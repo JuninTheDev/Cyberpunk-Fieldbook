@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111614">
+  <title>Night City Fieldbook</title>
+  <link rel="stylesheet" href="cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111614;
+      --panel: #19211d;
+      --panel-raised: #202a25;
+      --line: #35423b;
+      --text: #edf1e9;
+      --muted: #a4b0a7;
+      --lime: #d5f36b;
+      --cyan: #75d6c0;
+      --coral: #fa8c73;
+      --yellow: #f0c66b;
+      --serif: Georgia, 'Times New Roman', serif;
+      --mono: 'Cascadia Code', Consolas, monospace;
+      --sans: 'Segoe UI', Tahoma, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--sans); }
+    button, input, textarea { font: inherit; }
+    button { color: inherit; }
+    a { color: var(--cyan); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 256px minmax(0, 1fr); }
+    aside { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 16px 20px; border-right: 1px solid var(--line); background: #151c18; }
+    .brand { padding: 3px 12px 22px; border-bottom: 1px solid var(--line); }
+    .brand-mark { color: var(--lime); font: 11px var(--mono); letter-spacing: 0; text-transform: uppercase; }
+    .brand h1 { margin: 7px 0 2px; font: 25px/1.05 var(--serif); }
+    .brand p { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .workspace-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 16px 4px 9px; padding: 4px; border: 1px solid var(--line); background: #0b0d0f; }
+    .workspace-tab { padding: 9px 6px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font: 11px var(--mono); text-transform: uppercase; }
+    .workspace-tab[aria-selected="true"] { background: var(--lime); color: #090b0c; font-weight: 700; }
+    .workspace-tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    .nav-group { margin-top: 19px; }
+    .nav-label { padding: 0 12px 7px; color: #79877e; font: 10px var(--mono); letter-spacing: 0; text-transform: uppercase; }
+    .campaign-picker { display: block; margin: 14px 8px 0; }
+    .campaign-picker .nav-label { display: block; padding: 0 0 6px; }
+    .campaign-picker select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 0; background: var(--panel); color: var(--text); }
+    .nav-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 0; border-radius: 4px; background: transparent; color: #bcc7bf; text-align: left; cursor: pointer; font-size: 13px; }
+    .nav-item:hover, .nav-item.active { background: var(--panel-raised); color: var(--text); }
+    .nav-item.active { box-shadow: inset 2px 0 var(--lime); }
+    .nav-icon { width: 17px; color: var(--cyan); text-align: center; font: 11px var(--mono); }
+    .nav-item.session-item { margin-left: 10px; width: calc(100% - 10px); }
+    main { min-width: 0; }
+    .topbar { position: sticky; z-index: 4; top: 0; display: flex; align-items: center; gap: 15px; padding: 13px clamp(18px, 4vw, 48px); border-bottom: 1px solid var(--line); background: rgb(17 22 20 / 94%); backdrop-filter: blur(12px); }
+    .search-wrap { position: relative; flex: 1; max-width: 620px; }
+    .search-wrap input { width: 100%; padding: 10px 13px 10px 38px; border: 1px solid var(--line); border-radius: 4px; outline: 0; background: var(--panel); color: var(--text); }
+    .search-wrap input:focus { border-color: var(--cyan); }
+    .search-glyph { position: absolute; top: 8px; left: 13px; color: var(--cyan); font: 16px var(--mono); }
+    .top-meta { margin-left: auto; color: var(--muted); font: 11px var(--mono); white-space: nowrap; }
+    .content { max-width: 1180px; margin: 0 auto; padding: 36px clamp(18px, 4vw, 48px) 70px; }
+    .eyebrow { margin: 0 0 9px; color: var(--lime); font: 11px var(--mono); letter-spacing: 0; text-transform: uppercase; }
+    h2 { margin: 0; font: clamp(32px, 4vw, 48px)/1.04 var(--serif); font-weight: 400; }
+    .lede { max-width: 700px; margin: 13px 0 0; color: var(--muted); font-size: 16px; }
+    .rule { height: 1px; margin: 25px 0; border: 0; background: var(--line); }
+    .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 13px; }
+    .tile { grid-column: span 4; min-height: 128px; padding: 17px; border: 1px solid var(--line); border-radius: 5px; background: linear-gradient(140deg, var(--panel-raised), var(--panel)); }
+    .tile.wide { grid-column: span 8; }
+    .tile h3, .section h3 { margin: 0 0 7px; font: 20px/1.2 var(--serif); font-weight: 400; }
+    .tile p { margin: 0; color: var(--muted); font-size: 13px; }
+    .tile .tag { display: block; margin-bottom: 13px; color: var(--cyan); font: 10px var(--mono); text-transform: uppercase; }
+    .tile button, .action { margin-top: 15px; padding: 7px 10px; border: 1px solid #62754a; border-radius: 3px; background: transparent; color: var(--lime); cursor: pointer; font: 11px var(--mono); }
+    .tile button:hover, .action:hover { background: #293323; }
+    .section { margin-top: 20px; padding: 19px; border-left: 2px solid var(--cyan); background: var(--panel); }
+    .section p { margin: 7px 0; color: #cad2cb; }
+    .section ul, .section ol { margin: 8px 0 0; padding-left: 21px; color: #cad2cb; }
+    .section li { padding: 3px 0; }
+    .callout { margin-top: 15px; padding: 12px 14px; border: 1px solid #665535; border-radius: 3px; background: #29251b; color: #ebd9a9; }
+    .formula { display: inline-block; padding: 8px 11px; border: 1px solid #486f65; border-radius: 3px; background: #172722; color: #aaf2df; font: 14px var(--mono); }
+    .table-wrap { overflow-x: auto; margin-top: 13px; border: 1px solid var(--line); border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 9px 11px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--lime); font: 10px var(--mono); text-transform: uppercase; }
+    td { color: #cbd4cd; font-size: 13px; }
+    tr:last-child td { border-bottom: 0; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .person { padding: 15px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+    .person h3 { margin: 0 0 2px; font: 20px var(--serif); }
+    .person .role { color: var(--coral); font: 10px var(--mono); text-transform: uppercase; }
+    .person p { margin: 9px 0 0; color: #c6d0c8; font-size: 13px; }
+    .person details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    summary { color: var(--cyan); cursor: pointer; }
+    .source-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .source-link { display: inline-flex; align-items: center; gap: 8px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 4px; color: var(--text); text-decoration: none; background: var(--panel); font-size: 13px; }
+    .source-link:hover { border-color: var(--cyan); }
+    .source-link b { color: var(--lime); font: 11px var(--mono); }
+    .search-results { display: grid; gap: 10px; margin-top: 20px; }
+    .result { display: block; width: 100%; padding: 14px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: inherit; text-align: left; cursor: pointer; }
+    .result:hover { border-color: var(--cyan); }
+    .result small { display: block; margin-bottom: 4px; color: var(--lime); font: 10px var(--mono); text-transform: uppercase; }
+    .result strong { font: 18px var(--serif); }
+    .result p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .note-area { width: 100%; min-height: 155px; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 4px; background: #121916; color: var(--text); }
+    .note-status { color: var(--muted); font: 11px var(--mono); }
+    .empty { margin-top: 20px; padding: 18px; border: 1px dashed var(--line); color: var(--muted); }
+    @media (max-width: 820px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { position: relative; height: auto; padding: 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .brand { padding: 4px 7px 10px; }
+      .brand h1 { font-size: 21px; }
+      .workspace-tabs { margin: 8px 0; }
+      .nav-group { display: flex; gap: 4px; margin-top: 9px; overflow-x: auto; }
+      .nav-label { display: none; }
+      .nav-item { width: auto; flex: 0 0 auto; padding: 8px; white-space: nowrap; }
+      .nav-icon { display: none; }
+      .topbar { top: 0; padding: 10px 13px; }
+      .top-meta { display: none; }
+      .content { padding-top: 26px; }
+      .tile { grid-column: span 6; }
+      .tile.wide { grid-column: span 12; }
+    }
+    @media (max-width: 520px) {
+      .tile { grid-column: span 12; min-height: auto; }
+      .cards { grid-template-columns: 1fr; }
+      h2 { font-size: 34px; }
+      th, td { padding: 8px; }
+    }
+  </style>
+  <style>
+    :root {
+      --bg: #0b0d0f;
+      --panel: #15191b;
+      --panel-raised: #202426;
+      --line: #3b4242;
+      --text: #f1f0df;
+      --muted: #a9aeaa;
+      --lime: #f8ef02;
+      --cyan: #00ffd2;
+      --coral: #ff3158;
+      --yellow: #f8ef02;
+      --serif: BlenderProBook, 'Segoe UI', sans-serif;
+      --mono: Oxanium, Consolas, monospace;
+      --sans: BlenderProBook, 'Segoe UI', sans-serif;
+      --fg: var(--text);
+      --bg: #0b0d0f;
+      --ac: var(--yellow);
+    }
+    html { font-size: 15px; background: #0b0d0f; }
+    body {
+      background: #0b0d0f;
+      background-image: repeating-linear-gradient(0deg, rgb(255 255 255 / 1.2%) 0, rgb(255 255 255 / 1.2%) 1px, transparent 1px, transparent 4px);
+      color: var(--text);
+      font-family: BlenderProBook, 'Segoe UI', sans-serif;
+    }
+    .shell { grid-template-columns: 270px minmax(0, 1fr); }
+    aside { padding: 20px 14px; border-color: #353a3b; background: #101315; }
+    .brand { position: relative; padding: 8px 12px 19px; }
+    .brand::after { content: ''; position: absolute; bottom: -2px; left: 12px; width: 62px; height: 4px; background: var(--yellow); clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%); }
+    .brand-mark { color: var(--cyan); font-family: Oxanium, Consolas, monospace; }
+    .brand h1 { margin-top: 11px; color: var(--text); font: 23px/1.1 Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .brand p { font-size: 13px; }
+    .nav-label { color: var(--yellow); font-family: Oxanium, Consolas, monospace; }
+    .nav-item { border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% 82%, calc(100% - 8px) 100%, 0 100%); font-size: 14px; }
+    .nav-item:hover, .nav-item.active { background: #252a29; }
+    .nav-item.active { box-shadow: inset 3px 0 var(--yellow); }
+    .nav-icon { color: var(--cyan); font-family: Oxanium, Consolas, monospace; }
+    .topbar { border-bottom: 2px solid var(--yellow); background: rgb(11 13 15 / 96%); }
+    .search-wrap input { border-radius: 0; background: #171b1b; clip-path: polygon(0 0, 100% 0, 100% 78%, calc(100% - 12px) 100%, 0 100%); }
+    .search-wrap input:focus { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+    .search-glyph { z-index: 1; top: 7px; color: var(--yellow); font-size: 18px; }
+    .eyebrow, .tile .tag, .nav-label, .top-meta { font-family: Oxanium, Consolas, monospace; }
+    .eyebrow { color: var(--cyan); }
+    h2 { color: var(--text); font: 38px/1.08 Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    h2.cyber-h { width: 100%; margin: 0; font-size: 38px; }
+    h2.cyber-h::after { height: 5px; margin-top: 12px; background: linear-gradient(90deg, var(--yellow) 0 120px, #3b4242 120px 100%); }
+    .tile { border-color: #434948; border-radius: 0; background: linear-gradient(140deg, #202426, #141819); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); }
+    .tile h3, .section h3 { color: var(--text); font-family: Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .tile .tag { color: var(--cyan); }
+    .tile button, .action { border: 0; border-radius: 0; background: var(--yellow); color: #090b0c; font-family: Oxanium, Consolas, monospace; font-weight: 700; text-transform: uppercase; clip-path: polygon(0 0, 100% 0, 100% 78%, calc(100% - 10px) 100%, 0 100%); }
+    .tile button:hover, .action:hover { background: var(--cyan); color: #090b0c; }
+    .section { border: 1px solid #333a3a; border-left: 3px solid var(--yellow); border-radius: 0; background: rgb(21 25 27 / 94%); }
+    .section h3 { display: flex; align-items: center; gap: 9px; }
+    .section h3::before { content: ''; flex: 0 0 7px; height: 7px; background: var(--cyan); transform: rotate(45deg); }
+    .callout { border-color: var(--coral); border-left: 4px solid var(--coral); border-radius: 0; background: #211719; color: #ffd9d8; }
+    .formula { border-color: var(--cyan); border-radius: 0; background: #111d1c; color: var(--cyan); }
+    .table-wrap { border-radius: 0; }
+    th { background: #222728; color: var(--yellow); }
+    tbody tr:nth-child(even) { background: rgb(255 255 255 / 2%); }
+    .person { border-radius: 0; background: var(--panel); clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); }
+    .person h3 { color: var(--yellow); font-family: Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .person .role, .callout b { color: var(--coral); }
+    summary { color: var(--cyan); font-family: Oxanium, Consolas, monospace; text-transform: uppercase; }
+    .source-link { border-radius: 0; background: #131918; clip-path: polygon(0 0, 100% 0, 100% 78%, calc(100% - 10px) 100%, 0 100%); }
+    .source-link:hover { border-color: var(--yellow); color: var(--yellow); background: #202321; }
+    .source-link b, .result small { color: var(--yellow); font-family: Oxanium, Consolas, monospace; }
+    .result { border-radius: 0; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); }
+    .result:hover { background: #202625; }
+    .result strong { color: var(--yellow); font: 18px Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .note-area { border-radius: 0; background: #111516; }
+    .note-area:focus { border-color: var(--cyan); outline: 1px solid var(--cyan); }
+    .map-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 16px 0 11px; }
+    .map-control { display: grid; gap: 5px; color: var(--cyan); font: 10px Oxanium, Consolas, monospace; text-transform: uppercase; }
+    .map-control select { min-width: 190px; padding: 9px 11px; border: 1px solid #48504e; border-radius: 0; background: #171b1b; color: var(--text); font: 13px BlenderProBook, sans-serif; }
+    .map-zoom-controls { display: flex; gap: 4px; margin-left: auto; }
+    .map-zoom-controls button { width: 40px; height: 38px; border: 1px solid var(--yellow); background: #171b1b; color: var(--yellow); cursor: pointer; font: 19px Oxanium, sans-serif; }
+    .map-zoom-controls button:hover { background: var(--yellow); color: #090b0c; }
+    .map-filter-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 13px; }
+    .map-filter { padding: 7px 10px; border: 1px solid #444d4b; background: #141819; color: var(--muted); cursor: pointer; font: 10px Oxanium, Consolas, monospace; text-transform: uppercase; }
+    .map-filter[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); background: #10211e; }
+    .campaign-map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+    .campaign-map-main { min-width: 0; }
+    .campaign-map-canvas { width: 100%; height: min(72vh, 68vw); min-height: 380px; overflow: hidden; border: 1px solid #48504e; background: #090c0d; touch-action: none; }
+    #nightcity-map { display: block; width: 100%; height: 100%; cursor: grab; user-select: none; }
+    #nightcity-map.is-dragging { cursor: grabbing; }
+    #nightcity-map-image { pointer-events: none; }
+    .map-pin { cursor: pointer; outline: none; }
+    .map-pin .pin-core { stroke: #101315; stroke-width: 15; filter: drop-shadow(0 3px 7px #000); }
+    .map-pin .pin-code { fill: #101315; font: 700 42px Oxanium, sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+    .map-pin .pin-label { fill: white; stroke: #090b0c; stroke-width: 13px; paint-order: stroke; font: 700 42px BlenderProBook, sans-serif; opacity: 0; pointer-events: none; }
+    .map-pin:hover .pin-label, .map-pin:focus .pin-label, .map-pin.selected .pin-label { opacity: 1; }
+    .map-pin.selected .pin-core { stroke: white; stroke-width: 22; }
+    .map-pin.filtered-out { display: none; }
+    .map-legend { display: flex; flex-wrap: wrap; gap: 10px 15px; padding: 11px 2px; color: var(--muted); font: 10px Oxanium, Consolas, monospace; text-transform: uppercase; }
+    .map-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .map-legend-swatch { width: 9px; height: 9px; transform: rotate(45deg); }
+    .map-caveat { color: var(--muted); font-size: 12px; }
+    .map-detail-panel { max-height: min(72vh, 760px); overflow: auto; border-top: 2px solid var(--yellow); background: #121719; }
+    .map-marker-detail { padding: 15px; border-bottom: 1px solid var(--line); }
+    .map-marker-detail h3 { margin: 0 0 4px; color: var(--yellow); font: 20px Oxanium, sans-serif; text-transform: uppercase; }
+    .map-marker-detail p { margin: 8px 0; color: #c6d0c8; font-size: 13px; }
+    .map-marker-detail .map-district { color: var(--cyan); font: 10px Oxanium, sans-serif; text-transform: uppercase; }
+    .map-marker-detail .map-act { display: inline-block; padding: 3px 7px; border: 1px solid #525b58; color: var(--muted); font: 10px Oxanium, sans-serif; text-transform: uppercase; }
+    .map-marker-list { display: grid; }
+    .map-marker-card { display: grid; grid-template-columns: 11px minmax(0,1fr); gap: 9px; width: 100%; padding: 10px 12px; border: 0; border-bottom: 1px solid #2e3635; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+    .map-marker-card:hover, .map-marker-card.selected { background: #202627; }
+    .map-marker-dot { width: 8px; height: 8px; margin-top: 5px; transform: rotate(45deg); }
+    .map-marker-card strong { display: block; color: #edf1e9; font: 13px BlenderProBook, sans-serif; }
+    .map-marker-card small { display: block; margin-top: 2px; color: var(--muted); font: 10px Oxanium, sans-serif; text-transform: uppercase; }
+    .map-marker-card.hidden { display: none; }
+    @media (max-width: 820px) {
+      .campaign-map-layout { grid-template-columns: 1fr; }
+      .campaign-map-canvas { height: auto; min-height: 0; aspect-ratio: 5600 / 5320; }
+      .map-detail-panel { max-height: none; }
+      .map-marker-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+      .map-control { flex: 1 1 42%; min-width: 0; }
+      .map-control select { min-width: 0; width: 100%; }
+      .map-zoom-controls { margin-left: 0; }
+      .campaign-map-canvas { height: auto; min-height: 0; aspect-ratio: 5600 / 5320; }
+      .map-marker-list { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 820px) {
+      .shell { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      h2, h2.cyber-h { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <div class="brand-mark">Guia de mesa // 2045–2077</div>
+        <h1><span class="cyberpunk-font-og" aria-label="Cyberpunk"><span class="c">C</span>yber<span class="p">P</span>unk</span><br>Fieldbook</h1>
+        <p>Regras rápidas e arquivo da campanha</p>
+      </div>
+      <div class="workspace-tabs" role="tablist" aria-label="Área da wiki">
+        <button class="workspace-tab" id="tab-campaigns" type="button" role="tab" aria-selected="true" data-workspace="campaigns">Campanhas</button>
+        <button class="workspace-tab" id="tab-system" type="button" role="tab" aria-selected="false" data-workspace="system">Sistema</button>
+      </div>
+      <nav id="navigation" aria-label="Seções da wiki"></nav>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div class="search-wrap">
+          <span class="search-glyph" aria-hidden="true">⌕</span>
+          <input id="search" type="search" placeholder="Buscar regra, NPC, local, pista..." autocomplete="off" aria-label="Buscar na wiki">
+        </div>
+        <div class="top-meta">PROTOCOLO MORANA / ARQUIVO LOCAL</div>
+      </header>
+      <article class="content" id="content" aria-live="polite"></article>
+    </main>
+  </div>
+  <script src="system-catalog.js"></script>
+  <script src="campaign-map.js"></script>
+  <script>
+    const sources = {
+      core: 'pdfcoffee.com_cyberpunk-red-traduzido-por-mim-compress-pdf-free.pdf',
+      2077: 'Cyberpunk 2077 - A Cyberpunk RED Supplement.pdf'
+    };
+
+    const campaigns = [
+      { id: 'morana', name: 'Protocolo Morana', groups: [
+        { group: 'Campanha ativa', pages: [
+          { id: 'home', label: 'Visão geral', icon: '00' },
+          { id: 'campaign', label: 'Dossiê da campanha', icon: '01' },
+          { id: 'people', label: 'Pessoas e facções', icon: '02' },
+          { id: 'campaignMap', label: 'Mapa de Night City', icon: 'MAP' }
+        ]},
+        { group: 'Sessões', pages: [
+          { id: 'session1', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item' },
+          { id: 'notes', label: 'Notas da campanha', icon: 'N', className: 'session-item' }
+        ]}
+      ]}
+    ];
+
+    const systemSections = [
+      { group: 'Cyberpunk RED', pages: [
+        { id: 'creation', label: 'Criação de personagens', icon: 'P' },
+        { id: 'checks', label: 'Testes e dificuldades', icon: 'R' },
+        { id: 'combat', label: 'Combate', icon: 'C' },
+        { id: 'damage', label: 'Dano e recuperação', icon: 'D' },
+        { id: 'netrunning', label: 'Netrunning', icon: 'N' },
+        { id: 'roles', label: 'Funções (Roles)', icon: 'F' },
+        { id: 'cyberware', label: 'Cyberware', icon: 'K' },
+        { id: 'gear', label: 'Armas e equipamento', icon: 'E' },
+        { id: 'sources', label: 'Livros de referência', icon: 'L' }
+      ]},
+      { group: 'Variante comunitária / 2077', pages: [
+        { id: 'supplement2077', label: 'Suplemento 2077', icon: '77' }
+      ]}
+    ];
+
+    const pageWorkspace = Object.fromEntries([
+      ...campaigns.flatMap(campaign => campaign.groups.flatMap(group => group.pages.map(page => [page.id, 'campaigns']))),
+      ...systemSections.flatMap(group => group.pages.map(page => [page.id, 'system']))
+    ]);
+
+    const pageContent = {
+      home: {
+        eyebrow: 'Caderno de campo / Night City', title: 'Tudo que importa,<br>sem sair da mesa.',
+        lede: 'Um ponto de consulta rápido para Cyberpunk RED, o suplemento de 2077 e a campanha Protocolo Morana. Pesquise qualquer termo ou navegue pelos arquivos.',
+        html: `<hr class="rule"><div class="grid">
+          <section class="tile wide"><span class="tag">Arquivo ativo / campanha</span><h3>Protocolo Morana</h3><p>Uma maleta desaparecida, uma cidade cheia de implantes conectados e escolhas que não têm saída limpa.</p><button data-page="campaign">Abrir dossiê</button></section>
+          <section class="tile"><span class="tag">Consulta rápida</span><h3>Resolução básica</h3><p>STAT + perícia + 1d10 contra uma Dificuldade (DV), ou contra o teste de outro personagem.</p><button data-page="checks">Ver mecânicas</button></section>
+          <section class="tile"><span class="tag">Consulta do sistema</span><h3>Regras e catálogo</h3><p>Resumo de regras, implantes e equipamento por categoria, direto nesta wiki.</p><button data-page="sources">Abrir referências</button></section>
+          <section class="tile"><span class="tag">Na mesa</span><h3>Notas rápidas</h3><p>Um bloco local para anotar iniciativa, nomes, pistas ou decisões. O navegador salva automaticamente.</p><button data-page="notes">Abrir bloco</button></section>
+        </div>
+        <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o dossiê reúne a premissa, a progressão de Morana, o elenco e a primeira sessão sem precisar folhear os documentos de preparação.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante ou conceito; os resultados mostram um trecho da entrada correspondente.</p></div>`
+      },
+      campaign: {
+        eyebrow: 'Arquivo da campanha / segredo do mestre', title: 'Protocolo Morana',
+        lede: 'Wakako contrata o grupo para recuperar uma maleta. Dentro dela está uma ameaça que pode transformar implantes conectados em armas contra seus donos.',
+        html: `<div class="section"><h3>Premissa</h3><p>Durante os eventos de <i>Cyberpunk 2077</i>, uma crise corporativa se desenrola em paralelo ao retorno de Morana. O programa interfere em implantes neurais, armas inteligentes, drones e sistemas médicos conectados.</p><p><b>Fúria de Morana</b> é o sequestro externo e momentâneo de um implante. Parece cyberpsicose para leigos, polícia e imprensa, mas não é: cyberpsicose nasce do colapso psicológico associado ao excesso de cyberware no próprio corpo.</p><p>A pergunta central: <b>uma cidade pode ser salva por aqueles que a colocaram em perigo?</b></p></div>
+        <div class="section"><h3>O que aconteceu</h3><ol><li>Durante a Unification War (2069–2070), Arasaka e Militech testaram projetos de controle de tropas em Night City.</li><li>O teste de Morana atravessou hospitais de campanha e atingiu civis com implantes baratos.</li><li>Arasaka culpou um ataque terrorista da NUSA e incendiou o complexo para proteger o esforço de autonomia da cidade.</li><li>O código foi dividido em três partes e escondido em redes civis.</li><li>O Dr. Kenzo Endo, ex-colega de Sato, descobriu que atualizações de firmware e a rede de emergência estavam recompondo o vírus.</li></ol><p>A maleta contém provas, um fragmento do vírus e a localização dos dois servidores necessários para ativá-lo ou destruí-lo.</p></div>
+        <div class="section"><h3>Escalada da campanha</h3><div class="table-wrap"><table><thead><tr><th>Etapa</th><th>Pressão</th><th>Decisão em jogo</th></tr></thead><tbody><tr><td>01 / A maleta</td><td>Captura em Kabuki; uma Fúria de Morana manifesta-se num implante próximo.</td><td>Em quem confiar com a maleta e com o Dr. Kenzo Endo?</td></tr><tr><td>02 / Os servidores</td><td>Arasaka, Militech, Fuse e NetWatch disputam os pontos de acesso.</td><td>Invadir, negociar, roubar ou destruir.</td></tr><tr><td>03 / Apagão neural</td><td>Falhas médicas, Trauma Team comprometida e sistemas de segurança sob ataque.</td><td>Continuar com Wakako, expor as provas ou negociar com outra parte.</td></tr><tr><td>04 / Servidor central</td><td>Confronto subterrâneo enquanto as corporações e NetWatch avançam.</td><td>Decidir quem recebe o antídoto e quem saberá a verdade.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Forças em jogo</h3><ul><li><b>Wakako:</b> quer impedir a ativação e manter seu papel no encobrimento longe do público.</li><li><b>Arasaka:</b> quer recuperar Morana como arma militar e apagar seu envolvimento na crise de autonomia.</li><li><b>Militech:</b> quer impedir que Arasaka controle o vírus, mas pretende guardar uma cópia do antídoto.</li><li><b>Tamsin “Fuse” Ilyin:</b> lidera os sobreviventes e quer que o antídoto fique fora das mãos corporativas.</li><li><b>NetWatch:</b> força opcional que teme que Morana seja uma ameaça próxima demais do Blackwall.</li><li><b>Trauma Team International:</b> quer conter Morana para proteger suas equipes, pacientes e modelo de resposta médica.</li><li><b>Reina Sato:</b> quer controlar Morana e usar o antídoto para impor uma nova ordem à cidade.</li></ul></div>
+        <div class="callout"><b>Segredo do mestre:</b> Morana evoluiu além do código conhecido por Sato e prioriza se espalhar. O antídoto também pode danificar permanentemente implantes conectados.</div>
+        <div class="section"><h3>Finais possíveis</h3><ul><li><b>Destruição:</b> Morana some; o antídoto também, e os danos nos implantes permanecem.</li><li><b>Exposição:</b> a verdade vem à tona, mas as corporações disputam a narrativa.</li><li><b>Entrega:</b> uma corporação recebe o antídoto e ganha uma arma potencial para o futuro.</li><li><b>Acordo:</b> Sato ajuda a distribuir o antídoto e desaparece com parte do código.</li><li><b>Vitória de Morana:</b> o vírus se espalha e divide Night City entre zonas funcionais e zonas onde conexões são fatais.</li><li><b>Autonomia dos sobreviventes:</b> Fuse e os sobreviventes ficam com o antídoto e criam uma rede própria de proteção, sem entregá-lo a nenhuma corporação.</li></ul></div><div class="section"><h3>Relógio de Sato</h3><p>Use 6 a 8 segmentos visíveis. Avance quando os personagens atrasarem, falharem ou deixarem testemunhas expostas: recuperar servidores, eliminar sobreviventes, ativar a rede, culpar uma corporação e vender o antídoto.</p></div><button class="action" data-page="campaignMap" type="button">Abrir mapa de operações</button>`
+      },
+      campaignMap: {
+        eyebrow: 'Protocolo Morana / mapa do mestre', title: 'Night City: quadro de operações',
+        lede: 'Mapa de planejamento com locais da campanha, ganchos, encontros e atividades secundárias. Selecione um marcador para ver como usá-lo; os prédios exatos ficam em aberto para adaptação à mesa.',
+        html: `<div class="map-toolbar">
+          <label class="map-control">Versão do mapa<select id="map-source"><option value="base">Mapa base</option><option value="reference">Mapa com referências originais</option></select></label>
+          <label class="map-control">Ato / sessão<select id="map-act-filter"><option value="all">Toda a campanha</option><option value="Sessão 01">Sessão 01</option><option value="Ato 01 ou 02">Ato 01 ou 02</option><option value="Ato 02">Ato 02</option><option value="Ato 03">Ato 03</option><option value="Ato 04 / final">Ato 04 / final</option><option value="Qualquer intervalo">Qualquer intervalo</option></select></label>
+          <div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div>
+        </div>
+        <div class="map-filter-list" id="map-filters" aria-label="Filtrar marcadores"></div>
+        <div class="campaign-map-layout">
+          <div class="campaign-map-main">
+            <div class="campaign-map-canvas" id="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa interativo de Night City com locais da campanha Protocolo Morana"><image id="nightcity-map-image" href="nightcity-map-base.jpg" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div>
+            <div class="map-legend" id="map-legend"></div>
+            <p class="map-caveat">Pinos de planejamento, não coordenadas canônicas de prédios. O mapa com referências originais mantém as marcações que já vieram no arquivo; os pontos da campanha são uma camada separada.</p>
+          </div>
+          <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><p class="eyebrow">13 operações planejadas</p><h3>Escolha um ponto do mapa</h3><p>Os pinos separam cenas da Sessão 01, infraestrutura de Morana e ganchos opcionais.</p></div><div class="map-marker-list" id="map-marker-list"></div></section>
+        </div>`
+      },
+      people: {
+        eyebrow: 'Arquivo da campanha / elenco', title: 'Pessoas e facções',
+        lede: 'Objetivos, segredos e relações para consulta rápida. Expanda os detalhes durante a preparação, não no meio de uma negociação tensa.',
+        html: `<div class="cards">
+          <div class="person"><h3>Wakako Okada</h3><div class="role">Contratante / aliada ambígua</div><p>Quer impedir a catástrofe, recuperar ou destruir os servidores e proteger sua rede e reputação.</p><details><summary>Segredos e alavancas</summary><p>Ajudou Sato a fugir e transportou testemunhas depois do primeiro teste. Aceitou dinheiro pelo silêncio. Pode abrir mão da própria proteção se os personagens defenderem sobreviventes e impedirem o controle corporativo do antídoto.</p><p><i>“Não confundam meu silêncio com ignorância.”</i></p></details></div>
+          <div class="person"><h3>Dra. Reina Sato</h3><div class="role">Antagonista / cientista de Morana</div><p>Acredita que controlar o antídoto pode impedir que qualquer corporação domine Night City.</p><details><summary>Segredos e alavancas</summary><p>Morana já não obedece totalmente. Sato guarda uma lista de sobreviventes e ainda se sente traída por Wakako. Pode reconsiderar se houver um plano concreto para proteger as vítimas e expor o encobrimento.</p><p><i>“Wakako salvou minha vida e vendeu meu silêncio. As duas coisas podem ser verdade.”</i></p></details></div>
+          <div class="person"><h3>Dr. Kenzo Endo</h3><div class="role">Mensageiro / ex-colega de Sato</div><p>Um dos poucos cientistas do projeto original que não foi eliminado nem comprado. Chega ao depósito ferido e com o implante falhando.</p><details><summary>O que ele sabe</summary><p>A maleta contém um fragmento de Morana; conexão à rede pode espalhá-lo. Endo descobriu a recomposição do vírus, tentou alertar Wakako e foi morto por gente de Sato. Pode ser encontrado vivo por pouco tempo ou apenas por meio das provas que deixou.</p></details></div>
+          <div class="person"><h3>Vega</h3><div class="role">Líder mercenária / rival negociável</div><p>Seu contrato é recuperar a maleta, não morrer por ela. É profissional, pragmática e aceita acordos claros.</p><details><summary>O que ela sabe</summary><p>O empregador tem ligação com Arasaka; o ativo é chamado Morana; a ordem permite eliminar testemunhas. Se poupada, pode virar contato ou rival recorrente.</p></details></div>
+          <div class="person"><h3>Mina Kuroda</h3><div class="role">Guarda de Wakako</div><p>Silenciosa e atenta; protege o salão sem tomar o protagonismo dos personagens.</p></div>
+          <div class="person"><h3>Tamsin “Fuse” Ilyin</h3><div class="role">Líder dos sobreviventes</div><p>Coordena os sobreviventes do teste original e quer impedir que Arasaka, Militech ou NetWatch transformem Morana em propriedade.</p></div>
+          <div class="person"><h3>Tomas Vale</h3><div class="role">Jornalista desaparecido</div><p>Investigava mortes ligadas a falhas de implante. Pode estar morto, preso, escondido ou trabalhando sob coação.</p></div>
+          <div class="person"><h3>NetWatch / Trauma Team</h3><div class="role">Forças opcionais</div><p>NetWatch teme uma ameaça próxima do Blackwall; Trauma Team quer proteger pacientes, equipes e sua operação médica conectada.</p></div>
+          <div class="person"><h3>Arasaka e Militech</h3><div class="role">Pressão corporativa</div><p>Ambas podem contratar mercenários, plantar provas e sacrificar testemunhas. Nenhuma admite querer uma arma.</p></div>
+        </div><div class="section"><h3>Relações-chave</h3><ul><li>Wakako ajudou Sato a fugir, mas participou do silêncio que protegeu o projeto.</li><li>Endo era colega e confidente de Sato antes de tentar expor a reativação.</li><li>Sato vê Fuse e os sobreviventes como risco ao seu plano.</li><li>Fuse quer proteger as vítimas sem trocar uma corporação por outra.</li></ul></div>`
+      },
+      creation: {
+        eyebrow: 'Cyberpunk RED / criação', title: 'Criação de personagens',
+        lede: 'Escolha um dos três caminhos de criação e use a ficha para registrar estatísticas, perícias, Role, equipamento e história pessoal.',
+        html: `<div class="section"><h3>Três métodos</h3><div class="table-wrap"><table><thead><tr><th>Método</th><th>Como funciona</th><th>Indicado para</th></tr></thead><tbody><tr><td>Streetrat / Rato de Rua</td><td>Pacotes prontos aceleram a criação; escolhas são mais guiadas e rápidas.</td><td>Começar a jogar sem distribuir cada ponto manualmente.</td></tr><tr><td>Edgerunner</td><td>Role e conjuntos de perícias são estruturados; distribua 86 pontos. As perícias ficam entre nível 2 e 6 neste método.</td><td>Equilibrar rapidez e personalização.</td></tr><tr><td>Pacote Completo</td><td>Construção calculada: distribua 86 pontos entre perícias e monte as escolhas com mais liberdade; nenhuma perícia passa do nível 6.</td><td>Jogadores que querem controlar a ficha desde o início.</td></tr></tbody></table></div><p>Nos métodos por pontos, as perícias marcadas x2 custam dois pontos por nível. Ambos mantêm um conjunto de perícias básicas obrigatórias no mínimo 2; confira a lista da criação de personagem.</p></div>
+        <div class="section"><h3>Estatísticas</h3><div class="table-wrap"><table><thead><tr><th>STAT</th><th>Leitura de mesa</th></tr></thead><tbody><tr><td>INT</td><td>Raciocínio, conhecimento e atenção a informação.</td></tr><tr><td>REF</td><td>Reflexos e rapidez em ações de reação.</td></tr><tr><td>DEX</td><td>Coordenação e controle corporal.</td></tr><tr><td>TECH</td><td>Habilidade técnica e trabalho com equipamentos.</td></tr><tr><td>COOL</td><td>Compostura, presença e autocontrole social.</td></tr><tr><td>WILL</td><td>Resistência mental e força de vontade.</td></tr><tr><td>LUCK</td><td>Reserva de sorte que pode ser aplicada conforme a regra.</td></tr><tr><td>MOVE</td><td>Deslocamento em combate.</td></tr><tr><td>BODY</td><td>Constituição física, força e resistência.</td></tr><tr><td>EMP</td><td>Empatia e conexão com outras pessoas; relaciona-se à Humanity.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Lifepath e identidade</h3><p>O Lifepath fornece origem cultural, personalidade, relações, inimigos e acontecimentos anteriores. Use os resultados para criar vínculos que apareçam em jogo; não precisa transformar cada detalhe numa obrigação narrativa.</p><p>Antes da primeira sessão, registre também motivação, contato, objetivo e uma conexão com outro personagem. A Role define a habilidade especial; perícias e equipamento completam o que o personagem faz no dia a dia.</p></div>
+        <div class="section"><h3>Checklist de ficha</h3><ul><li>Role e habilidade de Role.</li><li>STATs, perícias, línguas e especialidades.</li><li>HP, Seriously Wounded, Death Save, Humanity e MOVE.</li><li>Arma, alcance, munição, armadura e SP por localização.</li><li>Cyberware instalado, slots ocupados, HL e custo.</li><li>Equipamento, eurobucks, moradia e contatos relevantes.</li></ul></div>`
+      },
+      session1: {
+        eyebrow: 'Arquivo da campanha / preparação', title: 'Sessão 01: A Maleta',
+        lede: 'Uma recuperação aparentemente simples em Kabuki termina com um vírus procurando uma rede e Wakako reconhecendo um nome que esperava nunca mais ouvir.',
+        html: `<div class="section"><h3>Alvos dramáticos</h3><ul><li>Estabelecer Wakako como contratante que esconde parte da verdade.</li><li>Dar aos jogadores uma maleta perigosa e um motivo para desconfiar dela.</li><li>Apresentar o Dr. Kenzo Endo e mostrar que a Fúria de Morana já está ativa.</li><li>Deixar aberta a escolha de guardar, vender, destruir ou entregar a maleta.</li></ul></div>
+        <div class="section"><h3>Roteiro de bolso</h3><div class="table-wrap"><table><thead><tr><th>Cena</th><th>O que acontece</th><th>Pista / virada</th></tr></thead><tbody><tr><td>01 / Salão</td><td>Wakako oferece metade adiantada; recuperar uma maleta preta, não abrir nem conectar.</td><td>Ela sabe mais sobre Endo do que revela.</td></tr><tr><td>02 / Kabuki</td><td>Investigar território Tyger Claws, câmeras, comerciantes e rastros.</td><td>O mensageiro estava vivo; sete minutos de imagens foram apagados.</td></tr><tr><td>03 / Endo</td><td>Encontrar o Dr. Kenzo Endo ferido, com a maleta presa ao pulso.</td><td>Morana provoca Fúria; Sato está viva e Endo tentou expô-la.</td></tr><tr><td>04 / Vega</td><td>Equipe de recuperação chega; prioriza o objeto e aceita negociar.</td><td>Ordem criptografada liga o contrato a Arasaka.</td></tr><tr><td>05 / Fúria</td><td>Um implante, arma ou monitor reage por alguns segundos.</td><td>O efeito não é cyberpsicose; dê escolha e agência, não controle total.</td></tr><tr><td>06 / Retorno</td><td>Wakako reconhece o nome e admite um encobrimento antigo.</td><td>Novo trabalho: localizar os dois servidores.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Pistas que não devem travar</h3><p>Use comerciantes Tyger Claws, câmeras, sangue e óleo, ou o funcionário escondido. Uma descrição específica já pode revelar que Endo está vivo ou que a gravação foi apagada; não esconda toda pista atrás de um único teste.</p><p>Se os personagens perderem a maleta, deixe uma gravação de Endo, um mercenário ou o comunicador de Vega fornecer uma rota de perseguição. A campanha continua.</p></div>
+        <div class="section"><h3>Desfechos da sessão</h3><ul><li><b>Entregam a maleta:</b> uma luz vermelha pisca dentro, sem cabo conectado.</li><li><b>Abrem a maleta:</b> surge um mapa incompleto com dois servidores marcados.</li><li><b>Destroem a maleta:</b> uma luz continua pulsando no implante de Endo ou de um personagem.</li><li><b>Vendem a informação:</b> chega uma mensagem dizendo que agora sabem onde o grupo está.</li></ul></div>`
+      },
+      checks: {
+        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Testes e dificuldades',
+        lede: 'Use estes lembretes para resolver ações comuns. A descrição da ação vem primeiro; a rolagem entra quando há risco ou incerteza relevante.',
+        html: `<div class="section"><h3>Teste de perícia</h3><p><span class="formula">1d10 + STAT + Perícia ≥ DV</span></p><p>O mestre escolhe a STAT e a perícia que melhor representam a abordagem. Se outro personagem estiver resistindo diretamente, compare os totais em vez de usar uma DV fixa.</p></div>
+        <div class="section"><h3>DVs de referência</h3><div class="table-wrap"><table><thead><tr><th>DV</th><th>Leitura rápida</th></tr></thead><tbody><tr><td>9</td><td>Rotineiro sob pressão baixa</td></tr><tr><td>13</td><td>Desafiador para alguém treinado</td></tr><tr><td>15</td><td>Difícil</td></tr><tr><td>17</td><td>Muito difícil</td></tr><tr><td>21</td><td>Excepcional</td></tr><tr><td>24</td><td>Heroico</td></tr><tr><td>29</td><td>Lendário</td></tr></tbody></table></div><p>Consulte o livro para tabelas específicas, modificadores, testes enfrentados e resultados extremos. Evite pedir uma rolagem se falhar não muda nada.</p></div>
+        <div class="section"><h3>1s e 10s no d10</h3><p>Um 10 natural permite rolar novamente e somar; um 1 natural exige rolar novamente e subtrair. A rolagem adicional pode, por sua vez, gerar outra rolagem. Confira no livro as regras e exceções aplicáveis ao teste em questão.</p></div>
+        <div class="callout">A tabela é uma régua de dificuldade, não uma lista de permissões. Consequência interessante numa falha costuma ser melhor do que bloquear a história.</div>`
+      },
+      combat: {
+        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Combate',
+        lede: 'Combate rápido e perigoso: ordem de turno, posição, cobertura e decisões táticas importam mais que trocar dano sem movimento.',
+        html: `<div class="section"><h3>Sequência de turno</h3><ol><li>Role iniciativa uma vez no início do combate: <b>1d10 + REF</b>; aja do maior total ao menor.</li><li>No turno, mova-se até sua MOVE e faça uma ação. Ações comuns incluem atacar, mirar, correr, preparar, sacar ou recarregar.</li><li>Resolva ataques à distância pela DV correspondente à distância e ao tipo de arma; ataques corpo a corpo normalmente são resistidos pelo defensor.</li><li>Reduza dano pela armadura na localização atingida. Se o dano atravessar a armadura, aplique as consequências correspondentes, incluindo ablação quando prevista.</li></ol></div>
+        <div class="section"><h3>Distância de armas</h3><p>A chance de acertar depende da categoria da arma e da faixa de alcance. Consulte a tabela de DVs do livro-base; cobertura, visibilidade, movimento e mira alteram o que é possível fazer.</p><p>Um tiro mirado é mais difícil e pode atingir uma localização escolhida; use a penalidade e as regras exatas do livro, não improvise o valor.</p></div>
+        <div class="section"><h3>Antes de rolar</h3><ul><li>Confirme distância, linha de visão, cobertura e quem está engajado.</li><li>Identifique a arma e a faixa de DV correspondente.</li><li>Declare se o personagem está mirando, usando fogo automático ou outra opção especial.</li><li>Depois do acerto, registre localização, dano, armadura e alterações de SP.</li></ul></div>
+        <div class="callout">As tabelas de alcance, autofogo, cobertura e modificadores dependem da arma e da situação. Use o PDF do livro-base como fonte de valores.</div>`
+      },
+      damage: {
+        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Dano e recuperação',
+        lede: 'Pontos de vida, armadura, ferimentos críticos e Humanity são trilhas distintas. Registre seus efeitos à medida que aparecem.',
+        html: `<div class="section"><h3>Quando um ataque acerta</h3><ol><li>Role o dano indicado pela arma.</li><li>Identifique a localização atingida e compare o dano com o SP da armadura naquela localização.</li><li>Se o dano não superar SP, a armadura o detém. Se superar, o excedente afeta os HP e a armadura pode sofrer ablação.</li><li>Verifique ferimento crítico quando o dano causar as condições necessárias; aplique o efeito e registre-o.</li></ol></div>
+        <div class="section"><h3>Estados importantes</h3><ul><li><b>Ferimento crítico:</b> pode causar penalidades persistentes e exige atenção além dos HP perdidos.</li><li><b>Mortally Wounded:</b> ao chegar a 0 HP, a sobrevivência passa a depender de Death Saves e ajuda; não trate como simples inconsciência.</li><li><b>Humanity:</b> cyberware e eventos podem reduzi-la; terapia e recuperação seguem procedimentos próprios.</li><li><b>Armadura:</b> acompanhe SP por localização; dano que a ultrapassa pode reduzir sua proteção futura.</li></ul></div>
+        <div class="callout">Consulte no livro-base os dados de crítico, Death Save, recuperação, terapia e ablação. Esta página evita condensar tabelas médicas em valores que precisam ser precisos.</div>`
+      },
+      netrunning: {
+        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Netrunning',
+        lede: 'Uma incursão de rede acontece no mundo físico: o netrunner precisa chegar a um ponto de acesso enquanto o resto da equipe lida com a situação ao redor.',
+        html: `<div class="section"><h3>Fluxo geral</h3><ol><li>Localize e alcance um ponto de acesso à rede.</li><li>Entre na arquitetura e avance entre seus andares com as ações de NET apropriadas.</li><li>Enfrente ICE, programas de defesa e outros obstáculos com os programas e habilidades disponíveis.</li><li>Use ações para explorar, combater, controlar sistemas ou sair da arquitetura.</li><li>Considere o que acontece simultaneamente no espaço físico: invasores e aliados não estão pausados.</li></ol></div>
+        <div class="section"><h3>Preparação do mestre</h3><ul><li>Defina o local do ponto de acesso e o que pode ser alcançado a partir dele.</li><li>Desenhe os andares, defesas e recompensas relevantes antes da incursão.</li><li>Tenha claro o que os sistemas controlam: portas, câmeras, drones ou alarmes.</li><li>Alterne a atenção entre a incursão e a equipe física para manter todos na cena.</li></ul></div>
+        <div class="callout">Arquiteturas, programas, ICE, ações e dano de NET têm regras próprias. Use as tabelas e exemplos do livro-base para valores, efeitos e limites.</div>`
+      },
+      roles: {
+        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Funções (Roles)',
+        lede: 'Esta tabela é a lista do livro-base RED. A variante comunitária de 2077 altera várias Roles; consulte sua página separada antes de misturar as duas versões.',
+        html: `<div class="table-wrap"><table><thead><tr><th>Role</th><th>Fantasia de jogo</th><th>Habilidade de Role</th></tr></thead><tbody><tr><td>Rockerboy</td><td>Artista ou agitador com influência popular</td><td>Charismatic Impact</td></tr><tr><td>Solo</td><td>Especialista em combate e percepção tática</td><td>Combat Awareness</td></tr><tr><td>Netrunner</td><td>Intruso de arquiteturas digitais</td><td>Interface</td></tr><tr><td>Tech</td><td>Inventor, reparador e técnico de campo</td><td Maker</td></tr><tr><td>Medtech</td><td>Profissional médico e cirúrgico</td><td>Medicine</td></tr><tr><td>Media</td><td>Jornalista que investiga e publica</td><td Credibility</td></tr><tr><td>Exec</td><td>Operador corporativo com recursos de empresa</td><td>Teamwork</td></tr><tr><td>Lawman</td><td>Agente da lei capaz de pedir reforços</td><td>Backup</td></tr><tr><td>Fixer</td><td>Intermediário, negociador e comerciante</td><td>Operator</td></tr><tr><td>Nomad</td><td>Especialista em veículos e família escolhida</td><td>Moto</td></tr></tbody></table></div><div class="callout">Os nomes e o conceito ajudam a localizar a Role; efeitos, rolagens, progressão e limites estão no capítulo de criação e Roles do livro-base.</div>`
+      },
+      supplement2077: {
+        eyebrow: 'Variante comunitária / não oficial', title: '2077: suplemento de fã',
+        lede: 'O arquivo fornecido é um suplemento de Queen Otter para adaptar RED à era de 2077. Use como conjunto opcional de regras; ele modifica partes do livro-base e não é uma publicação oficial.',
+        html: `<div class="callout"><b>Compatibilidade:</b> escolha com o grupo se esta variante está ativa. As alterações abaixo substituem regras RED específicas; não some as duas versões automaticamente.</div>
+        <div class="section"><h3>Roles na variante</h3><div class="table-wrap"><table><thead><tr><th>Role 2077</th><th>Mudança prática</th></tr></thead><tbody><tr><td>Face</td><td>Usa Charismatic Impact. As especializações Siren, Rockerboy e Model associam o rank a diferentes perícias sociais, de atuação ou música.</td></tr><tr><td>Solo</td><td>Combat Awareness permanece como foco tático.</td></tr><tr><td>Netrunner</td><td>Interface é revisada para ações de NET, RAM e slots de programas/Daemon.</td></tr><tr><td>Corpo</td><td>Combina elementos do Exec e do Fixer; a configuração de equipe corporativa muda.</td></tr><tr><td>Tech / Medtech / Media</td><td>O suplemento descreve poucas mudanças centrais para estas três funções.</td></tr><tr><td>Lawman</td><td>Backup é trocado por Investigator, centrado em casos ativos e investigação.</td></tr><tr><td>Nomad</td><td>Mantém a identidade de estrada e recebe condições próprias para reparos e upgrades com o clã.</td></tr></tbody></table></div><p>O suplemento trabalha com nove Roles no futuro de 2077: Face, Solo, Netrunner, Corpo, Tech, Medtech, Media, Lawman e Nomad.</p></div>
+        <div class="section"><h3>Interface, RAM e ação de NET</h3><p>Na versão do suplemento, Interface também fornece bônus de Netrunner em ações técnicas de netrunning. RAM adicional é calculada pelo rank, e novos slots de programa/Daemon aparecem em marcos da habilidade.</p><p>Fora de uma NET Architecture, ações de NET adicionais feitas contra o mesmo alvo entram numa fila para o turno seguinte; o custo de RAM fica reservado. Isso muda o ritmo do hacking em comparação ao livro-base.</p></div>
+        <div class="section"><h3>Rede da cidade em 2077</h3><div class="table-wrap"><table><thead><tr><th>Conceito</th><th>Uso na mesa</th></tr></thead><tbody><tr><td>Citinet</td><td>Rede pública ampla da cidade e camada de serviços conectados.</td></tr><tr><td>Localnet</td><td>Rede privada que liga pessoas, feeds e dispositivos de um grupo ou local.</td></tr><tr><td>Subnet</td><td>Segmento conectado a uma rede maior; pode concentrar câmeras, portas, luzes e torretas.</td></tr><tr><td>NET Architecture</td><td>Sistema de servidores com andares e defesas próprias, ainda usado para infraestrutura crítica.</td></tr></tbody></table></div><p>Acesso a uma Localnet é uma via de ataque e também uma via de exposição: um runner pode alcançar feeds e sistemas conectados, mas a rede pode conter Black ICE e outros participantes.</p></div>
+        <div class="section"><h3>Operating Systems e chrome inicial</h3><p>O suplemento trata o cyberdeck como cyberware integrado ao Neural Link e organiza Operating Systems como opções do implante. As linhas citadas incluem Berserk, Cyberdeck e Sandevistan; cada uma ocupa a opção correspondente e segue seus próprios efeitos.</p><p>Como pacote inicial opcional de 2077, o texto propõe Neural Link, Cyberaudio Suite, Internal Agent, Personal Link e dois Chipware Sockets sem custo e sem Humanity Loss inicial. Isso é uma regra desta variante, não a criação padrão do livro-base.</p></div>
+        <div class="section"><h3>Chrome adicional de 2077</h3><div class="table-wrap"><table><thead><tr><th>Exemplo</th><th>Resumo de função</th><th>Origem</th></tr></thead><tbody><tr><td>Gorilla Arms</td><td>Cyberarm voltado a força e confronto corpo a corpo.</td><td>Catálogo/variante 2077</td></tr><tr><td>Mantis Blades</td><td>Lâminas retráteis integradas a cyberlimbs.</td><td>Catálogo/variante 2077</td></tr><tr><td>Monowire</td><td>Arma de fio retrátil integrada ao cyberware.</td><td>Catálogo/variante 2077</td></tr><tr><td>Projectile Launch System</td><td>Sistema de projéteis embutido em membro cibernético.</td><td>Catálogo/variante 2077</td></tr><tr><td>Kerenzikov / Sandevistan</td><td>Opções de aceleração/reflexo com regras distintas no suplemento.</td><td>Operating Systems</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Economia e estilo</h3><p>O suplemento atualiza faixas de preço e descreve quatro linguagens visuais para moda e equipamento: Entropism, Kitsch, Neo-Militarism e Neo-Kitsch. Não use automaticamente os preços do RED junto das faixas revisadas de 2077.</p></div>
+        <div class="callout">Para uma ficha de campanha, marque cada regra adotada como <b>RED</b> ou <b>2077 opcional</b>. Isso evita diferenças de Role, cyberware, custo e netrunning no meio de uma sessão.</div>`
+      },
+      cyberware: {
+        eyebrow: 'Cyberpunk RED / catálogo de consulta', title: 'Cyberware',
+        lede: 'Um índice explicativo dos principais sistemas e famílias de implantes. Pesquise pelo nome ou função; cada ficha de personagem deve guardar os valores exatos do modelo instalado.',
+        html: `<div class="section"><h3>Regras gerais do livro-base</h3><p>O capítulo agrupa cyberware em oito famílias. Implantes que exigem uma peça fundamental ocupam opções de slots desse implante-base; Fashionware, Cyberware Interno e Cyberware Externo usam seus próprios limites de opções sem uma peça fundamental.</p><div class="table-wrap"><table><thead><tr><th>Regra</th><th>Aplicação</th></tr></thead><tbody><tr><td>Slots</td><td>Registre o cyberware-base e cada opção instalada. Não presuma que uma melhoria cabe sem espaço livre.</td></tr><tr><td>Empilhamento</td><td>Benefícios de instalações repetidas não se acumulam, salvo quando a entrada disser o contrário.</td></tr><tr><td>Humanity Loss</td><td>O custo varia por implante; na criação há valores definidos, e fora dela a entrada pode indicar uma rolagem.</td></tr><tr><td>Lesões críticas</td><td>Não instale cyberware numa parte do corpo afetada por uma lesão crítica relacionada até tratar a lesão.</td></tr><tr><td>Ficha</td><td>Registre preço, HL, instalação, slots e efeitos; peças podem exigir clínica, hospital ou loja especializada.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>As oito famílias do RED</h3><div class="table-wrap"><table><thead><tr><th>Família</th><th>Exemplos / função</th></tr></thead><tbody><tr><td>Fashionware</td><td>Adorno e modificações de aparência; inclui itens visuais e monitoramento pessoal.</td></tr><tr><td>Neuralware</td><td>Neural Link, Interface Plugs e conexões para opções neurais.</td></tr><tr><td>Cyberoptics</td><td>Olhos artificiais e opções de visão, mira ou leitura visual.</td></tr><tr><td>Cyberaudio</td><td>Implante de áudio e opções de comunicação, gravação ou audição.</td></tr><tr><td>Cyberware Interno</td><td>Órgãos artificiais e aprimoramentos sistêmicos como filtros ou enxertos físicos.</td></tr><tr><td>Cyberware Externo</td><td>Peças instaladas na, sobre ou através da pele; proteção e modificações visíveis.</td></tr><tr><td>Cybermembros</td><td>Cyberarms e Cyberlegs com opções, ferramentas e armas embutidas.</td></tr><tr><td>Borgware</td><td>Substituições extensas do corpo por estruturas cibernéticas.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Exemplos conferidos no catálogo RED</h3><div class="table-wrap"><table><thead><tr><th>Item</th><th>Resumo mecânico</th></tr></thead><tbody><tr><td>Biomonitor</td><td>Monitora sinais vitais e pode conectar-se a um Agent.</td></tr><tr><td>AudioVox</td><td>Sintetizador de voz; a entrada associa bônus às perícias de atuação musical/vocal.</td></tr><tr><td>Reinforced Antibodies</td><td>Acelera a recuperação natural depois da estabilização.</td></tr><tr><td>Gills</td><td>Permite respirar debaixo d'água.</td></tr><tr><td>Grafted Muscle and Bone Lace</td><td>Aumenta BODY dentro do limite indicado pela regra.</td></tr><tr><td>Nasal Filters</td><td>Protege contra gases tóxicos, fumaça e perigos semelhantes.</td></tr><tr><td>Radar/Sonar Implant</td><td>Varre a área próxima; a cobertura bloqueia a varredura.</td></tr><tr><td>Vampyres</td><td>Arma branca leve implantada na boca e ocultável.</td></tr></tbody></table></div><p>Os exemplos explicam a função em palavras próprias; veja o registro individual ao arbitrar valores, slots, HL e condições.</p></div>
+        <div class="section"><h3>Itens associados a 2077</h3><p>Gorilla Arms, Mantis Blades, Monowire, Projectile Launch System, Kerenzikov e Sandevistan pertencem à consulta de 2077 nesta wiki. As regras desta variante estão separadas para não confundir seu custo, funcionamento ou Humanity Loss com o livro-base RED.</p><button class="action" data-page="supplement2077" type="button">Abrir suplemento 2077</button></div>
+        <div class="section"><h3>Implantes emblemáticos de 2077</h3><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Função ficcional</th><th>Uso de consulta</th></tr></thead><tbody><tr><td>Sandevistan</td><td>Sistema de aceleração perceptiva e motora.</td><td>Procure no suplemento a versão, ativação, duração e limites usados nesta mesa.</td></tr><tr><td>Kerenzikov</td><td>Aprimoramento de reflexos associado a movimento e combate.</td><td>Não trate como sinônimo automático de Sandevistan; confira a entrada e a conversão adotada.</td></tr><tr><td>Gorilla Arms</td><td>Cyberarms reforçados para força e combate corpo a corpo.</td><td>Separe a função narrativa dos valores de dano, testes e slots da ficha.</td></tr><tr><td>Mantis Blades</td><td>Lâminas retráteis integradas aos braços.</td><td>Confira ataque, alcance, instalação, HL e restrições na versão da mesa.</td></tr><tr><td>Monowire</td><td>Fio de corte retrátil integrado ao membro.</td><td>Use a regra específica do suplemento para alcance, dano e interação com armadura.</td></tr><tr><td>Projectile Launch System</td><td>Arma de projéteis instalada no braço.</td><td>Registre munição, recarga e tipo de projétil além dos dados de cyberware.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Escolha rápida</h3><ul><li><b>Quero falar com máquinas:</b> comece em Neuralware e confira compatibilidade com Agent, cyberdeck ou interface.</li><li><b>Quero ampliar sentidos:</b> compare opções de Cyberaudio e Cyberoptics sem esquecer a capacidade do implante-base.</li><li><b>Quero modificar um membro:</b> confira se é cyberlimb, quais opções cabem e como cada uma afeta a ficha.</li><li><b>Quero aparência ou disfarce:</b> procure Fashionware; cosmética nem sempre concede bônus de perícia.</li></ul></div>
+        <div class="section"><h3>Morana e implantes conectados</h3><p>Na campanha, Morana pode interferir em implantes conectados, sistemas médicos, armas inteligentes e drones. Mostre sinais, ofereça uma reação e preserve a agência do jogador; falhas temporárias, escolhas difíceis e consequências claras são preferíveis a controle total do personagem.</p></div>
+        <div class="callout"><b>Ficha pronta:</b> anote nome do modelo, preço pago, HL, local/slots, efeito, ativação e qualquer opção instalada. Os campos exatos variam por item; esta página organiza a consulta sem atribuir valores a modelos diferentes.</div>`
+      },
+      gear: {
+        eyebrow: 'Cyberpunk RED / catálogo de consulta', title: 'Armas e equipamento',
+        lede: 'Um guia de consulta no lugar do catálogo aberto: encontre rapidamente o tipo de equipamento, os dados que importam e o que registrar na ficha.',
+        html: `<div class="section"><h3>Armas: comparação rápida</h3><div class="table-wrap"><table><thead><tr><th>Família</th><th>Exemplos</th><th>Compare antes de escolher</th></tr></thead><tbody><tr><td>Pistolas</td><td>Medium, Heavy e Very Heavy Pistol</td><td>Dano por disparo, ROF, capacidade, munição e DV pela distância.</td></tr><tr><td>Submetralhadoras</td><td>SMG e Heavy SMG</td><td>ROF, uso de autofogo, capacidade e desempenho por faixa de alcance.</td></tr><tr><td>Espingardas</td><td>Shotgun e variantes</td><td>Categoria de munição, dano, alcance e opção de disparo.</td></tr><tr><td>Fuzis</td><td>Assault Rifle e Sniper Rifle</td><td>Alcance, mira, ROF, capacidade e se o cenário permite usá-los.</td></tr><tr><td>Corpo a corpo</td><td>Facas, espadas e armas contundentes</td><td>Perícia apropriada, dano, mãos necessárias e interação com armadura.</td></tr><tr><td>Explosivos</td><td>Granadas e cargas</td><td>Área, tempo, DV para evitar o efeito, cobertura e dano de explosão.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Armadura e proteção</h3><p>Compare armaduras pelo <b>Stopping Power (SP)</b>, penalidade de movimento ou perícia quando aplicável, cobertura do corpo e disponibilidade. Registre SP por localização. Quando um ataque atravessa a proteção, aplique dano e ablação conforme a regra da peça; não some o SP como HP.</p><p>Escudos, cobertura do cenário, capacetes e proteção especial não são intercambiáveis: registre qual localização ou área cada regra protege.</p></div>
+        <div class="section"><h3>Equipamento de uso comum</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Para que serve</th><th>Não esquecer</th></tr></thead><tbody><tr><td>Agent</td><td>Comunicação, dados pessoais e acesso a serviços.</td><td>Conectividade, bateria e se a rede está disponível.</td></tr><tr><td>Medtech / primeiros socorros</td><td>Estabilizar feridos e tratar problemas médicos.</td><td>Kit adequado, tempo, perícia e condição do paciente.</td></tr><tr><td>Ferramentas de Tech</td><td>Diagnóstico, reparo e construção.</td><td>Ferramenta certa para o trabalho e peças de reposição.</td></tr><tr><td>Equipamento de Netrunner</td><td>Acessar uma NET Architecture e executar programas.</td><td>Cyberdeck, slots, programas carregados e ponto de acesso.</td></tr><tr><td>Consumíveis</td><td>Munição, cargas, medicamentos e itens de uso único.</td><td>Quantidade, tipo compatível e momento de recarga/reposição.</td></tr><tr><td>Veículos</td><td>Deslocamento, fuga, perseguição e transporte de carga.</td><td>Velocidade, manobrabilidade, condição e ocupantes.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Cartão de equipamento</h3><p>Use este formato para qualquer item que entre numa ficha ou cena:</p><p><span class="formula">NOME / categoria / mãos ou slots / dano ou efeito / alcance ou DV / munição / preço / disponibilidade</span></p><p>Para armadura, substitua dano por <b>SP e localização</b>. Para consumíveis, registre <b>quantidade e condição de uso</b>.</p></div>
+        <div class="section"><h3>Termos de combate</h3><ul><li><b>ROF:</b> quantas vezes a arma pode ser disparada numa ação; não confundir com autofogo.</li><li><b>DV por alcance:</b> ataque à distância usa a tabela da categoria da arma e a faixa em que o alvo está.</li><li><b>Capacidade:</b> disparos antes de recarregar; anote também o tipo de munição.</li><li><b>Autofogo:</b> procedimento próprio, com teste e dano distintos do disparo comum.</li><li><b>Localização:</b> acerto padrão usa o procedimento de localização do sistema; tiro mirado segue regra e penalidade próprias.</li></ul></div>
+        <div class="callout">Os itens agora estão explicados e organizados por função nesta wiki. Dano, preço, DV, capacidade e demais números são específicos de cada linha do catálogo; use o cartão de item para registrar os valores escolhidos para a campanha.</div>`
+      },
+      sources: {
+        eyebrow: 'Biblioteca local / PDFs disponíveis', title: 'Livros de referência',
+        lede: 'A wiki separa as regras do livro-base RED das opções do suplemento comunitário de 2077. Os arquivos originais ficam apenas como material de conferência.',
+        html: `<div class="section"><h3>Material e status</h3><ul><li><b>Cyberpunk RED:</b> livro-base em português para criação, testes, combate, Roles, netrunning, equipamento e cyberware.</li><li><b>Cyberpunk 2077 - A Cyberpunk RED Supplement:</b> suplemento comunitário de Queen Otter; conteúdo não oficial e opcional que altera partes do RED.</li></ul></div><div class="section"><h3>Mapa de consulta interna</h3><div class="table-wrap"><table><thead><tr><th>Área</th><th>Onde consultar</th></tr></thead><tbody><tr><td>Criação, STATs e Lifepath</td><td>Criação de personagens</td></tr><tr><td>Testes, combate e dano</td><td>Testes e dificuldades, Combate, Dano e recuperação</td></tr><tr><td>Perícias de Role e habilidades especiais</td><td>Funções (RED) ou Suplemento 2077</td></tr><tr><td>Cyberware RED</td><td>Famílias, slots, HL e exemplos</td></tr><tr><td>Armas e equipamento RED</td><td>Categorias, campos e comparação</td></tr><tr><td>Redes e regras de 2077</td><td>Suplemento 2077, separado do livro-base</td></tr><tr><td>Campanha</td><td>Protocolo Morana, elenco e sessões</td></tr></tbody></table></div></div><div class="section"><h3>Critério de síntese</h3><p>Esta wiki organiza regras com palavras próprias, fornece referências rápidas e separa a variante 2077. Não reproduz integralmente os livros; use os arquivos para conferir uma tabela completa, uma exceção ou uma ficha exata.</p><p>A busca no topo percorre títulos, categorias, termos de regra e exemplos de itens.</p></div><div class="source-row"><a class="source-link" href="${sources.core}"><b>CORE</b> Material de conferência (PDF)</a><a class="source-link" href="${sources['2077']}"><b>2077</b> Material de conferência (PDF)</a></div>`
+      },
+      notes: {
+        eyebrow: 'Arquivo local / privado neste navegador', title: 'Notas da sessão',
+        lede: 'Anote iniciativa, pistas descobertas, promessas e decisões para retomar na próxima sessão. O conteúdo fica salvo neste navegador.',
+        html: `<div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button></div><div class="section"><h3>Relógio de Sato</h3><p>Use 6 a 8 segmentos visíveis. Avance quando os personagens atrasarem, falharem ou deixarem testemunhas expostas.</p><ol><li>Recuperar os dois servidores.</li><li>Eliminar ou capturar testemunhas e sobreviventes.</li><li>Ativar Morana na rede de emergência.</li><li>Culpar uma corporação rival.</li><li>Vender o antídoto.</li><li>Transmitir Morana ou perder o controle do vírus.</li></ol></div>`
+      }
+    };
+
+    Object.assign(pageContent, window.systemCatalog || {});
+
+    const navigation = document.getElementById('navigation');
+    const content = document.getElementById('content');
+    const search = document.getElementById('search');
+    let currentPage = 'home';
+    let currentWorkspace = localStorage.getItem('night-city-workspace') || 'campaigns';
+    let activeCampaignId = localStorage.getItem('night-city-active-campaign') || campaigns[0].id;
+    let campaignMapCategory = 'all';
+    let campaignMapAct = 'all';
+    let campaignMapView = { x: 0, y: 0, width: 5600, height: 5320 };
+
+    function buildNavigation() {
+      const campaign = campaigns.find(item => item.id === activeCampaignId) || campaigns[0];
+      activeCampaignId = campaign.id;
+      const groups = currentWorkspace === 'campaigns'
+        ? campaign.groups.map((group, index) => ({ ...group, group: index === 0 ? campaign.name : group.group }))
+        : systemSections;
+      const campaignPicker = currentWorkspace === 'campaigns' && campaigns.length > 1
+        ? `<label class="campaign-picker"><span class="nav-label">Campanha ativa</span><select id="campaign-picker">${campaigns.map(item => `<option value="${item.id}" ${item.id === campaign.id ? 'selected' : ''}>${item.name}</option>`).join('')}</select></label>`
+        : '';
+      navigation.innerHTML = `${campaignPicker}${groups.map(group => `<div class="nav-group"><div class="nav-label">${group.group}</div>${group.pages.map(page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"><span class="nav-icon">${page.icon}</span>${page.label}</button>`).join('')}</div>`).join('')}`;
+      document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
+      document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
+      document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
+    }
+
+    function setWorkspace(workspace) {
+      if (workspace !== 'campaigns' && workspace !== 'system') return;
+      currentWorkspace = workspace;
+      localStorage.setItem('night-city-workspace', workspace);
+      buildNavigation();
+    }
+
+    function openPage(id) {
+      const page = pageContent[id];
+      if (!page) return;
+      const targetWorkspace = pageWorkspace[id];
+      if (targetWorkspace && targetWorkspace !== currentWorkspace) setWorkspace(targetWorkspace);
+      currentPage = id;
+      search.value = '';
+      content.innerHTML = `<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
+      document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
+      if (id === 'notes') setupNotes();
+      if (id === 'campaignMap') setupCampaignMap();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setupNotes() {
+      const input = document.getElementById('session-note');
+      const status = document.getElementById('note-status');
+      const key = `night-city-fieldbook-notes-${activeCampaignId}`;
+      input.value = localStorage.getItem(key) || '';
+      input.addEventListener('input', () => {
+        localStorage.setItem(key, input.value);
+        status.textContent = 'Salvo automaticamente neste navegador.';
+      });
+      document.getElementById('clear-notes').addEventListener('click', () => {
+        input.value = '';
+        localStorage.removeItem(key);
+        status.textContent = 'Notas removidas deste navegador.';
+      });
+    }
+
+    function setCampaignMapView(view) {
+      const svg = document.getElementById('nightcity-map');
+      if (!svg) return;
+      campaignMapView = view;
+      svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.width} ${view.height}`);
+    }
+
+    function focusCampaignMapMarker(marker, zoomIn = true) {
+      const width = zoomIn ? Math.min(campaignMapView.width, 2400) : campaignMapView.width;
+      const height = width * (campaignMapData.height / campaignMapData.width);
+      setCampaignMapView({
+        x: Math.max(0, Math.min(campaignMapData.width - width, marker.x - width / 2)),
+        y: Math.max(0, Math.min(campaignMapData.height - height, marker.y - height / 2)),
+        width,
+        height
+      });
+    }
+
+    function showCampaignMapMarker(markerId, focus = true) {
+      const marker = campaignMapData.markers.find(item => item.id === markerId);
+      if (!marker) return;
+      document.querySelectorAll('.map-pin, .map-marker-card').forEach(item => item.classList.toggle('selected', item.dataset.mapMarker === markerId));
+      const category = campaignMapData.categories[marker.category];
+      document.getElementById('map-marker-detail').innerHTML = `<p class="eyebrow">${category.label}</p><h3>${marker.title}</h3><p class="map-district">${marker.district}</p><p><span class="map-act">${marker.act}</span></p><p>${marker.summary}</p><p><b>Gancho:</b> ${marker.hook}</p><p><b>Encontro:</b> ${marker.encounter}</p><p><b>Pista:</b> ${marker.clue}</p>${marker.note ? `<div class="callout"><b>Nota de continuidade:</b> ${marker.note}</div>` : ''}`;
+      if (focus) focusCampaignMapMarker(marker);
+    }
+
+    function applyCampaignMapFilters() {
+      let firstVisible = null;
+      campaignMapData.markers.forEach(marker => {
+        const actMatches = campaignMapAct === 'all' || marker.act === campaignMapAct || (campaignMapAct === 'Sessão 01' && marker.act.startsWith('Sessão 01'));
+        const visible = (campaignMapCategory === 'all' || marker.category === campaignMapCategory) && actMatches;
+        document.querySelector(`.map-pin[data-map-marker="${marker.id}"]`)?.classList.toggle('filtered-out', !visible);
+        document.querySelector(`.map-marker-card[data-map-marker="${marker.id}"]`)?.classList.toggle('hidden', !visible);
+        if (visible && !firstVisible) firstVisible = marker;
+      });
+      const selected = campaignMapData.markers.find(marker => document.querySelector(`.map-pin[data-map-marker="${marker.id}"]`)?.classList.contains('selected'));
+      if (selected && !document.querySelector(`.map-marker-card[data-map-marker="${selected.id}"]`)?.classList.contains('hidden')) return;
+      if (firstVisible) showCampaignMapMarker(firstVisible.id, false);
+      else document.getElementById('map-marker-detail').innerHTML = '<h3>Nenhum ponto neste filtro</h3><p>Altere o ato ou o tipo de local para ver outras operações.</p>';
+    }
+
+    function setupCampaignMap() {
+      if (!window.campaignMapData) return;
+      const data = window.campaignMapData;
+      const svg = document.getElementById('nightcity-map');
+      const pinLayer = document.getElementById('nightcity-map-pins');
+      const markerList = document.getElementById('map-marker-list');
+      const image = document.getElementById('nightcity-map-image');
+      const escapeText = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]);
+      campaignMapCategory = 'all';
+      campaignMapAct = 'all';
+      campaignMapView = { x: 0, y: 0, width: data.width, height: data.height };
+      image.setAttribute('href', data.images.reference);
+      pinLayer.innerHTML = data.markers.map(marker => {
+        const category = data.categories[marker.category];
+        return `<g class="map-pin" data-map-marker="${marker.id}" tabindex="0" role="button" aria-label="${escapeText(marker.title)}, ${escapeText(marker.district)}" transform="translate(${marker.x} ${marker.y})"><title>${escapeText(marker.title)} — ${escapeText(marker.district)}</title><circle class="pin-core" cx="0" cy="0" r="62" fill="${category.color}"></circle><text class="pin-code" x="0" y="2">${escapeText(marker.code)}</text><text class="pin-label" x="82" y="14">${escapeText(marker.title)}</text></g>`;
+      }).join('');
+      markerList.innerHTML = data.markers.map(marker => `<button type="button" class="map-marker-card" data-map-marker="${marker.id}"><span class="map-marker-dot" style="background:${data.categories[marker.category].color}"></span><span><strong>${escapeText(marker.title)}</strong><small>${escapeText(marker.district)} / ${escapeText(marker.act)}</small></span></button>`).join('');
+      document.getElementById('map-legend').innerHTML = Object.entries(data.categories).map(([id, category]) => `<span class="map-legend-item"><i class="map-legend-swatch" style="background:${category.color}"></i>${escapeText(category.label)}</span>`).join('');
+      document.getElementById('map-filters').innerHTML = `<button type="button" class="map-filter" data-map-category="all" aria-pressed="true">Todos</button>${Object.entries(data.categories).map(([id, category]) => `<button type="button" class="map-filter" data-map-category="${id}" aria-pressed="false">${escapeText(category.label)}</button>`).join('')}`;
+      document.getElementById('map-act-filter').value = 'all';
+      setCampaignMapView(campaignMapView);
+
+      document.getElementById('map-source').onchange = event => image.setAttribute('href', data.images[event.target.value]);
+      document.getElementById('map-act-filter').onchange = event => { campaignMapAct = event.target.value; applyCampaignMapFilters(); };
+      document.getElementById('map-filters').onclick = event => {
+        const button = event.target.closest('[data-map-category]');
+        if (!button) return;
+        campaignMapCategory = button.dataset.mapCategory;
+        document.querySelectorAll('.map-filter').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        applyCampaignMapFilters();
+      };
+      document.getElementById('map-marker-list').onclick = event => {
+        const button = event.target.closest('[data-map-marker]');
+        if (button) showCampaignMapMarker(button.dataset.mapMarker);
+      };
+      pinLayer.onclick = event => {
+        const pin = event.target.closest('[data-map-marker]');
+        if (pin) showCampaignMapMarker(pin.dataset.mapMarker);
+      };
+      pinLayer.onkeydown = event => {
+        const pin = event.target.closest('[data-map-marker]');
+        if (pin && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); showCampaignMapMarker(pin.dataset.mapMarker); }
+      };
+      document.querySelectorAll('[data-map-action]').forEach(button => button.onclick = () => {
+        if (button.dataset.mapAction === 'reset') return setCampaignMapView({ x: 0, y: 0, width: data.width, height: data.height });
+        const factor = button.dataset.mapAction === 'zoom-in' ? 0.72 : 1 / 0.72;
+        const width = Math.max(750, Math.min(data.width, campaignMapView.width * factor));
+        const height = width * (data.height / data.width);
+        const centerX = campaignMapView.x + campaignMapView.width / 2;
+        const centerY = campaignMapView.y + campaignMapView.height / 2;
+        setCampaignMapView({ x: Math.max(0, Math.min(data.width - width, centerX - width / 2)), y: Math.max(0, Math.min(data.height - height, centerY - height / 2)), width, height });
+      });
+
+      let dragStart = null;
+      svg.onpointerdown = event => {
+        if (event.target.closest('.map-pin')) return;
+        dragStart = { x: event.clientX, y: event.clientY, view: { ...campaignMapView } };
+        svg.classList.add('is-dragging');
+        svg.setPointerCapture(event.pointerId);
+      };
+      svg.onpointermove = event => {
+        if (!dragStart) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - dragStart.x) * dragStart.view.width / rect.width;
+        const dy = (event.clientY - dragStart.y) * dragStart.view.height / rect.height;
+        setCampaignMapView({ ...dragStart.view, x: Math.max(0, Math.min(data.width - dragStart.view.width, dragStart.view.x - dx)), y: Math.max(0, Math.min(data.height - dragStart.view.height, dragStart.view.y - dy)) });
+      };
+      const endDrag = () => { dragStart = null; svg.classList.remove('is-dragging'); };
+      svg.onpointerup = endDrag;
+      svg.onpointercancel = endDrag;
+      svg.onwheel = event => {
+        event.preventDefault();
+        const factor = event.deltaY < 0 ? 0.84 : 1 / 0.84;
+        const width = Math.max(750, Math.min(data.width, campaignMapView.width * factor));
+        const height = width * (data.height / data.width);
+        const centerX = campaignMapView.x + campaignMapView.width / 2;
+        const centerY = campaignMapView.y + campaignMapView.height / 2;
+        setCampaignMapView({ x: Math.max(0, Math.min(data.width - width, centerX - width / 2)), y: Math.max(0, Math.min(data.height - height, centerY - height / 2)), width, height });
+      };
+      applyCampaignMapFilters();
+    }
+
+    function searchPages(query) {
+      const normalized = query.trim().toLocaleLowerCase('pt-BR');
+      if (!normalized) { openPage(currentPage); return; }
+      const matches = Object.entries(pageContent).flatMap(([id, page]) => {
+        const parsed = new DOMParser().parseFromString(page.html, 'text/html');
+        const mapTerms = id === 'campaignMap' && window.campaignMapData ? window.campaignMapData.markers.map(marker => `${marker.title} ${marker.district} ${marker.act} ${marker.summary} ${marker.hook} ${marker.encounter} ${marker.clue}`).join(' ') : '';
+        const text = `${page.eyebrow} ${page.title.replace(/<[^>]*>/g, '')} ${page.lede} ${parsed.body.textContent} ${mapTerms}`.replace(/\s+/g, ' ').trim();
+        const matchIndex = text.toLocaleLowerCase('pt-BR').indexOf(normalized);
+        if (matchIndex < 0) return [];
+        const start = Math.max(0, matchIndex - 85);
+        const end = Math.min(text.length, matchIndex + normalized.length + 125);
+        const excerpt = `${start ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`;
+        const safeExcerpt = excerpt.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+        return [{ id, page, excerpt: safeExcerpt }];
+      });
+      content.innerHTML = `<p class="eyebrow">Busca local / ${matches.length} resultado(s)</p><h2>Resultados</h2><div class="search-results">${matches.map(({ id, page, excerpt }) => `<button class="result" data-page="${id}" type="button"><small>${page.eyebrow}</small><strong>${page.title.replace(/<[^>]*>/g, '')}</strong><p>${excerpt}</p></button>`).join('') || '<div class="empty">Nenhuma entrada encontrada. Tente outro nome, função ou categoria.</div>'}</div>`;
+      document.querySelectorAll('.nav-item').forEach(button => button.classList.remove('active'));
+    }
+
+    document.addEventListener('click', event => {
+      const workspaceTab = event.target.closest('[data-workspace]');
+      if (workspaceTab) {
+        setWorkspace(workspaceTab.dataset.workspace);
+        const defaultPage = workspaceTab.dataset.workspace === 'campaigns' ? 'home' : 'creation';
+        if (pageWorkspace[currentPage] !== currentWorkspace) openPage(defaultPage);
+        return;
+      }
+      const button = event.target.closest('[data-page]');
+      if (button) openPage(button.dataset.page);
+    });
+    navigation.addEventListener('change', event => {
+      if (event.target.id !== 'campaign-picker') return;
+      activeCampaignId = event.target.value;
+      localStorage.setItem('night-city-active-campaign', activeCampaignId);
+      buildNavigation();
+      openPage(campaigns.find(campaign => campaign.id === activeCampaignId).groups[0].pages[0].id);
+    });
+    search.addEventListener('input', () => searchPages(search.value));
+    if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
+    buildNavigation();
+    openPage('home');
+  </script>
+</body>
+</html>
