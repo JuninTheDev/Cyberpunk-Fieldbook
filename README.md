@@ -29,10 +29,18 @@ e abra `http://localhost:8000`.
 | `diario-da-campanha.md` | Estado dos relógios, onde está cada parte de Morana e registro das sessões. Atualize depois de cada sessão. |
 | `index.html` | A wiki. As páginas de resumo estão escritas aqui; os documentos completos são lidos dos `.md`. |
 | `campaign-map.js` | Pinos do mapa de operações. |
+| `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade e drogas, Netrunning, economia e criação. Cada seção indica a página do PDF traduzido. |
 | `system-catalog.js` | Catálogo de Roles, cyberware e equipamento do RED. |
 | `server.js` | Servidor local da wiki. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
+
+## Consulta durante a sessão
+
+- **/** (ou Ctrl+K) coloca o cursor na busca. **Enter** abre o primeiro resultado já na seção certa, com o termo destacado. **Esc** volta para a página.
+- A busca ignora acentos e aceita termos em inglês (por exemplo, "Evasion", "Death Save", "Shoulder Arms").
+- Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.
+- O **Escudo do mestre** (aba Sistema) tem a calculadora de DV por alcance e o rolador de lesão crítica.
 
 ## Fluxo de trabalho
 

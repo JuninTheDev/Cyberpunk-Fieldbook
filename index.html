@@ -269,6 +269,43 @@
     .clock-segment:hover { border-color: var(--cyan); }
     .clock-segment[aria-pressed="true"] { border-color: var(--coral); background: #2a1519; color: #ffd9d8; }
     .clock-segment[aria-pressed="true"] span { color: var(--coral); }
+    /* Consulta rápida: índice da página, referências, destaque da busca */
+    .page-toc { position: sticky; z-index: 3; top: var(--topbar-h, 66px); display: flex; align-items: center; gap: 6px; margin: 18px calc(-1 * clamp(18px, 4vw, 48px)) 0; padding: 9px clamp(18px, 4vw, 48px); overflow-x: auto; border-bottom: 1px solid var(--line); background: rgb(11 13 15 / 95%); backdrop-filter: blur(10px); scrollbar-width: thin; }
+    .page-toc-label { flex: 0 0 auto; margin-right: 4px; color: var(--yellow); font: 10px Oxanium, Consolas, monospace; text-transform: uppercase; }
+    .page-toc button { flex: 0 0 auto; padding: 6px 10px; border: 1px solid #444d4b; background: #141819; color: var(--muted); cursor: pointer; white-space: nowrap; font: 12px BlenderProBook, sans-serif; }
+    .page-toc button:hover, .page-toc button.active { border-color: var(--cyan); color: var(--cyan); background: #10211e; }
+    .section, .person, #md-doc > h3 { scroll-margin-top: calc(var(--topbar-h, 66px) + 64px); }
+    .section h3 .ref { margin-left: auto; padding: 2px 7px; border: 1px solid #454d4b; color: var(--muted); font: 10px Oxanium, Consolas, monospace; text-transform: none; white-space: nowrap; }
+    .en { color: #7f8b85; font: 11px Oxanium, Consolas, monospace; }
+    mark { padding: 0 2px; background: var(--yellow); color: #090b0c; }
+    .flash { animation: flash-section 1.6s ease-out; }
+    @keyframes flash-section { 0%, 35% { box-shadow: 0 0 0 2px var(--cyan); } 100% { box-shadow: 0 0 0 2px transparent; } }
+    .table-wrap.dense { margin-top: 10px; }
+    .table-wrap.dense th, .table-wrap.dense td { padding: 6px 9px; font-size: 13px; line-height: 1.4; }
+    td.num, th.num { text-align: center; font-family: Oxanium, Consolas, monospace; white-space: nowrap; }
+    .range-table td:first-child { position: sticky; left: 0; background: #181c1d; white-space: nowrap; }
+    #dv-row th { white-space: nowrap; }
+    th.current, td.current { background: var(--yellow) !important; color: #090b0c !important; font-weight: 700; }
+    .quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; margin-top: 18px; align-items: start; }
+    .quick-grid .section { margin-top: 0; padding: 14px 15px; }
+    .quick-grid .section h3 { font-size: 16px; }
+    .quick-grid .section p, .quick-grid .section li { font-size: 13.5px; }
+    .quick-card.wide { grid-column: span 2; }
+    .dv-finder { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+    .dv-finder input { width: 110px; padding: 9px 11px; border: 1px solid #48504e; background: #171b1b; color: var(--text); font: 13px BlenderProBook, sans-serif; }
+    .dv-result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-top: 12px; color: var(--muted); }
+    .dv-big { color: var(--yellow); font: 700 30px/1 Oxanium, sans-serif; }
+    .crit-result h4 { margin: 6px 0 4px; color: var(--coral); font: 17px Oxanium, sans-serif; text-transform: uppercase; }
+    .crit-roll { color: var(--cyan); font: 12px Oxanium, Consolas, monospace; }
+    .skill-tools { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px; }
+    .skill-tools .map-filter-list { margin: 0; }
+    .skill-search { display: grid; gap: 4px; }
+    .skill-search .nav-label { display: block; padding: 0; }
+    .skill-search input { width: min(280px, 100%); padding: 8px 10px; border: 1px solid #48504e; background: #171b1b; color: var(--text); }
+    .result p mark { font-weight: 700; }
+    @media (max-width: 720px) {
+      .quick-card.wide { grid-column: auto; }
+    }
   </style>
 </head>
 <body>
@@ -289,7 +326,7 @@
       <header class="topbar">
         <div class="search-wrap">
           <span class="search-glyph" aria-hidden="true">⌕</span>
-          <input id="search" type="search" placeholder="Buscar regra, NPC, local, pista..." autocomplete="off" aria-label="Buscar na wiki">
+          <input id="search" type="search" placeholder="Buscar regra, NPC, local, pista…   ( / )" autocomplete="off" aria-label="Buscar na wiki">
         </div>
         <div class="top-meta">PROTOCOLO MORANA / ARQUIVO LOCAL</div>
       </header>
@@ -297,6 +334,7 @@
     </main>
   </div>
   <script src="system-catalog.js"></script>
+  <script src="system-rules.js"></script>
   <script src="campaign-map.js"></script>
   <script>
     const sources = {
@@ -341,19 +379,27 @@
     const markdownCache = {};
 
     const systemSections = [
-      { group: 'Cyberpunk RED', pages: [
-        { id: 'creation', label: 'Criação de personagens', icon: 'P' },
+      { group: 'Na mesa', pages: [
+        { id: 'screen', label: 'Escudo do mestre', icon: 'GM' },
+        { id: 'skills', label: 'Perícias por STAT', icon: 'SK' }
+      ]},
+      { group: 'Regras do RED', pages: [
         { id: 'checks', label: 'Testes e dificuldades', icon: 'R' },
         { id: 'combat', label: 'Combate', icon: 'C' },
-        { id: 'damage', label: 'Dano e recuperação', icon: 'D' },
+        { id: 'damage', label: 'Dano, ferimentos e cura', icon: 'D' },
+        { id: 'humanity', label: 'Humanidade e drogas', icon: 'H' },
         { id: 'netrunning', label: 'Netrunning', icon: 'N' },
-        { id: 'roles', label: 'Funções (Roles)', icon: 'F' },
-        { id: 'cyberware', label: 'Cyberware', icon: 'K' },
-        { id: 'gear', label: 'Armas e equipamento', icon: 'E' },
-        { id: 'sources', label: 'Livros de referência', icon: 'L' }
+        { id: 'economy', label: 'Economia e estilo de vida', icon: 'EB' },
+        { id: 'creation', label: 'Criação de personagens', icon: 'P' }
       ]},
-      { group: 'Variante comunitária / 2077', pages: [
-        { id: 'supplement2077', label: 'Suplemento 2077', icon: '77' }
+      { group: 'Catálogos', pages: [
+        { id: 'roles', label: 'Roles', icon: 'F' },
+        { id: 'cyberware', label: 'Cyberware', icon: 'K' },
+        { id: 'gear', label: 'Armas e equipamento', icon: 'E' }
+      ]},
+      { group: 'Variante 2077 e fontes', pages: [
+        { id: 'supplement2077', label: 'Suplemento 2077', icon: '77' },
+        { id: 'sources', label: 'Livros de referência', icon: 'L' }
       ]}
     ];
 
@@ -369,7 +415,7 @@
         html: `<hr class="rule"><div class="grid">
           <section class="tile wide"><span class="tag">Arquivo ativo / campanha</span><h3>Protocolo Morana</h3><p>Uma maleta desaparecida, uma cidade cheia de implantes conectados e escolhas que não têm saída limpa.</p><button data-page="campaign">Abrir dossiê</button></section>
           <section class="tile"><span class="tag">Consulta rápida</span><h3>Resolução básica</h3><p>STAT + perícia + 1d10 contra uma Dificuldade (DV), ou contra o teste de outro personagem.</p><button data-page="checks">Ver mecânicas</button></section>
-          <section class="tile"><span class="tag">Consulta do sistema</span><h3>Regras e catálogo</h3><p>Resumo de regras, implantes e equipamento por categoria, direto nesta wiki.</p><button data-page="sources">Abrir referências</button></section>
+          <section class="tile"><span class="tag">Consulta do sistema</span><h3>Escudo do mestre</h3><p>DV por alcance, ferimentos, Death Save, lesões críticas, cobertura e autofogo numa tela só.</p><button data-page="screen">Abrir escudo</button></section>
           <section class="tile"><span class="tag">Na mesa</span><h3>Notas rápidas</h3><p>Um bloco local para anotar iniciativa, nomes, pistas ou decisões. O navegador salva automaticamente.</p><button data-page="notes">Abrir bloco</button></section>
         </div>
         <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o dossiê reúne a premissa, a progressão de Morana, o elenco e a primeira sessão sem precisar folhear os documentos de preparação.</p><p><b>Documentos completos:</b> fundação, personagens, sessões, guia de Night City e diário são lidos direto dos arquivos .md. Edite o arquivo e recarregue a página: a wiki acompanha.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante, NPC ou conceito, com ou sem acento; os resultados incluem os documentos completos.</p></div>`
@@ -419,52 +465,6 @@
           <div class="person"><h3>Arasaka e Militech</h3><div class="role">Pressão corporativa</div><p>Ambas podem contratar mercenários, plantar provas e sacrificar testemunhas. Nenhuma admite querer uma arma.</p></div>
         </div><div class="section"><h3>Relações-chave</h3><ul><li>Wakako ajudou Sato a fugir, mas participou do silêncio que protegeu o projeto.</li><li>Endo era colega e confidente de Sato antes de tentar expor a reativação.</li><li>Iskra e Tamsin sobreviveram juntas a 2070 e se separaram por causa de Sato.</li><li>Sato vê Fuse e os sobreviventes como risco ao seu plano.</li><li>Fuse quer proteger as vítimas sem trocar uma corporação por outra.</li></ul></div>`
       },
-      creation: {
-        eyebrow: 'Cyberpunk RED / criação', title: 'Criação de personagens',
-        lede: 'Escolha um dos três caminhos de criação e use a ficha para registrar estatísticas, perícias, Role, equipamento e história pessoal.',
-        html: `<div class="section"><h3>Três métodos</h3><div class="table-wrap"><table><thead><tr><th>Método</th><th>Como funciona</th><th>Indicado para</th></tr></thead><tbody><tr><td>Streetrat / Rato de Rua</td><td>Pacotes prontos aceleram a criação; escolhas são mais guiadas e rápidas.</td><td>Começar a jogar sem distribuir cada ponto manualmente.</td></tr><tr><td>Edgerunner</td><td>Role e conjuntos de perícias são estruturados; distribua 86 pontos. As perícias ficam entre nível 2 e 6 neste método.</td><td>Equilibrar rapidez e personalização.</td></tr><tr><td>Pacote Completo</td><td>Construção calculada: distribua 86 pontos entre perícias e monte as escolhas com mais liberdade; nenhuma perícia passa do nível 6.</td><td>Jogadores que querem controlar a ficha desde o início.</td></tr></tbody></table></div><p>Nos métodos por pontos, as perícias marcadas x2 custam dois pontos por nível. Ambos mantêm um conjunto de perícias básicas obrigatórias no mínimo 2; confira a lista da criação de personagem.</p></div>
-        <div class="section"><h3>Estatísticas</h3><div class="table-wrap"><table><thead><tr><th>STAT</th><th>Leitura de mesa</th></tr></thead><tbody><tr><td>INT</td><td>Raciocínio, conhecimento e atenção a informação.</td></tr><tr><td>REF</td><td>Reflexos e rapidez em ações de reação.</td></tr><tr><td>DEX</td><td>Coordenação e controle corporal.</td></tr><tr><td>TECH</td><td>Habilidade técnica e trabalho com equipamentos.</td></tr><tr><td>COOL</td><td>Compostura, presença e autocontrole social.</td></tr><tr><td>WILL</td><td>Resistência mental e força de vontade.</td></tr><tr><td>LUCK</td><td>Reserva de sorte que pode ser aplicada conforme a regra.</td></tr><tr><td>MOVE</td><td>Deslocamento em combate.</td></tr><tr><td>BODY</td><td>Constituição física, força e resistência.</td></tr><tr><td>EMP</td><td>Empatia e conexão com outras pessoas; relaciona-se à Humanity.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Lifepath e identidade</h3><p>O Lifepath fornece origem cultural, personalidade, relações, inimigos e acontecimentos anteriores. Use os resultados para criar vínculos que apareçam em jogo; não precisa transformar cada detalhe numa obrigação narrativa.</p><p>Antes da primeira sessão, registre também motivação, contato, objetivo e uma conexão com outro personagem. A Role define a habilidade especial; perícias e equipamento completam o que o personagem faz no dia a dia.</p></div>
-        <div class="section"><h3>Checklist de ficha</h3><ul><li>Role e habilidade de Role.</li><li>STATs, perícias, línguas e especialidades.</li><li>HP, Seriously Wounded, Death Save, Humanity e MOVE.</li><li>Arma, alcance, munição, armadura e SP por localização.</li><li>Cyberware instalado, slots ocupados, HL e custo.</li><li>Equipamento, eurobucks, moradia e contatos relevantes.</li></ul></div>`
-      },
-      session1: {
-        eyebrow: 'Arquivo da campanha / preparação', title: 'Sessão 01: A Maleta',
-        lede: 'Uma recuperação aparentemente simples em Kabuki termina com um vírus procurando uma rede e Wakako reconhecendo um nome que esperava nunca mais ouvir.',
-        html: `<div class="section"><h3>Alvos dramáticos</h3><ul><li>Estabelecer Wakako como contratante que esconde parte da verdade.</li><li>Dar aos jogadores uma maleta perigosa e um motivo para desconfiar dela.</li><li>Apresentar o Dr. Kenzo Endo e mostrar que a Fúria de Morana já está ativa.</li><li>Deixar aberta a escolha de guardar, vender, destruir ou entregar a maleta.</li></ul></div>
-        <div class="section"><h3>Roteiro de bolso</h3><div class="table-wrap"><table><thead><tr><th>Cena</th><th>O que acontece</th><th>Pista / virada</th></tr></thead><tbody><tr><td>01 / Salão</td><td>Wakako oferece metade adiantada; recuperar uma maleta preta, não abrir nem conectar.</td><td>Ela sabe mais sobre Endo do que revela.</td></tr><tr><td>02 / Kabuki</td><td>Investigar território Tyger Claws, câmeras, comerciantes e rastros.</td><td>O mensageiro estava vivo; sete minutos de imagens foram apagados.</td></tr><tr><td>03 / Endo</td><td>Encontrar o Dr. Kenzo Endo ferido, com a maleta presa ao pulso, e o corpo de Kobo entre as prateleiras.</td><td>Kobo morreu pelo próprio cyberarm: Morana protegeu o portador da Chave. Endo mente que "era só um entregador".</td></tr><tr><td>04 / Vega</td><td>Equipe de recuperação chega; prioriza o objeto e aceita negociar. Fichas RED no documento completo.</td><td>Ordem criptografada liga o contrato à Arasaka; entrega nas Arasaka Industrial Docks.</td></tr><tr><td>05 / Fúria</td><td>Um implante, arma ou monitor reage por alguns segundos.</td><td>O efeito não é cyberpsicose; dê escolha e agência, não controle total.</td></tr><tr><td>06 / Retorno</td><td>Wakako reconhece o nome, descobre que Sato voltou e admite um encobrimento antigo.</td><td>Novo trabalho: localizar o Gatilho e a Coleira.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Pistas que não devem travar</h3><p>Use comerciantes Tyger Claws, câmeras, sangue e óleo, ou o funcionário escondido. Uma descrição específica já pode revelar que Endo está vivo ou que a gravação foi apagada; não esconda toda pista atrás de um único teste.</p><p>Se os personagens perderem a maleta, deixe uma gravação de Endo, um mercenário ou o comunicador de Vega fornecer uma rota de perseguição. A campanha continua.</p></div>
-        <div class="section"><h3>Desfechos da sessão</h3><ul><li><b>Entregam a maleta:</b> uma luz vermelha pisca dentro, sem cabo conectado.</li><li><b>Abrem a maleta:</b> surge um mapa incompleto com dois servidores marcados.</li><li><b>Destroem a maleta:</b> uma luz continua pulsando no implante de Endo ou de um personagem.</li><li><b>Vendem a informação:</b> chega uma mensagem dizendo que agora sabem onde o grupo está.</li></ul></div><button class="action" data-page="docSessao01" type="button">Ler a sessão completa e as fichas</button> <button class="action" data-page="docSessao02" type="button">Preparar a Sessão 02</button>`
-      },
-      checks: {
-        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Testes e dificuldades',
-        lede: 'Use estes lembretes para resolver ações comuns. A descrição da ação vem primeiro; a rolagem entra quando há risco ou incerteza relevante.',
-        html: `<div class="section"><h3>Teste de perícia</h3><p><span class="formula">1d10 + STAT + Perícia &gt; DV</span></p><p>O mestre escolhe a STAT e a perícia que melhor representam a abordagem. É preciso <b>superar</b> a DV. Se outro personagem estiver resistindo diretamente, compare os totais em vez de usar uma DV fixa; <b>em caso de empate, o defensor vence</b>.</p></div>
-        <div class="section"><h3>DVs de referência</h3><div class="table-wrap"><table><thead><tr><th>DV</th><th>Dificuldade</th><th>Leitura rápida</th></tr></thead><tbody><tr><td>9</td><td>Simples</td><td>Quase todo mundo faz sem pensar.</td></tr><tr><td>13</td><td>Comum</td><td>A maioria faz sem treinamento especial.</td></tr><tr><td>15</td><td>Difícil</td><td>Complicado sem treinamento ou talento natural.</td></tr><tr><td>17</td><td>Profissional</td><td>Exige treinamento real.</td></tr><tr><td>21</td><td>Heroico</td><td>Só os melhores dos melhores.</td></tr><tr><td>24</td><td>Incrível</td><td>Coloca o personagem entre os melhores da profissão.</td></tr><tr><td>29</td><td>Lendário</td><td>Um feito do qual se fala por anos.</td></tr></tbody></table></div><p>Consulte o livro para tabelas específicas, modificadores, testes enfrentados e resultados extremos. Evite pedir uma rolagem se falhar não muda nada.</p></div>
-        <div class="section"><h3>1s e 10s no d10</h3><p><b>Sucesso crítico:</b> um 10 natural permite rolar mais 1d10 e somar. <b>Falha crítica:</b> um 1 natural exige rolar mais 1d10 e subtrair. A rolagem extra acontece <b>uma vez só</b>: um novo 10 (ou 1) na rolagem extra não gera outra rolagem.</p></div>
-        <div class="callout">A tabela é uma régua de dificuldade, não uma lista de permissões. Consequência interessante numa falha costuma ser melhor do que bloquear a história.</div>`
-      },
-      combat: {
-        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Combate',
-        lede: 'Combate rápido e perigoso: ordem de turno, posição, cobertura e decisões táticas importam mais que trocar dano sem movimento.',
-        html: `<div class="section"><h3>Sequência de turno</h3><ol><li>Role iniciativa uma vez no início do combate: <b>1d10 + REF</b>; aja do maior total ao menor.</li><li>No turno, mova-se até sua MOVE e faça uma ação. Ações comuns incluem atacar, mirar, correr, preparar, sacar ou recarregar.</li><li>Resolva ataques à distância pela DV correspondente à distância e ao tipo de arma; ataques corpo a corpo normalmente são resistidos pelo defensor.</li><li>Reduza dano pela armadura na localização atingida. Se o dano atravessar a armadura, aplique as consequências correspondentes, incluindo ablação quando prevista.</li></ol></div>
-        <div class="section"><h3>Distância de armas</h3><p>A chance de acertar depende da categoria da arma e da faixa de alcance. Consulte a tabela de DVs do livro-base; cobertura, visibilidade, movimento e mira alteram o que é possível fazer.</p><p>Um tiro mirado é mais difícil e pode atingir uma localização escolhida; use a penalidade e as regras exatas do livro, não improvise o valor.</p></div>
-        <div class="section"><h3>Antes de rolar</h3><ul><li>Confirme distância, linha de visão, cobertura e quem está engajado.</li><li>Identifique a arma e a faixa de DV correspondente.</li><li>Declare se o personagem está mirando, usando fogo automático ou outra opção especial.</li><li>Depois do acerto, registre localização, dano, armadura e alterações de SP.</li></ul></div>
-        <div class="callout">As tabelas de alcance, autofogo, cobertura e modificadores dependem da arma e da situação. Use o PDF do livro-base como fonte de valores.</div>`
-      },
-      damage: {
-        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Dano e recuperação',
-        lede: 'Pontos de vida, armadura, ferimentos críticos e Humanity são trilhas distintas. Registre seus efeitos à medida que aparecem.',
-        html: `<div class="section"><h3>Quando um ataque acerta</h3><ol><li>Role o dano indicado pela arma.</li><li>Identifique a localização atingida e compare o dano com o SP da armadura naquela localização.</li><li>Se o dano não superar SP, a armadura o detém. Se superar, o excedente afeta os HP e a armadura pode sofrer ablação.</li><li>Verifique ferimento crítico quando o dano causar as condições necessárias; aplique o efeito e registre-o.</li></ol></div>
-        <div class="section"><h3>Estados importantes</h3><ul><li><b>Ferimento crítico:</b> pode causar penalidades persistentes e exige atenção além dos HP perdidos.</li><li><b>Mortally Wounded:</b> ao chegar a 0 HP, a sobrevivência passa a depender de Death Saves e ajuda; não trate como simples inconsciência.</li><li><b>Humanity:</b> cyberware e eventos podem reduzi-la; terapia e recuperação seguem procedimentos próprios.</li><li><b>Armadura:</b> acompanhe SP por localização; dano que a ultrapassa pode reduzir sua proteção futura.</li></ul></div>
-        <div class="callout">Consulte no livro-base os dados de crítico, Death Save, recuperação, terapia e ablação. Esta página evita condensar tabelas médicas em valores que precisam ser precisos.</div>`
-      },
-      netrunning: {
-        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Netrunning',
-        lede: 'Uma incursão de rede acontece no mundo físico: o netrunner precisa chegar a um ponto de acesso enquanto o resto da equipe lida com a situação ao redor.',
-        html: `<div class="section"><h3>Fluxo geral</h3><ol><li>Localize e alcance um ponto de acesso à rede.</li><li>Entre na arquitetura e avance entre seus andares com as ações de NET apropriadas.</li><li>Enfrente ICE, programas de defesa e outros obstáculos com os programas e habilidades disponíveis.</li><li>Use ações para explorar, combater, controlar sistemas ou sair da arquitetura.</li><li>Considere o que acontece simultaneamente no espaço físico: invasores e aliados não estão pausados.</li></ol></div>
-        <div class="section"><h3>Preparação do mestre</h3><ul><li>Defina o local do ponto de acesso e o que pode ser alcançado a partir dele.</li><li>Desenhe os andares, defesas e recompensas relevantes antes da incursão.</li><li>Tenha claro o que os sistemas controlam: portas, câmeras, drones ou alarmes.</li><li>Alterne a atenção entre a incursão e a equipe física para manter todos na cena.</li></ul></div>
-        <div class="callout">Arquiteturas, programas, ICE, ações e dano de NET têm regras próprias. Use as tabelas e exemplos do livro-base para valores, efeitos e limites.</div>`
-      },
       supplement2077: {
         eyebrow: 'Variante comunitária / não oficial', title: '2077: suplemento de fã',
         lede: 'O arquivo fornecido é um suplemento de Queen Otter para adaptar RED à era de 2077. Use como conjunto opcional de regras; ele modifica partes do livro-base e não é uma publicação oficial.',
@@ -480,7 +480,7 @@
       sources: {
         eyebrow: 'Biblioteca local / PDFs disponíveis', title: 'Livros de referência',
         lede: 'A wiki separa as regras do livro-base RED das opções do suplemento comunitário de 2077. Os arquivos originais ficam apenas como material de conferência.',
-        html: `<div class="section"><h3>Material e status</h3><ul><li><b>Cyberpunk RED:</b> livro-base em português para criação, testes, combate, Roles, netrunning, equipamento e cyberware.</li><li><b>Cyberpunk 2077 - A Cyberpunk RED Supplement:</b> suplemento comunitário de Queen Otter; conteúdo não oficial e opcional que altera partes do RED.</li></ul></div><div class="section"><h3>Mapa de consulta interna</h3><div class="table-wrap"><table><thead><tr><th>Área</th><th>Onde consultar</th></tr></thead><tbody><tr><td>Criação, STATs e Lifepath</td><td>Criação de personagens</td></tr><tr><td>Testes, combate e dano</td><td>Testes e dificuldades, Combate, Dano e recuperação</td></tr><tr><td>Perícias de Role e habilidades especiais</td><td>Funções (RED) ou Suplemento 2077</td></tr><tr><td>Cyberware RED</td><td>Famílias, slots, HL e exemplos</td></tr><tr><td>Armas e equipamento RED</td><td>Categorias, campos e comparação</td></tr><tr><td>Redes e regras de 2077</td><td>Suplemento 2077, separado do livro-base</td></tr><tr><td>Campanha</td><td>Protocolo Morana, elenco e sessões</td></tr></tbody></table></div></div><div class="section"><h3>Critério de síntese</h3><p>Esta wiki organiza regras com palavras próprias, fornece referências rápidas e separa a variante 2077. Não reproduz integralmente os livros; use os arquivos para conferir uma tabela completa, uma exceção ou uma ficha exata.</p><p>A busca no topo percorre títulos, categorias, termos de regra e exemplos de itens.</p></div><div class="source-row"><a class="source-link" href="${sources.core}"><b>CORE</b> Material de conferência (PDF)</a><a class="source-link" href="${sources['2077']}"><b>2077</b> Material de conferência (PDF)</a></div>`
+        html: `<div class="section"><h3>Material e status</h3><ul><li><b>Cyberpunk RED:</b> livro-base em português para criação, testes, combate, Roles, netrunning, equipamento e cyberware.</li><li><b>Cyberpunk 2077 - A Cyberpunk RED Supplement:</b> suplemento comunitário de Queen Otter; conteúdo não oficial e opcional que altera partes do RED.</li></ul></div><div class="section"><h3>Mapa de consulta interna</h3><div class="table-wrap"><table><thead><tr><th>Área</th><th>Onde consultar</th></tr></thead><tbody><tr><td>Consulta durante a sessão</td><td>Escudo do mestre, Perícias por STAT</td></tr><tr><td>Criação, STATs e Lifepath</td><td>Criação de personagens</td></tr><tr><td>Testes, combate e dano</td><td>Testes e dificuldades, Combate, Dano, ferimentos e cura</td></tr><tr><td>Humanidade, terapia e drogas</td><td>Humanidade e drogas</td></tr><tr><td>Preços, moradia e estilo de vida</td><td>Economia e estilo de vida</td></tr><tr><td>Perícias de Role e habilidades especiais</td><td>Funções (RED) ou Suplemento 2077</td></tr><tr><td>Cyberware RED</td><td>Famílias, slots, HL e exemplos</td></tr><tr><td>Armas e equipamento RED</td><td>Categorias, campos e comparação</td></tr><tr><td>Redes e regras de 2077</td><td>Suplemento 2077, separado do livro-base</td></tr><tr><td>Campanha</td><td>Protocolo Morana, elenco e sessões</td></tr></tbody></table></div></div><div class="section"><h3>Critério de síntese</h3><p>Esta wiki organiza regras com palavras próprias, fornece referências rápidas e separa a variante 2077. Não reproduz integralmente os livros; use os arquivos para conferir uma tabela completa, uma exceção ou uma ficha exata.</p><p>Cada seção traz a página do PDF traduzido ("p. 186") para conferir no livro. A busca no topo encontra a seção exata, com ou sem acento, em português ou inglês.</p></div><div class="source-row"><a class="source-link" href="${sources.core}"><b>CORE</b> Material de conferência (PDF)</a><a class="source-link" href="${sources['2077']}"><b>2077</b> Material de conferência (PDF)</a></div>`
       },
       notes: {
         eyebrow: 'Arquivo local / privado neste navegador', title: 'Notas e relógios',
@@ -489,7 +489,7 @@
       }
     };
 
-    Object.assign(pageContent, window.systemCatalog || {});
+    Object.assign(pageContent, window.systemCatalog || {}, (window.systemRules || {}).pages || {});
     Object.entries(markdownDocs).forEach(([id, doc]) => {
       pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
     });
@@ -531,7 +531,8 @@
       buildNavigation();
     }
 
-    function openPage(id) {
+    // target (opcional): { unit, term } abre a página já na seção indicada, com o termo destacado.
+    function openPage(id, target) {
       const page = pageContent[id];
       if (!page) return;
       const targetWorkspace = pageWorkspace[id];
@@ -542,8 +543,181 @@
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
       if (id === 'notes') setupNotes();
       if (id === 'campaignMap') setupCampaignMap();
-      if (markdownDocs[id]) showMarkdownDoc(id);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (id === 'screen') setupScreen();
+      if (id === 'skills') setupSkills();
+      if (markdownDocs[id]) {
+        window.scrollTo({ top: 0 });
+        showMarkdownDoc(id, target);
+        return;
+      }
+      buildToc();
+      if (target && target.unit !== undefined) focusUnit(target.unit, target.term);
+      else window.scrollTo({ top: 0 });
+    }
+
+    // Uma "unidade" é o trecho para onde a busca e o índice da página apontam:
+    // cada .section e cada cartão de pessoa; nos documentos .md, cada título de seção.
+    const unitSelector = '.section, .person';
+
+    function pageUnits(container) {
+      const doc = container.querySelector('#md-doc');
+      if (doc) return [...doc.querySelectorAll(':scope > h3')];
+      return [...container.querySelectorAll(unitSelector)].filter(element => !element.parentElement.closest(unitSelector));
+    }
+
+    function unitTitle(element) {
+      if (element.dataset.toc) return element.dataset.toc;
+      const heading = element.matches('h3') ? element : element.querySelector('h3, summary');
+      if (!heading) return '';
+      return (heading.firstChild && heading.firstChild.nodeType === Node.TEXT_NODE ? heading.firstChild.textContent : heading.textContent).trim();
+    }
+
+    // Nos documentos .md, uma seção é o título mais tudo até o próximo título do mesmo nível.
+    function unitBlock(element) {
+      if (!element.matches('#md-doc > h3')) return [element];
+      const block = [element];
+      for (let next = element.nextElementSibling; next && !next.matches('h3'); next = next.nextElementSibling) block.push(next);
+      return block;
+    }
+
+    function buildToc() {
+      content.querySelector('.page-toc')?.remove();
+      const units = pageUnits(content);
+      if (units.length < 4) return;
+      const toc = document.createElement('nav');
+      toc.className = 'page-toc';
+      toc.setAttribute('aria-label', 'Nesta página');
+      toc.innerHTML = `<span class="page-toc-label">Nesta página</span>${units.map((unit, index) => `<button type="button" data-toc-index="${index}">${escapeHtml(unitTitle(unit))}</button>`).join('')}`;
+      content.querySelector('.lede').after(toc);
+    }
+
+    // A busca pula direto (consulta rápida); os chips do índice rolam suavemente.
+    function focusUnit(index, term, smooth = false) {
+      const unit = pageUnits(content)[index];
+      if (!unit) return;
+      const details = unit.matches('details') ? unit : unit.closest('details');
+      if (details) details.open = true;
+      const block = unitBlock(unit);
+      if (term) highlightTerm(block, term);
+      unit.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+      block.forEach(element => {
+        element.classList.remove('flash');
+        void element.offsetWidth;
+        element.classList.add('flash');
+      });
+    }
+
+    function highlightTerm(elements, term) {
+      const needle = foldForSearch(term.trim());
+      const size = Array.from(needle).length;
+      if (!size) return;
+      elements.forEach(element => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(node => {
+          if (node.parentElement.closest('mark, select, option, button')) return;
+          const characters = Array.from(node.data);
+          const folded = foldForSearch(node.data);
+          let from = 0;
+          let at = folded.indexOf(needle);
+          if (at < 0) return;
+          const fragment = document.createDocumentFragment();
+          while (at >= 0) {
+            fragment.append(characters.slice(from, at).join(''));
+            const mark = document.createElement('mark');
+            mark.textContent = characters.slice(at, at + size).join('');
+            fragment.append(mark);
+            from = at + size;
+            at = folded.indexOf(needle, from);
+          }
+          fragment.append(characters.slice(from).join(''));
+          node.replaceWith(fragment);
+        });
+      });
+    }
+
+    let tocFrame = 0;
+    window.addEventListener('scroll', () => {
+      if (tocFrame) return;
+      tocFrame = requestAnimationFrame(() => {
+        tocFrame = 0;
+        const toc = content.querySelector('.page-toc');
+        if (!toc) return;
+        const limit = toc.getBoundingClientRect().bottom + 24;
+        let current = -1;
+        pageUnits(content).forEach((unit, index) => { if (unit.getBoundingClientRect().top <= limit) current = index; });
+        toc.querySelectorAll('[data-toc-index]').forEach(chip => {
+          const active = Number(chip.dataset.tocIndex) === current;
+          if (active && !chip.classList.contains('active')) toc.scrollTo({ left: chip.offsetLeft - toc.clientWidth / 3, behavior: 'smooth' });
+          chip.classList.toggle('active', active);
+        });
+      });
+    }, { passive: true });
+
+    function updateStickyOffset() {
+      document.documentElement.style.setProperty('--topbar-h', `${document.querySelector('.topbar').offsetHeight}px`);
+    }
+    window.addEventListener('resize', updateStickyOffset);
+
+    function setupScreen() {
+      const data = window.systemRules && window.systemRules.data;
+      const weapon = document.getElementById('dv-weapon');
+      const distance = document.getElementById('dv-distance');
+      if (!data || !weapon) return;
+      const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
+      const write = (key, value) => { try { localStorage.setItem(key, value); } catch { /* armazenamento indisponível */ } };
+      if (read('night-city-dv-weapon')) weapon.value = read('night-city-dv-weapon');
+      if (read('night-city-dv-distance')) distance.value = read('night-city-dv-distance');
+      const update = () => {
+        const selected = data.rangeDV.find(item => item.id === weapon.value) || data.rangeDV[0];
+        const meters = Math.max(0, Number(distance.value) || 0);
+        const band = data.rangeBandLimits.findIndex(limit => meters <= limit);
+        const dv = band < 0 ? null : selected.dv[band];
+        const autofire = selected.autofire ? (band < 0 ? null : selected.autofire[band] ?? null) : undefined;
+        document.getElementById('dv-result').innerHTML = dv === null
+          ? '<span class="dv-big">Fora de alcance</span>'
+          : `<span class="dv-big">DV ${dv}</span><span>${data.rangeBands[band]}</span>${autofire !== undefined ? `<span>Autofogo: ${autofire === null ? 'fora de alcance' : `DV ${autofire}`}</span>` : ''}<span class="note-status">Alvo com REF 8+ pode trocar a DV por DEX + Evasão + 1d10.</span>`;
+        document.getElementById('dv-row').innerHTML = `<div class="table-wrap dense"><table><thead><tr>${data.rangeBands.map((label, index) => `<th class="${index === band ? 'current' : ''}">${label}</th>`).join('')}</tr></thead><tbody><tr>${selected.dv.map((value, index) => `<td class="num ${index === band ? 'current' : ''}">${value === null ? '—' : value}</td>`).join('')}</tr></tbody></table></div>`;
+        write('night-city-dv-weapon', weapon.value);
+        write('night-city-dv-distance', distance.value);
+      };
+      weapon.onchange = update;
+      distance.oninput = update;
+      update();
+    }
+
+    function rollCritical(kind) {
+      const data = window.systemRules && window.systemRules.data;
+      const output = document.getElementById('crit-result');
+      if (!data || !output) return;
+      const rows = kind === 'head' ? data.critHead : data.critBody;
+      const first = 1 + Math.floor(Math.random() * 6);
+      const second = 1 + Math.floor(Math.random() * 6);
+      const [roll, name, effect, quick, treatment] = rows.find(row => row[0] === first + second);
+      output.innerHTML = `<p class="crit-roll">${kind === 'head' ? 'Cabeça' : 'Corpo'}: ${first} + ${second} = <b>${roll}</b></p><h4>${name}</h4><p>${effect}</p><p><b>Correção rápida:</b> ${quick}<br><b>Tratamento:</b> ${treatment}</p><p class="note-status">+5 de dano direto no HP. Se o alvo já tem essa lesão, role de novo.</p>`;
+    }
+
+    function setupSkills() {
+      const table = document.getElementById('skill-table');
+      const filter = document.getElementById('skill-filter');
+      const chips = document.getElementById('skill-stat-filter');
+      if (!table) return;
+      let stat = 'all';
+      const apply = () => {
+        const needle = foldForSearch(filter.value.trim());
+        table.querySelectorAll('tbody tr').forEach(row => {
+          row.hidden = (stat !== 'all' && row.dataset.stat !== stat) || (needle && !foldForSearch(row.textContent).includes(needle));
+        });
+      };
+      chips.onclick = event => {
+        const chip = event.target.closest('[data-skill-stat]');
+        if (!chip) return;
+        stat = chip.dataset.skillStat;
+        chips.querySelectorAll('[data-skill-stat]').forEach(item => item.setAttribute('aria-pressed', String(item === chip)));
+        apply();
+      };
+      filter.oninput = apply;
     }
 
     function escapeHtml(value) {
@@ -607,12 +781,16 @@
         .then(text => (markdownCache[id] = text));
     }
 
-    function showMarkdownDoc(id) {
+    // O primeiro título do arquivo repete o título da página.
+    const stripDocTitle = text => text.replace(/^﻿?#\s+.*\n/, '');
+
+    function showMarkdownDoc(id, target) {
       loadMarkdownDoc(id).then(text => {
         const container = document.getElementById('md-doc');
         if (currentPage !== id || !container) return;
-        // O primeiro título do arquivo repete o título da página.
-        container.innerHTML = renderMarkdown(text.replace(/^﻿?#\s+.*\n/, ''));
+        container.innerHTML = renderMarkdown(stripDocTitle(text));
+        buildToc();
+        if (target && target.unit !== undefined) focusUnit(target.unit, target.term);
       }).catch(() => {
         const container = document.getElementById('md-doc');
         if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
@@ -710,7 +888,7 @@
       campaignMapAct = 'all';
       campaignMapView = { x: 0, y: 0, width: data.width, height: data.height };
       image.setAttribute('href', data.images.base);
-      document.getElementById('map-source').value = 'base';
+      document.getElementById('map-source').value = 'base';
       pinLayer.innerHTML = data.markers.map(marker => {
         const category = data.categories[marker.category];
         return `<g class="map-pin" data-map-marker="${marker.id}" tabindex="0" role="button" aria-label="${escapeText(marker.title)}, ${escapeText(marker.district)}" transform="translate(${marker.x} ${marker.y})"><title>${escapeText(marker.title)} — ${escapeText(marker.district)}</title><circle class="pin-core" cx="0" cy="0" r="62" fill="${category.color}"></circle><text class="pin-code" x="0" y="2">${escapeText(marker.code)}</text><text class="pin-label" x="82" y="14">${escapeText(marker.title)}</text></g>`;
@@ -786,23 +964,49 @@
       return Array.from(text, character => character.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').charAt(0) || character).join('');
     }
 
-    function searchPages(query) {
-      const normalized = foldForSearch(query.trim());
-      if (!normalized) { openPage(currentPage); return; }
-      const matches = Object.entries(pageContent).flatMap(([id, page]) => {
-        const body = markdownDocs[id]
-          ? (markdownCache[id] || '').replace(/[#*>|`]/g, ' ')
-          : new DOMParser().parseFromString(page.html, 'text/html').body.textContent;
+    // Índice de busca por seção: cada unidade de cada página vira uma entrada.
+    let searchIndex = null;
+
+    function buildSearchIndex() {
+      const entries = [];
+      const strip = html => String(html).replace(/<[^>]*>/g, ' ');
+      Object.entries(pageContent).forEach(([id, page]) => {
+        if (markdownDocs[id] && !markdownCache[id]) return;
+        const holder = document.createElement('div');
+        // Espaço entre as tags para o texto de blocos vizinhos não grudar no trecho exibido.
+        holder.innerHTML = (markdownDocs[id] ? `<div id="md-doc">${renderMarkdown(stripDocTitle(markdownCache[id]))}</div>` : page.html).replace(/></g, '> <');
+        const pageTitle = strip(page.title).replace(/\s+/g, ' ').trim();
+        const units = pageUnits(holder);
+        units.forEach((unit, index) => entries.push({ id, unit: index, pageTitle, title: unitTitle(unit), text: unitBlock(unit).map(element => element.textContent).join(' ') }));
+        units.forEach(unit => unitBlock(unit).forEach(element => element.remove()));
         const mapTerms = id === 'campaignMap' && window.campaignMapData ? window.campaignMapData.markers.map(marker => `${marker.title} ${marker.district} ${marker.act} ${marker.summary} ${marker.hook} ${marker.encounter} ${marker.clue}`).join(' ') : '';
-        const text = Array.from(`${page.eyebrow} ${page.title.replace(/<[^>]*>/g, '')} ${page.lede} ${body} ${mapTerms}`.replace(/\s+/g, ' ').trim());
-        const matchIndex = foldForSearch(text.join('')).indexOf(normalized);
-        if (matchIndex < 0) return [];
-        const start = Math.max(0, matchIndex - 85);
-        const end = Math.min(text.length, matchIndex + normalized.length + 125);
-        const excerpt = `${start ? '…' : ''}${text.slice(start, end).join('')}${end < text.length ? '…' : ''}`;
-        return [{ id, page, excerpt: escapeHtml(excerpt) }];
+        entries.push({ id, unit: null, pageTitle, title: '', text: `${strip(page.eyebrow)} ${pageTitle} ${strip(page.lede)} ${holder.textContent} ${mapTerms}` });
       });
-      content.innerHTML = `<p class="eyebrow">Busca local / ${matches.length} resultado(s)</p><h2>Resultados</h2><div class="search-results">${matches.map(({ id, page, excerpt }) => `<button class="result" data-page="${id}" type="button"><small>${page.eyebrow}</small><strong>${page.title.replace(/<[^>]*>/g, '')}</strong><p>${excerpt}</p></button>`).join('') || '<div class="empty">Nenhuma entrada encontrada. Tente outro nome, função ou categoria.</div>'}</div>`;
+      return entries.map(entry => {
+        const text = entry.text.replace(/\s+/g, ' ').trim();
+        return { ...entry, characters: Array.from(text), folded: foldForSearch(text), foldedTitle: foldForSearch(`${entry.pageTitle} ${entry.title}`) };
+      });
+    }
+
+    function searchPages(query) {
+      const needle = foldForSearch(query.trim());
+      if (!needle) { openPage(currentPage); return; }
+      searchIndex = searchIndex || buildSearchIndex();
+      const size = Array.from(needle).length;
+      const matches = searchIndex.flatMap(entry => {
+        const at = entry.folded.indexOf(needle);
+        if (at < 0) return [];
+        // Título da seção primeiro, depois o texto das seções, por último o texto solto da página.
+        return [{ entry, at, score: entry.foldedTitle.includes(needle) ? 0 : entry.unit === null ? 2 : 1 }];
+      }).sort((first, second) => first.score - second.score);
+      const shown = matches.slice(0, 60);
+      const excerpt = ({ entry, at }) => {
+        const start = Math.max(0, at - 70);
+        const end = Math.min(entry.characters.length, at + size + 110);
+        const slice = (from, to) => escapeHtml(entry.characters.slice(from, to).join(''));
+        return `${start ? '…' : ''}${slice(start, at)}<mark>${slice(at, at + size)}</mark>${slice(at + size, end)}${end < entry.characters.length ? '…' : ''}`;
+      };
+      content.innerHTML = `<p class="eyebrow">Busca local / ${matches.length} trecho(s)${matches.length > shown.length ? ` · mostrando ${shown.length}` : ''}</p><h2>Resultados</h2><p class="lede"><b>Enter</b> abre o primeiro resultado já na seção certa. <b>Esc</b> volta para a página.</p><div class="search-results">${shown.map(match => `<button class="result" data-page="${match.entry.id}"${match.entry.unit === null ? '' : ` data-unit="${match.entry.unit}"`} data-term="${escapeHtml(query.trim())}" type="button"><small>${escapeHtml(match.entry.pageTitle)}</small><strong>${escapeHtml(match.entry.title || match.entry.pageTitle)}</strong><p>${excerpt(match)}</p></button>`).join('') || '<div class="empty">Nenhuma entrada encontrada. Tente outro nome, em português ou inglês.</div>'}</div>`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.remove('active'));
     }
 
@@ -810,12 +1014,31 @@
       const workspaceTab = event.target.closest('[data-workspace]');
       if (workspaceTab) {
         setWorkspace(workspaceTab.dataset.workspace);
-        const defaultPage = workspaceTab.dataset.workspace === 'campaigns' ? 'home' : 'creation';
+        const defaultPage = workspaceTab.dataset.workspace === 'campaigns' ? 'home' : 'screen';
         if (pageWorkspace[currentPage] !== currentWorkspace) openPage(defaultPage);
         return;
       }
+      const tocChip = event.target.closest('[data-toc-index]');
+      if (tocChip) { focusUnit(Number(tocChip.dataset.tocIndex), undefined, true); return; }
+      const critButton = event.target.closest('[data-crit]');
+      if (critButton) { rollCritical(critButton.dataset.crit); return; }
       const button = event.target.closest('[data-page]');
-      if (button) openPage(button.dataset.page);
+      if (button) openPage(button.dataset.page, button.dataset.unit === undefined ? undefined : { unit: Number(button.dataset.unit), term: button.dataset.term });
+    });
+    document.addEventListener('keydown', event => {
+      const typing = event.target.closest && event.target.closest('input, textarea, select, [contenteditable]');
+      if ((event.key === '/' && !typing) || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k')) {
+        event.preventDefault();
+        search.focus();
+        search.select();
+      }
+    });
+    search.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { openPage(currentPage); search.blur(); }
+      if (event.key === 'Enter') {
+        const first = content.querySelector('.result');
+        if (first) { event.preventDefault(); first.click(); search.blur(); }
+      }
     });
     navigation.addEventListener('change', event => {
       if (event.target.id !== 'campaign-picker') return;
@@ -826,10 +1049,14 @@
     });
     search.addEventListener('input', () => searchPages(search.value));
     if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
+    updateStickyOffset();
     buildNavigation();
     openPage('home');
     // Pré-carrega os documentos para a busca encontrar o texto completo deles.
-    Promise.allSettled(Object.keys(markdownDocs).map(loadMarkdownDoc)).then(() => { if (search.value.trim()) searchPages(search.value); });
+    Promise.allSettled(Object.keys(markdownDocs).map(loadMarkdownDoc)).then(() => {
+      searchIndex = null;
+      if (search.value.trim()) searchPages(search.value);
+    });
   </script>
 </body>
 </html>

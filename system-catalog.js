@@ -135,7 +135,7 @@
   const meleeWeapons = [
     ['Branca Leve', 'Faca, tomahawk', '1d6', '2', 'Varia por arma', 'Sim', '50eb'],
     ['Branca Média', 'Taco, pé de cabra, facão', '2d6', '2', 'Varia por arma', 'Não', '50eb'],
-    ['Branca Pesada', 'Cano, espada, taco com espinhos', '3d6', 'Varia', 'Varia por arma', 'Não', '100eb'],
+    ['Branca Pesada', 'Cano, espada, taco com espinhos', '3d6', '2', 'Varia por arma', 'Não', '100eb'],
     ['Branca Muito Pesada', 'Motosserra, marreta, naginata', '4d6', '1', 'Varia', 'Não', '500eb']
   ];
   const rangedWeapons = [
@@ -179,7 +179,7 @@
     ['Ballistic Shield', '10 HP', 'Ocupa um braço', '100eb']
   ];
 
-  const gearHTML = `<div class="section"><h3>Armas brancas RED</h3><p>O dano vem da classe da arma; o número de mãos pode variar pelo item. O teste usa a perícia de combate apropriada.</p>${table(['Classe', 'Exemplos', 'Dano', 'Ataques/ação', 'Mãos', 'Ocultável', 'Custo de referência'], meleeWeapons)}</div>
+  const gearHTML = `<div class="section"><h3>Armas brancas RED</h3><p>O dano vem da classe da arma; o número de mãos pode variar pelo item. O teste usa a perícia de combate apropriada.</p>${table(['Classe', 'Exemplos', 'Dano', 'CDT (ataques por Ação)', 'Mãos', 'Ocultável', 'Custo de referência'], meleeWeapons)}</div>
     <div class="section"><h3>Armas de longo alcance RED</h3><p>DV de acerto depende da categoria e distância; alcance, cobertura e modos de tiro continuam importantes.</p>${table(['Arma', 'Perícia', 'Dano', 'Carregador', 'ROF', 'Mãos', 'Ocultável', 'Preço-base', 'Modo/nota'], rangedWeapons)}</div>
     <div class="section"><h3>Armas exóticas</h3><p>São especializadas; em geral não aceitam acessórios nem munição não básica, salvo quando a entrada disser o contrário.</p>${table(['Modelo', 'Diferença mecânica resumida', 'Preço de referência'], exoticWeapons)}</div>
     <div class="section"><h3>Armaduras RED</h3><p>Compre proteção separadamente para cabeça e corpo. SP não acumula: vale a fonte mais alta por localização. A penalidade de uma armadura mais pesada aplica-se a REF, DEX e MOVE.</p>${table(['Tipo', 'SP', 'Penalidade', 'Preço-base'], armor)}</div>
