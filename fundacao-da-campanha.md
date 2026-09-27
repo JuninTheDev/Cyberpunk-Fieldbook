@@ -206,3 +206,5 @@ Antes da primeira sessao, cada personagem deve responder a uma pergunta:
 - Voce sacrificaria seu proprio implante para salvar outras pessoas?
 
 Essas respostas tornam Morana uma ameaca pessoal sem obrigar todos os personagens a terem a mesma historia.
+
+Para transformar cada resposta num gancho concreto, com o momento da campanha em que ele volta, use `ganchos-dos-personagens.md`.

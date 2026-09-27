@@ -50,6 +50,14 @@ Etapas do relógio de Sato: 1. Recuperar a Chave · 2. Garantir o Gatilho · 3. 
 |---|---|---|---|---|---|
 | | | | | | |
 
+### Ganchos escolhidos
+
+Veja `ganchos-dos-personagens.md`. Um gancho forte e um ou dois leves por personagem.
+
+| Personagem | Gancho forte | Ganchos leves | Segredo fechado? (o jogador aceitou) | Quando paga | Já pagou? |
+|---|---|---|---|---|---|
+| | | | | | |
+
 ## Registro das sessões
 
 ### Sessão 1: A Maleta (data: __/__/____)

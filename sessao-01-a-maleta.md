@@ -35,6 +35,8 @@ Prepare ou confirme com cada jogador:
 
 Nao exija que todos tenham uma relacao previa com Wakako. Uma reputacao, um contato em comum ou a indicacao de outro fixer ja e suficiente.
 
+Escolha os ganchos pessoais em `ganchos-dos-personagens.md`. Tres deles pagam ja nesta sessao: o implante com lote de 2069 (ao examinar Kobo), o HUD que marca "ALVO-70" e a arma inteligente que troca de alvo (Cena 5). Se houver um personagem espiao, mande a mensagem privada do outro fixer durante a Cena 2.
+
 ## Introducao para ler aos jogadores
 
 > Night City nao dorme. Ela apenas troca o tipo de barulho que faz.
