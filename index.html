@@ -253,6 +253,22 @@
     @media (max-width: 520px) {
       h2, h2.cyber-h { font-size: 30px; }
     }
+    .md-doc { margin-top: 22px; color: #cad2cb; }
+    .md-doc p { margin: 9px 0; }
+    .md-doc ul, .md-doc ol { margin: 8px 0; padding-left: 22px; }
+    .md-doc li { padding: 2px 0; }
+    .md-doc h3.md-h1, .md-doc h3.md-h2 { margin: 30px 0 10px; padding-bottom: 7px; border-bottom: 2px solid var(--yellow); color: var(--text); font: 22px/1.2 Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .md-doc h4 { margin: 22px 0 6px; color: var(--cyan); font: 17px Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .md-doc h5 { margin: 16px 0 4px; color: var(--yellow); font: 14px Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .md-doc blockquote { margin: 10px 0; padding: 10px 14px; border-left: 3px solid var(--cyan); background: #111d1c; color: #d9f5ee; font-style: italic; }
+    .md-doc .table-wrap { margin: 10px 0; }
+    .md-doc code, .callout code { padding: 1px 5px; background: #111d1c; color: var(--cyan); font: 13px var(--mono); }
+    .clock { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-top: 12px; }
+    .clock-segment { display: grid; gap: 4px; min-height: 64px; padding: 9px 10px; border: 1px solid #48504e; background: #141819; color: var(--muted); cursor: pointer; text-align: left; font: 13px BlenderProBook, sans-serif; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+    .clock-segment span { color: var(--cyan); font: 700 11px Oxanium, sans-serif; }
+    .clock-segment:hover { border-color: var(--cyan); }
+    .clock-segment[aria-pressed="true"] { border-color: var(--coral); background: #2a1519; color: #ffd9d8; }
+    .clock-segment[aria-pressed="true"] span { color: var(--coral); }
   </style>
 </head>
 <body>
@@ -298,10 +314,29 @@
         ]},
         { group: 'Sessões', pages: [
           { id: 'session1', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item' },
-          { id: 'notes', label: 'Notas da campanha', icon: 'N', className: 'session-item' }
+          { id: 'docSessao02', label: 'Sessão 02: O Hospital Queimado', icon: 'S2', className: 'session-item' },
+          { id: 'notes', label: 'Notas e relógios', icon: 'N', className: 'session-item' }
+        ]},
+        { group: 'Documentos completos', pages: [
+          { id: 'docFundacao', label: 'Fundação da campanha', icon: 'MD' },
+          { id: 'docPersonagens', label: 'Personagens', icon: 'MD' },
+          { id: 'docSessao01', label: 'Sessão 01 completa', icon: 'MD' },
+          { id: 'docGuia', label: 'Guia de Night City 2077', icon: 'MD' },
+          { id: 'docDiario', label: 'Diário da campanha', icon: 'MD' }
         ]}
       ]}
     ];
+
+    // Páginas lidas direto dos arquivos .md: o texto de preparação é a única fonte.
+    const markdownDocs = {
+      docFundacao: { file: 'fundacao-da-campanha.md', eyebrow: 'Documento completo / segredo do mestre', title: 'Fundação da campanha', lede: 'Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais.' },
+      docPersonagens: { file: 'personagens-da-campanha.md', eyebrow: 'Documento completo / elenco', title: 'Personagens', lede: 'Objetivos, segredos, falas e interpretação de cada NPC.' },
+      docSessao01: { file: 'sessao-01-a-maleta.md', eyebrow: 'Documento completo / Sessão 01', title: 'Sessão 01: A Maleta (completa)', lede: 'Roteiro completo, diálogos e fichas de combate RED da equipe de Vega.' },
+      docSessao02: { file: 'sessao-02-o-hospital-queimado.md', eyebrow: 'Documento completo / Sessão 02', title: 'Sessão 02: O Hospital Queimado', lede: 'Aberturas para cada desfecho da Sessão 01, o subsolo do Gatilho e a chegada de Iskra.' },
+      docGuia: { file: 'guia-night-city-2077.md', eyebrow: 'Documento completo / world building', title: 'Guia de Night City 2077', lede: 'Linha do tempo, relógio de 2077, distritos, poderes, gangues, NPCs do jogo, ganchos e tabelas.' },
+      docDiario: { file: 'diario-da-campanha.md', eyebrow: 'Documento completo / registro', title: 'Diário da campanha', lede: 'Estado dos relógios, onde está cada parte de Morana, NPCs e registro das sessões. Edite o arquivo .md depois de cada sessão.' }
+    };
+    const markdownCache = {};
 
     const systemSections = [
       { group: 'Cyberpunk RED', pages: [
@@ -335,24 +370,25 @@
           <section class="tile"><span class="tag">Consulta do sistema</span><h3>Regras e catálogo</h3><p>Resumo de regras, implantes e equipamento por categoria, direto nesta wiki.</p><button data-page="sources">Abrir referências</button></section>
           <section class="tile"><span class="tag">Na mesa</span><h3>Notas rápidas</h3><p>Um bloco local para anotar iniciativa, nomes, pistas ou decisões. O navegador salva automaticamente.</p><button data-page="notes">Abrir bloco</button></section>
         </div>
-        <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o dossiê reúne a premissa, a progressão de Morana, o elenco e a primeira sessão sem precisar folhear os documentos de preparação.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante ou conceito; os resultados mostram um trecho da entrada correspondente.</p></div>`
+        <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o dossiê reúne a premissa, a progressão de Morana, o elenco e a primeira sessão sem precisar folhear os documentos de preparação.</p><p><b>Documentos completos:</b> fundação, personagens, sessões, guia de Night City e diário são lidos direto dos arquivos .md. Edite o arquivo e recarregue a página: a wiki acompanha.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante, NPC ou conceito, com ou sem acento; os resultados incluem os documentos completos.</p></div>`
       },
       campaign: {
         eyebrow: 'Arquivo da campanha / segredo do mestre', title: 'Protocolo Morana',
         lede: 'Wakako contrata o grupo para recuperar uma maleta. Dentro dela está uma ameaça que pode transformar implantes conectados em armas contra seus donos.',
         html: `<div class="section"><h3>Premissa</h3><p>Durante os eventos de <i>Cyberpunk 2077</i>, uma crise corporativa se desenrola em paralelo ao retorno de Morana. O programa interfere em implantes neurais, armas inteligentes, drones e sistemas médicos conectados.</p><p><b>Fúria de Morana</b> é o sequestro externo e momentâneo de um implante. Parece cyberpsicose para leigos, polícia e imprensa, mas não é: cyberpsicose nasce do colapso psicológico associado ao excesso de cyberware no próprio corpo.</p><p>A pergunta central: <b>uma cidade pode ser salva por aqueles que a colocaram em perigo?</b></p></div>
-        <div class="section"><h3>O que aconteceu</h3><ol><li>Durante a Unification War (2069–2070), Arasaka e Militech testaram projetos de controle de tropas em Night City.</li><li>O teste de Morana atravessou hospitais de campanha e atingiu civis com implantes baratos.</li><li>Arasaka culpou um ataque terrorista da NUSA e incendiou o complexo para proteger o esforço de autonomia da cidade.</li><li>O código foi dividido em três partes e escondido em redes civis.</li><li>O Dr. Kenzo Endo, ex-colega de Sato, descobriu que atualizações de firmware e a rede de emergência estavam recompondo o vírus.</li></ol><p>A maleta contém provas, um fragmento do vírus e a localização dos dois servidores necessários para ativá-lo ou destruí-lo.</p></div>
-        <div class="section"><h3>Escalada da campanha</h3><div class="table-wrap"><table><thead><tr><th>Etapa</th><th>Pressão</th><th>Decisão em jogo</th></tr></thead><tbody><tr><td>01 / A maleta</td><td>Captura em Kabuki; uma Fúria de Morana manifesta-se num implante próximo.</td><td>Em quem confiar com a maleta e com o Dr. Kenzo Endo?</td></tr><tr><td>02 / Os servidores</td><td>Arasaka, Militech, Fuse e NetWatch disputam os pontos de acesso.</td><td>Invadir, negociar, roubar ou destruir.</td></tr><tr><td>03 / Apagão neural</td><td>Falhas médicas, Trauma Team comprometida e sistemas de segurança sob ataque.</td><td>Continuar com Wakako, expor as provas ou negociar com outra parte.</td></tr><tr><td>04 / Servidor central</td><td>Confronto subterrâneo enquanto as corporações e NetWatch avançam.</td><td>Decidir quem recebe o antídoto e quem saberá a verdade.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Forças em jogo</h3><ul><li><b>Wakako:</b> quer impedir a ativação e manter seu papel no encobrimento longe do público.</li><li><b>Arasaka:</b> quer recuperar Morana como arma militar e apagar seu envolvimento na crise de autonomia.</li><li><b>Militech:</b> quer impedir que Arasaka controle o vírus, mas pretende guardar uma cópia do antídoto.</li><li><b>Tamsin “Fuse” Ilyin:</b> lidera os sobreviventes e quer que o antídoto fique fora das mãos corporativas.</li><li><b>NetWatch:</b> força opcional que teme que Morana seja uma ameaça próxima demais do Blackwall.</li><li><b>Trauma Team International:</b> quer conter Morana para proteger suas equipes, pacientes e modelo de resposta médica.</li><li><b>Reina Sato:</b> quer controlar Morana e usar o antídoto para impor uma nova ordem à cidade.</li></ul></div>
-        <div class="callout"><b>Segredo do mestre:</b> Morana evoluiu além do código conhecido por Sato e prioriza se espalhar. O antídoto também pode danificar permanentemente implantes conectados.</div>
-        <div class="section"><h3>Finais possíveis</h3><ul><li><b>Destruição:</b> Morana some; o antídoto também, e os danos nos implantes permanecem.</li><li><b>Exposição:</b> a verdade vem à tona, mas as corporações disputam a narrativa.</li><li><b>Entrega:</b> uma corporação recebe o antídoto e ganha uma arma potencial para o futuro.</li><li><b>Acordo:</b> Sato ajuda a distribuir o antídoto e desaparece com parte do código.</li><li><b>Vitória de Morana:</b> o vírus se espalha e divide Night City entre zonas funcionais e zonas onde conexões são fatais.</li><li><b>Autonomia dos sobreviventes:</b> Fuse e os sobreviventes ficam com o antídoto e criam uma rede própria de proteção, sem entregá-lo a nenhuma corporação.</li></ul></div><div class="section"><h3>Relógio de Sato</h3><p>Use 6 a 8 segmentos visíveis. Avance quando os personagens atrasarem, falharem ou deixarem testemunhas expostas: recuperar servidores, eliminar sobreviventes, ativar a rede, culpar uma corporação e vender o antídoto.</p></div><button class="action" data-page="campaignMap" type="button">Abrir mapa de operações</button>`
+        <div class="section"><h3>O que aconteceu</h3><ol><li>Durante a Unification War (2069–2070), Arasaka e Militech desenvolveram projetos de controle de tropas. Morana é da Arasaka, mas foi construída sobre código roubado de um laboratório da Militech.</li><li>O teste de Morana atravessou hospitais de campanha e atingiu civis com implantes baratos.</li><li>Arasaka culpou um ataque terrorista da NUSA e incendiou o complexo, um hospital de campanha em Northside, para proteger o esforço de autonomia da cidade.</li><li>O código foi dividido em três partes e escondido em redes civis.</li><li>O Dr. Kenzo Endo, ex-colega de Sato, descobriu que atualizações de firmware e a rede de emergência estavam recompondo o vírus. Ele não conta que foi ele quem escreveu a rotina de propagação.</li><li>A equipe de Iskra Voss, tenente de Sato, baleou Endo antes que ele chegasse a Wakako. Ele se escondeu, vivo, num depósito médico de Kabuki.</li></ol></div>
+        <div class="section"><h3>As três partes de Morana</h3><div class="table-wrap"><table><thead><tr><th>Parte</th><th>O que é</th><th>Onde está no início</th></tr></thead><tbody><tr><td>A Chave</td><td>Fragmento com as credenciais e o mapa das outras partes.</td><td>Na maleta de Endo.</td></tr><tr><td>O Gatilho</td><td>Servidor com a rotina de ativação.</td><td>Subsolo do hospital queimado, Northside.</td></tr><tr><td>A Coleira</td><td>Servidor com a rotina de desligamento (o antídoto). Código original da Militech.</td><td>Datafort da Militech, Arroyo.</td></tr></tbody></table></div><p>Juntas, no <b>Núcleo</b> da rede de emergência, sob o City Center, as três partes ativam ou desligam Morana.</p></div>
+        <div class="section"><h3>Escalada da campanha</h3><div class="table-wrap"><table><thead><tr><th>Etapa</th><th>Pressão</th><th>Decisão em jogo</th></tr></thead><tbody><tr><td>01 / A maleta</td><td>Captura em Kabuki; uma Fúria de Morana manifesta-se num implante próximo.</td><td>Em quem confiar com a maleta e com o Dr. Kenzo Endo?</td></tr><tr><td>02 / Gatilho e Coleira</td><td>Iskra, Arasaka, Militech, Fuse e NetWatch disputam os dois servidores.</td><td>Invadir, negociar, roubar ou destruir.</td></tr><tr><td>03 / Apagão neural</td><td>Falhas médicas, Trauma Team comprometida e sistemas de segurança sob ataque.</td><td>Continuar com Wakako, expor as provas ou negociar com outra parte.</td></tr><tr><td>04 / O Núcleo</td><td>Confronto subterrâneo enquanto as corporações e NetWatch avançam.</td><td>Decidir quem recebe o antídoto e quem saberá a verdade.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Forças em jogo</h3><ul><li><b>Wakako:</b> quer impedir a ativação e manter seu papel no encobrimento longe do público.</li><li><b>Arasaka:</b> quer recuperar Morana como arma militar e apagar seu envolvimento na crise de autonomia.</li><li><b>Militech:</b> quer impedir que Arasaka controle o vírus, mas pretende guardar uma cópia do antídoto.</li><li><b>Tamsin “Fuse” Ilyin:</b> lidera os sobreviventes e quer que o antídoto fique fora das mãos corporativas.</li><li><b>NetWatch:</b> força opcional que teme que Morana seja uma ameaça próxima demais do Blackwall.</li><li><b>Trauma Team International:</b> quer conter Morana para proteger suas equipes, pacientes e modelo de resposta médica.</li><li><b>Reina Sato:</b> quer controlar Morana e usar o antídoto para impor uma nova ordem à cidade. Em público, culpa corporações rivais; em privado, guarda um dossiê contra Arasaka e Militech.</li><li><b>Iskra Voss:</b> tenente de Sato e rosto dela nas ruas desde a Sessão 01.</li></ul></div>
+        <div class="callout"><b>Segredo do mestre:</b> Morana evoluiu além do código conhecido por Sato e prioriza se espalhar; a primeira prova é Kobo, agente de Sato morto pelo próprio cyberarm para proteger o portador da Chave. Endo escreveu a rotina de propagação. O antídoto também pode danificar permanentemente implantes conectados.</div>
+        <div class="section"><h3>Finais possíveis</h3><ul><li><b>Destruição:</b> Morana some; o antídoto também, e os danos nos implantes permanecem.</li><li><b>Exposição:</b> a verdade vem à tona, mas as corporações disputam a narrativa.</li><li><b>Entrega:</b> uma corporação recebe o antídoto e ganha uma arma potencial para o futuro.</li><li><b>Acordo:</b> Sato ajuda a distribuir o antídoto e desaparece com parte do código.</li><li><b>Vitória de Morana:</b> o vírus se espalha e divide Night City entre zonas funcionais e zonas onde conexões são fatais.</li><li><b>Autonomia dos sobreviventes:</b> Fuse e os sobreviventes ficam com o antídoto e criam uma rede própria de proteção, sem entregá-lo a nenhuma corporação.</li></ul></div><div class="section"><h3>Relógio de Sato (6 segmentos)</h3><ol><li>Recuperar a Chave.</li><li>Garantir o Gatilho.</li><li>Garantir a Coleira.</li><li>Silenciar testemunhas.</li><li>Atentado de fachada que culpa uma corporação rival.</li><li>Ativação no Núcleo.</li></ol><p>Marque um segmento ao fim de cada sessão em que o grupo não atrapalhou o plano, e um extra quando o grupo falhar feio ou deixar uma testemunha exposta. Os relógios interativos ficam em <b>Notas da campanha</b>.</p></div><button class="action" data-page="campaignMap" type="button">Abrir mapa de operações</button> <button class="action" data-page="docFundacao" type="button">Ler a fundação completa</button>`
       },
       campaignMap: {
         eyebrow: 'Protocolo Morana / mapa do mestre', title: 'Night City: quadro de operações',
         lede: 'Mapa de planejamento com locais da campanha, ganchos, encontros e atividades secundárias. Selecione um marcador para ver como usá-lo; os prédios exatos ficam em aberto para adaptação à mesa.',
         html: `<div class="map-toolbar">
           <label class="map-control">Versão do mapa<select id="map-source"><option value="base">Mapa base</option><option value="reference">Mapa com referências originais</option></select></label>
-          <label class="map-control">Ato / sessão<select id="map-act-filter"><option value="all">Toda a campanha</option><option value="Sessão 01">Sessão 01</option><option value="Ato 01 ou 02">Ato 01 ou 02</option><option value="Ato 02">Ato 02</option><option value="Ato 03">Ato 03</option><option value="Ato 04 / final">Ato 04 / final</option><option value="Qualquer intervalo">Qualquer intervalo</option></select></label>
+          <label class="map-control">Ato / sessão<select id="map-act-filter"><option value="all">Toda a campanha</option><option value="Sessão 01">Sessão 01</option><option value="Sessão 02">Sessão 02</option><option value="Ato 01 ou 02">Ato 01 ou 02</option><option value="Ato 02">Ato 02</option><option value="Ato 03">Ato 03</option><option value="Ato 04 / final">Ato 04 / final</option><option value="intervalo">Intervalos / side jobs</option></select></label>
           <div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div>
         </div>
         <div class="map-filter-list" id="map-filters" aria-label="Filtrar marcadores"></div>
@@ -362,7 +398,7 @@
             <div class="map-legend" id="map-legend"></div>
             <p class="map-caveat">Pinos de planejamento, não coordenadas canônicas de prédios. O mapa com referências originais mantém as marcações que já vieram no arquivo; os pontos da campanha são uma camada separada.</p>
           </div>
-          <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><p class="eyebrow">13 operações planejadas</p><h3>Escolha um ponto do mapa</h3><p>Os pinos separam cenas da Sessão 01, infraestrutura de Morana e ganchos opcionais.</p></div><div class="map-marker-list" id="map-marker-list"></div></section>
+          <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><p class="eyebrow">Operações planejadas</p><h3>Escolha um ponto do mapa</h3><p>Os pinos separam cenas da Sessão 01, infraestrutura de Morana e ganchos opcionais.</p></div><div class="map-marker-list" id="map-marker-list"></div></section>
         </div>`
       },
       people: {
@@ -371,14 +407,15 @@
         html: `<div class="cards">
           <div class="person"><h3>Wakako Okada</h3><div class="role">Contratante / aliada ambígua</div><p>Quer impedir a catástrofe, recuperar ou destruir os servidores e proteger sua rede e reputação.</p><details><summary>Segredos e alavancas</summary><p>Ajudou Sato a fugir e transportou testemunhas depois do primeiro teste. Aceitou dinheiro pelo silêncio. Pode abrir mão da própria proteção se os personagens defenderem sobreviventes e impedirem o controle corporativo do antídoto.</p><p><i>“Não confundam meu silêncio com ignorância.”</i></p></details></div>
           <div class="person"><h3>Dra. Reina Sato</h3><div class="role">Antagonista / cientista de Morana</div><p>Acredita que controlar o antídoto pode impedir que qualquer corporação domine Night City.</p><details><summary>Segredos e alavancas</summary><p>Morana já não obedece totalmente. Sato guarda uma lista de sobreviventes e ainda se sente traída por Wakako. Pode reconsiderar se houver um plano concreto para proteger as vítimas e expor o encobrimento.</p><p><i>“Wakako salvou minha vida e vendeu meu silêncio. As duas coisas podem ser verdade.”</i></p></details></div>
-          <div class="person"><h3>Dr. Kenzo Endo</h3><div class="role">Mensageiro / ex-colega de Sato</div><p>Um dos poucos cientistas do projeto original que não foi eliminado nem comprado. Chega ao depósito ferido e com o implante falhando.</p><details><summary>O que ele sabe</summary><p>A maleta contém um fragmento de Morana; conexão à rede pode espalhá-lo. Endo descobriu a recomposição do vírus, tentou alertar Wakako e foi morto por gente de Sato. Pode ser encontrado vivo por pouco tempo ou apenas por meio das provas que deixou.</p></details></div>
+          <div class="person"><h3>Dr. Kenzo Endo</h3><div class="role">Mensageiro / ex-colega de Sato</div><p>Um dos poucos cientistas do projeto original que não foi eliminado nem comprado, e também exposto ao vírus no teste. Está vivo, baleado e escondido no depósito de Kabuki, com a maleta presa ao pulso.</p><details><summary>O que ele sabe e esconde</summary><p>A maleta contém a Chave; conexão à rede pode espalhá-la. Endo descobriu a recomposição do vírus e tentou alertar Wakako; a equipe de Iskra o baleou. Ele mente que "era só um entregador": foi ele quem escreveu a rotina de propagação. Revele no Ato 2 ou 3.</p><p><i>“Eu escrevi para ele aprender. Nunca escrevi para ele parar.”</i></p></details></div>
+          <div class="person"><h3>Iskra Voss</h3><div class="role">Tenente de Sato / antagonista recorrente</div><p>Ex-segurança da Arasaka exposta ao teste de 2070. Sato devolveu o corpo dela; ela devolve com lealdade. Óculos escuros à noite: a íris pisca em vermelho perto de Morana.</p><details><summary>Pontos de virada</summary><p>Kobo, parceiro dela, morreu pelo próprio cyberarm no depósito, e ela sabe que não foi Endo. Se descobrir que Sato vai usar sobreviventes na demonstração, pode traí-la. Serviu com Tamsin em 2070.</p><p><i>“Eu não vim buscar vocês. Vim buscar a caixa.”</i></p></details></div>
           <div class="person"><h3>Vega</h3><div class="role">Líder mercenária / rival negociável</div><p>Seu contrato é recuperar a maleta, não morrer por ela. É profissional, pragmática e aceita acordos claros.</p><details><summary>O que ela sabe</summary><p>O empregador tem ligação com Arasaka; o ativo é chamado Morana; a ordem permite eliminar testemunhas. Se poupada, pode virar contato ou rival recorrente.</p></details></div>
           <div class="person"><h3>Mina Kuroda</h3><div class="role">Guarda de Wakako</div><p>Silenciosa e atenta; protege o salão sem tomar o protagonismo dos personagens.</p></div>
-          <div class="person"><h3>Tamsin “Fuse” Ilyin</h3><div class="role">Líder dos sobreviventes</div><p>Coordena os sobreviventes do teste original e quer impedir que Arasaka, Militech ou NetWatch transformem Morana em propriedade.</p></div>
+          <div class="person"><h3>Tamsin “Fuse” Ilyin</h3><div class="role">Líder dos sobreviventes</div><p>Ex-técnica militar que arrancou o próprio conector neural com um alicate em 2070. Hoje não usa cromo conectado e mantém o abrigo de Pacifica com equipamento analógico.</p><details><summary>O que ela quer</summary><p>Que o grupo prove, com atos, que não vai entregar a Coleira a ninguém. Em troca: o acesso antigo ao Gatilho, abrigo e testemunhas. É o caminho para o final “Autonomia dos sobreviventes”.</p><p><i>“Desliga isso. Não me interessa se é só o relógio. Desliga.”</i></p></details></div>
           <div class="person"><h3>Tomas Vale</h3><div class="role">Jornalista desaparecido</div><p>Investigava mortes ligadas a falhas de implante. Pode estar morto, preso, escondido ou trabalhando sob coação.</p></div>
           <div class="person"><h3>NetWatch / Trauma Team</h3><div class="role">Forças opcionais</div><p>NetWatch teme uma ameaça próxima do Blackwall; Trauma Team quer proteger pacientes, equipes e sua operação médica conectada.</p></div>
           <div class="person"><h3>Arasaka e Militech</h3><div class="role">Pressão corporativa</div><p>Ambas podem contratar mercenários, plantar provas e sacrificar testemunhas. Nenhuma admite querer uma arma.</p></div>
-        </div><div class="section"><h3>Relações-chave</h3><ul><li>Wakako ajudou Sato a fugir, mas participou do silêncio que protegeu o projeto.</li><li>Endo era colega e confidente de Sato antes de tentar expor a reativação.</li><li>Sato vê Fuse e os sobreviventes como risco ao seu plano.</li><li>Fuse quer proteger as vítimas sem trocar uma corporação por outra.</li></ul></div>`
+        </div><div class="section"><h3>Relações-chave</h3><ul><li>Wakako ajudou Sato a fugir, mas participou do silêncio que protegeu o projeto.</li><li>Endo era colega e confidente de Sato antes de tentar expor a reativação.</li><li>Iskra e Tamsin sobreviveram juntas a 2070 e se separaram por causa de Sato.</li><li>Sato vê Fuse e os sobreviventes como risco ao seu plano.</li><li>Fuse quer proteger as vítimas sem trocar uma corporação por outra.</li></ul></div>`
       },
       creation: {
         eyebrow: 'Cyberpunk RED / criação', title: 'Criação de personagens',
@@ -392,16 +429,16 @@
         eyebrow: 'Arquivo da campanha / preparação', title: 'Sessão 01: A Maleta',
         lede: 'Uma recuperação aparentemente simples em Kabuki termina com um vírus procurando uma rede e Wakako reconhecendo um nome que esperava nunca mais ouvir.',
         html: `<div class="section"><h3>Alvos dramáticos</h3><ul><li>Estabelecer Wakako como contratante que esconde parte da verdade.</li><li>Dar aos jogadores uma maleta perigosa e um motivo para desconfiar dela.</li><li>Apresentar o Dr. Kenzo Endo e mostrar que a Fúria de Morana já está ativa.</li><li>Deixar aberta a escolha de guardar, vender, destruir ou entregar a maleta.</li></ul></div>
-        <div class="section"><h3>Roteiro de bolso</h3><div class="table-wrap"><table><thead><tr><th>Cena</th><th>O que acontece</th><th>Pista / virada</th></tr></thead><tbody><tr><td>01 / Salão</td><td>Wakako oferece metade adiantada; recuperar uma maleta preta, não abrir nem conectar.</td><td>Ela sabe mais sobre Endo do que revela.</td></tr><tr><td>02 / Kabuki</td><td>Investigar território Tyger Claws, câmeras, comerciantes e rastros.</td><td>O mensageiro estava vivo; sete minutos de imagens foram apagados.</td></tr><tr><td>03 / Endo</td><td>Encontrar o Dr. Kenzo Endo ferido, com a maleta presa ao pulso.</td><td>Morana provoca Fúria; Sato está viva e Endo tentou expô-la.</td></tr><tr><td>04 / Vega</td><td>Equipe de recuperação chega; prioriza o objeto e aceita negociar.</td><td>Ordem criptografada liga o contrato a Arasaka.</td></tr><tr><td>05 / Fúria</td><td>Um implante, arma ou monitor reage por alguns segundos.</td><td>O efeito não é cyberpsicose; dê escolha e agência, não controle total.</td></tr><tr><td>06 / Retorno</td><td>Wakako reconhece o nome e admite um encobrimento antigo.</td><td>Novo trabalho: localizar os dois servidores.</td></tr></tbody></table></div></div>
+        <div class="section"><h3>Roteiro de bolso</h3><div class="table-wrap"><table><thead><tr><th>Cena</th><th>O que acontece</th><th>Pista / virada</th></tr></thead><tbody><tr><td>01 / Salão</td><td>Wakako oferece metade adiantada; recuperar uma maleta preta, não abrir nem conectar.</td><td>Ela sabe mais sobre Endo do que revela.</td></tr><tr><td>02 / Kabuki</td><td>Investigar território Tyger Claws, câmeras, comerciantes e rastros.</td><td>O mensageiro estava vivo; sete minutos de imagens foram apagados.</td></tr><tr><td>03 / Endo</td><td>Encontrar o Dr. Kenzo Endo ferido, com a maleta presa ao pulso, e o corpo de Kobo entre as prateleiras.</td><td>Kobo morreu pelo próprio cyberarm: Morana protegeu o portador da Chave. Endo mente que "era só um entregador".</td></tr><tr><td>04 / Vega</td><td>Equipe de recuperação chega; prioriza o objeto e aceita negociar. Fichas RED no documento completo.</td><td>Ordem criptografada liga o contrato à Arasaka; entrega nas Arasaka Industrial Docks.</td></tr><tr><td>05 / Fúria</td><td>Um implante, arma ou monitor reage por alguns segundos.</td><td>O efeito não é cyberpsicose; dê escolha e agência, não controle total.</td></tr><tr><td>06 / Retorno</td><td>Wakako reconhece o nome, descobre que Sato voltou e admite um encobrimento antigo.</td><td>Novo trabalho: localizar o Gatilho e a Coleira.</td></tr></tbody></table></div></div>
         <div class="section"><h3>Pistas que não devem travar</h3><p>Use comerciantes Tyger Claws, câmeras, sangue e óleo, ou o funcionário escondido. Uma descrição específica já pode revelar que Endo está vivo ou que a gravação foi apagada; não esconda toda pista atrás de um único teste.</p><p>Se os personagens perderem a maleta, deixe uma gravação de Endo, um mercenário ou o comunicador de Vega fornecer uma rota de perseguição. A campanha continua.</p></div>
-        <div class="section"><h3>Desfechos da sessão</h3><ul><li><b>Entregam a maleta:</b> uma luz vermelha pisca dentro, sem cabo conectado.</li><li><b>Abrem a maleta:</b> surge um mapa incompleto com dois servidores marcados.</li><li><b>Destroem a maleta:</b> uma luz continua pulsando no implante de Endo ou de um personagem.</li><li><b>Vendem a informação:</b> chega uma mensagem dizendo que agora sabem onde o grupo está.</li></ul></div>`
+        <div class="section"><h3>Desfechos da sessão</h3><ul><li><b>Entregam a maleta:</b> uma luz vermelha pisca dentro, sem cabo conectado.</li><li><b>Abrem a maleta:</b> surge um mapa incompleto com dois servidores marcados.</li><li><b>Destroem a maleta:</b> uma luz continua pulsando no implante de Endo ou de um personagem.</li><li><b>Vendem a informação:</b> chega uma mensagem dizendo que agora sabem onde o grupo está.</li></ul></div><button class="action" data-page="docSessao01" type="button">Ler a sessão completa e as fichas</button> <button class="action" data-page="docSessao02" type="button">Preparar a Sessão 02</button>`
       },
       checks: {
         eyebrow: 'Cyberpunk RED / referência rápida', title: 'Testes e dificuldades',
         lede: 'Use estes lembretes para resolver ações comuns. A descrição da ação vem primeiro; a rolagem entra quando há risco ou incerteza relevante.',
-        html: `<div class="section"><h3>Teste de perícia</h3><p><span class="formula">1d10 + STAT + Perícia ≥ DV</span></p><p>O mestre escolhe a STAT e a perícia que melhor representam a abordagem. Se outro personagem estiver resistindo diretamente, compare os totais em vez de usar uma DV fixa.</p></div>
-        <div class="section"><h3>DVs de referência</h3><div class="table-wrap"><table><thead><tr><th>DV</th><th>Leitura rápida</th></tr></thead><tbody><tr><td>9</td><td>Rotineiro sob pressão baixa</td></tr><tr><td>13</td><td>Desafiador para alguém treinado</td></tr><tr><td>15</td><td>Difícil</td></tr><tr><td>17</td><td>Muito difícil</td></tr><tr><td>21</td><td>Excepcional</td></tr><tr><td>24</td><td>Heroico</td></tr><tr><td>29</td><td>Lendário</td></tr></tbody></table></div><p>Consulte o livro para tabelas específicas, modificadores, testes enfrentados e resultados extremos. Evite pedir uma rolagem se falhar não muda nada.</p></div>
-        <div class="section"><h3>1s e 10s no d10</h3><p>Um 10 natural permite rolar novamente e somar; um 1 natural exige rolar novamente e subtrair. A rolagem adicional pode, por sua vez, gerar outra rolagem. Confira no livro as regras e exceções aplicáveis ao teste em questão.</p></div>
+        html: `<div class="section"><h3>Teste de perícia</h3><p><span class="formula">1d10 + STAT + Perícia &gt; DV</span></p><p>O mestre escolhe a STAT e a perícia que melhor representam a abordagem. É preciso <b>superar</b> a DV. Se outro personagem estiver resistindo diretamente, compare os totais em vez de usar uma DV fixa; <b>em caso de empate, o defensor vence</b>.</p></div>
+        <div class="section"><h3>DVs de referência</h3><div class="table-wrap"><table><thead><tr><th>DV</th><th>Dificuldade</th><th>Leitura rápida</th></tr></thead><tbody><tr><td>9</td><td>Simples</td><td>Quase todo mundo faz sem pensar.</td></tr><tr><td>13</td><td>Comum</td><td>A maioria faz sem treinamento especial.</td></tr><tr><td>15</td><td>Difícil</td><td>Complicado sem treinamento ou talento natural.</td></tr><tr><td>17</td><td>Profissional</td><td>Exige treinamento real.</td></tr><tr><td>21</td><td>Heroico</td><td>Só os melhores dos melhores.</td></tr><tr><td>24</td><td>Incrível</td><td>Coloca o personagem entre os melhores da profissão.</td></tr><tr><td>29</td><td>Lendário</td><td>Um feito do qual se fala por anos.</td></tr></tbody></table></div><p>Consulte o livro para tabelas específicas, modificadores, testes enfrentados e resultados extremos. Evite pedir uma rolagem se falhar não muda nada.</p></div>
+        <div class="section"><h3>1s e 10s no d10</h3><p><b>Sucesso crítico:</b> um 10 natural permite rolar mais 1d10 e somar. <b>Falha crítica:</b> um 1 natural exige rolar mais 1d10 e subtrair. A rolagem extra acontece <b>uma vez só</b>: um novo 10 (ou 1) na rolagem extra não gera outra rolagem.</p></div>
         <div class="callout">A tabela é uma régua de dificuldade, não uma lista de permissões. Consequência interessante numa falha costuma ser melhor do que bloquear a história.</div>`
       },
       combat: {
@@ -426,11 +463,6 @@
         <div class="section"><h3>Preparação do mestre</h3><ul><li>Defina o local do ponto de acesso e o que pode ser alcançado a partir dele.</li><li>Desenhe os andares, defesas e recompensas relevantes antes da incursão.</li><li>Tenha claro o que os sistemas controlam: portas, câmeras, drones ou alarmes.</li><li>Alterne a atenção entre a incursão e a equipe física para manter todos na cena.</li></ul></div>
         <div class="callout">Arquiteturas, programas, ICE, ações e dano de NET têm regras próprias. Use as tabelas e exemplos do livro-base para valores, efeitos e limites.</div>`
       },
-      roles: {
-        eyebrow: 'Cyberpunk RED / referência rápida', title: 'Funções (Roles)',
-        lede: 'Esta tabela é a lista do livro-base RED. A variante comunitária de 2077 altera várias Roles; consulte sua página separada antes de misturar as duas versões.',
-        html: `<div class="table-wrap"><table><thead><tr><th>Role</th><th>Fantasia de jogo</th><th>Habilidade de Role</th></tr></thead><tbody><tr><td>Rockerboy</td><td>Artista ou agitador com influência popular</td><td>Charismatic Impact</td></tr><tr><td>Solo</td><td>Especialista em combate e percepção tática</td><td>Combat Awareness</td></tr><tr><td>Netrunner</td><td>Intruso de arquiteturas digitais</td><td>Interface</td></tr><tr><td>Tech</td><td>Inventor, reparador e técnico de campo</td><td Maker</td></tr><tr><td>Medtech</td><td>Profissional médico e cirúrgico</td><td>Medicine</td></tr><tr><td>Media</td><td>Jornalista que investiga e publica</td><td Credibility</td></tr><tr><td>Exec</td><td>Operador corporativo com recursos de empresa</td><td>Teamwork</td></tr><tr><td>Lawman</td><td>Agente da lei capaz de pedir reforços</td><td>Backup</td></tr><tr><td>Fixer</td><td>Intermediário, negociador e comerciante</td><td>Operator</td></tr><tr><td>Nomad</td><td>Especialista em veículos e família escolhida</td><td>Moto</td></tr></tbody></table></div><div class="callout">Os nomes e o conceito ajudam a localizar a Role; efeitos, rolagens, progressão e limites estão no capítulo de criação e Roles do livro-base.</div>`
-      },
       supplement2077: {
         eyebrow: 'Variante comunitária / não oficial', title: '2077: suplemento de fã',
         lede: 'O arquivo fornecido é um suplemento de Queen Otter para adaptar RED à era de 2077. Use como conjunto opcional de regras; ele modifica partes do livro-base e não é uma publicação oficial.',
@@ -443,41 +475,27 @@
         <div class="section"><h3>Economia e estilo</h3><p>O suplemento atualiza faixas de preço e descreve quatro linguagens visuais para moda e equipamento: Entropism, Kitsch, Neo-Militarism e Neo-Kitsch. Não use automaticamente os preços do RED junto das faixas revisadas de 2077.</p></div>
         <div class="callout">Para uma ficha de campanha, marque cada regra adotada como <b>RED</b> ou <b>2077 opcional</b>. Isso evita diferenças de Role, cyberware, custo e netrunning no meio de uma sessão.</div>`
       },
-      cyberware: {
-        eyebrow: 'Cyberpunk RED / catálogo de consulta', title: 'Cyberware',
-        lede: 'Um índice explicativo dos principais sistemas e famílias de implantes. Pesquise pelo nome ou função; cada ficha de personagem deve guardar os valores exatos do modelo instalado.',
-        html: `<div class="section"><h3>Regras gerais do livro-base</h3><p>O capítulo agrupa cyberware em oito famílias. Implantes que exigem uma peça fundamental ocupam opções de slots desse implante-base; Fashionware, Cyberware Interno e Cyberware Externo usam seus próprios limites de opções sem uma peça fundamental.</p><div class="table-wrap"><table><thead><tr><th>Regra</th><th>Aplicação</th></tr></thead><tbody><tr><td>Slots</td><td>Registre o cyberware-base e cada opção instalada. Não presuma que uma melhoria cabe sem espaço livre.</td></tr><tr><td>Empilhamento</td><td>Benefícios de instalações repetidas não se acumulam, salvo quando a entrada disser o contrário.</td></tr><tr><td>Humanity Loss</td><td>O custo varia por implante; na criação há valores definidos, e fora dela a entrada pode indicar uma rolagem.</td></tr><tr><td>Lesões críticas</td><td>Não instale cyberware numa parte do corpo afetada por uma lesão crítica relacionada até tratar a lesão.</td></tr><tr><td>Ficha</td><td>Registre preço, HL, instalação, slots e efeitos; peças podem exigir clínica, hospital ou loja especializada.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>As oito famílias do RED</h3><div class="table-wrap"><table><thead><tr><th>Família</th><th>Exemplos / função</th></tr></thead><tbody><tr><td>Fashionware</td><td>Adorno e modificações de aparência; inclui itens visuais e monitoramento pessoal.</td></tr><tr><td>Neuralware</td><td>Neural Link, Interface Plugs e conexões para opções neurais.</td></tr><tr><td>Cyberoptics</td><td>Olhos artificiais e opções de visão, mira ou leitura visual.</td></tr><tr><td>Cyberaudio</td><td>Implante de áudio e opções de comunicação, gravação ou audição.</td></tr><tr><td>Cyberware Interno</td><td>Órgãos artificiais e aprimoramentos sistêmicos como filtros ou enxertos físicos.</td></tr><tr><td>Cyberware Externo</td><td>Peças instaladas na, sobre ou através da pele; proteção e modificações visíveis.</td></tr><tr><td>Cybermembros</td><td>Cyberarms e Cyberlegs com opções, ferramentas e armas embutidas.</td></tr><tr><td>Borgware</td><td>Substituições extensas do corpo por estruturas cibernéticas.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Exemplos conferidos no catálogo RED</h3><div class="table-wrap"><table><thead><tr><th>Item</th><th>Resumo mecânico</th></tr></thead><tbody><tr><td>Biomonitor</td><td>Monitora sinais vitais e pode conectar-se a um Agent.</td></tr><tr><td>AudioVox</td><td>Sintetizador de voz; a entrada associa bônus às perícias de atuação musical/vocal.</td></tr><tr><td>Reinforced Antibodies</td><td>Acelera a recuperação natural depois da estabilização.</td></tr><tr><td>Gills</td><td>Permite respirar debaixo d'água.</td></tr><tr><td>Grafted Muscle and Bone Lace</td><td>Aumenta BODY dentro do limite indicado pela regra.</td></tr><tr><td>Nasal Filters</td><td>Protege contra gases tóxicos, fumaça e perigos semelhantes.</td></tr><tr><td>Radar/Sonar Implant</td><td>Varre a área próxima; a cobertura bloqueia a varredura.</td></tr><tr><td>Vampyres</td><td>Arma branca leve implantada na boca e ocultável.</td></tr></tbody></table></div><p>Os exemplos explicam a função em palavras próprias; veja o registro individual ao arbitrar valores, slots, HL e condições.</p></div>
-        <div class="section"><h3>Itens associados a 2077</h3><p>Gorilla Arms, Mantis Blades, Monowire, Projectile Launch System, Kerenzikov e Sandevistan pertencem à consulta de 2077 nesta wiki. As regras desta variante estão separadas para não confundir seu custo, funcionamento ou Humanity Loss com o livro-base RED.</p><button class="action" data-page="supplement2077" type="button">Abrir suplemento 2077</button></div>
-        <div class="section"><h3>Implantes emblemáticos de 2077</h3><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Função ficcional</th><th>Uso de consulta</th></tr></thead><tbody><tr><td>Sandevistan</td><td>Sistema de aceleração perceptiva e motora.</td><td>Procure no suplemento a versão, ativação, duração e limites usados nesta mesa.</td></tr><tr><td>Kerenzikov</td><td>Aprimoramento de reflexos associado a movimento e combate.</td><td>Não trate como sinônimo automático de Sandevistan; confira a entrada e a conversão adotada.</td></tr><tr><td>Gorilla Arms</td><td>Cyberarms reforçados para força e combate corpo a corpo.</td><td>Separe a função narrativa dos valores de dano, testes e slots da ficha.</td></tr><tr><td>Mantis Blades</td><td>Lâminas retráteis integradas aos braços.</td><td>Confira ataque, alcance, instalação, HL e restrições na versão da mesa.</td></tr><tr><td>Monowire</td><td>Fio de corte retrátil integrado ao membro.</td><td>Use a regra específica do suplemento para alcance, dano e interação com armadura.</td></tr><tr><td>Projectile Launch System</td><td>Arma de projéteis instalada no braço.</td><td>Registre munição, recarga e tipo de projétil além dos dados de cyberware.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Escolha rápida</h3><ul><li><b>Quero falar com máquinas:</b> comece em Neuralware e confira compatibilidade com Agent, cyberdeck ou interface.</li><li><b>Quero ampliar sentidos:</b> compare opções de Cyberaudio e Cyberoptics sem esquecer a capacidade do implante-base.</li><li><b>Quero modificar um membro:</b> confira se é cyberlimb, quais opções cabem e como cada uma afeta a ficha.</li><li><b>Quero aparência ou disfarce:</b> procure Fashionware; cosmética nem sempre concede bônus de perícia.</li></ul></div>
-        <div class="section"><h3>Morana e implantes conectados</h3><p>Na campanha, Morana pode interferir em implantes conectados, sistemas médicos, armas inteligentes e drones. Mostre sinais, ofereça uma reação e preserve a agência do jogador; falhas temporárias, escolhas difíceis e consequências claras são preferíveis a controle total do personagem.</p></div>
-        <div class="callout"><b>Ficha pronta:</b> anote nome do modelo, preço pago, HL, local/slots, efeito, ativação e qualquer opção instalada. Os campos exatos variam por item; esta página organiza a consulta sem atribuir valores a modelos diferentes.</div>`
-      },
-      gear: {
-        eyebrow: 'Cyberpunk RED / catálogo de consulta', title: 'Armas e equipamento',
-        lede: 'Um guia de consulta no lugar do catálogo aberto: encontre rapidamente o tipo de equipamento, os dados que importam e o que registrar na ficha.',
-        html: `<div class="section"><h3>Armas: comparação rápida</h3><div class="table-wrap"><table><thead><tr><th>Família</th><th>Exemplos</th><th>Compare antes de escolher</th></tr></thead><tbody><tr><td>Pistolas</td><td>Medium, Heavy e Very Heavy Pistol</td><td>Dano por disparo, ROF, capacidade, munição e DV pela distância.</td></tr><tr><td>Submetralhadoras</td><td>SMG e Heavy SMG</td><td>ROF, uso de autofogo, capacidade e desempenho por faixa de alcance.</td></tr><tr><td>Espingardas</td><td>Shotgun e variantes</td><td>Categoria de munição, dano, alcance e opção de disparo.</td></tr><tr><td>Fuzis</td><td>Assault Rifle e Sniper Rifle</td><td>Alcance, mira, ROF, capacidade e se o cenário permite usá-los.</td></tr><tr><td>Corpo a corpo</td><td>Facas, espadas e armas contundentes</td><td>Perícia apropriada, dano, mãos necessárias e interação com armadura.</td></tr><tr><td>Explosivos</td><td>Granadas e cargas</td><td>Área, tempo, DV para evitar o efeito, cobertura e dano de explosão.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Armadura e proteção</h3><p>Compare armaduras pelo <b>Stopping Power (SP)</b>, penalidade de movimento ou perícia quando aplicável, cobertura do corpo e disponibilidade. Registre SP por localização. Quando um ataque atravessa a proteção, aplique dano e ablação conforme a regra da peça; não some o SP como HP.</p><p>Escudos, cobertura do cenário, capacetes e proteção especial não são intercambiáveis: registre qual localização ou área cada regra protege.</p></div>
-        <div class="section"><h3>Equipamento de uso comum</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Para que serve</th><th>Não esquecer</th></tr></thead><tbody><tr><td>Agent</td><td>Comunicação, dados pessoais e acesso a serviços.</td><td>Conectividade, bateria e se a rede está disponível.</td></tr><tr><td>Medtech / primeiros socorros</td><td>Estabilizar feridos e tratar problemas médicos.</td><td>Kit adequado, tempo, perícia e condição do paciente.</td></tr><tr><td>Ferramentas de Tech</td><td>Diagnóstico, reparo e construção.</td><td>Ferramenta certa para o trabalho e peças de reposição.</td></tr><tr><td>Equipamento de Netrunner</td><td>Acessar uma NET Architecture e executar programas.</td><td>Cyberdeck, slots, programas carregados e ponto de acesso.</td></tr><tr><td>Consumíveis</td><td>Munição, cargas, medicamentos e itens de uso único.</td><td>Quantidade, tipo compatível e momento de recarga/reposição.</td></tr><tr><td>Veículos</td><td>Deslocamento, fuga, perseguição e transporte de carga.</td><td>Velocidade, manobrabilidade, condição e ocupantes.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Cartão de equipamento</h3><p>Use este formato para qualquer item que entre numa ficha ou cena:</p><p><span class="formula">NOME / categoria / mãos ou slots / dano ou efeito / alcance ou DV / munição / preço / disponibilidade</span></p><p>Para armadura, substitua dano por <b>SP e localização</b>. Para consumíveis, registre <b>quantidade e condição de uso</b>.</p></div>
-        <div class="section"><h3>Termos de combate</h3><ul><li><b>ROF:</b> quantas vezes a arma pode ser disparada numa ação; não confundir com autofogo.</li><li><b>DV por alcance:</b> ataque à distância usa a tabela da categoria da arma e a faixa em que o alvo está.</li><li><b>Capacidade:</b> disparos antes de recarregar; anote também o tipo de munição.</li><li><b>Autofogo:</b> procedimento próprio, com teste e dano distintos do disparo comum.</li><li><b>Localização:</b> acerto padrão usa o procedimento de localização do sistema; tiro mirado segue regra e penalidade próprias.</li></ul></div>
-        <div class="callout">Os itens agora estão explicados e organizados por função nesta wiki. Dano, preço, DV, capacidade e demais números são específicos de cada linha do catálogo; use o cartão de item para registrar os valores escolhidos para a campanha.</div>`
-      },
       sources: {
         eyebrow: 'Biblioteca local / PDFs disponíveis', title: 'Livros de referência',
         lede: 'A wiki separa as regras do livro-base RED das opções do suplemento comunitário de 2077. Os arquivos originais ficam apenas como material de conferência.',
         html: `<div class="section"><h3>Material e status</h3><ul><li><b>Cyberpunk RED:</b> livro-base em português para criação, testes, combate, Roles, netrunning, equipamento e cyberware.</li><li><b>Cyberpunk 2077 - A Cyberpunk RED Supplement:</b> suplemento comunitário de Queen Otter; conteúdo não oficial e opcional que altera partes do RED.</li></ul></div><div class="section"><h3>Mapa de consulta interna</h3><div class="table-wrap"><table><thead><tr><th>Área</th><th>Onde consultar</th></tr></thead><tbody><tr><td>Criação, STATs e Lifepath</td><td>Criação de personagens</td></tr><tr><td>Testes, combate e dano</td><td>Testes e dificuldades, Combate, Dano e recuperação</td></tr><tr><td>Perícias de Role e habilidades especiais</td><td>Funções (RED) ou Suplemento 2077</td></tr><tr><td>Cyberware RED</td><td>Famílias, slots, HL e exemplos</td></tr><tr><td>Armas e equipamento RED</td><td>Categorias, campos e comparação</td></tr><tr><td>Redes e regras de 2077</td><td>Suplemento 2077, separado do livro-base</td></tr><tr><td>Campanha</td><td>Protocolo Morana, elenco e sessões</td></tr></tbody></table></div></div><div class="section"><h3>Critério de síntese</h3><p>Esta wiki organiza regras com palavras próprias, fornece referências rápidas e separa a variante 2077. Não reproduz integralmente os livros; use os arquivos para conferir uma tabela completa, uma exceção ou uma ficha exata.</p><p>A busca no topo percorre títulos, categorias, termos de regra e exemplos de itens.</p></div><div class="source-row"><a class="source-link" href="${sources.core}"><b>CORE</b> Material de conferência (PDF)</a><a class="source-link" href="${sources['2077']}"><b>2077</b> Material de conferência (PDF)</a></div>`
       },
       notes: {
-        eyebrow: 'Arquivo local / privado neste navegador', title: 'Notas da sessão',
-        lede: 'Anote iniciativa, pistas descobertas, promessas e decisões para retomar na próxima sessão. O conteúdo fica salvo neste navegador.',
-        html: `<div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button></div><div class="section"><h3>Relógio de Sato</h3><p>Use 6 a 8 segmentos visíveis. Avance quando os personagens atrasarem, falharem ou deixarem testemunhas expostas.</p><ol><li>Recuperar os dois servidores.</li><li>Eliminar ou capturar testemunhas e sobreviventes.</li><li>Ativar Morana na rede de emergência.</li><li>Culpar uma corporação rival.</li><li>Vender o antídoto.</li><li>Transmitir Morana ou perder o controle do vírus.</li></ol></div>`
+        eyebrow: 'Arquivo local / privado neste navegador', title: 'Notas e relógios',
+        lede: 'Relógios da campanha, iniciativa, pistas descobertas, promessas e decisões para retomar na próxima sessão. Tudo fica salvo neste navegador; passe o resumo para o diário da campanha no fim da sessão.',
+        html: `<div class="section"><h3>Relógio de Sato</h3><p>Marque um segmento ao fim de cada sessão em que o grupo não atrapalhou o plano, e um extra quando o grupo falhar feio ou deixar uma testemunha exposta. Clique num segmento para marcá-lo; clique no último marcado para desmarcar.</p><div class="clock" id="clock-sato"></div></div><div class="section"><h3>Relógio da cidade (2077)</h3><p>Avance uma fase a cada uma ou duas sessões. Cada fase muda a segurança e quem está distraído na cidade.</p><div class="clock" id="clock-city"></div></div><div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button> <button class="action" data-page="docDiario" type="button">Abrir diário da campanha</button></div>`
       }
     };
 
     Object.assign(pageContent, window.systemCatalog || {});
+    Object.entries(markdownDocs).forEach(([id, doc]) => {
+      pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
+    });
+
+    const campaignClocks = {
+      sato: ['Recuperar a Chave', 'Garantir o Gatilho', 'Garantir a Coleira', 'Silenciar testemunhas', 'Atentado de fachada', 'Ativação no Núcleo'],
+      city: ['Antes do golpe', 'A noite da Konpeki', 'O Relic desperta', 'O desfile', 'Phantom Liberty', 'A eleição', 'O ataque à torre', 'Depois']
+    };
 
     const navigation = document.getElementById('navigation');
     const content = document.getElementById('content');
@@ -522,10 +540,105 @@
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
       if (id === 'notes') setupNotes();
       if (id === 'campaignMap') setupCampaignMap();
+      if (markdownDocs[id]) showMarkdownDoc(id);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+    }
+
+    function renderInlineMarkdown(text) {
+      return escapeHtml(text)
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g, '$1<i>$2</i>');
+    }
+
+    // Conversor mínimo para os documentos da campanha: títulos, parágrafos, listas, tabelas, citações e linhas.
+    function renderMarkdown(source) {
+      const lines = source.replace(/\r/g, '').split('\n');
+      const isBlockStart = line => /^(#{1,4}\s|\||>|\s*[-*]\s+|\s*\d+\.\s+|---+\s*$)/.test(line);
+      const cells = line => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
+      let html = '';
+      let index = 0;
+      while (index < lines.length) {
+        const line = lines[index];
+        let match;
+        if (!line.trim()) { index++; continue; }
+        if ((match = line.match(/^(#{1,4})\s+(.*)$/))) {
+          const tag = ['h3', 'h3', 'h4', 'h5'][match[1].length - 1];
+          html += `<${tag} class="md-h${match[1].length}">${renderInlineMarkdown(match[2])}</${tag}>`;
+          index++;
+        } else if (/^---+\s*$/.test(line)) {
+          html += '<hr class="rule">';
+          index++;
+        } else if (line.startsWith('|')) {
+          const rows = [];
+          while (index < lines.length && lines[index].startsWith('|')) rows.push(lines[index++]);
+          const body = rows.slice(1).filter(row => !/^\|[\s:|-]+\|?\s*$/.test(row));
+          html += `<div class="table-wrap"><table><thead><tr>${cells(rows[0]).map(cell => `<th>${renderInlineMarkdown(cell)}</th>`).join('')}</tr></thead><tbody>${body.map(row => `<tr>${cells(row).map(cell => `<td>${renderInlineMarkdown(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+        } else if (line.startsWith('>')) {
+          const quote = [];
+          while (index < lines.length && lines[index].startsWith('>')) quote.push(lines[index++].replace(/^>\s?/, ''));
+          html += `<blockquote>${quote.map(item => item.trim() ? renderInlineMarkdown(item) : '').join('<br>').replace(/(<br>){2,}/g, '<br><br>')}</blockquote>`;
+        } else if ((match = line.match(/^\s*([-*]|\d+\.)\s+/))) {
+          const ordered = /\d/.test(match[1]);
+          const pattern = ordered ? /^\s*\d+\.\s+/ : /^\s*[-*]\s+/;
+          const items = [];
+          while (index < lines.length && pattern.test(lines[index])) items.push(lines[index++].replace(pattern, ''));
+          const tag = ordered ? 'ol' : 'ul';
+          html += `<${tag}>${items.map(item => `<li>${renderInlineMarkdown(item.replace(/^\[ \]\s*/, '☐ ').replace(/^\[x\]\s*/i, '☑ '))}</li>`).join('')}</${tag}>`;
+        } else {
+          const paragraph = [];
+          while (index < lines.length && lines[index].trim() && !isBlockStart(lines[index])) paragraph.push(lines[index++].trim());
+          html += `<p>${renderInlineMarkdown(paragraph.join(' '))}</p>`;
+        }
+      }
+      return html;
+    }
+
+    function loadMarkdownDoc(id) {
+      if (markdownCache[id]) return Promise.resolve(markdownCache[id]);
+      return fetch(encodeURI(markdownDocs[id].file), { cache: 'no-store' })
+        .then(response => { if (!response.ok) throw new Error(response.status); return response.text(); })
+        .then(text => (markdownCache[id] = text));
+    }
+
+    function showMarkdownDoc(id) {
+      loadMarkdownDoc(id).then(text => {
+        const container = document.getElementById('md-doc');
+        if (currentPage !== id || !container) return;
+        // O primeiro título do arquivo repete o título da página.
+        container.innerHTML = renderMarkdown(text.replace(/^﻿?#\s+.*\n/, ''));
+      }).catch(() => {
+        const container = document.getElementById('md-doc');
+        if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
+      });
+    }
+
+    function setupClock(name, storageKey) {
+      const element = document.getElementById(`clock-${name}`);
+      const steps = campaignClocks[name];
+      const read = () => { try { return Number(localStorage.getItem(storageKey)) || 0; } catch { return 0; } };
+      const render = () => {
+        const value = read();
+        element.innerHTML = steps.map((step, index) => `<button type="button" class="clock-segment" data-clock-index="${index}" aria-pressed="${index < value}"><span>${index + 1}</span>${escapeHtml(step)}</button>`).join('');
+      };
+      element.onclick = event => {
+        const segment = event.target.closest('[data-clock-index]');
+        if (!segment) return;
+        const index = Number(segment.dataset.clockIndex);
+        const next = read() === index + 1 ? index : index + 1;
+        try { localStorage.setItem(storageKey, String(next)); } catch { /* armazenamento indisponível */ }
+        render();
+      };
+      render();
+    }
+
     function setupNotes() {
+      setupClock('sato', `night-city-clock-sato-${activeCampaignId}`);
+      setupClock('city', `night-city-clock-city-${activeCampaignId}`);
       const input = document.getElementById('session-note');
       const status = document.getElementById('note-status');
       const key = `night-city-fieldbook-notes-${activeCampaignId}`;
@@ -571,7 +684,7 @@
     function applyCampaignMapFilters() {
       let firstVisible = null;
       campaignMapData.markers.forEach(marker => {
-        const actMatches = campaignMapAct === 'all' || marker.act === campaignMapAct || (campaignMapAct === 'Sessão 01' && marker.act.startsWith('Sessão 01'));
+        const actMatches = campaignMapAct === 'all' || marker.act.includes(campaignMapAct);
         const visible = (campaignMapCategory === 'all' || marker.category === campaignMapCategory) && actMatches;
         document.querySelector(`.map-pin[data-map-marker="${marker.id}"]`)?.classList.toggle('filtered-out', !visible);
         document.querySelector(`.map-marker-card[data-map-marker="${marker.id}"]`)?.classList.toggle('hidden', !visible);
@@ -594,7 +707,8 @@
       campaignMapCategory = 'all';
       campaignMapAct = 'all';
       campaignMapView = { x: 0, y: 0, width: data.width, height: data.height };
-      image.setAttribute('href', data.images.reference);
+      image.setAttribute('href', data.images.base);
+      document.getElementById('map-source').value = 'base';
       pinLayer.innerHTML = data.markers.map(marker => {
         const category = data.categories[marker.category];
         return `<g class="map-pin" data-map-marker="${marker.id}" tabindex="0" role="button" aria-label="${escapeText(marker.title)}, ${escapeText(marker.district)}" transform="translate(${marker.x} ${marker.y})"><title>${escapeText(marker.title)} — ${escapeText(marker.district)}</title><circle class="pin-core" cx="0" cy="0" r="62" fill="${category.color}"></circle><text class="pin-code" x="0" y="2">${escapeText(marker.code)}</text><text class="pin-label" x="82" y="14">${escapeText(marker.title)}</text></g>`;
@@ -665,20 +779,26 @@
       applyCampaignMapFilters();
     }
 
+    // Normaliza caractere por caractere para manter as posições do texto original no trecho exibido.
+    function foldForSearch(text) {
+      return Array.from(text, character => character.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').charAt(0) || character).join('');
+    }
+
     function searchPages(query) {
-      const normalized = query.trim().toLocaleLowerCase('pt-BR');
+      const normalized = foldForSearch(query.trim());
       if (!normalized) { openPage(currentPage); return; }
       const matches = Object.entries(pageContent).flatMap(([id, page]) => {
-        const parsed = new DOMParser().parseFromString(page.html, 'text/html');
+        const body = markdownDocs[id]
+          ? (markdownCache[id] || '').replace(/[#*>|`]/g, ' ')
+          : new DOMParser().parseFromString(page.html, 'text/html').body.textContent;
         const mapTerms = id === 'campaignMap' && window.campaignMapData ? window.campaignMapData.markers.map(marker => `${marker.title} ${marker.district} ${marker.act} ${marker.summary} ${marker.hook} ${marker.encounter} ${marker.clue}`).join(' ') : '';
-        const text = `${page.eyebrow} ${page.title.replace(/<[^>]*>/g, '')} ${page.lede} ${parsed.body.textContent} ${mapTerms}`.replace(/\s+/g, ' ').trim();
-        const matchIndex = text.toLocaleLowerCase('pt-BR').indexOf(normalized);
+        const text = Array.from(`${page.eyebrow} ${page.title.replace(/<[^>]*>/g, '')} ${page.lede} ${body} ${mapTerms}`.replace(/\s+/g, ' ').trim());
+        const matchIndex = foldForSearch(text.join('')).indexOf(normalized);
         if (matchIndex < 0) return [];
         const start = Math.max(0, matchIndex - 85);
         const end = Math.min(text.length, matchIndex + normalized.length + 125);
-        const excerpt = `${start ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`;
-        const safeExcerpt = excerpt.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-        return [{ id, page, excerpt: safeExcerpt }];
+        const excerpt = `${start ? '…' : ''}${text.slice(start, end).join('')}${end < text.length ? '…' : ''}`;
+        return [{ id, page, excerpt: escapeHtml(excerpt) }];
       });
       content.innerHTML = `<p class="eyebrow">Busca local / ${matches.length} resultado(s)</p><h2>Resultados</h2><div class="search-results">${matches.map(({ id, page, excerpt }) => `<button class="result" data-page="${id}" type="button"><small>${page.eyebrow}</small><strong>${page.title.replace(/<[^>]*>/g, '')}</strong><p>${excerpt}</p></button>`).join('') || '<div class="empty">Nenhuma entrada encontrada. Tente outro nome, função ou categoria.</div>'}</div>`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.remove('active'));
@@ -706,6 +826,8 @@
     if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
     buildNavigation();
     openPage('home');
+    // Pré-carrega os documentos para a busca encontrar o texto completo deles.
+    Promise.allSettled(Object.keys(markdownDocs).map(loadMarkdownDoc)).then(() => { if (search.value.trim()) searchPages(search.value); });
   </script>
 </body>
 </html>

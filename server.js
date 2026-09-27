@@ -4,6 +4,9 @@ const path = require('path');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 8000);
+// A wiki contém segredos do mestre: por padrão só este computador acessa.
+// Para abrir na rede local (ex.: tablet do mestre), rode com HOST=0.0.0.0.
+const host = process.env.HOST || '127.0.0.1';
 const contentTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -47,6 +50,7 @@ http.createServer((request, response) => {
     });
     fs.createReadStream(filePath).pipe(response);
   });
-}).listen(port, '0.0.0.0', () => {
-  console.log(`Night City wiki listening on 0.0.0.0:${port}`);
+}).listen(port, host, () => {
+  console.log(`Night City wiki: http://localhost:${port}`);
+  if (host !== '127.0.0.1') console.log(`Aberta na rede (${host}:${port}). Quem estiver na mesma rede pode ver os segredos do mestre.`);
 });

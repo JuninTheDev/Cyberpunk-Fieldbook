@@ -1,5 +1,2 @@
 # Livros em PDF (grandes e de terceiros) ficam fora do versionamento
 *.pdf
-# Arquivos grandes/duplicados
-*.zip
-Map_*_Full.png
