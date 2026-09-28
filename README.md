@@ -30,6 +30,7 @@ e abra `http://localhost:8000`.
 | `index.html` | A wiki. As páginas de resumo estão escritas aqui; os documentos completos são lidos dos `.md`. |
 | `campaign-map.js` | Pinos do mapa de operações. |
 | `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade e drogas, Netrunning, economia e criação. Cada seção indica a página do PDF traduzido. |
+| `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
 | `system-catalog.js` | Catálogo de Roles, cyberware e equipamento do RED. |
 | `server.js` | Servidor local da wiki. |
 

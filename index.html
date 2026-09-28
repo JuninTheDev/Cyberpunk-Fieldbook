@@ -303,6 +303,20 @@
     .skill-search .nav-label { display: block; padding: 0; }
     .skill-search input { width: min(280px, 100%); padding: 8px 10px; border: 1px solid #48504e; background: #171b1b; color: var(--text); }
     .result p mark { font-weight: 700; }
+    /* Cartões de itens (Black ICE, programas, quickhacks...) */
+    .entry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 10px; margin-top: 12px; }
+    .entry { display: flex; flex-direction: column; gap: 6px; padding: 13px 14px; border: 1px solid #3b4443; background: #111617; scroll-margin-top: calc(var(--topbar-h, 66px) + 64px); clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); }
+    .entry header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+    .entry h4 { margin: 0; color: var(--yellow); font: 17px/1.2 Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+    .entry-tag { color: var(--cyan); font: 10px Oxanium, Consolas, monospace; text-transform: uppercase; }
+    .entry-stats { display: flex; flex-wrap: wrap; gap: 4px; }
+    .entry-stats span { padding: 2px 7px; border: 1px solid #454d4b; background: #181e1f; color: var(--text); font: 12px Oxanium, Consolas, monospace; }
+    .entry-stats b { color: var(--muted); font-weight: 400; }
+    .entry p { margin: 0; color: #cad2cb; font-size: 13.5px; }
+    .entry .entry-excellent { padding-left: 8px; border-left: 2px solid var(--yellow); }
+    .entry .entry-icon { color: #9fb3ab; font-style: italic; }
+    .entry .entry-icon b, .entry .entry-tip b { font-style: normal; }
+    .entry .entry-tip { padding: 6px 8px; background: #10211e; color: #bfe9de; }
     @media (max-width: 720px) {
       .quick-card.wide { grid-column: auto; }
     }
@@ -335,6 +349,7 @@
   </div>
   <script src="system-catalog.js"></script>
   <script src="system-rules.js"></script>
+  <script src="system-net.js"></script>
   <script src="campaign-map.js"></script>
   <script>
     const sources = {
@@ -388,9 +403,15 @@
         { id: 'combat', label: 'Combate', icon: 'C' },
         { id: 'damage', label: 'Dano, ferimentos e cura', icon: 'D' },
         { id: 'humanity', label: 'Humanidade e drogas', icon: 'H' },
-        { id: 'netrunning', label: 'Netrunning', icon: 'N' },
         { id: 'economy', label: 'Economia de 2077', icon: 'EB' },
         { id: 'creation', label: 'Criação de personagens', icon: 'P' }
+      ]},
+      { group: 'Netrunning', pages: [
+        { id: 'netrunning', label: 'Regras do RED', icon: 'N' },
+        { id: 'netArsenal', label: 'Arsenal: ICE, programas, upgrades', icon: 'ICE' },
+        { id: 'net2077', label: 'Netrunning de 2077', icon: '77' },
+        { id: 'quickhacks', label: 'Quickhacks e daemons', icon: 'QH' },
+        { id: 'os2077', label: 'Berserk e Sandevistan', icon: 'OS' }
       ]},
       { group: 'Catálogos', pages: [
         { id: 'roles', label: 'Roles', icon: 'F' },
@@ -470,9 +491,9 @@
         lede: 'O arquivo fornecido é um suplemento de Queen Otter para adaptar RED à era de 2077. Use como conjunto opcional de regras; ele modifica partes do livro-base e não é uma publicação oficial.',
         html: `<div class="callout"><b>Compatibilidade:</b> escolha com o grupo se esta variante está ativa. As alterações abaixo substituem regras RED específicas; não some as duas versões automaticamente.</div>
         <div class="section"><h3>Roles na variante</h3><div class="table-wrap"><table><thead><tr><th>Role 2077</th><th>Mudança prática</th></tr></thead><tbody><tr><td>Face</td><td>Usa Charismatic Impact. As especializações Siren, Rockerboy e Model associam o rank a diferentes perícias sociais, de atuação ou música.</td></tr><tr><td>Solo</td><td>Combat Awareness permanece como foco tático.</td></tr><tr><td>Netrunner</td><td>Interface é revisada para ações de NET, RAM e slots de programas/Daemon.</td></tr><tr><td>Corpo</td><td>Combina elementos do Exec e do Fixer; a configuração de equipe corporativa muda.</td></tr><tr><td>Tech / Medtech / Media</td><td>O suplemento descreve poucas mudanças centrais para estas três funções.</td></tr><tr><td>Lawman</td><td>Backup é trocado por Investigator, centrado em casos ativos e investigação.</td></tr><tr><td>Nomad</td><td>Mantém a identidade de estrada e recebe condições próprias para reparos e upgrades com o clã.</td></tr></tbody></table></div><p>O suplemento trabalha com nove Roles no futuro de 2077: Face, Solo, Netrunner, Corpo, Tech, Medtech, Media, Lawman e Nomad.</p></div>
-        <div class="section"><h3>Interface, RAM e ação de NET</h3><p>Na versão do suplemento, Interface também fornece bônus de Netrunner em ações técnicas de netrunning. RAM adicional é calculada pelo rank, e novos slots de programa/Daemon aparecem em marcos da habilidade.</p><p>Fora de uma NET Architecture, ações de NET adicionais feitas contra o mesmo alvo entram numa fila para o turno seguinte; o custo de RAM fica reservado. Isso muda o ritmo do hacking em comparação ao livro-base.</p></div>
+        <div class="section"><h3>Interface, RAM e ação de NET</h3><p>Na versão do suplemento, Interface também fornece bônus de Netrunner em ações técnicas de netrunning. RAM adicional é calculada pelo rank, e novos slots de programa/Daemon aparecem em marcos da habilidade.</p><p>Fora de uma NET Architecture, ações de NET adicionais feitas contra o mesmo alvo entram numa fila para o turno seguinte; o custo de RAM fica reservado. Isso muda o ritmo do hacking em comparação ao livro-base.</p><button class="action" data-page="net2077" type="button">Netrunning de 2077 completo</button> <button class="action" data-page="quickhacks" type="button">Quickhacks e daemons</button></div>
         <div class="section"><h3>Rede da cidade em 2077</h3><div class="table-wrap"><table><thead><tr><th>Conceito</th><th>Uso na mesa</th></tr></thead><tbody><tr><td>Citinet</td><td>Rede pública ampla da cidade e camada de serviços conectados.</td></tr><tr><td>Localnet</td><td>Rede privada que liga pessoas, feeds e dispositivos de um grupo ou local.</td></tr><tr><td>Subnet</td><td>Segmento conectado a uma rede maior; pode concentrar câmeras, portas, luzes e torretas.</td></tr><tr><td>NET Architecture</td><td>Sistema de servidores com andares e defesas próprias, ainda usado para infraestrutura crítica.</td></tr></tbody></table></div><p>Acesso a uma Localnet é uma via de ataque e também uma via de exposição: um runner pode alcançar feeds e sistemas conectados, mas a rede pode conter Black ICE e outros participantes.</p></div>
-        <div class="section"><h3>Operating Systems e chrome inicial</h3><p>O suplemento trata o cyberdeck como cyberware integrado ao Neural Link e organiza Operating Systems como opções do implante. As linhas citadas incluem Berserk, Cyberdeck e Sandevistan; cada uma ocupa a opção correspondente e segue seus próprios efeitos.</p><p>Como pacote inicial opcional de 2077, o texto propõe Neural Link, Cyberaudio Suite, Internal Agent, Personal Link e dois Chipware Sockets sem custo e sem Humanity Loss inicial. Isso é uma regra desta variante, não a criação padrão do livro-base.</p></div>
+        <div class="section"><h3>Operating Systems e chrome inicial</h3><p>O suplemento trata o cyberdeck como cyberware integrado ao Neural Link e organiza Operating Systems como opções do implante. As linhas citadas incluem Berserk, Cyberdeck e Sandevistan; cada uma ocupa a opção correspondente e segue seus próprios efeitos.</p><p>Como pacote inicial opcional de 2077, o texto propõe Neural Link, Cyberaudio Suite, Internal Agent, Personal Link e dois Chipware Sockets sem custo e sem Humanity Loss inicial. Isso é uma regra desta variante, não a criação padrão do livro-base.</p><button class="action" data-page="os2077" type="button">Modelos de Berserk e Sandevistan</button></div>
         <div class="section"><h3>Chrome adicional de 2077</h3><div class="table-wrap"><table><thead><tr><th>Exemplo</th><th>Resumo de função</th><th>Origem</th></tr></thead><tbody><tr><td>Gorilla Arms</td><td>Cyberarm voltado a força e confronto corpo a corpo.</td><td>Catálogo/variante 2077</td></tr><tr><td>Mantis Blades</td><td>Lâminas retráteis integradas a cyberlimbs.</td><td>Catálogo/variante 2077</td></tr><tr><td>Monowire</td><td>Arma de fio retrátil integrada ao cyberware.</td><td>Catálogo/variante 2077</td></tr><tr><td>Projectile Launch System</td><td>Sistema de projéteis embutido em membro cibernético.</td><td>Catálogo/variante 2077</td></tr><tr><td>Kerenzikov / Sandevistan</td><td>Opções de aceleração/reflexo com regras distintas no suplemento.</td><td>Operating Systems</td></tr></tbody></table></div></div>
         <div class="section"><h3>Economia e estilo</h3><p>As categorias de preço sobem um degrau (Barato passa a 20eb), mas as listas do suplemento mantêm quase todos os preços em eurobucks do RED e só trocam o nome da categoria. O Kibble some, o Prepak genérico custa 100eb, o hustle rende 1,5× e a moda se divide em quatro estilos: Entropismo, Kitsch, Neomilitarismo e Neokitsch.</p><button class="action" data-page="economy" type="button">Abrir a economia de 2077</button></div>
         <div class="callout">Para uma ficha de campanha, marque cada regra adotada como <b>RED</b> ou <b>2077 opcional</b>. Isso evita diferenças de Role, cyberware, custo e netrunning no meio de uma sessão.</div>`
@@ -489,7 +510,7 @@
       }
     };
 
-    Object.assign(pageContent, window.systemCatalog || {}, (window.systemRules || {}).pages || {});
+    Object.assign(pageContent, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {});
     Object.entries(markdownDocs).forEach(([id, doc]) => {
       pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
     });
@@ -551,18 +572,26 @@
         return;
       }
       buildToc();
-      if (target && target.unit !== undefined) focusUnit(target.unit, target.term);
+      if (target && target.unit !== undefined) focusUnit(searchUnits(content)[target.unit], target.term);
       else window.scrollTo({ top: 0 });
     }
 
-    // Uma "unidade" é o trecho para onde a busca e o índice da página apontam:
+    // Uma "unidade" é o trecho para onde o índice da página e a busca apontam:
     // cada .section e cada cartão de pessoa; nos documentos .md, cada título de seção.
     const unitSelector = '.section, .person';
 
+    // Índice "Nesta página": só as unidades de primeiro nível.
     function pageUnits(container) {
       const doc = container.querySelector('#md-doc');
       if (doc) return [...doc.querySelectorAll(':scope > h3')];
       return [...container.querySelectorAll(unitSelector)].filter(element => !element.parentElement.closest(unitSelector));
+    }
+
+    // Busca: também cada cartão (.entry) dentro das seções, para abrir direto num Black ICE ou quickhack.
+    function searchUnits(container) {
+      const doc = container.querySelector('#md-doc');
+      if (doc) return [...doc.querySelectorAll(':scope > h3')];
+      return [...container.querySelectorAll(`${unitSelector}, .entry`)];
     }
 
     function unitTitle(element) {
@@ -592,14 +621,17 @@
     }
 
     // A busca pula direto (consulta rápida); os chips do índice rolam suavemente.
-    function focusUnit(index, term, smooth = false) {
-      const unit = pageUnits(content)[index];
+    function focusUnit(unit, term, smooth = false) {
       if (!unit) return;
       const details = unit.matches('details') ? unit : unit.closest('details');
       if (details) details.open = true;
       const block = unitBlock(unit);
       if (term) highlightTerm(block, term);
-      unit.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+      // Numa seção longa (uma tabela grande, por exemplo), o termo pode estar fora da tela: centraliza nele.
+      const firstMark = term ? block.map(element => element.querySelector('mark')).find(Boolean) : null;
+      const markIsFar = firstMark && firstMark.getBoundingClientRect().top - unit.getBoundingClientRect().top > window.innerHeight / 2;
+      if (markIsFar) firstMark.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+      else unit.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
       block.forEach(element => {
         element.classList.remove('flash');
         void element.offsetWidth;
@@ -790,7 +822,7 @@
         if (currentPage !== id || !container) return;
         container.innerHTML = renderMarkdown(stripDocTitle(text));
         buildToc();
-        if (target && target.unit !== undefined) focusUnit(target.unit, target.term);
+        if (target && target.unit !== undefined) focusUnit(searchUnits(content)[target.unit], target.term);
       }).catch(() => {
         const container = document.getElementById('md-doc');
         if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
@@ -976,9 +1008,19 @@
         // Espaço entre as tags para o texto de blocos vizinhos não grudar no trecho exibido.
         holder.innerHTML = (markdownDocs[id] ? `<div id="md-doc">${renderMarkdown(stripDocTitle(markdownCache[id]))}</div>` : page.html).replace(/></g, '> <');
         const pageTitle = strip(page.title).replace(/\s+/g, ' ').trim();
-        const units = pageUnits(holder);
-        units.forEach((unit, index) => entries.push({ id, unit: index, pageTitle, title: unitTitle(unit), text: unitBlock(unit).map(element => element.textContent).join(' ') }));
-        units.forEach(unit => unitBlock(unit).forEach(element => element.remove()));
+        const units = searchUnits(holder);
+        // O texto de uma seção não inclui os cartões dela: cada cartão é uma entrada própria.
+        const ownText = unit => {
+          if (!unit.querySelector('.entry')) return unitBlock(unit).map(element => element.textContent).join(' ');
+          const copy = unit.cloneNode(true);
+          copy.querySelectorAll('.entry').forEach(card => card.remove());
+          return copy.textContent;
+        };
+        units.forEach((unit, index) => {
+          const parent = unit.matches('.entry') ? unit.parentElement.closest(unitSelector) : null;
+          entries.push({ id, unit: index, pageTitle: parent ? `${pageTitle} › ${unitTitle(parent)}` : pageTitle, title: unitTitle(unit), text: ownText(unit) });
+        });
+        pageUnits(holder).forEach(unit => unitBlock(unit).forEach(element => element.remove()));
         const mapTerms = id === 'campaignMap' && window.campaignMapData ? window.campaignMapData.markers.map(marker => `${marker.title} ${marker.district} ${marker.act} ${marker.summary} ${marker.hook} ${marker.encounter} ${marker.clue}`).join(' ') : '';
         entries.push({ id, unit: null, pageTitle, title: '', text: `${strip(page.eyebrow)} ${pageTitle} ${strip(page.lede)} ${holder.textContent} ${mapTerms}` });
       });
@@ -1019,7 +1061,7 @@
         return;
       }
       const tocChip = event.target.closest('[data-toc-index]');
-      if (tocChip) { focusUnit(Number(tocChip.dataset.tocIndex), undefined, true); return; }
+      if (tocChip) { focusUnit(pageUnits(content)[Number(tocChip.dataset.tocIndex)], undefined, true); return; }
       const critButton = event.target.closest('[data-crit]');
       if (critButton) { rollCritical(critButton.dataset.crit); return; }
       const button = event.target.closest('[data-page]');
