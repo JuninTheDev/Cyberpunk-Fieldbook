@@ -139,17 +139,17 @@
     ['Branca Muito Pesada', 'Motosserra, marreta, naginata', '4d6', '1', 'Varia', 'Não', '500eb']
   ];
   const rangedWeapons = [
-    ['Pistola Média', 'Handgun', '2d6', '12', '2', '1', 'Sim', '50eb', '—'],
-    ['Pistola Pesada', 'Handgun', '3d6', '8', '2', '1', 'Sim', '100eb', '—'],
-    ['Pistola Muito Pesada', 'Handgun', '4d6', '8', '1', '1', 'Não', '100eb', '—'],
-    ['SMG', 'Handgun', '2d6', '30', '1', '1', 'Sim', '100eb', 'Autofogo (3), supressão'],
-    ['SMG Pesada', 'Handgun', '3d6', '40', '1', '1', 'Não', '100eb', 'Autofogo (3), supressão'],
-    ['Espingarda (balote)', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', 'Cartuchos'],
-    ['Rifle de Assalto', 'Shoulder Arms', '5d6', '25', '1', '2', 'Não', '500eb', 'Autofogo (4), supressão'],
-    ['Rifle Sniper', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', '—'],
-    ['Arco / besta', 'Archery', '4d6', '—', '1', '2', 'Não', '100eb', 'Flechas'],
-    ['Lança-granadas', 'Heavy Weapons', '6d6', '2', '1', '2', 'Não', '500eb', 'Explosivo'],
-    ['Lança-mísseis', 'Heavy Weapons', '8d6', '1', '1', '2', 'Não', '500eb', 'Explosivo']
+    ['Pistola Média', 'Handgun', '2d6', '12', '2', '1', 'Sim', '50eb', '100eb', '—'],
+    ['Pistola Pesada', 'Handgun', '3d6', '8', '2', '1', 'Sim', '100eb', '100eb', '—'],
+    ['Pistola Muito Pesada', 'Handgun', '4d6', '8', '1', '1', 'Não', '100eb', '50–100eb', '—'],
+    ['SMG', 'Handgun', '2d6', '30', '1', '1', 'Sim', '100eb', '100eb', 'Autofogo (3), supressão'],
+    ['SMG Pesada', 'Handgun', '3d6', '40', '1', '1', 'Não', '100eb', '50eb (ruim) · 1.000eb (Smart)', 'Autofogo (3), supressão'],
+    ['Espingarda (balote)', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', '500eb', 'Cartuchos'],
+    ['Rifle de Assalto', 'Shoulder Arms', '5d6', '25', '1', '2', 'Não', '500eb', '500eb', 'Autofogo (4), supressão'],
+    ['Rifle Sniper', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', '1.000eb (exóticos)', '—'],
+    ['Arco / besta', 'Archery', '4d6', '—', '1', '2', 'Não', '100eb', 'igual ao RED', 'Flechas'],
+    ['Lança-granadas', 'Heavy Weapons', '6d6', '2', '1', '2', 'Não', '500eb', 'igual ao RED', 'Explosivo'],
+    ['Lança-mísseis', 'Heavy Weapons', '8d6', '1', '1', '2', 'Não', '500eb', 'igual ao RED', 'Explosivo']
   ];
   const exoticWeapons = [
     ['Air Pistol', 'Pistola Muito Pesada que dispara bolas de tinta ou ácido.', '100eb'],
@@ -180,7 +180,7 @@
   ];
 
   const gearHTML = `<div class="section"><h3>Armas brancas RED</h3><p>O dano vem da classe da arma; o número de mãos pode variar pelo item. O teste usa a perícia de combate apropriada.</p>${table(['Classe', 'Exemplos', 'Dano', 'CDT (ataques por Ação)', 'Mãos', 'Ocultável', 'Custo de referência'], meleeWeapons)}</div>
-    <div class="section"><h3>Armas de longo alcance RED</h3><p>DV de acerto depende da categoria e distância; alcance, cobertura e modos de tiro continuam importantes.</p>${table(['Arma', 'Perícia', 'Dano', 'Carregador', 'ROF', 'Mãos', 'Ocultável', 'Preço-base', 'Modo/nota'], rangedWeapons)}</div>
+    <div class="section"><h3>Armas de longo alcance RED</h3><p>DV de acerto depende da categoria e distância; alcance, cobertura e modos de tiro continuam importantes.</p><p class="note-status">"Preço 2077": faixa dos modelos de qualidade padrão no suplemento. Modelos e exceções na página Economia de 2077.</p>${table(['Arma', 'Perícia', 'Dano', 'Carregador', 'ROF', 'Mãos', 'Ocultável', 'Preço RED', 'Preço 2077', 'Modo/nota'], rangedWeapons)}</div>
     <div class="section"><h3>Armas exóticas</h3><p>São especializadas; em geral não aceitam acessórios nem munição não básica, salvo quando a entrada disser o contrário.</p>${table(['Modelo', 'Diferença mecânica resumida', 'Preço de referência'], exoticWeapons)}</div>
     <div class="section"><h3>Armaduras RED</h3><p>Compre proteção separadamente para cabeça e corpo. SP não acumula: vale a fonte mais alta por localização. A penalidade de uma armadura mais pesada aplica-se a REF, DEX e MOVE.</p>${table(['Tipo', 'SP', 'Penalidade', 'Preço-base'], armor)}</div>
     <div class="section"><h3>Munição e acessórios</h3><ul><li><b>Munição básica:</b> 10 unidades custam 10eb; escolha projétil compatível com a classe da arma. Cartuchos, flechas, granadas e mísseis seguem tipos próprios.</li><li><b>Munição especial:</b> incendiária, anti-blindagem, tóxica e outros tipos alteram o efeito e têm disponibilidade/custo próprios.</li><li><b>Acessórios:</b> armas de longo alcance não exóticas têm slots; acessórios consomem esses espaços e são específicos de certos tipos de arma.</li><li><b>Autofogo:</b> use o DV de autofogo e o multiplicador da arma; não trate como vários disparos comuns.</li><li><b>Tiro mirado:</b> pode escolher localização, mas usa penalidade específica.</li></ul></div>
