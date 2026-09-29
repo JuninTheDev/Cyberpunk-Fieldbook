@@ -12,9 +12,24 @@ node server.js
 
 e abra `http://localhost:8000`.
 
-- Por padrão, só este computador acessa (a wiki tem segredos do mestre).
-- Para abrir num tablet na mesma rede: no PowerShell, `$env:HOST='0.0.0.0'; node server.js`, e acesse pelo IP do computador. Quem estiver na mesma rede também consegue ver.
-- Abrir o `index.html` com dois cliques funciona para as páginas de resumo, mas os **documentos completos** só carregam pelo servidor.
+- Por padrão, só este computador acessa.
+- Para os jogadores entrarem pela rede: no PowerShell, `$env:HOST='0.0.0.0'; node server.js`. O servidor mostra no terminal o endereço (`http://192.168.x.x:8000`) para passar aos jogadores.
+- **Quem entra de outro aparelho só recebe a visão dos jogadores** (`jogadores.html`). A wiki do mestre, os `.md`, os PDFs e o `jogadores-mestre.json` ficam bloqueados para eles.
+- Para usar a visão do mestre num tablet: `$env:HOST='0.0.0.0'; $env:GM_KEY='uma-senha'; node server.js` e, no tablet, abra uma vez `http://IP:8000/?mestre=uma-senha`. O tablet guarda um cookie e passa a abrir a wiki do mestre.
+- Abrir o `index.html` com dois cliques funciona para as páginas de resumo, mas os **documentos completos** e a visão dos jogadores só funcionam pelo servidor.
+
+## Visão dos jogadores
+
+Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os jogadores podem ver:
+
+- **O que o grupo sabe:** o resumo que aparece na página inicial deles.
+- **Pessoas, Lugares no mapa, Notícias e handouts:** marque *Revelado* / *No mapa* / *Publicada* no que o grupo já descobriu. O resto fica guardado, mas não é enviado.
+- **Nota do mestre** (campo tracejado em vermelho): lembretes seus, como o nome verdadeiro de um NPC. Nunca vai para os jogadores.
+- Clique em **Publicar**. A página dos jogadores se atualiza sozinha em até 15 segundos e avisa "O mestre publicou novidades".
+
+Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, netrunning, armas, cyberware...), sem as notas de campanha. Nas páginas de regras da wiki do mestre, essas notas aparecem com **contorno tracejado vermelho**: é o que só você vê. Elas ficam no `index.html` (em `gmNotes`), e não nos arquivos `system-*.js`, que os jogadores baixam.
+
+**Não escreva segredos** em `jogadores.html`, `wiki-app.js`, `wiki.css` ou `system-*.js`: esses arquivos vão para os aparelhos dos jogadores.
 
 ## Arquivos
 
@@ -27,12 +42,18 @@ e abra `http://localhost:8000`.
 | `sessao-02-o-hospital-queimado.md` | Sessão 2, com aberturas para cada desfecho da Sessão 1. |
 | `guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo, ganchos e tabelas. |
 | `diario-da-campanha.md` | Estado dos relógios, onde está cada parte de Morana e registro das sessões. Atualize depois de cada sessão. |
-| `index.html` | A wiki. As páginas de resumo estão escritas aqui; os documentos completos são lidos dos `.md`. |
+| `index.html` | A wiki do mestre. As páginas de resumo e as notas de campanha nas regras (`gmNotes`) estão escritas aqui; os documentos completos são lidos dos `.md`. |
+| `jogadores.html` | A visão dos jogadores: resumo, pessoas, mapa e notícias publicados pelo mestre, mais as regras. |
+| `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre. |
+| `jogadores-mestre.json` | Tudo o que está no painel, inclusive o que ainda não foi revelado. Só o mestre acessa. |
+| `jogadores.json` | Só o que foi publicado. É o que a página dos jogadores lê. Gerado pelo botão Publicar. |
+| `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. |
 | `campaign-map.js` | Pinos do mapa de operações. |
 | `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade e drogas, Netrunning, economia e criação. Cada seção indica a página do PDF traduzido. |
 | `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
+| `system-2077.js` | Suplemento de 2077: as 46 armas (Power, Tech e Smart), os 42 cyberwares e o resumo do suplemento. |
 | `system-catalog.js` | Catálogo de Roles, cyberware e equipamento do RED. |
-| `server.js` | Servidor local da wiki. |
+| `server.js` | Servidor local da wiki. Decide quem vê a wiki do mestre e quem vê só a dos jogadores. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
 
@@ -47,4 +68,5 @@ Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cybe
 
 1. Mude a lore nos `.md`. A página "Documentos completos" da wiki acompanha na hora (recarregue a página).
 2. Se a mudança afetar um resumo (Dossiê, Pessoas, Sessão 01, mapa), atualize também o `index.html` ou o `campaign-map.js`.
+   Depois de cada sessão, revele no painel **Visão dos jogadores** o que o grupo descobriu e clique em Publicar.
 3. Salve uma versão no git: `git add -A` e `git commit -m "o que mudou"`. O histórico permite voltar atrás.

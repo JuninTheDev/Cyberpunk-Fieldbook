@@ -1,0 +1,176 @@
+{
+  "atualizado": "2026-09-29T03:50:56.281Z",
+  "resumo": "## A mensagem\n\nCada um de vocês recebeu a mesma mensagem, enviada por um contato de confiança:\n\n**Wakako Okada deseja falar com vocês. Hoje. Sem acompanhantes. O pagamento será alto.**\n\nO endereço leva ao pachinko de Wakako, na Jig-Jig Street, em Japantown.",
+  "npcs": [
+    {
+      "id": "wakako",
+      "nome": "Wakako Okada",
+      "papel": "Fixer de Japantown",
+      "texto": "Dona de um pachinko na Jig-Jig Street, ligada aos Tyger Claws. Mandou a mensagem que reuniu o grupo e paga bem. Fala baixo e escolhe cada palavra.",
+      "revelado": true
+    },
+    {
+      "id": "mina",
+      "nome": "Mina Kuroda",
+      "papel": "Guarda-costas de Wakako",
+      "texto": "Silenciosa, atenta às mãos de quem entra. Não parece impressionada com ameaças.",
+      "revelado": false
+    },
+    {
+      "id": "aya-nami",
+      "nome": "Aya e Nami",
+      "papel": "Atendentes do pachinko",
+      "texto": "Aya conversa fácil e sabe os horários da casa. Nami fala pouco e repara em tudo.",
+      "revelado": false
+    },
+    {
+      "id": "mensageiro",
+      "nome": "O mensageiro",
+      "papel": "Encontrado no depósito de Kabuki",
+      "texto": "Baleado, com uma maleta presa ao pulso por trava biométrica. Implante antigo no pescoço, espasmos e pequenas luzes sob a pele.",
+      "nota": "Dr. Kenzo Endo. Troque o nome do cartão quando o grupo souber.",
+      "revelado": false
+    },
+    {
+      "id": "vega",
+      "nome": "Vega",
+      "papel": "Mercenária",
+      "texto": "Líder de uma equipe profissional que veio buscar a maleta. Ofereceu o dobro do pagamento de Wakako. Cumpre a palavra quando o acordo é claro.",
+      "revelado": false
+    },
+    {
+      "id": "morto-deposito",
+      "nome": "Homem morto no depósito",
+      "papel": "Encontrado entre as prateleiras",
+      "texto": "Roupa de segurança sem insígnia. Morreu com a própria pistola encostada no queixo, segura pelo cyberarm.",
+      "nota": "Kobo, da equipe de Iskra. O cyberarm recebeu um comando externo (Tecnologia Básica/Cybertech DV 13). Mesmo lote militar de 2069 do implante do mensageiro.",
+      "revelado": false
+    },
+    {
+      "id": "mulher-oculos",
+      "nome": "Mulher de óculos escuros",
+      "papel": "Vista em Kabuki",
+      "texto": "Segurança corporativa sem insígnia, de óculos escuros mesmo à noite. Estava entre os que seguiram o mensageiro.",
+      "nota": "Iskra Voss, tenente de Sato. Troque o nome quando o grupo souber.",
+      "revelado": false
+    },
+    {
+      "id": "tomas",
+      "nome": "Tomas Vale",
+      "papel": "Jornalista desaparecido",
+      "texto": "Investigava mortes ligadas a falhas de implante. Sumiu e deixou o apartamento vazio em Little China.",
+      "revelado": false
+    },
+    {
+      "id": "tamsin",
+      "nome": "Tamsin \"Fuse\" Ilyin",
+      "papel": "Abrigo em Pacifica",
+      "texto": "Técnica de mãos queimadas que não usa nenhum cromo conectado. Pede que todo mundo desligue os implantes antes de entrar.",
+      "revelado": false
+    },
+    {
+      "id": "reina-sato",
+      "nome": "Reina Sato",
+      "papel": "Um nome",
+      "texto": "Um nome que fez Wakako perder a compostura por um instante.",
+      "revelado": false
+    },
+    {
+      "id": "brakk",
+      "nome": "Brakk",
+      "papel": "Profeta da Maelstrom",
+      "texto": "Rosto quase todo substituído por placas e óticas vermelhas. Lidera um culto no hospital queimado de Northside que diz ouvir \"a voz\".",
+      "revelado": false
+    },
+    {
+      "id": "agulha",
+      "nome": "Nico \"Agulha\" Ferreira",
+      "papel": "Ripperdoc de Kabuki",
+      "texto": "Ripperdoc de uma clínica clandestina em Kabuki. Quer sair de Watson.",
+      "revelado": false
+    }
+  ],
+  "lugares": [
+    {
+      "id": "pachinko",
+      "nome": "Pachinko de Wakako",
+      "distrito": "Jig-Jig Street, Japantown",
+      "x": 2650,
+      "y": 1800,
+      "texto": "Onde Wakako recebe quem ela contrata.",
+      "revelado": true
+    },
+    {
+      "id": "deposito",
+      "nome": "Depósito de mercadorias médicas",
+      "distrito": "Kabuki, Watson",
+      "x": 2450,
+      "y": 1350,
+      "texto": "Onde o mensageiro foi encontrado.",
+      "revelado": false
+    },
+    {
+      "id": "mercado",
+      "nome": "Mercado de Kabuki",
+      "distrito": "Kabuki, Watson",
+      "x": 2350,
+      "y": 1200,
+      "texto": "Comida de rua, cromo barato e boatos.",
+      "revelado": false
+    },
+    {
+      "id": "clinica",
+      "nome": "Clínica clandestina",
+      "distrito": "Kabuki, Watson",
+      "x": 2360,
+      "y": 1500,
+      "texto": "Ripperdoc que não faz perguntas.",
+      "revelado": false
+    },
+    {
+      "id": "apartamento",
+      "nome": "Apartamento de Tomas Vale",
+      "distrito": "Little China, Watson",
+      "x": 2200,
+      "y": 1600,
+      "texto": "Vazio. O jornalista sumiu.",
+      "revelado": false
+    },
+    {
+      "id": "docas",
+      "nome": "Arasaka Industrial Docks",
+      "distrito": "Northside, Watson",
+      "x": 1720,
+      "y": 1060,
+      "texto": "Docas da Arasaka.",
+      "revelado": false
+    },
+    {
+      "id": "hospital",
+      "nome": "Hospital queimado",
+      "distrito": "Northside, Watson",
+      "x": 2000,
+      "y": 1020,
+      "texto": "Um hospital de campanha que pegou fogo em 2070 e nunca foi reconstruído. Território da Maelstrom.",
+      "revelado": false
+    },
+    {
+      "id": "abrigo",
+      "nome": "Abrigo em Pacifica",
+      "distrito": "Coastview, Pacifica",
+      "x": 1920,
+      "y": 3330,
+      "texto": "Onde Tamsin e os dela se escondem.",
+      "revelado": false
+    }
+  ],
+  "noticias": [
+    {
+      "id": "exemplo-n54",
+      "titulo": "N54: surto de ciberpsicose em Kabuki (exemplo)",
+      "data": "Manhã seguinte",
+      "texto": "\"...o suspeito foi encontrado morto num depósito médico de Kabuki após o que a NCPD classificou como um surto de cyberpsicose. Segundo fontes, o corpo desapareceu antes da chegada da perícia.\"",
+      "publicada": false
+    }
+  ]
+}

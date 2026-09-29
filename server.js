@@ -1,56 +1,143 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 const path = require('path');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 8000);
-// A wiki contém segredos do mestre: por padrão só este computador acessa.
-// Para abrir na rede local (ex.: tablet do mestre), rode com HOST=0.0.0.0.
+// Por padrão só este computador acessa. Para os jogadores entrarem pela rede: HOST=0.0.0.0.
 const host = process.env.HOST || '127.0.0.1';
+// Senha opcional para abrir a visão do mestre de outro aparelho (tablet): GM_KEY=senha
+// e, no tablet, acesse uma vez http://IP:8000/?mestre=senha.
+const gmKey = process.env.GM_KEY || '';
+
 const contentTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.jpeg': 'image/jpeg',
   '.jpg': 'image/jpeg',
   '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
   '.md': 'text/markdown; charset=utf-8',
+  '.otf': 'font/otf',
   '.pdf': 'application/pdf',
   '.png': 'image/png',
-  '.svg': 'image/svg+xml'
+  '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2'
 };
 
+// O que um jogador (qualquer aparelho que não seja o do mestre) pode baixar.
+// Os arquivos de regras não têm notas de campanha; elas ficam no index.html.
+const playerFiles = new Set([
+  '/jogadores.html', '/jogadores.json', '/wiki.css', '/wiki-app.js',
+  '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js',
+  '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css'
+]);
+const playerFolders = ['/cyberpunk-css-main/cyberpunk-css-main/fonts/'];
+
+const isLoopback = address => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address);
+const cookieKey = request => ((request.headers.cookie || '').match(/(?:^|;\s*)gm=([^;]+)/) || [])[1] || '';
+const sameSecret = (given, expected) => {
+  const a = Buffer.from(String(given));
+  const b = Buffer.from(String(expected));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
+const isGameMaster = request => isLoopback(request.socket.remoteAddress) || (gmKey !== '' && sameSecret(decodeURIComponent(cookieKey(request)), gmKey));
+
+function send(response, status, text, headers = {}) {
+  response.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', ...headers });
+  response.end(text);
+}
+
+// Grava primeiro num arquivo temporário e depois troca: nunca fica um JSON pela metade.
+function writeJsonAtomic(file, data) {
+  const temporary = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`);
+  fs.renameSync(temporary, file);
+}
+
+function publishPlayerView(request, response) {
+  let body = '';
+  request.setEncoding('utf8');
+  request.on('data', chunk => {
+    body += chunk;
+    if (body.length > 2_000_000) { send(response, 413, 'Conteúdo grande demais.'); request.destroy(); }
+  });
+  request.on('end', () => {
+    let payload;
+    try { payload = JSON.parse(body); } catch { return send(response, 400, 'JSON inválido.'); }
+    const { mestre, publicado } = payload || {};
+    const lists = ['npcs', 'lugares', 'noticias'];
+    if (!mestre || !publicado || !lists.every(key => Array.isArray(mestre[key]) && Array.isArray(publicado[key]))) {
+      return send(response, 400, 'Formato inesperado: faltam as listas npcs, lugares e noticias.');
+    }
+    const atualizado = new Date().toISOString();
+    try {
+      writeJsonAtomic(path.join(root, 'jogadores-mestre.json'), { ...mestre, atualizado });
+      writeJsonAtomic(path.join(root, 'jogadores.json'), { ...publicado, atualizado });
+    } catch (error) {
+      return send(response, 500, `Não consegui gravar os arquivos: ${error.message}`);
+    }
+    send(response, 200, JSON.stringify({ ok: true, atualizado }), { 'Content-Type': 'application/json; charset=utf-8' });
+  });
+}
+
 http.createServer((request, response) => {
+  let url;
   let pathname;
   try {
-    pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    url = new URL(request.url, 'http://localhost');
+    pathname = decodeURIComponent(url.pathname);
   } catch {
-    response.writeHead(400);
-    response.end('Bad request');
-    return;
+    return send(response, 400, 'Bad request');
   }
 
-  if (pathname === '/') pathname = '/index.html';
+  // Tablet do mestre: /?mestre=senha grava um cookie e libera a visão do mestre neste aparelho.
+  if (gmKey && url.searchParams.has('mestre')) {
+    if (!sameSecret(url.searchParams.get('mestre'), gmKey)) return send(response, 403, 'Senha do mestre incorreta.');
+    response.writeHead(302, { 'Set-Cookie': `gm=${encodeURIComponent(gmKey)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000`, Location: '/' });
+    return response.end();
+  }
+
+  const gameMaster = isGameMaster(request);
+
+  if (pathname === '/api/jogadores') {
+    if (request.method !== 'POST') return send(response, 405, 'Use POST.');
+    if (!gameMaster) return send(response, 403, 'Só o mestre publica.');
+    return publishPlayerView(request, response);
+  }
+  if (request.method !== 'GET' && request.method !== 'HEAD') return send(response, 405, 'Método não permitido.');
+
+  if (pathname === '/') pathname = gameMaster ? '/index.html' : '/jogadores.html';
+
   const filePath = path.resolve(root, `.${pathname}`);
-  if (!filePath.startsWith(`${root}${path.sep}`)) {
-    response.writeHead(403);
-    response.end('Forbidden');
-    return;
+  if (!filePath.startsWith(`${root}${path.sep}`)) return send(response, 403, 'Forbidden');
+  // Confere a lista dos jogadores no caminho já resolvido: no Windows, "fonts/..\..\index.html" escaparia da pasta.
+  const servedPath = `/${path.relative(root, filePath).split(path.sep).join('/')}`;
+  if (!gameMaster && !playerFiles.has(servedPath) && !playerFolders.some(folder => servedPath.startsWith(folder))) {
+    return send(response, 403, 'Área do mestre. A visão dos jogadores fica em /jogadores.html');
   }
 
   fs.stat(filePath, (error, stats) => {
-    if (error || !stats.isFile()) {
-      response.writeHead(404);
-      response.end('Not found');
-      return;
-    }
-
+    if (error || !stats.isFile()) return send(response, 404, 'Not found');
+    const extension = path.extname(filePath).toLowerCase();
     response.writeHead(200, {
       'Content-Length': stats.size,
-      'Content-Type': contentTypes[path.extname(filePath).toLowerCase()] || 'application/octet-stream'
+      'Content-Type': contentTypes[extension] || 'application/octet-stream',
+      // Os dados publicados mudam durante a sessão: nunca guardar em cache.
+      ...(extension === '.json' ? { 'Cache-Control': 'no-store' } : {})
     });
+    if (request.method === 'HEAD') return response.end();
     fs.createReadStream(filePath).pipe(response);
   });
 }).listen(port, host, () => {
-  console.log(`Night City wiki: http://localhost:${port}`);
-  if (host !== '127.0.0.1') console.log(`Aberta na rede (${host}:${port}). Quem estiver na mesma rede pode ver os segredos do mestre.`);
+  console.log(`Wiki do mestre: http://localhost:${port}`);
+  if (host === '127.0.0.1') {
+    console.log('Só este computador acessa. Para os jogadores entrarem pela rede, rode com HOST=0.0.0.0.');
+    return;
+  }
+  const addresses = Object.values(os.networkInterfaces()).flat().filter(item => item && item.family === 'IPv4' && !item.internal).map(item => item.address);
+  addresses.forEach(address => console.log(`Jogadores na rede: http://${address}:${port}  (só a visão dos jogadores)`));
+  console.log(gmKey ? `Mestre em outro aparelho: http://IP:${port}/?mestre=SUA_SENHA` : 'Para usar a visão do mestre em outro aparelho, rode também com GM_KEY=uma-senha.');
 });
