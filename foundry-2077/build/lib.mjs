@@ -49,15 +49,44 @@ export const systemVersion = () => JSON.parse(fs.readFileSync(path.join(cacheDir
 const docStats = () => ({ coreVersion: '12.343', systemId: 'cyberpunk-red-core', systemVersion: systemVersion(), createdTime: null, modifiedTime: null, lastModifiedBy: null, compendiumSource: null, duplicateSource: null });
 
 // ---------------- Documentos ----------------
-// Item a partir de um molde do sistema: mantém todos os campos e troca só o que foi passado.
-export function itemFrom(template, { seed, name, img, system = {}, flags = {}, folder = null, key = id => `!items!${id}` }) {
-  const _id = makeId(seed || name);
+// Efeito ativo no formato do sistema: cada modificador tem a categoria (combat, skill, stat...) e,
+// se for situacional, aparece como opção na janela de rolagem em vez de somar sempre.
+// changes: [{ key, value, mode = 2 (somar), category, situational = false, onByDefault = false }]
+export function effectDoc({ seed, name, img, changes, disabled = false, description = '' }) {
+  const cats = {};
+  const situational = {};
+  changes.forEach((change, index) => {
+    cats[index] = change.category;
+    situational[index] = { isSituational: Boolean(change.situational), onByDefault: Boolean(change.onByDefault) };
+  });
   return {
+    _id: makeId(`efeito:${seed}`), name, img, description, disabled, transfer: true, type: 'base', system: {},
+    changes: changes.map(({ key, value, mode = 2 }) => ({ key, mode, priority: null, value: String(value) })),
+    duration: { combat: null, rounds: null, seconds: null, startRound: null, startTime: null, startTurn: null, turns: null },
+    flags: { 'cyberpunk-red-core': { changes: { cats, situational } } },
+    origin: null, statuses: [], tint: '#ffffff', sort: 0, _stats: docStats()
+  };
+}
+
+// Chaves (_key) dos efeitos de um item: item do compêndio ou item dentro de um ator.
+export function keyEffects(item, actorId = null) {
+  item.effects = (item.effects || []).map(effect => ({
+    ...effect,
+    _key: actorId ? `!actors.items.effects!${actorId}.${item._id}.${effect._id}` : `!items.effects!${item._id}.${effect._id}`
+  }));
+  return item;
+}
+
+// Item a partir de um molde do sistema: mantém todos os campos e troca só o que foi passado.
+// Os efeitos do molde não vêm junto; os do item são passados em effects (já montados com effectDoc).
+export function itemFrom(template, { seed, name, img, system = {}, flags = {}, folder = null, effects = [], key = id => `!items!${id}` }) {
+  const _id = makeId(seed || name);
+  return keyEffects({
     _id, _key: key(_id), name, type: template.type, img: img || template.img,
     system: foundryMerge(clone(template.system), system),
-    effects: [], folder, sort: 0, ownership: { default: 0 },
+    effects, folder, sort: 0, ownership: { default: 0 },
     flags: { [moduleId]: flags }, _stats: docStats()
-  };
+  });
 }
 
 // Pasta dentro de um compêndio.
@@ -70,7 +99,7 @@ export function actorDoc({ seed, name, type, img, system, items, flags = {}, fol
   const _id = makeId(seed || name);
   return {
     _id, _key: `!actors!${_id}`, name, type, img, system,
-    items: items.map(item => ({ ...item, _key: `!actors.items!${_id}.${item._id}`, folder: null })),
+    items: items.map(item => keyEffects({ ...item, _key: `!actors.items!${_id}.${item._id}`, folder: null }, _id)),
     effects: [], folder, sort: 0, ownership: { default: 0 }, flags: { [moduleId]: flags },
     prototypeToken: { name, actorLink: false, disposition: -1, displayName: 20, displayBars: 20, bar1: { attribute: 'derivedStats.hp' }, texture: { src: img }, ...token },
     _stats: docStats()

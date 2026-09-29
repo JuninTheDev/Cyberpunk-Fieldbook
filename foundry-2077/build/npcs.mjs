@@ -39,7 +39,9 @@ const tierFolders = { mook: 'Capangas', lieutenant: 'Tenentes', miniBoss: 'Mini-
 const tierLabels = { mook: 'Capanga (Mook) · conta como 1 personagem', lieutenant: 'Tenente (Lieutenant) · conta como 2', miniBoss: 'Mini-chefe (Mini Boss) · conta como 3', boss: 'Chefe (Boss) · luta final' };
 
 function embedded(actorSeed, template, name, system = {}) {
-  const item = itemFrom(template, { seed: `${actorSeed}:${name}`, name, system });
+  // Os efeitos do molde vão junto (as _key são refeitas dentro do ator).
+  const effects = (template.effects || []).map(({ _key, ...effect }) => clone(effect));
+  const item = itemFrom(template, { seed: `${actorSeed}:${name}`, name, system, effects });
   item.flags = template.flags?.['cpr-2077'] ? { 'cpr-2077': clone(template.flags['cpr-2077']) } : {};
   return item;
 }

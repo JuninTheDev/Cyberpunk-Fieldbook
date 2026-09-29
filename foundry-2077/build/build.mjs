@@ -6,6 +6,7 @@ import { buildWeapons } from './armas.mjs';
 import { packPack } from './cli.mjs';
 import { buildCyberware } from './cyberware.mjs';
 import { buildJournals } from './diarios.mjs';
+import { applyEffects, effectItemNames } from './efeitos.mjs';
 import { corePack, macroDoc, slug } from './lib.mjs';
 import { buildNet } from './net.mjs';
 import { buildNpcs, checkNpcSkills } from './npcs.mjs';
@@ -18,7 +19,9 @@ if (!fs.existsSync(path.join(cacheDir, 'core', 'versao.json'))) {
 }
 
 // ---------------- Documentos ----------------
-const weapons = buildWeapons();
+// Os efeitos entram antes de os NPCs copiarem as armas de 2077.
+const withEffects = docs => docs.map(doc => doc._key.startsWith('!items!') ? applyEffects(doc) : doc);
+const weapons = withEffects(buildWeapons());
 const macros = [
   ['Ataque Smart', 'icons/svg/target.svg', 'ataqueSmart'],
   ['Ricochete', 'icons/svg/explosion.svg', 'ricochete'],
@@ -27,8 +30,8 @@ const macros = [
 
 const packs = {
   'armas-2077': weapons,
-  'cyberware-2077': buildCyberware(),
-  'netrunning-2077': buildNet(),
+  'cyberware-2077': withEffects(buildCyberware()),
+  'netrunning-2077': withEffects(buildNet()),
   'veiculos-2077': buildVehicles(),
   'npcs-2077': buildNpcs(weapons),
   'regras-2077': buildJournals(),
@@ -41,7 +44,10 @@ const config = fs.readFileSync(path.join(systemDir, 'modules', 'system', 'config
 const keysOf = name => new Set([...(config.match(new RegExp(`CPR\\.${name} = \\{([\\s\\S]*?)\\};`)) || [, ''])[1].matchAll(/^\s*"?(\w+)"?:/gm)].map(match => match[1]));
 const allowed = {
   weaponType: keysOf('weaponTypes'), cyberwareType: keysOf('cyberwareTypes'), install: keysOf('cyberwareInstallList'),
-  quality: keysOf('itemQuality'), ammo: keysOf('ammoVarieties')
+  quality: keysOf('itemQuality'), ammo: keysOf('ammoVarieties'), usage: keysOf('effectUses'),
+  effectCategories: keysOf('activeEffectCategories'),
+  // Todas as chaves de efeito do sistema: "bonuses.x" e "system.stats.x.value" dentro de CPR.activeEffectKeys.
+  effectKeys: new Set([...(config.match(/CPR\.activeEffectKeys = \{([\s\S]*?)\n\};/) || [, ''])[1].matchAll(/"((?:bonuses|system)\.[\w.]+)"/g)].map(match => match[1]))
 };
 const skillNames = new Set(corePack('internal_skills').map(skill => skill.name));
 const dvTables = new Set(corePack('internal_dv-tables').map(table => table.name));
@@ -70,9 +76,22 @@ for (const [pack, docs] of Object.entries(packs)) {
       }
       if ('quality' in s) check(allowed.quality.has(s.quality), `${where}: qualidade ${s.quality}`);
       if ('price' in s) check(Number.isFinite(s.price.market), `${where}: preço ${s.price.market}`);
+      // Efeitos: chave e categoria existentes no sistema, uso válido e _key de cada efeito.
+      if (item.effects?.length) check(allowed.usage.has(s.usage), `${where}: uso ${s.usage}`);
+      for (const effect of item.effects || []) {
+        check(effect._key?.endsWith(`${item._id}.${effect._id}`), `${where} › ${effect.name}: _key ${effect._key}`);
+        effect.changes.forEach((change, index) => {
+          const cat = effect.flags['cyberpunk-red-core'].changes.cats[index];
+          check(allowed.effectKeys.has(change.key), `${where} › ${effect.name}: chave ${change.key}`);
+          check(allowed.effectCategories.has(cat), `${where} › ${effect.name}: categoria ${cat}`);
+        });
+      }
     }
   }
 }
+// Todo item da tabela de efeitos tem de existir num compêndio (pega nome digitado errado).
+const itemNames = new Set(Object.values(packs).flat().map(doc => doc.name));
+for (const name of effectItemNames()) check(itemNames.has(name), `efeitos: não existe item "${name}"`);
 problems.push(...checkNpcSkills(packs['npcs-2077']));
 if (problems.length) {
   console.error(`Build interrompido: ${problems.length} problema(s)\n  ${problems.join('\n  ')}`);
@@ -91,7 +110,7 @@ for (const [pack, docs] of Object.entries(packs)) {
   try {
     packPack(pack, dir, packsDir);
   } catch (error) {
-    const locked = /lock|LOCK|busy|EBUSY/.test(`${error.stderr || ''}${error.message}`);
+    const locked = /lock|LOCK|busy|EBUSY|EPERM/.test(`${error.stderr || ''}${error.message}`);
     console.error(locked ? `O compêndio ${pack} está aberto no Foundry. Feche o mundo que usa o módulo e rode o build de novo.` : `Falha ao compilar ${pack}:\n${error.stderr || error.message}`);
     process.exit(1);
   }
