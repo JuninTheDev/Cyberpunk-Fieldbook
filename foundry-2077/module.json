@@ -1,0 +1,28 @@
+{
+  "id": "cpr-2077",
+  "title": "Cyberpunk RED: 2077",
+  "description": "Conteúdo do suplemento de fã Cyberpunk 2077 para o sistema Cyberpunk RED - CORE: armas Power, Tech e Smart, cyberware, netrunning de 2077, veículos adaptados do jogo, NPCs prontos, a economia de 2077 e macros para ataque Smart, ricochete e carga Tech.",
+  "version": "0.1.0",
+  "authors": [{ "name": "Junin" }],
+  "compatibility": { "minimum": "12", "verified": "12.343", "maximum": "12" },
+  "relationships": {
+    "systems": [{ "id": "cyberpunk-red-core", "type": "system", "compatibility": { "minimum": "v0.92.4" } }]
+  },
+  "esmodules": ["scripts/cpr-2077.mjs"],
+  "styles": ["styles/cpr-2077.css"],
+  "packs": [
+    { "name": "armas-2077", "label": "Armas de 2077", "path": "packs/armas-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "cyberware-2077", "label": "Cyberware de 2077", "path": "packs/cyberware-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "netrunning-2077", "label": "Netrunning de 2077", "path": "packs/netrunning-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "veiculos-2077", "label": "Veículos de 2077", "path": "packs/veiculos-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "npcs-2077", "label": "NPCs de 2077 (mestre)", "path": "packs/npcs-2077", "type": "Actor", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" } },
+    { "name": "regras-2077", "label": "Regras de 2077", "path": "packs/regras-2077", "type": "JournalEntry", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "macros-2077", "label": "Macros de 2077", "path": "packs/macros-2077", "type": "Macro", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } }
+  ],
+  "packFolders": [
+    {
+      "name": "Cyberpunk 2077", "sorting": "m", "color": "#6b0012",
+      "packs": ["regras-2077", "armas-2077", "cyberware-2077", "netrunning-2077", "veiculos-2077", "npcs-2077", "macros-2077"]
+    }
+  ]
+}

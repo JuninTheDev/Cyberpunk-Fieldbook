@@ -253,5 +253,12 @@
     }
   };
 
-  window.systemNet = { pages };
+  // data: as listas de 2077, lidas pelo build do módulo do Foundry (foundry-2077/build).
+  window.systemNet = {
+    pages,
+    data: {
+      quickhacks: { cloak: cloakHacks, control: controlHacks, virus: virusHacks, ultimate: ultimateHacks },
+      daemons: daemons2077, whiteIce, neuralware, berserks, sandevistans, decks: deckRows
+    }
+  };
 })();

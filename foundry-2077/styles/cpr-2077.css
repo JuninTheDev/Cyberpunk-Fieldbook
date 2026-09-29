@@ -1,0 +1,32 @@
+/* Diários de regras (HTML vindo da wiki) e mensagens das macros. */
+.cpr2077 { --cpr2077-red: #b3001b; --cpr2077-teal: #006e5f; --cpr2077-line: rgba(0, 0, 0, 0.25); }
+.cpr2077-lede { font-size: 1.05em; font-style: italic; }
+.cpr2077 .section { margin: 0 0 1em; }
+.cpr2077 .section h3 { border-bottom: 1px solid var(--cpr2077-line); }
+.cpr2077 .ref, .cpr2077-ref { color: #666; font-size: 0.8em; text-transform: uppercase; }
+.cpr2077 .ref { margin-left: 0.5em; }
+.cpr2077 .callout { margin: 0.6em 0; padding: 0.4em 0.7em; border-left: 4px solid var(--cpr2077-red); background: rgba(179, 0, 27, 0.07); }
+.cpr2077 .formula { padding: 1px 6px; border: 1px solid var(--cpr2077-line); font-family: monospace; }
+.cpr2077 .table-wrap { overflow-x: auto; }
+.cpr2077 table { font-size: 0.92em; }
+.cpr2077 .entry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 0.5em; }
+.cpr2077 .entry { padding: 6px 9px; border: 1px solid var(--cpr2077-line); border-left: 4px solid var(--cpr2077-red); background: rgba(0, 0, 0, 0.03); }
+.cpr2077 .entry header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
+.cpr2077 .entry h4 { margin: 0; border: 0; color: var(--cpr2077-red); text-transform: uppercase; }
+.cpr2077 .entry-tag { color: #555; font-size: 0.78em; text-transform: uppercase; }
+.cpr2077 .entry-stats { display: flex; flex-wrap: wrap; gap: 3px; margin: 3px 0; }
+.cpr2077 .entry-stats span { padding: 0 5px; border: 1px solid var(--cpr2077-line); font-size: 0.85em; }
+.cpr2077 .entry p { margin: 0.3em 0; }
+.cpr2077 .entry-tip { padding: 3px 6px; background: rgba(0, 110, 95, 0.09); }
+.cpr2077 .entry-excellent { padding-left: 6px; border-left: 2px solid var(--cpr2077-teal); }
+.cpr2077 .entry-icon { font-style: italic; }
+
+.cpr2077-chat h3 { margin: 0 0 2px; color: #b3001b; }
+.cpr2077-chat-weapon { margin: 0 0 4px; font-style: italic; }
+.cpr2077-chat p { margin: 2px 0; }
+.cpr2077-chat-result { margin-top: 4px; font-weight: bold; text-align: center; text-transform: uppercase; }
+.cpr2077-chat-result.hit { color: #0a7a2f; }
+.cpr2077-chat-result.miss { color: #b3001b; }
+.cpr2077-chat-note { color: #555; font-size: 0.85em; }
+.cpr2077-chat-note.warning { color: #b3001b; font-weight: bold; }
+.cpr2077-dialog .form-group { margin-bottom: 4px; }

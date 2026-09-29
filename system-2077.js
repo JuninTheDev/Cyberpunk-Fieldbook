@@ -14,7 +14,9 @@
   const weapon = (name, kind, quality, skill, damage, magazine, rof, hands, conceal, cost, features, text, tip) => ({
     name, tag: `${kind} · ${quality}`,
     stats: [['Perícia', skill], ['Dano', damage], ['Pente', magazine], ['CDT', rof], ['Mãos', hands], ['Oculta', conceal], ['Custo', cost]],
-    text, extra: features ? `<p class="entry-excellent"><b>Recursos:</b> ${features}</p>` : '', tip
+    text, extra: features ? `<p class="entry-excellent"><b>Recursos:</b> ${features}</p>` : '', tip,
+    // Os argumentos crus, para o build do módulo do Foundry (foundry-2077/).
+    raw: { name, kind, quality, skill, damage, magazine, rof, hands, conceal, cost, features, text, tip }
   });
   const pistols = [
     weapon('Militech M-10AF Lexington', 'Pistola média Power, exótica', 'padrão', 'Armas de uma Mão', '2d6', '21 (pistola média)', 2, 1, 'Sim', '100eb', 'Autofogo (2); usa só 7 balas por rajada', 'Pistola média exótica com pente de 21 balas e dois slots de acessório. Tem autofogo (2) gastando só 7 balas por ataque, com a tabela de autofogo da SMG; com menos de 7 balas no pente, não dá. Não faz fogo supressivo. Mesmo sendo exótica, aceita munição especial.'),
@@ -78,7 +80,7 @@
   ];
 
   // ---------------- Cyberware ----------------
-  const ware = (name, category, install, cost, humanity, text, tip) => ({ name, tag: category, stats: [['Instalação', install], ['Custo', cost], ['Perda de Humanidade', humanity]], text, tip });
+  const ware = (name, category, install, cost, humanity, text, tip) => ({ name, tag: category, stats: [['Instalação', install], ['Custo', cost], ['Perda de Humanidade', humanity]], text, tip, raw: { name, category, install, cost, humanity, text, tip } });
   const fashionware = [
     ware('Cyber Panels', 'Fashionware', 'Loja', '500eb', 0, 'Cobre as partes feias do cromo e deixa o conjunto com cara de peça única, com as linhas dos painéis visíveis. Vem com cobertura de plástico; RealSkinn ou Superchrome custam à parte (o RealSkinn interage com Chemskin).'),
     ware('Cybernetic Fashion', 'Fashionware', 'Clínica', '100eb', 0, 'Cibernética decorativa: mandíbula, suporte de máscara facial, substitutos visuais de partes do corpo. Cada peça vem com o suporte e a peça de moda.')
@@ -180,5 +182,12 @@
     }
   };
 
-  window.system2077 = { pages };
+  // data: as listas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
+  window.system2077 = {
+    pages,
+    data: {
+      weapons: { pistols, revolvers, smgs, shotguns, rifles, machineGuns, snipers },
+      cyberware: { fashionware, neural, optics, internal, external, limbs }
+    }
+  };
 })();

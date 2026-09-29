@@ -1,2 +1,4 @@
 # Livros em PDF (grandes e de terceiros) ficam fora do versionamento
 *.pdf
+foundry-2077/.cache/
+foundry-2077/node_modules/

@@ -1,0 +1,33 @@
+<p class="cpr2077-lede">Este módulo traz para o Cyberpunk RED o que o suplemento de fã "Cyberpunk 2077" acrescenta: armas, cyberware, netrunning, a economia de 2077 e macros para as mecânicas novas. O conteúdo sai da wiki da mesa.</p>
+<div class="section">
+<h3>Compêndios</h3>
+<ul>
+<li><b>Armas de 2077:</b> as 46 armas Power, Tech e Smart do suplemento, por pasta, e as flechettes das armas Tech.</li>
+<li><b>Cyberware de 2077:</b> os 42 implantes do suplemento, a neuralware de netrunning e os sistemas Berserk e Sandevistan.</li>
+<li><b>Netrunning de 2077:</b> cyberdecks, quickhacks, daemons e White ICE.</li>
+<li><b>Veículos de 2077:</b> carros, motos e AVs do jogo, com os números das classes do RED. É uma <b>adaptação</b>: o suplemento não traz veículos.</li>
+<li><b>NPCs de 2077</b> (só o mestre vê): as 10 fichas prontas do livro do RED e variantes das gangues e forças de Night City.</li>
+<li><b>Regras de 2077:</b> estes diários, com as regras de cada parte.</li>
+<li><b>Macros de 2077:</b> Ataque Smart, Ricochete e Carga Tech.</li>
+</ul>
+<p>Arraste um item do compêndio para a ficha como qualquer item do sistema. Cada item traz a descrição completa, a dica "Na mesa" e a página do suplemento.</p>
+</div>
+<div class="section">
+<h3>Economia de 2077</h3>
+<p>Em <b>Configurações → Configurar módulos → Cyberpunk RED: 2077</b>, a opção <b>Economia de 2077</b> (ligada por padrão) troca a escala das categorias de preço pela do suplemento: Barato 20eb, Cotidiano 50eb, Oneroso 100eb, Premium 500eb, Caro 1.000eb, Muito caro 5.000eb, Luxo 10.000eb e Super luxo 20.000eb.</p>
+<p>Os preços em eb dos itens <b>não mudam</b>: muda só a categoria que a ficha mostra. É a regra de conversão do suplemento: o preço do RED continua valendo, com o nome da faixa de 2077.</p>
+</div>
+<div class="section">
+<h3>Macros</h3>
+<p>Selecione o token do personagem e rode a macro (arraste-a do compêndio para a barra de atalhos). As macros <b>só rolam e explicam</b>: não mudam fichas nem armaduras.</p>
+<ul>
+<li><b>Ataque Smart:</b> para armas Smart. Confere o Smart Link e rola 10 + 1d10 (12 + 1d10 nos modelos de várias balas) contra a DV. Se acertar, rola o dano.</li>
+<li><b>Ricochete:</b> para armas Power. Usa REF + perícia da arma, com a DV da tabela de autofogo, e rola o dano com um dado a menos.</li>
+<li><b>Carga Tech:</b> para armas Tech. Tiro único ou rajada, conforme a cobertura do alvo: mostra quanto do dano atravessa e quanto de SP a armadura perde.</li>
+</ul>
+<p>A regra do ataque Smart (10 + 1d10) sai das descrições das armas do suplemento, que não tem um parágrafo com a regra geral. Combine com a mesa.</p>
+</div>
+<div class="section">
+<h3>Atualizar o módulo</h3>
+<p>O módulo é gerado a partir da wiki. Depois de mudar a wiki, feche o mundo e rode, na pasta <code>foundry-2077</code>: <code>node build/build.mjs</code>. Os IDs dos itens não mudam entre versões, então o que já está nas fichas continua ligado.</p>
+</div>

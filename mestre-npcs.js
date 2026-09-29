@@ -271,5 +271,6 @@
     }
   };
 
-  window.npcStatBlocks = { pages };
+  // data: as fichas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
+  window.npcStatBlocks = { pages, data: { mooks, lieutenants, bosses, boss, skillNames, parseSkills } };
 })();

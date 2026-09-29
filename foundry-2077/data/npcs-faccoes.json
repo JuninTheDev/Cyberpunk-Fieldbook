@@ -1,0 +1,25 @@
+{
+  "_comentario": "Variantes de facção montadas sobre as fichas do livro, como na página Fichas de NPC da wiki. base = nome da ficha na wiki. tirar = armas removidas (nome na ficha). armas = [nome, origem]: origem 'core:<arma do sistema>' ou '2077:<arma do compêndio de 2077>'. pericia (opcional) troca a perícia da arma.",
+  "variantes": [
+    { "nome": "Tyger Claw", "base": "Boosterganger", "fonte": "adaptação", "tirar": ["Rippers"], "armas": [["Katana", "core:Heavy Melee"]], "armadura": "Kevlar",
+      "texto": "Capanga dos Tyger Claws (Japantown e Kabuki): katana, Kevlar e Basic Kiroshi Optics. Muitos chegam de moto. Na campanha, a gangue de Wakako." },
+    { "nome": "Tenente dos Tyger Claws", "base": "Oficial de segurança", "fonte": "adaptação", "tirar": ["Rifle de assalto"], "armas": [["Katana", "core:Heavy Melee"], ["Arasaka Shigure", "2077:Arasaka Shigure"]],
+      "texto": "Tenente dos Tyger Claws: katana e SMG. A elite troca o Kerenzikov por um Sandevistan (compêndio Cyberware de 2077). Para Mina Kuroda, a guarda-costas de Wakako, use esta ficha." },
+    { "nome": "Maelstrom", "base": "Boosterganger", "fonte": "livro, p. 422", "armadura": "Light Armorjack",
+      "texto": "Capanga da Maelstrom (Northside, Watson): Light Armorjack e Rippers, óticas vermelhas por toda parte. Na Sessão 02, os cultistas do hospital queimado." },
+    { "nome": "Tenente da Maelstrom", "base": "Oficial de segurança", "fonte": "livro, p. 422", "armas": [["Wolvers", "core:Heavy Melee"]],
+      "texto": "Líder de grupo da Maelstrom: a ficha do Oficial de segurança com uma arma cibernética (aqui, Wolvers)." },
+    { "nome": "Scavenger", "base": "Boosterganger", "fonte": "livro, p. 419", "tirar": ["Rippers"], "armas": [["Serra cirúrgica leve", "core:Light Melee"]],
+      "texto": "Scavenger (Watson): colecionam cromo de vivos e de mortos. Se o grupo deixou o corpo de Kobo no depósito, foram eles que o levaram (Sessão 02)." },
+    { "nome": "Animal", "base": "Guarda-costas", "fonte": "adaptação", "tirar": ["Espingarda (qualidade ruim)"], "armas": [["Gorilla Arms", "core:Heavy Melee", "Brawling"]],
+      "texto": "Animal (Pacifica): prefere os punhos. Gorilla Arms: ataques de Briga causam 3d6 como uma arma, contra a armadura." },
+    { "nome": "Patrulha da NCPD", "base": "Operativo de segurança", "fonte": "livro, p. 417",
+      "texto": "Patrulha da NCPD de dia: metade do grupo em número. Pedem documentos a quem anda armado; se alguém discute, chamam 3 policiais de reforço." },
+    { "nome": "Policial da NCPD (noite)", "base": "Oficial de segurança", "fonte": "livro, p. 419–421",
+      "texto": "Patrulha da NCPD à noite. Depois da meia-noite, some Interface Plugs e Smartgun Link. Atiram primeiro e preenchem o relatório depois." },
+    { "nome": "Segurança corporativa", "base": "Operativo de segurança", "fonte": "livro, p. 417", "tirar": ["Rifle de assalto (qualidade ruim)"], "armas": [["SMG (qualidade ruim)", "core:SMG (Poor)"]], "armadura": "Light Armorjack",
+      "texto": "Guarda corporativo de dia (Arasaka, Militech, Kang Tao): Light Armorjack e SMG ruim. À noite, Heavy Armorjack e SMG pesada; depois da meia-noite, use o Oficial de segurança com SMG pesada Smart. Na campanha, a equipe de Iskra e o datafort da Militech." },
+    { "nome": "Agente da MaxTac", "base": "Outrider", "fonte": "adaptação", "semRole": true, "tirar": ["Rifle de assalto"], "armas": [["Militech M251s Ajax", "2077:Militech M251s Ajax"], ["Mantis Blades", "core:Heavy Melee"]], "armadura": "Heavy Armorjack", "zerar": ["Moto Family", "Animal Handling"],
+      "texto": "Agente da MaxTac: mini-chefe (conta como 3 personagens). Heavy Armorjack (−2 REF, DEX e MOVE), rifle Militech e Mantis Blades; alguns usam um Militech Falcon Sandevistan. Chega 10 minutos depois de um surto ser reportado: é o relógio da cena, não uma luta para vencer." }
+  ]
+}

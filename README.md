@@ -55,8 +55,19 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `system-catalog.js` | Catálogo de Roles, cyberware e equipamento do RED. |
 | `mestre-npcs.js` | Fichas de NPC: as 10 fichas prontas do livro (capangas, tenentes, mini-chefes e o Cyberpsycho), a Trauma Team e variantes para as facções de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
 | `server.js` | Servidor local da wiki. Decide quem vê a wiki do mestre e quem vê só a dos jogadores. |
+| `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
+
+## Módulo do Foundry
+
+A pasta `foundry-2077/` gera o módulo **Cyberpunk RED: 2077** para o Foundry VTT a partir dos mesmos dados desta wiki (`system-2077.js`, `system-net.js`, `mestre-npcs.js`). Depois de mudar armas, cyberware, netrunning ou fichas de NPC na wiki, feche o mundo no Foundry e rode, dentro de `foundry-2077`:
+
+```
+node build/build.mjs
+```
+
+O módulo é gravado direto na pasta de módulos do Foundry.
 
 ## Consulta durante a sessão
 
