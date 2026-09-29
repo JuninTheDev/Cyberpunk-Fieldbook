@@ -53,6 +53,7 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
 | `system-2077.js` | Suplemento de 2077: as 46 armas (Power, Tech e Smart), os 42 cyberwares e o resumo do suplemento. |
 | `system-catalog.js` | Catálogo de Roles, cyberware e equipamento do RED. |
+| `mestre-npcs.js` | Fichas de NPC: as 10 fichas prontas do livro (capangas, tenentes, mini-chefes e o Cyberpsycho), a Trauma Team e variantes para as facções de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
 | `server.js` | Servidor local da wiki. Decide quem vê a wiki do mestre e quem vê só a dos jogadores. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
@@ -63,6 +64,7 @@ Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cybe
 - A busca ignora acentos e aceita termos em inglês (por exemplo, "Evasion", "Death Save", "Shoulder Arms").
 - Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.
 - O **Escudo do mestre** (aba Sistema) tem a calculadora de DV por alcance e o rolador de lesão crítica.
+- **Fichas de NPC** (aba Sistema, logo abaixo) tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo. Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
 
 ## Fluxo de trabalho
 

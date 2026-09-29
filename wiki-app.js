@@ -17,7 +17,8 @@
   const systemSections = [
     { group: 'Na mesa', pages: [
       { id: 'screen', label: 'Escudo do mestre', icon: 'GM' },
-      { id: 'skills', label: 'Perícias por STAT', icon: 'SK' }
+      { id: 'skills', label: 'Perícias por STAT', icon: 'SK' },
+      { id: 'npcs', label: 'Fichas de NPC', icon: 'NPC' }
     ]},
     { group: 'Regras do RED', pages: [
       { id: 'checks', label: 'Testes e dificuldades', icon: 'R' },
@@ -182,6 +183,8 @@
       if (details) details.open = true;
       const block = unitBlock(unit);
       if (term) highlightTerm(block, term);
+      // Termo dentro de um bloco recolhido do cartão (as perícias de uma ficha, por exemplo): abre o bloco.
+      block.forEach(element => element.querySelectorAll('details:not([open])').forEach(inner => { if (inner.querySelector('mark')) inner.open = true; }));
       // Numa seção longa (uma tabela grande, por exemplo), o termo pode estar fora da tela: centraliza nele.
       const firstMark = term ? block.map(element => element.querySelector('mark')).find(Boolean) : null;
       const markIsFar = firstMark && firstMark.getBoundingClientRect().top - unit.getBoundingClientRect().top > window.innerHeight / 2;

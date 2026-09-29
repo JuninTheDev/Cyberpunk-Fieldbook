@@ -308,6 +308,16 @@ th.current, td.current { background: var(--yellow) !important; color: #090b0c !i
 .entry .entry-icon { color: #9fb3ab; font-style: italic; }
 .entry .entry-icon b, .entry .entry-tip b { font-style: normal; }
 .entry .entry-tip { padding: 6px 8px; background: #10211e; color: #bfe9de; }
+/* Fichas de NPC */
+.npc-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 430px), 1fr)); }
+.npc-stats { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 3px; }
+.npc-stats span { display: grid; justify-items: center; padding: 3px 0 4px; border: 1px solid #454d4b; background: #181e1f; color: var(--text); font: 15px/1.2 Oxanium, Consolas, monospace; white-space: nowrap; }
+.npc-stats b { color: var(--muted); font: 9px Oxanium, Consolas, monospace; font-weight: 400; }
+.npc .table-wrap { margin-top: 2px; }
+.npc td small { color: var(--muted); font-size: 11px; }
+.npc-more summary { cursor: pointer; color: var(--cyan); font: 11px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.npc-more p { margin-top: 6px; }
+@media (max-width: 520px) { .npc-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 @media (max-width: 720px) {
   .quick-card.wide { grid-column: auto; }
 }

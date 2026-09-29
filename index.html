@@ -37,6 +37,7 @@
   <script src="system-rules.js"></script>
   <script src="system-net.js"></script>
   <script src="system-2077.js"></script>
+  <script src="mestre-npcs.js"></script>
   <script src="campaign-map.js"></script>
   <script src="jogadores-painel.js"></script>
   <script>
@@ -185,7 +186,7 @@
     window.wikiConfig = {
       campaigns,
       markdownDocs,
-      pageContent: { ...pageContent, ...(window.playerManager ? { playerView: window.playerManager.page } : {}) },
+      pageContent: { ...pageContent, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}) },
       clocks: campaignClocks,
       gmNotes,
       pageSetup: { playerView: () => window.playerManager && window.playerManager.setup() },
