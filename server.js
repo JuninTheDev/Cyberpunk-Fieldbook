@@ -43,10 +43,16 @@ const sameSecret = (given, expected) => {
   const b = Buffer.from(String(expected));
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
-const isGameMaster = request => isLoopback(request.socket.remoteAddress) || (gmKey !== '' && sameSecret(decodeURIComponent(cookieKey(request)), gmKey));
+// Pelo túnel do Cloudflare (abrir-online.ps1) toda conexão chega de 127.0.0.1, mas vem de fora de casa.
+// O túnel sempre põe estes cabeçalhos: quem os traz é jogador, a não ser que tenha o cookie do mestre.
+const viaTunnel = request => Boolean(request.headers['cf-connecting-ip'] || request.headers['x-forwarded-for']);
+const isGameMaster = request => (isLoopback(request.socket.remoteAddress) && !viaTunnel(request)) || (gmKey !== '' && sameSecret(decodeURIComponent(cookieKey(request)), gmKey));
+
+// O abrir-online.ps1 confere este cabeçalho para saber se o servidor já entende o túnel.
+const SERVER_VERSION = { 'X-Wiki-Servidor': '2' };
 
 function send(response, status, text, headers = {}) {
-  response.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', ...headers });
+  response.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', ...SERVER_VERSION, ...headers });
   response.end(text);
 }
 
@@ -96,7 +102,7 @@ http.createServer((request, response) => {
   // Tablet do mestre: /?mestre=senha grava um cookie e libera a visão do mestre neste aparelho.
   if (gmKey && url.searchParams.has('mestre')) {
     if (!sameSecret(url.searchParams.get('mestre'), gmKey)) return send(response, 403, 'Senha do mestre incorreta.');
-    response.writeHead(302, { 'Set-Cookie': `gm=${encodeURIComponent(gmKey)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000`, Location: '/' });
+    response.writeHead(302, { ...SERVER_VERSION, 'Cache-Control': 'private, no-store', 'Set-Cookie': `gm=${encodeURIComponent(gmKey)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000`, Location: '/' });
     return response.end();
   }
 
@@ -115,7 +121,8 @@ http.createServer((request, response) => {
   if (!filePath.startsWith(`${root}${path.sep}`)) return send(response, 403, 'Forbidden');
   // Confere a lista dos jogadores no caminho já resolvido: no Windows, "fonts/..\..\index.html" escaparia da pasta.
   const servedPath = `/${path.relative(root, filePath).split(path.sep).join('/')}`;
-  if (!gameMaster && !playerFiles.has(servedPath) && !playerFolders.some(folder => servedPath.startsWith(folder))) {
+  const playerFile = playerFiles.has(servedPath) || playerFolders.some(folder => servedPath.startsWith(folder));
+  if (!gameMaster && !playerFile) {
     return send(response, 403, 'Área do mestre. A visão dos jogadores fica em /jogadores.html');
   }
 
@@ -123,10 +130,12 @@ http.createServer((request, response) => {
     if (error || !stats.isFile()) return send(response, 404, 'Not found');
     const extension = path.extname(filePath).toLowerCase();
     response.writeHead(200, {
+      ...SERVER_VERSION,
       'Content-Length': stats.size,
       'Content-Type': contentTypes[extension] || 'application/octet-stream',
-      // Os dados publicados mudam durante a sessão: nunca guardar em cache.
-      ...(extension === '.json' ? { 'Cache-Control': 'no-store' } : {})
+      // Os dados publicados mudam durante a sessão, e arquivo do mestre não pode ficar no cache do túnel
+      // (senão o Cloudflare entregaria a cópia a um jogador): nunca guardar em cache.
+      ...(extension === '.json' || !playerFile ? { 'Cache-Control': 'private, no-store' } : {})
     });
     if (request.method === 'HEAD') return response.end();
     fs.createReadStream(filePath).pipe(response);

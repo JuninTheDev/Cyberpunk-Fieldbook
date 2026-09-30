@@ -18,6 +18,22 @@ e abra `http://localhost:8000`.
 - Para usar a visão do mestre num tablet: `$env:HOST='0.0.0.0'; $env:GM_KEY='uma-senha'; node server.js` e, no tablet, abra uma vez `http://IP:8000/?mestre=uma-senha`. O tablet guarda um cookie e passa a abrir a wiki do mestre.
 - Abrir o `index.html` com dois cliques funciona para as páginas de resumo, mas os **documentos completos** e a visão dos jogadores só funcionam pelo servidor.
 
+## Jogar com gente de fora de casa
+
+Sem mexer no roteador: o `abrir-online.bat` abre o Foundry e a wiki dos jogadores pela internet, com um túnel do Cloudflare (`cloudflared`, instalado com `winget install --id Cloudflare.cloudflared`).
+
+1. Abra o Foundry.
+2. Dê dois cliques em `abrir-online.bat`. Ele liga a wiki, se ela não estiver rodando, e mostra dois links `https://….trycloudflare.com`: um do Foundry (já copiado) e um da wiki dos jogadores.
+3. Mande os links aos jogadores. Os links mudam cada vez que você abre o script.
+4. Deixe a janela aberta durante a sessão; Enter fecha o acesso.
+
+Antes de usar:
+
+- **Senha de administrador no Foundry.** Sem ela, qualquer um com o link entra na tela de configuração. O script avisa e pede confirmação se estiver faltando.
+- **Senha em cada usuário do mundo**, principalmente no Gamemaster.
+
+Pelo túnel, todo visitante recebe só a visão dos jogadores da wiki, mesmo parecendo vir deste computador. Os arquivos do mestre também nunca ficam no cache do Cloudflare. Para abrir a wiki do mestre por fora, ligue o servidor com `GM_KEY` e use `link-da-wiki/?mestre=senha`.
+
 ## Visão dos jogadores
 
 Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os jogadores podem ver:
