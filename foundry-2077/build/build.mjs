@@ -10,6 +10,8 @@ import { applyEffects, effectItemNames } from './efeitos.mjs';
 import { corePack, macroDoc, slug } from './lib.mjs';
 import { buildNet } from './net.mjs';
 import { buildNpcs, checkNpcSkills } from './npcs.mjs';
+import { buildCatalog } from './loja.mjs';
+import { buildRoles } from './roles.mjs';
 import { cacheDir, moduleDir, sourceDir, systemDir } from './paths.mjs';
 import { buildVehicles } from './veiculos.mjs';
 
@@ -34,6 +36,7 @@ const packs = {
   'netrunning-2077': withEffects(buildNet()),
   'veiculos-2077': buildVehicles(),
   'npcs-2077': buildNpcs(weapons),
+  'roles-2077': buildRoles(),
   'regras-2077': buildJournals(),
   'macros-2077': macros
 };
@@ -127,3 +130,7 @@ fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(moduleDir, 'README.
 const count = docs => docs.filter(doc => !doc._key.startsWith('!folders!')).length;
 console.log(`Módulo gravado em ${moduleDir}`);
 for (const [pack, docs] of Object.entries(packs)) console.log(`  ${pack.padEnd(16)} ${count(docs)} documentos`);
+
+// Catálogo da loja da wiki, com os mesmos itens de 2077 dos compêndios.
+const catalog = buildCatalog({ weapons: packs['armas-2077'], cyberware: packs['cyberware-2077'], net: packs['netrunning-2077'] });
+console.log(`Catálogo da loja: ${catalog.total} itens em ${catalog.file}`);

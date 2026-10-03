@@ -11,6 +11,8 @@ export const wiki = {
   weapons: window.system2077.data.weapons,
   cyberware: window.system2077.data.cyberware,
   net: window.systemNet.data,
+  catalog: window.systemCatalog,
+  skills: window.systemRules.data.skills,
   npcs: window.npcStatBlocks.data,
   pages: { ...window.systemRules.pages, ...window.systemNet.pages, ...window.system2077.pages, ...window.npcStatBlocks.pages }
 };

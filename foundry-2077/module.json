@@ -15,6 +15,7 @@
     { "name": "cyberware-2077", "label": "Cyberware de 2077", "path": "packs/cyberware-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
     { "name": "netrunning-2077", "label": "Netrunning de 2077", "path": "packs/netrunning-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
     { "name": "veiculos-2077", "label": "Veículos de 2077", "path": "packs/veiculos-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "roles-2077", "label": "Roles de 2077", "path": "packs/roles-2077", "type": "Item", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
     { "name": "npcs-2077", "label": "NPCs de 2077 (mestre)", "path": "packs/npcs-2077", "type": "Actor", "system": "cyberpunk-red-core", "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" } },
     { "name": "regras-2077", "label": "Regras de 2077", "path": "packs/regras-2077", "type": "JournalEntry", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
     { "name": "macros-2077", "label": "Macros de 2077", "path": "packs/macros-2077", "type": "Macro", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } }
@@ -22,7 +23,7 @@
   "packFolders": [
     {
       "name": "Cyberpunk 2077", "sorting": "m", "color": "#6b0012",
-      "packs": ["regras-2077", "armas-2077", "cyberware-2077", "netrunning-2077", "veiculos-2077", "npcs-2077", "macros-2077"]
+      "packs": ["regras-2077", "roles-2077", "armas-2077", "cyberware-2077", "netrunning-2077", "veiculos-2077", "npcs-2077", "macros-2077"]
     }
   ]
 }

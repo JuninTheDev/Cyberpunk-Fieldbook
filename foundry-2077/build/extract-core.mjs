@@ -10,7 +10,8 @@ const packs = [
   'core/weapons', 'core/armor', 'core/cyberware', 'core/vehicles', 'core/ammo', 'core/programs', 'core/gear',
   'core/upgrades', 'core/drugs', 'core/clothing', 'internal/skills', 'internal/dv-tables', 'internal/cyberware-core',
   'black-chrome/vehicles', 'dlc/spinning-your-wheels', 'dlc/woodchippers-garage', 'core/roles',
-  'core/skills-languages', 'core/skills-local-expert', 'core/skills-science'
+  'core/skills-languages', 'core/skills-local-expert', 'core/skills-science',
+  'core/skills-martial-arts', 'core/skills-play-instrument'
 ];
 
 if (!fs.existsSync(systemDir)) throw new Error(`Sistema não encontrado em ${systemDir}`);

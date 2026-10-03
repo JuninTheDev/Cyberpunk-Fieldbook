@@ -631,6 +631,6 @@
 
   window.systemRules = {
     pages,
-    data: { rangeBands, rangeBandLimits, rangeDV, critBody, critHead }
+    data: { rangeBands, rangeBandLimits, rangeDV, critBody, critHead, skills }
   };
 })();
