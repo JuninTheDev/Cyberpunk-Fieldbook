@@ -167,6 +167,206 @@
 
   const skillsTable = `<div class="skill-tools"><div class="map-filter-list" id="skill-stat-filter">${['Todas', 'INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'EMP'].map((stat, index) => `<button type="button" class="map-filter" data-skill-stat="${index ? stat : 'all'}" aria-pressed="${index === 0}">${stat}</button>`).join('')}</div><label class="skill-search"><span class="nav-label">Filtrar</span><input id="skill-filter" type="search" placeholder="Nome em português ou inglês" autocomplete="off"></label></div><div class="table-wrap dense"><table id="skill-table"><thead><tr><th>Perícia</th><th>STAT</th><th>Grupo</th><th>Observação</th></tr></thead><tbody>${skills.map(([name, english, stat, group, double, basic]) => `<tr data-stat="${stat}"><td><b>${name}</b> ${en(english)}</td><td class="num">${stat}</td><td>${group}</td><td>${[double ? 'custa x2' : '', basic ? 'básica (mín. 2)' : ''].filter(Boolean).join(' · ') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
 
+  // ---------- Avanço (p. 408–411) ----------
+
+  const ipCostTable = table(['Nível ou Rank', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], [
+    ['<b>Perícia</b>', ...Array.from({ length: 10 }, (_, index) => `${20 * (index + 1)}`)],
+    ['<b>Perícia difícil (×2)</b>', ...Array.from({ length: 10 }, (_, index) => `${40 * (index + 1)}`)],
+    ['<b>Rank de Role</b>', ...Array.from({ length: 10 }, (_, index) => `${60 * (index + 1)}`)]
+  ], 'dense');
+
+  const ipEarnTable = table(['IP', 'Grupo', 'Guerreiro', 'Socializador', 'Explorador', 'Intérprete'], [
+    ['10', 'Não cumpriu a missão, mas tentou com bravura.', 'Usou perícias de combate com frequência, mesmo sem efeito excepcional.', 'Apoiou e ajudou a equipe, dentro ou fora do jogo.', 'Tentou investigar ou explorar o mundo com frequência, mesmo sem efeito excepcional.', 'Tentou interpretar o personagem com frequência.'],
+    ['20', 'Mal cumpriu os objetivos da missão.', 'Usou combate com frequência e eficácia, muitas vezes derrubando oponentes importantes.', 'O apoio ajudou a manter o grupo unido (lista de frases, caderno da campanha etc.).', 'Usou a exploração com eficácia para entender o mundo ou a situação.', 'Ficou no personagem o tempo todo, muitas vezes com eficácia.'],
+    ['30', 'Trabalhou bem em conjunto e cumpriu a maioria dos objetivos; todos participaram.', 'Uso frequente e eficaz do combate, derrotando os oponentes mais perigosos de uma luta.', 'Apoio frequente e eficaz que manteve o grupo unido (retratos dos personagens, diários extensos etc.).', 'Exploração e investigação frequentes e eficazes, que avançaram objetivos pessoais e do grupo.', 'Interpretação frequente e eficaz para cumprir um objetivo (atuado, não rolado).'],
+    ['40', 'Cumpriu bem a maioria dos objetivos, com forte cooperação.', 'Fez algo fora do comum em combate, derrotando um oponente de um jeito inesperado ou incomum.', 'Fez algo fora do comum que animou ou ajudou o grupo (diários extensos, eventos especiais).', 'Descobriu algo fora do comum ou excepcional explorando e investigando.', 'Fez algo fora do comum interpretando (um discurso esperto, uma interação marcante).'],
+    ['50', 'Cumpriu a maioria dos objetivos extremamente bem, com alguns momentos brilhantes.', 'Uso muito eficaz ou esperto do combate, derrotando vários oponentes de jeitos inesperados.', 'Fez algo muito eficaz ou esperto que animou ou ajudou o grupo.', 'Investigação muito eficaz ou esperta que revelou uma pessoa, lugar, pista ou coisa importante.', 'Interpretação muito eficaz ou esperta (interação inteligente, momento importante).'],
+    ['60', 'Sucesso forte: todos os objetivos, com vários momentos brilhantes.', 'O combate foi crucial para o personagem: derrotou sozinho um oponente importante ou um nêmesis.', 'O apoio foi parte muito importante do grupo trabalhar junto e cumprir os objetivos.', 'A investigação revelou uma pessoa, lugar, pista ou coisa crucial para o personagem.', 'A interpretação foi crucial para o personagem (mudou o rumo pessoal da sessão).'],
+    ['70', 'Sucesso retumbante: todos os objetivos e vários secundários, com forte trabalho em equipe.', 'O combate foi crucial para o grupo inteiro: sem ele, o grupo teria sido derrotado.', 'O apoio foi parte crucial do grupo trabalhar junto e cumprir os objetivos.', 'A investigação revelou algo crucial para o grupo inteiro.', 'A interpretação foi crucial para o grupo inteiro (mudou o rumo da sessão).'],
+    ['80', 'Lendário: todos os objetivos e todos os secundários, com cooperação excepcional.', 'Algo realmente incrível em combate: derrubou de um tiro só, venceu um inimigo impossível ou um nêmesis, salvou o grupo.', 'Algo realmente incrível para o grupo trabalhar junto e cumprir os objetivos.', 'A investigação descobriu algo realmente incrível nesta sessão.', 'Algo realmente incrível interpretando: discurso heroico, momento de estrela, influência enorme no resultado.']
+  ].map(([ip, ...cells]) => [`<b>${ip}</b>`, ...cells]), 'dense');
+
+  // Questionário de estilo de jogo (p. 409): marque as 5 coisas mais importantes ao jogar.
+  const playstyles = {
+    Guerreiro: ['Derrotar um inimigo em combate.', 'Ganhar uma ferramenta ou arma poderosa.', 'Provar sua perícia em combate.', 'A emoção da caçada.', 'Montar o personagem ou a ferramenta mais poderosa.', 'Estabelecer uma fortaleza.', 'Ter um nêmesis para vencer.'],
+    Explorador: ['Encontrar um lugar novo no mapa.', 'Conhecer alguém novo no mundo.', 'Resolver um enigma difícil.', 'Aprender sobre o mundo e sua história.', 'Estabelecer um lugar ou uma aliança.', 'Contribuir para a história do mundo.'],
+    Socializador: ['Relembrar um momento favorito do jogo.', 'Contar a outras pessoas sobre os jogos de que participa.', 'Contribuir para o sucesso do grupo.', 'Juntar-se a outros para vencer um desafio.', 'Fazer amigos fora do jogo.', 'Fazer parte do grupo.'],
+    Intérprete: ['Ter uma imagem do seu personagem.', 'Escrever o histórico do personagem.', 'Criar uma família estendida em volta do personagem.', 'Saber dos pets, das coisas favoritas, dos amigos e dos inimigos do personagem.', 'Interpretar o sotaque e os trejeitos do personagem.']
+  };
+  const playstyleQuiz = `<div class="playstyle-quiz">${Object.entries(playstyles).map(([style, items]) => `<fieldset><legend>${style}</legend>${items.map(item => `<label><input type="checkbox" data-style="${style}"> ${item}</label>`).join('')}</fieldset>`).join('')}</div><p class="note-status" id="playstyle-result">Marque as 5 coisas que você acha mais importantes ao jogar.</p>`;
+
+  function setupAdvancement(content) {
+    const result = content.querySelector('#playstyle-result');
+    if (!result) return;
+    content.querySelector('.playstyle-quiz').addEventListener('change', () => {
+      const marked = [...content.querySelectorAll('.playstyle-quiz input:checked')];
+      const counts = {};
+      marked.forEach(input => { counts[input.dataset.style] = (counts[input.dataset.style] || 0) + 1; });
+      const ranking = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      if (!marked.length) { result.textContent = 'Marque as 5 coisas que você acha mais importantes ao jogar.'; return; }
+      const [first, second] = ranking;
+      const tie = second && second[1] === first[1] ? ' (empate: o jogador escolhe a ordem)' : '';
+      result.innerHTML = `${marked.length} de 5 marcadas${marked.length > 5 ? ' — <b>desmarque até ficar com 5</b>' : ''}. Principal: <b>${first[0]}</b> (${first[1]})${second ? ` · secundário: <b>${second[0]}</b> (${second[1]})` : ''}${tie}.`;
+    });
+  }
+
+  // ---------- Lifepath (p. 44–52) ----------
+  // Cada tabela: [id, título, ref, cabeçalhos, itens]; um item é texto ou [texto, detalhe].
+
+  const lifepathTables = [
+    ['origem', 'Origem cultural', '45', ['1d10', 'Região', 'Línguas (escolha uma: você começa com ela no nível 4)'], [
+      ['América do Norte', 'chinês, cree, crioulo, inglês, francês, navajo, espanhol'],
+      ['América do Sul e Central', 'crioulo, inglês, alemão, guarani, maia, português, quéchua, espanhol'],
+      ['Europa Ocidental', 'holandês, inglês, francês, alemão, italiano, norueguês, português, espanhol'],
+      ['Europa Oriental', 'inglês, finlandês, polonês, romeno, russo, ucraniano'],
+      ['Oriente Médio e Norte da África', 'árabe, berbere, inglês, farsi, francês, hebraico, turco'],
+      ['África Subsaariana', 'árabe, inglês, francês, hauçá, lingala, oromo, português, suaíli, twi, iorubá'],
+      ['Sul da Ásia', 'bengali, dari, inglês, hindi, nepali, cingalês, tâmil, urdu'],
+      ['Sudeste Asiático', 'árabe, birmanês, inglês, filipino, hindi, indonésio, khmer, malaio, vietnamita'],
+      ['Leste Asiático', 'chinês cantonês, inglês, japonês, coreano, chinês mandarim, mongol'],
+      ['Oceania e Ilhas do Pacífico', 'inglês, francês, havaiano, maori, pama-nyungan, taitiano']
+    ]],
+    ['personalidade', 'Personalidade', '46', ['1d10', 'Como você é'], ['Tímido e reservado.', 'Rebelde, antissocial e violento.', 'Arrogante, orgulhoso e indiferente.', 'Mal-humorado, imprudente e teimoso.', 'Implicante, exigente e nervoso.', 'Estável e sério.', 'Bobo e distraído.', 'Sorrateiro e enganador.', 'Intelectual e fechado.', 'Amigável e extrovertido.']],
+    ['roupa', 'Estilo de roupa', '47', ['1d10', 'Estilo'], ['Genérico Chic (padrão, colorido, modular).', 'Roupa de lazer (conforto, agilidade, atletismo).', 'Flash urbano (chamativo, tecnológico, streetwear).', 'Roupa de negócios (liderança, presença, autoridade).', 'Alta moda (exclusivo, de grife, couture).', 'Boêmio (folk, retrô, espírito livre).', 'Bag Lady Chic (sem-teto, esfarrapado, de rua).', 'Cores de gangue (perigoso, violento, rebelde).', 'Couro nômade (do oeste, rústico, tribal).', 'Asia Pop (brilhante, fantasiado, jovem).']],
+    ['cabelo', 'Penteado', '47', ['1d10', 'Penteado'], ['Moicano.', 'Longo e bagunçado.', 'Curto e espetado.', 'Selvagem e espalhado.', 'Careca.', 'Listrado.', 'Cores selvagens.', 'Curto e arrumado.', 'Curto e cacheado.', 'Longo e liso.']],
+    ['adorno', 'Adorno que você sempre usa', '47', ['1d10', 'Adorno'], ['Tatuagens.', 'Óculos espelhados.', 'Cicatrizes rituais.', 'Luvas com espetos.', 'Argolas no nariz.', 'Piercing na língua ou em outro lugar.', 'Implantes de unha estranhos.', 'Botas com espetos ou saltos.', 'Luvas sem dedos.', 'Lentes de contato estranhas.']],
+    ['valor', 'O que você mais valoriza', '48', ['1d10', 'Valor'], ['Dinheiro.', 'Honra.', 'Sua palavra.', 'Honestidade.', 'Conhecimento.', 'Vingança.', 'Amor.', 'Poder.', 'Família.', 'Amizade.']],
+    ['pessoas', 'O que você sente pelas pessoas', '48', ['1d10', 'Sentimento'], ['Neutro.', 'Neutro.', 'Gosta de quase todo mundo.', 'Odeia quase todo mundo.', 'Pessoas são ferramentas: use-as para seus fins e descarte.', 'Cada pessoa é um indivíduo valioso.', 'Pessoas são obstáculos a destruir se ficarem no caminho.', 'Pessoas não são confiáveis: não dependa de ninguém.', 'Limpe tudo e deixe as baratas assumirem.', 'As pessoas são maravilhosas.']],
+    ['pessoa', 'A pessoa mais valiosa da sua vida', '48', ['1d10', 'Pessoa'], ['Um dos pais.', 'Um irmão ou irmã.', 'Um amor.', 'Um amigo.', 'Você mesmo.', 'Um pet.', 'Professor ou mentor.', 'Uma figura pública.', 'Um herói pessoal.', 'Ninguém.']],
+    ['posse', 'A posse mais valiosa', '48', ['1d10', 'Posse'], ['Uma arma.', 'Uma ferramenta.', 'Uma peça de roupa.', 'Uma fotografia.', 'Um livro ou diário.', 'Uma gravação.', 'Um instrumento musical.', 'Uma joia.', 'Um brinquedo.', 'Uma carta.']],
+    ['familia', 'Família original', '49', ['1d10', 'Família', 'Como era'], [
+      ['Execs corporativos', 'Ricos e poderosos, com empregados, casas de luxo e o melhor de tudo. Segurança particular garantia que você estivesse sempre seguro. Escola particular de grife.'],
+      ['Gerentes corporativos', 'Bem de vida: casas grandes, bairros seguros, bons carros. Às vezes, empregados. Ensino particular e corporativo.'],
+      ['Técnicos corporativos', 'Classe média: conapts confortáveis ou casas de subúrbio, minivans e escolas técnicas da corporação. Os anos 1950 misturados com <i>1984</i>.'],
+      ['Bando nômade', 'Trailers, veículos e kombis como casa. Aprendeu cedo a dirigir e lutar, mas a família sempre cuidou de você. Comida fresca e farta; ensino em casa.'],
+      ['"Família" de gangue', 'Um lar selvagem e violento, onde quer que a gangue se instalasse. Fome, frio e medo; talvez nem soubesse quem eram seus pais. A gangue ensinou a lutar, matar e roubar.'],
+      ['Zoners de combate', 'Um degrau acima da gangue: um prédio decadente e fortificado na Zona. Fome às vezes, mas cama e refeição com regularidade. Ensino em casa.'],
+      ['Sem-teto urbanos', 'Carros, caçambas ou contêineres abandonados, com sorte. Fome, frio e medo, a menos que fosse duro o bastante para brigar pelos restos. A escola da vida.'],
+      ['Megaestrutura cheia de ratos', 'Uma das megaestruturas erguidas depois da Guerra: conapt pequeno, ração e scop, cama quente. Talvez uma escola dos moradores ou de uma corp local.'],
+      ['Reclaimers', 'Começou na estrada e depois foi reconstruir uma cidade fantasma. Vida de pioneiro: perigosa, mas com comida simples e lugar seguro para dormir.'],
+      ['Edgerunners', 'A casa mudava com o "trabalho atual" dos pais: apartamento de luxo, conapt urbano ou uma caçamba, se estivessem fugindo. Comida de gourmet a ração.']
+    ]],
+    ['infancia', 'Ambiente de infância', '50', ['1d10', 'Onde você cresceu'], ['Na rua, sem supervisão de adultos.', 'Numa zona segura, protegida do resto da cidade.', 'Num grupo nômade em movimento entre cidades.', 'Num grupo nômade de raízes no transporte (navios, aviões, caravanas).', 'Num bairro decadente que já foi de alto nível, agora resistindo aos boosters para sobreviver.', 'No coração da Zona de Combate, num prédio destruído ou numa ocupação.', 'Numa megaestrutura enorme controlada por uma corp ou pela cidade.', 'Nas ruínas de uma cidade abandonada, tomada por reclaimers.', 'Numa nação à deriva: uma cidade flutuante perto da costa, ponto de encontro de todo tipo de gente.', 'Num arranha-céu de luxo corporativo, acima do resto da cidade.']],
+    ['crise', 'Crise familiar', '50', ['1d10', 'O que aconteceu'], ['A família perdeu tudo por traição.', 'A família perdeu tudo por má gestão.', 'A família foi exilada ou expulsa da casa, nação ou corporação.', 'A família foi presa, e só você escapou.', 'A família desapareceu. Você é o único que restou.', 'A família foi morta, e você foi o único sobrevivente.', 'A família está envolvida numa conspiração de longo prazo, organização ou associação, como uma família do crime ou um grupo revolucionário.', 'A família se espalhou pelos ventos, por causa de uma desgraça.', 'A família carrega uma rixa hereditária que dura gerações.', 'Você herdou uma dívida da família: precisa pagá-la antes de seguir com a vida.']],
+    ['amigo', 'Amigos', '51', ['1d10', 'Quem é o amigo'], ['Como um irmão mais velho para você.', 'Como um irmão mais novo para você.', 'Um professor ou mentor.', 'Um parceiro ou colega de trabalho.', 'Um ex-amante.', 'Um velho inimigo.', 'Como alguém da família para você.', 'Um velho amigo de infância.', 'Alguém que você conheceu na rua.', 'Alguém com um interesse ou objetivo em comum.']],
+    ['inimigo-quem', 'Inimigo: quem é', '51', ['1d10', 'Quem'], ['Ex-amigo.', 'Ex-amante.', 'Parente afastado.', 'Inimigo de infância.', 'Alguém que trabalha para você.', 'Alguém para quem você trabalha.', 'Parceiro ou colega de trabalho.', 'Exec corporativo.', 'Funcionário do governo.', 'Boosterganger.']],
+    ['inimigo-causa', 'Inimigo: o que causou', '51', ['1d10', 'Causa (decida quem foi o injustiçado)'], ['Um fez o outro perder a pose ou o status.', 'Um causou a perda de um amante, amigo ou parente.', 'Um causou uma grande humilhação pública.', 'Um acusou o outro de covardia ou de outra grande falha pessoal.', 'Um desertou ou traiu o outro.', 'Um recusou uma oferta de emprego ou um envolvimento romântico.', 'Vocês simplesmente não se gostam.', 'Um era rival do outro num romance.', 'Um era rival do outro nos negócios.', 'Um incriminou o outro por um crime que não cometeu.']],
+    ['inimigo-recursos', 'Inimigo: o que pode usar contra você', '51', ['1d10', 'Recursos'], ['Só ele mesmo, e não vai sair do caminho por isso.', 'Só ele mesmo.', 'Ele e um amigo próximo.', 'Ele e alguns amigos (1d6 ÷ 2).', 'Ele e alguns amigos (1d10 ÷ 2).', 'Uma gangue inteira (pelo menos 1d10 + 5 pessoas).', 'A polícia local ou outros agentes da lei.', 'Um chefe de gangue poderoso ou uma corporação pequena.', 'Uma corporação poderosa.', 'Uma cidade, governo ou agência inteira.']]
+  ];
+  // Vingança e amor trágico usam faixas ou ficam fora do formato de 1 a 10 sem repetição.
+  const revengeRows = [[1, 2, 'Evitar a escória.'], [3, 4, 'Entrar numa fúria assassina e tentar arrancar a cara do outro.'], [5, 6, 'Prejudicá-lo indiretamente, pelas costas.'], [7, 8, 'Atacá-lo com palavras.'], [9, 9, 'Incriminá-lo por um crime ou transgressão que não cometeu.'], [10, 10, 'Matá-lo ou mutilá-lo.']];
+  const loveRows = ['Seu amor morreu num acidente.', 'Seu amor desapareceu misteriosamente.', 'Simplesmente não deu certo.', 'Um objetivo pessoal ou uma vingança ficou entre vocês.', 'Seu amor foi sequestrado.', 'Seu amor enlouqueceu ou virou ciberpsicótico.', 'Seu amor se matou.', 'Seu amor foi morto numa luta.', 'Um rival tirou você da jogada.', 'Seu amor está preso ou exilado.'];
+  const goalRows = ['Livrar-se de uma má reputação.', 'Ganhar poder e controle.', 'Sair da rua, custe o que custar.', 'Causar dor e sofrimento a quem cruzar seu caminho.', 'Deixar a vida passada para trás e tentar esquecê-la.', 'Caçar os responsáveis pela sua vida miserável.', 'Pegar o que é seu por direito.', 'Salvar, se possível, alguém do seu passado, como um amor ou alguém da família.', 'Fama e reconhecimento.', 'Ser temido e respeitado.'];
+
+  const asRows = items => items.map((item, index) => [index + 1, index + 1, Array.isArray(item) ? `<b>${item[0]}</b> — ${item[1]}` : item]);
+  const rollTables = {};
+  lifepathTables.forEach(([id, , , , items]) => { rollTables[`lp-${id}`] = { dado: '1d10', linhas: asRows(items) }; });
+  rollTables['lp-vinganca'] = { dado: '1d10', linhas: revengeRows };
+  rollTables['lp-amor'] = { dado: '1d10', linhas: asRows(loveRows) };
+  rollTables['lp-meta'] = { dado: '1d10', linhas: asRows(goalRows) };
+
+  const rollButtons = buttons => `<div class="roll-buttons">${buttons.join('')}</div>`;
+  const rollButton = (id, label = 'Rolar 1d10') => `<button class="action" data-roll="${id}" type="button">${label}</button>`;
+  const lifepathButton = (kind, label) => `<button class="action" data-lifepath="${kind}" type="button">${label}</button>`;
+  const lifepathTable = ([, , , headers, items]) => table(headers, items.map((item, index) => [`<b>${index + 1}</b>`, ...(Array.isArray(item) ? [`<b>${item[0]}</b>`, item[1]] : [item])]), 'dense');
+  const lifepathSection = (id, extra = '') => {
+    const entry = lifepathTables.find(item => item[0] === id);
+    return section(entry[1], entry[2], `${extra}${lifepathTable(entry)}${rollButtons([rollButton(`lp-${id}`)])}`);
+  };
+
+  function setupLifepath(content, { rollTable, rollDice, showRoll }) {
+    const pick = id => rollTable(id).html;
+    const howMany = () => { const die = rollDice('1d10'); return { die, count: Math.max(0, die - 7) }; };
+    const numbered = (count, make) => `<ol>${Array.from({ length: count }, () => `<li>${make()}</li>`).join('')}</ol>`;
+    const enemy = () => `<b>${pick('lp-inimigo-quem')}</b> ${pick('lp-inimigo-causa')} Pode usar contra você: ${pick('lp-inimigo-recursos').toLowerCase()} Se vocês se encontrarem: ${pick('lp-vinganca').toLowerCase()}`;
+    const group = (singular, plural, none, make) => {
+      const { die, count } = howMany();
+      return `<span class="roll-value">1d10 = ${die} − 7</span> <b>${count ? `${count} ${count === 1 ? singular : plural}` : none}</b>${count ? numbered(count, make) : ''}`;
+    };
+    const rolls = {
+      amigos: () => group('amigo', 'amigos', 'Nenhum amigo, por enquanto.', () => pick('lp-amigo')),
+      inimigos: () => group('inimigo', 'inimigos', 'Nenhum inimigo, por enquanto.', enemy),
+      inimigo: () => enemy(),
+      amores: () => group('amor trágico', 'amores trágicos', 'Nenhum amor trágico, por enquanto.', () => pick('lp-amor')),
+      tudo: () => {
+        const line = (label, html) => `<li><b>${label}:</b> ${html}</li>`;
+        const counted = (label, make) => { const { count } = howMany(); return line(`${label} (${count})`, count ? numbered(count, make) : 'nenhum.'); };
+        return `<ul>${[
+          line('Origem cultural', pick('lp-origem')),
+          line('Personalidade', pick('lp-personalidade')),
+          line('Estilo de roupa', pick('lp-roupa')),
+          line('Penteado', pick('lp-cabelo')),
+          line('Adorno', pick('lp-adorno')),
+          line('Mais valoriza', pick('lp-valor')),
+          line('Sente pelas pessoas', pick('lp-pessoas')),
+          line('Pessoa mais valiosa', pick('lp-pessoa')),
+          line('Posse mais valiosa', pick('lp-posse')),
+          line('Família original', pick('lp-familia')),
+          line('Infância', pick('lp-infancia')),
+          line('Crise familiar', pick('lp-crise')),
+          counted('Amigos', () => pick('lp-amigo')),
+          counted('Inimigos', enemy),
+          counted('Amores trágicos', () => pick('lp-amor')),
+          line('Meta de vida', pick('lp-meta'))
+        ].join('')}</ul>`;
+      }
+    };
+    content.querySelectorAll('[data-lifepath]').forEach(button => button.addEventListener('click', () => showRoll(button, rolls[button.dataset.lifepath]())));
+  }
+
+  // ---------- Night Market (p. 337–339) ----------
+
+  const nightMarketCategories = ['Comida e drogas', 'Eletrônica pessoal', 'Armas e blindagens', 'Cyberware', 'Roupas e fashionware', 'Equipamento de sobrevivência'];
+  const nightMarketRows = [
+    ['Comida enlatada (10eb)', 'Agent (100eb)', 'Pistola média (50eb)', 'Cyberolho (100eb)', 'Bag Lady Chic', 'Máscara anti-fumaça (20eb)'],
+    ['Comida embalada (10eb)', 'Programa ou hardware de cyberdeck de até 100eb', 'Pistola pesada ou muito pesada (100eb)', 'Cyberaudio (500eb)', 'Cores de gangue', 'Protetores auriculares (1.000eb)'],
+    ['Comida congelada (10eb)', 'Gravador de áudio (100eb)', 'SMG (100eb)', 'Neural Link (500eb)', 'Genérico Chic', 'Binóculos (50eb)'],
+    ['Grãos a granel (20eb)', 'Detector de escutas (500eb)', 'SMG pesada (100eb)', 'Cyberbraço (500eb)', 'Boêmio', 'Carryall (20eb)'],
+    ['Prepak genérico, o antigo Kibble (10eb)', 'Analisador químico (1.000eb)', 'Espingarda (500eb)', 'Cyberperna (100eb)', 'Roupa de lazer', 'Lanterna (20eb)'],
+    ['Bolsas de Prepak (20eb)', 'Computador (50eb)', 'Rifle de assalto (500eb)', 'Cyberware externo de exatamente 1.000eb', 'Couro nômade', 'Fita adesiva (20eb)'],
+    ['Drogas de rua de até 20eb', 'Cyberdeck (500eb)', 'Rifle de precisão (500eb)', 'Cyberware externo de até 500eb', 'Asia Pop', 'Cama inflável e saco de dormir (20eb)'],
+    ['Álcool ruim (10eb)', 'Celular descartável (50eb)', 'Arco ou besta (100eb)', 'Cyberware interno de exatamente 1.000eb', 'Flash urbano', 'Kit de arrombamento (20eb)'],
+    ['Álcool (20eb)', 'Guitarra ou outro instrumento (500eb)', 'Lança-granadas ou lança-mísseis (500eb)', 'Cyberware interno de até 500eb', 'Roupa de negócios', 'Algemas (50eb)'],
+    ['Álcool excelente (100eb)', 'Programa ou hardware de cyberdeck de exatamente 500eb', 'Munição de até 500eb', 'Opção de cyberolho de exatamente 1.000eb', 'Alta moda', 'Bolsa Medtech (100eb)'],
+    ['MRE (10eb)', 'Medscanner (1.000eb)', 'Uma arma exótica à escolha do mestre', 'Opção de cyberolho de até 500eb', 'Biomonitor (100eb)', 'Barraca e equipamento de camping (50eb)'],
+    ['Frango vivo (50eb)', 'Rastreador (500eb)', 'Arma branca leve (50eb)', 'Opção de cyberaudio de exatamente 1.000eb', 'Pele química (100eb)', 'Corda, 60 m (20eb)'],
+    ['Peixe vivo (50eb)', 'Rádio comunicador (100eb)', 'Arma branca média (50eb)', 'Opção de cyberaudio de até 500eb', 'Fio EMP (10eb)', 'Techferramenta (100eb)'],
+    ['Frutas frescas (50eb)', 'Techscanner (1.000eb)', 'Arma branca pesada (100eb)', 'Neuralware de exatamente 1.000eb', 'Tatuagem luminosa (100eb)', 'Kit de higiene pessoal (20eb)'],
+    ['Legumes frescos (50eb)', 'Óculos inteligentes (500eb)', 'Arma branca muito pesada (100eb)', 'Neuralware de até 500eb', 'Lentes de cor (100eb)', 'Roupa antirradiação (1.000eb)'],
+    ['Raízes e tubérculos (20eb)', 'Detector de radar (500eb)', 'Blindagem de até 100eb', 'Opção de cybermembro de exatamente 1.000eb', 'Relógio de pele (100eb)', 'Sinalizador de estrada (10eb)'],
+    ['Porco vivo (100eb)', 'Embaralhador (500eb)', 'Blindagem de exatamente 500eb', 'Opção de cybermembro de até 500eb', 'Techhair (100eb)', 'Arma de gancho (100eb)'],
+    ['Frutas exóticas (100eb)', 'Rádio scanner ou tocador de música (50eb)', 'Blindagem de exatamente 1.000eb', 'Fashionware à escolha do mestre', 'Genérico Chic', 'Bolsa Tech (500eb)'],
+    ['Legumes exóticos (100eb)', 'Visualizador de braindance (1.000eb)', 'Acessório de arma de até 100eb', 'Borgware à escolha do mestre', 'Roupa de lazer', 'Pá ou machado (50eb)'],
+    ['Drogas de rua de exatamente 50eb', 'Óculos de realidade virtual (100eb)', 'Acessório de arma de 500eb ou mais', 'Qualquer cyberware à escolha do mestre', 'Cores de gangue', 'Airhypo (50eb)']
+  ];
+  const nightMarketTable = table(['d100', ...nightMarketCategories], nightMarketRows.map((row, index) => [`<b>${String(index * 5 + 1).padStart(2, '0')}–${index === 19 ? '00' : String(index * 5 + 5).padStart(2, '0')}</b>`, ...row]), 'dense');
+  const nightMarketNotes = { 4: 'O cyberware de base que o item exigir também está à venda, e o seu ripperdoc instala de graça.', 5: 'O fashionware é instalado ali mesmo, no mercado.' };
+
+  function setupNightMarket(content, { rollDice, showRoll }) {
+    const button = content.querySelector('[data-night-market]');
+    if (!button) return;
+    button.addEventListener('click', () => {
+      const first = rollDice('1d6');
+      let second = rollDice('1d6');
+      while (second === first) second = rollDice('1d6');
+      const parts = [first, second].map(category => {
+        const quantity = rollDice('1d10');
+        const seen = new Set();
+        const items = [];
+        while (items.length < quantity) {
+          const roll = rollDice('d100');
+          const row = Math.ceil(roll / 5) - 1;
+          if (seen.has(row)) continue;
+          seen.add(row);
+          items.push(`<li><small>${roll === 100 ? '00' : roll}</small> ${nightMarketRows[row][category - 1]}</li>`);
+        }
+        const note = nightMarketNotes[category] ? `<br><small>${nightMarketNotes[category]}</small>` : '';
+        return `<p><span class="roll-value">1d6: ${category}</span> <b>${nightMarketCategories[category - 1]}</b>: ${quantity} ${quantity === 1 ? 'item' : 'itens'}${note}</p><ul>${items.join('')}</ul>`;
+      });
+      showRoll(button, parts.join(''));
+    });
+  }
+
   // ---------- Páginas ----------
 
   const pages = {
@@ -351,6 +551,7 @@
     },
 
     economy: {
+      setup: setupNightMarket,
       eyebrow: 'Suplemento 2077 / economia (substitui a do RED)', title: 'Economia de 2077',
       lede: 'A economia de Night City em 2077, pelo suplemento de fã: dinheiro mais fácil de ganhar, custo de vida menor e categorias de preço mais altas. Onde o suplemento não diz nada, vale a regra do RED, e isso está marcado. Acerte as contas no início de cada mês.',
       html: `<div class="callout"><b>Resumo em uma linha:</b> as categorias de preço subiram um degrau, mas quase tudo continua custando os mesmos eurobucks de antes; o que muda é o nome da categoria. Viver ficou mais barato (acabou o Kibble) e o hustle rende 1,5×.</div>
@@ -370,6 +571,7 @@
         ${section('Estilo de vida', 'sup. p. 31', `${table(['Estilo', 'Como é', 'Por mês'], [['<s>Kibble</s>', '<b>Não existe mais em 2077.</b> A marca Continental faliu.', '—'], ['Prepak genérico', 'Substitui o Kibble <b>pelo mesmo preço</b>. Também cobre comprar qualquer item de 10eb ou menos <b>duas vezes por semana</b>. Um bar ou restaurante bom todo fim de semana.', '<b>100eb</b>'], ['Prepak bom', 'Comida de restaurante, quase como a de verdade. Bons bares; um show ou evento por mês.', '600eb'], ['Comida fresca', 'Comida de verdade. Bar executivo, hotel quando precisar, um restaurante de primeira por mês.', '1.500eb']], 'dense')}<p>Quem não está quebrado nem sem casa vive bem acima do antigo Kibble: carne de cultura, leite sintético e anúncios em toda vending machine.</p><p class="note-status">Regra do RED que continua valendo (p. 377): quem não paga o estilo de vida no início do mês tem uma semana; depois, rola um Death Save no início de cada dia sem pagar.</p>`)}
         ${section('Moradia', 'sup. p. 31', `<p><b>Mudança de 2077:</b> uma quitinete num <b>megaprédio</b> ou outro lugar subsidiado ou mais barato custa o mesmo que um contêiner de carga, para alugar e para comprar. Os outros valores não mudaram.</p>${table(['Moradia', 'Aluguel por mês', 'Compra'], [['Na rua / num veículo', '—', '—'], ['Hotel cápsula', '500eb', '—'], ['Contêiner de carga', '1.000eb', '15.000eb'], ['<b>Quitinete em megaprédio</b> (2077)', '<b>1.000eb</b>', '<b>15.000eb</b>'], ['Quitinete (fora de megaprédio)', '1.500eb', '25.000eb'], ['Apartamento de dois quartos', '2.500eb', '35.000eb'], ['Conapt corporativo', 'Dado pela corporação', '—'], ['Conapt de luxo', '7.500eb', '85.000eb'], ['Cobertura de luxo', '15.000eb', 'ver livro'], ['Casa corporativa em Beaverville', 'Dada pela corporação', '200.000eb'], ['Mansão corporativa em Beaverville', 'Dada pela corporação', '500.000eb']], 'dense')}<p class="note-status">Tabela-base do RED, p. 378.</p>`)}
         ${section('Comprar, vender e pechinchar', 'sup. p. 31', list(['Os preços das listas são de item <b>novo de fábrica</b>.', '<b>Usado ou quebrado:</b> de 25% a 50% de desconto. Pechinchar continua valendo, com metade do preço para coisa bem gasta.', '<b>Serviços de 10eb ou menos</b> mantiveram o preço, mas agora ficam abaixo de Barato: dependendo da situação, do lugar e do estilo de vida, podem até sair de graça.', 'Serviços como hospital, terapia, instalação de cyberware e Trauma Team: o suplemento não muda os valores em eb (veja Dano, ferimentos e cura).']))}
+        ${section('Night Market', '337–339', `<p>Um mercado improvisado, montado por um fixer, que aparece e some rápido. Cada um vende duas categorias de coisas. Para gerar um:</p>${list(['Role <b>1d6 duas vezes</b> para as duas categorias (role de novo se repetir).', 'Para cada categoria, role <b>1d10</b>: é o número de itens à venda.', 'Para cada item, role <b>d100</b> na coluna da categoria; role de novo se repetir a linha.', '<b>Cyberware:</b> o cyberware de base que o item exigir também está à venda, e o seu ripperdoc instala de graça. <b>Fashionware:</b> instalado ali mesmo.'])}${rollButtons(['<button class="action" data-night-market type="button">Gerar um Night Market</button>'])}<details class="roll-table"><summary>Tabela de itens (d100) / 20 linhas</summary>${nightMarketTable}</details><p class="note-status"><b>Midnight Market:</b> a versão secreta, só para convidados ricos e poderosos, com 1d10 + 5 itens raros escolhidos pelo mestre. Só um fixer de Rank 9 ou mais monta um. Em 2077 não há a Role Fixer: os mercados ficam com fixers NPCs, e a Role Corpo pode montá-los junto com eles.</p>`)}
         ${section('Trabalhos e hustle', '381–384', `${table(['Trabalho (RED)', 'Como é', 'Pagamento por pessoa'], [['Fácil', 'Não se espera resistência armada. Mas nunca se sabe.', '500eb'], ['Típico', 'Resistência armada esperada, mas dá para se preparar.', '1.000eb'], ['Perigoso', 'Resistência esmagadora. Sem muita preparação, você morre.', '2.000eb']], 'dense')}${list(['<b>Hustle:</b> com 7 dias inteiros livres, o personagem trabalha na própria Role e rola 1d6 na tabela da Role, conforme o Rank da habilidade (RED p. 382–384).', '<b>Em 2077 o hustle rende 1,5×</b> o valor da tabela do RED (sup. p. 31). Um resultado de 0eb continua 0.', 'O suplemento não muda o pagamento dos trabalhos.'])}`)}
         ${section('Zonas e autodefesa', 'sup. p. 31', list(['As zonas de combate do RED acabaram: a polícia patrulha a maior parte da cidade e a maioria dos serviços existe em qualquer bairro.', 'O problema do cidadão comum é crime e guerra de gangue. Porte ostensivo de arma e leis de legítima defesa amplas são aceitos.', '<b>Recompensa na hora:</b> abater criminosos rende pagamento quase imediato, vivos ou mortos, desde que o app da NCPD no Agent confirme.', 'Fora da cidade, nas Badlands, ninguém garante nada.']))}
         ${section('Moda: os quatro estilos', 'sup. p. 7–8', `<p>Metade do preço de um visual cobre o básico (parte de baixo, de cima e calçado); a outra metade, o extra e os acessórios do estilo.</p>${table(['Estilo', 'Cara', 'Visual genérico', 'Subestilos'], [['Entropismo', 'Robusto, quadradão, feio, mas funciona. Necessidade acima de estilo.', '100eb (Oneroso)', 'Nomad 500eb · Bohemian 500eb'], ['Kitsch', 'Espalhafatoso e colorido; cyberware à mostra. Estilo acima de substância.', '500eb (Premium)', 'Generic Chic 500eb · Gang Colours 500eb · Leisurewear 500eb · Urban Flash 500eb · Asia Pop 1.000eb'], ['Neomilitarismo', 'Monolítico, prático, dominante. O visual das megacorps.', '1.000eb (Caro)', 'Military/Police 1.000eb · Businesswear 5.000eb · Fashion 5.000eb'], ['Neokitsch', 'Ostensivo, dourado, materiais naturais de verdade. O visual do 0,1%.', '5.000eb (Muito caro)', 'High Fashion 10.000eb']], 'dense')}`)}
@@ -385,10 +587,47 @@
         ${section('Valores derivados', '79–80', `${formula('HP = 10 + 5 × (média de BODY e WILL, arredondada para cima)')}${table(['Média de BODY e WILL', '2', '3', '4', '5', '6', '7', '8', '9', '10'], [['HP', '20', '25', '30', '35', '40', '45', '50', '55', '60']], 'dense')}${list(['<b>Gravemente Ferido:</b> metade do HP, arredondada para cima.', '<b>Death Save:</b> igual ao BODY.', '<b>Humanidade:</b> EMP × 10.'])}`)}
         ${section('Perícias básicas', '88–90', `<p>Todo personagem tem pelo menos nível 2 em: Atletismo, Briga, Concentração, Conversação, Educação, Evasão, Primeiros Socorros, Percepção Humana, Linguagem (Streetslang), Especialista Local (sua área), Percepção, Persuasão e Furtividade.</p><p>Perícias marcadas x2 custam 2 pontos por nível. O Lifepath (Origem Cultural) dá mais 4 níveis de idiomas de graça.</p>${button('skills', 'Ver todas as perícias')}`)}
         ${section('Estatísticas', '72', table(['STAT', 'O que mede'], [['INT', 'Raciocínio, conhecimento e atenção.'], ['REF', 'Reflexos; mira com armas de fogo e direção.'], ['DEX', 'Coordenação; corpo a corpo, esquiva e atletismo.'], ['TECH', 'Habilidade técnica e medicina.'], ['COOL', 'Compostura e presença social.'], ['WILL', 'Força de vontade e resistência.'], ['LUCK', 'Pontos de sorte gastos por sessão.'], ['MOVE', 'Deslocamento: MOVE × 2 m por turno.'], ['BODY', 'Constituição, força, HP e Death Save.'], ['EMP', 'Empatia; define a Humanidade.']], 'dense'))}
-        ${section('Lifepath e identidade', '45', '<p>O Lifepath dá origem cultural, personalidade, relações, inimigos e acontecimentos passados. Use os resultados para criar vínculos que apareçam em jogo; não é preciso transformar cada detalhe em obrigação.</p>')}
+        ${section('Lifepath e identidade', '45', '<p>O Lifepath dá origem cultural, personalidade, relações, inimigos e acontecimentos passados. Use os resultados para criar vínculos que apareçam em jogo; não é preciso transformar cada detalhe em obrigação.</p>' + button('lifepath', 'Abrir o Lifepath, com roladores') + button('advancement', 'Avanço e Pontos de Melhoria'))}
         ${section('Checklist da ficha', '', list(['Role e habilidade de Role.', 'STATs, perícias, idiomas e especialidades.', 'HP, Gravemente Ferido, Death Save, Humanidade e MOVE.', 'Armas, munição, armadura e SP de cabeça e corpo.', 'Cyberware, slots ocupados e perda de Humanidade.', 'Equipamento, eurobucks, moradia, estilo de vida e contatos.']))}`
+    },
+
+    advancement: {
+      eyebrow: 'Cyberpunk RED / avanço', title: 'Avanço e Pontos de Melhoria',
+      lede: 'Ao fim de cada sessão, o mestre dá Pontos de Melhoria (IP) e os jogadores os gastam para subir perícias e o Rank da Role. O suplemento de 2077 não muda nada disso.',
+      setup: setupAdvancement,
+      html: `<div class="callout"><b>No fim da sessão:</b> missão concluída, com ou sem sucesso → todos ganham pela coluna <b>Grupo</b>. Missão ainda em andamento → cada um ganha pela coluna do seu estilo de jogo <b>principal ou secundário</b>. Quem se destacou em outro estilo pode ganhar por ele, se der mais.</div>
+        ${section('Gastar Pontos de Melhoria', '411', `<p>O custo depende do nível (ou Rank) <b>que você vai alcançar</b>.</p>${formula('Perícia: 20 × novo nível · perícia difícil (×2): 40 × novo nível · Rank de Role: 60 × novo Rank')}${ipCostTable}${list(['<b>Não dá para pular níveis</b>, mesmo com IP sobrando: compre um de cada vez e passe um tempo no nível novo antes de subir de novo.', 'Começar uma perícia nova é comprar o nível 1: 20 IP, ou 40 se for difícil.', '<b>Exemplos:</b> Pistola de 4 para 5 custa 100 IP; de 5 para 6, mais 120. A Role começa no Rank 4, e subir para o 5 custa 300 IP.'])}`)}
+        ${section('Ganhar Pontos de Melhoria', '410–411', `<p>Ache a linha que descreve a sessão na coluna certa. Exemplo do livro: Bob, um Guerreiro, atrai a temida Equipe X para um fogo cruzado e derrota todos. Isso é "uso muito eficaz ou esperto do combate, derrotando vários oponentes de jeitos inesperados": <b>50 IP</b>.</p>${ipEarnTable}`)}
+        ${section('Estilos de jogo', '409', `${list(['<b>Guerreiro:</b> gosta de testar a perícia contra adversários. Quer o lutador mais forte do grupo e as melhores armas e habilidades de combate.', '<b>Socializador:</b> foca na experiência do jogo como um todo. Faz piadas, registra as histórias e contribui fora do jogo; costuma apoiar os outros.', '<b>Explorador:</b> gosta de descobrir coisas novas no mundo: amigos, alianças, lugares. Adora enigmas e mistérios fora do combate.', '<b>Intérprete:</b> gosta de interpretar o personagem fiel ao tipo, com históricos elaborados, imagens, adereços e diários. Atua as cenas importantes com discursos e descrições.'])}<p>Cada jogador faz o questionário depois de criar o personagem: marque as 5 coisas que acha mais importantes ao jogar. O grupo com mais marcas é o estilo <b>principal</b>; o segundo, o <b>secundário</b>.</p>${playstyleQuiz}`)}
+        ${section('E em 2077?', 'sup.', `<p>O suplemento não muda os Pontos de Melhoria nem os custos. O que muda é o que algumas Roles ganham por Rank: o Face, o Corpo, o Investigador do Lawman e a Interface do Netrunner.</p>${button('roles2077', 'Ver Roles de 2077')}`)}`
+    },
+
+    lifepath: {
+      eyebrow: 'Cyberpunk RED / Lifepath', title: 'Lifepath',
+      lede: 'O passado do personagem em tabelas de 1d10: de onde veio, como é, quem ama, quem o odeia e o que quer. Role cada tabela, escolha o resultado ou role tudo de uma vez.',
+      setup: setupLifepath,
+      html: `<div class="callout"><b>Rolar ou escolher:</b> em todas as tabelas vale rolar 1d10 ou escolher. Use os resultados como ganchos para a campanha, não como obrigação. Depois deste, cada Role tem um Lifepath próprio no livro, que não está aqui.${rollButtons([lifepathButton('tudo', 'Rolar o Lifepath inteiro')])}</div>
+        ${lifepathSection('origem', '<p>Todo mundo fala Streetslang. De onde você vem define a sua outra língua: escolha uma da sua região, ou outra que não esteja na lista.</p>')}
+        ${lifepathSection('personalidade')}
+        ${lifepathSection('roupa', '<p>É o estilo que você prefere, não uma peça só: a mesma jaqueta pode ser de executivo, de couro nômade ou com as cores da gangue.</p>')}
+        ${lifepathSection('cabelo')}
+        ${lifepathSection('adorno')}
+        ${lifepathSection('valor')}
+        ${lifepathSection('pessoas')}
+        ${lifepathSection('pessoa')}
+        ${lifepathSection('posse')}
+        ${lifepathSection('familia')}
+        ${lifepathSection('infancia', '<p>Algo pode ter acontecido no caminho: o lugar onde você cresceu pode ser bem diferente da sua família original.</p>')}
+        ${lifepathSection('crise')}
+        ${section('Amigos', '51', `<p>Role <b>1d10 − 7</b> (mínimo 0) para o número de amigos. Para cada um, role na tabela.</p>${lifepathTable(lifepathTables.find(item => item[0] === 'amigo'))}${rollButtons([lifepathButton('amigos', 'Rolar amigos (1d10 − 7)'), rollButton('lp-amigo', 'Rolar um amigo')])}`)}
+        ${section('Inimigos', '51–52', `<p>Role <b>1d10 − 7</b> (mínimo 0) para o número de inimigos. Para cada um, decida quem foi o injustiçado e role uma vez em cada tabela. No fim, a Doce Vingança diz o que acontece quando vocês se encontram.</p><h4>Quem é</h4>${lifepathTable(lifepathTables.find(item => item[0] === 'inimigo-quem'))}<h4>O que causou</h4>${lifepathTable(lifepathTables.find(item => item[0] === 'inimigo-causa'))}<h4>O que pode usar contra você</h4>${lifepathTable(lifepathTables.find(item => item[0] === 'inimigo-recursos'))}<h4>Doce Vingança</h4>${table(['1d10', 'O que vocês vão fazer'], revengeRows.map(([from, to, text]) => [`<b>${from === to ? from : `${from}–${to}`}</b>`, text]), 'dense')}${rollButtons([lifepathButton('inimigos', 'Rolar inimigos (1d10 − 7)'), lifepathButton('inimigo', 'Rolar um inimigo')])}`)}
+        ${section('Amores trágicos', '52', `<p>Role <b>1d10 − 7</b> (mínimo 0) para o número de amores que terminaram mal. Para cada um, veja como acabou.</p>${table(['1d10', 'O que aconteceu'], loveRows.map((text, index) => [`<b>${index + 1}</b>`, text]), 'dense')}${rollButtons([lifepathButton('amores', 'Rolar amores trágicos (1d10 − 7)'), rollButton('lp-amor', 'Rolar um')])}`)}
+        ${section('Meta de vida', '53', `${table(['1d10', 'O que você quer'], goalRows.map((text, index) => [`<b>${index + 1}</b>`, text]), 'dense')}${rollButtons([rollButton('lp-meta')])}`)}
+        ${section('Lifepath em 2077', '', list(['As tabelas são do RED (2045). Em 2077 sobra pouca Zona de Combate: use Pacifica ou Dogtown.', 'Megaestrutura vira um <b>megaprédio</b>, como os de Watson e Heywood.', 'Boosterganger vira qualquer gangue de 2077: Maelstrom, Animals, Tyger Claws, Valentinos, 6th Street.', 'Bando nômade: Aldecaldos, Wraiths ou outro clã das Badlands.']))}`
     }
   };
+
+  window.rollTables = Object.assign(window.rollTables || {}, rollTables);
 
   window.systemRules = {
     pages,

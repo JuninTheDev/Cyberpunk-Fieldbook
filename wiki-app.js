@@ -19,6 +19,7 @@
       { id: 'screen', label: 'Escudo do mestre', icon: 'GM' },
       { id: 'skills', label: 'Perícias por STAT', icon: 'SK' },
       { id: 'npcs', label: 'Fichas de NPC', icon: 'NPC' },
+      { id: 'encounters', label: 'Encontros de 2077', icon: 'EN' },
       { id: 'glossary', label: 'Glossário', icon: 'G' },
       { id: 'indice', label: 'Índice A–Z', icon: 'AZ' }
     ]},
@@ -28,7 +29,9 @@
       { id: 'damage', label: 'Dano, ferimentos e cura', icon: 'D' },
       { id: 'humanity', label: 'Humanidade e drogas', icon: 'H' },
       { id: 'economy', label: 'Economia de 2077', icon: 'EB' },
-      { id: 'creation', label: 'Criação de personagens', icon: 'P' }
+      { id: 'creation', label: 'Criação de personagens', icon: 'P' },
+      { id: 'lifepath', label: 'Lifepath', icon: 'LP' },
+      { id: 'advancement', label: 'Avanço e Pontos de Melhoria', icon: 'IP' }
     ]},
     { group: 'Netrunning', pages: [
       { id: 'netrunning', label: 'Regras do RED', icon: 'N' },
@@ -41,6 +44,7 @@
       { id: 'weapons2077', label: 'Armas de 2077', icon: 'W' },
       { id: 'cyberware2077', label: 'Cyberware de 2077', icon: 'CW' },
       { id: 'roles', label: 'Roles', icon: 'F' },
+      { id: 'roles2077', label: 'Roles de 2077', icon: 'F77' },
       { id: 'cyberware', label: 'Cyberware do RED', icon: 'K' },
       { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' }
     ]},
@@ -171,7 +175,7 @@
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
       if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml });
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
-      if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target });
+      if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target, rollTable, rollDice, showRoll });
       linkGlossary(content);
       if (markdownDocs[id]) {
         window.scrollTo({ top: 0 });
@@ -465,6 +469,40 @@
       weapon.onchange = update;
       distance.oninput = update;
       update();
+    }
+
+    // ---------------- Roladores de tabela ----------------
+    // Os arquivos de dados registram tabelas em window.rollTables[id] = { dado: '1d10' | '1d6' | '2d6' | 'd100', linhas: [[de, até, html]] }.
+    // Um botão data-roll="id" rola a tabela e mostra o resultado logo abaixo dele.
+    const rollDie = sides => 1 + Math.floor(Math.random() * sides);
+    function rollDice(spec) {
+      if (spec === 'd100') return rollDie(100);
+      const [count, sides] = String(spec).split('d').map(Number);
+      let total = 0;
+      for (let i = 0; i < (count || 1); i += 1) total += rollDie(sides);
+      return total;
+    }
+    function rollTable(id) {
+      const table = (window.rollTables || {})[id];
+      if (!table) return null;
+      const value = rollDice(table.dado);
+      const row = table.linhas.find(([from, to]) => value >= from && value <= to);
+      return { value, dado: table.dado, html: row ? row[2] : '—' };
+    }
+    function showRoll(button, html) {
+      // Botões agrupados em .roll-buttons dividem um só resultado, logo abaixo do grupo.
+      const anchor = button.closest('.roll-buttons') || button;
+      let output = anchor.nextElementSibling;
+      if (!output || !output.classList.contains('roll-result')) {
+        output = document.createElement('div');
+        output.className = 'roll-result';
+        output.setAttribute('role', 'status');
+        anchor.after(output);
+      }
+      output.innerHTML = html;
+      output.classList.remove('flash');
+      void output.offsetWidth;
+      output.classList.add('flash');
     }
 
     function rollCritical(kind) {
@@ -944,6 +982,12 @@
       const filterButton = event.target.closest('[data-search-filter]');
       if (filterButton) { searchFilter = filterButton.dataset.searchFilter; searchPages(search.value); search.focus(); return; }
       if (event.target.closest('[data-search-more]')) { searchLimit += 60; searchPages(search.value); return; }
+      const rollButton = event.target.closest('[data-roll]');
+      if (rollButton) {
+        const result = rollTable(rollButton.dataset.roll);
+        if (result) showRoll(rollButton, `<span class="roll-value">${result.dado}: ${result.value}</span> ${result.html}`);
+        return;
+      }
       const critButton = event.target.closest('[data-crit]');
       if (critButton) { rollCritical(critButton.dataset.crit); return; }
       const button = event.target.closest('[data-page]');
@@ -1029,5 +1073,5 @@
       }
     }
 
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, currentPage: () => currentPage, recentPages, clockState };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, currentPage: () => currentPage, recentPages, clockState, rollTable, rollDice, showRoll };
 })();

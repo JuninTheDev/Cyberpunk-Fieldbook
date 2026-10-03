@@ -237,6 +237,132 @@
       'A equipe de Iskra (Sessões 01 e 02) e a segurança do datafort da Militech em Arroyo, onde está a Coleira.', 'livro, p. 417–421 + adaptação')
   ];
 
+  // ---------------- Encontros de 2077 ----------------
+  // Tabelas de encontro do RED (p. 417–425: dia, noite e madrugada), com as gangues trocadas pelas de 2077.
+  // Cada linha: [de, até, título, texto, sub-rolagem 1d10 ou null, fichas]. N = número de jogadores.
+  const ficha = (name, label = name) => `<a href="#npcs/${name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}">${label}</a>`;
+  const boost = mods => `${ficha('Boosterganger')}${mods ? ` (${mods})` : ''}`;
+  const ncpdDia = 'Se vocês andam com arma ou armadura à vista, eles param e pedem documentos. Se alguém discute, chamam reforço (3 policiais) para levar vocês. Se alguém vai pegar uma arma, atiram primeiro e preenchem a papelada depois.';
+  const pi = [[1, 3, 'Está à frente de vocês, pressionando um informante na esquina sobre o paradeiro de um suspeito.'], [4, 7, 'Está seguindo alguém à frente de vocês.'], [8, 10, 'Para vocês e pergunta se viram a pessoa que ele está seguindo.']];
+  const corpos = [[1, 4, 'Estão sendo seguidos por gangers (N) que querem assaltá-los.'], [5, 8, 'Acham que vocês são boosters e atiram à menor provocação.'], [9, 10, 'Acham que vocês são encrenca e chamam a segurança corporativa.']];
+  const midia = [[1, 5, 'O alvo da matéria descobre a dupla e começa a briga. Vocês, claro, estão no meio. Role de novo na tabela para saber quem é o alvo.'], [6, 10, 'Ainda não aconteceu nada.']];
+  const midiaFicha = `Dupla: ${boost('Kevlar no lugar do couro; pistola pesada no lugar da muito pesada ruim; sem Rippers; + cyberolho MicroVideo, Cyberaudio e Audição Ampliada')}.`;
+  const trauma = ['Trauma Team', 'O AV-4 pousa no meio de um tiroteio recente, e os médicos atendem meia dúzia de gangers feridos.', [[1, 5, 'A equipe decide que vocês são curiosos e ignora vocês.'], [6, 10, 'Acham que vocês são parte do problema, e os 2 seguranças abrem fogo com rifles de assalto.']], `${ficha('Trauma Team')}.`];
+  const testemunhas = [[1, 4, 'Não notam vocês.'], [5, 8, 'Notam vocês, e um deles manda vocês sumirem.'], [9, 10, 'Decidem que vocês são testemunhas e precisam ser apagados agora.']];
+  const viciados = (count, extra) => [`Viciados (${count})`, `Atrás de dinheiro para a droga. ${extra} Facas e porretes, sem armadura.`, null, `${boost('arma branca leve no lugar dos Rippers; sem pistola e sem couro')}.`];
+  const cromados = ['Fãs de rock cromado', 'Fãs radicais de uma banda de rock cromado, de couro com espetos e braços cheios de cromo e armas cibernéticas.'];
+  const cromadosFicha = `${boost('+ 2 cyberbraços com Superchrome; Wolvers no lugar dos Rippers; Light Armorjack no lugar do couro')}.`;
+  const turfWar = sides => `Uma guerra aberta entre as duas maiores gangues da área. Cada lado tem um membro por jogador (mínimo 4), com o equipamento da facção. Armas cibernéticas por todo lado. Escolham um lado ou um alvo. Lados possíveis: ${sides}.`;
+
+  const encounterTables = {
+    dia: { label: 'Dia', ref: '417–419', linhas: [
+      [1, 5, 'NCPD', `Policiais (metade de N) com rifles de assalto, pistolas muito pesadas, cassetetes e Kevlar. ${ncpdDia}`, null, `${ficha('Operativo de segurança')}; ${ficha('NCPD')}.`],
+      [6, 11, 'Segurança corporativa', 'Guardas de baixo escalão (N) patrulhando, com Light Armorjack e SMGs. Se vocês não trabalham para a corp deles, não têm nada que fazer ali. Circulando.', null, `${ficha('Operativo de segurança')} (Light Armorjack no lugar do Kevlar; SMG ruim no lugar do rifle ruim); ${ficha('Segurança corporativa')}.`],
+      [12, 13, 'Techs', 'Techs (metade de N) com espingardas e coletes de Kevlar.', [[1, 2, 'Carregando uma caixa de ferramentas para um AV-4.'], [3, 5, 'Consertando um sistema da cidade bem no caminho de vocês.'], [6, 10, 'Vindo na direção de vocês, a caminho do trabalho.']], `${ficha('Guarda-costas')} (+ Tool Hand e cyberolho MicroOptics).`],
+      [14, 17, 'Investigador particular', 'Um detetive com pistola muito pesada, cassetete e Medium Armorjack.', pi, `${ficha('Oficial de segurança')} (sem o rifle de assalto e o escudo).`],
+      [18, 20, 'Corporativos', 'Corporativos de uma firma local (N), de ternos tecidos com Kevlar e pistolas médias, tentando pegar um táxi.', corpos, `Corporativos: ${boost('sem Rippers; Kevlar no lugar do couro; pistola média no lugar da muito pesada ruim; + Cyberaudio e rádio scanner')}. Gangers: ${ficha('Boosterganger')}.`],
+      [21, 27, 'Locais', 'Dois jovens do bairro.', [[1, 5, 'Estão sendo assaltados pela gangue do bairro (N).'], [6, 10, 'Estão levando uma surra de fanáticos anti-cromo (N), pelo "pecado" de ter olhos de grife.']], `Jovens: ${boost('sem Rippers nem pistola')}. Gangue: ${boost('Heavy Armorjack no lugar do couro')}, ou a facção do bairro. Fanáticos: ${boost('arma branca média no lugar dos Rippers; sem Techhair')}.`],
+      [28, 32, 'Reclaimers', 'Um grupo bem equipado (N − 2) com um chefe, tentando fazer um gato de um prédio abandonado na rede elétrica.', [[1, 5, 'Ignoram vocês.'], [6, 8, 'O chefe e um deles vêm "dar uma olhada nesses caras que estão nos vigiando".'], [9, 10, 'Estouram um transformador e o quarteirão inteiro apaga. Pânico geral.']], `${ficha('Gangue de estrada')}; chefe: ${ficha('Chefe reclaimer')}.`],
+      [33, 37, 'Media', 'Uma dupla de câmera e repórter, de tocaia num prédio atrás de uma matéria quente.', midia, midiaFicha],
+      [38, 41, 'Investigador particular', 'Um detetive com pistola muito pesada, cassetete e Medium Armorjack.', [[1, 3, 'Está à frente de vocês, espancando um informante na esquina.'], [4, 7, 'Está arrombando o carro de alguém.'], [8, 10, 'Para vocês e exige respostas sobre o paradeiro do alvo dele.']], `${ficha('Oficial de segurança')} (sem o rifle de assalto e o escudo).`],
+      [42, 46, ...trauma],
+      [47, 57, 'Catadores', 'Catadores miseráveis (N) revirando ruínas ou lixo perto de um quarteirão queimado. Couro imundo, facas improvisadas e pistolas muito pesadas ruins. Se houver violência, até 6 outros podem vir ajudar.', [[1, 6, 'Pedem dinheiro ou qualquer coisa que vocês possam dar.'], [7, 8, 'Ignoram vocês.'], [9, 10, 'Tentam roubar vocês.']], `${boost('arma branca leve no lugar dos Rippers')}.`],
+      [58, 63, 'Nômades na cidade', 'Nômades (N) de couro, com bestas, facas e pistolas muito pesadas. Meio bêbados e querendo briga: implicam com quem acham atraente no grupo. Encarem: eles querem briga.', null, `${ficha('Gangue de estrada')}; ${ficha('Nômades e Wraiths')}.`],
+      [64, 70, 'Gangue do bairro', 'Punks de rua de baixo nível (N) da gangue local. Se vocês parecem presa fácil e com dinheiro, partem para cima. Pistolas muito pesadas e Rippers.', null, `${ficha('Boosterganger')}, ou a facção do bairro.`],
+      [71, 76, ...viciados('N', 'Se vocês não vestem as cores de uma corp ou de uma gangue, atacam ali mesmo, na rua.')],
+      [77, 82, 'Pregadores do fim do mundo', 'Cultistas (N), com facas, porretes e pistolas pesadas à vista, encurralam vocês para pregar que o fim dos tempos chegou. Se vocês desprezarem, tentam enfiar a verdade na porrada.', null, `${boost('Big Knucks no lugar dos Rippers; pistola pesada ruim no lugar da muito pesada ruim; + arma branca leve')}.`],
+      [83, 88, 'Caminhão dos Aldecaldos', 'Nômades (metade de N, mínimo 2) com um caminhão quebrado. A maioria encara uma gangue local (N), e o último tenta consertar o motor. Se vocês ignorarem, eles ignoram vocês.', [[1, 6, 'Se vocês oferecerem ajuda, aceitam.'], [7, 10, 'Se vocês oferecerem ajuda, recusam.']], `Nômades: ${ficha('Gangue de estrada')} (Kevlar no lugar do couro). Gangue: ${ficha('Boosterganger')}.`],
+      [89, 94, 'Tyger Claws', 'Tyger Claws (N) com SMGs, Rippers, cyberolhos de pouca luz e speedware. Implicam com quem se destaca no grupo, extorquem dinheiro e querem briga.', null, `${boost('SMG ruim no lugar da pistola muito pesada ruim; + cyberolhos Low Light/IR/UV, Neural Link e Kerenzikov')}; ${ficha('Tyger Claws')}.`],
+      [95, 100, 'Crime organizado', 'Uma grande operação de um sindicato do crime. Solos (N − 2) com pistolas muito pesadas, espingardas e Heavy Armorjack descarregam contrabando de um caminhão, liderados por um solo veterano.', testemunhas, `Solos: ${ficha('Operativo de segurança')}. Veterano: ${ficha('Oficial de segurança')}. Espingardas no lugar dos rifles de assalto.`]
+    ]},
+    noite: { label: 'Noite', ref: '419–422', linhas: [
+      [1, 5, 'NCPD', `Policiais (metade de N) com rifles de assalto e Medium Armorjack. ${ncpdDia.replace('(3 policiais)', '(3 operativos)')}`, null, `${ficha('Oficial de segurança')}; ${ficha('NCPD')}.`],
+      [6, 11, 'Segurança corporativa', 'Guardas (N) patrulhando, com Heavy Armorjack e SMGs pesadas. Se vocês não são corporativos, não têm nada que fazer no território deles. Circulando.', null, `${ficha('Operativo de segurança')} (Heavy Armorjack no lugar do Kevlar; SMG pesada ruim no lugar do rifle ruim); ${ficha('Segurança corporativa')}.`],
+      [12, 13, 'Techs corporativos', 'Techs (metade de N) com guarda-costas bem armados (metade de N).', [[1, 2, 'Carregando caixas de peças num AV-4.'], [3, 5, 'Consertando um sistema da cidade bem no caminho de vocês.'], [6, 10, 'Arrumando um carro bonito na beira da rua.']], `Techs: ${ficha('Guarda-costas')} (+ Tool Hand e cyberolho MicroOptics). Seguranças: ${ficha('Guarda-costas')} (Medium Armorjack; espingarda padrão; + Luneta de Mira).`],
+      [14, 17, 'Investigador particular', 'Um detetive com um revólver de grosso calibre, um facão e Light Armorjack.', pi, `${ficha('Chefe reclaimer')} (sem barraca nem espingarda; pistola muito pesada no lugar da pesada; arma branca média no lugar da pesada).`],
+      [18, 20, 'Corporativos', 'Corporativos de uma firma grande (N), a caminho da estação do metrô, de ternos tecidos com Kevlar e pistolas descartáveis de polímero.', corpos, `Corporativos: ${boost('sem Rippers; Kevlar no lugar do couro; + Cyberaudio e rádio scanner')}. Gangers: ${ficha('Boosterganger')}.`],
+      [21, 25, 'Rockerboys', 'Vocês alcançam uma banda (metade de N − 1) a caminho de um show, com solos de segurança (metade de N) e o empresário, um fixer.', [[1, 4, 'Convidam vocês para ir junto.'], [5, 8, 'Mandam os solos "resolver esses caras que estão nos seguindo".'], [9, 10, 'Ignoram vocês.']], `Músicos: ${boost('+ AudioVox e instrumentos')}. Fixer: ${boost('+ Cyberaudio e Agent interno')}. Seguranças: ${ficha('Guarda-costas')}.`],
+      [26, 30, 'Media', 'Uma dupla de câmera e repórter, de tocaia num prédio atrás de uma matéria quente.', [[1, 5, 'O alvo da matéria descobre a dupla e começa um tiroteio. Vocês, claro, estão no meio. Role de novo na tabela para saber quem é o alvo.'], [6, 10, 'Ainda não aconteceu nada.']], midiaFicha],
+      [31, 33, 'Netrunners brincalhões', 'Um coletivo de netrunners que vive pregando peças está aprontando de novo. Desfazer a peça pede Tecnologia Eletrônica/Segurança DV14.', [[1, 2, 'Três deles armam uma pegadinha com 3 ou 4 objetos domésticos estranhos, mas uma gangue (N) percebe e começa a briga.'], [3, 4, 'Três deles hackearam os postes para piscar no ritmo de um hit pop.'], [5, 6, 'Três deles hackearam os terminais de dados para anunciar um ataque de míssil. O pânico se espalha.'], [7, 8, 'Três deles jogam sacos de eurodólares da janela de uma viatura roubada. O povo se atropela atrás do dinheiro, que é todo falso.'], [9, 10, 'Três deles hackearam os telões do bairro e transmitem notícias falsas.']], `Netrunners: ${boost('base 10 em Tecnologia Eletrônica/Segurança')}. Gangue: ${ficha('Guarda-costas')}.`],
+      [34, 40, 'Locais', 'Um adolescente de um bairro corporativo, que fugiu de casa para ver a cidade.', [[1, 4, 'Está sendo assaltado pela gangue do bairro (N).'], [5, 8, 'Está levando uma surra de fanáticos anti-cromo (N), pelo "pecado" de usar fashionware.'], [9, 10, 'Está cercado por um fixer a quem deve e não tem como pagar.']], `Gangue: ${boost('Light Armorjack no lugar do couro')}. Fanáticos: ${boost('arma branca leve no lugar dos Rippers; sem Techhair')}. Fixer: ${ficha('Guarda-costas')} (+ Cyberaudio, Agent interno e Analisador de Estresse Vocal; base 10 em Comércio).`],
+      [41, 46, 'Netrunners', 'Dois netrunners com pistolas muito pesadas e Light Armorjack, rondando um pequeno escritório corporativo enquanto invadem a Arquitetura do prédio.', [[1, 5, 'Seguranças (N) descobrem os dois e começa a briga. Vocês, claro, estão no meio.'], [6, 10, 'Acham que vocês são da segurança e usam as 2 torretas do prédio contra vocês.']], `${ficha('Netrunner')} (Light Armorjack no lugar do traje). Seguranças: ${ficha('Operativo de segurança')}. Torretas: torreta automática (RED p. 214).`],
+      [47, 52, 'Wraiths', 'Nômades (N) de Medium Armorjack, com facas de combate e rifles. Meio bêbados e querendo briga: implicam com quem acham atraente no grupo. Encarem: eles querem briga.', null, `${ficha('Gangue de estrada')} (rifle de assalto no lugar da besta; Medium Armorjack no lugar do couro; Armas de Ombro no lugar de Arquearia); ${ficha('Nômades e Wraiths')}.`],
+      [53, 58, ...viciados('N', 'Se vocês não vestem as cores de uma corp ou de uma gangue, atacam ali mesmo, na rua.')],
+      [59, 63, ...trauma],
+      [64, 69, `${cromados[0]} (N)`, cromados[1], [[1, 5, 'Ligados de Smash, procuram briga.'], [6, 7, 'Passam por vocês soltando umas grosserias.'], [8, 10, 'Vão com a cara de alguém do grupo e chamam vocês para encher a cara e ir ao show.']], cromadosFicha],
+      [70, 72, 'Assassinos', 'Solos (metade de N) com Light Armorjack, espadas e pistola pesada; reflexos turbinados, cyberolhos com IR e cyberpernas. Claramente procurando alguém.', [[1, 5, 'Desviam de vocês e seguem.'], [6, 10, 'Decidem que vocês são testemunhas e precisam ser apagados agora.']], `${ficha('Oficial de segurança')} (+ cyberolhos Low Light/IR/UV e 2 cyberpernas com Jump Boosters; sem o rifle; pistola pesada no lugar da muito pesada).`],
+      [73, 77, 'Tyger Claws', 'Tyger Claws (N), mais pesados que os de dia: armas automáticas, armas cibernéticas, cyberolhos e reflexos turbinados. Implicam com quem é atraente no grupo, extorquem dinheiro e querem briga.', null, `${ficha('Guarda-costas')} (SMG pesada no lugar da espingarda ruim; + 2 armas cibernéticas à escolha; cyberolhos Low Light/IR/UV, Neural Link e Kerenzikov); ${ficha('Tyger Claws')}.`],
+      [78, 83, 'Equipe de solos', 'Solos (metade de N) com rifles de assalto com Smartgun Link; reflexos e audição turbinados, cyberolhos com IR e mira. Numa operação cinzenta. Só reagem se vocês usam uniforme ou insígnia de uma corp rival.', [[1, 5, 'Desviam de vocês e seguem.'], [6, 10, 'Decidem que vocês são testemunhas e precisam ser apagados agora.']], `${ficha('Oficial de segurança')} (+ Smartgun Link, plugs de interface, Cyberaudio, Audição Ampliada, cyberolhos Low Light/IR/UV e Luneta de Mira num olho).`],
+      [84, 90, 'Gangue do bairro', 'Punks de rua de baixo nível (N + 2) da gangue local. Se vocês parecem presa fácil e com dinheiro, partem para cima. Pistolas médias, facas e reflexos turbinados.', null, `${boost('pistola média ruim no lugar da muito pesada ruim; + Neural Link e Kerenzikov')}, ou a facção do bairro.`],
+      [91, 93, 'Crime organizado', 'Uma grande operação de um sindicato do crime. Solos cheios de cromo, com armas cibernéticas, pistolas pesadas e rifles de assalto com Smartgun Link, descarregam drogas de um caminhão.', testemunhas, `${ficha('Operativo de segurança')} (metade de N) e 2 ${ficha('Oficial de segurança', 'Oficiais de segurança')}: rifles de assalto com Smartgun Link no lugar dos ruins; + Wolvers, Neural Link, plugs de interface, Smartgun Link e Luneta de Mira.`],
+      [94, 100, 'Tiroteio: Maelstrom × Tyger Claws', 'Vocês caem no meio de uma briga grande. Cada lado tem N membros, de Light Armorjack e pistolas muito pesadas, com armas cibernéticas por todo lado e um líder com armamento mais pesado. Escolham um lado ou um alvo.', null, `Capangas: ${boost('Light Armorjack no lugar do couro; Rippers ou outra arma cibernética')}. Líderes: ${ficha('Oficial de segurança')} (+ uma arma cibernética). Facções: ${ficha('Maelstrom')}, ${ficha('Tyger Claws')}.`]
+    ]},
+    madrugada: { label: 'Madrugada', ref: '422–425', linhas: [
+      [1, 10, 'NCPD', 'Policiais (metade de N) com rifles de assalto com Smartgun Link. Ninguém tem o que fazer na rua depois da meia-noite, e eles sabem disso: procuram qualquer pretexto para uma prisão. Arma à vista: considerem-se detidos. Se alguém vai pegar uma arma, atiram e esquecem a papelada.', null, `${ficha('Oficial de segurança')} (+ plugs de interface e Smartgun Link); ${ficha('NCPD')}.`],
+      [11, 22, 'Segurança corporativa', 'Guardas (N) patrulhando, com SMGs pesadas com Smartgun Link. "O que vocês estão fazendo na propriedade depois da meia-noite? Coisa boa não é!"', null, `${ficha('Oficial de segurança')} (SMG pesada no lugar dos rifles; + plugs de interface e Smartgun Link); ${ficha('Segurança corporativa')}.`],
+      [23, 24, 'Investigador particular', 'Um detetive com um revólver de grosso calibre, um facão e Light Armorjack.', pi, `${ficha('Chefe reclaimer')} (sem barraca nem espingarda; pistola muito pesada no lugar da pesada; arma branca média no lugar da pesada).`],
+      [25, 25, 'Media', 'Uma dupla de câmera e repórter atrás de uma história.', [[1, 5, 'O alvo da matéria descobre a dupla e começa um tiroteio. Vocês, claro, estão no meio. Role de novo na tabela para saber quem é o alvo.'], [6, 10, 'Decidem que a história são vocês e passam a seguir o grupo.']], midiaFicha],
+      [26, 29, `${cromados[0]} (N + 2)`, cromados[1], [[1, 5, 'Voltando de um show, ligados de Smash, procuram briga.'], [6, 7, 'Passam bêbados por vocês, soltando umas grosserias.'], [8, 10, 'Vão com a cara de alguém do grupo e chamam vocês para a festa depois do show.']], cromadosFicha],
+      [30, 39, 'Equipe de edgerunners', 'Um netrunner, um solo e um nômade num carro velho, prestes a invadir um pequeno escritório corporativo. Do lado de fora, 6 seguranças patrulham.', [[1, 5, 'A segurança descobre a equipe e começa a briga. Vocês, claro, estão no meio.'], [6, 10, 'A equipe vê vocês e oferece uma parte do serviço.']], `${ficha('Netrunner')}; solo: ${ficha('Oficial de segurança')}; nômade: ${ficha('Chefe reclaimer')}; seguranças: ${ficha('Operativo de segurança')}.`],
+      [40, 42, ...trauma],
+      [43, 45, 'Lawman', 'Um Lawman e o ajudante estão na cidade caçando uma gangue de 6 catadores escondida ali. A recompensa pelos 6 é alta.', [[1, 5, 'O tiroteio já começou quando vocês chegam e bloqueia o caminho. O Lawman chama vocês para ajudar.'], [6, 10, 'Os dois fecharam a rua com a polícia local e vão invadir o esconderijo. O Lawman oferece parte da recompensa para vocês entrarem junto e trazerem os 6, vivos ou mortos.']], `Lawman: ${ficha('Outrider')}. Ajudante: ${ficha('Gangue de estrada')}. Catadores: ${ficha('Boosterganger')}.`],
+      [46, 58, 'Wraiths', 'Nômades (N + 2) espancando um casal de corporativos por terem olhado torto. Tatuagens luminosas, calças de couro, facas de combate, porretes e rifles. Se vocês ficarem longe deles e das motos, eles ignoram vocês e continuam no casal.', null, `${ficha('Gangue de estrada')} (+ tatuagens luminosas; rifle de assalto no lugar da besta; Armas de Ombro no lugar de Arquearia); ${ficha('Nômades e Wraiths')}. Casal: ${boost('sem Rippers')}.`],
+      [59, 63, 'Fanáticos anti-cromo', 'Em força máxima: fanáticos (N) com nunchakus, pistolas e chicotes encurralam vocês. Mais dois, com pistolas de ar e bolas de ácido, ficam atrás para atingir quem tem armadura pesada. "Só um servo dos Demônios de Metal estaria acordado a esta hora!"', null, `${boost('sem couro e sem Techhair; arma branca média no lugar dos Rippers; 2 deles com pistola de ar e 20 bolas de ácido')}.`],
+      [64, 73, ...viciados('N + 2', 'Mesmo com as cores de uma corp ou de uma gangue, atacam ali mesmo, na rua. Estão sob Black Lace: ignoram o estado Gravemente Ferido.')],
+      [74, 74, 'Crime organizado', 'Uma grande operação de um sindicato do crime. Solos cheios de cromo (N), com armas cibernéticas, pistolas pesadas e rifles de assalto com Smartgun Link, descarregam drogas de um caminhão.', testemunhas, `${ficha('Oficial de segurança')} (+ Wolvers, plugs de interface, Smartgun Link e Luneta de Mira).`],
+      [75, 79, 'Guerra de território', turfWar('Tyger Claws, 6th Street, Valentinos, Maelstrom e NCPD'), [[1, 2, 'Tyger Claws: jaquetas de moto blindadas, katanas e pistolas muito pesadas.'], [3, 4, '6th Street: ex-militares, Medium Armorjack e rifles de assalto.'], [5, 6, 'Valentinos: pistolas pesadas banhadas a ouro.'], [7, 8, 'Maelstrom: Light Armorjack e armas cibernéticas por todo lado.'], [9, 10, 'NCPD: uniformes de Medium Armorjack e rifles de assalto.']], `${ficha('Boosterganger')} com as trocas da facção: ${ficha('Tyger Claws')}, ${ficha('6th Street')}, ${ficha('Valentinos')}, ${ficha('Maelstrom')}, ${ficha('NCPD')}.`],
+      [80, 87, 'Incendiários', 'Anarquistas radicais com rancor de alguém do bairro. Um ganger cromado com lança-chamas, machado e pistola pesada lidera boosters (N − 3, mínimo 2), cada um com uma granada incendiária, Rippers e pistola muito pesada ruim. Não procuram briga, mas estão queimando o quarteirão e matam quem ficar no caminho.', null, `Lança-chamas: ${ficha('Pyro')}. Boosters: ${boost('+ 1 granada incendiária')}.`],
+      [88, 92, 'Guerra de território', turfWar('Animals, Maelstrom, Mox, Voodoo Boys e 6th Street'), [[1, 2, 'Animals: músculos, Gorilla Arms e pouca armadura.'], [3, 4, 'Maelstrom: Light Armorjack e armas cibernéticas por todo lado.'], [5, 6, 'Mox: espingardas e jaquetas de couro.'], [7, 8, 'Voodoo Boys: granadas de gás lacrimogêneo e SMGs.'], [9, 10, '6th Street: ex-militares, Medium Armorjack e rifles de assalto.']], `${ficha('Boosterganger')} com as trocas da facção: ${ficha('Animals')}, ${ficha('Maelstrom')}, ${ficha('Mox')}, ${ficha('Voodoo Boys')}, ${ficha('6th Street')}.`],
+      [93, 99, 'Crime organizado', 'Uma grande operação de um sindicato do crime. Seis solos cheios de cromo, com armas cibernéticas, pistolas pesadas e rifles de assalto com Smartgun Link, descarregam drogas de um caminhão.', testemunhas, `6 ${ficha('Oficial de segurança', 'Oficiais de segurança')} (+ Wolvers, plugs de interface, Smartgun Link e Luneta de Mira).`],
+      [100, 100, 'Ciberpsicótico', 'Um ciberpsicótico sozinho, cromado até os dentes (quatro cybermembros, Jump Boosters, Popguns, Wolvers e mais), descarregando a fúria num pedestre que passou do limite. Não vai se acalmar, e a MaxTac só chega em 1d6 + 1 rodadas. Pior: ele acabou de notar vocês.', null, `${ficha('Cyberpsycho')}; ${ficha('MaxTac')}.`]
+    ]}
+  };
+
+  const rangeLabel = (from, to) => {
+    const pad = value => value === 100 ? '00' : String(value).padStart(2, '0');
+    return from === to ? pad(from) : `${pad(from)}–${pad(to)}`;
+  };
+  const subList = sub => sub ? `<br><small>1d10: ${sub.map(([from, to, text]) => `<b>${from === to ? from : `${from}–${to}`}</b> ${text}`).join(' ')}</small>` : '';
+  const encounterTable = ({ linhas }) => table(['d100', 'Encontro', 'Fichas'], linhas.map(([from, to, title, text, sub, sheets]) => [`<b>${rangeLabel(from, to)}</b>`, `<b>${title}.</b> ${text}${subList(sub)}`, sheets]));
+
+  function setupEncounters(content, { rollDice, showRoll }) {
+    content.querySelectorAll('[data-encounter]').forEach(button => button.addEventListener('click', () => {
+      const { label, linhas } = encounterTables[button.dataset.encounter];
+      const value = rollDice('d100');
+      const [, , title, text, sub, sheets] = linhas.find(([from, to]) => value >= from && value <= to);
+      let detail = '';
+      if (sub) {
+        // Guerra de território: um 1d10 para cada lado, sem repetir a gangue.
+        const turf = /^Guerra/.test(title);
+        const pickSub = () => { const die = rollDice('1d10'); return [die, sub.find(([from, to]) => die >= from && die <= to)]; };
+        const first = pickSub();
+        let second = turf ? pickSub() : null;
+        while (second && second[1] === first[1]) second = pickSub();
+        detail = [first, second].filter(Boolean).map(([die, row]) => `<br><span class="roll-value">1d10: ${die}</span> ${row[2]}`).join('');
+      }
+      showRoll(button, `<span class="roll-value">${label} · d100: ${value === 100 ? '00' : value}</span> <b>${title}.</b> ${text}${detail}<br><small>Fichas: ${sheets}</small>`);
+    }));
+  }
+
+  const encountersHTML = `${section('Rolar um encontro', '417', `<p>Role d100 (2d10, um deles é a dezena) na tabela do horário. N = número de jogadores. Os botões já rolam o 1d10 do que está acontecendo.</p><div class="roll-buttons">${Object.entries(encounterTables).map(([id, { label }]) => `<button class="action" data-encounter="${id}" type="button">${label}</button>`).join('')}</div>`)}
+        ${section('Como usar', '417', list([
+          'Cada resultado aponta para uma ficha da página Fichas de NPC, às vezes com trocas de equipamento. Clique no nome para abrir a ficha.',
+          'Nem todo encontro precisa virar combate: use como oportunidade de interpretação sempre que der.',
+          '<b>Zonas corporativas</b> (City Center, Charter Hill, North Oak): evite resultados acima de 50. Se começar um tiroteio, role 1d10: em tantas rodadas chega a segurança corporativa para matar ou deter quem estiver armado.',
+          '<b>Zonas sem lei</b> (Pacifica, Dogtown, Northside à noite): evite resultados abaixo de 50, a não ser num dia parado. Combate é mais provável e a paz, mais difícil.',
+          '<b>Gangue do bairro:</b> Tyger Claws em Japantown e Kabuki, Maelstrom em Northside, Valentinos em Heywood, 6th Street em Santo Domingo, Animals e Voodoo Boys em Pacifica, Scavengers em Watson.'
+        ]))}
+        ${section('Dia', encounterTables.dia.ref, encounterTable(encounterTables.dia))}
+        ${section('Noite', encounterTables.noite.ref, encounterTable(encounterTables.noite))}
+        ${section('Madrugada', encounterTables.madrugada.ref, encounterTable(encounterTables.madrugada))}
+        ${section('O que mudou do livro', '', list([
+          'As gangues do RED viraram as de 2077: Iron Sights → Tyger Claws, Steel Vaqueros → Aldecaldos, Roadrunners e Wildman Pack → Wraiths, Piranhas e Red Chrome Legion → a gangue do bairro, Psycho Squad → MaxTac.',
+          'Inquisidores → fanáticos anti-cromo; Reckoners → pregadores do fim do mundo; Philharmonic Vampires → netrunners brincalhões; Vilshenko e Scagattalia → um sindicato do crime à escolha do mestre.',
+          'Nas guerras de território, os lados foram trocados por gangues de 2077 (no livro: Bozos, Primetime Players, Piranhas e Iron Sights).',
+          'O livro sobrepõe o 72 na tabela da noite (assassinos 70–72, Iron Sights 72–77); aqui ficou 70–72 e 73–77.',
+          'Media de dia e à noite: o livro só diz o que acontece em 1–5; em 6–10, nada aconteceu ainda.'
+        ]))}`;
+
   const pages = {
     npcs: {
       eyebrow: 'Na mesa / livro-base p. 399–422', title: 'Fichas de NPC',
@@ -268,6 +394,13 @@
           '<b>Iskra Voss</b>: Personagens, "Em combate". A equipe dela usa as fichas da equipe de Vega.',
           '<b>Brakk e os cultistas da Maelstrom</b>: Sessão 02, Cena 2.'
         ])}<p>${button('docSessao01', 'Sessão 01 completa')} ${button('docPersonagens', 'Personagens')} ${button('docSessao02', 'Sessão 02')}</p>`)}`
+    },
+
+    encounters: {
+      eyebrow: 'Na mesa / livro-base p. 417–425, adaptado', title: 'Encontros de 2077',
+      lede: 'As tabelas de encontro de rua do RED para dia, noite e madrugada, com as gangues de 2077. Role, leia a cena e abra a ficha com um clique.',
+      setup: setupEncounters,
+      html: encountersHTML
     }
   };
 

@@ -170,7 +170,7 @@
     // Página inicial: "Na mesa agora", com atalhos, as últimas páginas abertas e os relógios.
     // Montado na hora (não entra na busca); some se o navegador não guardar nada.
     function setupHomeDesk(content, { recentPages, clockState, escapeHtml }) {
-      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02']];
+      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02']];
       const clockNames = { sato: 'Relógio de Sato', city: 'Relógio da cidade' };
       const recent = recentPages();
       const clocks = clockState().map(({ name, steps, value }) => `<li><b>${escapeHtml(clockNames[name] || name)}: ${value}/${steps.length}</b><br><small>${value ? `Último marcado: ${escapeHtml(steps[value - 1])}` : 'Nenhum segmento marcado'}${value < steps.length ? ` · próximo: ${escapeHtml(steps[value])}` : ''}</small></li>`).join('');

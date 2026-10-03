@@ -83,7 +83,7 @@
     t('Fashionware', 'Fashionware', 'Cyberware cosmético, de baixa perda de Humanidade.', 'cyberware2077', 'Fashionware'),
     t('Borgware', 'Borgware', 'Cyberware pesado que transforma o corpo, como o Linear Frame e os braços extras.', 'cyberware', 'Borgware'),
     t('Ripperdoc', 'Ripperdoc', 'Médico de rua que instala, conserta e troca cyberware.', 'cyberware2077', 'Antes de instalar', ['ripperdocs']),
-    t('Smart Link', 'Smartgun Link', 'Cyberware de 2077 que permite usar armas Smart e liga a óptica ao sistema da arma.', 'cyberware2077', 'Smart Link', ['smartgun link', 'Smartgun Link']),
+    t('Smart Link', 'Smartgun Link', 'Cyberware de 2077 que permite usar armas Smart e liga a óptica ao sistema da arma. No RED, o Smartgun Link é um acessório de arma: +1 nos ataques à distância, com plugs de interface.', 'cyberware2077', 'Smart Link', ['smartgun link', 'Smartgun Link']),
 
     // ---------------- Armas de 2077 ----------------
     t('Arma Power', 'Power weapon', 'A arma de fogo clássica de 2077. Todas têm o modo Ricochete.', 'weapons2077', 'Os três tipos', ['armas Power']),
@@ -98,7 +98,16 @@
     t('Categoria de preço', 'Price Category', 'Faixas de preço dos itens. Em 2077: Barato 20eb, Cotidiano 50eb, Oneroso 100eb, Premium 500eb, Caro 1.000eb, Muito caro 5.000eb, Luxo 10.000eb, Super luxo 20.000eb ou mais.', 'economy', 'Categorias de preço', ['categorias de preço']),
     t('Estilo de vida', 'Lifestyle', 'Quanto o personagem gasta por mês com comida e cotidiano, além da moradia.', 'economy', 'Estilo de vida', ['estilos de vida']),
     t('Role', 'Role', 'A profissão do personagem (Solo, Netrunner, Fixer...), com uma habilidade especial que sobe por Rank, de 1 a 10.', 'roles', 'As dez Roles do RED', [], { semLink: true }),
-    t('Rank', 'Rank', 'Nível da habilidade de Role, de 1 a 10.', 'roles', 'As dez Roles do RED', [], { exato: true })
+    t('Rank', 'Rank', 'Nível da habilidade de Role, de 1 a 10.', 'roles', 'As dez Roles do RED', [], { exato: true }),
+    t('Night Market', 'Night Market', 'Mercado improvisado, montado por um fixer, que vende duas categorias de itens. A Economia de 2077 tem o gerador.', 'economy', 'Night Market', ['Night Markets', 'mercado noturno', 'mercados noturnos']),
+    t('Impacto Carismático', 'Charismatic Impact', 'Habilidade do Face em 2077 (do Rockerboy no RED): Rank + 1d10 contra DV 8 (uma pessoa), 10 (até 6) ou 12 (grupo enorme) para conseguir favores.', 'roles2077', 'Face', ['Charismatic Impact']),
+    t('Investigator', 'Investigator', 'Habilidade do Lawman em 2077, no lugar de Backup: casos ativos e um bônus de caso em Educação e Percepção.', 'roles2077', 'Lawman'),
+
+    // ---------------- Avanço e equipamento ----------------
+    t('Pontos de Melhoria', 'Improvement Points (IP)', 'Ganhos no fim de cada sessão. Subir uma perícia custa 20 × o novo nível (×2 nas difíceis); subir o Rank da Role, 60 × o novo Rank.', 'advancement', 'Gastar Pontos de Melhoria', ['Ponto de Melhoria', 'Improvement Points']),
+    t('Lifepath', 'Lifepath', 'As tabelas do passado do personagem: origem, personalidade, família, amigos, inimigos, amores trágicos e meta de vida.', 'lifepath', 'Origem cultural'),
+    t('Munição perfurante', 'Armor-Piercing Ammo', '100eb por 10 balas. Quando acerta a armadura, a ablação é de 2 em vez de 1. Não existe para espingarda.', 'gear', 'Munição', ['munição anti-blindagem', 'munição Perfurante']),
+    t('Slot de acessório', 'Attachment Slot', 'Toda arma de longo alcance não exótica tem 3 slots para acessórios, como luneta, baioneta ou carregador maior.', 'gear', 'Acessórios de arma', ['slots de acessório'])
   ];
 
   // Mesma normalização do endereço da wiki (#página/seção).

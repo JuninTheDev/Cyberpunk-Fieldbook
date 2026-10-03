@@ -403,3 +403,20 @@ a.gloss:hover { color: var(--cyan); }
 .home-desk ul { margin: 0; padding-left: 16px; }
 .home-desk li { margin-bottom: 6px; }
 .home-desk small { color: var(--muted); }
+
+/* Roladores de tabela */
+.roll-result { margin-top: 10px; padding: 10px 12px; border: 1px solid #3b4443; border-left: 3px solid var(--yellow); background: #12171a; color: var(--text); }
+.roll-result .roll-value { display: inline-block; margin-right: 8px; padding: 1px 7px; border: 1px solid var(--yellow); color: var(--yellow); font: 12px Oxanium, Consolas, monospace; }
+.roll-result ul { margin: 6px 0 0; padding-left: 18px; }
+.roll-result li { margin-bottom: 4px; }
+.roll-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.roll-buttons .action { margin-top: 0; }
+.roll-buttons + .roll-result, .callout .roll-buttons { margin-top: 10px; }
+details.roll-table { margin: 10px 0; }
+details.roll-table summary { cursor: pointer; color: var(--cyan); }
+.playstyle-quiz { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.playstyle-quiz fieldset { margin: 0; padding: 8px 12px 10px; border: 1px solid #3b4443; }
+.playstyle-quiz legend { padding: 0 6px; color: var(--yellow); font: 13px Oxanium, sans-serif; text-transform: uppercase; }
+.playstyle-quiz label { display: flex; gap: 8px; align-items: flex-start; margin: 5px 0; cursor: pointer; }
+.playstyle-quiz input { margin-top: 3px; accent-color: var(--yellow); }
+@media (max-width: 640px) { .playstyle-quiz { grid-template-columns: 1fr; } }
