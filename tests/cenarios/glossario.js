@@ -13,7 +13,7 @@ module.exports = async ({ edge, servidores, r }) => {
     return [temNoMenu && n >= 70, `${n} termos`];
   });
   await r.passo('filtro do glossário acha pelo nome em inglês ("stopping" → SP)', async () => {
-    const nomes = await edge.evaluate(`(() => { const f = document.getElementById('glossary-filter'); f.value = 'stopping'; f.dispatchEvent(new Event('input')); return [...document.querySelectorAll('#content .glossary-entry')].filter(e => !e.hidden).map(e => e.dataset.toc); })()`);
+    const nomes = await edge.evaluate(`(() => { const f = document.getElementById('glossary-filter'); f.value = 'stopping'; f.dispatchEvent(new Event('input')); return [...document.querySelectorAll('#content .glossary-entry')].filter(e => e.offsetParent).map(e => e.dataset.toc); })()`);
     return [nomes.length === 1 && nomes[0] === 'SP', nomes.join(', ')];
   });
   await edge.shot('pagina');

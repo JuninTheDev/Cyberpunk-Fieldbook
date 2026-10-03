@@ -19,7 +19,8 @@
       { id: 'screen', label: 'Escudo do mestre', icon: 'GM' },
       { id: 'skills', label: 'Perícias por STAT', icon: 'SK' },
       { id: 'npcs', label: 'Fichas de NPC', icon: 'NPC' },
-      { id: 'glossary', label: 'Glossário', icon: 'G' }
+      { id: 'glossary', label: 'Glossário', icon: 'G' },
+      { id: 'indice', label: 'Índice A–Z', icon: 'AZ' }
     ]},
     { group: 'Regras do RED', pages: [
       { id: 'checks', label: 'Testes e dificuldades', icon: 'R' },
@@ -54,6 +55,12 @@
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
   });
   applyGmNotes(config.gmNotes || []);
+  // Índice A–Z: montado na hora a partir do índice de busca (setupIndex).
+  pageContent.indice = {
+    eyebrow: 'Na mesa / tudo que tem cartão', title: 'Índice A–Z',
+    lede: 'Todos os itens da wiki numa lista só: armas, cyberware, programas, ICE, quickhacks, pessoas e fichas. Digite para filtrar e clique para abrir o cartão.',
+    html: '<div class="section" data-toc="Filtrar"><h3>Filtrar</h3><label class="skill-search"><input id="index-filter" type="search" placeholder="Nome, tipo ou página" autocomplete="off"></label><p class="note-status" id="index-count"></p></div><div id="index-list"></div>'
+  };
   const pageWorkspace = Object.fromEntries([
     ...campaigns.flatMap(campaign => campaign.groups.flatMap(group => group.pages.map(page => [page.id, 'campaigns']))),
     ...systemSections.flatMap(group => group.pages.map(page => [page.id, 'system']))
@@ -160,10 +167,10 @@
       writeHash(pageHash(id), historyMode);
       content.innerHTML = `<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
-      const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, ...(config.pageSetup || {}) }[id];
+      const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
       if (setup) setup();
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
-      if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml });
+      if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target });
       linkGlossary(content);
       if (markdownDocs[id]) {
         window.scrollTo({ top: 0 });
@@ -184,7 +191,8 @@
 
     // Uma "unidade" é o trecho para onde o índice da página e a busca apontam:
     // cada .section e cada cartão de pessoa; nos documentos .md, cada título de seção.
-    const unitSelector = '.section, .person';
+    // data-unit-skip: blocos montados pela própria página (a tabela comparável), que não são seções do conteúdo.
+    const unitSelector = '.section:not([data-unit-skip]), .person';
 
     // Índice "Nesta página": só as unidades de primeiro nível.
     function pageUnits(container) {
@@ -445,6 +453,37 @@
       const second = 1 + Math.floor(Math.random() * 6);
       const [roll, name, effect, quick, treatment] = rows.find(row => row[0] === first + second);
       output.innerHTML = `<p class="crit-roll">${kind === 'head' ? 'Cabeça' : 'Corpo'}: ${first} + ${second} = <b>${roll}</b></p><h4>${name}</h4><p>${effect}</p><p><b>Correção rápida:</b> ${quick}<br><b>Tratamento:</b> ${treatment}</p><p class="note-status">+5 de dano direto no HP. Se o alvo já tem essa lesão, role de novo.</p>`;
+    }
+
+    // Índice A–Z: cada cartão e cada pessoa das páginas desta visão, por letra, com filtro.
+    function setupIndex() {
+      searchIndex = searchIndex || buildSearchIndex();
+      const items = searchIndex
+        .filter(entry => (entry.kind === 'entry' || entry.kind === 'person') && entry.title && !['glossary', 'indice'].includes(entry.id))
+        .map(entry => ({ ...entry, key: foldForSearch(`${entry.title} ${entry.tag} ${entry.pageTitle}`) }))
+        .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+      const letterOf = item => { const first = foldForSearch(item.title).charAt(0).toUpperCase(); return /[A-Z]/.test(first) ? first : '#'; };
+      const letters = [...new Set(items.map(letterOf))];
+      document.getElementById('index-list').innerHTML = letters.map(letter => `<div class="section index-letter" data-toc="${letter}"><h3>${letter}</h3><div class="index-grid">${items.filter(item => letterOf(item) === letter).map(item => `<button type="button" class="index-item" data-page="${item.id}" data-unit="${item.unit}" data-key="${escapeHtml(item.key)}"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml([item.tag, item.pageTitle].filter(Boolean).join(' · '))}</small></button>`).join('')}</div></div>`).join('');
+      const input = document.getElementById('index-filter');
+      const count = document.getElementById('index-count');
+      const apply = () => {
+        const needles = foldForSearch(input.value.trim()).split(/\s+/).filter(Boolean);
+        let shown = 0;
+        content.querySelectorAll('.index-letter').forEach(section => {
+          let visible = 0;
+          section.querySelectorAll('.index-item').forEach(item => {
+            const match = needles.every(needle => item.dataset.key.includes(needle));
+            item.hidden = !match;
+            if (match) visible += 1;
+          });
+          section.hidden = !visible;
+          shown += visible;
+        });
+        count.textContent = needles.length ? `${shown} de ${items.length} itens` : `${items.length} itens`;
+      };
+      input.addEventListener('input', apply);
+      apply();
     }
 
     function setupSkills() {
@@ -743,7 +782,9 @@
         };
         units.forEach((unit, index) => {
           const parent = unit.matches('.entry') ? unit.parentElement.closest(unitSelector) : null;
-          entries.push({ id, unit: index, pageTitle: parent ? `${pageTitle} › ${unitTitle(parent)}` : pageTitle, title: unitTitle(unit), text: ownText(unit) });
+          const kind = unit.matches('.entry') ? 'entry' : unit.matches('.person') ? 'person' : 'section';
+          const tag = (unit.querySelector('.entry-tag, .role')?.textContent || '').replace(/\s+/g, ' ').trim();
+          entries.push({ id, unit: index, kind, tag, pageTitle: parent ? `${pageTitle} › ${unitTitle(parent)}` : pageTitle, title: unitTitle(unit), text: ownText(unit) });
         });
         pageUnits(holder).forEach(unit => unitBlock(unit).forEach(element => element.remove()));
         const mapTerms = mapPages.includes(id) && mapData() ? mapData().markers.map(marker => [marker.title, marker.district, marker.act, marker.summary, marker.hook, marker.encounter, marker.clue, marker.detail].filter(Boolean).join(' ')).join(' ') : '';

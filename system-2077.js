@@ -182,6 +182,95 @@
     }
   };
 
+  // ---------------- Tabela comparável (Cartões | Tabela) ----------------
+  // O wiki-app.js chama page.setup(content, { openPage, storage, escapeHtml }) depois de montar a página.
+  const slug = text => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const firstNumber = text => { const match = String(text).replace(/\.(?=\d{3})/g, '').match(/\d+/); return match ? Number(match[0]) : -1; };
+  // columns: [rótulo, valor(linha), tipo de ordenação ('texto' | 'numero')]; filters: [rótulo, valor(linha)]
+  function compareTable({ pageId, rows, columns, filters, noun }) {
+    return (content, { openPage, storage, escapeHtml, target }) => {
+      const storageKey = `vista-${pageId}`;
+      const state = { sort: null, desc: false, filters: Object.fromEntries(filters.map(([label]) => [label, ''])) };
+      const cardParts = [...content.querySelectorAll(':scope > .section')];
+      const bar = document.createElement('div');
+      bar.className = 'view-switch';
+      bar.innerHTML = `<span class="page-toc-label">Ver como</span><button type="button" data-view="cards">Cartões</button><button type="button" data-view="table">Tabela</button>`;
+      const panel = document.createElement('div');
+      panel.className = 'section compare-panel';
+      panel.dataset.unitSkip = '';
+      panel.hidden = true;
+      panel.innerHTML = `<h3>Comparar</h3><div class="compare-filters">${filters.map(([label, valueOf]) => {
+        const options = [...new Set(rows.map(valueOf))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        return `<label>${label}<select data-filter="${escapeHtml(label)}"><option value="">Todas</option>${options.map(option => `<option>${escapeHtml(option)}</option>`).join('')}</select></label>`;
+      }).join('')}<span class="note-status compare-count"></span></div><div class="table-wrap dense"><table class="compare-table"><thead><tr>${columns.map(([label], index) => `<th><button type="button" data-sort="${index}">${label}</button></th>`).join('')}</tr></thead><tbody></tbody></table></div><p class="note-status">Clique no cabeçalho para ordenar e numa linha para abrir o cartão.</p>`;
+      content.querySelector('.lede').after(bar, panel);
+
+      const render = () => {
+        let list = rows.filter(row => filters.every(([label, valueOf]) => !state.filters[label] || valueOf(row) === state.filters[label]));
+        if (state.sort !== null) {
+          const [, valueOf, type] = columns[state.sort];
+          list = [...list].sort((a, b) => {
+            const order = type === 'numero' ? firstNumber(valueOf(a)) - firstNumber(valueOf(b)) : String(valueOf(a)).localeCompare(String(valueOf(b)), 'pt-BR');
+            return state.desc ? -order : order;
+          });
+        }
+        panel.querySelector('tbody').innerHTML = list.map(row => `<tr data-card="${escapeHtml(slug(row.name))}">${columns.map(([, valueOf]) => `<td>${escapeHtml(valueOf(row))}</td>`).join('')}</tr>`).join('');
+        panel.querySelector('.compare-count').textContent = `${list.length} de ${rows.length} ${noun}`;
+        panel.querySelectorAll('[data-sort]').forEach(button => {
+          const active = Number(button.dataset.sort) === state.sort;
+          button.classList.toggle('active', active);
+          button.dataset.dir = active ? (state.desc ? '▼' : '▲') : '';
+        });
+      };
+      const setView = view => {
+        const table = view === 'table';
+        panel.hidden = !table;
+        cardParts.forEach(part => { part.hidden = table; });
+        const toc = content.querySelector('.page-toc');
+        if (toc) toc.hidden = table;
+        bar.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === view));
+        storage.set(storageKey, view);
+        if (table) render();
+      };
+      bar.addEventListener('click', event => { const button = event.target.closest('[data-view]'); if (button) setView(button.dataset.view); });
+      panel.addEventListener('change', event => { const select = event.target.closest('[data-filter]'); if (select) { state.filters[select.dataset.filter] = select.value; render(); } });
+      panel.addEventListener('click', event => {
+        const sortButton = event.target.closest('[data-sort]');
+        if (sortButton) {
+          const index = Number(sortButton.dataset.sort);
+          // Primeiro clique: números do maior para o menor, textos de A a Z.
+          state.desc = state.sort === index ? !state.desc : columns[index][2] === 'numero';
+          state.sort = index;
+          render();
+          return;
+        }
+        const row = event.target.closest('tr[data-card]');
+        if (row) { storage.set(storageKey, 'cards'); openPage(pageId, { section: row.dataset.card }); }
+      });
+      // buildToc roda depois do setup: espera o próximo instante para esconder a barra "Nesta página" na vista de tabela.
+      // Abrindo direto num cartão (busca, link, índice), mostra os cartões.
+      setTimeout(() => setView(!target && storage.get(storageKey) === 'table' ? 'table' : 'cards'), 0);
+    };
+  }
+
+  const weaponRows = Object.values({ pistols, revolvers, smgs, shotguns, rifles, machineGuns, snipers }).flat().map(entry => entry.raw);
+  const weaponClass = row => /smart/i.test(row.kind) ? 'Smart' : /tech/i.test(row.kind) ? 'Tech' : 'Power';
+  const weaponType = row => row.kind.replace(/\s+(Power|Tech|Smart)/, '').replace(/, exótic[ao]$/, '');
+  pages.weapons2077.setup = compareTable({
+    pageId: 'weapons2077', rows: weaponRows, noun: 'armas',
+    columns: [['Arma', row => row.name], ['Tipo', weaponType], ['Classe', weaponClass], ['Qualidade', row => row.quality], ['Perícia', row => row.skill.split(' (')[0]],
+      ['Dano', row => row.damage, 'numero'], ['CDT', row => String(row.rof), 'numero'], ['Pente', row => row.magazine, 'numero'], ['Mãos', row => String(row.hands), 'numero'],
+      ['Oculta', row => row.conceal], ['Preço', row => row.cost, 'numero']],
+    filters: [['Classe', weaponClass], ['Tipo', weaponType], ['Perícia', row => row.skill.split(' (')[0]]]
+  });
+  const cyberRows = Object.values({ fashionware, neural, optics, internal, external, limbs }).flat().map(entry => entry.raw);
+  const cyberGroup = row => row.category.split(' (')[0];
+  pages.cyberware2077.setup = compareTable({
+    pageId: 'cyberware2077', rows: cyberRows, noun: 'implantes',
+    columns: [['Implante', row => row.name], ['Categoria', row => row.category], ['Instalação', row => row.install], ['Humanidade', row => String(row.humanity), 'numero'], ['Preço', row => row.cost, 'numero']],
+    filters: [['Categoria', cyberGroup], ['Instalação', row => row.install]]
+  });
+
   // data: as listas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
   window.system2077 = {
     pages,
