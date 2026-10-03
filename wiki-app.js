@@ -110,14 +110,52 @@
       buildNavigation();
     }
 
-    // target (opcional): { unit, term } abre a página já na seção indicada, com o termo destacado.
-    function openPage(id, target) {
+    // ---------------- Endereço: #página ou #página/seção ----------------
+    // Trocar de página empilha no histórico (o Voltar do navegador funciona); ir a uma seção só troca o endereço atual.
+    const slug = text => foldForSearch(String(text)).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    let routedHash = null;
+    const pageHash = (id, unit) => `#${id}${unit ? `/${slug(unitTitle(unit))}` : ''}`;
+    function readHash() {
+      let hash = location.hash.slice(1);
+      try { hash = decodeURIComponent(hash); } catch { /* endereço malformado: usa como está */ }
+      const [id, section] = hash.split('/');
+      return { id, section };
+    }
+    // mode: 'push' (nova entrada no histórico), 'replace' (troca a atual) ou 'none' (não mexe).
+    function writeHash(hash, mode) {
+      if (mode === 'none') return;
+      routedHash = hash;
+      if (location.hash === hash) return;
+      try { history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', hash); } catch { /* navegador sem history API */ }
+    }
+    function routeFromHash() {
+      if (location.hash === routedHash) return;
+      routedHash = location.hash;
+      const { id, section } = readHash();
+      if (!pageContent[id]) { openPage(config.homePage || 'home', undefined, 'replace'); return; }
+      openPage(id, section ? { section } : undefined, 'none');
+    }
+    window.addEventListener('popstate', routeFromHash);
+    window.addEventListener('hashchange', routeFromHash);
+
+    // Unidade de destino: por índice (resultado de busca) ou pelo nome da seção no endereço.
+    function resolveTarget(target) {
+      if (!target) return null;
+      const units = searchUnits(content);
+      if (target.unit !== undefined) return units[target.unit] || null;
+      if (target.section) return units.find(unit => slug(unitTitle(unit)) === target.section) || null;
+      return null;
+    }
+
+    // target (opcional): { unit, term } ou { section } abre a página já na seção indicada, com o termo destacado.
+    function openPage(id, target, historyMode = 'push') {
       const page = pageContent[id];
       if (!page) return;
       const targetWorkspace = pageWorkspace[id];
       if (targetWorkspace && targetWorkspace !== currentWorkspace) setWorkspace(targetWorkspace);
       currentPage = id;
       search.value = '';
+      writeHash(pageHash(id), historyMode);
       content.innerHTML = `<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, ...(config.pageSetup || {}) }[id];
@@ -128,8 +166,15 @@
         return;
       }
       buildToc();
-      if (target && target.unit !== undefined) focusUnit(searchUnits(content)[target.unit], target.term);
+      const unit = resolveTarget(target);
+      if (unit) focusUnit(unit, target.term);
       else window.scrollTo({ top: 0 });
+    }
+
+    // Volta à página atual como estava no endereço (Esc na busca, busca apagada).
+    function reopenCurrent() {
+      const { id, section } = readHash();
+      openPage(currentPage, id === currentPage && section ? { section } : undefined, 'none');
     }
 
     // Uma "unidade" é o trecho para onde o índice da página e a busca apontam:
@@ -228,6 +273,8 @@
         void element.offsetWidth;
         element.classList.add('flash');
       });
+      // A seção vai para o endereço: recarregar ou mandar o link abre aqui.
+      writeHash(pageHash(currentPage, unit), 'replace');
     }
 
     function highlightTerm(elements, term) {
@@ -413,7 +460,8 @@
         if (currentPage !== id || !container) return;
         container.innerHTML = renderMarkdown(stripDocTitle(text));
         buildToc();
-        if (target && target.unit !== undefined) focusUnit(searchUnits(content)[target.unit], target.term);
+        const unit = resolveTarget(target);
+        if (unit) focusUnit(unit, target.term);
       }).catch(() => {
         const container = document.getElementById('md-doc');
         if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
@@ -629,7 +677,7 @@
 
     function searchPages(query) {
       const needle = foldForSearch(query.trim());
-      if (!needle) { openPage(currentPage); return; }
+      if (!needle) { reopenCurrent(); return; }
       searchIndex = searchIndex || buildSearchIndex();
       const size = Array.from(needle).length;
       const matches = searchIndex.flatMap(entry => {
@@ -677,7 +725,7 @@
       }
     });
     search.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { openPage(currentPage); search.blur(); }
+      if (event.key === 'Escape') { reopenCurrent(); search.blur(); }
       if (event.key === 'Enter') {
         const first = content.querySelector('.result');
         if (first) { event.preventDefault(); first.click(); search.blur(); }
@@ -694,7 +742,9 @@
     if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
     updateStickyOffset();
     buildNavigation();
-    openPage(config.homePage || 'home');
+    // Abre a página do endereço (link direto, recarregar) ou a inicial.
+    if (pageContent[readHash().id]) routeFromHash();
+    else openPage(config.homePage || 'home', undefined, 'replace');
     // Pré-carrega os documentos para a busca encontrar o texto completo deles.
     if (Object.keys(markdownDocs).length) Promise.allSettled(Object.keys(markdownDocs).map(loadMarkdownDoc)).then(() => {
       searchIndex = null;
@@ -728,7 +778,10 @@
       searchIndex = null;
       if (pages[currentPage] && !search.value.trim()) {
         const scroll = window.scrollY;
-        openPage(currentPage);
+        const { id, section } = readHash();
+        // Sem rolagem ainda (primeira carga de um link direto): vai à seção do endereço; senão, mantém onde estava.
+        if (!scroll && id === currentPage && section) { openPage(currentPage, { section }, 'none'); return; }
+        openPage(currentPage, undefined, 'none');
         window.scrollTo({ top: scroll });
       }
     }
