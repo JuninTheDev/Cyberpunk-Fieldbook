@@ -2,3 +2,4 @@
 *.pdf
 foundry-2077/.cache/
 foundry-2077/node_modules/
+tests/.saida/

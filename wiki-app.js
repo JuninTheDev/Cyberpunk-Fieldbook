@@ -176,6 +176,35 @@
       content.querySelector('.lede').after(toc);
     }
 
+    // Rolagem suave própria: a do navegador (behavior: 'smooth') às vezes é ignorada logo depois de trocar de página.
+    // Pula direto se a aba estiver oculta ou se o sistema pedir menos animação; a roda do mouse interrompe.
+    let scrollAnimation = 0;
+    const stopScrollAnimation = () => cancelAnimationFrame(scrollAnimation);
+    window.addEventListener('wheel', stopScrollAnimation, { passive: true });
+    window.addEventListener('touchstart', stopScrollAnimation, { passive: true });
+    function scrollWindow(top, smooth) {
+      stopScrollAnimation();
+      const target = Math.max(0, Math.min(top, document.documentElement.scrollHeight - window.innerHeight));
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!smooth || reduce || document.visibilityState === 'hidden') { window.scrollTo(0, target); return; }
+      const start = window.scrollY;
+      const distance = target - start;
+      const duration = Math.min(450, 160 + Math.abs(distance) / 10);
+      const startTime = performance.now();
+      const step = now => {
+        const progress = Math.min(1, (now - startTime) / duration);
+        window.scrollTo(0, start + distance * (1 - Math.pow(1 - progress, 3)));
+        if (progress < 1) scrollAnimation = requestAnimationFrame(step);
+      };
+      scrollAnimation = requestAnimationFrame(step);
+    }
+
+    // Altura ocupada no topo pelas barras fixas (a da busca e a "Nesta página", quando existe).
+    function stickyHeight() {
+      const toc = content.querySelector('.page-toc');
+      return toc ? toc.getBoundingClientRect().height + document.querySelector('.topbar').offsetHeight : document.querySelector('.topbar').offsetHeight;
+    }
+
     // A busca pula direto (consulta rápida); os chips do índice rolam suavemente.
     function focusUnit(unit, term, smooth = false) {
       if (!unit) return;
@@ -188,8 +217,12 @@
       // Numa seção longa (uma tabela grande, por exemplo), o termo pode estar fora da tela: centraliza nele.
       const firstMark = term ? block.map(element => element.querySelector('mark')).find(Boolean) : null;
       const markIsFar = firstMark && firstMark.getBoundingClientRect().top - unit.getBoundingClientRect().top > window.innerHeight / 2;
-      if (markIsFar) firstMark.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
-      else unit.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+      // A rolagem é calculada pela altura real da barra do topo e da barra "Nesta página" (que muda com os chips):
+      // assim a seção para logo abaixo delas e o chip certo fica marcado.
+      const top = markIsFar
+        ? firstMark.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2
+        : unit.getBoundingClientRect().top + window.scrollY - stickyHeight() - 8;
+      scrollWindow(top, smooth);
       block.forEach(element => {
         element.classList.remove('flash');
         void element.offsetWidth;
@@ -625,7 +658,11 @@
         return;
       }
       const tocChip = event.target.closest('[data-toc-index]');
-      if (tocChip) { focusUnit(pageUnits(content)[Number(tocChip.dataset.tocIndex)], undefined, true); return; }
+      if (tocChip) {
+        tocChip.parentElement.querySelectorAll('[data-toc-index]').forEach(chip => chip.classList.toggle('active', chip === tocChip));
+        focusUnit(pageUnits(content)[Number(tocChip.dataset.tocIndex)], undefined, true);
+        return;
+      }
       const critButton = event.target.closest('[data-crit]');
       if (critButton) { rollCritical(critButton.dataset.crit); return; }
       const button = event.target.closest('[data-page]');
