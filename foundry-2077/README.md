@@ -11,6 +11,11 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
   - regras em diários.
 - **Economia de 2077:** uma configuração do módulo que troca as categorias de preço pelas do suplemento.
 - **Macros:** Ataque Smart, Ricochete e Carga Tech. Só rolam e explicam no chat.
+- **Roles de 2077:** Face, Corpo e Lawman (com Investigator), no compêndio Roles de 2077.
+- **Personagens da wiki:**
+  - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.
+  - **Atualizar da wiki** (cabeçalho da ficha) traz o que mudou depois.
+  - O mestre importa do computador onde a wiki roda; o endereço fica em Configurações do módulo.
 
 O conteúdo é gerado a partir da wiki da mesa (`system-2077.js`, `system-net.js`, `mestre-npcs.js`), então a wiki e o Foundry nunca divergem.
 
@@ -38,6 +43,10 @@ Depois é só ativar **Cyberpunk RED: 2077** em *Configurar módulos* no mundo.
 | `module.json` | Manifesto do módulo. |
 | `scripts/cpr-2077.mjs` | Configuração da economia de 2077 e API das macros. |
 | `scripts/macros.mjs` | Ataque Smart, Ricochete e Carga Tech. |
+| `scripts/wiki.mjs` | Importar da wiki e Atualizar da wiki (personagens do criador). |
+| `build/loja.mjs` | Gera o `loja-catalogo.js` da wiki (também roda sozinho). |
+| `build/roles.mjs` | Face, Corpo e Lawman de 2077. |
+| `data/loja-nomes.json` | Nomes em português dos itens do sistema na loja. |
 | `styles/cpr-2077.css` | Visual dos diários e das mensagens no chat. |
 | `data/veiculos-2077.json` | Veículos do jogo e a classe do RED usada em cada um. |
 | `data/npcs-faccoes.json` | Variantes de facção sobre as fichas do livro. |

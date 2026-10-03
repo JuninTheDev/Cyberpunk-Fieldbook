@@ -1,5 +1,6 @@
-// Cyberpunk RED: 2077 — economia de 2077 e API das macros.
+// Cyberpunk RED: 2077 — economia de 2077, API das macros e personagens do criador da wiki.
 import { ataqueSmart, cargaTech, ricochete } from './macros.mjs';
+import { registerWikiButtons, registerWikiSettings, wikiApi } from './wiki.mjs';
 
 const MODULE_ID = 'cpr-2077';
 
@@ -26,7 +27,9 @@ Hooks.once('init', () => {
     hint: 'Usa as categorias de preço do suplemento (Barato 20eb … Super luxo 20.000eb). Os preços em eb dos itens não mudam, só a categoria mostrada na ficha.',
     scope: 'world', config: true, type: Boolean, default: true, requiresReload: true
   });
-  game.modules.get(MODULE_ID).api = { ataqueSmart, ricochete, cargaTech, precos2077: PRICES_2077, economia2077: false };
+  registerWikiSettings();
+  registerWikiButtons();
+  game.modules.get(MODULE_ID).api = { ataqueSmart, ricochete, cargaTech, precos2077: PRICES_2077, economia2077: false, ...wikiApi };
 });
 
 Hooks.once('setup', () => {

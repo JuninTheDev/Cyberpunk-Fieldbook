@@ -72,6 +72,11 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `system-glossario.js` | O glossário: definição curta de cada termo de regra e onde está a regra. Vai também para os jogadores. |
 | `mestre-npcs.js` | Fichas de NPC (as 10 fichas prontas do livro, a Trauma Team e variantes para as facções de 2077) e os Encontros de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
 | `server.js` | Servidor local da wiki. Decide quem vê a wiki do mestre e quem vê só a dos jogadores, e avisa se o OneDrive reverteu algum arquivo. |
+| `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores. |
+| `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
+| `system-criacao.js` | Regras de criação: Roles de 2077, tabelas de STAT, perícias e pacotes de cada Role. |
+| `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
+| `personagens/` | Um arquivo por personagem dos jogadores. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 
@@ -85,7 +90,28 @@ A pasta `foundry-2077/` gera o módulo **Cyberpunk RED: 2077** para o Foundry VT
 node build/build.mjs
 ```
 
-O módulo é gravado direto na pasta de módulos do Foundry.
+O módulo é gravado direto na pasta de módulos do Foundry. O build também gera o `loja-catalogo.js`, o catálogo da loja da wiki, com os itens do sistema e os de 2077. Para gerar só o catálogo, sem fechar o Foundry: `node build/loja.mjs`.
+
+## Personagens dos jogadores
+
+Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens ficam salvos no servidor da wiki.
+
+1. **Códigos:** na wiki do mestre, em **Campanha → Personagens e códigos**, crie um código para cada jogador (por exemplo, `NC-7F3K-9QAB`) e passe a ele.
+2. **Criar:** o jogador abre a wiki dos jogadores, entra em **Personagens**, digita o código uma vez (o aparelho lembra) e clica em **Novo personagem**.
+   - **Os passos:** identidade e Role, STATs, perícias, Lifepath, equipamento, moradia e revisão.
+   - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 9 Roles de 2077 e o cyberware grátis de 2077.
+   - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
+3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
+4. **Levar para o Foundry:** no Foundry aberto **neste computador**, aba Atores, botão **Importar da wiki**. Escolha o personagem e o dono, e o módulo cria o ator com STATs, perícias, Role, equipamento, cyberware instalado, Humanidade, Lifepath e dinheiro.
+   - Depois disso, a loja inicial daquele personagem fecha. As compras durante a sessão vêm numa próxima versão, pelo mesmo caminho.
+5. **Mudou algo na wiki depois?** Na ficha do ator, botão **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha.
+
+Notas:
+
+- **Onde importar:** importe do computador onde a wiki roda. O Foundry fala com a wiki em `http://localhost:8000` (dá para trocar em Configurações do módulo → Endereço da wiki). Se abrir o Foundry por outro endereço que não `localhost:30000`, ligue o servidor com `$env:FOUNDRY_ORIGIN='http://esse-endereco'`.
+- **Pelo túnel**, o link muda a cada sessão, e o jogador digita o código de novo.
+- **Onde ficam os dados:** os códigos ficam em `contas-jogadores.json`, fora do git. Os personagens ficam em `personagens/`. Apagar um personagem move o arquivo para `personagens/apagados/`.
+- **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros, só nome, apelido e Role. O mestre vê e edita todos.
 
 ## Consulta durante a sessão
 
