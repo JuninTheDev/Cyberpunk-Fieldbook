@@ -1,6 +1,7 @@
 // Visão dos jogadores: notas do mestre, painel de publicação, página dos jogadores e controle de acesso.
 // Mexe em jogadores.json e jogadores-mestre.json: faz cópia antes e restaura no fim.
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 const { abrir, buscar, semRolagemLateral } = require('../lib/wiki');
 
@@ -83,6 +84,27 @@ module.exports = async ({ edge, servidores, r }) => {
         if (depois > antes) return [resposta.status === 200, `apareceu em ~${(i + 1) / 2} s`];
       }
       return [false, 'não apareceu'];
+    });
+    // Com .pipe, conexões que caíam no meio deixavam o jogadores.json aberto, e o Publicar dava 500 (EPERM).
+    await r.passo('publicar funciona depois de 300 conexões que caem no meio', async () => {
+      const { hostname, port } = new URL(servidores.local);
+      for (let i = 0; i < 300; i += 1) {
+        await new Promise(resolve => {
+          const socket = net.connect(Number(port), hostname, () => {
+            socket.write('GET /jogadores.json HTTP/1.1\r\nHost: x\r\n\r\n');
+            setTimeout(() => { socket.destroy(); resolve(); }, i % 3);
+          });
+          socket.on('error', resolve);
+        });
+      }
+      await edge.sleep(500);
+      const temporarios = () => fs.readdirSync(path.dirname(arquivos[0])).filter(nome => /^jogadores.*\.tmp$/.test(nome));
+      const antes = temporarios();
+      const mestre = JSON.parse(fs.readFileSync(arquivos[1], 'utf8'));
+      const publicado = JSON.parse(fs.readFileSync(arquivos[0], 'utf8'));
+      const resposta = await fetch(`${servidores.local}/api/jogadores`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestre, publicado }) });
+      const sobras = temporarios().filter(nome => !antes.includes(nome));
+      return [resposta.status === 200 && !sobras.length, `HTTP ${resposta.status}${resposta.status === 200 ? '' : `: ${await resposta.text()}`}${sobras.length ? ` | sobrou ${sobras.join(', ')}` : ''}`];
     });
     await edge.celular(true);
     await r.passo('jogador no celular: sem rolagem lateral', async () => { await abrir(edge, 'pvPeople', 400); return [await semRolagemLateral(edge), '']; });

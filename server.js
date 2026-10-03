@@ -4,6 +4,7 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
+const { pipeline } = require('stream');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 8000);
@@ -92,10 +93,23 @@ async function health() {
 }
 
 // Grava primeiro num arquivo temporário e depois troca: nunca fica um JSON pela metade.
-function writeJsonAtomic(file, data) {
+// No Windows a troca falha se outro programa (o OneDrive, por exemplo) estiver com o arquivo aberto
+// naquele instante: tenta de novo por até 2 segundos e, se desistir, apaga o temporário.
+async function writeJsonAtomic(file, data) {
   const temporary = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`);
-  fs.renameSync(temporary, file);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      fs.renameSync(temporary, file);
+      return;
+    } catch (error) {
+      if (attempt >= 20 || !['EPERM', 'EBUSY', 'EACCES'].includes(error.code)) {
+        fs.rmSync(temporary, { force: true });
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
 }
 
 function publishPlayerView(request, response) {
@@ -105,7 +119,7 @@ function publishPlayerView(request, response) {
     body += chunk;
     if (body.length > 2_000_000) { send(response, 413, 'Conteúdo grande demais.'); request.destroy(); }
   });
-  request.on('end', () => {
+  request.on('end', async () => {
     let payload;
     try { payload = JSON.parse(body); } catch { return send(response, 400, 'JSON inválido.'); }
     const { mestre, publicado } = payload || {};
@@ -115,8 +129,8 @@ function publishPlayerView(request, response) {
     }
     const atualizado = new Date().toISOString();
     try {
-      writeJsonAtomic(path.join(root, 'jogadores-mestre.json'), { ...mestre, atualizado });
-      writeJsonAtomic(path.join(root, 'jogadores.json'), { ...publicado, atualizado });
+      await writeJsonAtomic(path.join(root, 'jogadores-mestre.json'), { ...mestre, atualizado });
+      await writeJsonAtomic(path.join(root, 'jogadores.json'), { ...publicado, atualizado });
     } catch (error) {
       return send(response, 500, `Não consegui gravar os arquivos: ${error.message}`);
     }
@@ -177,7 +191,9 @@ http.createServer((request, response) => {
       ...(extension === '.json' || !playerFile ? { 'Cache-Control': 'private, no-store' } : {})
     });
     if (request.method === 'HEAD') return response.end();
-    fs.createReadStream(filePath).pipe(response);
+    // pipeline fecha o arquivo mesmo se a conexão cair no meio. Com .pipe, o arquivo ficava aberto,
+    // e o Windows então não deixava o Publicar trocar o jogadores.json (EPERM).
+    pipeline(fs.createReadStream(filePath), response, () => {});
   });
 }).listen(port, host, () => {
   console.log(`Wiki do mestre: http://localhost:${port}`);
