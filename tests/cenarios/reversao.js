@@ -21,9 +21,12 @@ module.exports = async ({ edge, servidores, r }) => {
   let servidor = null;
   try {
     git(['clone', '--quiet', servidores.raiz, pasta]);
-    // O clone recebe as mudanças ainda sem commit do projeto (o motor e o servidor que estão sendo testados).
-    for (const arquivo of git(['diff', '--name-only', 'HEAD'], servidores.raiz).split('\n').filter(Boolean)) {
-      if (fs.existsSync(path.join(servidores.raiz, arquivo))) fs.copyFileSync(path.join(servidores.raiz, arquivo), path.join(pasta, arquivo));
+    // O clone recebe as mudanças ainda sem commit e os arquivos novos do projeto (o que está sendo testado).
+    const pendentes = [...git(['diff', '--name-only', 'HEAD'], servidores.raiz).split('\n'), ...git(['ls-files', '--others', '--exclude-standard'], servidores.raiz).split('\n')].filter(Boolean);
+    for (const arquivo of pendentes) {
+      if (!fs.existsSync(path.join(servidores.raiz, arquivo))) continue;
+      fs.mkdirSync(path.dirname(path.join(pasta, arquivo)), { recursive: true });
+      fs.copyFileSync(path.join(servidores.raiz, arquivo), path.join(pasta, arquivo));
     }
     fs.writeFileSync(path.join(pasta, 'campaign-map.js'), git(['show', 'a6ab001:campaign-map.js'], pasta));
     servidor = await subir(8767, { HOST: '127.0.0.1', GM_KEY: '' }, pasta);

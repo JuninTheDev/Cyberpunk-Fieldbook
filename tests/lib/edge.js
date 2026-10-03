@@ -48,10 +48,12 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
     if (details) throw new Error(details.exception?.description?.split('\n')[0] || details.text);
     return response.result?.result?.value;
   };
+  // Captura de tela é só para conferência visual: se o Edge sem janela demorar a desenhar o quadro, desiste em 10 s.
   const shot = async nome => {
     if (!saida) return;
-    const response = await send('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync(path.join(saida, `${prefixo}${nome}.png`), Buffer.from(response.result.data, 'base64'));
+    await send('Page.bringToFront');
+    const response = await Promise.race([send('Page.captureScreenshot', { format: 'png' }), sleep(10000).then(() => null)]);
+    if (response?.result?.data) fs.writeFileSync(path.join(saida, `${prefixo}${nome}.png`), Buffer.from(response.result.data, 'base64'));
   };
   // Abre um endereço e espera a wiki montar a primeira página (e pré-carregar os documentos .md).
   const ir = async (url, espera = 1500) => {

@@ -18,7 +18,8 @@
     { group: 'Na mesa', pages: [
       { id: 'screen', label: 'Escudo do mestre', icon: 'GM' },
       { id: 'skills', label: 'Perícias por STAT', icon: 'SK' },
-      { id: 'npcs', label: 'Fichas de NPC', icon: 'NPC' }
+      { id: 'npcs', label: 'Fichas de NPC', icon: 'NPC' },
+      { id: 'glossary', label: 'Glossário', icon: 'G' }
     ]},
     { group: 'Regras do RED', pages: [
       { id: 'checks', label: 'Testes e dificuldades', icon: 'R' },
@@ -48,7 +49,7 @@
     ]}
   ];
 
-  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, config.pageContent || {});
+  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemGlossary || {}).pages || {}, config.pageContent || {});
   Object.entries(markdownDocs).forEach(([id, doc]) => {
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
   });
@@ -143,7 +144,8 @@
       if (!target) return null;
       const units = searchUnits(content);
       if (target.unit !== undefined) return units[target.unit] || null;
-      if (target.section) return units.find(unit => slug(unitTitle(unit)) === target.section) || null;
+      // Nome exato da seção; senão, a que começa com ele ("neuralware" acha "Neuralware / 12 entradas").
+      if (target.section) return units.find(unit => slug(unitTitle(unit)) === target.section) || units.find(unit => slug(unitTitle(unit)).startsWith(target.section)) || null;
       return null;
     }
 
@@ -160,6 +162,9 @@
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, ...(config.pageSetup || {}) }[id];
       if (setup) setup();
+      // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
+      if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml });
+      linkGlossary(content);
       if (markdownDocs[id]) {
         window.scrollTo({ top: 0 });
         showMarkdownDoc(id, target);
@@ -275,6 +280,71 @@
       });
       // A seção vai para o endereço: recarregar ou mandar o link abre aqui.
       writeHash(pageHash(currentPage, unit), 'replace');
+    }
+
+    // ---------------- Glossário: links automáticos ----------------
+    // A primeira menção de cada termo em cada seção (ou cartão) vira um link para o glossário, com a definição no title.
+    const glossary = window.systemGlossary;
+    const glossarySkipPages = new Set(['glossary', 'playerView', 'notes', ...mapPages]);
+    const glossarySkip = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .eyebrow, .entry-tag, .npc-stats, .gloss';
+    let glossaryMatchers = null;
+    function buildGlossaryMatchers() {
+      const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const loose = new Map();
+      const exact = new Map();
+      glossary.terms.filter(term => !term.semLink).forEach(term => {
+        [term.termo, ...term.formas].forEach(form => (term.exato ? exact : loose).set(term.exato ? form : form.toLocaleLowerCase('pt-BR'), term));
+      });
+      // Sem letra (nem número, antes) colada: "DV" acha "DV13", mas "MOVE" não acha "REMOVE".
+      const build = (map, flags) => map.size ? new RegExp(`(?<![\\p{L}\\p{N}])(${[...map.keys()].sort((a, b) => b.length - a.length).map(escapeRegex).join('|')})(?![\\p{L}])`, flags) : null;
+      return [
+        { regex: build(loose, 'giu'), lookup: text => loose.get(text.toLocaleLowerCase('pt-BR')) },
+        { regex: build(exact, 'gu'), lookup: text => exact.get(text) }
+      ].filter(matcher => matcher.regex);
+    }
+    function linkGlossary(root) {
+      if (!glossary || glossarySkipPages.has(currentPage) || !root) return;
+      glossaryMatchers = glossaryMatchers || buildGlossaryMatchers();
+      const linked = new Map();
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(node => {
+        const parent = node.parentElement;
+        if (!parent || parent.closest(glossarySkip) || !node.data.trim()) return;
+        const scope = parent.closest('.entry, .section, .person, #md-doc') || root;
+        const scopeTitle = slug(unitTitle(scope) || '');
+        if (!linked.has(scope)) linked.set(scope, new Set());
+        const used = linked.get(scope);
+        const hits = [];
+        glossaryMatchers.forEach(({ regex, lookup }) => {
+          regex.lastIndex = 0;
+          for (let match = regex.exec(node.data); match; match = regex.exec(node.data)) {
+            const term = lookup(match[1]);
+            if (term) hits.push({ start: match.index, end: match.index + match[1].length, term });
+          }
+        });
+        if (!hits.length) return;
+        hits.sort((a, b) => a.start - b.start || b.end - a.end);
+        const fragment = document.createDocumentFragment();
+        let from = 0;
+        hits.forEach(({ start, end, term }) => {
+          // Uma vez por termo em cada seção; nunca dentro da seção que é a própria regra do termo.
+          if (start < from || used.has(term.id) || (term.pagina === currentPage && slug(term.secao) && scopeTitle.startsWith(slug(term.secao)))) return;
+          used.add(term.id);
+          fragment.append(node.data.slice(from, start));
+          const link = document.createElement('a');
+          link.className = 'gloss';
+          link.href = `#glossary/${term.id}`;
+          link.title = `${term.termo}: ${term.def.replace(/<[^>]+>/g, '')}`;
+          link.textContent = node.data.slice(start, end);
+          fragment.append(link);
+          from = end;
+        });
+        if (!from) return;
+        fragment.append(node.data.slice(from));
+        node.replaceWith(fragment);
+      });
     }
 
     // terms: lista de trechos já normalizados (foldForSearch), ou um texto solto.
@@ -457,6 +527,7 @@
         const container = document.getElementById('md-doc');
         if (currentPage !== id || !container) return;
         container.innerHTML = renderMarkdown(stripDocTitle(text));
+        linkGlossary(container);
         buildToc();
         const unit = resolveTarget(target);
         if (unit) focusUnit(unit, target.term);
@@ -740,6 +811,8 @@
         else if (title.startsWith(phrase)) score += 40;
         if (entry.folded.includes(phrase) || entry.foldedTitle.includes(phrase)) score += 20;
         if (entry.unit === null) score -= 5; // texto solto da página por último
+        // O glossário define o termo; quem busca o nome de um item quer o cartão do item primeiro.
+        if (entry.id === 'glossary') score -= 60;
         const firstText = perTerm.map(found => found.text[0]).filter(Boolean).sort((a, b) => a[0] - b[0])[0];
         return [{ entry, score, at: firstText ? firstText[0] : 0 }];
       }).sort((first, second) => second.score - first.score);
@@ -802,7 +875,8 @@
       if (button) {
         let terms;
         try { terms = button.dataset.terms ? JSON.parse(button.dataset.terms) : undefined; } catch { terms = undefined; }
-        openPage(button.dataset.page, button.dataset.unit === undefined ? undefined : { unit: Number(button.dataset.unit), term: terms });
+        const target = button.dataset.section ? { section: button.dataset.section } : button.dataset.unit === undefined ? undefined : { unit: Number(button.dataset.unit), term: terms };
+        openPage(button.dataset.page, target);
       }
     });
     document.addEventListener('keydown', event => {

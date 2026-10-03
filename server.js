@@ -32,7 +32,7 @@ const contentTypes = {
 // Os arquivos de regras não têm notas de campanha; elas ficam no index.html.
 const playerFiles = new Set([
   '/jogadores.html', '/jogadores.json', '/wiki.css', '/wiki-app.js',
-  '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js',
+  '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
   '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css'
 ]);
 const playerFolders = ['/cyberpunk-css-main/cyberpunk-css-main/fonts/'];
