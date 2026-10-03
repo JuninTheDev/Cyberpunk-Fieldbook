@@ -165,10 +165,11 @@
       currentPage = id;
       search.value = '';
       writeHash(pageHash(id), historyMode);
+      rememberRecent(id);
       content.innerHTML = `<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
-      if (setup) setup();
+      if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml });
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
       if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target });
       linkGlossary(content);
@@ -181,6 +182,27 @@
       const unit = resolveTarget(target);
       if (unit) focusUnit(unit, target.term);
       else window.scrollTo({ top: 0 });
+    }
+
+    // ---------------- Recentes e relógios (para a página inicial) ----------------
+    function recentPages() {
+      try { return JSON.parse(storage.get('recentes') || '[]'); } catch { return []; }
+    }
+    // Guarda a página (e a seção, quando há) entre as 8 últimas abertas neste aparelho.
+    function rememberRecent(id, unit) {
+      if (!pageContent[id] || id === (config.homePage || 'home')) return;
+      const title = String(pageContent[id].title).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const list = recentPages().filter(item => item.id !== id);
+      list.unshift({ id, hash: pageHash(id, unit), title, section: unit ? unitTitle(unit) : '' });
+      storage.set('recentes', JSON.stringify(list.slice(0, 8)));
+    }
+    // Valor atual de cada relógio de config.clocks (as mesmas chaves que setupClock grava).
+    function clockState() {
+      return Object.entries(config.clocks || {}).map(([name, steps]) => {
+        let value = 0;
+        try { value = Number(localStorage.getItem(`night-city-clock-${name}-${activeCampaignId}`)) || 0; } catch { /* armazenamento indisponível */ }
+        return { name, steps, value };
+      });
     }
 
     // Volta à página atual como estava no endereço (Esc na busca, busca apagada).
@@ -299,13 +321,14 @@
       });
       // A seção vai para o endereço: recarregar ou mandar o link abre aqui.
       writeHash(pageHash(currentPage, unit), 'replace');
+      rememberRecent(currentPage, unit);
     }
 
     // ---------------- Glossário: links automáticos ----------------
     // A primeira menção de cada termo em cada seção (ou cartão) vira um link para o glossário, com a definição no title.
     const glossary = window.systemGlossary;
     const glossarySkipPages = new Set(['glossary', 'playerView', 'notes', ...mapPages]);
-    const glossarySkip = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .eyebrow, .entry-tag, .npc-stats, .gloss';
+    const glossarySkip = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .eyebrow, .entry-tag, .npc-stats, .gloss, .home-desk, .view-switch, .compare-panel';
     let glossaryMatchers = null;
     function buildGlossaryMatchers() {
       const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1006,5 +1029,5 @@
       }
     }
 
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, currentPage: () => currentPage };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, currentPage: () => currentPage, recentPages, clockState };
 })();

@@ -393,3 +393,13 @@ a.gloss:hover { color: var(--cyan); }
 .index-item strong { color: var(--yellow); font: 14px Oxanium, BlenderProBook, sans-serif; }
 .index-item small { color: var(--muted); font-size: 12px; }
 .index-item:hover { border-color: var(--cyan); }
+
+/* Página inicial: Na mesa agora */
+.home-desk { margin-bottom: 20px; }
+.home-desk .desk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 18px; margin-top: 10px; }
+.home-desk .tag { display: block; margin-bottom: 8px; color: var(--cyan); font: 10px var(--mono); text-transform: uppercase; }
+.home-desk .desk-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.home-desk .desk-buttons .action { margin-top: 0; }
+.home-desk ul { margin: 0; padding-left: 16px; }
+.home-desk li { margin-bottom: 6px; }
+.home-desk small { color: var(--muted); }

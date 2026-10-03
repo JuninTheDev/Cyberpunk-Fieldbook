@@ -167,6 +167,24 @@
       city: ['Antes do golpe', 'A noite da Konpeki', 'O Relic desperta', 'O desfile', 'Phantom Liberty', 'A eleição', 'O ataque à torre', 'Depois']
     };
 
+    // Página inicial: "Na mesa agora", com atalhos, as últimas páginas abertas e os relógios.
+    // Montado na hora (não entra na busca); some se o navegador não guardar nada.
+    function setupHomeDesk(content, { recentPages, clockState, escapeHtml }) {
+      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02']];
+      const clockNames = { sato: 'Relógio de Sato', city: 'Relógio da cidade' };
+      const recent = recentPages();
+      const clocks = clockState().map(({ name, steps, value }) => `<li><b>${escapeHtml(clockNames[name] || name)}: ${value}/${steps.length}</b><br><small>${value ? `Último marcado: ${escapeHtml(steps[value - 1])}` : 'Nenhum segmento marcado'}${value < steps.length ? ` · próximo: ${escapeHtml(steps[value])}` : ''}</small></li>`).join('');
+      const block = document.createElement('div');
+      block.className = 'section home-desk';
+      block.dataset.unitSkip = '';
+      block.innerHTML = `<h3>Na mesa agora</h3><div class="desk-grid">
+          <div><span class="tag">Atalhos</span><div class="desk-buttons">${shortcuts.map(([id, label]) => `<button class="action" type="button" data-page="${id}">${label}</button>`).join('')}</div></div>
+          <div><span class="tag">Continuar de onde parou</span>${recent.length ? `<ul class="desk-recent">${recent.map(item => `<li><a href="${escapeHtml(item.hash)}">${escapeHtml(item.title)}</a>${item.section ? `<small> › ${escapeHtml(item.section)}</small>` : ''}</li>`).join('')}</ul>` : '<p class="note-status">As páginas que você abrir aparecem aqui.</p>'}</div>
+          <div><span class="tag">Relógios</span><ul class="desk-clocks">${clocks}</ul><button class="action" type="button" data-page="notes">Notas e relógios</button></div>
+        </div>`;
+      (content.querySelector('.rule') || content.querySelector('.lede')).after(block);
+    }
+
     // Notas de campanha nas páginas de regras. Ficam aqui (e não nos arquivos system-*.js)
     // para nunca chegarem à visão dos jogadores. "name" é a seção ou o cartão onde a nota entra.
     const gmNote = text => `<div class="callout gm-note"><b>Na campanha:</b> ${text}</div>`;
@@ -190,7 +208,7 @@
       pageContent: { ...pageContent, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}) },
       clocks: campaignClocks,
       gmNotes,
-      pageSetup: { playerView: () => window.playerManager && window.playerManager.setup() },
+      pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk },
       homePage: 'home',
       // Alerta quando um arquivo da campanha volta para uma versão antiga (OneDrive).
       healthUrl: 'api/saude'
