@@ -36,6 +36,9 @@ Etapas do relógio de Sato: 1. Recuperar a Chave · 2. Garantir o Gatilho · 3. 
 
 - [ ] Endo foi cientista do projeto (e não "só um entregador").
 - [ ] Endo escreveu a rotina de propagação.
+- [ ] Foi Endo quem chamou Sato de volta a Night City ("Ela acordou.").
+- [ ] Wakako achava que a maleta era prova do encobrimento, não uma arma.
+- [ ] A Militech guarda a Coleira sem saber.
 - [ ] Morana é Arasaka feita sobre código roubado da Militech.
 - [ ] Wakako ajudou Sato a fugir.
 - [ ] Wakako aceitou dinheiro para enterrar o caso.

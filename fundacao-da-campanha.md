@@ -30,7 +30,7 @@ O teste nao pretendia controlar toda a cidade. O objetivo era criar uma arma de 
 
 O primeiro teste saiu do controle. O virus atravessou uma rede de hospitais de campanha e atingiu civis com implantes baratos. Pessoas perderam o controle dos proprios corpos; pacientes tiveram seus suportes de vida desligados; seguranca privada atirou contra pessoas que seus sistemas identificaram como alvos. Para impedir um escandalo bem no meio da guerra pela autonomia da cidade, Arasaka culpou um ataque terrorista da NUSA e incendiou o complexo onde o teste acontecera - um hospital de campanha em Northside que nunca foi reconstruido.
 
-O projeto foi declarado destruido, mas isso era mentira. A equipe de pesquisa dividiu o codigo em tres partes e o escondeu dentro de redes civis. Os cientistas foram eliminados ou comprados. Os sobreviventes do teste passaram a ser monitorados como cobaias vivas, sem jamais saber por que certos implantes causavam falhas e pesadelos recorrentes.
+O projeto foi declarado destruido, mas isso era mentira. A divisao de seguranca da Arasaka - a mesma que conduziu o encobrimento -, com os cientistas que aceitaram ser comprados, dividiu o codigo em tres partes e o escondeu onde ninguem procuraria. Os outros cientistas foram eliminados. Os sobreviventes do teste passaram a ser monitorados como cobaias vivas, sem jamais saber por que certos implantes causavam falhas e pesadelos recorrentes.
 
 ### As tres partes de Morana
 
@@ -42,13 +42,100 @@ O projeto foi declarado destruido, mas isso era mentira. A equipe de pesquisa di
 
 Nenhuma parte faz nada sozinha. Juntas, no **Nucleo** - o no central da rede de emergencia da cidade, sob o City Center -, elas ativam ou desligam Morana. Quem controla a Chave decide onde as outras duas podem ser usadas; por isso a maleta e disputada desde a primeira cena.
 
+### Como as partes foram escondidas
+
+Sato ja tinha fugido quando o codigo foi dividido, e Endo ja constava como morto (veja abaixo). Nenhum dos dois participou da divisao, e por isso nenhum dos dois sabia onde as partes foram parar. Para esconde-las, a Arasaka usou a ferramenta que tinha a mao: a rotina de propagacao por firmware que Endo escrevera em 2069, feita justamente para mover codigo por aparelhos civis sem chamar atencao.
+
+- **A Chave** foi guardada numa particao esquecida de um retransmissor de firmware, num deposito de mercadorias medicas em Kabuki: um no barato que distribui atualizacoes para os implantes das clinicas de Watson. Ninguem audita esse tipo de maquina, e ela fica ligada a rede de emergencia o tempo todo. A Arasaka deixou ali um vigia digital que avisa se a particao for mexida.
+- **O Gatilho** ficou onde estava: no subsolo do hospital incendiado, desligado e lacrado. Remove-lo deixaria rastro, e a versao oficial dizia que tudo tinha queimado.
+- **A Coleira** foi escondida no lugar mais ironico possivel: num datafort da Militech, disfarcada de arquivo antigo da propria Militech. Como e codigo original da Militech, passa em qualquer auditoria. A Militech guarda a Coleira ha sete anos sem saber.
+
 ### O retorno
 
 Alguns anos depois, o codigo reapareceu. Dr. Kenzo Endo, um dos poucos cientistas do projeto original que nao foi eliminado nem comprado, descobriu que a parte adormecida de Morana esta se recompondo sozinha, alimentada por atualizacoes de firmware e pela rede de emergencias da cidade. Em poucos dias, ela podera se espalhar por qualquer implante conectado.
 
-O que Endo nao conta a ninguem: foi ele quem escreveu a rotina de propagacao por firmware em 2069, e ele proprio foi exposto ao virus durante o teste. Morana esta se reconstruindo com o codigo dele.
+O que Endo nao conta a ninguem: foi ele quem escreveu a rotina de propagacao por firmware em 2069, e ele proprio foi exposto ao virus durante o teste. Morana esta se reconstruindo com o codigo dele. E foi ele quem chamou Sato de volta a Night City.
 
-Endo tentou vender a informacao para Wakako, mas a equipe de Sato o alcancou antes do encontro. Ele foi baleado e se escondeu num deposito medico em Kabuki, ainda vivo, com a maleta presa ao pulso. A maleta contem a prova, a Chave e a localizacao do Gatilho e da Coleira. Os personagens descobrem a identidade dele conversando com ele, investigando a maleta ou pressionando Wakako.
+Endo tentou vender a Chave para Wakako, mas a equipe de Sato o alcancou antes do encontro. Ele foi baleado e se escondeu num deposito medico em Kabuki, ainda vivo, com a maleta presa ao pulso. A maleta contem a prova, a Chave e a localizacao do Gatilho e da Coleira. Os personagens descobrem a identidade dele conversando com ele, investigando a maleta ou pressionando Wakako. A historia completa esta logo abaixo.
+
+## A historia de Endo e da maleta (so para o mestre)
+
+### Quem e Endo depois de 2070
+
+Endo saiu de Night City em 2070 no "caminhao de peixe" de Wakako, junto com outras testemunhas. Para a Arasaka, ele morreu no incendio do hospital: Wakako providenciou um corpo para o lugar dele. Por isso ele nao foi eliminado nem comprado. Oficialmente, nao existia mais.
+
+Em 2074 ele voltou com outro nome, **Hideo Mori**, e arrumou emprego de tecnico noturno de firmware justamente no deposito de Kabuki. Nao foi coincidencia: ele tinha reconhecido a propria assinatura de codigo nas atualizacoes que aquele retransmissor distribuia e quis ficar perto. Passou tres anos vigiando, em silencio, o codigo que ele mesmo escreveu. Nesse periodo, vendia a Wakako, de vez em quando, informacoes sobre o mercado de implantes de Watson. Foi assim que virou informante dela.
+
+### Como ele descobriu
+
+No inicio de 2077, uma atualizacao de rotina da rede de emergencia reabriu o caminho que a rotina de Endo usava, e as tres partes voltaram a se enxergar. O retransmissor do deposito comecou a distribuir pacotes que ninguem tinha autorizado, com trechos do codigo dele. Pacientes das clinicas de Kabuki apareceram com espasmos (a clinica clandestina do Ato 1 tem esses registros). O implante do pescoco do proprio Endo comecou a acender sozinho.
+
+### Por que ele chamou Sato
+
+Endo nao tinha a quem recorrer. A Arasaka o mataria, a Militech transformaria Morana em arma e a NCPD chamaria tudo de cyberpsicose. Restava a unica pessoa que entendia o codigo tao bem quanto ele e que um dia tinha tentado denuncia-lo: Reina Sato. Os dois tinham combinado em 2070, antes da fuga dela, um endereco de mensagens que nunca usaram. Endo mandou duas palavras: **"Ela acordou."**
+
+Sato voltou a Night City em segredo, com Iskra Voss e a equipe dela, e trabalhou com Endo por cerca de tres semanas. Ela precisava dele: nao sabia onde a Arasaka escondera as partes, e ele era o autor da rotina que as escondia e o tecnico com acesso ao retransmissor. Juntos, confirmaram que a Chave estava no deposito. O plano, segundo Sato, era tira-la da rede para que Morana nao terminasse de se montar e depois usar o mapa para achar a Coleira e desligar tudo.
+
+Esta e a segunda culpa de Endo, alem de ter escrito a propagacao: foi ele quem trouxe Sato de volta. Por isso ele nunca menciona Sato primeiro.
+
+### A ruptura
+
+Dias antes da extracao combinada, Endo viu no terminal de Sato o roteiro real: o Nucleo marcado como ponto de ativacao, nao de desligamento, e uma lista de sobreviventes de 2070 escolhidos como alvos da "demonstracao". Ele nao teve tempo de copiar a lista, mas sabe que ela existe. E a prova que, nas maos certas, pode virar Iskra contra Sato.
+
+Endo antecipou a extracao. Sozinho, no turno da noite, tirou a Chave do retransmissor e a guardou no estojo que a propria Sato tinha lhe dado: uma maleta blindada de transporte de amostras da Arasaka, modelo de 2070, que isola o conteudo de qualquer rede. Junto com a Chave, guardou a prova que pretendia mostrar a Wakako: os registros dos pacotes que o retransmissor distribuiu e o historico das mensagens trocadas com Sato nas ultimas semanas, assinadas por ela. Depois prendeu a maleta ao pulso com uma trava biometrica regulada para ele. Sem Endo vivo, a maleta so abre por arrombamento. E um dos motivos da ordem de Sato: "vivo, se possivel".
+
+**Regra da Chave:** fora da rede, Morana nao consegue se coordenar em escala e so age perto de implantes vulneraveis. Mas a Chave continua "chamando": qualquer implante fraco perto da maleta pode virar ponte para ela procurar uma rede. Isso explica os espasmos de Endo, a morte de Kobo, a manifestacao da Cena 5 e o que acontece se a maleta for destruida.
+
+### Os dias de fuga
+
+Endo passou alguns dias escondido em Kabuki, em lugares blindados, tentando transformar a Chave em dinheiro e protecao:
+
+1. **Avisou Tomas Vale**, o jornalista para quem era fonte anonima havia meses, para que sumisse. Tomas sumiu e deixou os arquivos no apartamento de Little China.
+2. **Ofereceu uma amostra a um fixer ligado a Militech**, pelo canal de Meredith Stout: "codigo da Militech dentro de uma arma da Arasaka". O fixer quis comprar a Coleira para guarda-la, nao para destrui-la, e Endo recuou. Foi tarde: a Militech agora sabe que tem algo seu escondido. Esse fixer pode ser quem mandou um personagem espiao vigiar a maleta (veja `ganchos-dos-personagens.md`). A gravacao dessa conversa e a que aparece nos destrocos das Badlands.
+3. **Tratou os espasmos na clinica clandestina de Kabuki**, onde o ripperdoc viu o implante com lote militar de 2069.
+4. **Usou o canal de uso unico de Wakako.** Cada pessoa que Wakako tirou da cidade em 2070 recebeu um numero para usar uma unica vez, em caso de vida ou morte. Endo usou o dele.
+
+### O que Endo disse a Wakako (e o que escondeu)
+
+Pelo canal, Endo disse apenas que era "um dos seus de 2070"; que tinha uma coisa daquela epoca que nao podia ficar com ninguem; que queria vende-la por dinheiro suficiente para sumir; que ela vinha numa maleta preta do tamanho de uma caixa de sapatos, presa ao pulso dele; e que ninguem podia abri-la nem conecta-la a nada. Combinaram o encontro num mercado de Kabuki, na noite em que a cidade estivesse ocupada demais para reparar: a noite da Konpeki.
+
+Ele nao disse a palavra "Morana" e nao disse o nome de Sato, por tres motivos:
+
+- **Vergonha:** foi ele quem chamou Sato de volta.
+- **Medo:** Wakako e Sato tem uma divida antiga uma com a outra. Endo nao sabia de que lado Wakako ficaria e temia que ela tentasse negociar direto com Sato.
+- **Cautela:** a linha nao era segura, e a Arasaka estava varrendo Japantown e Watson. Ele pretendia contar tudo pessoalmente, mas o encontro nunca aconteceu.
+
+### Por que Wakako "nao sabia"
+
+Wakako sabia que a maleta era perigosa. So errou o tipo de perigo. Para ela, uma coisa de 2070 que nao pode ser aberta nem conectada so podia ser **prova do encobrimento**: registros, nomes, talvez o dela. Pelo que ela sabia, Morana estava morta havia sete anos. Sato estava viva, mas longe, e Wakako nao sabia que Endo e Sato voltaram a se falar.
+
+Isso explica o comportamento dela na Sessao 1:
+
+- **Paga acima do normal e quer a maleta fechada** porque quer ser a primeira, e talvez a unica, a ver o que tem dentro. Se for prova contra ela, quer decidir o que fazer com isso.
+- **Repassa as regras de Endo** ("nao abram, nao conectem") sem entender o motivo tecnico.
+- **Contrata gente de fora** porque os homens dela ja foram vistos fazendo perguntas, porque os Tyger Claws nao querem bater de frente com a Arasaka durante a varredura e porque, se a maleta for o que ela teme, quer intermediarios que possam ser negados.
+- **Nunca diz o nome do mensageiro.** Ela prometeu a cada pessoa que tirou da cidade que o nome dela nunca mais seria dito. E uma das poucas promessas que cumpre sempre.
+- **Perde a compostura no fim da sessao** porque e ali que descobre que a maleta nao guarda uma prova, e sim uma arma, e que as mensagens dentro dela tem a assinatura de Sato, com data desta semana. O medo dela muda de tamanho: deixa de ser pela propria reputacao e passa a ser pela cidade.
+
+### A noite da Konpeki: como Endo foi baleado
+
+1. **Sato perdeu Endo de vista** quando ele antecipou a extracao, mas tinha como acha-lo: o implante do pescoco dele esta na lista de sobreviventes que ela guarda, e ela conhece a assinatura do lote de 2069. Endo passou dias em lugares blindados. A caminho do encontro, teve um espasmo, e o implante se conectou sozinho por alguns segundos. Foi o suficiente.
+2. **Iskra interceptou Endo** a poucas quadras do mercado. Ele correu. Iskra atirou para derruba-lo, nao para matar, mas acertou o abdomen.
+3. **Endo fugiu para o deposito**, o unico lugar por perto do qual tinha as chaves e conhecia cada corredor. Iskra, Kobo e o netrunner entraram atras dele. O netrunner apagou sete minutos das cameras.
+4. **No deposito, o netrunner tentou forcar a trava da maleta** pela porta de dados. Endo gritou "Nao conectem isso!", o grito que um morador ouviu. A Chave procurou uma ponte e achou o cyberarm de Kobo, do mesmo lote de 2069. O braco levou a pistola ao queixo de Kobo e atirou.
+5. **Iskra recuou.** Um homem morto por algo que ela nao entendia, a iris piscando em vermelho, os sistemas do deposito enlouquecendo e os Tyger Claws chegando por causa dos tiros. Tres entraram; duas sairam. Endo se arrastou para a sala refrigerada. Um colega do turno da noite, escondido durante o tiroteio, viu "o Mori" se arrastar ate la: e o funcionario escondido da Sessao 1.
+6. **O homem de Wakako no mercado** ouviu os tiros e viu sangue na rua. Horas depois, o rumor do bairro e o radio da NCPD diziam: "um morto no deposito medico". Wakako concluiu que era o mensageiro. Era Kobo. E por isso que Endo comeca a campanha dado como morto, pela segunda vez na vida.
+7. **A Arasaka chegou ao deposito por outro caminho.** O vigia deixado no retransmissor em 2070 tinha avisado, dias antes, que a particao estava vazia. A divisao de seguranca rastreou a falha ate o tecnico noturno que sumiu, "Hideo Mori", e o tiroteio no mesmo deposito confirmou a pista. Por meio de um intermediario, contratou Vega: "Recuperar o ativo Morana antes da ativacao. Eliminar testemunhas se necessario." A Arasaka ainda nao sabe que "Mori" e o Endo que ela deu como morto em 2070.
+
+### O que cada um sabe no inicio da Sessao 1
+
+| Quem | Sabe | Nao sabe |
+|---|---|---|
+| Wakako | O mensageiro e Endo, um dos que ela tirou da cidade e informante dela. Ele queria vender "algo de 2070" que nao pode ser aberto nem conectado. | Que Morana voltou. Que Sato esta em Night City. Que foi Endo quem a chamou. Que Arasaka e Militech ja se mexeram. |
+| Endo | O que e a Chave, o plano real de Sato e que existe uma lista de sobreviventes para a demonstracao. | Que o proprio implante carrega codigo de Morana, e que foi assim que Sato o achou. Que Morana matou Kobo para protege-lo. |
+| Sato e Iskra | Que Endo traiu o plano e fugiu ferido com a Chave. Que Kobo morreu. Sato tambem adivinha para quem Endo correria: a mulher que tirou os dois da cidade. | Se Endo sobreviveu. Iskra sabe que nao foi Endo quem matou Kobo, mas nao sabe o que foi. |
+| Arasaka (via Vega) | Que a Chave foi extraida do retransmissor e que alguem pretende ativar Morana. | Que o mensageiro e Endo. Que Sato voltou. |
+| Militech | Que existe codigo seu dentro de uma arma da Arasaka e que alguem esta vendendo. | Que a Coleira esta no proprio datafort dela. |
 
 ## Quem tem o poder?
 
@@ -80,9 +167,9 @@ O primeiro trabalho parece uma operacao de limpeza. Aos poucos, fica evidente qu
 
 Reina Sato dirigiu a equipe cientifica responsavel pelo primeiro teste. Ela acreditava que Morana impediria guerras longas: uma corporacao capaz de desligar um exercito inteiro venceria rapidamente, evitando destruicao em larga escala.
 
-Quando o teste atingiu civis, Sato denunciou o projeto. Arasaka apagou seus registros, mas Wakako a ajudou a fugir em troca de informacoes e dinheiro. Sato desapareceu por alguns anos e retornou convencida de que a cidade nao pode mais ser deixada nas maos de corporacoes rivais.
+Quando o teste atingiu civis, Sato denunciou o projeto. Arasaka apagou seus registros, mas Wakako a ajudou a fugir em troca de informacoes e dinheiro. Sato desapareceu por alguns anos, montou do exilio a lista de sobreviventes e retornou, no inicio de 2077, quando Endo a chamou. Voltou convencida de que a cidade nao pode mais ser deixada nas maos de corporacoes rivais.
 
-Dr. Kenzo Endo, o mensageiro da Sessao 1, era seu colega e confidente na epoca do teste original. Ele discordou do plano de reativacao de Sato assim que descobriu e tentou expor tudo a Wakako. Sato mandou recupera-lo - vivo, se possivel - e a equipe dela atirou quando ele fugiu. Isso da a Sato uma traicao pessoal para carregar, alem da institucional.
+Dr. Kenzo Endo, o mensageiro da Sessao 1, era seu colega e confidente na epoca do teste original. Foi ele quem a avisou de que Morana estava acordando, e os dois trabalharam juntos ate Endo descobrir que ela queria ativar o virus, nao desliga-lo. Ele fugiu com a Chave e tentou vende-la a Wakako. Sato mandou recupera-lo - vivo, se possivel: a maleta esta presa ao pulso dele por trava biometrica, e ele e o autor da propagacao - e Iskra atirou quando ele fugiu. Isso da a Sato uma traicao pessoal para carregar, alem da institucional. (Detalhes em "A historia de Endo e da maleta".)
 
 Quem executa o trabalho de campo e **Iskra Voss**, tenente de Sato e sobrevivente do primeiro teste (veja `personagens-da-campanha.md`). Iskra e o rosto de Sato nas ruas ate a propria Sato aparecer.
 
@@ -154,7 +241,7 @@ O objetivo nao e apenas derrotar Sato. E escolher quem tera acesso ao antidoto e
 Use tres a quatro reviravoltas principais, cada uma mudando a escolha dos personagens:
 
 1. **Wakako sabia mais do que contou:** ela nao criou Morana, mas ajudou a apagar as provas do primeiro teste e conhece a identidade de varias vitimas.
-2. **Endo escreveu a propagacao:** o cientista que o grupo protegeu e o autor da parte do codigo que hoje faz Morana se espalhar. Ele e culpado - e tambem a pessoa que melhor sabe como quebra-la.
+2. **Endo escreveu a propagacao - e chamou Sato de volta:** o cientista que o grupo protegeu e o autor da parte do codigo que hoje faz Morana se espalhar, e foi a mensagem dele ("Ela acordou.") que trouxe Sato para Night City. Ele e culpado - e tambem a pessoa que melhor sabe como quebrar Morana. Revele as duas culpas separadamente: primeiro a propagacao (pista "K.E." na Sessao 2), depois o chamado. Wakako leu o historico de mensagens na maleta no fim da Sessao 1 e guarda essa informacao como alavanca sobre Endo; ela pode usa-la quando lhe convier, ou a propria Sato pode contar.
 3. **O antidoto tambem e uma arma:** ele pode desligar Morana, mas tambem pode apagar permanentemente os implantes de qualquer pessoa conectada a rede.
 4. **Morana esta evoluindo:** o virus nao obedece mais completamente a Sato. Se for transmitido para a rede principal, podera continuar se espalhando mesmo depois da morte dela.
 5. *(opcional)* **NetWatch ja sabia:** a organizacao vem rastreando anomalias na rede havia meses e deixou a situacao se desenrolar de proposito, esperando ver no que Morana se transformaria antes de agir.

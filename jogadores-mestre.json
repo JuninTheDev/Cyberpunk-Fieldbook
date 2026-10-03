@@ -1,13 +1,12 @@
 {
-  "atualizado": "2026-09-29T03:50:56.281Z",
-  "resumo": "## A mensagem\n\nCada um de vocês recebeu a mesma mensagem, enviada por um contato de confiança:\n\n**Wakako Okada deseja falar com vocês. Hoje. Sem acompanhantes. O pagamento será alto.**\n\nO endereço leva ao pachinko de Wakako, na Jig-Jig Street, em Japantown.",
+  "resumo": "## A mensagem\n\nCada um de vocês recebeu a mesma mensagem, enviada por um contato de confiança:\n\n**Wakako Okada deseja falar com você. Hoje. Sem acompanhantes. O pagamento será alto.**\n\nO endereço leva ao pachinko de Wakako, na Jig-Jig Street, em Japantown.",
   "npcs": [
     {
       "id": "wakako",
       "nome": "Wakako Okada",
-      "papel": "Fixer de Japantown",
-      "texto": "Dona de um pachinko na Jig-Jig Street, ligada aos Tyger Claws. Mandou a mensagem que reuniu o grupo e paga bem. Fala baixo e escolhe cada palavra.",
-      "revelado": true
+      "papel": "Canal de Japantown",
+      "texto": "Dona de um pachinko na Jig-Jig Street, ligada aos Tyger Claws. Mandou a mensagem que reuniu o grupo e paga bem.",
+      "revelado": false
     },
     {
       "id": "mina",
@@ -28,7 +27,7 @@
       "nome": "O mensageiro",
       "papel": "Encontrado no depósito de Kabuki",
       "texto": "Baleado, com uma maleta presa ao pulso por trava biométrica. Implante antigo no pescoço, espasmos e pequenas luzes sob a pele.",
-      "nota": "Dr. Kenzo Endo. Troque o nome do cartão quando o grupo souber.",
+      "nota": "Dr. Kenzo Endo. No depósito, os colegas o conhecem como Hideo Mori, técnico de firmware do turno da noite. Troque o nome do cartão quando o grupo souber.",
       "revelado": false
     },
     {
@@ -170,7 +169,8 @@
       "titulo": "N54: surto de ciberpsicose em Kabuki (exemplo)",
       "data": "Manhã seguinte",
       "texto": "\"...o suspeito foi encontrado morto num depósito médico de Kabuki após o que a NCPD classificou como um surto de cyberpsicose. Segundo fontes, o corpo desapareceu antes da chegada da perícia.\"",
-      "publicada": false
+      "publicada": true
     }
-  ]
+  ],
+  "atualizado": "2026-10-02T15:54:47.906Z"
 }
