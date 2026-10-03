@@ -229,12 +229,16 @@
     // Rolagem suave própria: a do navegador (behavior: 'smooth') às vezes é ignorada logo depois de trocar de página.
     // Pula direto se a aba estiver oculta ou se o sistema pedir menos animação; a roda do mouse interrompe.
     let scrollAnimation = 0;
-    const stopScrollAnimation = () => cancelAnimationFrame(scrollAnimation);
+    const stopScrollAnimation = () => { cancelAnimationFrame(scrollAnimation); scrollAnimation = 0; };
     window.addEventListener('wheel', stopScrollAnimation, { passive: true });
     window.addEventListener('touchstart', stopScrollAnimation, { passive: true });
-    function scrollWindow(top, smooth) {
+    // topOf: função que mede o destino agora. É medida de novo no fim, porque o layout pode mudar durante a rolagem
+    // (fontes terminando de carregar, links do glossário entrando no texto).
+    function scrollWindow(topOf, smooth) {
       stopScrollAnimation();
-      const target = Math.max(0, Math.min(top, document.documentElement.scrollHeight - window.innerHeight));
+      const clamp = top => Math.max(0, Math.min(top, document.documentElement.scrollHeight - window.innerHeight));
+      const settle = () => { const final = clamp(topOf()); if (Math.abs(window.scrollY - final) > 2) window.scrollTo(0, final); };
+      const target = clamp(topOf());
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (!smooth || reduce || document.visibilityState === 'hidden') { window.scrollTo(0, target); return; }
       const start = window.scrollY;
@@ -245,8 +249,15 @@
         const progress = Math.min(1, (now - startTime) / duration);
         window.scrollTo(0, start + distance * (1 - Math.pow(1 - progress, 3)));
         if (progress < 1) scrollAnimation = requestAnimationFrame(step);
+        else { scrollAnimation = 0; settle(); }
       };
       scrollAnimation = requestAnimationFrame(step);
+      // Se o navegador não desenhar quadros (aba em segundo plano), pula direto ao destino no fim do tempo previsto.
+      const animation = scrollAnimation;
+      setTimeout(() => {
+        // Nenhum quadro rodou (o id não mudou) e ninguém rolou na mão (a roda zera o id).
+        if (scrollAnimation === animation) { stopScrollAnimation(); settle(); }
+      }, duration + 150);
     }
 
     // Altura ocupada no topo pelas barras fixas (a da busca e a "Nesta página", quando existe).
@@ -269,10 +280,10 @@
       const markIsFar = firstMark && firstMark.getBoundingClientRect().top - unit.getBoundingClientRect().top > window.innerHeight / 2;
       // A rolagem é calculada pela altura real da barra do topo e da barra "Nesta página" (que muda com os chips):
       // assim a seção para logo abaixo delas e o chip certo fica marcado.
-      const top = markIsFar
+      const topOf = () => (markIsFar
         ? firstMark.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2
-        : unit.getBoundingClientRect().top + window.scrollY - stickyHeight() - 8;
-      scrollWindow(top, smooth);
+        : unit.getBoundingClientRect().top + window.scrollY - stickyHeight() - 8);
+      scrollWindow(topOf, smooth);
       block.forEach(element => {
         element.classList.remove('flash');
         void element.offsetWidth;
