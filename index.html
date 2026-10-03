@@ -190,7 +190,9 @@
       clocks: campaignClocks,
       gmNotes,
       pageSetup: { playerView: () => window.playerManager && window.playerManager.setup() },
-      homePage: 'home'
+      homePage: 'home',
+      // Alerta quando um arquivo da campanha volta para uma versão antiga (OneDrive).
+      healthUrl: 'api/saude'
     };
   </script>
   <script src="wiki-app.js"></script>

@@ -349,3 +349,9 @@ a.action.pv-link { display: inline-block; text-decoration: none; }
 /* Visão dos jogadores */
 .pv-toast { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 10; padding: 10px 14px; border: 1px solid var(--cyan); background: #10211e; color: var(--cyan); font: 12px Oxanium, Consolas, monospace; text-transform: uppercase; }
 .pv-news-date { color: var(--cyan); font: 11px Oxanium, Consolas, monospace; text-transform: uppercase; }
+
+/* Alerta de arquivo da campanha revertido (wiki do mestre) */
+.health-banner { position: relative; z-index: 6; padding: 12px clamp(18px, 4vw, 48px); border-bottom: 2px solid var(--coral); background: #2a0d14; color: #ffd9d8; font-size: 14px; }
+.health-banner b { color: var(--coral); }
+.health-banner ul { margin: 6px 0 0; padding-left: 18px; }
+.health-banner code { padding: 1px 5px; background: #12090b; color: #fff; font: 12px var(--mono); }

@@ -20,9 +20,9 @@ function ipDaRede() {
   return ips[0]?.address || null;
 }
 
-async function subir(porta, env) {
+async function subir(porta, env, pasta = raiz) {
   if (!(await portaLivre(porta))) throw new Error(`A porta ${porta} está em uso. Feche o que estiver nela e rode os testes de novo.`);
-  const proc = spawn(process.execPath, ['server.js'], { cwd: raiz, env: { ...process.env, ...env, PORT: String(porta) }, stdio: 'ignore' });
+  const proc = spawn(process.execPath, ['server.js'], { cwd: pasta, env: { ...process.env, ...env, PORT: String(porta) }, stdio: 'ignore' });
   for (let i = 0; i < 40; i++) {
     await sleep(150);
     try { await fetch(`http://127.0.0.1:${porta}/`); return proc; } catch { /* ainda subindo */ }
@@ -45,4 +45,4 @@ async function subirServidores() {
   };
 }
 
-module.exports = { subirServidores };
+module.exports = { subirServidores, subir };

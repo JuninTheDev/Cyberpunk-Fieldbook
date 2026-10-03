@@ -1,3 +1,4 @@
+const { execFile } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
@@ -56,6 +57,40 @@ function send(response, status, text, headers = {}) {
   response.end(text);
 }
 
+// ---------------- Alerta de arquivo revertido ----------------
+// A pasta fica no OneDrive, que já voltou arquivos da campanha para versões antigas sem avisar.
+// Um arquivo modificado que é idêntico a uma versão antiga do git (e não à atual) foi revertido.
+const runGit = args => new Promise(resolve => {
+  execFile('git', args, { cwd: root, maxBuffer: 20 * 1024 * 1024, windowsHide: true }, (error, stdout) => resolve(error ? null : stdout));
+});
+// Hash que o git daria ao conteúdo; com e sem CRLF, porque commits antigos guardaram CRLF.
+const blobHash = buffer => crypto.createHash('sha1').update(`blob ${buffer.length}\0`).update(buffer).digest('hex');
+
+async function findRevertedFiles() {
+  const status = await runGit(['status', '--porcelain', '-z']);
+  if (status === null) return null; // sem git ou fora de um repositório: sem alerta
+  const modified = status.split('\0').filter(line => /^( M|M |MM)/.test(line)).map(line => line.slice(3));
+  const reverted = [];
+  for (const file of modified) {
+    let raw;
+    try { raw = fs.readFileSync(path.join(root, file)); } catch { continue; }
+    const head = (await runGit(['rev-parse', `HEAD:${file}`]) || '').trim();
+    const hashes = new Set([blobHash(raw), blobHash(Buffer.from(raw.toString('utf8').replace(/\r\n/g, '\n'), 'utf8'))]);
+    if (hashes.has(head)) continue; // só o fim de linha mudou
+    for (const hash of hashes) {
+      const commits = (await runGit(['log', '--all', '--format=%h', `--find-object=${hash}`, '--', file]) || '').trim().split('\n').filter(Boolean);
+      if (commits.length) { reverted.push({ arquivo: file, commit: commits[commits.length - 1] }); break; }
+    }
+  }
+  return reverted;
+}
+
+let healthCache = { at: 0, result: null };
+async function health() {
+  if (Date.now() - healthCache.at > 30_000) healthCache = { at: Date.now(), result: await findRevertedFiles() };
+  return healthCache.result;
+}
+
 // Grava primeiro num arquivo temporário e depois troca: nunca fica um JSON pela metade.
 function writeJsonAtomic(file, data) {
   const temporary = `${file}.${process.pid}.tmp`;
@@ -108,6 +143,10 @@ http.createServer((request, response) => {
 
   const gameMaster = isGameMaster(request);
 
+  if (pathname === '/api/saude') {
+    if (!gameMaster) return send(response, 403, 'Só o mestre.');
+    return health().then(reverted => send(response, 200, JSON.stringify({ git: reverted !== null, revertidos: reverted || [] }), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' }));
+  }
   if (pathname === '/api/jogadores') {
     if (request.method !== 'POST') return send(response, 405, 'Use POST.');
     if (!gameMaster) return send(response, 403, 'Só o mestre publica.');
@@ -142,6 +181,11 @@ http.createServer((request, response) => {
   });
 }).listen(port, host, () => {
   console.log(`Wiki do mestre: http://localhost:${port}`);
+  health().then(reverted => {
+    for (const { arquivo, commit } of reverted || []) {
+      console.log(`\x1b[31mATENÇÃO: ${arquivo} voltou para uma versão antiga (${commit}), provavelmente pelo OneDrive.\n  Não edite. Para restaurar: git checkout HEAD -- "${arquivo}"\x1b[0m`);
+    }
+  });
   if (host === '127.0.0.1') {
     console.log('Só este computador acessa. Para os jogadores entrarem pela rede, rode com HOST=0.0.0.0.');
     return;

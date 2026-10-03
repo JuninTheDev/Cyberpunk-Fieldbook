@@ -701,6 +701,27 @@
       if (search.value.trim()) searchPages(search.value);
     });
 
+    // Alerta de arquivo revertido (só a wiki do mestre configura healthUrl): o servidor compara os arquivos com o git.
+    function checkHealth() {
+      if (!config.healthUrl || location.protocol === 'file:') return;
+      fetch(config.healthUrl, { cache: 'no-store' })
+        .then(response => response.ok ? response.json() : null)
+        .then(data => {
+          document.getElementById('health-banner')?.remove();
+          const reverted = (data && data.revertidos) || [];
+          if (!reverted.length) return;
+          const banner = document.createElement('div');
+          banner.id = 'health-banner';
+          banner.className = 'health-banner';
+          banner.setAttribute('role', 'alert');
+          banner.innerHTML = `<b>Arquivo da campanha voltou para uma versão antiga</b> (provavelmente pelo OneDrive). Não edite ${reverted.length > 1 ? 'esses arquivos' : 'esse arquivo'}; a wiki está mostrando o conteúdo antigo.<ul>${reverted.map(item => `<li><code>${escapeHtml(item.arquivo)}</code> está igual à versão ${escapeHtml(item.commit)}. Para restaurar: <code>git checkout HEAD -- "${escapeHtml(item.arquivo)}"</code></li>`).join('')}</ul>`;
+          document.querySelector('main').prepend(banner);
+        })
+        .catch(() => { /* servidor antigo ou sem rede: sem alerta */ });
+    }
+    checkHealth();
+    setInterval(checkHealth, 5 * 60 * 1000);
+
     // Atualiza páginas já carregadas (a visão dos jogadores recebe as novidades do mestre sem recarregar).
     function updatePages(pages) {
       Object.assign(pageContent, pages);
