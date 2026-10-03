@@ -355,3 +355,11 @@ a.action.pv-link { display: inline-block; text-decoration: none; }
 .health-banner b { color: var(--coral); }
 .health-banner ul { margin: 6px 0 0; padding-left: 18px; }
 .health-banner code { padding: 1px 5px; background: #12090b; color: #fff; font: 12px var(--mono); }
+
+/* Busca: resultado escolhido com as setas, filtros e "mostrar mais" */
+.result.selected { border-color: var(--yellow); background: #1d221c; box-shadow: inset 3px 0 0 var(--yellow); }
+.search-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.search-filter { padding: 6px 11px; border: 1px solid #444d4b; background: #141819; color: var(--muted); cursor: pointer; font: 12px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.search-filter span { margin-left: 4px; color: var(--cyan); }
+.search-filter.active { border-color: var(--yellow); color: var(--yellow); background: #1d1f12; }
+.search-more { margin-top: 14px; }

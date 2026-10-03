@@ -277,10 +277,10 @@
       writeHash(pageHash(currentPage, unit), 'replace');
     }
 
-    function highlightTerm(elements, term) {
-      const needle = foldForSearch(term.trim());
-      const size = Array.from(needle).length;
-      if (!size) return;
+    // terms: lista de trechos já normalizados (foldForSearch), ou um texto solto.
+    function highlightTerm(elements, terms) {
+      const needles = (Array.isArray(terms) ? terms : [foldForSearch(String(terms).trim())]).filter(Boolean);
+      if (!needles.length) return;
       elements.forEach(element => {
         const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
         const nodes = [];
@@ -288,19 +288,17 @@
         nodes.forEach(node => {
           if (node.parentElement.closest('mark, select, option, button')) return;
           const characters = Array.from(node.data);
-          const folded = foldForSearch(node.data);
-          let from = 0;
-          let at = folded.indexOf(needle);
-          if (at < 0) return;
+          const ranges = matchRanges(foldForSearch(node.data), needles);
+          if (!ranges.length) return;
           const fragment = document.createDocumentFragment();
-          while (at >= 0) {
-            fragment.append(characters.slice(from, at).join(''));
+          let from = 0;
+          ranges.forEach(([start, end]) => {
+            fragment.append(characters.slice(from, start).join(''));
             const mark = document.createElement('mark');
-            mark.textContent = characters.slice(at, at + size).join('');
+            mark.textContent = characters.slice(start, end).join('');
             fragment.append(mark);
-            from = at + size;
-            at = folded.indexOf(needle, from);
-          }
+            from = end;
+          });
           fragment.append(characters.slice(from).join(''));
           node.replaceWith(fragment);
         });
@@ -675,26 +673,110 @@
       });
     }
 
+    // ---------------- Busca por palavras ----------------
+    // Sinônimos e abreviações (já sem acento): buscar qualquer um acha os outros.
+    const synonymGroups = [
+      ['cdt', 'rof'], ['pv', 'hp'], ['dv', 'dificuldade'], ['eb', 'eddies', 'eurodolar', 'eurodolares'], ['move', 'movimento'],
+      ['lesao', 'lesoes', 'injury'], ['ferido', 'wounded'], ['gravemente', 'seriously'], ['mortalmente', 'mortally'],
+      ['municao', 'ammo'], ['granada', 'grenade'], ['escudo', 'shield'], ['cobertura', 'cover'], ['iniciativa', 'initiative'],
+      ['furtividade', 'stealth'], ['percepcao', 'perception'], ['evasao', 'evasion', 'esquiva', 'esquivar'], ['briga', 'brawling'],
+      ['autofogo', 'autofire'], ['supressivo', 'suppressive'], ['mirado', 'aimed'], ['dano', 'damage'], ['cura', 'healing'],
+      ['ciberpsicose', 'cyberpsychosis', 'cyberpsicose', 'cyberpsycho'], ['implante', 'implantes', 'cyberware', 'cromo'],
+      ['veiculo', 'veiculos', 'vehicle', 'carro', 'carros'], ['preco', 'custo', 'price', 'cost'], ['arma', 'armas', 'weapon']
+    ];
+    const synonyms = new Map();
+    synonymGroups.forEach(group => group.forEach(word => synonyms.set(word, group)));
+    const stopWords = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'no', 'na', 'nos', 'nas', 'um', 'uma', 'com', 'por', 'para', 'the', 'of']);
+
+    // Cada palavra da busca vira as formas aceitas: ela, os sinônimos e o singular ("lesoes" → "lesao", "pistolas" → "pistola").
+    function queryTerms(query) {
+      const words = foldForSearch(query.trim()).split(/[^a-z0-9]+/).filter(Boolean);
+      const useful = words.filter(word => !stopWords.has(word));
+      return (useful.length ? useful : words).map(word => {
+        const forms = new Set([word, ...(synonyms.get(word) || [])]);
+        if (word.length > 4 && word.endsWith('oes')) forms.add(`${word.slice(0, -3)}ao`);
+        else if (word.length > 4 && word.endsWith('s')) forms.add(word.slice(0, -1));
+        forms.forEach(form => (synonyms.get(form) || []).forEach(other => forms.add(other)));
+        return [...forms];
+      });
+    }
+
+    // Trechos [início, fim] onde as formas aparecem. Formas curtas (até 3 letras) só valem no começo de uma palavra,
+    // para "sp" não casar com "espingarda".
+    function matchRanges(folded, needles) {
+      const ranges = [];
+      needles.forEach(needle => {
+        for (let at = folded.indexOf(needle); at >= 0; at = folded.indexOf(needle, at + 1)) {
+          if (needle.length <= 3 && at > 0 && /[a-z0-9]/.test(folded[at - 1])) continue;
+          ranges.push([at, at + needle.length]);
+        }
+      });
+      ranges.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+      return ranges.reduce((merged, range) => {
+        const last = merged[merged.length - 1];
+        if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
+        else merged.push([...range]);
+        return merged;
+      }, []);
+    }
+
+    let searchFilter = 'all';
+    let searchLimit = 60;
+    let lastQuery = '';
+
     function searchPages(query) {
-      const needle = foldForSearch(query.trim());
-      if (!needle) { reopenCurrent(); return; }
+      const terms = queryTerms(query);
+      if (!terms.length) { reopenCurrent(); return; }
+      if (query !== lastQuery) { searchLimit = 60; lastQuery = query; }
       searchIndex = searchIndex || buildSearchIndex();
-      const size = Array.from(needle).length;
+      const phrase = foldForSearch(query.trim()).replace(/\s+/g, ' ');
       const matches = searchIndex.flatMap(entry => {
-        const at = entry.folded.indexOf(needle);
-        if (at < 0) return [];
-        // Título da seção primeiro, depois o texto das seções, por último o texto solto da página.
-        return [{ entry, at, score: entry.foldedTitle.includes(needle) ? 0 : entry.unit === null ? 2 : 1 }];
-      }).sort((first, second) => first.score - second.score);
-      const shown = matches.slice(0, 60);
+        // Cada palavra precisa aparecer (em qualquer forma aceita) no texto ou no título.
+        const perTerm = terms.map(forms => ({ text: matchRanges(entry.folded, forms), title: matchRanges(entry.foldedTitle, forms) }));
+        if (perTerm.some(found => !found.text.length && !found.title.length)) return [];
+        const title = foldForSearch(entry.title || '');
+        let score = perTerm.reduce((sum, found) => sum + (found.title.length ? 10 : 2), 0);
+        if (title === phrase) score += 100;
+        else if (title.startsWith(phrase)) score += 40;
+        if (entry.folded.includes(phrase) || entry.foldedTitle.includes(phrase)) score += 20;
+        if (entry.unit === null) score -= 5; // texto solto da página por último
+        const firstText = perTerm.map(found => found.text[0]).filter(Boolean).sort((a, b) => a[0] - b[0])[0];
+        return [{ entry, score, at: firstText ? firstText[0] : 0 }];
+      }).sort((first, second) => second.score - first.score);
+
+      const workspaceOf = match => pageWorkspace[match.entry.id] === 'system' ? 'system' : 'campaigns';
+      const counts = { all: matches.length, system: matches.filter(match => workspaceOf(match) === 'system').length, campaigns: matches.filter(match => workspaceOf(match) === 'campaigns').length };
+      if (searchFilter !== 'all' && !counts[searchFilter]) searchFilter = 'all';
+      const filtered = searchFilter === 'all' ? matches : matches.filter(match => workspaceOf(match) === searchFilter);
+      const shown = filtered.slice(0, searchLimit);
+      const allForms = terms.flat();
       const excerpt = ({ entry, at }) => {
         const start = Math.max(0, at - 70);
-        const end = Math.min(entry.characters.length, at + size + 110);
-        const slice = (from, to) => escapeHtml(entry.characters.slice(from, to).join(''));
-        return `${start ? '…' : ''}${slice(start, at)}<mark>${slice(at, at + size)}</mark>${slice(at + size, end)}${end < entry.characters.length ? '…' : ''}`;
+        const end = Math.min(entry.characters.length, at + 180);
+        const ranges = matchRanges(entry.folded.slice(start, end), allForms);
+        let html = '';
+        let from = 0;
+        const piece = (a, b) => escapeHtml(entry.characters.slice(start + a, start + b).join(''));
+        ranges.forEach(([a, b]) => { html += `${piece(from, a)}<mark>${piece(a, b)}</mark>`; from = b; });
+        html += piece(from, end - start);
+        return `${start ? '…' : ''}${html}${end < entry.characters.length ? '…' : ''}`;
       };
-      content.innerHTML = `<p class="eyebrow">Busca local / ${matches.length} trecho(s)${matches.length > shown.length ? ` · mostrando ${shown.length}` : ''}</p><h2>Resultados</h2><p class="lede"><b>Enter</b> abre o primeiro resultado já na seção certa. <b>Esc</b> volta para a página.</p><div class="search-results">${shown.map(match => `<button class="result" data-page="${match.entry.id}"${match.entry.unit === null ? '' : ` data-unit="${match.entry.unit}"`} data-term="${escapeHtml(query.trim())}" type="button"><small>${escapeHtml(match.entry.pageTitle)}</small><strong>${escapeHtml(match.entry.title || match.entry.pageTitle)}</strong><p>${excerpt(match)}</p></button>`).join('') || '<div class="empty">Nenhuma entrada encontrada. Tente outro nome, em português ou inglês.</div>'}</div>`;
+      const filterChip = (key, label) => counts[key] ? `<button type="button" class="search-filter${searchFilter === key ? ' active' : ''}" data-search-filter="${key}">${label} <span>${counts[key]}</span></button>` : '';
+      content.innerHTML = `<p class="eyebrow">Busca local / ${matches.length} trecho(s)</p><h2>Resultados</h2><p class="lede"><b>↑ ↓</b> escolhem, <b>Enter</b> abre já na seção certa, <b>Esc</b> volta para a página.</p>
+        ${matches.length ? `<div class="search-filters">${filterChip('all', 'Tudo')}${filterChip('system', 'Regras')}${filterChip('campaigns', 'Campanha')}</div>` : ''}
+        <div class="search-results">${shown.map((match, index) => `<button class="result${index === 0 ? ' selected' : ''}" data-page="${match.entry.id}"${match.entry.unit === null ? '' : ` data-unit="${match.entry.unit}"`} data-terms="${escapeHtml(JSON.stringify(allForms))}" type="button"><small>${escapeHtml(match.entry.pageTitle)}</small><strong>${escapeHtml(match.entry.title || match.entry.pageTitle)}</strong><p>${excerpt(match)}</p></button>`).join('') || '<div class="empty">Nenhuma entrada encontrada. Tente outro nome, em português ou inglês, ou menos palavras.</div>'}</div>
+        ${filtered.length > shown.length ? `<button type="button" class="action search-more" data-search-more>Mostrar mais (${filtered.length - shown.length} restantes)</button>` : ''}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.remove('active'));
+    }
+
+    // Seleção com as setas na lista de resultados.
+    function moveSelection(step) {
+      const results = [...content.querySelectorAll('.result')];
+      if (!results.length) return;
+      const current = results.findIndex(result => result.classList.contains('selected'));
+      const next = Math.max(0, Math.min(results.length - 1, current + step));
+      results.forEach((result, index) => result.classList.toggle('selected', index === next));
+      results[next].scrollIntoView({ block: 'nearest' });
     }
 
     document.addEventListener('click', event => {
@@ -711,10 +793,17 @@
         focusUnit(pageUnits(content)[Number(tocChip.dataset.tocIndex)], undefined, true);
         return;
       }
+      const filterButton = event.target.closest('[data-search-filter]');
+      if (filterButton) { searchFilter = filterButton.dataset.searchFilter; searchPages(search.value); search.focus(); return; }
+      if (event.target.closest('[data-search-more]')) { searchLimit += 60; searchPages(search.value); return; }
       const critButton = event.target.closest('[data-crit]');
       if (critButton) { rollCritical(critButton.dataset.crit); return; }
       const button = event.target.closest('[data-page]');
-      if (button) openPage(button.dataset.page, button.dataset.unit === undefined ? undefined : { unit: Number(button.dataset.unit), term: button.dataset.term });
+      if (button) {
+        let terms;
+        try { terms = button.dataset.terms ? JSON.parse(button.dataset.terms) : undefined; } catch { terms = undefined; }
+        openPage(button.dataset.page, button.dataset.unit === undefined ? undefined : { unit: Number(button.dataset.unit), term: terms });
+      }
     });
     document.addEventListener('keydown', event => {
       const typing = event.target.closest && event.target.closest('input, textarea, select, [contenteditable]');
@@ -726,9 +815,14 @@
     });
     search.addEventListener('keydown', event => {
       if (event.key === 'Escape') { reopenCurrent(); search.blur(); }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (!content.querySelector('.result')) return;
+        event.preventDefault();
+        moveSelection(event.key === 'ArrowDown' ? 1 : -1);
+      }
       if (event.key === 'Enter') {
-        const first = content.querySelector('.result');
-        if (first) { event.preventDefault(); first.click(); search.blur(); }
+        const chosen = content.querySelector('.result.selected') || content.querySelector('.result');
+        if (chosen) { event.preventDefault(); chosen.click(); search.blur(); }
       }
     });
     navigation.addEventListener('change', event => {

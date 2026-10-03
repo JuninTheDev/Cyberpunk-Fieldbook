@@ -15,11 +15,12 @@ class Relatorio {
   constructor() { this.itens = []; }
   // fn devolve [ok, detalhe]; um erro conta como falha, com a mensagem.
   async passo(nome, fn) {
+    const inicio = Date.now();
     try {
       const [ok, detalhe = ''] = await fn();
-      this.itens.push({ nome, ok: Boolean(ok), detalhe: String(detalhe) });
+      this.itens.push({ nome, ok: Boolean(ok), detalhe: String(detalhe), ms: Date.now() - inicio });
     } catch (error) {
-      this.itens.push({ nome, ok: false, detalhe: `erro: ${error.message}` });
+      this.itens.push({ nome, ok: false, detalhe: `erro: ${error.message}`, ms: Date.now() - inicio });
     }
   }
 }
@@ -54,7 +55,7 @@ class Relatorio {
       falhas += ruins.length;
       console.log(`\n${ruins.length ? '✗' : '✓'} ${nome} (${relatorio.itens.length - ruins.length}/${relatorio.itens.length}, ${Math.round((Date.now() - inicio) / 1000)} s)`);
       for (const item of relatorio.itens) {
-        if (!item.ok || process.env.DETALHES) console.log(`  ${item.ok ? '✓' : '✗'} ${item.nome}${item.detalhe ? `: ${item.detalhe.slice(0, 220)}` : ''}`);
+        if (!item.ok || process.env.DETALHES) console.log(`  ${item.ok ? '✓' : '✗'} ${item.nome}${item.detalhe ? `: ${item.detalhe.slice(0, 220)}` : ''}${process.env.DETALHES && item.ms > Number(process.env.LIMITE_MS || 2000) ? ` (${(item.ms / 1000).toFixed(1)} s)` : ''}`);
       }
     }
   } finally {
