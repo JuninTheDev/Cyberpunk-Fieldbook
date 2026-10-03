@@ -3,6 +3,7 @@
 //   rede  (0.0.0.0:8766, GM_KEY) → acessado pelo IP da rede, como o celular de um jogador.
 // Usa portas próprias, então não mexe no servidor da mesa (porta 8000).
 const { spawn } = require('child_process');
+const fs = require('fs');
 const net = require('net');
 const os = require('os');
 const path = require('path');
@@ -33,15 +34,18 @@ async function subir(porta, env, pasta = raiz) {
 
 async function subirServidores() {
   const ip = ipDaRede();
-  const local = await subir(8765, { HOST: '127.0.0.1', GM_KEY: '' });
-  const rede = ip ? await subir(8766, { HOST: '0.0.0.0', GM_KEY: SENHA_MESTRE }) : null;
+  // Contas e personagens dos testes ficam numa pasta temporária, compartilhada pelos dois servidores.
+  const dados = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-dados-'));
+  const local = await subir(8765, { HOST: '127.0.0.1', GM_KEY: '', DADOS_PERSONAGENS: dados });
+  const rede = ip ? await subir(8766, { HOST: '0.0.0.0', GM_KEY: SENHA_MESTRE, DADOS_PERSONAGENS: dados }) : null;
   return {
     local: 'http://127.0.0.1:8765',
     rede: ip ? `http://${ip}:8766` : null,
     redeLocal: 'http://127.0.0.1:8766',
     senhaMestre: SENHA_MESTRE,
     raiz,
-    parar: async () => { local.kill(); if (rede) rede.kill(); await sleep(300); }
+    dados,
+    parar: async () => { local.kill(); if (rede) rede.kill(); await sleep(300); fs.rmSync(dados, { recursive: true, force: true }); }
   };
 }
 

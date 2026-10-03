@@ -34,6 +34,7 @@ const contentTypes = {
 const playerFiles = new Set([
   '/jogadores.html', '/jogadores.json', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
+  '/system-criacao.js', '/loja-catalogo.js', '/criador.js',
   '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css'
 ]);
 const playerFolders = ['/cyberpunk-css-main/cyberpunk-css-main/fonts/'];
@@ -113,6 +114,8 @@ async function writeJsonAtomic(file, data) {
 }
 
 function publishPlayerView(request, response) {
+  // Só JSON: um formulário de outro site aberto no navegador do mestre não consegue mandar isso sem permissão.
+  if (!/^application\/json\b/i.test(request.headers['content-type'] || '')) return send(response, 415, 'Envie JSON (Content-Type: application/json).');
   let body = '';
   request.setEncoding('utf8');
   request.on('data', chunk => {
@@ -138,6 +141,9 @@ function publishPlayerView(request, response) {
   });
 }
 
+// Personagens dos jogadores, códigos de acesso e o importador do Foundry (api-personagens.js).
+const characterApi = require('./api-personagens')({ root, isGameMaster, send, writeJsonAtomic, sameSecret });
+
 http.createServer((request, response) => {
   let url;
   let pathname;
@@ -161,6 +167,7 @@ http.createServer((request, response) => {
     if (!gameMaster) return send(response, 403, 'Só o mestre.');
     return health().then(reverted => send(response, 200, JSON.stringify({ git: reverted !== null, revertidos: reverted || [] }), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' }));
   }
+  if (/^\/api\/(eu|entrar|sair|contas|personagens)(\/|$)/.test(pathname)) return void characterApi(request, response, pathname);
   if (pathname === '/api/jogadores') {
     if (request.method !== 'POST') return send(response, 405, 'Use POST.');
     if (!gameMaster) return send(response, 403, 'Só o mestre publica.');
@@ -191,9 +198,17 @@ http.createServer((request, response) => {
       ...(extension === '.json' || !playerFile ? { 'Cache-Control': 'private, no-store' } : {})
     });
     if (request.method === 'HEAD') return response.end();
+    // A conexão pode ter caído enquanto o stat rodava: aí o arquivo nem é aberto
+    // (o pipeline lança erro com a resposta já fechada, e isso derrubava o servidor).
+    if (response.destroyed) return;
     // pipeline fecha o arquivo mesmo se a conexão cair no meio. Com .pipe, o arquivo ficava aberto,
     // e o Windows então não deixava o Publicar trocar o jogadores.json (EPERM).
-    pipeline(fs.createReadStream(filePath), response, () => {});
+    const stream = fs.createReadStream(filePath);
+    try {
+      pipeline(stream, response, () => {});
+    } catch {
+      stream.destroy();
+    }
   });
 }).listen(port, host, () => {
   console.log(`Wiki do mestre: http://localhost:${port}`);

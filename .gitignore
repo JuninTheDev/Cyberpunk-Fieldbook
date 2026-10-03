@@ -3,3 +3,6 @@
 foundry-2077/.cache/
 foundry-2077/node_modules/
 tests/.saida/
+# Códigos dos jogadores (senhas) e personagens apagados ficam fora do git
+contas-jogadores.json
+personagens/apagados/
