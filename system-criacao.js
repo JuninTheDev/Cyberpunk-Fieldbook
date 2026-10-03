@@ -84,11 +84,12 @@
   const edgerunnerSkills = Object.fromEntries(Object.entries(streetratSkills).map(([role, list]) => [role, list.map(([skill]) => skill)]));
 
   // Perícias "escolha 1": o nome no Foundry leva o tipo entre parênteses, vindo de um compêndio próprio.
+  // `tipos`: nome no Foundry (entre parênteses) → português.
   const specializedSkills = {
-    'Play Instrument': { nome: 'Tocar Instrumento', pack: 'cyberpunk-red-core.core_skills-play-instrument' },
-    Science: { nome: 'Ciência', pack: 'cyberpunk-red-core.core_skills-science' },
-    'Martial Arts': { nome: 'Artes Marciais', pack: 'cyberpunk-red-core.core_skills-martial-arts', x2: true },
-    Language: { nome: 'Língua', pack: 'cyberpunk-red-core.core_skills-languages' }
+    'Play Instrument': { nome: 'Tocar Instrumento', stat: 'TECH', pack: 'cyberpunk-red-core.core_skills-play-instrument', tipos: { Drums: 'bateria', Guitar: 'guitarra', Piano: 'piano', Singing: 'canto', Violin: 'violino' } },
+    Science: { nome: 'Ciência', stat: 'INT', pack: 'cyberpunk-red-core.core_skills-science', tipos: { Anthropology: 'antropologia', Biology: 'biologia', Chemistry: 'química', Geology: 'geologia', History: 'história', Mathematics: 'matemática', Physics: 'física', Zoology: 'zoologia' } },
+    'Martial Arts': { nome: 'Artes Marciais', stat: 'DEX', x2: true, pack: 'cyberpunk-red-core.core_skills-martial-arts', tipos: { Aikido: 'aikido', Judo: 'judô', Karate: 'caratê', Taekwondo: 'taekwondo' } },
+    Language: { nome: 'Língua', stat: 'INT', pack: 'cyberpunk-red-core.core_skills-languages', tipos: null }
   };
 
   // Línguas do Foundry (nome em inglês → português) e as da Origem cultural do Lifepath (p. 45), na ordem da tabela.

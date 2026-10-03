@@ -420,3 +420,83 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .playstyle-quiz label { display: flex; gap: 8px; align-items: flex-start; margin: 5px 0; cursor: pointer; }
 .playstyle-quiz input { margin-top: 3px; accent-color: var(--yellow); }
 @media (max-width: 640px) { .playstyle-quiz { grid-template-columns: 1fr; } }
+
+/* Personagens: lista, ficha, criador e loja (criador.js) */
+.cc-box h3 { margin-top: 0; }
+.cc-box h4 { margin: 14px 0 6px; color: var(--yellow); font: 12px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.cc-card { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2c3434; }
+.cc-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.cc-card-actions .action, .cc-toolbar .action, .cc-shop-item .action, .cc-items .action, .cc-level .action, .cc-step-buttons .action, .cc-lp .action, .cc-lp-list .action, .cc-extra .action { margin-top: 0; }
+.cc-handle { color: var(--cyan); }
+.cc-ok { color: var(--lime); }
+.cc-bad { color: var(--coral); }
+.action.cc-danger { background: #3a2224; color: #ffd9d8; }
+.action.cc-danger:hover { background: var(--coral); color: #090b0c; }
+.cc-login { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cc-login input, .cc-form input, .cc-form textarea, .cc-box textarea, .cc-box select, .cc-shop-row input, .cc-toolbar select { padding: 7px 9px; border: 1px solid #3b4443; background: #0f1314; color: var(--text); font: 13px BlenderProBook, sans-serif; max-width: 100%; }
+.cc-box textarea { width: 100%; resize: vertical; }
+.cc-msg { color: var(--coral); min-height: 1em; }
+.cc-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cc-steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.cc-steps .map-filter.cc-done::after { content: ' ✓'; color: var(--lime); }
+.cc-save { min-height: 1.3em; margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.cc-save.ok { color: var(--lime); }
+.cc-save.bad { color: var(--coral); }
+.cc-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cc-form label { display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
+.cc-form .cc-wide { grid-column: 1 / -1; }
+.cc-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.cc-choice { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid #3b4443; background: #121718; text-align: left; cursor: pointer; }
+.cc-choice b { color: var(--text); font: 14px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.cc-choice small { color: var(--cyan); }
+.cc-choice span { color: var(--muted); font-size: 13px; }
+.cc-choice:hover { border-color: var(--cyan); }
+.cc-choice.active { border-color: var(--yellow); box-shadow: inset 3px 0 0 var(--yellow); }
+.cc-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.cc-stat { display: grid; justify-items: center; gap: 3px; padding: 8px 4px; border: 1px solid #3b4443; background: #121718; }
+.cc-stat span { color: var(--muted); font: 11px Oxanium, Consolas, monospace; }
+.cc-stat b { color: var(--yellow); font: 22px Oxanium, Consolas, monospace; }
+.cc-stat b small { color: var(--muted); font-size: 12px; }
+.cc-stat .action { margin-top: 2px; padding: 3px 9px; }
+.cc-step-buttons { display: flex; gap: 4px; }
+.cc-derived { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.cc-derived b { color: var(--yellow); }
+.cc-pick tbody tr { cursor: pointer; }
+.cc-pick tbody tr:hover td { background: #1c2426; }
+.cc-pick tr.cc-picked td { background: #2a2a1a; color: var(--yellow); }
+.cc-level { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.cc-level .action { padding: 2px 8px; }
+.cc-level b { min-width: 1.2em; text-align: center; }
+.cc-extra, .cc-lp-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.cc-lp-grid { display: grid; gap: 8px; }
+.cc-lp { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.cc-lp label { color: var(--muted); font-size: 13px; }
+.cc-lp select, .cc-lp-list select { width: 100%; min-width: 0; }
+.cc-lp-list select { flex: 1 1 220px; }
+.cc-warn { margin: 6px 0; padding-left: 18px; color: #ffd9d8; }
+.cc-link { padding: 0; border: 0; background: none; color: var(--cyan); text-decoration: underline; cursor: pointer; }
+.cc-radio { display: inline-flex; gap: 6px; align-items: center; margin: 2px 8px 2px 0; cursor: pointer; }
+.cc-items { margin: 4px 0; padding-left: 18px; }
+.cc-items li { margin-bottom: 4px; }
+.cc-items small { color: var(--muted); }
+.cc-lifepath dt { margin-top: 6px; color: var(--yellow); font: 12px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.cc-lifepath dd { margin: 2px 0 0; }
+.cc-wallet { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px; border: 1px solid #3b4443; background: #121718; }
+.cc-wallet b { color: var(--yellow); }
+.cc-wallet b.cc-bad { color: var(--coral); }
+.cc-shop-filters { margin-top: 12px; }
+.cc-shop-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.cc-shop-row input { flex: 1 1 200px; }
+.cc-shop-list { margin-top: 10px; max-height: 70vh; overflow-y: auto; border-top: 1px solid #2c3434; }
+.cc-shop-item { display: flex; gap: 10px; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #2c3434; }
+.cc-shop-item small { color: var(--muted); }
+.cc-shop-item .cc-desc { color: #c3ccc5; }
+.cc-price { display: grid; justify-items: end; gap: 4px; color: var(--yellow); white-space: nowrap; font: 13px Oxanium, Consolas, monospace; }
+@media (max-width: 640px) {
+  .cc-form { grid-template-columns: 1fr; }
+  .cc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cc-lp { grid-template-columns: 1fr; }
+  .cc-shop-item { flex-direction: column; align-items: stretch; }
+  .cc-price { justify-items: start; grid-auto-flow: column; justify-content: space-between; }
+}
+.cc-steps .map-filter.active, .cc-shop-filters .map-filter.active { border-color: var(--cyan); color: var(--cyan); background: #10211e; }

@@ -54,7 +54,7 @@
     ]}
   ];
 
-  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemGlossary || {}).pages || {}, config.pageContent || {});
+  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
   Object.entries(markdownDocs).forEach(([id, doc]) => {
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
   });
@@ -168,8 +168,10 @@
       if (targetWorkspace && targetWorkspace !== currentWorkspace) setWorkspace(targetWorkspace);
       currentPage = id;
       search.value = '';
-      writeHash(pageHash(id), historyMode);
-      rememberRecent(id);
+      // Páginas com manterAlvo (ficha e criador) guardam no endereço o id do que mostram: #ficha/<id>.
+      const keepTarget = page.manterAlvo && target && target.section;
+      writeHash(keepTarget ? `#${id}/${encodeURIComponent(target.section)}` : pageHash(id), historyMode);
+      if (!page.manterAlvo) rememberRecent(id);
       content.innerHTML = `<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
@@ -183,7 +185,7 @@
         return;
       }
       buildToc();
-      const unit = resolveTarget(target);
+      const unit = keepTarget ? null : resolveTarget(target);
       if (unit) focusUnit(unit, target.term);
       else window.scrollTo({ top: 0 });
     }

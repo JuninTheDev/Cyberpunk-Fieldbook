@@ -35,8 +35,9 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
     if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') erros.push(`console: ${message.params.args.map(arg => arg.value ?? arg.description ?? '').join(' ')}`);
     if (message.method === 'Network.responseReceived') {
       const { status, url } = message.params.response;
-      // 403 da área do mestre é esperado nos testes da visão dos jogadores; os testes conferem isso à parte.
-      if (status >= 400 && status !== 403 && !url.endsWith('favicon.ico')) erros.push(`http ${status} ${url}`);
+      // 403 da área do mestre é esperado nos testes da visão dos jogadores, e 409 no teste de conflito do criador;
+      // os testes conferem essas respostas à parte.
+      if (status >= 400 && status !== 403 && status !== 409 && !url.endsWith('favicon.ico')) erros.push(`http ${status} ${url}`);
     }
   };
   const send = (method, params = {}) => new Promise(resolve => { const i = ++id; pending[i] = resolve; ws.send(JSON.stringify({ id: i, method, params })); });

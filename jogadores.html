@@ -38,6 +38,9 @@
   <script src="system-net.js"></script>
   <script src="system-2077.js"></script>
   <script src="system-glossario.js"></script>
+  <script src="system-criacao.js"></script>
+  <script src="loja-catalogo.js"></script>
+  <script src="criador.js"></script>
   <script>
     // Visão dos jogadores: o conteúdo de campanha vem só de jogadores.json, publicado pelo mestre.
     // Este arquivo é baixado pelos jogadores: não escreva aqui nomes ou segredos da campanha.
@@ -51,6 +54,9 @@
         { id: 'pvPeople', label: 'Pessoas', icon: 'P' },
         { id: 'pvMap', label: 'Mapa', icon: 'MAP' },
         { id: 'pvNews', label: 'Notícias e handouts', icon: 'N' }
+      ]}, { group: 'Personagens', pages: [
+        { id: 'personagens', label: 'Personagens', icon: 'PC' },
+        { id: 'loja', label: 'Loja inicial', icon: 'EB' }
       ]}]}],
       pageContent: { pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts') },
       mapPages: ['pvMap'],
