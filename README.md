@@ -65,12 +65,14 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `jogadores.json` | Só o que foi publicado. É o que a página dos jogadores lê. Gerado pelo botão Publicar. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. |
 | `campaign-map.js` | Pinos do mapa de operações. |
-| `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade e drogas, Netrunning, economia e criação. Cada seção indica a página do PDF traduzido. |
+| `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
 | `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
-| `system-2077.js` | Suplemento de 2077: as 46 armas (Power, Tech e Smart), os 42 cyberwares e o resumo do suplemento. |
-| `system-catalog.js` | Catálogo de Roles, cyberware e equipamento do RED. |
-| `mestre-npcs.js` | Fichas de NPC: as 10 fichas prontas do livro (capangas, tenentes, mini-chefes e o Cyberpsycho), a Trauma Team e variantes para as facções de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
-| `server.js` | Servidor local da wiki. Decide quem vê a wiki do mestre e quem vê só a dos jogadores. |
+| `system-2077.js` | Suplemento de 2077: as 46 armas (Power, Tech e Smart), os 42 cyberwares, as Roles de 2077 e o resumo do suplemento. |
+| `system-catalog.js` | Catálogo do RED: Roles, cyberware, armas, armaduras, munição, acessórios, equipamento médico e a lista de equipamento. |
+| `system-glossario.js` | O glossário: definição curta de cada termo de regra e onde está a regra. Vai também para os jogadores. |
+| `mestre-npcs.js` | Fichas de NPC (as 10 fichas prontas do livro, a Trauma Team e variantes para as facções de 2077) e os Encontros de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
+| `server.js` | Servidor local da wiki. Decide quem vê a wiki do mestre e quem vê só a dos jogadores, e avisa se o OneDrive reverteu algum arquivo. |
+| `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
@@ -87,11 +89,40 @@ O módulo é gravado direto na pasta de módulos do Foundry.
 
 ## Consulta durante a sessão
 
-- **/** (ou Ctrl+K) coloca o cursor na busca. **Enter** abre o primeiro resultado já na seção certa, com o termo destacado. **Esc** volta para a página.
-- A busca ignora acentos e aceita termos em inglês (por exemplo, "Evasion", "Death Save", "Shoulder Arms").
+- **Início do mestre:** a faixa **Na mesa agora** tem atalhos (Escudo, Fichas de NPC, Encontros, Combate, Glossário, Índice, sessões), as últimas páginas abertas e o estado dos relógios de Sato e da cidade.
+- **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém.
+- **Busca:** **/** (ou Ctrl+K) coloca o cursor na busca.
+  - As palavras podem vir em qualquer ordem ("pistola smart" acha a Yukimura). A busca ignora acentos e aceita termos em inglês e sinônimos (CDT/ROF, HP/PV, eb/eddies, Death Save...).
+  - **↑ ↓** escolhem o resultado, **Enter** abre já na seção certa, com os termos destacados, e **Esc** volta para a página.
+  - Os chips **Tudo / Regras / Campanha** filtram os resultados.
+- **Glossário** (aba Sistema → Na mesa): termos como DV, SP, Death Save e Smart Link viram links nas páginas de regras. Passe o mouse para ler a definição; clique para abrir o glossário, que tem o botão "Ver a regra".
+- **Índice A–Z:** todos os cartões e fichas da wiki em ordem alfabética, com filtro.
+- **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por classe, tipo ou instalação.
 - Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.
-- O **Escudo do mestre** (aba Sistema) tem a calculadora de DV por alcance e o rolador de lesão crítica.
-- **Fichas de NPC** (aba Sistema, logo abaixo) tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo. Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
+- O **Escudo do mestre** tem a calculadora de DV por alcance e o rolador de lesão crítica.
+- **Fichas de NPC** tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo. Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
+- **Roladores:** o **Lifepath** rola cada tabela ou o passado inteiro de uma vez. A **Economia de 2077** gera um Night Market. Os **Encontros de 2077** (só na wiki do mestre) rolam dia, noite ou madrugada, e cada resultado leva à ficha do NPC.
+- **Avanço e Pontos de Melhoria** traz os custos, a tabela de quanto dar no fim da sessão e o questionário de estilo de jogo.
+
+## Alerta de arquivo revertido
+
+O OneDrive já voltou arquivos da lore para versões antigas mais de uma vez. O `server.js` confere isso sozinho: se um arquivo modificado for igual a uma versão antiga do git, ele avisa em vermelho no terminal, e a wiki do mestre mostra uma faixa vermelha no topo.
+
+Quando a faixa aparecer, **não edite o arquivo**. Restaure a versão certa com `git checkout HEAD -- nome-do-arquivo` e confira se nada se perdeu.
+
+## Testes
+
+Para conferir se a wiki continua funcionando depois de uma mudança, rode:
+
+```
+node tests/rodar.js
+```
+
+Os testes abrem o Edge escondido, sobem servidores próprios (portas 8765 a 8767, sem mexer no da porta 8000) e testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, o alerta de reversão e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+
+- Para rodar uma parte só, passe o nome: `node tests/rodar.js busca`. Os nomes são os arquivos de `tests/cenarios/`.
+- `$env:DETALHES=1` mostra o detalhe de cada checagem.
+- As capturas de tela ficam em `tests/.saida/`.
 
 ## Fluxo de trabalho
 
@@ -99,3 +130,4 @@ O módulo é gravado direto na pasta de módulos do Foundry.
 2. Se a mudança afetar um resumo (Dossiê, Pessoas, Sessão 01, mapa), atualize também o `index.html` ou o `campaign-map.js`.
    Depois de cada sessão, revele no painel **Visão dos jogadores** o que o grupo descobriu e clique em Publicar.
 3. Salve uma versão no git: `git add -A` e `git commit -m "o que mudou"`. O histórico permite voltar atrás.
+   O `iniciar serv.txt` pode ter a senha do mestre: tire-o do commit com `git restore --staged "iniciar serv.txt"` antes de `git commit`.

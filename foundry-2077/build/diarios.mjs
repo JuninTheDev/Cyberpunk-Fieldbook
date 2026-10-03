@@ -10,13 +10,15 @@ const journals = [
   ['weapons2077', null], ['cyberware2077', null], ['net2077', null], ['quickhacks', null], ['os2077', null],
   ['supplement2077', null], ['economy', null],
   // Das fichas de NPC, só o que não cita a campanha: o resto está no compêndio de NPCs.
-  ['npcs', ['Como usar', 'Trauma Team']]
+  ['npcs', ['Como usar', 'Trauma Team']],
+  ['roles2077', null]
 ];
 
 // Botões de navegação da wiki não fazem sentido no Foundry.
 const cleanHtml = html => html
   .replace(/<button class="action"[^>]*>[\s\S]*?<\/button>/g, '')
   .replace(/<p>\s*<\/p>/g, '')
+  .replace(/<div class="roll-buttons">\s*<\/div>/g, '')
   .trim();
 
 // Divide o HTML da página nas seções (<div class="section">). O título da seção vira o nome da página do diário.
