@@ -1,1 +1,1 @@
-$env:HOST='0.0.0.0'; node server.js
+$env:HOST='0.0.0.0'; $env:GM_KEY='7743'; node server.js

@@ -1,0 +1,617 @@
+{
+  "nome": "Qyan",
+  "apelido": "Corvo",
+  "role": "solo",
+  "especializacao": "",
+  "metodo": "pacote",
+  "passo": 3,
+  "stats": {
+    "INT": 3,
+    "REF": 8,
+    "DEX": 8,
+    "WILL": 4,
+    "LUCK": 6,
+    "MOVE": 7,
+    "BODY": 7,
+    "EMP": 7
+  },
+  "sorteio": {},
+  "pericias": {
+    "Brawling": 6,
+    "Melee Weapon": 6,
+    "Stealth": 6,
+    "Drive Land Vehicle": 2,
+    "Athletics": 6,
+    "Conceal/Reveal Object": 1,
+    "Perception": 6,
+    "Evasion": 6,
+    "Handgun": 6,
+    "Cybertech": 2,
+    "Demolitions": 2,
+    "Pick Lock": 2,
+    "Pick Pocket": 1,
+    "Weaponstech": 1,
+    "Language (Streetslang)": 3,
+    "Resist Torture/Drugs": 4,
+    "Tracking": 2,
+    "Tactics": 2,
+    "Wilderness Survival": 1,
+    "Deduction": 3,
+    "Shoulder Arms": 2
+  },
+  "tipos": {},
+  "extras": [],
+  "lingua": "Mandarin Chinese",
+  "casa": "Watson",
+  "lifepath": {
+    "amigos": [],
+    "inimigos": [
+      {
+        "quem": 8,
+        "causa": 9,
+        "recursos": 2,
+        "vinganca": 6
+      },
+      {
+        "quem": 4,
+        "causa": 5,
+        "recursos": 10,
+        "vinganca": 5
+      }
+    ],
+    "amores": [
+      4
+    ],
+    "origem": 9,
+    "personalidade": 7,
+    "roupa": 2,
+    "cabelo": 9,
+    "adorno": 9,
+    "valor": 9,
+    "pessoas": 9,
+    "pessoa": 10,
+    "posse": 9,
+    "familia": 8,
+    "infancia": 5,
+    "crise": 6,
+    "meta": 6
+  },
+  "escolhas": {},
+  "itens": [
+    {
+      "uid": "loja:mutd0717otp5",
+      "id": "core_armor:light-armorjack-head",
+      "qtd": 1
+    },
+    {
+      "uid": "loja:mutd07nqpvby",
+      "id": "core_armor:light-armorjack-body",
+      "qtd": 1
+    },
+    {
+      "uid": "loja:mutd0jj9repy",
+      "id": "core_weapons:heavy-melee-poor",
+      "qtd": 1
+    }
+  ],
+  "moradia": "",
+  "aparencia": "",
+  "notas": "",
+  "donoNome": "Corvo",
+  "resultado": {
+    "versaoRegras": 1,
+    "stats": {
+      "INT": 3,
+      "REF": 8,
+      "DEX": 8,
+      "TECH": 6,
+      "COOL": 6,
+      "WILL": 4,
+      "LUCK": 6,
+      "MOVE": 7,
+      "BODY": 7,
+      "EMP": 7
+    },
+    "derivados": {
+      "hp": 40,
+      "gravemente": 20,
+      "deathSave": 7,
+      "humanidade": 70,
+      "andar": 14,
+      "correr": 28
+    },
+    "humanidade": {
+      "max": 70,
+      "perda": 0,
+      "atual": 70,
+      "emp": 7
+    },
+    "role": {
+      "id": "solo",
+      "nome": "Solo",
+      "rank": 4,
+      "foundry": {
+        "pack": "cyberpunk-red-core.core_roles",
+        "nome": "Solo"
+      },
+      "especializacao": null
+    },
+    "pericias": [
+      {
+        "nome": "Concentration",
+        "nivel": 2,
+        "stat": "WILL"
+      },
+      {
+        "nome": "Conceal/Reveal Object",
+        "nivel": 1,
+        "stat": "INT"
+      },
+      {
+        "nome": "Lip Reading",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Perception",
+        "nivel": 6,
+        "stat": "INT"
+      },
+      {
+        "nome": "Tracking",
+        "nivel": 2,
+        "stat": "INT"
+      },
+      {
+        "nome": "Athletics",
+        "nivel": 6,
+        "stat": "DEX"
+      },
+      {
+        "nome": "Contortionist",
+        "nivel": 0,
+        "stat": "DEX"
+      },
+      {
+        "nome": "Dance",
+        "nivel": 0,
+        "stat": "DEX"
+      },
+      {
+        "nome": "Endurance",
+        "nivel": 0,
+        "stat": "WILL"
+      },
+      {
+        "nome": "Resist Torture/Drugs",
+        "nivel": 4,
+        "stat": "WILL"
+      },
+      {
+        "nome": "Stealth",
+        "nivel": 6,
+        "stat": "DEX"
+      },
+      {
+        "nome": "Drive Land Vehicle",
+        "nivel": 2,
+        "stat": "REF"
+      },
+      {
+        "nome": "Pilot Air Vehicle",
+        "nivel": 0,
+        "stat": "REF"
+      },
+      {
+        "nome": "Pilot Sea Vehicle",
+        "nivel": 0,
+        "stat": "REF"
+      },
+      {
+        "nome": "Riding",
+        "nivel": 0,
+        "stat": "REF"
+      },
+      {
+        "nome": "Accounting",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Animal Handling",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Bureaucracy",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Business",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Composition",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Criminology",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Cryptography",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Deduction",
+        "nivel": 3,
+        "stat": "INT"
+      },
+      {
+        "nome": "Education",
+        "nivel": 2,
+        "stat": "INT"
+      },
+      {
+        "nome": "Gamble",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Library Search",
+        "nivel": 0,
+        "stat": "INT"
+      },
+      {
+        "nome": "Tactics",
+        "nivel": 2,
+        "stat": "INT"
+      },
+      {
+        "nome": "Wilderness Survival",
+        "nivel": 1,
+        "stat": "INT"
+      },
+      {
+        "nome": "Brawling",
+        "nivel": 6,
+        "stat": "DEX"
+      },
+      {
+        "nome": "Evasion",
+        "nivel": 6,
+        "stat": "DEX"
+      },
+      {
+        "nome": "Melee Weapon",
+        "nivel": 6,
+        "stat": "DEX"
+      },
+      {
+        "nome": "Acting",
+        "nivel": 0,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Archery",
+        "nivel": 0,
+        "stat": "REF"
+      },
+      {
+        "nome": "Autofire",
+        "nivel": 0,
+        "stat": "REF"
+      },
+      {
+        "nome": "Handgun",
+        "nivel": 6,
+        "stat": "REF"
+      },
+      {
+        "nome": "Heavy Weapons",
+        "nivel": 0,
+        "stat": "REF"
+      },
+      {
+        "nome": "Shoulder Arms",
+        "nivel": 2,
+        "stat": "REF"
+      },
+      {
+        "nome": "Bribery",
+        "nivel": 0,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Conversation",
+        "nivel": 2,
+        "stat": "EMP"
+      },
+      {
+        "nome": "Human Perception",
+        "nivel": 2,
+        "stat": "EMP"
+      },
+      {
+        "nome": "Interrogation",
+        "nivel": 0,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Persuasion",
+        "nivel": 2,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Personal Grooming",
+        "nivel": 0,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Streetwise",
+        "nivel": 0,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Trading",
+        "nivel": 0,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Wardrobe & Style",
+        "nivel": 0,
+        "stat": "COOL"
+      },
+      {
+        "nome": "Air Vehicle Tech",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Basic Tech",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Cybertech",
+        "nivel": 2,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Demolitions",
+        "nivel": 2,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Electronics/Security Tech",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "First Aid",
+        "nivel": 2,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Forgery",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Land Vehicle Tech",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Paint/Draw/Sculpt",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Paramedic",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Photography/Film",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Pick Lock",
+        "nivel": 2,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Pick Pocket",
+        "nivel": 1,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Sea Vehicle Tech",
+        "nivel": 0,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Weaponstech",
+        "nivel": 1,
+        "stat": "TECH"
+      },
+      {
+        "nome": "Language (Streetslang)",
+        "nivel": 3,
+        "stat": "INT"
+      },
+      {
+        "nome": "Local Expert (Your Home)",
+        "nivel": 2,
+        "stat": "INT"
+      },
+      {
+        "nome": "Language (Mandarin Chinese)",
+        "base": "Language",
+        "tipo": "Mandarin Chinese",
+        "nivel": 4,
+        "stat": "INT",
+        "gratis": true
+      }
+    ],
+    "casa": "Watson",
+    "itens": [
+      {
+        "uid": "gratis:core_cyberware:neural-link",
+        "id": "core_cyberware:neural-link",
+        "nome": "Neural Link",
+        "renomear": "",
+        "qtd": 1,
+        "origem": "gratis2077",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_cyberware",
+          "nome": "Neural Link"
+        },
+        "cyber": true,
+        "semHumanidade": true
+      },
+      {
+        "uid": "gratis:core_cyberware:cyberaudio-suite",
+        "id": "core_cyberware:cyberaudio-suite",
+        "nome": "Cyberaudio Suite",
+        "renomear": "",
+        "qtd": 1,
+        "origem": "gratis2077",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_cyberware",
+          "nome": "Cyberaudio Suite"
+        },
+        "cyber": true,
+        "semHumanidade": true
+      },
+      {
+        "uid": "gratis:core_cyberware:internal-agent",
+        "id": "core_cyberware:internal-agent",
+        "nome": "Agent interno",
+        "renomear": "",
+        "qtd": 1,
+        "origem": "gratis2077",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_cyberware",
+          "nome": "Internal Agent"
+        },
+        "cyber": true,
+        "semHumanidade": true
+      },
+      {
+        "uid": "gratis:core_cyberware:interface-plugs",
+        "id": "core_cyberware:interface-plugs",
+        "nome": "Plugs de interface",
+        "renomear": "Personal Link",
+        "qtd": 1,
+        "origem": "gratis2077",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_cyberware",
+          "nome": "Interface Plugs"
+        },
+        "cyber": true,
+        "semHumanidade": true
+      },
+      {
+        "uid": "gratis:core_cyberware:chipware-socket",
+        "id": "core_cyberware:chipware-socket",
+        "nome": "Chipware Socket",
+        "renomear": "",
+        "qtd": 2,
+        "origem": "gratis2077",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_cyberware",
+          "nome": "Chipware Socket"
+        },
+        "cyber": true,
+        "semHumanidade": true
+      },
+      {
+        "uid": "loja:mutd0717otp5",
+        "id": "core_armor:light-armorjack-head",
+        "nome": "Armorjack leve (cabeça)",
+        "renomear": "",
+        "qtd": 1,
+        "origem": "loja",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_armor",
+          "nome": "Light Armorjack (Head)"
+        },
+        "cyber": false,
+        "semHumanidade": false
+      },
+      {
+        "uid": "loja:mutd07nqpvby",
+        "id": "core_armor:light-armorjack-body",
+        "nome": "Armorjack leve (corpo)",
+        "renomear": "",
+        "qtd": 1,
+        "origem": "loja",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_armor",
+          "nome": "Light Armorjack (Body)"
+        },
+        "cyber": false,
+        "semHumanidade": false
+      },
+      {
+        "uid": "loja:mutd0jj9repy",
+        "id": "core_weapons:heavy-melee-poor",
+        "nome": "Arma branca pesada (ruim)",
+        "renomear": "",
+        "qtd": 1,
+        "origem": "loja",
+        "foundry": {
+          "pack": "cyberpunk-red-core.core_weapons",
+          "nome": "Heavy Melee (Poor)"
+        },
+        "cyber": false,
+        "semHumanidade": false
+      }
+    ],
+    "dinheiro": {
+      "saldo": 2300,
+      "inicial": 2550
+    },
+    "moradia": {
+      "moradia": "Contêiner de carga ou quitinete num megaprédio",
+      "aluguel": 1000,
+      "estilo": "Prepak genérico",
+      "custoEstilo": 100,
+      "tipo": "padrao"
+    },
+    "lifepath": {
+      "culturalOrigin": "Leste Asiático — chinês cantonês, inglês, japonês, coreano, chinês mandarim, mongol Língua: chinês mandarim.",
+      "personality": "Bobo e distraído.",
+      "clothingStyle": "Roupa de lazer (conforto, agilidade, atletismo).",
+      "hairStyle": "Curto e cacheado.",
+      "affectations": "Luvas sem dedos.",
+      "valueMost": "Família.",
+      "aboutPeople": "Limpe tudo e deixe as baratas assumirem.",
+      "valuedPerson": "Ninguém.",
+      "valuedPossession": "Um brinquedo.",
+      "familyBackground": "Megaestrutura cheia de ratos — Uma das megaestruturas erguidas depois da Guerra: conapt pequeno, ração e scop, cama quente. Talvez uma escola dos moradores ou de uma corp local.",
+      "childhoodEnvironment": "Num bairro decadente que já foi de alto nível, agora resistindo aos boosters para sobreviver.",
+      "familyCrisis": "A família foi morta, e você foi o único sobrevivente.",
+      "lifeGoals": "Caçar os responsáveis pela sua vida miserável.",
+      "friends": "",
+      "enemies": "Exec corporativo. Um era rival do outro nos negócios. Pode usar: Só ele mesmo. Se se encontrarem: Prejudicá-lo indiretamente, pelas costas. | Inimigo de infância. Um desertou ou traiu o outro. Pode usar: Uma cidade, governo ou agência inteira. Se se encontrarem: Prejudicá-lo indiretamente, pelas costas.",
+      "tragicLoveAffairs": "Um objetivo pessoal ou uma vingança ficou entre vocês.",
+      "roleLifepath": ""
+    },
+    "pendencias": []
+  },
+  "id": "dme833xmvk",
+  "dono": "mn9pniese5",
+  "versao": 67,
+  "criado": "2026-10-04T04:56:26.004Z",
+  "atualizado": "2026-10-04T05:08:14.176Z",
+  "foundry": null
+}

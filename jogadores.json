@@ -1,5 +1,5 @@
 {
-  "atualizado": "2026-10-02T15:54:47.906Z",
+  "atualizado": "2026-10-03T14:54:49.624Z",
   "resumo": "## A mensagem\n\nCada um de vocês recebeu a mesma mensagem, enviada por um contato de confiança:\n\n**Wakako Okada deseja falar com você. Hoje. Sem acompanhantes. O pagamento será alto.**\n\nO endereço leva ao pachinko de Wakako, na Jig-Jig Street, em Japantown.",
   "npcs": [],
   "lugares": [
@@ -12,12 +12,5 @@
       "texto": "Onde Wakako recebe quem ela contrata."
     }
   ],
-  "noticias": [
-    {
-      "id": "exemplo-n54",
-      "titulo": "N54: surto de ciberpsicose em Kabuki (exemplo)",
-      "data": "Manhã seguinte",
-      "texto": "\"...o suspeito foi encontrado morto num depósito médico de Kabuki após o que a NCPD classificou como um surto de cyberpsicose. Segundo fontes, o corpo desapareceu antes da chegada da perícia.\""
-    }
-  ]
+  "noticias": []
 }

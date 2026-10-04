@@ -546,3 +546,19 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-hacks { display: grid; gap: 4px; }
 .cc-hacks small { color: var(--muted); }
 .cc-hacks input:disabled + b { opacity: 0.55; }
+/* Retrato: no passo 1, na ficha (ao lado do nome) e em miniatura nos cartões. */
+.cc-portrait { display: block; width: 140px; height: 140px; object-fit: cover; border: 1px solid var(--line); background: #0f1314; }
+.cc-portrait-empty { display: grid; place-items: center; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+.cc-portrait-edit { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.cc-portrait-tools { flex: 1 1 260px; min-width: 0; }
+.cc-portrait-tools p { margin: 0 0 8px; }
+.cc-portrait-tools label:not(.cc-file) { display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
+.cc-portrait-tools input[data-campo] { width: 100%; padding: 7px 9px; border: 1px solid #3b4443; background: #0f1314; color: var(--text); }
+.cc-file { position: relative; cursor: pointer; }
+.cc-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.cc-file:focus-within { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.cc-identity::after { content: ''; display: block; clear: both; }
+.cc-identity > .cc-portrait { float: right; width: 120px; height: 120px; margin: 0 0 10px 14px; }
+.cc-thumb { flex: 0 0 auto; width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--line); }
+.cc-card-text { flex: 1 1 200px; min-width: 0; }
+@media (max-width: 520px) { .cc-identity > .cc-portrait { width: 88px; height: 88px; } }

@@ -401,6 +401,27 @@
     if (fresh) fresh.outerHTML = foundryBox(doc, papel);
   }
 
+  // ---------------- Retrato ----------------
+  // A imagem enviada (servida pela API da wiki) vale no lugar do link colado.
+  const portraitUrl = doc => doc.retrato || (/^https:\/\//.test(doc.retratoLink || '') ? doc.retratoLink : '');
+  const portraitImg = (url, cls, alt = '') => (url ? `<img class="${cls}" src="${esc(url)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer">` : '');
+  // Reduz para no máximo 512 px no maior lado, em WebP (ou JPEG, se o navegador não gerar WebP).
+  async function shrinkImage(file, max = 512) {
+    const url = URL.createObjectURL(file);
+    try {
+      const image = await new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => reject(new Error('Não consegui ler esta imagem.')); img.src = url; });
+      const scale = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+      const webp = canvas.toDataURL('image/webp', 0.85);
+      return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.85);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   // Cada abertura de página ganha uma ficha; resposta que chega atrasada de uma página antiga é ignorada.
   let renderToken = 0;
 
@@ -416,9 +437,9 @@
     const characters = list.data.personagens || [];
     const mine = characters.filter(item => !item.publico);
     const others = characters.filter(item => item.publico);
-    const card = item => `<div class="cc-card"><div><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}</small></div>
+    const card = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}</small></div>
       <div class="cc-card-actions"><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button><button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
-    const publicCard = item => `<div class="cc-card"><div><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
+    const publicCard = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
 
     let who = '';
     if (papel === 'mestre') who = '<p>Você é o <b>mestre</b>: vê e edita todos os personagens.</p>';
@@ -501,7 +522,7 @@
     const lpRows = [...lifepathFields.map(([, label, field]) => [label, lp[field]]), ['Amigos', lp.friends], ['Inimigos', lp.enemies], ['Amores trágicos', lp.tragicLoveAffairs], ['Lifepath da Role', lp.roleLifepath]].filter(([, text]) => text);
     const home = housing(doc);
     return `<div class="cc-sheet">
-      <div class="section cc-box" data-toc="Identidade"><h3>${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
+      <div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome)}<h3>${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
         <p><b>${esc(role.nome || 'Sem Role')}</b> · ${esc(role.habilidade || '')} Rank 4${spec ? ` · ${esc(spec.nome)}` : ''} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}${doc.foundry ? ` · <b class="cc-ok">No Foundry desde ${new Date(doc.foundry.importado).toLocaleDateString('pt-BR')}</b>` : ''}</p>
         ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}</div>
       <div class="section cc-box" data-toc="STATs"><h3>STATs</h3><div class="cc-stats">${statKeys.map(statCell).join('')}</div>
@@ -529,7 +550,7 @@
     const doc = answer.data.personagem;
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
-    if (doc.publico) { root.innerHTML = `<div class="callout">Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>) e a Role (${esc(roleName(doc.role))}).</div>`; return; }
+    if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), a Role (${esc(roleName(doc.role))}) e o retrato.</div>`; return; }
     root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}${sheetHtml(doc)}`;
     root.onclick = event => {
       if (event.target.closest('[data-cc-send]')) return sendToGm(doc, papel, root);
@@ -824,6 +845,11 @@
     function drawIdentity() {
       const role = roleById(doc.role);
       return `${box('Quem é', `<div class="cc-form"><label>Nome<input data-campo="nome" value="${esc(doc.nome)}" maxlength="80"></label><label>Apelido (handle)<input data-campo="apelido" value="${esc(doc.apelido)}" maxlength="80"></label><label class="cc-wide">Aparência e jeito<textarea data-campo="aparencia" rows="2" maxlength="2000">${esc(doc.aparencia)}</textarea></label></div>`)}
+        ${box('Retrato', `<div class="cc-portrait-edit">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait cc-portrait-empty">sem retrato</div>'}
+          <div class="cc-portrait-tools"><p><label class="action cc-file">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" data-portrait-file></label>${portraitUrl(doc) ? ' <button type="button" class="action cc-danger" data-portrait-remove>Tirar retrato</button>' : ''}</p>
+          <label>Ou cole um link de imagem (https)<input data-campo="retratoLink" value="${esc(doc.retratoLink || '')}" maxlength="500" placeholder="https://…" inputmode="url"></label>
+          <p class="cc-msg" data-portrait-msg role="status"></p>
+          <p class="note-status">A imagem é reduzida para 512 px antes de ir para a wiki. Se houver imagem enviada, ela vale no lugar do link. O retrato vai para a ficha e o token no Foundry.</p></div></div>`)}
         ${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
           <p><button class="action" type="button" data-page="roles2077">Ler Roles de 2077</button></p>`)}
@@ -901,6 +927,21 @@
           ${list('Amores trágicos', 'amores', lp.amores, (value, index) => lpSelect('amor', value, `data-lp-item="amores:${index}"`))}`)}
         ${drawRoleLifepath()}
         ${box('Notas do Lifepath', `<label>O que mais quiser contar da história do personagem. Vai junto para o Foundry, depois do Lifepath da Role.<textarea data-lp-text="roleLifepath" rows="3" maxlength="3000">${esc(lp.roleLifepath || '')}</textarea></label>`)}`;
+    }
+    async function uploadPortrait(file) {
+      const msg = root.querySelector('[data-portrait-msg]');
+      if (!file) return;
+      if (msg) msg.textContent = 'Enviando…';
+      try {
+        const imagem = await shrinkImage(file);
+        const answer = await api(`api/personagens/${doc.id}/retrato`, { method: 'POST', body: { imagem } });
+        if (answer.status !== 200) throw new Error(answer.data.erro || 'Não consegui enviar.');
+        doc.retrato = answer.data.retrato;
+        draw(); changed();
+      } catch (error) {
+        const current = root.querySelector('[data-portrait-msg]');
+        if (current) current.textContent = error.message;
+      }
     }
     function drawRoleLifepath() {
       const role = roleById(doc.role);
@@ -1000,6 +1041,13 @@
         draw(); return changed();
       }
       // Perícias
+      if (target.closest('[data-portrait-remove]')) {
+        api(`api/personagens/${doc.id}/retrato`, { method: 'DELETE' }).then(answer => {
+          if (answer.status !== 200) { const msg = root.querySelector('[data-portrait-msg]'); if (msg) msg.textContent = answer.data.erro || 'Não consegui tirar.'; return; }
+          doc.retrato = null; doc.retratoLink = ''; draw(); changed();
+        });
+        return;
+      }
       if (target.closest('[data-skill-suggest]')) {
         if (!confirm('Trocar os níveis das perícias pelos sugeridos para a Role? Os que você pôs serão substituídos.')) return;
         applySuggested(doc); draw(); return changed();
@@ -1069,6 +1117,8 @@
       else if (target.matches('[data-lp-enemy]')) { const [index, part] = target.dataset.lpEnemy.split(':'); doc.lifepath.inimigos[Number(index)][part] = Number(target.value) || 1; }
       else if (target.matches('[data-escolha]')) { doc.escolhas[target.dataset.escolha] = Number(target.value); }
       else if (target.matches('[data-kitnet]')) { doc.kitNet = target.dataset.kitnet; }
+      else if (target.matches('[data-campo="retratoLink"]')) { doc.retratoLink = target.value.trim(); }
+      else if (target.matches('[data-portrait-file]')) { uploadPortrait(target.files && target.files[0]); return; }
       else if (target.matches('[data-quickhack]')) {
         const id = target.dataset.quickhack;
         const list = (doc.quickhacks || []).filter(item => item !== id);

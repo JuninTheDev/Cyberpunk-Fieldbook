@@ -115,7 +115,8 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
   }
   // Impressão digital da ficha que vai para o Foundry (o `resultado`, sem as pendências). Serve para saber
   // se algo mudou depois do envio ou da importação: a versão sobe até quando o jogador só troca de passo.
-  const resultHash = doc => crypto.createHash('sha1').update(JSON.stringify({ ...(doc.resultado || {}), pendencias: undefined })).digest('hex').slice(0, 16);
+  // O retrato entra só quando existe (as impressões gravadas antes dele continuam valendo).
+  const resultHash = doc => crypto.createHash('sha1').update(JSON.stringify({ ...(doc.resultado || {}), pendencias: undefined, ...(portraitOf(doc) ? { retrato: portraitOf(doc) } : {}) })).digest('hex').slice(0, 16);
   // novo · enviado · enviado-mudou (mudou depois do envio) · importado · mudou (depois da importação) · avisado (mudou e foi enviado de novo)
   function foundryState(doc) {
     const now = resultHash(doc);
