@@ -140,6 +140,13 @@ module.exports = async ({ edge, servidores, r }) => {
     const niveis = await edge.evaluate(`['Basic Tech', 'Athletics'].map(n => document.querySelector('[data-skill-plus="' + n + '"]').parentElement.querySelector('b').textContent)`);
     return [niveis.join(',') === '6,2', niveis.join(',')];
   });
+  await r.passo('Edgerunner: "Distribuir sugerido" põe os níveis do Rato de Rua (86 pontos)', async () => {
+    await edge.evaluate('window.confirm = () => true');
+    await clicar('[data-skill-suggest]');
+    const [usados, total] = await pontos();
+    const atletismo = await edge.evaluate(`document.querySelector('[data-skill-plus="Athletics"]').parentElement.querySelector('b').textContent`);
+    return [usados === 86 && total === 86 && atletismo === '2', `${usados}/${total} · Atletismo ${atletismo}`];
+  });
 
   // ---------- Pacote Completo e loja ----------
   let pacoteId;
@@ -155,6 +162,13 @@ module.exports = async ({ edge, servidores, r }) => {
     const depois = await texto('#cc-step');
     return [/Usados: 60/.test(antes) && /Usados: 62/.test(depois), `${antes.match(/Usados: \d+/)} → ${depois.match(/Usados: \d+/)}`];
   });
+  await r.passo('resumo fixo acompanha; ajuda do passo com as STATs; termos com link do glossário', async () => {
+    const resumo = (await texto('#cc-summary')).replace(/\s+/g, ' ');
+    const ajuda = await texto('#cc-help');
+    const glossario = await edge.evaluate(`document.querySelectorAll('#cc-step a.gloss').length`);
+    const aberto = await edge.evaluate(`document.querySelector('#cc-summary').open`);
+    return [/Lin/.test(resumo) && /STATs ?62 de 62/.test(resumo) && /HP ?\d+/.test(resumo) && /Reflexos/.test(ajuda) && /RED p\. 72/.test(ajuda) && glossario > 0 && aberto, `${resumo.slice(0, 110)} · glossário: ${glossario} links · aberto: ${aberto}`];
+  });
   await r.passo('Pacote Completo: básicas começam em 2 (26 pontos) e ×2 custa o dobro', async () => {
     await passo(3);
     const [antes] = await pontos();
@@ -163,6 +177,15 @@ module.exports = async ({ edge, servidores, r }) => {
     await clicar('[data-extra-add="Martial Arts"]');
     const [comArte] = await pontos();
     return [antes === 26 && depois === 28 && comArte === 30, `${antes} → ${depois} → ${comArte}`];
+  });
+  await r.passo('Pacote Completo: as 20 da Role vêm primeiro, com descrição; "Distribuir sugerido" fecha 86', async () => {
+    const primeiras = await edge.evaluate(`[...document.querySelectorAll('#cc-step tbody tr')].slice(0, 21).map(tr => tr.classList.contains('cc-suggested'))`);
+    const descricoes = await edge.evaluate(`document.querySelectorAll('#cc-step tbody .cc-desc').length`);
+    await clicar('[data-skill-suggest]');
+    const [usados] = await pontos();
+    await edge.shot('criador-pericias');
+    const resumo = (await texto('#cc-summary')).replace(/\s+/g, ' ');
+    return [primeiras.slice(0, 20).every(Boolean) && !primeiras[20] && descricoes >= 60 && usados === 86 && /Perícias ?86 de 86/.test(resumo), `sugeridas no topo: ${primeiras.filter(Boolean).length} · descrições: ${descricoes} · pontos ${usados}`];
   });
   const carteira = () => texto('.cc-wallet');
   const buscarNaLoja = async termo => { await edge.evaluate(`(() => { const s = document.querySelector('[data-shop-busca]'); s.value = ${JSON.stringify(termo)}; s.dispatchEvent(new Event('input', { bubbles: true })); })()`); await edge.sleep(200); };
@@ -273,6 +296,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(soloId)} })`);
     await edge.sleep(1200);
     const criador = await semRolagemLateral(edge);
+    await edge.shot('criador-celular');
     await edge.evaluate(`wikiApp.openPage('loja', { section: ${JSON.stringify(soloId)} })`);
     await edge.sleep(1200);
     const loja = await semRolagemLateral(edge);
@@ -325,5 +349,13 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(800);
     const nomes = await edge.evaluate(`[...document.querySelectorAll('#cc-accounts tbody tr td:first-child')].map(td => td.textContent)`);
     return [nomes.includes('Caio'), nomes.join(', ')];
+  });
+  await r.passo('página Perícias: as 66 com descrição, e a busca acha pela descrição', async () => {
+    await abrir(edge, 'skills', 900);
+    const descricoes = await edge.evaluate(`document.querySelectorAll('#skill-table .skill-desc').length`);
+    await digitar('#skill-filter', 'fechaduras');
+    await edge.sleep(200);
+    const visiveis = await edge.evaluate(`[...document.querySelectorAll('#skill-table tbody tr')].filter(tr => !tr.hidden).map(tr => tr.querySelector('b').textContent)`);
+    return [descricoes === 66 && visiveis.join() === 'Arrombamento', `${descricoes} descrições · "fechaduras": ${visiveis.join(', ')}`];
   });
 };

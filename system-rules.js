@@ -123,6 +123,76 @@
     ['Tecnologia de Armas', 'Weaponstech', 'TECH', 'Técnicas', false, false]
   ];
 
+  // O que cada perícia cobre, em uma frase (p. 82–85). Chave: nome em inglês, como no Foundry.
+  const skillDescriptions = {
+    Concentration: 'Foco e controle mental: memória, ignorar distrações e controlar o próprio corpo.',
+    'Conceal/Reveal Object': 'Esconder objetos e achar o que foi escondido, como uma arma debaixo da roupa.',
+    'Lip Reading': 'Ler os lábios de alguém para saber o que está dizendo.',
+    Perception: 'Notar pistas, armadilhas e gente escondida. Objeto escondido é com Esconder/Revelar Objeto.',
+    Tracking: 'Seguir uma trilha pelas pegadas e pistas deixadas para trás.',
+    Athletics: 'Saltar, escalar, arremessar, nadar, levantar peso.',
+    Contortionist: 'Escapar de algemas e amarras e se espremer em lugares apertados.',
+    Dance: 'Dançar em nível profissional.',
+    Endurance: 'Aguentar condições ambientais severas e privações.',
+    'Resist Torture/Drugs': 'Resistir à dor, a interrogatório, tortura e drogas.',
+    Stealth: 'Andar em silêncio, se esconder e agir sem ser notado.',
+    'Drive Land Vehicle': 'Dirigir veículos terrestres.',
+    'Pilot Air Vehicle': 'Pilotar veículos aéreos.',
+    'Pilot Sea Vehicle': 'Pilotar embarcações.',
+    Riding: 'Montar um animal treinado para isso.',
+    Accounting: 'Fazer e conferir contas, criar e identificar livros falsos, orçamentos e o dia a dia de um negócio.',
+    'Animal Handling': 'Lidar com animais, treinar e cuidar deles.',
+    Bureaucracy: 'Lidar com burocratas: com quem falar, como chegar lá e como tirar informação da burocracia.',
+    Business: 'Práticas de negócio: oferta e procura, gestão de pessoal, compras, vendas e marketing.',
+    Composition: 'Escrever músicas, artigos ou histórias de forma profissional.',
+    Criminology: 'Investigar: impressões digitais, balística, exame de provas, registros e arquivos da polícia.',
+    Cryptography: 'Codificar e decodificar mensagens.',
+    Deduction: 'Juntar vários indícios e chegar a uma conclusão nada óbvia, ou a um diagnóstico.',
+    Education: 'Conhecimento geral de escola: ler, escrever, fazer contas e saber um pouco de história.',
+    Gamble: 'Calcular probabilidades e se dar bem em jogos de azar.',
+    Language: 'Falar uma língua. Escolha qual a cada vez que comprar.',
+    'Library Search': 'Pesquisar em bancos de dados, Data Pools, bibliotecas e outras fontes.',
+    'Local Expert': 'Conhecer bem uma área (no máximo um bairro) e as facções, a política e o crime de lá.',
+    Science: 'Fazer experimentos e discutir com acadêmicos numa ciência, escolhida a cada compra.',
+    Tactics: 'Conduzir uma batalha grande: o que fazer e como o inimigo deve reagir.',
+    'Wilderness Survival': 'Sobreviver num ambiente que o homem não mudou.',
+    Brawling: 'Lutar com as mãos e a força bruta.',
+    Evasion: 'Esquivar de ataques corpo a corpo. Com REF 8 ou mais, também de tiros.',
+    'Martial Arts': 'Lutar com uma arte marcial (caratê, taekwondo, judô, aikidô). Cada arte é comprada separado.',
+    'Melee Weapon': 'Lutar com armas brancas.',
+    Acting: 'Fazer um papel, se disfarçar de outra pessoa e fingir emoções.',
+    'Play Instrument': 'Tocar um instrumento (ou cantar) profissionalmente. Escolha qual a cada compra.',
+    Archery: 'Atirar com arcos, bestas e armas parecidas.',
+    Autofire: 'Manter no alvo o fogo automático de uma arma, apesar do coice.',
+    Handgun: 'Atirar com armas de uma mão, como pistolas e revólveres.',
+    'Heavy Weapons': 'Atirar com armas muito grandes, como lança-granadas e lança-foguetes.',
+    'Shoulder Arms': 'Atirar com armas de ombro: fuzis, rifles e escopetas.',
+    Bribery: 'Saber quando subornar alguém, como chegar e quanto oferecer.',
+    Conversation: 'Tirar informação de alguém numa conversa, sem a pessoa perceber.',
+    'Human Perception': 'Ler rosto e corpo para saber o que a pessoa sente e pegar mentiras.',
+    Interrogation: 'Arrancar informação à força.',
+    Persuasion: 'Convencer, persuadir e influenciar pessoas.',
+    'Personal Grooming': 'Cuidar da aparência para ficar o mais atraente possível.',
+    Streetwise: 'Fazer e usar contatos para conseguir coisas ilegais, falar com o crime e sair de encrenca em bairro ruim.',
+    Trading: 'Fechar um bom negócio com comerciante ou cliente.',
+    'Wardrobe & Style': 'Saber que roupa usar e quando.',
+    'Air Vehicle Tech': 'Consertar e manter veículos aéreos.',
+    'Basic Tech': 'Consertar aparelhos eletrônicos e mecânicos simples, e o que nenhuma outra perícia técnica cobre.',
+    Cybertech: 'Identificar, entender e consertar cyberware.',
+    Demolitions: 'Armar e desarmar explosivos, e saber quanto usar para o efeito desejado.',
+    'Electronics/Security Tech': 'Eletrônica complexa: computadores, cyberdecks, segurança, escutas, rastreadores, placas de pressão e lasers.',
+    'First Aid': 'Tratar as lesões críticas mais comuns e manter alguém vivo.',
+    Forgery: 'Criar e identificar documentos e identidades falsas.',
+    'Land Vehicle Tech': 'Consertar e manter veículos terrestres.',
+    'Paint/Draw/Sculpt': 'Pintar, desenhar ou esculpir profissionalmente.',
+    Paramedic: 'Tratar todas as lesões críticas que não pedem cirurgia e manter alguém vivo. Cirurgia é do Medtech.',
+    'Photography/Film': 'Fazer fotos, vídeos e braindances.',
+    'Pick Lock': 'Abrir fechaduras que não são eletrônicas.',
+    'Pick Pocket': 'Bater carteira e pegar coisas pequenas sem ser notado.',
+    'Sea Vehicle Tech': 'Consertar e manter embarcações.',
+    Weaponstech: 'Consertar e manter armas de todo tipo.'
+  };
+
   // ---------- Tabelas reaproveitadas em mais de uma página ----------
 
   const dvScale = table(['DV', 'Dificuldade', 'Leitura rápida'], [
@@ -165,7 +235,7 @@
 
   const critTable = rows => table(['2d6', 'Lesão', 'Efeito', 'Correção rápida', 'Tratamento'], rows.map(([roll, name, effect, quick, treatment]) => [`<b>${roll}</b>`, name, effect, quick, treatment]), 'dense');
 
-  const skillsTable = `<div class="skill-tools"><div class="map-filter-list" id="skill-stat-filter">${['Todas', 'INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'EMP'].map((stat, index) => `<button type="button" class="map-filter" data-skill-stat="${index ? stat : 'all'}" aria-pressed="${index === 0}">${stat}</button>`).join('')}</div><label class="skill-search"><span class="nav-label">Filtrar</span><input id="skill-filter" type="search" placeholder="Nome em português ou inglês" autocomplete="off"></label></div><div class="table-wrap dense"><table id="skill-table"><thead><tr><th>Perícia</th><th>STAT</th><th>Grupo</th><th>Observação</th></tr></thead><tbody>${skills.map(([name, english, stat, group, double, basic]) => `<tr data-stat="${stat}"><td><b>${name}</b> ${en(english)}</td><td class="num">${stat}</td><td>${group}</td><td>${[double ? 'custa x2' : '', basic ? 'básica (mín. 2)' : ''].filter(Boolean).join(' · ') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
+  const skillsTable = `<div class="skill-tools"><div class="map-filter-list" id="skill-stat-filter">${['Todas', 'INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'EMP'].map((stat, index) => `<button type="button" class="map-filter" data-skill-stat="${index ? stat : 'all'}" aria-pressed="${index === 0}">${stat}</button>`).join('')}</div><label class="skill-search"><span class="nav-label">Filtrar</span><input id="skill-filter" type="search" placeholder="Nome em português ou inglês" autocomplete="off"></label></div><div class="table-wrap dense"><table id="skill-table"><thead><tr><th>Perícia</th><th>STAT</th><th>Grupo</th><th>Observação</th></tr></thead><tbody>${skills.map(([name, english, stat, group, double, basic]) => `<tr data-stat="${stat}"><td><b>${name}</b> ${en(english)}${skillDescriptions[english] ? `<br><small class="skill-desc">${skillDescriptions[english]}</small>` : ''}</td><td class="num">${stat}</td><td>${group}</td><td>${[double ? 'custa x2' : '', basic ? 'básica (mín. 2)' : ''].filter(Boolean).join(' · ') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
 
   // ---------- Avanço (p. 408–411) ----------
 
@@ -394,7 +464,7 @@
 
     skills: {
       eyebrow: 'Consulta rápida / perícias', title: 'Perícias por STAT',
-      lede: 'Todas as 66 perícias do RED com a STAT que somam no teste. Filtre por STAT ou digite o nome, em português ou em inglês (útil quando a ficha do jogador está em inglês).',
+      lede: 'Todas as 66 perícias do RED, o que cada uma cobre e a STAT que somam no teste. Filtre por STAT ou digite o nome, em português ou em inglês (útil quando a ficha do jogador está em inglês), ou uma palavra da descrição.',
       html: `${section('Lista de perícias', '81–85', `${skillsTable}<p class="note-status">"Custa x2": cada nível custa 2 pontos. "Básica": todo personagem começa com pelo menos 2.</p>`)}
         ${section('Sem a perícia', '130', '<p>Quem não tem a perícia rola só <b>STAT + 1d10</b>.</p>')}`
     },
@@ -631,6 +701,6 @@
 
   window.systemRules = {
     pages,
-    data: { rangeBands, rangeBandLimits, rangeDV, critBody, critHead, skills }
+    data: { rangeBands, rangeBandLimits, rangeDV, critBody, critHead, skills, skillDescriptions }
   };
 })();

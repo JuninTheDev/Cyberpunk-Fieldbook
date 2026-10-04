@@ -177,7 +177,7 @@
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
       if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml });
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
-      if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target, rollTable, rollDice, showRoll });
+      if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target, rollTable, rollDice, showRoll, linkGlossary });
       linkGlossary(content);
       if (markdownDocs[id]) {
         window.scrollTo({ top: 0 });
@@ -1075,5 +1075,5 @@
       }
     }
 
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, currentPage: () => currentPage, recentPages, clockState, rollTable, rollDice, showRoll };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, currentPage: () => currentPage, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
 })();

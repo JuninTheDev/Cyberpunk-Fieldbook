@@ -111,6 +111,8 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Os passos:** identidade e Role, STATs, perícias, Lifepath, equipamento, moradia e revisão.
    - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 9 Roles de 2077 e o cyberware grátis de 2077.
    - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
+   - **Ajuda:** cada passo tem um "Como funciona" com a página do livro, e um resumo fixo mostra pontos, HP, Humanidade, dinheiro e pendências. As perícias têm a descrição do livro, e os termos de regra levam ao glossário.
+   - **Perícias sugeridas:** no Edgerunner e no Pacote Completo, **Distribuir sugerido** põe os níveis do Rato de Rua da Role (86 pontos certinhos). No Pacote Completo, as 20 perícias da Role aparecem primeiro.
 3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
    - **Só itens de criação:** até 1.000eb, sem armas exóticas, qualidade excelente, borgware, munição rara (inteligente, biotoxina, EMP, sonífera), Linear Frame, Cryotank e Cryopump.
    - **O mestre ajusta** na página **Loja inicial**: muda o teto e as categorias escondidas, e libera ou esconde item por item.

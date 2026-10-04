@@ -42,7 +42,8 @@ module.exports = async ({ edge, servidores, r }) => {
     const filtro = termo => edge.evaluate(`(() => { const f = document.getElementById('skill-filter'); f.value = '${termo}'; f.oninput(); return [...document.querySelectorAll('#skill-table tbody tr')].filter(row => !row.hidden).map(row => row.cells[0].textContent); })()`);
     const evasao = await filtro('evasion');
     const eletronica = await filtro('eletronica');
-    return [evasao.some(nome => nome.startsWith('Evasão')) && eletronica.length === 1, `${evasao.join(',')} / ${eletronica.join(',')}`];
+    // A busca também olha a descrição: "eletronica" acha a perícia e a Tecnologia Básica (aparelhos eletrônicos simples).
+    return [evasao.some(nome => nome.startsWith('Evasão')) && eletronica.some(nome => nome.startsWith('Tecnologia Eletrônica')) && eletronica.length <= 3, `${evasao.map(nome => nome.slice(0, 12)).join(',')} / ${eletronica.map(nome => nome.slice(0, 30)).join(',')}`];
   });
 
   await abrir(edge, 'combat');

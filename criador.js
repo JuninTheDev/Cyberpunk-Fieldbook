@@ -18,11 +18,12 @@
   const eb = value => `${Math.round(value).toLocaleString('pt-BR')}eb`;
 
   // Perícias: nome no Foundry → { pt, stat, x2, basica }. As "de escolha" levam o tipo entre parênteses.
+  const descOf = en => ((rules.data && rules.data.skillDescriptions) || {})[en] || '';
   const skillInfo = new Map((rules.data && rules.data.skills || []).filter(([, en]) => !SPECIAL.includes(en) && en !== 'Local Expert')
-    .map(([pt, en, stat, grupo, x2, basica]) => [en, { pt, stat, grupo, x2, basica }]));
-  skillInfo.set('Language (Streetslang)', { pt: 'Linguagem (Streetslang)', stat: 'INT', grupo: 'Educação', x2: false, basica: true });
-  skillInfo.set('Local Expert (Your Home)', { pt: 'Especialista Local (sua casa)', stat: 'INT', grupo: 'Educação', x2: false, basica: true });
-  for (const [en, info] of Object.entries(C.specializedSkills)) skillInfo.set(en, { pt: `${info.nome} (escolha um tipo)`, stat: info.stat, grupo: '', x2: Boolean(info.x2), basica: false, especial: true });
+    .map(([pt, en, stat, grupo, x2, basica]) => [en, { pt, stat, grupo, x2, basica, desc: descOf(en) }]));
+  skillInfo.set('Language (Streetslang)', { pt: 'Linguagem (Streetslang)', stat: 'INT', grupo: 'Educação', x2: false, basica: true, desc: 'A gíria das ruas de Night City, que todo mundo fala.' });
+  skillInfo.set('Local Expert (Your Home)', { pt: 'Especialista Local (sua casa)', stat: 'INT', grupo: 'Educação', x2: false, basica: true, desc: descOf('Local Expert') });
+  for (const [en, info] of Object.entries(C.specializedSkills)) skillInfo.set(en, { pt: `${info.nome} (escolha um tipo)`, stat: info.stat, grupo: '', x2: Boolean(info.x2), basica: false, especial: true, desc: descOf(en) });
   const isX2 = name => Boolean((skillInfo.get(name) || {}).x2);
   const skillPt = name => (skillInfo.get(name) || {}).pt || name;
   const typeLabel = (base, type) => {
@@ -71,6 +72,19 @@
     return base + extras;
   }
   const skillBudget = doc => doc.metodo === 'pacote' ? C.completePackage.pontosPericia : C.edgerunnerRules.pontosPericia;
+
+  // As 20 perícias da Role (as do Edgerunner) e o "Distribuir sugerido": os níveis do Rato de Rua dela, que fecham os 86 pontos.
+  const suggestedSkills = doc => new Set(C.edgerunnerSkills[(roleById(doc.role) || {}).tabelas] || []);
+  function applySuggested(doc) {
+    const list = C.streetratSkills[(roleById(doc.role) || {}).tabelas] || [];
+    const oldExtras = doc.extras || [];
+    doc.pericias = {};
+    if (doc.metodo === 'pacote') doc.extras = [];
+    for (const [name, level] of list) {
+      if (doc.metodo === 'pacote' && C.specializedSkills[name]) doc.extras.push({ base: name, tipo: (oldExtras.find(extra => extra.base === name) || {}).tipo || doc.tipos[name] || '', nivel: level });
+      else doc.pericias[name] = level;
+    }
+  }
 
   // Lista final de perícias com o nome do Foundry: as de escolha viram "Science (Chemistry)".
   function finalSkills(doc) {
@@ -254,6 +268,49 @@
   const box = (title, body, extra = '') => `<div class="section cc-box"${extra}><h3>${title}</h3>${body}</div>`;
   const roleName = id => (roleById(id) || {}).nome || 'sem Role';
   const offline = '<div class="callout">Os personagens ficam no servidor da wiki. Abra a wiki pelo endereço do servidor (não pelo arquivo).</div>';
+
+  // ---------------- Ajuda de cada passo ----------------
+  const STAT_MEANING = { INT: 'Raciocínio, conhecimento e atenção.', REF: 'Reflexos: mira com armas de fogo e direção.', DEX: 'Coordenação: corpo a corpo, esquiva e atletismo.', TECH: 'Habilidade técnica e medicina.', COOL: 'Compostura e presença social.', WILL: 'Força de vontade e resistência.', LUCK: 'Pontos de sorte para gastar a cada sessão.', MOVE: 'Deslocamento: MOVE × 2 m por turno.', BODY: 'Constituição e força: HP e Death Save.', EMP: 'Empatia: define a Humanidade.' };
+  const HELP = {
+    1: ['RED p. 72–73 · Roles de 2077: suplemento p. 2–6', `<p><b>Role</b> é o que o personagem faz em Night City. Cada uma tem uma habilidade especial, que começa no Rank 4. <b>Método</b> é o quanto você quer decidir:</p>
+      <ul><li><b>Rato de Rua:</b> 1 dado para os STATs; perícias e equipamento vêm prontos. O mais rápido.</li><li><b>Edgerunner:</b> 1 dado para cada STAT, 86 pontos nas 20 perícias da Role e as opções do pacote da Role.</li><li><b>Pacote Completo:</b> você distribui 62 pontos de STAT e 86 de perícia, e compra o equipamento com 2.550eb.</li></ul>`],
+    2: ['RED p. 72–80', `<p>STATs são os atributos. Num teste, você soma <b>STAT + perícia + 1d10</b>.</p><dl class="cc-help-stats">${Object.entries(STAT_MEANING).map(([stat, text]) => `<dt>${stat}</dt><dd>${text}</dd>`).join('')}</dl><p>HP, Gravemente Ferido, Death Save e Humanidade saem dos STATs: veja Valores derivados, logo abaixo.</p>`],
+    3: ['RED p. 81–90', `<p>Num teste: <b>STAT + perícia + 1d10</b> contra uma dificuldade (DV). A coluna Base já soma a STAT.</p>
+      <ul><li>As 13 <b>básicas</b> (em negrito) todo personagem tem, no nível 2 pelo menos.</li><li>Perícias <b>×2</b> custam 2 pontos por nível.</li><li>Na criação, o nível máximo é 6.</li><li>A <b>língua da origem</b> vem de graça, no nível 4.</li></ul>
+      <p>Não sabe por onde começar? <b>Distribuir sugerido</b> põe os níveis do Rato de Rua da sua Role, e você ajusta a partir deles.</p>`],
+    4: ['RED p. 45–53', '<p>O Lifepath conta de onde o personagem veio: origem, família, amigos, inimigos e amores. Role ou escolha cada item.</p><p>Os resultados são ganchos para o mestre usar em jogo. Nenhum deles obriga nada.</p>'],
+    5: ['RED p. 98–117 · cyberware grátis: suplemento p. 8', `<ul><li><b>Rato de Rua e Edgerunner:</b> o pacote da Role, escolhendo nas linhas com opções, e mais 500eb.</li><li><b>Pacote Completo:</b> 2.550eb para a loja e mais 800eb só para moda. A loja de criação mostra só itens iniciais.</li>
+      <li><b>Cyberware custa Humanidade:</b> a cada 10 pontos perdidos, a EMP cai 1. As opções precisam de uma base, como o cyberbraço para as armas de braço.</li></ul>`],
+    6: ['RED p. 105 · suplemento p. 31', '<p>Onde o personagem mora e como vive. O primeiro mês é de graça; depois, o aluguel e o estilo de vida saem do dinheiro no dia 1º de cada mês.</p>'],
+    7: ['', '<p>Cada pendência leva ao passo certo. Nada impede de salvar nem de enviar. Quando estiver pronto, <b>envie para o mestre</b>: o Foundry dele avisa, e ele importa.</p>']
+  };
+
+  // ---------------- Resumo fixo ----------------
+  function summaryHtml(doc) {
+    const stats = computeStats(doc);
+    const derived = C.derived(stats);
+    const hum = humanity(doc, stats);
+    const cash = money(doc);
+    const used = skillPointsUsed(doc);
+    const issues = pending(doc).length;
+    const points = statPoints(stats);
+    const value = (text, bad) => `<dd${bad ? ' class="cc-bad"' : ''}>${text}</dd>`;
+    const rows = doc.metodo ? [
+      ['STATs', doc.metodo === 'pacote' ? value(`${points} de ${C.completePackage.pontosStat}`, points !== C.completePackage.pontosStat) : value(points ? `${points} pontos` : 'a rolar', !points)],
+      ['Perícias', used === null ? value('prontas') : value(`${used} de ${skillBudget(doc)}`, used !== skillBudget(doc))],
+      ['HP', value(points ? derived.hp : '—')],
+      ['Humanidade', value(points ? `${hum.atual}/${hum.max}` : '—')],
+      ['EMP', value(points ? hum.emp : '—', points && hum.emp !== stats.EMP)],
+      ['Dinheiro', value(eb(cash.saldo), cash.saldo < 0)],
+      ...(doc.metodo === 'pacote' ? [['Moda', value(`${eb(Math.max(0, cash.moda - cash.usadoModa))} sobrando`)]] : [])
+    ] : [];
+    const title = `${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` "${esc(doc.apelido)}"` : ''}`;
+    const short = doc.metodo ? `HP ${points ? derived.hp : '—'} · ${eb(cash.saldo)} · ${issues ? `${issues} pendência${issues > 1 ? 's' : ''}` : 'tudo certo'}` : 'escolha Role e método';
+    return `<summary><b>${title}</b> <small>${short}</small></summary>
+      <p class="cc-summary-role">${esc(roleName(doc.role))}${doc.metodo ? ` · ${esc((methodById(doc.metodo) || {}).nome || '')}` : ''}</p>
+      ${rows.length ? `<dl>${rows.map(([label, dd]) => `<dt>${label}</dt>${dd}`).join('')}</dl>` : ''}
+      <p>${issues ? `<button type="button" class="cc-link" data-step="7">${issues} pendência${issues > 1 ? 's' : ''}</button>` : '<span class="cc-ok">Sem pendências</span>'}</p>`;
+  }
 
   // ---------------- Levar para o Foundry ----------------
   // O servidor diz em que pé está (estadoFoundry): novo · enviado · enviado-mudou · importado · mudou · avisado.
@@ -664,12 +721,25 @@
     const papel = me.data.papel;
 
     root.innerHTML = `<div class="cc-steps" role="tablist">${steps.map((name, index) => `<button type="button" class="map-filter" data-step="${index + 1}">${index + 1}. ${name}</button>`).join('')}</div>
-      <p class="cc-save" id="cc-save" role="status"></p><div id="cc-recover"></div><div id="cc-step"></div>
-      <p class="cc-toolbar"><button class="action" type="button" data-nav="-1">Voltar</button><button class="action" type="button" data-nav="1">Próximo</button><button class="action" type="button" data-cc-sheet>Ver a ficha</button></p>`;
+      <p class="cc-save" id="cc-save" role="status"></p><div id="cc-recover"></div>
+      <div class="cc-layout"><div class="cc-main"><div id="cc-help"></div><div id="cc-step"></div>
+      <p class="cc-toolbar"><button class="action" type="button" data-nav="-1">Voltar</button><button class="action" type="button" data-nav="1">Próximo</button><button class="action" type="button" data-cc-sheet>Ver a ficha</button></p></div>
+      <div class="cc-summary" role="complementary" aria-label="Resumo do personagem"><details id="cc-summary"></details></div></div>`;
     // Depois de cada salvamento o servidor diz se o personagem mudou desde o envio: o quadro da revisão acompanha.
     const refreshFoundry = () => { const holder = root.querySelector('#cc-step [data-cc-foundry]'); if (holder && !holder.querySelector('[data-cc-send]:disabled')) holder.outerHTML = foundryBox(doc, papel); };
     const saver = createSaver(doc, root.querySelector('#cc-save'), helpers.storage, refreshFoundry);
-    const changed = () => { saver.changed(); markSteps(); };
+    const changed = () => { saver.changed(); markSteps(); drawSummary(); };
+    // Resumo: aberto em tela larga, recolhido no celular; o jogador abre e fecha à vontade.
+    const summaryEl = root.querySelector('#cc-summary');
+    summaryEl.open = window.matchMedia('(min-width: 1000px)').matches;
+    const drawSummary = () => { summaryEl.innerHTML = summaryHtml(doc); };
+    // Ajuda: aberta até o jogador fechar (fica lembrado neste aparelho).
+    const helpEl = root.querySelector('#cc-help');
+    const drawHelp = () => {
+      const [page, text] = HELP[step];
+      helpEl.innerHTML = `<details class="cc-help"${helpers.storage.get('criador-ajuda') === 'fechada' ? '' : ' open'}><summary>Como funciona${page ? ` <small>${page}</small>` : ''}</summary>${text}</details>`;
+      helpEl.firstElementChild.addEventListener('toggle', event => helpers.storage.set('criador-ajuda', event.target.open ? '' : 'fechada'));
+    };
 
     // Rascunho que não chegou ao servidor (conexão caiu): oferece recuperar.
     const draft = saver.draft();
@@ -701,7 +771,10 @@
     function draw() {
       stepEl.innerHTML = [drawIdentity, drawStats, drawSkills, drawLifepath, drawGear, drawHousing, drawReview][step - 1]();
       if (step === 5 && doc.metodo === 'pacote') renderShop(stepEl.querySelector('#cc-shop'), doc, { onChange: changed, readOnly: Boolean(doc.foundry) });
+      if (helpEl.dataset.step !== String(step)) { helpEl.dataset.step = String(step); drawHelp(); }
+      if (helpers.linkGlossary) helpers.linkGlossary(stepEl);
       markSteps();
+      drawSummary();
     }
 
     // ---------- 1. Identidade ----------
@@ -728,11 +801,11 @@
           <div class="table-wrap dense"><table class="cc-pick"><thead><tr><th>1d10</th>${statKeys.map(stat => `<th>${stat}</th>`).join('')}</tr></thead><tbody>${table.map((row, index) => `<tr data-row="${index + 1}" class="${doc.sorteio.linha === index + 1 ? 'cc-picked' : ''}"><td><b>${index + 1}</b></td>${row.map(value => `<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
       } else if (doc.metodo === 'edgerunner') {
         body = `<p>Role 1d10 para cada STAT e pegue o valor daquela linha na coluna dela.</p><p><button class="action" type="button" data-roll-each>Rolar todos</button></p>
-          <div class="cc-stats">${statKeys.map(stat => `<div class="cc-stat"><span>${stat}</span><b>${stats[stat] || '—'}</b><small>${doc.sorteio[stat] ? `1d10: ${doc.sorteio[stat]}` : ''}</small><button class="action" type="button" data-roll-stat="${stat}">Rolar</button></div>`).join('')}</div>`;
+          <div class="cc-stats">${statKeys.map(stat => `<div class="cc-stat"><span title="${STAT_MEANING[stat]}">${stat}</span><b>${stats[stat] || '—'}</b><small>${doc.sorteio[stat] ? `1d10: ${doc.sorteio[stat]}` : ''}</small><button class="action" type="button" data-roll-stat="${stat}">Rolar</button></div>`).join('')}</div>`;
       } else {
         const points = statPoints(stats);
         body = `<p>Distribua <b>${C.completePackage.pontosStat}</b> pontos; cada STAT de ${C.completePackage.statMin} a ${C.completePackage.statMax}. <b class="${points === C.completePackage.pontosStat ? 'cc-ok' : 'cc-bad'}">Usados: ${points}</b></p>
-          <div class="cc-stats">${statKeys.map(stat => `<div class="cc-stat"><span>${stat}</span><b>${stats[stat]}</b><div class="cc-step-buttons"><button type="button" class="action" data-stat-minus="${stat}" aria-label="Diminuir ${stat}">−</button><button type="button" class="action" data-stat-plus="${stat}" aria-label="Aumentar ${stat}">+</button></div></div>`).join('')}</div>`;
+          <div class="cc-stats">${statKeys.map(stat => `<div class="cc-stat"><span title="${STAT_MEANING[stat]}">${stat}</span><b>${stats[stat]}</b><div class="cc-step-buttons"><button type="button" class="action" data-stat-minus="${stat}" aria-label="Diminuir ${stat}">−</button><button type="button" class="action" data-stat-plus="${stat}" aria-label="Aumentar ${stat}">+</button></div></div>`).join('')}</div>`;
       }
       return `${box('STATs', body)}${box('Valores derivados', `<p class="cc-derived"><span>HP <b>${derived.hp}</b></span><span>Gravemente Ferido <b>${derived.gravemente}</b></span><span>Death Save <b>${derived.deathSave}</b></span><span>Humanidade <b>${derived.humanidade}</b></span><span>Andar <b>${derived.andar} m</b></span><span>Correr <b>${derived.correr} m</b></span></p><p class="note-status">HP = 10 + 5 × (média de BODY e WILL, para cima). A Humanidade cai com o cyberware no passo 5.</p>`)}`;
     }
@@ -750,16 +823,21 @@
       const used = skillPointsUsed(doc);
       const budget = skillBudget(doc);
       const origin = doc.lifepath.origem ? C.originLanguages[doc.lifepath.origem - 1] : null;
+      const suggested = doc.metodo === 'pacote' ? suggestedSkills(doc) : new Set();
+      // No Pacote Completo, as 20 perícias da Role vêm primeiro e destacadas.
+      if (suggested.size) rows.sort((a, b) => Number(suggested.has(b[0])) - Number(suggested.has(a[0])));
+      const suggestButton = `<button class="action" type="button" data-skill-suggest>Distribuir sugerido</button>`;
       const header = doc.metodo === 'ratoderua'
         ? '<p>No Rato de Rua as perícias vêm prontas. Só escolha os tipos e a língua.</p>'
-        : `<p>${doc.metodo === 'edgerunner' ? 'Distribua os pontos entre as 20 perícias da Role, cada uma de 2 a 6.' : 'Distribua os pontos em qualquer perícia, até 6; as básicas (em negrito) começam em 2.'} As marcadas ×2 custam o dobro. <b class="${used === budget ? 'cc-ok' : 'cc-bad'}">Pontos: ${used} de ${budget}</b></p>`;
+        : `<p>${doc.metodo === 'edgerunner' ? 'Distribua os pontos entre as 20 perícias da Role, cada uma de 2 a 6.' : `Distribua os pontos em qualquer perícia, até 6; as básicas (em negrito) começam em 2. As ${suggested.size} sugeridas para ${esc(roleName(doc.role))} vêm primeiro.`} As marcadas ×2 custam o dobro. <b class="${used === budget ? 'cc-ok' : 'cc-bad'}">Pontos: ${used} de ${budget}</b></p><p>${suggestButton} <small class="note-status">Põe os níveis do Rato de Rua da Role (86 pontos certinhos).</small></p>`;
       const line = ([name, level, editable]) => {
         const info = skillInfo.get(name) || {};
         const special = C.specializedSkills[name];
-        return `<tr><td>${info.basica ? `<b>${esc(info.pt)}</b>` : esc(special ? special.nome : info.pt || name)}${info.x2 ? ' <small>×2</small>' : ''}${special ? ` ${typeSelect(name, doc.tipos[name], `data-tipo="${esc(name)}"`)}` : ''}${name === 'Local Expert (Your Home)' ? ` <select data-casa aria-label="Seu bairro"><option value="">Bairro…</option>${C.homeDistricts.map(place => `<option${place === doc.casa ? ' selected' : ''}>${place}</option>`).join('')}</select>` : ''}</td>
+        return `<tr${suggested.has(name) ? ' class="cc-suggested"' : ''}><td>${info.basica ? `<b>${esc(info.pt)}</b>` : esc(special ? special.nome : info.pt || name)}${info.x2 ? ' <small>×2</small>' : ''}${suggested.has(name) ? ' <small class="cc-tag">sugerida</small>' : ''}${special ? ` ${typeSelect(name, doc.tipos[name], `data-tipo="${esc(name)}"`)}` : ''}${name === 'Local Expert (Your Home)' ? ` <select data-casa aria-label="Seu bairro"><option value="">Bairro…</option>${C.homeDistricts.map(place => `<option${place === doc.casa ? ' selected' : ''}>${place}</option>`).join('')}</select>` : ''}${info.desc ? `<small class="cc-desc">${esc(info.desc)}</small>` : ''}</td>
           <td>${info.stat || ''}</td><td class="cc-level">${editable ? `<button type="button" class="action" data-skill-minus="${esc(name)}" aria-label="Diminuir">−</button><b>${level}</b><button type="button" class="action" data-skill-plus="${esc(name)}" aria-label="Aumentar">+</button>` : `<b>${level}</b>`}</td><td><b>${level + (stats[info.stat] || 0)}</b></td></tr>`;
       };
-      const extras = doc.metodo === 'pacote' ? `<h4>Perícias de escolha extras</h4><p class="note-status">Outras línguas, artes marciais (×2), instrumentos ou ciências.</p>
+      const specialSuggested = doc.metodo === 'pacote' ? (C.streetratSkills[(roleById(doc.role) || {}).tabelas] || []).filter(([name]) => C.specializedSkills[name]) : [];
+      const extras = doc.metodo === 'pacote' ? `<h4>Perícias de escolha extras</h4><p class="note-status">Outras línguas, artes marciais (×2), instrumentos ou ciências.${specialSuggested.length ? ` Sugerida para ${esc(roleName(doc.role))}: ${specialSuggested.map(([name, level]) => `${esc(C.specializedSkills[name].nome)} (${level})`).join(', ')}.` : ''}</p>
         ${doc.extras.map((extra, index) => `<div class="cc-extra">${esc(C.specializedSkills[extra.base].nome)} ${typeSelect(extra.base, extra.tipo, `data-extra-tipo="${index}"`)} <span class="cc-level"><button type="button" class="action" data-extra-minus="${index}">−</button><b>${extra.nivel}</b><button type="button" class="action" data-extra-plus="${index}">+</button></span> <button type="button" class="action cc-danger" data-extra-remove="${index}">Tirar</button></div>`).join('')}
         <p>${SPECIAL.map(base => `<button type="button" class="action" data-extra-add="${base}">+ ${C.specializedSkills[base].nome}</button>`).join(' ')}</p>` : '';
       return `${box('Língua da origem (4 níveis grátis)', `<p>${origin ? `Pela sua origem (Lifepath), as opções são: ${origin.map(en => C.languages[en]).join(', ')}. Pode escolher outra.` : 'Role a Origem cultural no Lifepath (passo 4) para ver as línguas da sua região, ou escolha agora.'}</p>${typeSelect('Language', doc.lingua, 'data-lingua')}`)}
@@ -853,6 +931,10 @@
         draw(); return changed();
       }
       // Perícias
+      if (target.closest('[data-skill-suggest]')) {
+        if (!confirm('Trocar os níveis das perícias pelos sugeridos para a Role? Os que você pôs serão substituídos.')) return;
+        applySuggested(doc); draw(); return changed();
+      }
       const skillButton = target.closest('[data-skill-plus]') || target.closest('[data-skill-minus]');
       if (skillButton) {
         const name = skillButton.dataset.skillPlus || skillButton.dataset.skillMinus;
@@ -977,6 +1059,6 @@
       loja: { eyebrow: 'Personagens / loja', title: 'Loja inicial', lede: 'Compre o equipamento inicial com o dinheiro do personagem. Depois que ele for para o Foundry, a loja inicial fecha.', html: holder, setup: setupShopPage, manterAlvo: true }
     },
     // Para os testes e o importador: as mesmas contas que a tela usa.
-    regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank }
+    regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank, applySuggested }
   };
 })();
