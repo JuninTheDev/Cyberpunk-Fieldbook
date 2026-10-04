@@ -157,6 +157,25 @@ module.exports = async ({ edge, servidores, r }) => {
     return [usados === 86 && total === 86 && atletismo === '2', `${usados}/${total} · Atletismo ${atletismo}`];
   });
 
+  // ---------- Netrunner de 2077 ----------
+  await r.passo('Netrunner (Rato de Rua): o kit de 2077 troca o cyberdeck e os programas pelo Hunter e 3 quickhacks', async () => {
+    await novo();
+    await clicar('[data-role="netrunner"]');
+    await clicar('[data-method="ratoderua"]');
+    await passo(5);
+    const red = await texto('#cc-step');
+    await edge.evaluate("(() => { const r = document.querySelector('[data-kitnet=\"2077\"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()");
+    await edge.sleep(250);
+    for (const id of ['short-circuit', 'overheat', 'bait']) {
+      await edge.evaluate(`(() => { const c = document.querySelector('[data-quickhack="netrunning-2077:${id}"]'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+      await edge.sleep(200);
+    }
+    const travado = await edge.evaluate("document.querySelector('[data-quickhack=\"netrunning-2077:reboot-optics\"]').disabled");
+    const itens = await edge.evaluate("[...document.querySelectorAll('.cc-items li')].map(li => li.textContent)");
+    const pacote = itens.join(' | ');
+    return [/Cyberdeck/.test(red) && /Militech Hunter MK\.1/.test(pacote) && /Short Circuit/.test(pacote) && /Bait/.test(pacote) && !/Cyberdeck/.test(pacote) && !/Worm/.test(pacote) && travado, `quarto travado: ${travado} · ${pacote.slice(0, 160)}`];
+  });
+
   // ---------- Pacote Completo e loja ----------
   let pacoteId;
   await r.passo('Pacote Completo: 62 pontos de STAT (começa em 60)', async () => {

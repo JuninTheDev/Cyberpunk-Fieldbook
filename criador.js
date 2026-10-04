@@ -36,7 +36,7 @@
   // ---------------- Personagem em branco ----------------
   const blank = () => ({
     nome: '', apelido: '', role: '', especializacao: '', metodo: '', passo: 1,
-    stats: {}, sorteio: {}, pericias: {}, tipos: {}, extras: [], lingua: '', casa: '',
+    stats: {}, sorteio: {}, pericias: {}, tipos: {}, extras: [], lingua: '', casa: '', kitNet: 'red', quickhacks: [],
     lifepath: { amigos: [], inimigos: [], amores: [], role: {} }, escolhas: {}, itens: [], moradia: '', aparencia: '', notas: ''
   });
 
@@ -100,18 +100,28 @@
 
   // ---------------- Itens ----------------
   // Pacote da Role (Rato de Rua e Edgerunner) com as escolhas feitas, mais o cyberware grátis de 2077 e o que foi comprado.
+  // Kit do Netrunner: o do RED (cyberdeck e programas do pacote) ou o de 2077 (Hunter MK.1 e 3 quickhacks).
+  const isRedDeckEntry = entry => (entry.ou ? entry.ou.flat() : [entry]).every(([id]) => id === 'core_gear:cyberdeck' || id.startsWith('core_programs:'));
+  const uses2077Kit = (doc, pack) => Boolean(pack && pack.kit2077 && doc.kitNet === '2077');
+  const chosenQuickhacks = (doc, pack) => (doc.quickhacks || []).filter(id => pack.kit2077.quickhacks.some(([option]) => option === id)).slice(0, pack.kit2077.escolher);
   function packageEntries(doc) {
     if (!['ratoderua', 'edgerunner'].includes(doc.metodo)) return [];
     const pack = C.packages[(roleById(doc.role) || {}).tabelas];
     if (!pack) return [];
     const list = [];
+    const kit2077 = uses2077Kit(doc, pack);
     for (const category of ['armas', 'equipamento', 'moda', 'cyberware']) {
       (pack[category] || []).forEach((entry, index) => {
+        if (kit2077 && category === 'equipamento' && isRedDeckEntry(entry)) return;
         const key = `${category}:${index}`;
         const option = entry.ou ? Number(doc.escolhas[key]) || 0 : -1;
         const items = entry.ou ? entry.ou[option] || entry.ou[0] : [entry];
         items.forEach(([id, qty], k) => list.push({ uid: `pacote:${key}:${option}:${k}`, id, qtd: qty, origem: 'pacote' }));
       });
+      if (kit2077 && category === 'equipamento') {
+        list.push({ uid: 'pacote:kit2077:deck', id: pack.kit2077.deck, qtd: 1, origem: 'pacote' });
+        for (const id of chosenQuickhacks(doc, pack)) list.push({ uid: `pacote:kit2077:${id}`, id, qtd: 1, origem: 'pacote' });
+      }
     }
     return list;
   }
@@ -248,6 +258,11 @@
     if (missingLp.length) add(4, `Lifepath sem: ${missingLp.join(', ')}.`);
     const missingRole = roleLpMissing(doc).length;
     if (missingRole) add(4, `Lifepath da Role: falta${missingRole > 1 ? 'm' : ''} ${missingRole} pergunta${missingRole > 1 ? 's' : ''}.`);
+    const netPack = C.packages[(roleById(doc.role) || {}).tabelas];
+    if (['ratoderua', 'edgerunner'].includes(doc.metodo) && uses2077Kit(doc, netPack)) {
+      const left = netPack.kit2077.escolher - chosenQuickhacks(doc, netPack).length;
+      if (left > 0) add(5, `Escolha mais ${left} quickhack${left > 1 ? 's' : ''} do kit de 2077.`);
+    }
     const cash = money(doc);
     if (doc.metodo && cash.saldo < 0) add(5, `Gastou ${eb(-cash.saldo)} a mais do que tinha.`);
     for (const entry of missingFoundations(doc)) add(5, `${entry.item.nome} precisa de ${{ neuralWare: 'Neural Link', cyberEye: 'um cyberolho', cyberAudioSuite: 'Cyberaudio Suite', cyberArm: 'um cyberbraço', cyberLeg: 'uma cyberperna', borgware: 'uma base de borgware' }[entry.item.cyber.tipo]}.`);
@@ -914,13 +929,27 @@
       }
       const pack = C.packages[(roleById(doc.role) || {}).tabelas] || {};
       const label = ([id, qty]) => { const item = catalog.get(id) || {}; return `${esc(item.nome || id)}${qty > 1 ? ` ×${qty}` : ''}`; };
+      const kit2077 = uses2077Kit(doc, pack);
       const categoryBox = (category, title) => `<h4>${title}</h4><ul class="cc-items">${(pack[category] || []).map((entry, index) => {
+        if (kit2077 && category === 'equipamento' && isRedDeckEntry(entry)) return '';
         if (!entry.ou) return `<li>${label(entry)}${C.free2077.some(free2077 => free2077.id === entry[0]) && category === 'cyberware' ? ' <small class="cc-ok">já vem grátis em 2077</small>' : ''}</li>`;
         const key = `${category}:${index}`;
         const chosen = Number(doc.escolhas[key]) || 0;
         return `<li>${entry.ou.map((option, k) => `<label class="cc-radio"><input type="radio" name="esc-${key}" data-escolha="${key}" value="${k}"${k === chosen ? ' checked' : ''}> ${option.map(label).join(' + ')}</label>`).join(' <small>ou</small> ')}</li>`;
       }).join('')}</ul>`;
-      return `${box('Pacote da Role', `<p>No ${esc((methodById(doc.metodo) || {}).nome)} o equipamento vem pronto. Escolha onde houver opção.</p>${categoryBox('armas', 'Armas e armaduras')}${categoryBox('equipamento', 'Equipamento')}${categoryBox('moda', 'Moda')}${categoryBox('cyberware', 'Cyberware')}`)}
+      let kitBox = '';
+      if (pack.kit2077) {
+        const chosen = chosenQuickhacks(doc, pack);
+        const deck = catalog.get(pack.kit2077.deck) || {};
+        const hacks = kit2077 ? `<h4>Quickhacks: ${chosen.length} de ${pack.kit2077.escolher}</h4><div class="cc-hacks">${pack.kit2077.quickhacks.map(([id, text]) => {
+          const on = chosen.includes(id);
+          return `<label class="cc-radio"><input type="checkbox" data-quickhack="${id}"${on ? ' checked' : ''}${!on && chosen.length >= pack.kit2077.escolher ? ' disabled' : ''}> <b>${esc((catalog.get(id) || {}).nome || id)}</b> <small>${esc(text)}</small></label>`;
+        }).join('')}</div>` : '';
+        kitBox = box('Kit de Netrunner', `<p>Em 2077 dá para trocar o cyberdeck e os programas do RED pelo deck de 2077 com quickhacks. O resto do pacote não muda.</p>
+          <p><label class="cc-radio"><input type="radio" name="kitnet" data-kitnet="red"${kit2077 ? '' : ' checked'}> <b>Kit do RED:</b> Cyberdeck (7 slots) e os programas do pacote, logo abaixo</label>
+          <label class="cc-radio"><input type="radio" name="kitnet" data-kitnet="2077"${kit2077 ? ' checked' : ''}> <b>Kit de 2077:</b> ${esc(deck.nome || 'Militech Hunter MK.1')} (deck padrão: RAM 7, 7 slots, −1 de RAM contra alvo marcado) e ${pack.kit2077.escolher} quickhacks de 100eb</label></p>${hacks}`);
+      }
+      return `${kitBox}${box('Pacote da Role', `<p>No ${esc((methodById(doc.metodo) || {}).nome)} o equipamento vem pronto. Escolha onde houver opção.</p>${categoryBox('armas', 'Armas e armaduras')}${categoryBox('equipamento', 'Equipamento')}${kit2077 ? `<ul class="cc-items"><li>${esc((catalog.get(pack.kit2077.deck) || {}).nome || '')} <small class="cc-ok">kit de 2077</small></li>${chosenQuickhacks(doc, pack).map(id => `<li>${esc((catalog.get(id) || {}).nome || id)} <small class="cc-ok">kit de 2077</small></li>`).join('')}</ul>` : ''}${categoryBox('moda', 'Moda')}${categoryBox('cyberware', 'Cyberware')}`)}
         ${box('Cyberware grátis de 2077 e Humanidade', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}
         ${box('Mais 500eb para gastar', '<p>Além do pacote, você ganha 500eb para comprar outros itens ou guardar. Use a loja.</p><p><button type="button" class="action" data-cc-shop>Abrir a loja</button></p>')}`;
     }
@@ -1039,6 +1068,12 @@
       else if (target.matches('[data-lp-item]')) { const [kind, index] = target.dataset.lpItem.split(':'); doc.lifepath[kind][Number(index)] = Number(target.value) || 1; }
       else if (target.matches('[data-lp-enemy]')) { const [index, part] = target.dataset.lpEnemy.split(':'); doc.lifepath.inimigos[Number(index)][part] = Number(target.value) || 1; }
       else if (target.matches('[data-escolha]')) { doc.escolhas[target.dataset.escolha] = Number(target.value); }
+      else if (target.matches('[data-kitnet]')) { doc.kitNet = target.dataset.kitnet; }
+      else if (target.matches('[data-quickhack]')) {
+        const id = target.dataset.quickhack;
+        const list = (doc.quickhacks || []).filter(item => item !== id);
+        doc.quickhacks = target.checked ? [...list, id] : list;
+      }
       else if (target.matches('[data-moradia]')) { doc.moradia = target.dataset.moradia; }
       else return;
       draw();

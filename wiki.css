@@ -542,3 +542,7 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-rlp .cc-lp { grid-template-columns: 240px minmax(0, 1fr) auto; }
 .cc-rlp-pick { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 2 / -1; }
 @media (max-width: 640px) { .cc-rlp .cc-lp { grid-template-columns: 1fr; } .cc-rlp-pick { grid-column: auto; } }
+/* Kit de 2077 do Netrunner: um quickhack por linha. */
+.cc-hacks { display: grid; gap: 4px; }
+.cc-hacks small { color: var(--muted); }
+.cc-hacks input:disabled + b { opacity: 0.55; }

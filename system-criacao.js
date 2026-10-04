@@ -147,7 +147,20 @@
       armas: [w('very-heavy-pistol'), a('very-heavy-pistol-basic', 50), ...lightArmor],
       equipamento: [g('agent'), g('cyberdeck'), g('virtuality-goggles'), prog('armor'), prog('sword'), ou(prog('see-ya'), prog('eraser')), ou(prog('sword'), prog('vrizzbolt')), ou(prog('worm'), prog('sword'))],
       moda: [cl('generic-chic', 'top', 10), cl('leisurewear', 'footwear', 2), cl('leisurewear', 'jewelry'), cl('leisurewear', 'bottoms', 2), cl('urban-flash', 'jacket')],
-      cyberware: [cw('interface-plugs'), cw('neural-link'), cw('shift-tacts')], humanidade: 14
+      cyberware: [cw('interface-plugs'), cw('neural-link'), cw('shift-tacts')], humanidade: 14,
+      // Em 2077, o jogador pode trocar o cyberdeck e os programas do RED pelo deck de 2077 com 3 quickhacks de 100eb
+      // (sup. p. 16–20). O resto do pacote não muda.
+      kit2077: {
+        deck: 'netrunning-2077:militech-hunter-mk-1', escolher: 3,
+        quickhacks: [
+          ['netrunning-2077:short-circuit', 'Vírus: 2d6 direto no corpo do alvo.'],
+          ['netrunning-2077:reboot-optics', 'Controle: embaralha os cyberópticos do alvo (Olho Danificado).'],
+          ['netrunning-2077:weapon-glitch', 'Controle: trava a arma de longo alcance do alvo.'],
+          ['netrunning-2077:overheat', 'Vírus: põe o alvo em chamas, 2d6 por rodada.'],
+          ['netrunning-2077:bait', 'Cloak: um som no Cyberaudio do alvo atrai ele até você.'],
+          ['netrunning-2077:request-backup', 'Cloak: simula um pedido de reforço do alvo para a LocalNet dele.']
+        ]
+      }
     },
     tech: {
       armas: [ou(w('shotgun'), w('assault-rifle')), ou(a('shotgun-shell-basic', 100), a('rifle-basic', 100)), a('grenade-flashbang'), ...lightArmor],
