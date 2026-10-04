@@ -483,7 +483,7 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-items li { margin-bottom: 4px; }
 .cc-items small { color: var(--muted); }
 .cc-lifepath dt { margin-top: 6px; color: var(--yellow); font: 12px Oxanium, Consolas, monospace; text-transform: uppercase; }
-.cc-lifepath dd { margin: 2px 0 0; }
+.cc-lifepath dd { margin: 2px 0 0; white-space: pre-line; }
 .cc-wallet { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px; border: 1px solid #3b4443; background: #121718; }
 .cc-wallet b { color: var(--yellow); }
 .cc-wallet b.cc-bad { color: var(--coral); }
@@ -502,7 +502,7 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
   .cc-shop-item { flex-direction: column; align-items: stretch; }
   .cc-price { justify-items: start; grid-auto-flow: column; justify-content: space-between; }
 }
-.cc-steps .map-filter.active, .cc-shop-filters .map-filter.active { border-color: var(--cyan); color: var(--cyan); background: #10211e; }
+.cc-steps .map-filter.active, .cc-shop-filters .map-filter.active, .cc-rlp-pick .map-filter.active { border-color: var(--cyan); color: var(--cyan); background: #10211e; }
 .cc-kit { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--cyan); background: #10211e; }
 .cc-kit p { margin: 0 0 8px; }
 .cc-kit .action { margin-top: 0; }
@@ -538,3 +538,7 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-box td .cc-desc, #skill-table .skill-desc { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.35; }
 .cc-suggested td:first-child { box-shadow: inset 3px 0 0 var(--lime); }
 .cc-tag { padding: 0 5px; border: 1px solid var(--lime); color: var(--lime); font-size: 11px; text-transform: uppercase; }
+/* Lifepath da Role: perguntas mais longas que as do Lifepath comum; as de escolha viram botões. */
+.cc-rlp .cc-lp { grid-template-columns: 240px minmax(0, 1fr) auto; }
+.cc-rlp-pick { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 2 / -1; }
+@media (max-width: 640px) { .cc-rlp .cc-lp { grid-template-columns: 1fr; } .cc-rlp-pick { grid-column: auto; } }

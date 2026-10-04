@@ -37,7 +37,7 @@
   const blank = () => ({
     nome: '', apelido: '', role: '', especializacao: '', metodo: '', passo: 1,
     stats: {}, sorteio: {}, pericias: {}, tipos: {}, extras: [], lingua: '', casa: '',
-    lifepath: { amigos: [], inimigos: [], amores: [] }, escolhas: {}, itens: [], moradia: '', aparencia: '', notas: ''
+    lifepath: { amigos: [], inimigos: [], amores: [], role: {} }, escolhas: {}, itens: [], moradia: '', aparencia: '', notas: ''
   });
 
   // ---------------- Regras ----------------
@@ -168,6 +168,31 @@
     return row ? strip(row[2]) : '';
   };
   const enemyText = enemy => [lpText('inimigo-quem', enemy.quem), lpText('inimigo-causa', enemy.causa), lpText('inimigo-recursos', enemy.recursos) && `Pode usar: ${lpText('inimigo-recursos', enemy.recursos)}`, lpText('vinganca', enemy.vinganca) && `Se se encontrarem: ${lpText('vinganca', enemy.vinganca)}`].filter(Boolean).join(' ');
+  // Lifepath da Role (p. 54–70): as respostas ficam em lifepath.role, { idDaTabela: resultado }. Uma tabela
+  // condicional só vale quando a anterior que ela segue está valendo e deu o resultado certo.
+  const roleLpTables = doc => C.roleLifepaths[(roleById(doc.role) || {}).tabelas] || [];
+  function roleLpActive(doc) {
+    const answers = (doc.lifepath && doc.lifepath.role) || {};
+    const active = new Set();
+    return roleLpTables(doc).filter(table => {
+      if (table.se && !(active.has(table.se.id) && Number(answers[table.se.id]) === table.se.valor)) return false;
+      active.add(table.id);
+      return true;
+    });
+  }
+  function rollRoleLp(doc, roll) {
+    doc.lifepath.role = {};
+    for (const table of roleLpTables(doc)) {
+      if (roleLpActive(doc).includes(table)) doc.lifepath.role[table.id] = roll(table.dado || table.linhas.length);
+    }
+  }
+  const roleLpMissing = doc => roleLpActive(doc).filter(table => !((doc.lifepath && doc.lifepath.role) || {})[table.id]);
+  function roleLpText(doc) {
+    const answers = (doc.lifepath && doc.lifepath.role) || {};
+    return roleLpActive(doc).filter(table => table.linhas[answers[table.id] - 1])
+      .map(table => { const answer = table.linhas[answers[table.id] - 1]; return `${table.titulo} ${answer}${/[.!?]$/.test(answer) ? '' : '.'}`; }).join('\n');
+  }
+
   function lifepathTexts(doc) {
     const lp = doc.lifepath || {};
     const texts = {};
@@ -176,7 +201,8 @@
     texts.friends = (lp.amigos || []).map(value => lpText('amigo', value)).join(' | ');
     texts.enemies = (lp.inimigos || []).map(enemyText).join(' | ');
     texts.tragicLoveAffairs = (lp.amores || []).map(value => lpText('amor', value)).join(' | ');
-    texts.roleLifepath = lp.roleLifepath || '';
+    // Vai para o campo Role Lifepath do Foundry: as respostas das tabelas da Role e, depois, as notas do jogador.
+    texts.roleLifepath = [roleLpText(doc), lp.roleLifepath || ''].filter(Boolean).join('\n\n');
     return texts;
   }
 
@@ -220,6 +246,8 @@
     const lp = doc.lifepath || {};
     const missingLp = lifepathFields.filter(([key]) => !lp[key]).map(([, label]) => label);
     if (missingLp.length) add(4, `Lifepath sem: ${missingLp.join(', ')}.`);
+    const missingRole = roleLpMissing(doc).length;
+    if (missingRole) add(4, `Lifepath da Role: falta${missingRole > 1 ? 'm' : ''} ${missingRole} pergunta${missingRole > 1 ? 's' : ''}.`);
     const cash = money(doc);
     if (doc.metodo && cash.saldo < 0) add(5, `Gastou ${eb(-cash.saldo)} a mais do que tinha.`);
     for (const entry of missingFoundations(doc)) add(5, `${entry.item.nome} precisa de ${{ neuralWare: 'Neural Link', cyberEye: 'um cyberolho', cyberAudioSuite: 'Cyberaudio Suite', cyberArm: 'um cyberbraço', cyberLeg: 'uma cyberperna', borgware: 'uma base de borgware' }[entry.item.cyber.tipo]}.`);
@@ -856,7 +884,19 @@
         ${box('Relações', `${list('Amigos', 'amigos', lp.amigos, (value, index) => lpSelect('amigo', value, `data-lp-item="amigos:${index}"`))}
           ${list('Inimigos', 'inimigos', lp.inimigos, (enemy, index) => ['quem', 'causa', 'recursos', 'vinganca'].map(part => lpSelect(part === 'vinganca' ? 'vinganca' : `inimigo-${part}`, enemy[part], `data-lp-enemy="${index}:${part}"`)).join(''))}
           ${list('Amores trágicos', 'amores', lp.amores, (value, index) => lpSelect('amor', value, `data-lp-item="amores:${index}"`))}`)}
-        ${box('Lifepath da Role e notas', `<label>O livro tem um Lifepath próprio de cada Role. Escreva aqui o seu, se usar.<textarea data-lp-text="roleLifepath" rows="3" maxlength="3000">${esc(lp.roleLifepath || '')}</textarea></label>`)}`;
+        ${drawRoleLifepath()}
+        ${box('Notas do Lifepath', `<label>O que mais quiser contar da história do personagem. Vai junto para o Foundry, depois do Lifepath da Role.<textarea data-lp-text="roleLifepath" rows="3" maxlength="3000">${esc(lp.roleLifepath || '')}</textarea></label>`)}`;
+    }
+    function drawRoleLifepath() {
+      const role = roleById(doc.role);
+      if (!role) return box('Lifepath da Role', '<p>Escolha a Role no passo 1 para ver as perguntas dela.</p>');
+      const answers = doc.lifepath.role || {};
+      const source = role.tabelas !== role.id ? ` O ${esc(role.nome)} de 2077 usa as tabelas do ${role.tabelas === 'exec' ? 'Exec' : 'Rockerboy'} do RED.` : '';
+      const field = table => table.dado
+        ? `<select data-rlp="${table.id}" aria-label="${esc(table.titulo)}"><option value="">Escolha…</option>${table.linhas.map((line, index) => `<option value="${index + 1}"${Number(answers[table.id]) === index + 1 ? ' selected' : ''}>${index + 1}. ${esc(line)}</option>`).join('')}</select><button type="button" class="action" data-rlp-roll="${table.id}">Rolar 1d${table.dado}</button>`
+        : `<div class="cc-rlp-pick">${table.linhas.map((line, index) => `<button type="button" class="map-filter${Number(answers[table.id]) === index + 1 ? ' active' : ''}" data-rlp-pick="${table.id}:${index + 1}">${esc(line)}</button>`).join('')}</div>`;
+      return box(`Lifepath da Role: ${esc(role.nome)}`, `<p>Perguntas próprias da Role (RED p. 54–70). Role cada uma ou escolha; algumas só aparecem depois de outra.${source} <button type="button" class="action" data-rlp-all>Rolar tudo da Role</button></p>
+        <div class="cc-lp-grid cc-rlp">${roleLpActive(doc).map(table => `<div class="cc-lp"><label>${esc(table.titulo)}</label>${field(table)}</div>`).join('')}</div>`);
     }
     const rollLp = key => helpers.rollDice('1d10');
     const newEnemy = () => ({ quem: rollLp(), causa: rollLp(), recursos: rollLp(), vinganca: rollLp() });
@@ -911,7 +951,7 @@
       if (target.closest('[data-cc-sheet]')) { saver.now(); return helpers.openPage('ficha', { section: doc.id }); }
       if (target.closest('[data-cc-shop]')) { saver.now(); return helpers.openPage('loja', { section: doc.id }); }
       const role = target.closest('[data-role]');
-      if (role) { if (doc.role !== role.dataset.role) { doc.role = role.dataset.role; doc.especializacao = ''; doc.escolhas = {}; doc.tipos = {}; doc.pericias = {}; } draw(); return changed(); }
+      if (role) { if (doc.role !== role.dataset.role) { doc.role = role.dataset.role; doc.especializacao = ''; doc.escolhas = {}; doc.tipos = {}; doc.pericias = {}; doc.lifepath.role = {}; } draw(); return changed(); }
       const spec = target.closest('[data-spec]');
       if (spec) { doc.especializacao = spec.dataset.spec; draw(); return changed(); }
       const method = target.closest('[data-method]');
@@ -963,8 +1003,18 @@
         doc.lifepath.amigos = Array.from({ length: count() }, rollLp);
         doc.lifepath.inimigos = Array.from({ length: count() }, newEnemy);
         doc.lifepath.amores = Array.from({ length: count() }, rollLp);
+        rollRoleLp(doc, sides => helpers.rollDice(`1d${sides}`));
         draw(); return changed();
       }
+      if (target.closest('[data-rlp-all]')) { rollRoleLp(doc, sides => helpers.rollDice(`1d${sides}`)); draw(); return changed(); }
+      const rlpRoll = target.closest('[data-rlp-roll]');
+      if (rlpRoll) {
+        const table = roleLpTables(doc).find(item => item.id === rlpRoll.dataset.rlpRoll);
+        if (table) doc.lifepath.role = { ...doc.lifepath.role, [table.id]: helpers.rollDice(`1d${table.dado}`) };
+        draw(); return changed();
+      }
+      const rlpPick = target.closest('[data-rlp-pick]');
+      if (rlpPick) { const [id, value] = rlpPick.dataset.rlpPick.split(':'); doc.lifepath.role = { ...doc.lifepath.role, [id]: Number(value) }; draw(); return changed(); }
       const lpCount = target.closest('[data-lp-count]');
       if (lpCount) {
         const kind = lpCount.dataset.lpCount;
@@ -985,6 +1035,7 @@
       else if (target.matches('[data-casa]')) { doc.casa = target.value; }
       else if (target.matches('[data-extra-tipo]')) { doc.extras[Number(target.dataset.extraTipo)].tipo = target.value; }
       else if (target.matches('[data-lp]')) { doc.lifepath[target.dataset.lp] = Number(target.value) || ''; }
+      else if (target.matches('[data-rlp]')) { doc.lifepath.role = { ...doc.lifepath.role, [target.dataset.rlp]: Number(target.value) || '' }; }
       else if (target.matches('[data-lp-item]')) { const [kind, index] = target.dataset.lpItem.split(':'); doc.lifepath[kind][Number(index)] = Number(target.value) || 1; }
       else if (target.matches('[data-lp-enemy]')) { const [index, part] = target.dataset.lpEnemy.split(':'); doc.lifepath.inimigos[Number(index)][part] = Number(target.value) || 1; }
       else if (target.matches('[data-escolha]')) { doc.escolhas[target.dataset.escolha] = Number(target.value); }
@@ -1059,6 +1110,6 @@
       loja: { eyebrow: 'Personagens / loja', title: 'Loja inicial', lede: 'Compre o equipamento inicial com o dinheiro do personagem. Depois que ele for para o Foundry, a loja inicial fecha.', html: holder, setup: setupShopPage, manterAlvo: true }
     },
     // Para os testes e o importador: as mesmas contas que a tela usa.
-    regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank, applySuggested }
+    regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank, applySuggested, rollRoleLp, roleLpText }
   };
 })();

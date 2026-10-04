@@ -207,6 +207,236 @@
     corpo: { moradia: 'Conapt corporativo (pago pela corp)', aluguel: 0, estilo: 'Bom (pago no primeiro mês)', custoEstilo: 600 },
     nomad: { nota: 'O Nomad pode morar com a família do clã (veja a habilidade Moto).' }
   };
+  // Lifepath da Role (RED p. 54–70), tabela por tabela, na ordem do fluxograma do livro. Chave: a Role do RED
+  // (`tabelas` de cada Role de 2077). `dado`: 6 ou 10; 0 = escolha, sem rolar. `se`: a tabela só vale quando
+  // outra deu aquele resultado (1, 2, 3...). O Fixer não entra: nenhuma Role de 2077 usa as tabelas dele.
+  const roleLifepaths = {
+    // Rockerboy (p. 54). A Face de 2077 usa este.
+    rockerboy: [
+      { id: 'tipo', titulo: 'Que tipo de Rockerboy você é?', dado: 10, linhas: ['Músico', 'Poeta de palco', 'Artista de rua', 'Artista performático', 'Comediante', 'Orador', 'Político', 'Rapper', 'DJ', 'Idoru'] },
+      { id: 'grupo', titulo: 'Está num grupo ou em carreira solo?', dado: 0, linhas: ['Num grupo', 'Carreira solo'] },
+      { id: 'jaGrupo', titulo: 'Já fez parte de um grupo?', dado: 0, linhas: ['Sim, já fiz parte de um grupo', 'Não, sempre fiz carreira solo'], se: { id: 'grupo', valor: 2 } },
+      { id: 'saiu', titulo: 'Por que você saiu do grupo?', dado: 6, se: { id: 'jaGrupo', valor: 1 }, linhas: [
+        'Você foi um idiota, e o resto do grupo votou pela sua saída.',
+        'Foi pego dormindo com o par de outro membro.',
+        'O resto do grupo morreu num trágico "acidente".',
+        'O resto do grupo foi assassinado ou destruído por inimigos de fora.',
+        'O grupo se separou por "diferenças criativas".',
+        'Você decidiu seguir sozinho.'] },
+      { id: 'local', titulo: 'Onde você se apresenta?', dado: 6, linhas: ['Cafeterias alternativas', 'Clubes privados', 'Barzinhos decadentes', 'Apresentações de guerrilha', 'Casas noturnas pela cidade', 'Num servidor de Data Pool'] },
+      { id: 'atras', titulo: 'Quem está atrás de você ou do seu grupo?', dado: 6, linhas: [
+        'Um antigo membro do grupo que acha que você o traiu.',
+        'Um grupo ou artista rival tentando roubar a sua fatia do mercado.',
+        'Inimigos corporativos que não gostam da sua mensagem.',
+        'Um crítico ou outro "influencer" tentando derrubar você.',
+        'Uma estrela da mídia mais velha que se sente ameaçada pela sua fama.',
+        'Um interesse romântico ou figura da mídia que quer vingança por motivos pessoais.'] }
+    ],
+    // Solo (p. 55).
+    solo: [
+      { id: 'tipo', titulo: 'Que tipo de Solo você é?', dado: 6, linhas: ['Guarda-costas', 'Mercenário de rua', 'Capanga corporativo que pega serviços por fora', 'Agente corporativo ou freelancer de Black Ops', 'Vigilante local de aluguel', 'Assassino de aluguel'] },
+      { id: 'moral', titulo: 'Como é a sua bússola moral?', dado: 6, linhas: [
+        'Sempre trabalha pelo bem, tentando acabar com os "bandidos".',
+        'Sempre poupa os inocentes (idosos, mulheres, crianças, animais de estimação).',
+        'De vez em quando vacila e faz coisas antiéticas ou más, mas é raro.',
+        'Implacável e focado no lucro: trabalha para qualquer um e pega qualquer serviço pelo dinheiro.',
+        'Disposto a dobrar as regras (e a lei) para fazer o serviço.',
+        'Totalmente maligno: faz trabalho ilegal e antiético o tempo todo e, na verdade, se diverte.'] },
+      { id: 'territorio', titulo: 'Qual é o seu território de operação?', dado: 6, linhas: ['Uma zona corporativa', 'Zonas de combate', 'A cidade toda', 'O território de uma única corporação', 'O território de um Fixer ou contato em particular', 'Onde o dinheiro levar'] },
+      { id: 'atras', titulo: 'Quem está atrás de você?', dado: 6, linhas: [
+        'Uma corporação que você pode ter irritado.',
+        'Um gangueiro com cyberware que você enfrentou.',
+        'Homens da lei corruptos, ou homens da lei que acham, por engano, que você é culpado de algo.',
+        'Um Solo rival de outra corporação.',
+        'Um Fixer que vê você como ameaça.',
+        'Um Solo rival que vê você como seu arqui-inimigo.'] }
+    ],
+    // Netrunner (p. 56–57).
+    netrunner: [
+      { id: 'tipo', titulo: 'Que tipo de Netrunner você é?', dado: 6, linhas: [
+        'Freelancer que hackeia por contrato.',
+        'Corporativo "runner duplo" que hackeia o próprio chefe.',
+        'Hacktivista interessado em invadir sistemas e expor os bandidos.',
+        'Só gosta de invadir sistemas por diversão.',
+        'Faz parte de uma equipe de freelancers.',
+        'Hackeia para um Media, político ou Lawman que contrata você quando precisa.'] },
+      { id: 'parceiro', titulo: 'Tem um parceiro ou trabalha sozinho?', dado: 0, linhas: ['Tem um parceiro', 'Trabalha sozinho'] },
+      { id: 'quemParceiro', titulo: 'Quem é o seu parceiro?', dado: 6, se: { id: 'parceiro', valor: 1 }, linhas: [
+        'Alguém da família.',
+        'Um velho amigo.',
+        'Um possível par romântico, também.',
+        'Um parceiro secreto que pode ser uma IA renegada. Talvez.',
+        'Um parceiro secreto com ligações com a máfia ou uma gangue.',
+        'Um parceiro secreto com ligações corporativas.'] },
+      { id: 'local', titulo: 'Como é o seu espaço de trabalho?', dado: 6, linhas: ['Telas por todo lado.', 'Você jura que fica melhor no Virtual.', 'Uma cama suja coberta de fios.', 'Corporativo, modular e funcional.', 'Minimalista, limpo e organizado.', 'Cada canto do espaço está ocupado.'] },
+      { id: 'clientes', titulo: 'Quem são alguns dos seus outros clientes?', dado: 6, linhas: [
+        'Fixers locais que mandam clientes para você.',
+        'Gangueiros locais que também protegem a sua área de trabalho, enquanto você procura ameaças na NET.',
+        'Execs corporativos que usam você em trabalhos de "Black Project".',
+        'Solos locais ou outros combatentes que usam você para manter seus sistemas pessoais seguros.',
+        'Nomads e Fixers locais que usam você para manter os sistemas da família seguros.',
+        'Você trabalha para si mesmo, vendendo os dados que encontra na NET.'] },
+      { id: 'programas', titulo: 'Onde você consegue seus programas?', dado: 6, linhas: [
+        'Escavando nas antigas Zonas abandonadas da cidade.',
+        'Rouba de outros Netrunners cujo cérebro você fritou.',
+        'Um Fixer local fornece os programas em troca de trabalho de hacker.',
+        'Execs corporativos fornecem programas em troca dos seus serviços.',
+        'Você tem uma porta dos fundos em alguns armazéns corporativos.',
+        'Você vai aos Mercados Noturnos e pechincha programas sempre que pode.'] },
+      { id: 'atras', titulo: 'Quem está atrás de você?', dado: 6, linhas: [
+        'Você acha que pode ser uma IA renegada ou um fantasma da NET. Seja o que for, é má notícia.',
+        'Netrunners rivais que simplesmente não gostam de você.',
+        'Corporativos que querem que você trabalhe só para eles.',
+        'Lawmen que consideram você um "black hat" ilegal e querem prender você.',
+        'Velhos clientes que acham que você os passou para trás.',
+        'Um Fixer ou outro cliente que quer os seus serviços só para ele.'] }
+    ],
+    // Tech (p. 58–59).
+    tech: [
+      { id: 'tipo', titulo: 'Que tipo de Tech você é?', dado: 10, linhas: ['Técnico de cyberware', 'Mecânico de veículos', 'Faz-tudo', 'Técnico de microeletrônica', 'Armeiro', 'Inventor maluco', 'Mecânico de robôs e drones', 'Mecânico de maquinário pesado', 'Sucateiro', 'Mecânico náutico'] },
+      { id: 'parceiro', titulo: 'Tem um parceiro ou trabalha sozinho?', dado: 0, linhas: ['Tem um parceiro', 'Trabalha sozinho'] },
+      { id: 'quemParceiro', titulo: 'Quem é o seu parceiro?', dado: 6, se: { id: 'parceiro', valor: 1 }, linhas: [
+        'Alguém da família.',
+        'Um velho amigo.',
+        'Um possível par romântico, também.',
+        'Um mentor.',
+        'Um parceiro secreto com ligações com a máfia ou uma gangue.',
+        'Um parceiro secreto com ligações corporativas.'] },
+      { id: 'local', titulo: 'Como é o seu espaço de trabalho?', dado: 6, linhas: [
+        'Uma bagunça coberta de papéis de projetos.',
+        'Tudo tem código de cores, mas ainda é um pesadelo.',
+        'Totalmente digital, com backup todo dia.',
+        'Você projeta tudo no seu Agent.',
+        'Guarda tudo, para o caso de precisar mais tarde.',
+        'Só você entende o seu sistema de arquivos e anotações.'] },
+      { id: 'clientes', titulo: 'Quem são seus principais clientes?', dado: 6, linhas: [
+        'Fixers locais que mandam clientes para você.',
+        'Gangueiros locais que também protegem a sua área de trabalho ou casa.',
+        'Execs corporativos que usam você em trabalhos de "Black Project".',
+        'Solos locais ou outros combatentes que usam você na manutenção das armas.',
+        'Nomads e Fixers locais que trazem "achados" tecnológicos para consertar.',
+        'Você trabalha para si mesmo e vende o que inventa ou conserta.'] },
+      { id: 'suprimentos', titulo: 'Onde você consegue seus suprimentos?', dado: 6, linhas: [
+        'Vasculha os destroços que encontra nas zonas abandonadas da cidade.',
+        'Tira equipamento dos corpos depois dos tiroteios.',
+        'Um Fixer local traz suprimentos em troca de consertos.',
+        'Execs corporativos fornecem coisas em troca dos seus serviços.',
+        'Você tem uma porta dos fundos em alguns armazéns corporativos.',
+        'Você vai aos Mercados Noturnos e pechincha sempre que pode.'] },
+      { id: 'atras', titulo: 'Quem está atrás de você?', dado: 6, linhas: [
+        'Gangues da Zona de Combate que querem que você trabalhe só para elas.',
+        'Um Tech rival tentando roubar seus clientes.',
+        'Corporativos que querem que você trabalhe só para eles.',
+        'Um grande fabricante quer derrubar você, porque as suas modificações são uma ameaça.',
+        'Um velho cliente que acha que você o passou para trás.',
+        'Um Tech rival que quer derrubar você para ficar com os recursos e as peças.'] }
+    ],
+    // Medtech (p. 60–61).
+    medtech: [
+      { id: 'tipo', titulo: 'Que tipo de Medtech você é?', dado: 10, linhas: ['Cirurgião', 'Clínico geral', 'Médico de trauma', 'Psiquiatra', 'Terapeuta de ciberpsicose', 'Ripperdoc', 'Operador de sistemas de criogenia', 'Farmacologista', 'Escultor de corpos', 'Médico legista'] },
+      { id: 'parceiro', titulo: 'Tem um parceiro ou trabalha sozinho?', dado: 0, linhas: ['Tem um parceiro', 'Trabalha sozinho'] },
+      { id: 'quemParceiro', titulo: 'Quem é o seu parceiro (ou parceiros)?', dado: 6, se: { id: 'parceiro', valor: 1 }, linhas: [
+        'Uma equipe da Trauma Team.',
+        'Um velho amigo.',
+        'Um possível par romântico, também.',
+        'Alguém da família.',
+        'Um parceiro secreto com ligações com a máfia ou uma gangue.',
+        'Um parceiro secreto com ligações corporativas.'] },
+      { id: 'local', titulo: 'Como é o seu espaço de trabalho?', dado: 6, linhas: [
+        'Esterilizado toda manhã, como um relógio.',
+        'Não é o mais moderno, mas é confortável para você.',
+        'O equipamento de criogenia também serve para gelar as bebidas.',
+        'Tudo o que é descartável fica guardado e compactado até ser usado.',
+        'Não tão limpo quanto muitos pacientes esperariam.',
+        'Meticulosamente organizado, afiado e esterilizado.'] },
+      { id: 'clientes', titulo: 'Quem são seus principais clientes?', dado: 6, linhas: [
+        'Fixers locais que mandam clientes para você.',
+        'Gangues locais que também protegem a sua área de trabalho ou casa em troca de ajuda médica.',
+        'Execs corporativos que usam você em "Black Projects" de trabalho médico.',
+        'Solos locais ou outros combatentes que procuram você para ter ajuda médica.',
+        'Nomads e Fixers locais que trazem clientes feridos.',
+        'Paramédicos da Trauma Team.'] },
+      { id: 'suprimentos', titulo: 'Onde você consegue seus suprimentos?', dado: 6, linhas: [
+        'Vasculha esconderijos de suprimentos médicos que encontra nas zonas abandonadas da cidade.',
+        'Tira peças dos corpos depois dos tiroteios.',
+        'Um Fixer local traz suprimentos em troca de trabalho médico.',
+        'Execs corporativos ou a Trauma Team fornecem suprimentos em troca dos seus serviços.',
+        'Você tem uma porta dos fundos em alguns armazéns corporativos ou do hospital.',
+        'Você vai aos Mercados Noturnos e pechincha sempre que pode.'] }
+    ],
+    // Media (p. 62).
+    media: [
+      { id: 'tipo', titulo: 'Que tipo de Media você é?', dado: 6, linhas: ['Blogueiro', 'Escritor (livros)', 'Cinegrafista', 'Documentarista', 'Repórter investigativo', 'Escritor de rua'] },
+      { id: 'publico', titulo: 'Como o seu trabalho chega ao público?', dado: 6, linhas: ['Revista mensal', 'Blog', 'Transmissão de vídeo convencional', 'Canal de notícias', 'Venda de "livros"', 'Screamsheets'] },
+      { id: 'etica', titulo: 'Quão ético você é?', dado: 6, linhas: [
+        'Jornalismo justo e honesto, com ética forte. Você só publica a verdade verificada.',
+        'Reportagem justa e honesta, mas disposto a espalhar boatos se for preciso.',
+        'De vez em quando vacila e faz coisas antiéticas, mas é raro. Você tem alguns padrões.',
+        'Disposto a quebrar todas as regras para pegar os bandidos. Mas só os bandidos.',
+        'Implacável e decidido a ficar grande, mesmo que isso signifique quebrar a lei. Você é um canalha.',
+        'Totalmente corrupto: aceita suborno e faz matérias ilegais e antiéticas o tempo todo. A sua caneta vai para quem pagar mais.'] },
+      { id: 'historias', titulo: 'Que tipo de história você quer contar?', dado: 6, linhas: ['Intrigas políticas', 'Impacto ecológico', 'Notícias de celebridades', 'Derrubar corporações', 'Editoriais', 'Propaganda'] }
+    ],
+    // Exec (p. 63–64). O Corpo de 2077 usa este.
+    exec: [
+      { id: 'corporacao', titulo: 'Para que tipo de corporação você trabalha?', dado: 10, linhas: ['Financeira', 'Mídia e comunicações', 'Cybertecnologia e tecnologia médica', 'Farmacêutica e biotecnologia', 'Alimentos, moda ou outros bens de consumo', 'Produção de energia', 'Eletrônica pessoal e robótica', 'Serviços corporativos', 'Serviços ao consumidor', 'Construção e imobiliária'] },
+      { id: 'divisao', titulo: 'Em que divisão você trabalha?', dado: 6, linhas: ['Compras', 'Produção', 'Pesquisa e desenvolvimento', 'Recursos humanos', 'Relações públicas, publicidade e propaganda', 'Fusões e aquisições'] },
+      { id: 'etica', titulo: 'Quão boa ou ruim é a sua corporação?', dado: 6, linhas: [
+        'Sempre trabalha pelo bem e apoia de verdade as práticas éticas.',
+        'Funciona como um negócio justo e honesto o tempo todo.',
+        'De vez em quando vacila e faz coisas antiéticas, mas é raro.',
+        'Disposta a dobrar as regras para conseguir o que precisa.',
+        'Implacável e focada no lucro, disposta a fazer algumas coisas ruins.',
+        'Totalmente maligna: faz negócios ilegais e antiéticos o tempo todo.'] },
+      { id: 'base', titulo: 'Onde fica a base da sua corporação?', dado: 6, linhas: ['Numa cidade', 'Em várias cidades', 'No estado todo', 'No país todo', 'Internacional, com escritórios em algumas grandes cidades', 'Internacional, com escritórios em toda parte'] },
+      { id: 'atras', titulo: 'Quem está atrás do seu grupo?', dado: 6, linhas: [
+        'Uma corporação rival do mesmo ramo.',
+        'A polícia está de olho em você.',
+        'Um Media local quer acabar com você.',
+        'Divisões diferentes da sua própria empresa estão brigando entre si.',
+        'O governo local não gosta da sua corporação.',
+        'Corporações internacionais estão de olho em vocês para uma aquisição hostil.'] },
+      { id: 'chefe', titulo: 'Como está a relação com o seu chefe?', dado: 6, linhas: [
+        'Seu chefe é seu mentor, mas cuidado com os inimigos dele.',
+        'Seu chefe dá carta branca e não quer saber o que você está fazendo.',
+        'Seu chefe é obcecado por detalhes e tenta se meter no seu trabalho.',
+        'Seu chefe é um psicopata: explosões imprevisíveis, compensadas por uma paranoia silenciosa.',
+        'Seu chefe é legal e protege você dos rivais.',
+        'Seu chefe se sente ameaçado pela sua ascensão meteórica e planeja apunhalar você pelas costas.'] }
+    ],
+    // Lawman (p. 65).
+    lawman: [
+      { id: 'posto', titulo: 'Qual é o seu posto na força policial?', dado: 6, linhas: ['Guarda', 'Ronda comum ou patrulha', 'Investigador criminal', 'Forças especiais', 'Polícia motorizada (batedor)', 'Corregedoria'] },
+      { id: 'jurisdicao', titulo: 'Qual é a jurisdição do seu grupo?', dado: 6, linhas: ['Zona corporativa', 'Zona de patrulha comum da cidade', 'Zona de combate', 'Periferia da cidade', 'Zonas de reconstrução', 'Estradas abertas'] },
+      { id: 'corrupcao', titulo: 'Quão corrupto é o seu grupo?', dado: 6, linhas: [
+        'Policiamento justo e honesto, com ética forte.',
+        'Policiamento justo e honesto, mas duro com os infratores.',
+        'De vez em quando vacila e faz coisas antiéticas, mas é raro.',
+        'Disposto a quebrar as regras para pegar os caras maus.',
+        'Implacável e decidido a controlar a Rua, mesmo que isso signifique infringir a lei.',
+        'Totalmente corrupto: aceita suborno e faz negócios ilegais e antiéticos o tempo todo.'] },
+      { id: 'atras', titulo: 'Quem está atrás do seu grupo?', dado: 6, linhas: ['Crime organizado', 'Gangueiros com cyberware (boostergangs)', 'A corregedoria da polícia', 'Políticos corruptos', 'Contrabandistas', 'Criminosos de rua'] },
+      { id: 'alvo', titulo: 'Quem é o alvo principal do seu grupo?', dado: 6, linhas: ['Crime organizado', 'Gangueiros com cyberware (boostergangs)', 'Traficantes de drogas', 'Políticos corruptos', 'Contrabandistas', 'Criminosos de rua'] }
+    ],
+    // Nomad (p. 68–69).
+    nomad: [
+      { id: 'tamanho', titulo: 'Qual o tamanho do seu bando?', dado: 6, linhas: ['Uma única tribo ou família extensa', 'Algumas dezenas de membros', 'Quarenta ou cinquenta membros', 'Cem membros ou mais', 'Uma Família de Sangue (centenas de membros)', 'Uma Família Afiliada (várias Famílias de Sangue juntas)'] },
+      { id: 'meio', titulo: 'O seu bando é da terra, do ar ou do mar?', dado: 0, linhas: ['Terra', 'Ar', 'Mar'] },
+      { id: 'terra', titulo: 'Na terra, o que vocês fazem?', dado: 10, se: { id: 'meio', valor: 1 }, linhas: ['Gangue de estrada (gogang)', 'Transporte de passageiros', 'Chautauqua (escola itinerante)', 'Espetáculo itinerante ou parque de diversões', 'Trabalhadores rurais migrantes', 'Transporte de carga', 'Proteção de comboios', 'Contrabando', 'Exército mercenário', 'Equipe de construção civil'] },
+      { id: 'ar', titulo: 'No ar, o que vocês fazem?', dado: 6, se: { id: 'meio', valor: 2 }, linhas: ['Pirataria aérea', 'Transporte de carga', 'Transporte de passageiros', 'Proteção de aeronaves', 'Contrabando', 'Apoio de combate'] },
+      { id: 'mar', titulo: 'No mar, o que vocês fazem?', dado: 6, se: { id: 'meio', valor: 3 }, linhas: ['Pirataria', 'Transporte de carga', 'Transporte de passageiros', 'Contrabando', 'Apoio de combate', 'Guerra submarina'] },
+      { id: 'funcao', titulo: 'O que você faz pelo seu bando?', dado: 6, linhas: ['Batedor (negociador)', 'Escolta armada (proteção, armas)', 'Piloto de transporte ou motorista', 'Chefe de carga (grande transporte, caminhoneiro)', 'Contrabandista solo', 'Aquisições (combustível, veículos etc.)'] },
+      { id: 'filosofia', titulo: 'Qual é a filosofia geral do seu bando?', dado: 6, linhas: [
+        'Sempre trabalha pelo bem; o seu grupo acolhe quem só quer se dar bem.',
+        'É mais como uma empresa familiar: age com preocupação justa e honesta.',
+        'De vez em quando vacila e faz coisas antiéticas, mas é raro.',
+        'Disposto a quebrar as regras sempre que elas atrapalham o que o bando precisa.',
+        'Implacável e egocêntrico, disposto a fazer coisas más para o bando ir em frente.',
+        'Totalmente maligno: aterroriza as estradas, matando e saqueando.'] },
+      { id: 'atras', titulo: 'Quem está atrás do seu bando?', dado: 6, linhas: ['Crime organizado', 'Gangueiros com cyberware (boostergangs)', 'Traficantes de drogas', 'Políticos corruptos', 'Bandos nômades rivais do mesmo ramo', 'Policiais corruptos'] }
+    ]
+  };
+
   // HP = 10 + 5 × (média de BODY e WILL, arredondada para cima); Gravemente Ferido = metade, para cima.
   const derived = values => {
     const hp = 10 + 5 * Math.ceil((values.BODY + values.WILL) / 2);
@@ -215,6 +445,6 @@
 
   window.systemCreation = {
     stats, statTables, roles, basicSkills, streetratSkills, edgerunnerSkills, specializedSkills, languages, originLanguages, homeDistricts,
-    packages, methods, completePackage, edgerunnerRules, free2077, housing, derived
+    packages, methods, completePackage, edgerunnerRules, free2077, housing, derived, roleLifepaths
   };
 })();

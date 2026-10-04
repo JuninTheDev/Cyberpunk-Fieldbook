@@ -72,6 +72,11 @@ module.exports = async ({ edge, servidores, r }) => {
     const vazios = await edge.evaluate(`[...document.querySelectorAll('[data-lp]')].filter(s => !s.value).length`);
     return [vazios === 0, `${vazios} vazios`];
   });
+  await r.passo('passo 4: "Rolar tudo" também responde o Lifepath da Role (Solo: 4 perguntas)', async () => {
+    const respostas = await edge.evaluate(`[...document.querySelectorAll('[data-rlp]')].map(s => s.value)`);
+    const titulo = await edge.evaluate(`[...document.querySelectorAll('#cc-step h3')].map(h => h.textContent).find(t => /Lifepath da Role/.test(t)) || ''`);
+    return [respostas.length === 4 && respostas.every(Boolean) && /Solo/.test(titulo), `${titulo} · respostas ${respostas.join(',')}`];
+  });
   await r.passo('passo 5: pacote do Solo; Neural Link já vem grátis; EMP 5 → 4', async () => {
     await passo(5);
     const t = await texto('#cc-step');
@@ -116,6 +121,10 @@ module.exports = async ({ edge, servidores, r }) => {
     await clicar('[data-cc-send]', 1500);
     const depois = await quadro();
     return [/Enviar de novo/.test(antes) && /Enviado em .*Esperando o mestre/.test(depois) && !/mudou/.test(depois), depois.slice(0, 120)];
+  });
+  await r.passo('ficha: o Lifepath da Role aparece no Lifepath', async () => {
+    const t = (await texto('#cc-root')).replace(/\s+/g, ' ');
+    return [/Lifepath da Role ?Que tipo de Solo você é\? \S/.test(t), (t.match(/Lifepath da Role.{0,90}/) || [''])[0]];
   });
 
   // ---------- Edgerunner ----------
@@ -189,6 +198,18 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   const carteira = () => texto('.cc-wallet');
   const buscarNaLoja = async termo => { await edge.evaluate(`(() => { const s = document.querySelector('[data-shop-busca]'); s.value = ${JSON.stringify(termo)}; s.dispatchEvent(new Event('input', { bubbles: true })); })()`); await edge.sleep(200); };
+  await r.passo('Lifepath da Role do Netrunner: "Trabalha sozinho" esconde a pergunta do parceiro', async () => {
+    await passo(4);
+    const antes = await edge.evaluate(`document.querySelectorAll('[data-rlp]').length`);
+    await clicar('[data-rlp-pick="parceiro:1"]');
+    const comParceiro = await edge.evaluate(`!!document.querySelector('[data-rlp="quemParceiro"]')`);
+    await clicar('[data-rlp-pick="parceiro:2"]');
+    const sozinho = await edge.evaluate(`!!document.querySelector('[data-rlp="quemParceiro"]')`);
+    await edge.evaluate(`document.querySelector('.cc-rlp').scrollIntoView()`);
+    await edge.shot('criador-lifepath-role');
+    const ativo = await edge.evaluate(`(document.querySelector('[data-rlp-pick].active') || {}).textContent || ''`);
+    return [antes === 5 && comParceiro && !sozinho && ativo === 'Trabalha sozinho', `${antes} perguntas de lista · com parceiro: ${comParceiro} · sozinho: ${sozinho} · marcado: ${ativo}`];
+  });
   await r.passo('loja no passo 5: 2.550eb; Sandevistan (500eb) desconta', async () => {
     await passo(5);
     await buscarNaLoja('sandevistan');
