@@ -167,7 +167,7 @@ http.createServer((request, response) => {
     if (!gameMaster) return send(response, 403, 'Só o mestre.');
     return health().then(reverted => send(response, 200, JSON.stringify({ git: reverted !== null, revertidos: reverted || [] }), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' }));
   }
-  if (/^\/api\/(eu|entrar|sair|contas|personagens)(\/|$)/.test(pathname)) return void characterApi(request, response, pathname);
+  if (/^\/api\/(eu|entrar|sair|contas|personagens|loja)(\/|$)/.test(pathname)) return void characterApi(request, response, pathname);
   if (pathname === '/api/jogadores') {
     if (request.method !== 'POST') return send(response, 405, 'Use POST.');
     if (!gameMaster) return send(response, 403, 'Só o mestre publica.');

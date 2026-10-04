@@ -89,6 +89,45 @@ module.exports = async ({ servidores, r }) => {
     const salvo = (await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...ficha, foundry: null } })).dados?.personagem;
     return [jogador.status === 403 && mestre.status === 200 && depois.versao === 2 && salvo?.foundry?.ator === 'abc123', `${jogador.status}/${mestre.status} · v${depois?.versao} · foundry depois de salvar: ${salvo?.foundry?.ator}`];
   });
+  await r.passo('regras da loja: todos leem, só o mestre grava, com limpeza', async () => {
+    const lidas = await api(rede, '/api/loja/regras', { cookie: ana });
+    const jogador = await api(rede, '/api/loja/regras', { method: 'PUT', cookie: ana, body: { teto: 99999 } });
+    const mestre = await api(gm, '/api/loja/regras', { method: 'PUT', body: { teto: '500', esconder: ['exotica', 'inventada'], liberados: ['core_weapons:sword-excellent', 'lixo!'], bloqueados: [] } });
+    const depois = (await api(rede, '/api/loja/regras')).dados?.regras;
+    await api(gm, '/api/loja/regras', { method: 'PUT', body: { teto: 1000, esconder: lidas.dados.etiquetas, liberados: [], bloqueados: [] } });
+    return [lidas.dados?.regras?.teto === 1000 && jogador.status === 403 && mestre.status === 200 && depois.teto === 500 && depois.esconder.join() === 'exotica' && depois.liberados.join() === 'core_weapons:sword-excellent', `${jogador.status}/${mestre.status} · ${JSON.stringify(depois)}`];
+  });
+  await r.passo('enviar para o mestre: o dono pode, o outro jogador não; a versão não muda', async () => {
+    const antes = (await api(gm, `/api/personagens/${ficha.id}`)).dados?.personagem;
+    const outro = await api(rede, `/api/personagens/${ficha.id}/enviar`, { method: 'POST', cookie: bruno, body: {} });
+    const dono = await api(rede, `/api/personagens/${ficha.id}/enviar`, { method: 'POST', cookie: ana, body: {} });
+    const depois = (await api(gm, `/api/personagens/${ficha.id}`)).dados?.personagem;
+    return [outro.status === 403 && dono.status === 200 && depois.envio?.versao === antes.versao && depois.versao === antes.versao, `${outro.status}/${dono.status} · envio v${depois.envio?.versao} · personagem v${depois.versao}`];
+  });
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  await r.passo('retrato: recusa o que não é imagem; aceita PNG e serve pela rede, com CORS para o Foundry', async () => {
+    const falso = await api(rede, `/api/personagens/${ficha.id}/retrato`, { method: 'POST', cookie: ana, body: { imagem: 'data:image/png;base64,' + Buffer.from('<script>x</script>').toString('base64') } });
+    const outro = await api(rede, `/api/personagens/${ficha.id}/retrato`, { method: 'POST', cookie: bruno, body: { imagem: PNG } });
+    const ok = await api(rede, `/api/personagens/${ficha.id}/retrato`, { method: 'POST', cookie: ana, body: { imagem: PNG } });
+    const imagem = await fetch(`${rede}/${ok.dados?.retrato}`, { headers: { Origin: 'http://localhost:30000' } });
+    const bytes = Buffer.from(await imagem.arrayBuffer());
+    return [falso.status === 400 && outro.status === 403 && ok.status === 200 && imagem.headers.get('content-type') === 'image/png' && bytes[1] === 0x50 && imagem.headers.get('access-control-allow-origin') === 'http://localhost:30000', `${falso.status}/${outro.status}/${ok.status} · ${imagem.status} ${imagem.headers.get('content-type')}`];
+  });
+  await r.passo('retrato: o jogador não grava o campo direto pelo salvamento', async () => {
+    const atual = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: ana })).dados.personagem;
+    const salvo = (await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...atual, retrato: 'javascript:alert(1)', retratoLink: 'http://inseguro.example/a.png' } })).dados?.personagem;
+    ficha = salvo;
+    return [/^api\/personagens\//.test(salvo?.retrato || '') && salvo.retratoLink === '', `${salvo?.retrato} · link "${salvo?.retratoLink}"`];
+  });
+  await r.passo('IP: só o mestre dá; gastar mais do que tem é recusado', async () => {
+    const jogador = await api(rede, `/api/personagens/${ficha.id}/ip`, { method: 'POST', cookie: ana, body: { qtd: 500 } });
+    const mestre = await api(gm, `/api/personagens/${ficha.id}/ip`, { method: 'POST', body: { qtd: 100, motivo: 'Sessão 1' } });
+    const atual = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: ana })).dados.personagem;
+    const demais = await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...atual, avanco: [{ tipo: 'pericia', nome: 'Handgun', de: 4, para: 5, custo: 100 }, { tipo: 'pericia', nome: 'Brawling', de: 2, para: 3, custo: 60 }] } });
+    const certo = await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...atual, ip: { ganhos: [{ qtd: 9999 }] }, avanco: [{ tipo: 'pericia', nome: 'Handgun', de: 4, para: 5, custo: 100 }] } });
+    ficha = certo.dados?.personagem;
+    return [jogador.status === 403 && mestre.status === 200 && demais.status === 400 && certo.status === 200 && ficha.ip.ganhos.length === 1 && ficha.ip.ganhos[0].qtd === 100, `${jogador.status}/${mestre.status}/${demais.status}/${certo.status} · ganhos ${JSON.stringify(ficha?.ip?.ganhos?.map(g => g.qtd))}`];
+  });
   await r.passo('os dados ficam na pasta temporária, não na da campanha', async () => {
     const naTemp = fs.existsSync(path.join(servidores.dados, 'personagens', `${ficha.id}.json`)) && fs.existsSync(path.join(servidores.dados, 'contas-jogadores.json'));
     const naCampanha = fs.existsSync(path.join(servidores.raiz, 'personagens', `${ficha.id}.json`));

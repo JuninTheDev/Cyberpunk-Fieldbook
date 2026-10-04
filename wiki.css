@@ -500,3 +500,9 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
   .cc-price { justify-items: start; grid-auto-flow: column; justify-content: space-between; }
 }
 .cc-steps .map-filter.active, .cc-shop-filters .map-filter.active { border-color: var(--cyan); color: var(--cyan); background: #10211e; }
+.cc-kit { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--cyan); background: #10211e; }
+.cc-kit p { margin: 0 0 8px; }
+.cc-kit .action { margin-top: 0; }
+.cc-hidden-item { opacity: 0.6; }
+.cc-rules { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.cc-rules input[type=number] { width: 110px; padding: 6px 8px; border: 1px solid #3b4443; background: #0f1314; color: var(--text); }

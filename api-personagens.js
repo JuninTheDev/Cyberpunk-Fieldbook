@@ -56,14 +56,14 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
 
   // ---------------- Leitura do corpo ----------------
   // Gravações exigem JSON: um formulário de outro site não consegue mandar esse tipo sem permissão (CORS).
-  function readJson(request) {
+  function readJson(request, limit = MAX_BODY) {
     return new Promise((resolve, reject) => {
       if (!/^application\/json\b/i.test(request.headers['content-type'] || '')) return reject(Object.assign(new Error('Envie JSON (Content-Type: application/json).'), { status: 415 }));
       let body = '';
       request.setEncoding('utf8');
       request.on('data', chunk => {
         body += chunk;
-        if (body.length > MAX_BODY) { reject(Object.assign(new Error('Conteúdo grande demais.'), { status: 413 })); request.destroy(); }
+        if (body.length > limit) { reject(Object.assign(new Error('Conteúdo grande demais.'), { status: 413 })); request.destroy(); }
       });
       request.on('end', () => {
         try { resolve(JSON.parse(body || '{}')); } catch { reject(Object.assign(new Error('JSON inválido.'), { status: 400 })); }
@@ -82,9 +82,11 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
     try { return fs.readdirSync(charactersDir).filter(file => file.endsWith('.json')).map(file => readCharacter(file.slice(0, -5))).filter(Boolean); } catch { return []; }
   };
   const ownerName = (accounts, id) => (accounts.find(account => account.id === id) || {}).nome || '';
-  // O que qualquer um vê: nome, apelido e Role. O resto só o dono e o mestre.
-  const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', donoNome: ownerName(accounts, doc.dono), publico: true });
-  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null });
+  // Retrato: o arquivo enviado (servido por esta API) ou um link https colado pelo jogador.
+  const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
+  // O que qualquer um vê: nome, apelido, Role e retrato. O resto só o dono e o mestre.
+  const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', retrato: portraitOf(doc), donoNome: ownerName(accounts, doc.dono), publico: true });
+  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null });
   const canEdit = (identity, doc) => identity.papel === 'mestre' || (identity.papel === 'jogador' && doc.dono === identity.conta.id);
 
   // Limites gerais de forma: o criador confere as regras; aqui só se evita lixo e arquivo enorme.
@@ -97,21 +99,55 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
     if (typeof value === 'object') return Object.fromEntries(Object.entries(value).slice(0, 300).map(([key, item]) => [String(key).slice(0, 80), cleanValue(item, depth + 1)]));
     return null;
   }
-  // Campos que o cliente não escolhe: id, dono, versão, datas e a volta do Foundry.
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry'];
+  // Campos que o cliente não escolhe: id, dono, versão, datas, a volta do Foundry, o envio ao mestre,
+  // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota).
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip'];
   function cleanCharacter(input) {
     const doc = cleanValue(input && typeof input === 'object' && !Array.isArray(input) ? input : {});
     for (const field of SERVER_FIELDS) delete doc[field];
     doc.nome = String(doc.nome || '').trim().slice(0, 80);
     doc.apelido = String(doc.apelido || '').trim().slice(0, 80);
     if (doc.role && !ROLES.includes(doc.role)) doc.role = '';
+    if (doc.retratoLink && !/^https:\/\/[^\s"'<>]+$/.test(String(doc.retratoLink))) doc.retratoLink = '';
+    if (doc.retratoLink) doc.retratoLink = String(doc.retratoLink).slice(0, 500);
     return doc;
   }
+  // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
+  const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
+  const ipSpent = doc => (Array.isArray(doc.avanco) ? doc.avanco : []).reduce((sum, entry) => sum + Math.max(0, Number(entry.custo) || 0), 0);
+
+  // ---------------- Regras da loja inicial ----------------
+  // O que a loja de criação esconde. Todos leem; só o mestre muda.
+  const SHOP_TAGS = ['exotica', 'excelente', 'borgware', 'municao-rara', 'raro'];
+  const DEFAULT_SHOP_RULES = { teto: 1000, esconder: [...SHOP_TAGS], liberados: [], bloqueados: [] };
+  const shopRulesFile = path.join(dataDir, 'regras-loja.json');
+  const readShopRules = () => {
+    try { return { ...DEFAULT_SHOP_RULES, ...JSON.parse(fs.readFileSync(shopRulesFile, 'utf8')) }; } catch { return { ...DEFAULT_SHOP_RULES }; }
+  };
+  const itemIds = list => (Array.isArray(list) ? list : []).map(String).filter(id => /^[a-z0-9_-]+:[a-z0-9-]+$/.test(id)).slice(0, 2000);
+  const cleanShopRules = input => ({
+    teto: Math.max(0, Math.min(1000000, Math.round(Number(input.teto)) || 0)),
+    esconder: (Array.isArray(input.esconder) ? input.esconder : []).filter(tag => SHOP_TAGS.includes(tag)),
+    liberados: itemIds(input.liberados),
+    bloqueados: itemIds(input.bloqueados)
+  });
+
+  // ---------------- Retrato ----------------
+  // Imagem enviada em base64 (o navegador já reduz para 512 px). Confere os primeiros bytes, não o nome.
+  const portraitDir = () => path.join(charactersDir, 'retratos');
+  const imageType = buffer => {
+    if (buffer.length > 8 && buffer[0] === 0x89 && buffer.toString('ascii', 1, 4) === 'PNG') return 'png';
+    if (buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
+    if (buffer.length > 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return 'webp';
+    return null;
+  };
+  const portraitFiles = id => { try { return fs.readdirSync(portraitDir()).filter(file => file.startsWith(`${id}.`)); } catch { return []; } };
+  const imageTypes = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
 
   function cors(request, response) {
     const origin = request.headers.origin;
     if (!origin || !foundryOrigins.has(origin)) return {};
-    return { 'Access-Control-Allow-Origin': origin, Vary: 'Origin', 'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' };
+    return { 'Access-Control-Allow-Origin': origin, Vary: 'Origin', 'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' };
   }
 
   // ---------------- Rotas ----------------
@@ -133,6 +169,18 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
     }
     if (pathname === '/api/sair' && method === 'POST') {
       return json(response, 200, { ok: true }, { 'Set-Cookie': 'jogador=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' });
+    }
+
+    // Regras da loja inicial: todos leem, só o mestre grava.
+    if (pathname === '/api/loja/regras') {
+      if (method === 'GET') return json(response, 200, { regras: readShopRules(), etiquetas: SHOP_TAGS });
+      if (method === 'PUT') {
+        if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre muda as regras da loja.' });
+        const rules = cleanShopRules(await readJson(request));
+        await writeJsonAtomic(shopRulesFile, rules);
+        return json(response, 200, { regras: rules });
+      }
+      return json(response, 405, { erro: 'Método não permitido.' });
     }
 
     // Códigos dos jogadores: só o mestre.
@@ -196,6 +244,61 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
         await writeJsonAtomic(fileOf(id), stored);
         return reply(200, { foundry: stored.foundry });
       }
+      // Retrato: qualquer um vê (é o rosto do personagem); o dono ou o mestre trocam.
+      if (extra === 'retrato') {
+        if (method === 'GET') {
+          const [file] = portraitFiles(id);
+          if (!file) return reply(404, { erro: 'Sem retrato.' });
+          const data = fs.readFileSync(path.join(portraitDir(), file));
+          response.writeHead(200, { ...headers, 'Content-Type': imageTypes[path.extname(file).slice(1)] || 'application/octet-stream', 'Content-Length': data.length, 'Cache-Control': 'private, max-age=60' });
+          return response.end(data);
+        }
+        if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
+        if (method === 'POST') {
+          const { imagem } = await readJson(request, 3 * 1024 * 1024);
+          const base64 = String(imagem || '').replace(/^data:image\/[a-z]+;base64,/, '');
+          const buffer = Buffer.from(base64, 'base64');
+          if (buffer.length > 2 * 1024 * 1024) return reply(413, { erro: 'Imagem grande demais (até 2 MB).' });
+          const type = imageType(buffer);
+          if (!type) return reply(400, { erro: 'Envie uma imagem PNG, JPEG ou WebP.' });
+          fs.mkdirSync(portraitDir(), { recursive: true });
+          for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
+          fs.writeFileSync(path.join(portraitDir(), `${id}.${type}`), buffer);
+          stored.retrato = `api/personagens/${id}/retrato?v=${Date.now()}`;
+          await writeJsonAtomic(fileOf(id), stored);
+          return reply(200, { retrato: stored.retrato });
+        }
+        if (method === 'DELETE') {
+          for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
+          stored.retrato = null;
+          await writeJsonAtomic(fileOf(id), stored);
+          return reply(200, { retrato: null });
+        }
+        return reply(405, { erro: 'Método não permitido.' });
+      }
+      // Enviar para o mestre: marca o personagem como pronto para importar. Também não muda a versão.
+      if (extra === 'enviar') {
+        if (method !== 'POST') return reply(405, { erro: 'Use POST.' });
+        if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
+        stored.envio = { quando: new Date().toISOString(), versao: stored.versao };
+        await writeJsonAtomic(fileOf(id), stored);
+        return reply(200, { envio: stored.envio });
+      }
+      // Pontos de Melhoria: só o mestre dá (ou tira, com número negativo).
+      if (extra === 'ip') {
+        if (method !== 'POST') return reply(405, { erro: 'Use POST.' });
+        if (identity.papel !== 'mestre') return reply(403, { erro: 'Só o mestre dá Pontos de Melhoria.' });
+        const input = await readJson(request);
+        const amount = Math.round(Number(input.qtd));
+        if (!amount || Math.abs(amount) > 1000) return reply(400, { erro: 'Quantidade entre −1000 e 1000.' });
+        const granted = [...((stored.ip && stored.ip.ganhos) || []), { qtd: amount, motivo: String(input.motivo || '').trim().slice(0, 200), quando: new Date().toISOString() }];
+        if (granted.reduce((sum, entry) => sum + entry.qtd, 0) < ipSpent(stored)) return reply(400, { erro: 'Não dá para tirar mais do que sobra: o jogador já gastou esses pontos.' });
+        stored.ip = { ganhos: granted };
+        stored.versao += 1; // o avanço muda o que o jogador pode fazer: quem estiver com a ficha aberta recarrega
+        stored.atualizado = new Date().toISOString();
+        await writeJsonAtomic(fileOf(id), stored);
+        return reply(200, { ip: stored.ip, versao: stored.versao });
+      }
       if (extra) return reply(404, { erro: 'Rota não encontrada.' });
 
       if (method === 'GET') return reply(200, { personagem: canEdit(identity, stored) ? { ...stored, donoNome: ownerName(accounts, stored.dono) } : publicView(stored, accounts) });
@@ -204,7 +307,9 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
         const input = await readJson(request);
         // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
         if (Number(input.versao) !== stored.versao) return reply(409, { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: stored });
-        const doc = { ...cleanCharacter(input), id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : stored.dono, versao: stored.versao + 1, criado: stored.criado, atualizado: new Date().toISOString(), foundry: stored.foundry || null };
+        const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip'].map(field => [field, stored[field] || null]));
+        const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : stored.dono, versao: stored.versao + 1, criado: stored.criado, atualizado: new Date().toISOString() };
+        if (ipSpent(doc) > ipGranted(doc)) return reply(400, { erro: 'Pontos de Melhoria insuficientes para esse avanço.' });
         await writeJsonAtomic(fileOf(id), doc);
         return reply(200, { personagem: doc });
       }
@@ -221,7 +326,7 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
 
   // Devolve true se a rota é desta API (respondida), false para o server.js seguir.
   return async function handle(request, response, pathname) {
-    if (!/^\/api\/(eu|entrar|sair|contas|personagens)(\/|$)/.test(pathname)) return false;
+    if (!/^\/api\/(eu|entrar|sair|contas|personagens|loja)(\/|$)/.test(pathname)) return false;
     try {
       await route(request, response, pathname);
     } catch (error) {

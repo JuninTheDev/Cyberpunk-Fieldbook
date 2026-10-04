@@ -180,19 +180,53 @@ module.exports = async ({ edge, servidores, r }) => {
     await devolver('Mão de ferramentas');
     return [/Mão de ferramentas precisa da base/.test(aviso), aviso];
   });
+  await r.passo('loja de criação esconde o avançado: Linear Frame, Malorian, versões excelentes', async () => {
+    const achados = {};
+    for (const termo of ['linear frame', 'malorian arms', 'rifle de assalto (excelente)', 'medscanner']) {
+      await buscarNaLoja(termo);
+      achados[termo] = await edge.evaluate(`document.querySelectorAll('[data-shop-buy]').length`);
+    }
+    const aviso = await texto('#cc-shop .note-status');
+    return [achados['linear frame'] === 0 && achados['malorian arms'] === 0 && achados['rifle de assalto (excelente)'] === 0 && achados.medscanner > 0 && /itens avançados ficam fora/.test(aviso), JSON.stringify(achados)];
+  });
   await r.passo('comprar sem dinheiro deixa o saldo negativo e avisa', async () => {
-    await buscarNaLoja('linear frame beta');
-    await clicar('[data-shop-buy="core_gear:linear-frame-beta"]');
+    await buscarNaLoja('medscanner');
+    for (let i = 0; i < 3; i++) await clicar('[data-shop-buy="core_gear:medscanner"]', 150);
     const aviso = await texto('#cc-shop-msg');
-    await devolver('Linear Frame β');
+    for (let i = 0; i < 3; i++) await devolver('Medscanner');
     return [/Sem dinheiro/.test(aviso) && /2\.050eb/.test(await carteira()), aviso];
   });
-  await r.passo('a compra fica salva no personagem', async () => {
+  await r.passo('o mestre libera um item e ele aparece para o jogador', async () => {
+    const regras = (await (await fetch(`${gm}/api/loja/regras`)).json()).regras;
+    await post(gm, '/api/loja/regras', { ...regras, liberados: ['core_gear:linear-frame-beta'] }, 'PUT');
+    await passo(4); await passo(5); // redesenha a loja com as regras novas
+    await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(pacoteId)} }, 'replace')`);
+    await edge.sleep(1200);
+    await passo(5);
+    await buscarNaLoja('linear frame');
+    const botoes = await edge.evaluate(`[...document.querySelectorAll('[data-shop-buy]')].map(b => b.dataset.shopBuy)`);
+    await post(gm, '/api/loja/regras', regras, 'PUT');
+    return [botoes.includes('core_gear:linear-frame-beta') && !botoes.includes('core_gear:linear-frame-sigma'), botoes.join(', ')];
+  });
+  await r.passo('kit sugerido da Role: compra de uma vez e cabe no dinheiro', async () => {
+    await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(pacoteId)} }, 'replace')`);
+    await edge.sleep(1200);
+    await passo(5);
+    await edge.evaluate('window.confirm = () => true');
+    const antes = await edge.evaluate(`document.querySelectorAll('.cc-items li').length`);
+    await clicar('[data-shop-kit]', 400);
+    const depois = await edge.evaluate(`document.querySelectorAll('.cc-items li').length`);
+    const msg = await texto('#cc-shop-msg');
+    const c = (await carteira()).replace(/\s+/g, ' ');
+    return [depois > antes + 5 && /Kit comprado\. Sobram/.test(msg) && !/cc-bad/.test(await edge.evaluate(`document.querySelector('.cc-wallet').innerHTML`)), `${antes} → ${depois} itens · ${msg} · ${c}`];
+  });
+  await r.passo('a compra fica salva no personagem, com o saldo da tela', async () => {
+    const naTela = Number(((await carteira()).match(/Dinheiro: ([\d.]+)eb/) || [])[1]?.replace(/\./g, ''));
     const ok = await salvo();
     const doc = await (await fetch(`${gm}/api/personagens/${pacoteId}`)).json();
     const ids = (doc.personagem.itens || []).map(i => i.id);
     const resultado = doc.personagem.resultado || {};
-    return [ok && ids.includes('core_cyberware:sandevistan') && resultado.dinheiro?.saldo === 2050 && resultado.itens.some(i => i.foundry?.nome === 'Sandevistan'), `${ids.join(', ')} · saldo ${resultado.dinheiro?.saldo}`];
+    return [ok && ids.includes('core_cyberware:sandevistan') && resultado.dinheiro?.saldo === naTela && resultado.itens.some(i => i.foundry?.nome === 'Sandevistan'), `${ids.length} itens · saldo salvo ${resultado.dinheiro?.saldo} · na tela ${naTela}`];
   });
 
   // ---------- Outros jogadores, conflito, mestre ----------
@@ -245,6 +279,19 @@ module.exports = async ({ edge, servidores, r }) => {
     // Outros cenários usam a mesma pasta de dados: confere os nomes deste, não o total.
     const nomes = await edge.evaluate(`[...document.querySelectorAll('#cc-accounts tbody tr td:first-child')].map(td => td.textContent)`);
     return [/Todos os personagens/.test(t) && /Jay/.test(t) && /Lin/.test(t) && nomes.includes('Ana') && nomes.includes('Bruno'), nomes.join(', ')];
+  });
+  await r.passo('quadro do mestre na Loja: baixar o teto para 500eb esconde os de 1.000eb', async () => {
+    await abrir(edge, 'loja', 1500);
+    const temQuadro = await edge.evaluate(`!!document.querySelector('[data-rule-teto]')`);
+    await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '500'; })()`);
+    await clicar('[data-rule-save]', 1500);
+    await buscarNaLoja('medscanner');
+    const comprar = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="core_gear:medscanner"]').length`);
+    await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '1000'; })()`);
+    await clicar('[data-rule-save]', 1500);
+    const teto = (await (await fetch(`${gm}/api/loja/regras`)).json()).regras.teto;
+    await abrir(edge, 'personagens', 1200);
+    return [temQuadro && comprar === 0 && teto === 1000, `quadro ${temQuadro} · medscanner à venda com 500: ${comprar} · teto final ${teto}`];
   });
   await r.passo('mestre cria um código pela tela', async () => {
     await digitar('#cc-account-name', 'Caio');

@@ -390,40 +390,130 @@
   }
 
   // ================= Loja (componente usado no criador e na página Loja) =================
-  const shopState = { cat: 'armas', sub: '', busca: '' };
-  function renderShop(target, doc, { onChange, readOnly = false }) {
+  // Regras da loja inicial (o que fica de fora da criação). Vêm do servidor; o mestre muda no quadro da Loja.
+  const SHOP_TAG_NAMES = { exotica: 'armas exóticas', excelente: 'qualidade excelente', borgware: 'borgware', 'municao-rara': 'munição inteligente, biotoxina, EMP e sonífera', raro: 'Linear Frame, Cryotank e Cryopump' };
+  let shopRules = { teto: 1000, esconder: Object.keys(SHOP_TAG_NAMES), liberados: [], bloqueados: [] };
+  async function loadShopRules() {
+    const answer = await api('api/loja/regras');
+    if (answer.status === 200 && answer.data.regras) shopRules = answer.data.regras;
+    return shopRules;
+  }
+  // Por que um item fica fora da criação ('' = está à venda).
+  function hiddenReason(item, rules = shopRules) {
+    if (rules.bloqueados.includes(item.id)) return 'escondido pelo mestre';
+    if (rules.liberados.includes(item.id)) return '';
+    if (item.preco > rules.teto) return `acima de ${eb(rules.teto)}`;
+    const tag = (item.tags || []).find(name => rules.esconder.includes(name));
+    return tag ? SHOP_TAG_NAMES[tag] : '';
+  }
+
+  // Kit sugerido do Pacote Completo: o pacote de Rato de Rua da Role, com a primeira opção de cada escolha.
+  function suggestedKit(doc) {
+    const pack = C.packages[(roleById(doc.role) || {}).tabelas];
+    if (!pack) return [];
+    const freeIds = new Set(C.free2077.map(item => item.id));
+    const list = [];
+    for (const category of ['armas', 'equipamento', 'moda', 'cyberware']) {
+      for (const entry of pack[category] || []) {
+        for (const [id, qty] of entry.ou ? entry.ou[0] : [entry]) {
+          const item = catalog.get(id);
+          if (!item || (category === 'cyberware' && freeIds.has(id))) continue;
+          list.push({ id, qtd: qty, item });
+        }
+      }
+    }
+    return list;
+  }
+  const kitCost = entries => entries.reduce((sum, entry) => sum + entry.item.preco * (entry.item.lote > 1 ? entry.qtd / entry.item.lote : entry.qtd), 0);
+  // O kit à venda: sem o que a loja de criação esconde, e com a moda só até caber nos 800eb de moda
+  // (a roupa de negócios do Exec, por exemplo, passaria).
+  function kitFor(doc) {
+    let fashion = 0;
+    return suggestedKit(doc).filter(entry => !hiddenReason(entry.item)).filter(entry => {
+      if (!isFashion(entry.item)) return true;
+      const cost = kitCost([entry]);
+      if (fashion + cost > C.completePackage.moda) return false;
+      fashion += cost;
+      return true;
+    });
+  }
+  const addItem = (doc, id, qty) => {
+    const existing = (doc.itens || []).find(entry => entry.id === id);
+    if (existing) existing.qtd += qty;
+    else (doc.itens = doc.itens || []).push({ uid: `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, id, qtd: qty });
+  };
+
+  const shopState = { cat: 'armas', sub: '', busca: '', verTudo: false };
+  // doc pode faltar (o mestre olhando a loja sem personagem): aí só navega e ajusta as regras.
+  function renderShop(target, doc, { onChange = () => {}, readOnly = false, gm = false, onRules } = {}) {
     const fold = text => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const canBuy = Boolean(doc) && !readOnly;
     const draw = () => {
-      const cash = money(doc);
-      const subs = [...new Set(shop.itens.filter(item => item.cat === shopState.cat).map(item => item.sub))];
+      const cash = doc ? money(doc) : null;
+      const showHidden = gm && shopState.verTudo;
+      const available = shop.itens.filter(item => showHidden || !hiddenReason(item));
+      const hiddenCount = shop.itens.length - shop.itens.filter(item => !hiddenReason(item)).length;
+      const subs = [...new Set(available.filter(item => item.cat === shopState.cat).map(item => item.sub))];
       const terms = fold(shopState.busca).split(/\s+/).filter(Boolean);
-      const visible = shop.itens.filter(item => (terms.length ? true : item.cat === shopState.cat) && (!shopState.sub || terms.length || item.sub === shopState.sub)
+      const visible = available.filter(item => (terms.length ? true : item.cat === shopState.cat) && (!shopState.sub || terms.length || item.sub === shopState.sub)
         && terms.every(term => fold(`${item.nome} ${item.en} ${item.sub} ${item.resumo || ''}`).includes(term)));
       const shown = visible.slice(0, 120);
       const owned = new Map();
-      for (const entry of inventory(doc)) owned.set(entry.id, (owned.get(entry.id) || 0) + entry.qtd);
-      const bought = inventory(doc).filter(entry => entry.origem === 'loja');
-      target.innerHTML = `<div class="cc-wallet"><span>Dinheiro: <b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b> de ${eb(cash.inicial)}</span>${cash.moda ? `<span>Moda: ${eb(cash.usadoModa)} de ${eb(cash.moda)} <small>(só moda e fashionware; a sobra some)</small></span>` : ''}</div>
-        ${readOnly ? '<div class="callout">Este personagem já está no Foundry: a loja inicial fechou. Compras durante a sessão chegam numa próxima versão.</div>' : ''}
+      if (doc) for (const entry of inventory(doc)) owned.set(entry.id, (owned.get(entry.id) || 0) + entry.qtd);
+      const bought = doc ? inventory(doc).filter(entry => entry.origem === 'loja') : [];
+      const kit = doc && doc.metodo === 'pacote' && canBuy ? kitFor(doc) : [];
+      const kitMain = kit.filter(entry => !isFashion(entry.item));
+      const kitFashion = kit.filter(entry => isFashion(entry.item));
+      const gmButtons = item => {
+        if (!gm) return '';
+        const reason = hiddenReason(item);
+        return reason
+          ? `<small class="cc-bad">fora da criação: ${esc(reason)}</small><button class="action" type="button" data-shop-allow="${item.id}">Liberar</button>`
+          : `<button class="action cc-danger" type="button" data-shop-block="${item.id}">Esconder</button>`;
+      };
+      target.innerHTML = `${cash ? `<div class="cc-wallet"><span>Dinheiro: <b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b> de ${eb(cash.inicial)}</span>${cash.moda ? `<span>Moda: ${eb(cash.usadoModa)} de ${eb(cash.moda)} <small>(só moda e fashionware; a sobra some)</small></span>` : ''}</div>` : ''}
+        ${readOnly && doc ? '<div class="callout">Este personagem já está no Foundry: a loja inicial fechou. Compras durante a sessão chegam numa próxima versão.</div>' : ''}
+        ${kit.length ? `<div class="cc-kit"><p><b>Kit sugerido da Role</b>: o pacote de Rato de Rua de ${esc(roleName(doc.role))}, por ${eb(kitCost(kitMain))}${kitFashion.length ? ` e mais ${eb(kitCost(kitFashion))} de moda` : ''}. Compra tudo de uma vez; depois dá para devolver item por item.</p><button class="action" type="button" data-shop-kit>Comprar o kit sugerido</button></div>` : ''}
+        <p class="note-status">${hiddenCount} itens avançados ficam fora da loja de criação (acima de ${eb(shopRules.teto)}, ${shopRules.esconder.map(tag => SHOP_TAG_NAMES[tag]).join(', ') || 'nenhuma etiqueta'}). O mestre libera o que quiser.</p>
+        ${gm ? `<label class="cc-radio"><input type="checkbox" data-shop-all${shopState.verTudo ? ' checked' : ''}> Ver também os itens fora da criação</label>` : ''}
         <div class="cc-shop-filters"><div class="map-filter-list">${shop.categorias.map(category => `<button type="button" class="map-filter${category.id === shopState.cat && !terms.length ? ' active' : ''}" data-shop-cat="${category.id}">${category.nome}</button>`).join('')}</div>
           <div class="cc-shop-row"><select data-shop-sub aria-label="Grupo"><option value="">Todos os grupos</option>${subs.map(sub => `<option${sub === shopState.sub ? ' selected' : ''}>${esc(sub)}</option>`).join('')}</select><input type="search" data-shop-busca placeholder="Buscar item" value="${esc(shopState.busca)}" aria-label="Buscar item"></div></div>
-        <div class="cc-shop-list">${shown.map(item => `<div class="cc-shop-item"><div><b>${esc(item.nome)}</b>${owned.get(item.id) ? ` <small class="cc-ok">tem ${owned.get(item.id)}</small>` : ''}<br><small>${esc([item.sub, item.resumo].filter(Boolean).join(' · '))}</small>${item.desc ? `<br><small class="cc-desc">${esc(item.desc)}</small>` : ''}</div>
-          <div class="cc-price">${eb(item.preco)}${item.lote > 1 ? `<small>/${item.lote}</small>` : ''}${readOnly ? '' : `<button class="action" type="button" data-shop-buy="${item.id}">Comprar</button>`}</div></div>`).join('') || '<p class="note-status">Nada encontrado.</p>'}
+        <div class="cc-shop-list">${shown.map(item => `<div class="cc-shop-item${hiddenReason(item) ? ' cc-hidden-item' : ''}"><div><b>${esc(item.nome)}</b>${owned.get(item.id) ? ` <small class="cc-ok">tem ${owned.get(item.id)}</small>` : ''}<br><small>${esc([item.sub, item.resumo].filter(Boolean).join(' · '))}</small>${item.desc ? `<br><small class="cc-desc">${esc(item.desc)}</small>` : ''}</div>
+          <div class="cc-price">${eb(item.preco)}${item.lote > 1 ? `<small>/${item.lote}</small>` : ''}${canBuy && !hiddenReason(item) ? `<button class="action" type="button" data-shop-buy="${item.id}">Comprar</button>` : ''}${gmButtons(item)}</div></div>`).join('') || '<p class="note-status">Nada encontrado.</p>'}
           ${visible.length > shown.length ? `<p class="note-status">Mostrando ${shown.length} de ${visible.length}: use a busca para achar o resto.</p>` : ''}</div>
-        <h4>Comprado na loja</h4>${bought.length ? `<ul class="cc-items">${bought.map(entry => `<li><b>${esc(entry.item.nome)}</b> ×${entry.qtd} · ${eb(lineCost(entry))}${readOnly ? '' : ` <button class="action cc-danger" type="button" data-shop-return="${entry.uid}">Devolver</button>`}</li>`).join('')}</ul>` : '<p class="note-status">Nada ainda.</p>'}
+        ${doc ? `<h4>Comprado na loja</h4>${bought.length ? `<ul class="cc-items">${bought.map(entry => `<li><b>${esc(entry.item.nome)}</b> ×${entry.qtd} · ${eb(lineCost(entry))}${readOnly ? '' : ` <button class="action cc-danger" type="button" data-shop-return="${entry.uid}">Devolver</button>`}</li>`).join('')}</ul>` : '<p class="note-status">Nada ainda.</p>'}` : ''}
         <p class="cc-msg" id="cc-shop-msg"></p>`;
     };
+    // O mestre libera ou esconde um item: grava as regras no servidor na hora.
+    async function changeRules(change) {
+      const rules = { ...shopRules, liberados: [...shopRules.liberados], bloqueados: [...shopRules.bloqueados] };
+      change(rules);
+      const answer = await api('api/loja/regras', { method: 'PUT', body: rules });
+      if (answer.status === 200) shopRules = answer.data.regras;
+      draw();
+      if (onRules) onRules();
+    }
     target.onclick = event => {
       const cat = event.target.closest('[data-shop-cat]');
       if (cat) { shopState.cat = cat.dataset.shopCat; shopState.sub = ''; shopState.busca = ''; return draw(); }
-      if (readOnly) return;
+      const allow = event.target.closest('[data-shop-allow]');
+      if (allow) return changeRules(rules => { rules.bloqueados = rules.bloqueados.filter(id => id !== allow.dataset.shopAllow); if (hiddenReason(catalog.get(allow.dataset.shopAllow), rules)) rules.liberados.push(allow.dataset.shopAllow); });
+      const block = event.target.closest('[data-shop-block]');
+      if (block) return changeRules(rules => { rules.liberados = rules.liberados.filter(id => id !== block.dataset.shopBlock); rules.bloqueados.push(block.dataset.shopBlock); });
+      if (!canBuy) return;
+      if (event.target.closest('[data-shop-kit]')) {
+        const kit = kitFor(doc);
+        if (!confirm(`Comprar o kit sugerido (${kit.length} itens, ${eb(kitCost(kit.filter(entry => !isFashion(entry.item))))} mais ${eb(kitCost(kit.filter(entry => isFashion(entry.item))))} de moda)?`)) return;
+        for (const entry of kit) addItem(doc, entry.id, entry.qtd);
+        draw();
+        const cash = money(doc);
+        target.querySelector('#cc-shop-msg').textContent = cash.saldo < 0 ? `Kit comprado, mas faltam ${eb(-cash.saldo)}: devolva algo.` : `Kit comprado. Sobram ${eb(cash.saldo)}.`;
+        return onChange();
+      }
       const buy = event.target.closest('[data-shop-buy]');
       if (buy) {
         const item = catalog.get(buy.dataset.shopBuy);
-        const step = item.lote > 1 ? item.lote : 1;
-        const existing = (doc.itens || []).find(entry => entry.id === item.id);
-        if (existing) existing.qtd += step;
-        else (doc.itens = doc.itens || []).push({ uid: `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, id: item.id, qtd: step });
+        addItem(doc, item.id, item.lote > 1 ? item.lote : 1);
         draw();
         const message = target.querySelector('#cc-shop-msg');
         const cash = money(doc);
@@ -445,6 +535,7 @@
     };
     target.onchange = event => {
       if (event.target.matches('[data-shop-sub]')) { shopState.sub = event.target.value; draw(); }
+      if (event.target.matches('[data-shop-all]')) { shopState.verTudo = event.target.checked; draw(); }
     };
     target.oninput = event => {
       if (!event.target.matches('[data-shop-busca]')) return;
@@ -506,7 +597,7 @@
     const root = content.querySelector('#cc-root');
     const id = helpers.target && helpers.target.section;
     if (!id) { root.innerHTML = '<p>Abra um personagem em Personagens, ou crie um novo.</p>'; return; }
-    const answer = await api(`api/personagens/${id}`);
+    const [answer] = await Promise.all([api(`api/personagens/${id}`), loadShopRules()]);
     if (token !== renderToken) return;
     if (!answer.status) { root.innerHTML = offline; return; }
     const loaded = answer.data.personagem;
@@ -774,22 +865,45 @@
     const token = ++renderToken;
     shopState.busca = '';
     const root = content.querySelector('#cc-root');
-    const [me, list] = await Promise.all([identity(), api('api/personagens')]);
+    const [me, list] = await Promise.all([identity(), api('api/personagens'), loadShopRules()]);
     if (token !== renderToken) return;
     if (!me.status) { root.innerHTML = offline; return; }
+    const gm = me.data.papel === 'mestre';
     const mine = (list.data.personagens || []).filter(item => !item.publico);
-    if (!mine.length) { root.innerHTML = `<div class="callout">${me.data.papel === 'visitante' ? 'Entre com o seu código em Personagens para comprar.' : 'Crie um personagem primeiro, em Personagens.'}</div>`; return; }
-    const chosen = (helpers.target && helpers.target.section) || mine[0].id;
-    root.innerHTML = `<p class="cc-toolbar"><label>Personagem <select data-shop-pc>${mine.map(item => `<option value="${item.id}"${item.id === chosen ? ' selected' : ''}>${esc(item.nome || 'Sem nome')}</option>`).join('')}</select></label> <span class="cc-save" id="cc-save" role="status"></span></p><div id="cc-shop"></div>`;
+    const chosen = (helpers.target && helpers.target.section) || (mine[0] || {}).id;
+    const board = gm ? `<div class="section cc-box"><h3>Regras da loja de criação</h3><p>O que fica de fora quando os jogadores montam o personagem. Os itens um a um você libera ou esconde na lista abaixo.</p>
+      <div class="cc-rules"><label>Teto de preço por item <input type="number" min="0" step="50" data-rule-teto value="${shopRules.teto}"></label>
+      ${Object.entries(SHOP_TAG_NAMES).map(([tag, name]) => `<label class="cc-radio"><input type="checkbox" data-rule-tag="${tag}"${shopRules.esconder.includes(tag) ? ' checked' : ''}> Esconder ${esc(name)}</label>`).join('')}</div>
+      <p><button class="action" type="button" data-rule-save>Salvar regras</button> <span class="cc-save" id="cc-rules-msg"></span></p>
+      <p class="note-status">${shopRules.liberados.length} liberados e ${shopRules.bloqueados.length} escondidos um a um.</p></div>` : '';
+    const picker = mine.length ? `<p class="cc-toolbar"><label>Personagem <select data-shop-pc>${mine.map(item => `<option value="${item.id}"${item.id === chosen ? ' selected' : ''}>${esc(item.nome || 'Sem nome')}</option>`).join('')}</select></label> <span class="cc-save" id="cc-save" role="status"></span></p>` : '';
+    root.innerHTML = `${board}${picker}<div id="cc-shop"></div>`;
+    if (gm) {
+      root.querySelector('[data-rule-save]').onclick = async () => {
+        const rules = { ...shopRules, teto: Number(root.querySelector('[data-rule-teto]').value) || 0, esconder: [...root.querySelectorAll('[data-rule-tag]:checked')].map(input => input.dataset.ruleTag) };
+        const answer = await api('api/loja/regras', { method: 'PUT', body: rules });
+        if (answer.status === 200) { shopRules = answer.data.regras; helpers.openPage('loja', chosen ? { section: chosen } : undefined, 'replace'); }
+        else root.querySelector('#cc-rules-msg').textContent = answer.data.erro || 'Não consegui salvar.';
+      };
+    }
+    const shopEl = root.querySelector('#cc-shop');
+    if (!mine.length) {
+      if (!gm) { shopEl.innerHTML = `<div class="callout">${me.data.papel === 'visitante' ? 'Entre com o seu código em Personagens para comprar.' : 'Crie um personagem primeiro, em Personagens.'}</div>`; return; }
+      return renderShop(shopEl, null, { gm });
+    }
     root.querySelector('[data-shop-pc]').onchange = event => helpers.openPage('loja', { section: event.target.value }, 'replace');
     const answer = await api(`api/personagens/${chosen}`);
     if (token !== renderToken) return;
     const loaded = answer.data.personagem;
-    if (!loaded || loaded.publico) { root.querySelector('#cc-shop').innerHTML = '<div class="callout">Não consegui abrir este personagem.</div>'; return; }
+    if (!loaded || loaded.publico) { shopEl.innerHTML = '<div class="callout">Não consegui abrir este personagem.</div>'; return; }
     const doc = { ...blank(), ...loaded };
-    if (!doc.metodo) { root.querySelector('#cc-shop').innerHTML = '<div class="callout">Escolha o método de criação no criador antes de comprar: ele define quanto dinheiro você tem.</div>'; return; }
+    if (!doc.metodo) {
+      if (gm) return renderShop(shopEl, null, { gm });
+      shopEl.innerHTML = '<div class="callout">Escolha o método de criação no criador antes de comprar: ele define quanto dinheiro você tem.</div>';
+      return;
+    }
     const saver = createSaver(doc, root.querySelector('#cc-save'), helpers.storage);
-    renderShop(root.querySelector('#cc-shop'), doc, { onChange: () => saver.changed(), readOnly: Boolean(doc.foundry) });
+    renderShop(shopEl, doc, { onChange: () => saver.changed(), readOnly: Boolean(doc.foundry), gm });
   }
 
   // ---------------- Páginas ----------------

@@ -152,10 +152,27 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
   }
 }
 
+// Etiquetas do que é avançado para a criação: a loja inicial esconde as etiquetas que o mestre escolher
+// (regras-loja.json), além de tudo acima do teto de preço. Os modelos de 2077 até o teto ficam à venda.
+const RARE_GEAR = new Set(['Linear Frame β (Beta)', 'Linear Frame ∑ (Sigma)', 'Cryotank', 'Cryopump']);
+function tagsOf(entry) {
+  const tags = [];
+  if (entry.cat === 'armas' && entry.sub === 'Exóticas') tags.push('exotica');
+  if (/^core_(weapons|gear):/.test(entry.id) && / \(Excellent\)$/.test(entry.en)) tags.push('excelente');
+  if (entry.cyber && entry.cyber.tipo === 'borgware') tags.push('borgware');
+  if (entry.cat === 'municao' && / \((Smart|Biotoxin|EMP|Sleep)\)$/.test(entry.en)) tags.push('municao-rara');
+  if (entry.id.startsWith('core_gear:') && RARE_GEAR.has(entry.en)) tags.push('raro');
+  return tags;
+}
+
 export function buildCatalog(moduleDocs) {
   entries.length = 0;
   coreEntries();
   moduleEntries(moduleDocs);
+  for (const entry of entries) {
+    const tags = tagsOf(entry);
+    if (tags.length) entry.tags = tags;
+  }
   const ids = new Set();
   for (const entry of entries) {
     if (ids.has(entry.id)) throw new Error(`Catálogo: id repetido ${entry.id}`);
