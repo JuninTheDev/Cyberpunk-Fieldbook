@@ -90,11 +90,32 @@ module.exports = async ({ edge, servidores, r }) => {
     const t = await texto('#cc-step');
     return [/Tudo certo/.test(t), t.slice(0, 160)];
   });
+  const quadro = async () => (await texto('[data-cc-foundry]')).replace(/\s+/g, ' ').trim();
+  await r.passo('revisão: "Enviar para o mestre" marca como enviado', async () => {
+    const antes = await quadro();
+    await clicar('[data-cc-send]', 1500);
+    const depois = await quadro();
+    return [/Ainda não foi enviado/.test(antes) && /Enviado em .*Esperando o mestre importar/.test(depois), depois.slice(0, 120)];
+  });
+  await r.passo('mudou depois de enviar: o quadro avisa e oferece enviar de novo', async () => {
+    await passo(3);
+    await escolher('[data-casa]', 'Watson');
+    await passo(7);
+    for (let i = 0; i < 25 && !/mudou depois/.test(await quadro()); i++) await edge.sleep(200);
+    const t = await quadro();
+    return [/mudou depois disso/.test(t) && /Enviar de novo/.test(t), t.slice(0, 120)];
+  });
   await r.passo('ficha: HP, Humanidade e perícias com base', async () => {
     await clicar('[data-cc-sheet]', 1200);
     const t = (await texto('#cc-root')).replace(/\s+/g, ' ');
     // BODY 7 e WILL 6: média 6,5 → 7 → HP 45.
     return [/HP 45/.test(t) && /Humanidade 43\/50/.test(t) && /Linguagem \(Streetslang\)/.test(t) && /português/i.test(t), t.slice(0, 140)];
+  });
+  await r.passo('ficha: o quadro "Levar para o Foundry" envia de novo', async () => {
+    const antes = await quadro();
+    await clicar('[data-cc-send]', 1500);
+    const depois = await quadro();
+    return [/Enviar de novo/.test(antes) && /Enviado em .*Esperando o mestre/.test(depois) && !/mudou/.test(depois), depois.slice(0, 120)];
   });
 
   // ---------- Edgerunner ----------
@@ -279,6 +300,11 @@ module.exports = async ({ edge, servidores, r }) => {
     // Outros cenários usam a mesma pasta de dados: confere os nomes deste, não o total.
     const nomes = await edge.evaluate(`[...document.querySelectorAll('#cc-accounts tbody tr td:first-child')].map(td => td.textContent)`);
     return [/Todos os personagens/.test(t) && /Jay/.test(t) && /Lin/.test(t) && nomes.includes('Ana') && nomes.includes('Bruno'), nomes.join(', ')];
+  });
+  await r.passo('mestre vê quem está esperando no Foundry, e o selo na lista', async () => {
+    const esperando = (await texto('[data-cc-waiting]')).replace(/\s+/g, ' ');
+    const selos = await edge.evaluate(`[...document.querySelectorAll('.cc-card small b')].map(b => b.textContent)`);
+    return [/Jay \(de Ana\): importar/.test(esperando) && /Importar da wiki/.test(esperando) && !/Lin/.test(esperando) && selos.includes('esperando o mestre') && selos.includes('no Foundry'), `${esperando.slice(0, 100)} · selos: ${[...new Set(selos)].join(', ')}`];
   });
   await r.passo('quadro do mestre na Loja: baixar o teto para 500eb esconde os de 1.000eb', async () => {
     await abrir(edge, 'loja', 1500);

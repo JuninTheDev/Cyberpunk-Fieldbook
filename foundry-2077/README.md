@@ -14,6 +14,7 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
 - **Roles de 2077:** Face, Corpo e Lawman (com Investigator), no compêndio Roles de 2077.
 - **Personagens da wiki:**
   - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.
+  - **Avisos da wiki:** quando um jogador clica em **Enviar para o mestre** na wiki, o Foundry do mestre avisa (confere ao entrar e a cada minuto) e abre a janela **Personagens da wiki**, com Importar ou Atualizar. Cada envio avisa uma vez. Desliga em Configurações do módulo. Pela macro: `game.modules.get('cpr-2077').api.avisosDaWiki()`.
   - **Atualizar da wiki** (cabeçalho da ficha) traz o que mudou depois.
   - O mestre importa do computador onde a wiki roda; o endereço fica em Configurações do módulo.
 
@@ -21,7 +22,7 @@ O conteúdo é gerado a partir da wiki da mesa (`system-2077.js`, `system-net.js
 
 ## Gerar ou atualizar o módulo
 
-Com o Foundry fechado (ou sem nenhum mundo que use o módulo aberto), nesta pasta:
+O jeito fácil: feche o Foundry e dê dois cliques em `atualizar-modulo.bat`, na pasta da wiki. Ele faz o mesmo que estes comandos, rodados nesta pasta com o Foundry fechado (ou sem nenhum mundo que use o módulo aberto):
 
 ```
 node build/extract-core.mjs   # só na primeira vez ou quando o sistema atualizar

@@ -430,6 +430,9 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-handle { color: var(--cyan); }
 .cc-ok { color: var(--lime); }
 .cc-bad { color: var(--coral); }
+.cc-wait { color: var(--yellow); }
+[data-cc-foundry] .cc-msg:empty { display: none; }
+[data-cc-waiting] { border-color: var(--yellow); }
 .action.cc-danger { background: #3a2224; color: #ffd9d8; }
 .action.cc-danger:hover { background: var(--coral); color: #090b0c; }
 .cc-login { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

@@ -86,7 +86,7 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
   const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
   // O que qualquer um vê: nome, apelido, Role e retrato. O resto só o dono e o mestre.
   const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', retrato: portraitOf(doc), donoNome: ownerName(accounts, doc.dono), publico: true });
-  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null });
+  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null, estadoFoundry: foundryState(doc) });
   const canEdit = (identity, doc) => identity.papel === 'mestre' || (identity.papel === 'jogador' && doc.dono === identity.conta.id);
 
   // Limites gerais de forma: o criador confere as regras; aqui só se evita lixo e arquivo enorme.
@@ -100,8 +100,9 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
     return null;
   }
   // Campos que o cliente não escolhe: id, dono, versão, datas, a volta do Foundry, o envio ao mestre,
-  // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota).
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip'];
+  // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota). Os três últimos
+  // a API calcula na resposta e não vão para o arquivo.
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip', 'estadoFoundry', 'donoNome', 'publico'];
   function cleanCharacter(input) {
     const doc = cleanValue(input && typeof input === 'object' && !Array.isArray(input) ? input : {});
     for (const field of SERVER_FIELDS) delete doc[field];
@@ -111,6 +112,20 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
     if (doc.retratoLink && !/^https:\/\/[^\s"'<>]+$/.test(String(doc.retratoLink))) doc.retratoLink = '';
     if (doc.retratoLink) doc.retratoLink = String(doc.retratoLink).slice(0, 500);
     return doc;
+  }
+  // Impressão digital da ficha que vai para o Foundry (o `resultado`, sem as pendências). Serve para saber
+  // se algo mudou depois do envio ou da importação: a versão sobe até quando o jogador só troca de passo.
+  const resultHash = doc => crypto.createHash('sha1').update(JSON.stringify({ ...(doc.resultado || {}), pendencias: undefined })).digest('hex').slice(0, 16);
+  // novo · enviado · enviado-mudou (mudou depois do envio) · importado · mudou (depois da importação) · avisado (mudou e foi enviado de novo)
+  function foundryState(doc) {
+    const now = resultHash(doc);
+    if (doc.foundry && doc.foundry.importado) {
+      if (!doc.foundry.resultadoHash || doc.foundry.resultadoHash === now) return 'importado';
+      const resent = doc.envio && new Date(doc.envio.quando) > new Date(doc.foundry.sincronizado || doc.foundry.importado) && doc.envio.resultadoHash === now;
+      return resent ? 'avisado' : 'mudou';
+    }
+    if (doc.envio) return doc.envio.resultadoHash === now ? 'enviado' : 'enviado-mudou';
+    return 'novo';
   }
   // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
@@ -240,9 +255,11 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
         if (method !== 'PUT') return reply(405, { erro: 'Use PUT.' });
         if (identity.papel !== 'mestre') return reply(403, { erro: 'Só o mestre.' });
         const input = cleanValue(await readJson(request));
-        stored.foundry = { ator: String(input.ator || ''), nomeAtor: String(input.nomeAtor || ''), importado: String(input.importado || new Date().toISOString()), versao: Number(input.versao) || stored.versao, entregues: Array.isArray(input.entregues) ? input.entregues.map(String) : [] };
+        const now = new Date().toISOString();
+        const sameActor = stored.foundry && stored.foundry.importado && stored.foundry.ator === String(input.ator || '');
+        stored.foundry = { ator: String(input.ator || ''), nomeAtor: String(input.nomeAtor || ''), importado: sameActor ? stored.foundry.importado : String(input.importado || now), sincronizado: now, versao: Number(input.versao) || stored.versao, entregues: Array.isArray(input.entregues) ? input.entregues.map(String) : [], resultadoHash: resultHash(stored) };
         await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { foundry: stored.foundry });
+        return reply(200, { foundry: stored.foundry, estadoFoundry: foundryState(stored) });
       }
       // Retrato: qualquer um vê (é o rosto do personagem); o dono ou o mestre trocam.
       if (extra === 'retrato') {
@@ -280,9 +297,9 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
       if (extra === 'enviar') {
         if (method !== 'POST') return reply(405, { erro: 'Use POST.' });
         if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
-        stored.envio = { quando: new Date().toISOString(), versao: stored.versao };
+        stored.envio = { quando: new Date().toISOString(), versao: stored.versao, resultadoHash: resultHash(stored) };
         await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { envio: stored.envio });
+        return reply(200, { envio: stored.envio, estadoFoundry: foundryState(stored) });
       }
       // Pontos de Melhoria: só o mestre dá (ou tira, com número negativo).
       if (extra === 'ip') {
@@ -301,7 +318,7 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
       }
       if (extra) return reply(404, { erro: 'Rota não encontrada.' });
 
-      if (method === 'GET') return reply(200, { personagem: canEdit(identity, stored) ? { ...stored, donoNome: ownerName(accounts, stored.dono) } : publicView(stored, accounts) });
+      if (method === 'GET') return reply(200, { personagem: canEdit(identity, stored) ? { ...stored, donoNome: ownerName(accounts, stored.dono), estadoFoundry: foundryState(stored) } : publicView(stored, accounts) });
       if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
       if (method === 'PUT') {
         const input = await readJson(request);
@@ -311,7 +328,7 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
         const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : stored.dono, versao: stored.versao + 1, criado: stored.criado, atualizado: new Date().toISOString() };
         if (ipSpent(doc) > ipGranted(doc)) return reply(400, { erro: 'Pontos de Melhoria insuficientes para esse avanço.' });
         await writeJsonAtomic(fileOf(id), doc);
-        return reply(200, { personagem: doc });
+        return reply(200, { personagem: { ...doc, estadoFoundry: foundryState(doc) } });
       }
       if (method === 'DELETE') {
         const trash = path.join(charactersDir, 'apagados');

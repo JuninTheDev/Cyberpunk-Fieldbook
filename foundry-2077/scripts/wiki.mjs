@@ -10,6 +10,11 @@ export function registerWikiSettings() {
     hint: 'Onde o Foundry busca os personagens do criador da wiki. Use o endereço deste computador (http://localhost:8000).',
     scope: 'client', config: true, type: String, default: 'http://localhost:8000'
   });
+  game.settings.register(MODULE_ID, 'wikiAvisos', {
+    name: 'Avisos da wiki',
+    hint: 'Para o mestre: ao entrar e a cada minuto, confere se algum jogador enviou um personagem pela wiki e avisa (uma vez por envio).',
+    scope: 'client', config: true, type: Boolean, default: true
+  });
 }
 
 const wikiUrl = () => String(game.settings.get(MODULE_ID, 'wikiUrl') || 'http://localhost:8000').replace(/\/+$/, '');
@@ -173,20 +178,36 @@ async function importCharacter(id, ownerId) {
   return { actor, notes };
 }
 
-export async function importarDaWiki() {
+// Estado de cada personagem na wiki (estadoFoundry): os enviados ao mestre e ainda não levados ao Foundry.
+const WAITING = ['enviado', 'enviado-mudou', 'avisado'];
+const STATE_LABELS = { novo: 'não enviado', enviado: 'enviado, esperando', 'enviado-mudou': 'enviado, esperando', importado: 'já importado', mudou: 'já importado, mudou na wiki', avisado: 'já importado, mudou na wiki' };
+// O ator deste mundo que veio deste personagem (outro mundo pode ter importado o mesmo).
+const actorOf = id => game.actors.find(actor => actor.getFlag(MODULE_ID, 'wiki')?.id === id) || null;
+// O jogador do Foundry com o mesmo nome do dono na wiki, se houver.
+const sameName = (a, b) => String(a || '').trim().toLocaleLowerCase('pt-BR') === String(b || '').trim().toLocaleLowerCase('pt-BR');
+
+export async function importarDaWiki(preselect = '') {
   if (!game.user.isGM) return ui.notifications.warn('Só o mestre importa personagens da wiki.');
   let list;
   try { list = await wikiFetch('/api/personagens'); } catch (error) { return ui.notifications.error(error.message); }
   if (list.papel !== 'mestre') return ui.notifications.error('A wiki não reconheceu você como mestre: importe do computador onde a wiki roda (Foundry em localhost).');
-  const characters = (list.personagens || []).filter(item => !item.publico);
+  // Os enviados primeiro.
+  const characters = (list.personagens || []).filter(item => !item.publico).sort((a, b) => Number(WAITING.includes(b.estadoFoundry)) - Number(WAITING.includes(a.estadoFoundry)));
   if (!characters.length) return ui.notifications.info('Nenhum personagem na wiki ainda.');
+  const chosen = characters.find(item => item.id === preselect) || characters[0];
   const players = game.users.filter(user => !user.isGM);
+  const ownerOf = item => (players.find(user => sameName(user.name, item.donoNome)) || {}).id || '';
   const content = `<form class="cpr2077-wiki">
-    <div class="form-group"><label>Personagem</label><select name="id">${characters.map(item => `<option value="${item.id}">${esc(item.nome || 'Sem nome')}${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')}${item.foundry ? ' · já importado' : ''}</option>`).join('')}</select></div>
-    <div class="form-group"><label>Dono no Foundry</label><select name="owner"><option value="">Só o mestre</option>${players.map(user => `<option value="${user.id}">${esc(user.name)}</option>`).join('')}</select></div>
-    <p class="notes">Cria um ator novo com STATs, perícias, Role, equipamento, cyberware instalado, Lifepath e dinheiro.</p></form>`;
+    <div class="form-group"><label>Personagem</label><select name="id">${characters.map(item => `<option value="${item.id}"${item === chosen ? ' selected' : ''}>${esc(item.nome || 'Sem nome')}${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')} · ${STATE_LABELS[item.estadoFoundry] || (item.foundry ? 'já importado' : 'não enviado')}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Dono no Foundry</label><select name="owner"><option value="">Só o mestre</option>${players.map(user => `<option value="${user.id}"${user.id === ownerOf(chosen) ? ' selected' : ''}>${esc(user.name)}</option>`).join('')}</select></div>
+    <p class="notes">Cria um ator novo com STATs, perícias, Role, equipamento, cyberware instalado, Lifepath e dinheiro. Para um ator que já veio da wiki, use <b>Atualizar da wiki</b> no topo da ficha dele.</p></form>`;
   return Dialog.prompt({
     title: 'Importar personagem da wiki', content, label: 'Importar',
+    // Trocar o personagem escolhe o jogador do Foundry com o mesmo nome do dono na wiki.
+    render: html => {
+      const form = $(html).find('form')[0];
+      form?.id?.addEventListener('change', () => { const item = characters.find(entry => entry.id === form.id.value); if (item) form.owner.value = ownerOf(item); });
+    },
     callback: async html => {
       const form = html[0].querySelector('form');
       try {
@@ -217,7 +238,12 @@ export async function atualizarDaWiki(actor) {
   const skillChanges = (r.pericias || []).filter(skill => { const item = actor.items.find(i => i.type === 'skill' && i.name === skill.nome); return !item || item.system.level !== skill.nivel; }).map(skill => `${skill.nome} → ${skill.nivel}`);
   const newItems = (r.itens || []).filter(item => !(link.entregues || []).includes(item.uid));
   const lifepathChanged = Object.entries(r.lifepath || {}).some(([field, text]) => (actor.system.lifepath?.[field] || '') !== text);
-  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged) return ui.notifications.info('Nada mudou na wiki desde a importação.');
+  const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } }).catch(() => null);
+  // Nada que este botão aplique (a mudança foi em moradia ou dinheiro, por exemplo): a wiki para de mostrar "mudou".
+  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged) {
+    await synced(link.entregues || []);
+    return ui.notifications.info('Nada para aplicar: a ficha já está igual à da wiki.');
+  }
   const section = (name, title, lines) => lines.length ? `<div class="form-group"><label><input type="checkbox" name="${name}" checked> ${title}</label></div><ul>${lines.slice(0, 12).map(line => `<li>${esc(line)}</li>`).join('')}${lines.length > 12 ? `<li>e mais ${lines.length - 12}</li>` : ''}</ul>` : '';
   const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
   return Dialog.prompt({
@@ -245,10 +271,76 @@ export async function atualizarDaWiki(actor) {
       }
       if (checked('lifepath')) await actor.update({ 'system.lifepath': r.lifepath });
       await actor.setFlag(MODULE_ID, 'wiki', { ...link, versao: doc.versao, entregues: delivered });
-      await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } }).catch(() => null);
+      await synced(delivered);
       ui.notifications.info(`${actor.name} atualizado da wiki.`);
     },
     rejectClose: false
+  });
+}
+
+// ---------------- Avisos ----------------
+// Para o mestre: ao entrar e a cada minuto, pergunta à wiki quem foi enviado. Cada envio avisa uma vez neste navegador.
+const SEEN_KEY = `${MODULE_ID}.wiki-avisos`;
+const seenKeys = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch { return []; } };
+const markSeen = keys => { try { localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...seenKeys(), ...keys])].slice(-300))); } catch { /* navegador sem localStorage */ } };
+const sendKey = item => `${item.id}:${item.envio?.quando || ''}`;
+let waitingDialog = null;
+let quietError = false;
+
+// Uma linha por personagem: Importar (ainda não está neste mundo) ou Atualizar (o ator já existe).
+function showWaiting(waiting) {
+  const rows = waiting.map(item => {
+    const actor = actorOf(item.id);
+    const action = actor
+      ? `<button type="button" data-wiki-update="${item.id}"><i class="fas fa-sync"></i> Atualizar</button>`
+      : `<button type="button" data-wiki-import="${item.id}"><i class="fas fa-file-import"></i> Importar</button>`;
+    const sent = item.envio ? new Date(item.envio.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    return `<li class="cpr2077-wiki-row"><span><b>${esc(item.nome || 'Sem nome')}</b>${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')}<br><small>Enviado em ${sent}${actor ? ` · mudou desde a importação (${esc(actor.name)})` : ''}</small></span>${action}</li>`;
+  }).join('');
+  if (waitingDialog?.rendered) waitingDialog.close();
+  waitingDialog = new Dialog({
+    title: 'Personagens da wiki',
+    content: `<p>Os jogadores enviaram estes personagens pela wiki.</p><ul class="cpr2077-wiki-list">${rows}</ul><p class="notes">Dá para fazer depois: aba Atores → Importar da wiki, ou Atualizar da wiki no topo da ficha.</p>`,
+    buttons: { later: { icon: '<i class="fas fa-clock"></i>', label: 'Depois' } },
+    default: 'later',
+    render: html => {
+      $(html).find('[data-wiki-import]').on('click', event => { const id = event.currentTarget.dataset.wikiImport; waitingDialog.close(); importarDaWiki(id); });
+      $(html).find('[data-wiki-update]').on('click', event => { const actor = actorOf(event.currentTarget.dataset.wikiUpdate); waitingDialog.close(); if (actor) atualizarDaWiki(actor); });
+    }
+  }, { width: 460 });
+  waitingDialog.render(true);
+}
+
+// `manual`: aberto pelo mestre (mostra todos os enviados, e os erros); senão só avisa dos envios novos.
+export async function avisosDaWiki({ manual = false } = {}) {
+  if (!game.user.isGM) return;
+  let list;
+  try { list = await wikiFetch('/api/personagens'); } catch (error) {
+    if (manual) ui.notifications.error(error.message);
+    else if (!quietError) { quietError = true; console.warn(`${MODULE_ID} | avisos da wiki:`, error.message); }
+    return;
+  }
+  quietError = false;
+  if (list.papel !== 'mestre') {
+    if (manual) ui.notifications.error('A wiki não reconheceu você como mestre: abra o Foundry no computador onde a wiki roda (localhost).');
+    return;
+  }
+  const waiting = (list.personagens || []).filter(item => !item.publico && WAITING.includes(item.estadoFoundry));
+  const seen = seenKeys();
+  const fresh = waiting.filter(item => !seen.includes(sendKey(item)));
+  if (manual && !waiting.length) return ui.notifications.info('Nenhum personagem esperando na wiki.');
+  if (!manual && !fresh.length) return;
+  markSeen(waiting.map(sendKey));
+  if (fresh.length) ui.notifications.info(`Wiki: ${fresh.map(item => item.nome || 'Sem nome').join(', ')} ${fresh.length > 1 ? 'foram enviados' : 'foi enviado'} para você.`);
+  showWaiting(waiting);
+}
+
+export function registerWikiWatch() {
+  Hooks.once('ready', () => {
+    if (!game.user.isGM) return;
+    const tick = () => { if (game.settings.get(MODULE_ID, 'wikiAvisos')) avisosDaWiki(); };
+    setTimeout(tick, 3000);
+    setInterval(tick, 60 * 1000);
   });
 }
 
@@ -271,4 +363,4 @@ export function registerWikiButtons() {
   });
 }
 
-export const wikiApi = { importarDaWiki, atualizarDaWiki, importarPersonagem: importCharacter };
+export const wikiApi = { importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter };

@@ -30,3 +30,9 @@
 .cpr2077-chat-note { color: #555; font-size: 0.85em; }
 .cpr2077-chat-note.warning { color: #b3001b; font-weight: bold; }
 .cpr2077-dialog .form-group { margin-bottom: 4px; }
+
+/* Personagens da wiki: botão na aba Atores e janela de avisos. */
+.cpr2077-wiki-list { margin: 0.4em 0; padding: 0; list-style: none; }
+.cpr2077-wiki-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.15); }
+.cpr2077-wiki-row button { flex: 0 0 auto; width: auto; line-height: 24px; }
+.cpr2077-wiki-row small { color: #555; }

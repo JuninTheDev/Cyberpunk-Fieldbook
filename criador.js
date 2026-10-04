@@ -255,6 +255,52 @@
   const roleName = id => (roleById(id) || {}).nome || 'sem Role';
   const offline = '<div class="callout">Os personagens ficam no servidor da wiki. Abra a wiki pelo endereço do servidor (não pelo arquivo).</div>';
 
+  // ---------------- Levar para o Foundry ----------------
+  // O servidor diz em que pé está (estadoFoundry): novo · enviado · enviado-mudou · importado · mudou · avisado.
+  // "Enviar para o mestre" faz o Foundry dele avisar; quem importa é sempre o mestre.
+  const when = iso => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+  const FOUNDRY_BADGES = { enviado: 'esperando o mestre', 'enviado-mudou': 'enviado, mudou depois', importado: 'no Foundry', mudou: 'mudou depois de importar', avisado: 'esperando o mestre atualizar' };
+  const WAITING = ['enviado', 'enviado-mudou', 'avisado'];
+  const foundryBadge = item => (FOUNDRY_BADGES[item.estadoFoundry] ? ` · <b class="${item.estadoFoundry === 'importado' ? 'cc-ok' : 'cc-wait'}">${FOUNDRY_BADGES[item.estadoFoundry]}</b>` : '');
+  const GM_FOUNDRY_HELP = '<p class="note-status"><b>Mestre:</b> no Foundry, aba Atores → <b>Importar da wiki</b>. Para um ator que já veio da wiki, <b>Atualizar da wiki</b> no topo da ficha dele. Com o módulo atualizado (<code>atualizar-modulo.bat</code>), o Foundry avisa sozinho quando alguém envia.</p>';
+  function foundryBox(doc, papel) {
+    const state = doc.estadoFoundry || 'novo';
+    const sent = doc.envio ? when(doc.envio.quando) : '';
+    const since = doc.foundry ? new Date(doc.foundry.importado).toLocaleDateString('pt-BR') : '';
+    const actor = doc.foundry && doc.foundry.nomeAtor ? ` (ator <b>${esc(doc.foundry.nomeAtor)}</b>)` : '';
+    const button = label => `<p><button class="action" type="button" data-cc-send>${label}</button></p>`;
+    const issues = pending(doc).length;
+    const text = {
+      novo: `<p>Ainda não foi enviado ao mestre. Quando estiver pronto, envie: o Foundry do mestre avisa, e ele importa com um clique. Dá para continuar mudando depois.</p>${issues ? `<p class="note-status">Ainda há ${issues} pendência${issues > 1 ? 's' : ''}. Dá para enviar assim mesmo, se o mestre combinou.</p>` : ''}${button('Enviar para o mestre')}`,
+      enviado: `<p class="cc-wait">Enviado em ${sent}. Esperando o mestre importar no Foundry.</p>${button('Avisar o mestre de novo')}`,
+      'enviado-mudou': `<p class="cc-wait">Enviado em ${sent}, mas mudou depois disso.</p><p class="note-status">O mestre importa o que estiver aqui na hora. Envie de novo para ele saber que mudou.</p>${button('Enviar de novo')}`,
+      importado: `<p class="cc-ok">No Foundry desde ${since}${actor}.</p><p class="note-status">Se mudar algo aqui, este quadro mostra um botão para avisar o mestre, que atualiza a ficha no Foundry.</p>`,
+      mudou: `<p class="cc-wait">No Foundry desde ${since}${actor}, mas mudou na wiki depois disso.</p>${button('Avisar o mestre de novo')}`,
+      avisado: `<p class="cc-wait">Mudou depois da importação. O mestre foi avisado em ${sent} e ainda não atualizou.</p>${button('Avisar o mestre de novo')}`
+    }[state] || '';
+    return box('Levar para o Foundry', `${text}<p class="cc-msg" data-cc-send-msg role="status"></p>${papel === 'mestre' ? GM_FOUNDRY_HELP : ''}`, ' data-cc-foundry');
+  }
+  // Envia e redesenha o quadro. `before` salva o que estiver pendente (no criador).
+  async function sendToGm(doc, papel, scope, before) {
+    const holder = scope.querySelector('[data-cc-foundry]');
+    const button = holder && holder.querySelector('[data-cc-send]');
+    if (button) { button.disabled = true; button.textContent = 'Enviando…'; }
+    if (before) await before();
+    const answer = await api(`api/personagens/${doc.id}/enviar`, { method: 'POST', body: {} });
+    if (answer.status !== 200) {
+      const current = scope.querySelector('[data-cc-foundry]');
+      const again = current && current.querySelector('[data-cc-send]');
+      if (again) { again.disabled = false; again.textContent = 'Tentar de novo'; }
+      const msg = current && current.querySelector('[data-cc-send-msg]');
+      if (msg) msg.textContent = answer.data.erro || 'Não consegui enviar.';
+      return;
+    }
+    doc.envio = answer.data.envio;
+    doc.estadoFoundry = answer.data.estadoFoundry;
+    const fresh = scope.querySelector('[data-cc-foundry]');
+    if (fresh) fresh.outerHTML = foundryBox(doc, papel);
+  }
+
   // Cada abertura de página ganha uma ficha; resposta que chega atrasada de uma página antiga é ignorada.
   let renderToken = 0;
 
@@ -270,7 +316,7 @@
     const characters = list.data.personagens || [];
     const mine = characters.filter(item => !item.publico);
     const others = characters.filter(item => item.publico);
-    const card = item => `<div class="cc-card"><div><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${item.foundry ? ' · <b class="cc-ok">no Foundry</b>' : ''}</small></div>
+    const card = item => `<div class="cc-card"><div><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}</small></div>
       <div class="cc-card-actions"><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button><button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
     const publicCard = item => `<div class="cc-card"><div><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
 
@@ -280,7 +326,9 @@
     else who = `<p>Para criar ou editar o seu personagem, entre com o código que o mestre te passou. Este aparelho lembra dele.</p><form class="cc-login" data-cc-login><input id="cc-code" autocomplete="off" placeholder="NC-XXXX-XXXX" aria-label="Código do jogador"><button class="action" type="submit">Entrar</button></form><p class="cc-msg" id="cc-login-msg"></p>`;
 
     const canCreate = papel !== 'visitante';
-    root.innerHTML = `${box('Quem é você', who)}
+    const waiting = papel === 'mestre' ? mine.filter(item => WAITING.includes(item.estadoFoundry)) : [];
+    const waitingBox = waiting.length ? box('Esperando você no Foundry', `<ul>${waiting.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${item.estadoFoundry === 'avisado' ? 'mudou, atualizar' : 'importar'}. Enviado em ${when(item.envio && item.envio.quando)}.</li>`).join('')}</ul>${GM_FOUNDRY_HELP}`, ' data-cc-waiting') : '';
+    root.innerHTML = `${waitingBox}${box('Quem é você', who)}
       ${canCreate ? box(papel === 'mestre' ? 'Todos os personagens' : 'Meus personagens', `${mine.length ? mine.map(card).join('') : '<p class="note-status">Nenhum personagem ainda.</p>'}<p><button class="action" type="button" data-cc-new>Novo personagem</button></p>`) : ''}
       ${others.length ? box('O grupo', others.map(publicCard).join('')) : ''}
       ${papel === 'mestre' ? box('Códigos dos jogadores', '<div id="cc-accounts">Carregando…</div>') : ''}`;
@@ -375,14 +423,16 @@
     const root = content.querySelector('#cc-root');
     const id = helpers.target && helpers.target.section;
     if (!id) { root.innerHTML = '<p>Escolha um personagem em Personagens.</p>'; return; }
-    const answer = await api(`api/personagens/${id}`);
+    const [answer, me] = await Promise.all([api(`api/personagens/${id}`), identity()]);
     if (token !== renderToken) return;
     if (!answer.status) { root.innerHTML = offline; return; }
     const doc = answer.data.personagem;
+    const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
     if (doc.publico) { root.innerHTML = `<div class="callout">Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>) e a Role (${esc(roleName(doc.role))}).</div>`; return; }
-    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-back>Personagens</button></p>${sheetHtml(doc)}`;
+    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}${sheetHtml(doc)}`;
     root.onclick = event => {
+      if (event.target.closest('[data-cc-send]')) return sendToGm(doc, papel, root);
       if (event.target.closest('[data-cc-edit]')) helpers.openPage('criador', { section: id });
       if (event.target.closest('[data-cc-shop]')) helpers.openPage('loja', { section: id });
       if (event.target.closest('[data-cc-back]')) helpers.openPage('personagens');
@@ -551,26 +601,34 @@
 
   // ================= Salvamento =================
   // Salva sozinho depois de um tempo sem mudanças; se a conexão cair, guarda neste aparelho.
-  function createSaver(doc, statusEl, storage) {
+  function createSaver(doc, statusEl, storage, onSaved = () => {}) {
     let timer = null;
-    let saving = false;
-    let again = false;
+    let chain = Promise.resolve();
+    let queued = false;
+    let stopped = false;
     const draftKey = `rascunho-personagem-${doc.id}`;
     const show = (text, kind = '') => { if (statusEl) { statusEl.textContent = text; statusEl.className = `cc-save ${kind}`; } };
-    async function save() {
-      if (saving) { again = true; return; }
-      saving = true;
+    // Um salvamento por vez; o que chega enquanto um está em curso vira um só, depois dele.
+    function save() {
+      if (queued) return chain;
+      queued = true;
+      chain = chain.then(() => { queued = false; return stopped ? null : saveOnce(); });
+      return chain;
+    }
+    async function saveOnce() {
       show('Salvando…');
       const body = { ...doc, resultado: result(doc) };
       const answer = await api(`api/personagens/${doc.id}`, { method: 'PUT', body });
-      saving = false;
       if (answer.status === 200) {
         doc.versao = answer.data.personagem.versao;
         doc.atualizado = answer.data.personagem.atualizado;
+        doc.estadoFoundry = answer.data.personagem.estadoFoundry;
         storage.set(draftKey, '');
+        onSaved();
         show(`Salvo às ${new Date(doc.atualizado).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 'ok');
       } else if (answer.status === 409) {
         show('Este personagem foi alterado em outro lugar. Recarregue a página para ver a versão nova.', 'bad');
+        stopped = true;
         return;
       } else if (!answer.status) {
         storage.set(draftKey, JSON.stringify({ base: doc.versao, doc }));
@@ -578,7 +636,6 @@
       } else {
         show(answer.data.erro || 'Não consegui salvar.', 'bad');
       }
-      if (again) { again = false; save(); }
     }
     return {
       changed() { show('Mudanças não salvas…'); clearTimeout(timer); timer = setTimeout(save, 1200); },
@@ -597,18 +654,21 @@
     const root = content.querySelector('#cc-root');
     const id = helpers.target && helpers.target.section;
     if (!id) { root.innerHTML = '<p>Abra um personagem em Personagens, ou crie um novo.</p>'; return; }
-    const [answer] = await Promise.all([api(`api/personagens/${id}`), loadShopRules()]);
+    const [answer, me] = await Promise.all([api(`api/personagens/${id}`), identity(), loadShopRules()]);
     if (token !== renderToken) return;
     if (!answer.status) { root.innerHTML = offline; return; }
     const loaded = answer.data.personagem;
     if (!loaded || loaded.publico) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Você só pode editar os seus personagens. Entre com o seu código em Personagens.')}</div>`; return; }
     const doc = { ...blank(), ...loaded, lifepath: { ...blank().lifepath, ...(loaded.lifepath || {}) } };
     let step = Math.min(Math.max(Number(doc.passo) || 1, 1), steps.length);
+    const papel = me.data.papel;
 
     root.innerHTML = `<div class="cc-steps" role="tablist">${steps.map((name, index) => `<button type="button" class="map-filter" data-step="${index + 1}">${index + 1}. ${name}</button>`).join('')}</div>
       <p class="cc-save" id="cc-save" role="status"></p><div id="cc-recover"></div><div id="cc-step"></div>
       <p class="cc-toolbar"><button class="action" type="button" data-nav="-1">Voltar</button><button class="action" type="button" data-nav="1">Próximo</button><button class="action" type="button" data-cc-sheet>Ver a ficha</button></p>`;
-    const saver = createSaver(doc, root.querySelector('#cc-save'), helpers.storage);
+    // Depois de cada salvamento o servidor diz se o personagem mudou desde o envio: o quadro da revisão acompanha.
+    const refreshFoundry = () => { const holder = root.querySelector('#cc-step [data-cc-foundry]'); if (holder && !holder.querySelector('[data-cc-send]:disabled')) holder.outerHTML = foundryBox(doc, papel); };
+    const saver = createSaver(doc, root.querySelector('#cc-save'), helpers.storage, refreshFoundry);
     const changed = () => { saver.changed(); markSteps(); };
 
     // Rascunho que não chegou ao servidor (conexão caiu): oferece recuperar.
@@ -759,7 +819,7 @@
     // ---------- 7. Revisão ----------
     function drawReview() {
       const issues = pending(doc);
-      return `${box('Pendências', issues.length ? `<ul class="cc-warn">${issues.map(issue => `<li><button type="button" class="cc-link" data-step="${issue.step}">${steps[issue.step - 1]}</button>: ${esc(issue.text)}</li>`).join('')}</ul><p class="note-status">Nada aqui impede de salvar: o mestre importa no Foundry quando achar que está pronto.</p>` : '<p class="cc-ok">Tudo certo. O mestre já pode importar este personagem no Foundry.</p>')}${sheetHtml(doc)}`;
+      return `${box('Pendências', issues.length ? `<ul class="cc-warn">${issues.map(issue => `<li><button type="button" class="cc-link" data-step="${issue.step}">${steps[issue.step - 1]}</button>: ${esc(issue.text)}</li>`).join('')}</ul><p class="note-status">Nada aqui impede de salvar nem de enviar: o mestre decide quando importar.</p>` : '<p class="cc-ok">Tudo certo. Envie para o mestre no quadro abaixo.</p>')}${foundryBox(doc, papel)}${sheetHtml(doc)}`;
     }
 
     // ---------- Eventos ----------
@@ -769,6 +829,7 @@
       if (stepButton) return go(Number(stepButton.dataset.step));
       const nav = target.closest('[data-nav]');
       if (nav) return go(step + Number(nav.dataset.nav));
+      if (target.closest('[data-cc-send]')) return sendToGm(doc, papel, stepEl, () => saver.now());
       if (target.closest('[data-cc-sheet]')) { saver.now(); return helpers.openPage('ficha', { section: doc.id }); }
       if (target.closest('[data-cc-shop]')) { saver.now(); return helpers.openPage('loja', { section: doc.id }); }
       const role = target.closest('[data-role]');

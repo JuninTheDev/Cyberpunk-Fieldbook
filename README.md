@@ -92,7 +92,9 @@ Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cybe
 
 ## Módulo do Foundry
 
-A pasta `foundry-2077/` gera o módulo **Cyberpunk RED: 2077** para o Foundry VTT a partir dos mesmos dados desta wiki (`system-2077.js`, `system-net.js`, `mestre-npcs.js`). Depois de mudar armas, cyberware, netrunning ou fichas de NPC na wiki, feche o mundo no Foundry e rode, dentro de `foundry-2077`:
+A pasta `foundry-2077/` gera o módulo **Cyberpunk RED: 2077** para o Foundry VTT a partir dos mesmos dados desta wiki (`system-2077.js`, `system-net.js`, `mestre-npcs.js`).
+
+**Para instalar ou atualizar:** feche o Foundry e dê dois cliques em `atualizar-modulo.bat`. Faça isso depois de mudar armas, cyberware, netrunning ou fichas de NPC na wiki, e sempre que o importador de personagens mudar. Ele roda, dentro de `foundry-2077`:
 
 ```
 node build/build.mjs
@@ -110,9 +112,15 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 9 Roles de 2077 e o cyberware grátis de 2077.
    - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
 3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
-4. **Levar para o Foundry:** no Foundry aberto **neste computador**, aba Atores, botão **Importar da wiki**. Escolha o personagem e o dono, e o módulo cria o ator com STATs, perícias, Role, equipamento, cyberware instalado, Humanidade, Lifepath e dinheiro.
+   - **Só itens de criação:** até 1.000eb, sem armas exóticas, qualidade excelente, borgware, munição rara (inteligente, biotoxina, EMP, sonífera), Linear Frame, Cryotank e Cryopump.
+   - **O mestre ajusta** na página **Loja inicial**: muda o teto e as categorias escondidas, e libera ou esconde item por item.
+   - **Kit sugerido:** no Pacote Completo, um botão compra de uma vez o pacote de Rato de Rua da Role.
+4. **Enviar para o mestre:** quando o personagem estiver pronto, o jogador clica em **Enviar para o mestre**. O botão fica na revisão do criador e na ficha. O quadro **Levar para o Foundry** mostra em que pé está: não enviado, esperando o mestre, no Foundry, ou mudou depois de importar (aí aparece **Avisar o mestre de novo**). Na lista de Personagens, o mestre vê quem está esperando.
+5. **Importar no Foundry:** no Foundry aberto **neste computador**, o mestre recebe um aviso, até um minuto depois do envio, e a janela **Personagens da wiki** com **Importar**. Também dá para importar a qualquer hora: aba Atores, botão **Importar da wiki**. Escolha o personagem e o dono (vem marcado o jogador com o mesmo nome), e o módulo cria o ator com STATs, perícias, Role, equipamento, cyberware instalado, Humanidade, Lifepath e dinheiro.
+   - **Não aparece o botão nem o aviso?** O módulo instalado está velho: feche o Foundry e rode `atualizar-modulo.bat`.
+   - O aviso pode ser desligado em Configurações do módulo → Avisos da wiki.
    - Depois disso, a loja inicial daquele personagem fecha. As compras durante a sessão vêm numa próxima versão, pelo mesmo caminho.
-5. **Mudou algo na wiki depois?** Na ficha do ator, botão **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha.
+6. **Mudou algo na wiki depois?** O jogador avisa de novo, e a janela de avisos traz **Atualizar**. O mesmo botão fica no topo da ficha do ator: **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha.
 
 Notas:
 
