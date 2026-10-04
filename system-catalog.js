@@ -85,12 +85,13 @@
     ]],
     ['Cyberware externo', [
       ['Hidden Holster', 'Guarda no corpo uma arma que normalmente pode ser ocultada.', 'Instalação clínica.'],
-      ['Subdermal Armor', 'Proteção corporal SP 7; não acumula com armadura vestida; recupera 1 SP por descanso.', 'Cobertura de corpo e cabeça.'],
-      ['Subdermal Armor (reforçada)', 'Proteção corporal SP 11; não acumula com armadura vestida; recupera 1 SP por descanso.', 'Versão mais pesada.'],
+      ['Skin Weave', 'SP 7 no corpo e na cabeça. Não soma com armadura vestida: vale o maior SP do local, e a ablação atinge todas as fontes.', 'Malha sob a pele, a opção leve; recupera 1 SP por dia de cura natural.'],
+      ['Subdermal Armor', 'SP 11 no corpo e na cabeça. Não soma com armadura vestida: vale o maior SP do local, e a ablação atinge todas as fontes.', 'Placas grossas sob a pele, a opção pesada; recupera 1 SP por dia de cura natural.'],
       ['Subdermal Pocket', 'Compartimento oculto sob a pele de aproximadamente 5 x 10 cm.', 'Armazenamento.']
     ]],
     ['Cybermembros: braço e mão', [
       ['Cyberarm', 'Membro-base com quatro slots; inclui mão padrão sem HL ou slot adicional.', 'Implante-base.'],
+      ['Standard Hand', 'Mão de reposição com aparência de mão normal.', 'Não ocupa slot; num braço de carne, não conta como peça de cyberware.'],
       ['Big Knucks', 'Arma branca Média oculta nos nós dos dedos.', 'Também pode ser peça única num braço orgânico.'],
       ['Cyberdeck', 'Acomoda um cyberdeck dentro do braço cibernético.', 'Requer Cyberarm; ocupa 3 slots.'],
       ['Grapple Hand', 'Dispara a mão ligada a um cabo de gancho até 30 m.', 'Não funciona como arma; requer Cyberarm.'],
@@ -111,6 +112,7 @@
     ]],
     ['Cybermembros: perna e pé', [
       ['Cyberleg', 'Membro-base com três slots; pé padrão não ocupa slot nem causa HL.', 'Opções que exigem par precisam de duas pernas.'],
+      ['Standard Foot', 'Pé de reposição com aparência de pé normal.', 'Não ocupa slot; numa perna de carne, não conta como peça de cyberware.'],
       ['Grip Foot', 'Remove penalidade de movimento ao escalar.', 'Requer duas Cyberlegs; pareado.'],
       ['Jump Booster', 'Remove penalidade de movimento ao saltar.', 'Requer duas Cyberlegs; ocupa 2 slots; pareado.'],
       ['Roller Skates', 'Aumenta em 6 m o movimento durante uma ação de corrida.', 'Requer duas Cyberlegs; pareado.'],

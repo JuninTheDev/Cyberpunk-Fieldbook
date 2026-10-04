@@ -128,7 +128,15 @@ function coreEntries() {
 // ---------------- Itens de 2077 (do módulo) ----------------
 function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
   const items = docs => docs.filter(doc => doc._key?.startsWith('!items!'));
-  for (const doc of items(weapons)) add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'armas', sub: 'Armas de 2077', resumo: weaponSummary(doc.system), desc: strip(doc.system.description?.value).slice(0, 260) });
+  for (const doc of items(weapons)) {
+    const desc = strip(doc.system.description?.value).slice(0, 260);
+    if (doc.type === 'ammo') { // flechettes das armas Tech: vendidas em lote, como a munição do RED
+      const lote = doc.system.amount || 1;
+      add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'municao', sub: 'Flechettes Tech (2077)', lote, resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade', desc });
+      continue;
+    }
+    add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'armas', sub: 'Armas de 2077', resumo: weaponSummary(doc.system), desc });
+  }
   for (const doc of items(cyberware)) {
     const s = doc.system;
     add('cpr-2077.cyberware-2077', doc, {
