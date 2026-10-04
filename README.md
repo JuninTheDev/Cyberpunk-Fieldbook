@@ -22,10 +22,18 @@ e abra `http://localhost:8000`.
 
 Sem mexer no roteador: o `abrir-online.bat` abre o Foundry e a wiki dos jogadores pela internet, com um túnel do Cloudflare (`cloudflared`, instalado com `winget install --id Cloudflare.cloudflared`).
 
-1. Abra o Foundry.
-2. Dê dois cliques em `abrir-online.bat`. Ele liga a wiki, se ela não estiver rodando, e mostra dois links `https://….trycloudflare.com`: um do Foundry (já copiado) e um da wiki dos jogadores.
-3. Mande os links aos jogadores. Os links mudam cada vez que você abre o script.
-4. Deixe a janela aberta durante a sessão; Enter fecha o acesso.
+1. Abra o Foundry e **lance o mundo** (sem mundo aberto, quem chega pelo link cai na tela de configuração; o script avisa).
+2. Dê dois cliques em `abrir-online.bat`. Ele liga a wiki, se ela não estiver rodando, e abre um túnel para o Foundry e outro para a wiki.
+3. **Espere aparecer "Pronto: o link … funciona de fora"** para cada um. O script só mostra os links depois de testá-los pelo próprio Cloudflare. O do Foundry já fica copiado.
+4. Mande os links aos jogadores. **Os links mudam cada vez que você abre o script**: link de outra sessão não funciona.
+5. Deixe a janela aberta durante a sessão; Enter fecha o acesso. A cada minuto o script confere os túneis. Se um cair, ele abre outro e mostra o **link novo** em verde, para você mandar de novo.
+
+Se alguém não conseguir entrar:
+
+- **Teste você mesmo** no celular, com o Wi-Fi desligado (4G). Se abrir para você, o túnel está funcionando e o problema é do lado do jogador.
+- **"Não é possível acessar este site" / "DNS_PROBE…":** o jogador abriu cedo demais ou usou um link antigo. Peça para esperar um minuto e abrir de novo, ou trocar de rede (4G).
+- **Página de bloqueio ou de aviso do antivírus ou do navegador:** alguns antivírus, roteadores e DNS "seguros" bloqueiam todos os links `trycloudflare.com`. O jogador pode liberar o site no antivírus ou trocar o DNS do aparelho (por exemplo, para 1.1.1.1).
+- **Abre o Foundry, mas não entra no jogo:** confira se o usuário dele existe no mundo e se a senha está certa.
 
 Antes de usar:
 
