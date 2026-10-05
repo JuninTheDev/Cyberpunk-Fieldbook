@@ -13,6 +13,11 @@ A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre liga
 - **Mestre:** entra por `https://wiki.SEUDOMINIO/mestre`, com a senha. O aparelho fica lembrado por um ano.
   - Na barra lateral ficam **Sair do modo mestre**, **Baixar backup** (o servidor faz um por dia) e a versão no ar.
 - **Mesa:** a barra lateral das duas wikis mostra se a mesa está aberta e quantos estão conectados, e tem o botão **Entrar na mesa**.
+- **Servidor, para o mestre:** a barra lateral resume o último backup, o disco livre, se o módulo do Foundry está esperando a mesa vazia e as últimas publicações. Fica em vermelho com backup de mais de 2 dias ou disco com menos de 10% livre.
+- **No celular, como app:** na barra lateral aparece **Instalar no celular** (Android e computador; no iPhone, Compartilhar → Adicionar à Tela de Início).
+  - Instalada ou não, a wiki guarda no aparelho as regras e o que o mestre publicou, e abre sem internet. Os personagens e a loja precisam de rede.
+  - Com rede, ela sempre busca a versão nova primeiro.
+  - A wiki do mestre nunca fica guardada no aparelho.
 - **Dados ao vivo:** no servidor, ficam fora do git (`/srv/fieldbook/dados`).
   - São personagens, retratos, códigos, o painel Publicar e as regras da loja.
   - Use a wiki online para mexer neles: a wiki do PC vira um lugar de teste.
@@ -98,6 +103,7 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `mestre.html` | A tela "Entrar como mestre" (`/mestre`). |
 | `revertidos.js` | Confere se o OneDrive voltou algum arquivo para uma versão antiga. Usado pelo servidor e pelo `publicar.bat`. |
 | `publicar.bat`, `publicar.ps1` | Publicam a wiki no servidor online, pelo GitHub. |
+| `manifest.webmanifest`, `sw.js`, `icones/` | A wiki instalada no celular: o manifesto, o service worker (guarda as regras para abrir sem internet) e os ícones (o `icone.svg` é a fonte dos PNG). |
 | `servidor/` | Instalação e manutenção do servidor online (wiki, Foundry, HTTPS, atualização e backup). Veja o README da pasta. |
 | `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores. |
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
@@ -166,6 +172,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Na wiki:** o criador avisa e trava STATs, perícias, Role, equipamento e moradia; o servidor faz o mesmo.
    - **O que o jogador ainda muda:** o nome, o retrato, a aparência, as notas e o Lifepath.
    - **Lifepath ou retrato mudou?** O jogador avisa de novo, e a janela de avisos traz **Atualizar**. O mesmo botão fica no topo da ficha do ator: **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha.
+   - **Montagem:** o **Atualizar da wiki** também mostra o que da montagem da wiki falta na ficha (arma sem munição carregada, acessório, programa ou opção fora do lugar) e aplica. Serve para os atores importados antes da montagem existir, que chegaram com as armas descarregadas.
    - **Retrato:** tirar o retrato na wiki não apaga a imagem do Foundry.
 7. **Na mesa: a ficha do Foundry volta para a wiki.**
    - **Como chega:** a cada mudança num ator que veio da wiki, o Foundry do mestre manda a ficha para a wiki, uns 4 segundos depois da última mudança. Isso vale para HP, Humanidade, Sorte, dinheiro, Pontos de Melhoria, reputação, lesões críticas, itens, munição no pente e o que está instalado.

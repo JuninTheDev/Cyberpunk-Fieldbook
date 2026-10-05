@@ -39,6 +39,7 @@ const contentTypes = {
   '.pdf': 'application/pdf',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.woff2': 'font/woff2'
 };
 
@@ -48,7 +49,9 @@ const playerFiles = new Set([
   '/jogadores.html', '/jogadores.json', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
   '/system-criacao.js', '/loja-catalogo.js', '/criador.js',
-  '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css'
+  '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
+  // A wiki instalada no celular: o manifesto, o service worker (sw.js) e os ícones.
+  '/manifest.webmanifest', '/sw.js', '/icones/icone.svg', '/icones/icone-192.png', '/icones/icone-512.png'
 ]);
 const playerFolders = ['/cyberpunk-css-main/cyberpunk-css-main/fonts/'];
 
@@ -127,6 +130,22 @@ async function tableStatus() {
     tableCache = { at: Date.now(), result };
   }
   return tableCache.result;
+}
+
+// Saúde do servidor, para o mestre (só no modo hospedado): último backup, disco livre, módulo do Foundry esperando a
+// mesa esvaziar e as últimas linhas do registro de publicações (servidor/atualizar.sh).
+function serverHealth() {
+  if (!hosted) return null;
+  let backup = null;
+  try {
+    const newest = fs.readdirSync(backupDir).filter(name => /^backup-[\w-]+\.tar\.gz$/.test(name)).sort().pop();
+    if (newest) { const stat = fs.statSync(path.join(backupDir, newest)); backup = { nome: newest, data: stat.mtime.toISOString(), tamanho: stat.size }; }
+  } catch { /* sem pasta de backup */ }
+  let disco = null;
+  try { const s = fs.statfsSync(dataDir); disco = { livre: s.bavail * s.bsize, total: s.blocks * s.bsize }; } catch { /* sistema sem statfs */ }
+  let registro = [];
+  try { registro = fs.readFileSync(path.join(dataDir, 'atualizacoes.log'), 'utf8').trim().split('\n').slice(-6).reverse(); } catch { /* ainda sem publicações */ }
+  return { backup, disco, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), registro };
 }
 
 // ---------------- Pasta de dados ----------------
@@ -241,7 +260,7 @@ http.createServer((request, response) => {
   if (pathname === '/api/mestre/sair' && request.method === 'POST') return sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie('', 0) });
   // Estado para a barra lateral: a mesa do Foundry, a versão no ar e se este aparelho é o do mestre.
   if (pathname === '/api/estado') {
-    return Promise.all([version(), tableStatus()]).then(([versao, mesa]) => sendJson(response, 200, { modo: hosted ? 'hospedado' : 'local', mestre: gameMaster, login: Boolean(gmKey), versao, mesa, backup: gameMaster && Boolean(backupDir) }));
+    return Promise.all([version(), tableStatus()]).then(([versao, mesa]) => sendJson(response, 200, { modo: hosted ? 'hospedado' : 'local', mestre: gameMaster, login: Boolean(gmKey), versao, mesa, backup: gameMaster && Boolean(backupDir), servidor: gameMaster ? serverHealth() : null }));
   }
   if (pathname === '/mestre') pathname = '/mestre.html';
   // Backup mais recente (dados da wiki e mundos do Foundry), para o mestre guardar uma cópia fora do servidor.
@@ -289,7 +308,9 @@ http.createServer((request, response) => {
       'Content-Type': contentTypes[extension] || 'application/octet-stream',
       // Os dados publicados mudam durante a sessão, e arquivo do mestre não pode ficar no cache do túnel
       // (senão o Cloudflare entregaria a cópia a um jogador): nunca guardar em cache.
-      ...(extension === '.json' || !playerFile ? { 'Cache-Control': 'private, no-store' } : {})
+      ...(extension === '.json' || !playerFile ? { 'Cache-Control': 'private, no-store' } : {}),
+      // O navegador confere o service worker a cada abertura: a versão nova vale logo.
+      ...(servedPath === '/sw.js' ? { 'Cache-Control': 'no-cache' } : {})
     });
     if (request.method === 'HEAD') return response.end();
     // A conexão pode ter caído enquanto o stat rodava: aí o arquivo nem é aberto

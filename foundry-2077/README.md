@@ -20,7 +20,7 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
     - Os veículos da família do Nomad chegam com os upgrades instalados.
     - Moradia, estilo de vida, Trauma Team e moda vão para o Estilo de vida da ficha.
   - **Avisos da wiki:** quando um jogador clica em **Enviar para o mestre** na wiki, o Foundry do mestre avisa (confere ao entrar e a cada minuto) e abre a janela **Personagens da wiki**, com Importar ou Atualizar. Cada envio avisa uma vez. Desliga em Configurações do módulo. Pela macro: `game.modules.get('cpr-2077').api.avisosDaWiki()`.
-  - **Atualizar da wiki** (cabeçalho da ficha) traz o que mudou depois, inclusive um retrato novo (troca a imagem da ficha, do protótipo e dos tokens já no mapa).
+  - **Atualizar da wiki** (cabeçalho da ficha) traz o que mudou depois, inclusive um retrato novo (troca a imagem da ficha, do protótipo e dos tokens já no mapa) e a **Montagem** que falta na ficha (carregar armas, encaixar acessórios, instalar programas e opções). Pela macro: `api.montagemPendente(ator)` e `api.aplicarMontagem(ator)`.
   - **Na mesa:** a cada mudança num ator da wiki, o Foundry do mestre ativo manda a ficha de volta para a wiki (HP, Humanidade, dinheiro, Pontos de Melhoria, itens, munição…). Ao entrar, manda todos uma vez. Desliga em Configurações do módulo → Mandar a ficha para a wiki. Pela macro: `game.modules.get('cpr-2077').api.enviarParaWiki(ator)`.
   - **Quem importa:** o mestre importa do navegador em que entrou como mestre na wiki. Sem servidor, importa do computador onde a wiki roda.
   - **Endereço da wiki:** fica em Configurações do módulo e vale para o mundo todo. Vazio, ele usa `wiki.SEUDOMINIO` quando a mesa abre em `mesa.SEUDOMINIO`, ou `http://localhost:8000`.

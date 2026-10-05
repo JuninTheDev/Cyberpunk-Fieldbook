@@ -643,3 +643,10 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
   .cc-bar { background: #ddd; } .cc-bar span { background: #555 !important; }
   a { color: #000; }
 }
+/* Saúde do servidor, para o mestre (barra lateral). */
+.side-server { font-size: 12px; color: var(--muted); }
+.side-server summary { cursor: pointer; color: var(--cyan); }
+.side-server-bad summary { color: var(--coral); }
+.side-server ul { margin: 6px 0 0; padding-left: 16px; font: 10px/1.4 var(--mono); }
+.side-server p { margin: 6px 0 0; }
+.side-status .side-server summary { font: 11px/1.4 var(--mono); text-transform: none; letter-spacing: 0; }

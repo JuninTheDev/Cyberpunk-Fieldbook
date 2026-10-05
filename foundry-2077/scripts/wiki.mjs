@@ -84,22 +84,46 @@ async function itemData(entry) {
 //      a opção sem lugar vai numa base do mesmo tipo com espaço (as do corpo, interno/externo/fashionware, já vêm na ficha);
 //   3. a munição em cada arma, e a arma recarregada (o que entra no pente sai da munição).
 // Os pais são achados pelo uid da wiki gravado em cada item: no Atualizar da wiki, o pai pode já estar na ficha.
+const itemsByUid = (actor, uid) => actor.items.filter(item => item.getFlag(MODULE_ID, 'wikiUid') === uid);
+const installedSomewhere = (actor, item) => (item.type === 'cyberware' && item.system.isInstalled) || actor.items.some(other => other.system.installedItems?.list?.includes(item.id));
+
+// O que da montagem da wiki ainda não está na ficha: tudo o que o assemble faria (a lista mostra exatamente o que o
+// Atualizar da wiki vai aplicar). Acontece com atores importados antes da montagem existir, ou com algo tirado na mão.
+function pendingAssembly(actor, entries) {
+  const lines = [];
+  const cyber = entries.filter(item => item.cyber).flatMap(entry => itemsByUid(actor, entry.uid).map(item => ({ entry, item }))).filter(({ item }) => item.type === 'cyberware');
+  for (const { item } of cyber.filter(({ item }) => item.system.isFoundational && !actor.system.installedItems.list.includes(item.id))) lines.push(`${item.name}: instalar`);
+  for (const { entry, item } of cyber.filter(({ entry, item }) => !entry.em && !item.system.isFoundational && !installedSomewhere(actor, item))) lines.push(`${item.name}: instalar numa base do mesmo tipo`);
+  for (const entry of entries.filter(item => item.municao)) {
+    const ammo = itemsByUid(actor, entry.municao)[0];
+    if (!ammo) continue;
+    for (const weapon of itemsByUid(actor, entry.uid).filter(item => item.type === 'weapon')) {
+      if (!weapon.getInstalledItems?.('ammo')?.length) lines.push(`${weapon.name}: carregar com ${ammo.name}`);
+    }
+  }
+  for (const entry of entries.filter(item => item.em)) {
+    const target = itemsByUid(actor, entry.em)[0];
+    if (!target) continue;
+    for (const item of itemsByUid(actor, entry.uid)) if (!installedSomewhere(actor, item)) lines.push(`${item.name} → ${target.name}`);
+  }
+  return lines;
+}
+
 async function assemble(actor, entries) {
   const notes = [];
-  const byUid = uid => actor.items.filter(item => item.getFlag(MODULE_ID, 'wikiUid') === uid);
-  const installedSomewhere = item => (item.type === 'cyberware' && item.system.isInstalled) || actor.items.some(other => other.system.installedItems?.list?.includes(item.id));
+  const byUid = uid => itemsByUid(actor, uid);
   const cyber = entries.flatMap(entry => byUid(entry.uid)).filter(item => item.type === 'cyberware');
   const bases = cyber.filter(item => item.system.isFoundational && !actor.system.installedItems.list.includes(item.id));
   for (const base of bases) await actor.installItems([base]);
 
   for (const entry of entries.filter(item => item.em)) {
     const target = byUid(entry.em)[0];
-    const items = byUid(entry.uid).filter(item => !installedSomewhere(item));
+    const items = byUid(entry.uid).filter(item => !installedSomewhere(actor, item));
     if (!target || !items.length) continue;
     const ok = await target.installItems(items).catch(() => false);
     if (ok === false) notes.push(`${items[0].name}: não coube em ${target.name}; ficou no inventário.`);
   }
-  for (const item of cyber.filter(cw => !cw.system.isFoundational && !installedSomewhere(cw))) {
+  for (const item of cyber.filter(cw => !cw.system.isFoundational && !installedSomewhere(actor, cw))) {
     const current = actor.items.get(item.id);
     const options = actor.itemTypes.cyberware.filter(cw => cw.system.isFoundational && cw.system.type === current.system.type && actor.system.installedItems.list.includes(cw.id));
     const target = options.find(base => base.availableInstallSlots() >= current.system.size);
@@ -385,12 +409,13 @@ export async function atualizarDaWiki(actor) {
     .map(([key, label]) => `${label}: ${home[`system.lifestyle.${key}`].description || '—'} (${home[`system.lifestyle.${key}`].cost}eb/mês)`);
   const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } }).catch(() => null);
   // Nada que este botão aplique (a mudança foi em moradia ou dinheiro, por exemplo): a wiki para de mostrar "mudou".
-  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged && !portraitChanged && !homeLines.length) {
+  const mountLines = pendingAssembly(actor, (r.itens || []).filter(item => (link.entregues || []).includes(item.uid)));
+  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged && !portraitChanged && !homeLines.length && !mountLines.length) {
     await synced(link.entregues || []);
     return ui.notifications.info('Nada para aplicar: a ficha já está igual à da wiki.');
   }
   const section = (name, title, lines) => lines.length ? `<div class="form-group"><label><input type="checkbox" name="${name}" checked> ${title}</label></div><ul>${lines.slice(0, 12).map(line => `<li>${esc(line)}</li>`).join('')}${lines.length > 12 ? `<li>e mais ${lines.length - 12}</li>` : ''}</ul>` : '';
-  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}${portraitChanged ? section('portrait', 'Retrato', ['imagem da ficha e do token']) : ''}${section('lifestyle', 'Moradia e estilo de vida', homeLines)}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
+  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}${portraitChanged ? section('portrait', 'Retrato', ['imagem da ficha e do token']) : ''}${section('lifestyle', 'Moradia e estilo de vida', homeLines)}${section('mount', 'Montagem (carregar armas, encaixar e instalar)', mountLines)}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
   return Dialog.prompt({
     title: `Atualizar ${actor.name} da wiki`, content, label: 'Aplicar',
     callback: async html => {
@@ -416,6 +441,7 @@ export async function atualizarDaWiki(actor) {
       }
       if (checked('lifepath')) await actor.update({ 'system.lifepath': r.lifepath });
       if (checked('lifestyle')) await actor.update(home);
+      if (checked('mount')) for (const note of await assemble(actor, r.itens || [])) ui.notifications.warn(note);
       let portrait = link.retrato || '';
       if (checked('portrait')) {
         const result = await applyPortrait(actor, doc);
@@ -576,4 +602,19 @@ export function registerWikiButtons() {
   });
 }
 
-export const wikiApi = { importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter, enviarParaWiki: syncActor, fichaDaMesa: tableSnapshot };
+// Montagem da wiki num ator que já está na mesa (o mesmo que a seção Montagem do Atualizar da wiki).
+async function wikiDocOf(actor) {
+  const link = actor?.getFlag(MODULE_ID, 'wiki');
+  if (!link) throw new Error('Este ator não veio da wiki.');
+  return { link, doc: (await wikiFetch(`/api/personagens/${link.id}`)).personagem };
+}
+async function montagemPendente(actor) {
+  const { link, doc } = await wikiDocOf(actor);
+  return pendingAssembly(actor, ((doc.resultado || {}).itens || []).filter(item => (link.entregues || []).includes(item.uid)));
+}
+async function aplicarMontagem(actor) {
+  const { doc } = await wikiDocOf(actor);
+  return assemble(actor, (doc.resultado || {}).itens || []);
+}
+
+export const wikiApi = { importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter, enviarParaWiki: syncActor, fichaDaMesa: tableSnapshot, montagemPendente, aplicarMontagem };

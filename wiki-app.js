@@ -1063,6 +1063,7 @@
 
     // Barra lateral: a mesa do Foundry (aberta, quem está conectado e o link), entrar ou sair como mestre
     // e, para o mestre, a versão no ar. Tudo vem de config.statusUrl (api/estado).
+    let installPrompt = null;
     function drawStatus(state) {
       let box = document.getElementById('side-status');
       if (!state) { box?.remove(); return; }
@@ -1085,7 +1086,18 @@
       const account = hostedGm ? `<button type="button" class="side-link" data-gm-logout>Sair do modo mestre</button>${state.backup ? '<a class="side-link" href="api/backup">Baixar backup</a>' : ''}`
         : !state.mestre && state.login ? '<a class="side-link" href="mestre">Entrar como mestre</a>' : '';
       const version = state.mestre && state.versao ? `<small class="side-version">No ar: ${escapeHtml(state.versao.commit)} · ${new Date(state.versao.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>` : '';
-      box.innerHTML = `${table}${account || version ? `<div class="side-meta">${account}${version}</div>` : ''}`;
+      // Saúde do servidor (só para o mestre, no servidor online): em vermelho com backup de mais de 2 dias ou disco quase cheio.
+      const health = state.servidor;
+      let server = '';
+      if (health) {
+        const days = health.backup ? (Date.now() - new Date(health.backup.data)) / 86400000 : Infinity;
+        const free = health.disco && health.disco.total ? health.disco.livre / health.disco.total : 1;
+        const when = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.moduloPendente ? 'módulo esperando a mesa vazia' : ''].filter(Boolean).join(' · ');
+        server = `<details class="side-server${days > 2 || free < 0.1 ? ' side-server-bad' : ''}"><summary>Servidor: ${escapeHtml(summary)}</summary>${health.backup ? `<p>${escapeHtml(health.backup.nome)}, ${(health.backup.tamanho / 1048576).toFixed(1)} MB</p>` : ''}${health.registro.length ? `<ul>${health.registro.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '<p>Nenhuma publicação ainda.</p>'}</details>`;
+      }
+      const install = installPrompt ? '<button type="button" class="side-link" data-install>Instalar no celular</button>' : '';
+      box.innerHTML = `${table}${account || version || install ? `<div class="side-meta">${account}${install}${version}</div>` : ''}${server}`;
       box.hidden = !box.innerHTML.trim();
     }
     function checkStatus() {
@@ -1101,6 +1113,16 @@
     });
     checkStatus();
     setInterval(checkStatus, 60 * 1000);
+
+    // A wiki instalada (celular ou computador): o service worker guarda as regras e o que o mestre publicou para
+    // abrir sem internet (sw.js). Quando o navegador deixa instalar, a barra lateral mostra "Instalar no celular".
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { /* sem service worker: a wiki funciona igual, só não abre sem rede */ });
+    window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; checkStatus(); });
+    document.addEventListener('click', event => {
+      if (!event.target.closest('[data-install]') || !installPrompt) return;
+      installPrompt.prompt();
+      installPrompt.userChoice.finally(() => { installPrompt = null; checkStatus(); });
+    });
 
     // Atualiza páginas já carregadas (a visão dos jogadores recebe as novidades do mestre sem recarregar).
     function updatePages(pages) {

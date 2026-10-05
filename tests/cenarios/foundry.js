@@ -148,6 +148,20 @@ module.exports = async ({ edge, servidores, r }) => {
       const h = habilidades(a);
       return [h.Surgery === 2 && h['Surgery Skill'] === 4 && h['Medical Tech (Pharmaceuticals)'] === 1 && h['Medical Tech (Cryosystem Operation)'] === 1 && h['Medical Tech Skill'] === 2 && !a.notas.length, `${JSON.stringify(h)} · avisos: ${a.notas.join(' | ') || 'nenhum'}`];
     });
+    await r.passo('Atualizar da wiki: arma descarregada na mão (como um ator antigo) aparece na Montagem e volta carregada', async () => {
+      const res = await edge.evaluate(`(async () => {
+        const api = game.modules.get('cpr-2077').api;
+        const actor = game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        const rifle = actor.itemTypes.weapon.find(w => w.name === 'Assault Rifle');
+        await rifle.uninstallItems(rifle.getInstalledItems('ammo'));
+        const vazio = rifle.system.magazine.value;
+        const pendente = await api.montagemPendente(actor);
+        const avisos = await api.aplicarMontagem(actor);
+        const depois = await api.montagemPendente(actor);
+        return { vazio, pendente, avisos, cheio: actor.items.get(rifle.id).system.magazine.value, depois };
+      })()`);
+      return [res.vazio === 0 && res.pendente.some(line => /Assault Rifle: carregar com Rifle/.test(line)) && res.cheio === 25 && !res.depois.length, JSON.stringify(res)];
+    });
     // O que está instalado em cada item do ator (arma, deck, cyberbraço), pelo uid da wiki.
     const instalados = id => edge.evaluate(`(() => {
       const actor = game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(id)});

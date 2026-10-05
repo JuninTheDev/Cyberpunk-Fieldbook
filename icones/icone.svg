@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícone da wiki instalada (gera icone-192.png e icone-512.png). Margem de 10% para o recorte dos celulares. -->
+  <rect width="512" height="512" fill="#111614"/>
+  <path d="M72 72 H392 L440 120 V440 H120 L72 392 Z" fill="none" stroke="#fcee0a" stroke-width="22"/>
+  <text x="256" y="312" font-family="'Arial Black', 'Segoe UI', Arial, sans-serif" font-weight="900" font-size="176" fill="#fcee0a" text-anchor="middle" letter-spacing="-6">NC</text>
+  <rect x="136" y="352" width="240" height="16" fill="#75d6c0"/>
+</svg>

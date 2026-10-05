@@ -15,6 +15,9 @@ module.exports = async ({ edge, servidores, r }) => {
   fs.mkdirSync(backups);
   fs.writeFileSync(path.join(backups, 'backup-2026-10-04.tar.gz'), 'antigo');
   fs.writeFileSync(path.join(backups, 'backup-2026-10-05.tar.gz'), 'mais novo');
+  // Registro de publicações e módulo esperando (como o servidor/atualizar.sh deixa).
+  fs.writeFileSync(path.join(dados, 'atualizacoes.log'), ['2026-10-05 07:42:14 no ar: abc1234 Primeira', '2026-10-05 07:50:00 no ar: def5678 Segunda', ''].join('\n'));
+  fs.writeFileSync(path.join(dados, '.modulo-pendente'), '');
   let mesa = { active: true, world: 'protocolo-morana', users: 2, version: '12.343' };
   const foundry = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -59,7 +62,14 @@ module.exports = async ({ edge, servidores, r }) => {
       const conteudo = await mestre.text();
       return [jogador === 403 && mestre.status === 200 && conteudo === 'mais novo' && /backup-2026-10-05/.test(mestre.headers.get('content-disposition') || ''), `jogador ${jogador} · mestre ${mestre.status} "${conteudo}"`];
     });
-    await r.passo('/api/estado: mesa aberta com 2 conectados, versão no ar', async () => {
+    await r.passo('saúde do servidor: o mestre vê backup, disco, módulo e publicações; o jogador não', async () => {
+    const mestre = await (await fetch(`${base}/api/estado`, { headers: { cookie } })).json();
+    const jogador = await (await fetch(`${base}/api/estado`)).json();
+    const sv = mestre.servidor || {};
+    return [sv.backup?.nome === 'backup-2026-10-05.tar.gz' && sv.disco?.total > 0 && sv.moduloPendente === true && /def5678 Segunda/.test(sv.registro?.[0] || '') && jogador.servidor === null,
+      JSON.stringify({ backup: sv.backup?.nome, disco: Boolean(sv.disco), modulo: sv.moduloPendente, registro: sv.registro?.[0], jogador: jogador.servidor })];
+  });
+  await r.passo('/api/estado: mesa aberta com 2 conectados, versão no ar', async () => {
       const estado = await (await fetch(`${base}/api/estado`)).json();
       return [estado.modo === 'hospedado' && !estado.mestre && estado.mesa?.aberta && estado.mesa.usuarios === 2 && estado.mesa.url === 'https://mesa.exemplo.com' && /^[0-9a-f]{7,}$/.test(estado.versao?.commit || ''), JSON.stringify(estado)];
     });
@@ -85,7 +95,7 @@ module.exports = async ({ edge, servidores, r }) => {
       for (let i = 0; i < 40 && !(await edge.evaluate(`!!(window.wikiApp && document.querySelector('#content h2') && document.querySelector('[data-gm-logout]'))`).catch(() => false)); i++) await edge.sleep(200);
       const texto = (await edge.evaluate(`document.getElementById('side-status')?.textContent || ''`)).replace(/\s+/g, ' ');
       const titulo = await edge.evaluate('document.title');
-      return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(texto) && /No ar: [0-9a-f]{7,}/.test(texto), `${titulo} · ${texto}`];
+      return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(texto) && /No ar: [0-9a-f]{7,}/.test(texto) && /Servidor: backup .*módulo esperando a mesa vazia/.test(texto), `${titulo} · ${texto}`];
     });
     await edge.shot('barra-mestre');
     await r.passo('mesa fechada: o Foundry sem mundo aparece como "sem mundo aberto"', async () => {
