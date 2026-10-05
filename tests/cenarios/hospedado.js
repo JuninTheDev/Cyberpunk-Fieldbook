@@ -1,0 +1,110 @@
+// Modo hospedado (MODO=hospedado), como no servidor da nuvem atrás do Caddy: "este computador" não é o mestre,
+// o mestre entra pela tela /mestre, o Publicar grava na pasta de dados (fora do git) e a barra lateral mostra a mesa.
+// Um Foundry de mentira responde o /api/status. Nada aqui mexe nos arquivos do projeto.
+const fs = require('fs');
+const http = require('http');
+const os = require('os');
+const path = require('path');
+const { subir } = require('../lib/servidores');
+
+module.exports = async ({ edge, servidores, r }) => {
+  const SENHA = 'senha-longa-de-teste';
+  const base = 'http://localhost:8768';
+  const dados = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-hospedado-'));
+  const backups = path.join(dados, 'backups');
+  fs.mkdirSync(backups);
+  fs.writeFileSync(path.join(backups, 'backup-2026-10-04.tar.gz'), 'antigo');
+  fs.writeFileSync(path.join(backups, 'backup-2026-10-05.tar.gz'), 'mais novo');
+  let mesa = { active: true, world: 'protocolo-morana', users: 2, version: '12.343' };
+  const foundry = http.createServer((request, response) => {
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify(mesa));
+  }).listen(8769, '127.0.0.1');
+  const publicadoNoGit = fs.readFileSync(path.join(servidores.raiz, 'jogadores.json'), 'utf8');
+  let servidor = null;
+  const status = async (caminho, options = {}) => (await fetch(base + caminho, { redirect: 'manual', ...options })).status;
+  try {
+    servidor = await subir(8768, { HOST: '127.0.0.1', MODO: 'hospedado', GM_KEY: SENHA, DADOS: dados, DADOS_PERSONAGENS: '', FOUNDRY_URL: 'https://mesa.exemplo.com', FOUNDRY_STATUS: 'http://127.0.0.1:8769/api/status', BACKUPS: backups });
+
+    await r.passo('este computador sem senha é jogador: raiz dos jogadores, index.html bloqueado', async () => {
+      const raiz = await (await fetch(`${base}/`)).text();
+      const index = await status('/index.html');
+      return [/Jogadores/.test(raiz.match(/<title>[^<]*/)?.[0] || '') && index === 403, `index.html ${index}`];
+    });
+    await r.passo('senha no endereço não vale: manda para a tela /mestre', async () => {
+      const resposta = await fetch(`${base}/?mestre=${SENHA}`, { redirect: 'manual' });
+      return [resposta.status === 302 && resposta.headers.get('location') === '/mestre' && !resposta.headers.get('set-cookie'), `${resposta.status} → ${resposta.headers.get('location')}`];
+    });
+    let cookie = '';
+    await r.passo('login: senha errada recusa; certa dá cookie Secure assinado (sem a senha)', async () => {
+      const entrar = senha => fetch(`${base}/api/mestre/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha }) });
+      const errada = await entrar('chute');
+      const certa = await entrar(SENHA);
+      const setCookie = certa.headers.get('set-cookie') || '';
+      cookie = setCookie.split(';')[0];
+      const index = await status('/index.html', { headers: { cookie } });
+      return [errada.status === 403 && certa.status === 200 && /Secure/.test(setCookie) && !setCookie.includes(SENHA) && index === 200, `errada ${errada.status} · certa ${certa.status} · index ${index} · ${setCookie.slice(0, 40)}…`];
+    });
+    await r.passo('Publicar grava na pasta de dados; o jogadores.json do git não muda', async () => {
+      const mestre = JSON.parse(fs.readFileSync(path.join(dados, 'jogadores-mestre.json'), 'utf8'));
+      const publicado = { ...JSON.parse(publicadoNoGit), resumo: 'Publicado no servidor de teste.' };
+      const resposta = await fetch(`${base}/api/jogadores`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ mestre, publicado }) });
+      const servido = await (await fetch(`${base}/jogadores.json`)).json();
+      const noGit = fs.readFileSync(path.join(servidores.raiz, 'jogadores.json'), 'utf8');
+      return [resposta.status === 200 && servido.resumo === 'Publicado no servidor de teste.' && noGit === publicadoNoGit, `HTTP ${resposta.status} · servido "${servido.resumo}"`];
+    });
+    await r.passo('backup: o mestre baixa o mais recente; jogador não', async () => {
+      const jogador = await status('/api/backup');
+      const mestre = await fetch(`${base}/api/backup`, { headers: { cookie } });
+      const conteudo = await mestre.text();
+      return [jogador === 403 && mestre.status === 200 && conteudo === 'mais novo' && /backup-2026-10-05/.test(mestre.headers.get('content-disposition') || ''), `jogador ${jogador} · mestre ${mestre.status} "${conteudo}"`];
+    });
+    await r.passo('/api/estado: mesa aberta com 2 conectados, versão no ar', async () => {
+      const estado = await (await fetch(`${base}/api/estado`)).json();
+      return [estado.modo === 'hospedado' && !estado.mestre && estado.mesa?.aberta && estado.mesa.usuarios === 2 && estado.mesa.url === 'https://mesa.exemplo.com' && /^[0-9a-f]{7,}$/.test(estado.versao?.commit || ''), JSON.stringify(estado)];
+    });
+    await r.passo('Foundry do mestre: CORS com credenciais para mesa.exemplo.com, e o cookie conta como mestre', async () => {
+      const resposta = await fetch(`${base}/api/personagens`, { headers: { Origin: 'https://mesa.exemplo.com', cookie } });
+      const outra = await fetch(`${base}/api/personagens`, { headers: { Origin: 'https://site-estranho.example' } });
+      const dadosLista = await resposta.json();
+      return [resposta.headers.get('access-control-allow-origin') === 'https://mesa.exemplo.com' && resposta.headers.get('access-control-allow-credentials') === 'true' && dadosLista.papel === 'mestre' && !outra.headers.get('access-control-allow-origin'), `origem ${resposta.headers.get('access-control-allow-origin')} · papel ${dadosLista.papel}`];
+    });
+
+    // ---------- Na tela ----------
+    await r.passo('jogador: barra lateral mostra a mesa aberta, o link e "Entrar como mestre"', async () => {
+      await edge.ir(`${base}/`, 1500);
+      const texto = (await edge.evaluate(`document.getElementById('side-status')?.textContent || ''`)).replace(/\s+/g, ' ');
+      const link = await edge.evaluate(`document.querySelector('#side-status .table-link')?.href || ''`);
+      return [/Mesa aberta · 2 conectados/.test(texto) && link === 'https://mesa.exemplo.com/' && /Entrar como mestre/.test(texto), `${texto} · ${link}`];
+    });
+    await edge.shot('barra-jogador');
+    await r.passo('tela /mestre: com a senha, abre a wiki do mestre com "Sair" e a versão', async () => {
+      await edge.send('Page.navigate', { url: `${base}/mestre` });
+      await edge.sleep(1200);
+      await edge.evaluate(`(() => { document.getElementById('senha').value = ${JSON.stringify(SENHA)}; document.getElementById('login').requestSubmit(); })()`);
+      for (let i = 0; i < 40 && !(await edge.evaluate(`!!(window.wikiApp && document.querySelector('#content h2') && document.querySelector('[data-gm-logout]'))`).catch(() => false)); i++) await edge.sleep(200);
+      const texto = (await edge.evaluate(`document.getElementById('side-status')?.textContent || ''`)).replace(/\s+/g, ' ');
+      const titulo = await edge.evaluate('document.title');
+      return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(texto) && /No ar: [0-9a-f]{7,}/.test(texto), `${titulo} · ${texto}`];
+    });
+    await edge.shot('barra-mestre');
+    await r.passo('mesa fechada: o Foundry sem mundo aparece como "sem mundo aberto"', async () => {
+      mesa = { active: false, world: null, users: 0 };
+      await edge.sleep(16000); // o servidor guarda o estado por 15 s
+      await edge.evaluate(`fetch('api/estado').then(r => r.json())`);
+      await edge.ir(`${base}/`, 1200);
+      const texto = (await edge.evaluate(`document.getElementById('side-status')?.textContent || ''`)).replace(/\s+/g, ' ');
+      return [/sem mundo aberto/.test(texto), texto];
+    });
+    await r.passo('"Sair do modo mestre" volta para a visão dos jogadores', async () => {
+      await edge.evaluate(`document.querySelector('[data-gm-logout]').click()`);
+      for (let i = 0; i < 30 && !/Jogadores/.test(await edge.evaluate('document.title').catch(() => '')); i++) await edge.sleep(200);
+      return [/Jogadores/.test(await edge.evaluate('document.title')), await edge.evaluate('document.title')];
+    });
+  } finally {
+    if (servidor) servidor.kill();
+    foundry.close();
+    await edge.sleep(400);
+    try { fs.rmSync(dados, { recursive: true, force: true }); } catch { /* o Windows às vezes segura a pasta por um instante */ }
+  }
+};

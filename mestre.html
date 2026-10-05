@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111614">
+  <title>Entrar como mestre · Night City Fieldbook</title>
+  <link rel="stylesheet" href="cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css">
+  <link rel="stylesheet" href="wiki.css">
+</head>
+<body>
+  <!-- Tela de login do mestre. Os jogadores também baixam esta página: nada de segredo aqui. -->
+  <main class="login-page">
+    <div class="login-box">
+      <div class="brand-mark">Night City Fieldbook</div>
+      <h1>Entrar como mestre</h1>
+      <p>Com a senha do mestre, este aparelho passa a abrir a wiki do mestre. Ele fica lembrado por um ano.</p>
+      <form id="login">
+        <label>Senha do mestre<input id="senha" type="password" autocomplete="current-password" required autofocus></label>
+        <button class="action" type="submit">Entrar</button>
+        <p class="cc-msg" id="msg" role="status"></p>
+      </form>
+      <p class="login-back"><a href="./">Voltar para a wiki dos jogadores</a></p>
+    </div>
+  </main>
+  <script>
+    const msg = document.getElementById('msg');
+    document.getElementById('login').addEventListener('submit', async event => {
+      event.preventDefault();
+      msg.textContent = 'Conferindo…';
+      try {
+        const response = await fetch('api/mestre/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: document.getElementById('senha').value }) });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok) { location.href = './'; return; }
+        msg.textContent = data.erro || 'Não consegui entrar.';
+      } catch {
+        msg.textContent = 'Sem conexão com a wiki.';
+      }
+    });
+  </script>
+</body>
+</html>

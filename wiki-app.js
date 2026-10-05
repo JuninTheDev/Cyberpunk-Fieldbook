@@ -1061,6 +1061,47 @@
     checkHealth();
     setInterval(checkHealth, 5 * 60 * 1000);
 
+    // Barra lateral: a mesa do Foundry (aberta, quem está conectado e o link), entrar ou sair como mestre
+    // e, para o mestre, a versão no ar. Tudo vem de config.statusUrl (api/estado).
+    function drawStatus(state) {
+      let box = document.getElementById('side-status');
+      if (!state) { box?.remove(); return; }
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'side-status';
+        box.className = 'side-status';
+        document.querySelector('aside .brand')?.after(box);
+      }
+      const mesa = state.mesa;
+      let table = '';
+      if (mesa && mesa.url) {
+        const [kind, text] = !mesa.online ? ['off', 'Mesa fora do ar']
+          : mesa.aberta ? ['on', `Mesa aberta${mesa.usuarios ? ` · ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
+          : ['idle', 'Foundry ligado, sem mundo aberto'];
+        table = `<div class="table-status table-${kind}"><span class="table-dot" aria-hidden="true"></span><span>${escapeHtml(text)}</span></div>
+          ${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
+      }
+      const hostedGm = state.modo === 'hospedado' && state.mestre;
+      const account = hostedGm ? `<button type="button" class="side-link" data-gm-logout>Sair do modo mestre</button>${state.backup ? '<a class="side-link" href="api/backup">Baixar backup</a>' : ''}`
+        : !state.mestre && state.login ? '<a class="side-link" href="mestre">Entrar como mestre</a>' : '';
+      const version = state.mestre && state.versao ? `<small class="side-version">No ar: ${escapeHtml(state.versao.commit)} · ${new Date(state.versao.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>` : '';
+      box.innerHTML = `${table}${account || version ? `<div class="side-meta">${account}${version}</div>` : ''}`;
+      box.hidden = !box.innerHTML.trim();
+    }
+    function checkStatus() {
+      if (!config.statusUrl || location.protocol === 'file:') return;
+      fetch(config.statusUrl, { cache: 'no-store' })
+        .then(response => response.ok ? response.json() : null)
+        .then(drawStatus)
+        .catch(() => { /* servidor antigo ou sem rede: sem barra */ });
+    }
+    document.addEventListener('click', event => {
+      if (!event.target.closest('[data-gm-logout]')) return;
+      fetch('api/mestre/sair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(() => { location.href = './'; });
+    });
+    checkStatus();
+    setInterval(checkStatus, 60 * 1000);
+
     // Atualiza páginas já carregadas (a visão dos jogadores recebe as novidades do mestre sem recarregar).
     function updatePages(pages) {
       Object.assign(pageContent, pages);

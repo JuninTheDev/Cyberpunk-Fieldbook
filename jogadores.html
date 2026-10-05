@@ -61,7 +61,9 @@
       pageContent: { pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts') },
       mapPages: ['pvMap'],
       mapData: () => window.playerMapData,
-      pageSetup: { pvMap: () => window.wikiApp.setupMap() }
+      pageSetup: { pvMap: () => window.wikiApp.setupMap() },
+      // Mesa do Foundry e "Entrar como mestre", na barra lateral.
+      statusUrl: 'api/estado'
     };
   </script>
   <script src="wiki-app.js"></script>

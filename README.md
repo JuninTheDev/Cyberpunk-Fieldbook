@@ -1,8 +1,23 @@
 # Night City Fieldbook — Protocolo Morana
 
-Wiki local de mesa para a campanha de Cyberpunk RED ambientada em 2077.
+Wiki de mesa para a campanha de Cyberpunk RED ambientada em 2077.
 
-## Como abrir a wiki
+## Wiki e mesa online
+
+A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre ligados, com endereço fixo: `https://wiki.SEUDOMINIO` para a wiki e `https://mesa.SEUDOMINIO` para o Foundry. O passo a passo da mudança está em [servidor/README.md](servidor/README.md).
+
+- **Publicar uma mudança:** edite no PC e dê dois cliques em **`publicar.bat`**.
+  - Ele recusa se o OneDrive tiver voltado algum arquivo para uma versão antiga.
+  - Ele mostra o que mudou, pede uma descrição curta e manda para o GitHub.
+  - Ele espera a versão nova aparecer na wiki online, o que leva até 1 minuto.
+- **Mestre:** entra por `https://wiki.SEUDOMINIO/mestre`, com a senha. O aparelho fica lembrado por um ano.
+  - Na barra lateral ficam **Sair do modo mestre**, **Baixar backup** (o servidor faz um por dia) e a versão no ar.
+- **Mesa:** a barra lateral das duas wikis mostra se a mesa está aberta e quantos estão conectados, e tem o botão **Entrar na mesa**.
+- **Dados ao vivo:** no servidor, ficam fora do git (`/srv/fieldbook/dados`).
+  - São personagens, retratos, códigos, o painel Publicar e as regras da loja.
+  - Use a wiki online para mexer neles: a wiki do PC vira um lugar de teste.
+
+## Como abrir a wiki no PC
 
 Nesta pasta, rode:
 
@@ -18,9 +33,9 @@ e abra `http://localhost:8000`.
 - Para usar a visão do mestre num tablet: `$env:HOST='0.0.0.0'; $env:GM_KEY='uma-senha'; node server.js` e, no tablet, abra uma vez `http://IP:8000/?mestre=uma-senha`. O tablet guarda um cookie e passa a abrir a wiki do mestre.
 - Abrir o `index.html` com dois cliques funciona para as páginas de resumo, mas os **documentos completos** e a visão dos jogadores só funcionam pelo servidor.
 
-## Jogar com gente de fora de casa
+## Jogar com gente de fora de casa (sem servidor)
 
-Sem mexer no roteador: o `abrir-online.bat` abre o Foundry e a wiki dos jogadores pela internet, com um túnel do Cloudflare (`cloudflared`, instalado com `winget install --id Cloudflare.cloudflared`).
+Com a wiki e o Foundry no servidor (veja **Wiki e mesa online**), isto não é mais necessário. Sem o servidor, sem mexer no roteador: o `abrir-online.bat` abre o Foundry e a wiki dos jogadores pela internet, com um túnel do Cloudflare (`cloudflared`, instalado com `winget install --id Cloudflare.cloudflared`).
 
 1. Abra o Foundry e **lance o mundo** (sem mundo aberto, quem chega pelo link cai na tela de configuração; o script avisa).
 2. Dê dois cliques em `abrir-online.bat`. Ele liga a wiki, se ela não estiver rodando, e abre um túnel para o Foundry e outro para a wiki.
@@ -79,7 +94,11 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `system-catalog.js` | Catálogo do RED: Roles, cyberware, armas, armaduras, munição, acessórios, equipamento médico e a lista de equipamento. |
 | `system-glossario.js` | O glossário: definição curta de cada termo de regra e onde está a regra. Vai também para os jogadores. |
 | `mestre-npcs.js` | Fichas de NPC (as 10 fichas prontas do livro, a Trauma Team e variantes para as facções de 2077) e os Encontros de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
-| `server.js` | Servidor local da wiki. Decide quem vê a wiki do mestre e quem vê só a dos jogadores, e avisa se o OneDrive reverteu algum arquivo. |
+| `server.js` | Servidor da wiki, no PC ou no servidor online (`MODO=hospedado`). Decide quem vê a wiki do mestre e quem vê só a dos jogadores, mostra o estado da mesa e avisa se o OneDrive reverteu algum arquivo. |
+| `mestre.html` | A tela "Entrar como mestre" (`/mestre`). |
+| `revertidos.js` | Confere se o OneDrive voltou algum arquivo para uma versão antiga. Usado pelo servidor e pelo `publicar.bat`. |
+| `publicar.bat`, `publicar.ps1` | Publicam a wiki no servidor online, pelo GitHub. |
+| `servidor/` | Instalação e manutenção do servidor online (wiki, Foundry, HTTPS, atualização e backup). Veja o README da pasta. |
 | `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores. |
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
 | `system-criacao.js` | Regras de criação: Roles de 2077, tabelas de STAT, perícias e pacotes de cada Role. |
@@ -130,9 +149,17 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 
 Notas:
 
-- **Onde importar:** importe do computador onde a wiki roda. O Foundry fala com a wiki em `http://localhost:8000` (dá para trocar em Configurações do módulo → Endereço da wiki). Se abrir o Foundry por outro endereço que não `localhost:30000`, ligue o servidor com `$env:FOUNDRY_ORIGIN='http://esse-endereco'`.
+- **Onde importar:**
+  - **Com o servidor online:** de qualquer computador, no navegador em que você entrou como mestre na wiki. Com a mesa em `mesa.SEUDOMINIO`, o módulo acha a wiki em `wiki.SEUDOMINIO` sozinho.
+  - **Sem o servidor:** importe do computador onde a wiki roda, e o Foundry fala com a wiki em `http://localhost:8000`.
+  - O endereço pode ser trocado em Configurações do módulo → Endereço da wiki (vale para o mundo todo).
+  - Se abrir o Foundry por outro endereço, ligue a wiki com `$env:FOUNDRY_ORIGIN='http://esse-endereco'`.
 - **Pelo túnel**, o link muda a cada sessão, e o jogador digita o código de novo.
-- **Onde ficam os dados:** os códigos ficam em `contas-jogadores.json`, fora do git. Os personagens ficam em `personagens/`, e os retratos enviados, em `personagens/retratos/`. Apagar um personagem move o arquivo para `personagens/apagados/`.
+- **Onde ficam os dados:**
+  - Os códigos ficam em `contas-jogadores.json`, fora do git.
+  - Os personagens ficam em `personagens/`, e os retratos enviados, em `personagens/retratos/`.
+  - No servidor online, tudo isso fica em `/srv/fieldbook/dados`.
+  - Apagar um personagem move o arquivo para `personagens/apagados/`.
 - **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros, só nome, apelido, Role e retrato. O mestre vê e edita todos.
 
 ## Consulta durante a sessão
@@ -158,6 +185,8 @@ O OneDrive já voltou arquivos da lore para versões antigas mais de uma vez. O 
 
 Quando a faixa aparecer, **não edite o arquivo**. Restaure a versão certa com `git checkout HEAD -- nome-do-arquivo` e confira se nada se perdeu.
 
+O `publicar.bat` faz a mesma conferência e não publica enquanto houver arquivo revertido. Assim, a versão antiga nunca chega ao servidor.
+
 ## Testes
 
 Para conferir se a wiki continua funcionando depois de uma mudança, rode:
@@ -166,7 +195,7 @@ Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 node tests/rodar.js
 ```
 
-Os testes abrem o Edge escondido, sobem servidores próprios (portas 8765 a 8767, sem mexer no da porta 8000) e testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, o alerta de reversão e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+Os testes abrem o Edge escondido, sobem servidores próprios (portas 8765 a 8769, sem mexer no da porta 8000) e testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
 
 - Para rodar uma parte só, passe o nome: `node tests/rodar.js busca`. Os nomes são os arquivos de `tests/cenarios/`.
 - `$env:DETALHES=1` mostra o detalhe de cada checagem.
@@ -177,5 +206,6 @@ Os testes abrem o Edge escondido, sobem servidores próprios (portas 8765 a 8767
 1. Mude a lore nos `.md`. A página "Documentos completos" da wiki acompanha na hora (recarregue a página).
 2. Se a mudança afetar um resumo (Dossiê, Pessoas, Sessão 01, mapa), atualize também o `index.html` ou o `campaign-map.js`.
    Depois de cada sessão, revele no painel **Visão dos jogadores** o que o grupo descobriu e clique em Publicar.
-3. Salve uma versão no git: `git add -A` e `git commit -m "o que mudou"`. O histórico permite voltar atrás.
-   O `iniciar serv.txt` pode ter a senha do mestre: tire-o do commit com `git restore --staged "iniciar serv.txt"` antes de `git commit`.
+3. Dê dois cliques em **`publicar.bat`**. Ele salva uma versão no git, o que permite voltar atrás, e põe a wiki online no ar.
+   - O `iniciar serv.txt` (com a senha do mestre) fica fora do git.
+   - Com o servidor online, o painel **Visão dos jogadores** é usado na wiki online, e não na do PC.

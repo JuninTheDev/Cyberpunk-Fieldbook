@@ -6,3 +6,6 @@ tests/.saida/
 # Códigos dos jogadores (senhas) e personagens apagados ficam fora do git
 contas-jogadores.json
 personagens/apagados/
+# Senha do mestre (iniciar serv.txt) e o endereço/chave do servidor (enviar-para-servidor) ficam só no PC
+iniciar serv.txt
+servidor/servidor.local.json

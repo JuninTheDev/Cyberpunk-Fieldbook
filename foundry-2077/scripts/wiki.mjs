@@ -1,14 +1,17 @@
 // Personagens do criador da wiki: "Importar da wiki" (aba de Atores) e "Atualizar da wiki" (cabeçalho da ficha).
 // A wiki grava em cada personagem um `resultado` pronto: perícias com o nome do Foundry, itens com o compêndio
 // de onde vêm, Lifepath em texto e dinheiro. Aqui é só montar o ator com isso.
-// O mestre importa do computador onde a wiki roda: para a wiki, o pedido vem deste computador (é o mestre).
+// Quem é o mestre para a wiki: em casa, o computador onde a wiki roda; no servidor, o navegador que entrou
+// como mestre na wiki (o cookie vai junto: wiki.dominio e mesa.dominio são o mesmo site).
 const MODULE_ID = 'cpr-2077';
+// Endereço padrão da wiki: com o Foundry em mesa.dominio, a wiki fica em wiki.dominio; em casa, localhost:8000.
+const defaultWikiUrl = () => /^mesa\./.test(location.hostname) ? `${location.protocol}//wiki.${location.hostname.slice(5)}` : 'http://localhost:8000';
 
 export function registerWikiSettings() {
   game.settings.register(MODULE_ID, 'wikiUrl', {
     name: 'Endereço da wiki',
-    hint: 'Onde o Foundry busca os personagens do criador da wiki. Use o endereço deste computador (http://localhost:8000).',
-    scope: 'client', config: true, type: String, default: 'http://localhost:8000'
+    hint: 'Onde o Foundry busca os personagens do criador da wiki. Vazio: wiki.seudominio quando a mesa abre em mesa.seudominio, ou http://localhost:8000 com tudo no mesmo computador.',
+    scope: 'world', config: true, type: String, default: ''
   });
   game.settings.register(MODULE_ID, 'wikiAvisos', {
     name: 'Avisos da wiki',
@@ -17,20 +20,22 @@ export function registerWikiSettings() {
   });
 }
 
-const wikiUrl = () => String(game.settings.get(MODULE_ID, 'wikiUrl') || 'http://localhost:8000').replace(/\/+$/, '');
+const wikiUrl = () => String(game.settings.get(MODULE_ID, 'wikiUrl') || defaultWikiUrl()).trim().replace(/\/+$/, '');
 const esc = text => foundry.utils.escapeHTML ? foundry.utils.escapeHTML(String(text ?? '')) : String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 async function wikiFetch(path, { method = 'GET', body } = {}) {
   let response;
   try {
-    response = await fetch(`${wikiUrl()}${path}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    response = await fetch(`${wikiUrl()}${path}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', credentials: 'include' });
   } catch {
-    throw new Error(`Não consegui falar com a wiki em ${wikiUrl()}. Ela está aberta neste computador? (Configurações do módulo → Endereço da wiki.)`);
+    throw new Error(`Não consegui falar com a wiki em ${wikiUrl()}. Confira o endereço em Configurações do módulo → Endereço da wiki.`);
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.erro || `A wiki respondeu ${response.status}.`);
   return data;
 }
+// A wiki não reconheceu este navegador como o do mestre.
+const notGmMessage = () => `A wiki não reconheceu você como mestre. Neste navegador, entre como mestre na wiki (${wikiUrl()}/mestre) e tente de novo.`;
 
 // ---------------- Itens dos compêndios ----------------
 const packCache = new Map();
@@ -239,7 +244,7 @@ export async function importarDaWiki(preselect = '') {
   if (!game.user.isGM) return ui.notifications.warn('Só o mestre importa personagens da wiki.');
   let list;
   try { list = await wikiFetch('/api/personagens'); } catch (error) { return ui.notifications.error(error.message); }
-  if (list.papel !== 'mestre') return ui.notifications.error('A wiki não reconheceu você como mestre: importe do computador onde a wiki roda (Foundry em localhost).');
+  if (list.papel !== 'mestre') return ui.notifications.error(notGmMessage());
   // Os enviados primeiro.
   const characters = (list.personagens || []).filter(item => !item.publico).sort((a, b) => Number(WAITING.includes(b.estadoFoundry)) - Number(WAITING.includes(a.estadoFoundry)));
   if (!characters.length) return ui.notifications.info('Nenhum personagem na wiki ainda.');
@@ -379,7 +384,7 @@ export async function avisosDaWiki({ manual = false } = {}) {
   }
   quietError = false;
   if (list.papel !== 'mestre') {
-    if (manual) ui.notifications.error('A wiki não reconheceu você como mestre: abra o Foundry no computador onde a wiki roda (localhost).');
+    if (manual) ui.notifications.error(notGmMessage());
     return;
   }
   const waiting = (list.personagens || []).filter(item => !item.publico && WAITING.includes(item.estadoFoundry));

@@ -613,5 +613,22 @@
   "versao": 67,
   "criado": "2026-10-04T04:56:26.004Z",
   "atualizado": "2026-10-04T05:08:14.176Z",
-  "foundry": null
+  "foundry": {
+    "ator": "sEwYgivVM5g6Ja16",
+    "nomeAtor": "Qyan",
+    "importado": "2026-10-04T15:15:37.403Z",
+    "sincronizado": "2026-10-04T15:15:37.403Z",
+    "versao": 67,
+    "entregues": [
+      "gratis:core_cyberware:neural-link",
+      "gratis:core_cyberware:cyberaudio-suite",
+      "gratis:core_cyberware:internal-agent",
+      "gratis:core_cyberware:interface-plugs",
+      "gratis:core_cyberware:chipware-socket",
+      "loja:mutd0717otp5",
+      "loja:mutd07nqpvby",
+      "loja:mutd0jj9repy"
+    ],
+    "resultadoHash": "c5cdce196ea38d7f"
+  }
 }

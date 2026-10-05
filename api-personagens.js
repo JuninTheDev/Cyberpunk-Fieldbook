@@ -14,12 +14,11 @@ const path = require('path');
 const ROLES = ['face', 'solo', 'netrunner', 'corpo', 'tech', 'medtech', 'media', 'lawman', 'nomad'];
 const MAX_BODY = 300 * 1024;
 const MAX_PER_PLAYER = 20;
-// O importador do Foundry roda no navegador do mestre, em outra porta: só essas origens recebem CORS.
-const foundryOrigins = new Set(['http://localhost:30000', 'http://127.0.0.1:30000', ...String(process.env.FOUNDRY_ORIGIN || '').split(',').map(origin => origin.trim()).filter(Boolean)]);
-
-module.exports = function createCharacterApi({ root, isGameMaster, send, writeJsonAtomic, sameSecret }) {
-  // DADOS_PERSONAGENS troca a pasta dos dados (os testes usam uma pasta temporária, longe da campanha).
-  const dataDir = process.env.DADOS_PERSONAGENS ? path.resolve(process.env.DADOS_PERSONAGENS) : root;
+module.exports = function createCharacterApi({ dataDir, isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '' }) {
+  // O importador do Foundry roda no navegador do mestre, em outra origem: só essas origens recebem CORS.
+  // Com credenciais: no servidor, o Foundry (mesa.dominio) manda o cookie do mestre da wiki (wiki.dominio).
+  const originOf = url => { try { return new URL(url).origin; } catch { return ''; } };
+  const foundryOrigins = new Set(['http://localhost:30000', 'http://127.0.0.1:30000', originOf(foundryUrl), ...String(process.env.FOUNDRY_ORIGIN || '').split(',').map(origin => origin.trim())].filter(Boolean));
   const accountsFile = path.join(dataDir, 'contas-jogadores.json');
   const charactersDir = path.join(dataDir, 'personagens');
   const json = (response, status, data, headers = {}) => send(response, status, JSON.stringify(data), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store', ...headers });
@@ -163,7 +162,7 @@ module.exports = function createCharacterApi({ root, isGameMaster, send, writeJs
   function cors(request, response) {
     const origin = request.headers.origin;
     if (!origin || !foundryOrigins.has(origin)) return {};
-    return { 'Access-Control-Allow-Origin': origin, Vary: 'Origin', 'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' };
+    return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true', Vary: 'Origin', 'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' };
   }
 
   // ---------------- Rotas ----------------
