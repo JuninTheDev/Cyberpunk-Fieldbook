@@ -649,11 +649,16 @@
       if (event.target.closest('[data-cc-new]')) {
         const created = await api('api/personagens', { method: 'POST', body: blank() });
         if (created.status === 201) return helpers.openPage('criador', { section: created.data.personagem.id });
-        return alert(created.data.erro || 'Não consegui criar o personagem.');
+        return wikiPopup.toast(created.data.erro || 'Não consegui criar o personagem.', { tone: 'bad' });
       }
       const remove = event.target.closest('[data-cc-delete]');
-      if (remove && confirm('Apagar este personagem? O mestre ainda consegue recuperar o arquivo.')) {
-        await api(`api/personagens/${remove.dataset.ccDelete}`, { method: 'DELETE' });
+      if (remove) {
+        const item = characters.find(entry => entry.id === remove.dataset.ccDelete) || {};
+        const sure = await wikiPopup.confirm({ title: 'Apagar personagem', html: `<p>Apagar <b>${esc(item.nome || 'Sem nome')}</b>? Sai da lista de personagens.</p><p class="note-status">O mestre ainda consegue recuperar o arquivo.</p>`, ok: 'Apagar', danger: true });
+        if (!sure) return;
+        const answer = await api(`api/personagens/${remove.dataset.ccDelete}`, { method: 'DELETE' });
+        if (answer.status !== 200) return wikiPopup.toast(answer.data.erro || 'Não consegui apagar.', { tone: 'bad' });
+        wikiPopup.toast(item.nome ? `Personagem ${item.nome} apagado.` : 'Personagem apagado.', { tone: 'ok' });
         return helpers.openPage('personagens', undefined, 'replace');
       }
     };
@@ -676,9 +681,21 @@
       <p class="note-status">Passe o código ao jogador. Ele entra em Campanha → Personagens. Pelo túnel, o link muda a cada sessão; aí ele digita o código de novo.</p>`;
     target.onclick = async event => {
       const copy = event.target.closest('[data-cc-copy]');
-      if (copy) { try { await navigator.clipboard.writeText(copy.dataset.ccCopy); copy.textContent = 'Copiado'; } catch { prompt('Copie o código:', copy.dataset.ccCopy); } return; }
+      if (copy) {
+        const account = accounts.find(entry => entry.codigo === copy.dataset.ccCopy) || {};
+        try { await navigator.clipboard.writeText(copy.dataset.ccCopy); copy.textContent = 'Copiado'; wikiPopup.toast(`Código de ${account.nome || 'jogador'} copiado.`, { tone: 'ok', ms: 2500 }); }
+        catch { wikiPopup.copy({ title: `Código de ${account.nome || 'jogador'}`, message: 'Passe este código ao jogador. Ele entra em Campanha → Personagens.', value: copy.dataset.ccCopy }); }
+        return;
+      }
       const revoke = event.target.closest('[data-cc-revoke]');
-      if (revoke && confirm('Revogar este código? O jogador perde o acesso; os personagens dele continuam.')) { await api(`api/contas/${revoke.dataset.ccRevoke}`, { method: 'DELETE' }); renderAccounts(target); }
+      if (revoke) {
+        const account = accounts.find(entry => entry.id === revoke.dataset.ccRevoke) || {};
+        const sure = await wikiPopup.confirm({ title: 'Revogar código', html: `<p><b>${esc(account.nome || 'O jogador')}</b> perde o acesso à wiki com o código <code>${esc(account.codigo || '')}</code>.</p><p class="note-status">Os personagens continuam salvos; um código novo devolve o acesso.</p>`, ok: 'Revogar', danger: true });
+        if (!sure) return;
+        await api(`api/contas/${revoke.dataset.ccRevoke}`, { method: 'DELETE' });
+        wikiPopup.toast(`Código de ${account.nome || 'jogador'} revogado.`, { tone: 'ok' });
+        renderAccounts(target);
+      }
     };
     target.onsubmit = async event => {
       event.preventDefault();
@@ -1094,7 +1111,7 @@
       draw();
       if (onRules) onRules();
     }
-    target.onclick = event => {
+    target.onclick = async event => {
       if (shopCommonClick(event, target, draw, openRows)) return;
       const allow = event.target.closest('[data-shop-allow]');
       if (allow) return changeRules(rules => { rules.bloqueados = rules.bloqueados.filter(id => id !== allow.dataset.shopAllow); if (hiddenReason(catalog.get(allow.dataset.shopAllow), rules)) rules.liberados.push(allow.dataset.shopAllow); });
@@ -1103,11 +1120,21 @@
       if (!canBuy) return;
       if (event.target.closest('[data-shop-kit]')) {
         const kit = kitFor(doc);
-        if (!confirm(`Comprar o kit sugerido (${kit.length} itens, ${eb(kitCost(kit.filter(entry => !isFashion(entry.item))))} mais ${eb(kitCost(kit.filter(entry => isFashion(entry.item))))} de moda)?`)) return;
+        const cash = money(doc);
+        const main = kitCost(kit.filter(entry => !isFashion(entry.item)));
+        const fashion = kitCost(kit.filter(entry => isFashion(entry.item)));
+        const sure = await wikiPopup.confirm({
+          title: 'Comprar o kit sugerido',
+          html: `<p>O pacote de Rato de Rua de <b>${esc(roleName(doc.role))}</b>, ${kit.length} itens. Depois dá para devolver item por item.</p>
+            <ul class="popup-list">${kit.map(entry => `<li><span class="popup-item">${esc(entry.item.nome)}${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}${isFashion(entry.item) ? ' <small>moda</small>' : ''}</span><span class="popup-price">${eb(kitCost([entry]))}</span></li>`).join('')}</ul>
+            <p class="popup-total"><span>Kit: <b>${eb(main)}</b>${fashion ? ` + <b>${eb(fashion)}</b> de moda` : ''}</span><span>Você tem: <b class="${cash.saldo < main ? 'cc-bad' : ''}">${eb(cash.saldo)}</b></span></p>`,
+          ok: `Comprar (${eb(main + fashion)})`
+        });
+        if (!sure) return;
         for (const entry of kit) addItem(doc, entry.id, entry.qtd);
         draw();
-        const cash = money(doc);
-        say(cash.saldo < 0 ? `Kit comprado, mas faltam ${eb(-cash.saldo)}: devolva algo.` : `Kit comprado. Sobram ${eb(cash.saldo)}.`, cash.saldo < 0);
+        const after = money(doc);
+        say(after.saldo < 0 ? `Kit comprado, mas faltam ${eb(-after.saldo)}: devolva algo.` : `Kit comprado. Sobram ${eb(after.saldo)}.`, after.saldo < 0);
         return onChange();
       }
       const buy = event.target.closest('[data-shop-buy]');
@@ -1270,7 +1297,16 @@
       const approve = event.target.closest('[data-pedido-aprovar]');
       if (approve) return act(`${approve.dataset.pedidoAprovar}/aprovar`);
       const refuse = event.target.closest('[data-pedido-recusar]');
-      if (refuse) { const motivo = window.prompt('Motivo (opcional, o jogador vê):', '') ?? null; if (motivo !== null) return act(`${refuse.dataset.pedidoRecusar}/recusar`, { motivo }); return; }
+      if (refuse) {
+        const pedido = (doc.pedidos || []).find(entry => entry.id === refuse.dataset.pedidoRecusar) || { itens: [] };
+        const motivo = await wikiPopup.prompt({
+          title: 'Recusar o pedido',
+          html: `<p>${esc(doc.nome || 'Personagem')}: ${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')} (${eb(pedido.total || 0)}).</p>`,
+          label: 'Motivo (opcional, o jogador vê)', placeholder: 'Ex.: não tem na loja da Afterlife', maxlength: 200, ok: 'Recusar', danger: true
+        });
+        if (motivo !== null) return act(`${refuse.dataset.pedidoRecusar}/recusar`, { motivo });
+        return;
+      }
       const cancel = event.target.closest('[data-pedido-cancelar]');
       if (cancel) return act(`${cancel.dataset.pedidoCancelar}/cancelar`);
     };
@@ -1760,8 +1796,9 @@
         return;
       }
       if (target.closest('[data-skill-suggest]')) {
-        if (!confirm('Trocar os níveis das perícias pelos sugeridos para a Role? Os que você pôs serão substituídos.')) return;
-        applySuggested(doc); draw(); return changed();
+        wikiPopup.confirm({ title: 'Distribuir o sugerido', html: `<p>Os níveis das perícias viram os sugeridos para <b>${esc(roleName(doc.role))}</b>.</p><p class="note-status">Os níveis que você pôs serão substituídos.</p>`, ok: 'Trocar pelos sugeridos' })
+          .then(sure => { if (sure) { applySuggested(doc); draw(); changed(); } });
+        return;
       }
       const skillButton = target.closest('[data-skill-plus]') || target.closest('[data-skill-minus]');
       if (skillButton) {

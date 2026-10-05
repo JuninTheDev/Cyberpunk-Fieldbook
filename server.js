@@ -48,7 +48,7 @@ const contentTypes = {
 const playerFiles = new Set([
   '/jogadores.html', '/jogadores.json', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
-  '/system-criacao.js', '/loja-catalogo.js', '/criador.js',
+  '/system-criacao.js', '/loja-catalogo.js', '/popup.js', '/criador.js',
   '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   // A wiki instalada no celular: o manifesto, o service worker (sw.js) e os ícones.
   '/manifest.webmanifest', '/sw.js', '/icones/icone.svg', '/icones/icone-192.png', '/icones/icone-512.png'

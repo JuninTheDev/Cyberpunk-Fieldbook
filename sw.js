@@ -2,11 +2,11 @@
 // publicou. Com rede, sempre busca primeiro a versão nova (a wiki muda quando o mestre publica); sem rede, ou com a
 // rede travada por mais de 4 segundos, usa a última cópia.
 // Só guarda arquivos públicos, os mesmos que qualquer jogador baixa. A wiki do mestre, a API e o resto passam direto.
-const CACHE = 'fieldbook-jogadores-v1';
+const CACHE = 'fieldbook-jogadores-v2';
 const PUBLICOS = [
   '/jogadores.html', '/jogadores.json', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
-  '/system-criacao.js', '/loja-catalogo.js', '/criador.js', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
+  '/system-criacao.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'
 ];
 // O mapa (5 MB) e as fontes entram quando forem abertos, não na instalação.

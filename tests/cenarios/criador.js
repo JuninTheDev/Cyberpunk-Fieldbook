@@ -18,6 +18,12 @@ module.exports = async ({ edge, servidores, r }) => {
   const passo = n => clicar(`.cc-steps [data-step="${n}"]`);
   const salvo = async () => { for (let i = 0; i < 30; i++) { if (/Salvo/.test(await texto('#cc-save'))) return true; await edge.sleep(200); } return false; };
   const idAtual = () => edge.evaluate(`decodeURIComponent(location.hash).split('/')[1] || ''`);
+  const popupAberto = () => edge.evaluate(`(() => { const d = document.querySelector('dialog.popup[open]:not(.popup-closing)'); return d ? d.textContent.replace(/\\s+/g, ' ').trim() : ''; })()`);
+  const responder = (ok = true, espera = 350) => clicar(`dialog.popup[open]:not(.popup-closing) [data-popup-${ok ? 'ok' : 'cancel'}]`, espera);
+  const apertarEsc = async () => {
+    for (const type of ['keyDown', 'keyUp']) await edge.send('Input.dispatchKeyEvent', { type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    await edge.sleep(350);
+  };
   // d10 fixo: Math.random = 0.55 → 1 + floor(5.5) = 6.
   const dadoFixo = valor => edge.evaluate(`Math.random = () => ${valor}`);
 
@@ -252,11 +258,12 @@ module.exports = async ({ edge, servidores, r }) => {
     return [niveis.join(',') === '6,2', niveis.join(',')];
   });
   await r.passo('Edgerunner: "Distribuir sugerido" põe os níveis do Rato de Rua (86 pontos)', async () => {
-    await edge.evaluate('window.confirm = () => true');
     await clicar('[data-skill-suggest]');
+    const pergunta = await popupAberto();
+    await responder();
     const [usados, total] = await pontos();
     const atletismo = await edge.evaluate(`document.querySelector('[data-skill-plus="Athletics"]').parentElement.querySelector('b').textContent`);
-    return [usados === 86 && total === 86 && atletismo === '2', `${usados}/${total} · Atletismo ${atletismo}`];
+    return [/Distribuir o sugerido/i.test(pergunta) && usados === 86 && total === 86 && atletismo === '2', `pop-up "${pergunta.slice(0, 50)}" · ${usados}/${total} · Atletismo ${atletismo}`];
   });
 
   // ---------- Oficina da Família do Nomad ----------
@@ -338,6 +345,7 @@ module.exports = async ({ edge, servidores, r }) => {
     const primeiras = await edge.evaluate(`[...document.querySelectorAll('#cc-step tbody tr')].slice(0, 21).map(tr => tr.classList.contains('cc-suggested'))`);
     const descricoes = await edge.evaluate(`document.querySelectorAll('#cc-step tbody .cc-desc').length`);
     await clicar('[data-skill-suggest]');
+    await responder();
     const [usados] = await pontos();
     await edge.shot('criador-pericias');
     const resumo = (await texto('#cc-summary')).replace(/\s+/g, ' ');
@@ -435,13 +443,20 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(pacoteId)} }, 'replace')`);
     await edge.sleep(1200);
     await passo(5);
-    await edge.evaluate('window.confirm = () => true');
     const antes = await edge.evaluate(`document.querySelectorAll('.cc-items li').length`);
-    await clicar('[data-shop-kit]', 400);
+    await clicar('[data-shop-kit]', 300);
+    const cancelado = await popupAberto();
+    await responder(false);
+    const semCompra = await edge.evaluate(`document.querySelectorAll('.cc-items li').length`);
+    await clicar('[data-shop-kit]', 300);
+    const itensNoPopup = await edge.evaluate(`document.querySelectorAll('dialog.popup[open] .popup-list li').length`);
+    await edge.shot('popup-kit');
+    await responder(true, 500);
     const depois = await edge.evaluate(`document.querySelectorAll('.cc-items li').length`);
     const msg = await texto('#cc-shop-msg');
     const c = (await carteira()).replace(/\s+/g, ' ');
-    return [depois > antes + 5 && /Kit comprado\. Sobram/.test(msg) && !/cc-bad/.test(await edge.evaluate(`document.querySelector('.cc-wallet').innerHTML`)), `${antes} → ${depois} itens · ${msg} · ${c}`];
+    return [/Comprar o kit sugerido/i.test(cancelado) && semCompra === antes && itensNoPopup > 5 && depois > antes + 5 && /Kit comprado\. Sobram/.test(msg) && !/cc-bad/.test(await edge.evaluate(`document.querySelector('.cc-wallet').innerHTML`)),
+      `${antes} → ${depois} itens (cancelar: ${semCompra}) · pop-up com ${itensNoPopup} itens · ${msg} · ${c}`];
   });
   await r.passo('montagem do Netrunner: o cyberdeck do kit com os programas dentro', async () => {
     await clicar('[data-mont-tab="net"]', 250);
@@ -537,6 +552,41 @@ module.exports = async ({ edge, servidores, r }) => {
     return [/Na mesa/.test(t) && /HP 20\/40/.test(t) && /4\/8/.test(t) && /carregada com Heavy Pistol \(Basic\)/.test(t) && /Costela quebrada/.test(t) && /Pontos de Melhoria 10/.test(t) && /14 REF \+ Armas de uma Mão/.test(t),
       (t.match(/Vitais.{0,160}/) || [''])[0]];
   });
+  await r.passo('apagar personagem pede num pop-up: Cancelar e Esc não apagam; Apagar apaga e avisa', async () => {
+    const id = await novo();
+    await digitar('[data-campo="nome"]', 'Descartável');
+    await salvo();
+    await abrir(edge, 'personagens', 900);
+    const existe = () => edge.evaluate(`!!document.querySelector('[data-cc-delete="${id}"]')`);
+    await clicar(`[data-cc-delete="${id}"]`, 300);
+    const pergunta = await popupAberto();
+    const foco = await edge.evaluate(`document.activeElement && document.activeElement.hasAttribute('data-popup-cancel')`);
+    await responder(false);
+    const depoisCancelar = await existe();
+    await clicar(`[data-cc-delete="${id}"]`, 300);
+    await apertarEsc();
+    const depoisEsc = await existe() && !(await popupAberto());
+    await clicar(`[data-cc-delete="${id}"]`, 300);
+    await edge.shot('popup-apagar');
+    await responder(true, 900);
+    const aviso = await texto('.toast-stack');
+    const sumiu = !(await existe());
+    return [/Apagar Descartável\?/.test(pergunta) && foco && depoisCancelar && depoisEsc && sumiu && /Personagem Descartável apagado/.test(aviso),
+      `pop-up "${pergunta.slice(0, 60)}" · foco no Cancelar ${foco} · cancelar ${depoisCancelar} · Esc ${depoisEsc} · apagado ${sumiu} · aviso "${aviso}"`];
+  });
+  await r.passo('pop-up de texto: Enter devolve o que foi escrito; Esc devolve nada', async () => {
+    await edge.evaluate(`window.__resposta = 'esperando'; wikiPopup.prompt({ title: 'Recusar o pedido', label: 'Motivo' }).then(v => { window.__resposta = v; }); 0`);
+    await edge.sleep(250);
+    await edge.evaluate(`(() => { const i = document.querySelector('dialog.popup[open] input'); i.value = 'sem estoque'; i.form.requestSubmit(); })()`);
+    await edge.sleep(300);
+    const escrito = await edge.evaluate('window.__resposta');
+    await edge.evaluate(`window.__resposta = 'esperando'; wikiPopup.prompt({ title: 'Outro' }).then(v => { window.__resposta = v; }); 0`);
+    await edge.sleep(250);
+    await apertarEsc();
+    const cancelado = await edge.evaluate('window.__resposta');
+    const sobrou = await edge.evaluate(`document.querySelectorAll('dialog.popup').length`);
+    return [escrito === 'sem estoque' && cancelado === null && sobrou === 0, `Enter: ${JSON.stringify(escrito)} · Esc: ${JSON.stringify(cancelado)} · pop-ups sobrando ${sobrou}`];
+  });
   await r.passo('celular: criador e loja sem rolagem lateral', async () => {
     await edge.celular(true);
     await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(soloId)} })`);
@@ -554,8 +604,14 @@ module.exports = async ({ edge, servidores, r }) => {
     const abriu = await edge.evaluate("document.querySelector('.cc-shop-item.cc-has-desc').classList.contains('cc-open')");
     const lista = await semRolagemLateral(edge);
     await edge.shot('loja-celular-lista');
+    // Pop-up no celular: sobe de baixo, com os botões largos.
+    await edge.evaluate("wikiPopup.confirm({ title: 'Apagar personagem', html: '<p>Apagar <b>Jay</b>? Sai da lista de personagens.</p>', ok: 'Apagar', danger: true }); 0");
+    await edge.sleep(300);
+    const popupCabe = await edge.evaluate("(() => { const r = document.querySelector('dialog.popup[open] .popup-box').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight + 1; })()");
+    await edge.shot('popup-celular');
+    await apertarEsc();
     await edge.celular(false);
-    return [criador && loja && lista && abriu, `criador ${criador} · loja ${loja} · lista ${lista} · descrição abre com um toque ${abriu}`];
+    return [criador && loja && lista && abriu && popupCabe, `criador ${criador} · loja ${loja} · lista ${lista} · descrição abre com um toque ${abriu} · pop-up cabe na tela ${popupCabe}`];
   });
   await r.passo('outro jogador não abre o criador da Ana', async () => {
     await edge.evaluate(`fetch('api/sair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })`);
