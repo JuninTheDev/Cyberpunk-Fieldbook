@@ -84,7 +84,9 @@ A chave baixada está em *Downloads*, com um nome parecido com `ssh-key-2026-10-
 
 ### 4.2. Mandar o instalador e entrar no servidor
 
-Nos comandos abaixo, troque `IP` pelo IP público da máquina (por exemplo, `ubuntu@163.176.10.20`).
+Nos comandos abaixo, troque `IP` pelo número do IP público da máquina (por exemplo, `ubuntu@163.176.10.20`). Não digite a palavra `IP`.
+
+O terminal precisa estar na **pasta principal da wiki** (onde ficam o `server.js` e o `publicar.bat`), e não dentro de `servidor/`. Se estiver dentro dela, rode `cd ..` antes.
 
 1. Copie o instalador para o servidor:
 
