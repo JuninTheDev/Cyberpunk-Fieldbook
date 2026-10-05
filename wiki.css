@@ -596,3 +596,16 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-motorpool-row { display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
 .cc-motorpool-row select { width: 100%; max-width: 520px; padding: 7px 9px; border: 1px solid #3b4443; background: #0f1314; color: var(--text); }
 .cc-help-inline summary { cursor: pointer; color: var(--cyan); font-size: 13px; }
+/* Montagem do equipamento (passo 5): uma linha por item, com uso, munição e o que vai dentro dele. */
+.cc-mount-tabs { margin: 10px 0; }
+.cc-mount-tabs small { color: var(--muted); }
+.cc-mount { display: grid; gap: 8px; }
+.cc-mount-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: start; padding: 8px 10px; border: 1px solid var(--line); background: #0f1314; }
+.cc-mount-controls { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: flex-end; }
+.cc-mount-children { grid-column: 1 / -1; display: grid; gap: 6px; padding-left: 12px; border-left: 2px solid var(--line); }
+.cc-mount-children .cc-items { margin: 0; }
+.cc-mount-field { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+.cc-mount select { max-width: 100%; padding: 5px 7px; border: 1px solid #3b4443; background: #111716; color: var(--text); }
+.cc-slots { color: var(--muted); font: 11px var(--mono); }
+@media (max-width: 620px) { .cc-mount-row { grid-template-columns: 1fr; } .cc-mount-controls { justify-content: flex-start; } }
+.cc-mount-note { color: var(--cyan); }

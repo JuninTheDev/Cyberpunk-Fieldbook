@@ -91,6 +91,39 @@ module.exports = async ({ edge, servidores, r }) => {
     const t = await texto('#cc-step');
     return [/já vem grátis em 2077/.test(t) && /Humanidade 43\/50/.test(t) && /EMP 4/.test(t), t.match(/Humanidade[^P]*/)?.[0]];
   });
+  // Montagem: o pacote já vem montado; descarregar uma arma e tirar a armadura aparecem na ficha.
+  const abaMontagem = async aba => clicar(`[data-mont-tab="${aba}"]`, 200);
+  await r.passo('montagem: armas do pacote já carregadas com a munição compatível', async () => {
+    await abaMontagem('armas');
+    const carregadas = await edge.evaluate(`[...document.querySelectorAll('[data-mont-municao]')].map(s => s.selectedOptions[0].textContent)`);
+    return [carregadas.length >= 2 && carregadas.every(texto => !/descarregada/.test(texto)), carregadas.join(' | ')];
+  });
+  await r.passo('montagem: descarregar a arma e tirar a armadura do corpo; a ficha mostra', async () => {
+    const primeira = await edge.evaluate(`document.querySelector('[data-mont-municao]').dataset.montMunicao`);
+    await escolher(`[data-mont-municao="${primeira}"]`, '-');
+    await abaMontagem('armadura');
+    await edge.evaluate(`(() => { const r = [...document.querySelectorAll('[data-mont-armadura="corpo"]')].find(i => i.value === '-'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await edge.sleep(250);
+    await edge.evaluate("document.querySelector('[data-cc-mount]').scrollIntoView()");
+    await edge.shot('montagem-armadura');
+    await passo(7);
+    const ficha = (await texto('#cc-step')).replace(/\s+/g, ' ');
+    return [/descarregada/.test(ficha) && /SP corpo 0/.test(ficha) && /SP cabeça 11/.test(ficha), (ficha.match(/SP cabeça \d+ ?SP corpo \d+/) || [''])[0]];
+  });
+  await r.passo('montagem: voltar a armadura e a munição deixa tudo como antes', async () => {
+    await passo(5);
+    await abaMontagem('armadura');
+    const armadura = await edge.evaluate(`[...document.querySelectorAll('[data-mont-armadura="corpo"]')].find(i => i.value !== '-').value`);
+    await edge.evaluate(`(() => { const r = document.querySelector('[data-mont-armadura="corpo"][value="${armadura}"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await edge.sleep(250);
+    await abaMontagem('armas');
+    const primeira = await edge.evaluate(`document.querySelector('[data-mont-municao]').dataset.montMunicao`);
+    const opcao = await edge.evaluate(`[...document.querySelector('[data-mont-municao="${primeira}"]').options].find(o => o.value !== '-').value`);
+    await escolher(`[data-mont-municao="${primeira}"]`, opcao);
+    await passo(7);
+    const ficha = (await texto('#cc-step')).replace(/\s+/g, ' ');
+    return [!/descarregada/.test(ficha) && /SP corpo 11/.test(ficha), (ficha.match(/SP cabeça \d+ ?SP corpo \d+/) || [''])[0]];
+  });
   const escolherRadio = async seletor => { await edge.evaluate(`(() => { const r = document.querySelector(${JSON.stringify(seletor)}); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`); await edge.sleep(250); };
   const totalMoradia = async () => (await texto('.cc-housing-total')).replace(/\s+/g, ' ');
   await r.passo('passo 6: o padrão é grátis; quitinete cobra a diferença (500eb) no 1º mês', async () => {
@@ -398,6 +431,14 @@ module.exports = async ({ edge, servidores, r }) => {
     const msg = await texto('#cc-shop-msg');
     const c = (await carteira()).replace(/\s+/g, ' ');
     return [depois > antes + 5 && /Kit comprado\. Sobram/.test(msg) && !/cc-bad/.test(await edge.evaluate(`document.querySelector('.cc-wallet').innerHTML`)), `${antes} → ${depois} itens · ${msg} · ${c}`];
+  });
+  await r.passo('montagem do Netrunner: o cyberdeck do kit com os programas dentro', async () => {
+    await clicar('[data-mont-tab="net"]', 250);
+    const t = (await texto('[data-cc-mount] .cc-mount')).replace(/\s+/g, ' ');
+    await edge.evaluate("document.querySelector('[data-cc-mount]').scrollIntoView()");
+    await edge.shot('montagem-net');
+    // Armor, See Ya, Worm e dois Swords: 5 programas de 1 slot.
+    return [/Cyberdeck/.test(t) && /5 de 7 slots/.test(t) && /deck ativo/.test(t), t.slice(0, 200)];
   });
   await r.passo('a compra fica salva no personagem, com o saldo da tela', async () => {
     const naTela = Number(((await carteira()).match(/Dinheiro: ([\d.]+)eb/) || [])[1]?.replace(/\./g, ''));

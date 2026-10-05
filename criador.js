@@ -37,7 +37,7 @@
   const blank = () => ({
     nome: '', apelido: '', role: '', especializacao: '', metodo: '', passo: 1,
     stats: {}, sorteio: {}, pericias: {}, tipos: {}, extras: [], lingua: '', casa: '', kitNet: 'red', quickhacks: [],
-    lifepath: { amigos: [], inimigos: [], amores: [], role: {} }, escolhas: {}, itens: [], moradia: '', estiloVida: '', traumaTeam: '', estiloModa: '', habilidades: {}, oficina: [],
+    lifepath: { amigos: [], inimigos: [], amores: [], role: {} }, escolhas: {}, itens: [], moradia: '', estiloVida: '', traumaTeam: '', estiloModa: '', habilidades: {}, oficina: [], montagem: {},
     aparencia: '', notas: ''
   });
 
@@ -170,6 +170,94 @@
     const entries = inventory(doc).filter(entry => entry.item.cyber);
     const bases = new Set(entries.filter(entry => entry.item.cyber.base).map(entry => entry.item.cyber.tipo));
     return entries.filter(entry => !entry.item.cyber.base && NEEDS_BASE.includes(entry.item.cyber.tipo) && !bases.has(entry.item.cyber.tipo));
+  }
+
+  // ---------------- Montagem (como na ficha do Foundry) ----------------
+  // Cada item do inventário tem um uso (equipado, carregando, guardado) e, conforme o tipo, um lugar: a arma tem a
+  // munição carregada; o acessório fica numa arma; programa e hardware, num cyberdeck; a opção de cyberware, numa
+  // base (cyberbraço, cyberolho…). O que o jogador não mexeu sai montado sozinho, e doc.montagem guarda só o que ele
+  // mudou: { [uid]: { uso, municao, em } }, com '-' para "nenhuma" (descarregada, solto). Personagens antigos não têm
+  // nada e ficam com o padrão. Uma escolha que deixou de valer (o item saiu, não cabe mais) volta ao padrão.
+  const USOS = { equipado: 'Equipado', carregando: 'Carregando', guardado: 'Guardado' };
+  const kindOf = item => item.arma ? 'arma' : item.municao ? 'municao' : item.armadura ? 'armadura' : item.acessorio ? 'acessorio' : item.deck ? 'deck'
+    : item.programa || item.hardware ? 'deckItem' : item.cyber ? (item.cyber.base ? 'cyberBase' : 'cyberOpcao') : item.roupa ? 'roupa' : 'item';
+  // Acessório: arma de distância, que não seja exótica, com slots; com classe no nome, só naquela classe;
+  // os de cano (lança-granadas e espingarda embaixo do cano) só em arma de duas mãos.
+  const UNDERBARREL = /Underbarrel/;
+  const accessoryFits = (acc, weapon) => {
+    const a = weapon.item.arma;
+    if (!a.distancia || a.exotica || !a.slots) return false;
+    if (acc.item.acessorio.classe && acc.item.acessorio.classe !== a.classe) return false;
+    return !UNDERBARREL.test(acc.item.en || '') || a.maos >= 2;
+  };
+  const ammoFits = (ammo, weapon) => weapon.item.arma.municao.includes(ammo.item.municao.variedade);
+  // Slots que o item ocupa: o tamanho de cada cópia vezes a quantidade (dois Swords são dois programas no deck).
+  const sizeOf = entry => (entry.item.acessorio ? entry.item.acessorio.tamanho : entry.item.programa ? entry.item.programa.tamanho : entry.item.hardware ? entry.item.hardware.tamanho : entry.item.cyber ? entry.item.cyber.tamanho : 0) * Math.max(1, entry.qtd || 1);
+  const capacityOf = entry => entry.item.arma ? entry.item.arma.slots : entry.item.deck ? entry.item.deck.slots : entry.item.cyber && entry.item.cyber.base ? entry.item.cyber.slots : 0;
+  const parentFits = (child, parent) => {
+    const kind = kindOf(child.item);
+    if (kind === 'acessorio') return kindOf(parent.item) === 'arma' && accessoryFits(child, parent);
+    if (kind === 'deckItem') return kindOf(parent.item) === 'deck';
+    if (kind === 'cyberOpcao') return kindOf(parent.item) === 'cyberBase' && parent.item.cyber.tipo === child.item.cyber.tipo;
+    return false;
+  };
+  // A armadura cobre a cabeça, o corpo ou as duas; o escudo é à parte.
+  const armorLocations = item => [...(item.armadura.corpo ? ['corpo'] : []), ...(item.armadura.cabeca ? ['cabeca'] : [])];
+
+  function assembly(doc, inv = inventory(doc)) {
+    const overrides = doc.montagem || {};
+    const rows = inv.map(entry => ({ ...entry, tipo: kindOf(entry.item), uso: '', municao: '', em: '' }));
+    const byUid = new Map(rows.map(row => [row.uid, row]));
+    const used = new Map();
+    const free = parent => capacityOf(parent) - (used.get(parent.uid) || 0);
+    const place = (child, parent) => { child.em = parent.uid; used.set(parent.uid, (used.get(parent.uid) || 0) + sizeOf(child)); };
+    const childKinds = ['acessorio', 'deckItem', 'cyberOpcao'];
+    // 1. Lugares escolhidos pelo jogador (só os que ainda valem), depois os do padrão: o primeiro que couber.
+    for (const row of rows.filter(item => childKinds.includes(item.tipo))) {
+      const chosen = (overrides[row.uid] || {}).em;
+      if (chosen === '-') { row.em = '-'; continue; }
+      const parent = chosen && byUid.get(chosen);
+      if (parent && parentFits(row, parent) && free(parent) >= sizeOf(row)) place(row, parent);
+    }
+    for (const row of rows.filter(item => childKinds.includes(item.tipo) && !item.em)) {
+      // Cyberware interno, externo e fashionware vai no próprio corpo: no Foundry, as bases já vêm na ficha.
+      if (row.tipo === 'cyberOpcao' && !NEEDS_BASE.includes(row.item.cyber.tipo)) continue;
+      const parent = rows.find(item => parentFits(row, item) && free(item) >= sizeOf(row));
+      if (parent) place(row, parent);
+    }
+    // 2. Munição carregada em cada arma de distância: a escolhida, ou a compatível (de preferência a básica).
+    for (const row of rows.filter(item => item.tipo === 'arma' && item.item.arma.distancia && item.item.arma.pente)) {
+      const chosen = (overrides[row.uid] || {}).municao;
+      const pick = chosen === '-' ? null : byUid.get(chosen);
+      const compatible = rows.filter(item => item.tipo === 'municao' && ammoFits(item, row));
+      row.municao = chosen === '-' ? '-' : (pick && pick.tipo === 'municao' && ammoFits(pick, row) ? pick : compatible.find(item => item.item.municao.tipo === 'basic') || compatible[0] || {}).uid || '';
+    }
+    // 3. Uso. Armaduras: uma por local (a escolhida ou, sem escolha, a de maior SP); escudo e o resto, carregando.
+    for (const row of rows) {
+      const chosen = (overrides[row.uid] || {}).uso;
+      const fallback = { arma: 'equipado', roupa: 'equipado', item: 'carregando', armadura: 'carregando', deck: 'carregando' }[row.tipo] || '';
+      row.uso = fallback && USOS[chosen] ? chosen : fallback;
+    }
+    // Para cada local: a armadura que o jogador vestiu; sem escolha nenhuma ali, a de maior SP; se ele tirou todas,
+    // nenhuma. Uma armadura que cobre os dois locais (Bodyweight Suit) vestida no corpo vale também para a cabeça.
+    const armors = rows.filter(row => row.tipo === 'armadura' && !row.item.armadura.escudo);
+    const worn = new Set();
+    for (const location of ['corpo', 'cabeca']) {
+      const covering = armors.filter(row => armorLocations(row.item).includes(location));
+      if (covering.some(row => worn.has(row))) continue;
+      const chosen = covering.find(row => (overrides[row.uid] || {}).uso === 'equipado');
+      const untouched = !covering.some(row => (overrides[row.uid] || {}).uso);
+      const winner = chosen || (untouched ? [...covering].sort((a, b) => b.item.armadura[location] - a.item.armadura[location])[0] : null);
+      if (winner) worn.add(winner);
+    }
+    for (const row of armors) row.uso = worn.has(row) ? 'equipado' : (overrides[row.uid] || {}).uso === 'guardado' ? 'guardado' : 'carregando';
+    // O primeiro cyberdeck fica equipado (é o deck ativo no Foundry), a não ser que o jogador escolha outro.
+    const decks = rows.filter(row => row.tipo === 'deck');
+    if (decks.length && !decks.some(row => (overrides[row.uid] || {}).uso === 'equipado')) decks[0].uso = (overrides[decks[0].uid] || {}).uso || 'equipado';
+    // Penalidade da armadura (RED p. 97): a maior das armaduras vestidas, em REF, DEX e MOVE.
+    const penalty = Math.max(0, ...rows.filter(row => row.tipo === 'armadura' && row.uso === 'equipado').map(row => row.item.armadura.penalidade || 0));
+    const sp = location => Math.max(0, ...armors.filter(row => row.uso === 'equipado' && armorLocations(row.item).includes(location)).map(row => row.item.armadura[location]));
+    return { rows, byUid, used, free, penalidade: penalty, sp: { corpo: sp('corpo'), cabeca: sp('cabeca') } };
   }
 
   // ---------------- Lifepath ----------------
@@ -372,7 +460,9 @@
       role: role.id ? { id: role.id, nome: role.nome, rank: 4, foundry: role.foundry, especializacao: spec ? { nome: spec.nome, pericias: spec.pericias } : null, habilidades: roleAbilityRanks(doc) } : null,
       pericias: finalSkills(doc), casa: doc.casa,
       // renomear: só quando o item tem outro nome em 2077 (o plug de interface vira Personal Link).
-      itens: inventory(doc).map(entry => ({ uid: entry.uid, id: entry.id, nome: entry.item.nome, renomear: entry.nome || '', qtd: entry.qtd, origem: entry.origem, foundry: entry.item.foundry, cyber: Boolean(entry.item.cyber), semHumanidade: entry.origem === 'gratis2077' })),
+      // A montagem vai junto: uso (equipado, carregando, guardado), a munição da arma e onde cada item fica (uid do pai).
+      itens: assembly(doc).rows.map(row => ({ uid: row.uid, id: row.id, nome: row.item.nome, renomear: row.nome || '', qtd: row.qtd, origem: row.origem, foundry: row.item.foundry, cyber: Boolean(row.item.cyber), semHumanidade: row.origem === 'gratis2077',
+        uso: row.uso, municao: row.municao === '-' ? '' : row.municao, em: row.em === '-' ? '' : row.em })),
       // Veículos da família do Nomad, com os upgrades de cada um (instalados no Foundry).
       veiculos: doc.role === 'nomad' ? motorpool(doc).veiculos.map(entry => ({
         uid: `familia:${entry.escolha}`, nome: entry.veiculo.nome, familia: true, foundry: { pack: 'cyberpunk-red-core.core_vehicles', nome: entry.veiculo.id },
@@ -607,10 +697,23 @@
     const statCell = stat => `<div class="cc-stat"><span>${stat}</span><b>${stat === 'EMP' && hum.emp !== stats.EMP ? `${hum.emp}<small>/${stats.EMP}</small>` : stats[stat] || '—'}</b></div>`;
     const skills = finalSkills(doc).filter(skill => skill.nivel > 0).sort((a, b) => a.stat.localeCompare(b.stat) || a.nome.localeCompare(b.nome));
     const skillLabel = skill => skill.base ? specialName(skill.base, skill.tipo) : (skill.nome === 'Local Expert (Your Home)' && doc.casa ? `Especialista Local (${doc.casa})` : skillPt(skill.nome));
-    const inv = inventory(doc);
+    const mont = assembly(doc);
+    const inv = mont.rows;
+    // O que a montagem diz de cada item: munição, o que tem dentro, onde está e se não está equipado.
+    const nameOf = uid => { const row = mont.byUid.get(uid); return row ? row.nome || row.item.nome : ''; };
+    const mountNote = row => {
+      const bits = [];
+      if (row.tipo === 'arma' && row.item.arma.pente) bits.push(row.municao && row.municao !== '-' ? `carregada com ${nameOf(row.municao)}` : 'descarregada');
+      const inside = inv.filter(item => item.em === row.uid).map(item => item.nome || item.item.nome);
+      if (inside.length) bits.push(`com ${inside.join(', ')}`);
+      if (row.em && row.em !== '-') bits.push(`em ${nameOf(row.em)}`);
+      if (row.tipo === 'armadura') bits.push(row.uso === 'equipado' ? 'vestida' : USOS[row.uso].toLowerCase());
+      else if (['arma', 'roupa', 'deck'].includes(row.tipo) && row.uso !== 'equipado') bits.push(USOS[row.uso].toLowerCase());
+      return bits.length ? ` <small class="cc-mount-note">${esc(bits.join(' · '))}</small>` : '';
+    };
     const group = (title, filter) => {
       const rows = inv.filter(filter);
-      return rows.length ? `<h4>${title}</h4><ul class="cc-items">${rows.map(entry => `<li><b>${esc(entry.nome || entry.item.nome)}</b>${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}${entry.item.resumo ? ` <small>${esc(entry.item.resumo)}</small>` : ''}${entry.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (2077)</small>' : ''}${entry.origem === 'role' ? ' <small class="cc-ok">bônus da Role</small>' : ''}</li>`).join('')}</ul>` : '';
+      return rows.length ? `<h4>${title}</h4><ul class="cc-items">${rows.map(entry => `<li><b>${esc(entry.nome || entry.item.nome)}</b>${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}${entry.item.resumo ? ` <small>${esc(entry.item.resumo)}</small>` : ''}${entry.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (2077)</small>' : ''}${entry.origem === 'role' ? ' <small class="cc-ok">bônus da Role</small>' : ''}${mountNote(entry)}</li>`).join('')}</ul>` : '';
     };
     const lp = lifepathTexts(doc);
     const lpRows = [...lifepathFields.map(([, label, field]) => [label, lp[field]]), ['Amigos', lp.friends], ['Inimigos', lp.enemies], ['Amores trágicos', lp.tragicLoveAffairs], ['Lifepath da Role', lp.roleLifepath]].filter(([, text]) => text);
@@ -627,7 +730,7 @@
         ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}</div>
       ${roleBox}
       <div class="section cc-box" data-toc="STATs"><h3>STATs</h3><div class="cc-stats">${statKeys.map(statCell).join('')}</div>
-        <p class="cc-derived"><span>HP <b>${derived.hp}</b></span><span>Gravemente Ferido <b>${derived.gravemente}</b></span><span>Death Save <b>${derived.deathSave}</b></span><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Andar <b>${derived.andar} m</b></span><span>Correr <b>${derived.correr} m</b></span></p></div>
+        <p class="cc-derived"><span>HP <b>${derived.hp}</b></span><span>Gravemente Ferido <b>${derived.gravemente}</b></span><span>Death Save <b>${derived.deathSave}</b></span><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Andar <b>${derived.andar} m</b></span><span>Correr <b>${derived.correr} m</b></span><span>SP cabeça <b>${mont.sp.cabeca}</b></span><span>SP corpo <b>${mont.sp.corpo}</b></span></p>${mont.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${mont.penalidade} em REF, DEX e MOVE.</p>` : ''}</div>
       <div class="section cc-box" data-toc="Perícias"><h3>Perícias</h3><div class="table-wrap dense"><table><thead><tr><th>Perícia</th><th>STAT</th><th>Nível</th><th>Base</th></tr></thead><tbody>${skills.map(skill => `<tr><td>${esc(skillLabel(skill))}${skill.gratis ? ' <small>(origem)</small>' : ''}</td><td>${skill.stat}</td><td>${skill.nivel}</td><td><b>${skill.nivel + (stats[skill.stat] || 0)}</b></td></tr>`).join('')}</tbody></table></div></div>
       <div class="section cc-box" data-toc="Equipamento"><h3>Equipamento e cyberware</h3>
         ${group('Armas', entry => entry.item.cat === 'armas')}${group('Munição', entry => entry.item.cat === 'municao')}${group('Armaduras', entry => entry.item.cat === 'armaduras')}
@@ -714,7 +817,14 @@
       return true;
     });
   }
+  // Armas, armaduras, cyberdecks e bases de cyberware entram uma por linha: cada uma tem a sua montagem
+  // (o segundo cyberbraço recebe outras opções). Munição e o resto somam na mesma linha.
   const addItem = (doc, id, qty) => {
+    const item = catalog.get(id);
+    if (item && ['arma', 'armadura', 'deck', 'cyberBase'].includes(kindOf(item))) {
+      for (let i = 0; i < qty; i++) (doc.itens = doc.itens || []).push({ uid: `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, id, qtd: 1 });
+      return;
+    }
     const existing = (doc.itens || []).find(entry => entry.id === id);
     if (existing) existing.qtd += qty;
     else (doc.itens = doc.itens || []).push({ uid: `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, id, qtd: qty });
@@ -888,6 +998,9 @@
     if (!loaded || loaded.publico) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Você só pode editar os seus personagens. Entre com o seu código em Personagens.')}</div>`; return; }
     const doc = { ...blank(), ...loaded, lifepath: { ...blank().lifepath, ...(loaded.lifepath || {}) } };
     let step = Math.min(Math.max(Number(doc.passo) || 1, 1), steps.length);
+    let mountTab = 'armas'; // aba aberta no quadro Montagem (passo 5)
+    // Guarda só o que o jogador mudou na montagem (o resto sai do padrão).
+    const setMount = (uid, field, value) => { doc.montagem = doc.montagem || {}; doc.montagem[uid] = { ...(doc.montagem[uid] || {}), [field]: value }; };
     const papel = me.data.papel;
 
     root.innerHTML = `<div class="cc-steps" role="tablist">${steps.map((name, index) => `<button type="button" class="map-filter" data-step="${index + 1}">${index + 1}. ${name}</button>`).join('')}</div>
@@ -1101,7 +1214,7 @@
       const humanityLine = `<p class="cc-derived"><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Perda <b>${hum.perda}</b></span><span>EMP <b>${hum.emp}</b>${hum.emp !== stats.EMP ? ` <small>(era ${stats.EMP})</small>` : ''}</span></p><p class="note-status">Cada cyberware perde o valor fixo de Humanidade do livro. A EMP é a Humanidade ÷ 10, para baixo.</p>`;
       const warnings = missingFoundations(doc).map(entry => `<li>${esc(entry.item.nome)} precisa da base (${esc(entry.item.sub)}).</li>`).join('');
       if (doc.metodo === 'pacote') {
-        return `${box('Cyberware grátis de 2077', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}${box('Loja inicial', '<div id="cc-shop"></div>')}`;
+        return `${box('Cyberware grátis de 2077', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}${box('Loja inicial', '<div id="cc-shop"></div>')}${drawAssembly()}`;
       }
       const pack = C.packages[(roleById(doc.role) || {}).tabelas] || {};
       const label = ([id, qty]) => { const item = catalog.get(id) || {}; return `${esc(item.nome || id)}${qty > 1 ? ` ×${qty}` : ''}`; };
@@ -1127,7 +1240,79 @@
       }
       return `${kitBox}${box('Pacote da Role', `<p>No ${esc((methodById(doc.metodo) || {}).nome)} o equipamento vem pronto. Escolha onde houver opção.</p>${categoryBox('armas', 'Armas e armaduras')}${categoryBox('equipamento', 'Equipamento')}${kit2077 ? `<ul class="cc-items"><li>${esc((catalog.get(pack.kit2077.deck) || {}).nome || '')} <small class="cc-ok">kit de 2077</small></li>${chosenQuickhacks(doc, pack).map(id => `<li>${esc((catalog.get(id) || {}).nome || id)} <small class="cc-ok">kit de 2077</small></li>`).join('')}</ul>` : ''}${categoryBox('moda', 'Moda')}${categoryBox('cyberware', 'Cyberware')}`)}
         ${box('Cyberware grátis de 2077 e Humanidade', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}
-        ${box('Mais 500eb para gastar', '<p>Além do pacote, você ganha 500eb para comprar outros itens ou guardar. Use a loja.</p><p><button type="button" class="action" data-cc-shop>Abrir a loja</button></p>')}`;
+        ${box('Mais 500eb para gastar', '<p>Além do pacote, você ganha 500eb para comprar outros itens ou guardar. Use a loja.</p><p><button type="button" class="action" data-cc-shop>Abrir a loja</button></p>')}
+        ${drawAssembly()}`;
+    }
+
+    // ---------- 5. Montagem ----------
+    // Como o equipamento vai estar no Foundry: o que está equipado, a munição em cada arma, os acessórios,
+    // o cyberware em cada base e os programas no cyberdeck. Sai pronto; o jogador só muda o que quiser.
+    function drawAssembly() {
+      if (!doc.role || !doc.metodo) return '';
+      const mont = assembly(doc);
+      const rows = mont.rows;
+      const label = row => `${esc(row.nome || row.item.nome)}${row.qtd > 1 ? ` ×${row.qtd}` : ''}`;
+      const usoSelect = row => `<select data-mont-uso="${row.uid}" aria-label="Uso">${Object.entries(USOS).map(([id, name]) => `<option value="${id}"${row.uso === id ? ' selected' : ''}>${name}</option>`).join('')}</select>`;
+      const slotsText = row => `<small class="cc-slots${mont.free(row) < 0 ? ' cc-bad' : ''}">${capacityOf(row) - mont.free(row)} de ${capacityOf(row)} slots</small>`;
+      const children = parent => rows.filter(row => row.em === parent.uid);
+      // Mover um item para outro pai que caiba (ou soltar).
+      const moveSelect = (row, parents, looseLabel = 'tirar') => `<select data-mont-em="${row.uid}" aria-label="Onde fica"><option value="-"${row.em === '-' || !row.em ? ' selected' : ''}>${looseLabel}</option>${parents.filter(parent => parentFits(row, parent) && (parent.uid === row.em || mont.free(parent) >= sizeOf(row))).map(parent => `<option value="${parent.uid}"${parent.uid === row.em ? ' selected' : ''}>${label(parent)}</option>`).join('')}</select>`;
+      const addSelect = (parent, candidates, text) => {
+        const options = candidates.filter(row => row.em !== parent.uid && parentFits(row, parent) && mont.free(parent) >= sizeOf(row));
+        return options.length ? `<select data-mont-em-para="${parent.uid}" aria-label="${text}"><option value="">${text}…</option>${options.map(row => `<option value="${row.uid}">${label(row)}${row.em && row.em !== '-' ? ' (tirar de onde está)' : ''}</option>`).join('')}</select>` : '';
+      };
+      const tabs = [['armas', 'Armas', 'arma'], ['armadura', 'Armadura e roupa', ['armadura', 'roupa']], ['cyberware', 'Cyberware', ['cyberBase', 'cyberOpcao']], ['net', 'Netrunning', ['deck', 'deckItem']], ['outros', 'Outros', ['item', 'municao']]];
+      const count = kinds => rows.filter(row => [].concat(kinds).includes(row.tipo)).length;
+      let body = '';
+      if (mountTab === 'armas') {
+        const weapons = rows.filter(row => row.tipo === 'arma');
+        const accessories = rows.filter(row => row.tipo === 'acessorio');
+        body = weapons.map(weapon => {
+          const a = weapon.item.arma;
+          const ammo = rows.filter(row => row.tipo === 'municao' && ammoFits(row, weapon));
+          const loaded = a.distancia && a.pente ? `<label class="cc-mount-field">Munição <select data-mont-municao="${weapon.uid}"><option value="-"${!weapon.municao || weapon.municao === '-' ? ' selected' : ''}>descarregada</option>${ammo.map(row => `<option value="${row.uid}"${weapon.municao === row.uid ? ' selected' : ''}>${label(row)}</option>`).join('')}</select></label>${ammo.length ? '' : ' <small class="cc-wait">sem munição compatível no inventário</small>'}` : '';
+          const attached = children(weapon).map(row => `<li>${label(row)} <button type="button" class="action cc-danger" data-mont-soltar="${row.uid}">Tirar</button></li>`).join('');
+          const slots = a.slots && a.distancia && !a.exotica ? `<div class="cc-mount-children">${slotsText(weapon)}${attached ? `<ul class="cc-items">${attached}</ul>` : ''}${addSelect(weapon, accessories, 'Encaixar acessório')}</div>` : '';
+          return `<div class="cc-mount-row"><div><b>${label(weapon)}</b><br><small>${esc([a.dano, `CDT ${a.cdt}`, a.pente ? `pente ${a.pente}` : '', `${a.maos} mão${a.maos > 1 ? 's' : ''}`].filter(Boolean).join(' · '))}</small></div><div class="cc-mount-controls">${usoSelect(weapon)}${loaded}</div>${slots}</div>`;
+        }).join('') || '<p class="note-status">Nenhuma arma.</p>';
+        const loose = accessories.filter(row => !row.em || row.em === '-');
+        if (loose.length) body += `<p class="note-status">Acessórios soltos (vão para o inventário): ${loose.map(label).join(', ')}.</p>`;
+      } else if (mountTab === 'armadura') {
+        const armors = rows.filter(row => row.tipo === 'armadura' && !row.item.armadura.escudo);
+        const location = (loc, title) => {
+          const covering = armors.filter(row => armorLocations(row.item).includes(loc));
+          const current = covering.find(row => row.uso === 'equipado');
+          return covering.length ? `<div class="cc-mount-row"><div><b>${title}</b> <small>SP ${mont.sp[loc]}</small></div><div class="cc-options">${[...covering, null].map(row => `<label class="cc-radio"><input type="radio" name="mont-${loc}" data-mont-armadura="${loc}" value="${row ? row.uid : '-'}"${row === (current || null) ? ' checked' : ''}> ${row ? `${label(row)} <small>SP ${row.item.armadura[loc]}${row.item.armadura.penalidade ? ` · −${row.item.armadura.penalidade} REF/DEX/MOVE` : ''}</small>` : 'Nenhuma'}</label>`).join('')}</div></div>` : '';
+        };
+        const shields = rows.filter(row => row.tipo === 'armadura' && row.item.armadura.escudo).map(row => `<div class="cc-mount-row"><div><b>${label(row)}</b><br><small>Escudo, ${row.item.armadura.escudo} HP</small></div><div class="cc-mount-controls">${usoSelect(row)}</div></div>`).join('');
+        const clothes = rows.filter(row => row.tipo === 'roupa');
+        body = `${location('corpo', 'Corpo')}${location('cabeca', 'Cabeça')}${shields}
+          ${mont.penalidade ? `<p class="cc-warn">Armadura pesada: −${mont.penalidade} em REF, DEX e MOVE enquanto vestida (RED p. 97).</p>` : ''}
+          ${clothes.length ? `<h4>Roupas</h4><div class="cc-options">${clothes.map(row => `<label class="cc-radio"><input type="checkbox" data-mont-vestir="${row.uid}"${row.uso === 'equipado' ? ' checked' : ''}> Vestindo: ${label(row)}</label>`).join('')}</div>` : ''}` || '<p class="note-status">Nenhuma armadura nem roupa.</p>';
+      } else if (mountTab === 'cyberware') {
+        const bases = rows.filter(row => row.tipo === 'cyberBase' && NEEDS_BASE.includes(row.item.cyber.tipo));
+        const options = rows.filter(row => row.tipo === 'cyberOpcao');
+        body = bases.map(base => `<div class="cc-mount-row"><div><b>${label(base)}</b></div><div class="cc-mount-children">${slotsText(base)}${children(base).length ? `<ul class="cc-items">${children(base).map(row => `<li>${label(row)} <small>${sizeOf(row)} slot${sizeOf(row) > 1 ? 's' : ''}</small> ${bases.filter(other => other.item.cyber.tipo === row.item.cyber.tipo).length > 1 ? moveSelect(row, bases, 'tirar') : ''}</li>`).join('')}</ul>` : ''}${addSelect(base, options, 'Instalar opção')}</div></div>`).join('');
+        const withoutBase = options.filter(row => NEEDS_BASE.includes(row.item.cyber.tipo) && (!row.em || row.em === '-'));
+        if (withoutBase.length) body += `<p class="cc-warn">Sem base (não instala no Foundry): ${withoutBase.map(label).join(', ')}. Compre ou escolha a base do mesmo tipo.</p>`;
+        const body2 = options.filter(row => !NEEDS_BASE.includes(row.item.cyber.tipo));
+        if (body2.length) body += `<p class="note-status">No corpo (interno, externo e fashionware, sem base): ${body2.map(label).join(', ')}.</p>`;
+        if (!body) body = '<p class="note-status">Nenhum cyberware com opções.</p>';
+      } else if (mountTab === 'net') {
+        const decks = rows.filter(row => row.tipo === 'deck');
+        const items = rows.filter(row => row.tipo === 'deckItem');
+        body = decks.map(deck => `<div class="cc-mount-row"><div><b>${label(deck)}</b>${deck.uso === 'equipado' ? ' <small class="cc-ok">deck ativo</small>' : ''}</div><div class="cc-mount-controls">${usoSelect(deck)}</div><div class="cc-mount-children">${slotsText(deck)}${children(deck).length ? `<ul class="cc-items">${children(deck).map(row => `<li>${label(row)} <small>${sizeOf(row)} slot${sizeOf(row) > 1 ? 's' : ''}</small> ${decks.length > 1 ? moveSelect(row, decks) : `<button type="button" class="action cc-danger" data-mont-soltar="${row.uid}">Tirar</button>`}</li>`).join('')}</ul>` : ''}${addSelect(deck, items, 'Instalar programa ou hardware')}</div></div>`).join('');
+        const loose = items.filter(row => !row.em || row.em === '-');
+        if (loose.length) body += `<p class="note-status">Fora do deck (vão para o inventário): ${loose.map(label).join(', ')}.</p>`;
+        if (!body) body = '<p class="note-status">Nenhum cyberdeck nem programa.</p>';
+      } else {
+        const gear = rows.filter(row => row.tipo === 'item');
+        const ammo = rows.filter(row => row.tipo === 'municao');
+        body = `${gear.map(row => `<div class="cc-mount-row"><div><b>${label(row)}</b></div><div class="cc-mount-controls">${usoSelect(row)}</div></div>`).join('')}${ammo.length ? `<p class="note-status">Munição: ${ammo.map(label).join(', ')}. O que estiver carregado sai do total no Foundry.</p>` : ''}` || '<p class="note-status">Nada aqui.</p>';
+      }
+      return box('Montagem', `<p>Como o equipamento chega no Foundry: o que está equipado, a munição de cada arma, os acessórios, o cyberware em cada base e os programas no cyberdeck. Já vem montado; mude o que quiser.</p>
+        <div class="map-filter-list cc-mount-tabs">${tabs.map(([id, name, kinds]) => `<button type="button" class="map-filter${id === mountTab ? ' active' : ''}" data-mont-tab="${id}">${name} <small>${count(kinds)}</small></button>`).join('')}</div>
+        <div class="cc-mount">${body}</div>`, ' data-cc-mount');
     }
 
     // ---------- 6. Moradia ----------
@@ -1175,6 +1360,11 @@
       if (target.closest('[data-cc-shop]')) { saver.now(); return helpers.openPage('loja', { section: doc.id }); }
       const role = target.closest('[data-role]');
       if (role) { if (doc.role !== role.dataset.role) { doc.role = role.dataset.role; doc.especializacao = ''; doc.escolhas = {}; doc.tipos = {}; doc.pericias = {}; doc.lifepath.role = {}; doc.habilidades = {}; doc.oficina = []; } draw(); return changed(); }
+      // Montagem: abas e "Tirar" (o item fica solto no inventário).
+      const mountTabButton = target.closest('[data-mont-tab]');
+      if (mountTabButton) { mountTab = mountTabButton.dataset.montTab; return draw(); }
+      const loosen = target.closest('[data-mont-soltar]');
+      if (loosen) { setMount(loosen.dataset.montSoltar, 'em', '-'); draw(); return changed(); }
       // Sub-habilidades da Role: até o máximo de cada uma e o total de pontos.
       const habPlus = target.closest('[data-hab-plus]');
       const habMinus = target.closest('[data-hab-minus]');
@@ -1281,6 +1471,15 @@
       else if (target.matches('[data-lp-enemy]')) { const [index, part] = target.dataset.lpEnemy.split(':'); doc.lifepath.inimigos[Number(index)][part] = Number(target.value) || 1; }
       else if (target.matches('[data-escolha]')) { doc.escolhas[target.dataset.escolha] = Number(target.value); }
       else if (target.matches('[data-kitnet]')) { doc.kitNet = target.dataset.kitnet; }
+      else if (target.matches('[data-mont-uso]')) { setMount(target.dataset.montUso, 'uso', target.value); }
+      else if (target.matches('[data-mont-municao]')) { setMount(target.dataset.montMunicao, 'municao', target.value); }
+      else if (target.matches('[data-mont-em]')) { setMount(target.dataset.montEm, 'em', target.value); }
+      else if (target.matches('[data-mont-em-para]')) { if (!target.value) return; setMount(target.value, 'em', target.dataset.montEmPara); }
+      else if (target.matches('[data-mont-armadura]')) {
+        const location = target.dataset.montArmadura;
+        for (const row of assembly(doc).rows.filter(item => item.tipo === 'armadura' && !item.item.armadura.escudo && armorLocations(item.item).includes(location))) setMount(row.uid, 'uso', row.uid === target.value ? 'equipado' : 'carregando');
+      }
+      else if (target.matches('[data-mont-vestir]')) { setMount(target.dataset.montVestir, 'uso', target.checked ? 'equipado' : 'carregando'); }
       else if (target.matches('[data-oficina]')) { const list = Array.from({ length: MP().escolhas }, (_, index) => (doc.oficina || [])[index] || ''); list[Number(target.dataset.oficina)] = target.value; doc.oficina = list; }
       else if (target.matches('[data-campo="retratoLink"]')) { doc.retratoLink = target.value.trim(); }
       else if (target.matches('[data-portrait-file]')) { uploadPortrait(target.files && target.files[0]); return; }

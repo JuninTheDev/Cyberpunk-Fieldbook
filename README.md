@@ -140,6 +140,12 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
      - **Medtech:** os 4 pontos de Medicina (p. 149). As perícias Cirurgia (2 por ponto) e Tecnologia Médica são calculadas.
      - **Nomad:** as 4 escolhas da Oficina da Família (p. 161–165), entre veículos e upgrades. No Foundry, os veículos chegam com os upgrades instalados.
      - **Corpo:** no Pacote Completo, ganha o terno de negócios de graça (o bônus de assinatura do Teamwork). Nos outros métodos, o pacote já traz o terno.
+   - **Montagem** (passo 5, no fim): o equipamento como ele chega no Foundry, em abas (Armas, Armadura e roupa, Cyberware, Netrunning e Outros).
+     - Já vem montado: arma carregada com a munição compatível, a armadura de maior SP vestida em cada local, as opções de cyberware nas bases e os programas no cyberdeck.
+     - O jogador muda o que quiser: descarregar ou trocar a munição, encaixar um acessório (só nas armas em que ele serve), escolher em qual cyberbraço vai cada opção, tirar um programa do deck, deixar um item guardado.
+     - A wiki confere os slots de cada arma, deck e base.
+     - A ficha mostra a munição de cada arma, o que está dentro de cada item, o SP na cabeça e no corpo e a penalidade de armadura pesada.
+     - Armas, armaduras, cyberdecks e bases de cyberware compradas na loja entram uma por linha, para cada uma ter a sua montagem.
    - **Moradia e estilo de vida** (passo 6): a moradia (da rua à cobertura de luxo), o estilo de vida, o Trauma Team (Prata ou Executivo) e o estilo de moda de 2077.
      - O padrão da Role tem o primeiro mês de graça.
      - Escolher melhor paga a diferença do primeiro mês com o dinheiro inicial; o Trauma Team paga o mês inteiro.

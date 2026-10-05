@@ -54,6 +54,16 @@ function cyberSummary(s) {
   return [`Humanidade ${loss.static}${loss.roll && loss.roll !== '0' ? ` (${loss.roll})` : ''}`, `instala: ${installPt[s.installLocation] || s.installLocation || '—'}`, s.isFoundational ? `base, ${s.installedItems?.slots || 0} slots` : `ocupa ${s.size ?? 1} slot`].join(' · ');
 }
 
+// ---------------- Dados do Foundry para montar o equipamento na wiki ----------------
+// Classe do RED de cada arma (a dos acessórios "(Heavy SMG)" etc.). SMG e SMG pesada têm o mesmo tipo no
+// Foundry: a pesada é a de 3d6.
+const weaponClasses = { medPistol: 'Medium Pistol', heavyPistol: 'Heavy Pistol', vHeavyPistol: 'Very Heavy Pistol', shotgun: 'Shotgun', assaultRifle: 'Assault Rifle',
+  sniperRifle: 'Sniper Rifle', grenadeLauncher: 'Grenade Launcher', rocketLauncher: 'Rocket Launcher', bow: 'Bow' };
+const weaponClass = s => s.weaponType === 'smg' ? (s.damage === '3d6' ? 'Heavy SMG' : 'SMG') : weaponClasses[s.weaponType] || '';
+const weaponData = (s, exotica) => ({ tipo: s.weaponType || '', classe: weaponClass(s), pericia: s.weaponSkill || '', dano: s.damage || '', cdt: s.rof || 1, pente: s.isRanged ? s.magazine?.max || 0 : 0,
+  maos: s.handsReq || 1, distancia: Boolean(s.isRanged), oculta: Boolean(s.concealable?.concealable), municao: s.ammoVariety || [], slots: s.installedItems?.slots || 0, exotica });
+const programData = s => ({ classe: s.class || '', atk: s.atk || 0, def: s.def || 0, rez: s.rez?.max || 0, tamanho: s.size ?? 1 });
+
 // Descrições dos programas do RED em português: os cartões da página Arsenal.
 const programCards = Object.fromEntries([...(wiki.pages.netArsenal?.html || '').matchAll(/<article class="entry" data-toc="([^"]+)">(.*?)<\/article>/g)]
   .map(([, name, body]) => [name, strip((body.match(/<\/div><p>(.*?)<\/p>/) || body.match(/<p>(.*?)<\/p>/) || [])[1])]));
@@ -74,36 +84,42 @@ function coreEntries() {
     if (!s.price?.market) continue; // Desarmado, Artes Marciais, arremesso
     const [, base, quality] = doc.name.match(/^(.*?)(?: \((Excellent|Poor)\))?$/);
     const nome = `${names.armas[base] || base}${quality ? ` (${names.qualidade[quality]})` : ''}`;
-    add(`${CORE}.core_weapons`, doc, { nome, cat: 'armas', sub: exoticWeapons.has(base) ? 'Exóticas' : weaponGroups[s.weaponType] || 'Exóticas', resumo: weaponSummary(s) });
+    const exotica = exoticWeapons.has(base) || !weaponGroups[s.weaponType];
+    add(`${CORE}.core_weapons`, doc, { nome, cat: 'armas', sub: exotica ? 'Exóticas' : weaponGroups[s.weaponType], resumo: weaponSummary(s), arma: weaponData(s, exotica) });
   }
   for (const doc of corePack('core_ammo')) {
     const match = doc.name.match(/^(.*?) \((.*)\)$/);
     const nome = match ? `${names.municao[match[1]] || match[1]} · ${names.tipoMunicao[match[2]] || match[2]}` : (doc.name === 'Battery Pack' ? 'Bateria (armas de choque)' : doc.name);
     const lote = doc.system.amount || 1;
-    add(`${CORE}.core_ammo`, doc, { nome, cat: 'municao', sub: match ? names.municao[match[1]] || match[1] : 'Outras', lote, resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade' });
+    add(`${CORE}.core_ammo`, doc, { nome, cat: 'municao', sub: match ? names.municao[match[1]] || match[1] : 'Outras', lote, resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade', municao: { variedade: doc.system.variety || '', tipo: doc.system.type || '' } });
   }
   for (const doc of corePack('core_armor')) {
     if (!doc.system.price?.market) continue; // Skin Weave e Subdermal Armor: são cyberware
     const match = doc.name.match(/^(.*?)(?: \((Body|Head)\))?$/);
     const nome = `${names.armaduras[match[1]] || match[1]}${match[2] ? ` (${names.armaduras[match[2]]})` : ''}`;
-    add(`${CORE}.core_armor`, doc, { nome, cat: 'armaduras', sub: doc.system.isShield ? 'Escudos' : 'Armaduras', resumo: armorSummary(doc.system) });
+    const a = doc.system;
+    add(`${CORE}.core_armor`, doc, { nome, cat: 'armaduras', sub: a.isShield ? 'Escudos' : 'Armaduras', resumo: armorSummary(a),
+      armadura: { cabeca: a.isHeadLocation ? a.headLocation?.sp || 0 : 0, corpo: a.isBodyLocation ? a.bodyLocation?.sp || 0 : 0, penalidade: a.penalty || 0, escudo: a.isShield ? a.shieldHitPoints?.max || 0 : 0 } });
   }
   for (const doc of corePack('core_upgrades')) {
     if (!['weapon', 'cyberdeck'].includes(doc.system.type)) continue; // melhorias de veículo ficam para depois
     const match = doc.name.match(/^(.*?)(?: \((.*)\))?$/);
     const nome = `${names.acessorios[match[1]] || match[1]}${match[2] ? ` (${names.armas[match[2]] || match[2]})` : ''}`;
-    add(`${CORE}.core_upgrades`, doc, { nome, cat: doc.system.type === 'weapon' ? 'acessorios' : 'netrunning', sub: doc.system.type === 'weapon' ? 'Acessórios' : 'Hardware de cyberdeck', resumo: doc.system.type === 'weapon' ? `${doc.system.size || 1} slot` : '' });
+    const size = doc.system.size ?? 1;
+    // Acessório com classe no nome ("Drum Magazine (Assault Rifle)") só encaixa naquela classe de arma.
+    const extra = doc.system.type === 'weapon' ? { acessorio: { tamanho: size, classe: match[2] || '' } } : { hardware: { tamanho: size } };
+    add(`${CORE}.core_upgrades`, doc, { nome, cat: doc.system.type === 'weapon' ? 'acessorios' : 'netrunning', sub: doc.system.type === 'weapon' ? 'Acessórios' : 'Hardware de cyberdeck', resumo: `${size} slot${size > 1 ? 's' : ''}`, ...extra });
   }
   for (const doc of corePack('core_gear')) {
     if (!doc.system.price?.market) continue;
     const [nome, desc] = names.equipamento[doc.name] || [doc.name, ''];
     const deck = doc.type === 'cyberdeck';
-    add(`${CORE}.core_gear`, doc, { nome, cat: deck ? 'netrunning' : 'equipamento', sub: deck ? 'Cyberdecks do RED' : 'Equipamento', desc, resumo: deck ? `${doc.system.installedItems?.slots || 0} slots` : '' });
+    add(`${CORE}.core_gear`, doc, { nome, cat: deck ? 'netrunning' : 'equipamento', sub: deck ? 'Cyberdecks do RED' : 'Equipamento', desc, resumo: deck ? `${doc.system.installedItems?.slots || 0} slots` : '', ...(deck ? { deck: { slots: doc.system.installedItems?.slots || 0 } } : {}) });
   }
   for (const doc of corePack('core_programs')) {
     const s = doc.system;
     const stats = [s.atk ? `ATK ${s.atk}` : '', s.def ? `DEF ${s.def}` : '', s.rez?.max ? `REZ ${s.rez.max}` : ''].filter(Boolean).join(' · ');
-    add(`${CORE}.core_programs`, doc, { nome: names.programas[doc.name] || doc.name, cat: 'netrunning', sub: 'Programas do RED', resumo: stats, desc: programCards[doc.name] || '' });
+    add(`${CORE}.core_programs`, doc, { nome: names.programas[doc.name] || doc.name, cat: 'netrunning', sub: 'Programas do RED', resumo: stats, desc: programCards[doc.name] || '', programa: programData(s) });
   }
   for (const doc of corePack('core_cyberware')) {
     if (!doc.system.price?.market) continue;
@@ -116,7 +132,7 @@ function coreEntries() {
   }
   for (const doc of corePack('core_clothing')) {
     const s = doc.system;
-    add(`${CORE}.core_clothing`, doc, { nome: `${names.pecas[s.type] || s.type} · ${names.estilos[s.style] || s.style}`, cat: 'moda', sub: names.estilos[s.style] || s.style, moda: true, resumo: '' });
+    add(`${CORE}.core_clothing`, doc, { nome: `${names.pecas[s.type] || s.type} · ${names.estilos[s.style] || s.style}`, cat: 'moda', sub: names.estilos[s.style] || s.style, moda: true, resumo: '', roupa: { tipo: s.type || '', estilo: s.style || '' } });
   }
   for (const doc of corePack('core_drugs')) {
     if (!doc.system.price?.market) continue; // farmacêuticos do Medtech
@@ -132,10 +148,10 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
     const desc = strip(doc.system.description?.value).slice(0, 260);
     if (doc.type === 'ammo') { // flechettes das armas Tech: vendidas em lote, como a munição do RED
       const lote = doc.system.amount || 1;
-      add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'municao', sub: 'Flechettes Tech (2077)', lote, resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade', desc });
+      add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'municao', sub: 'Flechettes Tech (2077)', lote, resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade', desc, municao: { variedade: doc.system.variety || '', tipo: doc.system.type || '' } });
       continue;
     }
-    add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'armas', sub: 'Armas de 2077', resumo: weaponSummary(doc.system), desc });
+    add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'armas', sub: 'Armas de 2077', resumo: weaponSummary(doc.system), desc, arma: weaponData(doc.system, !weaponGroups[doc.system.weaponType]) });
   }
   for (const doc of items(cyberware)) {
     const s = doc.system;
@@ -145,10 +161,12 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
     });
   }
   for (const doc of items(net)) {
-    const deck = doc.type === 'gear';
+    // Os cyberdecks de 2077 são feitos a partir do Cyberdeck do RED (tipo cyberdeck); quickhacks e daemons são programas.
+    const deck = doc.type === 'cyberdeck';
     const sub = deck ? 'Cyberdecks de 2077' : doc.flags?.['cpr-2077']?.daemon ? 'Daemons de 2077' : doc.flags?.['cpr-2077']?.whiteIce ? null : 'Quickhacks de 2077';
     if (!sub) continue; // White ICE não se compra
-    add('cpr-2077.netrunning-2077', doc, { nome: doc.name, cat: 'netrunning', sub, resumo: deck ? `RAM ${doc.flags['cpr-2077'].ram} · ${doc.system.installedItems?.slots || 0} slots` : '', desc: strip(doc.system.description?.value).slice(0, 220) });
+    add('cpr-2077.netrunning-2077', doc, { nome: doc.name, cat: 'netrunning', sub, resumo: deck ? `RAM ${doc.flags['cpr-2077'].ram} · ${doc.system.installedItems?.slots || 0} slots` : '', desc: strip(doc.system.description?.value).slice(0, 220),
+      ...(deck ? { deck: { slots: doc.system.installedItems?.slots || 0, ram: doc.flags['cpr-2077'].ram } } : { programa: programData(doc.system) }) });
   }
 }
 

@@ -35,7 +35,7 @@ module.exports = async ({ edge, servidores, r }) => {
     for (let i = 0; i < 30 && !/Salvo/.test(await texto('#cc-save')); i++) await edge.sleep(200);
     return (await api(`/api/personagens/${personagem.id}`)).personagem;
   }
-  let solo, tech, medtech, nomad;
+  let solo, tech, medtech, nomad, netrunner, montado;
   const base = { metodo: 'ratoderua', sorteio: { linha: 6 }, lingua: 'Portuguese', casa: 'Heywood' };
   await r.passo('wiki: Solo (Rato de Rua) com o resultado calculado pelo criador', async () => {
     solo = await criar({ ...base, nome: 'Teste Foundry', apelido: 'Lab', role: 'solo', habilidades: { 'Initiative Reaction': 2, 'Threat Detection': 2 }, moradia: 'quitinete', estiloVida: 'bom', traumaTeam: 'prata', estiloModa: 'kitsch' });
@@ -48,6 +48,19 @@ module.exports = async ({ edge, servidores, r }) => {
     const veic = nomad.resultado?.veiculos || [];
     return [tech.resultado?.role?.habilidades?.length === 4 && medtech.resultado?.role?.habilidades?.some(h => h.nome === 'Surgery Skill' && h.rank === 4) && veic.length === 2 && veic[0].upgrades.length === 2,
       `tech ${tech.resultado?.role?.habilidades?.length} · medtech ${JSON.stringify(medtech.resultado?.role?.habilidades)} · nomad ${veic.map(v => `${v.nome}+${v.upgrades.length}`).join(', ')}`];
+  });
+
+  await r.passo('wiki: Netrunner com o kit do RED e um Solo do Pacote Completo com a montagem mudada', async () => {
+    netrunner = await criar({ ...base, nome: 'Teste Netrunner', role: 'netrunner' });
+    // Rifle, luneta, munição e dois cyberbraços; o lança-granadas vai no segundo braço (o padrão seria o primeiro).
+    const itens = [['rifle', 'core_weapons:assault-rifle', 1], ['luneta', 'core_upgrades:sniping-scope', 1], ['municao', 'core_ammo:rifle-basic', 50],
+      ['braco1', 'core_cyberware:cyberarm', 1], ['braco2', 'core_cyberware:cyberarm', 1], ['lanca', 'core_cyberware:popup-grenade-launcher', 1]].map(([uid, id, qtd]) => ({ uid: `loja:${uid}`, id, qtd }));
+    montado = await criar({ nome: 'Teste Montagem', role: 'solo', metodo: 'pacote', lingua: 'Portuguese', casa: 'Heywood', itens, montagem: { 'loja:lanca': { em: 'loja:braco2' } } });
+    const linhas = Object.fromEntries((montado.resultado?.itens || []).map(item => [item.uid, item]));
+    const deckUid = ((netrunner.resultado?.itens || []).find(item => item.id === 'core_gear:cyberdeck') || {}).uid;
+    const deck = (netrunner.resultado?.itens || []).filter(item => item.em && item.em === deckUid);
+    return [linhas['loja:luneta']?.em === 'loja:rifle' && linhas['loja:rifle']?.municao === 'loja:municao' && linhas['loja:lanca']?.em === 'loja:braco2' && deck.length >= 4,
+      `luneta em ${linhas['loja:luneta']?.em} · rifle com ${linhas['loja:rifle']?.municao} · lança-granadas em ${linhas['loja:lanca']?.em} · ${deck.length} programas no deck`];
   });
 
   // ---------- Foundry ----------
@@ -92,9 +105,10 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ator.nome === 'Teste Foundry' && statsOk && ator.hp === solo.resultado.derivados.hp && ator.role?.nome === 'Solo' && ator.role.rank === 4 && ator.cyberInstalado.length >= 3,
         `HP ${ator.hp} · ${ator.role?.nome} ${ator.role?.rank} · cyber instalado: ${ator.cyberInstalado.join(', ')} · avisos: ${ator.notas.join(' | ') || 'nenhum'}`];
     });
-    await r.passo('importa o Solo: armas e armaduras equipadas, dinheiro', async () => {
+    await r.passo('importa o Solo: armas carregadas, armaduras vestidas, dinheiro', async () => {
       const equip = [...ator.armas, ...ator.armaduras].every(item => item.equip === 'equipped');
-      return [ator.armas.length > 0 && ator.armaduras.length > 0 && equip && ator.dinheiro === solo.resultado.dinheiro.saldo,
+      const carregadas = ator.armas.filter(arma => arma.max > 0).every(arma => arma.pente === arma.max);
+      return [ator.armas.length > 0 && ator.armaduras.length > 0 && equip && carregadas && ator.dinheiro === solo.resultado.dinheiro.saldo,
         `armas: ${ator.armas.map(a => `${a.nome} ${a.pente}/${a.max}`).join(', ')} · armaduras: ${ator.armaduras.map(a => a.nome).join(', ')} · ${ator.dinheiro}eb`];
     });
     await r.passo('Solo: Consciência de Combate com os pontos da wiki', async () => {
@@ -115,6 +129,27 @@ module.exports = async ({ edge, servidores, r }) => {
       const a = await importar(medtech.id);
       const h = habilidades(a);
       return [h.Surgery === 2 && h['Surgery Skill'] === 4 && h['Medical Tech (Pharmaceuticals)'] === 1 && h['Medical Tech (Cryosystem Operation)'] === 1 && h['Medical Tech Skill'] === 2 && !a.notas.length, `${JSON.stringify(h)} · avisos: ${a.notas.join(' | ') || 'nenhum'}`];
+    });
+    // O que está instalado em cada item do ator (arma, deck, cyberbraço), pelo uid da wiki.
+    const instalados = id => edge.evaluate(`(() => {
+      const actor = game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(id)});
+      return actor.items.filter(i => i.system.installedItems?.list?.length).map(i => ({ uid: i.getFlag('cpr-2077', 'wikiUid') || '', nome: i.name, pente: i.system.magazine?.value, dentro: i.system.installedItems.list.map(x => actor.items.get(x)?.name) }))
+        .concat(actor.itemTypes.ammo.map(a => ({ uid: a.getFlag('cpr-2077', 'wikiUid') || '', nome: a.name, sobra: a.system.amount })));
+    })()`);
+    await r.passo('Netrunner: os programas do pacote dentro do cyberdeck', async () => {
+      await importar(netrunner.id);
+      const deck = (await instalados(netrunner.id)).find(item => item.nome === 'Cyberdeck');
+      return [deck && deck.dentro.length >= 4, JSON.stringify(deck)];
+    });
+    await r.passo('montagem: luneta no rifle, rifle carregado (sobram 25), lança-granadas no segundo braço', async () => {
+      await importar(montado.id);
+      const itens = await instalados(montado.id);
+      const rifle = itens.find(item => item.uid === 'loja:rifle');
+      const municao = itens.find(item => item.uid === 'loja:municao');
+      const braco1 = itens.find(item => item.uid === 'loja:braco1');
+      const braco2 = itens.find(item => item.uid === 'loja:braco2');
+      return [rifle && rifle.dentro.includes('Sniping Scope') && rifle.pente === 25 && municao?.sobra === 25 && braco2?.dentro.includes('Popup Grenade Launcher') && !(braco1?.dentro || []).includes('Popup Grenade Launcher'),
+        JSON.stringify(itens)];
     });
     await r.passo('Nomad: veículos da família, com os upgrades instalados', async () => {
       const a = await importar(nomad.id);

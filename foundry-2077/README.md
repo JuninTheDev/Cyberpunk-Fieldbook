@@ -15,6 +15,7 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
 - **Personagens da wiki:**
   - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.
     - O retrato do personagem é copiado para `worlds/<mundo>/retratos-wiki` e vai para a ficha e o token.
+    - O equipamento chega montado como na wiki: equipado, carregando ou guardado; armas carregadas (a munição do pente sai do total); acessórios nas armas; programas e hardware no cyberdeck; opções de cyberware na base escolhida.
     - As sub-habilidades da Role (Solo, Tech, Medtech) chegam com os pontos da wiki.
     - Os veículos da família do Nomad chegam com os upgrades instalados.
     - Moradia, estilo de vida, Trauma Team e moda vão para o Estilo de vida da ficha.

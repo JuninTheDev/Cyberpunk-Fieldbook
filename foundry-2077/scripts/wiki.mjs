@@ -51,6 +51,8 @@ async function fromPack(packId, name) {
   return data;
 }
 
+const EQUIPPED = { equipado: 'equipped', carregando: 'carried', guardado: 'owned' };
+
 // Dados de um item da wiki prontos para entrar no ator.
 async function itemData(entry) {
   const data = await fromPack(entry.foundry.pack, entry.foundry.nome);
@@ -65,23 +67,50 @@ async function itemData(entry) {
   // Munição e itens de pilha usam `amount`; o resto entra como cópias separadas.
   const stacks = 'amount' in s;
   if (stacks) s.amount = entry.qtd;
-  if (['weapon', 'armor'].includes(data.type) && 'equipped' in s) s.equipped = 'equipped';
-  else if ('equipped' in s && !['cyberware', 'clothing'].includes(data.type)) s.equipped = 'carried';
+  // Uso escolhido na montagem da wiki; sem ele (personagem antigo), armas e armaduras equipadas e o resto carregando.
+  if ('equipped' in s) s.equipped = EQUIPPED[entry.uso] || (['weapon', 'armor'].includes(data.type) ? 'equipped' : data.type === 'clothing' ? s.equipped : 'carried');
   data.flags = { ...(data.flags || {}), [MODULE_ID]: { ...((data.flags || {})[MODULE_ID] || {}), wikiUid: entry.uid } };
   return Array.from({ length: stacks ? 1 : Math.max(1, entry.qtd) }, () => foundry.utils.deepClone(data));
 }
 
-// Instala o cyberware: as bases no ator, as opções numa base do mesmo tipo com espaço. Sem janela e sem rolar.
-async function installCyberware(actor, created) {
+// Monta o equipamento como na wiki (sem janela e sem rolar):
+//   1. as bases de cyberware no ator;
+//   2. cada item no lugar escolhido: acessório na arma, programa e hardware no cyberdeck, opção de cyberware na base;
+//      a opção sem lugar vai numa base do mesmo tipo com espaço (as do corpo, interno/externo/fashionware, já vêm na ficha);
+//   3. a munição em cada arma, e a arma recarregada (o que entra no pente sai da munição).
+// Os pais são achados pelo uid da wiki gravado em cada item: no Atualizar da wiki, o pai pode já estar na ficha.
+async function assemble(actor, entries) {
   const notes = [];
-  const cyber = created.filter(item => item.type === 'cyberware');
-  for (const item of cyber.filter(cw => cw.system.isFoundational)) await actor.installItems([actor.items.get(item.id)]);
-  for (const item of cyber.filter(cw => !cw.system.isFoundational)) {
+  const byUid = uid => actor.items.filter(item => item.getFlag(MODULE_ID, 'wikiUid') === uid);
+  const installedSomewhere = item => (item.type === 'cyberware' && item.system.isInstalled) || actor.items.some(other => other.system.installedItems?.list?.includes(item.id));
+  const cyber = entries.flatMap(entry => byUid(entry.uid)).filter(item => item.type === 'cyberware');
+  const bases = cyber.filter(item => item.system.isFoundational && !actor.system.installedItems.list.includes(item.id));
+  for (const base of bases) await actor.installItems([base]);
+
+  for (const entry of entries.filter(item => item.em)) {
+    const target = byUid(entry.em)[0];
+    const items = byUid(entry.uid).filter(item => !installedSomewhere(item));
+    if (!target || !items.length) continue;
+    const ok = await target.installItems(items).catch(() => false);
+    if (ok === false) notes.push(`${items[0].name}: não coube em ${target.name}; ficou no inventário.`);
+  }
+  for (const item of cyber.filter(cw => !cw.system.isFoundational && !installedSomewhere(cw))) {
     const current = actor.items.get(item.id);
-    const bases = actor.itemTypes.cyberware.filter(cw => cw.system.isFoundational && cw.system.type === current.system.type && actor.system.installedItems.list.includes(cw.id));
-    const target = bases.find(base => base.availableInstallSlots() >= current.system.size);
+    const options = actor.itemTypes.cyberware.filter(cw => cw.system.isFoundational && cw.system.type === current.system.type && actor.system.installedItems.list.includes(cw.id));
+    const target = options.find(base => base.availableInstallSlots() >= current.system.size);
     if (target) await target.installItems([current]);
     else notes.push(`${current.name}: sem base com espaço; ficou no inventário, sem instalar.`);
+  }
+
+  for (const entry of entries.filter(item => item.municao)) {
+    const ammo = byUid(entry.municao)[0];
+    if (!ammo) continue;
+    for (const weapon of byUid(entry.uid).filter(item => item.type === 'weapon')) {
+      if (weapon.getInstalledItems?.('ammo')?.length) continue; // já carregada
+      const ok = await weapon.installItems([ammo]).catch(() => false);
+      if (ok === false) { notes.push(`${weapon.name}: não consegui carregar ${ammo.name}.`); continue; }
+      await weapon.reload().catch(error => notes.push(`${weapon.name}: não consegui recarregar (${error.message}).`));
+    }
   }
   return notes;
 }
@@ -250,7 +279,7 @@ async function importCharacter(id, ownerId) {
     if (data) datas.push(...data); else notes.push(`${entry.nome}: não achei no compêndio ${entry.foundry?.pack}.`);
   }
   const created = await actor.createEmbeddedDocuments('Item', datas);
-  notes.push(...await installCyberware(actor, created));
+  notes.push(...await assemble(actor, r.itens));
   notes.push(...await addVehicles(actor, r.veiculos));
 
   // Humanidade: o valor que a wiki calculou; a máxima o sistema recalcula pelo cyberware instalado.
@@ -375,7 +404,7 @@ export async function atualizarDaWiki(actor) {
         const datas = [];
         for (const entry of newItems) datas.push(...((await itemData(entry).catch(() => null)) || []));
         const created = await actor.createEmbeddedDocuments('Item', datas);
-        await installCyberware(actor, created);
+        await assemble(actor, newItems);
         delivered = [...delivered, ...newItems.map(item => item.uid)];
       }
       if (checked('lifepath')) await actor.update({ 'system.lifepath': r.lifepath });
