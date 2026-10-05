@@ -118,6 +118,53 @@ async function addRole(actor, role) {
   return [];
 }
 
+// ---------------- Retrato ----------------
+// O retrato da wiki: a imagem enviada (servida pela wiki) ou um link https colado pelo jogador.
+// A imagem é copiada para a pasta do mundo: os jogadores, que não falam com a wiki, também veem.
+// Um link de fora que não deixa baixar (sem CORS) entra como link, se terminar em extensão de imagem.
+const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
+const IMAGE_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' };
+const Picker = () => foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+
+async function ensureFolder(folder) {
+  try { await Picker().browse('data', folder); } catch { await Picker().createDirectory('data', folder); }
+}
+async function copyPortrait(doc, source) {
+  const url = /^https:\/\//.test(source) ? source : `${wikiUrl()}/${source.replace(/^\/+/, '')}`;
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`a imagem respondeu ${response.status}`);
+  const blob = await response.blob();
+  const ext = IMAGE_EXT[blob.type];
+  if (!ext) throw new Error(`não é uma imagem (${blob.type || 'sem tipo'})`);
+  const folder = `worlds/${game.world.id}/retratos-wiki`;
+  await ensureFolder(folder);
+  // Nome novo a cada troca: o navegador de ninguém fica com a imagem antiga no cache.
+  const name = `${doc.id}-${Date.now().toString(36)}.${ext}`;
+  const result = await Picker().upload('data', folder, new File([blob], name, { type: blob.type }), {}, { notify: false });
+  if (!result?.path) throw new Error('o Foundry não gravou a imagem');
+  return result.path;
+}
+// Põe o retrato na ficha e no token (o do protótipo e os já colocados no mapa). Devolve o que aplicou e os avisos.
+async function applyPortrait(actor, doc) {
+  const source = portraitOf(doc);
+  if (!source) return { applied: '', notes: [] };
+  let img;
+  try {
+    img = await copyPortrait(doc, source);
+  } catch (error) {
+    const external = /^https:\/\//.test(source);
+    if (!external || !/\.(png|jpe?g|webp|gif|avif|svg)(\?.*)?$/i.test(source)) return { applied: '', notes: [`Retrato: não consegui trazer a imagem (${error.message}). Ponha à mão na ficha.`] };
+    img = source;
+  }
+  try {
+    await actor.update({ img, 'prototypeToken.texture.src': img });
+    for (const token of actor.getDependentTokens?.({ linked: true }) || []) await token.update({ 'texture.src': img });
+  } catch (error) {
+    return { applied: '', notes: [`Retrato: o Foundry recusou a imagem (${error.message}).`] };
+  }
+  return { applied: source, notes: [] };
+}
+
 // ---------------- Importar ----------------
 async function importCharacter(id, ownerId) {
   const { personagem: doc } = await wikiFetch(`/api/personagens/${id}`);
@@ -171,9 +218,11 @@ async function importCharacter(id, ownerId) {
     'system.information.description': description
   });
   actor.setLedgerProperty('wealth', r.dinheiro.saldo, 'Dinheiro inicial (criador da wiki)');
+  const portrait = await applyPortrait(actor, doc);
+  notes.push(...portrait.notes);
 
   const delivered = r.itens.map(item => item.uid);
-  await actor.setFlag(MODULE_ID, 'wiki', { id: doc.id, versao: doc.versao, entregues: delivered, importado: new Date().toISOString() });
+  await actor.setFlag(MODULE_ID, 'wiki', { id: doc.id, versao: doc.versao, entregues: delivered, importado: new Date().toISOString(), retrato: portrait.applied });
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } });
   return { actor, notes };
 }
@@ -200,7 +249,7 @@ export async function importarDaWiki(preselect = '') {
   const content = `<form class="cpr2077-wiki">
     <div class="form-group"><label>Personagem</label><select name="id">${characters.map(item => `<option value="${item.id}"${item === chosen ? ' selected' : ''}>${esc(item.nome || 'Sem nome')}${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')} · ${STATE_LABELS[item.estadoFoundry] || (item.foundry ? 'já importado' : 'não enviado')}</option>`).join('')}</select></div>
     <div class="form-group"><label>Dono no Foundry</label><select name="owner"><option value="">Só o mestre</option>${players.map(user => `<option value="${user.id}"${user.id === ownerOf(chosen) ? ' selected' : ''}>${esc(user.name)}</option>`).join('')}</select></div>
-    <p class="notes">Cria um ator novo com STATs, perícias, Role, equipamento, cyberware instalado, Lifepath e dinheiro. Para um ator que já veio da wiki, use <b>Atualizar da wiki</b> no topo da ficha dele.</p></form>`;
+    <p class="notes">Cria um ator novo com STATs, perícias, Role, equipamento, cyberware instalado, Lifepath, dinheiro e retrato (na ficha e no token). Para um ator que já veio da wiki, use <b>Atualizar da wiki</b> no topo da ficha dele.</p></form>`;
   return Dialog.prompt({
     title: 'Importar personagem da wiki', content, label: 'Importar',
     // Trocar o personagem escolhe o jogador do Foundry com o mesmo nome do dono na wiki.
@@ -238,14 +287,16 @@ export async function atualizarDaWiki(actor) {
   const skillChanges = (r.pericias || []).filter(skill => { const item = actor.items.find(i => i.type === 'skill' && i.name === skill.nome); return !item || item.system.level !== skill.nivel; }).map(skill => `${skill.nome} → ${skill.nivel}`);
   const newItems = (r.itens || []).filter(item => !(link.entregues || []).includes(item.uid));
   const lifepathChanged = Object.entries(r.lifepath || {}).some(([field, text]) => (actor.system.lifepath?.[field] || '') !== text);
+  // Retrato novo na wiki (ou ator importado antes do retrato). Tirar o retrato na wiki não apaga a imagem da ficha.
+  const portraitChanged = Boolean(portraitOf(doc)) && portraitOf(doc) !== (link.retrato || '');
   const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } }).catch(() => null);
   // Nada que este botão aplique (a mudança foi em moradia ou dinheiro, por exemplo): a wiki para de mostrar "mudou".
-  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged) {
+  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged && !portraitChanged) {
     await synced(link.entregues || []);
     return ui.notifications.info('Nada para aplicar: a ficha já está igual à da wiki.');
   }
   const section = (name, title, lines) => lines.length ? `<div class="form-group"><label><input type="checkbox" name="${name}" checked> ${title}</label></div><ul>${lines.slice(0, 12).map(line => `<li>${esc(line)}</li>`).join('')}${lines.length > 12 ? `<li>e mais ${lines.length - 12}</li>` : ''}</ul>` : '';
-  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
+  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}${portraitChanged ? section('portrait', 'Retrato', ['imagem da ficha e do token']) : ''}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
   return Dialog.prompt({
     title: `Atualizar ${actor.name} da wiki`, content, label: 'Aplicar',
     callback: async html => {
@@ -270,7 +321,13 @@ export async function atualizarDaWiki(actor) {
         delivered = [...delivered, ...newItems.map(item => item.uid)];
       }
       if (checked('lifepath')) await actor.update({ 'system.lifepath': r.lifepath });
-      await actor.setFlag(MODULE_ID, 'wiki', { ...link, versao: doc.versao, entregues: delivered });
+      let portrait = link.retrato || '';
+      if (checked('portrait')) {
+        const result = await applyPortrait(actor, doc);
+        if (result.applied) portrait = result.applied;
+        for (const note of result.notes) ui.notifications.warn(note);
+      }
+      await actor.setFlag(MODULE_ID, 'wiki', { ...link, versao: doc.versao, entregues: delivered, retrato: portrait });
       await synced(delivered);
       ui.notifications.info(`${actor.name} atualizado da wiki.`);
     },

@@ -113,6 +113,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
    - **Ajuda:** cada passo tem um "Como funciona" com a página do livro, e um resumo fixo mostra pontos, HP, Humanidade, dinheiro e pendências. As perícias têm a descrição do livro, e os termos de regra levam ao glossário.
    - **Lifepath da Role:** no passo 4, as perguntas próprias da Role (livro p. 54–70), para rolar ou escolher. A Face usa as do Rockerboy, e o Corpo, as do Exec. As respostas vão para o campo Role Lifepath da ficha do Foundry, junto com as notas.
+   - **Retrato:** no passo 1, o jogador envia uma imagem (PNG, JPEG ou WebP, reduzida para 512 px antes de sair do aparelho) ou cola um link `https`. Se houver imagem enviada, ela vale no lugar do link. O retrato aparece na ficha, em miniatura na lista de Personagens (inclusive para os outros jogadores) e vai para a ficha e o token no Foundry.
    - **Perícias sugeridas:** no Edgerunner e no Pacote Completo, **Distribuir sugerido** põe os níveis do Rato de Rua da Role (86 pontos certinhos). No Pacote Completo, as 20 perícias da Role aparecem primeiro.
 3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
    - **Só itens de criação:** até 1.000eb, sem armas exóticas, qualidade excelente, borgware, munição rara (inteligente, biotoxina, EMP, sonífera), Linear Frame, Cryotank e Cryopump.
@@ -120,18 +121,19 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Netrunner de 2077:** no Rato de Rua e no Edgerunner, o Netrunner escolhe entre o kit do RED (cyberdeck e programas) e o de 2077 (Militech Hunter MK.1 e 3 quickhacks de 100eb). O resto do pacote não muda.
    - **Kit sugerido:** no Pacote Completo, um botão compra de uma vez o pacote de Rato de Rua da Role.
 4. **Enviar para o mestre:** quando o personagem estiver pronto, o jogador clica em **Enviar para o mestre**. O botão fica na revisão do criador e na ficha. O quadro **Levar para o Foundry** mostra em que pé está: não enviado, esperando o mestre, no Foundry, ou mudou depois de importar (aí aparece **Avisar o mestre de novo**). Na lista de Personagens, o mestre vê quem está esperando.
-5. **Importar no Foundry:** no Foundry aberto **neste computador**, o mestre recebe um aviso, até um minuto depois do envio, e a janela **Personagens da wiki** com **Importar**. Também dá para importar a qualquer hora: aba Atores, botão **Importar da wiki**. Escolha o personagem e o dono (vem marcado o jogador com o mesmo nome), e o módulo cria o ator com STATs, perícias, Role, equipamento, cyberware instalado, Humanidade, Lifepath e dinheiro.
+5. **Importar no Foundry:** no Foundry aberto **neste computador**, o mestre recebe um aviso, até um minuto depois do envio, e a janela **Personagens da wiki** com **Importar**. Também dá para importar a qualquer hora: aba Atores, botão **Importar da wiki**. Escolha o personagem e o dono (vem marcado o jogador com o mesmo nome), e o módulo cria o ator com STATs, perícias, Role, equipamento, cyberware instalado, Humanidade, Lifepath, dinheiro e retrato.
+   - **Retrato:** o módulo copia a imagem para a pasta do mundo (`worlds/<mundo>/retratos-wiki`), para os jogadores também verem, e a põe na ficha e no token. Um link de outro site que não deixa baixar entra como link, se terminar em `.png`, `.jpg` ou `.webp`; senão, o aviso do chat pede para pôr a imagem à mão.
    - **Não aparece o botão nem o aviso?** O módulo instalado está velho: feche o Foundry e rode `atualizar-modulo.bat`.
    - O aviso pode ser desligado em Configurações do módulo → Avisos da wiki.
    - Depois disso, a loja inicial daquele personagem fecha. As compras durante a sessão vêm numa próxima versão, pelo mesmo caminho.
-6. **Mudou algo na wiki depois?** O jogador avisa de novo, e a janela de avisos traz **Atualizar**. O mesmo botão fica no topo da ficha do ator: **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha.
+6. **Mudou algo na wiki depois?** O jogador avisa de novo, e a janela de avisos traz **Atualizar**. O mesmo botão fica no topo da ficha do ator: **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha. Um retrato novo na wiki também aparece ali; tirar o retrato na wiki não apaga a imagem do Foundry.
 
 Notas:
 
 - **Onde importar:** importe do computador onde a wiki roda. O Foundry fala com a wiki em `http://localhost:8000` (dá para trocar em Configurações do módulo → Endereço da wiki). Se abrir o Foundry por outro endereço que não `localhost:30000`, ligue o servidor com `$env:FOUNDRY_ORIGIN='http://esse-endereco'`.
 - **Pelo túnel**, o link muda a cada sessão, e o jogador digita o código de novo.
-- **Onde ficam os dados:** os códigos ficam em `contas-jogadores.json`, fora do git. Os personagens ficam em `personagens/`. Apagar um personagem move o arquivo para `personagens/apagados/`.
-- **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros, só nome, apelido e Role. O mestre vê e edita todos.
+- **Onde ficam os dados:** os códigos ficam em `contas-jogadores.json`, fora do git. Os personagens ficam em `personagens/`, e os retratos enviados, em `personagens/retratos/`. Apagar um personagem move o arquivo para `personagens/apagados/`.
+- **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros, só nome, apelido, Role e retrato. O mestre vê e edita todos.
 
 ## Consulta durante a sessão
 

@@ -13,9 +13,9 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
 - **Macros:** Ataque Smart, Ricochete e Carga Tech. Só rolam e explicam no chat.
 - **Roles de 2077:** Face, Corpo e Lawman (com Investigator), no compêndio Roles de 2077.
 - **Personagens da wiki:**
-  - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.
+  - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki. O retrato do personagem é copiado para `worlds/<mundo>/retratos-wiki` e vai para a ficha e o token.
   - **Avisos da wiki:** quando um jogador clica em **Enviar para o mestre** na wiki, o Foundry do mestre avisa (confere ao entrar e a cada minuto) e abre a janela **Personagens da wiki**, com Importar ou Atualizar. Cada envio avisa uma vez. Desliga em Configurações do módulo. Pela macro: `game.modules.get('cpr-2077').api.avisosDaWiki()`.
-  - **Atualizar da wiki** (cabeçalho da ficha) traz o que mudou depois.
+  - **Atualizar da wiki** (cabeçalho da ficha) traz o que mudou depois, inclusive um retrato novo (troca a imagem da ficha, do protótipo e dos tokens já no mapa).
   - O mestre importa do computador onde a wiki roda; o endereço fica em Configurações do módulo.
 
 O conteúdo é gerado a partir da wiki da mesa (`system-2077.js`, `system-net.js`, `mestre-npcs.js`), então a wiki e o Foundry nunca divergem.

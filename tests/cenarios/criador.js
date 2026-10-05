@@ -89,6 +89,41 @@ module.exports = async ({ edge, servidores, r }) => {
     const nome = await edge.evaluate(`document.querySelector('[data-campo="nome"]').value`);
     return [ok && nome === 'Jay', `salvo ${ok} · nome "${nome}"`];
   });
+  // Retrato: uma imagem de 1024×768 feita na hora, posta no campo de arquivo como se o jogador escolhesse.
+  const retratoNaTela = () => edge.evaluate(`(() => { const i = document.querySelector('#cc-step img.cc-portrait'); return i && i.complete ? [i.naturalWidth, i.naturalHeight] : null; })()`);
+  await r.passo('retrato: a imagem enviada chega reduzida a 512 px e aparece no passo 1', async () => {
+    await passo(1);
+    await edge.evaluate(`(async () => {
+      const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 768;
+      const g = canvas.getContext('2d'); g.fillStyle = '#d5f36b'; g.fillRect(0, 0, 1024, 768);
+      const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+      const lista = new DataTransfer(); lista.items.add(new File([blob], 'rosto.png', { type: 'image/png' }));
+      const campo = document.querySelector('[data-portrait-file]'); campo.files = lista.files;
+      campo.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
+    let tamanho = null;
+    for (let i = 0; i < 25 && !(tamanho && tamanho[0]); i++) { await edge.sleep(200); tamanho = await retratoNaTela(); }
+    const arquivo = await fetch(`${gm}/api/personagens/${soloId}/retrato`);
+    return [tamanho?.join('x') === '512x384' && /^image\/(webp|jpeg)$/.test(arquivo.headers.get('content-type')), `na tela ${tamanho?.join('x')} · servido como ${arquivo.headers.get('content-type')}`];
+  });
+  await r.passo('retrato: aparece na ficha e em miniatura na lista', async () => {
+    await salvo();
+    await clicar('[data-cc-sheet]', 1200);
+    const naFicha = await edge.evaluate(`!!document.querySelector('.cc-identity img.cc-portrait')`);
+    await edge.shot('ficha-retrato');
+    await abrir(edge, 'personagens', 900);
+    const miniatura = await edge.evaluate(`[...document.querySelectorAll('.cc-card')].some(card => /Jay/.test(card.textContent) && card.querySelector('img.cc-thumb'))`);
+    return [naFicha && miniatura, `ficha ${naFicha} · lista ${miniatura}`];
+  });
+  await r.passo('retrato: "Tirar retrato" apaga a imagem do servidor', async () => {
+    await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(soloId)} })`);
+    await edge.sleep(1200);
+    await passo(1);
+    await clicar('[data-portrait-remove]', 800);
+    const vazio = await edge.evaluate(`!!document.querySelector('#cc-step .cc-portrait-empty')`);
+    const arquivo = await fetch(`${gm}/api/personagens/${soloId}/retrato`);
+    return [vazio && arquivo.status === 404, `quadro vazio ${vazio} · servidor ${arquivo.status}`];
+  });
   await edge.shot('criador');
   await r.passo('revisão: sem pendências', async () => {
     await passo(7);
