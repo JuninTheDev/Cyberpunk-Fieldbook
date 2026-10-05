@@ -13,6 +13,11 @@ export function registerWikiSettings() {
     hint: 'Onde o Foundry busca os personagens do criador da wiki. Vazio: wiki.seudominio quando a mesa abre em mesa.seudominio, ou http://localhost:8000 com tudo no mesmo computador.',
     scope: 'world', config: true, type: String, default: ''
   });
+  game.settings.register(MODULE_ID, 'wikiMesa', {
+    name: 'Mandar a ficha para a wiki',
+    hint: 'Para o mestre: a cada mudança num personagem que veio da wiki (HP, dinheiro, itens, munição…), manda a ficha para a wiki, que mostra em "Na mesa".',
+    scope: 'client', config: true, type: Boolean, default: true
+  });
   game.settings.register(MODULE_ID, 'wikiAvisos', {
     name: 'Avisos da wiki',
     hint: 'Para o mestre: ao entrar e a cada minuto, confere se algum jogador enviou um personagem pela wiki e avisa (uma vez por envio).',
@@ -305,6 +310,8 @@ async function importCharacter(id, ownerId) {
   const delivered = [...r.itens.map(item => item.uid), ...(r.veiculos || []).flatMap(vehicle => [vehicle.uid, ...(vehicle.upgrades || []).map(upgrade => upgrade.uid)])];
   await actor.setFlag(MODULE_ID, 'wiki', { id: doc.id, versao: doc.versao, entregues: delivered, importado: new Date().toISOString(), retrato: portrait.applied });
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } });
+  // A wiki passa a mostrar a ficha da mesa logo depois da importação.
+  await syncActor(actor).catch(() => null);
   return { actor, notes };
 }
 
@@ -423,6 +430,67 @@ export async function atualizarDaWiki(actor) {
   });
 }
 
+// ---------------- Na mesa: a ficha do Foundry de volta para a wiki ----------------
+// Depois da importação o Foundry manda. A cada mudança num ator que veio da wiki (HP, dinheiro, itens, munição…),
+// o Foundry do mestre manda um retrato da ficha para a wiki, alguns segundos depois da última mudança; a ficha da
+// wiki mostra em "Na mesa". Só um mestre manda (o ativo).
+const strip = html => String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+function tableSnapshot(actor) {
+  const s = actor.system;
+  const nameOf = id => actor.items.get(id)?.name || '';
+  const armorSp = (is, key) => Math.max(0, ...actor.itemTypes.armor.filter(item => item.system.equipped === 'equipped' && item.system[is]).map(item => (item.system[key]?.sp || 0) - (item.system[key]?.ablation || 0)));
+  const role = actor.itemTypes.role.find(item => item.name === s.roleInfo?.activeRole) || actor.itemTypes.role[0];
+  const items = actor.items.filter(item => !['skill', 'role', 'criticalInjury'].includes(item.type)).filter(item => {
+    // As bases do próprio corpo (Internal, External, Fashionware) o sistema cria sozinho: ficam de fora.
+    return !(item.type === 'cyberware' && item.system.isFoundational && !item.getFlag(MODULE_ID, 'wikiUid'));
+  }).map(item => {
+    const x = item.system;
+    const entry = { nome: item.name, tipo: item.type, qtd: 'amount' in x ? x.amount : 1, uso: x.equipped || '', uid: item.getFlag(MODULE_ID, 'wikiUid') || '' };
+    if (item.type === 'weapon') Object.assign(entry, { dano: x.damage, cdt: x.rof, pericia: x.weaponSkill, distancia: Boolean(x.isRanged), maos: x.handsReq || 1,
+      pente: x.isRanged ? { atual: x.magazine?.value || 0, max: x.magazine?.max || 0 } : null, municao: (item.getInstalledItems?.('ammo') || [])[0]?.name || '' });
+    if (item.type === 'armor') Object.assign(entry, { cabeca: x.isHeadLocation ? (x.headLocation?.sp || 0) - (x.headLocation?.ablation || 0) : 0, corpo: x.isBodyLocation ? (x.bodyLocation?.sp || 0) - (x.bodyLocation?.ablation || 0) : 0 });
+    if (item.type === 'cyberware') Object.assign(entry, { instalado: Boolean(x.isInstalled), base: Boolean(x.isFoundational) });
+    if (x.installedItems?.list?.length) entry.dentro = x.installedItems.list.map(nameOf).filter(Boolean);
+    return entry;
+  });
+  return {
+    ator: actor.id, nomeAtor: actor.name, quando: new Date().toISOString(),
+    stats: Object.fromEntries(Object.entries(s.stats || {}).map(([key, value]) => [key.toUpperCase(), value.value])),
+    hp: { atual: s.derivedStats?.hp?.value ?? 0, max: s.derivedStats?.hp?.max ?? 0 },
+    humanidade: { atual: s.derivedStats?.humanity?.value ?? 0, max: s.derivedStats?.humanity?.max ?? 0 },
+    sorte: { atual: s.stats?.luck?.value ?? 0, max: s.stats?.luck?.max ?? 0 },
+    sp: { cabeca: armorSp('isHeadLocation', 'headLocation'), corpo: armorSp('isBodyLocation', 'bodyLocation') },
+    dinheiro: s.wealth?.value ?? 0, ip: s.improvementPoints?.value ?? 0, reputacao: s.reputation?.value ?? 0,
+    role: role ? { nome: role.name, rank: role.system.rank, habilidades: (role.system.abilities || []).map(ability => [ability.name, ability.rank]) } : null,
+    pericias: actor.itemTypes.skill.filter(skill => skill.system.level > 0).map(skill => ({ nome: skill.name, nivel: skill.system.level, stat: String(skill.system.stat || '').toUpperCase() })),
+    lesoes: actor.itemTypes.criticalInjury.map(injury => injury.name),
+    moradia: Object.fromEntries(['housing', 'lifeStyle', 'traumaTeam'].map(key => [key, { custo: s.lifestyle?.[key]?.cost || 0, descricao: strip(s.lifestyle?.[key]?.description) }])),
+    itens: items
+  };
+}
+async function syncActor(actor) {
+  const link = actor?.getFlag(MODULE_ID, 'wiki');
+  if (!link) return null;
+  return wikiFetch(`/api/personagens/${link.id}/mesa`, { method: 'PUT', body: tableSnapshot(actor) });
+}
+const syncTimers = new Map();
+let syncWarned = false;
+const isSyncGm = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id) && game.settings.get(MODULE_ID, 'wikiMesa');
+function scheduleSync(actor) {
+  if (!actor || actor.documentName !== 'Actor' || !actor.getFlag(MODULE_ID, 'wiki') || !isSyncGm()) return;
+  clearTimeout(syncTimers.get(actor.id));
+  syncTimers.set(actor.id, setTimeout(() => {
+    syncTimers.delete(actor.id);
+    syncActor(actor).then(() => { syncWarned = false; }).catch(error => { if (!syncWarned) { syncWarned = true; console.warn(`${MODULE_ID} | Na mesa (wiki):`, error.message); } });
+  }, 4000));
+}
+export function registerTableSync() {
+  Hooks.on('updateActor', actor => scheduleSync(actor));
+  for (const hook of ['createItem', 'updateItem', 'deleteItem']) Hooks.on(hook, item => scheduleSync(item.parent));
+  // Ao entrar: manda todos os atores da wiki uma vez (os importados antes desta versão também).
+  Hooks.once('ready', () => { if (isSyncGm()) for (const actor of game.actors) scheduleSync(actor); });
+}
+
 // ---------------- Avisos ----------------
 // Para o mestre: ao entrar e a cada minuto, pergunta à wiki quem foi enviado. Cada envio avisa uma vez neste navegador.
 const SEEN_KEY = `${MODULE_ID}.wiki-avisos`;
@@ -508,4 +576,4 @@ export function registerWikiButtons() {
   });
 }
 
-export const wikiApi = { importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter };
+export const wikiApi = { importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter, enviarParaWiki: syncActor, fichaDaMesa: tableSnapshot };

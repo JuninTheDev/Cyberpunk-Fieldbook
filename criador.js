@@ -621,7 +621,7 @@
     const characters = list.data.personagens || [];
     const mine = characters.filter(item => !item.publico);
     const others = characters.filter(item => item.publico);
-    const card = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}</small></div>
+    const card = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}</small></div>
       <div class="cc-card-actions"><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button><button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
     const publicCard = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
 
@@ -687,64 +687,192 @@
   }
 
   // ================= Página: Ficha =================
-  function sheetHtml(doc, { forPrint = false } = {}) {
+  // ================= Ficha =================
+  // A ficha mostra o mesmo desenho com duas fontes: a criação (antes da importação) ou a mesa (depois, o Foundry manda
+  // e o módulo devolve o estado do ator em doc.mesa). sheetModel junta as duas no mesmo formato.
+  const SKILL_GROUPS = ['Consciência', 'Corpo', 'Controle', 'Educação', 'Luta', 'Performance', 'Armas à distância', 'Sociais', 'Técnicas'];
+  const SPECIAL_GROUP = { Language: 'Educação', Science: 'Educação', 'Martial Arts': 'Luta', 'Play Instrument': 'Performance' };
+  const SPECIAL_RE = /^(Language|Science|Martial Arts|Play Instrument) \((.*)\)$/;
+  // Nome da perícia na ficha, a partir do nome do Foundry ("Science (Biology)" → "Ciência: biologia").
+  function skillLabelOf(doc, name) {
+    if (name === 'Local Expert (Your Home)') return doc.casa ? `Especialista Local (${doc.casa})` : skillPt(name);
+    if (skillInfo.has(name) && !skillInfo.get(name).especial) return skillPt(name); // Linguagem (Streetslang) é perícia comum
+    const special = String(name).match(SPECIAL_RE);
+    return special ? specialName(special[1], special[2] === '?' ? '' : special[2]) : skillPt(name);
+  }
+  const groupOfSkill = name => {
+    if (skillInfo.has(name) && skillInfo.get(name).grupo) return skillInfo.get(name).grupo;
+    const special = String(name).match(SPECIAL_RE);
+    return special ? SPECIAL_GROUP[special[1]] : 'Educação';
+  };
+  // Ataque: arma de distância com REF, corpo a corpo com DEX (+ o nível da perícia da arma).
+  const attackStat = ranged => ranged ? 'REF' : 'DEX';
+
+  function sheetModel(doc) {
+    if (doc.mesa && doc.foundry) return tableModel(doc);
     const stats = computeStats(doc);
     const derived = C.derived(stats);
     const hum = humanity(doc, stats);
+    const mont = assembly(doc);
+    const rows = mont.rows;
+    const nameOf = row => row.nome || row.item.nome;
+    const skills = finalSkills(doc).filter(skill => skill.nivel > 0);
+    const levelOf = name => (skills.find(skill => skill.nome === name) || {}).nivel || 0;
+    const penalty = stat => (['REF', 'DEX'].includes(stat) ? mont.penalidade : 0);
+    const inside = row => rows.filter(item => item.em === row.uid).map(nameOf);
+    const ammoName = uid => { const row = mont.byUid.get(uid); return row ? nameOf(row) : ''; };
+    const loose = row => !row.em || row.em === '-';
+    return {
+      fonte: 'criacao', stats, empMostrada: hum.emp, penalidade: mont.penalidade,
+      hp: { atual: derived.hp, max: derived.hp }, gravemente: derived.gravemente, deathSave: derived.deathSave,
+      humanidade: { atual: hum.atual, max: hum.max }, sorte: { atual: stats.LUCK || 0, max: stats.LUCK || 0 }, sp: mont.sp,
+      andar: derived.andar, correr: derived.correr, dinheiro: Math.max(0, money(doc).saldo), ip: null, reputacao: null, lesoes: [],
+      armas: rows.filter(row => row.tipo === 'arma').map(row => {
+        const a = row.item.arma;
+        const stat = attackStat(a.distancia);
+        const loaded = row.municao && row.municao !== '-';
+        return { nome: nameOf(row), qtd: row.qtd, pericia: skillPt(a.pericia), base: (stats[stat] || 0) - penalty(stat) + levelOf(a.pericia), stat, dano: a.dano, cdt: a.cdt, maos: a.maos,
+          pente: a.distancia && a.pente ? `${loaded ? a.pente : 0}/${a.pente}` : '', municao: loaded ? ammoName(row.municao) : '', dentro: inside(row), uso: row.uso };
+      }),
+      armaduras: rows.filter(row => row.tipo === 'armadura').map(row => ({ nome: nameOf(row), cabeca: row.item.armadura.cabeca, corpo: row.item.armadura.corpo, escudo: row.item.armadura.escudo, uso: row.uso })),
+      pericias: skills.map(skill => ({ label: skill.base ? specialName(skill.base, skill.tipo) : skillLabelOf(doc, skill.nome), grupo: skill.base ? SPECIAL_GROUP[skill.base] : groupOfSkill(skill.nome), stat: skill.stat, nivel: skill.nivel, base: skill.nivel + (stats[skill.stat] || 0) - penalty(skill.stat), origem: skill.gratis })),
+      cyber: rows.filter(row => row.tipo === 'cyberBase').map(row => ({ nome: nameOf(row), dentro: inside(row) })),
+      noCorpo: rows.filter(row => row.tipo === 'cyberOpcao' && !NEEDS_BASE.includes(row.item.cyber.tipo)).map(nameOf),
+      semBase: rows.filter(row => row.tipo === 'cyberOpcao' && NEEDS_BASE.includes(row.item.cyber.tipo) && loose(row)).map(nameOf),
+      decks: rows.filter(row => row.tipo === 'deck').map(row => ({ nome: nameOf(row), ativo: row.uso === 'equipado', dentro: inside(row) })),
+      outros: rows.filter(row => ['item', 'municao', 'roupa'].includes(row.tipo) || (['acessorio', 'deckItem'].includes(row.tipo) && loose(row)))
+        .map(row => ({ nome: nameOf(row), qtd: row.qtd, uso: row.tipo === 'municao' ? '' : row.uso, roupa: row.tipo === 'roupa', origem: row.origem })),
+      veiculos: doc.role === 'nomad' ? motorpool(doc).veiculos.map(entry => ({ nome: entry.veiculo.nome, dentro: entry.upgrades.map(item => item.upgrade.nome) })) : [],
+      habilidades: (abilitySpec(doc) || { itens: [] }).itens.map(item => [item.nome, Number((doc.habilidades || {})[item.id]) || 0, item.desc])
+    };
+  }
+
+  // A ficha da mesa: o que o Foundry mandou (nomes e números do Foundry).
+  function tableModel(doc) {
+    const m = doc.mesa;
+    const stats = m.stats || {};
+    const level = name => ((m.pericias || []).find(skill => skill.nome === name) || {}).nivel || 0;
+    const items = m.itens || [];
+    const cyberNames = new Set(items.filter(item => item.tipo === 'cyberware' && item.base).flatMap(item => item.dentro || []));
+    const deckNames = new Set(items.filter(item => item.tipo === 'cyberdeck').flatMap(item => item.dentro || []));
+    const weaponInside = new Set(items.filter(item => item.tipo === 'weapon').flatMap(item => item.dentro || []));
+    const vehicleInside = new Set(items.filter(item => item.tipo === 'vehicle').flatMap(item => item.dentro || []));
+    const uso = item => ({ equipped: 'equipado', carried: 'carregando', owned: 'guardado' })[item.uso] || '';
+    const spec = abilitySpec(doc);
+    const abilityName = name => ((spec && spec.itens.find(item => item.id === name)) || {}).nome || name;
+    const body = Number(stats.BODY) || 0;
+    const will = Number(stats.WILL) || 0;
+    return {
+      fonte: 'mesa', quando: m.quando || m.recebido, stats, empMostrada: stats.EMP, penalidade: 0,
+      hp: m.hp || { atual: 0, max: 0 }, gravemente: Math.ceil((m.hp?.max || 0) / 2), deathSave: body,
+      humanidade: m.humanidade || { atual: 0, max: 0 }, sorte: m.sorte || { atual: 0, max: 0 }, sp: m.sp || { cabeca: 0, corpo: 0 },
+      andar: (Number(stats.MOVE) || 0) * 2, correr: (Number(stats.MOVE) || 0) * 4, dinheiro: m.dinheiro || 0, ip: m.ip ?? null, reputacao: m.reputacao ?? null, lesoes: m.lesoes || [], vontade: will,
+      armas: items.filter(item => item.tipo === 'weapon').map(item => {
+        const stat = attackStat(item.distancia);
+        return { nome: item.nome, qtd: 1, pericia: skillPt(item.pericia), base: (Number(stats[stat]) || 0) + level(item.pericia), stat, dano: item.dano, cdt: item.cdt, maos: item.maos,
+          pente: item.pente && item.pente.max ? `${item.pente.atual}/${item.pente.max}` : '', municao: item.municao || '', dentro: (item.dentro || []).filter(name => name !== item.municao), uso: uso(item) };
+      }),
+      armaduras: items.filter(item => item.tipo === 'armor').map(item => ({ nome: item.nome, cabeca: item.cabeca, corpo: item.corpo, escudo: 0, uso: uso(item) })),
+      pericias: (m.pericias || []).map(skill => ({ label: skillLabelOf(doc, skill.nome), grupo: groupOfSkill(skill.nome), stat: skill.stat, nivel: skill.nivel, base: skill.nivel + (Number(stats[skill.stat]) || 0) })),
+      cyber: items.filter(item => item.tipo === 'cyberware' && item.base).map(item => ({ nome: item.nome, dentro: item.dentro || [] })),
+      noCorpo: items.filter(item => item.tipo === 'cyberware' && !item.base && item.instalado && !cyberNames.has(item.nome)).map(item => item.nome),
+      semBase: items.filter(item => item.tipo === 'cyberware' && !item.base && !item.instalado).map(item => item.nome),
+      decks: items.filter(item => item.tipo === 'cyberdeck').map(item => ({ nome: item.nome, ativo: item.uso === 'equipped', dentro: item.dentro || [] })),
+      outros: items.filter(item => ['gear', 'ammo', 'clothing', 'drug'].includes(item.tipo) || (['program', 'itemUpgrade'].includes(item.tipo) && !deckNames.has(item.nome) && !weaponInside.has(item.nome) && !vehicleInside.has(item.nome)))
+        .map(item => ({ nome: item.nome, qtd: item.qtd, uso: item.tipo === 'ammo' ? '' : uso(item), roupa: item.tipo === 'clothing' })),
+      veiculos: items.filter(item => item.tipo === 'vehicle').map(item => ({ nome: item.nome, dentro: item.dentro || [] })),
+      habilidades: ((m.role || {}).habilidades || []).filter(([name]) => !/Skill$/.test(name)).map(([name, rank]) => [abilityName(name), rank, ''])
+    };
+  }
+
+  function sheetHtml(doc) {
+    const model = sheetModel(doc);
+    const mesa = model.fonte === 'mesa';
     const role = roleById(doc.role) || {};
     const spec = (role.especializacoes || []).find(item => item.id === doc.especializacao);
-    const cash = money(doc);
-    const statCell = stat => `<div class="cc-stat"><span>${stat}</span><b>${stat === 'EMP' && hum.emp !== stats.EMP ? `${hum.emp}<small>/${stats.EMP}</small>` : stats[stat] || '—'}</b></div>`;
-    const skills = finalSkills(doc).filter(skill => skill.nivel > 0).sort((a, b) => a.stat.localeCompare(b.stat) || a.nome.localeCompare(b.nome));
-    const skillLabel = skill => skill.base ? specialName(skill.base, skill.tipo) : (skill.nome === 'Local Expert (Your Home)' && doc.casa ? `Especialista Local (${doc.casa})` : skillPt(skill.nome));
-    const mont = assembly(doc);
-    const inv = mont.rows;
-    // O que a montagem diz de cada item: munição, o que tem dentro, onde está e se não está equipado.
-    const nameOf = uid => { const row = mont.byUid.get(uid); return row ? row.nome || row.item.nome : ''; };
-    const mountNote = row => {
-      const bits = [];
-      if (row.tipo === 'arma' && row.item.arma.pente) bits.push(row.municao && row.municao !== '-' ? `carregada com ${nameOf(row.municao)}` : 'descarregada');
-      const inside = inv.filter(item => item.em === row.uid).map(item => item.nome || item.item.nome);
-      if (inside.length) bits.push(`com ${inside.join(', ')}`);
-      if (row.em && row.em !== '-') bits.push(`em ${nameOf(row.em)}`);
-      if (row.tipo === 'armadura') bits.push(row.uso === 'equipado' ? 'vestida' : USOS[row.uso].toLowerCase());
-      else if (['arma', 'roupa', 'deck'].includes(row.tipo) && row.uso !== 'equipado') bits.push(USOS[row.uso].toLowerCase());
-      return bits.length ? ` <small class="cc-mount-note">${esc(bits.join(' · '))}</small>` : '';
-    };
-    const group = (title, filter) => {
-      const rows = inv.filter(filter);
-      return rows.length ? `<h4>${title}</h4><ul class="cc-items">${rows.map(entry => `<li><b>${esc(entry.nome || entry.item.nome)}</b>${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}${entry.item.resumo ? ` <small>${esc(entry.item.resumo)}</small>` : ''}${entry.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (2077)</small>' : ''}${entry.origem === 'role' ? ' <small class="cc-ok">bônus da Role</small>' : ''}${mountNote(entry)}</li>`).join('')}</ul>` : '';
-    };
     const lp = lifepathTexts(doc);
     const lpRows = [...lifepathFields.map(([, label, field]) => [label, lp[field]]), ['Amigos', lp.friends], ['Inimigos', lp.enemies], ['Amores trágicos', lp.tragicLoveAffairs], ['Lifepath da Role', lp.roleLifepath]].filter(([, text]) => text);
-    const home = housing(doc);
-    // Sub-habilidades e veículos da família: o que a Role tem além do Rank.
-    const abilities = abilitySpec(doc);
-    const fleet = doc.role === 'nomad' ? motorpool(doc).veiculos : [];
-    const roleBox = abilities || fleet.length ? `<div class="section cc-box" data-toc="Role"><h3>${esc(role.habilidade || 'Role')} Rank 4</h3>
-      ${abilities ? `<h4>${esc(abilities.titulo)}</h4><ul class="cc-items">${abilities.itens.map(item => `<li><b>${esc(item.nome)}</b> ${Number((doc.habilidades || {})[item.id]) || 0}<small> · ${esc(item.desc)}</small></li>`).join('')}</ul>` : ''}
-      ${fleet.length ? `<h4>Veículos da família</h4><ul class="cc-items">${fleet.map(entry => `<li><b>${esc(entry.veiculo.nome)}</b>${entry.upgrades.length ? `: ${entry.upgrades.map(item => esc(item.upgrade.nome)).join(', ')}` : ''}</li>`).join('')}</ul><p class="note-status">Um de cada vez com você; o resto fica com a família.</p>` : ''}</div>` : '';
-    return `<div class="cc-sheet">
-      <div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome)}<h3>${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
-        <p><b>${esc(role.nome || 'Sem Role')}</b> · ${esc(role.habilidade || '')} Rank 4${spec ? ` · ${esc(spec.nome)}` : ''} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}${doc.foundry ? ` · <b class="cc-ok">No Foundry desde ${new Date(doc.foundry.importado).toLocaleDateString('pt-BR')}</b>` : ''}</p>
-        ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}</div>
-      ${roleBox}
-      <div class="section cc-box" data-toc="STATs"><h3>STATs</h3><div class="cc-stats">${statKeys.map(statCell).join('')}</div>
-        <p class="cc-derived"><span>HP <b>${derived.hp}</b></span><span>Gravemente Ferido <b>${derived.gravemente}</b></span><span>Death Save <b>${derived.deathSave}</b></span><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Andar <b>${derived.andar} m</b></span><span>Correr <b>${derived.correr} m</b></span><span>SP cabeça <b>${mont.sp.cabeca}</b></span><span>SP corpo <b>${mont.sp.corpo}</b></span></p>${mont.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${mont.penalidade} em REF, DEX e MOVE.</p>` : ''}</div>
-      <div class="section cc-box" data-toc="Perícias"><h3>Perícias</h3><div class="table-wrap dense"><table><thead><tr><th>Perícia</th><th>STAT</th><th>Nível</th><th>Base</th></tr></thead><tbody>${skills.map(skill => `<tr><td>${esc(skillLabel(skill))}${skill.gratis ? ' <small>(origem)</small>' : ''}</td><td>${skill.stat}</td><td>${skill.nivel}</td><td><b>${skill.nivel + (stats[skill.stat] || 0)}</b></td></tr>`).join('')}</tbody></table></div></div>
-      <div class="section cc-box" data-toc="Equipamento"><h3>Equipamento e cyberware</h3>
-        ${group('Armas', entry => entry.item.cat === 'armas')}${group('Munição', entry => entry.item.cat === 'municao')}${group('Armaduras', entry => entry.item.cat === 'armaduras')}
-        ${group('Cyberware', entry => entry.item.cat === 'cyberware')}${group('Netrunning', entry => entry.item.cat === 'netrunning')}${group('Equipamento', entry => ['equipamento', 'acessorios', 'drogas'].includes(entry.item.cat))}${group('Moda', entry => entry.item.cat === 'moda')}
-        <p><b>Dinheiro:</b> ${eb(Math.max(0, cash.saldo))}</p></div>
-      <div class="section cc-box" data-toc="Lifepath"><h3>Lifepath</h3>${lpRows.length ? `<dl class="cc-lifepath">${lpRows.map(([label, text]) => `<dt>${label}</dt><dd>${esc(text)}</dd>`).join('')}</dl>` : '<p class="note-status">Ainda não preenchido.</p>'}</div>
-      <div class="section cc-box" data-toc="Moradia"><h3>Moradia e estilo de vida</h3>
-        <dl class="cc-lifepath"><dt>Moradia</dt><dd>${esc(home.moradia)}${home.aluguel ? ` · ${eb(home.aluguel)}/mês` : ' · sem aluguel'}</dd>
+    const bar = (now, max) => max ? ` <span class="cc-bar" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, Math.round(now / max * 100)))}%"></span></span>` : '';
+    const vital = (label, value, extra = '', bad = false) => `<div class="cc-vital${bad ? ' cc-vital-bad' : ''}"><span>${label} </span><b>${value}</b>${extra}</div>`;
+    const usoTag = uso => uso && uso !== 'equipado' && USOS[uso] ? ` <small class="cc-mount-note">${USOS[uso].toLowerCase()}</small>` : '';
+    const names = list => list.map(name => esc(name)).join(', ');
+    const statCell = stat => `<div class="cc-stat"><span>${stat}</span><b>${stat === 'EMP' && !mesa && model.empMostrada !== model.stats.EMP ? `${model.empMostrada}<small>/${model.stats.EMP}</small>` : model.stats[stat] || '—'}</b></div>`;
+    const hurt = model.hp.atual < model.hp.max;
+    const rank = mesa && doc.mesa.role ? doc.mesa.role.rank : 4;
+    const source = mesa
+      ? `<p class="cc-source cc-ok">Na mesa: a ficha do Foundry${model.quando ? `, atualizada em ${when(model.quando)}` : ''}. Os números agora mudam lá.</p>`
+      : `<p class="cc-source">Ficha da criação.${doc.foundry ? ' O Foundry ainda não mandou a ficha da mesa.' : ' Depois que o mestre importar no Foundry, esta ficha passa a mostrar a mesa.'}</p>`;
+
+    const vitals = `<div class="section cc-box" data-toc="Vitais"><h3>Vitais</h3><div class="cc-vitals">
+        ${vital('HP', mesa ? `${model.hp.atual}/${model.hp.max}` : model.hp.max, bar(model.hp.atual, model.hp.max), hurt)}
+        ${vital('Gravemente Ferido', model.gravemente)}${vital('Death Save', model.deathSave)}
+        ${vital('Humanidade', `${model.humanidade.atual}/${model.humanidade.max}`, bar(model.humanidade.atual, model.humanidade.max))}
+        ${vital('Sorte', mesa ? `${model.sorte.atual}/${model.sorte.max}` : model.sorte.max)}
+        ${vital('SP cabeça', model.sp.cabeca)}${vital('SP corpo', model.sp.corpo)}
+        ${vital('Andar', `${model.andar} m`)}${vital('Correr', `${model.correr} m`)}
+        ${vital('Dinheiro', eb(model.dinheiro))}${model.ip !== null ? vital('Pontos de Melhoria', model.ip) : ''}${model.reputacao !== null ? vital('Reputação', model.reputacao) : ''}</div>
+        ${model.lesoes.length ? `<p class="cc-warn">Lesões críticas: ${names(model.lesoes)}.</p>` : ''}
+        <h4>STATs</h4><div class="cc-stats">${statKeys.map(statCell).join('')}</div>
+        ${model.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${model.penalidade} em REF, DEX e MOVE (já descontado no ataque e nas perícias).</p>` : ''}</div>`;
+
+    const worn = model.armaduras.filter(item => item.uso === 'equipado');
+    const armorText = item => [item.cabeca ? `SP ${item.cabeca} na cabeça` : '', item.corpo ? `SP ${item.corpo} no corpo` : '', item.escudo ? `escudo ${item.escudo} HP` : ''].filter(Boolean).join(', ');
+    const weaponNote = arma => [arma.pente ? (arma.municao ? `carregada com ${arma.municao}` : 'descarregada') : '', arma.dentro.length ? `com ${arma.dentro.join(', ')}` : ''].filter(Boolean).join(' · ');
+    const weaponRow = arma => `<tr><td><b>${esc(arma.nome)}</b>${arma.qtd > 1 ? ` ×${arma.qtd}` : ''}${usoTag(arma.uso)}<br><small>${esc(weaponNote(arma))}</small></td>
+        <td><b>${arma.base}</b> <small>${arma.stat} + ${esc(arma.pericia)}</small></td><td>${esc(arma.dano || '')}</td><td>${arma.cdt || ''}</td><td>${arma.pente || '—'}</td><td>${arma.maos || 1}</td></tr>`;
+    const carried = model.armaduras.filter(item => item.uso !== 'equipado');
+    const combat = `<div class="section cc-box" data-toc="Combate"><h3>Combate</h3>
+      ${model.armas.length ? `<div class="table-wrap dense"><table class="cc-weapons"><thead><tr><th>Arma</th><th>Ataque</th><th>Dano</th><th>CDT</th><th>Pente</th><th>Mãos</th></tr></thead><tbody>${model.armas.map(weaponRow).join('')}</tbody></table></div>` : '<p class="note-status">Nenhuma arma.</p>'}
+      <p><b>Armadura:</b> ${worn.length ? worn.map(item => `${esc(item.nome)} <small>(${armorText(item)})</small>`).join(' · ') : 'nenhuma vestida'}${carried.length ? ` <small>· carregando: ${names(carried.map(item => item.nome))}</small>` : ''}</p></div>`;
+
+    const abilityTitle = (abilitySpec(doc) || {}).titulo || 'Sub-habilidades';
+    const roleBox = model.habilidades.length || model.veiculos.length || spec ? `<div class="section cc-box" data-toc="Role"><h3>${esc(role.habilidade || 'Role')} Rank ${rank}${spec ? ` · ${esc(spec.nome)}` : ''}</h3>
+      ${spec ? `<p>Especialização: soma o Rank em ${spec.pericias.map(skillPt).join(', ')}.</p>` : ''}
+      ${model.habilidades.length ? `${abilityTitle !== role.habilidade ? `<h4>${esc(abilityTitle)}</h4>` : ''}<ul class="cc-items">${model.habilidades.map(([name, value, desc]) => `<li><b>${esc(name)}</b> ${value}${desc ? `<small> · ${esc(desc)}</small>` : ''}</li>`).join('')}</ul>` : ''}
+      ${model.veiculos.length ? `<h4>Veículos da família</h4><ul class="cc-items">${model.veiculos.map(item => `<li><b>${esc(item.nome)}</b>${item.dentro.length ? `: ${names(item.dentro)}` : ''}</li>`).join('')}</ul><p class="note-status">Um de cada vez com você; o resto fica com a família.</p>` : ''}</div>` : '';
+
+    const byGroup = SKILL_GROUPS.map(group => [group, model.pericias.filter(skill => skill.grupo === group).sort((a, b) => a.label.localeCompare(b.label, 'pt'))]).filter(([, list]) => list.length);
+    const skillRow = skill => `<tr><td>${esc(skill.label)}${skill.origem ? ' <small>(origem)</small>' : ''}</td><td><small>${skill.stat}</small></td><td>${skill.nivel}</td><td><b>${skill.base}</b></td></tr>`;
+    const skills = `<div class="section cc-box" data-toc="Perícias"><h3>Perícias</h3><div class="cc-skill-groups">${byGroup.map(([group, list]) => `<div class="cc-skill-group"><h4>${group}</h4><table class="cc-skill-table"><tbody>${list.map(skillRow).join('')}</tbody></table></div>`).join('')}</div>
+      <p class="note-status">Nível e, em negrito, a base do teste (STAT + nível). Some 1d10.</p></div>`;
+
+    const tree = list => `<ul class="cc-tree">${list.map(item => `<li><b>${esc(item.nome)}</b>${item.ativo ? ' <small class="cc-ok">deck ativo</small>' : ''}${item.dentro.length ? `<ul>${item.dentro.map(name => `<li>${esc(name)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>`;
+    const nothingCyber = !model.cyber.length && !model.noCorpo.length && !model.decks.length;
+    const cyber = `<div class="section cc-box" data-toc="Cyberware"><h3>Cyberware e netrunning</h3>
+      ${model.cyber.length ? tree(model.cyber) : ''}${model.noCorpo.length ? `<p><b>No corpo:</b> ${names(model.noCorpo)}.</p>` : ''}
+      ${model.semBase.length ? `<p class="cc-warn">Sem base, fora do corpo: ${names(model.semBase)}.</p>` : ''}
+      ${model.decks.length ? `<h4>Cyberdeck</h4>${tree(model.decks)}` : ''}${nothingCyber ? '<p class="note-status">Nenhum.</p>' : ''}</div>`;
+
+    const clothes = model.outros.filter(item => item.roupa);
+    const gear = model.outros.filter(item => !item.roupa);
+    const itemLine = item => `<li><b>${esc(item.nome)}</b>${item.qtd > 1 ? ` ×${item.qtd}` : ''}${usoTag(item.uso)}${item.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (2077)</small>' : ''}${item.origem === 'role' ? ' <small class="cc-ok">bônus da Role</small>' : ''}</li>`;
+    const equipment = `<div class="section cc-box" data-toc="Equipamento"><h3>Equipamento</h3>
+      ${gear.length ? `<ul class="cc-items cc-columns">${gear.map(itemLine).join('')}</ul>` : '<p class="note-status">Nada além das armas.</p>'}
+      ${clothes.length ? `<h4>Moda</h4><ul class="cc-items cc-columns">${clothes.map(itemLine).join('')}</ul>` : ''}</div>`;
+
+    let homeBox;
+    if (mesa && doc.mesa.moradia) {
+      const m = doc.mesa.moradia;
+      const line = (label, item) => `<dt>${label}</dt><dd>${esc(item.descricao || '—')}${item.custo ? ` · ${eb(item.custo)}/mês` : ''}</dd>`;
+      const total = (m.housing?.custo || 0) + (m.lifeStyle?.custo || 0) + (m.traumaTeam?.custo || 0);
+      homeBox = `<dl class="cc-lifepath">${line('Moradia', m.housing || {})}${line('Estilo de vida', m.lifeStyle || {})}${line('Trauma Team', m.traumaTeam || {})}<dt>Por mês</dt><dd><b>${eb(total)}</b>, no dia 1º</dd></dl>`;
+    } else {
+      const home = housing(doc);
+      homeBox = `<dl class="cc-lifepath"><dt>Moradia</dt><dd>${esc(home.moradia)}${home.aluguel ? ` · ${eb(home.aluguel)}/mês` : ' · sem aluguel'}</dd>
           <dt>Estilo de vida</dt><dd>${esc(home.estilo)}${home.custoEstilo ? ` · ${eb(home.custoEstilo)}/mês` : ''}</dd>
           <dt>Trauma Team</dt><dd>${home.traumaTeam ? `${esc(home.traumaTeam.nome)} · ${eb(home.traumaTeam.custo)}/mês` : 'Sem cobertura'}</dd>
           ${home.moda ? `<dt>Moda</dt><dd>${esc(home.moda.nome)}: ${esc(home.moda.desc)}</dd>` : ''}
-          <dt>Por mês</dt><dd><b>${eb(home.mensal)}</b>, no dia 1º${home.primeiroMes ? ` · o primeiro mês custou ${eb(home.primeiroMes)} do dinheiro inicial` : ' · o primeiro mês foi de graça'}</dd></dl></div>
-      ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}
-      ${forPrint ? '' : ''}</div>`;
+          <dt>Por mês</dt><dd><b>${eb(home.mensal)}</b>, no dia 1º${home.primeiroMes ? ` · o primeiro mês custou ${eb(home.primeiroMes)} do dinheiro inicial` : ' · o primeiro mês foi de graça'}</dd></dl>`;
+    }
+
+    return `<div class="cc-sheet">
+      <div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome)}<h3>${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
+        <p><b>${esc(role.nome || 'Sem Role')}</b> · ${esc(role.habilidade || '')} Rank ${rank}${spec ? ` · ${esc(spec.nome)}` : ''} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}${doc.foundry ? ` · <b class="cc-ok">No Foundry desde ${new Date(doc.foundry.importado).toLocaleDateString('pt-BR')}</b>` : ''}</p>
+        ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}${source}</div>
+      ${vitals}${combat}${roleBox}${skills}${cyber}${equipment}
+      <div class="section cc-box" data-toc="Moradia"><h3>Moradia e estilo de vida</h3>${homeBox}</div>
+      <div class="section cc-box" data-toc="Lifepath"><h3>Lifepath</h3>${lpRows.length ? `<dl class="cc-lifepath">${lpRows.map(([label, text]) => `<dt>${label}</dt><dd>${esc(text)}</dd>`).join('')}</dl>` : '<p class="note-status">Ainda não preenchido.</p>'}</div>
+      ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}</div>`;
   }
 
   async function setupSheet(content, helpers) {
@@ -760,8 +888,23 @@
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
     if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), a Role (${esc(roleName(doc.role))}) e o retrato.</div>`; return; }
-    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}${sheetHtml(doc)}`;
+    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}<div data-cc-sheet-body>${sheetHtml(doc)}</div>`;
+    // Personagem no Foundry: a ficha da mesa muda durante a sessão; confere a cada 30 segundos enquanto a página estiver aberta.
+    if (doc.foundry) {
+      let seen = (doc.mesa || {}).recebido || '';
+      const refresh = setInterval(async () => {
+        if (token !== renderToken || !document.body.contains(root)) return clearInterval(refresh);
+        const fresh = await api(`api/personagens/${id}`);
+        const next = fresh.status === 200 && fresh.data.personagem;
+        if (!next || ((next.mesa || {}).recebido || '') === seen) return;
+        seen = (next.mesa || {}).recebido || '';
+        Object.assign(doc, next);
+        const body = root.querySelector('[data-cc-sheet-body]');
+        if (body) body.innerHTML = sheetHtml(doc);
+      }, 30000);
+    }
     root.onclick = event => {
+      if (event.target.closest('[data-cc-print]')) return window.print();
       if (event.target.closest('[data-cc-send]')) return sendToGm(doc, papel, root);
       if (event.target.closest('[data-cc-edit]')) helpers.openPage('criador', { section: id });
       if (event.target.closest('[data-cc-shop]')) helpers.openPage('loja', { section: id });
@@ -1002,9 +1145,14 @@
     // Guarda só o que o jogador mudou na montagem (o resto sai do padrão).
     const setMount = (uid, field, value) => { doc.montagem = doc.montagem || {}; doc.montagem[uid] = { ...(doc.montagem[uid] || {}), [field]: value }; };
     const papel = me.data.papel;
+    // Depois de importado no Foundry, o Foundry manda: o que é regra fica só para ver. Continuam abertos nome, apelido,
+    // retrato, aparência, notas e Lifepath (o servidor garante o mesmo).
+    const locked = Boolean(doc.foundry && doc.foundry.importado);
+    const lockBox = html => (locked ? `<fieldset disabled class="cc-locked">${html}</fieldset>` : html);
 
     root.innerHTML = `<div class="cc-steps" role="tablist">${steps.map((name, index) => `<button type="button" class="map-filter" data-step="${index + 1}">${index + 1}. ${name}</button>`).join('')}</div>
       <p class="cc-save" id="cc-save" role="status"></p><div id="cc-recover"></div>
+      ${locked ? '<div class="callout cc-locked-note"><b>Este personagem já está no Foundry.</b> STATs, perícias, Role, equipamento e moradia agora mudam lá, pelo mestre; a ficha mostra a mesa. Aqui você ainda muda o nome, o retrato, a aparência, as notas e o Lifepath.</div>' : ''}
       <div class="cc-layout"><div class="cc-main"><div id="cc-help"></div><div id="cc-step"></div>
       <p class="cc-toolbar"><button class="action" type="button" data-nav="-1">Voltar</button><button class="action" type="button" data-nav="1">Próximo</button><button class="action" type="button" data-cc-sheet>Ver a ficha</button></p></div>
       <div class="cc-summary" role="complementary" aria-label="Resumo do personagem"><details id="cc-summary"></details></div></div>`;
@@ -1052,7 +1200,8 @@
       root.scrollIntoView({ block: 'start' });
     }
     function draw() {
-      stepEl.innerHTML = [drawIdentity, drawStats, drawSkills, drawLifepath, drawGear, drawHousing, drawReview][step - 1]();
+      const html = [drawIdentity, drawStats, drawSkills, drawLifepath, drawGear, drawHousing, drawReview][step - 1]();
+      stepEl.innerHTML = [2, 3, 5].includes(step) ? lockBox(html) : html;
       if (step === 5 && doc.metodo === 'pacote') renderShop(stepEl.querySelector('#cc-shop'), doc, { onChange: changed, readOnly: Boolean(doc.foundry) });
       if (helpEl.dataset.step !== String(step)) { helpEl.dataset.step = String(step); drawHelp(); }
       if (helpers.linkGlossary) helpers.linkGlossary(stepEl);
@@ -1069,11 +1218,11 @@
           <label>Ou cole um link de imagem (https)<input data-campo="retratoLink" value="${esc(doc.retratoLink || '')}" maxlength="500" placeholder="https://…" inputmode="url"></label>
           <p class="cc-msg" data-portrait-msg role="status"></p>
           <p class="note-status">A imagem é reduzida para 512 px antes de ir para a wiki. Se houver imagem enviada, ela vale no lugar do link. O retrato vai para a ficha e o token no Foundry.</p></div></div>`)}
-        ${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
+        ${lockBox(`${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
           <p><button class="action" type="button" data-page="roles2077">Ler Roles de 2077</button></p>`)}
         ${drawRoleAbilities()}${drawMotorpool()}
-        ${box('Método de criação', `<div class="cc-choices">${C.methods.map(item => `<button type="button" class="cc-choice${item.id === doc.metodo ? ' active' : ''}" data-method="${item.id}"><b>${item.nome}</b><span>${esc(item.resumo)}</span></button>`).join('')}</div>`)}`;
+        ${box('Método de criação', `<div class="cc-choices">${C.methods.map(item => `<button type="button" class="cc-choice${item.id === doc.metodo ? ' active' : ''}" data-method="${item.id}"><b>${item.nome}</b><span>${esc(item.resumo)}</span></button>`).join('')}</div>`)}`)}`;
     }
     // Sub-habilidades (Solo, Tech, Medtech): − e + em cada uma, até o máximo, com os pontos que faltam.
     function drawRoleAbilities() {
@@ -1334,11 +1483,11 @@
       const modas = `<select data-moda aria-label="Estilo de moda">${H.modas.map(item => `<option value="${item.id}"${item.id === modaId ? ' selected' : ''}>${esc(item.nome)}</option>`).join('')}</select>${home.moda ? `<p class="note-status">${esc(home.moda.desc)}</p>` : ''}`;
       const cash = money(doc);
       const total = `<p class="cc-derived cc-housing-total"><span>Por mês <b>${eb(home.mensal)}</b></span><span>1º mês <b>${home.primeiroMes ? eb(home.primeiroMes) : 'grátis'}</b></span>${doc.metodo ? `<span>Dinheiro depois disso <b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b></span>` : ''}</p>`;
-      return `${box('Quanto custa', `${total}<p class="note-status">No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro. Em 2077 acabou o Kibble: o Prepak genérico custa o mesmo.</p>`)}
+      return `${lockBox(`${box('Quanto custa', `${total}<p class="note-status">No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro. Em 2077 acabou o Kibble: o Prepak genérico custa o mesmo.</p>`)}
         ${box('Moradia', `<div class="cc-options">${homes}</div>`)}
         ${box('Estilo de vida', `<div class="cc-options">${lives}</div>`)}
         ${box('Trauma Team', `<div class="cc-options">${traumas}</div><p class="note-status">Com Agent e Biomonitor, a Trauma Team é chamada sozinha quando o HP fica abaixo do BODY ou há desmembramento (RED p. 223).</p>`)}
-        ${box('Estilo de moda', `<p>O visual do personagem nas quatro modas de 2077 (suplemento p. 7–8). Ajuda a escolher as roupas na loja e a descrever o personagem.</p>${modas}`)}
+        ${box('Estilo de moda', `<p>O visual do personagem nas quatro modas de 2077 (suplemento p. 7–8). Ajuda a escolher as roupas na loja e a descrever o personagem.</p>${modas}`)}`)}
         ${box('Notas', `<label>Aparência da casa, contatos, o que quiser<textarea data-campo="notas" rows="3" maxlength="5000">${esc(doc.notas)}</textarea></label>`)}`;
     }
 

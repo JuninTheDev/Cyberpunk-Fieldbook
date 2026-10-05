@@ -467,6 +467,43 @@ module.exports = async ({ edge, servidores, r }) => {
     const botoes = await edge.evaluate(`document.querySelectorAll('[data-shop-buy]').length`);
     return [/a loja inicial fechou/.test(t) && botoes === 0, `${botoes} botões de comprar`];
   });
+  // ---------- Depois do Foundry: o Foundry manda ----------
+  await r.passo('depois do Foundry: o criador avisa e trava o que é regra; o nome continua aberto', async () => {
+    await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(pacoteId)} })`);
+    await edge.sleep(1200);
+    const aviso = await texto('.cc-locked-note');
+    await passo(1);
+    const nomeLivre = await edge.evaluate(`!document.querySelector('[data-campo="nome"]').closest('fieldset[disabled]')`);
+    const roleTravada = await edge.evaluate(`!!document.querySelector('[data-role]').closest('fieldset[disabled]')`);
+    await passo(2);
+    const statsTravados = await edge.evaluate(`!!document.querySelector('#cc-step fieldset.cc-locked[disabled]')`);
+    return [/já está no Foundry/.test(aviso) && nomeLivre && roleTravada && statsTravados, `aviso ${Boolean(aviso)} · nome livre ${nomeLivre} · Role travada ${roleTravada} · STATs travados ${statsTravados}`];
+  });
+  await r.passo('depois do Foundry: o servidor não aceita do jogador STATs nem itens; aceita notas e Lifepath', async () => {
+    const res = await edge.evaluate(`(async () => {
+      const atual = (await (await fetch('api/personagens/${pacoteId}')).json()).personagem;
+      const body = { ...atual, stats: { ...atual.stats, INT: 1 }, itens: [], notas: 'nota depois do Foundry',
+        resultado: { ...atual.resultado, stats: { ...atual.resultado.stats, INT: 1 }, lifepath: { ...atual.resultado.lifepath, culturalOrigin: 'Origem mudada' } } };
+      const salvo = (await (await fetch('api/personagens/${pacoteId}', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json()).personagem;
+      return { int: salvo.stats.INT, antes: atual.stats.INT, itens: salvo.itens.length, antesItens: atual.itens.length, rint: salvo.resultado.stats.INT, notas: salvo.notas, origem: salvo.resultado.lifepath.culturalOrigin };
+    })()`);
+    return [res.int === res.antes && res.itens === res.antesItens && res.rint !== 1 && res.notas === 'nota depois do Foundry' && res.origem === 'Origem mudada', JSON.stringify(res)];
+  });
+  await r.passo('ficha da mesa: mostra o estado do Foundry (HP ferido, pente, lesão, Pontos de Melhoria, ataque)', async () => {
+    await post(gm, `/api/personagens/${pacoteId}/mesa`, {
+      ator: 'abc', quando: new Date().toISOString(), stats: { INT: 7, REF: 8, DEX: 6, TECH: 6, COOL: 5, WILL: 5, LUCK: 5, MOVE: 6, BODY: 5, EMP: 5 },
+      hp: { atual: 20, max: 40 }, humanidade: { atual: 50, max: 60 }, sorte: { atual: 3, max: 5 }, sp: { cabeca: 11, corpo: 11 }, dinheiro: 123, ip: 10, reputacao: 1,
+      pericias: [{ nome: 'Handgun', nivel: 6, stat: 'REF' }, { nome: 'Language (Streetslang)', nivel: 2, stat: 'INT' }], lesoes: ['Costela quebrada'],
+      itens: [{ nome: 'Heavy Pistol', tipo: 'weapon', uso: 'equipped', dano: '3d6', cdt: 2, pericia: 'Handgun', distancia: true, maos: 1, pente: { atual: 4, max: 8 }, municao: 'Heavy Pistol (Basic)', dentro: ['Heavy Pistol (Basic)'] }],
+      role: { nome: 'Netrunner', rank: 4, habilidades: [] }, moradia: { housing: { custo: 1000, descricao: 'Contêiner de carga' }, lifeStyle: { custo: 100, descricao: 'Prepak genérico' }, traumaTeam: { custo: 0, descricao: '' } }
+    }, 'PUT');
+    await edge.evaluate(`wikiApp.openPage('ficha', { section: ${JSON.stringify(pacoteId)} })`);
+    await edge.sleep(1200);
+    const t = (await texto('#cc-root')).replace(/\s+/g, ' ');
+    await edge.shot('ficha-mesa');
+    return [/Na mesa/.test(t) && /HP 20\/40/.test(t) && /4\/8/.test(t) && /carregada com Heavy Pistol \(Basic\)/.test(t) && /Costela quebrada/.test(t) && /Pontos de Melhoria 10/.test(t) && /14 REF \+ Armas de uma Mão/.test(t),
+      (t.match(/Vitais.{0,160}/) || [''])[0]];
+  });
   await r.passo('celular: criador e loja sem rolagem lateral', async () => {
     await edge.celular(true);
     await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(soloId)} })`);
@@ -504,7 +541,8 @@ module.exports = async ({ edge, servidores, r }) => {
   await r.passo('mestre vê quem está esperando no Foundry, e o selo na lista', async () => {
     const esperando = (await texto('[data-cc-waiting]')).replace(/\s+/g, ' ');
     const selos = await edge.evaluate(`[...document.querySelectorAll('.cc-card small b')].map(b => b.textContent)`);
-    return [/Jay \(de Ana\): importar/.test(esperando) && /Importar da wiki/.test(esperando) && !/Lin/.test(esperando) && selos.includes('esperando o mestre') && selos.includes('no Foundry'), `${esperando.slice(0, 100)} · selos: ${[...new Set(selos)].join(', ')}`];
+    // Lin foi para o Foundry e depois o jogador mudou o Lifepath: o selo avisa que mudou, e a lista mostra o HP da mesa.
+    return [/Jay \(de Ana\): importar/.test(esperando) && /Importar da wiki/.test(esperando) && !/Lin/.test(esperando) && selos.includes('esperando o mestre') && selos.includes('mudou depois de importar') && selos.includes('HP 20/40 na mesa'), `${esperando.slice(0, 100)} · selos: ${[...new Set(selos)].join(', ')}`];
   });
   await r.passo('quadro do mestre na Loja: baixar o teto para 500eb esconde os de 1.000eb', async () => {
     await abrir(edge, 'loja', 1500);

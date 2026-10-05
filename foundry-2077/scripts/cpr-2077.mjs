@@ -1,6 +1,6 @@
 // Cyberpunk RED: 2077 — economia de 2077, API das macros e personagens do criador da wiki.
 import { ataqueSmart, cargaTech, ricochete } from './macros.mjs';
-import { registerWikiButtons, registerWikiSettings, registerWikiWatch, wikiApi } from './wiki.mjs';
+import { registerTableSync, registerWikiButtons, registerWikiSettings, registerWikiWatch, wikiApi } from './wiki.mjs';
 
 const MODULE_ID = 'cpr-2077';
 
@@ -30,6 +30,7 @@ Hooks.once('init', () => {
   registerWikiSettings();
   registerWikiButtons();
   registerWikiWatch();
+  registerTableSync();
   game.modules.get(MODULE_ID).api = { ataqueSmart, ricochete, cargaTech, precos2077: PRICES_2077, economia2077: false, ...wikiApi };
 });
 

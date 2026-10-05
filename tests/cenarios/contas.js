@@ -104,7 +104,7 @@ module.exports = async ({ servidores, r }) => {
     const depois = (await api(gm, `/api/personagens/${ficha.id}`)).dados?.personagem;
     return [outro.status === 403 && dono.status === 200 && depois.envio?.versao === antes.versao && depois.versao === antes.versao, `${outro.status}/${dono.status} · envio v${depois.envio?.versao} · personagem v${depois.versao}`];
   });
-  await r.passo('estado no Foundry: enviado, mudou depois, importado, mudou, avisado, atualizado', async () => {
+  await r.passo('estado no Foundry: enviado, mudou depois, importado, STATs travados, mudou (Lifepath), avisado, atualizado', async () => {
     const estados = [];
     let doc = (await api(rede, '/api/personagens', { method: 'POST', cookie: ana, body: { nome: 'Estado', resultado: { stats: { INT: 5 }, pendencias: ['a'] } } })).dados.personagem;
     const salvar = async mudanca => { doc = (await api(rede, `/api/personagens/${doc.id}`, { method: 'PUT', cookie: ana, body: { ...doc, ...mudanca } })).dados.personagem; estados.push(doc.estadoFoundry); };
@@ -115,13 +115,14 @@ module.exports = async ({ servidores, r }) => {
     await salvar({ passo: 3, resultado: { stats: { INT: 5 }, pendencias: ['b'] } }); // enviado: só pendências e passo mudaram
     await salvar({ resultado: { stats: { INT: 6 } } }); // enviado-mudou
     const primeira = await voltaDoFoundry(); // importado
-    await salvar({ resultado: { stats: { INT: 7 } } }); // mudou
+    await salvar({ resultado: { stats: { INT: 7 } } }); // importado: depois do Foundry, os STATs não mudam mais pela wiki
+    await salvar({ resultado: { stats: { INT: 7 }, lifepath: { culturalOrigin: 'Nova origem' } } }); // mudou: o Lifepath ainda muda
     await enviar(); // avisado
     const segunda = await voltaDoFoundry(); // importado de novo (Atualizar da wiki no mesmo ator)
     const lista = ((await api(rede, '/api/personagens', { cookie: ana })).dados.personagens || []).find(p => p.id === doc.id);
     const arquivo = JSON.parse(fs.readFileSync(path.join(servidores.dados, 'personagens', `${doc.id}.json`), 'utf8'));
     const calculados = ['estadoFoundry', 'donoNome', 'publico'].filter(campo => campo in arquivo);
-    const esperado = 'novo,enviado,enviado,enviado-mudou,importado,mudou,avisado,importado';
+    const esperado = 'novo,enviado,enviado,enviado-mudou,importado,importado,mudou,avisado,importado';
     return [estados.join() === esperado && segunda.importado === primeira.importado && segunda.sincronizado >= primeira.sincronizado && lista?.estadoFoundry === 'importado' && !calculados.length, `${estados.join()} · data da importação mantida: ${segunda.importado === primeira.importado} · no arquivo: ${calculados.join() || 'nenhum calculado'}`];
   });
   const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
@@ -138,6 +139,14 @@ module.exports = async ({ servidores, r }) => {
     const salvo = (await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...atual, retrato: 'javascript:alert(1)', retratoLink: 'http://inseguro.example/a.png' } })).dados?.personagem;
     ficha = salvo;
     return [/^api\/personagens\//.test(salvo?.retrato || '') && salvo.retratoLink === '', `${salvo?.retrato} · link "${salvo?.retratoLink}"`];
+  });
+  await r.passo('na mesa: só o mestre grava a ficha da mesa; o jogador não muda pelo salvamento', async () => {
+    const jogador = await api(rede, `/api/personagens/${ficha.id}/mesa`, { method: 'PUT', cookie: ana, body: { hp: { atual: 99, max: 99 } } });
+    const mestre = await api(gm, `/api/personagens/${ficha.id}/mesa`, { method: 'PUT', body: { hp: { atual: 20, max: 40 } } });
+    const atual = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: ana })).dados.personagem;
+    const salvo = (await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...atual, mesa: { hp: { atual: 99, max: 99 } } } })).dados?.personagem;
+    ficha = salvo;
+    return [jogador.status === 403 && mestre.status === 200 && atual.mesa?.hp?.atual === 20 && salvo?.mesa?.hp?.atual === 20, `jogador ${jogador.status} · mestre ${mestre.status} · depois do salvamento HP ${salvo?.mesa?.hp?.atual}`];
   });
   await r.passo('IP: só o mestre dá; gastar mais do que tem é recusado', async () => {
     const jogador = await api(rede, `/api/personagens/${ficha.id}/ip`, { method: 'POST', cookie: ana, body: { qtd: 500 } });

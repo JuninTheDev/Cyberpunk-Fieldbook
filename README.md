@@ -162,7 +162,20 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Não aparece o botão nem o aviso?** O módulo instalado está velho: feche o Foundry e rode `atualizar-modulo.bat`.
    - O aviso pode ser desligado em Configurações do módulo → Avisos da wiki.
    - Depois disso, a loja inicial daquele personagem fecha. As compras durante a sessão vêm numa próxima versão, pelo mesmo caminho.
-6. **Mudou algo na wiki depois?** O jogador avisa de novo, e a janela de avisos traz **Atualizar**. O mesmo botão fica no topo da ficha do ator: **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha. Um retrato novo na wiki também aparece ali; tirar o retrato na wiki não apaga a imagem do Foundry.
+6. **Depois de importado, o Foundry manda.**
+   - **Na wiki:** o criador avisa e trava STATs, perícias, Role, equipamento e moradia; o servidor faz o mesmo.
+   - **O que o jogador ainda muda:** o nome, o retrato, a aparência, as notas e o Lifepath.
+   - **Lifepath ou retrato mudou?** O jogador avisa de novo, e a janela de avisos traz **Atualizar**. O mesmo botão fica no topo da ficha do ator: **Atualizar da wiki**. Ele mostra o que mudou e aplica o que você marcar, sem apagar nada da ficha.
+   - **Retrato:** tirar o retrato na wiki não apaga a imagem do Foundry.
+7. **Na mesa: a ficha do Foundry volta para a wiki.**
+   - **Como chega:** a cada mudança num ator que veio da wiki, o Foundry do mestre manda a ficha para a wiki, uns 4 segundos depois da última mudança. Isso vale para HP, Humanidade, Sorte, dinheiro, Pontos de Melhoria, reputação, lesões críticas, itens, munição no pente e o que está instalado.
+   - **O que aparece:** a ficha da wiki passa a mostrar a mesa ("Na mesa", com a hora) e se atualiza sozinha a cada 30 segundos. Na lista de Personagens aparece o HP da mesa.
+   - **Ao entrar no mundo,** o Foundry manda a ficha de todos os atores da wiki uma vez, inclusive os importados antes.
+   - **Para desligar:** Configurações do módulo → Mandar a ficha para a wiki.
+8. **A ficha da wiki** tem o desenho da ficha do Foundry e o botão **Imprimir ou salvar em PDF** (só a ficha, em fundo branco).
+   - **Vitais:** HP e Humanidade com barra, SP na cabeça e no corpo, dinheiro.
+   - **Combate:** a base de ataque já somada (STAT + perícia), dano, CDT, pente e munição.
+   - **O resto:** perícias pelos grupos do Foundry, a árvore de cyberware, o cyberdeck e o equipamento.
 
 Notas:
 

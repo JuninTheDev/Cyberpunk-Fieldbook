@@ -609,3 +609,37 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-slots { color: var(--muted); font: 11px var(--mono); }
 @media (max-width: 620px) { .cc-mount-row { grid-template-columns: 1fr; } .cc-mount-controls { justify-content: flex-start; } }
 .cc-mount-note { color: var(--cyan); }
+/* Ficha: vitais (com barra de HP e Humanidade), combate, perícias por grupo e árvore de cyberware. */
+.cc-source { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.cc-vitals { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+.cc-vital { display: grid; gap: 2px; padding: 7px 9px; border: 1px solid var(--line); background: #0f1314; }
+.cc-vital span:first-child { color: var(--muted); font: 10px var(--mono); text-transform: uppercase; }
+.cc-vital b { font-size: 18px; color: var(--lime); }
+.cc-vital-bad b { color: var(--coral); }
+.cc-bar { display: block; height: 4px; background: #26302b; }
+.cc-bar span { display: block; height: 100%; background: var(--lime); }
+.cc-vital-bad .cc-bar span { background: var(--coral); }
+.cc-weapons td { vertical-align: top; }
+.cc-skill-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 18px; }
+.cc-skill-group h4 { margin: 4px 0; }
+.cc-skill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cc-skill-table td { padding: 2px 4px; border-bottom: 1px solid #222b26; }
+.cc-skill-table td:nth-child(n+2) { width: 1%; white-space: nowrap; text-align: right; }
+.cc-tree, .cc-tree ul { margin: 4px 0; padding-left: 18px; }
+.cc-tree ul { border-left: 1px solid var(--line); }
+.cc-columns { columns: 2 220px; column-gap: 24px; }
+.cc-columns li { break-inside: avoid; }
+.cc-locked { margin: 0; padding: 0; border: 0; min-width: 0; opacity: 0.6; }
+/* Impressão (ou PDF) da ficha: só a ficha, em fundo branco. */
+@media print {
+  :root { color-scheme: light; }
+  body { background: #fff !important; color: #000 !important; }
+  aside, .topbar, .cc-toolbar, [data-cc-foundry], .side-status, .toc, .page-toc, .health-banner { display: none !important; }
+  .shell { display: block; }
+  .content { max-width: none; padding: 0; }
+  .cc-box, .section { break-inside: avoid; border-color: #999 !important; background: #fff !important; box-shadow: none !important; }
+  .cc-vital, .cc-stat, .cc-mount-row { background: #fff !important; border-color: #999 !important; }
+  .cc-vital b, .cc-stat b, h1, h2, h3, h4, .cc-ok, .cc-mount-note { color: #000 !important; }
+  .cc-bar { background: #ddd; } .cc-bar span { background: #555 !important; }
+  a { color: #000; }
+}

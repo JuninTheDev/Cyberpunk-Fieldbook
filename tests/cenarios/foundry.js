@@ -121,6 +121,24 @@ module.exports = async ({ edge, servidores, r }) => {
         JSON.stringify({ moradia: l.housing, estilo: l.lifeStyle, tt: l.traumaTeam, moda: (l.fashion.desription || '').slice(0, 30) })];
     });
     await edge.shot('ator');
+    await r.passo('na mesa: a wiki recebe a ficha do Foundry logo depois da importação', async () => {
+      const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
+      const m = doc.mesa || {};
+      const rifle = (m.itens || []).find(item => item.nome === 'Assault Rifle');
+      return [m.hp?.max === 45 && m.hp.atual === 45 && rifle?.pente?.atual === 25 && m.sp?.corpo === 11 && m.role?.nome === 'Solo', JSON.stringify({ hp: m.hp, sp: m.sp, rifle: rifle?.pente, municao: rifle?.municao, itens: (m.itens || []).length })];
+    });
+    await r.passo('na mesa: perder HP e gastar munição no Foundry chega na wiki sozinho', async () => {
+      await edge.evaluate(`(async () => {
+        const actor = game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        await actor.update({ 'system.derivedStats.hp.value': 30 });
+        const rifle = actor.itemTypes.weapon.find(w => w.name === 'Assault Rifle');
+        await rifle.update({ 'system.magazine.value': 10 });
+      })()`);
+      let m = {};
+      for (let i = 0; i < 30; i++) { await edge.sleep(500); m = (await api(`/api/personagens/${solo.id}`)).personagem.mesa || {}; if (m.hp?.atual === 30) break; }
+      const rifle = (m.itens || []).find(item => item.nome === 'Assault Rifle');
+      return [m.hp?.atual === 30 && rifle?.pente?.atual === 10, `HP ${m.hp?.atual} · rifle ${rifle?.pente?.atual}`];
+    });
     await r.passo('Tech: as quatro especialidades de Artífice', async () => {
       const h = habilidades(await importar(tech.id));
       return [h['Field Expertise'] === 4 && h['Upgrade Expertise'] === 2 && h['Fabrication Expertise'] === 2 && h['Invention Expertise'] === 0, JSON.stringify(h)];
@@ -167,4 +185,14 @@ module.exports = async ({ edge, servidores, r }) => {
     edge.erros.push(...doModulo);
     await mesa.parar();
   }
+
+  // ---------- A ficha da wiki com a mesa ----------
+  await r.passo('ficha da wiki: depois da importação mostra a mesa (HP 30/45, rifle 10/25)', async () => {
+    await edge.ir(`${wiki}/#ficha/${solo.id}`, 1500);
+    const t = (await texto('#cc-root')).replace(/\s+/g, ' ');
+    await edge.shot('ficha-mesa');
+    await edge.evaluate(`document.querySelector('[data-toc="Combate"]').scrollIntoView()`);
+    await edge.shot('ficha-mesa-combate');
+    return [/Na mesa/.test(t) && /HP 30\/45/.test(t) && /10\/25/.test(t) && /Consciência de Combate/.test(t), (t.match(/Vitais.{0,120}/) || [''])[0]];
+  });
 };
