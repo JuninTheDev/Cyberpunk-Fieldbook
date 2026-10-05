@@ -162,6 +162,30 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       return [res.vazio === 0 && res.pendente.some(line => /Assault Rifle: carregar com Rifle/.test(line)) && res.cheio === 25 && !res.depois.length, JSON.stringify(res)];
     });
+    await r.passo('pedido da campanha: sem dinheiro na mesa fica aprovado com o motivo; com dinheiro, o Foundry entrega montado e desconta', async () => {
+      const rifle = solo.resultado.itens.find(item => item.id === 'core_weapons:assault-rifle').uid;
+      const pedido = (await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'core_weapons:heavy-pistol', qtd: 1, municao: '@1' }, { id: 'core_ammo:heavy-pistol-basic', qtd: 20 }, { id: 'core_upgrades:sniping-scope', qtd: 1, em: rifle }] })).pedido;
+      const aprovar = () => api(`/api/personagens/${solo.id}/pedidos/${pedido.id}/aprovar`, 'POST', {});
+      const situacao = async () => ((await api(`/api/personagens/${solo.id}`)).personagem.pedidos || []).find(item => item.id === pedido.id);
+      const entregar = () => edge.evaluate(`game.modules.get('cpr-2077').api.entregarPedidos().then(() => true)`);
+      await aprovar();
+      await edge.evaluate(`(async () => { const a = game.actors.find(x => x.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(solo.id)}); await a.setLedgerProperty('wealth', 0, 'teste'); })()`);
+      await entregar();
+      const semDinheiro = await situacao();
+      await edge.evaluate(`(async () => { const a = game.actors.find(x => x.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(solo.id)}); await a.setLedgerProperty('wealth', 1000, 'teste'); })()`);
+      await aprovar(); // "Tentar de novo": limpa o erro
+      await entregar();
+      const entregue = await situacao();
+      const ficha = await edge.evaluate(`(() => {
+        const a = game.actors.find(x => x.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        const pistola = a.itemTypes.weapon.find(w => w.name === 'Heavy Pistol');
+        const rifle = a.itemTypes.weapon.find(w => w.name === 'Assault Rifle');
+        const municao = a.itemTypes.ammo.find(m => m.name === 'Heavy Pistol (Basic)');
+        return { pente: pistola?.system.magazine.value, sobra: municao?.system.amount, luneta: rifle.system.installedItems.list.map(id => a.items.get(id)?.name).includes('Sniping Scope'), dinheiro: a.system.wealth.value };
+      })()`);
+      return [semDinheiro.status === 'aprovado' && /Dinheiro insuficiente/.test(semDinheiro.erro) && entregue.status === 'entregue' && ficha.pente === 8 && ficha.sobra === 12 && ficha.luneta && ficha.dinheiro === 780 && pedido.total === 220,
+        `sem dinheiro: ${semDinheiro.status} "${semDinheiro.erro}" · depois: ${entregue.status} · ${JSON.stringify(ficha)} · total ${pedido.total}`];
+    });
     // O que está instalado em cada item do ator (arma, deck, cyberbraço), pelo uid da wiki.
     const instalados = id => edge.evaluate(`(() => {
       const actor = game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(id)});

@@ -148,6 +148,34 @@ module.exports = async ({ servidores, r }) => {
     ficha = salvo;
     return [jogador.status === 403 && mestre.status === 200 && atual.mesa?.hp?.atual === 20 && salvo?.mesa?.hp?.atual === 20, `jogador ${jogador.status} · mestre ${mestre.status} · depois do salvamento HP ${salvo?.mesa?.hp?.atual}`];
   });
+  await r.passo('pedidos da campanha: só depois do Foundry; catálogo conferido e total calculado no servidor', async () => {
+    const novo = (await api(rede, '/api/personagens', { method: 'POST', cookie: ana, body: { nome: 'Compras' } })).dados.personagem;
+    const pedir = (cookie, itens, base = rede) => api(base, `/api/personagens/${novo.id}/pedidos`, { method: 'POST', cookie, body: { itens } });
+    const antes = await pedir(ana, [{ id: 'core_weapons:heavy-pistol', qtd: 1 }]);
+    await api(gm, `/api/personagens/${novo.id}/foundry`, { method: 'PUT', body: { ator: 'x1', nomeAtor: 'Compras' } });
+    const inexistente = await pedir(ana, [{ id: 'core_weapons:canhao-de-mentira', qtd: 1 }]);
+    const outro = await pedir(bruno, [{ id: 'core_weapons:heavy-pistol', qtd: 1 }]);
+    // O jogador manda um preço (1eb): não vale, o total sai do catálogo (pistola pesada 100eb + 50 balas a 10eb por 10).
+    const ok = await pedir(ana, [{ id: 'core_weapons:heavy-pistol', qtd: 1, preco: 1 }, { id: 'core_ammo:heavy-pistol-basic', qtd: 50, municao: 'x' }]);
+    const lista = ((await api(rede, '/api/personagens', { cookie: ana })).dados.personagens || []).find(p => p.id === novo.id);
+    r.pedidoTeste = { id: novo.id, pedido: ok.dados?.pedido };
+    return [antes.status === 400 && inexistente.status === 400 && outro.status === 403 && ok.status === 201 && ok.dados.pedido.total === 150 && ok.dados.pedido.status === 'pendente' && lista?.pedidos?.pendentes === 1,
+      `antes ${antes.status} · inexistente ${inexistente.status} · outro jogador ${outro.status} · ok ${ok.status} total ${ok.dados?.pedido?.total} · pendentes na lista ${lista?.pedidos?.pendentes}`];
+  });
+  await r.passo('pedidos da campanha: só o mestre aprova; aprovado não se cancela; o Foundry marca entregue', async () => {
+    const { id, pedido } = r.pedidoTeste;
+    const acao = (cookie, nome, base = rede, body = {}) => api(base, `/api/personagens/${id}/pedidos/${pedido.id}/${nome}`, { method: 'POST', cookie, body });
+    const jogadorAprova = await acao(ana, 'aprovar');
+    const mestreAprova = await acao(undefined, 'aprovar', gm);
+    const cancelaDepois = await acao(ana, 'cancelar');
+    const entregue = await acao(undefined, 'entregue', gm, { avisos: ['tudo certo'] });
+    const segundo = (await api(rede, `/api/personagens/${id}/pedidos`, { method: 'POST', cookie: ana, body: { itens: [{ id: 'core_gear:agent', qtd: 1 }] } })).dados.pedido;
+    const cancela = await api(rede, `/api/personagens/${id}/pedidos/${segundo.id}/cancelar`, { method: 'POST', cookie: ana, body: {} });
+    const doc = (await api(rede, `/api/personagens/${id}`, { cookie: ana })).dados.personagem;
+    const estados = (doc.pedidos || []).map(item => item.status).join(',');
+    return [jogadorAprova.status === 403 && mestreAprova.status === 200 && cancelaDepois.status === 400 && entregue.status === 200 && cancela.status === 200 && estados === 'entregue,cancelado',
+      `jogador aprova ${jogadorAprova.status} · mestre ${mestreAprova.status} · cancelar aprovado ${cancelaDepois.status} · entregue ${entregue.status} · ${estados}`];
+  });
   await r.passo('IP: só o mestre dá; gastar mais do que tem é recusado', async () => {
     const jogador = await api(rede, `/api/personagens/${ficha.id}/ip`, { method: 'POST', cookie: ana, body: { qtd: 500 } });
     const mestre = await api(gm, `/api/personagens/${ficha.id}/ip`, { method: 'POST', body: { qtd: 100, motivo: 'Sessão 1' } });

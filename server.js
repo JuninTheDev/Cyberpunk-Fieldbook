@@ -233,7 +233,7 @@ function publishPlayerView(request, response) {
 }
 
 // Personagens dos jogadores, códigos de acesso e o importador do Foundry (api-personagens.js).
-const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl });
+const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js') });
 
 http.createServer((request, response) => {
   let url;

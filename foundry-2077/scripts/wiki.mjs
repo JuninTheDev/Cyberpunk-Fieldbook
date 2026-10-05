@@ -526,8 +526,75 @@ const sendKey = item => `${item.id}:${item.envio?.quando || ''}`;
 let waitingDialog = null;
 let quietError = false;
 
-// Uma linha por personagem: Importar (ainda não está neste mundo) ou Atualizar (o ator já existe).
-function showWaiting(waiting) {
+// ---------------- Pedidos da campanha ----------------
+// O jogador pede na loja da wiki; o mestre aprova (na wiki ou aqui); o Foundry do mestre ativo entrega o aprovado:
+// cria os itens, encaixa e carrega como o jogador pediu e desconta o dinheiro. Cyberware chega sem instalar: instale pela
+// ficha, que cobra a instalação e rola a Humanidade. Cada item entregue leva o uid "pedido:<id>:<n>": nada sai em dobro.
+const isActiveGm = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id);
+async function deliverOrder(actor, wikiId, pedido) {
+  const prefix = `pedido:${pedido.id}:`;
+  const notes = [];
+  const already = actor.items.some(item => String(item.getFlag(MODULE_ID, 'wikiUid') || '').startsWith(prefix));
+  if (!already) {
+    const wealth = Number(actor.system.wealth?.value) || 0;
+    if (wealth < pedido.total) {
+      const erro = `Dinheiro insuficiente na mesa: ${wealth}eb de ${pedido.total}eb.`;
+      await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/erro`, { method: 'POST', body: { erro } }).catch(() => null);
+      return { ok: false, notes: [erro] };
+    }
+    const datas = [];
+    for (const line of pedido.itens) {
+      const data = await itemData({ ...line, uso: 'carregando' }).catch(() => null);
+      if (data) datas.push(...data); else notes.push(`${line.nome}: não achei no compêndio ${line.foundry?.pack}.`);
+    }
+    if (datas.length) await actor.createEmbeddedDocuments('Item', datas);
+    // Montagem do pedido: acessório na arma, programa no deck, munição na arma (cyberware fica de fora).
+    notes.push(...await assemble(actor, pedido.itens.filter(line => !line.cyber)));
+    await actor.setLedgerProperty('wealth', wealth - pedido.total, `Compra na wiki: ${pedido.itens.map(line => line.nome).join(', ')}`);
+    if (pedido.itens.some(line => line.cyber)) notes.push('Cyberware: instale pela ficha (o sistema cobra a instalação e rola a Humanidade).');
+  }
+  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notes } });
+  return { ok: true, notes };
+}
+// Aprovar aqui e entregar na hora.
+async function approveAndDeliver(wikiId, pedido) {
+  const actor = actorOf(wikiId);
+  if (!actor) return ui.notifications.warn('Este personagem ainda não está neste mundo: importe antes.');
+  try {
+    if (pedido.status === 'pendente') await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/aprovar`, { method: 'POST', body: {} });
+    const result = await deliverOrder(actor, wikiId, pedido);
+    if (result.ok) ui.notifications.info(`${actor.name}: pedido entregue.${result.notes.length ? ` ${result.notes.join(' ')}` : ''}`);
+    else ui.notifications.warn(`${actor.name}: ${result.notes.join(' ')}`);
+  } catch (error) {
+    ui.notifications.error(`Pedido da wiki: ${error.message}`);
+  }
+}
+async function refuseOrder(wikiId, pedido) {
+  const motivo = await Dialog.prompt({ title: 'Recusar o pedido', content: '<form class="cpr2077-wiki"><div class="form-group"><label>Motivo (o jogador vê)</label><input type="text" name="motivo"></div></form>', label: 'Recusar', callback: html => html[0].querySelector('[name="motivo"]').value, rejectClose: false });
+  if (motivo === null || motivo === undefined) return;
+  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/recusar`, { method: 'POST', body: { motivo } }).catch(error => ui.notifications.error(error.message));
+}
+// Pedidos de todos os personagens deste mundo: entrega os aprovados e devolve os que esperam o mestre.
+async function pendingOrders(list, { deliver = true } = {}) {
+  const pending = [];
+  for (const item of (list.personagens || []).filter(entry => !entry.publico && entry.pedidos && (entry.pedidos.pendentes || entry.pedidos.aprovados))) {
+    const actor = actorOf(item.id);
+    if (!actor) continue;
+    const doc = (await wikiFetch(`/api/personagens/${item.id}`).catch(() => ({}))).personagem;
+    for (const pedido of (doc?.pedidos || [])) {
+      if (pedido.status === 'aprovado' && !pedido.erro && deliver) {
+        const result = await deliverOrder(actor, item.id, pedido).catch(error => ({ ok: false, notes: [error.message] }));
+        if (result.ok) ui.notifications.info(`Wiki: pedido de ${actor.name} entregue na ficha.`);
+        else ui.notifications.warn(`Wiki: pedido de ${actor.name} não foi entregue. ${result.notes.join(' ')}`);
+      } else if (pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro)) pending.push({ wikiId: item.id, nome: doc.nome || actor.name, pedido });
+    }
+  }
+  return pending;
+}
+
+// Uma linha por personagem: Importar (ainda não está neste mundo) ou Atualizar (o ator já existe); e uma linha por
+// pedido da campanha esperando o mestre, com Aprovar (entrega na hora) e Recusar.
+function showWaiting(waiting, orders = []) {
   const rows = waiting.map(item => {
     const actor = actorOf(item.id);
     const action = actor
@@ -536,21 +603,28 @@ function showWaiting(waiting) {
     const sent = item.envio ? new Date(item.envio.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
     return `<li class="cpr2077-wiki-row"><span><b>${esc(item.nome || 'Sem nome')}</b>${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')}<br><small>Enviado em ${sent}${actor ? ` · mudou desde a importação (${esc(actor.name)})` : ''}</small></span>${action}</li>`;
   }).join('');
+  const orderRows = orders.map(({ wikiId, nome, pedido }, index) => `<li class="cpr2077-wiki-row"><span><b>${esc(nome)}</b> pediu ${pedido.total}eb${pedido.erro ? ` · <i>${esc(pedido.erro)}</i>` : ''}<br><small>${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}${pedido.nota ? ` · “${esc(pedido.nota)}”` : ''}</small></span>
+    <span class="cpr2077-wiki-actions"><button type="button" data-order-approve="${index}"><i class="fas fa-check"></i> ${pedido.status === 'aprovado' ? 'Tentar de novo' : 'Aprovar'}</button><button type="button" data-order-refuse="${index}"><i class="fas fa-times"></i> Recusar</button></span></li>`).join('');
   if (waitingDialog?.rendered) waitingDialog.close();
   waitingDialog = new Dialog({
     title: 'Personagens da wiki',
-    content: `<p>Os jogadores enviaram estes personagens pela wiki.</p><ul class="cpr2077-wiki-list">${rows}</ul><p class="notes">Dá para fazer depois: aba Atores → Importar da wiki, ou Atualizar da wiki no topo da ficha.</p>`,
+    content: `${rows ? `<p>Os jogadores enviaram estes personagens pela wiki.</p><ul class="cpr2077-wiki-list">${rows}</ul>` : ''}
+      ${orderRows ? `<p>Pedidos da loja da campanha. Aprovar entrega na hora: os itens entram na ficha e o dinheiro sai.</p><ul class="cpr2077-wiki-list">${orderRows}</ul>` : ''}
+      <p class="notes">Dá para fazer depois: aba Atores → Importar da wiki, Atualizar da wiki no topo da ficha, ou a Loja do personagem na wiki.</p>`,
     buttons: { later: { icon: '<i class="fas fa-clock"></i>', label: 'Depois' } },
     default: 'later',
     render: html => {
       $(html).find('[data-wiki-import]').on('click', event => { const id = event.currentTarget.dataset.wikiImport; waitingDialog.close(); importarDaWiki(id); });
       $(html).find('[data-wiki-update]').on('click', event => { const actor = actorOf(event.currentTarget.dataset.wikiUpdate); waitingDialog.close(); if (actor) atualizarDaWiki(actor); });
+      $(html).find('[data-order-approve]').on('click', event => { const order = orders[Number(event.currentTarget.dataset.orderApprove)]; waitingDialog.close(); approveAndDeliver(order.wikiId, order.pedido); });
+      $(html).find('[data-order-refuse]').on('click', event => { const order = orders[Number(event.currentTarget.dataset.orderRefuse)]; waitingDialog.close(); refuseOrder(order.wikiId, order.pedido); });
     }
-  }, { width: 460 });
+  }, { width: 480 });
   waitingDialog.render(true);
 }
 
-// `manual`: aberto pelo mestre (mostra todos os enviados, e os erros); senão só avisa dos envios novos.
+// `manual`: aberto pelo mestre (mostra todos os enviados e pedidos, e os erros); senão só avisa dos novos.
+// O mestre ativo também entrega aqui os pedidos já aprovados na wiki.
 export async function avisosDaWiki({ manual = false } = {}) {
   if (!game.user.isGM) return;
   let list;
@@ -564,20 +638,27 @@ export async function avisosDaWiki({ manual = false } = {}) {
     if (manual) ui.notifications.error(notGmMessage());
     return;
   }
+  const orders = await pendingOrders(list, { deliver: isActiveGm() });
+  const showNotices = manual || game.settings.get(MODULE_ID, 'wikiAvisos');
+  if (!showNotices) return;
   const waiting = (list.personagens || []).filter(item => !item.publico && WAITING.includes(item.estadoFoundry));
   const seen = seenKeys();
+  const orderKey = order => `pedido:${order.pedido.id}:${order.pedido.erro || ''}`;
   const fresh = waiting.filter(item => !seen.includes(sendKey(item)));
-  if (manual && !waiting.length) return ui.notifications.info('Nenhum personagem esperando na wiki.');
-  if (!manual && !fresh.length) return;
-  markSeen(waiting.map(sendKey));
+  const freshOrders = orders.filter(order => !seen.includes(orderKey(order)));
+  if (manual && !waiting.length && !orders.length) return ui.notifications.info('Nada esperando na wiki.');
+  if (!manual && !fresh.length && !freshOrders.length) return;
+  markSeen([...waiting.map(sendKey), ...orders.map(orderKey)]);
   if (fresh.length) ui.notifications.info(`Wiki: ${fresh.map(item => item.nome || 'Sem nome').join(', ')} ${fresh.length > 1 ? 'foram enviados' : 'foi enviado'} para você.`);
-  showWaiting(waiting);
+  if (freshOrders.length) ui.notifications.info(`Wiki: ${freshOrders.length > 1 ? `${freshOrders.length} pedidos da loja esperando você` : `${freshOrders[0].nome} fez um pedido na loja`}.`);
+  showWaiting(waiting, orders);
 }
 
 export function registerWikiWatch() {
   Hooks.once('ready', () => {
     if (!game.user.isGM) return;
-    const tick = () => { if (game.settings.get(MODULE_ID, 'wikiAvisos')) avisosDaWiki(); };
+    // Os pedidos aprovados são entregues mesmo com os avisos desligados.
+    const tick = () => avisosDaWiki();
     setTimeout(tick, 3000);
     setInterval(tick, 60 * 1000);
   });
@@ -617,4 +698,4 @@ async function aplicarMontagem(actor) {
   return assemble(actor, (doc.resultado || {}).itens || []);
 }
 
-export const wikiApi = { importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter, enviarParaWiki: syncActor, fichaDaMesa: tableSnapshot, montagemPendente, aplicarMontagem };
+export const wikiApi = { entregarPedidos: async () => pendingOrders(await wikiFetch('/api/personagens')), importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter, enviarParaWiki: syncActor, fichaDaMesa: tableSnapshot, montagemPendente, aplicarMontagem };

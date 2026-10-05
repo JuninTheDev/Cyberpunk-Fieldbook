@@ -458,14 +458,31 @@ module.exports = async ({ edge, servidores, r }) => {
     for (let i = 0; i < 20; i++) { if (/outro lugar/.test(await texto('#cc-save'))) break; await edge.sleep(200); }
     return [/outro lugar/.test(await texto('#cc-save')), await texto('#cc-save')];
   });
-  await r.passo('depois que vai para o Foundry, a loja inicial fecha', async () => {
+  await r.passo('depois que vai para o Foundry, a Loja vira a loja da campanha (sem a loja inicial)', async () => {
     await post(gm, `/api/personagens/${pacoteId}/foundry`, { ator: 'abc', nomeAtor: 'Lin', versao: 1 }, 'PUT');
     await abrir(edge, 'personagens', 600);
     await edge.evaluate(`wikiApp.openPage('loja', { section: ${JSON.stringify(pacoteId)} })`);
     await edge.sleep(1200);
     const t = await texto('#cc-shop');
-    const botoes = await edge.evaluate(`document.querySelectorAll('[data-shop-buy]').length`);
-    return [/a loja inicial fechou/.test(t) && botoes === 0, `${botoes} botões de comprar`];
+    const inicial = await edge.evaluate(`document.querySelectorAll('[data-shop-buy]').length`);
+    const campanha = await edge.evaluate(`document.querySelectorAll('[data-pedido-por]').length`);
+    return [/Seu pedido/.test(t) && inicial === 0 && campanha > 0, `loja inicial ${inicial} botões · campanha ${campanha}`];
+  });
+  await r.passo('loja da campanha: pistola e munição no pedido, carregada com a munição do pedido; vai para o mestre', async () => {
+    await buscarNaLoja('pistola pesada');
+    await clicar('[data-pedido-por="core_weapons:heavy-pistol"]');
+    await buscarNaLoja('munição de pistola pesada · básica');
+    await clicar('[data-pedido-por="core_ammo:heavy-pistol-basic"]');
+    await escolher('[data-pedido-municao="0"]', '@1');
+    const total = (await texto('[data-pedido-enviar]')).replace(/\s+/g, ' ');
+    await clicar('[data-pedido-enviar]', 800);
+    const msg = await texto('[data-pedido-msg]');
+    const pedidos = (await texto('[data-cc-orders]')).replace(/\s+/g, ' ');
+    const doc = (await (await fetch(`${gm}/api/personagens/${pacoteId}`)).json()).personagem;
+    const p = (doc.pedidos || [])[0] || {};
+    await edge.shot('loja-campanha');
+    return [/Pedido enviado/.test(msg) && /esperando o mestre/.test(pedidos) && p.total === 110 && p.itens?.[0]?.municao === `pedido:${p.id}:1`,
+      `${total} · ${msg} · total ${p.total} · munição da pistola ${p.itens?.[0]?.municao}`];
   });
   // ---------- Depois do Foundry: o Foundry manda ----------
   await r.passo('depois do Foundry: o criador avisa e trava o que é regra; o nome continua aberto', async () => {
@@ -543,6 +560,15 @@ module.exports = async ({ edge, servidores, r }) => {
     const selos = await edge.evaluate(`[...document.querySelectorAll('.cc-card small b')].map(b => b.textContent)`);
     // Lin foi para o Foundry e depois o jogador mudou o Lifepath: o selo avisa que mudou, e a lista mostra o HP da mesa.
     return [/Jay \(de Ana\): importar/.test(esperando) && /Importar da wiki/.test(esperando) && !/Lin/.test(esperando) && selos.includes('esperando o mestre') && selos.includes('mudou depois de importar') && selos.includes('HP 20/40 na mesa'), `${esperando.slice(0, 100)} · selos: ${[...new Set(selos)].join(', ')}`];
+  });
+  await r.passo('mestre: o quadro "Pedidos da campanha" mostra o pedido; aprovado na Loja, fica esperando o Foundry', async () => {
+    const quadro = (await texto('[data-cc-orders-gm]')).replace(/\s+/g, ' ');
+    await edge.evaluate(`wikiApp.openPage('loja', { section: ${JSON.stringify(pacoteId)} })`);
+    await edge.sleep(1200);
+    await clicar('[data-pedido-aprovar]', 800);
+    const pedidos = (await texto('[data-cc-orders]')).replace(/\s+/g, ' ');
+    await abrir(edge, 'personagens', 1000);
+    return [/Lin.*1 esperando você/.test(quadro) && /aprovado, esperando o Foundry entregar/.test(pedidos), `${quadro.slice(0, 120)} · ${pedidos.slice(0, 120)}`];
   });
   await r.passo('quadro do mestre na Loja: baixar o teto para 500eb esconde os de 1.000eb', async () => {
     await abrir(edge, 'loja', 1500);

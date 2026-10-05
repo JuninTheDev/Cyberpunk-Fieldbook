@@ -621,7 +621,7 @@
     const characters = list.data.personagens || [];
     const mine = characters.filter(item => !item.publico);
     const others = characters.filter(item => item.publico);
-    const card = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}</small></div>
+    const card = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}</small></div>
       <div class="cc-card-actions"><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button><button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
     const publicCard = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
 
@@ -633,7 +633,10 @@
     const canCreate = papel !== 'visitante';
     const waiting = papel === 'mestre' ? mine.filter(item => WAITING.includes(item.estadoFoundry)) : [];
     const waitingBox = waiting.length ? box('Esperando você no Foundry', `<ul>${waiting.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${item.estadoFoundry === 'avisado' ? 'mudou, atualizar' : 'importar'}. Enviado em ${when(item.envio && item.envio.quando)}.</li>`).join('')}</ul>${GM_FOUNDRY_HELP}`, ' data-cc-waiting') : '';
-    root.innerHTML = `${waitingBox}${box('Quem é você', who)}
+    // Pedidos da campanha esperando o mestre (aprova na Loja do personagem) ou o Foundry (entrega quando o mundo abrir).
+    const withOrders = mine.filter(item => item.pedidos && (item.pedidos.pendentes || item.pedidos.aprovados));
+    const ordersBox = papel === 'mestre' && withOrders.length ? box('Pedidos da campanha', `<ul>${withOrders.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${[item.pedidos.pendentes ? `${item.pedidos.pendentes} esperando você` : '', item.pedidos.aprovados ? `${item.pedidos.aprovados} aprovado${item.pedidos.aprovados > 1 ? 's' : ''}, esperando o Foundry entregar` : ''].filter(Boolean).join(' · ')} <button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Abrir</button></li>`).join('')}</ul><p class="note-status">Aprove ou recuse na Loja do personagem (ou na janela Personagens da wiki, no Foundry). O Foundry entrega o que foi aprovado assim que o mundo estiver aberto.</p>`, ' data-cc-orders-gm') : '';
+    root.innerHTML = `${waitingBox}${ordersBox}${box('Quem é você', who)}
       ${canCreate ? box(papel === 'mestre' ? 'Todos os personagens' : 'Meus personagens', `${mine.length ? mine.map(card).join('') : '<p class="note-status">Nenhum personagem ainda.</p>'}<p><button class="action" type="button" data-cc-new>Novo personagem</button></p>`) : ''}
       ${others.length ? box('O grupo', others.map(publicCard).join('')) : ''}
       ${papel === 'mestre' ? box('Códigos dos jogadores', '<div id="cc-accounts">Carregando…</div>') : ''}`;
@@ -1068,6 +1071,146 @@
       if (event.target.matches('[data-shop-all]')) { shopState.verTudo = event.target.checked; draw(); }
     };
     target.oninput = event => {
+      if (!event.target.matches('[data-shop-busca]')) return;
+      shopState.busca = event.target.value;
+      const position = event.target.selectionStart;
+      draw();
+      const input = target.querySelector('[data-shop-busca]');
+      input.focus();
+      try { input.setSelectionRange(position, position); } catch { /* campo sem cursor */ }
+    };
+    draw();
+  }
+
+  // ================= Loja da campanha (depois do Foundry) =================
+  // O jogador monta um pedido com qualquer item do catálogo; o mestre aprova ou recusa; o Foundry do mestre entrega
+  // (cria os itens na ficha, desconta o dinheiro, carrega a arma e encaixa o acessório ou o programa onde o jogador
+  // escolheu). Cyberware chega sem instalar: o mestre instala pela ficha do Foundry, que cobra e rola a Humanidade.
+  // O dinheiro e os itens de onde escolher vêm da ficha da mesa (doc.mesa).
+  const ORDER_STATUS = { pendente: 'esperando o mestre', aprovado: 'aprovado, esperando o Foundry entregar', entregue: 'entregue', recusado: 'recusado', cancelado: 'cancelado' };
+  const carts = new Map(); // o pedido em montagem, por personagem (fica enquanto a página estiver aberta)
+  let catalogByEn = null;
+  const catalogEntryOf = name => {
+    if (!catalogByEn) catalogByEn = new Map([...shop.itens].reverse().map(item => [item.en, item]));
+    return catalogByEn.get(name) || null;
+  };
+  const cartCost = line => { const item = catalog.get(line.id); return item ? item.preco * (item.lote > 1 ? line.qtd / item.lote : line.qtd) : 0; };
+
+  function renderCampaignShop(target, doc, { gm = false } = {}) {
+    const cart = carts.get(doc.id) || [];
+    carts.set(doc.id, cart);
+    const fold = text => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const mesa = doc.mesa || null;
+    // Itens da ficha (com uid da wiki) como "linhas" da montagem, para conferir onde cada coisa encaixa.
+    const tableRows = ((mesa && mesa.itens) || []).filter(item => item.uid).map(item => ({ uid: item.uid, nome: item.nome, item: catalogEntryOf(item.nome), qtd: 1, dentro: item.dentro || [] })).filter(row => row.item);
+    const freeIn = row => capacityOf(row) - row.dentro.reduce((sum, name) => sum + (catalogEntryOf(name) ? sizeOf({ item: catalogEntryOf(name), qtd: 1 }) : 0), 0);
+    const draw = () => {
+      const terms = fold(shopState.busca).split(/\s+/).filter(Boolean);
+      const subs = [...new Set(shop.itens.filter(item => item.cat === shopState.cat).map(item => item.sub))];
+      const visible = shop.itens.filter(item => (terms.length || item.cat === shopState.cat) && (!shopState.sub || terms.length || item.sub === shopState.sub)
+        && terms.every(term => fold(`${item.nome} ${item.en} ${item.sub} ${item.resumo || ''}`).includes(term)));
+      const shown = visible.slice(0, 120);
+      const total = cart.reduce((sum, line) => sum + cartCost(line), 0);
+      const money = mesa ? Number(mesa.dinheiro) || 0 : null;
+      // Onde cada linha do pedido pode ir: um item da ficha ou outra linha do pedido ("@N").
+      const lineRows = cart.map((line, index) => ({ uid: `@${index}`, nome: (catalog.get(line.id) || {}).nome, item: catalog.get(line.id), qtd: line.qtd, dentro: [] }));
+      const placeSelect = (line, index) => {
+        const child = { item: catalog.get(line.id), qtd: line.qtd };
+        const kind = kindOf(child.item);
+        if (!['acessorio', 'deckItem'].includes(kind)) return '';
+        const parents = [...tableRows.filter(row => parentFits(child, row) && freeIn(row) >= sizeOf(child)), ...lineRows.filter(row => row.uid !== `@${index}` && parentFits(child, row))];
+        return `<label class="cc-mount-field">${kind === 'acessorio' ? 'Encaixar em' : 'Instalar em'} <select data-pedido-em="${index}"><option value="">solto, no inventário</option>${parents.map(row => `<option value="${esc(row.uid)}"${row.uid === line.em ? ' selected' : ''}>${esc(row.nome)}${row.uid.startsWith('@') ? ' (deste pedido)' : ''}</option>`).join('')}</select></label>`;
+      };
+      const ammoSelect = (line, index) => {
+        const weapon = { item: catalog.get(line.id), qtd: 1 };
+        if (kindOf(weapon.item) !== 'arma' || !weapon.item.arma.distancia || !weapon.item.arma.pente) return '';
+        const ammo = [...tableRows.filter(row => kindOf(row.item) === 'municao' && ammoFits(row, weapon)), ...lineRows.filter(row => kindOf(row.item) === 'municao' && ammoFits(row, weapon))];
+        return `<label class="cc-mount-field">Munição <select data-pedido-municao="${index}"><option value="">descarregada</option>${ammo.map(row => `<option value="${esc(row.uid)}"${row.uid === line.municao ? ' selected' : ''}>${esc(row.nome)}${row.uid.startsWith('@') ? ' (deste pedido)' : ''}</option>`).join('')}</select></label>`;
+      };
+      const cartBox = cart.length ? `<ul class="cc-items cc-cart">${cart.map((line, index) => {
+        const item = catalog.get(line.id) || {};
+        return `<li><div><b>${esc(item.nome || line.id)}</b> ×${line.qtd} · ${eb(cartCost(line))}${item.cyber ? ' <small class="cc-wait">o mestre instala pela ficha (Humanidade e instalação)</small>' : ''}</div>
+          <div class="cc-mount-controls"><button type="button" class="action" data-pedido-menos="${index}">−</button><button type="button" class="action" data-pedido-mais="${index}">+</button><button type="button" class="action cc-danger" data-pedido-tirar="${index}">Tirar</button>${ammoSelect(line, index)}${placeSelect(line, index)}</div></li>`;
+      }).join('')}</ul>
+        <label class="cc-wide">Recado para o mestre (opcional)<textarea data-pedido-nota rows="2" maxlength="300">${esc(target.dataset.nota || '')}</textarea></label>
+        <p><button type="button" class="action" data-pedido-enviar>Pedir ao mestre (${eb(total)})</button></p>` : '<p class="note-status">Nada no pedido ainda: escolha na lista abaixo.</p>';
+      const orders = (doc.pedidos || []).slice().reverse();
+      const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div><b>${when(pedido.criado)}</b> · ${eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span>${pedido.motivo ? ` <small>(${esc(pedido.motivo)})</small>` : ''}${pedido.erro ? ` <small class="cc-bad">${esc(pedido.erro)}</small>` : ''}<br>
+        <small>${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}${pedido.nota ? ` · “${esc(pedido.nota)}”` : ''}${(pedido.avisos || []).length ? ` · ${esc(pedido.avisos.join(' '))}` : ''}</small></div>
+        <div class="cc-mount-controls">${pedido.status === 'pendente' ? `${gm ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Aprovar</button>` : ''}<button type="button" class="action cc-danger" data-pedido-${gm ? 'recusar' : 'cancelar'}="${pedido.id}">${gm ? 'Recusar' : 'Cancelar'}</button>` : ''}${gm && pedido.status === 'aprovado' ? `${pedido.erro ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Tentar de novo</button>` : ''}<button type="button" class="action cc-danger" data-pedido-recusar="${pedido.id}">Recusar</button>` : ''}</div></li>`;
+      target.innerHTML = `<div class="cc-wallet"><span>Dinheiro na mesa: <b>${money === null ? '—' : eb(money)}</b></span><span>Neste pedido: <b class="${money !== null && total > money ? 'cc-bad' : ''}">${eb(total)}</b></span></div>
+        ${money === null ? '<p class="note-status">O Foundry ainda não mandou a ficha da mesa: o dinheiro aparece quando o mestre abrir o mundo.</p>' : ''}
+        <p class="note-status">Na campanha, cada pedido passa pelo mestre. Aprovado, o Foundry entrega: os itens entram na ficha, o dinheiro sai, a arma vem carregada e o acessório ou o programa vai onde você escolher. Cyberware chega sem instalar.</p>
+        <div class="section cc-box" data-cc-cart><h3>Seu pedido</h3>${cartBox}<p class="cc-msg" data-pedido-msg role="status"></p></div>
+        ${orders.length ? `<div class="section cc-box" data-cc-orders><h3>Pedidos</h3><ul class="cc-items">${orders.map(orderLine).join('')}</ul></div>` : ''}
+        <div class="cc-shop-filters"><div class="map-filter-list">${shop.categorias.map(category => `<button type="button" class="map-filter${category.id === shopState.cat && !terms.length ? ' active' : ''}" data-shop-cat="${category.id}">${category.nome}</button>`).join('')}</div>
+          <div class="cc-shop-row"><select data-shop-sub aria-label="Grupo"><option value="">Todos os grupos</option>${subs.map(sub => `<option${sub === shopState.sub ? ' selected' : ''}>${esc(sub)}</option>`).join('')}</select><input type="search" data-shop-busca placeholder="Buscar item" value="${esc(shopState.busca)}" aria-label="Buscar item"></div></div>
+        <div class="cc-shop-list">${shown.map(item => `<div class="cc-shop-item"><div><b>${esc(item.nome)}</b><br><small>${esc([item.sub, item.resumo].filter(Boolean).join(' · '))}</small>${item.desc ? `<br><small class="cc-desc">${esc(item.desc)}</small>` : ''}</div>
+          <div class="cc-price">${eb(item.preco)}${item.lote > 1 ? `<small>/${item.lote}</small>` : ''}<button class="action" type="button" data-pedido-por="${item.id}">Pôr no pedido</button></div></div>`).join('') || '<p class="note-status">Nada encontrado.</p>'}
+          ${visible.length > shown.length ? `<p class="note-status">Mostrando ${shown.length} de ${visible.length}: use a busca para achar o resto.</p>` : ''}</div>`;
+    };
+    const message = text => { const el = target.querySelector('[data-pedido-msg]'); if (el) el.textContent = text; };
+    async function act(path, body = {}) {
+      const answer = await api(`api/personagens/${doc.id}/pedidos/${path}`, { method: 'POST', body });
+      if (answer.status !== 200) return message(answer.data.erro || 'Não consegui.');
+      const fresh = await api(`api/personagens/${doc.id}`);
+      if (fresh.status === 200) doc.pedidos = fresh.data.personagem.pedidos;
+      draw();
+    }
+    target.onclick = async event => {
+      const cat = event.target.closest('[data-shop-cat]');
+      if (cat) { shopState.cat = cat.dataset.shopCat; shopState.sub = ''; shopState.busca = ''; return draw(); }
+      const add = event.target.closest('[data-pedido-por]');
+      if (add) {
+        const item = catalog.get(add.dataset.pedidoPor);
+        const step = item.lote > 1 ? item.lote : 1;
+        const existing = cart.find(line => line.id === item.id && !['arma', 'armadura', 'deck', 'cyberBase'].includes(kindOf(item)));
+        if (existing) existing.qtd += step; else cart.push({ id: item.id, qtd: step, em: '', municao: '' });
+        draw();
+        return message(`No pedido: ${item.nome}.`);
+      }
+      const index = name => Number((event.target.closest(`[data-pedido-${name}]`) || {}).dataset?.[`pedido${name[0].toUpperCase()}${name.slice(1)}`]);
+      if (event.target.closest('[data-pedido-mais]') || event.target.closest('[data-pedido-menos]')) {
+        const plus = Boolean(event.target.closest('[data-pedido-mais]'));
+        const line = cart[index(plus ? 'mais' : 'menos')];
+        const item = catalog.get(line.id);
+        const step = item.lote > 1 ? item.lote : 1;
+        line.qtd = Math.max(step, line.qtd + (plus ? step : -step));
+        return draw();
+      }
+      if (event.target.closest('[data-pedido-tirar]')) {
+        const removed = index('tirar');
+        cart.splice(removed, 1);
+        // Referências a linhas do pedido ("@N") andam junto.
+        for (const line of cart) for (const field of ['em', 'municao']) {
+          const ref = String(line[field] || '').match(/^@(\d+)$/);
+          if (ref) line[field] = Number(ref[1]) === removed ? '' : Number(ref[1]) > removed ? `@${Number(ref[1]) - 1}` : line[field];
+        }
+        return draw();
+      }
+      if (event.target.closest('[data-pedido-enviar]')) {
+        const nota = (target.querySelector('[data-pedido-nota]') || {}).value || '';
+        const answer = await api(`api/personagens/${doc.id}/pedidos`, { method: 'POST', body: { itens: cart, nota } });
+        if (answer.status !== 201) return message(answer.data.erro || 'Não consegui enviar o pedido.');
+        cart.length = 0;
+        doc.pedidos = [...(doc.pedidos || []), answer.data.pedido];
+        draw();
+        return message('Pedido enviado. O mestre aprova, e o Foundry entrega na ficha.');
+      }
+      const approve = event.target.closest('[data-pedido-aprovar]');
+      if (approve) return act(`${approve.dataset.pedidoAprovar}/aprovar`);
+      const refuse = event.target.closest('[data-pedido-recusar]');
+      if (refuse) { const motivo = window.prompt('Motivo (opcional, o jogador vê):', '') ?? null; if (motivo !== null) return act(`${refuse.dataset.pedidoRecusar}/recusar`, { motivo }); return; }
+      const cancel = event.target.closest('[data-pedido-cancelar]');
+      if (cancel) return act(`${cancel.dataset.pedidoCancelar}/cancelar`);
+    };
+    target.onchange = event => {
+      if (event.target.matches('[data-shop-sub]')) { shopState.sub = event.target.value; return draw(); }
+      if (event.target.matches('[data-pedido-em]')) { cart[Number(event.target.dataset.pedidoEm)].em = event.target.value; return draw(); }
+      if (event.target.matches('[data-pedido-municao]')) { cart[Number(event.target.dataset.pedidoMunicao)].municao = event.target.value; return draw(); }
+    };
+    target.oninput = event => {
+      if (event.target.matches('[data-pedido-nota]')) { target.dataset.nota = event.target.value; return; }
       if (!event.target.matches('[data-shop-busca]')) return;
       shopState.busca = event.target.value;
       const position = event.target.selectionStart;
@@ -1697,6 +1840,8 @@
       shopEl.innerHTML = '<div class="callout">Escolha o método de criação no criador antes de comprar: ele define quanto dinheiro você tem.</div>';
       return;
     }
+    // Depois do Foundry: a loja da campanha (pedidos que o mestre aprova).
+    if (doc.foundry && doc.foundry.importado) return renderCampaignShop(shopEl, doc, { gm });
     const saver = createSaver(doc, root.querySelector('#cc-save'), helpers.storage);
     renderShop(shopEl, doc, { onChange: () => saver.changed(), readOnly: Boolean(doc.foundry), gm });
   }
@@ -1708,7 +1853,7 @@
       personagens: { eyebrow: 'Campanha / jogadores', title: 'Personagens', lede: 'Os personagens dos jogadores, salvos na wiki. Crie, edite e consulte; o mestre leva para o Foundry quando estiver pronto.', html: holder, setup: setupList },
       ficha: { eyebrow: 'Personagens / ficha', title: 'Ficha', lede: 'A ficha para consulta durante o jogo.', html: holder, setup: setupSheet, manterAlvo: true },
       criador: { eyebrow: 'Personagens / criador', title: 'Criador de personagem', lede: 'Passo a passo do Cyberpunk RED com as Roles de 2077. Tudo é salvo sozinho; os avisos mostram o que falta, mas não impedem de continuar.', html: holder, setup: setupCreator, manterAlvo: true },
-      loja: { eyebrow: 'Personagens / loja', title: 'Loja inicial', lede: 'Compre o equipamento inicial com o dinheiro do personagem. Depois que ele for para o Foundry, a loja inicial fecha.', html: holder, setup: setupShopPage, manterAlvo: true }
+      loja: { eyebrow: 'Personagens / loja', title: 'Loja', lede: 'Antes do Foundry, a loja inicial monta o equipamento da criação com o dinheiro do personagem. Depois, a loja da campanha manda pedidos ao mestre, e o Foundry entrega na ficha.', html: holder, setup: setupShopPage, manterAlvo: true }
     },
     // Para os testes e o importador: as mesmas contas que a tela usa.
     regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank, applySuggested, rollRoleLp, roleLpText }

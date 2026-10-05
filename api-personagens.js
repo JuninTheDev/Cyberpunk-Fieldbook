@@ -14,7 +14,20 @@ const path = require('path');
 const ROLES = ['face', 'solo', 'netrunner', 'corpo', 'tech', 'medtech', 'media', 'lawman', 'nomad'];
 const MAX_BODY = 300 * 1024;
 const MAX_PER_PLAYER = 20;
-module.exports = function createCharacterApi({ dataDir, isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '' }) {
+module.exports = function createCharacterApi({ dataDir, isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '' }) {
+  // Catálogo da loja (loja-catalogo.js, o mesmo que a wiki carrega): o servidor confere os pedidos e calcula o total.
+  let catalogCache = { mtime: 0, items: new Map() };
+  function catalog() {
+    try {
+      const mtime = fs.statSync(catalogFile).mtimeMs;
+      if (mtime !== catalogCache.mtime) {
+        const text = fs.readFileSync(catalogFile, 'utf8');
+        const data = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+        catalogCache = { mtime, items: new Map(data.itens.map(item => [item.id, item])) };
+      }
+    } catch { /* sem catálogo: nenhum pedido passa */ }
+    return catalogCache.items;
+  }
   // O importador do Foundry roda no navegador do mestre, em outra origem: só essas origens recebem CORS.
   // Com credenciais: no servidor, o Foundry (mesa.dominio) manda o cookie do mestre da wiki (wiki.dominio).
   const originOf = url => { try { return new URL(url).origin; } catch { return ''; } };
@@ -85,7 +98,8 @@ module.exports = function createCharacterApi({ dataDir, isGameMaster, send, writ
   const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
   // O que qualquer um vê: nome, apelido, Role e retrato. O resto só o dono e o mestre.
   const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', retrato: portraitOf(doc), donoNome: ownerName(accounts, doc.dono), publico: true });
-  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null, estadoFoundry: foundryState(doc), mesa: doc.mesa ? { hp: doc.mesa.hp || null, recebido: doc.mesa.recebido } : null });
+  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null, estadoFoundry: foundryState(doc), mesa: doc.mesa ? { hp: doc.mesa.hp || null, recebido: doc.mesa.recebido } : null,
+    pedidos: { pendentes: (doc.pedidos || []).filter(item => item.status === 'pendente').length, aprovados: (doc.pedidos || []).filter(item => item.status === 'aprovado').length } });
   const canEdit = (identity, doc) => identity.papel === 'mestre' || (identity.papel === 'jogador' && doc.dono === identity.conta.id);
 
   // Limites gerais de forma: o criador confere as regras; aqui só se evita lixo e arquivo enorme.
@@ -101,7 +115,7 @@ module.exports = function createCharacterApi({ dataDir, isGameMaster, send, writ
   // Campos que o cliente não escolhe: id, dono, versão, datas, a volta do Foundry, o envio ao mestre,
   // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota). Os três últimos
   // a API calcula na resposta e não vão para o arquivo.
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip', 'mesa', 'estadoFoundry', 'donoNome', 'publico'];
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'estadoFoundry', 'donoNome', 'publico'];
   // O que o jogador não muda mais pela wiki depois que o personagem foi importado no Foundry.
   const LOCKED_AFTER_IMPORT = ['role', 'especializacao', 'metodo', 'stats', 'sorteio', 'pericias', 'tipos', 'extras', 'lingua', 'casa', 'kitNet', 'quickhacks', 'escolhas', 'itens',
     'habilidades', 'oficina', 'montagem', 'moradia', 'estiloVida', 'traumaTeam', 'estiloModa'];
@@ -264,6 +278,73 @@ module.exports = function createCharacterApi({ dataDir, isGameMaster, send, writ
         await writeJsonAtomic(fileOf(id), stored);
         return reply(200, { foundry: stored.foundry, estadoFoundry: foundryState(stored) });
       }
+      // Pedidos da campanha (depois da importação): o jogador pede itens do catálogo, o mestre aprova ou recusa, e o
+      // Foundry do mestre entrega (cria os itens, desconta o dinheiro) e marca como entregue. O servidor confere cada
+      // item no catálogo e calcula o total; ninguém escolhe o preço. Não muda a versão do personagem.
+      if (extra === 'pedidos') {
+        const pedidos = Array.isArray(stored.pedidos) ? stored.pedidos : [];
+        const [, , pid, action] = pathname.slice('/api/personagens/'.length).split('/');
+        if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
+        const save = async () => { stored.pedidos = pedidos.slice(-50); await writeJsonAtomic(fileOf(id), stored); };
+        if (!pid) {
+          if (method === 'GET') return reply(200, { pedidos });
+          if (method !== 'POST') return reply(405, { erro: 'Use POST.' });
+          if (!(stored.foundry && stored.foundry.importado)) return reply(400, { erro: 'Antes do Foundry, as compras são na loja inicial.' });
+          if (pedidos.filter(item => item.status === 'pendente').length >= 5) return reply(400, { erro: 'Já há 5 pedidos esperando o mestre.' });
+          const input = await readJson(request);
+          const lines = Array.isArray(input.itens) ? input.itens.slice(0, 30) : [];
+          const items = catalog();
+          const pedidoId = newId();
+          const itens = [];
+          for (const [index, line] of lines.entries()) {
+            const item = items.get(String(line.id || ''));
+            const qtd = Math.round(Number(line.qtd));
+            if (!item) return reply(400, { erro: `Item que não existe no catálogo: ${String(line.id || '').slice(0, 80)}` });
+            if (!(qtd >= 1 && qtd <= 1000)) return reply(400, { erro: `Quantidade inválida para ${item.nome}.` });
+            // Onde instalar e qual munição: um item que já está na ficha (o uid dele) ou outra linha deste pedido ("@2").
+            const ref = value => {
+              const text = String(value || '');
+              const inOrder = text.match(/^@(\d{1,2})$/);
+              if (inOrder) return Number(inOrder[1]) < lines.length && Number(inOrder[1]) !== index ? `pedido:${pedidoId}:${inOrder[1]}` : '';
+              return /^[\w:.-]{1,80}$/.test(text) ? text : '';
+            };
+            itens.push({ uid: `pedido:${pedidoId}:${index}`, id: item.id, nome: item.nome, qtd, preco: item.preco, lote: item.lote || 1, foundry: item.foundry, cat: item.cat, cyber: Boolean(item.cyber), em: ref(line.em), municao: ref(line.municao) });
+          }
+          if (!itens.length) return reply(400, { erro: 'O pedido está vazio.' });
+          const total = itens.reduce((sum, line) => sum + line.preco * (line.lote > 1 ? line.qtd / line.lote : line.qtd), 0);
+          const pedido = { id: pedidoId, criado: new Date().toISOString(), status: 'pendente', itens, total: Math.round(total), nota: String(input.nota || '').trim().slice(0, 300), por: identity.papel };
+          pedidos.push(pedido);
+          await save();
+          return reply(201, { pedido });
+        }
+        const pedido = pedidos.find(item => item.id === pid);
+        if (!pedido) return reply(404, { erro: 'Pedido não encontrado.' });
+        if (method !== 'POST' && method !== 'PUT') return reply(405, { erro: 'Use POST.' });
+        const now = new Date().toISOString();
+        if (action === 'cancelar') {
+          if (pedido.status !== 'pendente') return reply(400, { erro: 'Só dá para cancelar um pedido que ainda espera o mestre.' });
+          Object.assign(pedido, { status: 'cancelado', decidido: now });
+        } else {
+          if (identity.papel !== 'mestre') return reply(403, { erro: 'Só o mestre.' });
+          const input = await readJson(request).catch(() => ({}));
+          if (action === 'aprovar') {
+            // Aprovar de novo um aprovado que deu erro (faltou dinheiro na mesa) limpa o erro: o Foundry tenta outra vez.
+            if (!(pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))) return reply(400, { erro: 'Este pedido não está esperando.' });
+            Object.assign(pedido, { status: 'aprovado', decidido: now, erro: '' });
+          } else if (action === 'recusar') {
+            if (!['pendente', 'aprovado'].includes(pedido.status)) return reply(400, { erro: 'Este pedido já foi resolvido.' });
+            Object.assign(pedido, { status: 'recusado', decidido: now, motivo: String(input.motivo || '').trim().slice(0, 300) });
+          } else if (action === 'entregue') {
+            if (!['pendente', 'aprovado'].includes(pedido.status)) return reply(400, { erro: 'Este pedido já foi resolvido.' });
+            Object.assign(pedido, { status: 'entregue', entregue: now, decidido: pedido.decidido || now, avisos: (Array.isArray(input.avisos) ? input.avisos : []).map(String).slice(0, 20), erro: '' });
+          } else if (action === 'erro') {
+            // O Foundry não conseguiu entregar (dinheiro insuficiente na mesa, por exemplo): fica aprovado, com o motivo.
+            pedido.erro = String(input.erro || '').slice(0, 300);
+          } else return reply(404, { erro: 'Ação desconhecida.' });
+        }
+        await save();
+        return reply(200, { pedido });
+      }
       // Na mesa: o estado do ator no Foundry (HP, Humanidade, dinheiro, itens…), mandado pelo módulo do Foundry do
       // mestre a cada mudança. Depois da importação o Foundry manda; a ficha da wiki mostra isto. Não muda a versão.
       if (extra === 'mesa') {
@@ -337,7 +418,7 @@ module.exports = function createCharacterApi({ dataDir, isGameMaster, send, writ
         const input = await readJson(request);
         // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
         if (Number(input.versao) !== stored.versao) return reply(409, { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: stored });
-        const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa'].map(field => [field, stored[field] || null]));
+        const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos'].map(field => [field, stored[field] || null]));
         const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : stored.dono, versao: stored.versao + 1, criado: stored.criado, atualizado: new Date().toISOString() };
         // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
         // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.

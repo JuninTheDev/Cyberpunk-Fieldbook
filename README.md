@@ -159,7 +159,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
      - O custo por mês aparece no resumo, e tudo vai para o Estilo de vida da ficha do Foundry.
 3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
    - **Só itens de criação:** até 1.000eb, sem armas exóticas, qualidade excelente, borgware, munição rara (inteligente, biotoxina, EMP, sonífera), Linear Frame, Cryotank e Cryopump.
-   - **O mestre ajusta** na página **Loja inicial**: muda o teto e as categorias escondidas, e libera ou esconde item por item.
+   - **O mestre ajusta** na página **Loja**: muda o teto e as categorias escondidas, e libera ou esconde item por item.
    - **Netrunner de 2077:** no Rato de Rua e no Edgerunner, o Netrunner escolhe entre o kit do RED (cyberdeck e programas) e o de 2077 (Militech Hunter MK.1 e 3 quickhacks de 100eb). O resto do pacote não muda.
    - **Kit sugerido:** no Pacote Completo, um botão compra de uma vez o pacote de Rato de Rua da Role.
 4. **Enviar para o mestre:** quando o personagem estiver pronto, o jogador clica em **Enviar para o mestre**. O botão fica na revisão do criador e na ficha. O quadro **Levar para o Foundry** mostra em que pé está: não enviado, esperando o mestre, no Foundry, ou mudou depois de importar (aí aparece **Avisar o mestre de novo**). Na lista de Personagens, o mestre vê quem está esperando.
@@ -167,7 +167,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Retrato:** o módulo copia a imagem para a pasta do mundo (`worlds/<mundo>/retratos-wiki`), para os jogadores também verem, e a põe na ficha e no token. Um link de outro site que não deixa baixar entra como link, se terminar em `.png`, `.jpg` ou `.webp`; senão, o aviso do chat pede para pôr a imagem à mão.
    - **Não aparece o botão nem o aviso?** O módulo instalado está velho: feche o Foundry e rode `atualizar-modulo.bat`.
    - O aviso pode ser desligado em Configurações do módulo → Avisos da wiki.
-   - Depois disso, a loja inicial daquele personagem fecha. As compras durante a sessão vêm numa próxima versão, pelo mesmo caminho.
+   - Depois disso, a loja inicial daquele personagem fecha, e a Loja vira a **loja da campanha** (veja abaixo).
 6. **Depois de importado, o Foundry manda.**
    - **Na wiki:** o criador avisa e trava STATs, perícias, Role, equipamento e moradia; o servidor faz o mesmo.
    - **O que o jogador ainda muda:** o nome, o retrato, a aparência, as notas e o Lifepath.
@@ -179,7 +179,18 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **O que aparece:** a ficha da wiki passa a mostrar a mesa ("Na mesa", com a hora) e se atualiza sozinha a cada 30 segundos. Na lista de Personagens aparece o HP da mesa.
    - **Ao entrar no mundo,** o Foundry manda a ficha de todos os atores da wiki uma vez, inclusive os importados antes.
    - **Para desligar:** Configurações do módulo → Mandar a ficha para a wiki.
-8. **A ficha da wiki** tem o desenho da ficha do Foundry e o botão **Imprimir ou salvar em PDF** (só a ficha, em fundo branco).
+8. **Loja da campanha (compras durante o jogo).** Depois da importação, a página Loja do personagem vira uma loja de pedidos.
+   - **O jogador** escolhe qualquer item do catálogo e monta o pedido.
+     - Escolhe a munição de cada arma (a da ficha ou a do próprio pedido) e onde encaixar acessórios e programas.
+     - Deixa um recado e envia. A loja mostra o dinheiro da mesa e o total do pedido.
+   - **Você aprova ou recusa:**
+     - na Loja do personagem na wiki (a lista de Personagens mostra o quadro **Pedidos da campanha**);
+     - ou na janela **Personagens da wiki** do Foundry.
+   - **O Foundry entrega** o aprovado, até um minuto depois, com o mundo aberto: cria os itens na ficha, carrega as armas, encaixa acessórios e programas e desconta o dinheiro no livro-caixa.
+   - **O servidor confere tudo:** cada item no catálogo e o total, que sai sempre do catálogo; nada sai em dobro.
+   - **Cyberware** chega sem instalar: instale pela ficha do Foundry, que cobra a instalação e rola a perda de Humanidade.
+   - **Sem dinheiro na mesa:** o pedido fica aprovado com o motivo. Depois de ajustar, clique em **Tentar de novo**.
+9. **A ficha da wiki** tem o desenho da ficha do Foundry e o botão **Imprimir ou salvar em PDF** (só a ficha, em fundo branco).
    - **Vitais:** HP e Humanidade com barra, SP na cabeça e no corpo, dinheiro.
    - **Combate:** a base de ataque já somada (STAT + perícia), dano, CDT, pente e munição.
    - **O resto:** perícias pelos grupos do Foundry, a árvore de cyberware, o cyberdeck e o equipamento.
