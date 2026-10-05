@@ -214,11 +214,117 @@
     { id: 'core_cyberware:neural-link', qtd: 1 }, { id: 'core_cyberware:cyberaudio-suite', qtd: 1 }, { id: 'core_cyberware:internal-agent', qtd: 1 },
     { id: 'core_cyberware:interface-plugs', qtd: 1, nome: 'Personal Link' }, { id: 'core_cyberware:chipware-socket', qtd: 2 }
   ];
-  // Moradia e estilo de vida no começo (p. 105 e sup. p. 31): o primeiro mês é de graça.
+  // Sub-habilidades da Role no Rank 4, com o nome que o item de Role do Foundry usa (`abilities`).
+  // pontos: quantos distribuir; max: o máximo em cada uma. `derivadas`: campos que o Foundry espera calculados
+  // (a perícia Cirurgia do Medtech vale 2 por ponto em Cirurgia; Tecnologia Médica, Farmacêutica + Criossistemas).
+  const roleAbilities = {
+    solo: {
+      titulo: 'Consciência de Combate', pagina: 'RED p. 146', pontos: 4, max: 4,
+      nota: 'Dá para redistribuir os pontos quando o combate começa (antes da Iniciativa), fora de combate ou, no combate, com uma Ação.',
+      itens: [
+        { id: 'Initiative Reaction', nome: 'Reação de Iniciativa', desc: '+1 na Iniciativa por ponto.' },
+        { id: 'Precision Attack', nome: 'Ataque de Precisão', desc: '+1 em todo ataque a cada 3 pontos.' },
+        { id: 'Spot Weakness', nome: 'Ponto Fraco', desc: '+1 no dano (antes da armadura) do primeiro acerto da rodada, por ponto.' },
+        { id: 'Threat Detection', nome: 'Detecção de Ameaça', desc: '+1 em Percepção por ponto.' },
+        { id: 'Damage Deflection', nome: 'Deflexão de Dano', desc: 'A cada 2 pontos, −1 no primeiro dano sofrido na rodada.' },
+        { id: 'Fumble Recovery', nome: 'Recuperação de Falhas', desc: 'Com 4 pontos, ignora as falhas críticas (1 no dado) ao atacar.' }
+      ]
+    },
+    tech: {
+      titulo: 'Especialidades de Artífice', pagina: 'RED p. 147–148', pontos: 8, max: 4,
+      nota: 'Cada Rank de Artífice dá +1 em duas especialidades diferentes: no Rank 4, são 8 pontos, até 4 em cada.',
+      itens: [
+        { id: 'Field Expertise', nome: 'Especialização de Campo', desc: 'Soma o Rank aos testes de Tecnologia fora do Artífice e faz reparos temporários como uma Ação.' },
+        { id: 'Upgrade Expertise', nome: 'Especialização de Upgrade', desc: 'Melhora um item: menos perda de Humanidade, mais slots, ocultável, qualidade excelente…' },
+        { id: 'Fabrication Expertise', nome: 'Especialização de Fabricação', desc: 'Fabrica itens que já existem, com materiais de uma categoria de preço abaixo.' },
+        { id: 'Invention Expertise', nome: 'Especialização de Invenção', desc: 'Inventa itens e upgrades novos, com o mestre.' }
+      ]
+    },
+    medtech: {
+      titulo: 'Especialidades de Medicina', pagina: 'RED p. 149', pontos: 4, max: 4,
+      nota: 'Cada Rank de Medicina dá 1 ponto numa especialidade. Cirurgia e Tecnologia Médica são perícias que só o Medtech tem.',
+      itens: [
+        { id: 'Surgery', nome: 'Cirurgia', desc: '+2 na perícia Cirurgia por ponto (até 10): lesões críticas graves e instalação de cyberware.' },
+        { id: 'Medical Tech (Pharmaceuticals)', nome: 'Farmacêutica', desc: '+1 em Tecnologia Médica por ponto; fabrica fármacos.' },
+        { id: 'Medical Tech (Cryosystem Operation)', nome: 'Operação de Criossistemas', desc: '+1 em Tecnologia Médica por ponto; opera cryopumps e cryotanks.' }
+      ],
+      derivadas: [
+        { id: 'Surgery Skill', de: { Surgery: 2 }, max: 10 },
+        { id: 'Medical Tech Skill', de: { 'Medical Tech (Pharmaceuticals)': 1, 'Medical Tech (Cryosystem Operation)': 1 } }
+      ]
+    }
+  };
+
+  // Oficina da Família do Nomad (RED p. 161–165): a cada Rank de Moto, um veículo de série ou um upgrade de um
+  // veículo da família, do Rank dele ou menor. No Rank 4: 4 escolhas, só da faixa 1–4 e upgrades de Rank 1.
+  // Só um veículo da família fica com o Nomad de cada vez. `classe`: para as restrições dos upgrades.
+  const nomadMotorpool = {
+    pagina: 'RED p. 161–165', escolhas: 4,
+    veiculos: [
+      { id: 'Compact Groundcar', nome: 'Groundcar Compacto', classe: ['groundcar', 'terrestre'] },
+      { id: 'Roadbike', nome: 'Moto Estradeira', classe: ['moto', 'terrestre'] },
+      { id: 'Jetski', nome: 'Jetski', classe: ['jetski', 'maritimo'] },
+      { id: 'Gyrocopter', nome: 'Girocóptero', classe: ['girocoptero', 'aereo'] }
+    ],
+    // vezes: quantas vezes no mesmo veículo (0 = sem limite). so/exceto: classes. requer: outro upgrade antes, no mesmo veículo.
+    upgrades: [
+      { id: 'Bulletproof Glass', nome: 'Vidro blindado', vezes: 2, desc: 'O vidro vira cobertura (15 HP); da segunda vez, vidro denso (30 HP).' },
+      { id: 'Communications Center', nome: 'Centro de comunicações', vezes: 1, desc: 'Console com agente, 6 rádios, codificadores, rastreador e gravador.' },
+      { id: 'NOS', nome: 'NOS', vezes: 0, desc: 'Uma Ação de Movimento a mais ao dirigir, uma vez por dia por tanque.' },
+      { id: 'Onboard Flamethrower', nome: 'Lança-chamas instalado', vezes: 0, desc: 'O motorista dispara com a Ação. Não recarrega dirigindo.' },
+      { id: 'Onboard Machine Gun', nome: 'Metralhadora instalada', vezes: 0, desc: 'Rifle de assalto de 30 tiros, com autofogo, virado para a frente.' },
+      { id: 'Seating Upgrade', nome: 'Upgrade de assento', vezes: 0, exceto: ['moto', 'jetski', 'girocoptero'], desc: 'Mais dois assentos (podem ser ejetáveis).' },
+      { id: 'Smuggling Upgrade', nome: 'Upgrade de contrabando', vezes: 0, exceto: ['moto', 'jetski', 'girocoptero'], desc: 'Dois coldres ocultos e um compartimento escondido (DV17 para achar).' },
+      { id: 'Heavy Chassis', nome: 'Chassis pesado', vezes: 1, exceto: ['moto', 'jetski', 'girocoptero'], desc: '+20 SDP e reboca até 10 toneladas.' },
+      { id: 'Onboard Melee Weapon', nome: 'Arma branca instalada', vezes: 0, so: ['terrestre', 'maritimo'], desc: 'Arma Branca Muito Pesada montada no veículo.' },
+      { id: 'Combat Plow', nome: 'Implemento de combate', vezes: 1, so: ['terrestre', 'maritimo'], exceto: ['moto', 'jetski'], desc: 'Bater de frente não danifica o veículo nem os ocupantes.' },
+      { id: 'Deployable Spike Strip', nome: 'Tira de pregos', vezes: 0, so: ['groundcar'], desc: 'Quem passar por cima: Dirigir DV17 ou 4d6 no ponto fraco do veículo.' },
+      { id: 'Housing Capacity', nome: 'Capacidade de alojamento', vezes: 1, so: ['groundcar'], requer: 'Heavy Chassis', desc: 'Cama, banheiro, chuveiro e cozinha: o carro vira uma kombi.' }
+    ]
+  };
+
+  // Bônus de assinatura do Corpo (Teamwork Rank 1 do Exec, RED p. 153): um terno de negócios de graça.
+  // Nos pacotes do Rato de Rua e do Edgerunner ele já vem; no Pacote Completo entra aqui.
+  const roleFreeItems = {
+    corpo: [{ id: 'core_clothing:businesswear-top', qtd: 1 }, { id: 'core_clothing:businesswear-bottoms', qtd: 1 }, { id: 'core_clothing:businesswear-footwear', qtd: 1 }]
+  };
+
+  // Moradia, estilo de vida, Trauma Team e moda (RED p. 223 e 377–378, sup. p. 7–8 e 31).
+  // O padrão de cada Role tem o primeiro mês de graça. Escolher algo melhor paga a diferença do primeiro mês
+  // com o dinheiro inicial; escolher pior não devolve nada (regra da mesa). `roles`: só para essas Roles.
   const housing = {
-    padrao: { moradia: 'Contêiner de carga ou quitinete num megaprédio', aluguel: 1000, estilo: 'Prepak genérico', custoEstilo: 100 },
-    corpo: { moradia: 'Conapt corporativo (pago pela corp)', aluguel: 0, estilo: 'Bom (pago no primeiro mês)', custoEstilo: 600 },
-    nomad: { nota: 'O Nomad pode morar com a família do clã (veja a habilidade Moto).' }
+    moradias: [
+      { id: 'rua', nome: 'Na rua ou num veículo', aluguel: 0, desc: 'Sem casa. Na rua, Resistência DV15 para não acordar cansado.' },
+      { id: 'capsula', nome: 'Hotel cápsula', aluguel: 500, desc: 'Só uma cápsula para dormir. Com mais de uma pessoa por cápsula, todos dormem mal.' },
+      { id: 'conteiner', nome: 'Contêiner de carga', aluguel: 1000, desc: 'Um contêiner adaptado, num pátio ou empilhado.' },
+      { id: 'megapredio', nome: 'Quitinete em megaprédio', aluguel: 1000, desc: 'Em 2077 custa o mesmo que o contêiner (sup. p. 31).' },
+      { id: 'quitinete', nome: 'Quitinete fora de megaprédio', aluguel: 1500, desc: 'Um cômodo só, num prédio comum.' },
+      { id: 'dois-quartos', nome: 'Apartamento de dois quartos', aluguel: 2500, desc: 'Espaço para mais gente dormir bem.' },
+      { id: 'conapt-luxo', nome: 'Conapt de luxo', aluguel: 7500, desc: 'Prédio com segurança e serviços.' },
+      { id: 'cobertura', nome: 'Cobertura de luxo', aluguel: 15000, desc: 'O topo de um arranha-céu.' },
+      { id: 'conapt-corp', nome: 'Conapt corporativo', aluguel: 0, roles: ['corpo'], desc: 'Da corporação, sem aluguel enquanto você trabalhar para ela (Teamwork Rank 2).' },
+      { id: 'cla', nome: 'Com a família do clã', aluguel: 0, roles: ['nomad'], desc: 'Mora no comboio ou no acampamento do clã (Moto).' }
+    ],
+    estilos: [
+      { id: 'generico', nome: 'Prepak genérico', custo: 100, desc: 'O antigo Kibble, pelo mesmo preço. Cobre comprar itens de até 10eb duas vezes por semana e um bar bom no fim de semana.' },
+      { id: 'bom', nome: 'Prepak bom', custo: 600, desc: 'Comida de restaurante, quase como a de verdade. Bons bares e um show ou evento por mês.' },
+      { id: 'fresca', nome: 'Comida fresca', custo: 1500, desc: 'Comida de verdade, bar executivo, hotel quando precisar e um restaurante de primeira por mês.' },
+      { id: 'cla', nome: 'Com o clã', custo: 0, roles: ['nomad'], desc: 'O clã divide a comida e o resto.' }
+    ],
+    traumaTeam: [
+      { id: 'nenhum', nome: 'Sem Trauma Team', custo: 0, desc: '' },
+      { id: 'prata', nome: 'Trauma Team Prata', custo: 500, desc: 'Chega em 1d6 rodadas. As cirurgias são cobradas à parte, pelo preço do hospital.' },
+      { id: 'executivo', nome: 'Trauma Team Executivo', custo: 1000, desc: 'Chega em 1d6 rodadas, com a cirurgia incluída.' }
+    ],
+    modas: [
+      { id: '', nome: 'Nenhum em especial', desc: '' },
+      { id: 'entropismo', nome: 'Entropismo', desc: 'Robusto, quadradão, feio, mas funciona. Necessidade acima de estilo.' },
+      { id: 'kitsch', nome: 'Kitsch', desc: 'Espalhafatoso e colorido, com cyberware à mostra. Estilo acima de substância.' },
+      { id: 'neomilitarismo', nome: 'Neomilitarismo', desc: 'Monolítico, prático, dominante. O visual das megacorps.' },
+      { id: 'neokitsch', nome: 'Neokitsch', desc: 'Ostensivo, dourado, materiais naturais de verdade. O visual do 0,1%.' }
+    ],
+    // O que cada Role tem de graça no primeiro mês (o Corpo: conapt da corporação e Prepak bom).
+    padrao: { geral: { moradia: 'conteiner', estilo: 'generico' }, corpo: { moradia: 'conapt-corp', estilo: 'bom' } }
   };
   // Lifepath da Role (RED p. 54–70), tabela por tabela, na ordem do fluxograma do livro. Chave: a Role do RED
   // (`tabelas` de cada Role de 2077). `dado`: 6 ou 10; 0 = escolha, sem rolar. `se`: a tabela só vale quando
@@ -458,6 +564,6 @@
 
   window.systemCreation = {
     stats, statTables, roles, basicSkills, streetratSkills, edgerunnerSkills, specializedSkills, languages, originLanguages, homeDistricts,
-    packages, methods, completePackage, edgerunnerRules, free2077, housing, derived, roleLifepaths
+    packages, methods, completePackage, edgerunnerRules, free2077, housing, derived, roleLifepaths, roleAbilities, nomadMotorpool, roleFreeItems
   };
 })();

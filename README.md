@@ -134,6 +134,17 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Lifepath da Role:** no passo 4, as perguntas próprias da Role (livro p. 54–70), para rolar ou escolher. A Face usa as do Rockerboy, e o Corpo, as do Exec. As respostas vão para o campo Role Lifepath da ficha do Foundry, junto com as notas.
    - **Retrato:** no passo 1, o jogador envia uma imagem (PNG, JPEG ou WebP, reduzida para 512 px antes de sair do aparelho) ou cola um link `https`. Se houver imagem enviada, ela vale no lugar do link. O retrato aparece na ficha, em miniatura na lista de Personagens (inclusive para os outros jogadores) e vai para a ficha e o token no Foundry.
    - **Perícias sugeridas:** no Edgerunner e no Pacote Completo, **Distribuir sugerido** põe os níveis do Rato de Rua da Role (86 pontos certinhos). No Pacote Completo, as 20 perícias da Role aparecem primeiro.
+   - **O que a Role ganha além do Rank** (passo 1). Tudo vai para o item de Role e para a ficha no Foundry.
+     - **Solo:** os 4 pontos da Consciência de Combate (RED p. 146).
+     - **Tech:** os 8 pontos das especialidades de Artífice, até 4 em cada (p. 147–148).
+     - **Medtech:** os 4 pontos de Medicina (p. 149). As perícias Cirurgia (2 por ponto) e Tecnologia Médica são calculadas.
+     - **Nomad:** as 4 escolhas da Oficina da Família (p. 161–165), entre veículos e upgrades. No Foundry, os veículos chegam com os upgrades instalados.
+     - **Corpo:** no Pacote Completo, ganha o terno de negócios de graça (o bônus de assinatura do Teamwork). Nos outros métodos, o pacote já traz o terno.
+   - **Moradia e estilo de vida** (passo 6): a moradia (da rua à cobertura de luxo), o estilo de vida, o Trauma Team (Prata ou Executivo) e o estilo de moda de 2077.
+     - O padrão da Role tem o primeiro mês de graça.
+     - Escolher melhor paga a diferença do primeiro mês com o dinheiro inicial; o Trauma Team paga o mês inteiro.
+     - Escolher pior não devolve.
+     - O custo por mês aparece no resumo, e tudo vai para o Estilo de vida da ficha do Foundry.
 3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
    - **Só itens de criação:** até 1.000eb, sem armas exóticas, qualidade excelente, borgware, munição rara (inteligente, biotoxina, EMP, sonífera), Linear Frame, Cryotank e Cryopump.
    - **O mestre ajusta** na página **Loja inicial**: muda o teto e as categorias escondidas, e libera ou esconde item por item.
@@ -195,7 +206,13 @@ Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 node tests/rodar.js
 ```
 
-Os testes abrem o Edge escondido, sobem servidores próprios (portas 8765 a 8769, sem mexer no da porta 8000) e testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8769), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+
+**Teste do Foundry** (`node tests/rodar.js foundry`): importa personagens feitos na wiki de teste num Foundry de verdade e confere o ator.
+- **Onde roda:** usa o Foundry instalado no PC, sem janela, na porta 30999. Os dados ficam numa pasta própria, `%LOCALAPPDATA%\FieldbookTeste\foundry`, que nunca toca nos seus mundos.
+- **O que confere:** STATs, Role e sub-habilidades, cyberware instalado, armas, moradia e veículos.
+- **Licença:** ela vale para uma mesa por vez, então o teste confere antes, na wiki online, se a mesa do servidor está vazia. Se houver alguém, o teste é pulado.
+- **Módulo:** os scripts do módulo são copiados a cada rodada. Os compêndios só são gerados de novo na primeira vez ou com `$env:FOUNDRY_BUILD=1`.
 
 - Para rodar uma parte só, passe o nome: `node tests/rodar.js busca`. Os nomes são os arquivos de `tests/cenarios/`.
 - `$env:DETALHES=1` mostra o detalhe de cada checagem.

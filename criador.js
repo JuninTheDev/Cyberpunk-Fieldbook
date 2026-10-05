@@ -37,7 +37,8 @@
   const blank = () => ({
     nome: '', apelido: '', role: '', especializacao: '', metodo: '', passo: 1,
     stats: {}, sorteio: {}, pericias: {}, tipos: {}, extras: [], lingua: '', casa: '', kitNet: 'red', quickhacks: [],
-    lifepath: { amigos: [], inimigos: [], amores: [], role: {} }, escolhas: {}, itens: [], moradia: '', aparencia: '', notas: ''
+    lifepath: { amigos: [], inimigos: [], amores: [], role: {} }, escolhas: {}, itens: [], moradia: '', estiloVida: '', traumaTeam: '', estiloModa: '', habilidades: {}, oficina: [],
+    aparencia: '', notas: ''
   });
 
   // ---------------- Regras ----------------
@@ -125,8 +126,13 @@
     }
     return list;
   }
+  // Itens que a Role dá (o terno de negócios do Corpo): só no Pacote Completo, porque os pacotes já trazem.
+  const roleFree = doc => (doc.metodo === 'pacote' && C.roleFreeItems[doc.role]) || [];
   function inventory(doc) {
-    const free = C.free2077.map(item => ({ uid: `gratis:${item.id}`, id: item.id, qtd: item.qtd, origem: 'gratis2077', nome: item.nome || '' }));
+    const free = [
+      ...C.free2077.map(item => ({ uid: `gratis:${item.id}`, id: item.id, qtd: item.qtd, origem: 'gratis2077', nome: item.nome || '' })),
+      ...roleFree(doc).map(item => ({ uid: `role:${item.id}`, id: item.id, qtd: item.qtd, origem: 'role', nome: '' }))
+    ];
     const freeIds = new Set(free.map(item => item.id));
     // O que o pacote dá e já vem grátis em 2077 não entra duas vezes (nem cobra Humanidade de novo).
     const pack = packageEntries(doc).filter(item => !(freeIds.has(item.id) && (catalog.get(item.id) || {}).cat === 'cyberware'));
@@ -137,6 +143,7 @@
   const lineCost = entry => entry.item.preco * (entry.item.lote > 1 ? entry.qtd / entry.item.lote : entry.qtd);
 
   // Dinheiro: Pacote Completo tem 2.550eb e mais 800eb só de moda (a sobra da moda some); os outros, 500eb.
+  // A moradia e o estilo de vida melhores que o padrão (e o Trauma Team) cobram o primeiro mês daqui.
   function money(doc) {
     const bought = inventory(doc).filter(entry => entry.origem === 'loja');
     const fashion = bought.filter(entry => isFashion(entry.item)).reduce((sum, entry) => sum + lineCost(entry), 0);
@@ -144,8 +151,9 @@
     const budget = doc.metodo === 'pacote' ? C.completePackage.dinheiro : C.edgerunnerRules.dinheiro;
     const fashionBudget = doc.metodo === 'pacote' ? C.completePackage.moda : 0;
     const fromFashion = Math.min(fashionBudget, fashion);
-    const spent = other + fashion - fromFashion;
-    return { inicial: budget, moda: fashionBudget, gastoModa: fashion, usadoModa: fromFashion, gasto: spent, saldo: budget - spent };
+    const home = doc.role ? housing(doc).primeiroMes : 0;
+    const spent = other + fashion - fromFashion + home;
+    return { inicial: budget, moda: fashionBudget, gastoModa: fashion, usadoModa: fromFashion, moradia: home, gasto: spent, saldo: budget - spent };
   }
 
   // Humanidade: EMP × 10, menos a perda fixa de cada cyberware (o grátis de 2077 não perde). EMP = Humanidade ÷ 10, para baixo.
@@ -217,10 +225,83 @@
   }
 
   // ---------------- Moradia ----------------
+  // Moradia, estilo de vida, Trauma Team e moda. O padrão da Role tem o primeiro mês de graça; o que for melhor
+  // paga a diferença do primeiro mês (o que for pior não devolve). Opção que não serve para a Role volta ao padrão.
+  // Personagens antigos guardavam moradia 'padrao' ou 'familia' (Nomad com o clã).
+  const allowedFor = (option, role) => !option.roles || option.roles.includes(role);
+  const housingBase = doc => C.housing.padrao[doc.role] || C.housing.padrao.geral;
   function housing(doc) {
-    if (doc.role === 'corpo') return { ...C.housing.corpo, tipo: 'corpo' };
-    if (doc.role === 'nomad' && doc.moradia === 'familia') return { moradia: 'Com a família do clã', aluguel: 0, estilo: 'Com o clã', custoEstilo: 0, tipo: 'familia' };
-    return { ...C.housing.padrao, tipo: 'padrao' };
+    const H = C.housing;
+    const base = housingBase(doc);
+    const pick = (list, id, fallback) => list.find(item => item.id === id && allowedFor(item, doc.role)) || list.find(item => item.id === fallback);
+    const home = pick(H.moradias, { padrao: '', familia: 'cla' }[doc.moradia] ?? doc.moradia, base.moradia);
+    const life = pick(H.estilos, doc.estiloVida || (doc.moradia === 'familia' ? 'cla' : ''), base.estilo);
+    const trauma = pick(H.traumaTeam, doc.traumaTeam, 'nenhum');
+    const fashion = H.modas.find(item => item.id === (doc.estiloModa || '')) || H.modas[0];
+    const baseHome = H.moradias.find(item => item.id === base.moradia);
+    const baseLife = H.estilos.find(item => item.id === base.estilo);
+    return {
+      tipo: home.id, moradia: home.nome, aluguel: home.aluguel, estiloId: life.id, estilo: life.nome, custoEstilo: life.custo,
+      traumaTeam: trauma.custo ? { id: trauma.id, nome: trauma.nome, custo: trauma.custo } : null,
+      moda: fashion.id ? { id: fashion.id, nome: fashion.nome, desc: fashion.desc } : null,
+      mensal: home.aluguel + life.custo + trauma.custo,
+      primeiroMes: Math.max(0, home.aluguel - baseHome.aluguel) + Math.max(0, life.custo - baseLife.custo) + trauma.custo
+    };
+  }
+
+  // ---------------- Sub-habilidades da Role ----------------
+  // doc.habilidades: { nome no Foundry: pontos }. Só Solo, Tech e Medtech têm (C.roleAbilities).
+  const abilitySpec = doc => C.roleAbilities[doc.role] || null;
+  const abilityPoints = doc => { const spec = abilitySpec(doc); return spec ? spec.itens.reduce((sum, item) => sum + (Number((doc.habilidades || {})[item.id]) || 0), 0) : 0; };
+  // Os Ranks que vão para o item de Role do Foundry, com as derivadas (perícias Cirurgia e Tecnologia Médica do Medtech).
+  function roleAbilityRanks(doc) {
+    const spec = abilitySpec(doc);
+    if (!spec) return [];
+    const ranks = spec.itens.map(item => ({ nome: item.id, rank: Math.min(spec.max, Math.max(0, Number((doc.habilidades || {})[item.id]) || 0)) }));
+    const byName = Object.fromEntries(ranks.map(entry => [entry.nome, entry.rank]));
+    for (const derived of spec.derivadas || []) {
+      const value = Object.entries(derived.de).reduce((sum, [name, factor]) => sum + (byName[name] || 0) * factor, 0);
+      ranks.push({ nome: derived.id, rank: derived.max ? Math.min(derived.max, value) : value });
+    }
+    return ranks;
+  }
+
+  // ---------------- Oficina da Família (Nomad) ----------------
+  // doc.oficina: as escolhas na ordem, 'v:<veículo>' ou 'u:<número da escolha do veículo>:<upgrade>'.
+  // Cada escolha só vale se fizer sentido com as de antes; a que deixou de valer vira pendência.
+  const MP = () => C.nomadMotorpool;
+  const vehicleById = id => MP().veiculos.find(vehicle => vehicle.id === id);
+  const upgradeById = id => MP().upgrades.find(upgrade => upgrade.id === id);
+  function upgradeFits(upgrade, vehicle, installed) {
+    const classes = vehicle.classe;
+    if (upgrade.so && !upgrade.so.some(cls => classes.includes(cls))) return false;
+    if (upgrade.exceto && upgrade.exceto.some(cls => classes.includes(cls))) return false;
+    if (upgrade.vezes && installed.filter(id => id === upgrade.id).length >= upgrade.vezes) return false;
+    return !upgrade.requer || installed.includes(upgrade.requer);
+  }
+  function motorpool(doc) {
+    const vehicles = [];
+    const valid = (doc.oficina || []).slice(0, MP().escolhas).map((value, index) => {
+      const [kind, first, second] = String(value || '').split(':');
+      if (kind === 'v' && vehicleById(first) && !vehicles.some(entry => entry.veiculo.id === first)) { vehicles.push({ escolha: index, veiculo: vehicleById(first), upgrades: [] }); return true; }
+      const target = kind === 'u' && vehicles.find(entry => entry.escolha === Number(first));
+      const upgrade = upgradeById(second);
+      if (target && upgrade && upgradeFits(upgrade, target.veiculo, target.upgrades.map(entry => entry.upgrade.id))) { target.upgrades.push({ escolha: index, upgrade }); return true; }
+      return false;
+    });
+    return { veiculos: vehicles, validas: valid, feitas: valid.filter(Boolean).length };
+  }
+  // O que dá para escolher na linha `index`, a partir das escolhas válidas de antes.
+  function motorpoolChoices(doc, index) {
+    const before = motorpool({ oficina: (doc.oficina || []).slice(0, index) });
+    const options = MP().veiculos.filter(vehicle => !before.veiculos.some(entry => entry.veiculo.id === vehicle.id)).map(vehicle => ({ value: `v:${vehicle.id}`, label: `Veículo: ${vehicle.nome}` }));
+    for (const target of before.veiculos) {
+      const installed = target.upgrades.map(entry => entry.upgrade.id);
+      for (const upgrade of MP().upgrades) {
+        if (upgradeFits(upgrade, target.veiculo, installed)) options.push({ value: `u:${target.escolha}:${upgrade.id}`, label: `Upgrade no ${target.veiculo.nome}: ${upgrade.nome}` });
+      }
+    }
+    return options;
   }
 
   // ---------------- Pendências (avisos, não bloqueiam) ----------------
@@ -233,6 +314,12 @@
     if (!doc.metodo) add(1, 'Escolha o método de criação.');
     const role = roleById(doc.role);
     if (role && role.especializacoes && !doc.especializacao) add(1, `Escolha a especialização de ${role.nome}.`);
+    const spec = abilitySpec(doc);
+    if (spec && abilityPoints(doc) !== spec.pontos) add(1, `${spec.titulo}: distribua ${spec.pontos} pontos (agora: ${abilityPoints(doc)}).`);
+    if (doc.role === 'nomad') {
+      const pool = motorpool(doc);
+      if (pool.feitas < MP().escolhas) add(1, `Oficina da Família: falta${MP().escolhas - pool.feitas > 1 ? 'm' : ''} ${MP().escolhas - pool.feitas} escolha${MP().escolhas - pool.feitas > 1 ? 's' : ''} (veículos ou upgrades).`);
+    }
     if (doc.metodo === 'ratoderua' && !doc.sorteio.linha) add(2, 'Role ou escolha a linha da tabela de STATs.');
     if (doc.metodo === 'edgerunner' && statKeys.some(stat => !doc.sorteio[stat])) add(2, 'Role 1d10 para cada STAT.');
     if (doc.metodo === 'pacote') {
@@ -282,10 +369,15 @@
     return {
       versaoRegras: 1,
       stats, derivados: derived, humanidade: hum,
-      role: role.id ? { id: role.id, nome: role.nome, rank: 4, foundry: role.foundry, especializacao: spec ? { nome: spec.nome, pericias: spec.pericias } : null } : null,
+      role: role.id ? { id: role.id, nome: role.nome, rank: 4, foundry: role.foundry, especializacao: spec ? { nome: spec.nome, pericias: spec.pericias } : null, habilidades: roleAbilityRanks(doc) } : null,
       pericias: finalSkills(doc), casa: doc.casa,
       // renomear: só quando o item tem outro nome em 2077 (o plug de interface vira Personal Link).
       itens: inventory(doc).map(entry => ({ uid: entry.uid, id: entry.id, nome: entry.item.nome, renomear: entry.nome || '', qtd: entry.qtd, origem: entry.origem, foundry: entry.item.foundry, cyber: Boolean(entry.item.cyber), semHumanidade: entry.origem === 'gratis2077' })),
+      // Veículos da família do Nomad, com os upgrades de cada um (instalados no Foundry).
+      veiculos: doc.role === 'nomad' ? motorpool(doc).veiculos.map(entry => ({
+        uid: `familia:${entry.escolha}`, nome: entry.veiculo.nome, familia: true, foundry: { pack: 'cyberpunk-red-core.core_vehicles', nome: entry.veiculo.id },
+        upgrades: entry.upgrades.map(item => ({ uid: `familia:${item.escolha}`, nome: item.upgrade.nome, foundry: { pack: 'cyberpunk-red-core.core_upgrades', nome: item.upgrade.id } }))
+      })) : [],
       dinheiro: { saldo: Math.max(0, cash.saldo), inicial: cash.inicial },
       moradia: housing(doc),
       lifepath: lifepathTexts(doc),
@@ -324,7 +416,8 @@
     4: ['RED p. 45–53', '<p>O Lifepath conta de onde o personagem veio: origem, família, amigos, inimigos e amores. Role ou escolha cada item.</p><p>Os resultados são ganchos para o mestre usar em jogo. Nenhum deles obriga nada.</p>'],
     5: ['RED p. 98–117 · cyberware grátis: suplemento p. 8', `<ul><li><b>Rato de Rua e Edgerunner:</b> o pacote da Role, escolhendo nas linhas com opções, e mais 500eb.</li><li><b>Pacote Completo:</b> 2.550eb para a loja e mais 800eb só para moda. A loja de criação mostra só itens iniciais.</li>
       <li><b>Cyberware custa Humanidade:</b> a cada 10 pontos perdidos, a EMP cai 1. As opções precisam de uma base, como o cyberbraço para as armas de braço.</li></ul>`],
-    6: ['RED p. 105 · suplemento p. 31', '<p>Onde o personagem mora e como vive. O primeiro mês é de graça; depois, o aluguel e o estilo de vida saem do dinheiro no dia 1º de cada mês.</p>'],
+    6: ['RED p. 223 e 377–378 · suplemento p. 7–8 e 31', `<p>Onde o personagem mora, como vive e se tem Trauma Team. No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro.</p>
+      <ul><li>O <b>padrão</b> da sua Role tem o primeiro mês de graça.</li><li>Escolher algo <b>melhor</b> paga a diferença do primeiro mês com o dinheiro inicial. Escolher pior não devolve nada.</li><li>O <b>Trauma Team</b> paga o primeiro mês inteiro.</li><li>Quem não paga o estilo de vida tem uma semana; depois, Death Save no começo de cada dia sem pagar.</li></ul>`],
     7: ['', '<p>Cada pendência leva ao passo certo. Nada impede de salvar nem de enviar. Quando estiver pronto, <b>envie para o mestre</b>: o Foundry dele avisa, e ele importa.</p>']
   };
 
@@ -345,7 +438,8 @@
       ['Humanidade', value(points ? `${hum.atual}/${hum.max}` : '—')],
       ['EMP', value(points ? hum.emp : '—', points && hum.emp !== stats.EMP)],
       ['Dinheiro', value(eb(cash.saldo), cash.saldo < 0)],
-      ...(doc.metodo === 'pacote' ? [['Moda', value(`${eb(Math.max(0, cash.moda - cash.usadoModa))} sobrando`)]] : [])
+      ...(doc.metodo === 'pacote' ? [['Moda', value(`${eb(Math.max(0, cash.moda - cash.usadoModa))} sobrando`)]] : []),
+      ...(doc.role ? [['Por mês', value(eb(housing(doc).mensal))]] : [])
     ] : [];
     const title = `${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` "${esc(doc.apelido)}"` : ''}`;
     const short = doc.metodo ? `HP ${points ? derived.hp : '—'} · ${eb(cash.saldo)} · ${issues ? `${issues} pendência${issues > 1 ? 's' : ''}` : 'tudo certo'}` : 'escolha Role e método';
@@ -516,15 +610,22 @@
     const inv = inventory(doc);
     const group = (title, filter) => {
       const rows = inv.filter(filter);
-      return rows.length ? `<h4>${title}</h4><ul class="cc-items">${rows.map(entry => `<li><b>${esc(entry.nome || entry.item.nome)}</b>${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}${entry.item.resumo ? ` <small>${esc(entry.item.resumo)}</small>` : ''}${entry.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (2077)</small>' : ''}</li>`).join('')}</ul>` : '';
+      return rows.length ? `<h4>${title}</h4><ul class="cc-items">${rows.map(entry => `<li><b>${esc(entry.nome || entry.item.nome)}</b>${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}${entry.item.resumo ? ` <small>${esc(entry.item.resumo)}</small>` : ''}${entry.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (2077)</small>' : ''}${entry.origem === 'role' ? ' <small class="cc-ok">bônus da Role</small>' : ''}</li>`).join('')}</ul>` : '';
     };
     const lp = lifepathTexts(doc);
     const lpRows = [...lifepathFields.map(([, label, field]) => [label, lp[field]]), ['Amigos', lp.friends], ['Inimigos', lp.enemies], ['Amores trágicos', lp.tragicLoveAffairs], ['Lifepath da Role', lp.roleLifepath]].filter(([, text]) => text);
     const home = housing(doc);
+    // Sub-habilidades e veículos da família: o que a Role tem além do Rank.
+    const abilities = abilitySpec(doc);
+    const fleet = doc.role === 'nomad' ? motorpool(doc).veiculos : [];
+    const roleBox = abilities || fleet.length ? `<div class="section cc-box" data-toc="Role"><h3>${esc(role.habilidade || 'Role')} Rank 4</h3>
+      ${abilities ? `<h4>${esc(abilities.titulo)}</h4><ul class="cc-items">${abilities.itens.map(item => `<li><b>${esc(item.nome)}</b> ${Number((doc.habilidades || {})[item.id]) || 0}<small> · ${esc(item.desc)}</small></li>`).join('')}</ul>` : ''}
+      ${fleet.length ? `<h4>Veículos da família</h4><ul class="cc-items">${fleet.map(entry => `<li><b>${esc(entry.veiculo.nome)}</b>${entry.upgrades.length ? `: ${entry.upgrades.map(item => esc(item.upgrade.nome)).join(', ')}` : ''}</li>`).join('')}</ul><p class="note-status">Um de cada vez com você; o resto fica com a família.</p>` : ''}</div>` : '';
     return `<div class="cc-sheet">
       <div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome)}<h3>${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
         <p><b>${esc(role.nome || 'Sem Role')}</b> · ${esc(role.habilidade || '')} Rank 4${spec ? ` · ${esc(spec.nome)}` : ''} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}${doc.foundry ? ` · <b class="cc-ok">No Foundry desde ${new Date(doc.foundry.importado).toLocaleDateString('pt-BR')}</b>` : ''}</p>
         ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}</div>
+      ${roleBox}
       <div class="section cc-box" data-toc="STATs"><h3>STATs</h3><div class="cc-stats">${statKeys.map(statCell).join('')}</div>
         <p class="cc-derived"><span>HP <b>${derived.hp}</b></span><span>Gravemente Ferido <b>${derived.gravemente}</b></span><span>Death Save <b>${derived.deathSave}</b></span><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Andar <b>${derived.andar} m</b></span><span>Correr <b>${derived.correr} m</b></span></p></div>
       <div class="section cc-box" data-toc="Perícias"><h3>Perícias</h3><div class="table-wrap dense"><table><thead><tr><th>Perícia</th><th>STAT</th><th>Nível</th><th>Base</th></tr></thead><tbody>${skills.map(skill => `<tr><td>${esc(skillLabel(skill))}${skill.gratis ? ' <small>(origem)</small>' : ''}</td><td>${skill.stat}</td><td>${skill.nivel}</td><td><b>${skill.nivel + (stats[skill.stat] || 0)}</b></td></tr>`).join('')}</tbody></table></div></div>
@@ -533,7 +634,12 @@
         ${group('Cyberware', entry => entry.item.cat === 'cyberware')}${group('Netrunning', entry => entry.item.cat === 'netrunning')}${group('Equipamento', entry => ['equipamento', 'acessorios', 'drogas'].includes(entry.item.cat))}${group('Moda', entry => entry.item.cat === 'moda')}
         <p><b>Dinheiro:</b> ${eb(Math.max(0, cash.saldo))}</p></div>
       <div class="section cc-box" data-toc="Lifepath"><h3>Lifepath</h3>${lpRows.length ? `<dl class="cc-lifepath">${lpRows.map(([label, text]) => `<dt>${label}</dt><dd>${esc(text)}</dd>`).join('')}</dl>` : '<p class="note-status">Ainda não preenchido.</p>'}</div>
-      <div class="section cc-box" data-toc="Moradia"><h3>Moradia e estilo de vida</h3><p>${esc(home.moradia || '')}${home.aluguel ? ` · aluguel ${eb(home.aluguel)}/mês` : ''} · ${esc(home.estilo || '')}${home.custoEstilo ? ` (${eb(home.custoEstilo)}/mês)` : ''}. O primeiro mês é de graça.${doc.role === 'nomad' ? ` ${esc(C.housing.nomad.nota)}` : ''}</p></div>
+      <div class="section cc-box" data-toc="Moradia"><h3>Moradia e estilo de vida</h3>
+        <dl class="cc-lifepath"><dt>Moradia</dt><dd>${esc(home.moradia)}${home.aluguel ? ` · ${eb(home.aluguel)}/mês` : ' · sem aluguel'}</dd>
+          <dt>Estilo de vida</dt><dd>${esc(home.estilo)}${home.custoEstilo ? ` · ${eb(home.custoEstilo)}/mês` : ''}</dd>
+          <dt>Trauma Team</dt><dd>${home.traumaTeam ? `${esc(home.traumaTeam.nome)} · ${eb(home.traumaTeam.custo)}/mês` : 'Sem cobertura'}</dd>
+          ${home.moda ? `<dt>Moda</dt><dd>${esc(home.moda.nome)}: ${esc(home.moda.desc)}</dd>` : ''}
+          <dt>Por mês</dt><dd><b>${eb(home.mensal)}</b>, no dia 1º${home.primeiroMes ? ` · o primeiro mês custou ${eb(home.primeiroMes)} do dinheiro inicial` : ' · o primeiro mês foi de graça'}</dd></dl></div>
       ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}
       ${forPrint ? '' : ''}</div>`;
   }
@@ -588,7 +694,7 @@
       for (const entry of pack[category] || []) {
         for (const [id, qty] of entry.ou ? entry.ou[0] : [entry]) {
           const item = catalog.get(id);
-          if (!item || (category === 'cyberware' && freeIds.has(id))) continue;
+          if (!item || (category === 'cyberware' && freeIds.has(id)) || roleFree(doc).some(free => free.id === id)) continue;
           list.push({ id, qtd: qty, item });
         }
       }
@@ -853,7 +959,36 @@
         ${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
           <p><button class="action" type="button" data-page="roles2077">Ler Roles de 2077</button></p>`)}
+        ${drawRoleAbilities()}${drawMotorpool()}
         ${box('Método de criação', `<div class="cc-choices">${C.methods.map(item => `<button type="button" class="cc-choice${item.id === doc.metodo ? ' active' : ''}" data-method="${item.id}"><b>${item.nome}</b><span>${esc(item.resumo)}</span></button>`).join('')}</div>`)}`;
+    }
+    // Sub-habilidades (Solo, Tech, Medtech): − e + em cada uma, até o máximo, com os pontos que faltam.
+    function drawRoleAbilities() {
+      const spec = abilitySpec(doc);
+      if (!spec) return '';
+      const used = abilityPoints(doc);
+      const rows = spec.itens.map(item => {
+        const value = Number((doc.habilidades || {})[item.id]) || 0;
+        return `<tr><td><b>${esc(item.nome)}</b><br><small class="cc-desc">${esc(item.desc)}</small></td><td><span class="cc-level"><button type="button" class="action" data-hab-minus="${esc(item.id)}"${value <= 0 ? ' disabled' : ''} aria-label="Menos ${esc(item.nome)}">−</button><b>${value}</b><button type="button" class="action" data-hab-plus="${esc(item.id)}"${value >= spec.max || used >= spec.pontos ? ' disabled' : ''} aria-label="Mais ${esc(item.nome)}">+</button></span></td></tr>`;
+      }).join('');
+      const derived = (spec.derivadas || []).length ? `<p class="note-status">No Foundry: ${roleAbilityRanks(doc).filter(entry => spec.derivadas.some(item => item.id === entry.nome)).map(entry => `${entry.nome === 'Surgery Skill' ? 'perícia Cirurgia' : 'perícia Tecnologia Médica'} ${entry.rank}`).join(' · ')}.</p>` : '';
+      return box(`${esc(spec.titulo)} <small>${spec.pagina}</small>`, `<p class="cc-points${used !== spec.pontos ? ' cc-bad' : ''}">Pontos: ${used} de ${spec.pontos}${spec.max < spec.pontos ? ` · até ${spec.max} em cada` : ''}</p>
+        <div class="table-wrap dense"><table class="cc-abilities"><tbody>${rows}</tbody></table></div><p class="note-status">${esc(spec.nota)}</p>${derived}`, ' data-cc-abilities');
+    }
+    // Oficina da Família do Nomad: 4 escolhas, cada uma um veículo ou um upgrade num veículo já escolhido.
+    function drawMotorpool() {
+      if (doc.role !== 'nomad') return '';
+      const pool = motorpool(doc);
+      const rows = Array.from({ length: MP().escolhas }, (_, index) => {
+        const current = (doc.oficina || [])[index] || '';
+        const options = motorpoolChoices(doc, index);
+        const stale = current && !options.some(option => option.value === current);
+        return `<label class="cc-motorpool-row">Escolha ${index + 1}<select data-oficina="${index}"><option value="">— escolha —</option>${stale ? `<option value="${esc(current)}" selected>(não vale mais) ${esc(current)}</option>` : ''}${options.map(option => `<option value="${esc(option.value)}"${option.value === current ? ' selected' : ''}>${esc(option.label)}</option>`).join('')}</select></label>`;
+      }).join('');
+      const fleet = pool.veiculos.length ? `<h4>Veículos da família</h4><ul class="cc-items">${pool.veiculos.map(entry => `<li><b>${esc(entry.veiculo.nome)}</b>${entry.upgrades.length ? `: ${entry.upgrades.map(item => esc(item.upgrade.nome)).join(', ')}` : ''}</li>`).join('')}</ul>` : '';
+      const upgradeHelp = `<details class="cc-help-inline"><summary>O que cada upgrade faz</summary><dl class="cc-lifepath">${MP().upgrades.map(item => `<dt>${esc(item.nome)}</dt><dd>${esc(item.desc)}</dd>`).join('')}</dl></details>`;
+      return box(`Oficina da Família <small>${MP().pagina}</small>`, `<p>A cada Rank de Moto, o Nomad ganha um veículo de série da família ou um upgrade num veículo dela. No Rank 4: <b>${MP().escolhas} escolhas</b>, entre o Groundcar Compacto, a Moto Estradeira, o Jetski e o Girocóptero, e os upgrades de Rank 1.</p>
+        <div class="cc-motorpool">${rows}</div>${fleet}<p class="note-status">Só um veículo da família fica com você de cada vez: troca com a família de um dia para o outro. Destruído, a família conserta em uma semana, por 500eb.</p>${upgradeHelp}`, ' data-cc-motorpool');
     }
 
     // ---------- 2. STATs ----------
@@ -998,10 +1133,28 @@
     // ---------- 6. Moradia ----------
     function drawHousing() {
       if (!doc.role) return box('Moradia', '<p>Escolha a Role no passo 1.</p>');
+      const H = C.housing;
       const home = housing(doc);
-      const nomad = doc.role === 'nomad' ? `<p><label class="cc-radio"><input type="radio" name="moradia" data-moradia="padrao"${home.tipo === 'padrao' ? ' checked' : ''}> Contêiner ou quitinete na cidade</label> <label class="cc-radio"><input type="radio" name="moradia" data-moradia="familia"${home.tipo === 'familia' ? ' checked' : ''}> Com a família do clã</label></p>` : '';
-      return box('Moradia e estilo de vida', `<p><b>${esc(home.moradia)}</b>${home.aluguel ? `: aluguel de ${eb(home.aluguel)} por mês` : ''}.</p><p>Estilo de vida: <b>${esc(home.estilo)}</b>${home.custoEstilo ? ` (${eb(home.custoEstilo)} por mês)` : ''}.</p>${nomad}<p class="note-status">O primeiro mês é de graça. Depois, ${home.aluguel + home.custoEstilo ? `${eb(home.aluguel + home.custoEstilo)} no dia 1º de cada mês` : 'sem custo fixo'}. Em 2077 acabou o Kibble: o Prepak genérico custa o mesmo.</p>
-        <label>Notas (aparência da casa, contatos, o que quiser)<textarea data-campo="notas" rows="3" maxlength="5000">${esc(doc.notas)}</textarea></label>`);
+      const base = housingBase(doc);
+      const baseHome = H.moradias.find(item => item.id === base.moradia);
+      const baseLife = H.estilos.find(item => item.id === base.estilo);
+      // Cada opção mostra o preço por mês e, se for melhor que o padrão, quanto sai do dinheiro inicial no primeiro mês.
+      const tag = (item, cost, baseCost, isBase) => isBase ? ' <small class="cc-ok">padrão da Role: 1º mês grátis</small>' : cost > baseCost ? ` <small class="cc-wait">+${eb(cost - baseCost)} no 1º mês</small>` : '';
+      const option = (name, attr, item, checked, price, note) => `<label class="cc-radio cc-option"><input type="radio" name="${name}" ${attr}="${item.id}"${checked ? ' checked' : ''}> <b>${esc(item.nome)}</b> <small>${price}</small>${note}${item.desc ? `<small class="cc-desc">${esc(item.desc)}</small>` : ''}</label>`;
+      const homes = H.moradias.filter(item => allowedFor(item, doc.role)).map(item => option('moradia', 'data-moradia', item, item.id === home.tipo, item.aluguel ? `${eb(item.aluguel)}/mês` : 'sem aluguel', tag(item, item.aluguel, baseHome.aluguel, item.id === base.moradia))).join('');
+      const lives = H.estilos.filter(item => allowedFor(item, doc.role)).map(item => option('estilo-vida', 'data-estilo-vida', item, item.id === home.estiloId, item.custo ? `${eb(item.custo)}/mês` : 'sem custo', tag(item, item.custo, baseLife.custo, item.id === base.estilo))).join('');
+      const traumaId = (home.traumaTeam || {}).id || 'nenhum';
+      const traumas = H.traumaTeam.map(item => option('trauma', 'data-trauma', item, item.id === traumaId, item.custo ? `${eb(item.custo)}/mês` : '', item.custo ? ` <small class="cc-wait">${eb(item.custo)} no 1º mês</small>` : '')).join('');
+      const modaId = (home.moda || {}).id || '';
+      const modas = `<select data-moda aria-label="Estilo de moda">${H.modas.map(item => `<option value="${item.id}"${item.id === modaId ? ' selected' : ''}>${esc(item.nome)}</option>`).join('')}</select>${home.moda ? `<p class="note-status">${esc(home.moda.desc)}</p>` : ''}`;
+      const cash = money(doc);
+      const total = `<p class="cc-derived cc-housing-total"><span>Por mês <b>${eb(home.mensal)}</b></span><span>1º mês <b>${home.primeiroMes ? eb(home.primeiroMes) : 'grátis'}</b></span>${doc.metodo ? `<span>Dinheiro depois disso <b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b></span>` : ''}</p>`;
+      return `${box('Quanto custa', `${total}<p class="note-status">No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro. Em 2077 acabou o Kibble: o Prepak genérico custa o mesmo.</p>`)}
+        ${box('Moradia', `<div class="cc-options">${homes}</div>`)}
+        ${box('Estilo de vida', `<div class="cc-options">${lives}</div>`)}
+        ${box('Trauma Team', `<div class="cc-options">${traumas}</div><p class="note-status">Com Agent e Biomonitor, a Trauma Team é chamada sozinha quando o HP fica abaixo do BODY ou há desmembramento (RED p. 223).</p>`)}
+        ${box('Estilo de moda', `<p>O visual do personagem nas quatro modas de 2077 (suplemento p. 7–8). Ajuda a escolher as roupas na loja e a descrever o personagem.</p>${modas}`)}
+        ${box('Notas', `<label>Aparência da casa, contatos, o que quiser<textarea data-campo="notas" rows="3" maxlength="5000">${esc(doc.notas)}</textarea></label>`)}`;
     }
 
     // ---------- 7. Revisão ----------
@@ -1021,7 +1174,18 @@
       if (target.closest('[data-cc-sheet]')) { saver.now(); return helpers.openPage('ficha', { section: doc.id }); }
       if (target.closest('[data-cc-shop]')) { saver.now(); return helpers.openPage('loja', { section: doc.id }); }
       const role = target.closest('[data-role]');
-      if (role) { if (doc.role !== role.dataset.role) { doc.role = role.dataset.role; doc.especializacao = ''; doc.escolhas = {}; doc.tipos = {}; doc.pericias = {}; doc.lifepath.role = {}; } draw(); return changed(); }
+      if (role) { if (doc.role !== role.dataset.role) { doc.role = role.dataset.role; doc.especializacao = ''; doc.escolhas = {}; doc.tipos = {}; doc.pericias = {}; doc.lifepath.role = {}; doc.habilidades = {}; doc.oficina = []; } draw(); return changed(); }
+      // Sub-habilidades da Role: até o máximo de cada uma e o total de pontos.
+      const habPlus = target.closest('[data-hab-plus]');
+      const habMinus = target.closest('[data-hab-minus]');
+      if (habPlus || habMinus) {
+        const abilitySpecNow = abilitySpec(doc);
+        const name = (habPlus || habMinus).dataset[habPlus ? 'habPlus' : 'habMinus'];
+        const value = Number((doc.habilidades = doc.habilidades || {})[name]) || 0;
+        if (habPlus && abilitySpecNow && value < abilitySpecNow.max && abilityPoints(doc) < abilitySpecNow.pontos) doc.habilidades[name] = value + 1;
+        if (habMinus && value > 0) doc.habilidades[name] = value - 1;
+        draw(); return changed();
+      }
       const spec = target.closest('[data-spec]');
       if (spec) { doc.especializacao = spec.dataset.spec; draw(); return changed(); }
       const method = target.closest('[data-method]');
@@ -1117,6 +1281,7 @@
       else if (target.matches('[data-lp-enemy]')) { const [index, part] = target.dataset.lpEnemy.split(':'); doc.lifepath.inimigos[Number(index)][part] = Number(target.value) || 1; }
       else if (target.matches('[data-escolha]')) { doc.escolhas[target.dataset.escolha] = Number(target.value); }
       else if (target.matches('[data-kitnet]')) { doc.kitNet = target.dataset.kitnet; }
+      else if (target.matches('[data-oficina]')) { const list = Array.from({ length: MP().escolhas }, (_, index) => (doc.oficina || [])[index] || ''); list[Number(target.dataset.oficina)] = target.value; doc.oficina = list; }
       else if (target.matches('[data-campo="retratoLink"]')) { doc.retratoLink = target.value.trim(); }
       else if (target.matches('[data-portrait-file]')) { uploadPortrait(target.files && target.files[0]); return; }
       else if (target.matches('[data-quickhack]')) {
@@ -1125,6 +1290,9 @@
         doc.quickhacks = target.checked ? [...list, id] : list;
       }
       else if (target.matches('[data-moradia]')) { doc.moradia = target.dataset.moradia; }
+      else if (target.matches('[data-estilo-vida]')) { doc.estiloVida = target.dataset.estiloVida; }
+      else if (target.matches('[data-trauma]')) { doc.traumaTeam = target.dataset.trauma; }
+      else if (target.matches('[data-moda]')) { doc.estiloModa = target.value; }
       else return;
       draw();
       changed();

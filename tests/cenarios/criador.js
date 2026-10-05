@@ -51,6 +51,15 @@ module.exports = async ({ edge, servidores, r }) => {
     const ativos = await edge.evaluate(`[...document.querySelectorAll('.cc-choice.active')].map(b => b.querySelector('b').textContent)`);
     return [ativos.includes('Solo') && ativos.includes('Rato de Rua'), ativos.join(', ')];
   });
+  const pontosHab = () => texto('[data-cc-abilities] .cc-points');
+  await r.passo('passo 1: Consciência de Combate do Solo, 4 pontos, e não passa do total', async () => {
+    const antes = await pontosHab();
+    for (let i = 0; i < 3; i++) await clicar('[data-hab-plus="Initiative Reaction"]', 120);
+    for (let i = 0; i < 3; i++) await clicar('[data-hab-plus="Threat Detection"]', 120); // a terceira já não cabe
+    const depois = await pontosHab();
+    const niveis = await edge.evaluate(`['Initiative Reaction', 'Threat Detection'].map(n => document.querySelector('[data-hab-plus="' + n + '"]').parentElement.querySelector('b').textContent)`);
+    return [/0 de 4/.test(antes) && /4 de 4/.test(depois) && niveis.join(',') === '3,1', `${antes} → ${depois} · ${niveis.join(',')}`];
+  });
   await r.passo('passo 2: rolar 1d10 pega a linha 6 da tabela do Solo', async () => {
     await passo(2);
     await dadoFixo(0.55);
@@ -81,6 +90,31 @@ module.exports = async ({ edge, servidores, r }) => {
     await passo(5);
     const t = await texto('#cc-step');
     return [/já vem grátis em 2077/.test(t) && /Humanidade 43\/50/.test(t) && /EMP 4/.test(t), t.match(/Humanidade[^P]*/)?.[0]];
+  });
+  const escolherRadio = async seletor => { await edge.evaluate(`(() => { const r = document.querySelector(${JSON.stringify(seletor)}); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`); await edge.sleep(250); };
+  const totalMoradia = async () => (await texto('.cc-housing-total')).replace(/\s+/g, ' ');
+  await r.passo('passo 6: o padrão é grátis; quitinete cobra a diferença (500eb) no 1º mês', async () => {
+    await passo(6);
+    const padrao = await totalMoradia();
+    await escolherRadio('[data-moradia="quitinete"]');
+    const melhor = await totalMoradia();
+    await edge.shot('moradia');
+    return [/Por mês 1\.100eb/.test(padrao) && /1º mês grátis/.test(padrao) && /Por mês 1\.600eb/.test(melhor) && /1º mês 500eb/.test(melhor) && /depois disso 0eb/.test(melhor), `${padrao} → ${melhor}`];
+  });
+  await r.passo('passo 6: Trauma Team Prata paga o 1º mês inteiro e o dinheiro fica negativo', async () => {
+    await escolherRadio('[data-trauma="prata"]');
+    const t = await totalMoradia();
+    const resumo = (await texto('#cc-summary')).replace(/\s+/g, ' ');
+    return [/Por mês 2\.100eb/.test(t) && /1º mês 1\.000eb/.test(t) && /-500eb/.test(resumo), `${t} · resumo: ${resumo.match(/Dinheiro[^A-Z]*/)?.[0]}`];
+  });
+  await r.passo('passo 6: hotel cápsula (mais barato) não devolve dinheiro; volta ao padrão', async () => {
+    await escolherRadio('[data-trauma="nenhum"]');
+    await escolherRadio('[data-moradia="capsula"]');
+    const barato = await totalMoradia();
+    await escolherRadio('[data-moradia="conteiner"]');
+    await escolherRadio('[data-estilo-vida="generico"]');
+    const final = await totalMoradia();
+    return [/Por mês 600eb/.test(barato) && /depois disso 500eb/.test(barato) && /1º mês grátis/.test(final), `${barato} · ${final}`];
   });
   await r.passo('salva sozinho e, recarregando, continua igual', async () => {
     const ok = await salvo();
@@ -190,6 +224,32 @@ module.exports = async ({ edge, servidores, r }) => {
     const [usados, total] = await pontos();
     const atletismo = await edge.evaluate(`document.querySelector('[data-skill-plus="Athletics"]').parentElement.querySelector('b').textContent`);
     return [usados === 86 && total === 86 && atletismo === '2', `${usados}/${total} · Atletismo ${atletismo}`];
+  });
+
+  // ---------- Oficina da Família do Nomad ----------
+  const opcoesOficina = linha => edge.evaluate(`[...document.querySelectorAll('[data-oficina="${linha}"] option')].map(o => o.value).filter(Boolean)`);
+  await r.passo('Nomad: 4 escolhas na Oficina; a Capacidade de alojamento só aparece depois do Chassis pesado', async () => {
+    await novo();
+    await clicar('[data-role="nomad"]');
+    await clicar('[data-method="ratoderua"]');
+    await escolher('[data-oficina="0"]', 'v:Compact Groundcar');
+    const semChassis = await opcoesOficina(1);
+    await escolher('[data-oficina="1"]', 'u:0:Heavy Chassis');
+    const comChassis = await opcoesOficina(2);
+    await escolher('[data-oficina="2"]', 'u:0:Housing Capacity');
+    await escolher('[data-oficina="3"]', 'v:Roadbike');
+    const frota = (await texto('[data-cc-motorpool] .cc-items')).replace(/\s+/g, ' ');
+    await edge.evaluate(`document.querySelector('[data-cc-motorpool]').scrollIntoView()`);
+    await edge.shot('oficina');
+    const pend = await edge.evaluate(`document.querySelector('#cc-summary').textContent`);
+    return [!semChassis.includes('u:0:Housing Capacity') && comChassis.includes('u:0:Housing Capacity') && !comChassis.includes('v:Compact Groundcar') && /Groundcar Compacto: Chassis pesado, Capacidade de alojamento/.test(frota) && /Moto Estradeira/.test(frota), frota];
+  });
+  await r.passo('Nomad: trocar o Chassis por NOS invalida a Capacidade de alojamento (vira pendência)', async () => {
+    await escolher('[data-oficina="1"]', 'u:0:NOS');
+    const invalida = await edge.evaluate(`document.querySelector('[data-oficina="2"]').selectedOptions[0].textContent`);
+    await passo(7);
+    const pend = await texto('#cc-step .cc-warn');
+    return [/não vale mais/.test(invalida) && /Oficina da Família: falta 1 escolha/.test(pend), `${invalida} · ${pend.slice(0, 120)}`];
   });
 
   // ---------- Netrunner de 2077 ----------

@@ -115,12 +115,44 @@ async function addRole(actor, role) {
   const data = await fromPack(role.foundry.pack, role.foundry.nome);
   if (!data) return [`Role ${role.foundry.nome} não encontrada em ${role.foundry.pack}.`];
   data.system.rank = role.rank || 4;
+  // Sub-habilidades (Solo, Tech, Medtech): os pontos distribuídos na wiki, pelo nome que o item de Role usa.
+  const notes = [];
+  const ranks = new Map((role.habilidades || []).map(entry => [entry.nome, entry.rank]));
+  if (ranks.size) {
+    data.system.abilities = (data.system.abilities || []).map(ability => ranks.has(ability.name) ? { ...ability, rank: ranks.get(ability.name) } : ability);
+    for (const name of ranks.keys()) if (!data.system.abilities.some(ability => ability.name === name)) notes.push(`Role: a sub-habilidade ${name} não existe no item ${data.name}.`);
+  }
   // A especialização (Face, Lawman) soma o Rank nas perícias dela.
   if (role.especializacao) data.system.bonuses = [...(data.system.bonuses || []), ...role.especializacao.pericias.filter(name => !(data.system.bonuses || []).some(b => b.name === name)).map(name => ({ name }))];
   if (role.especializacao) data.system.description.value += `<p><b>Especialização:</b> ${esc(role.especializacao.nome)}.</p>`;
   const [created] = await actor.createEmbeddedDocuments('Item', [data]);
   await actor.update({ 'system.roleInfo.activeRole': created.name });
-  return [];
+  return notes;
+}
+
+// Veículos da família do Nomad (Oficina da Família), com os upgrades instalados em cada um.
+async function addVehicles(actor, vehicles = []) {
+  const notes = [];
+  const family = '<p><b>Veículo da família</b> (Oficina da Família, habilidade Moto): só um fica com o Nomad de cada vez, trocado de um dia para o outro. Destruído, a família conserta em uma semana, por 500eb.</p>';
+  for (const entry of vehicles) {
+    const data = await fromPack(entry.foundry.pack, entry.foundry.nome).catch(() => null);
+    if (!data) { notes.push(`${entry.nome}: não achei no compêndio ${entry.foundry.pack}.`); continue; }
+    data.system.description = { ...(data.system.description || {}), value: family + (data.system.description?.value || '') };
+    data.flags = { ...(data.flags || {}), [MODULE_ID]: { wikiUid: entry.uid, familia: true } };
+    const [vehicle] = await actor.createEmbeddedDocuments('Item', [data]);
+    const upgrades = [];
+    for (const upgrade of entry.upgrades || []) {
+      const item = await fromPack(upgrade.foundry.pack, upgrade.foundry.nome).catch(() => null);
+      if (!item) { notes.push(`${upgrade.nome}: não achei no compêndio ${upgrade.foundry.pack}.`); continue; }
+      item.flags = { ...(item.flags || {}), [MODULE_ID]: { wikiUid: upgrade.uid } };
+      upgrades.push(item);
+    }
+    if (!upgrades.length) continue;
+    const created = await actor.createEmbeddedDocuments('Item', upgrades);
+    const installed = await vehicle.installItems(created).catch(error => { notes.push(`${vehicle.name}: os upgrades ficaram no inventário (${error.message}).`); return null; });
+    if (installed === false) notes.push(`${vehicle.name}: os upgrades ficaram no inventário, sem instalar.`);
+  }
+  return notes;
 }
 
 // ---------------- Retrato ----------------
@@ -170,6 +202,20 @@ async function applyPortrait(actor, doc) {
   return { applied: source, notes: [] };
 }
 
+// ---------------- Moradia e estilo de vida ----------------
+// Moradia, estilo de vida, Trauma Team e moda nos campos de Estilo de vida da ficha.
+// A moda vai em `fashion.desription`: o sistema escreveu o nome do campo assim (v0.92.4); `description` fica
+// junto para quando corrigirem.
+function lifestyleUpdate(home = {}) {
+  const fashion = home.moda ? `<p><b>${esc(home.moda.nome)}:</b> ${esc(home.moda.desc)}</p>` : '';
+  return {
+    'system.lifestyle.housing': { cost: home.aluguel || 0, description: home.moradia || '' },
+    'system.lifestyle.lifeStyle': { cost: home.custoEstilo || 0, description: home.estilo || '' },
+    'system.lifestyle.traumaTeam': { cost: home.traumaTeam?.custo || 0, description: home.traumaTeam?.nome || '' },
+    'system.lifestyle.fashion': { desription: fashion, description: fashion }
+  };
+}
+
 // ---------------- Importar ----------------
 async function importCharacter(id, ownerId) {
   const { personagem: doc } = await wikiFetch(`/api/personagens/${id}`);
@@ -205,6 +251,7 @@ async function importCharacter(id, ownerId) {
   }
   const created = await actor.createEmbeddedDocuments('Item', datas);
   notes.push(...await installCyberware(actor, created));
+  notes.push(...await addVehicles(actor, r.veiculos));
 
   // Humanidade: o valor que a wiki calculou; a máxima o sistema recalcula pelo cyberware instalado.
   await actor.update({ 'system.derivedStats.humanity.value': r.humanidade.atual });
@@ -217,8 +264,7 @@ async function importCharacter(id, ownerId) {
   ].join('');
   await actor.update({
     'system.lifepath': r.lifepath,
-    'system.lifestyle.housing': { cost: r.moradia.aluguel || 0, description: r.moradia.moradia || '' },
-    'system.lifestyle.lifeStyle': { cost: r.moradia.custoEstilo || 0, description: r.moradia.estilo || '' },
+    ...lifestyleUpdate(r.moradia),
     'system.information.alias': doc.apelido || '',
     'system.information.description': description
   });
@@ -226,7 +272,8 @@ async function importCharacter(id, ownerId) {
   const portrait = await applyPortrait(actor, doc);
   notes.push(...portrait.notes);
 
-  const delivered = r.itens.map(item => item.uid);
+  // Entregues: os itens e os veículos da família (com os upgrades), para o Atualizar da wiki não trazer de novo.
+  const delivered = [...r.itens.map(item => item.uid), ...(r.veiculos || []).flatMap(vehicle => [vehicle.uid, ...(vehicle.upgrades || []).map(upgrade => upgrade.uid)])];
   await actor.setFlag(MODULE_ID, 'wiki', { id: doc.id, versao: doc.versao, entregues: delivered, importado: new Date().toISOString(), retrato: portrait.applied });
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } });
   return { actor, notes };
@@ -294,14 +341,20 @@ export async function atualizarDaWiki(actor) {
   const lifepathChanged = Object.entries(r.lifepath || {}).some(([field, text]) => (actor.system.lifepath?.[field] || '') !== text);
   // Retrato novo na wiki (ou ator importado antes do retrato). Tirar o retrato na wiki não apaga a imagem da ficha.
   const portraitChanged = Boolean(portraitOf(doc)) && portraitOf(doc) !== (link.retrato || '');
+  // Moradia, estilo de vida e Trauma Team: compara custo e descrição com a ficha.
+  const home = lifestyleUpdate(r.moradia);
+  const ls = actor.system.lifestyle || {};
+  const homeLines = [['housing', 'Moradia'], ['lifeStyle', 'Estilo de vida'], ['traumaTeam', 'Trauma Team']]
+    .filter(([key]) => (ls[key]?.cost || 0) !== home[`system.lifestyle.${key}`].cost || (ls[key]?.description || '') !== home[`system.lifestyle.${key}`].description)
+    .map(([key, label]) => `${label}: ${home[`system.lifestyle.${key}`].description || '—'} (${home[`system.lifestyle.${key}`].cost}eb/mês)`);
   const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } }).catch(() => null);
   // Nada que este botão aplique (a mudança foi em moradia ou dinheiro, por exemplo): a wiki para de mostrar "mudou".
-  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged && !portraitChanged) {
+  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged && !portraitChanged && !homeLines.length) {
     await synced(link.entregues || []);
     return ui.notifications.info('Nada para aplicar: a ficha já está igual à da wiki.');
   }
   const section = (name, title, lines) => lines.length ? `<div class="form-group"><label><input type="checkbox" name="${name}" checked> ${title}</label></div><ul>${lines.slice(0, 12).map(line => `<li>${esc(line)}</li>`).join('')}${lines.length > 12 ? `<li>e mais ${lines.length - 12}</li>` : ''}</ul>` : '';
-  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}${portraitChanged ? section('portrait', 'Retrato', ['imagem da ficha e do token']) : ''}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
+  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}${portraitChanged ? section('portrait', 'Retrato', ['imagem da ficha e do token']) : ''}${section('lifestyle', 'Moradia e estilo de vida', homeLines)}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
   return Dialog.prompt({
     title: `Atualizar ${actor.name} da wiki`, content, label: 'Aplicar',
     callback: async html => {
@@ -326,6 +379,7 @@ export async function atualizarDaWiki(actor) {
         delivered = [...delivered, ...newItems.map(item => item.uid)];
       }
       if (checked('lifepath')) await actor.update({ 'system.lifepath': r.lifepath });
+      if (checked('lifestyle')) await actor.update(home);
       let portrait = link.retrato || '';
       if (checked('portrait')) {
         const result = await applyPortrait(actor, doc);

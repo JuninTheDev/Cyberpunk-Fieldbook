@@ -583,3 +583,16 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .side-meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
 .side-link { padding: 0; border: 0; background: none; color: var(--cyan); cursor: pointer; font-size: 12px; }
 .side-version { color: var(--muted); font: 10px var(--mono); }
+/* Moradia, estilo de vida e Trauma Team: cada opção com preço e descrição; a escolhida fica marcada. */
+.cc-options { display: grid; gap: 6px; }
+.cc-option { display: block; margin: 0; padding: 7px 9px; border: 1px solid var(--line); background: #0f1314; cursor: pointer; }
+.cc-option:has(input:checked) { border-color: var(--lime); background: #182019; }
+.cc-option .cc-desc { display: block; margin: 3px 0 0 22px; }
+/* Sub-habilidades da Role e Oficina da Família do Nomad. */
+.cc-points { font: 12px var(--mono); text-transform: uppercase; }
+.cc-abilities td:last-child { width: 1%; white-space: nowrap; }
+.cc-level .action:disabled { opacity: 0.4; cursor: default; }
+.cc-motorpool { display: grid; gap: 8px; }
+.cc-motorpool-row { display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
+.cc-motorpool-row select { width: 100%; max-width: 520px; padding: 7px 9px; border: 1px solid #3b4443; background: #0f1314; color: var(--text); }
+.cc-help-inline summary { cursor: pointer; color: var(--cyan); font-size: 13px; }
