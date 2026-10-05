@@ -18,6 +18,8 @@ fi
 
 systemctl stop foundry
 trap 'systemctl start foundry' EXIT
+# Uma cópia vinda do Windows pode chegar sem permissão de escrita: o build precisa regravar a pasta do módulo.
+[ -d "$DATA/modules/cpr-2077" ] && chown -R mesa:mesa "$DATA/modules/cpr-2077" && chmod -R u+rwX "$DATA/modules/cpr-2077"
 cd "$WIKI/foundry-2077"
 # Cópia dos compêndios do sistema: na primeira vez e sempre que o sistema for atualizado no Foundry.
 sistema=$(node -p "require('$DATA/systems/cyberpunk-red-core/system.json').version")

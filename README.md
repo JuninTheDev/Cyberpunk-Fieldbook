@@ -103,7 +103,7 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
 | `system-criacao.js` | Regras de criação: Roles de 2077, tabelas de STAT, perícias e pacotes de cada Role. |
 | `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
-| `personagens/` | Um arquivo por personagem dos jogadores. |
+| `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 

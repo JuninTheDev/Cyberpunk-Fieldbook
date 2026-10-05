@@ -37,6 +37,9 @@ if [ -f "$DADOS/.modulo-pendente" ]; then
   case $codigo in
     0) rm -f "$DADOS/.modulo-pendente"; echo "$(date '+%F %T') módulo do Foundry atualizado" >> "$LOG" ;;
     2) ;; # mesa ocupada ou Foundry sem o sistema: tenta no próximo minuto
-    *) rm -f "$DADOS/.modulo-pendente"; echo "$(date '+%F %T') módulo do Foundry: ERRO ($(tail -n 1 <<<"$saida"))" >> "$LOG" ;;
+    *) rm -f "$DADOS/.modulo-pendente"
+       printf '%s\n' "$saida" > "$DADOS/modulo-ultimo-erro.log"
+       motivo=$(grep -m 1 -E 'Error|Erro|erro|Falha|falha' <<<"$saida" || tail -n 1 <<<"$saida")
+       echo "$(date '+%F %T') módulo do Foundry: ERRO: $motivo (tudo em modulo-ultimo-erro.log)" >> "$LOG" ;;
   esac
 fi

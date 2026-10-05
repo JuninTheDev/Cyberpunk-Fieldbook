@@ -16,8 +16,10 @@ echo "Cópia do que havia no servidor: $copia"
 
 if [ -f "$PASTA/dados.tar.gz" ]; then
   systemctl stop fieldbook
-  tar -xzf "$PASTA/dados.tar.gz" -C "$DADOS"
+  tar -xzf "$PASTA/dados.tar.gz" -C "$DADOS" --no-same-permissions
   chown -R mesa:mesa "$DADOS"
+  # O tar do Windows traz permissões do PC (pastas sem escrita, arquivos abertos a todos): normaliza.
+  chmod -R u+rwX,go-rwx "$DADOS"
   systemctl start fieldbook
   echo "Dados da wiki: recebidos."
 fi
@@ -29,8 +31,9 @@ fi
 if [ -f "$PASTA/foundry.tar.gz" ]; then
   systemctl stop foundry 2>/dev/null || true
   mkdir -p "$FOUNDRY_DATA"
-  tar -xzf "$PASTA/foundry.tar.gz" -C "$FOUNDRY_DATA"
+  tar -xzf "$PASTA/foundry.tar.gz" -C "$FOUNDRY_DATA" --no-same-permissions
   chown -R mesa:mesa /srv/foundry/data
+  chmod -R u+rwX,go-w /srv/foundry/data
   touch "$DADOS/.modulo-pendente" # o módulo cpr-2077 é gerado de novo aqui, com a versão do GitHub
   systemctl start foundry 2>/dev/null || true
   echo "Foundry: mundos, sistemas e módulos recebidos."

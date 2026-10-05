@@ -197,9 +197,24 @@ Feche o Foundry do PC e dê dois cliques em **`servidor\enviar-para-servidor.bat
 - **`abrir-online.bat` e o `cloudflared` não são mais necessários.**
 - **Recomendado: tire a pasta da wiki do OneDrive.** O GitHub já é o backup, e o OneDrive é quem volta arquivos para versões antigas.
   - Feche o VS Code e mova a pasta para fora do OneDrive (por exemplo, `C:\Users\kouar\Documents\Cyberpunk Fieldbook`, se Documentos não estiver sincronizado).
-- **Backup:** de vez em quando, em **Baixar backup**, guarde uma cópia no PC.
-  - O servidor guarda 14 dias, mas só lá dentro.
-  - Mapas e imagens soltas do Foundry não entram no backup diário, só os mundos.
+- **Backup no PC:** o servidor faz um backup por dia (dados da wiki e mundos do Foundry) e guarda 14 dias, mas só lá dentro. Se a máquina da Oracle se perder, eles se perdem junto. Para ter uma cópia fora dele:
+  - Dê dois cliques em **`servidor\baixar-backup.bat`**. Ele traz o mais recente para `C:\Users\kouar\Backups\Night City Fieldbook` (fora do OneDrive) e guarda os 8 últimos.
+  - **Para não precisar lembrar:** no terminal da pasta da wiki, rode `servidor\baixar-backup.bat -Agendar` uma vez.
+    - O Windows passa a baixar sozinho todo domingo ao meio-dia, ou na primeira vez que o PC ligar depois disso. O registro fica em `registro.txt`, na mesma pasta.
+    - Para desligar: `servidor\baixar-backup.bat -Desagendar`.
+  - Ele usa o servidor e a chave que o `enviar-para-servidor.bat` salvou. Também dá para baixar pela wiki: barra lateral → **Baixar backup**.
+  - Mapas e imagens soltas do Foundry não entram no backup diário, só os mundos. Você já tem esses arquivos no PC.
+
+## Saber quando algo cair
+
+Sem um monitor, você só descobre que a wiki ou a mesa caiu quando um jogador reclama. O [UptimeRobot](https://uptimerobot.com) (gratuito) confere a cada 5 minutos e manda e-mail quando cai e quando volta:
+
+1. Crie a conta e clique em **New monitor** → tipo **HTTP(s)**.
+2. Crie um monitor com a URL `https://wiki.SEUDOMINIO/api/estado` e o nome "Wiki".
+3. Crie outro com a URL `https://mesa.SEUDOMINIO/api/status` e o nome "Mesa".
+4. Em *Alert contacts*, deixe o seu e-mail marcado.
+
+Se a Oracle desligar a máquina, os dois avisam juntos: entre no painel da Oracle e ligue a máquina de novo (*Start*). Tudo volta sozinho.
 
 ## Manutenção
 
@@ -237,3 +252,4 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 | `receber.sh` | Recebe o envio do PC. |
 | `iniciar-foundry.sh` | Liga o Foundry. |
 | `enviar-para-servidor.ps1` | Faz o envio, do lado do PC. |
+| `baixar-backup.ps1` | Traz o backup mais recente para o PC (no PC; `-Agendar` para toda semana). |

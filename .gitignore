@@ -3,9 +3,12 @@
 foundry-2077/.cache/
 foundry-2077/node_modules/
 tests/.saida/
-# Códigos dos jogadores (senhas) e personagens apagados ficam fora do git
+# Dados ao vivo ficam fora do git: no servidor moram em /srv/fieldbook/dados (com backup diário),
+# e no PC são só de teste. Códigos dos jogadores (senhas), personagens, retratos e regras da loja.
+# O jogadores.json e o jogadores-mestre.json continuam no git: são o ponto de partida de um servidor novo.
 contas-jogadores.json
-personagens/apagados/
+personagens/
+regras-loja.json
 # Senha do mestre (iniciar serv.txt) e o endereço/chave do servidor (enviar-para-servidor) ficam só no PC
 iniciar serv.txt
 servidor/servidor.local.json
