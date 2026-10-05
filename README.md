@@ -159,7 +159,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
      - O custo por mês aparece no resumo, e tudo vai para o Estilo de vida da ficha do Foundry.
 3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
    - **Só itens de criação:** até 1.000eb, sem armas exóticas, qualidade excelente, borgware, munição rara (inteligente, biotoxina, EMP, sonífera), Linear Frame, Cryotank e Cryopump.
-   - **O mestre ajusta** na página **Loja**: muda o teto e as categorias escondidas, e libera ou esconde item por item.
+   - **O mestre ajusta** na página **Loja**, no botão **Regras da loja** (a engrenagem): muda o teto e as categorias escondidas. Item por item, libera ou esconde direto na lista.
    - **Netrunner de 2077:** no Rato de Rua e no Edgerunner, o Netrunner escolhe entre o kit do RED (cyberdeck e programas) e o de 2077 (Militech Hunter MK.1 e 3 quickhacks de 100eb). O resto do pacote não muda.
    - **Kit sugerido:** no Pacote Completo, um botão compra de uma vez o pacote de Rato de Rua da Role.
 4. **Enviar para o mestre:** quando o personagem estiver pronto, o jogador clica em **Enviar para o mestre**. O botão fica na revisão do criador e na ficha. O quadro **Levar para o Foundry** mostra em que pé está: não enviado, esperando o mestre, no Foundry, ou mudou depois de importar (aí aparece **Avisar o mestre de novo**). Na lista de Personagens, o mestre vê quem está esperando.
@@ -182,7 +182,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 8. **Loja da campanha (compras durante o jogo).** Depois da importação, a página Loja do personagem vira uma loja de pedidos.
    - **O jogador** escolhe qualquer item do catálogo e monta o pedido.
      - Escolhe a munição de cada arma (a da ficha ou a do próprio pedido) e onde encaixar acessórios e programas.
-     - Deixa um recado e envia. A loja mostra o dinheiro da mesa e o total do pedido.
+     - Deixa um recado e envia. A barra da loja mostra o dinheiro da mesa e dois botões: **Seu pedido** (o que está montando, com o total) e **Pedidos** (os enviados, com o status).
    - **Você aprova ou recusa:**
      - na Loja do personagem na wiki (a lista de Personagens mostra o quadro **Pedidos da campanha**);
      - ou na janela **Personagens da wiki** do Foundry.

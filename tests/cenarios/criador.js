@@ -344,6 +344,10 @@ module.exports = async ({ edge, servidores, r }) => {
     return [primeiras.slice(0, 20).every(Boolean) && !primeiras[20] && descricoes >= 60 && usados === 86 && /Perícias ?86 de 86/.test(resumo), `sugeridas no topo: ${primeiras.filter(Boolean).length} · descrições: ${descricoes} · pontos ${usados}`];
   });
   const carteira = () => texto('.cc-wallet');
+  const abrirPainel = async id => {
+    if (await edge.evaluate(`document.querySelector('[data-painel="${id}"]').hidden`)) await clicar(`[data-shop-painel="${id}"]`);
+    return edge.evaluate(`!document.querySelector('[data-painel="${id}"]').hidden && document.querySelector('[data-painel="${id}"]').offsetHeight > 0`);
+  };
   const buscarNaLoja = async termo => { await edge.evaluate(`(() => { const s = document.querySelector('[data-shop-busca]'); s.value = ${JSON.stringify(termo)}; s.dispatchEvent(new Event('input', { bubbles: true })); })()`); await edge.sleep(200); };
   await r.passo('Lifepath da Role do Netrunner: "Trabalha sozinho" esconde a pergunta do parceiro', async () => {
     await passo(4);
@@ -364,8 +368,9 @@ module.exports = async ({ edge, servidores, r }) => {
     const c = await carteira();
     return [/2\.050eb de 2\.550eb/.test(c), c];
   });
-  // Devolve o item pelo nome na lista "Comprado na loja".
+  // Devolve o item pelo nome no painel "Comprados".
   const devolver = async nome => {
+    await abrirPainel('comprado');
     await edge.evaluate(`[...document.querySelectorAll('[data-shop-return]')].find(b => b.closest('li').textContent.includes(${JSON.stringify(nome)})).click()`);
     await edge.sleep(250);
   };
@@ -381,9 +386,15 @@ module.exports = async ({ edge, servidores, r }) => {
     await clicar('[data-shop-buy="core_cyberware:tool-hand"]');
     const aviso = await texto('#cc-shop-msg');
     const antes = await carteira();
+    const botao = (await texto('[data-shop-painel="comprado"]')).replace(/\s+/g, ' ');
+    const fechado = await edge.evaluate(`document.querySelector('[data-painel="comprado"]').hidden`);
+    const aberto = await abrirPainel('comprado');
+    const lista = await texto('[data-cc-bought]');
     await devolver('Mão de ferramentas');
     const depois = await carteira();
-    return [/precisa da base/.test(aviso) && /1\.950eb/.test(antes) && /2\.050eb/.test(depois), `${aviso} · ${antes.match(/[\d.]+eb/)} → ${depois.match(/[\d.]+eb/)}`];
+    await clicar('[data-shop-painel="comprado"]');
+    return [/precisa da base/.test(aviso) && /1\.950eb/.test(antes) && /2\.050eb/.test(depois) && /Comprados 3/i.test(botao) && fechado && aberto && /Mão de ferramentas/.test(lista),
+      `${aviso} · ${antes.match(/[\d.]+eb/)} → ${depois.match(/[\d.]+eb/)} · botão "${botao}", painel fechado ${fechado} → aberto ${aberto}`];
   });
   await r.passo('passo 5 lista o cyberware sem base', async () => {
     await clicar('[data-shop-buy="core_cyberware:tool-hand"]');
@@ -473,16 +484,21 @@ module.exports = async ({ edge, servidores, r }) => {
     await clicar('[data-pedido-por="core_weapons:heavy-pistol"]');
     await buscarNaLoja('munição de pistola pesada · básica');
     await clicar('[data-pedido-por="core_ammo:heavy-pistol-basic"]');
+    const botao = (await texto('[data-shop-painel="pedido"]')).replace(/\s+/g, ' ');
+    const marcado = await texto('[data-shop-row="core_ammo:heavy-pistol-basic"] .cc-badge');
+    const aberto = await abrirPainel('pedido');
     await escolher('[data-pedido-municao="0"]', '@1');
     const total = (await texto('[data-pedido-enviar]')).replace(/\s+/g, ' ');
     await clicar('[data-pedido-enviar]', 800);
     const msg = await texto('[data-pedido-msg]');
     const pedidos = (await texto('[data-cc-orders]')).replace(/\s+/g, ' ');
+    const enviados = await edge.evaluate(`!document.querySelector('[data-cc-orders]').hidden`);
     const doc = (await (await fetch(`${gm}/api/personagens/${pacoteId}`)).json()).personagem;
     const p = (doc.pedidos || [])[0] || {};
+    await buscarNaLoja('');
     await edge.shot('loja-campanha');
-    return [/Pedido enviado/.test(msg) && /esperando o mestre/.test(pedidos) && p.total === 110 && p.itens?.[0]?.municao === `pedido:${p.id}:1`,
-      `${total} · ${msg} · total ${p.total} · munição da pistola ${p.itens?.[0]?.municao}`];
+    return [/Pedido enviado/.test(msg) && /esperando o mestre/.test(pedidos) && p.total === 110 && p.itens?.[0]?.municao === `pedido:${p.id}:1` && /Seu pedido 2 · 110eb/i.test(botao) && /no pedido 10/i.test(marcado) && aberto && enviados,
+      `botão "${botao}" · ${total} · ${msg} · total ${p.total} · munição da pistola ${p.itens?.[0]?.municao} · painel do pedido ${aberto}, dos enviados ${enviados}`];
   });
   // ---------- Depois do Foundry: o Foundry manda ----------
   await r.passo('depois do Foundry: o criador avisa e trava o que é regra; o nome continua aberto', async () => {
@@ -531,8 +547,15 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(1200);
     const loja = await semRolagemLateral(edge);
     await edge.shot('loja-celular');
+    // A lista compacta no celular: um toque na linha abre a descrição inteira.
+    await clicar('[data-shop-cat="cyberware"]');
+    await edge.evaluate("document.querySelector('.cc-shop-bar').scrollIntoView()");
+    await clicar('.cc-shop-item.cc-has-desc .cc-shop-info b');
+    const abriu = await edge.evaluate("document.querySelector('.cc-shop-item.cc-has-desc').classList.contains('cc-open')");
+    const lista = await semRolagemLateral(edge);
+    await edge.shot('loja-celular-lista');
     await edge.celular(false);
-    return [criador && loja, `criador ${criador} · loja ${loja}`];
+    return [criador && loja && lista && abriu, `criador ${criador} · loja ${loja} · lista ${lista} · descrição abre com um toque ${abriu}`];
   });
   await r.passo('outro jogador não abre o criador da Ana', async () => {
     await edge.evaluate(`fetch('api/sair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })`);
@@ -565,23 +588,29 @@ module.exports = async ({ edge, servidores, r }) => {
     const quadro = (await texto('[data-cc-orders-gm]')).replace(/\s+/g, ' ');
     await edge.evaluate(`wikiApp.openPage('loja', { section: ${JSON.stringify(pacoteId)} })`);
     await edge.sleep(1200);
+    const jaAberto = await edge.evaluate(`!document.querySelector('[data-cc-orders]').hidden`);
+    const alerta = await texto('[data-shop-painel="pedidos"] .cc-tab-alert');
     await clicar('[data-pedido-aprovar]', 800);
     const pedidos = (await texto('[data-cc-orders]')).replace(/\s+/g, ' ');
     await abrir(edge, 'personagens', 1000);
-    return [/Lin.*1 esperando você/.test(quadro) && /aprovado, esperando o Foundry entregar/.test(pedidos), `${quadro.slice(0, 120)} · ${pedidos.slice(0, 120)}`];
+    return [/Lin.*1 esperando você/.test(quadro) && /aprovado, esperando o Foundry entregar/.test(pedidos) && jaAberto && /1 para aprovar/.test(alerta), `${quadro.slice(0, 120)} · ${pedidos.slice(0, 120)} · abriu nos pedidos ${jaAberto} (${alerta})`];
   });
-  await r.passo('quadro do mestre na Loja: baixar o teto para 500eb esconde os de 1.000eb', async () => {
+  await r.passo('regras da loja atrás da engrenagem: baixar o teto para 500eb esconde os de 1.000eb', async () => {
     await abrir(edge, 'loja', 1500);
-    const temQuadro = await edge.evaluate(`!!document.querySelector('[data-rule-teto]')`);
+    const fechado = await edge.evaluate(`document.querySelector('[data-cc-rules]').hidden`);
+    await clicar('[data-shop-config]');
+    const temQuadro = await edge.evaluate(`!document.querySelector('[data-cc-rules]').hidden && document.querySelector('[data-rule-teto]').offsetHeight > 0`) && fechado;
+    await edge.shot('loja-mestre');
     await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '500'; })()`);
     await clicar('[data-rule-save]', 1500);
+    const salvo = await texto('#cc-rules-msg');
     await buscarNaLoja('medscanner');
     const comprar = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="core_gear:medscanner"]').length`);
     await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '1000'; })()`);
     await clicar('[data-rule-save]', 1500);
     const teto = (await (await fetch(`${gm}/api/loja/regras`)).json()).regras.teto;
     await abrir(edge, 'personagens', 1200);
-    return [temQuadro && comprar === 0 && teto === 1000, `quadro ${temQuadro} · medscanner à venda com 500: ${comprar} · teto final ${teto}`];
+    return [temQuadro && /Regras salvas/.test(salvo) && comprar === 0 && teto === 1000, `engrenagem abre o quadro ${temQuadro} · ${salvo} · medscanner à venda com 500: ${comprar} · teto final ${teto}`];
   });
   await r.passo('mestre cria um código pela tela', async () => {
     await digitar('#cc-account-name', 'Caio');
