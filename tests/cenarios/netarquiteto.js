@@ -81,9 +81,10 @@ module.exports = async ({ edge, servidores, r }) => {
   const noJogador = expressao => jogador.evaluate(expressao);
   // Clique de verdade (eventos de mouse do DevTools) no marcador do ponto de acesso, na tela do jogador.
   const clicarNoPonto = async () => {
+    await noJogador(`(() => { const t = canvas.scene.tiles.get(${JSON.stringify(ids.tile)}); canvas.pan({ x: t.x + t.width / 2, y: t.y + t.height / 2, scale: 1 }); })()`);
+    await sleep(400);
     const p = await noJogador(`(() => {
       const t = canvas.scene.tiles.get(${JSON.stringify(ids.tile)});
-      canvas.pan({ x: t.x + t.width / 2, y: t.y + t.height / 2, scale: 1 });
       const ponto = canvas.stage.worldTransform.apply(new PIXI.Point(t.x + t.width / 2, t.y + t.height / 2));
       const caixa = canvas.app.view.getBoundingClientRect();
       return { x: ponto.x + caixa.left, y: ponto.y + caixa.top };
@@ -98,9 +99,15 @@ module.exports = async ({ edge, servidores, r }) => {
   const ir = async no => { await naJanela(`[data-action="selecionar"][data-no="${no}"]`, true); await sleep(150); await naJanela(`[data-action="mover"][data-no="${no}"]`); return esperarEstado(e => (e.corredores.find(c => c.token === ids.token) || {}).no === no); };
   const usar = async (habilidade, teste) => { await esperar(jogador, `!!document.querySelector('.net-janela [data-habilidade="${habilidade}"]:not([disabled])')`, 25); await naJanela(`[data-habilidade="${habilidade}"]`); return esperarEstado(teste); };
   const ultimas = (e, n = 4) => e.log.slice(-n).map(linha => linha.texto).join(' | ');
+  let parou = '';
+  const passo = async (nome, fn) => {
+    if (parou) { await r.passo(nome, async () => [false, `não rodou: falhou antes "${parou}"`]); return; }
+    await r.passo(nome, fn);
+    if (!r.itens[r.itens.length - 1].ok) parou = nome;
+  };
 
   try {
-    await r.passo('mestre entra com o cpr-2077 e o NET Architect; o compêndio “Arquiteturas da NET” nasce com os 3 exemplos', async () => {
+    await passo('mestre entra com o cpr-2077 e o NET Architect; o compêndio “Arquiteturas da NET” nasce com os 3 exemplos', async () => {
       await foundry.entrarComoMestre(edge, mesa.url);
       await foundry.ativarModulo(edge, ['cpr-2077', 'net-architect']);
       await edge.evaluate(`game.settings.set('cpr-2077', 'wikiUrl', ${JSON.stringify(wiki)})`);
@@ -109,7 +116,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.ativo && info.api === 'function' && exemplos >= 3, `${exemplos} arquiteturas · ${JSON.stringify(info)}`];
     });
 
-    await r.passo('netrunner da wiki importado com Interface, cyberdeck equipado e programas no deck', async () => {
+    await passo('netrunner da wiki importado com Interface, cyberdeck equipado e programas no deck', async () => {
       const resumo = await edge.evaluate(`(async () => {
         const { actor } = await game.modules.get('cpr-2077').api.importarPersonagem(${JSON.stringify(personagem.id)}, '');
         const deck = actor.itemTypes.cyberdeck[0];
@@ -122,7 +129,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [resumo.role && resumo.role[1] >= 4 && resumo.equipado === 'equipped' && resumo.programas.length > 0, JSON.stringify(resumo)];
     });
 
-    await r.passo('cena de teste: Tile configurado pela janela do mestre (Clínica de ripperdoc, alcance 6 m)', async () => {
+    await passo('cena de teste: Tile configurado pela janela do mestre (Clínica de ripperdoc, alcance 6 m)', async () => {
       const criado = await edge.evaluate(`(async () => {
         for (const velha of game.scenes.filter(s => s.name === 'NET teste')) await velha.delete();
         let usuario = game.users.getName('Jogador NET');
@@ -135,6 +142,7 @@ module.exports = async ({ edge, servidores, r }) => {
         let curioso = game.actors.getName('Curioso sem deck');
         if (!curioso) curioso = await Actor.create({ name: 'Curioso sem deck', type: 'character' });
         for (const a of [netrunner, curioso]) await a.update({ ownership: { default: 0, ${JSON.stringify(ids.usuario)}: 3 } });
+        await game.users.get(${JSON.stringify(ids.usuario)}).update({ character: netrunner.id });
         const scene = await Scene.create({ name: 'NET teste', width: 3000, height: 2000, padding: 0, grid: { size: 100, distance: 2, units: 'm' }, tokenVision: false, fog: { exploration: false } });
         const [tile] = await scene.createEmbeddedDocuments('Tile', [{ x: 1400, y: 800, width: 200, height: 200, texture: { src: 'icons/svg/terminal.svg' } }]);
         const [t1, t2] = await scene.createEmbeddedDocuments('Token', [
@@ -161,9 +169,11 @@ module.exports = async ({ edge, servidores, r }) => {
       return [aberta && ponto && ponto.nome === 'Terminal da clínica' && /arquiteturas-net/.test(ponto.arquitetura) && ponto.alcance === 6 && ponto.exigeDeck, JSON.stringify(ponto)];
     });
 
-    await r.passo('jogador entra e vê o marcador NET; o token sem cyberdeck não conecta', async () => {
+    await passo('jogador entra e vê o marcador NET; o token sem cyberdeck não conecta', async () => {
       await foundry.entrarComo(jogador, mesa.url, 'Jogador NET');
       await esperar(jogador, `canvas.ready && canvas.scene?.id === ${JSON.stringify(ids.cena)}`);
+      await noJogador(`(() => { for (const app of Object.values(ui.windows)) app.close(); for (const app of foundry.applications.instances.values()) app.close(); })()`);
+      await sleep(400);
       await noJogador(`(() => { window.__avisos = []; const w = ui.notifications.warn.bind(ui.notifications); ui.notifications.warn = (m, o) => { window.__avisos.push(String(m)); return w(m, o); }; })()`);
       const marcadores = await esperar(jogador, `(canvas.interface.children.find(c => c.name === 'net-architect-pontos') || { children: [] }).children.length`);
       await noJogador(`canvas.tokens.get(${JSON.stringify(ids.curioso)}).control({ releaseOthers: true })`);
@@ -173,7 +183,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [marcadores === 1 && /cyberdeck/.test(aviso || '') && !(e && e.corredores.length), `marcadores ${marcadores} · aviso: ${aviso}`];
     });
 
-    await r.passo('clique no ponto conecta: janela da NET só para o jogador e o mestre; o token fica marcado para todos', async () => {
+    await passo('clique no ponto conecta: janela da NET só para o jogador e o mestre; o token fica marcado para todos', async () => {
       await noJogador(`canvas.tokens.get(${JSON.stringify(ids.token)}).control({ releaseOthers: true })`);
       await clicarNoPonto();
       const janela = await esperar(jogador, `!!document.querySelector('#net-architect-${ids.tile}-${ids.token}')`);
@@ -192,7 +202,7 @@ module.exports = async ({ edge, servidores, r }) => {
     // Dados fixos no cliente do mestre (quem rola): d10 = 6, d6 = 4.
     await edge.evaluate('CONFIG.Dice.randomUniform = () => 0.55');
 
-    await r.passo('Pathfinder (4 + 6 = 10) revela a clínica inteira; a rolagem sai no chat com o cartão do sistema', async () => {
+    await passo('Pathfinder (4 + 6 = 10) revela a clínica inteira; a rolagem sai no chat com o cartão do sistema', async () => {
       const chatAntes = await edge.evaluate('game.messages.size');
       const e = await usar('pathfinder', est => est.vistos.length >= 8);
       const chat = await edge.evaluate(`game.messages.contents.slice(${chatAntes}).map(m => m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 60))`);
@@ -200,7 +210,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [e.vistos.length === 8 && chat.length >= 1 && mapa === 9, `vistos ${e.vistos.join(',')} · nós na tela ${mapa} · chat: ${chat.join(' / ')}`];
     });
 
-    await r.passo('Backdoor (10 contra DV 8) quebra a senha do andar 1; antes disso a descida estava travada', async () => {
+    await passo('Backdoor (10 contra DV 8) quebra a senha do andar 1; antes disso a descida estava travada', async () => {
       await ir('1a');
       const avisos = await noJogador('window.__avisos.length');
       await naJanela(`[data-action="selecionar"][data-no="2a"]`, true);
@@ -211,7 +221,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [/trava a descida/.test(travado || '') && e.feitos.includes('1a.0'), `${travado} · ${ultimas(e, 2)}`];
     });
 
-    await r.passo('Wisp no andar 2: empata na velocidade, ataca na hora e tira 4 do HP; Zap tira 4 de REZ', async () => {
+    await passo('Wisp no andar 2: empata na velocidade, ataca na hora e tira 4 do HP; Zap tira 4 de REZ', async () => {
       const hp = () => edge.evaluate(`game.actors.get(${JSON.stringify(ids.ator)}).system.derivedStats.hp.value`);
       const antes = await hp();
       let e = await ir('2a');
@@ -221,7 +231,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [antes - depois === 4 && (e.ices.find(i => i.chave === '2a.0') || {}).rez === 11, `HP ${antes} → ${depois} · ${ultimas(e, 5)}`];
     });
 
-    await r.passo('programa de ataque: ativar e atacar derruba o Wisp (ou Zap até cair); a descida libera', async () => {
+    await passo('programa de ataque: ativar e atacar derruba o Wisp (ou Zap até cair); a descida libera', async () => {
       let e;
       if (ids.ataque) {
         await esperar(jogador, `!!document.querySelector('.net-janela [data-programa="${ids.ataque}"][data-acao="ativar"]')`, 25);
@@ -237,7 +247,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [(e.ices.find(i => i.chave === '2a.0') || {}).rez === 0 && (desceu.corredores.find(c => c.token === ids.token) || {}).no === '3a', `${ids.ataque ? 'com programa' : 'só Zap'} · ${ultimas(e, 3)}`];
     });
 
-    await r.passo('Eye-Dee no 3a mostra o arquivo; no ramo B, Control toma o nó e um comando vai para o registro', async () => {
+    await passo('Eye-Dee no 3a mostra o arquivo; no ramo B, Control toma o nó e um comando vai para o registro', async () => {
       let e = await usar('eyedee', est => est.feitos.includes('3a.0'));
       const arquivo = /Prontuários/.test(ultimas(e, 2));
       await ir('2a');
@@ -251,14 +261,14 @@ module.exports = async ({ edge, servidores, r }) => {
       return [arquivo && e.feitos.includes('3b.0') && /portas do centro/.test(ultimas(e, 1)), `${ultimas(e, 3)} · detalhe: ${detalhe.replace(/\s+/g, ' ').slice(0, 80)}`];
     });
 
-    await r.passo('senha DV 10 no 4b: Backdoor com 10 não passa (empate perde)', async () => {
+    await passo('senha DV 10 no 4b: Backdoor com 10 não passa (empate perde)', async () => {
       await ir('4b');
       const e = await usar('backdoor', est => /não passou a senha/.test(ultimas(est, 1)));
       const c = await corredor();
       return [!e.feitos.includes('4b.0') && c.acoes >= 5, `${ultimas(e, 1)} · ações usadas ${c.acoes}/${c.max} (fora de combate não trava)`];
     });
 
-    await r.passo('desconectar: a janela fecha, o efeito sai do token e, sem ninguém, a arquitetura reinicia as defesas', async () => {
+    await passo('desconectar: a janela fecha, o efeito sai do token e, sem ninguém, a arquitetura reinicia as defesas', async () => {
       await naJanela('[data-action="desconectar"]:not([data-inseguro])');
       const fechou = await esperar(jogador, `!document.querySelector('#net-architect-${ids.tile}-${ids.token}')`);
       const e = await esperarEstado(est => !est.corredores.length);
@@ -267,7 +277,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [fechou && limpo && anel && !e.ices.length && e.feitos.join() === '3a.0', `janela fechou ${fechou} · token limpo ${limpo} · anel sumiu ${anel} · feitos ${e.feitos} · ${ultimas(e, 2)}`];
     });
 
-    await r.passo('sair do alcance com a conexão aberta derruba da NET (desconexão insegura)', async () => {
+    await passo('sair do alcance com a conexão aberta derruba da NET (desconexão insegura)', async () => {
       await clicarNoPonto();
       await esperarEstado(est => est.corredores.length === 1);
       await edge.evaluate(`game.scenes.get(${JSON.stringify(ids.cena)}).tokens.get(${JSON.stringify(ids.token)}).update({ x: 300, y: 300 }, { animate: false })`);
@@ -276,7 +286,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [!e.corredores.length && /insegura/.test(ultimas(e, 3)) && fechou, ultimas(e, 3)];
     });
 
-    await r.passo('jogador não enxerga o compêndio de arquiteturas (os segredos ficam com o mestre)', async () => {
+    await passo('jogador não enxerga o compêndio de arquiteturas (os segredos ficam com o mestre)', async () => {
       const visivel = await noJogador(`!!game.packs.get('world.arquiteturas-net')?.visible`);
       return [!visivel, `compêndio visível para o jogador: ${visivel}`];
     });

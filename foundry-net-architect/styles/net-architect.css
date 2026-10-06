@@ -9,18 +9,18 @@
   --net-texto: #d8f5ef;
   --net-apagado: #7f9a96;
 }
-.net-architect .window-content { padding: 0; background: var(--net-fundo); color: var(--net-texto); font-size: 13px; }
-.net-architect .window-header { background: linear-gradient(90deg, #071a1c, #170812); border-bottom: 1px solid var(--net-ciano); color: var(--net-ciano); }
-.net-architect button { margin: 0; padding: 3px 8px; border: 1px solid var(--net-linha); border-radius: 2px; background: #0b1b1d; color: var(--net-texto); font-size: 12px; line-height: 1.4; cursor: pointer; white-space: nowrap; }
-.net-architect button:hover:not(:disabled) { border-color: var(--net-ciano); color: var(--net-ciano); box-shadow: 0 0 6px rgba(0, 255, 210, 0.35); }
-.net-architect button:disabled { opacity: 0.45; cursor: not-allowed; }
-.net-architect .net-perigo { border-color: #5a1f35; color: #ff9fbf; }
-.net-architect .net-perigo:hover:not(:disabled) { border-color: var(--net-magenta); color: var(--net-magenta); box-shadow: 0 0 6px rgba(255, 46, 136, 0.4); }
+.application.net-architect .window-content { padding: 0; background: var(--net-fundo); color: var(--net-texto); font-size: 13px; }
+.application.net-architect .window-header { background: linear-gradient(90deg, #071a1c, #170812); border-bottom: 1px solid var(--net-ciano); color: var(--net-ciano); }
+.application.net-architect .window-content button { margin: 0; padding: 3px 8px; border: 1px solid var(--net-linha); border-radius: 2px; background: #0b1b1d; color: var(--net-texto); font-size: 12px; line-height: 1.4; cursor: pointer; white-space: nowrap; }
+.application.net-architect .window-content button:hover:not(:disabled) { border-color: var(--net-ciano); color: var(--net-ciano); box-shadow: 0 0 6px rgba(0, 255, 210, 0.35); }
+.application.net-architect .window-content button:disabled { opacity: 0.45; cursor: not-allowed; }
+.application.net-architect .window-content .net-perigo { border-color: #5a1f35; color: #ff9fbf; }
+.application.net-architect .window-content .net-perigo:hover:not(:disabled) { border-color: var(--net-magenta); color: var(--net-magenta); box-shadow: 0 0 6px rgba(255, 46, 136, 0.4); }
 .net-architect .net-nota { margin: 4px 0; color: var(--net-apagado); font-size: 12px; }
 .net-architect .net-tag { padding: 0 5px; border: 1px solid var(--net-magenta); color: var(--net-magenta); font-size: 10px; text-transform: uppercase; }
 .net-architect .net-ok { color: var(--net-ciano); }
-.net-architect h3, .net-architect h4 { margin: 0 0 6px; border: 0; color: var(--net-ciano); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
-.net-architect h4 i { margin-right: 4px; color: var(--net-magenta); }
+.application.net-architect .window-content h3, .application.net-architect .window-content h4 { margin: 0 0 6px; border: 0; color: var(--net-ciano); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+.application.net-architect .window-content h4 i { margin-right: 4px; color: var(--net-magenta); }
 .net-architect .net-botoes { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
 
 /* Janela da NET */
@@ -72,7 +72,7 @@
 .net-corredor small { color: var(--net-apagado); }
 .net-numeros { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; }
 .net-numeros b { color: var(--net-ciano); }
-.net-numeros input { width: 38px; height: 20px; padding: 0 3px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); }
+.application.net-architect .window-content .net-numeros input { width: 38px; height: 20px; padding: 0 3px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); }
 .net-programas { margin: 0; padding: 0; list-style: none; }
 .net-programas li { display: flex; gap: 6px; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #0f2425; }
 .net-programas li > div:first-child { flex: 1; min-width: 0; }
@@ -80,15 +80,15 @@
 .net-programas .net-ativo b { color: var(--net-ciano); }
 .net-habilidades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
 .net-habilidades button { overflow: hidden; text-overflow: ellipsis; }
-.net-architect input[type="text"] { width: 100%; margin-top: 5px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); }
+.application.net-architect .window-content input[type="text"] { width: 100%; margin-top: 5px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); }
 .net-linha { display: flex; gap: 4px; align-items: center; }
 .net-linha input[type="text"] { margin-top: 0; }
 .net-sair { display: flex; gap: 4px; margin-top: auto; }
 .net-sair button { flex: 1; }
 .net-corredores { display: flex; flex-wrap: wrap; gap: 4px; }
-.net-corredores .ativo { border-color: var(--net-ciano); color: var(--net-ciano); }
+.application.net-architect .window-content .net-corredores .ativo { border-color: var(--net-ciano); color: var(--net-ciano); }
 .net-mestre { padding: 6px; border: 1px dashed #5a1f35; background: rgba(40, 8, 22, 0.35); }
-.net-mestre h4 { color: var(--net-magenta); }
+.application.net-architect .window-content .net-mestre h4 { color: var(--net-magenta); }
 .net-ajuste { display: inline-flex; gap: 2px; align-items: center; }
 .net-log { grid-column: 1 / -1; overflow: auto; padding: 6px 10px; border-top: 1px solid var(--net-ciano); background: #030708; font-family: var(--font-mono, monospace); font-size: 12px; }
 .net-log p { margin: 0 0 2px; }
@@ -102,18 +102,18 @@
 .net-vazio { padding: 20px; }
 
 /* Configuração do ponto de acesso */
-.net-config .window-content { padding: 10px 12px; }
+.application.net-config .window-content { padding: 10px 12px; }
 .net-form { display: flex; flex-direction: column; gap: 6px; }
 .net-form .form-group { margin: 0; }
-.net-form .form-group label { color: var(--net-ciano); }
-.net-form select, .net-form input[type="number"], .net-form input[type="text"] { background: #061012; color: var(--net-texto); border: 1px solid var(--net-linha); }
-.net-form .hint { margin: 2px 0 0; color: var(--net-apagado); font-size: 11px; }
-.net-form fieldset { margin: 0; padding: 4px 8px 8px; border: 1px solid var(--net-linha); }
-.net-form legend { color: var(--net-magenta); }
-.net-check { display: flex; gap: 6px; align-items: center; }
+.application.net-architect .window-content .net-form .form-group label { color: var(--net-ciano); }
+.application.net-architect .window-content .net-form select, .application.net-architect .window-content .net-form input[type="number"], .application.net-architect .window-content .net-form input[type="text"] { background: #061012; color: var(--net-texto); border: 1px solid var(--net-linha); }
+.application.net-architect .window-content .net-form .hint { margin: 2px 0 0; color: var(--net-apagado); font-size: 11px; }
+.application.net-architect .window-content .net-form fieldset { margin: 0; padding: 4px 8px 8px; border: 1px solid var(--net-linha); }
+.application.net-architect .window-content .net-form legend { color: var(--net-magenta); }
+.application.net-architect .window-content .net-check { color: var(--net-texto);  display: flex; gap: 6px; align-items: center; }
 .net-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .net-rodape { justify-content: flex-end; margin-top: 6px; }
-.net-rodape button[type="submit"] { border-color: var(--net-ciano); color: var(--net-ciano); }
+.application.net-architect .window-content .net-rodape button[type="submit"] { border-color: var(--net-ciano); color: var(--net-ciano); }
 
 /* Botão no HUD do Tile */
 .net-architect-hud.active { color: #00ffd2; border-color: #00ffd2; }

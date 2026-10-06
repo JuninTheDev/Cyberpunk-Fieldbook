@@ -44,7 +44,8 @@ export const EXEMPLOS = [
 export async function garantirCompendio() {
   let pack = packDoMundo();
   if (pack) return pack;
-  const Colecao = foundry.documents.collections?.CompendiumCollection || globalThis.CompendiumCollection;
+  // No v12 a classe é global só pelo nome (não é propriedade de globalThis); no v13, fica em foundry.documents.collections.
+  const Colecao = foundry.documents?.collections?.CompendiumCollection ?? CompendiumCollection;
   pack = await Colecao.createCompendium({ name: PACK_NAME, label: ROTULO, type: 'Item', system: game.system.id });
   try { await pack.configure({ ownership: { PLAYER: 'NONE', TRUSTED: 'NONE', ASSISTANT: 'OWNER' } }); } catch (error) { console.warn(`${MODULE_ID} | permissões do compêndio`, error); }
   await Item.createDocuments(EXEMPLOS, { pack: pack.collection });

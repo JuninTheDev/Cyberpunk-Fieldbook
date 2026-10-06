@@ -13,7 +13,7 @@ async function classes() {
   return sistema;
 }
 
-const renderizar = (...args) => (foundry.applications?.handlebars?.renderTemplate || globalThis.renderTemplate)(...args);
+const renderizar = (...args) => (foundry.applications?.handlebars?.renderTemplate ?? renderTemplate)(...args);
 
 // Quem vê as rolagens da NET: todos, ou só o mestre e os donos do netrunner.
 function destinatarios(actor) {
