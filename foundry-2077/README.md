@@ -29,6 +29,8 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
 
 O conteúdo é gerado a partir da wiki da mesa (`system-2077.js`, `system-net.js`, `mestre-npcs.js`), então a wiki e o Foundry nunca divergem.
 
+Para netrunning com arquiteturas no mapa (pontos de acesso nos Tiles, janela do netrunner e Black ICE resolvido pelo mestre), use junto o módulo **NET Architect**, da pasta `foundry-net-architect/`. O `atualizar-modulo.bat` instala os dois.
+
 ## Gerar ou atualizar o módulo
 
 O jeito fácil: feche o Foundry e dê dois cliques em `atualizar-modulo.bat`, na pasta da wiki. Ele faz o mesmo que estes comandos, rodados nesta pasta com o Foundry fechado (ou sem nenhum mundo que use o módulo aberto):
