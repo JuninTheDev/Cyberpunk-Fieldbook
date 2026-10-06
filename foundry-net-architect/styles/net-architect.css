@@ -179,3 +179,62 @@
 
 /* Botão no HUD do Tile */
 .net-architect-hud.active { color: #00ffd2; border-color: #00ffd2; }
+
+/* ---------- Situação do netrunner, alvo e nó de controle ---------- */
+.net-aviso { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; padding: 5px 8px; border: 1px solid #5a1f35; background: rgba(60, 10, 30, 0.45); color: #ffd0e2; font-size: 12px; }
+.net-aviso i { margin-right: 4px; color: var(--net-magenta); }
+.net-aviso-fogo { border-color: #a35a00; background: rgba(90, 40, 0, 0.5); color: #ffd9a0; }
+.net-aviso-fogo i { color: #ff9a2e; }
+.net-alvo { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; color: var(--net-texto); }
+.application.net-architect .window-content .net-alvo select { flex: 1; }
+.net-controle { padding: 6px 8px; border: 1px solid #1f6a3a; background: rgba(10, 40, 20, 0.45); }
+.application.net-architect .window-content .net-controle h4 { color: var(--net-verde); }
+.net-ligacoes { display: grid; gap: 4px; margin: 4px 0; padding: 0; list-style: none; }
+.net-ligacoes li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; justify-content: space-between; }
+.net-ligacoes li i { color: var(--net-verde); }
+.net-ligacoes small { color: var(--net-apagado); }
+
+/* ---------- Configuração: ligações ---------- */
+.net-ligacoes-config { display: grid; gap: 8px; }
+.net-ligar { display: grid; gap: 4px; padding: 6px 8px; border: 1px solid var(--net-linha); background: rgba(10, 22, 25, 0.6); }
+.net-ligar b { color: var(--net-texto); }
+.net-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.net-chips li { display: inline-flex; gap: 4px; align-items: center; padding: 1px 2px 1px 6px; border: 1px solid #1f6a3a; background: #071a10; color: var(--net-texto); font-size: 12px; }
+.net-chips li i { color: var(--net-verde); }
+.application.net-architect .window-content .net-chips button { min-height: 18px; padding: 0 4px; border: 0; background: transparent; }
+.application.net-architect .window-content .net-ligar select { flex: 1; }
+
+/* ---------- Editor visual de arquitetura ---------- */
+.net-ed { display: flex; flex-direction: column; height: 100%; }
+.net-ed-topo { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--net-linha); background: var(--net-painel); }
+.net-ed-topo label { display: flex; gap: 6px; align-items: center; color: var(--net-texto); font-weight: 600; }
+.application.net-architect .window-content .net-ed-topo input[type="text"] { width: 260px; }
+.net-ed-topo .net-nota { flex: 1 1 260px; }
+.net-ed-corpo { display: grid; grid-template-columns: minmax(0, 1fr) 330px; flex: 1; min-height: 0; }
+.net-ed-grade-area { overflow: auto; padding: 10px; background:
+  linear-gradient(rgba(0, 255, 210, 0.045) 1px, transparent 1px) 0 0 / 22px 22px,
+  linear-gradient(90deg, rgba(0, 255, 210, 0.045) 1px, transparent 1px) 0 0 / 22px 22px; }
+.net-ed-entrada { width: 150px; margin-bottom: 8px; padding: 6px 10px; border: 1px solid var(--net-magenta); background: #140a10; color: var(--net-magenta); font-weight: 700; text-transform: uppercase; }
+.net-ed-grade { display: grid; gap: 8px; }
+.net-ed-ramo { color: var(--net-apagado); font-size: 11px; text-transform: uppercase; }
+.net-ed-no, .net-ed-vazio { min-height: 62px; padding: 5px 8px; border: 1px solid #2b5a59; background: #08171a; cursor: pointer; }
+.net-ed-no { display: grid; gap: 1px; align-content: start; border-left: 4px solid #2b5a59; cursor: grab; }
+.net-ed-no b { color: var(--net-ciano); font-size: 11px; text-transform: uppercase; }
+.net-ed-no span { overflow: hidden; color: var(--net-texto); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.net-ed-no small { color: var(--net-amarelo); font-size: 10px; }
+.net-ed-no.net-tipo-senha { border-left-color: var(--net-amarelo); }
+.net-ed-no.net-tipo-arquivo { border-left-color: var(--net-ciano); }
+.net-ed-no.net-tipo-controle { border-left-color: var(--net-verde); }
+.net-ed-no.net-tipo-ice, .net-ed-no.net-tipo-demonio, .net-ed-no.net-tipo-netrunner { border-left-color: var(--net-magenta); }
+.net-ed-sel { border-color: var(--net-ciano); box-shadow: 0 0 6px rgba(0, 255, 210, 0.5); }
+.net-ed-vazio { display: flex; align-items: center; justify-content: center; border-style: dashed; border-color: #1c3433; background: transparent; color: #2b5a59; }
+.net-ed-vazio:hover { border-color: var(--net-ciano); color: var(--net-ciano); }
+.net-ed-sobre { border-color: var(--net-amarelo); box-shadow: 0 0 8px rgba(248, 239, 2, 0.5); }
+.net-ed-arrastando { opacity: 0.4; }
+.net-ed-painel { overflow: auto; padding: 10px 12px; border-left: 1px solid var(--net-linha); background: var(--net-painel); }
+.net-ed-lista { display: grid; gap: 8px; margin: 0 0 8px; padding: 0; list-style: none; }
+.net-ed-conteudo { display: grid; gap: 4px; padding: 6px 8px; border: 1px solid var(--net-linha); background: rgba(5, 11, 13, 0.6); }
+.net-ed-conteudo label { display: grid; gap: 2px; color: var(--net-apagado); font-size: 12px; }
+.application.net-architect .window-content .net-ed-conteudo select, .application.net-architect .window-content .net-ed-conteudo input[type="text"] { width: 100%; }
+.application.net-architect .window-content .net-ed-conteudo textarea { width: 100%; min-height: 44px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); resize: vertical; }
+.net-ed-conteudo .net-linha select { flex: 1; }

@@ -1,11 +1,16 @@
 // O motor da NET, sempre no cliente do mestre ativo: conecta e desconecta netrunners, move pela arquitetura,
-// resolve as habilidades de Interface e o Black ICE com as rolagens do sistema e grava o estado no Tile.
-// No Tile só vai o que os jogadores podem ver (andares revelados, o que já foi feito); o resto (DVs e conteúdos
-// ainda escondidos, descrições) fica no item da arquitetura, que só o mestre lê.
-import { MODULE_ID, FLAG_PONTO, FLAG_ESTADO, FLAG_CONEXAO, STATUS_ID, HABILIDADES, NOME_DO_TIPO, acoesPorRank, iceDaChave } from './constantes.mjs';
-import { ENTRADA, lerArquitetura, vizinhos, filhosDe, paiDoNo, ehFundo, revelarPathfinder } from './arquitetura.mjs';
+// resolve as habilidades de Interface e os inimigos (Black ICE, demônios, netrunners inimigos) com as rolagens do
+// sistema, aplica os efeitos na ficha, põe os inimigos no combate, executa os comandos dos nós de controle e grava
+// o estado no Tile. No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
+import { MODULE_ID, FLAG_PONTO, FLAG_ESTADO, FLAG_CONEXAO, STATUS_ID, HABILIDADES, NOME_DO_TIPO, acoesPorRank, iceDaChave, demonioDaChave } from './constantes.mjs';
+import { ENTRADA, lerArquitetura, vizinhos, filhosDe, ehFundo, revelarPathfinder } from './arquitetura.mjs';
 import { erro } from './socket.mjs';
 import * as rolagens from './rolagens.mjs';
+import { aplicarEfeitoDoIce, danoNoCerebro, apagarFogo, emChamas } from './efeitos.mjs';
+import { entrarNoCombate, sincronizarCombate, sairDoCombate } from './combate.mjs';
+import { acionar, devolver, ligacoesDo } from './ligacoes.mjs';
+import { copiarArquivo } from './arquivos.mjs';
+import { animar, tocar } from './fx.mjs';
 
 const LOG_MAX = 60;
 const esc = texto => String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -32,8 +37,6 @@ export function netrunnerDo(actor) {
   return { role, deck, programas, rank: role ? Number(role.system.rank) || 0 : 0 };
 }
 
-export { emCombate };
-
 export function faltasPara(ponto, actor) {
   const n = netrunnerDo(actor);
   const faltas = [];
@@ -53,14 +56,91 @@ export function distancia(tile, token) {
 }
 export const alcanceDo = (ponto, cena) => (Number(ponto.alcance) > 0 ? Number(ponto.alcance) : cena.grid.distance);
 
-const estadoNovo = (ponto, arq) => ({ v: 1, arquitetura: ponto.arquitetura, nome: arq.nome, dv: arq.dv, mapa: false, vistos: [], feitos: [], ices: [], corredores: [], nos: [], log: [] });
+// Ações NET: em combate, cada netrunner tem as do rank por turno; fora de combate não contam.
+export function emCombate(token) {
+  return game.combats.some(combate => combate.started && combate.combatants.some(item => item.tokenId === token.id && item.sceneId === token.parent.id));
+}
+function gastarAcao(corredor, token, usuario, quantas = 1) {
+  if (!emCombate(token)) return;
+  if (!usuario.isGM && corredor.acoes + quantas > corredor.max) throw erro(`Sem Ações NET neste turno (${corredor.acoes} de ${corredor.max}).`);
+  corredor.acoes += quantas;
+}
+
+function exigirNetrunner(actor) {
+  const n = netrunnerDo(actor);
+  if (!n.deck) throw erro('Sem cyberdeck equipado: não dá para agir na NET.');
+  if (!n.role) throw erro('Sem Role de netrunning (Interface) na ficha: o sistema não sabe com que rank rolar.');
+  return n;
+}
+
+// ---------------- Inimigos: Black ICE, demônios e netrunners inimigos ----------------
+const INIMIGOS = ['ice', 'demonio', 'netrunner'];
+export const ehInimigo = conteudo => INIMIGOS.includes(conteudo.tipo);
+const conteudosDe = (arq, id) => (id === ENTRADA || !arq.nos[id] ? [] : arq.nos[id].conteudos);
+const acharConteudo = (arq, chave) => {
+  for (const no of Object.values(arq.nos)) {
+    const achado = no.conteudos.find(item => item.chave === chave);
+    if (achado) return { no, conteudo: achado };
+  }
+  return null;
+};
+const rezMaxDe = conteudo => (conteudo.tipo === 'ice' ? iceDaChave(conteudo.ice).rez : conteudo.tipo === 'demonio' ? demonioDaChave(conteudo.demonio).rez : null);
+function rezDe(est, conteudo) {
+  if (conteudo.tipo === 'netrunner') return null;
+  const salvo = est.ices.find(item => item.chave === conteudo.chave);
+  return salvo ? salvo.rez : rezMaxDe(conteudo);
+}
+function mudarRez(est, conteudo, rez) {
+  const valor = Math.max(0, Math.min(rezMaxDe(conteudo), rez));
+  est.ices = [...est.ices.filter(item => item.chave !== conteudo.chave), { chave: conteudo.chave, rez: valor }];
+  return valor;
+}
+const inimigoAtivo = (est, conteudo) => (conteudo.tipo === 'netrunner' ? !(est.fora || []).includes(conteudo.chave) : rezDe(est, conteudo) > 0);
+const atorDoNetrunner = conteudo => (conteudo.ator ? fromUuidSync(conteudo.ator) : null);
+export function nomeDoInimigo(conteudo) {
+  if (conteudo.tipo === 'ice') return iceDaChave(conteudo.ice).nome;
+  if (conteudo.tipo === 'demonio') return conteudo.nome || demonioDaChave(conteudo.demonio).nome;
+  const actor = atorDoNetrunner(conteudo);
+  return conteudo.nome || (actor && actor.name) || 'Netrunner inimigo';
+}
+const inimigosAtivos = (arq, est, id) => conteudosDe(arq, id).filter(conteudo => ehInimigo(conteudo) && inimigoAtivo(est, conteudo));
+// Quem segura a descida: Black ICE (a não ser que tenha dado Slide) e demônios. Netrunner inimigo não segura.
+const quemSegura = (arq, est, corredor) => inimigosAtivos(arq, est, corredor.no).filter(conteudo => conteudo.tipo === 'demonio' || (conteudo.tipo === 'ice' && !corredor.escapou.includes(conteudo.chave)));
+
+// Defesa do inimigo contra um ataque do netrunner: DEF do ICE, Interface do demônio, ou a defesa do netrunner inimigo.
+async function defesaDo(conteudo) {
+  const nome = nomeDoInimigo(conteudo);
+  if (conteudo.tipo === 'ice') return rolagens.rolagemDoIce({ nome, rotulo: 'DEF', valor: iceDaChave(conteudo.ice).def });
+  if (conteudo.tipo === 'demonio') return rolagens.rolagemDoIce({ nome, rotulo: 'Interface', valor: demonioDaChave(conteudo.demonio).interface });
+  const actor = atorDoNetrunner(conteudo);
+  const n = actor ? netrunnerDo(actor) : null;
+  if (n && n.deck && n.role) return rolagens.interfaceRoll({ actor, token: null, deck: n.deck, role: n.role, habilidade: 'defense', titulo: `${nome}: defesa` });
+  return rolagens.rolagemDoIce({ nome, rotulo: 'Interface', valor: n ? n.rank : 0 });
+}
+
+// Dano no inimigo: REZ (Black ICE e demônio) ou HP do netrunner inimigo (direto no cérebro).
+async function danoNoInimigo(est, conteudo, total) {
+  if (conteudo.tipo !== 'netrunner') {
+    const rez = mudarRez(est, conteudo, rezDe(est, conteudo) - total);
+    return rez <= 0 ? ', e ele caiu' : `, fica com ${rez} de REZ`;
+  }
+  const actor = atorDoNetrunner(conteudo);
+  const hp = actor && actor.system.derivedStats && actor.system.derivedStats.hp;
+  if (!hp) return ' (aplique no HP)';
+  const novo = Math.max(0, Number(hp.value) - total);
+  await actor.update({ 'system.derivedStats.hp.value': novo });
+  if (novo <= 0) est.fora = [...new Set([...(est.fora || []), conteudo.chave])];
+  return novo <= 0 ? ', e ele caiu da NET' : `, fica com HP ${novo}/${hp.max}`;
+}
+
+// ---------------- Estado ----------------
+const estadoNovo = (ponto, arq) => ({ v: 2, arquitetura: ponto.arquitetura, nome: arq.nome, dv: arq.dv, mapa: false, vistos: [], feitos: [], ices: [], fora: [], arquivos: [], assumidos: [], combatentes: [], corredores: [], nos: [], log: [] });
 
 // Os andares que os jogadores enxergam: os revelados (com o conteúdo) e os vizinhos de quem está na NET ("?").
 function vistaPublica(arq, est) {
   const vistos = new Set(est.vistos);
   if (est.mapa) for (const id of Object.keys(arq.nos)) vistos.add(id);
   const feitos = new Set(est.feitos);
-  const ices = Object.fromEntries(est.ices.map(ice => [ice.chave, ice]));
   const desconhecidos = new Set();
   for (const corredor of est.corredores) for (const id of vizinhos(arq, corredor.no)) if (id !== ENTRADA && !vistos.has(id)) desconhecidos.add(id);
   const nos = [];
@@ -71,15 +151,13 @@ function vistaPublica(arq, est) {
     nos.push({
       id, andar: no.andar, ramo: no.ramo, pai: no.pai, visto: true,
       conteudos: no.conteudos.map(conteudo => {
-        const feito = feitos.has(conteudo.chave);
-        const publico = { chave: conteudo.chave, tipo: conteudo.tipo, dv: conteudo.dv, feito };
-        if (conteudo.tipo === 'ice') {
-          const dados = iceDaChave(conteudo.ice);
-          const atual = ices[conteudo.chave];
-          publico.ice = { ...dados, chave: conteudo.ice, rezAtual: atual ? atual.rez : dados.rez };
-          publico.feito = publico.ice.rezAtual <= 0;
-        }
-        if (feito && (conteudo.tipo === 'arquivo' || conteudo.tipo === 'controle')) publico.descricao = conteudo.descricao;
+        const publico = { chave: conteudo.chave, tipo: conteudo.tipo, dv: conteudo.dv, feito: feitos.has(conteudo.chave) };
+        if (conteudo.tipo === 'ice') publico.inimigo = { ...iceDaChave(conteudo.ice), modelo: conteudo.ice, rezAtual: rezDe(est, conteudo) };
+        if (conteudo.tipo === 'demonio') publico.inimigo = { ...demonioDaChave(conteudo.demonio), nome: nomeDoInimigo(conteudo), modelo: conteudo.demonio, classe: 'Demônio', rezAtual: rezDe(est, conteudo) };
+        if (conteudo.tipo === 'netrunner') publico.inimigo = { nome: nomeDoInimigo(conteudo), classe: 'Netrunner inimigo', rez: null, rezAtual: null, ativo: inimigoAtivo(est, conteudo) };
+        if (publico.inimigo) publico.feito = !inimigoAtivo(est, conteudo);
+        if (publico.feito && (conteudo.tipo === 'arquivo' || conteudo.tipo === 'controle')) publico.descricao = conteudo.descricao;
+        if (conteudo.tipo === 'arquivo') publico.diario = ((est.arquivos || []).find(item => item.chave === conteudo.chave) || {}).uuid || '';
         return publico;
       })
     });
@@ -105,47 +183,74 @@ async function contexto(dados, usuario, { precisaCorredor = true } = {}) {
   if (!ponto || !ponto.ativo) throw erro('Este Tile não é um ponto de acesso à NET ativo.');
   const token = dados.token ? tile.parent.tokens.get(dados.token) : null;
   if (dados.token && !token) throw erro('O token não está nesta cena.');
-  if (token && !usuario.isGM && !token.actor?.testUserPermission(usuario, 'OWNER')) throw erro('Você não controla este token.');
+  if (token && !usuario.isGM && !(token.actor && token.actor.testUserPermission(usuario, 'OWNER'))) throw erro('Você não controla este token.');
   const arq = await arquiteturaDoPonto(ponto);
   let est = foundry.utils.deepClone(estadoDoTile(tile));
   if (!est || est.arquitetura !== ponto.arquitetura) est = estadoNovo(ponto, arq);
+  for (const campo of ['fora', 'arquivos', 'assumidos', 'combatentes']) est[campo] = est[campo] || [];
   est.dv = arq.dv;
   est.nome = arq.nome;
   const corredor = token ? est.corredores.find(item => item.token === token.id) : null;
   if (precisaCorredor && !corredor) throw erro('Este netrunner não está conectado a este ponto de acesso.');
-  return { tile, token, ponto, arq, est, corredor, actor: token ? token.actor : null };
+  return { tile, token, ponto, arq, est, corredor, actor: token ? token.actor : null, usuario, inicio: Date.now(), havia: est.corredores.length, desmarcar: [], registrar, netrunnerDo };
+}
+// O contexto de outro corredor (para efeitos que caem em quem não pediu: Giant, desconexão insegura).
+const contextoDe = (ctx, corredor) => ({ ...ctx, corredor, token: ctx.tile.parent.tokens.get(corredor.token) });
+
+// Sem ninguém conectado, a arquitetura reinicia as defesas (RED p. 198): Black ICE e demônios de volta,
+// senhas e nós trancados, tokens assumidos devolvidos. Os arquivos copiados continuam.
+async function reiniciarDefesas(ctx) {
+  const { est, arq, tile } = ctx;
+  est.ices = [];
+  est.fora = [];
+  est.feitos = est.feitos.filter(chave => { const achado = acharConteudo(arq, chave); return achado && achado.conteudo.tipo === 'arquivo'; });
+  await devolver(tile.parent, est);
+  await sairDoCombate(est, tile.parent);
+  registrar(est, 'Ninguém na NET: a arquitetura reiniciou as defesas (Black ICE e demônios de volta, senhas e nós trancados).', 'info');
 }
 
-// Conteúdos do andar em que o corredor está.
-const conteudosDe = (arq, id) => (id === ENTRADA || !arq.nos[id] ? [] : arq.nos[id].conteudos);
-const iceAtual = (est, conteudo) => {
-  const salvo = est.ices.find(ice => ice.chave === conteudo.chave);
-  return salvo ? salvo.rez : iceDaChave(conteudo.ice).rez;
-};
-function mudarRez(est, conteudo, rez) {
-  const max = iceDaChave(conteudo.ice).rez;
-  const valor = Math.max(0, Math.min(max, rez));
-  est.ices = [...est.ices.filter(ice => ice.chave !== conteudo.chave), { chave: conteudo.chave, rez: valor }];
-  return valor;
-}
-const icesAtivos = (arq, est, id) => conteudosDe(arq, id).filter(conteudo => conteudo.tipo === 'ice' && iceAtual(est, conteudo) > 0);
-
-// Ações NET: em combate, cada netrunner tem as do rank por turno (o mestre pode passar do limite).
-function emCombate(token) {
-  return game.combats.some(combate => combate.started && combate.combatants.some(item => item.tokenId === token.id && item.sceneId === token.parent.id));
-}
-// Fora de combate não há turno: as Ações NET não contam.
-function gastarAcao(corredor, token, usuario, quantas = 1) {
-  if (!emCombate(token)) return;
-  if (!usuario.isGM && corredor.acoes + quantas > corredor.max) throw erro(`Sem Ações NET neste turno (${corredor.acoes} de ${corredor.max}).`);
-  corredor.acoes += quantas;
+// Tira um corredor da NET (segura ou insegura). Na insegura, o Black ICE encontrado e ativo ataca de graça.
+async function retirar(ctx, corredor, { inseguro = false, motivo = '', exceto = null } = {}) {
+  const { arq, est, tile } = ctx;
+  const token = tile.parent.tokens.get(corredor.token);
+  if (inseguro) {
+    registrar(est, `${corredor.nome} desconectou de forma insegura${motivo ? ` (${motivo})` : ''}.`, 'falha');
+    const ativos = (corredor.engajado || []).map(chave => conteudosDe(arq, corredor.no).find(item => item.chave === chave))
+      .filter(item => item && item.tipo === 'ice' && item.chave !== exceto && inimigoAtivo(est, item));
+    if (token) for (const conteudo of ativos) await aplicarEfeitoDoIce(contextoDe(ctx, corredor), conteudo);
+  } else registrar(est, `${corredor.nome} desconectou.`, 'info');
+  est.corredores = est.corredores.filter(item => item.token !== corredor.token);
+  await devolver(tile.parent, est, item => item.usuario === corredor.usuario);
+  ctx.desmarcar.push(corredor.token);
+  if (token) {
+    tocar(inseguro ? 'dano' : 'desconectar', token.actor);
+    animar(inseguro ? 'dano' : 'desconectar', { token });
+  }
 }
 
-function exigirNetrunner(actor) {
-  const n = netrunnerDo(actor);
-  if (!n.deck) throw erro('Sem cyberdeck equipado: não dá para agir na NET.');
-  if (!n.role) throw erro('Sem Role de netrunning (Interface) na ficha: o sistema não sabe com que rank rolar.');
-  return n;
+// Fecha a operação: expulsões (Giant), Skunk que caiu, reinício das defesas, combate, som e gravação.
+async function concluir(ctx) {
+  const { est, tile, arq, ponto } = ctx;
+  for (const corredor of [...est.corredores]) {
+    if (!corredor.expulso) continue;
+    const fonte = corredor.expulso;
+    delete corredor.expulso;
+    await retirar(ctx, corredor, { inseguro: true, motivo: 'derrubado pelo Giant', exceto: fonte });
+  }
+  for (const corredor of est.corredores) {
+    corredor.skunks = (corredor.skunks || []).filter(chave => { const achado = acharConteudo(arq, chave); return achado && inimigoAtivo(est, achado.conteudo); });
+  }
+  if (ctx.havia > 0 && !est.corredores.length && ponto.reiniciar !== false) await reiniciarDefesas(ctx);
+  await sincronizarCombate(est, tile.parent, chave => { const achado = acharConteudo(arq, chave); return achado ? rezDe(est, achado.conteudo) : null; });
+  // O som da operação para quem pediu: dano, falha ou sucesso (pelo que entrou no registro agora).
+  const novos = est.log.filter(linha => linha.t >= ctx.inicio).map(linha => linha.tipo);
+  if (ctx.token && ctx.token.actor && est.corredores.some(item => item.token === ctx.token.id)) {
+    if (novos.includes('ice')) { tocar('dano', ctx.token.actor); animar('dano', { token: ctx.token }); }
+    else if (novos.includes('falha')) tocar('falha', ctx.token.actor);
+    else if (novos.includes('ok')) tocar('sucesso', ctx.token.actor);
+  }
+  await gravar(tile, arq, est);
+  for (const id of ctx.desmarcar) { const token = tile.parent.tokens.get(id); if (token) await marcarToken(token, tile, false); }
 }
 
 // ---------------- Efeito no token ----------------
@@ -158,59 +263,60 @@ async function marcarToken(token, tile, ligado) {
   }
 }
 
-// ---------------- Black ICE ----------------
-// O efeito de um Black ICE que acertou (ou que ganhou na velocidade): dano no cérebro (HP) ou no REZ de um
-// programa ativo, e o texto do efeito para o mestre aplicar o resto.
-async function efeitoDoIce(ctx, conteudo, corredor) {
-  const { est, token } = ctx;
-  const actor = token.actor;
-  const ice = iceDaChave(conteudo.ice);
-  registrar(est, `${ice.nome}: ${ice.efeito}`, 'ice');
-  if (!ice.dano) return;
-  const total = await rolagens.dano({ titulo: `${ice.nome}: ${ice.classe === 'Anti-programa' ? 'dano no programa' : 'dano no cérebro'}`, formula: ice.dano, alias: ice.nome });
-  if (ice.classe === 'Anti-programa') {
-    const ativos = netrunnerDo(actor).programas.filter(programa => programa.system.isRezzed);
-    if (!ativos.length) { registrar(est, `${ice.nome} não achou programa ativo para atacar.`, 'info'); return; }
-    const alvo = ativos[Math.floor(Math.random() * ativos.length)];
-    const rez = Math.max(0, (Number(alvo.system.rez?.value) || 0) - total);
-    await alvo.update({ 'system.rez.value': rez, ...(rez <= 0 ? { 'system.isRezzed': false } : {}) });
-    registrar(est, rez <= 0 ? `${alvo.name} levou ${total} de REZ e caiu: o efeito diz que é destruído (apague do deck se a mesa concordar).` : `${alvo.name} levou ${total} de REZ (fica com ${rez}).`, 'ice');
-    return;
-  }
-  // Dano no cérebro: direto no HP, sem armadura. O programa Armor ativo tira 4.
-  const armor = netrunnerDo(actor).programas.some(programa => programa.system.isRezzed && /^armor$/i.test(programa.name));
-  const final = Math.max(0, total - (armor ? 4 : 0));
-  const hp = actor.system.derivedStats?.hp;
-  if (hp && game.settings.get(MODULE_ID, 'danoAutomatico')) {
-    await actor.update({ 'system.derivedStats.hp.value': Math.max(0, Number(hp.value) - final) });
-    registrar(est, `${corredor.nome} levou ${final} no cérebro${armor ? ' (Armor tirou 4)' : ''}: HP ${Math.max(0, Number(hp.value) - final)}/${hp.max}.`, 'ice');
-  } else {
-    registrar(est, `${corredor.nome} leva ${final} no cérebro${armor ? ' (Armor tirou 4)' : ''}: aplique no HP.`, 'ice');
-  }
-}
-
-// Ao chegar num andar com Black ICE ativo: Interface + velocidade + 1d10 contra SPD do ICE + 1d10.
-// Se o ICE vencer, o efeito vem na hora (RED p. 204).
-async function encontrarIce(ctx, corredor, n) {
+// ---------------- Ataques dos inimigos ----------------
+// Ao chegar num andar: o Black ICE disputa a velocidade (Interface + velocidade + 1d10 contra SPD + 1d10; se o ICE
+// vencer, o efeito vem na hora); demônios sempre vencem a velocidade e só detectam; todos entram no combate.
+async function encontrarInimigos(ctx, corredor) {
   const { arq, est, token } = ctx;
-  for (const conteudo of icesAtivos(arq, est, corredor.no)) {
-    const ice = iceDaChave(conteudo.ice);
+  const inimigos = inimigosAtivos(arq, est, corredor.no);
+  if (!inimigos.length) return;
+  const n = exigirNetrunner(token.actor);
+  tocar('alarme', token.actor);
+  animar('ice', { token });
+  for (const conteudo of inimigos) {
+    const nome = nomeDoInimigo(conteudo);
     if (!corredor.engajado.includes(conteudo.chave)) corredor.engajado.push(conteudo.chave);
+    if (conteudo.tipo === 'demonio') { registrar(est, `O demônio ${nome} detectou ${corredor.nome} (demônios sempre vencem a velocidade).`, 'falha'); continue; }
+    if (conteudo.tipo === 'netrunner') { registrar(est, `${nome}, um netrunner inimigo, está neste andar.`, 'falha'); continue; }
+    const ice = iceDaChave(conteudo.ice);
     const meu = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: 'speed', titulo: `Velocidade contra ${ice.nome}` });
     const dele = await rolagens.rolagemDoIce({ nome: ice.nome, rotulo: 'SPD', valor: ice.spd });
     if (meu > dele) registrar(est, `${corredor.nome} viu o ${ice.nome} primeiro (${meu} contra ${dele}).`, 'ok');
     else {
       registrar(est, `O ${ice.nome} foi mais rápido (${dele} contra ${meu}) e ataca na hora.`, 'falha');
-      await efeitoDoIce(ctx, conteudo, corredor);
+      await aplicarEfeitoDoIce(ctx, conteudo);
     }
   }
+  await entrarNoCombate(ctx, inimigos, nomeDoInimigo);
+}
+
+// O ataque de um inimigo no netrunner (o turno dele, jogado pelo mestre).
+async function ataqueDoInimigo(ctx, conteudo) {
+  const { est, corredor, token } = ctx;
+  const n = exigirNetrunner(token.actor);
+  const nome = nomeDoInimigo(conteudo);
+  let dele;
+  if (conteudo.tipo === 'ice') dele = await rolagens.rolagemDoIce({ nome, rotulo: 'ATK', valor: iceDaChave(conteudo.ice).atk });
+  else if (conteudo.tipo === 'demonio') dele = await rolagens.rolagemDoIce({ nome, rotulo: 'Zap (Interface)', valor: demonioDaChave(conteudo.demonio).interface });
+  else {
+    const actor = atorDoNetrunner(conteudo);
+    const m = actor ? netrunnerDo(actor) : null;
+    dele = m && m.deck && m.role ? await rolagens.interfaceRoll({ actor, token: null, deck: m.deck, role: m.role, habilidade: 'zap', titulo: `${nome}: Zap` }) : await rolagens.rolagemDoIce({ nome, rotulo: 'Zap (Interface)', valor: m ? m.rank : 0 });
+  }
+  const meu = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: 'defense', titulo: `Defesa contra ${nome}` });
+  if (dele <= meu) { registrar(est, `${corredor.nome} se defendeu do ${nome} (${meu} contra ${dele}).`, 'ok'); return; }
+  registrar(est, `O ${nome} acertou ${corredor.nome} (${dele} contra ${meu}).`, 'falha');
+  if (conteudo.tipo === 'ice') { await aplicarEfeitoDoIce(ctx, conteudo); return; }
+  // Demônio e netrunner inimigo usam Zap: 1d6 direto no cérebro.
+  const total = await rolagens.dano({ titulo: `${nome}: Zap`, formula: '1d6', alias: nome });
+  await danoNoCerebro(ctx, total, `Zap do ${nome}`);
 }
 
 // ---------------- Operações (o que o socket chama) ----------------
 export const operacoes = {
   async conectar(dados, usuario) {
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
-    const { tile, token, ponto, est, arq, actor } = ctx;
+    const { tile, token, ponto, est, actor } = ctx;
     if (!token || !actor) throw erro('Escolha um token com ficha para conectar.');
     if (ctx.corredor) return { jaConectado: true };
     const outra = conexaoDoToken(token);
@@ -222,29 +328,37 @@ export const operacoes = {
     if (longe > alcance + 0.01 && !usuario.isGM) throw erro(`Longe demais do ponto de acesso: ${longe.toFixed(1)} ${tile.parent.grid.units || 'm'} (alcance ${alcance}).`);
     const n = netrunnerDo(actor);
     const dono = game.users.find(user => !user.isGM && user.active && actor.testUserPermission(user, 'OWNER')) || game.users.find(user => !user.isGM && actor.testUserPermission(user, 'OWNER')) || usuario;
-    est.corredores = [...est.corredores, { token: token.id, ator: actor.id, nome: token.name, img: token.texture?.src || actor.img, usuario: dono.id, no: ENTRADA, acoes: emCombate(token) ? 1 : 0, max: acoesPorRank(n.rank), engajado: [], escapou: [], rastro: null, programasNaRodada: [] }];
+    est.corredores = [...est.corredores, { token: token.id, ator: actor.id, nome: token.name, img: (token.texture && token.texture.src) || actor.img, usuario: dono.id, no: ENTRADA, acoes: emCombate(token) ? 1 : 0, max: acoesPorRank(n.rank), engajado: [], escapou: [], skunks: [], rastro: null, programasNaRodada: [], preso: 0, menosAcoes: 0 }];
     registrar(est, `${token.name} conectou em ${ponto.nome || 'um ponto de acesso'}.`, 'info');
-    await gravar(tile, arq, est);
+    await concluir(ctx);
     await marcarToken(token, tile, true);
+    tocar('conectar', actor);
+    animar('conectar', { token, tile });
     return { conectado: true };
   },
 
   async desconectar(dados, usuario) {
     const ctx = await contexto(dados, usuario);
-    return desconectarCorredor(ctx, { inseguro: Boolean(dados.inseguro), motivo: dados.motivo || '' , usuario });
+    const inseguro = Boolean(dados.inseguro);
+    if (!inseguro && ctx.corredor.preso > 0 && !usuario.isGM) throw erro('O Kraken te prende: até o fim do seu próximo turno só dá para fazer a desconexão insegura.');
+    if (!inseguro && !usuario.isGM) gastarAcao(ctx.corredor, ctx.token, usuario);
+    await retirar(ctx, ctx.corredor, { inseguro, motivo: dados.motivo || '' });
+    await concluir(ctx);
+    return { desconectado: true };
   },
 
   async mover(dados, usuario) {
     const ctx = await contexto(dados, usuario);
-    const { arq, est, corredor, token, tile } = ctx;
+    const { arq, est, corredor } = ctx;
     const destino = dados.destino;
     if (!vizinhos(arq, corredor.no).includes(destino)) throw erro('Só dá para ir a um andar vizinho.');
     const descendo = filhosDe(arq, corredor.no).includes(destino);
     if (descendo) {
+      if (corredor.preso > 0) throw erro('O Kraken te prende: não dá para avançar até o fim do seu próximo turno.');
       const senha = conteudosDe(arq, corredor.no).find(conteudo => conteudo.tipo === 'senha' && !est.feitos.includes(conteudo.chave));
       if (senha) throw erro(`A senha deste andar (DV ${senha.dv}) trava a descida: use Backdoor.`);
-      const preso = icesAtivos(arq, est, corredor.no).find(conteudo => !corredor.escapou.includes(conteudo.chave));
-      if (preso) throw erro(`O ${iceDaChave(preso.ice).nome} deste andar te segura: derrube-o (Zap ou programa) ou use Slide.`);
+      const preso = quemSegura(arq, est, corredor)[0];
+      if (preso) throw erro(preso.tipo === 'demonio' ? `O demônio ${nomeDoInimigo(preso)} te segura: derrube-o (Zap ou programa). Slide não funciona contra demônios.` : `O ${nomeDoInimigo(preso)} deste andar te segura: derrube-o (Zap ou programa) ou use Slide.`);
     }
     // Andar pela arquitetura não é Ação NET (RED p. 198).
     corredor.no = destino;
@@ -252,18 +366,18 @@ export const operacoes = {
     corredor.escapou = [];
     if (destino !== ENTRADA && !est.vistos.includes(destino)) est.vistos = [...est.vistos, destino];
     registrar(est, destino === ENTRADA ? `${corredor.nome} voltou ao ponto de acesso.` : `${corredor.nome} ${descendo ? 'desceu' : 'subiu'} para o andar ${arq.nos[destino].andar}${arq.nos[destino].ramo !== 'a' ? ` (ramo ${arq.nos[destino].ramo.toUpperCase()})` : ''}: ${resumoDoAndar(arq, est, destino)}.`, 'info');
-    if (icesAtivos(arq, est, destino).length) await encontrarIce(ctx, corredor, exigirNetrunner(token.actor));
-    await gravar(tile, arq, est);
+    await encontrarInimigos(ctx, corredor);
+    await concluir(ctx);
     return { no: destino };
   },
 
   async habilidade(dados, usuario) {
     const ctx = await contexto(dados, usuario);
-    const { arq, est, corredor, token, tile } = ctx;
+    const { corredor, token } = ctx;
     const chave = dados.habilidade;
     const info = HABILIDADES[chave];
     if (!info) throw erro('Habilidade desconhecida.');
-    if (chave === 'scanner') throw erro('Scanner é uma Ação Carnal, usada fora da NET para achar pontos de acesso.');
+    if (chave === 'scanner') throw erro('Scanner é uma Ação Carnal, usada fora da NET (botão no HUD do token).');
     const n = exigirNetrunner(token.actor);
     const alvo = escolherAlvo(ctx, chave, dados.alvo);
     let dvVirus = 0;
@@ -272,15 +386,17 @@ export const operacoes = {
       if (!dvVirus) throw erro('O mestre não aceitou o vírus agora.');
     }
     gastarAcao(corredor, token, usuario);
-    const total = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: chave, sorte: dados.sorte });
-    await resolverHabilidade(ctx, { chave, info, alvo, total, n, dvVirus, texto: dados.texto || '' });
-    await gravar(tile, arq, est);
+    // Skunk: −2 em Slide por Skunk ativo que acertou este netrunner.
+    const mods = chave === 'slide' && (corredor.skunks || []).length ? [{ value: -2 * corredor.skunks.length, source: 'Skunk' }] : [];
+    const total = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: chave, sorte: dados.sorte, mods });
+    await resolverHabilidade(ctx, { chave, info, alvo, total, dvVirus, texto: dados.texto || '' });
+    await concluir(ctx);
     return { total };
   },
 
   async programa(dados, usuario) {
     const ctx = await contexto(dados, usuario);
-    const { arq, est, corredor, token, tile } = ctx;
+    const { est, corredor, token } = ctx;
     const n = exigirNetrunner(token.actor);
     const programa = n.programas.find(item => item.id === dados.programa);
     if (!programa) throw erro('Este programa não está instalado no cyberdeck equipado.');
@@ -288,97 +404,154 @@ export const operacoes = {
       const ligar = dados.acao === 'ativar';
       if (Boolean(programa.system.isRezzed) === ligar) return { ok: true };
       if (corredor.programasNaRodada.includes(programa.id) && emCombate(token) && !usuario.isGM) throw erro('Cada programa só pode ser ativado ou desativado uma vez por rodada.');
-      if (ligar && (Number(programa.system.rez?.value) || 0) <= 0 && (Number(programa.system.rez?.max) || 0) > 0) throw erro(`${programa.name} está com 0 de REZ.`);
+      if (ligar && (Number(programa.system.rez && programa.system.rez.value) || 0) <= 0 && (Number(programa.system.rez && programa.system.rez.max) || 0) > 0) throw erro(`${programa.name} está com 0 de REZ.`);
       gastarAcao(corredor, token, usuario);
       corredor.programasNaRodada = [...corredor.programasNaRodada, programa.id];
       await programa.update({ 'system.isRezzed': ligar });
       registrar(est, `${corredor.nome} ${ligar ? 'ativou' : 'desativou'} ${programa.name}.`, 'info');
-      await gravar(tile, arq, est);
+      await concluir(ctx);
       return { ok: true };
     }
     if (dados.acao === 'atacar') {
       if (!programa.system.isRezzed) throw erro(`Ative ${programa.name} antes de atacar com ele.`);
       if (!/attacker/.test(programa.system.class || '')) throw erro(`${programa.name} não é um programa de ataque.`);
+      const antipessoal = /antipersonnel/.test(programa.system.class);
       const alvo = escolherAlvo(ctx, 'zap', dados.alvo);
-      if (/antipersonnel/.test(programa.system.class)) throw erro(`${programa.name} é anti-pessoal: só afeta netrunners, não Black ICE.`);
+      if (antipessoal && alvo.tipo !== 'netrunner') throw erro(`${programa.name} é anti-pessoal: só afeta netrunners.`);
+      if (!antipessoal && alvo.tipo === 'netrunner') throw erro(`${programa.name} é anti-programa: não afeta netrunners.`);
       gastarAcao(corredor, token, usuario);
-      const ice = iceDaChave(alvo.ice);
+      const nome = nomeDoInimigo(alvo);
       const meu = await rolagens.ataqueDePrograma({ actor: token.actor, token, deck: n.deck, role: n.role, programa, sorte: dados.sorte });
-      const dele = await rolagens.rolagemDoIce({ nome: ice.nome, rotulo: 'DEF', valor: ice.def });
+      const dele = await defesaDo(alvo);
       if (meu > dele) {
-        const formula = (programa.system.damage && (programa.system.damage.blackIce || programa.system.damage.standard)) || '1d6';
-        const total = await rolagens.dano({ titulo: `${programa.name} contra ${ice.nome}`, formula, actor: token.actor, token });
-        const rez = mudarRez(est, alvo, iceAtual(est, alvo) - total);
-        registrar(est, `${programa.name} acertou o ${ice.nome} (${meu} contra ${dele}): ${total} de REZ${rez <= 0 ? ', e ele caiu' : `, fica com ${rez}`}.`, 'ok');
-      } else registrar(est, `${programa.name} errou o ${ice.nome} (${meu} contra ${dele}).`, 'falha');
-      await gravar(tile, arq, est);
+        const dano = programa.system.damage || {};
+        const formula = (alvo.tipo === 'ice' || alvo.tipo === 'demonio' ? dano.blackIce || dano.standard : dano.standard) || '1d6';
+        const total = await rolagens.dano({ titulo: `${programa.name} contra ${nome}`, formula, actor: token.actor, token });
+        registrar(est, `${programa.name} acertou o ${nome} (${meu} contra ${dele}): ${total} de dano${await danoNoInimigo(est, alvo, total)}.`, 'ok');
+      } else registrar(est, `${programa.name} errou o ${nome} (${meu} contra ${dele}).`, 'falha');
+      await concluir(ctx);
       return { ok: true };
     }
     throw erro('Ação de programa desconhecida.');
   },
 
-  // Comandar um nó de controle já tomado: 1 Ação NET por comando; o mestre narra o efeito.
+  // Comandar um nó de controle já tomado: texto livre (o mestre narra), 1 Ação NET por comando.
   async comandar(dados, usuario) {
     const ctx = await contexto(dados, usuario);
-    const { arq, est, corredor, token, tile } = ctx;
+    const { arq, est, corredor, token } = ctx;
     const no = conteudosDe(arq, corredor.no).find(conteudo => conteudo.tipo === 'controle' && est.feitos.includes(conteudo.chave));
     if (!no) throw erro('Não há nó de controle tomado neste andar.');
     const texto = String(dados.texto || '').trim().slice(0, 200);
     if (!texto) throw erro('Escreva o comando.');
     gastarAcao(corredor, token, usuario);
     registrar(est, `${corredor.nome} comanda o nó de controle: “${texto}”.`, 'info');
-    await gravar(tile, arq, est);
+    await concluir(ctx);
     return { ok: true };
   },
 
-  // ---------- Só o mestre ----------
-  async iceAtaca(dados, usuario) {
-    if (!usuario.isGM) throw erro('Só o mestre joga o turno do Black ICE.');
+  // Comando numa coisa da cena ligada ao nó de controle (porta, luz, som, token): 1 Ação NET.
+  async acionar(dados, usuario) {
     const ctx = await contexto(dados, usuario);
-    const { arq, est, corredor, token, tile } = ctx;
-    const conteudo = conteudosDe(arq, corredor.no).find(item => item.chave === dados.alvo && item.tipo === 'ice');
-    if (!conteudo || iceAtual(est, conteudo) <= 0) throw erro('Este Black ICE não está ativo no andar do netrunner.');
+    const { arq, est, corredor, token, tile, ponto } = ctx;
+    const controle = conteudosDe(arq, corredor.no).find(conteudo => conteudo.chave === dados.controle && conteudo.tipo === 'controle');
+    if (!controle) throw erro('Este nó de controle não está no seu andar.');
+    if (!est.feitos.includes(controle.chave)) throw erro('Tome o nó de controle (Control) antes de comandar.');
+    const ligacao = ligacoesDo(ponto, controle.chave)[Number(dados.indice)];
+    if (!ligacao) throw erro('Este nó de controle não comanda isso.');
+    gastarAcao(corredor, token, usuario);
+    let texto;
+    try { texto = await acionar(tile.parent, ligacao, dados.acao, { est, usuarioId: corredor.usuario }); } catch (error) { throw erro(error.message); }
+    registrar(est, `${corredor.nome} pelo nó de controle: ${texto}.`, 'ok');
+    await concluir(ctx);
+    return { ok: true };
+  },
+
+  // Apagar o fogo do Hellhound: uma Ação Carnal (não gasta Ação NET).
+  async apagarFogo(dados, usuario) {
+    const ctx = await contexto(dados, usuario);
+    if (!emChamas(ctx.token.actor)) return { ok: true };
+    await apagarFogo(ctx.token.actor);
+    registrar(ctx.est, `${ctx.corredor.nome} apagou o fogo (Ação Carnal).`, 'ok');
+    await concluir(ctx);
+    return { ok: true };
+  },
+
+  // Scanner (Ação Carnal, fora da NET): acha os pontos de acesso até o resultado × 10 m; os ocultos, só se o
+  // resultado passar do DV do Scanner do ponto (padrão 10). Os ocultos achados aparecem para quem rolou.
+  async scanner(dados, usuario) {
+    const cena = game.scenes.get(dados.cena);
+    const token = cena && cena.tokens.get(dados.token);
+    if (!token || !token.actor) throw erro('Token não encontrado.');
+    if (!usuario.isGM && !token.actor.testUserPermission(usuario, 'OWNER')) throw erro('Você não controla este token.');
+    if (conexaoDoToken(token)) throw erro('Scanner é usado fora da NET: desconecte antes.');
     const n = exigirNetrunner(token.actor);
-    const ice = iceDaChave(conteudo.ice);
-    const dele = await rolagens.rolagemDoIce({ nome: ice.nome, rotulo: 'ATK', valor: ice.atk });
-    const meu = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: 'defense', titulo: `Defesa contra ${ice.nome}` });
-    if (dele > meu) {
-      registrar(est, `O ${ice.nome} acertou ${corredor.nome} (${dele} contra ${meu}).`, 'falha');
-      await efeitoDoIce(ctx, conteudo, corredor);
-    } else registrar(est, `${corredor.nome} se defendeu do ${ice.nome} (${meu} contra ${dele}).`, 'ok');
-    await gravar(tile, arq, est);
+    const total = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: 'scanner' });
+    const raio = total * 10;
+    const donos = game.users.filter(user => !user.isGM && token.actor.testUserPermission(user, 'OWNER')).map(user => user.id);
+    const achados = [];
+    for (const tile of cena.tiles) {
+      const ponto = pontoDoTile(tile);
+      if (!ponto || !ponto.ativo) continue;
+      const longe = distancia(tile, token);
+      if (longe > raio) continue;
+      const oculto = tile.hidden || ponto.oculto;
+      if (oculto && total <= (Number(ponto.dvScanner) || 10)) continue;
+      if (oculto) await tile.setFlag(MODULE_ID, FLAG_PONTO, { ...ponto, revelados: [...new Set([...(ponto.revelados || []), ...donos])] });
+      achados.push(`${ponto.nome || 'Ponto de acesso'} (${longe.toFixed(0)} ${cena.grid.units || 'm'}${oculto ? ', estava oculto' : ''})`);
+    }
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: token.actor, token }),
+      whisper: [...new Set([...game.users.filter(user => user.isGM).map(user => user.id), ...donos])],
+      content: `<p><b>Scanner</b> (${total}, até ${raio} ${esc(cena.grid.units || 'm')}): ${achados.length ? `achou ${achados.map(esc).join('; ')}.` : 'nenhum ponto de acesso por perto.'}</p>`
+    });
+    tocar(achados.length ? 'sucesso' : 'falha', token.actor);
+    return { total, achados };
+  },
+
+  // ---------- Só o mestre ----------
+  async inimigoAtaca(dados, usuario) {
+    if (!usuario.isGM) throw erro('Só o mestre joga o turno dos inimigos da NET.');
+    const ctx = await contexto(dados, usuario);
+    const { arq, est, corredor } = ctx;
+    const conteudo = conteudosDe(arq, corredor.no).find(item => item.chave === dados.alvo && ehInimigo(item));
+    if (!conteudo || !inimigoAtivo(est, conteudo)) throw erro('Este inimigo não está ativo no andar do netrunner.');
+    await ataqueDoInimigo(ctx, conteudo);
+    await concluir(ctx);
     return { ok: true };
   },
 
   async ajustarIce(dados, usuario) {
-    if (!usuario.isGM) throw erro('Só o mestre ajusta o Black ICE.');
+    if (!usuario.isGM) throw erro('Só o mestre ajusta o REZ dos inimigos.');
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
-    const { arq, est, tile } = ctx;
-    const no = Object.values(arq.nos).find(item => item.conteudos.some(conteudo => conteudo.chave === dados.alvo));
-    const conteudo = no && no.conteudos.find(item => item.chave === dados.alvo);
-    if (!conteudo || conteudo.tipo !== 'ice') throw erro('Black ICE não encontrado.');
-    const rez = mudarRez(est, conteudo, iceAtual(est, conteudo) + (Number(dados.delta) || 0));
-    registrar(est, `O mestre ajustou o ${iceDaChave(conteudo.ice).nome}: REZ ${rez}.`, 'info');
-    await gravar(tile, arq, est);
+    const achado = acharConteudo(ctx.arq, dados.alvo);
+    if (!achado || rezMaxDe(achado.conteudo) === null) throw erro('Inimigo com REZ não encontrado.');
+    const rez = mudarRez(ctx.est, achado.conteudo, rezDe(ctx.est, achado.conteudo) + (Number(dados.delta) || 0));
+    registrar(ctx.est, `O mestre ajustou o ${nomeDoInimigo(achado.conteudo)}: REZ ${rez}.`, 'info');
+    await concluir(ctx);
     return { rez };
   },
 
   async revelar(dados, usuario) {
     if (!usuario.isGM) throw erro('Só o mestre revela andares.');
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
-    const { arq, est, tile } = ctx;
+    const { arq, est } = ctx;
     if (dados.tudo) { est.mapa = true; registrar(est, 'O mestre revelou o mapa da arquitetura.', 'info'); }
     else if (arq.nos[dados.no] && !est.vistos.includes(dados.no)) { est.vistos = [...est.vistos, dados.no]; registrar(est, `O mestre revelou o andar ${arq.nos[dados.no].andar}.`, 'info'); }
-    await gravar(tile, arq, est);
+    await concluir(ctx);
     return { ok: true };
   },
 
+  // Começo do turno do netrunner: as Ações NET voltam (o Wisp tira 1, mínimo 2) e a prisão do Kraken anda.
   async zerarAcoes(dados, usuario) {
     if (!usuario.isGM) throw erro('Só o mestre zera as Ações NET.');
     const ctx = await contexto(dados, usuario);
-    ctx.corredor.acoes = 0;
-    ctx.corredor.programasNaRodada = [];
-    await gravar(ctx.tile, ctx.arq, ctx.est);
+    const corredor = ctx.corredor;
+    corredor.acoes = corredor.menosAcoes ? Math.min(corredor.menosAcoes, Math.max(0, corredor.max - 2)) : 0;
+    if (corredor.menosAcoes) registrar(ctx.est, `${corredor.nome} começa o turno com 1 Ação NET a menos (Wisp).`, 'ice');
+    corredor.menosAcoes = 0;
+    if (corredor.preso > 0) corredor.preso -= 1;
+    corredor.programasNaRodada = [];
+    await concluir(ctx);
     return { ok: true };
   },
 
@@ -386,15 +559,20 @@ export const operacoes = {
     if (!usuario.isGM) throw erro('Só o mestre reinicia a arquitetura.');
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
     const { tile, ponto, arq, est } = ctx;
+    await devolver(tile.parent, est);
+    await sairDoCombate(est, tile.parent);
     const novo = estadoNovo(ponto, arq);
-    novo.corredores = est.corredores.map(corredor => ({ ...corredor, no: ENTRADA, engajado: [], escapou: [], acoes: 0, programasNaRodada: [] }));
+    novo.arquivos = est.arquivos;
+    novo.corredores = est.corredores.map(corredor => ({ ...corredor, no: ENTRADA, engajado: [], escapou: [], skunks: [], acoes: 0, programasNaRodada: [], preso: 0, menosAcoes: 0 }));
     registrar(novo, 'O mestre reiniciou a arquitetura.', 'info');
     await gravar(tile, arq, novo);
     return { ok: true };
   }
 };
+// Nome antigo do ataque (macros feitas com a versão anterior).
+operacoes.iceAtaca = operacoes.inimigoAtaca;
 
-// O alvo da habilidade no andar atual (senha, arquivo, nó de controle, Black ICE) ou a arquitetura inteira.
+// O alvo da habilidade no andar atual (senha, arquivo, nó de controle, inimigo) ou a arquitetura inteira.
 function escolherAlvo(ctx, chave, pedido) {
   const { arq, est, corredor } = ctx;
   const info = HABILIDADES[chave];
@@ -404,15 +582,21 @@ function escolherAlvo(ctx, chave, pedido) {
     if (!ehFundo(arq, corredor.no)) throw erro('Virus só no andar mais fundo da arquitetura.');
     return null;
   }
-  const tipo = { senha: 'senha', arquivo: 'arquivo', controle: 'controle', ice: 'ice' }[info.alvo];
-  const candidatos = aqui.filter(conteudo => conteudo.tipo === tipo && (tipo === 'ice' ? iceAtual(est, conteudo) > 0 : !est.feitos.includes(conteudo.chave)));
+  if (info.alvo === 'ice') {
+    // Zap vale contra qualquer inimigo; Slide, só contra Black ICE (demônios e netrunners não se driblam).
+    const candidatos = aqui.filter(conteudo => ehInimigo(conteudo) && inimigoAtivo(est, conteudo) && (chave !== 'slide' || conteudo.tipo === 'ice'));
+    const alvo = candidatos.find(conteudo => conteudo.chave === pedido) || candidatos[0];
+    if (!alvo) throw erro(chave === 'slide' ? 'Não há Black ICE ativo neste andar (Slide não funciona contra demônios nem netrunners).' : 'Não há inimigo ativo neste andar.');
+    return alvo;
+  }
+  const candidatos = aqui.filter(conteudo => conteudo.tipo === info.alvo && !est.feitos.includes(conteudo.chave));
   const alvo = candidatos.find(conteudo => conteudo.chave === pedido) || candidatos[0];
-  if (!alvo) throw erro({ senha: 'Não há senha trancada neste andar.', arquivo: 'Não há arquivo por identificar neste andar.', controle: 'Não há nó de controle livre neste andar.', ice: 'Não há Black ICE ativo neste andar.' }[tipo]);
+  if (!alvo) throw erro({ senha: 'Não há senha trancada neste andar.', arquivo: 'Não há arquivo por identificar neste andar.', controle: 'Não há nó de controle livre neste andar.' }[info.alvo]);
   return alvo;
 }
 
 async function resolverHabilidade(ctx, { chave, info, alvo, total, dvVirus, texto }) {
-  const { arq, est, corredor, token } = ctx;
+  const { arq, est, corredor, token, ponto } = ctx;
   const nome = corredor.nome;
   switch (chave) {
     case 'pathfinder': {
@@ -429,16 +613,19 @@ async function resolverHabilidade(ctx, { chave, info, alvo, total, dvVirus, text
       const oQue = { backdoor: 'a senha', eyedee: 'o arquivo', control: 'o nó de controle' }[chave];
       const resultado = { backdoor: 'quebrou a senha', eyedee: 'identificou o arquivo', control: 'tomou o nó de controle' }[chave];
       registrar(est, ok ? `${info.nome} (${total} contra DV ${alvo.dv}): ${nome} ${resultado}${alvo.descricao && chave !== 'backdoor' ? `: ${alvo.descricao.replace(/[.!?…\s]+$/, '')}` : ''}.` : `${info.nome} (${total} contra DV ${alvo.dv}): ${nome} não passou ${oQue}.`, ok ? 'ok' : 'falha');
+      if (ok && chave === 'eyedee') {
+        const registro = await copiarArquivo({ est, arq, ponto, no: arq.nos[corredor.no], conteudo: alvo, corredor, token });
+        registrar(est, `${nome} copiou o arquivo para o deck (diário “${registro.nome}”).`, 'ok');
+      }
       return;
     }
     case 'zap': {
-      const ice = iceDaChave(alvo.ice);
-      const dele = await rolagens.rolagemDoIce({ nome: ice.nome, rotulo: 'DEF', valor: ice.def });
+      const nomeAlvo = nomeDoInimigo(alvo);
+      const dele = await defesaDo(alvo);
       if (total > dele) {
-        const dano = await rolagens.dano({ titulo: `Zap contra ${ice.nome}`, formula: '1d6', actor: token.actor, token });
-        const rez = mudarRez(est, alvo, iceAtual(est, alvo) - dano);
-        registrar(est, `Zap acertou o ${ice.nome} (${total} contra ${dele}): ${dano} de REZ${rez <= 0 ? ', e ele caiu' : `, fica com ${rez}`}.`, 'ok');
-      } else registrar(est, `Zap errou o ${ice.nome} (${total} contra ${dele}).`, 'falha');
+        const dano = await rolagens.dano({ titulo: `Zap contra ${nomeAlvo}`, formula: '1d6', actor: token.actor, token });
+        registrar(est, `Zap acertou o ${nomeAlvo} (${total} contra ${dele}): ${dano} de dano${await danoNoInimigo(est, alvo, dano)}.`, 'ok');
+      } else registrar(est, `Zap errou o ${nomeAlvo} (${total} contra ${dele}).`, 'falha');
       return;
     }
     case 'slide': {
@@ -467,7 +654,7 @@ async function resolverHabilidade(ctx, { chave, info, alvo, total, dvVirus, text
 
 // O vírus tem DV e custo definidos pelo mestre (RED p. 200): o mestre responde na hora, numa janela.
 async function perguntarVirus(corredor, texto) {
-  const DialogV2 = foundry.applications?.api?.DialogV2;
+  const DialogV2 = foundry.applications && foundry.applications.api && foundry.applications.api.DialogV2;
   const pergunta = `<p><b>${esc(corredor.nome)}</b> quer deixar um vírus:</p><blockquote>${esc(texto || '(sem descrição)')}</blockquote><div class="form-group"><label>DV do vírus</label><input type="number" name="dv" value="10" min="2" max="30"></div><p class="hint">Exemplos (RED p. 200): mudar o ícone de um Black ICE DV6; desativar um Black ICE ou um nó de controle DV10; apagar todo o Black ICE DV12.</p>`;
   if (!DialogV2) return 10;
   const dv = await DialogV2.prompt({ window: { title: 'Vírus na NET' }, content: pergunta, ok: { label: 'Rolar', callback: (event, button) => Number(button.form.elements.dv.value) || 10 }, rejectClose: false });
@@ -477,52 +664,30 @@ async function perguntarVirus(corredor, texto) {
 const resumoDoAndar = (arq, est, id) => {
   const conteudos = conteudosDe(arq, id);
   if (!conteudos.length) return 'vazio';
-  return conteudos.map(conteudo => (conteudo.tipo === 'ice' ? iceDaChave(conteudo.ice).nome : `${NOME_DO_TIPO[conteudo.tipo]}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}`)).join(', ');
+  return conteudos.map(conteudo => (ehInimigo(conteudo) ? nomeDoInimigo(conteudo) : `${NOME_DO_TIPO[conteudo.tipo]}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}`)).join(', ');
 };
 
-// Desconectar: segura (1 Ação NET) ou insegura (o Black ICE encontrado e ativo ataca de graça).
-// Sem ninguém conectado, a arquitetura reinicia as defesas (RED p. 198), se o ponto estiver configurado assim.
-export async function desconectarCorredor(ctx, { inseguro = false, motivo = '', usuario = game.user } = {}) {
-  const { arq, est, corredor, token, tile, ponto } = ctx;
-  if (!inseguro && !usuario.isGM) gastarAcao(corredor, token, usuario);
-  if (inseguro) {
-    registrar(est, `${corredor.nome} desconectou de forma insegura${motivo ? ` (${motivo})` : ''}.`, 'falha');
-    const ativos = corredor.engajado.map(chave => conteudosDe(arq, corredor.no).find(conteudo => conteudo.chave === chave)).filter(conteudo => conteudo && iceAtual(est, conteudo) > 0);
-    for (const conteudo of ativos) await efeitoDoIce(ctx, conteudo, corredor);
-  } else registrar(est, `${corredor.nome} desconectou.`, 'info');
-  est.corredores = est.corredores.filter(item => item.token !== corredor.token);
-  if (!est.corredores.length && ponto.reiniciar !== false) {
-    est.ices = [];
-    est.feitos = est.feitos.filter(chave => {
-      const no = arq.nos[chave.split('.')[0]];
-      const conteudo = no && no.conteudos.find(item => item.chave === chave);
-      return conteudo && conteudo.tipo === 'arquivo';
-    });
-    registrar(est, 'Ninguém na NET: a arquitetura reiniciou as defesas (Black ICE de volta, senhas e nós trancados).', 'info');
-  }
-  await gravar(tile, arq, est);
-  if (token) await marcarToken(token, tile, false);
-  return { desconectado: true };
+// ---------------- Para os ganchos do mestre ----------------
+// Netrunners no andar de um inimigo (para a vez dele no combate).
+export async function quemEstaNoAndar(tileUuid, chave) {
+  const tile = await fromUuid(tileUuid);
+  const ponto = pontoDoTile(tile);
+  const est = estadoDoTile(tile);
+  if (!tile || !ponto || !est) return null;
+  const achado = acharConteudo(await arquiteturaDoPonto(ponto), chave);
+  if (!achado || !inimigoAtivo(est, achado.conteudo)) return null;
+  return est.corredores.filter(corredor => corredor.no === achado.no.id).map(corredor => ({ token: corredor.token, nome: corredor.nome }));
 }
-
-// Para os ganchos do mestre (token saiu do alcance, token apagado, turno do combate).
-export async function contextoDoToken(token) {
-  const conexao = conexaoDoToken(token);
-  if (!conexao) return null;
-  try { return await contexto({ tile: conexao.tile, token: token.id }, game.user); } catch { return null; }
-}
-export { gravar, registrar, contexto };
 
 // Token apagado com a conexão aberta: o corredor sai do estado (o token já não existe para tirar o efeito).
 export async function removerCorredorApagado(tileUuid, tokenId) {
   const tile = await fromUuid(tileUuid);
   const ponto = pontoDoTile(tile);
-  const atual = estadoDoTile(tile);
-  if (!tile || !ponto || !atual) return;
-  const est = foundry.utils.deepClone(atual);
-  const corredor = est.corredores.find(item => item.token === tokenId);
+  if (!tile || !ponto || !estadoDoTile(tile)) return;
+  const ctx = await contexto({ tile: tileUuid }, game.user, { precisaCorredor: false });
+  const corredor = ctx.est.corredores.find(item => item.token === tokenId);
   if (!corredor) return;
-  est.corredores = est.corredores.filter(item => item.token !== tokenId);
-  registrar(est, `${corredor.nome} sumiu da cena e caiu da NET.`, 'falha');
-  await gravar(tile, await arquiteturaDoPonto(ponto), est);
+  ctx.est.corredores = ctx.est.corredores.filter(item => item.token !== tokenId);
+  registrar(ctx.est, `${corredor.nome} sumiu da cena e caiu da NET.`, 'falha');
+  await concluir(ctx);
 }

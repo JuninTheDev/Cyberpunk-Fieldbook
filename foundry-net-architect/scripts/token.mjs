@@ -1,12 +1,12 @@
 // O token de quem está na NET: o status "Conectado à NET" (o ícone que todos veem no token, posto pelo mestre)
 // e um anel ciano pulsando em volta, desenhado em cada cliente a partir da flag de conexão do token.
-import { MODULE_ID, STATUS_ID, FLAG_CONEXAO } from './constantes.mjs';
+import { MODULE_ID, STATUS_ID, STATUS_FOGO, FLAG_CONEXAO } from './constantes.mjs';
 
 export const ICONE_CONECTADO = `modules/${MODULE_ID}/icones/conectado.svg`;
 
 export function registrarStatus() {
-  if (CONFIG.statusEffects.some(efeito => efeito.id === STATUS_ID)) return;
-  CONFIG.statusEffects.push({ id: STATUS_ID, name: 'Conectado à NET', img: ICONE_CONECTADO });
+  if (!CONFIG.statusEffects.some(efeito => efeito.id === STATUS_ID)) CONFIG.statusEffects.push({ id: STATUS_ID, name: 'Conectado à NET', img: ICONE_CONECTADO });
+  if (!CONFIG.statusEffects.some(efeito => efeito.id === STATUS_FOGO)) CONFIG.statusEffects.push({ id: STATUS_FOGO, name: 'Em chamas (NET)', img: 'icons/svg/fire.svg' });
 }
 
 const aneis = new Set();

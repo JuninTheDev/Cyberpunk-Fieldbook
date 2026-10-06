@@ -43,10 +43,11 @@ async function gastarSorte(actor, cprRoll, sorte) {
 }
 
 // Habilidade de Interface (pathfinder, backdoor, zap, slide…), ou "speed" e "defense", pelo cyberdeck.
-export async function interfaceRoll({ actor, token, deck, role, habilidade, sorte = 0, titulo = '' }) {
+export async function interfaceRoll({ actor, token, deck, role, habilidade, sorte = 0, titulo = '', mods = [] }) {
   const { rolls } = await classes();
   const cprRoll = deck.createRoll(rolls.rollTypes.INTERFACEABILITY, actor, { interfaceAbility: habilidade, cyberdeck: deck, netRoleItem: role });
   if (titulo) cprRoll.rollTitle = titulo;
+  if (mods.length) cprRoll.addMod(mods);
   await gastarSorte(actor, cprRoll, sorte);
   await cprRoll.roll();
   await postar(cprRoll, { actor, token, item: deck });

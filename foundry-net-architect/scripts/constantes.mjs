@@ -36,7 +36,7 @@ export const CONTEUDO = {
   'CPR.global.programClass.blackice': 'ice'
 };
 export const CONTEUDO_DO_TIPO = Object.fromEntries(Object.entries(CONTEUDO).map(([chave, tipo]) => [tipo, chave]));
-export const NOME_DO_TIPO = { senha: 'Senha', arquivo: 'Arquivo', controle: 'Nó de controle', ice: 'Black ICE', vazio: 'Andar vazio' };
+export const NOME_DO_TIPO = { senha: 'Senha', arquivo: 'Arquivo', controle: 'Nó de controle', ice: 'Black ICE', demonio: 'Demônio', netrunner: 'Netrunner inimigo', vazio: 'Andar vazio' };
 export const ICE_PREFIXO = 'CPR.netArchitecture.floor.options.blackIce.';
 
 // Black ICE do livro-base. `dano` é a rolagem do efeito (no cérebro, ou no REZ de um programa no anti-programa);
@@ -58,3 +58,18 @@ export const BLACK_ICE = {
 // Black ICE sem tipo escolhido no item ("--"): o mestre ajusta pelo REZ na janela.
 export const ICE_GENERICO = { nome: 'Black ICE', classe: 'Anti-pessoal', per: 4, spd: 4, atk: 4, def: 2, rez: 15, dano: '1d6', efeito: '1d6 no cérebro (Black ICE sem tipo no item: ajuste pela mesa).' };
 export const iceDaChave = chave => (chave && BLACK_ICE[chave]) || ICE_GENERICO;
+
+// Demônios (RED p. 212, os números da wiki): Black ICE inteligente. Sempre vencem a velocidade, senhas não os param,
+// não têm PER, SPD nem DEF (defendem com Interface + 1d10, então não dá Slide) e só usam Zap e Control.
+export const DEMONIOS = {
+  imp: { nome: 'Imp', rez: 15, interface: 3, acoes: 2, combate: 14 },
+  efreet: { nome: 'Efreet', rez: 25, interface: 4, acoes: 3, combate: 14 },
+  balron: { nome: 'Balron', rez: 30, interface: 7, acoes: 4, combate: 14 }
+};
+export const demonioDaChave = chave => DEMONIOS[chave] || DEMONIOS.imp;
+
+// Status no token: conectado (já registrado) e em chamas (Hellhound, até gastar uma Ação Carnal).
+export const STATUS_FOGO = 'net-architect-fogo';
+// Pasta dos atores de Black ICE e demônios que entram no combate, e dos arquivos copiados (diários).
+export const PASTA_ATORES = 'NET Architect: Black ICE e demônios';
+export const PASTA_ARQUIVOS = 'Arquivos da NET';
