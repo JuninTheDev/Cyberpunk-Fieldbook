@@ -113,6 +113,7 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
+| `foundry-net-architect/` | Módulo do Foundry VTT "NET Architect": pontos de acesso à NET nos Tiles, com a janela do netrunner e o mapa da arquitetura. Veja o README da pasta. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
 
@@ -127,6 +128,8 @@ node build/build.mjs
 ```
 
 O módulo é gravado direto na pasta de módulos do Foundry. O build também gera o `loja-catalogo.js`, o catálogo da loja da wiki, com os itens do sistema e os de 2077. Para gerar só o catálogo, sem fechar o Foundry: `node build/loja.mjs`.
+
+O mesmo `atualizar-modulo.bat` instala o **NET Architect** (`foundry-net-architect/`): qualquer Tile vira um ponto de acesso à NET. O netrunner conecta pelo token, vê o mapa ramificado da arquitetura e usa as habilidades de Interface; o mestre resolve as rolagens e o Black ICE. As arquiteturas ficam no compêndio do mundo "Arquiteturas da NET". Veja o README da pasta.
 
 ## Personagens dos jogadores
 

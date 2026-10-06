@@ -1,0 +1,119 @@
+/* NET Architect: janela da NET, configuração do ponto de acesso e botão no HUD do Tile. */
+.net-architect {
+  --net-fundo: rgba(5, 11, 13, 0.94);
+  --net-painel: rgba(10, 22, 25, 0.9);
+  --net-linha: #1d3b3c;
+  --net-ciano: #00ffd2;
+  --net-magenta: #ff2e88;
+  --net-amarelo: #f8ef02;
+  --net-texto: #d8f5ef;
+  --net-apagado: #7f9a96;
+}
+.net-architect .window-content { padding: 0; background: var(--net-fundo); color: var(--net-texto); font-size: 13px; }
+.net-architect .window-header { background: linear-gradient(90deg, #071a1c, #170812); border-bottom: 1px solid var(--net-ciano); color: var(--net-ciano); }
+.net-architect button { margin: 0; padding: 3px 8px; border: 1px solid var(--net-linha); border-radius: 2px; background: #0b1b1d; color: var(--net-texto); font-size: 12px; line-height: 1.4; cursor: pointer; white-space: nowrap; }
+.net-architect button:hover:not(:disabled) { border-color: var(--net-ciano); color: var(--net-ciano); box-shadow: 0 0 6px rgba(0, 255, 210, 0.35); }
+.net-architect button:disabled { opacity: 0.45; cursor: not-allowed; }
+.net-architect .net-perigo { border-color: #5a1f35; color: #ff9fbf; }
+.net-architect .net-perigo:hover:not(:disabled) { border-color: var(--net-magenta); color: var(--net-magenta); box-shadow: 0 0 6px rgba(255, 46, 136, 0.4); }
+.net-architect .net-nota { margin: 4px 0; color: var(--net-apagado); font-size: 12px; }
+.net-architect .net-tag { padding: 0 5px; border: 1px solid var(--net-magenta); color: var(--net-magenta); font-size: 10px; text-transform: uppercase; }
+.net-architect .net-ok { color: var(--net-ciano); }
+.net-architect h3, .net-architect h4 { margin: 0 0 6px; border: 0; color: var(--net-ciano); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+.net-architect h4 i { margin-right: 4px; color: var(--net-magenta); }
+.net-architect .net-botoes { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+
+/* Janela da NET */
+.net-grade { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr) 118px; height: 100%; }
+.net-mapa-area { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--net-linha); }
+.net-arq { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--net-linha); background: var(--net-painel); }
+.net-arq b { color: var(--net-amarelo); font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+.net-arq span { color: var(--net-apagado); }
+.net-arq .net-mini { margin-left: auto; }
+.net-mapa { flex: 1 1 auto; min-height: 120px; overflow: auto; padding: 6px; background:
+  linear-gradient(rgba(0, 255, 210, 0.04) 1px, transparent 1px) 0 0 / 20px 20px,
+  linear-gradient(90deg, rgba(0, 255, 210, 0.04) 1px, transparent 1px) 0 0 / 20px 20px; }
+.net-mapa svg { display: block; overflow: visible; }
+.net-ligacao { fill: none; stroke: var(--net-ciano); stroke-width: 2; opacity: 0.65; }
+.net-ligacao-oculta { stroke-dasharray: 5 5; opacity: 0.35; }
+.net-no { cursor: pointer; }
+.net-no rect { fill: #08171a; stroke: #2b5a59; stroke-width: 1.5; }
+.net-no text { fill: var(--net-texto); font-family: var(--font-primary, Signika), sans-serif; pointer-events: none; }
+.net-no .net-no-titulo { fill: var(--net-ciano); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.net-no .net-no-texto { font-size: 12px; }
+.net-no .net-no-tipo { fill: var(--net-apagado); font-size: 10px; }
+.net-no:hover rect { stroke: var(--net-ciano); }
+.net-no-oculto rect { fill: #060c0d; stroke-dasharray: 4 4; stroke: #3c4b4a; }
+.net-no-oculto text { fill: var(--net-apagado); }
+.net-no-secreto rect { fill: #10080d; stroke: #6a2a46; }
+.net-no-entrada rect { fill: #140a10; stroke: var(--net-magenta); }
+.net-no-entrada .net-no-titulo { fill: var(--net-magenta); }
+.net-no-vizinho rect { stroke: var(--net-amarelo); stroke-width: 2; }
+.net-no-atual rect { stroke: var(--net-ciano); stroke-width: 3; filter: drop-shadow(0 0 4px rgba(0, 255, 210, 0.7)); }
+.net-no-sel rect { fill: #0d2a2c; }
+.net-marca { fill: var(--net-apagado); stroke: #000; stroke-width: 1.5; }
+.net-marca-eu { fill: var(--net-ciano); }
+.net-detalhe { max-height: 42%; overflow: auto; padding: 8px 10px; border-top: 1px solid var(--net-linha); background: var(--net-painel); }
+.net-detalhe ul { margin: 0 0 6px; padding: 0; list-style: none; }
+.net-detalhe li { margin: 0 0 6px; }
+.net-detalhe li > i { width: 16px; color: var(--net-magenta); text-align: center; }
+.net-detalhe li p { margin: 2px 0 0 20px; color: var(--net-texto); }
+.net-detalhe small { display: block; margin-left: 20px; color: var(--net-apagado); }
+.net-barra { position: relative; height: 14px; margin: 3px 0 2px 20px; border: 1px solid #5a1f35; background: #12070c; }
+.net-barra span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #7a1240, var(--net-magenta)); }
+.net-barra em { position: relative; padding-left: 4px; color: #fff; font-size: 10px; font-style: normal; line-height: 12px; }
+.net-barra-programa { margin-left: 0; border-color: #1d4f4a; background: #061413; }
+.net-barra-programa span { background: linear-gradient(90deg, #0b5d52, var(--net-ciano)); }
+.net-barra-programa em { color: #001a16; font-weight: 700; }
+.net-hud { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; padding: 8px 10px; }
+.net-corredor { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 8px; align-items: center; }
+.net-corredor img { width: 54px; height: 54px; border: 1px solid var(--net-ciano); object-fit: cover; }
+.net-corredor b { display: block; color: var(--net-amarelo); font-size: 14px; }
+.net-corredor small { color: var(--net-apagado); }
+.net-numeros { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; }
+.net-numeros b { color: var(--net-ciano); }
+.net-numeros input { width: 38px; height: 20px; padding: 0 3px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); }
+.net-programas { margin: 0; padding: 0; list-style: none; }
+.net-programas li { display: flex; gap: 6px; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #0f2425; }
+.net-programas li > div:first-child { flex: 1; min-width: 0; }
+.net-programas li small { color: var(--net-apagado); }
+.net-programas .net-ativo b { color: var(--net-ciano); }
+.net-habilidades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.net-habilidades button { overflow: hidden; text-overflow: ellipsis; }
+.net-architect input[type="text"] { width: 100%; margin-top: 5px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); }
+.net-linha { display: flex; gap: 4px; align-items: center; }
+.net-linha input[type="text"] { margin-top: 0; }
+.net-sair { display: flex; gap: 4px; margin-top: auto; }
+.net-sair button { flex: 1; }
+.net-corredores { display: flex; flex-wrap: wrap; gap: 4px; }
+.net-corredores .ativo { border-color: var(--net-ciano); color: var(--net-ciano); }
+.net-mestre { padding: 6px; border: 1px dashed #5a1f35; background: rgba(40, 8, 22, 0.35); }
+.net-mestre h4 { color: var(--net-magenta); }
+.net-ajuste { display: inline-flex; gap: 2px; align-items: center; }
+.net-log { grid-column: 1 / -1; overflow: auto; padding: 6px 10px; border-top: 1px solid var(--net-ciano); background: #030708; font-family: var(--font-mono, monospace); font-size: 12px; }
+.net-log p { margin: 0 0 2px; }
+.net-log p::before { content: '> '; color: var(--net-apagado); }
+.net-log-ok { color: var(--net-ciano); }
+.net-log-falha { color: #ff9fbf; }
+.net-log-ice { color: var(--net-amarelo); }
+.net-log-info { color: var(--net-texto); }
+.net-espera { position: absolute; right: 12px; bottom: 126px; padding: 6px 10px; border: 1px solid var(--net-amarelo); background: rgba(20, 18, 0, 0.92); color: var(--net-amarelo); }
+.net-ocupado .net-hud button { pointer-events: none; }
+.net-vazio { padding: 20px; }
+
+/* Configuração do ponto de acesso */
+.net-config .window-content { padding: 10px 12px; }
+.net-form { display: flex; flex-direction: column; gap: 6px; }
+.net-form .form-group { margin: 0; }
+.net-form .form-group label { color: var(--net-ciano); }
+.net-form select, .net-form input[type="number"], .net-form input[type="text"] { background: #061012; color: var(--net-texto); border: 1px solid var(--net-linha); }
+.net-form .hint { margin: 2px 0 0; color: var(--net-apagado); font-size: 11px; }
+.net-form fieldset { margin: 0; padding: 4px 8px 8px; border: 1px solid var(--net-linha); }
+.net-form legend { color: var(--net-magenta); }
+.net-check { display: flex; gap: 6px; align-items: center; }
+.net-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.net-rodape { justify-content: flex-end; margin-top: 6px; }
+.net-rodape button[type="submit"] { border-color: var(--net-ciano); color: var(--net-ciano); }
+
+/* Botão no HUD do Tile */
+.net-architect-hud.active { color: #00ffd2; border-color: #00ffd2; }

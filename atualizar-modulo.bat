@@ -1,11 +1,12 @@
 @echo off
-rem Atualiza o modulo cpr-2077 do Foundry com o que esta na wiki:
-rem compendios, importador de personagens e avisos da wiki.
+rem Atualiza os modulos do Foundry com o que esta na wiki:
+rem cpr-2077 (compendios, importador de personagens e avisos da wiki)
+rem e NET Architect (pontos de acesso a NET nos Tiles).
 rem Os compendios ficam travados com o Foundry aberto: feche antes.
 cd /d "%~dp0foundry-2077"
 echo.
-echo  Atualizar o modulo "Cyberpunk RED: 2077" no Foundry
-echo  ---------------------------------------------------
+echo  Atualizar os modulos "Cyberpunk RED: 2077" e "NET Architect" no Foundry
+echo  ---------------------------------------------------------------------
 echo  Feche o Foundry antes de continuar (ou pelo menos o mundo que usa o modulo).
 echo.
 pause
@@ -22,9 +23,11 @@ if not exist ".cache\core\versao.json" (
 )
 node build\build.mjs
 if errorlevel 1 goto erro
+node ..\foundry-net-architect\instalar.mjs
+if errorlevel 1 goto erro
 echo.
 echo  Pronto. Abra o Foundry e entre no mundo.
-echo  Em Configurar modulos, "Cyberpunk RED: 2077" precisa estar ativo.
+echo  Em Configurar modulos, "Cyberpunk RED: 2077" e "NET Architect" precisam estar ativos.
 echo  Os personagens enviados pela wiki aparecem sozinhos para o mestre.
 echo.
 pause

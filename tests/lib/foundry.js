@@ -47,6 +47,8 @@ function preparar() {
     fs.cpSync(path.join(fonte, pasta), path.join(modulo, pasta), { recursive: true });
   }
   fs.copyFileSync(path.join(fonte, 'module.json'), path.join(modulo, 'module.json'));
+  // NET Architect: só scripts, então instalar é copiar (o mesmo instalar.mjs do PC e do servidor).
+  execFileSync(process.execPath, ['instalar.mjs'], { cwd: path.join(raiz, 'foundry-net-architect'), env: { ...process.env, FOUNDRY_DATA: data }, stdio: 'ignore' });
 }
 
 // Apaga os atores do mundo de teste entre uma rodada e outra (o mundo fica, os personagens não).
@@ -70,16 +72,19 @@ async function subir() {
 }
 
 // Entra no mundo como Gamemaster (sem senha no mundo de teste) e espera o jogo ficar pronto.
-async function entrarComoMestre(edge, url) {
+const entrarComoMestre = (edge, url) => entrarComo(edge, url, /Gamemaster/i);
+// Entra com um usuário pelo nome (os jogadores do mundo de teste não têm senha).
+async function entrarComo(edge, url, nome) {
+  const padrao = nome instanceof RegExp ? nome : new RegExp(`^\\s*${nome}\\s*$`);
   await edge.send('Page.navigate', { url: `${url}/join` });
   for (let i = 0; i < 60; i++) {
     await sleep(300);
-    const pronto = await edge.evaluate(`(() => { const s = document.querySelector('select[name="userid"]'); return !!(s && [...s.options].some(o => /Gamemaster/i.test(o.textContent))); })()`).catch(() => false);
+    const pronto = await edge.evaluate(`(() => { const s = document.querySelector('select[name="userid"]'); return !!(s && [...s.options].some(o => ${padrao}.test(o.textContent))); })()`).catch(() => false);
     if (pronto) break;
   }
   await edge.evaluate(`(() => {
     const select = document.querySelector('select[name="userid"]');
-    select.value = [...select.options].find(o => /Gamemaster/i.test(o.textContent)).value;
+    select.value = [...select.options].find(o => ${padrao}.test(o.textContent)).value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
     const form = select.closest('form');
     (form.querySelector('button[name="join"]') || form.querySelector('button[type="submit"]')).click();
@@ -94,14 +99,26 @@ async function esperarJogo(edge) {
   throw new Error('O mundo de teste não ficou pronto no navegador.');
 }
 
-// Liga o módulo cpr-2077 no mundo (precisa recarregar a página para valer).
-async function ativarModulo(edge) {
-  const ativo = await edge.evaluate(`!!game.modules.get('cpr-2077')?.active`);
-  if (ativo) return;
-  await edge.evaluate(`game.settings.set('core', 'moduleConfiguration', { ...game.settings.get('core', 'moduleConfiguration'), 'cpr-2077': true })`);
+// Liga módulos no mundo (precisa recarregar a página para valer).
+async function ativarModulo(edge, ids = ['cpr-2077']) {
+  const faltam = await edge.evaluate(`${JSON.stringify(ids)}.filter(id => !game.modules.get(id)?.active)`);
+  if (!faltam.length) return;
+  await edge.evaluate(`game.settings.set('core', 'moduleConfiguration', { ...game.settings.get('core', 'moduleConfiguration'), ...Object.fromEntries(${JSON.stringify(faltam)}.map(id => [id, true])) })`);
   await edge.evaluate('location.reload()').catch(() => {});
   await sleep(1500);
   await esperarJogo(edge);
 }
 
-module.exports = { disponivel, preparar, limparMundo, subir, entrarComoMestre, ativarModulo, PORTA };
+// Mesa do servidor ocupada? A wiki online diz (/api/estado); sem endereço configurado, não dá para saber.
+// A licença do Foundry vale para uma mesa por vez: com gente na mesa do servidor, os cenários do Foundry não rodam.
+async function mesaOcupada(raiz) {
+  let wiki = process.env.WIKI_ONLINE || '';
+  try { wiki = wiki || fs.readFileSync(path.join(raiz, 'servidor', 'endereco.txt'), 'utf8').trim(); } catch { /* sem servidor */ }
+  if (!wiki) return '';
+  try {
+    const estado = await (await fetch(`${wiki.replace(/\/+$/, '')}/api/estado`, { signal: AbortSignal.timeout(8000) })).json();
+    return estado.mesa && estado.mesa.usuarios > 0 ? `${estado.mesa.usuarios} pessoa(s) na mesa do servidor` : '';
+  } catch { return ''; }
+}
+
+module.exports = { mesaOcupada, disponivel, preparar, limparMundo, subir, entrarComoMestre, entrarComo, esperarJogo, ativarModulo, PORTA };

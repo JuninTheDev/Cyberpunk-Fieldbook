@@ -176,7 +176,7 @@ Feche o Foundry do PC e dê dois cliques em **`servidor\enviar-para-servidor.bat
   - **Os PDFs dos livros:** no servidor, só o mestre abre.
   - **A pasta Data do Foundry:** mundos, sistemas, módulos e imagens. Pode demorar, se houver muitas imagens.
 - O servidor guarda uma cópia do que já tinha antes de receber.
-- O módulo **Cyberpunk RED: 2077** é gerado de novo no servidor, com a versão do GitHub, em até uns 2 minutos.
+- Os módulos **Cyberpunk RED: 2077** e **NET Architect** são gerados e instalados de novo no servidor, com a versão do GitHub, em até uns 2 minutos.
 
 ## 7. Conferir
 
@@ -247,7 +247,7 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 |---|---|
 | `instalar.sh` | Monta ou refaz o servidor. |
 | `atualizar.sh` | Roda a cada minuto e puxa o GitHub. |
-| `atualizar-modulo.sh` | Gera o módulo do Foundry; sozinho, só com a mesa vazia. |
+| `atualizar-modulo.sh` | Gera o módulo cpr-2077 e instala os outros (`foundry-*/instalar.mjs`); sozinho, só com a mesa vazia. |
 | `backup.sh` | Faz o backup diário. |
 | `receber.sh` | Recebe o envio do PC. |
 | `iniciar-foundry.sh` | Liga o Foundry. |

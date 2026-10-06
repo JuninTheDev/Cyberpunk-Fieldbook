@@ -2,7 +2,7 @@
 # Puxa do GitHub o que o mestre publicou (publicar.bat). Roda a cada minuto (fieldbook-atualizar.timer), como root.
 # - Páginas, regras, lore e estilos: valem na hora (o servidor lê os arquivos a cada pedido).
 # - server.js e a API: reinicia a wiki (2 segundos fora do ar).
-# - Módulo do Foundry (foundry-2077/): gera de novo assim que a mesa estiver vazia.
+# - Módulos do Foundry (foundry-2077/ e os outros foundry-*/): gera e instala de novo assim que a mesa estiver vazia.
 # O registro fica em /srv/fieldbook/dados/atualizacoes.log.
 set -euo pipefail
 WIKI=/srv/fieldbook/wiki
@@ -26,7 +26,7 @@ if [ "$antes" != "$depois" ]; then
   if grep -q '^servidor/instalar\.sh$' <<<"$mudou"; then
     echo "$(date '+%F %T') AVISO: servidor/instalar.sh mudou. Para valer, rode: sudo bash $WIKI/servidor/instalar.sh" >> "$LOG"
   fi
-  if grep -q '^foundry-2077/' <<<"$mudou"; then touch "$DADOS/.modulo-pendente"; fi
+  if grep -q '^foundry-[^/]*/' <<<"$mudou"; then touch "$DADOS/.modulo-pendente"; fi
 fi
 
 # Módulo do Foundry: precisa parar o Foundry por uns segundos, então só com ninguém na mesa.

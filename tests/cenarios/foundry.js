@@ -5,20 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const foundry = require('../lib/foundry');
 
-// Mesa do servidor ocupada? A wiki online diz (/api/estado); sem endereço configurado, não dá para saber.
-async function mesaOcupada(raiz) {
-  let wiki = process.env.WIKI_ONLINE || '';
-  try { wiki = wiki || fs.readFileSync(path.join(raiz, 'servidor', 'endereco.txt'), 'utf8').trim(); } catch { /* sem servidor */ }
-  if (!wiki) return '';
-  try {
-    const estado = await (await fetch(`${wiki.replace(/\/+$/, '')}/api/estado`, { signal: AbortSignal.timeout(8000) })).json();
-    return estado.mesa && estado.mesa.usuarios > 0 ? `${estado.mesa.usuarios} pessoa(s) na mesa do servidor` : '';
-  } catch { return ''; }
-}
-
 module.exports = async ({ edge, servidores, r }) => {
   if (!foundry.disponivel()) { await r.passo('Foundry não instalado neste PC: cenário pulado', async () => [true, '']); return; }
-  const ocupada = await mesaOcupada(servidores.raiz);
+  const ocupada = await foundry.mesaOcupada(servidores.raiz);
   if (ocupada) { await r.passo(`mesa do servidor em uso (${ocupada}): cenário pulado`, async () => [true, '']); return; }
 
   const wiki = servidores.local;

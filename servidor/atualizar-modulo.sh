@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Gera o módulo cpr-2077 direto na pasta do Foundry do servidor (o mesmo que o atualizar-modulo.bat faz no PC).
+# Gera o módulo cpr-2077 direto na pasta do Foundry do servidor e instala os outros módulos da wiki
+# (foundry-*/instalar.mjs, como o NET Architect): o mesmo que o atualizar-modulo.bat faz no PC.
 # Os compêndios ficam travados com o Foundry aberto: para o Foundry, gera e liga de novo. Por isso só roda
 # com ninguém conectado, a não ser com --agora (derruba quem estiver na mesa).
 # Uso: sudo bash servidor/atualizar-modulo.sh [--agora]
@@ -19,7 +20,9 @@ fi
 systemctl stop foundry
 trap 'systemctl start foundry' EXIT
 # Uma cópia vinda do Windows pode chegar sem permissão de escrita: o build precisa regravar a pasta do módulo.
-[ -d "$DATA/modules/cpr-2077" ] && chown -R mesa:mesa "$DATA/modules/cpr-2077" && chmod -R u+rwX "$DATA/modules/cpr-2077"
+for pasta in "$DATA"/modules/cpr-2077 "$DATA"/modules/net-architect; do
+  [ -d "$pasta" ] && chown -R mesa:mesa "$pasta" && chmod -R u+rwX "$pasta"
+done
 cd "$WIKI/foundry-2077"
 # Cópia dos compêndios do sistema: na primeira vez e sempre que o sistema for atualizado no Foundry.
 sistema=$(node -p "require('$DATA/systems/cyberpunk-red-core/system.json').version")
@@ -28,4 +31,8 @@ if [ "$sistema" != "$copia" ]; then como_mesa node build/extract-core.mjs; fi
 como_mesa node build/build.mjs
 # O build também regrava o catálogo da loja; no servidor vale o do GitHub.
 como_mesa git -C "$WIKI" checkout -q -- loja-catalogo.js 2>/dev/null || true
-echo "Módulo atualizado."
+# Módulos só de scripts (sem compêndio compilado): instalar é copiar.
+for instalar in "$WIKI"/foundry-*/instalar.mjs; do
+  [ -f "$instalar" ] && como_mesa node "$instalar"
+done
+echo "Módulos atualizados."
