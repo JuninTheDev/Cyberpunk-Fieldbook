@@ -44,8 +44,8 @@ Pontos de acesso à NET em qualquer Tile da cena, para o Foundry VTT 12 (a API u
 ## Regras implementadas (RED p. 197–207)
 
 - **Ações NET por turno pela Interface:** 2, 3, 4 ou 5.
-  - Elas contam em combate e voltam no turno do netrunner.
-  - Fora de combate, só são contadas.
+  - Em combate, a janela mostra as que sobram no turno e recusa a que passar do limite; elas voltam no turno do netrunner.
+  - Fora de combate não há turno: as Ações NET não contam (a janela mostra "livres").
   - O mestre pode passar do limite.
 - **Conectar e desconectar:** 1 Ação NET.
   - Andar pela arquitetura não gasta.

@@ -87,17 +87,29 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = canvas.scene.tiles.get(${JSON.stringify(ids.tile)});
       const ponto = canvas.stage.worldTransform.apply(new PIXI.Point(t.x + t.width / 2, t.y + t.height / 2));
       const caixa = canvas.app.view.getBoundingClientRect();
-      return { x: ponto.x + caixa.left, y: ponto.y + caixa.top };
+      const x = ponto.x + caixa.left;
+      const y = ponto.y + caixa.top;
+      const el = document.elementFromPoint(x, y);
+      return { x, y, alvo: el ? \`\${el.tagName}#\${el.id}.\${String(el.className).slice(0, 40)}\` : 'nada', tela: [innerWidth, innerHeight] };
     })()`);
     await sleep(300);
     for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await jogador.send('Input.dispatchMouseEvent', { type, x: p.x, y: p.y, button: 'left', clickCount: type === 'mouseMoved' ? 0 : 1 });
+    return p;
   };
   // Botão da janela da NET do jogador; nós do mapa (SVG) recebem o clique por evento.
   const naJanela = (seletor, svg = false) => noJogador(`(() => { const el = document.querySelector('.net-janela ${seletor}'); if (!el) return false; ${svg ? "el.dispatchEvent(new MouseEvent('click', { bubbles: true }))" : 'el.click()'}; return true; })()`);
   const corredor = async () => ((await estado(edge)) || { corredores: [] }).corredores.find(item => item.token === ids.token) || null;
   const esperarEstado = async (teste, vezes = 75) => { for (let i = 0; i < vezes; i++) { const e = await estado(edge); if (e && teste(e)) return e; await sleep(200); } return estado(edge); };
-  const ir = async no => { await naJanela(`[data-action="selecionar"][data-no="${no}"]`, true); await sleep(150); await naJanela(`[data-action="mover"][data-no="${no}"]`); return esperarEstado(e => (e.corredores.find(c => c.token === ids.token) || {}).no === no); };
-  const usar = async (habilidade, teste) => { await esperar(jogador, `!!document.querySelector('.net-janela [data-habilidade="${habilidade}"]:not([disabled])')`, 25); await naJanela(`[data-habilidade="${habilidade}"]`); return esperarEstado(teste); };
+  // Escolhe o andar no mapa e clica em "Ir para cá" quando o botão aparecer (o redesenho é assíncrono).
+  const pedirIda = async no => {
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      await naJanela(`[data-action="selecionar"][data-no="${no}"]`, true);
+      if (await esperar(jogador, `!!document.querySelector('.net-janela [data-action="mover"][data-no="${no}"]:not([disabled])')`, 20)) return naJanela(`[data-action="mover"][data-no="${no}"]`);
+    }
+    return false;
+  };
+  const ir = async no => { await pedirIda(no); return esperarEstado(e => (e.corredores.find(c => c.token === ids.token) || {}).no === no); };
+  const usar = async (habilidade, teste) => { await esperar(jogador, `!!document.querySelector('.net-janela [data-habilidade="${habilidade}"]:not([disabled])')`); await naJanela(`[data-habilidade="${habilidade}"]`); return esperarEstado(teste); };
   const ultimas = (e, n = 4) => e.log.slice(-n).map(linha => linha.texto).join(' | ');
   let parou = '';
   const passo = async (nome, fn) => {
@@ -126,6 +138,7 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       ids.ator = resumo.id;
       ids.ataque = (resumo.programas.find(p => p[2] === 'antiprogramattacker') || [])[0] || '';
+      ids.seeya = (resumo.programas.find(p => p[1] === 'See Ya') || [])[0] || '';
       return [resumo.role && resumo.role[1] >= 4 && resumo.equipado === 'equipped' && resumo.programas.length > 0, JSON.stringify(resumo)];
     });
 
@@ -144,11 +157,14 @@ module.exports = async ({ edge, servidores, r }) => {
         for (const a of [netrunner, curioso]) await a.update({ ownership: { default: 0, ${JSON.stringify(ids.usuario)}: 3 } });
         await game.users.get(${JSON.stringify(ids.usuario)}).update({ character: netrunner.id });
         const scene = await Scene.create({ name: 'NET teste', width: 3000, height: 2000, padding: 0, grid: { size: 100, distance: 2, units: 'm' }, tokenVision: false, fog: { exploration: false } });
-        const [tile] = await scene.createEmbeddedDocuments('Tile', [{ x: 1400, y: 800, width: 200, height: 200, texture: { src: 'icons/svg/terminal.svg' } }]);
-        const [t1, t2] = await scene.createEmbeddedDocuments('Token', [
+        const [tile] = await scene.createEmbeddedDocuments('Tile', [{ x: 1400, y: 800, width: 200, height: 200, texture: { src: 'icons/svg/net.svg' } }]);
+        const criados = await scene.createEmbeddedDocuments('Token', [
           { name: netrunner.name, actorId: netrunner.id, actorLink: true, x: 1100, y: 800, texture: { src: netrunner.img || 'icons/svg/mystery-man.svg' } },
           { name: curioso.name, actorId: curioso.id, actorLink: true, x: 1100, y: 1000, texture: { src: 'icons/svg/mystery-man.svg' } }
         ]);
+        // A ordem da resposta não é a do pedido: cada token pelo ator.
+        const t1 = criados.find(t => t.actorId === netrunner.id);
+        const t2 = criados.find(t => t.actorId === curioso.id);
         await scene.activate();
         await scene.view();
         return { cena: scene.id, tile: tile.id, token: t1.id, curioso: t2.id };
@@ -176,15 +192,15 @@ module.exports = async ({ edge, servidores, r }) => {
       await sleep(400);
       await noJogador(`(() => { window.__avisos = []; const w = ui.notifications.warn.bind(ui.notifications); ui.notifications.warn = (m, o) => { window.__avisos.push(String(m)); return w(m, o); }; })()`);
       const marcadores = await esperar(jogador, `(canvas.interface.children.find(c => c.name === 'net-architect-pontos') || { children: [] }).children.length`);
-      await noJogador(`canvas.tokens.get(${JSON.stringify(ids.curioso)}).control({ releaseOthers: true })`);
-      await clicarNoPonto();
+      const selecionados = await noJogador(`(() => { canvas.tokens.releaseAll(); canvas.tokens.get(${JSON.stringify(ids.curioso)}).control({ releaseOthers: true }); return canvas.tokens.controlled.map(t => t.name); })()`);
+      const clique = await clicarNoPonto();
       const aviso = await esperar(jogador, `window.__avisos.join(' | ')`, 20);
       const e = await estado(edge);
-      return [marcadores === 1 && /cyberdeck/.test(aviso || '') && !(e && e.corredores.length), `marcadores ${marcadores} · aviso: ${aviso}`];
+      return [marcadores === 1 && selecionados.join() === 'Curioso sem deck' && /cyberdeck/.test(aviso || '') && !(e && e.corredores.length), `marcadores ${marcadores} · selecionados ${selecionados} · aviso: ${aviso} · clique ${JSON.stringify(clique)}`];
     });
 
     await passo('clique no ponto conecta: janela da NET só para o jogador e o mestre; o token fica marcado para todos', async () => {
-      await noJogador(`canvas.tokens.get(${JSON.stringify(ids.token)}).control({ releaseOthers: true })`);
+      await noJogador(`(() => { canvas.tokens.releaseAll(); canvas.tokens.get(${JSON.stringify(ids.token)}).control({ releaseOthers: true }); })()`);
       await clicarNoPonto();
       const janela = await esperar(jogador, `!!document.querySelector('#net-architect-${ids.tile}-${ids.token}')`);
       const painel = await esperar(edge, `!!document.querySelector('#net-architect-${ids.tile}-mestre')`);
@@ -199,23 +215,28 @@ module.exports = async ({ edge, servidores, r }) => {
       return [janela && painel && marcadoJogador && marcadoMestre && anel && c && c.no === ENTRADA && c.max === 3, `janela ${janela} · painel ${painel} · status ${marcadoJogador}/${marcadoMestre} · anel ${anel} · ${JSON.stringify(c)}`];
     });
 
-    // Dados fixos no cliente do mestre (quem rola): d10 = 6, d6 = 4.
-    await edge.evaluate('CONFIG.Dice.randomUniform = () => 0.55');
+    // Dados fixos no cliente do mestre (quem rola). O Foundry 12 tira a face com ceil((1 − u) × faces): u = 0,45 dá d10 = 6 e d6 = 4.
+    await edge.evaluate('CONFIG.Dice.randomUniform = () => 0.45');
 
-    await passo('Pathfinder (4 + 6 = 10) revela a clínica inteira; a rolagem sai no chat com o cartão do sistema', async () => {
+    await passo('See Ya ativo soma +2: Pathfinder (4 + 6 + 2 = 12) revela a clínica inteira; o cartão do sistema vai para o chat', async () => {
+      if (ids.seeya) {
+        await esperar(jogador, `!!document.querySelector('.net-janela [data-programa="${ids.seeya}"][data-acao="ativar"]')`);
+        await naJanela(`[data-programa="${ids.seeya}"][data-acao="ativar"]`);
+        await esperar(edge, `game.actors.get(${JSON.stringify(ids.ator)}).items.get(${JSON.stringify(ids.seeya)}).system.isRezzed`);
+      }
       const chatAntes = await edge.evaluate('game.messages.size');
       const e = await usar('pathfinder', est => est.vistos.length >= 8);
       const chat = await edge.evaluate(`game.messages.contents.slice(${chatAntes}).map(m => m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 60))`);
-      const mapa = await esperar(jogador, `document.querySelectorAll('.net-janela .net-no:not(.net-no-oculto)').length`);
-      return [e.vistos.length === 8 && chat.length >= 1 && mapa === 9, `vistos ${e.vistos.join(',')} · nós na tela ${mapa} · chat: ${chat.join(' / ')}`];
+      const mapa = await esperar(jogador, `document.querySelectorAll('.net-janela .net-no:not(.net-tipo-oculto)').length`);
+      await jogador.shot('mapa-revelado');
+      const total = ((ultimas(e, 1).match(/Pathfinder \((\d+)\)/) || [])[1]) | 0;
+      return [e.vistos.length === 8 && chat.length >= 1 && mapa === 9 && total === (ids.seeya ? 12 : 10), `Pathfinder ${total} · vistos ${e.vistos.join(',')} · nós na tela ${mapa} · chat: ${chat.join(' / ')}`];
     });
 
     await passo('Backdoor (10 contra DV 8) quebra a senha do andar 1; antes disso a descida estava travada', async () => {
       await ir('1a');
       const avisos = await noJogador('window.__avisos.length');
-      await naJanela(`[data-action="selecionar"][data-no="2a"]`, true);
-      await sleep(150);
-      await naJanela(`[data-action="mover"][data-no="2a"]`);
+      await pedirIda('2a');
       const travado = await esperar(jogador, `window.__avisos.slice(${avisos}).join(' ')`, 30);
       const e = await usar('backdoor', est => est.feitos.includes('1a.0'));
       return [/trava a descida/.test(travado || '') && e.feitos.includes('1a.0'), `${travado} · ${ultimas(e, 2)}`];
@@ -234,10 +255,10 @@ module.exports = async ({ edge, servidores, r }) => {
     await passo('programa de ataque: ativar e atacar derruba o Wisp (ou Zap até cair); a descida libera', async () => {
       let e;
       if (ids.ataque) {
-        await esperar(jogador, `!!document.querySelector('.net-janela [data-programa="${ids.ataque}"][data-acao="ativar"]')`, 25);
+        await esperar(jogador, `!!document.querySelector('.net-janela [data-programa="${ids.ataque}"][data-acao="ativar"]')`);
         await naJanela(`[data-programa="${ids.ataque}"][data-acao="ativar"]`);
         await esperar(edge, `game.actors.get(${JSON.stringify(ids.ator)}).items.get(${JSON.stringify(ids.ataque)}).system.isRezzed`);
-        await esperar(jogador, `!!document.querySelector('.net-janela [data-programa="${ids.ataque}"][data-acao="atacar"]')`, 25);
+        await esperar(jogador, `!!document.querySelector('.net-janela [data-programa="${ids.ataque}"][data-acao="atacar"]')`);
         await naJanela(`[data-programa="${ids.ataque}"][data-acao="atacar"]`);
         e = await esperarEstado(est => (est.ices.find(i => i.chave === '2a.0') || {}).rez === 0);
       }
@@ -253,7 +274,9 @@ module.exports = async ({ edge, servidores, r }) => {
       await ir('2a');
       await ir('3b');
       e = await usar('control', est => est.feitos.includes('3b.0'));
-      await esperar(jogador, `!!document.querySelector('.net-janela [data-texto="comando"]')`, 25);
+      await esperar(jogador, `!!document.querySelector('.net-janela [data-texto="comando"]')`);
+      const campo = await esperar(jogador, `!!document.querySelector('.net-janela [data-texto="comando"]')`);
+      if (!campo) return [false, `o campo de comando do nó não apareceu · ${ultimas(e, 2)}`];
       await noJogador(`(() => { const i = document.querySelector('.net-janela [data-texto="comando"]'); i.value = 'abrir as portas do centro cirúrgico'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
       await naJanela('[data-action="comandar"]');
       e = await esperarEstado(est => /comanda o nó/.test(ultimas(est, 2)));
@@ -265,7 +288,28 @@ module.exports = async ({ edge, servidores, r }) => {
       await ir('4b');
       const e = await usar('backdoor', est => /não passou a senha/.test(ultimas(est, 1)));
       const c = await corredor();
-      return [!e.feitos.includes('4b.0') && c.acoes >= 5, `${ultimas(e, 1)} · ações usadas ${c.acoes}/${c.max} (fora de combate não trava)`];
+      const livres = await noJogador(`/livres/.test((document.querySelector('.net-janela .net-numeros') || {}).textContent || '')`);
+      return [!e.feitos.includes('4b.0') && c.acoes === 0 && livres, `${ultimas(e, 1)} · fora de combate as ações não contam (${c.acoes}); a barra diz "livres": ${livres}`];
+    });
+
+    await passo('em combate: 3 Ações NET por turno; a quarta é recusada e o turno seguinte devolve', async () => {
+      await edge.evaluate(`(async () => {
+        const combate = await Combat.create({ scene: ${JSON.stringify(ids.cena)}, active: true });
+        await combate.createEmbeddedDocuments('Combatant', [{ tokenId: ${JSON.stringify(ids.token)}, sceneId: ${JSON.stringify(ids.cena)}, actorId: ${JSON.stringify(ids.ator)} }]);
+        await combate.startCombat();
+      })()`);
+      await sleep(600);
+      for (let i = 1; i <= 3; i++) await usar('cloak', est => (est.corredores.find(c => c.token === ids.token) || {}).acoes === i);
+      const pips = await noJogador(`document.querySelectorAll('.net-janela .net-pip.net-pip-usado').length`);
+      const avisos = await noJogador('window.__avisos.length');
+      await naJanela('[data-habilidade="cloak"]');
+      const recusa = await esperar(jogador, `window.__avisos.slice(${avisos}).join(' ')`, 30);
+      await edge.evaluate('game.combat.nextRound()');
+      const e = await esperarEstado(est => (est.corredores.find(c => c.token === ids.token) || {}).acoes === 0);
+      const devolvidas = (e.corredores.find(c => c.token === ids.token) || {}).acoes === 0;
+      await edge.evaluate('game.combat.delete()');
+      await sleep(300);
+      return [pips === 3 && /Sem Ações NET/.test(recusa || '') && devolvidas, `bolinhas usadas ${pips} · quarta: ${recusa} · nova rodada devolveu: ${devolvidas}`];
     });
 
     await passo('desconectar: a janela fecha, o efeito sai do token e, sem ninguém, a arquitetura reinicia as defesas', async () => {

@@ -32,6 +32,8 @@ export function netrunnerDo(actor) {
   return { role, deck, programas, rank: role ? Number(role.system.rank) || 0 : 0 };
 }
 
+export { emCombate };
+
 export function faltasPara(ponto, actor) {
   const n = netrunnerDo(actor);
   const faltas = [];
@@ -132,8 +134,10 @@ const icesAtivos = (arq, est, id) => conteudosDe(arq, id).filter(conteudo => con
 function emCombate(token) {
   return game.combats.some(combate => combate.started && combate.combatants.some(item => item.tokenId === token.id && item.sceneId === token.parent.id));
 }
+// Fora de combate não há turno: as Ações NET não contam.
 function gastarAcao(corredor, token, usuario, quantas = 1) {
-  if (!usuario.isGM && emCombate(token) && corredor.acoes + quantas > corredor.max) throw erro(`Sem Ações NET neste turno (${corredor.acoes} de ${corredor.max}).`);
+  if (!emCombate(token)) return;
+  if (!usuario.isGM && corredor.acoes + quantas > corredor.max) throw erro(`Sem Ações NET neste turno (${corredor.acoes} de ${corredor.max}).`);
   corredor.acoes += quantas;
 }
 
@@ -424,7 +428,7 @@ async function resolverHabilidade(ctx, { chave, info, alvo, total, dvVirus, text
       if (ok) est.feitos = [...est.feitos, alvo.chave];
       const oQue = { backdoor: 'a senha', eyedee: 'o arquivo', control: 'o nó de controle' }[chave];
       const resultado = { backdoor: 'quebrou a senha', eyedee: 'identificou o arquivo', control: 'tomou o nó de controle' }[chave];
-      registrar(est, ok ? `${info.nome} (${total} contra DV ${alvo.dv}): ${nome} ${resultado}${alvo.descricao && chave !== 'backdoor' ? `: ${alvo.descricao}` : ''}.` : `${info.nome} (${total} contra DV ${alvo.dv}): ${nome} não passou ${oQue}.`, ok ? 'ok' : 'falha');
+      registrar(est, ok ? `${info.nome} (${total} contra DV ${alvo.dv}): ${nome} ${resultado}${alvo.descricao && chave !== 'backdoor' ? `: ${alvo.descricao.replace(/[.!?…\s]+$/, '')}` : ''}.` : `${info.nome} (${total} contra DV ${alvo.dv}): ${nome} não passou ${oQue}.`, ok ? 'ok' : 'falha');
       return;
     }
     case 'zap': {

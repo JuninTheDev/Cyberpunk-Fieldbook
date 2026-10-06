@@ -51,20 +51,29 @@ function preparar() {
   execFileSync(process.execPath, ['instalar.mjs'], { cwd: path.join(raiz, 'foundry-net-architect'), env: { ...process.env, FOUNDRY_DATA: data }, stdio: 'ignore' });
 }
 
-// Apaga os atores do mundo de teste entre uma rodada e outra (o mundo fica, os personagens não).
+// Apaga os atores e o chat do mundo de teste entre uma rodada e outra (o mundo fica, os personagens não).
 function limparMundo() {
-  fs.rmSync(path.join(PASTA, 'Data', 'worlds', MUNDO, 'data', 'actors'), { recursive: true, force: true });
+  // O chat também: as rolagens se acumulam de uma rodada para outra e deixam o cliente lento.
+  for (const pasta of ['actors', 'messages']) fs.rmSync(path.join(PASTA, 'Data', 'worlds', MUNDO, 'data', pasta), { recursive: true, force: true });
 }
 
 async function subir() {
   if (!(await fetch(`http://localhost:${PORTA}/api/status`).then(() => false, () => true))) throw new Error(`A porta ${PORTA} já está em uso.`);
+  // Um Foundry encerrado à força deixa a trava da pasta (Config/options.json.lock); com a porta livre, ela é velha.
+  fs.rmSync(path.join(PASTA, 'Config', 'options.json.lock'), { recursive: true, force: true });
   const log = fs.openSync(path.join(PASTA, 'servidor.log'), 'w');
   const proc = spawn(process.execPath, [entrada(), `--dataPath=${PASTA}`, `--port=${PORTA}`, `--world=${MUNDO}`, '--noupnp', '--noupdate', '--noipdiscovery'], { cwd: PROGRAMA, stdio: ['ignore', log, log], windowsHide: true });
   for (let i = 0; i < 90; i++) {
     await sleep(500);
     try {
       const status = await (await fetch(`http://localhost:${PORTA}/api/status`)).json();
-      if (status.active && status.world === MUNDO) return { url: `http://localhost:${PORTA}`, parar: async () => { proc.kill(); await sleep(800); fs.closeSync(log); } };
+      if (status.active && status.world === MUNDO) return { url: `http://localhost:${PORTA}`, parar: async () => {
+        const saiu = new Promise(resolve => { proc.once('exit', resolve); setTimeout(resolve, 8000); });
+        proc.kill();
+        await saiu;
+        fs.closeSync(log);
+        fs.rmSync(path.join(PASTA, 'Config', 'options.json.lock'), { recursive: true, force: true });
+      } };
     } catch { /* ainda subindo */ }
   }
   proc.kill();
