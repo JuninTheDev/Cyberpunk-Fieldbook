@@ -12,6 +12,8 @@ import { TIPOS as TIPOS_DE_LIGACAO, objetosDaCena, nomeDe as nomeDaLigacao, docu
 const { ApplicationV2 } = foundry.applications.api;
 const esc = texto => String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const PONTO_PADRAO = { ativo: true, nome: 'Ponto de acesso', arquitetura: '', dv: null, alcance: 6, exigeDeck: true, rankMinimo: 1, oculto: false, dvScanner: 10, reiniciar: true, ligacoes: [], revelados: [] };
+export const IMAGEM_PADRAO = `modules/${MODULE_ID}/icones/terminal.svg`;
+const semImagem = tile => !(tile.texture && tile.texture.src);
 const visivelPara = (tile, ponto, user) => user.isGM || !(tile.hidden || ponto.oculto) || (ponto.revelados || []).includes(user.id);
 
 // ---------------- Marcadores no mapa ----------------
@@ -51,7 +53,8 @@ export function desenharPontos() {
     const texto = new PIXI.Text('NET', { fontFamily: 'Signika, sans-serif', fontSize: Math.round(raio * 0.62), fontWeight: '700', fill: 0xe8fffb, letterSpacing: 1 });
     texto.anchor.set(0.5);
     marca.addChild(texto);
-    const nome = new PIXI.Text(ponto.nome || 'Ponto de acesso', { fontFamily: 'Signika, sans-serif', fontSize: Math.round(raio * 0.42), fill: 0x00ffd2, stroke: 0x000000, strokeThickness: 3 });
+    const rotulo = game.user.isGM && escondido ? `${ponto.nome || 'Ponto de acesso'} · oculto${tile.hidden ? ' (Tile escondido)' : ''}` : (ponto.nome || 'Ponto de acesso');
+    const nome = new PIXI.Text(rotulo, { fontFamily: 'Signika, sans-serif', fontSize: Math.round(raio * 0.42), fill: game.user.isGM && escondido ? 0xff9fbf : 0x00ffd2, stroke: 0x000000, strokeThickness: 3 });
     nome.anchor.set(0.5, 0);
     nome.position.set(0, raio * 1.15);
     marca.addChild(nome);
@@ -210,10 +213,10 @@ export class ConfigDoPonto extends ApplicationV2 {
         controles = Object.values(arq.nos).flatMap(no => no.conteudos.filter(c => c.tipo === 'controle').map(c => ({ chave: c.chave, rotulo: `Andar ${no.andar}${no.ramo !== 'a' ? ` · ramo ${no.ramo.toUpperCase()}` : ''} · nó de controle DV ${c.dv || '—'}`, descricao: c.descricao })));
       } catch { controles = []; }
     }
-    return { ponto, salvo, controles, arquiteturas: await arquiteturasDisponiveis(), cena: this.tile.parent };
+    return { ponto, salvo, controles, arquiteturas: await arquiteturasDisponiveis(), cena: this.tile.parent, semImagem: semImagem(this.tile) };
   }
 
-  async _renderHTML({ ponto, salvo, controles, arquiteturas, cena }) {
+  async _renderHTML({ ponto, salvo, controles, arquiteturas, cena, semImagem: tileSemImagem }) {
     const grupos = {};
     for (const arq of arquiteturas) (grupos[arq.fonte] = grupos[arq.fonte] || []).push(arq);
     const opcoes = Object.entries(grupos).map(([fonte, lista]) => `<optgroup label="${esc(fonte)}">${lista.map(arq => `<option value="${esc(arq.uuid)}"${arq.uuid === ponto.arquitetura ? ' selected' : ''}>${esc(arq.nome)}</option>`).join('')}</optgroup>`).join('');
@@ -227,6 +230,7 @@ export class ConfigDoPonto extends ApplicationV2 {
       </div>`).join('') : `<p class="hint">${salvo.arquitetura ? 'A arquitetura não tem nós de controle.' : 'Escolha e salve uma arquitetura para ligar os nós de controle.'}</p>`;
     return `<div class="net-form">
       <label class="net-check"><input type="checkbox" name="ativo"${marcado(ponto.ativo)}> Ponto de acesso ativo</label>
+      ${tileSemImagem ? '<label class="net-check net-aviso-config"><input type="checkbox" name="imagemPadrao" checked> Este Tile não tem imagem, e o Foundry não mostra Tile sem imagem para os jogadores: pôr a imagem de terminal do módulo</label>' : ''}
       <div class="form-group"><label>Nome</label><input type="text" name="nome" value="${esc(ponto.nome)}" maxlength="60"></div>
       <div class="form-group"><label>Arquitetura</label><select name="arquitetura"><option value="">(escolha)</option>${opcoes}</select></div>
       <div class="net-botoes"><button type="button" data-action="nova"><i class="fa-solid fa-plus"></i> Nova arquitetura no compêndio</button>${salvo.arquitetura ? '<button type="button" data-action="editor"><i class="fa-solid fa-diagram-project"></i> Editor visual</button><button type="button" data-action="abrirArquitetura"><i class="fa-solid fa-pen"></i> Ficha do sistema</button>' : ''}</div>
@@ -241,7 +245,7 @@ export class ConfigDoPonto extends ApplicationV2 {
         <div class="form-group"><label>Interface mínima (rank da Role de netrunning)</label><input type="number" name="rankMinimo" value="${esc(ponto.rankMinimo)}" min="0" max="10"></div>
       </fieldset>
       <div class="net-colunas">
-        <label class="net-check"><input type="checkbox" name="oculto"${marcado(ponto.oculto)}> Oculto: o marcador só aparece para o mestre e para quem achar com Scanner</label>
+        <label class="net-check"><input type="checkbox" name="oculto"${marcado(ponto.oculto)}> <span>Oculto: os jogadores <b>não veem</b> o marcador nem conectam até acharem o ponto com o Scanner</span></label>
         <div class="form-group"><label>DV do Scanner (se oculto)</label><input type="number" name="dvScanner" value="${esc(ponto.dvScanner ?? 10)}" min="2" max="30"><p class="hint">O Scanner acha até resultado × 10 m.${(ponto.revelados || []).length ? ` Achado por ${(ponto.revelados || []).map(id => esc((game.users.get(id) || {}).name || '?')).join(', ')}.` : ''}</p></div>
       </div>
       <label class="net-check"><input type="checkbox" name="reiniciar"${marcado(ponto.reiniciar)}> Sem ninguém conectado, a arquitetura reinicia as defesas (RED p. 198)</label>
@@ -273,7 +277,9 @@ export class ConfigDoPonto extends ApplicationV2 {
       ligacoes: dados.arquitetura === salvo.arquitetura ? this.ligacoes : [], revelados: salvo.revelados || []
     };
     await this.tile.setFlag(MODULE_ID, FLAG_PONTO, ponto);
-    ui.notifications.info(`${ponto.nome}: ponto de acesso salvo.`);
+    if (dados.imagemPadrao && semImagem(this.tile)) await this.tile.update({ 'texture.src': IMAGEM_PADRAO });
+    if (ponto.oculto || this.tile.hidden) ui.notifications.warn(`${ponto.nome}: salvo, mas ${this.tile.hidden ? 'o Tile está escondido' : 'o ponto está oculto'}: os jogadores não veem o marcador${ponto.oculto ? ' até acharem com o Scanner' : ''}.`);
+    else ui.notifications.info(`${ponto.nome}: ponto de acesso salvo.`);
   }
 
   static #ligar(event, alvo) {

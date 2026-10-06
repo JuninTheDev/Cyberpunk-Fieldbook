@@ -174,7 +174,8 @@ module.exports = async ({ edge, servidores, r }) => {
         for (const a of [netrunner, curioso]) await a.update({ ownership: { default: 0, ${JSON.stringify(ids.usuario)}: 3 } });
         await game.users.get(${JSON.stringify(ids.usuario)}).update({ character: netrunner.id });
         const scene = await Scene.create({ name: 'NET teste', width: 3000, height: 2000, padding: 0, grid: { size: 100, distance: 2, units: 'm' }, tokenVision: false, fog: { exploration: false } });
-        const [tile] = await scene.createEmbeddedDocuments('Tile', [{ x: 1400, y: 800, width: 200, height: 200, texture: { src: 'icons/svg/net.svg' } }]);
+        // Sem imagem, como um Tile vazio que o mestre põe só para marcar o lugar.
+        const [tile] = await scene.createEmbeddedDocuments('Tile', [{ x: 1400, y: 800, width: 200, height: 200 }]);
         const criados = await scene.createEmbeddedDocuments('Token', [
           { name: netrunner.name, actorId: netrunner.id, actorLink: true, x: 1100, y: 800, texture: { src: netrunner.img || 'icons/svg/mystery-man.svg' } },
           { name: curioso.name, actorId: curioso.id, actorLink: true, x: 1100, y: 1000, texture: { src: 'icons/svg/mystery-man.svg' } }
@@ -201,6 +202,7 @@ module.exports = async ({ edge, servidores, r }) => {
         form.requestSubmit();
       })()`);
       const ponto = await esperar(edge, `game.scenes.get(${JSON.stringify(ids.cena)}).tiles.get(${JSON.stringify(ids.tile)}).getFlag('net-architect', 'pontoDeAcesso')`);
+      const imagem = await esperar(edge, `game.scenes.get(${JSON.stringify(ids.cena)}).tiles.get(${JSON.stringify(ids.tile)}).texture.src`);
       // Segunda vez na configuração: liga o nó de controle do ramo B à porta e à luz da cena.
       await edge.evaluate(`game.modules.get('net-architect').api.configurar(game.scenes.get(${JSON.stringify(ids.cena)}).tiles.get(${JSON.stringify(ids.tile)}))`);
       const secao = await esperar(edge, `!!document.querySelector('.net-config [data-escolha="3b.0"]')`);
@@ -211,7 +213,7 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.shot('config-ligacoes');
       await edge.evaluate("document.querySelector('.net-config').requestSubmit()");
       const ligado = await esperar(edge, `(game.scenes.get(${JSON.stringify(ids.cena)}).tiles.get(${JSON.stringify(ids.tile)}).getFlag('net-architect', 'pontoDeAcesso').ligacoes || []).filter(l => l.controle === '3b.0').length === 2 && game.scenes.get(${JSON.stringify(ids.cena)}).tiles.get(${JSON.stringify(ids.tile)}).getFlag('net-architect', 'pontoDeAcesso')`);
-      return [aberta && secao && ligado && ligado.nome === 'Terminal da clínica' && /arquiteturas-net/.test(ligado.arquitetura) && ligado.alcance === 6 && ligado.exigeDeck, `${JSON.stringify(ligado && ligado.ligacoes)} · alcance ${ligado && ligado.alcance}`];
+      return [aberta && secao && ligado && /net-architect\/icones\/terminal\.svg$/.test(imagem || '') && ligado.nome === 'Terminal da clínica' && /arquiteturas-net/.test(ligado.arquitetura) && ligado.alcance === 6 && ligado.exigeDeck, `${JSON.stringify(ligado && ligado.ligacoes)} · alcance ${ligado && ligado.alcance} · imagem do Tile sem imagem: ${imagem}`];
     });
 
     await passo('jogador entra e vê o marcador NET; o token sem cyberdeck não conecta', async () => {
@@ -441,10 +443,13 @@ module.exports = async ({ edge, servidores, r }) => {
     await passo('Scanner no HUD do token acha o ponto oculto; o marcador aparece só para quem achou', async () => {
       const criado = await edge.evaluate(`(async () => {
         const scene = game.scenes.get(${JSON.stringify(ids.cena)});
-        const [t2, t3] = await scene.createEmbeddedDocuments('Tile', [
+        const novos = await scene.createEmbeddedDocuments('Tile', [
           { x: 500, y: 250, width: 200, height: 200, texture: { src: 'icons/svg/net.svg' } },
           { x: 300, y: 700, width: 100, height: 100, texture: { src: 'icons/svg/net.svg' } }
         ]);
+        // A ordem da resposta não é a do pedido: cada Tile pela posição.
+        const t2 = novos.find(t => t.x === 500);
+        const t3 = novos.find(t => t.x === 300);
         const base = { ativo: true, alcance: 6, exigeDeck: true, rankMinimo: 1, reiniciar: true, ligacoes: [], revelados: [], dvScanner: 8 };
         await t2.setFlag('net-architect', 'pontoDeAcesso', { ...base, nome: 'Servidor avançado', arquitetura: ${JSON.stringify(ids.item)}, oculto: false });
         await t3.setFlag('net-architect', 'pontoDeAcesso', { ...base, nome: 'Terminal escondido', arquitetura: ${JSON.stringify(ids.item)}, oculto: true });

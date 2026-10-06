@@ -238,3 +238,4 @@
 .application.net-architect .window-content .net-ed-conteudo select, .application.net-architect .window-content .net-ed-conteudo input[type="text"] { width: 100%; }
 .application.net-architect .window-content .net-ed-conteudo textarea { width: 100%; min-height: 44px; border: 1px solid var(--net-linha); background: #061012; color: var(--net-texto); resize: vertical; }
 .net-ed-conteudo .net-linha select { flex: 1; }
+.application.net-architect .window-content .net-aviso-config { padding: 5px 8px; border: 1px solid #a35a00; background: rgba(90, 40, 0, 0.45); color: #ffd9a0; }
