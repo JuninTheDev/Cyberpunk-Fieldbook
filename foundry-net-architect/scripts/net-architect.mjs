@@ -13,12 +13,22 @@ import { garantirCompendio, arquiteturasDisponiveis, packDoMundo } from './compe
 import { vezDoInimigo } from './combate.mjs';
 import { queimar } from './efeitos.mjs';
 import { efeitoSimples, tocarLocal } from './fx.mjs';
+import { responderRolagem } from './rolagens.mjs';
 
 Hooks.once('init', () => {
   const registrar = (chave, dados) => game.settings.register(MODULE_ID, chave, { config: true, ...dados });
   registrar('rolagens', {
     name: 'Rolagens da NET no chat', hint: 'Quem vê os cartões das rolagens feitas na NET (as do netrunner e as dos inimigos).',
     scope: 'world', type: String, default: 'publicas', choices: { publicas: 'Todos', privadas: 'Só o mestre e o dono do netrunner' }
+  });
+  registrar('rolagemManual', {
+    name: 'O jogador rola as próprias rolagens',
+    hint: 'As rolagens do netrunner (habilidades, ataques de programa, defesa contra um ataque, velocidade contra o Black ICE) abrem a janela de rolagem do sistema no computador do jogador, com modificadores e Sorte, e o dado sai no nome dele. Se ele não responder a tempo (ou estiver desconectado), o mestre rola. Desligado, o mestre rola tudo.',
+    scope: 'world', type: Boolean, default: true
+  });
+  registrar('esperaDaRolagem', {
+    name: 'Tempo para o jogador rolar (segundos)', hint: 'Quanto o mestre espera o jogador confirmar a janela de rolagem. Passou disso, a janela do jogador fecha e o mestre rola por ele.',
+    scope: 'world', type: Number, default: 120, range: { min: 10, max: 300, step: 10 }
   });
   registrar('danoAutomatico', {
     name: 'Efeitos do Black ICE na ficha',
@@ -58,7 +68,7 @@ const tratadores = {
 };
 
 Hooks.once('ready', async () => {
-  iniciarSocket(tratadores, { fx: efeitoSimples, som: dados => tocarLocal(dados.nome) });
+  iniciarSocket(tratadores, { fx: efeitoSimples, som: dados => tocarLocal(dados.nome) }, { rolar: responderRolagem });
   escutarCliques();
   game.modules.get(MODULE_ID).api = {
     configurar: tile => configurar(tile.document || tile),

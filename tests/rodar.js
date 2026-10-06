@@ -55,7 +55,7 @@ class Relatorio {
       falhas += ruins.length;
       console.log(`\n${ruins.length ? '✗' : '✓'} ${nome} (${relatorio.itens.length - ruins.length}/${relatorio.itens.length}, ${Math.round((Date.now() - inicio) / 1000)} s)`);
       for (const item of relatorio.itens) {
-        if (!item.ok || process.env.DETALHES) console.log(`  ${item.ok ? '✓' : '✗'} ${item.nome}${item.detalhe ? `: ${item.detalhe.slice(0, 220)}` : ''}${process.env.DETALHES && item.ms > Number(process.env.LIMITE_MS || 2000) ? ` (${(item.ms / 1000).toFixed(1)} s)` : ''}`);
+        if (!item.ok || process.env.DETALHES) console.log(`  ${item.ok ? '✓' : '✗'} ${item.nome}${item.detalhe ? `: ${item.detalhe.slice(0, Number(process.env.LARGURA || 220))}` : ''}${process.env.DETALHES && item.ms > Number(process.env.LIMITE_MS || 2000) ? ` (${(item.ms / 1000).toFixed(1)} s)` : ''}`);
       }
     }
   } finally {

@@ -10,7 +10,8 @@ Pontos de acesso à NET em qualquer Tile da cena, para o Foundry VTT 12 (a API u
   - o nó de controle tomado, com os comandos das portas, luzes, sons e tokens ligados a ele;
   - o mapa ramificado da arquitetura e o registro do netrun.
 - **O token fica marcado** como "Conectado à NET" para todos: o ícone do status e um anel ciano pulsando.
-- **O mestre resolve tudo** pelo socket: rolagens do sistema, Black ICE, demônios, netrunners inimigos, combate e estado. Os jogadores só pedem.
+- **O mestre resolve tudo** pelo socket: Black ICE, demônios, netrunners inimigos, combate e estado. Os jogadores só pedem.
+- **O jogador rola os próprios dados.** Cada rolagem do netrunner abre, no computador dele, a janela de rolagem do sistema. Lá ele confere os modificadores, põe Sorte e confirma.
 - **As arquiteturas são documentos reutilizáveis:** itens *NET Architecture* do próprio sistema, no compêndio do mundo **Arquiteturas da NET**, com um **editor visual** próprio.
 
 ## Instalar e ativar
@@ -47,6 +48,22 @@ Pontos de acesso à NET em qualquer Tile da cena, para o Foundry VTT 12 (a API u
 4. **Mestre:**
    - **Clique no marcador:** abre o painel do mestre. Com um token selecionado e o ponto vazio, ele oferece conectar esse token.
    - **Shift + clique:** abre a configuração.
+
+## Rolagens do jogador
+
+Com **O jogador rola as próprias rolagens** ligado (padrão), o mestre pede ao dono do netrunner que role e espera.
+
+- **O que o jogador rola:**
+  - as ações dele: habilidades, ataques de programa e o Scanner;
+  - o que ele responde, mesmo quando foi o mestre quem disparou: a **defesa** contra o ataque de um Black ICE, demônio ou netrunner inimigo, e a **velocidade** contra o Black ICE no andar.
+- **Antes de rolar,** o inimigo rola primeiro e o título da janela mostra quanto ele tirou. Um aviso diz o que o jogador precisa passar.
+- **Na janela do sistema,** o jogador vê o rank, os bônus dos programas e efeitos, e os modificadores; põe Sorte (vem preenchida com a da janela da NET); e confirma. O dado e o cartão saem no nome dele.
+- **Cancelar:**
+  - numa ação, nada acontece (nem Ação NET, nem Sorte);
+  - na defesa e na velocidade, rola assim mesmo, sem os ajustes.
+- **Sem resposta** no tempo da configuração (padrão 2 minutos) ou com o jogador desconectado, a janela dele fecha e o mestre rola por ele. O registro da NET avisa.
+- **As ações que o próprio mestre faz** pelo painel (com o jogador fora) continuam com o mestre.
+- **As rolagens dos inimigos** são sempre do mestre.
 
 ## Regras implementadas (RED p. 197–212)
 
@@ -122,6 +139,8 @@ Os números do Black ICE e dos demônios são os do livro-base, iguais aos da wi
 ## Configurações do módulo
 
 - **Rolagens da NET no chat:** todos veem, ou só o mestre e o dono do netrunner.
+- **O jogador rola as próprias rolagens:** ligado por padrão. Desligado, o mestre rola tudo.
+- **Tempo para o jogador rolar:** de 10 a 300 segundos (padrão 120).
 - **Efeitos do Black ICE na ficha:** ligado por padrão.
 - **Inimigos da NET no combate:** ligado por padrão.
 - **Animações da NET:** Sequencer e JB2A se tiver, só o efeito simples, ou desligadas.
@@ -150,8 +169,8 @@ Os números do Black ICE e dos demônios são os do livro-base, iguais aos da wi
 | `scripts/arquivos.mjs` | Arquivos do Eye-Dee como diários. |
 | `scripts/fx.mjs` | Animações (Sequencer e JB2A, ou simples) e sons sintetizados. |
 | `scripts/editor.mjs` | O editor visual de arquitetura (ApplicationV2). |
-| `scripts/socket.mjs` | Pedidos do jogador ao mestre ativo, um de cada vez. |
-| `scripts/rolagens.mjs` | Rolagens e cartões de chat do próprio sistema. |
+| `scripts/socket.mjs` | Pedidos do jogador ao mestre ativo, um de cada vez, e as perguntas do mestre ao jogador (rolar). |
+| `scripts/rolagens.mjs` | Rolagens e cartões de chat do próprio sistema, e a janela de rolagem no computador do jogador. |
 | `scripts/arquitetura.mjs` | Lê o item da arquitetura (andares, ramos, defensores) e converte para o editor. Sem Foundry: os testes rodam no Node. |
 | `scripts/janela.mjs` | A janela da NET (ApplicationV2). |
 | `scripts/ponto-de-acesso.mjs` | Marcador no mapa, clique, botões nos HUDs e configuração. |

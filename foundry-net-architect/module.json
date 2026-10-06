@@ -2,7 +2,7 @@
   "id": "net-architect",
   "title": "NET Architect",
   "description": "Pontos de acesso à NET em qualquer Tile da cena, para o Cyberpunk RED - CORE: o netrunner conecta pelo token, vê o mapa ramificado da arquitetura e age com as habilidades de Interface; o mestre resolve as rolagens e o Black ICE, e o token fica marcado como conectado para todos.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "authors": [{ "name": "Junin" }],
   "compatibility": { "minimum": "12", "verified": "12.343", "maximum": "13" },
   "relationships": {

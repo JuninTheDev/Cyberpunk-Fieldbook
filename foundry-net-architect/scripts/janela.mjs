@@ -119,7 +119,7 @@ export class JanelaNet extends ApplicationV2 {
         ${corredor && actor ? this.#hud(ctx, nos) : '<p class="net-nota">Ninguém conectado. Os jogadores conectam clicando no marcador NET do ponto de acesso, perto dele.</p>'}
         ${this.gm ? this.#painelDoMestre(ctx, nos, selecionado) : ''}
       </aside>
-      ${this.ocupado ? '<div class="net-espera"><i class="fa-solid fa-circle-notch fa-spin"></i> Esperando o mestre resolver…</div>' : ''}
+      ${this.ocupado ? '<div class="net-espera"><i class="fa-solid fa-circle-notch fa-spin"></i> Resolvendo… se abrir a janela de rolagem, confirme lá.</div>' : ''}
     </div>`;
   }
 

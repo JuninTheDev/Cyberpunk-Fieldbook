@@ -54,6 +54,42 @@ export async function interfaceRoll({ actor, token, deck, role, habilidade, sort
   return cprRoll.resultTotal;
 }
 
+// No computador do jogador: a rolagem do netrunner com a janela de rolagem do sistema (modificadores, Sorte,
+// confirmar ou cancelar), o dado e o cartão no chat em nome dele. Devolve { total } ou { cancelado: true }.
+// Numa rolagem obrigatória (defesa, velocidade), cancelar a janela rola assim mesmo, sem os ajustes.
+export async function rolarComJanela({ actor, token, deck, role, habilidade = null, programa = null, titulo = '', mods = [], sorte = 0, obrigatoria = false, pergunta = null }) {
+  const { rolls } = await classes();
+  const cprRoll = programa
+    ? deck.createRoll(rolls.rollTypes.CYBERDECKPROGRAM, actor, { cyberdeckId: deck.id, programId: programa.id, executionType: 'atk', netRoleItem: role })
+    : deck.createRoll(rolls.rollTypes.INTERFACEABILITY, actor, { interfaceAbility: habilidade, cyberdeck: deck, netRoleItem: role });
+  if (titulo) cprRoll.rollTitle = titulo;
+  if (mods.length) cprRoll.addMod(mods);
+  const disponivel = Number(actor.system && actor.system.stats && actor.system.stats.luck && actor.system.stats.luck.value) || 0;
+  cprRoll.luck = Math.max(0, Math.min(Number(sorte) || 0, disponivel));
+  // O mestre cansou de esperar (e rolou): a janela fecha sozinha e nada sai daqui.
+  if (pergunta) pergunta.aoExpirar = () => { const janela = Object.values(ui.windows).find(app => app.rollData === cprRoll); if (janela) janela.closeDialog(); };
+  const seguir = await cprRoll.handleRollDialog({ ctrlKey: false, metaKey: false, type: MODULE_ID }, actor, deck);
+  if (pergunta && pergunta.expirou) { ui.notifications.warn('Demorou demais: o mestre já rolou por você.'); return { cancelado: true }; }
+  if (!seguir && !obrigatoria) return { cancelado: true };
+  cprRoll.luck = Math.max(0, Math.min(Number(cprRoll.luck) || 0, disponivel));
+  await cprRoll.roll();
+  if (cprRoll.luck) await actor.update({ 'system.stats.luck.value': disponivel - cprRoll.luck });
+  await postar(cprRoll, { actor, token, item: deck });
+  return { total: cprRoll.resultTotal };
+}
+
+// O pedido do mestre chega aqui (no jogador): acha a ficha e rola.
+export async function responderRolagem(dados, pergunta = null) {
+  const token = await fromUuid(dados.token);
+  const actor = token && token.actor;
+  if (!actor) return null;
+  const deck = actor.items.get(dados.deck);
+  const role = actor.items.get(dados.role);
+  if (!deck || !role) return null;
+  if (dados.aviso) ui.notifications.info(dados.aviso);
+  return rolarComJanela({ actor, token, deck, role, habilidade: dados.habilidade, programa: dados.programa ? actor.items.get(dados.programa) : null, titulo: dados.titulo, mods: dados.mods || [], sorte: dados.sorte, obrigatoria: dados.obrigatoria, pergunta });
+}
+
 // Ataque de um programa instalado no deck (Interface + ATK do programa + 1d10).
 export async function ataqueDePrograma({ actor, token, deck, role, programa, sorte = 0 }) {
   const { rolls } = await classes();

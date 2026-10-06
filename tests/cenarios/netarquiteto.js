@@ -222,6 +222,20 @@ module.exports = async ({ edge, servidores, r }) => {
       await noJogador(`(() => { for (const app of Object.values(ui.windows)) app.close(); for (const app of foundry.applications.instances.values()) app.close(); })()`);
       await sleep(400);
       await noJogador(`(() => { window.__avisos = []; const w = ui.notifications.warn.bind(ui.notifications); ui.notifications.warn = (m, o) => { window.__avisos.push(String(m)); return w(m, o); }; })()`);
+      await noJogador(`(() => {
+        window.__robo = true;
+        window.__rolagens = [];
+        setInterval(() => {
+          for (const botao of document.querySelectorAll('.window-app.dialog .cpr-dialog-button[name="confirm"]')) {
+            const janela = botao.closest('.window-app');
+            if (janela.dataset.netVisto) continue;
+            if (!window.__robo) continue;
+            janela.dataset.netVisto = '1';
+            window.__rolagens.push((janela.querySelector('.window-title') || {}).textContent || '');
+            botao.click();
+          }
+        }, 150);
+      })()`);
       const marcadores = await esperar(jogador, `(canvas.interface.children.find(c => c.name === 'net-architect-pontos') || { children: [] }).children.length`);
       const selecionados = await noJogador(`(() => { canvas.tokens.releaseAll(); canvas.tokens.get(${JSON.stringify(ids.curioso)}).control({ releaseOthers: true }); return canvas.tokens.controlled.map(t => t.name); })()`);
       const clique = await clicarNoPonto();
@@ -248,6 +262,7 @@ module.exports = async ({ edge, servidores, r }) => {
 
     // Dados fixos no cliente do mestre (quem rola). O Foundry 12 tira a face com ceil((1 − u) × faces): u = 0,45 dá d10 = 6 e d6 = 4.
     await edge.evaluate('CONFIG.Dice.randomUniform = () => 0.45');
+    await noJogador('CONFIG.Dice.randomUniform = () => 0.45');
 
     await passo('See Ya ativo soma +2: Pathfinder (4 + 6 + 2 = 12) revela a clínica inteira; o cartão do sistema vai para o chat', async () => {
       if (ids.seeya) {
@@ -256,12 +271,58 @@ module.exports = async ({ edge, servidores, r }) => {
         await esperar(edge, `game.actors.get(${JSON.stringify(ids.ator)}).items.get(${JSON.stringify(ids.seeya)}).system.isRezzed`);
       }
       const chatAntes = await edge.evaluate('game.messages.size');
-      const e = await usar('pathfinder', est => est.vistos.length >= 8);
+      await noJogador('window.__robo = false');
+      await esperar(jogador, `!!document.querySelector('.net-janela [data-habilidade="pathfinder"]:not([disabled])')`);
+      await naJanela('[data-habilidade="pathfinder"]');
+      const janelaDeRolagem = await esperar(jogador, `(() => { const b = document.querySelector('.window-app.dialog .cpr-dialog-button[name="confirm"]'); return b ? (b.closest('.window-app').querySelector('.window-title') || {}).textContent : null; })()`);
+      await jogador.shot('janela-de-rolagem');
+      await noJogador(`document.querySelector('.window-app.dialog .cpr-dialog-button[name="confirm"]').click()`);
+      await noJogador('window.__robo = true');
+      const e = await esperarEstado(est => est.vistos.length >= 8);
+      const autor = await edge.evaluate(`(() => { const m = game.messages.contents.find(m => /Pathfinder/.test(m.content)); return m ? (m.author || m.user).id : null; })()`);
       const chat = await edge.evaluate(`game.messages.contents.slice(${chatAntes}).map(m => m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 60))`);
       const mapa = await esperar(jogador, `document.querySelectorAll('.net-janela .net-no:not(.net-tipo-oculto)').length`);
       await jogador.shot('mapa-revelado');
       const total = ((ultimas(e, 1).match(/Pathfinder \((\d+)\)/) || [])[1]) | 0;
-      return [e.vistos.length === 8 && chat.length >= 1 && mapa === 9 && total === (ids.seeya ? 12 : 10), `Pathfinder ${total} · vistos ${e.vistos.join(',')} · nós na tela ${mapa} · chat: ${chat.join(' / ')}`];
+      return [/Pathfinder/.test(janelaDeRolagem || '') && autor === ids.usuario && e.vistos.length === 8 && chat.length >= 1 && mapa === 9 && total === (ids.seeya ? 12 : 10), `janela de rolagem no jogador: "${janelaDeRolagem}" · cartão do jogador ${autor === ids.usuario} · Pathfinder ${total} · vistos ${e.vistos.join(',')} · nós na tela ${mapa}`];
+    });
+
+    await passo('cancelar a janela de rolagem do jogador não faz nada: nem registro, nem Sorte', async () => {
+      const antes = await estado(edge);
+      const sorte = () => edge.evaluate(`game.actors.get(${JSON.stringify(ids.ator)}).system.stats.luck.value`);
+      const sorteAntes = await sorte();
+      const avisos = await noJogador('window.__avisos.length');
+      await noJogador('window.__robo = false');
+      await noJogador(`(() => { const i = document.querySelector('.net-janela [data-campo="sorte"]'); i.value = '2'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+      await naJanela('[data-habilidade="cloak"]');
+      const abriu = await esperar(jogador, `!!document.querySelector('.window-app.dialog .cpr-dialog-button[name="cancel"]')`);
+      const sortePreenchida = await noJogador(`(document.querySelector('.window-app.dialog input[name="luck"]') || {}).value`);
+      if (abriu) await noJogador(`document.querySelector('.window-app.dialog .cpr-dialog-button[name="cancel"]').click()`);
+      const aviso = await esperar(jogador, `window.__avisos.slice(${avisos}).join(' ')`, 40);
+      await noJogador('window.__robo = true');
+      // A Sorte escolhida continua na janela (para tentar de novo); o resto do teste rola sem ela.
+      await esperar(jogador, `!!document.querySelector('.net-janela [data-campo="sorte"]')`);
+      await noJogador(`(() => { const i = document.querySelector('.net-janela [data-campo="sorte"]'); i.value = '0'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+      const depois = await estado(edge);
+      return [abriu && sortePreenchida === '2' && /cancelada/.test(aviso || '') && ultimas(depois, 1) === ultimas(antes, 1) && depois.log.length === antes.log.length && (await sorte()) === sorteAntes, `janela ${abriu} · Sorte preenchida ${sortePreenchida} · ${aviso} · registro ${antes.log.length} → ${depois.log.length} · Sorte ${sorteAntes} → ${await sorte()}`];
+    });
+
+    await passo('o jogador não rola a tempo: a janela de rolagem dele fecha e o mestre rola por ele', async () => {
+      await edge.evaluate(`game.settings.set('net-architect', 'esperaDaRolagem', 10)`);
+      const antes = await estado(edge);
+      const avisos = await noJogador('window.__avisos.length');
+      await noJogador('window.__robo = false');
+      await esperar(jogador, `!!document.querySelector('.net-janela [data-habilidade="pathfinder"]:not([disabled])')`);
+      await naJanela('[data-habilidade="pathfinder"]');
+      const abriu = await esperar(jogador, `!!document.querySelector('.window-app.dialog .cpr-dialog-button[name="confirm"]')`);
+      const desde = (antes.log[antes.log.length - 1] || { t: 0 }).t;
+      const e = await esperarEstado(est => est.log.filter(l => l.t > desde).length >= 2, 100);
+      const fechou = await esperar(jogador, `!document.querySelector('.window-app.dialog .cpr-dialog-button[name="confirm"]')`, 20);
+      const aviso = await esperar(jogador, `window.__avisos.slice(${avisos}).join(' ')`, 20);
+      await noJogador('window.__robo = true');
+      await edge.evaluate(`game.settings.set('net-architect', 'esperaDaRolagem', 120)`);
+      const novas = e.log.filter(l => l.t > desde).map(l => l.texto).join(' | ');
+      return [abriu && fechou && /não rolou a tempo/.test(novas) && /Pathfinder \(\d+\)/.test(novas) && /Demorou demais/.test(aviso || ''), `janela ${abriu} · fechou ${fechou} · ${novas} · aviso: ${aviso}`];
     });
 
     await passo('Backdoor (10 contra DV 8) quebra a senha do andar 1; antes disso a descida estava travada', async () => {
@@ -281,8 +342,11 @@ module.exports = async ({ edge, servidores, r }) => {
       const depois = await hp();
       e = await usar('zap', est => (est.ices.find(i => i.chave === '2a.0') || {}).rez === 11);
       const combate = await edge.evaluate(`(() => { const c = game.combats.find(c => c.combatants.some(cb => cb.actor && cb.actor.type === 'blackIce')); if (!c) return null; const ice = c.combatants.find(cb => cb.actor && cb.actor.type === 'blackIce'); return { ice: ice.name, escondido: ice.token.hidden, iniciativa: ice.initiative, netrunner: c.combatants.some(cb => cb.tokenId === ${JSON.stringify(ids.token)}) }; })()`);
+      // O token recém-criado só fica invisível no primeiro redesenho do canvas do jogador: espera um pouco.
+      await esperar(jogador, `canvas.tokens.placeables.filter(t => t.document.getFlag('net-architect', 'chave')).every(t => !t.visible)`, 15);
       const visto = await noJogador(`canvas.tokens.placeables.filter(t => t.document.getFlag('net-architect', 'chave')).map(t => t.visible).join()`);
-      return [antes - depois === 4 && (e.ices.find(i => i.chave === '2a.0') || {}).rez === 11 && combate && combate.ice === 'Wisp' && combate.escondido && combate.netrunner && !/true/.test(visto),
+      const rolou = await noJogador(`window.__rolagens.some(t => /Velocidade contra Wisp/.test(t))`);
+      return [rolou && antes - depois === 4 && (e.ices.find(i => i.chave === '2a.0') || {}).rez === 11 && combate && combate.ice === 'Wisp' && combate.escondido && combate.netrunner && !/true/.test(visto),
         `HP ${antes} → ${depois} · combate ${JSON.stringify(combate)} · token do ICE visível para o jogador: ${visto || 'não'} · ${ultimas(e, 3)}`];
     });
 
@@ -513,7 +577,8 @@ module.exports = async ({ edge, servidores, r }) => {
       const dialogo2 = await esperar(edge, `!!document.querySelector('.application.dialog [data-action="pular"]')`);
       const depoisFogo = await hp();
       if (dialogo2) await edge.evaluate(`document.querySelector('.application.dialog [data-action="pular"]').click()`);
-      return [info.ordem[0] === 'Hellhound' && dialogo && antes - depoisAtaque === 8 && depoisAtaque - depoisFogo === 2 && dialogo2,
+      const defesa = await noJogador(`window.__rolagens.some(t => /Defesa contra Hellhound/.test(t))`);
+      return [defesa && info.ordem[0] === 'Hellhound' && dialogo && antes - depoisAtaque === 8 && depoisAtaque - depoisFogo === 2 && dialogo2,
         `ordem ${info.ordem} · ataque ${antes} → ${depoisAtaque} · fogo no fim do turno ${depoisAtaque} → ${depoisFogo}`];
     });
 

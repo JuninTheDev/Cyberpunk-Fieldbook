@@ -4,7 +4,7 @@
 // o estado no Tile. No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
 import { MODULE_ID, FLAG_PONTO, FLAG_ESTADO, FLAG_CONEXAO, STATUS_ID, HABILIDADES, NOME_DO_TIPO, acoesPorRank, iceDaChave, demonioDaChave } from './constantes.mjs';
 import { ENTRADA, lerArquitetura, vizinhos, filhosDe, ehFundo, revelarPathfinder } from './arquitetura.mjs';
-import { erro } from './socket.mjs';
+import { erro, perguntarAoJogador } from './socket.mjs';
 import * as rolagens from './rolagens.mjs';
 import { aplicarEfeitoDoIce, danoNoCerebro, apagarFogo, emChamas } from './efeitos.mjs';
 import { entrarNoCombate, sincronizarCombate, sairDoCombate } from './combate.mjs';
@@ -71,6 +71,29 @@ function exigirNetrunner(actor) {
   if (!n.deck) throw erro('Sem cyberdeck equipado: não dá para agir na NET.');
   if (!n.role) throw erro('Sem Role de netrunning (Interface) na ficha: o sistema não sabe com que rank rolar.');
   return n;
+}
+
+// ---------------- Rolagens do netrunner ----------------
+// Com "O jogador rola" ligado, o mestre pede ao dono do netrunner (se estiver conectado) que role na janela do
+// sistema: as ações dele (habilidades, ataques de programa) quando foi ele quem pediu, e sempre as rolagens a que
+// ele responde (defesa contra um ataque, velocidade contra o Black ICE). Sem resposta no tempo da configuração, o mestre rola.
+const donoDo = (corredor, actor) => (corredor && game.users.get(corredor.usuario)) || game.users.find(user => !user.isGM && user.active && actor.testUserPermission(user, 'OWNER')) || null;
+async function rolarNetrunner(ctx, { habilidade = null, programa = null, titulo = '', mods = [], sorte = 0, obrigatoria = false, aviso = '' }) {
+  const { token, corredor, usuario } = ctx;
+  const actor = token.actor;
+  const n = exigirNetrunner(actor);
+  const dono = donoDo(corredor, actor);
+  const perguntar = game.settings.get(MODULE_ID, 'rolagemManual') && dono && dono.active && !dono.isGM && (obrigatoria || (usuario && !usuario.isGM));
+  if (perguntar) {
+    const espera = (Number(game.settings.get(MODULE_ID, 'esperaDaRolagem')) || 120) * 1000;
+    const resposta = await perguntarAoJogador(dono.id, 'rolar', { token: token.uuid, deck: n.deck.id, role: n.role.id, habilidade, programa: programa ? programa.id : null, titulo, mods, sorte, obrigatoria, aviso }, espera);
+    if (resposta && resposta.cancelado) throw erro('Rolagem cancelada: nada aconteceu.');
+    if (resposta && Number.isFinite(Number(resposta.total))) return Number(resposta.total);
+    if (ctx.est) registrar(ctx.est, `${dono.name} não rolou a tempo: o mestre rolou por ${(corredor && corredor.nome) || token.name}.`, 'info');
+  }
+  return programa
+    ? rolagens.ataqueDePrograma({ actor, token, deck: n.deck, role: n.role, programa, sorte })
+    : rolagens.interfaceRoll({ actor, token, deck: n.deck, role: n.role, habilidade, sorte, titulo, mods });
 }
 
 // ---------------- Inimigos: Black ICE, demônios e netrunners inimigos ----------------
@@ -279,8 +302,8 @@ async function encontrarInimigos(ctx, corredor) {
     if (conteudo.tipo === 'demonio') { registrar(est, `O demônio ${nome} detectou ${corredor.nome} (demônios sempre vencem a velocidade).`, 'falha'); continue; }
     if (conteudo.tipo === 'netrunner') { registrar(est, `${nome}, um netrunner inimigo, está neste andar.`, 'falha'); continue; }
     const ice = iceDaChave(conteudo.ice);
-    const meu = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: 'speed', titulo: `Velocidade contra ${ice.nome}` });
     const dele = await rolagens.rolagemDoIce({ nome: ice.nome, rotulo: 'SPD', valor: ice.spd });
+    const meu = await rolarNetrunner(ctx, { habilidade: 'speed', titulo: `Velocidade contra ${ice.nome} (tirou ${dele})`, obrigatoria: true, aviso: `Um ${ice.nome} no andar! Role a velocidade: precisa passar de ${dele}.` });
     if (meu > dele) registrar(est, `${corredor.nome} viu o ${ice.nome} primeiro (${meu} contra ${dele}).`, 'ok');
     else {
       registrar(est, `O ${ice.nome} foi mais rápido (${dele} contra ${meu}) e ataca na hora.`, 'falha');
@@ -303,7 +326,7 @@ async function ataqueDoInimigo(ctx, conteudo) {
     const m = actor ? netrunnerDo(actor) : null;
     dele = m && m.deck && m.role ? await rolagens.interfaceRoll({ actor, token: null, deck: m.deck, role: m.role, habilidade: 'zap', titulo: `${nome}: Zap` }) : await rolagens.rolagemDoIce({ nome, rotulo: 'Zap (Interface)', valor: m ? m.rank : 0 });
   }
-  const meu = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: 'defense', titulo: `Defesa contra ${nome}` });
+  const meu = await rolarNetrunner(ctx, { habilidade: 'defense', titulo: `Defesa contra ${nome} (tirou ${dele})`, obrigatoria: true, aviso: `O ${nome} te ataca! Role a defesa: precisa de ${dele} ou mais.` });
   if (dele <= meu) { registrar(est, `${corredor.nome} se defendeu do ${nome} (${meu} contra ${dele}).`, 'ok'); return; }
   registrar(est, `O ${nome} acertou ${corredor.nome} (${dele} contra ${meu}).`, 'falha');
   if (conteudo.tipo === 'ice') { await aplicarEfeitoDoIce(ctx, conteudo); return; }
@@ -388,7 +411,7 @@ export const operacoes = {
     gastarAcao(corredor, token, usuario);
     // Skunk: −2 em Slide por Skunk ativo que acertou este netrunner.
     const mods = chave === 'slide' && (corredor.skunks || []).length ? [{ value: -2 * corredor.skunks.length, source: 'Skunk' }] : [];
-    const total = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: chave, sorte: dados.sorte, mods });
+    const total = await rolarNetrunner(ctx, { habilidade: chave, sorte: dados.sorte, mods });
     await resolverHabilidade(ctx, { chave, info, alvo, total, dvVirus, texto: dados.texto || '' });
     await concluir(ctx);
     return { total };
@@ -421,7 +444,7 @@ export const operacoes = {
       if (!antipessoal && alvo.tipo === 'netrunner') throw erro(`${programa.name} é anti-programa: não afeta netrunners.`);
       gastarAcao(corredor, token, usuario);
       const nome = nomeDoInimigo(alvo);
-      const meu = await rolagens.ataqueDePrograma({ actor: token.actor, token, deck: n.deck, role: n.role, programa, sorte: dados.sorte });
+      const meu = await rolarNetrunner(ctx, { programa, sorte: dados.sorte });
       const dele = await defesaDo(alvo);
       if (meu > dele) {
         const dano = programa.system.damage || {};
@@ -485,7 +508,7 @@ export const operacoes = {
     if (!usuario.isGM && !token.actor.testUserPermission(usuario, 'OWNER')) throw erro('Você não controla este token.');
     if (conexaoDoToken(token)) throw erro('Scanner é usado fora da NET: desconecte antes.');
     const n = exigirNetrunner(token.actor);
-    const total = await rolagens.interfaceRoll({ actor: token.actor, token, deck: n.deck, role: n.role, habilidade: 'scanner' });
+    const total = await rolarNetrunner({ token, corredor: null, usuario, est: null }, { habilidade: 'scanner' });
     const raio = total * 10;
     const donos = game.users.filter(user => !user.isGM && token.actor.testUserPermission(user, 'OWNER')).map(user => user.id);
     const achados = [];
