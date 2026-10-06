@@ -176,7 +176,7 @@ Feche o Foundry do PC e dê dois cliques em **`servidor\enviar-para-servidor.bat
   - **Os PDFs dos livros:** no servidor, só o mestre abre.
   - **A pasta Data do Foundry:** mundos, sistemas, módulos e imagens. Pode demorar, se houver muitas imagens.
 - O servidor guarda uma cópia do que já tinha antes de receber.
-- Os módulos **Cyberpunk RED: 2077** e **NET Architect** são gerados e instalados de novo no servidor, com a versão do GitHub, em até uns 2 minutos.
+- Os módulos **Cyberpunk RED: 2077**, **NET Architect** e **Fluxo de Combate** são gerados e instalados de novo no servidor, com a versão do GitHub, em até uns 2 minutos. O Evasion Workflow sai da pasta de módulos (o Fluxo de Combate faz o mesmo).
 
 ## 7. Conferir
 

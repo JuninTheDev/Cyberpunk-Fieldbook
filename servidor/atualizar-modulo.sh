@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Gera o módulo cpr-2077 direto na pasta do Foundry do servidor e instala os outros módulos da wiki
-# (foundry-*/instalar.mjs, como o NET Architect): o mesmo que o atualizar-modulo.bat faz no PC.
+# (foundry-*/instalar.mjs, como o NET Architect e o Fluxo de Combate): o mesmo que o atualizar-modulo.bat faz no PC.
+# O instalar do Fluxo de Combate também apaga o Evasion Workflow (cpred-evasion-workflow), que fazia o mesmo.
 # Os compêndios ficam travados com o Foundry aberto: para o Foundry, gera e liga de novo. Por isso só roda
 # com ninguém conectado, a não ser com --agora (derruba quem estiver na mesa).
 # Uso: sudo bash servidor/atualizar-modulo.sh [--agora]
@@ -19,8 +20,9 @@ fi
 
 systemctl stop foundry
 trap 'systemctl start foundry' EXIT
-# Uma cópia vinda do Windows pode chegar sem permissão de escrita: o build precisa regravar a pasta do módulo.
-for pasta in "$DATA"/modules/cpr-2077 "$DATA"/modules/net-architect; do
+# Uma cópia vinda do Windows pode chegar sem permissão de escrita: o build precisa regravar a pasta do módulo
+# (e o instalar do Fluxo de Combate, apagar a do Evasion Workflow).
+for pasta in "$DATA"/modules/cpr-2077 "$DATA"/modules/net-architect "$DATA"/modules/fluxo-de-combate "$DATA"/modules/cpred-evasion-workflow; do
   [ -d "$pasta" ] && chown -R mesa:mesa "$pasta" && chmod -R u+rwX "$pasta"
 done
 cd "$WIKI/foundry-2077"

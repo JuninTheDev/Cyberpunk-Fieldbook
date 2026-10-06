@@ -1,0 +1,14 @@
+{
+  "id": "fluxo-de-combate",
+  "title": "Fluxo de Combate",
+  "description": "Ataque, defesa e dano automáticos para o Cyberpunk RED - CORE: o alvo escolhe esquivar, aguentar ou usar o escudo sem ver o total do ataque e rola a própria Evasão; o dano sai com a armadura, a cabeça, o autofogo e a lesão crítica na ficha. Também resolve explosivos em área, espingarda com cartucho, fogo supressivo e Death Save. Substitui o Evasion Workflow.",
+  "version": "1.0.0",
+  "authors": [{ "name": "Junin" }],
+  "compatibility": { "minimum": "12", "verified": "12.343", "maximum": "13" },
+  "relationships": {
+    "systems": [{ "id": "cyberpunk-red-core", "type": "system", "compatibility": { "minimum": "v0.92.4" } }]
+  },
+  "esmodules": ["scripts/fluxo-de-combate.mjs"],
+  "styles": ["styles/fluxo-de-combate.css"],
+  "socket": true
+}

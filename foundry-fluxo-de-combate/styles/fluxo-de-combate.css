@@ -1,0 +1,78 @@
+/* Fluxo de Combate: a janela "Ataque!" e os cartões do chat.
+   Os seletores da janela começam por .application.fluxo-de-combate .window-content porque o CSS do sistema CPR
+   estiliza botões e textos com `.application .window-content …` (e variáveis --cpr-text-* com !important). */
+.application.fluxo-de-combate {
+  --fluxo-fundo: rgba(6, 10, 13, 0.96);
+  --fluxo-painel: rgba(13, 22, 27, 0.94);
+  --fluxo-linha: #24434a;
+  --fluxo-ciano: #00ffd2;
+  --fluxo-magenta: #ff2e88;
+  --fluxo-amarelo: #f8ef02;
+  --fluxo-texto: #e5f6f2;
+  --fluxo-apagado: #9ab3b0;
+  --color-text-primary: var(--fluxo-texto);
+  --cpr-text-window: var(--fluxo-texto);
+  --cpr-text-normal: var(--fluxo-texto);
+  --cpr-text-hint: var(--fluxo-apagado);
+}
+.application.fluxo-de-combate .window-header { background: linear-gradient(90deg, #1a0710, #071a1c); border-bottom: 1px solid var(--fluxo-magenta); color: var(--fluxo-magenta); }
+.application.fluxo-de-combate .window-content { padding: 0; background: var(--fluxo-fundo); color: var(--fluxo-texto); font-size: 13px; }
+
+.fluxo-defesa-corpo { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; }
+.fluxo-duelo { display: flex; gap: 10px; align-items: center; justify-content: center; }
+.fluxo-duelo figure { display: flex; flex-direction: column; gap: 3px; align-items: center; margin: 0; max-width: 170px; }
+.fluxo-duelo img { width: 64px; height: 64px; border: 1px solid var(--fluxo-linha); border-radius: 3px; background: #000; object-fit: cover; }
+.fluxo-duelo figcaption { overflow: hidden; color: var(--fluxo-texto); font-weight: 700; text-align: center; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+.fluxo-duelo > i { color: var(--fluxo-magenta); font-size: 22px; }
+.fluxo-arma { margin: 0; color: var(--fluxo-apagado); text-align: center; }
+.fluxo-arma b { color: var(--fluxo-amarelo); }
+.fluxo-total { margin: 0; color: var(--fluxo-texto); text-align: center; }
+.fluxo-total b { color: var(--fluxo-magenta); font-size: 16px; }
+.fluxo-defesa-corpo .fluxo-nota { margin: 0; color: var(--fluxo-apagado); font-size: 12px; text-align: center; }
+.fluxo-opcoes { display: flex; flex-direction: column; gap: 6px; }
+.application.fluxo-de-combate .window-content button.fluxo-opcao {
+  display: flex; gap: 10px; align-items: center; justify-content: flex-start; width: 100%; height: auto; margin: 0; padding: 8px 10px;
+  border: 1px solid var(--fluxo-linha); border-radius: 3px; background: var(--fluxo-painel); color: var(--fluxo-texto); text-align: left; line-height: 1.3; cursor: pointer; box-shadow: none;
+}
+.application.fluxo-de-combate .window-content button.fluxo-opcao > i { width: 22px; color: var(--fluxo-ciano); font-size: 18px; text-align: center; }
+.application.fluxo-de-combate .window-content button.fluxo-opcao span { display: flex; flex-direction: column; gap: 2px; }
+.application.fluxo-de-combate .window-content button.fluxo-opcao b { color: var(--fluxo-texto); font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; }
+.application.fluxo-de-combate .window-content button.fluxo-opcao small { color: var(--fluxo-apagado); font-size: 12px; white-space: normal; }
+.application.fluxo-de-combate .window-content button.fluxo-opcao small b { color: var(--fluxo-amarelo); font-size: 12px; text-transform: none; letter-spacing: 0; }
+.application.fluxo-de-combate .window-content button.fluxo-opcao:hover { border-color: var(--fluxo-ciano); background: #0f2a2c; box-shadow: 0 0 8px rgba(0, 255, 210, 0.35); }
+.application.fluxo-de-combate .window-content button.fluxo-escudo > i { color: var(--fluxo-amarelo); }
+.application.fluxo-de-combate .window-content button.fluxo-aguentar > i { color: var(--fluxo-magenta); }
+.fluxo-tempo { height: 4px; overflow: hidden; border-radius: 2px; background: #10262a; }
+.fluxo-tempo span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, var(--fluxo-magenta), var(--fluxo-ciano)); transition: width 0.25s linear; }
+
+/* ---------- Chat ---------- */
+.fluxo-marca { color: #2bb7a4; cursor: help; }
+.fluxo-cartao, .fluxo-espera { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid #24434a; border-left: 3px solid #00b39a; border-radius: 3px; background: rgba(8, 20, 23, 0.06); font-size: 13px; }
+.fluxo-cartao header { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
+.fluxo-cartao header i { color: #ff2e88; }
+.fluxo-cartao header small { margin-left: auto; color: #6c8582; }
+.fluxo-cartao p { margin: 0; }
+.fluxo-cabecalho b { font-size: 15px; }
+.fluxo-alvos { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.fluxo-alvos li { padding: 4px 6px; border-left: 3px solid #8aa; border-radius: 2px; background: rgba(0, 0, 0, 0.04); }
+.fluxo-alvos li.fluxo-acertou, .fluxo-alvos li.fluxo-suprimido { border-left-color: #e0245e; }
+.fluxo-alvos li.fluxo-esquivou, .fluxo-alvos li.fluxo-errou, .fluxo-alvos li.fluxo-firme, .fluxo-alvos li.fluxo-fora { border-left-color: #1aa58e; }
+.fluxo-alvo { display: flex; gap: 6px; align-items: center; }
+.fluxo-alvo img { width: 24px; height: 24px; border: 0; border-radius: 2px; object-fit: cover; }
+.fluxo-selo { margin-left: auto; padding: 0 6px; border: 1px solid currentColor; border-radius: 2px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.fluxo-acertou .fluxo-selo, .fluxo-suprimido .fluxo-selo { color: #d0204f; }
+.fluxo-esquivou .fluxo-selo, .fluxo-errou .fluxo-selo, .fluxo-firme .fluxo-selo, .fluxo-fora .fluxo-selo { color: #12866f; }
+.fluxo-dano { font-size: 12px; }
+.fluxo-lesao { color: #b0153f; font-size: 12px; }
+.fluxo-cartao .fluxo-nota, .fluxo-espera .fluxo-nota { color: #6c8582; font-size: 12px; }
+.fluxo-perigo { color: #d0204f; }
+.fluxo-alerta { color: #b86e00; }
+.fluxo-cartao footer { display: flex; justify-content: flex-end; }
+.fluxo-cartao footer button, .fluxo-espera button { width: auto; height: auto; padding: 1px 8px; font-size: 12px; line-height: 1.6; }
+.fluxo-botoes { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.fluxo-botoes span { color: #6c8582; font-size: 12px; }
+.fluxo-desfeito { opacity: 0.55; }
+.fluxo-desfeito::after { content: "Desfeito pelo mestre"; color: #6c8582; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.fluxo-desfeito footer { display: none; }
+.fluxo-morte { border-left-color: #d0204f; }
+.fluxo-morte i { color: #d0204f; }

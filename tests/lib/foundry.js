@@ -47,8 +47,20 @@ function preparar() {
     fs.cpSync(path.join(fonte, pasta), path.join(modulo, pasta), { recursive: true });
   }
   fs.copyFileSync(path.join(fonte, 'module.json'), path.join(modulo, 'module.json'));
-  // NET Architect: só scripts, então instalar é copiar (o mesmo instalar.mjs do PC e do servidor).
-  execFileSync(process.execPath, ['instalar.mjs'], { cwd: path.join(raiz, 'foundry-net-architect'), env: { ...process.env, FOUNDRY_DATA: data }, stdio: 'ignore' });
+  // NET Architect e Fluxo de Combate: só scripts, então instalar é copiar (o mesmo instalar.mjs do PC e do servidor).
+  // O instalar do Fluxo de Combate tira o Evasion Workflow da pasta; o teste copia de novo (abaixo) para conferir o aviso.
+  for (const pasta of ['foundry-net-architect', 'foundry-fluxo-de-combate']) {
+    execFileSync(process.execPath, ['instalar.mjs'], { cwd: path.join(raiz, pasta), env: { ...process.env, FOUNDRY_DATA: data }, stdio: 'ignore' });
+  }
+  // Módulos da mesa que o Fluxo de Combate precisa respeitar: o Diwako (com o lib-wrapper) e o Evasion Workflow (com o
+  // socketlib). Vêm do Foundry do PC, quando ele tem; sem eles, o cenário pula essas checagens.
+  for (const id of ['lib-wrapper', 'diwako-cpred-additions', 'socketlib', 'cpred-evasion-workflow']) {
+    const real = path.join(DADOS_REAIS, 'Data', 'modules', id);
+    const copia = path.join(data, 'modules', id);
+    if (!fs.existsSync(path.join(real, 'module.json'))) continue;
+    fs.rmSync(copia, { recursive: true, force: true });
+    fs.cpSync(real, copia, { recursive: true });
+  }
 }
 
 // Apaga os atores e o chat do mundo de teste entre uma rodada e outra (o mundo fica, os personagens não).

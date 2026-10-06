@@ -37,3 +37,30 @@ Hooks.once('init', () => {
 Hooks.once('setup', () => {
   if (game.settings.get(MODULE_ID, 'economia2077')) applyEconomy();
 });
+
+// O Fluxo de Combate (foundry-fluxo-de-combate/) substitui o Evasion Workflow. Num mundo que usava o Evasion
+// Workflow, com o Fluxo de Combate instalado e desligado, o mestre liga com um clique (e o Evasion Workflow sai da
+// lista de módulos ligados). Pergunta uma vez só.
+const FLUXO = 'fluxo-de-combate';
+const EVASION = 'cpred-evasion-workflow';
+Hooks.once('init', () => {
+  game.settings.register(MODULE_ID, 'fluxoPerguntado', { scope: 'world', config: false, type: Boolean, default: false });
+});
+Hooks.once('ready', async () => {
+  if (!game.user.isGM || (game.users.activeGM && game.users.activeGM !== game.user)) return;
+  const fluxo = game.modules.get(FLUXO);
+  const usavaEvasion = EVASION in (game.settings.get('core', 'moduleConfiguration') || {});
+  if (!fluxo || fluxo.active || !usavaEvasion || game.settings.get(MODULE_ID, 'fluxoPerguntado')) return;
+  const ligar = await foundry.applications.api.DialogV2.confirm({
+    window: { title: 'Fluxo de Combate', icon: 'fa-solid fa-crosshairs' },
+    content: '<p>O módulo <b>Fluxo de Combate</b> está instalado e desligado neste mundo. Ele resolve o ataque, a esquiva e o dano sozinho, no lugar do <b>Evasion Workflow</b>.</p><p>Ligar agora? A página recarrega.</p>',
+    yes: { label: 'Ligar e recarregar', icon: 'fa-solid fa-power-off' },
+    no: { label: 'Não perguntar de novo' },
+    rejectClose: false
+  }).catch(() => null);
+  if (ligar === null) return;
+  await game.settings.set(MODULE_ID, 'fluxoPerguntado', true);
+  if (!ligar) return;
+  await game.settings.set('core', 'moduleConfiguration', { ...game.settings.get('core', 'moduleConfiguration'), [FLUXO]: true, [EVASION]: false });
+  foundry.utils.debouncedReload();
+});

@@ -114,6 +114,7 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 | `foundry-net-architect/` | Módulo do Foundry VTT "NET Architect": pontos de acesso à NET nos Tiles, com a janela do netrunner e o mapa da arquitetura. Veja o README da pasta. |
+| `foundry-fluxo-de-combate/` | Módulo do Foundry VTT "Fluxo de Combate": ataque, esquiva às cegas e dano na ficha, com área, cartucho, fogo supressivo, lesão crítica e Death Save. Substitui o Evasion Workflow. Veja o README da pasta. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
 
@@ -130,6 +131,14 @@ node build/build.mjs
 O módulo é gravado direto na pasta de módulos do Foundry. O build também gera o `loja-catalogo.js`, o catálogo da loja da wiki, com os itens do sistema e os de 2077. Para gerar só o catálogo, sem fechar o Foundry: `node build/loja.mjs`.
 
 O mesmo `atualizar-modulo.bat` instala o **NET Architect** (`foundry-net-architect/`): qualquer Tile vira um ponto de acesso à NET. O netrunner conecta pelo token, vê o mapa ramificado da arquitetura e usa as habilidades de Interface; o mestre resolve as rolagens e o Black ICE. As arquiteturas ficam no compêndio do mundo "Arquiteturas da NET". Veja o README da pasta.
+
+Ele também instala o **Fluxo de Combate** (`foundry-fluxo-de-combate/`), no lugar do Evasion Workflow (a pasta dele é apagada):
+
+- **O alvo de um ataque decide sem ver o total:** esquivar, aguentar ou usar o escudo. Ele rola a própria Evasão.
+- **Quem atacou rola o dano.** O mestre aplica na ficha, com a armadura e as lesões críticas.
+- **Explosivos, espingarda com cartucho e fogo supressivo** valem como na wiki. Quem está mortalmente ferido rola o Death Save no começo do turno.
+
+Veja o README da pasta.
 
 ## Personagens dos jogadores
 
