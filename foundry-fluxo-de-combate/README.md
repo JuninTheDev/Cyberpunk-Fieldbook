@@ -85,21 +85,23 @@ As mesmas da wiki da mesa (o teste confere o texto da wiki):
 - **Token Action HUD e Combat HUD:** os ataques deles entram no fluxo, como os da ficha.
 - **NET Architect:** não interfere (as rolagens da NET não são ataques de arma). Os tokens escondidos dos inimigos da NET não entram em área nem em supressão.
 
-## Macros
+## Armas de 2077 (cpr-2077)
 
-As macros de 2077 do cpr-2077 (Ataque Smart, Ricochete e Carga Tech) entregam ao Fluxo de Combate quando há um alvo marcado. A macro rola o ataque com as regras do suplemento; o Fluxo cuida da defesa e do dano:
+Os modos de 2077 do menu de ataque do sistema (cpr-2077: Ricochete, Carga e Rajada Tech, teste Smart) chegam pela rolagem do próprio sistema, como qualquer ataque. Os ajustes de cada modo vêm na rolagem (`cprRoll.fluxoExtra`):
 
-| Macro | O que muda no Fluxo |
+| Modo | O que muda no Fluxo |
 |---|---|
-| **Ataque Smart** | Nada: tiro normal (10 ou 12 + 1d10, pela macro). |
+| **Teste Smart** | Nada na defesa: o ataque é 10 ou 12 + 1d10. Com a **Kappa** (dois alvos marcados): se não pegar o primeiro, as balas vão para o segundo, se ele estiver a até 4 m. |
 | **Ricochete** | DV da tabela de autofogo (pistolas e SMGs usam a da SMG) e um dado a menos de dano. |
-| **Carga Tech, tiro único** | A armadura perde 4 de SP (2 através de cobertura) se o dano passar. Através de cobertura fina, chega metade do dano; grossa, um quarto. |
-| **Carga Tech, rajada** | Como o autofogo, com a tabela da SMG e o máximo da rajada da arma (×3 na Senkoh LX). Através de cobertura fina, chega um quarto; grossa, nada. |
+| **Carga Tech** | A armadura perde 4 de SP (2 através de cobertura) se o dano passar. Através de cobertura fina, chega metade do dano; grossa, um quarto. |
+| **Rajada Tech** | Como o autofogo, com a tabela da SMG e o máximo da rajada da arma (×3 na Senkoh LX). Através de cobertura fina, chega um quarto; grossa, nada. |
+
+## Macros
 
 `game.modules.get('fluxo-de-combate').api` tem:
 
 - `pronto(alvos)`: o Fluxo vai resolver um ataque nesses alvos (ligado, com mestre e com alvo);
-- `atacar({ token, arma, total, alvos, rolagem, local, mensagem, revelar, extra })`: o mesmo pedido que o cartão do ataque faz ao mestre. Em `extra`, os ajustes de macro: `descricao`, `tabela` (de DV), `formula` (de dano), `multiplicadorMax` (da rajada), `ablacao`, `fracao` (que atravessa a cobertura) e `notas`;
+- `atacar({ token, arma, total, alvos, rolagem, local, mensagem, revelar, extra })`: o mesmo pedido que o cartão do ataque faz ao mestre. Em `extra` (ou em `cprRoll.fluxoExtra`, numa rolagem do sistema), os ajustes: `descricao`, `tabela` (de DV), `formula` (de dano), `multiplicadorMax` (da rajada), `ablacao`, `fracao` (que atravessa a cobertura), `redirecionar` (dois alvos) e `notas`;
 - `esconderDe(alvos)` e `sussurro()`: se o cartão da macro deve ficar escondido até a defesa, e para quem sussurrar;
 - `desfazer(mensagem)`: desfaz o cartão de resultado;
 - `ultimo` (no mestre): o último ataque resolvido, com o resultado de cada alvo;

@@ -52,9 +52,10 @@ function preparar() {
   for (const pasta of ['foundry-net-architect', 'foundry-fluxo-de-combate']) {
     execFileSync(process.execPath, ['instalar.mjs'], { cwd: path.join(raiz, pasta), env: { ...process.env, FOUNDRY_DATA: data }, stdio: 'ignore' });
   }
-  // Módulos da mesa que o Fluxo de Combate precisa respeitar: o Diwako (com o lib-wrapper) e o Evasion Workflow (com o
-  // socketlib). Vêm do Foundry do PC, quando ele tem; sem eles, o cenário pula essas checagens.
-  for (const id of ['lib-wrapper', 'diwako-cpred-additions', 'socketlib', 'cpred-evasion-workflow']) {
+  // Módulos da mesa que o Fluxo de Combate e as armas de 2077 precisam respeitar: o Diwako (com o lib-wrapper), o
+  // Evasion Workflow (com o socketlib) e o Combat HUD. Vêm do Foundry do PC, quando ele tem; sem eles, o cenário pula
+  // essas checagens.
+  for (const id of ['lib-wrapper', 'diwako-cpred-additions', 'socketlib', 'cpred-evasion-workflow', 'cpr-combat-hud']) {
     const real = path.join(DADOS_REAIS, 'Data', 'modules', id);
     const copia = path.join(data, 'modules', id);
     if (!fs.existsSync(path.join(real, 'module.json'))) continue;

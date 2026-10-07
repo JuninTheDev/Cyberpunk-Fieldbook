@@ -88,6 +88,56 @@ module.exports = async ({ edge, servidores, r }) => {
     return [!faltam.length, faltam.length ? `a wiki não diz mais: ${faltam.join(', ')}` : `${Object.keys(trechos).length} regras conferidas`];
   });
 
+  // ---------- Armas de 2077 (cpr-2077), sem Foundry ----------
+  await r.passo('armas de 2077 do compêndio: classe e regras de cada modelo (várias balas, Kappa, Palica, Dian, rajada da Senkoh, Nowaki sem ricochete, +1 das excelentes)', async () => {
+    const { buildWeapons } = await import(pathToFileURL(path.join(raiz, 'foundry-2077', 'build', 'armas.mjs')).href);
+    const { perfil, COBERTURAS } = await import(pathToFileURL(path.join(raiz, 'foundry-2077', 'scripts', 'armas2077.mjs')).href);
+    const armas = Object.fromEntries(buildWeapons().filter(item => item.type === 'weapon').map(item => [item.name, item]));
+    const p = nome => perfil(armas[nome]);
+    const checagens = {
+      'Yukimura: Smart de várias balas': [p('Arasaka HJKE-11 Yukimura').classe + p('Arasaka HJKE-11 Yukimura').smartMulti, 'smarttrue'],
+      'Kappa: dois alvos': [p('Tsunami Kappa').doisAlvos && p('Tsunami Kappa').smartMulti, true],
+      'Palica: dois canos (sem várias balas fixas)': [p('Rostovic DB-4 Palica').doisCanos && !p('Rostovic DB-4 Palica').smartMulti, true],
+      'Dian: coronha retrátil': [p('Kang Tao G-58 Dian').coronhaRetratil, true],
+      'Senkoh LX: Tech com rajada ×3': [`${p('Arasaka Senkoh LX').classe}×${p('Arasaka Senkoh LX').rajada}`, 'tech×3'],
+      'Achilles: Tech só tiro único': [p('Militech M-179 Achilles').rajada, 0],
+      'Lexington: Power que ricocheteia': [p('Militech M-10AF Lexington').ricocheteia, true],
+      'Nowaki: só rajadas, não ricocheteia': [p('Arasaka Nowaki').ricocheteia, false],
+      'Defender: só autofogo, não ricocheteia': [p('Constitutional Arms M2067 Defender').ricocheteia, false],
+      'Shingen excelente: +1 no ataque': [armas['Arasaka TKI-20 Shingen'].system.attackmod, 1],
+      'Lexington padrão: sem bônus': [armas['Militech M-10AF Lexington'].system.attackmod, 0],
+      'cobertura fina na carga': [COBERTURAS.thin.carga, 0.5],
+      'cobertura grossa na carga': [COBERTURAS.thick.carga, 0.25],
+      'cobertura fina na rajada': [COBERTURAS.thin.rajada, 0.25],
+      'ablação sem cobertura': [COBERTURAS.none.ablacao, 4]
+    };
+    const errados = Object.entries(checagens).filter(([, [obtido, esperado]]) => obtido !== esperado).map(([nome, [obtido, esperado]]) => `${nome}: ${obtido} (esperado ${esperado})`);
+    return [!errados.length, errados.join(' · ') || `${Object.keys(checagens).length} checagens certas`];
+  });
+
+  await r.passo('regras das armas de 2077 iguais às da wiki: teste Smart 10/12 + 1d10 com o Smart Link, ricochete, carga e rajada Tech, esfriar', async () => {
+    const wiki = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+    const trechos = {
+      'Smart Link': /Só funcionam com o cyberware <b>Smart Link<\/b>/,
+      'teste Smart 10': /teste de 10 \+ 1d10<\/b>/,
+      'várias balas 12': /várias balas Smart sobem para <b>12 \+ 1d10<\/b>/,
+      'ricochete: tabela de autofogo': /a DV vem da <b>tabela de autofogo<\/b>/,
+      'ricochete: um dado a menos': /role <b>um dado a menos<\/b> de dano/,
+      'ricochete: coprocessador': /Ballistic Coprocessor dá \+2 no teste de ricochete/,
+      'ricochete: não com rajadas': /Armas que não disparam menos de três balas não ricocheteiam/,
+      'carga: metade da fina': /metade do dano fica na cobertura e metade passa/,
+      'carga: 25% da grossa': /Atravessa <b>25% da cobertura grossa<\/b>/,
+      'carga: 4 de SP': /a armadura perde <b>4 de SP<\/b>/,
+      'carga: esfriar': /a arma precisa de uma rodada para esfriar/,
+      'rajada: tabela da SMG e 25% da fina': /tabela de autofogo da SMG\. Atravessa só 25% da cobertura fina/,
+      'Kappa: dois alvos a 4 m': /Trava em <b>dois alvos<\/b> a até 4 m/,
+      'Palica: dois canos': /Disparar os dois canos sobe o teste Smart para 12 \+ 1d10/,
+      'Dian: −1 recolhida': /coronha recolhida dá para esconder, mas os ataques têm −1/
+    };
+    const faltam = Object.entries(trechos).filter(([, padrao]) => !padrao.test(wiki)).map(([nome]) => nome);
+    return [!faltam.length, faltam.length ? `a wiki não diz mais: ${faltam.join(', ')}` : `${Object.keys(trechos).length} regras conferidas`];
+  });
+
   // ---------- Foundry de verdade ----------
   if (!foundry.disponivel()) { await r.passo('Foundry não instalado neste PC: parte do Foundry pulada', async () => [true, '']); return; }
   const ocupada = await foundry.mesaOcupada(raiz);
@@ -104,9 +154,10 @@ module.exports = async ({ edge, servidores, r }) => {
 
   foundry.limparMundo();
   foundry.preparar();
-  const extras = Object.fromEntries(['lib-wrapper', 'diwako-cpred-additions', 'socketlib', 'cpred-evasion-workflow'].map(id => [id, fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FieldbookTeste', 'foundry', 'Data', 'modules', id, 'module.json'))]));
+  const extras = Object.fromEntries(['lib-wrapper', 'diwako-cpred-additions', 'socketlib', 'cpred-evasion-workflow', 'cpr-combat-hud'].map(id => [id, fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FieldbookTeste', 'foundry', 'Data', 'modules', id, 'module.json'))]));
   const comDiwako = extras['lib-wrapper'] && extras['diwako-cpred-additions'];
   const comEvasion = extras.socketlib && extras['cpred-evasion-workflow'];
+  const comHud = extras['cpr-combat-hud'];
   const mesa = await foundry.subir();
   const saida = path.join(__dirname, '..', '.saida');
   const jogador = await abrirEdge({ porta: 9397, saida, prefixo: 'fluxo-jogador-', largura: 1400, altura: 900 });
@@ -145,10 +196,12 @@ module.exports = async ({ edge, servidores, r }) => {
   // Janela "Ataque!" e janela de rolagem do sistema.
   const opcoesDaJanela = (alvo, vezes = 60) => esperar(alvo, `(() => { const j = document.querySelector('.fluxo-defesa'); return j ? [...j.querySelectorAll('[data-escolha]')].map(b => b.dataset.escolha).join() : null; })()`, vezes);
   const escolher = (alvo, escolha) => alvo.evaluate(`(() => { const b = document.querySelector('.fluxo-defesa [data-escolha="${escolha}"]'); if (!b) return false; b.click(); return true; })()`);
-  const tituloDaRolagem = (alvo, vezes = 60) => esperar(alvo, `(() => { const b = document.querySelector('.window-app.dialog .cpr-dialog-button[name="confirm"]'); return b ? ((b.closest('.window-app').querySelector('.window-title') || {}).textContent || '?') : null; })()`, vezes);
+  // A janela de rolagem do sistema mais nova que o teste ainda não confirmou (a anterior pode estar fechando ainda).
+  const BOTAO_DA_ROLAGEM = `[...document.querySelectorAll('.window-app.dialog .cpr-dialog-button[name="confirm"]')].filter(b => !b.closest('.window-app').dataset.fluxoConfirmada).pop()`;
+  const tituloDaRolagem = (alvo, vezes = 60) => esperar(alvo, `(() => { const b = ${BOTAO_DA_ROLAGEM}; return b ? ((b.closest('.window-app').querySelector('.window-title') || {}).textContent || '?') : null; })()`, vezes);
   const confirmar = async alvo => {
     const titulo = await tituloDaRolagem(alvo);
-    if (titulo) await alvo.evaluate(`document.querySelector('.window-app.dialog .cpr-dialog-button[name="confirm"]').click()`);
+    if (titulo) await alvo.evaluate(`(() => { const b = ${BOTAO_DA_ROLAGEM}; if (!b) return false; b.closest('.window-app').dataset.fluxoConfirmada = '1'; b.click(); return true; })()`);
     return titulo;
   };
   const ator = id => `game.actors.get(${JSON.stringify(id)})`;
@@ -180,6 +233,7 @@ module.exports = async ({ edge, servidores, r }) => {
         await game.settings.set('cpr-2077', 'fluxoPerguntado', false);
         const config = { ...game.settings.get('core', 'moduleConfiguration'), '${MODULO}': false, 'cpred-evasion-workflow': false, 'socketlib': false, 'net-architect': false };
         if (${comDiwako}) Object.assign(config, { 'lib-wrapper': true, 'diwako-cpred-additions': true });
+        if (${comHud}) config['cpr-combat-hud'] = true;
         await game.settings.set('core', 'moduleConfiguration', config);
       })()`);
       await edge.evaluate('location.reload()').catch(() => {});
@@ -249,10 +303,18 @@ module.exports = async ({ edge, servidores, r }) => {
         ids.pistolaPc = await carregar(pc, await arma('Heavy Pistol'), await municao('heavyPistol'), 16);
         ids.facaPc = await carregar(pc, await arma('Combat Knife'));
         ids.espadaPc = await carregar(pc, await arma('Sword'));
-        // Armas de 2077 para as macros do cpr-2077 (Power, Smart e Tech).
+        // Armas de 2077 (Power, Smart e Tech) do compêndio do cpr-2077, carregadas, para o menu de ataque.
+        etapa = 'armas de 2077';
         const de2077 = nome => doPack('cpr-2077.armas-2077', i => i.name === nome);
-        const armas2077 = await pc.createEmbeddedDocuments('Item', await Promise.all(['Militech M-10AF Lexington', 'Arasaka TKI-20 Shingen', 'Arasaka Senkoh LX'].map(de2077)));
-        [ids.power, ids.smart, ids.tech] = ['Militech M-10AF Lexington', 'Arasaka TKI-20 Shingen', 'Arasaka Senkoh LX'].map(nome => armas2077.find(i => i.name === nome).id);
+        ids.power = await carregar(pc, await de2077('Militech M-10AF Lexington'), await municao('medPistol'), 21);
+        ids.smart = await carregar(pc, await de2077('Arasaka TKI-20 Shingen'), await municao('medPistol'), 30);
+        ids.tech = await carregar(pc, await de2077('Arasaka Senkoh LX'), await municao('medPistol'), 60);
+        ids.kappa = await carregar(pc, await de2077('Tsunami Kappa'), await municao('medPistol'), 30);
+        ids.dian = await carregar(pc, await de2077('Kang Tao G-58 Dian'), await municao('medPistol'), 30);
+        ids.palica = await carregar(pc, await de2077('Rostovic DB-4 Palica'), await municao('shotgunShell'), 4);
+        // O Combat HUD mostra as armas equipadas.
+        // A aba de combate da ficha (e o Combat HUD) só mostram as armas equipadas.
+        await pc.updateEmbeddedDocuments('Item', [ids.power, ids.smart, ids.tech, ids.kappa, ids.dian, ids.palica, ids.pistolaPc].map(id => ({ _id: id, 'system.equipped': 'equipped' })));
         ids.armaduraPc = await vestir(pc, ['Kevlar® (Body)', 'Kevlar® (Head)']);
         const [escudo] = await pc.createEmbeddedDocuments('Item', [await armadura('Bullet Proof Shield')]);
         ids.escudo = escudo.id;
@@ -512,80 +574,223 @@ module.exports = async ({ edge, servidores, r }) => {
       return [Boolean(titulo) && penalidade && morto && vivo, `janela "${titulo}" · penalidade 1 depois de passar: ${penalidade} · capanga morto: ${morto} · jogador vivo: ${vivo}`];
     });
 
-    // ---------- Macros das armas de 2077 (cpr-2077) entregando ao Fluxo ----------
-    // No navegador do jogador: o token dele selecionado, o NPC marcado, a macro aberta; escolhe a arma (e o modo e a
-    // cobertura da carga Tech) no diálogo e clica em Rolar.
-    const macro = async (nome, { arma, modo = null, cobertura = null }) => {
-      await noJogador(`(() => { canvas.tokens.get(${JSON.stringify(ids.tPc)}).control({ releaseOthers: true }); game.user.updateTokenTargets([${JSON.stringify(ids.tG)}]); game.modules.get('cpr-2077').api.${nome}(); return 0; })()`);
-      const dialogo = await esperar(jogador, `(() => { const f = document.querySelector('form.cpr2077-dialog'); return f ? { dv: !!f.dv, nota: (f.querySelector('.cpr2077-fluxo') || {}).textContent || '' } : null; })()`);
-      const clicou = await noJogador(`(() => {
-        const f = document.querySelector('form.cpr2077-dialog');
-        if (!f) return false;
-        f.weapon.value = ${JSON.stringify(arma)};
-        f.weapon.dispatchEvent(new Event('change'));
-        ${modo ? `f.mode.value = ${JSON.stringify(modo)}; f.mode.dispatchEvent(new Event('change'));` : ''}
-        ${cobertura ? `f.cover.value = ${JSON.stringify(cobertura)};` : ''}
-        const b = f.closest('.app, .application').querySelector('button[data-button="roll"], .dialog-button.roll');
-        if (!b) return false;
-        b.click();
-        return true;
-      })()`);
-      return { dialogo, clicou };
-    };
-    const cartaoDaMacro = () => edge.evaluate(`(() => { const m = game.messages.contents.filter(m => /cpr2077-chat/.test(m.content)).pop(); return m ? m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ') : ''; })()`);
-    // O mestre aguenta pelo NPC (a janela dele mostra o total) e o jogador confirma a janela de dano do sistema.
+    // ---------- Armas de 2077 no menu de ataque do sistema (cpr-2077) ----------
+    // A ficha do personagem do jogador, aberta no navegador dele: avalia uma função (raiz) => … no HTML da ficha.
+    const naFicha = (funcao, vezes = 1) => esperar(jogador, `(() => { const app = Object.values(ui.windows).find(w => w instanceof ActorSheet && w.actor && w.actor.id === ${JSON.stringify(ids.pc)} && w.rendered); if (!app) return null; const raiz = app.element[0]; return (${funcao})(raiz); })()`, vezes);
+    const linhaDaArma = id => `raiz.querySelector('.weapon-grid[data-item-id="${id}"]')`;
+    const clicarNaFicha = seletor => naFicha(`raiz => { const el = raiz.querySelector(${JSON.stringify(seletor)}); if (!el) return false; el.click(); return true; }`, 20);
+    const atacarPelaFicha = id => clicarNaFicha(`.weapon-grid[data-item-id="${id}"] .rollable[data-roll-type="attack"]`);
+    const flagDoModo = id => edge.evaluate(`game.actors.get(${JSON.stringify(ids.pc)}).getFlag('cyberpunk-red-core', 'firetype-${id}') || null`);
+    // Responde a pergunta própria do cpr-2077 (cobertura, dois canos) ou a do macro (arma, modo).
+    const responderDialogo = (campos, vezes = 40) => esperar(jogador, `(() => {
+      const campos = ${JSON.stringify(campos)};
+      // A mais nova ainda não respondida que tem os campos (a anterior pode estar fechando).
+      const d = [...document.querySelectorAll('dialog.application, .application.dialog')].filter(e => !e.dataset.fluxoRespondido && e.querySelector('button[data-action="ok"]') && Object.keys(campos).some(nome => e.querySelector('[name="' + nome + '"]'))).pop();
+      if (!d) return null;
+      d.dataset.fluxoRespondido = '1';
+      for (const [nome, valor] of Object.entries(campos)) {
+        const el = d.querySelector('[name="' + nome + '"]');
+        if (!el) continue;
+        if (el.type === 'checkbox') el.checked = Boolean(valor); else el.value = valor;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      d.querySelector('button[data-action="ok"]').click();
+      return true;
+    })()`, vezes);
+    const mirar = alvos => noJogador(`game.user.updateTokenTargets(${JSON.stringify(alvos)})`);
     const npcAguentaEJogadorRola = async antes => {
       const opcoes = await opcoesDaJanela(edge);
       await escolher(edge, 'aguentar');
       const titulo = await confirmar(jogador);
       return { opcoes, titulo, u: await resultado(antes) };
     };
+    const ultimoCartaoDoModo = modo => edge.evaluate(`(() => { const m = game.messages.contents.filter(m => m.getFlag('cpr-2077', 'modo') === ${JSON.stringify(modo)}).pop(); return m ? m.content : ''; })()`);
 
-    await passo('macro Ricochete com alvo marcado: o diálogo não pede DV; o NPC aguenta contra a DV do autofogo (12 m) e o dano é um dado a menos (1d6 da Lexington)', async () => {
+    await passo('menu de ataque da ficha: cada arma de 2077 mostra a classe e os modos dela (Ricochete; Carga e Rajada); a ficha do item tem a classe e salva', async () => {
       await curar(ids.pc);
       await curar(ids.g);
       await mover(ids.tG, 1600, 1000);
-      const tabelas = await edge.evaluate(`(async () => { const p = game.packs.get('cyberpunk-red-core.internal_dv-tables'); const i = await p.getIndex(); const faixas = async n => (await p.getDocument(i.getName(n)._id)).results.contents.map(r => [r.range, r.text]); return { auto: await faixas('DV SMG (Autofire)'), smg: await faixas('DV SMG') }; })()`);
+      const tabelas = await edge.evaluate(`(async () => { const p = game.packs.get('cyberpunk-red-core.internal_dv-tables'); const i = await p.getIndex(); const faixas = async n => (await p.getDocument(i.getName(n)._id)).results.contents.map(r => [r.range, r.text]); return { auto: await faixas('DV SMG (Autofire)'), smg: await faixas('DV SMG'), pistola: await faixas('DV Pistol') }; })()`);
       ids.dvAuto = R.dvPelaDistancia(tabelas.auto, 12).dv;
       ids.dvSmg = R.dvPelaDistancia(tabelas.smg, 12).dv;
-      const antes = await idDoUltimo();
-      const { dialogo, clicou } = await macro('ricochete', { arma: ids.power });
-      const { opcoes, titulo, u } = await npcAguentaEJogadorRola(antes);
-      const linha = u && u.linhas[0];
-      const cartao = await cartaoDaMacro();
-      return [dialogo && !dialogo.dv && /Fluxo de Combate/.test(dialogo.nota) && clicou && opcoes === 'esquivar,aguentar' && Boolean(titulo) && u.descricao === 'Ricochete' && u.total === 20 && linha.dv === ids.dvAuto && linha.resultado === 'acertou' && linha.dano && linha.dano.formula === '1d6' && linha.dano.rolado === 4 && /saem pelo Fluxo de Combate/.test(cartao),
-        `diálogo ${JSON.stringify(dialogo)} · opções ${opcoes} · ${u && u.descricao} ${u && u.total} contra DV ${linha && linha.dv} (tabela ${ids.dvAuto}) · ${JSON.stringify(linha && linha.dano && { formula: linha.dano.formula, rolado: linha.dano.rolado, perdeu: linha.dano.perdeu })} · cartão: ${cartao.slice(0, 160)}`];
+      ids.dvPistola14 = R.dvPelaDistancia(tabelas.pistola, 14).dv;
+      ids.dvPistola12 = R.dvPelaDistancia(tabelas.pistola, 12).dv;
+      await noJogador(`game.actors.get(${JSON.stringify(ids.pc)}).sheet.render(true)`);
+      const menu = await naFicha(`raiz => {
+        const linha = id => raiz.querySelector('.weapon-grid[data-item-id="' + id + '"]');
+        if (!linha(${JSON.stringify(ids.power)})) return null;
+        const modos = id => [...linha(id).querySelectorAll('.cpr2077-modo')].map(a => a.dataset.fireMode).join();
+        const pilulas = id => [...linha(id).querySelectorAll('.weapon-info .text-pill')].map(p => p.textContent.trim()).join('|');
+        return { power: modos(${JSON.stringify(ids.power)}), tech: modos(${JSON.stringify(ids.tech)}), smart: modos(${JSON.stringify(ids.smart)}), comum: modos(${JSON.stringify(ids.pistolaPc)}),
+          pPower: pilulas(${JSON.stringify(ids.power)}), pSmart: pilulas(${JSON.stringify(ids.smart)}), pDian: pilulas(${JSON.stringify(ids.dian)}) };
+      }`, 60);
+      await jogador.shot('menu-de-ataque');
+      // Ficha do item (no mestre): a classe da Senkoh é Tech, rajada ×3; a Heavy Pistol comum vira Power pela ficha.
+      // A ficha de um item (só a janela dele: outra ficha pode estar fechando ainda).
+      const fichaDoItem = id => `(Object.values(ui.windows).find(w => w.item && w.item.id === ${JSON.stringify(id)} && w.rendered)?.element[0])`;
+      await edge.evaluate(`game.actors.get(${JSON.stringify(ids.pc)}).items.get(${JSON.stringify(ids.tech)}).sheet.render(true)`);
+      const fichaTech = await esperar(edge, `(() => { const f = ${fichaDoItem(ids.tech)}; const s = f && f.querySelector('select[name="flags.cpr-2077.classe"]'); const r = f && f.querySelector('input[name="flags.cpr-2077.techRajada"]'); return s && r ? [s.value, r.value].join() : null; })()`);
+      await edge.evaluate(`(() => { const f = ${fichaDoItem(ids.tech)}; const aba = f && f.querySelector('[data-tab="item-settings"].tab-label, a[data-tab="item-settings"]'); if (aba) aba.click(); })()`);
+      await sleep(400);
+      await edge.shot('ficha-do-item');
+      await edge.evaluate(`(() => { for (const app of Object.values(ui.windows)) if (app.item) app.close(); })()`);
+      await edge.evaluate(`game.actors.get(${JSON.stringify(ids.pc)}).items.get(${JSON.stringify(ids.pistolaPc)}).sheet.render(true)`);
+      await esperar(edge, `!!${fichaDoItem(ids.pistolaPc)}?.querySelector('select[name="flags.cpr-2077.classe"]')`);
+      await edge.evaluate(`(() => { const s = ${fichaDoItem(ids.pistolaPc)}.querySelector('select[name="flags.cpr-2077.classe"]'); s.value = 'power'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+      const salvou = await esperar(edge, `game.actors.get(${JSON.stringify(ids.pc)}).items.get(${JSON.stringify(ids.pistolaPc)}).getFlag('cpr-2077', 'classe') === 'power'`);
+      const comumVirouPower = await naFicha(`raiz => [...(raiz.querySelector('.weapon-grid[data-item-id="${ids.pistolaPc}"]')?.querySelectorAll('.cpr2077-modo') || [])].map(a => a.dataset.fireMode).join() || null`, 40);
+      await edge.evaluate(`(() => { for (const app of Object.values(ui.windows)) if (app.item) app.close(); })()`);
+      return [menu && menu.power === 'ricochete' && menu.tech === 'cargaTech,rajadaTech' && menu.smart === '' && menu.comum === '' && /^Power/.test(menu.pPower) && /Sem Smart Link/.test(menu.pSmart) && /Coronha estendida/.test(menu.pDian) && fichaTech === 'tech,3' && salvou && comumVirouPower === 'ricochete',
+        `${JSON.stringify(menu)} · ficha da Senkoh ${fichaTech} · Heavy Pistol virou Power: ${salvou} (modos ${comumVirouPower})`];
     });
 
-    await passo('macro Ataque Smart (Shingen, várias balas: 12 + 6 = 18) contra a DV da SMG a 12 m: 3d6 = 12 menos SP 7 = 5', async () => {
+    await passo('arma Smart sem o Smart Link não dispara: o ataque pela ficha para com o aviso e nada vai para o chat', async () => {
+      await mirar([ids.tG]);
+      const mensagens = await edge.evaluate('game.messages.size');
+      const avisos = await noJogador('window.__avisos.length');
+      await atacarPelaFicha(ids.smart);
+      const aviso = await esperar(jogador, `window.__avisos.slice(${avisos}).find(a => /Smart Link/.test(a)) || null`, 30);
+      await sleep(800);
+      const depois = await edge.evaluate('game.messages.size');
+      const janela = await noJogador(`!!document.querySelector('.window-app.dialog .cpr-dialog-button')`);
+      return [/só dispara com o Smart Link/.test(aviso || '') && depois === mensagens && !janela, `aviso: ${aviso} · mensagens ${mensagens} → ${depois} · janela de rolagem ${janela}`];
+    });
+
+    await passo('com o Smart Link instalado, o tiro da Shingen é o teste Smart (12 + 1 da qualidade + 6 = 19) pela ficha; o Fluxo resolve (DV da SMG) e o dano vai para a ficha', async () => {
+      // Instalado como o sistema conta: o id na lista de itens instalados do ator (o Smart Link pode ir num braço de carne).
+      const instalado = await edge.evaluate(`(async () => {
+        const a = game.actors.get(${JSON.stringify(ids.pc)});
+        const p = game.packs.get('cpr-2077.cyberware-2077');
+        const e = (await p.getIndex()).find(i => i.name === 'Smart Link');
+        const [link] = await a.createEmbeddedDocuments('Item', [(await p.getDocument(e._id)).toObject()]);
+        if (typeof a.installItems === 'function') await a.installItems([link]);
+        if (!link.system.isInstalled) await a.update({ 'system.installedItems.list': [...(a.system.installedItems?.list || []), link.id] });
+        return a.items.get(link.id).system.isInstalled;
+      })()`);
+      if (!instalado) return [false, 'não consegui instalar o Smart Link no personagem'];
+      const pilula = await naFicha(`raiz => { const t = [...(raiz.querySelector('.weapon-grid[data-item-id="${ids.smart}"]')?.querySelectorAll('.weapon-info .text-pill') || [])].map(p => p.textContent.trim()).join('|'); return /Smart 12 \\+ 1d10/.test(t) ? t : null; }`, 40);
       await curar(ids.g);
       const antes = await idDoUltimo();
-      const { clicou } = await macro('ataqueSmart', { arma: ids.smart });
+      const avisos = await noJogador('window.__avisos.length');
+      const errosAntes = jogador.erros.length;
+      await atacarPelaFicha(ids.smart);
+      const tituloAtaque = await confirmar(jogador);
+      if (!tituloAtaque) return [false, `pílula "${pilula}" · a janela de rolagem não abriu · avisos: ${(await noJogador(`window.__avisos.slice(${avisos}).join(' | ')`))} · erros: ${jogador.erros.slice(errosAntes).join(' | ').slice(0, 600)}`];
       const { u } = await npcAguentaEJogadorRola(antes);
       const linha = u && u.linhas[0];
-      return [clicou && u.descricao === 'Ataque Smart (várias balas)' && u.total === 18 && linha.dv === ids.dvSmg && linha.resultado === 'acertou' && linha.dano.rolado === 12 && linha.dano.perdeu === 5 && (await hp(ids.g)) === ids.maxG - 5,
-        `${u && u.descricao} ${u && u.total} contra DV ${linha && linha.dv} · ${JSON.stringify(linha && linha.dano && { rolado: linha.dano.rolado, perdeu: linha.dano.perdeu })}`];
+      if (!u) {
+        const ultimas = await edge.evaluate(`game.messages.contents.slice(-3).map(m => JSON.stringify(m.flags) + ' ' + m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').slice(0, 120)).join(' || ')`);
+        return [false, `janela "${tituloAtaque}" · sem resultado do Fluxo · avisos do jogador: ${(await noJogador(`window.__avisos.slice(${avisos}).join(' | ')`))} · últimas mensagens: ${ultimas} · erros: ${jogador.erros.slice(errosAntes).join(' | ').slice(0, 400)}`];
+      }
+      return [Boolean(pilula) && /Smart \(12 \+ 1d10\)/.test(tituloAtaque || '') && u.descricao === 'Ataque Smart (várias balas)' && u.total === 19 && linha.dv === ids.dvSmg && linha.resultado === 'acertou' && linha.dano.rolado === 12 && linha.dano.perdeu === 5,
+        `pílula "${pilula}" · janela "${tituloAtaque}" · ${u && u.descricao} ${u && u.total} contra DV ${linha && linha.dv} · ${JSON.stringify(linha && linha.dano && { rolado: linha.dano.rolado, perdeu: linha.dano.perdeu })}`];
     });
 
-    await passo('macro Carga Tech em rajada (Senkoh LX, até ×3): 20 contra DV 17 do autofogo; 2d6 = 8 × 3 = 24, menos SP 7 = 17, e o colete perde 4 de SP (sem cobertura)', async () => {
+    await passo('Ricochete escolhido no menu da ficha: 20 contra a DV do autofogo (17 a 12 m), dano de um dado a menos (1d6), nota da regra no cartão', async () => {
+      await curar(ids.g);
+      await clicarNaFicha(`.weapon-grid[data-item-id="${ids.power}"] .cpr2077-modo[data-fire-mode="ricochete"]`);
+      const marcado = await esperar(edge, `game.actors.get(${JSON.stringify(ids.pc)}).getFlag('cyberpunk-red-core', 'firetype-${ids.power}') === 'ricochete'`);
+      const ponto = await naFicha(`raiz => !!raiz.querySelector('.weapon-grid[data-item-id="${ids.power}"] .cpr2077-modo[data-fire-mode="ricochete"] .fa-circle-dot')`, 40);
+      const regua = await esperar(edge, `game.scenes.get(${JSON.stringify(ids.cena)}).tokens.get(${JSON.stringify(ids.tPc)}).getFlag('cyberpunk-red-core', 'cprDvTable')?.name`, 30);
+      const antes = await idDoUltimo();
+      await atacarPelaFicha(ids.power);
+      const tituloAtaque = await confirmar(jogador);
+      const { u } = await npcAguentaEJogadorRola(antes);
+      const linha = u && u.linhas[0];
+      const cartao = await ultimoCartaoDoModo('ricochete');
+      return [marcado && ponto && regua === 'DV SMG (Autofire)' && /Ricochete/.test(tituloAtaque || '') && u.descricao === 'Ricochete' && u.total === 20 && linha.dv === ids.dvAuto && linha.dano && linha.dano.formula === '1d6' && linha.dano.rolado === 4 && /cpr2077-modo-nota/.test(cartao) && /um dado a menos/.test(cartao),
+        `marcado ${marcado}/${ponto} · régua ${regua} · janela "${tituloAtaque}" · ${u && u.descricao} ${u && u.total} contra DV ${linha && linha.dv} · ${JSON.stringify(linha && linha.dano && { formula: linha.dano.formula, rolado: linha.dano.rolado })} · nota no cartão ${/cpr2077-modo-nota/.test(cartao)}`];
+    });
+
+    await passo('atalho "Carga Tech" (macro): escolhe a rajada, sem cobertura; 21 contra 17 passa por 4, mas a Senkoh limita a ×3: 24, menos SP 7 = 17, e o colete perde 4', async () => {
       await curar(ids.g);
       const antes = await idDoUltimo();
-      const { clicou } = await macro('cargaTech', { arma: ids.tech, modo: 'burst', cobertura: 'none' });
+      await noJogador(`(() => { game.modules.get('cpr-2077').api.cargaTech(); return 0; })()`);
+      const escolheu = await responderDialogo({ arma: ids.tech, modo: 'rajadaTech' });
+      const cobertura = await responderDialogo({ cobertura: 'none' });
+      await confirmar(jogador);
       const { u } = await npcAguentaEJogadorRola(antes);
       const linha = u && u.linhas[0];
       const ablacao = await edge.evaluate(`${ator(ids.g)}.itemTypes.armor.find(i => i.system.isBodyLocation).system.bodyLocation.ablation`);
-      return [clicou && u.descricao === 'Carga Tech (rajada)' && u.modo === 'autofogo' && u.total === 20 && linha.dv === ids.dvAuto && linha.dano.autofogo === 3 && linha.dano.rolado === 24 && linha.dano.perdeu === 17 && linha.dano.ablacao === 4 && ablacao === 4,
-        `${u && u.descricao} ${u && u.modo} ${u && u.total} contra DV ${linha && linha.dv} · ${JSON.stringify(linha && linha.dano && { autofogo: linha.dano.autofogo, rolado: linha.dano.rolado, perdeu: linha.dano.perdeu, ablacao: linha.dano.ablacao })} · SP perdido ${ablacao}`];
+      return [escolheu && cobertura && u.descricao === 'Carga Tech (rajada)' && u.modo === 'autofogo' && u.total === 21 && linha.dv === ids.dvAuto && linha.dano.autofogo === 3 && linha.dano.rolado === 24 && linha.dano.perdeu === 17 && ablacao === 4,
+        `${u && u.descricao} ${u && u.modo} ${u && u.total} contra DV ${linha && linha.dv} · ${JSON.stringify(linha && linha.dano && { autofogo: linha.dano.autofogo, rolado: linha.dano.rolado, perdeu: linha.dano.perdeu })} · SP perdido ${ablacao}`];
     });
 
-    await passo('macro Carga Tech em tiro único através de cobertura fina: 21 acerta; dos 8 do dano, só 4 atravessam (e a armadura segura)', async () => {
+    await passo('Carga Tech pelo menu, em combate, através de cobertura fina: dos 8 só 4 passam; logo depois a Senkoh está esfriando e não carrega', async () => {
       await curar(ids.g);
+      await edge.evaluate(`(async () => {
+        const combate = await Combat.create({ scene: ${JSON.stringify(ids.cena)} });
+        await combate.createEmbeddedDocuments('Combatant', [{ tokenId: ${JSON.stringify(ids.tPc)}, sceneId: ${JSON.stringify(ids.cena)}, actorId: ${JSON.stringify(ids.pc)}, initiative: 20 }, { tokenId: ${JSON.stringify(ids.tG)}, sceneId: ${JSON.stringify(ids.cena)}, actorId: ${JSON.stringify(ids.g)}, initiative: 10 }]);
+        await combate.activate();
+        await combate.startCombat();
+      })()`);
+      await clicarNaFicha(`.weapon-grid[data-item-id="${ids.tech}"] .cpr2077-modo[data-fire-mode="cargaTech"]`);
+      await esperar(edge, `game.actors.get(${JSON.stringify(ids.pc)}).getFlag('cyberpunk-red-core', 'firetype-${ids.tech}') === 'cargaTech'`);
+      await sleep(300);
       const antes = await idDoUltimo();
-      const { clicou } = await macro('cargaTech', { arma: ids.tech, modo: 'single', cobertura: 'thin' });
+      await atacarPelaFicha(ids.tech);
+      await responderDialogo({ cobertura: 'thin' });
+      await confirmar(jogador);
       const { u } = await npcAguentaEJogadorRola(antes);
       const linha = u && u.linhas[0];
-      return [clicou && u.descricao === 'Carga Tech' && u.total === 21 && linha.resultado === 'acertou' && linha.cobertura && linha.cobertura.rolado === 8 && linha.cobertura.passou === 4 && linha.dano && linha.dano.rolado === 4 && linha.dano.perdeu === 0,
-        `${u && u.descricao} ${u && u.total} · cobertura ${JSON.stringify(linha && linha.cobertura)} · ${JSON.stringify(linha && linha.dano && { rolado: linha.dano.rolado, perdeu: linha.dano.perdeu })} · notas: ${linha && linha.notas.join(' | ')}`];
+      const marca = await esperar(edge, `game.actors.get(${JSON.stringify(ids.pc)}).items.get(${JSON.stringify(ids.tech)}).getFlag('cpr-2077', 'carga')`);
+      const mensagens = await edge.evaluate('game.messages.size');
+      const avisos = await noJogador('window.__avisos.length');
+      await atacarPelaFicha(ids.tech);
+      const aviso = await esperar(jogador, `window.__avisos.slice(${avisos}).find(a => /esfriando/.test(a)) || null`, 30);
+      await sleep(600);
+      const depois = await edge.evaluate('game.messages.size');
+      await edge.evaluate('game.combat && game.combat.delete()');
+      return [u.descricao === 'Carga Tech' && u.total === 21 && linha.cobertura && linha.cobertura.rolado === 8 && linha.cobertura.passou === 4 && linha.dano.perdeu === 0 && marca && marca.rodada === 1 && /rodada 3/.test(aviso || '') && depois === mensagens,
+        `${u && u.descricao} ${u && u.total} · cobertura ${JSON.stringify(linha && linha.cobertura)} · marca ${JSON.stringify(marca)} · ${aviso} · mensagens ${mensagens} → ${depois}`];
+    });
+
+    await passo('Tsunami Kappa trava dois alvos: o teste Smart (19) erra o capanga (DV 20 a 14 m) e as balas vão para o guarda, a 2 m dele (DV 15)', async () => {
+      await curar(ids.g);
+      await edge.evaluate(`(async () => { const a = game.actors.get(${JSON.stringify(ids.c)}); await a.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: false }); await a.update({ 'system.derivedStats.hp.value': a.system.derivedStats.hp.max }); })()`);
+      await mover(ids.tC, 1700, 1000);
+      await mirar([ids.tC, ids.tG]);
+      const antes = await idDoUltimo();
+      await atacarPelaFicha(ids.kappa);
+      await confirmar(jogador);
+      const { u } = await npcAguentaEJogadorRola(antes);
+      const porNome = Object.fromEntries((u ? u.linhas : []).map(l => [l.nome, l]));
+      const c = porNome['Capanga Fluxo'];
+      const g = porNome['Guarda Fluxo'];
+      return [u.total === 19 && c && c.resultado === 'errou' && c.dv === ids.dvPistola14 && g && g.resultado === 'acertou' && g.dv === ids.dvPistola12 && g.notas.some(n => /mudaram de alvo/.test(n)) && g.dano && g.dano.rolado === 8 && g.dano.perdeu === 1,
+        `ataque ${u && u.total} · capanga ${JSON.stringify(c && { r: c.resultado, dv: c.dv })} · guarda ${JSON.stringify(g && { r: g.resultado, dv: g.dv, notas: g.notas, perdeu: g.dano && g.dano.perdeu })}`];
+    });
+
+    await passo('coronha da Dian recolhida pela ficha: −1 no teste Smart (10 + 1 − 1 + 6 = 16)', async () => {
+      await mirar([]);
+      await clicarNaFicha(`.weapon-grid[data-item-id="${ids.dian}"] .cpr2077-coronha`);
+      const recolhida = await esperar(edge, `game.actors.get(${JSON.stringify(ids.pc)}).items.get(${JSON.stringify(ids.dian)}).getFlag('cpr-2077', 'coronhaRecolhida') === true`);
+      const pilula = await naFicha(`raiz => /recolhida \\(−1\\)/.test(raiz.querySelector('.weapon-grid[data-item-id="${ids.dian}"] .cpr2077-coronha')?.textContent || '') || null`, 40);
+      const total = await atacar(jogador, { token: ids.tPc, item: ids.dian, alvos: [] });
+      return [recolhida && pilula && total === 16, `recolhida ${recolhida} · pílula ${pilula} · teste Smart ${total}`];
+    });
+
+    await passo('Palica com os dois canos: a pergunta antes da janela sobe o teste Smart para 12 + 1d10 e gasta os 2 cartuchos', async () => {
+      const pente = () => edge.evaluate(`game.actors.get(${JSON.stringify(ids.pc)}).items.get(${JSON.stringify(ids.palica)}).system.magazine.value`);
+      const antes = await pente();
+      const mensagens = await edge.evaluate('game.messages.size');
+      await atacarPelaFicha(ids.palica);
+      const perguntou = await responderDialogo({ doisCanos: true });
+      const titulo = await confirmar(jogador);
+      const cartao = await esperar(edge, `game.messages.size > ${mensagens} && game.messages.contents.slice(${mensagens}).find(m => /Palica/.test(m.content))?.content || null`);
+      const total = Number(((cartao || '').match(/data-action="toggleVisibility"[^>]*>(\d+)</) || [])[1]);
+      const depois = await pente();
+      return [perguntou && /Smart \(12 \+ 1d10\)/.test(titulo || '') && total === 18 && antes - depois === 2, `janela "${titulo}" · total ${total} · cartuchos ${antes} → ${depois}`];
+    });
+
+    await passo('Combat HUD: a arma Power equipada ganha o botão do Ricochete (ativo, porque foi escolhido na ficha); clicar desliga o modo', async () => {
+      if (!comHud) return [true, 'sem o Combat HUD no PC: pulado'];
+      await noJogador(`canvas.tokens.get(${JSON.stringify(ids.tPc)}).control({ releaseOthers: true })`);
+      const botao = await esperar(jogador, `(() => { const b = document.querySelector('#cpr-combat-hud .chud-toggle[data-mode="ricochete"][data-item-id="${ids.power}"]'); return b ? b.className : null; })()`, 60);
+      await jogador.shot('combat-hud');
+      if (botao) await noJogador(`document.querySelector('#cpr-combat-hud .chud-toggle[data-mode="ricochete"][data-item-id="${ids.power}"]').click()`);
+      const desligou = await esperar(edge, `!game.actors.get(${JSON.stringify(ids.pc)}).getFlag('cyberpunk-red-core', 'firetype-${ids.power}')`, 40);
+      return [/active/.test(botao || '') && desligou, `botão ${botao} · desligou ${desligou}`];
     });
 
     await passo('o Diwako continua ligado, mas não anuncia acerto nem erro antes da defesa (nenhuma linha dele nos ataques)', async () => {
@@ -613,14 +818,14 @@ module.exports = async ({ edge, servidores, r }) => {
     // O mundo de teste volta como estava para os outros cenários (sem o Fluxo, o Diwako e o Evasion ligados).
     await edge.evaluate(`(async () => {
       await game.settings.set('cpr-2077', 'fluxoPerguntado', true);
-      await game.settings.set('core', 'moduleConfiguration', { ...${JSON.stringify(ids.config || {})}, '${MODULO}': false, 'lib-wrapper': false, 'diwako-cpred-additions': false, 'socketlib': false, 'cpred-evasion-workflow': false });
+      await game.settings.set('core', 'moduleConfiguration', { ...${JSON.stringify(ids.config || {})}, '${MODULO}': false, 'lib-wrapper': false, 'diwako-cpred-additions': false, 'socketlib': false, 'cpred-evasion-workflow': false, 'cpr-combat-hud': false });
     })()`).catch(() => {});
     for (const navegador of [edge, jogador]) await navegador.send('Page.navigate', { url: 'about:blank' }).catch(() => {});
     await sleep(500);
     // Só contam os erros do módulo (o Foundry desligando, o Diwako e o lib-wrapper falam no console por conta própria).
     const doFoundry = edge.erros.splice(errosAntes);
     const doJogador = jogador.erros.splice(0);
-    edge.erros.push(...[...doFoundry, ...doJogador].filter(erro => new RegExp(MODULO).test(erro)));
+    edge.erros.push(...[...doFoundry, ...doJogador].filter(erro => /fluxo-de-combate|cpr-2077/.test(erro)));
     await jogador.fechar().catch(() => {});
     await mesa.parar();
   }

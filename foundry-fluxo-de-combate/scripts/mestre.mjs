@@ -265,21 +265,41 @@ async function ferir(ctx, linha, dano, { escudo = false } = {}) {
 const podeDefender = token => token.actor && TIPOS_DE_ATOR.includes(token.actor.type);
 
 // Tiro, autofogo e corpo a corpo: cada alvo se defende; o dano sai para cada um que foi atingido.
+// Um alvo: alcance, DV e defesa. Devolve a linha se o ataque pegou.
+async function resolverAlvo(ctx, token) {
+  const linha = linhaDe(ctx, token);
+  if (!podeDefender(token)) { linha.resultado = 'ignorado'; return null; }
+  const alvo = infoDoAlvo(ctx, token);
+  linha.distancia = alvo.distancia;
+  let dv = null;
+  if (ctx.modo !== 'corpo') {
+    const achada = await dvDoAlvo(ctx, alvo);
+    if (achada.fora) { linha.resultado = 'fora'; return null; }
+    dv = achada.dv ?? (await dvDoMestre(ctx, alvo));
+  }
+  return (await defesaDoAlvo(ctx, linha, alvo, dv)) ? { linha, alvo } : null;
+}
+
+// Arma Smart que trava dois alvos (Tsunami Kappa): o ataque vai no primeiro; se não pegar, as balas mudam para o
+// segundo, se ele estiver a até 4 m do primeiro.
+const ALCANCE_DO_REDIRECIONAMENTO = 4;
+async function redirecionado(ctx) {
+  const [primeiro, segundo] = ctx.alvos;
+  const pegou = await resolverAlvo(ctx, primeiro);
+  if (pegou) return [pegou];
+  if (distancia(primeiro, segundo) > ALCANCE_DO_REDIRECIONAMENTO + 0.5) {
+    ctx.notas.push(`${segundo.name} está a mais de ${ALCANCE_DO_REDIRECIONAMENTO} m de ${primeiro.name}: as balas Smart não mudam de alvo.`);
+    return [];
+  }
+  const segundaVez = await resolverAlvo(ctx, segundo);
+  ctx.linhas[ctx.linhas.length - 1].notas.push(`As balas Smart mudaram de alvo: ${primeiro.name} não foi atingido.`);
+  return segundaVez ? [segundaVez] : [];
+}
+
 async function individual(ctx) {
-  const pendentes = [];
-  await Promise.all(ctx.alvos.map(async token => {
-    const linha = linhaDe(ctx, token);
-    if (!podeDefender(token)) { linha.resultado = 'ignorado'; return; }
-    const alvo = infoDoAlvo(ctx, token);
-    linha.distancia = alvo.distancia;
-    let dv = null;
-    if (ctx.modo !== 'corpo') {
-      const achada = await dvDoAlvo(ctx, alvo);
-      if (achada.fora) { linha.resultado = 'fora'; return; }
-      dv = achada.dv ?? (await dvDoMestre(ctx, alvo));
-    }
-    if (await defesaDoAlvo(ctx, linha, alvo, dv)) pendentes.push({ linha, alvo });
-  }));
+  const pendentes = ctx.extra.redirecionar && ctx.alvos.length >= 2
+    ? await redirecionado(ctx)
+    : (await Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token)))).filter(Boolean);
   if (config('dano') === 'manual') { for (const { linha } of pendentes) linha.notas.push('Role o dano pelo botão do cartão do ataque.'); return; }
   for (const { linha } of ctx.linhas.map(l => pendentes.find(p => p.linha === l)).filter(Boolean)) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;

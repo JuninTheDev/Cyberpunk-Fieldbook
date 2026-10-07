@@ -1,5 +1,6 @@
-// Cyberpunk RED: 2077 — economia de 2077, API das macros e personagens do criador da wiki.
+// Cyberpunk RED: 2077 — economia de 2077, armas de 2077 no menu de ataque, API das macros e personagens do criador da wiki.
 import { ataqueSmart, cargaTech, ricochete } from './macros.mjs';
+import * as armas2077 from './armas2077.mjs';
 import { registerTableSync, registerWikiButtons, registerWikiSettings, registerWikiWatch, wikiApi } from './wiki.mjs';
 
 const MODULE_ID = 'cpr-2077';
@@ -27,16 +28,32 @@ Hooks.once('init', () => {
     hint: 'Usa as categorias de preço do suplemento (Barato 20eb … Super luxo 20.000eb). Os preços em eb dos itens não mudam, só a categoria mostrada na ficha.',
     scope: 'world', config: true, type: Boolean, default: true, requiresReload: true
   });
+  armas2077.registrarConfiguracoes();
   registerWikiSettings();
   registerWikiButtons();
   registerWikiWatch();
   registerTableSync();
-  game.modules.get(MODULE_ID).api = { ataqueSmart, ricochete, cargaTech, precos2077: PRICES_2077, economia2077: false, ...wikiApi };
+  game.modules.get(MODULE_ID).api = { ataqueSmart, ricochete, cargaTech, armas2077, precos2077: PRICES_2077, economia2077: false, ...wikiApi };
 });
 
 Hooks.once('setup', () => {
   if (game.settings.get(MODULE_ID, 'economia2077')) applyEconomy();
 });
+
+// Armas de 2077 (Power, Tech, Smart) no menu de ataque do sistema: os modos no createRoll dos itens, o cartão do
+// ataque, a ficha do personagem, o Combat HUD e a ficha do item.
+Hooks.once('setup', async () => {
+  try {
+    await armas2077.carregarSistema();
+    armas2077.instalarModos();
+    armas2077.instalarCartoes();
+  } catch (error) {
+    console.error(`${MODULE_ID} | armas de 2077 no menu de ataque`, error);
+  }
+});
+Hooks.on('renderActorSheet', armas2077.noMenuDaFicha);
+Hooks.on('renderCPRCombatHUD', armas2077.noCombatHud);
+Hooks.on('renderItemSheet', armas2077.naFichaDoItem);
 
 // O Fluxo de Combate (foundry-fluxo-de-combate/) substitui o Evasion Workflow. Num mundo que usava o Evasion
 // Workflow, com o Fluxo de Combate instalado e desligado, o mestre liga com um clique (e o Evasion Workflow sai da

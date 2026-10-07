@@ -23,9 +23,9 @@ const brands = ['Constitutional Arms', 'Darra Polytechnic', 'Budget Arms', 'Midn
 const numberWords = { um: 1, uma: 1, dois: 2, duas: 2, três: 3 };
 
 export const classRules = {
-  power: '<b>Power:</b> tem o modo <b>Ricochete</b> (macro "Ricochete"): acerta um alvo atrás de cobertura com um tiro único, usando a DV da tabela de autofogo; alvos com REF 8+ podem esquivar, e o dano tem um dado a menos.',
-  tech: '<b>Tech:</b> tem a <b>carga Tech</b> (macro "Carga Tech"): atravessa cobertura e abla a armadura (−2 SP, ou −4 sem cobertura); depois precisa de uma rodada para esfriar. Usa flechettes, que custam e ablam como munição perfurante.',
-  smart: '<b>Smart:</b> só funciona com o cyberware <b>Smart Link</b>. O ataque Smart (macro "Ataque Smart") é 10 + 1d10, ou 12 + 1d10 nos modelos de várias balas; a regra sai das descrições das armas.'
+  power: '<b>Power:</b> tem o modo <b>Ricochete</b> no menu de ataque (e na macro "Ricochete"): acerta um alvo atrás de cobertura com um tiro único, usando a DV da tabela de autofogo; alvos com REF 8+ podem esquivar, e o dano tem um dado a menos.',
+  tech: '<b>Tech:</b> tem a <b>carga Tech</b> no menu de ataque (e na macro "Carga Tech"): atravessa cobertura e abla a armadura (−2 SP, ou −4 sem cobertura); depois precisa de uma rodada para esfriar. Usa flechettes, que custam e ablam como munição perfurante.',
+  smart: '<b>Smart:</b> só dispara com o cyberware <b>Smart Link</b>. O tiro único é o teste Smart, 10 + 1d10 (12 + 1d10 nos modelos de várias balas), no lugar de REF + perícia; a regra sai das descrições das armas.'
 };
 
 // Armas que o livro só descreve em texto: dano e DV do autofogo seguem a Tsunami Arms Helix do livro-base.
@@ -64,6 +64,8 @@ function convert(raw, group) {
     img: coreImg('core_weapons', templateName + qualitySuffix),
     system: {
       weaponType, weaponSkill, damage, rof: raw.rof, handsReq: parseInt(raw.hands, 10) || 1, quality,
+      // Como as armas Excellent do livro-base: +1 no ataque (RED p. 342).
+      attackmod: quality === 'excellent' ? 1 : 0,
       dvTable: autofireOnly.has(raw.name) ? 'DV Assault Rifle (Autofire)' : dvTables[weaponType],
       fireModes: { autoFire, suppressiveFire: /supressivo/i.test(features) },
       magazine: { value: 0, max: magazine, ammoData: null }, ammoVariety,
@@ -76,7 +78,20 @@ function convert(raw, group) {
         value: `<p><b>${raw.kind}</b> · qualidade ${raw.quality}</p>${para(raw.text)}${para(features, 'Recursos')}<p>${classRules[classe]}</p>${bookNotes ? para(bookNotes, 'No livro') : ''}${para(raw.tip, 'Na mesa')}${sourceNote('Suplemento Cyberpunk 2077', page)}`
       }
     },
-    flags: { classe, exotica: exotic, grupo: group, smartMulti: /12 \+ 1d10/.test(`${raw.text} ${raw.tip || ''}`), techModo: (features.match(/carga Tech \(([^)]+)\)/i) || [])[1] || null }
+    flags: {
+      classe, exotica: exotic, grupo: group,
+      // Smart: várias balas (12 + 1d10), a Kappa (dois alvos), a Palica (dois canos).
+      smartMulti: /12 \+ 1d10/.test(`${raw.text} ${raw.tip || ''}`) && !/dois canos/i.test(`${raw.text} ${raw.tip || ''}`),
+      smartDoisAlvos: classe === 'smart' && /dois alvos/i.test(`${raw.text} ${raw.tip || ''}`),
+      smartDoisCanos: classe === 'smart' && /dois canos/i.test(`${raw.text} ${raw.tip || ''}`),
+      // Tech: a rajada da carga (0: só tiro único).
+      techModo: (features.match(/carga Tech \(([^)]+)\)/i) || [])[1] || null,
+      techRajada: classe === 'tech' ? Number((features.match(/carga Tech \(rajada de (\d)\)/i) || [])[1] || 0) : 0,
+      // Power: as que só disparam rajadas de três não ricocheteiam.
+      semRicochete: classe === 'power' && (/só rajada de três balas/i.test(features) || weaponSkill === 'Autofire'),
+      // A Dian: coronha retrátil, −1 recolhida.
+      coronhaRetratil: /coronha recolhida/i.test(`${raw.text} ${raw.tip || ''}`)
+    }
   });
 }
 

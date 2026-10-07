@@ -27,8 +27,6 @@
 .cpr2077-chat-result { margin-top: 4px; font-weight: bold; text-align: center; text-transform: uppercase; }
 .cpr2077-chat-result.hit { color: #0a7a2f; }
 .cpr2077-chat-result.miss { color: #b3001b; }
-.cpr2077-chat-result.fluxo { color: #12866f; font-size: 0.85em; text-transform: none; }
-.cpr2077-dialog .cpr2077-fluxo { margin: 4px 0; color: #12866f; font-size: 0.9em; }
 .cpr2077-chat-note { color: #555; font-size: 0.85em; }
 .cpr2077-chat-note.warning { color: #b3001b; font-weight: bold; }
 .cpr2077-dialog .form-group { margin-bottom: 4px; }
@@ -38,3 +36,21 @@
 .cpr2077-wiki-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.15); }
 .cpr2077-wiki-row button { flex: 0 0 auto; width: auto; line-height: 24px; }
 .cpr2077-wiki-row small { color: #555; }
+
+/* Armas de 2077 no menu de ataque (armas2077.mjs): a classe na linha da arma, os modos, a nota no cartão.
+   As pílulas ficam sobre o fundo escuro das .text-pill do sistema: cores claras. */
+.cpr2077-classe { font-weight: bold; }
+.text-pill.cpr2077-smart { color: #6fe3ff; }
+.text-pill.cpr2077-tech { color: #d6a8ff; }
+.text-pill.cpr2077-power { color: #ffc46b; }
+.text-pill.cpr2077-alerta { color: #ff7a8a; font-weight: bold; }
+a.cpr2077-coronha { cursor: pointer; }
+a.cpr2077-coronha.cpr2077-ativa { color: #ff7a8a; }
+.cpr2077-modos { display: inline-flex; gap: 0.6em; margin-left: auto; padding-right: 0.3em; white-space: nowrap; }
+.cpr2077-modos a.cpr2077-modo { cursor: pointer; }
+.cpr2077-modos a.cpr2077-modo.cpr2077-ativa { font-weight: bold; }
+.cpr2077-modo-nota { margin: 4px 6px 2px; padding: 3px 6px; border-left: 3px solid #b3001b; background: rgba(179, 0, 27, 0.06); font-size: 0.85em; }
+.cpr2077-modo-nota i { color: #b3001b; }
+.cpr2077-pergunta { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.cpr2077-pergunta select { margin-left: 6px; }
+.cpr2077-chud-alerta { align-self: center; padding: 0 4px; color: #ff5a6e; font-size: 10px; font-weight: bold; text-transform: uppercase; }

@@ -66,7 +66,9 @@ function lerAtaque(cprRoll, rolls) {
     local: rolagem === 'aimed' ? cprRoll.location || 'head' : null,
     municao: (typeof arma._getLoadedAmmoProp === 'function' && arma._getLoadedAmmoProp('variety')) || null,
     alvos: alvos.map(alvo => alvo.id),
-    esconder: esconderDe(alvos)
+    esconder: esconderDe(alvos),
+    // Ajustes de quem montou a rolagem (os modos de 2077 do cpr-2077: ricochete, carga Tech, teste Smart).
+    extra: cprRoll.fluxoExtra ? { ...cprRoll.fluxoExtra } : null
   };
 }
 
