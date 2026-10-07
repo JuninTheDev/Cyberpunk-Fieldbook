@@ -1,6 +1,10 @@
 // Macros das armas de 2077: ataque Smart, ricochete (Power) e carga Tech.
-// Só rolam e explicam no chat: não mudam fichas, munição nem armadura.
+// Sozinhas, só rolam e explicam no chat: não mudam fichas, munição nem armadura.
+// Com o módulo Fluxo de Combate ligado e um alvo marcado, a macro rola o ataque (com as regras de 2077) e entrega a
+// defesa e o dano ao Fluxo: o alvo decide às cegas (esquivar, aguentar, escudo), a DV sai da distância até ele, e o
+// dano vai para a ficha com o que a arma muda (um dado a menos no ricochete; rajada, ablação e cobertura na carga Tech).
 const MODULE_ID = 'cpr-2077';
+const FLUXO = 'fluxo-de-combate';
 const flag = (item, key) => item.flags?.[MODULE_ID]?.[key];
 const escape = text => String(text ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
@@ -12,6 +16,14 @@ function selectedActor() {
 
 const weaponsOfClass = (actor, classe) => actor.items.filter(item => flag(item, 'classe') === classe && (item.type === 'weapon' || (item.type === 'cyberware' && item.system.isWeapon)) && item.system.isRanged);
 const hasCyberware = (actor, key, pattern) => actor.items.some(item => item.type === 'cyberware' && (flag(item, key) || pattern.test(item.name)));
+
+// O Fluxo de Combate vai resolver este ataque? Ligado, com mestre e com algum alvo marcado.
+function comFluxo() {
+  const fluxo = game.modules.get(FLUXO);
+  const alvos = [...(game.user.targets || [])];
+  return fluxo?.active && fluxo.api?.pronto?.(alvos) ? { api: fluxo.api, alvos } : null;
+}
+const tokenDe = actor => canvas.tokens?.controlled.find(token => token.actor?.id === actor.id) ?? actor.getActiveTokens()[0] ?? null;
 
 // d10 do RED: um 10 soma mais um d10; um 1 subtrai mais um d10 (só uma vez).
 async function rollD10() {
@@ -53,16 +65,21 @@ const qualityBonus = weapon => weapon.system.quality === 'excellent' ? 1 : 0;
 const oneDieLess = formula => formula.replace(/^(\d+)d6/, (match, dice) => `${Math.max(1, Number(dice) - 1)}d6`);
 
 // Diálogo comum: arma, distância (preenche a DV pela tabela), DV, modificador e campos extras.
-async function askAttack({ title, weapons, tableFor, extra = '' }) {
+// Com o Fluxo de Combate, a DV sai da distância até o alvo: o diálogo não pergunta.
+async function askAttack({ title, weapons, tableFor, extra = '', fluxo = null }) {
   const options = weapons.map(weapon => `<option value="${weapon.id}">${escape(weapon.name)}</option>`).join('');
+  const rangeFields = fluxo
+    ? `<p class="cpr2077-fluxo">Alvo marcado: a DV sai da distância até ${escape(fluxo.alvos.map(alvo => alvo.name).join(', '))}, e a defesa e o dano saem pelo Fluxo de Combate.</p>`
+    : `<div class="form-group"><label>Distância</label><select name="range"></select></div>
+      <div class="form-group"><label>DV</label><input type="number" name="dv" value="15"></div>`;
   const content = `<form class="cpr2077-dialog">
       <div class="form-group"><label>Arma</label><select name="weapon">${options}</select></div>
-      <div class="form-group"><label>Distância</label><select name="range"></select></div>
-      <div class="form-group"><label>DV</label><input type="number" name="dv" value="15"></div>
+      ${rangeFields}
       <div class="form-group"><label>Modificador</label><input type="number" name="mod" value="0"></div>
       ${extra}</form>`;
   const fillRanges = async html => {
     const form = html[0].querySelector('form');
+    if (!form.range) return;
     const weapon = weapons.find(item => item.id === form.weapon.value);
     const rows = await dvTable(tableFor(weapon, form));
     form.range.innerHTML = rows.length ? rows.map(row => `<option value="${row.dv}">${row.from}–${row.to} m: DV ${row.dv}</option>`).join('') : '<option value="">(sem tabela: digite a DV)</option>';
@@ -76,14 +93,14 @@ async function askAttack({ title, weapons, tableFor, extra = '' }) {
       fillRanges(html);
       form.weapon.addEventListener('change', () => fillRanges(html));
       form.querySelectorAll('[data-refresh]').forEach(field => field.addEventListener('change', () => fillRanges(html)));
-      form.range.addEventListener('change', () => { if (form.range.value) form.dv.value = form.range.value; });
+      if (form.range) form.range.addEventListener('change', () => { if (form.range.value) form.dv.value = form.range.value; });
     },
     buttons: {
       roll: {
         icon: '<i class="fas fa-dice-d10"></i>', label: 'Rolar',
         callback: html => {
           const form = html[0].querySelector('form');
-          return { weapon: weapons.find(item => item.id === form.weapon.value), dv: Number(form.dv.value) || 0, mod: Number(form.mod.value) || 0, form };
+          return { weapon: weapons.find(item => item.id === form.weapon.value), dv: form.dv ? Number(form.dv.value) || 0 : null, mod: Number(form.mod.value) || 0, form };
         }
       }
     },
@@ -94,14 +111,32 @@ async function askAttack({ title, weapons, tableFor, extra = '' }) {
 
 const line = (label, value) => `<p><b>${label}:</b> ${value}</p>`;
 function card({ title, weapon, lines, hit, footer }) {
-  return `<div class="cpr2077-chat"><h3>${escape(title)}</h3><p class="cpr2077-chat-weapon">${escape(weapon.name)}</p>${lines.join('')}<p class="cpr2077-chat-result ${hit ? 'hit' : 'miss'}">${hit ? 'Acertou' : 'Errou'}</p>${footer || ''}</div>`;
+  const result = hit === null
+    ? '<p class="cpr2077-chat-result fluxo">A defesa e o dano saem pelo Fluxo de Combate</p>'
+    : `<p class="cpr2077-chat-result ${hit ? 'hit' : 'miss'}">${hit ? 'Acertou' : 'Errou'}</p>`;
+  return `<div class="cpr2077-chat"><h3>${escape(title)}</h3><p class="cpr2077-chat-weapon">${escape(weapon.name)}</p>${lines.join('')}${result}${footer || ''}</div>`;
 }
-const attackLine = (parts, d10, total, dv) => line('Ataque', `${parts} + 1d10 (${d10.natural}${d10.note ? `, ${d10.note}` : ''}) = <b>${total}</b> contra DV ${dv}`);
+const attackLine = (parts, d10, total, dv) => line('Ataque', `${parts} + 1d10 (${d10.natural}${d10.note ? `, ${d10.note}` : ''}) = <b>${total}</b>${dv === null || dv === undefined ? '' : ` contra DV ${dv}`}`);
 const damageLine = (damage, label = 'Dano') => line(label, `<b>${damage.total}</b> (${damage.roll.formula})${damage.critical ? ' · <b>lesão crítica</b> (dois 6)' : ''}`);
 const jamLine = (weapon, d10) => weapon.system.quality === 'poor' && d10.natural === 1 ? '<p class="cpr2077-chat-note">Arma de qualidade ruim: a falha crítica emperra a arma (uma Ação para desemperrar).</p>' : '';
 
-async function post(actor, content, rolls) {
-  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content, rolls, sound: CONFIG.sounds.dice });
+async function post(actor, content, rolls, extra = {}) {
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content, rolls, sound: CONFIG.sounds.dice, ...extra });
+}
+
+// Entrega ao Fluxo de Combate: o cartão da macro sai sem acerto nem dano (escondido do alvo, se for de outro jogador,
+// até ele decidir) e o mestre resolve a defesa e o dano.
+async function handToFluxo(fluxo, { actor, weapon, title, lines, total, rolls, footer, rolagem = 'attack', extra }) {
+  const token = tokenDe(actor);
+  if (!token) {
+    ui.notifications.warn(`Ponha o token de ${actor.name} na cena para o Fluxo de Combate resolver o ataque.`);
+    return null;
+  }
+  const hide = fluxo.api.esconderDe(fluxo.alvos);
+  const message = await post(actor, card({ title, weapon, lines, hit: null, footer }), rolls, hide ? { whisper: fluxo.api.sussurro() } : {});
+  fluxo.api.atacar({ token, arma: weapon, total, alvos: fluxo.alvos, rolagem, mensagem: message, revelar: hide, extra })
+    .catch(error => ui.notifications.warn(`Fluxo de Combate: ${error.message}`));
+  return message;
 }
 
 // ---------------- Ataque Smart ----------------
@@ -110,8 +145,9 @@ export async function ataqueSmart() {
   if (!actor) return;
   const weapons = weaponsOfClass(actor, 'smart');
   if (!weapons.length) return ui.notifications.warn(`${actor.name} não tem nenhuma arma Smart do compêndio "Armas de 2077".`);
+  const fluxo = comFluxo();
   const answer = await askAttack({
-    title: 'Ataque Smart', weapons, tableFor: weapon => weapon.system.dvTable,
+    title: 'Ataque Smart', weapons, tableFor: weapon => weapon.system.dvTable, fluxo,
     extra: '<div class="form-group"><label>Várias balas Smart (12 + 1d10)</label><input type="checkbox" name="multi"></div>'
   });
   if (!answer) return;
@@ -120,23 +156,26 @@ export async function ataqueSmart() {
   const base = multi ? 12 : 10;
   const d10 = await rollD10();
   const total = base + mod + d10.total;
-  const hit = total > dv;
   const rolls = [...d10.rolls];
-  const lines = [attackLine(`${base}${mod ? ` ${mod > 0 ? '+' : '−'} ${Math.abs(mod)}` : ''}`, d10, total, dv)];
+  const lines = [attackLine(`${base}${mod ? ` ${mod > 0 ? '+' : '−'} ${Math.abs(mod)}` : ''}`, d10, total, fluxo ? null : dv)];
   if (!hasCyberware(actor, 'smartLink', /smart ?(gun )?link/i)) lines.unshift('<p class="cpr2077-chat-note warning">Sem Smart Link instalado: a arma não funciona como Smart.</p>');
-  if (hit) { const damage = await rollDamage(weapon.system.damage); rolls.push(damage.roll); lines.push(damageLine(damage)); }
   const footer = `${jamLine(weapon, d10)}<p class="cpr2077-chat-note">Regra inferida das descrições das armas Smart (suplemento p. 30–50). O alvo pode esquivar como de costume.</p>`;
+  if (fluxo) return handToFluxo(fluxo, { actor, weapon, title: 'Ataque Smart', lines, total, rolls, footer, extra: { descricao: multi ? 'Ataque Smart (várias balas)' : 'Ataque Smart' } });
+  const hit = total > dv;
+  if (hit) { const damage = await rollDamage(weapon.system.damage); rolls.push(damage.roll); lines.push(damageLine(damage)); }
   return post(actor, card({ title: 'Ataque Smart', weapon, lines, hit, footer }), rolls);
 }
 
 // ---------------- Ricochete (armas Power) ----------------
 const smgLike = ['medPistol', 'heavyPistol', 'vHeavyPistol', 'smg', 'heavySmg'];
+const ricochetTable = weapon => smgLike.includes(weapon.system.weaponType) ? 'DV SMG (Autofire)' : 'DV Assault Rifle (Autofire)';
 export async function ricochete() {
   const actor = selectedActor();
   if (!actor) return;
   const weapons = weaponsOfClass(actor, 'power').filter(weapon => weapon.system.weaponSkill !== 'Autofire');
   if (!weapons.length) return ui.notifications.warn(`${actor.name} não tem nenhuma arma Power (compêndio "Armas de 2077") que faça tiro único.`);
-  const answer = await askAttack({ title: 'Ricochete', weapons, tableFor: weapon => smgLike.includes(weapon.system.weaponType) ? 'DV SMG (Autofire)' : 'DV Assault Rifle (Autofire)' });
+  const fluxo = comFluxo();
+  const answer = await askAttack({ title: 'Ricochete', weapons, tableFor: ricochetTable, fluxo });
   if (!answer) return;
   const { weapon, dv, mod } = answer;
   const skill = weapon.system.weaponSkill;
@@ -144,12 +183,18 @@ export async function ricochete() {
   const base = skillBase(actor, skill) + qualityBonus(weapon) + coprocessor + mod;
   const d10 = await rollD10();
   const total = base + d10.total;
-  const hit = total > dv;
   const rolls = [...d10.rolls];
   const parts = `REF + ${escape(skill)}${qualityBonus(weapon) ? ' + 1 (excelente)' : ''}${coprocessor ? ' + 2 (Ballistic Coprocessor)' : ''}${mod ? ` ${mod > 0 ? '+' : '−'} ${Math.abs(mod)}` : ''} = ${base}`;
-  const lines = [attackLine(parts, d10, total, dv)];
-  if (hit) { const damage = await rollDamage(oneDieLess(weapon.system.damage)); rolls.push(damage.roll); lines.push(damageLine(damage, 'Dano (um dado a menos)')); }
+  const lines = [attackLine(parts, d10, total, fluxo ? null : dv)];
   const footer = `${jamLine(weapon, d10)}<p class="cpr2077-chat-note">Tiro único ricocheteado num alvo atrás de cobertura, cuja posição você conhece. A DV vem da tabela de autofogo (pistolas e SMGs usam a da SMG). Alvos com REF 8+ podem esquivar (suplemento p. 32).</p>`;
+  if (fluxo) {
+    return handToFluxo(fluxo, {
+      actor, weapon, title: 'Ricochete', lines, total, rolls, footer,
+      extra: { descricao: 'Ricochete', tabela: ricochetTable(weapon), formula: oneDieLess(weapon.system.damage), notas: ['Ricochete: DV da tabela de autofogo e um dado a menos de dano (suplemento p. 32).'] }
+    });
+  }
+  const hit = total > dv;
+  if (hit) { const damage = await rollDamage(oneDieLess(weapon.system.damage)); rolls.push(damage.roll); lines.push(damageLine(damage, 'Dano (um dado a menos)')); }
   return post(actor, card({ title: 'Ricochete', weapon, lines, hit, footer }), rolls);
 }
 
@@ -164,8 +209,9 @@ export async function cargaTech() {
   if (!actor) return;
   const weapons = weaponsOfClass(actor, 'tech');
   if (!weapons.length) return ui.notifications.warn(`${actor.name} não tem nenhuma arma Tech do compêndio "Armas de 2077".`);
+  const fluxo = comFluxo();
   const answer = await askAttack({
-    title: 'Carga Tech', weapons,
+    title: 'Carga Tech', weapons, fluxo,
     tableFor: (weapon, form) => form.mode.value === 'burst' ? 'DV SMG (Autofire)' : weapon.system.dvTable,
     extra: `<div class="form-group"><label>Modo</label><select name="mode" data-refresh><option value="single">Tiro único</option><option value="burst">Rajada</option></select></div>
       <div class="form-group"><label>Alvo</label><select name="cover"><option value="none">Sem cobertura</option><option value="thin">Atrás de cobertura fina</option><option value="thick">Atrás de cobertura grossa</option></select></div>`
@@ -181,9 +227,24 @@ export async function cargaTech() {
   const base = skillBase(actor, skill) + (mode === 'burst' ? 0 : qualityBonus(weapon)) + mod;
   const d10 = await rollD10();
   const total = base + d10.total;
-  const hit = total > dv;
   const rolls = [...d10.rolls];
-  const lines = [line('Modo', mode === 'burst' ? `rajada carregada (até ×${burstSize})` : 'tiro único carregado'), attackLine(`REF + ${escape(skill)} = ${base}`, d10, total, dv)];
+  const lines = [line('Modo', mode === 'burst' ? `rajada carregada (até ×${burstSize})` : 'tiro único carregado'), attackLine(`REF + ${escape(skill)} = ${base}`, d10, total, fluxo ? null : dv)];
+  const footer = `${jamLine(weapon, d10)}<p class="cpr2077-chat-note">Depois da carga, a arma precisa de <b>uma rodada para esfriar</b> antes de carregar de novo (suplemento p. 32).</p>`;
+  if (fluxo) {
+    if (form.cover.value !== 'none') lines.push(line('Alvo', `atrás de ${cover.label}: chega ${cover[mode === 'burst' ? 'burst' : 'single'] * 100}% do dano`));
+    lines.push(line('Armadura', `se o dano passar da armadura, ela perde <b>${cover.ablation} de SP</b> em vez de 1`));
+    return handToFluxo(fluxo, {
+      actor, weapon, title: 'Carga Tech', lines, total, rolls, footer, rolagem: mode === 'burst' ? 'autofire' : 'attack',
+      extra: {
+        descricao: mode === 'burst' ? 'Carga Tech (rajada)' : 'Carga Tech',
+        ...(mode === 'burst' ? { tabela: 'DV SMG (Autofire)', multiplicadorMax: burstSize } : {}),
+        ablacao: cover.ablation,
+        fracao: cover[mode === 'burst' ? 'burst' : 'single'],
+        notas: [`Carga Tech ${form.cover.value === 'none' ? 'sem cobertura' : `através de ${cover.label}`}: a armadura perde ${cover.ablation} de SP se o dano passar.`]
+      }
+    });
+  }
+  const hit = total > dv;
   if (hit) {
     const damage = mode === 'burst' ? await rollDamage('2d6') : await rollDamage(weapon.system.damage);
     const multiplier = mode === 'burst' ? Math.min(total - dv, burstSize) : 1;
@@ -194,6 +255,5 @@ export async function cargaTech() {
     if (form.cover.value !== 'none') lines.push(line('Através da cobertura', through ? `<b>${through}</b> chegam ao alvo (${cover.label}); o resto fica na cobertura` : `nada atravessa a ${cover.label}`));
     lines.push(line('Armadura', `se o dano passar da armadura, ela perde <b>${cover.ablation} de SP</b> em vez de 1`));
   }
-  const footer = `${jamLine(weapon, d10)}<p class="cpr2077-chat-note">Depois da carga, a arma precisa de <b>uma rodada para esfriar</b> antes de carregar de novo (suplemento p. 32).</p>`;
   return post(actor, card({ title: 'Carga Tech', weapon, lines, hit, footer }), rolls);
 }

@@ -84,18 +84,21 @@ async function contexto(dados, usuario) {
   return {
     dados, usuario, cena, tokenAtq, atacante, arma, municao, modo, mirado,
     local: mirado ? dados.local || 'head' : 'body',
-    descricao: R.descreverAtaque({ modo, mirado, local: dados.local || 'head' }),
+    // Ajustes de quem pediu por macro (cpr-2077): tabela de DV, fórmula de dano, multiplicador máximo da rajada,
+    // ablação, fração que atravessa a cobertura e notas.
+    extra: dados.extra || {},
+    descricao: (dados.extra && dados.extra.descricao) || R.descreverAtaque({ modo, mirado, local: dados.local || 'head' }),
     alvos: (dados.alvos || []).map(id => cena.tokens.get(id)).filter(token => token && token.actor),
     mensagem: game.messages.get(dados.mensagem) || null,
     cabecalho: '',
     linhas: [],
-    notas: []
+    notas: [...((dados.extra && dados.extra.notas) || [])]
   };
 }
 
 // ---------------- DV ----------------
 async function dvDoAlvo(ctx, alvo) {
-  for (const nome of R.tabelasCandidatas(ctx.arma.system.dvTable, ctx.modo)) {
+  for (const nome of ctx.extra.tabela ? [ctx.extra.tabela] : R.tabelasCandidatas(ctx.arma.system.dvTable, ctx.modo)) {
     const faixas = await faixasDaTabela(nome);
     if (faixas) return { ...R.dvPelaDistancia(faixas, alvo.distancia), tabela: nome };
   }
@@ -207,19 +210,32 @@ async function defesaDoAlvo(ctx, linha, alvo, dv) {
 }
 
 // ---------------- Dano ----------------
+const ajustesDoDano = ctx => ({ formula: ctx.extra.formula || null, multiplicadorMax: Number(ctx.extra.multiplicadorMax) || null, ablacao: Number(ctx.extra.ablacao) || null });
+
+// Carga Tech através de cobertura: só a fração chega ao alvo (o resto fica na cobertura). Nada passa: null.
+function atravessar(ctx, linha, dano) {
+  const fracao = ctx.extra.fracao;
+  if (fracao === undefined || fracao === null || Number(fracao) >= 1) return dano;
+  const passa = Math.floor(dano.total * Number(fracao));
+  linha.cobertura = { rolado: dano.total, passou: passa };
+  if (passa <= 0) { linha.notas.push(`Nada dos ${dano.total} atravessou a cobertura.`); return null; }
+  linha.notas.push(`${passa} dos ${dano.total} atravessaram a cobertura; o resto ficou nela.`);
+  return { ...dano, total: passa };
+}
+
 // Quem atacou rola, se for um jogador conectado (com a janela do sistema); senão, o mestre rola sozinho.
 async function rolarDanoDoAtaque(ctx, { multiplicador = 1, titulo = '' } = {}) {
   const jogador = !ctx.usuario.isGM && ctx.usuario.active && ctx.atacante.testUserPermission(ctx.usuario, 'OWNER') ? ctx.usuario : null;
   const local = ctx.mirado ? ctx.local : 'body';
   if (jogador && config('rolagemManual')) {
     const resposta = await perguntarAoJogador(jogador.id, 'dano', {
-      token: ctx.tokenAtq.uuid, arma: ctx.arma.id, modo: ctx.modo, mirado: ctx.mirado, local, multiplicador, janela: true, titulo,
+      token: ctx.tokenAtq.uuid, arma: ctx.arma.id, modo: ctx.modo, mirado: ctx.mirado, local, multiplicador, janela: true, titulo, ...ajustesDoDano(ctx),
       aviso: `Acertou! Role o dano de ${ctx.arma.name}${ctx.modo === 'autofogo' ? ` (2d6 × ${multiplicador})` : ''}.`
     }, ((Number(config('tempo')) || 60) + 15) * 1000);
     if (resposta && Number.isFinite(Number(resposta.total))) return resposta;
     ctx.notas.push(`${jogador.name} não rolou o dano a tempo: o mestre rolou.`);
   }
-  return rolarDano({ actor: ctx.atacante, token: ctx.tokenAtq, arma: ctx.arma, modo: ctx.modo, mirado: ctx.mirado, local, multiplicador, janela: false, titulo });
+  return rolarDano({ actor: ctx.atacante, token: ctx.tokenAtq, arma: ctx.arma, modo: ctx.modo, mirado: ctx.mirado, local, multiplicador, janela: false, titulo, ...ajustesDoDano(ctx) });
 }
 
 // Aplica o dano rolado num alvo e cuida das lesões: dois 6 (tabela da cabeça só em tiro mirado na cabeça), tiro na
@@ -228,7 +244,7 @@ async function ferir(ctx, linha, dano, { escudo = false } = {}) {
   const actor = linha.token.actor;
   const jaMortal = Number(actor.system.derivedStats.hp.value) < 1;
   const efeito = await aplicarDano(actor, { total: dano.total, bonus: dano.bonus, local: dano.local, extra: dano.extra, escudo });
-  linha.dano = { ...efeito, rolado: dano.total, bonus: dano.bonus, critico: dano.critico, autofogo: dano.autofogo, localMirado: dano.local, lesoes: [], serio: Number(actor.system.derivedStats.seriouslyWounded) || 0 };
+  linha.dano = { ...efeito, rolado: dano.total, formula: dano.formula, bonus: dano.bonus, critico: dano.critico, autofogo: dano.autofogo, localMirado: dano.local, lesoes: [], serio: Number(actor.system.derivedStats.seriouslyWounded) || 0 };
   const modoLesao = config('lesaoCritica');
   const lesao = async opcoes => {
     if (modoLesao === 'nao') return;
@@ -268,8 +284,8 @@ async function individual(ctx) {
   for (const { linha } of ctx.linhas.map(l => pendentes.find(p => p.linha === l)).filter(Boolean)) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
     const multiplicador = ctx.modo === 'autofogo' ? R.multiplicadorDeAutofogo(ctx.dados.total, contra) : 1;
-    const dano = await rolarDanoDoAtaque(ctx, { multiplicador, titulo: ctx.alvos.length > 1 ? `${ctx.arma.name} em ${linha.nome}` : '' });
-    await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
+    const dano = atravessar(ctx, linha, await rolarDanoDoAtaque(ctx, { multiplicador, titulo: ctx.alvos.length > 1 ? `${ctx.arma.name} em ${linha.nome}` : '' }));
+    if (dano) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
   }
 }
 
@@ -278,7 +294,10 @@ async function danoNaArea(ctx, pegos) {
   if (!pegos.length) return;
   if (config('dano') === 'manual') { ctx.notas.push('Role o dano pelo botão do cartão do ataque e aplique em quem ficou na área.'); return; }
   const dano = await rolarDanoDoAtaque(ctx);
-  for (const linha of ctx.linhas.filter(l => pegos.includes(l))) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
+  for (const linha of ctx.linhas.filter(l => pegos.includes(l))) {
+    const passou = atravessar(ctx, linha, dano);
+    if (passou) await ferir(ctx, linha, passou, { escudo: linha.escolha === 'escudo' });
+  }
 }
 
 // Espingarda com cartucho: um ataque contra DV 13; se acertar, cada alvo à frente, até 6 m, leva 3d6 (rolado uma vez).
@@ -391,7 +410,8 @@ export const operacoes = {
     const cartao = await postarResultado(ctx);
     ultimo = {
       ataque: dados.id, modo: ctx.modo, total: dados.total, cartao: cartao && cartao.id, mensagem: dados.mensagem, notas: ctx.notas, cabecalho: ctx.cabecalho,
-      linhas: ctx.linhas.map(l => ({ token: l.token.id, nome: l.nome, resultado: l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null, dv: l.dv ?? null, distancia: l.distancia ?? null, dano: l.dano ? { ...l.dano } : null, suprimido: Boolean(l.suprimido), notas: l.notas }))
+      descricao: ctx.descricao,
+      linhas: ctx.linhas.map(l => ({ token: l.token.id, nome: l.nome, resultado: l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null, dv: l.dv ?? null, distancia: l.distancia ?? null, dano: l.dano ? { ...l.dano } : null, cobertura: l.cobertura || null, suprimido: Boolean(l.suprimido), notas: l.notas }))
     };
     return ultimo;
   },

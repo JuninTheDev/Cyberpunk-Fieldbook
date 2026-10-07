@@ -27,6 +27,8 @@
 .cpr2077-chat-result { margin-top: 4px; font-weight: bold; text-align: center; text-transform: uppercase; }
 .cpr2077-chat-result.hit { color: #0a7a2f; }
 .cpr2077-chat-result.miss { color: #b3001b; }
+.cpr2077-chat-result.fluxo { color: #12866f; font-size: 0.85em; text-transform: none; }
+.cpr2077-dialog .cpr2077-fluxo { margin: 4px 0; color: #12866f; font-size: 0.9em; }
 .cpr2077-chat-note { color: #555; font-size: 0.85em; }
 .cpr2077-chat-note.warning { color: #b3001b; font-weight: bold; }
 .cpr2077-dialog .form-group { margin-bottom: 4px; }

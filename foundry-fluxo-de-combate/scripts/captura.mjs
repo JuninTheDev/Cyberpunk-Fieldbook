@@ -71,9 +71,9 @@ function lerAtaque(cprRoll, rolls) {
 }
 
 // Esconde o total quando algum alvo é de um jogador (que ainda vai decidir). Alvos do mestre: ele pode ver.
-function esconderDe(alvos) {
+export function esconderDe(alvos) {
   if (!game.settings.get(MODULE_ID, 'escondeAtaque')) return false;
-  return alvos.some(alvo => alvo.actor && game.users.some(user => user.active && !user.isGM && user.id !== game.user.id && alvo.actor.testUserPermission(user, 'OWNER')));
+  return alvos.map(alvo => alvo.document || alvo).some(alvo => alvo.actor && game.users.some(user => user.active && !user.isGM && user.id !== game.user.id && alvo.actor.testUserPermission(user, 'OWNER')));
 }
 
 function marcarCartao(mensagem, dados, opcoes, usuarioId) {

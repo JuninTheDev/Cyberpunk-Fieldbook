@@ -10,7 +10,12 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
   - NPCs prontos (só o mestre vê);
   - regras em diários.
 - **Economia de 2077:** uma configuração do módulo que troca as categorias de preço pelas do suplemento.
-- **Macros:** Ataque Smart, Ricochete e Carga Tech. Só rolam e explicam no chat.
+- **Macros:** Ataque Smart, Ricochete e Carga Tech.
+  - Com o **Fluxo de Combate** ligado e um alvo marcado, a macro rola o ataque com as regras de 2077 e entrega a defesa e o dano ao Fluxo:
+    - a DV sai da distância até o alvo (o diálogo não pergunta);
+    - o alvo decide às cegas e rola a própria esquiva;
+    - quem atacou rola o dano, e o mestre aplica na ficha. Vale o que a arma muda: um dado a menos no ricochete; rajada até ×N, armadura perdendo 2 ou 4 de SP e só a parte que atravessa a cobertura, na carga Tech.
+  - Sem alvo marcado (ou sem o Fluxo), só rolam e explicam no chat, como antes.
 - **Roles de 2077:** Face, Corpo e Lawman (com Investigator), no compêndio Roles de 2077.
 - **Personagens da wiki:**
   - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.

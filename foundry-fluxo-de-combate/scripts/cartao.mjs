@@ -38,7 +38,7 @@ function textoDoDano(linha) {
   const d = linha.dano;
   if (!d) return '';
   const partes = [];
-  const rolado = `${d.rolado}${d.autofogo ? ` (2d6 × ${d.autofogo})` : ''}${d.bonus ? ` + ${d.bonus} da lesão crítica` : ''}`;
+  const rolado = `${d.rolado}${d.autofogo ? ` (2d6 × ${d.autofogo})` : d.formula && /^\d+d6$/.test(d.formula) ? ` em ${d.formula}` : ''}${d.bonus ? ` + ${d.bonus} da lesão crítica` : ''}`;
   if (d.escudo) partes.push(`O escudo segurou ${d.escudo}${d.perdeu ? ' e o resto passou' : ''}.`);
   const local = d.local === 'head' ? 'na cabeça, ×2 depois da armadura' : `no ${LOCAIS[d.local] || d.local}`;
   if (d.perdeu > 0) partes.push(`<b>${d.perdeu} de dano</b> ${local} (rolou ${rolado}) · HP ${d.hpAntes} → ${d.hpDepois}`);

@@ -104,7 +104,9 @@ export async function rolarPericia({ actor, token = null, pericia, stat, titulo 
 
 // Dano da arma pela rolagem do sistema: tiro mirado (local), autofogo (2d6 × multiplicador, limitado pela arma),
 // munição (ablação, tipo, variedade) e bônus de efeitos e upgrades. O cartão sai sem os botões de aplicar.
-export async function rolarDano({ actor, token = null, arma, modo, mirado = false, local = 'body', multiplicador = 1, janela = false, pergunta = null, titulo = '' }) {
+// Ajustes de macro: `formula` troca os dados (ricochete: um dado a menos), `multiplicadorMax` é o máximo da rajada
+// (carga Tech) e `ablacao` é quanto de SP a armadura perde se o dano passar.
+export async function rolarDano({ actor, token = null, arma, modo, mirado = false, local = 'body', multiplicador = 1, janela = false, pergunta = null, titulo = '', formula = null, multiplicadorMax = null, ablacao = null }) {
   const { rollTypes } = await cpr();
   const tipo = mirado ? rollTypes.AIMED : modo === 'autofogo' ? rollTypes.AUTOFIRE : rollTypes.ATTACK;
   let cprRoll = semAvisoDeAlvo(() => arma.createRoll(rollTypes.DAMAGE, actor, { damageType: tipo }));
@@ -113,6 +115,9 @@ export async function rolarDano({ actor, token = null, arma, modo, mirado = fals
     cprRoll.location = local || 'head';
   }
   if (modo === 'autofogo') cprRoll.autofireMultiplier = Math.max(1, Number(multiplicador) || 1);
+  if (modo === 'autofogo' && multiplicadorMax) cprRoll.autofireMultiplierMax = Number(multiplicadorMax);
+  if (formula && modo !== 'autofogo') cprRoll.formula = formula;
+  if (ablacao) cprRoll.rollCardExtraArgs.ablationValue = Number(ablacao);
   if (titulo) cprRoll.rollTitle = titulo;
   if (janela && !(await janelaDeRolagem(cprRoll, actor, arma, pergunta))) return null;
   cprRoll = await arma.confirmRoll(cprRoll);
@@ -125,7 +130,9 @@ export async function rolarDano({ actor, token = null, arma, modo, mirado = fals
     critico,
     local: cprRoll.isAimed ? cprRoll.location : 'body',
     autofogo: cprRoll.isAutofire ? Math.min(cprRoll.autofireMultiplier, cprRoll.autofireMultiplierMax || cprRoll.autofireMultiplier) : null,
-    extra: foundry.utils.deepClone(cprRoll.rollCardExtraArgs || {}),
+    // O sistema guarda os dados da munição como propriedades de um array ([] com nomes): copiar campo a campo
+    // (deepClone de um array perde os nomes, e com eles a ablação e o "ignora metade do SP" das armas brancas).
+    extra: Object.fromEntries(Object.entries(cprRoll.rollCardExtraArgs || {}).filter(([chave]) => !/^\d+$/.test(chave))),
     formula: cprRoll.formula,
     faces: [...cprRoll.faces]
   };

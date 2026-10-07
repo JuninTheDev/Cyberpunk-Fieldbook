@@ -6,7 +6,7 @@
 import { MODULE_ID, STATUS_SUPRIMIDO, MODULO_ANTIGO } from './constantes.mjs';
 import * as regras from './regras.mjs';
 import { iniciarSocket, pedir, forcarResposta, souMestreAtivo } from './socket.mjs';
-import { instalarCaptura } from './captura.mjs';
+import { instalarCaptura, esconderDe } from './captura.mjs';
 import { instalarCapturaDeDano } from './sistema.mjs';
 import * as mestre from './mestre.mjs';
 import { responderDefesa, responderDano, responderDeathSave } from './defesa.mjs';
@@ -84,8 +84,21 @@ Hooks.once('ready', async () => {
     regras,
     // No mestre: o último ataque resolvido.
     get ultimo() { return mestre.ultimo; },
-    // Para macros: o mesmo pedido que o cartão do ataque faz (dados como em captura.mjs).
-    atacar: dados => pedir('ataque', { id: foundry.utils.randomID(), usuario: game.user.id, ...dados })
+    // Para macros (as de 2077 do cpr-2077): o Fluxo resolve? Ligado, com mestre e com algum alvo marcado.
+    pronto: (alvos = [...game.user.targets]) => Boolean(game.settings.get(MODULE_ID, 'ativo') && game.users.activeGM && alvos.length),
+    // Esconder o total do cartão do macro até a defesa? E para quem sussurrar (o mestre e quem atacou).
+    esconderDe: (alvos = [...game.user.targets]) => esconderDe(alvos),
+    sussurro: () => [...new Set([...game.users.filter(user => user.isGM).map(user => user.id), game.user.id])],
+    // O mesmo pedido que o cartão do ataque faz. `extra`: { descricao, tabela, formula, multiplicadorMax, ablacao,
+    // fracao, notas } (veja o README). `revelar`: o mestre mostra o cartão do macro para todos depois da defesa.
+    atacar: ({ token, arma, total, alvos = [...game.user.targets], rolagem = 'attack', local = null, mensagem = null, revelar = false, extra = {} }) => {
+      const doc = token.document || token;
+      return pedir('ataque', {
+        id: foundry.utils.randomID(), usuario: game.user.id, cena: doc.parent.id, token: doc.id, arma: arma.id, rolagem, total, local,
+        alvos: alvos.map(alvo => (alvo.document || alvo).id).filter(id => id !== doc.id),
+        mensagem: mensagem && mensagem.id ? mensagem.id : mensagem, revelar, extra
+      });
+    }
   };
   if (souMestreAtivo()) avisarModuloAntigo();
 });

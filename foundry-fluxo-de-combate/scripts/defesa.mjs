@@ -139,7 +139,7 @@ export async function responderDano(dados, pergunta = null) {
   const arma = actor && actor.items.get(dados.arma);
   if (!arma) return null;
   ui.notifications.info(dados.aviso);
-  return rolarDano({ actor, token, arma, modo: dados.modo, mirado: dados.mirado, local: dados.local, multiplicador: dados.multiplicador, janela: dados.janela, pergunta, titulo: dados.titulo });
+  return rolarDano({ actor, token, arma, modo: dados.modo, mirado: dados.mirado, local: dados.local, multiplicador: dados.multiplicador, janela: dados.janela, pergunta, titulo: dados.titulo, formula: dados.formula, multiplicadorMax: dados.multiplicadorMax, ablacao: dados.ablacao });
 }
 
 export async function responderDeathSave(dados, pergunta = null) {

@@ -87,9 +87,20 @@ As mesmas da wiki da mesa (o teste confere o texto da wiki):
 
 ## Macros
 
+As macros de 2077 do cpr-2077 (Ataque Smart, Ricochete e Carga Tech) entregam ao Fluxo de Combate quando há um alvo marcado. A macro rola o ataque com as regras do suplemento; o Fluxo cuida da defesa e do dano:
+
+| Macro | O que muda no Fluxo |
+|---|---|
+| **Ataque Smart** | Nada: tiro normal (10 ou 12 + 1d10, pela macro). |
+| **Ricochete** | DV da tabela de autofogo (pistolas e SMGs usam a da SMG) e um dado a menos de dano. |
+| **Carga Tech, tiro único** | A armadura perde 4 de SP (2 através de cobertura) se o dano passar. Através de cobertura fina, chega metade do dano; grossa, um quarto. |
+| **Carga Tech, rajada** | Como o autofogo, com a tabela da SMG e o máximo da rajada da arma (×3 na Senkoh LX). Através de cobertura fina, chega um quarto; grossa, nada. |
+
 `game.modules.get('fluxo-de-combate').api` tem:
 
-- `atacar(dados)`: o mesmo pedido que o cartão do ataque faz ao mestre (`cena`, `token`, `arma`, `rolagem`, `total`, `alvos`, `local`);
+- `pronto(alvos)`: o Fluxo vai resolver um ataque nesses alvos (ligado, com mestre e com alvo);
+- `atacar({ token, arma, total, alvos, rolagem, local, mensagem, revelar, extra })`: o mesmo pedido que o cartão do ataque faz ao mestre. Em `extra`, os ajustes de macro: `descricao`, `tabela` (de DV), `formula` (de dano), `multiplicadorMax` (da rajada), `ablacao`, `fracao` (que atravessa a cobertura) e `notas`;
+- `esconderDe(alvos)` e `sussurro()`: se o cartão da macro deve ficar escondido até a defesa, e para quem sussurrar;
 - `desfazer(mensagem)`: desfaz o cartão de resultado;
 - `ultimo` (no mestre): o último ataque resolvido, com o resultado de cada alvo;
 - `regras`: as funções de regra (modo, escolhas, DV pela distância, autofogo).
