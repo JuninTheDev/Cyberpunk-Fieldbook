@@ -98,18 +98,45 @@
     let campaignMapAct = 'all';
     let campaignMapView = { x: 0, y: 0, width: 5600, height: 5320 };
 
+    // ---------------- Campanha ativa ----------------
+    // Cada campanha tem as suas páginas (config.campaigns[].groups). A página inicial é config.homePage se a campanha
+    // a tiver; senão, a primeira dela. Trocar de campanha muda a cor e o nome no topo e avisa as páginas (evento
+    // "wiki:campanha"), que recarregam o que é da campanha (personagens, loja, Publicar).
+    const activeCampaign = () => campaigns.find(item => item.id === activeCampaignId) || campaigns[0] || null;
+    const pagesOf = campaign => (campaign ? campaign.groups.flatMap(group => group.pages.map(page => page.id)) : []);
+    function homePage() {
+      const pages = pagesOf(activeCampaign()).filter(id => pageContent[id]);
+      return pages.includes(config.homePage) || !pages.length ? config.homePage || 'home' : pages[0];
+    }
+    function showCampaign() {
+      const campaign = activeCampaign();
+      if (!campaign) return;
+      document.documentElement.style.setProperty('--campanha-cor', campaign.color || '');
+      const meta = document.querySelector('.top-meta');
+      if (meta && config.topMeta) meta.textContent = config.topMeta(campaign);
+    }
+    function setCampaign(id) {
+      if (!campaigns.some(item => item.id === id) || id === activeCampaignId) return false;
+      activeCampaignId = id;
+      storage.set('active-campaign', id);
+      showCampaign();
+      buildNavigation();
+      document.dispatchEvent(new CustomEvent('wiki:campanha', { detail: activeCampaign() }));
+      return true;
+    }
+
     function buildNavigation() {
-      const campaign = campaigns.find(item => item.id === activeCampaignId) || campaigns[0];
+      const campaign = activeCampaign();
       activeCampaignId = campaign.id;
       const groups = currentWorkspace === 'campaigns'
-        ? campaign.groups.map((group, index) => ({ ...group, group: index === 0 ? campaign.name : group.group }))
+        ? campaign.groups.map((group, index) => ({ ...group, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
         : systemSections;
       // Páginas que não existem nesta visão (ex.: só do mestre) somem do menu.
       const visibleGroups = groups.map(group => ({ ...group, pages: group.pages.filter(page => pageContent[page.id]) })).filter(group => group.pages.length);
       const campaignPicker = currentWorkspace === 'campaigns' && campaigns.length > 1
-        ? `<label class="campaign-picker"><span class="nav-label">Campanha ativa</span><select id="campaign-picker">${campaigns.map(item => `<option value="${item.id}" ${item.id === campaign.id ? 'selected' : ''}>${item.name}</option>`).join('')}</select></label>`
+        ? `<label class="campaign-picker"><span class="nav-label">Campanha ativa</span><select id="campaign-picker">${campaigns.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === campaign.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>`
         : '';
-      navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => `<div class="nav-group"><div class="nav-label">${group.group}</div>${group.pages.map(page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"><span class="nav-icon">${page.icon}</span>${page.label}</button>`).join('')}</div>`).join('')}`;
+      navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => `<div class="nav-group"><div class="nav-label${group.campaignLabel ? ' nav-campaign' : ''}">${escapeHtml(group.group)}</div>${group.pages.map(page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"><span class="nav-icon">${page.icon}</span>${page.label}</button>`).join('')}</div>`).join('')}`;
       document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
       document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
       document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
@@ -144,7 +171,7 @@
       if (location.hash === routedHash) return;
       routedHash = location.hash;
       const { id, section } = readHash();
-      if (!pageContent[id]) { openPage(config.homePage || 'home', undefined, 'replace'); return; }
+      if (!pageContent[id]) { openPage(homePage(), undefined, 'replace'); return; }
       openPage(id, section ? { section } : undefined, 'none');
     }
     window.addEventListener('popstate', routeFromHash);
@@ -166,6 +193,9 @@
       if (!page) return;
       const targetWorkspace = pageWorkspace[id];
       if (targetWorkspace && targetWorkspace !== currentWorkspace) setWorkspace(targetWorkspace);
+      // Página que só existe em outra campanha (um resultado de busca do mestre): troca para ela.
+      const owners = campaigns.filter(campaign => pagesOf(campaign).includes(id));
+      if (owners.length && !owners.some(campaign => campaign.id === activeCampaignId)) setCampaign(owners[0].id);
       currentPage = id;
       search.value = '';
       // Páginas com manterAlvo (ficha e criador) guardam no endereço o id do que mostram: #ficha/<id>.
@@ -196,7 +226,7 @@
     }
     // Guarda a página (e a seção, quando há) entre as 8 últimas abertas neste aparelho.
     function rememberRecent(id, unit) {
-      if (!pageContent[id] || id === (config.homePage || 'home')) return;
+      if (!pageContent[id] || id === homePage()) return;
       const title = String(pageContent[id].title).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const list = recentPages().filter(item => item.id !== id);
       list.unshift({ id, hash: pageHash(id, unit), title, section: unit ? unitTitle(unit) : '' });
@@ -971,7 +1001,7 @@
       const workspaceTab = event.target.closest('[data-workspace]');
       if (workspaceTab) {
         setWorkspace(workspaceTab.dataset.workspace);
-        const defaultPage = workspaceTab.dataset.workspace === 'campaigns' ? (config.homePage || 'home') : 'screen';
+        const defaultPage = workspaceTab.dataset.workspace === 'campaigns' ? homePage() : 'screen';
         if (pageWorkspace[currentPage] !== currentWorkspace) openPage(defaultPage);
         return;
       }
@@ -1020,20 +1050,27 @@
         if (chosen) { event.preventDefault(); chosen.click(); search.blur(); }
       }
     });
-    navigation.addEventListener('change', event => {
+    navigation.addEventListener('change', async event => {
       if (event.target.id !== 'campaign-picker') return;
-      activeCampaignId = event.target.value;
-      storage.set('active-campaign', activeCampaignId);
-      buildNavigation();
-      openPage(campaigns.find(campaign => campaign.id === activeCampaignId).groups[0].pages[0].id);
+      // A página pode segurar a troca (o Publicar com alterações não publicadas): config.confirmCampaignChange.
+      const wanted = event.target.value;
+      if (config.confirmCampaignChange) {
+        event.target.value = activeCampaignId;
+        if (!(await config.confirmCampaignChange(campaigns.find(item => item.id === wanted)))) return;
+      }
+      setCampaign(wanted);
+      // Na mesma página, se a campanha nova também tem (Personagens, Loja, Publicar): ela se monta de novo para a
+      // campanha nova. Senão, a página inicial da campanha.
+      openPage(pagesOf(activeCampaign()).includes(currentPage) ? currentPage : homePage(), undefined, 'replace');
     });
     search.addEventListener('input', () => searchPages(search.value));
     if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
     updateStickyOffset();
+    showCampaign();
     buildNavigation();
     // Abre a página do endereço (link direto, recarregar) ou a inicial.
     if (pageContent[readHash().id]) routeFromHash();
-    else openPage(config.homePage || 'home', undefined, 'replace');
+    else openPage(homePage(), undefined, 'replace');
     // Pré-carrega os documentos para a busca encontrar o texto completo deles.
     if (Object.keys(markdownDocs).length) Promise.allSettled(Object.keys(markdownDocs).map(loadMarkdownDoc)).then(() => {
       searchIndex = null;
@@ -1076,8 +1113,9 @@
       const mesa = state.mesa;
       let table = '';
       if (mesa && mesa.url) {
+        // Com mais de uma campanha, a mesa aberta diz de qual é (o servidor só conta a quem joga nela).
         const [kind, text] = !mesa.online ? ['off', 'Mesa fora do ar']
-          : mesa.aberta ? ['on', `Mesa aberta${mesa.usuarios ? ` · ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
+          : mesa.aberta ? ['on', `Mesa aberta${mesa.campanha && campaigns.length > 1 ? `: ${mesa.campanha.nome}` : ''}${mesa.usuarios ? ` · ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
           : ['idle', 'Foundry ligado, sem mundo aberto'];
         table = `<div class="table-status table-${kind}"><span class="table-dot" aria-hidden="true"></span><span>${escapeHtml(text)}</span></div>
           ${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
@@ -1138,5 +1176,6 @@
       }
     }
 
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, currentPage: () => currentPage, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
+    // activeCampaign: { id, name, color, ... } da campanha escolhida no menu (o que cada página da campanha usa).
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
 })();

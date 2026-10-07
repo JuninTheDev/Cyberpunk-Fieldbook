@@ -487,6 +487,13 @@
     }
   }
   const identity = () => api('api/eu');
+  // A campanha escolhida no menu da wiki (o mestre troca no seletor; o jogador, se joga em mais de uma).
+  // A visão dos jogadores sem código (ou sem servidor) tem uma campanha de mentira (real: false): aí não filtra.
+  const activeCampaign = () => {
+    const campaign = window.wikiApp && window.wikiApp.activeCampaign ? window.wikiApp.activeCampaign() : null;
+    return campaign && campaign.real !== false ? campaign : null;
+  };
+  const campaignQuery = (id = (activeCampaign() || {}).id) => (id ? `?campanha=${encodeURIComponent(id)}` : '');
 
   // ---------------- Visual comum ----------------
   let esc = text => String(text);
@@ -543,8 +550,8 @@
   // O servidor diz em que pé está (estadoFoundry): novo · enviado · enviado-mudou · importado · mudou · avisado.
   // "Enviar para o mestre" faz o Foundry dele avisar; quem importa é sempre o mestre.
   const when = iso => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
-  const FOUNDRY_BADGES = { enviado: 'esperando o mestre', 'enviado-mudou': 'enviado, mudou depois', importado: 'no Foundry', mudou: 'mudou depois de importar', avisado: 'esperando o mestre atualizar' };
-  const WAITING = ['enviado', 'enviado-mudou', 'avisado'];
+  const FOUNDRY_BADGES = { enviado: 'esperando o mestre', 'enviado-mudou': 'enviado, mudou depois', importado: 'no Foundry', mudou: 'mudou depois de importar', avisado: 'esperando o mestre atualizar', 'outra-mesa': 'veio de outra campanha: falta trazer para o Foundry desta' };
+  const WAITING = ['enviado', 'enviado-mudou', 'avisado', 'outra-mesa'];
   const foundryBadge = item => (FOUNDRY_BADGES[item.estadoFoundry] ? ` · <b class="${item.estadoFoundry === 'importado' ? 'cc-ok' : 'cc-wait'}">${FOUNDRY_BADGES[item.estadoFoundry]}</b>` : '');
   const GM_FOUNDRY_HELP = '<p class="note-status"><b>Mestre:</b> no Foundry, aba Atores → <b>Importar da wiki</b>. Para um ator que já veio da wiki, <b>Atualizar da wiki</b> no topo da ficha dele. Com o módulo atualizado (<code>atualizar-modulo.bat</code>), o Foundry avisa sozinho quando alguém envia.</p>';
   function foundryBox(doc, papel) {
@@ -560,7 +567,8 @@
       'enviado-mudou': `<p class="cc-wait">Enviado em ${sent}, mas mudou depois disso.</p><p class="note-status">O mestre importa o que estiver aqui na hora. Envie de novo para ele saber que mudou.</p>${button('Enviar de novo')}`,
       importado: `<p class="cc-ok">No Foundry desde ${since}${actor}.</p><p class="note-status">Se mudar algo aqui, este quadro mostra um botão para avisar o mestre, que atualiza a ficha no Foundry.</p>`,
       mudou: `<p class="cc-wait">No Foundry desde ${since}${actor}, mas mudou na wiki depois disso.</p>${button('Avisar o mestre de novo')}`,
-      avisado: `<p class="cc-wait">Mudou depois da importação. O mestre foi avisado em ${sent} e ainda não atualizou.</p>${button('Avisar o mestre de novo')}`
+      avisado: `<p class="cc-wait">Mudou depois da importação. O mestre foi avisado em ${sent} e ainda não atualizou.</p>${button('Avisar o mestre de novo')}`,
+      'outra-mesa': `<p class="cc-wait">Este personagem veio de outra campanha. A ficha dele está no Foundry da mesa antiga${actor}; o mestre traz para o Foundry desta campanha.</p>`
     }[state] || '';
     return box('Levar para o Foundry', `${text}<p class="cc-msg" data-cc-send-msg role="status"></p>${papel === 'mestre' ? GM_FOUNDRY_HELP : ''}`, ' data-cc-foundry');
   }
@@ -614,42 +622,61 @@
     esc = helpers.escapeHtml;
     const token = ++renderToken;
     const root = content.querySelector('#cc-root');
-    const [me, list] = await Promise.all([identity(), api('api/personagens')]);
+    const campaign = activeCampaign();
+    const [me, list] = await Promise.all([identity(), api(`api/personagens${campaignQuery()}`)]);
     if (token !== renderToken) return;
     if (!me.status) { root.innerHTML = offline; return; }
     const papel = me.data.papel;
+    // As campanhas desta pessoa (o mestre: todas). Mover só aparece com mais de uma.
+    const campaignsOfMe = me.data.campanhas || [];
     const characters = list.data.personagens || [];
     const mine = characters.filter(item => !item.publico);
     const others = characters.filter(item => item.publico);
     const card = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}</small></div>
-      <div class="cc-card-actions"><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button><button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
+      <div class="cc-card-actions"><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button>${papel === 'mestre' && campaignsOfMe.length > 1 ? `<button class="action" type="button" data-cc-move="${item.id}">Mover</button>` : ''}<button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
     const publicCard = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
 
     let who = '';
-    if (papel === 'mestre') who = '<p>Você é o <b>mestre</b>: vê e edita todos os personagens.</p>';
-    else if (papel === 'jogador') who = `<p>Você entrou como <b>${esc(me.data.jogador.nome)}</b>. <button class="action" type="button" data-cc-logout>Sair</button></p>`;
+    const campaignName = campaign ? esc(campaign.name) : '';
+    if (papel === 'mestre') who = `<p>Você é o <b>mestre</b>: vê e edita todos os personagens.${campaign && campaignsOfMe.length > 1 ? ` Esta lista é de <b>${campaignName}</b>; troque de campanha no menu.` : ''}</p>`;
+    else if (papel === 'jogador') who = `<p>Você entrou como <b>${esc(me.data.jogador.nome)}</b>${campaign && campaignsOfMe.length > 1 ? `, em <b>${campaignName}</b> (troque de campanha no menu)` : ''}. <button class="action" type="button" data-cc-logout>Sair</button></p>${campaignsOfMe.length ? '' : '<p class="note-status">Você ainda não está em nenhuma campanha. Fale com o mestre.</p>'}`;
     else who = `<p>Para criar ou editar o seu personagem, entre com o código que o mestre te passou. Este aparelho lembra dele.</p><form class="cc-login" data-cc-login><input id="cc-code" autocomplete="off" placeholder="NC-XXXX-XXXX" aria-label="Código do jogador"><button class="action" type="submit">Entrar</button></form><p class="cc-msg" id="cc-login-msg"></p>`;
 
-    const canCreate = papel !== 'visitante';
+    const canCreate = papel === 'mestre' || (papel === 'jogador' && campaignsOfMe.length > 0);
     const waiting = papel === 'mestre' ? mine.filter(item => WAITING.includes(item.estadoFoundry)) : [];
-    const waitingBox = waiting.length ? box('Esperando você no Foundry', `<ul>${waiting.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${item.estadoFoundry === 'avisado' ? 'mudou, atualizar' : 'importar'}. Enviado em ${when(item.envio && item.envio.quando)}.</li>`).join('')}</ul>${GM_FOUNDRY_HELP}`, ' data-cc-waiting') : '';
+    const waitingBox = waiting.length ? box('Esperando você no Foundry', `<ul>${waiting.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${item.estadoFoundry === 'outra-mesa' ? 'veio de outra campanha, trazer para o Foundry desta.' : `${item.estadoFoundry === 'avisado' ? 'mudou, atualizar' : 'importar'}. Enviado em ${when(item.envio && item.envio.quando)}.`}</li>`).join('')}</ul>${GM_FOUNDRY_HELP}`, ' data-cc-waiting') : '';
     // Pedidos da campanha esperando o mestre (aprova na Loja do personagem) ou o Foundry (entrega quando o mundo abrir).
     const withOrders = mine.filter(item => item.pedidos && (item.pedidos.pendentes || item.pedidos.aprovados));
     const ordersBox = papel === 'mestre' && withOrders.length ? box('Pedidos da campanha', `<ul>${withOrders.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${[item.pedidos.pendentes ? `${item.pedidos.pendentes} esperando você` : '', item.pedidos.aprovados ? `${item.pedidos.aprovados} aprovado${item.pedidos.aprovados > 1 ? 's' : ''}, esperando o Foundry entregar` : ''].filter(Boolean).join(' · ')} <button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Abrir</button></li>`).join('')}</ul><p class="note-status">Aprove ou recuse na Loja do personagem (ou na janela Personagens da wiki, no Foundry). O Foundry entrega o que foi aprovado assim que o mundo estiver aberto.</p>`, ' data-cc-orders-gm') : '';
     root.innerHTML = `${waitingBox}${ordersBox}${box('Quem é você', who)}
-      ${canCreate ? box(papel === 'mestre' ? 'Todos os personagens' : 'Meus personagens', `${mine.length ? mine.map(card).join('') : '<p class="note-status">Nenhum personagem ainda.</p>'}<p><button class="action" type="button" data-cc-new>Novo personagem</button></p>`) : ''}
+      ${canCreate ? box(papel === 'mestre' ? (campaign && campaignsOfMe.length > 1 ? `Personagens de ${campaignName}` : 'Todos os personagens') : 'Meus personagens', `${mine.length ? mine.map(card).join('') : '<p class="note-status">Nenhum personagem ainda.</p>'}<p><button class="action" type="button" data-cc-new>Novo personagem</button></p>`) : ''}
       ${others.length ? box('O grupo', others.map(publicCard).join('')) : ''}
-      ${papel === 'mestre' ? box('Códigos dos jogadores', '<div id="cc-accounts">Carregando…</div>') : ''}`;
-    if (papel === 'mestre') renderAccounts(root.querySelector('#cc-accounts'));
+      ${papel === 'mestre' ? box(campaign && campaignsOfMe.length > 1 ? `Códigos dos jogadores de ${campaignName}` : 'Códigos dos jogadores', '<div id="cc-accounts">Carregando…</div>') : ''}`;
+    if (papel === 'mestre') renderAccounts(root.querySelector('#cc-accounts'), campaign, campaignsOfMe);
 
     root.onclick = async event => {
       const open = event.target.closest('[data-cc-open]');
       if (open) return helpers.openPage(open.dataset.ccOpen, { section: open.dataset.id });
-      if (event.target.closest('[data-cc-logout]')) { await api('api/sair', { method: 'POST', body: {} }); return helpers.openPage('personagens', undefined, 'replace'); }
+      if (event.target.closest('[data-cc-logout]')) { await api('api/sair', { method: 'POST', body: {} }); return location.reload(); }
       if (event.target.closest('[data-cc-new]')) {
-        const created = await api('api/personagens', { method: 'POST', body: blank() });
+        const created = await api('api/personagens', { method: 'POST', body: { ...blank(), ...(campaign ? { campanha: campaign.id } : {}) } });
         if (created.status === 201) return helpers.openPage('criador', { section: created.data.personagem.id });
         return wikiPopup.toast(created.data.erro || 'Não consegui criar o personagem.', { tone: 'bad' });
+      }
+      // Crossover: o mestre leva o personagem para outra campanha (o dono passa a jogar nela também).
+      const move = event.target.closest('[data-cc-move]');
+      if (move) {
+        const item = characters.find(entry => entry.id === move.dataset.ccMove) || {};
+        const options = campaignsOfMe.filter(entry => entry.id !== item.campanha).map(entry => ({ value: entry.id, label: entry.nome }));
+        const imported = item.foundry && item.foundry.importado;
+        const target = await wikiPopup.choose({ title: 'Mover para outra campanha', label: 'Campanha', options, ok: 'Mover',
+          html: `<p>Levar <b>${esc(item.nome || 'Sem nome')}</b> para outra campanha. Ele sai desta lista e passa a aparecer só para os jogadores da campanha nova.</p>${item.donoNome ? `<p class="note-status">${esc(item.donoNome)} passa a jogar na campanha nova também (sem sair desta).</p>` : ''}${imported ? '<p class="note-status">No Foundry, o ator continua no mundo desta campanha. No mundo da campanha nova, <b>Importar da wiki</b> traz a ficha como ela está (veja o aviso lá).</p>' : ''}` });
+        if (!target) return;
+        const answer = await api(`api/personagens/${item.id}/campanha`, { method: 'POST', body: { campanha: target } });
+        if (answer.status !== 200) return wikiPopup.toast(answer.data.erro || 'Não consegui mover.', { tone: 'bad' });
+        const destination = (options.find(option => option.value === target) || {}).label || target;
+        wikiPopup.toast(`${item.nome || 'Personagem'} agora é de ${destination}.${answer.data.donoEntrou ? ` ${answer.data.donoEntrou} entrou nessa campanha.` : ''}`, { tone: 'ok', ms: 6000 });
+        return helpers.openPage('personagens', undefined, 'replace');
       }
       const remove = event.target.closest('[data-cc-delete]');
       if (remove) {
@@ -667,19 +694,39 @@
       event.preventDefault();
       const code = root.querySelector('#cc-code').value.trim();
       const answer = await api('api/entrar', { method: 'POST', body: { codigo: code } });
-      if (answer.status === 200) return helpers.openPage('personagens', undefined, 'replace');
+      // Recarrega: o menu passa a ter as campanhas do jogador (e o que foi publicado nelas).
+      if (answer.status === 200) return location.reload();
       root.querySelector('#cc-login-msg').textContent = answer.data.erro || 'Não deu certo.';
     };
   }
 
-  // Quadro do mestre: criar, copiar e revogar códigos.
-  async function renderAccounts(target) {
+  // Quadro do mestre: criar, copiar e revogar códigos. Com mais de uma campanha, mostra os jogadores da campanha
+  // escolhida no menu: o código novo já entra nela, e um jogador de outra campanha pode entrar nesta também.
+  async function renderAccounts(target, campaign = null, campaignList = []) {
     const answer = await api('api/contas');
-    const accounts = answer.data.contas || [];
-    target.innerHTML = `${accounts.length ? `<div class="table-wrap dense"><table><thead><tr><th>Jogador</th><th>Código</th><th></th></tr></thead><tbody>${accounts.map(account => `<tr><td>${esc(account.nome)}</td><td><code>${esc(account.codigo)}</code></td><td><button class="action" type="button" data-cc-copy="${esc(account.codigo)}">Copiar</button> <button class="action cc-danger" type="button" data-cc-revoke="${account.id}">Revogar</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="note-status">Nenhum código ainda.</p>'}
+    const all = answer.data.contas || [];
+    const several = Boolean(campaign) && campaignList.length > 1;
+    const accounts = several ? all.filter(account => (account.campanhas || []).includes(campaign.id)) : all;
+    const outside = several ? all.filter(account => !(account.campanhas || []).includes(campaign.id)) : [];
+    const nameOf = id => (campaignList.find(entry => entry.id === id) || {}).nome || id;
+    const elsewhere = account => (account.campanhas || []).filter(id => id !== (campaign && campaign.id));
+    target.innerHTML = `${accounts.length ? `<div class="table-wrap dense"><table><thead><tr><th>Jogador</th><th>Código</th>${several ? '<th>Também joga em</th>' : ''}<th></th></tr></thead><tbody>${accounts.map(account => `<tr><td>${esc(account.nome)}</td><td><code>${esc(account.codigo)}</code></td>${several ? `<td>${esc(elsewhere(account).map(nameOf).join(', ') || '—')}</td>` : ''}<td><button class="action" type="button" data-cc-copy="${esc(account.codigo)}">Copiar</button> ${several && elsewhere(account).length ? `<button class="action cc-danger" type="button" data-cc-leave="${account.id}">Tirar desta campanha</button>` : `<button class="action cc-danger" type="button" data-cc-revoke="${account.id}">Revogar</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note-status">Nenhum código ainda.</p>'}
       <form class="cc-login" data-cc-account><input id="cc-account-name" placeholder="Nome do jogador" aria-label="Nome do jogador"><button class="action" type="submit">Criar código</button></form>
-      <p class="note-status">Passe o código ao jogador. Ele entra em Campanha → Personagens. Pelo túnel, o link muda a cada sessão; aí ele digita o código de novo.</p>`;
+      ${outside.length ? `<form class="cc-login" data-cc-join><select id="cc-join" aria-label="Jogador de outra campanha">${outside.map(account => `<option value="${account.id}">${esc(account.nome)} (${esc(account.campanhas.map(nameOf).join(', '))})</option>`).join('')}</select><button class="action" type="submit">Adicionar jogador de outra campanha</button></form>` : ''}
+      <p class="note-status">Passe o código ao jogador. Ele entra em Campanha → Personagens${several ? ' e vê só as campanhas em que joga; o mesmo código serve para todas' : ''}. Pelo túnel, o link muda a cada sessão; aí ele digita o código de novo.</p>`;
+    const setCampaigns = async (account, list) => {
+      const saved = await api(`api/contas/${account.id}`, { method: 'PUT', body: { campanhas: list } });
+      if (saved.status !== 200) wikiPopup.toast(saved.data.erro || 'Não consegui mudar.', { tone: 'bad' });
+      renderAccounts(target, campaign, campaignList);
+    };
     target.onclick = async event => {
+      const leave = event.target.closest('[data-cc-leave]');
+      if (leave) {
+        const account = accounts.find(entry => entry.id === leave.dataset.ccLeave);
+        const sure = await wikiPopup.confirm({ title: 'Tirar desta campanha', html: `<p><b>${esc(account.nome)}</b> deixa de ver ${esc(campaign.name)} (o código continua valendo em ${esc(elsewhere(account).map(nameOf).join(', '))}).</p><p class="note-status">Os personagens dele nesta campanha continuam salvos; ele só perde o acesso a eles.</p>`, ok: 'Tirar', danger: true });
+        if (sure) await setCampaigns(account, elsewhere(account));
+        return;
+      }
       const copy = event.target.closest('[data-cc-copy]');
       if (copy) {
         const account = accounts.find(entry => entry.codigo === copy.dataset.ccCopy) || {};
@@ -694,15 +741,20 @@
         if (!sure) return;
         await api(`api/contas/${revoke.dataset.ccRevoke}`, { method: 'DELETE' });
         wikiPopup.toast(`Código de ${account.nome || 'jogador'} revogado.`, { tone: 'ok' });
-        renderAccounts(target);
+        renderAccounts(target, campaign, campaignList);
       }
     };
     target.onsubmit = async event => {
       event.preventDefault();
+      if (event.target.closest('[data-cc-join]')) {
+        const account = outside.find(entry => entry.id === target.querySelector('#cc-join').value);
+        if (account) await setCampaigns(account, [...account.campanhas, campaign.id]);
+        return;
+      }
       const name = target.querySelector('#cc-account-name').value.trim();
       if (!name) return;
-      await api('api/contas', { method: 'POST', body: { nome: name } });
-      renderAccounts(target);
+      await api('api/contas', { method: 'POST', body: { nome: name, ...(campaign ? { campanhas: [campaign.id] } : {}) } });
+      renderAccounts(target, campaign, campaignList);
     };
   }
 
@@ -935,12 +987,15 @@
   // ================= Loja (componente usado no criador e na página Loja) =================
   // Regras da loja inicial (o que fica de fora da criação). Vêm do servidor; o mestre muda na engrenagem da Loja.
   const SHOP_TAG_NAMES = { exotica: 'armas exóticas', excelente: 'qualidade excelente', borgware: 'borgware', 'municao-rara': 'munição inteligente, biotoxina, EMP e sonífera', raro: 'Linear Frame, Cryotank e Cryopump' };
+  // Cada campanha tem as suas: as carregadas são as da campanha do personagem aberto (ou da escolhida no menu).
   let shopRules = { teto: 1000, esconder: Object.keys(SHOP_TAG_NAMES), liberados: [], bloqueados: [] };
-  async function loadShopRules() {
-    const answer = await api('api/loja/regras');
-    if (answer.status === 200 && answer.data.regras) shopRules = answer.data.regras;
+  let shopRulesCampaign = null;
+  async function loadShopRules(campaignId = (activeCampaign() || {}).id) {
+    const answer = await api(`api/loja/regras${campaignQuery(campaignId)}`);
+    if (answer.status === 200 && answer.data.regras) { shopRules = answer.data.regras; shopRulesCampaign = answer.data.campanha || null; }
     return shopRules;
   }
+  const saveShopRules = rules => api(`api/loja/regras${campaignQuery(shopRulesCampaign)}`, { method: 'PUT', body: rules });
   // Por que um item fica fora da criação ('' = está à venda).
   function hiddenReason(item, rules = shopRules) {
     if (rules.bloqueados.includes(item.id)) return 'escondido pelo mestre';
@@ -1106,7 +1161,7 @@
     async function changeRules(change) {
       const rules = { ...shopRules, liberados: [...shopRules.liberados], bloqueados: [...shopRules.bloqueados] };
       change(rules);
-      const answer = await api('api/loja/regras', { method: 'PUT', body: rules });
+      const answer = await saveShopRules(rules);
       if (answer.status === 200) shopRules = answer.data.regras;
       draw();
       if (onRules) onRules();
@@ -1378,11 +1433,14 @@
     const root = content.querySelector('#cc-root');
     const id = helpers.target && helpers.target.section;
     if (!id) { root.innerHTML = '<p>Abra um personagem em Personagens, ou crie um novo.</p>'; return; }
-    const [answer, me] = await Promise.all([api(`api/personagens/${id}`), identity(), loadShopRules()]);
+    const [answer, me] = await Promise.all([api(`api/personagens/${id}`), identity()]);
     if (token !== renderToken) return;
     if (!answer.status) { root.innerHTML = offline; return; }
     const loaded = answer.data.personagem;
     if (!loaded || loaded.publico) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Você só pode editar os seus personagens. Entre com o seu código em Personagens.')}</div>`; return; }
+    // A loja de criação segue as regras da campanha do personagem.
+    await loadShopRules(loaded.campanha);
+    if (token !== renderToken) return;
     const doc = { ...blank(), ...loaded, lifepath: { ...blank().lifepath, ...(loaded.lifepath || {}) } };
     let step = Math.min(Math.max(Number(doc.passo) || 1, 1), steps.length);
     let mountTab = 'armas'; // aba aberta no quadro Montagem (passo 5)
@@ -1909,7 +1967,7 @@
     shopState.busca = '';
     shopState.painel = '';
     const root = content.querySelector('#cc-root');
-    const [me, list] = await Promise.all([identity(), api('api/personagens'), loadShopRules()]);
+    const [me, list] = await Promise.all([identity(), api(`api/personagens${campaignQuery()}`), loadShopRules()]);
     if (token !== renderToken) return;
     if (!me.status) { root.innerHTML = offline; return; }
     const gm = me.data.papel === 'mestre';
@@ -1939,7 +1997,7 @@
       root.querySelector('[data-shop-all]').onchange = event => { shopState.verTudo = event.target.checked; view.redraw(); };
       root.querySelector('[data-rule-save]').onclick = async () => {
         const rules = { ...shopRules, teto: Number(root.querySelector('[data-rule-teto]').value) || 0, esconder: [...root.querySelectorAll('[data-rule-tag]:checked')].map(input => input.dataset.ruleTag) };
-        const answer = await api('api/loja/regras', { method: 'PUT', body: rules });
+        const answer = await saveShopRules(rules);
         const status = root.querySelector('#cc-rules-msg');
         if (answer.status !== 200) { status.textContent = answer.data.erro || 'Não consegui salvar.'; status.className = 'cc-save bad'; return; }
         shopRules = answer.data.regras;

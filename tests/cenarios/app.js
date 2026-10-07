@@ -21,18 +21,21 @@ module.exports = async ({ edge, servidores, r }) => {
     await r.passo('a página dos jogadores registra o service worker e guarda as regras', async () => {
       await edge.ir(`${base}/jogadores.html`, 1500);
       await edge.evaluate('navigator.serviceWorker.ready');
+      // Na primeira visita o service worker ainda não controla a página: a API entra a partir da segunda.
+      await edge.ir(`${base}/jogadores.html`, 1500);
       let chaves = [];
-      for (let i = 0; i < 30 && !chaves.includes('/system-rules.js'); i++) {
+      for (let i = 0; i < 30 && !(chaves.includes('/system-rules.js') && chaves.includes('/api/visao')); i++) {
         await edge.sleep(300);
         chaves = await edge.evaluate(`caches.keys().then(ns => caches.open(ns.find(n => n.startsWith('fieldbook-jogadores-')) || 'nenhum')).then(c => c.keys()).then(ks => ks.map(k => new URL(k.url).pathname))`);
       }
-      return [['/jogadores.html', '/system-rules.js', '/wiki-app.js', '/popup.js', '/jogadores.json'].every(chave => chaves.includes(chave)), `${chaves.length} arquivos guardados`];
+      // Da API, só o que é deste aparelho: quem entrou (api/eu) e a visão da campanha (api/visao).
+      return [['/jogadores.html', '/system-rules.js', '/wiki-app.js', '/popup.js', '/api/eu', '/api/visao'].every(chave => chaves.includes(chave)), `${chaves.length} arquivos guardados: ${chaves.filter(chave => chave.startsWith('/api/')).join(', ')}`];
     });
     await r.passo('a wiki do mestre não fica guardada no aparelho', async () => {
       await edge.ir(`${base}/`, 1500); // neste computador a raiz é a wiki do mestre
       await edge.ir(`${base}/jogadores.html`, 800);
       const chaves = await edge.evaluate(`caches.keys().then(ns => caches.open(ns.find(n => n.startsWith('fieldbook-jogadores-')) || 'nenhum')).then(c => c.keys()).then(ks => ks.map(k => new URL(k.url).pathname))`);
-      const mestre = chaves.filter(chave => ['/', '/index.html', '/mestre-npcs.js', '/campaign-map.js', '/jogadores-mestre.json'].includes(chave) || chave.endsWith('.md'));
+      const mestre = chaves.filter(chave => ['/', '/index.html', '/mestre-npcs.js', '/campaign-map.js', '/campanhas-painel.js', '/jogadores-mestre.json', '/api/campanhas', '/api/night-city'].includes(chave) || chave.endsWith('.md') || chave.includes('/publicar'));
       return [!mestre.length, mestre.join(', ') || 'nada do mestre'];
     });
     await r.passo('sem internet (servidor desligado): a wiki dos jogadores abre e mostra as regras', async () => {

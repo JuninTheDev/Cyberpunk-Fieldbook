@@ -3,6 +3,7 @@
 // Tudo devolve uma Promise:
 //   wikiPopup.confirm({ title, message, html, ok, cancel, danger })  → true ou false
 //   wikiPopup.prompt({ title, message, label, value, placeholder, ok, multiline, maxlength, danger }) → texto ou null
+//   wikiPopup.choose({ title, message, html, label, options: [{ value, label }], value, ok }) → value escolhido ou null
 //   wikiPopup.alert({ title, message, html, ok })                     → quando fechar
 //   wikiPopup.copy({ title, message, value })                         → quando fechar (campo pronto para copiar)
 //   wikiPopup.toast(texto, { tone: 'ok' | 'bad', ms })                → aviso no canto, sem esperar ninguém
@@ -21,7 +22,9 @@
       const dialog = document.createElement('dialog');
       dialog.className = `popup${danger ? ' popup-danger' : ''}`;
       dialog.setAttribute('aria-labelledby', `${id}-title`);
-      const input = field ? (field.multiline
+      const input = field ? (field.options
+        ? `<select id="${id}-field">${field.options.map(option => `<option value="${esc(option.value)}"${option.value === field.value ? ' selected' : ''}>${esc(option.label)}</option>`).join('')}</select>`
+        : field.multiline
         ? `<textarea id="${id}-field" rows="3"${field.maxlength ? ` maxlength="${field.maxlength}"` : ''} placeholder="${esc(field.placeholder || '')}"${field.readOnly ? ' readonly' : ''}>${esc(field.value || '')}</textarea>`
         : `<input id="${id}-field" type="text" value="${esc(field.value || '')}"${field.maxlength ? ` maxlength="${field.maxlength}"` : ''} placeholder="${esc(field.placeholder || '')}"${field.readOnly ? ' readonly' : ''} autocomplete="off">`) : '';
       dialog.innerHTML = `<form method="dialog" class="popup-box">
@@ -74,6 +77,12 @@
     return open({ title, message, html, ok, cancel, danger, cancelValue: null, field: { label, value, placeholder, multiline, maxlength, selectAll: Boolean(value) } });
   }
 
+  // Uma escolha numa lista (options: [{ value, label }]): devolve o value escolhido, ou null.
+  function choose({ title = 'Escolha', message = '', html = '', label = '', options = [], value = '', ok = 'OK', cancel = 'Cancelar' } = {}) {
+    if (!supported) { const typed = window.prompt([title, message, options.map(option => `${option.value}: ${option.label}`).join('\n')].filter(Boolean).join('\n\n'), value); return Promise.resolve(options.some(option => option.value === typed) ? typed : null); }
+    return open({ title, message, html, ok, cancel, cancelValue: null, field: { label, options, value } });
+  }
+
   function alert({ title = 'Aviso', message = '', html = '', ok = 'Entendi' } = {}) {
     if (!supported) { window.alert([title, message].filter(Boolean).join('\n\n')); return Promise.resolve(); }
     return open({ title, message, html, ok, cancelValue: undefined }).then(() => undefined);
@@ -120,5 +129,5 @@
     return item;
   }
 
-  window.wikiPopup = { confirm, prompt, alert, copy, toast };
+  window.wikiPopup = { confirm, prompt, choose, alert, copy, toast };
 })();

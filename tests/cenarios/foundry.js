@@ -202,6 +202,51 @@ module.exports = async ({ edge, servidores, r }) => {
       return [a.veiculos.length === 2 && carro && carro.upgrades.includes('Heavy Chassis') && carro.upgrades.includes('Housing Capacity') && a.veiculos.some(v => v.nome === 'Roadbike'),
         `${JSON.stringify(a.veiculos)} · avisos: ${a.notas.join(' | ') || 'nenhum'}`];
     });
+
+    // ---------- Campanhas: crossover entre dois mundos ----------
+    // Este mundo de teste faz os dois papéis: primeiro o da campanha antiga (Morana), depois o da nova.
+    const mundo = await edge.evaluate('game.world.id');
+    await api('/api/campanhas/morana', 'PUT', { mundo });
+    const nova = (await api('/api/campanhas', 'POST', { nome: 'Mesa B do teste' })).campanha;
+    const usarCampanha = id => edge.evaluate(`game.settings.set('cpr-2077', 'wikiCampanha', ${JSON.stringify(id)}).then(() => true)`);
+    // Os dois atores do personagem: o do mundo antigo (marcado "saiu" quando manda a ficha) e o novo.
+    const atores = id => edge.evaluate(`game.actors.filter(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(id)}).map(actor => ({
+      id: actor.id, saiu: !!actor.getFlag('cpr-2077', 'saiu'), veioDe: actor.getFlag('cpr-2077', 'wiki')?.veioDe || '', itens: actor.items.size, hp: actor.system.derivedStats.hp.value,
+      montagem: actor.items.filter(i => i.system.installedItems?.list?.length).map(i => i.getFlag('cpr-2077', 'wikiUid') + '>' + i.system.installedItems.list.map(x => actor.items.get(x)?.name).join('+')).sort().join(' | '),
+      pente: actor.itemTypes.weapon.find(w => w.getFlag('cpr-2077', 'wikiUid') === 'loja:rifle')?.system.magazine.value }))`);
+    await r.passo('campanhas: o mundo acha a campanha dele pela wiki (o "Mundo do Foundry"); com duas campanhas e sem ligação, avisa e não entrega pedidos', async () => {
+      const ligada = await edge.evaluate(`game.modules.get('cpr-2077').api.campanhaDaWiki().then(c => c && c.id)`);
+      await api('/api/campanhas/morana', 'PUT', { mundo: '' });
+      await usarCampanha('x'); await usarCampanha(''); // limpa o cache
+      const solta = await edge.evaluate(`game.modules.get('cpr-2077').api.campanhaDaWiki().then(c => c && c.erro)`);
+      await api('/api/campanhas/morana', 'PUT', { mundo });
+      await usarCampanha('morana');
+      return [ligada === 'morana' && /não está ligado/.test(solta || ''), `ligada: ${ligada} · sem ligação: ${solta}`];
+    });
+    await r.passo('crossover: o mestre move na wiki; o mundo antigo manda a ficha do ator sozinho e para de mandar a da mesa', async () => {
+      const antes = (await atores(montado.id))[0];
+      await api(`/api/personagens/${montado.id}/campanha`, 'POST', { campanha: nova.id });
+      await edge.evaluate(`game.modules.get('cpr-2077').api.avisosDaWiki().then(() => true)`);
+      await edge.sleep(800);
+      const ficha = await fetch(`${wiki}/api/personagens/${montado.id}/ator`).then(resposta => resposta.json());
+      const lista = (await api('/api/personagens')).personagens.find(p => p.id === montado.id);
+      const velho = (await atores(montado.id))[0];
+      // O mundo antigo não grava mais neste personagem (nem pela volta do Foundry nem pela ficha da mesa).
+      const recusa = await fetch(`${wiki}/api/personagens/${montado.id}/mesa`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campanha: 'morana', hp: { atual: 1, max: 1 } }) });
+      return [ficha.ator?.name === 'Teste Montagem' && ficha.ator.items.length === antes.itens && lista.estadoFoundry === 'outra-mesa' && lista.transferencia?.de === 'morana' && velho.saiu && recusa.status === 409,
+        `ficha: ${ficha.ator?.name} (${ficha.ator?.items?.length} itens de ${antes.itens}) · ${lista.estadoFoundry} · de ${lista.transferencia?.de} · ator antigo parado ${velho.saiu} · mesa antiga ${recusa.status}`];
+    });
+    await r.passo('crossover: no mundo da campanha nova, Importar da wiki cria o ator como estava, com a montagem e o HP da mesa antiga', async () => {
+      await usarCampanha(nova.id);
+      const resultado = await edge.evaluate(`game.modules.get('cpr-2077').api.importarPersonagem(${JSON.stringify(montado.id)}, '').then(({ actor, notes }) => ({ nome: actor.name, notas: notes }))`);
+      const [velho, novo] = await atores(montado.id);
+      const doc = (await api(`/api/personagens/${montado.id}`)).personagem;
+      const fichaDepois = (await fetch(`${wiki}/api/personagens/${montado.id}/ator`)).status;
+      await usarCampanha('morana');
+      return [novo && novo.veioDe === 'morana' && !novo.saiu && novo.itens === velho.itens && novo.montagem === velho.montagem && novo.hp === velho.hp && novo.pente === velho.pente && /loja:braco2>.*Popup Grenade Launcher/.test(novo.montagem)
+        && doc.estadoFoundry === 'importado' && doc.foundry.campanha === nova.id && doc.foundry.ator === novo.id && fichaDepois === 404,
+        `${resultado.nome}: ${novo?.itens} itens (antigo ${velho?.itens}) · montagem igual ${novo?.montagem === velho?.montagem} · HP ${novo?.hp} · ${doc.estadoFoundry} em ${doc.foundry?.campanha} · avisos: ${resultado.notas.join(' | ')}`];
+    });
   } finally {
     // Sai do Foundry antes de desligar (senão a página reclama da conexão perdida).
     await edge.send('Page.navigate', { url: 'about:blank' });

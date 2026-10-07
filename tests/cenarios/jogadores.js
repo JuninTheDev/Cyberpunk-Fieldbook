@@ -1,5 +1,6 @@
 // Visão dos jogadores: notas do mestre, painel de publicação, página dos jogadores e controle de acesso.
-// Mexe em jogadores.json e jogadores-mestre.json: faz cópia antes e restaura no fim.
+// O Publicar do Protocolo Morana começa com o jogadores.json e o jogadores-mestre.json do projeto (de antes das
+// campanhas) e grava na pasta temporária dos servidores de teste: os arquivos do projeto não mudam.
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
@@ -7,7 +8,10 @@ const { abrir, buscar, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
   const arquivos = ['jogadores.json', 'jogadores-mestre.json'].map(nome => path.join(servidores.raiz, nome));
-  const copias = arquivos.map(arquivo => fs.readFileSync(arquivo));
+  const copias = arquivos.map(arquivo => fs.readFileSync(arquivo, 'utf8'));
+  const pastaPublicar = path.join(servidores.dados, 'campanhas', 'morana');
+  const lerPublicar = async () => (await fetch(`${servidores.local}/api/campanhas/morana/publicar`)).json();
+  const publicar = mestre => fetch(`${servidores.local}/api/campanhas/morana/publicar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestre }) });
   try {
     await edge.ir(`${servidores.local}/`);
     for (const pagina of ['humanity', 'netrunning', 'creation', 'cyberware', 'netArsenal', 'quickhacks']) {
@@ -37,17 +41,31 @@ module.exports = async ({ edge, servidores, r }) => {
         nota.value = 'SEGREDO-DE-TESTE'; nota.dispatchEvent(new Event('input', { bubbles: true }));
         document.getElementById('pv-save').click();
         await new Promise(r => setTimeout(r, 1200));
-        const pub = await (await fetch('jogadores.json', { cache: 'no-store' })).text();
+        const pub = await (await fetch('api/visao?campanha=morana', { cache: 'no-store' })).text();
         return { nome, publicado: JSON.parse(pub).npcs.some(n => n.nome === nome), vazou: pub.includes('SEGREDO-DE-TESTE') };
       })()`);
       return [resultado.publicado && !resultado.vazou, JSON.stringify(resultado)];
     });
+    await r.passo('painel: o Publicar grava na pasta de dados; os arquivos do projeto não mudam', async () => {
+      const gravado = fs.existsSync(path.join(pastaPublicar, 'publicar.json'));
+      const iguais = arquivos.every((arquivo, i) => fs.readFileSync(arquivo, 'utf8') === copias[i]);
+      return [gravado && iguais, `publicar.json na pasta de dados: ${gravado} · projeto igual: ${iguais}`];
+    });
 
     if (!servidores.rede) return;
     await edge.ir(`${servidores.rede}/`, 2500);
-    await r.passo('jogador: abre a visão dos jogadores', async () => {
-      const estado = await edge.evaluate(`({ titulo: document.title, pagina: wikiApp.currentPage() })`);
-      return [/Jogadores/.test(estado.titulo) && estado.pagina === 'pvHome', JSON.stringify(estado)];
+    await r.passo('visitante (sem código): a página inicial pede o código e não mostra nada da campanha', async () => {
+      const estado = await edge.evaluate(`({ titulo: document.title, pagina: wikiApp.currentPage(), login: !!document.querySelector('[data-pv-login]'), texto: document.getElementById('content').textContent })`);
+      return [/Jogadores/.test(estado.titulo) && estado.pagina === 'pvHome' && estado.login && !/Wakako|pachinko/i.test(estado.texto), `${estado.pagina} · login ${estado.login}`];
+    });
+    // Um código no Protocolo Morana (a campanha de antes), para ver o que foi publicado.
+    const conta = (await (await fetch(`${servidores.local}/api/contas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: 'Jogador da visão' }) })).json()).conta;
+    await r.passo('jogador: entra pela página inicial e vê o resumo publicado', async () => {
+      await edge.evaluate(`(() => { document.getElementById('pv-code').value = ${JSON.stringify(conta.codigo)}; document.querySelector('[data-pv-login]').requestSubmit(); })()`);
+      for (let i = 0; i < 40 && !(await edge.evaluate(`!!(window.wikiApp && !document.querySelector('[data-pv-login]') && /Wakako/.test(document.getElementById('content').textContent))`).catch(() => false)); i++) await edge.sleep(250);
+      const estado = await edge.evaluate(`({ pagina: wikiApp.currentPage(), wakako: /Wakako/.test(document.getElementById('content').textContent), topo: document.querySelector('.top-meta').textContent })`);
+      // O nome do mestre ("Protocolo Morana") entrega o vírus: o jogador vê o "nome para os jogadores".
+      return [estado.pagina === 'pvHome' && estado.wakako && /NIGHT CITY, 2077/.test(estado.topo) && !/MORANA/.test(estado.topo), JSON.stringify(estado)];
     });
     await r.passo('jogador: mapa mostra os lugares revelados', async () => {
       await abrir(edge, 'pvMap', 900);
@@ -73,11 +91,9 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.evaluate(`document.querySelector('#tab-campaigns').click()`);
       await abrir(edge, 'pvNews', 200);
       const antes = await edge.evaluate(`document.querySelectorAll('#content .section h3').length`);
-      const mestre = JSON.parse(fs.readFileSync(arquivos[1], 'utf8'));
+      const { atualizado: _data, ...mestre } = await lerPublicar();
       mestre.noticias.push({ id: 'teste-automatico', titulo: 'Notícia de teste', data: 'agora', texto: 'Teste.', publicada: true });
-      const pick = (list, flag) => list.filter(item => item[flag]).map(({ [flag]: _f, nota: _n, ...rest }) => rest);
-      const publicado = { resumo: mestre.resumo, npcs: pick(mestre.npcs, 'revelado'), lugares: pick(mestre.lugares, 'revelado'), noticias: pick(mestre.noticias, 'publicada').reverse() };
-      const resposta = await fetch(`${servidores.local}/api/jogadores`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestre, publicado }) });
+      const resposta = await publicar(mestre);
       for (let i = 0; i < 40; i++) {
         await edge.sleep(500);
         const depois = await edge.evaluate(`document.querySelectorAll('#content .section h3').length`);
@@ -85,24 +101,23 @@ module.exports = async ({ edge, servidores, r }) => {
       }
       return [false, 'não apareceu'];
     });
-    // Com .pipe, conexões que caíam no meio deixavam o jogadores.json aberto, e o Publicar dava 500 (EPERM).
+    // Com .pipe, conexões que caíam no meio deixavam arquivos abertos, e o Publicar dava 500 (EPERM).
     await r.passo('publicar funciona depois de 300 conexões que caem no meio', async () => {
       const { hostname, port } = new URL(servidores.local);
       for (let i = 0; i < 300; i += 1) {
         await new Promise(resolve => {
           const socket = net.connect(Number(port), hostname, () => {
-            socket.write('GET /jogadores.json HTTP/1.1\r\nHost: x\r\n\r\n');
+            socket.write(`GET ${i % 2 ? '/api/visao?campanha=morana' : '/jogadores.html'} HTTP/1.1\r\nHost: x\r\n\r\n`);
             setTimeout(() => { socket.destroy(); resolve(); }, i % 3);
           });
           socket.on('error', resolve);
         });
       }
       await edge.sleep(500);
-      const temporarios = () => fs.readdirSync(path.dirname(arquivos[0])).filter(nome => /^jogadores.*\.tmp$/.test(nome));
+      const temporarios = () => fs.readdirSync(pastaPublicar).filter(nome => /\.tmp$/.test(nome));
       const antes = temporarios();
-      const mestre = JSON.parse(fs.readFileSync(arquivos[1], 'utf8'));
-      const publicado = JSON.parse(fs.readFileSync(arquivos[0], 'utf8'));
-      const resposta = await fetch(`${servidores.local}/api/jogadores`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestre, publicado }) });
+      const { atualizado: _data, ...mestre } = await lerPublicar();
+      const resposta = await publicar(mestre);
       const sobras = temporarios().filter(nome => !antes.includes(nome));
       return [resposta.status === 200 && !sobras.length, `HTTP ${resposta.status}${resposta.status === 200 ? '' : `: ${await resposta.text()}`}${sobras.length ? ` | sobrou ${sobras.join(', ')}` : ''}`];
     });
@@ -112,8 +127,9 @@ module.exports = async ({ edge, servidores, r }) => {
 
     // ---------------- Controle de acesso (sem navegador) ----------------
     const status = async (url, options = {}) => (await fetch(url, { redirect: 'manual', ...options })).status;
-    const liberados = ['/', '/jogadores.html', '/jogadores.json', '/wiki-app.js', '/wiki.css', '/system-2077.js', '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/fonts/Oxanium.woff2'];
-    const bloqueados = ['/index.html', '/jogadores-mestre.json', '/jogadores-painel.js', '/mestre-npcs.js', '/campaign-map.js', '/server.js', '/personagens-da-campanha.md', '/.git/config', '/cyberpunk-css-main/cyberpunk-css-main/fonts/..%5C..%5C..%5Cindex.html', '/%2e%2e/%2e%2e/Windows/win.ini'];
+    const liberados = ['/', '/jogadores.html', '/wiki-app.js', '/wiki.css', '/system-2077.js', '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/fonts/Oxanium.woff2'];
+    // O jogadores.json de antes das campanhas não é mais público: o que o mestre publica vem pela API, por campanha.
+    const bloqueados = ['/index.html', '/jogadores.json', '/jogadores-mestre.json', '/jogadores-painel.js', '/campanhas-painel.js', '/mestre-npcs.js', '/campaign-map.js', '/server.js', '/api-campanhas.js', '/documentos/morana/personagens-da-campanha.md', '/.git/config', '/cyberpunk-css-main/cyberpunk-css-main/fonts/..%5C..%5C..%5Cindex.html', '/%2e%2e/%2e%2e/Windows/win.ini'];
     await r.passo('acesso: arquivos dos jogadores liberados pela rede', async () => {
       const ruins = [];
       for (const caminho of liberados) { const s = await status(servidores.rede + caminho); if (s !== 200) ruins.push(`${caminho}=${s}`); }
@@ -124,7 +140,14 @@ module.exports = async ({ edge, servidores, r }) => {
       for (const caminho of bloqueados) { const s = await status(servidores.rede + caminho); if (s !== 403) ruins.push(`${caminho}=${s}`); }
       return [!ruins.length, ruins.join(' ') || `${bloqueados.length} bloqueados`];
     });
-    await r.passo('acesso: jogador não publica', async () => { const s = await status(`${servidores.rede}/api/jogadores`, { method: 'POST', body: '{}' }); return [s === 403, s]; });
+    await r.passo('acesso: jogador não publica nem lê o rascunho do mestre; sem código não vê a campanha', async () => {
+      const json = { 'Content-Type': 'application/json' };
+      const publica = await status(`${servidores.rede}/api/campanhas/morana/publicar`, { method: 'POST', headers: json, body: '{"mestre":{"npcs":[],"lugares":[],"noticias":[]}}' });
+      const rascunho = await status(`${servidores.rede}/api/campanhas/morana/publicar`);
+      const mural = await status(`${servidores.rede}/api/night-city`, { method: 'POST', headers: json, body: '{"noticias":[]}' });
+      const visao = await status(`${servidores.rede}/api/visao?campanha=morana`);
+      return [publica === 403 && rascunho === 403 && mural === 403 && visao === 401, `publicar ${publica} · rascunho ${rascunho} · Night City ${mural} · visão sem código ${visao}`];
+    });
     await r.passo('acesso: senha do mestre libera a wiki do mestre por cookie', async () => {
       const errada = await status(`${servidores.rede}/?mestre=errada`);
       const login = await fetch(`${servidores.rede}/?mestre=${servidores.senhaMestre}`, { redirect: 'manual' });
@@ -140,6 +163,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [/Jogadores/.test(raiz.match(/<title>[^<]*/)?.[0] || '') && index === 403, `index.html ${index}`];
     });
   } finally {
-    arquivos.forEach((arquivo, i) => fs.writeFileSync(arquivo, copias[i]));
+    // Garantia: se algo gravou nos arquivos do projeto, volta como estavam.
+    arquivos.forEach((arquivo, i) => { if (fs.readFileSync(arquivo, 'utf8') !== copias[i]) fs.writeFileSync(arquivo, copias[i]); });
   }
 };

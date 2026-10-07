@@ -48,13 +48,14 @@ module.exports = async ({ edge, servidores, r }) => {
       const index = await status('/index.html', { headers: { cookie } });
       return [errada.status === 403 && certa.status === 200 && /Secure/.test(setCookie) && !setCookie.includes(SENHA) && index === 200, `errada ${errada.status} · certa ${certa.status} · index ${index} · ${setCookie.slice(0, 40)}…`];
     });
-    await r.passo('Publicar grava na pasta de dados; o jogadores.json do git não muda', async () => {
-      const mestre = JSON.parse(fs.readFileSync(path.join(dados, 'jogadores-mestre.json'), 'utf8'));
-      const publicado = { ...JSON.parse(publicadoNoGit), resumo: 'Publicado no servidor de teste.' };
-      const resposta = await fetch(`${base}/api/jogadores`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ mestre, publicado }) });
-      const servido = await (await fetch(`${base}/jogadores.json`)).json();
+    await r.passo('Publicar grava na pasta de dados (o servidor novo começa com o do git); o jogadores.json do git não muda', async () => {
+      const { atualizado: _data, ...mestre } = await (await fetch(`${base}/api/campanhas/morana/publicar`, { headers: { cookie } })).json();
+      const comecou = mestre.resumo === JSON.parse(publicadoNoGit).resumo;
+      const resposta = await fetch(`${base}/api/campanhas/morana/publicar`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ mestre: { ...mestre, resumo: 'Publicado no servidor de teste.' } }) });
+      const servido = await (await fetch(`${base}/api/visao?campanha=morana`, { headers: { cookie } })).json();
+      const gravado = fs.existsSync(path.join(dados, 'campanhas', 'morana', 'publicar.json'));
       const noGit = fs.readFileSync(path.join(servidores.raiz, 'jogadores.json'), 'utf8');
-      return [resposta.status === 200 && servido.resumo === 'Publicado no servidor de teste.' && noGit === publicadoNoGit, `HTTP ${resposta.status} · servido "${servido.resumo}"`];
+      return [comecou && resposta.status === 200 && servido.resumo === 'Publicado no servidor de teste.' && gravado && noGit === publicadoNoGit, `começou com o do git ${comecou} · HTTP ${resposta.status} · servido "${servido.resumo}" · gravado ${gravado}`];
     });
     await r.passo('backup: o mestre baixa o mais recente; jogador não', async () => {
       const jogador = await status('/api/backup');
@@ -71,7 +72,26 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   await r.passo('/api/estado: mesa aberta com 2 conectados, versão no ar', async () => {
       const estado = await (await fetch(`${base}/api/estado`)).json();
-      return [estado.modo === 'hospedado' && !estado.mestre && estado.mesa?.aberta && estado.mesa.usuarios === 2 && estado.mesa.url === 'https://mesa.exemplo.com' && /^[0-9a-f]{7,}$/.test(estado.versao?.commit || ''), JSON.stringify(estado)];
+      return [estado.modo === 'hospedado' && !estado.mestre && estado.mesa?.aberta && estado.mesa.usuarios === 2 && estado.mesa.url === 'https://mesa.exemplo.com' && /^[0-9a-f]{7,}$/.test(estado.versao?.commit || '') && !('mundo' in estado.mesa), JSON.stringify(estado)];
+    });
+    await r.passo('mesa de uma campanha: o mestre vê qual é; quem joga nela vê aberta; quem não joga (e o visitante) não fica sabendo', async () => {
+      const json = { 'Content-Type': 'application/json', cookie };
+      await fetch(`${base}/api/campanhas/morana`, { method: 'PUT', headers: json, body: JSON.stringify({ mundo: 'protocolo-morana' }) });
+      const outra = (await (await fetch(`${base}/api/campanhas`, { method: 'POST', headers: json, body: JSON.stringify({ nome: 'Outra mesa' }) })).json()).campanha;
+      const entrar = async campanhas => {
+        const conta = (await (await fetch(`${base}/api/contas`, { method: 'POST', headers: json, body: JSON.stringify({ nome: 'J', campanhas }) })).json()).conta;
+        return (await fetch(`${base}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: conta.codigo }) })).headers.get('set-cookie').split(';')[0];
+      };
+      const daMorana = await entrar(['morana']);
+      const daOutra = await entrar([outra.id]);
+      const ver = async headers => (await (await fetch(`${base}/api/estado`, { headers })).json()).mesa;
+      const [mestre, jogador, estranho, visitante] = [await ver({ cookie }), await ver({ cookie: daMorana }), await ver({ cookie: daOutra }), await ver({})];
+      // Devolve como estava: os passos de tela abaixo esperam a mesa aberta para o visitante.
+      await fetch(`${base}/api/campanhas/morana`, { method: 'PUT', headers: json, body: JSON.stringify({ mundo: '' }) });
+      await fetch(`${base}/api/contas`, { headers: { cookie } }).then(resposta => resposta.json()).then(({ contas }) => Promise.all(contas.map(conta => fetch(`${base}/api/contas/${conta.id}`, { method: 'DELETE', headers: { cookie } }))));
+      await fetch(`${base}/api/campanhas/${outra.id}`, { method: 'DELETE', headers: { cookie } });
+      return [mestre.campanha?.nome === 'Protocolo Morana' && mestre.mundo === 'protocolo-morana' && jogador.aberta && jogador.campanha?.nome === 'Night City, 2077' && !('mundo' in jogador) && !estranho.aberta && !estranho.campanha && !visitante.aberta,
+        JSON.stringify({ mestre: mestre.campanha?.nome, jogador: [jogador.aberta, jogador.campanha?.nome], estranho: [estranho.aberta, estranho.usuarios], visitante: visitante.aberta })];
     });
     await r.passo('Foundry do mestre: CORS com credenciais para mesa.exemplo.com, e o cookie conta como mestre', async () => {
       const resposta = await fetch(`${base}/api/personagens`, { headers: { Origin: 'https://mesa.exemplo.com', cookie } });
@@ -98,6 +118,17 @@ module.exports = async ({ edge, servidores, r }) => {
       return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(texto) && /No ar: [0-9a-f]{7,}/.test(texto) && /Servidor: backup .*módulo esperando a mesa vazia/.test(texto), `${titulo} · ${texto}`];
     });
     await edge.shot('barra-mestre');
+    await r.passo('página Campanhas: oferece ligar o mundo aberto no Foundry à campanha, com um clique', async () => {
+      await edge.evaluate(`wikiApp.openPage('campanhas')`);
+      for (let i = 0; i < 25 && !(await edge.evaluate(`!!document.querySelector('[data-cp-world]')`)); i++) await edge.sleep(200);
+      const botao = await edge.evaluate(`(document.querySelector('[data-cp-id="morana"] [data-cp-world]') || {}).textContent || ''`);
+      await edge.evaluate(`document.querySelector('[data-cp-id="morana"] [data-cp-world]').click()`);
+      for (let i = 0; i < 30 && !(await edge.evaluate(`!!(window.wikiApp && document.querySelector('#cp-list [data-cp-id]'))`).catch(() => false)); i++) await edge.sleep(250);
+      await edge.sleep(600);
+      const ligado = (await (await fetch(`${base}/api/campanhas/morana`, { headers: { cookie } })).json()).campanha?.mundo;
+      await fetch(`${base}/api/campanhas/morana`, { method: 'PUT', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ mundo: '' }) });
+      return [/protocolo-morana/.test(botao) && ligado === 'protocolo-morana', `botão "${botao}" · gravado: ${ligado}`];
+    });
     await r.passo('mesa fechada: o Foundry sem mundo aparece como "sem mundo aberto"', async () => {
       mesa = { active: false, world: null, users: 0 };
       await edge.sleep(16000); // o servidor guarda o estado por 15 s

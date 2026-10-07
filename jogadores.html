@@ -46,35 +46,52 @@
   <script src="popup.js"></script>
   <script src="criador.js"></script>
   <script>
-    // Visão dos jogadores: o conteúdo de campanha vem só de jogadores.json, publicado pelo mestre.
-    // Este arquivo é baixado pelos jogadores: não escreva aqui nomes ou segredos da campanha.
+    // Visão dos jogadores: o conteúdo de campanha vem da API (api/visao), publicado pelo mestre, e só das campanhas em
+    // que este jogador joga (api/eu diz quais). Sem código, só as regras.
+    // Este arquivo é baixado por qualquer um: não escreva aqui nomes ou segredos de campanha.
     const waiting = title => ({ eyebrow: 'Night City', title, lede: 'Carregando o que o mestre publicou…', html: '' });
+    const playerGroups = [{ group: 'O que o grupo sabe', pages: [
+      { id: 'pvHome', label: 'Resumo', icon: '00' },
+      { id: 'pvPeople', label: 'Pessoas', icon: 'P' },
+      { id: 'pvMap', label: 'Mapa', icon: 'MAP' },
+      { id: 'pvNews', label: 'Notícias e handouts', icon: 'N' },
+      { id: 'pvNightCity', label: 'Notícias de Night City', icon: 'N54' }
+    ]}, { group: 'Personagens', pages: [
+      { id: 'personagens', label: 'Personagens', icon: 'PC' },
+      { id: 'loja', label: 'Loja', icon: 'EB' }
+    ]}];
     window.playerMapData = null;
-    window.wikiConfig = {
-      storagePrefix: 'night-city-jogadores',
-      homePage: 'pvHome',
-      campaigns: [{ id: 'grupo', name: 'Night City, 2077', groups: [{ group: 'O que o grupo sabe', pages: [
-        { id: 'pvHome', label: 'Resumo', icon: '00' },
-        { id: 'pvPeople', label: 'Pessoas', icon: 'P' },
-        { id: 'pvMap', label: 'Mapa', icon: 'MAP' },
-        { id: 'pvNews', label: 'Notícias e handouts', icon: 'N' }
-      ]}, { group: 'Personagens', pages: [
-        { id: 'personagens', label: 'Personagens', icon: 'PC' },
-        { id: 'loja', label: 'Loja', icon: 'EB' }
-      ]}]}],
-      pageContent: { pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts') },
-      mapPages: ['pvMap'],
-      mapData: () => window.playerMapData,
-      pageSetup: { pvMap: () => window.wikiApp.setupMap() },
-      // Mesa do Foundry e "Entrar como mestre", na barra lateral.
-      statusUrl: 'api/estado'
-    };
-  </script>
-  <script src="wiki-app.js"></script>
-  <script>
-    // Busca jogadores.json a cada 15 segundos e atualiza as páginas quando o mestre publica algo novo.
-    (() => {
+    function startWiki(me) {
+      const list = me && Array.isArray(me.campanhas) && me.campanhas.length ? me.campanhas : null;
+      // ?campanha=<id> (o link "Abrir a visão dos jogadores" do mestre) abre direto nessa campanha.
+      const wanted = new URLSearchParams(location.search).get('campanha');
+      if (list && wanted && list.some(item => item.id === wanted)) { try { localStorage.setItem('night-city-jogadores-active-campaign', wanted); } catch { /* sem armazenamento */ } }
+      window.playerIdentity = me;
+      window.wikiConfig = {
+        storagePrefix: 'night-city-jogadores',
+        homePage: 'pvHome',
+        // Sem campanha (sem código, ou sem servidor): uma de mentira, só para o menu (real: false).
+        campaigns: list ? list.map(item => ({ id: item.id, name: item.nome, color: item.cor, groups: playerGroups })) : [{ id: 'grupo', name: 'Night City, 2077', real: false, groups: playerGroups }],
+        pageContent: { pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') },
+        mapPages: ['pvMap'],
+        mapData: () => window.playerMapData,
+        pageSetup: { pvMap: () => window.wikiApp.setupMap(), pvHome: content => window.playerView && window.playerView.setupHome(content) },
+        topMeta: campaign => `${campaign.real === false ? 'Night City 2077' : campaign.name} / visão dos jogadores`.toUpperCase(),
+        // Mesa do Foundry e "Entrar como mestre", na barra lateral.
+        statusUrl: 'api/estado'
+      };
+      const script = document.createElement('script');
+      script.src = 'wiki-app.js';
+      script.onload = startPlayerView;
+      document.body.appendChild(script);
+    }
+    if (location.protocol === 'file:') startWiki(null);
+    else fetch('api/eu', { cache: 'no-store' }).then(response => (response.ok ? response.json() : null)).then(startWiki, () => startWiki(null));
+
+    // Busca o que o mestre publicou a cada 15 segundos e atualiza as páginas quando há novidade.
+    function startPlayerView() {
       const { escapeHtml, renderMarkdown, updatePages } = window.wikiApp;
+      const me = window.playerIdentity;
       let lastUpdate = null;
 
       const mapHtml = hasPlaces => `${hasPlaces ? '' : '<div class="callout">Nenhum lugar marcado ainda. Eles aparecem aqui conforme o grupo descobre.</div>'}
@@ -87,6 +104,8 @@
         const people = data.npcs || [];
         const places = data.lugares || [];
         const news = data.noticias || [];
+        const city = data.nightCity || [];
+        const name = (data.campanha && data.campanha.nome) || 'Night City';
         const updated = data.atualizado ? new Date(data.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
         window.playerMapData = {
           width: 5600, height: 5320, images: { base: 'nightcity-map-base.jpg' },
@@ -96,27 +115,64 @@
         const newsHtml = items => items.map(item => `<div class="section" data-toc="${escapeHtml(item.titulo || 'Notícia')}"><h3>${escapeHtml(item.titulo || 'Notícia')}</h3>${item.data ? `<p class="pv-news-date">${escapeHtml(item.data)}</p>` : ''}<div class="md-doc">${renderMarkdown(item.texto || '')}</div></div>`).join('');
         return {
           pvHome: {
-            eyebrow: `Night City${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
+            eyebrow: `${escapeHtml(name)}${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
             lede: 'Resumo da campanha até agora, publicado pelo mestre. Esta página se atualiza sozinha.',
-            html: `<div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
+            html: `<div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
           },
           pvPeople: {
-            eyebrow: 'Night City / pessoas', title: 'Pessoas',
+            eyebrow: `${escapeHtml(name)} / pessoas`, title: 'Pessoas',
             lede: 'Quem o grupo já conheceu e o que sabe sobre cada um.',
             html: people.length ? `<div class="cards">${people.map(person => `<div class="person"><h3>${escapeHtml(person.nome)}</h3>${person.papel ? `<div class="role">${escapeHtml(person.papel)}</div>` : ''}<div class="md-doc">${renderMarkdown(person.texto || '')}</div></div>`).join('')}</div>` : '<div class="callout">Ninguém ainda. As pessoas aparecem aqui conforme o grupo as conhece.</div>'
           },
           pvMap: {
-            eyebrow: 'Night City / mapa', title: 'Night City',
+            eyebrow: `${escapeHtml(name)} / mapa`, title: 'Night City',
             lede: 'Os lugares que o grupo já conhece. Arraste para mover, use os botões ou a roda do mouse para zoom.',
             html: mapHtml(places.length > 0)
           },
           pvNews: {
-            eyebrow: 'Night City / notícias', title: 'Notícias e handouts',
+            eyebrow: `${escapeHtml(name)} / notícias`, title: 'Notícias e handouts',
             lede: 'Boletins, mensagens e documentos que o grupo recebeu. Os mais recentes primeiro.',
             html: news.length ? newsHtml(news) : '<div class="callout">Nenhuma notícia ainda.</div>'
+          },
+          pvNightCity: {
+            eyebrow: 'Night City / N54 News', title: 'Notícias de Night City',
+            lede: 'O que a cidade inteira está comentando: boletins, manchetes e rumores. Os mais recentes primeiro.',
+            html: city.length ? newsHtml(city) : '<div class="callout">Nenhuma notícia da cidade ainda.</div>'
           }
         };
       }
+
+      // Sem campanha para mostrar: sem código (entra aqui mesmo), código sem campanha, ou sem servidor.
+      function emptyPages(kind) {
+        const text = {
+          visitante: 'Entre com o código que o mestre te passou para ver o que o seu grupo sabe. As regras estão na aba Regras.',
+          semCampanha: 'O seu código ainda não está em nenhuma campanha. Fale com o mestre.',
+          offline: 'Esta página precisa ser aberta pelo servidor do mestre (o endereço que ele passou). As regras continuam disponíveis na aba Regras.'
+        }[kind];
+        const callout = `<div class="callout">${text}</div>`;
+        const login = kind === 'visitante' ? '<div class="section" data-toc="Entrar"><h3>Entrar</h3><form class="cc-login" data-pv-login><input id="pv-code" autocomplete="off" placeholder="NC-XXXX-XXXX" aria-label="Código do jogador"><button class="action" type="submit">Entrar</button></form><p class="cc-msg" id="pv-login-msg"></p></div>' : '';
+        const titles = { pvPeople: 'Pessoas', pvMap: 'Mapa', pvNews: 'Notícias e handouts', pvNightCity: 'Notícias de Night City' };
+        return {
+          pvHome: { eyebrow: 'Night City', title: kind === 'offline' ? 'Sem conexão' : 'O que o grupo sabe', lede: kind === 'visitante' ? 'Cada jogador vê a campanha em que joga.' : 'Não consegui ler o que o mestre publicou.', html: `${callout}${login}` },
+          ...Object.fromEntries(Object.entries(titles).map(([id, title]) => [id, { eyebrow: 'Night City', title, lede: '', html: callout }]))
+        };
+      }
+      // Entrar pela página inicial: o menu passa a ter as campanhas do jogador.
+      window.playerView = {
+        setupHome(content) {
+          const form = content.querySelector('[data-pv-login]');
+          if (!form) return;
+          form.onsubmit = async event => {
+            event.preventDefault();
+            const message = content.querySelector('#pv-login-msg');
+            try {
+              const response = await fetch('api/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: content.querySelector('#pv-code').value.trim() }) });
+              if (response.ok) return location.reload();
+              message.textContent = (await response.json().catch(() => ({}))).erro || 'Não deu certo.';
+            } catch { message.textContent = 'Sem conexão com o servidor da wiki.'; }
+          };
+        }
+      };
 
       function toast(text) {
         const element = document.createElement('div');
@@ -127,9 +183,18 @@
       }
 
       function refresh() {
-        fetch('jogadores.json', { cache: 'no-store' })
+        const campaign = window.wikiApp.activeCampaign();
+        if (!campaign || campaign.real === false) {
+          if (lastUpdate !== null) return;
+          lastUpdate = '';
+          updatePages(emptyPages(!me ? 'offline' : me.papel === 'visitante' ? 'visitante' : 'semCampanha'));
+          return;
+        }
+        const id = campaign.id;
+        fetch(`api/visao?campanha=${encodeURIComponent(id)}`, { cache: 'no-store' })
           .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
           .then(data => {
+            if (window.wikiApp.activeCampaign().id !== id) return; // trocou de campanha enquanto lia
             if (data.atualizado && data.atualizado === lastUpdate) return;
             const first = lastUpdate === null;
             lastUpdate = data.atualizado || '';
@@ -139,13 +204,20 @@
           .catch(() => {
             if (lastUpdate !== null) return;
             lastUpdate = '';
-            updatePages({ pvHome: { eyebrow: 'Night City', title: 'Sem conexão', lede: 'Não consegui ler o que o mestre publicou.', html: '<div class="callout">Esta página precisa ser aberta pelo servidor do mestre (o endereço que ele passou). As regras continuam disponíveis na aba Regras.</div>' } });
+            updatePages(emptyPages('offline'));
           });
       }
+      // Trocou de campanha no menu: lê a nova do zero.
+      document.addEventListener('wiki:campanha', () => {
+        lastUpdate = null;
+        window.playerMapData = null;
+        updatePages({ pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') });
+        refresh();
+      });
 
       refresh();
       setInterval(refresh, 15000);
-    })();
+    }
   </script>
 </body>
 </html>

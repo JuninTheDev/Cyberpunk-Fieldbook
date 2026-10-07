@@ -35,10 +35,13 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(500);
     return [temCampo && /não encontrado/i.test(await texto('#cc-login-msg')), await texto('#cc-login-msg')];
   });
+  // Entrar recarrega a página (o menu passa a ter as campanhas do jogador): espera a lista voltar.
+  const esperarLista = async () => { for (let i = 0; i < 40 && !/Você entrou como/.test(await texto('#cc-root').catch(() => '')); i++) await edge.sleep(200); };
   await r.passo('com o código certo, entra e vê "Meus personagens"', async () => {
     await digitar('#cc-code', conta.codigo);
     await edge.evaluate(`document.querySelector('[data-cc-login]').requestSubmit()`);
-    await edge.sleep(800);
+    await edge.sleep(400);
+    await esperarLista();
     const t = await texto('#cc-root');
     return [/Você entrou como Ana/.test(t) && /Meus personagens/.test(t), t.slice(0, 80)];
   });
@@ -619,7 +622,8 @@ module.exports = async ({ edge, servidores, r }) => {
     await abrir(edge, 'personagens', 800);
     await digitar('#cc-code', outra.codigo);
     await edge.evaluate(`document.querySelector('[data-cc-login]').requestSubmit()`);
-    await edge.sleep(900);
+    await edge.sleep(400);
+    await esperarLista();
     await edge.evaluate(`wikiApp.openPage('criador', { section: ${JSON.stringify(soloId)} })`);
     await edge.sleep(1000);
     const t = await texto('#cc-root');

@@ -44,9 +44,10 @@ const contentTypes = {
 };
 
 // O que um jogador (qualquer aparelho que não seja o do mestre) pode baixar.
-// Os arquivos de regras não têm notas de campanha; elas ficam no index.html.
+// Os arquivos de regras não têm notas de campanha; elas ficam no index.html. O que o mestre publica em cada campanha
+// não é arquivo: vem pela API (/api/visao), só para quem joga nela.
 const playerFiles = new Set([
-  '/jogadores.html', '/jogadores.json', '/mestre.html', '/wiki.css', '/wiki-app.js',
+  '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
   '/system-criacao.js', '/loja-catalogo.js', '/popup.js', '/criador.js',
   '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
@@ -149,8 +150,8 @@ function serverHealth() {
 }
 
 // ---------------- Pasta de dados ----------------
-// O que a wiki grava (Publicar) fica na pasta de dados. Na primeira vez num servidor novo, começa
-// com a cópia que veio no git.
+// O que a wiki grava (Publicar, campanhas) fica na pasta de dados. Na primeira vez num servidor novo, o Publicar do
+// Protocolo Morana começa com a cópia que veio no git (jogadores.json e jogadores-mestre.json, de antes das campanhas).
 const dataFile = name => path.join(dataDir, name);
 if (dataDir !== root) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -158,7 +159,6 @@ if (dataDir !== root) {
     if (!fs.existsSync(dataFile(name)) && fs.existsSync(path.join(root, name))) fs.copyFileSync(path.join(root, name), dataFile(name));
   }
 }
-const dataFiles = new Set(['/jogadores.json', '/jogadores-mestre.json']);
 
 function readJsonBody(request, limit = 10_000) {
   return new Promise((resolve, reject) => {
@@ -204,36 +204,23 @@ async function writeJsonAtomic(file, data) {
   }
 }
 
-function publishPlayerView(request, response) {
-  // Só JSON: um formulário de outro site aberto no navegador do mestre não consegue mandar isso sem permissão.
-  if (!/^application\/json\b/i.test(request.headers['content-type'] || '')) return send(response, 415, 'Envie JSON (Content-Type: application/json).');
-  let body = '';
-  request.setEncoding('utf8');
-  request.on('data', chunk => {
-    body += chunk;
-    if (body.length > 2_000_000) { send(response, 413, 'Conteúdo grande demais.'); request.destroy(); }
-  });
-  request.on('end', async () => {
-    let payload;
-    try { payload = JSON.parse(body); } catch { return send(response, 400, 'JSON inválido.'); }
-    const { mestre, publicado } = payload || {};
-    const lists = ['npcs', 'lugares', 'noticias'];
-    if (!mestre || !publicado || !lists.every(key => Array.isArray(mestre[key]) && Array.isArray(publicado[key]))) {
-      return send(response, 400, 'Formato inesperado: faltam as listas npcs, lugares e noticias.');
-    }
-    const atualizado = new Date().toISOString();
-    try {
-      await writeJsonAtomic(dataFile('jogadores-mestre.json'), { ...mestre, atualizado });
-      await writeJsonAtomic(dataFile('jogadores.json'), { ...publicado, atualizado });
-    } catch (error) {
-      return send(response, 500, `Não consegui gravar os arquivos: ${error.message}`);
-    }
-    send(response, 200, JSON.stringify({ ok: true, atualizado }), { 'Content-Type': 'application/json; charset=utf-8' });
-  });
-}
+// Personagens dos jogadores, códigos de acesso, campanhas (com o Publicar de cada uma) e o importador do Foundry
+// (api-personagens.js e api-campanhas.js).
+const { ROUTES: characterApiRoutes } = require('./api-personagens');
+const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js') });
 
-// Personagens dos jogadores, códigos de acesso e o importador do Foundry (api-personagens.js).
-const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js') });
+// A mesa na barra lateral, para cada um. Mundo ligado a uma campanha (o "mundo do Foundry" dela): quem joga nela vê
+// a mesa aberta e o nome da campanha; quem não joga vê o Foundry sem mundo aberto (não fica sabendo de outra mesa).
+// O id do mundo só o mestre vê.
+function tableFor(identity, mesa) {
+  if (!mesa) return null;
+  const { mundo, ...rest } = mesa;
+  const campaign = mesa.aberta ? characterApi.campaigns.byWorld(mundo) : null;
+  const card = campaign ? characterApi.campaignCard(campaign, identity) : null;
+  if (identity.papel === 'mestre') return { ...mesa, campanha: card };
+  if (!campaign) return rest;
+  return identity.campanhas.includes(campaign.id) ? { ...rest, campanha: card } : { ...rest, aberta: false, usuarios: 0 };
+}
 
 http.createServer((request, response) => {
   let url;
@@ -260,7 +247,7 @@ http.createServer((request, response) => {
   if (pathname === '/api/mestre/sair' && request.method === 'POST') return sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie('', 0) });
   // Estado para a barra lateral: a mesa do Foundry, a versão no ar e se este aparelho é o do mestre.
   if (pathname === '/api/estado') {
-    return Promise.all([version(), tableStatus()]).then(([versao, mesa]) => sendJson(response, 200, { modo: hosted ? 'hospedado' : 'local', mestre: gameMaster, login: Boolean(gmKey), versao, mesa, backup: gameMaster && Boolean(backupDir), servidor: gameMaster ? serverHealth() : null }));
+    return Promise.all([version(), tableStatus()]).then(([versao, mesa]) => sendJson(response, 200, { modo: hosted ? 'hospedado' : 'local', mestre: gameMaster, login: Boolean(gmKey), versao, mesa: tableFor(characterApi.who(request), mesa), backup: gameMaster && Boolean(backupDir), servidor: gameMaster ? serverHealth() : null }));
   }
   if (pathname === '/mestre') pathname = '/mestre.html';
   // Backup mais recente (dados da wiki e mundos do Foundry), para o mestre guardar uma cópia fora do servidor.
@@ -278,12 +265,7 @@ http.createServer((request, response) => {
     if (!gameMaster) return send(response, 403, 'Só o mestre.');
     return health().then(reverted => send(response, 200, JSON.stringify({ git: reverted !== null, revertidos: reverted || [] }), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' }));
   }
-  if (/^\/api\/(eu|entrar|sair|contas|personagens|loja)(\/|$)/.test(pathname)) return void characterApi(request, response, pathname);
-  if (pathname === '/api/jogadores') {
-    if (request.method !== 'POST') return send(response, 405, 'Use POST.');
-    if (!gameMaster) return send(response, 403, 'Só o mestre publica.');
-    return publishPlayerView(request, response);
-  }
+  if (characterApiRoutes.test(pathname)) return void characterApi(request, response, pathname);
   if (request.method !== 'GET' && request.method !== 'HEAD') return send(response, 405, 'Método não permitido.');
 
   if (pathname === '/') pathname = gameMaster ? '/index.html' : '/jogadores.html';
@@ -296,10 +278,7 @@ http.createServer((request, response) => {
   if (!gameMaster && !playerFile) {
     return send(response, 403, 'Área do mestre. A visão dos jogadores fica em /jogadores.html');
   }
-  // O que o Publicar grava vem da pasta de dados (no servidor, fora da pasta do git).
-  const sourcePath = dataFiles.has(servedPath) ? dataFile(servedPath.slice(1)) : filePath;
-
-  fs.stat(sourcePath, (error, stats) => {
+  fs.stat(filePath, (error, stats) => {
     if (error || !stats.isFile()) return send(response, 404, 'Not found');
     const extension = path.extname(filePath).toLowerCase();
     response.writeHead(200, {
@@ -317,8 +296,8 @@ http.createServer((request, response) => {
     // (o pipeline lança erro com a resposta já fechada, e isso derrubava o servidor).
     if (response.destroyed) return;
     // pipeline fecha o arquivo mesmo se a conexão cair no meio. Com .pipe, o arquivo ficava aberto,
-    // e o Windows então não deixava o Publicar trocar o jogadores.json (EPERM).
-    const stream = fs.createReadStream(sourcePath);
+    // e o Windows então não deixava trocar o arquivo depois (o Publicar dava EPERM).
+    const stream = fs.createReadStream(filePath);
     try {
       pipeline(stream, response, () => {});
     } catch {

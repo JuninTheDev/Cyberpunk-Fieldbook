@@ -37,7 +37,13 @@ aside { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px
 .nav-label { padding: 0 12px 7px; color: #79877e; font: 10px var(--mono); letter-spacing: 0; text-transform: uppercase; }
 .campaign-picker { display: block; margin: 14px 8px 0; }
 .campaign-picker .nav-label { display: block; padding: 0 0 6px; }
-.campaign-picker select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 0; background: var(--panel); color: var(--text); }
+.campaign-picker select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-left: 4px solid var(--campanha-cor, var(--line)); border-radius: 0; background: var(--panel); color: var(--text); }
+/* A cor da campanha ativa (campanhas.json): no nome dela no menu e no topo, para não confundir as mesas. */
+.nav-label.nav-campaign { color: var(--campanha-cor, var(--yellow)); }
+.cp-row .cp-name { font: 15px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.cp-row .action { margin-top: 0; }
+.cp-row .pv-field input[type="color"], #cp-new input[type="color"] { height: 34px; padding: 2px; }
+.pv-shared { border-left: 3px solid var(--yellow); padding-left: 12px; }
 .nav-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 0; border-radius: 4px; background: transparent; color: #bcc7bf; text-align: left; cursor: pointer; font-size: 13px; }
 .nav-item:hover, .nav-item.active { background: var(--panel-raised); color: var(--text); }
 .nav-item.active { box-shadow: inset 2px 0 var(--lime); }
@@ -49,7 +55,7 @@ main { min-width: 0; }
 .search-wrap input { width: 100%; padding: 10px 13px 10px 38px; border: 1px solid var(--line); border-radius: 4px; outline: 0; background: var(--panel); color: var(--text); }
 .search-wrap input:focus { border-color: var(--cyan); }
 .search-glyph { position: absolute; top: 8px; left: 13px; color: var(--cyan); font: 16px var(--mono); }
-.top-meta { margin-left: auto; color: var(--muted); font: 11px var(--mono); white-space: nowrap; }
+.top-meta { margin-left: auto; color: var(--campanha-cor, var(--muted)); font: 11px var(--mono); white-space: nowrap; }
 .content { max-width: 1180px; margin: 0 auto; padding: 36px clamp(18px, 4vw, 48px) 70px; }
 .eyebrow { margin: 0 0 9px; color: var(--lime); font: 11px var(--mono); letter-spacing: 0; text-transform: uppercase; }
 h2 { margin: 0; font: clamp(32px, 4vw, 48px)/1.04 var(--serif); font-weight: 400; }

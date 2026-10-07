@@ -9,6 +9,11 @@ tests/.saida/
 contas-jogadores.json
 personagens/
 regras-loja.json
+# Campanhas (api-campanhas.js): a lista, o Publicar e as regras da loja de cada uma, e as Notícias de Night City.
+# Os documentos do mestre de cada campanha (documentos/<id>/*.md) continuam no git.
+campanhas.json
+campanhas/
+noticias-night-city.json
 # Senha do mestre (iniciar serv.txt) e o endereço/chave do servidor (enviar-para-servidor) ficam só no PC
 iniciar serv.txt
 servidor/servidor.local.json

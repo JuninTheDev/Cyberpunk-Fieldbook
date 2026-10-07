@@ -172,7 +172,7 @@ Feche o Foundry do PC e dê dois cliques em **`servidor\enviar-para-servidor.bat
 
 - Ele pede o servidor (`ubuntu@IP`) e o arquivo da chave, e lembra dos dois para a próxima vez.
 - Ele pergunta o que enviar:
-  - **Dados da wiki:** personagens e retratos, códigos dos jogadores, painel Publicar e regras da loja.
+  - **Dados da wiki:** personagens e retratos, códigos dos jogadores, as campanhas (com o Publicar e as regras da loja de cada uma) e as Notícias de Night City.
   - **Os PDFs dos livros:** no servidor, só o mestre abre.
   - **A pasta Data do Foundry:** mundos, sistemas, módulos e imagens. Pode demorar, se houver muitas imagens.
 - O servidor guarda uma cópia do que já tinha antes de receber.
@@ -237,7 +237,7 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 | Onde | O quê |
 |---|---|
 | `/srv/fieldbook/wiki` | A cópia do GitHub. Nunca edite aqui: a atualização apaga mudanças locais. |
-| `/srv/fieldbook/dados` | Personagens, retratos, códigos, Publicar e regras da loja. Ficam fora do git e entram no backup. |
+| `/srv/fieldbook/dados` | Personagens, retratos, códigos, campanhas (Publicar e regras da loja de cada uma) e Notícias de Night City. Ficam fora do git e entram no backup. |
 | `/srv/foundry/app` e `/srv/foundry/data` | O programa do Foundry e os dados dele. |
 | `/srv/backups` | Os backups diários (14 dias). |
 | `/etc/fieldbook.env` | A configuração da wiki: senha do mestre, endereço da mesa. |

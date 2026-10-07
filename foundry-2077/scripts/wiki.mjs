@@ -23,9 +23,42 @@ export function registerWikiSettings() {
     hint: 'Para o mestre: ao entrar e a cada minuto, confere se algum jogador enviou um personagem pela wiki e avisa (uma vez por envio).',
     scope: 'client', config: true, type: Boolean, default: true
   });
+  game.settings.register(MODULE_ID, 'wikiCampanha', {
+    name: 'Campanha da wiki',
+    hint: 'A campanha da wiki que este mundo joga: o importador, a ficha na wiki, os avisos e os pedidos ficam só com os personagens dela. Vazio: a campanha cujo "Mundo do Foundry" (página Campanhas da wiki) é este mundo; com uma campanha só, ela. Para escolher na mão, escreva o id da campanha (aparece ao lado do nome, na página Campanhas da wiki).',
+    scope: 'world', config: true, type: String, default: '', onChange: () => { campaignCache = null; }
+  });
 }
 
 const wikiUrl = () => String(game.settings.get(MODULE_ID, 'wikiUrl') || defaultWikiUrl()).trim().replace(/\/+$/, '');
+
+// ---------------- Campanha deste mundo ----------------
+// A wiki tem várias campanhas no mesmo universo; cada mundo do Foundry joga uma. Resolve: a configurada; senão a que
+// tem este mundo como "Mundo do Foundry"; senão, com uma campanha só, ela.
+//   null          → wiki de antes das campanhas (ou fora do ar): tudo como antes, sem filtro;
+//   { id, nome }  → a campanha deste mundo;
+//   { erro }      → há campanhas, mas não deu para saber qual: mostra tudo e não entrega pedidos (avisa o mestre).
+let campaignCache = null;
+async function tableCampaign() {
+  const configured = String(game.settings.get(MODULE_ID, 'wikiCampanha') || '').trim();
+  if (campaignCache && Date.now() - campaignCache.at < 60_000 && campaignCache.configured === configured) return campaignCache.value;
+  let value = null;
+  try {
+    const list = (await wikiFetch('/api/campanhas')).campanhas || [];
+    const found = configured ? list.find(item => item.id === configured) : list.find(item => item.mundo && item.mundo === game.world.id) || (list.length === 1 ? list[0] : null);
+    value = found || (list.length ? { erro: configured ? `A campanha "${configured}" não existe na wiki.` : 'Este mundo não está ligado a nenhuma campanha da wiki.', lista: list } : null);
+    // Com uma campanha só, este mundo é dela: grava na configuração, para continuar nela quando aparecer a segunda.
+    if (found && !configured && list.length === 1 && game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id)) {
+      campaignCache = { at: Date.now(), configured: found.id, value: found };
+      await game.settings.set(MODULE_ID, 'wikiCampanha', found.id).catch(() => null);
+    }
+  } catch { value = null; }
+  campaignCache = { at: Date.now(), configured: String(game.settings.get(MODULE_ID, 'wikiCampanha') || '').trim(), value };
+  return value;
+}
+// O personagem é da campanha deste mundo? Sem campanha resolvida, todos (como antes das campanhas).
+const ofTable = (item, campaign) => !campaign?.id || item.campanha === campaign.id;
+const unresolvedHelp = campaign => `${campaign.erro} Ligue este mundo a uma: Configurações do módulo → Campanha da wiki, ou o "Mundo do Foundry" (${game.world.id}) na página Campanhas da wiki.`;
 const esc = text => foundry.utils.escapeHTML ? foundry.utils.escapeHTML(String(text ?? '')) : String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 async function wikiFetch(path, { method = 'GET', body } = {}) {
@@ -226,7 +259,8 @@ async function ensureFolder(folder) {
 }
 async function copyPortrait(doc, source) {
   const url = /^https:\/\//.test(source) ? source : `${wikiUrl()}/${source.replace(/^\/+/, '')}`;
-  const response = await fetch(url, { cache: 'no-store' });
+  // O retrato enviado só sai para quem é da campanha (o mestre, aqui): vai o cookie da wiki junto. Link de fora, sem.
+  const response = await fetch(url, { cache: 'no-store', ...(url.startsWith(`${wikiUrl()}/`) ? { credentials: 'include' } : {}) });
   if (!response.ok) throw new Error(`a imagem respondeu ${response.status}`);
   const blob = await response.blob();
   const ext = IMAGE_EXT[blob.type];
@@ -274,9 +308,60 @@ function lifestyleUpdate(home = {}) {
   };
 }
 
+// ---------------- Crossover ----------------
+// O mestre levou o personagem para outra campanha na wiki (Mover). O mundo da campanha antiga manda a ficha do ator
+// para a wiki (uma vez, sozinho, nos avisos) e para de mandar a ficha da mesa; o mundo da campanha nova cria o ator
+// igualzinho, com tudo o que aconteceu na mesa antiga.
+async function sendMovedAway(list, campaign) {
+  const moved = (list.personagens || []).filter(item => !item.publico && item.estadoFoundry === 'outra-mesa' && item.foundry?.campanha === campaign.id && !item.transferencia);
+  for (const item of moved) {
+    const actor = actorOf(item.id);
+    if (!actor) continue;
+    try {
+      await wikiFetch(`/api/personagens/${item.id}/ator`, { method: 'PUT', body: { campanha: campaign.id, ator: actor.toObject() } });
+      await actor.setFlag(MODULE_ID, 'saiu', { para: item.campanha, quando: new Date().toISOString() });
+      ui.notifications.info(`Wiki: ${actor.name} foi para outra campanha. A ficha deste mundo foi para a wiki, e o mundo da campanha nova importa com tudo. O ator fica aqui, parado.`);
+    } catch (error) {
+      console.warn(`${MODULE_ID} | crossover de ${actor.name}:`, error.message);
+    }
+  }
+}
+// O ator como veio do mundo antigo. Os ids dos itens ficam (o cyberware instalado e a munição na arma apontam para
+// eles); o dono é escolhido aqui (os jogadores de cada mundo são outros); o retrato é copiado de novo para este mundo.
+async function importTransferred(doc, transfer, ownerId, campaign) {
+  const data = foundry.utils.deepClone(transfer.ator);
+  delete data._id;
+  delete data.folder;
+  data.ownership = { default: 0, ...(ownerId ? { [ownerId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } : {}) };
+  const previous = data.flags?.[MODULE_ID]?.wiki || {};
+  if (data.flags?.[MODULE_ID]) delete data.flags[MODULE_ID].saiu;
+  foundry.utils.setProperty(data, `flags.${MODULE_ID}.wiki`, { ...previous, id: doc.id, versao: doc.versao, importado: new Date().toISOString(), veioDe: transfer.de });
+  // Com `system`, o create do sistema não acrescenta as perícias e o cyberware de base (o ator já tem).
+  const created = await CONFIG.Actor.documentClass.create(data, { keepEmbeddedIds: true });
+  const actor = game.actors.get(created.id);
+  const notes = [`Veio do mundo da campanha antiga com tudo o que aconteceu lá (ficha mandada em ${new Date(transfer.quando).toLocaleString('pt-BR')}).`];
+  if (portraitOf(doc)) {
+    const portrait = await applyPortrait(actor, doc);
+    notes.push(...portrait.notes);
+    if (portrait.applied) await actor.setFlag(MODULE_ID, 'wiki', { ...actor.getFlag(MODULE_ID, 'wiki'), retrato: portrait.applied });
+  }
+  const link = actor.getFlag(MODULE_ID, 'wiki');
+  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: link.entregues || [], ...(campaign?.id ? { campanha: campaign.id } : {}) } });
+  await wikiFetch(`/api/personagens/${doc.id}/ator`, { method: 'DELETE' }).catch(() => null);
+  await syncActor(actor).catch(() => null);
+  return { actor, notes };
+}
+
 // ---------------- Importar ----------------
-async function importCharacter(id, ownerId) {
+async function importCharacter(id, ownerId, campaign = undefined) {
+  if (campaign === undefined) campaign = await tableCampaign();
   const { personagem: doc } = await wikiFetch(`/api/personagens/${id}`);
+  if (campaign?.id && doc.campanha && doc.campanha !== campaign.id) throw new Error(`${doc.nome || 'Este personagem'} é de outra campanha da wiki: importe no mundo dela.`);
+  // Veio de outra campanha: com a ficha que o mundo antigo mandou, o ator vem como estava lá.
+  if (doc.estadoFoundry === 'outra-mesa') {
+    const transfer = await wikiFetch(`/api/personagens/${id}/ator`).catch(() => null);
+    if (transfer?.ator) return importTransferred(doc, transfer, ownerId, campaign);
+  }
   const r = doc.resultado;
   if (!r) throw new Error('Este personagem ainda não tem ficha pronta: abra no criador da wiki e deixe salvar.');
   const notes = [];
@@ -333,15 +418,18 @@ async function importCharacter(id, ownerId) {
   // Entregues: os itens e os veículos da família (com os upgrades), para o Atualizar da wiki não trazer de novo.
   const delivered = [...r.itens.map(item => item.uid), ...(r.veiculos || []).flatMap(vehicle => [vehicle.uid, ...(vehicle.upgrades || []).map(upgrade => upgrade.uid)])];
   await actor.setFlag(MODULE_ID, 'wiki', { id: doc.id, versao: doc.versao, entregues: delivered, importado: new Date().toISOString(), retrato: portrait.applied });
-  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } });
+  if (doc.estadoFoundry === 'outra-mesa') notes.push('Veio de outra campanha, mas a ficha da mesa antiga não tinha chegado: o ator saiu como foi criado na wiki.');
+  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered, ...(campaign?.id ? { campanha: campaign.id } : {}) } });
   // A wiki passa a mostrar a ficha da mesa logo depois da importação.
   await syncActor(actor).catch(() => null);
   return { actor, notes };
 }
 
-// Estado de cada personagem na wiki (estadoFoundry): os enviados ao mestre e ainda não levados ao Foundry.
-const WAITING = ['enviado', 'enviado-mudou', 'avisado'];
-const STATE_LABELS = { novo: 'não enviado', enviado: 'enviado, esperando', 'enviado-mudou': 'enviado, esperando', importado: 'já importado', mudou: 'já importado, mudou na wiki', avisado: 'já importado, mudou na wiki' };
+// Estado de cada personagem na wiki (estadoFoundry): os enviados ao mestre e ainda não levados ao Foundry, e os que
+// vieram de outra campanha (outra-mesa).
+const WAITING = ['enviado', 'enviado-mudou', 'avisado', 'outra-mesa'];
+const STATE_LABELS = { novo: 'não enviado', enviado: 'enviado, esperando', 'enviado-mudou': 'enviado, esperando', importado: 'já importado', mudou: 'já importado, mudou na wiki', avisado: 'já importado, mudou na wiki', 'outra-mesa': 'veio de outra campanha' };
+const stateLabel = item => (item.estadoFoundry === 'outra-mesa' ? `veio de outra campanha${item.transferencia ? ', com a ficha da mesa antiga' : ', sem a ficha da mesa antiga'}` : STATE_LABELS[item.estadoFoundry] || (item.foundry ? 'já importado' : 'não enviado'));
 // O ator deste mundo que veio deste personagem (outro mundo pode ter importado o mesmo).
 const actorOf = id => game.actors.find(actor => actor.getFlag(MODULE_ID, 'wiki')?.id === id) || null;
 // O jogador do Foundry com o mesmo nome do dono na wiki, se houver.
@@ -352,16 +440,21 @@ export async function importarDaWiki(preselect = '') {
   let list;
   try { list = await wikiFetch('/api/personagens'); } catch (error) { return ui.notifications.error(error.message); }
   if (list.papel !== 'mestre') return ui.notifications.error(notGmMessage());
-  // Os enviados primeiro.
-  const characters = (list.personagens || []).filter(item => !item.publico).sort((a, b) => Number(WAITING.includes(b.estadoFoundry)) - Number(WAITING.includes(a.estadoFoundry)));
-  if (!characters.length) return ui.notifications.info('Nenhum personagem na wiki ainda.');
+  // Só os da campanha deste mundo; os enviados (e os que vieram de outra campanha) primeiro.
+  const campaign = await tableCampaign();
+  const characters = (list.personagens || []).filter(item => !item.publico && ofTable(item, campaign)).sort((a, b) => Number(WAITING.includes(b.estadoFoundry)) - Number(WAITING.includes(a.estadoFoundry)));
+  if (!characters.length) return ui.notifications.info(campaign?.id ? `Nenhum personagem de ${campaign.nome} na wiki ainda.` : 'Nenhum personagem na wiki ainda.');
   const chosen = characters.find(item => item.id === preselect) || characters[0];
   const players = game.users.filter(user => !user.isGM);
   const ownerOf = item => (players.find(user => sameName(user.name, item.donoNome)) || {}).id || '';
-  const content = `<form class="cpr2077-wiki">
-    <div class="form-group"><label>Personagem</label><select name="id">${characters.map(item => `<option value="${item.id}"${item === chosen ? ' selected' : ''}>${esc(item.nome || 'Sem nome')}${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')} · ${STATE_LABELS[item.estadoFoundry] || (item.foundry ? 'já importado' : 'não enviado')}</option>`).join('')}</select></div>
+  const campaignName = id => ((campaign?.lista || []).find(item => item.id === id) || {}).nome || id;
+  const which = campaign?.id ? `<p class="notes">Campanha da wiki deste mundo: <b>${esc(campaign.nome)}</b>.</p>`
+    : campaign?.erro ? `<p class="notes cpr2077-chat-note warning">${esc(unresolvedHelp(campaign))} Por enquanto, a lista tem os personagens de todas as campanhas.</p>` : '';
+  const content = `<form class="cpr2077-wiki">${which}
+    <div class="form-group"><label>Personagem</label><select name="id">${characters.map(item => `<option value="${item.id}"${item === chosen ? ' selected' : ''}>${campaign?.erro ? `[${esc(campaignName(item.campanha))}] ` : ''}${esc(item.nome || 'Sem nome')}${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')} · ${esc(stateLabel(item))}</option>`).join('')}</select></div>
     <div class="form-group"><label>Dono no Foundry</label><select name="owner"><option value="">Só o mestre</option>${players.map(user => `<option value="${user.id}"${user.id === ownerOf(chosen) ? ' selected' : ''}>${esc(user.name)}</option>`).join('')}</select></div>
-    <p class="notes">Cria um ator novo com STATs, perícias, Role, equipamento, cyberware instalado, Lifepath, dinheiro e retrato (na ficha e no token). Para um ator que já veio da wiki, use <b>Atualizar da wiki</b> no topo da ficha dele.</p></form>`;
+    <p class="notes">Cria um ator novo com STATs, perícias, Role, equipamento, cyberware instalado, Lifepath, dinheiro e retrato (na ficha e no token). Para um ator que já veio da wiki, use <b>Atualizar da wiki</b> no topo da ficha dele.</p>
+    <p class="notes">Quem veio de outra campanha chega com a ficha da mesa antiga, se o mundo dela já mandou (ele manda sozinho, na primeira vez que abrir depois da mudança). Sem ela, o ator sai como foi criado na wiki.</p></form>`;
   return Dialog.prompt({
     title: 'Importar personagem da wiki', content, label: 'Importar',
     // Trocar o personagem escolhe o jogador do Foundry com o mesmo nome do dono na wiki.
@@ -373,7 +466,7 @@ export async function importarDaWiki(preselect = '') {
       const form = html[0].querySelector('form');
       try {
         ui.notifications.info('Importando da wiki…');
-        const { actor, notes } = await importCharacter(form.id.value, form.owner.value);
+        const { actor, notes } = await importCharacter(form.id.value, form.owner.value, campaign);
         if (notes.length) ChatMessage.create({ whisper: [game.user.id], content: `<p><b>${esc(actor.name)}</b> importado da wiki. Avisos:</p><ul>${notes.map(note => `<li>${esc(note)}</li>`).join('')}</ul>` });
         ui.notifications.info(`${actor.name} importado da wiki.`);
         actor.sheet.render(true);
@@ -393,6 +486,9 @@ export async function atualizarDaWiki(actor) {
   if (!link) return ui.notifications.warn('Este ator não veio da wiki.');
   let doc;
   try { doc = (await wikiFetch(`/api/personagens/${link.id}`)).personagem; } catch (error) { return ui.notifications.error(error.message); }
+  // Depois de um crossover, a ficha é do mundo da campanha nova.
+  const campaign = await tableCampaign();
+  if (campaign?.id && doc.campanha && doc.campanha !== campaign.id) return ui.notifications.warn(`${actor.name} agora é de outra campanha na wiki: a ficha dele é do mundo dela.`);
   const r = doc.resultado || {};
   const keys = { INT: 'int', REF: 'ref', DEX: 'dex', TECH: 'tech', COOL: 'cool', WILL: 'will', LUCK: 'luck', MOVE: 'move', BODY: 'body', EMP: 'emp' };
   const statChanges = Object.entries(keys).filter(([key, field]) => (field === 'emp' ? actor.system.stats.emp.max : actor.system.stats[field].value) !== r.stats?.[key]).map(([key, field]) => `${key} ${field === 'emp' ? actor.system.stats.emp.max : actor.system.stats[field].value} → ${r.stats[key]}`);
@@ -407,7 +503,7 @@ export async function atualizarDaWiki(actor) {
   const homeLines = [['housing', 'Moradia'], ['lifeStyle', 'Estilo de vida'], ['traumaTeam', 'Trauma Team']]
     .filter(([key]) => (ls[key]?.cost || 0) !== home[`system.lifestyle.${key}`].cost || (ls[key]?.description || '') !== home[`system.lifestyle.${key}`].description)
     .map(([key, label]) => `${label}: ${home[`system.lifestyle.${key}`].description || '—'} (${home[`system.lifestyle.${key}`].cost}eb/mês)`);
-  const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered } }).catch(() => null);
+  const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered, ...(campaign?.id ? { campanha: campaign.id } : {}) } }).catch(() => null);
   // Nada que este botão aplique (a mudança foi em moradia ou dinheiro, por exemplo): a wiki para de mostrar "mudou".
   const mountLines = pendingAssembly(actor, (r.itens || []).filter(item => (link.entregues || []).includes(item.uid)));
   if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged && !portraitChanged && !homeLines.length && !mountLines.length) {
@@ -494,10 +590,14 @@ function tableSnapshot(actor) {
     itens: items
   };
 }
+// Ator que foi para outra campanha (crossover): para de mandar. A wiki também recusa (409) se o mundo for o antigo.
+const movedAway = new Set();
 async function syncActor(actor) {
   const link = actor?.getFlag(MODULE_ID, 'wiki');
-  if (!link) return null;
-  return wikiFetch(`/api/personagens/${link.id}/mesa`, { method: 'PUT', body: tableSnapshot(actor) });
+  if (!link || actor.getFlag(MODULE_ID, 'saiu') || movedAway.has(actor.id)) return null;
+  const campaign = await tableCampaign();
+  return wikiFetch(`/api/personagens/${link.id}/mesa`, { method: 'PUT', body: { ...tableSnapshot(actor), ...(campaign?.id ? { campanha: campaign.id } : {}) } })
+    .catch(error => { if (/outra campanha/.test(error.message)) movedAway.add(actor.id); throw error; });
 }
 const syncTimers = new Map();
 let syncWarned = false;
@@ -522,7 +622,9 @@ export function registerTableSync() {
 const SEEN_KEY = `${MODULE_ID}.wiki-avisos`;
 const seenKeys = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch { return []; } };
 const markSeen = keys => { try { localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...seenKeys(), ...keys])].slice(-300))); } catch { /* navegador sem localStorage */ } };
-const sendKey = item => `${item.id}:${item.envio?.quando || ''}`;
+// Quem veio de outra campanha avisa de novo quando chega a ficha da mesa antiga.
+const sendKey = item => `${item.id}:${item.envio?.quando || ''}${item.estadoFoundry === 'outra-mesa' ? `:outra:${item.transferencia?.quando || ''}` : ''}`;
+let unresolvedWarned = false;
 let waitingDialog = null;
 let quietError = false;
 
@@ -601,7 +703,8 @@ function showWaiting(waiting, orders = []) {
       ? `<button type="button" data-wiki-update="${item.id}"><i class="fas fa-sync"></i> Atualizar</button>`
       : `<button type="button" data-wiki-import="${item.id}"><i class="fas fa-file-import"></i> Importar</button>`;
     const sent = item.envio ? new Date(item.envio.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-    return `<li class="cpr2077-wiki-row"><span><b>${esc(item.nome || 'Sem nome')}</b>${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')}<br><small>Enviado em ${sent}${actor ? ` · mudou desde a importação (${esc(actor.name)})` : ''}</small></span>${action}</li>`;
+    const detail = item.estadoFoundry === 'outra-mesa' ? esc(stateLabel(item)) : `Enviado em ${sent}${actor ? ` · mudou desde a importação (${esc(actor.name)})` : ''}`;
+    return `<li class="cpr2077-wiki-row"><span><b>${esc(item.nome || 'Sem nome')}</b>${item.apelido ? ` "${esc(item.apelido)}"` : ''} · ${esc(item.donoNome || 'sem dono')}<br><small>${detail}</small></span>${action}</li>`;
   }).join('');
   const orderRows = orders.map(({ wikiId, nome, pedido }, index) => `<li class="cpr2077-wiki-row"><span><b>${esc(nome)}</b> pediu ${pedido.total}eb${pedido.erro ? ` · <i>${esc(pedido.erro)}</i>` : ''}<br><small>${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}${pedido.nota ? ` · “${esc(pedido.nota)}”` : ''}</small></span>
     <span class="cpr2077-wiki-actions"><button type="button" data-order-approve="${index}"><i class="fas fa-check"></i> ${pedido.status === 'aprovado' ? 'Tentar de novo' : 'Aprovar'}</button><button type="button" data-order-refuse="${index}"><i class="fas fa-times"></i> Recusar</button></span></li>`).join('');
@@ -638,10 +741,15 @@ export async function avisosDaWiki({ manual = false } = {}) {
     if (manual) ui.notifications.error(notGmMessage());
     return;
   }
-  const orders = await pendingOrders(list, { deliver: isActiveGm() });
+  // Só a campanha deste mundo. Sem saber qual (há campanhas e o mundo não está ligado), não entrega pedido nenhum.
+  const campaign = await tableCampaign();
+  if (campaign?.erro && (manual || !unresolvedWarned)) { unresolvedWarned = true; ui.notifications.warn(`Wiki: ${unresolvedHelp(campaign)}`, { permanent: manual }); }
+  if (campaign?.id && isActiveGm()) await sendMovedAway(list, campaign);
+  const mine = { ...list, personagens: (list.personagens || []).filter(item => ofTable(item, campaign)) };
+  const orders = await pendingOrders(mine, { deliver: isActiveGm() && !campaign?.erro });
   const showNotices = manual || game.settings.get(MODULE_ID, 'wikiAvisos');
   if (!showNotices) return;
-  const waiting = (list.personagens || []).filter(item => !item.publico && WAITING.includes(item.estadoFoundry));
+  const waiting = mine.personagens.filter(item => !item.publico && WAITING.includes(item.estadoFoundry));
   const seen = seenKeys();
   const orderKey = order => `pedido:${order.pedido.id}:${order.pedido.erro || ''}`;
   const fresh = waiting.filter(item => !seen.includes(sendKey(item)));
@@ -649,7 +757,10 @@ export async function avisosDaWiki({ manual = false } = {}) {
   if (manual && !waiting.length && !orders.length) return ui.notifications.info('Nada esperando na wiki.');
   if (!manual && !fresh.length && !freshOrders.length) return;
   markSeen([...waiting.map(sendKey), ...orders.map(orderKey)]);
-  if (fresh.length) ui.notifications.info(`Wiki: ${fresh.map(item => item.nome || 'Sem nome').join(', ')} ${fresh.length > 1 ? 'foram enviados' : 'foi enviado'} para você.`);
+  const arrived = fresh.filter(item => item.estadoFoundry === 'outra-mesa');
+  const sentNow = fresh.filter(item => item.estadoFoundry !== 'outra-mesa');
+  if (sentNow.length) ui.notifications.info(`Wiki: ${sentNow.map(item => item.nome || 'Sem nome').join(', ')} ${sentNow.length > 1 ? 'foram enviados' : 'foi enviado'} para você.`);
+  if (arrived.length) ui.notifications.info(`Wiki: ${arrived.map(item => item.nome || 'Sem nome').join(', ')} ${arrived.length > 1 ? 'vieram' : 'veio'} de outra campanha para esta.`);
   if (freshOrders.length) ui.notifications.info(`Wiki: ${freshOrders.length > 1 ? `${freshOrders.length} pedidos da loja esperando você` : `${freshOrders[0].nome} fez um pedido na loja`}.`);
   showWaiting(waiting, orders);
 }
@@ -698,4 +809,9 @@ async function aplicarMontagem(actor) {
   return assemble(actor, (doc.resultado || {}).itens || []);
 }
 
-export const wikiApi = { entregarPedidos: async () => pendingOrders(await wikiFetch('/api/personagens')), importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter, enviarParaWiki: syncActor, fichaDaMesa: tableSnapshot, montagemPendente, aplicarMontagem };
+// Pedidos da campanha deste mundo (o mesmo filtro dos avisos).
+async function ordersOfThisTable() {
+  const [list, campaign] = [await wikiFetch('/api/personagens'), await tableCampaign()];
+  return pendingOrders({ ...list, personagens: (list.personagens || []).filter(item => ofTable(item, campaign)) }, { deliver: !campaign?.erro });
+}
+export const wikiApi = { entregarPedidos: ordersOfThisTable, campanhaDaWiki: tableCampaign, importarDaWiki, atualizarDaWiki, avisosDaWiki: () => avisosDaWiki({ manual: true }), importarPersonagem: importCharacter, enviarParaWiki: syncActor, fichaDaMesa: tableSnapshot, montagemPendente, aplicarMontagem };

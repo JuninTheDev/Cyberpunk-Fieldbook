@@ -25,6 +25,14 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
   - **Na mesa:** a cada mudança num ator da wiki, o Foundry do mestre ativo manda a ficha de volta para a wiki (HP, Humanidade, dinheiro, Pontos de Melhoria, itens, munição…). Ao entrar, manda todos uma vez. Desliga em Configurações do módulo → Mandar a ficha para a wiki. Pela macro: `game.modules.get('cpr-2077').api.enviarParaWiki(ator)`.
   - **Quem importa:** o mestre importa do navegador em que entrou como mestre na wiki. Sem servidor, importa do computador onde a wiki roda.
   - **Endereço da wiki:** fica em Configurações do módulo e vale para o mundo todo. Vazio, ele usa `wiki.SEUDOMINIO` quando a mesa abre em `mesa.SEUDOMINIO`, ou `http://localhost:8000`.
+  - **Campanha da wiki:** cada mundo joga uma campanha da wiki. O importador, a ficha na wiki, os avisos e os pedidos ficam só com os personagens dela.
+    - **Como o mundo descobre:** a configuração **Campanha da wiki** (o id da campanha, que aparece na página Campanhas da wiki); vazia, a campanha cujo **Mundo do Foundry** é este mundo; com uma campanha só na wiki, ela (e o módulo grava na configuração, para o mundo continuar nela quando a segunda aparecer).
+    - **Sem saber qual** (duas campanhas e o mundo sem ligação): o mestre recebe um aviso, o importador mostra todas as campanhas e nenhum pedido é entregue até ligar.
+    - Pela macro: `game.modules.get('cpr-2077').api.campanhaDaWiki()`.
+  - **Crossover** (o mestre moveu o personagem para outra campanha na wiki):
+    - **No mundo da campanha antiga,** na primeira vez que abrir depois da mudança, o módulo manda a ficha do ator para a wiki e para de mandar a ficha da mesa. O ator fica no mundo, parado. A wiki também recusa o que esse mundo tentar gravar no personagem.
+    - **No mundo da campanha nova,** o personagem aparece nos avisos ("veio de outra campanha") e **Importar da wiki** cria o ator igual ao da mesa antiga: itens, montagem, HP, dinheiro, lesões e o que mais tiver. Os ids dos itens ficam, então cyberware instalado e munição no pente continuam no lugar. O dono é escolhido na hora, e o retrato é copiado para a pasta deste mundo.
+    - Se a ficha da mesa antiga ainda não chegou, o importador avisa e cria o ator como foi feito na wiki.
   - **No servidor online,** o módulo é gerado lá mesmo a cada publicação, assim que a mesa estiver vazia (veja `servidor/README.md`).
 
 O conteúdo é gerado a partir da wiki da mesa (`system-2077.js`, `system-net.js`, `mestre-npcs.js`), então a wiki e o Foundry nunca divergem.

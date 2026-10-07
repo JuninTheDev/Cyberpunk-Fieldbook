@@ -44,7 +44,7 @@ Remove-Item -Recurse -Force $out -ErrorAction SilentlyContinue
 New-Item -ItemType Directory $out | Out-Null
 
 if (Ask-YesNo 'Enviar os dados da wiki (personagens, retratos, códigos, Publicar, regras da loja)?') {
-  $items = @('contas-jogadores.json', 'regras-loja.json', 'jogadores.json', 'jogadores-mestre.json', 'personagens') | Where-Object { Test-Path (Join-Path $wiki $_) }
+  $items = @('contas-jogadores.json', 'regras-loja.json', 'jogadores.json', 'jogadores-mestre.json', 'personagens', 'campanhas.json', 'campanhas', 'noticias-night-city.json') | Where-Object { Test-Path (Join-Path $wiki $_) }
   & $tar -czf (Join-Path $out 'dados.tar.gz') -C $wiki --exclude 'personagens/apagados' @items
   Write-Host "  dados da wiki: $($items -join ', ')"
 }

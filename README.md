@@ -1,6 +1,6 @@
-# Night City Fieldbook — Protocolo Morana
+# Night City Fieldbook
 
-Wiki de mesa para a campanha de Cyberpunk RED ambientada em 2077.
+Wiki de mesa para as campanhas de Cyberpunk RED ambientadas em 2077: o Protocolo Morana e as que vierem, ao mesmo tempo, no mesmo universo (veja **Campanhas**).
 
 ## Wiki e mesa online
 
@@ -12,14 +12,14 @@ A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre liga
   - Ele espera a versão nova aparecer na wiki online, o que leva até 1 minuto.
 - **Mestre:** entra por `https://wiki.SEUDOMINIO/mestre`, com a senha. O aparelho fica lembrado por um ano.
   - Na barra lateral ficam **Sair do modo mestre**, **Baixar backup** (o servidor faz um por dia) e a versão no ar.
-- **Mesa:** a barra lateral das duas wikis mostra se a mesa está aberta e quantos estão conectados, e tem o botão **Entrar na mesa**.
+- **Mesa:** a barra lateral das duas wikis mostra se a mesa está aberta e quantos estão conectados, e tem o botão **Entrar na mesa**. Com o mundo ligado a uma campanha, diz de qual campanha é a mesa, e só quem joga nela a vê aberta.
 - **Servidor, para o mestre:** a barra lateral resume o último backup, o disco livre, se o módulo do Foundry está esperando a mesa vazia e as últimas publicações. Fica em vermelho com backup de mais de 2 dias ou disco com menos de 10% livre.
 - **No celular, como app:** na barra lateral aparece **Instalar no celular** (Android e computador; no iPhone, Compartilhar → Adicionar à Tela de Início).
-  - Instalada ou não, a wiki guarda no aparelho as regras e o que o mestre publicou, e abre sem internet. Os personagens e a loja precisam de rede.
+  - Instalada ou não, a wiki guarda no aparelho as regras e o que o mestre publicou nas campanhas do jogador, e abre sem internet. Os personagens e a loja precisam de rede.
   - Com rede, ela sempre busca a versão nova primeiro.
   - A wiki do mestre nunca fica guardada no aparelho.
 - **Dados ao vivo:** no servidor, ficam fora do git (`/srv/fieldbook/dados`).
-  - São personagens, retratos, códigos, o painel Publicar e as regras da loja.
+  - São personagens, retratos, códigos, as campanhas (com o Publicar e as regras da loja de cada uma) e as Notícias de Night City.
   - Use a wiki online para mexer neles: a wiki do PC vira um lugar de teste.
 
 ## Como abrir a wiki no PC
@@ -34,7 +34,7 @@ e abra `http://localhost:8000`.
 
 - Por padrão, só este computador acessa.
 - Para os jogadores entrarem pela rede: no PowerShell, `$env:HOST='0.0.0.0'; node server.js`. O servidor mostra no terminal o endereço (`http://192.168.x.x:8000`) para passar aos jogadores.
-- **Quem entra de outro aparelho só recebe a visão dos jogadores** (`jogadores.html`). A wiki do mestre, os `.md`, os PDFs e o `jogadores-mestre.json` ficam bloqueados para eles.
+- **Quem entra de outro aparelho só recebe a visão dos jogadores** (`jogadores.html`). A wiki do mestre, os documentos `.md`, os PDFs e os arquivos de dados ficam bloqueados para eles.
 - Para usar a visão do mestre num tablet: `$env:HOST='0.0.0.0'; $env:GM_KEY='uma-senha'; node server.js` e, no tablet, abra uma vez `http://IP:8000/?mestre=uma-senha`. O tablet guarda um cookie e passa a abrir a wiki do mestre.
 - Abrir o `index.html` com dois cliques funciona para as páginas de resumo, mas os **documentos completos** e a visão dos jogadores só funcionam pelo servidor.
 
@@ -64,33 +64,52 @@ Pelo túnel, todo visitante recebe só a visão dos jogadores da wiki, mesmo par
 
 ## Visão dos jogadores
 
-Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os jogadores podem ver:
+Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os jogadores da campanha escolhida no menu podem ver:
 
 - **O que o grupo sabe:** o resumo que aparece na página inicial deles.
 - **Pessoas, Lugares no mapa, Notícias e handouts:** marque *Revelado* / *No mapa* / *Publicada* no que o grupo já descobriu. O resto fica guardado, mas não é enviado.
-- **Nota do mestre** (campo tracejado em vermelho): lembretes seus, como o nome verdadeiro de um NPC. Nunca vai para os jogadores.
-- Clique em **Publicar**. A página dos jogadores se atualiza sozinha em até 15 segundos e avisa "O mestre publicou novidades".
+- **Notícias de Night City** (no fim do painel): o mural de **todas as campanhas** (boletins do N54, a eleição, apagões). Uma notícia publicada ali aparece para os jogadores de qualquer campanha; não conte nela o que é segredo de uma.
+- **Nota do mestre** (campo tracejado em vermelho): lembretes seus, como o nome verdadeiro de um NPC. Nunca vai para os jogadores: o servidor tira as notas e o que não foi revelado antes de mandar.
+- Clique em **Publicar**. A página dos jogadores se atualiza sozinha em até 15 segundos e avisa "O mestre publicou novidades". Trocar de campanha com alterações não publicadas pergunta antes.
+
+Os jogadores entram com o código deles (na página inicial ou em Personagens). Sem código, a pessoa vê só a aba **Regras**.
 
 Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, netrunning, armas, cyberware...), sem as notas de campanha. Nas páginas de regras da wiki do mestre, essas notas aparecem com **contorno tracejado vermelho**: é o que só você vê. Elas ficam no `index.html` (em `gmNotes`), e não nos arquivos `system-*.js`, que os jogadores baixam.
 
 **Não escreva segredos** em `jogadores.html`, `wiki-app.js`, `wiki.css` ou `system-*.js`: esses arquivos vão para os aparelhos dos jogadores.
 
+## Campanhas
+
+Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o mesmo universo. Na wiki do mestre, a página **Campanhas** (no menu de cada campanha) cria, renomeia e apaga; o seletor **Campanha ativa** no menu troca entre elas.
+
+- **O que é de cada campanha:** os personagens, os jogadores, o Publicar, as regras da loja, os documentos e o mundo do Foundry. Trocar a campanha ativa troca tudo isso nas páginas (Personagens e códigos, Loja, Visão dos jogadores).
+- **O que é de todas:** as regras do jogo, o catálogo, o mapa base, as fichas de NPC e as **Notícias de Night City**.
+- **Quem vê o quê:** cada jogador só vê as campanhas em que joga. De outra campanha, não vê nem o nome: o servidor responde como se ela não existisse, também para quem tenta pelo endereço direto.
+- **Nome para os jogadores:** o nome que eles veem no menu e no topo. O do mestre pode entregar um segredo; o Protocolo Morana aparece para os jogadores como "Night City, 2077", como antes.
+- **Um jogador em duas campanhas:** o mesmo código. Em **Personagens e códigos** de uma campanha, **Adicionar jogador de outra campanha**; **Tirar desta campanha** tira o acesso (os personagens dele lá continuam salvos). O jogador troca de campanha no menu, como o mestre.
+- **Crossover:** só o mestre leva um personagem para outra campanha, com **Mover** na lista de personagens. O dono passa a jogar na campanha nova também. No Foundry, veja o README do módulo: o mundo antigo manda a ficha do ator sozinho, e o mundo novo importa com tudo o que aconteceu na mesa antiga.
+- **Regras da loja:** cada campanha tem as suas. A campanha nova começa com uma cópia das do Protocolo Morana.
+- **Documentos:** os `.md` de `documentos/<id da campanha>/` (o id aparece na página Campanhas). O título é a primeira linha (`# Título`). Os de `documentos/night-city/` aparecem em todas. Publique com `publicar.bat`.
+- **Mundo do Foundry:** o id da pasta do mundo (o nome em `Data/worlds/`). Com o Foundry aberto, a página Campanhas oferece **Usar o mundo aberto agora**. Com ele, a barra lateral diz de qual campanha é a mesa, e o módulo do mundo sabe a campanha dele. Uma licença abre um mundo por vez: sessões de campanhas diferentes precisam ser em horários diferentes.
+- **O que existia antes** é do Protocolo Morana: os códigos, os personagens, o Publicar (`jogadores.json` e `jogadores-mestre.json`, que ficam no git só como ponto de partida de um servidor novo) e as regras da loja. Os jogadores não percebem a mudança, e os códigos continuam os mesmos.
+
 ## Arquivos
 
 | Arquivo | Para que serve |
 |---|---|
-| `fundacao-da-campanha.md` | Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais. **Fonte principal da lore.** |
-| `personagens-da-campanha.md` | NPCs: objetivos, segredos, falas e interpretação. |
-| `ganchos-dos-personagens.md` | Sessão zero: transforma as respostas dos jogadores em ganchos pessoais ligados a Morana. |
-| `sessao-01-a-maleta.md` | Roteiro da Sessão 1 e fichas de combate RED da equipe de Vega. |
-| `sessao-02-o-hospital-queimado.md` | Sessão 2, com aberturas para cada desfecho da Sessão 1. |
-| `guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo, ganchos e tabelas. |
-| `diario-da-campanha.md` | Estado dos relógios, onde está cada parte de Morana e registro das sessões. Atualize depois de cada sessão. |
-| `index.html` | A wiki do mestre. As páginas de resumo e as notas de campanha nas regras (`gmNotes`) estão escritas aqui; os documentos completos são lidos dos `.md`. |
-| `jogadores.html` | A visão dos jogadores: resumo, pessoas, mapa e notícias publicados pelo mestre, mais as regras. |
-| `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre. |
-| `jogadores-mestre.json` | Tudo o que está no painel, inclusive o que ainda não foi revelado. Só o mestre acessa. |
-| `jogadores.json` | Só o que foi publicado. É o que a página dos jogadores lê. Gerado pelo botão Publicar. |
+| `documentos/morana/fundacao-da-campanha.md` | Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais. **Fonte principal da lore.** |
+| `documentos/morana/personagens-da-campanha.md` | NPCs: objetivos, segredos, falas e interpretação. |
+| `documentos/morana/ganchos-dos-personagens.md` | Sessão zero: transforma as respostas dos jogadores em ganchos pessoais ligados a Morana. |
+| `documentos/morana/sessao-01-a-maleta.md` | Roteiro da Sessão 1 e fichas de combate RED da equipe de Vega. |
+| `documentos/morana/sessao-02-o-hospital-queimado.md` | Sessão 2, com aberturas para cada desfecho da Sessão 1. |
+| `documentos/morana/guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo, ganchos e tabelas (com os ganchos de Morana). |
+| `documentos/morana/diario-da-campanha.md` | Estado dos relógios, onde está cada parte de Morana e registro das sessões. Atualize depois de cada sessão. |
+| `documentos/<campanha>/`, `documentos/night-city/` | Os documentos de cada campanha nova, e os de todas. Veja **Campanhas**. |
+| `index.html` | A wiki do mestre. As páginas de resumo do Protocolo Morana e as notas de campanha nas regras (`gmNotes`) estão escritas aqui; os documentos completos são lidos dos `.md`. |
+| `campanhas-painel.js` | A página Campanhas e as páginas das campanhas novas (visão geral, notas, documentos) na wiki do mestre. |
+| `jogadores.html` | A visão dos jogadores: resumo, pessoas, mapa e notícias publicados pelo mestre na campanha do jogador, as Notícias de Night City e as regras. |
+| `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre (o Publicar de cada campanha e as Notícias de Night City). |
+| `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. |
 | `campaign-map.js` | Pinos do mapa de operações. |
 | `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
@@ -105,7 +124,8 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 | `publicar.bat`, `publicar.ps1` | Publicam a wiki no servidor online, pelo GitHub. |
 | `manifest.webmanifest`, `sw.js`, `icones/` | A wiki instalada no celular: o manifesto, o service worker (guarda as regras para abrir sem internet) e os ícones (o `icone.svg` é a fonte dos PNG). |
 | `servidor/` | Instalação e manutenção do servidor online (wiki, Foundry, HTTPS, atualização e backup). Veja o README da pasta. |
-| `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores. |
+| `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores e decide quem vê o quê em cada campanha. |
+| `api-campanhas.js` | A lista de campanhas, o Publicar e as regras da loja de cada uma e as Notícias de Night City (`campanhas.json`, `campanhas/`, `noticias-night-city.json`, na pasta de dados, fora do git). |
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
 | `popup.js` | Os pop-ups da wiki (confirmar, escrever um motivo, copiar um código) e os avisos rápidos no canto, no lugar das caixas do navegador. |
 | `system-criacao.js` | Regras de criação: Roles de 2077, tabelas de STAT, perícias e pacotes de cada Role. |
@@ -144,7 +164,7 @@ Veja o README da pasta.
 
 Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens ficam salvos no servidor da wiki.
 
-1. **Códigos:** na wiki do mestre, em **Campanha → Personagens e códigos**, crie um código para cada jogador (por exemplo, `NC-7F3K-9QAB`) e passe a ele.
+1. **Códigos:** na wiki do mestre, em **Campanha → Personagens e códigos**, crie um código para cada jogador (por exemplo, `NC-7F3K-9QAB`) e passe a ele. O código já entra na campanha escolhida no menu.
 2. **Criar:** o jogador abre a wiki dos jogadores, entra em **Personagens**, digita o código uma vez (o aparelho lembra) e clica em **Novo personagem**.
    - **Os passos:** identidade e Role, STATs, perícias, Lifepath, equipamento, moradia e revisão.
    - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 9 Roles de 2077 e o cyberware grátis de 2077.
@@ -221,7 +241,7 @@ Notas:
   - Os personagens ficam em `personagens/`, e os retratos enviados, em `personagens/retratos/`.
   - No servidor online, tudo isso fica em `/srv/fieldbook/dados`.
   - Apagar um personagem move o arquivo para `personagens/apagados/`.
-- **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros, só nome, apelido, Role e retrato. O mestre vê e edita todos.
+- **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros jogadores da mesma campanha, só nome, apelido, Role e retrato. De outra campanha, nada. Sem código, nenhum personagem. O mestre vê e edita todos.
 
 ## Consulta durante a sessão
 
@@ -256,11 +276,11 @@ Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 node tests/rodar.js
 ```
 
-Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8769), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8772), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
 
 **Teste do Foundry** (`node tests/rodar.js foundry`): importa personagens feitos na wiki de teste num Foundry de verdade e confere o ator.
 - **Onde roda:** usa o Foundry instalado no PC, sem janela, na porta 30999. Os dados ficam numa pasta própria, `%LOCALAPPDATA%\FieldbookTeste\foundry`, que nunca toca nos seus mundos.
-- **O que confere:** STATs, Role e sub-habilidades, cyberware instalado, armas, moradia e veículos.
+- **O que confere:** STATs, Role e sub-habilidades, cyberware instalado, armas, moradia, veículos e o crossover entre campanhas (o mundo antigo manda a ficha; o novo cria o ator igual).
 - **Licença:** ela vale para uma mesa por vez, então o teste confere antes, na wiki online, se a mesa do servidor está vazia. Se houver alguém, o teste é pulado.
 - **Módulo:** os scripts do módulo são copiados a cada rodada. Os compêndios só são gerados de novo na primeira vez ou com `$env:FOUNDRY_BUILD=1`.
 
@@ -270,7 +290,7 @@ Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 876
 
 ## Fluxo de trabalho
 
-1. Mude a lore nos `.md`. A página "Documentos completos" da wiki acompanha na hora (recarregue a página).
+1. Mude a lore nos `.md` de `documentos/<campanha>/`. A página "Documentos completos" da wiki acompanha na hora (recarregue a página).
 2. Se a mudança afetar um resumo (Dossiê, Pessoas, Sessão 01, mapa), atualize também o `index.html` ou o `campaign-map.js`.
    Depois de cada sessão, revele no painel **Visão dos jogadores** o que o grupo descobriu e clique em Publicar.
 3. Dê dois cliques em **`publicar.bat`**. Ele salva uma versão no git, o que permite voltar atrás, e põe a wiki online no ar.

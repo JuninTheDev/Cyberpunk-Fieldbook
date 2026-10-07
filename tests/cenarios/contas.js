@@ -73,7 +73,7 @@ module.exports = async ({ servidores, r }) => {
   });
   await r.passo('gravação sem JSON é recusada (personagens e Publicar)', async () => {
     const texto = await api(rede, '/api/personagens', { method: 'POST', cookie: ana, body: '{"nome":"x"}', headers: { 'Content-Type': 'text/plain' } });
-    const publicar = await api(gm, '/api/jogadores', { method: 'POST', body: '{}', headers: { 'Content-Type': 'text/plain' } });
+    const publicar = await api(gm, '/api/campanhas/morana/publicar', { method: 'POST', body: '{}', headers: { 'Content-Type': 'text/plain' } });
     return [texto.status === 415 && publicar.status === 415, `${texto.status}/${publicar.status}`];
   });
   await r.passo('CORS só para o Foundry (localhost:30000)', async () => {
@@ -89,11 +89,11 @@ module.exports = async ({ servidores, r }) => {
     const salvo = (await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...ficha, foundry: null } })).dados?.personagem;
     return [jogador.status === 403 && mestre.status === 200 && depois.versao === 2 && salvo?.foundry?.ator === 'abc123', `${jogador.status}/${mestre.status} · v${depois?.versao} · foundry depois de salvar: ${salvo?.foundry?.ator}`];
   });
-  await r.passo('regras da loja: todos leem, só o mestre grava, com limpeza', async () => {
+  await r.passo('regras da loja: os jogadores da campanha leem, só o mestre grava, com limpeza', async () => {
     const lidas = await api(rede, '/api/loja/regras', { cookie: ana });
     const jogador = await api(rede, '/api/loja/regras', { method: 'PUT', cookie: ana, body: { teto: 99999 } });
     const mestre = await api(gm, '/api/loja/regras', { method: 'PUT', body: { teto: '500', esconder: ['exotica', 'inventada'], liberados: ['core_weapons:sword-excellent', 'lixo!'], bloqueados: [] } });
-    const depois = (await api(rede, '/api/loja/regras')).dados?.regras;
+    const depois = (await api(rede, '/api/loja/regras', { cookie: ana })).dados?.regras;
     await api(gm, '/api/loja/regras', { method: 'PUT', body: { teto: 1000, esconder: lidas.dados.etiquetas, liberados: [], bloqueados: [] } });
     return [lidas.dados?.regras?.teto === 1000 && jogador.status === 403 && mestre.status === 200 && depois.teto === 500 && depois.esconder.join() === 'exotica' && depois.liberados.join() === 'core_weapons:sword-excellent', `${jogador.status}/${mestre.status} · ${JSON.stringify(depois)}`];
   });
@@ -126,13 +126,14 @@ module.exports = async ({ servidores, r }) => {
     return [estados.join() === esperado && segunda.importado === primeira.importado && segunda.sincronizado >= primeira.sincronizado && lista?.estadoFoundry === 'importado' && !calculados.length, `${estados.join()} · data da importação mantida: ${segunda.importado === primeira.importado} · no arquivo: ${calculados.join() || 'nenhum calculado'}`];
   });
   const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-  await r.passo('retrato: recusa o que não é imagem; aceita PNG e serve pela rede, com CORS para o Foundry', async () => {
+  await r.passo('retrato: recusa o que não é imagem; aceita PNG e serve para quem é da campanha, com CORS para o Foundry', async () => {
     const falso = await api(rede, `/api/personagens/${ficha.id}/retrato`, { method: 'POST', cookie: ana, body: { imagem: 'data:image/png;base64,' + Buffer.from('<script>x</script>').toString('base64') } });
     const outro = await api(rede, `/api/personagens/${ficha.id}/retrato`, { method: 'POST', cookie: bruno, body: { imagem: PNG } });
     const ok = await api(rede, `/api/personagens/${ficha.id}/retrato`, { method: 'POST', cookie: ana, body: { imagem: PNG } });
-    const imagem = await fetch(`${rede}/${ok.dados?.retrato}`, { headers: { Origin: 'http://localhost:30000' } });
+    const imagem = await fetch(`${rede}/${ok.dados?.retrato}`, { headers: { Origin: 'http://localhost:30000', Cookie: bruno } });
     const bytes = Buffer.from(await imagem.arrayBuffer());
-    return [falso.status === 400 && outro.status === 403 && ok.status === 200 && imagem.headers.get('content-type') === 'image/png' && bytes[1] === 0x50 && imagem.headers.get('access-control-allow-origin') === 'http://localhost:30000', `${falso.status}/${outro.status}/${ok.status} · ${imagem.status} ${imagem.headers.get('content-type')}`];
+    const semCodigo = await fetch(`${rede}/${ok.dados?.retrato}`);
+    return [falso.status === 400 && outro.status === 403 && ok.status === 200 && imagem.headers.get('content-type') === 'image/png' && bytes[1] === 0x50 && imagem.headers.get('access-control-allow-origin') === 'http://localhost:30000' && semCodigo.status === 401, `${falso.status}/${outro.status}/${ok.status} · outro jogador da campanha ${imagem.status} ${imagem.headers.get('content-type')} · sem código ${semCodigo.status}`];
   });
   await r.passo('retrato: o jogador não grava o campo direto pelo salvamento', async () => {
     const atual = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: ana })).dados.personagem;
