@@ -22,9 +22,14 @@
     'Melee Weapon': 'Armas Brancas', 'Melee Weapons': 'Armas Brancas', 'Moto Family': 'Moto', Paramedic: 'Paramédico', Perception: 'Percepção',
     Persuasion: 'Persuasão', 'Pick Lock': 'Arrombamento', 'Resist Torture/Drug': 'Resistir Tortura/Drogas', 'Resist Torture/Drugs': 'Resistir Tortura/Drogas',
     'Science (Chemistry)': 'Ciências (Química)', 'Shoulder Arms': 'Armas de Ombro', Stealth: 'Furtividade', Streetwise: 'Malandragem', Tactics: 'Táticas',
-    Tracking: 'Rastrear', Weaponstech: 'Tecnologia de Armas', 'Wilderness Survival': 'Sobrevivência'
+    Tracking: 'Rastrear', Weaponstech: 'Tecnologia de Armas', 'Wilderness Survival': 'Sobrevivência',
+    // Do elenco da campanha (o livro não usa).
+    Accounting: 'Contabilidade', Acting: 'Atuação', Bribery: 'Subornar', Bureaucracy: 'Burocracia', Business: 'Negócios', Composition: 'Composição',
+    Cybertech: 'Cybertecnologia', Demolitions: 'Demolições', 'Language (English)': 'Linguagem (inglês)', 'Language (Japanese)': 'Linguagem (japonês)',
+    'Personal Grooming': 'Cuidados Pessoais', 'Photography/Film': 'Fotografia/Filme', 'Science (Biology)': 'Ciências (Biologia)', Trading: 'Negociação',
+    'Wardrobe & Style': 'Guarda-roupa e Estilo', Operator: 'Operator', Medicine: 'Medicine', Maker: 'Maker'
   };
-  const roleAbilities = ['Interface', 'Moto Family', 'Combat Awareness'];
+  const roleAbilities = ['Interface', 'Moto Family', 'Combat Awareness', 'Operator', 'Medicine', 'Maker'];
   // Perícias que aparecem no cartão sem abrir "Todas as perícias".
   const highlighted = ['Handgun', 'Shoulder Arms', 'Autofire', 'Heavy Weapons', 'Archery', 'Melee Weapon', 'Melee Weapons', 'Brawling', 'Evasion', 'Perception', 'Stealth', 'Athletics'];
   const statNames = ['INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'MOVE', 'BODY', 'EMP'];
@@ -57,7 +62,7 @@
       `${weapon}${note ? ` <small>${note}</small>` : ''}`, damage, rof,
       `${skillNames[skill]} ${base(skill)}${skill === 'Shoulder Arms' && base('Autofire') !== '—' && /autofogo/.test(note || '') ? ` · autofogo ${base('Autofire')}` : ''}`
     ]);
-    return `<article class="entry npc" data-toc="${name}"><header><h4>${name}</h4><span class="entry-tag">${tiers[tier]} · ${book} · p. ${page}</span></header>
+    return `<article class="entry npc" data-toc="${name}"><header><h4>${name}</h4><span class="entry-tag">${tiers[tier]} · ${book}${page ? ` · p. ${page}` : ''}</span></header>
       <div class="npc-stats">${stats.map((value, index) => `<span><b>${statNames[index]}</b>${value}</span>`).join('')}</div>
       <div class="entry-stats"><span><b>PV</b> ${hp}</span><span><b>Gravemente Ferido</b> ${wounded}</span><span><b>Death Save</b> ${deathSave}</span><span><b>Iniciativa</b> ${initiative}</span></div>
       <div class="entry-stats"><span><b>Armadura</b> ${armor}</span></div>
@@ -172,6 +177,93 @@
       skills: 'Athletics 16, Autofire 14, Basic Tech 11, Brawling 15, Concentration 6, Conversation 2, Drive Land Vehicle 10, Education 7, Endurance 10, Evasion 13, First Aid 6, Handgun 12, Heavy Weapons 14, Human Perception 2, Interrogation 13, Language (Native) 7, Language (Streetslang) 7, Local Expert (Your Home) 7, Melee Weapon 17, Perception 9, Persuasion 6, Resist Torture/Drugs 15, Stealth 10, Tracking 10',
       gear: 'granadas perfurantes ×2, munição de pistola pesada ×100, Cyberarm ×2 (lança-granadas pop-up ×2, SMG pesada pop-up, Wolvers), Cyberleg ×2 (Jump Booster ×2), Cybersnake, Grafted Muscle and Bone Lace, Neural Link (Chipware Socket, Pain Editor), Subdermal Armor',
       tip: 'O livro avisa: é uma luta de chefe, só ponha na mesa se o grupo aguentar. O Pain Editor ignora as penalidades de Gravemente Ferido, e a SMG pesada faz autofogo a 14. Para uma vítima da Fúria de Morana que ainda pode ser salva, use uma ficha mais fraca (Guarda-costas ou Boosterganger) com o implante tomado. Guarde esta para quem já passou do limite.'
+    }
+  ];
+
+  // ---------------- O elenco do Protocolo Morana ----------------
+  // Fichas próprias da campanha, no formato das do livro (bases = STAT + perícia; PV = 10 + 5 × (BODY + WILL) ÷ 2,
+  // para cima). O build do módulo do Foundry cria um ator para cada uma, na pasta "Protocolo Morana".
+  const campaignCast = [
+    {
+      name: 'Wakako Okada', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
+      stats: [7, 4, 4, 4, 8, 7, 3, 4, 6], hp: 40, wounded: 20, deathSave: 4, initiative: '4 + 1d10',
+      armor: 'Kevlar · SP 7 na cabeça e no corpo (sob o quimono)',
+      weapons: [['Pistola média', '2d6', 2, 'Handgun', 'escondida na manga']],
+      skills: 'Operator 8, Accounting 11, Bribery 14, Bureaucracy 11, Business 13, Concentration 11, Conversation 12, Deduction 11, Education 11, Handgun 8, Human Perception 14, Interrogation 12, Language (English) 11, Language (Japanese) 13, Language (Streetslang) 11, Local Expert (Your Home) 15, Perception 11, Persuasion 15, Personal Grooming 8, Resist Torture/Drugs 11, Streetwise 15, Trading 14, Wardrobe & Style 9',
+      gear: 'munição de pistola média ×20, Agent, a rede de contatos de Japantown e Kabuki, a rota do "caminhão de peixe" para fora da cidade',
+      tip: 'Não é ficha de combate: quando se irrita, fica mais educada. Operator 8 dá contatos em toda Night City e pechincha (até 20%). Mina Kuroda fica sempre perto. Personagens, "Wakako Okada".'
+    },
+    {
+      name: 'Mina Kuroda', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
+      stats: [5, 7, 7, 3, 6, 6, 6, 7, 3], hp: 45, wounded: 23, deathSave: 7, initiative: '9 + 1d10',
+      armor: 'Light Armorjack · SP 11 na cabeça e no corpo',
+      weapons: [['Arma branca pesada', '3d6', 2, 'Melee Weapon', 'katana'], ['Pistola muito pesada', '4d6', 1, 'Handgun', 'escondida']],
+      skills: 'Athletics 11, Brawling 12, Concentration 9, Conversation 5, Education 7, Evasion 13, First Aid 5, Handgun 12, Human Perception 8, Interrogation 9, Language (Native) 7, Language (Streetslang) 7, Local Expert (Your Home) 9, Melee Weapon 14, Perception 11, Persuasion 7, Resist Torture/Drugs 10, Stealth 9, Tactics 8',
+      gear: 'munição de pistola muito pesada ×20, rádio comunicador, Cybereye (TeleOptics, discreto), Neural Link (Kerenzikov)',
+      tip: 'A guarda de Wakako: fica perto dela sem bloquear a saída, observa as mãos e só intervém quando um limite foi cruzado. A iniciativa soma REF 7 e +2 do Kerenzikov. Para um Tyger Claw de elite, troque o Kerenzikov por um Sandevistan (Cyberware de 2077).'
+    },
+    {
+      name: 'Dr. Kenzo Endo', book: 'Protocolo Morana', tier: 'mook', page: null,
+      stats: [8, 4, 5, 8, 3, 4, 4, 4, 5], hp: 30, wounded: 15, deathSave: 4, initiative: '4 + 1d10',
+      armor: 'Sem armadura',
+      weapons: [],
+      skills: 'Acting 8, Basic Tech 12, Concentration 8, Conversation 7, Cryptography 14, Cybertech 14, Deduction 12, Education 14, Electronics/Security Tech 15, First Aid 10, Human Perception 6, Language (English) 10, Language (Japanese) 12, Language (Streetslang) 9, Library Search 12, Local Expert (Your Home) 10, Paramedic 10, Perception 10, Persuasion 5, Resist Torture/Drugs 7, Science (Biology) 12, Stealth 7',
+      gear: 'a maleta blindada de 2070, presa ao pulso (trava biométrica), implante muscular antigo no pescoço (lote militar de 2069), Agent com as gravações',
+      tip: 'Na Sessão 01 começa com 10 PV (Gravemente Ferido: −2 em tudo) e espasmos da Fúria de Morana. Atuação 8 é a mentira ("era só um entregador"): Percepção Humana contra ela revela que ele esconde algo. As travas da maleta estão na Sessão 01, Cena 3.'
+    },
+    {
+      name: 'Dra. Reina Sato', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
+      stats: [8, 5, 5, 8, 7, 8, 5, 5, 4], hp: 45, wounded: 23, deathSave: 5, initiative: '5 + 1d10',
+      armor: 'Light Armorjack · SP 11 na cabeça e no corpo (o casaco de campo)',
+      weapons: [['Pistola pesada', '3d6', 2, 'Handgun']],
+      skills: 'Medicine 6, Basic Tech 12, Concentration 12, Conversation 7, Cryptography 13, Cybertech 15, Deduction 14, Education 15, Electronics/Security Tech 14, First Aid 12, Handgun 9, Human Perception 8, Interrogation 11, Language (English) 10, Language (Japanese) 12, Language (Streetslang) 9, Library Search 13, Local Expert (Your Home) 10, Paramedic 14, Perception 12, Persuasion 13, Resist Torture/Drugs 12, Science (Biology) 15, Stealth 9, Tactics 12',
+      gear: 'munição de pistola pesada ×30, terminal com o código de Morana e a lista dos sobreviventes de 2070, Medtech Bag, Neural Link (Interface Plugs)',
+      tip: 'Prefere convencer a atacar e evita matar quando uma desativação remota resolve. Com acesso a Morana, trava o implante de um sobrevivente da lista (teste de resistência no estágio atual). Sem o vírus, é uma cientista com uma pistola: a força dela está em Iskra. Personagens, "Dra. Reina Sato".'
+    },
+    {
+      name: 'Iskra Voss', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
+      stats: [4, '8 (6)', '6 (4)', 4, 6, 5, '6 (4)', 7, 4], hp: 40, wounded: 20, deathSave: 7, initiative: '8 + 1d10',
+      armor: 'Medium Armorjack · SP 13 na cabeça e no corpo · −2 REF, DEX e MOVE',
+      weapons: [['Pistola muito pesada', '4d6', 1, 'Handgun', 'inteligente: +1 no ataque (Subdermal Grip)'], ['Arma branca média', '2d6', 2, 'Melee Weapon', 'cassetete']],
+      skills: 'Athletics 10 (8), Autofire 12 (10), Brawling 10 (8), Concentration 7, Conversation 6, Deduction 6, Drive Land Vehicle 12 (10), Education 6, Evasion 10 (8), First Aid 6, Handgun 10 (8), Human Perception 6, Interrogation 8, Language (Native) 6, Language (Streetslang) 6, Local Expert (Your Home) 6, Melee Weapon 10 (8), Perception 6, Persuasion 8, Resist Torture/Drugs 10, Shoulder Arms 10 (8), Stealth 6 (4), Tactics 8',
+      gear: 'munição de pistola muito pesada ×50, óculos escuros, algemas ×2, rádio comunicador, Cyberarm esquerdo militar (lote de 2069, Subdermal Grip), Cybereye ×2 (Kiroshi de primeira geração), Neural Link (Kerenzikov)',
+      tip: 'O Oficial de segurança do livro, como os documentos pedem, com a pistola inteligente no lugar do rifle. Prefere capturar a matar, nunca ameaça duas vezes e recua Gravemente Ferida. Quando Morana está perto, a íris pisca em vermelho. A equipe dela usa as fichas de Operativo de segurança e Netrunner.'
+    },
+    {
+      name: 'Vega', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
+      stats: [4, 8, 6, 4, 6, 5, 6, 7, 4], hp: 40, wounded: 20, deathSave: 7, initiative: '10 + 1d10',
+      armor: 'Light Armorjack · SP 11 na cabeça e no corpo',
+      weapons: [['Rifle de assalto', '5d6', 1, 'Shoulder Arms', 'inteligente: +1 no ataque · autofogo (4), supressão'], ['Pistola muito pesada', '4d6', 1, 'Handgun']],
+      skills: 'Athletics 10, Autofire 12, Brawling 10, Concentration 7, Conversation 6, Education 6, Evasion 10, First Aid 6, Handgun 10, Human Perception 8, Interrogation 8, Language (Native) 6, Language (Streetslang) 6, Local Expert (Your Home) 6, Perception 8, Persuasion 8, Resist Torture/Drugs 7, Shoulder Arms 11, Stealth 6, Tactics 8',
+      gear: 'munição de rifle ×50, munição de pistola muito pesada ×30, rádio comunicador, visor com leitura tática, Neural Link (Kerenzikov, Interface Plugs)',
+      tip: 'Sessão 01, Cena 4. Começa oferecendo rendição, mira nas pernas quando pode incapacitar e recua Gravemente Ferida ou quando dois da equipe caem. Pode oferecer o dobro de Wakako. A equipe: dois Operativos de segurança, um Netrunner e um técnico de contenção (Guarda-costas com Tecnologia Básica 11 e a caixa de Faraday).'
+    },
+    {
+      name: 'Brakk', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
+      stats: [3, 6, 6, 5, 4, 5, 4, 6, 4], hp: 40, wounded: 20, deathSave: 6, initiative: '6 + 1d10',
+      armor: 'Light Armorjack · SP 11 na cabeça e no corpo',
+      weapons: [['Wolvers', '3d6', 2, 'Melee Weapon', 'arma cibernética'], ['Espingarda', '5d6', 1, 'Shoulder Arms', 'balote'], ['Pistola pesada', '3d6', 2, 'Handgun']],
+      skills: 'Athletics 12, Basic Tech 9, Brawling 8, Concentration 7, Conversation 6, Deduction 7, Drive Land Vehicle 10, Education 5, Electronics/Security Tech 9, Endurance 11, Evasion 8, First Aid 7, Handgun 10, Human Perception 6, Land Vehicle Tech 7, Language (Native) 5, Language (Streetslang) 5, Local Expert (Your Home) 5, Melee Weapon 10, Paramedic 7, Perception 8, Persuasion 6, Pick Lock 7, Resist Torture/Drugs 10, Shoulder Arms 10, Stealth 10, Weaponstech 9, Wilderness Survival 7',
+      gear: 'balotes de espingarda ×25, munição de pistola pesada ×25, Cyberarm ×2 (Wolvers), Cybereye ×2 (Low Light/Infrared/UV), o rosto quase todo coberto de placas, rádio comunicador',
+      tip: 'O Chefe reclaimer do livro com Wolvers, como a Sessão 02 pede. O profeta do culto da Maelstrom que ouve "a voz" no hospital queimado: cobra dízimo, pode virar aliado temporário ou, conectado ao Gatilho, um antagonista que fala com a voz de Morana. Os cultistas: Maelstrom (Facções de 2077).'
+    },
+    {
+      name: 'Tamsin “Fuse” Ilyin', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
+      stats: [6, 6, 6, 8, 6, 8, 5, 6, 5], hp: 45, wounded: 23, deathSave: 6, initiative: '6 + 1d10',
+      armor: 'Light Armorjack · SP 11 na cabeça e no corpo',
+      weapons: [['Espingarda', '5d6', 1, 'Shoulder Arms', 'balote'], ['Pistola pesada', '3d6', 2, 'Handgun']],
+      skills: 'Maker 5, Athletics 9, Basic Tech 14, Brawling 9, Concentration 11, Conversation 7, Cryptography 11, Cybertech 13, Deduction 10, Demolitions 12, Education 10, Electronics/Security Tech 15, Evasion 9, First Aid 11, Handgun 10, Human Perception 8, Interrogation 9, Language (English) 9, Language (Streetslang) 9, Local Expert (Your Home) 11, Perception 10, Persuasion 8, Resist Torture/Drugs 13, Shoulder Arms 10, Stealth 9, Tactics 9, Weaponstech 12',
+      gear: 'balotes de espingarda ×25, munição de pistola pesada ×25, rádios analógicos, cabos blindados, a lista de expostos escrita à mão. Nenhum implante conectado: arrancou o próprio conector em 2070',
+      tip: 'Não faz o teste de resistência a Morana: não tem cromo conectado. Pede que desliguem os implantes antes de entrar no abrigo de Pacifica. Uma cena com Iskra vale mais que um tiroteio. Personagens, "Tamsin".'
+    },
+    {
+      name: 'Tomas Vale', book: 'Protocolo Morana', tier: 'mook', page: null,
+      stats: [7, 5, 5, 5, 5, 5, 5, 4, 6], hp: 35, wounded: 18, deathSave: 4, initiative: '5 + 1d10',
+      armor: 'Couro · SP 4 na cabeça e no corpo',
+      weapons: [['Pistola média', '2d6', 2, 'Handgun']],
+      skills: 'Composition 13, Concentration 8, Conversation 10, Cryptography 9, Deduction 11, Education 11, Handgun 7, Human Perception 12, Interrogation 9, Language (English) 9, Language (Streetslang) 9, Library Search 13, Local Expert (Your Home) 11, Perception 11, Persuasion 9, Photography/Film 11, Stealth 9, Streetwise 9',
+      gear: 'câmera, Agent com as gravações dos sobreviventes, a senha parcial de um dos servidores',
+      tip: 'O jornalista desaparecido: pode estar morto, preso pela Arasaka, escondido com os sobreviventes ou trabalhando sob coação. Personagens, "Jornalista desaparecido".'
     }
   ];
 
@@ -389,11 +481,7 @@
         ${section('Chefe', '416', npcGrid(boss))}
         ${section('Trauma Team', '224', traumaTeam)}
         ${section('Facções de 2077', '417–422', `<div class="callout">O livro monta os encontros de rua trocando o equipamento destas fichas ("use o Boosterganger, troque o couro por…"). As variantes marcadas com <b>livro</b> vêm das tabelas de encontros (p. 417–422); as marcadas com <b>adaptação</b> seguem o mesmo método para as gangues de 2077. As armas citadas estão em Armas de 2077.</div><div class="entry-grid">${factions.join('')}</div>`)}
-        ${section('Fichas da campanha', '', `<p>Os NPCs da campanha já têm fichas completas nos documentos:</p>${list([
-          '<b>Equipe de Vega</b> (Vega, dois solos, netrunner e técnico de contenção): Sessão 01, Cena 4.',
-          '<b>Iskra Voss</b>: Personagens, "Em combate". A equipe dela usa as fichas da equipe de Vega.',
-          '<b>Brakk e os cultistas da Maelstrom</b>: Sessão 02, Cena 2.'
-        ])}<p>${button('docSessao01', 'Sessão 01 completa')} ${button('docPersonagens', 'Personagens')} ${button('docSessao02', 'Sessão 02')}</p>`)}`
+        ${section('Protocolo Morana: o elenco', '', `<p>Os NPCs nomeados da campanha, no formato das fichas do livro. No Foundry, o módulo cpr-2077 traz um ator para cada um, na pasta <b>Protocolo Morana</b> do compêndio de NPCs. A personalidade, os segredos e as falas estão em Personagens.</p>${npcGrid(campaignCast)}<p>${button('docPersonagens', 'Personagens')} ${button('docSessao01', 'Sessão 01 completa')} ${button('docSessao02', 'Sessão 02')}</p>`)}`
     },
 
     encounters: {
@@ -405,5 +493,5 @@
   };
 
   // data: as fichas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
-  window.npcStatBlocks = { pages, data: { mooks, lieutenants, bosses, boss, skillNames, parseSkills } };
+  window.npcStatBlocks = { pages, data: { mooks, lieutenants, bosses, boss, campaignCast, skillNames, parseSkills } };
 })();

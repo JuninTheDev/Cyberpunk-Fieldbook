@@ -135,6 +135,12 @@ module.exports = async ({ edge, r }) => {
       const inicio = new Date(emHoras(0)).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
       return [/BEGIN:VEVENT/.test(ics) && ics.includes(`DTSTART:${inicio}`) && /SUMMARY:Night City\\, 2077: Sessão 3: o hospital/.test(ics) && /TRIGGER:-PT1H/.test(ics) && /\r\n/.test(ics) && /^sessao-\d{4}-\d\d-\d\d\.ics$/.test(nome), `${nome} · ${ics.split('\r\n').filter(linha => /^(DTSTART|SUMMARY|TRIGGER)/.test(linha)).join(' / ')}`];
     });
+    await r.passo('jogador: a página Como jogamos explica o sistema, a carta X e a experiência, sem nada da campanha', async () => {
+      await abrir(edge, 'pvGuia', 500);
+      const pagina = await texto('#content');
+      const menu = await edge.evaluate(`!!document.querySelector('.nav-item[data-page="pvGuia"]')`);
+      return [menu && /carta X/.test(pagina) && /Pontos de Melhoria/.test(pagina) && /suplemento comunitário/.test(pagina) && !/Morana|Wakako|Sato/.test(pagina), `no menu ${menu} · ${pagina.slice(0, 90)}`];
+    });
     await r.passo('jogador no celular: o cartão da próxima sessão cabe sem rolagem lateral', async () => {
       await edge.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
       await edge.sleep(500);

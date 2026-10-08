@@ -2,8 +2,8 @@ window.campaignMapData = {
   width: 5600,
   height: 5320,
   images: {
-    base: 'nightcity-map-base.jpg',
-    reference: 'nightcity-map-reference.jpg'
+    base: 'nightcity-map-base.webp',
+    reference: 'nightcity-map-reference.webp'
   },
   categories: {
     plot: { label: 'Campanha / pista principal', color: '#ff3158' },

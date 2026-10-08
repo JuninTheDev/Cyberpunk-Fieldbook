@@ -1,5 +1,5 @@
 // NPCs prontos: as 10 fichas do livro do RED (p. 412–416), como na página Fichas de NPC da wiki,
-// e variantes de facção de 2077 (data/npcs-faccoes.json).
+// variantes de facção de 2077 (data/npcs-faccoes.json) e o elenco do Protocolo Morana (as fichas da campanha da wiki).
 import fs from 'node:fs';
 import path from 'node:path';
 import { actorDoc, clone, coreDoc, corePack, folderDoc, itemFrom, makeId, para } from './lib.mjs';
@@ -11,14 +11,14 @@ const leadingNumber = value => parseInt(String(value), 10) || 0;
 
 // Nomes de perícia do livro que diferem dos itens do sistema.
 const skillAliases = { 'Resist Torture/Drug': 'Resist Torture/Drugs', 'Melee Weapons': 'Melee Weapon', Demolition: 'Demolitions', 'Language (Native)': 'Language (English)' };
-const roleAbilities = { Interface: 'Netrunner', 'Moto Family': 'Nomad', 'Combat Awareness': 'Solo' };
+const roleAbilities = { Interface: 'Netrunner', 'Moto Family': 'Nomad', 'Combat Awareness': 'Solo', Operator: 'Fixer', Medicine: 'Medtech', Maker: 'Tech' };
 const skillPacks = ['internal_skills', 'core_skills-languages', 'core_skills-local-expert', 'core_skills-science'];
 const findSkill = name => skillPacks.map(pack => corePack(pack).find(skill => skill.name === name)).find(Boolean);
 
 // Armas da ficha (nome em português) → arma do livro-base usada como molde.
 const weaponTemplates = {
   'Espingarda (qualidade ruim)': 'Shotgun (Poor)', Espingarda: 'Shotgun', 'Pistola muito pesada': 'Very Heavy Pistol',
-  'Pistola muito pesada (qualidade ruim)': 'Very Heavy Pistol (Poor)', 'Pistola pesada': 'Heavy Pistol', Besta: 'Crossbow',
+  'Pistola muito pesada (qualidade ruim)': 'Very Heavy Pistol (Poor)', 'Pistola pesada': 'Heavy Pistol', 'Pistola média': 'Medium Pistol', Besta: 'Crossbow',
   'Rifle de assalto (qualidade ruim)': 'Assault Rifle (Poor)', 'Rifle de assalto': 'Assault Rifle', 'Arma branca leve': 'Light Melee',
   'Arma branca média': 'Medium Melee', 'Arma branca pesada': 'Heavy Melee', 'Lança-chamas': 'Flamethrower',
   // Armas cibernéticas entram como armas comuns: funcionam na ficha sem a instalação de cyberware.
@@ -99,14 +99,15 @@ function buildNpc(card, { seed, name, weapons2077, variant = {} }) {
   for (const [weaponName, origin, skill] of variant.armas || []) items.push(...weaponItem(seed, weaponName, origin, skill, weapons2077));
 
   const armorName = variant.armadura || Object.keys(armorTemplates).find(key => card.armor.startsWith(key));
-  for (const piece of armorTemplates[armorName]) items.push(embedded(seed, coreDoc('core_armor', piece), piece, { equipped: 'equipped' }));
+  // Sem armadura ("Sem armadura" na ficha): nenhuma peça.
+  for (const piece of armorTemplates[armorName] || []) items.push(embedded(seed, coreDoc('core_armor', piece), piece, { equipped: 'equipped' }));
   if (/escudo à prova de balas/.test(card.gear)) items.push(embedded(seed, coreDoc('core_armor', 'Bullet Proof Shield'), 'Escudo à prova de balas'));
 
   const hp = variant.hp ?? card.hp;
   const role = roles[0];
   const netRole = items.find(item => item.type === 'role' && item.name === 'Netrunner');
   const description = [
-    `<p><b>${tierLabels[card.tier]}</b> · ficha do livro do RED: ${card.book}, p. ${card.page}${variant.fonte ? ` · variante: ${variant.fonte}` : ''}</p>`,
+    `<p><b>${tierLabels[card.tier]}</b> · ${card.page ? `ficha do livro do RED: ${card.book}, p. ${card.page}` : `ficha da campanha ${card.book}`}${variant.fonte ? ` · variante: ${variant.fonte}` : ''}</p>`,
     variant.texto ? para(variant.texto) : '',
     para(`${card.armor}. Iniciativa ${card.initiative}.`, 'Armadura'),
     para(`${card.gear}.`, 'Cyberware e equipamento'),
@@ -135,6 +136,7 @@ export function buildNpcs(weaponDocs) {
   const cards = [...wiki.npcs.mooks, ...wiki.npcs.lieutenants, ...wiki.npcs.bosses, ...wiki.npcs.boss];
   const folders = Object.fromEntries(Object.entries(tierFolders).map(([tier, name], index) => [tier, folderDoc('Actor', name, index)]));
   const factionFolder = folderDoc('Actor', 'Facções de 2077', Object.keys(folders).length);
+  const castFolder = folderDoc('Actor', 'Protocolo Morana', Object.keys(folders).length + 1);
   const book = cards.map(card => {
     const actor = buildNpc(card, { seed: `npc:${card.book}`, name: `${card.name} (${card.book})`.replace(`${card.book} (${card.book})`, card.book), weapons2077 });
     actor.folder = folders[card.tier]._id;
@@ -148,13 +150,19 @@ export function buildNpcs(weaponDocs) {
     actor.folder = factionFolder._id;
     return actor;
   });
-  return [...Object.values(folders), factionFolder, ...book, ...variants];
+  // O elenco da campanha: atores com o nome do personagem (sem o nome da ficha do livro).
+  const cast = (wiki.npcs.campaignCast || []).map(card => {
+    const actor = buildNpc(card, { seed: `npc:campanha:${card.name}`, name: card.name, weapons2077 });
+    actor.folder = castFolder._id;
+    return actor;
+  });
+  return [...Object.values(folders), factionFolder, castFolder, ...book, ...variants, ...cast];
 }
 
 // Conferência: a base de cada perícia (STAT + nível) tem de bater com o livro.
 export function checkNpcSkills(actors) {
   const problems = [];
-  const cards = [...wiki.npcs.mooks, ...wiki.npcs.lieutenants, ...wiki.npcs.bosses, ...wiki.npcs.boss];
+  const cards = [...wiki.npcs.mooks, ...wiki.npcs.lieutenants, ...wiki.npcs.bosses, ...wiki.npcs.boss, ...(wiki.npcs.campaignCast || [])];
   for (const actor of actors.filter(doc => doc._key.startsWith('!actors!') && !doc.flags['cpr-2077'].variante)) {
     const card = cards.find(item => item.name === actor.flags['cpr-2077'].base);
     for (const { en, value } of wiki.npcs.parseSkills(card.skills)) {

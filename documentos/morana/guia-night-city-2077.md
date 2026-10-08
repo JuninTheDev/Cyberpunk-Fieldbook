@@ -43,7 +43,7 @@ Use os eventos do jogo como um relógio que avança entre os atos: cada fase mud
 
 | Fase | Evento canônico | O que as ruas sentem | Encaixe no Protocolo Morana |
 |---|---|---|---|
-| 1. Antes do golpe | V e Jackie viram mercenários. Dex DeShawn e Evelyn Parker montam o roubo do Relic. | Muito trampo, canais ricos, clima de "ano bom". | Sessão zero ou prelúdio. Endo já tem espasmos; Wakako já negocia a maleta. |
+| 1. Antes do golpe | V e Jackie viram mercenários. Dex DeShawn e Evelyn Parker montam o roubo do Relic. | Muito trampo, fixers ricos, clima de "ano bom". | Sessão zero ou prelúdio. Endo já tem espasmos; Wakako já negocia a maleta. |
 | 2. A noite da Konpeki | Yorinobu Arasaka mata o pai, Saburo, na Konpeki Plaza. Jackie morre; Dex tenta executar V. | Arasaka em fúria, varreduras em Japantown e Watson, ações da empresa em queda. | Ato 1. A Arasaka caça ladrões e escaneia implantes: péssima hora para carregar um vírus neural por Kabuki. |
 | 3. O Relic desperta | V carrega o engrama de Johnny Silverhand. Evelyn some; os Voodoo Boys e a Clouds entram na história. | Boatos de Soulkiller, bonecas da Clouds nervosas, netrunners agitados em Pacifica. | Atos 1–2. Os Voodoo Boys farejam Morana; os dollchips da Clouds viram alvo possível. |
 | 4. O desfile | Cortejo fúnebre de Saburo em Japantown. Yorinobu assume; Hanako é sequestrada por Takemura e V. | Drones, torres e seguranças Arasaka por toda Westbrook; Tyger Claws contidos. | Ato 2 ou 3. Cena perfeita para Sato testar Morana nos drones do desfile e culpar "terroristas". |
@@ -58,7 +58,7 @@ Use os eventos do jogo como um relógio que avança entre os atos: cada fase mud
 
 ## 3. Distritos
 
-Night City tem seis distritos mais as Badlands, e cada um tem seu canal, suas gangues e seu tipo de problema. Use o distrito para definir o tom da sessão antes mesmo do trampo.
+Night City tem seis distritos mais as Badlands, e cada um tem seu fixer, suas gangues e seu tipo de problema. Use o distrito para definir o tom da sessão antes mesmo do trampo.
 
 ### Watson: onde a campanha começa
 
@@ -66,7 +66,7 @@ Antigo polo industrial abandonado pelas corporações. Hoje é mercado, imigraç
 
 - **Bairros:** Little China, Kabuki, Northside, Arasaka Waterfront.
 - **Quem manda:** Tyger Claws em Kabuki e Little China; Maelstrom em Northside; Moxes protegendo Kabuki; Scavengers nos cantos escuros.
-- **Canal:** Regina Jones, ex-jornalista que caça ciberpsicos para salvá-los.
+- **Fixer:** Regina Jones, ex-jornalista que caça ciberpsicos para salvá-los.
 - **Lugares-chave:** Afterlife, Mercado de Kabuki, Lizzie's Bar, clínica de Viktor Vector, Misty's Esoterica, Tom's Diner, Megabuilding H10, fábrica All Foods, Arasaka Industrial Docks e o clube Totentanz (Maelstrom).
 - **Para a mesa:** implantes baratos e sem atualização fazem de Watson o primeiro foco de Morana. A clínica clandestina do Ato 1 pode ficar num porão de Kabuki, a duas quadras do Lizzie's. As Arasaka Industrial Docks são o destino da maleta no contrato de Vega, e o hospital de campanha queimado em 2070, em Northside, esconde o Gatilho.
 
@@ -76,7 +76,7 @@ O lado bonito da cidade: Japantown para turistas e yakuza, Charter Hill para cor
 
 - **Bairros:** Japantown, Charter Hill, North Oak.
 - **Quem manda:** Tyger Claws em Japantown; Arasaka onipresente; segurança privada em North Oak.
-- **Canal:** Wakako Okada, veterana ligada aos Tyger Claws, com escritório no pachinko da Jig-Jig Street.
+- **Fixer:** Wakako Okada, veterana ligada aos Tyger Claws, com escritório no pachinko da Jig-Jig Street.
 - **Lugares-chave:** Jig-Jig Street, Clouds (casa de bonecas), mercado de Japantown, mansões de North Oak (Kerry Eurodyne mora lá), o Columbário.
 - **Para a mesa:** é a base de Wakako e o palco do desfile de Saburo. As bonecas da Clouds usam dollchips, que Morana pode sequestrar.
 
@@ -86,7 +86,7 @@ Arranha-céus, Arasaka Tower reconstruída e o dinheiro que move a cidade. A NCP
 
 - **Bairros:** Corporate Plaza, Downtown.
 - **Quem manda:** Arasaka, Militech e as demais corporações; NCPD e segurança corporativa.
-- **Canal:** Dino Dinovic, especialista em trampos de alto nível.
+- **Fixer:** Dino Dinovic, especialista em trampos de alto nível.
 - **Lugares-chave:** Arasaka Tower, torres corporativas, o Memorial da bomba de 2023, lojas de luxo.
 - **Para a mesa:** onde ficam os escritórios que encobriram o primeiro teste e, no subsolo, o Núcleo da rede de emergência do Ato 4. Se a torre estiver sob ataque na fase 7, o clímax transborda para a superfície.
 
@@ -96,7 +96,7 @@ Distrito residencial latino que vai do bairro pobre à prefeitura. Honra e leald
 
 - **Bairros:** Wellsprings, The Glen, Vista del Rey.
 - **Quem manda:** Valentinos; 6th Street nas bordas; a prefeitura fica em The Glen.
-- **Canal:** Sebastian "Padre" Ibarra, ex-padre que ainda trata negócios como confissão.
+- **Fixer:** Sebastian "Padre" Ibarra, ex-padre que ainda trata negócios como confissão.
 - **Lugares-chave:** El Coyote Cojo (bar de Mama Welles, mãe de Jackie), prefeitura, mercados de Vista del Rey.
 - **Para a mesa:** famílias inteiras com implantes médicos baratos. Se um bairro Valentino é atingido por Morana, a gangue vai querer sangue, e vai culpar alguém.
 
@@ -106,7 +106,7 @@ Zona industrial e de usinas que alimenta a cidade, cercada por conjuntos habitac
 
 - **Bairros:** Arroyo, Rancho Coronado.
 - **Quem manda:** 6th Street; corporações donas das fábricas.
-- **Canal:** Muamar "El Capitán" Reyes, especialista em veículos e contrabando.
+- **Fixer:** Muamar "El Capitán" Reyes, especialista em veículos e contrabando.
 - **Lugares-chave:** usinas de energia, pátios ferroviários, fábricas, megabuildings.
 - **Para a mesa:** a rede de emergência e os nós de energia da cidade passam por aqui. O datafort da Militech que guarda a Coleira fica em Arroyo, e o trem de carga do Ato 2 cruza os pátios ferroviários.
 
@@ -116,7 +116,7 @@ Pacifica ia ser um paraíso de resorts, mas os investidores fugiram na Guerra da
 
 - **Bairros:** Coastview, West Wind Estate, Dogtown.
 - **Quem manda:** Voodoo Boys e Animals em Pacifica; Barghest em Dogtown. A NCPD quase não entra.
-- **Canal:** Mr. Hands, que opera em Pacifica e Dogtown e sabe de tudo antes de todos.
+- **Fixer:** Mr. Hands, que opera em Pacifica e Dogtown e sabe de tudo antes de todos.
 - **Lugares-chave:** Grand Imperial Mall (Animals), a igreja e o Batty's Hotel (Voodoo Boys), estádio EBM Petrochem (quartel de Hansen), Black Sapphire, o mercado negro de Dogtown.
 - **Para a mesa:** o esconderijo dos sobreviventes de Morana, comandado por Tamsin "Fuse" Ilyin, fica em Pacifica, onde nenhuma corporação quer investir e nenhum policial quer entrar.
 
@@ -126,7 +126,7 @@ Deserto, fazendas corporativas, bases abandonadas e clãs nômades. É a saída 
 
 - **Regiões:** Rocky Ridge, Biotechnica Flats, Jackson Plains, Laguna Bend, Red Peaks.
 - **Quem manda:** Aldecaldos, Wraiths, Biotechnica e ninguém.
-- **Canal:** Dakota Smith, veterana que trabalha de uma garagem em Rocky Ridge.
+- **Fixer:** Dakota Smith, veterana que trabalha de uma garagem em Rocky Ridge.
 - **Lugares-chave:** acampamento Aldecaldo, Sunset Motel, campos solares, destroços da Guerra da Unificação.
 - **Para a mesa:** depósitos militares esquecidos da guerra de 2069–2070 podem guardar um pedaço de Morana ou registros do primeiro teste.
 
@@ -203,13 +203,13 @@ Os personagens do jogo funcionam melhor como portas, preços e problemas, nunca 
 
 | NPC | Onde encontrar | Quem é no jogo | Como usar no Protocolo Morana |
 |---|---|---|---|
-| Rogue Amendiares | Afterlife, Watson | Lenda de 2023, o canal mais poderoso da cidade. | Terreno neutro para negociar com Sato ou com as corporações. Sabe o passado de Wakako e cobra caro para contar. |
-| Regina Jones | Watson | Canal que caça ciberpsicos para salvá-los. | Passa trampos de "ciberpsicos" que são vítimas de Morana. Aliada natural, porque quer salvá-los. |
-| Mr. Hands | Pacifica e Dogtown (sempre por holo) | Canal que sabe de tudo antes de todos. | Organiza o leilão de um servidor em Dogtown. Nunca toma partido, só comissão. |
-| Padre | Heywood | Canal ligado aos Valentinos. | Mediador quando um bairro Valentino é atingido; pode segurar ou soltar a vingança da gangue. |
-| El Capitán | Santo Domingo | Canal de veículos e contrabando. | Informante sobre o trem de carga do Ato 2, ou quem aluga o veículo para interceptá-lo. |
-| Dakota Smith | Badlands | Canal veterana das Badlands. | Sabe onde ficam os depósitos militares da Unificação. Rota de saída da cidade. |
-| Dino Dinovic | City Center | Canal de contratos corporativos. | Intermediário quando Arasaka ou Militech querem contratar o grupo sem sujar as mãos. |
+| Rogue Amendiares | Afterlife, Watson | Lenda de 2023, a fixer mais poderosa da cidade. | Terreno neutro para negociar com Sato ou com as corporações. Sabe o passado de Wakako e cobra caro para contar. |
+| Regina Jones | Watson | Fixer que caça ciberpsicos para salvá-los. | Passa trampos de "ciberpsicos" que são vítimas de Morana. Aliada natural, porque quer salvá-los. |
+| Mr. Hands | Pacifica e Dogtown (sempre por holo) | Fixer que sabe de tudo antes de todos. | Organiza o leilão de um servidor em Dogtown. Nunca toma partido, só comissão. |
+| Padre | Heywood | Fixer ligado aos Valentinos. | Mediador quando um bairro Valentino é atingido; pode segurar ou soltar a vingança da gangue. |
+| El Capitán | Santo Domingo | Fixer de veículos e contrabando. | Informante sobre o trem de carga do Ato 2, ou quem aluga o veículo para interceptá-lo. |
+| Dakota Smith | Badlands | Fixer veterana das Badlands. | Sabe onde ficam os depósitos militares da Unificação. Rota de saída da cidade. |
+| Dino Dinovic | City Center | Fixer de contratos corporativos. | Intermediário quando Arasaka ou Militech querem contratar o grupo sem sujar as mãos. |
 | Viktor Vector | Clínica em Watson | Ripperdoc honesto, ex-boxeador. | Primeiro a diagnosticar Morana num implante. Não tem cura, mas tem coragem de dizer a verdade. |
 | Misty Olszewski | Esoterica, ao lado de Viktor | Mística e tarô. | Leituras de tarô como presságio dos finais. Ótima para abrir ou fechar um ato. |
 | Judy Alvarez | Lizzie's Bar, Kabuki | Editora de neurodança, ligada aos Moxes. | Analisa a neurodança ou as memórias de Endo. Leva a luta para o pessoal se dollchips forem atacados. |

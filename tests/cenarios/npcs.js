@@ -6,9 +6,10 @@ module.exports = async ({ edge, servidores, r }) => {
   await edge.evaluate(`document.querySelector('#tab-system').click()`);
   await abrir(edge, 'npcs', 400);
 
-  await r.passo('10 fichas do livro e 12 facções', async () => {
-    const n = await edge.evaluate(`({ npc: document.querySelectorAll('#content .entry.npc').length, faccoes: document.querySelectorAll('#content .entry:not(.npc)').length })`);
-    return [n.npc === 10 && n.faccoes === 12, JSON.stringify(n)];
+  await r.passo('10 fichas do livro, 12 facções e as 9 fichas do elenco do Protocolo Morana', async () => {
+    const elenco = `#content .section[data-toc="Protocolo Morana: o elenco"]`;
+    const n = await edge.evaluate(`({ npc: [...document.querySelectorAll('#content .entry.npc')].filter(card => !card.closest('${elenco}')).length, faccoes: document.querySelectorAll('#content .entry:not(.npc)').length, elenco: document.querySelectorAll('${elenco} .entry.npc').length })`);
+    return [n.npc === 10 && n.faccoes === 12 && n.elenco === 9, JSON.stringify(n)];
   });
   await r.passo('Oficial de segurança mostra REF com e sem armadura', async () => {
     const stats = await edge.evaluate(`[...[...document.querySelectorAll('#content .entry.npc')].find(c => c.dataset.toc === 'Oficial de segurança').querySelectorAll('.npc-stats span')].map(s => s.textContent).join(' ')`);

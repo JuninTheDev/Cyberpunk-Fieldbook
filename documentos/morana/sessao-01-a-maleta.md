@@ -1,149 +1,149 @@
-# Sessao 1: A Maleta
+# Sessão 1: A Maleta
 
 ## Resumo para o mestre
 
-Os personagens sao contratados por Wakako Okada para recuperar uma maleta de um mensageiro morto em Kabuki. O trabalho parece ser uma simples recuperacao de propriedade, mas a maleta contem um fragmento do Protocolo Morana.
+Os personagens são contratados por Wakako Okada para recuperar uma maleta de um mensageiro morto em Kabuki. O trabalho parece ser uma simples recuperação de propriedade, mas a maleta contém um fragmento do Protocolo Morana.
 
-Durante a missao, os personagens descobrem que o mensageiro ainda esta vivo, embora em estado critico. Ele foi atingido pelo virus e tenta avisar que a maleta nao pode ser conectada a uma rede. Um grupo de mercenarios chega para recuperar o objeto. Quando os personagens escapam, um implante proximo e ativado remotamente, provando que Morana ja esta funcionando.
+Durante a missão, os personagens descobrem que o mensageiro ainda está vivo, embora em estado crítico. Ele foi atingido pelo vírus e tenta avisar que a maleta não pode ser conectada a uma rede. Um grupo de mercenários chega para recuperar o objeto. Quando os personagens escapam, um implante próximo é ativado remotamente, provando que Morana já está funcionando.
 
-Ha um segundo interessado: a equipe de Iskra Voss, tenente de Sato, foi quem atirou no mensageiro. Um dos agentes dela, Kobo, ficou para tras no deposito - morto pelo proprio cyberarm, que Morana virou contra ele.
+Há um segundo interessado: a equipe de Iskra Voss, tenente de Sato, foi quem atirou no mensageiro. Um dos agentes dela, Kobo, ficou para trás no depósito - morto pelo próprio cyberarm, que Morana virou contra ele.
 
-A sessao termina quando Wakako encontra a assinatura de Reina Sato no conteudo da maleta e percebe que o passado que ela tentou enterrar voltou para Night City.
+A sessão termina quando Wakako encontra a assinatura de Reina Sato no conteúdo da maleta e percebe que o passado que ela tentou enterrar voltou para Night City.
 
-## Objetivos da sessao
+## Objetivos da sessão
 
-Ao final da sessao, os jogadores devem saber que:
+Ao final da sessão, os jogadores devem saber que:
 
-- Wakako esta por tras do trabalho.
-- A maleta contem algo perigoso e cobicado por grupos poderosos.
+- Wakako está por trás do trabalho.
+- A maleta contém algo perigoso e cobiçado por grupos poderosos.
 - O mensageiro era o Dr. Kenzo Endo, ex-colega de Sato e um dos poucos cientistas que sobreviveram ao projeto (mesmo que ele tente negar).
-- Existe outra equipe na disputa alem dos mercenarios, e ela nao e da Arasaka.
+- Existe outra equipe na disputa além dos mercenários, e ela não é da Arasaka.
 - O perigo envolve implantes e pode afetar pessoas inocentes.
-- Wakako esta escondendo uma parte importante da verdade.
+- Wakako está escondendo uma parte importante da verdade.
 
-Os jogadores nao precisam descobrir tudo sobre Morana ainda. O objetivo e criar curiosidade, perigo e uma razao clara para aceitar o proximo trabalho.
+Os jogadores não precisam descobrir tudo sobre Morana ainda. O objetivo é criar curiosidade, perigo e uma razão clara para aceitar o próximo trabalho.
 
-## Antes da sessao
+## Antes da sessão
 
 Prepare ou confirme com cada jogador:
 
-- Uma conexao com Night City que possa estar em Kabuki.
-- Uma divida, favor ou servico que torne um bom pagamento importante.
-- Um implante que o personagem nao gostaria de perder.
-- Uma razao para conhecer ou respeitar Wakako.
-- Um limite que o personagem nao ultrapassaria por dinheiro.
+- Uma conexão com Night City que possa estar em Kabuki.
+- Uma dívida, favor ou serviço que torne um bom pagamento importante.
+- Um implante que o personagem não gostaria de perder.
+- Uma razão para conhecer ou respeitar Wakako.
+- Um limite que o personagem não ultrapassaria por dinheiro.
 
-Nao exija que todos tenham uma relacao previa com Wakako. Uma reputacao, um contato em comum ou a indicacao de outro fixer ja e suficiente.
+Não exija que todos tenham uma relação prévia com Wakako. Uma reputação, um contato em comum ou a indicação de outro fixer já é suficiente.
 
-Escolha os ganchos pessoais em `ganchos-dos-personagens.md`. Tres deles pagam ja nesta sessao: o implante com lote de 2069 (ao examinar Kobo), o HUD que marca "ALVO-70" e a arma inteligente que troca de alvo (Cena 5). Se houver um personagem espiao, mande a mensagem privada do outro fixer durante a Cena 2.
+Escolha os ganchos pessoais em `ganchos-dos-personagens.md`. Três deles pagam já nesta sessão: o implante com lote de 2069 (ao examinar Kobo), o HUD que marca "ALVO-70" e a arma inteligente que troca de alvo (Cena 5). Se houver um personagem espião, mande a mensagem privada do outro fixer durante a Cena 2.
 
-## Introducao para ler aos jogadores
+## Introdução para ler aos jogadores
 
-> Night City nao dorme. Ela apenas troca o tipo de barulho que faz.
+> Night City não dorme. Ela apenas troca o tipo de barulho que faz.
 >
-> Durante o dia, a cidade vende promessas em telas gigantes. A noite revela o preco delas: sirenes, disparos, motores acelerando e anuncios que continuam sorrindo enquanto alguem morre na rua.
+> Durante o dia, a cidade vende promessas em telas gigantes. A noite revela o preço delas: sirenes, disparos, motores acelerando e anúncios que continuam sorrindo enquanto alguém morre na rua.
 >
-> Voces estao em Japantown, onde o neon da Jig-Jig Street pinta a chuva de rosa e o cheiro de lamen se mistura ao de ozonio e desinfetante barato. Cada um de voces recebeu a mesma mensagem, enviada por um contato confiavel:
+> Vocês estão em Japantown, onde o neon da Jig-Jig Street pinta a chuva de rosa e o cheiro de lámen se mistura ao de ozônio e desinfetante barato. Cada um de vocês recebeu a mesma mensagem, enviada por um contato confiável:
 >
-> **Wakako Okada deseja falar com voces. Hoje. Sem acompanhantes. O pagamento sera alto.**
+> **Wakako Okada deseja falar com vocês. Hoje. Sem acompanhantes. O pagamento será alto.**
 >
-> O endereco leva ao pachinko de Wakako. Do lado de fora, a rua esta cheia e as maquinas despejam bolinhas de aco num barulho sem fim. Na sala dos fundos, tudo parece silencioso demais.
+> O endereço leva ao pachinko de Wakako. Do lado de fora, a rua está cheia e as máquinas despejam bolinhas de aço num barulho sem fim. Na sala dos fundos, tudo parece silencioso demais.
 
 Depois da leitura, permita que os jogadores descrevam como chegaram, o que carregam e o que fazem antes de entrar.
 
-## Cena 1: O salao de Wakako
+## Cena 1: O salão de Wakako
 
-### Funcao da cena
+### Função da cena
 
-Apresentar Wakako, oferecer o trabalho e dar aos personagens uma escolha imediata: aceitar um servico mal explicado ou sair sem saber o que esta acontecendo.
+Apresentar Wakako, oferecer o trabalho e dar aos personagens uma escolha imediata: aceitar um serviço mal explicado ou sair sem saber o que está acontecendo.
 
-### Descricao do local
+### Descrição do local
 
-O salao e elegante sem ser luxuoso. Incenso cobre o cheiro de armas, oleo e sangue. Uma tela exibe corridas de cavalos sem som. Duas atendentes trabalham em silencio. Wakako esta sentada no fundo, cercada por telas e por uma guarda que nao parece precisar olhar para as portas.
+O salão é elegante sem ser luxuoso. Incenso cobre o cheiro de armas, óleo e sangue. Uma tela exibe corridas de cavalos sem som. Duas atendentes trabalham em silêncio. Wakako está sentada no fundo, cercada por telas e por uma guarda que não parece precisar olhar para as portas.
 
 ### Primeira fala de Wakako
 
-> "Sentem. Se eu quisesse que voces fossem revistados, ja teriam sido. Se eu quisesse que estivessem mortos, nao teriam recebido o convite."
+> "Sentem. Se eu quisesse que vocês fossem revistados, já teriam sido. Se eu quisesse que estivessem mortos, não teriam recebido o convite."
 
 Ela observa cada personagem antes de explicar o trabalho.
 
 ### O contrato
 
-Wakako oferece um servico de recuperacao:
+Wakako oferece um serviço de recuperação:
 
-- Local: um deposito de mercadorias medicas em Kabuki.
+- Local: um depósito de mercadorias médicas em Kabuki.
 - Alvo: uma maleta preta, do tamanho de uma caixa de sapatos.
-- Situacao: o mensageiro que a carregava foi atacado e dado como morto.
+- Situação: o mensageiro que a carregava foi atacado e dado como morto.
 - Pagamento: metade adiantada, metade na entrega.
-- Regra principal: a maleta nao deve ser conectada a nenhuma rede.
-- Regra secundaria: nao abrir a maleta.
+- Regra principal: a maleta não deve ser conectada a nenhuma rede.
+- Regra secundária: não abrir a maleta.
 
-Ela nao exige que os personagens matem ninguem, mas deixa claro que a mercadoria precisa chegar inteira.
+Ela não exige que os personagens matem ninguém, mas deixa claro que a mercadoria precisa chegar inteira.
 
-### Dialogos possiveis
+### Diálogos possíveis
 
-**Se perguntarem o que ha na maleta:**
+**Se perguntarem o que há na maleta:**
 
-> "Algo que vale mais fechado do que aberto. Isso e tudo que voces precisam saber."
+> "Algo que vale mais fechado do que aberto. Isso é tudo que vocês precisam saber."
 
 **Se perguntarem quem atacou o mensageiro:**
 
 > "Pessoas que sabiam que ele carregava algo. Isso reduz pouco a lista, eu sei."
 
-**Se perguntarem por que ela nao manda seus proprios homens:**
+**Se perguntarem por que ela não manda seus próprios homens:**
 
-> "Porque meus homens ja foram vistos fazendo perguntas. Voces ainda podem parecer um acidente."
+> "Porque meus homens já foram vistos fazendo perguntas. Vocês ainda podem parecer um acidente."
 
 **Se exigirem mais dinheiro:**
 
-> "Tragam a maleta sem danos e conversaremos sobre o valor da discricao."
+> "Tragam a maleta sem danos e conversaremos sobre o valor da discrição."
 
 **Se recusarem:**
 
-> "Sair daqui e uma escolha. Apenas nao confundam escolha com seguranca."
+> "Sair daqui é uma escolha. Apenas não confundam escolha com segurança."
 
-### O que Wakako esta escondendo
+### O que Wakako está escondendo
 
-O mensageiro era um antigo informante dela: um cientista que ela mesma tirou da cidade em 2070 e que voltou anos depois. Wakako sabe que ele trabalhou com Reina Sato no passado, mas acredita que Sato continua escondida longe de Night City. Ela nao sabe que Morana voltou a funcionar, nem que Endo ainda falava com Sato.
+O mensageiro era um antigo informante dela: um cientista que ela mesma tirou da cidade em 2070 e que voltou anos depois. Wakako sabe que ele trabalhou com Reina Sato no passado, mas acredita que Sato continua escondida longe de Night City. Ela não sabe que Morana voltou a funcionar, nem que Endo ainda falava com Sato.
 
-Ela tambem omite que ajudou Sato a fugir de Night City anos atras, depois do primeiro teste do virus. Esta informacao nao deve aparecer nesta cena, a menos que os jogadores tenham uma razao excepcional para pressionar Wakako.
+Ela também omite que ajudou Sato a fugir de Night City anos atrás, depois do primeiro teste do vírus. Esta informação não deve aparecer nesta cena, a menos que os jogadores tenham uma razão excepcional para pressionar Wakako.
 
-## Cena 2: Kabuki e o deposito medico
+## Cena 2: Kabuki e o depósito médico
 
-### Funcao da cena
+### Função da cena
 
-Dar aos jogadores espaco para escolher como investigar o local antes do primeiro confronto.
+Dar aos jogadores espaço para escolher como investigar o local antes do primeiro confronto.
 
 ### Chegada ao bairro
 
-Kabuki esta lotada. Comerciantes fecham bancas mais cedo porque houve um tiroteio no setor medico. Uma ambulancia foi embora sem levar o corpo. Um drone de seguranca esta parado no ar, repetindo a mesma imagem por alguns segundos.
+Kabuki está lotada. Comerciantes fecham bancas mais cedo porque houve um tiroteio no setor médico. Uma ambulância foi embora sem levar o corpo. Um drone de segurança está parado no ar, repetindo a mesma imagem por alguns segundos.
 
 Os personagens podem:
 
 - Perguntar aos comerciantes.
-- Examinar as cameras da rua.
-- Seguir sinais de sangue e oleo.
+- Examinar as câmeras da rua.
+- Seguir sinais de sangue e óleo.
 - Procurar a entrada dos fundos.
 - Usar um contato ou fazer uma busca na rede.
 
-### Informacoes obtidas
+### Informações obtidas
 
-Cada abordagem pode revelar uma informacao. Nao esconda todas atras de testes; uma boa descricao ou uma pergunta especifica ja deve render uma pista.
+Cada abordagem pode revelar uma informação. Não esconda todas atrás de testes; uma boa descrição ou uma pergunta específica já deve render uma pista.
 
-- O mensageiro entrou sozinho no deposito.
-- Tres pessoas o seguiram, mas apenas duas sairam.
-- Uma das pessoas usava equipamento de seguranca corporativo sem simbolo visivel e oculos escuros no meio da noite (Iskra Voss).
-- Um morador ouviu o mensageiro gritar: "Nao conectem isso!"
-- O sistema de cameras apagou exatamente sete minutos de gravacao.
-- Um funcionario do deposito esta escondido e sabe que o mensageiro ainda esta vivo.
+- O mensageiro entrou sozinho no depósito.
+- Três pessoas o seguiram, mas apenas duas saíram.
+- Uma das pessoas usava equipamento de segurança corporativo sem símbolo visível e óculos escuros no meio da noite (Iskra Voss).
+- Um morador ouviu o mensageiro gritar: "Não conectem isso!"
+- O sistema de câmeras apagou exatamente sete minutos de gravação.
+- Um funcionário do depósito está escondido e sabe que o mensageiro ainda está vivo.
 
-### Complicacao opcional
+### Complicação opcional
 
-Se o grupo for muito rapido, um vendedor de implantes chama um dos personagens para mostrar uma falha em seu equipamento. O implante reinicia sozinho, exibe uma mensagem incompleta e volta ao normal.
+Se o grupo for muito rápido, um vendedor de implantes chama um dos personagens para mostrar uma falha em seu equipamento. O implante reinicia sozinho, exibe uma mensagem incompleta e volta ao normal.
 
 Mensagem exibida:
 
-> MORANA // SINCRONIZACAO INCOMPLETA // AGUARDANDO NO
+> MORANA // SINCRONIZAÇÃO INCOMPLETA // AGUARDANDO NÓ
 
 A mensagem desaparece antes de poder ser copiada.
 
@@ -151,80 +151,104 @@ A mensagem desaparece antes de poder ser copiada.
 
 ### Local
 
-O mensageiro esta em uma sala de armazenamento refrigerada, escondido atras de caixas de medicamentos. Seu nome e **Dr. Kenzo Endo**. Ele esta vivo, mas seus implantes musculares se contraem sem controle por uma crise de Furia de Morana. Ha um ferimento de bala no abdomen e pequenos pontos de luz sob a pele do pescoco.
+O mensageiro está em uma sala de armazenamento refrigerada, escondido atrás de caixas de medicamentos. Seu nome é **Dr. Kenzo Endo**. Ele está vivo, mas seus implantes musculares se contraem sem controle por uma crise de Fúria de Morana. Há um ferimento de bala no abdômen e pequenos pontos de luz sob a pele do pescoço.
 
-A maleta esta presa ao pulso dele por uma trava biometrica.
+A maleta está presa ao pulso dele por uma trava biométrica.
+
+### A trava e a maleta (regras)
+
+É o desvio mais provável da sessão: o grupo quer a maleta e não o homem preso a ela. São duas travas diferentes, e as duas foram reguladas para Endo **vivo** (a trava lê pulso e temperatura, não só a digital).
+
+**A algema (soltar a maleta do pulso)**
+
+| Como | Teste | Tempo | Risco |
+|---|---|---|---|
+| Endo solta | Ele precisa querer: Persuasão DV 13, ou automático se o grupo mostrou que veio de Wakako ou cuidou do ferimento dele | 1 ação | Nenhum. Desmaiado, o polegar dele ainda abre (ele está vivo). |
+| Cortar a algema | Tecnologia Básica DV 15 com uma Tech Bag (DV 17 sem ferramentas) | 1 minuto (20 rodadas) por tentativa | Cada falha é mais um minuto: dá tempo para Vega chegar. |
+| Arrancar à força | Atletismo DV 17 | 1 ação | Quebra o pulso de Endo (Ferimento Crítico: Braço Quebrado). Ele grita, e a equipe de Vega ouve. |
+| Cortar a mão | Armas Brancas ou ferramenta, sem teste | 1 ação | Solta a maleta, mas não a abre. Endo sofre o Ferimento Crítico Mão desmembrada (Death Save base +1) e morre na sessão se ninguém o estabilizar (Paramédico DV 15). Wakako fica sabendo, e os sobreviventes nunca perdoam. |
+
+**A maleta (abrir o estojo)**
+
+| Como | Teste | Tempo | Risco |
+|---|---|---|---|
+| Endo abre | Ele só abre para Wakako, ou para quem o convencer de que a Chave vai para longe de Sato (Persuasão DV 17) | 1 ação | Nenhum. |
+| Arrombar o lacre | Tecnologia Eletrônica/Segurança DV 17, com ferramentas | 10 minutos | Falhar por 5 ou mais rompe o lacre interno: por uma rodada a Chave fica exposta, e todo implante conectado a até 10 m faz o teste de resistência a Morana (WILL + Concentração, DV 13). É uma manifestação da Cena 5 antes da hora. |
+| Pela porta de dados | Um netrunner conecta o deck (é o que o netrunner de Iskra tentou) | 1 Ação NET | É conectar a maleta: o netrunner e todo implante a até 10 m fazem o teste no estágio Enxame (DV 15), e o relógio de Morana marca um segmento. Ninguém precisa explicar ao grupo o que aconteceu com Kobo. |
+| No pachinko de Wakako | Ela tem o equipamento (e Endo, se ele estiver vivo) | 1 hora | Nenhum. É por isso que ela quer a maleta fechada. |
+
+**Sem Endo**, a maleta só abre pelo lacre ou pela porta de dados. A caixa de contenção do técnico de Vega (Cena 4) permite carregar a maleta presa ao pulso sem risco, mesmo com Endo desmaiado.
 
 ### O terceiro perseguidor
 
-A tres metros de Endo, entre as prateleiras, esta o corpo de um homem com roupa de seguranca sem insignia: **Kobo**, da equipe de Iskra Voss. O cyberarm dele segura a propria pistola encostada no queixo. Ele disparou uma vez.
+A três metros de Endo, entre as prateleiras, está o corpo de um homem com roupa de segurança sem insígnia: **Kobo**, da equipe de Iskra Voss. O cyberarm dele segura a própria pistola encostada no queixo. Ele disparou uma vez.
 
 O que o grupo pode descobrir no corpo:
 
-- O cyberarm tem o mesmo numero de lote militar de 2069 do implante no pescoco de Endo. Kobo tambem era um exposto do primeiro teste.
-- O comunicador tem uma ultima mensagem recebida, assinada so com "I.": "Vivo, se possivel. A caixa, de qualquer jeito."
-- Um scanner ou teste de Tecnologia Basica/Cybertech (DV 13) mostra que o braco recebeu um comando externo segundos antes do disparo. Kobo nao se matou.
+- O cyberarm tem o mesmo número de lote militar de 2069 do implante no pescoço de Endo. Kobo também era um exposto do primeiro teste.
+- O comunicador tem uma última mensagem recebida, assinada só com "I.": "Vivo, se possível. A caixa, de qualquer jeito."
+- Um scanner ou teste de Tecnologia Básica ou Cybertecnologia (DV 13) mostra que o braço recebeu um comando externo segundos antes do disparo. Kobo não se matou.
 
-Se perguntarem, Endo diz, com a voz falhando: "Ele ia me levar. O braco dele... nao deixou." Endo nao entende por que Morana o protegeu. O mestre sabe: o virus preservou o portador da Chave. E a primeira prova de que Morana nao obedece mais a Sato.
+Se perguntarem, Endo diz, com a voz falhando: "Ele ia me levar. O braço dele... não deixou." Endo não entende por que Morana o protegeu. O mestre sabe: o vírus preservou o portador da Chave. É a primeira prova de que Morana não obedece mais a Sato.
 
-Se o grupo deixar o corpo para tras, os Scavengers o levam antes do amanhecer e revendem os implantes - o gancho "Colheita" do guia de Night City.
+Se o grupo deixar o corpo para trás, os Scavengers o levam antes do amanhecer e revendem os implantes - o gancho "Colheita" do guia de Night City.
 
 ### Primeira fala de Endo
 
-> "Wakako... ela mandou voces? Entao voces ja estao atrasados."
+> "Wakako... ela mandou vocês? Então vocês já estão atrasados."
 
 ### O que Endo sabe
 
-Endo nao conhece toda a historia, mas pode revelar:
+Endo não conhece toda a história, mas pode revelar:
 
-- A maleta contem um fragmento de um programa chamado Morana.
-- O programa nao e uma inteligencia artificial comum. Ele interfere em implantes conectados.
+- A maleta contém um fragmento de um programa chamado Morana.
+- O programa não é uma inteligência artificial comum. Ele interfere em implantes conectados.
 - O teste aconteceu durante a Unification War, entre 2069 e 2070.
-- A equipe que criou Morana tentou destruir o codigo depois do teste.
-- Reina Sato esta viva.
-- Sato acredita que o fragmento (a Chave) precisa ser levado ao Nucleo, o no central da rede de emergencia.
+- A equipe que criou Morana tentou destruir o código depois do teste.
+- Reina Sato está viva.
+- Sato acredita que o fragmento (a Chave) precisa ser levado ao Núcleo, o nó central da rede de emergência.
 - Se a maleta for conectada, o fragmento pode procurar outros sistemas.
 
-### Dialogos possiveis
+### Diálogos possíveis
 
-**Se perguntarem se ele e um dos criadores:**
+**Se perguntarem se ele é um dos criadores:**
 
-> "Nao. Eu era um entregador. Depois do primeiro teste, ninguem mais chamava as pessoas pelo nome. Eramos so pacientes, testemunhas ou problemas."
+> "Não. Eu era um entregador. Depois do primeiro teste, ninguém mais chamava as pessoas pelo nome. Éramos só pacientes, testemunhas ou problemas."
 
-*Nota do mestre:* e mentira. Endo foi cientista do projeto e escreveu a rotina de propagacao que hoje reconstroi Morana. Ele mente por vergonha. Um teste de Percepcao Humana contra a Enganacao dele (base 8) revela que ele esta escondendo algo, nao o que. Nao entregue a verdade agora: guarde para o Ato 2 ou 3, depois que o grupo ja tiver arriscado algo para protege-lo.
+*Nota do mestre:* é mentira. Endo foi cientista do projeto e escreveu a rotina de propagação que hoje reconstrói Morana. Ele mente por vergonha. Um teste de Percepção Humana contra a Atuação dele (base 8) revela que ele está escondendo algo, não o quê. Não entregue a verdade agora: guarde para o Ato 2 ou 3, depois que o grupo já tiver arriscado algo para protegê-lo.
 
 **Se perguntarem por que Wakako quer a maleta:**
 
-> "Porque ela sabe o que aconteceu. Talvez queira impedir que aconteca de novo. Talvez queira garantir que ninguem conte a historia antes dela."
+> "Porque ela sabe o que aconteceu. Talvez queira impedir que aconteça de novo. Talvez queira garantir que ninguém conte a história antes dela."
 
-**Se perguntarem quem e Sato:**
+**Se perguntarem quem é Sato:**
 
-> "A mulher que escreveu a primeira versao. A mulher que tentou denuncia-la. A mulher que voltou para terminar o trabalho. Escolham a versao que conseguirem suportar."
+> "A mulher que escreveu a primeira versão. A mulher que tentou denunciá-la. A mulher que voltou para terminar o trabalho. Escolham a versão que conseguirem suportar."
 
 **Se tentarem salvar Endo:**
 
-> "Nao gastem seus remedios comigo. Se Morana me encontrar de novo, voces vao entender."
+> "Não gastem seus remédios comigo. Se Morana me encontrar de novo, vocês vão entender."
 
-Endo pode sobreviver se os jogadores cuidarem dele. Nesse caso, ele se torna uma testemunha importante para uma sessao futura. Se for deixado para tras, mercenarios ou agentes corporativos o capturam.
+Endo pode sobreviver se os jogadores cuidarem dele. Nesse caso, ele se torna uma testemunha importante para uma sessão futura. Se for deixado para trás, mercenários ou agentes corporativos o capturam.
 
-## Cena 4: A equipe de recuperacao
+## Cena 4: A equipe de recuperação
 
 ### Entrada dos inimigos
 
-Quando os personagens descobrirem a maleta ou tentarem retirar Endo, a equipe de recuperacao chega. Use tres a cinco inimigos, ajustando a quantidade ao tamanho e nivel do grupo.
+Quando os personagens descobrirem a maleta ou tentarem retirar Endo, a equipe de recuperação chega. Use três a cinco inimigos, ajustando a quantidade ao tamanho e nível do grupo.
 
 A equipe pode ser composta por:
 
-- Uma lider mercenaria chamada **Vega**.
+- Uma líder mercenária chamada **Vega**.
 - Dois solos contratados.
-- Um netrunner com equipamento para bloquear comunicacoes.
-- Um tecnico carregando um dispositivo de contençao.
+- Um netrunner com equipamento para bloquear comunicações.
+- Um técnico carregando um dispositivo de contenção.
 
-Eles nao precisam lutar ate a morte. O objetivo deles e pegar a maleta.
+Eles não precisam lutar até a morte. O objetivo deles é pegar a maleta.
 
 ### Fichas de combate (Cyberpunk RED)
 
-Baseadas nos NPCs prontos do livro-base (capitulo Running Cyberpunk, "Mooks and Grunts"). As bases de pericia ja somam STAT + pericia + bonus. **Escala:** o livro sugere 1 Lieutenant para cada 2 personagens. Para 4 jogadores, use a equipe completa; para 3, tire um solo; para 2, tire o netrunner e um solo.
+Baseadas nos NPCs prontos do livro-base (capítulo Running Cyberpunk, "Mooks and Grunts"). As bases de perícia já somam STAT + perícia + bônus. **Escala:** o livro sugere 1 Lieutenant para cada 2 personagens. Para 4 jogadores, use a equipe completa; para 3, tire um solo; para 2, tire o netrunner e um solo.
 
 **Vega** (Lieutenant, adaptada do Security Officer)
 
@@ -233,11 +257,11 @@ Baseadas nos NPCs prontos do livro-base (capitulo Running Cyberpunk, "Mooks and 
 | 4 | 8 | 6 | 4 | 6 | 5 | 6 | 7 | 4 |
 
 - **HP** 40 / **Gravemente Ferido** 20 / **Death Save** 7
-- **Armadura:** Light Armorjack, SP 11 na cabeca e no corpo (sem penalidade)
+- **Armadura:** Light Armorjack, SP 11 na cabeça e no corpo (sem penalidade)
 - **Armas:** rifle de assalto inteligente 5d6 (ROF 1, Autofire 4; +1 no ataque pelo link inteligente); pistola muito pesada 4d6
-- **Bases:** Autofire 12, Armas de Ombro 11, Armas de uma Mao 10, Briga 10, Evasao 10, Atletismo 10, Percepcao 8, Furtividade 6, Persuasao 8
-- **Cyberware:** Neural Link com Kerenzikov (+2 Iniciativa) e Interface Plugs; radio comunicador
-- **Tatica:** comeca oferecendo rendicao. Mira nas pernas (tiro mirado) quando pode incapacitar. Recua quando fica Gravemente Ferida ou quando dois membros da equipe caem.
+- **Bases:** Disparo Automático 12, Armas de Ombro 11, Armas de uma Mão 10, Briga 10, Evasão 10, Atletismo 10, Percepção 8, Furtividade 6, Persuasão 8
+- **Cyberware:** Neural Link com Kerenzikov (+2 Iniciativa) e Interface Plugs; rádio comunicador
+- **Tática:** começa oferecendo rendição. Mira nas pernas (tiro mirado) quando pode incapacitar. Recua quando fica Gravemente Ferida ou quando dois membros da equipe caem.
 
 **Solos contratados x2** (Mooks, Security Operative)
 
@@ -246,10 +270,10 @@ Baseadas nos NPCs prontos do livro-base (capitulo Running Cyberpunk, "Mooks and 
 | 3 | 7 | 4 | 2 | 2 | 3 | 3 | 5 | 3 |
 
 - **HP** 30 / **Gravemente Ferido** 15 / **Death Save** 5
-- **Armadura:** Kevlar, SP 7 na cabeca e no corpo
+- **Armadura:** Kevlar, SP 7 na cabeça e no corpo
 - **Armas:** rifle de assalto de qualidade ruim 5d6; pistola muito pesada 4d6
-- **Bases:** Autofire 10, Armas de Ombro 10, Armas de uma Mao 10, Evasao 6, Briga 6, Percepcao 5, Furtividade 6
-- **Tatica:** cobrem as saidas e dao fogo de supressao enquanto Vega negocia. Fogem se Vega cair.
+- **Bases:** Disparo Automático 10, Armas de Ombro 10, Armas de uma Mão 10, Evasão 6, Briga 6, Percepção 5, Furtividade 6
+- **Tática:** cobrem as saídas e dão fogo de supressão enquanto Vega negocia. Fogem se Vega cair.
 
 **Netrunner** (Lieutenant)
 
@@ -258,171 +282,201 @@ Baseadas nos NPCs prontos do livro-base (capitulo Running Cyberpunk, "Mooks and 
 | 7 | 5 | 4 | 7 | 4 | 5 | 5 | 3 | 4 |
 
 - **HP** 30 / **Gravemente Ferido** 15 / **Death Save** 3
-- **Armadura:** Bodyweight Suit, SP 11 na cabeca e no corpo
+- **Armadura:** Bodyweight Suit, SP 11 na cabeça e no corpo
 - **Armas:** pistola muito pesada 4d6
-- **Bases:** Interface 4, Tecnologia Basica 13, Eletronica/Tec. de Seguranca 11, Percepcao 11, Armas de uma Mao 10, Evasao 6
+- **Bases:** Interface 4, Tecnologia Básica 13, Tecnologia Eletrônica/Segurança 11, Percepção 11, Armas de uma Mão 10, Evasão 6
 - **Programas:** Banhammer, DeckKRASH, Eraser, Hellbolt, Shield, Sword, Worm
-- **Bloqueio:** enquanto estiver ativo, os Agents e comunicadores do grupo nao funcionam dentro do deposito. Derruba-lo ou achar o ponto de acesso do predio e vencer um teste de Eletronica/Tec. de Seguranca (DV 13) encerra o bloqueio.
+- **Bloqueio:** enquanto estiver ativo, os Agents e comunicadores do grupo não funcionam dentro do depósito. Derrubá-lo ou achar o ponto de acesso do prédio e vencer um teste de Tecnologia Eletrônica/Segurança (DV 13) encerra o bloqueio.
 
-**Tecnico de contencao** (Mook, adaptado do Bodyguard)
+**Técnico de contenção** (Mook, adaptado do Bodyguard)
 
 | INT | REF | DEX | TECH | COOL | WILL | MOVE | BODY | EMP |
 |---|---|---|---|---|---|---|---|---|
 | 4 | 6 | 5 | 5 | 4 | 4 | 4 | 6 | 3 |
 
 - **HP** 35 / **Gravemente Ferido** 18 / **Death Save** 6
-- **Armadura:** Kevlar, SP 7 na cabeca e no corpo
+- **Armadura:** Kevlar, SP 7 na cabeça e no corpo
 - **Armas:** espingarda de qualidade ruim 5d6; pistola muito pesada 4d6
-- **Bases:** Briga 11, Armas de Ombro 10, Armas de uma Mao 10, Tecnologia Basica 11, Evasao 7, Percepcao 9
-- **Dispositivo de contencao:** caixa blindada com gaiola de Faraday. Colocar a maleta dentro exige uma acao e isola a Chave de qualquer rede. **Se o grupo tomar a caixa, ganha uma forma segura de transportar a Chave** - uma recompensa que muda a Sessao 2.
+- **Bases:** Briga 11, Armas de Ombro 10, Armas de uma Mão 10, Tecnologia Básica 11, Evasão 7, Percepção 9
+- **Dispositivo de contenção:** caixa blindada com gaiola de Faraday. Colocar a maleta dentro exige uma ação e isola a Chave de qualquer rede. **Se o grupo tomar a caixa, ganha uma forma segura de transportar a Chave** - uma recompensa que muda a Sessão 2.
 
 ### Primeira fala de Vega
 
-> "Deixem a caixa no chao e afastem-se. Ninguem aqui precisa virar parte do relatorio."
+> "Deixem a caixa no chão e afastem-se. Ninguém aqui precisa virar parte do relatório."
 
 ### Se os personagens negociarem
 
-Vega pode oferecer o dobro do pagamento de Wakako, mas nao revela quem a contratou. Ela sabe apenas que a maleta deve chegar as Arasaka Industrial Docks, em Watson, e que "outra equipe" ja tentou pegar o mensageiro antes dela.
+Vega pode oferecer o dobro do pagamento de Wakako, mas não revela quem a contratou. Ela sabe apenas que a maleta deve chegar às Arasaka Industrial Docks, em Watson, e que "outra equipe" já tentou pegar o mensageiro antes dela.
 
-> "Eu nao sei o que tem dentro. Sei que alguem pagou o suficiente para que eu nao perguntasse. E voces estao perguntando demais."
+> "Eu não sei o que tem dentro. Sei que alguém pagou o suficiente para que eu não perguntasse. E vocês estão perguntando demais."
 
 ### Se os personagens vencerem
 
-Um dos mercenarios carrega uma ordem de recuperacao criptografada. Ela nao cita Arasaka diretamente, mas usa um codigo interno da empresa. O documento inclui uma frase:
+Um dos mercenários carrega uma ordem de recuperação criptografada. Ela não cita Arasaka diretamente, mas usa um código interno da empresa. O documento inclui uma frase:
 
-> "Recuperar o ativo Morana antes da ativacao. Eliminar testemunhas se necessario."
+> "Recuperar o ativo Morana antes da ativação. Eliminar testemunhas se necessário."
 
 ### Se os personagens perderem a maleta
 
-Nao encerre a campanha. A equipe foge com a maleta, mas Endo ou um mercenario deixa uma pista. Os personagens podem persegui-los por Kabuki, invadir o veiculo ou negociar a recuperacao com Wakako.
+Não encerre a campanha. A equipe foge com a maleta, mas Endo ou um mercenário deixa uma pista. Os personagens podem persegui-los por Kabuki, invadir o veículo ou negociar a recuperação com Wakako.
 
-## Cena 5: A primeira manifestacao
+## Cena 5: A primeira manifestação
 
-Depois do confronto, os personagens precisam decidir o que fazer com Endo e com a maleta. Dê um breve momento de alivio antes da manifestacao.
+Depois do confronto, os personagens precisam decidir o que fazer com Endo e com a maleta. Dê um breve momento de alívio antes da manifestação.
 
-Um personagem com implante, um comerciante proximo ou um dos mercenarios derrotados sofre uma falha. O corpo trava. A arma inteligente aponta para um alvo aleatorio. Um monitor medico liga sozinho.
+Um personagem com implante, um comerciante próximo ou um dos mercenários derrotados sofre uma falha. O corpo trava. A arma inteligente aponta para um alvo aleatório. Um monitor médico liga sozinho.
 
 O sistema emite a mesma mensagem:
 
 > MORANA // HOST DETECTADO // BUSCANDO REDE
 
-A falha dura poucos segundos, mas deixa uma marca: o alvo recebe queimaduras internas, perde uma memoria recente ou fica com um implante temporariamente inutilizado.
+A falha dura poucos segundos, mas deixa uma marca: o alvo recebe queimaduras internas, perde uma memória recente ou fica com um implante temporariamente inutilizado.
 
-O objetivo nao e matar um personagem sem aviso. A manifestacao deve provar que o perigo e real e que a maleta e apenas uma parte do problema.
+O objetivo não é matar um personagem sem aviso. A manifestação deve provar que o perigo é real e que a maleta é apenas uma parte do problema.
 
 ## Cena 6: Retorno a Wakako
 
-Os personagens podem voltar ao pachinko com a maleta, com Endo ou apenas com informacoes. Wakako os recebe em silencio. Ela reconhece o simbolo de Morana e perde, por um instante, o controle da expressao.
+Os personagens podem voltar ao pachinko com a maleta, com Endo ou apenas com informações. Wakako os recebe em silêncio. Ela reconhece o símbolo de Morana e perde, por um instante, o controle da expressão.
 
-O que realmente a abala vem logo depois: no cabecalho do fragmento (ou na mensagem "Vivo, se possivel" assinada por "I.", se o grupo mostrar o comunicador de Kobo) ela reconhece a assinatura de trabalho de Reina Sato. Wakako achava que Sato estava longe, em seguranca, e que nunca voltaria. Estava errada.
+O que realmente a abala vem logo depois: no cabeçalho do fragmento (ou na mensagem "Vivo, se possível" assinada por "I.", se o grupo mostrar o comunicador de Kobo) ela reconhece a assinatura de trabalho de Reina Sato. Wakako achava que Sato estava longe, em segurança, e que nunca voltaria. Estava errada.
 
 ### Fala de Wakako
 
-> "Eu conheco esse nome. E esperava nunca mais ouvir falar dele."
+> "Eu conheço esse nome. E esperava nunca mais ouvir falar dele."
 
 > (baixo, quase para si mesma) "Ela voltou. Claro que voltou."
 
 Se os personagens exigirem respostas, Wakako pode revelar uma parte da verdade:
 
-> "Anos atras, uma empresa tentou transformar pessoas em armas que nao podiam desobedecer. O teste falhou. Pessoas morreram. Os responsaveis compraram silencio, queimaram documentos e chamaram o resto de dano colateral."
+> "Anos atrás, uma empresa tentou transformar pessoas em armas que não podiam desobedecer. O teste falhou. Pessoas morreram. Os responsáveis compraram silêncio, queimaram documentos e chamaram o resto de dano colateral."
 
 Se perguntarem qual foi o papel dela:
 
-> "Eu ajudei algumas pessoas a desaparecer. Algumas sobreviveram. Outras nao. Naquela epoca, salvar dez parecia melhor do que salvar ninguem. Hoje nao tenho certeza."
+> "Eu ajudei algumas pessoas a desaparecer. Algumas sobreviveram. Outras não. Naquela época, salvar dez parecia melhor do que salvar ninguém. Hoje não tenho certeza."
 
-Ela ainda nao precisa revelar que ajudou Sato especificamente. Isso pode ser descoberto depois.
+Ela ainda não precisa revelar que ajudou Sato especificamente. Isso pode ser descoberto depois.
 
 ### O novo trabalho
 
-Wakako propoe que os personagens encontrem dois servidores ligados ao protocolo. Ela explica que um - o Gatilho - pode ativar Morana e o outro - a Coleira - pode desliga-la. A maleta e a Chave que liga os dois.
+Wakako propõe que os personagens encontrem dois servidores ligados ao protocolo. Ela explica que um - o Gatilho - pode ativar Morana e o outro - a Coleira - pode desligá-la. A maleta é a Chave que liga os dois.
 
-> "A maleta nao e a arma. E o manual de como montar a arma. Os dois servidores sao o gatilho e a coleira. Se outra pessoa encontra-los primeiro, Night City pode acordar sem controle sobre o proprio corpo."
+> "A maleta não é a arma. É o manual de como montar a arma. Os dois servidores são o gatilho e a coleira. Se outra pessoa encontrá-los primeiro, Night City pode acordar sem controle sobre o próprio corpo."
 
-O pagamento e maior do que o primeiro. Wakako oferece acesso a contatos, abrigo temporario e uma equipe medica para Endo, caso ele tenha sobrevivido.
+O pagamento é maior do que o primeiro. Wakako oferece acesso a contatos, abrigo temporário e uma equipe médica para Endo, caso ele tenha sobrevivido.
 
-## Encerramento da sessao
+## Encerramento da sessão
 
-Termine com uma destas imagens, escolhida de acordo com as decisoes dos jogadores:
+Termine com uma destas imagens, escolhida de acordo com as decisões dos jogadores:
 
 ### Se entregarem a maleta
 
-A maleta e colocada sobre a mesa de Wakako. Uma luz vermelha pisca dentro dela, embora nenhum cabo esteja conectado.
+A maleta é colocada sobre a mesa de Wakako. Uma luz vermelha pisca dentro dela, embora nenhum cabo esteja conectado.
 
 ### Se abrirem a maleta
 
-O fragmento projeta um mapa incompleto de Night City. Dois pontos aparecem marcados: um sob um hospital abandonado em Northside (o Gatilho) e outro dentro de uma instalacao corporativa em Arroyo (a Coleira). Um terceiro ponto, sob o City Center, pisca e some antes que alguem consiga fixa-lo (o Nucleo).
+O fragmento projeta um mapa incompleto de Night City. Dois pontos aparecem marcados: um sob um hospital abandonado em Northside (o Gatilho) e outro dentro de uma instalação corporativa em Arroyo (a Coleira). Um terceiro ponto, sob o City Center, pisca e some antes que alguém consiga fixá-lo (o Núcleo).
 
-### Se destruirem a maleta
+### Se destruírem a maleta
 
 O metal se rompe, mas uma pequena luz continua pulsando no implante de Endo ou de um personagem.
 
-### Se venderem a informacao
+### Se venderem a informação
 
 Uma mensagem chega ao comunicador de todos ao mesmo tempo:
 
-> "O primeiro pagamento foi apenas uma demonstracao. Agora sabemos onde voces estao."
+> "O primeiro pagamento foi apenas uma demonstração. Agora sabemos onde vocês estão."
 
-## Anotacoes para o mestre
+## Anotações para o mestre
 
 ### Ritmo
 
-A sessao deve durar entre tres e quatro horas:
+A sessão deve durar entre três e quatro horas:
 
-- 20 minutos: apresentacao dos personagens e encontro com Wakako.
-- 45 minutos: investigacao em Kabuki.
+- 20 minutos: apresentação dos personagens e encontro com Wakako.
+- 45 minutos: investigação em Kabuki.
 - 30 minutos: conversa com Endo.
-- 45 minutos: confronto ou negociacao com Vega.
-- 20 minutos: manifestacao de Morana.
+- 45 minutos: confronto ou negociação com Vega.
+- 20 minutos: manifestação de Morana.
 - 30 minutos: retorno a Wakako e novo gancho.
 
-Se o grupo estiver demorando, faca Vega chegar mais cedo. Se estiver avancando rapido demais, permita que Endo revele uma pista adicional antes do confronto.
+Se o grupo estiver demorando, faça Vega chegar mais cedo. Se estiver avançando rápido demais, permita que Endo revele uma pista adicional antes do confronto.
 
-### Agencia dos jogadores
+### Agência dos jogadores
 
-Nao force os personagens a entregar a maleta a Wakako. O importante e que eles descubram que:
+Não force os personagens a entregar a maleta a Wakako. O importante é que eles descubram que:
 
-- A maleta e perigosa.
-- Arasaka esta envolvida.
+- A maleta é perigosa.
+- Arasaka está envolvida.
 - Wakako sabe mais do que diz.
-- Morana ja esta ativa.
+- Morana já está ativa.
 
-Eles podem guardar, vender, destruir ou negociar o objeto. Cada escolha deve alterar a segunda sessao, nao impedir a campanha.
+Eles podem guardar, vender, destruir ou negociar o objeto. Cada escolha deve alterar a segunda sessão, não impedir a campanha.
 
-### Wakako nao e uma aliada simples
+### Wakako não é uma aliada simples
 
-Ela pode estar tentando fazer a coisa certa, mas tambem quer controlar o que sera revelado. Wakako protege a propria reputacao, seus negocios e as pessoas que ainda dependem dela.
+Ela pode estar tentando fazer a coisa certa, mas também quer controlar o que será revelado. Wakako protege a própria reputação, seus negócios e as pessoas que ainda dependem dela.
 
-Interprete-a como alguem que raramente levanta a voz. Quanto mais perigosa for a informacao, mais educada ela se torna.
+Interprete-a como alguém que raramente levanta a voz. Quanto mais perigosa for a informação, mais educada ela se torna.
 
-### Morana nao deve parecer magica
+### Morana não deve parecer mágica
 
 Mostre efeitos concretos e curtos:
 
 - Uma arma inteligente troca de alvo.
-- Um implante medico aplica a dose errada.
+- Um implante médico aplica a dose errada.
 - Um cyberware motor trava por alguns segundos.
 - Uma porta reconhece uma pessoa como hostil.
 - Um drone repete uma ordem antiga.
 
-Evite controlar completamente um personagem jogador sem consentimento. E mais interessante oferecer um teste, uma escolha dificil ou uma falha parcial do que retirar a agencia do jogador.
+Evite controlar completamente um personagem jogador sem consentimento. É mais interessante oferecer um teste, uma escolha difícil ou uma falha parcial do que retirar a agência do jogador.
 
-### Possiveis recompensas
+### Recompensas
 
-- Pagamento de Wakako.
+Os valores partem da tabela de trabalhos do RED (Economia: trabalho típico, 1.000eb por pessoa) e da tabela de Pontos de Melhoria do livro (p. 410).
+
+**Dinheiro (por pessoa)**
+
+| Situação | Pagamento |
+|---|---|
+| Wakako, combinado | 1.500eb (um trabalho típico pago acima do normal): 750eb adiantados no salão e 750eb na entrega. |
+| Endo entregue vivo | +500eb ("pelo mensageiro"). Wakako não explica por quê. |
+| Maleta entregue aberta | Só o combinado, sem extra. Wakako fica fria e conta menos na Cena 6. |
+| Vega, para ficar com a maleta (e Endo) | 3.000eb na hora, o dobro de Wakako. A maleta vai para as Arasaka Industrial Docks (Ramo D da Sessão 2) e Wakako vira inimiga até a Sessão 3. |
+| Venderam a informação | 1.000eb, de um comprador que some (Ramo F da Sessão 2). |
+
+Um Fixer pode subir o pagamento de Wakako em até 20% com a habilidade Operator. Pedir mais dinheiro a ela sem essa habilidade só rende a resposta da Cena 1.
+
+**Pontos de Melhoria**
+
+| Como terminou | IP do grupo |
+|---|---|
+| Maleta entregue a Wakako e Endo vivo | 60 |
+| Só a maleta entregue | 40 |
+| Ficaram com a maleta, abriram ou destruíram, sem perder a pista de Sato | 30 |
+| Perderam a maleta, mas acharam a ordem da Arasaka ou o comunicador de Kobo | 20 |
+
+Some, para cada jogador, o destaque da sessão pela coluna do estilo dele (Guerreiro, Socializador, Explorador, Ator), como o livro manda. Exemplos: quem examinou Kobo e achou o comando externo (Explorador, 50); quem convenceu Endo a soltar a maleta sem violência (Ator, 50); quem derrubou o netrunner de Vega e encerrou o bloqueio (Guerreiro, 40).
+
+**Reputação**
+
+Um tiroteio no depósito com testemunhas (os Tyger Claws, o funcionário escondido, o vídeo de um drone) vira história em Kabuki: quem se destacou ganha +1 de Reputação. Poupar Vega e deixá-la ir também é contado na rua, para o bem.
+
+**O resto**
+
 - Um contato no mercado de implantes.
-- Acesso a uma clinica segura.
-- Uma informacao sobre o passado de um personagem.
-- Um componente util para um cyberware.
-- A caixa de contencao do tecnico de Vega: transporte seguro para a Chave.
-- A gratidao de Endo ou de outro sobrevivente.
+- Acesso a uma clínica segura.
+- Uma informação sobre o passado de um personagem.
+- Um componente útil para um cyberware.
+- A caixa de contenção do técnico de Vega: transporte seguro para a Chave.
+- A gratidão de Endo ou de outro sobrevivente.
 
-### Perguntas para fechar a sessao
+### Perguntas para fechar a sessão
 
 Antes de terminar, pergunte aos jogadores:
 
-- O que seu personagem faz quando percebe que Morana pode afetar seu proprio corpo?
-- Voces entregam a maleta a Wakako?
+- O que seu personagem faz quando percebe que Morana pode afetar seu próprio corpo?
+- Vocês entregam a maleta a Wakako?
 - Endo deve ser protegido ou deixado aos cuidados de outra pessoa?
-- Voces confiam em Wakako depois do que ela revelou?
+- Vocês confiam em Wakako depois do que ela revelou?
 
-As respostas ja fornecem a direcao da segunda sessao.
+As respostas já fornecem a direção da segunda sessão.

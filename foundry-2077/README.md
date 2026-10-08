@@ -5,9 +5,9 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
 - **Compêndios:**
   - armas Power, Tech e Smart;
   - cyberware;
-  - netrunning de 2077 (cyberdecks, quickhacks, daemons, White ICE);
+  - netrunning de 2077 (cyberdecks, quickhacks, daemons, White ICE) e as arquiteturas NET do Protocolo Morana (lidas de `documentos/morana/arquiteturas-da-campanha.md`; o NET Architect as oferece nos pontos de acesso);
   - veículos adaptados do jogo;
-  - NPCs prontos (só o mestre vê);
+  - NPCs prontos (só o mestre vê), com o elenco do Protocolo Morana na pasta própria;
   - regras em diários.
 - **Economia de 2077:** uma configuração do módulo que troca as categorias de preço pelas do suplemento.
 - **Armas de 2077 no menu de ataque do sistema:** veja a seção abaixo. As macros Ataque Smart, Ricochete e Carga Tech viraram atalhos para os mesmos modos.

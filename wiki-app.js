@@ -504,7 +504,7 @@
     }
 
     // Uma "unidade" é o trecho para onde o índice da página e a busca apontam:
-    // cada .section e cada cartão de pessoa; nos documentos .md, cada título de seção.
+    // cada .section e cada cartão de pessoa; nos documentos .md, cada título de seção (# e ##; na busca, também ###).
     // data-unit-skip: blocos montados pela própria página (a tabela comparável), que não são seções do conteúdo.
     const unitSelector = '.section:not([data-unit-skip]), .person';
 
@@ -515,25 +515,28 @@
       return [...container.querySelectorAll(unitSelector)].filter(element => !element.parentElement.closest(unitSelector));
     }
 
-    // Busca: também cada cartão (.entry) dentro das seções, para abrir direto num Black ICE ou quickhack.
+    // Busca: também cada cartão (.entry) dentro das seções, para abrir direto num Black ICE ou quickhack. Nos .md, cada
+    // ### também (um NPC, uma cena, uma ficha dentro de uma seção grande): a busca e o endereço #pagina/secao vão direto.
     function searchUnits(container) {
       const doc = container.querySelector('#md-doc');
-      if (doc) return [...doc.querySelectorAll(':scope > h3')];
+      if (doc) return [...doc.querySelectorAll(':scope > h3, :scope > h4')];
       return [...container.querySelectorAll(`${unitSelector}, .entry`)];
     }
 
     function unitTitle(element) {
       if (element.dataset.toc) return element.dataset.toc;
-      const heading = element.matches('h3') ? element : element.querySelector('h3, summary');
+      const heading = element.matches('h3, h4') ? element : element.querySelector('h3, summary');
       if (!heading) return '';
       return (heading.firstChild && heading.firstChild.nodeType === Node.TEXT_NODE ? heading.firstChild.textContent : heading.textContent).trim();
     }
 
-    // Nos documentos .md, uma seção é o título mais tudo até o próximo título do mesmo nível.
-    function unitBlock(element) {
-      if (!element.matches('#md-doc > h3')) return [element];
+    // Nos documentos .md, uma seção é o título mais tudo até o próximo título do mesmo nível (ou de um nível acima).
+    // own: só o texto da própria seção, sem as subseções (na busca, cada ### tem a sua entrada).
+    function unitBlock(element, own = false) {
+      if (!element.matches('#md-doc > h3, #md-doc > h4')) return [element];
+      const stop = own || element.matches('h4') ? 'h3, h4' : 'h3';
       const block = [element];
-      for (let next = element.nextElementSibling; next && !next.matches('h3'); next = next.nextElementSibling) block.push(next);
+      for (let next = element.nextElementSibling; next && !next.matches(stop); next = next.nextElementSibling) block.push(next);
       return block;
     }
 
@@ -861,9 +864,26 @@
       return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
     }
 
+    // Links nos textos em Markdown: [texto](#pagina/secao) abre uma página da wiki; [texto](https://...) abre fora, em
+    // outra aba; [texto](arquivo.md) e o nome de um documento entre crases (`ganchos-dos-personagens.md`) abrem a página
+    // daquele documento. Outro destino (javascript:, data:...) fica só como texto.
+    const docPageFor = name => { const base = String(name).split('/').pop(); return Object.keys(markdownDocs).find(id => markdownDocs[id].file.split('/').pop() === base) || ''; };
+    function linkHref(target) {
+      const value = target.replace(/&amp;/g, '&');
+      if (/^#[\w-]+(\/[\w-]+)?$/.test(value)) return value;
+      if (/^https?:\/\/[^\s"'<>]+$/.test(value)) return target;
+      const [name, section] = value.split('#');
+      const doc = /\.md$/i.test(name) ? docPageFor(name) : '';
+      return doc ? `#${doc}${section && /^[\w-]+$/.test(section) ? `/${section}` : ''}` : '';
+    }
     function renderInlineMarkdown(text) {
       return escapeHtml(text)
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/`([^`]+)`/g, (match, code) => { const doc = /\.md$/i.test(code) ? docPageFor(code) : ''; return doc ? `<a href="#${doc}"><code>${code}</code></a>` : `<code>${code}</code>`; })
+        .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, label, target) => {
+          const href = linkHref(target);
+          if (!href) return label;
+          return `<a href="${href}"${/^https?:/.test(href) ? ' target="_blank" rel="noopener noreferrer"' : ''}>${label}</a>`;
+        })
         .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
         .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g, '$1<i>$2</i>');
     }
@@ -919,7 +939,7 @@
     }
 
     // O primeiro título do arquivo repete o título da página.
-    const stripDocTitle = text => text.replace(/^﻿?#\s+.*\n/, '');
+    const stripDocTitle = text => text.replace(/^﻿?#\s+.*\r?\n/, '');
 
     function showMarkdownDoc(id, target) {
       loadMarkdownDoc(id).then(text => {
@@ -1133,7 +1153,7 @@
         const units = searchUnits(holder);
         // O texto de uma seção não inclui os cartões dela: cada cartão é uma entrada própria.
         const ownText = unit => {
-          if (!unit.querySelector('.entry')) return unitBlock(unit).map(element => element.textContent).join(' ');
+          if (!unit.querySelector('.entry')) return unitBlock(unit, true).map(element => element.textContent).join(' ');
           const copy = unit.cloneNode(true);
           copy.querySelectorAll('.entry').forEach(card => card.remove());
           return copy.textContent;

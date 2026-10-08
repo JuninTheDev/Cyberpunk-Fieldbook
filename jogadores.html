@@ -51,13 +51,47 @@
     // que este jogador joga (api/eu diz quais). Sem código, só as regras.
     // Este arquivo é baixado por qualquer um: não escreva aqui nomes ou segredos de campanha.
     const waiting = title => ({ eyebrow: 'Night City', title, lede: 'Carregando o que o mestre publicou…', html: '' });
+    // Como jogamos: o guia do jogador, igual para todas as campanhas (sem nomes nem segredos: qualquer um baixa este arquivo).
+    const button = (page, label) => `<button class="action" type="button" data-page="${page}">${label}</button>`;
+    const playerGuide = {
+      eyebrow: 'Night City / para os jogadores', title: 'Como jogamos',
+      lede: 'O sistema, o seu personagem na wiki, como se ganha experiência e os combinados da mesa. O mestre confirma tudo na sessão zero.',
+      html: `<div class="section" data-toc="O sistema"><h3>O sistema</h3><ul>
+          <li><b>Cyberpunk RED</b>, com opções do suplemento comunitário <b>Cyberpunk 2077</b> (feito por fãs, não oficial). Na aba Regras, cada página diz o que é do RED e o que é de 2077.</li>
+          <li>Os eventos do jogo Cyberpunk 2077 acontecem em paralelo à campanha, como pano de fundo. Não é preciso ter jogado; V não aparece.</li>
+        </ul><p>${button('supplement2077', 'Suplemento 2077')} ${button('roles2077', 'Roles de 2077')} ${button('economy', 'Economia de 2077')}</p></div>
+        <div class="section" data-toc="Seu personagem"><h3>Seu personagem</h3><ul>
+          <li><b>Entre</b> com o código que o mestre passou (no botão do canto de cima). O aparelho lembra.</li>
+          <li><b>Crie</b> pelo criador, em Personagens: três métodos (Rato de Rua, Edgerunner e Pacote Completo) e a loja inicial, com o teto e as regras que o mestre escolheu.</li>
+          <li><b>Envie ao mestre</b> quando estiver pronto. Ele leva para o Foundry, a mesa virtual.</li>
+          <li><b>Depois do Foundry</b>, a ficha da mesa manda: na wiki você ainda muda nome, apelido, aparência, notas, retrato e Lifepath. Compras viram <b>pedidos</b> na Loja, que o mestre aprova.</li>
+          <li><b>Anotações</b>, na Ficha: pistas, contatos, dívidas. Só você e o mestre leem.</li>
+        </ul><p>${button('creation', 'Criação de personagens')} ${button('ficha', 'Ficha')}</p></div>
+        <div class="section" data-toc="Experiência"><h3>Experiência</h3><ul>
+          <li>No fim de cada sessão, o mestre dá <b>Pontos de Melhoria</b> pela tabela do livro: o grupo pela missão, e cada um pelo que fez de melhor no seu estilo (combate, apoio ao grupo, investigação ou interpretação).</li>
+          <li>Os pontos sobem perícias e o Rank da Role, na página Avanço.</li>
+          <li><b>Cromo custa Humanidade.</b> A partir de EMP 2 já há efeito; com EMP 0, ciberpsicose.</li>
+        </ul><p>${button('advancement', 'Avanço e Pontos de Melhoria')} ${button('humanity', 'Humanidade')}</p></div>
+        <div class="section" data-toc="Combinados da mesa"><h3>Combinados da mesa</h3><ul>
+          <li>Cyberpunk lida com temas pesados: violência, perda do controle do corpo, trauma médico, corporações sem escrúpulo. Na sessão zero, a mesa combina as <b>linhas</b> (o que não entra no jogo) e os <b>véus</b> (o que acontece fora de cena).</li>
+          <li><b>A carta X:</b> a qualquer momento, qualquer pessoa pode pedir para cortar uma cena ou um detalhe ("corta", ou o X da mesa), sem explicar por quê. A cena segue sem aquilo.</li>
+          <li><b>O seu personagem é seu:</b> o mestre nunca tira o controle do seu personagem sem você ter combinado antes como isso pode acontecer.</li>
+          <li>No fim da sessão, o mestre pergunta se algo deve ficar de fora da próxima. Diga, mesmo em particular.</li>
+        </ul></div>
+        <div class="section" data-toc="Na wiki"><h3>Na wiki</h3><ul>
+          <li><b>Resumo:</b> o seu personagem, a próxima sessão (com o botão para pôr no calendário), os relógios que o mestre mostra e as últimas notícias.</li>
+          <li><b>Sessões, Pessoas, Mapa e Notícias:</b> o que o grupo já sabe, publicado pelo mestre. O que é novo desde a sua última visita ganha um selo.</li>
+          <li><b>Fixar:</b> o botão ☆ ao lado do título de qualquer página a põe no topo da barra lateral (Combate, a Ficha...).</li>
+        </ul></div>`
+    };
     const playerGroups = [{ group: 'O que o grupo sabe', pages: [
       { id: 'pvHome', label: 'Resumo', icon: '00' },
       { id: 'pvSessions', label: 'Sessões', icon: 'S' },
       { id: 'pvPeople', label: 'Pessoas', icon: 'P' },
       { id: 'pvMap', label: 'Mapa', icon: 'MAP' },
       { id: 'pvNews', label: 'Notícias e handouts', icon: 'N' },
-      { id: 'pvNightCity', label: 'Notícias de Night City', icon: 'N54' }
+      { id: 'pvNightCity', label: 'Notícias de Night City', icon: 'N54' },
+      { id: 'pvGuia', label: 'Como jogamos', icon: '?' }
     ]}, { group: 'Personagens', pages: [
       // Ficha e Loja abrem no personagem em uso (o do botão da conta, no canto de cima).
       { id: 'ficha', label: 'Ficha', icon: 'ID' },
@@ -76,7 +110,7 @@
         homePage: 'pvHome',
         // Sem campanha (sem código, ou sem servidor): uma de mentira, só para o menu (real: false).
         campaigns: list ? list.map(item => ({ id: item.id, name: item.nome, color: item.cor, groups: playerGroups })) : [{ id: 'grupo', name: 'Night City, 2077', real: false, groups: playerGroups }],
-        pageContent: { pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') },
+        pageContent: { pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City'), pvGuia: playerGuide },
         mapPages: ['pvMap'],
         mapData: () => window.playerMapData,
         pageSetup: { pvMap: () => window.wikiApp.setupMap(), pvHome: content => window.playerView && window.playerView.setupHome(content) },
@@ -156,7 +190,7 @@
       const mapHtml = hasPlaces => `${hasPlaces ? '' : '<div class="callout">Nenhum lugar marcado ainda. Eles aparecem aqui conforme o grupo descobre.</div>'}
         <div class="map-toolbar"><div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div></div>
         <div class="map-filter-list" id="map-filters" hidden></div>
-        <div class="campaign-map-layout"><div class="campaign-map-main"><div class="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa de Night City com os lugares que o grupo conhece"><image id="nightcity-map-image" href="nightcity-map-base.jpg" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div><div class="map-legend" id="map-legend"></div></div>
+        <div class="campaign-map-layout"><div class="campaign-map-main"><div class="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa de Night City com os lugares que o grupo conhece"><image id="nightcity-map-image" href="nightcity-map-base.webp" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div><div class="map-legend" id="map-legend"></div></div>
         <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><h3>Escolha um ponto</h3></div><div class="map-marker-list" id="map-marker-list"></div></section></div>`;
 
       function buildPages(data, seen) {
@@ -182,7 +216,7 @@
         const when = next ? window.wikiApp.sessionTime(next) : null;
         const nextHtml = next ? `<div class="section pv-next" data-toc="Próxima sessão"><h3>Próxima sessão</h3><p class="pv-next-when"><b>${escapeHtml(when.data)}</b>, ${escapeHtml(when.horario)} · ${escapeHtml(when.relativo)}</p>${next.titulo ? `<p><b>${escapeHtml(next.titulo)}</b></p>` : ''}${next.nota ? `<p>${escapeHtml(next.nota)}</p>` : ''}<p><button class="action" type="button" data-pv-ics="${escapeHtml(next.id)}">Adicionar ao calendário</button></p>${agendaNow.length > 1 ? `<p class="note-status">Depois: ${agendaNow.slice(1).map(item => escapeHtml(window.wikiApp.sessionTime(item).curto)).join(' · ')}</p>` : ''}</div>` : '';
         window.playerMapData = {
-          width: 5600, height: 5320, images: { base: 'nightcity-map-base.jpg' },
+          width: 5600, height: 5320, images: { base: 'nightcity-map-base.webp' },
           // Os lugares novos desde a última visita: outra cor, e a legenda diz o que é.
           categories: { lugar: { label: 'Lugar que o grupo conhece', color: '#00ffd2' }, ...(newPlaces.length ? { novo: { label: 'Novo desde a sua última visita', color: '#ff3158' } } : {}) },
           markers: places.map((place, index) => ({ id: place.id || `lugar-${index}`, code: String(index + 1), title: `${place.nome || 'Lugar'}${fresh('pvMap', place) ? ' (novo)' : ''}`, district: place.distrito || '', x: Number(place.x) || 0, y: Number(place.y) || 0, category: fresh('pvMap', place) ? 'novo' : 'lugar', detail: place.texto || '' }))

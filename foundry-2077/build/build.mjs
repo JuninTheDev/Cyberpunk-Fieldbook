@@ -10,6 +10,7 @@ import { applyEffects, effectItemNames } from './efeitos.mjs';
 import { corePack, macroDoc, slug } from './lib.mjs';
 import { buildNet } from './net.mjs';
 import { buildNpcs, checkNpcSkills } from './npcs.mjs';
+import { buildArchitectures } from './arquiteturas.mjs';
 import { buildCatalog } from './loja.mjs';
 import { buildRoles } from './roles.mjs';
 import { cacheDir, moduleDir, sourceDir, systemDir } from './paths.mjs';
@@ -33,7 +34,8 @@ const macros = [
 const packs = {
   'armas-2077': weapons,
   'cyberware-2077': withEffects(buildCyberware()),
-  'netrunning-2077': withEffects(buildNet()),
+  // As arquiteturas da campanha entram no compêndio de netrunning (o NET Architect lista os itens netarch dele).
+  'netrunning-2077': [...withEffects(buildNet()), ...buildArchitectures()],
   'veiculos-2077': buildVehicles(),
   'npcs-2077': buildNpcs(weapons),
   'roles-2077': buildRoles(),

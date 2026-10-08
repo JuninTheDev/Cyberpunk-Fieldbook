@@ -121,8 +121,8 @@ A escada de emergência desce por três andares de escuridão e cheiro de plást
 ### Perigos (escolha dois ou três)
 
 - **Macas-drone:** reconhecem qualquer pessoa como "paciente fora do leito" e tentam contê-la. Teste de Evasão ou Atletismo (DV 13) para não ser preso por um turno.
-- **Dispensador de medicamentos:** dispara uma dose de sedativo em quem passa. Resistir à Tortura/Drogas (DV 15) ou fica com -2 em todas as ações por uma hora.
-- **Porta de isolamento:** fecha e liga o sistema de ventilação ao contrário. Abrir exige Eletrônica/Tec. de Segurança (DV 15) ou força bruta (Atletismo DV 17).
+- **Dispensador de medicamentos:** dispara uma dose de sedativo em quem passa. Resistir Tortura/Drogas (DV 15) ou fica com -2 em todas as ações por uma hora.
+- **Porta de isolamento:** fecha e liga o sistema de ventilação ao contrário. Abrir exige Tecnologia Eletrônica/Segurança (DV 15) ou força bruta (Atletismo DV 17).
 - **Sussurro:** cada personagem com cromo conectado faz o teste de resistência a Morana (WILL + Concentração, DV 13, estágio Programa). Na falha, um implante trava por uma rodada, e o personagem ouve uma voz dizendo o nome dele.
 
 ### O que o grupo encontra
@@ -133,7 +133,7 @@ A escada de emergência desce por três andares de escuridão e cheiro de plást
 
 ### A arquitetura NET do Gatilho
 
-Para quem quiser entrar pela rede em vez de pelo cabo. Sugestão de arquitetura básica, no formato do livro-base:
+Para quem quiser entrar pela rede em vez de pelo cabo. Sugestão de arquitetura básica, no formato do livro-base. É a mesma de [Arquiteturas da campanha](arquiteturas-da-campanha.md), que também vai para o Foundry (o NET Architect a oferece no ponto de acesso):
 
 | Andar | Conteúdo |
 |---|---|
@@ -194,9 +194,37 @@ Termine com uma destas imagens:
 - 40 minutos: Iskra.
 - 20 minutos: decisão sobre o Gatilho e encerramento.
 
+### Recompensas
+
+**Dinheiro (por pessoa).** É um trabalho perigoso no RED (2.000eb por pessoa): ruínas hostis, território da Maelstrom e outra equipe armada.
+
+| Situação | Pagamento |
+|---|---|
+| Wakako, pelo Gatilho levado ou destruído | 2.000eb. A metade adiantada só nos Ramos A e D (ela já confia, ou está desesperada). |
+| Wakako, pela cópia da rotina | 1.000eb. Ela queria o servidor, não uma cópia. |
+| Os registros de 2070 entregues a Tamsin | Nada em dinheiro: abrigo em Pacifica, a confiança dos sobreviventes e uma testemunha disposta a depor. |
+| Iskra, pelo Gatilho | Ela não paga em eurodólar: deixa o grupo sair com os registros e passa a dever um favor. |
+| Brakk, pelo dízimo | Ao contrário: o culto cobra. Um implante, 500eb por pessoa ou um fragmento de código. |
+
+**Pontos de Melhoria**
+
+| Como terminou | IP do grupo |
+|---|---|
+| Decidiram o destino do Gatilho e saíram com os registros de 2070 | 60 |
+| Decidiram o destino do Gatilho | 40 |
+| Iskra levou o Gatilho, mas o grupo achou a assinatura "K.E." | 30 |
+| Saíram sem nada | 10 a 20 |
+
+Destaques: quem chegou ao andar 6 da arquitetura e aguentou o olhar de Morana (Explorador, 60); quem fez Iskra hesitar com a prova sobre Kobo (Ator, 60).
+
+### Relógios desta sessão
+
+- **Sato:** marque a etapa 2 se Iskra (ou a Arasaka) ficou com o Gatilho ou com uma cópia que a leve até ele.
+- **Morana:** marque um segmento se o Gatilho foi levado para outra rede, copiado ou entregue ao culto (Brakk se conecta). Destruí-lo também marca um: o vírus passa a se reconstruir sozinho (veja a Cena 5).
+
 ### Depois da sessão
 
-- Atualize os dois relógios no diário da campanha.
+- Atualize os três relógios no diário da campanha.
 - Anote onde está cada parte de Morana (Chave, Gatilho, Coleira).
 - Anote o que Iskra sabe sobre Kobo e o que o grupo sabe sobre "K.E.".
 
@@ -208,6 +236,6 @@ Termine com uma destas imagens:
 
 ### Próxima sessão: sugestões
 
-- **A Coleira:** o datafort da Militech em Arroyo. A Militech sabe que a Coleira é código dela e vai negar até a morte.
+- **A Coleira:** o datafort da Militech em Arroyo. A Militech sabe que a Coleira é código dela e vai negar até a morte. Está escrita: [Sessão 3](sessao-03-a-coleira.md).
 - **O resgate:** tirar Endo das Arasaka Industrial Docks (se Vega o capturou).
 - **Pacifica:** levar os registros de 2070 para Tamsin "Fuse" Ilyin, com Iskra no encalço, e assistir ao reencontro das duas.

@@ -40,6 +40,7 @@ const contentTypes = {
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
   '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.webp': 'image/webp',
   '.woff2': 'font/woff2'
 };
 
@@ -50,7 +51,7 @@ const playerFiles = new Set([
   '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
   '/system-criacao.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
-  '/nightcity-map-base.jpg', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
+  '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   // A wiki instalada no celular: o manifesto, o service worker (sw.js) e os ícones.
   '/manifest.webmanifest', '/sw.js', '/icones/icone.svg', '/icones/icone-192.png', '/icones/icone-512.png'
 ]);
@@ -284,15 +285,25 @@ http.createServer((request, response) => {
   fs.stat(filePath, (error, stats) => {
     if (error || !stats.isFile()) return send(response, 404, 'Not found');
     const extension = path.extname(filePath).toLowerCase();
+    // Os dados publicados mudam durante a sessão, e arquivo do mestre não pode ficar no cache do túnel
+    // (senão o Cloudflare entregaria a cópia a um jogador): nunca guardar em cache. As imagens do mestre (o mapa de
+    // referência, 2,7 MB) ficam só no navegador dele ("private") e são conferidas a cada vez.
+    // O resto (o que os jogadores baixam): o navegador guarda e confere a cada vez (no-cache); se o arquivo não mudou,
+    // a resposta é um 304 sem corpo, em vez de baixar o mapa de novo a cada abertura.
+    const image = ['.webp', '.jpg', '.jpeg', '.png', '.svg'].includes(extension);
+    const cacheControl = extension === '.json' || (!playerFile && !image) ? 'private, no-store' : playerFile ? 'no-cache' : 'private, no-cache';
+    const etag = `W/"${stats.size.toString(36)}-${Math.round(stats.mtimeMs).toString(36)}"`;
+    const cacheable = cacheControl !== 'private, no-store';
+    if (cacheable && request.headers['if-none-match'] === etag) {
+      response.writeHead(304, { ...SERVER_VERSION, ETag: etag, 'Cache-Control': cacheControl });
+      return response.end();
+    }
     response.writeHead(200, {
       ...SERVER_VERSION,
       'Content-Length': stats.size,
       'Content-Type': contentTypes[extension] || 'application/octet-stream',
-      // Os dados publicados mudam durante a sessão, e arquivo do mestre não pode ficar no cache do túnel
-      // (senão o Cloudflare entregaria a cópia a um jogador): nunca guardar em cache.
-      ...(extension === '.json' || !playerFile ? { 'Cache-Control': 'private, no-store' } : {}),
-      // O navegador confere o service worker a cada abertura: a versão nova vale logo.
-      ...(servedPath === '/sw.js' ? { 'Cache-Control': 'no-cache' } : {})
+      'Cache-Control': cacheControl,
+      ...(cacheable ? { ETag: etag } : {})
     });
     if (request.method === 'HEAD') return response.end();
     // A conexão pode ter caído enquanto o stat rodava: aí o arquivo nem é aberto

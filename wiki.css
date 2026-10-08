@@ -92,6 +92,8 @@ summary { color: var(--cyan); cursor: pointer; }
 .source-link { display: inline-flex; align-items: center; gap: 8px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 4px; color: var(--text); text-decoration: none; background: var(--panel); font-size: 13px; }
 .source-link:hover { border-color: var(--cyan); }
 .source-link b { color: var(--lime); font: 11px var(--mono); }
+.source-missing { color: var(--muted); }
+.source-missing:hover { border-color: var(--line); }
 .search-results { display: grid; gap: 10px; margin-top: 20px; }
 .result { display: block; width: 100%; padding: 14px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: inherit; text-align: left; cursor: pointer; }
 .result:hover { border-color: var(--cyan); }

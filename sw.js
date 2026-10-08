@@ -4,7 +4,7 @@
 // Guarda os arquivos públicos (os mesmos que qualquer jogador baixa) e, da API, só o que é deste aparelho: quem
 // entrou (api/eu) e o que o mestre publicou nas campanhas dele (api/visao). Entrar ou sair apaga essas duas.
 // A wiki do mestre e o resto da API passam direto.
-const CACHE = 'fieldbook-jogadores-v4';
+const CACHE = 'fieldbook-jogadores-v5';
 const PUBLICOS = [
   '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
@@ -13,9 +13,12 @@ const PUBLICOS = [
 ];
 const PRIVADOS = ['/api/eu', '/api/visao'];
 const TROCA_DE_QUEM = ['/api/entrar', '/api/sair', '/api/sair-de-todos', '/api/mestre/entrar', '/api/mestre/sair'];
-// O mapa (5 MB) e as fontes entram quando forem abertos, não na instalação.
+// O mapa (2,7 MB) e as fontes entram quando forem abertos, não na instalação.
+const MAPA = '/nightcity-map-base.webp';
+const FONTES = '/cyberpunk-css-main/cyberpunk-css-main/fonts/';
+const estatico = url => url.origin === self.location.origin && (url.pathname === MAPA || url.pathname.startsWith(FONTES));
 const guardavel = url => url.origin === self.location.origin
-  && (PUBLICOS.includes(url.pathname) || PRIVADOS.includes(url.pathname) || url.pathname === '/nightcity-map-base.jpg' || url.pathname.startsWith('/cyberpunk-css-main/cyberpunk-css-main/fonts/'));
+  && (PUBLICOS.includes(url.pathname) || PRIVADOS.includes(url.pathname) || estatico(url));
 // A visão de cada campanha é guardada separada (?campanha=).
 const chave = url => (PRIVADOS.includes(url.pathname) ? url.pathname + url.search : url.pathname);
 const limparPrivados = () => caches.open(CACHE).then(cache => cache.keys().then(keys => Promise.all(keys.filter(key => PRIVADOS.includes(new URL(key.url).pathname)).map(key => cache.delete(key)))));
@@ -38,6 +41,18 @@ self.addEventListener('fetch', event => {
   // visão dos jogadores), e a resposta da raiz não é guardada (para o mestre ela é a wiki do mestre).
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => caches.match('/jogadores.html')));
+    return;
+  }
+  // O mapa e as fontes quase nunca mudam e são pesados: vêm do aparelho (e atualizam por trás, para a próxima vez).
+  // A primeira vez espera a rede o quanto precisar: com o prazo de 4 segundos, um celular lento nunca terminava de
+  // baixar o mapa (e, sem cópia guardada, ficava sem nenhum).
+  if (estatico(url)) {
+    event.respondWith(caches.open(CACHE).then(cache => cache.match(url.pathname).then(cached => {
+      const fresh = fetch(request).then(response => { if (response.ok) cache.put(url.pathname, response.clone()); return response; });
+      if (!cached) return fresh;
+      event.waitUntil(fresh.catch(() => null));
+      return cached;
+    })));
     return;
   }
   if (!guardavel(url)) return;

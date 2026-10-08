@@ -109,6 +109,11 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `documentos/morana/ganchos-dos-personagens.md` | Sessão zero: transforma as respostas dos jogadores em ganchos pessoais ligados a Morana. |
 | `documentos/morana/sessao-01-a-maleta.md` | Roteiro da Sessão 1 e fichas de combate RED da equipe de Vega. |
 | `documentos/morana/sessao-02-o-hospital-queimado.md` | Sessão 2, com aberturas para cada desfecho da Sessão 1. |
+| `documentos/morana/sessao-03-a-coleira.md` | Sessão 3: o datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto. |
+| `documentos/morana/sessao-zero.md` | Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas. |
+| `documentos/morana/roteiro-da-campanha.md` | A campanha numa tabela: ato, sessão, fase da cidade, relógio de Sato, estágio de Morana, revelações e recompensas. |
+| `documentos/morana/quem-e-quem.md` | Todas as pessoas com nome: lado, lugar, primeira aparição e o link da ficha. |
+| `documentos/morana/arquiteturas-da-campanha.md` | As arquiteturas NET da campanha. As tabelas são a fonte dos itens do Foundry (o build do cpr-2077 lê este arquivo). |
 | `documentos/morana/guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo, ganchos e tabelas (com os ganchos de Morana). |
 | `documentos/morana/diario-da-campanha.md` | Estado dos relógios, onde está cada parte de Morana e registro das sessões. Atualize depois de cada sessão. |
 | `documentos/<campanha>/`, `documentos/night-city/` | Os documentos de cada campanha nova, e os de todas. Veja **Campanhas**. |
@@ -119,12 +124,13 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. |
 | `campaign-map.js` | Pinos do mapa de operações. |
+| `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
 | `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (com a tabela da ciberpsicose e a perda por trauma), terapia e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
 | `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
 | `system-2077.js` | Suplemento de 2077: as 46 armas (Power, Tech e Smart), os 42 cyberwares, as Roles de 2077 e o resumo do suplemento. |
 | `system-catalog.js` | Catálogo do RED: Roles, cyberware, armas, armaduras, munição, acessórios, equipamento médico e a lista de equipamento. |
 | `system-glossario.js` | O glossário: definição curta de cada termo de regra e onde está a regra. Vai também para os jogadores. |
-| `mestre-npcs.js` | Fichas de NPC (as 10 fichas prontas do livro, a Trauma Team e variantes para as facções de 2077) e os Encontros de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
+| `mestre-npcs.js` | Fichas de NPC (as 10 fichas prontas do livro, a Trauma Team, variantes para as facções de 2077 e o elenco do Protocolo Morana) e os Encontros de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
 | `server.js` | Servidor da wiki, no PC ou no servidor online (`MODO=hospedado`). Decide quem vê a wiki do mestre e quem vê só a dos jogadores, mostra o estado da mesa e avisa se o OneDrive reverteu algum arquivo. |
 | `mestre.html` | A tela "Entrar como mestre" (`/mestre`). |
 | `revertidos.js` | Confere se o OneDrive voltou algum arquivo para uma versão antiga. Usado pelo servidor e pelo `publicar.bat`. |
@@ -280,10 +286,12 @@ Notas:
 
 - **Notas e relógios (mestre):** os relógios e o bloco de mesa ficam no servidor, por campanha: entram no backup e aparecem iguais no PC e no tablet (o que estava só no navegador subiu na primeira vez).
   - **Mostrar aos jogadores**, embaixo de cada relógio, põe esse relógio no Resumo dos jogadores (só leitura). Bom para o relógio da cidade.
+  - **Estágio de Morana** (Protocolo Morana): o terceiro relógio. Dois segmentos por estágio (Programa, Enxame, Entidade), com a DV do teste de resistência e os gatilhos para marcar e desmarcar.
   - **Virar rascunho de sessão** cria, com o texto do bloco, uma sessão **não publicada** em Visão dos jogadores → Sessões. Revise (o bloco tem segredos) e marque Publicada.
 - **Início do mestre:** a faixa **Na mesa agora** tem atalhos (Escudo, Fichas de NPC, Encontros, Combate, Glossário, Índice, sessões), as últimas páginas abertas e o estado dos relógios de Sato e da cidade.
 - **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém.
 - **Busca:** **/** (ou Ctrl+K) coloca o cursor na busca.
+  - Nos documentos .md, cada seção `###` (uma cena, um NPC, uma regra) também é um resultado, e tem endereço próprio (`#docSessao01/a-trava-e-a-maleta-regras`).
   - As palavras podem vir em qualquer ordem ("pistola smart" acha a Yukimura). A busca ignora acentos e aceita termos em inglês e sinônimos (CDT/ROF, HP/PV, eb/eddies, Death Save...).
   - **↑ ↓** escolhem o resultado, **Enter** abre já na seção certa, com os termos destacados, e **Esc** volta para a página.
   - Os chips **Tudo / Regras / Campanha** filtram os resultados.
@@ -292,7 +300,8 @@ Notas:
 - **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por classe, tipo ou instalação.
 - Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.
 - O **Escudo do mestre** tem a calculadora de DV por alcance e o rolador de lesão crítica.
-- **Fichas de NPC** tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo. Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
+- **Links nos documentos .md:** `[texto](#pagina/secao)` abre uma página da wiki; `[texto](arquivo.md)` e o nome de um documento entre crases abrem o documento; `[texto](https://...)` abre fora, em outra aba.
+- **Fichas de NPC** tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo, e o **elenco do Protocolo Morana** (Wakako, Mina, Endo, Sato, Iskra, Vega, Brakk, Tamsin e Tomas). Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
 - **Roladores:** o **Lifepath** rola cada tabela ou o passado inteiro de uma vez. A **Economia de 2077** gera um Night Market. Os **Encontros de 2077** (só na wiki do mestre) rolam dia, noite ou madrugada, e cada resultado leva à ficha do NPC.
 - **Avanço e Pontos de Melhoria** traz os custos, a tabela de quanto dar no fim da sessão e o questionário de estilo de jogo.
 
@@ -312,7 +321,9 @@ Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 node tests/rodar.js
 ```
 
-Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8773), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), a conta e a barra lateral (personagem em uso, pedidos resolvidos, sessões, páginas fixadas, barra compacta, gaveta do celular), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8774), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), a conta e a barra lateral (personagem em uso, pedidos resolvidos, sessões, páginas fixadas, barra compacta, gaveta do celular), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+
+**Teste dos documentos** (`node tests/rodar.js documentos`): confere os `.md` da campanha. Acusa termos fora do padrão da wiki ("Seriamente Ferido", "Canal", "Cybertech", "Enganação"), palavras comuns sem acento, nomes de perícia que não existem, arquivos citados que não existem, documentos fora da wiki e links para fichas que não existem.
 
 **Teste do Foundry** (`node tests/rodar.js foundry`): importa personagens feitos na wiki de teste num Foundry de verdade e confere o ator.
 - **Onde roda:** usa o Foundry instalado no PC, sem janela, na porta 30999. Os dados ficam numa pasta própria, `%LOCALAPPDATA%\FieldbookTeste\foundry`, que nunca toca nos seus mundos.

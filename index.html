@@ -76,12 +76,17 @@
         { group: 'Sessões', pages: [
           { id: 'session1', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item' },
           { id: 'docSessao02', label: 'Sessão 02: O Hospital Queimado', icon: 'S2', className: 'session-item' },
+          { id: 'docSessao03', label: 'Sessão 03: A Coleira', icon: 'S3', className: 'session-item' },
           { id: 'notes', label: 'Notas e relógios', icon: 'N', className: 'session-item' }
         ]},
         { group: 'Documentos completos', pages: [
           { id: 'docFundacao', label: 'Fundação da campanha', icon: 'MD' },
           { id: 'docPersonagens', label: 'Personagens', icon: 'MD' },
           { id: 'docGanchos', label: 'Ganchos dos personagens', icon: 'MD' },
+          { id: 'docSessaoZero', label: 'Sessão zero', icon: 'MD' },
+          { id: 'docQuemEQuem', label: 'Quem é quem', icon: 'MD' },
+          { id: 'docRoteiro', label: 'Roteiro da campanha', icon: 'MD' },
+          { id: 'docArquiteturas', label: 'Arquiteturas da campanha', icon: 'MD' },
           { id: 'docSessao01', label: 'Sessão 01 completa', icon: 'MD' },
           { id: 'docGuia', label: 'Guia de Night City 2077', icon: 'MD' },
           { id: 'docDiario', label: 'Diário da campanha', icon: 'MD' }
@@ -92,6 +97,11 @@
     const markdownDocs = {
       docFundacao: { file: 'documentos/morana/fundacao-da-campanha.md', eyebrow: 'Documento completo / segredo do mestre', title: 'Fundação da campanha', lede: 'Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais.' },
       docPersonagens: { file: 'documentos/morana/personagens-da-campanha.md', eyebrow: 'Documento completo / elenco', title: 'Personagens', lede: 'Objetivos, segredos, falas e interpretação de cada NPC.' },
+      docSessao03: { file: 'documentos/morana/sessao-03-a-coleira.md', eyebrow: 'Documento completo / Sessão 03', title: 'Sessão 03: A Coleira', lede: 'O datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto.' },
+      docSessaoZero: { file: 'documentos/morana/sessao-zero.md', eyebrow: 'Documento completo / sessão zero', title: 'Sessão zero', lede: 'Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas.' },
+      docQuemEQuem: { file: 'documentos/morana/quem-e-quem.md', eyebrow: 'Documento completo / elenco', title: 'Quem é quem', lede: 'Todas as pessoas com nome numa lista só: lado, lugar, primeira aparição, ficha.' },
+      docRoteiro: { file: 'documentos/morana/roteiro-da-campanha.md', eyebrow: 'Documento completo / roteiro', title: 'Roteiro da campanha', lede: 'Ato, sessão, fase da cidade, relógio de Sato, estágio de Morana, revelações e recompensas numa tabela.' },
+      docArquiteturas: { file: 'documentos/morana/arquiteturas-da-campanha.md', eyebrow: 'Documento completo / NET', title: 'Arquiteturas da campanha', lede: 'As arquiteturas NET do retransmissor, do Gatilho, da Coleira e do Núcleo. São as mesmas do compêndio do Foundry.' },
       docGanchos: { file: 'documentos/morana/ganchos-dos-personagens.md', eyebrow: 'Documento completo / sessão zero', title: 'Ganchos dos personagens', lede: 'Como transformar as respostas da sessão zero em ganchos pessoais ligados a Morana, com o momento em que cada um volta à mesa.' },
       docSessao01: { file: 'documentos/morana/sessao-01-a-maleta.md', eyebrow: 'Documento completo / Sessão 01', title: 'Sessão 01: A Maleta (completa)', lede: 'Roteiro completo, diálogos e fichas de combate RED da equipe de Vega.' },
       docSessao02: { file: 'documentos/morana/sessao-02-o-hospital-queimado.md', eyebrow: 'Documento completo / Sessão 02', title: 'Sessão 02: O Hospital Queimado', lede: 'Aberturas para cada desfecho da Sessão 01, o subsolo do Gatilho e a chegada de Iskra.' },
@@ -134,7 +144,7 @@
         <div class="map-filter-list" id="map-filters" aria-label="Filtrar marcadores"></div>
         <div class="campaign-map-layout">
           <div class="campaign-map-main">
-            <div class="campaign-map-canvas" id="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa interativo de Night City com locais da campanha Protocolo Morana"><image id="nightcity-map-image" href="nightcity-map-base.jpg" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div>
+            <div class="campaign-map-canvas" id="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa interativo de Night City com locais da campanha Protocolo Morana"><image id="nightcity-map-image" href="nightcity-map-base.webp" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div>
             <div class="map-legend" id="map-legend"></div>
             <p class="map-caveat">Pinos de planejamento, não coordenadas canônicas de prédios. O mapa com referências originais mantém as marcações que já vieram no arquivo; os pontos da campanha são uma camada separada.</p>
           </div>
@@ -173,20 +183,22 @@
       notes: {
         eyebrow: 'Mesa do mestre / só você vê', title: 'Notas e relógios',
         lede: 'Relógios da campanha, iniciativa, pistas descobertas, promessas e decisões para retomar na próxima sessão. Fica salvo no servidor, com o backup, e aparece igual no PC e no tablet. No fim da sessão, o bloco vira o rascunho do resumo para os jogadores (Virar rascunho de sessão), e o diário da campanha continua no .md.',
-        html: `<div class="section"><h3>Relógio de Sato</h3><p>Marque um segmento ao fim de cada sessão em que o grupo não atrapalhou o plano, e um extra quando o grupo falhar feio ou deixar uma testemunha exposta. Clique num segmento para marcá-lo; clique no último marcado para desmarcar.</p><div class="clock" id="clock-sato"></div></div><div class="section"><h3>Relógio da cidade (2077)</h3><p>Avance uma fase a cada uma ou duas sessões. Cada fase muda a segurança e quem está distraído na cidade.</p><div class="clock" id="clock-city"></div></div><div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button> <button class="action" data-session-draft type="button" title="Cria uma sessão não publicada, com este bloco, em Visão dos jogadores → Sessões">Virar rascunho de sessão</button> <button class="action" data-page="docDiario" type="button">Abrir diário da campanha</button></div>`
+        html: `<div class="section"><h3>Relógio de Sato</h3><p>Marque um segmento ao fim de cada sessão em que o grupo não atrapalhou o plano, e um extra quando o grupo falhar feio ou deixar uma testemunha exposta. Clique num segmento para marcá-lo; clique no último marcado para desmarcar.</p><div class="clock" id="clock-sato"></div></div><div class="section"><h3>Relógio da cidade (2077)</h3><p>Avance uma fase a cada uma ou duas sessões. Cada fase muda a segurança e quem está distraído na cidade.</p><div class="clock" id="clock-city"></div></div><div class="section"><h3>Estágio de Morana</h3><p>O quanto o vírus cresceu. Os segmentos 1–2 são o estágio <b>Programa</b> (teste de resistência DV 13; na falha, um implante trava por 1 rodada), 3–4 o <b>Enxame</b> (DV 15; ataca o alvo marcado mais próximo por 1d6 rodadas) e 5–6 a <b>Entidade</b> (DV 17; perde 2d6 de Humanidade e age como ciberpsico até alguém cortar a conexão).</p><p><b>Marque um segmento quando:</b> a Chave é conectada a uma rede; o Gatilho é ligado, copiado ou levado para outra rede; o relógio de Sato marca o Atentado de fachada; Sato tenta a ativação incompleta (dois de uma vez); ou o grupo deixa um surto de Fúria de Morana sem resposta por uma sessão inteira. <b>Desmarque um</b> quando o grupo isolar a Chave por uma sessão inteira (a caixa de contenção) ou destruir uma cópia. A Coleira usada no Núcleo zera o relógio, com o custo do antídoto.</p><div class="clock" id="clock-morana"></div></div><div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button> <button class="action" data-session-draft type="button" title="Cria uma sessão não publicada, com este bloco, em Visão dos jogadores → Sessões">Virar rascunho de sessão</button> <button class="action" data-page="docDiario" type="button">Abrir diário da campanha</button></div>`
       }
     };
 
     const campaignClocks = {
       sato: ['Recuperar a Chave', 'Garantir o Gatilho', 'Garantir a Coleira', 'Silenciar testemunhas', 'Atentado de fachada', 'Ativação no Núcleo'],
-      city: ['Antes do golpe', 'A noite da Konpeki', 'O Relic desperta', 'O desfile', 'Phantom Liberty', 'A eleição', 'O ataque à torre', 'Depois']
+      city: ['Antes do golpe', 'A noite da Konpeki', 'O Relic desperta', 'O desfile', 'Phantom Liberty', 'A eleição', 'O ataque à torre', 'Depois'],
+      // O estágio de Morana (guia de Night City, seção 7): dois segmentos por estágio; a DV do teste de resistência segue o estágio.
+      morana: ['Programa: a Chave chama', 'Programa: a primeira desobediência', 'Enxame: aprende com os implantes civis', 'Enxame: surto em escala de bairro', 'Entidade: toca o Núcleo ou a Blackwall', 'Entidade: age como uma IA']
     };
 
     // Página inicial: "Na mesa agora", com atalhos, as últimas páginas abertas e os relógios.
     // Montado na hora (não entra na busca); some se o navegador não guardar nada.
     function setupHomeDesk(content, { recentPages, clockState, escapeHtml }) {
-      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02']];
-      const clockNames = { sato: 'Relógio de Sato', city: 'Relógio da cidade' };
+      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02'], ['docSessao03', 'Sessão 03']];
+      const clockNames = { sato: 'Relógio de Sato', city: 'Relógio da cidade', morana: 'Estágio de Morana' };
       const recent = recentPages();
       const clocks = clockState().map(({ name, steps, value }) => `<li><b>${escapeHtml(clockNames[name] || name)}: ${value}/${steps.length}</b><br><small>${value ? `Último marcado: ${escapeHtml(steps[value - 1])}` : 'Nenhum segmento marcado'}${value < steps.length ? ` · próximo: ${escapeHtml(steps[value])}` : ''}</small></li>`).join('');
       const block = document.createElement('div');
@@ -210,6 +222,20 @@
           : '<span class="tag">Próxima sessão</span> nenhuma marcada <button class="action" type="button" data-page="agenda">Marcar</button>';
         block.querySelector('h3').after(line);
       }).catch(() => { /* sem servidor: o bloco fica sem a agenda */ });
+    }
+
+    // Livros de referência: os PDFs ficam fora do git (são grandes e de terceiros), então só existem no PC do mestre.
+    // Onde o arquivo não está (no servidor online), o link vira um aviso em vez de dar erro.
+    function setupSources(content) {
+      content.querySelectorAll('.source-link').forEach(link => {
+        fetch(link.getAttribute('href'), { method: 'HEAD', cache: 'no-store' }).then(response => {
+          if (response.ok || !link.isConnected) return;
+          const note = document.createElement('span');
+          note.className = 'source-link source-missing';
+          note.innerHTML = `${link.querySelector('b').outerHTML} Só no PC do mestre (o PDF não vai para o servidor)`;
+          link.replaceWith(note);
+        }).catch(() => {});
+      });
     }
 
     // Notas de campanha nas páginas de regras. Ficam aqui (e não nos arquivos system-*.js)
@@ -239,7 +265,7 @@
         pageContent: { ...pageContent, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages },
         clocks: campaignClocks,
         gmNotes,
-        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, ...built.pageSetup },
+        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, sources: setupSources, ...built.pageSetup },
         homePage: 'home',
         topMeta: campaign => `${campaign.name} / arquivo do mestre`.toUpperCase(),
         // Relógios e bloco de notas da campanha, no servidor (com o backup), iguais em qualquer aparelho do mestre.
