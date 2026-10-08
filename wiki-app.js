@@ -125,22 +125,91 @@
       return true;
     }
 
+    // ---------------- Barra lateral ----------------
+    // Grupos que recolhem (clique no nome do grupo; o aparelho lembra), selos de novidade nas páginas (setBadges) e
+    // o botão ☰ da barra de cima: no computador deixa a barra compacta (só os ícones); no celular abre a gaveta.
+    const narrow = window.matchMedia('(max-width: 820px)');
+    const badges = {};
+    const closedGroups = () => { try { return new Set(JSON.parse(storage.get('grupos-fechados') || '[]')); } catch { return new Set(); } };
+    const saveClosedGroups = set => storage.set('grupos-fechados', JSON.stringify([...set]));
+    const compact = () => document.body.classList.contains('sidebar-compact') && !narrow.matches;
+
     function buildNavigation() {
       const campaign = activeCampaign();
       activeCampaignId = campaign.id;
+      // key: o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela).
       const groups = currentWorkspace === 'campaigns'
-        ? campaign.groups.map((group, index) => ({ ...group, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
-        : systemSections;
+        ? campaign.groups.map((group, index) => ({ ...group, key: group.group, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
+        : systemSections.map(group => ({ ...group, key: group.group }));
       // Páginas que não existem nesta visão (ex.: só do mestre) somem do menu.
       const visibleGroups = groups.map(group => ({ ...group, pages: group.pages.filter(page => pageContent[page.id]) })).filter(group => group.pages.length);
       const campaignPicker = currentWorkspace === 'campaigns' && campaigns.length > 1
         ? `<label class="campaign-picker"><span class="nav-label">Campanha ativa</span><select id="campaign-picker">${campaigns.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === campaign.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>`
         : '';
-      navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => `<div class="nav-group"><div class="nav-label${group.campaignLabel ? ' nav-campaign' : ''}">${escapeHtml(group.group)}</div>${group.pages.map(page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"><span class="nav-icon">${page.icon}</span>${page.label}</button>`).join('')}</div>`).join('')}`;
+      const closed = closedGroups();
+      const rail = compact();
+      const item = page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"${rail ? ` title="${escapeHtml(String(page.label).replace(/<[^>]+>/g, ''))}"` : ''}><span class="nav-icon">${page.icon}</span><span class="nav-text">${page.label}</span>${badges[page.id] ? `<span class="nav-badge" aria-label="${badges[page.id]} novidade(s)">${badges[page.id]}</span>` : ''}</button>`;
+      navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => {
+        const key = `${currentWorkspace}:${group.key}`;
+        const shut = closed.has(key) && !group.pages.some(page => page.id === currentPage);
+        const news = group.pages.reduce((sum, page) => sum + (badges[page.id] || 0), 0);
+        return `<div class="nav-group${shut ? ' collapsed' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
+      }).join('')}`;
       document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
       document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
       document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
+      document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === currentPage));
     }
+    // Selos de novidade: { idDaPágina: quantidade } (0 tira o selo). A visão dos jogadores marca o que o mestre
+    // publicou desde a última vez que o jogador abriu a página.
+    function setBadges(map) {
+      Object.entries(map).forEach(([id, count]) => { if (count > 0) badges[id] = count; else delete badges[id]; });
+      buildNavigation();
+    }
+
+    // O botão ☰ (criado aqui, nas duas wikis) e o fundo escuro da gaveta do celular.
+    const menuButton = document.createElement('button');
+    menuButton.type = 'button';
+    menuButton.className = 'nav-toggle';
+    menuButton.setAttribute('aria-controls', 'navigation');
+    menuButton.innerHTML = '<span></span><span></span><span></span>';
+    document.querySelector('.topbar')?.prepend(menuButton);
+    const backdrop = document.createElement('div');
+    backdrop.className = 'nav-backdrop';
+    document.body.append(backdrop);
+    function labelMenuButton() {
+      const label = narrow.matches ? (document.body.classList.contains('sidebar-open') ? 'Fechar o menu' : 'Abrir o menu') : compact() ? 'Mostrar a barra lateral inteira ( [ )' : 'Deixar a barra lateral compacta ( [ )';
+      menuButton.setAttribute('aria-label', label);
+      menuButton.title = label;
+      menuButton.setAttribute('aria-expanded', String(narrow.matches ? document.body.classList.contains('sidebar-open') : !compact()));
+    }
+    function setCompact(on) {
+      document.body.classList.toggle('sidebar-compact', on);
+      storage.set('barra-compacta', on ? '1' : '');
+      buildNavigation();
+      labelMenuButton();
+    }
+    function setDrawer(open) {
+      document.body.classList.toggle('sidebar-open', open);
+      labelMenuButton();
+      if (open) (navigation.querySelector('.nav-item.active') || navigation.querySelector('.nav-item'))?.focus({ preventScroll: true });
+    }
+    const toggleSidebar = () => (narrow.matches ? setDrawer(!document.body.classList.contains('sidebar-open')) : setCompact(!compact()));
+    menuButton.addEventListener('click', toggleSidebar);
+    backdrop.addEventListener('click', () => setDrawer(false));
+    narrow.addEventListener('change', () => { document.body.classList.remove('sidebar-open'); buildNavigation(); labelMenuButton(); });
+    if (storage.get('barra-compacta') === '1') document.body.classList.add('sidebar-compact');
+    // Abreviação das abas para a barra compacta (CAM, SIS, REG).
+    document.querySelectorAll('.workspace-tab').forEach(tab => { tab.dataset.short = tab.textContent.trim().slice(0, 3).toUpperCase(); });
+    navigation.addEventListener('click', event => {
+      const toggle = event.target.closest('.nav-group-toggle');
+      if (!toggle) return;
+      const group = toggle.closest('.nav-group');
+      const set = closedGroups();
+      if (group.classList.toggle('collapsed')) set.add(group.dataset.groupKey); else set.delete(group.dataset.groupKey);
+      toggle.setAttribute('aria-expanded', String(!group.classList.contains('collapsed')));
+      saveClosedGroups(set);
+    });
 
     function setWorkspace(workspace) {
       if (workspace !== 'campaigns' && workspace !== 'system') return;
@@ -204,6 +273,10 @@
       if (!page.manterAlvo) rememberRecent(id);
       content.innerHTML = `<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
+      // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
+      navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
+      if (document.body.classList.contains('sidebar-open')) setDrawer(false);
+      document.dispatchEvent(new CustomEvent('wiki:pagina', { detail: { id } }));
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
       if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml });
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
@@ -1037,6 +1110,9 @@
         search.focus();
         search.select();
       }
+      // [ : barra lateral compacta (ou a gaveta, no celular). Esc fecha a gaveta.
+      if (event.key === '[' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); toggleSidebar(); }
+      if (event.key === 'Escape' && document.body.classList.contains('sidebar-open')) { setDrawer(false); menuButton.focus(); }
     });
     search.addEventListener('keydown', event => {
       if (event.key === 'Escape') { reopenCurrent(); search.blur(); }
@@ -1050,24 +1126,28 @@
         if (chosen) { event.preventDefault(); chosen.click(); search.blur(); }
       }
     });
-    navigation.addEventListener('change', async event => {
-      if (event.target.id !== 'campaign-picker') return;
-      // A página pode segurar a troca (o Publicar com alterações não publicadas): config.confirmCampaignChange.
-      const wanted = event.target.value;
-      if (config.confirmCampaignChange) {
-        event.target.value = activeCampaignId;
-        if (!(await config.confirmCampaignChange(campaigns.find(item => item.id === wanted)))) return;
-      }
+    // Troca de campanha (o seletor da barra lateral e o menu da conta). A página pode segurar a troca (o Publicar com
+    // alterações não publicadas): config.confirmCampaignChange. Na mesma página, se a campanha nova também tem
+    // (Personagens, Loja, Publicar): ela se monta de novo para a campanha nova. Senão, a página inicial da campanha.
+    async function switchCampaign(wanted) {
+      if (wanted === activeCampaignId || !campaigns.some(item => item.id === wanted)) return false;
+      if (config.confirmCampaignChange && !(await config.confirmCampaignChange(campaigns.find(item => item.id === wanted)))) return false;
       setCampaign(wanted);
-      // Na mesma página, se a campanha nova também tem (Personagens, Loja, Publicar): ela se monta de novo para a
-      // campanha nova. Senão, a página inicial da campanha.
       openPage(pagesOf(activeCampaign()).includes(currentPage) ? currentPage : homePage(), undefined, 'replace');
+      return true;
+    }
+    navigation.addEventListener('change', event => {
+      if (event.target.id !== 'campaign-picker') return;
+      const wanted = event.target.value;
+      event.target.value = activeCampaignId;
+      switchCampaign(wanted);
     });
     search.addEventListener('input', () => searchPages(search.value));
     if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
     updateStickyOffset();
     showCampaign();
     buildNavigation();
+    labelMenuButton();
     // Abre a página do endereço (link direto, recarregar) ou a inicial.
     if (pageContent[readHash().id]) routeFromHash();
     else openPage(homePage(), undefined, 'replace');
@@ -1101,7 +1181,12 @@
     // Barra lateral: a mesa do Foundry (aberta, quem está conectado e o link), entrar ou sair como mestre
     // e, para o mestre, a versão no ar. Tudo vem de config.statusUrl (api/estado).
     let installPrompt = null;
+    let lastState = null;
+    // O quadro da barra lateral é a mesa (e, para o mestre, a saúde do servidor). Quem está usando a wiki, a versão no
+    // ar, o backup, "Instalar no celular" e entrar ou sair ficam no menu da conta (conta.js), que ouve "wiki:estado".
     function drawStatus(state) {
+      lastState = state;
+      document.dispatchEvent(new CustomEvent('wiki:estado', { detail: { ...(state || {}), instalar: Boolean(installPrompt) } }));
       let box = document.getElementById('side-status');
       if (!state) { box?.remove(); return; }
       if (!box) {
@@ -1117,13 +1202,9 @@
         const [kind, text] = !mesa.online ? ['off', 'Mesa fora do ar']
           : mesa.aberta ? ['on', `Mesa aberta${mesa.campanha && campaigns.length > 1 ? `: ${mesa.campanha.nome}` : ''}${mesa.usuarios ? ` · ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
           : ['idle', 'Foundry ligado, sem mundo aberto'];
-        table = `<div class="table-status table-${kind}"><span class="table-dot" aria-hidden="true"></span><span>${escapeHtml(text)}</span></div>
+        table = `<div class="table-status table-${kind}" title="${escapeHtml(text)}"><span class="table-dot" aria-hidden="true"></span><span class="table-text">${escapeHtml(text)}</span></div>
           ${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
       }
-      const hostedGm = state.modo === 'hospedado' && state.mestre;
-      const account = hostedGm ? `<button type="button" class="side-link" data-gm-logout>Sair do modo mestre</button>${state.backup ? '<a class="side-link" href="api/backup">Baixar backup</a>' : ''}`
-        : !state.mestre && state.login ? '<a class="side-link" href="mestre">Entrar como mestre</a>' : '';
-      const version = state.mestre && state.versao ? `<small class="side-version">No ar: ${escapeHtml(state.versao.commit)} · ${new Date(state.versao.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>` : '';
       // Saúde do servidor (só para o mestre, no servidor online): em vermelho com backup de mais de 2 dias ou disco quase cheio.
       const health = state.servidor;
       let server = '';
@@ -1134,8 +1215,7 @@
         const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.moduloPendente ? 'módulo esperando a mesa vazia' : ''].filter(Boolean).join(' · ');
         server = `<details class="side-server${days > 2 || free < 0.1 ? ' side-server-bad' : ''}"><summary>Servidor: ${escapeHtml(summary)}</summary>${health.backup ? `<p>${escapeHtml(health.backup.nome)}, ${(health.backup.tamanho / 1048576).toFixed(1)} MB</p>` : ''}${health.registro.length ? `<ul>${health.registro.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '<p>Nenhuma publicação ainda.</p>'}</details>`;
       }
-      const install = installPrompt ? '<button type="button" class="side-link" data-install>Instalar no celular</button>' : '';
-      box.innerHTML = `${table}${account || version || install ? `<div class="side-meta">${account}${install}${version}</div>` : ''}${server}`;
+      box.innerHTML = `${table}${server}`;
       box.hidden = !box.innerHTML.trim();
     }
     function checkStatus() {
@@ -1153,14 +1233,15 @@
     setInterval(checkStatus, 60 * 1000);
 
     // A wiki instalada (celular ou computador): o service worker guarda as regras e o que o mestre publicou para
-    // abrir sem internet (sw.js). Quando o navegador deixa instalar, a barra lateral mostra "Instalar no celular".
+    // abrir sem internet (sw.js). Quando o navegador deixa instalar, o menu da conta mostra "Instalar no celular".
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { /* sem service worker: a wiki funciona igual, só não abre sem rede */ });
-    window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; checkStatus(); });
-    document.addEventListener('click', event => {
-      if (!event.target.closest('[data-install]') || !installPrompt) return;
+    window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; drawStatus(lastState); });
+    function install() {
+      if (!installPrompt) return;
       installPrompt.prompt();
-      installPrompt.userChoice.finally(() => { installPrompt = null; checkStatus(); });
-    });
+      installPrompt.userChoice.finally(() => { installPrompt = null; drawStatus(lastState); });
+    }
+    document.addEventListener('click', event => { if (event.target.closest('[data-install]')) install(); });
 
     // Atualiza páginas já carregadas (a visão dos jogadores recebe as novidades do mestre sem recarregar).
     function updatePages(pages) {
@@ -1177,5 +1258,21 @@
     }
 
     // activeCampaign: { id, name, color, ... } da campanha escolhida no menu (o que cada página da campanha usa).
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
+    // Voltar ao topo: aparece nas páginas longas (regras, documentos), depois de rolar uma tela e meia.
+    const toTop = document.createElement('button');
+    toTop.type = 'button';
+    toTop.className = 'to-top';
+    toTop.hidden = true;
+    toTop.title = 'Voltar ao topo';
+    toTop.setAttribute('aria-label', 'Voltar ao topo');
+    toTop.innerHTML = '<span aria-hidden="true"></span>';
+    document.body.append(toTop);
+    toTop.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); search.focus({ preventScroll: true }); });
+    window.addEventListener('scroll', () => { toTop.hidden = window.scrollY < window.innerHeight * 1.5; }, { passive: true });
+
+    // switchCampaign: troca a campanha ativa (pergunta antes, se a página pedir). setBadges: selos de novidade no menu.
+    // status: o último /api/estado. hasPage: a página existe nesta wiki (a do mestre tem páginas que a dos jogadores não tem).
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
+    // Quem depende da wiki montada (o menu da conta) começa aqui.
+    document.dispatchEvent(new Event('wiki:pronta'));
 })();

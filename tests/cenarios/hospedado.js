@@ -101,21 +101,32 @@ module.exports = async ({ edge, servidores, r }) => {
     });
 
     // ---------- Na tela ----------
-    await r.passo('jogador: barra lateral mostra a mesa aberta, o link e "Entrar como mestre"', async () => {
+    // A barra lateral mostra a mesa (e, para o mestre, o servidor); entrar, sair e a versão ficam no menu da conta.
+    const textoDe = seletor => edge.evaluate(`(document.querySelector(${JSON.stringify(seletor)})?.textContent || '').replace(/\\s+/g, ' ')`);
+    const menuDaConta = async () => {
+      await edge.evaluate(`document.querySelector('.account-button').click()`);
+      await edge.sleep(300);
+      const texto = await textoDe('.account-menu');
+      await edge.evaluate(`document.querySelector('.account-button').click()`);
+      return texto;
+    };
+    await r.passo('jogador: barra lateral mostra a mesa aberta e o link; o menu da conta tem "Entrar como mestre"', async () => {
       await edge.ir(`${base}/`, 1500);
-      const texto = (await edge.evaluate(`document.getElementById('side-status')?.textContent || ''`)).replace(/\s+/g, ' ');
+      const texto = await textoDe('#side-status');
       const link = await edge.evaluate(`document.querySelector('#side-status .table-link')?.href || ''`);
-      return [/Mesa aberta · 2 conectados/.test(texto) && link === 'https://mesa.exemplo.com/' && /Entrar como mestre/.test(texto), `${texto} · ${link}`];
+      const menu = await menuDaConta();
+      return [/Mesa aberta · 2 conectados/.test(texto) && link === 'https://mesa.exemplo.com/' && /Entrar como mestre/.test(menu), `${texto} · ${link} · menu: ${menu}`];
     });
     await edge.shot('barra-jogador');
-    await r.passo('tela /mestre: com a senha, abre a wiki do mestre com "Sair" e a versão', async () => {
+    await r.passo('tela /mestre: com a senha, abre a wiki do mestre; o menu da conta tem "Sair" e a versão', async () => {
       await edge.send('Page.navigate', { url: `${base}/mestre` });
       await edge.sleep(1200);
       await edge.evaluate(`(() => { document.getElementById('senha').value = ${JSON.stringify(SENHA)}; document.getElementById('login').requestSubmit(); })()`);
-      for (let i = 0; i < 40 && !(await edge.evaluate(`!!(window.wikiApp && document.querySelector('#content h2') && document.querySelector('[data-gm-logout]'))`).catch(() => false)); i++) await edge.sleep(200);
-      const texto = (await edge.evaluate(`document.getElementById('side-status')?.textContent || ''`)).replace(/\s+/g, ' ');
+      for (let i = 0; i < 40 && !(await edge.evaluate(`!!(window.wikiApp && document.querySelector('#content h2') && /Mestre/.test(document.querySelector('.account-button')?.textContent || '') && document.getElementById('side-status'))`).catch(() => false)); i++) await edge.sleep(200);
+      const texto = await textoDe('#side-status');
+      const menu = await menuDaConta();
       const titulo = await edge.evaluate('document.title');
-      return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(texto) && /No ar: [0-9a-f]{7,}/.test(texto) && /Servidor: backup .*módulo esperando a mesa vazia/.test(texto), `${titulo} · ${texto}`];
+      return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(menu) && /No ar: [0-9a-f]{7,}/.test(menu) && /Baixar backup/.test(menu) && /Servidor: backup .*módulo esperando a mesa vazia/.test(texto), `${titulo} · ${texto} · menu: ${menu}`];
     });
     await edge.shot('barra-mestre');
     await r.passo('página Campanhas: oferece ligar o mundo aberto no Foundry à campanha, com um clique', async () => {
@@ -137,7 +148,9 @@ module.exports = async ({ edge, servidores, r }) => {
       const texto = (await edge.evaluate(`document.getElementById('side-status')?.textContent || ''`)).replace(/\s+/g, ' ');
       return [/sem mundo aberto/.test(texto), texto];
     });
-    await r.passo('"Sair do modo mestre" volta para a visão dos jogadores', async () => {
+    await r.passo('"Sair do modo mestre" (no menu da conta) volta para a visão dos jogadores', async () => {
+      await edge.evaluate(`document.querySelector('.account-button').click()`);
+      await edge.sleep(300);
       await edge.evaluate(`document.querySelector('[data-gm-logout]').click()`);
       for (let i = 0; i < 30 && !/Jogadores/.test(await edge.evaluate('document.title').catch(() => '')); i++) await edge.sleep(200);
       return [/Jogadores/.test(await edge.evaluate('document.title')), await edge.evaluate('document.title')];

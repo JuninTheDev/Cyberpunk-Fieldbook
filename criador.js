@@ -632,14 +632,16 @@
     const characters = list.data.personagens || [];
     const mine = characters.filter(item => !item.publico);
     const others = characters.filter(item => item.publico);
-    const card = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}</small></div>
-      <div class="cc-card-actions"><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button>${papel === 'mestre' && campaignsOfMe.length > 1 ? `<button class="action" type="button" data-cc-move="${item.id}">Mover</button>` : ''}<button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
+    // O jogador escolhe com qual personagem está (o retrato no botão da conta, a Ficha e a Loja abrem nele).
+    const inUse = papel === 'jogador' && window.playerAccount ? window.playerAccount.selected() : null;
+    const card = item => `<div class="cc-card${item.id === inUse ? ' cc-selected' : ''}" data-cc-card="${item.id}">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}</small></div>
+      <div class="cc-card-actions">${papel === 'jogador' ? `<span class="cc-in-use">Em uso</span><button class="action cc-use" type="button" data-cc-select="${item.id}">Usar</button>` : ''}<button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button>${papel === 'mestre' && campaignsOfMe.length > 1 ? `<button class="action" type="button" data-cc-move="${item.id}">Mover</button>` : ''}<button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
     const publicCard = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
 
     let who = '';
     const campaignName = campaign ? esc(campaign.name) : '';
     if (papel === 'mestre') who = `<p>Você é o <b>mestre</b>: vê e edita todos os personagens.${campaign && campaignsOfMe.length > 1 ? ` Esta lista é de <b>${campaignName}</b>; troque de campanha no menu.` : ''}</p>`;
-    else if (papel === 'jogador') who = `<p>Você entrou como <b>${esc(me.data.jogador.nome)}</b>${campaign && campaignsOfMe.length > 1 ? `, em <b>${campaignName}</b> (troque de campanha no menu)` : ''}. <button class="action" type="button" data-cc-logout>Sair</button></p>${campaignsOfMe.length ? '' : '<p class="note-status">Você ainda não está em nenhuma campanha. Fale com o mestre.</p>'}`;
+    else if (papel === 'jogador') who = campaignsOfMe.length ? '' : '<p>Você ainda não está em nenhuma campanha. Fale com o mestre.</p>';
     else who = `<p>Para criar ou editar o seu personagem, entre com o código que o mestre te passou. Este aparelho lembra dele.</p><form class="cc-login" data-cc-login><input id="cc-code" autocomplete="off" placeholder="NC-XXXX-XXXX" aria-label="Código do jogador"><button class="action" type="submit">Entrar</button></form><p class="cc-msg" id="cc-login-msg"></p>`;
 
     const canCreate = papel === 'mestre' || (papel === 'jogador' && campaignsOfMe.length > 0);
@@ -648,7 +650,7 @@
     // Pedidos da campanha esperando o mestre (aprova na Loja do personagem) ou o Foundry (entrega quando o mundo abrir).
     const withOrders = mine.filter(item => item.pedidos && (item.pedidos.pendentes || item.pedidos.aprovados));
     const ordersBox = papel === 'mestre' && withOrders.length ? box('Pedidos da campanha', `<ul>${withOrders.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${[item.pedidos.pendentes ? `${item.pedidos.pendentes} esperando você` : '', item.pedidos.aprovados ? `${item.pedidos.aprovados} aprovado${item.pedidos.aprovados > 1 ? 's' : ''}, esperando o Foundry entregar` : ''].filter(Boolean).join(' · ')} <button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Abrir</button></li>`).join('')}</ul><p class="note-status">Aprove ou recuse na Loja do personagem (ou na janela Personagens da wiki, no Foundry). O Foundry entrega o que foi aprovado assim que o mundo estiver aberto.</p>`, ' data-cc-orders-gm') : '';
-    root.innerHTML = `${waitingBox}${ordersBox}${box('Quem é você', who)}
+    root.innerHTML = `${waitingBox}${ordersBox}${who ? box(papel === 'jogador' ? 'Sem campanha' : 'Quem é você', who) : ''}
       ${canCreate ? box(papel === 'mestre' ? (campaign && campaignsOfMe.length > 1 ? `Personagens de ${campaignName}` : 'Todos os personagens') : 'Meus personagens', `${mine.length ? mine.map(card).join('') : '<p class="note-status">Nenhum personagem ainda.</p>'}<p><button class="action" type="button" data-cc-new>Novo personagem</button></p>`) : ''}
       ${others.length ? box('O grupo', others.map(publicCard).join('')) : ''}
       ${papel === 'mestre' ? box(campaign && campaignsOfMe.length > 1 ? `Códigos dos jogadores de ${campaignName}` : 'Códigos dos jogadores', '<div id="cc-accounts">Carregando…</div>') : ''}`;
@@ -657,10 +659,14 @@
     root.onclick = async event => {
       const open = event.target.closest('[data-cc-open]');
       if (open) return helpers.openPage(open.dataset.ccOpen, { section: open.dataset.id });
-      if (event.target.closest('[data-cc-logout]')) { await api('api/sair', { method: 'POST', body: {} }); return location.reload(); }
+      const use = event.target.closest('[data-cc-select]');
+      if (use && window.playerAccount) return window.playerAccount.select(use.dataset.ccSelect);
       if (event.target.closest('[data-cc-new]')) {
         const created = await api('api/personagens', { method: 'POST', body: { ...blank(), ...(campaign ? { campanha: campaign.id } : {}) } });
-        if (created.status === 201) return helpers.openPage('criador', { section: created.data.personagem.id });
+        if (created.status === 201) {
+          if (papel === 'jogador' && window.playerAccount) { await window.playerAccount.refresh(); window.playerAccount.select(created.data.personagem.id); }
+          return helpers.openPage('criador', { section: created.data.personagem.id });
+        }
         return wikiPopup.toast(created.data.erro || 'Não consegui criar o personagem.', { tone: 'bad' });
       }
       // Crossover: o mestre leva o personagem para outra campanha (o dono passa a jogar nela também).
@@ -686,6 +692,7 @@
         const answer = await api(`api/personagens/${remove.dataset.ccDelete}`, { method: 'DELETE' });
         if (answer.status !== 200) return wikiPopup.toast(answer.data.erro || 'Não consegui apagar.', { tone: 'bad' });
         wikiPopup.toast(item.nome ? `Personagem ${item.nome} apagado.` : 'Personagem apagado.', { tone: 'ok' });
+        if (window.playerAccount) await window.playerAccount.refresh();
         return helpers.openPage('personagens', undefined, 'replace');
       }
     };
@@ -951,8 +958,8 @@
     esc = helpers.escapeHtml;
     const token = ++renderToken;
     const root = content.querySelector('#cc-root');
-    const id = helpers.target && helpers.target.section;
-    if (!id) { root.innerHTML = '<p>Escolha um personagem em Personagens.</p>'; return; }
+    const id = (helpers.target && helpers.target.section) || (window.playerAccount && window.playerAccount.selected());
+    if (!id) { root.innerHTML = '<p>Escolha um personagem em Personagens (ou no menu da conta, no canto de cima).</p>'; return; }
     const [answer, me] = await Promise.all([api(`api/personagens/${id}`), identity()]);
     if (token !== renderToken) return;
     if (!answer.status) { root.innerHTML = offline; return; }
@@ -1402,6 +1409,8 @@
         doc.versao = answer.data.personagem.versao;
         doc.atualizado = answer.data.personagem.atualizado;
         doc.estadoFoundry = answer.data.personagem.estadoFoundry;
+        // O botão da conta mostra o nome e o retrato do personagem em uso.
+        if (window.playerAccount) window.playerAccount.update(answer.data.personagem);
         storage.set(draftKey, '');
         onSaved();
         show(`Salvo às ${new Date(doc.atualizado).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 'ok');
@@ -1636,6 +1645,7 @@
         const answer = await api(`api/personagens/${doc.id}/retrato`, { method: 'POST', body: { imagem } });
         if (answer.status !== 200) throw new Error(answer.data.erro || 'Não consegui enviar.');
         doc.retrato = answer.data.retrato;
+        if (window.playerAccount) window.playerAccount.update({ id: doc.id, retrato: doc.retrato });
         draw(); changed();
       } catch (error) {
         const current = root.querySelector('[data-portrait-msg]');
@@ -1850,6 +1860,7 @@
         api(`api/personagens/${doc.id}/retrato`, { method: 'DELETE' }).then(answer => {
           if (answer.status !== 200) { const msg = root.querySelector('[data-portrait-msg]'); if (msg) msg.textContent = answer.data.erro || 'Não consegui tirar.'; return; }
           doc.retrato = null; doc.retratoLink = ''; draw(); changed();
+          if (window.playerAccount) window.playerAccount.update({ id: doc.id, retrato: '' });
         });
         return;
       }
@@ -1972,7 +1983,8 @@
     if (!me.status) { root.innerHTML = offline; return; }
     const gm = me.data.papel === 'mestre';
     const mine = (list.data.personagens || []).filter(item => !item.publico);
-    const chosen = (helpers.target && helpers.target.section) || (mine[0] || {}).id;
+    const inUse = window.playerAccount && window.playerAccount.selected();
+    const chosen = (helpers.target && helpers.target.section) || (mine.some(item => item.id === inUse) ? inUse : (mine[0] || {}).id);
     // As regras da loja de criação ficam atrás da engrenagem, fora do redesenho da loja (o que o mestre digita não se perde).
     const ruleCount = () => `${shopRules.liberados.length} liberados e ${shopRules.bloqueados.length} escondidos um a um (botões Liberar e Esconder na lista).`;
     const rulesPanel = gm ? `<div class="cc-shop-panel cc-rules-panel" data-cc-rules hidden><h4>Regras da loja de criação</h4>
@@ -2030,6 +2042,12 @@
     const saver = createSaver(doc, root.querySelector('#cc-save'), helpers.storage);
     view = renderShop(shopEl, doc, { onChange: () => saver.changed(), readOnly: Boolean(doc.foundry), gm, onRules });
   }
+
+  // O personagem em uso mudou (no menu da conta): a lista de Personagens marca o novo.
+  document.addEventListener('wiki:personagem', event => {
+    const id = event.detail && event.detail.id;
+    document.querySelectorAll('[data-cc-card]').forEach(card => card.classList.toggle('cc-selected', card.dataset.ccCard === id));
+  });
 
   // ---------------- Páginas ----------------
   const holder = '<div id="cc-root">Carregando…</div>';

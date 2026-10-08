@@ -36,14 +36,16 @@ module.exports = async ({ edge, servidores, r }) => {
     return [temCampo && /não encontrado/i.test(await texto('#cc-login-msg')), await texto('#cc-login-msg')];
   });
   // Entrar recarrega a página (o menu passa a ter as campanhas do jogador): espera a lista voltar.
-  const esperarLista = async () => { for (let i = 0; i < 40 && !/Você entrou como/.test(await texto('#cc-root').catch(() => '')); i++) await edge.sleep(200); };
+  const esperarLista = async () => { for (let i = 0; i < 40 && !/Meus personagens/.test(await texto('#cc-root').catch(() => '')); i++) await edge.sleep(200); };
   await r.passo('com o código certo, entra e vê "Meus personagens"', async () => {
     await digitar('#cc-code', conta.codigo);
     await edge.evaluate(`document.querySelector('[data-cc-login]').requestSubmit()`);
     await edge.sleep(400);
     await esperarLista();
     const t = await texto('#cc-root');
-    return [/Você entrou como Ana/.test(t) && /Meus personagens/.test(t), t.slice(0, 80)];
+    for (let i = 0; i < 20 && !/Ana/.test(await texto('.account-button')); i++) await edge.sleep(200);
+    const botao = await texto('.account-button');
+    return [/Ana/.test(botao) && /Meus personagens/.test(t) && !/NC-XXXX/.test(await edge.evaluate(`document.getElementById('cc-root').innerHTML`)), `conta: ${botao} · ${t.slice(0, 60)}`];
   });
 
   let soloId;

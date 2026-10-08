@@ -45,6 +45,7 @@
   <script src="loja-catalogo.js"></script>
   <script src="popup.js"></script>
   <script src="criador.js"></script>
+  <script src="conta.js"></script>
   <script>
     // Visão dos jogadores: o conteúdo de campanha vem da API (api/visao), publicado pelo mestre, e só das campanhas em
     // que este jogador joga (api/eu diz quais). Sem código, só as regras.
@@ -57,6 +58,8 @@
       { id: 'pvNews', label: 'Notícias e handouts', icon: 'N' },
       { id: 'pvNightCity', label: 'Notícias de Night City', icon: 'N54' }
     ]}, { group: 'Personagens', pages: [
+      // Ficha e Loja abrem no personagem em uso (o do botão da conta, no canto de cima).
+      { id: 'ficha', label: 'Ficha', icon: 'ID' },
       { id: 'personagens', label: 'Personagens', icon: 'PC' },
       { id: 'loja', label: 'Loja', icon: 'EB' }
     ]}];
@@ -94,13 +97,57 @@
       const me = window.playerIdentity;
       let lastUpdate = null;
 
+      // ---------------- Novidades ----------------
+      // O que o mestre publicou desde a última vez que este aparelho abriu cada página: selo no menu e "novo" no item.
+      // Na primeira vez neste aparelho, nada é novidade.
+      const NEWS_PAGES = { pvPeople: 'npcs', pvMap: 'lugares', pvNews: 'noticias', pvNightCity: 'nightCity' };
+      const itemKey = item => String(item.id || item.titulo || item.nome || '');
+      let currentIds = {};
+      const seenKey = () => `night-city-jogadores-vistos-${window.wikiApp.activeCampaign().id}`;
+      const readSeen = () => { try { return JSON.parse(localStorage.getItem(seenKey()) || 'null'); } catch { return null; } };
+      const writeSeen = seen => { try { localStorage.setItem(seenKey(), JSON.stringify(seen)); } catch { /* sem armazenamento: sem selos */ } };
+      function markSeen(page) {
+        if (!NEWS_PAGES[page] || !currentIds[page]) return;
+        writeSeen({ ...(readSeen() || {}), [page]: currentIds[page] });
+        window.wikiApp.setBadges({ [page]: 0 });
+      }
+      function updateBadges() {
+        const seen = readSeen() || {};
+        const open = window.wikiApp.currentPage();
+        window.wikiApp.setBadges(Object.fromEntries(Object.keys(NEWS_PAGES).map(page => [page, page === open ? 0 : (currentIds[page] || []).filter(id => !(seen[page] || []).includes(id)).length])));
+        markSeen(open);
+      }
+      document.addEventListener('wiki:pagina', event => markSeen(event.detail.id));
+
+      // ---------------- Seu personagem ----------------
+      // O personagem em uso (o do botão da conta), no topo do Resumo, com a ficha e a loja a um clique.
+      function renderMe(content = document.getElementById('content')) {
+        const holder = content && content.querySelector('#pv-me');
+        if (!holder) return;
+        const account = window.playerAccount;
+        if (!account || account.papel() !== 'jogador') { holder.innerHTML = ''; return; }
+        const doc = account.selectedDoc();
+        const hp = doc && doc.mesa && doc.mesa.hp ? ` · HP ${doc.mesa.hp.atual}/${doc.mesa.hp.max} na mesa` : '';
+        holder.innerHTML = doc
+          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.roleName(doc.role) || 'sem Role')}${escapeHtml(hp)}</p></div><div class="pv-me-actions"><button class="action" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action" type="button" data-pv-switch>Trocar</button></div></div>`
+          : '<div class="pv-me-card pv-me-empty"><div class="pv-me-text"><span class="tag">Seu personagem</span><h3>Nenhum ainda</h3><p>Crie o seu personagem para esta campanha. O mestre leva para o Foundry quando estiver pronto.</p></div><div class="pv-me-actions"><button class="action" type="button" data-pv-new>Criar personagem</button></div></div>';
+      }
+      document.addEventListener('wiki:personagem', () => renderMe());
+      document.addEventListener('click', event => {
+        // Abre o menu da conta depois deste clique (senão o próprio clique, fora do menu, o fecharia).
+        if (event.target.closest('[data-pv-switch]')) setTimeout(() => window.playerAccount && window.playerAccount.open(), 0);
+        if (event.target.closest('[data-pv-new]')) setTimeout(() => { window.playerAccount && window.playerAccount.open(); document.querySelector('[data-account-new]')?.click(); }, 0);
+      });
+
       const mapHtml = hasPlaces => `${hasPlaces ? '' : '<div class="callout">Nenhum lugar marcado ainda. Eles aparecem aqui conforme o grupo descobre.</div>'}
         <div class="map-toolbar"><div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div></div>
         <div class="map-filter-list" id="map-filters" hidden></div>
         <div class="campaign-map-layout"><div class="campaign-map-main"><div class="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa de Night City com os lugares que o grupo conhece"><image id="nightcity-map-image" href="nightcity-map-base.jpg" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div><div class="map-legend" id="map-legend"></div></div>
         <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><h3>Escolha um ponto</h3></div><div class="map-marker-list" id="map-marker-list"></div></section></div>`;
 
-      function buildPages(data) {
+      function buildPages(data, seen) {
+        const fresh = (page, item) => Boolean(seen) && !(seen[page] || []).includes(itemKey(item));
+        const tag = (page, item) => (fresh(page, item) ? ' <span class="pv-new">novo</span>' : '');
         const people = data.npcs || [];
         const places = data.lugares || [];
         const news = data.noticias || [];
@@ -112,17 +159,17 @@
           categories: { lugar: { label: 'Lugar que o grupo conhece', color: '#00ffd2' } },
           markers: places.map((place, index) => ({ id: place.id || `lugar-${index}`, code: String(index + 1), title: place.nome || 'Lugar', district: place.distrito || '', x: Number(place.x) || 0, y: Number(place.y) || 0, category: 'lugar', detail: place.texto || '' }))
         };
-        const newsHtml = items => items.map(item => `<div class="section" data-toc="${escapeHtml(item.titulo || 'Notícia')}"><h3>${escapeHtml(item.titulo || 'Notícia')}</h3>${item.data ? `<p class="pv-news-date">${escapeHtml(item.data)}</p>` : ''}<div class="md-doc">${renderMarkdown(item.texto || '')}</div></div>`).join('');
+        const newsHtml = (items, page) => items.map(item => `<div class="section" data-toc="${escapeHtml(item.titulo || 'Notícia')}"><h3>${escapeHtml(item.titulo || 'Notícia')}${tag(page, item)}</h3>${item.data ? `<p class="pv-news-date">${escapeHtml(item.data)}</p>` : ''}<div class="md-doc">${renderMarkdown(item.texto || '')}</div></div>`).join('');
         return {
           pvHome: {
             eyebrow: `${escapeHtml(name)}${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
             lede: 'Resumo da campanha até agora, publicado pelo mestre. Esta página se atualiza sozinha.',
-            html: `<div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
+            html: `<div id="pv-me"></div><div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
           },
           pvPeople: {
             eyebrow: `${escapeHtml(name)} / pessoas`, title: 'Pessoas',
             lede: 'Quem o grupo já conheceu e o que sabe sobre cada um.',
-            html: people.length ? `<div class="cards">${people.map(person => `<div class="person"><h3>${escapeHtml(person.nome)}</h3>${person.papel ? `<div class="role">${escapeHtml(person.papel)}</div>` : ''}<div class="md-doc">${renderMarkdown(person.texto || '')}</div></div>`).join('')}</div>` : '<div class="callout">Ninguém ainda. As pessoas aparecem aqui conforme o grupo as conhece.</div>'
+            html: people.length ? `<div class="cards">${people.map(person => `<div class="person"><h3>${escapeHtml(person.nome)}${tag('pvPeople', person)}</h3>${person.papel ? `<div class="role">${escapeHtml(person.papel)}</div>` : ''}<div class="md-doc">${renderMarkdown(person.texto || '')}</div></div>`).join('')}</div>` : '<div class="callout">Ninguém ainda. As pessoas aparecem aqui conforme o grupo as conhece.</div>'
           },
           pvMap: {
             eyebrow: `${escapeHtml(name)} / mapa`, title: 'Night City',
@@ -132,12 +179,12 @@
           pvNews: {
             eyebrow: `${escapeHtml(name)} / notícias`, title: 'Notícias e handouts',
             lede: 'Boletins, mensagens e documentos que o grupo recebeu. Os mais recentes primeiro.',
-            html: news.length ? newsHtml(news) : '<div class="callout">Nenhuma notícia ainda.</div>'
+            html: news.length ? newsHtml(news, 'pvNews') : '<div class="callout">Nenhuma notícia ainda.</div>'
           },
           pvNightCity: {
             eyebrow: 'Night City / N54 News', title: 'Notícias de Night City',
             lede: 'O que a cidade inteira está comentando: boletins, manchetes e rumores. Os mais recentes primeiro.',
-            html: city.length ? newsHtml(city) : '<div class="callout">Nenhuma notícia da cidade ainda.</div>'
+            html: city.length ? newsHtml(city, 'pvNightCity') : '<div class="callout">Nenhuma notícia da cidade ainda.</div>'
           }
         };
       }
@@ -160,6 +207,7 @@
       // Entrar pela página inicial: o menu passa a ter as campanhas do jogador.
       window.playerView = {
         setupHome(content) {
+          renderMe(content);
           const form = content.querySelector('[data-pv-login]');
           if (!form) return;
           form.onsubmit = async event => {
@@ -198,7 +246,12 @@
             if (data.atualizado && data.atualizado === lastUpdate) return;
             const first = lastUpdate === null;
             lastUpdate = data.atualizado || '';
-            updatePages(buildPages(data));
+            currentIds = Object.fromEntries(Object.entries(NEWS_PAGES).map(([page, list]) => [page, (data[list] || []).map(itemKey).filter(Boolean)]));
+            let seen = readSeen();
+            if (!seen) { seen = currentIds; writeSeen(seen); }
+            updatePages(buildPages(data, seen));
+            updateBadges();
+            renderMe();
             if (!first) toast('O mestre publicou novidades');
           })
           .catch(() => {
@@ -210,6 +263,8 @@
       // Trocou de campanha no menu: lê a nova do zero.
       document.addEventListener('wiki:campanha', () => {
         lastUpdate = null;
+        currentIds = {};
+        window.wikiApp.setBadges(Object.fromEntries(Object.keys(NEWS_PAGES).map(page => [page, 0])));
         window.playerMapData = null;
         updatePages({ pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') });
         refresh();

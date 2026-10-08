@@ -11,10 +11,10 @@ A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre liga
   - Ele mostra o que mudou, pede uma descrição curta e manda para o GitHub.
   - Ele espera a versão nova aparecer na wiki online, o que leva até 1 minuto.
 - **Mestre:** entra por `https://wiki.SEUDOMINIO/mestre`, com a senha. O aparelho fica lembrado por um ano.
-  - Na barra lateral ficam **Sair do modo mestre**, **Baixar backup** (o servidor faz um por dia) e a versão no ar.
+  - No menu da conta (o botão **Mestre**, no canto de cima) ficam **Sair do modo mestre**, **Baixar backup** (o servidor faz um por dia) e a versão no ar.
 - **Mesa:** a barra lateral das duas wikis mostra se a mesa está aberta e quantos estão conectados, e tem o botão **Entrar na mesa**. Com o mundo ligado a uma campanha, diz de qual campanha é a mesa, e só quem joga nela a vê aberta.
 - **Servidor, para o mestre:** a barra lateral resume o último backup, o disco livre, se o módulo do Foundry está esperando a mesa vazia e as últimas publicações. Fica em vermelho com backup de mais de 2 dias ou disco com menos de 10% livre.
-- **No celular, como app:** na barra lateral aparece **Instalar no celular** (Android e computador; no iPhone, Compartilhar → Adicionar à Tela de Início).
+- **No celular, como app:** no menu da conta (canto de cima) aparece **Instalar no celular** (Android e computador; no iPhone, Compartilhar → Adicionar à Tela de Início).
   - Instalada ou não, a wiki guarda no aparelho as regras e o que o mestre publicou nas campanhas do jogador, e abre sem internet. Os personagens e a loja precisam de rede.
   - Com rede, ela sempre busca a versão nova primeiro.
   - A wiki do mestre nunca fica guardada no aparelho.
@@ -72,7 +72,7 @@ Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os j
 - **Nota do mestre** (campo tracejado em vermelho): lembretes seus, como o nome verdadeiro de um NPC. Nunca vai para os jogadores: o servidor tira as notas e o que não foi revelado antes de mandar.
 - Clique em **Publicar**. A página dos jogadores se atualiza sozinha em até 15 segundos e avisa "O mestre publicou novidades". Trocar de campanha com alterações não publicadas pergunta antes.
 
-Os jogadores entram com o código deles (na página inicial ou em Personagens). Sem código, a pessoa vê só a aba **Regras**.
+Os jogadores entram com o código deles pelo botão **Entrar**, no canto de cima (ou na página inicial). Sem código, a pessoa vê só a aba **Regras**. Veja **Conta e navegação**.
 
 Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, netrunning, armas, cyberware...), sem as notas de campanha. Nas páginas de regras da wiki do mestre, essas notas aparecem com **contorno tracejado vermelho**: é o que só você vê. Elas ficam no `index.html` (em `gmNotes`), e não nos arquivos `system-*.js`, que os jogadores baixam.
 
@@ -127,6 +127,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores e decide quem vê o quê em cada campanha. |
 | `api-campanhas.js` | A lista de campanhas, o Publicar e as regras da loja de cada uma e as Notícias de Night City (`campanhas.json`, `campanhas/`, `noticias-night-city.json`, na pasta de dados, fora do git). |
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
+| `conta.js` | O botão da conta no canto de cima (as duas wikis): entrar, o personagem em uso, novo personagem, trocar de campanha e sair; para o mestre, atalhos, versão, backup e sair. |
 | `popup.js` | Os pop-ups da wiki (confirmar, escrever um motivo, copiar um código) e os avisos rápidos no canto, no lugar das caixas do navegador. |
 | `system-criacao.js` | Regras de criação: Roles de 2077, tabelas de STAT, perícias e pacotes de cada Role. |
 | `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
@@ -165,7 +166,7 @@ Veja o README da pasta.
 Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens ficam salvos no servidor da wiki.
 
 1. **Códigos:** na wiki do mestre, em **Campanha → Personagens e códigos**, crie um código para cada jogador (por exemplo, `NC-7F3K-9QAB`) e passe a ele. O código já entra na campanha escolhida no menu.
-2. **Criar:** o jogador abre a wiki dos jogadores, entra em **Personagens**, digita o código uma vez (o aparelho lembra) e clica em **Novo personagem**.
+2. **Criar:** o jogador abre a wiki dos jogadores, clica em **Entrar** (canto de cima), digita o código uma vez (o aparelho lembra) e, no mesmo menu, clica em **Novo personagem**.
    - **Os passos:** identidade e Role, STATs, perícias, Lifepath, equipamento, moradia e revisão.
    - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 9 Roles de 2077 e o cyberware grátis de 2077.
    - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
@@ -243,6 +244,21 @@ Notas:
   - Apagar um personagem move o arquivo para `personagens/apagados/`.
 - **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros jogadores da mesma campanha, só nome, apelido, Role e retrato. De outra campanha, nada. Sem código, nenhum personagem. O mestre vê e edita todos.
 
+## Conta e navegação
+
+- **O botão da conta** fica no canto de cima, à direita, nas duas wikis.
+  - **Sem código:** **Entrar**, com o código que o mestre passou (o aparelho lembra).
+  - **Jogador:** mostra o retrato (ou as iniciais) do **personagem em uso**. O menu troca de personagem, cria um novo, abre Ficha, Editar e Loja, troca de campanha (quem joga em mais de uma) e tem **Sair**.
+  - **O personagem em uso** é um por campanha, lembrado no aparelho. A **Ficha** e a **Loja** do menu lateral abrem nele, o **Resumo** mostra o cartão "Seu personagem" e a lista de Personagens marca "Em uso" (o botão **Usar** troca).
+  - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
+- **Barra lateral:**
+  - **Grupos que recolhem:** clique no nome do grupo. O aparelho lembra; abrir uma página de um grupo recolhido mostra o grupo.
+  - **Barra compacta:** o botão ☰ (ou a tecla **[**) deixa só os ícones; parar o mouse num ícone mostra o nome. O aparelho lembra.
+  - **No celular,** a barra lateral é uma gaveta: o ☰ abre, escolher uma página fecha. O conteúdo começa logo abaixo da barra de cima.
+  - **Mesa:** o quadro no topo diz se a mesa está aberta (e de qual campanha), com **Entrar na mesa**; para o mestre, também a saúde do servidor.
+- **Novidades (visão dos jogadores):** pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. Abrir a página tira o selo.
+- **Voltar ao topo:** nas páginas longas, um botão no canto de baixo.
+
 ## Consulta durante a sessão
 
 - **Início do mestre:** a faixa **Na mesa agora** tem atalhos (Escudo, Fichas de NPC, Encontros, Combate, Glossário, Índice, sessões), as últimas páginas abertas e o estado dos relógios de Sato e da cidade.
@@ -276,7 +292,7 @@ Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 node tests/rodar.js
 ```
 
-Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8772), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8773), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), a conta e a barra lateral (personagem em uso, barra compacta, gaveta do celular), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
 
 **Teste do Foundry** (`node tests/rodar.js foundry`): importa personagens feitos na wiki de teste num Foundry de verdade e confere o ator.
 - **Onde roda:** usa o Foundry instalado no PC, sem janela, na porta 30999. Os dados ficam numa pasta própria, `%LOCALAPPDATA%\FieldbookTeste\foundry`, que nunca toca nos seus mundos.

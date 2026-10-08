@@ -275,7 +275,7 @@ module.exports = async ({ edge, r }) => {
       await entrarNaTela(bia.codigo);
       const estado = await edge.evaluate(`({ seletor: !!document.getElementById('campaign-picker'), rotulo: document.querySelector('.nav-campaign').textContent, topo: document.querySelector('.top-meta').textContent })`);
       await edge.evaluate(`wikiApp.openPage('personagens')`);
-      for (let i = 0; i < 25 && !/Você entrou como/.test(await edge.evaluate(`document.getElementById('cc-root').textContent`)); i++) await edge.sleep(200);
+      for (let i = 0; i < 25 && !/Meus personagens/.test(await edge.evaluate(`document.getElementById('cc-root').textContent`)); i++) await edge.sleep(200);
       const nomes = await edge.evaluate(`[...document.querySelectorAll('.cc-card strong')].map(s => s.textContent).sort().join()`);
       const tela = await edge.evaluate(`document.body.innerText`);
       const vazou = tela.match(/.{0,60}(Velho|Caio em Night City|Morana|Protocolo|Night City, 2077).{0,30}/);

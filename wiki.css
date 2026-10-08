@@ -102,16 +102,9 @@ summary { color: var(--cyan); cursor: pointer; }
 .note-status { color: var(--muted); font: 11px var(--mono); }
 .empty { margin-top: 20px; padding: 18px; border: 1px dashed var(--line); color: var(--muted); }
 @media (max-width: 820px) {
-  .shell { grid-template-columns: 1fr; }
-  aside { position: relative; height: auto; padding: 12px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .brand { padding: 4px 7px 10px; }
-  .brand h1 { font-size: 21px; }
-  .workspace-tabs { margin: 8px 0; }
-  .nav-group { display: flex; gap: 4px; margin-top: 9px; overflow-x: auto; }
-  .nav-label { display: none; }
-  .nav-item { width: auto; flex: 0 0 auto; padding: 8px; white-space: nowrap; }
-  .nav-icon { display: none; }
-  .topbar { top: 0; padding: 10px 13px; }
+  /* No celular, a barra lateral é uma gaveta: o ☰ da barra de cima abre, escolher uma página fecha. */
+  .shell, body .shell { grid-template-columns: 1fr; }
+  .topbar { top: 0; gap: 9px; padding: 9px 11px; }
   .top-meta { display: none; }
   .content { padding-top: 26px; }
   .tile { grid-column: span 6; }
@@ -767,3 +760,113 @@ dialog.popup.popup-closing::backdrop { animation: popup-fade 120ms ease-in rever
   .popup-buttons .action { flex: 1 1 auto; padding: 11px 14px; }
   .toast-stack { right: 16px; bottom: 16px; }
 }
+
+/* ---------------- Barra de cima: o ☰ e a conta (conta.js) ---------------- */
+.nav-toggle { flex: 0 0 auto; display: inline-grid; align-content: center; gap: 4px; width: 38px; height: 38px; padding: 0 9px; border: 1px solid #3b4242; background: #141819; cursor: pointer; }
+.nav-toggle span { display: block; height: 2px; background: var(--yellow); transition: width 0.15s; }
+.nav-toggle:hover, .nav-toggle:focus-visible { border-color: var(--cyan); outline: none; }
+.nav-toggle:hover span, .nav-toggle:focus-visible span { background: var(--cyan); }
+body.sidebar-compact .nav-toggle span:nth-child(2) { width: 60%; }
+.account { position: relative; flex: 0 0 auto; }
+.account-button { display: flex; align-items: center; gap: 9px; max-width: 250px; padding: 3px 12px 3px 3px; border: 1px solid #3b4242; background: #141819; color: var(--text); cursor: pointer; text-align: left; clip-path: polygon(0 0, 100% 0, 100% 72%, calc(100% - 10px) 100%, 0 100%); }
+.account-button:hover, .account-button:focus-visible, .account.open .account-button { border-color: var(--campanha-cor, var(--cyan)); outline: none; }
+.account-avatar { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; overflow: hidden; border: 1px solid var(--campanha-cor, var(--cyan)); background: #0b0d0f; }
+.account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.account-avatar-sm { width: 30px; height: 30px; }
+.account-initials { background: var(--campanha-cor, var(--cyan)); color: #090b0c; font: 700 12px Oxanium, Consolas, monospace; }
+.account-gm { border-color: var(--yellow); background: var(--yellow); }
+.account-icon { color: var(--cyan); }
+.account-icon svg { width: 20px; height: 20px; }
+.account-name { display: grid; min-width: 0; line-height: 1.2; }
+.account-name b { overflow: hidden; color: var(--text); font: 13px Oxanium, Consolas, monospace; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.account-name small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.account-caret { flex: 0 0 auto; width: 7px; height: 7px; margin-left: 2px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
+.account-menu { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: min(330px, calc(100vw - 22px)); max-height: calc(100vh - 90px); overflow-y: auto; padding: 12px; border: 1px solid #3b4242; border-top: 2px solid var(--campanha-cor, var(--yellow)); background: #111516; box-shadow: 0 18px 40px rgb(0 0 0 / 55%); }
+.account-head { margin: 0 0 8px; color: var(--text); font: 14px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.account-head small { display: block; color: var(--campanha-cor, var(--cyan)); font-size: 11px; }
+.account-section { padding: 8px 0; border-top: 1px solid #262c2c; }
+.account-label { margin: 0 0 5px; color: var(--yellow); font: 10px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.account-item { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 8px; border: 0; background: transparent; color: #cdd6cf; cursor: pointer; font: 14px BlenderProBook, 'Segoe UI', sans-serif; text-align: left; text-decoration: none; }
+.account-item:hover, .account-item:focus-visible { background: #1d2324; color: var(--text); outline: none; }
+.account-item[aria-current="true"] { background: #1a2021; box-shadow: inset 3px 0 var(--campanha-cor, var(--yellow)); color: var(--text); }
+.account-item:disabled { opacity: 0.6; cursor: wait; }
+.account-character > span:last-child { display: grid; min-width: 0; }
+.account-character small { color: var(--muted); font-size: 12px; }
+.account-new { color: var(--cyan); }
+.account-danger { color: var(--coral); }
+.account-swatch { flex: 0 0 auto; width: 10px; height: 10px; }
+.account-actions { display: flex; gap: 6px; padding: 2px 0 10px; }
+.account-actions .action { flex: 1; margin: 0; }
+.account-login label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+.account-login div { display: flex; gap: 6px; }
+.account-login input { flex: 1; min-width: 0; padding: 8px 9px; border: 1px solid #3b4443; background: #0f1314; color: var(--text); }
+.account-login input:focus { border-color: var(--cyan); outline: none; }
+.account-login .action { margin: 0; }
+.account-msg { min-height: 1em; margin: 6px 0; color: var(--coral); font-size: 13px; }
+.account-note { margin: 6px 0; color: var(--muted); font-size: 12px; }
+
+/* ---------------- Barra lateral: mais curta, grupos que recolhem, selos ---------------- */
+.brand { padding: 4px 12px 14px; }
+.brand h1 { margin-top: 8px; font-size: 20px; }
+.brand p { display: none; }
+.side-status { margin-top: 12px; }
+.nav-group { margin-top: 12px; }
+button.nav-group-toggle { display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 12px 6px; border: 0; background: none; cursor: pointer; text-align: left; }
+button.nav-group-toggle:hover, button.nav-group-toggle:focus-visible { color: var(--cyan); outline: none; }
+.nav-chevron { flex: 0 0 auto; width: 6px; height: 6px; margin-left: auto; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; opacity: 0.7; transform: rotate(45deg); transition: transform 0.15s; }
+.nav-group.collapsed .nav-chevron { transform: rotate(-45deg); }
+.nav-group.collapsed .nav-items { display: none; }
+.nav-item { padding: 7px 11px; }
+.nav-text { flex: 1; min-width: 0; }
+.nav-badge { flex: 0 0 auto; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--coral); color: #090b0c; font: 700 10px/16px Oxanium, Consolas, monospace; text-align: center; }
+.nav-group-toggle .nav-badge { margin-left: 4px; }
+.nav-backdrop { display: none; }
+
+/* Barra compacta (☰ ou a tecla [, no computador): só os ícones, com o nome ao parar o mouse. */
+@media (min-width: 821px) {
+  body.sidebar-compact .shell { grid-template-columns: 64px minmax(0, 1fr); }
+  body.sidebar-compact aside { padding: 12px 6px; overflow-x: hidden; scrollbar-width: none; }
+  body.sidebar-compact .brand, body.sidebar-compact .campaign-picker, body.sidebar-compact .side-server, body.sidebar-compact .table-text, body.sidebar-compact .table-link, body.sidebar-compact .nav-group-toggle, body.sidebar-compact .nav-text { display: none; }
+  body.sidebar-compact .side-status { justify-items: center; margin: 2px; padding: 9px 0; }
+  body.sidebar-compact .workspace-tabs { grid-template-columns: 1fr; margin: 8px 2px; }
+  body.sidebar-compact .workspace-tab { padding: 7px 0; font-size: 0; }
+  body.sidebar-compact .workspace-tab::before { content: attr(data-short); font-size: 10px; }
+  body.sidebar-compact .nav-group { margin-top: 6px; padding-top: 6px; border-top: 1px solid #262c2c; }
+  body.sidebar-compact .nav-group.collapsed .nav-items { display: block; }
+  body.sidebar-compact .nav-item, body.sidebar-compact .nav-item.session-item { position: relative; justify-content: center; width: 100%; margin-left: 0; padding: 8px 0; }
+  body.sidebar-compact .nav-icon { width: auto; }
+  body.sidebar-compact .nav-item .nav-badge { position: absolute; top: 1px; right: 1px; min-width: 14px; padding: 0 3px; font-size: 9px; line-height: 14px; }
+}
+/* No celular: a gaveta. */
+@media (max-width: 820px) {
+  aside { position: fixed; z-index: 35; top: 0; bottom: 0; left: 0; width: min(86vw, 320px); height: 100%; padding: 14px 12px 24px; border-right: 1px solid #353a3b; transform: translateX(-102%); visibility: hidden; transition: transform 0.2s ease, visibility 0.2s; }
+  body.sidebar-open aside { visibility: visible; transform: none; box-shadow: 18px 0 40px rgb(0 0 0 / 60%); }
+  body.sidebar-open .nav-backdrop { position: fixed; z-index: 34; inset: 0; display: block; background: rgb(0 0 0 / 55%); }
+  body.sidebar-open { overflow: hidden; }
+  .account-name, .account-caret { display: none; }
+  .account-button { padding: 3px; clip-path: none; }
+  .account-menu { position: fixed; top: 58px; right: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { aside, .nav-chevron, .nav-toggle span { transition: none; } }
+@media print { .nav-toggle, .nav-backdrop, .account, .to-top { display: none !important; } }
+/* Voltar ao topo (wiki-app.js), nas páginas longas. */
+.to-top { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--yellow); background: #141819; cursor: pointer; clip-path: polygon(0 0, 100% 0, 100% 76%, calc(100% - 10px) 100%, 0 100%); }
+.to-top span { width: 11px; height: 11px; margin-top: 5px; border-top: 2px solid var(--yellow); border-left: 2px solid var(--yellow); transform: rotate(45deg); }
+.to-top:hover, .to-top:focus-visible { border-color: var(--cyan); outline: none; }
+.to-top:hover span, .to-top:focus-visible span { border-color: var(--cyan); }
+
+/* ---------------- O personagem em uso ---------------- */
+.pv-me-card { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 18px; padding: 14px 16px; border: 1px solid #333a3a; border-left: 3px solid var(--campanha-cor, var(--cyan)); background: rgb(21 25 27 / 94%); }
+.pv-me-portrait { width: 64px; height: 64px; border: 1px solid var(--campanha-cor, var(--cyan)); object-fit: cover; }
+.pv-me-text { flex: 1 1 200px; min-width: 0; }
+.pv-me-text .tag { color: var(--cyan); font: 10px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.pv-me-text h3 { margin: 2px 0; color: var(--text); font: 20px Oxanium, BlenderProBook, sans-serif; text-transform: uppercase; }
+.pv-me-text h3 small { color: var(--cyan); font-size: 14px; text-transform: none; }
+.pv-me-text p { margin: 0; color: var(--muted); font-size: 13px; }
+.pv-me-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.pv-me-actions .action { margin: 0; }
+.pv-new { display: inline-block; margin-left: 8px; padding: 1px 6px; background: var(--coral); color: #090b0c; font: 700 10px Oxanium, Consolas, monospace; text-transform: uppercase; vertical-align: middle; }
+.cc-card.cc-selected { padding-left: 10px; background: rgb(255 255 255 / 2%); box-shadow: inset 3px 0 var(--campanha-cor, var(--yellow)); }
+.cc-in-use { display: none; align-self: center; color: var(--campanha-cor, var(--yellow)); font: 11px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.cc-selected .cc-in-use { display: inline; }
+.cc-selected .cc-use { display: none; }
