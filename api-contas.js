@@ -14,6 +14,7 @@ const path = require('path');
 
 const TOKEN_PREFIX = 's1.';
 const SEEN_EVERY = 10 * 60 * 1000; // "visto" é gravado no máximo a cada 10 minutos por sessão
+const MAX_IDLE = 180 * 24 * 60 * 60 * 1000; // sessão sem uso por 6 meses acaba (o aparelho perdido não fica entrando)
 const PREF_KEY = /^[\w:.-]{1,100}$/;
 const PREF_MAX_KEYS = 300;
 const PREF_MAX_BYTES = 200 * 1024;
@@ -26,6 +27,7 @@ function createAccountStores({ dataDir, writeJsonAtomic }) {
 
   // ---------------- Sessões ----------------
   const readSessions = () => ((readFile(sessionsFile) || {}).sessoes || []).filter(item => item && item.id && item.conta);
+  const alive = item => Date.now() - new Date(item.visto || item.criada).getTime() < MAX_IDLE;
   const saveSessions = list => writeJsonAtomic(sessionsFile, { sessoes: list });
   // Um resumo do aparelho, para o mestre ver quantos e quais (sem guardar o user-agent inteiro).
   const device = agent => {
@@ -39,13 +41,14 @@ function createAccountStores({ dataDir, writeJsonAtomic }) {
     async create(account, agent) {
       const token = `${TOKEN_PREFIX}${crypto.randomBytes(32).toString('base64url')}`;
       const now = new Date().toISOString();
-      // Até 20 aparelhos por conta: o mais antigo sai.
-      const mine = readSessions().filter(item => item.conta === account);
-      const others = readSessions().filter(item => item.conta !== account);
+      // Até 20 aparelhos por conta: o mais antigo sai. As vencidas saem do arquivo aqui.
+      const list = readSessions().filter(alive);
+      const mine = list.filter(item => item.conta === account);
+      const others = list.filter(item => item.conta !== account);
       await saveSessions([...others, ...mine.slice(-19), { id: hash(token), conta: account, criada: now, visto: now, aparelho: device(agent) }]);
       return token;
     },
-    find: token => (sessions.isToken(token) ? readSessions().find(item => item.id === hash(token)) || null : null),
+    find: token => (sessions.isToken(token) ? readSessions().find(item => item.id === hash(token) && alive(item)) || null : null),
     // Marca o último acesso (sem gravar a cada pedido).
     async touch(session) {
       if (!session || Date.now() - new Date(session.visto).getTime() < SEEN_EVERY) return;
@@ -59,8 +62,9 @@ function createAccountStores({ dataDir, writeJsonAtomic }) {
     async removeAccount(account) { const list = readSessions(); if (list.some(item => item.conta === account)) await saveSessions(list.filter(item => item.conta !== account)); },
     // Para a página de códigos do mestre: último acesso e os aparelhos de cada conta.
     summary(account) {
-      const mine = readSessions().filter(item => item.conta === account);
-      const last = mine.map(item => item.visto).sort().pop() || null;
+      const all = readSessions().filter(item => item.conta === account);
+      const mine = all.filter(alive);
+      const last = all.map(item => item.visto).sort().pop() || null;
       return { ultimoAcesso: last, aparelhos: mine.map(item => item.aparelho) };
     }
   };

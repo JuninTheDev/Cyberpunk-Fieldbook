@@ -92,6 +92,12 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 - **Regras da loja:** cada campanha tem as suas. A campanha nova começa com uma cópia das do Protocolo Morana.
 - **Documentos:** os `.md` de `documentos/<id da campanha>/` (o id aparece na página Campanhas). O título é a primeira linha (`# Título`). Os de `documentos/night-city/` aparecem em todas. Publique com `publicar.bat`.
 - **Mundo do Foundry:** o id da pasta do mundo (o nome em `Data/worlds/`). Com o Foundry aberto, a página Campanhas oferece **Usar o mundo aberto agora**. Com ele, a barra lateral diz de qual campanha é a mesa, e o módulo do mundo sabe a campanha dele. Uma licença abre um mundo por vez: sessões de campanhas diferentes precisam ser em horários diferentes.
+- **Agenda das mesas** (no menu de cada campanha): as sessões marcadas de todas as campanhas numa lista só, com a cor de cada uma.
+  - **Marcar sessão:** campanha, dia e hora (do aparelho), duração, título e uma nota para os jogadores. A data sugerida é uma semana depois da última sessão daquela campanha.
+  - **Horário cruzado:** duas sessões que se sobrepõem ganham um aviso. De campanhas diferentes, uma precisa mudar (o Foundry abre um mundo por vez).
+  - **Os jogadores** da campanha veem a **Próxima sessão** no Resumo (data, horário, quanto falta, título e nota) e as seguintes numa linha. **Adicionar ao calendário** baixa um `.ics` com lembrete uma hora antes. Marcar ou mudar uma sessão conta como novidade.
+  - **O mestre** vê a próxima sessão no início ("Na mesa agora") e na visão geral de cada campanha.
+  - As que já passaram ficam embaixo e saem sozinhas seis meses depois (`agenda.json`, na pasta de dados).
 - **O que existia antes** é do Protocolo Morana: os códigos, os personagens, o Publicar (`jogadores.json` e `jogadores-mestre.json`, que ficam no git só como ponto de partida de um servidor novo) e as regras da loja. Os jogadores não percebem a mudança, e os códigos continuam os mesmos.
 
 ## Arquivos
@@ -113,7 +119,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. |
 | `campaign-map.js` | Pinos do mapa de operações. |
-| `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
+| `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (com a tabela da ciberpsicose e a perda por trauma), terapia e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
 | `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
 | `system-2077.js` | Suplemento de 2077: as 46 armas (Power, Tech e Smart), os 42 cyberwares, as Roles de 2077 e o resumo do suplemento. |
 | `system-catalog.js` | Catálogo do RED: Roles, cyberware, armas, armaduras, munição, acessórios, equipamento médico e a lista de equipamento. |
@@ -127,7 +133,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `servidor/` | Instalação e manutenção do servidor online (wiki, Foundry, HTTPS, atualização e backup). Veja o README da pasta. |
 | `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores e decide quem vê o quê em cada campanha. |
 | `api-contas.js` | As sessões de login (o cookie leva só um identificador; sair de todos, desconectar, último acesso) e as preferências de cada conta (`sessoes-jogadores.json`, `preferencias/`, na pasta de dados). |
-| `api-campanhas.js` | A lista de campanhas, o Publicar e as regras da loja de cada uma e as Notícias de Night City (`campanhas.json`, `campanhas/`, `noticias-night-city.json`, na pasta de dados, fora do git). |
+| `api-campanhas.js` | A lista de campanhas, o Publicar, as regras da loja e a mesa do mestre de cada uma, as Notícias de Night City e a Agenda das mesas (`campanhas.json`, `campanhas/`, `noticias-night-city.json`, `agenda.json`, na pasta de dados, fora do git). |
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
 | `conta.js` | O botão da conta no canto de cima (as duas wikis): entrar, o personagem em uso, novo personagem, trocar de campanha e sair; para o mestre, atalhos, versão, backup e sair. |
 | `popup.js` | Os pop-ups da wiki (confirmar, escrever um motivo, copiar um código) e os avisos rápidos no canto, no lugar das caixas do navegador. |
@@ -244,9 +250,11 @@ Notas:
   - Os personagens ficam em `personagens/`, e os retratos enviados, em `personagens/retratos/`.
   - No servidor online, tudo isso fica em `/srv/fieldbook/dados`.
   - Apagar um personagem move o arquivo para `personagens/apagados/`.
+  - Cada gravação relê o arquivo e grava na vez dela (uma fila por arquivo): a ficha do Foundry chegando enquanto o jogador salva não apaga uma à outra.
 - **Anotações:** a ficha tem um quadro **Anotações** (pistas, contatos, dívidas, o que o NPC prometeu), que salva sozinho. Só o dono e o mestre leem; na página Personagens, o mestre vê o quadro **Anotações dos jogadores**, com as de todos, as mais novas primeiro.
+- **Histórico de versões (mestre):** antes de cada rodada de edição, a wiki guarda como o personagem estava (no máximo uma a cada 10 minutos; ficam as últimas 30, em `personagens/historico/`). Na **Ficha**, o quadro **Histórico de versões** lista cada uma com o que ela tem de diferente da de agora, e **Restaurar** volta o que o jogador preenche (STATs, perícias, itens, Lifepath...). Foundry, ficha da mesa, pedidos, Pontos de Melhoria, retrato e anotações ficam como estão, e a versão de agora também vai para o histórico (dá para desfazer).
 - **Códigos:** a tabela mostra o **último acesso** e quantos aparelhos cada jogador tem. **Desconectar** tira o jogador de todos os aparelhos (ele volta com o mesmo código); **Novo código** troca o código (o antigo para de valer, e os personagens ficam).
-- **Sessões de login:** entrar com o código cria uma sessão; o cookie guarda só um identificador aleatório dela, não o código.
+- **Sessões de login:** entrar com o código cria uma sessão; o cookie guarda só um identificador aleatório dela, não o código. No servidor online o cookie só vai por https. Uma sessão sem uso por seis meses acaba (o aparelho esquecido não fica entrando).
 - **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros jogadores da mesma campanha, só nome, apelido, Role e retrato. De outra campanha, nada. Sem código, nenhum personagem. O mestre vê e edita todos.
 
 ## Conta e navegação
@@ -256,7 +264,7 @@ Notas:
   - **Jogador:** mostra o retrato (ou as iniciais) do **personagem em uso**. O menu troca de personagem, cria um novo, abre Ficha, Editar e Loja, troca de campanha (quem joga em mais de uma) e tem **Sair**.
   - **Pedidos da loja:** quando o mestre aprova ou recusa um pedido (ou o Foundry entrega), o botão ganha um número e aparece um aviso rápido; o menu diz qual personagem. Abrir a Loja daquele personagem tira o número. Com a wiki aberta, confere a cada minuto.
   - **O personagem em uso** é um por campanha, lembrado no aparelho. A **Ficha** e a **Loja** do menu lateral abrem nele, o **Resumo** mostra o cartão "Seu personagem" e a lista de Personagens marca "Em uso" (o botão **Usar** troca).
-  - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
+  - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas, Agenda das mesas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
   - **Sair de todos os aparelhos** (no menu do jogador): a conta sai do celular, do computador, de tudo. Para voltar, o código de novo. Bom para celular perdido ou computador emprestado.
 - **O que acompanha a conta:** as páginas fixadas, os grupos recolhidos, a barra compacta, as páginas recentes, o personagem em uso e o que já foi visto (selos de novidade e de pedidos) ficam no servidor, na conta do jogador (ou na do mestre). Entrar no celular mostra tudo como estava no computador. Sem código, fica só no aparelho, como antes.
 - **Barra lateral:**

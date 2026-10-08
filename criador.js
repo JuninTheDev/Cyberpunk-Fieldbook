@@ -163,6 +163,15 @@
     const current = Math.max(0, max - lost);
     return { max, perda: lost, atual: current, emp: Math.floor(current / 10) };
   }
+  // Ciberpsicose (p. 230–232): com EMP 2 já começa. Sem EMP ainda (STATs por distribuir), nada a dizer.
+  function cyberpsychosis(hum) {
+    if (!hum.max) return '';
+    if (hum.max - hum.perda < 0) return 'Humanidade negativa: ciberpsicose extrema. O personagem passa para o mestre até a Humanidade voltar a ser positiva.';
+    if (hum.emp <= 0) return 'EMP 0: ciberpsicose. O personagem mostra com força pelo menos 5 traços de psicopatia.';
+    if (hum.emp === 1) return 'EMP 1: ciberpsicose limítrofe. O personagem mostra com força pelo menos 3 traços de psicopatia.';
+    if (hum.emp === 2) return 'EMP 2: transtorno dissociativo limítrofe. Mais cromo leva à ciberpsicose.';
+    return '';
+  }
 
   // Cyberware de opção precisa da base do mesmo tipo (cyberbraço, cyberolho, Neural Link...).
   const NEEDS_BASE = ['neuralWare', 'cyberEye', 'cyberAudioSuite', 'cyberArm', 'cyberLeg', 'borgware'];
@@ -442,7 +451,8 @@
     if (doc.metodo && cash.saldo < 0) add(5, `Gastou ${eb(-cash.saldo)} a mais do que tinha.`);
     for (const entry of missingFoundations(doc)) add(5, `${entry.item.nome} precisa de ${{ neuralWare: 'Neural Link', cyberEye: 'um cyberolho', cyberAudioSuite: 'Cyberaudio Suite', cyberArm: 'um cyberbraço', cyberLeg: 'uma cyberperna', borgware: 'uma base de borgware' }[entry.item.cyber.tipo]}.`);
     const hum = humanity(doc, stats);
-    if (doc.metodo && hum.emp <= 0) add(5, 'A Humanidade chegou a zero: ciberpsicose.');
+    const psychosis = doc.metodo ? cyberpsychosis(hum) : '';
+    if (psychosis) add(5, psychosis);
     return list;
   }
 
@@ -975,6 +985,22 @@
   // O quadro de anotações da ficha: só o dono e o mestre leem (pistas, contatos, dívidas, o que o NPC prometeu).
   const notesBox = (doc, papel) => box('Anotações', `<p class="note-status">Pistas, contatos, dívidas, o que o NPC prometeu. ${papel === 'mestre' ? 'O jogador escreve aqui; você também pode.' : 'Só você e o mestre leem.'} Fica salvo sozinho, em qualquer aparelho.</p><textarea class="note-area cc-notes" data-cc-notes rows="8" placeholder="Ex.: Brakk quer 500eb até sexta. A senha do depósito é 4471.">${esc((doc.anotacoes || {}).texto || '')}</textarea><p class="note-status" data-cc-notes-status>${doc.anotacoes && doc.anotacoes.atualizado ? `Salvo em ${when(doc.anotacoes.atualizado)}${doc.anotacoes.por ? ` (${esc(doc.anotacoes.por)})` : ''}.` : ''}</p>`, ' data-cc-notes-box data-toc="Anotações"');
 
+  // Histórico de versões (só o mestre): como o personagem estava antes de cada rodada de edição, e Restaurar.
+  const HISTORY_FIELDS = { nome: 'nome', apelido: 'apelido', role: 'Role', especializacao: 'especialização', metodo: 'método', stats: 'STATs', sorteio: 'sorteio dos STATs', pericias: 'perícias', tipos: 'tipos de perícia', extras: 'perícias extras', lingua: 'língua', casa: 'bairro', itens: 'itens', quickhacks: 'quickhacks', kitNet: 'kit NET', escolhas: 'escolhas', habilidades: 'habilidade da Role', oficina: 'oficina', montagem: 'montagem', moradia: 'moradia', estiloVida: 'estilo de vida', traumaTeam: 'Trauma Team', estiloModa: 'moda', lifepath: 'Lifepath', avanco: 'avanço', aparencia: 'aparência', notas: 'notas', retratoLink: 'link do retrato' };
+  const historyBox = () => box('Histórico de versões', '<p class="note-status">Antes de cada rodada de edição, a wiki guarda como o personagem estava (no máximo uma a cada 10 minutos; ficam as últimas 30). Restaurar volta o que o jogador preenche (STATs, perícias, itens, Lifepath...) daquela versão. Foundry, ficha da mesa, pedidos, Pontos de Melhoria, retrato e anotações ficam como estão agora, e a versão de agora também vai para o histórico.</p><div data-cc-history>Carregando…</div>', ' data-cc-history-box data-toc="Histórico de versões"');
+  async function drawHistory(root, id) {
+    const holder = root.querySelector('[data-cc-history]');
+    if (!holder) return;
+    const answer = await api(`api/personagens/${id}/versoes`);
+    if (!holder.isConnected) return;
+    const versions = answer.data.versoes || [];
+    if (answer.status !== 200) { holder.innerHTML = `<p class="cc-msg">${esc(answer.data.erro || 'Não consegui ler o histórico.')}</p>`; return; }
+    const changes = item => (item.diferencas.length ? `muda: ${item.diferencas.map(field => HISTORY_FIELDS[field] || field).join(', ')}` : 'igual à de agora');
+    holder.innerHTML = versions.length
+      ? `<ul class="cc-history">${versions.map(item => `<li><b>v${esc(item.versao)}</b> · ${esc(when(item.guardada))} · ${esc(item.nome || 'sem nome')}${item.role ? ` (${esc(roleName(item.role))})` : ''} · <span class="note-status">${esc(changes(item))}</span> ${item.diferencas.length ? `<button class="action" type="button" data-cc-restore="${esc(item.id)}" data-cc-restore-v="${esc(item.versao)}">Restaurar</button>` : ''}</li>`).join('')}</ul>`
+      : '<p class="note-status">Nenhuma versão guardada ainda: a primeira entra no próximo salvamento.</p>';
+  }
+
   async function setupSheet(content, helpers) {
     esc = helpers.escapeHtml;
     const token = ++renderToken;
@@ -988,7 +1014,8 @@
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
     if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), a Role (${esc(roleName(doc.role))}) e o retrato.</div>`; return; }
-    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}<div data-cc-sheet-body>${sheetHtml(doc)}</div>${notesBox(doc, papel)}`;
+    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}<div data-cc-sheet-body>${sheetHtml(doc)}</div>${notesBox(doc, papel)}${papel === 'mestre' ? historyBox() : ''}`;
+    if (papel === 'mestre') drawHistory(root, id);
     // Anotações: salvam sozinhas (um instante depois de parar de digitar), sem mudar a versão do personagem.
     const notes = root.querySelector('[data-cc-notes]');
     if (notes) {
@@ -1018,9 +1045,18 @@
         if (body) body.innerHTML = sheetHtml(doc);
       }, 30000);
     }
-    root.onclick = event => {
+    root.onclick = async event => {
       if (event.target.closest('[data-cc-print]')) return window.print();
       if (event.target.closest('[data-cc-send]')) return sendToGm(doc, papel, root);
+      const restore = event.target.closest('[data-cc-restore]');
+      if (restore) {
+        const sure = await window.wikiPopup.confirm({ title: 'Restaurar versão', html: `<p>Voltar <b>${esc(doc.nome || 'este personagem')}</b> para a versão <b>v${esc(restore.dataset.ccRestoreV)}</b>?</p><p class="note-status">A versão de agora vai para o histórico (dá para voltar). Quem estiver com o criador aberto precisa recarregar.</p>`, ok: 'Restaurar' });
+        if (!sure) return;
+        const answer = await api(`api/personagens/${id}/versoes/${encodeURIComponent(restore.dataset.ccRestore)}/restaurar`, { method: 'POST', body: {} });
+        if (answer.status !== 200) return window.wikiPopup.toast(answer.data.erro || 'Não consegui restaurar.', { tone: 'bad' });
+        window.wikiPopup.toast(`Versão v${answer.data.restaurada} restaurada.`);
+        return setupSheet(content, helpers);
+      }
       if (event.target.closest('[data-cc-edit]')) helpers.openPage('criador', { section: id });
       if (event.target.closest('[data-cc-shop]')) helpers.openPage('loja', { section: id });
       if (event.target.closest('[data-cc-back]')) helpers.openPage('personagens');
@@ -1708,7 +1744,7 @@
       const stats = computeStats(doc);
       const hum = humanity(doc, stats);
       const free = `<p>Em 2077, todo personagem começa de graça e sem perder Humanidade com: ${C.free2077.map(item => `${esc(item.nome || (catalog.get(item.id) || {}).nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}.</p>`;
-      const humanityLine = `<p class="cc-derived"><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Perda <b>${hum.perda}</b></span><span>EMP <b>${hum.emp}</b>${hum.emp !== stats.EMP ? ` <small>(era ${stats.EMP})</small>` : ''}</span></p><p class="note-status">Cada cyberware perde o valor fixo de Humanidade do livro. A EMP é a Humanidade ÷ 10, para baixo.</p>`;
+      const humanityLine = `<p class="cc-derived"><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Perda <b>${hum.perda}</b></span><span>EMP <b>${hum.emp}</b>${hum.emp !== stats.EMP ? ` <small>(era ${stats.EMP})</small>` : ''}</span></p><p class="note-status">Cada cyberware perde o valor fixo de Humanidade do livro. A EMP é a Humanidade ÷ 10, para baixo.</p>${cyberpsychosis(hum) ? `<p class="note-status cc-bad" data-cc-psicose>${esc(cyberpsychosis(hum))} <button class="cc-link" type="button" data-page="humanity">Ciberpsicose</button></p>` : ''}`;
       const warnings = missingFoundations(doc).map(entry => `<li>${esc(entry.item.nome)} precisa da base (${esc(entry.item.sub)}).</li>`).join('');
       if (doc.metodo === 'pacote') {
         return `${box('Cyberware grátis de 2077', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}${box('Loja inicial', '<div id="cc-shop"></div>')}${drawAssembly()}`;

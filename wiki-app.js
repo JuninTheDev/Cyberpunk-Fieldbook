@@ -1475,9 +1475,40 @@
     toTop.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); search.focus({ preventScroll: true }); });
     window.addEventListener('scroll', () => { toTop.hidden = window.scrollY < window.innerHeight * 1.5; }, { passive: true });
 
+    // Agenda: quando é uma sessão marcada, para ler ("sábado, 10 de outubro", "19:00–23:00", "em 2 dias"), e o .ics para
+    // o calendário do celular (com lembrete 1 hora antes). item: { id, inicio (ISO), duracao (minutos), titulo, nota }.
+    function sessionTime(item, now = new Date()) {
+      const start = new Date(item.inicio);
+      const end = new Date(start.getTime() + item.duracao * 60000);
+      const day = date => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      const days = Math.round((day(start) - day(now)) / 86400000);
+      const hour = date => date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const relative = now >= start && now < end ? 'agora' : end <= now ? 'já passou' : days === 0 ? 'hoje' : days === 1 ? 'amanhã' : `em ${days} dias`;
+      return { data: start.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }), horario: `${hour(start)}–${hour(end)}`, relativo: relative, curto: `${start.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${hour(start)}` };
+    }
+    function downloadSession(item, campaignName) {
+      const stamp = date => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      const text = value => String(value || '').replace(/\\/g, '\\\\').replace(/[;,]/g, match => `\\${match}`).replace(/\r?\n/g, '\\n');
+      // Linhas do .ics: no máximo 75 caracteres; a continuação começa com um espaço.
+      const fold = line => (line.match(/.{1,72}/gu) || ['']).join('\r\n ');
+      const start = new Date(item.inicio);
+      const end = new Date(start.getTime() + item.duracao * 60000);
+      const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Cyberpunk Fieldbook//Agenda//PT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+        `UID:${item.id}@cyberpunk-fieldbook`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
+        `SUMMARY:${text(`${campaignName}: ${item.titulo || 'sessão'}`)}`, ...(item.nota ? [`DESCRIPTION:${text(item.nota)}`] : []), `URL:${location.origin}${location.pathname}`,
+        'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', `DESCRIPTION:${text(`${campaignName} em 1 hora`)}`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'];
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([`${lines.map(fold).join('\r\n')}\r\n`], { type: 'text/calendar;charset=utf-8' }));
+      link.download = `sessao-${String(item.inicio).slice(0, 10)}.ics`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+
     // switchCampaign: troca a campanha ativa (pergunta antes, se a página pedir). setBadges: selos de novidade no menu.
     // status: o último /api/estado. hasPage: a página existe nesta wiki (a do mestre tem páginas que a dos jogadores não tem).
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
     // Quem depende da wiki montada (o menu da conta) começa aqui.
     document.dispatchEvent(new Event('wiki:pronta'));
 })();

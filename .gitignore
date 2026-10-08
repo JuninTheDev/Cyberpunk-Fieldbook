@@ -20,3 +20,6 @@ preferencias/
 # Senha do mestre (iniciar serv.txt) e o endereço/chave do servidor (enviar-para-servidor) ficam só no PC
 iniciar serv.txt
 servidor/servidor.local.json
+# Temporários das gravações (writeJsonAtomic) e cópias de conflito do OneDrive
+*.tmp
+* (2).*

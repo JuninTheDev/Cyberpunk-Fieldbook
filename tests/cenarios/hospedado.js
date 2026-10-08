@@ -74,13 +74,15 @@ module.exports = async ({ edge, servidores, r }) => {
       const estado = await (await fetch(`${base}/api/estado`)).json();
       return [estado.modo === 'hospedado' && !estado.mestre && estado.mesa?.aberta && estado.mesa.usuarios === 2 && estado.mesa.url === 'https://mesa.exemplo.com' && /^[0-9a-f]{7,}$/.test(estado.versao?.commit || '') && !('mundo' in estado.mesa), JSON.stringify(estado)];
     });
-    await r.passo('mesa de uma campanha: o mestre vê qual é; quem joga nela vê aberta; quem não joga (e o visitante) não fica sabendo', async () => {
+    await r.passo('mesa de uma campanha: o mestre vê qual é; quem joga nela vê aberta; quem não joga (e o visitante) não fica sabendo; o cookie do jogador só vai por https', async () => {
       const json = { 'Content-Type': 'application/json', cookie };
       await fetch(`${base}/api/campanhas/morana`, { method: 'PUT', headers: json, body: JSON.stringify({ mundo: 'protocolo-morana' }) });
       const outra = (await (await fetch(`${base}/api/campanhas`, { method: 'POST', headers: json, body: JSON.stringify({ nome: 'Outra mesa' }) })).json()).campanha;
+      let cookieInteiro = '';
       const entrar = async campanhas => {
         const conta = (await (await fetch(`${base}/api/contas`, { method: 'POST', headers: json, body: JSON.stringify({ nome: 'J', campanhas }) })).json()).conta;
-        return (await fetch(`${base}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: conta.codigo }) })).headers.get('set-cookie').split(';')[0];
+        cookieInteiro = (await fetch(`${base}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: conta.codigo }) })).headers.get('set-cookie');
+        return cookieInteiro.split(';')[0];
       };
       const daMorana = await entrar(['morana']);
       const daOutra = await entrar([outra.id]);
@@ -90,8 +92,8 @@ module.exports = async ({ edge, servidores, r }) => {
       await fetch(`${base}/api/campanhas/morana`, { method: 'PUT', headers: json, body: JSON.stringify({ mundo: '' }) });
       await fetch(`${base}/api/contas`, { headers: { cookie } }).then(resposta => resposta.json()).then(({ contas }) => Promise.all(contas.map(conta => fetch(`${base}/api/contas/${conta.id}`, { method: 'DELETE', headers: { cookie } }))));
       await fetch(`${base}/api/campanhas/${outra.id}`, { method: 'DELETE', headers: { cookie } });
-      return [mestre.campanha?.nome === 'Protocolo Morana' && mestre.mundo === 'protocolo-morana' && jogador.aberta && jogador.campanha?.nome === 'Night City, 2077' && !('mundo' in jogador) && !estranho.aberta && !estranho.campanha && !visitante.aberta,
-        JSON.stringify({ mestre: mestre.campanha?.nome, jogador: [jogador.aberta, jogador.campanha?.nome], estranho: [estranho.aberta, estranho.usuarios], visitante: visitante.aberta })];
+      return [mestre.campanha?.nome === 'Protocolo Morana' && mestre.mundo === 'protocolo-morana' && jogador.aberta && jogador.campanha?.nome === 'Night City, 2077' && !('mundo' in jogador) && !estranho.aberta && !estranho.campanha && !visitante.aberta && /;\s*Secure/i.test(cookieInteiro),
+        JSON.stringify({ mestre: mestre.campanha?.nome, jogador: [jogador.aberta, jogador.campanha?.nome], estranho: [estranho.aberta, estranho.usuarios], visitante: visitante.aberta, cookieSeguro: /;\s*Secure/i.test(cookieInteiro) })];
     });
     await r.passo('Foundry do mestre: CORS com credenciais para mesa.exemplo.com, e o cookie conta como mestre', async () => {
       const resposta = await fetch(`${base}/api/personagens`, { headers: { Origin: 'https://mesa.exemplo.com', cookie } });

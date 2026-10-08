@@ -128,7 +128,7 @@
     }
     if (me.papel === 'mestre') {
       const active = app.activeCampaign() || {};
-      const shortcuts = [['personagens', 'Personagens e códigos'], ['playerView', 'Visão dos jogadores'], ['campanhas', 'Campanhas']].filter(([id]) => app.hasPage(id));
+      const shortcuts = [['personagens', 'Personagens e códigos'], ['playerView', 'Visão dos jogadores'], ['campanhas', 'Campanhas'], ['agenda', 'Agenda das mesas']].filter(([id]) => app.hasPage(id));
       const version = state.versao ? `<p class="account-note">No ar: ${esc(state.versao.commit)} · ${new Date(state.versao.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>` : '';
       return `<p class="account-head">Mestre<small>${esc(active.name || '')}</small></p>
         ${campaignList(app.campaigns(), active.id)}

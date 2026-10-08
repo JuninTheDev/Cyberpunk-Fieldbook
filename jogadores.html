@@ -97,6 +97,9 @@
       const { escapeHtml, renderMarkdown, updatePages } = window.wikiApp;
       const me = window.playerIdentity;
       let lastUpdate = null;
+      // As próximas sessões da agenda (para o botão do calendário) e o nome da campanha.
+      let agendaNow = [];
+      let agendaName = '';
 
       // ---------------- Novidades ----------------
       // O que o mestre publicou desde a última vez que este aparelho abriu cada página: selo no menu e "novo" no item.
@@ -145,6 +148,9 @@
         // Abre o menu da conta depois deste clique (senão o próprio clique, fora do menu, o fecharia).
         if (event.target.closest('[data-pv-switch]')) setTimeout(() => window.playerAccount && window.playerAccount.open(), 0);
         if (event.target.closest('[data-pv-new]')) setTimeout(() => { window.playerAccount && window.playerAccount.open(); document.querySelector('[data-account-new]')?.click(); }, 0);
+        const ics = event.target.closest('[data-pv-ics]');
+        const session = ics && agendaNow.find(item => item.id === ics.dataset.pvIcs);
+        if (session) window.wikiApp.downloadSession(session, agendaName);
       });
 
       const mapHtml = hasPlaces => `${hasPlaces ? '' : '<div class="callout">Nenhum lugar marcado ainda. Eles aparecem aqui conforme o grupo descobre.</div>'}
@@ -169,6 +175,12 @@
         const newPlaces = places.filter(place => fresh('pvMap', place));
         const name = (data.campanha && data.campanha.nome) || 'Night City';
         const updated = data.atualizado ? new Date(data.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+        // A próxima sessão marcada na agenda do mestre (e as seguintes, numa linha).
+        agendaNow = (data.agenda || []).filter(item => Date.parse(item.inicio) + item.duracao * 60000 > Date.now());
+        agendaName = name;
+        const next = agendaNow[0];
+        const when = next ? window.wikiApp.sessionTime(next) : null;
+        const nextHtml = next ? `<div class="section pv-next" data-toc="Próxima sessão"><h3>Próxima sessão</h3><p class="pv-next-when"><b>${escapeHtml(when.data)}</b>, ${escapeHtml(when.horario)} · ${escapeHtml(when.relativo)}</p>${next.titulo ? `<p><b>${escapeHtml(next.titulo)}</b></p>` : ''}${next.nota ? `<p>${escapeHtml(next.nota)}</p>` : ''}<p><button class="action" type="button" data-pv-ics="${escapeHtml(next.id)}">Adicionar ao calendário</button></p>${agendaNow.length > 1 ? `<p class="note-status">Depois: ${agendaNow.slice(1).map(item => escapeHtml(window.wikiApp.sessionTime(item).curto)).join(' · ')}</p>` : ''}</div>` : '';
         window.playerMapData = {
           width: 5600, height: 5320, images: { base: 'nightcity-map-base.jpg' },
           // Os lugares novos desde a última visita: outra cor, e a legenda diz o que é.
@@ -180,7 +192,7 @@
           pvHome: {
             eyebrow: `${escapeHtml(name)}${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
             lede: 'Resumo da campanha até agora, publicado pelo mestre. Esta página se atualiza sozinha.',
-            html: `<div id="pv-me"></div><div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${clocks.length ? `<div class="section" data-toc="Relógios"><h3>Relógios</h3>${clocks.map(clock => `<p class="pv-clock-name"><b>${escapeHtml(clock.nome)}</b> ${clock.valor}/${clock.passos.length}${clock.valor && clock.passos[clock.valor - 1] ? ` · agora: ${escapeHtml(clock.passos[clock.valor - 1])}` : ''}</p><div class="clock clock-readonly">${clock.passos.map((step, index) => `<span class="clock-segment" aria-pressed="${index < clock.valor}"><span>${index + 1}</span>${escapeHtml(step)}</span>`).join('')}</div>`).join('')}</div>` : ''}${lastSession ? `<div class="section" data-toc="Última sessão"><h3>Última sessão${tag('pvSessions', lastSession)}</h3><p><b>${escapeHtml(sessionTitle(lastSession, sessions.length - 1))}</b>${lastSession.data ? ` · ${escapeHtml(lastSession.data)}` : ''}</p><button class="action" type="button" data-page="pvSessions" data-section="${escapeHtml(sectionSlug(sessionTitle(lastSession, sessions.length - 1)))}">Ler o resumo</button></div>` : ''}${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
+            html: `<div id="pv-me"></div>${nextHtml}<div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${clocks.length ? `<div class="section" data-toc="Relógios"><h3>Relógios</h3>${clocks.map(clock => `<p class="pv-clock-name"><b>${escapeHtml(clock.nome)}</b> ${clock.valor}/${clock.passos.length}${clock.valor && clock.passos[clock.valor - 1] ? ` · agora: ${escapeHtml(clock.passos[clock.valor - 1])}` : ''}</p><div class="clock clock-readonly">${clock.passos.map((step, index) => `<span class="clock-segment" aria-pressed="${index < clock.valor}"><span>${index + 1}</span>${escapeHtml(step)}</span>`).join('')}</div>`).join('')}</div>` : ''}${lastSession ? `<div class="section" data-toc="Última sessão"><h3>Última sessão${tag('pvSessions', lastSession)}</h3><p><b>${escapeHtml(sessionTitle(lastSession, sessions.length - 1))}</b>${lastSession.data ? ` · ${escapeHtml(lastSession.data)}` : ''}</p><button class="action" type="button" data-page="pvSessions" data-section="${escapeHtml(sectionSlug(sessionTitle(lastSession, sessions.length - 1)))}">Ler o resumo</button></div>` : ''}${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
           },
           pvSessions: {
             eyebrow: `${escapeHtml(name)} / sessões`, title: 'Sessões',

@@ -187,8 +187,11 @@ async function gmLogin(request, response) {
 // Grava primeiro num arquivo temporário e depois troca: nunca fica um JSON pela metade.
 // No Windows a troca falha se outro programa (o OneDrive, por exemplo) estiver com o arquivo aberto
 // naquele instante: tenta de novo por até 2 segundos e, se desistir, apaga o temporário.
+// Cada gravação usa o seu temporário: duas ao mesmo tempo no mesmo arquivo não se atropelam.
+let temporaryCount = 0;
 async function writeJsonAtomic(file, data) {
-  const temporary = `${file}.${process.pid}.tmp`;
+  temporaryCount = (temporaryCount + 1) % 1e6;
+  const temporary = `${file}.${process.pid}-${temporaryCount}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`);
   for (let attempt = 1; ; attempt += 1) {
     try {
@@ -207,7 +210,7 @@ async function writeJsonAtomic(file, data) {
 // Personagens dos jogadores, códigos de acesso, campanhas (com o Publicar de cada uma) e o importador do Foundry
 // (api-personagens.js e api-campanhas.js).
 const { ROUTES: characterApiRoutes } = require('./api-personagens');
-const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js') });
+const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js'), secureCookies: hosted });
 
 // A mesa na barra lateral, para cada um. Mundo ligado a uma campanha (o "mundo do Foundry" dela): quem joga nela vê
 // a mesa aberta e o nome da campanha; quem não joga vê o Foundry sem mundo aberto (não fica sabendo de outra mesa).

@@ -66,7 +66,8 @@
           { id: 'people', label: 'Pessoas e facções', icon: '02' },
           { id: 'campaignMap', label: 'Mapa de Night City', icon: 'MAP' },
           { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' },
-          { id: 'campanhas', label: 'Campanhas', icon: 'CP' }
+          { id: 'campanhas', label: 'Campanhas', icon: 'CP' },
+          { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' }
         ]},
         { group: 'Personagens dos jogadores', pages: [
           { id: 'personagens', label: 'Personagens e códigos', icon: 'PC' },
@@ -197,6 +198,18 @@
           <div><span class="tag">Relógios</span><ul class="desk-clocks">${clocks}</ul><button class="action" type="button" data-page="notes">Notas e relógios</button></div>
         </div>`;
       (content.querySelector('.rule') || content.querySelector('.lede')).after(block);
+      // A próxima sessão do Protocolo Morana (da Agenda das mesas, no servidor), logo abaixo do título.
+      fetch('api/agenda', { cache: 'no-store' }).then(response => (response.ok ? response.json() : null)).then(data => {
+        if (!data || !block.isConnected) return;
+        const next = (data.sessoes || []).find(item => item.campanha === 'morana' && Date.parse(item.inicio) + item.duracao * 60000 > Date.now());
+        const when = next && window.wikiApp.sessionTime(next);
+        const line = document.createElement('p');
+        line.className = 'desk-next';
+        line.innerHTML = next
+          ? `<span class="tag">Próxima sessão</span> <b>${escapeHtml(when.curto)}</b> · ${escapeHtml(when.relativo)}${next.titulo ? ` · ${escapeHtml(next.titulo)}` : ''} <button class="action" type="button" data-page="agenda">Agenda</button>`
+          : '<span class="tag">Próxima sessão</span> nenhuma marcada <button class="action" type="button" data-page="agenda">Marcar</button>';
+        block.querySelector('h3').after(line);
+      }).catch(() => { /* sem servidor: o bloco fica sem a agenda */ });
     }
 
     // Notas de campanha nas páginas de regras. Ficam aqui (e não nos arquivos system-*.js)

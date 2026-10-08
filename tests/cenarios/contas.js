@@ -1,6 +1,8 @@
 // Códigos dos jogadores e a API de personagens (sem navegador): quem entra, quem vê, quem grava.
 // Os dados ficam na pasta temporária dos servidores de teste, nunca na pasta da campanha.
+const crypto = require('crypto');
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 
 module.exports = async ({ servidores, r }) => {
@@ -252,6 +254,56 @@ module.exports = async ({ servidores, r }) => {
     await api(gm, '/api/campanhas/morana/mesa', { method: 'PUT', body: { publicos: { city: null } } });
     const depois = (await api(rede, '/api/visao', { cookie: ana })).dados.relogios;
     return [jogador === 403 && grava.relogios.city === 2 && visao.relogios.length === 1 && visao.relogios[0].valor === 2 && !/Segredo do bloco|sato/.test(texto) && depois.length === 0, `jogador ${jogador} · visão ${JSON.stringify(visao.relogios)} · depois de esconder ${depois.length}`];
+  });
+  await r.passo('salvamento lento não apaga o que chegou no meio (anotação do jogador e ficha da mesa)', async () => {
+    const atual = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: ana })).dados.personagem;
+    // O criador salva com o corpo chegando devagar (rede ruim); no meio, a anotação e a ficha do Foundry gravam.
+    const corpo = Buffer.from(JSON.stringify({ ...atual, apelido: 'Lento' }));
+    const url = new URL(`${rede}/api/personagens/${ficha.id}`);
+    let pedido;
+    const lento = new Promise((resolve, reject) => {
+      pedido = http.request({ hostname: url.hostname, port: url.port, path: url.pathname, method: 'PUT', headers: { 'Content-Type': 'application/json', 'Content-Length': corpo.length, Cookie: ana } }, resposta => {
+        let texto = '';
+        resposta.setEncoding('utf8');
+        resposta.on('data', parte => { texto += parte; });
+        resposta.on('end', () => { try { resolve({ status: resposta.statusCode, dados: JSON.parse(texto) }); } catch (error) { reject(error); } });
+      });
+      pedido.on('error', reject);
+    });
+    pedido.write(corpo.subarray(0, 20));
+    await new Promise(pronto => setTimeout(pronto, 150));
+    const nota = await api(rede, `/api/personagens/${ficha.id}/anotacoes`, { method: 'PUT', cookie: ana, body: { texto: 'Chegou no meio.' } });
+    const mesa = await api(gm, `/api/personagens/${ficha.id}/mesa`, { method: 'PUT', body: { hp: { atual: 11, max: 40 } } });
+    pedido.end(corpo.subarray(20));
+    const salvo = await lento;
+    const arquivo = JSON.parse(fs.readFileSync(path.join(servidores.dados, 'personagens', `${ficha.id}.json`), 'utf8'));
+    if (salvo.status === 200) ficha = salvo.dados.personagem;
+    const sobras = fs.readdirSync(path.join(servidores.dados, 'personagens')).filter(nome => nome.endsWith('.tmp'));
+    return [nota.status === 200 && mesa.status === 200 && salvo.status === 200 && arquivo.apelido === 'Lento' && arquivo.anotacoes?.texto === 'Chegou no meio.' && arquivo.mesa?.hp?.atual === 11 && !sobras.length,
+      `anotação ${nota.status} · mesa ${mesa.status} · salvamento ${salvo.status} · no arquivo: apelido ${arquivo.apelido}, anotação "${arquivo.anotacoes?.texto}", HP ${arquivo.mesa?.hp?.atual} · temporários ${sobras.length}`];
+  });
+  await r.passo('histórico de versões: só o mestre vê; Restaurar volta a ficha e mantém o que é do servidor', async () => {
+    const jogador = (await api(rede, `/api/personagens/${ficha.id}/versoes`, { cookie: ana })).status;
+    const lista = (await api(gm, `/api/personagens/${ficha.id}/versoes`)).dados;
+    // A primeira guardada: a de antes do primeiro salvamento (v1, nome "V").
+    const primeira = lista.versoes[lista.versoes.length - 1];
+    const restaura = await api(gm, `/api/personagens/${ficha.id}/versoes/${primeira.id}/restaurar`, { method: 'POST', body: {} });
+    const doc = restaura.dados?.personagem;
+    const depois = (await api(gm, `/api/personagens/${ficha.id}/versoes`)).dados.versoes;
+    const estranha = (await api(gm, `/api/personagens/${ficha.id}/versoes/..%2F..%2Fcontas-jogadores/restaurar`, { method: 'POST', body: {} })).status;
+    if (doc) ficha = doc;
+    return [jogador === 403 && primeira?.versao === 1 && primeira.diferencas.includes('nome') && restaura.status === 200 && doc.nome === 'V' && doc.apelido === 'Merc' && doc.versao === lista.atual + 1 && doc.anotacoes?.texto === 'Chegou no meio.' && doc.mesa?.hp?.atual === 11 && /^api\//.test(doc.retrato || '') && depois.length === lista.versoes.length + 1 && estranha === 404,
+      `jogador ${jogador} · ${lista.versoes.length} versão(ões), a primeira v${primeira?.versao} (${primeira?.diferencas?.join(' ')}) · restaurar ${restaura.status}: ${doc?.nome} "${doc?.apelido}" v${doc?.versao} · anotação ${Boolean(doc?.anotacoes)} · HP ${doc?.mesa?.hp?.atual} · depois ${depois.length} · nome estranho ${estranha}`];
+  });
+  await r.passo('sessão parada há mais de 6 meses não vale mais; a usada há pouco vale', async () => {
+    const arquivo = path.join(servidores.dados, 'sessoes-jogadores.json');
+    const dados = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
+    const sessao = (token, dias) => { const quando = new Date(Date.now() - dias * 86400000).toISOString(); return { id: crypto.createHash('sha256').update(token).digest('hex'), conta: conta1.id, criada: quando, visto: quando, aparelho: 'teste' }; };
+    dados.sessoes.push(sessao('s1.velha-de-teste', 200), sessao('s1.recente-de-teste', 20));
+    fs.writeFileSync(arquivo, JSON.stringify(dados));
+    const velha = (await api(rede, '/api/eu', { cookie: 'jogador=s1.velha-de-teste' })).dados.papel;
+    const recente = (await api(rede, '/api/eu', { cookie: 'jogador=s1.recente-de-teste' })).dados.papel;
+    return [velha === 'visitante' && recente === 'jogador', `200 dias: ${velha} · 20 dias: ${recente}`];
   });
   await r.passo('código revogado deixa de valer', async () => {
     await api(gm, `/api/contas/${conta2.id}`, { method: 'DELETE' });

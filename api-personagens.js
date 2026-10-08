@@ -19,7 +19,7 @@ const ROLES = ['face', 'solo', 'netrunner', 'corpo', 'tech', 'medtech', 'media',
 const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
-module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '' }) {
+module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false }) {
   const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic });
   const { sessions, preferences } = createAccountStores({ dataDir, writeJsonAtomic });
   // Documentos do mestre: os .md de documentos/<id da campanha>/ no projeto (vêm pelo git, como o resto da wiki).
@@ -62,6 +62,25 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     try { return (JSON.parse(fs.readFileSync(accountsFile, 'utf8')).contas || []).map(withCampaigns); } catch { return []; }
   };
   const saveAccounts = accounts => writeJsonAtomic(accountsFile, { contas: accounts });
+  // Fila por arquivo: quem muda um arquivo espera a vez, relê e grava sem esperar nada no meio. Sem isso, dois
+  // pedidos ao mesmo tempo (a ficha do Foundry chegando enquanto o jogador salva) liam o mesmo arquivo e o segundo a
+  // gravar apagava o que o primeiro tinha mudado.
+  const queues = new Map();
+  function lockOn(key, task) {
+    const run = (queues.get(key) || Promise.resolve()).then(task, task);
+    const tail = run.catch(() => null);
+    queues.set(key, tail);
+    tail.then(() => { if (queues.get(key) === tail) queues.delete(key); });
+    return run;
+  }
+  // As contas, do mesmo jeito: change(lista) muda a lista; false = nada a gravar; { status, data } = desiste.
+  const updateAccounts = change => lockOn(accountsFile, async () => {
+    const accounts = readAccounts();
+    const result = change(accounts);
+    if (result === false || (result && result.status)) return result || {};
+    await saveAccounts(result && result.accounts ? result.accounts : accounts);
+    return result || {};
+  });
   // Código fácil de ditar: sem 0/O, 1/I/L.
   const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   const randomFrom = (chars, length) => Array.from(crypto.randomBytes(length), byte => chars[byte % chars.length]).join('');
@@ -69,13 +88,16 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const newId = () => randomFrom('abcdefghijkmnpqrstuvwxyz23456789', 10);
   const playerCookie = request => decodeURIComponent(((request.headers.cookie || '').match(/(?:^|;\s*)jogador=([^;]+)/) || [])[1] || '');
   const findAccount = code => code ? readAccounts().find(account => sameSecret(account.codigo, code)) : null;
-  // O cookie do jogador: a sessão (só um identificador aleatório). Max-Age 0 apaga.
-  const sessionCookie = (token, maxAge = 31536000) => `jogador=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
+  // O cookie do jogador: a sessão (só um identificador aleatório). Max-Age 0 apaga. No servidor (https), só vai por https.
+  const sessionCookie = (token, maxAge = 31536000) => `jogador=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secureCookies ? '; Secure' : ''}`;
   // Tira a conta de todos os aparelhos: as sessões acabam, e o cookie antigo (com o código) deixa de valer.
   async function disconnect(accountId) {
-    const accounts = readAccounts();
-    const account = accounts.find(item => item.id === accountId);
-    if (account && account.cookieAntigo !== false) { account.cookieAntigo = false; await saveAccounts(accounts); }
+    await updateAccounts(list => {
+      const account = list.find(item => item.id === accountId);
+      if (!account || account.cookieAntigo === false) return false;
+      account.cookieAntigo = false;
+      return {};
+    });
     await sessions.removeAccount(accountId);
   }
 
@@ -242,6 +264,42 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
   const ipSpent = doc => (Array.isArray(doc.avanco) ? doc.avanco : []).reduce((sum, entry) => sum + Math.max(0, Number(entry.custo) || 0), 0);
 
+  // ---------------- Histórico de versões ----------------
+  // Antes de uma rodada de edição, a versão de antes vai para personagens/historico/<id>/<quando>-v<versão>.json: no
+  // máximo uma a cada 10 minutos (o criador salva sozinho a cada mudança) e as últimas 30. O mestre lista e restaura
+  // (o jogador apagou o Lifepath sem querer, ou um bug estragou a ficha).
+  const HISTORY_EVERY = 10 * 60 * 1000;
+  const HISTORY_KEEP = 30;
+  const historyDir = id => path.join(charactersDir, 'historico', id);
+  const historyFiles = id => { try { return fs.readdirSync(historyDir(id)).filter(file => /^[\dTZ-]+-v\d+\.json$/.test(file)).sort(); } catch { return []; } };
+  // O nome guarda quando (2026-10-08T14-30-05-120Z) e a versão.
+  const savedAt = file => file.replace(/^(\d{4}-\d\d-\d\d)T(\d\d)-(\d\d)-(\d\d)-(\d{3})Z.*$/, '$1T$2:$3:$4.$5Z');
+  function snapshot(doc, force = false) {
+    const files = historyFiles(doc.id);
+    const last = files[files.length - 1];
+    if (!force && last && Date.now() - new Date(savedAt(last)).getTime() < HISTORY_EVERY) return;
+    fs.mkdirSync(historyDir(doc.id), { recursive: true });
+    const name = `${new Date().toISOString().replace(/[:.]/g, '-')}-v${doc.versao}.json`;
+    fs.writeFileSync(path.join(historyDir(doc.id), name), JSON.stringify(doc));
+    for (const old of [...files, name].slice(0, -HISTORY_KEEP)) fs.rmSync(path.join(historyDir(doc.id), old), { force: true });
+  }
+  const readHistory = (id, version) => {
+    if (!/^[\dTZ-]+-v\d+$/.test(String(version || ''))) return null;
+    try { return JSON.parse(fs.readFileSync(path.join(historyDir(id), `${version}.json`), 'utf8')); } catch { return null; }
+  };
+  // A lista para o mestre (a mais nova primeiro), com o que cada versão tem de diferente da de agora.
+  const COMPARED_OUT = ['resultado', 'passo', 'pendencias'];
+  function listHistory(current) {
+    const now = cleanCharacter(current);
+    return historyFiles(current.id).reverse().map(file => {
+      const old = readHistory(current.id, file.slice(0, -5));
+      if (!old) return null;
+      const before = cleanCharacter(old);
+      const fields = [...new Set([...Object.keys(before), ...Object.keys(now)])].filter(field => !COMPARED_OUT.includes(field) && JSON.stringify(before[field]) !== JSON.stringify(now[field]));
+      return { id: file.slice(0, -5), guardada: savedAt(file), versao: old.versao, nome: old.nome || '', role: old.role || '', atualizado: old.atualizado || null, diferencas: fields.sort() };
+    }).filter(Boolean);
+  }
+
   // ---------------- Regras da loja inicial ----------------
   // O que a loja de criação esconde, em cada campanha. Os jogadores da campanha leem; só o mestre muda.
   // Campanha sem regras gravadas usa as do Protocolo Morana (a campanha nova começa com uma cópia delas).
@@ -334,31 +392,33 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     // Códigos dos jogadores: só o mestre. Cada código joga numa ou mais campanhas (campanhas: [ids]).
     if (pathname === '/api/contas' || pathname.startsWith('/api/contas/')) {
       if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre gerencia os códigos.' });
-      const accounts = readAccounts();
       const existing = campaigns.list().map(item => item.id);
       const campaignList = value => [...new Set((Array.isArray(value) ? value : []).map(String))].filter(id => existing.includes(id));
       // Com o último acesso e os aparelhos com sessão de cada código.
-      if (pathname === '/api/contas' && method === 'GET') return json(response, 200, { contas: accounts.map(account => ({ ...account, ...sessions.summary(account.id) })) });
+      if (pathname === '/api/contas' && method === 'GET') return json(response, 200, { contas: readAccounts().map(account => ({ ...account, ...sessions.summary(account.id) })) });
       if (pathname === '/api/contas' && method === 'POST') {
         const input = await readJson(request);
         const clean = String(input.nome || '').trim().slice(0, 60);
         if (!clean) return json(response, 400, { erro: 'Dê um nome ao jogador.' });
         const chosen = campaignList(input.campanhas);
         const account = { id: newId(), nome: clean, codigo: newCode(), criado: new Date().toISOString(), campanhas: chosen.length ? chosen : [campaigns.first] };
-        await saveAccounts([...accounts, account]);
+        await updateAccounts(list => ({ accounts: [...list, account] }));
         return json(response, 201, { conta: account });
       }
       const [id, action] = pathname.slice('/api/contas/'.length).split('/');
-      const account = accounts.find(item => item.id === id);
-      if (!account) return json(response, 404, { erro: 'Conta não encontrada.' });
+      if (!readAccounts().some(item => item.id === id)) return json(response, 404, { erro: 'Conta não encontrada.' });
+      const missing = { status: 404, data: { erro: 'Conta não encontrada.' } };
       // Desconectar: tira o código de todos os aparelhos (ele entra de novo com o mesmo código).
       // Novo código: o antigo deixa de valer, e todos os aparelhos saem; os personagens e as campanhas ficam.
       if (action === 'desconectar' || action === 'novo-codigo') {
         if (method !== 'POST') return json(response, 405, { erro: 'Use POST.' });
-        if (action === 'novo-codigo') { account.codigo = newCode(); await saveAccounts(accounts); }
-        await disconnect(account.id);
-        const fresh = readAccounts().find(item => item.id === account.id);
-        return json(response, 200, { conta: { ...fresh, ...sessions.summary(account.id) } });
+        if (action === 'novo-codigo') {
+          const done = await updateAccounts(list => { const item = list.find(entry => entry.id === id); if (!item) return missing; item.codigo = newCode(); return {}; });
+          if (done.status) return json(response, done.status, done.data);
+        }
+        await disconnect(id);
+        const fresh = readAccounts().find(item => item.id === id);
+        return json(response, 200, { conta: { ...fresh, ...sessions.summary(id) } });
       }
       if (action) return json(response, 404, { erro: 'Rota não encontrada.' });
       // Em que campanhas o código joga. Sem nenhuma, o certo é revogar (DELETE).
@@ -366,12 +426,12 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const input = await readJson(request);
         const chosen = campaignList(input.campanhas);
         if (!chosen.length) return json(response, 400, { erro: 'O jogador precisa estar em pelo menos uma campanha. Para tirar o acesso, revogue o código.' });
-        account.campanhas = chosen;
-        await saveAccounts(accounts);
-        return json(response, 200, { conta: account });
+        const done = await updateAccounts(list => { const item = list.find(entry => entry.id === id); if (!item) return missing; item.campanhas = chosen; return { conta: item }; });
+        if (done.status) return json(response, done.status, done.data);
+        return json(response, 200, { conta: done.conta });
       }
       if (method === 'DELETE') {
-        await saveAccounts(accounts.filter(item => item.id !== id));
+        await updateAccounts(list => ({ accounts: list.filter(item => item.id !== id) }));
         await sessions.removeAccount(id);
         preferences.remove(id);
         return json(response, 200, { ok: true });
@@ -445,7 +505,28 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       // Os relógios que o mestre mostra (o relógio da cidade, por exemplo): mudar um deles também conta como novidade.
       const clocks = campaigns.publicClocks(id);
       const table = clocks.length ? campaigns.readTable(id).atualizado : null;
-      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, relogios: clocks, atualizado: [view.atualizado, news.atualizado, table].filter(Boolean).sort().pop() || null });
+      // As próximas sessões marcadas na agenda: marcar ou mudar uma também conta como novidade.
+      const agenda = campaigns.upcoming(id);
+      const scheduled = campaigns.agendaUpdated(id);
+      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, relogios: clocks, agenda, atualizado: [view.atualizado, news.atualizado, table, scheduled].filter(Boolean).sort().pop() || null });
+    }
+    // Agenda das mesas: só o mestre marca, muda e desmarca (os jogadores veem as da campanha deles em /api/visao).
+    if (pathname === '/api/agenda' || pathname.startsWith('/api/agenda/')) {
+      if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre.' });
+      if (pathname === '/api/agenda') {
+        if (method === 'GET') return json(response, 200, campaigns.agendaView());
+        if (method !== 'POST') return json(response, 405, { erro: 'Use GET ou POST.' });
+        const sessao = await campaigns.addSession(await readJson(request));
+        return json(response, 201, { sessao, ...campaigns.agendaView() });
+      }
+      const sid = pathname.slice('/api/agenda/'.length);
+      if (!/^[a-f0-9]{10}$/.test(sid)) return json(response, 404, { erro: 'Sessão não encontrada.' });
+      if (method === 'PUT') {
+        const sessao = await campaigns.updateSession(sid, await readJson(request));
+        return sessao ? json(response, 200, { sessao, ...campaigns.agendaView() }) : json(response, 404, { erro: 'Sessão não encontrada.' });
+      }
+      if (method === 'DELETE') return (await campaigns.removeSession(sid)) ? json(response, 200, { ok: true, ...campaigns.agendaView() }) : json(response, 404, { erro: 'Sessão não encontrada.' });
+      return json(response, 405, { erro: 'Use PUT ou DELETE.' });
     }
     // Notícias de Night City: o mural que todas as campanhas veem. Só o mestre lê o rascunho e publica.
     if (pathname === '/api/night-city') {
@@ -500,21 +581,36 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       if (!level) return hidden();
       const gmOnly = () => reply(403, { erro: 'Só o mestre.' });
 
+      // Toda mudança num personagem passa por update(): lê o arquivo de novo logo antes de gravar e grava sem esperar
+      // nada no meio, em fila por personagem. Assim, o que outro pedido gravou enquanto este chegava (a ficha do Foundry,
+      // um pedido aprovado, uma anotação) não se perde. change(doc) muda o doc; devolver { status, data } desiste.
+      const update = change => lockOn(fileOf(id), async () => {
+        const doc = readCharacter(id);
+        if (!doc) return { status: 404, data: { erro: 'Personagem não encontrado.' } };
+        const result = change(doc);
+        if (result && result.status) return result;
+        await writeJsonAtomic(fileOf(id), result && result.doc ? result.doc : doc);
+        return { doc: result && result.doc ? result.doc : doc };
+      });
+      const answer = (done, ok) => (done.status ? reply(done.status, done.data) : ok(done.doc));
+
       // Volta do Foundry: o importador grava o ator e o que já entregou. Não muda a versão (não atrapalha quem está editando).
       // campanha: a do mundo que importou (o Foundry de cada campanha manda a sua; sem ela, a do personagem agora).
       if (extra === 'foundry') {
         if (method !== 'PUT') return reply(405, { erro: 'Use PUT.' });
         if (identity.papel !== 'mestre') return gmOnly();
         const input = cleanValue(await readJson(request));
-        // O mundo de outra campanha (o antigo, depois de um crossover) não grava mais neste personagem.
-        if (input.campanha && realId(input.campanha) !== campaignOf(stored)) return reply(409, { erro: `${stored.nome || 'Este personagem'} agora é de outra campanha na wiki: importe no mundo dela.`, campanha: campaignOf(stored) });
-        const now = new Date().toISOString();
-        const sameActor = stored.foundry && stored.foundry.importado && stored.foundry.ator === String(input.ator || '');
-        const table = campaigns.get(realId(input.campanha)) ? realId(input.campanha) : campaignOf(stored);
-        const sameTable = sameActor && (stored.foundry.campanha || campaignOf(stored)) === table;
-        stored.foundry = { ator: String(input.ator || ''), nomeAtor: String(input.nomeAtor || ''), campanha: table, importado: sameTable ? stored.foundry.importado : String(input.importado || now), sincronizado: now, versao: Number(input.versao) || stored.versao, entregues: Array.isArray(input.entregues) ? input.entregues.map(String) : [], resultadoHash: resultHash(stored) };
-        await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { foundry: stored.foundry, estadoFoundry: foundryState(stored) });
+        const done = await update(doc => {
+          // O mundo de outra campanha (o antigo, depois de um crossover) não grava mais neste personagem.
+          if (input.campanha && realId(input.campanha) !== campaignOf(doc)) return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} agora é de outra campanha na wiki: importe no mundo dela.`, campanha: campaignOf(doc) } };
+          const now = new Date().toISOString();
+          const sameActor = doc.foundry && doc.foundry.importado && doc.foundry.ator === String(input.ator || '');
+          const table = campaigns.get(realId(input.campanha)) ? realId(input.campanha) : campaignOf(doc);
+          const sameTable = sameActor && (doc.foundry.campanha || campaignOf(doc)) === table;
+          doc.foundry = { ator: String(input.ator || ''), nomeAtor: String(input.nomeAtor || ''), campanha: table, importado: sameTable ? doc.foundry.importado : String(input.importado || now), sincronizado: now, versao: Number(input.versao) || doc.versao, entregues: Array.isArray(input.entregues) ? input.entregues.map(String) : [], resultadoHash: resultHash(doc) };
+          return null;
+        });
+        return answer(done, doc => reply(200, { foundry: doc.foundry, estadoFoundry: foundryState(doc) }));
       }
       // Crossover: o mestre leva o personagem para outra campanha. O dono passa a jogar nela também (sem sair das
       // que já tinha). O ator do Foundry fica no mundo antigo; o estado "outra-mesa" avisa o Foundry da campanha nova.
@@ -523,32 +619,44 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         if (identity.papel !== 'mestre') return reply(403, { erro: 'Só o mestre muda um personagem de campanha.' });
         const target = campaigns.get(String((await readJson(request)).campanha || ''));
         if (!target) return reply(400, { erro: 'Campanha não encontrada.' });
-        const from = campaignOf(stored);
-        if (target.id === from) return reply(400, { erro: 'O personagem já está nesta campanha.' });
-        if (stored.foundry && stored.foundry.importado && !stored.foundry.campanha) stored.foundry.campanha = from;
-        stored.campanha = target.id;
-        stored.transferencias = [...(Array.isArray(stored.transferencias) ? stored.transferencias : []), { de: from, para: target.id, quando: new Date().toISOString() }].slice(-20);
-        const owner = accounts.find(account => account.id === stored.dono);
-        const joined = Boolean(owner && !owner.campanhas.includes(target.id));
-        if (joined) { owner.campanhas.push(target.id); await saveAccounts(accounts); }
+        const done = await update(doc => {
+          const from = campaignOf(doc);
+          if (target.id === from) return { status: 400, data: { erro: 'O personagem já está nesta campanha.' } };
+          if (doc.foundry && doc.foundry.importado && !doc.foundry.campanha) doc.foundry.campanha = from;
+          doc.campanha = target.id;
+          doc.transferencias = [...(Array.isArray(doc.transferencias) ? doc.transferencias : []), { de: from, para: target.id, quando: new Date().toISOString() }].slice(-20);
+          return null;
+        });
+        if (done.status) return reply(done.status, done.data);
+        // O dono passa a jogar na campanha nova (sem sair das que já tinha).
+        const joined = await updateAccounts(list => {
+          const owner = list.find(account => account.id === done.doc.dono);
+          if (!owner || owner.campanhas.includes(target.id)) return false;
+          owner.campanhas.push(target.id);
+          return { nome: owner.nome };
+        });
         // Uma ficha mandada numa mudança anterior não vale para esta: o mundo antigo manda de novo.
         fs.rmSync(transferFile(id), { force: true });
-        await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { personagem: summary(stored, accounts), donoEntrou: joined ? owner.nome : null });
+        return reply(200, { personagem: summary(done.doc, readAccounts()), donoEntrou: joined.nome || null });
       }
       // Pedidos da campanha (depois da importação): o jogador pede itens do catálogo, o mestre aprova ou recusa, e o
       // Foundry do mestre entrega (cria os itens, desconta o dinheiro) e marca como entregue. O servidor confere cada
       // item no catálogo e calcula o total; ninguém escolhe o preço. Não muda a versão do personagem.
       if (extra === 'pedidos') {
-        const pedidos = Array.isArray(stored.pedidos) ? stored.pedidos : [];
         const [, , pid, action] = pathname.slice('/api/personagens/'.length).split('/');
         if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
-        const save = async () => { stored.pedidos = pedidos.slice(-50); await writeJsonAtomic(fileOf(id), stored); };
+        const ordersOf = doc => (Array.isArray(doc.pedidos) ? doc.pedidos : []);
+        // Os erros de sempre já com o que estava no arquivo; dentro de update() confere de novo, com o arquivo relido.
+        const orderBlock = doc => {
+          if (!(doc.foundry && doc.foundry.importado)) return { status: 400, data: { erro: 'Antes do Foundry, as compras são na loja inicial.' } };
+          if (ordersOf(doc).filter(item => item.status === 'pendente').length >= 5) return { status: 400, data: { erro: 'Já há 5 pedidos esperando o mestre.' } };
+          return null;
+        };
         if (!pid) {
-          if (method === 'GET') return reply(200, { pedidos });
+          if (method === 'GET') return reply(200, { pedidos: ordersOf(stored) });
           if (method !== 'POST') return reply(405, { erro: 'Use POST.' });
-          if (!(stored.foundry && stored.foundry.importado)) return reply(400, { erro: 'Antes do Foundry, as compras são na loja inicial.' });
-          if (pedidos.filter(item => item.status === 'pendente').length >= 5) return reply(400, { erro: 'Já há 5 pedidos esperando o mestre.' });
+          const blocked = orderBlock(stored);
+          if (blocked) return reply(blocked.status, blocked.data);
           const input = await readJson(request);
           const lines = Array.isArray(input.itens) ? input.itens.slice(0, 30) : [];
           const items = catalog();
@@ -571,37 +679,42 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           if (!itens.length) return reply(400, { erro: 'O pedido está vazio.' });
           const total = itens.reduce((sum, line) => sum + line.preco * (line.lote > 1 ? line.qtd / line.lote : line.qtd), 0);
           const pedido = { id: pedidoId, criado: new Date().toISOString(), status: 'pendente', itens, total: Math.round(total), nota: String(input.nota || '').trim().slice(0, 300), por: identity.papel };
-          pedidos.push(pedido);
-          await save();
-          return reply(201, { pedido });
+          const done = await update(doc => {
+            const late = orderBlock(doc);
+            if (late) return late;
+            doc.pedidos = [...ordersOf(doc), pedido].slice(-50);
+            return null;
+          });
+          return answer(done, () => reply(201, { pedido }));
         }
-        const pedido = pedidos.find(item => item.id === pid);
-        if (!pedido) return reply(404, { erro: 'Pedido não encontrado.' });
+        if (!ordersOf(stored).some(item => item.id === pid)) return reply(404, { erro: 'Pedido não encontrado.' });
         if (method !== 'POST' && method !== 'PUT') return reply(405, { erro: 'Use POST.' });
-        const now = new Date().toISOString();
-        if (action === 'cancelar') {
-          if (pedido.status !== 'pendente') return reply(400, { erro: 'Só dá para cancelar um pedido que ainda espera o mestre.' });
-          Object.assign(pedido, { status: 'cancelado', decidido: now });
-        } else {
-          if (identity.papel !== 'mestre') return reply(403, { erro: 'Só o mestre.' });
-          const input = await readJson(request).catch(() => ({}));
-          if (action === 'aprovar') {
+        if (action !== 'cancelar' && identity.papel !== 'mestre') return reply(403, { erro: 'Só o mestre.' });
+        const input = action === 'cancelar' ? {} : await readJson(request).catch(() => ({}));
+        const done = await update(doc => {
+          const pedido = ordersOf(doc).find(item => item.id === pid);
+          if (!pedido) return { status: 404, data: { erro: 'Pedido não encontrado.' } };
+          const now = new Date().toISOString();
+          if (action === 'cancelar') {
+            if (pedido.status !== 'pendente') return { status: 400, data: { erro: 'Só dá para cancelar um pedido que ainda espera o mestre.' } };
+            Object.assign(pedido, { status: 'cancelado', decidido: now });
+          } else if (action === 'aprovar') {
             // Aprovar de novo um aprovado que deu erro (faltou dinheiro na mesa) limpa o erro: o Foundry tenta outra vez.
-            if (!(pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))) return reply(400, { erro: 'Este pedido não está esperando.' });
+            if (!(pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))) return { status: 400, data: { erro: 'Este pedido não está esperando.' } };
             Object.assign(pedido, { status: 'aprovado', decidido: now, erro: '' });
           } else if (action === 'recusar') {
-            if (!['pendente', 'aprovado'].includes(pedido.status)) return reply(400, { erro: 'Este pedido já foi resolvido.' });
+            if (!['pendente', 'aprovado'].includes(pedido.status)) return { status: 400, data: { erro: 'Este pedido já foi resolvido.' } };
             Object.assign(pedido, { status: 'recusado', decidido: now, motivo: String(input.motivo || '').trim().slice(0, 300) });
           } else if (action === 'entregue') {
-            if (!['pendente', 'aprovado'].includes(pedido.status)) return reply(400, { erro: 'Este pedido já foi resolvido.' });
+            if (!['pendente', 'aprovado'].includes(pedido.status)) return { status: 400, data: { erro: 'Este pedido já foi resolvido.' } };
             Object.assign(pedido, { status: 'entregue', entregue: now, decidido: pedido.decidido || now, avisos: (Array.isArray(input.avisos) ? input.avisos : []).map(String).slice(0, 20), erro: '' });
           } else if (action === 'erro') {
             // O Foundry não conseguiu entregar (dinheiro insuficiente na mesa, por exemplo): fica aprovado, com o motivo.
             pedido.erro = String(input.erro || '').slice(0, 300);
-          } else return reply(404, { erro: 'Ação desconhecida.' });
-        }
-        await save();
-        return reply(200, { pedido });
+          } else return { status: 404, data: { erro: 'Ação desconhecida.' } };
+          return null;
+        });
+        return answer(done, doc => reply(200, { pedido: ordersOf(doc).find(item => item.id === pid) }));
       }
       // Na mesa: o estado do ator no Foundry (HP, Humanidade, dinheiro, itens…), mandado pelo módulo do Foundry do
       // mestre a cada mudança. Depois da importação o Foundry manda; a ficha da wiki mostra isto. Não muda a versão.
@@ -609,12 +722,14 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         if (method !== 'PUT') return reply(405, { erro: 'Use PUT.' });
         if (identity.papel !== 'mestre') return reply(403, { erro: 'Só o mestre.' });
         const input = cleanValue(await readJson(request));
-        // Depois de um crossover, o mundo antigo para de mandar a ficha (a da mesa nova é que vale).
-        if (input.campanha && realId(input.campanha) !== campaignOf(stored)) return reply(409, { erro: `${stored.nome || 'Este personagem'} agora é de outra campanha na wiki.`, campanha: campaignOf(stored) });
-        delete input.campanha;
-        stored.mesa = { ...input, recebido: new Date().toISOString() };
-        await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { recebido: stored.mesa.recebido });
+        const done = await update(doc => {
+          // Depois de um crossover, o mundo antigo para de mandar a ficha (a da mesa nova é que vale).
+          if (input.campanha && realId(input.campanha) !== campaignOf(doc)) return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} agora é de outra campanha na wiki.`, campanha: campaignOf(doc) } };
+          delete input.campanha;
+          doc.mesa = { ...input, recebido: new Date().toISOString() };
+          return null;
+        });
+        return answer(done, doc => reply(200, { recebido: doc.mesa.recebido }));
       }
       // A ficha do ator para o crossover: o mundo antigo manda (PUT, depois que o personagem mudou de campanha) e o mundo
       // novo lê (GET) para criar o ator como estava. Só o mestre; o que vem é o ator do Foundry inteiro (até 4 MB).
@@ -628,10 +743,11 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         if (method !== 'PUT') return reply(405, { erro: 'Use PUT, GET ou DELETE.' });
         const input = await readJson(request, 4 * 1024 * 1024);
         const from = realId(input.campanha);
-        if (!campaigns.get(from) || from === campaignOf(stored)) return reply(400, { erro: 'Só o mundo da campanha antiga manda a ficha, depois que o personagem muda de campanha.' });
+        const now = readCharacter(id) || stored;
+        if (!campaigns.get(from) || from === campaignOf(now)) return reply(400, { erro: 'Só o mundo da campanha antiga manda a ficha, depois que o personagem muda de campanha.' });
         if (!input.ator || typeof input.ator !== 'object' || input.ator.type !== 'character') return reply(400, { erro: 'Mande o ator do Foundry (actor.toObject()).' });
         fs.mkdirSync(path.dirname(transferFile(id)), { recursive: true });
-        await writeJsonAtomic(transferFile(id), { de: from, para: campaignOf(stored), quando: new Date().toISOString(), nomeAtor: String(input.ator.name || '').slice(0, 120), ator: input.ator });
+        await lockOn(transferFile(id), () => writeJsonAtomic(transferFile(id), { de: from, para: campaignOf(now), quando: new Date().toISOString(), nomeAtor: String(input.ator.name || '').slice(0, 120), ator: input.ator }));
         return reply(200, { transferencia: transferInfo(id) });
       }
       // Anotações do personagem (pistas, contatos, dívidas, o que o NPC prometeu): o dono e o mestre leem e escrevem.
@@ -641,9 +757,11 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         if (method === 'GET') return reply(200, { anotacoes: stored.anotacoes || null });
         if (method !== 'PUT') return reply(405, { erro: 'Use GET ou PUT.' });
         const input = await readJson(request, 64 * 1024);
-        stored.anotacoes = { texto: String(input.texto || '').slice(0, 20000), atualizado: new Date().toISOString(), por: identity.papel === 'mestre' ? 'mestre' : identity.conta.nome };
-        await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { anotacoes: stored.anotacoes });
+        const done = await update(doc => {
+          doc.anotacoes = { texto: String(input.texto || '').slice(0, 20000), atualizado: new Date().toISOString(), por: identity.papel === 'mestre' ? 'mestre' : identity.conta.nome };
+          return null;
+        });
+        return answer(done, doc => reply(200, { anotacoes: doc.anotacoes }));
       }
       // Retrato: quem joga na campanha do personagem vê (é o rosto dele); o dono ou o mestre trocam.
       if (extra === 'retrato') {
@@ -662,18 +780,22 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           if (buffer.length > 2 * 1024 * 1024) return reply(413, { erro: 'Imagem grande demais (até 2 MB).' });
           const type = imageType(buffer);
           if (!type) return reply(400, { erro: 'Envie uma imagem PNG, JPEG ou WebP.' });
-          fs.mkdirSync(portraitDir(), { recursive: true });
-          for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
-          fs.writeFileSync(path.join(portraitDir(), `${id}.${type}`), buffer);
-          stored.retrato = `api/personagens/${id}/retrato?v=${Date.now()}`;
-          await writeJsonAtomic(fileOf(id), stored);
-          return reply(200, { retrato: stored.retrato });
+          const done = await update(doc => {
+            fs.mkdirSync(portraitDir(), { recursive: true });
+            for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
+            fs.writeFileSync(path.join(portraitDir(), `${id}.${type}`), buffer);
+            doc.retrato = `api/personagens/${id}/retrato?v=${Date.now()}`;
+            return null;
+          });
+          return answer(done, doc => reply(200, { retrato: doc.retrato }));
         }
         if (method === 'DELETE') {
-          for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
-          stored.retrato = null;
-          await writeJsonAtomic(fileOf(id), stored);
-          return reply(200, { retrato: null });
+          const done = await update(doc => {
+            for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
+            doc.retrato = null;
+            return null;
+          });
+          return answer(done, () => reply(200, { retrato: null }));
         }
         return reply(405, { erro: 'Método não permitido.' });
       }
@@ -681,9 +803,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       if (extra === 'enviar') {
         if (method !== 'POST') return reply(405, { erro: 'Use POST.' });
         if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
-        stored.envio = { quando: new Date().toISOString(), versao: stored.versao, resultadoHash: resultHash(stored) };
-        await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { envio: stored.envio, estadoFoundry: foundryState(stored) });
+        const done = await update(doc => { doc.envio = { quando: new Date().toISOString(), versao: doc.versao, resultadoHash: resultHash(doc) }; return null; });
+        return answer(done, doc => reply(200, { envio: doc.envio, estadoFoundry: foundryState(doc) }));
       }
       // Pontos de Melhoria: só o mestre dá (ou tira, com número negativo).
       if (extra === 'ip') {
@@ -692,13 +813,34 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const input = await readJson(request);
         const amount = Math.round(Number(input.qtd));
         if (!amount || Math.abs(amount) > 1000) return reply(400, { erro: 'Quantidade entre −1000 e 1000.' });
-        const granted = [...((stored.ip && stored.ip.ganhos) || []), { qtd: amount, motivo: String(input.motivo || '').trim().slice(0, 200), quando: new Date().toISOString() }];
-        if (granted.reduce((sum, entry) => sum + entry.qtd, 0) < ipSpent(stored)) return reply(400, { erro: 'Não dá para tirar mais do que sobra: o jogador já gastou esses pontos.' });
-        stored.ip = { ganhos: granted };
-        stored.versao += 1; // o avanço muda o que o jogador pode fazer: quem estiver com a ficha aberta recarrega
-        stored.atualizado = new Date().toISOString();
-        await writeJsonAtomic(fileOf(id), stored);
-        return reply(200, { ip: stored.ip, versao: stored.versao });
+        const done = await update(doc => {
+          const granted = [...((doc.ip && doc.ip.ganhos) || []), { qtd: amount, motivo: String(input.motivo || '').trim().slice(0, 200), quando: new Date().toISOString() }];
+          if (granted.reduce((sum, entry) => sum + entry.qtd, 0) < ipSpent(doc)) return { status: 400, data: { erro: 'Não dá para tirar mais do que sobra: o jogador já gastou esses pontos.' } };
+          doc.ip = { ganhos: granted };
+          doc.versao += 1; // o avanço muda o que o jogador pode fazer: quem estiver com a ficha aberta recarrega
+          doc.atualizado = new Date().toISOString();
+          return null;
+        });
+        return answer(done, doc => reply(200, { ip: doc.ip, versao: doc.versao }));
+      }
+      // Histórico de versões (só o mestre): as versões guardadas antes de cada rodada de edição, e Restaurar uma delas.
+      // Restaurar volta o que o jogador preenche (STATs, perícias, itens, Lifepath...) e mantém o que é do servidor
+      // (Foundry, mesa, pedidos, Pontos de Melhoria, retrato, anotações). A versão de agora vai para o histórico antes.
+      if (extra === 'versoes') {
+        if (identity.papel !== 'mestre') return gmOnly();
+        const [, , vid, action] = pathname.slice('/api/personagens/'.length).split('/');
+        if (!vid) return method === 'GET' ? reply(200, { versoes: listHistory(stored), atual: stored.versao }) : reply(405, { erro: 'Use GET.' });
+        if (action !== 'restaurar' || method !== 'POST') return reply(404, { erro: 'Rota não encontrada.' });
+        const old = readHistory(id, vid);
+        if (!old) return reply(404, { erro: 'Versão não encontrada.' });
+        const done = await update(doc => {
+          const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, doc[field] || null]));
+          const restored = { ...cleanCharacter(old), ...kept, id, dono: doc.dono, campanha: campaignOf(doc), versao: doc.versao + 1, criado: doc.criado, atualizado: new Date().toISOString() };
+          if (ipSpent(restored) > ipGranted(restored)) return { status: 400, data: { erro: 'Essa versão gasta mais Pontos de Melhoria do que o personagem tem agora.' } };
+          snapshot(doc, true);
+          return { doc: restored };
+        });
+        return answer(done, doc => reply(200, { personagem: { ...doc, estadoFoundry: foundryState(doc) }, restaurada: old.versao }));
       }
       if (extra) return reply(404, { erro: 'Rota não encontrada.' });
 
@@ -706,24 +848,30 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
       if (method === 'PUT') {
         const input = await readJson(request);
-        // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
-        if (Number(input.versao) !== stored.versao) return reply(409, { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, stored) });
-        const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, stored[field] || null]));
-        const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : stored.dono, campanha: campaignOf(stored), versao: stored.versao + 1, criado: stored.criado, atualizado: new Date().toISOString() };
-        // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
-        // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.
-        if (stored.foundry && stored.foundry.importado && identity.papel !== 'mestre') {
-          for (const field of LOCKED_AFTER_IMPORT) doc[field] = stored[field] === undefined ? doc[field] : stored[field];
-          if (stored.resultado) doc.resultado = { ...stored.resultado, lifepath: (input.resultado && input.resultado.lifepath) || stored.resultado.lifepath };
-        }
-        if (ipSpent(doc) > ipGranted(doc)) return reply(400, { erro: 'Pontos de Melhoria insuficientes para esse avanço.' });
-        await writeJsonAtomic(fileOf(id), doc);
-        return reply(200, { personagem: forViewer(identity, { ...doc, estadoFoundry: foundryState(doc) }) });
+        const done = await update(current => {
+          // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
+          if (Number(input.versao) !== current.versao) return { status: 409, data: { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, current) } };
+          const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] || null]));
+          const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : current.dono, campanha: campaignOf(current), versao: current.versao + 1, criado: current.criado, atualizado: new Date().toISOString() };
+          // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
+          // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.
+          if (current.foundry && current.foundry.importado && identity.papel !== 'mestre') {
+            for (const field of LOCKED_AFTER_IMPORT) doc[field] = current[field] === undefined ? doc[field] : current[field];
+            if (current.resultado) doc.resultado = { ...current.resultado, lifepath: (input.resultado && input.resultado.lifepath) || current.resultado.lifepath };
+          }
+          if (ipSpent(doc) > ipGranted(doc)) return { status: 400, data: { erro: 'Pontos de Melhoria insuficientes para esse avanço.' } };
+          // A versão de antes vai para o histórico (uma por rodada de edição).
+          snapshot(current);
+          return { doc };
+        });
+        return answer(done, doc => reply(200, { personagem: forViewer(identity, { ...doc, estadoFoundry: foundryState(doc) }) }));
       }
       if (method === 'DELETE') {
-        const trash = path.join(charactersDir, 'apagados');
-        fs.mkdirSync(trash, { recursive: true });
-        fs.renameSync(fileOf(id), path.join(trash, `${id}-${Date.now()}.json`));
+        await lockOn(fileOf(id), async () => {
+          const trash = path.join(charactersDir, 'apagados');
+          fs.mkdirSync(trash, { recursive: true });
+          if (fs.existsSync(fileOf(id))) fs.renameSync(fileOf(id), path.join(trash, `${id}-${Date.now()}.json`));
+        });
         return reply(200, { ok: true });
       }
       return reply(405, { erro: 'Método não permitido.' });
@@ -747,5 +895,5 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   handle.campaignCard = campaignCard;
   return handle;
 };
-const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city)(\/|$)/;
+const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city|agenda)(\/|$)/;
 module.exports.ROUTES = ROUTES;

@@ -9,9 +9,11 @@
 //   campanhas.json                    → a lista (nome, cor e o mundo do Foundry de cada uma);
 //   campanhas/<id>/publicar.json      → o Publicar: o que o mestre guarda e o que os jogadores veem;
 //   campanhas/<id>/regras-loja.json   → o que a loja de criação esconde nesta campanha;
-//   noticias-night-city.json          → as notícias que todas as campanhas veem.
+//   noticias-night-city.json          → as notícias que todas as campanhas veem;
+//   agenda.json                       → as sessões marcadas de todas as campanhas.
 // O que existia antes das campanhas (jogadores.json, jogadores-mestre.json, regras-loja.json, e os personagens e
 // códigos sem campanha) é do Protocolo Morana: lido como está e gravado no lugar novo na primeira mudança.
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -168,7 +170,69 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
   // O que os jogadores veem: os relógios marcados, com o valor de agora.
   const publicClocks = id => { const table = readTable(id); return Object.entries(table.publicos).map(([name, clock]) => ({ id: name, nome: clock.nome, passos: clock.passos, valor: table.relogios[name] || 0 })); };
 
-  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, publicClocks, validId: id => ID_RE.test(String(id || '')) };
+  // ---------------- Agenda das mesas ----------------
+  // As sessões marcadas de todas as campanhas num arquivo só: uma licença do Foundry abre um mundo por vez, então o
+  // mestre precisa ver os horários juntos. Os jogadores de cada campanha veem as próximas sessões dela.
+  //   agenda.json → { sessoes: [{ id, campanha, inicio (ISO), duracao (minutos), titulo, nota, criada }], atualizado,
+  //                   porCampanha: { id: quando mudou a agenda dela } } (a visão dos jogadores de cada uma se atualiza)
+  const agendaFile = path.join(dataDir, 'agenda.json');
+  const AGENDA_KEEP = 180 * 24 * 60 * 60 * 1000; // sessões que acabaram há mais de 6 meses saem na próxima gravação
+  const endOf = item => Date.parse(item.inicio) + item.duracao * 60000;
+  function readAgenda() {
+    const data = readFile(agendaFile) || {};
+    const items = (Array.isArray(data.sessoes) ? data.sessoes : []).filter(item => item && item.id && !Number.isNaN(Date.parse(item.inicio)) && Number(item.duracao) > 0);
+    return { sessoes: items.sort((a, b) => a.inicio.localeCompare(b.inicio)), atualizado: data.atualizado || null, porCampanha: data.porCampanha && typeof data.porCampanha === 'object' ? data.porCampanha : {} };
+  }
+  const saveAgenda = (items, touched) => {
+    const atualizado = new Date().toISOString();
+    const changed = { ...readAgenda().porCampanha, ...Object.fromEntries(touched.map(id => [id, atualizado])) };
+    return writeJsonAtomic(agendaFile, { sessoes: items.filter(item => Date.now() - endOf(item) < AGENDA_KEEP), atualizado, porCampanha: changed }).then(() => atualizado);
+  };
+  const fail = text => Object.assign(new Error(text), { status: 400 });
+  function cleanSession(input, base = {}) {
+    if (!input || typeof input !== 'object') throw fail('Mande { campanha, inicio, duracao, titulo, nota }.');
+    const start = new Date(input.inicio ?? base.inicio ?? '');
+    if (Number.isNaN(start.getTime())) throw fail('Diga a data e a hora da sessão.');
+    const campaign = String(input.campanha ?? base.campanha ?? '');
+    if (!get(campaign)) throw fail('Campanha não encontrada.');
+    const minutes = Math.round(Number(input.duracao ?? base.duracao ?? 240));
+    if (!(minutes >= 30 && minutes <= 24 * 60)) throw fail('A duração vai de 30 minutos a 24 horas.');
+    return { id: base.id || crypto.randomBytes(5).toString('hex'), campanha: campaign, inicio: start.toISOString(), duracao: minutes, titulo: String(input.titulo ?? base.titulo ?? '').trim().slice(0, 80), nota: String(input.nota ?? base.nota ?? '').trim().slice(0, 300), criada: base.criada || new Date().toISOString() };
+  }
+  // Sessões que se cruzam no horário: de outra campanha (o Foundry só abre um mundo por vez) ou da mesma (marcada duas vezes).
+  const clashes = (item, items) => items.filter(other => other.id !== item.id && Date.parse(other.inicio) < endOf(item) && Date.parse(item.inicio) < endOf(other)).map(other => other.id);
+  // Para o mestre: todas (das campanhas que existem), com os choques de horário.
+  function agendaView() {
+    const { sessoes, atualizado } = readAgenda();
+    const items = sessoes.filter(item => get(item.campanha));
+    return { sessoes: items.map(item => ({ ...item, conflitos: clashes(item, items) })), atualizado };
+  }
+  async function addSession(input) {
+    const item = cleanSession(input);
+    await saveAgenda([...readAgenda().sessoes, item], [item.campanha]);
+    return item;
+  }
+  async function updateSession(id, input) {
+    const items = readAgenda().sessoes;
+    const index = items.findIndex(item => item.id === id);
+    if (index < 0) return null;
+    const before = items[index].campanha;
+    items[index] = cleanSession(input, items[index]);
+    await saveAgenda(items, [before, items[index].campanha]);
+    return items[index];
+  }
+  async function removeSession(id) {
+    const items = readAgenda().sessoes;
+    const gone = items.find(item => item.id === id);
+    if (!gone) return false;
+    await saveAgenda(items.filter(item => item.id !== id), [gone.campanha]);
+    return true;
+  }
+  // Para os jogadores de uma campanha: as próximas (até 5), sem o id da campanha.
+  const agendaUpdated = id => readAgenda().porCampanha[id] || null;
+  const upcoming = id => readAgenda().sessoes.filter(item => item.campanha === id && endOf(item) > Date.now()).slice(0, 5).map(({ id: sid, inicio, duracao, titulo, nota }) => ({ id: sid, inicio, duracao, titulo, nota }));
+
+  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, publicClocks, readAgenda, agendaView, addSession, updateSession, removeSession, upcoming, agendaUpdated, validId: id => ID_RE.test(String(id || '')) };
 }
 
 module.exports = { createCampaigns, publishedOf };

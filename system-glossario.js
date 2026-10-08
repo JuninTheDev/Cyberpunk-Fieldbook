@@ -50,7 +50,7 @@
     // ---------------- Humanidade ----------------
     t('Humanidade', 'Humanity', 'EMP × 10. Cai com cada cyberware instalado; a EMP efetiva é a dezena da Humanidade atual.', 'humanity', 'Humanidade e EMP'),
     t('Perda de Humanidade', 'Humanity Loss', 'O quanto de Humanidade um cyberware tira ao ser instalado (valor fixo ou rolado).', 'humanity', 'Humanidade e EMP'),
-    t('Ciberpsicose', 'Cyberpsychosis', 'Humanidade abaixo de zero: o personagem perde o controle para o cromo.', 'humanity', 'Humanidade e EMP', ['ciberpsicótico', 'ciberpsicótica', 'cyberpsicose', 'Cyberpsychosis']),
+    t('Ciberpsicose', 'Cyberpsychosis', 'Transtorno dissociativo causado pelo cromo. Começa limítrofe na EMP 2; com EMP 0 é ciberpsicose, e com Humanidade negativa o personagem passa para o mestre.', 'humanity', 'Humanidade e EMP', ['ciberpsicótico', 'ciberpsicótica', 'cyberpsicose', 'Cyberpsychosis']),
 
     // ---------------- Netrunning do RED ----------------
     t('Interface', 'Interface', 'Habilidade de Role do Netrunner: dá as Ações NET e as habilidades Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Scanner, Slide, Virus e Zap.', 'netrunning', 'Habilidades de Interface'),

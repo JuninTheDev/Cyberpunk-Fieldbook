@@ -3,6 +3,7 @@
 //   de montar a wiki. O Protocolo Morana tem as páginas do index.html; as outras ganham a visão geral, o Publicar,
 //   Personagens e códigos, Loja, Notas e os documentos da pasta documentos/<id>/.
 //   A página "Campanhas": criar, renomear, cor, mundo do Foundry e apagar (só campanha vazia).
+//   A página "Agenda das mesas": as sessões marcadas de todas as campanhas, com aviso de horário cruzado.
 (() => {
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
   const slug = text => String(text || 'item').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item';
@@ -39,14 +40,16 @@
   });
   async function setupOverview(id, content) {
     const root = content.querySelector('#cp-overview');
-    const answer = await api(`api/campanhas/${encodeURIComponent(id)}`);
+    const [answer, agenda] = await Promise.all([api(`api/campanhas/${encodeURIComponent(id)}`), api('api/agenda')]);
     if (!root.isConnected) return;
     const item = answer.data.campanha;
+    const next = (agenda.data.sessoes || []).find(session => session.campanha === id && Date.parse(session.inicio) + session.duracao * 60000 > Date.now());
     if (!item) { root.innerHTML = `<div class="callout">${escapeHtml(answer.data.erro || 'Não consegui ler a campanha.')}</div>`; return; }
     const docs = item.documentos || [];
     root.innerHTML = `<hr class="rule"><div class="grid">
         <section class="tile"><span class="tag">Personagens</span><h3>${plural(item.personagens, 'personagem', 'personagens')}</h3><p>${plural(item.jogadores, 'jogador', 'jogadores')} com código nesta campanha.</p><button type="button" data-page="personagens">Personagens e códigos</button></section>
         <section class="tile"><span class="tag">Jogadores</span><h3>Visão dos jogadores</h3><p>Resumo, pessoas, lugares e notícias que o grupo já conhece.</p><button type="button" data-page="playerView">Publicar</button></section>
+        <section class="tile"><span class="tag">Agenda</span><h3>${next ? escapeHtml(window.wikiApp.sessionTime(next).curto) : 'Nenhuma sessão marcada'}</h3><p>${next ? `${escapeHtml(window.wikiApp.sessionTime(next).relativo)}${next.titulo ? ` · ${escapeHtml(next.titulo)}` : ''}. Os jogadores veem no Resumo.` : 'Marque a próxima: os jogadores veem no Resumo e põem no calendário.'}</p><button type="button" data-page="agenda">Agenda das mesas</button></section>
         <section class="tile"><span class="tag">Foundry</span><h3>${item.mundo ? escapeHtml(item.mundo) : 'Sem mundo ligado'}</h3><p>${item.mundo ? 'O mundo desta campanha. A barra da wiki mostra quando ele está aberto.' : 'Diga qual é o mundo do Foundry desta campanha na página Campanhas.'}</p><button type="button" data-page="campanhas">Campanhas</button></section>
       </div>
       <div class="section" data-toc="Documentos"><h3>Documentos</h3>${docs.length
@@ -138,11 +141,116 @@
     };
   }
 
+  // ---------------- Página: Agenda das mesas ----------------
+  const agendaPage = {
+    eyebrow: 'Mestre / agenda', title: 'Agenda das mesas',
+    lede: 'As sessões marcadas de todas as campanhas. Uma licença do Foundry abre um mundo por vez: a agenda avisa quando dois horários se cruzam. Os jogadores de cada campanha veem as próximas sessões dela no Resumo e podem pôr no calendário.',
+    html: `<div class="section" data-toc="Próximas sessões"><h3>Próximas sessões</h3><div id="ag-list" class="pv-list">Carregando…</div></div>
+      <div class="section" data-toc="Marcar sessão"><h3>Marcar sessão</h3><form id="ag-new" class="pv-row on"><div class="pv-fields" id="ag-new-fields"></div><p><button class="action" type="submit">Marcar</button> <span class="note-status" id="ag-new-msg" role="status"></span></p></form>
+        <p class="note-status">A data e a hora são as deste aparelho; cada jogador vê no horário do aparelho dele.</p></div>
+      <div class="section" data-toc="Já passaram"><h3>Já passaram</h3><div id="ag-past">…</div></div>`
+  };
+  // "2026-10-10T19:00" no horário deste aparelho (o que o campo datetime-local usa) ↔ ISO.
+  const localInput = iso => { if (!iso) return ''; const date = new Date(iso); const pad = n => String(n).padStart(2, '0'); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`; };
+  const endOf = item => Date.parse(item.inicio) + item.duracao * 60000;
+  function sessionFields(item, campaigns) {
+    return `<label class="pv-field"><span>Campanha</span><select name="campanha">${campaigns.map(campaign => `<option value="${escapeHtml(campaign.id)}"${campaign.id === item.campanha ? ' selected' : ''}>${escapeHtml(campaign.nome)}</option>`).join('')}</select></label>
+      <label class="pv-field"><span>Quando</span><input name="inicio" type="datetime-local" required value="${escapeHtml(localInput(item.inicio))}"></label>
+      <label class="pv-field small"><span>Horas</span><input name="horas" type="number" min="0.5" max="24" step="0.5" value="${(item.duracao || 240) / 60}"></label>
+      <label class="pv-field"><span>Título (opcional)</span><input name="titulo" maxlength="80" value="${escapeHtml(item.titulo || '')}" placeholder="Sessão 3: o hospital"></label>
+      <label class="pv-field"><span>Nota para os jogadores (opcional)</span><input name="nota" maxlength="300" value="${escapeHtml(item.nota || '')}" placeholder="No Discord; tragam a ficha atualizada"></label>`;
+  }
+  const sessionBody = form => ({ campanha: form.elements.campanha.value, inicio: form.elements.inicio.value ? new Date(form.elements.inicio.value).toISOString() : '', duracao: Math.round(Number(form.elements.horas.value) * 60), titulo: form.elements.titulo.value.trim(), nota: form.elements.nota.value.trim() });
+  // A próxima da mesma campanha, uma semana depois da última marcada (a mesa costuma ter dia fixo).
+  function suggestion(campaign, sessions) {
+    const last = sessions.filter(item => item.campanha === campaign).pop();
+    if (!last) return '';
+    let start = Date.parse(last.inicio) + 7 * 86400000;
+    while (start < Date.now()) start += 7 * 86400000;
+    return new Date(start).toISOString();
+  }
+  async function setupAgenda(content) {
+    const list = content.querySelector('#ag-list');
+    const [agenda, answer] = await Promise.all([api('api/agenda'), api('api/campanhas')]);
+    if (!list.isConnected) return;
+    const campaigns = answer.data.campanhas || [];
+    const byId = id => campaigns.find(item => item.id === id) || { nome: id, cor: '#888888' };
+    let sessions = agenda.data.sessoes || [];
+    if (agenda.status !== 200) { list.innerHTML = `<div class="callout">${escapeHtml(agenda.data.erro || 'Não consegui ler a agenda.')}</div>`; return; }
+    const draw = () => {
+      const now = Date.now();
+      const future = sessions.filter(item => endOf(item) > now);
+      const past = sessions.filter(item => endOf(item) <= now).reverse().slice(0, 20);
+      list.innerHTML = future.length ? future.map(item => {
+        const when = window.wikiApp.sessionTime(item);
+        const clash = (item.conflitos || []).map(id => sessions.find(other => other.id === id)).filter(Boolean);
+        return `<form class="pv-row on ag-row" data-ag-id="${escapeHtml(item.id)}" style="border-left-color: ${escapeHtml(byId(item.campanha).cor)}">
+          <div class="pv-row-head"><b>${escapeHtml(when.data)}, ${escapeHtml(when.horario)}</b><span class="note-status">${escapeHtml(byId(item.campanha).nome)} · ${escapeHtml(when.relativo)}</span><button type="button" class="pv-remove" data-ag-delete>Desmarcar</button></div>
+          ${clash.length ? `<div class="callout ag-clash">Cruza com ${clash.map(other => `<b>${escapeHtml(byId(other.campanha).nome)}</b> (${escapeHtml(window.wikiApp.sessionTime(other).curto)})`).join(' e ')}. ${clash.some(other => other.campanha !== item.campanha) ? 'O Foundry abre um mundo por vez: uma das duas precisa mudar de horário.' : 'A mesma campanha marcada duas vezes no mesmo horário.'}</div>` : ''}
+          <div class="pv-fields">${sessionFields(item, campaigns)}</div><p><button class="action" type="submit">Salvar</button> <span class="note-status" data-ag-msg role="status"></span></p></form>`;
+      }).join('') : '<p>Nenhuma sessão marcada.</p>';
+      content.querySelector('#ag-past').innerHTML = past.length ? `<ul class="ag-past">${past.map(item => `<li data-ag-id="${escapeHtml(item.id)}">${escapeHtml(window.wikiApp.sessionTime(item).curto)} · <b>${escapeHtml(byId(item.campanha).nome)}</b>${item.titulo ? ` · ${escapeHtml(item.titulo)}` : ''} <button type="button" class="pv-remove" data-ag-delete>Tirar</button></li>`).join('')}</ul><p class="note-status">Saem sozinhas seis meses depois.</p>` : '<p>Nenhuma ainda.</p>';
+    };
+    const newForm = content.querySelector('#ag-new');
+    const active = (window.wikiApp.activeCampaign() || {}).id;
+    const fresh = campaign => ({ campanha: campaign, inicio: suggestion(campaign, sessions), duracao: 240 });
+    newForm.querySelector('#ag-new-fields').innerHTML = sessionFields(fresh(campaigns.some(item => item.id === active) ? active : (campaigns[0] || {}).id), campaigns);
+    // Trocar a campanha do formulário novo sugere o dia dela (se a data ainda é a sugerida ou está vazia).
+    let suggested = newForm.elements.inicio.value;
+    newForm.elements.campanha.onchange = () => {
+      if (newForm.elements.inicio.value && newForm.elements.inicio.value !== suggested) return;
+      suggested = localInput(suggestion(newForm.elements.campanha.value, sessions));
+      newForm.elements.inicio.value = suggested;
+    };
+    const after = (saved, message, okText) => {
+      if (![200, 201].includes(saved.status)) { message.textContent = saved.data.erro || 'Não consegui salvar.'; return false; }
+      sessions = saved.data.sessoes || sessions;
+      draw();
+      const mine = saved.data.sessao && sessions.find(item => item.id === saved.data.sessao.id);
+      window.wikiPopup.toast(mine && (mine.conflitos || []).length ? `${okText}, mas cruza com outra sessão: veja o aviso.` : okText, { tone: mine && (mine.conflitos || []).length ? 'bad' : undefined });
+      return true;
+    };
+    newForm.onsubmit = async event => {
+      event.preventDefault();
+      const message = content.querySelector('#ag-new-msg');
+      message.textContent = 'Marcando…';
+      if (after(await api('api/agenda', { method: 'POST', body: sessionBody(newForm) }), message, 'Sessão marcada')) {
+        message.textContent = '';
+        newForm.elements.titulo.value = '';
+        newForm.elements.nota.value = '';
+        suggested = localInput(suggestion(newForm.elements.campanha.value, sessions));
+        newForm.elements.inicio.value = suggested;
+      }
+    };
+    list.onsubmit = async event => {
+      event.preventDefault();
+      const form = event.target.closest('[data-ag-id]');
+      const message = form.querySelector('[data-ag-msg]');
+      message.textContent = 'Salvando…';
+      after(await api(`api/agenda/${encodeURIComponent(form.dataset.agId)}`, { method: 'PUT', body: sessionBody(form) }), message, 'Sessão salva');
+    };
+    // Desmarcar: nas próximas e nas que já passaram (cada lista com o seu clique; o #content é de todas as páginas).
+    const onDelete = async event => {
+      if (!event.target.closest('[data-ag-delete]')) return;
+      const id = event.target.closest('[data-ag-id]').dataset.agId;
+      const item = sessions.find(entry => entry.id === id) || {};
+      const sure = await window.wikiPopup.confirm({ title: 'Desmarcar sessão', html: `<p>Desmarcar a sessão de <b>${escapeHtml(byId(item.campanha).nome)}</b> (${escapeHtml(window.wikiApp.sessionTime(item).curto)})? Os jogadores deixam de ver.</p>`, ok: 'Desmarcar', danger: true });
+      if (!sure) return;
+      const removed = await api(`api/agenda/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (removed.status !== 200) return window.wikiPopup.toast(removed.data.erro || 'Não consegui desmarcar.', { tone: 'bad' });
+      sessions = removed.data.sessoes || sessions.filter(entry => entry.id !== id);
+      draw();
+    };
+    list.onclick = onDelete;
+    content.querySelector('#ag-past').onclick = onDelete;
+    draw();
+  }
+
   // ---------------- Menu ----------------
   function build(data, { morana, markdownDocs }) {
     const list = data && Array.isArray(data.campanhas) ? data.campanhas : null;
-    const pages = { campanhas: managerPage, notas: notesPage };
-    const pageSetup = { campanhas: setupManager, notas: () => window.wikiApp.setupNotes() };
+    const pages = { campanhas: managerPage, notas: notesPage, agenda: agendaPage };
+    const pageSetup = { campanhas: setupManager, notas: () => window.wikiApp.setupNotes(), agenda: setupAgenda };
     const docs = {};
     const known = new Set(Object.values(markdownDocs).map(doc => doc.file));
     const toPages = entries => entries.map(entry => { docs[entry.id] = entry.doc; return { id: entry.id, label: entry.label, icon: entry.icon }; });
@@ -161,7 +269,7 @@
       pages[home] = overviewPage(item);
       pageSetup[home] = content => setupOverview(item.id, content);
       return { id: item.id, name: item.nome, color: item.cor, groups: [
-        { group: 'Campanha', pages: [{ id: home, label: 'Visão geral', icon: '00' }, { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' }, { id: 'campanhas', label: 'Campanhas', icon: 'CP' }] },
+        { group: 'Campanha', pages: [{ id: home, label: 'Visão geral', icon: '00' }, { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' }, { id: 'campanhas', label: 'Campanhas', icon: 'CP' }, { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' }] },
         { group: 'Personagens dos jogadores', pages: [{ id: 'personagens', label: 'Personagens e códigos', icon: 'PC' }, { id: 'loja', label: 'Loja', icon: 'EB' }] },
         { group: 'Mesa', pages: [{ id: 'notas', label: 'Notas e relógio da cidade', icon: 'N', className: 'session-item' }] },
         ...(own.length ? [{ group: 'Documentos', pages: own }] : []),

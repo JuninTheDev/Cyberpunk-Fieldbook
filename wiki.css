@@ -476,6 +476,14 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-lp select, .cc-lp-list select { width: 100%; min-width: 0; }
 .cc-lp-list select { flex: 1 1 220px; }
 .cc-warn { margin: 6px 0; padding-left: 18px; color: #ffd9d8; }
+.cc-history { margin: 6px 0; padding-left: 18px; }
+.cc-history li { margin: 4px 0; }
+.cc-history .action { margin-left: 6px; padding: 2px 8px; }
+.ag-clash { margin: 6px 0; }
+.ag-past { margin: 6px 0; padding-left: 18px; }
+.ag-past li { margin: 3px 0; }
+.desk-next { margin: 4px 0 12px; }
+.desk-next .action { margin-left: 6px; padding: 2px 8px; }
 .cc-link { padding: 0; border: 0; background: none; color: var(--cyan); text-decoration: underline; cursor: pointer; }
 .cc-radio { display: inline-flex; gap: 6px; align-items: center; margin: 2px 8px 2px 0; cursor: pointer; }
 .cc-items { margin: 4px 0; padding-left: 18px; }
