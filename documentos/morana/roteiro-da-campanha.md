@@ -27,16 +27,18 @@ As Sessões 1 a 3 estão escritas. Da 4 em diante, a tabela é o plano: escreva 
 
 A ordem sugerida, a mesma da lista "Segredos já revelados" do diário. Nenhuma revelação deve anular uma decisão dos jogadores.
 
-1. Endo foi cientista do projeto (Sessão 1, a mentira; Sessão 2, "K.E.").
-2. Kobo foi morto por Morana, não por Endo (Sessão 1, o braço; Sessão 2, Iskra hesita).
-3. Wakako achava que a maleta era prova do encobrimento, não uma arma (Sessão 1, Cena 6).
-4. A Militech guarda a Coleira sem saber, e Morana é Arasaka feita sobre código da Militech (Sessão 3).
-5. O antídoto também queima implantes (Sessão 3, Cena 6).
-6. Endo escreveu a rotina de propagação (Sessão 4).
-7. Wakako ajudou Sato a fugir e aceitou dinheiro para enterrar o caso (Sessão 5).
-8. Foi Endo quem chamou Sato de volta: "Ela acordou." (Sessão 5).
-9. Sato pretende usar sobreviventes na demonstração (Sessão 6, a lista).
-10. Morana não obedece mais a Sato (Sessão 6).
+Entre parênteses, os [handouts](handouts-da-campanha.md) que entregam cada uma. A tabela "Por onde cada informação chega", no fim dos handouts, tem os caminhos de reserva.
+
+1. Endo foi cientista do projeto (Sessão 1, a mentira; Sessão 2, "K.E.", H-12).
+2. Kobo foi morto por Morana, não por Endo (Sessão 1, o braço, H-04; Sessão 2, Iskra hesita).
+3. Wakako achava que a maleta era prova do encobrimento, não uma arma (Sessão 1, Cena 6, H-07).
+4. A Militech guarda a Coleira sem saber, e Morana é Arasaka feita sobre código da Militech (Sessão 3, H-16; o dossiê, H-23).
+5. O antídoto também queima implantes (Sessão 3, Cena 6; H-26).
+6. Endo escreveu a rotina de propagação (Sessão 4; H-15, H-25 Parte 1).
+7. Wakako ajudou Sato a fugir e aceitou dinheiro para enterrar o caso (Sessão 5; H-19, H-21, H-27).
+8. Foi Endo quem chamou Sato de volta: "Ela acordou." (Sessão 5; H-07 inteiro, H-25 Parte 2).
+9. Sato pretende usar sobreviventes na demonstração (Sessão 6, a lista; H-24, H-28).
+10. Morana não obedece mais a Sato (Sessão 6; o ultimato quebrado, H-22).
 
 ## Se o grupo sair do roteiro
 

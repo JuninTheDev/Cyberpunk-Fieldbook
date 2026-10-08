@@ -110,6 +110,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `documentos/morana/sessao-01-a-maleta.md` | Roteiro da Sessão 1 e fichas de combate RED da equipe de Vega. |
 | `documentos/morana/sessao-02-o-hospital-queimado.md` | Sessão 2, com aberturas para cada desfecho da Sessão 1. |
 | `documentos/morana/sessao-03-a-coleira.md` | Sessão 3: o datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto. |
+| `documentos/morana/handouts-da-campanha.md` | Os 30 handouts (H-01 a H-30), os textos para ler em voz alta e como criar um handout na hora. Na wiki, cada citação tem os botões **Entregar aos jogadores** e **Só preparar**. |
 | `documentos/morana/sessao-zero.md` | Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas. |
 | `documentos/morana/roteiro-da-campanha.md` | A campanha numa tabela: ato, sessão, fase da cidade, relógio de Sato, estágio de Morana, revelações e recompensas. |
 | `documentos/morana/quem-e-quem.md` | Todas as pessoas com nome: lado, lugar, primeira aparição e o link da ficha. |
@@ -287,6 +288,7 @@ Notas:
 - **Notas e relógios (mestre):** os relógios e o bloco de mesa ficam no servidor, por campanha: entram no backup e aparecem iguais no PC e no tablet (o que estava só no navegador subiu na primeira vez).
   - **Mostrar aos jogadores**, embaixo de cada relógio, põe esse relógio no Resumo dos jogadores (só leitura). Bom para o relógio da cidade.
   - **Estágio de Morana** (Protocolo Morana): o terceiro relógio. Dois segmentos por estágio (Programa, Enxame, Entidade), com a DV do teste de resistência e os gatilhos para marcar e desmarcar.
+  - **Handouts** (Protocolo Morana → Documentos completos → Handouts e textos): embaixo de cada documento, **Entregar aos jogadores** publica na hora em Notícias e handouts, com o título que os jogadores devem ver; **Só preparar** deixa no Publicar sem publicar, para editar antes (os campos entre colchetes). O código H-xx fica na nota do mestre, e a página mostra o que já foi preparado ou entregue.
   - **Virar rascunho de sessão** cria, com o texto do bloco, uma sessão **não publicada** em Visão dos jogadores → Sessões. Revise (o bloco tem segredos) e marque Publicada.
 - **Início do mestre:** a faixa **Na mesa agora** tem atalhos (Escudo, Fichas de NPC, Encontros, Combate, Glossário, Índice, sessões), as últimas páginas abertas e o estado dos relógios de Sato e da cidade.
 - **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém.

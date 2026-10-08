@@ -75,6 +75,7 @@ Veja `ganchos-dos-personagens.md`. Um gancho forte e um ou dois leves por person
 - **Quem sofreu a Fúria de Morana na Cena 5 e qual marca ficou:**
 - **Relógio de Sato:** marcou algum segmento? Qual?
 - **Estágio de Morana:** subiu ou desceu? Por quê?
+- **Handouts entregues:** (H-xx; a página de handouts marca os entregues)
 - **Pontas soltas para a próxima sessão:**
 
 ### Sessão 2: O Hospital Queimado (data: __/__/____)
@@ -85,6 +86,7 @@ Veja `ganchos-dos-personagens.md`. Um gancho forte e um ou dois leves por person
 - **Iskra:** (hesitou / lutou / fez acordo)
 - **Relógio de Sato:**
 - **Estágio de Morana:**
+- **Handouts entregues:** (H-xx; a página de handouts marca os entregues)
 - **Pontas soltas para a próxima sessão:**
 
 ### Sessão 3: A Coleira (data: __/__/____)
@@ -98,4 +100,5 @@ Veja `ganchos-dos-personagens.md`. Um gancho forte e um ou dois leves por person
 - **Quem leu a Coleira (e sabe que o antídoto queima):**
 - **Relógio de Sato:**
 - **Estágio de Morana:**
+- **Handouts entregues:** (H-xx; a página de handouts marca os entregues)
 - **Pontas soltas para a próxima sessão:**

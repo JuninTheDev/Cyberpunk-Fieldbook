@@ -115,11 +115,13 @@ Arroyo é um bairro de armazéns, subestações de energia e pátios de caminhõ
 
 Use as fichas da página Fichas de NPC: dois **Segurança corporativa** (Facções de 2077) na guarita, um **Oficial de segurança** de plantão e o **Netrunner** do livro na sala do servidor. A equipe de reação, se for chamada: mais quatro Segurança corporativa e outro Oficial de segurança, num AV.
 
+**Handout:** [H-16](handouts-da-campanha.md#h-16-inventario-do-datafort-de-arroyo), o inventário de arquivo legado, no terminal da guarita ou no andar 5 da arquitetura. É ele que leva o grupo ao rack certo.
+
 ## Cena 3: O cofre de arquivos mortos
 
 ### Descrição
 
-Por dentro, o datafort é frio e silencioso: corredores de racks, luz azul, o zumbido do resfriamento. O cofre de arquivos mortos fica no subsolo, atrás de uma porta blindada com leitor de credencial. Lá dentro, um rack antigo, com etiqueta de 2069: **PROJETO DE CONTENÇÃO · ARQUIVO MORTO**. É a Coleira.
+Por dentro, o datafort é frio e silencioso: corredores de racks, luz azul, o zumbido do resfriamento. O cofre de arquivos mortos fica no subsolo, atrás de uma porta blindada com leitor de credencial. Lá dentro, um rack antigo, com etiqueta de 2069: **MIL-L-2069-7 · REGISTROS DE MANUTENÇÃO · DEPÓSITO SANTO DOMINGO**. Registros de manutenção não ocupam 4,2 TB. É a Coleira.
 
 ### Perigos (escolha dois ou três)
 
@@ -146,7 +148,7 @@ No meio da cena (com Iskra ou sem ela), o implante de um dos guardas da Militech
 
 ### A troca
 
-- **O que Sato oferece:** as onze cobaias, vivas, entregues onde o grupo quiser (Tamsin conhece seis dos nomes).
+- **O que Sato oferece:** as onze cobaias, vivas, entregues onde o grupo quiser. Tamsin conhece seis dos nomes, entre eles Baek e Beltrán ([o caderno dela, H-14](handouts-da-campanha.md#h-14-a-lista-de-tamsin)).
 - **O que ela quer:** a Coleira inteira, sem cópia. Se o grupo tiver o Gatilho (Ramo A), ela pede os dois e oferece o dobro de pessoas.
 - **O que ela esconde:** as onze estão na lista de alvos da demonstração. Soltar as onze não as tira da lista.
 - **Um teste de Percepção Humana contra a Persuasão de Sato (13)** mostra que ela diz a verdade sobre soltar as pessoas e que esconde algo sobre o depois.
@@ -160,7 +162,7 @@ Quando a Coleira for copiada ou tirada do rack (ou quando a sessão precisar de 
 - Um **Netrunner** da Militech entra na arquitetura atrás de quem estiver conectado.
 - A **equipe de reação** chega ao pátio num AV.
 - Se o Ramo E estiver em jogo, os **cultistas de Brakk** aparecem do outro lado da rua para destruir o servidor.
-- *(opcional)* Se a NetWatch estiver na campanha, o netrunner do grupo vê, por um segundo, um terceiro observador na arquitetura, que não ataca ninguém e some.
+- *(opcional)* Se a NetWatch estiver na campanha, o netrunner do grupo vê, por um segundo, um terceiro observador na arquitetura, que não ataca ninguém e some. No dia seguinte, chega o [H-18](handouts-da-campanha.md#h-18-aviso-da-netwatch).
 
 A saída é por Arroyo à noite: pátios de caminhões, a subestação e as ruas largas onde o AV vê tudo.
 

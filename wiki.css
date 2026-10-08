@@ -485,6 +485,10 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .ag-past { margin: 6px 0; padding-left: 18px; }
 .ag-past li { margin: 3px 0; }
 .desk-next { margin: 4px 0 12px; }
+.handout-send { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: -6px 0 20px; }
+.handout-send .action { padding: 4px 10px; font-size: 12px; }
+.handout-send .action.handout-prepare { background: transparent; color: var(--yellow); box-shadow: inset 0 0 0 1px var(--yellow); }
+.handout-preview { max-height: 50vh; overflow: auto; }
 .desk-next .action { margin-left: 6px; padding: 2px 8px; }
 .cc-link { padding: 0; border: 0; background: none; color: var(--cyan); text-decoration: underline; cursor: pointer; }
 .cc-radio { display: inline-flex; gap: 6px; align-items: center; margin: 2px 8px 2px 0; cursor: pointer; }

@@ -194,5 +194,115 @@
       button.disabled = false;
     }
   });
-  window.playerManager = { page, setup, confirmLeave };
+
+  // ---------------- Handouts: entregar pela página do documento ----------------
+  // Na página "Handouts e textos" (documentos/morana/handouts-da-campanha.md), cada citação de um H-xx ganha dois botões:
+  // Entregar aos jogadores (publica na hora em Notícias e handouts do Protocolo Morana) e Só preparar (fica no Publicar,
+  // sem publicar, para revisar). O título é a linha "Para os jogadores" do documento; o código H-xx vai na nota do
+  // mestre, que nunca sai para os jogadores, e é por ela que a página sabe o que já foi preparado ou entregue.
+  const HANDOUT_DOCS = { docHandouts: 'morana' };
+  // As citações de cada H-xx no texto do .md, na ordem da página: [{ code, base, parts: [{ label, text }] }].
+  // label: a linha em negrito logo antes da citação ("**Parte 1**", "**Versão A · ...**"), quando houver.
+  function parseHandouts(source) {
+    const list = [];
+    let current = null;
+    let block = null;
+    let label = '';
+    for (const line of source.replace(/\r/g, '').split('\n')) {
+      const heading = line.match(/^###\s+(H-\d+)\s+·\s+(.+)$/);
+      if (heading) { current = { code: heading[1], base: heading[2].trim(), parts: [] }; list.push(current); block = null; label = ''; continue; }
+      if (/^#{1,3}\s/.test(line)) { current = null; block = null; continue; }
+      if (!current) continue;
+      if (line.startsWith('>')) {
+        if (!block) { block = { label, lines: [] }; current.parts.push(block); label = ''; }
+        block.lines.push(line);
+        continue;
+      }
+      block = null;
+      const title = line.match(/^- \*\*Para os jogadores:\*\*\s*(.+)$/);
+      if (title) { current.base = title[1].trim(); continue; }
+      const bold = line.match(/^\*\*(.+)\*\*\s*$/);
+      if (bold) label = bold[1].trim();
+      else if (line.trim()) label = '';
+    }
+    return list.map(item => ({ ...item, parts: item.parts.map(part => ({ label: part.label, text: part.lines.join('\n') })) }));
+  }
+  // "Parte 1" entra no título (são entregas diferentes); "Versão A" não (só uma versão vai para a mesa).
+  const handoutTitle = (item, part) => (part.label && /^Parte\b/i.test(part.label) ? `${item.base} · ${part.label}` : item.base);
+  const handoutKey = (code, index) => `Handout ${code}#${index + 1}`;
+  const publishUrl = campaign => `api/campanhas/${encodeURIComponent(campaign)}/publicar`;
+  let handoutCache = { campaign: '', list: [] };
+
+  async function handoutStatus(campaign, root) {
+    let noticias = [];
+    try { noticias = (await (await fetch(publishUrl(campaign), { cache: 'no-store' })).json()).noticias || []; } catch { return; }
+    root.querySelectorAll('[data-handout]').forEach(row => {
+      const found = noticias.find(item => String(item.nota || '').startsWith(`${handoutKey(row.dataset.handout, Number(row.dataset.part))} `));
+      const status = row.querySelector('[data-handout-status]');
+      status.textContent = !found ? '' : found.publicada ? 'Entregue: os jogadores veem.' : 'Preparado no Publicar, ainda não entregue.';
+      status.classList.toggle('cc-ok', Boolean(found && found.publicada));
+    });
+  }
+
+  document.addEventListener('wiki:documento', event => {
+    const campaign = HANDOUT_DOCS[event.detail.id];
+    if (!campaign) return;
+    const { container, text } = event.detail;
+    const list = parseHandouts(text);
+    handoutCache = { campaign, list };
+    for (const item of list) {
+      const heading = [...container.querySelectorAll('h4')].find(element => element.textContent.trim().startsWith(`${item.code} `));
+      if (!heading) continue;
+      const quotes = [];
+      for (let next = heading.nextElementSibling; next && !next.matches('h3, h4'); next = next.nextElementSibling) if (next.matches('blockquote')) quotes.push(next);
+      if (quotes.length !== item.parts.length) continue; // o texto mudou de um jeito que a página não entende: sem botões
+      quotes.forEach((quote, index) => {
+        const part = item.parts[index];
+        const which = item.parts.length > 1 ? ` (${escapeHtml(part.label || String(index + 1))})` : '';
+        quote.insertAdjacentHTML('afterend', `<p class="handout-send" data-handout="${item.code}" data-part="${index}"><button class="action" type="button" data-handout-deliver>Entregar aos jogadores${which}</button><button class="action handout-prepare" type="button" data-handout-prepare>Só preparar</button><span class="note-status" data-handout-status></span></p>`);
+      });
+    }
+    handoutStatus(campaign, container);
+  });
+
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-handout-deliver], [data-handout-prepare]');
+    if (!button) return;
+    const row = button.closest('[data-handout]');
+    const item = handoutCache.list.find(entry => entry.code === row.dataset.handout);
+    const index = Number(row.dataset.part);
+    const part = item && item.parts[index];
+    if (!part) return;
+    const deliver = 'handoutDeliver' in button.dataset;
+    const titulo = handoutTitle(item, part);
+    if (deliver) {
+      const sure = await window.wikiPopup.confirm({ title: `Entregar ${item.code}`, html: `<p>Os jogadores do Protocolo Morana passam a ver, em Notícias e handouts, <b>${escapeHtml(titulo)}</b>:</p><div class="md-doc handout-preview">${window.wikiApp.renderMarkdown(part.text)}</div><p class="note-status">Confira os campos entre colchetes antes. Para editar primeiro, use Só preparar.</p>`, ok: 'Entregar' });
+      if (!sure) return;
+    }
+    row.querySelectorAll('button').forEach(element => { element.disabled = true; });
+    try {
+      const response = await fetch(publishUrl(handoutCache.campaign), { cache: 'no-store' });
+      if (!response.ok) throw new Error(response.status);
+      const { atualizado: _date, ...mestre } = await response.json();
+      const noticias = mestre.noticias || [];
+      const key = handoutKey(item.code, index);
+      const existing = noticias.find(entry => String(entry.nota || '').startsWith(`${key} `));
+      if (existing && (!deliver || existing.publicada)) {
+        window.wikiPopup.toast(existing.publicada ? `${item.code} já foi entregue.` : `${item.code} já está preparado no Publicar.`);
+      } else {
+        if (existing) existing.publicada = true;
+        else noticias.push({ id: `${slug(item.code)}-${index + 1}-${Date.now().toString(36)}`, titulo, data: '', texto: part.text, nota: `${key} · do documento Handouts e textos. Tudo o que está aqui fica com o mestre.`, publicada: deliver });
+        const saved = await post(publishUrl(handoutCache.campaign), { mestre: { ...mestre, noticias } });
+        if (saved.erro) throw new Error(saved.erro);
+        window.wikiPopup.toast(deliver ? `${item.code} entregue: os jogadores veem em Notícias e handouts.` : `${item.code} preparado em Visão dos jogadores → Notícias e handouts (ainda não entregue).`, { tone: 'ok', ms: 6000 });
+      }
+      await handoutStatus(handoutCache.campaign, row.closest('#md-doc') || document);
+    } catch (error) {
+      window.wikiPopup.toast(`Não consegui entregar ${item.code}: ${error.message}`, { tone: 'bad' });
+    } finally {
+      row.querySelectorAll('button').forEach(element => { element.disabled = false; });
+    }
+  });
+
+  window.playerManager = { page, setup, confirmLeave, parseHandouts };
 })();

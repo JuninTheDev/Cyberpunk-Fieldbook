@@ -36,7 +36,7 @@ A sessão termina com uma escolha concreta sobre o Gatilho (levar, copiar, destr
 | Salvo pelo grupo | Recupera-se sob a guarda de Wakako ou do grupo. Pode acompanhar a expedição, frágil e útil: conhece o subsolo do hospital. |
 | Capturado por Vega | Está preso nas Arasaka Industrial Docks. Wakako paga o dobro para tirá-lo de lá (vira gancho para a Sessão 3). |
 | Capturado por Iskra | Está com Sato. Aparece no fim da sessão numa transmissão, vivo, pedindo que o grupo "não deixe o Gatilho com ela". |
-| Morto | Deixou gravações no Agent. Uma delas, mal apagada, tem a voz dele dizendo: "Eu escrevi a propagação. Se alguém ouvir isto, eu sinto muito." Entregue-a só no fim da sessão. |
+| Morto | Deixou gravações no Agent. Uma delas, mal apagada, tem a voz dele dizendo: "Eu escrevi a propagação. Se alguém ouvir isto, eu sinto muito." Entregue-a só no fim da sessão: é o [H-25](handouts-da-campanha.md#h-25-gravacoes-de-endo), Parte 1. As notas dele são o [H-26](handouts-da-campanha.md#h-26-notas-de-endo-o-que-eu-faria). |
 
 ## Abertura: por onde o grupo começa
 
@@ -86,6 +86,8 @@ O comprador pagou e sumiu. Dois dias depois, o N54 News mostra um "ataque de cyb
 
 Antes de sair, mostre que o mundo reagiu à Sessão 1. Leia ou improvise um boletim do N54:
 
+**Handout:** [H-08](handouts-da-campanha.md#h-08-n54-e-classificados-a-manha-seguinte), a edição da manhã com os classificados. Ou leia o boletim:
+
 > "...o suspeito, identificado apenas como Kobo, foi encontrado morto num depósito médico de Kabuki após o que a NCPD classificou como um surto de cyberpsicose. Segundo fontes, o corpo desapareceu antes da chegada da perícia. Em outras notícias, as ações da Arasaka..."
 
 Se o grupo deixou o corpo de Kobo para trás, os Scavengers o levaram (gancho "Colheita" do guia). Um ripperdoc de rua está vendendo "um cyberarm militar, lote de 2069, quase novo". Comprá-lo, rastreá-lo ou deixá-lo circular muda a Sessão 3.
@@ -110,6 +112,8 @@ Brakk quer descer até "a voz", mas os sistemas médicos automáticos do subsolo
 
 > "Vocês chamam de vírus. Eu chamo de a primeira coisa nesta cidade que ouve a gente."
 
+**Handout:** [H-09](handouts-da-campanha.md#h-09-panfleto-da-comunhao), o panfleto da Comunhão.
+
 Use o bloco **Boosterganger** do livro-base para os cultistas (Mooks) e o **Reclaimer Chief** (Lieutenant) para Brakk, trocando o equipamento de sobrevivência por Wolvers.
 
 ## Cena 3: O subsolo
@@ -130,6 +134,8 @@ A escada de emergência desce por três andares de escuridão e cheiro de plást
 - **Os registros de 2070**, gravados num servidor de prontuários: nomes de pacientes, horários e a ordem de incinerar o complexo. É prova para o final "Exposição" e dá a Tamsin a lista que falta.
 - **A assinatura "K.E."** no cabeçalho da rotina de propagação. Quem conhece Endo pode ligar os pontos (Dedução DV 15, ou automático se alguém já desconfiava). Se Endo estiver presente, ele vê a assinatura e fica em silêncio. Não force a confissão agora: deixe a suspeita crescer.
 - **O Gatilho:** um servidor militar do tamanho de uma geladeira, ligado à rede de emergência por um cabo que ninguém instalou em 2070. Morana passou a usar a rede sozinha.
+
+**Handouts:** [H-10](handouts-da-campanha.md#h-10-central-de-pacientes-2070) (o áudio da central, para ler em voz alta), [H-11](handouts-da-campanha.md#h-11-prontuarios-ala-b) (os prontuários), [H-12](handouts-da-campanha.md#h-12-cabecalho-da-rotina-de-propagacao) (o cabeçalho "K.E.") e [H-13](handouts-da-campanha.md#h-13-ordem-cinzas) (a ordem "Cinzas").
 
 ### A arquitetura NET do Gatilho
 

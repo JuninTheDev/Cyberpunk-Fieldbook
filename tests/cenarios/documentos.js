@@ -100,4 +100,60 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`(() => { const s = document.getElementById('search'); s.value = ''; s.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     return [resultados.some(titulo => /A trava e a maleta/.test(titulo)), resultados.join(' | ')];
   });
+
+  // ---------- Handouts ----------
+  const handoutsDoc = docs.find(doc => doc.nome === 'handouts-da-campanha.md');
+  global.window = global.window || {};
+  window.addEventListener = window.addEventListener || (() => {});
+  global.document = global.document || { addEventListener() {} };
+  delete require.cache[require.resolve(path.join(raiz, 'jogadores-painel.js'))];
+  require(path.join(raiz, 'jogadores-painel.js'));
+  const handouts = window.playerManager.parseHandouts(handoutsDoc.texto);
+  const citacoes = handouts.reduce((soma, item) => soma + item.parts.length, 0);
+
+  await r.passo('handouts: H-01 a H-30, cada um com título para os jogadores e citação; todo H-xx citado existe', async () => {
+    const codigos = handouts.map(item => item.code);
+    const esperados = Array.from({ length: 30 }, (_, i) => `H-${String(i + 1).padStart(2, '0')}`);
+    const semTitulo = handouts.filter(item => !new RegExp(`^- \\*\\*Para os jogadores:\\*\\*`, 'm').test(handoutsDoc.texto.split(`### ${item.code} `)[1].split('\n### ')[0])).map(item => item.code);
+    const citados = new Set(docs.flatMap(doc => [...doc.texto.matchAll(/\bH-(\d{2})\b/g)].map(m => `H-${m[1]}`)));
+    const inexistentes = [...citados].filter(code => !codigos.includes(code));
+    const ok = codigos.join() === esperados.join() && handouts.every(item => item.parts.length) && !semTitulo.length && !inexistentes.length;
+    return [ok, `${codigos.length} handouts, ${citacoes} citações · sem título: ${semTitulo.join(', ') || 'nenhum'} · citados que não existem: ${inexistentes.join(', ') || 'nenhum'}`];
+  });
+
+  await r.passo('links para seções (arquivo.md#secao) apontam para um título que existe', async () => {
+    const slug = texto => fold(texto.replace(/\*\*|`|\*/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const secoes = new Map(docs.map(doc => [doc.nome, new Set(doc.texto.split(/\r?\n/).filter(linha => /^#{1,4}\s/.test(linha)).map(linha => slug(linha.replace(/^#+\s+/, ''))))]));
+    const quebrados = docs.flatMap(doc => linhas(doc).flatMap(({ texto, onde }) => [...texto.matchAll(/\]\(([\w-]+\.md)#([\w-]+)\)/g)].filter(m => !(secoes.get(m[1]) || new Set()).has(m[2])).map(m => `${onde} ${m[1]}#${m[2]}`)));
+    return [!quebrados.length, quebrados.slice(0, 6).join(' · ') || 'todos os links de seção conferidos'];
+  });
+
+  await r.passo('na wiki: cada citação de handout tem os botões; Só preparar e Entregar gravam no Publicar, e os jogadores não veem a nota', async () => {
+    const url = `${servidores.local}/api/campanhas/morana/publicar`;
+    const antes = await (await fetch(url)).json();
+    const { atualizado: _data, ...original } = antes;
+    try {
+      await edge.ir(`${servidores.local}/?recarregar#docHandouts`, 1800);
+      const botoes = await edge.evaluate(`document.querySelectorAll('[data-handout] [data-handout-deliver]').length`);
+      await edge.evaluate(`document.querySelector('[data-handout="H-01"] [data-handout-prepare]').click()`);
+      await edge.sleep(900);
+      await edge.evaluate(`document.querySelector('[data-handout="H-09"] [data-handout-deliver]').click()`);
+      await edge.sleep(500);
+      const pergunta = await edge.evaluate(`(document.querySelector('dialog.popup[open]') || {}).textContent || ''`);
+      await edge.evaluate(`document.querySelector('dialog.popup[open]:not(.popup-closing) [data-popup-ok]').click()`);
+      await edge.sleep(1200);
+      const status = await edge.evaluate(`({ h01: document.querySelector('[data-handout="H-01"] [data-handout-status]').textContent, h09: document.querySelector('[data-handout="H-09"] [data-handout-status]').textContent })`);
+      const depois = (await (await fetch(url)).json()).noticias || [];
+      const h01 = depois.find(item => /^Handout H-01#1 /.test(item.nota || ''));
+      const h09 = depois.find(item => /^Handout H-09#1 /.test(item.nota || ''));
+      const visao = await (await fetch(`${servidores.local}/api/visao?campanha=morana`)).json();
+      const publicado = (visao.noticias || []).find(item => item.titulo === 'Panfleto: a voz não pede');
+      const ok = botoes === citacoes && /A VOZ NÃO PEDE/.test(pergunta) && h01 && !h01.publicada && /Não abram/.test(h01.texto) && h09 && h09.publicada
+        && publicado && !('nota' in publicado) && !(visao.noticias || []).some(item => item.titulo === 'O cartão de Wakako') && /Preparado/.test(status.h01) && /Entregue/.test(status.h09);
+      return [ok, `${botoes}/${citacoes} botões · H-01 ${h01 ? (h01.publicada ? 'publicado' : 'preparado') : 'ausente'} · H-09 ${h09 ? (h09.publicada ? 'publicado' : 'preparado') : 'ausente'} · para os jogadores: ${publicado ? 'sim, sem nota' : 'não'} · ${JSON.stringify(status)}`];
+    } finally {
+      // Devolve o Publicar como estava (os outros cenários usam o mesmo servidor).
+      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestre: original }) });
+    }
+  });
 };

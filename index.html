@@ -83,6 +83,7 @@
           { id: 'docFundacao', label: 'Fundação da campanha', icon: 'MD' },
           { id: 'docPersonagens', label: 'Personagens', icon: 'MD' },
           { id: 'docGanchos', label: 'Ganchos dos personagens', icon: 'MD' },
+          { id: 'docHandouts', label: 'Handouts e textos', icon: 'H' },
           { id: 'docSessaoZero', label: 'Sessão zero', icon: 'MD' },
           { id: 'docQuemEQuem', label: 'Quem é quem', icon: 'MD' },
           { id: 'docRoteiro', label: 'Roteiro da campanha', icon: 'MD' },
@@ -97,6 +98,7 @@
     const markdownDocs = {
       docFundacao: { file: 'documentos/morana/fundacao-da-campanha.md', eyebrow: 'Documento completo / segredo do mestre', title: 'Fundação da campanha', lede: 'Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais.' },
       docPersonagens: { file: 'documentos/morana/personagens-da-campanha.md', eyebrow: 'Documento completo / elenco', title: 'Personagens', lede: 'Objetivos, segredos, falas e interpretação de cada NPC.' },
+      docHandouts: { file: 'documentos/morana/handouts-da-campanha.md', eyebrow: 'Documento completo / para entregar', title: 'Handouts e textos da campanha', lede: 'Os 30 documentos (H-01 a H-30) para entregar aos jogadores, os textos para ler em voz alta e como criar um handout na hora. Embaixo de cada citação, os botões entregam pela wiki.' },
       docSessao03: { file: 'documentos/morana/sessao-03-a-coleira.md', eyebrow: 'Documento completo / Sessão 03', title: 'Sessão 03: A Coleira', lede: 'O datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto.' },
       docSessaoZero: { file: 'documentos/morana/sessao-zero.md', eyebrow: 'Documento completo / sessão zero', title: 'Sessão zero', lede: 'Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas.' },
       docQuemEQuem: { file: 'documentos/morana/quem-e-quem.md', eyebrow: 'Documento completo / elenco', title: 'Quem é quem', lede: 'Todas as pessoas com nome numa lista só: lado, lugar, primeira aparição, ficha.' },
@@ -197,7 +199,7 @@
     // Página inicial: "Na mesa agora", com atalhos, as últimas páginas abertas e os relógios.
     // Montado na hora (não entra na busca); some se o navegador não guardar nada.
     function setupHomeDesk(content, { recentPages, clockState, escapeHtml }) {
-      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02'], ['docSessao03', 'Sessão 03']];
+      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02'], ['docSessao03', 'Sessão 03'], ['docHandouts', 'Handouts']];
       const clockNames = { sato: 'Relógio de Sato', city: 'Relógio da cidade', morana: 'Estágio de Morana' };
       const recent = recentPages();
       const clocks = clockState().map(({ name, steps, value }) => `<li><b>${escapeHtml(clockNames[name] || name)}: ${value}/${steps.length}</b><br><small>${value ? `Último marcado: ${escapeHtml(steps[value - 1])}` : 'Nenhum segmento marcado'}${value < steps.length ? ` · próximo: ${escapeHtml(steps[value])}` : ''}</small></li>`).join('');

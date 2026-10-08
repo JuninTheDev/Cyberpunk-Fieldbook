@@ -80,6 +80,8 @@ Wakako oferece um serviço de recuperação:
 
 Ela não exige que os personagens matem ninguém, mas deixa claro que a mercadoria precisa chegar inteira.
 
+**Handout:** [H-01](handouts-da-campanha.md#h-01-o-cartao-de-wakako), o cartão de Wakako, que Mina entrega com o adiantamento.
+
 ### Diálogos possíveis
 
 **Se perguntarem o que há na maleta:**
@@ -137,6 +139,8 @@ Cada abordagem pode revelar uma informação. Não esconda todas atrás de teste
 - O sistema de câmeras apagou exatamente sete minutos de gravação.
 - Um funcionário do depósito está escondido e sabe que o mensageiro ainda está vivo.
 
+**Handouts:** [H-02](handouts-da-campanha.md#h-02-cameras-de-kabuki-os-sete-minutos) (as câmeras do beco) e [H-03](handouts-da-campanha.md#h-03-quadro-de-turnos-do-deposito) (a escala do depósito e os chamados de Mori).
+
 ### Complicação opcional
 
 Se o grupo for muito rápido, um vendedor de implantes chama um dos personagens para mostrar uma falha em seu equipamento. O implante reinicia sozinho, exibe uma mensagem incompleta e volta ao normal.
@@ -192,6 +196,8 @@ O que o grupo pode descobrir no corpo:
 Se perguntarem, Endo diz, com a voz falhando: "Ele ia me levar. O braço dele... não deixou." Endo não entende por que Morana o protegeu. O mestre sabe: o vírus preservou o portador da Chave. É a primeira prova de que Morana não obedece mais a Sato.
 
 Se o grupo deixar o corpo para trás, os Scavengers o levam antes do amanhecer e revendem os implantes - o gancho "Colheita" do guia de Night City.
+
+**Handouts:** [H-04](handouts-da-campanha.md#h-04-comunicador-de-kobo) (o comunicador de Kobo) e [H-06](handouts-da-campanha.md#h-06-o-cartao-uma-vez) (o cartão "Uma vez.", no bolso de Endo).
 
 ### Primeira fala de Endo
 
@@ -316,6 +322,8 @@ Um dos mercenários carrega uma ordem de recuperação criptografada. Ela não c
 
 > "Recuperar o ativo Morana antes da ativação. Eliminar testemunhas se necessário."
 
+**Handout:** [H-05](handouts-da-campanha.md#h-05-ordem-de-recuperacao-arasaka), a ordem completa.
+
 ### Se os personagens perderem a maleta
 
 Não encerre a campanha. A equipe foge com a maleta, mas Endo ou um mercenário deixa uma pista. Os personagens podem persegui-los por Kabuki, invadir o veículo ou negociar a recuperação com Wakako.
@@ -355,6 +363,8 @@ Se perguntarem qual foi o papel dela:
 > "Eu ajudei algumas pessoas a desaparecer. Algumas sobreviveram. Outras não. Naquela época, salvar dez parecia melhor do que salvar ninguém. Hoje não tenho certeza."
 
 Ela ainda não precisa revelar que ajudou Sato especificamente. Isso pode ser descoberto depois.
+
+**Handout:** se o grupo vir o que Wakako leu, [H-07](handouts-da-campanha.md#h-07-mensagens-dentro-da-chave), só as três últimas mensagens.
 
 ### O novo trabalho
 

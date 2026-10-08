@@ -948,6 +948,9 @@
         container.innerHTML = renderMarkdown(stripDocTitle(text));
         linkGlossary(container);
         buildToc();
+        // Quem quiser acrescentar algo ao documento (os botões dos handouts, na wiki do mestre) faz isto agora, antes da
+        // rolagem até a seção pedida.
+        document.dispatchEvent(new CustomEvent('wiki:documento', { detail: { id, container, text } }));
         const unit = resolveTarget(target);
         if (unit) focusUnit(unit, target.term);
       }).catch(() => {

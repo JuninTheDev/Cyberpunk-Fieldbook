@@ -1,6 +1,6 @@
 # Quem é quem
 
-Todas as pessoas com nome no Protocolo Morana numa lista só: de que lado estão no começo, onde ficam, quando aparecem pela primeira vez e onde está o resto. A personalidade, os segredos e as falas estão em [Personagens](personagens-da-campanha.md); as fichas de combate, em [Fichas de NPC](#npcs/protocolo-morana-o-elenco). Os nomes do jogo (Cyberpunk 2077) estão no [guia de Night City](guia-night-city-2077.md).
+Todas as pessoas com nome no Protocolo Morana numa lista só: de que lado estão no começo, onde ficam, quando aparecem pela primeira vez e onde está o resto. A personalidade, os segredos e as falas estão em [Personagens](personagens-da-campanha.md); as fichas de combate, em [Fichas de NPC](#npcs/protocolo-morana-o-elenco). Os documentos que cada um deixa estão em [Handouts e textos](handouts-da-campanha.md). Os nomes do jogo (Cyberpunk 2077) estão no [guia de Night City](guia-night-city-2077.md).
 
 **Lado** é a posição no início da campanha. Muda com as escolhas do grupo: anote no [diário](diario-da-campanha.md).
 
@@ -18,15 +18,19 @@ Todas as pessoas com nome no Protocolo Morana numa lista só: de que lado estão
 | **Vega** | Arasaka (contratada) | Kabuki; depois, as Arasaka Industrial Docks | Sessão 1, Cena 4 | [ficha](#npcs/vega) | Mercenária; pode virar informante ou rival. Oferece o dobro de Wakako. |
 | Equipe de Vega | Arasaka (contratada) | Com Vega | Sessão 1, Cena 4 | [Operativo](#npcs/operativo-de-seguranca), [Netrunner](#npcs/netrunner) | Dois solos, um netrunner e o técnico de contenção (a caixa de Faraday). |
 | **Tamsin "Fuse" Ilyin** | Os sobreviventes | Esconderijo em Pacifica | Ato 2 (Sessão 2 ou 3) | [ficha](#npcs/tamsin-fuse-ilyin) | Arrancou o próprio conector em 2070. Caminho para a "Autonomia dos sobreviventes". |
-| As onze | Sobreviventes (cobaias de Sato) | Clínica em Rancho Coronado | Sessão 3, Cena 4 | — | Estão na lista de alvos da demonstração. Tamsin conhece seis nomes. |
+| As onze | Sobreviventes (cobaias de Sato) | Clínica em Rancho Coronado | Sessão 3, Cena 4 | — | Estão na lista de alvos da demonstração (H-24). Tamsin conhece seis nomes. |
+| **Lucía Beltrán** *(novo)* | Os sobreviventes | Watson | Ato 2 (H-14, H-15) | — | Ex-enfermeira do Campo-4, olho esquerdo do lote 69. Quer publicar tudo. É a "L.B." da entrevista de Tomas, e uma das onze. |
+| **Joon-ho Baek** *(novo)* | Os sobreviventes | Oficina em Heywood | Ato 2 (H-14) | — | Mecânico, joelho e coluna do lote 69. Quer sumir. Uma das onze. |
 | **Tomas Vale** | Nenhum (desaparecido) | Apartamento vazio em Little China | Opcional, Ato 1 | [ficha](#npcs/tomas-vale) | Jornalista; Endo era fonte dele. Deixou gravações e uma senha parcial. |
 | **Brakk** | O culto da Maelstrom | Hospital queimado, Northside | Sessão 2, Cena 2 | [ficha](#npcs/brakk) | Profeta que ouve "a voz". Conectado ao Gatilho, fala com a voz de Morana. |
 | **Meredith Stout** | Militech | Watson | Sessão 3, Cena 1 | [Oficial de segurança](#npcs/oficial-de-seguranca) | Quer o "vendedor" e o código, sem admitir que a Coleira é da Militech. |
 | **El Capitán** | Ele mesmo (comissão) | Santo Domingo | Sessão 3, Ramo D | — | Vende os horários do trem de carga do Ato 2. |
-| O funcionário escondido | Ninguém | Depósito de Kabuki | Sessão 1, Cena 2 | — | Viu "o Mori" se arrastar para a sala refrigerada. |
+| O funcionário escondido (**S. Park**) | Ninguém | Depósito de Kabuki, câmaras frias | Sessão 1, Cena 2 | — | Viu "o Mori" se arrastar para a sala refrigerada. Está na escala do depósito (H-03), com L. Rojas, do recebimento. |
 | O ripperdoc da clínica clandestina | Ninguém | Kabuki | Ato 1 | — | Viu o implante de Endo com lote militar de 2069. |
 | O intermediário da Militech | Militech | Pelo canal de Meredith Stout | Antes da campanha | — | Quis comprar a Coleira para guardá-la. Pode ter mandado um personagem espião. |
-| Agente da NetWatch | NetWatch (opcional) | Na NET | Ato 2 (pista) | — | Observa sem atacar. Veja a reviravolta opcional "NetWatch já sabia". |
+| Agente **Bryce Mosley** | NetWatch (opcional) | Na NET | Ato 2 (pista; o aviso H-18) | — | Observa sem atacar. Veja a reviravolta opcional "NetWatch já sabia". |
+| **I. Volkova** *(novo)* | Trauma Team | Gerência de Contas da TT | Ato 2 ou 3 (H-17) | — | Assina o memorando que manda abandonar clientes com o padrão M-70. |
+| **Daichi Kuroiwa** *(novo, opcional)* | Arasaka | Divisão de Segurança | Só se a Arasaka virar a força principal | — | O chefe da Divisão que assinou a ordem "Cinzas" (H-13). |
 
 ## Forças
 
