@@ -59,46 +59,70 @@
 
     // As campanhas vêm do servidor (api/campanhas). O Protocolo Morana tem as páginas daqui; as outras, as páginas
     // comuns (campanhas-painel.js) e os documentos da pasta documentos/<id>/.
+    // O menu do Protocolo Morana: cada entrada reúne em abas tudo o que é do mesmo assunto (tabs). As páginas das abas
+    // continuam com o próprio endereço (#docSessao01, #docFundacao...) e na busca; só saem da barra lateral.
+    // As abas Handouts, NPCs e Notas das sessões e as Fichas do elenco são montadas por campanhas-painel.js (moranaExtras).
+    const sessionTabs = (n, first) => [...first, { id: `sessao${n}Handouts`, label: 'Handouts' }, { id: `sessao${n}Npcs`, label: 'NPCs' }, { id: `sessao${n}Notas`, label: 'Notas' }];
     const morana = { id: 'morana', name: 'Protocolo Morana', color: '#00ffd2', groups: [
         { group: 'Campanha ativa', pages: [
           { id: 'home', label: 'Visão geral', icon: '00' },
-          { id: 'campaign', label: 'Dossiê da campanha', icon: '01' },
-          { id: 'people', label: 'Pessoas e facções', icon: '02' },
-          { id: 'campaignMap', label: 'Mapa de Night City', icon: 'MAP' },
+          { id: 'campaign', label: 'A campanha', icon: '01', tabs: [
+            { id: 'campaign', label: 'Dossiê' }, { id: 'docFundacao', label: 'Fundação' }, { id: 'docRoteiro', label: 'Roteiro' }, { id: 'docDiario', label: 'Diário' }
+          ] },
+          { id: 'people', label: 'Elenco', icon: '02', tabs: [
+            { id: 'people', label: 'Pessoas e facções' }, { id: 'docQuemEQuem', label: 'Quem é quem' }, { id: 'docPersonagens', label: 'Personagens' }, { id: 'elencoFichas', label: 'Fichas' }
+          ] },
+          { id: 'campaignMap', label: 'Night City', icon: 'MAP', tabs: [
+            { id: 'campaignMap', label: 'Mapa' }, { id: 'docGuia', label: 'Guia de 2077' }, { id: 'docArquiteturas', label: 'Arquiteturas NET' }
+          ] }
+        ]},
+        { group: 'Sessões', pages: [
+          { id: 'docSessaoZero', label: 'Sessão zero', icon: 'S0', className: 'session-item', tabs: [{ id: 'docSessaoZero', label: 'A conversa' }, { id: 'docGanchos', label: 'Ganchos dos personagens' }] },
+          { id: 'session1', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item', tabs: sessionTabs('01', [{ id: 'session1', label: 'Resumo' }, { id: 'docSessao01', label: 'Roteiro completo' }]) },
+          { id: 'docSessao02', label: 'Sessão 02: O Hospital Queimado', icon: 'S2', className: 'session-item', tabs: sessionTabs('02', [{ id: 'docSessao02', label: 'Roteiro' }]) },
+          { id: 'docSessao03', label: 'Sessão 03: A Coleira', icon: 'S3', className: 'session-item', tabs: sessionTabs('03', [{ id: 'docSessao03', label: 'Roteiro' }]) },
+          { id: 'docHandouts', label: 'Handouts e textos', icon: 'H', className: 'session-item' }
+        ]},
+        { group: 'Mesa', pages: [
+          { id: 'notes', label: 'Notas e relógios', icon: 'N' },
           { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' },
-          { id: 'campanhas', label: 'Campanhas', icon: 'CP' },
-          { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' }
+          { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' },
+          { id: 'campanhas', label: 'Campanhas', icon: 'CP' }
         ]},
         { group: 'Personagens dos jogadores', pages: [
           { id: 'personagens', label: 'Personagens e códigos', icon: 'PC' },
           { id: 'loja', label: 'Loja', icon: 'EB' }
-        ]},
-        { group: 'Sessões', pages: [
-          { id: 'session1', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item' },
-          { id: 'docSessao02', label: 'Sessão 02: O Hospital Queimado', icon: 'S2', className: 'session-item' },
-          { id: 'docSessao03', label: 'Sessão 03: A Coleira', icon: 'S3', className: 'session-item' },
-          { id: 'notes', label: 'Notas e relógios', icon: 'N', className: 'session-item' }
-        ]},
-        { group: 'Documentos completos', pages: [
-          { id: 'docFundacao', label: 'Fundação da campanha', icon: 'MD' },
-          { id: 'docPersonagens', label: 'Personagens', icon: 'MD' },
-          { id: 'docGanchos', label: 'Ganchos dos personagens', icon: 'MD' },
-          { id: 'docHandouts', label: 'Handouts e textos', icon: 'H' },
-          { id: 'docSessaoZero', label: 'Sessão zero', icon: 'MD' },
-          { id: 'docQuemEQuem', label: 'Quem é quem', icon: 'MD' },
-          { id: 'docRoteiro', label: 'Roteiro da campanha', icon: 'MD' },
-          { id: 'docArquiteturas', label: 'Arquiteturas da campanha', icon: 'MD' },
-          { id: 'docSessao01', label: 'Sessão 01 completa', icon: 'MD' },
-          { id: 'docGuia', label: 'Guia de Night City 2077', icon: 'MD' },
-          { id: 'docDiario', label: 'Diário da campanha', icon: 'MD' }
         ]}
       ]};
+
+    // As abas montadas: os handouts de cada sessão (tirados de Handouts e textos), as fichas de NPC escolhidas e as
+    // notas da sessão (as duas na mesa do servidor), e as fichas do elenco. npcs: a sugestão até o mestre mudar.
+    const handoutsFile = 'documentos/morana/handouts-da-campanha.md';
+    const diarioFile = 'documentos/morana/diario-da-campanha.md';
+    const cast = ['Wakako Okada', 'Mina Kuroda', 'Dr. Kenzo Endo', 'Dra. Reina Sato', 'Iskra Voss', 'Vega', 'Brakk', 'Tamsin “Fuse” Ilyin', 'Tomas Vale'];
+    const moranaSessions = [
+      { n: '01', title: 'Sessão 01: A Maleta', diario: 'Sessão 1:', handouts: ['H-01', 'H-02', 'H-03', 'H-04', 'H-05', 'H-06', 'H-07'],
+        npcs: ['Wakako Okada', 'Mina Kuroda', 'Dr. Kenzo Endo', 'Vega', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner', 'Guarda-costas', 'Tyger Claws'] },
+      { n: '02', title: 'Sessão 02: O Hospital Queimado', diario: 'Sessão 2:', handouts: ['H-08', 'H-09', 'H-10', 'H-11', 'H-12', 'H-13', 'H-25', 'H-26'],
+        npcs: ['Brakk', 'Maelstrom', 'Iskra Voss', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner', 'Dr. Kenzo Endo'] },
+      { n: '03', title: 'Sessão 03: A Coleira', diario: 'Sessão 3:', handouts: ['H-14', 'H-15', 'H-16', 'H-17', 'H-18', 'H-19'],
+        npcs: ['Segurança corporativa', 'Segurança corporativa', 'Oficial de segurança', 'Netrunner', 'Iskra Voss', 'Operativo de segurança', 'Dra. Reina Sato', 'Tamsin “Fuse” Ilyin'] }
+    ];
+    const moranaExtras = [
+      ...moranaSessions.flatMap(({ n, title, diario, handouts, npcs }) => [
+        { kind: 'handouts', id: `sessao${n}Handouts`, file: handoutsFile, eyebrow: `${title} / handouts`, title: 'Handouts da sessão', handouts },
+        { kind: 'npcs', id: `sessao${n}Npcs`, key: `sessao${n}`, eyebrow: `${title} / fichas`, title: 'NPCs da sessão', npcs },
+        { kind: 'notas', id: `sessao${n}Notas`, key: `sessao${n}`, eyebrow: `${title} / só você vê`, title: 'Notas da sessão', sessionTitle: title, diario, diarioFile }
+      ]),
+      { kind: 'npcs', id: 'elencoFichas', key: 'elenco', eyebrow: 'Elenco / fichas de combate', title: 'Fichas do elenco', npcs: cast,
+        lede: 'As fichas dos NPCs nomeados do Protocolo Morana (as mesmas de Fichas de NPC e do compêndio do Foundry). Acrescente outras pelo seletor: um capanga de gangue, uma ficha do livro.' }
+    ];
 
     // Páginas lidas direto dos arquivos .md: o texto de preparação é a única fonte. Cada campanha tem a sua pasta.
     const markdownDocs = {
       docFundacao: { file: 'documentos/morana/fundacao-da-campanha.md', eyebrow: 'Documento completo / segredo do mestre', title: 'Fundação da campanha', lede: 'Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais.' },
       docPersonagens: { file: 'documentos/morana/personagens-da-campanha.md', eyebrow: 'Documento completo / elenco', title: 'Personagens', lede: 'Objetivos, segredos, falas e interpretação de cada NPC.' },
-      docHandouts: { file: 'documentos/morana/handouts-da-campanha.md', eyebrow: 'Documento completo / para entregar', title: 'Handouts e textos da campanha', lede: 'Os 30 documentos (H-01 a H-30) para entregar aos jogadores, os textos para ler em voz alta e como criar um handout na hora. Embaixo de cada citação, os botões entregam pela wiki.' },
+      docHandouts: { entregar: 'morana', file: 'documentos/morana/handouts-da-campanha.md', eyebrow: 'Documento completo / para entregar', title: 'Handouts e textos da campanha', lede: 'Os 30 documentos (H-01 a H-30) para entregar aos jogadores, os textos para ler em voz alta e como criar um handout na hora. Embaixo de cada citação, os botões entregam pela wiki.' },
       docSessao03: { file: 'documentos/morana/sessao-03-a-coleira.md', eyebrow: 'Documento completo / Sessão 03', title: 'Sessão 03: A Coleira', lede: 'O datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto.' },
       docSessaoZero: { file: 'documentos/morana/sessao-zero.md', eyebrow: 'Documento completo / sessão zero', title: 'Sessão zero', lede: 'Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas.' },
       docQuemEQuem: { file: 'documentos/morana/quem-e-quem.md', eyebrow: 'Documento completo / elenco', title: 'Quem é quem', lede: 'Todas as pessoas com nome numa lista só: lado, lugar, primeira aparição, ficha.' },
@@ -261,13 +285,14 @@
     function startWiki(list) {
       const manager = window.campaignManager;
       const built = manager.build(list, { morana, markdownDocs });
+      const extras = manager.extraPages('morana', moranaExtras);
       window.wikiConfig = {
         campaigns: built.campaigns,
-        markdownDocs: { ...markdownDocs, ...built.markdownDocs },
-        pageContent: { ...pageContent, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages },
+        markdownDocs: { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs },
+        pageContent: { ...pageContent, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
         clocks: campaignClocks,
         gmNotes,
-        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, sources: setupSources, ...built.pageSetup },
+        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, sources: setupSources, ...built.pageSetup, ...extras.pageSetup },
         homePage: 'home',
         topMeta: campaign => `${campaign.name} / arquivo do mestre`.toUpperCase(),
         // Relógios e bloco de notas da campanha, no servidor (com o backup), iguais em qualquer aparelho do mestre.

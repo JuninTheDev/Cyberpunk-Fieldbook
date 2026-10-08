@@ -146,8 +146,10 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
   // ---------------- Mesa do mestre ----------------
   // Os relógios (o valor de cada um), o bloco de notas e quais relógios os jogadores veem (com o nome e os passos,
   // que o servidor não conhece de outro jeito). Antes ficavam só no navegador do mestre; aqui entram no backup.
-  //   campanhas/<id>/mesa.json → { relogios: { nome: valor }, notas, publicos: { nome: { nome, passos } }, atualizado }
-  const emptyTable = () => ({ relogios: {}, notas: '', publicos: {}, atualizado: null });
+  //   campanhas/<id>/mesa.json → { relogios: { nome: valor }, notas, publicos: { nome: { nome, passos } },
+  //                               paginas: { chave: { npcs: [nomes das fichas], notas } }, atualizado }
+  // paginas: o que o mestre guarda em cada página da campanha (as abas NPCs e Notas de cada sessão, as fichas do elenco).
+  const emptyTable = () => ({ relogios: {}, notas: '', publicos: {}, paginas: {}, atualizado: null });
   const readTable = id => ({ ...emptyTable(), ...(readFile(path.join(folder(id), 'mesa.json')) || {}) });
   async function writeTable(id, patch) {
     if (!patch || typeof patch !== 'object') throw Object.assign(new Error('Mande { relogios, notas, publicos }.'), { status: 400 });
@@ -161,6 +163,14 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
       if (!/^[\w-]{1,40}$/.test(name)) continue;
       if (!value) { delete table.publicos[name]; continue; }
       table.publicos[name] = { nome: String(value.nome || name).slice(0, 80), passos: (Array.isArray(value.passos) ? value.passos : []).slice(0, 20).map(step => String(step).slice(0, 80)) };
+    }
+    for (const [key, value] of Object.entries(patch.paginas || {})) {
+      if (!/^[\w-]{1,40}$/.test(key)) continue;
+      if (!value) { delete table.paginas[key]; continue; }
+      const page = { ...(table.paginas[key] || {}) };
+      if (value.npcs !== undefined) page.npcs = (Array.isArray(value.npcs) ? value.npcs : []).map(name => String(name).trim().slice(0, 80)).filter(Boolean).slice(0, 40);
+      if (value.notas !== undefined) page.notas = String(value.notas).slice(0, 50000);
+      table.paginas[key] = page;
     }
     table.atualizado = new Date().toISOString();
     fs.mkdirSync(folder(id), { recursive: true });

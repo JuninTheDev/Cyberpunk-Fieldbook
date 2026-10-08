@@ -138,8 +138,11 @@
     lede: 'Todos os itens da wiki numa lista só: armas, cyberware, programas, ICE, quickhacks, pessoas e fichas. Digite para filtrar e clique para abrir o cartão.',
     html: '<div class="section" data-toc="Filtrar"><h3>Filtrar</h3><label class="skill-search"><input id="index-filter" type="search" placeholder="Nome, tipo ou página" autocomplete="off"></label><p class="note-status" id="index-count"></p></div><div id="index-list"></div>'
   };
+  // Uma entrada do menu pode reunir várias páginas em abas (tabs: [{ id, label }]): só a entrada aparece na barra
+  // lateral, e cada página ganha a barra de abas no topo. As páginas continuam com o próprio endereço e na busca.
+  const withTabs = page => [page.id, ...(page.tabs || []).map(tab => tab.id).filter(id => id !== page.id)];
   const pageWorkspace = Object.fromEntries([
-    ...campaigns.flatMap(campaign => campaign.groups.flatMap(group => group.pages.map(page => [page.id, 'campaigns']))),
+    ...campaigns.flatMap(campaign => campaign.groups.flatMap(group => group.pages.flatMap(page => withTabs(page).map(id => [id, 'campaigns'])))),
     ...systemSections.flatMap(group => group.pages.map(page => [page.id, 'system']))
   ]);
 
@@ -176,7 +179,16 @@
     // a tiver; senão, a primeira dela. Trocar de campanha muda a cor e o nome no topo e avisa as páginas (evento
     // "wiki:campanha"), que recarregam o que é da campanha (personagens, loja, Publicar).
     const activeCampaign = () => campaigns.find(item => item.id === activeCampaignId) || campaigns[0] || null;
-    const pagesOf = campaign => (campaign ? campaign.groups.flatMap(group => group.pages.map(page => page.id)) : []);
+    const pagesOf = campaign => (campaign ? campaign.groups.flatMap(group => group.pages.flatMap(withTabs)) : []);
+    // A entrada do menu que tem esta página como aba (a da campanha ativa primeiro); null se a página não é aba.
+    function tabHost(id) {
+      for (const campaign of [activeCampaign(), ...campaigns].filter(Boolean)) {
+        for (const group of campaign.groups) for (const page of group.pages) if (page.tabs && page.tabs.some(tab => tab.id === id)) return page;
+      }
+      return null;
+    }
+    // O botão do menu que fica aceso para esta página: o dela, ou o da entrada que a tem como aba.
+    const navIdOf = id => (tabHost(id) || { id }).id;
     function homePage() {
       const pages = pagesOf(activeCampaign()).filter(id => pageContent[id]);
       return pages.includes(config.homePage) || !pages.length ? config.homePage || 'home' : pages[0];
@@ -222,6 +234,8 @@
         const page = group.pages.find(item => item.id === id);
         if (page) return { id, label: page.label, icon: page.icon };
       }
+      const host = tabHost(id);
+      if (host) return { id, label: `${host.label} › ${host.tabs.find(tab => tab.id === id).label}`, icon: host.icon };
       return { id, label: escapeHtml(String(pageContent[id].title).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()), icon: '★' };
     }
     const pinButton = id => {
@@ -256,14 +270,14 @@
       const item = page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"${rail ? ` title="${escapeHtml(String(page.label).replace(/<[^>]+>/g, ''))}"` : ''}><span class="nav-icon">${page.icon}</span><span class="nav-text">${page.label}</span>${badges[page.id] ? `<span class="nav-badge" aria-label="${badges[page.id]} novidade(s)">${badges[page.id]}</span>` : ''}</button>`;
       navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => {
         const key = group.shared ? group.key : `${currentWorkspace}:${group.key}`;
-        const shut = closed.has(key) && !group.pages.some(page => page.id === currentPage);
+        const shut = closed.has(key) && !group.pages.some(page => page.id === navIdOf(currentPage));
         const news = group.pages.reduce((sum, page) => sum + (badges[page.id] || 0), 0);
         return `<div class="nav-group${shut ? ' collapsed' : ''}${group.shared ? ' nav-pinned' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
       }).join('')}`;
       document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
       document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
       document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
-      document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === currentPage));
+      document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(currentPage)));
     }
     // Selos de novidade: { idDaPágina: quantidade } (0 tira o selo). A visão dos jogadores marca o que o mestre
     // publicou desde a última vez que o jogador abriu a página.
@@ -376,8 +390,11 @@
       const keepTarget = page.manterAlvo && target && target.section;
       writeHash(keepTarget ? `#${id}/${encodeURIComponent(target.section)}` : pageHash(id), historyMode);
       if (!page.manterAlvo) rememberRecent(id);
-      content.innerHTML = `${pinnable(id) ? pinButton(id) : ''}<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
-      document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
+      // As abas da entrada do menu (Sessão 01: Resumo, Roteiro completo, Handouts...), no topo da página.
+      const host = tabHost(id);
+      const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
+      content.innerHTML = `${tabs}${pinnable(id) ? pinButton(id) : ''}<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
+      document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
       if (document.body.classList.contains('sidebar-open')) setDrawer(false);
@@ -867,7 +884,8 @@
     // Links nos textos em Markdown: [texto](#pagina/secao) abre uma página da wiki; [texto](https://...) abre fora, em
     // outra aba; [texto](arquivo.md) e o nome de um documento entre crases (`ganchos-dos-personagens.md`) abrem a página
     // daquele documento. Outro destino (javascript:, data:...) fica só como texto.
-    const docPageFor = name => { const base = String(name).split('/').pop(); return Object.keys(markdownDocs).find(id => markdownDocs[id].file.split('/').pop() === base) || ''; };
+    // O documento inteiro, não uma página que mostra só um pedaço dele (os handouts de uma sessão).
+    const docPageFor = name => { const base = String(name).split('/').pop(); const ids = Object.keys(markdownDocs).filter(id => markdownDocs[id].file.split('/').pop() === base); return ids.find(id => !markdownDocs[id].transform) || ids[0] || ''; };
     function linkHref(target) {
       const value = target.replace(/&amp;/g, '&');
       if (/^#[\w-]+(\/[\w-]+)?$/.test(value)) return value;
@@ -942,7 +960,8 @@
     const stripDocTitle = text => text.replace(/^﻿?#\s+.*\r?\n/, '');
 
     function showMarkdownDoc(id, target) {
-      loadMarkdownDoc(id).then(text => {
+      loadMarkdownDoc(id).then(raw => {
+        const text = markdownDocs[id].transform ? markdownDocs[id].transform(raw) : raw;
         const container = document.getElementById('md-doc');
         if (currentPage !== id || !container) return;
         container.innerHTML = renderMarkdown(stripDocTitle(text));
@@ -1148,6 +1167,7 @@
       const entries = [];
       const strip = html => String(html).replace(/<[^>]*>/g, ' ');
       Object.entries(pageContent).forEach(([id, page]) => {
+        if (page.semBusca || (markdownDocs[id] && markdownDocs[id].semBusca)) return;
         if (markdownDocs[id] && !markdownCache[id]) return;
         const holder = document.createElement('div');
         // Espaço entre as tags para o texto de blocos vizinhos não grudar no trecho exibido.
@@ -1380,7 +1400,7 @@
     loadTable();
     prefs.load();
     // Pré-carrega os documentos para a busca encontrar o texto completo deles.
-    if (Object.keys(markdownDocs).length) Promise.allSettled(Object.keys(markdownDocs).map(loadMarkdownDoc)).then(() => {
+    if (Object.keys(markdownDocs).length) Promise.allSettled(Object.keys(markdownDocs).filter(id => !markdownDocs[id].semBusca).map(loadMarkdownDoc)).then(() => {
       searchIndex = null;
       if (search.value.trim()) searchPages(search.value);
     });

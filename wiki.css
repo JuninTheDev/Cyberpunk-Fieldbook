@@ -906,3 +906,16 @@ button.nav-group-toggle:hover, button.nav-group-toggle:focus-visible { color: va
 .cc-in-use { display: none; align-self: center; color: var(--campanha-cor, var(--yellow)); font: 11px Oxanium, Consolas, monospace; text-transform: uppercase; }
 .cc-selected .cc-in-use { display: inline; }
 .cc-selected .cc-use { display: none; }
+
+/* Abas dentro da página: uma entrada do menu reúne páginas do mesmo assunto (Sessão 01: Resumo, Roteiro, Handouts...). */
+.page-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 18px; padding: 0 0 12px; border-bottom: 1px solid var(--line); }
+.page-tabs-label { flex: 1 0 100%; margin-bottom: 2px; color: var(--yellow); font: 11px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.page-tab { padding: 7px 12px; border: 1px solid #444d4b; background: #141819; color: var(--muted); cursor: pointer; white-space: nowrap; font: 13px BlenderProBook, sans-serif; }
+.page-tab:hover, .page-tab:focus-visible { border-color: var(--cyan); color: var(--cyan); outline: none; }
+.page-tab[aria-current="page"] { border-color: var(--yellow); background: #1f1e0c; color: var(--yellow); }
+/* Abas NPCs e Fichas: o seletor e o botão de tirar uma ficha da página. */
+.np-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 8px; }
+.np-bar select { min-width: min(320px, 100%); max-width: 100%; padding: 7px 8px; border: 1px solid #444d4b; background: #141819; color: var(--text); font: 13px BlenderProBook, sans-serif; }
+.np-bar .action.np-secondary { background: transparent; color: var(--yellow); box-shadow: inset 0 0 0 1px var(--yellow); }
+.np-remove { margin-left: auto; padding: 0 8px; border: 1px solid #5a3a3a; background: transparent; color: var(--coral); cursor: pointer; font: 16px/1.4 Oxanium, Consolas, monospace; }
+.np-remove:hover, .np-remove:focus-visible { border-color: var(--coral); background: #2a1414; outline: none; }

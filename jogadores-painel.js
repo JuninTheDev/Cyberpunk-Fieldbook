@@ -171,10 +171,12 @@
   }
   // Bloco de mesa → rascunho de sessão (botão nas Notas): uma sessão nova, não publicada, no Publicar da campanha
   // ativa, com o texto do bloco. O mestre revisa (o bloco tem segredos) e marca Publicada quando quiser.
+  // data-session-draft="#id": o texto vem de outro campo (as notas da aba de uma sessão); data-session-title: o título.
   document.addEventListener('click', async event => {
     const button = event.target.closest('[data-session-draft]');
     if (!button) return;
-    const text = ((document.getElementById('session-note') || {}).value || '').trim();
+    const source = button.dataset.sessionDraft ? document.querySelector(button.dataset.sessionDraft) : document.getElementById('session-note');
+    const text = ((source || {}).value || '').trim();
     if (!text) { window.wikiPopup.toast('O bloco de mesa está vazio.', { tone: 'bad' }); return; }
     const active = window.wikiApp.activeCampaign();
     const url = `api/campanhas/${encodeURIComponent(active.id)}/publicar`;
@@ -184,7 +186,7 @@
       if (!response.ok) throw new Error(response.status);
       const { atualizado: _date, ...mestre } = await response.json();
       const sessoes = mestre.sessoes || [];
-      const titulo = `Sessão ${String(sessoes.length + 1).padStart(2, '0')}`;
+      const titulo = button.dataset.sessionTitle || `Sessão ${String(sessoes.length + 1).padStart(2, '0')}`;
       sessoes.push({ id: `${slug(titulo)}-${Date.now().toString(36)}`, titulo, data: new Date().toLocaleDateString('pt-BR'), texto: text, nota: 'Rascunho tirado do bloco de mesa: revise (o bloco tem segredos) antes de publicar.', publicada: false });
       await post(url, { mestre: { ...mestre, sessoes } });
       window.wikiPopup.toast(`Rascunho "${titulo}" criado em Visão dos jogadores → Sessões (ainda não publicado).`, { tone: 'ok', ms: 7000 });
@@ -196,11 +198,13 @@
   });
 
   // ---------------- Handouts: entregar pela página do documento ----------------
-  // Na página "Handouts e textos" (documentos/morana/handouts-da-campanha.md), cada citação de um H-xx ganha dois botões:
+  // Na página "Handouts e textos" (documentos/morana/handouts-da-campanha.md) e nas abas Handouts de cada sessão (as
+  // páginas com "entregar" no documento), cada citação de um H-xx ganha dois botões:
   // Entregar aos jogadores (publica na hora em Notícias e handouts do Protocolo Morana) e Só preparar (fica no Publicar,
   // sem publicar, para revisar). O título é a linha "Para os jogadores" do documento; o código H-xx vai na nota do
   // mestre, que nunca sai para os jogadores, e é por ela que a página sabe o que já foi preparado ou entregue.
-  const HANDOUT_DOCS = { docHandouts: 'morana' };
+  // A campanha onde o handout é entregue: a do documento ("entregar: 'morana'").
+  const handoutCampaign = id => (((window.wikiConfig || {}).markdownDocs || {})[id] || {}).entregar || '';
   // As citações de cada H-xx no texto do .md, na ordem da página: [{ code, base, parts: [{ label, text }] }].
   // label: a linha em negrito logo antes da citação ("**Parte 1**", "**Versão A · ...**"), quando houver.
   function parseHandouts(source) {
@@ -209,7 +213,7 @@
     let block = null;
     let label = '';
     for (const line of source.replace(/\r/g, '').split('\n')) {
-      const heading = line.match(/^###\s+(H-\d+)\s+·\s+(.+)$/);
+      const heading = line.match(/^#{2,3}\s+(H-\d+)\s+·\s+(.+)$/);
       if (heading) { current = { code: heading[1], base: heading[2].trim(), parts: [] }; list.push(current); block = null; label = ''; continue; }
       if (/^#{1,3}\s/.test(line)) { current = null; block = null; continue; }
       if (!current) continue;
@@ -245,13 +249,13 @@
   }
 
   document.addEventListener('wiki:documento', event => {
-    const campaign = HANDOUT_DOCS[event.detail.id];
+    const campaign = handoutCampaign(event.detail.id);
     if (!campaign) return;
     const { container, text } = event.detail;
     const list = parseHandouts(text);
     handoutCache = { campaign, list };
     for (const item of list) {
-      const heading = [...container.querySelectorAll('h4')].find(element => element.textContent.trim().startsWith(`${item.code} `));
+      const heading = [...container.querySelectorAll('h3, h4')].find(element => element.textContent.trim().startsWith(`${item.code} `));
       if (!heading) continue;
       const quotes = [];
       for (let next = heading.nextElementSibling; next && !next.matches('h3, h4'); next = next.nextElementSibling) if (next.matches('blockquote')) quotes.push(next);

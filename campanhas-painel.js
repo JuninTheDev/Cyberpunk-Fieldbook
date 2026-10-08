@@ -4,6 +4,7 @@
 //   Personagens e códigos, Loja, Notas e os documentos da pasta documentos/<id>/.
 //   A página "Campanhas": criar, renomear, cor, mundo do Foundry e apagar (só campanha vazia).
 //   A página "Agenda das mesas": as sessões marcadas de todas as campanhas, com aviso de horário cruzado.
+//   extraPages(campanha, defs) → as abas montadas de cada sessão (Handouts, NPCs, Notas) e as fichas do elenco.
 (() => {
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
   const slug = text => String(text || 'item').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item';
@@ -246,6 +247,149 @@
     draw();
   }
 
+  // ---------------- Abas montadas: Handouts, NPCs e Notas ----------------
+  // Cada sessão (e o elenco) ganha abas que não são um documento só:
+  //   handouts: os H-xx da sessão, tirados de Handouts e textos (o mesmo texto, com os botões de entregar);
+  //   npcs:     as fichas que o mestre escolhe num seletor com todas as fichas da wiki (a página Fichas de NPC). A
+  //             escolha fica na mesa do servidor (paginas.<chave>.npcs); sem escolha, a página mostra a sugestão;
+  //   notas:    o que aconteceu na sessão (paginas.<chave>.notas), com o modelo de campos do diário da campanha.
+  const tableUrl = campaign => `api/campanhas/${encodeURIComponent(campaign)}/mesa`;
+  const readPageData = async (campaign, key) => ((await api(tableUrl(campaign))).data.paginas || {})[key] || {};
+  const savePageData = (campaign, key, data) => api(tableUrl(campaign), { method: 'PUT', body: { paginas: { [key]: data } } });
+
+  // Os H-xx pedidos, na ordem pedida, como seções (##) da página (a barra "Nesta página" lista cada um).
+  function pickHandouts(source, codes) {
+    const sections = {};
+    let current = null;
+    for (const line of source.replace(/\r/g, '').split('\n')) {
+      const heading = line.match(/^###\s+(H-\d+)\s+·/);
+      if (heading) { current = heading[1]; sections[current] = [line.replace(/^###/, '##')]; continue; }
+      if (/^#{1,3}\s/.test(line)) { current = null; continue; }
+      if (current) sections[current].push(line);
+    }
+    const intro = '# Handouts\n\nOs documentos desta sessão. Todos estão em [Handouts e textos](handouts-da-campanha.md), com os textos para ler em voz alta e a tabela de por onde cada informação chega. Embaixo de cada citação, os botões entregam aos jogadores.';
+    return [intro, ...codes.filter(code => sections[code]).map(code => sections[code].join('\n'))].join('\n\n');
+  }
+
+  // Todas as fichas da página Fichas de NPC (o livro, as facções e o elenco): nome → { html, grupo }.
+  let npcCards = null;
+  function allNpcCards() {
+    if (npcCards) return npcCards;
+    npcCards = new Map();
+    const source = window.npcStatBlocks && window.npcStatBlocks.pages.npcs;
+    if (!source) return npcCards;
+    const holder = document.createElement('div');
+    holder.innerHTML = source.html;
+    holder.querySelectorAll('.section[data-toc]').forEach(section => section.querySelectorAll('article.entry[data-toc]').forEach(card => {
+      if (!npcCards.has(card.dataset.toc)) npcCards.set(card.dataset.toc, { html: card.outerHTML, grupo: section.dataset.toc });
+    }));
+    return npcCards;
+  }
+  const npcPage = def => ({
+    eyebrow: def.eyebrow || 'Mesa do mestre / fichas', title: def.title, semBusca: true,
+    lede: def.lede || 'As fichas que você quer à mão nesta sessão. O seletor tem todas as fichas de Fichas de NPC (o livro, as facções de 2077 e o elenco); a mesma ficha pode entrar mais de uma vez (dois solos, por exemplo). Fica salvo no servidor.',
+    html: '<div class="section" data-toc="Fichas"><h3>Fichas</h3><div class="np-bar"><select data-np-select aria-label="Ficha para adicionar"></select><button class="action" type="button" data-np-add>Adicionar</button><button class="action np-secondary" type="button" data-np-reset hidden>Voltar à sugestão</button></div><p class="note-status" data-np-summary>Carregando…</p><div class="entry-grid npc-grid" data-np-cards></div></div>'
+  });
+  async function setupNpcPage(content, campaign, def) {
+    const root = content.querySelector('[data-np-cards]');
+    const select = content.querySelector('[data-np-select]');
+    const summary = content.querySelector('[data-np-summary]');
+    const reset = content.querySelector('[data-np-reset]');
+    const cards = allNpcCards();
+    const groups = [...new Set([...cards.values()].map(card => card.grupo))];
+    select.innerHTML = `<option value="">Escolha uma ficha…</option>${groups.map(group => `<optgroup label="${escapeHtml(group)}">${[...cards].filter(([, card]) => card.grupo === group).map(([name]) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}</optgroup>`).join('')}`;
+    const saved = await readPageData(campaign, def.key);
+    if (!root.isConnected) return;
+    let chosen = Array.isArray(saved.npcs);
+    let names = chosen ? saved.npcs : [...def.npcs];
+    const draw = () => {
+      root.innerHTML = names.map(name => (cards.get(name) ? cards.get(name).html : `<article class="entry" data-toc="${escapeHtml(name)}"><header><h4>${escapeHtml(name)}</h4></header><p class="note-status">Esta ficha não existe mais em Fichas de NPC.</p></article>`)).join('');
+      root.querySelectorAll(':scope > article.entry').forEach((card, index) => card.querySelector('header').insertAdjacentHTML('beforeend', `<button type="button" class="np-remove" data-np-remove="${index}" title="Tirar desta página" aria-label="Tirar ${escapeHtml(names[index])}">×</button>`));
+      window.wikiApp.linkGlossary(root);
+      summary.textContent = names.length ? `${names.length === 1 ? '1 ficha' : `${names.length} fichas`}${chosen ? '' : ' · a sugestão desta página: mude à vontade'}.` : 'Nenhuma ficha. Escolha no seletor acima.';
+      reset.hidden = JSON.stringify(names) === JSON.stringify(def.npcs);
+    };
+    const save = async () => {
+      chosen = true;
+      const answer = await savePageData(campaign, def.key, { npcs: names });
+      if (answer.status !== 200) window.wikiPopup.toast(answer.data.erro || 'Não consegui salvar as fichas.', { tone: 'bad' });
+    };
+    content.querySelector('[data-np-add]').onclick = () => {
+      if (!select.value) return;
+      names = [...names, select.value];
+      select.value = '';
+      draw();
+      save();
+    };
+    reset.onclick = () => { names = [...def.npcs]; draw(); save(); };
+    root.onclick = event => {
+      const button = event.target.closest('[data-np-remove]');
+      if (!button) return;
+      names = names.filter((_, index) => index !== Number(button.dataset.npRemove));
+      draw();
+      save();
+    };
+    draw();
+  }
+
+  // O modelo das notas: os campos da sessão no diário da campanha (o bloco "### Sessão N: ..." do .md).
+  const diaryCache = {};
+  async function diaryTemplate(fileName, heading) {
+    if (!fileName || !heading) return '';
+    if (diaryCache[fileName] === undefined) {
+      try { diaryCache[fileName] = await (await fetch(encodeURI(fileName), { cache: 'no-store' })).text(); } catch { diaryCache[fileName] = ''; }
+    }
+    const lines = diaryCache[fileName].replace(/\r/g, '').split('\n');
+    const start = lines.findIndex(line => line.startsWith(`### ${heading}`));
+    if (start < 0) return '';
+    const fields = [];
+    for (const line of lines.slice(start + 1)) {
+      if (/^#{1,3}\s/.test(line)) break;
+      if (line.startsWith('- ')) fields.push(line.replace(/\*\*/g, ''));
+    }
+    return fields.join('\n');
+  }
+  const sessionNotesPage = def => ({
+    eyebrow: def.eyebrow || 'Mesa do mestre / só você vê', title: def.title, semBusca: true,
+    lede: 'O que aconteceu na sessão, as decisões do grupo e as pontas soltas. Salva sozinho no servidor, com o backup, em qualquer aparelho. No fim, passe o essencial para o diário da campanha e para o resumo dos jogadores.',
+    html: `<div class="section" data-toc="Notas"><h3>Notas da sessão</h3><textarea class="note-area" id="sn-${def.key}" data-sn-text rows="16" placeholder="Carregando…"></textarea><p class="note-status" data-sn-status></p><p><button class="action" type="button" data-sn-template hidden>Usar o modelo do diário</button> <button class="action" type="button" data-session-draft="#sn-${def.key}" data-session-title="${escapeHtml(def.sessionTitle || '')}" title="Cria uma sessão não publicada, com estas notas, em Visão dos jogadores → Sessões">Virar rascunho de sessão</button></p></div>`
+  });
+  async function setupSessionNotes(content, campaign, def) {
+    const area = content.querySelector('[data-sn-text]');
+    const status = content.querySelector('[data-sn-status]');
+    const templateButton = content.querySelector('[data-sn-template]');
+    const [saved, template] = await Promise.all([readPageData(campaign, def.key), diaryTemplate(def.diarioFile, def.diario)]);
+    if (!area.isConnected) return;
+    area.value = saved.notas || '';
+    area.placeholder = template || 'O que aconteceu, as decisões do grupo, as pontas soltas…';
+    status.textContent = saved.notas ? 'Salvo no servidor.' : '';
+    templateButton.hidden = !template;
+    let timer = null;
+    const persist = () => {
+      status.textContent = 'Salvando…';
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const answer = await savePageData(campaign, def.key, { notas: area.value });
+        status.textContent = answer.status === 200 ? `Salvo no servidor às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.` : (answer.data.erro || 'Não consegui salvar.');
+      }, 800);
+    };
+    area.oninput = persist;
+    templateButton.onclick = () => { area.value = area.value.trim() ? `${area.value.trimEnd()}\n\n${template}` : template; area.focus(); persist(); };
+  }
+
+  // defs: [{ kind: 'handouts' | 'npcs' | 'notas', id, title, ... }] → { pages, pageSetup, markdownDocs } para juntar à wiki.
+  function extraPages(campaign, defs) {
+    const pages = {};
+    const pageSetup = {};
+    const docs = {};
+    for (const def of defs) {
+      if (def.kind === 'handouts') docs[def.id] = { file: def.file, eyebrow: def.eyebrow || 'Para entregar / handouts da sessão', title: def.title, lede: def.lede || 'Os documentos que o grupo pode encontrar nesta sessão, prontos para entregar.', transform: text => pickHandouts(text, def.handouts), semBusca: true, entregar: campaign };
+      if (def.kind === 'npcs') { pages[def.id] = npcPage(def); pageSetup[def.id] = content => setupNpcPage(content, campaign, def); }
+      if (def.kind === 'notas') { pages[def.id] = sessionNotesPage(def); pageSetup[def.id] = content => setupSessionNotes(content, campaign, def); }
+    }
+    return { pages, pageSetup, markdownDocs: docs };
+  }
+
   // ---------------- Menu ----------------
   function build(data, { morana, markdownDocs }) {
     const list = data && Array.isArray(data.campanhas) ? data.campanhas : null;
@@ -261,17 +405,19 @@
     const campaigns = list.map(item => {
       const own = toPages(docEntries(item.id, (item.documentos || []).filter(doc => !known.has(doc.arquivo)), `${escapeHtml(item.nome)} / documento`));
       if (item.id === morana.id) {
-        // Arquivos novos na pasta do Morana entram no grupo dos documentos completos.
-        const groups = morana.groups.map(group => (group.group === 'Documentos completos' ? { ...group, pages: [...group.pages, ...own] } : group));
+        // Arquivos novos na pasta do Morana (que ainda não estão nas abas) entram num grupo próprio.
+        const groups = own.length ? [...morana.groups, { group: 'Outros documentos', pages: own }] : morana.groups;
         return { ...morana, name: item.nome, color: item.cor, groups: [...groups, ...sharedGroup] };
       }
       const home = homeOf(item.id);
       pages[home] = overviewPage(item);
       pageSetup[home] = content => setupOverview(item.id, content);
+      // O mesmo desenho do Protocolo Morana: a campanha em cima, a mesa (o que se usa durante e entre as sessões) e os
+      // personagens dos jogadores.
       return { id: item.id, name: item.nome, color: item.cor, groups: [
-        { group: 'Campanha', pages: [{ id: home, label: 'Visão geral', icon: '00' }, { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' }, { id: 'campanhas', label: 'Campanhas', icon: 'CP' }, { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' }] },
+        { group: 'Campanha', pages: [{ id: home, label: 'Visão geral', icon: '00' }] },
+        { group: 'Mesa', pages: [{ id: 'notas', label: 'Notas e relógio da cidade', icon: 'N' }, { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' }, { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' }, { id: 'campanhas', label: 'Campanhas', icon: 'CP' }] },
         { group: 'Personagens dos jogadores', pages: [{ id: 'personagens', label: 'Personagens e códigos', icon: 'PC' }, { id: 'loja', label: 'Loja', icon: 'EB' }] },
-        { group: 'Mesa', pages: [{ id: 'notas', label: 'Notas e relógio da cidade', icon: 'N', className: 'session-item' }] },
         ...(own.length ? [{ group: 'Documentos', pages: own }] : []),
         ...sharedGroup
       ] };
@@ -279,5 +425,5 @@
     return { campaigns, pages, pageSetup, markdownDocs: docs };
   }
 
-  window.campaignManager = { build, homeOf };
+  window.campaignManager = { build, homeOf, extraPages };
 })();
