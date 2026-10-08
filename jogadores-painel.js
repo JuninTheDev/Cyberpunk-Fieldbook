@@ -169,5 +169,30 @@
     if (!open || !(dirty.campanha || dirty.nightCity)) return Promise.resolve(true);
     return window.wikiPopup.confirm({ title: 'Alterações não publicadas', html: `<p>Há alterações não publicadas em <b>${escapeHtml(campaign.name)}</b>. Trocar para ${escapeHtml(next ? next.name : 'a outra campanha')} descarta essas alterações.</p>`, ok: 'Trocar mesmo assim', cancel: 'Ficar e publicar', danger: true });
   }
+  // Bloco de mesa → rascunho de sessão (botão nas Notas): uma sessão nova, não publicada, no Publicar da campanha
+  // ativa, com o texto do bloco. O mestre revisa (o bloco tem segredos) e marca Publicada quando quiser.
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-session-draft]');
+    if (!button) return;
+    const text = ((document.getElementById('session-note') || {}).value || '').trim();
+    if (!text) { window.wikiPopup.toast('O bloco de mesa está vazio.', { tone: 'bad' }); return; }
+    const active = window.wikiApp.activeCampaign();
+    const url = `api/campanhas/${encodeURIComponent(active.id)}/publicar`;
+    button.disabled = true;
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(response.status);
+      const { atualizado: _date, ...mestre } = await response.json();
+      const sessoes = mestre.sessoes || [];
+      const titulo = `Sessão ${String(sessoes.length + 1).padStart(2, '0')}`;
+      sessoes.push({ id: `${slug(titulo)}-${Date.now().toString(36)}`, titulo, data: new Date().toLocaleDateString('pt-BR'), texto: text, nota: 'Rascunho tirado do bloco de mesa: revise (o bloco tem segredos) antes de publicar.', publicada: false });
+      await post(url, { mestre: { ...mestre, sessoes } });
+      window.wikiPopup.toast(`Rascunho "${titulo}" criado em Visão dos jogadores → Sessões (ainda não publicado).`, { tone: 'ok', ms: 7000 });
+    } catch (error) {
+      window.wikiPopup.toast(`Não consegui criar o rascunho: ${error.message}`, { tone: 'bad' });
+    } finally {
+      button.disabled = false;
+    }
+  });
   window.playerManager = { page, setup, confirmLeave };
 })();

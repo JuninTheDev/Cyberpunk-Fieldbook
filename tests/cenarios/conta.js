@@ -94,9 +94,13 @@ module.exports = async ({ edge, r }) => {
       await edge.sleep(400);
       const novos = await edge.evaluate(`[...document.querySelectorAll('#content .person')].filter(p => p.querySelector('.pv-new')).map(p => p.querySelector('h3').firstChild.textContent.trim())`);
       const selo = await edge.evaluate(`!!document.querySelector('.nav-item[data-page="pvPeople"] .nav-badge')`);
+      // O "já visto" vai para a conta logo depois (no teste, o pedido que sai ao fechar a página não leva o cabeçalho do
+      // túnel, então espera o envio normal).
+      await edge.sleep(1200);
       await edge.ir(`${base}/jogadores.html`, 1200);
       const depois = await edge.evaluate(`!!document.querySelector('.nav-item[data-page="pvPeople"] .nav-badge')`);
-      return [chegou && novos.join() === 'Mina Kuroda' && !selo && !depois, `selo chegou ${chegou} · novos: ${novos.join(', ')} · selo depois de abrir ${selo} · depois de recarregar ${depois}`];
+      const vistos = JSON.stringify((await (await fetch(`${base}/api/eu/preferencias`, { headers: { ...TUNEL, Cookie: cookie } })).json()).valores);
+      return [chegou && novos.join() === 'Mina Kuroda' && !selo && !depois, `selo chegou ${chegou} · novos: ${novos.join(', ')} · selo depois de abrir ${selo} · depois de recarregar ${depois} · já visto na conta: ${vistos.includes('mina')}`];
     });
 
     // ---------------- Sessões, mapa, pedidos ----------------
@@ -157,6 +161,29 @@ module.exports = async ({ edge, r }) => {
       return [naRegras && naCampanha && lembrou && tirou, `na aba Regras ${naRegras} · na aba Campanha ${naCampanha} · depois de recarregar ${lembrou} · tirou ${tirou}`];
     });
 
+    await r.passo('preferências acompanham a conta: a página fixada num aparelho aparece em outro (aparelho limpo)', async () => {
+      await edge.evaluate(`wikiApp.openPage('screen')`);
+      await edge.sleep(300);
+      await edge.evaluate(`document.querySelector('[data-pin="screen"]').click()`);
+      await edge.sleep(1500); // o servidor recebe logo depois da mudança
+      await edge.evaluate('localStorage.clear()');
+      await edge.ir(`${base}/jogadores.html`, 1200);
+      const voltou = await esperar(`!!document.querySelector('.nav-pinned .nav-item[data-page="screen"]')`);
+      const servidor = (await (await fetch(`${base}/api/eu/preferencias`, { headers: { ...TUNEL, Cookie: cookie } })).json()).valores['night-city-jogadores:fixadas'];
+      await edge.evaluate(`wikiApp.openPage('screen')`);
+      await edge.sleep(300);
+      await edge.evaluate(`document.querySelector('[data-pin="screen"]').click()`);
+      return [voltou && /screen/.test(servidor || ''), `voltou do servidor ${voltou} · no servidor ${servidor}`];
+    });
+    await r.passo('ficha: as anotações salvam sozinhas no servidor (só o dono e o mestre)', async () => {
+      await edge.evaluate(`wikiApp.openPage('ficha', { section: ${JSON.stringify(rin.id)} })`);
+      await esperar(`!!document.querySelector('[data-cc-notes]')`);
+      await edge.evaluate(`(() => { const t = document.querySelector('[data-cc-notes]'); t.value = 'Brakk quer 500eb até sexta.'; t.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+      await esperar(`/Salvo às/.test(document.querySelector('[data-cc-notes-status]').textContent)`);
+      const salvo = (await (await fetch(`${base}/api/personagens/${rin.id}/anotacoes`, { headers: { ...TUNEL, Cookie: cookie } })).json()).anotacoes;
+      return [salvo && salvo.texto === 'Brakk quer 500eb até sexta.' && salvo.por === 'Ana', JSON.stringify(salvo)];
+    });
+
     // ---------------- Barra lateral ----------------
     await r.passo('grupo recolhido fica recolhido depois de recarregar; abrir uma página dele mostra o grupo', async () => {
       await edge.evaluate(`wikiApp.openPage('pvHome')`);
@@ -211,6 +238,28 @@ module.exports = async ({ edge, r }) => {
     // ---------------- Mestre ----------------
     await edge.send('Network.setExtraHTTPHeaders', { headers: {} });
     await post('/api/campanhas', { nome: 'Mesa B' });
+    await r.passo('mestre: relógios e bloco no servidor (iguais em outro aparelho); o relógio marcado aparece aos jogadores; o bloco vira rascunho de sessão', async () => {
+      const mesa = async () => (await fetch(`${base}/api/campanhas/morana/mesa`)).json();
+      await edge.ir(`${base}/#notes`, 1500);
+      await esperar(`!!document.querySelector('#clock-city [data-clock-index]') && !document.getElementById('session-note').disabled`);
+      await edge.evaluate(`document.querySelector('#clock-city [data-clock-index="2"]').click()`);
+      await edge.evaluate(`(() => { const c = document.querySelector('[data-clock-public="city"]'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+      await edge.evaluate(`(() => { const t = document.getElementById('session-note'); t.value = 'Jay deve 500eb ao Brakk. O grupo achou a maleta.'; t.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+      await esperar(`/Salvo no servidor/.test(document.getElementById('note-status').textContent)`);
+      const gravada = await mesa();
+      const visao = (await (await fetch(`${base}/api/visao`, { headers: { ...TUNEL, Cookie: cookie } })).json()).relogios;
+      await edge.evaluate(`document.querySelector('[data-session-draft]').click()`);
+      await esperar(`[...document.querySelectorAll('.toast')].some(t => /Rascunho/.test(t.textContent))`);
+      const sessoesAgora = (await (await fetch(`${base}/api/campanhas/morana/publicar`)).json()).sessoes;
+      const rascunho = sessoesAgora[sessoesAgora.length - 1];
+      // Outro aparelho do mestre (navegador limpo): os relógios e o bloco vêm do servidor.
+      await edge.evaluate('localStorage.clear()');
+      await edge.ir(`${base}/#notes`, 1500);
+      await esperar(`document.getElementById('session-note').value.length > 0`);
+      const outro = await edge.evaluate(`({ marcados: document.querySelectorAll('#clock-city [aria-pressed="true"]').length, bloco: document.getElementById('session-note').value, publico: document.querySelector('[data-clock-public="city"]').checked })`);
+      return [gravada.relogios.city === 3 && /maleta/.test(gravada.notas) && visao.length === 1 && visao[0].valor === 3 && rascunho.publicada === false && /maleta/.test(rascunho.texto) && outro.marcados === 3 && /maleta/.test(outro.bloco) && outro.publico,
+        `servidor: cidade ${gravada.relogios.city}, bloco "${gravada.notas.slice(0, 20)}…" · jogadores veem ${JSON.stringify(visao.map(c => `${c.nome} ${c.valor}`))} · rascunho "${rascunho.titulo}" publicada ${rascunho.publicada} · outro aparelho ${JSON.stringify(outro).slice(0, 80)}`];
+    });
     await r.passo('mestre: o menu da conta troca de campanha e leva aos atalhos do mestre', async () => {
       await edge.ir(`${base}/`, 1500);
       await abrirMenu();

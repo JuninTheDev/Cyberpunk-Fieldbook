@@ -141,7 +141,34 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
     await writeJsonAtomic(path.join(folder(id), 'regras-loja.json'), rules);
   }
 
-  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, validId: id => ID_RE.test(String(id || '')) };
+  // ---------------- Mesa do mestre ----------------
+  // Os relógios (o valor de cada um), o bloco de notas e quais relógios os jogadores veem (com o nome e os passos,
+  // que o servidor não conhece de outro jeito). Antes ficavam só no navegador do mestre; aqui entram no backup.
+  //   campanhas/<id>/mesa.json → { relogios: { nome: valor }, notas, publicos: { nome: { nome, passos } }, atualizado }
+  const emptyTable = () => ({ relogios: {}, notas: '', publicos: {}, atualizado: null });
+  const readTable = id => ({ ...emptyTable(), ...(readFile(path.join(folder(id), 'mesa.json')) || {}) });
+  async function writeTable(id, patch) {
+    if (!patch || typeof patch !== 'object') throw Object.assign(new Error('Mande { relogios, notas, publicos }.'), { status: 400 });
+    const table = readTable(id);
+    for (const [name, value] of Object.entries(patch.relogios || {})) {
+      if (!/^[\w-]{1,40}$/.test(name)) continue;
+      table.relogios[name] = Math.max(0, Math.min(99, Math.round(Number(value)) || 0));
+    }
+    if (patch.notas !== undefined) table.notas = String(patch.notas).slice(0, 50000);
+    for (const [name, value] of Object.entries(patch.publicos || {})) {
+      if (!/^[\w-]{1,40}$/.test(name)) continue;
+      if (!value) { delete table.publicos[name]; continue; }
+      table.publicos[name] = { nome: String(value.nome || name).slice(0, 80), passos: (Array.isArray(value.passos) ? value.passos : []).slice(0, 20).map(step => String(step).slice(0, 80)) };
+    }
+    table.atualizado = new Date().toISOString();
+    fs.mkdirSync(folder(id), { recursive: true });
+    await writeJsonAtomic(path.join(folder(id), 'mesa.json'), table);
+    return table;
+  }
+  // O que os jogadores veem: os relógios marcados, com o valor de agora.
+  const publicClocks = id => { const table = readTable(id); return Object.entries(table.publicos).map(([name, clock]) => ({ id: name, nome: clock.nome, passos: clock.passos, valor: table.relogios[name] || 0 })); };
+
+  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, publicClocks, validId: id => ID_RE.test(String(id || '')) };
 }
 
 module.exports = { createCampaigns, publishedOf };

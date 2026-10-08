@@ -619,8 +619,11 @@ module.exports = async ({ edge, servidores, r }) => {
     return [criador && loja && lista && abriu && popupCabe, `criador ${criador} · loja ${loja} · lista ${lista} · descrição abre com um toque ${abriu} · pop-up cabe na tela ${popupCabe}`];
   });
   await r.passo('outro jogador não abre o criador da Ana', async () => {
-    await edge.evaluate(`fetch('api/sair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })`);
+    // Sai pelo menu da conta (canto de cima), como o jogador: a página recarrega.
+    await edge.evaluate(`document.querySelector('.account-button').click()`);
     await edge.sleep(300);
+    await edge.evaluate(`document.querySelector('[data-account-logout]').click()`);
+    for (let i = 0; i < 40 && !/Entrar/.test(await texto('.account-button').catch(() => '')); i++) await edge.sleep(200);
     await abrir(edge, 'personagens', 800);
     await digitar('#cc-code', outra.codigo);
     await edge.evaluate(`document.querySelector('[data-cc-login]').requestSubmit()`);

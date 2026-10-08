@@ -28,8 +28,10 @@ module.exports = async ({ edge, servidores, r }) => {
     return [parou.pagina === 'combat' && parou.foco === 'Cobertura', `${parou.pagina} | foco "${parou.foco}"`];
   });
   await r.passo('relógios mostram o segmento marcado e o próximo', async () => {
-    await edge.evaluate(`localStorage.setItem('night-city-clock-sato-morana', '2')`);
-    await abrir(edge, 'home');
+    // Os relógios ficam no servidor (a mesa do mestre): marca lá e abre de novo.
+    await fetch(`${servidores.local}/api/campanhas/morana/mesa`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ relogios: { sato: 2, city: 0 } }) });
+    // ?recarregar: só trocar o # não recarrega a página (a mesa lida antes continuaria).
+    await edge.ir(`${servidores.local}/?recarregar#home`, 800);
     const texto = await bloco();
     return [/Relógio de Sato: 2\/6/.test(texto) && /Último marcado: Garantir o Gatilho/.test(texto) && /próximo: Garantir a Coleira/.test(texto) && /Relógio da cidade: 0\/8/.test(texto), texto.slice(texto.indexOf('Relógios'), texto.indexOf('Relógios') + 200)];
   });

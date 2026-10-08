@@ -12,7 +12,7 @@ const PUBLICOS = [
   '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'
 ];
 const PRIVADOS = ['/api/eu', '/api/visao'];
-const TROCA_DE_QUEM = ['/api/entrar', '/api/sair', '/api/mestre/entrar', '/api/mestre/sair'];
+const TROCA_DE_QUEM = ['/api/entrar', '/api/sair', '/api/sair-de-todos', '/api/mestre/entrar', '/api/mestre/sair'];
 // O mapa (5 MB) e as fontes entram quando forem abertos, não na instalação.
 const guardavel = url => url.origin === self.location.origin
   && (PUBLICOS.includes(url.pathname) || PRIVADOS.includes(url.pathname) || url.pathname === '/nightcity-map-base.jpg' || url.pathname.startsWith('/cyberpunk-css-main/cyberpunk-css-main/fonts/'));

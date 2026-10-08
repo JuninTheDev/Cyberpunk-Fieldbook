@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { createCampaigns } = require('./api-campanhas');
+const { createAccountStores } = require('./api-contas');
 
 const ROLES = ['face', 'solo', 'netrunner', 'corpo', 'tech', 'medtech', 'media', 'lawman', 'nomad'];
 const MAX_BODY = 300 * 1024;
@@ -20,6 +21,7 @@ const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
 module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '' }) {
   const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic });
+  const { sessions, preferences } = createAccountStores({ dataDir, writeJsonAtomic });
   // Documentos do mestre: os .md de documentos/<id da campanha>/ no projeto (vêm pelo git, como o resto da wiki).
   // documentos/night-city/ é de todas as campanhas. O título é o primeiro "# " do arquivo.
   function documentsOf(folder) {
@@ -67,13 +69,35 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const newId = () => randomFrom('abcdefghijkmnpqrstuvwxyz23456789', 10);
   const playerCookie = request => decodeURIComponent(((request.headers.cookie || '').match(/(?:^|;\s*)jogador=([^;]+)/) || [])[1] || '');
   const findAccount = code => code ? readAccounts().find(account => sameSecret(account.codigo, code)) : null;
+  // O cookie do jogador: a sessão (só um identificador aleatório). Max-Age 0 apaga.
+  const sessionCookie = (token, maxAge = 31536000) => `jogador=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
+  // Tira a conta de todos os aparelhos: as sessões acabam, e o cookie antigo (com o código) deixa de valer.
+  async function disconnect(accountId) {
+    const accounts = readAccounts();
+    const account = accounts.find(item => item.id === accountId);
+    if (account && account.cookieAntigo !== false) { account.cookieAntigo = false; await saveAccounts(accounts); }
+    await sessions.removeAccount(accountId);
+  }
 
   // campanhas: as que esta pessoa vê (o mestre, todas; o jogador, as do código dele que ainda existem).
   function who(request) {
     const existing = campaigns.list().map(item => item.id);
     if (isGameMaster(request)) return { papel: 'mestre', campanhas: existing };
-    const account = findAccount(playerCookie(request));
-    return account ? { papel: 'jogador', conta: account, campanhas: account.campanhas.filter(id => existing.includes(id)) } : { papel: 'visitante', campanhas: [] };
+    const value = playerCookie(request);
+    let account = null;
+    let session = null;
+    if (sessions.isToken(value)) {
+      session = sessions.find(value);
+      account = session ? readAccounts().find(item => item.id === session.conta) || null : null;
+    } else {
+      // Cookie de antes das sessões (o próprio código): vale até a conta sair de todos os aparelhos ou trocar de
+      // código. O /api/eu troca por uma sessão na primeira visita.
+      const legacy = findAccount(value);
+      account = legacy && legacy.cookieAntigo !== false ? legacy : null;
+    }
+    if (!account) return { papel: 'visitante', campanhas: [] };
+    if (session) sessions.touch(session).catch(() => null);
+    return { papel: 'jogador', conta: account, sessao: session, token: session ? value : '', cookieAntigo: !session, campanhas: account.campanhas.filter(id => existing.includes(id)) };
   }
   const inCampaign = (identity, id) => identity.campanhas.includes(id);
   // Para os jogadores, cada campanha tem um id público (um pedaço de hash do id) e o "nome para os jogadores": o id e
@@ -150,6 +174,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     // resolvidos: o que o mestre decidiu (ou o Foundry entregou), para o botão da conta do jogador avisar.
     pedidos: { pendentes: (doc.pedidos || []).filter(item => item.status === 'pendente').length, aprovados: (doc.pedidos || []).filter(item => item.status === 'aprovado').length,
       resolvidos: (doc.pedidos || []).filter(item => ['aprovado', 'recusado', 'entregue'].includes(item.status)).slice(-10).map(item => ({ id: item.id, status: item.status, quando: item.entregue || item.decidido || item.criado, erro: Boolean(item.erro), total: item.total })) },
+    // As anotações do personagem: se tem, o começo e quando mudou (o mestre vê as do grupo num quadro só).
+    temAnotacoes: Boolean(doc.anotacoes && doc.anotacoes.texto), anotacoesTrecho: doc.anotacoes && doc.anotacoes.texto ? doc.anotacoes.texto.slice(0, 220) : '', anotacoesEm: (doc.anotacoes && doc.anotacoes.atualizado) || null,
     ...(foundryState(doc) === 'outra-mesa' ? { transferencia: transferInfo(doc.id) } : {}) });
   // O que cada um pode com um personagem: 'editar' (o mestre; o dono, enquanto jogar na campanha do personagem),
   // 'ver' (os outros jogadores da mesma campanha: o resumo) ou null (nem fica sabendo que ele existe).
@@ -181,7 +207,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota). Os três últimos
   // a API calcula na resposta e não vão para o arquivo.
   // A campanha (e o histórico de mudanças de campanha) só o mestre muda, pela rota /campanha.
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'estadoFoundry', 'donoNome', 'publico'];
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico'];
   // O que o jogador não muda mais pela wiki depois que o personagem foi importado no Foundry.
   const LOCKED_AFTER_IMPORT = ['role', 'especializacao', 'metodo', 'stats', 'sorteio', 'pericias', 'tipos', 'extras', 'lingua', 'casa', 'kitNet', 'quickhacks', 'escolhas', 'itens',
     'habilidades', 'oficina', 'montagem', 'moradia', 'estiloVida', 'traumaTeam', 'estiloModa'];
@@ -255,7 +281,19 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     const query = new URL(request.url, 'http://localhost').searchParams;
 
     if (pathname === '/api/eu' && method === 'GET') {
-      return json(response, 200, { papel: identity.papel, jogador: identity.conta ? { id: identity.conta.id, nome: identity.conta.nome } : null, campanhas: identity.campanhas.map(id => campaignCard(campaigns.get(id), identity)) });
+      // Quem ainda tem o cookie de antes das sessões (o código) ganha uma sessão aqui.
+      const upgrade = identity.cookieAntigo ? { 'Set-Cookie': sessionCookie(await sessions.create(identity.conta.id, request.headers['user-agent'])) } : {};
+      return json(response, 200, { papel: identity.papel, jogador: identity.conta ? { id: identity.conta.id, nome: identity.conta.nome } : null, campanhas: identity.campanhas.map(id => campaignCard(campaigns.get(id), identity)) }, upgrade);
+    }
+    // Preferências da conta (o jogador, ou o mestre): o que a pessoa ajusta na wiki, igual em qualquer aparelho.
+    if (pathname === '/api/eu/preferencias') {
+      // O visitante lê uma lista vazia (sem erro: a wiki sempre pergunta); gravar exige conta.
+      if (identity.papel === 'visitante') return method === 'GET' ? json(response, 200, { dono: null, valores: {}, atualizado: null }) : json(response, 401, { erro: 'Entre com o seu código.' });
+      const owner = identity.papel === 'mestre' ? 'mestre' : identity.conta.id;
+      if (method === 'GET') return json(response, 200, { dono: owner, ...preferences.read(owner) });
+      if (method !== 'PUT') return json(response, 405, { erro: 'Use GET ou PUT.' });
+      const input = await readJson(request, 256 * 1024);
+      return json(response, 200, { dono: owner, ...(await preferences.merge(owner, input.valores)) });
     }
 
     if (pathname === '/api/entrar' && method === 'POST') {
@@ -264,10 +302,18 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       const account = findAccount(String(codigo || '').trim().toUpperCase());
       if (!account) return json(response, 403, { erro: 'Código não encontrado. Confira com o mestre.' });
       attempts.delete(clientIp(request));
-      return json(response, 200, { jogador: { id: account.id, nome: account.nome } }, { 'Set-Cookie': `jogador=${encodeURIComponent(account.codigo)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000` });
+      const token = await sessions.create(account.id, request.headers['user-agent']);
+      return json(response, 200, { jogador: { id: account.id, nome: account.nome } }, { 'Set-Cookie': sessionCookie(token) });
     }
     if (pathname === '/api/sair' && method === 'POST') {
-      return json(response, 200, { ok: true }, { 'Set-Cookie': 'jogador=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' });
+      if (identity.token) await sessions.remove(identity.token);
+      return json(response, 200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
+    }
+    // Sair de todos os aparelhos.
+    if (pathname === '/api/sair-de-todos' && method === 'POST') {
+      if (identity.papel !== 'jogador') return json(response, 401, { erro: 'Entre com o seu código.' });
+      await disconnect(identity.conta.id);
+      return json(response, 200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
     }
 
     // Regras da loja inicial (?campanha=): os jogadores da campanha leem, só o mestre grava.
@@ -291,7 +337,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       const accounts = readAccounts();
       const existing = campaigns.list().map(item => item.id);
       const campaignList = value => [...new Set((Array.isArray(value) ? value : []).map(String))].filter(id => existing.includes(id));
-      if (pathname === '/api/contas' && method === 'GET') return json(response, 200, { contas: accounts });
+      // Com o último acesso e os aparelhos com sessão de cada código.
+      if (pathname === '/api/contas' && method === 'GET') return json(response, 200, { contas: accounts.map(account => ({ ...account, ...sessions.summary(account.id) })) });
       if (pathname === '/api/contas' && method === 'POST') {
         const input = await readJson(request);
         const clean = String(input.nome || '').trim().slice(0, 60);
@@ -301,9 +348,19 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         await saveAccounts([...accounts, account]);
         return json(response, 201, { conta: account });
       }
-      const id = pathname.slice('/api/contas/'.length);
+      const [id, action] = pathname.slice('/api/contas/'.length).split('/');
       const account = accounts.find(item => item.id === id);
       if (!account) return json(response, 404, { erro: 'Conta não encontrada.' });
+      // Desconectar: tira o código de todos os aparelhos (ele entra de novo com o mesmo código).
+      // Novo código: o antigo deixa de valer, e todos os aparelhos saem; os personagens e as campanhas ficam.
+      if (action === 'desconectar' || action === 'novo-codigo') {
+        if (method !== 'POST') return json(response, 405, { erro: 'Use POST.' });
+        if (action === 'novo-codigo') { account.codigo = newCode(); await saveAccounts(accounts); }
+        await disconnect(account.id);
+        const fresh = readAccounts().find(item => item.id === account.id);
+        return json(response, 200, { conta: { ...fresh, ...sessions.summary(account.id) } });
+      }
+      if (action) return json(response, 404, { erro: 'Rota não encontrada.' });
       // Em que campanhas o código joga. Sem nenhuma, o certo é revogar (DELETE).
       if (method === 'PUT') {
         const input = await readJson(request);
@@ -315,6 +372,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       }
       if (method === 'DELETE') {
         await saveAccounts(accounts.filter(item => item.id !== id));
+        await sessions.removeAccount(id);
+        preferences.remove(id);
         return json(response, 200, { ok: true });
       }
       return json(response, 405, { erro: 'Método não permitido.' });
@@ -348,6 +407,12 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       if (!campaign) return json(response, 404, { erro: 'Campanha não encontrada.' });
       // O Publicar da campanha: o mestre lê tudo (com o que está escondido) e grava. O que vai para os jogadores o
       // servidor calcula: só os itens revelados, sem as notas do mestre.
+      // A mesa do mestre: relógios, bloco de notas e quais relógios os jogadores veem.
+      if (part === 'mesa') {
+        if (method === 'GET') return json(response, 200, campaigns.readTable(id));
+        if (method !== 'PUT') return json(response, 405, { erro: 'Use GET ou PUT.' });
+        return json(response, 200, await campaigns.writeTable(id, await readJson(request, 128 * 1024)));
+      }
       if (part === 'publicar') {
         if (method === 'GET') { const { mestre, atualizado } = campaigns.readPublish(id); return json(response, 200, { ...mestre, atualizado }); }
         if (method !== 'POST') return json(response, 405, { erro: 'Use POST.' });
@@ -377,7 +442,10 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       if (!id) return json(response, 404, { erro: 'Campanha não encontrada.' });
       const view = campaigns.readPublish(id);
       const news = campaigns.readNews();
-      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, atualizado: [view.atualizado, news.atualizado].filter(Boolean).sort().pop() || null });
+      // Os relógios que o mestre mostra (o relógio da cidade, por exemplo): mudar um deles também conta como novidade.
+      const clocks = campaigns.publicClocks(id);
+      const table = clocks.length ? campaigns.readTable(id).atualizado : null;
+      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, relogios: clocks, atualizado: [view.atualizado, news.atualizado, table].filter(Boolean).sort().pop() || null });
     }
     // Notícias de Night City: o mural que todas as campanhas veem. Só o mestre lê o rascunho e publica.
     if (pathname === '/api/night-city') {
@@ -566,6 +634,17 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         await writeJsonAtomic(transferFile(id), { de: from, para: campaignOf(stored), quando: new Date().toISOString(), nomeAtor: String(input.ator.name || '').slice(0, 120), ator: input.ator });
         return reply(200, { transferencia: transferInfo(id) });
       }
+      // Anotações do personagem (pistas, contatos, dívidas, o que o NPC prometeu): o dono e o mestre leem e escrevem.
+      // Rota própria: não muda a versão (não atrapalha quem está com o criador aberto).
+      if (extra === 'anotacoes') {
+        if (!canEdit(identity, stored)) return reply(403, { erro: 'Este personagem é de outro jogador.' });
+        if (method === 'GET') return reply(200, { anotacoes: stored.anotacoes || null });
+        if (method !== 'PUT') return reply(405, { erro: 'Use GET ou PUT.' });
+        const input = await readJson(request, 64 * 1024);
+        stored.anotacoes = { texto: String(input.texto || '').slice(0, 20000), atualizado: new Date().toISOString(), por: identity.papel === 'mestre' ? 'mestre' : identity.conta.nome };
+        await writeJsonAtomic(fileOf(id), stored);
+        return reply(200, { anotacoes: stored.anotacoes });
+      }
       // Retrato: quem joga na campanha do personagem vê (é o rosto dele); o dono ou o mestre trocam.
       if (extra === 'retrato') {
         if (method === 'GET') {
@@ -629,7 +708,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const input = await readJson(request);
         // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
         if (Number(input.versao) !== stored.versao) return reply(409, { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, stored) });
-        const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias'].map(field => [field, stored[field] || null]));
+        const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, stored[field] || null]));
         const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : stored.dono, campanha: campaignOf(stored), versao: stored.versao + 1, criado: stored.criado, atualizado: new Date().toISOString() };
         // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
         // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.
@@ -668,5 +747,5 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   handle.campaignCard = campaignCard;
   return handle;
 };
-const ROUTES = /^\/api\/(eu|entrar|sair|contas|personagens|loja|campanhas|visao|night-city)(\/|$)/;
+const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city)(\/|$)/;
 module.exports.ROUTES = ROUTES;

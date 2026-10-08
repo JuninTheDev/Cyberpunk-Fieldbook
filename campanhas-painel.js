@@ -27,10 +27,10 @@
 
   // ---------------- Páginas comuns das campanhas novas ----------------
   const notesPage = {
-    eyebrow: 'Campanha / privado neste navegador', title: 'Notas e relógio da cidade',
-    lede: 'O relógio de 2077, iniciativa, pistas, promessas e decisões para retomar na próxima sessão. Fica salvo neste navegador, separado para cada campanha.',
+    eyebrow: 'Mesa do mestre / só você vê', title: 'Notas e relógio da cidade',
+    lede: 'O relógio de 2077, iniciativa, pistas, promessas e decisões para retomar na próxima sessão. Fica salvo no servidor, com o backup, separado para cada campanha. No fim da sessão, o bloco vira o rascunho do resumo para os jogadores.',
     html: `<div class="section"><h3>Relógio da cidade (2077)</h3><p>Avance uma fase a cada uma ou duas sessões. Cada fase muda a segurança e quem está distraído na cidade. Clique num segmento para marcá-lo; clique no último marcado para desmarcar.</p><div class="clock" id="clock-city"></div></div>
-      <div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button></div>`
+      <div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button> <button class="action" data-session-draft type="button" title="Cria uma sessão não publicada, com este bloco, em Visão dos jogadores → Sessões">Virar rascunho de sessão</button></div>`
   };
   const overviewPage = item => ({
     eyebrow: 'Campanha / visão geral', title: escapeHtml(item.nome),

@@ -191,6 +191,68 @@ module.exports = async ({ servidores, r }) => {
     const naCampanha = fs.existsSync(path.join(servidores.raiz, 'personagens', `${ficha.id}.json`));
     return [naTemp && !naCampanha, `temp ${naTemp} · campanha ${naCampanha}`];
   });
+  // ---------------- Sessões, preferências, anotações, mesa do mestre ----------------
+  await r.passo('sessão: o cookie não leva o código; o cookie antigo (com o código) vira sessão no /api/eu', async () => {
+    const semCodigo = !ana.includes(conta1.codigo) && /^jogador=s1\./.test(ana);
+    const antigo = `jogador=${encodeURIComponent(conta1.codigo)}`;
+    const troca = await api(rede, '/api/eu', { cookie: antigo });
+    const nova = cookieDe(troca);
+    const comNova = await api(rede, '/api/eu', { cookie: nova });
+    return [semCodigo && troca.dados?.papel === 'jogador' && /^jogador=s1\./.test(nova) && comNova.dados?.jogador?.nome === 'Ana', `cookie de sessão ${semCodigo} · antigo vira ${nova.slice(0, 14)}… · ${comNova.dados?.jogador?.nome}`];
+  });
+  await r.passo('mestre vê o último acesso e os aparelhos; Desconectar tira de todos (até o cookie antigo); o código continua', async () => {
+    const lista = (await api(gm, '/api/contas')).dados.contas.find(c => c.id === conta1.id);
+    const outroAparelho = cookieDe(await api(rede, '/api/entrar', { method: 'POST', body: { codigo: conta1.codigo } }));
+    const desconectar = await api(gm, `/api/contas/${conta1.id}/desconectar`, { method: 'POST', body: {} });
+    const depois = [(await api(rede, '/api/eu', { cookie: ana })).dados.papel, (await api(rede, '/api/eu', { cookie: outroAparelho })).dados.papel, (await api(rede, '/api/eu', { cookie: `jogador=${encodeURIComponent(conta1.codigo)}` })).dados.papel];
+    ana = cookieDe(await api(rede, '/api/entrar', { method: 'POST', body: { codigo: conta1.codigo } }));
+    const voltou = (await api(rede, '/api/eu', { cookie: ana })).dados.papel;
+    return [Boolean(lista.ultimoAcesso) && lista.aparelhos.length >= 1 && desconectar.status === 200 && depois.every(papel => papel === 'visitante') && voltou === 'jogador', `último acesso ${lista.ultimoAcesso ? 'sim' : 'não'} · ${lista.aparelhos.length} aparelho(s) · depois: ${depois.join('/')} · voltou ${voltou}`];
+  });
+  await r.passo('Novo código: o antigo para de valer e todos os aparelhos saem; o novo entra; o jogador também sai de todos sozinho', async () => {
+    const velho = conta1.codigo;
+    const novo = (await api(gm, `/api/contas/${conta1.id}/novo-codigo`, { method: 'POST', body: {} })).dados.conta;
+    const comVelho = (await api(rede, '/api/entrar', { method: 'POST', body: { codigo: velho } })).status;
+    const sessaoVelha = (await api(rede, '/api/eu', { cookie: ana })).dados.papel;
+    conta1.codigo = novo.codigo;
+    ana = cookieDe(await api(rede, '/api/entrar', { method: 'POST', body: { codigo: novo.codigo } }));
+    const segundo = cookieDe(await api(rede, '/api/entrar', { method: 'POST', body: { codigo: novo.codigo } }));
+    const sair = await api(rede, '/api/sair-de-todos', { method: 'POST', cookie: segundo, body: {} });
+    const ambos = [(await api(rede, '/api/eu', { cookie: ana })).dados.papel, (await api(rede, '/api/eu', { cookie: segundo })).dados.papel];
+    ana = cookieDe(await api(rede, '/api/entrar', { method: 'POST', body: { codigo: novo.codigo } }));
+    return [novo.codigo !== velho && comVelho === 403 && sessaoVelha === 'visitante' && sair.status === 200 && ambos.every(papel => papel === 'visitante'), `código novo ${novo.codigo !== velho} · velho ${comVelho} · sessão velha ${sessaoVelha} · sair de todos ${sair.status}: ${ambos.join('/')}`];
+  });
+  await r.passo('preferências: cada conta as suas, iguais em qualquer aparelho; visitante não; chave estranha recusada', async () => {
+    const grava = await api(rede, '/api/eu/preferencias', { method: 'PUT', cookie: ana, body: { valores: { 'personagem:x': 'abc', 'night-city-jogadores:fixadas': '["combat"]' } } });
+    const outroAparelho = cookieDe(await api(rede, '/api/entrar', { method: 'POST', body: { codigo: conta1.codigo } }));
+    const le = (await api(rede, '/api/eu/preferencias', { cookie: outroAparelho })).dados;
+    const doBruno = (await api(rede, '/api/eu/preferencias', { cookie: bruno })).dados;
+    const apaga = (await api(rede, '/api/eu/preferencias', { method: 'PUT', cookie: ana, body: { valores: { 'personagem:x': null } } })).dados;
+    const visitante = (await api(rede, '/api/eu/preferencias', { method: 'PUT', body: { valores: { x: 1 } } })).status;
+    const visitanteLe = (await api(rede, '/api/eu/preferencias')).dados;
+    const estranha = (await api(rede, '/api/eu/preferencias', { method: 'PUT', cookie: ana, body: { valores: { '../fora': 1 } } })).status;
+    return [grava.status === 200 && le.valores['personagem:x'] === 'abc' && !('personagem:x' in (doBruno.valores || {})) && !('personagem:x' in apaga.valores) && visitante === 401 && visitanteLe.dono === null && estranha === 400, `outro aparelho lê ${le.valores['personagem:x']} · Bruno ${JSON.stringify(doBruno.valores)} · visitante ${visitante} · chave estranha ${estranha}`];
+  });
+  await r.passo('anotações do personagem: o dono e o mestre escrevem; outro jogador não; a versão não muda', async () => {
+    const antes = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: ana })).dados.personagem.versao;
+    const dono = await api(rede, `/api/personagens/${ficha.id}/anotacoes`, { method: 'PUT', cookie: ana, body: { texto: 'Brakk quer 500eb até sexta.' } });
+    const outro = await api(rede, `/api/personagens/${ficha.id}/anotacoes`, { method: 'PUT', cookie: bruno, body: { texto: 'invadido' } });
+    const mestre = await api(gm, `/api/personagens/${ficha.id}/anotacoes`, { method: 'PUT', body: { texto: 'Brakk quer 500eb até sexta. (O mestre sabe que é armadilha.)' } });
+    const doc = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: ana })).dados.personagem;
+    const doOutro = (await api(rede, `/api/personagens/${ficha.id}`, { cookie: bruno })).dados.personagem;
+    // Salvar pelo criador não apaga as anotações.
+    const salvo = (await api(rede, `/api/personagens/${ficha.id}`, { method: 'PUT', cookie: ana, body: { ...doc, anotacoes: null } })).dados.personagem;
+    return [dono.status === 200 && outro.status === 403 && mestre.status === 200 && doc.versao === antes && /armadilha/.test(doc.anotacoes.texto) && doc.anotacoes.por === 'mestre' && !('anotacoes' in doOutro) && /armadilha/.test(salvo.anotacoes?.texto || ''), `dono ${dono.status} · outro ${outro.status} · mestre ${mestre.status} · versão ${antes}→${doc.versao} · por ${doc.anotacoes.por} · depois de salvar ${Boolean(salvo.anotacoes)}`];
+  });
+  await r.passo('mesa do mestre: só o mestre lê e grava; o relógio marcado aparece na visão dos jogadores', async () => {
+    const jogador = (await api(rede, '/api/campanhas/morana/mesa', { cookie: ana })).status;
+    const grava = (await api(gm, '/api/campanhas/morana/mesa', { method: 'PUT', body: { relogios: { city: 2, sato: 4 }, notas: 'Segredo do bloco', publicos: { city: { nome: 'Relógio da cidade', passos: ['a', 'b', 'c'] } } } })).dados;
+    const visao = (await api(rede, '/api/visao', { cookie: ana })).dados;
+    const texto = JSON.stringify(visao);
+    await api(gm, '/api/campanhas/morana/mesa', { method: 'PUT', body: { publicos: { city: null } } });
+    const depois = (await api(rede, '/api/visao', { cookie: ana })).dados.relogios;
+    return [jogador === 403 && grava.relogios.city === 2 && visao.relogios.length === 1 && visao.relogios[0].valor === 2 && !/Segredo do bloco|sato/.test(texto) && depois.length === 0, `jogador ${jogador} · visão ${JSON.stringify(visao.relogios)} · depois de esconder ${depois.length}`];
+  });
   await r.passo('código revogado deixa de valer', async () => {
     await api(gm, `/api/contas/${conta2.id}`, { method: 'DELETE' });
     const eu = await api(rede, '/api/eu', { cookie: bruno });

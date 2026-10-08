@@ -19,7 +19,7 @@ A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre liga
   - Com rede, ela sempre busca a versão nova primeiro.
   - A wiki do mestre nunca fica guardada no aparelho.
 - **Dados ao vivo:** no servidor, ficam fora do git (`/srv/fieldbook/dados`).
-  - São personagens, retratos, códigos, as campanhas (com o Publicar e as regras da loja de cada uma) e as Notícias de Night City.
+  - São personagens (com as anotações), retratos, códigos e sessões, as preferências de cada conta, as campanhas (com o Publicar, as regras da loja e a mesa do mestre de cada uma) e as Notícias de Night City.
   - Use a wiki online para mexer neles: a wiki do PC vira um lugar de teste.
 
 ## Como abrir a wiki no PC
@@ -126,6 +126,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `manifest.webmanifest`, `sw.js`, `icones/` | A wiki instalada no celular: o manifesto, o service worker (guarda as regras para abrir sem internet) e os ícones (o `icone.svg` é a fonte dos PNG). |
 | `servidor/` | Instalação e manutenção do servidor online (wiki, Foundry, HTTPS, atualização e backup). Veja o README da pasta. |
 | `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores e decide quem vê o quê em cada campanha. |
+| `api-contas.js` | As sessões de login (o cookie leva só um identificador; sair de todos, desconectar, último acesso) e as preferências de cada conta (`sessoes-jogadores.json`, `preferencias/`, na pasta de dados). |
 | `api-campanhas.js` | A lista de campanhas, o Publicar e as regras da loja de cada uma e as Notícias de Night City (`campanhas.json`, `campanhas/`, `noticias-night-city.json`, na pasta de dados, fora do git). |
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
 | `conta.js` | O botão da conta no canto de cima (as duas wikis): entrar, o personagem em uso, novo personagem, trocar de campanha e sair; para o mestre, atalhos, versão, backup e sair. |
@@ -243,6 +244,9 @@ Notas:
   - Os personagens ficam em `personagens/`, e os retratos enviados, em `personagens/retratos/`.
   - No servidor online, tudo isso fica em `/srv/fieldbook/dados`.
   - Apagar um personagem move o arquivo para `personagens/apagados/`.
+- **Anotações:** a ficha tem um quadro **Anotações** (pistas, contatos, dívidas, o que o NPC prometeu), que salva sozinho. Só o dono e o mestre leem; na página Personagens, o mestre vê o quadro **Anotações dos jogadores**, com as de todos, as mais novas primeiro.
+- **Códigos:** a tabela mostra o **último acesso** e quantos aparelhos cada jogador tem. **Desconectar** tira o jogador de todos os aparelhos (ele volta com o mesmo código); **Novo código** troca o código (o antigo para de valer, e os personagens ficam).
+- **Sessões de login:** entrar com o código cria uma sessão; o cookie guarda só um identificador aleatório dela, não o código.
 - **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros jogadores da mesma campanha, só nome, apelido, Role e retrato. De outra campanha, nada. Sem código, nenhum personagem. O mestre vê e edita todos.
 
 ## Conta e navegação
@@ -253,6 +257,8 @@ Notas:
   - **Pedidos da loja:** quando o mestre aprova ou recusa um pedido (ou o Foundry entrega), o botão ganha um número e aparece um aviso rápido; o menu diz qual personagem. Abrir a Loja daquele personagem tira o número. Com a wiki aberta, confere a cada minuto.
   - **O personagem em uso** é um por campanha, lembrado no aparelho. A **Ficha** e a **Loja** do menu lateral abrem nele, o **Resumo** mostra o cartão "Seu personagem" e a lista de Personagens marca "Em uso" (o botão **Usar** troca).
   - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
+  - **Sair de todos os aparelhos** (no menu do jogador): a conta sai do celular, do computador, de tudo. Para voltar, o código de novo. Bom para celular perdido ou computador emprestado.
+- **O que acompanha a conta:** as páginas fixadas, os grupos recolhidos, a barra compacta, as páginas recentes, o personagem em uso e o que já foi visto (selos de novidade e de pedidos) ficam no servidor, na conta do jogador (ou na do mestre). Entrar no celular mostra tudo como estava no computador. Sem código, fica só no aparelho, como antes.
 - **Barra lateral:**
   - **Fixadas:** o botão **☆ Fixar**, ao lado do título de qualquer página (Combate, Escudo do mestre, a Ficha…), põe a página no grupo **Fixadas**, no topo da barra lateral, nas duas abas. Até 8, lembradas no aparelho; **★ Fixada** tira.
   - **Grupos que recolhem:** clique no nome do grupo. O aparelho lembra; abrir uma página de um grupo recolhido mostra o grupo.
@@ -264,6 +270,9 @@ Notas:
 
 ## Consulta durante a sessão
 
+- **Notas e relógios (mestre):** os relógios e o bloco de mesa ficam no servidor, por campanha: entram no backup e aparecem iguais no PC e no tablet (o que estava só no navegador subiu na primeira vez).
+  - **Mostrar aos jogadores**, embaixo de cada relógio, põe esse relógio no Resumo dos jogadores (só leitura). Bom para o relógio da cidade.
+  - **Virar rascunho de sessão** cria, com o texto do bloco, uma sessão **não publicada** em Visão dos jogadores → Sessões. Revise (o bloco tem segredos) e marque Publicada.
 - **Início do mestre:** a faixa **Na mesa agora** tem atalhos (Escudo, Fichas de NPC, Encontros, Combate, Glossário, Índice, sessões), as últimas páginas abertas e o estado dos relógios de Sato e da cidade.
 - **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém.
 - **Busca:** **/** (ou Ctrl+K) coloca o cursor na busca.

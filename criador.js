@@ -634,7 +634,7 @@
     const others = characters.filter(item => item.publico);
     // O jogador escolhe com qual personagem está (o retrato no botão da conta, a Ficha e a Loja abrem nele).
     const inUse = papel === 'jogador' && window.playerAccount ? window.playerAccount.selected() : null;
-    const card = item => `<div class="cc-card${item.id === inUse ? ' cc-selected' : ''}" data-cc-card="${item.id}">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}</small></div>
+    const card = item => `<div class="cc-card${item.id === inUse ? ' cc-selected' : ''}" data-cc-card="${item.id}">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}${item.temAnotacoes ? ' · anotações' : ''}</small></div>
       <div class="cc-card-actions">${papel === 'jogador' ? `<span class="cc-in-use">Em uso</span><button class="action cc-use" type="button" data-cc-select="${item.id}">Usar</button>` : ''}<button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button>${papel === 'mestre' && campaignsOfMe.length > 1 ? `<button class="action" type="button" data-cc-move="${item.id}">Mover</button>` : ''}<button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
     const publicCard = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
 
@@ -650,7 +650,10 @@
     // Pedidos da campanha esperando o mestre (aprova na Loja do personagem) ou o Foundry (entrega quando o mundo abrir).
     const withOrders = mine.filter(item => item.pedidos && (item.pedidos.pendentes || item.pedidos.aprovados));
     const ordersBox = papel === 'mestre' && withOrders.length ? box('Pedidos da campanha', `<ul>${withOrders.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b>${item.donoNome ? ` (de ${esc(item.donoNome)})` : ''}: ${[item.pedidos.pendentes ? `${item.pedidos.pendentes} esperando você` : '', item.pedidos.aprovados ? `${item.pedidos.aprovados} aprovado${item.pedidos.aprovados > 1 ? 's' : ''}, esperando o Foundry entregar` : ''].filter(Boolean).join(' · ')} <button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Abrir</button></li>`).join('')}</ul><p class="note-status">Aprove ou recuse na Loja do personagem (ou na janela Personagens da wiki, no Foundry). O Foundry entrega o que foi aprovado assim que o mundo estiver aberto.</p>`, ' data-cc-orders-gm') : '';
-    root.innerHTML = `${waitingBox}${ordersBox}${who ? box(papel === 'jogador' ? 'Sem campanha' : 'Quem é você', who) : ''}
+    // Para o mestre preparar a sessão: as anotações que os jogadores escreveram nas fichas, as mais novas primeiro.
+    const withNotes = papel === 'mestre' ? mine.filter(item => item.temAnotacoes).sort((x, y) => String(y.anotacoesEm || '').localeCompare(String(x.anotacoesEm || ''))) : [];
+    const notesBoxGm = withNotes.length ? box('Anotações dos jogadores', `<ul class="cc-notes-list">${withNotes.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b><small class="note-status">${item.donoNome ? `de ${esc(item.donoNome)} · ` : ''}${when(item.anotacoesEm)}</small><span>${esc(item.anotacoesTrecho)}${item.anotacoesTrecho.length >= 220 ? '…' : ''}</span><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Abrir a ficha</button></li>`).join('')}</ul>`, ' data-cc-notes-gm') : '';
+    root.innerHTML = `${waitingBox}${ordersBox}${notesBoxGm}${who ? box(papel === 'jogador' ? 'Sem campanha' : 'Quem é você', who) : ''}
       ${canCreate ? box(papel === 'mestre' ? (campaign && campaignsOfMe.length > 1 ? `Personagens de ${campaignName}` : 'Todos os personagens') : 'Meus personagens', `${mine.length ? mine.map(card).join('') : '<p class="note-status">Nenhum personagem ainda.</p>'}<p><button class="action" type="button" data-cc-new>Novo personagem</button></p>`) : ''}
       ${others.length ? box('O grupo', others.map(publicCard).join('')) : ''}
       ${papel === 'mestre' ? box(campaign && campaignsOfMe.length > 1 ? `Códigos dos jogadores de ${campaignName}` : 'Códigos dos jogadores', '<div id="cc-accounts">Carregando…</div>') : ''}`;
@@ -717,7 +720,7 @@
     const outside = several ? all.filter(account => !(account.campanhas || []).includes(campaign.id)) : [];
     const nameOf = id => (campaignList.find(entry => entry.id === id) || {}).nome || id;
     const elsewhere = account => (account.campanhas || []).filter(id => id !== (campaign && campaign.id));
-    target.innerHTML = `${accounts.length ? `<div class="table-wrap dense"><table><thead><tr><th>Jogador</th><th>Código</th>${several ? '<th>Também joga em</th>' : ''}<th></th></tr></thead><tbody>${accounts.map(account => `<tr><td>${esc(account.nome)}</td><td><code>${esc(account.codigo)}</code></td>${several ? `<td>${esc(elsewhere(account).map(nameOf).join(', ') || '—')}</td>` : ''}<td><button class="action" type="button" data-cc-copy="${esc(account.codigo)}">Copiar</button> ${several && elsewhere(account).length ? `<button class="action cc-danger" type="button" data-cc-leave="${account.id}">Tirar desta campanha</button>` : `<button class="action cc-danger" type="button" data-cc-revoke="${account.id}">Revogar</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note-status">Nenhum código ainda.</p>'}
+    target.innerHTML = `${accounts.length ? `<div class="table-wrap dense"><table><thead><tr><th>Jogador</th><th>Código</th>${several ? '<th>Também joga em</th>' : ''}<th>Último acesso</th><th></th></tr></thead><tbody>${accounts.map(account => `<tr><td>${esc(account.nome)}</td><td><code>${esc(account.codigo)}</code></td>${several ? `<td>${esc(elsewhere(account).map(nameOf).join(', ') || '—')}</td>` : ''}<td>${account.ultimoAcesso ? `${when(account.ultimoAcesso)}<br><small class="note-status" title="${esc((account.aparelhos || []).join(', '))}">${(account.aparelhos || []).length} aparelho${(account.aparelhos || []).length === 1 ? '' : 's'}</small>` : '<small class="note-status">ainda não entrou</small>'}</td><td><button class="action" type="button" data-cc-copy="${esc(account.codigo)}">Copiar</button> ${(account.aparelhos || []).length ? `<button class="action" type="button" data-cc-disconnect="${account.id}">Desconectar</button> ` : ''}<button class="action" type="button" data-cc-newcode="${account.id}">Novo código</button> ${several && elsewhere(account).length ? `<button class="action cc-danger" type="button" data-cc-leave="${account.id}">Tirar desta campanha</button>` : `<button class="action cc-danger" type="button" data-cc-revoke="${account.id}">Revogar</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note-status">Nenhum código ainda.</p>'}
       <form class="cc-login" data-cc-account><input id="cc-account-name" placeholder="Nome do jogador" aria-label="Nome do jogador"><button class="action" type="submit">Criar código</button></form>
       ${outside.length ? `<form class="cc-login" data-cc-join><select id="cc-join" aria-label="Jogador de outra campanha">${outside.map(account => `<option value="${account.id}">${esc(account.nome)} (${esc(account.campanhas.map(nameOf).join(', '))})</option>`).join('')}</select><button class="action" type="submit">Adicionar jogador de outra campanha</button></form>` : ''}
       <p class="note-status">Passe o código ao jogador. Ele entra em Campanha → Personagens${several ? ' e vê só as campanhas em que joga; o mesmo código serve para todas' : ''}. Pelo túnel, o link muda a cada sessão; aí ele digita o código de novo.</p>`;
@@ -727,6 +730,21 @@
       renderAccounts(target, campaign, campaignList);
     };
     target.onclick = async event => {
+      // Desconectar: sai de todos os aparelhos (entra de novo com o mesmo código). Novo código: o antigo para de valer.
+      const disconnect = event.target.closest('[data-cc-disconnect]');
+      const renew = event.target.closest('[data-cc-newcode]');
+      if (disconnect || renew) {
+        const account = all.find(entry => entry.id === (disconnect || renew).dataset[disconnect ? 'ccDisconnect' : 'ccNewcode']) || {};
+        const sure = await wikiPopup.confirm(disconnect
+          ? { title: 'Desconectar', html: `<p><b>${esc(account.nome)}</b> sai da wiki em todos os aparelhos. Para voltar, entra de novo com o mesmo código.</p>`, ok: 'Desconectar' }
+          : { title: 'Novo código', html: `<p><b>${esc(account.nome)}</b> ganha um código novo, e <code>${esc(account.codigo)}</code> para de valer (todos os aparelhos saem).</p><p class="note-status">Os personagens e as campanhas dele continuam. Passe o código novo a ele.</p>`, ok: 'Trocar o código', danger: true });
+        if (!sure) return;
+        const answer = await api(`api/contas/${account.id}/${disconnect ? 'desconectar' : 'novo-codigo'}`, { method: 'POST', body: {} });
+        if (answer.status !== 200) { wikiPopup.toast(answer.data.erro || 'Não deu certo.', { tone: 'bad' }); return; }
+        wikiPopup.toast(disconnect ? `${account.nome} saiu de todos os aparelhos.` : `Código novo de ${account.nome}: ${answer.data.conta.codigo}`, { tone: 'ok', ms: 8000 });
+        renderAccounts(target, campaign, campaignList);
+        return;
+      }
       const leave = event.target.closest('[data-cc-leave]');
       if (leave) {
         const account = accounts.find(entry => entry.id === leave.dataset.ccLeave);
@@ -954,6 +972,9 @@
       ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}</div>`;
   }
 
+  // O quadro de anotações da ficha: só o dono e o mestre leem (pistas, contatos, dívidas, o que o NPC prometeu).
+  const notesBox = (doc, papel) => box('Anotações', `<p class="note-status">Pistas, contatos, dívidas, o que o NPC prometeu. ${papel === 'mestre' ? 'O jogador escreve aqui; você também pode.' : 'Só você e o mestre leem.'} Fica salvo sozinho, em qualquer aparelho.</p><textarea class="note-area cc-notes" data-cc-notes rows="8" placeholder="Ex.: Brakk quer 500eb até sexta. A senha do depósito é 4471.">${esc((doc.anotacoes || {}).texto || '')}</textarea><p class="note-status" data-cc-notes-status>${doc.anotacoes && doc.anotacoes.atualizado ? `Salvo em ${when(doc.anotacoes.atualizado)}${doc.anotacoes.por ? ` (${esc(doc.anotacoes.por)})` : ''}.` : ''}</p>`, ' data-cc-notes-box data-toc="Anotações"');
+
   async function setupSheet(content, helpers) {
     esc = helpers.escapeHtml;
     const token = ++renderToken;
@@ -967,7 +988,22 @@
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
     if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), a Role (${esc(roleName(doc.role))}) e o retrato.</div>`; return; }
-    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}<div data-cc-sheet-body>${sheetHtml(doc)}</div>`;
+    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}<div data-cc-sheet-body>${sheetHtml(doc)}</div>${notesBox(doc, papel)}`;
+    // Anotações: salvam sozinhas (um instante depois de parar de digitar), sem mudar a versão do personagem.
+    const notes = root.querySelector('[data-cc-notes]');
+    if (notes) {
+      let timer = null;
+      const status = root.querySelector('[data-cc-notes-status]');
+      notes.oninput = () => {
+        status.textContent = 'Salvando…';
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+          const answer = await api(`api/personagens/${id}/anotacoes`, { method: 'PUT', body: { texto: notes.value } });
+          status.textContent = answer.status === 200 ? `Salvo às ${new Date(answer.data.anotacoes.atualizado).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.` : (answer.data.erro || 'Não consegui salvar.');
+          status.classList.toggle('cc-bad', answer.status !== 200);
+        }, 900);
+      };
+    }
     // Personagem no Foundry: a ficha da mesa muda durante a sessão; confere a cada 30 segundos enquanto a página estiver aberta.
     if (doc.foundry) {
       let seen = (doc.mesa || {}).recebido || '';

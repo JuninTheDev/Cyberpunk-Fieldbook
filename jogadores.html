@@ -104,9 +104,14 @@
       const NEWS_PAGES = { pvSessions: 'sessoes', pvPeople: 'npcs', pvMap: 'lugares', pvNews: 'noticias', pvNightCity: 'nightCity' };
       const itemKey = item => String(item.id || item.titulo || item.nome || '');
       let currentIds = {};
-      const seenKey = () => `night-city-jogadores-vistos-${window.wikiApp.activeCampaign().id}`;
-      const readSeen = () => { try { return JSON.parse(localStorage.getItem(seenKey()) || 'null'); } catch { return null; } };
-      const writeSeen = seen => { try { localStorage.setItem(seenKey(), JSON.stringify(seen)); } catch { /* sem armazenamento: sem selos */ } };
+      // O que já foi visto fica na conta (igual no celular e no computador); o de antes, deste aparelho, ainda vale.
+      const campaignKey = () => window.wikiApp.activeCampaign().id;
+      const readSeen = () => {
+        const value = window.wikiApp.prefs.get(`vistos:${campaignKey()}`);
+        if (value !== undefined) return value;
+        try { return JSON.parse(localStorage.getItem(`night-city-jogadores-vistos-${campaignKey()}`) || 'null'); } catch { return null; }
+      };
+      const writeSeen = seen => window.wikiApp.prefs.set(`vistos:${campaignKey()}`, seen);
       function markSeen(page) {
         if (!NEWS_PAGES[page] || !currentIds[page]) return;
         writeSeen({ ...(readSeen() || {}), [page]: currentIds[page] });
@@ -119,6 +124,8 @@
         markSeen(open);
       }
       document.addEventListener('wiki:pagina', event => markSeen(event.detail.id));
+      // As preferências da conta chegaram: o que foi visto em outro aparelho não é mais novidade.
+      document.addEventListener('wiki:preferencias', () => { if (Object.keys(currentIds).length) updateBadges(); });
 
       // ---------------- Seu personagem ----------------
       // O personagem em uso (o do botão da conta), no topo do Resumo, com a ficha e a loja a um clique.
@@ -154,6 +161,7 @@
         const news = data.noticias || [];
         const city = data.nightCity || [];
         const sessions = data.sessoes || [];
+        const clocks = data.relogios || [];
         const sessionTitle = (item, index) => item.titulo || `Sessão ${index + 1}`;
         // O endereço da seção (#pvSessions/sessao-02...), como a wiki faz: sem acento, minúsculo, com hífens.
         const sectionSlug = text => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -172,7 +180,7 @@
           pvHome: {
             eyebrow: `${escapeHtml(name)}${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
             lede: 'Resumo da campanha até agora, publicado pelo mestre. Esta página se atualiza sozinha.',
-            html: `<div id="pv-me"></div><div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${lastSession ? `<div class="section" data-toc="Última sessão"><h3>Última sessão${tag('pvSessions', lastSession)}</h3><p><b>${escapeHtml(sessionTitle(lastSession, sessions.length - 1))}</b>${lastSession.data ? ` · ${escapeHtml(lastSession.data)}` : ''}</p><button class="action" type="button" data-page="pvSessions" data-section="${escapeHtml(sectionSlug(sessionTitle(lastSession, sessions.length - 1)))}">Ler o resumo</button></div>` : ''}${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
+            html: `<div id="pv-me"></div><div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${clocks.length ? `<div class="section" data-toc="Relógios"><h3>Relógios</h3>${clocks.map(clock => `<p class="pv-clock-name"><b>${escapeHtml(clock.nome)}</b> ${clock.valor}/${clock.passos.length}${clock.valor && clock.passos[clock.valor - 1] ? ` · agora: ${escapeHtml(clock.passos[clock.valor - 1])}` : ''}</p><div class="clock clock-readonly">${clock.passos.map((step, index) => `<span class="clock-segment" aria-pressed="${index < clock.valor}"><span>${index + 1}</span>${escapeHtml(step)}</span>`).join('')}</div>`).join('')}</div>` : ''}${lastSession ? `<div class="section" data-toc="Última sessão"><h3>Última sessão${tag('pvSessions', lastSession)}</h3><p><b>${escapeHtml(sessionTitle(lastSession, sessions.length - 1))}</b>${lastSession.data ? ` · ${escapeHtml(lastSession.data)}` : ''}</p><button class="action" type="button" data-page="pvSessions" data-section="${escapeHtml(sectionSlug(sessionTitle(lastSession, sessions.length - 1)))}">Ler o resumo</button></div>` : ''}${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
           },
           pvSessions: {
             eyebrow: `${escapeHtml(name)} / sessões`, title: 'Sessões',

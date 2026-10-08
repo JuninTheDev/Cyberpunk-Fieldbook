@@ -24,14 +24,19 @@
   // Pedidos já vistos, por personagem (o id do pedido e o estado em que foi visto).
   const ORDER_WORDS = { aprovado: 'aprovado', recusado: 'recusado', entregue: 'entregue na ficha' };
   const orderKey = order => `${order.id}:${order.status}:${order.erro ? 'erro' : ''}`;
-  const seenOrdersKey = id => `night-city-pedidos-vistos-${id}`;
-  const seenOrders = id => { try { return JSON.parse(store.get(seenOrdersKey(id)) || 'null'); } catch { return null; } };
+  // Na conta (wikiApp.prefs: igual em qualquer aparelho); o que estava só neste aparelho, de antes, ainda vale.
+  const seenOrders = id => {
+    const value = app.prefs.get(`pedidos:${id}`);
+    if (value !== undefined) return value;
+    try { return JSON.parse(store.get(`night-city-pedidos-vistos-${id}`) || 'null'); } catch { return null; }
+  };
+  const setSeenOrders = (id, keys) => app.prefs.set(`pedidos:${id}`, keys);
   const resolved = doc => (doc.pedidos && doc.pedidos.resolvidos) || [];
   const unseenOrders = doc => { const seen = seenOrders(doc.id) || []; return resolved(doc).filter(order => !seen.includes(orderKey(order))); };
   function markOrdersSeen(id) {
     const doc = characters.find(item => item.id === id);
     if (!doc) return;
-    store.set(seenOrdersKey(id), JSON.stringify(resolved(doc).map(orderKey)));
+    setSeenOrders(id, resolved(doc).map(orderKey));
     render();
   }
   let toasted = null; // os já avisados nesta visita (o primeiro carregamento não avisa)
@@ -51,16 +56,21 @@
   // ---------------- Personagem escolhido ----------------
   // A visão dos jogadores sem código (ou sem servidor) tem uma campanha de mentira (real: false).
   const campaign = () => { const item = app.activeCampaign(); return item && item.real !== false ? item : null; };
-  const selectionKey = () => (me && me.jogador && campaign() ? `night-city-personagem-${me.jogador.id}-${campaign().id}` : '');
+  // O personagem em uso de cada campanha, na conta (o de antes, deste aparelho, ainda vale até escolher de novo).
+  const savedSelection = () => {
+    if (!me || !me.jogador || !campaign()) return null;
+    const value = app.prefs.get(`personagem:${campaign().id}`);
+    return value !== undefined ? value : store.get(`night-city-personagem-${me.jogador.id}-${campaign().id}`);
+  };
   function selectedDoc() {
     if (!characters.length) return null;
-    const id = store.get(selectionKey());
+    const id = savedSelection();
     return characters.find(item => item.id === id) || characters[0];
   }
   const announce = () => document.dispatchEvent(new CustomEvent('wiki:personagem', { detail: selectedDoc() }));
   function select(id) {
     if (!characters.some(item => item.id === id)) return;
-    store.set(selectionKey(), id);
+    if (campaign()) app.prefs.set(`personagem:${campaign().id}`, id);
     render();
     announce();
   }
@@ -76,7 +86,7 @@
       const list = await api(`api/personagens?campanha=${encodeURIComponent(campaign().id)}`);
       if (mine !== ticket) return;
       characters = (list.data.personagens || []).filter(item => !item.publico);
-      for (const doc of characters) if (seenOrders(doc.id) === null) store.set(seenOrdersKey(doc.id), JSON.stringify(resolved(doc).map(orderKey)));
+      for (const doc of characters) if (seenOrders(doc.id) === null) setSeenOrders(doc.id, resolved(doc).map(orderKey));
       const fresh = characters.flatMap(doc => unseenOrders(doc).map(order => ({ doc, order })));
       if (toasted) fresh.filter(({ order }) => !toasted.has(orderKey(order))).forEach(({ doc, order }) => window.wikiPopup?.toast(`${doc.nome || 'Seu personagem'}: pedido ${ORDER_WORDS[order.status]}${order.erro ? ' (com um aviso do mestre)' : ''}. Veja na Loja.`, { tone: order.status === 'recusado' ? 'bad' : 'ok', ms: 7000 }));
       toasted = new Set(fresh.map(({ order }) => orderKey(order)));
@@ -134,7 +144,7 @@
       ${section('Personagem', `${rows || `<p class="account-note">Nenhum personagem${here ? ` em ${esc(here.name)}` : ''} ainda.</p>`}<button type="button" class="account-item account-new" data-account-new>+ Novo personagem</button>`)}
       ${doc ? `<div class="account-actions"><button type="button" class="action" data-account-open="ficha">Ficha</button><button type="button" class="action" data-account-open="criador">Editar</button><button type="button" class="action" data-account-open="loja">Loja</button></div>` : ''}
       ${campaignList(me.campanhas || [], here && here.id)}
-      <div class="account-section">${install()}<button type="button" class="account-item account-danger" data-account-logout>Sair</button></div>`;
+      <div class="account-section">${install()}<button type="button" class="account-item account-danger" data-account-logout>Sair</button><button type="button" class="account-item account-quiet" data-account-logout-all>Sair de todos os aparelhos</button></div>`;
   }
 
   function render() {
@@ -158,14 +168,24 @@
 
   // ---------------- Ações ----------------
   async function onClick(event) {
-    const target = event.target.closest('[data-account-pick], [data-account-new], [data-account-open], [data-account-campaign], [data-account-page], [data-account-logout]');
+    const target = event.target.closest('[data-account-pick], [data-account-new], [data-account-open], [data-account-campaign], [data-account-page], [data-account-logout], [data-account-logout-all]');
     if (!target) return;
     const close = () => openMenu(false);
     if (target.dataset.accountPick) { select(target.dataset.accountPick); close(); return; }
     if (target.dataset.accountOpen) { const doc = selectedDoc(); close(); if (doc) app.openPage(target.dataset.accountOpen, { section: doc.id }); return; }
     if (target.dataset.accountPage) { close(); app.openPage(target.dataset.accountPage); return; }
     if (target.dataset.accountCampaign) { close(); await app.switchCampaign(target.dataset.accountCampaign); return; }
-    if ('accountLogout' in target.dataset) { await api('api/sair', { method: 'POST', body: {} }); location.reload(); return; }
+    if ('accountLogout' in target.dataset) { await app.prefs.forget(); await api('api/sair', { method: 'POST', body: {} }); location.reload(); return; }
+    // Celular perdido, computador emprestado: todos os aparelhos saem; para voltar, o código de novo.
+    if ('accountLogoutAll' in target.dataset) {
+      close();
+      const sure = await window.wikiPopup.confirm({ title: 'Sair de todos os aparelhos', html: '<p>A wiki sai da sua conta em <b>todos</b> os aparelhos, inclusive neste. Para voltar, entre de novo com o seu código.</p>', ok: 'Sair de todos', danger: true });
+      if (!sure) return;
+      await app.prefs.forget();
+      await api('api/sair-de-todos', { method: 'POST', body: {} });
+      location.reload();
+      return;
+    }
     if ('accountNew' in target.dataset) {
       target.disabled = true;
       const blank = window.characterCreator && window.characterCreator.regras ? window.characterCreator.regras.blank() : {};
@@ -204,6 +224,8 @@
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && !root.querySelector('.account-menu').hidden) { openMenu(false); root.querySelector('.account-button').focus(); } });
     document.addEventListener('wiki:estado', event => { state = event.detail || {}; render(); });
     document.addEventListener('wiki:campanha', load);
+    // As preferências da conta chegaram (o personagem em uso pode ser outro, escolhido em outro aparelho).
+    document.addEventListener('wiki:preferencias', () => { render(); announce(); });
     document.addEventListener('wiki:pagina', event => {
       if (event.detail.id !== 'loja') return;
       const target = event.detail.target && event.detail.target.section;

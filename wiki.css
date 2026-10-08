@@ -855,6 +855,18 @@ button.nav-group-toggle:hover, button.nav-group-toggle:focus-visible { color: va
 .pin-page[aria-pressed="true"] { border-color: var(--yellow); color: var(--yellow); }
 .nav-pinned .nav-group-toggle { color: var(--cyan); }
 .nav-pinned .nav-icon { color: var(--yellow); }
+/* Mesa do mestre no servidor: o relógio que os jogadores veem (só leitura) e a marca "Mostrar aos jogadores". */
+.clock-public { display: inline-flex; align-items: center; gap: 7px; margin-top: 9px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.clock-readonly .clock-segment { min-height: 52px; cursor: default; }
+.clock-readonly .clock-segment:hover { border-color: #48504e; }
+.clock-readonly .clock-segment[aria-pressed="true"]:hover { border-color: var(--coral); }
+.pv-clock-name { margin: 12px 0 0; }
+.cc-notes { min-height: 140px; }
+.account-quiet { color: var(--muted); font-size: 13px; }
+.cc-notes-list { margin: 6px 0 0; padding: 0; list-style: none; }
+.cc-notes-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 8px 0; border-bottom: 1px solid #2c3434; }
+.cc-notes-list li span { flex: 1 1 260px; min-width: 0; color: var(--muted); font-size: 13px; }
+.cc-notes-list .action { margin-top: 0; }
 /* Selo de pedidos resolvidos no botão da conta. */
 .account-button { position: relative; }
 .account-dot { position: absolute; top: 0; left: 24px; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--coral); color: #090b0c; font: 700 10px/16px Oxanium, Consolas, monospace; text-align: center; }

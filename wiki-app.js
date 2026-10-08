@@ -7,9 +7,82 @@
   const markdownDocs = config.markdownDocs || {};
   const markdownCache = {};
   const storagePrefix = config.storagePrefix || 'night-city';
+  const localGet = key => { try { return localStorage.getItem(key); } catch { return null; } };
+  const localSet = (key, value) => { try { if (value === null || value === undefined) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* armazenamento indisponível */ } };
+
+  // ---------------- Preferências na conta ----------------
+  // Fixadas, grupos recolhidos, barra compacta e recentes acompanham a conta (o jogador, ou o mestre): ficam no
+  // servidor (api/eu/preferencias) e numa cópia no aparelho, e valem iguais no celular e no computador. Visitante e
+  // wiki sem servidor: só no aparelho. O que o aparelho já tinha e a conta ainda não sobe na primeira vez.
+  // O menu da conta e a visão dos jogadores guardam aqui as deles (wikiApp.prefs) e ouvem "wiki:preferencias",
+  // quando o servidor responde.
+  const SYNCED = ['fixadas', 'grupos-fechados', 'barra-compacta', 'recentes'];
+  const prefs = (() => {
+    let owner = localGet('night-city-dono') || 'aparelho'; // a conta do último que entrou neste aparelho
+    let server = null; // null = sem conta (ou ainda não leu)
+    let pending = {};
+    let early = {}; // gravado antes de o servidor responder: entra na conta quando ele responder (se ela ainda não tiver)
+    let timer = null;
+    const localKey = key => `night-city-pref-${owner}-${key}`;
+    // keepalive: o pedido sobrevive à página sendo fechada ou recarregada (o que mudou logo antes não se perde).
+    function flush() {
+      clearTimeout(timer);
+      timer = null;
+      const valores = pending;
+      pending = {};
+      if (!Object.keys(valores).length) return Promise.resolve();
+      return fetch('api/eu/preferencias', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valores }), cache: 'no-store', keepalive: true })
+        .then(response => {
+          // A conta saiu (deste ou de outro aparelho): para de mandar; fica só no aparelho.
+          if (response.status === 401) { server = null; pending = {}; return; }
+          if (!response.ok) throw new Error(response.status);
+        })
+        .catch(() => { if (server) pending = { ...valores, ...pending }; }); // sem rede: tenta na próxima mudança
+    }
+    const schedule = () => { if (server && !timer) timer = setTimeout(flush, 800); };
+    const put = (key, value) => { if (!server) { early[key] = value; return; } if (value === null || value === undefined) delete server[key]; else server[key] = value; pending[key] = value === undefined ? null : value; schedule(); };
+    return {
+      get(key) {
+        if (server && key in server) return server[key];
+        const raw = localGet(localKey(key));
+        if (raw === null) return undefined;
+        try { return JSON.parse(raw); } catch { return undefined; }
+      },
+      set(key, value) { localSet(localKey(key), value === null || value === undefined ? null : JSON.stringify(value)); put(key, value); },
+      // As chaves da própria wiki (SYNCED): no servidor como "<prefixo>:<chave>"; no aparelho, com o nome de sempre.
+      rawGet: key => (server && `${storagePrefix}:${key}` in server ? server[`${storagePrefix}:${key}`] : undefined),
+      rawSet: (key, value) => put(`${storagePrefix}:${key}`, value),
+      async load() {
+        if (location.protocol === 'file:') return;
+        let data = null;
+        try { const response = await fetch('api/eu/preferencias', { cache: 'no-store' }); if (response.ok) data = await response.json(); } catch { /* sem rede */ }
+        if (!data || !data.dono) return; // visitante: só no aparelho
+        owner = data.dono;
+        localSet('night-city-dono', owner);
+        server = { ...(data.valores || {}) };
+        for (const [key, value] of Object.entries(early)) if (!(key in server) && value !== null && value !== undefined) { server[key] = value; pending[key] = value; }
+        early = {};
+        for (const key of SYNCED) {
+          const name = `${storagePrefix}:${key}`;
+          const raw = localGet(`${storagePrefix}-${key}`);
+          if (name in server) localSet(`${storagePrefix}-${key}`, server[name]);
+          else if (raw !== null && raw !== '') { server[name] = raw; pending[name] = raw; }
+        }
+        schedule();
+        document.dispatchEvent(new CustomEvent('wiki:preferencias'));
+      },
+      loaded: () => Boolean(server),
+      flush: () => { if (server) flush(); },
+      // Sair da conta: manda o que falta e para de sincronizar (o que vier depois fica só no aparelho).
+      forget: () => { const last = server ? flush() : Promise.resolve(); server = null; pending = {}; early = {}; return last; }
+    };
+  })();
+  // Fechar, recarregar ou trocar de aba: manda o que falta.
+  window.addEventListener('pagehide', () => prefs.flush());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') prefs.flush(); });
   const storage = {
-    get: key => { try { return localStorage.getItem(`${storagePrefix}-${key}`); } catch { return null; } },
-    set: (key, value) => { try { localStorage.setItem(`${storagePrefix}-${key}`, value); } catch { /* armazenamento indisponível */ } }
+    get: key => { const synced = SYNCED.includes(key) ? prefs.rawGet(key) : undefined; return synced !== undefined ? synced : localGet(`${storagePrefix}-${key}`); },
+    set: (key, value) => { localSet(`${storagePrefix}-${key}`, value); if (SYNCED.includes(key)) prefs.rawSet(key, value); }
   };
   const mapPages = ['campaignMap', ...(config.mapPages || [])];
   const mapData = () => (config.mapData ? config.mapData() : window.campaignMapData);
@@ -119,6 +192,9 @@
       if (!campaigns.some(item => item.id === id) || id === activeCampaignId) return false;
       activeCampaignId = id;
       storage.set('active-campaign', id);
+      // A mesa (relógios e bloco) é de cada campanha: lê a da nova.
+      table = null;
+      loadTable();
       showCampaign();
       buildNavigation();
       document.dispatchEvent(new CustomEvent('wiki:campanha', { detail: activeCampaign() }));
@@ -336,11 +412,89 @@
     }
     // Valor atual de cada relógio de config.clocks (as mesmas chaves que setupClock grava).
     function clockState() {
-      return Object.entries(config.clocks || {}).map(([name, steps]) => {
-        let value = 0;
-        try { value = Number(localStorage.getItem(`night-city-clock-${name}-${activeCampaignId}`)) || 0; } catch { /* armazenamento indisponível */ }
-        return { name, steps, value };
-      });
+      return Object.entries(config.clocks || {}).map(([name, steps]) => ({ name, steps, value: clockValue(name) }));
+    }
+
+    // ---------------- Mesa do mestre: relógios e bloco de notas ----------------
+    // Na wiki do mestre pelo servidor (config.tableUrl), ficam no servidor, por campanha: entram no backup e aparecem
+    // iguais em qualquer aparelho. Sem servidor, no navegador, como antes (o navegador guarda sempre uma cópia). O que
+    // estava só no navegador sobe na primeira vez. Um relógio marcado "Mostrar aos jogadores" aparece no Resumo deles.
+    const tableUrl = (campaign = activeCampaignId) => (config.tableUrl && location.protocol !== 'file:' ? config.tableUrl(campaign) : '');
+    let table = null; // { campanha, relogios, notas, publicos, atualizado } da campanha ativa
+    let tableState = 'local'; // local · carregando · salvo · salvando · erro
+    const tablePending = new Map(); // endereço → o que falta mandar
+    let tableTimer = null;
+    const localClockKey = (name, campaign = activeCampaignId) => `night-city-clock-${name}-${campaign}`;
+    const localNotesKey = (campaign = activeCampaignId) => `night-city-fieldbook-notes-${campaign}`;
+    const tableHere = () => (table && table.campanha === activeCampaignId ? table : null);
+    function clockValue(name) { const here = tableHere(); return here ? Number(here.relogios[name]) || 0 : Number(localGet(localClockKey(name))) || 0; }
+    function notesValue() { const here = tableHere(); return here ? here.notas || '' : localGet(localNotesKey()) || ''; }
+    function showTableStatus() {
+      const status = document.getElementById('note-status');
+      if (!status) return;
+      status.textContent = { local: 'Salvo automaticamente neste navegador.', carregando: 'Carregando do servidor…', salvo: `Salvo no servidor${table && table.atualizado ? ` às ${new Date(table.atualizado).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}: entra no backup e aparece em qualquer aparelho seu.`, salvando: 'Salvando no servidor…', erro: 'Sem conexão com o servidor: ficou salvo só neste navegador, e vai na próxima mudança.' }[tableState];
+    }
+    async function loadTable() {
+      const url = tableUrl();
+      if (!url) return null;
+      const campaign = activeCampaignId;
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) return null;
+        let data = await response.json();
+        if (campaign !== activeCampaignId) return null;
+        if (!data.atualizado) {
+          // Primeira vez com o servidor: os relógios e o bloco que estavam só neste navegador sobem.
+          const relogios = Object.fromEntries(Object.keys(config.clocks || {}).map(name => [name, Number(localGet(localClockKey(name, campaign))) || 0]).filter(([, value]) => value));
+          const notas = localGet(localNotesKey(campaign)) || '';
+          if (Object.keys(relogios).length || notas) {
+            const up = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ relogios, notas }) });
+            if (up.ok) data = await up.json();
+          }
+        }
+        table = { ...data, campanha: campaign };
+        tableState = 'salvo';
+        document.dispatchEvent(new CustomEvent('wiki:mesa', { detail: table }));
+        return table;
+      } catch { return null; }
+    }
+    async function flushTable() {
+      tableTimer = null;
+      for (const [url, body] of [...tablePending]) {
+        tablePending.delete(url);
+        try {
+          const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true });
+          if (!response.ok) throw new Error(response.status);
+          const saved = await response.json();
+          if (table && url === tableUrl(table.campanha)) table.atualizado = saved.atualizado;
+          tableState = 'salvo';
+        } catch {
+          // Sem rede: junta com o que vier depois e tenta de novo na próxima mudança.
+          const later = tablePending.get(url) || {};
+          tablePending.set(url, { ...body, ...later, relogios: { ...(body.relogios || {}), ...(later.relogios || {}) }, publicos: { ...(body.publicos || {}), ...(later.publicos || {}) } });
+          tableState = 'erro';
+        }
+      }
+      showTableStatus();
+    }
+    // Fechar ou recarregar a página com algo por mandar: manda já.
+    window.addEventListener('pagehide', () => { if (tablePending.size) { clearTimeout(tableTimer); flushTable(); } });
+    // Muda a mesa (só o que mudou): na hora na tela e no navegador; no servidor, logo depois.
+    function saveTable(patch) {
+      for (const [name, value] of Object.entries(patch.relogios || {})) localSet(localClockKey(name), String(value));
+      if (patch.notas !== undefined) localSet(localNotesKey(), patch.notas);
+      const here = tableHere();
+      const url = tableUrl();
+      if (!here || !url) return;
+      Object.assign(here.relogios, patch.relogios || {});
+      if (patch.notas !== undefined) here.notas = patch.notas;
+      for (const [name, value] of Object.entries(patch.publicos || {})) { if (value) here.publicos[name] = value; else delete here.publicos[name]; }
+      const before = tablePending.get(url) || {};
+      tablePending.set(url, { ...before, ...(patch.notas !== undefined ? { notas: patch.notas } : {}), relogios: { ...(before.relogios || {}), ...(patch.relogios || {}) }, publicos: { ...(before.publicos || {}), ...(patch.publicos || {}) } });
+      tableState = 'salvando';
+      showTableStatus();
+      clearTimeout(tableTimer);
+      tableTimer = setTimeout(flushTable, 600);
     }
 
     // Volta à página atual como estava no endereço (Esc na busca, busca apagada).
@@ -782,43 +936,52 @@
       });
     }
 
-    function setupClock(name, storageKey) {
+    function setupClock(name) {
       const element = document.getElementById(`clock-${name}`);
       const steps = (config.clocks || {})[name] || [];
-      const read = () => { try { return Number(localStorage.getItem(storageKey)) || 0; } catch { return 0; } };
       const render = () => {
-        const value = read();
+        const value = clockValue(name);
         element.innerHTML = steps.map((step, index) => `<button type="button" class="clock-segment" data-clock-index="${index}" aria-pressed="${index < value}"><span>${index + 1}</span>${escapeHtml(step)}</button>`).join('');
       };
       element.onclick = event => {
         const segment = event.target.closest('[data-clock-index]');
         if (!segment) return;
         const index = Number(segment.dataset.clockIndex);
-        const next = read() === index + 1 ? index : index + 1;
-        try { localStorage.setItem(storageKey, String(next)); } catch { /* armazenamento indisponível */ }
+        saveTable({ relogios: { [name]: clockValue(name) === index + 1 ? index : index + 1 } });
         render();
       };
       render();
+      // Com o servidor: o relógio pode aparecer para os jogadores (no Resumo deles), com o nome do título do quadro.
+      element.parentElement.querySelector(`[data-clock-public="${name}"]`)?.closest('label').remove();
+      if (!tableHere()) return;
+      const title = (element.closest('.section')?.querySelector('h3')?.textContent || name).trim();
+      element.insertAdjacentHTML('afterend', `<label class="clock-public"><input type="checkbox" data-clock-public="${name}"${tableHere().publicos[name] ? ' checked' : ''}> Mostrar aos jogadores (no Resumo deles)</label>`);
+      element.parentElement.querySelector(`[data-clock-public="${name}"]`).onchange = event => saveTable({ publicos: { [name]: event.target.checked ? { nome: title, passos: steps } : null } });
     }
 
     function setupNotes() {
-      // Um relógio para cada entrada de config.clocks que tenha um elemento #clock-nome na página.
-      Object.keys(config.clocks || {}).forEach(name => {
-        if (document.getElementById(`clock-${name}`)) setupClock(name, `night-city-clock-${name}-${activeCampaignId}`);
-      });
       const input = document.getElementById('session-note');
-      const status = document.getElementById('note-status');
-      const key = `night-city-fieldbook-notes-${activeCampaignId}`;
-      input.value = localStorage.getItem(key) || '';
-      input.addEventListener('input', () => {
-        localStorage.setItem(key, input.value);
-        status.textContent = 'Salvo automaticamente neste navegador.';
-      });
-      document.getElementById('clear-notes').addEventListener('click', () => {
+      // Com o servidor e a mesa ainda não lida: lê e monta de novo.
+      if (tableUrl() && !tableHere()) {
+        tableState = 'carregando';
+        input.disabled = true;
+        showTableStatus();
+        const page = currentPage;
+        loadTable().then(loaded => { if (currentPage === page && document.getElementById('session-note')) { if (!loaded) tableState = 'erro'; input.disabled = false; setupNotes(); } });
+        return;
+      }
+      if (!tableUrl()) tableState = 'local';
+      // Um relógio para cada entrada de config.clocks que tenha um elemento #clock-nome na página.
+      Object.keys(config.clocks || {}).forEach(name => { if (document.getElementById(`clock-${name}`)) setupClock(name); });
+      input.disabled = false;
+      input.value = notesValue();
+      showTableStatus();
+      input.oninput = () => saveTable({ notas: input.value });
+      document.getElementById('clear-notes').onclick = () => {
         input.value = '';
-        localStorage.removeItem(key);
-        status.textContent = 'Notas removidas deste navegador.';
-      });
+        saveTable({ notas: '' });
+        if (!tableUrl()) document.getElementById('note-status').textContent = 'Notas removidas deste navegador.';
+      };
     }
 
     function setCampaignMapView(view) {
@@ -1182,6 +1345,17 @@
     // Abre a página do endereço (link direto, recarregar) ou a inicial.
     if (pageContent[readHash().id]) routeFromHash();
     else openPage(homePage(), undefined, 'replace');
+    // A mesa do mestre e as preferências da conta chegam do servidor depois da primeira página.
+    document.addEventListener('wiki:mesa', () => { if (currentPage === 'home' && !search.value.trim()) openPage('home', undefined, 'none'); });
+    document.addEventListener('wiki:preferencias', () => {
+      document.body.classList.toggle('sidebar-compact', storage.get('barra-compacta') === '1');
+      buildNavigation();
+      labelMenuButton();
+      const pin = content.querySelector('[data-pin]');
+      if (pin) pin.outerHTML = pinButton(pin.dataset.pin);
+    });
+    loadTable();
+    prefs.load();
     // Pré-carrega os documentos para a busca encontrar o texto completo deles.
     if (Object.keys(markdownDocs).length) Promise.allSettled(Object.keys(markdownDocs).map(loadMarkdownDoc)).then(() => {
       searchIndex = null;
@@ -1303,7 +1477,7 @@
 
     // switchCampaign: troca a campanha ativa (pergunta antes, se a página pedir). setBadges: selos de novidade no menu.
     // status: o último /api/estado. hasPage: a página existe nesta wiki (a do mestre tem páginas que a dos jogadores não tem).
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary };
     // Quem depende da wiki montada (o menu da conta) começa aqui.
     document.dispatchEvent(new Event('wiki:pronta'));
 })();
