@@ -53,6 +53,7 @@
     const waiting = title => ({ eyebrow: 'Night City', title, lede: 'Carregando o que o mestre publicou…', html: '' });
     const playerGroups = [{ group: 'O que o grupo sabe', pages: [
       { id: 'pvHome', label: 'Resumo', icon: '00' },
+      { id: 'pvSessions', label: 'Sessões', icon: 'S' },
       { id: 'pvPeople', label: 'Pessoas', icon: 'P' },
       { id: 'pvMap', label: 'Mapa', icon: 'MAP' },
       { id: 'pvNews', label: 'Notícias e handouts', icon: 'N' },
@@ -75,7 +76,7 @@
         homePage: 'pvHome',
         // Sem campanha (sem código, ou sem servidor): uma de mentira, só para o menu (real: false).
         campaigns: list ? list.map(item => ({ id: item.id, name: item.nome, color: item.cor, groups: playerGroups })) : [{ id: 'grupo', name: 'Night City, 2077', real: false, groups: playerGroups }],
-        pageContent: { pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') },
+        pageContent: { pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') },
         mapPages: ['pvMap'],
         mapData: () => window.playerMapData,
         pageSetup: { pvMap: () => window.wikiApp.setupMap(), pvHome: content => window.playerView && window.playerView.setupHome(content) },
@@ -100,7 +101,7 @@
       // ---------------- Novidades ----------------
       // O que o mestre publicou desde a última vez que este aparelho abriu cada página: selo no menu e "novo" no item.
       // Na primeira vez neste aparelho, nada é novidade.
-      const NEWS_PAGES = { pvPeople: 'npcs', pvMap: 'lugares', pvNews: 'noticias', pvNightCity: 'nightCity' };
+      const NEWS_PAGES = { pvSessions: 'sessoes', pvPeople: 'npcs', pvMap: 'lugares', pvNews: 'noticias', pvNightCity: 'nightCity' };
       const itemKey = item => String(item.id || item.titulo || item.nome || '');
       let currentIds = {};
       const seenKey = () => `night-city-jogadores-vistos-${window.wikiApp.activeCampaign().id}`;
@@ -152,19 +153,31 @@
         const places = data.lugares || [];
         const news = data.noticias || [];
         const city = data.nightCity || [];
+        const sessions = data.sessoes || [];
+        const sessionTitle = (item, index) => item.titulo || `Sessão ${index + 1}`;
+        // O endereço da seção (#pvSessions/sessao-02...), como a wiki faz: sem acento, minúsculo, com hífens.
+        const sectionSlug = text => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const lastSession = sessions.length ? sessions[sessions.length - 1] : null;
+        const newPlaces = places.filter(place => fresh('pvMap', place));
         const name = (data.campanha && data.campanha.nome) || 'Night City';
         const updated = data.atualizado ? new Date(data.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
         window.playerMapData = {
           width: 5600, height: 5320, images: { base: 'nightcity-map-base.jpg' },
-          categories: { lugar: { label: 'Lugar que o grupo conhece', color: '#00ffd2' } },
-          markers: places.map((place, index) => ({ id: place.id || `lugar-${index}`, code: String(index + 1), title: place.nome || 'Lugar', district: place.distrito || '', x: Number(place.x) || 0, y: Number(place.y) || 0, category: 'lugar', detail: place.texto || '' }))
+          // Os lugares novos desde a última visita: outra cor, e a legenda diz o que é.
+          categories: { lugar: { label: 'Lugar que o grupo conhece', color: '#00ffd2' }, ...(newPlaces.length ? { novo: { label: 'Novo desde a sua última visita', color: '#ff3158' } } : {}) },
+          markers: places.map((place, index) => ({ id: place.id || `lugar-${index}`, code: String(index + 1), title: `${place.nome || 'Lugar'}${fresh('pvMap', place) ? ' (novo)' : ''}`, district: place.distrito || '', x: Number(place.x) || 0, y: Number(place.y) || 0, category: fresh('pvMap', place) ? 'novo' : 'lugar', detail: place.texto || '' }))
         };
         const newsHtml = (items, page) => items.map(item => `<div class="section" data-toc="${escapeHtml(item.titulo || 'Notícia')}"><h3>${escapeHtml(item.titulo || 'Notícia')}${tag(page, item)}</h3>${item.data ? `<p class="pv-news-date">${escapeHtml(item.data)}</p>` : ''}<div class="md-doc">${renderMarkdown(item.texto || '')}</div></div>`).join('');
         return {
           pvHome: {
             eyebrow: `${escapeHtml(name)}${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
             lede: 'Resumo da campanha até agora, publicado pelo mestre. Esta página se atualiza sozinha.',
-            html: `<div id="pv-me"></div><div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
+            html: `<div id="pv-me"></div><div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${lastSession ? `<div class="section" data-toc="Última sessão"><h3>Última sessão${tag('pvSessions', lastSession)}</h3><p><b>${escapeHtml(sessionTitle(lastSession, sessions.length - 1))}</b>${lastSession.data ? ` · ${escapeHtml(lastSession.data)}` : ''}</p><button class="action" type="button" data-page="pvSessions" data-section="${escapeHtml(sectionSlug(sessionTitle(lastSession, sessions.length - 1)))}">Ler o resumo</button></div>` : ''}${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
+          },
+          pvSessions: {
+            eyebrow: `${escapeHtml(name)} / sessões`, title: 'Sessões',
+            lede: 'O que aconteceu em cada sessão, na ordem, contado pelo mestre. A barra "Nesta página" pula para cada uma.',
+            html: sessions.length ? sessions.map((item, index) => `<div class="section" data-toc="${escapeHtml(sessionTitle(item, index))}"><h3>${escapeHtml(sessionTitle(item, index))}${tag('pvSessions', item)}</h3>${item.data ? `<p class="pv-news-date">${escapeHtml(item.data)}</p>` : ''}<div class="md-doc">${renderMarkdown(item.texto || '')}</div></div>`).join('') : '<div class="callout">Nenhuma sessão publicada ainda. O mestre publica o resumo de cada sessão aqui.</div>'
           },
           pvPeople: {
             eyebrow: `${escapeHtml(name)} / pessoas`, title: 'Pessoas',
@@ -198,7 +211,7 @@
         }[kind];
         const callout = `<div class="callout">${text}</div>`;
         const login = kind === 'visitante' ? '<div class="section" data-toc="Entrar"><h3>Entrar</h3><form class="cc-login" data-pv-login><input id="pv-code" autocomplete="off" placeholder="NC-XXXX-XXXX" aria-label="Código do jogador"><button class="action" type="submit">Entrar</button></form><p class="cc-msg" id="pv-login-msg"></p></div>' : '';
-        const titles = { pvPeople: 'Pessoas', pvMap: 'Mapa', pvNews: 'Notícias e handouts', pvNightCity: 'Notícias de Night City' };
+        const titles = { pvSessions: 'Sessões', pvPeople: 'Pessoas', pvMap: 'Mapa', pvNews: 'Notícias e handouts', pvNightCity: 'Notícias de Night City' };
         return {
           pvHome: { eyebrow: 'Night City', title: kind === 'offline' ? 'Sem conexão' : 'O que o grupo sabe', lede: kind === 'visitante' ? 'Cada jogador vê a campanha em que joga.' : 'Não consegui ler o que o mestre publicou.', html: `${callout}${login}` },
           ...Object.fromEntries(Object.entries(titles).map(([id, title]) => [id, { eyebrow: 'Night City', title, lede: '', html: callout }]))
@@ -266,7 +279,7 @@
         currentIds = {};
         window.wikiApp.setBadges(Object.fromEntries(Object.keys(NEWS_PAGES).map(page => [page, 0])));
         window.playerMapData = null;
-        updatePages({ pvHome: waiting('Resumo'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') });
+        updatePages({ pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') });
         refresh();
       });
 

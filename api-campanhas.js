@@ -23,15 +23,18 @@ const RESERVED = new Set(['apagadas', 'night-city', 'todas', 'nova']);
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
 const PALETTE = ['#00ffd2', '#ff3864', '#f7d038', '#8f7bff', '#4dd0ff', '#ff8a3d'];
 const WORLD_RE = /^[a-z0-9_-]{0,80}$/i;
-// O que cada lista do Publicar marca para ir aos jogadores.
-const FLAGS = { npcs: 'revelado', lugares: 'revelado', noticias: 'publicada' };
-const emptyView = () => ({ resumo: '', npcs: [], lugares: [], noticias: [] });
+// O que cada lista do Publicar marca para ir aos jogadores. As sessões (o resumo de cada sessão, em ordem) vieram
+// depois: um Publicar antigo sem elas vale como lista vazia.
+const FLAGS = { npcs: 'revelado', lugares: 'revelado', noticias: 'publicada', sessoes: 'publicada' };
+const REQUIRED = ['npcs', 'lugares', 'noticias'];
+const emptyView = () => ({ resumo: '', npcs: [], lugares: [], noticias: [], sessoes: [] });
 const slug = text => String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
 
-// O que vai para os jogadores: só o revelado, sem a marcação e sem a nota do mestre. As notícias mais novas primeiro.
+// O que vai para os jogadores: só o revelado, sem a marcação e sem a nota do mestre. As notícias mais novas primeiro;
+// as sessões na ordem do painel (da primeira para a última).
 // O servidor calcula (não confia no que o navegador mandar como "publicado").
 const pick = (items, flag) => (Array.isArray(items) ? items : []).filter(item => item && typeof item === 'object' && item[flag]).map(({ [flag]: _flag, nota: _nota, ...rest }) => rest);
-const publishedOf = mestre => ({ resumo: String(mestre.resumo || ''), npcs: pick(mestre.npcs, FLAGS.npcs), lugares: pick(mestre.lugares, FLAGS.lugares), noticias: pick(mestre.noticias, FLAGS.noticias).reverse() });
+const publishedOf = mestre => ({ resumo: String(mestre.resumo || ''), npcs: pick(mestre.npcs, FLAGS.npcs), lugares: pick(mestre.lugares, FLAGS.lugares), noticias: pick(mestre.noticias, FLAGS.noticias).reverse(), sessoes: pick(mestre.sessoes, FLAGS.sessoes) });
 
 // dataDir: a pasta dos personagens e códigos. legacyDir: onde o Publicar gravava antes das campanhas (no servidor e
 // no PC é a mesma; nos testes, os personagens ficam numa pasta temporária).
@@ -106,10 +109,10 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
     return { mestre: emptyView(), publicado: emptyView(), atualizado: null };
   }
   async function writePublish(id, mestre) {
-    if (!mestre || typeof mestre !== 'object' || !Object.keys(FLAGS).every(key => Array.isArray(mestre[key]))) {
+    if (!mestre || typeof mestre !== 'object' || !REQUIRED.every(key => Array.isArray(mestre[key]))) {
       throw Object.assign(new Error('Formato inesperado: faltam as listas npcs, lugares e noticias.'), { status: 400 });
     }
-    const state = { resumo: String(mestre.resumo || ''), npcs: mestre.npcs, lugares: mestre.lugares, noticias: mestre.noticias };
+    const state = { resumo: String(mestre.resumo || ''), npcs: mestre.npcs, lugares: mestre.lugares, noticias: mestre.noticias, sessoes: Array.isArray(mestre.sessoes) ? mestre.sessoes : [] };
     const atualizado = new Date().toISOString();
     fs.mkdirSync(folder(id), { recursive: true });
     await writeJsonAtomic(path.join(folder(id), 'publicar.json'), { atualizado, mestre: state, publicado: publishedOf(state) });

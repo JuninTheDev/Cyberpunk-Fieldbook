@@ -134,13 +134,42 @@
     const saveClosedGroups = set => storage.set('grupos-fechados', JSON.stringify([...set]));
     const compact = () => document.body.classList.contains('sidebar-compact') && !narrow.matches;
 
+    // ---------------- Páginas fixadas ----------------
+    // O botão "Fixar" ao lado do título põe a página no grupo Fixadas, no topo da barra lateral (nas duas abas), neste
+    // aparelho. Até 8; a mais antiga sai quando passa disso.
+    const PIN_LIMIT = 8;
+    const pinned = () => { try { return JSON.parse(storage.get('fixadas') || '[]').filter(id => pageContent[id]); } catch { return []; } };
+    const pinnable = id => Boolean(pageContent[id]) && id !== 'criador';
+    // Rótulo e ícone do menu (o mesmo da página no menu dela); página fora do menu usa o título.
+    function navEntry(id) {
+      for (const group of [...campaigns.flatMap(campaign => campaign.groups), ...systemSections]) {
+        const page = group.pages.find(item => item.id === id);
+        if (page) return { id, label: page.label, icon: page.icon };
+      }
+      return { id, label: escapeHtml(String(pageContent[id].title).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()), icon: '★' };
+    }
+    const pinButton = id => {
+      const on = pinned().includes(id);
+      return `<button type="button" class="pin-page" data-pin="${id}" aria-pressed="${on}" title="${on ? 'Tirar das fixadas' : 'Fixar no topo da barra lateral'}">${on ? '★ Fixada' : '☆ Fixar'}</button>`;
+    };
+    function togglePin(id) {
+      const list = pinned();
+      if (list.includes(id)) list.splice(list.indexOf(id), 1);
+      else { list.push(id); if (list.length > PIN_LIMIT) list.shift(); }
+      storage.set('fixadas', JSON.stringify(list));
+      buildNavigation();
+      const button = content.querySelector(`[data-pin="${id}"]`);
+      if (button) button.outerHTML = pinButton(id);
+    }
+
     function buildNavigation() {
       const campaign = activeCampaign();
       activeCampaignId = campaign.id;
-      // key: o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela).
-      const groups = currentWorkspace === 'campaigns'
+      // key: o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela). Fixadas: nas duas abas.
+      const pins = pinned().map(navEntry);
+      const groups = [...(pins.length ? [{ key: 'fixadas', group: 'Fixadas', pages: pins, shared: true }] : []), ...(currentWorkspace === 'campaigns'
         ? campaign.groups.map((group, index) => ({ ...group, key: group.group, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
-        : systemSections.map(group => ({ ...group, key: group.group }));
+        : systemSections.map(group => ({ ...group, key: group.group })))];
       // Páginas que não existem nesta visão (ex.: só do mestre) somem do menu.
       const visibleGroups = groups.map(group => ({ ...group, pages: group.pages.filter(page => pageContent[page.id]) })).filter(group => group.pages.length);
       const campaignPicker = currentWorkspace === 'campaigns' && campaigns.length > 1
@@ -150,10 +179,10 @@
       const rail = compact();
       const item = page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"${rail ? ` title="${escapeHtml(String(page.label).replace(/<[^>]+>/g, ''))}"` : ''}><span class="nav-icon">${page.icon}</span><span class="nav-text">${page.label}</span>${badges[page.id] ? `<span class="nav-badge" aria-label="${badges[page.id]} novidade(s)">${badges[page.id]}</span>` : ''}</button>`;
       navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => {
-        const key = `${currentWorkspace}:${group.key}`;
+        const key = group.shared ? group.key : `${currentWorkspace}:${group.key}`;
         const shut = closed.has(key) && !group.pages.some(page => page.id === currentPage);
         const news = group.pages.reduce((sum, page) => sum + (badges[page.id] || 0), 0);
-        return `<div class="nav-group${shut ? ' collapsed' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
+        return `<div class="nav-group${shut ? ' collapsed' : ''}${group.shared ? ' nav-pinned' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
       }).join('')}`;
       document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
       document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
@@ -271,12 +300,12 @@
       const keepTarget = page.manterAlvo && target && target.section;
       writeHash(keepTarget ? `#${id}/${encodeURIComponent(target.section)}` : pageHash(id), historyMode);
       if (!page.manterAlvo) rememberRecent(id);
-      content.innerHTML = `<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
+      content.innerHTML = `${pinnable(id) ? pinButton(id) : ''}<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === id));
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
       if (document.body.classList.contains('sidebar-open')) setDrawer(false);
-      document.dispatchEvent(new CustomEvent('wiki:pagina', { detail: { id } }));
+      document.dispatchEvent(new CustomEvent('wiki:pagina', { detail: { id, target } }));
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
       if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml });
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
@@ -1093,6 +1122,8 @@
         if (result) showRoll(rollButton, `<span class="roll-value">${result.dado}: ${result.value}</span> ${result.html}`);
         return;
       }
+      const pin = event.target.closest('[data-pin]');
+      if (pin) { togglePin(pin.dataset.pin); return; }
       const critButton = event.target.closest('[data-crit]');
       if (critButton) { rollCritical(critButton.dataset.crit); return; }
       const button = event.target.closest('[data-page]');

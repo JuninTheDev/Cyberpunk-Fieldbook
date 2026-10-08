@@ -67,6 +67,7 @@ Pelo túnel, todo visitante recebe só a visão dos jogadores da wiki, mesmo par
 Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os jogadores da campanha escolhida no menu podem ver:
 
 - **O que o grupo sabe:** o resumo que aparece na página inicial deles.
+- **Sessões:** o resumo de cada sessão, um por sessão, na ordem em que aconteceram. Os jogadores leem na página **Sessões**; a última também aparece no Resumo deles, com um botão que leva até ela.
 - **Pessoas, Lugares no mapa, Notícias e handouts:** marque *Revelado* / *No mapa* / *Publicada* no que o grupo já descobriu. O resto fica guardado, mas não é enviado.
 - **Notícias de Night City** (no fim do painel): o mural de **todas as campanhas** (boletins do N54, a eleição, apagões). Uma notícia publicada ali aparece para os jogadores de qualquer campanha; não conte nela o que é segredo de uma.
 - **Nota do mestre** (campo tracejado em vermelho): lembretes seus, como o nome verdadeiro de um NPC. Nunca vai para os jogadores: o servidor tira as notas e o que não foi revelado antes de mandar.
@@ -249,14 +250,16 @@ Notas:
 - **O botão da conta** fica no canto de cima, à direita, nas duas wikis.
   - **Sem código:** **Entrar**, com o código que o mestre passou (o aparelho lembra).
   - **Jogador:** mostra o retrato (ou as iniciais) do **personagem em uso**. O menu troca de personagem, cria um novo, abre Ficha, Editar e Loja, troca de campanha (quem joga em mais de uma) e tem **Sair**.
+  - **Pedidos da loja:** quando o mestre aprova ou recusa um pedido (ou o Foundry entrega), o botão ganha um número e aparece um aviso rápido; o menu diz qual personagem. Abrir a Loja daquele personagem tira o número. Com a wiki aberta, confere a cada minuto.
   - **O personagem em uso** é um por campanha, lembrado no aparelho. A **Ficha** e a **Loja** do menu lateral abrem nele, o **Resumo** mostra o cartão "Seu personagem" e a lista de Personagens marca "Em uso" (o botão **Usar** troca).
   - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
 - **Barra lateral:**
+  - **Fixadas:** o botão **☆ Fixar**, ao lado do título de qualquer página (Combate, Escudo do mestre, a Ficha…), põe a página no grupo **Fixadas**, no topo da barra lateral, nas duas abas. Até 8, lembradas no aparelho; **★ Fixada** tira.
   - **Grupos que recolhem:** clique no nome do grupo. O aparelho lembra; abrir uma página de um grupo recolhido mostra o grupo.
   - **Barra compacta:** o botão ☰ (ou a tecla **[**) deixa só os ícones; parar o mouse num ícone mostra o nome. O aparelho lembra.
   - **No celular,** a barra lateral é uma gaveta: o ☰ abre, escolher uma página fecha. O conteúdo começa logo abaixo da barra de cima.
   - **Mesa:** o quadro no topo diz se a mesa está aberta (e de qual campanha), com **Entrar na mesa**; para o mestre, também a saúde do servidor.
-- **Novidades (visão dos jogadores):** pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. Abrir a página tira o selo.
+- **Novidades (visão dos jogadores):** sessões, pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. No mapa, os lugares novos aparecem em outra cor, com "(novo)" e a legenda explicando. Abrir a página tira o selo.
 - **Voltar ao topo:** nas páginas longas, um botão no canto de baixo.
 
 ## Consulta durante a sessão
@@ -292,7 +295,7 @@ Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 node tests/rodar.js
 ```
 
-Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8773), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), a conta e a barra lateral (personagem em uso, barra compacta, gaveta do celular), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8773), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), a conta e a barra lateral (personagem em uso, pedidos resolvidos, sessões, páginas fixadas, barra compacta, gaveta do celular), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
 
 **Teste do Foundry** (`node tests/rodar.js foundry`): importa personagens feitos na wiki de teste num Foundry de verdade e confere o ator.
 - **Onde roda:** usa o Foundry instalado no PC, sem janela, na porta 30999. Os dados ficam numa pasta própria, `%LOCALAPPDATA%\FieldbookTeste\foundry`, que nunca toca nos seus mundos.

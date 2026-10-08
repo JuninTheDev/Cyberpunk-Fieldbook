@@ -11,6 +11,8 @@
   const kinds = {
     npcs: { flag: 'revelado', flagLabel: 'Revelado', fields: [['nome', 'Nome', 'input'], ['papel', 'Como o grupo conhece', 'input'], ['texto', 'O que o grupo sabe (aceita **negrito** e listas)', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], empty: { nome: '', papel: '', texto: '', nota: '', revelado: false } },
     lugares: { flag: 'revelado', flagLabel: 'No mapa', fields: [['nome', 'Nome', 'input'], ['distrito', 'Bairro / distrito', 'input'], ['x', 'X', 'number'], ['y', 'Y', 'number'], ['texto', 'O que o grupo sabe', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], empty: { nome: '', distrito: '', x: 2800, y: 2660, texto: '', nota: '', revelado: false } },
+    // Sessões: o resumo de cada uma, na ordem do painel (a última aparece no Resumo dos jogadores).
+    sessoes: { flag: 'publicada', flagLabel: 'Publicada', fields: [['titulo', 'Título (ex.: Sessão 03: Kabuki)', 'input'], ['data', 'Quando (texto livre)', 'input'], ['texto', 'O que aconteceu, como o grupo viu (aceita **negrito** e listas)', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], empty: { titulo: '', data: '', texto: '', nota: '', publicada: false } },
     noticias: { flag: 'publicada', flagLabel: 'Publicada', fields: newsFields, empty: { titulo: '', data: '', texto: '', nota: '', publicada: false } },
     nightCity: { flag: 'publicada', flagLabel: 'Publicada', fields: newsFields, empty: { titulo: '', data: '', texto: '', nota: '', publicada: false }, shared: true }
   };
@@ -22,7 +24,7 @@
 
   const page = {
     eyebrow: 'Campanha / visão dos jogadores', title: 'Visão dos jogadores',
-    lede: 'O que os jogadores desta campanha veem na página deles: o resumo, as pessoas que conheceram, os lugares no mapa e as notícias. Marque o que foi revelado e clique em Publicar. A página dos jogadores se atualiza sozinha em até 15 segundos.',
+    lede: 'O que os jogadores desta campanha veem na página deles: o resumo, as sessões, as pessoas que conheceram, os lugares no mapa e as notícias. Marque o que foi revelado e clique em Publicar. A página dos jogadores se atualiza sozinha em até 15 segundos.',
     html: `<div class="section" data-toc="Como funciona"><h3>Como funciona</h3>
         <ul><li>Os jogadores entram com o código deles (em Personagens) e veem <b>só as campanhas em que jogam</b>. O que você publica aqui vai só para os jogadores de <b id="pv-campaign-name">esta campanha</b>.</li>
         <li>As <b>Notícias de Night City</b>, no fim desta página, vão para os jogadores de todas as campanhas: é o mesmo universo. Cuidado para não contar nelas o que é segredo de uma campanha.</li>
@@ -31,6 +33,7 @@
         <p id="pv-status" class="note-status">Carregando…</p>
         <p><a class="action pv-link" id="pv-open" href="jogadores.html" target="_blank" rel="noopener">Abrir a visão dos jogadores</a></p></div>
       <div class="section" data-toc="O que o grupo sabe"><h3>O que o grupo sabe</h3><p class="note-status">Resumo na página inicial dos jogadores. Aceita títulos (##), **negrito** e listas.</p><textarea id="pv-resumo" class="note-area" rows="8"></textarea></div>
+      <div class="section" data-toc="Sessões"><h3>Sessões</h3><p class="note-status">Uma por sessão, na ordem em que aconteceram. Os jogadores leem na página Sessões; a última também aparece no Resumo deles.</p><div id="pv-sessoes" class="pv-list"></div><button class="action" type="button" data-pv-add="sessoes">Adicionar sessão</button></div>
       <div class="section" data-toc="Pessoas"><h3>Pessoas</h3><div id="pv-npcs" class="pv-list"></div><button class="action" type="button" data-pv-add="npcs">Adicionar pessoa</button></div>
       <div class="section" data-toc="Lugares no mapa"><h3>Lugares no mapa</h3><p class="note-status">X e Y usam as coordenadas do mapa de Night City (5600 × 5320). No Protocolo Morana, dá para copiar a posição de um pino do mapa do mestre, na lista do lugar.</p><div id="pv-lugares" class="pv-list"></div><button class="action" type="button" data-pv-add="lugares">Adicionar lugar</button></div>
       <div class="section" data-toc="Notícias e handouts"><h3>Notícias e handouts</h3><p class="note-status">Boletins, mensagens, bilhetes desta campanha. Os mais recentes aparecem primeiro para os jogadores.</p><div id="pv-noticias" class="pv-list"></div><button class="action" type="button" data-pv-add="noticias">Adicionar notícia</button></div>
@@ -85,7 +88,7 @@
     setStatus('Publicando…');
     try {
       let atualizado = null;
-      if (dirty.campanha || !dirty.nightCity) atualizado = (await post(`api/campanhas/${encodeURIComponent(target.id)}/publicar`, { mestre: { resumo: state.resumo || '', npcs: state.npcs, lugares: state.lugares, noticias: state.noticias } })).atualizado;
+      if (dirty.campanha || !dirty.nightCity) atualizado = (await post(`api/campanhas/${encodeURIComponent(target.id)}/publicar`, { mestre: { resumo: state.resumo || '', npcs: state.npcs, lugares: state.lugares, noticias: state.noticias, sessoes: state.sessoes } })).atualizado;
       if (dirty.nightCity) atualizado = (await post('api/night-city', { noticias: state.nightCity })).atualizado;
       if (target !== campaign) return; // trocou de campanha no meio
       markDirty();
@@ -114,7 +117,7 @@
     Promise.all([read(`api/campanhas/${encodeURIComponent(campaign.id)}/publicar`), read('api/night-city')])
       .then(([data, news]) => {
         if (target !== campaign || !document.getElementById('pv-resumo')) return;
-        state = { resumo: data.resumo || '', npcs: data.npcs || [], lugares: data.lugares || [], noticias: data.noticias || [], nightCity: news.noticias || [] };
+        state = { resumo: data.resumo || '', sessoes: data.sessoes || [], npcs: data.npcs || [], lugares: data.lugares || [], noticias: data.noticias || [], nightCity: news.noticias || [] };
         render();
         markDirty();
         setStatus(data.atualizado ? `Última publicação de ${escapeHtml(campaign.name)}: ${new Date(data.atualizado).toLocaleString('pt-BR')}.` : `${escapeHtml(campaign.name)} ainda não publicou nada.`);

@@ -99,6 +99,64 @@ module.exports = async ({ edge, r }) => {
       return [chegou && novos.join() === 'Mina Kuroda' && !selo && !depois, `selo chegou ${chegou} · novos: ${novos.join(', ')} · selo depois de abrir ${selo} · depois de recarregar ${depois}`];
     });
 
+    // ---------------- Sessões, mapa, pedidos ----------------
+    const publicarTudo = ({ npcs = [], lugares = [], sessoes = [] }) => post('/api/campanhas/morana/publicar', { mestre: { resumo: 'Resumo do teste', npcs, lugares, noticias: [], sessoes } });
+    const npcs = [{ id: 'vega', nome: 'Vega', revelado: true }, { id: 'mina', nome: 'Mina Kuroda', revelado: true }];
+    const sessoes = [{ id: 's1', titulo: 'Sessão 01: A Maleta', data: 'outubro', texto: 'Primeira.', publicada: true }, { id: 's2', titulo: 'Sessão 02: O Hospital', texto: 'Segunda.', publicada: true }, { id: 's3', titulo: 'Rascunho do mestre', publicada: false }];
+    await r.passo('sessões: o mestre publica em ordem; a página Sessões mostra só as publicadas; a última está no Resumo e leva até ela', async () => {
+      await edge.evaluate(`wikiApp.openPage('pvHome')`);
+      await publicarTudo({ npcs, sessoes });
+      const selo = await esperar(`document.querySelector('.nav-item[data-page="pvSessions"] .nav-badge')?.textContent === '2'`, 90);
+      const ultima = await texto('[data-toc="Última sessão"]');
+      await edge.evaluate(`document.querySelector('[data-toc="Última sessão"] [data-page="pvSessions"]').click()`);
+      await edge.sleep(600);
+      const titulos = await edge.evaluate(`[...document.querySelectorAll('#content .section h3')].map(h => h.firstChild.textContent.trim())`);
+      const endereco = await edge.evaluate('decodeURIComponent(location.hash)');
+      return [selo && /Sessão 02: O Hospital/.test(ultima) && titulos.join() === 'Sessão 01: A Maleta,Sessão 02: O Hospital' && /pvSessions\/sessao-02/.test(endereco), `selo ${selo} · última "${ultima}" · ${titulos.join(' | ')} · ${endereco}`];
+    });
+    await r.passo('mapa: o lugar novo aparece em outra cor, com "(novo)" e a legenda explicando', async () => {
+      await edge.evaluate(`wikiApp.openPage('pvHome')`);
+      await publicarTudo({ npcs, sessoes, lugares: [{ id: 'pachinko', nome: 'Pachinko', distrito: 'Japantown', x: 2650, y: 1800, texto: '', revelado: true }] });
+      await esperar(`document.querySelector('.nav-item[data-page="pvMap"] .nav-badge')?.textContent === '1'`, 90);
+      await edge.evaluate(`wikiApp.openPage('pvMap')`);
+      await edge.sleep(700);
+      const mapa = await edge.evaluate(`({ categoria: window.playerMapData.markers[0].category, titulo: window.playerMapData.markers[0].title, legenda: document.getElementById('map-legend').textContent, cor: document.querySelector('.map-marker-dot')?.style.background })`);
+      return [mapa.categoria === 'novo' && /\(novo\)/.test(mapa.titulo) && /Novo desde a sua última visita/.test(mapa.legenda), JSON.stringify(mapa)];
+    });
+    await r.passo('pedidos: o mestre aprova; o botão da conta mostra o número e avisa; abrir a Loja do personagem tira o número', async () => {
+      // A Rin vai para o Foundry (a volta do importador): a loja dela vira a de pedidos.
+      await fetch(`${base}/api/personagens/${rin.id}/foundry`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ator: 'atorRin', nomeAtor: 'Rin' }) });
+      const pedido = (await (await post(`/api/personagens/${rin.id}/pedidos`, { itens: [{ id: 'core_weapons:heavy-pistol', qtd: 1 }] }, { ...TUNEL, Cookie: cookie })).json()).pedido;
+      await edge.evaluate(`window.playerAccount.refresh()`);
+      await edge.sleep(500);
+      const antes = await edge.evaluate(`!!document.querySelector('.account-dot')`);
+      await post(`/api/personagens/${rin.id}/pedidos/${pedido.id}/aprovar`, {});
+      await edge.evaluate(`window.playerAccount.refresh()`);
+      await esperar(`document.querySelector('.account-dot')?.textContent === '1'`);
+      const numero = await texto('.account-dot');
+      const aviso = await edge.evaluate(`[...document.querySelectorAll('.toast')].map(t => t.textContent).join(' | ')`);
+      await abrirMenu();
+      const noMenu = await texto(`[data-account-pick="${rin.id}"] .account-orders`);
+      await edge.evaluate(`document.querySelector('.account-button').click()`);
+      await edge.evaluate(`wikiApp.openPage('loja', { section: ${JSON.stringify(rin.id)} })`);
+      await edge.sleep(500);
+      const depois = await edge.evaluate(`!!document.querySelector('.account-dot')`);
+      return [!antes && numero === '1' && /Rin: pedido aprovado/.test(aviso) && /pedido aprovado/.test(noMenu) && !depois, `antes ${antes} · número ${numero} · aviso "${aviso}" · menu "${noMenu}" · depois da Loja ${depois}`];
+    });
+    await r.passo('fixar: a página vai para Fixadas no topo da barra (nas duas abas), o aparelho lembra; tirar remove', async () => {
+      await edge.evaluate(`wikiApp.openPage('combat')`);
+      await edge.sleep(300);
+      await edge.evaluate(`document.querySelector('[data-pin="combat"]').click()`);
+      const naRegras = await edge.evaluate(`!!document.querySelector('.nav-pinned .nav-item[data-page="combat"]')`);
+      await edge.evaluate(`document.querySelector('#tab-campaigns').click()`);
+      const naCampanha = await edge.evaluate(`!!document.querySelector('.nav-pinned .nav-item[data-page="combat"]')`);
+      await edge.ir(`${base}/jogadores.html#combat`, 1200);
+      const lembrou = await edge.evaluate(`!!document.querySelector('.nav-pinned .nav-item[data-page="combat"]') && document.querySelector('[data-pin="combat"]').getAttribute('aria-pressed') === 'true'`);
+      await edge.evaluate(`document.querySelector('[data-pin="combat"]').click()`);
+      const tirou = await edge.evaluate(`!document.querySelector('.nav-pinned')`);
+      return [naRegras && naCampanha && lembrou && tirou, `na aba Regras ${naRegras} · na aba Campanha ${naCampanha} · depois de recarregar ${lembrou} · tirou ${tirou}`];
+    });
+
     // ---------------- Barra lateral ----------------
     await r.passo('grupo recolhido fica recolhido depois de recarregar; abrir uma página dele mostra o grupo', async () => {
       await edge.evaluate(`wikiApp.openPage('pvHome')`);

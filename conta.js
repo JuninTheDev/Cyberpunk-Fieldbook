@@ -6,6 +6,9 @@
 //   mestre    → a campanha ativa, os atalhos do mestre, a versão no ar, o backup e "Sair do modo mestre".
 // O personagem escolhido vale para a Ficha e a Loja (quando nenhum outro foi aberto) e para o resumo do jogador:
 // window.playerAccount, e o evento "wiki:personagem" avisa quando ele muda.
+// Pedidos da loja que o mestre aprovou, recusou ou o Foundry entregou desde a última vez que o jogador abriu a Loja
+// daquele personagem: número no botão, aviso no menu e, se acontecer com a wiki aberta, um aviso rápido (confere a
+// cada minuto).
 (() => {
   let app = null;
   let me = null; // api/eu: { papel, jogador, campanhas }; null = sem servidor
@@ -18,6 +21,20 @@
     get: key => { try { return localStorage.getItem(key); } catch { return null; } },
     set: (key, value) => { try { localStorage.setItem(key, value); } catch { /* sem armazenamento: escolhe o primeiro */ } }
   };
+  // Pedidos já vistos, por personagem (o id do pedido e o estado em que foi visto).
+  const ORDER_WORDS = { aprovado: 'aprovado', recusado: 'recusado', entregue: 'entregue na ficha' };
+  const orderKey = order => `${order.id}:${order.status}:${order.erro ? 'erro' : ''}`;
+  const seenOrdersKey = id => `night-city-pedidos-vistos-${id}`;
+  const seenOrders = id => { try { return JSON.parse(store.get(seenOrdersKey(id)) || 'null'); } catch { return null; } };
+  const resolved = doc => (doc.pedidos && doc.pedidos.resolvidos) || [];
+  const unseenOrders = doc => { const seen = seenOrders(doc.id) || []; return resolved(doc).filter(order => !seen.includes(orderKey(order))); };
+  function markOrdersSeen(id) {
+    const doc = characters.find(item => item.id === id);
+    if (!doc) return;
+    store.set(seenOrdersKey(id), JSON.stringify(resolved(doc).map(orderKey)));
+    render();
+  }
+  let toasted = null; // os já avisados nesta visita (o primeiro carregamento não avisa)
   const ROLES = { face: 'Face', solo: 'Solo', netrunner: 'Netrunner', corpo: 'Corpo', tech: 'Tech', medtech: 'Medtech', media: 'Media', lawman: 'Lawman', nomad: 'Nomad' };
 
   async function api(path, { method = 'GET', body } = {}) {
@@ -59,6 +76,10 @@
       const list = await api(`api/personagens?campanha=${encodeURIComponent(campaign().id)}`);
       if (mine !== ticket) return;
       characters = (list.data.personagens || []).filter(item => !item.publico);
+      for (const doc of characters) if (seenOrders(doc.id) === null) store.set(seenOrdersKey(doc.id), JSON.stringify(resolved(doc).map(orderKey)));
+      const fresh = characters.flatMap(doc => unseenOrders(doc).map(order => ({ doc, order })));
+      if (toasted) fresh.filter(({ order }) => !toasted.has(orderKey(order))).forEach(({ doc, order }) => window.wikiPopup?.toast(`${doc.nome || 'Seu personagem'}: pedido ${ORDER_WORDS[order.status]}${order.erro ? ' (com um aviso do mestre)' : ''}. Veja na Loja.`, { tone: order.status === 'recusado' ? 'bad' : 'ok', ms: 7000 }));
+      toasted = new Set(fresh.map(({ order }) => orderKey(order)));
     }
     render();
     announce();
@@ -77,8 +98,9 @@
     if (!me || me.papel === 'visitante') return `${PERSON_ICON}<span class="account-name"><b>Entrar</b><small>${me ? 'código do jogador' : 'sem conexão'}</small></span>`;
     if (me.papel === 'mestre') return `<span class="account-avatar account-initials account-gm">GM</span><span class="account-name"><b>Mestre</b><small>${esc((app.activeCampaign() || {}).name || '')}</small></span><span class="account-caret" aria-hidden="true"></span>`;
     const doc = selectedDoc();
+    const orders = characters.reduce((sum, item) => sum + unseenOrders(item).length, 0);
     // Personagem ainda sem nome (recém-criado): as iniciais do jogador.
-    return `${avatar(doc, (doc && doc.nome) || me.jogador.nome)}<span class="account-name"><b>${esc(doc ? doc.nome || 'Sem nome' : me.jogador.nome)}</b><small>${esc(doc ? me.jogador.nome : 'sem personagem')}</small></span><span class="account-caret" aria-hidden="true"></span>`;
+    return `${orders ? `<span class="account-dot" title="Pedidos resolvidos pelo mestre">${orders}</span>` : ''}${avatar(doc, (doc && doc.nome) || me.jogador.nome)}<span class="account-name"><b>${esc(doc ? doc.nome || 'Sem nome' : me.jogador.nome)}</b><small>${esc(doc ? me.jogador.nome : 'sem personagem')}</small></span><span class="account-caret" aria-hidden="true"></span>`;
   }
 
   const section = (title, body) => `<div class="account-section"><p class="account-label">${title}</p>${body}</div>`;
@@ -107,7 +129,7 @@
     }
     const doc = selectedDoc();
     const here = campaign();
-    const rows = characters.map(item => `<button type="button" class="account-item account-character" aria-current="${Boolean(doc && item.id === doc.id)}" data-account-pick="${esc(item.id)}">${avatar(item, item.nome || me.jogador.nome, ' account-avatar-sm')}<span><b>${esc(nameOf(item))}</b><small>${esc(ROLES[item.role] || 'sem Role')}${esc(hp(item))}</small></span></button>`).join('');
+    const rows = characters.map(item => `<button type="button" class="account-item account-character" aria-current="${Boolean(doc && item.id === doc.id)}" data-account-pick="${esc(item.id)}">${avatar(item, item.nome || me.jogador.nome, ' account-avatar-sm')}<span><b>${esc(nameOf(item))}</b><small>${esc(ROLES[item.role] || 'sem Role')}${esc(hp(item))}</small>${unseenOrders(item).length ? `<small class="account-orders">${unseenOrders(item).map(order => `pedido ${ORDER_WORDS[order.status]}`).join(' · ')}: veja na Loja</small>` : ''}</span></button>`).join('');
     return `<p class="account-head">${esc(me.jogador.nome)}<small>${esc(here ? here.name : '')}</small></p>
       ${section('Personagem', `${rows || `<p class="account-note">Nenhum personagem${here ? ` em ${esc(here.name)}` : ''} ainda.</p>`}<button type="button" class="account-item account-new" data-account-new>+ Novo personagem</button>`)}
       ${doc ? `<div class="account-actions"><button type="button" class="action" data-account-open="ficha">Ficha</button><button type="button" class="action" data-account-open="criador">Editar</button><button type="button" class="action" data-account-open="loja">Loja</button></div>` : ''}
@@ -182,6 +204,13 @@
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && !root.querySelector('.account-menu').hidden) { openMenu(false); root.querySelector('.account-button').focus(); } });
     document.addEventListener('wiki:estado', event => { state = event.detail || {}; render(); });
     document.addEventListener('wiki:campanha', load);
+    document.addEventListener('wiki:pagina', event => {
+      if (event.detail.id !== 'loja') return;
+      const target = event.detail.target && event.detail.target.section;
+      markOrdersSeen(target || (selectedDoc() || {}).id);
+    });
+    // Pedidos resolvidos com a wiki aberta: confere a cada minuto (só o jogador, com a aba à vista).
+    setInterval(() => { if (me && me.papel === 'jogador' && document.visibilityState === 'visible') load(); }, 60 * 1000);
     state = { ...(app.status() || {}) };
     // A visão dos jogadores já leu api/eu antes de montar a wiki: desenha logo, e confere em seguida.
     if (window.playerIdentity !== undefined) me = window.playerIdentity;

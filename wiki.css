@@ -848,7 +848,17 @@ button.nav-group-toggle:hover, button.nav-group-toggle:focus-visible { color: va
   .account-menu { position: fixed; top: 58px; right: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { aside, .nav-chevron, .nav-toggle span { transition: none; } }
-@media print { .nav-toggle, .nav-backdrop, .account, .to-top { display: none !important; } }
+@media print { .nav-toggle, .nav-backdrop, .account, .to-top, .pin-page { display: none !important; } }
+/* Páginas fixadas (wiki-app.js): o botão ao lado do título e o grupo no topo da barra lateral. */
+.pin-page { float: right; margin: -3px 0 6px 12px; padding: 5px 10px; border: 1px solid #3b4242; background: #141819; color: var(--muted); cursor: pointer; font: 11px Oxanium, Consolas, monospace; text-transform: uppercase; }
+.pin-page:hover, .pin-page:focus-visible { border-color: var(--cyan); color: var(--cyan); outline: none; }
+.pin-page[aria-pressed="true"] { border-color: var(--yellow); color: var(--yellow); }
+.nav-pinned .nav-group-toggle { color: var(--cyan); }
+.nav-pinned .nav-icon { color: var(--yellow); }
+/* Selo de pedidos resolvidos no botão da conta. */
+.account-button { position: relative; }
+.account-dot { position: absolute; top: 0; left: 24px; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--coral); color: #090b0c; font: 700 10px/16px Oxanium, Consolas, monospace; text-align: center; }
+.account-orders { color: var(--coral); }
 /* Voltar ao topo (wiki-app.js), nas páginas longas. */
 .to-top { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--yellow); background: #141819; cursor: pointer; clip-path: polygon(0 0, 100% 0, 100% 76%, calc(100% - 10px) 100%, 0 100%); }
 .to-top span { width: 11px; height: 11px; margin-top: 5px; border-top: 2px solid var(--yellow); border-left: 2px solid var(--yellow); transform: rotate(45deg); }
