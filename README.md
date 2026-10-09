@@ -151,6 +151,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 | `foundry-net-architect/` | Módulo do Foundry VTT "NET Architect": pontos de acesso à NET nos Tiles, com a janela do netrunner e o mapa da arquitetura. Veja o README da pasta. |
 | `foundry-fluxo-de-combate/` | Módulo do Foundry VTT "Fluxo de Combate": ataque, esquiva às cegas e dano na ficha, com área, cartucho, fogo supressivo, lesão crítica e Death Save. Substitui o Evasion Workflow. Veja o README da pasta. |
+| `foundry-painel-tatico/` | Módulo do Foundry VTT "Painel Tático": o HUD de combate com o retrato grande do personagem (um PNG por estado de ferimento) e o estilo de cada jogador, ligado ao cpr-2077, ao Fluxo de Combate e ao NET Architect. Veja o README da pasta. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
 
@@ -173,6 +174,15 @@ Ele também instala o **Fluxo de Combate** (`foundry-fluxo-de-combate/`), no lug
 - **O alvo de um ataque decide sem ver o total:** esquivar, aguentar ou usar o escudo. Ele rola a própria Evasão.
 - **Quem atacou rola o dano.** O mestre aplica na ficha, com a armadura e as lesões críticas.
 - **Explosivos, espingarda com cartucho e fogo supressivo** valem como na wiki. Quem está mortalmente ferido rola o Death Save no começo do turno.
+
+Veja o README da pasta.
+
+E instala o **Painel Tático** (`foundry-painel-tatico/`), um HUD de combate na base da tela:
+
+- **O retrato do personagem** é um PNG grande, em pé sobre a barra. Cada estado de ferimento pode ter o seu (do Sem ferimentos ao Morto), e o dono troca pela própria barra. Sem imagem para um estado, entra um efeito automático.
+- **Cada jogador escolhe o visual** no próprio navegador: tema, cores, fonte, tamanho, posição e a ordem das seções. Um código `PT1:…` passa o visual de um jogador para outro.
+- **Rola pela ficha do sistema:** os modos de 2077 do cpr-2077 e o Fluxo de Combate funcionam pelo ATK do painel. O token conectado na NET ganha o selo do NET Architect.
+- **Com o Combat HUD também ligado,** o painel o esconde.
 
 Veja o README da pasta.
 

@@ -47,9 +47,10 @@ function preparar() {
     fs.cpSync(path.join(fonte, pasta), path.join(modulo, pasta), { recursive: true });
   }
   fs.copyFileSync(path.join(fonte, 'module.json'), path.join(modulo, 'module.json'));
-  // NET Architect e Fluxo de Combate: só scripts, então instalar é copiar (o mesmo instalar.mjs do PC e do servidor).
-  // O instalar do Fluxo de Combate tira o Evasion Workflow da pasta; o teste copia de novo (abaixo) para conferir o aviso.
-  for (const pasta of ['foundry-net-architect', 'foundry-fluxo-de-combate']) {
+  // NET Architect, Fluxo de Combate e Painel Tático: só scripts, então instalar é copiar (o mesmo instalar.mjs do PC e
+  // do servidor). O instalar do Fluxo de Combate tira o Evasion Workflow da pasta; o teste copia de novo (abaixo) para
+  // conferir o aviso.
+  for (const pasta of ['foundry-net-architect', 'foundry-fluxo-de-combate', 'foundry-painel-tatico']) {
     execFileSync(process.execPath, ['instalar.mjs'], { cwd: path.join(raiz, pasta), env: { ...process.env, FOUNDRY_DATA: data }, stdio: 'ignore' });
   }
   // Módulos da mesa que o Fluxo de Combate e as armas de 2077 precisam respeitar: o Diwako (com o lib-wrapper), o

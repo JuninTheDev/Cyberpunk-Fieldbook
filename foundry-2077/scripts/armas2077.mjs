@@ -462,6 +462,32 @@ export function noCombatHud(app, html) {
   }
 }
 
+// ---------------- Para outros HUDs (o Painel Tático) ----------------
+// O que a linha da arma mostra: a classe, os modos (com o ativo), o teste Smart e os avisos (sem Smart Link,
+// esfriando, coronha). Os modos ligam e desligam por alternarModo, que grava a mesma flag da ficha.
+const ROTULOS_CURTOS = { power: 'Power', tech: 'Tech', smart: 'Smart' };
+export function paraHud(actor, item) {
+  const p = perfil(item);
+  if (!actor || !p || !p.classe) return null;
+  const ativo = actor.getFlag(SYSTEM_ID, `firetype-${item.id}`);
+  const rotulos = { [MODOS.ricochete]: 'Ricochete', [MODOS.carga]: 'Carga', [MODOS.rajada]: `Rajada ×${p.rajada}`, [MODOS.smart]: 'Smart' };
+  const link = temSmartLink(actor);
+  const alertas = [];
+  if (p.classe === 'smart' && !link) alertas.push({ texto: 'sem Smart Link', dica: 'As armas Smart só funcionam com o cyberware Smart Link.' });
+  const rodada = p.classe === 'tech' ? esfriaAte(item) : null;
+  if (rodada) alertas.push({ texto: `esfriando: rodada ${rodada}`, dica: 'Depois de uma carga, a arma Tech esfria uma rodada.' });
+  return {
+    classe: p.classe,
+    rotulo: ROTULOS_CURTOS[p.classe],
+    dica: DICAS[p.classe === 'power' ? 'ricochete' : p.classe === 'tech' ? 'cargaTech' : 'smart'],
+    smart: p.classe === 'smart' && link ? `${p.smartMulti ? 12 : 10} + 1d10` : null,
+    modos: modosDaArma(p).map(modo => ({ modo, nome: NOMES[modo], rotulo: rotulos[modo], dica: DICAS[modo], icone: ICONES[modo], ativo: ativo === modo })),
+    alertas,
+    coronha: p.coronhaRetratil ? { recolhida: p.coronhaRecolhida } : null
+  };
+}
+export const alternarCoronha = item => item.setFlag(MODULE_ID, 'coronhaRecolhida', !item.getFlag(MODULE_ID, 'coronhaRecolhida'));
+
 // ---------------- Ficha do item: a classe de 2077 ----------------
 // Campos no próprio formulário da ficha (flags.cpr-2077.*): o sistema salva sozinho, como os outros.
 export function naFichaDoItem(sheet, html) {

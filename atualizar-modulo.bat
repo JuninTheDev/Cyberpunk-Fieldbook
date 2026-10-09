@@ -2,12 +2,13 @@
 rem Atualiza os modulos do Foundry com o que esta na wiki:
 rem cpr-2077 (compendios, importador de personagens e avisos da wiki)
 rem NET Architect (pontos de acesso a NET nos Tiles)
-rem e Fluxo de Combate (ataque, esquiva e dano; tira o Evasion Workflow).
+rem Fluxo de Combate (ataque, esquiva e dano; tira o Evasion Workflow)
+rem e Painel Tatico (HUD de combate com o retrato do personagem).
 rem Os compendios ficam travados com o Foundry aberto: feche antes.
 cd /d "%~dp0foundry-2077"
 echo.
-echo  Atualizar os modulos "Cyberpunk RED: 2077", "NET Architect" e "Fluxo de Combate" no Foundry
-echo  ------------------------------------------------------------------------------------------
+echo  Atualizar os modulos "Cyberpunk RED: 2077", "NET Architect", "Fluxo de Combate" e "Painel Tatico" no Foundry
+echo  ----------------------------------------------------------------------------------------------------------
 echo  Feche o Foundry antes de continuar (ou pelo menos o mundo que usa o modulo).
 echo.
 pause
@@ -28,9 +29,11 @@ node ..\foundry-net-architect\instalar.mjs
 if errorlevel 1 goto erro
 node ..\foundry-fluxo-de-combate\instalar.mjs
 if errorlevel 1 goto erro
+node ..\foundry-painel-tatico\instalar.mjs
+if errorlevel 1 goto erro
 echo.
 echo  Pronto. Abra o Foundry e entre no mundo.
-echo  Em Configurar modulos, "Cyberpunk RED: 2077", "NET Architect" e "Fluxo de Combate" precisam estar ativos.
+echo  Em Configurar modulos, ative "Cyberpunk RED: 2077", "NET Architect", "Fluxo de Combate" e "Painel Tatico".
 echo  O Evasion Workflow saiu: o Fluxo de Combate faz o mesmo.
 echo  Os personagens enviados pela wiki aparecem sozinhos para o mestre.
 echo.

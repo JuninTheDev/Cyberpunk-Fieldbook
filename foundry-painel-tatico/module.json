@@ -1,0 +1,18 @@
+{
+  "id": "painel-tatico",
+  "title": "Painel Tático",
+  "description": "HUD de combate para o Cyberpunk RED - CORE: o retrato grande do personagem (um PNG para cada estado de ferimento), HP, armadura, Humanidade, Sorte, Death Save, atributos, armas com os modos do sistema e os de 2077, iniciativa, Facedown, perícias, Role, NET e equipamento. Cada jogador escolhe o próprio estilo (tema, cores, fonte, tamanho, posição e seções). Rola pela ficha do sistema: funciona com o cpr-2077, o Fluxo de Combate e o NET Architect.",
+  "version": "1.0.0",
+  "authors": [{ "name": "Junin" }],
+  "compatibility": { "minimum": "12", "verified": "12.343", "maximum": "13" },
+  "relationships": {
+    "systems": [{ "id": "cyberpunk-red-core", "type": "system", "compatibility": { "minimum": "v0.92.4" } }],
+    "recommends": [
+      { "id": "cpr-2077", "type": "module", "reason": "Os modos de 2077 (Ricochete, Carga e Rajada Tech, Smart) nas armas do painel." },
+      { "id": "fluxo-de-combate", "type": "module", "reason": "Ataque, defesa e dano automáticos a partir do ATK do painel." },
+      { "id": "net-architect", "type": "module", "reason": "O selo NET, a janela da NET e o Scanner pelo painel." }
+    ]
+  },
+  "esmodules": ["scripts/painel-tatico.mjs"],
+  "styles": ["styles/painel-tatico.css"]
+}
