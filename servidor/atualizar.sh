@@ -27,7 +27,10 @@ if [ "$antes" != "$depois" ]; then
   if grep -q '^servidor/instalar\.sh$' <<<"$mudou"; then
     echo "$(date '+%F %T') AVISO: servidor/instalar.sh mudou. Para valer, rode: sudo bash $WIKI/servidor/instalar.sh" >> "$LOG"
   fi
-  if grep -qE '^(foundry-[^/]*/|mestre-npcs\.js$|system-[a-z0-9-]*\.js$|documentos/morana/arquiteturas-da-campanha\.md$)' <<<"$mudou"; then touch "$DADOS/.modulo-pendente"; fi
+  # foundry-sistema/ é o sistema para o Foundry 14 (protótipo): não vai para a mesa do servidor (Foundry 12). Filtrado
+  # numa variável, e não num pipe com grep -q: com pipefail, o SIGPIPE do primeiro grep daria falso negativo.
+  daMesa=$(grep -v '^foundry-sistema/' <<<"$mudou" || true)
+  if grep -qE '^(foundry-[^/]*/|mestre-npcs\.js$|system-[a-z0-9-]*\.js$|documentos/morana/arquiteturas-da-campanha\.md$)' <<<"$daMesa"; then touch "$DADOS/.modulo-pendente"; fi
 fi
 
 # Módulo do Foundry: precisa parar o Foundry por uns segundos, então só com ninguém na mesa.
