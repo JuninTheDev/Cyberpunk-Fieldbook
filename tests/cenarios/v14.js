@@ -966,6 +966,77 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...info, wiki: [status(pedido.id).status, status(caro.id).status, status(caro.id).erro] })];
     });
 
+    await r.passo('migração: "Importar da mesa" monta o ator pela ficha que o Foundry 12 mandou (HP, dinheiro, lesão, itens pelo uid e pelo nome, o pente, o SP que sobrou, os programas no deck)', async () => {
+      // Um personagem da wiki de teste com a criação mínima e a ficha da mesa no formato do cpr-2077 (Foundry 12).
+      const { personagem } = await api('/api/personagens', 'POST', {
+        nome: 'Teste Migração', apelido: 'Foundry 12', resultado: {
+          stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 5 }, derivados: { hp: 40 }, humanidade: { atual: 48 }, dinheiro: { saldo: 500 },
+          pericias: [], veiculos: [],
+          itens: [
+            { uid: 'pacote:armas:0', id: 'core_weapons:heavy-pistol', nome: 'Pistola pesada', qtd: 1 }, { uid: 'pacote:armas:1', id: 'core_ammo:heavy-pistol-basic', nome: 'Munição', qtd: 30 },
+            { uid: 'pacote:armas:2', id: 'core_armor:light-armorjack-body', nome: 'Armorjack', qtd: 1 }
+          ]
+        }
+      });
+      await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
+        ator: 'atorDoF12', nomeAtor: 'Teste Migração', quando: '2026-10-01T22:00:00.000Z',
+        stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 2, BODY: 6, EMP: 4 },
+        hp: { atual: 20, max: 40 }, humanidade: { atual: 41, max: 48 }, sorte: { atual: 3, max: 5 }, sp: { cabeca: 0, corpo: 10 }, dinheiro: 1234, ip: 12, reputacao: 2,
+        role: { nome: 'Solo', rank: 4, habilidades: [['Initiative Reaction', 2], ['Threat Detection', 2]] },
+        pericias: [{ nome: 'Handgun', nivel: 6, stat: 'REF' }, { nome: 'Language (Streetslang)', nivel: 4, stat: 'INT' }],
+        lesoes: ['Broken Leg'],
+        itens: [
+          { nome: 'Heavy Pistol', tipo: 'weapon', qtd: 1, uso: 'equipped', uid: 'pacote:armas:0', dano: '3d6', cdt: 2, pericia: 'Handgun', distancia: true, maos: 1, pente: { atual: 5, max: 8 }, municao: 'Heavy Pistol (Basic)', dentro: ['Heavy Pistol (Basic)'] },
+          { nome: 'Heavy Pistol (Basic)', tipo: 'ammo', qtd: 17, uso: 'carried', uid: 'pacote:armas:1' },
+          { nome: 'Light Armorjack (Body)', tipo: 'armor', qtd: 1, uso: 'equipped', uid: 'pacote:armas:2', cabeca: 0, corpo: 10 },
+          { nome: 'Combat Knife', tipo: 'weapon', qtd: 1, uso: 'carried', uid: '', dano: '1d6', cdt: 2, pericia: 'Melee Weapon', distancia: false, maos: 1, pente: null, municao: '' },
+          { nome: 'Agent', tipo: 'gear', qtd: 1, uso: 'carried', uid: '' },
+          { nome: 'Cyberdeck', tipo: 'cyberdeck', qtd: 1, uso: 'equipped', uid: '', dentro: ['Sword', 'Worm'] },
+          { nome: 'Sword', tipo: 'program', qtd: 1, uso: '', uid: '' }, { nome: 'Worm', tipo: 'program', qtd: 1, uso: '', uid: '' },
+          { nome: 'Kerenzikov', tipo: 'cyberware', qtd: 1, uso: '', uid: '', instalado: true, base: false },
+          { nome: 'Coisa Desconhecida', tipo: 'gear', qtd: 1, uso: 'carried', uid: '' }
+        ]
+      });
+      const info = await edge.evaluate(`(async () => {
+        const { ator, notas } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)}, '');
+        const s = ator.system;
+        const item = nome => ator.items.getName(nome);
+        const pistola = item('Heavy Pistol');
+        const resultado = {
+          hp: [s.hp.value, s.hp.max], hum: [s.humanidade.value, s.humanidade.max], sorte: s.sorte.value, dinheiro: s.dinheiro, ip: s.pontosDeMelhoria, rep: s.reputacao,
+          move: s.atributos.move.valor, ref: s.atributos.ref.valor, pericias: [s.pericias.handgun?.nivel, s.pericias['language-streetslang']?.nivel], habilidades: s.role.habilidades,
+          lesoes: ator.items.filter(i => i.type === 'lesao').map(i => i.name),
+          pistola: [pistola.system.equipada, pistola.system.pente.value, pistola.municaoCarregada?.name, pistola.municaoCarregada?.system.quantidade],
+          faca: item('Combat Knife')?.system.equipada, agent: item('Agent')?.system.uso, sp: s.armadura.corpo.sp,
+          deck: item('Cyberdeck')?.instalados.map(i => i.name), ker: item('Kerenzikov')?.system.instalado, notas
+        };
+        await ator.delete();
+        return resultado;
+      })()`);
+      const ok = info.hp.join() === '20,40' && info.hum.join() === '41,48' && info.sorte === 3 && info.dinheiro === 1234 && info.ip === 12 && info.rep === 2
+        && info.move === 2 && info.ref === 8 && info.pericias.join() === '6,4' && info.habilidades['Initiative Reaction'] === 2 && info.lesoes.join() === 'Perna quebrada'
+        && info.pistola.join() === 'true,5,Heavy Pistol (Basic),17' && info.faca === false && info.agent === 'carregando' && info.sp === 10
+        && info.deck.join() === 'Sword,Worm' && info.ker === true && info.notas.length === 1 && info.notas[0].startsWith('Coisa Desconhecida:');
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('migração: a ficha da mesa que este sistema manda volta igual pelo "Importar da mesa" (ida e volta)', async () => {
+      const info = await edge.evaluate(`(async () => {
+        await game.system.api.wiki.mandarPendentes();
+        const original = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        const resumo = a => {
+          const rifle = a.items.getName('Assault Rifle');
+          return { hp: a.system.hp.value, dinheiro: a.system.dinheiro, hum: a.system.humanidade.value, itens: a.items.map(i => i.name).sort(), rifle: [rifle.system.pente.value, rifle.system.pente.max, rifle.instalados.map(i => i.name)] };
+        };
+        const antes = resumo(original);
+        const { ator, notas } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(solo.id)}, '');
+        const depois = resumo(ator);
+        await ator.delete();
+        return { antes, depois, notas };
+      })()`);
+      return [JSON.stringify(info.antes) === JSON.stringify(info.depois) && info.notas.length === 0, JSON.stringify(info)];
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

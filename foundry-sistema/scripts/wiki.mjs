@@ -318,3 +318,121 @@ export async function entregarPedidos() {
   }
   return resultados;
 }
+
+// ---------------- Importar da mesa (a migração do Foundry 12) ----------------
+// A campanha migra pela ficha "Na mesa" que o Foundry 12 (o módulo cpr-2077) manda para a wiki: o ator sai com o estado
+// de jogo (HP, Humanidade, Sorte, dinheiro, IP, reputação, Role, perícias, lesões e os itens como estão: equipados,
+// guardados, com o pente carregado, com o SP que sobrou, com o que está dentro de cada um). Os STATs base vêm da criação:
+// a mesa manda os de agora, já com a armadura e as lesões, que aqui voltam a valer pelos itens.
+// Cada item acha o catálogo pelo uid da wiki (da criação, de um pedido ou da família do Nomad) ou, sem uid (o que o
+// mestre deu no Foundry 12), pelo nome do CORE, do mesmo tipo.
+const TIPO_DA_WIKI = Object.fromEntries(Object.entries(TIPO_NA_WIKI).map(([nosso, doCore]) => [doCore, nosso]));
+const USO_DA_WIKI = Object.fromEntries(Object.entries(USO_NA_WIKI).map(([nosso, doCore]) => [doCore, nosso]));
+
+function idNoCatalogo(catalogo, doc, item) {
+  const r = doc.resultado || {};
+  if (item.uid) {
+    const daCriacao = (r.itens || []).find(entrada => entrada.uid === item.uid);
+    if (catalogo[daCriacao?.id]) return daCriacao.id;
+    const doPedido = (doc.pedidos || []).flatMap(pedido => pedido.itens || []).find(linha => linha.uid === item.uid);
+    if (catalogo[doPedido?.id]) return doPedido.id;
+    const daFamilia = (r.veiculos || []).flatMap(v => [['core_vehicles', v], ...(v.upgrades || []).map(u => ['core_upgrades', u])]).find(([, entrada]) => entrada.uid === item.uid);
+    const idDaFamilia = daFamilia && `${daFamilia[0]}:${slug(daFamilia[1].foundry?.nome || daFamilia[1].nome)}`;
+    if (catalogo[idDaFamilia]) return idDaFamilia;
+  }
+  const tipo = TIPO_DA_WIKI[item.tipo];
+  return Object.entries(catalogo).find(([, base]) => base.name === item.nome && (!tipo || base.type === tipo))?.[0] ?? null;
+}
+
+export async function importarDaMesa(id, donoId = '') {
+  if (!game.user.isGM) throw new Error('Só o mestre importa personagens da wiki.');
+  const catalogo = await carregarCatalogo();
+  const { personagem: doc } = await wikiFetch(`/api/personagens/${id}`);
+  const m = doc.mesa;
+  if (!Array.isArray(m?.itens)) throw new Error('Este personagem ainda não tem a ficha da mesa na wiki: o Foundry 12 manda quando o ator muda.');
+  const r = doc.resultado || {};
+  const notas = [];
+
+  const statBase = chave => Number(r.stats?.[chave.toUpperCase()]) || Number(m.stats?.[chave.toUpperCase()]) || 1;
+  const pericias = {};
+  for (const p of m.pericias || []) {
+    const par = periciaDaWiki({ nome: p.nome, nivel: Number(p.nivel) || 0 });
+    if (par) pericias[par[0]] = par[1]; else notas.push(`Perícia ${p.nome} não existe neste sistema.`);
+  }
+
+  // Os itens, com o estado da mesa. As linhas que acharam o catálogo ficam na mesma ordem dos dados criados.
+  const linhas = [];
+  const dados = [];
+  for (const item of m.itens) {
+    const idDoItem = idNoCatalogo(catalogo, doc, item);
+    if (!idDoItem) { notas.push(`${item.nome}: não achei no catálogo deste sistema; crie à mão.`); continue; }
+    const data = foundry.utils.deepClone(catalogo[idDoItem]);
+    const s = data.system;
+    data.name = item.nome || data.name;
+    if (item.uid) foundry.utils.setProperty(data, `flags.${SISTEMA}.wikiUid`, item.uid);
+    if (data.type === 'municao') s.quantidade = Math.max(0, Number(item.qtd) || 0);
+    else if (EM_PILHA.includes(data.type)) s.quantidade = Math.max(1, Number(item.qtd) || 1);
+    if (data.type === 'arma' || data.type === 'armadura') s.equipada = item.uso === 'equipped';
+    else if ('uso' in s && USO_DA_WIKI[item.uso]) s.uso = USO_DA_WIKI[item.uso];
+    if (data.type === 'arma' && item.pente) s.pente.value = Math.max(0, Number(item.pente.atual) || 0);
+    if (data.type === 'armadura') {
+      for (const local of ['cabeca', 'corpo']) if (s.sp[local].max) s.sp[local].value = Math.min(s.sp[local].max, Math.max(0, Number(item[local]) || 0));
+    }
+    // O Foundry 12 já descontou a Humanidade do cyberware: o valor vem da mesa, e o instalado fica como estava.
+    if (data.type === 'cyberware') s.instalado = Boolean(item.instalado);
+    linhas.push(item);
+    dados.push(data);
+  }
+  // As lesões, pelo nome do CORE (o original das traduzidas) ou pelo nome daqui.
+  for (const nome of m.lesoes || []) {
+    const lesao = Object.values(catalogo).find(base => base.type === 'lesao' && (base.flags?.[SISTEMA]?.nomeOriginal === nome || base.name === nome));
+    if (lesao) dados.push(foundry.utils.deepClone(lesao)); else notas.push(`Lesão ${nome}: não achei na tabela deste sistema.`);
+  }
+
+  const ownership = { default: 0, ...(donoId ? { [donoId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } : {}) };
+  const origem = `ator ${foundry.utils.escapeHTML(String(m.ator || '?'))}, ${m.quando ? new Date(m.quando).toLocaleString('pt-BR') : 'sem data'}`;
+  const ator = await Actor.implementation.create({
+    name: doc.nome || m.nomeAtor || 'Sem nome', type: 'personagem', ownership,
+    system: {
+      atributos: Object.fromEntries(ATRIBUTOS.map(chave => [chave, { valor: statBase(chave) }])),
+      hp: { value: Number(m.hp?.atual) || 0 }, humanidade: { value: Number(m.humanidade?.atual) || 0 }, sorte: { value: Number(m.sorte?.atual) || 0 },
+      pericias,
+      role: {
+        nome: m.role?.nome || r.role?.nome || '', rank: Number(m.role?.rank) || 4,
+        habilidades: Object.fromEntries((m.role?.habilidades || []).map(([nome, rank]) => [nome, Number(rank) || 0]))
+      },
+      dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0,
+      notas: `<p><i>Migrado da ficha da mesa do Foundry 12 (${origem}) em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`
+    },
+    flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), origem: 'mesa' } } }
+  });
+  const criados = await ator.createEmbeddedDocuments('Item', dados);
+
+  // O que está dentro de cada item (programa no deck, acessório na arma, upgrade no veículo) e a munição no pente, pelos
+  // nomes que a mesa manda. Cada item de dentro vai para um pai só.
+  const mudancas = [];
+  const usados = new Set();
+  const livrePorNome = (nome, aceita) => criados.find(item => !usados.has(item.id) && item.name === nome && aceita(item));
+  let opcoesDeCyberware = false;
+  linhas.forEach((item, indice) => {
+    const pai = criados[indice];
+    if (pai.type === 'arma' && item.municao) {
+      const municao = livrePorNome(item.municao, outro => outro.type === 'municao');
+      if (municao) mudancas.push({ _id: pai.id, 'system.carregada': municao.id });
+    }
+    for (const nome of (item.dentro || []).filter(nome => nome !== item.municao)) {
+      if (pai.type === 'cyberware') { opcoesDeCyberware = true; continue; }
+      const filho = livrePorNome(nome, outro => 'instaladoEm' in outro.system && outro.id !== pai.id);
+      if (!filho) continue;
+      usados.add(filho.id);
+      mudancas.push({ _id: filho.id, 'system.instaladoEm': pai.id });
+    }
+  });
+  if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
+  if (opcoesDeCyberware) notas.push('Opções de cyberware: entram instaladas, mas este sistema ainda não liga a opção à base.');
+
+  const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
+  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues } })
+    .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
+  return { ator, notas };
+}

@@ -57,10 +57,9 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [x] **Volta da ficha para a wiki e pedidos da loja** (bloqueador da migração):
   - [x] a ficha volta para a wiki a cada mudança ("Na mesa"), no formato do cpr-2077 (Ciclo 13);
   - [x] a entrega dos pedidos da loja aprovados pelo mestre (Ciclo 14).
-- [ ] **O estado de jogo da campanha** (bloqueador da migração): o importador traz o personagem como foi criado na
-  wiki; o HP, as lesões, o dinheiro e o que os personagens ganharam jogando estão nos atores do Foundry 12 (e, em parte,
-  na ficha "Na mesa" da wiki). Precisa de um caminho decidido com o usuário: ver o MIGRATION_STATUS.
-- [ ] **Da wiki:** botão "Importar da wiki" na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
+- [x] **O estado de jogo da campanha** (bloqueador da migração): "Importar da mesa" monta o ator pela ficha que o
+  Foundry 12 manda para a wiki (Ciclo 15). Procedimento no MIGRATION_STATUS.
+- [ ] **Da wiki:** a janela "Personagens da wiki" (Importar, Importar da mesa, aprovar pedidos) na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
   ator); retrato.
 - [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
@@ -98,6 +97,9 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [ ] Ícones próprios no lugar dos genéricos do Foundry.
 
 ## Decisões tomadas
+
+- **2026-10-11, migração da campanha:** pela ficha "Na mesa" que o Foundry 12 manda para a wiki ("Importar da
+  mesa"), e não pela conversão dos atores do Foundry 12. Decisão do usuário.
 
 - **2026-10-11, arma branca contra SP ímpar:** vale SP efetivo 6 para SP 11, como o CORE e o Fluxo de Combate (o que a
   mesa usa hoje). A wiki diz "ignoram metade do SP (arredondado p/ cima)", e o texto também cabe na leitura 5.

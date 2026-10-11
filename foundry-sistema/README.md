@@ -83,6 +83,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
   A wiki marca o personagem como "no Foundry".
 - **Na mesa:** a cada mudança num personagem que veio da wiki (HP, dinheiro, munição, itens, lesões…), o mestre ativo manda a ficha de volta, 4 s depois da última mudança, e a wiki a mostra no lugar da ficha da criação. O formato é o mesmo do módulo cpr-2077 do Foundry 12, então a wiki não muda. Pela macro: `game.system.api.wiki.mandarFicha(ator)`; para mandar já o que está esperando, `mandarPendentes()`.
+- **Importar da mesa** (a migração do Foundry 12): `game.system.api.wiki.importarDaMesa(id, donoId)` monta o ator pela ficha "Na mesa" que o Foundry 12 mandou para a wiki, com o estado de jogo:
+  - HP, Humanidade, Sorte, dinheiro, IP, reputação, a Role, as perícias e as lesões (pelo nome do CORE);
+  - os itens como estavam: equipados ou guardados, o pente carregado e com qual munição, o SP que sobrou, o cyberware instalado, o que está dentro do deck, da arma e do veículo;
+  - cada item acha o catálogo pelo uid da wiki (da criação, de um pedido, da família do Nomad) ou, sem uid, pelo nome do CORE. O que não achar vira aviso;
+  - os STATs base vêm da criação: a ficha da mesa manda os de agora, já com a armadura e as lesões, que aqui voltam pelos itens.
 - **Pedidos da loja:** o jogador pede na loja da wiki e o mestre aprova na página do personagem, na wiki. A cada minuto, o mestre ativo entrega o aprovado: cria os itens (no lugar e com a munição que o jogador pediu), desconta o dinheiro e marca o pedido como entregue. O cyberware chega sem instalar (instale pela ficha, que rola a Humanidade). Sem dinheiro na mesa, o pedido fica aprovado com o erro, e a wiki mostra "Tentar de novo". Cada item leva o uid do pedido, então nada sai em dobro. Pela macro: `game.system.api.wiki.entregarPedidos()`. Tudo o que a loja da wiki vende (o CORE e o conteúdo de 2077) existe aqui. Um item que um dia não existir vira aviso e não conta como entregue para a wiki.
 
 ## Configurações (Configurações → Sistema)

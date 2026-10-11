@@ -44,8 +44,9 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 1. ~~O importador descarta itens~~: resolvido nos ciclos 8 a 12. Tudo o que a loja da wiki vende entra na ficha, e o
    que um dia não existir vira aviso, sem contar como entregue. Falta só pôr as opções de cyberware na base (P3).
 2. ~~Volta da ficha e pedidos~~: resolvido nos ciclos 13 e 14.
-3. **O estado de jogo da campanha.** O importador traz o personagem como foi criado na wiki (o `resultado` do
-   criador). O que mudou jogando está nos atores do Foundry 12: o HP, as lesões, o dinheiro, os itens ganhos ou
+3. ~~O estado de jogo da campanha~~: resolvido no ciclo 15 pelo "Importar da mesa" (decisão do usuário: pela ficha
+   "Na mesa"). Veja o procedimento abaixo. O que valia antes da decisão: o importador trazia o personagem como foi
+   criado na wiki (o `resultado` do criador). O que mudou jogando está nos atores do Foundry 12: o HP, as lesões, o dinheiro, os itens ganhos ou
    perdidos, a munição, o cyberware instalado depois. Dois caminhos, para decidir com o usuário (a migração da campanha
    exige backup e autorização):
    - **pela ficha "Na mesa" da wiki**, que o Foundry 12 já manda: tem HP, Humanidade, dinheiro, lesões, STATs,
@@ -553,3 +554,54 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
   - o crossover entre campanhas: o sistema não manda a campanha nos pedidos nem na ficha da mesa.
 - **Bloqueador que ficou à vista:** o estado de jogo da campanha. Está descrito no bloqueador 3, com os dois caminhos,
   para o usuário decidir.
+- **Commit:** `2f62c77`.
+
+### Ciclo 15 (2026-10-11): Importar da mesa, a migração do estado de jogo (P2, bloqueador da migração)
+
+O usuário decidiu migrar pela ficha "Na mesa" (ROADMAP, decisões).
+
+- **Implementado:** `importarDaMesa(id, donoId)` monta o ator pela ficha da mesa que a wiki guarda.
+  - **Da mesa:** HP, Humanidade, Sorte, dinheiro, IP, reputação, a Role com as habilidades e as perícias pelo nome do
+    CORE, inclusive as de família;
+  - **as lesões:** pelo nome do CORE, que é o original das traduzidas ("Broken Leg" vira "Perna quebrada");
+  - **os STATs base:** vêm da criação, porque a mesa manda os de agora (com a armadura e as lesões), e aqui eles voltam
+    pelos itens;
+  - **cada item acha o catálogo:** pelo uid da wiki (da criação, de um pedido, da família do Nomad) ou, sem uid (o que o
+    mestre deu no Foundry 12), pelo nome do CORE e pelo tipo;
+  - **o estado de cada item:** equipado ou guardado, o pente e a munição carregada (pelo nome), o SP que sobrou na
+    armadura, o cyberware instalado (sem descontar a Humanidade de novo) e o que está dentro do deck, da arma e do
+    veículo (pelos nomes de `dentro`). As opções de cyberware entram instaladas, mas sem a ligação com a base (aviso);
+  - o que não achar vira aviso, e a wiki passa a apontar para o ator novo (com o `entregues` só do que entrou).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 31 de 31;
+  - G4: 49 de 49, cerca de 52 s. Passos novos:
+    - **uma ficha da mesa escrita no formato do Foundry 12:** itens com e sem uid, a pistola com 5 balas, a armadura com
+      SP 10, o deck com dois programas, o Kerenzikov instalado, "Broken Leg" e um item desconhecido. Resultado:
+      - HP 20/40 e Humanidade 41/48, com 1.234eb, IP 12 e reputação 2;
+      - MOVE 2 (6 da criação, menos 4 da Perna quebrada) e REF 8;
+      - a pistola equipada com 5 balas, carregada da munição de 17; a faca carregando; o Agent carregando; SP 10;
+      - Sword e Worm no deck, o Kerenzikov instalado, e um aviso só, o do item desconhecido;
+    - **ida e volta:** o Solo importado, depois dos pedidos, sai da ficha da mesa igual ao original (HP, dinheiro,
+      Humanidade, os 23 itens, o rifle com o carregador e o pente);
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Limitações:**
+  - com duas pilhas da mesma munição, a carregada é a primeira pelo nome;
+  - um STAT mudado à mão no Foundry 12 não vem (vale o da criação);
+  - as notas do ator, os efeitos ligados à mão e os itens renomeados no Foundry 12 sem uid não acham o catálogo pelo
+    nome e viram aviso.
+
+## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
+
+1. **Backup:** o mundo do Foundry 12 inteiro (a pasta do mundo no servidor) e os dados da wiki (os personagens).
+2. **No Foundry 12:** confirme que "Mandar a ficha para a wiki" está ligado e abra o mundo como mestre. Ao entrar, o
+   módulo manda a ficha de todos os atores da wiki. Confira na wiki que cada personagem mostra "Na mesa" com a data de
+   hoje.
+3. **Feche o mundo do Foundry 12,** para ele não mandar mais a ficha da mesa.
+4. **No Foundry 14, num mundo novo com este sistema:** configure o endereço da wiki. Para cada personagem, rode como
+   mestre `game.system.api.wiki.importarDaMesa('<id na wiki>', '<id do usuário dono>')` e leia os avisos: um item que
+   não achou o catálogo precisa ser criado à mão.
+5. **Confira cada ficha** contra a da mesa na wiki: HP, dinheiro, itens, munição, lesões e Humanidade.
+6. **Fora deste procedimento:** os NPCs, as cenas, os diários e as macros do mundo antigo (o Foundry 14 abre mundos do
+   12, mas os atores e os itens do CORE não existem neste sistema).
