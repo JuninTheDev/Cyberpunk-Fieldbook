@@ -76,8 +76,15 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
   cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.
-- [ ] **Armas de 2077:** os modos de cada classe (o ricochete da Power, a carga Tech, o teste Smart). As armas já
-  entram com a classe e as opções na flag `arma2077` (Ciclo 12).
+- [x] **Armas de 2077, os modos de cada classe** (bloqueador da migração, Ciclo 17): o Ricochete da Power (DV da tabela
+  de autofogo, um dado a menos, +2 do Ballistic Coprocessor); a Carga e a Rajada Tech (a janela pergunta a cobertura, o
+  que atravessa, a ablação 4 ou 2, as balas da rajada de cada arma, a arma que esfria uma rodada); o teste Smart (10 ou
+  12 + 1d10, só com o Smart Link), com as três configurações do cpr-2077 (os mesmos padrões).
+- [ ] **Armas de 2077, as opções de cada modelo:** os dois canos da Palica (12 + 1d10, dois cartuchos), os dois alvos da
+  Kappa, a coronha recolhida da Dian (−1), a carga da Satara (os dois cartuchos, 4d6), a Burya (todo tiro é carga), o
+  supressivo da Senkoh pela carga (as 30 balas), as 7 balas do autofogo da Lexington, o +1 da Nowaki, da Masamune e da
+  Kyubi entre 13 e 50 m, e os dois cartuchos juntos da Testera. Hoje a descrição de cada arma diz que isso é com o
+  mestre, e a carga com cartucho é recusada com aviso.
 - [ ] **Cyberware que é arma** (Wolvers, Mantis Blades, Gorilla Arms, o lança-granadas embutido): hoje é só cyberware e
   não ataca.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e

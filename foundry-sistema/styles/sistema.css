@@ -45,11 +45,14 @@
 .cpr-fieldbook table.lista th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: var(--cprf-texto-fraco); }
 .cpr-fieldbook table.lista td { padding: 0.25rem 0.3rem; border-top: 1px solid var(--cprf-borda); vertical-align: middle; }
 .cpr-fieldbook table.lista td.num { text-align: center; font-weight: 700; }
-.cpr-fieldbook table.lista td.nome { display: flex; align-items: center; gap: 0.35rem; }
+.cpr-fieldbook table.lista td.nome { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
 .cpr-fieldbook table.lista td.nome img, .cpr-fieldbook .itens img { width: 24px; height: 24px; border: none; }
-.cpr-fieldbook table.lista td.acoes .botoes { display: flex; justify-content: flex-end; gap: 0.25rem; }
+.cpr-fieldbook table.lista td.acoes .botoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.25rem; }
 .cpr-fieldbook table.lista td.acoes button { flex: 0 0 auto; width: auto; min-width: 0; height: 1.7rem; padding: 0 0.45rem; font-size: 0.85rem; }
 .cpr-fieldbook table.lista tr.guardada { opacity: 0.55; }
+/* Armas de 2077: a classe e os avisos (sem Smart Link, esfriando). */
+.cpr-fieldbook .classe-2077 { color: var(--cprf-ciano); }
+.cpr-fieldbook .aviso-2077 { color: var(--cprf-vermelho); font-weight: 600; }
 .cpr-fieldbook small { color: var(--cprf-texto-fraco); }
 .cpr-fieldbook .itens { list-style: none; margin: 0; padding: 0; }
 .cpr-fieldbook .itens li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; border-top: 1px solid var(--cprf-borda); }

@@ -1,6 +1,7 @@
 // Ficha do personagem (ApplicationV2 do Foundry 14): cabeçalho com os vitais, e abas de atributos e combate, perícias,
 // equipamento, cyberware e notas. Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { acoesDe2077 } from './combate.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -56,10 +57,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const s = ator.system;
     const fonte = ator._source.system;
     const itens = tipo => ator.items.filter(item => item.type === tipo).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'pt-BR'));
+    // Armas de 2077: os botões dos modos, os avisos e o teste Smart no lugar de REF + perícia (combate.mjs).
     const linhaArma = arma => {
-      const { partes } = arma.partesDoAtaque();
+      const de2077 = acoesDe2077(arma);
+      const { partes } = arma.partesDoAtaque(null, { smart: de2077.smart });
       return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
-        classe2077: CLASSES_2077[arma.getFlag(SISTEMA, 'arma2077')?.classe] ?? '' };
+        classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, avisos2077: de2077.avisos, smart: de2077.smart };
     };
     // Perícias: as comuns sempre (nível 0 também), e as de família que o personagem tem, no grupo da família.
     const linhaPericia = id => {

@@ -33,12 +33,16 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   passo. Solto no console, o G4 o pegaria como problema.
 - **Teste de uma correção** é provado falhando sem ela. A mutação é desfeita antes do commit.
 - **Código para o navegador** (`edge.evaluate`) vai dentro de um template literal do Node: escreva `\\s` para chegar
-  `\s` ao navegador. Um `\s` sozinho vira `s`. Ao editar o cenário por `node -e` no Git Bash, as barras invertidas
-  chegam pela metade: edite essas linhas no editor.
+  `\s` ao navegador. Um `\s` sozinho vira `s`. Ao editar o cenário por `node -e` ou por heredoc no Git Bash, as barras
+  invertidas chegam pela metade: edite essas linhas no editor, ou escreva o script num arquivo.
 - **Ordem do que se cria:** o Foundry não garante que `createEmbeddedDocuments` devolva os documentos na ordem dos dados.
   Ache cada um pelo tipo, pelo nome ou por um `_id` escolhido antes (`keepId: true`).
-- **Janela fechando:** no Edge sem janela, uma janela do Foundry fica no DOM com a classe `minimizing` por um tempo
-  depois do clique. Para contar janelas abertas, use `:not(.minimizing)`.
+- **Janela fechando:** no Edge sem janela, uma janela do Foundry fica no DOM com a classe `minimizing` por até 1 s
+  depois do clique (o `close` espera a animação). Para contar janelas abertas, e para achar a que vai receber o
+  clique, use `:not(.minimizing)`: a janela que fecha também tem os botões, e o clique nela se perde.
+- **Limpeza no `finally`:** o passo que cria combate, marca alvo ou abre janela desfaz isso num `finally`. Uma falha no
+  meio não pode arrastar os passos seguintes: no ciclo 17, um combate e um alvo marcado que sobraram derrubaram três
+  passos de fogo supressivo e de turnos.
 
 ## Build
 

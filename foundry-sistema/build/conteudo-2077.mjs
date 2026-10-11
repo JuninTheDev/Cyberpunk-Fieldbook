@@ -2,8 +2,9 @@
 // netrunning (cyberdecks, quickhacks e daemons). Vem da própria wiki (system-2077.js e system-net.js), os mesmos dados de
 // que o módulo cpr-2077 gera os compêndios do Foundry 12 (foundry-2077/build): as regras de conversão são as dele, e os
 // ids são os da loja da wiki ("armas-2077:<nome>", "cyberware-2077:<nome>", "netrunning-2077:<nome>").
-// As regras próprias de 2077 (ricochete, carga Tech, teste Smart) ainda não estão neste sistema: a classe e as opções de
-// cada arma ficam na flag arma2077, para quando estiverem.
+// A classe e as opções de cada arma ficam na flag arma2077, que as regras de 2077 do sistema leem (regras.mjs: o
+// ricochete, a carga e a rajada Tech e o teste Smart). As opções próprias de alguns modelos (os dois canos da Palica, os
+// dois alvos da Kappa, a coronha da Dian, a carga da Satara) ainda não têm regra no sistema.
 // Uso: chamado por build/conteudo.mjs.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -59,6 +60,13 @@ const REGRA_DA_CLASSE = {
   tech: 'Tech: a carga Tech (atravessa cobertura e abla a armadura). Usa flechettes.',
   smart: 'Smart: só dispara com o cyberware Smart Link; o tiro único é o teste Smart (10 + 1d10).'
 };
+// O que os botões da arma fazem neste sistema. As regras próprias de cada modelo (no texto da arma) ficam com o mestre.
+const NESTE_SISTEMA = {
+  power: 'o botão Ricochete faz o tiro que ricocheteia (DV da tabela de autofogo, um dado a menos de dano; +2 com o Ballistic Coprocessor). As armas que só disparam rajadas não ricocheteiam.',
+  tech: 'o botão Carga (e o Rajada, nas que fazem rajada) faz a carga Tech: pergunta a cobertura do alvo, deixa nela o que não atravessa e abla 4 de SP (2 através de cobertura). A arma esfria uma rodada.',
+  smart: 'o tiro é o teste Smart (pela configuração do mundo, no lugar de REF + perícia ou num botão à parte); sem o Smart Link instalado, a arma não dispara (ou dispara como comum, pela configuração).'
+};
+const SO_COM_O_MESTRE = 'O que o texto acima diz de próprio deste modelo, o mestre resolve.';
 // Armas que o livro só descreve em texto: o dano e a DV do autofogo seguem a Tsunami Arms Helix do livro-base.
 const SO_AUTOFOGO = new Set(['Constitutional Arms M2067 Defender', 'Militech Mk.31 HMG']);
 
@@ -82,7 +90,7 @@ function arma(raw, grupo) {
     name: raw.name, type: 'arma', img: 'icons/svg/target.svg',
     system: {
       descricao: `<p><b>${raw.kind}</b> · qualidade ${raw.quality}</p>${paragrafo(raw.text)}${paragrafo(recursos, 'Recursos')}${paragrafo(REGRA_DA_CLASSE[classe], 'Classe')}`
-        + `${paragrafo('as regras de 2077 (ricochete, carga Tech e teste Smart) ainda não estão neste sistema: veja a página de 2077 da wiki.', 'Neste sistema')}`
+        + `${paragrafo(`${NESTE_SISTEMA[classe]} ${SO_COM_O_MESTRE}`, 'Neste sistema')}`
         + `${paragrafo(raw.tip, 'Na mesa')}${fonteNaWiki(pagina)}`,
       tipo, pericia, dano: soAutofogo ? '2d6' : (String(raw.damage).match(/\d+d6/) || ['3d6'])[0], cdt: Number(raw.rof) || 1,
       pente: { value: 0, max: parseInt(raw.magazine, 10) || 0 }, municoes, aDistancia: true, maos: parseInt(raw.hands, 10) || 1,
@@ -100,8 +108,10 @@ function arma(raw, grupo) {
           smartVariasBalas: /12 \+ 1d10/.test(textoCompleto) && !/dois canos/i.test(textoCompleto),
           smartDoisAlvos: classe === 'smart' && /dois alvos/i.test(textoCompleto),
           smartDoisCanos: classe === 'smart' && /dois canos/i.test(textoCompleto),
-          // Tech: a rajada da carga (0: só tiro único).
+          // Tech: a rajada da carga (o multiplicador máximo; 0: só tiro único) e as balas que ela gasta, quando o texto diz
+          // (a Kenshin 2, a Omaha 3, a Quasar 10, a Senkoh as 30 do pente); sem o número, as 10 do autofogo.
           techRajada: classe === 'tech' ? Number((recursos.match(/carga Tech \(rajada de (\d)\)/i) || [])[1] || 0) : 0,
+          techBalas: classe === 'tech' ? Number((raw.text.match(/(?:dispara|exige) (?:as )?(\d+) balas/i) || [])[1] || 0) : 0,
           // Power: as que só disparam rajadas de três não ricocheteiam.
           semRicochete: classe === 'power' && (/só rajada de três balas/i.test(recursos) || pericia === 'autofire'),
           coronhaRetratil: /coronha recolhida/i.test(textoCompleto)

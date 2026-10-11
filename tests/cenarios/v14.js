@@ -544,6 +544,263 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // ---------- Armas de 2077 (a página de 2077 da wiki) ----------
+    // Ajudantes no navegador do mestre: pôr uma arma de 2077 (e a munição, carregada) na Atiradora; a linha dela na
+    // ficha; os avisos que o ataque daria; a fórmula e as partes do último teste de ataque.
+    await edge.evaluate(`(() => {
+      window.__arma2077 = async (idArma, idMunicao, quantidade) => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const arma = foundry.utils.deepClone(cat[idArma]);
+        arma.system.equipada = true;
+        const municao = foundry.utils.deepClone(cat[idMunicao]);
+        municao.system.quantidade = quantidade;
+        const criados = await __ator('Atiradora').createEmbeddedDocuments('Item', [arma, municao]);
+        const pronta = criados.find(i => i.type === 'arma');
+        await pronta.recarregar();
+        return { arma: pronta, municao: criados.find(i => i.type === 'municao') };
+      };
+      window.__cyber2077 = async id => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const [item] = await __ator('Atiradora').createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat[id])]);
+        await __ator('Atiradora').instalarCyberware(item, { rolar: false });
+        return item;
+      };
+      window.__tirarCyber = async item => { await __ator('Atiradora').desinstalarCyberware(item); await item.delete(); };
+      window.__linhaDaArma = arma => document.querySelector('.application.ficha-personagem tr[data-item-id="' + arma.id + '"]');
+      window.__comAvisos = async acao => {
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try { return { r: await acao(), avisos }; } finally { delete ui.notifications.warn; }
+      };
+      window.__ultimoTeste = () => {
+        const m = game.messages.contents.findLast(x => x.getFlag('${S}', 'teste')?.ataque);
+        return { formula: m.rolls[0].formula, partes: [...new DOMParser().parseFromString(m.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.trim()) };
+      };
+      window.__armaduraDoAlvo = sp => __ator('Alvo').items.getName('Light Armorjack (Body)').update({ 'system.sp.corpo.value': sp });
+      return true;
+    })()`);
+
+    await r.passo('arma Smart (2077): sem o Smart Link não dispara nem gasta bala; com ele, o tiro é o teste Smart 12 + 1d10 (+1 da qualidade) no lugar de REF + perícia; o mirado continua REF + perícia; na configuração "alternativa", só pelo botão Smart', async () => {
+      // Yukimura (Smart de três balas, excelente) contra o Alvo a 10 m: DV 15 (Pistol). Com o Smart Link: d10 5 → 12 + 1 + 5
+      // = 18, acerta (2d6: 5 + 4 = 9, a armadura segura). Mirado na cabeça: d10 9 → 8 + 4 + 1 − 8 + 9 = 14, erra.
+      // Alternativa: o "Atacar" d10 2 → 8 + 4 + 1 + 2 = 15, erra; o botão Smart d10 4 → 12 + 1 + 4 = 17, acerta (1 + 1).
+      await fixar(edge, [[5, 10], [5, 6], [4, 6], [9, 10], [2, 10], [4, 10], [1, 6], [1, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const alvo = __token('Alvo');
+        await __ator('Alvo').update({ 'system.hp.value': 45 });
+        await __armaduraDoAlvo(11);
+        const { arma, municao } = await __arma2077('armas-2077:arasaka-hjke-11-yukimura', 'core_ammo:medium-pistol-basic', 30);
+        await a.sheet.render({ force: true });
+        await __esperar(() => __linhaDaArma(arma));
+        const linha = () => ({ avisos: [...(__linhaDaArma(arma)?.querySelectorAll('.aviso-2077') ?? [])].map(e => e.textContent.trim()), ataque: __linhaDaArma(arma)?.querySelector('td.num')?.textContent.trim(),
+          dica: __linhaDaArma(arma)?.querySelector('td.num')?.dataset.tooltip ?? '', botoes: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-modo]') ?? [])].map(b => b.dataset.modo) });
+        const semLink = { ...(await __comAvisos(() => arma.atacar({ alvo }))), pente: arma.system.pente.value, ficha: linha() };
+        const link = await __cyber2077('cyberware-2077:smart-link');
+        await __esperar(() => !linha().avisos.length);
+        const ficha = linha();
+        const tiro = await arma.atacar({ alvo });
+        const teste = __ultimoTeste();
+        const mirado = await arma.atacar({ alvo, local: 'cabeca' });
+        const testeMirado = __ultimoTeste();
+        await game.settings.set('${S}', 'smartAtaque', 'alternativa');
+        await a.sheet.render();
+        await __esperar(() => linha().botoes.includes('smart'));
+        const fichaAlternativa = linha();
+        const comum = await arma.atacar({ alvo });
+        const peloBotao = await arma.atacar({ alvo, modo: 'smart' });
+        await game.settings.set('${S}', 'smartAtaque', 'substitui');
+        const resultado = {
+          semLink: { r: semLink.r, avisos: semLink.avisos, pente: semLink.pente, ficha: semLink.ficha }, ficha, fichaAlternativa,
+          tiro: { ataque: tiro.ataque, descricao: tiro.descricao, notas: tiro.notas, linhas: __linhas(tiro), teste },
+          mirado: { ataque: mirado.ataque, descricao: mirado.descricao, formula: testeMirado.formula },
+          comum: { ataque: comum.ataque, descricao: comum.descricao }, peloBotao: { ataque: peloBotao.ataque, descricao: peloBotao.descricao },
+          pente: arma.system.pente.value, sobrou: window.__fila.length
+        };
+        await a.sheet.close();
+        await __tirarCyber(link);
+        await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
+        return resultado;
+      })()`);
+      const { semLink, ficha, fichaAlternativa, tiro, mirado, comum, peloBotao } = info;
+      const [l] = tiro.linhas;
+      const ok = semLink.r === null && semLink.pente === 30 && semLink.avisos.join() === 'Arasaka HJKE-11 Yukimura: arma Smart, só dispara com o cyberware Smart Link instalado.'
+        && semLink.ficha.avisos.join() === 'sem Smart Link' && semLink.ficha.dica === ''
+        && ficha.avisos.length === 0 && ficha.ataque === '+13' && /Teste Smart: 12 \+ 1d10/.test(ficha.dica) && !ficha.botoes.includes('smart')
+        && tiro.ataque === 18 && tiro.descricao === 'Tiro Smart' && tiro.notas.includes('Teste Smart: 12 + 1d10 no lugar de REF + perícia.')
+        && tiro.teste.formula === '1d10crit + 12 + 1' && tiro.teste.partes.includes('Teste Smart +12') && !tiro.teste.partes.some(p => /^REF/.test(p))
+        && l.dv === 15 && l.resultado === 'acertou' && l.dano?.dano === 9 && l.dano.recebido === 0
+        && mirado.ataque === 14 && mirado.descricao === 'Tiro mirado na cabeça' && mirado.formula === '1d10crit + 8 + 4 + 1 - 8'
+        && fichaAlternativa.botoes.includes('smart') && comum.ataque === 15 && comum.descricao === 'Tiro' && peloBotao.ataque === 17 && peloBotao.descricao === 'Tiro Smart'
+        && info.pente === 26 && info.sobrou === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('ricochete (Power, 2077): DV da tabela de autofogo da SMG (17 a 10 m) e um dado a menos de dano; o Ballistic Coprocessor dá +2; arma que não é Power não ricocheteia', async () => {
+      // Liberty (pistola pesada Power, 3d6) contra o Alvo a 10 m (SP 5): d10 6 → 8 + 4 + 6 = 18 contra 17. Dano 2d6 (o
+      // terceiro dado da fila sobra): 5 + 4 = 9, passam 4. Com o coprocessador: d10 6 → 20 (dano 1 + 1, a armadura segura).
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const alvo = __token('Alvo');
+        await __ator('Alvo').update({ 'system.hp.value': 45 });
+        await __armaduraDoAlvo(5);
+        const { arma, municao } = await __arma2077('armas-2077:constitutional-arms-liberty', 'core_ammo:heavy-pistol-basic', 12);
+        await a.sheet.render({ force: true });
+        await __esperar(() => __linhaDaArma(arma));
+        const botao = () => __linhaDaArma(arma)?.querySelector('button[data-modo="ricochete"]');
+        const ficha = { botao: Boolean(botao()), dica: botao()?.dataset.tooltip ?? '' };
+        window.__fila = [[6, 10], [5, 6], [4, 6], [3, 6]];
+        const r1 = await arma.atacar({ alvo, modo: 'ricochete' });
+        const sobrou = window.__fila.length;
+        const teste1 = __ultimoTeste();
+        const cop = await __cyber2077('cyberware-2077:ballistic-coprocessor');
+        await __esperar(() => /Coprocessor/.test(botao()?.dataset.tooltip ?? ''));
+        window.__fila = [[6, 10], [1, 6], [1, 6]];
+        const r2 = await arma.atacar({ alvo, modo: 'ricochete' });
+        const teste2 = __ultimoTeste();
+        const rifle = a.items.getName('Assault Rifle');
+        const penteDoRifle = rifle.system.pente.value;
+        const naoPower = await __comAvisos(() => rifle.atacar({ alvo, modo: 'ricochete' }));
+        const resultado = {
+          ficha, coprocessadorNaFicha: botao()?.dataset.tooltip ?? '',
+          r1: { ataque: r1.ataque, descricao: r1.descricao, notas: r1.notas, linhas: __linhas(r1), formula: teste1.formula }, sobrou,
+          r2: { ataque: r2.ataque, formula: teste2.formula, partes: teste2.partes, linhas: __linhas(r2) },
+          naoPower: { r: naoPower.r, avisos: naoPower.avisos, gastou: penteDoRifle - rifle.system.pente.value },
+          pente: arma.system.pente.value, sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value, fila: window.__fila.length
+        };
+        await a.sheet.close();
+        await __tirarCyber(cop);
+        await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
+        await __armaduraDoAlvo(11);
+        await __ator('Alvo').update({ 'system.hp.value': 45 });
+        return resultado;
+      })()`);
+      const { r1, r2, naoPower } = info;
+      const [l1] = r1.linhas;
+      const ok = info.ficha.botao && !/Coprocessor/.test(info.ficha.dica) && /Ballistic Coprocessor: \+2/.test(info.coprocessadorNaFicha)
+        && r1.ataque === 18 && r1.descricao === 'Ricochete' && r1.formula === '1d10crit + 8 + 4' && l1.dv === 17 && l1.resultado === 'acertou'
+        && l1.dano?.dano === 9 && l1.dano.recebido === 4 && l1.dano.ablado === 1 && info.sobrou === 1
+        && r1.notas.includes('Ricochete: DV da tabela SMG (Autofire) e 2d6 de dano (um dado a menos).')
+        && r2.ataque === 20 && r2.formula === '1d10crit + 8 + 4 + 2' && r2.partes.includes('Ballistic Coprocessor +2') && r2.linhas[0].dano?.recebido === 0
+        && naoPower.r === null && naoPower.gastou === 0 && naoPower.avisos.join() === 'Assault Rifle: só as armas Power de tiro único ricocheteiam (as que disparam três balas ou mais, não).'
+        && info.pente === 10 && info.hp === 41 && info.sp === 4 && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('carga Tech (2077): a janela pergunta a cobertura; através da fina chega metade e a armadura perde 2; a arma esfria (bloqueada nas rodadas 1 e 2, carrega na 3); sem cobertura abla 4; o Desfazer tira a marca; a rajada (×2, 2 balas, tabela de autofogo da SMG) passa 25% da fina e nem oferece a grossa', async () => {
+      // Kenshin (Tech, 2d6, excelente) com flechettes, contra o Alvo a 10 m (DV 15). Rodada 1, carga através de cobertura
+      // fina: d10 6 → 8 + 4 + 1 + 6 = 19; dano 6 + 5 = 11, chegam 5 contra SP 4: passa 1; a armadura perde 2 (não o 2
+      // da flechette por acaso: a carga sem cobertura abla 4). Rodada 3, pela ficha, sem cobertura (SP 6): dano 4 + 3 = 7,
+      // passa 1, a armadura perde 4. Desfeita, a rajada através da fina (SP 2): d10 8 → 8 + 4 + 1 + 8 = 21 contra 17 (SMG
+      // Autofire): ×2 (o máximo da Kenshin); 2d6 5 + 4 = 9 × 2 = 18, chegam 4, passam 2; a armadura perde 2.
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const alvo = __token('Alvo');
+        await a.update({ 'system.pericias.autofire.nivel': 4 });
+        await __ator('Alvo').update({ 'system.hp.value': 45 });
+        await __armaduraDoAlvo(4);
+        const { arma, municao } = await __arma2077('armas-2077:arasaka-jke-x2-kenshin', 'armas-2077:flechettes-tech-pistola-media', 12);
+        const cena = canvas.scene;
+        const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+        await combate.createEmbeddedDocuments('Combatant', ['Atiradora', 'Alvo'].map(n => ({ tokenId: __token(n).id, sceneId: cena.id, actorId: __ator(n).id })));
+        await combate.startCombat();
+        await a.sheet.render({ force: true });
+        await __esperar(() => __linhaDaArma(arma));
+        const linha = () => ({ avisos: [...(__linhaDaArma(arma)?.querySelectorAll('.aviso-2077') ?? [])].map(e => e.textContent.trim()), botoes: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-modo]') ?? [])].map(b => b.textContent.trim()) });
+        // A janela que fecha fica no DOM até a animação acabar (classe "minimizing"): só a aberta conta.
+        const janela = () => document.querySelector('.application.dialog.cobertura:not(.minimizing)');
+        // Responde a janela da cobertura e devolve as opções que ela tinha.
+        const responder = async escolha => {
+          await __esperar(() => janela()?.querySelector('button[data-action="' + escolha + '"]'));
+          const opcoes = [...janela().querySelectorAll('.form-footer button')].map(b => b.dataset.action);
+          janela().querySelector('button[data-action="' + escolha + '"]').click();
+          return opcoes;
+        };
+        try {
+          const fichaAntes = linha();
+          // Rodada 1: carga através de cobertura fina (pela janela).
+          window.__fila = [[6, 10], [6, 6], [5, 6]];
+          const promessa1 = arma.atacar({ alvo, modo: 'carga' });
+          const opcoesDaCarga = await responder('fina');
+          const r1 = await promessa1;
+          const marca1 = arma.getFlag('${S}', 'carga');
+          const fila1 = window.__fila.length;
+          const sp1 = __ator('Alvo').system.armadura.corpo.sp;
+          await __esperar(() => linha().avisos.length);
+          const fichaEsfriando = linha();
+          const bloqueio1 = await __comAvisos(() => arma.atacar({ alvo, modo: 'carga', cobertura: 'nenhuma' }));
+          await combate.nextRound();
+          const bloqueio2 = await __comAvisos(() => arma.atacar({ alvo, modo: 'rajadaTech', cobertura: 'nenhuma' }));
+          await combate.nextRound();
+          await __esperar(() => !linha().avisos.length);
+          const fichaRodada3 = linha();
+          // Rodada 3: carga sem cobertura, pelo botão da ficha, no alvo marcado.
+          await __armaduraDoAlvo(6);
+          canvas.tokens.setTargets([alvo.id]);
+          window.__fila = [[6, 10], [4, 6], [3, 6]];
+          const antes = game.messages.size;
+          __linhaDaArma(arma).querySelector('button[data-modo="carga"]').click();
+          const opcoesPelaFicha = await responder('nenhuma');
+          await __esperar(() => game.messages.contents.slice(antes).some(m => m.getFlag('${S}', 'ataque')));
+          const cartao3 = game.messages.contents.slice(antes).find(m => m.getFlag('${S}', 'ataque'));
+          const r3 = cartao3.getFlag('${S}', 'ataque');
+          const marca3 = arma.getFlag('${S}', 'carga');
+          const depois3 = { sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value, pente: arma.system.pente.value };
+          const desfeito = await game.system.api.combate.desfazer(cartao3);
+          const depoisDoDesfazer = { marca: arma.getFlag('${S}', 'carga') ?? null, esfria: game.system.api.combate.esfriaAte(arma), sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value };
+          // Ainda na rodada 3 (a marca saiu): a rajada através da fina; a janela não oferece a grossa.
+          await __armaduraDoAlvo(2);
+          window.__fila = [[8, 10], [5, 6], [4, 6]];
+          const promessa4 = arma.atacar({ alvo, modo: 'rajadaTech' });
+          const opcoesDaRajada = await responder('fina');
+          const r4 = await promessa4;
+          await __esperar(() => linha().avisos.length);
+          const fichaDepoisDaRajada = linha();
+          // O combate acaba: a ficha aberta deixa de mostrar a arma esfriando.
+          await combate.delete();
+          await __esperar(() => !linha().avisos.length);
+          const fichaSemCombate = linha();
+          const resultado = {
+            fichaAntes, fichaEsfriando, fichaRodada3, fichaDepoisDaRajada, fichaSemCombate, opcoesDaCarga, opcoesPelaFicha, opcoesDaRajada,
+            r1: { ataque: r1.ataque, descricao: r1.descricao, notas: r1.notas, linhas: __linhas(r1), notasDaLinha: r1.linhas[0].notas }, marca1: marca1 && { ok: marca1.combate === combate.id, rodada: marca1.rodada }, fila1, sp1,
+            bloqueio1: { r: bloqueio1.r, avisos: bloqueio1.avisos }, bloqueio2: { r: bloqueio2.r, avisos: bloqueio2.avisos },
+            r3: { descricao: r3.descricao, dano: r3.linhas[0].dano && { dano: r3.linhas[0].dano.dano, recebido: r3.linhas[0].dano.recebido, ablado: r3.linhas[0].dano.ablado } }, marca3: marca3?.rodada, depois3,
+            desfeito, depoisDoDesfazer,
+            r4: { ataque: r4.ataque, descricao: r4.descricao, linhas: __linhas(r4), notasDaLinha: r4.linhas[0].notas },
+            pente: arma.system.pente.value, sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value, fila: window.__fila.length
+          };
+          return resultado;
+        } finally {
+          // Mesmo se algo falhar no meio: nenhuma janela, alvo marcado, combate ou arma fica para os passos seguintes.
+          for (const app of [...foundry.applications.instances.values()].filter(app => app.options.classes?.includes('cobertura'))) await app.close();
+          canvas.tokens.setTargets([]);
+          await a.sheet.close();
+          if (game.combats.has(combate.id)) await combate.delete();
+          await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
+          await __armaduraDoAlvo(11);
+          await __ator('Alvo').update({ 'system.hp.value': 45 });
+        }
+      })()`);
+      const { r1, r3, r4, depois3, depoisDoDesfazer } = info;
+      const [l1] = r1.linhas;
+      const [l4] = r4.linhas;
+      const esfriando = 'Arasaka JKE-X2 Kenshin: ainda está esfriando: carrega de novo na rodada 3.';
+      const ok = info.fichaAntes.botoes.join() === 'Carga,Rajada ×2' && info.fichaAntes.avisos.length === 0 && info.fichaEsfriando.avisos.join() === 'esfriando: carga na rodada 3' && info.fichaRodada3.avisos.length === 0
+        && info.fichaDepoisDaRajada.avisos.join() === 'esfriando: carga na rodada 5' && info.fichaSemCombate.avisos.length === 0
+        && info.opcoesDaCarga.join() === 'nenhuma,fina,grossa' && info.opcoesPelaFicha.join() === 'nenhuma,fina,grossa' && info.opcoesDaRajada.join() === 'nenhuma,fina'
+        && r1.ataque === 19 && r1.descricao === 'Carga Tech através de cobertura fina' && l1.dv === 15 && l1.dano?.dano === 5 && l1.dano.recebido === 1 && l1.dano.ablado === 2
+        && r1.notasDaLinha.includes('5 dos 11 de dano atravessaram a cobertura fina; o resto ficou nela.')
+        && r1.notas.includes('Carga Tech através de cobertura fina: chega 50% do dano, e a armadura perde 2 de SP se o dano passar dela. A arma esfria uma rodada.')
+        && info.marca1?.ok && info.marca1.rodada === 1 && info.fila1 === 0 && info.sp1 === 2
+        && info.bloqueio1.r === null && info.bloqueio1.avisos.join() === esfriando && info.bloqueio2.r === null && info.bloqueio2.avisos.join() === esfriando
+        && r3.descricao === 'Carga Tech' && r3.dano?.dano === 7 && r3.dano.recebido === 1 && r3.dano.ablado === 4 && info.marca3 === 3 && depois3.sp === 2 && depois3.hp === 43 && depois3.pente === 10
+        && info.desfeito === true && depoisDoDesfazer.marca === null && depoisDoDesfazer.esfria === null && depoisDoDesfazer.sp === 6 && depoisDoDesfazer.hp === 44
+        && r4.ataque === 21 && r4.descricao === 'Rajada Tech através de cobertura fina' && l4.dv === 17 && l4.mult === 2 && l4.dano?.dano === 4 && l4.dano.recebido === 2 && l4.dano.ablado === 2
+        && r4.notasDaLinha.includes('4 dos 18 de dano atravessaram a cobertura fina; o resto ficou nela.')
+        && info.pente === 8 && info.sp === 0 && info.hp === 42 && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('escudo e a janela do mestre: o Capanga (NPC) pode aguentar ou usar o escudo; o mestre vê o total, escolhe o escudo, que leva os 10 PV dele; o Desfazer devolve', async () => {
       // Ataque: d10 8 → REF 8 + Armas de Ombro 4 + 8 = 20 contra DV 16 (12 m). Dano 5d6: 3 × 5 = 15; o escudo (10 PV) leva
       // 10, e o resto de um tiro se perde (wiki: cobertura).

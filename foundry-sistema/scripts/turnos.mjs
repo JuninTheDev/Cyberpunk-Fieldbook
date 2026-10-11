@@ -46,3 +46,12 @@ export function aoMudarTurno(combate, mudancas) {
     await deathSave(combate);
   })().catch(erro => console.warn(`${SISTEMA} | turno`, erro));
 }
+
+// A ficha mostra o que depende do combate (a arma Tech esfriando depois da carga). A cada mudança do combate o Foundry
+// já redesenha as fichas de quem está nele (Combat#updateCombatantActors); quando o combate acaba, não: aqui, as fichas
+// abertas neste cliente de quem estava nele com arma Tech se redesenham.
+export function redesenharFichas(combate) {
+  for (const { actor } of combate.combatants) {
+    if (actor?.sheet?.rendered && actor.items.some(item => item.perfil2077?.classe === 'tech')) actor.sheet.render();
+  }
+}

@@ -381,3 +381,146 @@ test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia
   }
   assert.deepEqual(problemas, []);
 });
+
+// ---------------- Armas de 2077 ----------------
+// As regras da página de 2077 da wiki (system-2077.js: "Os três tipos", "Ricochete (Power)", "Carga Tech" e "Armas
+// Smart") e o texto de cada arma, contra o perfil que o sistema monta da flag arma2077 do catálogo.
+const perfilDe = id => {
+  const item = catalogo[id];
+  assert.ok(item, `${id}: não está no catálogo`);
+  return regras.perfil2077(item.flags['cpr-fieldbook']?.arma2077, item.system);
+};
+const linhaDaWiki = id => wiki.rangeDV.find(linha => linha.id === id);
+
+test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que cada Tech diz no texto; o 12 + 1d10 das Smart de várias balas)', () => {
+  // "Na carga Tech (rajada), dispara 2 balas" (Kenshin), "3 balas" (Omaha), "exige 10 balas no pente e gasta essas 10"
+  // (Quasar), "dispara as 30 balas do pente" (Senkoh). Sem rajada: a Achilles, a Nekomata, a Burya e a Satara.
+  const tech = id => { const p = perfilDe(`armas-2077:${id}`); return [p.classe, p.rajadaTech, p.rajadaTech ? p.balasDaRajadaTech : 0]; };
+  assert.deepEqual(tech('arasaka-jke-x2-kenshin'), ['tech', 2, 2]);
+  assert.deepEqual(tech('militech-m-76e-omaha'), ['tech', 3, 3]);
+  assert.deepEqual(tech('darra-polytechnic-dr-12-quasar'), ['tech', 3, 10]);
+  assert.deepEqual(tech('arasaka-senkoh-lx'), ['tech', 3, 30]);
+  for (const id of ['militech-m-179-achilles', 'tsunami-nekomata', 'techtronika-rt-46-burya', 'rostovic-db-2-satara']) assert.deepEqual(tech(id), ['tech', 0, 0], id);
+  // "Dispara três balas Smart: o teste Smart passa a 12 + 1d10" (Yukimura, Shingen, Zhuo...); as outras, 10 + 1d10.
+  assert.equal(perfilDe('armas-2077:arasaka-hjke-11-yukimura').smart, 12);
+  assert.equal(perfilDe('armas-2077:arasaka-tki-20-shingen').smart, 12);
+  assert.equal(perfilDe('armas-2077:kang-tao-l-69-zhuo').smart, 12);
+  assert.equal(perfilDe('armas-2077:tsunami-ashura').smart, 10);
+  assert.equal(perfilDe('armas-2077:rostovic-db-4-palica').smart, 10);
+  // Power: ricocheteia, menos as que "não disparam menos de três balas" (Nowaki, Masamune) e as de Disparo Automático.
+  assert.equal(perfilDe('armas-2077:constitutional-arms-liberty').ricocheteia, true);
+  assert.equal(perfilDe('armas-2077:nokota-d5-copperhead').ricocheteia, true);
+  assert.equal(perfilDe('armas-2077:arasaka-nowaki').ricocheteia, false);
+  assert.equal(perfilDe('armas-2077:arasaka-hjsh-18-masamune').ricocheteia, false);
+  assert.equal(perfilDe('armas-2077:militech-mk-31-hmg').ricocheteia, false);
+  // As armas do livro-base não são de 2077.
+  assert.equal(perfilDe('core_weapons:heavy-pistol'), null);
+  // Toda arma do catálogo de 2077 tem classe; nenhuma Power ou Smart tem rajada Tech.
+  for (const [id, item] of Object.entries(catalogo).filter(([id, item]) => id.startsWith('armas-2077:') && item.type === 'arma')) {
+    const p = perfilDe(id);
+    assert.ok(p, `${id}: sem perfil de 2077`);
+    if (p.classe !== 'tech') assert.equal(p.rajadaTech, 0, id);
+    if (p.classe !== 'smart') assert.equal(p.smart, 0, id);
+    assert.ok(item.system.descricao.includes('Neste sistema:'), `${id}: a descrição não diz o que o sistema faz`);
+  }
+});
+
+test('Ricochete (wiki): tiro único com a perícia da arma, DV da tabela de autofogo (pistolas na linha da SMG), um dado a menos; +2 do Ballistic Coprocessor', () => {
+  assert.equal(regras.classificar({ pedido: 'ricochete' }), 'ricochete');
+  assert.equal(regras.balasDoModo('ricochete'), 1);
+  assert.equal(regras.tabelaDoRicochete('heavyPistol'), 'DV SMG (Autofire)');
+  assert.equal(regras.tabelaDoRicochete('medPistol'), 'DV SMG (Autofire)');
+  assert.equal(regras.tabelaDoRicochete('heavySmg'), 'DV SMG (Autofire)');
+  assert.equal(regras.tabelaDoRicochete('assaultRifle'), 'DV Assault Rifle (Autofire)');
+  assert.deepEqual(regras.tabelasCandidatas('DV Pistol', 'ricochete', 'heavyPistol'), ['DV SMG (Autofire)']);
+  assert.deepEqual(regras.tabelasCandidatas('DV Assault Rifle', 'ricochete', 'assaultRifle'), ['DV Assault Rifle (Autofire)']);
+  // A 10 m: a coluna de 7–12 m da tabela de autofogo da wiki.
+  assert.equal(regras.dvPelaDistancia(TABELAS_DV[regras.tabelaDoRicochete('heavyPistol')], 10).dv, linhaDaWiki('smg').autofire[1]);
+  assert.equal(regras.dvPelaDistancia(TABELAS_DV[regras.tabelaDoRicochete('assaultRifle')], 10).dv, linhaDaWiki('assault').autofire[1]);
+  assert.equal(regras.umDadoAMenos('3d6'), '2d6');
+  assert.equal(regras.umDadoAMenos('5d6'), '4d6');
+  assert.equal(regras.umDadoAMenos('1d6'), '1d6');
+  assert.equal(regras.BONUS_COPROCESSADOR, 2);
+  assert.equal(regras.descreverAtaque({ modo: 'ricochete' }), 'Ricochete');
+  // Quem não ricocheteia: o aviso, antes de gastar a bala.
+  const liberty = perfilDe('armas-2077:constitutional-arms-liberty');
+  assert.equal(regras.impedimento2077({ modo: 'ricochete', perfil: liberty }), null);
+  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:arasaka-nowaki') }), /Power de tiro único/);
+  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:arasaka-jke-x2-kenshin') }), /Power de tiro único/);
+  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:budget-arms-carnage'), pelaMunicao: 'cartucho' }), /tiro único/);
+  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: null }), /Power de tiro único/);
+});
+
+test('Carga Tech (wiki): metade passa da cobertura fina e um quarto da grossa; a armadura perde 4 de SP (2 através de cobertura); a rajada usa a tabela de autofogo da SMG e passa só 25% da fina', () => {
+  const { nenhuma, fina, grossa } = regras.COBERTURAS;
+  assert.deepEqual([nenhuma.carga, fina.carga, grossa.carga], [1, 0.5, 0.25]);
+  assert.deepEqual([nenhuma.rajadaTech, fina.rajadaTech, grossa.rajadaTech], [1, 0.25, 0]);
+  assert.deepEqual([nenhuma.ablacao, fina.ablacao, grossa.ablacao], [4, 2, 2]);
+  // O que atravessa: a fração do rolado, para baixo.
+  assert.equal(regras.atravessarCobertura(13, 1), 13);
+  assert.equal(regras.atravessarCobertura(13, 0.5), 6);
+  assert.equal(regras.atravessarCobertura(13, 0.25), 3);
+  assert.equal(regras.atravessarCobertura(3, 0.25), 0);
+  // A carga é tiro único; a rajada, autofogo carregado (tabela da SMG, perícia Disparo Automático, até o ×N da arma).
+  assert.equal(regras.classificar({ pedido: 'carga' }), 'carga');
+  assert.equal(regras.balasDoModo('carga'), 1);
+  assert.equal(regras.balasDoModo('rajadaTech', { rajadaTech: 2 }), 2);
+  assert.equal(regras.balasDoModo('rajadaTech'), regras.BALAS_RAJADA);
+  assert.deepEqual(regras.tabelasCandidatas('DV Pistol', 'rajadaTech', 'medPistol'), ['DV SMG (Autofire)']);
+  assert.deepEqual(regras.tabelasCandidatas('DV Sniper Rifle', 'carga', 'sniperRifle'), ['DV Sniper Rifle']);
+  assert.equal(regras.multiplicadorDeAutofogo(25, 17, perfilDe('armas-2077:arasaka-jke-x2-kenshin').rajadaTech), 2);
+  assert.equal(regras.descreverAtaque({ modo: 'carga', cobertura: 'fina' }), 'Carga Tech através de cobertura fina');
+  assert.equal(regras.descreverAtaque({ modo: 'rajadaTech', cobertura: 'nenhuma' }), 'Rajada Tech');
+  // O que impede: arma que não é Tech, rajada numa arma de tiro único, rajada contra cobertura grossa, a carga com
+  // cartucho (a Satara, que ainda não está no sistema).
+  const kenshin = perfilDe('armas-2077:arasaka-jke-x2-kenshin');
+  const achilles = perfilDe('armas-2077:militech-m-179-achilles');
+  assert.equal(regras.impedimento2077({ modo: 'carga', perfil: kenshin, cobertura: 'grossa' }), null);
+  assert.equal(regras.impedimento2077({ modo: 'rajadaTech', perfil: kenshin, cobertura: 'fina' }), null);
+  assert.match(regras.impedimento2077({ modo: 'rajadaTech', perfil: kenshin, cobertura: 'grossa' }), /não atravessa cobertura grossa/);
+  assert.match(regras.impedimento2077({ modo: 'rajadaTech', perfil: achilles }), /só faz a carga em tiro único/);
+  assert.match(regras.impedimento2077({ modo: 'carga', perfil: perfilDe('armas-2077:constitutional-arms-liberty') }), /não é uma arma Tech/);
+  assert.match(regras.impedimento2077({ modo: 'carga', perfil: perfilDe('armas-2077:rostovic-db-2-satara'), pelaMunicao: 'cartucho' }), /Satara/);
+});
+
+test('Carga Tech: depois de uma carga a arma esfria uma rodada (carrega de novo na rodada R + 2), só no mesmo combate', () => {
+  const marca = { combate: 'c1', rodada: 3 };
+  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c1', rodada: 3 }), 5);
+  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c1', rodada: 4 }), 5);
+  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c1', rodada: 5 }), null);
+  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c2', rodada: 3 }), null);
+  assert.equal(regras.rodadaDaProximaCarga(null, { id: 'c1', rodada: 3 }), null);
+  assert.equal(regras.rodadaDaProximaCarga(marca, null), null);
+});
+
+test('Teste Smart (wiki): 10 + 1d10 (12 com várias balas) no tiro da arma Smart, só com o Smart Link; o autofogo e o mirado continuam REF + perícia', () => {
+  const yukimura = perfilDe('armas-2077:arasaka-hjke-11-yukimura');
+  const ashura = perfilDe('armas-2077:tsunami-ashura');
+  const comLink = { smartLink: true };
+  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', ...comLink }), 12);
+  assert.equal(regras.testeSmart({ perfil: ashura, modo: 'tiro', ...comLink }), 10);
+  assert.equal(regras.testeSmart({ perfil: perfilDe('armas-2077:kang-tao-l-69-zhuo'), modo: 'cartucho', ...comLink }), 12);
+  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro' }), 0);
+  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', local: 'cabeca', ...comLink }), 0);
+  assert.equal(regras.testeSmart({ perfil: perfilDe('armas-2077:arasaka-tki-20-shingen'), modo: 'autofogo', ...comLink }), 0);
+  assert.equal(regras.testeSmart({ perfil: perfilDe('armas-2077:arasaka-jke-x2-kenshin'), modo: 'tiro', ...comLink }), 0);
+  // Na configuração "alternativa", só pelo botão "Smart".
+  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', smartAtaque: 'alternativa', ...comLink }), 0);
+  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', pedido: 'smart', smartAtaque: 'alternativa', ...comLink }), 12);
+  assert.equal(regras.descreverAtaque({ modo: 'tiro', smart: 12 }), 'Tiro Smart');
+  // Sem o Smart Link: não dispara (o padrão) ou dispara como comum.
+  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: yukimura }), /só dispara com o cyberware Smart Link/);
+  assert.match(regras.impedimento2077({ modo: 'autofogo', perfil: perfilDe('armas-2077:arasaka-tki-20-shingen') }), /Smart Link/);
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, smartSemLink: 'comum' }), null);
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, smartLink: true }), null);
+  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, pedido: 'smart', smartSemLink: 'comum' }), /precisa do Smart Link/);
+  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: perfilDe('armas-2077:constitutional-arms-liberty'), pedido: 'smart' }), /não é uma arma Smart/);
+  // O Smart Link e o Ballistic Coprocessor do catálogo (pelo nome, ou pelo id do catálogo depois de renomeados); o
+  // Smartgun Link do livro-base é outro (um acessório de arma).
+  assert.equal(regras.ehSmartLink(catalogo['cyberware-2077:smart-link'].name), true);
+  assert.equal(regras.ehSmartLink('Smartlink'), true);
+  assert.equal(regras.ehSmartLink('Smartgun Link'), false);
+  assert.equal(regras.ehSmartLink('O link da Vee', 'cyberware-2077:smart-link'), true);
+  assert.equal(regras.ehCoprocessador(catalogo['cyberware-2077:ballistic-coprocessor'].name), true);
+  assert.equal(regras.ehCoprocessador('Smart Link'), false);
+});

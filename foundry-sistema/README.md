@@ -59,8 +59,13 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Recuperação de Falhas:** com 4 pontos, o 1 natural do ataque não tira um d10.
 
   A rodada é a do combate de que o personagem participa. Fora de combate, o Ponto Fraco e a Deflexão valem toda vez.
-- **Desfazer:** o cartão do resultado tem o botão, só para o mestre. Devolve o HP, o SP e o escudo, tira as lesões e o Suprimido, e devolve o Ponto Fraco e a Deflexão que o ataque gastou.
+- **Desfazer:** o cartão do resultado tem o botão, só para o mestre. Devolve o HP, o SP e o escudo, tira as lesões e o Suprimido, e devolve o Ponto Fraco e a Deflexão que o ataque gastou (e a carga Tech da arma).
 - **Munição:** cada tiro sai do pente, e **↻** recarrega com a munição compatível da ficha. O ataque de um jogador sem mestre na mesa para antes de gastar a bala.
+- **Armas de 2077** (o suplemento de fã da mesa, como a página de 2077 da wiki descreve). A classe aparece ao lado do nome da arma, e os modos são botões na linha dela:
+  - **Power, Ricochete:** tiro único num alvo atrás de cobertura, com a perícia da arma e a DV da tabela de autofogo (pistolas e SMGs: a da SMG; as outras, a do rifle de assalto). Rola um dado a menos de dano, e o Ballistic Coprocessor instalado dá +2. As que só disparam rajadas não ricocheteiam.
+  - **Tech, Carga e Rajada:** a janela pergunta a cobertura do alvo. A carga deixa passar tudo, metade da fina ou um quarto da grossa; a rajada (o autofogo carregado, com a tabela da SMG e o multiplicador até o da arma), tudo ou um quarto da fina. Se o dano passar da armadura, ela perde 4 de SP (2 através de cobertura). A rajada gasta as balas que a arma diz (a Kenshin 2, a Senkoh o pente todo). Depois de uma carga, a arma esfria uma rodada: a ficha mostra até quando.
+  - **Smart:** sem o cyberware Smart Link instalado, não dispara (a ficha avisa). Com ele, o tiro é o teste Smart, 10 + 1d10 (12 + 1d10 nos modelos de várias balas), no lugar de REF + perícia; o bônus da arma e as penalidades continuam, e o autofogo e o mirado são REF + perícia.
+  - **O que é próprio de um modelo** (os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian, a carga da Satara e outros), o mestre resolve: a descrição da arma diz.
 - **Inventário** (aba Equipamento): equipamento, roupas e drogas, com a quantidade e o uso (equipado, carregando ou guardado; o botão da linha passa de um para o outro).
   - **Efeitos do equipamento** valem conforme o uso, como no CORE: o Agent (+2 em Pesquisa em Biblioteca) e o Techscanner valem equipados ou carregando; o Medscanner e o Linear Frame, só equipados.
   - **Drogas** vêm com os efeitos desligados. Quem usa liga o efeito na ficha do item (o Boost dá +2 INT).
@@ -103,6 +108,13 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
 - **Death Save no começo do turno:** jogadores e NPCs, só jogadores, ou desligado (padrão: todos).
 - **Explosivos pegam toda a área** (padrão: sim).
 - **Fogo supressivo sem alvo pega todos à vista** (padrão: sim).
+
+As do módulo cpr-2077, para as armas de 2077, com os mesmos padrões:
+- **Ataque das armas Smart:** substitui REF + perícia, ou é uma alternativa, com o botão Smart (padrão: substitui).
+- **Arma Smart sem o Smart Link:** não dispara, ou dispara como arma comum (padrão: não dispara).
+- **A carga Tech esfria uma rodada** (padrão: sim).
+
+E as da wiki:
 - **Endereço da wiki** (padrão: `http://localhost:8000`).
 - **Mandar a ficha para a wiki** (de cada navegador; padrão: sim): veja "Na mesa".
 
@@ -114,7 +126,7 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
   - o Reflex Tuner;
   - a Sorte na rolagem.
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
-- **Os modos das armas de 2077** e o cyberware que é arma.
+- **Das armas de 2077,** as regras próprias de alguns modelos (veja o ROADMAP), e o cyberware que é arma.
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
@@ -137,7 +149,7 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
   - 22 lesões críticas e as duas tabelas, com o nome e o texto em português das tabelas da wiki;
   - as 61 perícias, com os nomes em português da tabela da wiki;
   - as 13 tabelas de DV.
-- **2077:** `build/conteudo-2077.mjs` converte o suplemento de fã da própria wiki (`system-2077.js` e `system-net.js`), os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele: 46 armas e 5 flechettes, 57 cyberwares, 21 cyberdecks, 16 quickhacks e 5 daemons. A classe de cada arma (Power, Tech ou Smart) e as opções dela ficam na flag `arma2077`; os modos de 2077 ainda não estão aqui.
+- **2077:** `build/conteudo-2077.mjs` converte o suplemento de fã da própria wiki (`system-2077.js` e `system-net.js`), os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele: 46 armas e 5 flechettes, 57 cyberwares, 21 cyberdecks, 16 quickhacks e 5 daemons. A classe de cada arma (Power, Tech ou Smart) e as opções dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`); as balas da rajada Tech saem do texto de cada arma.
 - **Os mesmos ids da loja da wiki** (`core_weapons:assault-rifle`, `armas-2077:arasaka-hjke-11-yukimura`): é por eles que o importador acha cada item.
 - **Efeitos situacionais** (Audição Amplificada, Image Enhance, o Sandevistan ligado, Dedos esmagados) ficam de fora por enquanto: aplicados sempre, dariam bônus errado. O build lista quais são.
 

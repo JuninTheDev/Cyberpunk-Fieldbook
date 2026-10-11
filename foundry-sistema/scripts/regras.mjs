@@ -9,6 +9,8 @@
 // - Explosivo: dano em todos numa área de 10 × 10 m em volta do alvo.
 // - Fogo supressivo: quem está até 25 m rola WILL + Concentração + 1d10 contra o ataque; quem perder é suprimido.
 // - Escudo: recebe o ataque todo, mas quem usa não esquiva.
+// - Armas de 2077 (o suplemento de fã da mesa, como a wiki resume em system-2077.js): o Ricochete das Power, a Carga e
+//   a Rajada das Tech e o teste Smart (no fim deste arquivo).
 
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
@@ -91,7 +93,12 @@ export const passouNoDeathSave = ({ natural, total, body }) => natural !== 10 &&
 export const lesaoNaTabela = (faixas, total) => (faixas || []).find(([min, max]) => total >= min && total <= max)?.[2] ?? null;
 
 // ---------------- Modos de ataque ----------------
-export const MODOS = { corpo: 'Corpo a corpo', tiro: 'Tiro', autofogo: 'Autofogo', supressivo: 'Fogo supressivo', cartucho: 'Espingarda com cartucho', explosivo: 'Explosivo' };
+export const MODOS = {
+  corpo: 'Corpo a corpo', tiro: 'Tiro', autofogo: 'Autofogo', supressivo: 'Fogo supressivo', cartucho: 'Espingarda com cartucho', explosivo: 'Explosivo',
+  ricochete: 'Ricochete', carga: 'Carga Tech', rajadaTech: 'Rajada Tech'
+};
+// Os modos que só valem pelo botão (os de 2077 e os de rajada): a arma e a munição não os escolhem sozinhas.
+const MODOS_PEDIDOS = ['autofogo', 'supressivo', 'ricochete', 'carga', 'rajadaTech'];
 export const LOCAIS_MIRADOS = { cabeca: 'cabeça', perna: 'perna', item: 'item na mão' };
 export const DV_CARTUCHO = 13;
 export const ALCANCE_CARTUCHO = 6;
@@ -100,17 +107,20 @@ export const AREA_EXPLOSIVO = 10;
 export const BALAS_RAJADA = 10;
 export const MEDIA_D10 = 5.5;
 
-// O modo do ataque: o botão escolhido (autofogo, supressivo) ou o que a arma e a munição no pente dizem.
+// O modo do ataque: o botão escolhido (autofogo, supressivo, os de 2077) ou o que a arma e a munição no pente dizem.
 export function classificar({ pedido = null, aDistancia = true, tipoDeArma = '', municao = '' }) {
-  if (pedido === 'autofogo' || pedido === 'supressivo') return pedido;
+  if (MODOS_PEDIDOS.includes(pedido)) return pedido;
   if (!aDistancia) return 'corpo';
   if (['grenade', 'rocket'].includes(municao) || ['grenadeLauncher', 'rocketLauncher'].includes(tipoDeArma)) return 'explosivo';
   if (municao === 'shotgunShell') return 'cartucho';
   return 'tiro';
 }
 
-// Balas que o modo gasta.
-export const balasDoModo = modo => (modo === 'autofogo' || modo === 'supressivo' ? BALAS_RAJADA : 1);
+// Balas que o modo gasta. A rajada Tech gasta o que a arma diz (perfil2077, mais abaixo).
+export function balasDoModo(modo, { rajadaTech = BALAS_RAJADA } = {}) {
+  if (modo === 'rajadaTech') return rajadaTech;
+  return modo === 'autofogo' || modo === 'supressivo' ? BALAS_RAJADA : 1;
+}
 
 // Munição que não causa dano (a tabela de munição da wiki, system-catalog.js, com o texto dela): quem é pego sofre só o
 // efeito, que o mestre resolve pelo cartão. As outras munições especiais causam o dano da arma.
@@ -182,8 +192,11 @@ export function dvPelaDistancia(faixas, distancia) {
   return faixa ? { dv: faixa[2], fora: false } : { dv: null, fora: true };
 }
 
-// Tabelas candidatas: o autofogo usa a tabela "(Autofire)" da arma; sem ela, a da SMG.
-export function tabelasCandidatas(tabela, modo) {
+// Tabelas candidatas: o autofogo usa a tabela "(Autofire)" da arma; sem ela, a da SMG. O ricochete e a rajada Tech têm
+// a tabela de autofogo deles (mais abaixo), qualquer que seja a da arma.
+export function tabelasCandidatas(tabela, modo, tipoDeArma = '') {
+  if (modo === 'ricochete') return [tabelaDoRicochete(tipoDeArma)];
+  if (modo === 'rajadaTech') return [TABELA_DA_RAJADA_TECH];
   if (!tabela) return [];
   if (modo !== 'autofogo') return [tabela];
   if (/\(Autofire\)/.test(tabela)) return [tabela];
@@ -193,9 +206,96 @@ export function tabelasCandidatas(tabela, modo) {
 // Centro do token dentro do quadrado de lado 2 × metade (em pixels)?
 export const dentroDaArea = (centro, ponto, metade) => Math.abs(ponto.x - centro.x) <= metade + 0.5 && Math.abs(ponto.y - centro.y) <= metade + 0.5;
 
-// Descrição curta do ataque: "Tiro mirado na cabeça", "Autofogo", "Corpo a corpo"…
-export function descreverAtaque({ modo, local = 'corpo' }) {
+// Descrição curta do ataque: "Tiro mirado na cabeça", "Autofogo", "Tiro Smart", "Carga Tech através de cobertura fina"…
+export function descreverAtaque({ modo, local = 'corpo', smart = false, cobertura = null }) {
   const base = MODOS[modo] || 'Ataque';
-  if (!LOCAIS_MIRADOS[local]) return base;
-  return `${modo === 'corpo' ? 'Golpe' : 'Tiro'} mirado ${local === 'item' ? 'no item na mão' : `na ${LOCAIS_MIRADOS[local]}`}`;
+  if (LOCAIS_MIRADOS[local]) return `${modo === 'corpo' ? 'Golpe' : 'Tiro'} mirado ${local === 'item' ? 'no item na mão' : `na ${LOCAIS_MIRADOS[local]}`}`;
+  if (smart) return modo === 'tiro' ? 'Tiro Smart' : `${base} (Smart)`;
+  return COBERTURAS[cobertura] && cobertura !== 'nenhuma' ? `${base} através de ${COBERTURAS[cobertura].rotulo}` : base;
+}
+
+// ---------------- Armas de 2077 ----------------
+// As regras do suplemento de fã que a mesa usa (wiki, system-2077.js: "Os três tipos", "Ricochete (Power)", "Carga Tech"
+// e "Armas Smart", sup. p. 30–32), com as escolhas do cpr-2077 do Foundry 12 onde o texto não diz:
+// - Power, Ricochete: um tiro único que ricocheteia num alvo atrás de cobertura. Usa a perícia da arma, mas a DV vem da
+//   tabela de autofogo (pistolas e SMGs: a linha da SMG; as outras, a do rifle de assalto); REF 8+ esquiva; um dado a
+//   menos de dano; o Ballistic Coprocessor dá +2. As armas que não disparam menos de três balas não ricocheteiam.
+// - Tech, Carga: o tiro único carregado atravessa a cobertura (metade do dano passa da fina, um quarto da grossa) e, se
+//   causar dano, a armadura perde 4 de SP (2 através de cobertura). Rajada: o autofogo carregado, com a tabela de
+//   autofogo da SMG e o multiplicador até a "rajada de N" da arma, que atravessa um quarto da cobertura fina e nada da
+//   grossa. Depois de uma carga, a arma esfria uma rodada.
+// - Smart: só dispara com o cyberware Smart Link. O tiro é o teste Smart, 10 + 1d10 (12 + 1d10 nos modelos de várias
+//   balas Smart), no lugar de REF + perícia; a wiki manda combinar com a mesa se substitui ou é uma alternativa (uma
+//   configuração do mundo).
+export const TABELA_DA_RAJADA_TECH = 'DV SMG (Autofire)';
+const PARECIDAS_COM_SMG = ['medPistol', 'heavyPistol', 'vHeavyPistol', 'smg', 'heavySmg'];
+export const tabelaDoRicochete = tipoDeArma => (PARECIDAS_COM_SMG.includes(tipoDeArma) ? 'DV SMG (Autofire)' : 'DV Assault Rifle (Autofire)');
+export const BONUS_COPROCESSADOR = 2;
+
+// O dano do ricochete: um dado a menos, no mínimo um ("3d6" → "2d6").
+export const umDadoAMenos = formula => String(formula).replace(/^(\d+)d6/, (todo, dados) => `${Math.max(1, Number(dados) - 1)}d6`);
+
+// O que chega ao alvo em cada carga, pela cobertura, e o SP que a armadura perde se o dano passar dela.
+export const COBERTURAS = {
+  nenhuma: { rotulo: 'sem cobertura', carga: 1, rajadaTech: 1, ablacao: 4 },
+  fina: { rotulo: 'cobertura fina', carga: 0.5, rajadaTech: 0.25, ablacao: 2 },
+  grossa: { rotulo: 'cobertura grossa', carga: 0.25, rajadaTech: 0, ablacao: 2 }
+};
+// O dano que atravessa: a fração do rolado, para baixo; o resto fica na cobertura.
+export const atravessarCobertura = (total, fracao) => (fracao >= 1 ? Number(total) : Math.floor(Number(total) * fracao));
+
+// A rodada em que a arma Tech carrega de novo, ou null se já pode: carregou na rodada R, esfria na R + 1 e carrega na
+// R + 2. marca: { combate, rodada } da última carga; combate: o de agora ({ id, rodada }), ou null fora de combate.
+export function rodadaDaProximaCarga(marca, combate) {
+  if (!marca || !combate || marca.combate !== combate.id) return null;
+  return combate.rodada <= marca.rodada + 1 ? marca.rodada + 2 : null;
+}
+
+// O perfil de 2077 de uma arma, pela flag arma2077 do conteúdo (build/conteudo-2077.mjs); null nas outras armas.
+export function perfil2077(flag, { aDistancia = true, pericia = '' } = {}) {
+  const classe = ['power', 'tech', 'smart'].includes(flag?.classe) ? flag.classe : null;
+  if (!classe) return null;
+  return {
+    classe,
+    ricocheteia: classe === 'power' && Boolean(aDistancia) && pericia !== 'autofire' && !flag.semRicochete,
+    rajadaTech: classe === 'tech' ? Math.max(0, Number(flag.techRajada) || 0) : 0,
+    balasDaRajadaTech: Number(flag.techBalas) || BALAS_RAJADA,
+    smart: classe === 'smart' ? (flag.smartVariasBalas ? 12 : 10) : 0
+  };
+}
+
+// O cyberware que as regras de 2077 procuram: pelo id do catálogo (vale depois de renomear) ou pelo nome.
+export const ehSmartLink = (nome, catalogo = '') => catalogo === 'cyberware-2077:smart-link' || /^smart ?link\b/i.test(String(nome).trim());
+export const ehCoprocessador = (nome, catalogo = '') => catalogo === 'cyberware-2077:ballistic-coprocessor' || /ballistic coprocessor/i.test(String(nome));
+
+// O valor do teste Smart neste ataque (10 ou 12), ou 0. Pelo botão "Smart" (pedido "smart", na configuração
+// "alternativa") ou, na "substitui", em todo tiro e cartucho não mirado da arma Smart; o autofogo, o supressivo e o
+// mirado continuam REF + perícia, como no Foundry 12.
+export function testeSmart({ perfil, modo, local = 'corpo', pedido = null, smartLink = false, smartAtaque = 'substitui' }) {
+  if (perfil?.classe !== 'smart' || !smartLink) return 0;
+  if (pedido === 'smart') return perfil.smart;
+  return smartAtaque === 'substitui' && ['tiro', 'cartucho'].includes(modo) && !LOCAIS_MIRADOS[local] ? perfil.smart : 0;
+}
+
+// O que impede o ataque com uma arma de 2077 (o aviso, depois do nome da arma), ou null. pelaMunicao: o modo que a
+// arma e a munição dariam sozinhas ("tiro", "cartucho", "explosivo"); smartLink: o atacante tem o Smart Link
+// instalado; smartSemLink: a configuração ("naoDispara" ou "comum").
+export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', cobertura = 'nenhuma', pedido = null, smartLink = false, smartSemLink = 'naoDispara' }) {
+  if (perfil?.classe === 'smart' && !smartLink && smartSemLink === 'naoDispara') return 'arma Smart, só dispara com o cyberware Smart Link instalado.';
+  if (pedido === 'smart') {
+    if (perfil?.classe !== 'smart') return 'não é uma arma Smart.';
+    if (!smartLink) return 'o teste Smart precisa do Smart Link instalado.';
+  }
+  if (modo === 'ricochete') {
+    if (!perfil?.ricocheteia) return 'só as armas Power de tiro único ricocheteiam (as que disparam três balas ou mais, não).';
+    if (pelaMunicao !== 'tiro') return 'o ricochete é um tiro único: com cartucho ou explosivo, não.';
+  }
+  if (modo === 'carga' || modo === 'rajadaTech') {
+    if (perfil?.classe !== 'tech') return 'não é uma arma Tech.';
+    if (modo === 'rajadaTech' && !perfil.rajadaTech) return 'só faz a carga em tiro único.';
+    if (pelaMunicao !== 'tiro') return 'a carga com cartucho (a da Satara: os dois cartuchos, 4d6) ainda não está no sistema; combine com a mesa.';
+    if (!COBERTURAS[cobertura]) return `cobertura desconhecida (${cobertura}).`;
+    if (!COBERTURAS[cobertura][modo]) return `a rajada Tech não atravessa ${COBERTURAS[cobertura].rotulo}: nada chegaria ao alvo.`;
+  }
+  return null;
 }

@@ -1,7 +1,7 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
 import { caminho, SIGLA, SISTEMA } from './config.mjs';
-import { aplicarDano, localDaArmadura, passouNoDeathSave } from './regras.mjs';
+import { aplicarDano, ehCoprocessador, ehSmartLink, localDaArmadura, passouNoDeathSave, perfil2077 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
@@ -55,6 +55,13 @@ export class AtorCPR extends Actor {
   zerarDeathSave() {
     return this.update({ 'system.deathSave.penalidade': 0 });
   }
+
+  // Cyberware instalado que as armas de 2077 procuram: o Smart Link (armas Smart) e o Ballistic Coprocessor (ricochete).
+  #instalado(teste) {
+    return this.items.some(item => item.type === 'cyberware' && item.system.instalado && teste(item.name, item.getFlag(SISTEMA, 'catalogo')));
+  }
+  get temSmartLink() { return this.#instalado(ehSmartLink); }
+  get temCoprocessador() { return this.#instalado(ehCoprocessador); }
 
   // O escudo equipado com mais pontos (que ainda segura algo), ou null.
   get escudo() {
@@ -144,20 +151,27 @@ export class ItemCPR extends Item {
     return (id && this.actor?.items.get(id)) || null;
   }
 
+  // A classe de 2077 da arma (Power, Tech, Smart) e o que ela pode fazer (regras.mjs, perfil2077), ou null.
+  get perfil2077() {
+    return this.type === 'arma' ? perfil2077(this.getFlag(SISTEMA, 'arma2077'), this.system) : null;
+  }
+
   // A munição no pente (um item de munição do mesmo ator), ou null.
   get municaoCarregada() {
     return this.type === 'arma' && this.system.carregada ? this.actor?.items.get(this.system.carregada) ?? null : null;
   }
 
-  // Atributo + perícia + bônus da arma + 1d10 (p. 172–176): REF para tiro, DEX para corpo a corpo. Autofogo e fogo
-  // supressivo usam a perícia Autofogo. As lesões tiram dos tiros (olho) ou do corpo a corpo (músculo).
-  partesDoAtaque(modo = null) {
+  // Atributo + perícia + bônus da arma + 1d10 (p. 172–176): REF para tiro, DEX para corpo a corpo. Autofogo, fogo
+  // supressivo e a rajada Tech usam a perícia Autofogo. As lesões tiram dos tiros (olho) ou do corpo a corpo (músculo).
+  // smart: o teste Smart das armas de 2077 (10 ou 12) no lugar do atributo, da perícia e do bônus dela; o resto fica.
+  partesDoAtaque(modo = null, { smart = 0 } = {}) {
     const ator = this.actor;
     const atributo = this.system.aDistancia ? 'ref' : 'dex';
-    const pericia = modo === 'autofogo' || modo === 'supressivo' ? 'autofire' : this.system.pericia;
+    const pericia = ['autofogo', 'supressivo', 'rajadaTech'].includes(modo) ? 'autofire' : this.system.pericia;
     const { pericia: p, partes } = ator.partesDaPericia(pericia);
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
-    if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
+    if (smart) partes.splice(0, p.bonus ? 3 : 2, { rotulo: 'Teste Smart', valor: smart });
+    if (this.system.bonusAtaque) partes.splice(smart ? 1 : 2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
     const daLesao = this.system.aDistancia ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
     if (daLesao) partes.push({ rotulo: 'Lesões', valor: daLesao });
     if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });

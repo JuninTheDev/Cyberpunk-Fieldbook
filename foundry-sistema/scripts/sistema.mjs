@@ -15,7 +15,7 @@ import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
 import * as regras from './regras.mjs';
 import { registrarCritico, rolarDano, testar } from './rolagens.mjs';
-import { aoMudarTurno } from './turnos.mjs';
+import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 
 Hooks.once('init', () => {
@@ -46,5 +46,6 @@ Hooks.once('ready', () => {
 });
 
 Hooks.on('updateCombat', aoMudarTurno);
+Hooks.on('deleteCombat', redesenharFichas);
 Hooks.on('renderChatMessageHTML', combate.ligarBotoes);
 Hooks.on('renderActorDirectory', botaoNaAbaDeAtores);

@@ -32,7 +32,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
-| cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; os modos das armas de 2077 faltam |
+| cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo |
+| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17; as opções de cada modelo (Palica, Kappa, Dian, Satara...) faltam |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
 | cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
 | cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
@@ -55,7 +56,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
      os nomes do CORE, então quase sempre acha);
    - **pelos atores do Foundry 12** (a exportação do mundo, ou o envio de crossover que a wiki já recebe), convertidos
      do formato do CORE para este sistema: mais completo, e mais trabalho.
-4. **Faltam a NET e os modos das armas de 2077,** que a campanha usa.
+4. **Falta a NET,** que a campanha usa. Os modos das armas de 2077 entraram no ciclo 17; as opções próprias de alguns
+   modelos (os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian, a carga da Satara) ainda são com o mestre.
 5. **Sem migração de dados entre versões deste sistema** (ainda não há mundo real para migrar).
 
 ## Dúvidas de regra e discrepâncias
@@ -98,6 +100,31 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   o dano pela arma (o `createRoll` do CORE) e o aplica na ficha, sem olhar o tipo da munição. Aqui, o ataque, a defesa
   e a área continuam valendo, mas quem é pego não leva dano. O cartão traz o efeito com o texto da wiki, e o mestre o
   resolve.
+
+- **Rajada Tech: muda o que a mesa vê.** O sistema lê a "rajada de N" como o multiplicador máximo, como o cpr-2077, e
+  as balas pelo texto de cada arma: a Kenshin gasta 2, a Omaha 3, a Quasar 10 e a Senkoh as 30 do pente. No Foundry 12,
+  toda rajada Tech gastava as 10 balas do autofogo do CORE. Com isso, a Senkoh precisa do pente cheio, e a Kenshin faz
+  rajada com 2 balas no pente.
+
+- **Teste Smart: substitui REF + perícia ou é uma alternativa?** A wiki manda combinar com a mesa. Isso virou uma
+  configuração, com o padrão do Foundry 12 (substitui). Três escolhas do cpr-2077 seguidas aqui, que a wiki não
+  detalha:
+  - o tiro mirado e o autofogo da arma Smart continuam REF + perícia (o mirado com −8);
+  - o teste Smart troca o atributo, a perícia e o bônus da perícia; o bônus da arma (+1 da excelente), as penalidades e
+    o Ataque de Precisão continuam;
+  - a espingarda Smart com cartucho (a Zhuo) faz o teste Smart contra a DV 13 do cartucho.
+
+- **Carga Tech através de cobertura: o que se divide.** A fração vale para o dano rolado, com o Ponto Fraco dentro; o
+  +5 do crítico entra inteiro, como no Fluxo do Foundry 12. A wiki não diz.
+
+- **A carga esfria até R + 2.** "Uma rodada para esfriar" virou: carregou na rodada R, esfria na R + 1 e carrega de novo
+  na R + 2, como o cpr-2077. A marca vale até se o tiro errar, porque a carga faz parte da Ação de ataque. Fora do
+  combate, não conta.
+
+- **Ricochete com cartucho ou explosivo: recusado.** O texto diz "um tiro único", e o sistema recusa o ricochete com
+  cartucho de espingarda (a espingarda Power com balote ricocheteia). A carga Tech com cartucho também é recusada, mas
+  por outro motivo: a Satara, a única Tech de cartucho, tem regra própria (os dois cartuchos, 4d6), que ainda não está
+  no sistema.
 
 ## Registro dos ciclos
 
@@ -642,3 +669,79 @@ O usuário decidiu migrar pela ficha "Na mesa" (ROADMAP, decisões).
   - o "Atualizar da wiki" e o retrato.
 - **Próximo:** os modos das armas de 2077 (o ricochete da Power, a carga Tech, o teste Smart), que a campanha usa e são
   o bloqueador 4 da migração, com a NET.
+- **Commit:** `c0a5c7e`.
+
+### Ciclo 17 (2026-10-11): armas de 2077, os modos de cada classe (P2, bloqueador da migração)
+
+As regras vêm da página de 2077 da wiki (system-2077.js: "Os três tipos", "Ricochete (Power)", "Carga Tech" e "Armas
+Smart"). Onde o texto não diz, valem as escolhas do cpr-2077 do Foundry 12 (`foundry-2077/scripts/armas2077.mjs`), que
+a mesa já usa.
+
+- **Implementado:**
+  - **Ricochete (Power):** o botão Ricochete na linha da arma. É um tiro único com a perícia da arma, e a DV vem da
+    tabela de autofogo: pistolas e SMGs usam a da SMG; as outras, a do rifle de assalto. O dano tem um dado a menos, e o
+    Ballistic Coprocessor instalado dá +2. As que só disparam rajadas (Nowaki, Masamune) e as de Disparo Automático não
+    ricocheteiam; o aviso sai antes de gastar a bala;
+  - **Carga Tech:** os botões Carga e "Rajada ×N" (nas que fazem rajada). A janela pergunta a quem atira a cobertura
+    do alvo (sem cobertura, fina ou grossa; na rajada, a grossa nem aparece).
+    - Chega ao alvo a fração do dano rolado, para baixo: na carga, tudo, metade ou um quarto; na rajada, tudo ou um
+      quarto. O resto fica na cobertura, e o cartão diz quanto atravessou.
+    - Se o dano passar da armadura, ela perde 4 de SP sem cobertura e 2 através dela, no lugar da ablação da munição.
+    - A rajada é o autofogo carregado: perícia Disparo Automático, tabela de autofogo da SMG e multiplicador até o N da
+      arma. Gasta as balas que cada arma diz no texto (Kenshin 2, Omaha 3, Quasar 10, Senkoh as 30 do pente), lidas
+      pelo conversor (`techBalas`).
+    - Depois de uma carga (tiro ou rajada), a arma esfria uma rodada: a marca fica na arma, no combate do dono; a ficha
+      mostra "esfriando: carga na rodada N", e o ataque é recusado com aviso até lá. O "Desfazer" do mestre tira a
+      marca;
+  - **teste Smart:** sem o Smart Link instalado, a arma Smart não dispara (aviso e "sem Smart Link" na ficha). Com ele,
+    o tiro é 10 + 1d10 (12 + 1d10 nos modelos de várias balas) no lugar de REF + perícia; o bônus da arma, as
+    penalidades e o Ataque de Precisão continuam. O autofogo e o mirado continuam REF + perícia;
+  - **as três configurações do cpr-2077, com os mesmos padrões:** "Ataque das armas Smart" (substitui, ou alternativa
+    com o botão Smart), "Arma Smart sem o Smart Link" (não dispara, ou dispara como comum) e "A carga Tech esfria uma
+    rodada" (ligada);
+  - **na ficha:** a classe ao lado do nome, os botões dos modos, os avisos e o total do ataque com o teste Smart. A
+    descrição de cada arma de 2077 passou a dizer o que os botões fazem e que as regras próprias do modelo ficam com o
+    mestre;
+  - **redesenho da ficha quando o combate acaba:** o Foundry 14 já redesenha as fichas de quem está no combate a cada
+    rodada (`Combat#updateCombatantActors`), mas não quando o combate é apagado. Sem isso, o "esfriando" ficava na ficha
+    aberta.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 36 de 36. Cinco testes novos de referência:
+    - o perfil de cada classe pela flag do catálogo, com a rajada e as balas de cada Tech lidas do texto da wiki;
+    - o ricochete: a DV a 10 m comparada com a linha de autofogo da tabela de alcance da wiki;
+    - a carga e a rajada Tech: a fração, a ablação, as tabelas e o que impede;
+    - o esfriamento;
+    - o teste Smart;
+  - G4: 53 de 53, cerca de 54 s, em duas rodadas seguidas (e 54 de 54 numa terceira, com um passo temporário só para
+    a captura da ficha, tirado depois). Três passos novos, com os dados fixos:
+    - **Smart (Yukimura):**
+      - sem o Smart Link não dispara nem gasta bala, e a ficha avisa;
+      - com ele, 12 + 1 + 5 = 18 (a fórmula `1d10crit + 12 + 1`, sem REF nem perícia);
+      - o mirado na cabeça é REF + perícia − 8;
+      - na configuração "alternativa", o "Atacar" é REF + perícia e o botão Smart é o teste Smart;
+    - **Ricochete (Liberty):** DV 17 a 10 m (a da SMG de autofogo), 2d6 em vez de 3d6 (o terceiro dado da fila sobra),
+      +2 com o Ballistic Coprocessor; o rifle do CORE recusa o ricochete sem gastar bala;
+    - **Carga Tech (Kenshin, com flechettes):**
+      - rodada 1: pela janela, através da cobertura fina, chegam 5 dos 11, e a armadura perde 2;
+      - nas rodadas 1 e 2 a arma está esfriando (aviso, nada gasto);
+      - rodada 3: pelo botão da ficha, no alvo marcado, sem cobertura, a armadura perde 4 (não o 2 da flechette);
+      - o Desfazer devolve o HP e o SP e tira a marca;
+      - a rajada através da fina: ×2 (o máximo da Kenshin), 2 balas, chegam 4 dos 18, e a janela não oferece a grossa;
+      - com o combate apagado, a ficha deixa de mostrar "esfriando";
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado em seguida:
+    - G3: a fração da cobertura fina, o "+ 1" do esfriamento e o 12 + 1d10;
+    - G4: a ablação da carga, a troca de REF + perícia pelo teste Smart (o total dá 18 dos dois jeitos: quem pegou foi a
+      fórmula) e o redesenho no fim do combate;
+  - **conferência visual:** a linha das três armas na ficha (os botões quebram em duas linhas, sem estourar a coluna);
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Achado do teste:** o Foundry 14 deixa a janela que fecha no DOM por até 1 s, com a classe `minimizing`, e o teste
+  clicou na janela velha. O seletor agora pula a que fecha, e o passo limpa o que criou num `finally`; a falha tinha
+  arrastado outros três passos. A regra foi para o QUALITY_GATES.
+- **Ficou:**
+  - as opções de cada modelo (ROADMAP): Palica, Kappa, Dian, Satara, Burya, o supressivo da Senkoh, Lexington, o +1 da
+    Nowaki, da Masamune e da Kyubi, e os dois cartuchos da Testera;
+  - o cyberware que é arma;
+  - a NET.
+- **Próximo:** as opções de cada modelo de 2077, que completam as armas da campanha, ou a NET, o último bloqueador.

@@ -17,8 +17,8 @@
     <tbody>
       {{#each armas}}
       <tr data-item-id="{{id}}" class="{{#unless sistema.equipada}}guardada{{/unless}}">
-        <td class="nome"><img src="{{img}}" alt=""> <a data-action="editarItem">{{nome}}</a>{{#if qualidade}} <small>{{qualidade}}</small>{{/if}}</td>
-        <td class="num">+{{ataque}}</td>
+        <td class="nome"><img src="{{img}}" alt=""> <a data-action="editarItem">{{nome}}</a>{{#if qualidade}} <small>{{qualidade}}</small>{{/if}}{{#if classe2077}} <small class="classe-2077">{{classe2077}}</small>{{/if}}{{#each avisos2077}} <small class="aviso-2077" data-tooltip="{{dica}}">{{texto}}</small>{{/each}}</td>
+        <td class="num"{{#if smart}} data-tooltip="Teste Smart: {{smart}} + 1d10 no lugar de REF + perícia"{{/if}}>+{{ataque}}</td>
         <td>{{sistema.dano}}</td>
         <td class="num">{{sistema.cdt}}</td>
         <td>{{#if sistema.pente.max}}{{sistema.pente.value}}/{{sistema.pente.max}}{{#if municao}} <small>{{municao}}</small>{{/if}}{{else}}—{{/if}}</td>
@@ -27,6 +27,7 @@
           <button type="button" data-action="mirar" data-tooltip="Mirado (−8): cabeça, perna ou item na mão">Mirar</button>
           {{#if sistema.autofogo}}<button type="button" data-action="atacar" data-modo="autofogo" data-tooltip="Autofogo (×{{sistema.autofogo}}): 10 balas">Autofogo</button>{{/if}}
           {{#if sistema.supressivo}}<button type="button" data-action="atacar" data-modo="supressivo" data-tooltip="Fogo supressivo: 10 balas, todos a até 25 m">Supressivo</button>{{/if}}
+          {{#each modos2077}}<button type="button" data-action="atacar" data-modo="{{modo}}" data-tooltip="{{dica}}">{{rotulo}}</button>{{/each}}
           <button type="button" data-action="rolarDano" data-tooltip="Só rolar o dano">Dano</button>
           {{#if sistema.pente.max}}<button type="button" data-action="recarregar" data-tooltip="Recarregar">↻</button>{{/if}}
         </div></td>
