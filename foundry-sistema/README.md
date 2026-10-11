@@ -61,7 +61,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   A rodada é a do combate de que o personagem participa. Fora de combate, o Ponto Fraco e a Deflexão valem toda vez.
 - **Desfazer:** o cartão do resultado tem o botão, só para o mestre. Devolve o HP, o SP e o escudo, tira as lesões e o Suprimido, e devolve o Ponto Fraco e a Deflexão que o ataque gastou.
 - **Munição:** cada tiro sai do pente, e **↻** recarrega com a munição compatível da ficha. O ataque de um jogador sem mestre na mesa para antes de gastar a bala.
-- **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Lesões críticas e Personagens de exemplo. Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
+- **Inventário** (aba Equipamento): equipamento, roupas e drogas, com a quantidade e o uso (equipado, carregando ou guardado; o botão da linha passa de um para o outro).
+  - **Efeitos do equipamento** valem conforme o uso, como no CORE: o Agent (+2 em Pesquisa em Biblioteca) e o Techscanner valem equipados ou carregando; o Medscanner e o Linear Frame, só equipados.
+  - **Drogas** vêm com os efeitos desligados. Quem usa liga o efeito na ficha do item (o Boost dá +2 INT).
+  - **Roupas** guardam o tipo e o estilo, com os nomes da loja da wiki.
+- **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Equipamento, Roupas, Drogas, Lesões críticas e Personagens de exemplo. Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
 - **Cyberware:**
   - **Instalar** desconta a Humanidade pela perda rolada (Shift: pela média).
   - **Humanidade máxima:** 10 × EMP, menos 2 por peça instalada que tem perda de Humanidade (borgware, menos 4). Peça sem perda, como o cyberware grátis de 2077, não reduz.
@@ -69,9 +73,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Tirar** devolve a Humanidade.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
   - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e dinheiro;
-  - armas carregadas, armaduras vestidas e cyberware instalado.
+  - armas carregadas, armaduras vestidas e cyberware instalado;
+  - equipamento, roupas e drogas, com a quantidade e o uso da montagem da wiki (equipado, carregando ou guardado).
 
-  A wiki marca o personagem como "no Foundry". O que ainda não existe aqui (equipamento, roupas, programas, veículos) vira aviso.
+  A wiki marca o personagem como "no Foundry". O que ainda não existe aqui (cyberdeck, programas, acessórios, veículos e o conteúdo de 2077) vira aviso.
 
 ## Configurações (Configurações → Sistema)
 
@@ -128,7 +133,7 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
 - **Lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js`.
 - **No Foundry 14:** `node tests/rodar.js v14`, na raiz da wiki. Sobe o Foundry 14 do PC sem janela, num mundo vazio e numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`), e confere estes pontos, com dados fixos onde a conta importa:
   - os compêndios, a ficha e o crítico do d10;
-  - o catálogo, o cyberware e a recarga;
+  - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item);
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o mirado na cabeça e na perna;
   - o autofogo, o explosivo em área, o cartucho, a munição de borracha e a que não causa dano;

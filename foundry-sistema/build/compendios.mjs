@@ -1,5 +1,6 @@
 // Gera os compêndios do sistema em packs/ (fora do git) a partir de dados/catalogo.json: armas, armaduras, munição,
-// cyberware e lesões críticas, e dois personagens de exemplo prontos para o combate (um Solo e um Capanga).
+// cyberware, equipamento, roupas, drogas e lesões críticas, e dois personagens de exemplo prontos para o combate (um Solo
+// e um Capanga).
 // Compila com a ferramenta oficial do Foundry (@foundryvtt/foundryvtt-cli) pelo npx, como o build do cpr-2077.
 // Uso: node build/compendios.mjs   (o instalar.mjs chama sozinho quando o catálogo ou este arquivo mudam)
 import { execSync } from 'node:child_process';
@@ -35,7 +36,7 @@ function documentoDeItem(id, { ator = null, mudar = null } = {}) {
   return { ...dados, _id, _key: ator ? `!actors.items!${ator}.${_id}` : `!items!${_id}`, effects, folder: null, sort: 0, ownership: { default: 0 }, _stats: estatisticas };
 }
 
-const PACKS_DE_ITENS = { armas: 'arma', armaduras: 'armadura', municao: 'municao', cyberware: 'cyberware', lesoes: 'lesao' };
+const PACKS_DE_ITENS = { armas: 'arma', armaduras: 'armadura', municao: 'municao', cyberware: 'cyberware', equipamento: 'equipamento', roupas: 'roupa', drogas: 'droga', lesoes: 'lesao' };
 
 // ---------------- Personagens de exemplo ----------------
 // Armas com o pente cheio da munição da ficha (a quantidade de munição na lista é o que sobra), armaduras vestidas e

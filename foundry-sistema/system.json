@@ -68,6 +68,21 @@
         "htmlFields": [
           "descricao"
         ]
+      },
+      "equipamento": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "roupa": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "droga": {
+        "htmlFields": [
+          "descricao"
+        ]
       }
     }
   },
@@ -125,6 +140,39 @@
       }
     },
     {
+      "name": "equipamento",
+      "label": "Equipamento",
+      "path": "packs/equipamento",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "roupas",
+      "label": "Roupas",
+      "path": "packs/roupas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "drogas",
+      "label": "Drogas",
+      "path": "packs/drogas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
       "name": "lesoes",
       "label": "Lesões críticas",
       "path": "packs/lesoes",
@@ -157,6 +205,9 @@
         "armaduras",
         "municao",
         "cyberware",
+        "equipamento",
+        "roupas",
+        "drogas",
         "lesoes",
         "exemplos"
       ]

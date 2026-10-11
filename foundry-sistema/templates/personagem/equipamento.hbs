@@ -37,6 +37,21 @@
     {{else}}<li class="vazio">Sem munição.</li>{{/each}}
   </ol>
 
+  {{#each inventario}}
+  <h3>{{titulo}}</h3>
+  <ol class="itens">
+    {{#each itens}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <span class="detalhe">{{detalhe}}</span>
+      <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado">{{usoNome}}</button>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{else}}<li class="vazio">{{vazio}}</li>{{/each}}
+  </ol>
+  {{/each}}
+
   <h3>Dinheiro e reputação</h3>
   <div class="campos">
     <label>Eurodólares <input type="number" name="system.dinheiro" value="{{fonte.dinheiro}}"></label>

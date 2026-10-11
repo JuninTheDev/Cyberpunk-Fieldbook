@@ -42,13 +42,32 @@
     <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
     <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
     {{/if}}
+    {{#if inventario}}
+    <label>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}} <input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>
+    <label>Uso <select name="system.uso">{{selectOptions usos selected=fonte.uso}}</select></label>
+    {{/if}}
+    {{#if eh.equipamento}}
+    <label>Os efeitos valem <select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>
+    <label class="caixa"><input type="checkbox" name="system.eletronico" {{checked fonte.eletronico}}> Eletrônico</label>
+    <label class="caixa"><input type="checkbox" name="system.ocultavel" {{checked fonte.ocultavel}}> Ocultável</label>
+    {{/if}}
+    {{#if eh.roupa}}
+    <label>Tipo <select name="system.tipo">{{selectOptions tiposRoupa selected=fonte.tipo}}</select></label>
+    <label>Estilo <select name="system.estilo">{{selectOptions estilosRoupa selected=fonte.estilo}}</select></label>
+    {{/if}}
+    {{#if eh.droga}}{{#if fonte.consumo}}<p class="nota">Ao usar: ligue o efeito "{{fonte.consumo}}" abaixo.</p>{{/if}}{{/if}}
     {{#unless eh.lesao}}<label>Preço (eb) <input type="number" name="system.preco" value="{{fonte.preco}}"></label>{{/unless}}
   </div>
 
   {{#if efeitos.length}}
   <h3>Efeitos</h3>
   <ol class="efeitos">
-    {{#each efeitos}}<li class="{{#unless ativo}}inativo{{/unless}}"><b>{{nome}}</b> {{mudancas}}{{#unless ativo}} <small>(sem efeito agora)</small>{{/unless}}</li>{{/each}}
+    {{#each efeitos}}
+    <li class="{{#unless ativo}}inativo{{/unless}}">
+      <b>{{nome}}</b> {{mudancas}}{{#unless ativo}} <small>(sem efeito agora)</small>{{/unless}}
+      {{#if ligavel}}<button type="button" class="alternar {{#unless desligado}}ligado{{/unless}}" data-action="alternarEfeito" data-efeito="{{id}}">{{#if desligado}}Ligar{{else}}Desligar{{/if}}</button>{{/if}}
+    </li>
+    {{/each}}
   </ol>
   {{/if}}
 

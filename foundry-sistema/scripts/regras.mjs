@@ -37,6 +37,14 @@ export function consciencia(habilidades = {}) {
 export const PENALIDADE_MOVE_MORTAL = -6;
 export const moveFinal = (move, mortal) => Math.max(1, Number(move) + (mortal ? PENALIDADE_MOVE_MORTAL : 0));
 
+// O efeito de um equipamento vale com o uso de agora? Pela ativação do item: "equipado" só equipado; "carregando"
+// equipado ou carregando (guardado em casa, não); "manual" sempre, e quem decide é o efeito, ligado ou desligado.
+export function efeitoValeNoUso(ativacao, uso) {
+  if (ativacao === 'equipado') return uso === 'equipado';
+  if (ativacao === 'carregando') return uso === 'equipado' || uso === 'carregando';
+  return true;
+}
+
 // Estado de ferimento (p. 186): abaixo da metade do HP (arredondada para cima), −2 em tudo; abaixo de 1, −4.
 export function estadoDeFerimento(hp, max) {
   if (hp < 1) return { chave: 'mortal', rotulo: 'Mortalmente ferido', penalidade: -4 };

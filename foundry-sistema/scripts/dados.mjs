@@ -1,7 +1,7 @@
 // Modelos de dados (TypeDataModel do Foundry 14): o personagem, as armas, armaduras, munição e cyberware, e o efeito
 // que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP, bônus dos efeitos)
 // é calculado na preparação, a cada vez.
-import { ATRIBUTOS } from './config.mjs';
+import { ATIVACOES, ATRIBUTOS, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 
@@ -175,6 +175,53 @@ export class DadosCyberware extends foundry.abstract.TypeDataModel {
   }
 }
 
+// Inventário: equipamento, roupa e droga, em pilha (a quantidade) e com o uso da montagem da wiki.
+const usoDoItem = initial => new fields.StringField({ required: true, blank: false, initial, choices: Object.keys(USOS) });
+
+export class DadosEquipamento extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      quantidade: inteiro(1, { min: 0 }),
+      uso: usoDoItem('carregando'),
+      ativacao: new fields.StringField({ required: true, blank: false, initial: 'carregando', choices: Object.keys(ATIVACOES) }),
+      eletronico: new fields.BooleanField({ initial: false }),
+      ocultavel: new fields.BooleanField({ initial: false }),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+}
+
+export class DadosRoupa extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      quantidade: inteiro(1, { min: 0 }),
+      uso: usoDoItem('equipado'),
+      tipo: texto(),
+      estilo: texto(),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+}
+
+// Droga: as doses. Os efeitos vêm desligados (o CORE também); quem usa liga o efeito na ficha do item. "consumo" é o
+// nome do efeito principal, para quando o sistema souber consumir.
+export class DadosDroga extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      quantidade: inteiro(1, { min: 0 }),
+      uso: usoDoItem('carregando'),
+      consumo: texto(),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+}
+
 export class DadosLesao extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
@@ -189,15 +236,16 @@ export class DadosLesao extends foundry.abstract.TypeDataModel {
   }
 }
 
-// Efeito que vem de um item só vale com o item em uso: cyberware instalado, arma ou armadura equipada.
-// O Foundry 14 pergunta isso ao modelo de dados do efeito (ActiveEffect#isSuppressed → system.isSuppressed); null deixa
-// o core decidir (efeito expirado).
+// Efeito que vem de um item só vale com o item em uso: cyberware instalado, arma ou armadura equipada, equipamento no uso
+// que a ativação pede. O Foundry 14 pergunta isso ao modelo de dados do efeito (ActiveEffect#isSuppressed →
+// system.isSuppressed); null deixa o core decidir (efeito desligado ou expirado), como nos efeitos ligados à mão.
 export class DadosEfeito extends foundry.data.ActiveEffectTypeDataModel {
   get isSuppressed() {
     const item = this.parent?.parent;
     if (!(item instanceof Item)) return null;
     if (item.type === 'cyberware') return !item.system.instalado;
     if (item.type === 'arma' || item.type === 'armadura') return !item.system.equipada;
+    if (item.type === 'equipamento' && item.system.ativacao !== 'manual') return !regras.efeitoValeNoUso(item.system.ativacao, item.system.uso);
     return null;
   }
 }

@@ -8,7 +8,10 @@
       "armadura": "Armadura",
       "municao": "Munição",
       "cyberware": "Cyberware",
-      "lesao": "Lesão crítica"
+      "lesao": "Lesão crítica",
+      "equipamento": "Equipamento",
+      "roupa": "Roupa",
+      "droga": "Droga"
     }
   }
 }

@@ -229,9 +229,45 @@ function lesao(doc, s) {
     }
   };
 }
+// Inventário: equipamento, roupa e droga, em pilha. O "usage" do CORE diz quando o efeito do equipamento vale: carregado,
+// equipado, ou ligado à mão ("toggled" e o resto).
+const ATIVACAO_DO_CORE = { carried: 'carregando', equipped: 'equipado' };
+function equipamento(doc, s) {
+  return {
+    name: doc.name, type: 'equipamento', img: 'icons/svg/item-bag.svg',
+    system: {
+      descricao: s.description?.value || '', quantidade: Number(s.amount) || 1, uso: 'carregando', ativacao: ATIVACAO_DO_CORE[s.usage] || 'manual',
+      eletronico: Boolean(s.isElectronic), ocultavel: Boolean(s.concealable?.concealable), preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+    }
+  };
+}
+function roupa(doc, s) {
+  return {
+    name: doc.name, type: 'roupa', img: 'icons/svg/cowled.svg',
+    system: {
+      descricao: s.description?.value || '', quantidade: Number(s.amount) || 1, uso: 'equipado', tipo: s.type || '', estilo: s.style || '',
+      preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+    }
+  };
+}
+// Droga: "consumed" é o nome do efeito principal ("None" quando não tem).
+function droga(doc, s) {
+  return {
+    name: doc.name, type: 'droga', img: 'icons/svg/pill.svg',
+    system: {
+      descricao: s.description?.value || '', quantidade: Number(s.amount) || 1, uso: 'carregando', consumo: s.consumed && s.consumed !== 'None' ? s.consumed : '',
+      preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+    }
+  };
+}
+// O pack de equipamento do CORE traz também duas bases de cyberware externas (Battleglove e Smart Glasses) e os
+// cyberdecks, que ainda não têm tipo neste sistema (null: fica de fora, e o build lista).
+const doPackDeEquipamento = (doc, s) => (doc.type === 'gear' ? equipamento(doc, s) : doc.type === 'cyberware' ? cyberware(doc, s) : null);
+
 const CONVERSORES = {
   'core/weapons': arma, 'core/armor': armadura, 'core/ammo': municao, 'core/cyberware': cyberware,
-  'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao
+  'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao,
+  'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga
 };
 
 // Tabelas de Lesão Crítica (2d6): faixas [mín, máx, id do item no catálogo], uma do corpo e uma da cabeça.
@@ -279,11 +315,13 @@ async function main() {
   const lesoes = converterLesoes(yaml);
   const itens = {};
   const foraDoMapa = [];
+  const semTipo = [];
   const contagem = {};
   for (const [pack, converter] of Object.entries(CONVERSORES)) {
     const curto = `core_${pack.split('/')[1]}`;
     for (const doc of lerPack(yaml, pack)) {
       const item = converter(doc, doc.system || {});
+      if (!item) { semTipo.push(`${doc.name} (${doc.type})`); continue; }
       item.effects = converterEfeitos(doc, camel, foraDoMapa);
       item.flags = { 'cpr-fieldbook': { catalogo: `${curto}:${slug(doc.name)}`, origem: { sistema: 'cyberpunk-red-core', versao: VERSAO, id: doc._id } } };
       itens[`${curto}:${slug(doc.name)}`] = item;
@@ -310,6 +348,7 @@ async function main() {
   console.log(`Perícias: ${pericias.length} (+${Object.keys(familias).length} famílias) · tabelas de DV: ${Object.keys(tabelas).length} · tabelas de lesão: ${Object.keys(lesoes).join(', ')}`);
   if (semItem.length) console.log(`Resultados de lesão sem item no catálogo: ${semItem.join(', ')}`);
   if (semNome.length) console.log(`Perícias sem nome em português na wiki: ${semNome.join(', ')}`);
+  if (semTipo.length) console.log(`Sem tipo neste sistema, ficaram de fora (${semTipo.length}): ${semTipo.join(', ')}`);
   if (foraDoMapa.length) console.log(`Mudanças de efeito que ficaram de fora (${foraDoMapa.length}):\n  ${foraDoMapa.join('\n  ')}`);
 }
 

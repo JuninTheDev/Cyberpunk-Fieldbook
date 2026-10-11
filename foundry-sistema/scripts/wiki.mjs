@@ -1,9 +1,9 @@
 // Importar da wiki: o personagem criado no criador da wiki vira um ator deste sistema, com STATs, perícias, Role,
 // Humanidade, dinheiro e o equipamento (armas carregadas, armaduras vestidas, cyberware instalado).
 // Os itens vêm de dados/catalogo.json pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"). O que ainda não
-// existe neste sistema (equipamento, roupas, programas, veículos) vira um aviso, e o resto entra.
+// existe neste sistema (cyberdeck, programas, acessórios, veículos e o conteúdo de 2077) vira um aviso, e o resto entra.
 import { carregarCatalogo } from './catalogo.mjs';
-import { ATRIBUTOS, SISTEMA } from './config.mjs';
+import { ATRIBUTOS, SISTEMA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 
 export { carregarCatalogo };
@@ -43,20 +43,26 @@ function periciaDaWiki({ nome, nivel, base }) {
   return [`${familia}-${slug(especifico || nome)}`, { nivel, familia, nome: especifico || nome }];
 }
 
+// Munição e inventário entram em pilha (um item com a quantidade); o resto, em cópias separadas.
+const EM_PILHA = ['municao', 'equipamento', 'roupa', 'droga'];
+
 // Os dados de cada item da wiki prontos para entrar no ator, com o uid da wiki na flag (para a munição achar a arma).
 function itensDaWiki(catalogo, entradas, notas) {
   const itens = [];
   for (const entrada of entradas) {
     const base = catalogo[entrada.id];
     if (!base) { notas.push(`${entrada.nome || entrada.id}: ainda não existe neste sistema.`); continue; }
-    const copias = base.type === 'municao' ? 1 : Math.max(1, Number(entrada.qtd) || 1);
+    const copias = EM_PILHA.includes(base.type) ? 1 : Math.max(1, Number(entrada.qtd) || 1);
     for (let i = 0; i < copias; i++) {
       const data = foundry.utils.deepClone(base);
       if (entrada.renomear) data.name = entrada.renomear;
       foundry.utils.setProperty(data, `flags.${SISTEMA}.wikiUid`, entrada.uid);
       if (data.type === 'municao') data.system.quantidade = Number(entrada.qtd) || 0;
+      else if (EM_PILHA.includes(data.type)) data.system.quantidade = Math.max(1, Number(entrada.qtd) || 1);
       // Uso escolhido na montagem da wiki; sem ele (personagem antigo), armas e armaduras equipadas.
       if (data.type === 'arma' || data.type === 'armadura') data.system.equipada = entrada.uso ? entrada.uso === 'equipado' : true;
+      // No inventário, o uso vem igual (equipado, carregando, guardado); sem ele, fica o padrão do item.
+      else if ('uso' in data.system && Object.hasOwn(USOS, entrada.uso ?? '')) data.system.uso = entrada.uso;
       // O criador da wiki já descontou a Humanidade do cyberware: entra instalado, sem rolar de novo.
       if (data.type === 'cyberware') data.system.instalado = true;
       if (entrada.semHumanidade) data.system.perdaHumanidade = { formula: '0', media: 0, sofrida: 0 };

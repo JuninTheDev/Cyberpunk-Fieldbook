@@ -31,14 +31,15 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | habilidades das outras Roles | falta |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
-| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição e cyberware; o resto vira aviso |
+| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas e drogas do CORE; o resto vira aviso |
 | cpr-2077 | volta da ficha para a wiki, pedidos da loja, crossover entre campanhas, armas de 2077 | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
 
-1. **O importador descarta** equipamento, roupas, programas, cyberdeck, drogas, upgrades e veículos (`scripts/wiki.mjs`).
+1. **O importador descarta** cyberdecks, programas, upgrades (acessórios e hardware), veículos e o conteúdo de 2077 da
+   loja (armas, netrunning e cyberware) (`scripts/wiki.mjs`). Equipamento, roupas e drogas já entram (ciclo 8).
 2. **Sem volta da ficha para a wiki:** a wiki pararia de receber o estado da mesa.
 3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
 4. **Faltam a NET e as armas de 2077,** que a campanha usa.
@@ -64,6 +65,13 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   - a Deflexão só se gasta quando entra dano: o que a armadura ou o escudo seguram inteiro não conta como dano sofrido.
 
   Se a mesa ler "rodada" como o turno de cada combatente, é só trocar a marca (`combate.mjs`, `primeiraNaRodada`).
+
+- **Linear Frame vestido (equipamento): o HP sobe com o BODY?** O efeito do CORE troca o BODY por 12 ou 14 enquanto o
+  item está equipado, e o HP máximo, que vem do BODY, sobe junto. A wiki diz "BODY vira 14 enquanto plugado" para o
+  vestido; para o implantado (cyberware), diz que "atualiza HP, Seriously Wounded e Death Save". Ficou como o CORE.
+  Se o vestido não deve mudar o HP, é preciso separar o BODY do HP.
+
+- **Medscanner e Techscanner "não acumulam com outro"** (loja da wiki). Dois equipados somam +4 aqui, como no CORE.
 
 - **Munição de borracha: muda o que a mesa vê.** A wiki diz que a borracha "não causa lesão crítica nem ablação". O
   Fluxo, no Foundry 12, rolava a lesão crítica com ela (só o "não letal" e a ablação vinham do CORE). Agora não sai
@@ -267,3 +275,44 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
 - **Atenção:** num mundo em que a ficha de um desses cyberwares já foi editada, o tipo pode estar como `fashionware`.
   Confira à mão. Não há migração, porque ainda não existe mundo real deste sistema.
 - **Próximo:** ciclo 8, equipamento, roupa e droga no catálogo, na ficha e na importação (P2).
+- **Commit:** `a3abc1c`.
+
+### Ciclo 8 (2026-10-11): equipamento, roupa e droga (P2, bloqueador da migração)
+
+- **Implementado:**
+  - **Tipos novos:** `equipamento`, `roupa` e `droga`, com a quantidade e o uso da montagem da wiki (equipado,
+    carregando ou guardado). O equipamento tem a ativação dos efeitos, que vem do `usage` do CORE: só equipado (Medscanner,
+    Linear Frame), equipado ou carregando (Agent, Techscanner), ou ligado à mão (lanterna). A roupa tem o tipo e o
+    estilo; a droga, o nome do efeito principal;
+  - **Efeitos:** os do equipamento valem conforme o uso (`regras.efeitoValeNoUso`, no `isSuppressed` do efeito). Os da
+    droga vêm desligados, como no CORE, e um botão na ficha do item liga e desliga os efeitos de ligar à mão;
+  - **Conversão:** os packs de equipamento, roupas e drogas do CORE. O catálogo foi de 300 para 453 itens: 51 de
+    equipamento, 90 roupas, 10 drogas e 2 cyberwares do pack de equipamento (Battleglove e Smart Glasses, bases
+    externas sem perda de Humanidade). Nenhum item que já existia mudou. Os 3 cyberdecks ficaram de fora, e o build os
+    lista. Os efeitos de luz da lanterna, do bastão de luz e do sinalizador (chaves do Active Token Lighting) também
+    ficaram de fora, e o build lista;
+  - **Compêndios:** Equipamento, Roupas e Drogas;
+  - **Importação:** os três tipos entram em pilha, com a quantidade e o uso da wiki. O Solo do teste não gera mais
+    nenhum aviso;
+  - **Ficha:** a aba Equipamento lista os três, com o uso num botão (equipado → carregando → guardado), e a ficha do
+    item tem os campos de cada tipo.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 27 de 27. Novos ou ampliados:
+    - toda peça da loja da wiki de equipamento, moda e drogas existe no catálogo;
+    - a tabela da ativação pelo uso;
+    - a ativação pelo `usage` do CORE, os efeitos da droga desligados e com o efeito principal existente, e os
+      rótulos de tipo e estilo de toda roupa;
+  - G4: 39 de 39, cerca de 38 s (49 s na rodada que gerou os compêndios de novo). Novo passo do inventário:
+    - o Agent vale carregando (+2) e não guardado;
+    - o Medscanner vale só equipado;
+    - o botão da ficha do item liga o Boost (+2 INT);
+    - a ficha lista os três tipos e troca o uso.
+
+    Na importação do Solo, o Agent e as cinco peças de roupa da wiki entram com o uso da montagem, e nenhum aviso sobra.
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Achado na wiki:** a loja mostra o tipo de roupa "hats" sem tradução (aqui, "Chapéu").
+- **Ficou:** cyberdeck e programa, os upgrades (acessório e hardware), os veículos e o conteúdo de 2077 (P2); usar a
+  droga (dose, duração, vício); o não acumular do Medscanner e do Techscanner; a luz no token.
+- **Próximo:** ciclo 9, cyberdeck e programa, com os programas no deck (P2, bloqueador da migração).

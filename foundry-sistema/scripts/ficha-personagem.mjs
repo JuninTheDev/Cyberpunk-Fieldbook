@@ -1,6 +1,6 @@
 // Ficha do personagem (ApplicationV2 do Foundry 14): cabeçalho com os vitais, e abas de atributos e combate, perícias,
 // equipamento, cyberware e notas. Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
-import { ATRIBUTOS, caminho, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE } from './config.mjs';
+import { ATRIBUTOS, caminho, ESTILOS_ROUPA, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -23,6 +23,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarDano: FichaPersonagem.#rolarDano,
       recarregar: FichaPersonagem.#recarregar,
       equipar: FichaPersonagem.#equipar,
+      mudarUso: FichaPersonagem.#mudarUso,
       instalar: FichaPersonagem.#instalar,
       editarItem: FichaPersonagem.#editarItem,
       apagarItem: FichaPersonagem.#apagarItem
@@ -64,6 +65,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       const p = s.pericia(id);
       return { ...p, sigla: SIGLA[p.atributo], total: s.atributos[p.atributo].valor + p.nivel + p.bonus + s.penalidade };
     };
+    // Inventário: um detalhe de cada tipo e o uso (o botão passa por equipado, carregando e guardado).
+    const vezes = item => (item.system.quantidade > 1 ? `×${item.system.quantidade}` : '');
+    const linhaDoInventario = (item, ...detalhes) => ({
+      id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', usoNome: USOS[item.system.uso] ?? item.system.uso
+    });
     const grupos = new Map();
     const noGrupo = (grupo, linha) => { if (!grupos.has(grupo)) grupos.set(grupo, []); grupos.get(grupo).push(linha); };
     for (const p of PERICIAS) noGrupo(p.grupo, linhaPericia(p.id));
@@ -76,6 +82,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       lesoes: itens('lesao').map(item => ({ id: item.id, nome: item.name, img: item.img, sistema: item.system, resumo: item.system.descricao.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(' Paliativo:')[0] })),
       deathSavePenalidade: s.deathSave.base + s.deathSave.penalidade,
       municoes: itens('municao'),
+      inventario: [
+        { titulo: 'Equipamento', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, vezes(item), item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
+        { titulo: 'Roupas', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, vezes(item), TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
+        { titulo: 'Drogas', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item, `${item.system.quantidade} ${item.system.quantidade === 1 ? 'dose' : 'doses'}`)) }
+      ],
       cyberwares: itens('cyberware').map(item => ({ id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', ') })),
       grupos: [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR')).map(([nome, pericias]) => ({ nome, pericias: pericias.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')) })),
       habilidades: Object.entries(s.role.habilidades).map(([nome, rank]) => ({ nome, rank })),
@@ -114,6 +125,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #equipar(evento, alvo) {
     const item = this.#item(alvo);
     return item?.update({ 'system.equipada': !item.system.equipada });
+  }
+  static #mudarUso(evento, alvo) {
+    const item = this.#item(alvo);
+    if (!item) return null;
+    const ordem = Object.keys(USOS);
+    return item.update({ 'system.uso': ordem[(ordem.indexOf(item.system.uso) + 1) % ordem.length] });
   }
   static #instalar(evento, alvo) {
     const item = this.#item(alvo);

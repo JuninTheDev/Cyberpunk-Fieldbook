@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
 import { FAMILIAS, PERICIAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { TIPOS_CYBERWARE } from '../../foundry-sistema/scripts/config.mjs';
+import { ESTILOS_ROUPA, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -198,12 +198,13 @@ test('Perícias: o atributo e o "x2" de cada perícia batem com a tabela de per�
   assert.deepEqual(diferencas, []);
 });
 
-test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, armaduras, munição, cyberware) existe nele', () => {
-  // Array.from: o que vem do vm é de outro "realm", e o deepEqual estrito compara o protótipo.
-  const itens = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens);
-  const tipos = /^core_(weapons|armor|ammo|cyberware):/;
+test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, armaduras, munição, cyberware, equipamento, roupa e droga) existe nele', () => {
+  // Array.from: o que vem do vm é de outro "realm", e o deepEqual estrito compara o protótipo. Os cyberdecks do pack de
+  // equipamento (categoria netrunning) ainda não têm tipo aqui.
+  const itens = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => item.cat !== 'netrunning');
+  const tipos = /^core_(weapons|armor|ammo|cyberware|gear|clothing|drugs):/;
   const faltam = itens.filter(item => tipos.test(item.id) && !catalogo[item.id]).map(item => item.id);
-  assert.ok(itens.filter(item => tipos.test(item.id)).length > 250, 'a loja da wiki tem os itens do CORE');
+  assert.ok(itens.filter(item => tipos.test(item.id)).length > 400, 'a loja da wiki tem os itens do CORE');
   assert.deepEqual(faltam, []);
 });
 
@@ -242,6 +243,26 @@ test('Munição que não causa dano: as mesmas da tabela de munição da wiki, c
 test('Tipos de cyberware: todo tipo do catálogo tem rótulo na ficha (senão o select da ficha do item troca o tipo ao salvar)', () => {
   const tipos = [...new Set(Object.values(catalogo).filter(item => item.type === 'cyberware').map(item => item.system.tipo))];
   assert.deepEqual(tipos.filter(tipo => !TIPOS_CYBERWARE[tipo]), []);
+});
+
+test('Inventário: o efeito do equipamento vale conforme a ativação e o uso', () => {
+  const tabela = ['equipado', 'carregando', 'manual'].map(ativacao => ['equipado', 'carregando', 'guardado'].map(uso => regras.efeitoValeNoUso(ativacao, uso)));
+  assert.deepEqual(tabela, [[true, false, false], [true, true, false], [true, true, true]]);
+});
+
+test('Catálogo: equipamento, roupa e droga como o CORE (ativação pelo usage, efeitos da droga desligados, rótulos de roupa)', () => {
+  const ativacao = id => catalogo[id].system.ativacao;
+  assert.deepEqual(['core_gear:agent', 'core_gear:medscanner', 'core_gear:linear-frame-beta', 'core_gear:flashlight'].map(ativacao), ['carregando', 'equipado', 'equipado', 'manual']);
+  const porTipo = tipo => Object.values(catalogo).filter(item => item.type === tipo);
+  assert.deepEqual([porTipo('equipamento').length, porTipo('roupa').length, porTipo('droga').length], [51, 90, 10]);
+  // As duas bases externas do pack de equipamento entram como cyberware, sem perda de Humanidade.
+  assert.deepEqual(['core_gear:battleglove', 'core_gear:smart-glasses'].map(id => [catalogo[id].type, catalogo[id].system.fundacional, catalogo[id].system.perdaHumanidade.media]),
+    [['cyberware', true, 0], ['cyberware', true, 0]]);
+  for (const droga of porTipo('droga')) {
+    assert.ok(droga.effects.every(efeito => efeito.disabled), `${droga.name}: efeito ligado`);
+    if (droga.system.consumo) assert.ok(droga.effects.some(efeito => efeito.name === droga.system.consumo), `${droga.name}: o efeito "${droga.system.consumo}" não existe`);
+  }
+  for (const roupa of porTipo('roupa')) assert.ok(TIPOS_ROUPA[roupa.system.tipo] && ESTILOS_ROUPA[roupa.system.estilo], `${roupa.name}: tipo ou estilo sem rótulo`);
 });
 
 test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia que existe e tabela de DV que existe', () => {

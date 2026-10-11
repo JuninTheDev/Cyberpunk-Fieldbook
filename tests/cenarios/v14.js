@@ -49,7 +49,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
-    await r.passo('compêndios: armas, armaduras, munição, cyberware, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
+    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
       const info = await edge.evaluate(`(async () => {
         const tamanhos = Object.fromEntries(game.packs.filter(p => p.metadata.packageName === '${S}').map(p => [p.metadata.name, p.index.size]));
         const pack = game.packs.get('${S}.exemplos');
@@ -63,7 +63,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 105 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -180,6 +180,44 @@ module.exports = async ({ edge, servidores, r }) => {
         return { r, pente: rifle.system.pente.value, sobra: a.items.getName('Rifle (Basic)').system.quantidade, carregada: rifle.municaoCarregada?.name };
       })()`);
       return [info.pente === 25 && info.sobra === 25 && info.carregada === 'Rifle (Basic)', JSON.stringify(info)];
+    });
+
+    await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const ids = ['core_gear:agent', 'core_gear:medscanner', 'core_drugs:boost', 'core_clothing:high-fashion-footwear'];
+        const a = await Actor.implementation.create({ name: 'Mochileiro', type: 'personagem', items: ids.map(id => foundry.utils.deepClone(cat[id])) });
+        const bonus = id => a.system.pericia(id).bonus;
+        const [agent, med, boost] = ['Agent', 'Medscanner', 'Boost'].map(nome => a.items.getName(nome));
+        const passos = [{ biblioteca: bonus('library-search'), primeirosSocorros: bonus('first-aid'), int: a.system.atributos.int.valor }];
+        await agent.update({ 'system.uso': 'guardado' });
+        await med.update({ 'system.uso': 'equipado' });
+        passos.push({ biblioteca: bonus('library-search'), primeirosSocorros: bonus('first-aid') });
+        // A droga: o botão da ficha do item liga o efeito principal.
+        await boost.sheet.render({ force: true });
+        await esperar(() => boost.sheet.element?.querySelector('[data-action="alternarEfeito"]'));
+        [...boost.sheet.element.querySelectorAll('[data-action="alternarEfeito"]')].find(b => b.closest('li').textContent.includes('Boost Primary')).click();
+        await esperar(() => a.system.atributos.int.valor !== 5);
+        passos.push({ int: a.system.atributos.int.valor, ligados: boost.effects.filter(e => !e.disabled).map(e => e.name) });
+        await boost.sheet.close();
+        // A ficha do personagem: as listas do inventário e o botão do uso (guardado → equipado).
+        await a.sheet.render({ force: true });
+        await esperar(() => a.sheet.element?.querySelector('.tab.equipamento [data-action="mudarUso"]'));
+        const linhas = [...a.sheet.element.querySelectorAll('.tab.equipamento li[data-item-id]')].filter(li => li.querySelector('[data-action="mudarUso"]'))
+          .map(li => [li.querySelector('.nome').textContent, li.querySelector('.detalhe').textContent, li.querySelector('[data-action="mudarUso"]').textContent].join(' | '));
+        a.sheet.element.querySelector('li[data-item-id="' + agent.id + '"] [data-action="mudarUso"]').click();
+        await esperar(() => agent.system.uso === 'equipado');
+        passos.push({ uso: agent.system.uso, biblioteca: bonus('library-search') });
+        await a.sheet.close();
+        await a.delete();
+        return { passos, linhas };
+      })()`);
+      const [p0, p1, p2, p3] = info.passos;
+      const linhas = info.linhas.join(' ; ');
+      return [p0.biblioteca === 2 && p0.primeirosSocorros === 0 && p0.int === 5 && p1.biblioteca === 0 && p1.primeirosSocorros === 2 && p2.int === 7 && p2.ligados.join() === 'Boost Primary'
+        && p3.uso === 'equipado' && p3.biblioteca === 2 && /Agent \|[^;]*\| Guardado/.test(linhas) && /Medscanner \|[^;]*Medscanner[^;]*\| Equipado/.test(linhas) && /Boost \| 1 dose \| Carregando/.test(linhas)
+        && /High Fashion Footwear \| Calçado · Alta moda \| Equipado/.test(linhas), JSON.stringify(info)];
     });
 
     // ---------- Combate ----------
@@ -764,7 +802,7 @@ module.exports = async ({ edge, servidores, r }) => {
     });
 
     // ---------- Importar da wiki ----------
-    await r.passo('wiki: importa o Solo com STATs, HP, perícias, Role, armas carregadas, armadura vestida e cyberware instalado', async () => {
+    await r.passo('wiki: importa o Solo com STATs, HP, perícias, Role, armas carregadas, armadura vestida, cyberware instalado e o inventário (equipamento e roupas, com o uso da wiki)', async () => {
       await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)})`);
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(solo.id)}, '');
@@ -775,16 +813,24 @@ module.exports = async ({ edge, servidores, r }) => {
           armas: ator.items.filter(i => i.type === 'arma').map(i => [i.name, i.system.equipada, i.system.pente.value, i.system.pente.max]),
           armaduras: ator.items.filter(i => i.type === 'armadura').map(i => [i.name, i.system.equipada]), sp: s.armadura.corpo.sp,
           cyber: ator.items.filter(i => i.type === 'cyberware').map(i => [i.name, i.system.instalado]), dinheiro: s.dinheiro, notas,
-          pecasComPerda: ator.items.filter(i => i.type === 'cyberware' && i.system.instalado && i.system.perdaHumanidade.media > 0 && i.system.tipo !== 'borgware').length, emp: s.atributos.emp.valor
+          pecasComPerda: ator.items.filter(i => i.type === 'cyberware' && i.system.instalado && i.system.perdaHumanidade.media > 0 && i.system.tipo !== 'borgware').length, emp: s.atributos.emp.valor,
+          porUid: ator.items.map(i => [i.getFlag('${S}', 'wikiUid'), i.type, i.system.uso ?? null, i.system.quantidade ?? null])
         };
       })()`);
+      // O inventário da wiki (equipamento, roupa e droga do CORE; os cyberdecks ainda não têm tipo aqui) entra todo, com o
+      // uso da montagem, e nenhum vira aviso.
+      const doInventario = solo.resultado.itens.filter(i => /^core_(gear|clothing|drugs):/.test(i.id) && !/^core_gear:cyberdeck/.test(i.id));
+      const naFicha = new Map(info.porUid.map(([uid, tipo, uso, qtd]) => [uid, { tipo, uso, qtd }]));
+      const inventarioOk = doInventario.length > 0 && doInventario.every(i => naFicha.has(i.uid) && (naFicha.get(i.uid).uso === null || naFicha.get(i.uid).uso === i.uso))
+        && !info.notas.some(nota => doInventario.some(i => nota.startsWith(`${i.nome}:`)));
       const st = solo.resultado.stats;
       const statsOk = ['int', 'ref', 'dex', 'tech', 'cool', 'will', 'move', 'body'].every(k => info.stats[k] === st[k.toUpperCase()]);
       const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
       const armasOk = info.armas.length > 0 && info.armas.filter(([, , , max]) => max > 0).every(([, equipada, valor, max]) => equipada && valor === max);
       return [info.nome === 'Teste Sistema' && statsOk && info.hp[0] === solo.resultado.derivados.hp && info.hp[1] === solo.resultado.derivados.hp && info.role[0] === 'Solo' && info.role[1] === 4
         && info.role[2]['Initiative Reaction'] === 2 && info.evasao >= 2 && info.lingua.length >= 1 && armasOk && info.armaduras.every(([, v]) => v) && info.sp === 11 && info.cyber.every(([, inst]) => inst) && info.hum[0] === solo.resultado.humanidade.atual && info.hum[1] === info.emp * 10 - 2 * info.pecasComPerda && info.pecasComPerda > 0 && info.dinheiro === solo.resultado.dinheiro.saldo
-        && doc.foundry?.ator, `${JSON.stringify(info)} · wiki: ${doc.estadoFoundry} ${doc.foundry?.ator || ''}`];
+        && inventarioOk && doc.foundry?.ator,
+        `inventário da wiki: ${doInventario.map(i => `${i.nome} (${i.uso})`).join(', ')} · ${JSON.stringify({ ...info, porUid: undefined })} · wiki: ${doc.estadoFoundry} ${doc.foundry?.ator || ''}`];
     });
     await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki'))?.sheet.render({ force: true })`);
     await edge.sleep(1200);

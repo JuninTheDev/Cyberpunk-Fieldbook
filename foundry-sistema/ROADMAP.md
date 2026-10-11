@@ -47,11 +47,18 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 
 ## P2: fichas, inventário, equipamento, armas e combate
 
-- [ ] **Tipos de item que o importador hoje descarta:** equipamento, roupa, programa, cyberdeck, droga, upgrade e
-  veículo. É bloqueador da migração da campanha.
+- [ ] **Tipos de item que o importador hoje descarta** (bloqueador da migração da campanha):
+  - [x] equipamento, roupa e droga, com a quantidade, o uso da montagem da wiki e os efeitos do equipamento pelo uso
+    (Ciclo 8);
+  - [ ] cyberdeck e programa, com os programas no deck;
+  - [ ] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem;
+  - [ ] veículo (os da família do Nomad, com os upgrades);
+  - [ ] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077.
 - [ ] **Volta da ficha para a wiki** (HP, munição, dinheiro, lesões) e entrega dos pedidos da loja. Bloqueador da migração.
 - [ ] **Da wiki:** botão "Importar da wiki" na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
   ator); retrato.
+- [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
+  e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [ ] **Na rolagem:** Sorte; Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
   Falhas do Solo; Facedown.
 - [ ] **Consciência de Combate na ficha:** redistribuir os pontos (a wiki permite antes do combate ou com uma ação) e
