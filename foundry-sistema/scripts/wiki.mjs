@@ -55,7 +55,9 @@ function periciaDaWiki({ nome, nivel, base }) {
 const EM_PILHA = ['municao', 'equipamento', 'roupa', 'droga'];
 
 // Os dados de cada item da wiki prontos para entrar no ator, com o uid da wiki na flag (para a munição achar a arma).
-function itensDaWiki(catalogo, entradas, notas) {
+// instalarCyberware: na importação, sim (o criador já descontou a Humanidade); num pedido da loja, não (a instalação na
+// ficha rola a Humanidade).
+function itensDaWiki(catalogo, entradas, notas, { instalarCyberware = true } = {}) {
   const itens = [];
   for (const entrada of entradas) {
     const base = catalogo[entrada.id];
@@ -72,7 +74,7 @@ function itensDaWiki(catalogo, entradas, notas) {
       // No inventário, o uso vem igual (equipado, carregando, guardado); sem ele, fica o padrão do item.
       else if ('uso' in data.system && Object.hasOwn(USOS, entrada.uso ?? '')) data.system.uso = entrada.uso;
       // O criador da wiki já descontou a Humanidade do cyberware: entra instalado, sem rolar de novo.
-      if (data.type === 'cyberware') data.system.instalado = true;
+      if (data.type === 'cyberware') data.system.instalado = instalarCyberware;
       if (entrada.semHumanidade) data.system.perdaHumanidade = { formula: '0', media: 0, sofrida: 0 };
       itens.push(data);
     }
@@ -258,6 +260,61 @@ export async function mandarPendentes() {
 function registrarVoltaParaWiki() {
   Hooks.on('updateActor', ator => agendarVolta(ator));
   for (const gancho of ['createItem', 'updateItem', 'deleteItem']) Hooks.on(gancho, item => agendarVolta(item.parent));
+  // A cada minuto (e logo depois de entrar), o mestre ativo entrega os pedidos aprovados na wiki. Sem falar com a wiki
+  // (fora do ar, endereço errado), não avisa nada: o mestre vê o erro quando entregar pela macro.
+  Hooks.once('ready', () => {
+    const tentar = () => { if (souOMestreAtivo()) entregarPedidos().catch(erro => console.debug(`${SISTEMA} | pedidos da wiki:`, erro.message)); };
+    setTimeout(tentar, 5000);
+    setInterval(tentar, 60000);
+  });
   // Ao entrar: manda todos os atores da wiki uma vez.
   Hooks.once('ready', () => { for (const ator of game.actors) agendarVolta(ator); });
+}
+
+// ---------------- Pedidos da loja ----------------
+// O jogador pede na loja da wiki, o mestre aprova na página do personagem na wiki, e o mestre ativo entrega aqui: cria os
+// itens (no lugar e com a munição que o jogador pediu), desconta o dinheiro e marca o pedido como entregue. Cada item leva
+// o uid "pedido:<id>:<n>" que a wiki deu: se a entrega cair no meio, a próxima não cria em dobro. O cyberware chega sem
+// instalar. Sem dinheiro na mesa, o pedido fica aprovado, com o erro, e a wiki mostra "Tentar de novo".
+const souOMestreAtivo = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id);
+
+export async function entregarPedido(ator, wikiId, pedido) {
+  const prefixo = `pedido:${pedido.id}:`;
+  const notas = [];
+  const jaEntregue = ator.items.some(item => String(item.getFlag(SISTEMA, 'wikiUid') || '').startsWith(prefixo));
+  if (!jaEntregue) {
+    if (ator.system.dinheiro < pedido.total) {
+      const erro = `Dinheiro insuficiente na mesa: ${ator.system.dinheiro}eb de ${pedido.total}eb.`;
+      await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/erro`, { method: 'POST', body: { erro } }).catch(() => null);
+      return { ok: false, notas: [erro] };
+    }
+    const linhas = (pedido.itens || []).map(linha => ({ ...linha, uso: 'carregando' }));
+    const dados = itensDaWiki(await carregarCatalogo(), linhas, notas, { instalarCyberware: false });
+    if (dados.length) await ator.createEmbeddedDocuments('Item', dados);
+    await instalarNoLugar(ator, linhas);
+    await carregarArmas(ator, linhas);
+    await ator.update({ 'system.dinheiro': ator.system.dinheiro - pedido.total });
+    if (linhas.some(linha => linha.cyber)) notas.push('Cyberware: instale pela ficha (a instalação rola a Humanidade).');
+  }
+  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notas } });
+  return { ok: true, notas };
+}
+
+// Os pedidos aprovados dos personagens que estão neste mundo (pelo id da wiki na flag do ator).
+export async function entregarPedidos() {
+  if (!souOMestreAtivo()) return [];
+  const { personagens = [] } = await wikiFetch('/api/personagens');
+  const resultados = [];
+  for (const resumo of personagens.filter(p => !p.publico && p.pedidos?.aprovados)) {
+    const ator = game.actors.find(a => a.getFlag(SISTEMA, 'wiki')?.id === resumo.id);
+    if (!ator) continue;
+    const { personagem } = await wikiFetch(`/api/personagens/${resumo.id}`);
+    for (const pedido of (personagem?.pedidos || []).filter(p => p.status === 'aprovado' && !p.erro)) {
+      const resultado = await entregarPedido(ator, resumo.id, pedido).catch(erro => ({ ok: false, notas: [erro.message] }));
+      if (resultado.ok) ui.notifications.info(`Wiki: pedido de ${ator.name} entregue na ficha.${resultado.notas.length ? ` ${resultado.notas.join(' ')}` : ''}`);
+      else ui.notifications.warn(`Wiki: o pedido de ${ator.name} não foi entregue. ${resultado.notas.join(' ')}`);
+      resultados.push({ ator: ator.name, pedido: pedido.id, ...resultado });
+    }
+  }
+  return resultados;
 }

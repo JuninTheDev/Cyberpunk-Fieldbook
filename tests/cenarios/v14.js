@@ -927,6 +927,45 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...mesa, itens: itens.map(i => `${i.tipo}:${i.nome}:${i.uso}`) }).slice(0, 1500)];
     });
 
+    await r.passo('pedidos da loja: o aprovado na wiki entra na ficha (o carregador estendido no rifle, 10 balas), desconta 110eb e fica entregue; não sai em dobro; o caro demais fica aprovado com o erro', async () => {
+      const rifleDaWiki = solo.resultado.itens.find(i => i.id === 'core_weapons:assault-rifle');
+      // Pedido 1: Extended Magazine (Assault Rifle) no rifle e 10 balas de rifle (10eb o pacote) = 110eb.
+      const { pedido } = await api(`/api/personagens/${solo.id}/pedidos`, 'POST', {
+        itens: [{ id: 'core_upgrades:extended-magazine-assault-rifle', qtd: 1, em: rifleDaWiki.uid }, { id: 'core_ammo:rifle-basic', qtd: 10 }]
+      });
+      await api(`/api/personagens/${solo.id}/pedidos/${pedido.id}/aprovar`, 'POST', {});
+      // Pedido 2, caro demais para o que vai sobrar: Linear Frame β (5.000eb).
+      const caro = (await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'core_gear:linear-frame-beta', qtd: 1 }] })).pedido;
+      await api(`/api/personagens/${solo.id}/pedidos/${caro.id}/aprovar`, 'POST', {});
+      const info = await edge.evaluate(`(async () => {
+        const a = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        const antes = a.system.dinheiro;
+        // As mensagens da entrega (a do pedido sem dinheiro é um aviso) ficam aqui, conferidas, e não no console.
+        const mensagens = [];
+        ui.notifications.info = m => { mensagens.push(String(m)); };
+        ui.notifications.warn = m => { mensagens.push(String(m)); };
+        let resultados;
+        try { resultados = await game.system.api.wiki.entregarPedidos(); } finally { delete ui.notifications.info; delete ui.notifications.warn; }
+        const rifle = a.items.getName('Assault Rifle');
+        const depois = {
+          dinheiro: a.system.dinheiro, pente: rifle.system.pente.max, acessorios: rifle.instalados.map(i => i.name),
+          municao: a.items.filter(i => i.type === 'municao').map(i => i.name + ' ' + i.system.quantidade), linear: a.items.filter(i => i.name.startsWith('Linear Frame')).length
+        };
+        // Entregar de novo o mesmo pedido, inteiro: os itens dele já estão na ficha (o uid "pedido:<id>:<n>"), então nada sai
+        // em dobro, e a wiki recusa marcar de novo (já resolvido).
+        const itensAntes = a.items.size;
+        const deNovo = await game.system.api.wiki.entregarPedido(a, ${JSON.stringify(solo.id)}, ${JSON.stringify(pedido)}).then(r => r.ok, e => e.message);
+        return { antes, resultados: resultados.map(r => r.ok), mensagens, depois, deNovo, itensAntes, itensDepois: a.items.size, dinheiroDepois: a.system.dinheiro };
+      })()`);
+      const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
+      const status = id => doc.pedidos.find(p => p.id === id);
+      const d = info.depois;
+      const ok = info.resultados.join() === 'true,false' && d.dinheiro === info.antes - 110 && d.pente === 35 && d.acessorios.join() === 'Extended Magazine (Assault Rifle)'
+        && d.municao.includes('Rifle (Basic) 10') && d.linear === 0 && status(pedido.id).status === 'entregue' && status(caro.id).status === 'aprovado' && /Dinheiro insuficiente/.test(status(caro.id).erro)
+        && info.mensagens.some(m => /entregue na ficha/.test(m)) && info.mensagens.some(m => /não foi entregue/.test(m)) && /já foi resolvido/.test(info.deNovo) && info.itensDepois === info.itensAntes && info.dinheiroDepois === d.dinheiro;
+      return [ok, JSON.stringify({ ...info, wiki: [status(pedido.id).status, status(caro.id).status, status(caro.id).erro] })];
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

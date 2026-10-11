@@ -34,7 +34,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; os modos das armas de 2077 faltam |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
-| cpr-2077 | pedidos da loja, crossover entre campanhas, Atualizar da wiki, avisos de envio, retrato | falta |
+| cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
+| cpr-2077 | janela "Personagens da wiki" (aprovar no Foundry, avisos de envio), crossover entre campanhas, Atualizar da wiki, retrato | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
@@ -42,9 +43,18 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 
 1. ~~O importador descarta itens~~: resolvido nos ciclos 8 a 12. Tudo o que a loja da wiki vende entra na ficha, e o
    que um dia não existir vira aviso, sem contar como entregue. Falta só pôr as opções de cyberware na base (P3).
-2. **Volta da ficha e pedidos:** a ficha já volta para a wiki (ciclo 13); falta entregar os pedidos da loja.
-3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
-4. **Faltam a NET e as armas de 2077,** que a campanha usa.
+2. ~~Volta da ficha e pedidos~~: resolvido nos ciclos 13 e 14.
+3. **O estado de jogo da campanha.** O importador traz o personagem como foi criado na wiki (o `resultado` do
+   criador). O que mudou jogando está nos atores do Foundry 12: o HP, as lesões, o dinheiro, os itens ganhos ou
+   perdidos, a munição, o cyberware instalado depois. Dois caminhos, para decidir com o usuário (a migração da campanha
+   exige backup e autorização):
+   - **pela ficha "Na mesa" da wiki**, que o Foundry 12 já manda: tem HP, Humanidade, dinheiro, lesões, STATs,
+     perícias e os itens com o uid da wiki. Os itens dados pelo mestre no Foundry 12 vêm só pelo nome (o catálogo usa
+     os nomes do CORE, então quase sempre acha);
+   - **pelos atores do Foundry 12** (a exportação do mundo, ou o envio de crossover que a wiki já recebe), convertidos
+     do formato do CORE para este sistema: mais completo, e mais trabalho.
+4. **Faltam a NET e os modos das armas de 2077,** que a campanha usa.
+5. **Sem migração de dados entre versões deste sistema** (ainda não há mundo real para migrar).
 
 ## Dúvidas de regra e discrepâncias
 
@@ -511,3 +521,35 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
     quando a campanha vem junto;
   - o "Atualizar da wiki", os avisos de envio e o retrato.
 - **Próximo:** a entrega dos pedidos da loja aprovados.
+- **Commit:** `b9ca7ef`.
+
+### Ciclo 14 (2026-10-11): a entrega dos pedidos da loja (P2, bloqueador da migração)
+
+- **Implementado:**
+  - **`entregarPedido(ator, wikiId, pedido)`:**
+    - cria os itens do pedido como a importação, guardados (carregando) e com o cyberware sem instalar;
+    - põe cada um no lugar e com a munição que o jogador pediu (o `em` e a `municao` da wiki, que apontam para um item da
+      ficha ou para outra linha do pedido);
+    - desconta o dinheiro e marca o pedido como entregue na wiki;
+    - os itens levam o uid `pedido:<id>:<n>` da wiki: com eles já na ficha, a entrega não cria nada de novo;
+    - sem dinheiro na mesa, grava o erro na wiki e não entrega;
+  - **`entregarPedidos()`:** os pedidos aprovados dos personagens que estão neste mundo. O mestre ativo chama a cada
+    minuto, e 5 s depois de entrar, sem avisar quando a wiki não responde. Avisa o mestre de cada entrega e de cada
+    pedido que não deu. A aprovação continua na página do personagem na wiki, como hoje;
+  - o lint ganhou `setInterval` e `clearInterval` nos globais do navegador.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 31 de 31;
+  - G4: 47 de 47, cerca de 52 s. Passo novo, no Solo importado:
+    - um pedido aprovado na wiki de teste (o carregador estendido no rifle e 10 balas, 110eb) entra na ficha, com o
+      carregador no rifle (pente 35) e as balas, desconta 110eb e fica "entregue";
+    - um segundo pedido, de 5.000eb, fica "aprovado" com "Dinheiro insuficiente na mesa: 290eb de 5000eb.";
+    - entregar de novo o primeiro, inteiro, não cria nada nem desconta, e a wiki recusa marcar outra vez;
+    - sem a guarda do uid, o passo falhou: dois itens a mais e 110eb cobrados de novo;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:**
+  - a janela "Personagens da wiki" no Foundry, para aprovar ali e para os avisos de envio;
+  - o crossover entre campanhas: o sistema não manda a campanha nos pedidos nem na ficha da mesa.
+- **Bloqueador que ficou à vista:** o estado de jogo da campanha. Está descrito no bloqueador 3, com os dois caminhos,
+  para o usuário decidir.

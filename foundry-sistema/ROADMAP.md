@@ -54,9 +54,12 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   - [x] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem (Ciclo 10);
   - [x] veículo (os da família do Nomad, com os upgrades) (Ciclo 11);
   - [x] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077 (Ciclo 12).
-- [ ] **Volta da ficha para a wiki e pedidos da loja** (bloqueador da migração):
+- [x] **Volta da ficha para a wiki e pedidos da loja** (bloqueador da migração):
   - [x] a ficha volta para a wiki a cada mudança ("Na mesa"), no formato do cpr-2077 (Ciclo 13);
-  - [ ] a entrega dos pedidos da loja aprovados pelo mestre.
+  - [x] a entrega dos pedidos da loja aprovados pelo mestre (Ciclo 14).
+- [ ] **O estado de jogo da campanha** (bloqueador da migração): o importador traz o personagem como foi criado na
+  wiki; o HP, as lesões, o dinheiro e o que os personagens ganharam jogando estão nos atores do Foundry 12 (e, em parte,
+  na ficha "Na mesa" da wiki). Precisa de um caminho decidido com o usuário: ver o MIGRATION_STATUS.
 - [ ] **Da wiki:** botão "Importar da wiki" na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
   ator); retrato.
 - [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
