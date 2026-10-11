@@ -376,10 +376,22 @@ async function resolverAlvo(ctx, token) {
   return (await defesaDoAlvo(ctx, linha, alvo, dv)) ? linha : null;
 }
 
+// Munição que não causa dano (biotoxina, veneno, EMP...): quem foi pego não leva o dano da arma, e o cartão diz o efeito
+// dela, que o mestre resolve. Devolve se era o caso.
+function semDano(ctx, linhas) {
+  const municao = ctx.arma.municaoCarregada;
+  const efeito = R.MUNICAO_SEM_DANO[municao?.system.efeito];
+  if (!efeito) return false;
+  for (const linha of linhas) linha.notas.push(`${municao.name}: não causa dano. ${efeito[0].toUpperCase()}${efeito.slice(1)} O mestre resolve.`);
+  return true;
+}
+
 // Tiro, autofogo e corpo a corpo: cada alvo se defende; o dano sai para cada um que foi atingido.
 async function individual(ctx) {
   const atingidas = new Set((await Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token)))).filter(Boolean));
-  for (const linha of ctx.linhas.filter(l => atingidas.has(l))) {
+  const pegas = ctx.linhas.filter(l => atingidas.has(l));
+  if (semDano(ctx, pegas)) return;
+  for (const linha of pegas) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
     const autofogo = ctx.modo === 'autofogo';
     const multiplicador = autofogo ? R.multiplicadorDeAutofogo(ctx.pedido.total, contra, ctx.arma.system.autofogo) : 1;
@@ -390,7 +402,7 @@ async function individual(ctx) {
 
 // Área (explosivo e cartucho): o dano é rolado uma vez e vale para cada um que ficou.
 async function danoNaArea(ctx, pegas, formula = null) {
-  if (!pegas.length) return;
+  if (!pegas.length || semDano(ctx, pegas)) return;
   const dano = await rolarDanoDoAtaque(ctx, { formula });
   for (const linha of ctx.linhas.filter(l => pegas.includes(l))) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
 }

@@ -71,6 +71,12 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   **Dúvida:** o +5 do crítico continua entrando com a borracha. A wiki não diz se ele cai junto com a lesão, e o HP para
   em 1 de todo jeito.
 
+- **Munição que não causa dano: muda o que a mesa vê.** A tabela de munição da wiki diz que biotoxina, veneno, EMP,
+  flashbang, sonífera e gás lacrimogêneo "não causam dano", e que a fumaça só cobre a área. No Foundry 12, o Fluxo rola
+  o dano pela arma (o `createRoll` do CORE) e o aplica na ficha, sem olhar o tipo da munição. Aqui, o ataque, a defesa
+  e a área continuam valendo, mas quem é pego não leva dano. O cartão traz o efeito com o texto da wiki, e o mestre o
+  resolve.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -187,3 +193,24 @@ virou P0: o P1 espera enquanto houver problema conhecido de regra.
   - o +5 do crítico com a borracha (ver as dúvidas);
   - as munições que não causam dano (ciclo 5).
 - **Próximo:** ciclo 5, munição que não causa dano (P0).
+- **Commit:** `5e90fe1`.
+
+### Ciclo 5 (2026-10-11): munição que não causa dano (P0, regra)
+
+- **Implementado:**
+  - `regras.MUNICAO_SEM_DANO`: as sete munições e o efeito de cada uma, com o texto da tabela de munição da wiki;
+  - no tiro, no autofogo, no explosivo e no cartucho, quem é pego por uma delas não leva dano: nada de rolagem de dano,
+    lesão, Ponto Fraco ou Deflexão. A linha do cartão diz o efeito, e o mestre resolve. Sem dano, o cartão não tem o
+    Desfazer.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 24 de 24. Novo: as munições sem dano são as mesmas da wiki (toda linha "Não causa dano", mais a fumaça), o
+    texto do sistema está dentro da linha da wiki, e cada uma existe no catálogo;
+  - G4: 31 de 31. Passo novo: o lança-granadas com a granada venenosa explode no Alvo e pega o Capanga. Ninguém perde
+    HP, nenhum dado de dano é rolado, e as duas linhas têm o efeito. Sem a correção, o passo falhou: a granada tirou 27
+    HP do Alvo, com crítico;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:** os testes de resistência automáticos e os outros efeitos das munições especiais (P2).
+- **Próximo:** ciclo 6, lacunas de teste (P1): escudo, "responder pelo jogador", corpo a corpo com esquiva, armadura
+  pesada, janela do mestre para NPC e os erros da importação.

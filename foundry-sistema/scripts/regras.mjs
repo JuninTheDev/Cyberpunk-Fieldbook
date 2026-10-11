@@ -104,6 +104,18 @@ export function classificar({ pedido = null, aDistancia = true, tipoDeArma = '',
 // Balas que o modo gasta.
 export const balasDoModo = modo => (modo === 'autofogo' || modo === 'supressivo' ? BALAS_RAJADA : 1);
 
+// Munição que não causa dano (a tabela de munição da wiki, system-catalog.js, com o texto dela): quem é pego sofre só o
+// efeito, que o mestre resolve pelo cartão. As outras munições especiais causam o dano da arma.
+export const MUNICAO_SEM_DANO = {
+  biotoxin: 'quem é atingido faz Resistir a Tortura/Drogas DV15 ou sofre 3d6 direto no HP.',
+  emp: 'quem é atingido faz Cybertech DV15 ou o mestre escolhe 2 cyberwares ou eletrônicos que param por 1 minuto.',
+  flashbang: 'quem é atingido faz Resistir a Tortura/Drogas DV15 ou sofre as lesões Olho danificado e Ouvido danificado por 1 minuto, sem dano bônus.',
+  poison: 'quem é atingido faz Resistir a Tortura/Drogas DV13 ou sofre 2d6 direto no HP.',
+  sleep: 'quem é atingido faz Resistir a Tortura/Drogas DV13 ou cai inconsciente por 1 minuto, até sofrer dano ou alguém usar uma Ação para acordá-lo.',
+  smoke: 'Cobre de fumaça uma área de 10 × 10 m por 1 minuto. Agir dentro dela costuma ter −4.',
+  teargas: 'quem tem olhos de carne faz Resistir a Tortura/Drogas DV13 ou sofre Olho danificado por 1 minuto, sem dano bônus.'
+};
+
 // O local do corpo que a armadura protege: só cabeça e corpo têm SP; perna e item na mão contam como corpo.
 export const localDaArmadura = local => (local === 'cabeca' ? 'cabeca' : 'corpo');
 

@@ -19,9 +19,9 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   CORE em 1 (borracha, biotoxina, veneno, fumaça, gás lacrimogêneo e paintball), e a borracha causava lesão crítica.
   Fonte: a tabela de munição da wiki (system-catalog.js): a borracha "não causa lesão crítica nem ablação", e a
   biotoxina e a venenosa "não causam ablação". (Ciclo 4)
-- [ ] **Munição que não causa dano** (Ciclo 5): a wiki diz que biotoxina, veneno, EMP, flashbang, sonífera e gás
-  lacrimogêneo "não causam dano", mas o sistema aplica o dano da arma. O mínimo é não aplicar o dano e dizer no cartão
-  o que a munição faz. Os testes de resistência automáticos ficam para o P2.
+- [x] **Munição que não causa dano** (Ciclo 5): a wiki diz que biotoxina, veneno, EMP, flashbang, sonífera e gás
+  lacrimogêneo "não causam dano", e a fumaça só cobre a área, mas o sistema aplicava o dano da arma. Agora quem é pego
+  não leva dano, e o cartão diz o efeito com o texto da wiki. Os testes de resistência automáticos ficam para o P2.
 
 ## P1: bugs, testes de regressão e confiabilidade
 

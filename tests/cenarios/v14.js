@@ -366,6 +366,36 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.hp === 1 && info.ablacao === 0 && info.spDepois === info.sp && info.sobrou === 0, JSON.stringify(info)];
     });
 
+    await r.passo('munição que não causa dano (granada venenosa): explode na área, mas ninguém perde HP; o cartão diz o efeito da wiki', async () => {
+      // Lança-granadas com a granada venenosa, no Alvo a 10 m: d10 9 → REF 8 + Armas Pesadas 4 + 9 = 21 contra DV 15. O
+      // Capanga, a 2 m do Alvo, também é pego. Nenhum dado de dano é rolado.
+      await fixar(edge, [[9, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const granada = foundry.utils.deepClone(cat['core_ammo:grenade-poison']);
+        granada.system.quantidade = 1;
+        const lanca = foundry.utils.deepClone(cat['core_weapons:grenade-launcher']);
+        lanca.system.equipada = true;
+        const [arma, municao] = await a.createEmbeddedDocuments('Item', [lanca, granada]);
+        await a.update({ 'system.pericias.heavy-weapons.nivel': 4 });
+        await arma.recarregar();
+        const antes = { alvo: __ator('Alvo').system.hp.value, capanga: __ator('Capanga').system.hp.value };
+        const r = await arma.atacar({ alvo: __token('Alvo') });
+        const cartao = game.messages.contents.at(-1);
+        const resultado = {
+          cabecalho: r.cabecalho, linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, dano: l.dano, notas: l.notas })), antes,
+          depois: { alvo: __ator('Alvo').system.hp.value, capanga: __ator('Capanga').system.hp.value }, desfazer: cartao.getFlag('${S}', 'desfazer')?.length ?? null, sobrou: window.__fila.length
+        };
+        await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
+        return resultado;
+      })()`);
+      const nota = 'Grenade (Poison): não causa dano. Quem é atingido faz Resistir a Tortura/Drogas DV13 ou sofre 2d6 direto no HP. O mestre resolve.';
+      const ok = /explodiu/.test(info.cabecalho) && info.linhas.length === 2 && info.linhas.every(l => l.resultado === 'acertou' && !l.dano && l.notas.includes(nota))
+        && info.depois.alvo === info.antes.alvo && info.depois.capanga === info.antes.capanga && info.desfazer === 0 && info.sobrou === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
     // ---------- O jogador do alvo defende no computador dele ----------
     await r.passo('jogador: entra no mesmo mundo, dono do Alvo (agora REF 8, pode esquivar de tiro)', async () => {
       await edge.evaluate(`(async () => {
