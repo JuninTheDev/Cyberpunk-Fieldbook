@@ -62,7 +62,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
-    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
+    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, upgrades, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
       const info = await edge.evaluate(`(async () => {
         const tamanhos = Object.fromEntries(game.packs.filter(p => p.metadata.packageName === '${S}').map(p => [p.metadata.name, p.index.size]));
         const pack = game.packs.get('${S}.exemplos');
@@ -76,7 +76,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -231,6 +231,47 @@ module.exports = async ({ edge, servidores, r }) => {
       return [p0.biblioteca === 2 && p0.primeirosSocorros === 0 && p0.int === 5 && p1.biblioteca === 0 && p1.primeirosSocorros === 2 && p2.int === 7 && p2.ligados.join() === 'Boost Primary'
         && p3.uso === 'equipado' && p3.biblioteca === 2 && /Agent \|[^;]*\| Guardado/.test(linhas) && /Medscanner \|[^;]*Medscanner[^;]*\| Equipado/.test(linhas) && /Boost \| 1 dose \| Carregando/.test(linhas)
         && /High Fashion Footwear \| Calçado · Alta moda \| Equipado/.test(linhas), JSON.stringify(info)];
+    });
+
+    await r.passo('acessórios: o carregador estendido põe o pente do rifle em 35 (a recarga enche 35); o Smartgun Link dá +1, e dois dão +1 só; tirados, volta a 25; o hardware ocupa slots do deck', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const balas = pegar('core_ammo:rifle-basic');
+        balas.system.quantidade = 100;
+        const ids = ['core_weapons:assault-rifle', 'core_upgrades:extended-magazine-assault-rifle', 'core_upgrades:smartgun-link', 'core_upgrades:smartgun-link', 'core_gear:cyberdeck', 'core_upgrades:backup-drive'];
+        const a = await Actor.implementation.create({ name: 'Armeiro', type: 'personagem', system: { pericias: { 'shoulder-arms': { nivel: 4 } } }, items: [...ids.map(pegar), balas] });
+        const rifle = a.items.getName('Assault Rifle');
+        const deck = a.items.getName('Cyberdeck');
+        const acessorios = a.items.filter(i => i.type === 'upgrade' && i.system.alvo === 'arma');
+        const partes = () => rifle.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor);
+        const antes = { max: rifle.system.pente.max, partes: partes() };
+        await a.updateEmbeddedDocuments('Item', [...acessorios.map(i => ({ _id: i.id, 'system.instaladoEm': rifle.id })), { _id: a.items.getName('Backup Drive').id, 'system.instaladoEm': deck.id }]);
+        await rifle.recarregar();
+        const com = { max: rifle.system.pente.max, pente: rifle.system.pente.value, slots: rifle.slotsUsados, partes: partes(), deck: deck.slotsUsados };
+        // As fichas: a linha do rifle com os acessórios e a lista de upgrades; o "Instalado em" na ficha do acessório.
+        const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        await a.sheet.render({ force: true });
+        await esperar(() => a.sheet.element?.querySelector('.tab.equipamento li[data-item-id="' + rifle.id + '"] .detalhe'));
+        com.ficha = {
+          rifle: a.sheet.element.querySelector('.tab.equipamento li[data-item-id="' + rifle.id + '"] .detalhe').textContent,
+          upgrades: [...a.sheet.element.querySelectorAll('.tab.equipamento li[data-item-id]')].filter(li => / em (Assault Rifle|Cyberdeck)$/.test(li.querySelector('.detalhe')?.textContent ?? '')).length
+        };
+        await a.sheet.close();
+        await acessorios[0].sheet.render({ force: true });
+        await esperar(() => acessorios[0].sheet.element?.querySelector('select[name="system.instaladoEm"]'));
+        com.ficha.instaladoEm = acessorios[0].sheet.element.querySelector('select[name="system.instaladoEm"]').value === rifle.id;
+        await acessorios[0].sheet.close();
+        await a.updateEmbeddedDocuments('Item', acessorios.map(i => ({ _id: i.id, 'system.instaladoEm': '' })));
+        const sem = { max: rifle.system.pente.max, partes: partes() };
+        await a.delete();
+        return { antes, com, sem };
+      })()`);
+      const { antes, com, sem } = info;
+      const links = lista => lista.filter(p => p.startsWith('Smartgun Link')).length;
+      return [antes.max === 25 && links(antes.partes) === 0 && com.max === 35 && com.pente === 35 && com.slots === 5 && links(com.partes) === 1 && com.partes.includes('Smartgun Link 1')
+        && com.deck === 2 && sem.max === 25 && links(sem.partes) === 0
+        && /pente 35\/35 · Extended Magazine \(Assault Rifle\), Smartgun Link, Smartgun Link$/.test(com.ficha.rifle) && com.ficha.upgrades === 4 && com.ficha.instaladoEm, JSON.stringify(info)];
     });
 
     // ---------- Combate ----------

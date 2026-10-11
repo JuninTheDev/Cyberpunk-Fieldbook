@@ -1,7 +1,7 @@
 // Importar da wiki: o personagem criado no criador da wiki vira um ator deste sistema, com STATs, perícias, Role,
 // Humanidade, dinheiro e o equipamento (armas carregadas, armaduras vestidas, cyberware instalado).
 // Os itens vêm de dados/catalogo.json pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"). O que ainda não
-// existe neste sistema (acessórios, hardware de deck, veículos e o conteúdo de 2077) vira um aviso, e o resto entra.
+// existe neste sistema (veículos e o conteúdo de 2077) vira um aviso, e o resto entra.
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, SISTEMA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
@@ -87,14 +87,14 @@ async function carregarArmas(ator, entradas) {
   }
 }
 
-// Cada programa no cyberdeck em que a montagem da wiki o pôs ("em": o uid do pai). Os acessórios de arma, o hardware do
-// deck e as opções de cyberware ainda não têm onde entrar aqui.
-async function instalarNosDecks(ator, entradas) {
+// Cada programa, hardware e acessório no lugar em que a montagem da wiki o pôs ("em": o uid do pai): o cyberdeck ou a
+// arma. As opções de cyberware (na base de cyberware) ainda não têm onde entrar aqui.
+async function instalarNoLugar(ator, entradas) {
   const mudancas = [];
   for (const entrada of entradas.filter(e => e.em)) {
-    const [deck] = porUid(ator, entrada.em).filter(item => item.type === 'cyberdeck');
-    if (!deck) continue;
-    for (const item of porUid(ator, entrada.uid).filter(item => 'instaladoEm' in item.system)) mudancas.push({ _id: item.id, 'system.instaladoEm': deck.id });
+    const [pai] = porUid(ator, entrada.em).filter(item => item.type === 'cyberdeck' || item.type === 'arma');
+    if (!pai) continue;
+    for (const item of porUid(ator, entrada.uid).filter(item => 'instaladoEm' in item.system)) mudancas.push({ _id: item.id, 'system.instaladoEm': pai.id });
   }
   if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
 }
@@ -133,8 +133,9 @@ export async function importarPersonagem(id, donoId = '') {
     items: itensDaWiki(catalogo, r.itens || [], notas),
     flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString() } } }
   });
+  // Primeiro os acessórios (um carregador muda o tamanho do pente), depois a munição.
+  await instalarNoLugar(ator, r.itens || []);
   await carregarArmas(ator, r.itens || []);
-  await instalarNosDecks(ator, r.itens || []);
   for (const veiculo of r.veiculos || []) notas.push(`${veiculo.nome}: veículos ainda não existem neste sistema.`);
 
   // A wiki passa a mostrar o personagem como "no Foundry".

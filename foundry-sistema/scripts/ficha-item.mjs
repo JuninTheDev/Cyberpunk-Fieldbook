@@ -1,6 +1,6 @@
 // Ficha dos itens (ApplicationV2): os campos de cada tipo, a descrição e os efeitos que o item dá. Nos efeitos ligados
 // à mão (droga, equipamento como a lanterna), um botão liga e desliga.
-import { ATIVACOES, caminho, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -29,9 +29,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const item = this.item;
     const fonte = item._source.system;
     const tipo = item.type;
+    const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable,
-      eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa'].map(t => [t, tipo === t])),
+      eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade'].map(t => [t, tipo === t])),
       temQuantidade: tipo !== 'municao' && 'quantidade' in fonte,
       temUso: 'uso' in fonte,
       locaisLesao: comAtual({ corpo: 'Corpo', cabeca: 'Cabeça' }, tipo === 'lesao' && fonte.local),
@@ -43,9 +44,11 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       tiposRoupa: comAtual(TIPOS_ROUPA, tipo === 'roupa' && fonte.tipo),
       estilosRoupa: comAtual(ESTILOS_ROUPA, tipo === 'roupa' && fonte.estilo),
       classesPrograma: comAtual(CLASSES_PROGRAMA, tipo === 'programa' && fonte.classe),
-      // Programa: os cyberdecks do mesmo ator. Um deck que não existe mais conta como fora do deck.
-      decks: { '': 'Fora do deck', ...Object.fromEntries((item.actor?.items.filter(i => i.type === 'cyberdeck') ?? []).map(deck => [deck.id, deck.name])) },
-      deckAtual: item.deck?.id ?? '',
+      alvosUpgrade: comAtual(ALVOS_UPGRADE, tipo === 'upgrade' && fonte.alvo),
+      // Onde o programa ou o upgrade pode ser instalado: os itens do tipo certo no mesmo ator. Um lugar que não existe mais
+      // conta como não instalado.
+      lugares: { '': tipo === 'programa' ? 'Fora do deck' : 'Não instalado', ...Object.fromEntries((item.actor?.items.filter(i => i.type === tipoDoLugar) ?? []).map(i => [i.id, i.name])) },
+      lugarAtual: tipoDoLugar && item.instaladoNo?.type === tipoDoLugar ? item.instaladoNo.id : '',
       instalados: item.instalados.map(i => i.name).join(', '),
       slotsUsados: item.slotsUsados,
       efeitos: item.effects.map(efeito => ({

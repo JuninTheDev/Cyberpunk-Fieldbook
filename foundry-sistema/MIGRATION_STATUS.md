@@ -31,16 +31,16 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | habilidades das outras Roles | falta |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
-| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, cyberdecks e programas do CORE (os programas no deck); o resto vira aviso |
+| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, cyberdecks, programas e upgrades do CORE (os programas e o hardware no deck, os acessórios na arma); o resto vira aviso |
 | cpr-2077 | volta da ficha para a wiki, pedidos da loja, crossover entre campanhas, armas de 2077 | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
 
-1. **O importador descarta** upgrades (acessórios e hardware), veículos e o conteúdo de 2077 da loja (armas, netrunning
-   e cyberware) (`scripts/wiki.mjs`). Equipamento, roupas e drogas já entram (ciclo 8); cyberdecks e programas, com os
-   programas no deck (ciclo 9).
+1. **O importador descarta** os veículos e o conteúdo de 2077 da loja (armas, netrunning e cyberware)
+   (`scripts/wiki.mjs`). Já entram: equipamento, roupas e drogas (ciclo 8); cyberdecks e programas, com os programas no
+   deck (ciclo 9); acessórios e hardware, no lugar da montagem (ciclo 10).
 2. **Sem volta da ficha para a wiki:** a wiki pararia de receber o estado da mesa.
 3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
 4. **Faltam a NET e as armas de 2077,** que a campanha usa.
@@ -353,3 +353,45 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
   (P3).
 - **Próximo:** ciclo 10, os upgrades (acessório de arma e hardware de cyberdeck) no lugar da montagem (P2, bloqueador
   da migração).
+- **Commit:** `a96c825`.
+
+### Ciclo 10 (2026-10-11): upgrades (P2, bloqueador da migração)
+
+- **Implementado:**
+  - **Tipo novo `upgrade`:** cobre o acessório de arma, o hardware de cyberdeck e o upgrade de veículo. Guarda onde
+    instala, os slots, o item em que está (`instaladoEm`) e os modificadores do CORE que o sistema aplica: o pente do
+    carregador (troca o tamanho), o bônus de ataque e, para o ciclo dos veículos, o SDP e os assentos;
+  - **Na arma:** com um carregador instalado, o pente máximo é o dele (`DadosArma.prepareDerivedData`). Os acessórios
+    com bônus de ataque entram no teste pelo nome, sem repetir o mesmo acessório (a wiki: "o mesmo acessório duas vezes
+    não faz nada"). A arma ganhou os slots de acessório do CORE (3 na de longo alcance que não é exótica);
+  - **Item:** `instalados` e `slotsUsados` valem para o deck e para a arma; `instaladoNo` dá o item onde algo está;
+  - **Conversão:** os 51 upgrades do CORE (24 de arma, 6 de cyberdeck, 21 de veículo). O +1 da luneta de precisão é
+    situacional e fica de fora, e o build lista;
+  - **Compêndio:** Upgrades e acessórios;
+  - **Importação:** cada programa, hardware e acessório vai para o deck ou a arma em que a montagem da wiki o pôs, antes
+    da munição. Assim, a arma com o carregador maior entra com o pente maior cheio;
+  - **Ficha:** os acessórios aparecem na linha da arma, e a lista de upgrades mostra onde cada um está. Na ficha do
+    item, os campos do upgrade e o "Instalado em"; na da arma, os slots em uso.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 29 de 29. Novos ou ampliados:
+    - a loja inteira de upgrades do CORE no catálogo, com os slots da loja;
+    - a tabela de carregadores da wiki, nas 10 classes: o pente padrão de cada arma, o estendido e o tambor;
+    - o +1 do Smartgun Link, e a luneta sem bônus automático;
+    - os slots das armas da loja (3 nas de longo alcance que não são exóticas);
+  - G4: 42 de 42, cerca de 42 s. Passo novo:
+    - o carregador estendido põe o rifle em 35, e a recarga enche 35;
+    - dois Smartgun Links dão +1 só;
+    - tirados os acessórios, o pente volta a 25 e o bônus some;
+    - o Backup Drive ocupa 2 slots do deck;
+    - as fichas mostram tudo isso;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou** (ROADMAP, P2):
+  - o limite de slots (a ficha mostra "5 de 3", mas não impede);
+  - os plugs que o Smartgun Link exige;
+  - a luneta de precisão (+1 a 51 m ou mais);
+  - a arma sob o cano como segunda arma;
+  - o pente acima do máximo quando o carregador sai;
+  - os veículos.
+- **Próximo:** ciclo 11, veículos: os da família do Nomad, com os upgrades (P2, bloqueador da migração).

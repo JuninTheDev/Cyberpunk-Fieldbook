@@ -51,7 +51,7 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   - [x] equipamento, roupa e droga, com a quantidade, o uso da montagem da wiki e os efeitos do equipamento pelo uso
     (Ciclo 8);
   - [x] cyberdeck e programa, com os programas no deck (Ciclo 9);
-  - [ ] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem;
+  - [x] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem (Ciclo 10);
   - [ ] veículo (os da família do Nomad, com os upgrades);
   - [ ] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077.
 - [ ] **Volta da ficha para a wiki** (HP, munição, dinheiro, lesões) e entrega dos pedidos da loja. Bloqueador da migração.
@@ -65,6 +65,9 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   mostrar os nomes em português. Hoje a ficha só lista as habilidades, com os nomes do CORE, e os pontos vêm da
   importação.
 - [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
+- [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a luneta
+  de precisão (+1 em tiro único ou mirado a 51 m ou mais); a arma sob o cano (lança-granadas e espingarda) como
+  segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Armas de 2077** (Smart, ricochete, carga Tech) e o conteúdo do cpr-2077.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
   do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente.

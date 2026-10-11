@@ -27,6 +27,9 @@ export const ESTILOS_ROUPA = {
   genericChic: 'Genérico Chic', highFashion: 'Alta moda', leisurewear: 'Roupa de lazer', nomadLeathers: 'Couro nômade', urbanFlash: 'Flash urbano'
 };
 
+// Upgrades: onde cada um instala (o "type" do itemUpgrade do CORE).
+export const ALVOS_UPGRADE = { arma: 'Arma', cyberdeck: 'Cyberdeck', veiculo: 'Veículo' };
+
 // Programas: a classe do CORE, com o nome da página de NET da wiki.
 export const CLASSES_PROGRAMA = { booster: 'Booster', defender: 'Defensor', antiprogramattacker: 'Ataque anti-programa', antipersonnelattacker: 'Ataque anti-pessoal' };
 

@@ -1,7 +1,7 @@
 // Modelos de dados (TypeDataModel do Foundry 14): o personagem, as armas, armaduras, munição e cyberware, e o efeito
 // que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP, bônus dos efeitos)
 // é calculado na preparação, a cada vez.
-import { ATIVACOES, ATRIBUTOS, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 
@@ -122,10 +122,20 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
       tabelaDV: texto(),
       ignorarArmadura: inteiro(0, { min: 0, max: 100 }),
       ignorarAbaixo: inteiro(0, { min: 0 }),
+      // Slots de acessório (3 na arma de longo alcance que não é exótica).
+      slots: inteiro(0, { min: 0 }),
       equipada: new fields.BooleanField({ initial: false }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };
+  }
+
+  // Com um carregador instalado (um upgrade do mesmo ator com instaladoEm = esta arma), o pente é o dele. A wiki diz que
+  // só cabe um carregador por vez; com mais de um, vale o maior.
+  prepareDerivedData() {
+    const item = this.parent;
+    const pente = Math.max(0, ...(item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id).map(a => a.system.modificadores.pente) ?? []));
+    if (pente) this.pente.max = pente;
   }
 }
 
@@ -249,6 +259,23 @@ export class DadosPrograma extends foundry.abstract.TypeDataModel {
       dano: new fields.SchemaField({ padrao: texto('0'), blackIce: texto('0') }),
       tamanho: inteiro(1, { min: 0 }),
       instaladoEm: texto(),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+}
+
+// Upgrade: o acessório de arma, o hardware de cyberdeck e o upgrade de veículo. alvo: onde instala; instaladoEm: o id,
+// no mesmo ator, do item onde está. Os modificadores do CORE que o sistema aplica no item pai: o pente do carregador
+// (troca o tamanho), o bônus de ataque (soma; Smartgun Link), e o SDP e os assentos do veículo (somam).
+export class DadosUpgrade extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      alvo: new fields.StringField({ required: true, blank: false, initial: 'arma', choices: Object.keys(ALVOS_UPGRADE) }),
+      tamanho: inteiro(1, { min: 0 }),
+      instaladoEm: texto(),
+      modificadores: new fields.SchemaField({ pente: inteiro(0, { min: 0 }), ataque: inteiro(0), sdp: inteiro(0), assentos: inteiro(0) }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };

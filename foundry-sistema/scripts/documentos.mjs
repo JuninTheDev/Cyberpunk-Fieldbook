@@ -128,20 +128,19 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
-  // Cyberdeck: os itens instalados nele (no mesmo ator) e os slots que ocupam.
+  // Cyberdeck e arma: os itens instalados neles (programas, hardware, acessórios, no mesmo ator) e os slots que ocupam.
   get instalados() {
-    return this.type === 'cyberdeck' ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
+    return ['cyberdeck', 'arma'].includes(this.type) ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
   }
 
   get slotsUsados() {
     return this.instalados.reduce((soma, item) => soma + (Number(item.system.tamanho) || 0), 0);
   }
 
-  // O cyberdeck onde o item está instalado (no mesmo ator), ou null.
-  get deck() {
+  // O item (do mesmo ator) onde este está instalado, ou null: o deck de um programa, a arma de um acessório.
+  get instaladoNo() {
     const id = this.system.instaladoEm;
-    const deck = id ? this.actor?.items.get(id) : null;
-    return deck?.type === 'cyberdeck' ? deck : null;
+    return (id && this.actor?.items.get(id)) || null;
   }
 
   // A munição no pente (um item de munição do mesmo ator), ou null.
@@ -161,6 +160,9 @@ export class ItemCPR extends Item {
     const daLesao = this.system.aDistancia ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
     if (daLesao) partes.push({ rotulo: 'Lesões', valor: daLesao });
     if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });
+    // Acessórios com bônus de ataque (o Smartgun Link). O mesmo acessório duas vezes não faz nada (wiki).
+    const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && item.system.modificadores.ataque).map(item => [item.name, item.system.modificadores.ataque]));
+    for (const [rotulo, valor] of comBonus) partes.push({ rotulo, valor });
     return { pericia: p, partes };
   }
 

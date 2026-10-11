@@ -5,7 +5,7 @@
     <li data-item-id="{{id}}">
       <img src="{{img}}" alt="">
       <a class="nome" data-action="editarItem">{{nome}}</a>
-      <span class="detalhe">{{sistema.dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}</span>
+      <span class="detalhe">{{sistema.dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
       <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
       <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
     </li>
@@ -53,6 +53,20 @@
   </ol>
   {{/if}}
   {{/each}}
+
+  {{#if upgrades.length}}
+  <h3>Upgrades e acessórios</h3>
+  <ol class="itens">
+    {{#each upgrades}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <span class="detalhe">{{detalhe}}</span>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{/each}}
+  </ol>
+  {{/if}}
 
   {{#if programas.length}}
   <h3>Programas</h3>

@@ -14,6 +14,8 @@
     <label>Tabela de DV <input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
     <label>Qualidade <select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
     <label>Ignora armadura (%) <input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
+    <label>Slots de acessório <input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
+    {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
     <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
     <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>
     {{/if}}
@@ -56,7 +58,16 @@
     <label>REZ <input type="number" name="system.rez" value="{{fonte.rez}}" min="0"></label>
     <label>Dano <input type="text" name="system.dano.padrao" value="{{fonte.dano.padrao}}"> contra Black ICE <input type="text" name="system.dano.blackIce" value="{{fonte.dano.blackIce}}"></label>
     <label>Slots no deck <input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
-    <label>Instalado em <select name="system.instaladoEm">{{selectOptions decks selected=deckAtual}}</select></label>
+    <label>Instalado em <select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+    {{/if}}
+    {{#if eh.upgrade}}
+    <label>Para <select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
+    <label>Slots <input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
+    <label>Pente (carregador) <input type="number" name="system.modificadores.pente" value="{{fonte.modificadores.pente}}" min="0"></label>
+    <label>Bônus de ataque <input type="number" name="system.modificadores.ataque" value="{{fonte.modificadores.ataque}}"></label>
+    <label>SDP do veículo <input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
+    <label>Assentos do veículo <input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
+    <label>Instalado em <select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
     {{/if}}
     {{#if eh.equipamento}}
     <label>Os efeitos valem <select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>

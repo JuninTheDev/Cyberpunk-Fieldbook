@@ -184,7 +184,7 @@ function arma(doc, s) {
       pente: { value: 0, max: Number(s.magazine?.max) || 0 }, municoes: s.ammoVariety || [], aDistancia: Boolean(s.isRanged), maos: Number(s.handsReq) || 1,
       autofogo: Number(s.fireModes?.autoFire) || 0, supressivo: Boolean(s.fireModes?.suppressiveFire), bonusAtaque: Number(s.attackmod) || 0,
       qualidade: s.quality || 'standard', ocultavel: Boolean(s.concealable?.concealable), tabelaDV: s.dvTable || '',
-      ignorarArmadura: Number(s.ignoreArmorPercent) || 0, ignorarAbaixo: Number(s.ignoreBelowSP) || 0, equipada: false,
+      ignorarArmadura: Number(s.ignoreArmorPercent) || 0, ignorarAbaixo: Number(s.ignoreBelowSP) || 0, slots: Number(s.installedItems?.slots) || 0, equipada: false,
       preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
     }
   };
@@ -280,6 +280,25 @@ function programa(doc, s) {
     }
   };
 }
+// Upgrade: onde instala (o "type" do CORE), os slots e os modificadores que o sistema aplica: o pente do carregador (o
+// CORE dá como "override"), o bônus de ataque, o SDP e os assentos (como "modifier"). Os situacionais (a luneta de
+// precisão) ficam de fora, e o build lista.
+const ALVO_DO_CORE = { weapon: 'arma', cyberdeck: 'cyberdeck', vehicle: 'veiculo' };
+const MODIFICADORES = { pente: 'magazine', ataque: 'attackmod', sdp: 'sdp', assentos: 'seats' };
+function upgrade(doc, s, foraDoMapa) {
+  const modificadores = Object.fromEntries(Object.entries(MODIFICADORES).map(([nosso, doCore]) => {
+    const m = s.modifiers?.[doCore];
+    if (m?.isSituational && m.value) foraDoMapa.push(`${doc.name}: ${doCore} ${m.value} (situacional)`);
+    return [nosso, m && !m.isSituational ? Number(m.value) || 0 : 0];
+  }));
+  return {
+    name: doc.name, type: 'upgrade', img: 'icons/svg/upgrade.svg',
+    system: {
+      descricao: s.description?.value || '', alvo: ALVO_DO_CORE[s.type] || 'arma', tamanho: Number(s.size) || 0, instaladoEm: '', modificadores,
+      preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+    }
+  };
+}
 // O pack de equipamento do CORE traz também os cyberdecks e duas bases de cyberware externas (Battleglove e Smart
 // Glasses). Um tipo que este sistema não tem devolve null: fica de fora, e o build lista.
 const TIPOS_DO_PACK_DE_EQUIPAMENTO = { gear: equipamento, cyberware, cyberdeck };
@@ -288,7 +307,7 @@ const doPackDeEquipamento = (doc, s) => TIPOS_DO_PACK_DE_EQUIPAMENTO[doc.type]?.
 const CONVERSORES = {
   'core/weapons': arma, 'core/armor': armadura, 'core/ammo': municao, 'core/cyberware': cyberware,
   'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao,
-  'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga, 'core/programs': programa
+  'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga, 'core/programs': programa, 'core/upgrades': upgrade
 };
 
 // Tabelas de Lesão Crítica (2d6): faixas [mín, máx, id do item no catálogo], uma do corpo e uma da cabeça.
@@ -341,7 +360,7 @@ async function main() {
   for (const [pack, converter] of Object.entries(CONVERSORES)) {
     const curto = `core_${pack.split('/')[1]}`;
     for (const doc of lerPack(yaml, pack)) {
-      const item = converter(doc, doc.system || {});
+      const item = converter(doc, doc.system || {}, foraDoMapa);
       if (!item) { semTipo.push(`${doc.name} (${doc.type})`); continue; }
       item.effects = converterEfeitos(doc, camel, foraDoMapa);
       item.flags = { 'cpr-fieldbook': { catalogo: `${curto}:${slug(doc.name)}`, origem: { sistema: 'cyberpunk-red-core', versao: VERSAO, id: doc._id } } };

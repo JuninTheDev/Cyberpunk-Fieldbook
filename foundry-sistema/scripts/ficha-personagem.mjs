@@ -1,6 +1,6 @@
 // Ficha do personagem (ApplicationV2 do Foundry 14): cabeçalho com os vitais, e abas de atributos e combate, perícias,
 // equipamento, cyberware e notas. Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
-import { ATRIBUTOS, caminho, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -58,7 +58,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const itens = tipo => ator.items.filter(item => item.type === tipo).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'pt-BR'));
     const linhaArma = arma => {
       const { partes } = arma.partesDoAtaque();
-      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '' };
+      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', ') };
     };
     // Perícias: as comuns sempre (nível 0 também), e as de família que o personagem tem, no grupo da família.
     const linhaPericia = id => {
@@ -91,7 +91,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       ],
       programas: itens('programa').map(p => ({
         id: p.id, nome: p.name, img: p.img,
-        detalhe: [CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe, `ATK ${p.system.atk} · DEF ${p.system.def} · REZ ${p.system.rez}`, p.deck ? `no ${p.deck.name}` : 'fora do deck'].join(' · ')
+        detalhe: [CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe, `ATK ${p.system.atk} · DEF ${p.system.def} · REZ ${p.system.rez}`, p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'].join(' · ')
+      })),
+      upgrades: itens('upgrade').map(u => ({
+        id: u.id, nome: u.name, img: u.img,
+        detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
       cyberwares: itens('cyberware').map(item => ({ id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', ') })),
       grupos: [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR')).map(([nome, pericias]) => ({ nome, pericias: pericias.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')) })),

@@ -198,11 +198,11 @@ test('Perícias: o atributo e o "x2" de cada perícia batem com a tabela de per�
   assert.deepEqual(diferencas, []);
 });
 
-test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, armaduras, munição, cyberware, equipamento, roupa, droga, cyberdeck e programa) existe nele', () => {
-  // Array.from: o que vem do vm é de outro "realm", e o deepEqual estrito compara o protótipo. Os upgrades (acessórios e
-  // hardware de deck) e o conteúdo de 2077 ainda não têm tipo aqui.
+test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, armaduras, munição, cyberware, equipamento, roupa, droga, cyberdeck, programa e upgrade) existe nele', () => {
+  // Array.from: o que vem do vm é de outro "realm", e o deepEqual estrito compara o protótipo. O conteúdo de 2077 ainda
+  // não tem tipo aqui.
   const itens = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens);
-  const tipos = /^core_(weapons|armor|ammo|cyberware|gear|clothing|drugs|programs):/;
+  const tipos = /^core_(weapons|armor|ammo|cyberware|gear|clothing|drugs|programs|upgrades):/;
   const faltam = itens.filter(item => tipos.test(item.id) && !catalogo[item.id]).map(item => item.id);
   assert.ok(itens.filter(item => tipos.test(item.id)).length > 400, 'a loja da wiki tem os itens do CORE');
   assert.deepEqual(faltam, []);
@@ -281,6 +281,37 @@ test('Catálogo: programas com ATK, DEF, REZ, classe e custo da página de NET d
   const loja = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => item.deck && item.id.startsWith('core_'));
   assert.equal(loja.length, 3);
   for (const deck of loja) assert.equal(catalogo[deck.id]?.system.slots, deck.deck.slots, `${deck.id}: slots`);
+});
+
+test('Upgrades: os slots da loja da wiki; o pente de cada carregador e o padrão de cada arma, pela tabela de carregadores da wiki', () => {
+  const loja = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens);
+  // Acessórios e hardware: os slots que a loja mostra.
+  const upgrades = loja.filter(item => item.acessorio || item.hardware);
+  assert.equal(upgrades.length, 32);
+  for (const item of upgrades) assert.equal(catalogo[item.id]?.system.tamanho, (item.acessorio || item.hardware).tamanho, `${item.id}: slots`);
+  // Tabela de carregadores (system-catalog.js): [classe, padrão, estendido, tambor].
+  const texto = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  const bloco = texto.slice(texto.indexOf('Tabela de carregadores'), texto.indexOf('Qualidade da arma'));
+  const tabela = Object.fromEntries([...bloco.matchAll(/\['([^']+)', '(\d+)', '(\d+)', '(\d+)'\]/g)].map(([, classe, ...pentes]) => [classe, pentes.map(Number)]));
+  const CLASSES = {
+    'Medium Pistol': 'Pistola média', 'Heavy Pistol': 'Pistola pesada', 'Very Heavy Pistol': 'Pistola muito pesada', SMG: 'SMG', 'Heavy SMG': 'SMG pesada',
+    Shotgun: 'Espingarda', 'Assault Rifle': 'Rifle de assalto', 'Sniper Rifle': 'Rifle de precisão', 'Grenade Launcher': 'Lança-granadas', 'Rocket Launcher': 'Lança-mísseis'
+  };
+  assert.equal(Object.keys(tabela).length, 10, 'a tabela de carregadores da wiki mudou');
+  for (const [en, pt] of Object.entries(CLASSES)) {
+    const [padrao, estendido, tambor] = tabela[pt];
+    const id = en.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    assert.equal(catalogo[`core_weapons:${id}`].system.pente.max, padrao, `${en}: pente padrão`);
+    assert.equal(catalogo[`core_upgrades:extended-magazine-${id}`].system.modificadores.pente, estendido, `${en}: carregador estendido`);
+    assert.equal(catalogo[`core_upgrades:drum-magazine-${id}`].system.modificadores.pente, tambor, `${en}: carregador tambor`);
+  }
+  // Smartgun Link: +1 nos ataques à distância. A luneta de precisão (+1 a 51 m ou mais) é situacional: fica de fora.
+  assert.deepEqual(['smartgun-link', 'sniping-scope'].map(id => catalogo[`core_upgrades:${id}`].system.modificadores.ataque), [1, 0]);
+  // Armas: os slots de acessório da loja; de longo alcance e não exótica, 3 (wiki).
+  for (const item of loja.filter(i => i.id.startsWith('core_weapons:'))) {
+    assert.equal(catalogo[item.id].system.slots, item.arma.slots, `${item.id}: slots`);
+    if (item.arma.distancia && !item.arma.exotica) assert.equal(item.arma.slots, 3, `${item.id}: arma de longo alcance com ${item.arma.slots} slots`);
+  }
 });
 
 test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia que existe e tabela de DV que existe', () => {

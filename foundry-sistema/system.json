@@ -93,6 +93,11 @@
         "htmlFields": [
           "descricao"
         ]
+      },
+      "upgrade": {
+        "htmlFields": [
+          "descricao"
+        ]
       }
     }
   },
@@ -194,6 +199,17 @@
       }
     },
     {
+      "name": "upgrades",
+      "label": "Upgrades e acessórios",
+      "path": "packs/upgrades",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
       "name": "lesoes",
       "label": "Lesões críticas",
       "path": "packs/lesoes",
@@ -230,6 +246,7 @@
         "roupas",
         "drogas",
         "netrunning",
+        "upgrades",
         "lesoes",
         "exemplos"
       ]
