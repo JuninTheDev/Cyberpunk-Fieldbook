@@ -60,7 +60,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     // As lesões e a armadura tiram MOVE, mas o mínimo é 1 (p. 187).
     if (a.move.valor < 1) a.move.valor = 1;
     this.hp.max = regras.hpMaximo(a.body.valor, a.will.valor);
-    this.humanidade.max = regras.humanidadeMaxima(a.emp.valor);
+    const instalados = this.parent.items.filter(item => item.type === 'cyberware' && item.system.instalado)
+      .map(item => ({ tipo: item.system.tipo, perda: item.system.perdaHumanidade.media }));
+    this.humanidade.max = regras.humanidadeMaxima(a.emp.valor, instalados);
     this.sorte.max = a.luck.valor;
     this.empAtual = regras.empAtual(this.humanidade.value, a.emp.valor);
     this.ferimento = regras.estadoDeFerimento(this.hp.value, this.hp.max);

@@ -54,6 +54,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Lesões críticas e Personagens de exemplo. Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
 - **Cyberware:**
   - **Instalar** desconta a Humanidade pela perda rolada (Shift: pela média).
+  - **Humanidade máxima:** 10 × EMP, menos 2 por peça instalada que tem perda de Humanidade (borgware, menos 4). Peça sem perda, como o cyberware grátis de 2077, não reduz.
   - Os efeitos do cyberware só valem instalado. O Kerenzikov, por exemplo, dá +2 na iniciativa.
   - **Tirar** devolve a Humanidade.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:

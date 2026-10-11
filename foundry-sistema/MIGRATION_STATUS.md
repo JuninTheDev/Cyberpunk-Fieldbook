@@ -25,7 +25,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | De onde | O quê | Estado |
 | --- | --- | --- |
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
-| CORE | Humanidade máxima pelo cyberware | **desvio**: hoje é EMP × 10 (corrigir no ciclo 1) |
+| CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | habilidades de Role com efeito no combate (as do Solo) | falta (ciclo 3) |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
@@ -41,7 +41,11 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
 4. **Faltam a NET e as armas de 2077,** que a campanha usa.
 
-## Dúvidas de regra
+## Dúvidas de regra e discrepâncias
+
+- **O criador da wiki mostra a Humanidade máxima como EMP × 10** (`humanity()` em criador.js), sem tirar 2 por peça.
+  A página de regras da wiki e o CORE tiram. No Foundry 12, o importador antigo corrigia com o `setMaxHumanity()` do
+  CORE. Este sistema segue a regra (a página da wiki e o CORE). O criador da wiki fica como está até você decidir.
 
 - **Arma branca contra SP ímpar.** Decidido em 2026-10-11: SP 11 → 6, como o CORE e o Fluxo. A wiki permite a leitura 5.
   Ver o ROADMAP.
@@ -60,5 +64,17 @@ os bloqueadores abaixo resolvidos, backup e autorização.
     o sistema);
   - trava do instalador em pastas de teste: Foundry 12 recusa (saída 1), sem log recusa (saída 1), Foundry 14 instala,
     pasta atualizada do 12 para o 14 instala, `FOUNDRY_VERSAO=14` instala;
-  - G1 e G4 (resultado no commit do ciclo).
-- **Próximo:** ciclo 1, Humanidade máxima.
+  - G1: 0 erros. G4: 28 de 28.
+- **Commits:** `ffb55c2` (servidor) e `f6e3473` (sistema e documentos), no branch `sistema-v14`.
+
+### Ciclo 1 (2026-10-11): Humanidade máxima (P0, regra)
+
+- **Implementado:** `regras.humanidadeMaxima(emp, cyberware)` e o máximo derivado das peças instaladas (`dados.mjs`).
+- **Testes:**
+  - G3, novo: `tests/sistema/regras.test.mjs`, 2 de 2 (os casos de referência da Humanidade e da EMP);
+  - G1: 0 erros;
+  - G4: 28 de 28. O Kerenzikov instalado e o Solo de exemplo ficam em 36/48. O Solo importado fica em 43/48: a
+    Humanidade é a da wiki, e o máximo perde 2 pela peça com perda (as peças grátis de 2077 não reduzem).
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:** a discrepância do criador da wiki (acima).
+- **Próximo:** ciclo 2, portões de qualidade.

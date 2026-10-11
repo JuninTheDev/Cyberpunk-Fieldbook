@@ -12,7 +12,7 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [x] **`instalar.mjs` só instala num Foundry 14**, pela versão no log do Foundry ao lado da pasta Data (ou
   `FOUNDRY_VERSAO=14`). (Ciclo 0)
 - [x] **Trabalho guardado no branch `sistema-v14`**, sem push. (Ciclo 0)
-- [ ] **Humanidade máxima pelo cyberware instalado** (desvio de regra): 10 × EMP, menos 2 por peça com perda de
+- [x] **Humanidade máxima pelo cyberware instalado** (desvio de regra): 10 × EMP, menos 2 por peça com perda de
   Humanidade maior que 0, menos 4 por borgware. Fonte: wiki (system-rules.js, "cada peça reduz o máximo em 2") e o
   CORE (`_calcMaxHumanity`). (Ciclo 1)
 

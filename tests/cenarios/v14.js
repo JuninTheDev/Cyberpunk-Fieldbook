@@ -101,13 +101,13 @@ module.exports = async ({ edge, servidores, r }) => {
         const entrada = pack.index.find(e => e.name === 'Solo (exemplo)');
         const ator = await game.actors.importFromCompendium(pack, entrada._id);
         const rifle = ator.items.getName('Assault Rifle');
-        const resumo = { hp: ator.system.hp.value, ini: ator.system.iniciativa, sp: [ator.system.armadura.cabeca.sp, ator.system.armadura.corpo.sp], pente: rifle.system.pente.value, municao: rifle.municaoCarregada?.name, hum: ator.system.humanidade.value };
+        const resumo = { hp: ator.system.hp.value, ini: ator.system.iniciativa, sp: [ator.system.armadura.cabeca.sp, ator.system.armadura.corpo.sp], pente: rifle.system.pente.value, municao: rifle.municaoCarregada?.name, hum: ator.system.humanidade.value, humMax: ator.system.humanidade.max };
         await ator.delete();
         return { tamanhos, resumo };
       })()`);
       const t = info.tamanhos;
       const s = info.resumo;
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 105 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 10 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 105 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 10 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -171,9 +171,9 @@ module.exports = async ({ edge, servidores, r }) => {
         const antes = { ini: a.system.iniciativa, efeitoAtivo: ker.effects.contents[0]?.active };
         await a.items.getName('Light Armorjack (Body)').update({ 'system.equipada': true });
         await a.instalarCyberware(ker, { rolar: false });
-        return { antes, depois: { ini: a.system.iniciativa, efeitoAtivo: ker.effects.contents[0]?.active, hum: a.system.humanidade.value, emp: a.system.empAtual, sp: a.system.armadura.corpo.sp }, itens: a.items.size, tamanhoCatalogo: Object.keys(cat).length };
+        return { antes, depois: { ini: a.system.iniciativa, efeitoAtivo: ker.effects.contents[0]?.active, hum: a.system.humanidade.value, humMax: a.system.humanidade.max, emp: a.system.empAtual, sp: a.system.armadura.corpo.sp }, itens: a.items.size, tamanhoCatalogo: Object.keys(cat).length };
       })()`);
-      return [info.antes.ini === 8 && info.antes.efeitoAtivo === false && info.depois.ini === 10 && info.depois.efeitoAtivo === true && info.depois.hum === 36 && info.depois.emp === 3 && info.depois.sp === 11 && info.itens === 4,
+      return [info.antes.ini === 8 && info.antes.efeitoAtivo === false && info.depois.ini === 10 && info.depois.efeitoAtivo === true && info.depois.hum === 36 && info.depois.humMax === 48 && info.depois.emp === 3 && info.depois.sp === 11 && info.itens === 4,
         JSON.stringify(info)];
     });
 
@@ -481,7 +481,8 @@ module.exports = async ({ edge, servidores, r }) => {
           role: [s.role.nome, s.role.rank, s.role.habilidades], pericias: Object.keys(s.pericias).length, evasao: s.pericias.evasion?.nivel, lingua: Object.keys(s.pericias).filter(k => k.startsWith('language-')),
           armas: ator.items.filter(i => i.type === 'arma').map(i => [i.name, i.system.equipada, i.system.pente.value, i.system.pente.max]),
           armaduras: ator.items.filter(i => i.type === 'armadura').map(i => [i.name, i.system.equipada]), sp: s.armadura.corpo.sp,
-          cyber: ator.items.filter(i => i.type === 'cyberware').map(i => [i.name, i.system.instalado]), dinheiro: s.dinheiro, notas
+          cyber: ator.items.filter(i => i.type === 'cyberware').map(i => [i.name, i.system.instalado]), dinheiro: s.dinheiro, notas,
+          pecasComPerda: ator.items.filter(i => i.type === 'cyberware' && i.system.instalado && i.system.perdaHumanidade.media > 0 && i.system.tipo !== 'borgware').length, emp: s.atributos.emp.valor
         };
       })()`);
       const st = solo.resultado.stats;
@@ -489,7 +490,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
       const armasOk = info.armas.length > 0 && info.armas.filter(([, , , max]) => max > 0).every(([, equipada, valor, max]) => equipada && valor === max);
       return [info.nome === 'Teste Sistema' && statsOk && info.hp[0] === solo.resultado.derivados.hp && info.hp[1] === solo.resultado.derivados.hp && info.role[0] === 'Solo' && info.role[1] === 4
-        && info.role[2]['Initiative Reaction'] === 2 && info.evasao >= 2 && info.lingua.length >= 1 && armasOk && info.armaduras.every(([, v]) => v) && info.sp === 11 && info.cyber.every(([, inst]) => inst) && info.dinheiro === solo.resultado.dinheiro.saldo
+        && info.role[2]['Initiative Reaction'] === 2 && info.evasao >= 2 && info.lingua.length >= 1 && armasOk && info.armaduras.every(([, v]) => v) && info.sp === 11 && info.cyber.every(([, inst]) => inst) && info.hum[0] === solo.resultado.humanidade.atual && info.hum[1] === info.emp * 10 - 2 * info.pecasComPerda && info.pecasComPerda > 0 && info.dinheiro === solo.resultado.dinheiro.saldo
         && doc.foundry?.ator, `${JSON.stringify(info)} · wiki: ${doc.estadoFoundry} ${doc.foundry?.ator || ''}`];
     });
     await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki'))?.sheet.render({ force: true })`);

@@ -21,8 +21,14 @@ export function estadoDeFerimento(hp, max) {
   return { chave: 'ileso', rotulo: 'Ileso', penalidade: 0 };
 }
 
-// Humanidade (p. 230): a máxima é EMP × 10; a EMP de agora é a Humanidade / 10 (para baixo), nunca acima da base.
-export const humanidadeMaxima = emp => Number(emp) * 10;
+// Humanidade máxima: EMP × 10, menos 2 por peça de cyberware instalada com perda de Humanidade (borgware, menos 4). Peça
+// sem perda (fashionware, o cyberware grátis de 2077) não reduz. Fonte: a wiki ("cada peça reduz o máximo em 2
+// (borgware, em 4). Peças com 0 de perda não reduzem") e o CORE (_calcMaxHumanity, que olha a perda estática da peça).
+// cyberware: [{ tipo, perda }] das peças instaladas, com a perda estática (a média do livro).
+export const humanidadeMaxima = (emp, cyberware = []) =>
+  Number(emp) * 10 - cyberware.reduce((soma, peca) => soma + (peca.tipo === 'borgware' ? 4 : Number(peca.perda) > 0 ? 2 : 0), 0);
+
+// A EMP de agora é a Humanidade / 10 (para baixo), nunca acima da base.
 export const empAtual = (humanidade, empBase) => Math.max(0, Math.min(Number(empBase), Math.floor(Number(humanidade) / 10)));
 
 // O dano na ficha, como o sistema oficial aplica (CPRActor#_applyDamage):

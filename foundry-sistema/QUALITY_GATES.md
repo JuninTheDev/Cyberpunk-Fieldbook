@@ -8,7 +8,7 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 | --- | --- | --- | --- |
 | G1 Sintaxe | `node --check` em cada `.mjs` do sistema e nos testes | nenhum erro | ativo |
 | G2 Lint | ESLint com versão exata pelo npx (configuração no repositório, sem node_modules) | nenhum erro | ciclo 2 |
-| G3 Regras | `node --test` com os testes de referência das regras puras | todos passam | ciclo 2 |
+| G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam | ativo (desde o ciclo 1; o ciclo 2 traz o resto das regras para cá) |
 | G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam e nenhum erro do sistema no console (a partir do ciclo 2, nenhum aviso de compatibilidade vindo do sistema) | ativo |
 | G5 Wiki | `node tests/rodar.js` (a suíte inteira) | nenhuma falha nova; as conhecidas estão listadas abaixo | ativo |
 | G6 Revisão | `git diff` do lote | sem mudança fora da tarefa e nada que alcance o servidor ou a campanha real | ativo |
