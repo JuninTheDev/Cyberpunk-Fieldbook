@@ -35,6 +35,8 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 - **Código para o navegador** (`edge.evaluate`) vai dentro de um template literal do Node: escreva `\\s` para chegar
   `\s` ao navegador. Um `\s` sozinho vira `s`. Ao editar o cenário por `node -e` no Git Bash, as barras invertidas
   chegam pela metade: edite essas linhas no editor.
+- **Ordem do que se cria:** o Foundry não garante que `createEmbeddedDocuments` devolva os documentos na ordem dos dados.
+  Ache cada um pelo tipo, pelo nome ou por um `_id` escolhido antes (`keepId: true`).
 - **Janela fechando:** no Edge sem janela, uma janela do Foundry fica no DOM com a classe `minimizing` por um tempo
   depois do clique. Para contar janelas abertas, use `:not(.minimizing)`.
 

@@ -490,7 +490,10 @@ module.exports = async ({ edge, servidores, r }) => {
         balas.system.quantidade = 8;
         const pistola = foundry.utils.deepClone(cat['core_weapons:heavy-pistol']);
         pistola.system.equipada = true;
-        const [arma, municao] = await a.createEmbeddedDocuments('Item', [pistola, balas]);
+        const criados = await a.createEmbeddedDocuments('Item', [pistola, balas]);
+        // O Foundry não garante a ordem do que cria: cada um pelo tipo.
+        const arma = criados.find(i => i.type === 'arma');
+        const municao = criados.find(i => i.type === 'municao');
         await arma.recarregar();
         await alvo.update({ 'system.hp.value': 10 });
         const sp = alvo.system.armadura.corpo.sp;
@@ -519,7 +522,10 @@ module.exports = async ({ edge, servidores, r }) => {
         granada.system.quantidade = 1;
         const lanca = foundry.utils.deepClone(cat['core_weapons:grenade-launcher']);
         lanca.system.equipada = true;
-        const [arma, municao] = await a.createEmbeddedDocuments('Item', [lanca, granada]);
+        const criados = await a.createEmbeddedDocuments('Item', [lanca, granada]);
+        // O Foundry não garante a ordem do que cria: cada um pelo tipo.
+        const arma = criados.find(i => i.type === 'arma');
+        const municao = criados.find(i => i.type === 'municao');
         await a.update({ 'system.pericias.heavy-weapons.nivel': 4 });
         await arma.recarregar();
         const antes = { alvo: __ator('Alvo').system.hp.value, capanga: __ator('Capanga').system.hp.value };
@@ -1112,6 +1118,61 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       const entregues = (await api(`/api/personagens/${personagem.id}`)).personagem.foundry?.entregues || [];
       return [info.itens.join() === 'Agent' && info.notas.some(nota => nota.startsWith('Item Fantasma:')) && entregues.join() === 'teste:agent', JSON.stringify({ ...info, entregues })];
+    });
+
+    await r.passo('janela "Personagens da wiki" (botão na aba de Atores): lista o que dá para fazer com cada um; aprova um pedido (entrega na hora), recusa outro com o motivo e importa o Netrunner para o Jogador', async () => {
+      // Dois pedidos do Solo esperando o mestre: um Agent cada (100eb).
+      const pedir = async () => (await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'core_gear:agent', qtd: 1 }] })).pedido;
+      const [aprovar, recusar] = [await pedir(), await pedir()];
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const solo = game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        const dinheiroAntes = solo.system.dinheiro;
+        const agentsAntes = solo.items.filter(i => i.name === 'Agent').length;
+        // O botão na aba de Atores abre a janela.
+        await ui.sidebar.changeTab('actors', 'primary');
+        await ui.actors.render({ force: true });
+        await esperar(() => ui.actors.element?.querySelector('[data-cprf-wiki]'));
+        const temBotao = Boolean(ui.actors.element.querySelector('[data-cprf-wiki]'));
+        ui.actors.element.querySelector('[data-cprf-wiki]').click();
+        const janela = () => foundry.applications.instances.get('${S}-wiki')?.element;
+        // A linha do personagem (os pedidos também levam o id da wiki do personagem).
+        const linha = (id, seletor = '') => janela()?.querySelector('ol.personagens li[data-wiki-id="' + id + '"]' + seletor);
+        await esperar(() => linha(${JSON.stringify(netrunner.id)}));
+        const botoes = id => [...(linha(id)?.querySelectorAll(':scope > button') ?? [])].map(b => b.dataset.action);
+        const lista = { solo: botoes(${JSON.stringify(solo.id)}), netrunner: botoes(${JSON.stringify(netrunner.id)}) };
+        const ultimo = () => janela()?.querySelector('.ultimo')?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        // Aprovar: entrega na hora.
+        janela().querySelector('li[data-pedido="${aprovar.id}"] [data-action="aprovar"]').click();
+        await esperar(() => /pedido entregue/.test(ultimo()));
+        const aprovado = { aviso: ultimo(), dinheiro: solo.system.dinheiro - dinheiroAntes, agents: solo.items.filter(i => i.name === 'Agent').length - agentsAntes };
+        // Recusar: a janela pergunta o motivo.
+        janela().querySelector('li[data-pedido="${recusar.id}"] [data-action="recusar"]').click();
+        const pergunta = () => document.querySelector('.application.dialog.recusar-pedido');
+        await esperar(() => pergunta()?.querySelector('input[name="motivo"]'));
+        pergunta().querySelector('input[name="motivo"]').value = 'Já tem um Agent';
+        pergunta().querySelector('button[data-action="ok"]').click();
+        await esperar(() => /Pedido recusado/.test(ultimo()));
+        const recusado = ultimo();
+        // Importar o Netrunner com o Jogador de dono.
+        const jogador = game.users.getName('Jogador');
+        linha(${JSON.stringify(netrunner.id)}, ' select').value = jogador.id;
+        linha(${JSON.stringify(netrunner.id)}, ' [data-action="importar"]').click();
+        await esperar(() => /importado/.test(ultimo()));
+        const importado = game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(netrunner.id)});
+        await esperar(() => botoes(${JSON.stringify(netrunner.id)}).includes('abrir'));
+        const depois = { aviso: ultimo(), dono: importado?.testUserPermission(jogador, 'OWNER'), botoes: botoes(${JSON.stringify(netrunner.id)}) };
+        await foundry.applications.instances.get('${S}-wiki').close();
+        await importado?.delete();
+        return { temBotao, lista, aprovado, recusado, depois };
+      })()`);
+      const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
+      const status = id => doc.pedidos.find(p => p.id === id);
+      const ok = info.temBotao && info.lista.solo.join() === 'abrir' && info.lista.netrunner.includes('importar')
+        && info.aprovado.dinheiro === -100 && info.aprovado.agents === 1 && status(aprovar.id).status === 'entregue'
+        && /Pedido recusado/.test(info.recusado) && status(recusar.id).status === 'recusado' && status(recusar.id).motivo === 'Já tem um Agent'
+        && info.depois.dono === true && info.depois.botoes.join() === 'abrir';
+      return [ok, JSON.stringify({ ...info, wiki: [status(aprovar.id).status, status(recusar.id).status, status(recusar.id).motivo] })];
     });
 
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {

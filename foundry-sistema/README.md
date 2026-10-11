@@ -74,6 +74,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Humanidade máxima:** 10 × EMP, menos 2 por peça instalada que tem perda de Humanidade (borgware, menos 4). Peça sem perda, como o cyberware grátis de 2077, não reduz.
   - Os efeitos do cyberware só valem instalado. O Kerenzikov, por exemplo, dá +2 na iniciativa.
   - **Tirar** devolve a Humanidade.
+- **Janela "Personagens da wiki"** (só o mestre; botão no alto da aba de Atores): cada personagem da wiki com o que dá para fazer neste mundo, que é importar (como foi criado), importar da mesa (como está no Foundry 12) ou abrir a ficha, com o dono no Foundry escolhido na linha. Também mostra os pedidos da loja que esperam o mestre, com Aprovar (entrega na hora) e Recusar (com o motivo, que o jogador vê). Os avisos da última importação ficam no alto. Pela macro: `game.system.api.abrirJanelaDaWiki()`.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
   - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e dinheiro;
   - armas carregadas, armaduras vestidas e cyberware instalado;
@@ -114,8 +115,8 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
   - a Sorte na rolagem.
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
 - **Os modos das armas de 2077** e o cyberware que é arma.
-- **Da wiki:** o retrato e o "Atualizar da wiki". Importar de novo hoje cria outro ator.
-- **Interface:** botão "Importar da wiki" na barra dos atores e ícones próprios (hoje, os genéricos do Foundry).
+- **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
+- **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
 
 ## Instalar

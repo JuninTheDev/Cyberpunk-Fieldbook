@@ -406,7 +406,11 @@ export async function importarDaMesa(id, donoId = '') {
     },
     flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), origem: 'mesa' } } }
   });
-  const criados = await ator.createEmbeddedDocuments('Item', dados);
+  // Cada item com o id escolhido aqui: o Foundry não garante a ordem do que cria, e cada linha da mesa precisa achar o
+  // item dela.
+  for (const data of dados) data._id = foundry.utils.randomID();
+  await ator.createEmbeddedDocuments('Item', dados, { keepId: true });
+  const criados = dados.map(data => ator.items.get(data._id));
 
   // O que está dentro de cada item (programa no deck, acessório na arma, upgrade no veículo) e a munição no pente, pelos
   // nomes que a mesa manda. Cada item de dentro vai para um pai só.
@@ -435,4 +439,33 @@ export async function importarDaMesa(id, donoId = '') {
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
+}
+
+// ---------------- Para a janela do mestre ----------------
+// Os personagens da wiki (o mestre vê todos) e os pedidos que esperam o mestre: os pendentes e os aprovados que deram
+// erro (o "Tentar de novo").
+export async function personagensDaWiki() {
+  const { personagens = [] } = await wikiFetch('/api/personagens');
+  const lista = personagens.filter(p => !p.publico);
+  const comPedidos = lista.filter(p => p.pedidos?.pendentes || p.pedidos?.aprovados);
+  const docs = await Promise.all(comPedidos.map(p => wikiFetch(`/api/personagens/${p.id}`).then(r => r.personagem).catch(() => null)));
+  const pedidos = docs.filter(Boolean).flatMap(doc => (doc.pedidos || [])
+    .filter(pedido => pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))
+    .map(pedido => ({ wikiId: doc.id, nome: doc.nome || 'Sem nome', pedido })));
+  return { personagens: lista, pedidos };
+}
+
+// Aprovar na wiki e entregar já, no ator deste mundo. Um aprovado que deu erro é aprovado de novo (a wiki limpa o erro).
+export async function aprovarPedido(wikiId, pedidoId) {
+  const ator = game.actors.find(a => a.getFlag(SISTEMA, 'wiki')?.id === wikiId);
+  if (!ator) throw new Error('Este personagem ainda não está neste mundo: importe antes.');
+  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedidoId}/aprovar`, { method: 'POST', body: {} });
+  const { personagem } = await wikiFetch(`/api/personagens/${wikiId}`);
+  const pedido = (personagem?.pedidos || []).find(p => p.id === pedidoId);
+  if (!pedido) throw new Error('O pedido sumiu da wiki.');
+  return { ator: ator.name, ...(await entregarPedido(ator, wikiId, pedido)) };
+}
+
+export async function recusarPedido(wikiId, pedidoId, motivo = '') {
+  return wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedidoId}/recusar`, { method: 'POST', body: { motivo } });
 }

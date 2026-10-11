@@ -59,8 +59,10 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   - [x] a entrega dos pedidos da loja aprovados pelo mestre (Ciclo 14).
 - [x] **O estado de jogo da campanha** (bloqueador da migração): "Importar da mesa" monta o ator pela ficha que o
   Foundry 12 manda para a wiki (Ciclo 15). Procedimento no MIGRATION_STATUS.
-- [ ] **Da wiki:** a janela "Personagens da wiki" (Importar, Importar da mesa, aprovar pedidos) na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
-  ator); retrato.
+- [x] **Da wiki, a janela "Personagens da wiki"** (botão na aba de Atores): Importar, Importar da mesa, abrir a ficha,
+  aprovar e recusar pedidos (Ciclo 16).
+- [ ] **Da wiki, o resto:** "Atualizar da wiki" (hoje, importar de novo cria outro ator), os avisos de envio, o retrato e
+  a campanha da wiki de cada mundo (a janela lista os personagens de todas as campanhas).
 - [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [ ] **Na rolagem:** Sorte; Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de

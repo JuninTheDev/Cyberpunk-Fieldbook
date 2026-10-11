@@ -35,7 +35,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; os modos das armas de 2077 faltam |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
 | cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
-| cpr-2077 | janela "Personagens da wiki" (aprovar no Foundry, avisos de envio), crossover entre campanhas, Atualizar da wiki, retrato | falta |
+| cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
+| cpr-2077 | avisos de envio, a campanha da wiki de cada mundo, crossover entre campanhas, Atualizar da wiki, retrato | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
@@ -599,9 +600,45 @@ O usuário decidiu migrar pela ficha "Na mesa" (ROADMAP, decisões).
    módulo manda a ficha de todos os atores da wiki. Confira na wiki que cada personagem mostra "Na mesa" com a data de
    hoje.
 3. **Feche o mundo do Foundry 12,** para ele não mandar mais a ficha da mesa.
-4. **No Foundry 14, num mundo novo com este sistema:** configure o endereço da wiki. Para cada personagem, rode como
-   mestre `game.system.api.wiki.importarDaMesa('<id na wiki>', '<id do usuário dono>')` e leia os avisos: um item que
-   não achou o catálogo precisa ser criado à mão.
+4. **No Foundry 14, num mundo novo com este sistema:** crie os usuários dos jogadores e configure o endereço da wiki.
+   Na aba de Atores, abra "Personagens da wiki" e, para cada personagem, escolha o dono e clique em "Importar da mesa".
+   Leia os avisos que a janela mostra no alto: um item que não achou o catálogo precisa ser criado à mão. Sem a janela:
+   `game.system.api.wiki.importarDaMesa('<id na wiki>', '<id do usuário dono>')`.
 5. **Confira cada ficha** contra a da mesa na wiki: HP, dinheiro, itens, munição, lesões e Humanidade.
 6. **Fora deste procedimento:** os NPCs, as cenas, os diários e as macros do mundo antigo (o Foundry 14 abre mundos do
    12, mas os atores e os itens do CORE não existem neste sistema).
+- **Commit:** `b58df95`.
+
+### Ciclo 16 (2026-10-11): a janela "Personagens da wiki" (P2)
+
+- **Implementado:**
+  - **a janela** (`scripts/janela-wiki.mjs` e `templates/wiki.hbs`, só o mestre), aberta pelo botão no alto da aba de
+    Atores, lista:
+    - **cada personagem da wiki,** com a situação neste mundo: o ator, a ficha da mesa do Foundry 12 com o HP e a data,
+      importado em outro mundo, ou ainda não. Os botões são Importar e Importar da mesa, com o dono no Foundry escolhido
+      na linha (o sugerido é o usuário com o nome do dono na wiki), ou Abrir ficha;
+    - **os pedidos da loja que esperam o mestre,** com Aprovar (aprova na wiki e entrega na hora) ou "Tentar de novo"
+      no aprovado que deu erro, e Recusar, que pede o motivo;
+    - **os avisos da última ação,** no alto;
+  - na API: `abrirJanelaDaWiki()`, `wiki.personagensDaWiki()`, `wiki.aprovarPedido()` e `wiki.recusarPedido()`.
+- **Bug achado e corrigido** no "Importar da mesa" (ciclo 15). O código supunha que `createEmbeddedDocuments` devolve
+  os itens na ordem dos dados. Numa rodada não devolveu, e o "Worm" foi parar dentro do "Sword", fora do deck. Agora
+  cada item é criado com o `_id` escolhido antes (`keepId`). Dois passos do cenário que pegavam `[arma, municao]` pela
+  ordem passaram a pegar pelo tipo, e a regra foi para o QUALITY_GATES.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 31 de 31;
+  - G4: 50 de 50 em três rodadas seguidas, cerca de 50 s. Passo novo:
+    - o botão aparece na aba de Atores e abre a janela;
+    - o Solo mostra "Abrir ficha", e o Netrunner (cujo ator foi apagado) mostra "Importar";
+    - "Aprovar" entrega o Agent e desconta 100eb, e a wiki marca "entregue";
+    - "Recusar" pergunta o motivo, e a wiki guarda "recusado" com ele;
+    - "Importar" traz o Netrunner com o Jogador de dono, e a linha vira "Abrir ficha";
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:**
+  - os avisos de envio (quando o jogador clica em "Enviar para o mestre" na wiki);
+  - a campanha da wiki de cada mundo: a janela lista os personagens de todas;
+  - o "Atualizar da wiki" e o retrato.
+- **Próximo:** os modos das armas de 2077 (o ricochete da Power, a carga Tech, o teste Smart), que a campanha usa e são
+  o bloqueador 4 da migração, com a NET.

@@ -119,3 +119,10 @@
 /* Janelas da defesa e do tiro mirado (DialogV2). */
 .cpr-fieldbook.defesa .form-footer button, .cpr-fieldbook.mirar .form-footer button { font-weight: 700; }
 .cpr-fieldbook.defesa .total { color: var(--cprf-vermelho); }
+
+/* Janela "Personagens da wiki" */
+.cpr-fieldbook.janela-wiki .barra { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; }
+.cpr-fieldbook.janela-wiki .aviso { border: 1px solid var(--cprf-borda); border-radius: 4px; padding: 0.4rem 0.6rem; margin: 0.4rem 0; }
+.cpr-fieldbook.janela-wiki .aviso.erro { border-color: #b33; }
+.cpr-fieldbook.janela-wiki .aviso ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+.cpr-fieldbook.janela-wiki .itens select { flex: 0 0 auto; width: auto; max-width: 9rem; }
