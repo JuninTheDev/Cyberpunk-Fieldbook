@@ -226,6 +226,39 @@
       }
     },
     {
+      "name": "armas-2077",
+      "label": "Armas de 2077",
+      "path": "packs/armas-2077",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "cyberware-2077",
+      "label": "Cyberware de 2077",
+      "path": "packs/cyberware-2077",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "netrunning-2077",
+      "label": "Netrunning de 2077",
+      "path": "packs/netrunning-2077",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
       "name": "lesoes",
       "label": "Lesões críticas",
       "path": "packs/lesoes",
@@ -264,6 +297,9 @@
         "netrunning",
         "upgrades",
         "veiculos",
+        "armas-2077",
+        "cyberware-2077",
+        "netrunning-2077",
         "lesoes",
         "exemplos"
       ]

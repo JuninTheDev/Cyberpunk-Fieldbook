@@ -30,8 +30,14 @@ export const ESTILOS_ROUPA = {
 // Upgrades: onde cada um instala (o "type" do itemUpgrade do CORE).
 export const ALVOS_UPGRADE = { arma: 'Arma', cyberdeck: 'Cyberdeck', veiculo: 'Veículo' };
 
-// Programas: a classe do CORE, com o nome da página de NET da wiki.
-export const CLASSES_PROGRAMA = { booster: 'Booster', defender: 'Defensor', antiprogramattacker: 'Ataque anti-programa', antipersonnelattacker: 'Ataque anti-pessoal' };
+// Armas de 2077: a classe (as regras de cada uma ainda não estão neste sistema).
+export const CLASSES_2077 = { power: 'Power', tech: 'Tech', smart: 'Smart' };
+
+// Programas: a classe do CORE, com o nome da página de NET da wiki, e os quickhacks e daemons de 2077.
+export const CLASSES_PROGRAMA = {
+  booster: 'Booster', defender: 'Defensor', antiprogramattacker: 'Ataque anti-programa', antipersonnelattacker: 'Ataque anti-pessoal',
+  quickhack: 'Quickhack (2077)', daemon: 'Daemon (2077)'
+};
 
 // As chaves são as do conteúdo convertido do CORE (system.tipo do cyberware); os rótulos, os da loja da wiki.
 export const TIPOS_CYBERWARE = {

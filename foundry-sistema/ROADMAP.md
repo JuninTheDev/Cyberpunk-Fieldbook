@@ -47,13 +47,13 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 
 ## P2: fichas, inventário, equipamento, armas e combate
 
-- [ ] **Tipos de item que o importador hoje descarta** (bloqueador da migração da campanha):
+- [x] **Tipos de item que o importador descartava** (bloqueador da migração da campanha):
   - [x] equipamento, roupa e droga, com a quantidade, o uso da montagem da wiki e os efeitos do equipamento pelo uso
     (Ciclo 8);
   - [x] cyberdeck e programa, com os programas no deck (Ciclo 9);
   - [x] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem (Ciclo 10);
   - [x] veículo (os da família do Nomad, com os upgrades) (Ciclo 11);
-  - [ ] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077.
+  - [x] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077 (Ciclo 12).
 - [ ] **Volta da ficha para a wiki** (HP, munição, dinheiro, lesões) e entrega dos pedidos da loja. Bloqueador da migração.
 - [ ] **Da wiki:** botão "Importar da wiki" na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
   ator); retrato.
@@ -70,14 +70,18 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
   cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.
-- [ ] **Armas de 2077** (Smart, ricochete, carga Tech) e o conteúdo do cpr-2077.
+- [ ] **Armas de 2077:** os modos de cada classe (o ricochete da Power, a carga Tech, o teste Smart). As armas já
+  entram com a classe e as opções na flag `arma2077` (Ciclo 12).
+- [ ] **Cyberware que é arma** (Wolvers, Mantis Blades, Gorilla Arms, o lança-granadas embutido): hoje é só cyberware e
+  não ataca.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
   do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente.
 
 ## P3: Netrunning, cyberware, NPCs e ferramentas do mestre
 
 - [ ] **NET:** o NET Architect dentro do sistema (Interface, programas, Black ICE, dano no cérebro).
-- [ ] **Cyberware:** base e slots ao instalar, terapia e ciberpsicose.
+- [ ] **Cyberware:** base e slots ao instalar (com as opções na base, como a montagem da wiki), terapia e ciberpsicose.
+- [ ] **NET de 2077:** a RAM e o Cooling do deck, os quickhacks e os daemons.
 - [ ] **NPCs:** ficha de capanga (mook), Black ICE e demônios como atores.
 - [ ] **Ferramentas do mestre:** o Painel Tático dentro do sistema.
 

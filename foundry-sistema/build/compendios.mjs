@@ -1,7 +1,7 @@
 // Gera os compêndios do sistema em packs/ (fora do git) a partir de dados/catalogo.json: armas, armaduras, munição,
 // cyberware, equipamento, roupas, drogas, netrunning (cyberdecks e programas), upgrades (acessórios de arma, hardware
-// de deck e upgrades de veículo), veículos e lesões críticas, e dois personagens de exemplo prontos para o combate (um
-// Solo e um Capanga).
+// de deck e upgrades de veículo), veículos e lesões críticas; o conteúdo de 2077 (armas, cyberware e netrunning); e
+// dois personagens de exemplo prontos para o combate (um Solo e um Capanga).
 // Compila com a ferramenta oficial do Foundry (@foundryvtt/foundryvtt-cli) pelo npx, como o build do cpr-2077.
 // Uso: node build/compendios.mjs   (o instalar.mjs chama sozinho quando o catálogo ou este arquivo mudam)
 import { execSync } from 'node:child_process';
@@ -38,9 +38,13 @@ function documentoDeItem(id, { ator = null, mudar = null } = {}) {
 }
 
 // Cada compêndio de itens e os tipos que entram nele.
+// Cada compêndio de itens: a origem (o prefixo do id no catálogo) e os tipos que entram nele. O conteúdo de 2077 fica
+// nos compêndios dele.
 const PACKS_DE_ITENS = {
-  armas: ['arma'], armaduras: ['armadura'], municao: ['municao'], cyberware: ['cyberware'], equipamento: ['equipamento'], roupas: ['roupa'], drogas: ['droga'],
-  netrunning: ['cyberdeck', 'programa'], upgrades: ['upgrade'], veiculos: ['veiculo'], lesoes: ['lesao']
+  armas: ['core_', ['arma']], armaduras: ['core_', ['armadura']], municao: ['core_', ['municao']], cyberware: ['core_', ['cyberware']],
+  equipamento: ['core_', ['equipamento']], roupas: ['core_', ['roupa']], drogas: ['core_', ['droga']], netrunning: ['core_', ['cyberdeck', 'programa']],
+  upgrades: ['core_', ['upgrade']], veiculos: ['core_', ['veiculo']], lesoes: ['core_', ['lesao']],
+  'armas-2077': ['armas-2077:', ['arma', 'municao']], 'cyberware-2077': ['cyberware-2077:', ['cyberware']], 'netrunning-2077': ['netrunning-2077:', ['cyberdeck', 'programa']]
 };
 
 // ---------------- Personagens de exemplo ----------------
@@ -116,7 +120,7 @@ function fvtt(args) {
 
 export function gerar() {
   const fonte = fs.mkdtempSync(path.join(os.tmpdir(), 'cpr-fieldbook-packs-'));
-  const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, tipos]) => [nome, Object.entries(catalogo).filter(([, item]) => tipos.includes(item.type)).map(([id]) => documentoDeItem(id))]));
+  const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, [prefixo, tipos]]) => [nome, Object.entries(catalogo).filter(([id, item]) => id.startsWith(prefixo) && tipos.includes(item.type)).map(([id]) => documentoDeItem(id))]));
   packs.exemplos = EXEMPLOS;
   fs.rmSync(packsDir, { recursive: true, force: true });
   fs.mkdirSync(packsDir, { recursive: true });

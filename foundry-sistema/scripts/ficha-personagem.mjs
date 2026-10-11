@@ -1,6 +1,6 @@
 // Ficha do personagem (ApplicationV2 do Foundry 14): cabeçalho com os vitais, e abas de atributos e combate, perícias,
 // equipamento, cyberware e notas. Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
-import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -58,7 +58,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const itens = tipo => ator.items.filter(item => item.type === tipo).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'pt-BR'));
     const linhaArma = arma => {
       const { partes } = arma.partesDoAtaque();
-      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', ') };
+      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
+        classe2077: CLASSES_2077[arma.getFlag(SISTEMA, 'arma2077')?.classe] ?? '' };
     };
     // Perícias: as comuns sempre (nível 0 também), e as de família que o personagem tem, no grupo da família.
     const linhaPericia = id => {
@@ -87,11 +88,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         { titulo: 'Roupas', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, vezes(item), TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
         { titulo: 'Drogas', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item, `${item.system.quantidade} ${item.system.quantidade === 1 ? 'dose' : 'doses'}`)) },
         // NET: só aparece para quem tem cyberdeck.
-        { titulo: 'Cyberdecks', opcional: true, itens: itens('cyberdeck').map(deck => linhaDoInventario(deck, `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', '))) }
+        { titulo: 'Cyberdecks', opcional: true, itens: itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', '))) }
       ],
       programas: itens('programa').map(p => ({
         id: p.id, nome: p.name, img: p.img,
-        detalhe: [CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe, `ATK ${p.system.atk} · DEF ${p.system.def} · REZ ${p.system.rez}`, p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'].join(' · ')
+        detalhe: [
+          CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe,
+          p.system.classe === 'quickhack' ? `RAM ${p.system.ram}` : p.system.classe === 'daemon' ? `REZ ${p.system.rez}` : `ATK ${p.system.atk} · DEF ${p.system.def} · REZ ${p.system.rez}`,
+          p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'
+        ].join(' · ')
       })),
       veiculos: itens('veiculo').map(v => ({
         id: v.id, nome: v.name, img: v.img,

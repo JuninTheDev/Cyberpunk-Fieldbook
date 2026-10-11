@@ -270,7 +270,8 @@ test('Catálogo: programas com ATK, DEF, REZ, classe e custo da página de NET d
   const texto = fs.readFileSync(path.join(raiz, 'system-net.js'), 'utf8');
   const daWikiNet = Object.fromEntries([...texto.matchAll(/\{ name: '([^']+)', tag: '([^']+)', stats: programStats\((\d+), (\d+), (\d+), '(\d+)eb'\)/g)]
     .map(([, nome, classe, atk, def, rez, custo]) => [nome, { classe, numeros: [atk, def, rez, custo].map(Number) }]));
-  const programas = Object.values(catalogo).filter(item => item.type === 'programa');
+  // Os programas do RED (os quickhacks e daemons de 2077 têm o teste deles).
+  const programas = Object.entries(catalogo).filter(([id, item]) => item.type === 'programa' && id.startsWith('core_')).map(([, item]) => item);
   assert.equal(programas.length, 15);
   for (const p of programas) {
     const wiki = daWikiNet[p.name];
@@ -335,6 +336,38 @@ test('Veículos: os terrestres com o PDE, os assentos, o MOVE e o custo da tabel
   const desc = nome => oficina.upgrades.find(u => u.id === nome).desc;
   assert.ok(/\+20 SDP/.test(desc('Heavy Chassis')) && catalogo['core_upgrades:heavy-chassis'].system.modificadores.sdp === 20);
   assert.ok(/Mais dois assentos/.test(desc('Seating Upgrade')) && catalogo['core_upgrades:seating-upgrade'].system.modificadores.assentos === 2);
+});
+
+test('Catálogo de 2077: todo item que a loja da wiki vende existe, com os números dos compêndios do cpr-2077 que a loja registra', () => {
+  // A loja (loja-catalogo.js) é gerada dos compêndios do cpr-2077, e o sistema converte direto da wiki
+  // (build/conteudo-2077.mjs): os dois têm de dar o mesmo. O "exotica" da loja é outra coisa (a classe da arma fora das
+  // do RED) e fica de fora.
+  const loja = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => /^(armas|cyberware|netrunning)-2077:/.test(item.id));
+  assert.equal(loja.length, 150);
+  const id = nome => nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  for (const item of loja) {
+    const nosso = catalogo[item.id];
+    assert.ok(nosso, `${item.id}: não está no catálogo`);
+    const s = nosso.system;
+    const igual = (campo, a, b) => assert.deepEqual(a, b, `${item.id}: ${campo}`);
+    igual('preço', s.preco, item.preco);
+    if (item.arma) {
+      const a = item.arma;
+      igual('números da arma', [s.tipo, s.pericia, s.dano, s.cdt, s.pente.max, s.maos, s.ocultavel, s.slots], [a.tipo, id(a.pericia), a.dano, a.cdt, a.pente, a.maos, a.oculta, a.slots]);
+      igual('munição', Array.from(s.municoes), Array.from(a.municao));
+      assert.ok(['power', 'tech', 'smart'].includes(nosso.flags['cpr-fieldbook'].arma2077.classe), `${item.id}: classe de 2077`);
+    } else if (item.municao) {
+      igual('munição', [s.tipo, s.efeito], [item.municao.variedade, item.municao.tipo]);
+    } else if (item.cyber) {
+      const c = item.cyber;
+      igual('cyberware', [s.tipo, s.fundacional, s.tamanho, s.perdaHumanidade.media, s.perdaHumanidade.formula, s.local], [c.tipo, c.base, c.tamanho, c.hl, c.rolagem, c.instalacao]);
+    } else if (item.deck) {
+      igual('deck', [s.slots, s.ram], [item.deck.slots, item.deck.ram]);
+    } else if (item.programa) {
+      igual('tamanho', s.tamanho, item.programa.tamanho);
+      if (s.classe === 'daemon') igual('REZ do daemon', s.rez, item.programa.rez);
+    }
+  }
 });
 
 test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia que existe e tabela de DV que existe', () => {

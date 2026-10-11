@@ -239,6 +239,9 @@ export class DadosCyberdeck extends foundry.abstract.TypeDataModel {
     return {
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       slots: inteiro(7, { min: 0 }),
+      // Os decks de 2077: a RAM que paga os quickhacks e o Cooling (quanta RAM volta por rodada).
+      ram: inteiro(0, { min: 0 }),
+      resfriamento: inteiro(0, { min: 0 }),
       qualidade: texto('standard'),
       uso: usoDoItem('carregando'),
       preco: inteiro(0, { min: 0 }),
@@ -255,6 +258,8 @@ export class DadosPrograma extends foundry.abstract.TypeDataModel {
       atk: inteiro(0),
       def: inteiro(0),
       rez: inteiro(0, { min: 0 }),
+      // O custo em RAM do quickhack de 2077.
+      ram: inteiro(0, { min: 0 }),
       // O dano do programa de ataque: contra programa e netrunner, e contra Black ICE.
       dano: new fields.SchemaField({ padrao: texto('0'), blackIce: texto('0') }),
       tamanho: inteiro(1, { min: 0 }),

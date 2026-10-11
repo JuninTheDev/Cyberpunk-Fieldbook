@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import https from 'node:https';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { converter2077 } from './conteudo-2077.mjs';
 
 const VERSAO = 'v0.92.4';
 const PROJETO = 'cyberpunk-red-team%2Ffvtt-cyberpunk-red-core';
@@ -380,6 +381,13 @@ async function main() {
     }
   }
   traduzirLesoes(itens, lesoes);
+  // O conteúdo de 2077, da própria wiki (build/conteudo-2077.mjs), com os ids da loja.
+  const de2077 = converter2077({ raizDaWiki: path.join(raiz, '..'), itensDoCore: itens, slug });
+  for (const id of Object.keys(de2077)) {
+    const prefixo = id.split(':')[0];
+    contagem[prefixo] = (contagem[prefixo] || 0) + 1;
+  }
+  Object.assign(itens, de2077);
   fs.mkdirSync(path.join(raiz, 'dados'), { recursive: true });
   const catalogo = { fonte: `Cyberpunk RED - CORE ${VERSAO} (GPL-3, The Project Red Team), convertido por build/conteudo.mjs`, itens };
   fs.writeFileSync(path.join(raiz, 'dados', 'catalogo.json'), JSON.stringify(catalogo));

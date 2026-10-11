@@ -31,16 +31,16 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | habilidades das outras Roles | falta |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
-| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, cyberdecks, programas, upgrades e veículos do CORE (os programas e o hardware no deck, os acessórios na arma, os upgrades no veículo); o conteúdo de 2077 vira aviso |
-| cpr-2077 | volta da ficha para a wiki, pedidos da loja, crossover entre campanhas, armas de 2077 | falta |
+| cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
+| cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; os modos das armas de 2077 faltam |
+| cpr-2077 | volta da ficha para a wiki, pedidos da loja, crossover entre campanhas, Atualizar da wiki | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
 
-1. **O importador descarta** o conteúdo de 2077 da loja (armas, netrunning e cyberware) (`scripts/wiki.mjs`). Já
-   entram: equipamento, roupas e drogas (ciclo 8); cyberdecks e programas, com os programas no deck (ciclo 9);
-   acessórios e hardware, no lugar da montagem (ciclo 10); os veículos da família, com os upgrades (ciclo 11).
+1. ~~O importador descarta itens~~: resolvido nos ciclos 8 a 12. Tudo o que a loja da wiki vende entra na ficha, e o
+   que um dia não existir vira aviso, sem contar como entregue. Falta só pôr as opções de cyberware na base (P3).
 2. **Sem volta da ficha para a wiki:** a wiki pararia de receber o estado da mesa.
 3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
 4. **Faltam a NET e as armas de 2077,** que a campanha usa.
@@ -431,3 +431,48 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
   - os veículos no combate: o dano no SDP, as armas instaladas, o vidro blindado e um veículo da família por vez.
 - **Próximo:** o conteúdo de 2077 (armas-2077, netrunning-2077 e cyberware-2077), que vem dos compêndios do cpr-2077, ou
   o próximo bloqueador da migração, a volta da ficha para a wiki.
+- **Commit:** `f110198`.
+
+### Ciclo 12 (2026-10-11): o conteúdo de 2077 (P2, bloqueador da migração)
+
+- **Implementado:**
+  - **`build/conteudo-2077.mjs`:** converte o suplemento de fã "Cyberpunk 2077" da própria wiki (`system-2077.js` e
+    `system-net.js`). São os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, e as regras de
+    conversão foram portadas do build dele (`foundry-2077/build`): o tipo, a perícia, o dano, o pente, a munição, o
+    autofogo, os slots e o +1 da qualidade excelente de cada arma; o tipo, a base, os slots e a perda de Humanidade
+    (com a rolagem equivalente) de cada cyberware; a RAM, os slots e o Cooling de cada deck. Os ids são os da loja da wiki;
+  - **o que entra:** 46 armas e as 5 flechettes das armas Tech; 57 cyberwares (os do suplemento, a neuralware de
+    netrunning, Berserk e Sandevistan); 21 cyberdecks, 16 quickhacks e 5 daemons;
+  - **as armas de 2077:** a classe (Power, Tech ou Smart) e as opções (várias balas Smart, dois alvos, dois canos, a
+    rajada da carga Tech, sem ricochete, coronha retrátil) ficam na flag `arma2077`, para quando os modos de 2077
+    existirem. A ficha mostra a classe na linha da arma;
+  - **modelo:** o deck ganhou a RAM e o Cooling (os de 2077), e o programa ganhou o custo em RAM (o quickhack). As
+    classes Quickhack e Daemon entram junto com as do RED;
+  - **compêndios:** Armas de 2077, Cyberware de 2077 e Netrunning de 2077. Cada compêndio agora escolhe os itens pela
+    origem (o prefixo do id) e pelo tipo.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 31 de 31. Novo: os 150 itens de 2077 que a loja da wiki vende existem no catálogo, com os números que a loja
+    registra dos compêndios do cpr-2077:
+    - das armas: tipo, perícia, dano, CDT, pente, mãos, ocultável, munição, slots e preço;
+    - do cyberware: tipo, base, tamanho, Humanidade e rolagem, instalação e preço;
+    - dos decks: slots, RAM e preço;
+    - dos daemons: o REZ.
+
+    O teste dos programas do RED (ciclo 9) passou a olhar só os do RED;
+  - G4: 45 de 45, cerca de 45 s. Ampliados ou novos:
+    - os 3 compêndios de 2077;
+    - o Nomad importa a Yukimura (Smart, pente 30, +1 de excelente) sem aviso, e tudo conta como entregue;
+    - num personagem sintético da wiki de teste, um item de id desconhecido vira aviso e fica fora de `entregues`. É a
+      prova do ciclo 11, que o Nomad não fazia mais;
+  - G5 não rodou de novo: o ciclo leu os arquivos da wiki, sem mudar nenhum.
+- **Diferença conhecida:** o campo `exotica` da loja não é o "exótica" do suplemento: a loja marca a arma de classe fora
+  das do RED. Ele não entra na comparação.
+- **Ficou:**
+  - os modos das armas de 2077 (P2);
+  - o cyberware que é arma, de 2077 e do RED, que ainda não ataca (P2);
+  - as opções de cyberware na base (P3);
+  - a NET de 2077: RAM, Cooling, quickhacks e daemons (P3).
+- **Próximo:** o próximo bloqueador da migração: a volta da ficha para a wiki (HP, munição, dinheiro, lesões) e a entrega
+  dos pedidos da loja.

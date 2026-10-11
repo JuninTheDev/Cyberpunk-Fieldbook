@@ -79,7 +79,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
-    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, upgrades, veículos, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
+    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, upgrades, veículos, o conteúdo de 2077, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
       const info = await edge.evaluate(`(async () => {
         const tamanhos = Object.fromEntries(game.packs.filter(p => p.metadata.packageName === '${S}').map(p => [p.metadata.name, p.index.size]));
         const pack = game.packs.get('${S}.exemplos');
@@ -93,7 +93,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 51 && t['cyberware-2077'] === 57 && t['netrunning-2077'] === 42 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -945,14 +945,15 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('wiki: importa o Nomad com os veículos da família e os upgrades instalados (SDP 50 + 20, 4 + 2 assentos); a arma de 2077 vira aviso e não conta como entregue', async () => {
+    await r.passo('wiki: importa o Nomad com os veículos da família e os upgrades instalados (SDP 50 + 20, 4 + 2 assentos) e a arma de 2077 da loja (Smart); tudo entregue', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '');
         const veiculos = ator.items.filter(i => i.type === 'veiculo').map(v => ({
           nome: v.name, sdp: [v.system.sdp.value, v.system.sdp.max], assentos: v.system.assentos, familia: v.system.familia, upgrades: v.instalados.map(i => i.name)
         }));
+        const de2077 = ator.items.filter(i => i.getFlag('${S}', 'arma2077')).map(i => [i.name, i.getFlag('${S}', 'arma2077').classe, i.system.pente.max, i.system.bonusAtaque]);
         await ator.delete();
-        return { veiculos, notas };
+        return { veiculos, de2077, notas };
       })()`);
       const doc = (await api(`/api/personagens/${nomad.id}`)).personagem;
       const entregues = doc.foundry?.entregues || [];
@@ -960,9 +961,27 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = info.veiculos.length === 2
         && JSON.stringify(info.veiculos[0]) === JSON.stringify({ nome: 'Compact Groundcar', sdp: [70, 70], assentos: 6, familia: true, upgrades: ['Heavy Chassis', 'Seating Upgrade'] })
         && JSON.stringify(info.veiculos[1]) === JSON.stringify({ nome: 'Roadbike', sdp: [35, 35], assentos: 2, familia: true, upgrades: [] })
-        && info.notas.some(nota => /Yukimura/.test(nota)) && !entregues.includes('loja:teste-2077')
-        && [carro.uid, moto.uid, ...carro.upgrades.map(u => u.uid)].every(uid => entregues.includes(uid));
-      return [ok, `${JSON.stringify(info)} · entregues: ${entregues.length} (2077 de fora: ${!entregues.includes('loja:teste-2077')})`];
+        && JSON.stringify(info.de2077) === JSON.stringify([['Arasaka HJKE-11 Yukimura', 'smart', 30, 1]]) && info.notas.length === 0
+        && [carro.uid, moto.uid, ...carro.upgrades.map(u => u.uid), 'loja:teste-2077'].every(uid => entregues.includes(uid));
+      return [ok, `${JSON.stringify(info)} · entregues: ${entregues.length}`];
+    });
+
+    await r.passo('wiki: um item que o sistema não conhece vira aviso e não conta como entregue para a wiki', async () => {
+      // Personagem sintético na wiki de teste: o resultado já pronto, com um Agent e um item com id que não existe.
+      const { personagem } = await api('/api/personagens', 'POST', {
+        nome: 'Teste Entregues', apelido: 'Sintético', resultado: {
+          stats: { BODY: 5, WILL: 5 }, derivados: { hp: 35 }, humanidade: { atual: 50 }, dinheiro: { saldo: 0 }, pericias: [], veiculos: [],
+          itens: [{ uid: 'teste:agent', id: 'core_gear:agent', nome: 'Agent', qtd: 1, uso: 'carregando' }, { uid: 'teste:fantasma', id: 'core_gear:item-que-nao-existe', nome: 'Item Fantasma', qtd: 1 }]
+        }
+      });
+      const info = await edge.evaluate(`(async () => {
+        const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(personagem.id)}, '');
+        const resultado = { itens: ator.items.map(i => i.name), notas };
+        await ator.delete();
+        return resultado;
+      })()`);
+      const entregues = (await api(`/api/personagens/${personagem.id}`)).personagem.foundry?.entregues || [];
+      return [info.itens.join() === 'Agent' && info.notas.some(nota => nota.startsWith('Item Fantasma:')) && entregues.join() === 'teste:agent', JSON.stringify({ ...info, entregues })];
     });
 
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
