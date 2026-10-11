@@ -1,0 +1,19 @@
+<section class="tab pericias {{tab.cssClass}}" data-group="primary" data-tab="pericias">
+  <div class="grupos">
+    {{#each grupos}}
+    <div class="grupo">
+      <h3>{{nome}}</h3>
+      <ol>
+        {{#each pericias}}
+        <li class="pericia {{#if nivel}}tem{{/if}}" data-pericia="{{id}}">
+          <a class="nome" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{sigla}} + {{nome}} + 1d10">{{nome}}{{#if dificil}} <small>x2</small>{{/if}}</a>
+          <span class="sigla">{{sigla}}</span>
+          <input type="number" name="system.pericias.{{id}}.nivel" value="{{nivel}}" min="0" max="10">
+          <span class="total" data-tooltip="Total sem o dado{{#if bonus}} (bônus +{{bonus}}){{/if}}">{{total}}</span>
+        </li>
+        {{/each}}
+      </ol>
+    </div>
+    {{/each}}
+  </div>
+</section>

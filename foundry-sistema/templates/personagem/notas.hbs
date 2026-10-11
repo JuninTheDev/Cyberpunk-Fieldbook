@@ -1,0 +1,7 @@
+<section class="tab notas {{tab.cssClass}}" data-group="primary" data-tab="notas">
+  {{#if editavel}}
+  <prose-mirror name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+  {{else}}
+  <div class="texto">{{{notasRicas}}}</div>
+  {{/if}}
+</section>

@@ -1,0 +1,60 @@
+<div class="item-ficha">
+  <header class="cabecalho">
+    <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img">
+    <input class="nome" type="text" name="name" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
+  </header>
+
+  <div class="campos">
+    {{#if eh.arma}}
+    <label>Perícia <select name="system.pericia">{{selectOptions pericias selected=fonte.pericia}}</select></label>
+    <label>Dano <input type="text" name="system.dano" value="{{fonte.dano}}"></label>
+    <label>CDT <input type="number" name="system.cdt" value="{{fonte.cdt}}"></label>
+    <label>Bônus de ataque <input type="number" name="system.bonusAtaque" value="{{fonte.bonusAtaque}}"></label>
+    <label>Pente <input type="number" name="system.pente.value" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" value="{{fonte.pente.max}}"></label>
+    <label>Tabela de DV <input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
+    <label>Qualidade <select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
+    <label>Ignora armadura (%) <input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
+    <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
+    <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>
+    {{/if}}
+    {{#if eh.armadura}}
+    <label>SP cabeça <input type="number" name="system.sp.cabeca.value" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" value="{{fonte.sp.cabeca.max}}"></label>
+    <label>SP corpo <input type="number" name="system.sp.corpo.value" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" value="{{fonte.sp.corpo.max}}"></label>
+    <label>Penalidade <input type="number" name="system.penalidade" value="{{fonte.penalidade}}"></label>
+    <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Vestida</label>
+    {{/if}}
+    {{#if eh.municao}}
+    <label>Tipo <input type="text" name="system.tipo" value="{{fonte.tipo}}"></label>
+    <label>Quantidade <input type="number" name="system.quantidade" value="{{fonte.quantidade}}"></label>
+    <label>Ablação <input type="number" name="system.ablacao" value="{{fonte.ablacao}}"></label>
+    {{/if}}
+    {{#if eh.lesao}}
+    <label>Local <select name="system.local">{{selectOptions locaisLesao selected=fonte.local}}</select></label>
+    <label class="caixa"><input type="checkbox" name="system.aumentaDeathSave" {{checked fonte.aumentaDeathSave}}> Death Save base +1</label>
+    <label>Paliativo: Primeiros Socorros DV <input type="number" name="system.paliativo.primeirosSocorros" value="{{fonte.paliativo.primeirosSocorros}}"></label>
+    <label>Paliativo: Paramédico DV <input type="number" name="system.paliativo.paramedico" value="{{fonte.paliativo.paramedico}}"></label>
+    <label>Tratamento: Paramédico DV <input type="number" name="system.tratamento.paramedico" value="{{fonte.tratamento.paramedico}}"></label>
+    <label>Tratamento: Cirurgia DV <input type="number" name="system.tratamento.cirurgia" value="{{fonte.tratamento.cirurgia}}"></label>
+    {{/if}}
+    {{#if eh.cyberware}}
+    <label>Tipo <select name="system.tipo">{{selectOptions tiposCyberware selected=fonte.tipo}}</select></label>
+    <label>Perda de Humanidade <input type="text" name="system.perdaHumanidade.formula" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" value="{{fonte.perdaHumanidade.media}}"></label>
+    <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
+    <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
+    {{/if}}
+    {{#unless eh.lesao}}<label>Preço (eb) <input type="number" name="system.preco" value="{{fonte.preco}}"></label>{{/unless}}
+  </div>
+
+  {{#if efeitos.length}}
+  <h3>Efeitos</h3>
+  <ol class="efeitos">
+    {{#each efeitos}}<li class="{{#unless ativo}}inativo{{/unless}}"><b>{{nome}}</b> {{mudancas}}{{#unless ativo}} <small>(sem efeito agora)</small>{{/unless}}</li>{{/each}}
+  </ol>
+  {{/if}}
+
+  <h3>Descrição</h3>
+  {{#if editavel}}
+  <prose-mirror name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
+  {{else}}<div class="texto">{{{descricaoRica}}}</div>{{/if}}
+  {{#if sistema.fonte.livro}}<p class="fonte">{{sistema.fonte.livro}}, p. {{sistema.fonte.pagina}}</p>{{/if}}
+</div>

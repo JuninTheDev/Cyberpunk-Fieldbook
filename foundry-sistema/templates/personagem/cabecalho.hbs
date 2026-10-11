@@ -1,0 +1,35 @@
+<header class="cabecalho">
+  <img class="retrato" src="{{ator.img}}" alt="{{ator.name}}" data-action="editImage" data-edit="img">
+  <div class="identidade">
+    <input class="nome" type="text" name="name" value="{{ator.name}}" placeholder="Nome" {{#unless editavel}}disabled{{/unless}}>
+    <div class="role">
+      <label>Role <input type="text" name="system.role.nome" value="{{fonte.role.nome}}" placeholder="Solo, Netrunner…"></label>
+      <label>Rank <input type="number" name="system.role.rank" value="{{fonte.role.rank}}" min="0" max="10"></label>
+      {{#if habilidades.length}}<span class="habilidades">{{#each habilidades}}<span class="chip">{{nome}} {{rank}}</span>{{/each}}</span>{{/if}}
+    </div>
+  </div>
+  <div class="vitais">
+    <div class="vital hp">
+      <span class="rotulo">HP</span>
+      <span class="valor"><input type="number" name="system.hp.value" value="{{sistema.hp.value}}"> / {{sistema.hp.max}}</span>
+      <span class="estado estado-{{sistema.ferimento.chave}}">{{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}}){{/if}}</span>
+    </div>
+    <div class="vital">
+      <span class="rotulo">Humanidade</span>
+      <span class="valor"><input type="number" name="system.humanidade.value" value="{{sistema.humanidade.value}}"> / {{sistema.humanidade.max}}</span>
+      <span class="estado">EMP {{sistema.empAtual}}</span>
+    </div>
+    <div class="vital">
+      <span class="rotulo">Sorte</span>
+      <span class="valor"><input type="number" name="system.sorte.value" value="{{sistema.sorte.value}}"> / {{sistema.sorte.max}}</span>
+    </div>
+    <div class="vital armadura">
+      <span class="rotulo">SP</span>
+      <span class="valor">cabeça {{sistema.armadura.cabeca.sp}} · corpo {{sistema.armadura.corpo.sp}}</span>
+      <span class="estado death-save">
+        <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY">Death Save &lt; {{sistema.deathSave.body}}</a>{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}
+        {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves">zerar</a>{{/if}}
+      </span>
+    </div>
+  </div>
+</header>

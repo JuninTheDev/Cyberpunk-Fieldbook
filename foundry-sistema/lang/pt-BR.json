@@ -1,0 +1,14 @@
+{
+  "TYPES": {
+    "Actor": {
+      "personagem": "Personagem"
+    },
+    "Item": {
+      "arma": "Arma",
+      "armadura": "Armadura",
+      "municao": "Munição",
+      "cyberware": "Cyberware",
+      "lesao": "Lesão crítica"
+    }
+  }
+}

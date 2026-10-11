@@ -152,6 +152,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `foundry-net-architect/` | Módulo do Foundry VTT "NET Architect": pontos de acesso à NET nos Tiles, com a janela do netrunner e o mapa da arquitetura. Veja o README da pasta. |
 | `foundry-fluxo-de-combate/` | Módulo do Foundry VTT "Fluxo de Combate": ataque, esquiva às cegas e dano na ficha, com área, cartucho, fogo supressivo, lesão crítica e Death Save. Substitui o Evasion Workflow. Veja o README da pasta. |
 | `foundry-painel-tatico/` | Módulo do Foundry VTT "Painel Tático": o HUD de combate com o retrato grande do personagem (um PNG por estado de ferimento) e o estilo de cada jogador, ligado ao cpr-2077, ao Fluxo de Combate e ao NET Architect. Veja o README da pasta. |
+| `foundry-sistema/` | Protótipo do sistema próprio "Cyberpunk RED — Fieldbook" para o Foundry VTT 14: ficha, crítico do d10, o combate do Fluxo de Combate (tiro, mirado, autofogo, supressivo, cartucho e explosivo, com a esquiva às cegas e o dano na ficha), Lesão Crítica, Death Save, cyberware e importação da wiki. A mesa continua no Foundry 12 por enquanto. Veja o README da pasta. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
 
@@ -343,6 +344,16 @@ Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 877
 - **O que confere:** STATs, Role e sub-habilidades, cyberware instalado, armas, moradia, veículos e o crossover entre campanhas (o mundo antigo manda a ficha; o novo cria o ator igual).
 - **Licença:** ela vale para uma mesa por vez, então o teste confere antes, na wiki online, se a mesa do servidor está vazia. Se houver alguém, o teste é pulado.
 - **Módulo:** os scripts do módulo são copiados a cada rodada. Os compêndios só são gerados de novo na primeira vez ou com `$env:FOUNDRY_BUILD=1`.
+
+**Teste do sistema no Foundry 14** (`node tests/rodar.js v14`): o protótipo `foundry-sistema/` num Foundry 14 de verdade.
+- **Onde roda:** o Foundry 14 do PC (`%LOCALAPPDATA%\Programs\Foundry Virtual Tabletop`), sem janela, na porta 31014, numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`). O mundo começa vazio a cada rodada.
+- **O que confere:**
+  - ficha e crítico do d10, com os dados fixos;
+  - cyberware que só vale instalado e recarga;
+  - os modos de ataque (tiro, mirado, autofogo, explosivo, cartucho e supressivo), com Lesão Crítica, Desfazer e os turnos (Suprimido e Death Save);
+  - um segundo navegador fazendo o jogador que esquiva e que ataca rolando o próprio dano;
+  - importação de um personagem do criador.
+- **Licença:** só a licença sai da pasta de dados do Foundry do PC. Como no teste do Foundry 12, o teste é pulado com a mesa do servidor ocupada.
 
 - Para rodar uma parte só, passe o nome: `node tests/rodar.js busca`. Os nomes são os arquivos de `tests/cenarios/`.
 - `$env:DETALHES=1` mostra o detalhe de cada checagem.

@@ -1,0 +1,121 @@
+/* Cyberpunk RED — Fieldbook: a ficha, os itens e os cartões do chat (camada "system" do Foundry 14).
+   Tudo fica dentro de .cpr-fieldbook; as cores seguem o tema do Foundry (claro ou escuro) com o vermelho do RED. */
+.cpr-fieldbook {
+  --cprf-vermelho: #d7263d;
+  --cprf-ciano: #2fd6d6;
+  --cprf-borda: var(--color-border, #6b6b6b);
+  --cprf-fundo-suave: color-mix(in srgb, var(--cprf-vermelho) 8%, transparent);
+  --cprf-texto-fraco: var(--color-text-secondary, #9a9a9a);
+}
+
+/* ---------- Ficha do personagem ---------- */
+.cpr-fieldbook.ficha-personagem .window-content { padding: 0; gap: 0; }
+.cpr-fieldbook .cabecalho { display: grid; grid-template-columns: 96px 1fr; gap: 0.5rem 0.75rem; padding: 0.75rem; border-bottom: 2px solid var(--cprf-vermelho); }
+.cpr-fieldbook .cabecalho .retrato { width: 96px; height: 96px; object-fit: cover; border: 1px solid var(--cprf-borda); border-radius: 4px; cursor: pointer; grid-row: span 2; }
+.cpr-fieldbook .cabecalho .nome { font-size: 1.5rem; font-weight: 700; height: auto; border: none; border-bottom: 1px solid var(--cprf-borda); border-radius: 0; background: none; }
+.cpr-fieldbook .cabecalho .role { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.35rem; }
+.cpr-fieldbook .cabecalho .role label { display: flex; align-items: center; gap: 0.3rem; }
+.cpr-fieldbook .cabecalho .role input[type="text"] { width: 9rem; }
+.cpr-fieldbook .cabecalho .role input[type="number"] { width: 3rem; }
+.cpr-fieldbook .chip { display: inline-block; padding: 0 0.4rem; border: 1px solid var(--cprf-borda); border-radius: 999px; font-size: 0.8rem; margin-right: 0.25rem; }
+.cpr-fieldbook .vitais { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+.cpr-fieldbook .vital { display: flex; flex-direction: column; padding: 0.35rem 0.5rem; border: 1px solid var(--cprf-borda); border-radius: 4px; background: var(--cprf-fundo-suave); }
+.cpr-fieldbook .vital .rotulo { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .vital .valor { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
+.cpr-fieldbook .vital .valor input { width: 3.2rem; font-weight: 700; text-align: right; }
+.cpr-fieldbook .vital .estado { font-size: 0.8rem; color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .estado-grave, .cpr-fieldbook .estado-mortal { color: var(--cprf-vermelho) !important; font-weight: 700; }
+
+.cpr-fieldbook nav.tabs { padding: 0 0.75rem; border-bottom: 1px solid var(--cprf-borda); }
+.cpr-fieldbook nav.tabs [data-tab].active { border-bottom: 2px solid var(--cprf-vermelho); }
+.cpr-fieldbook section.tab { padding: 0.75rem; }
+.cpr-fieldbook section.tab h3 { margin: 0.75rem 0 0.35rem; border-bottom: 1px solid var(--cprf-borda); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.cpr-fieldbook section.tab h3:first-child { margin-top: 0; }
+.cpr-fieldbook .vazio, .cpr-fieldbook .dica { color: var(--cprf-texto-fraco); font-style: italic; }
+
+/* Atributos: dez caixas com o botão de rolar. */
+.cpr-fieldbook .atributos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.5rem; list-style: none; margin: 0; padding: 0; }
+.cpr-fieldbook .atributo { display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem; border: 1px solid var(--cprf-borda); border-radius: 4px; }
+.cpr-fieldbook .atributo .rolar { flex: 0 0 3.6rem; font-weight: 700; }
+.cpr-fieldbook .atributo input { width: 3rem; text-align: center; font-size: 1.1rem; font-weight: 700; }
+.cpr-fieldbook .atributo .efetivo { color: var(--cprf-ciano); font-weight: 700; }
+
+/* Tabelas e listas de itens. */
+.cpr-fieldbook table.lista { width: 100%; border-collapse: collapse; margin: 0; }
+.cpr-fieldbook table.lista th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: var(--cprf-texto-fraco); }
+.cpr-fieldbook table.lista td { padding: 0.25rem 0.3rem; border-top: 1px solid var(--cprf-borda); vertical-align: middle; }
+.cpr-fieldbook table.lista td.num { text-align: center; font-weight: 700; }
+.cpr-fieldbook table.lista td.nome { display: flex; align-items: center; gap: 0.35rem; }
+.cpr-fieldbook table.lista td.nome img, .cpr-fieldbook .itens img { width: 24px; height: 24px; border: none; }
+.cpr-fieldbook table.lista td.acoes .botoes { display: flex; justify-content: flex-end; gap: 0.25rem; }
+.cpr-fieldbook table.lista td.acoes button { flex: 0 0 auto; width: auto; min-width: 0; height: 1.7rem; padding: 0 0.45rem; font-size: 0.85rem; }
+.cpr-fieldbook table.lista tr.guardada { opacity: 0.55; }
+.cpr-fieldbook small { color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .itens { list-style: none; margin: 0; padding: 0; }
+.cpr-fieldbook .itens li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; border-top: 1px solid var(--cprf-borda); }
+.cpr-fieldbook .itens .nome { flex: 0 1 auto; font-weight: 600; }
+.cpr-fieldbook .itens .detalhe { flex: 1; color: var(--cprf-texto-fraco); font-size: 0.85rem; }
+.cpr-fieldbook .itens button { flex: 0 0 auto; width: auto; padding: 0 0.5rem; line-height: 1.6rem; }
+.cpr-fieldbook .alternar.ligado { border-color: var(--cprf-ciano); color: var(--cprf-ciano); }
+.cpr-fieldbook .apagar { color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.5rem 1rem; }
+.cpr-fieldbook .campos label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.cpr-fieldbook .campos label.caixa { justify-content: flex-start; }
+.cpr-fieldbook .campos input[type="number"] { width: 4.5rem; }
+
+/* Perícias: grupos em colunas. */
+.cpr-fieldbook .grupos { columns: 2 20rem; column-gap: 1.25rem; }
+.cpr-fieldbook .grupo { break-inside: avoid; margin-bottom: 0.75rem; }
+.cpr-fieldbook .grupo ol { list-style: none; margin: 0; padding: 0; }
+.cpr-fieldbook .pericia { display: grid; grid-template-columns: 1fr 2.6rem 3rem 2.2rem; align-items: center; gap: 0.35rem; padding: 0.1rem 0; }
+.cpr-fieldbook .pericia .nome { cursor: pointer; }
+.cpr-fieldbook .pericia:not(.tem) .nome { color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .pericia .sigla { font-size: 0.75rem; color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .pericia input { width: 3rem; text-align: center; }
+.cpr-fieldbook .pericia .total { font-weight: 700; text-align: right; }
+
+.cpr-fieldbook .notas prose-mirror { min-height: 20rem; }
+
+/* ---------- Ficha do item ---------- */
+.cpr-fieldbook.ficha-item .item-ficha { display: flex; flex-direction: column; gap: 0.5rem; }
+.cpr-fieldbook.ficha-item .cabecalho { grid-template-columns: 64px 1fr; padding: 0 0 0.5rem; }
+.cpr-fieldbook.ficha-item .cabecalho .retrato { width: 64px; height: 64px; grid-row: auto; }
+.cpr-fieldbook .efeitos { margin: 0; padding-left: 1rem; }
+.cpr-fieldbook .efeitos .inativo { opacity: 0.6; }
+.cpr-fieldbook .fonte { color: var(--cprf-texto-fraco); font-size: 0.8rem; }
+
+/* ---------- Cartões do chat ---------- */
+.cpr-fieldbook.cartao header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; border-bottom: 2px solid var(--cprf-vermelho); margin-bottom: 0.35rem; }
+.cpr-fieldbook.cartao header h3 { margin: 0; border: none; font-size: 1rem; }
+.cpr-fieldbook.cartao .sabor { color: var(--cprf-texto-fraco); font-size: 0.85rem; }
+.cpr-fieldbook.cartao .partes { display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; list-style: none; margin: 0 0 0.35rem; padding: 0; font-size: 0.85rem; }
+.cpr-fieldbook.cartao .critico { margin: 0.25rem 0; font-weight: 700; }
+.cpr-fieldbook.cartao.critico-sucesso .critico { color: var(--cprf-ciano); }
+.cpr-fieldbook.cartao.critico-falha .critico { color: var(--cprf-vermelho); }
+.cpr-fieldbook.cartao .placar { margin: 0 0 0.35rem; }
+.cpr-fieldbook.cartao .alvos { list-style: none; margin: 0; padding: 0; }
+.cpr-fieldbook.cartao .alvo { padding: 0.3rem 0; border-top: 1px solid var(--cprf-borda); }
+.cpr-fieldbook.cartao .alvo .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.cpr-fieldbook.cartao .alvo img { width: 28px; height: 28px; border: none; object-fit: cover; }
+.cpr-fieldbook.cartao .alvo .rotulo { font-weight: 700; }
+.cpr-fieldbook.cartao .alvo.resultado-acertou .rotulo, .cpr-fieldbook.cartao .alvo.resultado-suprimido .rotulo { color: var(--cprf-vermelho); }
+.cpr-fieldbook.cartao .alvo.resultado-esquivou .rotulo, .cpr-fieldbook.cartao .alvo.resultado-firme .rotulo { color: var(--cprf-ciano); }
+.cpr-fieldbook.cartao .contra { color: var(--cprf-texto-fraco); font-size: 0.85rem; }
+.cpr-fieldbook.cartao .dano { margin: 0.2rem 0 0; padding-left: 1.1rem; font-size: 0.9rem; }
+.cpr-fieldbook.cartao .dano .lesao { color: var(--cprf-vermelho); }
+.cpr-fieldbook.cartao .nota { margin: 0.2rem 0 0; color: var(--cprf-texto-fraco); font-size: 0.85rem; font-style: italic; }
+.cpr-fieldbook.cartao .botoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.35rem; }
+.cpr-fieldbook.cartao .botoes button { flex: 0 0 auto; width: auto; padding: 0 0.6rem; }
+.cpr-fieldbook.cartao.desfeito { opacity: 0.5; }
+.cpr-fieldbook.cartao.desfeito .botoes { display: none; }
+.cpr-fieldbook.cartao.death-save.falhou .resultado, .cpr-fieldbook.cartao.morte { color: var(--cprf-vermelho); font-weight: 700; }
+.cpr-fieldbook.cartao.death-save.passou .resultado { color: var(--cprf-ciano); font-weight: 700; }
+
+/* Ficha: Death Save e lesões. */
+.cpr-fieldbook .death-save a { cursor: pointer; }
+.cpr-fieldbook .death-save .zerar { margin-left: 0.35rem; font-size: 0.75rem; text-decoration: underline; }
+.cpr-fieldbook .lesoes .nome { color: var(--cprf-vermelho); }
+
+/* Janelas da defesa e do tiro mirado (DialogV2). */
+.cpr-fieldbook.defesa .form-footer button, .cpr-fieldbook.mirar .form-footer button { font-weight: 700; }
+.cpr-fieldbook.defesa .total { color: var(--cprf-vermelho); }

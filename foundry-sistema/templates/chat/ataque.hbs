@@ -1,0 +1,29 @@
+<div class="cpr-fieldbook cartao ataque">
+  <header><h3>{{atacante}}: {{descricao}}</h3><span class="sabor">{{arma}}</span></header>
+  <p class="placar">Ataque <b>{{ataque}}</b>{{#if cabecalho}} · {{cabecalho}}{{/if}}</p>
+  <ol class="alvos">
+    {{#each linhas}}
+    <li class="alvo resultado-{{resultado}}">
+      <div class="linha">
+        <img src="{{img}}" alt="">
+        <b>{{nome}}</b>
+        <span class="rotulo">{{rotulo}}</span>
+        {{#if contra}}<span class="contra">contra {{contra}}</span>{{/if}}
+        {{#if metros}}<span class="contra">{{metros}} m</span>{{/if}}
+      </div>
+      {{#if dano}}
+      <ul class="dano">
+        {{#if dano.escudo}}<li>O escudo ({{dano.escudo}}) levou {{dano.escudoAblado}}.</li>{{/if}}
+        {{#if (or dano.lugar (not dano.escudo))}}<li>Dano <b>{{dano.dano}}</b>{{#if multiplicador}} (2d6 × {{multiplicador}}){{/if}} contra SP {{dano.spEfetivo}}{{#if (ne dano.spEfetivo dano.sp)}} (de {{dano.sp}}){{/if}}{{#if dano.armadura}} ({{dano.armadura}}){{/if}}: {{#if dano.passou}}passaram {{dano.bruto}}{{#if (eq dano.local "cabeca")}} (cabeça ×2){{/if}}{{else}}a armadura segurou{{/if}}.</li>{{/if}}
+        {{#if dano.bonus}}<li>Crítico: +{{dano.bonus}} direto no HP.</li>{{/if}}
+        <li><b>Perdeu {{dano.recebido}} HP</b> ({{dano.hpAntes}} → {{dano.hpDepois}}){{#if dano.ablado}}; a armadura perdeu {{dano.ablado}} de SP{{/if}}.</li>
+        {{#each dano.lesoes}}<li class="lesao">Lesão crítica: <b>{{nome}}</b>.</li>{{/each}}
+      </ul>
+      {{/if}}
+      {{#each notas}}<p class="nota">{{this}}</p>{{/each}}
+    </li>
+    {{/each}}
+  </ol>
+  {{#each notas}}<p class="nota">{{this}}</p>{{/each}}
+  {{#if desfazer}}<div class="botoes"><button type="button" data-cprf-acao="desfazer">Desfazer</button></div>{{/if}}
+</div>

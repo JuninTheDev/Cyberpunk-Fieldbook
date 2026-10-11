@@ -1,0 +1,46 @@
+<section class="tab equipamento {{tab.cssClass}}" data-group="primary" data-tab="equipamento">
+  <h3>Armas</h3>
+  <ol class="itens">
+    {{#each armas}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <span class="detalhe">{{sistema.dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}</span>
+      <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{else}}<li class="vazio">Sem armas.</li>{{/each}}
+  </ol>
+
+  <h3>Armaduras</h3>
+  <ol class="itens">
+    {{#each armaduras}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{name}}</a>
+      <span class="detalhe">{{#if system.sp.cabeca.max}}cabeça {{system.sp.cabeca.value}}/{{system.sp.cabeca.max}}{{/if}}{{#if system.sp.corpo.max}} corpo {{system.sp.corpo.value}}/{{system.sp.corpo.max}}{{/if}}{{#if system.penalidade}} · penalidade {{system.penalidade}}{{/if}}</span>
+      <button type="button" class="alternar {{#if system.equipada}}ligado{{/if}}" data-action="equipar">{{#if system.equipada}}Vestida{{else}}Guardada{{/if}}</button>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
+  </ol>
+
+  <h3>Munição</h3>
+  <ol class="itens">
+    {{#each municoes}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{name}}</a>
+      <span class="detalhe">{{system.quantidade}} tiros</span>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{else}}<li class="vazio">Sem munição.</li>{{/each}}
+  </ol>
+
+  <h3>Dinheiro e reputação</h3>
+  <div class="campos">
+    <label>Eurodólares <input type="number" name="system.dinheiro" value="{{fonte.dinheiro}}"></label>
+    <label>Pontos de Melhoria <input type="number" name="system.pontosDeMelhoria" value="{{fonte.pontosDeMelhoria}}"></label>
+    <label>Reputação <input type="number" name="system.reputacao" value="{{fonte.reputacao}}"></label>
+  </div>
+</section>

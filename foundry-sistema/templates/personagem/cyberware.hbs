@@ -1,0 +1,14 @@
+<section class="tab cyberware {{tab.cssClass}}" data-group="primary" data-tab="cyberware">
+  <p class="dica">Instalar desconta a Humanidade pela perda rolada (Shift: pela média). O efeito do cyberware só vale instalado.</p>
+  <ol class="itens">
+    {{#each cyberwares}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <span class="detalhe">{{tipo}}{{#if sistema.fundacional}} · base{{/if}} · {{sistema.perdaHumanidade.formula}} ({{sistema.perdaHumanidade.media}}){{#if sistema.perdaHumanidade.sofrida}} · custou {{sistema.perdaHumanidade.sofrida}}{{/if}}{{#if efeitos}} · {{efeitos}}{{/if}}</span>
+      <button type="button" class="alternar {{#if sistema.instalado}}ligado{{/if}}" data-action="instalar">{{#if sistema.instalado}}Instalado{{else}}Instalar{{/if}}</button>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{else}}<li class="vazio">Sem cyberware.</li>{{/each}}
+  </ol>
+</section>

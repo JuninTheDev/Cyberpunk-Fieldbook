@@ -1,0 +1,166 @@
+{
+  "id": "cpr-fieldbook",
+  "title": "Cyberpunk RED — Fieldbook",
+  "description": "Sistema próprio de Cyberpunk RED para o Foundry VTT 14, feito em volta da wiki da mesa: ficha, rolagens com o crítico do d10, armadura com ablação, cyberware que só vale instalado, o combate do Fluxo de Combate (tiro, mirado, corpo a corpo, autofogo, fogo supressivo, cartucho e explosivo em área, com a esquiva às cegas e o dano na ficha), Lesão Crítica, Death Save e importação dos personagens criados na wiki.",
+  "version": "0.2.0",
+  "authors": [
+    {
+      "name": "Junin"
+    }
+  ],
+  "license": "GPL-3.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.369",
+    "maximum": "14"
+  },
+  "esmodules": [
+    "scripts/sistema.mjs"
+  ],
+  "styles": [
+    {
+      "src": "styles/sistema.css",
+      "layer": "system"
+    }
+  ],
+  "languages": [
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/pt-BR.json"
+    }
+  ],
+  "documentTypes": {
+    "Actor": {
+      "personagem": {
+        "htmlFields": [
+          "notas"
+        ]
+      }
+    },
+    "Item": {
+      "arma": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "armadura": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "municao": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "cyberware": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "lesao": {
+        "htmlFields": [
+          "descricao"
+        ]
+      }
+    }
+  },
+  "socket": true,
+  "grid": {
+    "distance": 2,
+    "units": "m"
+  },
+  "primaryTokenAttribute": "hp",
+  "secondaryTokenAttribute": "humanidade",
+  "initiative": "1d10 + @iniciativa",
+  "packs": [
+    {
+      "name": "armas",
+      "label": "Armas",
+      "path": "packs/armas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "armaduras",
+      "label": "Armaduras",
+      "path": "packs/armaduras",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "municao",
+      "label": "Munição",
+      "path": "packs/municao",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "cyberware",
+      "label": "Cyberware",
+      "path": "packs/cyberware",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "lesoes",
+      "label": "Lesões críticas",
+      "path": "packs/lesoes",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "exemplos",
+      "label": "Personagens de exemplo",
+      "path": "packs/exemplos",
+      "type": "Actor",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "NONE",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Cyberpunk RED — Fieldbook",
+      "sorting": "m",
+      "color": "#6b0012",
+      "packs": [
+        "armas",
+        "armaduras",
+        "municao",
+        "cyberware",
+        "lesoes",
+        "exemplos"
+      ]
+    }
+  ],
+  "flags": {}
+}

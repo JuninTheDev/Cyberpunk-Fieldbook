@@ -1,0 +1,6 @@
+<div class="cpr-fieldbook cartao lesao">
+  <header><h3>Lesão crítica: {{nome}}</h3><span class="sabor">{{alvo}}{{#if cabeca}}, na cabeça{{/if}}</span></header>
+  {{{descricao}}}
+  {{#if repetida}}<p class="nota">{{alvo}} já tinha esta lesão.</p>{{else if (not naFicha)}}<p class="nota">Só anunciada: ponha na ficha à mão, se valer.</p>{{/if}}
+  {{{dados}}}
+</div>

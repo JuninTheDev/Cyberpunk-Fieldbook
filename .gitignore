@@ -2,6 +2,8 @@
 *.pdf
 foundry-2077/.cache/
 foundry-2077/node_modules/
+foundry-sistema/.cache/
+foundry-sistema/packs/
 tests/.saida/
 # Dados ao vivo ficam fora do git: no servidor moram em /srv/fieldbook/dados (com backup diário),
 # e no PC são só de teste. Códigos dos jogadores (senhas), personagens, retratos e regras da loja.
