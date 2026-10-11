@@ -243,7 +243,7 @@ São 14 ganchos rápidos, 5 sub-quests prontas no formato de preparação da cam
 | Gancho | Onde | NPC de entrada | Ligação com Morana | Ato ideal |
 |---|---|---|---|---|
 | O ciberpsico que chorava | Watson | Regina Jones | O alvo pede ajuda entre os surtos: não é ciberpsico, é vítima. A MaxTac chega em 10 minutos. | 1 |
-| Colheita | Kabuki | Scavengers | Os Scavs levaram o corpo de Kobo, o agente de Sato morto no depósito, e estão revendendo o cyberarm e os implantes dele. Cada venda espalha Morana. | 1 |
+| Colheita | Kabuki | Scavengers | Se o grupo deixou o corpo de Kobo (o agente de Sato morto no depósito) para trás, os Scavs o levaram e estão revendendo o cyberarm e os implantes dele. Cada venda espalha Morana. | 1 |
 | Dollchip em loop | Clouds e Lizzie's Bar | Judy e os Moxes | Bonecas repetem a mesma frase em transe: um endereço e um nome, "Sato". | 1–2 |
 | Recall silencioso | Fábrica em Santo Domingo | Executivo da Kang Tao | Um lote de armas inteligentes escolheu alvos errados. A Kang Tao quer tudo de volta antes da imprensa. | 2 |
 | Cliente Platinum | City Center | Gerente da Trauma Team | Um cliente morreu com o suporte de vida desligado. A TT quer o log do implante antes da família. | 2 |

@@ -15,7 +15,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await r.passo('barra lateral do Protocolo Morana: só as entradas; os documentos viraram abas', async () => {
       const itens = await edge.evaluate(`[...document.querySelectorAll('#navigation .nav-item')].map(b => b.dataset.page)`);
       const esperados = ['home', 'campaign', 'people', 'campaignMap', 'docSessaoZero', 'session1', 'docSessao02', 'docSessao03', 'docHandouts', 'notes', 'playerView', 'agenda', 'campanhas', 'personagens', 'loja'];
-      const viraramAba = ['docSessao01', 'docFundacao', 'docRoteiro', 'docDiario', 'docQuemEQuem', 'docPersonagens', 'docGuia', 'docArquiteturas', 'docGanchos'];
+      const viraramAba = ['docSessao01', 'docFundacao', 'docRoteiro', 'docDiario', 'docBase', 'docPersonagens', 'lugares', 'docGuia', 'docArquiteturas', 'docGanchos'];
       const faltam = esperados.filter(id => !itens.includes(id));
       const sobram = viraramAba.filter(id => itens.includes(id));
       return [!faltam.length && !sobram.length && itens.length === esperados.length, `${itens.length} entradas · faltam ${faltam.join(', ') || 'nenhuma'} · ainda no menu ${sobram.join(', ') || 'nenhuma'}`];
@@ -88,7 +88,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const night = await edge.evaluate(`[...document.querySelectorAll('#content .page-tab')].map(b => b.textContent).join()`);
       await edge.ir(`${base}/?recarregar#docFundacao`, 1500);
       const campanha = await edge.evaluate(`[...document.querySelectorAll('#content .page-tab')].map(b => b.textContent).join()`);
-      return [fichas === 9 && menuElenco === 'people' && night === 'Mapa,Guia de 2077,Arquiteturas NET' && campanha === 'Dossiê,Fundação,Roteiro,Diário', `fichas ${fichas} · menu ${menuElenco} · Night City: ${night} · A campanha: ${campanha}`];
+      return [fichas === 9 && menuElenco === 'people' && night === 'Mapa,Lugares e peças,Guia de 2077,Arquiteturas NET' && campanha === 'Dossiê,Fundação,Roteiro,Diário,Base', `fichas ${fichas} · menu ${menuElenco} · Night City: ${night} · A campanha: ${campanha}`];
     });
 
     await r.passo('fixar uma aba: entra nas Fixadas com o nome da entrada e da aba', async () => {

@@ -14,7 +14,8 @@ module.exports = async ({ edge, servidores, r }) => {
   }
   const linhas = doc => doc.texto.split(/\r?\n/).map((texto, index) => ({ texto, onde: `${doc.arquivo}:${index + 1}` }));
   // Sem o que está entre crases (nomes de arquivo, código) e sem o destino dos links ([texto](destino)).
-  const semCodigo = texto => texto.replace(/`[^`]*`/g, ' ').replace(/\]\([^)]*\)/g, ']');
+  // E sem as citações da base ({{base:pecas}}, {{doc:arquivo.md#secao}}), que são código.
+  const semCodigo = texto => texto.replace(/`[^`]*`/g, ' ').replace(/\]\([^)]*\)/g, ']').replace(/\{\{[^}]*\}\}/g, ' ');
   const fold = texto => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
   await r.passo('termos no padrão da wiki (Gravemente Ferido, fixer, nomes de perícia)', async () => {

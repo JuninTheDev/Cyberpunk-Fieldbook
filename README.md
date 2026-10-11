@@ -104,6 +104,8 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 
 | Arquivo | Para que serve |
 |---|---|
+| `documentos/morana/base-da-campanha.md` | **A base da campanha: a fonte única.** Um registro para cada pessoa, facção, lugar, peça de Morana, relógio e segredo. Pessoas e facções, Lugares e peças, o Estado da campanha, o Dossiê, as tabelas citadas nos documentos (`{{base:pecas}}`), os cartões dos nomes e o texto dos atores do elenco no Foundry saem daqui. |
+| `documentos/morana/dossie-da-campanha.md` | O Dossiê: só citações (`{{doc:fundacao-da-campanha.md#premissa}}`, `{{base:faccoes}}`). Mude a ordem aqui; o texto, na fonte. |
 | `documentos/morana/fundacao-da-campanha.md` | Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais. **Fonte principal da lore.** |
 | `documentos/morana/personagens-da-campanha.md` | NPCs: objetivos, segredos, falas e interpretação. |
 | `documentos/morana/ganchos-dos-personagens.md` | Sessão zero: transforma as respostas dos jogadores em ganchos pessoais ligados a Morana. |
@@ -113,10 +115,9 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `documentos/morana/handouts-da-campanha.md` | Os 30 handouts (H-01 a H-30), os textos para ler em voz alta e como criar um handout na hora. Na wiki, cada citação tem os botões **Entregar aos jogadores** e **Só preparar**. |
 | `documentos/morana/sessao-zero.md` | Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas. |
 | `documentos/morana/roteiro-da-campanha.md` | A campanha numa tabela: ato, sessão, fase da cidade, relógio de Sato, estágio de Morana, revelações e recompensas. |
-| `documentos/morana/quem-e-quem.md` | Todas as pessoas com nome: lado, lugar, primeira aparição e o link da ficha. |
 | `documentos/morana/arquiteturas-da-campanha.md` | As arquiteturas NET da campanha. As tabelas são a fonte dos itens do Foundry (o build do cpr-2077 lê este arquivo). |
 | `documentos/morana/guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo, ganchos e tabelas (com os ganchos de Morana). |
-| `documentos/morana/diario-da-campanha.md` | Estado dos relógios, onde está cada parte de Morana e registro das sessões. Atualize depois de cada sessão. |
+| `documentos/morana/diario-da-campanha.md` | O registro das sessões, as respostas da sessão zero e os ganchos escolhidos. A foto do estado de agora (peças, pessoas, segredos) vem do Estado da campanha. |
 | `documentos/<campanha>/`, `documentos/night-city/` | Os documentos de cada campanha nova, e os de todas. Veja **Campanhas**. |
 | `index.html` | A wiki do mestre. As páginas de resumo do Protocolo Morana e as notas de campanha nas regras (`gmNotes`) estão escritas aqui; os documentos completos são lidos dos `.md`. |
 | `campanhas-painel.js` | A página Campanhas e as páginas das campanhas novas (visão geral, notas, documentos) na wiki do mestre. |
@@ -124,7 +125,8 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre (o Publicar de cada campanha e as Notícias de Night City). |
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. |
-| `campaign-map.js` | Pinos do mapa de operações. |
+| `campaign-map.js` | Pinos do mapa de operações. Os lugares da base apontam para eles (`#campaignMap/<ponto>` abre o mapa já no ponto). |
+| `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
 | `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (com a tabela da ciberpsicose e a perda por trauma), terapia e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
 | `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
@@ -284,7 +286,7 @@ Notas:
   - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas, Agenda das mesas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
   - **Sair de todos os aparelhos** (no menu do jogador): a conta sai do celular, do computador, de tudo. Para voltar, o código de novo. Bom para celular perdido ou computador emprestado.
 - **O que acompanha a conta:** as páginas fixadas, os grupos recolhidos, a barra compacta, as páginas recentes, o personagem em uso e o que já foi visto (selos de novidade e de pedidos) ficam no servidor, na conta do jogador (ou na do mestre). Entrar no celular mostra tudo como estava no computador. Sem código, fica só no aparelho, como antes.
-- **Páginas com abas (wiki do mestre):** cada assunto da campanha é uma entrada só na barra lateral, com abas no topo da página. **A campanha:** Dossiê, Fundação, Roteiro e Diário. **Elenco:** Pessoas e facções, Quem é quem, Personagens e Fichas. **Night City:** Mapa, Guia de 2077 e Arquiteturas NET. **Sessão zero:** a conversa e os ganchos. **Cada sessão:** Resumo ou Roteiro, Handouts (os da sessão, com os botões de entregar), NPCs (as fichas que você escolhe num seletor com todas as fichas da wiki) e Notas (o que aconteceu, com o modelo do diário). As fichas e as notas ficam na mesa do servidor, por campanha. Os endereços de antes (`#docSessao01/cena-3-o-mensageiro`) continuam valendo, e a busca acha o texto de todas as abas.
+- **Páginas com abas (wiki do mestre):** cada assunto da campanha é uma entrada só na barra lateral, com abas no topo da página. **A campanha:** Dossiê, Fundação, Roteiro, Diário e Base. **Elenco:** Pessoas e facções, Personagens e Fichas. **Night City:** Mapa, Lugares e peças, Guia de 2077 e Arquiteturas NET. **Sessão zero:** a conversa e os ganchos. **Cada sessão:** Resumo ou Roteiro, Handouts (os da sessão, com os botões de entregar), NPCs (as fichas que você escolhe num seletor com todas as fichas da wiki) e Notas (o que aconteceu, com o modelo do diário). As fichas e as notas ficam na mesa do servidor, por campanha. Os endereços de antes (`#docSessao01/cena-3-o-mensageiro`) continuam valendo, e a busca acha o texto de todas as abas.
 - **Barra lateral:**
   - **Fixadas:** o botão **☆ Fixar**, ao lado do título de qualquer página (Combate, Escudo do mestre, a Ficha…), põe a página no grupo **Fixadas**, no topo da barra lateral, nas duas abas. Até 8, lembradas no aparelho; **★ Fixada** tira.
   - **Grupos que recolhem:** clique no nome do grupo. O aparelho lembra; abrir uma página de um grupo recolhido mostra o grupo.
@@ -296,7 +298,13 @@ Notas:
 
 ## Consulta durante a sessão
 
-- **Notas e relógios (mestre):** os relógios e o bloco de mesa ficam no servidor, por campanha: entram no backup e aparecem iguais no PC e no tablet (o que estava só no navegador subiu na primeira vez).
+- **A base da campanha (mestre):** cada pessoa, facção, lugar, peça de Morana, relógio e segredo tem um registro só, em `documentos/morana/base-da-campanha.md`.
+  - **Sai dela:** Pessoas e facções (com a tabela Quem é quem), Lugares e peças, o Dossiê (que junta trechos da fundação e do roteiro), o Resumo da Sessão 01 (tirado do próprio documento) e o texto dos atores do elenco no Foundry.
+  - **Nos documentos:** os nomes viram link, e passar o mouse mostra o cartão com o lado, onde está e a situação de agora. Uma linha `{{base:pecas}}`, `{{base:faccoes}}`, `{{base:pessoas}}`, `{{base:segredos}}` ou `{{base:relogio:sato}}` vira a tabela de agora.
+  - **Endereços antigos:** `#docQuemEQuem` abre a tabela em Pessoas e facções.
+- **Estado da campanha (mestre):** o que muda na mesa, salvo no servidor, por campanha: entra no backup e aparece igual no PC e no tablet.
+  - **O que guarda:** os relógios, com quem está cada peça de Morana, a situação, onde está e a atitude de cada pessoa com o grupo, os segredos revelados e o bloco de mesa.
+  - **Onde aparece:** nas páginas da base, nas tabelas citadas nos documentos (o diário mostra a foto de agora) e nos cartões dos nomes.
   - **Mostrar aos jogadores**, embaixo de cada relógio, põe esse relógio no Resumo dos jogadores (só leitura). Bom para o relógio da cidade.
   - **Estágio de Morana** (Protocolo Morana): o terceiro relógio. Dois segmentos por estágio (Programa, Enxame, Entidade), com a DV do teste de resistência e os gatilhos para marcar e desmarcar.
   - **Handouts** (Protocolo Morana → Sessões → Handouts e textos, ou a aba Handouts de cada sessão): embaixo de cada documento, **Entregar aos jogadores** publica na hora em Notícias e handouts, com o título que os jogadores devem ver; **Só preparar** deixa no Publicar sem publicar, para editar antes (os campos entre colchetes). O código H-xx fica na nota do mestre, e a página mostra o que já foi preparado ou entregue.
@@ -351,7 +359,7 @@ Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 877
 ## Fluxo de trabalho
 
 1. Mude a lore nos `.md` de `documentos/<campanha>/`. A página "Documentos completos" da wiki acompanha na hora (recarregue a página).
-2. Se a mudança afetar um resumo (Dossiê, Pessoas, Sessão 01, mapa), atualize também o `index.html` ou o `campaign-map.js`.
+2. Um nome, um lado, um lugar ou uma peça mudou? Mude o registro na base da campanha (`base-da-campanha.md`): as páginas, as tabelas dos documentos e os cartões mudam juntos. Nos documentos, cite a base (`{{base:pecas}}`) em vez de copiar. O que mudou na mesa vai em Estado da campanha, na wiki. O ponto no mapa fica no `campaign-map.js`.
    Depois de cada sessão, revele no painel **Visão dos jogadores** o que o grupo descobriu e clique em Publicar.
 3. Dê dois cliques em **`publicar.bat`**. Ele salva uma versão no git, o que permite voltar atrás, e põe a wiki online no ar.
    - O `iniciar serv.txt` (com a senha do mestre) fica fora do git.

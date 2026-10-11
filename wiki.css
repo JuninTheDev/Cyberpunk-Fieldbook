@@ -919,3 +919,26 @@ button.nav-group-toggle:hover, button.nav-group-toggle:focus-visible { color: va
 .np-bar .action.np-secondary { background: transparent; color: var(--yellow); box-shadow: inset 0 0 0 1px var(--yellow); }
 .np-remove { margin-left: auto; padding: 0 8px; border: 1px solid #5a3a3a; background: transparent; color: var(--coral); cursor: pointer; font: 16px/1.4 Oxanium, Consolas, monospace; }
 .np-remove:hover, .np-remove:focus-visible { border-color: var(--coral); background: #2a1414; outline: none; }
+
+/* Base da campanha (campanha-base.js): os nomes viram link, com um cartão ao passar o mouse; o Estado da campanha. */
+a.ent { color: inherit; text-decoration: underline solid color-mix(in srgb, var(--coral) 70%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a.ent:hover, a.ent:focus { color: var(--coral); }
+a.ent-lugar, a.ent-peca { text-decoration-color: color-mix(in srgb, var(--yellow) 70%, transparent); }
+a.ent-lugar:hover, a.ent-peca:hover { color: var(--yellow); }
+.ent-card { position: absolute; z-index: 60; padding: 10px 12px; border: 1px solid var(--coral); background: var(--panel); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); color: var(--text); font-size: 13px; line-height: 1.4; pointer-events: none; }
+.ent-card[hidden] { display: none; }
+.ent-card small { display: block; color: var(--coral); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.ent-card b { display: block; margin: 2px 0 4px; font-size: 15px; }
+.ent-card p { margin: 0 0 6px; color: var(--muted); }
+.ent-card dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; margin: 0; }
+.ent-card dt { color: var(--muted); }
+.ent-card dd { margin: 0; }
+.ent-card q { display: block; margin-top: 6px; color: var(--cyan); font-style: italic; }
+.bs-tabela input, .bs-tabela select { width: 100%; min-width: 120px; padding: 4px 6px; border: 1px solid var(--line); background: #111516; color: var(--text); font: inherit; }
+.bs-tabela input:focus, .bs-tabela select:focus { border-color: var(--cyan); outline: 1px solid var(--cyan); }
+.bs-tabela td small { color: var(--muted); }
+.bs-mais { margin-top: 10px; }
+.bs-mais summary { cursor: pointer; color: var(--muted); }
+.bs-segredos { list-style: none; padding-left: 0; }
+.bs-segredos li { margin: 6px 0; }
+.bs-segredos small { color: var(--muted); }

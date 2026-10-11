@@ -81,10 +81,11 @@ module.exports = async ({ edge, servidores, r }) => {
     return [estado.pagina === 'checks' && estado.busca === '' && estado.resultados === 0, JSON.stringify(estado)];
   });
 
-  await r.passo('Pessoas e facções tem Iskra Voss', async () => {
-    await abrir(edge, 'people');
+  await r.passo('Pessoas e facções (da base da campanha) tem o cartão de Iskra Voss e as seções no índice', async () => {
+    await abrir(edge, 'people', 1200);
     const chips = await edge.evaluate(`[...document.querySelectorAll('.page-toc [data-toc-index]')].map(b => b.textContent)`);
-    return [chips.includes('Iskra Voss'), chips.slice(0, 6).join(', ')];
+    const cartao = await edge.evaluate(`[...document.querySelectorAll('#md-doc h4')].some(h => h.textContent.trim() === 'Iskra Voss')`);
+    return [cartao && chips.join() === 'Quem é quem,Elenco principal,Outros nomes,Forças', chips.join(', ')];
   });
   await r.passo('mapa de Night City com os pinos', async () => {
     await abrir(edge, 'campaignMap', 900);

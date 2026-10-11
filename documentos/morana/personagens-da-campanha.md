@@ -4,20 +4,9 @@ Este arquivo reúne os personagens citados em `fundacao-da-campanha.md` e `sessa
 
 ## Guia rápido
 
-| Personagem | Função | Relação inicial com o grupo |
-|---|---|---|
-| Wakako Okada | Contratante e aliada ambígua | Oferece o primeiro trabalho |
-| Dra. Reina Sato | Antagonista principal | Quer controlar o Protocolo Morana |
-| Dr. Kenzo Endo | Mensageiro, cientista e testemunha | Precisa ser protegido ou interrogado |
-| Iskra Voss | Tenente de Sato | Caçou Endo; volta sempre que Sato quer algo do grupo |
-| Vega | Líder mercenária | Tenta recuperar a maleta |
-| Guarda de Wakako | Proteção e observador | Avalia o comportamento do grupo |
-| Atendentes do salão | Apoio e informação | Podem ouvir e transmitir rumores |
-| Tamsin "Fuse" Ilyin e sobreviventes | Grupo aliado ou perseguido | Conhecem o custo do projeto e disputam o destino do antídoto |
-| Jornalista desaparecido | Pista opcional | Investigava o encobrimento |
-| Mercenários de Arasaka e Militech | Forças de pressão | Tornam o conflito maior |
-| Protocolo Morana | Ameaça em evolução | Afeta pessoas e sistemas |
-| Personagens dos jogadores | Protagonistas | Decidem o destino de Morana |
+Quem é cada um, o lado, onde fica, quando aparece e a situação de agora (da base da campanha). Abaixo, a interpretação de cada um: como age, o que quer, o que esconde e as falas.
+
+{{base:pessoas:pessoas}}
 
 ---
 

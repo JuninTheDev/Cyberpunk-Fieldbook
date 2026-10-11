@@ -68,7 +68,7 @@ function weaponItem(actorSeed, name, origin, skill, weapons2077, card = {}) {
   return [weapon, ammo];
 }
 
-function buildNpc(card, { seed, name, weapons2077, variant = {} }) {
+function buildNpc(card, { seed, name, weapons2077, variant = {}, campanha = '' }) {
   const stats = Object.fromEntries(statKeys.map((key, index) => [key, leadingNumber(card.stats[index])]));
   Object.assign(stats, variant.stats || {});
   const parsed = wiki.npcs.parseSkills(card.skills);
@@ -113,7 +113,8 @@ function buildNpc(card, { seed, name, weapons2077, variant = {} }) {
     para(`${card.gear}.`, 'Cyberware e equipamento'),
     card.extra || '',
     para(card.tip, 'Na mesa'),
-    notes.length ? para(notes.join(' '), 'Notas') : ''
+    notes.length ? para(notes.join(' '), 'Notas') : '',
+    campanha
   ].join('');
   return actorDoc({
     seed, name, type: 'mook', img: 'icons/svg/mystery-man.svg', items,
@@ -151,8 +152,10 @@ export function buildNpcs(weaponDocs) {
     return actor;
   });
   // O elenco da campanha: atores com o nome do personagem (sem o nome da ficha do livro).
+  // O texto do ator vem também da base da campanha (quem é, lado, onde, a nota do mestre): o mesmo da wiki.
   const cast = (wiki.npcs.campaignCast || []).map(card => {
-    const actor = buildNpc(card, { seed: `npc:campanha:${card.name}`, name: card.name, weapons2077 });
+    const pessoa = wiki.base.pessoas.find(item => item.campos.ficha === card.name);
+    const actor = buildNpc(card, { seed: `npc:campanha:${card.name}`, name: card.name, weapons2077, campanha: pessoa ? wiki.campanhaBase.paraFoundry(pessoa) : '' });
     actor.folder = castFolder._id;
     return actor;
   });

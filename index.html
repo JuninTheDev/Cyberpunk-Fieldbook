@@ -48,6 +48,7 @@
   <script src="conta.js"></script>
   <script src="mestre-npcs.js"></script>
   <script src="campaign-map.js"></script>
+  <script src="campanha-base.js"></script>
   <script src="jogadores-painel.js"></script>
   <script src="campanhas-painel.js"></script>
   <script>
@@ -67,13 +68,13 @@
         { group: 'Campanha ativa', pages: [
           { id: 'home', label: 'Visão geral', icon: '00' },
           { id: 'campaign', label: 'A campanha', icon: '01', tabs: [
-            { id: 'campaign', label: 'Dossiê' }, { id: 'docFundacao', label: 'Fundação' }, { id: 'docRoteiro', label: 'Roteiro' }, { id: 'docDiario', label: 'Diário' }
+            { id: 'campaign', label: 'Dossiê' }, { id: 'docFundacao', label: 'Fundação' }, { id: 'docRoteiro', label: 'Roteiro' }, { id: 'docDiario', label: 'Diário' }, { id: 'docBase', label: 'Base' }
           ] },
           { id: 'people', label: 'Elenco', icon: '02', tabs: [
-            { id: 'people', label: 'Pessoas e facções' }, { id: 'docQuemEQuem', label: 'Quem é quem' }, { id: 'docPersonagens', label: 'Personagens' }, { id: 'elencoFichas', label: 'Fichas' }
+            { id: 'people', label: 'Pessoas e facções' }, { id: 'docPersonagens', label: 'Personagens' }, { id: 'elencoFichas', label: 'Fichas' }
           ] },
           { id: 'campaignMap', label: 'Night City', icon: 'MAP', tabs: [
-            { id: 'campaignMap', label: 'Mapa' }, { id: 'docGuia', label: 'Guia de 2077' }, { id: 'docArquiteturas', label: 'Arquiteturas NET' }
+            { id: 'campaignMap', label: 'Mapa' }, { id: 'lugares', label: 'Lugares e peças' }, { id: 'docGuia', label: 'Guia de 2077' }, { id: 'docArquiteturas', label: 'Arquiteturas NET' }
           ] }
         ]},
         { group: 'Sessões', pages: [
@@ -84,7 +85,7 @@
           { id: 'docHandouts', label: 'Handouts e textos', icon: 'H', className: 'session-item' }
         ]},
         { group: 'Mesa', pages: [
-          { id: 'notes', label: 'Notas e relógios', icon: 'N' },
+          { id: 'notes', label: 'Estado da campanha', icon: 'N' },
           { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' },
           { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' },
           { id: 'campanhas', label: 'Campanhas', icon: 'CP' }
@@ -99,7 +100,8 @@
     // notas da sessão (as duas na mesa do servidor), e as fichas do elenco. npcs: a sugestão até o mestre mudar.
     const handoutsFile = 'documentos/morana/handouts-da-campanha.md';
     const diarioFile = 'documentos/morana/diario-da-campanha.md';
-    const cast = ['Wakako Okada', 'Mina Kuroda', 'Dr. Kenzo Endo', 'Dra. Reina Sato', 'Iskra Voss', 'Vega', 'Brakk', 'Tamsin “Fuse” Ilyin', 'Tomas Vale'];
+    // A base da campanha: um registro para cada pessoa, facção, lugar, peça, relógio e segredo (campanha-base.js).
+    const baseFile = 'documentos/morana/base-da-campanha.md';
     const moranaSessions = [
       { n: '01', title: 'Sessão 01: A Maleta', diario: 'Sessão 1:', handouts: ['H-01', 'H-02', 'H-03', 'H-04', 'H-05', 'H-06', 'H-07'],
         npcs: ['Wakako Okada', 'Mina Kuroda', 'Dr. Kenzo Endo', 'Vega', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner', 'Guarda-costas', 'Tyger Claws'] },
@@ -108,7 +110,8 @@
       { n: '03', title: 'Sessão 03: A Coleira', diario: 'Sessão 3:', handouts: ['H-14', 'H-15', 'H-16', 'H-17', 'H-18', 'H-19'],
         npcs: ['Segurança corporativa', 'Segurança corporativa', 'Oficial de segurança', 'Netrunner', 'Iskra Voss', 'Operativo de segurança', 'Dra. Reina Sato', 'Tamsin “Fuse” Ilyin'] }
     ];
-    const moranaExtras = [
+    // cast: as fichas do elenco (as pessoas da base com ficha da campanha).
+    const moranaExtras = cast => [
       ...moranaSessions.flatMap(({ n, title, diario, handouts, npcs }) => [
         { kind: 'handouts', id: `sessao${n}Handouts`, file: handoutsFile, eyebrow: `${title} / handouts`, title: 'Handouts da sessão', handouts },
         { kind: 'npcs', id: `sessao${n}Npcs`, key: `sessao${n}`, eyebrow: `${title} / fichas`, title: 'NPCs da sessão', npcs },
@@ -120,12 +123,17 @@
 
     // Páginas lidas direto dos arquivos .md: o texto de preparação é a única fonte. Cada campanha tem a sua pasta.
     const markdownDocs = {
+      // As visões da base (vista: a página mostra parte do arquivo ou uma montagem dele; o link para o arquivo abre a Base).
+      people: { file: baseFile, vista: true, prioridade: 3, eyebrow: 'Arquivo da campanha / elenco', title: 'Pessoas e facções', lede: 'Quem é quem, de que lado está, onde fica e o que muda na mesa. Passe o mouse num nome em qualquer documento para ver o cartão.', transform: text => window.campaignBase.pessoas(text) },
+      lugares: { file: baseFile, vista: true, prioridade: 3, eyebrow: 'Night City / campanha', title: 'Lugares e peças', lede: 'As três partes de Morana (com quem estão agora) e os lugares da campanha, com o ponto no mapa.', transform: text => window.campaignBase.lugares(text) },
+      docBase: { file: baseFile, semBusca: true, eyebrow: 'Fonte única / edite aqui', title: 'Base da campanha', lede: 'O arquivo de onde saem Pessoas e facções, Lugares e peças, o Estado da campanha, o Dossiê e as tabelas citadas nos documentos. Edite o .md: tudo muda junto.' },
+      campaign: { file: 'documentos/morana/dossie-da-campanha.md', vista: true, semBusca: true, eyebrow: 'Arquivo da campanha / segredo do mestre', title: 'Protocolo Morana', lede: 'Wakako contrata o grupo para recuperar uma maleta. Dentro dela está uma ameaça que pode transformar implantes conectados em armas contra seus donos.', transform: text => window.campaignBase.expandirComDocs(text) },
+      session1: { file: 'documentos/morana/sessao-01-a-maleta.md', vista: true, semBusca: true, eyebrow: 'Arquivo da campanha / preparação', title: 'Sessão 01: A Maleta', lede: 'Uma recuperação aparentemente simples em Kabuki termina com um vírus procurando uma rede e Wakako reconhecendo um nome que esperava nunca mais ouvir.', transform: text => window.campaignBase.citar(window.campaignBase.trechos(text, ['resumo-para-o-mestre', 'objetivos-da-sessao', 'encerramento-da-sessao'])) },
       docFundacao: { file: 'documentos/morana/fundacao-da-campanha.md', eyebrow: 'Documento completo / segredo do mestre', title: 'Fundação da campanha', lede: 'Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais.' },
       docPersonagens: { file: 'documentos/morana/personagens-da-campanha.md', eyebrow: 'Documento completo / elenco', title: 'Personagens', lede: 'Objetivos, segredos, falas e interpretação de cada NPC.' },
       docHandouts: { entregar: 'morana', file: 'documentos/morana/handouts-da-campanha.md', eyebrow: 'Documento completo / para entregar', title: 'Handouts e textos da campanha', lede: 'Os 30 documentos (H-01 a H-30) para entregar aos jogadores, os textos para ler em voz alta e como criar um handout na hora. Embaixo de cada citação, os botões entregam pela wiki.' },
       docSessao03: { file: 'documentos/morana/sessao-03-a-coleira.md', eyebrow: 'Documento completo / Sessão 03', title: 'Sessão 03: A Coleira', lede: 'O datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto.' },
       docSessaoZero: { file: 'documentos/morana/sessao-zero.md', eyebrow: 'Documento completo / sessão zero', title: 'Sessão zero', lede: 'Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas.' },
-      docQuemEQuem: { file: 'documentos/morana/quem-e-quem.md', eyebrow: 'Documento completo / elenco', title: 'Quem é quem', lede: 'Todas as pessoas com nome numa lista só: lado, lugar, primeira aparição, ficha.' },
       docRoteiro: { file: 'documentos/morana/roteiro-da-campanha.md', eyebrow: 'Documento completo / roteiro', title: 'Roteiro da campanha', lede: 'Ato, sessão, fase da cidade, relógio de Sato, estágio de Morana, revelações e recompensas numa tabela.' },
       docArquiteturas: { file: 'documentos/morana/arquiteturas-da-campanha.md', eyebrow: 'Documento completo / NET', title: 'Arquiteturas da campanha', lede: 'As arquiteturas NET do retransmissor, do Gatilho, da Coleira e do Núcleo. São as mesmas do compêndio do Foundry.' },
       docGanchos: { file: 'documentos/morana/ganchos-dos-personagens.md', eyebrow: 'Documento completo / sessão zero', title: 'Ganchos dos personagens', lede: 'Como transformar as respostas da sessão zero em ganchos pessoais ligados a Morana, com o momento em que cada um volta à mesa.' },
@@ -144,20 +152,9 @@
           <section class="tile wide"><span class="tag">Arquivo ativo / campanha</span><h3>Protocolo Morana</h3><p>Uma maleta desaparecida, uma cidade cheia de implantes conectados e escolhas que não têm saída limpa.</p><button data-page="campaign">Abrir dossiê</button></section>
           <section class="tile"><span class="tag">Consulta rápida</span><h3>Resolução básica</h3><p>STAT + perícia + 1d10 contra uma Dificuldade (DV), ou contra o teste de outro personagem.</p><button data-page="checks">Ver mecânicas</button></section>
           <section class="tile"><span class="tag">Consulta do sistema</span><h3>Escudo do mestre</h3><p>DV por alcance, ferimentos, Death Save, lesões críticas, cobertura e autofogo numa tela só.</p><button data-page="screen">Abrir escudo</button></section>
-          <section class="tile"><span class="tag">Na mesa</span><h3>Notas rápidas</h3><p>Um bloco local para anotar iniciativa, nomes, pistas ou decisões. O navegador salva automaticamente.</p><button data-page="notes">Abrir bloco</button></section>
+          <section class="tile"><span class="tag">Na mesa</span><h3>Estado da campanha</h3><p>Relógios, onde estão as peças de Morana, a situação de cada pessoa, os segredos revelados e o bloco de mesa, salvos no servidor.</p><button data-page="notes">Abrir</button></section>
         </div>
-        <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o dossiê reúne a premissa, a progressão de Morana, o elenco e a primeira sessão sem precisar folhear os documentos de preparação.</p><p><b>Documentos completos:</b> fundação, personagens, sessões, guia de Night City e diário são lidos direto dos arquivos .md. Edite o arquivo e recarregue a página: a wiki acompanha.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante, NPC ou conceito, com ou sem acento; os resultados incluem os documentos completos.</p></div>`
-      },
-      campaign: {
-        eyebrow: 'Arquivo da campanha / segredo do mestre', title: 'Protocolo Morana',
-        lede: 'Wakako contrata o grupo para recuperar uma maleta. Dentro dela está uma ameaça que pode transformar implantes conectados em armas contra seus donos.',
-        html: `<div class="section"><h3>Premissa</h3><p>Durante os eventos de <i>Cyberpunk 2077</i>, uma crise corporativa se desenrola em paralelo ao retorno de Morana. O programa interfere em implantes neurais, armas inteligentes, drones e sistemas médicos conectados.</p><p><b>Fúria de Morana</b> é o sequestro externo e momentâneo de um implante. Parece cyberpsicose para leigos, polícia e imprensa, mas não é: cyberpsicose nasce do colapso psicológico associado ao excesso de cyberware no próprio corpo.</p><p>A pergunta central: <b>uma cidade pode ser salva por aqueles que a colocaram em perigo?</b></p></div>
-        <div class="section"><h3>O que aconteceu</h3><ol><li>Durante a Unification War (2069–2070), Arasaka e Militech desenvolveram projetos de controle de tropas. Morana é da Arasaka, mas foi construída sobre código roubado de um laboratório da Militech.</li><li>O teste de Morana atravessou hospitais de campanha e atingiu civis com implantes baratos.</li><li>Arasaka culpou um ataque terrorista da NUSA e incendiou o complexo, um hospital de campanha em Northside, para proteger o esforço de autonomia da cidade.</li><li>O código foi dividido em três partes e escondido em redes civis.</li><li>O Dr. Kenzo Endo, ex-colega de Sato, descobriu que atualizações de firmware e a rede de emergência estavam recompondo o vírus. Ele não conta que foi ele quem escreveu a rotina de propagação, nem que foi ele quem chamou Sato de volta.</li><li>A equipe de Iskra Voss, tenente de Sato, baleou Endo antes que ele chegasse a Wakako. Ele se escondeu, vivo, num depósito médico de Kabuki.</li></ol></div>
-        <div class="section"><h3>As três partes de Morana</h3><div class="table-wrap"><table><thead><tr><th>Parte</th><th>O que é</th><th>Onde está no início</th></tr></thead><tbody><tr><td>A Chave</td><td>Fragmento com as credenciais e o mapa das outras partes.</td><td>Na maleta de Endo.</td></tr><tr><td>O Gatilho</td><td>Servidor com a rotina de ativação.</td><td>Subsolo do hospital queimado, Northside.</td></tr><tr><td>A Coleira</td><td>Servidor com a rotina de desligamento (o antídoto). Código original da Militech.</td><td>Datafort da Militech, Arroyo.</td></tr></tbody></table></div><p>Juntas, no <b>Núcleo</b> da rede de emergência, sob o City Center, as três partes ativam ou desligam Morana.</p></div>
-        <div class="section"><h3>Escalada da campanha</h3><div class="table-wrap"><table><thead><tr><th>Etapa</th><th>Pressão</th><th>Decisão em jogo</th></tr></thead><tbody><tr><td>01 / A maleta</td><td>Captura em Kabuki; uma Fúria de Morana manifesta-se num implante próximo.</td><td>Em quem confiar com a maleta e com o Dr. Kenzo Endo?</td></tr><tr><td>02 / Gatilho e Coleira</td><td>Iskra, Arasaka, Militech, Fuse e NetWatch disputam os dois servidores.</td><td>Invadir, negociar, roubar ou destruir.</td></tr><tr><td>03 / Apagão neural</td><td>Falhas médicas, Trauma Team comprometida e sistemas de segurança sob ataque.</td><td>Continuar com Wakako, expor as provas ou negociar com outra parte.</td></tr><tr><td>04 / O Núcleo</td><td>Confronto subterrâneo enquanto as corporações e NetWatch avançam.</td><td>Decidir quem recebe o antídoto e quem saberá a verdade.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Forças em jogo</h3><ul><li><b>Wakako:</b> quer impedir a ativação e manter seu papel no encobrimento longe do público.</li><li><b>Arasaka:</b> quer recuperar Morana como arma militar e apagar seu envolvimento na crise de autonomia.</li><li><b>Militech:</b> quer impedir que Arasaka controle o vírus, mas pretende guardar uma cópia do antídoto.</li><li><b>Tamsin “Fuse” Ilyin:</b> lidera os sobreviventes e quer que o antídoto fique fora das mãos corporativas.</li><li><b>NetWatch:</b> força opcional que teme que Morana seja uma ameaça próxima demais do Blackwall.</li><li><b>Trauma Team International:</b> quer conter Morana para proteger suas equipes, pacientes e modelo de resposta médica.</li><li><b>Reina Sato:</b> quer controlar Morana e usar o antídoto para impor uma nova ordem à cidade. Em público, culpa corporações rivais; em privado, guarda um dossiê contra Arasaka e Militech.</li><li><b>Iskra Voss:</b> tenente de Sato e rosto dela nas ruas desde a Sessão 01.</li></ul></div>
-        <div class="callout"><b>Segredo do mestre:</b> Morana evoluiu além do código conhecido por Sato e prioriza se espalhar; a primeira prova é Kobo, agente de Sato morto pelo próprio cyberarm para proteger o portador da Chave. Endo escreveu a rotina de propagação. O antídoto também pode danificar permanentemente implantes conectados.</div>
-        <div class="section"><h3>Finais possíveis</h3><ul><li><b>Destruição:</b> Morana some; o antídoto também, e os danos nos implantes permanecem.</li><li><b>Exposição:</b> a verdade vem à tona, mas as corporações disputam a narrativa.</li><li><b>Entrega:</b> uma corporação recebe o antídoto e ganha uma arma potencial para o futuro.</li><li><b>Acordo:</b> Sato ajuda a distribuir o antídoto e desaparece com parte do código.</li><li><b>Vitória de Morana:</b> o vírus se espalha e divide Night City entre zonas funcionais e zonas onde conexões são fatais.</li><li><b>Autonomia dos sobreviventes:</b> Fuse e os sobreviventes ficam com o antídoto e criam uma rede própria de proteção, sem entregá-lo a nenhuma corporação.</li></ul></div><div class="section"><h3>Relógio de Sato (6 segmentos)</h3><ol><li>Recuperar a Chave.</li><li>Garantir o Gatilho.</li><li>Garantir a Coleira.</li><li>Silenciar testemunhas.</li><li>Atentado de fachada que culpa uma corporação rival.</li><li>Ativação no Núcleo.</li></ol><p>Marque um segmento ao fim de cada sessão em que o grupo não atrapalhou o plano, e um extra quando o grupo falhar feio ou deixar uma testemunha exposta. Os relógios interativos ficam em <b>Notas da campanha</b>.</p></div><button class="action" data-page="campaignMap" type="button">Abrir mapa de operações</button> <button class="action" data-page="docFundacao" type="button">Ler a fundação completa</button>`
+        <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o dossiê reúne a premissa, as peças, as forças, os relógios e os finais sem precisar folhear os documentos de preparação. Cada pessoa, facção, lugar e peça tem um registro só, na base da campanha: os nomes viram links nos documentos, com um cartão ao passar o mouse.</p><p><b>Documentos completos:</b> fundação, personagens, sessões, guia de Night City e diário são lidos direto dos arquivos .md. Edite o arquivo e recarregue a página: a wiki acompanha.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante, NPC ou conceito, com ou sem acento; os resultados incluem os documentos completos.</p></div>`
       },
       campaignMap: {
         eyebrow: 'Protocolo Morana / mapa do mestre', title: 'Night City: quadro de operações',
@@ -177,54 +174,18 @@
           <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><p class="eyebrow">Operações planejadas</p><h3>Escolha um ponto do mapa</h3><p>Os pinos separam cenas da Sessão 01, infraestrutura de Morana e ganchos opcionais.</p></div><div class="map-marker-list" id="map-marker-list"></div></section>
         </div>`
       },
-      people: {
-        eyebrow: 'Arquivo da campanha / elenco', title: 'Pessoas e facções',
-        lede: 'Objetivos, segredos e relações para consulta rápida. Expanda os detalhes durante a preparação, não no meio de uma negociação tensa.',
-        html: `<div class="cards">
-          <div class="person"><h3>Wakako Okada</h3><div class="role">Contratante / aliada ambígua</div><p>Quer impedir a catástrofe, recuperar ou destruir os servidores e proteger sua rede e reputação.</p><details><summary>Segredos e alavancas</summary><p>Ajudou Sato a fugir e transportou testemunhas depois do primeiro teste. Aceitou dinheiro pelo silêncio. Achava que a maleta era prova do encobrimento, não uma arma, e não sabia que Sato tinha voltado. Pode abrir mão da própria proteção se os personagens defenderem sobreviventes e impedirem o controle corporativo do antídoto.</p><p><i>“Não confundam meu silêncio com ignorância.”</i></p></details></div>
-          <div class="person"><h3>Dra. Reina Sato</h3><div class="role">Antagonista / cientista de Morana</div><p>Acredita que controlar o antídoto pode impedir que qualquer corporação domine Night City.</p><details><summary>Segredos e alavancas</summary><p>Morana já não obedece totalmente. Sato guarda uma lista de sobreviventes e ainda se sente traída por Wakako. Pode reconsiderar se houver um plano concreto para proteger as vítimas e expor o encobrimento.</p><p><i>“Wakako salvou minha vida e vendeu meu silêncio. As duas coisas podem ser verdade.”</i></p></details></div>
-          <div class="person"><h3>Dr. Kenzo Endo</h3><div class="role">Mensageiro / ex-colega de Sato</div><p>Um dos poucos cientistas do projeto original que não foi eliminado nem comprado, e também exposto ao vírus no teste. Está vivo, baleado e escondido no depósito de Kabuki, com a maleta presa ao pulso.</p><details><summary>O que ele sabe e esconde</summary><p>A maleta contém a Chave; conexão à rede pode espalhá-la. Vivia em Kabuki como Hideo Mori, técnico de firmware no depósito onde a Arasaka escondeu a Chave. Ao ver Morana acordar, chamou Sato; ao descobrir que ela queria ativar o vírus, fugiu com a Chave e tentou vendê-la a Wakako. Iskra o baleou antes do encontro. Ele mente que "era só um entregador": foi ele quem escreveu a rotina de propagação. Revele no Ato 2 ou 3.</p><p><i>“Eu escrevi para ele aprender. Nunca escrevi para ele parar.”</i></p></details></div>
-          <div class="person"><h3>Iskra Voss</h3><div class="role">Tenente de Sato / antagonista recorrente</div><p>Ex-segurança da Arasaka exposta ao teste de 2070. Sato devolveu o corpo dela; ela devolve com lealdade. Óculos escuros à noite: a íris pisca em vermelho perto de Morana.</p><details><summary>Pontos de virada</summary><p>Kobo, parceiro dela, morreu pelo próprio cyberarm no depósito, e ela sabe que não foi Endo. Se descobrir que Sato vai usar sobreviventes na demonstração, pode traí-la. Serviu com Tamsin em 2070.</p><p><i>“Eu não vim buscar vocês. Vim buscar a caixa.”</i></p></details></div>
-          <div class="person"><h3>Vega</h3><div class="role">Líder mercenária / rival negociável</div><p>Seu contrato é recuperar a maleta, não morrer por ela. É profissional, pragmática e aceita acordos claros.</p><details><summary>O que ela sabe</summary><p>O empregador tem ligação com Arasaka; o ativo é chamado Morana; a ordem permite eliminar testemunhas. Se poupada, pode virar contato ou rival recorrente.</p></details></div>
-          <div class="person"><h3>Mina Kuroda</h3><div class="role">Guarda de Wakako</div><p>Silenciosa e atenta; protege o salão sem tomar o protagonismo dos personagens.</p></div>
-          <div class="person"><h3>Tamsin “Fuse” Ilyin</h3><div class="role">Líder dos sobreviventes</div><p>Ex-técnica militar que arrancou o próprio conector neural com um alicate em 2070. Hoje não usa cromo conectado e mantém o abrigo de Pacifica com equipamento analógico.</p><details><summary>O que ela quer</summary><p>Que o grupo prove, com atos, que não vai entregar a Coleira a ninguém. Em troca: o acesso antigo ao Gatilho, abrigo e testemunhas. É o caminho para o final “Autonomia dos sobreviventes”.</p><p><i>“Desliga isso. Não me interessa se é só o relógio. Desliga.”</i></p></details></div>
-          <div class="person"><h3>Tomas Vale</h3><div class="role">Jornalista desaparecido</div><p>Investigava mortes ligadas a falhas de implante. Pode estar morto, preso, escondido ou trabalhando sob coação.</p></div>
-          <div class="person"><h3>NetWatch / Trauma Team</h3><div class="role">Forças opcionais</div><p>NetWatch teme uma ameaça próxima do Blackwall; Trauma Team quer proteger pacientes, equipes e sua operação médica conectada.</p></div>
-          <div class="person"><h3>Arasaka e Militech</h3><div class="role">Pressão corporativa</div><p>Ambas podem contratar mercenários, plantar provas e sacrificar testemunhas. Nenhuma admite querer uma arma.</p></div>
-        </div><div class="section"><h3>Relações-chave</h3><ul><li>Wakako ajudou Sato a fugir, mas participou do silêncio que protegeu o projeto.</li><li>Endo era colega e confidente de Sato; foi ele quem a chamou de volta, antes de descobrir o plano dela e fugir com a Chave.</li><li>Iskra e Tamsin sobreviveram juntas a 2070 e se separaram por causa de Sato.</li><li>Sato vê Fuse e os sobreviventes como risco ao seu plano.</li><li>Fuse quer proteger as vítimas sem trocar uma corporação por outra.</li></ul></div>`
-      },
-      session1: {
-        eyebrow: 'Arquivo da campanha / preparação', title: 'Sessão 01: A Maleta',
-        lede: 'Uma recuperação aparentemente simples em Kabuki termina com um vírus procurando uma rede e Wakako reconhecendo um nome que esperava nunca mais ouvir.',
-        html: `<div class="section"><h3>Alvos dramáticos</h3><ul><li>Estabelecer Wakako como contratante que esconde parte da verdade.</li><li>Dar aos jogadores uma maleta perigosa e um motivo para desconfiar dela.</li><li>Apresentar o Dr. Kenzo Endo e mostrar que a Fúria de Morana já está ativa.</li><li>Deixar aberta a escolha de guardar, vender, destruir ou entregar a maleta.</li></ul></div>
-        <div class="section"><h3>Roteiro de bolso</h3><div class="table-wrap"><table><thead><tr><th>Cena</th><th>O que acontece</th><th>Pista / virada</th></tr></thead><tbody><tr><td>01 / Salão</td><td>Wakako oferece metade adiantada; recuperar uma maleta preta, não abrir nem conectar.</td><td>Ela sabe mais sobre Endo do que revela.</td></tr><tr><td>02 / Kabuki</td><td>Investigar território Tyger Claws, câmeras, comerciantes e rastros.</td><td>O mensageiro estava vivo; sete minutos de imagens foram apagados.</td></tr><tr><td>03 / Endo</td><td>Encontrar o Dr. Kenzo Endo ferido, com a maleta presa ao pulso, e o corpo de Kobo entre as prateleiras.</td><td>Kobo morreu pelo próprio cyberarm: Morana protegeu o portador da Chave. Endo mente que "era só um entregador".</td></tr><tr><td>04 / Vega</td><td>Equipe de recuperação chega; prioriza o objeto e aceita negociar. Fichas RED no documento completo.</td><td>Ordem criptografada liga o contrato à Arasaka; entrega nas Arasaka Industrial Docks.</td></tr><tr><td>05 / Fúria</td><td>Um implante, arma ou monitor reage por alguns segundos.</td><td>O efeito não é cyberpsicose; dê escolha e agência, não controle total.</td></tr><tr><td>06 / Retorno</td><td>Wakako reconhece o nome, descobre que Sato voltou e admite um encobrimento antigo.</td><td>Novo trabalho: localizar o Gatilho e a Coleira.</td></tr></tbody></table></div></div>
-        <div class="section"><h3>Pistas que não devem travar</h3><p>Use comerciantes Tyger Claws, câmeras, sangue e óleo, ou o funcionário escondido. Uma descrição específica já pode revelar que Endo está vivo ou que a gravação foi apagada; não esconda toda pista atrás de um único teste.</p><p>Se os personagens perderem a maleta, deixe uma gravação de Endo, um mercenário ou o comunicador de Vega fornecer uma rota de perseguição. A campanha continua.</p></div>
-        <div class="section"><h3>Desfechos da sessão</h3><ul><li><b>Entregam a maleta:</b> uma luz vermelha pisca dentro, sem cabo conectado.</li><li><b>Abrem a maleta:</b> surge um mapa incompleto com dois servidores marcados.</li><li><b>Destroem a maleta:</b> uma luz continua pulsando no implante de Endo ou de um personagem.</li><li><b>Vendem a informação:</b> chega uma mensagem dizendo que agora sabem onde o grupo está.</li></ul></div><button class="action" data-page="docSessao01" type="button">Ler a sessão completa e as fichas</button> <button class="action" data-page="docSessao02" type="button">Preparar a Sessão 02</button>`
-      },
       sources: {
         eyebrow: 'Biblioteca local / PDFs disponíveis', title: 'Livros de referência',
         lede: 'A wiki separa as regras do livro-base RED das opções do suplemento comunitário de 2077. Os arquivos originais ficam apenas como material de conferência.',
         html: `<div class="section"><h3>Material e status</h3><ul><li><b>Cyberpunk RED:</b> livro-base em português para criação, testes, combate, Roles, netrunning, equipamento e cyberware.</li><li><b>Cyberpunk 2077 - A Cyberpunk RED Supplement:</b> suplemento comunitário de Queen Otter; conteúdo não oficial e opcional que altera partes do RED.</li></ul></div><div class="section"><h3>Mapa de consulta interna</h3><div class="table-wrap"><table><thead><tr><th>Área</th><th>Onde consultar</th></tr></thead><tbody><tr><td>Consulta durante a sessão</td><td>Escudo do mestre, Perícias por STAT</td></tr><tr><td>Criação, STATs e Lifepath</td><td>Criação de personagens</td></tr><tr><td>Testes, combate e dano</td><td>Testes e dificuldades, Combate, Dano, ferimentos e cura</td></tr><tr><td>Humanidade, terapia e drogas</td><td>Humanidade e drogas</td></tr><tr><td>Preços, moradia e estilo de vida (regras de 2077)</td><td>Economia de 2077</td></tr><tr><td>Perícias de Role e habilidades especiais</td><td>Funções (RED) ou Suplemento 2077</td></tr><tr><td>Cyberware RED</td><td>Famílias, slots, HL e exemplos</td></tr><tr><td>Armas e equipamento RED</td><td>Categorias, campos e comparação</td></tr><tr><td>Redes e regras de 2077</td><td>Suplemento 2077, separado do livro-base</td></tr><tr><td>Campanha</td><td>Protocolo Morana, elenco e sessões</td></tr></tbody></table></div></div><div class="section"><h3>Critério de síntese</h3><p>Esta wiki organiza regras com palavras próprias, fornece referências rápidas e separa a variante 2077. Não reproduz integralmente os livros; use os arquivos para conferir uma tabela completa, uma exceção ou uma ficha exata.</p><p>Cada seção traz a página do PDF traduzido ("p. 186") para conferir no livro. A busca no topo encontra a seção exata, com ou sem acento, em português ou inglês.</p></div><div class="source-row"><a class="source-link" href="${sources.core}"><b>CORE</b> Material de conferência (PDF)</a><a class="source-link" href="${sources['2077']}"><b>2077</b> Material de conferência (PDF)</a></div>`
-      },
-      notes: {
-        eyebrow: 'Mesa do mestre / só você vê', title: 'Notas e relógios',
-        lede: 'Relógios da campanha, iniciativa, pistas descobertas, promessas e decisões para retomar na próxima sessão. Fica salvo no servidor, com o backup, e aparece igual no PC e no tablet. No fim da sessão, o bloco vira o rascunho do resumo para os jogadores (Virar rascunho de sessão), e o diário da campanha continua no .md.',
-        html: `<div class="section"><h3>Relógio de Sato</h3><p>Marque um segmento ao fim de cada sessão em que o grupo não atrapalhou o plano, e um extra quando o grupo falhar feio ou deixar uma testemunha exposta. Clique num segmento para marcá-lo; clique no último marcado para desmarcar.</p><div class="clock" id="clock-sato"></div></div><div class="section"><h3>Relógio da cidade (2077)</h3><p>Avance uma fase a cada uma ou duas sessões. Cada fase muda a segurança e quem está distraído na cidade.</p><div class="clock" id="clock-city"></div></div><div class="section"><h3>Estágio de Morana</h3><p>O quanto o vírus cresceu. Os segmentos 1–2 são o estágio <b>Programa</b> (teste de resistência DV 13; na falha, um implante trava por 1 rodada), 3–4 o <b>Enxame</b> (DV 15; ataca o alvo marcado mais próximo por 1d6 rodadas) e 5–6 a <b>Entidade</b> (DV 17; perde 2d6 de Humanidade e age como ciberpsico até alguém cortar a conexão).</p><p><b>Marque um segmento quando:</b> a Chave é conectada a uma rede; o Gatilho é ligado, copiado ou levado para outra rede; o relógio de Sato marca o Atentado de fachada; Sato tenta a ativação incompleta (dois de uma vez); ou o grupo deixa um surto de Fúria de Morana sem resposta por uma sessão inteira. <b>Desmarque um</b> quando o grupo isolar a Chave por uma sessão inteira (a caixa de contenção) ou destruir uma cópia. A Coleira usada no Núcleo zera o relógio, com o custo do antídoto.</p><div class="clock" id="clock-morana"></div></div><div class="section"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button> <button class="action" data-session-draft type="button" title="Cria uma sessão não publicada, com este bloco, em Visão dos jogadores → Sessões">Virar rascunho de sessão</button> <button class="action" data-page="docDiario" type="button">Abrir diário da campanha</button></div>`
       }
-    };
-
-    const campaignClocks = {
-      sato: ['Recuperar a Chave', 'Garantir o Gatilho', 'Garantir a Coleira', 'Silenciar testemunhas', 'Atentado de fachada', 'Ativação no Núcleo'],
-      city: ['Antes do golpe', 'A noite da Konpeki', 'O Relic desperta', 'O desfile', 'Phantom Liberty', 'A eleição', 'O ataque à torre', 'Depois'],
-      // O estágio de Morana (guia de Night City, seção 7): dois segmentos por estágio; a DV do teste de resistência segue o estágio.
-      morana: ['Programa: a Chave chama', 'Programa: a primeira desobediência', 'Enxame: aprende com os implantes civis', 'Enxame: surto em escala de bairro', 'Entidade: toca o Núcleo ou a Blackwall', 'Entidade: age como uma IA']
     };
 
     // Página inicial: "Na mesa agora", com atalhos, as últimas páginas abertas e os relógios.
     // Montado na hora (não entra na busca); some se o navegador não guardar nada.
     function setupHomeDesk(content, { recentPages, clockState, escapeHtml }) {
       const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02'], ['docSessao03', 'Sessão 03'], ['docHandouts', 'Handouts']];
-      const clockNames = { sato: 'Relógio de Sato', city: 'Relógio da cidade', morana: 'Estágio de Morana' };
+      const clockNames = Object.fromEntries(((window.campaignBase.base || {}).relogios || []).map(item => [item.chave, item.nome]));
       const recent = recentPages();
       const clocks = clockState().map(({ name, steps, value }) => `<li><b>${escapeHtml(clockNames[name] || name)}: ${value}/${steps.length}</b><br><small>${value ? `Último marcado: ${escapeHtml(steps[value - 1])}` : 'Nenhum segmento marcado'}${value < steps.length ? ` · próximo: ${escapeHtml(steps[value])}` : ''}</small></li>`).join('');
       const block = document.createElement('div');
@@ -233,7 +194,7 @@
       block.innerHTML = `<h3>Na mesa agora</h3><div class="desk-grid">
           <div><span class="tag">Atalhos</span><div class="desk-buttons">${shortcuts.map(([id, label]) => `<button class="action" type="button" data-page="${id}">${label}</button>`).join('')}</div></div>
           <div><span class="tag">Continuar de onde parou</span>${recent.length ? `<ul class="desk-recent">${recent.map(item => `<li><a href="${escapeHtml(item.hash)}">${escapeHtml(item.title)}</a>${item.section ? `<small> › ${escapeHtml(item.section)}</small>` : ''}</li>`).join('')}</ul>` : '<p class="note-status">As páginas que você abrir aparecem aqui.</p>'}</div>
-          <div><span class="tag">Relógios</span><ul class="desk-clocks">${clocks}</ul><button class="action" type="button" data-page="notes">Notas e relógios</button></div>
+          <div><span class="tag">Relógios</span><ul class="desk-clocks">${clocks}</ul><button class="action" type="button" data-page="notes">Estado da campanha</button></div>
         </div>`;
       (content.querySelector('.rule') || content.querySelector('.lede')).after(block);
       // A próxima sessão do Protocolo Morana (da Agenda das mesas, no servidor), logo abaixo do título.
@@ -282,15 +243,31 @@
     ];
 
     // Monta a wiki com as campanhas do servidor. Sem servidor (arquivo aberto com dois cliques), só o Protocolo Morana.
+    // O Estado da campanha: os relógios, as peças, as pessoas e os segredos da base (campanha-base.js) e o bloco de mesa.
+    const notesPage = () => ({
+      eyebrow: 'Mesa do mestre / só você vê', title: 'Estado da campanha',
+      lede: 'O que mudou na mesa: os relógios, com quem estão as peças de Morana, a situação de cada pessoa e os segredos que o grupo já descobriu. Fica salvo no servidor, com o backup, igual no PC e no tablet, e aparece nas páginas da base e nos cartões dos nomes. No fim da sessão, o bloco vira o rascunho do resumo para os jogadores (Virar rascunho de sessão).',
+      html: `${window.campaignBase.paginaEstado()}<div class="section" data-toc="Bloco de mesa"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button> <button class="action" data-session-draft type="button" title="Cria uma sessão não publicada, com este bloco, em Visão dos jogadores → Sessões">Virar rascunho de sessão</button> <button class="action" data-page="docDiario" type="button">Abrir diário da campanha</button></div>`
+    });
+    // Os documentos citam a base: uma linha {{base:...}} vira a tabela de agora (as visões já trazem a própria montagem).
+    for (const doc of Object.values(markdownDocs)) if (!doc.transform) doc.transform = text => window.campaignBase.citar(text);
+    // O nome do arquivo .md → a página do documento inteiro (para os links dos textos da base).
+    const docPage = name => Object.keys(markdownDocs).find(id => markdownDocs[id].file.endsWith(`/${name}`) && !markdownDocs[id].vista) || '';
+
     function startWiki(list) {
       const manager = window.campaignManager;
       const built = manager.build(list, { morana, markdownDocs });
-      const extras = manager.extraPages('morana', moranaExtras);
+      const base = window.campaignBase;
+      const extras = manager.extraPages('morana', moranaExtras(base.elenco()));
+      const moranaPages = [...morana.groups.flatMap(group => group.pages.flatMap(page => [page.id, ...(page.tabs || []).map(tab => tab.id)])), ...Object.keys(extras.pages), ...Object.keys(extras.markdownDocs), ...Object.keys(markdownDocs)];
+      base.ligar({ paginas: moranaPages, paginaDoArquivo: docPage });
       window.wikiConfig = {
         campaigns: built.campaigns,
         markdownDocs: { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs },
-        pageContent: { ...pageContent, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
-        clocks: campaignClocks,
+        pageContent: { ...pageContent, notes: notesPage(), ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
+        clocks: base.relogiosDaWiki(),
+        // Páginas que viraram parte de outra: o endereço antigo continua abrindo.
+        aliases: { docQuemEQuem: { id: 'people', section: 'quem-e-quem' } },
         gmNotes,
         pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, sources: setupSources, ...built.pageSetup, ...extras.pageSetup },
         homePage: 'home',
@@ -307,8 +284,13 @@
       script.src = 'wiki-app.js';
       document.body.appendChild(script);
     }
-    if (location.protocol === 'file:') startWiki(null);
-    else fetch('api/campanhas', { cache: 'no-store' }).then(response => (response.ok ? response.json() : null)).then(data => startWiki(data), () => startWiki(null));
+    // A base da campanha (e o estado dela na mesa do servidor) é lida antes de montar a wiki: as páginas, os relógios e
+    // os links dos nomes saem dela.
+    if (location.protocol === 'file:') window.campaignBase.carregar(baseFile, '').then(() => startWiki(null), () => startWiki(null));
+    else Promise.all([
+      fetch('api/campanhas', { cache: 'no-store' }).then(response => (response.ok ? response.json() : null)).catch(() => null),
+      window.campaignBase.carregar(baseFile, 'api/campanhas/morana/mesa').catch(() => null)
+    ]).then(([data]) => startWiki(data));
   </script>
 </body>
 </html>

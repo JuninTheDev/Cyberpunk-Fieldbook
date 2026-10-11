@@ -3,7 +3,7 @@
 # - Páginas, regras, lore e estilos: valem na hora (o servidor lê os arquivos a cada pedido).
 # - server.js e a API: reinicia a wiki (2 segundos fora do ar).
 # - Módulos do Foundry (foundry-2077/ e os outros foundry-*/, e o que o build do cpr-2077 lê da wiki: as fichas de NPC,
-#   as regras system-*.js e as arquiteturas da campanha): gera e instala de novo assim que a mesa estiver vazia.
+#   as regras system-*.js, as arquiteturas e a base da campanha): gera e instala de novo assim que a mesa estiver vazia.
 # O registro fica em /srv/fieldbook/dados/atualizacoes.log.
 set -euo pipefail
 WIKI=/srv/fieldbook/wiki
@@ -27,7 +27,7 @@ if [ "$antes" != "$depois" ]; then
   if grep -q '^servidor/instalar\.sh$' <<<"$mudou"; then
     echo "$(date '+%F %T') AVISO: servidor/instalar.sh mudou. Para valer, rode: sudo bash $WIKI/servidor/instalar.sh" >> "$LOG"
   fi
-  if grep -qE '^(foundry-[^/]*/|mestre-npcs\.js$|system-[a-z0-9-]*\.js$|documentos/morana/arquiteturas-da-campanha\.md$)' <<<"$mudou"; then touch "$DADOS/.modulo-pendente"; fi
+  if grep -qE '^(foundry-[^/]*/|mestre-npcs\.js$|system-[a-z0-9-]*\.js$|campanha-base\.js$|documentos/morana/(arquiteturas|base)-da-campanha\.md$)' <<<"$mudou"; then touch "$DADOS/.modulo-pendente"; fi
 fi
 
 # Módulo do Foundry: precisa parar o Foundry por uns segundos, então só com ninguém na mesa.

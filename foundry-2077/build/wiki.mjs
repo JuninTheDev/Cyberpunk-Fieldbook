@@ -1,4 +1,5 @@
 // Lê os dados da wiki (os mesmos arquivos que a página carrega), sem copiar nada à mão.
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { wikiDir } from './paths.mjs';
@@ -14,5 +15,8 @@ export const wiki = {
   catalog: window.systemCatalog,
   skills: window.systemRules.data.skills,
   npcs: window.npcStatBlocks.data,
+  // A base da campanha (documentos/morana/base-da-campanha.md): quem é cada pessoa do elenco, para a ficha do ator.
+  base: require(path.join(wikiDir, 'campanha-base.js')).ler(fs.readFileSync(path.join(wikiDir, 'documentos', 'morana', 'base-da-campanha.md'), 'utf8')),
+  campanhaBase: require(path.join(wikiDir, 'campanha-base.js')),
   pages: { ...window.systemRules.pages, ...window.systemNet.pages, ...window.system2077.pages, ...window.npcStatBlocks.pages }
 };
