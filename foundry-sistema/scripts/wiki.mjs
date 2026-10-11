@@ -1,7 +1,9 @@
-// Importar da wiki: o personagem criado no criador da wiki vira um ator deste sistema, com STATs, perícias, Role,
-// Humanidade, dinheiro e o equipamento (armas carregadas, armaduras vestidas, cyberware instalado).
-// Os itens vêm de dados/catalogo.json pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"). O que ainda não
-// existe neste sistema (o conteúdo de 2077) vira um aviso, e o resto entra.
+// A wiki da mesa e este sistema:
+// - Importar da wiki: o personagem criado no criador da wiki vira um ator deste sistema, com STATs, perícias, Role,
+//   Humanidade, dinheiro e o equipamento montado (armas carregadas, armaduras vestidas, cyberware instalado, programas
+//   no deck, acessórios na arma, veículos da família). Os itens vêm de dados/catalogo.json pelo mesmo id da loja da wiki
+//   ("core_weapons:assault-rifle"); o que não existir vira um aviso, e o resto entra.
+// - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra.
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, SISTEMA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
@@ -13,6 +15,12 @@ export function registrarWiki() {
     name: 'Endereço da wiki', hint: 'De onde o mestre importa os personagens (o servidor da wiki da mesa).',
     scope: 'world', config: true, type: String, default: 'http://localhost:8000'
   });
+  game.settings.register(SISTEMA, 'wikiMesa', {
+    name: 'Mandar a ficha para a wiki',
+    hint: 'Para o mestre: a cada mudança num personagem que veio da wiki (HP, dinheiro, itens, munição…), manda a ficha para a wiki, que mostra em "Na mesa".',
+    scope: 'client', config: true, type: Boolean, default: true
+  });
+  registrarVoltaParaWiki();
 }
 
 const wikiUrl = () => String(game.settings.get(SISTEMA, 'wikiUrl') || '').replace(/\/+$/, '');
@@ -170,4 +178,86 @@ export async function importarPersonagem(id, donoId = '') {
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
+}
+
+// ---------------- Na mesa: a ficha volta para a wiki ----------------
+// O formato é o do módulo cpr-2077 no Foundry 12 (os tipos e os usos do CORE, as perícias pelo nome em inglês), para a
+// wiki mostrar a ficha da mesa sem mudar nada. Os STATs vão como estão agora na mesa (com a armadura pesada e o
+// ferimento descontados, a EMP de agora): a wiki soma STAT + nível direto.
+const TIPO_NA_WIKI = {
+  arma: 'weapon', armadura: 'armor', municao: 'ammo', cyberware: 'cyberware', equipamento: 'gear', roupa: 'clothing', droga: 'drug', cyberdeck: 'cyberdeck',
+  programa: 'program', upgrade: 'itemUpgrade', veiculo: 'vehicle'
+};
+const USO_NA_WIKI = { equipado: 'equipped', carregando: 'carried', guardado: 'owned' };
+const nomeDaPericia = (id, propria) => PERICIAS.find(p => p.id === id)?.en ?? (FAMILIAS[propria.familia] ? `${FAMILIAS[propria.familia].en} (${propria.nome})` : id);
+
+export function fichaParaAWiki(ator) {
+  const s = ator.system;
+  const usoDe = item => (['arma', 'armadura'].includes(item.type) ? (item.system.equipada ? 'equipped' : 'carried') : USO_NA_WIKI[item.system.uso] || '');
+  const itens = ator.items.filter(item => TIPO_NA_WIKI[item.type]).map(item => {
+    const x = item.system;
+    const linha = { nome: item.name, tipo: TIPO_NA_WIKI[item.type], qtd: 'quantidade' in x ? x.quantidade : 1, uso: usoDe(item), uid: item.getFlag(SISTEMA, 'wikiUid') || '' };
+    if (item.type === 'arma') {
+      Object.assign(linha, {
+        dano: x.dano, cdt: x.cdt, pericia: PERICIAS.find(p => p.id === x.pericia)?.en ?? x.pericia, distancia: x.aDistancia, maos: x.maos,
+        pente: x.aDistancia ? { atual: x.pente.value, max: x.pente.max } : null, municao: item.municaoCarregada?.name ?? ''
+      });
+    }
+    if (item.type === 'armadura') Object.assign(linha, { cabeca: x.sp.cabeca.max ? x.sp.cabeca.value : 0, corpo: x.sp.corpo.max ? x.sp.corpo.value : 0 });
+    if (item.type === 'cyberware') Object.assign(linha, { instalado: x.instalado, base: x.fundacional });
+    if (item.instalados.length) linha.dentro = item.instalados.map(dentro => dentro.name);
+    return linha;
+  });
+  return {
+    ator: ator.id, nomeAtor: ator.name, quando: new Date().toISOString(),
+    stats: Object.fromEntries(Object.entries(s.atributos).map(([chave, atributo]) => [chave.toUpperCase(), chave === 'emp' ? s.empAtual : atributo.valor])),
+    hp: { atual: s.hp.value, max: s.hp.max }, humanidade: { atual: s.humanidade.value, max: s.humanidade.max }, sorte: { atual: s.sorte.value, max: s.sorte.max },
+    sp: { cabeca: s.armadura.cabeca.sp, corpo: s.armadura.corpo.sp }, dinheiro: s.dinheiro, ip: s.pontosDeMelhoria, reputacao: s.reputacao,
+    role: s.role.nome ? { nome: s.role.nome, rank: s.role.rank, habilidades: Object.entries(s.role.habilidades) } : null,
+    pericias: Object.entries(s.pericias).filter(([, propria]) => propria.nivel > 0)
+      .map(([id, propria]) => ({ nome: nomeDaPericia(id, propria), nivel: propria.nivel, stat: s.pericia(id).atributo.toUpperCase() })),
+    lesoes: ator.items.filter(item => item.type === 'lesao').map(item => item.name),
+    itens
+  };
+}
+
+// Manda a ficha de um ator importado da wiki (o "wiki" na flag do sistema).
+export async function mandarFicha(ator) {
+  const vinculo = ator?.getFlag(SISTEMA, 'wiki');
+  if (!vinculo?.id) return null;
+  return wikiFetch(`/api/personagens/${vinculo.id}/mesa`, { method: 'PUT', body: fichaParaAWiki(ator) });
+}
+
+// Quem manda: o mestre ativo, com a configuração ligada. Espera 4 s depois da última mudança (um ataque muda HP, SP e
+// munição de uma vez). Um erro avisa no console uma vez, até a próxima volta dar certo.
+const ESPERA_DA_VOLTA = 4000;
+const esperando = new Map();
+let avisouFalha = false;
+const souQuemManda = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id) && game.settings.get(SISTEMA, 'wikiMesa');
+async function mandarAgora(id) {
+  const ator = game.actors.get(id);
+  if (!ator) return;
+  await mandarFicha(ator).then(() => { avisouFalha = false; }).catch(erro => {
+    if (!avisouFalha) { avisouFalha = true; console.warn(`${SISTEMA} | Na mesa (wiki):`, erro.message); }
+  });
+}
+function agendarVolta(ator) {
+  if (!ator || ator.documentName !== 'Actor' || ator.isToken || !ator.getFlag(SISTEMA, 'wiki') || !souQuemManda()) return;
+  clearTimeout(esperando.get(ator.id));
+  esperando.set(ator.id, setTimeout(() => { esperando.delete(ator.id); mandarAgora(ator.id); }, ESPERA_DA_VOLTA));
+}
+
+// Manda já o que está esperando (macros e testes).
+export async function mandarPendentes() {
+  const ids = [...esperando.keys()];
+  for (const id of ids) clearTimeout(esperando.get(id));
+  esperando.clear();
+  await Promise.all(ids.map(mandarAgora));
+}
+
+function registrarVoltaParaWiki() {
+  Hooks.on('updateActor', ator => agendarVolta(ator));
+  for (const gancho of ['createItem', 'updateItem', 'deleteItem']) Hooks.on(gancho, item => agendarVolta(item.parent));
+  // Ao entrar: manda todos os atores da wiki uma vez.
+  Hooks.once('ready', () => { for (const ator of game.actors) agendarVolta(ator); });
 }

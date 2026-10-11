@@ -54,7 +54,9 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   - [x] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem (Ciclo 10);
   - [x] veículo (os da família do Nomad, com os upgrades) (Ciclo 11);
   - [x] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077 (Ciclo 12).
-- [ ] **Volta da ficha para a wiki** (HP, munição, dinheiro, lesões) e entrega dos pedidos da loja. Bloqueador da migração.
+- [ ] **Volta da ficha para a wiki e pedidos da loja** (bloqueador da migração):
+  - [x] a ficha volta para a wiki a cada mudança ("Na mesa"), no formato do cpr-2077 (Ciclo 13);
+  - [ ] a entrega dos pedidos da loja aprovados pelo mestre.
 - [ ] **Da wiki:** botão "Importar da wiki" na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
   ator); retrato.
 - [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner

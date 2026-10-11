@@ -907,6 +907,26 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(1200);
     await edge.shot('importado');
 
+    await r.passo('na mesa: a cada mudança, a ficha volta para a wiki no formato que ela já lê (HP, dinheiro, armas com o pente, armadura, cyberware, inventário, perícias, Role)', async () => {
+      // O Solo importado perde 15 HP e gasta 100eb; a volta espera 4 s depois da última mudança.
+      await edge.evaluate(`(async () => {
+        const a = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        await a.update({ 'system.hp.value': 30, 'system.dinheiro': a.system.dinheiro - 100 });
+        return true;
+      })()`);
+      let mesa = null;
+      for (let i = 0; i < 40 && mesa?.hp?.atual !== 30; i++) { await edge.sleep(250); mesa = (await api(`/api/personagens/${solo.id}`)).personagem.mesa; }
+      const itens = mesa?.itens || [];
+      const rifle = itens.find(i => i.nome === 'Assault Rifle');
+      const ok = mesa?.hp?.atual === 30 && mesa.hp.max === 45 && mesa.dinheiro === solo.resultado.dinheiro.saldo - 100
+        && rifle?.tipo === 'weapon' && rifle.uso === 'equipped' && rifle.pente?.atual === 25 && rifle.municao === 'Rifle (Basic)' && rifle.pericia === 'Shoulder Arms'
+        && itens.some(i => i.tipo === 'armor' && i.corpo === 11 && i.uso === 'equipped') && itens.some(i => i.tipo === 'cyberware' && i.instalado)
+        && itens.some(i => i.tipo === 'gear' && i.nome === 'Agent' && i.uso === 'carried') && itens.some(i => i.tipo === 'clothing' && i.uso === 'equipped')
+        && mesa.stats.REF === solo.resultado.stats.REF && mesa.pericias.some(p => p.nome === 'Evasion' && p.stat === 'DEX')
+        && mesa.role?.habilidades.some(([nome, rank]) => nome === 'Initiative Reaction' && rank === 2) && itens.every(i => i.uid);
+      return [ok, JSON.stringify({ ...mesa, itens: itens.map(i => `${i.tipo}:${i.nome}:${i.uso}`) }).slice(0, 1500)];
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');
@@ -986,6 +1006,8 @@ module.exports = async ({ edge, servidores, r }) => {
 
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {
+        // As voltas da ficha que estão esperando vão antes de a wiki "cair".
+        await game.system.api.wiki.mandarPendentes();
         const atores = game.actors.size;
         const erro = promessa => promessa.then(() => null, e => e.message);
         const naoExiste = await erro(game.system.api.wiki.importarPersonagem('nao-existe-0000', ''));

@@ -81,7 +81,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - o cyberdeck, com os programas e o hardware instalados nele, e os acessórios nas armas, como a montagem da wiki (com o carregador maior, a arma entra com o pente maior cheio);
   - os veículos da família do Nomad, com os upgrades instalados e o SDP cheio.
 
-  A wiki marca o personagem como "no Foundry". Tudo o que a loja da wiki vende (o CORE e o conteúdo de 2077) existe aqui. Um item que um dia não existir vira aviso e não conta como entregue para a wiki.
+  A wiki marca o personagem como "no Foundry".
+- **Na mesa:** a cada mudança num personagem que veio da wiki (HP, dinheiro, munição, itens, lesões…), o mestre ativo manda a ficha de volta, 4 s depois da última mudança, e a wiki a mostra no lugar da ficha da criação. O formato é o mesmo do módulo cpr-2077 do Foundry 12, então a wiki não muda. Pela macro: `game.system.api.wiki.mandarFicha(ator)`; para mandar já o que está esperando, `mandarPendentes()`. Tudo o que a loja da wiki vende (o CORE e o conteúdo de 2077) existe aqui. Um item que um dia não existir vira aviso e não conta como entregue para a wiki.
 
 ## Configurações (Configurações → Sistema)
 
@@ -96,18 +97,18 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
 - **Explosivos pegam toda a área** (padrão: sim).
 - **Fogo supressivo sem alvo pega todos à vista** (padrão: sim).
 - **Endereço da wiki** (padrão: `http://localhost:8000`).
+- **Mandar a ficha para a wiki** (de cada navegador; padrão: sim): veja "Na mesa".
 
 ## Ainda não faz
 
 - **Do Fluxo de Combate:**
   - a animação e o texto em cima do token;
   - quem vê o cartão do resultado (hoje, todos);
-  - as armas de 2077 (Smart, ricochete, carga Tech);
   - o Reflex Tuner;
   - a Sorte na rolagem.
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
-- **Tipos de item:** equipamento, roupa, programa, cyberdeck, droga, upgrade e veículo.
-- **Volta da ficha para a wiki** (HP, munição, dinheiro) e entrega dos pedidos da loja.
+- **Os modos das armas de 2077** e o cyberware que é arma.
+- **A entrega dos pedidos da loja da wiki.**
 - **Da wiki:** o retrato e o "Atualizar da wiki". Importar de novo hoje cria outro ator.
 - **Interface:** botão "Importar da wiki" na barra dos atores e ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.

@@ -33,7 +33,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; os modos das armas de 2077 faltam |
-| cpr-2077 | volta da ficha para a wiki, pedidos da loja, crossover entre campanhas, Atualizar da wiki | falta |
+| cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
+| cpr-2077 | pedidos da loja, crossover entre campanhas, Atualizar da wiki, avisos de envio, retrato | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
@@ -41,7 +42,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 
 1. ~~O importador descarta itens~~: resolvido nos ciclos 8 a 12. Tudo o que a loja da wiki vende entra na ficha, e o
    que um dia não existir vira aviso, sem contar como entregue. Falta só pôr as opções de cyberware na base (P3).
-2. **Sem volta da ficha para a wiki:** a wiki pararia de receber o estado da mesa.
+2. **Volta da ficha e pedidos:** a ficha já volta para a wiki (ciclo 13); falta entregar os pedidos da loja.
 3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
 4. **Faltam a NET e as armas de 2077,** que a campanha usa.
 
@@ -476,3 +477,37 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
   - a NET de 2077: RAM, Cooling, quickhacks e daemons (P3).
 - **Próximo:** o próximo bloqueador da migração: a volta da ficha para a wiki (HP, munição, dinheiro, lesões) e a entrega
   dos pedidos da loja.
+- **Commit:** `f3de672`.
+
+### Ciclo 13 (2026-10-11): a ficha volta para a wiki ("Na mesa") (P2, bloqueador da migração)
+
+- **Implementado:**
+  - **`fichaParaAWiki(ator)`:** o retrato da ficha no formato que o módulo cpr-2077 manda no Foundry 12. Leva os tipos e
+    os usos do CORE (`weapon`, `equipped`...) e as perícias pelo nome em inglês. Leva também os STATs como estão na mesa
+    (com a armadura pesada e o ferimento descontados, a EMP de agora), HP, Humanidade, Sorte, SP, dinheiro, IP,
+    reputação, a Role com as habilidades, as lesões e os itens: a arma com o pente e a munição, a armadura com o SP, o
+    cyberware instalado, o que está dentro do deck, da arma e do veículo, e o uid da wiki. A wiki mostra isso sem mudar;
+  - **a volta:** a cada mudança num ator importado (ator ou item criado, mudado ou apagado), o mestre ativo manda a
+    ficha 4 s depois da última mudança (`PUT /api/personagens/<id>/mesa`). Ao entrar, manda todos os atores da wiki uma
+    vez. Um erro avisa no console uma vez, até a próxima volta dar certo. Para a macro: `mandarFicha(ator)` e
+    `mandarPendentes()`;
+  - **configuração** "Mandar a ficha para a wiki", de cada navegador, ligada por padrão.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 31 de 31;
+  - G4: 46 de 46, cerca de 50 s. Passo novo: o Solo importado perde 15 HP e gasta 100eb, e 4 s depois a wiki de teste
+    tem a ficha da mesa com:
+    - HP 30/45 e 400eb;
+    - o rifle equipado, com o pente 25 e a munição;
+    - a armadura com SP 11, o cyberware instalado, o Agent carregando e as roupas equipadas;
+    - os STATs, a Evasão pelo nome do CORE com DEX, a Reação de Iniciativa 2 da Role, e o uid de todo item.
+
+    O passo dos erros da importação manda antes as voltas pendentes, para nenhuma cair na wiki "fora do ar" do teste;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:**
+  - a entrega dos pedidos da loja (a outra metade deste bloqueador);
+  - o crossover entre campanhas: o sistema ainda não manda a campanha, e a wiki só recusa a ficha do mundo antigo
+    quando a campanha vem junto;
+  - o "Atualizar da wiki", os avisos de envio e o retrato.
+- **Próximo:** a entrega dos pedidos da loja aprovados.
