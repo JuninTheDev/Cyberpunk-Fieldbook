@@ -336,6 +336,36 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('munição de borracha: não mata (fica com 1 HP), não tira SP e não causa lesão crítica, nem com dois 6', async () => {
+      // Pistola pesada com borracha, a 10 m do Alvo (HP 10): d10 9 → REF 8 + Pistola 4 + 9 = 21 contra DV 15.
+      // Dano 3d6: 6 + 6 + 5 = 17, crítico (+5). Letal, passaria do HP; de borracha, o Alvo fica com 1.
+      await fixar(edge, [[9, 10], [6, 6], [6, 6], [5, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const alvo = __ator('Alvo');
+        const balas = foundry.utils.deepClone(cat['core_ammo:heavy-pistol-rubber']);
+        balas.system.quantidade = 8;
+        const pistola = foundry.utils.deepClone(cat['core_weapons:heavy-pistol']);
+        pistola.system.equipada = true;
+        const [arma, municao] = await a.createEmbeddedDocuments('Item', [pistola, balas]);
+        await arma.recarregar();
+        await alvo.update({ 'system.hp.value': 10 });
+        const sp = alvo.system.armadura.corpo.sp;
+        const r = await arma.atacar({ alvo: __token('Alvo') });
+        const [l] = r.linhas;
+        const resultado = {
+          ataque: r.ataque, dv: l.dv, resultado: l.resultado, critico: l.dano?.critico, lesoesNoCartao: l.dano?.lesoes.length, notas: l.notas, ablacao: municao.system.ablacao,
+          sp, spDepois: alvo.system.armadura.corpo.sp, hp: alvo.system.hp.value, lesoes: alvo.items.filter(i => i.type === 'lesao').length, sobrou: window.__fila.length
+        };
+        await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
+        await alvo.update({ 'system.hp.value': 45 });
+        return resultado;
+      })()`);
+      return [info.ataque === 21 && info.dv === 15 && info.resultado === 'acertou' && info.critico === true && info.lesoesNoCartao === 0 && info.lesoes === 0 && info.notas.includes('Munição de borracha: sem lesão crítica.')
+        && info.hp === 1 && info.ablacao === 0 && info.spDepois === info.sp && info.sobrou === 0, JSON.stringify(info)];
+    });
+
     // ---------- O jogador do alvo defende no computador dele ----------
     await r.passo('jogador: entra no mesmo mundo, dono do Alvo (agora REF 8, pode esquivar de tiro)', async () => {
       await edge.evaluate(`(async () => {

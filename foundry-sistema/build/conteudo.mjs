@@ -203,7 +203,7 @@ function armadura(doc, s) {
 function municao(doc, s) {
   return {
     name: doc.name, type: 'municao', img: 'icons/svg/barrel.svg',
-    system: { descricao: s.description?.value || '', tipo: s.variety || '', efeito: s.type || 'basic', quantidade: Number(s.amount) || 0, ablacao: Number(s.ablationValue) || 1, preco: Number(s.price?.market) || 0, fonte: fonteDo(s) }
+    system: { descricao: s.description?.value || '', tipo: s.variety || '', efeito: s.type || 'basic', quantidade: Number(s.amount) || 0, ablacao: Number(s.ablationValue ?? 1), preco: Number(s.price?.market) || 0, fonte: fonteDo(s) }
   };
 }
 function cyberware(doc, s) {

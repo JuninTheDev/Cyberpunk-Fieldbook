@@ -65,6 +65,12 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 
   Se a mesa ler "rodada" como o turno de cada combatente, é só trocar a marca (`combate.mjs`, `primeiraNaRodada`).
 
+- **Munição de borracha: muda o que a mesa vê.** A wiki diz que a borracha "não causa lesão crítica nem ablação". O
+  Fluxo, no Foundry 12, rolava a lesão crítica com ela (só o "não letal" e a ablação vinham do CORE). Agora não sai
+  lesão (nem a dos dois 6, nem a Perna quebrada do tiro na perna, nem a do mortalmente ferido), e o cartão avisa.
+  **Dúvida:** o +5 do crítico continua entrando com a borracha. A wiki não diz se ele cai junto com a lesão, e o HP para
+  em 1 de todo jeito.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -154,3 +160,30 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   - as habilidades das outras Roles.
 - **Próximo:** ciclo 4, lacunas de teste (escudo, "responder pelo jogador", corpo a corpo com esquiva, munição de
   borracha, armadura pesada, a janela do mestre para NPC, os erros da importação).
+- **Commit:** `b8b430c`.
+
+### Ciclo 4 (2026-10-11): munição (P0, regra)
+
+O ciclo começou pelas lacunas de teste (P1). O teste da munição de borracha achou dois desvios de regra, e o ciclo
+virou P0: o P1 espera enquanto houver problema conhecido de regra.
+
+- **Achado:**
+  - o conversor gravava `ablacao: Number(s.ablationValue) || 1`, e o 0 do CORE virava 1 em 13 munições: as 6 de
+    borracha, as 2 de biotoxina, as 2 venenosas, a fumaça, o gás lacrimogêneo e o paintball básico;
+  - a borracha causava lesão crítica.
+- **Implementado:**
+  - o conversor guarda o 0 (`Number(s.ablationValue ?? 1)`). O catálogo gerado de novo mudou só nessas 13 munições, só
+    na ablação; as perícias e as tabelas saíram iguais;
+  - munição de borracha não causa lesão crítica (`combate.mjs`, `ferir`), e o cartão diz quando uma teria saído.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 23 de 23. Novo: a ablação de cada munição do catálogo contra a tabela de munição da wiki (perfurante 2;
+    borracha, biotoxina e venenosa 0). Com o catálogo antigo, falhou na Arrow (Biotoxin);
+  - G4: 30 de 30. Passo novo: a pistola pesada com borracha, com dois 6 no dano, contra o Alvo com 10 HP. Ele fica com
+    1 HP e com o mesmo SP, e não ganha lesão. Sem a correção, o passo falhou (a lesão entrou);
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:**
+  - o +5 do crítico com a borracha (ver as dúvidas);
+  - as munições que não causam dano (ciclo 5).
+- **Próximo:** ciclo 5, munição que não causa dano (P0).

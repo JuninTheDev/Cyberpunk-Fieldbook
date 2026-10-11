@@ -39,8 +39,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Armadura segura:** se o dano não passa do SP, entra só o bônus do crítico.
   - **Cabeça:** o dano que passa conta ×2.
   - **Escudo:** recebe o ataque todo; só um explosivo passa de um escudo destruído.
-  - **Ablação:** a armadura perde 1 de SP, ou a ablação da munição (a perfurante tira 2).
-  - **Munição de borracha:** não mata; deixa o alvo com 1 HP.
+  - **Ablação:** a armadura perde 1 de SP, ou a ablação da munição (a perfurante tira 2; a borracha, a biotoxina e a venenosa não tiram nada).
+  - **Munição de borracha:** não mata (deixa o alvo com 1 HP), não tira SP e não causa lesão crítica.
 - **Lesão Crítica** (dois 6 no dano):
   - **Tabelas:** 2d6 na tabela do corpo, ou na da cabeça no tiro mirado na cabeça, sem repetir uma que o alvo já tem.
   - **Na ficha:** a lesão entra com os efeitos (Perna quebrada: −4 MOVE, mínimo 1) e o texto da wiki, com o paliativo e o tratamento.
@@ -130,7 +130,7 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
   - o catálogo, o cyberware e a recarga;
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o mirado na cabeça e na perna;
-  - o autofogo, o explosivo em área e o cartucho;
+  - o autofogo, o explosivo em área, o cartucho e a munição de borracha;
   - a Consciência de Combate do Solo (com o Ponto Fraco e a Deflexão por rodada e o Desfazer) e o MOVE do mortalmente ferido;
   - a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele, e o ataque dele sem mestre na mesa;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);

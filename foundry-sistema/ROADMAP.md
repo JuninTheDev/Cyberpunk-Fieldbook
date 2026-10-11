@@ -15,6 +15,13 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [x] **Humanidade máxima pelo cyberware instalado** (desvio de regra): 10 × EMP, menos 2 por peça com perda de
   Humanidade maior que 0, menos 4 por borgware. Fonte: wiki (system-rules.js, "cada peça reduz o máximo em 2") e o
   CORE (`_calcMaxHumanity`). (Ciclo 1)
+- [x] **Munição** (desvio de regra, achado ao escrever o teste da borracha): o conversor transformava a ablação 0 do
+  CORE em 1 (borracha, biotoxina, veneno, fumaça, gás lacrimogêneo e paintball), e a borracha causava lesão crítica.
+  Fonte: a tabela de munição da wiki (system-catalog.js): a borracha "não causa lesão crítica nem ablação", e a
+  biotoxina e a venenosa "não causam ablação". (Ciclo 4)
+- [ ] **Munição que não causa dano** (Ciclo 5): a wiki diz que biotoxina, veneno, EMP, flashbang, sonífera e gás
+  lacrimogêneo "não causam dano", mas o sistema aplica o dano da arma. O mínimo é não aplicar o dano e dizer no cartão
+  o que a munição faz. Os testes de resistência automáticos ficam para o P2.
 
 ## P1: bugs, testes de regressão e confiabilidade
 
@@ -30,8 +37,8 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
     por rodada do combate, e o Desfazer devolve o que o ataque gastou;
   - −6 MOVE (mínimo 1) do mortalmente ferido;
   - o ataque de um jogador sem mestre na mesa para antes de gastar a bala e de rolar.
-- [ ] **Lacunas de teste** (Ciclo 4): escudo, "responder pelo jogador", corpo a corpo com esquiva, munição de borracha,
-  armadura pesada, janela do mestre para a defesa de NPC e os erros da importação.
+- [ ] **Lacunas de teste** (Ciclo 6): escudo, "responder pelo jogador", corpo a corpo com esquiva, armadura pesada,
+  janela do mestre para a defesa de NPC e os erros da importação. A munição de borracha ganhou teste no ciclo 4.
 
 ## P2: fichas, inventário, equipamento, armas e combate
 
@@ -47,6 +54,8 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   importação.
 - [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
 - [ ] **Armas de 2077** (Smart, ricochete, carga Tech) e o conteúdo do cpr-2077.
+- [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
+  do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente.
 
 ## P3: Netrunning, cyberware, NPCs e ferramentas do mestre
 

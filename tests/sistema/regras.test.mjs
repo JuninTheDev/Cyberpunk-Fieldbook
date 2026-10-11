@@ -209,6 +209,21 @@ test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, a
 // Armas exóticas sem dano no CORE: o efeito delas é especial (a Shrieker dá lesão no ouvido; a Air Pistol dispara tinta
 // ou ácido) e não é automático nem no CORE.
 const SEM_DANO = ['core_weapons:air-pistol', 'core_weapons:microwaver', 'core_weapons:shrieker'];
+test('Catálogo: a ablação da munição segue a tabela de munição da wiki (perfurante 2; borracha, biotoxina e venenosa 0)', () => {
+  // As linhas da tabela "Munição" de system-catalog.js: o tipo e o que ele faz.
+  const texto = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  const secao = texto.slice(texto.indexOf('data-toc="Munição"'), texto.indexOf('data-toc="Acessórios de arma"'));
+  const linhas = Object.fromEntries([...secao.matchAll(/\['<b>([^<]+)<\/b>[^']*', '[^']*', '[^']*', '([^']*)'\]/g)].map(([, nome, efeito]) => [nome, efeito]));
+  const EFEITO = { Perfurante: 'armorPiercing', Biotoxina: 'biotoxin', Venenosa: 'poison', Borracha: 'rubber' };
+  const esperada = nome => (/ablação é de 2/.test(linhas[nome]) ? 2 : /(Não causa|nem) ablação/.test(linhas[nome]) ? 0 : null);
+  assert.deepEqual(Object.keys(EFEITO).map(esperada), [2, 0, 0, 0], 'a tabela de munição da wiki mudou');
+  for (const [nome, efeito] of Object.entries(EFEITO)) {
+    const municoes = Object.values(catalogo).filter(item => item.type === 'municao' && item.system.efeito === efeito);
+    assert.ok(municoes.length, `${nome}: nenhuma munição no catálogo`);
+    for (const municao of municoes) assert.equal(municao.system.ablacao, esperada(nome), `${municao.name}: ablação`);
+  }
+});
+
 test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia que existe e tabela de DV que existe', () => {
   const pericias = new Set([...PERICIAS.map(p => p.id), ...Object.keys(FAMILIAS)]);
   const problemas = [];

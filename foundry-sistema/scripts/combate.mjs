@@ -322,17 +322,20 @@ async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}
   return dano;
 }
 
+const SEM_LESAO_DE_BORRACHA = 'Munição de borracha: sem lesão crítica.';
+
 // Aplica o dano num alvo e cuida das lesões: dois 6 (a tabela da cabeça só no tiro mirado na cabeça), tiro na perna
 // que passou da armadura (Perna quebrada), mortalmente ferido atingido de novo. A Deflexão de Dano do Solo tira do
-// primeiro dano que ele sofre na rodada.
+// primeiro dano que ele sofre na rodada. A munição de borracha não mata nem causa lesão crítica (wiki, munições).
 async function ferir(ctx, linha, dano, { escudo = false } = {}) {
   const ator = linha.token.actor;
   const jaMortal = ator.system.hp.value < 1;
   const municao = ctx.arma.municaoCarregada;
+  const borracha = municao?.system.efeito === 'rubber';
   const deflexao = ator.system.consciencia.deflexao && primeiraNaRodada(ator, 'deflexao') ? ator.system.consciencia.deflexao : 0;
   const efeito = await ator.receberDano({
     dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.arma.system.ignorarArmadura, ignorarAbaixo: ctx.arma.system.ignorarAbaixo,
-    ablacao: municao?.system.ablacao ?? 1, letal: municao?.system.efeito !== 'rubber', escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
+    ablacao: municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
   });
   // A deflexão só se gasta quando entra dano de verdade: o que a armadura ou o escudo seguraram inteiro não é "dano
   // sofrido".
@@ -341,6 +344,10 @@ async function ferir(ctx, linha, dano, { escudo = false } = {}) {
   linha.dano = { ...efeito, critico: dano.critico, formula: dano.formula, pontoFraco: dano.pontoFraco || 0, deflexao: sofreu ? deflexao : 0, lesoes: [] };
   const modo = config('lesaoCritica');
   const lesao = async opcoes => {
+    if (borracha) {
+      if (!linha.notas.includes(SEM_LESAO_DE_BORRACHA)) linha.notas.push(SEM_LESAO_DE_BORRACHA);
+      return;
+    }
     if (modo === 'nao') return;
     const feita = await lesaoCritica(ator, { naFicha: modo === 'ficha', ...opcoes });
     if (feita) linha.dano.lesoes.push({ nome: feita.nome, item: feita.item?.id ?? null });
@@ -348,7 +355,7 @@ async function ferir(ctx, linha, dano, { escudo = false } = {}) {
   if (dano.critico) await lesao({ cabeca: ctx.local === 'cabeca' });
   if (ctx.local === 'perna' && efeito.passou) await lesao({ id: PERNA_QUEBRADA });
   if (ctx.local === 'item' && efeito.passou) linha.notas.push(`${linha.nome} larga o item na mão que ${ctx.nomeAtq} escolher.`);
-  if (jaMortal && config('mortalmenteFerido')) {
+  if (jaMortal && !borracha && config('mortalmenteFerido')) {
     linha.notas.push('Já estava mortalmente ferido: uma lesão crítica a mais.');
     await lesao({});
   }
