@@ -37,8 +37,9 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
     por rodada do combate, e o Desfazer devolve o que o ataque gastou;
   - −6 MOVE (mínimo 1) do mortalmente ferido;
   - o ataque de um jogador sem mestre na mesa para antes de gastar a bala e de rolar.
-- [ ] **Lacunas de teste** (Ciclo 6): escudo, "responder pelo jogador", corpo a corpo com esquiva, armadura pesada,
-  janela do mestre para a defesa de NPC e os erros da importação. A munição de borracha ganhou teste no ciclo 4.
+- [x] **Lacunas de teste** (Ciclo 6): escudo (com o explosivo que passa do escudo destruído), "responder pelo
+  jogador", corpo a corpo com esquiva, armadura pesada, janela do mestre para a defesa de NPC e os erros da importação.
+  A munição de borracha ganhou teste no ciclo 4.
 
 ## P2: fichas, inventário, equipamento, armas e combate
 

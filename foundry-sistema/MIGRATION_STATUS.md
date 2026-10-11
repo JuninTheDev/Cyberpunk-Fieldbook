@@ -214,3 +214,30 @@ virou P0: o P1 espera enquanto houver problema conhecido de regra.
 - **Ficou:** os testes de resistência automáticos e os outros efeitos das munições especiais (P2).
 - **Próximo:** ciclo 6, lacunas de teste (P1): escudo, "responder pelo jogador", corpo a corpo com esquiva, armadura
   pesada, janela do mestre para NPC e os erros da importação.
+- **Commit:** `7cc2e09`.
+
+### Ciclo 6 (2026-10-11): lacunas de teste (P1)
+
+- **Implementado:** só testes. Nenhum bug do sistema apareceu; o comportamento coberto bate com a wiki.
+- **Testes** (G4, 6 passos novos):
+  - **Escudo e a janela do mestre:** o Capanga (NPC) pode aguentar ou usar o escudo. A janela do mestre mostra "Total
+    do ataque: 20 · DV 16"; o escudo leva os 10 PV dele, o resto do tiro se perde, e o Desfazer devolve os PV;
+  - **Escudo destruído** (`receberDano` direto, sem dados): o resto do tiro se perde, o explosivo que destrói o escudo
+    passa inteiro (12 de 12), e o que não destrói não passa;
+  - **Corpo a corpo:** DEX + Arma Branca. O Capanga, com REF 6, esquiva assim mesmo e sem janela. O empate é dele, e o
+    golpe que acerta tira os 7 do 2d6;
+  - **Armadura pesada:** com Heavy Armorjack (−2) e Metalgear (−4) vale o −4 em REF, DEX, MOVE e na iniciativa; sem a
+    Metalgear, o −2. O SP é o maior de cada local;
+  - **Jogador que demora:** depois de 8 s, o mestre ganha o cartão, responde "Aguentar", a janela do jogador fecha, o
+    cartão de espera some, e a nota "O mestre respondeu por Jogador" entra no resultado. São cerca de 9 s;
+  - **Erros da importação:** o personagem que não existe dá a mensagem da wiki, a wiki fora do ar dá "Não consegui
+    falar com a wiki em …", e o jogador ouve "Só o mestre importa…". Nenhum ator é criado.
+- **Resultados:** G1 0 erros; G2 0 erros; G3 24 de 24; G4 37 de 37, cerca de 37 s. G5 não rodou de novo: o ciclo não
+  mexeu na wiki.
+- **Achados do harness**, registrados no QUALITY_GATES:
+  - o `\s` dentro do template literal do cenário vira `s` no navegador;
+  - o `node -e` no Git Bash corta as barras invertidas pela metade;
+  - a janela que fecha fica no DOM com `minimizing` por um tempo.
+- **Ficou:** com isto, o P0 e o P1 do ROADMAP estão fechados, até onde se sabe.
+- **Próximo:** P2. O primeiro item são os tipos de item que o importador descarta (equipamento, roupa, programa,
+  cyberdeck, droga, upgrade e veículo), bloqueador da migração da campanha.

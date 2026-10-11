@@ -166,12 +166,19 @@ module.exports = async ({ edge, servidores, r }) => {
       window.__esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
       return true;
     })()`);
-    // No navegador de quem defende: espera a janela da defesa e clica na escolha.
+    // No navegador de quem defende: espera a janela da defesa, clica na escolha e devolve o texto da janela.
     const responder = async (navegador, escolha) => {
       for (let i = 0; i < 60; i++) {
         await navegador.sleep(250);
-        const ok = await navegador.evaluate(`(() => { const b = document.querySelector('.application.dialog.cpr-fieldbook.defesa .form-footer button[data-action="${escolha}"]'); if (!b) return false; b.click(); return true; })()`).catch(() => false);
-        if (ok) return true;
+        const texto = await navegador.evaluate(`(() => {
+          const janela = document.querySelector('.application.dialog.cpr-fieldbook.defesa');
+          const botao = janela?.querySelector('.form-footer button[data-action="${escolha}"]');
+          if (!botao) return null;
+          const texto = janela.textContent.replace(/\\s+/g, ' ').trim();
+          botao.click();
+          return texto || '(janela vazia)';
+        })()`).catch(() => null);
+        if (texto) return texto;
       }
       return false;
     };
@@ -396,6 +403,107 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('escudo e a janela do mestre: o Capanga (NPC) pode aguentar ou usar o escudo; o mestre vê o total, escolhe o escudo, que leva os 10 PV dele; o Desfazer devolve', async () => {
+      // Ataque: d10 8 → REF 8 + Armas de Ombro 4 + 8 = 20 contra DV 16 (12 m). Dano 5d6: 3 × 5 = 15; o escudo (10 PV) leva
+      // 10, e o resto de um tiro se perde (wiki: cobertura).
+      await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const escudo = foundry.utils.deepClone(cat['core_armor:bullet-proof-shield']);
+        escudo.system.equipada = true;
+        await __ator('Capanga').createEmbeddedDocuments('Item', [escudo]);
+        return true;
+      })()`);
+      await fixar(edge, [[8, 10], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]);
+      await edge.evaluate(`(() => {
+        window.__pente = __ator('Atiradora').items.getName('Assault Rifle').system.pente.value;
+        window.__hp = __ator('Capanga').system.hp.value;
+        window.__ataque = __ator('Atiradora').items.getName('Assault Rifle').atacar({ alvo: __token('Capanga') });
+        return true;
+      })()`);
+      const janela = await responder(edge, 'escudo');
+      const info = await edge.evaluate(`window.__ataque.then(async r => {
+        const capanga = __ator('Capanga');
+        const escudo = capanga.items.getName('Bullet Proof Shield');
+        const [l] = r.linhas;
+        const depois = { hp: capanga.system.hp.value, pv: escudo.system.pvEscudo.value };
+        const desfeito = await game.system.api.combate.desfazer(game.messages.contents.at(-1));
+        await __ator('Atiradora').items.getName('Assault Rifle').update({ 'system.pente.value': window.__pente });
+        return { escolha: l.escolha, resultado: l.resultado, escudoAblado: l.dano?.escudoAblado, recebido: l.dano?.recebido, hpAntes: window.__hp, depois, desfeito, pvDesfeito: escudo.system.pvEscudo.value };
+      })`);
+      return [/Total do ataque: 20 · DV 16/.test(janela) && info.escolha === 'escudo' && info.resultado === 'acertou' && info.escudoAblado === 10 && info.recebido === 0
+        && info.depois.hp === info.hpAntes && info.depois.pv === 0 && info.desfeito && info.pvDesfeito === 10, `janela: ${janela} · ${JSON.stringify(info)}`];
+    });
+
+    await r.passo('escudo destruído: o resto de um tiro se perde; o explosivo que destrói o escudo passa inteiro; o que não destrói, não passa (wiki: cobertura e explosivos)', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const capanga = __ator('Capanga');
+        const escudo = capanga.items.getName('Bullet Proof Shield');
+        const hp = capanga.system.hp.value;
+        const caso = async (pv, opcoes) => {
+          await escudo.update({ 'system.pvEscudo.value': pv });
+          await capanga.update({ 'system.hp.value': hp });
+          const r = await capanga.receberDano({ dano: 12, escudo: true, ...opcoes });
+          return { escudoAblado: r.escudoAblado, recebido: r.recebido, pv: escudo.system.pvEscudo.value, perdeu: hp - capanga.system.hp.value };
+        };
+        const resultado = { tiro: await caso(5, {}), explosivo: await caso(5, { explosivo: true }), explosivoSegura: await caso(20, { explosivo: true }) };
+        await capanga.update({ 'system.hp.value': hp });
+        await capanga.deleteEmbeddedDocuments('Item', [escudo.id]);
+        return resultado;
+      })()`);
+      const { tiro, explosivo, explosivoSegura } = info;
+      return [tiro.pv === 0 && tiro.perdeu === 0 && explosivo.pv === 0 && explosivo.perdeu === 12 && explosivoSegura.pv === 8 && explosivoSegura.perdeu === 0, JSON.stringify(info)];
+    });
+
+    await r.passo('corpo a corpo: DEX + Arma Branca; o Capanga (REF 6) esquiva assim mesmo, sem janela; empate é dele; acertando, a arma branca leva 2d6', async () => {
+      // Atiradora: DEX 7 + Arma Branca 3. 1º golpe: d10 3 → 13 contra a esquiva do Capanga, DEX 5 + d10 8 = 13: empate,
+      // esquivou. 2º golpe: d10 8 → 18 contra 5 + 2 = 7: acertou. Dano 2d6: 4 + 3 = 7 (o Capanga não tem armadura).
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const lamina = foundry.utils.deepClone(cat['core_weapons:medium-melee']);
+        lamina.system.equipada = true;
+        const [arma] = await a.createEmbeddedDocuments('Item', [lamina]);
+        await a.update({ 'system.pericias.melee-weapon.nivel': 3 });
+        const hp = capanga.system.hp.value;
+        // As janelas de defesa abertas (a do passo do escudo pode ainda estar fechando: essa não conta).
+        const janelas = () => [...document.querySelectorAll('.application.dialog.cpr-fieldbook.defesa:not(.minimizing)')].map(d => d.textContent.replace(/\\s+/g, ' ').trim().slice(0, 80));
+        const golpe = async fila => {
+          window.__fila = fila;
+          const r = await arma.atacar({ alvo: __token('Capanga') });
+          const [l] = r.linhas;
+          return { ataque: r.ataque, escolha: l.escolha, defesa: l.defesa, resultado: l.resultado, recebido: l.dano?.recebido ?? null };
+        };
+        const resultado = { partes: arma.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor), primeiro: await golpe([[3, 10], [8, 10]]), segundo: await golpe([[8, 10], [2, 10], [4, 6], [3, 6]]), perdeu: hp - capanga.system.hp.value };
+        resultado.janelas = janelas();
+        await a.deleteEmbeddedDocuments('Item', [arma.id]);
+        await capanga.update({ 'system.hp.value': hp });
+        return resultado;
+      })()`);
+      const { primeiro: p, segundo: s } = info;
+      return [info.partes[0] === 'DEX 7' && p.ataque === 13 && p.escolha === 'esquivar' && p.defesa === 13 && p.resultado === 'esquivou'
+        && s.ataque === 18 && s.defesa === 7 && s.resultado === 'acertou' && s.recebido === 7 && info.perdeu === 7 && !info.janelas.length, JSON.stringify(info)];
+    });
+
+    await r.passo('armadura pesada: a maior penalidade das vestidas sai de REF, DEX e MOVE (e da iniciativa); o SP é o maior de cada local', async () => {
+      // Heavy Armorjack no corpo (SP 13, −2) e Metalgear na cabeça (SP 18, −4): vale o −4. Tirada a Metalgear, o −2.
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const vestida = id => { const d = foundry.utils.deepClone(cat[id]); d.system.equipada = true; return d; };
+        const a = await Actor.implementation.create({ name: 'Blindado', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 7 }, move: { valor: 6 } } },
+          items: [vestida('core_armor:heavy-armorjack-body'), vestida('core_armor:metalgear-head')] });
+        const ver = () => ({ ref: a.system.atributos.ref.valor, dex: a.system.atributos.dex.valor, move: a.system.atributos.move.valor, ini: a.system.iniciativa, sp: [a.system.armadura.cabeca.sp, a.system.armadura.corpo.sp] });
+        const duas = ver();
+        await a.items.getName('Metalgear® (Head)').update({ 'system.equipada': false });
+        const uma = ver();
+        await a.delete();
+        return { duas, uma };
+      })()`);
+      const { duas, uma } = info;
+      return [duas.ref === 4 && duas.dex === 3 && duas.move === 2 && duas.ini === 4 && duas.sp.join() === '18,13' && uma.ref === 6 && uma.dex === 5 && uma.move === 4 && uma.ini === 6 && uma.sp.join() === '0,13',
+        JSON.stringify(info)];
+    });
+
     // ---------- O jogador do alvo defende no computador dele ----------
     await r.passo('jogador: entra no mesmo mundo, dono do Alvo (agora REF 8, pode esquivar de tiro)', async () => {
       await edge.evaluate(`(async () => {
@@ -433,6 +541,35 @@ module.exports = async ({ edge, servidores, r }) => {
       const [l] = info.linhas;
       return [janela && janela.botoes.join() === 'esquivar,aguentar' && !/\b16\b/.test(janela.texto) && !antes && depois && l.escolha === 'esquivar' && l.defesa === 25 && l.resultado === 'esquivou' && info.hp === 45,
         `janela ${JSON.stringify(janela)} · total visível ao jogador antes ${antes}, depois ${depois} · ${JSON.stringify(info)}`];
+    });
+
+    await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {
+      // Ataque: d10 8 → 8 + 4 + 8 = 20 contra DV 16. Dano 5d6: 2 × 5 = 10 contra o SP do Alvo.
+      await fixar(edge, [[8, 10], [2, 6], [2, 6], [2, 6], [2, 6], [2, 6]]);
+      await edge.evaluate(`(() => {
+        window.__pente = __ator('Atiradora').items.getName('Assault Rifle').system.pente.value;
+        window.__ataque = __ator('Atiradora').items.getName('Assault Rifle').atacar({ alvo: __token('Alvo') });
+        return true;
+      })()`);
+      const janelaDoJogador = `Boolean(document.querySelector('.application.dialog.cpr-fieldbook.defesa'))`;
+      const botao = `document.querySelector('.cartao.espera [data-cprf-acao="responder"][data-escolha="aguentar"]')`;
+      let abriu = false;
+      for (let i = 0; i < 40 && !abriu; i++) { await jogador.sleep(250); abriu = await jogador.evaluate(janelaDoJogador); }
+      let cartao = false;
+      for (let i = 0; i < 60 && !cartao; i++) { await edge.sleep(250); cartao = await edge.evaluate(`Boolean(${botao})`); }
+      await edge.evaluate(`${botao}?.click()`);
+      const info = await edge.evaluate(`window.__ataque.then(r => ({ linha: __linhas(r)[0], notas: r.notas }))`);
+      await edge.sleep(600);
+      const fechou = !(await jogador.evaluate(janelaDoJogador));
+      const cartaoSumiu = !(await edge.evaluate(`game.messages.contents.some(m => m.content.includes('cartao espera'))`));
+      await edge.evaluate(`(async () => {
+        await __ator('Alvo').update({ 'system.hp.value': 45 });
+        await __ator('Atiradora').items.getName('Assault Rifle').update({ 'system.pente.value': window.__pente });
+        return true;
+      })()`);
+      const l = info.linha;
+      return [abriu && cartao && l.escolha === 'aguentar' && l.resultado === 'acertou' && info.notas.some(n => /O mestre respondeu por Jogador: Alvo aguentou/.test(n)) && fechou && cartaoSumiu,
+        JSON.stringify({ abriu, cartao, fechou, cartaoSumiu, ...info })];
     });
 
     await r.passo('explosivo: lança-granadas (perfurante) contra DV 15; explode na área: o Alvo (aguentou) e o Capanga ao lado levam os mesmos 12; o Longe fica fora', async () => {
@@ -626,6 +763,22 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki'))?.sheet.render({ force: true })`);
     await edge.sleep(1200);
     await edge.shot('importado');
+
+    await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const atores = game.actors.size;
+        const erro = promessa => promessa.then(() => null, e => e.message);
+        const naoExiste = await erro(game.system.api.wiki.importarPersonagem('nao-existe-0000', ''));
+        const url = game.settings.get('${S}', 'wikiUrl');
+        await game.settings.set('${S}', 'wikiUrl', 'http://127.0.0.1:9');
+        const foraDoAr = await erro(game.system.api.wiki.importarPersonagem('qualquer', ''));
+        await game.settings.set('${S}', 'wikiUrl', url);
+        return { naoExiste, foraDoAr, novos: game.actors.size - atores };
+      })()`);
+      const doJogador = await jogador.evaluate(`game.system.api.wiki.importarPersonagem('qualquer', '').then(() => null, e => e.message)`);
+      return [Boolean(info.naoExiste) && /^Não consegui falar com a wiki em http:\/\/127\.0\.0\.1:9\./.test(info.foraDoAr) && info.novos === 0 && /^Só o mestre importa/.test(doJogador),
+        JSON.stringify({ ...info, doJogador })];
+    });
 
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);

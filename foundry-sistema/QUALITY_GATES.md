@@ -32,6 +32,11 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 - **Aviso esperado** (um `ui.notifications.warn` que o passo provoca de propósito) é capturado e conferido no próprio
   passo. Solto no console, o G4 o pegaria como problema.
 - **Teste de uma correção** é provado falhando sem ela. A mutação é desfeita antes do commit.
+- **Código para o navegador** (`edge.evaluate`) vai dentro de um template literal do Node: escreva `\\s` para chegar
+  `\s` ao navegador. Um `\s` sozinho vira `s`. Ao editar o cenário por `node -e` no Git Bash, as barras invertidas
+  chegam pela metade: edite essas linhas no editor.
+- **Janela fechando:** no Edge sem janela, uma janela do Foundry fica no DOM com a classe `minimizing` por um tempo
+  depois do clique. Para contar janelas abertas, use `:not(.minimizing)`.
 
 ## Build
 

@@ -132,10 +132,11 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o mirado na cabeça e na perna;
   - o autofogo, o explosivo em área, o cartucho, a munição de borracha e a que não causa dano;
+  - o escudo (com a janela do mestre para a defesa de um NPC e o explosivo que passa do escudo destruído), o corpo a corpo com esquiva e a armadura pesada;
   - a Consciência de Combate do Solo (com o Ponto Fraco e a Deflexão por rodada e o Desfazer) e o MOVE do mortalmente ferido;
-  - a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele, e o ataque dele sem mestre na mesa;
+  - a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele, o ataque dele sem mestre na mesa e o mestre respondendo por ele quando demora;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
-  - a importação de um Solo feito no criador da wiki de teste;
+  - a importação de um Solo feito no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 
 Da pasta de dados do Foundry do PC só sai a licença. `FOUNDRY14_APP=...` e `FOUNDRY14_DADOS=...` trocam o programa e a pasta de onde vem a licença.
