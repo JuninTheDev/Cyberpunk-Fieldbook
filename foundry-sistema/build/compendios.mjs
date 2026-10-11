@@ -105,7 +105,7 @@ const EXEMPLOS = [
 function fvtt(args) {
   // No Windows o npx é um .cmd: roda pelo shell. Os argumentos vão entre aspas por causa dos espaços nos caminhos.
   const entreAspas = args.map(arg => (/[\s"]/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg));
-  execSync(['npx', '--yes', '@foundryvtt/foundryvtt-cli@1', ...entreAspas].join(' '), { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
+  execSync(['npx', '--yes', '@foundryvtt/foundryvtt-cli@1.1.0', ...entreAspas].join(' '), { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
 }
 
 export function gerar() {

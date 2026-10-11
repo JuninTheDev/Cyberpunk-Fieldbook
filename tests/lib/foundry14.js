@@ -102,6 +102,26 @@ async function entrarComo(edge, url, nome) {
 }
 const entrarComoMestre = (edge, url) => entrarComo(edge, url, /Gamemaster/i);
 
+// Avisos e erros do console, com a pilha, desde o começo de cada página (chame antes de entrar no mundo). Os avisos de
+// compatibilidade do Foundry (API depreciada) saem como console.warn com "Deprecated since Version".
+async function capturarAvisos(edge) {
+  await edge.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+    window.__avisos = [];
+    for (const nivel of ['warn', 'error']) {
+      const original = console[nivel].bind(console);
+      console[nivel] = (...args) => {
+        try {
+          const texto = args.map(a => (a instanceof Error ? a.stack || a.message : String(a))).join(' ').slice(0, 1500);
+          window.__avisos.push({ nivel, texto, pilha: (new Error().stack || '').split('\\n').slice(2, 12).join(' | ') });
+        } catch { /* nunca atrapalhar o console */ }
+        return original(...args);
+      };
+    }
+  })();` });
+}
+// Os avisos e erros que vêm do sistema (no texto ou na pilha).
+const avisosDoSistema = edge => edge.evaluate(`(window.__avisos || []).filter(a => /systems\\/${SISTEMA}\\//.test(a.texto + ' ' + a.pilha)).map(a => a.nivel + ': ' + a.texto.slice(0, 300))`);
+
 async function esperarJogo(edge) {
   for (let i = 0; i < 120; i++) {
     await sleep(500);
@@ -110,4 +130,4 @@ async function esperarJogo(edge) {
   throw new Error('O mundo de teste não ficou pronto no navegador.');
 }
 
-module.exports = { disponivel, motivoIndisponivel, preparar, subir, entrarComo, entrarComoMestre, esperarJogo, versao, PORTA, PASTA, SISTEMA };
+module.exports = { disponivel, motivoIndisponivel, preparar, subir, entrarComo, entrarComoMestre, esperarJogo, capturarAvisos, avisosDoSistema, versao, PORTA, PASTA, SISTEMA };

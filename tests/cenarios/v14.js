@@ -1,61 +1,15 @@
 // Sistema Cyberpunk RED — Fieldbook no Foundry 14 de verdade (tests/lib/foundry14.js):
-// - as regras puras, no Node;
+// - as regras puras ficam em tests/sistema/regras.test.mjs (node --test), com as tabelas da wiki;
 // - no Foundry: ficha, crítico do d10, catálogo, cyberware que só vale instalado, recarregar, o ataque com a defesa
 //   no cliente do jogador do alvo e o dano na ficha, e a importação de um personagem feito na wiki de teste.
 // Os dados ficam fixos onde a conta importa: CONFIG.Dice.randomUniform devolve os lados pedidos, em ordem.
 // Só roda com a mesa do servidor vazia: a licença do Foundry vale para uma mesa por vez.
 const path = require('path');
-const { pathToFileURL } = require('url');
 const foundry14 = require('../lib/foundry14');
 const { mesaOcupada } = require('../lib/foundry');
 const { abrirEdge } = require('../lib/edge');
 
 module.exports = async ({ edge, servidores, r }) => {
-  // ---------- Regras, sem Foundry ----------
-  const regras = await import(pathToFileURL(path.join(servidores.raiz, 'foundry-sistema', 'scripts', 'regras.mjs')).href);
-  await r.passo('regras: HP, ferimentos e Humanidade', async () => {
-    const hp = regras.hpMaximo(6, 7);
-    const grave = regras.estadoDeFerimento(22, 45);
-    const leve = regras.estadoDeFerimento(23, 45);
-    const mortal = regras.estadoDeFerimento(0, 45);
-    return [hp === 45 && grave.penalidade === -2 && leve.chave === 'leve' && mortal.penalidade === -4 && regras.empAtual(47, 5) === 4 && regras.empAtual(80, 5) === 5,
-      `HP ${hp} · 22/45 ${grave.chave} · 23/45 ${leve.chave} · EMP ${regras.empAtual(47, 5)}`];
-  });
-  await r.passo('regras: dano contra armadura (só o bônus, cabeça ×2, arma branca, não letal, ignora abaixo de SP)', async () => {
-    const segurou = regras.aplicarDano({ dano: 10, bonus: 5, sp: 11, hpAtual: 40 });
-    const cabeca = regras.aplicarDano({ dano: 15, sp: 11, local: 'cabeca', hpAtual: 40 });
-    const branca = regras.aplicarDano({ dano: 10, sp: 11, ignorarPct: 50, hpAtual: 40 });
-    const naoLetal = regras.aplicarDano({ dano: 30, sp: 0, letal: false, hpAtual: 12 });
-    const ignora = regras.aplicarDano({ dano: 5, sp: 7, ignorarAbaixo: 8, hpAtual: 40 });
-    const ok = segurou.recebido === 5 && !segurou.ablar && cabeca.recebido === 8 && cabeca.ablar && branca.spEfetivo === 6 && branca.recebido === 4 && naoLetal.recebido === 11 && ignora.recebido === 5;
-    return [ok, JSON.stringify({ segurou: segurou.recebido, cabeca: cabeca.recebido, branca: [branca.spEfetivo, branca.recebido], naoLetal: naoLetal.recebido, ignora: ignora.recebido })];
-  });
-  await r.passo('regras: defesa (tiro só com REF 8+, corpo a corpo sempre, empate do defensor, DV pela distância)', async () => {
-    const tiroRef6 = regras.opcoesDeDefesa({ modo: 'tiro', esquiva: regras.podeEsquivar({ modo: 'tiro', ref: 6 }) });
-    const tiroRef8 = regras.opcoesDeDefesa({ modo: 'tiro', esquiva: regras.podeEsquivar({ modo: 'tiro', ref: 8 }) });
-    const corpo = regras.opcoesDeDefesa({ modo: 'corpo', esquiva: regras.podeEsquivar({ modo: 'corpo', ref: 2 }) });
-    const empate = regras.acertou({ modo: 'tiro', escolha: 'esquivar', ataque: 15, defesa: 15 });
-    const faixas = [[0, 6, 17], [7, 12, 16], [13, 25, 15]];
-    const ok = tiroRef6.join() === 'aguentar' && tiroRef8.join() === 'esquivar,aguentar' && corpo.join() === 'esquivar' && empate === false
-      && regras.dvPelaDistancia(faixas, 10).dv === 16 && regras.dvPelaDistancia(faixas, 30).fora && regras.danoCritico([6, 2, 6]) && !regras.danoCritico([6, 5, 4]);
-    return [ok, JSON.stringify({ tiroRef6, tiroRef8, corpo, empate })];
-  });
-
-  await r.passo('regras: autofogo, Death Save, Lesão Crítica, modos, Concentração e a área do explosivo', async () => {
-    const checagens = {
-      'autofogo até o máximo': regras.multiplicadorDeAutofogo(31, 20, 4) === 4 && regras.multiplicadorDeAutofogo(21, 20, 4) === 1,
-      'Death Save: menos que BODY, o 10 sempre falha': regras.passouNoDeathSave({ natural: 3, total: 3, body: 5 }) && !regras.passouNoDeathSave({ natural: 10, total: 10, body: 12 }) && !regras.passouNoDeathSave({ natural: 5, total: 5, body: 5 }),
-      'tabela de lesão': regras.lesaoNaTabela([[2, 2, 'a'], [3, 4, 'b']], 4) === 'b',
-      'modos pela munição e pelo botão': regras.classificar({ municao: 'grenade' }) === 'explosivo' && regras.classificar({ municao: 'shotgunShell' }) === 'cartucho' && regras.classificar({ aDistancia: false }) === 'corpo' && regras.classificar({ pedido: 'autofogo' }) === 'autofogo',
-      'explosivo: empate na esquiva fica na área': regras.acertou({ modo: 'explosivo', escolha: 'esquivar', ataque: 15, defesa: 15 }) === true,
-      'supressivo: só Concentração; perder é ser suprimido': regras.opcoesDeDefesa({ modo: 'supressivo', esquiva: true }).join() === 'concentrar' && regras.acertou({ modo: 'supressivo', escolha: 'concentrar', ataque: 15, defesa: 14 }) === true,
-      'área de 10 × 10 m': regras.dentroDaArea({ x: 0, y: 0 }, { x: 250, y: -250 }, 250) && !regras.dentroDaArea({ x: 0, y: 0 }, { x: 251, y: 0 }, 250),
-      'tabela de autofogo': regras.tabelasCandidatas('DV Pistol', 'autofogo')[0] === 'DV Pistol (Autofire)'
-    };
-    const falhas = Object.entries(checagens).filter(([, ok]) => !ok).map(([nome]) => nome);
-    return [!falhas.length, falhas.join(' · ')];
-  });
-
   // ---------- Personagem na wiki de teste (antes do Foundry: o criador roda neste navegador) ----------
   const wiki = servidores.local;
   const api = async (caminho, method = 'GET', body) => (await fetch(`${wiki}${caminho}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })).json();
@@ -89,6 +43,7 @@ module.exports = async ({ edge, servidores, r }) => {
   const S = foundry14.SISTEMA;
   try {
     await r.passo('Foundry 14 abre o mundo de teste com o sistema, como Gamemaster', async () => {
+      await foundry14.capturarAvisos(edge);
       await foundry14.entrarComoMestre(edge, mesa.url);
       const info = await edge.evaluate(`({ geracao: game.release.generation, build: game.release.build, sistema: game.system.id, versao: game.system.version, gm: game.user.isGM, api: Object.keys(game.system.api || {}) })`);
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
@@ -313,6 +268,7 @@ module.exports = async ({ edge, servidores, r }) => {
         await __ator('Alvo').update({ ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, 'system.atributos.ref.valor': 8, 'system.hp.value': 45 });
       })()`);
       jogador = await abrirEdge({ porta: 9460, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-jogador-' });
+      await foundry14.capturarAvisos(jogador);
       await foundry14.entrarComo(jogador, mesa.url, 'Jogador');
       const info = await jogador.evaluate(`({ nome: game.user.name, gm: game.user.isGM, dono: game.actors.getName('Alvo')?.isOwner })`);
       const ativo = await edge.evaluate(`game.users.getName('Jogador').active`);
@@ -470,6 +426,32 @@ module.exports = async ({ edge, servidores, r }) => {
       return [a.vez === 'Capanga' && !a.alvoSuprimido && a.capangaSuprimido && a.penalidade === 1 && b.rodada === 2 && !b.capangaSuprimido && c.derrotado && c.morto, JSON.stringify(passos)];
     });
 
+    await r.passo('linha de visão: o fogo supressivo não pega quem está atrás de uma parede; tirada a parede, pega', async () => {
+      // Atrás: a 8 m da Atiradora, com uma parede no meio. O Alvo fica escondido (sem pergunta ao jogador); o Capanga está
+      // derrotado e o Longe, a 28 m: ninguém mais conta. Ataque: d10 5 → REF 8 + Autofogo 4 + 5 = 17.
+      const info = await edge.evaluate(`(async () => {
+        const cena = canvas.scene;
+        const atras = await Actor.implementation.create({ name: 'Atrás', type: 'personagem', system: { hp: { value: 40 } } });
+        await cena.createEmbeddedDocuments('Token', [(await atras.getTokenDocument({ x: 300, y: 900 })).toObject()]);
+        await __token('Alvo').update({ hidden: true });
+        const [parede] = await cena.createEmbeddedDocuments('Wall', [{ c: [150, 750, 550, 750] }]);
+        await __esperar(() => canvas.tokens.placeables.some(t => t.name === 'Atrás'));
+        await new Promise(r => setTimeout(r, 500));
+        const rifle = __ator('Atiradora').items.getName('Assault Rifle');
+        await rifle.recarregar();
+        window.__fila = [[5, 10]];
+        const comParede = await rifle.atacar({ modo: 'supressivo' });
+        await parede.delete();
+        await new Promise(r => setTimeout(r, 500));
+        await rifle.recarregar();
+        window.__fila = [[5, 10], [3, 10]];
+        const semParede = await rifle.atacar({ modo: 'supressivo' });
+        await __token('Alvo').update({ hidden: false });
+        return { comParede: { cabecalho: comParede.cabecalho, alvos: comParede.linhas.map(l => l.nome) }, semParede: { cabecalho: semParede.cabecalho, alvos: semParede.linhas.map(l => l.nome) } };
+      })()`);
+      return [info.comParede.alvos.length === 0 && /ninguém/.test(info.comParede.cabecalho) && info.semParede.alvos.join() === 'Atrás', JSON.stringify(info)];
+    });
+
     // ---------- Importar da wiki ----------
     await r.passo('wiki: importa o Solo com STATs, HP, perícias, Role, armas carregadas, armadura vestida e cyberware instalado', async () => {
       await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)})`);
@@ -496,6 +478,12 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki'))?.sheet.render({ force: true })`);
     await edge.sleep(1200);
     await edge.shot('importado');
+
+    await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
+      const doMestre = await foundry14.avisosDoSistema(edge);
+      const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];
+      return [!doMestre.length && !doJogador.length, [...doMestre.map(a => `mestre: ${a}`), ...doJogador.map(a => `jogador: ${a}`)].join(' | ')];
+    });
   } finally {
     if (jogador) {
       await jogador.send('Page.navigate', { url: 'about:blank' }).catch(() => {});

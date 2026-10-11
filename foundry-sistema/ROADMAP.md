@@ -18,7 +18,7 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 
 ## P1: bugs, testes de regressão e confiabilidade
 
-- [ ] **Portões de qualidade** (Ciclo 2):
+- [x] **Portões de qualidade** (Ciclo 2):
   - testes unitários das regras puras com `node --test`: rolagem, dano, armadura, lesão, Death Save, defesa, autofogo e área;
   - ESLint com versão exata pelo npx, sem node_modules;
   - o cenário do Foundry 14 falhar com aviso de compatibilidade vindo do sistema;

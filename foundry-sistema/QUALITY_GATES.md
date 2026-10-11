@@ -7,9 +7,9 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 | Portão | Como roda | Passa quando | Estado |
 | --- | --- | --- | --- |
 | G1 Sintaxe | `node --check` em cada `.mjs` do sistema e nos testes | nenhum erro | ativo |
-| G2 Lint | ESLint com versão exata pelo npx (configuração no repositório, sem node_modules) | nenhum erro | ciclo 2 |
-| G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam | ativo (desde o ciclo 1; o ciclo 2 traz o resto das regras para cá) |
-| G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam e nenhum erro do sistema no console (a partir do ciclo 2, nenhum aviso de compatibilidade vindo do sistema) | ativo |
+| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
+| G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam: as regras puras com os valores de referência, e o conteúdo gerado contra a própria wiki (tabelas de DV faixa por faixa, lesões pelo 2d6, perícias, os itens da loja) | ativo |
+| G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam, inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
 | G5 Wiki | `node tests/rodar.js` (a suíte inteira) | nenhuma falha nova; as conhecidas estão listadas abaixo | ativo |
 | G6 Revisão | `git diff` do lote | sem mudança fora da tarefa e nada que alcance o servidor ou a campanha real | ativo |
 | G7 Documentação | README, ROADMAP e MIGRATION_STATUS | o que mudou está escrito, e as limitações também | ativo |
@@ -26,6 +26,12 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   esperado.
 - **Dúvida de regra** vira pergunta registrada no MIGRATION_STATUS.md, não interpretação nova.
 - **Dados nos testes:** a conta fica com os dados fixos (`CONFIG.Dice.randomUniform` no cenário).
+
+## Build
+
+- **O que o build baixa é conferido.** A tag do CORE tem de ser do commit `75b8c9d…`, e o js-yaml (código que roda no
+  build) tem de ter o SHA-256 registrado em `build/conteudo.mjs`. Qualquer diferença para o build sem executar nada.
+- **Versões exatas:** `@foundryvtt/foundryvtt-cli@1.1.0` e `eslint@10.12.0`.
 
 ## Segurança
 

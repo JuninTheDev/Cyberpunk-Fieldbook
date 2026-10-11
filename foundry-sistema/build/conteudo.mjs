@@ -6,6 +6,7 @@
 //   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle");
 //   scripts/gerado.mjs   as perícias (com os nomes em português da wiki) e as tabelas de DV.
 import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import https from 'node:https';
 import path from 'node:path';
@@ -13,9 +14,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const VERSAO = 'v0.92.4';
 const PROJETO = 'cyberpunk-red-team%2Ffvtt-cyberpunk-red-core';
+// O que se baixa é conferido: a tag tem de ser deste commit (o arquivo do GitLab vem numa pasta com o hash dele), e o
+// js-yaml, que é código e roda aqui, tem de ter este SHA-256. Qualquer diferença para o build.
+const COMMIT_DA_TAG = '75b8c9d7cb76ed1ea2797a3404ce77172d424b6b';
+const JS_YAML = { url: 'https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.mjs', sha256: '16f210b939b359b6ec8dde581eb62c157185711dc7b719b33779c43db5c31a91' };
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cache = path.join(raiz, '.cache');
-const fonte = path.join(cache, `cpr-core-${VERSAO}`, 'src', 'packs');
+const pastaDaFonte = path.join(cache, `cpr-core-${VERSAO}`);
+const fonte = path.join(pastaDaFonte, 'src', 'packs');
+const sha256 = arquivo => crypto.createHash('sha256').update(fs.readFileSync(arquivo)).digest('hex');
 
 // Pelo https do Node e não pelo fetch: o GitLab responde 406 aos cabeçalhos que o fetch acrescenta, e uma página de
 // desafio a pedidos sem cara de navegador.
@@ -31,20 +38,33 @@ function baixar(url, destino) {
 
 async function prepararFonte() {
   fs.mkdirSync(cache, { recursive: true });
+  // Cache sem a marca do commit (de antes da conferência) ou de outro commit: baixa de novo.
+  const marca = path.join(pastaDaFonte, 'COMMIT');
+  if (fs.existsSync(pastaDaFonte) && (!fs.existsSync(marca) || fs.readFileSync(marca, 'utf8').trim() !== COMMIT_DA_TAG)) fs.rmSync(pastaDaFonte, { recursive: true, force: true });
   if (!fs.existsSync(fonte)) {
     const arquivo = path.join(cache, `packs-${VERSAO}.tar.gz`);
     await baixar(`https://gitlab.com/api/v4/projects/${PROJETO}/repository/archive.tar.gz?sha=${VERSAO}&path=src/packs`, arquivo);
     const tmp = fs.mkdtempSync(path.join(cache, 'extrair-'));
-    // Caminhos relativos: o tar do Git Bash lê "C:\..." como endereço de outra máquina; o do Windows aceita os dois.
-    execFileSync('tar', ['-xzf', path.basename(arquivo), '-C', path.basename(tmp)], { cwd: cache });
-    // O arquivo vem numa pasta com o hash do commit: fica como cpr-core-<versão>.
-    const [pasta] = fs.readdirSync(tmp);
-    fs.renameSync(path.join(tmp, pasta), path.join(cache, `cpr-core-${VERSAO}`));
-    fs.rmSync(tmp, { recursive: true, force: true });
-    fs.rmSync(arquivo, { force: true });
+    try {
+      // Caminhos relativos: o tar do Git Bash lê "C:\..." como endereço de outra máquina; o do Windows aceita os dois.
+      execFileSync('tar', ['-xzf', path.basename(arquivo), '-C', path.basename(tmp)], { cwd: cache });
+      // O arquivo vem numa pasta com o hash do commit ("fvtt-cyberpunk-red-core-v0.92.4-<commit>-src-packs"): confere e
+      // guarda como cpr-core-<versão>.
+      const [pasta] = fs.readdirSync(tmp);
+      if (!new RegExp(`-${COMMIT_DA_TAG}(-|$)`).test(pasta)) throw new Error(`A tag ${VERSAO} do GitLab não é mais do commit ${COMMIT_DA_TAG} (veio ${pasta}). Confira a mudança antes de aceitar.`);
+      fs.renameSync(path.join(tmp, pasta), pastaDaFonte);
+      fs.writeFileSync(marca, COMMIT_DA_TAG);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+      fs.rmSync(arquivo, { force: true });
+    }
   }
   const yamlJs = path.join(cache, 'js-yaml-4.1.0.mjs');
-  if (!fs.existsSync(yamlJs)) await baixar('https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.mjs', yamlJs);
+  if (!fs.existsSync(yamlJs)) await baixar(JS_YAML.url, yamlJs);
+  if (sha256(yamlJs) !== JS_YAML.sha256) {
+    fs.rmSync(yamlJs, { force: true });
+    throw new Error(`O js-yaml baixado de ${JS_YAML.url} não tem o SHA-256 esperado. Nada foi executado.`);
+  }
   return (await import(pathToFileURL(yamlJs).href)).default;
 }
 

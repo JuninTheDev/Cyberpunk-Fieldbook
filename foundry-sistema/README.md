@@ -114,16 +114,18 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
 
 ## Teste
 
-`node tests/rodar.js v14`, na raiz da wiki. Sobe o Foundry 14 do PC sem janela, num mundo vazio e numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`), e confere estes pontos, com dados fixos onde a conta importa:
-- as regras puras, no Node;
-- a ficha e o crítico do d10;
-- o catálogo, o cyberware e a recarga;
-- o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
-- o mirado na cabeça e na perna;
-- o autofogo, o explosivo em área e o cartucho;
-- a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele;
-- o fogo supressivo e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
-- a importação de um Solo feito no criador da wiki de teste.
+- **Regras (rápido, sem Foundry):** `node --test "tests/sistema/*.test.mjs"`. Inclui o conteúdo gerado conferido contra as tabelas da própria wiki.
+- **Lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js`.
+- **No Foundry 14:** `node tests/rodar.js v14`, na raiz da wiki. Sobe o Foundry 14 do PC sem janela, num mundo vazio e numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`), e confere estes pontos, com dados fixos onde a conta importa:
+  - os compêndios, a ficha e o crítico do d10;
+  - o catálogo, o cyberware e a recarga;
+  - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
+  - o mirado na cabeça e na perna;
+  - o autofogo, o explosivo em área e o cartucho;
+  - a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele;
+  - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
+  - a importação de um Solo feito no criador da wiki de teste;
+  - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 
 Da pasta de dados do Foundry do PC só sai a licença. `FOUNDRY14_APP=...` e `FOUNDRY14_DADOS=...` trocam o programa e a pasta de onde vem a licença.
 

@@ -77,4 +77,27 @@ os bloqueadores abaixo resolvidos, backup e autorização.
     Humanidade é a da wiki, e o máximo perde 2 pela peça com perda (as peças grátis de 2077 não reduzem).
   - G5 não rodou de novo: o ciclo não mexeu na wiki.
 - **Ficou:** a discrepância do criador da wiki (acima).
-- **Próximo:** ciclo 2, portões de qualidade.
+- **Commit:** `a78d8db`.
+
+### Ciclo 2 (2026-10-11): portões de qualidade (P1)
+
+- **Implementado:**
+  - G2: ESLint 10.12.0 pelo npx, com `eslint.config.mjs` na raiz (só o sistema e os testes dele);
+  - G3: `tests/sistema/regras.test.mjs` com 19 testes. As regras puras saíram do cenário para cá, uma a uma. O
+    conteúdo gerado é conferido contra a wiki: as 13 tabelas de DV faixa por faixa, as lesões pelo resultado do 2d6, o
+    atributo, o x2 e o nome de cada perícia, e os itens da loja da wiki;
+  - G4: o cenário captura avisos e erros com a pilha nos dois navegadores e falha com qualquer um vindo do sistema;
+    passo novo da parede no fogo supressivo;
+  - build: o commit da tag do CORE e o SHA-256 do js-yaml são conferidos; o foundryvtt-cli fica na 1.1.0.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 21 arquivos, 0 erros. O lint foi provado com um código plantado: pegou a variável indefinida e a não usada;
+  - G3: 19 de 19;
+  - G4: 26 de 26, cerca de 27 s;
+  - build: saída idêntica à de antes. Um js-yaml adulterado para o build sem executar nada.
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Achados no caminho:**
+  - as tabelas de DV do CORE e a da wiki batem em todas as faixas;
+  - três armas exóticas do CORE não têm dano (Air Pistol, Microwaver, Shrieker): o efeito delas é especial e não é
+    automático nem no CORE.
+- **Próximo:** ciclo 3, combate (habilidades do Solo, −6 MOVE do mortalmente ferido, munição depois de checar o mestre).
