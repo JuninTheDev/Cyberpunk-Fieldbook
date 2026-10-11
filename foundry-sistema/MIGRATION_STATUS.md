@@ -241,3 +241,29 @@ virou P0: o P1 espera enquanto houver problema conhecido de regra.
 - **Ficou:** com isto, o P0 e o P1 do ROADMAP estão fechados, até onde se sabe.
 - **Próximo:** P2. O primeiro item são os tipos de item que o importador descarta (equipamento, roupa, programa,
   cyberdeck, droga, upgrade e veículo), bloqueador da migração da campanha.
+- **Commit:** `ad9396b`.
+
+### Ciclo 7 (2026-10-11): tipo do cyberware na ficha do item (P0, dados)
+
+O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou um problema de dados, que passou na frente.
+
+- **Achado:** as chaves de `TIPOS_CYBERWARE` (`cyberOptic`, `cyberAudio`, `internalBodyCyberware` e
+  `externalBodyCyberware`) não são as do catálogo (`cyberEye`, `cyberAudioSuite`, `cyberwareInternal` e
+  `cyberwareExternal`). Na ficha do item, o select do tipo não achava o valor e mostrava a primeira opção. Ao mudar
+  qualquer campo, a ficha gravava o tipo como `fashionware`. Reproduzido no G4: o Cyberaudio Suite virou `fashionware`
+  só de mudar o preço. Hoje o tipo só aparece na ficha, mas é dado perdido, e a base e os slots do cyberware vão
+  depender dele.
+- **Implementado:**
+  - as chaves certas, com os rótulos da loja da wiki ("Cyberolho" no lugar de "Cyberóptico");
+  - na ficha do item, todo select (perícia e qualidade da arma, tipo do cyberware, local da lesão) garante o valor
+    atual entre as opções. Um valor que a lista não conhece, como o de um conteúdo de 2077, não é trocado.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 25 de 25. Novo: todo tipo de cyberware do catálogo tem rótulo. Antes da correção, faltavam quatro;
+  - G4: 38 de 38. Passo novo: mudar o preço na ficha do Cyberaudio Suite e de um cyberware com um tipo inventado; os
+    dois mantêm o tipo. Antes da correção, o primeiro virou `fashionware`;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Atenção:** num mundo em que a ficha de um desses cyberwares já foi editada, o tipo pode estar como `fashionware`.
+  Confira à mão. Não há migração, porque ainda não existe mundo real deste sistema.
+- **Próximo:** ciclo 8, equipamento, roupa e droga no catálogo, na ficha e na importação (P2).

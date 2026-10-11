@@ -128,6 +128,32 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.ref === 9 && info.furtividade === 3 && info.total === 10, JSON.stringify(info)];
     });
 
+    await r.passo('ficha do item: mudar o preço de um cyberware não troca o tipo dele (o do catálogo e um que a lista não conhece)', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const editarPreco = async (tipo = null) => {
+          const dados = foundry.utils.deepClone(cat['core_cyberware:cyberaudio-suite']);
+          if (tipo) dados.system.tipo = tipo;
+          const [item] = await Item.implementation.create([dados]);
+          await item.sheet.render({ force: true });
+          for (let i = 0; i < 50 && !item.sheet.element?.querySelector('input[name="system.preco"]'); i++) await new Promise(r => setTimeout(r, 100));
+          const opcao = item.sheet.element.querySelector('select[name="system.tipo"]').value;
+          const campo = item.sheet.element.querySelector('input[name="system.preco"]');
+          campo.value = 123;
+          campo.dispatchEvent(new Event('change', { bubbles: true }));
+          for (let i = 0; i < 50 && item.system.preco !== 123; i++) await new Promise(r => setTimeout(r, 100));
+          const resultado = { opcao, tipo: item.system.tipo, preco: item.system.preco };
+          await item.sheet.close();
+          await item.delete();
+          return resultado;
+        };
+        return { catalogo: await editarPreco(), desconhecido: await editarPreco('tipoDeOutroConteudo') };
+      })()`);
+      const { catalogo: c, desconhecido: d } = info;
+      return [c.preco === 123 && c.opcao === 'cyberAudioSuite' && c.tipo === 'cyberAudioSuite' && d.preco === 123 && d.opcao === 'tipoDeOutroConteudo' && d.tipo === 'tipoDeOutroConteudo',
+        JSON.stringify(info)];
+    });
+
     await r.passo('catálogo: rifle, armadura, munição e Kerenzikov entram na ficha; o efeito só vale instalado', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();

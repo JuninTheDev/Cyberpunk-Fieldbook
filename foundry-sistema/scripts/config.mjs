@@ -12,7 +12,8 @@ export const DEFESAS = { esquivar: 'Esquivar', aguentar: 'Aguentar' };
 
 export const QUALIDADES = { poor: 'Ruim', standard: 'Padrão', excellent: 'Excelente' };
 
+// As chaves são as do conteúdo convertido do CORE (system.tipo do cyberware); os rótulos, os da loja da wiki.
 export const TIPOS_CYBERWARE = {
-  fashionware: 'Fashionware', neuralWare: 'Neuralware', cyberOptic: 'Cyberóptico', cyberAudio: 'Cyberaudio',
-  internalBodyCyberware: 'Interno', externalBodyCyberware: 'Externo', cyberArm: 'Cyberbraço', cyberLeg: 'Cyberperna', borgware: 'Borgware'
+  fashionware: 'Fashionware', neuralWare: 'Neuralware', cyberEye: 'Cyberolho', cyberAudioSuite: 'Cyberaudio',
+  cyberwareInternal: 'Interno', cyberwareExternal: 'Externo', cyberArm: 'Cyberbraço', cyberLeg: 'Cyberperna', borgware: 'Borgware'
 };

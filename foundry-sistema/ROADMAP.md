@@ -19,6 +19,10 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   CORE em 1 (borracha, biotoxina, veneno, fumaça, gás lacrimogêneo e paintball), e a borracha causava lesão crítica.
   Fonte: a tabela de munição da wiki (system-catalog.js): a borracha "não causa lesão crítica nem ablação", e a
   biotoxina e a venenosa "não causam ablação". (Ciclo 4)
+- [x] **Tipo do cyberware trocado ao salvar a ficha do item** (dados, achado no ciclo 7): as chaves de
+  `TIPOS_CYBERWARE` não eram as do catálogo (`cyberEye`, `cyberAudioSuite`, `cyberwareInternal`, `cyberwareExternal`).
+  O select mostrava a primeira opção, e mudar qualquer campo gravava o tipo como `fashionware`. Agora as chaves batem, e
+  a ficha do item garante o valor atual entre as opções de todo select. (Ciclo 7)
 - [x] **Munição que não causa dano** (Ciclo 5): a wiki diz que biotoxina, veneno, EMP, flashbang, sonífera e gás
   lacrimogêneo "não causam dano", e a fumaça só cobre a área, mas o sistema aplicava o dano da arma. Agora quem é pego
   não leva dano, e o cartão diz o efeito com o texto da wiki. Os testes de resistência automáticos ficam para o P2.
