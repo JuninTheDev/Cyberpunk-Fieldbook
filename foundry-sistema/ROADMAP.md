@@ -52,7 +52,7 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
     (Ciclo 8);
   - [x] cyberdeck e programa, com os programas no deck (Ciclo 9);
   - [x] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem (Ciclo 10);
-  - [ ] veículo (os da família do Nomad, com os upgrades);
+  - [x] veículo (os da família do Nomad, com os upgrades) (Ciclo 11);
   - [ ] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077.
 - [ ] **Volta da ficha para a wiki** (HP, munição, dinheiro, lesões) e entrega dos pedidos da loja. Bloqueador da migração.
 - [ ] **Da wiki:** botão "Importar da wiki" na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
@@ -68,6 +68,8 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a luneta
   de precisão (+1 em tiro único ou mirado a 51 m ou mais); a arma sob o cano (lança-granadas e espingarda) como
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
+- [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
+  cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.
 - [ ] **Armas de 2077** (Smart, ricochete, carga Tech) e o conteúdo do cpr-2077.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
   do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente.

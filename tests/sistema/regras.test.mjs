@@ -314,6 +314,29 @@ test('Upgrades: os slots da loja da wiki; o pente de cada carregador e o padrão
   }
 });
 
+test('Veículos: os terrestres com o PDE, os assentos, o MOVE e o custo da tabela da wiki; a Oficina da Família do Nomad toda no catálogo', () => {
+  // A tabela de veículos terrestres de system-rules.js: [nome, PDE, assentos, MOVE, custo].
+  const texto = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  const bloco = texto.slice(texto.indexOf("'Veículo terrestre'"));
+  const tabela = Object.fromEntries([...bloco.slice(0, bloco.indexOf("'dense'")).matchAll(/\['([^']+)', '(\d+)', '(\d+)', '(\d+)', '([\d.]+)eb'\]/g)]
+    .map(([, nome, sdp, assentos, move, custo]) => [nome, [sdp, assentos, move, custo.replace('.', '')].map(Number)]));
+  const NOMES = { roadbike: 'Moto estradeira', superbike: 'Superbike', 'compact-groundcar': 'Carro compacto', 'high-performance-groundcar': 'Carro esportivo', 'super-groundcar': 'Supercarro' };
+  assert.equal(Object.keys(tabela).length, 5, 'a tabela de veículos da wiki mudou');
+  for (const [id, nome] of Object.entries(NOMES)) {
+    const s = catalogo[`core_vehicles:${id}`].system;
+    assert.deepEqual([s.sdp.max, s.assentos, s.velocidade.combate, s.preco], tabela[nome], nome);
+  }
+  // A Oficina da Família (system-criacao.js): o importador acha cada veículo e upgrade pelo nome do CORE.
+  const oficina = daWiki('system-criacao.js', 'systemCreation').nomadMotorpool;
+  const id = nome => nome.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  for (const v of oficina.veiculos) assert.equal(catalogo[`core_vehicles:${id(v.id)}`]?.type, 'veiculo', v.id);
+  for (const u of oficina.upgrades) assert.equal(catalogo[`core_upgrades:${id(u.id)}`]?.system.alvo, 'veiculo', u.id);
+  // Os dois upgrades com número, como a descrição da Oficina: +20 SDP e mais dois assentos.
+  const desc = nome => oficina.upgrades.find(u => u.id === nome).desc;
+  assert.ok(/\+20 SDP/.test(desc('Heavy Chassis')) && catalogo['core_upgrades:heavy-chassis'].system.modificadores.sdp === 20);
+  assert.ok(/Mais dois assentos/.test(desc('Seating Upgrade')) && catalogo['core_upgrades:seating-upgrade'].system.modificadores.assentos === 2);
+});
+
 test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia que existe e tabela de DV que existe', () => {
   const pericias = new Set([...PERICIAS.map(p => p.id), ...Object.keys(FAMILIAS)]);
   const problemas = [];

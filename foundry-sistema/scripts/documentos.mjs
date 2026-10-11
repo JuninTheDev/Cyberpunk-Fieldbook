@@ -128,9 +128,10 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
-  // Cyberdeck e arma: os itens instalados neles (programas, hardware, acessórios, no mesmo ator) e os slots que ocupam.
+  // Cyberdeck, arma e veículo: os itens instalados neles (programas, hardware, acessórios, upgrades, no mesmo ator) e os
+  // slots que ocupam.
   get instalados() {
-    return ['cyberdeck', 'arma'].includes(this.type) ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
+    return ['cyberdeck', 'arma', 'veiculo'].includes(this.type) ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
   }
 
   get slotsUsados() {

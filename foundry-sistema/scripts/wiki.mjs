@@ -1,7 +1,7 @@
 // Importar da wiki: o personagem criado no criador da wiki vira um ator deste sistema, com STATs, perícias, Role,
 // Humanidade, dinheiro e o equipamento (armas carregadas, armaduras vestidas, cyberware instalado).
 // Os itens vêm de dados/catalogo.json pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"). O que ainda não
-// existe neste sistema (veículos e o conteúdo de 2077) vira um aviso, e o resto entra.
+// existe neste sistema (o conteúdo de 2077) vira um aviso, e o resto entra.
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, SISTEMA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
@@ -73,6 +73,29 @@ function itensDaWiki(catalogo, entradas, notas) {
 }
 
 // Carrega cada arma com a munição escolhida na wiki: o pente enche e sai da munição.
+// Os veículos da família do Nomad, com os upgrades de cada um: os itens e onde cada upgrade fica ({ uid, em }, como as
+// entradas da montagem, para o instalarNoLugar).
+function veiculosDaWiki(catalogo, veiculos, notas) {
+  const itens = [];
+  const lugares = [];
+  const doCatalogo = (prefixo, entrada) => catalogo[`${prefixo}:${slug(entrada.foundry?.nome || entrada.nome)}`];
+  const comUid = (base, uid) => { const data = foundry.utils.deepClone(base); foundry.utils.setProperty(data, `flags.${SISTEMA}.wikiUid`, uid); return data; };
+  for (const veiculo of veiculos) {
+    const base = doCatalogo('core_vehicles', veiculo);
+    if (!base) { notas.push(`${veiculo.nome}: veículo que ainda não existe neste sistema.`); continue; }
+    const data = comUid(base, veiculo.uid);
+    data.system.familia = Boolean(veiculo.familia);
+    itens.push(data);
+    for (const upgrade of veiculo.upgrades || []) {
+      const baseDoUpgrade = doCatalogo('core_upgrades', upgrade);
+      if (!baseDoUpgrade) { notas.push(`${upgrade.nome} (${veiculo.nome}): upgrade que ainda não existe neste sistema.`); continue; }
+      itens.push(comUid(baseDoUpgrade, upgrade.uid));
+      lugares.push({ uid: upgrade.uid, em: veiculo.uid });
+    }
+  }
+  return { itens, lugares };
+}
+
 // Os itens do ator que vieram de uma entrada da wiki (pelo uid gravado na importação).
 const porUid = (ator, uid) => ator.items.filter(item => item.getFlag(SISTEMA, 'wikiUid') === uid);
 
@@ -88,11 +111,11 @@ async function carregarArmas(ator, entradas) {
 }
 
 // Cada programa, hardware e acessório no lugar em que a montagem da wiki o pôs ("em": o uid do pai): o cyberdeck ou a
-// arma. As opções de cyberware (na base de cyberware) ainda não têm onde entrar aqui.
+// arma, ou o upgrade no veículo. As opções de cyberware (na base de cyberware) ainda não têm onde entrar aqui.
 async function instalarNoLugar(ator, entradas) {
   const mudancas = [];
   for (const entrada of entradas.filter(e => e.em)) {
-    const [pai] = porUid(ator, entrada.em).filter(item => item.type === 'cyberdeck' || item.type === 'arma');
+    const [pai] = porUid(ator, entrada.em).filter(item => ['cyberdeck', 'arma', 'veiculo'].includes(item.type));
     if (!pai) continue;
     for (const item of porUid(ator, entrada.uid).filter(item => 'instaladoEm' in item.system)) mudancas.push({ _id: item.id, 'system.instaladoEm': pai.id });
   }
@@ -118,6 +141,7 @@ export async function importarPersonagem(id, donoId = '') {
   const notasHtml = [doc.aparencia && `<p>${foundry.utils.escapeHTML(doc.aparencia)}</p>`, doc.notas && `<p>${foundry.utils.escapeHTML(doc.notas)}</p>`,
     `<p><i>Criado na wiki${doc.apelido ? ` (${foundry.utils.escapeHTML(doc.apelido)})` : ''}. Importado em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`].filter(Boolean).join('');
 
+  const veiculos = veiculosDaWiki(catalogo, r.veiculos || [], notas);
   const ator = await Actor.implementation.create({
     name: doc.nome || 'Sem nome', type: 'personagem', ownership,
     system: {
@@ -130,16 +154,19 @@ export async function importarPersonagem(id, donoId = '') {
       dinheiro: Number(r.dinheiro?.saldo) || 0,
       notas: notasHtml
     },
-    items: itensDaWiki(catalogo, r.itens || [], notas),
+    items: [...itensDaWiki(catalogo, r.itens || [], notas), ...veiculos.itens],
     flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString() } } }
   });
   // Primeiro os acessórios (um carregador muda o tamanho do pente), depois a munição.
-  await instalarNoLugar(ator, r.itens || []);
+  await instalarNoLugar(ator, [...(r.itens || []), ...veiculos.lugares]);
   await carregarArmas(ator, r.itens || []);
-  for (const veiculo of r.veiculos || []) notas.push(`${veiculo.nome}: veículos ainda não existem neste sistema.`);
+  // O veículo entra inteiro: o SDP de agora é o máximo, já com os upgrades.
+  const deVeiculo = ator.items.filter(item => item.type === 'veiculo');
+  if (deVeiculo.length) await ator.updateEmbeddedDocuments('Item', deVeiculo.map(item => ({ _id: item.id, 'system.sdp.value': item.system.sdp.max })));
 
   // A wiki passa a mostrar o personagem como "no Foundry".
-  const entregues = [...(r.itens || []).map(item => item.uid), ...(r.veiculos || []).map(veiculo => veiculo.uid)];
+  // Entregues: só o que entrou na ficha. O que virou aviso fica de fora, para uma atualização futura poder trazê-lo.
+  const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };

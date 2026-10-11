@@ -1,7 +1,7 @@
 // Gera os compêndios do sistema em packs/ (fora do git) a partir de dados/catalogo.json: armas, armaduras, munição,
 // cyberware, equipamento, roupas, drogas, netrunning (cyberdecks e programas), upgrades (acessórios de arma, hardware
-// de deck e upgrades de veículo) e lesões críticas, e dois personagens de exemplo prontos para o combate (um Solo e um
-// Capanga).
+// de deck e upgrades de veículo), veículos e lesões críticas, e dois personagens de exemplo prontos para o combate (um
+// Solo e um Capanga).
 // Compila com a ferramenta oficial do Foundry (@foundryvtt/foundryvtt-cli) pelo npx, como o build do cpr-2077.
 // Uso: node build/compendios.mjs   (o instalar.mjs chama sozinho quando o catálogo ou este arquivo mudam)
 import { execSync } from 'node:child_process';
@@ -40,7 +40,7 @@ function documentoDeItem(id, { ator = null, mudar = null } = {}) {
 // Cada compêndio de itens e os tipos que entram nele.
 const PACKS_DE_ITENS = {
   armas: ['arma'], armaduras: ['armadura'], municao: ['municao'], cyberware: ['cyberware'], equipamento: ['equipamento'], roupas: ['roupa'], drogas: ['droga'],
-  netrunning: ['cyberdeck', 'programa'], upgrades: ['upgrade'], lesoes: ['lesao']
+  netrunning: ['cyberdeck', 'programa'], upgrades: ['upgrade'], veiculos: ['veiculo'], lesoes: ['lesao']
 };
 
 // ---------------- Personagens de exemplo ----------------

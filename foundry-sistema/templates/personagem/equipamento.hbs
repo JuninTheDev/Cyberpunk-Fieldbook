@@ -54,6 +54,20 @@
   {{/if}}
   {{/each}}
 
+  {{#if veiculos.length}}
+  <h3>Veículos</h3>
+  <ol class="itens">
+    {{#each veiculos}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <span class="detalhe">{{detalhe}}</span>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{/each}}
+  </ol>
+  {{/if}}
+
   {{#if upgrades.length}}
   <h3>Upgrades e acessórios</h3>
   <ol class="itens">

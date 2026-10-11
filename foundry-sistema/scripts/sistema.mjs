@@ -5,7 +5,8 @@ import * as combate from './combate.mjs';
 import { caminho, SISTEMA } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
-  DadosArma, DadosArmadura, DadosCyberdeck, DadosCyberware, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma, DadosRoupa, DadosUpgrade
+  DadosArma, DadosArmadura, DadosCyberdeck, DadosCyberware, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma, DadosRoupa, DadosUpgrade,
+  DadosVeiculo
 } from './dados.mjs';
 import { AtorCPR, ItemCPR } from './documentos.mjs';
 import { FichaItem } from './ficha-item.mjs';
@@ -22,7 +23,7 @@ Hooks.once('init', () => {
   CONFIG.Actor.dataModels.personagem = DadosPersonagem;
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,
-    cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade
+    cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo
   });
   CONFIG.ActiveEffect.dataModels.base = DadosEfeito;
   CONFIG.statusEffects.push({ id: combate.STATUS_SUPRIMIDO, name: 'Suprimido', img: caminho('icones/suprimido.svg') });
@@ -32,7 +33,7 @@ Hooks.once('init', () => {
   const { DocumentSheetConfig } = foundry.applications.apps;
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaPersonagem, { types: ['personagem'], makeDefault: true, label: 'Ficha do RED' });
   DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaItem, {
-    types: ['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade'], makeDefault: true, label: 'Item do RED'
+    types: ['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'], makeDefault: true, label: 'Item do RED'
   });
 
   wiki.registrarWiki();

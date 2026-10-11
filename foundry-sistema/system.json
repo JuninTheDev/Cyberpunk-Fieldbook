@@ -98,6 +98,11 @@
         "htmlFields": [
           "descricao"
         ]
+      },
+      "veiculo": {
+        "htmlFields": [
+          "descricao"
+        ]
       }
     }
   },
@@ -210,6 +215,17 @@
       }
     },
     {
+      "name": "veiculos",
+      "label": "Veículos",
+      "path": "packs/veiculos",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
       "name": "lesoes",
       "label": "Lesões críticas",
       "path": "packs/lesoes",
@@ -247,6 +263,7 @@
         "drogas",
         "netrunning",
         "upgrades",
+        "veiculos",
         "lesoes",
         "exemplos"
       ]

@@ -93,6 +93,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         id: p.id, nome: p.name, img: p.img,
         detalhe: [CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe, `ATK ${p.system.atk} · DEF ${p.system.def} · REZ ${p.system.rez}`, p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'].join(' · ')
       })),
+      veiculos: itens('veiculo').map(v => ({
+        id: v.id, nome: v.name, img: v.img,
+        detalhe: [`SDP ${v.system.sdp.value}/${v.system.sdp.max}`, `${v.system.assentos} assentos`, `MOVE ${v.system.velocidade.combate}`, v.system.familia ? 'da família' : '', v.instalados.map(i => i.name).join(', ')].filter(Boolean).join(' · ')
+      })),
       upgrades: itens('upgrade').map(u => ({
         id: u.id, nome: u.name, img: u.img,
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')

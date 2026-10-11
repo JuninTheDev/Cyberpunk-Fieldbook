@@ -282,6 +282,32 @@ export class DadosUpgrade extends foundry.abstract.TypeDataModel {
   }
 }
 
+// Veículo (RED p. 189–192): o SDP (a wiki chama de PDE), os assentos e a velocidade (a de combate é o MOVE do veículo; a
+// narrativa, em texto). familia: veículo da família do Nomad. Os upgrades instalados nele (instaladoEm) somam SDP e
+// assentos.
+export class DadosVeiculo extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      sdp: recurso(50, 50),
+      assentos: inteiro(2, { min: 0 }),
+      velocidade: new fields.SchemaField({ combate: inteiro(20, { min: 0 }), narrativa: texto() }),
+      familia: new fields.BooleanField({ initial: false }),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+
+  prepareDerivedData() {
+    const item = this.parent;
+    const upgrades = item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id) ?? [];
+    for (const upgrade of upgrades) {
+      this.sdp.max += upgrade.system.modificadores.sdp;
+      this.assentos += upgrade.system.modificadores.assentos;
+    }
+  }
+}
+
 export class DadosLesao extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {

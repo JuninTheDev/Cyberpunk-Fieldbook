@@ -38,6 +38,23 @@ module.exports = async ({ edge, servidores, r }) => {
     return [Boolean(deck) && noDeck.length >= 4, `${itens.length} itens · deck ${deck?.id} · no deck: ${noDeck.map(i => `${i.id}×${i.qtd}`).join(', ')}`];
   });
 
+  let nomad;
+  await r.passo('wiki: Nomad (Rato de Rua) com dois veículos da família (o carro com Chassis pesado e Upgrade de assento) e uma arma de 2077 comprada na loja', async () => {
+    const { personagem } = await api('/api/personagens', 'POST', {
+      metodo: 'ratoderua', sorteio: { linha: 1 }, lingua: 'Portuguese', casa: 'Heywood', nome: 'Teste Nomad', apelido: 'Estrada', role: 'nomad', lifepath,
+      oficina: ['v:Compact Groundcar', 'u:0:Heavy Chassis', 'u:0:Seating Upgrade', 'v:Roadbike'],
+      itens: [{ uid: 'loja:teste-2077', id: 'armas-2077:arasaka-hjke-11-yukimura', qtd: 1 }]
+    });
+    await edge.ir(`${wiki}/#criador/${personagem.id}`, 1200);
+    await edge.evaluate(`document.querySelector('.cc-steps [data-step="7"]').click()`);
+    for (let i = 0; i < 30 && !/Salvo/.test(await texto('#cc-save')); i++) await edge.sleep(200);
+    nomad = (await api(`/api/personagens/${personagem.id}`)).personagem;
+    const r = nomad.resultado || {};
+    const veiculos = (r.veiculos || []).map(v => `${v.foundry?.nome} (${(v.upgrades || []).map(u => u.foundry?.nome).join(', ')})`);
+    const de2077 = (r.itens || []).some(i => i.id === 'armas-2077:arasaka-hjke-11-yukimura');
+    return [veiculos.length === 2 && (r.veiculos[0].upgrades || []).length === 2 && de2077, `veículos: ${veiculos.join('; ')} · arma de 2077 no resultado: ${de2077}`];
+  });
+
   // ---------- Foundry 14 ----------
   if (!foundry14.disponivel()) { await r.passo(`${foundry14.motivoIndisponivel()}: parte do Foundry pulada`, async () => [true, '']); return; }
   const ocupada = await mesaOcupada(servidores.raiz);
@@ -62,7 +79,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
-    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, upgrades, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
+    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, upgrades, veículos, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
       const info = await edge.evaluate(`(async () => {
         const tamanhos = Object.fromEntries(game.packs.filter(p => p.metadata.packageName === '${S}').map(p => [p.metadata.name, p.index.size]));
         const pack = game.packs.get('${S}.exemplos');
@@ -76,7 +93,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -926,6 +943,26 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.deck.usados === info.programas.filter(p => p.noDeck).length && !info.notas.some(nota => nomes.some(nome => nota.startsWith(`${nome}:`)))
         && info.ficha.deck.startsWith(`${info.deck.usados}/${info.deck.slots} slots · `) && info.ficha.programas === info.programas.length && info.ficha.instaladoEm;
       return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('wiki: importa o Nomad com os veículos da família e os upgrades instalados (SDP 50 + 20, 4 + 2 assentos); a arma de 2077 vira aviso e não conta como entregue', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '');
+        const veiculos = ator.items.filter(i => i.type === 'veiculo').map(v => ({
+          nome: v.name, sdp: [v.system.sdp.value, v.system.sdp.max], assentos: v.system.assentos, familia: v.system.familia, upgrades: v.instalados.map(i => i.name)
+        }));
+        await ator.delete();
+        return { veiculos, notas };
+      })()`);
+      const doc = (await api(`/api/personagens/${nomad.id}`)).personagem;
+      const entregues = doc.foundry?.entregues || [];
+      const [carro, moto] = nomad.resultado.veiculos;
+      const ok = info.veiculos.length === 2
+        && JSON.stringify(info.veiculos[0]) === JSON.stringify({ nome: 'Compact Groundcar', sdp: [70, 70], assentos: 6, familia: true, upgrades: ['Heavy Chassis', 'Seating Upgrade'] })
+        && JSON.stringify(info.veiculos[1]) === JSON.stringify({ nome: 'Roadbike', sdp: [35, 35], assentos: 2, familia: true, upgrades: [] })
+        && info.notas.some(nota => /Yukimura/.test(nota)) && !entregues.includes('loja:teste-2077')
+        && [carro.uid, moto.uid, ...carro.upgrades.map(u => u.uid)].every(uid => entregues.includes(uid));
+      return [ok, `${JSON.stringify(info)} · entregues: ${entregues.length} (2077 de fora: ${!entregues.includes('loja:teste-2077')})`];
     });
 
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {

@@ -31,16 +31,16 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | habilidades das outras Roles | falta |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
-| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, cyberdecks, programas e upgrades do CORE (os programas e o hardware no deck, os acessórios na arma); o resto vira aviso |
+| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, cyberdecks, programas, upgrades e veículos do CORE (os programas e o hardware no deck, os acessórios na arma, os upgrades no veículo); o conteúdo de 2077 vira aviso |
 | cpr-2077 | volta da ficha para a wiki, pedidos da loja, crossover entre campanhas, armas de 2077 | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
 
-1. **O importador descarta** os veículos e o conteúdo de 2077 da loja (armas, netrunning e cyberware)
-   (`scripts/wiki.mjs`). Já entram: equipamento, roupas e drogas (ciclo 8); cyberdecks e programas, com os programas no
-   deck (ciclo 9); acessórios e hardware, no lugar da montagem (ciclo 10).
+1. **O importador descarta** o conteúdo de 2077 da loja (armas, netrunning e cyberware) (`scripts/wiki.mjs`). Já
+   entram: equipamento, roupas e drogas (ciclo 8); cyberdecks e programas, com os programas no deck (ciclo 9);
+   acessórios e hardware, no lugar da montagem (ciclo 10); os veículos da família, com os upgrades (ciclo 11).
 2. **Sem volta da ficha para a wiki:** a wiki pararia de receber o estado da mesa.
 3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
 4. **Faltam a NET e as armas de 2077,** que a campanha usa.
@@ -395,3 +395,39 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
   - o pente acima do máximo quando o carregador sai;
   - os veículos.
 - **Próximo:** ciclo 11, veículos: os da família do Nomad, com os upgrades (P2, bloqueador da migração).
+- **Commit:** `54a258a`.
+
+### Ciclo 11 (2026-10-11): veículos e o "entregues" da importação (P2, bloqueador da migração)
+
+- **Implementado:**
+  - **Tipo novo `veiculo`:** SDP (a wiki chama de PDE), assentos, MOVE (a velocidade de combate), a velocidade narrativa
+    e a marca de veículo da família do Nomad. Os upgrades instalados nele somam SDP e assentos
+    (`DadosVeiculo.prepareDerivedData`);
+  - **Conversão:** os 14 veículos do CORE; compêndio Veículos;
+  - **Importação:** os veículos da família (`resultado.veiculos`) entram com os upgrades instalados e o SDP cheio, já com
+    os upgrades;
+  - **Correção:** a lista `entregues` que a importação manda para a wiki tinha os uids de todos os itens e veículos,
+    inclusive os que viraram aviso e não entraram. Isso faria um "Atualizar da wiki" futuro nunca trazer esses itens.
+    Agora vai só o que entrou na ficha (os uids gravados nos itens). Os upgrades dos veículos, que antes não iam, agora
+    vão;
+  - **Ficha:** a lista de veículos (SDP, assentos, MOVE, da família e os upgrades). Na ficha do item, os campos do
+    veículo, com o SDP e os assentos já somados aos upgrades.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 30 de 30. Novo:
+    - os 5 veículos terrestres com o PDE, os assentos, o MOVE e o custo da tabela da wiki;
+    - todo veículo e upgrade da Oficina da Família (system-criacao.js) existe no catálogo;
+    - o Chassis pesado (+20 SDP) e o Upgrade de assento (+2) batem com a descrição da Oficina;
+  - G4: 44 de 44, cerca de 45 s. Passos novos:
+    - um Nomad criado na wiki de teste, com o carro compacto (Chassis pesado e Upgrade de assento), a moto e uma arma de
+      2077 comprada na loja;
+    - importado, o carro fica com SDP 70/70 e 6 assentos e a moto com 35/35, os dois da família;
+    - a arma de 2077 vira aviso e não aparece em `entregues`, e os veículos e os upgrades aparecem;
+    - sem a correção, o passo falhou: o 2077 entrava em `entregues`, e os upgrades ficavam de fora;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:**
+  - o conteúdo de 2077 que a loja vende (o último pedaço deste bloqueador);
+  - os veículos no combate: o dano no SDP, as armas instaladas, o vidro blindado e um veículo da família por vez.
+- **Próximo:** o conteúdo de 2077 (armas-2077, netrunning-2077 e cyberware-2077), que vem dos compêndios do cpr-2077, ou
+  o próximo bloqueador da migração, a volta da ficha para a wiki.

@@ -60,6 +60,14 @@
     <label>Slots no deck <input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
     <label>Instalado em <select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
     {{/if}}
+    {{#if eh.veiculo}}
+    <label>SDP <input type="number" name="system.sdp.value" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" value="{{fonte.sdp.max}}" min="0"></label>
+    <label>Assentos <input type="number" name="system.assentos" value="{{fonte.assentos}}" min="0"></label>
+    {{#if instalados}}<p class="nota">Com os upgrades ({{instalados}}): SDP máximo {{sistema.sdp.max}}, {{sistema.assentos}} assentos.</p>{{/if}}
+    <label>MOVE (velocidade de combate) <input type="number" name="system.velocidade.combate" value="{{fonte.velocidade.combate}}" min="0"></label>
+    <label>Velocidade narrativa <input type="text" name="system.velocidade.narrativa" value="{{fonte.velocidade.narrativa}}"></label>
+    <label class="caixa"><input type="checkbox" name="system.familia" {{checked fonte.familia}}> Da família (Nomad)</label>
+    {{/if}}
     {{#if eh.upgrade}}
     <label>Para <select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
     <label>Slots <input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>

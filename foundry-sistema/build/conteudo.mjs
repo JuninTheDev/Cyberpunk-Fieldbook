@@ -299,6 +299,16 @@ function upgrade(doc, s, foraDoMapa) {
     }
   };
 }
+// Veículo: SDP, assentos e a velocidade (a de combate, que a wiki chama de MOVE, e a narrativa).
+function veiculo(doc, s) {
+  return {
+    name: doc.name, type: 'veiculo', img: 'icons/svg/wingfoot.svg',
+    system: {
+      descricao: s.description?.value || '', sdp: { value: Number(s.sdp) || 0, max: Number(s.sdp) || 0 }, assentos: Number(s.seats) || 0,
+      velocidade: { combate: Number(s.speedCombat) || 0, narrativa: s.speedNarrative || '' }, familia: false, preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+    }
+  };
+}
 // O pack de equipamento do CORE traz também os cyberdecks e duas bases de cyberware externas (Battleglove e Smart
 // Glasses). Um tipo que este sistema não tem devolve null: fica de fora, e o build lista.
 const TIPOS_DO_PACK_DE_EQUIPAMENTO = { gear: equipamento, cyberware, cyberdeck };
@@ -307,7 +317,8 @@ const doPackDeEquipamento = (doc, s) => TIPOS_DO_PACK_DE_EQUIPAMENTO[doc.type]?.
 const CONVERSORES = {
   'core/weapons': arma, 'core/armor': armadura, 'core/ammo': municao, 'core/cyberware': cyberware,
   'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao,
-  'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga, 'core/programs': programa, 'core/upgrades': upgrade
+  'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga, 'core/programs': programa, 'core/upgrades': upgrade,
+  'core/vehicles': veiculo
 };
 
 // Tabelas de Lesão Crítica (2d6): faixas [mín, máx, id do item no catálogo], uma do corpo e uma da cabeça.

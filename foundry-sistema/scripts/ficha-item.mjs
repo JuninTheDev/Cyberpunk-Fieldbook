@@ -32,7 +32,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable,
-      eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade'].map(t => [t, tipo === t])),
+      eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'].map(t => [t, tipo === t])),
       temQuantidade: tipo !== 'municao' && 'quantidade' in fonte,
       temUso: 'uso' in fonte,
       locaisLesao: comAtual({ corpo: 'Corpo', cabeca: 'Cabeça' }, tipo === 'lesao' && fonte.local),
