@@ -1,5 +1,5 @@
 // Gera os compêndios do sistema em packs/ (fora do git) a partir de dados/catalogo.json: armas, armaduras, munição,
-// cyberware, equipamento, roupas, drogas e lesões críticas, e dois personagens de exemplo prontos para o combate (um Solo
+// cyberware, equipamento, roupas, drogas, netrunning (cyberdecks e programas) e lesões críticas, e dois personagens de exemplo prontos para o combate (um Solo
 // e um Capanga).
 // Compila com a ferramenta oficial do Foundry (@foundryvtt/foundryvtt-cli) pelo npx, como o build do cpr-2077.
 // Uso: node build/compendios.mjs   (o instalar.mjs chama sozinho quando o catálogo ou este arquivo mudam)
@@ -36,7 +36,11 @@ function documentoDeItem(id, { ator = null, mudar = null } = {}) {
   return { ...dados, _id, _key: ator ? `!actors.items!${ator}.${_id}` : `!items!${_id}`, effects, folder: null, sort: 0, ownership: { default: 0 }, _stats: estatisticas };
 }
 
-const PACKS_DE_ITENS = { armas: 'arma', armaduras: 'armadura', municao: 'municao', cyberware: 'cyberware', equipamento: 'equipamento', roupas: 'roupa', drogas: 'droga', lesoes: 'lesao' };
+// Cada compêndio de itens e os tipos que entram nele.
+const PACKS_DE_ITENS = {
+  armas: ['arma'], armaduras: ['armadura'], municao: ['municao'], cyberware: ['cyberware'], equipamento: ['equipamento'], roupas: ['roupa'], drogas: ['droga'],
+  netrunning: ['cyberdeck', 'programa'], lesoes: ['lesao']
+};
 
 // ---------------- Personagens de exemplo ----------------
 // Armas com o pente cheio da munição da ficha (a quantidade de munição na lista é o que sobra), armaduras vestidas e
@@ -111,7 +115,7 @@ function fvtt(args) {
 
 export function gerar() {
   const fonte = fs.mkdtempSync(path.join(os.tmpdir(), 'cpr-fieldbook-packs-'));
-  const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, tipo]) => [nome, Object.entries(catalogo).filter(([, item]) => item.type === tipo).map(([id]) => documentoDeItem(id))]));
+  const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, tipos]) => [nome, Object.entries(catalogo).filter(([, item]) => tipos.includes(item.type)).map(([id]) => documentoDeItem(id))]));
   packs.exemplos = EXEMPLOS;
   fs.rmSync(packsDir, { recursive: true, force: true });
   fs.mkdirSync(packsDir, { recursive: true });

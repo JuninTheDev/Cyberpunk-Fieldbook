@@ -25,6 +25,19 @@ module.exports = async ({ edge, servidores, r }) => {
     return [solo.resultado && solo.resultado.itens.length > 5, `${solo.resultado?.itens.length} itens · HP ${solo.resultado?.derivados?.hp}`];
   });
 
+  let netrunner;
+  await r.passo('wiki: Netrunner (Rato de Rua) com o cyberdeck e os programas que a montagem põe nele', async () => {
+    const { personagem } = await api('/api/personagens', 'POST', { metodo: 'ratoderua', sorteio: { linha: 1 }, lingua: 'Portuguese', casa: 'Heywood', nome: 'Teste Netrunner', apelido: 'Deck', role: 'netrunner', lifepath });
+    await edge.ir(`${wiki}/#criador/${personagem.id}`, 1200);
+    await edge.evaluate(`document.querySelector('.cc-steps [data-step="7"]').click()`);
+    for (let i = 0; i < 30 && !/Salvo/.test(await texto('#cc-save')); i++) await edge.sleep(200);
+    netrunner = (await api(`/api/personagens/${personagem.id}`)).personagem;
+    const itens = netrunner.resultado?.itens || [];
+    const deck = itens.find(i => i.id.startsWith('core_gear:cyberdeck'));
+    const noDeck = itens.filter(i => deck && i.em === deck.uid);
+    return [Boolean(deck) && noDeck.length >= 4, `${itens.length} itens · deck ${deck?.id} · no deck: ${noDeck.map(i => `${i.id}×${i.qtd}`).join(', ')}`];
+  });
+
   // ---------- Foundry 14 ----------
   if (!foundry14.disponivel()) { await r.passo(`${foundry14.motivoIndisponivel()}: parte do Foundry pulada`, async () => [true, '']); return; }
   const ocupada = await mesaOcupada(servidores.raiz);
@@ -49,7 +62,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
-    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
+    await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
       const info = await edge.evaluate(`(async () => {
         const tamanhos = Object.fromEntries(game.packs.filter(p => p.metadata.packageName === '${S}').map(p => [p.metadata.name, p.index.size]));
         const pack = game.packs.get('${S}.exemplos');
@@ -63,7 +76,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -835,6 +848,44 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki'))?.sheet.render({ force: true })`);
     await edge.sleep(1200);
     await edge.shot('importado');
+
+    await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');
+        const deck = ator.items.find(i => i.type === 'cyberdeck');
+        const resultado = {
+          deck: deck && { nome: deck.name, slots: deck.system.slots, usados: deck.slotsUsados, uso: deck.system.uso },
+          programas: ator.items.filter(i => i.type === 'programa').map(p => ({ uid: p.getFlag('${S}', 'wikiUid'), nome: p.name, noDeck: p.system.instaladoEm === deck?.id })),
+          notas
+        };
+        // As fichas: a linha do deck e a lista de programas na ficha do personagem; o "Instalado em" na ficha do programa.
+        const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        await ator.sheet.render({ force: true });
+        await esperar(() => ator.sheet.element?.querySelector('li[data-item-id="' + deck.id + '"] .detalhe'));
+        resultado.ficha = {
+          deck: ator.sheet.element.querySelector('li[data-item-id="' + deck.id + '"] .detalhe').textContent,
+          programas: [...ator.sheet.element.querySelectorAll('.tab.equipamento li[data-item-id]')].filter(li => li.textContent.includes('ATK')).length
+        };
+        await ator.sheet.close();
+        const programa = ator.items.find(i => i.type === 'programa');
+        await programa.sheet.render({ force: true });
+        await esperar(() => programa.sheet.element?.querySelector('select[name="system.instaladoEm"]'));
+        resultado.ficha.instaladoEm = programa.sheet.element.querySelector('select[name="system.instaladoEm"]').value === deck.id;
+        await programa.sheet.close();
+        await ator.delete();
+        return resultado;
+      })()`);
+      const itens = netrunner.resultado.itens;
+      const deckDaWiki = itens.find(i => i.id.startsWith('core_gear:cyberdeck'));
+      const programasDaWiki = itens.filter(i => i.id.startsWith('core_programs:'));
+      const copias = programasDaWiki.reduce((soma, i) => soma + Math.max(1, Number(i.qtd) || 1), 0);
+      const nomes = [deckDaWiki, ...programasDaWiki].map(i => i.nome);
+      const ok = info.deck && info.deck.uso === deckDaWiki.uso && info.programas.length === copias
+        && info.programas.every(p => p.noDeck === (programasDaWiki.find(i => i.uid === p.uid)?.em === deckDaWiki.uid))
+        && info.deck.usados === info.programas.filter(p => p.noDeck).length && !info.notas.some(nota => nomes.some(nome => nota.startsWith(`${nome}:`)))
+        && info.ficha.deck.startsWith(`${info.deck.usados}/${info.deck.slots} slots · `) && info.ficha.programas === info.programas.length && info.ficha.instaladoEm;
+      return [ok, JSON.stringify(info)];
+    });
 
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {

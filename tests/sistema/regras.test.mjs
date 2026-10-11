@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
 import { FAMILIAS, PERICIAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { ESTILOS_ROUPA, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
+import { CLASSES_PROGRAMA, ESTILOS_ROUPA, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -198,11 +198,11 @@ test('Perícias: o atributo e o "x2" de cada perícia batem com a tabela de per�
   assert.deepEqual(diferencas, []);
 });
 
-test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, armaduras, munição, cyberware, equipamento, roupa e droga) existe nele', () => {
-  // Array.from: o que vem do vm é de outro "realm", e o deepEqual estrito compara o protótipo. Os cyberdecks do pack de
-  // equipamento (categoria netrunning) ainda não têm tipo aqui.
-  const itens = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => item.cat !== 'netrunning');
-  const tipos = /^core_(weapons|armor|ammo|cyberware|gear|clothing|drugs):/;
+test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, armaduras, munição, cyberware, equipamento, roupa, droga, cyberdeck e programa) existe nele', () => {
+  // Array.from: o que vem do vm é de outro "realm", e o deepEqual estrito compara o protótipo. Os upgrades (acessórios e
+  // hardware de deck) e o conteúdo de 2077 ainda não têm tipo aqui.
+  const itens = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens);
+  const tipos = /^core_(weapons|armor|ammo|cyberware|gear|clothing|drugs|programs):/;
   const faltam = itens.filter(item => tipos.test(item.id) && !catalogo[item.id]).map(item => item.id);
   assert.ok(itens.filter(item => tipos.test(item.id)).length > 400, 'a loja da wiki tem os itens do CORE');
   assert.deepEqual(faltam, []);
@@ -263,6 +263,24 @@ test('Catálogo: equipamento, roupa e droga como o CORE (ativação pelo usage, 
     if (droga.system.consumo) assert.ok(droga.effects.some(efeito => efeito.name === droga.system.consumo), `${droga.name}: o efeito "${droga.system.consumo}" não existe`);
   }
   for (const roupa of porTipo('roupa')) assert.ok(TIPOS_ROUPA[roupa.system.tipo] && ESTILOS_ROUPA[roupa.system.estilo], `${roupa.name}: tipo ou estilo sem rótulo`);
+});
+
+test('Catálogo: programas com ATK, DEF, REZ, classe e custo da página de NET da wiki; cyberdecks com os slots da loja', () => {
+  // As linhas dos programas do RED em system-net.js: { name: 'Eraser', tag: 'Booster', stats: programStats(0, 0, 7, '20eb') }.
+  const texto = fs.readFileSync(path.join(raiz, 'system-net.js'), 'utf8');
+  const daWikiNet = Object.fromEntries([...texto.matchAll(/\{ name: '([^']+)', tag: '([^']+)', stats: programStats\((\d+), (\d+), (\d+), '(\d+)eb'\)/g)]
+    .map(([, nome, classe, atk, def, rez, custo]) => [nome, { classe, numeros: [atk, def, rez, custo].map(Number) }]));
+  const programas = Object.values(catalogo).filter(item => item.type === 'programa');
+  assert.equal(programas.length, 15);
+  for (const p of programas) {
+    const wiki = daWikiNet[p.name];
+    assert.ok(wiki, `${p.name}: não está na página de NET da wiki`);
+    assert.deepEqual([p.system.atk, p.system.def, p.system.rez, p.system.preco], wiki.numeros, `${p.name}: ATK, DEF, REZ e custo`);
+    assert.equal(CLASSES_PROGRAMA[p.system.classe], wiki.classe, `${p.name}: classe`);
+  }
+  const loja = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => item.deck && item.id.startsWith('core_'));
+  assert.equal(loja.length, 3);
+  for (const deck of loja) assert.equal(catalogo[deck.id]?.system.slots, deck.deck.slots, `${deck.id}: slots`);
 });
 
 test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia que existe e tabela de DV que existe', () => {

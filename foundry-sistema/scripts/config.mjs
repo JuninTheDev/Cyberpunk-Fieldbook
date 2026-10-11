@@ -27,6 +27,9 @@ export const ESTILOS_ROUPA = {
   genericChic: 'Genérico Chic', highFashion: 'Alta moda', leisurewear: 'Roupa de lazer', nomadLeathers: 'Couro nômade', urbanFlash: 'Flash urbano'
 };
 
+// Programas: a classe do CORE, com o nome da página de NET da wiki.
+export const CLASSES_PROGRAMA = { booster: 'Booster', defender: 'Defensor', antiprogramattacker: 'Ataque anti-programa', antipersonnelattacker: 'Ataque anti-pessoal' };
+
 // As chaves são as do conteúdo convertido do CORE (system.tipo do cyberware); os rótulos, os da loja da wiki.
 export const TIPOS_CYBERWARE = {
   fashionware: 'Fashionware', neuralWare: 'Neuralware', cyberEye: 'Cyberolho', cyberAudioSuite: 'Cyberaudio',

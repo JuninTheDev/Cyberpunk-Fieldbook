@@ -128,6 +128,22 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
+  // Cyberdeck: os itens instalados nele (no mesmo ator) e os slots que ocupam.
+  get instalados() {
+    return this.type === 'cyberdeck' ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
+  }
+
+  get slotsUsados() {
+    return this.instalados.reduce((soma, item) => soma + (Number(item.system.tamanho) || 0), 0);
+  }
+
+  // O cyberdeck onde o item está instalado (no mesmo ator), ou null.
+  get deck() {
+    const id = this.system.instaladoEm;
+    const deck = id ? this.actor?.items.get(id) : null;
+    return deck?.type === 'cyberdeck' ? deck : null;
+  }
+
   // A munição no pente (um item de munição do mesmo ator), ou null.
   get municaoCarregada() {
     return this.type === 'arma' && this.system.carregada ? this.actor?.items.get(this.system.carregada) ?? null : null;

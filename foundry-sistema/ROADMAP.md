@@ -50,7 +50,7 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [ ] **Tipos de item que o importador hoje descarta** (bloqueador da migração da campanha):
   - [x] equipamento, roupa e droga, com a quantidade, o uso da montagem da wiki e os efeitos do equipamento pelo uso
     (Ciclo 8);
-  - [ ] cyberdeck e programa, com os programas no deck;
+  - [x] cyberdeck e programa, com os programas no deck (Ciclo 9);
   - [ ] acessório de arma e hardware de cyberdeck (os upgrades), no lugar da montagem;
   - [ ] veículo (os da família do Nomad, com os upgrades);
   - [ ] o conteúdo de 2077 que a loja da wiki vende: armas-2077, netrunning-2077 e cyberware-2077.

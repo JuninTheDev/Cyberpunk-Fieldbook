@@ -83,6 +83,16 @@
         "htmlFields": [
           "descricao"
         ]
+      },
+      "cyberdeck": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "programa": {
+        "htmlFields": [
+          "descricao"
+        ]
       }
     }
   },
@@ -173,6 +183,17 @@
       }
     },
     {
+      "name": "netrunning",
+      "label": "Netrunning",
+      "path": "packs/netrunning",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
       "name": "lesoes",
       "label": "Lesões críticas",
       "path": "packs/lesoes",
@@ -208,6 +229,7 @@
         "equipamento",
         "roupas",
         "drogas",
+        "netrunning",
         "lesoes",
         "exemplos"
       ]

@@ -1,6 +1,6 @@
 // Ficha dos itens (ApplicationV2): os campos de cada tipo, a descrição e os efeitos que o item dá. Nos efeitos ligados
 // à mão (droga, equipamento como a lanterna), um botão liga e desliga.
-import { ATIVACOES, caminho, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { ATIVACOES, caminho, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -31,16 +31,23 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const tipo = item.type;
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable,
-      eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga'].map(t => [t, tipo === t])),
-      inventario: 'uso' in fonte,
+      eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa'].map(t => [t, tipo === t])),
+      temQuantidade: tipo !== 'municao' && 'quantidade' in fonte,
+      temUso: 'uso' in fonte,
       locaisLesao: comAtual({ corpo: 'Corpo', cabeca: 'Cabeça' }, tipo === 'lesao' && fonte.local),
       pericias: comAtual(Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), tipo === 'arma' && fonte.pericia),
-      qualidades: comAtual(QUALIDADES, tipo === 'arma' && fonte.qualidade),
+      qualidades: comAtual(QUALIDADES, (tipo === 'arma' || tipo === 'cyberdeck') && fonte.qualidade),
       tiposCyberware: comAtual(TIPOS_CYBERWARE, tipo === 'cyberware' && fonte.tipo),
       usos: USOS,
       ativacoes: ATIVACOES,
       tiposRoupa: comAtual(TIPOS_ROUPA, tipo === 'roupa' && fonte.tipo),
       estilosRoupa: comAtual(ESTILOS_ROUPA, tipo === 'roupa' && fonte.estilo),
+      classesPrograma: comAtual(CLASSES_PROGRAMA, tipo === 'programa' && fonte.classe),
+      // Programa: os cyberdecks do mesmo ator. Um deck que não existe mais conta como fora do deck.
+      decks: { '': 'Fora do deck', ...Object.fromEntries((item.actor?.items.filter(i => i.type === 'cyberdeck') ?? []).map(deck => [deck.id, deck.name])) },
+      deckAtual: item.deck?.id ?? '',
+      instalados: item.instalados.map(i => i.name).join(', '),
+      slotsUsados: item.slotsUsados,
       efeitos: item.effects.map(efeito => ({
         id: efeito.id, nome: efeito.name, ativo: efeito.active, desligado: efeito.disabled, ligavel: ligaAMao(item),
         mudancas: efeito.system.changes.map(c => `${c.key.replace(/^system\./, '')} ${c.type === 'add' ? '+' : c.type} ${c.value}`).join(' · ')

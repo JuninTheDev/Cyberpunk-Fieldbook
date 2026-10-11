@@ -11,7 +11,9 @@
       "lesao": "Lesão crítica",
       "equipamento": "Equipamento",
       "roupa": "Roupa",
-      "droga": "Droga"
+      "droga": "Droga",
+      "cyberdeck": "Cyberdeck",
+      "programa": "Programa"
     }
   }
 }

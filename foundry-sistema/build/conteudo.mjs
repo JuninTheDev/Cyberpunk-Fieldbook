@@ -260,14 +260,35 @@ function droga(doc, s) {
     }
   };
 }
-// O pack de equipamento do CORE traz também duas bases de cyberware externas (Battleglove e Smart Glasses) e os
-// cyberdecks, que ainda não têm tipo neste sistema (null: fica de fora, e o build lista).
-const doPackDeEquipamento = (doc, s) => (doc.type === 'gear' ? equipamento(doc, s) : doc.type === 'cyberware' ? cyberware(doc, s) : null);
+// NET: o cyberdeck (os slots) e o programa (ATK, DEF, REZ, o dano e o tamanho no deck).
+function cyberdeck(doc, s) {
+  return {
+    name: doc.name, type: 'cyberdeck', img: 'icons/svg/net.svg',
+    system: {
+      descricao: s.description?.value || '', slots: Number(s.installedItems?.slots) || 0, qualidade: s.quality || 'standard', uso: 'carregando',
+      preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+    }
+  };
+}
+function programa(doc, s) {
+  return {
+    name: doc.name, type: 'programa', img: 'icons/svg/lightning.svg',
+    system: {
+      descricao: s.description?.value || '', classe: s.class || '', atk: Number(s.atk) || 0, def: Number(s.def) || 0, rez: Number(s.rez?.max ?? s.rez) || 0,
+      dano: { padrao: String(s.damage?.standard ?? '0'), blackIce: String(s.damage?.blackIce ?? '0') }, tamanho: Number(s.size ?? 1), instaladoEm: '',
+      preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+    }
+  };
+}
+// O pack de equipamento do CORE traz também os cyberdecks e duas bases de cyberware externas (Battleglove e Smart
+// Glasses). Um tipo que este sistema não tem devolve null: fica de fora, e o build lista.
+const TIPOS_DO_PACK_DE_EQUIPAMENTO = { gear: equipamento, cyberware, cyberdeck };
+const doPackDeEquipamento = (doc, s) => TIPOS_DO_PACK_DE_EQUIPAMENTO[doc.type]?.(doc, s) ?? null;
 
 const CONVERSORES = {
   'core/weapons': arma, 'core/armor': armadura, 'core/ammo': municao, 'core/cyberware': cyberware,
   'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao,
-  'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga
+  'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga, 'core/programs': programa
 };
 
 // Tabelas de Lesão Crítica (2d6): faixas [mín, máx, id do item no catálogo], uma do corpo e uma da cabeça.

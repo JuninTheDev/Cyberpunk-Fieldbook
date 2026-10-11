@@ -42,9 +42,21 @@
     <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
     <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
     {{/if}}
-    {{#if inventario}}
-    <label>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}} <input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>
-    <label>Uso <select name="system.uso">{{selectOptions usos selected=fonte.uso}}</select></label>
+    {{#if temQuantidade}}<label>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}} <input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>{{/if}}
+    {{#if temUso}}<label>Uso <select name="system.uso">{{selectOptions usos selected=fonte.uso}}</select></label>{{/if}}
+    {{#if eh.cyberdeck}}
+    <label>Slots <input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
+    <label>Qualidade <select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
+    <p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso{{#if instalados}}: {{instalados}}{{/if}}.</p>
+    {{/if}}
+    {{#if eh.programa}}
+    <label>Classe <select name="system.classe">{{selectOptions classesPrograma selected=fonte.classe}}</select></label>
+    <label>ATK <input type="number" name="system.atk" value="{{fonte.atk}}"></label>
+    <label>DEF <input type="number" name="system.def" value="{{fonte.def}}"></label>
+    <label>REZ <input type="number" name="system.rez" value="{{fonte.rez}}" min="0"></label>
+    <label>Dano <input type="text" name="system.dano.padrao" value="{{fonte.dano.padrao}}"> contra Black ICE <input type="text" name="system.dano.blackIce" value="{{fonte.dano.blackIce}}"></label>
+    <label>Slots no deck <input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
+    <label>Instalado em <select name="system.instaladoEm">{{selectOptions decks selected=deckAtual}}</select></label>
     {{/if}}
     {{#if eh.equipamento}}
     <label>Os efeitos valem <select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>

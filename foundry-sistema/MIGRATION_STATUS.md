@@ -31,15 +31,16 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | habilidades das outras Roles | falta |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
-| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas e drogas do CORE; o resto vira aviso |
+| cpr-2077 | importação da wiki | parcial: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, cyberdecks e programas do CORE (os programas no deck); o resto vira aviso |
 | cpr-2077 | volta da ficha para a wiki, pedidos da loja, crossover entre campanhas, armas de 2077 | falta |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
 
-1. **O importador descarta** cyberdecks, programas, upgrades (acessórios e hardware), veículos e o conteúdo de 2077 da
-   loja (armas, netrunning e cyberware) (`scripts/wiki.mjs`). Equipamento, roupas e drogas já entram (ciclo 8).
+1. **O importador descarta** upgrades (acessórios e hardware), veículos e o conteúdo de 2077 da loja (armas, netrunning
+   e cyberware) (`scripts/wiki.mjs`). Equipamento, roupas e drogas já entram (ciclo 8); cyberdecks e programas, com os
+   programas no deck (ciclo 9).
 2. **Sem volta da ficha para a wiki:** a wiki pararia de receber o estado da mesa.
 3. **Sem migração de dados entre versões do sistema** (ainda não há mundo real para migrar).
 4. **Faltam a NET e as armas de 2077,** que a campanha usa.
@@ -316,3 +317,39 @@ O ciclo 8 (P2) começou pelo exame dos tipos de cyberware do catálogo e achou u
 - **Ficou:** cyberdeck e programa, os upgrades (acessório e hardware), os veículos e o conteúdo de 2077 (P2); usar a
   droga (dose, duração, vício); o não acumular do Medscanner e do Techscanner; a luz no token.
 - **Próximo:** ciclo 9, cyberdeck e programa, com os programas no deck (P2, bloqueador da migração).
+- **Commit:** `6aa6850`.
+
+### Ciclo 9 (2026-10-11): cyberdeck e programa (P2, bloqueador da migração)
+
+- **Implementado:**
+  - **Tipos novos:** `cyberdeck` (os slots, a qualidade e o uso) e `programa` (classe, ATK, DEF, REZ, o dano contra
+    programa ou netrunner e contra Black ICE, o tamanho no deck). O campo `instaladoEm` liga o programa ao deck do mesmo
+    ator. O item sabe os instalados num deck, os slots usados e o deck de um programa;
+  - **Conversão:** os 3 cyberdecks do pack de equipamento do CORE e os 15 programas. Os efeitos dos boosters (+2 em
+    Cloak, Pathfinder, Speed e Backdoor, que são habilidades da Interface) ficam de fora até existir a NET, e o build
+    os lista;
+  - **Compêndio:** Netrunning (decks e programas);
+  - **Importação:** os programas entram no cyberdeck em que a montagem da wiki os pôs (`em`), pelo uid da wiki;
+  - **Ficha:** na aba Equipamento, os cyberdecks (os slots usados e os programas de cada um) e a lista de programas (a
+    classe, os números e o deck). As duas só aparecem para quem tem um deles. Na ficha do item, os campos do deck (com
+    os instalados) e do programa (com o select "Instalado em").
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 28 de 28. Novos ou ampliados:
+    - os decks e os programas do CORE que a loja da wiki vende existem no catálogo;
+    - os 15 programas têm o ATK, a DEF, o REZ, a classe e o custo da página de NET da wiki;
+    - os 3 decks têm os slots da loja;
+  - G4: 41 de 41, cerca de 42 s. Passos novos:
+    - um Netrunner (Rato de Rua) criado na wiki de teste: a montagem põe 5 programas no deck;
+    - importado, o deck fica com 5 de 7 slots, os 5 programas dentro, o uso da wiki e nenhum aviso;
+    - a ficha mostra a linha do deck e as 5 de programa, e a ficha do programa aponta para o deck;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Achado na wiki:** o gerador da loja (`foundry-2077/build/loja.mjs`, `programData`) lê `s.rez?.max`, mas o `rez` dos
+  programas do CORE 0.92.4 é um número. A loja mostra REZ 0 em todos os programas do RED; a página de NET e as regras
+  da wiki têm os valores certos (Armor, REZ 7). O gerador precisa do Foundry 12 com o CORE para rodar, e por isso ficou
+  como está. O sistema converte direto do CORE.
+- **Ficou:** o hardware de deck e os acessórios (os upgrades), os veículos e o conteúdo de 2077 (P2); as regras da NET
+  (P3).
+- **Próximo:** ciclo 10, os upgrades (acessório de arma e hardware de cyberdeck) no lugar da montagem (P2, bloqueador
+  da migração).

@@ -222,6 +222,39 @@ export class DadosDroga extends foundry.abstract.TypeDataModel {
   }
 }
 
+// NET: o cyberdeck (os slots) e os programas. instaladoEm: o id, no mesmo ator, do cyberdeck onde o programa está; vazio,
+// fora de deck.
+export class DadosCyberdeck extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      slots: inteiro(7, { min: 0 }),
+      qualidade: texto('standard'),
+      uso: usoDoItem('carregando'),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+}
+
+export class DadosPrograma extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      classe: texto(),
+      atk: inteiro(0),
+      def: inteiro(0),
+      rez: inteiro(0, { min: 0 }),
+      // O dano do programa de ataque: contra programa e netrunner, e contra Black ICE.
+      dano: new fields.SchemaField({ padrao: texto('0'), blackIce: texto('0') }),
+      tamanho: inteiro(1, { min: 0 }),
+      instaladoEm: texto(),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+}
+
 export class DadosLesao extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {

@@ -38,6 +38,7 @@
   </ol>
 
   {{#each inventario}}
+  {{#if (or itens.length (not opcional))}}
   <h3>{{titulo}}</h3>
   <ol class="itens">
     {{#each itens}}
@@ -50,7 +51,22 @@
     </li>
     {{else}}<li class="vazio">{{vazio}}</li>{{/each}}
   </ol>
+  {{/if}}
   {{/each}}
+
+  {{#if programas.length}}
+  <h3>Programas</h3>
+  <ol class="itens">
+    {{#each programas}}
+    <li data-item-id="{{id}}">
+      <img src="{{img}}" alt="">
+      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <span class="detalhe">{{detalhe}}</span>
+      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+    </li>
+    {{/each}}
+  </ol>
+  {{/if}}
 
   <h3>Dinheiro e reputação</h3>
   <div class="campos">
