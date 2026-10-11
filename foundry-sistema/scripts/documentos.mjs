@@ -65,7 +65,8 @@ export class AtorCPR extends Actor {
   // Aplica um dano já rolado (no cliente do mestre). Devolve o resumo para o cartão e para o "Desfazer".
   // local: "corpo", "cabeca", "perna" ou "item" (a armadura do corpo protege a perna e o item na mão).
   // escudo: o alvo se protegeu com o escudo, que leva o dano antes; só explosivo passa de um escudo destruído.
-  async receberDano({ dano, bonus = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, ablacao = 1, letal = true, escudo = false, explosivo = false }) {
+  // reducao: o que sai do dano que entra (a Deflexão de Dano do Solo).
+  async receberDano({ dano, bonus = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, ablacao = 1, letal = true, escudo = false, explosivo = false, reducao = 0 }) {
     const hpAntes = this.system.hp.value;
     const resumo = { local, dano, bonus, hpAntes, ablado: 0, escudoAblado: 0, armadura: null, armaduraId: null };
     const protecao = escudo ? this.escudo : null;
@@ -74,11 +75,11 @@ export class AtorCPR extends Actor {
       await protecao.update({ 'system.pvEscudo.value': protecao.system.pvEscudo.value - resumo.escudoAblado });
       resumo.escudo = protecao.name;
       resumo.escudoId = protecao.id;
-      if (!explosivo || protecao.system.pvEscudo.value > 0) return { ...resumo, sp: 0, spEfetivo: 0, passou: false, bruto: 0, recebido: 0, hpDepois: hpAntes };
+      if (!explosivo || protecao.system.pvEscudo.value > 0) return { ...resumo, sp: 0, spEfetivo: 0, passou: false, bruto: 0, entrou: 0, recebido: 0, hpDepois: hpAntes };
     }
     const lugar = localDaArmadura(local);
     const armadura = this.system.armadura[lugar] || { sp: 0, item: null };
-    const conta = aplicarDano({ dano, bonus, sp: armadura.sp, local, ignorarPct, ignorarAbaixo, letal, hpAtual: hpAntes });
+    const conta = aplicarDano({ dano, bonus, sp: armadura.sp, local, ignorarPct, ignorarAbaixo, reducao, letal, hpAtual: hpAntes });
     await this.update({ 'system.hp.value': hpAntes - conta.recebido });
     const item = conta.ablar && armadura.item ? this.items.get(armadura.item) : null;
     if (item && ablacao) {
@@ -88,7 +89,8 @@ export class AtorCPR extends Actor {
       resumo.armadura = item.name;
       resumo.armaduraId = item.id;
     }
-    return { ...resumo, ...conta, sp: armadura.sp, lugar, hpDepois: this.system.hp.value };
+    // entrou: o dano que chegou ao corpo antes das reduções (o que passou da armadura e o bônus do crítico).
+    return { ...resumo, ...conta, entrou: conta.bruto + bonus, sp: armadura.sp, lugar, hpDepois: this.system.hp.value };
   }
 
   // Desfaz um dano aplicado: o HP perdido, o SP da armadura e os pontos do escudo voltam. Pela diferença, e não pelo
@@ -142,6 +144,7 @@ export class ItemCPR extends Item {
     if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
     const daLesao = this.system.aDistancia ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
     if (daLesao) partes.push({ rotulo: 'Lesões', valor: daLesao });
+    if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });
     return { pericia: p, partes };
   }
 

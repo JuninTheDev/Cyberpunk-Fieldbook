@@ -26,6 +26,12 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   esperado.
 - **Dúvida de regra** vira pergunta registrada no MIGRATION_STATUS.md, não interpretação nova.
 - **Dados nos testes:** a conta fica com os dados fixos (`CONFIG.Dice.randomUniform` no cenário).
+- **Passo novo no cenário** devolve o que mudou (balas, habilidades, HP): os passos seguintes contam com o estado de
+  antes. Para trocar um objeto inteiro (as habilidades da Role, um `TypedObjectField`), use `_replace(...)`; o `update`
+  só mescla.
+- **Aviso esperado** (um `ui.notifications.warn` que o passo provoca de propósito) é capturado e conferido no próprio
+  passo. Solto no console, o G4 o pegaria como problema.
+- **Teste de uma correção** é provado falhando sem ela. A mutação é desfeita antes do commit.
 
 ## Build
 

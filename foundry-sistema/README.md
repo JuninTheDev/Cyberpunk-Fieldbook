@@ -17,7 +17,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   Funcionam no chat, em macros e no Dice So Nice.
 - **Testes:** clique no atributo (STAT + 1d10) ou na perícia (STAT + perícia + 1d10). Entram:
   - o bônus dos efeitos;
-  - a penalidade de ferimento (−2 gravemente, −4 mortalmente);
+  - a penalidade de ferimento (−2 gravemente; −4 mortalmente, que também tira 6 de MOVE, com mínimo 1);
   - as lesões (−2 em todas as ações da Concussão, por exemplo);
   - a armadura pesada, que tira de REF, DEX e MOVE.
 - **Ataque, defesa e dano** (o Fluxo de Combate dentro do sistema). Marque os alvos (T) e use os botões da arma:
@@ -49,8 +49,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Penalidades:** a de base vem das lesões; a outra sobe 1 a cada sucesso e se zera na ficha quando o personagem estabiliza.
   - **Quando:** no combate, no começo do turno de quem está mortalmente ferido. O jogador rola no computador dele.
   - **Falhou:** morto, com o status e o combatente derrotado.
-- **Desfazer:** o cartão do resultado tem o botão, só para o mestre. Devolve o HP, o SP e o escudo, e tira as lesões e o Suprimido.
-- **Munição:** cada tiro sai do pente, e **↻** recarrega com a munição compatível da ficha.
+- **Consciência de Combate do Solo**, pelos pontos de cada habilidade da Role, como a wiki descreve:
+  - **Reação de Iniciativa:** +1 na iniciativa por ponto.
+  - **Ataque de Precisão:** +1 em todo ataque a cada 3 pontos.
+  - **Detecção de Ameaça:** +1 em Percepção por ponto.
+  - **Ponto Fraco:** +1 no dano (antes da armadura) do primeiro acerto da rodada, por ponto.
+  - **Deflexão de Dano:** −1 no primeiro dano sofrido na rodada a cada 2 pontos, até 5.
+  - **Recuperação de Falhas:** com 4 pontos, o 1 natural do ataque não tira um d10.
+
+  A rodada é a do combate de que o personagem participa. Fora de combate, o Ponto Fraco e a Deflexão valem toda vez.
+- **Desfazer:** o cartão do resultado tem o botão, só para o mestre. Devolve o HP, o SP e o escudo, tira as lesões e o Suprimido, e devolve o Ponto Fraco e a Deflexão que o ataque gastou.
+- **Munição:** cada tiro sai do pente, e **↻** recarrega com a munição compatível da ficha. O ataque de um jogador sem mestre na mesa para antes de gastar a bala.
 - **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Lesões críticas e Personagens de exemplo. Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
 - **Cyberware:**
   - **Instalar** desconta a Humanidade pela perda rolada (Shift: pela média).
@@ -122,7 +131,8 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o mirado na cabeça e na perna;
   - o autofogo, o explosivo em área e o cartucho;
-  - a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele;
+  - a Consciência de Combate do Solo (com o Ponto Fraco e a Deflexão por rodada e o Desfazer) e o MOVE do mortalmente ferido;
+  - a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele, e o ataque dele sem mestre na mesa;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - a importação de um Solo feito no criador da wiki de teste;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.

@@ -50,7 +50,27 @@ test('EMP de agora: Humanidade / 10 para baixo, nunca acima da base (wiki)', () 
   assert.equal(regras.empAtual(0, 5), 0);
 });
 
+test('Mortalmente ferido: −6 MOVE, mínimo 1 (wiki)', () => {
+  assert.equal(regras.moveFinal(8, true), 2);
+  assert.equal(regras.moveFinal(5, true), 1);
+  assert.equal(regras.moveFinal(5, false), 5);
+  assert.equal(regras.moveFinal(0, false), 1, 'lesões e armadura também param no 1');
+});
+
+test('Consciência de Combate do Solo pelos pontos (wiki, e o bonusRatio do CORE)', () => {
+  const tudo = regras.consciencia({ 'Initiative Reaction': 2, 'Precision Attack': 3, 'Threat Detection': 2, 'Spot Weakness': 2, 'Damage Deflection': 3, 'Fumble Recovery': 4 });
+  assert.deepEqual(tudo, { iniciativa: 2, ataque: 1, percepcao: 2, pontoFraco: 2, deflexao: 1, semFalhaCritica: true });
+  assert.deepEqual(regras.consciencia({ 'Precision Attack': 2, 'Damage Deflection': 1, 'Fumble Recovery': 3 }), { iniciativa: 0, ataque: 0, percepcao: 0, pontoFraco: 0, deflexao: 0, semFalhaCritica: false });
+  assert.deepEqual(regras.consciencia(), { iniciativa: 0, ataque: 0, percepcao: 0, pontoFraco: 0, deflexao: 0, semFalhaCritica: false }, 'sem Role');
+  assert.equal(regras.consciencia({ 'Damage Deflection': 12 }).deflexao, 5, 'a Deflexão para em 5 (system-catalog.js)');
+});
+
 // ---------------- Dano e armadura (CORE _applyDamage) ----------------
+test('Redução no dano que entra (Deflexão de Dano): tira do que passou mais o bônus, sem curar', () => {
+  assert.equal(regras.aplicarDano({ dano: 17, sp: 11, reducao: 1, hpAtual: 40 }).recebido, 5);
+  assert.equal(regras.aplicarDano({ dano: 11, bonus: 0, sp: 11, reducao: 1, hpAtual: 40 }).recebido, 0, 'nada entrou: nada a reduzir');
+});
+
 test('Dano contra armadura: só o bônus do crítico quando não passa; cabeça ×2; ablação quando passa', () => {
   const segurou = regras.aplicarDano({ dano: 10, bonus: 5, sp: 11, hpAtual: 40 });
   assert.deepEqual([segurou.recebido, segurou.passou, segurou.ablar], [5, false, false]);

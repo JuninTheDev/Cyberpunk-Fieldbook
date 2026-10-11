@@ -15,7 +15,9 @@
       <ul class="dano">
         {{#if dano.escudo}}<li>O escudo ({{dano.escudo}}) levou {{dano.escudoAblado}}.</li>{{/if}}
         {{#if (or dano.lugar (not dano.escudo))}}<li>Dano <b>{{dano.dano}}</b>{{#if multiplicador}} (2d6 × {{multiplicador}}){{/if}} contra SP {{dano.spEfetivo}}{{#if (ne dano.spEfetivo dano.sp)}} (de {{dano.sp}}){{/if}}{{#if dano.armadura}} ({{dano.armadura}}){{/if}}: {{#if dano.passou}}passaram {{dano.bruto}}{{#if (eq dano.local "cabeca")}} (cabeça ×2){{/if}}{{else}}a armadura segurou{{/if}}.</li>{{/if}}
+        {{#if dano.pontoFraco}}<li>Ponto Fraco: +{{dano.pontoFraco}} no dano (primeiro acerto da rodada).</li>{{/if}}
         {{#if dano.bonus}}<li>Crítico: +{{dano.bonus}} direto no HP.</li>{{/if}}
+        {{#if dano.deflexao}}<li>Deflexão de Dano: −{{dano.deflexao}} (primeiro dano da rodada).</li>{{/if}}
         <li><b>Perdeu {{dano.recebido}} HP</b> ({{dano.hpAntes}} → {{dano.hpDepois}}){{#if dano.ablado}}; a armadura perdeu {{dano.ablado}} de SP{{/if}}.</li>
         {{#each dano.lesoes}}<li class="lesao">Lesão crítica: <b>{{nome}}</b>.</li>{{/each}}
       </ul>

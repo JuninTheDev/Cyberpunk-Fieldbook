@@ -62,7 +62,8 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       const t = info.tamanhos;
       const s = info.resumo;
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 105 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 10 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 105 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -72,6 +73,18 @@ module.exports = async ({ edge, servidores, r }) => {
         return { hp: a.system.hp.max, hum: a.system.humanidade.max, sorte: a.system.sorte.max, emp: a.system.empAtual, ligado: a.prototypeToken.actorLink, barra: a.prototypeToken.bar1.attribute, estado: a.system.ferimento.chave, ini: a.system.iniciativa };
       })()`);
       return [info.hp === 45 && info.hum === 50 && info.sorte === 6 && info.emp === 5 && info.ligado && info.barra === 'hp' && info.estado === 'ileso' && info.ini === 8, JSON.stringify(info)];
+    });
+
+    await r.passo('mortalmente ferido: −6 MOVE (mínimo 1); volta quando o HP sobe', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const a = await Actor.implementation.create({ name: 'Ferido', type: 'personagem', system: { atributos: { move: { valor: 8 } }, hp: { value: 0 } } });
+        const mortal = a.system.atributos.move.valor;
+        await a.update({ 'system.hp.value': 30 });
+        const vivo = a.system.atributos.move.valor;
+        await a.delete();
+        return { mortal, vivo };
+      })()`);
+      return [info.mortal === 2 && info.vivo === 8, JSON.stringify(info)];
     });
 
     await r.passo('teste de perícia: REF 8 + Pistola 4 + 1d10; o 10 soma mais um d10 e o 1 tira um d10', async () => {
@@ -260,6 +273,69 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.ataque === 31 && l.dv === 20 && l.mult === 4 && l.dano?.dano === 28 && l.dano.recebido === 28 - info.sp && info.hp === 45 - (28 - info.sp) && info.gastou === 10, JSON.stringify(info)];
     });
 
+    await r.passo('Solo, Consciência de Combate: Reação de Iniciativa, Detecção de Ameaça, Ataque de Precisão e Recuperação de Falhas', async () => {
+      // Pontos: Reação 2, Precisão 3 (+1), Detecção 2, Recuperação 4. Ataque com o 1 natural: sem tirar d10 (o 9 da fila
+      // não é usado). 8 + 4 + 1 (Precisão) + 1 = 14 contra DV 16: erra.
+      await fixar(edge, [[1, 10], [9, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const pente = a.items.getName('Assault Rifle').system.pente.value;
+        await a.update({ 'system.role.habilidades': _replace({ 'Initiative Reaction': 2, 'Precision Attack': 3, 'Threat Detection': 2, 'Fumble Recovery': 4 }) });
+        const partes = a.items.getName('Assault Rifle').partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor);
+        const r = await a.items.getName('Assault Rifle').atacar({ alvo: __token('Alvo') });
+        const m = game.messages.contents.findLast(x => x.getFlag('${S}', 'teste')?.ataque);
+        const resultado = { ini: a.system.iniciativa, percepcao: a.system.pericia('perception').bonus, partes, ataque: r.ataque, critico: m.getFlag('${S}', 'teste').critico, formula: m.rolls[0].formula, sobrou: window.__fila.length };
+        window.__fila = [];
+        await a.update({ 'system.role.habilidades': _replace({}) });
+        await a.items.getName('Assault Rifle').update({ 'system.pente.value': pente });
+        return resultado;
+      })()`);
+      return [info.ini === 12 && info.percepcao === 2 && info.partes.includes('Ataque de Precisão 1') && info.ataque === 14 && info.critico === null && /1d10xo/.test(info.formula) && info.sobrou === 1, JSON.stringify(info)];
+    });
+
+    await r.passo('Solo: Ponto Fraco (+2 no dano) e Deflexão de Dano (−1) só no primeiro acerto e no primeiro dano da rodada; o Desfazer devolve; voltam na rodada seguinte', async () => {
+      // Atiradora com Ponto Fraco 2; Alvo com Deflexão 2 (−1). Rodada 1: um tiro desfeito e mais dois; rodada 2: um tiro.
+      // Cada tiro: d10 8 → 8 + 4 + 8 = 20 contra DV 16. Dano 5d6: 3 + 3 + 3 + 3 + 3 = 15.
+      const tiro = '[[8, 10], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]';
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const alvo = __ator('Alvo');
+        const pente = a.items.getName('Assault Rifle').system.pente.value;
+        await a.update({ 'system.role.habilidades': _replace({ 'Spot Weakness': 2 }) });
+        await alvo.update({ 'system.role.habilidades': _replace({ 'Damage Deflection': 2 }), 'system.hp.value': 45 });
+        const cena = canvas.scene;
+        const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+        await combate.createEmbeddedDocuments('Combatant', ['Atiradora', 'Alvo'].map(n => ({ tokenId: __token(n).id, sceneId: cena.id, actorId: __ator(n).id })));
+        await combate.startCombat();
+        const tiros = [];
+        const atirar = async () => {
+          window.__fila = ${tiro};
+          const sp = alvo.system.armadura.corpo.sp;
+          const r = await a.items.getName('Assault Rifle').atacar({ alvo: __token('Alvo') });
+          const d = r.linhas[0].dano;
+          tiros.push({ rodada: combate.round, sp, dano: d.dano, pontoFraco: d.pontoFraco, deflexao: d.deflexao, recebido: d.recebido });
+        };
+        await atirar();
+        const desfeito = await game.system.api.combate.desfazer(game.messages.contents.findLast(m => m.getFlag('${S}', 'desfazer')?.length));
+        const hpDesfeito = alvo.system.hp.value;
+        await atirar();
+        await atirar();
+        await combate.nextRound();
+        await atirar();
+        await combate.delete();
+        await a.update({ 'system.role.habilidades': _replace({}) });
+        await a.items.getName('Assault Rifle').update({ 'system.pente.value': pente });
+        await alvo.update({ 'system.role.habilidades': _replace({}), 'system.hp.value': 45 });
+        return { desfeito, hpDesfeito, tiros };
+      })()`);
+      const [t0, t1, t2, t3] = info.tiros;
+      const ok = info.desfeito === true && info.hpDesfeito === 45 && t0.dano === 17 && t0.pontoFraco === 2 && t0.deflexao === 1 && t1.sp === t0.sp
+        && t1.rodada === 1 && t1.dano === 17 && t1.pontoFraco === 2 && t1.deflexao === 1 && t1.recebido === 17 - t1.sp - 1
+        && t2.rodada === 1 && t2.dano === 15 && t2.pontoFraco === 0 && t2.deflexao === 0 && t2.recebido === 15 - t2.sp
+        && t3.rodada === 2 && t3.dano === 17 && t3.pontoFraco === 2 && t3.deflexao === 1 && t3.recebido === 17 - t3.sp - 1;
+      return [ok, JSON.stringify(info)];
+    });
+
     // ---------- O jogador do alvo defende no computador dele ----------
     await r.passo('jogador: entra no mesmo mundo, dono do Alvo (agora REF 8, pode esquivar de tiro)', async () => {
       await edge.evaluate(`(async () => {
@@ -352,7 +428,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.modo === 'cartucho' && /acertou/.test(info.cabecalho) && capanga?.dano?.dano === 6 && info.capanga === antes.capanga - 6 && alvo?.resultado === 'fora' && info.alvo === antes.alvo, JSON.stringify({ antes, ...info })];
     });
 
-    await r.passo('jogador ataca: rola no computador dele, o mestre resolve e pede o dano, que o jogador rola (12)', async () => {
+    await r.passo('jogador ataca: sem mestre não gasta bala; com mestre, rola no computador dele, o mestre resolve e pede o dano, que o jogador rola (12)', async () => {
       // Alvo (do Jogador) com a pistola pesada: d10 9 → REF 8 + Pistola 3 + 9 = 20 contra DV 13 (Pistol, 0–6 m: o Capanga a 6 m). Dano 3d6: 4 + 4 + 4 = 12.
       await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
@@ -366,6 +442,17 @@ module.exports = async ({ edge, servidores, r }) => {
         await alvo.items.getName('Heavy Pistol').recarregar();
         return true;
       })()`);
+      const semMestre = await jogador.evaluate(`(async () => {
+        const pistola = game.actors.getName('Alvo').items.getName('Heavy Pistol');
+        const pente = pistola.system.pente.value;
+        const mensagens = game.messages.size;
+        const avisos = [];
+        Object.defineProperty(game.users, 'activeGM', { value: null, configurable: true });
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let r;
+        try { r = await pistola.atacar({ alvo: canvas.scene.tokens.find(t => t.name === 'Capanga') }); } finally { delete game.users.activeGM; delete ui.notifications.warn; }
+        return { resultado: r, avisos, gastou: pente - pistola.system.pente.value, rolou: game.messages.size - mensagens, mestreDeVolta: Boolean(game.users.activeGM) };
+      })()`);
       const antes = await edge.evaluate(`__ator('Capanga').system.hp.value`);
       await fixar(jogador, [[9, 10], [4, 6], [4, 6], [4, 6]]);
       const pedido = await jogador.evaluate(`(async () => {
@@ -376,7 +463,8 @@ module.exports = async ({ edge, servidores, r }) => {
       let depois = antes;
       for (let i = 0; i < 40 && depois === antes; i++) { await edge.sleep(250); depois = await edge.evaluate(`__ator('Capanga').system.hp.value`); }
       const autorDoDano = await edge.evaluate(`game.messages.contents.findLast(m => /Dano: Heavy Pistol/.test(m.content))?.author?.name ?? null`);
-      return [pedido?.total === 20 && depois === antes - 12 && autorDoDano === 'Jogador', JSON.stringify({ pedido, antes, depois, autorDoDano })];
+      return [semMestre.resultado === null && /Sem mestre na mesa/.test(semMestre.avisos.join()) && semMestre.gastou === 0 && semMestre.rolou === 0 && semMestre.mestreDeVolta && pedido?.total === 20 && depois === antes - 12 && autorDoDano === 'Jogador',
+        JSON.stringify({ semMestre, pedido, antes, depois, autorDoDano })];
     });
 
     await r.passo('fogo supressivo sem alvo: pega quem está a até 25 m (Alvo e Capanga, não o Longe); quem perde a Concentração fica Suprimido', async () => {

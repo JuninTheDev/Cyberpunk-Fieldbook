@@ -107,6 +107,8 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (modo === 'supressivo' && !tokenAtq) { ui.notifications.warn(`Ponha o token de ${atacante.name} na cena para o fogo supressivo.`); return null; }
   if (modo === 'supressivo' && !arma.system.supressivo) { ui.notifications.warn(`${arma.name} não faz fogo supressivo.`); return null; }
   if (modo === 'autofogo' && !arma.system.autofogo) { ui.notifications.warn(`${arma.name} não tem autofogo.`); return null; }
+  // Sem mestre na mesa ninguém resolve o ataque de um jogador: avisa antes de gastar a bala e de rolar.
+  if (!game.user.isGM && !game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque precisa do mestre para resolver a defesa e o dano.'); return null; }
   if (arma.system.aDistancia && arma.system.pente.max) {
     const balas = R.balasDoModo(modo);
     if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${modo === 'tiro' ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
@@ -117,10 +119,11 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
   const descricao = R.descreverAtaque({ modo, local });
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
-  const { total, mensagem } = await testar(atacante, { rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes, modo: 'gm', dados: { ataque: true } });
+  const { total, mensagem } = await testar(atacante, {
+    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes, modo: 'gm', dados: { ataque: true }, semFalhaCritica: atacante.system.consciencia.semFalhaCritica
+  });
   const dados = { id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id };
   if (game.user.isGM) return resolver(dados, game.user);
-  if (!game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque ficou só na rolagem.'); return null; }
   game.socket.emit(CANAL, { tipo: 'ataque', pedido: dados, de: game.user.id });
   return dados;
 }
@@ -177,7 +180,7 @@ async function contexto(pedido, usuario) {
   return {
     pedido, usuario, arma, atacante, tokenAtq, cena: tokenAtq?.parent ?? alvos[0]?.parent ?? canvas.scene, alvos,
     modo: pedido.modo, local: pedido.local, descricao: R.descreverAtaque(pedido), nomeAtq: tokenAtq?.name ?? atacante.name,
-    linhas: [], notas: [], rolagens: [], cabecalho: ''
+    linhas: [], notas: [], rolagens: [], marcas: [], cabecalho: ''
   };
 }
 
@@ -279,30 +282,63 @@ async function defesaDoAlvo(ctx, linha, alvo, dv) {
 }
 
 // ---------------- Dano ----------------
-// Quem atacou rola, se for um jogador conectado; senão (ou se ele não responder), o mestre.
+// "O primeiro da rodada" (Ponto Fraco e Deflexão de Dano do Solo): uma vez por rodada do combate de que o ator participa,
+// marcado nele; fora de combate não há rodada, e toda vez conta como a primeira. As marcas do ataque vão para o cartão:
+// o "Desfazer" as devolve.
+const combateDe = ator => game.combats.find(combate => combate.started && combate.combatants.some(c => c.actor === ator)) ?? null;
+function primeiraNaRodada(ator, chave) {
+  const combate = combateDe(ator);
+  const marca = combate ? ator.getFlag(SISTEMA, chave) : null;
+  return !(marca && marca.combate === combate.id && marca.rodada === combate.round);
+}
+async function marcarRodada(ctx, ator, chave) {
+  const combate = combateDe(ator);
+  if (!combate) return;
+  const marca = { combate: combate.id, rodada: combate.round };
+  await ator.setFlag(SISTEMA, chave, marca);
+  ctx.marcas.push({ ator: ator.uuid, chave, ...marca });
+}
+
+// Quem atacou rola, se for um jogador conectado; senão (ou se ele não responder), o mestre. O Ponto Fraco do Solo soma
+// no dano (antes da armadura) do primeiro acerto dele na rodada.
 async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}) {
+  let dano = null;
   const jogador = !ctx.usuario.isGM && ctx.usuario.active ? ctx.usuario : null;
   if (jogador && config('jogadorRolaDano')) {
     const resposta = await pedir(jogador, 'dano', { arma: ctx.arma.uuid, multiplicador, formula });
-    if (Number.isFinite(Number(resposta?.total))) return resposta;
-    ctx.notas.push(`${jogador.name} não rolou o dano a tempo: o mestre rolou.`);
+    if (Number.isFinite(Number(resposta?.total))) dano = resposta;
+    else ctx.notas.push(`${jogador.name} não rolou o dano a tempo: o mestre rolou.`);
   }
-  const dano = await rolarDano(ctx.arma, { multiplicador, formula });
-  ctx.rolagens.push(dano.roll);
-  return { total: dano.total, critico: dano.critico, bonus: dano.bonus, formula: dano.formula };
+  if (!dano) {
+    const rolado = await rolarDano(ctx.arma, { multiplicador, formula });
+    ctx.rolagens.push(rolado.roll);
+    dano = { total: rolado.total, critico: rolado.critico, bonus: rolado.bonus, formula: rolado.formula };
+  }
+  const pontoFraco = ctx.atacante.system.consciencia.pontoFraco;
+  if (pontoFraco && primeiraNaRodada(ctx.atacante, 'pontoFraco')) {
+    await marcarRodada(ctx, ctx.atacante, 'pontoFraco');
+    dano = { ...dano, total: dano.total + pontoFraco, pontoFraco };
+  }
+  return dano;
 }
 
 // Aplica o dano num alvo e cuida das lesões: dois 6 (a tabela da cabeça só no tiro mirado na cabeça), tiro na perna
-// que passou da armadura (Perna quebrada), mortalmente ferido atingido de novo.
+// que passou da armadura (Perna quebrada), mortalmente ferido atingido de novo. A Deflexão de Dano do Solo tira do
+// primeiro dano que ele sofre na rodada.
 async function ferir(ctx, linha, dano, { escudo = false } = {}) {
   const ator = linha.token.actor;
   const jaMortal = ator.system.hp.value < 1;
   const municao = ctx.arma.municaoCarregada;
+  const deflexao = ator.system.consciencia.deflexao && primeiraNaRodada(ator, 'deflexao') ? ator.system.consciencia.deflexao : 0;
   const efeito = await ator.receberDano({
     dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.arma.system.ignorarArmadura, ignorarAbaixo: ctx.arma.system.ignorarAbaixo,
-    ablacao: municao?.system.ablacao ?? 1, letal: municao?.system.efeito !== 'rubber', escudo, explosivo: ctx.modo === 'explosivo'
+    ablacao: municao?.system.ablacao ?? 1, letal: municao?.system.efeito !== 'rubber', escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
   });
-  linha.dano = { ...efeito, critico: dano.critico, formula: dano.formula, lesoes: [] };
+  // A deflexão só se gasta quando entra dano de verdade: o que a armadura ou o escudo seguraram inteiro não é "dano
+  // sofrido".
+  const sofreu = deflexao > 0 && efeito.entrou > 0;
+  if (sofreu) await marcarRodada(ctx, ator, 'deflexao');
+  linha.dano = { ...efeito, critico: dano.critico, formula: dano.formula, pontoFraco: dano.pontoFraco || 0, deflexao: sofreu ? deflexao : 0, lesoes: [] };
   const modo = config('lesaoCritica');
   const lesao = async opcoes => {
     if (modo === 'nao') return;
@@ -459,11 +495,12 @@ async function cartaoDoResultado(ctx) {
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map(l => ({ ...l, contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 });
-  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, flags: { [SISTEMA]: { ataque: resumo, desfazer } } });
+  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, flags: { [SISTEMA]: { ataque: resumo, desfazer, marcas: ctx.marcas } } });
   return resumo;
 }
 
-// Desfaz o resultado de um ataque: HP, armadura e escudo voltam, e as lesões e o Suprimido saem da ficha.
+// Desfaz o resultado de um ataque: HP, armadura e escudo voltam, e as lesões e o Suprimido saem da ficha. O Ponto Fraco
+// e a Deflexão de Dano gastos nele voltam, se a marca ainda for a deste ataque (o mesmo combate e a mesma rodada).
 export async function desfazer(mensagem) {
   if (!game.user.isGM) return false;
   const lista = mensagem.getFlag(SISTEMA, 'desfazer');
@@ -478,6 +515,11 @@ export async function desfazer(mensagem) {
       await ator.toggleStatusEffect(STATUS_SUPRIMIDO, { active: false });
       await ator.unsetFlag(SISTEMA, 'suprimido');
     }
+  }
+  for (const { ator: uuid, chave, combate, rodada } of mensagem.getFlag(SISTEMA, 'marcas') ?? []) {
+    const ator = await fromUuid(uuid);
+    const marca = ator?.getFlag(SISTEMA, chave);
+    if (marca?.combate === combate && marca.rodada === rodada) await ator.unsetFlag(SISTEMA, chave);
   }
   await mensagem.update({ [`flags.${SISTEMA}.desfeito`]: true });
   return true;

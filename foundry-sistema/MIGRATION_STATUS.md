@@ -14,8 +14,9 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   a pilha. Ela passou por fichas (todas as abas e um item de cada tipo), testes, Death Save, tiro, mirado, supressivo com
   parede, combate com turnos, Desfazer e importação de compêndio. Resultado: **0 avisos e 0 erros**. A captura foi
   provada com um aviso de propósito (`CONST.ACTIVE_EFFECT_MODES`).
-- **Fora da captura de avisos:** os fluxos com dois navegadores (defesa e dano do jogador) e a importação da wiki. Os
-  testes cobrem esses fluxos, mas só pegam erros.
+- **Captura de avisos no G4:** desde o ciclo 2, o cenário captura os avisos nos dois navegadores, o do mestre e o do
+  jogador, e isso inclui a defesa e o dano do jogador e a importação da wiki. No ciclo 3, a captura pegou no navegador
+  do jogador um aviso provocado de propósito (o do "sem mestre na mesa"), antes de o passo passar a conferi-lo ele mesmo.
 - **APIs do v14 usadas e conferidas no código-fonte da instalação:** `system.changes` e `isSuppressed` nos efeitos;
   `messageMode` nas mensagens; ApplicationV2 nas fichas e janelas; `Die.MODIFIERS`; `measurePath`;
   `polygonBackends.sight.testCollision`; `toggleStatusEffect`.
@@ -26,7 +27,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | --- | --- | --- |
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
-| CORE | habilidades de Role com efeito no combate (as do Solo) | falta (ciclo 3) |
+| CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
+| CORE | habilidades das outras Roles | falta |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | parcial: armas, armaduras, munição e cyberware; o resto vira aviso |
@@ -49,6 +51,19 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 
 - **Arma branca contra SP ímpar.** Decidido em 2026-10-11: SP 11 → 6, como o CORE e o Fluxo. A wiki permite a leitura 5.
   Ver o ROADMAP.
+
+- **Ponto Fraco e Deflexão de Dano: muda o que a mesa vê.** A wiki diz "primeiro acerto da rodada" e "primeiro dano
+  sofrido na rodada" (system-criacao.js e system-catalog.js), e o sistema segue a wiki. No Foundry 12 os dois valem em
+  todo dano:
+  - a Deflexão, porque o Fluxo chama o `_applyDamage` do CORE com `damageReductionRole: true`;
+  - o Ponto Fraco, porque no CORE ele é um bônus situacional, ligado por padrão (`isSituational: true` e
+    `onByDefault: true` no role.solo.yaml).
+
+  Duas escolhas do sistema, que a wiki não detalha:
+  - a rodada é a do combate de que o personagem participa; fora de combate, os dois valem toda vez;
+  - a Deflexão só se gasta quando entra dano: o que a armadura ou o escudo seguram inteiro não conta como dano sofrido.
+
+  Se a mesa ler "rodada" como o turno de cada combatente, é só trocar a marca (`combate.mjs`, `primeiraNaRodada`).
 
 ## Registro dos ciclos
 
@@ -101,3 +116,41 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   - três armas exóticas do CORE não têm dano (Air Pistol, Microwaver, Shrieker): o efeito delas é especial e não é
     automático nem no CORE.
 - **Próximo:** ciclo 3, combate (habilidades do Solo, −6 MOVE do mortalmente ferido, munição depois de checar o mestre).
+
+### Ciclo 3 (2026-10-11): combate (P1)
+
+- **Implementado:**
+  - **Consciência de Combate do Solo**, pelos pontos de cada habilidade (`regras.consciencia`), como a wiki descreve:
+    - Reação de Iniciativa: +1 na iniciativa por ponto;
+    - Ataque de Precisão: +1 em todo ataque a cada 3 pontos (entra como parte do ataque);
+    - Detecção de Ameaça: +1 em Percepção por ponto;
+    - Ponto Fraco: +1 no dano (antes da armadura) do primeiro acerto da rodada, por ponto;
+    - Deflexão de Dano: −1 no primeiro dano sofrido na rodada a cada 2 pontos, até 5;
+    - Recuperação de Falhas: com 4 pontos, o 1 natural do ataque não tira um d10 (`1d10xo`; o 10 ainda soma).
+  - **As marcas da rodada** ficam no ator, pelo combate de que ele participa. Vão para o cartão do ataque, e o Desfazer
+    as devolve se ainda forem da mesma rodada. O cartão mostra as linhas do Ponto Fraco e da Deflexão.
+  - **Mortalmente ferido:** −6 MOVE, mínimo 1 (`regras.moveFinal`), como em system-rules.js. O mínimo 1 vale também
+    para o que as lesões e a armadura tiram, como antes.
+  - **Ataque de jogador sem mestre na mesa:** avisa e para antes de gastar a bala e de rolar. Antes, a bala saía, o
+    ataque era rolado e ficava sem resolução.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 22 de 22. Novos: o MOVE do mortal, a Consciência pelos pontos (com o teto da Deflexão) e a redução no dano que
+    entra;
+  - G4: 29 de 29, cerca de 27 s. Passos novos:
+    - o MOVE do mortalmente ferido;
+    - a Consciência: iniciativa 12, Percepção +2, e o ataque com o 1 natural somando 1, sem falha crítica;
+    - o Ponto Fraco e a Deflexão numa rodada, com um Desfazer no meio, e de novo na rodada seguinte;
+    - o ataque do jogador sem mestre: nenhuma bala gasta, nenhuma rolagem, e o aviso conferido.
+  - O teste do Desfazer foi provado: sem a devolução das marcas, o passo falhou (28 de 29).
+  - O Solo de exemplo passou de iniciativa 10 para 12, porque os 2 pontos de Reação de Iniciativa dele agora contam. O
+    teste mudou junto.
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Ficou:**
+  - redistribuir os pontos na ficha (P2);
+  - a Briga e as Artes Marciais, que ainda não existem, vão precisar do Ataque de Precisão e da Recuperação de Falhas
+    (P2);
+  - as habilidades das outras Roles.
+- **Próximo:** ciclo 4, lacunas de teste (escudo, "responder pelo jogador", corpo a corpo com esquiva, munição de
+  borracha, armadura pesada, a janela do mestre para NPC, os erros da importação).

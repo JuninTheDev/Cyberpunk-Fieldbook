@@ -57,8 +57,6 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     const armaduras = this.parent.items.filter(item => item.type === 'armadura' && item.system.equipada && !item.system.escudo);
     this.penalidadeArmadura = armaduras.reduce((maior, item) => Math.max(maior, Math.abs(item.system.penalidade)), 0);
     for (const chave of ['ref', 'dex', 'move']) a[chave].valor = Math.max(0, a[chave].valor - this.penalidadeArmadura);
-    // As lesões e a armadura tiram MOVE, mas o mínimo é 1 (p. 187).
-    if (a.move.valor < 1) a.move.valor = 1;
     this.hp.max = regras.hpMaximo(a.body.valor, a.will.valor);
     const instalados = this.parent.items.filter(item => item.type === 'cyberware' && item.system.instalado)
       .map(item => ({ tipo: item.system.tipo, perda: item.system.perdaHumanidade.media }));
@@ -66,6 +64,10 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     this.sorte.max = a.luck.valor;
     this.empAtual = regras.empAtual(this.humanidade.value, a.emp.valor);
     this.ferimento = regras.estadoDeFerimento(this.hp.value, this.hp.max);
+    // Mortalmente ferido: −6 MOVE. As lesões, a armadura e o ferimento tiram MOVE, mas o mínimo é 1 (wiki).
+    a.move.valor = regras.moveFinal(a.move.valor, this.ferimento.chave === 'mortal');
+    // Consciência de Combate do Solo (pelos pontos de cada habilidade da Role).
+    this.consciencia = regras.consciencia(this.role.habilidades);
     // Editor de dor (supressão de dor) tira a penalidade de ferimento.
     this.penalidade = this.bonus.supressaoDeDor ? 0 : this.ferimento.penalidade;
     // Death Save: a penalidade de base vem das lesões que a aumentam; a outra sobe a cada sucesso.
@@ -80,7 +82,7 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       const item = maior(local);
       return [local, { sp: item ? item.system.sp[local].value : 0, max: item ? item.system.sp[local].max : 0, item: item?.id ?? null }];
     }));
-    this.iniciativa = a.ref.valor + this.bonus.iniciativa;
+    this.iniciativa = a.ref.valor + this.bonus.iniciativa + this.consciencia.iniciativa;
   }
 
   // Nível, atributo e bônus de uma perícia, pela chave. Perícia que o personagem não tem vale 0 no nível.
@@ -90,7 +92,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     const familia = FAMILIAS[propria?.familia || ''];
     const atributo = base?.atributo || familia?.atributo || 'int';
     const nome = base ? base.nome : `${familia?.nome || ''}${propria?.nome ? ` (${propria.nome})` : ''}`;
-    const bonus = (this.bonus.pericias[id] || 0) + (propria?.familia ? this.bonus.pericias[propria.familia] || 0 : 0);
+    // Os efeitos somam na perícia e na família dela; a Detecção de Ameaça do Solo soma na Percepção.
+    const bonus = (this.bonus.pericias[id] || 0) + (propria?.familia ? this.bonus.pericias[propria.familia] || 0 : 0)
+      + (id === 'perception' ? this.consciencia?.percepcao || 0 : 0);
     return { id, nome, atributo, nivel: propria?.nivel ?? 0, bonus, dificil: Boolean(base?.dificil ?? familia?.dificil) };
   }
 }

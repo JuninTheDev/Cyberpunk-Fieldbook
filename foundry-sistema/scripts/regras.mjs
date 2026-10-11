@@ -13,6 +13,30 @@
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
 
+// Consciência de Combate do Solo (RED p. 146), pelos pontos de cada habilidade, como a wiki descreve (system-criacao.js)
+// e o CORE automatiza (bonusRatio de cada habilidade do item de Role):
+// - Reação de Iniciativa: +1 na Iniciativa por ponto;
+// - Ataque de Precisão: +1 em todo ataque a cada 3 pontos;
+// - Detecção de Ameaça: +1 em Percepção por ponto;
+// - Ponto Fraco: +1 no dano (antes da armadura) do primeiro acerto da rodada, por ponto;
+// - Deflexão de Dano: −1 no primeiro dano sofrido na rodada, a cada 2 pontos, até 5 (system-catalog.js);
+// - Recuperação de Falhas: com 4 pontos, ignora as falhas críticas (1 no dado) ao atacar.
+export function consciencia(habilidades = {}) {
+  const pontos = nome => Math.max(0, Number(habilidades?.[nome]) || 0);
+  return {
+    iniciativa: pontos('Initiative Reaction'),
+    ataque: Math.floor(pontos('Precision Attack') / 3),
+    percepcao: pontos('Threat Detection'),
+    pontoFraco: pontos('Spot Weakness'),
+    deflexao: Math.min(5, Math.floor(pontos('Damage Deflection') / 2)),
+    semFalhaCritica: pontos('Fumble Recovery') >= 4
+  };
+}
+
+// Mortalmente ferido (wiki, system-rules.js): −6 MOVE, mínimo 1 (vale também para o que as lesões e a armadura tiram).
+export const PENALIDADE_MOVE_MORTAL = -6;
+export const moveFinal = (move, mortal) => Math.max(1, Number(move) + (mortal ? PENALIDADE_MOVE_MORTAL : 0));
+
 // Estado de ferimento (p. 186): abaixo da metade do HP (arredondada para cima), −2 em tudo; abaixo de 1, −4.
 export function estadoDeFerimento(hp, max) {
   if (hp < 1) return { chave: 'mortal', rotulo: 'Mortalmente ferido', penalidade: -4 };

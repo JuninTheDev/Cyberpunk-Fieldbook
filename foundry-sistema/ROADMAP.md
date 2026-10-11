@@ -24,11 +24,12 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   - o cenário do Foundry 14 falhar com aviso de compatibilidade vindo do sistema;
   - teste da parede no fogo supressivo;
   - versão exata e hash conferido do que o build baixa (js-yaml da CDN, foundryvtt-cli do npm).
-- [ ] **Combate** (Ciclo 3):
-  - as habilidades do Solo (Consciência de Combate) que a wiki descreve: Reação de Iniciativa, Ataque de Precisão,
-    Ponto Fraco, Deflexão de Dano, Recuperação de Falhas e Detecção de Ameaça;
+- [x] **Combate** (Ciclo 3):
+  - as habilidades do Solo (Consciência de Combate) como a wiki descreve: Reação de Iniciativa, Ataque de Precisão,
+    Ponto Fraco, Deflexão de Dano, Recuperação de Falhas e Detecção de Ameaça. O Ponto Fraco e a Deflexão valem uma vez
+    por rodada do combate, e o Desfazer devolve o que o ataque gastou;
   - −6 MOVE (mínimo 1) do mortalmente ferido;
-  - a munição só sai do pente depois de conferir que há mestre na mesa.
+  - o ataque de um jogador sem mestre na mesa para antes de gastar a bala e de rolar.
 - [ ] **Lacunas de teste** (Ciclo 4): escudo, "responder pelo jogador", corpo a corpo com esquiva, munição de borracha,
   armadura pesada, janela do mestre para a defesa de NPC e os erros da importação.
 
@@ -39,7 +40,11 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [ ] **Volta da ficha para a wiki** (HP, munição, dinheiro, lesões) e entrega dos pedidos da loja. Bloqueador da migração.
 - [ ] **Da wiki:** botão "Importar da wiki" na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
   ator); retrato.
-- [ ] **Na rolagem:** Sorte; Briga e Artes Marciais (dano pelo BODY); Facedown.
+- [ ] **Na rolagem:** Sorte; Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
+  Falhas do Solo; Facedown.
+- [ ] **Consciência de Combate na ficha:** redistribuir os pontos (a wiki permite antes do combate ou com uma ação) e
+  mostrar os nomes em português. Hoje a ficha só lista as habilidades, com os nomes do CORE, e os pontos vêm da
+  importação.
 - [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
 - [ ] **Armas de 2077** (Smart, ricochete, carga Tech) e o conteúdo do cpr-2077.
 
