@@ -130,7 +130,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
 | `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (com a tabela da ciberpsicose e a perda por trauma), terapia e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
 | `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
-| `system-2077.js` | Suplemento de 2077: as 46 armas (Power, Tech e Smart), os 42 cyberwares, as Roles de 2077 e o resumo do suplemento. |
+| `system-2077.js` | Os anos 2070: as regras de Power, Smart e Tech e os Rebuilds do Cyberpunk Edgerunners Mission Kit, as 46 armas (13 do Kit e as do suplemento de fã, adaptadas), os 48 cyberwares (o Neuroport e o cromo do Kit, mais os do suplemento), as Roles de 2077 e o resumo do suplemento de fã. |
 | `system-catalog.js` | Catálogo do RED: Roles, cyberware, armas, armaduras, munição, acessórios, equipamento médico e a lista de equipamento. |
 | `system-glossario.js` | O glossário: definição curta de cada termo de regra e onde está a regra. Vai também para os jogadores. |
 | `mestre-npcs.js` | Fichas de NPC (as 10 fichas prontas do livro, a Trauma Team, variantes para as facções de 2077 e o elenco do Protocolo Morana) e os Encontros de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
@@ -313,12 +313,12 @@ Notas:
 - **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém.
 - **Busca:** **/** (ou Ctrl+K) coloca o cursor na busca.
   - Nos documentos .md, cada seção `###` (uma cena, um NPC, uma regra) também é um resultado, e tem endereço próprio (`#docSessao01/a-trava-e-a-maleta-regras`).
-  - As palavras podem vir em qualquer ordem ("pistola smart" acha a Yukimura). A busca ignora acentos e aceita termos em inglês e sinônimos (CDT/ROF, HP/PV, eb/eddies, Death Save...).
+  - As palavras podem vir em qualquer ordem ("smg smart" acha a Yukimura). A busca ignora acentos e aceita termos em inglês e sinônimos (CDT/ROF, HP/PV, eb/eddies, Death Save...).
   - **↑ ↓** escolhem o resultado, **Enter** abre já na seção certa, com os termos destacados, e **Esc** volta para a página.
   - Os chips **Tudo / Regras / Campanha** filtram os resultados.
 - **Glossário** (aba Sistema → Na mesa): termos como DV, SP, Death Save e Smart Link viram links nas páginas de regras. Passe o mouse para ler a definição; clique para abrir o glossário, que tem o botão "Ver a regra".
 - **Índice A–Z:** todos os cartões e fichas da wiki em ordem alfabética, com filtro.
-- **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por classe, tipo ou instalação.
+- **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por origem (Mission Kit ou suplemento de fã), classe, tipo ou instalação.
 - Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.
 - O **Escudo do mestre** tem a calculadora de DV por alcance e o rolador de lesão crítica.
 - **Links nos documentos .md:** `[texto](#pagina/secao)` abre uma página da wiki; `[texto](arquivo.md)` e o nome de um documento entre crases abrem o documento; `[texto](https://...)` abre fora, em outra aba.

@@ -8,7 +8,7 @@
   "relationships": {
     "systems": [{ "id": "cyberpunk-red-core", "type": "system", "compatibility": { "minimum": "v0.92.4" } }],
     "recommends": [
-      { "id": "cpr-2077", "type": "module", "reason": "Os modos de 2077 (Ricochete, Carga e Rajada Tech, Smart) nas armas do painel." },
+      { "id": "cpr-2077", "type": "module", "reason": "As regras de 2077 do Mission Kit nas armas do painel: o Ricochete, o Carregar das armas Tech, a munição Smart melhorada e os avisos." },
       { "id": "fluxo-de-combate", "type": "module", "reason": "Ataque, defesa e dano automáticos a partir do ATK do painel." },
       { "id": "net-architect", "type": "module", "reason": "O selo NET, a janela da NET e o Scanner pelo painel." }
     ]

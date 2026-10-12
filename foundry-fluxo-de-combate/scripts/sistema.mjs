@@ -104,9 +104,10 @@ export async function rolarPericia({ actor, token = null, pericia, stat, titulo 
 
 // Dano da arma pela rolagem do sistema: tiro mirado (local), autofogo (2d6 × multiplicador, limitado pela arma),
 // munição (ablação, tipo, variedade) e bônus de efeitos e upgrades. O cartão sai sem os botões de aplicar.
-// Ajustes de macro: `formula` troca os dados (ricochete: um dado a menos), `multiplicadorMax` é o máximo da rajada
-// (carga Tech) e `ablacao` é quanto de SP a armadura perde se o dano passar.
-export async function rolarDano({ actor, token = null, arma, modo, mirado = false, local = 'body', multiplicador = 1, janela = false, pergunta = null, titulo = '', formula = null, multiplicadorMax = null, ablacao = null }) {
+// Ajustes do cpr-2077: `formula` troca os dados (menos balas no pente, tiro mirado da Unity), `multiplicadorMax` é o
+// máximo do autofogo, `ablacao` é quanto de SP a armadura perde se o dano passar e `ignorarSP` é a parte do SP que
+// o tiro ignora (a carga Tech do Mission Kit: 50%).
+export async function rolarDano({ actor, token = null, arma, modo, mirado = false, local = 'body', multiplicador = 1, janela = false, pergunta = null, titulo = '', formula = null, multiplicadorMax = null, ablacao = null, ignorarSP = null }) {
   const { rollTypes } = await cpr();
   const tipo = mirado ? rollTypes.AIMED : modo === 'autofogo' ? rollTypes.AUTOFIRE : rollTypes.ATTACK;
   let cprRoll = semAvisoDeAlvo(() => arma.createRoll(rollTypes.DAMAGE, actor, { damageType: tipo }));
@@ -118,6 +119,7 @@ export async function rolarDano({ actor, token = null, arma, modo, mirado = fals
   if (modo === 'autofogo' && multiplicadorMax) cprRoll.autofireMultiplierMax = Number(multiplicadorMax);
   if (formula && modo !== 'autofogo') cprRoll.formula = formula;
   if (ablacao) cprRoll.rollCardExtraArgs.ablationValue = Number(ablacao);
+  if (ignorarSP) cprRoll.rollCardExtraArgs.ignoreArmorPercent = Math.max(Number(cprRoll.rollCardExtraArgs.ignoreArmorPercent) || 0, Number(ignorarSP));
   if (titulo) cprRoll.rollTitle = titulo;
   if (janela && !(await janelaDeRolagem(cprRoll, actor, arma, pergunta))) return null;
   cprRoll = await arma.confirmRoll(cprRoll);
@@ -136,6 +138,18 @@ export async function rolarDano({ actor, token = null, arma, modo, mirado = fals
     formula: cprRoll.formula,
     faces: [...cprRoll.faces]
   };
+}
+
+// Segunda chance da munição Smart melhorada (Mission Kit p. 32): 14 + 1d10 com as penalidades do primeiro tiro, no
+// cartão do sistema em nome de quem atacou (com o 10 que explode e o 1 que implode, como qualquer teste).
+export async function rolarSegundaChance({ actor, token = null, arma, base = 14, penalidades = 0 }) {
+  const { rolls } = await cpr();
+  const cprRoll = new rolls.CPRRoll(`${arma.name} · segunda chance (Smart melhorada)`, '1d10');
+  cprRoll.addMod([{ value: base, source: 'Munição Smart melhorada' }]);
+  if (penalidades) cprRoll.addMod([{ value: penalidades, source: 'Penalidades do primeiro tiro' }]);
+  await cprRoll.roll();
+  await postar(cprRoll, { actor, token });
+  return { total: cprRoll.resultTotal, natural: cprRoll.initialRoll };
 }
 
 // Death Save do sistema: d10 + penalidade contra BODY; 10 natural sempre falha. O sistema sobe a penalidade

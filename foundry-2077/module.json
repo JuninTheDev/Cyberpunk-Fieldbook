@@ -1,7 +1,7 @@
 {
   "id": "cpr-2077",
   "title": "Cyberpunk RED: 2077",
-  "description": "Conteúdo do suplemento de fã Cyberpunk 2077 para o sistema Cyberpunk RED - CORE: armas Power, Tech e Smart, cyberware, netrunning de 2077, veículos adaptados do jogo, NPCs prontos, a economia de 2077 e macros para ataque Smart, ricochete e carga Tech.",
+  "description": "Os anos 2070 para o sistema Cyberpunk RED - CORE: as regras e os itens do Cyberpunk Edgerunners Mission Kit e, como opcional, o suplemento de fã Cyberpunk 2077 adaptado a elas: armas Power, Tech e Smart, cyberware, netrunning de 2077, veículos adaptados do jogo, NPCs prontos, a economia de 2077 e macros para ataque Smart, ricochete e carga Tech.",
   "version": "0.1.0",
   "authors": [{ "name": "Junin" }],
   "compatibility": { "minimum": "12", "verified": "12.343", "maximum": "12" },

@@ -146,9 +146,14 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
   const items = docs => docs.filter(doc => doc._key?.startsWith('!items!'));
   for (const doc of items(weapons)) {
     const desc = strip(doc.system.description?.value).slice(0, 260);
-    if (doc.type === 'ammo') { // flechettes das armas Tech: vendidas em lote, como a munição do RED
+    if (doc.type === 'itemUpgrade') { // os Rebuilds do Mission Kit: acessórios de 2 slots para qualquer arma
+      const size = doc.system.size ?? 1;
+      add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'acessorios', sub: 'Rebuilds (Mission Kit)', resumo: `${size} slot${size > 1 ? 's' : ''}`, desc, acessorio: { tamanho: size, classe: '' } });
+      continue;
+    }
+    if (doc.type === 'ammo') { // munição Smart melhorada do Mission Kit: vendida em lote, como a munição do RED
       const lote = doc.system.amount || 1;
-      add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'municao', sub: 'Flechettes Tech (2077)', lote, resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade', desc, municao: { variedade: doc.system.variety || '', tipo: doc.system.type || '' } });
+      add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'municao', sub: 'Smart melhorada (Mission Kit)', lote, resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade', desc, municao: { variedade: doc.system.variety || '', tipo: doc.system.type || '' } });
       continue;
     }
     add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'armas', sub: 'Armas de 2077', resumo: weaponSummary(doc.system), desc, arma: weaponData(doc.system, !weaponGroups[doc.system.weaponType]) });

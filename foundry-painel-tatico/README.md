@@ -33,8 +33,9 @@ Um HUD de combate para o Foundry VTT 12 (a API usada também existe no 13) e o s
   - os modos do sistema: mirado (com o local), autofogo e supressivo;
   - **com o cpr-2077:**
     - a classe da arma (Power, Tech, Smart);
-    - os modos de 2077: Ricochete, Carga e Rajada Tech, Smart;
-    - os avisos: sem Smart Link, esfriando;
+    - o modo Ricochete das armas Power;
+    - os botões de estado: Carregar (Tech), Manejar o ferrolho (Grad) e a coronha (Dian);
+    - os avisos: sem conexão Smart, munição errada;
     - a coronha retrátil;
   - recarregar e trocar a munição;
   - **ATK** e **DMG**.
@@ -59,7 +60,7 @@ Toda rolagem segue o caminho da ficha do sistema: a janela de rolagem, a muniç�
   - O fogo supressivo não pede alvo (ele pega a área).
 - **cpr-2077:**
   - Os botões de modo de 2077 gravam a mesma marca que a ficha grava.
-  - A rolagem passa pelo `createRoll` que o cpr-2077 troca. A pergunta da cobertura na Carga Tech e o teste Smart funcionam igual à ficha.
+  - A rolagem passa pelo `createRoll` que o cpr-2077 troca. A carga Tech, os dois canos da Palica e o +1 da arma Smart funcionam igual à ficha.
 - **NET Architect:**
   - **Conectado:** aparece o selo NET (com as Ações NET do turno, em combate). Ele abre a janela da NET, e o painel NET tem o botão Desconectar.
   - **Fora da NET:** o painel NET tem o Scanner (procura pontos de acesso) e as rolagens livres de Interface.

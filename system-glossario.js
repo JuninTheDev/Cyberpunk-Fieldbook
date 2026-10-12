@@ -83,14 +83,17 @@
     t('Fashionware', 'Fashionware', 'Cyberware cosmético, de baixa perda de Humanidade.', 'cyberware2077', 'Fashionware'),
     t('Borgware', 'Borgware', 'Cyberware pesado que transforma o corpo, como o Linear Frame e os braços extras.', 'cyberware', 'Borgware'),
     t('Ripperdoc', 'Ripperdoc', 'Médico de rua que instala, conserta e troca cyberware.', 'cyberware2077', 'Antes de instalar', ['ripperdocs']),
-    t('Smart Link', 'Smartgun Link', 'Cyberware de 2077 que permite usar armas Smart e liga a óptica ao sistema da arma. No RED, o Smartgun Link é um acessório de arma: +1 nos ataques à distância, com plugs de interface.', 'cyberware2077', 'Smart Link', ['smartgun link', 'Smartgun Link']),
+    t('Smart Link', 'Smart Link', 'Cyberware do suplemento de fã de 2077 que conecta a arma Smart, como o Subdermal Grip. Não confunda com o Smartgun Link do RED, um acessório de arma (+1 nos ataques à distância, com plugs de interface) que não faz de uma arma uma arma Smart.', 'cyberware2077', 'Smart Link', ['smartgun link', 'Smartgun Link']),
+    t('Neuroport', 'Neuroport', 'O pacote de cyberware dos anos 2070 (Mission Kit): Neural Link de 5 slots, Holophone, Biomonitor, Virtu, HUD, dois Shard Slots e Personal Link. Todo personagem começa com um, de graça e sem perda de Humanidade.', 'cyberware2077', 'Neuroport', ['Neuroports']),
 
     // ---------------- Armas de 2077 ----------------
-    t('Arma Power', 'Power weapon', 'A arma de fogo clássica de 2077. Todas têm o modo Ricochete.', 'weapons2077', 'Os três tipos', ['armas Power']),
-    t('Arma Tech', 'Tech weapon', 'Railgun miniaturizado de 2077: exótica, usa flechettes e tem a carga Tech.', 'weapons2077', 'Os três tipos', ['armas Tech']),
-    t('Arma Smart', 'Smart weapon', 'Arma de balas guiadas de 2077. Só funciona com o Smart Link; o ataque Smart é 10 + 1d10 (12 + 1d10 com várias balas).', 'weapons2077', 'Armas Smart', ['armas Smart']),
-    t('Ricochete', 'Ricochet', 'Modo das armas Power: tiro único contra um alvo atrás de cobertura, com a DV da tabela de autofogo e um dado a menos de dano.', 'weapons2077', 'Ricochete (Power)', ['ricochetear', 'ricocheteando']),
-    t('Carga Tech', 'Tech Charge', 'Modo das armas Tech: atravessa cobertura e abla mais a armadura; depois a arma precisa de uma rodada para esfriar.', 'weapons2077', 'Carga Tech'),
+    t('Rebuild', 'Rebuild', 'Acessório do Mission Kit (1.000eb, 2 slots, 1 hora para instalar) que transforma uma arma de fogo do RED em arma Power, Smart ou Tech.', 'weapons2077', 'Rebuilds', ['Rebuilds']),
+    t('Arma Power', 'Power weapon', 'Arma de fogo com Power Rebuild (Mission Kit): a lesão crítica causa 10 de dano bônus em vez de 5, e o tiro pode ricochetear com −4.', 'weapons2077', 'Power', ['armas Power']),
+    t('Arma Tech', 'Tech weapon', 'Arma eletromagnética com Tech Rebuild (Mission Kit): a mira vê vultos através de cobertura fina e, carregada, o próximo ataque atravessa a cobertura fina e ignora metade do SP.', 'weapons2077', 'Tech', ['armas Tech']),
+    t('Arma Smart', 'Smart weapon', 'Arma de balas guiadas com Smart Rebuild (Mission Kit): +1 nos ataques à distância, e só dispara conectada pelo Personal Link do Neuroport ou pelo Subdermal Grip.', 'weapons2077', 'Smart', ['armas Smart']),
+    t('Munição Smart melhorada', 'Improved Smart Ammunition', 'Munição do Mission Kit para armas Smart (50eb por 10): ignora escuridão, fumaça e neblina, e errar a DV por 5 ou menos dá outra chance com 14 + 1d10.', 'weapons2077', 'Munição Smart melhorada', ['Improved Smart Ammunition']),
+    t('Ricochete', 'Ricochet', 'Tiro de arma Power que ricocheteia numa superfície para acertar um alvo atrás de cobertura ou fora da linha de visão: −4 no ataque (no tiro mirado, só a penalidade do mirado).', 'weapons2077', 'Power', ['ricochetear', 'ricocheteando']),
+    t('Carga Tech', 'Tech Charge', 'Carregar a arma Tech gasta a Ação de Movimento e dura até disparar ou 20 rodadas: o próximo ataque é de CDT 1, atravessa cobertura fina e ignora metade do SP, e a cobertura não perde HP.', 'weapons2077', 'Tech'),
     t('Qualidade da arma', 'Weapon Quality', 'Ruim: emperra numa falha crítica. Excelente: +1 no ataque. Armas exóticas são de qualidade padrão.', 'weapons2077', 'Qualidade das armas', ['qualidade ruim', 'qualidade excelente']),
 
     // ---------------- Economia e Roles ----------------

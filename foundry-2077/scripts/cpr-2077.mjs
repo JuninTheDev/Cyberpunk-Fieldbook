@@ -1,5 +1,5 @@
 // Cyberpunk RED: 2077 — economia de 2077, armas de 2077 no menu de ataque, API das macros e personagens do criador da wiki.
-import { ataqueSmart, cargaTech, ricochete } from './macros.mjs';
+import { carregarTech, ricochete } from './macros.mjs';
 import * as armas2077 from './armas2077.mjs';
 import { registerTableSync, registerWikiButtons, registerWikiSettings, registerWikiWatch, wikiApi } from './wiki.mjs';
 
@@ -33,15 +33,15 @@ Hooks.once('init', () => {
   registerWikiButtons();
   registerWikiWatch();
   registerTableSync();
-  game.modules.get(MODULE_ID).api = { ataqueSmart, ricochete, cargaTech, armas2077, precos2077: PRICES_2077, economia2077: false, ...wikiApi };
+  game.modules.get(MODULE_ID).api = { ricochete, carregarTech, armas2077, precos2077: PRICES_2077, economia2077: false, ...wikiApi };
 });
 
 Hooks.once('setup', () => {
   if (game.settings.get(MODULE_ID, 'economia2077')) applyEconomy();
 });
 
-// Armas de 2077 (Power, Tech, Smart) no menu de ataque do sistema: os modos no createRoll dos itens, o cartão do
-// ataque, a ficha do personagem, o Combat HUD e a ficha do item.
+// Armas de 2077 (Power, Tech, Smart, com as regras do Mission Kit) no menu de ataque do sistema: as regras no
+// createRoll dos itens, o cartão do ataque, a ficha do personagem, o Combat HUD e a ficha do item.
 Hooks.once('setup', async () => {
   try {
     await armas2077.carregarSistema();

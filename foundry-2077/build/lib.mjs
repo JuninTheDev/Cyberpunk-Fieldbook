@@ -140,3 +140,4 @@ export const stripTags = html => String(html ?? '').replace(/<[^>]+>/g, '');
 export const para = (html, label) => html ? `<p>${label ? `<b>${label}:</b> ` : ''}${html}</p>` : '';
 export const sourceNote = (book, page) => `<p><i>${book}${page ? `, p. ${page}` : ''}.</i></p>`;
 export const SUPPLEMENT = 'Cyberpunk 2077 (suplemento)';
+export const KIT = 'Cyberpunk Edgerunners Mission Kit';

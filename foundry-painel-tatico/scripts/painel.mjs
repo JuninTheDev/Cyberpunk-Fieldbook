@@ -392,10 +392,11 @@ export class PainelTatico {
     for (const m of extra?.modos || []) botoesDeModo.push(modoBotao(m.modo, m.nome, m.icone, m.dica, m.ativo).replace('class="pt-modo', 'class="pt-modo pt-modo-2077'));
     const pilulas = [];
     if (extra) {
-      pilulas.push(`<span class="pt-pilula pt-classe-${extra.classe}" data-tooltip="${esc(extra.dica)}">${extra.rotulo}</span>`);
-      if (extra.smart) pilulas.push(`<span class="pt-pilula" data-tooltip="Teste Smart no lugar de REF + perícia">Smart ${extra.smart}</span>`);
+      if (extra.classe) pilulas.push(`<span class="pt-pilula pt-classe-${extra.classe}" data-tooltip="${esc(extra.dica)}">${esc(extra.rotulo)}</span>`);
+      if (extra.smart) pilulas.push(`<span class="pt-pilula" data-tooltip="${esc(extra.smart.dica)}">${esc(extra.smart.texto)}</span>`);
       for (const alerta of extra.alertas) pilulas.push(`<span class="pt-pilula pt-alerta" data-tooltip="${esc(alerta.dica)}">${esc(alerta.texto)}</span>`);
-      if (extra.coronha) pilulas.push(`<button type="button" class="pt-pilula${extra.coronha.recolhida ? ' pt-ativa' : ''}" data-acao="coronha" data-item="${arma.id}" data-tooltip="${extra.coronha.recolhida ? 'Coronha recolhida (−1 no ataque): clique para estender (uma Ação)' : 'Clique para recolher a coronha (dá para esconder; −1 no ataque)'}">coronha ${extra.coronha.recolhida ? 'recolhida' : 'estendida'}</button>`);
+      // Carga Tech, ferrolho e coronha: botões que ligam e desligam pelo cpr-2077 (acao).
+      for (const a of extra.acoes || []) pilulas.push(`<button type="button" class="pt-pilula${a.ativo ? ' pt-ativa' : ''}" data-acao="acao2077" data-chave="${esc(a.chave)}" data-item="${arma.id}" data-tooltip="${esc(a.dica)}"><i class="fa-solid ${esc(a.icone)}"></i> ${esc(a.rotulo)}</button>`);
     }
     const nomeDoModo = MODOS_DO_SISTEMA[modo]?.nome || extra?.modos.find(m => m.ativo)?.nome || '';
     const local = A.localMirado(a);
@@ -584,7 +585,7 @@ export class PainelTatico {
         case 'modo': return A.alternarModo(a, t, id, el.dataset.modo);
         case 'recarregar': return A.recarregar(a, id);
         case 'municao': return A.trocarMunicao(a, id);
-        case 'coronha': { const item = a.items.get(id); return item && armas2077()?.alternarCoronha?.(item); }
+        case 'acao2077': { const item = a.items.get(id); return item && armas2077()?.acao?.(a, item, el.dataset.chave); }
         case 'atacar': return this.#atacar(evento, id);
         case 'dano': return A.rolarDano(evento, a, t, id);
         case 'iniciativa': return A.iniciativa(a, t);

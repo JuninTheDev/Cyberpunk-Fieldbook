@@ -1,16 +1,16 @@
 # Cyberpunk RED: 2077 (módulo do Foundry VTT)
 
-Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Traz o conteúdo do suplemento de fã "Cyberpunk 2077":
+Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Traz os anos 2070: as regras e os itens do **Cyberpunk Edgerunners Mission Kit** (oficial) e, como opcional, o conteúdo do suplemento de fã "Cyberpunk 2077", adaptado às regras do Kit:
 
 - **Compêndios:**
-  - armas Power, Tech e Smart;
-  - cyberware;
+  - armas Power, Tech e Smart (as 13 do Kit e as do suplemento), os Rebuilds e a munição Smart melhorada;
+  - cyberware (o Neuroport e o cromo do Kit, mais o do suplemento);
   - netrunning de 2077 (cyberdecks, quickhacks, daemons, White ICE) e as arquiteturas NET do Protocolo Morana (lidas de `documentos/morana/arquiteturas-da-campanha.md`; o NET Architect as oferece nos pontos de acesso);
   - veículos adaptados do jogo;
   - NPCs prontos (só o mestre vê), com o elenco do Protocolo Morana na pasta própria;
   - regras em diários.
 - **Economia de 2077:** uma configuração do módulo que troca as categorias de preço pelas do suplemento.
-- **Armas de 2077 no menu de ataque do sistema:** veja a seção abaixo. As macros Ataque Smart, Ricochete e Carga Tech viraram atalhos para os mesmos modos.
+- **Armas de 2077 no menu de ataque do sistema:** as regras de Power, Smart e Tech do Kit; veja a seção abaixo. As macros Ricochete e Carregar arma Tech são atalhos para o mesmo caminho.
 - **Roles de 2077:** Face, Corpo e Lawman (com Investigator), no compêndio Roles de 2077.
 - **Personagens da wiki:**
   - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.
@@ -41,45 +41,37 @@ Para netrunning com arquiteturas no mapa (pontos de acesso nos Tiles, janela do 
 
 ## Armas de 2077 no menu de ataque
 
-A **classe de 2077** (Power, Tech ou Smart) é um campo da arma: na ficha do item, aba de configurações, logo abaixo do tipo de arma. Lá ficam também as opções de cada classe:
+As regras são as do **Mission Kit** (p. 31–35). A **classe de 2077** (Power, Tech ou Smart) é um campo da arma: na ficha do item, aba de configurações, logo abaixo do tipo de arma. Um **Rebuild** instalado numa arma comum também dá a classe. Na mesma aba ficam as balas por tiro, o dano com menos balas, o dano do tiro mirado, os dois alvos (Smart), carregar sem a Ação de Movimento (Tech) e a coronha retrátil.
 
-| Classe | Opções na ficha do item |
-|---|---|
-| **Smart** | várias balas Smart (12 + 1d10), trava em dois alvos, dois canos, coronha retrátil |
-| **Tech** | o tamanho da rajada da carga (0: só tiro único) |
-| **Power** | "não ricocheteia", para as que só disparam rajadas |
+As armas do compêndio "Armas de 2077" já vêm com a classe e as regras de cada modelo. Qualquer outra arma, inclusive as do livro-base, ganha uma classe pela ficha ou por um Rebuild.
 
-As armas do compêndio "Armas de 2077" já vêm com a classe e as opções certas. Qualquer outra arma, inclusive as do livro-base, ganha uma classe pela ficha.
-
-Na ficha do personagem (aba de combate), cada arma de 2077 mostra a classe e ganha os modos dela, ao lado de mirar, autofogo e supressivo. O **Combat HUD** ganha os mesmos botões. O **Token Action HUD** não mostra os botões, mas ataca no modo escolhido na ficha ou no Combat HUD.
-
-| Classe | Modo | Regra |
+| Classe | Na ficha e nos HUDs | Regra |
 |---|---|---|
-| **Power** | **Ricochete** | Tiro único num alvo atrás de cobertura. A DV vem da tabela de autofogo (pistolas e SMGs usam a da SMG). Alvos com REF 8+ esquivam. O dano tem um dado a menos. O Ballistic Coprocessor dá +2. As armas que só disparam rajadas de três não ricocheteiam. |
-| **Tech** | **Carga** | Tiro único carregado. Através de cobertura fina chega metade do dano; através de grossa, um quarto. Se o dano passar, a armadura perde 4 de SP sem cobertura e 2 através dela. |
-| **Tech** | **Rajada** | Autofogo carregado com a tabela da SMG, até o máximo da arma. Através de cobertura fina chega um quarto do dano; a grossa segura tudo. |
-| **Smart** | (tiro comum) | **Só dispara com o cyberware Smart Link instalado.** O tiro único é o **teste Smart**, 10 + 1d10 no lugar de REF + perícia (12 + 1d10 nos modelos de várias balas, ou disparando os dois canos da Palica). Valem os modificadores da arma, a qualidade, os efeitos e os ferimentos. |
+| **Power** | Modo **Ricochete** | A lesão crítica causa 10 de dano bônus em vez de 5 (o botão de dano e o Fluxo de Combate já usam). Ricochete: −4 no ataque (−2 com o Ballistic Coprocessor), com a tabela de DV da própria arma. Num tiro mirado, use o modo mirado: vale só a penalidade dele. |
+| **Smart** | Pílula da classe; aviso "sem conexão Smart" | +1 nos ataques à distância. **Só dispara conectada:** o Neuroport (Personal Link), Interface Plugs, Subdermal Grip ou o Smart Link do suplemento. Com a **munição Smart melhorada** carregada, a nota do cartão traz a segunda chance, que o Fluxo de Combate rola: errou a DV (ou a esquiva) por 5 ou menos, 14 + 1d10 com as penalidades do primeiro tiro. |
+| **Tech** | Botão **Carregar** | Carregar gasta a Ação de Movimento e anuncia no chat. Carregada (até disparar ou 20 rodadas), o próximo ataque ignora metade do SP do alvo (o botão de dano e o Fluxo de Combate já usam) e atravessa cobertura fina; disparar descarrega. |
 
-- **Esfriar:** no combate, depois de uma carga (tiro ou rajada), a arma Tech só carrega de novo duas rodadas depois. A ficha mostra "Esfriando".
-- **Cobertura:** a carga e a rajada perguntam a cobertura do alvo antes da janela de rolagem.
-- **Palica:** pergunta se dispara os dois canos (12 + 1d10, gasta os 2 cartuchos).
+As regras de cada modelo (flags do compêndio):
+
+- **Balas por tiro** (Yukimura, Shingen, Masamune, Chao, Kappa, Nowaki, Zhuo): o tiro único gasta o tanto de balas da regra; com menos no pente, dispara o que tem com o dano menor (a Zhuo não dispara com menos de 8).
+- **Unity:** 4d6 no tiro mirado. **Zhuo:** 4d6 e só aceita munição Smart melhorada.
+- **Omaha:** carregada até o fim do turno em que disparou, com CDT 2 e até 3 balas por ataque. **Burya:** carrega sem a Ação de Movimento. **Nekomata:** carregada, atravessa cobertura fina e grossa.
+- **Carnage** (BODY menor que 10) e **Burya** (sem Grafted Muscle and Bone Lace nem cyberbraço): o cartão e um aviso dizem que o atirador sofre a lesão crítica.
+- **Grad:** depois do tiro, o botão "Manejar o ferrolho" trava o próximo ataque até gastar a Ação.
+- **Palica:** pergunta se dispara os dois canos (gasta os 2 cartuchos, 4d6).
 - **Kappa:** trava dois alvos a até 4 m um do outro. Com o Fluxo de Combate, se o ataque não pegar o primeiro, as balas vão para o segundo.
 - **Dian:** a coronha recolhe pela pílula na linha da arma (−1 nos ataques até estender).
 - **Qualidade excelente:** +1 no ataque, como as armas Excellent do livro-base. As armas importadas antes da correção ganham o +1 na rolagem.
 - **Tudo passa pela rolagem do sistema:** a janela de rolagem, a munição, a Sorte e o cartão.
-  - O cartão traz uma nota com a regra do modo.
-  - O botão de dano do cartão rola o dano do modo (um dado a menos; a ablação certa).
-  - Com o **Fluxo de Combate** e um alvo marcado, a defesa e o dano saem por ele, com a DV, a ablação e a cobertura de cada modo.
+  - O cartão traz uma nota com cada regra que valeu no tiro.
+  - O botão de dano do cartão leva os ajustes do tiro (o dano com menos balas, os dois canos, a metade do SP da carga).
+  - Com o **Fluxo de Combate** e um alvo marcado, a defesa e o dano saem por ele.
 
-Configurações do módulo:
+Configuração do módulo: **Conexão das armas Smart** (exige a conexão instalada, o padrão; ou "todo mundo tem o Neuroport", que não confere).
 
-- **Ataque das armas Smart:** o suplemento não diz se o teste Smart troca REF + perícia ou se é uma opção.
-  - **Substitui** (padrão): o tiro único da arma Smart é sempre o teste Smart.
-  - **Alternativa:** o menu ganha o modo "Smart", e o tiro comum continua REF + perícia.
-- **Arma Smart sem o Smart Link:** não dispara (padrão), ou dispara como arma comum.
-- **A carga Tech esfria uma rodada:** ligado por padrão.
+As macros **Ricochete** e **Carregar arma Tech** do compêndio "Macros de 2077" são atalhos: escolhem a arma e atacam (ou carregam) pelo mesmo caminho.
 
-As macros **Ataque Smart**, **Ricochete** e **Carga Tech** do compêndio "Macros de 2077" são atalhos: escolhem a arma (e, na carga, tiro ou rajada) e atacam pelo mesmo caminho.
+Armas importadas antes desta versão guardam as opções antigas do suplemento de fã (teste Smart, rajada da carga): troque-as pelas do compêndio para ter as regras do Kit.
 
 ## Gerar ou atualizar o módulo
 
@@ -104,8 +96,8 @@ Depois é só ativar **Cyberpunk RED: 2077** em *Configurar módulos* no mundo.
 |---|---|
 | `module.json` | Manifesto do módulo. |
 | `scripts/cpr-2077.mjs` | Configuração da economia de 2077 e API das macros. |
-| `scripts/armas2077.mjs` | Armas de 2077 no menu de ataque: classe na ficha do item, modos na ficha e no Combat HUD, regras Smart, Tech e Power. |
-| `scripts/macros.mjs` | Atalhos Ataque Smart, Ricochete e Carga Tech. |
+| `scripts/armas2077.mjs` | Armas de 2077 no menu de ataque: classe na ficha do item (ou pelo Rebuild), o Ricochete e o Carregar na ficha e no Combat HUD, as regras de Power, Smart e Tech do Mission Kit e as de cada arma. |
+| `scripts/macros.mjs` | Atalhos Ricochete e Carregar arma Tech. |
 | `scripts/wiki.mjs` | Importar da wiki e Atualizar da wiki (personagens do criador). |
 | `build/loja.mjs` | Gera o `loja-catalogo.js` da wiki (também roda sozinho). |
 | `build/roles.mjs` | Face, Corpo e Lawman de 2077. |
@@ -120,6 +112,6 @@ Depois é só ativar **Cyberpunk RED: 2077** em *Configurar módulos* no mundo.
 
 - **Veículos:** o suplemento não traz veículos. Os carros do jogo usam os números de uma classe do RED ou do Black Chrome, indicada na descrição de cada um.
 - **Metralhadoras só de autofogo** (Defender, Mk.31): seguem a Tsunami Arms Helix do livro-base, com dano 2d6 × multiplicador de autofogo.
-- **Ataque Smart** (10 + 1d10): regra inferida das descrições das armas. Se troca REF + perícia ou é uma opção fica na configuração "Ataque das armas Smart".
+- **Armas do suplemento de fã:** seguem as regras de Power, Smart e Tech do Kit. O que o suplemento fazia de outro jeito (o teste Smart de 10 ou 12 + 1d10, a rajada carregada, o "esfriar", as flechettes) saiu; as armas de várias balas Smart passaram a gastar 3 balas e causar mais dano, como a Yukimura do Kit. A dica "Na mesa" de cada arma diz o que mudou.
 - **Kappa** ("redireciona as balas para o segundo alvo"): lido como "se o ataque não pegar o primeiro, vai para o segundo, a até 4 m dele".
 - **Inconsistências do livro:** quando o livro se contradiz (dano, pente, perícia), o item usa o texto e a descrição mostra o valor da tabela.

@@ -42,13 +42,11 @@ const table = {
   ProxiShield: { efeitos: [{ nome: 'ProxiShield (contra corpo a corpo)', desligado: true, descricao: '+1 de SP contra ataques corpo a corpo.', mods: [add('bonuses.universalDamageReduction', 1)] }] },
   RangeGuard: { efeitos: [{ nome: 'RangeGuard (contra ataques à distância)', desligado: true, descricao: '+1 de SP contra ataques à distância.', mods: [add('bonuses.universalDamageReduction', 1)] }] },
   'Pain Editor (2077)': { efeitos: [{ nome: 'Pain Editor (2077)', descricao: 'Ignora as penalidades de Gravemente Ferido.', mods: [painSuppression] }] },
-  'Gorilla Arms': { efeitos: [{ nome: 'Gorilla Arms (Atletismo com os braços)', descricao: '+2 em Atletismo com os braços.', mods: [situational('bonuses.athletics', 2)] }] },
   Microgenerator: { efeitos: [{ nome: 'Microgenerator (segundo ataque corpo a corpo)', descricao: '+1 no segundo ataque corpo a corpo depois do primeiro.', mods: [situational('bonuses.melee', 1)] }] },
   'Shock Absorber': { efeitos: [{ nome: 'Shock Absorber', descricao: '+2 no teste de autofogo.', mods: [add('bonuses.autofire', 2)] }] },
   "Jenkins' Tendons": { efeitos: [{ nome: "Jenkins' Tendons (em linha reta)", desligado: true, descricao: '+2 de MOVE andando em linha reta.', mods: [stat('move', 2)] }] },
   'Leeroy Ligament System': { efeitos: [{ nome: 'Leeroy Ligament System', descricao: '+2 de MOVE.', mods: [stat('move', 2)] }] },
   'Lynx Paws': { efeitos: [{ nome: 'Lynx Paws (mover-se em silêncio)', descricao: '+2 em Furtividade para se mover em silêncio.', mods: [situational('bonuses.stealth', 2)] }] },
-  'Ex-Disk': { efeitos: [{ nome: 'Ex-Disk (versão de 5.000eb)', desligado: true, descricao: 'A versão de 5.000eb dá +1 de INT. Ligue se for essa a versão instalada.', mods: [stat('int', 1)] }] },
 
   // ---------------- Berserk e Sandevistan: ativar = ligar o efeito ----------------
   'Biodyne Berserk': { usage: 'toggled', efeitos: [{ nome: 'Biodyne Berserk ativo', desligado: true, descricao: '+3 BODY e MOVE (BODY até 10); ignora Gravemente Ferido. SP 11 e +1 de dano corpo a corpo por dado: aplique à parte.', mods: [stat('body', 3), stat('move', 3), painSuppression] }] },

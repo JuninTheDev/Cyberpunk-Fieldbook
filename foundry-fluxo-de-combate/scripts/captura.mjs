@@ -67,10 +67,14 @@ function lerAtaque(cprRoll, rolls) {
     municao: (typeof arma._getLoadedAmmoProp === 'function' && arma._getLoadedAmmoProp('variety')) || null,
     alvos: alvos.map(alvo => alvo.id),
     esconder: esconderDe(alvos),
-    // Ajustes de quem montou a rolagem (os modos de 2077 do cpr-2077: ricochete, carga Tech, teste Smart).
-    extra: cprRoll.fluxoExtra ? { ...cprRoll.fluxoExtra } : null
+    // Ajustes de quem montou a rolagem (as regras do Mission Kit no cpr-2077: carga Tech, munição Smart melhorada).
+    // A segunda chance da Smart melhorada leva as penalidades deste tiro.
+    extra: cprRoll.fluxoExtra ? { ...cprRoll.fluxoExtra, ...(cprRoll.fluxoExtra.segundaChance ? { penalidades: penalidadesDe(cprRoll) } : {}) } : null
   };
 }
+
+// A soma dos modificadores negativos do ataque (ferimentos, ricochete, mirado, os da janela).
+const penalidadesDe = cprRoll => (cprRoll.mods || []).reduce((soma, mod) => soma + Math.min(0, Number(mod.value) || 0), 0);
 
 // Esconde o total quando algum alvo é de um jogador (que ainda vai decidir). Alvos do mestre: ele pode ver.
 export function esconderDe(alvos) {

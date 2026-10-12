@@ -5,7 +5,7 @@ module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
   await edge.evaluate(`document.querySelector('#tab-system').click()`);
 
-  const minimos = { netArsenal: 56, net2077: 12, quickhacks: 21, os2077: 8 };
+  const minimos = { netArsenal: 56, net2077: 10, quickhacks: 21, os2077: 8 };
   for (const [pagina, minimo] of Object.entries(minimos)) {
     await r.passo(`${pagina}: pelo menos ${minimo} cartões`, async () => {
       await abrir(edge, pagina, 200);

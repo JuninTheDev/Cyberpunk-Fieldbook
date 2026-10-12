@@ -1,5 +1,6 @@
-// Cyberware de 2077 (suplemento p. 27–30), a neuralware de netrunning (p. 13) e Berserk e Sandevistan (p. 24–26).
-import { SUPPLEMENT, coreDoc, folderDoc, humanityLoss, itemFrom, para, parseEb, sourceNote, stripTags } from './lib.mjs';
+// Cyberware de 2077: o do Mission Kit (Kit p. 35–37) e o do suplemento de fã (p. 27–30), a neuralware de netrunning
+// (p. 13) e Berserk e Sandevistan (p. 24–26) do suplemento.
+import { KIT, SUPPLEMENT, coreDoc, folderDoc, humanityLoss, itemFrom, para, parseEb, sourceNote, stripTags } from './lib.mjs';
 import { wiki } from './wiki.mjs';
 
 const installs = { Loja: 'mall', Clínica: 'clinic', Hospital: 'hospital' };
@@ -7,6 +8,7 @@ const numberWords = { um: 1, uma: 1, dois: 2, duas: 2, três: 3 };
 
 // Categoria da wiki → [tipo no sistema, molde do livro-base, é base (abre slots)?]
 const categories = [
+  [/^Neuroport \(base\)/, 'neuralWare', 'Neural Link', true],
   [/^Fashionware/, 'fashionware', 'Light Tattoo', false],
   [/^Neuralware/, 'neuralWare', 'Tactile Boost', false],
   [/^Cyberóptico \(base\)/, 'cyberEye', 'Cybereye', true],
@@ -20,13 +22,18 @@ const categories = [
 ];
 
 // Cyberware que é arma: molde de arma cibernética do livro-base e os números da arma.
+// As do Kit: Gorilla Arm e Mantis Blade são de qualidade excelente (+1 no ataque).
 const weapons = {
-  'Mantis Blades': ['Wolvers', { weaponType: 'heavyMelee', damage: '3d6', rof: 2, weaponSkill: 'Melee Weapon' }],
-  Monowire: ['Rippers', { weaponType: 'medMelee', damage: '2d6', rof: 2, weaponSkill: 'Melee Weapon' }],
-  'Gorilla Arms': ['Big Knucks', { weaponType: 'heavyMelee', damage: '3d6', rof: 2, weaponSkill: 'Brawling' }],
-  'Projectile Launch System': ['Popup Grenade Launcher', { weaponType: 'rocketLauncher', damage: '8d6', rof: 1, weaponSkill: 'Heavy Weapons', dvTable: 'DV Rocket Launcher', ammoVariety: ['rocket'], magazine: { value: 0, max: 1, ammoData: null } }]
+  'Mantis Blade': ['Wolvers', { weaponType: 'heavyMelee', damage: '3d6', rof: 2, weaponSkill: 'Melee Weapon', attackmod: 1, concealable: { concealable: true, isConcealed: false } }],
+  Monowire: ['Rippers', { weaponType: 'heavyMelee', damage: '3d6', rof: 2, weaponSkill: 'Melee Weapon', concealable: { concealable: true, isConcealed: false } }],
+  'Gorilla Arm': ['Big Knucks', { weaponType: 'heavyMelee', damage: '3d6', rof: 2, weaponSkill: 'Melee Weapon', attackmod: 1 }],
+  'Projectile Launch System': ['Popup Grenade Launcher', { weaponType: 'rocketLauncher', damage: '8d6', rof: 1, weaponSkill: 'Heavy Weapons', dvTable: 'DV Rocket Launcher', ammoVariety: ['rocket', 'grenade'], magazine: { value: 0, max: 1, ammoData: null }, concealable: { concealable: true, isConcealed: false } }]
 };
-const groups = { fashionware: ['Fashionware', 27], neural: ['Neuralware', 27], optics: ['Cyberópticos', 28], internal: ['Cyberware interno', 28], external: ['Cyberware externo e placas', 29], limbs: ['Cybermembros', 30] };
+// Grupo da wiki → pasta, página do suplemento de fã e página do Kit.
+const kitPages = { neuroport: 36, neural: 35, limbs: 36 };
+// O que o armas2077.mjs procura no ator: a conexão da arma Smart e o Ballistic Coprocessor.
+const markers = { Neuroport: { conexaoSmart: true, neuroport: true }, 'Smart Link': { conexaoSmart: true, smartLink: true }, 'Ballistic Coprocessor': { ballisticCoprocessor: true }, 'Feedback Circuit': { feedbackCircuit: true } };
+const groups = { neuroport: ['Neuroport', 36], fashionware: ['Fashionware', 27], neural: ['Neuralware', 27], optics: ['Cyberópticos', 28], internal: ['Cyberware interno', 28], external: ['Cyberware externo e placas', 29], limbs: ['Cybermembros', 30] };
 
 function slotsFrom(text, fallback) {
   const match = text.match(/(\d|um|uma|dois|duas|três) slots? (?:de opção|de placa)/i);
@@ -37,7 +44,8 @@ function convert(raw, group, folder) {
   const [, type, templateName, foundational] = categories.find(([pattern]) => pattern.test(raw.category));
   const [weaponTemplate, weaponStats] = weapons[raw.name] || [];
   const text = stripTags(raw.text);
-  const [, page] = groups[group];
+  const kit = raw.origem === 'kit';
+  const page = kit ? kitPages[group] || 36 : groups[group][1];
   const size = foundational ? 0 : /ocupa dois slots/i.test(text) ? 2 : 1;
   return itemFrom(coreDoc('core_cyberware', weaponTemplate || templateName), {
     seed: `cyberware:${raw.name}`, name: raw.name, folder,
@@ -46,10 +54,10 @@ function convert(raw, group, folder) {
       installLocation: installs[raw.install] || 'clinic', size,
       humanityLoss: humanityLoss(raw.humanity), price: { market: parseEb(raw.cost) ?? 0 },
       ...(foundational ? { installedItems: { allowed: true, allowedTypes: ['itemUpgrade', 'cyberware'], slots: slotsFrom(text, 2) } } : {}),
-      source: { book: SUPPLEMENT, page },
-      description: { value: `<p><b>${raw.category}</b> · instalação: ${raw.install} · Humanidade ${raw.humanity} · ${raw.cost}</p>${para(raw.text)}${para(raw.tip, 'Na mesa')}${sourceNote('Suplemento Cyberpunk 2077', page)}` }
+      source: { book: kit ? KIT : SUPPLEMENT, page },
+      description: { value: `<p><b>${raw.category}</b> · instalação: ${raw.install} · Humanidade ${raw.humanity} · ${raw.cost} · ${kit ? 'Mission Kit' : 'suplemento de fã'}</p>${para(raw.text)}${para(raw.tip, 'Na mesa')}${sourceNote(kit ? 'Cyberpunk Edgerunners Mission Kit' : 'Suplemento de fã Cyberpunk 2077', page)}` }
     },
-    flags: { grupo: group, ...(raw.name === 'Smart Link' ? { smartLink: true } : {}), ...(raw.name === 'Ballistic Coprocessor' ? { ballisticCoprocessor: true } : {}) }
+    flags: { grupo: group, origem: kit ? 'kit' : 'fa', ...(markers[raw.name] || {}) }
   });
 }
 
