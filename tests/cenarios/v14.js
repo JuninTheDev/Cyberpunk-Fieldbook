@@ -221,6 +221,61 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.pente === 25 && info.sobra === 25 && info.carregada === 'Rifle (Basic)', JSON.stringify(info)];
     });
 
+    await r.passo('Sorte e o visual do chat: os pontos preparados pela ficha (− e +, até a Sorte que resta) entram no teste de perícia, +1 cada, e saem da Sorte; o ↺ do começo da sessão volta ao máximo; o teste e o dano saem no visual do tema', async () => {
+      // Armas de uma Mão com +2 de Sorte: d10 5 → REF 8 + 4 + 2 + 5 = 19. Dano do rifle: 5d6, 3 em cada = 15.
+      await fixar(edge, [[5, 10], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const a = game.actors.getName('Atiradora');
+        const sorteAntes = a.system.sorte.value;
+        await a.sheet.render({ force: true });
+        await esperar(() => a.sheet.element?.querySelector('.indicador.sorte [data-delta="1"]'));
+        const f = () => a.sheet.element;
+        const clicar = async (seletor, mudou) => { f().querySelector(seletor).click(); await esperar(mudou); };
+        const preparada = () => f()?.querySelector('.indicador.sorte .sorte-acoes b')?.textContent.trim();
+        // + + − +: 2 pontos preparados, e a ficha mostra.
+        for (const [delta, esperado] of [[1, 1], [1, 2], [-1, 1], [1, 2]]) await clicar('.indicador.sorte [data-delta="' + delta + '"]', () => a.sortePreparada === esperado && preparada() === '+' + esperado);
+        const naFicha = { preparada: preparada(), destaque: f().querySelector('.indicador.sorte').classList.contains('preparada') };
+        // Mais do que resta não dá: fica no que resta.
+        await a.prepararSorte(99);
+        const teto = a.sortePreparada;
+        await a.prepararSorte(2);
+        // O teste de perícia, pelo nome na ficha.
+        const antes = game.messages.size;
+        await clicar('.tab.pericias .pericia[data-pericia="handgun"] .nome', () => game.messages.size > antes && a.sortePreparada === 0);
+        const teste = game.messages.contents.at(-1);
+        const partes = [...new DOMParser().parseFromString(teste.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.trim());
+        const depois = { sorte: a.system.sorte.value, preparada: a.sortePreparada, total: teste.rolls[0].total, formula: teste.rolls[0].formula, partes };
+        // O dano do rifle, pelo botão da aba Combate.
+        const rifle = a.items.getName('Assault Rifle');
+        const antesDoDano = game.messages.size;
+        await clicar('.tab.combate tr[data-item-id="' + rifle.id + '"] [data-action="rolarDano"]', () => game.messages.size > antesDoDano);
+        const dano = game.messages.contents.at(-1);
+        // O visual do tema na mensagem inteira (no chat e na notificação, onde houver).
+        await esperar(() => document.querySelector('.chat-message[data-message-id="' + dano.id + '"]'));
+        const classes = id => [...document.querySelectorAll('.chat-message[data-message-id="' + id + '"]')].map(li => [...li.classList].filter(c => c.startsWith('cprf-')).sort().join(' '));
+        const visual = { teste: classes(teste.id), dano: classes(dano.id), danoTotal: dano.rolls[0].total };
+        // ↺: começo da sessão.
+        await a.prepararSorte(1);
+        await clicar('.indicador.sorte [data-action="recarregarSorte"]', () => a.system.sorte.value === a.system.sorte.max && a.sortePreparada === 0);
+        const recarregada = { sorte: a.system.sorte.value, max: a.system.sorte.max, preparada: a.sortePreparada };
+        await a.update({ 'system.sorte.value': sorteAntes });
+        await a.sheet.close();
+        return { sorteAntes, naFicha, teto, depois, visual, recarregada, fila: window.__fila.length };
+      })()`);
+      // O chat, para a conferência visual.
+      await edge.evaluate(`ui.sidebar.changeTab('chat', 'primary')`);
+      await edge.sleep(600);
+      await edge.shot('chat');
+      await edge.evaluate(`ui.sidebar.changeTab('actors', 'primary')`);
+      const { naFicha, depois, visual, recarregada } = info;
+      const ok = info.sorteAntes === 5 && naFicha.preparada === '+2' && naFicha.destaque && info.teto === 5
+        && depois.total === 19 && depois.formula === '1d10crit + 8 + 4 + 2' && depois.partes.includes('Sorte +2') && depois.sorte === 3 && depois.preparada === 0
+        && visual.teste.length > 0 && visual.teste.every(c => c === 'cprf-mensagem cprf-teste') && visual.dano.length > 0 && visual.dano.every(c => c === 'cprf-dano cprf-mensagem') && visual.danoTotal === 15
+        && recarregada.sorte === 6 && recarregada.max === 6 && recarregada.preparada === 0 && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
@@ -1384,6 +1439,15 @@ module.exports = async ({ edge, servidores, r }) => {
           nome: texto('.tab.role .role-nome'), titulo: texto('.tab.role .painel:nth-of-type(2) .titulo'),
           habilidades: [...f().querySelectorAll('.tab.role .habilidade')].map(li => [li.querySelector('.nome').firstChild.textContent.trim(), li.querySelector('input').value, li.querySelector('.efeito')?.textContent.trim() ?? ''])
         };
+        // A conferência dos pontos: um ponto a mais no Ponto Fraco passa do total do Rank 4; tirado, volta.
+        const mudar = async (nome, valorNovo) => { const campo = f().querySelector('[name="' + nome + '"]'); campo.value = valorNovo; campo.dispatchEvent(new Event('change', { bubbles: true })); };
+        const tituloDaRole = () => texto('.tab.role .painel:nth-of-type(2) .titulo span');
+        await mudar('system.role.habilidades.Spot Weakness', 1);
+        await __esperar(() => tituloDaRole().startsWith('5 DE 4'));
+        role.passou = { titulo: tituloDaRole(), vermelho: Boolean(f().querySelector('.tab.role .titulo .conta-erro')), aviso: texto('.tab.role .conferencia.erro') };
+        await mudar('system.role.habilidades.Spot Weakness', 0);
+        await __esperar(() => tituloDaRole().startsWith('4 DE 4'));
+        role.devolta = tituloDaRole();
         const vida = { origem: valor('system.lifepath.origem'), meta: valor('system.lifepath.meta'), campos: f().querySelectorAll('.tab.vida textarea').length };
         const equipadas = ator.items.filter(i => i.type === 'arma' && i.system.equipada).length;
         const geral = {
@@ -1422,7 +1486,8 @@ module.exports = async ({ edge, servidores, r }) => {
       const { topo, role, vida, geral, nova } = info;
       const habilidade = nome => role.habilidades.find(([n]) => n === nome);
       const ok = topo.role === 'Solo' && topo.rank === '4' && topo.nome === 'Teste Sistema' && topo.apelido === 'Lab'
-        && /SOLO/i.test(role.nome) && /Consciência de Combate/.test(role.nome) && /4 PONTOS DISTRIBUÍDOS/.test(role.titulo) && role.habilidades.length === 6
+        && /SOLO/i.test(role.nome) && /Consciência de Combate/.test(role.nome) && /4 DE 4 PONTOS/.test(role.titulo) && role.habilidades.length === 6
+        && role.passou.titulo.includes('5 DE 4 PONTOS') && role.passou.vermelho && role.passou.aviso === 'PASSOU DO TOTAL DO RANK 4: 5 DE 4 PONTOS' && role.devolta === '4 DE 4 PONTOS · RED p. 146'
         && habilidade('Reação de Iniciativa')?.[1] === '2' && habilidade('Reação de Iniciativa')[2] === '+2 na Iniciativa'
         && habilidade('Detecção de Ameaça')?.[1] === '2' && habilidade('Detecção de Ameaça')[2] === '+2 em Percepção' && habilidade('Ponto Fraco')?.[1] === '0'
         && vida.campos === 17 && vida.origem && vida.origem === lp.culturalOrigin && vida.meta === lp.lifeGoals

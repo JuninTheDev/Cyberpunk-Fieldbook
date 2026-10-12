@@ -35,12 +35,15 @@ export function criticoDo(roll) {
 // partes: [{ rotulo, valor }]; as de valor 0 não entram. modo: o messageMode do Foundry 14 ("public", "gm"...).
 // semFalhaCritica: o 1 natural não tira um d10 (Recuperação de Falhas do Solo, nos ataques); o 10 ainda soma (o "xo"
 // do core: explode uma vez).
+// A Sorte que o ator preparou na ficha entra no teste, +1 por ponto, e sai da Sorte dele (RED p. 130).
 export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false }) {
-  const usadas = partes.filter(parte => Number(parte.valor));
+  const sorte = ator?.sortePreparada ?? 0;
+  const usadas = [...partes, ...(sorte ? [{ rotulo: 'Sorte', valor: sorte }] : [])].filter(parte => Number(parte.valor));
   const formula = [semFalhaCritica ? '1d10xo' : '1d10crit', ...usadas.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ');
   const roll = await new Roll(formula).evaluate();
   const critico = semFalhaCritica && criticoDo(roll) === 'falha' ? null : criticoDo(roll);
-  const resultado = { roll, total: roll.total, critico, natural: roll.dice[0].results[0].result };
+  const resultado = { roll, total: roll.total, critico, natural: roll.dice[0].results[0].result, sorte };
+  if (sorte) await ator.gastarSortePreparada();
   if (!falar) return resultado;
   const content = await renderizar('teste.hbs', { rotulo, sabor, partes: usadas, total: roll.total, critico, dados: await roll.render() });
   resultado.mensagem = await ChatMessage.implementation.create({

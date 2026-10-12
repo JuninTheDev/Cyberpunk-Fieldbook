@@ -37,6 +37,22 @@ export function consciencia(habilidades = {}) {
 
 // Mortalmente ferido (wiki, system-rules.js): −6 MOVE, mínimo 1 (vale também para o que as lesões e a armadura tiram).
 export const PENALIDADE_MOVE_MORTAL = -6;
+
+// LUCK (RED p. 130, wiki: system-rules.js): "antes de rolar, gaste pontos de LUCK: +1 no teste por ponto"; os pontos são
+// a STAT LUCK e voltam no início de cada sessão. Quanto dá para preparar para o próximo teste: de 0 até a Sorte que resta.
+export const sorteParaGastar = (pedida, resta) => Math.max(0, Math.min(Math.trunc(Number(pedida) || 0), Number(resta) || 0));
+
+// Os pontos das especialidades de Role por Rank, pelas notas do criador da wiki (system-criacao.js, roleAbilities): o
+// Tech ganha 2 por Rank ("cada Rank de Artífice dá +1 em duas especialidades diferentes"), o Medtech 1 ("cada Rank de
+// Medicina dá 1 ponto numa especialidade") e o Solo 1, como os 4 do Rank 4 que a wiki dá (ela não diz a regra do Solo
+// por Rank). O máximo em cada especialidade é o Rank (o "até 4 em cada" do Rank 4).
+export const PONTOS_DE_ROLE_POR_RANK = { solo: 1, tech: 2, medtech: 1 };
+export function pontosDeRole(roleId, rank) {
+  const porRank = PONTOS_DE_ROLE_POR_RANK[roleId];
+  if (!porRank) return null;
+  const r = Math.max(0, Number(rank) || 0);
+  return { total: porRank * r, max: r };
+}
 export const moveFinal = (move, mortal) => Math.max(1, Number(move) + (mortal ? PENALIDADE_MOVE_MORTAL : 0));
 
 // O efeito de um equipamento vale com o uso de agora? Pela ativação do item: "equipado" só equipado; "carregando"

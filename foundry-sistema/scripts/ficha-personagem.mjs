@@ -5,6 +5,7 @@
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { acoesDe2077 } from './combate.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
+import { pontosDeRole } from './regras.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -36,6 +37,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       zerarDeathSave: FichaPersonagem.#zerarDeathSave,
       rolarDano: FichaPersonagem.#rolarDano,
       recarregar: FichaPersonagem.#recarregar,
+      prepararSorte: FichaPersonagem.#prepararSorte,
+      recarregarSorte: FichaPersonagem.#recarregarSorte,
       alternarCoronha: FichaPersonagem.#alternarCoronha,
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
@@ -156,7 +159,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const decks = itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')));
 
     return Object.assign(contexto, {
-      ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')),
+      ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
       roles: ROLES,
       atributos: ATRIBUTOS.map(chave => ({ chave, sigla: SIGLA[chave], valor: s.atributos[chave].valor, base: fonte.atributos[chave].valor })),
       vitais: { hp: porcento(s.hp.value, s.hp.max), humanidade: porcento(s.humanidade.value, s.humanidade.max), grave: Math.ceil(s.hp.max / 2) },
@@ -193,15 +196,24 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
       roleDaWiki: role,
-      especialidades: especialidades && {
-        ...especialidades,
-        itens: especialidades.itens.map(item => ({ ...item, pontos: Number(s.role.habilidades[item.id]) || 0, efeito: role.id === 'solo' ? efeitoDoSolo[item.id] || '' : '' })),
-        distribuidos: especialidades.itens.reduce((soma, item) => soma + (Number(s.role.habilidades[item.id]) || 0), 0)
-      },
+      especialidades: especialidades && this.#especialidades(especialidades, role, efeitoDoSolo),
       outrasHabilidades: Object.entries(s.role.habilidades).filter(([nome]) => !daEspecialidade.has(nome)).map(([nome, pontos]) => ({ nome, pontos })),
       lifepath: LIFEPATH.map(({ chave, rotulo }) => ({ chave, rotulo, valor: s.lifepath[chave], largo: ['amigos', 'inimigos', 'amores', 'role'].includes(chave), linhas: chave === 'role' ? 4 : 2 })),
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
+  }
+
+  // As especialidades da Role com os pontos de cada uma e a conferência do Rank (regras.mjs, pontosDeRole): o total
+  // distribuído contra o do Rank e cada uma contra o máximo. Só avisa: quem decide é a mesa.
+  #especialidades(especialidades, role, efeitoDoSolo) {
+    const { habilidades, rank } = this.actor.system.role;
+    const { total, max } = pontosDeRole(role.id, rank);
+    const itens = especialidades.itens.map(item => {
+      const pontos = Number(habilidades[item.id]) || 0;
+      return { ...item, pontos, acima: pontos > max, efeito: role.id === 'solo' ? efeitoDoSolo[item.id] || '' : '' };
+    });
+    const distribuidos = itens.reduce((soma, item) => soma + item.pontos, 0);
+    return { ...especialidades, itens, distribuidos, total, max, rank, passou: distribuidos > total, sobra: Math.max(0, total - distribuidos), acima: itens.filter(item => item.acima).map(item => item.nome).join(', ') };
   }
 
   async _preparePartContext(partId, contexto, options) {
@@ -256,6 +268,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #zerarDeathSave() { return this.actor.zerarDeathSave(); }
   static #rolarDano(evento, alvo) { return this.#item(alvo)?.rolarDano(); }
   static #recarregar(evento, alvo) { return this.#item(alvo)?.recarregar(); }
+  // Sorte: um ponto a mais ou a menos para o próximo teste; no começo da sessão, volta ao máximo.
+  static #prepararSorte(evento, alvo) { return this.actor.prepararSorte(this.actor.sortePreparada + Number(alvo.dataset.delta)); }
+  static #recarregarSorte() { return this.actor.recarregarSorte(); }
   // A coronha retrátil (a Dian, de 2077): recolhida, dá para esconder a arma, e os ataques têm −1.
   static #alternarCoronha(evento, alvo) {
     const item = this.#item(alvo);

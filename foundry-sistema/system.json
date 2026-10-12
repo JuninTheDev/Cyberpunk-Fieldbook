@@ -23,7 +23,7 @@
       "layer": "system"
     },
     {
-      "src": "styles/ficha.css",
+      "src": "styles/tema.css",
       "layer": "system"
     }
   ],

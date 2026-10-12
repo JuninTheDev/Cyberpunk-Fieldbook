@@ -17,10 +17,16 @@
         <span class="valor"><input type="number" name="system.hp.value" value="{{sistema.hp.value}}" aria-label="HP atual"><small>/{{sistema.hp.max}}</small></span>
         <i>HP</i>
       </label>
-      <label class="indicador corte" data-tooltip="Sorte que ainda dá para gastar nesta sessão (o máximo é o LUCK)">
-        <span class="valor"><input type="number" name="system.sorte.value" value="{{sistema.sorte.value}}" aria-label="Sorte atual"><small>/{{sistema.sorte.max}}</small></span>
+      <div class="indicador corte sorte {{#if sortePreparada}}preparada{{/if}}">
+        <span class="valor" data-tooltip="Sorte que ainda dá para gastar nesta sessão (o máximo é o LUCK)"><input type="number" name="system.sorte.value" value="{{sistema.sorte.value}}" aria-label="Sorte atual"><small>/{{sistema.sorte.max}}</small></span>
         <i>SORTE</i>
-      </label>
+        <span class="sorte-acoes">
+          <button type="button" data-action="prepararSorte" data-delta="-1" data-tooltip="Um ponto a menos no próximo teste" aria-label="Um ponto de Sorte a menos">−</button>
+          <b data-tooltip="Pontos de Sorte no próximo teste: +1 por ponto, que saem da Sorte quando ele rola">{{#if sortePreparada}}+{{sortePreparada}}{{else}}0{{/if}}</b>
+          <button type="button" data-action="prepararSorte" data-delta="1" data-tooltip="Gastar um ponto de Sorte no próximo teste (+1)" aria-label="Um ponto de Sorte a mais">+</button>
+          <button type="button" data-action="recarregarSorte" data-tooltip="Começo da sessão: a Sorte volta ao máximo" aria-label="Recarregar a Sorte">↺</button>
+        </span>
+      </div>
       <label class="indicador corte">
         <span class="valor"><input class="largo" type="number" name="system.dinheiro" value="{{fonte.dinheiro}}" aria-label="Eurodólares"></span>
         <i>EURODÓLARES</i>

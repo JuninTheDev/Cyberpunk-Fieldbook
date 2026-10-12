@@ -605,3 +605,21 @@ test('Ficha: o Lifepath tem os campos e os rótulos do criador da wiki (criador.
   assert.equal(LIFEPATH.length, 17);
   assert.equal(new Set(LIFEPATH.map(l => l.chave)).size, 17);
 });
+
+test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
+  assert.equal(regras.sorteParaGastar(2, 5), 2);
+  assert.equal(regras.sorteParaGastar(7, 5), 5);
+  assert.equal(regras.sorteParaGastar(-1, 5), 0);
+  assert.equal(regras.sorteParaGastar(2.7, 5), 2);
+  assert.equal(regras.sorteParaGastar('x', 5), 0);
+  assert.equal(regras.sorteParaGastar(3, 0), 0);
+});
+
+test('Pontos de Role por Rank: no Rank 4 dão os números que o criador da wiki dá (Solo 4, Tech 8, Medtech 4, até 4 em cada); o Tech ganha 2 por Rank', () => {
+  for (const [id, wikiRole] of Object.entries(HABILIDADES_DE_ROLE)) {
+    assert.deepEqual(regras.pontosDeRole(id, 4), { total: wikiRole.pontos, max: wikiRole.max }, id);
+  }
+  assert.deepEqual(regras.pontosDeRole('tech', 6), { total: 12, max: 6 });
+  assert.deepEqual(regras.pontosDeRole('medtech', 2), { total: 2, max: 2 });
+  assert.equal(regras.pontosDeRole('netrunner', 4), null);
+});

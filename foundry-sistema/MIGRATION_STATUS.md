@@ -29,6 +29,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | habilidades das outras Roles | falta |
+| CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
+| CORE | o ledger de Eurodólares, IP e Reputação | falta (ciclo 21) |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
@@ -137,6 +139,16 @@ os bloqueadores abaixo resolvidos, backup e autorização.
     Supressivo comum (10 balas) continua? E o supressivo carregado esfria a arma?
   - **"Dispara três balas Smart"** (Yukimura, Chao, Kappa, Shingen) **e "só dispara em rajadas de três"** (Nowaki,
     Masamune): cada tiro gasta 3 balas? O Foundry 12 gasta 1, e o sistema também, por enquanto.
+
+- **Sorte: preparada na ficha, não numa janela de rolagem.** O CORE pergunta a Sorte na janela de cada rolagem; aqui
+  não há essa janela, e a regra da wiki ("antes de rolar, gaste pontos") virou os botões − e + no indicador da Sorte,
+  que valem para o próximo teste (atributo, perícia, ataque ou defesa). O Death Save não usa Sorte: ele não passa pelo
+  teste e rola contra o BODY (somar pioraria). O dano também não.
+
+- **Pontos de Role por Rank: o Solo é uma leitura.** O Tech (2 por Rank) e o Medtech (1 por Rank) seguem as notas do
+  criador da wiki; o Solo ficou com 1 por Rank, como os 4 do Rank 4 que a wiki dá, mas ela não diz a regra do Solo por
+  Rank. O máximo em cada especialidade é o Rank (o "até 4 em cada" do Rank 4). A ficha só avisa: se a mesa ler
+  diferente, é só trocar `PONTOS_DE_ROLE_POR_RANK` (regras.mjs).
 
 - **Lexington e Testera: muda o que a mesa vê.** O autofogo da Lexington gasta 7 balas ("gastando só 7 balas por
   ataque"; no Foundry 12, as 10 do CORE). A Testera ganhou o botão dos dois cartuchos (4d6), que o Foundry 12 não tinha.
@@ -892,3 +904,45 @@ abas) saiu.
   - a NET em ação.
 - **Próximo:** pela ordem do ROADMAP, o resto do P2: o cyberware que é arma e, na rolagem, a Sorte, a Briga e as
   Artes Marciais.
+- **Commit:** `3cf87a7`.
+
+### Ciclo 20 (2026-10-12): os cartões do chat, a Sorte e a conferência dos pontos de Role (P2)
+
+Pedidos do usuário depois da ficha nova, com o extrato de Eurodólares, que ficou para o ciclo 21.
+
+- **Implementado:**
+  - **os cartões do chat no visual da ficha:** o gancho que desenha as mensagens põe `cprf-mensagem` e o tipo do cartão
+    (teste, ataque, dano, Death Save, espera, morte) na mensagem que tem um cartão do sistema. Ela fica escura, com a
+    borda amarela (vermelha no dano, na morte e no Death Save que falhou), quem falou em amarelo, as partes do teste em
+    etiquetas, a fórmula em mono e o total grande. As mensagens que não são do sistema não mudam. O estilo do tema foi
+    para `styles/tema.css` (antes `ficha.css`), que agora cobre as fichas e o chat;
+  - **a Sorte** (RED p. 130, wiki: "antes de rolar, gaste pontos de LUCK: +1 no teste por ponto"):
+    - os botões − e + no indicador da Sorte preparam pontos para o próximo teste, de 0 até a Sorte que resta;
+    - o teste (atributo, perícia, ataque ou defesa) soma a "Sorte +N" nas partes e tira os pontos da Sorte;
+    - o ↺ é o começo da sessão: a Sorte volta ao máximo (a LUCK);
+  - **a conferência dos pontos de Role** (`pontosDeRole`): na aba Role, "X DE Y PONTOS" no título, em vermelho
+    quando passa do total do Rank. Abaixo, o aviso do que passou ou do que sobra, e a especialidade acima do Rank fica
+    vermelha. Só avisa.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 41 de 41. Dois testes novos:
+    - a Sorte que dá para preparar;
+    - os pontos de Role, que no Rank 4 dão os números do criador da wiki;
+  - G4: 58 de 58, cerca de 63 s, em duas rodadas (e 59 de 59 numa terceira, com um passo temporário só para a
+    captura do chat com os ataques, tirado depois). O que mudou:
+    - **um passo novo, a Sorte e o visual do chat:**
+      - + + − + na ficha deixam 2 pontos preparados, e o pedido de 99 fica nos 5 que restam;
+      - o teste de Armas de uma Mão, pelo nome na ficha, dá 8 + 4 + 2 + 5 = 19, com "Sorte +2" nas partes, e a Sorte
+        vai de 5 a 3;
+      - o teste e o dano do rifle saem com o visual do tema na mensagem inteira;
+      - o ↺ volta a Sorte a 6;
+    - **no passo da ficha nova:** um ponto a mais no Ponto Fraco dá "5 DE 4 PONTOS" em vermelho e o aviso "PASSOU DO
+      TOTAL DO RANK 4"; tirado, volta a 4 de 4;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado em seguida:
+    - G3: o teto da Sorte e os 2 por Rank do Tech;
+    - G4: o gasto da Sorte no teste e a classe do visual nas mensagens;
+  - **conferência visual:** as capturas do chat com os testes, o dano e os ataques;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Escolhas:** a Sorte preparada na ficha e os pontos do Solo por Rank (nas dúvidas, acima).
+- **Próximo:** ciclo 21, o extrato de Eurodólares, IP e Reputação, como o ledger do CORE.

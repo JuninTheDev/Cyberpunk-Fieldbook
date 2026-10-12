@@ -1,6 +1,6 @@
 /* Cyberpunk RED — Fieldbook: a ficha, os itens e os cartões do chat (camada "system" do Foundry 14).
-   Tudo fica dentro de .cpr-fieldbook; as cores seguem o tema do Foundry (claro ou escuro) com o vermelho do RED. A ficha
-   do personagem e o tema dela ficam em styles/ficha.css. */
+   Tudo fica dentro de .cpr-fieldbook; as cores seguem o tema do Foundry (claro ou escuro) com o vermelho do RED. As
+   fichas e os cartões do chat, no visual do modelo da mesa, ficam em styles/tema.css. */
 .cpr-fieldbook {
   --cprf-vermelho: #d7263d;
   --cprf-ciano: #2fd6d6;
@@ -35,33 +35,6 @@
 .cpr-fieldbook .efeitos { margin: 0; padding-left: 1rem; }
 .cpr-fieldbook .efeitos .inativo { opacity: 0.6; }
 .cpr-fieldbook .fonte { color: var(--cprf-texto-fraco); font-size: 0.8rem; }
-
-/* ---------- Cartões do chat ---------- */
-.cpr-fieldbook.cartao header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; border-bottom: 2px solid var(--cprf-vermelho); margin-bottom: 0.35rem; }
-.cpr-fieldbook.cartao header h3 { margin: 0; border: none; font-size: 1rem; }
-.cpr-fieldbook.cartao .sabor { color: var(--cprf-texto-fraco); font-size: 0.85rem; }
-.cpr-fieldbook.cartao .partes { display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; list-style: none; margin: 0 0 0.35rem; padding: 0; font-size: 0.85rem; }
-.cpr-fieldbook.cartao .critico { margin: 0.25rem 0; font-weight: 700; }
-.cpr-fieldbook.cartao.critico-sucesso .critico { color: var(--cprf-ciano); }
-.cpr-fieldbook.cartao.critico-falha .critico { color: var(--cprf-vermelho); }
-.cpr-fieldbook.cartao .placar { margin: 0 0 0.35rem; }
-.cpr-fieldbook.cartao .alvos { list-style: none; margin: 0; padding: 0; }
-.cpr-fieldbook.cartao .alvo { padding: 0.3rem 0; border-top: 1px solid var(--cprf-borda); }
-.cpr-fieldbook.cartao .alvo .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
-.cpr-fieldbook.cartao .alvo img { width: 28px; height: 28px; border: none; object-fit: cover; }
-.cpr-fieldbook.cartao .alvo .rotulo { font-weight: 700; }
-.cpr-fieldbook.cartao .alvo.resultado-acertou .rotulo, .cpr-fieldbook.cartao .alvo.resultado-suprimido .rotulo { color: var(--cprf-vermelho); }
-.cpr-fieldbook.cartao .alvo.resultado-esquivou .rotulo, .cpr-fieldbook.cartao .alvo.resultado-firme .rotulo { color: var(--cprf-ciano); }
-.cpr-fieldbook.cartao .contra { color: var(--cprf-texto-fraco); font-size: 0.85rem; }
-.cpr-fieldbook.cartao .dano { margin: 0.2rem 0 0; padding-left: 1.1rem; font-size: 0.9rem; }
-.cpr-fieldbook.cartao .dano .lesao { color: var(--cprf-vermelho); }
-.cpr-fieldbook.cartao .nota { margin: 0.2rem 0 0; color: var(--cprf-texto-fraco); font-size: 0.85rem; font-style: italic; }
-.cpr-fieldbook.cartao .botoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.35rem; }
-.cpr-fieldbook.cartao .botoes button { flex: 0 0 auto; width: auto; padding: 0 0.6rem; }
-.cpr-fieldbook.cartao.desfeito { opacity: 0.5; }
-.cpr-fieldbook.cartao.desfeito .botoes { display: none; }
-.cpr-fieldbook.cartao.death-save.falhou .resultado, .cpr-fieldbook.cartao.morte { color: var(--cprf-vermelho); font-weight: 700; }
-.cpr-fieldbook.cartao.death-save.passou .resultado { color: var(--cprf-ciano); font-weight: 700; }
 
 /* Janelas da defesa e do tiro mirado (DialogV2). */
 .cpr-fieldbook.defesa .form-footer button, .cpr-fieldbook.mirar .form-footer button { font-weight: 700; }

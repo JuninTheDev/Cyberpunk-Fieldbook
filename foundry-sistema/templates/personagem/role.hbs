@@ -11,17 +11,20 @@
 
   {{#if especialidades}}
   <section class="painel corte">
-    <div class="titulo">{{especialidades.titulo}}<span>{{especialidades.distribuidos}} PONTO{{#unless (eq especialidades.distribuidos 1)}}S{{/unless}} DISTRIBUÍDO{{#unless (eq especialidades.distribuidos 1)}}S{{/unless}} · {{especialidades.pagina}}</span></div>
+    <div class="titulo">{{especialidades.titulo}}<span class="{{#if especialidades.passou}}conta-erro{{/if}}">{{especialidades.distribuidos}} DE {{especialidades.total}} PONTOS · {{especialidades.pagina}}</span></div>
     <ol class="habilidades">
       {{#each especialidades.itens}}
       <li class="habilidade {{#if pontos}}tem{{/if}}">
         <span class="nome">{{nome}}<small>{{desc}}</small></span>
         {{#if efeito}}<span class="efeito">{{efeito}}</span>{{/if}}
-        <input type="number" name="system.role.habilidades.{{id}}" value="{{pontos}}" min="0" max="10" aria-label="Pontos em {{nome}}">
+        <input class="{{#if acima}}acima{{/if}}" type="number" name="system.role.habilidades.{{id}}" value="{{pontos}}" min="0" max="10" aria-label="Pontos em {{nome}}"{{#if acima}} data-tooltip="Mais que o Rank ({{../especialidades.max}})"{{/if}}>
       </li>
       {{/each}}
     </ol>
-    <p class="dica">{{especialidades.nota}} No Rank 4, a wiki dá {{especialidades.pontos}} pontos, até {{especialidades.max}} em cada.</p>
+    {{#if especialidades.passou}}<div class="conferencia erro">PASSOU DO TOTAL DO RANK {{especialidades.rank}}: {{especialidades.distribuidos}} DE {{especialidades.total}} PONTOS</div>
+    {{else if especialidades.sobra}}<div class="conferencia">SOBRA{{#unless (eq especialidades.sobra 1)}}M{{/unless}} {{especialidades.sobra}} PONTO{{#unless (eq especialidades.sobra 1)}}S{{/unless}} PARA DISTRIBUIR</div>{{/if}}
+    {{#if especialidades.acima}}<div class="conferencia erro">MAIS QUE O RANK ({{especialidades.max}}) EM: {{especialidades.acima}}</div>{{/if}}
+    <p class="dica">No Rank {{especialidades.rank}}: {{especialidades.total}} pontos, até {{especialidades.max}} em cada. {{especialidades.nota}}</p>
   </section>
   {{/if}}
 

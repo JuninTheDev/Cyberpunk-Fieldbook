@@ -7,7 +7,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 ## O que já faz
 
 - **Ficha do personagem**, no visual do modelo de ficha da mesa (Cyberpunk 2077: amarelo, ciano e vermelho sobre o escuro, com as fontes Rajdhani e Share Tech Mono embutidas). A ficha é sempre escura, qualquer que seja o tema do Foundry. Tem estas partes:
-  - **Cabeçalho:** o retrato, a Role e o Rank (com a lista das Roles de 2077), o nome, o apelido e os indicadores de HP, Sorte, Eurodólares, IP e Reputação.
+  - **Cabeçalho:** o retrato, a Role e o Rank (com a lista das Roles de 2077), o nome, o apelido e os indicadores de HP, Sorte (com os botões da Sorte, abaixo), Eurodólares, IP e Reputação.
   - **Perícias:** o painel geral, em três colunas.
     - **Esquerda:** os atributos (clique para rolar) e os vitais (as barras de HP e Humanidade, a EMP de agora, o limite de gravemente ferido, o Death Save e o estado).
     - **Centro:** as perícias com nível, das mais altas para as mais baixas, ou todas, no grupo de cada uma. Na lista completa, dá para acrescentar uma perícia de família (uma Linguagem, um Especialista Local...) e tirá-la.
@@ -15,10 +15,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Combate:** as armas com todos os modos de ataque, a armadura vestida, a Iniciativa, a esquiva, o Death Save e a munição.
   - **Equipamento:** armas, armaduras, munição, equipamento, roupas, drogas, upgrades e veículos.
   - **Cyberware:** a Humanidade e cada peça, com instalar e tirar.
-  - **Role:** a Role de 2077 da wiki, com a habilidade e o resumo. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora.
+  - **Role:** a Role de 2077 da wiki, com a habilidade e o resumo. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora. A ficha confere os pontos com o Rank: o total (o Tech ganha 2 por Rank; o Solo e o Medtech, 1) e o máximo em cada especialidade (o Rank). Ela avisa o que passou e o que sobra, sem travar.
   - **NET:** o cyberdeck e os programas (as regras da NET ainda não).
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
+- **Cartões do chat** (testes, ataques, dano, Death Save) no mesmo visual: a mensagem inteira fica escura, com a borda amarela (vermelha no dano e na morte), as partes do teste em etiquetas e o total grande. As mensagens que não são do sistema não mudam.
 - **Rolagens nativas do Foundry 14**, com o crítico do d10 como o modificador `crit` (`1d10crit + 12`):
   - um 10 natural soma mais um d10;
   - um 1 natural tira um d10;
@@ -29,7 +30,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - o bônus dos efeitos;
   - a penalidade de ferimento (−2 gravemente; −4 mortalmente, que também tira 6 de MOVE, com mínimo 1);
   - as lesões (−2 em todas as ações da Concussão, por exemplo);
-  - a armadura pesada, que tira de REF, DEX e MOVE.
+  - a armadura pesada, que tira de REF, DEX e MOVE;
+  - a **Sorte** preparada na ficha (RED p. 130: antes de rolar, +1 por ponto). Os botões − e + no indicador da Sorte escolhem quantos pontos vão no próximo teste (atributo, perícia, ataque ou defesa), e eles saem da Sorte quando ele rola. O ↺ é o começo da sessão: a Sorte volta ao máximo (a LUCK).
 - **Ataque, defesa e dano** (o Fluxo de Combate dentro do sistema). Marque os alvos (T) e use os botões da arma:
   - **Atacar:** tiro, ou corpo a corpo com arma branca.
   - **Mirar:** −8, na cabeça (o dano que passa dobra), na perna (se passar dano, Perna quebrada) ou no item na mão (o alvo larga).
@@ -139,8 +141,7 @@ E as da wiki:
 - **Do Fluxo de Combate:**
   - a animação e o texto em cima do token;
   - quem vê o cartão do resultado (hoje, todos);
-  - o Reflex Tuner;
-  - a Sorte na rolagem.
+  - o Reflex Tuner.
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
 - **Das armas de 2077,** as regras de alguns modelos (a Satara, a Burya, a Senkoh, o +1 entre 13 e 50 m: veja o ROADMAP), e o cyberware que é arma.
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).

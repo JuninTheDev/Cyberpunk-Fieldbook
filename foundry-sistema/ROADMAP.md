@@ -65,15 +65,19 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   a campanha da wiki de cada mundo (a janela lista os personagens de todas as campanhas).
 - [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
-- [ ] **Na rolagem:** Sorte; Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
+- [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da
+  Sorte; o ↺ do começo da sessão.
+- [ ] **Na rolagem, o resto:** Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
   Falhas do Solo; Facedown.
 - [x] **A ficha nova** (Ciclo 19), no visual do modelo de ficha da mesa: o painel geral em três colunas, as abas
   Combate, Equipamento, Cyberware, Role, NET e Vida, o apelido e o Lifepath (com a importação da wiki), as perícias de
   família pela ficha e o tema escuro com as fontes embutidas, também na ficha do item. A aba Role mostra as
   especialidades (Solo, Tech, Medtech) com os nomes em português e os pontos editáveis, o que dá para redistribuir a
   Consciência de Combate.
-- [ ] **A ficha, o que falta:** a conferência do total de pontos de Role por Rank (a wiki só dá os números do Rank 4);
-  a NET em ação; um botão para gastar Sorte; os cartões do chat no mesmo visual.
+- [x] **A ficha, o resto do visual e da Role** (Ciclo 20): os cartões do chat no visual da ficha e a conferência dos
+  pontos de Role pelo Rank.
+- [ ] **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12: o histórico e o menu de somar,
+  subtrair e definir, com o motivo (Ciclo 21).
 - [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
 - [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a luneta
   de precisão (+1 em tiro único ou mirado a 51 m ou mais); a arma sob o cano (lança-granadas e espingarda) como

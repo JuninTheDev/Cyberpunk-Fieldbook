@@ -1,11 +1,12 @@
-/* Cyberpunk RED — Fieldbook: a ficha do personagem no visual do modelo da mesa ("Modelo de ficha/": Cyberpunk 2077,
-   amarelo, ciano e vermelho sobre o escuro), e o mesmo tema na ficha do item. As fontes vêm embutidas (fontes/, SIL OFL)
-   e a ficha fica sempre no tema escuro do Foundry (classes "themed theme-dark"). Tudo fica dentro das duas fichas. */
+/* Cyberpunk RED — Fieldbook: o visual do modelo de ficha da mesa ("Modelo de ficha/": Cyberpunk 2077, amarelo, ciano e
+   vermelho sobre o escuro) na ficha do personagem, na ficha do item e nos cartões do chat. As fontes vêm embutidas
+   (fontes/, SIL OFL) e as fichas ficam sempre no tema escuro do Foundry (classes "themed theme-dark"). Nas mensagens do
+   chat, só as que têm um cartão deste sistema (a classe cprf-mensagem, que combate.mjs põe ao desenhar). */
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fontes/rajdhani-500.woff2') format('woff2'); }
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fontes/rajdhani-700.woff2') format('woff2'); }
 @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
 
-.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item {
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .chat-message.cprf-mensagem {
   --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
   --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
   --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
@@ -111,6 +112,16 @@
 .cpr-fieldbook.ficha-personagem .indicador.hp { border-top-color: var(--cp-vermelho); }
 .cpr-fieldbook.ficha-personagem .indicador.hp input { color: var(--cp-vermelho); }
 .cpr-fieldbook.ficha-personagem .indicador.hp:is(.estado-grave, .estado-mortal) { background: color-mix(in srgb, var(--cp-vermelho) 18%, var(--cp-painel)); }
+/* A Sorte: os pontos preparados para o próximo teste (− e +) e o ↺ do começo da sessão. */
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes button {
+  width: 20px; height: 20px; min-height: 0; padding: 0; border: 1px solid var(--cp-linha); border-radius: 0;
+  background: transparent; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; line-height: 1;
+}
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes button:hover { border-color: var(--cp-amarelo); color: var(--cp-amarelo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes b { min-width: 3ch; text-align: center; font-family: var(--cp-dados); font-size: 12px; font-weight: 400; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .indicador.sorte.preparada { border-top-color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .indicador.sorte.preparada .sorte-acoes b { color: var(--cp-ciano); }
 
 /* ---------- Abas ---------- */
 .cpr-fieldbook.ficha-personagem nav.sheet-tabs {
@@ -244,6 +255,14 @@
 .cpr-fieldbook.ficha-personagem .habilidade .efeito { font-family: var(--cp-dados); font-size: 13px; color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .habilidade input { height: auto; padding: 2px 0; text-align: center; color: var(--cp-amarelo); font: 700 22px var(--cp-titulo); }
 .cpr-fieldbook.ficha-personagem .habilidade:not(.tem) input { color: var(--cp-fraco); }
+/* A conferência dos pontos de Role: o que sobra (amarelo) e o que passou (vermelho). */
+.cpr-fieldbook.ficha-personagem .titulo .conta-erro { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .habilidade input.acima { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .conferencia {
+  margin-top: 8px; padding: 8px; border: 1px dashed var(--cp-amarelo); color: var(--cp-amarelo); text-align: center;
+  font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.12em;
+}
+.cpr-fieldbook.ficha-personagem .conferencia.erro { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
 
 /* ---------- Vida: o Lifepath e as notas ---------- */
 .cpr-fieldbook.ficha-personagem .lifepath { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
@@ -271,6 +290,74 @@
   .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .lifepath) { grid-template-columns: minmax(0, 1fr); }
   .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- Cartões do chat ---------- */
+/* A mensagem inteira: o fundo, a borda (amarela; vermelha no dano e na morte) e quem falou. */
+.chat-message.cprf-mensagem {
+  background-color: var(--cp-fundo);
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
+  border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-amarelo); border-radius: 0;
+  color: var(--cp-texto); font-family: var(--cp-titulo); font-size: 14px;
+}
+.chat-message.cprf-mensagem:is(.cprf-dano, .cprf-morte, .cprf-falhou) { border-left-color: var(--cp-vermelho); }
+.chat-message.cprf-mensagem:is(.cprf-espera) { border-left-color: var(--cp-fraco); }
+.chat-message.cprf-mensagem .message-header { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
+.chat-message.cprf-mensagem .message-sender { color: var(--cp-amarelo); font: 700 15px/1.2 var(--cp-titulo); letter-spacing: 0.06em; text-transform: uppercase; }
+.chat-message.cprf-mensagem :is(.message-metadata, .whisper-to, .flavor-text) { color: var(--cp-fraco); }
+.cpr-fieldbook.cartao { color: var(--cp-texto); font-family: var(--cp-titulo); }
+.cpr-fieldbook.cartao header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--cp-linha);
+}
+.cpr-fieldbook.cartao header h3 { margin: 0; border: none; color: var(--cp-texto); font: 700 16px/1.15 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .sabor { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.04em; text-align: right; }
+.cpr-fieldbook.cartao p { margin: 4px 0; }
+.cpr-fieldbook.cartao b { color: var(--cp-amarelo); }
+/* As partes do teste (atributo, perícia, bônus, Sorte...). */
+.cpr-fieldbook.cartao .partes { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 6px; padding: 0; list-style: none; }
+.cpr-fieldbook.cartao .partes li { padding: 1px 6px; background: var(--cp-poco); border-top: 1px solid var(--cp-ciano); color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
+.cpr-fieldbook.cartao .partes li b { font-weight: 400; }
+.cpr-fieldbook.cartao .critico { margin: 4px 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.cartao.critico-sucesso .critico { color: var(--cp-ciano); }
+.cpr-fieldbook.cartao.critico-falha .critico { color: var(--cp-vermelho); }
+/* Os dados (o roll.render do Foundry): a fórmula, os dados e o total grande. */
+.cpr-fieldbook.cartao .dice-roll { margin-top: 6px; }
+.cpr-fieldbook.cartao .dice-formula { background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.cartao .dice-tooltip { background: var(--cp-poco); color: var(--cp-texto); }
+.cpr-fieldbook.cartao .dice-tooltip :is(.part-formula, .part-total) { color: var(--cp-fraco); font-family: var(--cp-dados); }
+.cpr-fieldbook.cartao .dice-total {
+  background: var(--cp-poco); border: 1px solid var(--cp-amarelo); border-radius: 0; box-shadow: none;
+  color: var(--cp-amarelo); font: 700 24px/1.3 var(--cp-titulo);
+}
+.cpr-fieldbook.cartao:is(.dano, .death-save.falhou) .dice-total { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao.death-save.passou .dice-total { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+/* O resultado do ataque: cada alvo, o dano e as notas. */
+.cpr-fieldbook.cartao .placar { margin: 0 0 6px; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; color: var(--cp-fraco); }
+.cpr-fieldbook.cartao .placar b { font: 700 20px var(--cp-titulo); }
+.cpr-fieldbook.cartao .alvos { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.cartao .alvo { padding: 5px 0; border-top: 1px solid var(--cp-linha); }
+.cpr-fieldbook.cartao .alvo .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cpr-fieldbook.cartao .alvo .linha b { color: var(--cp-texto); }
+.cpr-fieldbook.cartao .alvo img { width: 28px; height: 28px; border: none; object-fit: cover; }
+.cpr-fieldbook.cartao .alvo .rotulo { font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .alvo:is(.resultado-acertou, .resultado-suprimido) .rotulo { color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao .alvo:is(.resultado-esquivou, .resultado-firme) .rotulo { color: var(--cp-ciano); }
+.cpr-fieldbook.cartao .alvo:is(.resultado-errou, .resultado-fora, .resultado-semDv) .rotulo { color: var(--cp-fraco); }
+.cpr-fieldbook.cartao .contra { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
+.cpr-fieldbook.cartao .dano { margin: 4px 0 0; padding-left: 16px; font-size: 13px; }
+.cpr-fieldbook.cartao .dano .lesao, .cpr-fieldbook.cartao .dano .lesao b { color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao .nota { margin: 4px 0 0; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; line-height: 1.4; }
+.cpr-fieldbook.cartao .botoes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
+.cpr-fieldbook.cartao .botoes button {
+  flex: none; width: auto; height: auto; min-height: 0; padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; line-height: 1.2;
+}
+.cpr-fieldbook.cartao .botoes button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.cartao.desfeito { opacity: 0.5; }
+.cpr-fieldbook.cartao.desfeito .botoes { display: none; }
+.cpr-fieldbook.cartao .resultado { font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.cpr-fieldbook.cartao.death-save.passou .resultado { color: var(--cp-ciano); }
+.cpr-fieldbook.cartao.death-save.falhou .resultado, .cpr-fieldbook.cartao.morte { color: var(--cp-vermelho); }
 
 /* ---------- Ficha do item: o mesmo tema ---------- */
 .cpr-fieldbook.ficha-item .cabecalho { border-bottom: 2px solid var(--cp-amarelo); }

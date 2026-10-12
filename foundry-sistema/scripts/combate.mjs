@@ -694,8 +694,14 @@ export async function desfazer(mensagem) {
   return true;
 }
 
-// Botões dos cartões (só o mestre vê): Desfazer e "responder pelo jogador".
+// Os tipos de cartão que mudam o visual da mensagem inteira (styles/tema.css): a borda vermelha do dano e da morte.
+const TIPOS_DE_CARTAO = ['teste', 'ataque', 'dano', 'death-save', 'falhou', 'espera', 'morte'];
+
+// Ao desenhar uma mensagem com um cartão deste sistema: o visual do tema na mensagem inteira (quem falou, a hora) e os
+// botões dos cartões (só o mestre vê): Desfazer e "responder pelo jogador".
 export function ligarBotoes(mensagem, html) {
+  const cartao = html.querySelector('.cpr-fieldbook.cartao');
+  if (cartao) html.classList.add('cprf-mensagem', ...TIPOS_DE_CARTAO.filter(tipo => cartao.classList.contains(tipo)).map(tipo => `cprf-${tipo}`));
   for (const botao of html.querySelectorAll('[data-cprf-acao]')) {
     if (!game.user.isGM) { botao.remove(); continue; }
     botao.addEventListener('click', evento => {

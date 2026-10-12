@@ -1,7 +1,7 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
 import { caminho, SIGLA, SISTEMA } from './config.mjs';
-import { aplicarDano, ehCoprocessador, ehSmartLink, localDaArmadura, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077 } from './regras.mjs';
+import { aplicarDano, ehCoprocessador, ehSmartLink, localDaArmadura, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, sorteParaGastar } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
@@ -54,6 +54,22 @@ export class AtorCPR extends Actor {
   // Estabilizou: a penalidade dos Death Saves volta a zero.
   zerarDeathSave() {
     return this.update({ 'system.deathSave.penalidade': 0 });
+  }
+
+  // Sorte (RED p. 130): os pontos preparados na ficha para o próximo teste (+1 por ponto), que saem da Sorte quando ele
+  // rola (rolagens.mjs, testar). No começo da sessão, a Sorte volta ao máximo (a STAT LUCK).
+  get sortePreparada() {
+    return sorteParaGastar(this.getFlag(SISTEMA, 'sorte'), this.system.sorte.value);
+  }
+  prepararSorte(pontos) {
+    return this.setFlag(SISTEMA, 'sorte', sorteParaGastar(pontos, this.system.sorte.value));
+  }
+  gastarSortePreparada() {
+    const pontos = this.sortePreparada;
+    return this.update({ 'system.sorte.value': this.system.sorte.value - pontos, [`flags.${SISTEMA}.sorte`]: 0 });
+  }
+  recarregarSorte() {
+    return this.update({ 'system.sorte.value': this.system.sorte.max, [`flags.${SISTEMA}.sorte`]: 0 });
   }
 
   // Cyberware instalado que as armas de 2077 procuram: o Smart Link (armas Smart) e o Ballistic Coprocessor (ricochete).
