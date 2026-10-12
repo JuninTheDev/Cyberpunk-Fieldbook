@@ -97,8 +97,30 @@ o P0 do ROADMAP, e não se tiram nem se mudam para passar:
   build) tem de ter o SHA-256 registrado em `build/conteudo.mjs`. Qualquer diferença para o build sem executar nada.
 - **Versões exatas:** `@foundryvtt/foundryvtt-cli@1.1.0` e `eslint@10.12.0`.
 
+## G4 num PC sem o instalador do Foundry 14
+
+O cenário procura o Foundry 14 do instalador do Windows. Sem ele, dá para usar o app do servidor (a parte de servidor do
+Foundry é a mesma em todo sistema operacional), todo dentro da pasta descartável:
+- **O app:** `resources/app` do zip do Linux (no servidor, `/srv/foundry14/app/resources/app`) em
+  `%LOCALAPPDATA%\FieldbookTeste\foundry14-app`.
+  - O único módulo nativo dele é o `classic-level` 3.0.0, que vem só com o binário do Linux.
+  - Copie para `node_modules/classic-level/prebuilds/win32-x64/` o `classic-level.node` da mesma versão. O do npx da
+    foundryvtt-cli 3.x serve.
+- **O Node 24:** o Foundry 14 pede `>=24.13.1 <25`. Use o Node portátil oficial em `%LOCALAPPDATA%\FieldbookTeste\node24`,
+  conferido pelo SHA-256 do site do Node.
+- **Rodar:** `FOUNDRY14_APP=%LOCALAPPDATA%\FieldbookTeste\foundry14-app %LOCALAPPDATA%\FieldbookTeste\node24\node.exe tests/rodar.js v14`.
+- **Prova:** montado assim em 2026-10-12, o G4 deu os mesmos 61 de 67 do PC com o instalador; as 6 falhas são as
+  conhecidas.
+
 ## Segurança
 
-- **Instalar** só num Foundry 14 (o `instalar.mjs` confere), e nunca na mesa do servidor.
-- **Testes** usam só a pasta descartável `%LOCALAPPDATA%\FieldbookTeste`; da pasta do Foundry do PC sai só a licença.
-- **Git:** sem push nem publicação. Commits no branch `sistema-v14`.
+- **Instalar:**
+  - só num Foundry 14 (o `instalar.mjs` confere);
+  - no servidor, só no Foundry 14 da mesa nova (`/srv/foundry14`), pelo `servidor/instalar-sistema-v14.sh` (decisão do
+    usuário, 2026-10-12);
+  - no Foundry 12 da mesa, nunca.
+- **Testes:** usam só a pasta descartável `%LOCALAPPDATA%\FieldbookTeste`. Da pasta do Foundry do PC sai só a licença.
+- **Git:**
+  - commits no branch `sistema-v14`, com push no fim de cada ciclo: duas sessões trabalham no mesmo plano (o de paridade,
+    no ROADMAP; decisão do usuário, 2026-10-12);
+  - o master é da wiki e do servidor.
