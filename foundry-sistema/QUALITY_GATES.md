@@ -69,6 +69,11 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 - **Pergunta do DialogV2:** o texto fica em `.dialog-content`, e os botões em `.form-footer`. O `.window-content` e um
   `button[data-action]` solto pegam também os botões e os controles do cabeçalho (no ciclo 21, duas rodadas do G4
   falharam por isso, com o sistema certo).
+- **Janela de reação do alvo** (ciclo 28): não é DialogV2. As escolhas são `button.opcao[data-escolha="..."]` em
+  `.application.cpr-fieldbook.janela-defesa`, e o X é `.window-header [data-action="close"]`. Fechar a janela do jogador
+  vale a escolha padrão e responde ao mestre: o `finally` que fecha uma janela de reação que sobrou manda essa resposta
+  (o mestre que já não espera a ignora). O passo que espera o tempo acabar baixa a configuração "Tempo" (o mínimo é
+  10 s) e a devolve no `finally`.
 
 ## Build
 

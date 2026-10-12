@@ -1,13 +1,13 @@
 /* Cyberpunk RED — Fieldbook: o visual do modelo de ficha da mesa ("Modelo de ficha/": Cyberpunk 2077, amarelo, ciano e
    vermelho sobre o escuro) na ficha do personagem, na ficha do item e nos cartões do chat. As fontes vêm embutidas
-   (fontes/, SIL OFL) e as fichas e a janela do extrato ficam sempre no tema escuro do Foundry (classes "themed
-   theme-dark"). Nas mensagens do chat, só as que têm um cartão deste sistema (a classe cprf-mensagem, que combate.mjs põe
-   ao desenhar). */
+   (fontes/, SIL OFL) e as fichas e as janelas do sistema (o extrato, a rolagem, a reação do alvo) ficam sempre no tema
+   escuro do Foundry (classes "themed theme-dark"). Nas mensagens do chat, só as que têm um cartão deste sistema (a classe
+   cprf-mensagem, que combate.mjs põe ao desenhar). */
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fontes/rajdhani-500.woff2') format('woff2'); }
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fontes/rajdhani-700.woff2') format('woff2'); }
 @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
 
-.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .chat-message.cprf-mensagem {
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .cpr-fieldbook.janela-defesa, .chat-message.cprf-mensagem {
   --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
   --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
   --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
@@ -15,11 +15,11 @@
 }
 
 /* ---------- Janela ---------- */
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem) .window-header {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa) .window-header {
   background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); color: var(--cp-amarelo);
   font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
 }
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem) .window-content {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa) .window-content {
   background-color: var(--cp-fundo);
   background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
   color: var(--cp-texto); font-family: var(--cp-titulo); font-weight: 500; font-size: 15px;
@@ -392,6 +392,45 @@
 .cpr-fieldbook.janela-rolagem .total b { font: 700 32px/1 var(--cp-titulo); letter-spacing: 0; }
 .cpr-fieldbook.janela-rolagem .form-footer button { border-radius: 0; font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
 .cpr-fieldbook.janela-rolagem .form-footer button[data-action="rolar"] { background: var(--cp-amarelo); border-color: var(--cp-amarelo); color: var(--cp-fundo); }
+
+/* ---------- A janela de reação do alvo ("Você está sendo atacado!") ---------- */
+/* Como a "Ataque!" do Fluxo de Combate: quem ataca e quem é atacado, a arma, as escolhas com a conta e a barra do tempo. */
+.cpr-fieldbook.janela-defesa .window-header { border-bottom-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa .window-content { padding: 12px 14px 14px; }
+.cpr-fieldbook.janela-defesa .defesa-conteudo { display: flex; flex-direction: column; gap: 10px; }
+.cpr-fieldbook.janela-defesa .duelo { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.cpr-fieldbook.janela-defesa .duelo figure { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; max-width: 170px; margin: 0; }
+.cpr-fieldbook.janela-defesa .duelo img { width: 64px; height: 64px; object-fit: cover; background: var(--cp-poco); border: 1px solid var(--cp-linha); border-top: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.janela-defesa .duelo figure:last-child img { border-top-color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa .duelo figcaption { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 15px/1.2 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.janela-defesa .duelo > i { color: var(--cp-vermelho); font-size: 22px; }
+.cpr-fieldbook.janela-defesa p { margin: 0; text-align: center; }
+.cpr-fieldbook.janela-defesa .arma { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; }
+.cpr-fieldbook.janela-defesa .arma b { color: var(--cp-amarelo); font-weight: 400; }
+.cpr-fieldbook.janela-defesa .total { color: var(--cp-texto); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.janela-defesa .total b { color: var(--cp-vermelho); font: 700 22px/1 var(--cp-titulo); letter-spacing: 0; }
+.cpr-fieldbook.janela-defesa .nota { color: var(--cp-fraco); font-size: 13px; }
+.cpr-fieldbook.janela-defesa .opcoes { display: flex; flex-direction: column; gap: 6px; }
+.cpr-fieldbook.janela-defesa button.opcao {
+  display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; height: auto; min-height: 0; margin: 0; padding: 8px 12px;
+  background: var(--cp-painel); border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-ciano); border-radius: 0;
+  color: var(--cp-texto); font-family: var(--cp-titulo); text-align: left; line-height: 1.3; cursor: pointer; box-shadow: none;
+}
+.cpr-fieldbook.janela-defesa button.opcao > i { flex: none; width: 22px; margin: 0; color: var(--cp-ciano); font-size: 18px; text-align: center; }
+.cpr-fieldbook.janela-defesa button.opcao span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cpr-fieldbook.janela-defesa button.opcao span > b { font: 700 15px/1.2 var(--cp-titulo); letter-spacing: 0.06em; text-transform: uppercase; }
+.cpr-fieldbook.janela-defesa button.opcao small { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; white-space: normal; }
+.cpr-fieldbook.janela-defesa button.opcao small b { color: var(--cp-amarelo); font-weight: 400; }
+.cpr-fieldbook.janela-defesa button.opcao.aguentar { border-left-color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa button.opcao.aguentar > i { color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa button.opcao.escudo { border-left-color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-defesa button.opcao.escudo > i { color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-defesa button.opcao:is(:hover, :focus-visible) {
+  border-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 10%, var(--cp-painel)); outline: none;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cp-ciano) 35%, transparent);
+}
+.cpr-fieldbook.janela-defesa .tempo { height: 4px; overflow: hidden; background: var(--cp-poco); }
+.cpr-fieldbook.janela-defesa .tempo span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, var(--cp-vermelho), var(--cp-amarelo)); transition: width 0.25s linear; }
 
 /* ---------- Cartões do chat ---------- */
 /* A mensagem inteira: o fundo, a borda (amarela; vermelha no dano e na morte) e quem falou. */

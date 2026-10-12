@@ -8,7 +8,7 @@ export function registrarConfiguracoes() {
   registrar('exigeRef8', { name: 'Esquivar de tiros exige REF 8+', hint: 'Regra do livro (p. 172). Desligado, todo mundo pode trocar a DV pela Evasão. No corpo a corpo, qualquer um esquiva.', type: Boolean, default: true });
   registrar('jogadorRolaDano', { name: 'Quem atacou rola o dano', hint: 'O jogador que atacou rola o dano no computador dele (os dados aparecem para ele). Desligado, ou sem resposta, o mestre rola.', type: Boolean, default: true });
   registrar('tempo', {
-    name: 'Tempo para o jogador responder (segundos)', hint: 'Passou disso, a janela fecha: o alvo aguenta (ou o mestre rola por ele). Depois de 8 s, o mestre ganha um cartão para responder por ele.',
+    name: 'Tempo para o jogador responder (segundos)', hint: 'A janela de reação mostra o tempo numa barra. Passou dele, vale a escolha padrão (aguentar; a Concentração no fogo supressivo; no corpo a corpo, a esquiva), rolada direto. Depois de 8 s, o mestre ganha um cartão para responder por ele.',
     type: Number, default: 60, range: { min: 10, max: 300, step: 5 }
   });
   registrar('defesaDosNpcs', {

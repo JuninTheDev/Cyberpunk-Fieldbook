@@ -758,6 +758,13 @@ test('TeleOptics pela wiki (decisão do usuário): o do RED, +1 no tiro mirado a
   assert.deepEqual(catalogo[v2077].effects, []);
 });
 
+test('A conta da defesa na janela de reação (como a "Ataque!" do Fluxo): as partes do teste, a penalidade com o sinal, o 1d10 e a média', () => {
+  assert.deepEqual(regras.contaDaDefesa([{ rotulo: 'DEX', valor: 7 }, { rotulo: 'Evasão', valor: 2 }]), { texto: 'DEX 7 + Evasão 2 + 1d10', media: 14.5 });
+  assert.deepEqual(regras.contaDaDefesa([{ rotulo: 'WILL', valor: 7 }, { rotulo: 'Concentração', valor: 1 }, { rotulo: 'Gravemente ferido', valor: -2 }]),
+    { texto: 'WILL 7 + Concentração 1 − Gravemente ferido 2 + 1d10', media: 11.5 });
+  assert.deepEqual(regras.contaDaDefesa([{ rotulo: 'DEX', valor: 0 }]), { texto: 'DEX 0 + 1d10', media: 5.5 });
+});
+
 test('Dano com o modificador do mestre (a janela de rolagem): entra depois do multiplicador do autofogo, como o CORE', () => {
   assert.equal(regras.expressaoDoDano('5d6'), '5d6');
   assert.equal(regras.expressaoDoDano('5d6', { modificador: 2 }), '5d6 + 2');

@@ -36,7 +36,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
-| Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
+| Fluxo de Combate | a janela "Ataque!" (a reação do alvo: quem ataca, a conta de cada escolha, a barra do tempo; o X e o tempo valem a escolha padrão) | portada no ciclo 28, no visual do sistema |
+| Fluxo de Combate | um ataque por vez no mestre, quem vê o cartão, esconder ou não o total do ataque, texto e animação no token, Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo |
 | cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17 |
@@ -1307,3 +1308,59 @@ modificadores e Sorte: a esquiva, a Concentração, o dano (quem atacou) e o Dea
       sem a janela, o modificador fora do dano, o Death Save pedido sem a janela e a Sorte fora da esquiva.
 - **Próximo:** o P1 fechou. Pela ordem do ROADMAP, o P2: as rolagens das Roles, a Briga e as Artes Marciais e o
   Facedown; depois, o cyberware que é arma.
+- **Commit:** `bea4ea8`.
+
+### Ciclo 28 (2026-10-12): a janela de reação do alvo, como a "Ataque!" do Fluxo (pedido do usuário)
+
+O pedido: "Faça o mesmo estilo para a janela de reação do alvo (Esquivar / Aguentar). E também trabalhe melhor no fluxo
+de combate. se precisar use como exemplo o foundry-fluxo-de-combate/". Este ciclo faz a janela. O resto do fluxo de
+combate fica para o próximo (ROADMAP, P2, "Do Fluxo de Combate").
+
+- **Implementado:**
+  - **a janela** (`janela-defesa.mjs` e `templates/defesa.hbs`, no visual do sistema em `tema.css`), no lugar da pergunta
+    do DialogV2. Ela mostra o título ("Você está sendo atacado!"; para o mestre, "Ataque em <alvo>"), os retratos de
+    quem ataca e de quem é atacado, a arma, o modo e a distância. Cada escolha vem com a conta:
+    - Esquivar: as partes da Evasão do alvo ("DEX 7 + Evasão 2 + 1d10") com a média, e o que ela faz (vira a DV, contra
+      o golpe, sair da área);
+    - Aguentar: a DV do alcance ("O tiro precisa passar da DV 16 (10 m)"), ou o que acontece na área e no corpo a corpo;
+    - Usar o escudo: o escudo e os PV dele;
+    - Rolar a Concentração (fogo supressivo): as partes, a média e o que acontece a quem perde (wiki, "Fogo
+      supressivo");
+  - **o tempo:** a barra mostra o que resta do "Tempo para o jogador responder". Quando ele acaba, ou quando o jogador
+    fecha a janela no X, vale a escolha padrão, que o computador dele rola direto, sem a janela de rolagem. O cartão do
+    resultado anota o caso ("Jogador fechou a janela: ...", "Jogador não respondeu a tempo: ..."). Antes, fechar dava
+    "sem resposta", e o mestre só seguia quando acabava o prazo dele (o tempo mais 15 s);
+  - **o total do ataque** continua fora da janela do jogador e nem vai no pedido. A janela do mestre, pelos NPCs, mostra
+    o total e a DV, não tem tempo e, fechada no X, deixa o sistema escolher, como a pergunta antiga;
+  - **o mestre desiste** (o prazo dele ou "Responder por ele"): a janela do jogador fecha sem resposta (`expirar`), e a
+    janela de rolagem aberta depois dela também;
+  - **`regras.contaDaDefesa`:** a conta da esquiva e da Concentração pelas partes do teste, com a penalidade e o sinal
+    dela, e a média;
+  - a ajuda da configuração "Tempo" diz o que vale quando o tempo acaba.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 51 de 51. Um teste novo: a conta da defesa (as partes, a penalidade com o sinal, o 1d10 e a média);
+  - G4: 64 de 64, cerca de 95 s. O que mudou:
+    - **os seletores** da pergunta (o `responder` do cenário, a Kappa, o corpo a corpo, o jogador) passaram para a janela
+      nova;
+    - **o passo do jogador** confere a janela: o título, o duelo, a arma e a distância, a nota sem o total (e nenhuma
+      linha do total), a conta da esquiva com a média, a DV, o tempo e a barra andando;
+    - **o passo do escudo** confere a janela do mestre (o título, o total com a DV, a nota do X, o escudo com os PV) e,
+      num segundo ataque, o X: o sistema escolhe (sem a esquiva, o escudo; a escolha padrão do jogador seria aguentar);
+    - **um passo novo**, no computador do jogador: o X e o tempo esgotado (10 s) valem a esquiva no corpo a corpo,
+      rolada direto, sem a janela de rolagem, e o mestre anota cada caso;
+    - **duas capturas novas:** `v14-jogador-defesa.png` (a janela do jogador) e `v14-defesa-mestre.png` (a do mestre),
+      conferidas;
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a penalidade somando na conta da defesa;
+    - G4, no passo novo: a janela de rolagem abrindo depois do X ou do tempo (o passo levou 50 s: as duas esperaram o
+      prazo do mestre), o X do jogador sem resposta, o tempo acabando sem resposta (o passo esperou os 25 s do prazo do
+      mestre) e o mestre sem a nota "fechou a janela";
+    - G4, nos outros passos: o X do mestre valendo a escolha padrão do jogador (o passo do escudo), a janela do jogador
+      aberta depois que o mestre desiste ("jogador demora") e a linha do total na janela do jogador (o passo do jogador
+      e o passo novo);
+  - **sem teste:** a janela respondida antes de terminar de abrir (o mestre desiste nesse instante) fecha assim que
+    aparece. O cenário não reproduz esse instante. O retrato de quem ataca só aparece nas capturas.
+- **Próximo:** o resto do fluxo de combate, pelo Fluxo: um ataque por vez no mestre; as configurações de quem vê o
+  cartão do resultado e de esconder ou não o total do ataque; o texto e a animação no token; o Reflex Tuner.

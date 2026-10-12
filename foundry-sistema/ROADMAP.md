@@ -125,7 +125,16 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
 - [ ] **Na migração, o histórico do ledger do Foundry 12:** a ficha "Na mesa" só manda o saldo, e o extrato começa com
   ele. Trazer o histórico exige que o módulo da mesa (cpr-2077) mande as `transactions`, o que mexe no Foundry 12 da
   campanha (decisão do usuário).
-- [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
+- [ ] **Do Fluxo de Combate** (pedido do usuário, 2026-10-12: "trabalhe melhor no fluxo de combate", com o módulo
+  `foundry-fluxo-de-combate/` de exemplo):
+  - [x] a janela de reação do alvo no visual do sistema, como a "Ataque!" do Fluxo: quem ataca e quem é atacado, a
+    arma e a distância, cada escolha com a conta (a esquiva média, a DV, os PV do escudo) e a barra do tempo; fechada
+    no X ou sem resposta no tempo, vale a escolha padrão, rolada direto (Ciclo 28);
+  - [ ] um ataque por vez no mestre (a fila), como o Fluxo;
+  - [ ] as configurações do Fluxo que faltam: quem vê o cartão do resultado e esconder ou não o total do ataque até a
+    defesa (hoje, sempre escondido);
+  - [ ] texto e animação no token;
+  - [ ] o Reflex Tuner (wiki: depois de ser atingido, +1 para se esquivar pelo resto da rodada).
 - [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como

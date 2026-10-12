@@ -281,6 +281,13 @@ export function escolhaAutomatica({ opcoes, modo, dv = null, mediaEsquiva = 0 })
   return opcoes.includes('aguentar') ? 'aguentar' : opcoes[0];
 }
 
+// A conta de uma perícia de defesa (a esquiva, a Concentração) pelas partes que o teste vai usar, para a janela de reação:
+// "DEX 7 + Evasão 2 − Gravemente ferido 2 + 1d10" e a média (o d10 vale 5,5).
+export function contaDaDefesa(partes) {
+  const texto = partes.map((parte, i) => `${i ? (parte.valor < 0 ? ' − ' : ' + ') : ''}${parte.rotulo} ${i ? Math.abs(parte.valor) : parte.valor}`).join('');
+  return { texto: `${texto} + 1d10`, media: partes.reduce((soma, parte) => soma + parte.valor, 0) + MEDIA_D10 };
+}
+
 // O ataque pegou? true / false; null quando falta a DV (o mestre decide).
 // Na Concentração, true quer dizer que o alvo perdeu (foi suprimido).
 export function acertou({ modo, escolha, ataque, defesa = null, dv = null }) {

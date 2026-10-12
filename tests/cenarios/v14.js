@@ -589,13 +589,13 @@ module.exports = async ({ edge, servidores, r }) => {
       window.__esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
       return true;
     })()`);
-    // No navegador de quem defende: espera a janela da defesa, clica na escolha e devolve o texto da janela.
+    // No navegador de quem defende: espera a janela de reação, clica na escolha e devolve o texto da janela.
     const responder = async (navegador, escolha) => {
       for (let i = 0; i < 60; i++) {
         await navegador.sleep(250);
         const texto = await navegador.evaluate(`(() => {
-          const janela = document.querySelector('.application.dialog.cpr-fieldbook.defesa');
-          const botao = janela?.querySelector('.form-footer button[data-action="${escolha}"]');
+          const janela = document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing)');
+          const botao = janela?.querySelector('button.opcao[data-escolha="${escolha}"]');
           if (!botao) return null;
           const texto = janela.textContent.replace(/\\s+/g, ' ').trim();
           botao.click();
@@ -1394,12 +1394,12 @@ module.exports = async ({ edge, servidores, r }) => {
         // A janela da defesa do NPC (do mestre): só a que está aberta.
         // A janela da defesa do NPC não tem prazo. Uma que não devia aparecer (um alvo perguntado fora da vez) fecha
         // sozinha e fica anotada: o passo falha em vez de travar. A que fecha depois do clique não conta (não está rendered).
-        const janelasDeDefesa = () => [...foundry.applications.instances.values()].filter(app => app.rendered && app.options.classes?.includes('defesa'));
+        const janelasDeDefesa = () => [...foundry.applications.instances.values()].filter(app => app.rendered && app.options.classes?.includes('janela-defesa'));
         // Esquiva pela janela do mestre e espera ela começar a fechar (o fechamento começa depois do clique).
         const esquivar = async () => {
-          await __esperar(() => janelasDeDefesa()[0]?.element.querySelector('.form-footer button[data-action="esquivar"]'));
+          await __esperar(() => janelasDeDefesa()[0]?.element.querySelector('button.opcao[data-escolha="esquivar"]'));
           const [janela] = janelasDeDefesa();
-          janela.element.querySelector('.form-footer button[data-action="esquivar"]').click();
+          janela.element.querySelector('button.opcao[data-escolha="esquivar"]').click();
           await __esperar(() => !janela.rendered);
         };
         const inesperadas = [];
@@ -1454,7 +1454,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('escudo e a janela do mestre: o Capanga (NPC) pode aguentar ou usar o escudo; o mestre vê o total, escolhe o escudo, que leva os 10 PV dele; o Desfazer devolve', async () => {
+    await r.passo('escudo e a janela do mestre: o Capanga (NPC) pode aguentar ou usar o escudo; o mestre vê o total, escolhe o escudo, que leva os 10 PV dele; o Desfazer devolve; fechada no X, o sistema escolhe (sem esquiva, o escudo)', async () => {
       // Ataque: d10 8 → REF 8 + Armas de Ombro 4 + 8 = 20 contra DV 16 (12 m). Dano 5d6: 3 × 5 = 15; o escudo (10 PV) leva
       // 10, e o resto de um tiro se perde (wiki: cobertura).
       await edge.evaluate(`(async () => {
@@ -1471,6 +1471,9 @@ module.exports = async ({ edge, servidores, r }) => {
         window.__ataque = __ator('Atiradora').items.getName('Assault Rifle').atacar({ alvo: __token('Capanga') });
         return true;
       })()`);
+      await edge.evaluate(`__esperar(() => document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing) button.opcao'))`);
+      await edge.sleep(300);
+      await edge.shot('defesa-mestre');
       const janela = await responder(edge, 'escudo');
       const info = await edge.evaluate(`window.__ataque.then(async r => {
         const capanga = __ator('Capanga');
@@ -1481,8 +1484,25 @@ module.exports = async ({ edge, servidores, r }) => {
         await __ator('Atiradora').items.getName('Assault Rifle').update({ 'system.pente.value': window.__pente });
         return { escolha: l.escolha, resultado: l.resultado, escudoAblado: l.dano?.escudoAblado, recebido: l.dano?.recebido, hpAntes: window.__hp, depois, desfeito, pvDesfeito: escudo.system.pvEscudo.value };
       })`);
-      return [/Total do ataque: 20 · DV 16/.test(janela) && info.escolha === 'escudo' && info.resultado === 'acertou' && info.escudoAblado === 10 && info.recebido === 0
-        && info.depois.hp === info.hpAntes && info.depois.pv === 0 && info.desfeito && info.pvDesfeito === 10, `janela: ${janela} · ${JSON.stringify(info)}`];
+      // Fechada no X, a janela do mestre fica sem resposta, e o sistema escolhe como na defesa automática: sem a esquiva,
+      // o escudo (a escolha padrão do jogador seria aguentar).
+      await fixar(edge, [[8, 10], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]);
+      await edge.evaluate(`(() => { window.__ataque = __ator('Atiradora').items.getName('Assault Rifle').atacar({ alvo: __token('Capanga') }); return true; })()`);
+      const fechar = `document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing) .window-header [data-action="close"]')`;
+      await edge.evaluate(`__esperar(() => ${fechar})`);
+      await edge.evaluate(`${fechar}.click()`);
+      const noX = await edge.evaluate(`window.__ataque.then(async r => {
+        const capanga = __ator('Capanga');
+        const [l] = r.linhas;
+        const desfeito = await game.system.api.combate.desfazer(game.messages.contents.at(-1));
+        await __ator('Atiradora').items.getName('Assault Rifle').update({ 'system.pente.value': window.__pente });
+        window.__fila = [];
+        return { escolha: l.escolha, resultado: l.resultado, desfeito, hp: capanga.system.hp.value, pv: capanga.items.getName('Bullet Proof Shield').system.pvEscudo.value };
+      })`);
+      return [/^Ataque em Capanga /.test(janela) && /Total do ataque: 20 · DV 16 Fechada sem escolher, o sistema escolhe \(como na defesa automática\)\./.test(janela)
+        && /Usar o escudo Bullet Proof Shield \(10 PV\) recebe o ataque todo\. Sem esquiva\. O tiro precisa passar da DV 16/.test(janela) && info.escolha === 'escudo' && info.resultado === 'acertou' && info.escudoAblado === 10 && info.recebido === 0
+        && info.depois.hp === info.hpAntes && info.depois.pv === 0 && info.desfeito && info.pvDesfeito === 10
+        && noX.escolha === 'escudo' && noX.resultado === 'acertou' && noX.desfeito && noX.hp === info.hpAntes && noX.pv === 10, `janela: ${janela} · ${JSON.stringify({ ...info, noX })}`];
     });
 
     await r.passo('escudo destruído: o resto de um tiro se perde; o explosivo que destrói o escudo passa inteiro; o que não destrói, não passa (wiki: cobertura e explosivos)', async () => {
@@ -1518,7 +1538,7 @@ module.exports = async ({ edge, servidores, r }) => {
         await a.update({ 'system.pericias.melee-weapon.nivel': 3 });
         const hp = capanga.system.hp.value;
         // As janelas de defesa abertas (a do passo do escudo pode ainda estar fechando: essa não conta).
-        const janelas = () => [...document.querySelectorAll('.application.dialog.cpr-fieldbook.defesa:not(.minimizing)')].map(d => d.textContent.replace(/\\s+/g, ' ').trim().slice(0, 80));
+        const janelas = () => [...document.querySelectorAll('.application.cpr-fieldbook.janela-defesa:not(.minimizing)')].map(d => d.textContent.replace(/\\s+/g, ' ').trim().slice(0, 80));
         const golpe = async fila => {
           window.__fila = fila;
           const r = await arma.atacar({ alvo: __token('Capanga') });
@@ -1581,20 +1601,29 @@ module.exports = async ({ edge, servidores, r }) => {
       let janela = null;
       for (let i = 0; i < 40 && !janela; i++) {
         await jogador.sleep(250);
-        janela = await jogador.evaluate(`(() => { const d = document.querySelector('.application.dialog.cpr-fieldbook.defesa'); return d && { texto: d.textContent.replace(/\\s+/g, ' ').trim(), botoes: [...d.querySelectorAll('.form-footer button[data-action]')].map(b => b.dataset.action) }; })()`);
+        janela = await jogador.evaluate(`(() => {
+          const d = document.querySelector('.application.cpr-fieldbook.janela-defesa');
+          return d && { titulo: d.querySelector('.window-title')?.textContent.trim(), texto: d.querySelector('.window-content').textContent.replace(/\\s+/g, ' ').trim(), total: Boolean(d.querySelector('.total')), botoes: [...d.querySelectorAll('button.opcao[data-escolha]')].map(b => b.dataset.escolha) };
+        })()`);
       }
       // O total do ataque (16) não aparece para o jogador antes da defesa: a rolagem foi só para o mestre. O Foundry mostra
       // que houve uma rolagem privada (visible), mas não o conteúdo (isContentVisible).
       const ultimoAtaque = `game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.ataque).at(-1)`;
       const antes = await jogador.evaluate(`Boolean(${ultimoAtaque}?.isContentVisible)`);
       await jogador.shot('defesa');
-      await jogador.evaluate(`document.querySelector('.application.dialog.cpr-fieldbook.defesa button[data-action="esquivar"]').click()`);
+      // A barra do tempo (60 s) já andou um pouco.
+      const barra = await jogador.evaluate(`parseFloat(document.querySelector('.application.cpr-fieldbook.janela-defesa .tempo span')?.style.width)`);
+      await jogador.evaluate(`document.querySelector('.application.cpr-fieldbook.janela-defesa button.opcao[data-escolha="esquivar"]').click()`);
       const info = await edge.evaluate(`window.__ataque.then(r => ({ ataque: r.ataque, linhas: __linhas(r), hp: __ator('Alvo').system.hp.value }))`);
       await jogador.sleep(500);
       const depois = await jogador.evaluate(`Boolean(${ultimoAtaque}?.isContentVisible)`);
       const [l] = info.linhas;
-      return [janela && janela.botoes.join() === 'esquivar,aguentar' && !/\b16\b/.test(janela.texto) && !antes && depois && l.escolha === 'esquivar' && l.defesa === 25 && l.resultado === 'esquivou' && info.hp === 45,
-        `janela ${JSON.stringify(janela)} · total visível ao jogador antes ${antes}, depois ${depois} · ${JSON.stringify(info)}`];
+      // O texto da janela, na ordem: o duelo, a arma, a nota sem o total, as escolhas com a conta e o tempo.
+      const textos = [/^Atiradora Alvo Assault Rifle · Tiro · 10 m Você não vê o total do ataque: decida antes\. /,
+        / Esquivar DEX 7 \+ Evasão 2 \+ 1d10 \(média 14,5\) vira a DV do ataque\. Empate é seu\. /, / Aguentar O tiro precisa passar da DV 16 \(10 m\)\. /, / Sem resposta em 60 s: aguenta\.$/];
+      return [janela && janela.titulo === 'Você está sendo atacado!' && janela.botoes.join() === 'esquivar,aguentar' && !janela.total && !/Total do ataque/.test(janela.texto) && textos.every(t => t.test(janela.texto))
+        && barra > 50 && barra < 100 && !antes && depois && l.escolha === 'esquivar' && l.defesa === 25 && l.resultado === 'esquivou' && info.hp === 45,
+        `janela ${JSON.stringify(janela)} · barra ${barra} · total visível ao jogador antes ${antes}, depois ${depois} · ${JSON.stringify(info)}`];
     });
 
     await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {
@@ -1605,7 +1634,7 @@ module.exports = async ({ edge, servidores, r }) => {
         window.__ataque = __ator('Atiradora').items.getName('Assault Rifle').atacar({ alvo: __token('Alvo') });
         return true;
       })()`);
-      const janelaDoJogador = `Boolean(document.querySelector('.application.dialog.cpr-fieldbook.defesa'))`;
+      const janelaDoJogador = `Boolean(document.querySelector('.application.cpr-fieldbook.janela-defesa'))`;
       const botao = `document.querySelector('.cartao.espera [data-cprf-acao="responder"][data-escolha="aguentar"]')`;
       let abriu = false;
       for (let i = 0; i < 40 && !abriu; i++) { await jogador.sleep(250); abriu = await jogador.evaluate(janelaDoJogador); }
@@ -1624,6 +1653,77 @@ module.exports = async ({ edge, servidores, r }) => {
       const l = info.linha;
       return [abriu && cartao && l.escolha === 'aguentar' && l.resultado === 'acertou' && info.notas.some(n => /O mestre respondeu por Jogador: Alvo aguentou/.test(n)) && fechou && cartaoSumiu,
         JSON.stringify({ abriu, cartao, fechou, cartaoSumiu, ...info })];
+    });
+
+    await r.passo('jogador fecha a janela de reação no X, e depois não responde no tempo (10 s): vale a escolha padrão; no corpo a corpo, a esquiva, que o computador dele rola direto, sem a janela de rolagem; o mestre anota cada caso', async () => {
+      // A Atiradora golpeia o Alvo com a lâmina (DEX 7 + Arma Branca 3 + d10 2), duas vezes. No corpo a corpo, o Alvo só
+      // esquiva: no X, a esquiva rola com o d10 5; sem resposta, com o d10 6. O Alvo (DEX 7 + Evasão 2) passa as duas.
+      await jogador.evaluate(`game.settings.set('${S}', 'rolarDireto', false).then(() => true)`);
+      const janela = `document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing)')`;
+      const rolagemAberta = `Boolean(document.querySelector('.application.janela-rolagem'))`;
+      // No navegador do jogador: espera a janela de reação e devolve o texto dela.
+      const esperarReacao = async () => {
+        for (let i = 0; i < 40; i++) {
+          await jogador.sleep(250);
+          const texto = await jogador.evaluate(`${janela}?.querySelector('.window-content').textContent.replace(/\\s+/g, ' ').trim() ?? null`).catch(() => null);
+          if (texto) return texto;
+        }
+        return null;
+      };
+      try {
+        const base = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const lamina = foundry.utils.deepClone(cat['core_weapons:medium-melee']);
+          lamina.system.equipada = true;
+          [window.__lamina] = await __ator('Atiradora').createEmbeddedDocuments('Item', [lamina]);
+          window.__tempoAntes = game.settings.get('${S}', 'tempo');
+          await game.settings.set('${S}', 'tempo', 10);
+          const soma = partes => partes.reduce((total, parte) => total + parte.valor, 0);
+          return { ataque: soma(window.__lamina.partesDoAtaque().partes), esquiva: soma(__ator('Alvo').partesDaPericia('evasion').partes) };
+        })()`);
+        const golpear = () => edge.evaluate(`(() => { window.__golpe = window.__lamina.atacar({ alvo: __token('Alvo') }); return true; })()`);
+        const resultado = () => edge.evaluate(`window.__golpe.then(r => ({ ataque: r.ataque, linha: __linhas(r)[0], notas: r.notas }))`);
+
+        // 1. O X: vale a esquiva (a única escolha), rolada direto.
+        await fixar(edge, [[2, 10]]);
+        await fixar(jogador, [[5, 10]]);
+        await golpear();
+        const textoX = await esperarReacao();
+        await jogador.evaluate(`${janela}.querySelector('.window-header [data-action="close"]').click()`);
+        const x = await resultado();
+        const rolagemNoX = await jogador.evaluate(rolagemAberta);
+
+        // 2. Sem resposta: a barra acaba em 10 s, e vale a esquiva, rolada direto.
+        await fixar(edge, [[2, 10]]);
+        await fixar(jogador, [[6, 10]]);
+        const inicio = Date.now();
+        await golpear();
+        const textoTempo = await esperarReacao();
+        const t = await resultado();
+        const segundos = Math.round((Date.now() - inicio) / 100) / 10;
+        const rolagemNoTempo = await jogador.evaluate(rolagemAberta);
+        const ataque = base.ataque + 2;
+        const ok = /^Atiradora Alvo .* · Corpo a corpo Você não vê o total do ataque: decida antes\. Esquivar .* contra o golpe\. Empate é seu\. Sem resposta em 10 s: esquiva\.$/.test(textoX ?? '')
+          && x.ataque === ataque && x.linha.escolha === 'esquivar' && x.linha.defesa === base.esquiva + 5 && x.linha.resultado === 'esquivou'
+          && x.notas.includes('Jogador fechou a janela: Alvo esquivou.') && !rolagemNoX && Boolean(textoTempo)
+          && t.ataque === ataque && t.linha.escolha === 'esquivar' && t.linha.defesa === base.esquiva + 6 && t.linha.resultado === 'esquivou'
+          && t.notas.includes('Jogador não respondeu a tempo: Alvo esquivou.') && segundos >= 9.5 && segundos < 20 && !rolagemNoTempo;
+        return [ok, JSON.stringify({ base, textoX, x, rolagemNoX, textoTempo, t, segundos, rolagemNoTempo })];
+      } finally {
+        await jogador.evaluate(`(async () => {
+          await game.settings.set('${S}', 'rolarDireto', true);
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem') || app.options.classes?.includes('janela-defesa')) await app.close();
+          window.__fila = [];
+          return true;
+        })()`);
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          if (window.__lamina) await __ator('Atiradora').deleteEmbeddedDocuments('Item', [window.__lamina.id]);
+          window.__lamina = null;
+          if (window.__tempoAntes) await game.settings.set('${S}', 'tempo', window.__tempoAntes);
+          return true;
+        })()`);
+      }
     });
 
     await r.passo('explosivo: lança-granadas (perfurante) contra DV 15; explode na área: o Alvo (aguentou) e o Capanga ao lado levam os mesmos 12; o Longe fica fora', async () => {

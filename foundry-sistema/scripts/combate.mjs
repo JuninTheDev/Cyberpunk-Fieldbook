@@ -9,6 +9,7 @@
 import { DEFESAS, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { TABELAS_DV } from './gerado.mjs';
+import { JanelaDeDefesa } from './janela-defesa.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
 import { lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
 import * as R from './regras.mjs';
@@ -73,7 +74,9 @@ export function registrarCombate() {
     } else if (mensagem.tipo === 'resposta') {
       esperando.get(mensagem.id)?.(mensagem.resposta);
     } else if (mensagem.tipo === 'expirou') {
-      janelas.get(mensagem.id)?.close();
+      // A janela de reação fecha sem resposta (expirar); a de rolagem, só fecha.
+      const janela = janelas.get(mensagem.id);
+      if (janela?.expirar) janela.expirar(); else janela?.close();
       janelas.delete(mensagem.id);
     }
   });
@@ -191,36 +194,34 @@ async function rolarDanoDoAtacante({ arma, multiplicador, formula }, { id = null
 }
 
 // ---------------- No cliente de quem defende ----------------
-// A janela com as escolhas (sem o total do ataque, menos para o mestre) e a rolagem dele. Fechou ou o tempo acabou: null.
+// A janela de reação (janela-defesa.mjs: sem o total do ataque, menos para o mestre, com a conta de cada escolha e o
+// tempo) e a rolagem dele. O mestre a fechou (desistiu de esperar ou respondeu por ele): null. Sem resposta no tempo, ou
+// fechada no X, vale a escolha padrão (a resposta diz qual dos dois).
 export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}) {
   const [arma, alvo] = await Promise.all([fromUuid(pacote.arma), fromUuid(pacote.alvo)]);
   const ator = alvo.actor;
-  let escolha = pacote.opcoes.length === 1 && !precisaRolar(pacote.opcoes[0]) ? pacote.opcoes[0] : null;
-  if (!escolha) {
-    // Os nomes vêm de quem criou os documentos: escapados antes de virar HTML na tela de outro jogador.
-    const [atacante, defensor, nomeArma] = [pacote.atacante, alvo.name, arma.name].map(esc);
-    const onde = pacote.metros ? `, a ${String(pacote.metros).replace('.', ',')} m` : '';
-    const pergunta = pacote.opcoes.includes('concentrar')
-      ? `<p><b>${atacante}</b> faz fogo supressivo com <b>${nomeArma}</b>${onde}. Role a Concentração para não correr para a cobertura.</p>`
-      : `<p><b>${atacante}</b> ataca <b>${defensor}</b> com <b>${nomeArma}</b> (${esc(pacote.descricao.toLowerCase())}${onde}).</p><p>O que ${defensor} faz?</p>`;
-    const total = mestre ? `<p class="total">Total do ataque: <b>${pacote.total}</b>${pacote.dv ? ` · DV ${pacote.dv}` : ''}</p>` : '';
-    escolha = await DialogV2.wait({
-      window: { title: `Ataque contra ${alvo.name}` },
-      classes: [SISTEMA, 'defesa'],
-      content: pergunta + total,
-      buttons: pacote.opcoes.map(opcao => ({ action: opcao, label: BOTAO[opcao], default: opcao === pacote.padrao })),
-      rejectClose: false,
-      render: (evento, janela) => { if (id) janelas.set(id, janela); }
-    });
+  let resposta = pacote.opcoes.length === 1 && !precisaRolar(pacote.opcoes[0]) ? { escolha: pacote.opcoes[0] } : null;
+  if (!resposta) {
+    // A conta de cada escolha sai do ator, aqui: a esquiva, a Concentração e o escudo.
+    const escudo = ator.escudo;
+    resposta = await JanelaDeDefesa.perguntar({
+      ...pacote, mestre, arma: arma.name, tempo: mestre ? 0 : Number(config('tempo')) || 0,
+      atacante: { nome: pacote.atacante, img: pacote.imgAtq || 'icons/svg/mystery-man.svg' }, alvo: { nome: alvo.name, img: alvo.texture?.src || ator.img },
+      esquiva: R.contaDaDefesa(ator.partesDaPericia('evasion').partes), concentracao: R.contaDaDefesa(ator.partesDaPericia('concentration').partes),
+      escudo: escudo ? { nome: escudo.name, pv: escudo.system.pvEscudo.value } : null
+    }, registrarJanela(id));
     if (id) janelas.delete(id);
-    if (!escolha) return null;
+    if (!resposta) return null;
   }
-  if (!precisaRolar(escolha)) return { escolha };
-  // O jogador rola na janela de rolagem (menos com "Rolar direto"), ainda dentro do prazo do pedido; pelos NPCs, o mestre
-  // rola direto.
-  const resultado = await rolarDefesa(ator, alvo.name, escolha, { perguntar: !mestre && !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+  const { escolha } = resposta;
+  const comoFoi = { fechou: Boolean(resposta.fechou), semResposta: Boolean(resposta.semResposta) };
+  if (!precisaRolar(escolha)) return { escolha, ...comoFoi };
+  // O jogador rola na janela de rolagem (menos com "Rolar direto", ou quando valeu a escolha padrão: aí rola direto),
+  // ainda dentro do prazo do pedido; pelos NPCs, o mestre rola direto.
+  const perguntar = !mestre && !config('rolarDireto') && !comoFoi.fechou && !comoFoi.semResposta;
+  const resultado = await rolarDefesa(ator, alvo.name, escolha, { perguntar, aoAbrir: registrarJanela(id) });
   if (id) janelas.delete(id);
-  return resultado;
+  return resultado && { ...resultado, ...comoFoi };
 }
 
 // Esquiva (DEX + Evasão + 1d10) ou Concentração (WILL + Concentração + 1d10), com as penalidades do alvo. Com a janela de
@@ -331,7 +332,10 @@ function avisoDeEspera(alvo, id, opcoes) {
 async function defender(ctx, alvo, { opcoes, dv = null }) {
   const padrao = R.escolhaPadrao(opcoes);
   if (opcoes.length === 1 && !precisaRolar(opcoes[0])) return { escolha: opcoes[0] };
-  const pacote = { alvo: alvo.token.uuid, arma: ctx.arma.uuid, atacante: ctx.nomeAtq, modo: ctx.modo, descricao: ctx.descricao, metros: ctx.modo === 'corpo' ? null : alvo.metros, dv, opcoes, padrao };
+  const pacote = {
+    alvo: alvo.token.uuid, arma: ctx.arma.uuid, atacante: ctx.nomeAtq, imgAtq: ctx.tokenAtq?.texture?.src || ctx.atacante.img, modo: ctx.modo, descricao: ctx.descricao,
+    metros: ctx.modo === 'corpo' ? null : alvo.metros, dv, opcoes, padrao
+  };
   if (alvo.dono) {
     const promessa = pedir(alvo.dono, 'defesa', pacote);
     let aviso = null;
@@ -341,6 +345,8 @@ async function defender(ctx, alvo, { opcoes, dv = null }) {
     if (aviso) (await aviso.catch(() => null))?.delete().catch(() => {});
     if (resposta?.escolha) {
       if (resposta.forcada) ctx.notas.push(`O mestre respondeu por ${alvo.dono.name}: ${alvo.nome} ${ROTULO[resposta.escolha]}.`);
+      else if (resposta.fechou) ctx.notas.push(`${alvo.dono.name} fechou a janela: ${alvo.nome} ${ROTULO[resposta.escolha]}.`);
+      else if (resposta.semResposta) ctx.notas.push(`${alvo.dono.name} não respondeu a tempo: ${alvo.nome} ${ROTULO[resposta.escolha]}.`);
       if (resposta.defesa !== undefined || !precisaRolar(resposta.escolha)) return resposta;
       return rolarDefesa(alvo.ator, alvo.nome, resposta.escolha);
     }
