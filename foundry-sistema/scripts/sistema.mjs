@@ -12,6 +12,7 @@ import { AtorCPR, ItemCPR } from './documentos.mjs';
 import { FichaItem } from './ficha-item.mjs';
 import { FichaPersonagem } from './ficha-personagem.mjs';
 import { abrirExtrato } from './extrato.mjs';
+import { CombateCPR, CombatenteCPR } from './iniciativa.mjs';
 import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
 import * as regras from './regras.mjs';
@@ -22,6 +23,8 @@ import * as wiki from './wiki.mjs';
 Hooks.once('init', () => {
   CONFIG.Actor.documentClass = AtorCPR;
   CONFIG.Item.documentClass = ItemCPR;
+  CONFIG.Combat.documentClass = CombateCPR;
+  CONFIG.Combatant.documentClass = CombatenteCPR;
   CONFIG.Actor.dataModels.personagem = DadosPersonagem;
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,

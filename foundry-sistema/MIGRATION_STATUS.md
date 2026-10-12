@@ -30,7 +30,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad; a especialização do Face; o Investigator do Lawman) | portados no ciclo 23 os que valem sempre (o Moto e a especialização do Face, com a especialização vinda da wiki); o Investigator do Lawman e o Netrunner de 2077 esperam a janela de rolagem |
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta |
-| CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada no ciclo 24 nos testes de atributo e de perícia; falta no ataque, na defesa, no dano, no Death Save e na iniciativa |
+| CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada no ciclo 24 nos testes de atributo e de perícia e no ciclo 25 no ataque e na iniciativa; falta na defesa, no dano e no Death Save |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga, Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
@@ -91,7 +91,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
   | Área | No Foundry 12 | Aqui | ROADMAP |
   | --- | --- | --- | --- |
-  | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | nos testes, desde o ciclo 24; o ataque, a defesa, o dano, o Death Save e a iniciativa rolam direto | P1 |
+  | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | nos testes (ciclo 24), no ataque e na iniciativa (ciclo 25); a defesa, o dano e o Death Save rolam direto | P1 |
   | Rolagens | Facedown (COOL + Reputação + 1d10) | falta | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta | P2 |
@@ -204,9 +204,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   em todo teste de perícia, e a mesa decide quando marcar. Se a mesa quiser uma lista (as perícias de TECH, por
   exemplo), é só trocar em `regras.situacionaisDeRole`.
 
-- **Sandevistan e luneta: muda o que a mesa vê, até a janela chegar na iniciativa e no ataque.** No CORE, o Sandevistan
-  instalado dá +3 na iniciativa, ligado por padrão (a iniciativa de quem o tem abre a janela, onde dá para desligar), e
-  a luneta dá +1 situacional no ataque. Aqui os dois ainda não somam (ROADMAP, "A janela de rolagem no resto").
+- **Luneta de precisão: muda o que a mesa vê.** A wiki: "+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais.
+  Não acumula com cyberware óptico". No CORE, é um +1 situacional desligado, que o jogador marca na janela. Aqui (ciclo
+  25), a regra da wiki decide pela distância do primeiro alvo: a janela a traz marcada quando vale, e o ataque sem a
+  janela a soma sozinho. "Não acumula" virou: se o cyberware óptico já dá o bônus nesse tiro (o de tiro mirado ou o de
+  tiro único), a luneta vem desmarcada.
+
+- **TeleOptics: a wiki e o CORE não batem.** A wiki: "+1 em tiros mirados contra alvos a 51 m ou mais". O CORE (e a
+  mesa do Foundry 12): +1 no tiro mirado e +1 no tiro único, sempre, sem olhar a distância. Aqui: +1 no mirado, sempre
+  (o efeito do CORE), e nada no tiro único (o bônus de tiro único que o efeito do CORE dá nunca entrou no ataque). A mesa
+  decide: a regra da wiki (pela distância, como a luneta) ou a do CORE.
 
 - **Lexington e Testera: muda o que a mesa vê.** O autofogo da Lexington gasta 7 balas ("gastando só 7 balas por
   ataque"; no Foundry 12, as 10 do CORE). A Testera ganhou o botão dos dois cartuchos (4d6), que o Foundry 12 não tinha.
@@ -1187,4 +1194,43 @@ A janela de rolagem do CORE, que no Foundry 12 todo teste abre e da qual os mód
       parado;
   - **conferência visual:** a captura da janela (`v14-janela-rolagem.png`).
 - **Ficou:** a janela no ataque, na defesa, no dano, no Death Save e na iniciativa (com o Sandevistan e a luneta).
+- **Próximo:** a janela de rolagem no resto (P1).
+- **Commit:** `0ff2227`.
+
+### Ciclo 25 (2026-10-12): a janela de rolagem no ataque e na iniciativa (P1)
+
+- **Implementado:**
+  - **o ataque** (`combate.atacar`, com `perguntar`): os botões de ataque da ficha (Atacar, os modos, Mirar) abrem a
+    janela, com as partes do ataque, os situacionais e o resto da janela. Ela vem antes de gastar a bala e de marcar a
+    carga Tech: fechada ou cancelada, não ataca. Ctrl + clique, as macros e os testes atacam direto, com os
+    situacionais ligados por padrão;
+  - **os situacionais do ataque** (`AtorCPR.situacionaisDoAtaque`): os efeitos na perícia da arma e em todas as ações
+    (os de Role ficam nos testes) e a luneta de precisão instalada na arma, num tiro único ou mirado, marcada quando
+    vale (`regras.lunetaVale`: o primeiro alvo a 51 m ou mais e o cyberware óptico sem bônus nesse tiro; dúvida acima);
+  - **a iniciativa** (`scripts/iniciativa.mjs`, `CombateCPR` e `CombatenteCPR`): como o CORE, quem tem um situacional
+    de iniciativa vê a janela ao rolar (as partes: o REF, o cyberware, a Reação de Iniciativa), e a Sorte escolhida sai
+    da Sorte dele. Sem a janela ("Rolar direto"), entram os ligados por padrão;
+  - **o Sandevistan:** o build converte o +3 de iniciativa dele (situacional, ligado por padrão no CORE) num efeito à
+    parte.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros (o `Combatant` entrou nos globais do Foundry na configuração do lint);
+  - G3: 48 de 48. Um teste novo, a luneta (o tiro único, a distância, o óptico e o texto da wiki); o do catálogo agora
+    confere o Sandevistan;
+  - G4: 62 de 62, cerca de 74 s. O que mudou:
+    - **um passo novo, a janela no ataque e na iniciativa,** com atores e tokens só dele (apagados no fim): um atirador
+      com rifle, luneta e Sandevistan, um alvo a 4 m e outro a 52,9 m (10 m no chão e 52 m acima):
+      - o Atacar abre a janela com a luneta marcada contra o alvo distante (total 13) e desmarcada contra o perto
+        (12); cancelar não rola nem gasta bala;
+      - pela janela, contra o perto, o modificador do mestre (+2) e a Sorte (1) entram no ataque, e a luneta não: 20
+        com o dado 5; a bala e a Sorte saem;
+      - sem a janela, contra o distante, a luneta entra sozinha: 19 com o dado 6;
+      - a iniciativa abre a janela com o Sandevistan (+3) marcado: 17 com o dado 6; com "Rolar direto", 18 com o 7;
+    - **o passo da carga Tech** clica no botão da ficha com Ctrl (rola direto), como antes;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado (conferido pelo md5):
+    - G3: a luneta a 50 m;
+    - G4: o ataque sem a janela, a bala saindo também antes da janela (o passo novo pegou o gasto no cancelar, e os
+      passos de combate, as balas a mais), a luneta nunca marcada, a iniciativa sem os ligados por padrão, a iniciativa
+      sem a janela e o que se marca fora do ataque;
+- **Ficou:** a janela na defesa do jogador, no dano e no Death Save; o TeleOptics (dúvida acima).
 - **Próximo:** a janela de rolagem no resto (P1).

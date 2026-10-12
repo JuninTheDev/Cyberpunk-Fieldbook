@@ -58,7 +58,10 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   ficou guardado numa variável mostra o estado de antes (no ciclo 23, uma espera esgotou e a checagem leu a
   especialização antiga, com o sistema certo).
 - **Clique com Ctrl no cenário:** o `.click()` não leva tecla. Para o Ctrl + clique (rolar direto, sem a janela de
-  rolagem), use `dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }))`.
+  rolagem), use `dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }))`. O passo
+  que clica num botão de rolar (atributo, perícia, ataque) e não testa a janela usa o Ctrl + clique: o clique comum
+  abre a janela, que fica esperando e derruba passos seguintes (no ciclo 25, a carga Tech deixou a janela aberta, e o
+  passo da ficha nova, bem depois, achou essa janela no lugar da pergunta dele).
 - **Pergunta do DialogV2:** o texto fica em `.dialog-content`, e os botões em `.form-footer`. O `.window-content` e um
   `button[data-action]` solto pegam também os botões e os controles do cabeçalho (no ciclo 21, duas rodadas do G4
   falharam por isso, com o sistema certo).

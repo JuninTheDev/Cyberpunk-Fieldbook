@@ -178,6 +178,13 @@ export const MODOS = {
 // Os modos que só valem pelo botão (os de 2077 e os de rajada): a arma e a munição não os escolhem sozinhas.
 const MODOS_PEDIDOS = ['autofogo', 'supressivo', 'ricochete', 'carga', 'rajadaTech'];
 export const LOCAIS_MIRADOS = { cabeca: 'cabeça', perna: 'perna', item: 'item na mão' };
+// Os modos que são um tiro só (o tiro, o mirado, os de 2077 de um tiro): no CORE, os que levam o bônus de tiro único.
+export const ehTiroUnico = modo => !['autofogo', 'supressivo', 'rajadaTech', 'cartucho', 'explosivo'].includes(modo);
+// A luneta de precisão (wiki: "+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais. Não acumula com cyberware
+// óptico"; no CORE, +1 situacional): vale com o alvo a 51 m ou mais, se o cyberware óptico já não dá o bônus nesse tiro.
+export const LUNETA = { valor: 1, metros: 51 };
+export const ehLuneta = (nome, catalogo = '') => catalogo === 'core_upgrades:sniping-scope' || /^sniping scope$/i.test(String(nome).trim());
+export const lunetaVale = ({ metros, bonusOptico = 0 }) => metros !== null && Number(metros) >= LUNETA.metros && !(Number(bonusOptico) > 0);
 export const DV_CARTUCHO = 13;
 export const ALCANCE_CARTUCHO = 6;
 export const RAIO_SUPRESSAO = 25;

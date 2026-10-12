@@ -68,9 +68,12 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
   - os efeitos situacionais, ligados ou não na hora: os que hoje ficam de fora (Audição Amplificada, Image Enhance, o
     Sandevistan ligado, Dedos esmagados), o Investigator do Lawman e o Netrunner de 2077 (P0, acima);
   - a Sorte na própria janela (vem com a preparada na ficha, ciclo 20).
-- [ ] **A janela de rolagem no resto:** o ataque (com a luneta, +1 situacional no CORE), a defesa do jogador (a esquiva e
-  a Concentração), o dano, o Death Save e a iniciativa (o Sandevistan, +3 ligado por padrão no CORE: no Foundry 12, a
-  iniciativa de quem tem um situacional abre a janela).
+- [x] **A janela de rolagem no ataque e na iniciativa** (Ciclo 25): os botões de ataque da ficha abrem a janela antes de
+  gastar a bala; a luneta de precisão (+1 em tiro único ou mirado a 51 m ou mais, wiki) vem marcada quando vale e entra
+  sozinha sem a janela; a iniciativa de quem tem um situacional (o Sandevistan, +3 ligado por padrão, como o CORE) abre
+  a janela, e sem ela o +3 entra.
+- [ ] **A janela de rolagem no resto:** a defesa do jogador (a esquiva e a Concentração, dentro do prazo do pedido), o
+  dano e o Death Save.
 
 ## P2: fichas, inventário, equipamento, armas e combate
 
@@ -122,8 +125,7 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
   ele. Trazer o histórico exige que o módulo da mesa (cpr-2077) mande as `transactions`, o que mexe no Foundry 12 da
   campanha (decisão do usuário).
 - [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
-- [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a luneta
-  de precisão (+1 em tiro único ou mirado a 51 m ou mais); a arma sob o cano (lança-granadas e espingarda) como
+- [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
   cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.
@@ -139,7 +141,7 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
     (todo tiro é carga), o supressivo da Senkoh pela carga (as 30 balas), e se "dispara três balas" e "só dispara em
     rajadas de três" gastam 3 balas por tiro;
   - **o +1 em tiro único entre 13 e 50 m** da Nowaki, da Masamune e da Kyubi: um bônus pela distância de cada alvo,
-    como a luneta de precisão (Acessórios);
+    como a luneta de precisão (ciclo 25);
   - **o que não é regra de ataque:** o BODY mínimo (Burya, Grad, SOR-22) e a recarga de duas Ações.
 
   A descrição de cada arma diz o que o sistema faz e que o resto é com o mestre, e a carga com cartucho é recusada com

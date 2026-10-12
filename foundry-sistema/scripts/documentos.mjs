@@ -3,7 +3,7 @@
 import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
-import { aplicarDano, ehCoprocessador, ehSmartLink, linhaDoExtrato, localDaArmadura, novoSaldo, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, situacionaisDeRole, sorteParaGastar } from './regras.mjs';
+import { aplicarDano, ehCoprocessador, ehLuneta, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, situacionaisDeRole, sorteParaGastar } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
@@ -59,8 +59,16 @@ export class AtorCPR extends Actor {
   // itens em uso (na perícia ou na família dela; "todas as ações" em todo teste) e os bônus de Role que dependem da
   // situação (regras.situacionaisDeRole). O teste sem a janela usa os ligados por padrão, como o CORE.
   situacionaisDoTeste(periciaId = null) {
+    const { role, especializacao } = this.system;
+    return [...this.#efeitosSituacionais(this.#chavesDoTeste(periciaId)), ...situacionaisDeRole({ roleId: roleDaWiki(role.nome)?.id, rank: role.rank, especializacao, periciaId })];
+  }
+  // As chaves dos efeitos que valem num teste: a perícia, a família dela e todas as ações.
+  #chavesDoTeste(periciaId) {
     const familia = periciaId ? this.system.pericias[periciaId]?.familia : '';
-    const chaves = new Set(['system.bonus.todasAcoes', ...[periciaId, familia].filter(Boolean).map(id => `system.bonus.pericias.${id}`)]);
+    return new Set(['system.bonus.todasAcoes', ...[periciaId, familia].filter(Boolean).map(id => `system.bonus.pericias.${id}`)]);
+  }
+  // Os efeitos situacionais dos itens em uso que mexem nestas chaves.
+  #efeitosSituacionais(chaves) {
     const lista = [];
     for (const efeito of this.allApplicableEffects()) {
       const dados = efeito.system;
@@ -69,8 +77,28 @@ export class AtorCPR extends Actor {
       const origem = efeito.parent instanceof Item ? efeito.parent.name : efeito.name;
       if (valor) lista.push({ id: efeito.uuid, rotulo: `${origem}: ${dados.situacional.alvo}`, valor, ligado: dados.situacional.ligadoPorPadrao });
     }
-    const { role, especializacao } = this.system;
-    return [...lista, ...situacionaisDeRole({ roleId: roleDaWiki(role.nome)?.id, rank: role.rank, especializacao, periciaId })];
+    return lista;
+  }
+  // Os situacionais de um ataque: os efeitos na perícia da arma e em todas as ações (os de Role não: são de teste) e a
+  // luneta de precisão da arma, num tiro único ou mirado, ligada quando a regra vale (regras.lunetaVale, pela distância
+  // do alvo e pelo bônus do cyberware óptico nesse tiro).
+  situacionaisDoAtaque(arma, { pericia, modo, local = 'corpo', metros = null }) {
+    const lista = this.#efeitosSituacionais(this.#chavesDoTeste(pericia));
+    const luneta = arma.system.aDistancia && ehTiroUnico(modo) ? arma.instalados.find(item => item.type === 'upgrade' && ehLuneta(item.name, item.getFlag(SISTEMA, 'catalogo'))) : null;
+    if (luneta) {
+      const bonusOptico = LOCAIS_MIRADOS[local] ? this.system.bonus.tiroMirado : this.system.bonus.tiroUnico;
+      lista.push({ id: luneta.uuid, rotulo: `${luneta.name}: alvo a ${LUNETA.metros} m ou mais`, valor: LUNETA.valor, ligado: lunetaVale({ metros, bonusOptico }) });
+    }
+    return lista;
+  }
+  // Os situacionais da iniciativa (o Sandevistan, ligado por padrão no CORE).
+  situacionaisDaIniciativa() {
+    return this.#efeitosSituacionais(new Set(['system.bonus.iniciativa']));
+  }
+  // As partes fixas da iniciativa (REF + 1d10, p. 168): o REF, o cyberware e a Reação de Iniciativa do Solo.
+  partesDaIniciativa() {
+    const { atributos, bonus, consciencia } = this.system;
+    return [{ rotulo: 'REF', valor: atributos.ref.valor }, { rotulo: 'Cyberware', valor: bonus.iniciativa }, { rotulo: 'Reação de Iniciativa', valor: consciencia.iniciativa }].filter(parte => parte.valor);
   }
   // Os situacionais que entram: os escolhidos na janela ou, sem ela, os ligados por padrão.
   #situacionais(escolhidos, periciaId = null) {
@@ -267,7 +295,7 @@ export class ItemCPR extends Item {
     const ator = this.actor;
     const atributo = this.system.aDistancia ? 'ref' : 'dex';
     const pericia = ['autofogo', 'supressivo', 'rajadaTech'].includes(modo) ? 'autofire' : this.system.pericia;
-    const { pericia: p, partes } = ator.partesDaPericia(pericia);
+    const { pericia: p, partes } = ator.partesDaPericia(pericia, { situacionais: [] });
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
     if (smart) partes.splice(0, p.bonus ? 3 : 2, { rotulo: 'Teste Smart', valor: smart });
     if (this.system.bonusAtaque) partes.splice(smart ? 1 : 2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });

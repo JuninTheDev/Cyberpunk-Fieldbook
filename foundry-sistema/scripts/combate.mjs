@@ -9,6 +9,7 @@
 import { DEFESAS, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { TABELAS_DV } from './gerado.mjs';
+import { perguntarTeste } from './janela-rolagem.mjs';
 import { lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
 import * as R from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
@@ -96,8 +97,9 @@ export function jogadorDe(ator) {
 // alvos (ou alvo, um só): Tokens ou TokenDocuments; padrão, os marcados. local: "corpo" ou mirado ("cabeca", "perna",
 // "item"). modo: os botões da ficha ("autofogo", "supressivo" e os de 2077: "ricochete", "carga", "rajadaTech",
 // "smart", "doisCanos"); senão, a arma e a munição dizem (tiro, cartucho, explosivo). cobertura: a do alvo na carga
-// Tech ("nenhuma", "fina", "grossa"); sem ela, a janela pergunta a quem atira.
-export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, cobertura = null } = {}) {
+// Tech ("nenhuma", "fina", "grossa"); sem ela, a janela pergunta a quem atira. perguntar: abre a janela de rolagem (a
+// ficha abre; Ctrl + clique, não).
+export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, cobertura = null, perguntar = false } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
   const lista = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
@@ -124,23 +126,28 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   }
   if (impedido) { ui.notifications.warn(`${arma.name}: ${impedido}`); return null; }
   const doisCanos = pedido === 'doisCanos';
-  if (arma.system.aDistancia && arma.system.pente.max) {
-    const balas = R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech, autofogo: perfil?.balasDoAutofogo, doisCanos });
-    if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
-    await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
-  }
-  // A carga marca a rodada na arma, para esfriar; o "Desfazer" do mestre tira a marca.
-  const carga = tech ? await marcarCarga(arma) : null;
+  const balas = arma.system.aDistancia && arma.system.pente.max ? R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech, autofogo: perfil?.balasDoAutofogo, doisCanos }) : 0;
+  if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
   const smart = R.testeSmart({ perfil, modo, local, pedido, smartLink: de2077.smartLink, smartAtaque: config('smartAtaque') });
-  const { partes } = arma.partesDoAtaque(modo, { smart });
+  const { pericia, partes } = arma.partesDoAtaque(modo, { smart });
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
   if (modo === 'ricochete' && atacante.temCoprocessador) partes.push({ rotulo: 'Ballistic Coprocessor', valor: R.BONUS_COPROCESSADOR });
   if (!tech) cobertura = null;
   const descricao = R.descreverAtaque({ modo, local, smart, cobertura, doisCanos });
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
+  // Os situacionais (a luneta, pela distância do primeiro alvo) e a janela de rolagem: fechada ou cancelada, não ataca nem
+  // gasta bala. Sem a janela, entram os ligados por padrão.
+  const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null });
+  const escolha = perguntar ? await perguntarTeste(atacante, { rotulo: `${arma.name}: ${descricao}`, partes, situacionais }) : null;
+  if (perguntar && !escolha) return null;
+  const extras = escolha?.partes ?? situacionais.filter(situacional => situacional.ligado).map(({ rotulo, valor }) => ({ rotulo, valor }));
+  if (balas) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
+  // A carga marca a rodada na arma, para esfriar; o "Desfazer" do mestre tira a marca.
+  const carga = tech ? await marcarCarga(arma) : null;
   const { total, mensagem } = await testar(atacante, {
-    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes, modo: 'gm', dados: { ataque: true }, semFalhaCritica: atacante.system.consciencia.semFalhaCritica
+    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: 'gm', dados: { ataque: true },
+    semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,

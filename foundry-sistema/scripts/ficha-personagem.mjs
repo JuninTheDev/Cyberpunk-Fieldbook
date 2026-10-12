@@ -274,7 +274,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const ok = await DialogV2.confirm({ window: { title: 'Tirar perícia' }, content: `<p>Tirar <b>${foundry.utils.escapeHTML(nome)}</b> da ficha?</p>` });
     return ok ? this.actor.update({ [`system.pericias.${chave}`]: new foundry.data.operators.ForcedDeletion() }) : null;
   }
-  static #atacar(evento, alvo) { return this.#item(alvo)?.atacar({ local: alvo.dataset.local || 'corpo', modo: alvo.dataset.modo || null }); }
+  static #atacar(evento, alvo) { return this.#item(alvo)?.atacar({ local: alvo.dataset.local || 'corpo', modo: alvo.dataset.modo || null, perguntar: comJanela(evento) }); }
   // Tiro (ou golpe) mirado: escolhe o local e ataca.
   static async #mirar(evento, alvo) {
     const item = this.#item(alvo);
@@ -284,7 +284,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       content: '<p>Onde mirar? O ataque leva −8.</p><ul><li><b>Cabeça:</b> o dano que passa da armadura dobra.</li><li><b>Perna:</b> se passar dano, Perna quebrada.</li><li><b>Item na mão:</b> se passar dano, o alvo larga o item.</li></ul>',
       buttons: [{ action: 'cabeca', label: 'Cabeça', default: true }, { action: 'perna', label: 'Perna' }, { action: 'item', label: 'Item na mão' }]
     });
-    return local ? item.atacar({ local }) : null;
+    return local ? item.atacar({ local, perguntar: comJanela(evento) }) : null;
   }
   static #deathSave() { return this.actor.rolarDeathSave(); }
   static #zerarDeathSave() { return this.actor.zerarDeathSave(); }

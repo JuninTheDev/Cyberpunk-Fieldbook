@@ -187,17 +187,17 @@ function chaveNova(chave, camel) {
   return null;
 }
 // Os situacionais do CORE (isSituational) que a janela de rolagem oferece: numa perícia (a Percepção pela audição ou pela
-// visão é a Percepção, com o "quando") ou em toda ação (com as mãos, com a fala). A iniciativa (Sandevistan) e o ataque
-// (luneta) ficam de fora até a janela chegar neles.
+// visão é a Percepção, com o "quando"), em toda ação (com as mãos, com a fala) ou na iniciativa (o Sandevistan).
 const SITUACIONAIS = {
   perceptionHearing: ['perception', 'pela audição'], perceptionSight: ['perception', 'pela visão'],
-  allActionsHands: ['todasAcoes', 'com as mãos'], allActionsSpeech: ['todasAcoes', 'com a fala']
+  allActionsHands: ['todasAcoes', 'com as mãos'], allActionsSpeech: ['todasAcoes', 'com a fala'], initiative: ['iniciativa', '']
 };
 function chaveSituacional(chave, camel, nomes) {
   const m = chave.match(/^bonuses\.([A-Za-z]+)$/);
   const [alvo, quando] = SITUACIONAIS[m?.[1]] ?? (camel[m?.[1]] ? [camel[m[1]], ''] : []);
   if (!alvo) return null;
   if (alvo === 'todasAcoes') return { key: 'system.bonus.todasAcoes', alvo: `Todas as ações ${quando}` };
+  if (alvo === 'iniciativa') return { key: 'system.bonus.iniciativa', alvo: 'Iniciativa' };
   return { key: `system.bonus.pericias.${alvo}`, alvo: [nomes[alvo], quando].filter(Boolean).join(' ') };
 }
 // Cada efeito do CORE vira um efeito com as mudanças que valem sempre e um efeito à parte para cada mudança situacional,
@@ -333,8 +333,8 @@ function programa(doc, s) {
   };
 }
 // Upgrade: onde instala (o "type" do CORE), os slots e os modificadores que o sistema aplica: o pente do carregador (o
-// CORE dá como "override"), o bônus de ataque, o SDP e os assentos (como "modifier"). Os situacionais (a luneta de
-// precisão) ficam de fora, e o build lista.
+// CORE dá como "override"), o bônus de ataque, o SDP e os assentos (como "modifier"). O situacional (a luneta de
+// precisão) fica de fora daqui: a regra dela, pela distância do alvo, está em regras.lunetaVale. O build lista.
 const ALVO_DO_CORE = { weapon: 'arma', cyberdeck: 'cyberdeck', vehicle: 'veiculo' };
 const MODIFICADORES = { pente: 'magazine', ataque: 'attackmod', sdp: 'sdp', assentos: 'seats' };
 function upgrade(doc, s, foraDoMapa) {

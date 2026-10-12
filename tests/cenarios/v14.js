@@ -629,6 +629,141 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.tokens === 4 && info.alvo === 10 && info.capanga === 12 && info.longe === 28 && info.sp === 11, JSON.stringify(info)];
     });
 
+    await r.passo('janela de rolagem no ataque e na iniciativa: o Atacar da ficha abre a janela antes de gastar a bala (cancelar não gasta nem rola); a luneta de precisão vem marcada contra o alvo a 51 m ou mais e desmarcada perto; o que se marca entra no ataque; sem a janela, a luneta entra sozinha quando vale; a iniciativa de quem tem Sandevistan abre a janela com o +3 marcado, e "Rolar direto" rola com ele', async () => {
+      // Atores e tokens só deste passo (apagados no fim): o Atirador de Elite (REF 8, Armas de Ombro 4, rifle com a luneta,
+      // Sandevistan), o Perto (a 4 m) e o Telhado (10 m no chão e 52 m acima: mais de 51 m).
+      const ATQ = `(() => { const a = game.actors.getName('Atirador de Elite'); const rifle = a.items.getName('Assault Rifle'); return { a, rifle }; })()`;
+      try {
+        const montagem = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const pegar = id => foundry.utils.deepClone(cat[id]);
+          const a = await Actor.implementation.create({ name: 'Atirador de Elite', type: 'personagem', system: { atributos: { ref: { valor: 8 } }, pericias: { 'shoulder-arms': { nivel: 4 } } } });
+          const rifle = pegar('core_weapons:assault-rifle');
+          Object.assign(rifle.system, { equipada: true, pente: { value: 25, max: 25 } });
+          const [arma] = await a.createEmbeddedDocuments('Item', [rifle]);
+          const luneta = pegar('core_upgrades:sniping-scope');
+          luneta.system.instaladoEm = arma.id;
+          const sandevistan = pegar('core_cyberware:sandevistan');
+          sandevistan.system.instalado = true;
+          await a.createEmbeddedDocuments('Item', [luneta, sandevistan]);
+          const perto = await Actor.implementation.create({ name: 'Perto', type: 'personagem', system: { hp: { value: 40 } } });
+          const telhado = await Actor.implementation.create({ name: 'Telhado', type: 'personagem', system: { hp: { value: 40 } } });
+          const token = async (ator, x, elevation = 0) => (await ator.getTokenDocument({ x, y: 900, elevation })).toObject();
+          await canvas.scene.createEmbeddedDocuments('Token', [await token(a, 300), await token(perto, 500), await token(telhado, 800, 52)]);
+          await __esperar(() => canvas.tokens.placeables.length === 7);
+          await new Promise(r => setTimeout(r, 500));
+          const d = nome => game.system.api.combate.distancia(__token('Atirador de Elite'), __token(nome));
+          return { perto: d('Perto'), telhado: d('Telhado') };
+        })()`);
+
+        // A. A janela do Atacar, com a luneta marcada (Telhado) e desmarcada (Perto); cancelar não gasta nem rola.
+        const janelas = await edge.evaluate(`(async () => {
+          const { a, rifle } = ${ATQ};
+          await a.sheet.render({ force: true });
+          await __esperar(() => a.sheet.element?.querySelector('.tab.combate tr[data-item-id="' + rifle.id + '"] [data-action="atacar"]'));
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const textoDe = el => el.textContent.replace(/\\s+/g, ' ').trim();
+          const abrir = async alvo => {
+            canvas.tokens.setTargets([__token(alvo).id]);
+            a.sheet.element.querySelector('.tab.combate tr[data-item-id="' + rifle.id + '"] [data-action="atacar"]').click();
+            await __esperar(() => janela()?.querySelector('.total-sem-dado'));
+            const j = janela();
+            const lido = {
+              titulo: textoDe(j.querySelector('.window-title')), partes: [...j.querySelectorAll('.partes li')].map(textoDe),
+              situacionais: [...j.querySelectorAll('[name="situacional"]')].map(c => textoDe(c.closest('label')) + (c.checked ? ' [x]' : ' [ ]')), total: textoDe(j.querySelector('.total-sem-dado'))
+            };
+            const antes = game.messages.size;
+            j.querySelector('button[data-action="cancelar"]').click();
+            await __esperar(() => !janela());
+            await new Promise(r => setTimeout(r, 300));
+            return { ...lido, rolou: game.messages.size !== antes, pente: rifle.system.pente.value };
+          };
+          return { telhado: await abrir('Telhado'), perto: await abrir('Perto') };
+        })()`);
+
+        // B. Pela janela, contra o Perto: o modificador do mestre e a Sorte entram; a luneta, não. d10 5; o dano 5 × 1.
+        await fixar(edge, [[5, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]]);
+        const pelaJanela = await edge.evaluate(`(async () => {
+          const { a, rifle } = ${ATQ};
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          canvas.tokens.setTargets([__token('Perto').id]);
+          const cartoes = () => game.messages.filter(m => m.getFlag('${S}', 'ataque')).length;
+          const antes = cartoes();
+          a.sheet.element.querySelector('.tab.combate tr[data-item-id="' + rifle.id + '"] [data-action="atacar"]').click();
+          await __esperar(() => janela()?.querySelector('.total-sem-dado'));
+          const j = janela();
+          const outro = j.querySelector('[name="outro"]');
+          outro.value = 2;
+          outro.dispatchEvent(new Event('input', { bubbles: true }));
+          const sorte = j.querySelector('[name="sorte"]');
+          sorte.value = 1;
+          sorte.dispatchEvent(new Event('input', { bubbles: true }));
+          j.querySelector('button[data-action="rolar"]').click();
+          await __esperar(() => cartoes() > antes, 150);
+          const teste = game.messages.filter(m => m.getFlag('${S}', 'teste')?.ataque).at(-1);
+          const partes = [...new DOMParser().parseFromString(teste.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.replace(/\\s+/g, ' ').trim());
+          return { partes, total: teste.rolls[0].total, pente: rifle.system.pente.value, sorte: a.system.sorte.value, cartao: cartoes() > antes };
+        })()`);
+
+        // C. Sem a janela (como Ctrl + clique e as macros), contra o Telhado: a luneta entra sozinha. d10 6.
+        await fixar(edge, [[6, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]]);
+        const direto = await edge.evaluate(`(async () => {
+          const { rifle } = ${ATQ};
+          await rifle.atacar({ alvos: [__token('Telhado')] });
+          const teste = game.messages.filter(m => m.getFlag('${S}', 'teste')?.ataque).at(-1);
+          const partes = [...new DOMParser().parseFromString(teste.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.replace(/\\s+/g, ' ').trim());
+          return { partes, total: teste.rolls[0].total, pente: rifle.system.pente.value };
+        })()`);
+
+        // D. A iniciativa: a janela traz o Sandevistan (+3, marcado); "Rolar direto" rola com ele. d10 6 e depois 7.
+        await fixar(edge, [[6, 10]]);
+        const iniciativa = await edge.evaluate(`(async () => {
+          const { a } = ${ATQ};
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const textoDe = el => el.textContent.replace(/\\s+/g, ' ').trim();
+          const combate = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          const [combatente] = await combate.createEmbeddedDocuments('Combatant', [{ tokenId: __token('Atirador de Elite').id, sceneId: canvas.scene.id, actorId: a.id }]);
+          const rolando = combate.rollInitiative([combatente.id]);
+          await __esperar(() => janela()?.querySelector('.total-sem-dado'));
+          const j = janela();
+          const lido = { partes: [...j.querySelectorAll('.partes li')].map(textoDe), situacionais: [...j.querySelectorAll('[name="situacional"]')].map(c => textoDe(c.closest('label')) + (c.checked ? ' [x]' : ' [ ]')), total: textoDe(j.querySelector('.total-sem-dado')) };
+          j.querySelector('button[data-action="rolar"]').click();
+          await rolando;
+          lido.comJanela = combate.combatants.get(combatente.id).initiative;
+          window.__fila = [[7, 10]];
+          await game.settings.set('${S}', 'rolarDireto', true);
+          await combate.rollInitiative([combatente.id]);
+          lido.direto = combate.combatants.get(combatente.id).initiative;
+          lido.janelaNoDireto = Boolean(janela());
+          return lido;
+        })()`);
+        const info = { montagem, janelas, pelaJanela, direto, iniciativa };
+        const { telhado, perto } = janelas;
+        const luneta = 'Sniping Scope: alvo a 51 m ou mais +1';
+        const ok = montagem.perto < 51 && montagem.telhado >= 51
+          && /Assault Rifle/.test(telhado.titulo) && telhado.partes.join() === 'REF +8,Armas de Ombro +4,1d10' && telhado.situacionais.join() === luneta + ' [x]' && telhado.total === '13'
+          && !telhado.rolou && telhado.pente === 25 && perto.situacionais.join() === luneta + ' [ ]' && perto.total === '12' && !perto.rolou && perto.pente === 25
+          && pelaJanela.cartao && pelaJanela.partes.includes('Modificador do mestre +2') && pelaJanela.partes.includes('Sorte +1') && !pelaJanela.partes.some(parte => parte.startsWith('Sniping'))
+          && pelaJanela.total === 8 + 4 + 2 + 1 + 5 && pelaJanela.pente === 24 && pelaJanela.sorte === 4
+          && direto.partes.includes(luneta) && direto.total === 8 + 4 + 1 + 6 && direto.pente === 23
+          && iniciativa.partes.join() === 'REF +8,1d10' && iniciativa.situacionais.join() === 'Sandevistan: Iniciativa +3 [x]' && iniciativa.total === '11'
+          && iniciativa.comJanela === 8 + 3 + 6 && iniciativa.direto === 8 + 3 + 7 && !iniciativa.janelaNoDireto;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          await game.settings.set('${S}', 'rolarDireto', false);
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close();
+          for (const combate of game.combats.filter(c => c.combatants.some(cb => cb.name === 'Atirador de Elite'))) await combate.delete();
+          canvas.tokens.setTargets([]);
+          const nomes = ['Atirador de Elite', 'Perto', 'Telhado'];
+          await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => nomes.includes(t.name)).map(t => t.id));
+          for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
+          await __esperar(() => canvas.tokens.placeables.length === 4);
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('tiro: 19 contra DV 16 a 10 m; dano 21 com crítico (SP 11 segura 11; entram 10 + 5); a armadura perde 1; Lesão Crítica 8: Perna quebrada (−4 MOVE)', async () => {
       // Ataque: d10 7 → REF 8 + Armas Longas 4 + 7 = 19. Dano 5d6: 6, 6, 2, 3, 4 = 21 (dois 6: crítico). Lesão: 2d6 4 + 4 = 8.
       await fixar(edge, [[7, 10], [6, 6], [6, 6], [2, 6], [3, 6], [4, 6], [4, 6], [4, 6]]);
@@ -1026,7 +1161,8 @@ module.exports = async ({ edge, servidores, r }) => {
           canvas.tokens.setTargets([alvo.id]);
           window.__fila = [[6, 10], [4, 6], [3, 6]];
           const antes = game.messages.size;
-          __linhaDaArma(arma).querySelector('button[data-modo="carga"]').click();
+          // Ctrl + clique: direto, sem a janela de rolagem (o passo da janela confere o clique comum).
+          __linhaDaArma(arma).querySelector('button[data-modo="carga"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
           const opcoesPelaFicha = await responder('nenhuma');
           await __esperar(() => game.messages.contents.slice(antes).some(m => m.getFlag('${S}', 'ataque')));
           const cartao3 = game.messages.contents.slice(antes).find(m => m.getFlag('${S}', 'ataque'));

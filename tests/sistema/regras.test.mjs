@@ -718,6 +718,22 @@ test('Situacionais do CORE no catálogo: cada mudança situacional vira um efeit
   const sempre = id => catalogo[id].effects.filter(e => !e.system.situacional).flatMap(e => e.system.changes.map(c => `${c.key.replace('system.bonus.', '')}=${c.value}`));
   assert.deepEqual(sempre('core_critical-injuries-head:lost-eye'), ['distancia=-4']);
   assert.deepEqual(sempre('core_gear:agent'), ['pericias.library-search=2']);
-  // A iniciativa do Sandevistan e a luneta esperam a janela chegar na iniciativa e no ataque.
-  assert.deepEqual(sit('core_cyberware:sandevistan'), []);
+  // A iniciativa do Sandevistan (+3, ligada por padrão). A luneta não vira efeito: a regra dela é a da distância.
+  assert.deepEqual(sit('core_cyberware:sandevistan'), [['Iniciativa', 'iniciativa=3', true]]);
+  assert.ok(!JSON.stringify(catalogo['core_upgrades:sniping-scope'].effects ?? []).includes('situacional'));
+});
+
+test('Luneta de precisão (wiki: "+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais. Não acumula com cyberware óptico"): o tiro único, a distância e o óptico', () => {
+  for (const modo of ['tiro', 'smart', 'ricochete', 'carga', 'doisCanos']) assert.equal(regras.ehTiroUnico(modo), true, modo);
+  for (const modo of ['autofogo', 'supressivo', 'rajadaTech', 'cartucho', 'explosivo']) assert.equal(regras.ehTiroUnico(modo), false, modo);
+  assert.equal(regras.lunetaVale({ metros: 51 }), true);
+  assert.equal(regras.lunetaVale({ metros: 50.9 }), false);
+  assert.equal(regras.lunetaVale({ metros: null }), false);
+  assert.equal(regras.lunetaVale({ metros: 80, bonusOptico: 1 }), false);
+  assert.deepEqual(regras.LUNETA, { valor: 1, metros: 51 });
+  assert.equal(regras.ehLuneta('Sniping Scope'), true);
+  assert.equal(regras.ehLuneta('Luneta', 'core_upgrades:sniping-scope'), true);
+  assert.equal(regras.ehLuneta('Infrared Nightvision Scope'), false);
+  const loja = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  assert.match(loja, /\+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais\. Não acumula com cyberware óptico\./);
 });

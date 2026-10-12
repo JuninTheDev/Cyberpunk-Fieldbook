@@ -38,7 +38,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - os **modificadores comuns** do livro (RED p. 130, a tabela da wiki: pouca luz −1, tarefa complexa −2, exausto −4, tempo extra +1...);
   - o **modificador do mestre** e a **Sorte** (vem com a preparada na ficha).
 
-  **Ctrl + clique** rola direto, com a Sorte preparada e os situacionais ligados por padrão; a configuração "Rolar direto" (deste navegador) inverte. O ataque, a defesa, o dano, o Death Save e a iniciativa ainda rolam direto.
+  **Ctrl + clique** rola direto, com a Sorte preparada e os situacionais ligados por padrão; a configuração "Rolar direto" (deste navegador) inverte. Os botões de ataque da ficha também abrem a janela, antes de gastar a bala (cancelar não gasta nem rola); na iniciativa, ela abre para quem tem um situacional de iniciativa (o Sandevistan, +3 já marcado). A defesa, o dano e o Death Save ainda rolam direto.
 - **Testes:** atributo (STAT + 1d10) ou perícia (STAT + perícia + 1d10). Entram:
   - o bônus dos efeitos;
   - a penalidade de ferimento (−2 gravemente; −4 mortalmente, que também tira 6 de MOVE, com mínimo 1);
@@ -49,6 +49,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Ataque, defesa e dano** (o Fluxo de Combate dentro do sistema). Marque os alvos (T) e use os botões da arma:
   - **Atacar:** tiro, ou corpo a corpo com arma branca.
   - **Mirar:** −8, na cabeça (o dano que passa dobra), na perna (se passar dano, Perna quebrada) ou no item na mão (o alvo larga).
+  - **Luneta de precisão** na arma: +1 em tiro único ou mirado contra alvo a 51 m ou mais, se o cyberware óptico já não dá o bônus (wiki). Ela entra sozinha quando vale, e a janela de rolagem a traz marcada ou não.
   - **Autofogo:** a perícia Autofogo contra a tabela de autofogo. O dano é 2d6 × quanto passou, até o máximo da arma. Gasta 10 balas.
   - **Supressivo:** sem alvo marcado, pega todos a até 25 m e à vista. Cada um rola WILL + Concentração contra o ataque, e quem perde fica **Suprimido** até o fim do próximo turno dele. Gasta 10 balas.
   - **Espingarda com cartucho** (pela munição): um ataque contra DV 13. Se acertar, cada alvo a até 6 m leva 3d6, rolados uma vez.
@@ -185,7 +186,7 @@ E a do navegador de cada um:
   - as 13 tabelas de DV.
 - **2077:** `build/conteudo-2077.mjs` converte o suplemento de fã da própria wiki (`system-2077.js` e `system-net.js`), os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele: 46 armas e 5 flechettes, 57 cyberwares, 21 cyberdecks, 16 quickhacks e 5 daemons. A classe de cada arma (Power, Tech ou Smart) e as opções dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`); as balas da rajada Tech saem do texto de cada arma.
 - **Os mesmos ids da loja da wiki** (`core_weapons:assault-rifle`, `armas-2077:arasaka-hjke-11-yukimura`): é por eles que o importador acha cada item.
-- **Efeitos situacionais** do CORE (Audição Amplificada, Image Enhance, as lesões de olho, ouvido, mão e mandíbula, o Agent) entram como efeitos à parte, que não somam sozinhos: a janela de rolagem os oferece. Ficam de fora, até a janela chegar na iniciativa e no ataque, a iniciativa do Sandevistan e a luneta. O build lista quais são.
+- **Efeitos situacionais** do CORE (Audição Amplificada, Image Enhance, as lesões de olho, ouvido, mão e mandíbula, o Agent, a iniciativa do Sandevistan) entram como efeitos à parte, que não somam sozinhos: a janela de rolagem os oferece, e o rolar direto usa os ligados por padrão. A luneta de precisão não vira efeito: a regra dela, pela distância do alvo, está nas regras do ataque. O build lista o que fica de fora.
 
 ## Teste
 
@@ -203,7 +204,7 @@ E a do navegador de cada um:
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - a Sorte preparada na ficha e o visual dos cartões do chat;
-  - a janela de rolagem: as partes, os situacionais (do cyberware, das lesões e da Role), os modificadores comuns, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste; cancelar não rola; Ctrl + clique e o "Rolar direto";
+  - a janela de rolagem: as partes, os situacionais (do cyberware, das lesões e da Role), os modificadores comuns, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste; cancelar não rola; Ctrl + clique e o "Rolar direto"; no ataque, a luneta marcada a 51 m ou mais e desmarcada perto, cancelar sem gastar bala e o que se marca entrando no ataque; na iniciativa, o Sandevistan (+3) pela janela e direto;
   - os bônus de Role: o Moto do Nomad importado da wiki de teste, e um Face sintético com a especialização pela importação e pela migração, no teste, no total da ficha e trocada na aba Role (o Lawman guarda a dele sem somar);
   - o extrato: somar, subtrair e definir com o motivo, a mudança direta, o saldo negativo com o aviso, o mestre tirando linhas (só a linha ou desfazendo a mudança) e as linhas da importação, da migração e da loja;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
