@@ -1,4 +1,4 @@
-// Conteúdo novo: Avanço, Lifepath, Night Market, Roles de 2077, equipamento e Encontros de 2077 (só do mestre).
+// Conteúdo novo: Avanço, Lifepath, Night Market, Roles nos anos 2070, equipamento e Encontros de 2077 (só do mestre).
 const { abrir, buscarEAbrir, ondeParou, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
@@ -12,7 +12,7 @@ module.exports = async ({ edge, servidores, r }) => {
   })()`);
   const secoes = () => edge.evaluate(`[...document.querySelectorAll('#content .section')].map(s => s.dataset.toc)`);
 
-  await r.passo('menu tem Lifepath, Avanço, Roles de 2077 e Encontros', async () => {
+  await r.passo('menu tem Lifepath, Avanço, Roles nos anos 2070 e Encontros', async () => {
     await edge.evaluate(`document.querySelector('#tab-system').click()`);
     const ids = await edge.evaluate(`[...document.querySelectorAll('.nav-item')].map(b => b.dataset.page)`);
     const faltam = ['lifepath', 'advancement', 'roles2077', 'encounters'].filter(id => !ids.includes(id));
@@ -86,12 +86,14 @@ module.exports = async ({ edge, servidores, r }) => {
   });
 
   await abrir(edge, 'roles2077');
-  await r.passo('Roles de 2077: Face com tabela por Rank, Corpo e Lawman', async () => {
+  await r.passo('Roles nos anos 2070: as 10 Roles do RED no resumo, o Netrunner, a compra direta e o Lawman do suplemento de fã', async () => {
     const s = await secoes();
-    const ranks = await edge.evaluate(`[...document.querySelectorAll('#content .section')].find(x => x.dataset.toc === 'Face').querySelectorAll('tbody tr').length`);
-    return [['Face', 'Netrunner', 'Corpo', 'Lawman', 'Nomad'].every(x => s.includes(x)) && ranks === 9, `${s.join(', ')} | ${ranks} linhas no Face`];
+    const linhas = await edge.evaluate(`[...[...document.querySelectorAll('#content .section')].find(x => x.dataset.toc === 'Resumo').querySelectorAll('tbody tr')].map(tr => tr.cells[0].textContent)`);
+    const ok = ['Resumo', 'Netrunner', 'Comprar direto do fabricante', 'Lawman com Investigator (suplemento de fã)'].every(x => s.includes(x)) && !s.includes('Face') && !s.includes('Corpo')
+      && linhas.length === 10 && ['Rockerboy', 'Exec', 'Fixer'].every(role => linhas.includes(role));
+    return [ok, `${s.join(', ')} | ${linhas.join(', ')}`];
   });
-  await r.passo('o resumo do suplemento leva às Roles de 2077', async () => {
+  await r.passo('o resumo do suplemento leva às Roles nos anos 2070', async () => {
     await abrir(edge, 'supplement2077');
     await edge.evaluate(`document.querySelector('#content [data-page="roles2077"]').click()`);
     await edge.sleep(300);
@@ -166,7 +168,7 @@ module.exports = async ({ edge, servidores, r }) => {
   });
 
   if (!servidores.rede) return;
-  await r.passo('visão dos jogadores: Lifepath e Roles de 2077 sim, Encontros não', async () => {
+  await r.passo('visão dos jogadores: Lifepath e Roles nos anos 2070 sim, Encontros não', async () => {
     await edge.ir(`${servidores.rede}/#encounters`, 2500);
     const pagina = await edge.evaluate('wikiApp.currentPage()');
     const ids = await edge.evaluate(`(() => { document.querySelector('#tab-system').click(); return [...document.querySelectorAll('.nav-item')].map(b => b.dataset.page); })()`);

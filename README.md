@@ -146,7 +146,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `criador.js` | Personagens, ficha, criador e loja inicial (nas duas wikis). |
 | `conta.js` | O botão da conta no canto de cima (as duas wikis): entrar, o personagem em uso, novo personagem, trocar de campanha e sair; para o mestre, atalhos, versão, backup e sair. |
 | `popup.js` | Os pop-ups da wiki (confirmar, escrever um motivo, copiar um código) e os avisos rápidos no canto, no lugar das caixas do navegador. |
-| `system-criacao.js` | Regras de criação: Roles de 2077, tabelas de STAT, perícias e pacotes de cada Role. |
+| `system-criacao.js` | Regras de criação: as 10 Roles do RED com os ajustes do Mission Kit, tabelas de STAT, perícias, pacotes e Lifepath de cada Role e o Neuroport de graça. |
 | `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
 | `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
@@ -195,10 +195,10 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 1. **Códigos:** na wiki do mestre, em **Campanha → Personagens e códigos**, crie um código para cada jogador (por exemplo, `NC-7F3K-9QAB`) e passe a ele. O código já entra na campanha escolhida no menu.
 2. **Criar:** o jogador abre a wiki dos jogadores, clica em **Entrar** (canto de cima), digita o código uma vez (o aparelho lembra) e, no mesmo menu, clica em **Novo personagem**.
    - **Os passos:** identidade e Role, STATs, perícias, Lifepath, equipamento, moradia e revisão.
-   - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 9 Roles de 2077 e o cyberware grátis de 2077.
+   - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 10 Roles do RED (os ajustes dos anos 2070 do Mission Kit) e o Neuroport de graça. Personagens antigos com as Roles do suplemento de fã viram Rockerboy (o Face) e Exec (o Corpo).
    - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
    - **Ajuda:** cada passo tem um "Como funciona" com a página do livro, e um resumo fixo mostra pontos, HP, Humanidade, dinheiro e pendências. As perícias têm a descrição do livro, e os termos de regra levam ao glossário.
-   - **Lifepath da Role:** no passo 4, as perguntas próprias da Role (livro p. 54–70), para rolar ou escolher. A Face usa as do Rockerboy, e o Corpo, as do Exec. As respostas vão para o campo Role Lifepath da ficha do Foundry, junto com as notas.
+   - **Lifepath da Role:** no passo 4, as perguntas próprias da Role (livro p. 54–70), para rolar ou escolher. As respostas vão para o campo Role Lifepath da ficha do Foundry, junto com as notas.
    - **Retrato:** no passo 1, o jogador envia uma imagem (PNG, JPEG ou WebP, reduzida para 512 px antes de sair do aparelho) ou cola um link `https`. Se houver imagem enviada, ela vale no lugar do link. O retrato aparece na ficha, em miniatura na lista de Personagens (inclusive para os outros jogadores) e vai para a ficha e o token no Foundry.
    - **Perícias sugeridas:** no Edgerunner e no Pacote Completo, **Distribuir sugerido** põe os níveis do Rato de Rua da Role (86 pontos certinhos). No Pacote Completo, as 20 perícias da Role aparecem primeiro.
    - **O que a Role ganha além do Rank** (passo 1). Tudo vai para o item de Role e para a ficha no Foundry.
@@ -323,7 +323,7 @@ Notas:
 - O **Escudo do mestre** tem a calculadora de DV por alcance e o rolador de lesão crítica.
 - **Links nos documentos .md:** `[texto](#pagina/secao)` abre uma página da wiki; `[texto](arquivo.md)` e o nome de um documento entre crases abrem o documento; `[texto](https://...)` abre fora, em outra aba.
 - **Fichas de NPC** tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo, e o **elenco do Protocolo Morana** (Wakako, Mina, Endo, Sato, Iskra, Vega, Brakk, Tamsin e Tomas). Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
-- **Roladores:** o **Lifepath** rola cada tabela ou o passado inteiro de uma vez. A **Economia de 2077** gera um Night Market. Os **Encontros de 2077** (só na wiki do mestre) rolam dia, noite ou madrugada, e cada resultado leva à ficha do NPC.
+- **Roladores:** o **Lifepath** rola cada tabela ou o passado inteiro de uma vez. A **Economia** gera um Night Market. Os **Encontros de 2077** (só na wiki do mestre) rolam dia, noite ou madrugada, e cada resultado leva à ficha do NPC.
 - **Avanço e Pontos de Melhoria** traz os custos, a tabela de quanto dar no fim da sessão e o questionário de estilo de jogo.
 
 ## Alerta de arquivo revertido

@@ -9,9 +9,9 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
   - veículos adaptados do jogo;
   - NPCs prontos (só o mestre vê), com o elenco do Protocolo Morana na pasta própria;
   - regras em diários.
-- **Economia de 2077:** uma configuração do módulo que troca as categorias de preço pelas do suplemento.
+- **Preços:** valem as categorias do RED, como no Mission Kit (a economia do suplemento de fã saiu).
 - **Armas de 2077 no menu de ataque do sistema:** as regras de Power, Smart e Tech do Kit; veja a seção abaixo. As macros Ricochete e Carregar arma Tech são atalhos para o mesmo caminho.
-- **Roles de 2077:** Face, Corpo e Lawman (com Investigator), no compêndio Roles de 2077.
+- **Roles:** as 10 do RED (os ajustes do Mission Kit são de compra de itens e de quickhack, sem mudar o item de Role). O compêndio Roles de 2077 tem só o Lawman com Investigator, opcional, do suplemento de fã.
 - **Personagens da wiki:**
   - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.
     - O retrato do personagem é copiado para `worlds/<mundo>/retratos-wiki` e vai para a ficha e o token.
@@ -95,12 +95,12 @@ Depois é só ativar **Cyberpunk RED: 2077** em *Configurar módulos* no mundo.
 | Arquivo | Para que serve |
 |---|---|
 | `module.json` | Manifesto do módulo. |
-| `scripts/cpr-2077.mjs` | Configuração da economia de 2077 e API das macros. |
+| `scripts/cpr-2077.mjs` | Entrada do módulo: as configurações e a API das macros. |
 | `scripts/armas2077.mjs` | Armas de 2077 no menu de ataque: classe na ficha do item (ou pelo Rebuild), o Ricochete e o Carregar na ficha e no Combat HUD, as regras de Power, Smart e Tech do Mission Kit e as de cada arma. |
 | `scripts/macros.mjs` | Atalhos Ricochete e Carregar arma Tech. |
 | `scripts/wiki.mjs` | Importar da wiki e Atualizar da wiki (personagens do criador). |
 | `build/loja.mjs` | Gera o `loja-catalogo.js` da wiki (também roda sozinho). |
-| `build/roles.mjs` | Face, Corpo e Lawman de 2077. |
+| `build/roles.mjs` | O Lawman com Investigator (opcional, do suplemento de fã). |
 | `data/loja-nomes.json` | Nomes em português dos itens do sistema na loja. |
 | `styles/cpr-2077.css` | Visual dos diários e das mensagens no chat. |
 | `data/veiculos-2077.json` | Veículos do jogo e a classe do RED usada em cada um. |

@@ -100,8 +100,8 @@
   }
 
   // ---------------- Itens ----------------
-  // Pacote da Role (Rato de Rua e Edgerunner) com as escolhas feitas, mais o cyberware grátis de 2077 e o que foi comprado.
-  // Kit do Netrunner: o do RED (cyberdeck e programas do pacote) ou o de 2077 (Hunter MK.1 e 3 quickhacks).
+  // Pacote da Role (Rato de Rua e Edgerunner) com as escolhas feitas, mais o Neuroport de graça e o que foi comprado.
+  // Kit do Netrunner: o do RED (cyberdeck e programas do pacote) ou o do suplemento de fã (Hunter MK.1 e 3 quickhacks).
   const isRedDeckEntry = entry => (entry.ou ? entry.ou.flat() : [entry]).every(([id]) => id === 'core_gear:cyberdeck' || id.startsWith('core_programs:'));
   const uses2077Kit = (doc, pack) => Boolean(pack && pack.kit2077 && doc.kitNet === '2077');
   const chosenQuickhacks = (doc, pack) => (doc.quickhacks || []).filter(id => pack.kit2077.quickhacks.some(([option]) => option === id)).slice(0, pack.kit2077.escolher);
@@ -133,8 +133,8 @@
       ...C.free2077.map(item => ({ uid: `gratis:${item.id}`, id: item.id, qtd: item.qtd, origem: 'gratis2077', nome: item.nome || '' })),
       ...roleFree(doc).map(item => ({ uid: `role:${item.id}`, id: item.id, qtd: item.qtd, origem: 'role', nome: '' }))
     ];
-    const freeIds = new Set(free.map(item => item.id));
-    // O que o pacote dá e já vem grátis em 2077 não entra duas vezes (nem cobra Humanidade de novo).
+    const freeIds = new Set([...free.map(item => item.id), ...C.neuroportIncludes]);
+    // O que o pacote dá e já vem no Neuroport (Neural Link, Interface Plugs...) não entra duas vezes (nem cobra Humanidade de novo).
     const pack = packageEntries(doc).filter(item => !(freeIds.has(item.id) && (catalog.get(item.id) || {}).cat === 'cyberware'));
     const bought = (doc.itens || []).filter(item => catalog.has(item.id)).map(item => ({ ...item, origem: 'loja' }));
     return [...free, ...pack, ...bought].map(item => ({ ...item, item: catalog.get(item.id) })).filter(entry => entry.item);
@@ -156,7 +156,7 @@
     return { inicial: budget, moda: fashionBudget, gastoModa: fashion, usadoModa: fromFashion, moradia: home, gasto: spent, saldo: budget - spent };
   }
 
-  // Humanidade: EMP × 10, menos a perda fixa de cada cyberware (o grátis de 2077 não perde). EMP = Humanidade ÷ 10, para baixo.
+  // Humanidade: EMP × 10, menos a perda fixa de cada cyberware (o Neuroport de graça não perde). EMP = Humanidade ÷ 10, para baixo.
   function humanity(doc, stats) {
     const lost = inventory(doc).filter(entry => entry.item.cyber && entry.origem !== 'gratis2077').reduce((sum, entry) => sum + entry.item.cyber.hl * entry.qtd, 0);
     const max = (Number(stats.EMP) || 0) * 10;
@@ -445,7 +445,7 @@
     const netPack = C.packages[(roleById(doc.role) || {}).tabelas];
     if (['ratoderua', 'edgerunner'].includes(doc.metodo) && uses2077Kit(doc, netPack)) {
       const left = netPack.kit2077.escolher - chosenQuickhacks(doc, netPack).length;
-      if (left > 0) add(5, `Escolha mais ${left} quickhack${left > 1 ? 's' : ''} do kit de 2077.`);
+      if (left > 0) add(5, `Escolha mais ${left} quickhack${left > 1 ? 's' : ''} do kit do suplemento de fã.`);
     }
     const cash = money(doc);
     if (doc.metodo && cash.saldo < 0) add(5, `Gastou ${eb(-cash.saldo)} a mais do que tinha.`);
@@ -514,7 +514,7 @@
   // ---------------- Ajuda de cada passo ----------------
   const STAT_MEANING = { INT: 'Raciocínio, conhecimento e atenção.', REF: 'Reflexos: mira com armas de fogo e direção.', DEX: 'Coordenação: corpo a corpo, esquiva e atletismo.', TECH: 'Habilidade técnica e medicina.', COOL: 'Compostura e presença social.', WILL: 'Força de vontade e resistência.', LUCK: 'Pontos de sorte para gastar a cada sessão.', MOVE: 'Deslocamento: MOVE × 2 m por turno.', BODY: 'Constituição e força: HP e Death Save.', EMP: 'Empatia: define a Humanidade.' };
   const HELP = {
-    1: ['RED p. 72–73 · Roles de 2077: suplemento p. 2–6', `<p><b>Role</b> é o que o personagem faz em Night City. Cada uma tem uma habilidade especial, que começa no Rank 4. <b>Método</b> é o quanto você quer decidir:</p>
+    1: ['RED p. 72–73 · anos 2070: Mission Kit p. 26', `<p><b>Role</b> é o que o personagem faz em Night City. Cada uma tem uma habilidade especial, que começa no Rank 4. <b>Método</b> é o quanto você quer decidir:</p>
       <ul><li><b>Rato de Rua:</b> 1 dado para os STATs; perícias e equipamento vêm prontos. O mais rápido.</li><li><b>Edgerunner:</b> 1 dado para cada STAT, 86 pontos nas 20 perícias da Role e as opções do pacote da Role.</li><li><b>Pacote Completo:</b> você distribui 62 pontos de STAT e 86 de perícia, e compra o equipamento com 2.550eb.</li></ul>`],
     2: ['RED p. 72–80', `<p>STATs são os atributos. Num teste, você soma <b>STAT + perícia + 1d10</b>.</p><dl class="cc-help-stats">${Object.entries(STAT_MEANING).map(([stat, text]) => `<dt>${stat}</dt><dd>${text}</dd>`).join('')}</dl><p>HP, Gravemente Ferido, Death Save e Humanidade saem dos STATs: veja Valores derivados, logo abaixo.</p>`],
     3: ['RED p. 81–90', `<p>Num teste: <b>STAT + perícia + 1d10</b> contra uma dificuldade (DV). A coluna Base já soma a STAT.</p>
@@ -952,7 +952,7 @@
 
     const clothes = model.outros.filter(item => item.roupa);
     const gear = model.outros.filter(item => !item.roupa);
-    const itemLine = item => `<li><b>${esc(item.nome)}</b>${item.qtd > 1 ? ` ×${item.qtd}` : ''}${usoTag(item.uso)}${item.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (2077)</small>' : ''}${item.origem === 'role' ? ' <small class="cc-ok">bônus da Role</small>' : ''}</li>`;
+    const itemLine = item => `<li><b>${esc(item.nome)}</b>${item.qtd > 1 ? ` ×${item.qtd}` : ''}${usoTag(item.uso)}${item.origem === 'gratis2077' ? ' <small class="cc-ok">grátis (Neuroport)</small>' : ''}${item.origem === 'role' ? ' <small class="cc-ok">bônus da Role</small>' : ''}</li>`;
     const equipment = `<div class="section cc-box" data-toc="Equipamento"><h3>Equipamento</h3>
       ${gear.length ? `<ul class="cc-items cc-columns">${gear.map(itemLine).join('')}</ul>` : '<p class="note-status">Nada além das armas.</p>'}
       ${clothes.length ? `<h4>Moda</h4><ul class="cc-items cc-columns">${clothes.map(itemLine).join('')}</ul>` : ''}</div>`;
@@ -1088,7 +1088,7 @@
   function suggestedKit(doc) {
     const pack = C.packages[(roleById(doc.role) || {}).tabelas];
     if (!pack) return [];
-    const freeIds = new Set(C.free2077.map(item => item.id));
+    const freeIds = new Set([...C.free2077.map(item => item.id), ...C.neuroportIncludes]);
     const list = [];
     for (const category of ['armas', 'equipamento', 'moda', 'cyberware']) {
       for (const entry of pack[category] || []) {
@@ -1523,6 +1523,7 @@
     await loadShopRules(loaded.campanha);
     if (token !== renderToken) return;
     const doc = { ...blank(), ...loaded, lifepath: { ...blank().lifepath, ...(loaded.lifepath || {}) } };
+    if (C.roleAliases[doc.role]) doc.role = C.roleAliases[doc.role];
     let step = Math.min(Math.max(Number(doc.passo) || 1, 1), steps.length);
     let mountTab = 'armas'; // aba aberta no quadro Montagem (passo 5)
     // Guarda só o que o jogador mudou na montagem (o resto sai do padrão).
@@ -1603,7 +1604,7 @@
           <p class="note-status">A imagem é reduzida para 512 px antes de ir para a wiki. Se houver imagem enviada, ela vale no lugar do link. O retrato vai para a ficha e o token no Foundry.</p></div></div>`)}
         ${lockBox(`${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
-          <p><button class="action" type="button" data-page="roles2077">Ler Roles de 2077</button></p>`)}
+          <p><button class="action" type="button" data-page="roles2077">Ler as Roles nos anos 2070</button></p>`)}
         ${drawRoleAbilities()}${drawMotorpool()}
         ${box('Método de criação', `<div class="cc-choices">${C.methods.map(item => `<button type="button" class="cc-choice${item.id === doc.metodo ? ' active' : ''}" data-method="${item.id}"><b>${item.nome}</b><span>${esc(item.resumo)}</span></button>`).join('')}</div>`)}`)}`;
     }
@@ -1743,18 +1744,18 @@
       if (!doc.role || !doc.metodo) return box('Equipamento', '<p>Escolha a Role e o método no passo 1.</p>');
       const stats = computeStats(doc);
       const hum = humanity(doc, stats);
-      const free = `<p>Em 2077, todo personagem começa de graça e sem perder Humanidade com: ${C.free2077.map(item => `${esc(item.nome || (catalog.get(item.id) || {}).nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}.</p>`;
+      const free = `<p>Nos anos 2070 (Mission Kit), todo personagem começa com o <b>Neuroport</b>, de graça e sem perder Humanidade. Ele já traz o Neural Link (5 slots), o Personal Link (Interface Plugs), dois Shard Slots, o Biomonitor, o Virtu e o HUD, e é o que todo cyberware que não seja de grau médico exige.</p>`;
       const humanityLine = `<p class="cc-derived"><span>Humanidade <b>${hum.atual}/${hum.max}</b></span><span>Perda <b>${hum.perda}</b></span><span>EMP <b>${hum.emp}</b>${hum.emp !== stats.EMP ? ` <small>(era ${stats.EMP})</small>` : ''}</span></p><p class="note-status">Cada cyberware perde o valor fixo de Humanidade do livro. A EMP é a Humanidade ÷ 10, para baixo.</p>${cyberpsychosis(hum) ? `<p class="note-status cc-bad" data-cc-psicose>${esc(cyberpsychosis(hum))} <button class="cc-link" type="button" data-page="humanity">Ciberpsicose</button></p>` : ''}`;
       const warnings = missingFoundations(doc).map(entry => `<li>${esc(entry.item.nome)} precisa da base (${esc(entry.item.sub)}).</li>`).join('');
       if (doc.metodo === 'pacote') {
-        return `${box('Cyberware grátis de 2077', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}${box('Loja inicial', '<div id="cc-shop"></div>')}${drawAssembly()}`;
+        return `${box('Neuroport e Humanidade', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}${box('Loja inicial', '<div id="cc-shop"></div>')}${drawAssembly()}`;
       }
       const pack = C.packages[(roleById(doc.role) || {}).tabelas] || {};
       const label = ([id, qty]) => { const item = catalog.get(id) || {}; return `${esc(item.nome || id)}${qty > 1 ? ` ×${qty}` : ''}`; };
       const kit2077 = uses2077Kit(doc, pack);
       const categoryBox = (category, title) => `<h4>${title}</h4><ul class="cc-items">${(pack[category] || []).map((entry, index) => {
         if (kit2077 && category === 'equipamento' && isRedDeckEntry(entry)) return '';
-        if (!entry.ou) return `<li>${label(entry)}${C.free2077.some(free2077 => free2077.id === entry[0]) && category === 'cyberware' ? ' <small class="cc-ok">já vem grátis em 2077</small>' : ''}</li>`;
+        if (!entry.ou) return `<li>${label(entry)}${(C.free2077.some(free2077 => free2077.id === entry[0]) || C.neuroportIncludes.includes(entry[0])) && category === 'cyberware' ? ' <small class="cc-ok">já vem no Neuroport</small>' : ''}</li>`;
         const key = `${category}:${index}`;
         const chosen = Number(doc.escolhas[key]) || 0;
         return `<li>${entry.ou.map((option, k) => `<label class="cc-radio"><input type="radio" name="esc-${key}" data-escolha="${key}" value="${k}"${k === chosen ? ' checked' : ''}> ${option.map(label).join(' + ')}</label>`).join(' <small>ou</small> ')}</li>`;
@@ -1767,12 +1768,12 @@
           const on = chosen.includes(id);
           return `<label class="cc-radio"><input type="checkbox" data-quickhack="${id}"${on ? ' checked' : ''}${!on && chosen.length >= pack.kit2077.escolher ? ' disabled' : ''}> <b>${esc((catalog.get(id) || {}).nome || id)}</b> <small>${esc(text)}</small></label>`;
         }).join('')}</div>` : '';
-        kitBox = box('Kit de Netrunner', `<p>Em 2077 dá para trocar o cyberdeck e os programas do RED pelo deck de 2077 com quickhacks. O resto do pacote não muda.</p>
+        kitBox = box('Kit de Netrunner', `<p>Dá para trocar o cyberdeck e os programas do RED pelo deck do suplemento de fã, com quickhacks dele. Os do Mission Kit o netrunner já faz pelo Rank de Interface. O resto do pacote não muda.</p>
           <p><label class="cc-radio"><input type="radio" name="kitnet" data-kitnet="red"${kit2077 ? '' : ' checked'}> <b>Kit do RED:</b> Cyberdeck (7 slots) e os programas do pacote, logo abaixo</label>
-          <label class="cc-radio"><input type="radio" name="kitnet" data-kitnet="2077"${kit2077 ? ' checked' : ''}> <b>Kit de 2077:</b> ${esc(deck.nome || 'Militech Hunter MK.1')} (deck padrão: RAM 7, 7 slots, −1 de RAM contra alvo marcado) e ${pack.kit2077.escolher} quickhacks de 100eb</label></p>${hacks}`);
+          <label class="cc-radio"><input type="radio" name="kitnet" data-kitnet="2077"${kit2077 ? ' checked' : ''}> <b>Kit do suplemento de fã:</b> ${esc(deck.nome || 'Militech Hunter MK.1')} (7 slots) e ${pack.kit2077.escolher} quickhacks de 100eb</label></p>${hacks}`);
       }
       return `${kitBox}${box('Pacote da Role', `<p>No ${esc((methodById(doc.metodo) || {}).nome)} o equipamento vem pronto. Escolha onde houver opção.</p>${categoryBox('armas', 'Armas e armaduras')}${categoryBox('equipamento', 'Equipamento')}${kit2077 ? `<ul class="cc-items"><li>${esc((catalog.get(pack.kit2077.deck) || {}).nome || '')} <small class="cc-ok">kit de 2077</small></li>${chosenQuickhacks(doc, pack).map(id => `<li>${esc((catalog.get(id) || {}).nome || id)} <small class="cc-ok">kit de 2077</small></li>`).join('')}</ul>` : ''}${categoryBox('moda', 'Moda')}${categoryBox('cyberware', 'Cyberware')}`)}
-        ${box('Cyberware grátis de 2077 e Humanidade', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}
+        ${box('Neuroport e Humanidade', free + humanityLine + (warnings ? `<ul class="cc-warn">${warnings}</ul>` : ''))}
         ${box('Mais 500eb para gastar', '<p>Além do pacote, você ganha 500eb para comprar outros itens ou guardar. Use a loja.</p><p><button type="button" class="action" data-cc-shop>Abrir a loja</button></p>')}
         ${drawAssembly()}`;
     }
@@ -1867,11 +1868,11 @@
       const modas = `<select data-moda aria-label="Estilo de moda">${H.modas.map(item => `<option value="${item.id}"${item.id === modaId ? ' selected' : ''}>${esc(item.nome)}</option>`).join('')}</select>${home.moda ? `<p class="note-status">${esc(home.moda.desc)}</p>` : ''}`;
       const cash = money(doc);
       const total = `<p class="cc-derived cc-housing-total"><span>Por mês <b>${eb(home.mensal)}</b></span><span>1º mês <b>${home.primeiroMes ? eb(home.primeiroMes) : 'grátis'}</b></span>${doc.metodo ? `<span>Dinheiro depois disso <b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b></span>` : ''}</p>`;
-      return `${lockBox(`${box('Quanto custa', `${total}<p class="note-status">No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro. Em 2077 acabou o Kibble: o Prepak genérico custa o mesmo.</p>`)}
+      return `${lockBox(`${box('Quanto custa', `${total}<p class="note-status">No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro. No Mission Kit, viver de Kibble ou em hotel cápsula também custa Humanidade todo mês.</p>`)}
         ${box('Moradia', `<div class="cc-options">${homes}</div>`)}
         ${box('Estilo de vida', `<div class="cc-options">${lives}</div>`)}
         ${box('Trauma Team', `<div class="cc-options">${traumas}</div><p class="note-status">Com Agent e Biomonitor, a Trauma Team é chamada sozinha quando o HP fica abaixo do BODY ou há desmembramento (RED p. 223).</p>`)}
-        ${box('Estilo de moda', `<p>O visual do personagem nas quatro modas de 2077 (suplemento p. 7–8). Ajuda a escolher as roupas na loja e a descrever o personagem.</p>${modas}`)}`)}
+        ${box('Estilo de moda', `<p>O visual do personagem nas quatro modas do suplemento de fã (p. 7–8, opcional). Ajuda a escolher as roupas na loja e a descrever o personagem.</p>${modas}`)}`)}
         ${box('Notas', `<label>Aparência da casa, contatos, o que quiser<textarea data-campo="notas" rows="3" maxlength="5000">${esc(doc.notas)}</textarea></label>`)}`;
     }
 
@@ -2104,6 +2105,7 @@
     const loaded = answer.data.personagem;
     if (!loaded || loaded.publico) { shopEl.innerHTML = '<div class="callout">Não consegui abrir este personagem.</div>'; return; }
     const doc = { ...blank(), ...loaded };
+    if (C.roleAliases[doc.role]) doc.role = C.roleAliases[doc.role];
     if (!doc.metodo) {
       if (gm) { view = renderShop(shopEl, null, { gm, onRules }); return; }
       shopEl.innerHTML = '<div class="callout">Escolha o método de criação no criador antes de comprar: ele define quanto dinheiro você tem.</div>';
@@ -2127,7 +2129,7 @@
     pages: {
       personagens: { eyebrow: 'Campanha / jogadores', title: 'Personagens', lede: 'Os personagens dos jogadores, salvos na wiki. Crie, edite e consulte; o mestre leva para o Foundry quando estiver pronto.', html: holder, setup: setupList },
       ficha: { eyebrow: 'Personagens / ficha', title: 'Ficha', lede: 'A ficha para consulta durante o jogo.', html: holder, setup: setupSheet, manterAlvo: true },
-      criador: { eyebrow: 'Personagens / criador', title: 'Criador de personagem', lede: 'Passo a passo do Cyberpunk RED com as Roles de 2077. Tudo é salvo sozinho; os avisos mostram o que falta, mas não impedem de continuar.', html: holder, setup: setupCreator, manterAlvo: true },
+      criador: { eyebrow: 'Personagens / criador', title: 'Criador de personagem', lede: 'Passo a passo do Cyberpunk RED nos anos 2070 (Mission Kit). Tudo é salvo sozinho; os avisos mostram o que falta, mas não impedem de continuar.', html: holder, setup: setupCreator, manterAlvo: true },
       loja: { eyebrow: 'Personagens / loja', title: 'Loja', lede: 'Antes do Foundry, monta o equipamento da criação. Depois, vira pedidos que o mestre aprova e o Foundry entrega na ficha.', html: holder, setup: setupShopPage, manterAlvo: true }
     },
     // Para os testes e o importador: as mesmas contas que a tela usa.

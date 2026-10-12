@@ -101,7 +101,7 @@
       { id: 'combat', label: 'Combate', icon: 'C' },
       { id: 'damage', label: 'Dano, ferimentos e cura', icon: 'D' },
       { id: 'humanity', label: 'Humanidade e drogas', icon: 'H' },
-      { id: 'economy', label: 'Economia de 2077', icon: 'EB' },
+      { id: 'economy', label: 'Economia', icon: 'EB' },
       { id: 'creation', label: 'Criação de personagens', icon: 'P' },
       { id: 'lifepath', label: 'Lifepath', icon: 'LP' },
       { id: 'advancement', label: 'Avanço e Pontos de Melhoria', icon: 'IP' }
@@ -117,12 +117,12 @@
       { id: 'weapons2077', label: 'Armas de 2077', icon: 'W' },
       { id: 'cyberware2077', label: 'Cyberware de 2077', icon: 'CW' },
       { id: 'roles', label: 'Roles', icon: 'F' },
-      { id: 'roles2077', label: 'Roles de 2077', icon: 'F77' },
+      { id: 'roles2077', label: 'Roles nos anos 2070', icon: 'F77' },
       { id: 'cyberware', label: 'Cyberware do RED', icon: 'K' },
       { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' }
     ]},
-    { group: 'Variante 2077 e fontes', pages: [
-      { id: 'supplement2077', label: 'Suplemento 2077', icon: '77' },
+    { group: 'Suplemento de fã e fontes', pages: [
+      { id: 'supplement2077', label: 'Suplemento de fã', icon: '77' },
       { id: 'sources', label: 'Livros de referência', icon: 'L' }
     ]}
   ];

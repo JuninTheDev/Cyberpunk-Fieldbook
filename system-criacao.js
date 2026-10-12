@@ -1,11 +1,12 @@
-// Criação de personagem: regras do RED (p. 72–118) com as Roles de 2077 (suplemento p. 2–8).
+// Criação de personagem: regras do RED (p. 72–118) com os ajustes dos anos 2070 do Cyberpunk Edgerunners Mission Kit
+// (Kit p. 26: as Roles e o Neuroport de graça).
 // Vai também para os jogadores: só regras, nada da campanha.
 // Os itens dos pacotes apontam para o catálogo da loja (loja-catalogo.js) pelo id "pacote:nome-em-ingles".
 (() => {
   const stats = ['INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'LUCK', 'MOVE', 'BODY', 'EMP'];
 
   // Tabelas de STAT por Role (RED p. 74–77): uma linha por resultado de 1d10, na ordem de `stats`.
-  // Geradas do texto do livro; a do Fixer fica só como referência (em 2077 o Corpo usa a do Exec).
+  // Geradas do texto do livro.
   const statTables = {
     rockerboy: [[7, 6, 6, 5, 6, 8, 7, 7, 3, 8], [3, 7, 7, 7, 7, 6, 7, 7, 5, 8], [4, 5, 7, 7, 6, 6, 7, 7, 5, 8], [4, 5, 7, 7, 6, 8, 7, 6, 3, 8], [3, 7, 7, 7, 6, 8, 6, 5, 4, 7], [5, 6, 7, 5, 7, 8, 5, 7, 3, 7], [5, 6, 6, 7, 7, 8, 7, 6, 3, 6], [5, 7, 7, 5, 6, 6, 6, 6, 4, 8], [3, 5, 5, 6, 7, 8, 7, 5, 5, 7], [4, 5, 6, 5, 8, 8, 7, 6, 4, 7]],
     solo: [[6, 7, 7, 3, 8, 6, 5, 5, 6, 5], [7, 8, 6, 3, 6, 6, 7, 5, 6, 6], [5, 8, 7, 4, 7, 7, 6, 7, 8, 5], [5, 8, 6, 4, 6, 7, 6, 5, 7, 6], [6, 6, 7, 5, 7, 6, 7, 6, 8, 4], [7, 7, 6, 5, 7, 6, 6, 7, 7, 5], [7, 7, 6, 5, 6, 7, 7, 6, 6, 6], [7, 8, 7, 5, 6, 6, 5, 6, 8, 4], [7, 7, 6, 4, 6, 6, 6, 5, 6, 5], [6, 6, 8, 5, 6, 6, 5, 6, 6, 5]],
@@ -19,38 +20,32 @@
     nomad: [[6, 6, 8, 3, 6, 7, 6, 6, 6, 4], [5, 7, 6, 5, 8, 8, 8, 7, 5, 4], [5, 8, 6, 3, 8, 7, 6, 5, 6, 5], [5, 8, 7, 4, 8, 6, 7, 7, 7, 5], [6, 6, 6, 3, 6, 7, 6, 7, 7, 4], [7, 6, 8, 4, 6, 7, 6, 5, 6, 5], [6, 7, 8, 4, 6, 6, 7, 5, 7, 5], [5, 7, 8, 3, 8, 6, 7, 5, 5, 5], [6, 7, 6, 4, 8, 6, 6, 6, 6, 6], [5, 6, 7, 4, 7, 8, 7, 7, 7, 4]]
   };
 
-  // As 9 Roles de 2077 (suplemento p. 2–6). `tabelas`: de qual Role do RED vêm as tabelas e os pacotes.
-  // `foundry`: o item de Role que o importador põe na ficha.
+  // As 10 Roles do RED (p. 74–77), com os ajustes dos anos 2070 do Mission Kit (Kit p. 26). `tabelas`: a chave das
+  // tabelas de STAT, das perícias, dos pacotes e do Lifepath da Role. `foundry`: o item de Role que o importador põe na ficha.
   const roles = [
-    { id: 'face', nome: 'Face', habilidade: 'Impacto Carismático', en: 'Charismatic Impact', tabelas: 'rockerboy', foundry: { pack: 'cpr-2077.roles-2077', nome: 'Face' },
-      resumo: 'O representante persuasivo: convence, agita a multidão e consegue favores. Substitui o Rockerboy do RED.',
-      especializacoes: [
-        { id: 'siren', nome: 'Siren', pericias: ['Conversation', 'Personal Grooming'] },
-        { id: 'rockerboy', nome: 'Rockerboy', pericias: ['Play Instrument', 'Streetwise'] },
-        { id: 'model', nome: 'Model', pericias: ['Acting', 'Trading'] }
-      ] },
+    { id: 'rockerboy', nome: 'Rockerboy', habilidade: 'Impacto Carismático', en: 'Charismatic Impact', tabelas: 'rockerboy', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Rockerboy' },
+      resumo: 'O artista rebelde: música, poesia, discurso. Consegue favores dos fãs com o Impacto Carismático. Nos anos 2070, consegue itens Caros a partir do Rank 4.' },
     { id: 'solo', nome: 'Solo', habilidade: 'Consciência de Combate', en: 'Combat Awareness', tabelas: 'solo', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Solo' },
-      resumo: 'Especialista em combate: mercenário, guarda-costas ou assassino. Igual ao RED.' },
+      resumo: 'Especialista em combate: mercenário, guarda-costas ou assassino.' },
     { id: 'netrunner', nome: 'Netrunner', habilidade: 'Interface', en: 'Interface', tabelas: 'netrunner', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Netrunner' },
-      resumo: 'Hacker que corre a NET. Em 2077 soma o Rank nos testes técnicos, ganha RAM e slots extras.' },
-    { id: 'corpo', nome: 'Corpo', habilidade: 'Teamwork + Operator', en: 'Teamwork', tabelas: 'exec', foundry: { pack: 'cpr-2077.roles-2077', nome: 'Corpo' },
-      resumo: 'O corporativo que suja as mãos. Junta o Exec e o Fixer do RED, sem a equipe do Exec.' },
+      resumo: 'Hacker que corre a NET. Nos anos 2070, faz quickhacks no Neuroport das pessoas, liberados pelo Rank de Interface.' },
     { id: 'tech', nome: 'Tech', habilidade: 'Maker', en: 'Maker', tabelas: 'tech', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Tech' },
-      resumo: 'Conserta, melhora e inventa: armas, veículos, cyberware. Igual ao RED.' },
+      resumo: 'Conserta, melhora e inventa: armas, veículos, cyberware.' },
     { id: 'medtech', nome: 'Medtech', habilidade: 'Medicine', en: 'Medicine', tabelas: 'medtech', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Medtech' },
-      resumo: 'Médico de rua: cirurgia, remédios e criossistemas. Igual ao RED.' },
+      resumo: 'Médico de rua: cirurgia, remédios e criossistemas.' },
     { id: 'media', nome: 'Media', habilidade: 'Credibility', en: 'Credibility', tabelas: 'media', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Media' },
-      resumo: 'Jornalista que investiga e publica a verdade. Igual ao RED.' },
-    { id: 'lawman', nome: 'Lawman', habilidade: 'Investigator', en: 'Investigator', tabelas: 'lawman', foundry: { pack: 'cpr-2077.roles-2077', nome: 'Lawman (2077)' },
-      resumo: 'Policial que segue os próprios casos. Em 2077 troca Backup por Investigator.',
-      especializacoes: [
-        { id: 'street-cop', nome: 'Street Cop', pericias: ['Streetwise', 'Athletics', 'Bribery'] },
-        { id: 'undercover', nome: 'Undercover', pericias: ['Acting', 'Stealth', 'Wardrobe & Style'] },
-        { id: 'interrogator', nome: 'Interrogator', pericias: ['Interrogation', 'Persuasion', 'Human Perception'] }
-      ] },
+      resumo: 'Jornalista que investiga e publica a verdade. Nos anos 2070, consegue itens Caros a partir do Rank 4.' },
+    { id: 'exec', nome: 'Exec', habilidade: 'Teamwork', en: 'Teamwork', tabelas: 'exec', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Exec' },
+      resumo: 'O corporativo: bônus de contratação, moradia e plano de saúde da corporação, e uma equipe. Nos anos 2070, consegue itens Caros a partir do Rank 4.' },
+    { id: 'lawman', nome: 'Lawman', habilidade: 'Backup', en: 'Backup', tabelas: 'lawman', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Lawman' },
+      resumo: 'Policial, xerife ou segurança corporativo, que chama reforços. Nos anos 2070, consegue os itens Caros do trabalho a partir do Rank 4.' },
+    { id: 'fixer', nome: 'Fixer', habilidade: 'Operator', en: 'Operator', tabelas: 'fixer', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Fixer' },
+      resumo: 'O negociador: contatos, mercado negro e Night Markets. Nos anos 2070, consegue itens Caros desde o Rank 1 de Operator (Muito Caros no 4, Luxuosos no 7, Super Luxuosos no 9).' },
     { id: 'nomad', nome: 'Nomad', habilidade: 'Moto', en: 'Moto', tabelas: 'nomad', foundry: { pack: 'cyberpunk-red-core.core_roles', nome: 'Nomad' },
-      resumo: 'Da estrada e do clã: veículos, contrabando e família. Em 2077, upgrades e reparos pela metade do preço com o clã.' }
+      resumo: 'Da estrada e do clã: veículos, contrabando e família. Nos anos 2070, consegue qualquer veículo e upgrade desde o Rank 1 de Moto.' }
   ];
+  // Roles do suplemento de fã que saíram: os personagens antigos continuam com a Role do RED de onde elas vinham.
+  const roleAliases = { face: 'rockerboy', corpo: 'exec' };
 
   // Perícias básicas: todo personagem tem no mínimo nível 2 (p. 88–90).
   const basicSkills = ['Athletics', 'Brawling', 'Concentration', 'Conversation', 'Education', 'Evasion', 'First Aid', 'Human Perception',
@@ -66,6 +61,7 @@
     media: [2, 2, 2, 6, 2, 6, 2, 6, 2, 6, 6, 6, 2],
     lawman: [2, 6, 2, 6, 2, 6, 2, 2, 2, 2, 2, 2, 2],
     exec: [2, 2, 2, 6, 6, 6, 2, 6, 2, 2, 2, 6, 2],
+    fixer: [2, 2, 2, 6, 2, 6, 2, 6, 4, 6, 2, 4, 2],
     nomad: [2, 6, 2, 2, 2, 6, 6, 2, 2, 2, 4, 2, 6]
   };
   const roleSkills = {
@@ -77,6 +73,7 @@
     media: [['Bribery', 6], ['Composition', 6], ['Deduction', 6], ['Handgun', 6], ['Library Search', 4], ['Lip Reading', 4], ['Photography/Film', 4]],
     lawman: [['Autofire', 6], ['Criminology', 6], ['Deduction', 6], ['Handgun', 6], ['Interrogation', 6], ['Shoulder Arms', 6], ['Tracking', 6]],
     exec: [['Accounting', 6], ['Bureaucracy', 6], ['Business', 6], ['Deduction', 6], ['Handgun', 6], ['Lip Reading', 6], ['Personal Grooming', 4]],
+    fixer: [['Bribery', 6], ['Business', 6], ['Forgery', 6], ['Handgun', 6], ['Pick Lock', 4], ['Streetwise', 6], ['Trading', 6]],
     nomad: [['Animal Handling', 6], ['Drive Land Vehicle', 6], ['Handgun', 6], ['Melee Weapon', 6], ['Tracking', 6], ['Trading', 6], ['Wilderness Survival', 6]]
   };
   // Rato de Rua: [perícia, nível]. Edgerunner: as mesmas 20 perícias, com 86 pontos (p. 88–89).
@@ -191,6 +188,12 @@
       moda: [cl('businesswear', 'footwear'), cl('businesswear', 'jacket'), cl('businesswear', 'bottoms'), cl('businesswear', 'mirrorshades'), cl('businesswear', 'top'), cl('businesswear', 'jewelry', 2)],
       cyberware: [ou(cw('biomonitor'), cw('techhair')), cw('cyberaudio-suite'), cw('internal-agent'), ou(cw('toxin-binders'), cw('nasal-filters'))], humanidade: 12
     },
+    fixer: {
+      armas: [ou(w('heavy-pistol'), w('very-heavy-pistol')), ou(w('heavy-pistol'), w('very-heavy-pistol')), w('light-melee'), ou(a('heavy-pistol-basic', 100), a('very-heavy-pistol-basic', 100)), ...lightArmor],
+      equipamento: [g('agent'), g('bug-detector'), g('computer'), g('disposable-cell-phone', 2)],
+      moda: [cl('generic-chic', 'contact-lenses'), cl('generic-chic', 'jewelry'), cl('leisurewear', 'mirrorshades'), cl('urban-flash', 'footwear'), cl('urban-flash', 'jacket'), cl('urban-flash', 'bottoms'), cl('urban-flash', 'top')],
+      cyberware: [cw('cyberaudio-suite'), cw('internal-agent'), cw('subdermal-pocket'), ou(cw('voice-stress-analyzer'), cw('amplified-hearing'))], humanidade: 16
+    },
     nomad: {
       armas: [ou(w('heavy-pistol'), w('very-heavy-pistol')), ou(a('heavy-pistol-basic', 100), a('very-heavy-pistol-basic', 100)), ou(w('heavy-melee'), w('heavy-pistol')), ...lightArmor],
       equipamento: [g('agent'), g('anti-smog-breathing-mask'), g('duct-tape'), g('flashlight'), g('grapple-gun'), g('inflatable-bed-sleep-bag'), g('medtech-bag'), g('radio-communicator', 2), g('rope-60m-yd'), g('techtool'), g('tent-and-camping-equipment')],
@@ -207,11 +210,11 @@
   ];
   const completePackage = { pontosStat: 62, statMin: 2, statMax: 8, pontosPericia: 86, periciaMax: 6, dinheiro: 2550, moda: 800 };
   const edgerunnerRules = { pontosPericia: 86, periciaMin: 2, periciaMax: 6, dinheiro: 500 };
-  // 2077 (suplemento p. 8): grátis e sem perda de Humanidade. O Personal Link é o plug de interface do pulso.
-  const free2077 = [
-    { id: 'core_cyberware:neural-link', qtd: 1 }, { id: 'core_cyberware:cyberaudio-suite', qtd: 1 }, { id: 'core_cyberware:internal-agent', qtd: 1 },
-    { id: 'core_cyberware:interface-plugs', qtd: 1, nome: 'Personal Link' }, { id: 'core_cyberware:chipware-socket', qtd: 2 }
-  ];
+  // Anos 2070 (Mission Kit p. 26): o Neuroport, de graça e sem perda de Humanidade. Ele já traz o Neural Link (5 slots),
+  // o Personal Link (Interface Plugs), dois Shard Slots (Chipware Sockets), o Biomonitor, o Virtu e o HUD (Chyron):
+  // esses itens dos pacotes do RED não entram de novo.
+  const free2077 = [{ id: 'cyberware-2077:neuroport', qtd: 1 }];
+  const neuroportIncludes = ['core_cyberware:neural-link', 'core_cyberware:interface-plugs', 'core_cyberware:chipware-socket', 'core_cyberware:biomonitor', 'core_cyberware:virtuality', 'core_cyberware:chyron'];
   // Sub-habilidades da Role no Rank 4, com o nome que o item de Role do Foundry usa (`abilities`).
   // pontos: quantos distribuir; max: o máximo em cada uma. `derivadas`: campos que o Foundry espera calculados
   // (a perícia Cirurgia do Medtech vale 2 por ponto em Cirurgia; Tecnologia Médica, Farmacêutica + Criossistemas).
@@ -281,13 +284,14 @@
     ]
   };
 
-  // Bônus de assinatura do Corpo (Teamwork Rank 1 do Exec, RED p. 153): um terno de negócios de graça.
+  // Bônus de contratação do Exec (Teamwork Rank 1, RED p. 153): um terno de negócios de graça.
   // Nos pacotes do Rato de Rua e do Edgerunner ele já vem; no Pacote Completo entra aqui.
   const roleFreeItems = {
-    corpo: [{ id: 'core_clothing:businesswear-top', qtd: 1 }, { id: 'core_clothing:businesswear-bottoms', qtd: 1 }, { id: 'core_clothing:businesswear-footwear', qtd: 1 }]
+    exec: [{ id: 'core_clothing:businesswear-top', qtd: 1 }, { id: 'core_clothing:businesswear-bottoms', qtd: 1 }, { id: 'core_clothing:businesswear-footwear', qtd: 1 }]
   };
 
-  // Moradia, estilo de vida, Trauma Team e moda (RED p. 223 e 377–378, sup. p. 7–8 e 31).
+  // Moradia, estilo de vida, Trauma Team e moda (RED p. 223 e 377–378; a quitinete em megaprédio e os estilos de moda
+  // são do suplemento de fã, p. 7–8 e 31, opcionais).
   // O padrão de cada Role tem o primeiro mês de graça. Escolher algo melhor paga a diferença do primeiro mês
   // com o dinheiro inicial; escolher pior não devolve nada (regra da mesa). `roles`: só para essas Roles.
   const housing = {
@@ -295,16 +299,17 @@
       { id: 'rua', nome: 'Na rua ou num veículo', aluguel: 0, desc: 'Sem casa. Na rua, Resistência DV15 para não acordar cansado.' },
       { id: 'capsula', nome: 'Hotel cápsula', aluguel: 500, desc: 'Só uma cápsula para dormir. Com mais de uma pessoa por cápsula, todos dormem mal.' },
       { id: 'conteiner', nome: 'Contêiner de carga', aluguel: 1000, desc: 'Um contêiner adaptado, num pátio ou empilhado.' },
-      { id: 'megapredio', nome: 'Quitinete em megaprédio', aluguel: 1000, desc: 'Em 2077 custa o mesmo que o contêiner (sup. p. 31).' },
+      { id: 'megapredio', nome: 'Quitinete em megaprédio (suplemento de fã)', aluguel: 1000, desc: 'Opcional, do suplemento de fã: subsidiada, custa o mesmo que o contêiner (sup. p. 31).' },
       { id: 'quitinete', nome: 'Quitinete fora de megaprédio', aluguel: 1500, desc: 'Um cômodo só, num prédio comum.' },
       { id: 'dois-quartos', nome: 'Apartamento de dois quartos', aluguel: 2500, desc: 'Espaço para mais gente dormir bem.' },
       { id: 'conapt-luxo', nome: 'Conapt de luxo', aluguel: 7500, desc: 'Prédio com segurança e serviços.' },
       { id: 'cobertura', nome: 'Cobertura de luxo', aluguel: 15000, desc: 'O topo de um arranha-céu.' },
-      { id: 'conapt-corp', nome: 'Conapt corporativo', aluguel: 0, roles: ['corpo'], desc: 'Da corporação, sem aluguel enquanto você trabalhar para ela (Teamwork Rank 2).' },
+      { id: 'conapt-corp', nome: 'Conapt corporativo', aluguel: 0, roles: ['exec'], desc: 'Da corporação, sem aluguel enquanto você trabalhar para ela (Teamwork Rank 2).' },
       { id: 'cla', nome: 'Com a família do clã', aluguel: 0, roles: ['nomad'], desc: 'Mora no comboio ou no acampamento do clã (Moto).' }
     ],
     estilos: [
-      { id: 'generico', nome: 'Prepak genérico', custo: 100, desc: 'O antigo Kibble, pelo mesmo preço. Cobre comprar itens de até 10eb duas vezes por semana e um bar bom no fim de semana.' },
+      { id: 'kibble', nome: 'Kibble', custo: 100, desc: 'A ração de Night City: sem gosto, sem cheiro e com todos os nutrientes. No Mission Kit, viver de Kibble custa Humanidade todo mês.' },
+      { id: 'generico', nome: 'Prepak genérico', custo: 300, desc: 'Comida pronta e barata, um passo acima do Kibble.' },
       { id: 'bom', nome: 'Prepak bom', custo: 600, desc: 'Comida de restaurante, quase como a de verdade. Bons bares e um show ou evento por mês.' },
       { id: 'fresca', nome: 'Comida fresca', custo: 1500, desc: 'Comida de verdade, bar executivo, hotel quando precisar e um restaurante de primeira por mês.' },
       { id: 'cla', nome: 'Com o clã', custo: 0, roles: ['nomad'], desc: 'O clã divide a comida e o resto.' }
@@ -321,14 +326,14 @@
       { id: 'neomilitarismo', nome: 'Neomilitarismo', desc: 'Monolítico, prático, dominante. O visual das megacorps.' },
       { id: 'neokitsch', nome: 'Neokitsch', desc: 'Ostensivo, dourado, materiais naturais de verdade. O visual do 0,1%.' }
     ],
-    // O que cada Role tem de graça no primeiro mês (o Corpo: conapt da corporação e Prepak bom).
-    padrao: { geral: { moradia: 'conteiner', estilo: 'generico' }, corpo: { moradia: 'conapt-corp', estilo: 'bom' } }
+    // O que cada Role tem de graça no primeiro mês (o Exec: conapt da corporação e Prepak bom).
+    padrao: { geral: { moradia: 'conteiner', estilo: 'kibble' }, exec: { moradia: 'conapt-corp', estilo: 'bom' } }
   };
   // Lifepath da Role (RED p. 54–70), tabela por tabela, na ordem do fluxograma do livro. Chave: a Role do RED
-  // (`tabelas` de cada Role de 2077). `dado`: 6 ou 10; 0 = escolha, sem rolar. `se`: a tabela só vale quando
-  // outra deu aquele resultado (1, 2, 3...). O Fixer não entra: nenhuma Role de 2077 usa as tabelas dele.
+  // (`tabelas` de cada Role). `dado`: 6 ou 10; 0 = escolha, sem rolar. `se`: a tabela só vale quando outra deu
+  // aquele resultado (1, 2, 3...).
   const roleLifepaths = {
-    // Rockerboy (p. 54). A Face de 2077 usa este.
+    // Rockerboy (p. 54).
     rockerboy: [
       { id: 'tipo', titulo: 'Que tipo de Rockerboy você é?', dado: 10, linhas: ['Músico', 'Poeta de palco', 'Artista de rua', 'Artista performático', 'Comediante', 'Orador', 'Político', 'Rapper', 'DJ', 'Idoru'] },
       { id: 'grupo', titulo: 'Está num grupo ou em carreira solo?', dado: 0, linhas: ['Num grupo', 'Carreira solo'] },
@@ -494,7 +499,7 @@
         'Totalmente corrupto: aceita suborno e faz matérias ilegais e antiéticas o tempo todo. A sua caneta vai para quem pagar mais.'] },
       { id: 'historias', titulo: 'Que tipo de história você quer contar?', dado: 6, linhas: ['Intrigas políticas', 'Impacto ecológico', 'Notícias de celebridades', 'Derrubar corporações', 'Editoriais', 'Propaganda'] }
     ],
-    // Exec (p. 63–64). O Corpo de 2077 usa este.
+    // Exec (p. 63–64).
     exec: [
       { id: 'corporacao', titulo: 'Para que tipo de corporação você trabalha?', dado: 10, linhas: ['Financeira', 'Mídia e comunicações', 'Cybertecnologia e tecnologia médica', 'Farmacêutica e biotecnologia', 'Alimentos, moda ou outros bens de consumo', 'Produção de energia', 'Eletrônica pessoal e robótica', 'Serviços corporativos', 'Serviços ao consumidor', 'Construção e imobiliária'] },
       { id: 'divisao', titulo: 'Em que divisão você trabalha?', dado: 6, linhas: ['Compras', 'Produção', 'Pesquisa e desenvolvimento', 'Recursos humanos', 'Relações públicas, publicidade e propaganda', 'Fusões e aquisições'] },
@@ -535,6 +540,37 @@
       { id: 'atras', titulo: 'Quem está atrás do seu grupo?', dado: 6, linhas: ['Crime organizado', 'Gangueiros com cyberware (boostergangs)', 'A corregedoria da polícia', 'Políticos corruptos', 'Contrabandistas', 'Criminosos de rua'] },
       { id: 'alvo', titulo: 'Quem é o alvo principal do seu grupo?', dado: 6, linhas: ['Crime organizado', 'Gangueiros com cyberware (boostergangs)', 'Traficantes de drogas', 'Políticos corruptos', 'Contrabandistas', 'Criminosos de rua'] }
     ],
+    // Fixer (p. 66–67).
+    fixer: [
+      { id: 'tipo', titulo: 'Que tipo de Fixer você é?', dado: 10, linhas: [
+        'Mediador de negócios entre gangues rivais.',
+        'Consegue recursos raros ou atípicos para uma clientela exclusiva.',
+        'Agente especializado em arranjar serviços de Solos ou Techs.',
+        'Abastece os Night Markets com recursos, como comida, remédios ou drogas.',
+        'Consegue recursos muito ilegais, como drogas de rua ou armas especiais.',
+        'Abastece Techs e Medtechs com peças e suprimentos médicos.',
+        'Opera em vários Night Markets de sucesso, mas não como dono.',
+        'Agente de contratos de máquinas pesadas, veículos militares e aeronaves.',
+        'Receptador de quem saqueia corporações ou zonas de combate.',
+        'Agente exclusivo de um Media, um Rockerboy ou um grupo Nomad.'] },
+      { id: 'parceiro', titulo: 'Tem um parceiro ou trabalha sozinho?', dado: 0, linhas: ['Tem um parceiro', 'Trabalha sozinho'] },
+      { id: 'quem', titulo: 'Quem é o seu parceiro?', dado: 6, se: { id: 'parceiro', valor: 1 }, linhas: ['Um membro da família', 'Um velho amigo', 'Também um possível par romântico', 'Um mentor', 'Um parceiro secreto com ligações com a máfia ou uma gangue', 'Um parceiro secreto com ligações corporativas'] },
+      { id: 'escritorio', titulo: 'Como é o seu "escritório"?', dado: 6, se: { id: 'parceiro', valor: 2 }, linhas: ['Você não tem um: gosta de ficar sempre em movimento.', 'Uma mesa num bar local.', 'Tudo passa pelo Data Pool, e as entregas são anônimas.', 'Um quarto vago num armazém, loja ou clínica.', 'Um prédio quase abandonado.', 'O saguão de um hotel cápsula.'] },
+      { id: 'clientes', titulo: 'Quem são os seus clientes?', dado: 6, linhas: [
+        'Rockerboys ou Medias locais que te usam para conseguir shows ou contatos.',
+        'Gangueiros locais que também protegem a sua área de trabalho ou a sua casa.',
+        'Execs corporativos que te usam em compras de "Black Project".',
+        'Solos locais ou outros tipos de combate que te usam para conseguir trabalhos ou contatos.',
+        'Nomads e Fixers locais que te usam para fechar transações ou negócios.',
+        'Políticos ou Execs locais que dependem de você para descobrir informações.'] },
+      { id: 'atras', titulo: 'Quem está atrás de você?', dado: 6, linhas: [
+        'Gangueiros da zona de combate que querem você trabalhando só para eles.',
+        'Fixers rivais tentando roubar os seus clientes.',
+        'Execs que querem você trabalhando só para eles.',
+        'O inimigo de um antigo cliente, que quer apagar "pontas soltas" como você.',
+        'Um antigo cliente que acha que você o enganou.',
+        'Um Fixer rival tentando te derrubar por recursos e peças.'] }
+    ],
     // Nomad (p. 68–69).
     nomad: [
       { id: 'tamanho', titulo: 'Qual o tamanho do seu bando?', dado: 6, linhas: ['Uma única tribo ou família extensa', 'Algumas dezenas de membros', 'Quarenta ou cinquenta membros', 'Cem membros ou mais', 'Uma Família de Sangue (centenas de membros)', 'Uma Família Afiliada (várias Famílias de Sangue juntas)'] },
@@ -562,6 +598,6 @@
 
   window.systemCreation = {
     stats, statTables, roles, basicSkills, streetratSkills, edgerunnerSkills, specializedSkills, languages, originLanguages, homeDistricts,
-    packages, methods, completePackage, edgerunnerRules, free2077, housing, derived, roleLifepaths, roleAbilities, nomadMotorpool, roleFreeItems
+    packages, methods, completePackage, edgerunnerRules, free2077, neuroportIncludes, housing, derived, roleLifepaths, roleAbilities, nomadMotorpool, roleFreeItems, roleAliases
   };
 })();

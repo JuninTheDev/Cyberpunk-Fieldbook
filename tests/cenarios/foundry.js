@@ -78,6 +78,9 @@ module.exports = async ({ edge, servidores, r }) => {
         role: role && { nome: role.name, rank: role.system.rank, abilities: role.system.abilities.map(a => [a.name, a.rank]) },
         tipos: Object.fromEntries(Object.entries(actor.itemTypes).map(([k, v]) => [k, v.length])),
         cyberInstalado: actor.itemTypes.cyberware.filter(c => c.system.isInstalled).map(c => c.name),
+        // O Neuroport de graça (Mission Kit): instalado, sem perda de Humanidade, com as opções de neuralware dentro.
+        neuroport: (() => { const n = actor.itemTypes.cyberware.find(c => c.name === 'Neuroport'); return n ? { instalado: n.system.isInstalled, perda: n.system.humanityLoss?.static, dentro: (n.system.installedItems?.list || []).map(id => actor.items.get(id)?.name).filter(Boolean) } : null; })(),
+        neuralLink: actor.itemTypes.cyberware.some(c => c.name === 'Neural Link'),
         armas: actor.itemTypes.weapon.map(w => ({ nome: w.name, equip: w.system.equipped, pente: w.system.magazine?.value, max: w.system.magazine?.max })),
         armaduras: actor.itemTypes.armor.map(a => ({ nome: a.name, equip: a.system.equipped })),
         lifestyle: s.lifestyle, dinheiro: s.wealth?.value,
@@ -93,6 +96,10 @@ module.exports = async ({ edge, servidores, r }) => {
       const statsOk = ['int', 'ref', 'dex', 'tech', 'cool', 'will', 'move', 'body'].every(k => ator.stats[k] === st[k.toUpperCase()]);
       return [ator.nome === 'Teste Foundry' && statsOk && ator.hp === solo.resultado.derivados.hp && ator.role?.nome === 'Solo' && ator.role.rank === 4 && ator.cyberInstalado.length >= 3,
         `HP ${ator.hp} · ${ator.role?.nome} ${ator.role?.rank} · cyber instalado: ${ator.cyberInstalado.join(', ')} · avisos: ${ator.notas.join(' | ') || 'nenhum'}`];
+    });
+    await r.passo('importa o Solo: o Neuroport de graça, instalado e sem perda de Humanidade, no lugar do Neural Link do pacote', async () => {
+      const n = ator.neuroport;
+      return [Boolean(n && n.instalado && n.perda === 0 && !ator.neuralLink), JSON.stringify({ neuroport: n, neuralLink: ator.neuralLink })];
     });
     await r.passo('importa o Solo: armas carregadas, armaduras vestidas, dinheiro', async () => {
       const equip = [...ator.armas, ...ator.armaduras].every(item => item.equip === 'equipped');

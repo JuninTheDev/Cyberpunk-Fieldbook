@@ -51,6 +51,8 @@
     t('Humanidade', 'Humanity', 'EMP × 10. Cai com cada cyberware instalado; a EMP efetiva é a dezena da Humanidade atual.', 'humanity', 'Humanidade e EMP'),
     t('Perda de Humanidade', 'Humanity Loss', 'O quanto de Humanidade um cyberware tira ao ser instalado (valor fixo ou rolado).', 'humanity', 'Humanidade e EMP'),
     t('Ciberpsicose', 'Cyberpsychosis', 'Transtorno dissociativo causado pelo cromo. Começa limítrofe na EMP 2; com EMP 0 é ciberpsicose, e com Humanidade negativa o personagem passa para o mestre.', 'humanity', 'Humanidade e EMP', ['ciberpsicótico', 'ciberpsicótica', 'cyberpsicose', 'Cyberpsychosis']),
+    t('Ganho de Humanidade', 'Humanity Gain', 'No Mission Kit, Humanidade que volta por um incidente bom ou pelo efeito de longo prazo do mês (amigos, família, comida fresca). Não passa da máxima da terapia.', 'humanity', 'Perda e ganho de Humanidade (Mission Kit)', ['Humanity Gain']),
+    t('Immunoblockers', 'Immunoblockers', 'Droga do Mission Kit contra a ciberpsicose: recupera 2d6 de Humanidade por um mês. O efeito secundário (DV21) pode custar 4d6.', 'humanity', 'Immunoblockers (Mission Kit)'),
 
     // ---------------- Netrunning do RED ----------------
     t('Interface', 'Interface', 'Habilidade de Role do Netrunner: dá as Ações NET e as habilidades Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Scanner, Slide, Virus e Zap.', 'netrunning', 'Habilidades de Interface'),
@@ -100,13 +102,13 @@
 
     // ---------------- Economia e Roles ----------------
     t('Eurodólar', 'Eurodollar (eb)', 'A moeda de Night City, escrita "eb". Na rua: eddies.', 'economy', 'Categorias de preço', ['eurodólares', 'eddies']),
-    t('Categoria de preço', 'Price Category', 'Faixas de preço dos itens. Em 2077: Barato 20eb, Cotidiano 50eb, Oneroso 100eb, Premium 500eb, Caro 1.000eb, Muito caro 5.000eb, Luxo 10.000eb, Super luxo 20.000eb ou mais.', 'economy', 'Categorias de preço', ['categorias de preço']),
+    t('Categoria de preço', 'Price Category', 'Faixas de preço dos itens (RED, que vale no Mission Kit): Barato 10eb, Cotidiano 20eb, Oneroso 50eb, Premium 100eb, Caro 500eb, Muito Caro 1.000eb, Luxuoso 5.000eb, Super Luxuoso 10.000eb ou mais.', 'economy', 'Categorias de preço', ['categorias de preço']),
     t('Estilo de vida', 'Lifestyle', 'Quanto o personagem gasta por mês com comida e cotidiano, além da moradia.', 'economy', 'Estilo de vida', ['estilos de vida']),
     t('Role', 'Role', 'A profissão do personagem (Solo, Netrunner, Fixer...), com uma habilidade especial que sobe por Rank, de 1 a 10.', 'roles', 'As dez Roles do RED', [], { semLink: true }),
     t('Rank', 'Rank', 'Nível da habilidade de Role, de 1 a 10.', 'roles', 'As dez Roles do RED', [], { exato: true }),
-    t('Night Market', 'Night Market', 'Mercado improvisado, montado por um fixer, que vende duas categorias de itens. A Economia de 2077 tem o gerador.', 'economy', 'Night Market', ['Night Markets', 'mercado noturno', 'mercados noturnos']),
-    t('Impacto Carismático', 'Charismatic Impact', 'Habilidade do Face em 2077 (do Rockerboy no RED): Rank + 1d10 contra DV 8 (uma pessoa), 10 (até 6) ou 12 (grupo enorme) para conseguir favores.', 'roles2077', 'Face', ['Charismatic Impact']),
-    t('Investigator', 'Investigator', 'Habilidade do Lawman em 2077, no lugar de Backup: casos ativos e um bônus de caso em Educação e Percepção.', 'roles2077', 'Lawman'),
+    t('Night Market', 'Night Market', 'Mercado improvisado, montado por um fixer, que vende duas categorias de itens. A página Economia tem o gerador.', 'economy', 'Night Market', ['Night Markets', 'mercado noturno', 'mercados noturnos']),
+    t('Impacto Carismático', 'Charismatic Impact', 'A habilidade de Role do Rockerboy: os fãs fazem favores para ele, maiores conforme o Rank.', 'roles', 'As dez Roles do RED', ['Charismatic Impact']),
+    t('Investigator', 'Investigator', 'Habilidade opcional do Lawman no suplemento de fã de 2077, no lugar de Backup: casos ativos e um bônus de caso em Educação e Percepção.', 'roles2077', 'Lawman com Investigator (suplemento de fã)'),
 
     // ---------------- Avanço e equipamento ----------------
     t('Pontos de Melhoria', 'Improvement Points (IP)', 'Ganhos no fim de cada sessão. Subir uma perícia custa 20 × o novo nível (×2 nas difíceis); subir o Rank da Role, 60 × o novo Rank.', 'advancement', 'Gastar Pontos de Melhoria', ['Ponto de Melhoria', 'Improvement Points']),

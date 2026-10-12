@@ -97,10 +97,10 @@ module.exports = async ({ edge, servidores, r }) => {
     const titulo = await edge.evaluate(`[...document.querySelectorAll('#cc-step h3')].map(h => h.textContent).find(t => /Lifepath da Role/.test(t)) || ''`);
     return [respostas.length === 4 && respostas.every(Boolean) && /Solo/.test(titulo), `${titulo} · respostas ${respostas.join(',')}`];
   });
-  await r.passo('passo 5: pacote do Solo; Neural Link já vem grátis; EMP 5 → 4', async () => {
+  await r.passo('passo 5: pacote do Solo; Neural Link já vem no Neuroport; EMP 5 → 4', async () => {
     await passo(5);
     const t = await texto('#cc-step');
-    return [/já vem grátis em 2077/.test(t) && /Humanidade 43\/50/.test(t) && /EMP 4/.test(t), t.match(/Humanidade[^P]*/)?.[0]];
+    return [/já vem no Neuroport/.test(t) && /Humanidade 43\/50/.test(t) && /EMP 4/.test(t), (t.match(/Humanidade \d[^P]*/) || [])[0]];
   });
   // Montagem: o pacote já vem montado; descarregar uma arma e tirar a armadura aparecem na ficha.
   const abaMontagem = async aba => clicar(`[data-mont-tab="${aba}"]`, 200);
@@ -156,7 +156,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await escolherRadio('[data-moradia="capsula"]');
     const barato = await totalMoradia();
     await escolherRadio('[data-moradia="conteiner"]');
-    await escolherRadio('[data-estilo-vida="generico"]');
+    await escolherRadio('[data-estilo-vida="kibble"]');
     const final = await totalMoradia();
     return [/Por mês 600eb/.test(barato) && /depois disso 500eb/.test(barato) && /1º mês grátis/.test(final), `${barato} · ${final}`];
   });

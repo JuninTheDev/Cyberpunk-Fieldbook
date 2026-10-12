@@ -141,17 +141,17 @@
     ['Branca Muito Pesada', 'Motosserra, marreta, naginata', '4d6', '1', 'Varia', 'Não', '500eb']
   ];
   const rangedWeapons = [
-    ['Pistola Média', 'Handgun', '2d6', '12', '2', '1', 'Sim', '50eb', '100eb', '—'],
-    ['Pistola Pesada', 'Handgun', '3d6', '8', '2', '1', 'Sim', '100eb', '100eb', '—'],
-    ['Pistola Muito Pesada', 'Handgun', '4d6', '8', '1', '1', 'Não', '100eb', '50–100eb', '—'],
-    ['SMG', 'Handgun', '2d6', '30', '1', '1', 'Sim', '100eb', '100eb', 'Autofogo (3), supressão'],
-    ['SMG Pesada', 'Handgun', '3d6', '40', '1', '1', 'Não', '100eb', '50eb (ruim) · 1.000eb (Smart)', 'Autofogo (3), supressão'],
-    ['Espingarda (balote)', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', '500eb', 'Cartuchos'],
-    ['Rifle de Assalto', 'Shoulder Arms', '5d6', '25', '1', '2', 'Não', '500eb', '500eb', 'Autofogo (4), supressão'],
-    ['Rifle Sniper', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', '1.000eb (exóticos)', '—'],
-    ['Arco / besta', 'Archery', '4d6', '—', '1', '2', 'Não', '100eb', 'igual ao RED', 'Flechas'],
-    ['Lança-granadas', 'Heavy Weapons', '6d6', '2', '1', '2', 'Não', '500eb', 'igual ao RED', 'Explosivo'],
-    ['Lança-mísseis', 'Heavy Weapons', '8d6', '1', '1', '2', 'Não', '500eb', 'igual ao RED', 'Explosivo']
+    ['Pistola Média', 'Handgun', '2d6', '12', '2', '1', 'Sim', '50eb', '—'],
+    ['Pistola Pesada', 'Handgun', '3d6', '8', '2', '1', 'Sim', '100eb', '—'],
+    ['Pistola Muito Pesada', 'Handgun', '4d6', '8', '1', '1', 'Não', '100eb', '—'],
+    ['SMG', 'Handgun', '2d6', '30', '1', '1', 'Sim', '100eb', 'Autofogo (3), supressão'],
+    ['SMG Pesada', 'Handgun', '3d6', '40', '1', '1', 'Não', '100eb', 'Autofogo (3), supressão'],
+    ['Espingarda (balote)', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', 'Cartuchos'],
+    ['Rifle de Assalto', 'Shoulder Arms', '5d6', '25', '1', '2', 'Não', '500eb', 'Autofogo (4), supressão'],
+    ['Rifle Sniper', 'Shoulder Arms', '5d6', '4', '1', '2', 'Não', '500eb', '—'],
+    ['Arco / besta', 'Archery', '4d6', '—', '1', '2', 'Não', '100eb', 'Flechas'],
+    ['Lança-granadas', 'Heavy Weapons', '6d6', '2', '1', '2', 'Não', '500eb', 'Explosivo'],
+    ['Lança-mísseis', 'Heavy Weapons', '8d6', '1', '1', '2', 'Não', '500eb', 'Explosivo']
   ];
   const exoticWeapons = [
     ['Air Pistol', 'Pistola Muito Pesada que dispara bolas de tinta ou ácido.', '100eb'],
@@ -182,7 +182,7 @@
   ];
 
   const gearHTML = `<div class="section"><h3>Armas brancas RED</h3><p>O dano vem da classe da arma; o número de mãos pode variar pelo item. O teste usa a perícia de combate apropriada.</p>${table(['Classe', 'Exemplos', 'Dano', 'CDT (ataques por Ação)', 'Mãos', 'Ocultável', 'Custo de referência'], meleeWeapons)}</div>
-    <div class="section"><h3>Armas de longo alcance RED</h3><p>DV de acerto depende da categoria e distância; alcance, cobertura e modos de tiro continuam importantes.</p><p class="note-status">"Preço 2077": faixa dos modelos de qualidade padrão no suplemento. Modelos e exceções na página Economia de 2077.</p>${table(['Arma', 'Perícia', 'Dano', 'Carregador', 'ROF', 'Mãos', 'Ocultável', 'Preço RED', 'Preço 2077', 'Modo/nota'], rangedWeapons)}</div>
+    <div class="section"><h3>Armas de longo alcance RED</h3><p>DV de acerto depende da categoria e distância; alcance, cobertura e modos de tiro continuam importantes.</p><p class="note-status">Para fazer dela uma arma Power, Smart ou Tech dos anos 2070, some um Rebuild (1.000eb, 2 slots): veja Armas de 2077.</p>${table(['Arma', 'Perícia', 'Dano', 'Carregador', 'ROF', 'Mãos', 'Ocultável', 'Preço', 'Modo/nota'], rangedWeapons)}</div>
     <div class="section"><h3>Armas exóticas</h3><p>São especializadas; em geral não aceitam acessórios nem munição não básica, salvo quando a entrada disser o contrário.</p>${table(['Modelo', 'Diferença mecânica resumida', 'Preço de referência'], exoticWeapons)}</div>
     <div class="section"><h3>Armaduras RED</h3><p>Compre proteção separadamente para cabeça e corpo. SP não acumula: vale a fonte mais alta por localização. A penalidade de uma armadura mais pesada aplica-se a REF, DEX e MOVE.</p>${table(['Tipo', 'SP', 'Penalidade', 'Preço-base'], armor)}</div>
     <div class="section" data-toc="Munição"><h3>Munição<span class="ref">p. 344–347</span></h3><ul><li>Compre a munição do tipo da arma: bala (pistola média, pesada, muito pesada, balote ou rifle), cartucho de espingarda, flecha, granada ou míssil.</li><li><b>Granadas e mísseis</b> são comprados <b>um a um</b>; o resto, em pacotes de <b>10</b>. O preço abaixo vale para isso.</li><li>Granadas podem ser arremessadas ou disparadas de um lança-granadas.</li><li>Armas exóticas só aceitam munição básica, salvo se a descrição disser o contrário.</li></ul>${table(['Tipo', 'Preço', 'Para', 'Efeito'], [
@@ -226,7 +226,7 @@
       ['<b>Stim</b>', 'Ignora as penalidades de Gravemente Ferido por 1 hora.', '1 por dia.'],
       ['<b>Surge</b>', 'Fica 24 horas sem precisar dormir.', '1 por semana.']
     ])}<h4>Criossistema do Medtech, por Rank</h4>${table(['Rank', 'Ganha'], [['1', 'Um Cryopump.'], ['2', 'Registro de técnico de Cryotank.'], ['3', 'Um Cryotank.'], ['4', 'Mais 2 Cryotanks; o Cryopump passa a 2 cargas e 2 pessoas.'], ['5', 'Mais 3 Cryotanks; o Cryopump passa a 3 cargas.']])}</div>
-    <div class="section" data-toc="Lista de equipamento"><h3>Lista de equipamento<span class="ref">p. 351–355</span></h3><p>Os preços são do RED. Em 2077 a maioria dos itens mantém o preço em eurobucks e só troca o nome da categoria (veja a Economia de 2077).</p>${table(['Item', 'Preço', 'O que faz'], [
+    <div class="section" data-toc="Lista de equipamento"><h3>Lista de equipamento<span class="ref">p. 351–355</span></h3><p>Os preços são do RED, que valem nos anos 2070 do Mission Kit (veja a Economia).</p>${table(['Item', 'Preço', 'O que faz'], [
       ['<b>Agent</b>', '100eb', 'Smartphone com IA adaptativa: agenda, chamadas, Data Pool, compras. +2 em Pesquisa em Biblioteca, e +2 em Guarda-roupa e Estilo se você vestir o que ele sugere.'],
       ['<b>Analisador químico</b>', '1.000eb', 'Uma Ação identifica a composição exata de quase qualquer substância.'],
       ['<b>Arma de gancho</b>', '100eb', 'Uma Ação dispara um gancho que prende em cobertura grossa a até 30 m. Aguenta 2× o seu peso e tem 10 HP. Anula a penalidade de movimento ao escalar.'],
@@ -275,7 +275,7 @@
   window.systemCatalog = {
     roles: {
       eyebrow: 'Cyberpunk RED / guia de Roles', title: 'Roles: conceito e habilidade',
-      lede: 'Uma Role é a profissão e a habilidade especial que define como o personagem altera o jogo. Estas descrições são da versão RED; as alterações do suplemento 2077 ficam na página separada.',
+      lede: 'Uma Role é a profissão e a habilidade especial que define como o personagem altera o jogo. Estas descrições são da versão RED; os ajustes dos anos 2070 (Mission Kit) ficam na página Roles nos anos 2070.',
       html: `<div class="section"><h3>As dez Roles do RED</h3><p>A Role é mais que uma classe de combate: cada habilidade abre uma forma distinta de conseguir influência, resolver problemas ou obter recursos.</p>${table(['Role', 'Quem é', 'O que a habilidade de Role faz'], roleRows)}</div><div class="section"><h3>Decisão rápida</h3>${table(['Quero…', 'Role que se destaca'], [['liderar fãs, multidões ou uma causa', 'Rockerboy'], ['ter vantagem tática em combate', 'Solo'], ['invadir uma arquitetura NET', 'Netrunner'], ['consertar, aprimorar ou inventar', 'Tech'], ['tratar feridos e cyberware', 'Medtech'], ['investigar e publicar uma história', 'Media'], ['usar equipe e benefícios corporativos', 'Exec'], ['chamar apoio policial', 'Lawman'], ['achar e negociar bens/contatos', 'Fixer'], ['dirigir, pilotar e acessar veículos', 'Nomad']])}</div><div class="callout">As habilidades têm limites, ações e tabelas por Rank. Os resumos acima destacam o uso principal; não substituem as condições de cada ação.</div><div class="callout"><b>Em 2077:</b> são nove Roles. O Rockerboy vira especialização do Face, o Exec e o Fixer viram o Corpo, e o Lawman troca Backup por Investigator. <button class="action" data-page="roles2077" type="button">Roles de 2077</button></div>`
     },
     cyberware: {

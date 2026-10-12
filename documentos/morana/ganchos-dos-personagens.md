@@ -81,13 +81,13 @@ Para quando o jogador ainda não sabe o que responder, ou para dar um segundo ga
 
 | Role | Gancho | Leva a |
 |---|---|---|
-| Rockerboy / Face | Uma música de protesto antiga, proibida nas rádios, fala de "um hospital que queimou com as luzes acesas". O personagem sabe cantá-la e não sabe de onde veio. | Final "Exposição"; Kerry Eurodyne. |
+| Rockerboy | Uma música de protesto antiga, proibida nas rádios, fala de "um hospital que queimou com as luzes acesas". O personagem sabe cantá-la e não sabe de onde veio. | Final "Exposição"; Kerry Eurodyne. |
 | Solo | Recebeu uma oferta para a equipe de Vega uma semana antes da Sessão 1, e recusou. Vega se lembra. Ou serviu em 2070 no mesmo posto que Iskra e Tamsin. | Vega, ou Iskra e Tamsin. |
 | Netrunner | Ouviu "a voz" semanas antes da campanha, numa sub-rede de Kabuki, e achou que era um daemon estranho. Guardou um pedaço de código. | Voodoo Boys, NetWatch, o culto de Brakk. |
 | Tech | Já consertou implantes com lote de 2069 e reparou num firmware que ninguém devia ter escrito assim. Pode construir uma caixa de Faraday como a do técnico de Vega. | Endo (o autor do firmware). |
 | Medtech | Trabalhou na clínica clandestina de Kabuki, ou foi estagiário num hospital de campanha em 2070. Viu pacientes com luzinhas sob a pele do pescoço. | Endo, Nico "Agulha" Ferreira, Tamsin. |
 | Media | Era colega de Tomas Vale e tem metade dos arquivos dele. A outra metade está no apartamento de Little China. | Tomas Vale; final "Exposição". |
-| Exec / Corpo | Trabalha, ou trabalhou, na divisão da Arasaka que fez o encobrimento. Tem acesso a arquivos, e tudo a perder se usá-los. | A divisão de segurança da Arasaka; o dossiê de Sato. |
+| Exec | Trabalha, ou trabalhou, na divisão da Arasaka que fez o encobrimento. Tem acesso a arquivos, e tudo a perder se usá-los. | A divisão de segurança da Arasaka; o dossiê de Sato. |
 | Lawman | Na NCPD, tem uma pilha de casos de "cyberpsicose" que não fecham: vítimas sem histórico e com implantes do mesmo lote. | River Ward; MaxTac. |
 | Fixer | Aprendeu o ofício com Wakako, ou é rival dela. Ouviu a história do caminhão de peixe e nunca soube se era verdade. | Wakako; Rogue, que sabe o passado de Wakako. |
 | Nomad | O clã do personagem ajudou a tirar os passageiros do caminhão de peixe da cidade em 2070. A família conhece rostos que Wakako quer esquecidos. | Aldecaldos; Panam; a rota de fuga do Ato 4. |

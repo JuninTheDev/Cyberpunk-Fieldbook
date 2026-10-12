@@ -15,7 +15,9 @@ const path = require('path');
 const { createCampaigns } = require('./api-campanhas');
 const { createAccountStores } = require('./api-contas');
 
-const ROLES = ['face', 'solo', 'netrunner', 'corpo', 'tech', 'medtech', 'media', 'lawman', 'nomad'];
+// As 10 Roles do RED (com os ajustes dos anos 2070 do Mission Kit). Face e Corpo, do suplemento de fã, viram as do RED.
+const ROLES = ['rockerboy', 'solo', 'netrunner', 'tech', 'medtech', 'media', 'exec', 'lawman', 'fixer', 'nomad'];
+const ROLES_ANTIGAS = { face: 'rockerboy', corpo: 'exec' };
 const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
@@ -238,6 +240,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     for (const field of SERVER_FIELDS) delete doc[field];
     doc.nome = String(doc.nome || '').trim().slice(0, 80);
     doc.apelido = String(doc.apelido || '').trim().slice(0, 80);
+    if (ROLES_ANTIGAS[doc.role]) doc.role = ROLES_ANTIGAS[doc.role];
     if (doc.role && !ROLES.includes(doc.role)) doc.role = '';
     if (doc.retratoLink && !/^https:\/\/[^\s"'<>]+$/.test(String(doc.retratoLink))) doc.retratoLink = '';
     if (doc.retratoLink) doc.retratoLink = String(doc.retratoLink).slice(0, 500);

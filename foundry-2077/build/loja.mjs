@@ -159,6 +159,10 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
     add('cpr-2077.armas-2077', doc, { nome: doc.name, cat: 'armas', sub: 'Armas de 2077', resumo: weaponSummary(doc.system), desc, arma: weaponData(doc.system, !weaponGroups[doc.system.weaponType]) });
   }
   for (const doc of items(cyberware)) {
+    if (doc.type === 'drug') { // Immunoblockers, a droga do Mission Kit
+      add('cpr-2077.cyberware-2077', doc, { nome: doc.name, cat: 'drogas', sub: 'Drogas do Mission Kit', desc: strip(doc.system.description?.value).slice(0, 260), resumo: 'Preço por dose' });
+      continue;
+    }
     const s = doc.system;
     add('cpr-2077.cyberware-2077', doc, {
       nome: doc.name, cat: 'cyberware', sub: 'Cyberware de 2077', resumo: cyberSummary(s), desc: strip(s.description?.value).slice(0, 260),

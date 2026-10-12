@@ -79,8 +79,19 @@ function convertCard(card, { templateName, page, folder, category, extraSystem =
   });
 }
 
+// A droga do Mission Kit (Kit p. 31): Immunoblockers, no molde das drogas do sistema.
+const IMMUNOBLOCKERS = '<p><b>Droga do Mission Kit</b> · 100eb (Premium) a dose · não vicia</p><p><b>Efeito primário:</b> recupera 2d6 de Humanidade, sem passar da Humanidade máxima que a terapia permite. Dura um mês, mas pode acabar antes, num momento estressante (o mestre decide).</p><p><b>Efeito secundário (DV21):</b> perde a Humanidade ganha com a droga, e alucinações dão −2 em todo teste por 60 segundos (20 rodadas). Se nesse tempo não injetar 2 doses de Immunoblockers (uma Ação), perde 4d6 de Humanidade no fim dos 60 segundos (sem mexer na máxima). Abaixo de 0: ciberpsicose extrema, e o mestre pode dar +2 em todo teste até a Humanidade voltar a ser positiva.</p>';
+function buildDrugs(folder) {
+  return [itemFrom(coreDoc('core_drugs', 'Black Lace'), {
+    seed: 'droga:immunoblockers', name: 'Immunoblockers', folder,
+    system: { price: { market: 100 }, consumed: '', source: { book: KIT, page: 31 }, description: { value: IMMUNOBLOCKERS + sourceNote('Cyberpunk Edgerunners Mission Kit', 31) } },
+    flags: { origem: 'kit' }
+  })];
+}
+
 export function buildCyberware() {
   const folders = Object.values(groups).map(([name], index) => folderDoc('Item', name, index));
+  const drugFolder = folderDoc('Item', 'Drogas (Mission Kit)', folders.length + 2);
   const netFolder = folderDoc('Item', 'Neuralware de netrunning', folders.length);
   const osFolder = folderDoc('Item', 'Berserk e Sandevistan', folders.length + 1);
   const items = Object.entries(wiki.cyberware).flatMap(([group, list]) => list.map(entry => convert(entry.raw, group, folders[Object.keys(groups).indexOf(group)]._id)));
@@ -89,5 +100,5 @@ export function buildCyberware() {
     templateName: 'Sandevistan', page: 24, folder: osFolder._id,
     category: `${card.tag} (instalado no Neural Link)`
   }));
-  return [...folders, netFolder, osFolder, ...items, ...net, ...os];
+  return [...folders, netFolder, osFolder, drugFolder, ...items, ...net, ...os, ...buildDrugs(drugFolder._id)];
 }
