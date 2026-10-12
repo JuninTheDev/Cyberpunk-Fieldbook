@@ -239,7 +239,7 @@
           '<b>Berserk e Sandevistan</b> como sistemas operacionais do Neural Link.',
           '<b>Roles:</b> o Lawman com Investigator e o desconto do clã do Nomad.',
           '<b>Economia:</b> a quitinete em megaprédio, o hustle de 1,5×, os quatro estilos de moda e as zonas de 2077.',
-          '<b>Veículos de 2077</b> no Foundry: uma adaptação, o suplemento não traz veículos.'
+          '<b>Veículos de 2077</b> no Foundry: uma adaptação, nem o Mission Kit nem o suplemento de fã trazem veículos.'
         ])}<p>${button('weapons2077', 'Armas de 2077')} ${button('cyberware2077', 'Cyberware de 2077')} ${button('net2077', 'Netrunning de 2077')} ${button('os2077', 'Berserk e Sandevistan')} ${button('roles2077', 'Roles nos anos 2070')} ${button('economy', 'Economia')}</p>`)}
         ${section('O que saiu', 'Kit', list([
           'O <b>Face</b> e o <b>Corpo</b>: valem as 10 Roles do RED.',

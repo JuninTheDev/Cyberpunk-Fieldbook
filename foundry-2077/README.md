@@ -110,7 +110,7 @@ Depois é só ativar **Cyberpunk RED: 2077** em *Configurar módulos* no mundo.
 
 ## Adaptações
 
-- **Veículos:** o suplemento não traz veículos. Os carros do jogo usam os números de uma classe do RED ou do Black Chrome, indicada na descrição de cada um.
+- **Veículos:** nem o Mission Kit nem o suplemento de fã trazem veículos. Os carros do jogo usam os números de uma classe do RED ou do Black Chrome, indicada na descrição de cada um.
 - **Metralhadoras só de autofogo** (Defender, Mk.31): seguem a Tsunami Arms Helix do livro-base, com dano 2d6 × multiplicador de autofogo.
 - **Armas do suplemento de fã:** seguem as regras de Power, Smart e Tech do Kit. O que o suplemento fazia de outro jeito (o teste Smart de 10 ou 12 + 1d10, a rajada carregada, o "esfriar", as flechettes) saiu; as armas de várias balas Smart passaram a gastar 3 balas e causar mais dano, como a Yukimura do Kit. A dica "Na mesa" de cada arma diz o que mudou.
 - **Kappa** ("redireciona as balas para o segundo alvo"): lido como "se o ataque não pegar o primeiro, vai para o segundo, a até 4 m dele".

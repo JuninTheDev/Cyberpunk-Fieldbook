@@ -339,8 +339,8 @@ Cyberpunk RED se passa em 2045, então rodar 2077 pede três ajustes: tecnologia
 
 ### Regras de 2077 no sistema RED
 
-- **Use o suplemento do projeto.** *Cyberpunk 2077 – A Cyberpunk RED Supplement* é material de fã, não oficial. Ele converte quickhacks, cyberdecks como implantes, Sandevistan, Berserk, armas tecnológicas e o custo de vida de 2077.
-- **Quickhacks como base de Morana.** Os quickhacks do suplemento Cyberware Malfunction, Contagion (que se espalha entre alvos próximos) e Cyberpsychosis servem de molde para os efeitos do vírus.
+- **Use o Mission Kit e, como opção, o suplemento de fã.** O *Cyberpunk Edgerunners Mission Kit* (R. Talsorian e CD Projekt, 2024) é oficial e traz as regras dos anos 2070: Neuroport, quickhacks, armas Power, Smart e Tech, as Roles e a Humanidade. O *Cyberpunk 2077 – A Cyberpunk RED Supplement* é material de fã, não oficial; o que só ele tem (quickhacks, implantes e armas a mais) fica na wiki como opção marcada "suplemento de fã".
+- **Quickhacks como base de Morana.** O Cyberware Malfunction do Kit e os quickhacks Contagion (que se espalha entre alvos próximos) e Cyberpsychosis do suplemento de fã servem de molde para os efeitos do vírus.
 - **Teste de resistência sugerido.** Quem tem cromo conectado numa zona afetada rola WILL + Concentração + 1d10 e precisa superar a DV. A dificuldade sobe com o estágio: DV 13 como Programa, 15 como Enxame, 17 como Entidade.
 - **Efeito da falha.** Programa: um implante trava por 1 rodada. Enxame: o personagem ataca o alvo marcado mais próximo por 1d6 rodadas (pode repetir o teste no fim de cada turno para se libertar). Entidade: perde 2d6 de Humanidade e age como ciberpsico até alguém cortar a conexão.
 - **O antídoto também queima.** Quando a Coleira é usada, role 1d10 para cada implante *neural ou conectado à rede* do alvo (Neural Link e opções, cyberdecks, olhos e armas inteligentes). Com 1 a 3, o implante queima para sempre. Membros e implantes sem conexão não são afetados. Isso mantém o custo real sem destruir de uma vez um Solo cheio de cromo.
@@ -394,5 +394,6 @@ A maior parte da lore vem do jogo base, de Phantom Liberty, do anime Edgerunners
 - Lucius Rhyne — Cyberpunk Wiki
 - Kurt Hansen — Fextralife
 - Barghest — Fextralife
+- Cyberpunk Edgerunners Mission Kit (arquivo do projeto, oficial). A lore do Kit está resumida e comparada com este guia em `lore-dos-anos-2070.md`, sem mudar nada aqui.
 - Cyberpunk 2077 – A Cyberpunk RED Supplement (arquivo do projeto, material de fã)
 - Campanha: Protocolo Morana (`fundacao-da-campanha.md`)

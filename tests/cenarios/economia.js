@@ -1,5 +1,5 @@
 // Economia dos anos 2070 (os preços do RED, que valem no Mission Kit) e o resumo do suplemento de fã.
-const { abrir, buscarEAbrir, semRolagemLateral } = require('../lib/wiki');
+const { abrir, buscar, tecla, ondeParou, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
@@ -13,9 +13,20 @@ module.exports = async ({ edge, servidores, r }) => {
   await edge.shot('economia');
 
   // O Kibble também está na Humanidade: no Mission Kit, viver de Kibble custa Humanidade todo mês.
+  // Os documentos de Night City entram na busca (a missão The Jacket tem "Ping: o Megaprédio H4"): no filtro Sistema,
+  // o termo ainda cai na Economia.
   for (const termo of ['kibble', 'megapredio', 'neokitsch', 'hustle']) {
-    await r.passo(`busca "${termo}" cai na Economia${termo === 'kibble' ? ' (ou na Humanidade)' : ''}`, async () => {
-      const { parou } = await buscarEAbrir(edge, termo, 500);
+    await r.passo(`busca "${termo}" cai na Economia${termo === 'kibble' ? ' (ou na Humanidade)' : ''}, no filtro Sistema`, async () => {
+      await buscar(edge, termo);
+      await edge.evaluate(`document.querySelector('[data-search-filter="system"]')?.click()`);
+      await edge.sleep(250);
+      await tecla(edge, 'Enter');
+      await edge.sleep(500);
+      const parou = await ondeParou(edge);
+      // Volta o filtro para Tudo (ele fica guardado para a próxima busca).
+      await buscar(edge, termo);
+      await edge.evaluate(`document.querySelector('[data-search-filter="all"]')?.click()`);
+      await edge.sleep(150);
       return [(parou.pagina === 'economy' || (termo === 'kibble' && parou.pagina === 'humanity')) && parou.marcas > 0, `${parou.pagina} | ${parou.marcas} marcas`];
     });
   }
