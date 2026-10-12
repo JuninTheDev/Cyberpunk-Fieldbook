@@ -1,6 +1,7 @@
-﻿# Traz para o PC o backup mais recente do servidor (dados da wiki e mundos do Foundry): uma cópia fora do
-# servidor, caso a máquina da Oracle se perca. Guarda os 8 mais recentes em $HOME\Backups\Night City Fieldbook
-# (fora do OneDrive). Usa o servidor e a chave SSH salvos pelo enviar-para-servidor.bat.
+﻿# Traz para o PC o backup mais recente do servidor (dados da wiki e mundos do Foundry) e o pacote mais recente dos
+# arquivos soltos do Foundry (mapas, vídeos, músicas e retratos): uma cópia fora do servidor, caso a máquina da Oracle
+# se perca. Guarda os 8 backups e os 2 pacotes mais recentes em $HOME\Backups\Night City Fieldbook (fora do
+# OneDrive). Usa o servidor e a chave SSH salvos pelo enviar-para-servidor.bat.
 # Uso: dois cliques em servidor\baixar-backup.bat
 #      servidor\baixar-backup.bat -Agendar   → roda sozinho todo domingo ao meio-dia (ou quando o PC ligar depois disso)
 #      servidor\baixar-backup.bat -Desagendar
@@ -62,22 +63,35 @@ $sshArgs = @('-i', $saved.chave, '-o', 'StrictHostKeyChecking=accept-new', '-o',
 # ---------------- Baixar ----------------
 # Os backups são do root e do grupo mesa: o servidor faz uma cópia temporária que o usuário do SSH pode ler.
 # Sem aspas duplas nos comandos remotos: o PowerShell 5.1 as estraga ao passar para o ssh.
-$names = @(& ssh @sshArgs $server "sudo find /srv/backups -maxdepth 1 -name 'backup-*.tar.gz' -printf '%f\n'")
-if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'Não consegui entrar no servidor (confira a internet, o IP e a chave).' }
-$name = $names | ForEach-Object { "$_".Trim() } | Where-Object { $_ -match '^backup-[0-9-]+\.tar\.gz$' } | Sort-Object | Select-Object -Last 1
-if (-not $name) { Finish 'O servidor ainda não fez nenhum backup (ele faz um por dia, às 4h30).' }
-$target = Join-Path $destination $name
-if (Test-Path $target) { Finish "Já tenho o backup mais recente: $name" }
+# O mais recente em /srv/backups com este nome, ou nada.
+function Get-Newest($pattern, $regex) {
+  $names = @(& ssh @sshArgs $server "sudo find /srv/backups -maxdepth 1 -name '$pattern' -printf '%f\n'")
+  if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'Não consegui entrar no servidor (confira a internet, o IP e a chave).' }
+  return $names | ForEach-Object { "$_".Trim() } | Where-Object { $_ -match $regex } | Sort-Object | Select-Object -Last 1
+}
+# Baixa um arquivo de /srv/backups, se ainda não estiver aqui. Devolve a frase para o registro.
+function Save-FromServer($name) {
+  $target = Join-Path $destination $name
+  if (Test-Path $target) { return "Já tenho $name." }
+  $bytes = [double](@(& ssh @sshArgs $server "sudo stat -c %s /srv/backups/$name")[0])
+  Write-Log ('Baixando {0} ({1:N0} MB)…' -f $name, ($bytes / 1MB))
+  & ssh @sshArgs $server "sudo install -m 600 -o `$(id -un) /srv/backups/$name /tmp/$name" | Out-Null
+  & scp @sshArgs "${server}:/tmp/$name" "$target.parcial" | Out-Host
+  $ok = $LASTEXITCODE -eq 0
+  & ssh @sshArgs $server "rm -f /tmp/$name" | Out-Null
+  if (-not $ok) { Remove-Item -Force "$target.parcial" -ErrorAction SilentlyContinue; Stop-WithMessage "O download de $name falhou. Rode de novo." }
+  Move-Item -Force "$target.parcial" $target
+  return ('{0} salvo ({1:N1} MB).' -f $name, ((Get-Item $target).Length / 1MB))
+}
 
-Write-Log "Baixando $name…"
-& ssh @sshArgs $server "sudo install -m 600 -o `$(id -un) /srv/backups/$name /tmp/$name"
-& scp @sshArgs "${server}:/tmp/$name" "$target.parcial"
-$ok = $LASTEXITCODE -eq 0
-& ssh @sshArgs $server "rm -f /tmp/$name" | Out-Null
-if (-not $ok) { Remove-Item -Force "$target.parcial" -ErrorAction SilentlyContinue; Stop-WithMessage 'O download falhou. Rode de novo.' }
-Move-Item -Force "$target.parcial" $target
+$name = Get-Newest 'backup-*.tar.gz' '^backup-[0-9-]+\.tar\.gz$'
+if (-not $name) { Finish 'O servidor ainda não fez nenhum backup (ele faz um por dia, às 4h30).' }
+$messages = @(Save-FromServer $name)
+# Os arquivos soltos do Foundry: o servidor só faz um pacote novo quando algum deles muda.
+$pack = Get-Newest 'arquivos-*.tar' '^arquivos-[0-9-]+\.tar$'
+if ($pack) { $messages += Save-FromServer $pack }
 
 # Fica com os mais recentes.
 Get-ChildItem $destination -Filter 'backup-*.tar.gz' | Sort-Object Name -Descending | Select-Object -Skip $keep | Remove-Item -Force
-$size = (Get-Item $target).Length / 1MB
-Finish ('Backup salvo: {0} ({1:N1} MB) em {2}' -f $name, $size, $destination)
+Get-ChildItem $destination -Filter 'arquivos-*.tar' | Sort-Object Name -Descending | Select-Object -Skip 2 | Remove-Item -Force
+Finish ('{0} Pasta: {1}' -f ($messages -join ' '), $destination)

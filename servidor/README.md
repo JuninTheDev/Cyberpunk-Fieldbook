@@ -199,11 +199,17 @@ Feche o Foundry do PC e dê dois cliques em **`servidor\enviar-para-servidor.bat
   - Feche o VS Code e mova a pasta para fora do OneDrive (por exemplo, `C:\Users\kouar\Documents\Cyberpunk Fieldbook`, se Documentos não estiver sincronizado).
 - **Backup no PC:** o servidor faz um backup por dia (dados da wiki e mundos do Foundry) e guarda 14 dias, mas só lá dentro. Se a máquina da Oracle se perder, eles se perdem junto. Para ter uma cópia fora dele:
   - Dê dois cliques em **`servidor\baixar-backup.bat`**. Ele traz o mais recente para `C:\Users\kouar\Backups\Night City Fieldbook` (fora do OneDrive) e guarda os 8 últimos.
+  - Ele traz também o pacote dos arquivos soltos do Foundry (`arquivos-<data>.tar`) e guarda os 2 últimos.
+    - O pacote leva os mapas, vídeos, músicas e retratos da pasta Data, a pasta `modules/Mapas` e as imagens que ficaram dentro do sistema CORE.
+    - O servidor só faz um pacote novo quando um desses arquivos muda.
   - **Para não precisar lembrar:** no terminal da pasta da wiki, rode `servidor\baixar-backup.bat -Agendar` uma vez.
     - O Windows passa a baixar sozinho todo domingo ao meio-dia, ou na primeira vez que o PC ligar depois disso. O registro fica em `registro.txt`, na mesma pasta.
     - Para desligar: `servidor\baixar-backup.bat -Desagendar`.
-  - Ele usa o servidor e a chave que o `enviar-para-servidor.bat` salvou. Também dá para baixar pela wiki: barra lateral → **Baixar backup**.
-  - Mapas e imagens soltas do Foundry não entram no backup diário, só os mundos. Você já tem esses arquivos no PC.
+  - Ele usa o servidor e a chave que o `enviar-para-servidor.bat` salvou. Também dá para baixar pela wiki: barra lateral → **Baixar backup** (só o backup diário, sem o pacote dos arquivos).
+- **Backup completo, antes de uma mudança grande** (como a troca para o Foundry 14):
+  - Com a mesa vazia, rode `sudo bash /srv/fieldbook/wiki/servidor/backup-completo.sh`.
+  - Ele guarda o programa e a pasta de dados do Foundry inteiros, os dados da wiki e a configuração dos serviços em `/srv/backups/foundry12-completo-<data>.tar`, com o `.sha256` ao lado.
+  - O Foundry para por alguns segundos e volta na tela de configuração. Depois, inicie o mundo como sempre.
 
 ## Saber quando algo cair
 
@@ -229,7 +235,9 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 | Trocar a senha do mestre, o domínio ou instalar o Foundry | `sudo bash /srv/fieldbook/wiki/servidor/instalar.sh` (Enter mantém o resto) |
 | Reiniciar o servidor todo | `sudo reboot` (tudo volta sozinho) |
 
-- **Atualizar o Foundry:** pela própria tela de configuração dele (*Update Software*).
+- **Atualizar o Foundry:** dentro da versão 12, pela própria tela de configuração dele (*Update Software*).
+  - **Para o Foundry 14, não use essa tela.** O sistema Cyberpunk RED - CORE só funciona até o 12, e o 14 exige outro Node.
+  - A troca é uma instalação nova, ao lado da atual, depois do backup completo.
 - **Atualizações de segurança do Ubuntu:** são automáticas.
 
 ### Como funciona por dentro
@@ -239,7 +247,7 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 | `/srv/fieldbook/wiki` | A cópia do GitHub. Nunca edite aqui: a atualização apaga mudanças locais. |
 | `/srv/fieldbook/dados` | Personagens, retratos, códigos, campanhas (Publicar e regras da loja de cada uma) e Notícias de Night City. Ficam fora do git e entram no backup. |
 | `/srv/foundry/app` e `/srv/foundry/data` | O programa do Foundry e os dados dele. |
-| `/srv/backups` | Os backups diários (14 dias). |
+| `/srv/backups` | Os backups diários (14 dias), os pacotes dos arquivos soltos (os 3 últimos) e os backups completos. |
 | `/etc/fieldbook.env` | A configuração da wiki: senha do mestre, endereço da mesa. |
 | `/etc/caddy/Caddyfile` | Os endereços e o HTTPS. |
 
@@ -248,8 +256,9 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 | `instalar.sh` | Monta ou refaz o servidor. |
 | `atualizar.sh` | Roda a cada minuto e puxa o GitHub. |
 | `atualizar-modulo.sh` | Gera o módulo cpr-2077 e instala os outros (`foundry-*/instalar.mjs`); sozinho, só com a mesa vazia. |
-| `backup.sh` | Faz o backup diário. |
+| `backup.sh` | Faz o backup diário e, quando algum mapa ou retrato muda, o pacote dos arquivos soltos. |
+| `backup-completo.sh` | Faz o backup completo do Foundry e da wiki (à mão, antes de uma mudança grande). |
 | `receber.sh` | Recebe o envio do PC. |
 | `iniciar-foundry.sh` | Liga o Foundry. |
 | `enviar-para-servidor.ps1` | Faz o envio, do lado do PC. |
-| `baixar-backup.ps1` | Traz o backup mais recente para o PC (no PC; `-Agendar` para toda semana). |
+| `baixar-backup.ps1` | Traz o backup e o pacote dos arquivos mais recentes para o PC (no PC; `-Agendar` para toda semana). |
