@@ -24,10 +24,10 @@ module.exports = async ({ edge, servidores, r }) => {
   await buscaCai('falcon', 'os2077', 'Militech Falcon Sandevistan');
   await buscaCai('gosma', 'netArsenal', 'Gosma');
 
-  await r.passo('quickhacks: chip "Quickhacks definitivos" leva à seção e fica ativo', async () => {
+  await r.passo('quickhacks: chip "Avançados (DV12)" leva à seção e fica ativo', async () => {
     await abrir(edge, 'quickhacks');
-    const c = await clicarChip(edge, 'Quickhacks definitivos');
-    return [c.ativo === 'Quickhacks definitivos' && c.topo >= c.barra - 2 && c.topo <= c.barra + 40, JSON.stringify(c)];
+    const c = await clicarChip(edge, 'Avançados (DV12)');
+    return [c.ativo === 'Avançados (DV12)' && c.topo >= c.barra - 2 && c.topo <= c.barra + 40, JSON.stringify(c)];
   });
   await edge.shot('quickhacks');
 

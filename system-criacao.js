@@ -148,17 +148,15 @@
       equipamento: [g('agent'), g('cyberdeck'), g('virtuality-goggles'), prog('armor'), prog('sword'), ou(prog('see-ya'), prog('eraser')), ou(prog('sword'), prog('vrizzbolt')), ou(prog('worm'), prog('sword'))],
       moda: [cl('generic-chic', 'top', 10), cl('leisurewear', 'footwear', 2), cl('leisurewear', 'jewelry'), cl('leisurewear', 'bottoms', 2), cl('urban-flash', 'jacket')],
       cyberware: [cw('interface-plugs'), cw('neural-link'), cw('shift-tacts')], humanidade: 14,
-      // Em 2077, o jogador pode trocar o cyberdeck e os programas do RED pelo deck de 2077 com 3 quickhacks de 100eb
-      // (sup. p. 16–20). O resto do pacote não muda.
+      // Em 2077, o jogador pode trocar o cyberdeck e os programas do RED pelo deck de 2077 com 3 quickhacks de 100eb do
+      // suplemento de fã (sup. p. 16–20). Os do Mission Kit o netrunner já faz pelo Rank de Interface. O resto do pacote não muda.
       kit2077: {
         deck: 'netrunning-2077:militech-hunter-mk-1', escolher: 3,
         quickhacks: [
-          ['netrunning-2077:short-circuit', 'Vírus: 2d6 direto no corpo do alvo.'],
-          ['netrunning-2077:reboot-optics', 'Controle: embaralha os cyberópticos do alvo (Olho Danificado).'],
-          ['netrunning-2077:weapon-glitch', 'Controle: trava a arma de longo alcance do alvo.'],
-          ['netrunning-2077:overheat', 'Vírus: põe o alvo em chamas, 2d6 por rodada.'],
-          ['netrunning-2077:bait', 'Cloak: um som no Cyberaudio do alvo atrai ele até você.'],
-          ['netrunning-2077:request-backup', 'Cloak: simula um pedido de reforço do alvo para a LocalNet dele.']
+          ['netrunning-2077:reboot-optics', 'Simples (DV6): embaralha os cyberópticos do alvo (Olho Danificado).'],
+          ['netrunning-2077:weapon-glitch', 'Padrão (DV8): trava a arma Smart do alvo.'],
+          ['netrunning-2077:bait', 'Simples (DV6): um som no Cyberaudio do alvo atrai ele até você.'],
+          ['netrunning-2077:request-backup', 'Padrão (DV8): simula um pedido de reforço do alvo para os aliados dele.']
         ]
       }
     },
