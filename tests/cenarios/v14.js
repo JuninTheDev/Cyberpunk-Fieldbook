@@ -2444,9 +2444,14 @@ module.exports = async ({ edge, servidores, r }) => {
         const { ator, notas } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(solo.id)}, '');
         const depois = resumo(ator);
         await ator.delete();
-        return { antes, depois, notas };
+        return { antes, depois, notas, original: { id: original.id, nome: original.name } };
       })()`);
-      return [JSON.stringify(info.antes) === JSON.stringify(info.depois) && info.notas.length === 0, JSON.stringify(info)];
+      // A wiki ficou ligada ao ator da importação, que o passo apagou. Ela só aceita a ficha e os pedidos do ator ligado
+      // (o "ator antigo" leva 409): a ligação volta para o Solo do começo, com o que ele já recebeu.
+      const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
+      const religado = await api(`/api/personagens/${solo.id}/foundry`, 'PUT', { ator: info.original.id, nomeAtor: info.original.nome, versao: doc.versao, entregues: doc.foundry?.entregues ?? [] });
+      return [JSON.stringify(info.antes) === JSON.stringify(info.depois) && info.notas.length === 0 && religado.foundry?.ator === info.original.id,
+        JSON.stringify({ ...info, religado: religado.foundry?.ator ?? religado })];
     });
 
     await r.passo('Role, a especialização: a do Face vem da criação da wiki, na importação e na migração (a ficha "Na mesa" não a traz), e soma o Rank: Siren em Conversação e Cuidados Pessoais ("Siren +4" no teste e no total da ficha); a aba Role mostra e troca a especialização (o Rockerboy soma em todo instrumento); a do Lawman fica guardada e não soma (bônus de caso)', async () => {

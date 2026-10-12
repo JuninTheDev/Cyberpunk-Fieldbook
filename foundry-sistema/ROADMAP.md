@@ -60,6 +60,15 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
 
   As armas já entram com a classe, a origem e as regras próprias na flag `arma2077` (Ciclos 12 e 31). O
   `foundry-2077/scripts/armas2077.mjs` do master tem a implementação do Foundry 12.
+- [ ] **As Roles pelo RED** (desvio de regra desde a integração da revisão, ciclo 32): a wiki do master voltou às 10
+  Roles do RED. O Face e o Corpo viraram Rockerboy e Exec, e as especializações de 2077 saíram do criador; ficam, como
+  opcionais, o Investigator do Lawman e o desconto do clã do Nomad (system-2077.js). A lista da ficha já vem do criador
+  (`gerado.mjs`). Falta rever, contra a wiki e o item de Role do CORE:
+  - o que o ciclo 23 soma (o Moto do Nomad, a especialização do Face);
+  - os situacionais de Role (o Investigator, o Netrunner de 2077);
+  - os atores que já têm a Role Face.
+
+  Os testes de referência que pegaram as duas mudanças estão no QUALITY_GATES, como falhas conhecidas.
 
 ## P1: bugs, testes de regressão e confiabilidade
 

@@ -1453,6 +1453,7 @@ de ser atingido, +1 para se esquivar pelo resto da rodada".
   - "Dano: manual".
 - **Próximo:** o P2 pela ordem do ROADMAP: as rolagens das Roles, a Briga e as Artes Marciais e o Facedown; depois, o
   cyberware que é arma.
+- **Commit:** `82e89b4`.
 
 ### Ciclo 31 (2026-10-12): o master na branch, o Mission Kit no catálogo, três correções e as ferramentas da migração
 
@@ -1510,6 +1511,58 @@ do ciclo 15. Lá ele se chamava "ciclo 16"; na integração (ciclo 32), virou o 
   - o `importarDaMesa` avisar sem necessidade das bases de corpo do CORE (no ensaio com o Qyan, a "Internal (7 Option
     Slots)", que este sistema não usa).
 - **Commit:** `3a73abd` (na `revisao-v14`), depois da mescla `edd0624`.
+
+### Ciclo 32 (2026-10-12): a integração da revisão (pedido do usuário)
+
+O pedido: integrar na `sistema-v14` a branch `revisao-v14` pelo guia dela (`INTEGRAR-REVISAO.md`). No conversor de
+2077, seguir o Mission Kit (`raw.regras` e `raw.origem` da wiki) e manter os modos dos ciclos 17 e 18. Gerar o catálogo
+de novo pelo build, registrar o ciclo da revisão como o próximo (o 31), mesclar o master de novo, rodar G1 a G5 e apagar
+o guia.
+
+- **Feito:**
+  - **as mesclas:** `e274759`, a `revisao-v14` com o master até o `30692f7`; e `cbb7591`, o master `32f9c7b` (o
+    `atualizar-modulo.sh` extrai o CORE de novo quando o extrator muda);
+  - **os 8 conflitos, como o guia indica:**
+    - o conversor de 2077 segue o Kit e mantém as opções que os modos dos ciclos 17 e 18 leem. Elas vêm das regras da
+      wiki quando ela as tem (os dois alvos, os dois canos, as balas por tiro das Smart) e do texto quando não tem (a
+      Testera, a Dian). A descrição de cada arma diz que os botões ainda seguem o suplemento de fã;
+    - o catálogo e o `gerado.mjs` saíram do build: 704 itens, 168 de 2077, e os compêndios de 2077 com 58, 62 e 48;
+    - os documentos foram juntados: o ciclo da revisão virou o 31, e o procedimento da migração foi para o fim, com a
+      janela "Personagens da wiki" no passo 5;
+  - **o ator ligado também na janela "Personagens da wiki"** (o item 6 do guia): o "Aprovar" confere o ator ligado antes
+    de aprovar e, se no mundo só há uma cópia antiga, avisa e não entrega. Antes, os itens seriam criados na cópia, e
+    depois a wiki recusaria o "entregue" (409);
+  - **o `enderecoPadraoDaWiki` foi para o `config.mjs`:** neste ramo, o `wiki.mjs` importa o `dados.mjs`, que precisa
+    do Foundry, e o teste de referência não carregava. O `wiki.mjs` o reexporta;
+  - **no cenário:**
+    - os passos que instalam e tiram cyberware (o `__tirarCyber` da Atiradora e o Reflex Tuner do Capanga) devolvem a
+      Humanidade, porque desinstalar não a devolve mais;
+    - o passo "ida e volta" (ciclo 15) devolve a ligação do Solo na wiki ao ator do começo. O "Importar da mesa" liga o
+      personagem ao ator novo, que o passo apaga, e a wiki passou a recusar o resto, inclusive o pedido da janela
+      (ciclo 16).
+- **Achado da integração: a wiki do master mudou duas regras que o sistema segue:**
+  - **as armas de 2077 seguem o Mission Kit.** A página diz que o teste Smart, a rajada carregada, o "esfriar" e as
+    flechettes deram lugar às regras do Kit. Os dados das armas mudaram: a Yukimura é de qualidade padrão, a Kappa tem
+    3d6, a Lexington não tem o autofogo de 7 balas, e as Tech não têm rajada nem flechettes;
+  - **as Roles são as 10 do RED.** O Face e o Corpo viraram Rockerboy e Exec, e as especializações de 2077 saíram do
+    criador. Ficam, como opcionais, o Investigator do Lawman e o desconto do clã do Nomad.
+
+  O sistema ainda segue as regras antigas nos dois: os modos dos ciclos 17 e 18, mantidos como foi pedido, e os bônus e
+  situacionais de Role do ciclo 23. Os testes de referência que conferem o sistema contra a wiki pegaram isso e falham.
+  As falhas estão no QUALITY_GATES até o P0 do ROADMAP ("As armas de 2077 pelo Mission Kit" e "As Roles pelo RED").
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros (o lint cobre `migracao/`);
+  - G3: 50 de 57. São 4 testes novos da revisão (o Editor de Dor, o endereço padrão, a loja inteira e o Mission Kit), que
+    passam. As 7 falhas são as da troca de regra na wiki (QUALITY_GATES);
+  - G4: 61 de 67, cerca de 106 s. A parte do cenário que a revisão mexeu, que ainda não tinha rodado, passa: os
+    compêndios de 2077 com 58, 62 e 48, a Yukimura com bônus 0 na importação e o passo novo do desinstalar. A janela
+    "Personagens da wiki" passa com o ator ligado. As 6 falhas são as da troca de regra (QUALITY_GATES). Na primeira
+    rodada, antes de devolver a ligação do Solo, a janela também falhou (60 de 67);
+  - G5: 25 dos 28 cenários verdes. O `fluxo` e o `sistema` falham pelas causas conhecidas deste PC (o
+    `foundry-2077/.cache` do Foundry 12 e os PDFs), e o `v14` pelas 6 da troca de regra.
+- **O guia** (`INTEGRAR-REVISAO.md`) saiu, como ele mesmo pedia.
+- **Próximo (P0, desvio de regra):** as armas de 2077 pelo Mission Kit e as Roles pelo RED, com os testes delas.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -170,6 +170,8 @@ E a do navegador de cada um:
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
   flag `arma2077`.
 - **O cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm).
+- **As Roles do RED** (a wiki voltou às 10 Roles do RED): a lista da ficha já é a do RED, mas os bônus e os situacionais
+  de Role ainda são os de 2077 (a especialização do Face, o Investigator do Lawman, o Netrunner de 2077).
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.

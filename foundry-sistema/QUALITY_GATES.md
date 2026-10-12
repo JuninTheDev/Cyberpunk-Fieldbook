@@ -20,6 +20,18 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   PC com o Foundry 12 e o CORE instalados.
 - **`sistema`, "sem erros de JS na página":** dois 404 dos PDFs dos livros, que ficam fora do git (`*.pdf`).
 
+## Falhas conhecidas desde a integração da revisão (ciclo 32), até o P0 das armas de 2077 e das Roles
+
+A wiki do master trocou duas regras que o sistema ainda segue: as armas de 2077 passaram ao Mission Kit, e as Roles
+voltaram às 10 do RED. Os testes de referência que conferem o sistema contra a wiki pegaram isso. Eles ficam falhando até
+o P0 do ROADMAP, e não se tiram nem se mudam para passar:
+- **G3 (7):** contra o texto da wiki, o perfil de 2077 pela flag (a rajada e as balas das Tech), o Ricochete, a Carga
+  Tech e as regras de cada modelo; os bônus de Role (o Face e as especializações) e os situacionais de Role (o Lawman e o
+  Netrunner de 2077);
+- **G4 (6):** os passos da arma Smart (a Yukimura agora é de qualidade padrão), da carga Tech (sem flechettes nem
+  rajada), da Dian e Lexington (a Lexington sem autofogo), da Kappa (3d6) e da especialização do Face, e a checagem de
+  avisos (os dois avisos da Lexington, do passo dela).
+
 ## Regras
 
 - **Mudança de regra** só com a fonte (a página da wiki ou o código do CORE) e um teste de referência com o valor
