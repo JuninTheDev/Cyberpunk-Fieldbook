@@ -68,8 +68,8 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     a.move.valor = regras.moveFinal(a.move.valor, this.ferimento.chave === 'mortal');
     // Consciência de Combate do Solo (pelos pontos de cada habilidade da Role).
     this.consciencia = regras.consciencia(this.role.habilidades);
-    // Editor de dor (supressão de dor) tira a penalidade de ferimento.
-    this.penalidade = this.bonus.supressaoDeDor ? 0 : this.ferimento.penalidade;
+    // Editor de dor (supressão de dor): tira só a penalidade de gravemente ferido, não a de mortalmente ferido.
+    this.penalidade = regras.penalidadeDoFerimento(this.ferimento, this.bonus.supressaoDeDor);
     // Death Save: a penalidade de base vem das lesões que a aumentam; a outra sobe a cada sucesso.
     const lesoes = this.parent.items.filter(item => item.type === 'lesao');
     this.deathSave.base = lesoes.filter(item => item.system.aumentaDeathSave).length;

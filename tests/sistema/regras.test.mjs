@@ -11,6 +11,7 @@ import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
 import { FAMILIAS, PERICIAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
 import { CLASSES_PROGRAMA, ESTILOS_ROUPA, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
+import { enderecoPadraoDaWiki } from '../../foundry-sistema/scripts/wiki.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -49,6 +50,21 @@ test('EMP de agora: Humanidade / 10 para baixo, nunca acima da base (wiki)', () 
   assert.equal(regras.empAtual(47, 5), 4);
   assert.equal(regras.empAtual(80, 5), 5);
   assert.equal(regras.empAtual(0, 5), 0);
+});
+
+test('Editor de Dor: tira o −2 de gravemente ferido, não o −4 de mortalmente ferido (wiki e CORE getWoundStateMods)', () => {
+  const texto = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  assert.match(texto, /\['Pain Editor', 'Ignora penalidades de Seriously Wounded\.'/, 'a regra da wiki mudou');
+  const [ileso, grave, mortal] = [45, 20, 0].map(hp => regras.estadoDeFerimento(hp, 45));
+  assert.deepEqual([grave, mortal].map(f => regras.penalidadeDoFerimento(f)), [-2, -4], 'sem o Editor');
+  assert.deepEqual([ileso, grave, mortal].map(f => regras.penalidadeDoFerimento(f, true)), [0, 0, -4], 'com o Editor');
+});
+
+test('Endereço padrão da wiki: wiki.<domínio> com a mesa em mesa.<domínio>; senão, localhost:8000 (como o cpr-2077)', () => {
+  assert.equal(enderecoPadraoDaWiki({ protocol: 'https:', hostname: 'mesa.edgerunnersstorys.app' }), 'https://wiki.edgerunnersstorys.app');
+  assert.equal(enderecoPadraoDaWiki({ protocol: 'http:', hostname: 'localhost' }), 'http://localhost:8000');
+  assert.equal(enderecoPadraoDaWiki({ protocol: 'http:', hostname: '192.168.0.10' }), 'http://localhost:8000');
+  assert.equal(enderecoPadraoDaWiki(), 'http://localhost:8000', 'sem endereço (fora do navegador)');
 });
 
 test('Mortalmente ferido: −6 MOVE, mínimo 1 (wiki)', () => {
@@ -253,7 +269,8 @@ test('Inventário: o efeito do equipamento vale conforme a ativação e o uso', 
 test('Catálogo: equipamento, roupa e droga como o CORE (ativação pelo usage, efeitos da droga desligados, rótulos de roupa)', () => {
   const ativacao = id => catalogo[id].system.ativacao;
   assert.deepEqual(['core_gear:agent', 'core_gear:medscanner', 'core_gear:linear-frame-beta', 'core_gear:flashlight'].map(ativacao), ['carregando', 'equipado', 'equipado', 'manual']);
-  const porTipo = tipo => Object.values(catalogo).filter(item => item.type === tipo);
+  // Os do CORE (a droga do Mission Kit, Immunoblockers, tem o teste dela).
+  const porTipo = tipo => Object.entries(catalogo).filter(([id, item]) => id.startsWith('core_') && item.type === tipo).map(([, item]) => item);
   assert.deepEqual([porTipo('equipamento').length, porTipo('roupa').length, porTipo('droga').length], [51, 90, 10]);
   // As duas bases externas do pack de equipamento entram como cyberware, sem perda de Humanidade.
   assert.deepEqual(['core_gear:battleglove', 'core_gear:smart-glasses'].map(id => [catalogo[id].type, catalogo[id].system.fundacional, catalogo[id].system.perdaHumanidade.media]),
@@ -286,9 +303,9 @@ test('Catálogo: programas com ATK, DEF, REZ, classe e custo da página de NET d
 
 test('Upgrades: os slots da loja da wiki; o pente de cada carregador e o padrão de cada arma, pela tabela de carregadores da wiki', () => {
   const loja = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens);
-  // Acessórios e hardware: os slots que a loja mostra.
+  // Acessórios e hardware: os slots que a loja mostra (os do CORE e os três Rebuilds do Mission Kit).
   const upgrades = loja.filter(item => item.acessorio || item.hardware);
-  assert.equal(upgrades.length, 32);
+  assert.equal(upgrades.length, 35);
   for (const item of upgrades) assert.equal(catalogo[item.id]?.system.tamanho, (item.acessorio || item.hardware).tamanho, `${item.id}: slots`);
   // Tabela de carregadores (system-catalog.js): [classe, padrão, estendido, tambor].
   const texto = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
@@ -343,7 +360,7 @@ test('Catálogo de 2077: todo item que a loja da wiki vende existe, com os núme
   // (build/conteudo-2077.mjs): os dois têm de dar o mesmo. O "exotica" da loja é outra coisa (a classe da arma fora das
   // do RED) e fica de fora.
   const loja = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => /^(armas|cyberware|netrunning)-2077:/.test(item.id));
-  assert.equal(loja.length, 150);
+  assert.equal(loja.length, 157, 'o Mission Kit e o suplemento de fã');
   const id = nome => nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   for (const item of loja) {
     const nosso = catalogo[item.id];
@@ -368,6 +385,22 @@ test('Catálogo de 2077: todo item que a loja da wiki vende existe, com os núme
       if (s.classe === 'daemon') igual('REZ do daemon', s.rez, item.programa.rez);
     }
   }
+});
+
+test('Loja inteira: o que a loja da wiki vende e o sistema ainda não tem é só o Black Chrome (pendente no ROADMAP)', () => {
+  const faltam = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => !catalogo[item.id]);
+  const foraDoBlackChrome = faltam.filter(item => !Array.from(item.tags || []).includes('blackchrome')).map(item => item.id);
+  assert.deepEqual(foraDoBlackChrome, [], 'itens fora do Black Chrome que o importador recusaria');
+});
+
+test('Mission Kit: o Neuroport é base, os Rebuilds ocupam 2 slots, a munição Smart melhorada é Smart e os quickhacks do Kit não se compram', () => {
+  const s = id => catalogo[id]?.system;
+  assert.deepEqual([s('cyberware-2077:neuroport').fundacional, s('cyberware-2077:neuroport').tipo, s('cyberware-2077:neuroport').perdaHumanidade.formula], [true, 'neuralWare', '2d6']);
+  assert.deepEqual(['power', 'smart', 'tech'].map(c => [s(`armas-2077:${c}-rebuild`).alvo, s(`armas-2077:${c}-rebuild`).tamanho]), [['arma', 2], ['arma', 2], ['arma', 2]]);
+  assert.deepEqual([s('armas-2077:smart-melhorada-rifle').efeito, s('armas-2077:smart-melhorada-rifle').quantidade, s('armas-2077:smart-melhorada-granada').preco], ['smart', 10, 500]);
+  assert.equal(catalogo['cyberware-2077:immunoblockers']?.type, 'droga');
+  const kit = Object.values(catalogo).filter(item => item.system.classe === 'quickhack' && item.system.fonte.livro === 'Cyberpunk Edgerunners Mission Kit');
+  assert.ok(kit.length >= 10 && kit.every(item => item.system.preco === 0), `${kit.length} quickhacks do Kit, todos sem preço`);
 });
 
 test('Catálogo: armas com dano em dados (menos as exóticas sem dano), perícia que existe e tabela de DV que existe', () => {

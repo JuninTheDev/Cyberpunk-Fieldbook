@@ -26,6 +26,14 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [x] **Munição que não causa dano** (Ciclo 5): a wiki diz que biotoxina, veneno, EMP, flashbang, sonífera e gás
   lacrimogêneo "não causam dano", e a fumaça só cobre a área, mas o sistema aplicava o dano da arma. Agora quem é pego
   não leva dano, e o cartão diz o efeito com o texto da wiki. Os testes de resistência automáticos ficam para o P2.
+- [x] **Editor de Dor** (desvio de regra, achado na revisão de 2026-10-12): zerava também o −4 de mortalmente ferido.
+  Fonte: a wiki ("Pain Editor: Ignora penalidades de Seriously Wounded", system-catalog.js) e o CORE
+  (`getWoundStateMods`). Agora tira só o −2 de gravemente ferido. (Ciclo 16)
+- [x] **Desinstalar cyberware devolvia a Humanidade** (desvio de regra, achado na revisão de 2026-10-12): dava para
+  tirar e pôr de novo para rolar a perda outra vez. Fonte: a wiki ("Humanidade, terapia e drogas": cada peça reduz o
+  máximo, e a Humanidade volta pela terapia) e o CORE (`uninstallCyberware` só recalcula o máximo). (Ciclo 16)
+- [x] **O master na branch** (Mission Kit, Black Chrome, visual novo): o build quebrava no grupo `neuroport` do Kit, e
+  os testes de regra caíam para 29 de 31. Agora o conversor de 2077 segue o Kit. (Ciclo 16)
 
 ## P1: bugs, testes de regressão e confiabilidade
 
@@ -59,6 +67,14 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   - [x] a entrega dos pedidos da loja aprovados pelo mestre (Ciclo 14).
 - [x] **O estado de jogo da campanha** (bloqueador da migração): "Importar da mesa" monta o ator pela ficha que o
   Foundry 12 manda para a wiki (Ciclo 15). Procedimento no MIGRATION_STATUS.
+- [x] **A mesa no servidor e a migração** (Ciclo 16):
+  - o endereço da wiki deduzido de `mesa.<domínio>`, como o cpr-2077;
+  - só o ator ligado ao personagem entrega pedidos e manda a ficha (a wiki recusa o "ator antigo");
+  - o pacote das cenas: as cenas, os diários e as playlists do mundo do Foundry 12 num módulo, com os arquivos.
+- [ ] **Black Chrome** (bloqueador da migração para quem tiver os itens): os 176 itens da loja.
+  - Converter dos compêndios do CORE (`black-chrome_*` e `dlc_black-chrome-plus`): armas com Combinação, cyberdedos, Linear Frames, moda, equipamento e veículos.
+  - Mais as regras novas (dano direto no HP, Combinação).
+  - Hoje o importador e os pedidos avisam e não entregam.
 - [ ] **Da wiki:** a janela "Personagens da wiki" (Importar, Importar da mesa, aprovar pedidos) na barra dos atores; "Atualizar da wiki" (hoje, importar de novo cria outro
   ator); retrato.
 - [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
@@ -74,9 +90,12 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
   cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.
-- [ ] **Armas de 2077:** os modos de cada classe (o ricochete da Power, a carga Tech, o teste Smart). As armas já
-  entram com a classe e as opções na flag `arma2077` (Ciclo 12).
-- [ ] **Cyberware que é arma** (Wolvers, Mantis Blades, Gorilla Arms, o lança-granadas embutido): hoje é só cyberware e
+- [ ] **Armas de 2077, pelo Mission Kit:**
+  - os modos de cada classe: a Power (+5 na lesão crítica e o Ricochete), a Smart (+1 e a conexão pelo Personal Link) e a Tech (Carregar);
+  - os Rebuilds e a segunda chance da munição Smart melhorada.
+
+  As armas já entram com a classe, a origem e as regras próprias na flag `arma2077` (Ciclos 12 e 16).
+- [ ] **Cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm, o lança-granadas embutido): hoje é só cyberware e
   não ataca.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
   do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente.

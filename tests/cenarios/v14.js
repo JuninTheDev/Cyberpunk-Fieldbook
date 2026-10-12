@@ -93,7 +93,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 51 && t['cyberware-2077'] === 57 && t['netrunning-2077'] === 42 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 58 && t['cyberware-2077'] === 62 && t['netrunning-2077'] === 48 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -198,6 +198,21 @@ module.exports = async ({ edge, servidores, r }) => {
         return { antes, depois: { ini: a.system.iniciativa, efeitoAtivo: ker.effects.contents[0]?.active, hum: a.system.humanidade.value, humMax: a.system.humanidade.max, emp: a.system.empAtual, sp: a.system.armadura.corpo.sp }, itens: a.items.size, tamanhoCatalogo: Object.keys(cat).length };
       })()`);
       return [info.antes.ini === 8 && info.antes.efeitoAtivo === false && info.depois.ini === 10 && info.depois.efeitoAtivo === true && info.depois.hum === 36 && info.depois.humMax === 48 && info.depois.emp === 3 && info.depois.sp === 11 && info.itens === 4,
+        JSON.stringify(info)];
+    });
+
+    await r.passo('desinstalar cyberware: a Humanidade perdida não volta (só a terapia devolve); o máximo sobe 2 e o efeito para', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const a = game.actors.getName('Atiradora');
+        const ker = a.items.getName('Kerenzikov');
+        await a.desinstalarCyberware(ker);
+        const fora = { hum: a.system.humanidade.value, humMax: a.system.humanidade.max, ini: a.system.iniciativa, efeitoAtivo: ker.effects.contents[0]?.active };
+        // Os passos seguintes contam com o Kerenzikov instalado e a Humanidade 36: devolve o estado de antes.
+        await a.instalarCyberware(ker, { rolar: false });
+        await a.update({ 'system.humanidade.value': 36 });
+        return { fora, volta: { hum: a.system.humanidade.value, humMax: a.system.humanidade.max, ini: a.system.iniciativa } };
+      })()`);
+      return [info.fora.hum === 36 && info.fora.humMax === 50 && info.fora.ini === 8 && info.fora.efeitoAtivo === false && info.volta.hum === 36 && info.volta.humMax === 48 && info.volta.ini === 10,
         JSON.stringify(info)];
     });
 
@@ -1091,7 +1106,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = info.veiculos.length === 2
         && JSON.stringify(info.veiculos[0]) === JSON.stringify({ nome: 'Compact Groundcar', sdp: [70, 70], assentos: 6, familia: true, upgrades: ['Heavy Chassis', 'Seating Upgrade'] })
         && JSON.stringify(info.veiculos[1]) === JSON.stringify({ nome: 'Roadbike', sdp: [35, 35], assentos: 2, familia: true, upgrades: [] })
-        && JSON.stringify(info.de2077) === JSON.stringify([['Arasaka HJKE-11 Yukimura', 'smart', 30, 1]]) && info.notas.length === 0
+        && JSON.stringify(info.de2077) === JSON.stringify([['Arasaka HJKE-11 Yukimura', 'smart', 30, 0]]) && info.notas.length === 0
         && [carro.uid, moto.uid, ...carro.upgrades.map(u => u.uid), 'loja:teste-2077'].every(uid => entregues.includes(uid));
       return [ok, `${JSON.stringify(info)} · entregues: ${entregues.length}`];
     });
