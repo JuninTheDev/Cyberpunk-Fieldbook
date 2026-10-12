@@ -2,7 +2,7 @@
 // recarregar).
 import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
-import { perguntarTeste } from './janela-rolagem.mjs';
+import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   aplicarDano, deLonge, ehCoprocessador, ehLuneta, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   PENALIDADE_CORONHA, perfil2077, situacionaisDeRole, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
@@ -150,15 +150,25 @@ export class AtorCPR extends Actor {
     }, opcoes);
   }
 
-  // Death Save (p. 186): 1d10 + penalidades contra BODY, sem crítico. Passou: a próxima fica 1 mais difícil.
-  async rolarDeathSave({ falar = true } = {}) {
+  // Death Save (p. 186): 1d10 + penalidades contra BODY, sem crítico. Passou: a próxima fica 1 mais difícil. Com a janela
+  // (perguntar), o modificador do mestre (sem a Sorte: ela é só dos testes); fechada, null.
+  async rolarDeathSave({ falar = true, perguntar = false, aoAbrir = null } = {}) {
     const { base, penalidade, body } = this.system.deathSave;
-    const roll = await new Roll(`1d10 + ${base + penalidade}`).evaluate();
+    let modificador = 0;
+    if (perguntar) {
+      const linhas = [`1d10 + ${base} (lesões) + ${penalidade} (Death Saves anteriores)`, `Passa com menos que BODY ${body}; o 10 natural sempre falha`];
+      const escolha = await perguntarModificador({ titulo: `Death Save de ${this.name}`, linhas, aoAbrir });
+      if (!escolha) return null;
+      modificador = escolha.modificador;
+    }
+    const soma = base + penalidade + modificador;
+    const roll = await new Roll(`1d10 ${soma < 0 ? '-' : '+'} ${Math.abs(soma)}`).evaluate();
     const natural = roll.dice[0].results[0].result;
     const passou = passouNoDeathSave({ natural, total: roll.total, body });
     if (passou) await this.update({ 'system.deathSave.penalidade': penalidade + 1 });
     if (falar) {
-      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/death-save.hbs'), { nome: this.name, total: roll.total, body, base, penalidade, passou, natural, dados: await roll.render() });
+      const mestre = modificador ? `${modificador < 0 ? '−' : '+'} ${Math.abs(modificador)}` : '';
+      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/death-save.hbs'), { nome: this.name, total: roll.total, body, base, penalidade, mestre, passou, natural, dados: await roll.render() });
       await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { deathSave: { total: roll.total, passou } } } });
     }
     return { roll, total: roll.total, natural, passou };

@@ -72,8 +72,9 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
   gastar a bala; a luneta de precisão (+1 em tiro único ou mirado a 51 m ou mais, wiki) vem marcada quando vale e entra
   sozinha sem a janela; a iniciativa de quem tem um situacional (o Sandevistan, +3 ligado por padrão, como o CORE) abre
   a janela, e sem ela o +3 entra.
-- [ ] **A janela de rolagem no resto:** a defesa do jogador (a esquiva e a Concentração, dentro do prazo do pedido), o
-  dano e o Death Save.
+- [x] **A janela de rolagem no resto** (Ciclo 27): no computador do jogador, a esquiva e a Concentração que o mestre
+  pede (dentro do prazo: a janela fecha quando ele desiste ou responde por ele), o dano que ele rola e o Death Save do
+  começo do turno; na ficha, o botão do dano e o do Death Save. Com isso, o P1 fecha.
 
 ## P2: fichas, inventário, equipamento, armas e combate
 

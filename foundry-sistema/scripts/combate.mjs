@@ -49,12 +49,16 @@ export function desistir(id, resposta) {
   return true;
 }
 
+// No cliente do jogador, as rolagens pedidas abrem a janela de rolagem (menos com "Rolar direto"), que o mestre fecha
+// quando o prazo do pedido acaba (a janela entra em "janelas" pelo id do pedido).
+const registrarJanela = id => (id ? janela => janelas.set(id, janela) : null);
 const TRATADORES = {
   defesa: (dados, id) => perguntarDefesa(dados, { id }),
-  dano: dados => rolarDanoDoAtacante(dados),
-  deathSave: async ({ ator }) => {
-    const { total, passou } = await (await fromUuid(ator)).rolarDeathSave();
-    return { total, passou };
+  dano: (dados, id) => rolarDanoDoAtacante(dados, { id }),
+  deathSave: async ({ ator }, id) => {
+    const resultado = await (await fromUuid(ator)).rolarDeathSave({ perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+    janelas.delete(id);
+    return resultado && { total: resultado.total, passou: resultado.passou };
   }
 };
 
@@ -178,10 +182,12 @@ async function marcarCarga(arma) {
   return marca;
 }
 
-// No cliente de quem atacou (jogador): rola o dano, com os dados aparecendo para ele, e devolve ao mestre.
-async function rolarDanoDoAtacante({ arma, multiplicador, formula }) {
-  const dano = await rolarDano(await fromUuid(arma), { falar: true, multiplicador, formula });
-  return { total: dano.total, critico: dano.critico, bonus: dano.bonus, formula: dano.formula };
+// No cliente de quem atacou (jogador): rola o dano, com os dados aparecendo para ele, e devolve ao mestre. A janela de
+// rolagem (o modificador do mestre) abre, menos com "Rolar direto"; fechada, o mestre rola.
+async function rolarDanoDoAtacante({ arma, multiplicador, formula }, { id = null } = {}) {
+  const dano = await rolarDano(await fromUuid(arma), { falar: true, multiplicador, formula, perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+  if (id) janelas.delete(id);
+  return dano && { total: dano.total, critico: dano.critico, bonus: dano.bonus, formula: dano.formula };
 }
 
 // ---------------- No cliente de quem defende ----------------
@@ -209,13 +215,29 @@ export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}
     if (id) janelas.delete(id);
     if (!escolha) return null;
   }
-  return precisaRolar(escolha) ? rolarDefesa(ator, alvo.name, escolha) : { escolha };
+  if (!precisaRolar(escolha)) return { escolha };
+  // O jogador rola na janela de rolagem (menos com "Rolar direto"), ainda dentro do prazo do pedido; pelos NPCs, o mestre
+  // rola direto.
+  const resultado = await rolarDefesa(ator, alvo.name, escolha, { perguntar: !mestre && !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+  if (id) janelas.delete(id);
+  return resultado;
 }
 
-// Esquiva (DEX + Evasão + 1d10) ou Concentração (WILL + Concentração + 1d10), com as penalidades do alvo.
-async function rolarDefesa(ator, nome, escolha) {
-  const { partes } = ator.partesDaPericia(escolha === 'concentrar' ? 'concentration' : 'evasion');
-  const { total } = await testar(ator, { rotulo: `${escolha === 'concentrar' ? 'Concentração' : 'Esquiva'} de ${nome}`, partes, dados: { defesa: escolha } });
+// Esquiva (DEX + Evasão + 1d10) ou Concentração (WILL + Concentração + 1d10), com as penalidades do alvo. Com a janela de
+// rolagem (perguntar), os situacionais, os modificadores comuns, o do mestre e a Sorte; fechada, null.
+async function rolarDefesa(ator, nome, escolha, { perguntar = false, aoAbrir = null } = {}) {
+  const pericia = escolha === 'concentrar' ? 'concentration' : 'evasion';
+  const rotulo = `${escolha === 'concentrar' ? 'Concentração' : 'Esquiva'} de ${nome}`;
+  let { partes } = ator.partesDaPericia(pericia);
+  let sorte;
+  if (perguntar) {
+    const fixas = ator.partesDaPericia(pericia, { situacionais: [] }).partes;
+    const resposta = await perguntarTeste(ator, { rotulo, partes: fixas, situacionais: ator.situacionaisDoTeste(pericia), aoAbrir });
+    if (!resposta) return null;
+    partes = [...fixas, ...resposta.partes];
+    sorte = resposta.sorte;
+  }
+  const { total } = await testar(ator, { rotulo, partes, sorte, dados: { defesa: escolha } });
   return { escolha, defesa: total };
 }
 

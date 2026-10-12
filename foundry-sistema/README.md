@@ -38,7 +38,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - os **modificadores comuns** do livro (RED p. 130, a tabela da wiki: pouca luz −1, tarefa complexa −2, exausto −4, tempo extra +1...);
   - o **modificador do mestre** e a **Sorte** (vem com a preparada na ficha).
 
-  **Ctrl + clique** rola direto, com a Sorte preparada e os situacionais ligados por padrão; a configuração "Rolar direto" (deste navegador) inverte. Os botões de ataque da ficha também abrem a janela, antes de gastar a bala (cancelar não gasta nem rola); na iniciativa, ela abre para quem tem um situacional de iniciativa (o Sandevistan, +3 já marcado). A defesa, o dano e o Death Save ainda rolam direto.
+  **Ctrl + clique** rola direto, com a Sorte preparada e os situacionais ligados por padrão; a configuração "Rolar direto" (deste navegador) inverte. Os botões de ataque da ficha também abrem a janela, antes de gastar a bala (cancelar não gasta nem rola); na iniciativa, ela abre para quem tem um situacional de iniciativa (o Sandevistan, +3 já marcado). No computador do jogador, o que o mestre pede também abre a janela: a esquiva e a Concentração (a janela completa), o dano que ele rola e o Death Save do começo do turno (estes, só com o que vai ser rolado e o modificador do mestre: a Sorte é só dos testes); quando o prazo do pedido acaba, a janela fecha e o mestre segue. Na ficha, o botão do dano e o do Death Save abrem a mesma janela. Pelos NPCs, o mestre rola direto.
 - **Testes:** atributo (STAT + 1d10) ou perícia (STAT + perícia + 1d10). Entram:
   - o bônus dos efeitos;
   - a penalidade de ferimento (−2 gravemente; −4 mortalmente, que também tira 6 de MOVE, com mínimo 1);
@@ -205,6 +205,7 @@ E a do navegador de cada um:
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - a Sorte preparada na ficha e o visual dos cartões do chat;
+  - a janela de rolagem do jogador, no computador dele: a esquiva com o modificador do mestre e a Sorte, a janela que fecha quando o mestre responde por ele no fim do prazo, o dano com o modificador e o Death Save pedido pelo mestre;
   - a janela de rolagem: as partes, os situacionais (do cyberware, das lesões e da Role), os modificadores comuns, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste; cancelar não rola; Ctrl + clique e o "Rolar direto"; no ataque, a luneta marcada a 51 m ou mais e desmarcada perto, cancelar sem gastar bala e o que se marca entrando no ataque; na iniciativa, o Sandevistan (+3) pela janela e direto;
   - os bônus de Role: o Moto do Nomad importado da wiki de teste, e um Face sintético com a especialização pela importação e pela migração, no teste, no total da ficha e trocada na aba Role (o Lawman guarda a dele sem somar);
   - o extrato: somar, subtrair e definir com o motivo, a mudança direta, o saldo negativo com o aviso, o mestre tirando linhas (só a linha ou desfazendo a mudança) e as linhas da importação, da migração e da loja;

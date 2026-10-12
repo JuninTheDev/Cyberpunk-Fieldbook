@@ -757,3 +757,12 @@ test('TeleOptics pela wiki (decisão do usuário): o do RED, +1 no tiro mirado a
   assert.deepEqual(catalogo[red].effects, []);
   assert.deepEqual(catalogo[v2077].effects, []);
 });
+
+test('Dano com o modificador do mestre (a janela de rolagem): entra depois do multiplicador do autofogo, como o CORE', () => {
+  assert.equal(regras.expressaoDoDano('5d6'), '5d6');
+  assert.equal(regras.expressaoDoDano('5d6', { modificador: 2 }), '5d6 + 2');
+  assert.equal(regras.expressaoDoDano('5d6', { modificador: -3 }), '5d6 - 3');
+  assert.equal(regras.expressaoDoDano('2d6', { multiplicador: 3 }), '2d6 * 3');
+  assert.equal(regras.expressaoDoDano('2d6', { multiplicador: 3, modificador: 2 }), '2d6 * 3 + 2');
+  assert.equal(regras.expressaoDoDano('3d6 + 2', { multiplicador: 2, modificador: 1 }), '(3d6 + 2) * 2 + 1');
+});

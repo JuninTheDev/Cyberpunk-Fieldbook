@@ -286,9 +286,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     });
     return local ? item.atacar({ local, perguntar: comJanela(evento) }) : null;
   }
-  static #deathSave() { return this.actor.rolarDeathSave(); }
+  static #deathSave(evento) { return this.actor.rolarDeathSave({ perguntar: comJanela(evento) }); }
   static #zerarDeathSave() { return this.actor.zerarDeathSave(); }
-  static #rolarDano(evento, alvo) { return this.#item(alvo)?.rolarDano(); }
+  static #rolarDano(evento, alvo) { return this.#item(alvo)?.rolarDano({ perguntar: comJanela(evento) }); }
   static #recarregar(evento, alvo) { return this.#item(alvo)?.recarregar(); }
   // Sorte: um ponto a mais ou a menos para o próximo teste; no começo da sessão, volta ao máximo.
   static #prepararSorte(evento, alvo) { return this.actor.prepararSorte(this.actor.sortePreparada + Number(alvo.dataset.delta)); }

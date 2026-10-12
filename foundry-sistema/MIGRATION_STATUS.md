@@ -30,7 +30,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad; a especialização do Face; o Investigator do Lawman) | portados no ciclo 23 os que valem sempre (o Moto e a especialização do Face, com a especialização vinda da wiki); o Investigator do Lawman e o Netrunner de 2077 esperam a janela de rolagem |
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta |
-| CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada no ciclo 24 nos testes de atributo e de perícia e no ciclo 25 no ataque e na iniciativa; falta na defesa, no dano e no Death Save |
+| CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga, Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
@@ -91,7 +91,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
   | Área | No Foundry 12 | Aqui | ROADMAP |
   | --- | --- | --- | --- |
-  | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | nos testes (ciclo 24), no ataque e na iniciativa (ciclo 25); a defesa, o dano e o Death Save rolam direto | P1 |
+  | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | portada nos ciclos 24, 25 e 27 | feito |
   | Rolagens | Facedown (COOL + Reputação + 1d10) | falta | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta | P2 |
@@ -1264,3 +1264,46 @@ A janela de rolagem do CORE, que no Foundry 12 todo teste abre e da qual os mód
     - G3: o TeleOptics do RED no tiro único;
     - G4: a luneta acumulando com o TeleOptics e o TeleOptics nunca marcado.
 - **Próximo:** a janela de rolagem na defesa do jogador, no dano e no Death Save (P1).
+- **Commit:** `b517590`.
+
+### Ciclo 27 (2026-10-12): a janela de rolagem do jogador: a defesa, o dano e o Death Save (P1)
+
+O que o Fluxo de Combate fazia no Foundry 12: "O jogador rola os próprios dados na janela de rolagem do sistema, com
+modificadores e Sorte: a esquiva, a Concentração, o dano (quem atacou) e o Death Save." Com este ciclo, o P1 fecha.
+
+- **Implementado:**
+  - **a defesa** (`combate.perguntarDefesa` e `rolarDefesa`): depois da escolha (Esquivar, Rolar Concentração), a
+    janela de rolagem abre no computador do jogador, com os situacionais da perícia, os modificadores comuns, o do
+    mestre e a Sorte. Pelos NPCs, o mestre rola direto;
+  - **o prazo:** as janelas que o pedido do mestre abre no jogador (a da defesa, a do dano, a do Death Save) entram em
+    `janelas` pelo id do pedido, e o mestre as fecha quando desiste de esperar ou responde por ele. Fechada, a resposta
+    é nenhuma, e o mestre segue como antes (aguenta, rola o dano, rola o Death Save);
+  - **o dano e o Death Save** (`janela-rolagem.perguntarModificador`): uma janela mais curta, como as do CORE, com o que
+    vai ser rolado e o modificador do mestre (sem a Sorte, que é só dos testes, e sem os modificadores comuns). O
+    modificador do dano entra depois do multiplicador do autofogo (`regras.expressaoDoDano`, como o CORE); o do Death
+    Save aparece no cartão ("+1 (mestre)");
+  - **na ficha:** o botão do dano da arma e o do Death Save abrem a mesma janela (Ctrl + clique pula);
+  - **"Rolar direto"**, no navegador do jogador, vale também para esses pedidos.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 50 de 50. Um teste novo: a fórmula do dano com o modificador, antes e depois do multiplicador;
+  - G4: 63 de 63, cerca de 82 s. O que mudou:
+    - **um passo novo, a janela do jogador,** no navegador do jogador:
+      - a esquiva pela janela, com +1 do mestre e Sorte 1: DEX 7 + Evasão 2 + 1 + 1 + 9 = 20, e a Sorte vai de 5 a 4;
+      - o prazo: o jogador escolhe Esquivar e deixa a janela aberta; depois de 8 s, o mestre responde Aguentar, e a
+        janela do jogador fecha;
+      - o dano que o jogador rola com a pistola: a janela ("Heavy Pistol: 3d6"), com +2 do mestre, dá 4 + 4 + 4 + 2 = 14
+        no alvo do passo;
+      - o Death Save que o mestre pede: a janela, com +1 do mestre, dá 3 + 1 = 4 contra BODY 6 (passou);
+      - o passo devolve o estado do começo (o pente da Atiradora, o HP e a Sorte do Alvo, a penalidade do Death Save) e
+        apaga o alvo dele;
+    - **o navegador do jogador entra com "Rolar direto"**: os passos do combate conferem as regras, e o passo da janela
+      do jogador desliga e confere a janela;
+    - **o passo da Sorte** rola o dano pela ficha com Ctrl + clique;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado (conferido pelo md5):
+    - G3: o modificador antes do multiplicador;
+    - G4: a esquiva do jogador sem a janela, a janela da defesa fora do prazo (o mestre não a fecha), o dano do jogador
+      sem a janela, o modificador fora do dano, o Death Save pedido sem a janela e a Sorte fora da esquiva.
+- **Próximo:** o P1 fechou. Pela ordem do ROADMAP, o P2: as rolagens das Roles, a Briga e as Artes Marciais e o
+  Facedown; depois, o cyberware que é arma.

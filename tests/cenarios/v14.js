@@ -251,7 +251,8 @@ module.exports = async ({ edge, servidores, r }) => {
         // O dano do rifle, pelo botão da aba Combate.
         const rifle = a.items.getName('Assault Rifle');
         const antesDoDano = game.messages.size;
-        await clicar('.tab.combate tr[data-item-id="' + rifle.id + '"] [data-action="rolarDano"]', () => game.messages.size > antesDoDano);
+        f().querySelector('.tab.combate tr[data-item-id="' + rifle.id + '"] [data-action="rolarDano"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+        await esperar(() => game.messages.size > antesDoDano);
         const dano = game.messages.contents.at(-1);
         // O visual do tema na mensagem inteira (no chat e na notificação, onde houver).
         await esperar(() => document.querySelector('.chat-message[data-message-id="' + dano.id + '"]'));
@@ -1564,6 +1565,9 @@ module.exports = async ({ edge, servidores, r }) => {
       jogador = await abrirEdge({ porta: 9460, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-jogador-' });
       await foundry14.capturarAvisos(jogador);
       await foundry14.entrarComo(jogador, mesa.url, 'Jogador');
+      // "Rolar direto" neste navegador: a esquiva, o dano e o Death Save do jogador rolam sem a janela de rolagem nos
+      // passos do combate; o passo da janela do jogador desliga e confere a janela.
+      await jogador.evaluate(`game.settings.set('${S}', 'rolarDireto', true).then(() => true)`);
       const info = await jogador.evaluate(`({ nome: game.user.name, gm: game.user.isGM, dono: game.actors.getName('Alvo')?.isOwner })`);
       const ativo = await edge.evaluate(`game.users.getName('Jogador').active`);
       return [info.nome === 'Jogador' && !info.gm && info.dono && ativo, JSON.stringify({ ...info, ativo })];
@@ -1712,6 +1716,126 @@ module.exports = async ({ edge, servidores, r }) => {
       const autorDoDano = await edge.evaluate(`game.messages.contents.findLast(m => /Dano: Heavy Pistol/.test(m.content))?.author?.name ?? null`);
       return [semMestre.resultado === null && /Sem mestre na mesa/.test(semMestre.avisos.join()) && semMestre.gastou === 0 && semMestre.rolou === 0 && semMestre.mestreDeVolta && pedido?.total === 20 && depois === antes - 12 && autorDoDano === 'Jogador',
         JSON.stringify({ semMestre, pedido, antes, depois, autorDoDano })];
+    });
+
+    await r.passo('janela de rolagem do jogador (no computador dele): a esquiva, com o modificador do mestre e a Sorte; o prazo (o mestre responde por ele, e a janela de rolagem do jogador fecha); o dano que ele rola, com o modificador do mestre; o Death Save que o mestre pede, com o modificador', async () => {
+      await jogador.evaluate(`game.settings.set('${S}', 'rolarDireto', false).then(() => true)`);
+      const janelaDoJogador = `document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)')`;
+      // No navegador do jogador: espera a janela de rolagem e devolve o que ela mostra.
+      const esperarJanela = async () => {
+        for (let i = 0; i < 60; i++) {
+          await jogador.sleep(250);
+          const lido = await jogador.evaluate(`(() => {
+            const j = ${janelaDoJogador};
+            return j && { titulo: j.querySelector('.window-title').textContent.trim(), partes: [...j.querySelectorAll('.partes li')].map(li => li.textContent.replace(/\\s+/g, ' ').trim()), sorte: j.querySelector('[name="sorte"]')?.value ?? null };
+          })()`).catch(() => null);
+          if (lido) return lido;
+        }
+        return null;
+      };
+      // No navegador do jogador: põe o modificador do mestre (e a Sorte) e rola.
+      const rolarNaJanela = ({ outro = 0, sorte = null } = {}) => jogador.evaluate(`(() => {
+        const j = ${janelaDoJogador};
+        const campo = (nome, valor) => { const c = j.querySelector('[name="' + nome + '"]'); if (c && valor !== null) { c.value = valor; c.dispatchEvent(new Event('input', { bubbles: true })); } };
+        campo('outro', ${outro});
+        campo('sorte', ${sorte === null ? 'null' : sorte});
+        j.querySelector('button[data-action="rolar"]').click();
+        return true;
+      })()`);
+      // A soma das partes fixas que a janela mostra ("DEX +7", "Evasão +2", "Gravemente ferido −2").
+      const somaDasPartes = partes => partes.reduce((soma, parte) => { const m = parte.match(/([+−-])(\d+)$/); return m ? soma + (m[1] === '+' ? 1 : -1) * Number(m[2]) : soma; }, 0);
+      try {
+        // O estado do começo (o pente do rifle, o HP e a Sorte do Alvo) volta no fim: os passos seguintes contam com ele.
+        await edge.evaluate(`(() => { window.__inicioDaJanela = { pente: __ator('Atiradora').items.getName('Assault Rifle').system.pente.value, hp: __ator('Alvo').system.hp.value, sorte: __ator('Alvo').system.sorte.value }; return true; })()`);
+        // 1. A esquiva: o mestre ataca o Alvo (d10 4 → 16); o jogador esquiva na janela, com +1 do mestre e Sorte 1, d10 9.
+        const sorteAntes = await edge.evaluate(`__ator('Alvo').system.sorte.value`);
+        await fixar(edge, [[4, 10]]);
+        await fixar(jogador, [[9, 10]]);
+        await edge.evaluate(`(() => { window.__ataque = __ator('Atiradora').items.getName('Assault Rifle').atacar({ alvo: __token('Alvo') }); return true; })()`);
+        const escolheu = Boolean(await responder(jogador, 'esquivar'));
+        const esquiva = await esperarJanela();
+        await rolarNaJanela({ outro: 1, sorte: 1 });
+        const r1 = await edge.evaluate(`window.__ataque.then(r => ({ linha: __linhas(r)[0], sorte: __ator('Alvo').system.sorte.value }))`);
+
+        // 2. O prazo: o mestre ataca de novo (d10 4; o dano 5 × 2 não passa do SP); o jogador escolhe Esquivar e não rola;
+        //    depois de 8 s, o mestre responde Aguentar, e a janela de rolagem do jogador fecha.
+        await fixar(edge, [[4, 10], [2, 6], [2, 6], [2, 6], [2, 6], [2, 6]]);
+        await edge.evaluate(`(() => {
+          window.__estado = { hp: __ator('Alvo').system.hp.value, pente: __ator('Atiradora').items.getName('Assault Rifle').system.pente.value };
+          window.__ataque = __ator('Atiradora').items.getName('Assault Rifle').atacar({ alvo: __token('Alvo') });
+          return true;
+        })()`);
+        await responder(jogador, 'esquivar');
+        const abriuNoPrazo = Boolean(await esperarJanela());
+        const botao = `document.querySelector('.cartao.espera [data-cprf-acao="responder"][data-escolha="aguentar"]')`;
+        let cartao = false;
+        for (let i = 0; i < 60 && !cartao; i++) { await edge.sleep(250); cartao = await edge.evaluate(`Boolean(${botao})`); }
+        await edge.evaluate(`${botao}?.click()`);
+        const r2 = await edge.evaluate(`window.__ataque.then(r => ({ linha: __linhas(r)[0], notas: r.notas }))`);
+        let fechou = false;
+        for (let i = 0; i < 20 && !fechou; i++) { await jogador.sleep(250); fechou = !(await jogador.evaluate(`Boolean(${janelaDoJogador})`)); }
+        await edge.evaluate(`(async () => {
+          await __ator('Alvo').update({ 'system.hp.value': window.__estado.hp });
+          await __ator('Atiradora').items.getName('Assault Rifle').update({ 'system.pente.value': window.__estado.pente });
+          return true;
+        })()`);
+
+        // 3. O dano: o jogador ataca, com a pistola do Alvo, um saco de pancadas a 2 m dele (d10 9 → 20 contra DV 13); o
+        //    mestre pede o dano, e a janela abre no jogador; +2 do mestre: 4 + 4 + 4 + 2 = 14.
+        await edge.evaluate(`(async () => {
+          const saco = await Actor.implementation.create({ name: 'Saco de Pancadas', type: 'personagem', system: { hp: { value: 40 } } });
+          const alvo = __token('Alvo');
+          await canvas.scene.createEmbeddedDocuments('Token', [(await saco.getTokenDocument({ x: alvo.x, y: alvo.y + 100 })).toObject()]);
+          await __esperar(() => canvas.tokens.placeables.some(t => t.document.name === 'Saco de Pancadas'));
+          return true;
+        })()`);
+        await fixar(jogador, [[9, 10], [4, 6], [4, 6], [4, 6]]);
+        await jogador.evaluate(`(() => {
+          const saco = canvas.scene.tokens.find(t => t.name === 'Saco de Pancadas');
+          window.__ataque = game.actors.getName('Alvo').items.getName('Heavy Pistol').atacar({ alvo: saco });
+          return true;
+        })()`);
+        const dano = await esperarJanela();
+        await rolarNaJanela({ outro: 2 });
+        let hpDoSaco = 40;
+        for (let i = 0; i < 40 && hpDoSaco === 40; i++) { await edge.sleep(250); hpDoSaco = await edge.evaluate(`__ator('Saco de Pancadas').system.hp.value`); }
+
+        // 4. O Death Save que o mestre pede ao jogador (o do começo do turno): a janela abre; +1 do mestre; d10 3.
+        const ds = await edge.evaluate(`(() => { const s = __ator('Alvo').system.deathSave; return { base: s.base, penalidade: s.penalidade, body: s.body }; })()`);
+        await fixar(jogador, [[3, 10]]);
+        await edge.evaluate(`(() => { window.__ds = game.system.api.combate.pedir(game.users.getName('Jogador'), 'deathSave', { ator: __ator('Alvo').uuid }); return true; })()`);
+        const deathSave = await esperarJanela();
+        await rolarNaJanela({ outro: 1 });
+        const r4 = await edge.evaluate(`window.__ds`);
+        await edge.evaluate(`__ator('Alvo').update({ 'system.deathSave.penalidade': ${ds.penalidade} }).then(() => true)`);
+
+        const info = { escolheu, esquiva, r1, abriuNoPrazo, cartao, r2: { linha: r2.linha, notas: r2.notas }, fechou, dano, hpDoSaco, ds, deathSave, r4 };
+        const esperado = somaDasPartes(esquiva?.partes ?? []) + 1 + 1 + 9;
+        const ok = escolheu && esquiva?.titulo === 'Teste: Esquiva de Alvo' && esquiva.sorte !== null && r1.linha.escolha === 'esquivar' && r1.linha.defesa === esperado && r1.linha.resultado === 'esquivou' && r1.sorte === sorteAntes - 1
+          && abriuNoPrazo && cartao && r2.linha.escolha === 'aguentar' && r2.notas.some(n => /O mestre respondeu por Jogador/.test(n)) && fechou
+          && dano?.titulo === 'Dano: Heavy Pistol' && dano.partes.join() === 'Heavy Pistol: 3d6' && hpDoSaco === 40 - 14
+          && deathSave?.titulo === 'Death Save de Alvo' && r4?.total === 3 + ds.base + ds.penalidade + 1 && r4.passou === (3 + ds.base + ds.penalidade + 1 < ds.body);
+        return [ok, JSON.stringify({ ...info, esperado })];
+      } finally {
+        await jogador.evaluate(`(async () => {
+          await game.settings.set('${S}', 'rolarDireto', true);
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem') || app.options.classes?.includes('defesa')) await app.close();
+          return true;
+        })()`);
+        await edge.evaluate(`(async () => {
+          // Os dados fixos que sobraram no mestre (o dano do ataque da parte 2, que não acertou) saem.
+          window.__fila = [];
+          const inicio = window.__inicioDaJanela;
+          if (inicio) {
+            await __ator('Atiradora').items.getName('Assault Rifle').update({ 'system.pente.value': inicio.pente });
+            await __ator('Alvo').update({ 'system.hp.value': inicio.hp, 'system.sorte.value': inicio.sorte });
+          }
+          const tokens = canvas.scene.tokens.filter(t => t.name === 'Saco de Pancadas').map(t => t.id);
+          if (tokens.length) await canvas.scene.deleteEmbeddedDocuments('Token', tokens);
+          for (const a of game.actors.filter(a => a.name === 'Saco de Pancadas')) await a.delete();
+          return true;
+        })()`);
+      }
     });
 
     await r.passo('fogo supressivo sem alvo: pega quem está a até 25 m (Alvo e Capanga, não o Longe); quem perde a Concentração fica Suprimido', async () => {

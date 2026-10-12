@@ -26,9 +26,11 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   esperado.
 - **Dúvida de regra** vira pergunta registrada no MIGRATION_STATUS.md, não interpretação nova.
 - **Dados nos testes:** a conta fica com os dados fixos (`CONFIG.Dice.randomUniform` no cenário).
-- **Passo novo no cenário** devolve o que mudou (balas, habilidades, HP): os passos seguintes contam com o estado de
-  antes. Para trocar um objeto inteiro (as habilidades da Role, um `TypedObjectField`), use `_replace(...)`; o `update`
-  só mescla.
+- **Passo novo no cenário** devolve o que mudou (balas, habilidades, HP, Sorte): os passos seguintes contam com o estado
+  de antes. No ciclo 27, a bala de uma esquiva que o passo novo não devolveu fez a recarga do fogo supressivo, bem
+  depois, avisar "sem munição compatível". Guarde o estado no começo e devolva no `finally`; os dados fixos que sobram
+  também (`window.__fila = []`). Para trocar um objeto inteiro (as habilidades da Role, um `TypedObjectField`), use
+  `_replace(...)`; o `update` só mescla.
 - **Aviso esperado** (um `ui.notifications.warn` que o passo provoca de propósito) é capturado e conferido no próprio
   passo. Solto no console, o G4 o pegaria como problema.
 - **Teste de uma correção** é provado falhando sem ela. A mutação é desfeita antes do commit.
@@ -61,7 +63,9 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   rolagem), use `dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }))`. O passo
   que clica num botão de rolar (atributo, perícia, ataque) e não testa a janela usa o Ctrl + clique: o clique comum
   abre a janela, que fica esperando e derruba passos seguintes (no ciclo 25, a carga Tech deixou a janela aberta, e o
-  passo da ficha nova, bem depois, achou essa janela no lugar da pergunta dele).
+  passo da ficha nova, bem depois, achou essa janela no lugar da pergunta dele). O navegador do jogador entra com "Rolar
+  direto" ligado (a esquiva, o dano e o Death Save que o mestre pede rolam direto); o passo da janela do jogador
+  desliga e volta.
 - **Pergunta do DialogV2:** o texto fica em `.dialog-content`, e os botões em `.form-footer`. O `.window-content` e um
   `button[data-action]` solto pegam também os botões e os controles do cabeçalho (no ciclo 21, duas rodadas do G4
   falharam por isso, com o sistema certo).

@@ -162,6 +162,13 @@ export function aplicarDano({ dano, bonus = 0, sp = 0, local = 'corpo', ignorarP
 // Crítico do dano (p. 187): dois ou mais 6 nos dados de dano. Soma 5 de bônus direto no HP e uma Lesão Crítica.
 export const BONUS_CRITICO = 5;
 export const danoCritico = resultados => resultados.filter(valor => valor === 6).length >= 2;
+// A fórmula do dano: a da arma (ou outra: 2d6 do autofogo, 3d6 do cartucho), vezes o multiplicador do autofogo, mais o
+// modificador do mestre da janela de rolagem, que entra depois da multiplicação (como o CORE soma os modificadores no
+// dano do autofogo). Uma fórmula com mais termos vai entre parênteses na multiplicação ("(3d6 + 2) * 3").
+export function expressaoDoDano(base, { multiplicador = 1, modificador = 0 } = {}) {
+  const expressao = multiplicador > 1 ? `${/^\d+d\d+$/.test(base) ? base : `(${base})`} * ${multiplicador}` : base;
+  return modificador ? `${expressao} ${modificador < 0 ? '-' : '+'} ${Math.abs(modificador)}` : expressao;
+}
 
 // Death Save (p. 186): 1d10 + penalidade (a de base, das lesões, e +1 a cada Death Save que passou) contra BODY.
 // Passa tirando menos que BODY; o 10 natural sempre falha.
