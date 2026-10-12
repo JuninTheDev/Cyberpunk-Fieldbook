@@ -133,6 +133,11 @@ export function estadoDeFerimento(hp, max) {
   return { chave: 'ileso', rotulo: 'Ileso', penalidade: 0 };
 }
 
+// A penalidade do ferimento que entra nos testes. O Editor de Dor (supressão de dor) tira só a de gravemente ferido; a
+// de mortalmente ferido continua. Fontes: a wiki ("Pain Editor: Ignora penalidades de Seriously Wounded", system-catalog.js)
+// e o CORE (CPRActor#getWoundStateMods).
+export const penalidadeDoFerimento = (ferimento, supressaoDeDor = false) => (supressaoDeDor && ferimento?.chave === 'grave' ? 0 : ferimento?.penalidade ?? 0);
+
 // Humanidade máxima: EMP × 10, menos 2 por peça de cyberware instalada com perda de Humanidade (borgware, menos 4). Peça
 // sem perda (fashionware, o cyberware grátis de 2077) não reduz. Fonte: a wiki ("cada peça reduz o máximo em 2
 // (borgware, em 4). Peças com 0 de perda não reduzem") e o CORE (_calcMaxHumanity, que olha a perda estática da peça).

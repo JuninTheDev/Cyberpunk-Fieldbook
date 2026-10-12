@@ -278,12 +278,12 @@ export class AtorCPR extends Actor {
     return perda;
   }
 
-  // Tirar o cyberware devolve a Humanidade perdida na instalação (sem terapia, para simplificar por enquanto).
+  // Tirar o cyberware não devolve a Humanidade perdida: o máximo volta a subir sozinho (a peça deixa de contar), e a
+  // Humanidade só volta com terapia. Fontes: a wiki ("Humanidade, terapia e drogas": não dá para recuperar toda a
+  // Humanidade sem tirar cyberware, porque cada peça reduz o máximo) e o CORE (uninstallCyberware só recalcula o máximo).
   async desinstalarCyberware(item) {
     if (!item.system.instalado) return;
-    const perda = item.system.perdaHumanidade.sofrida;
     await item.update({ 'system.instalado': false, 'system.perdaHumanidade.sofrida': 0 });
-    await this.update({ 'system.humanidade.value': Math.min(this.system.humanidade.max, this.system.humanidade.value + perda) });
   }
 }
 

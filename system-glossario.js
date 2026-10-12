@@ -51,6 +51,8 @@
     t('Humanidade', 'Humanity', 'EMP × 10. Cai com cada cyberware instalado; a EMP efetiva é a dezena da Humanidade atual.', 'humanity', 'Humanidade e EMP'),
     t('Perda de Humanidade', 'Humanity Loss', 'O quanto de Humanidade um cyberware tira ao ser instalado (valor fixo ou rolado).', 'humanity', 'Humanidade e EMP'),
     t('Ciberpsicose', 'Cyberpsychosis', 'Transtorno dissociativo causado pelo cromo. Começa limítrofe na EMP 2; com EMP 0 é ciberpsicose, e com Humanidade negativa o personagem passa para o mestre.', 'humanity', 'Humanidade e EMP', ['ciberpsicótico', 'ciberpsicótica', 'cyberpsicose', 'Cyberpsychosis']),
+    t('Ganho de Humanidade', 'Humanity Gain', 'No Mission Kit, Humanidade que volta por um incidente bom ou pelo efeito de longo prazo do mês (amigos, família, comida fresca). Não passa da máxima da terapia.', 'humanity', 'Perda e ganho de Humanidade (Mission Kit)', ['Humanity Gain']),
+    t('Immunoblockers', 'Immunoblockers', 'Droga do Mission Kit contra a ciberpsicose: recupera 2d6 de Humanidade por um mês. O efeito secundário (DV21) pode custar 4d6.', 'humanity', 'Immunoblockers (Mission Kit)'),
 
     // ---------------- Netrunning do RED ----------------
     t('Interface', 'Interface', 'Habilidade de Role do Netrunner: dá as Ações NET e as habilidades Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Scanner, Slide, Virus e Zap.', 'netrunning', 'Habilidades de Interface'),
@@ -61,17 +63,19 @@
     t('Black ICE', 'Black ICE', 'Programa hostil que vigia a arquitetura e ataca o netrunner ou os programas dele.', 'netrunning', 'Black ICE'),
     t('Demônio', 'Demon', 'Black ICE inteligente que opera os nós de controle (torretas, drones) contra a equipe.', 'netrunning', 'Demônios', ['demônios']),
     t('REZ', 'REZ', 'Os "pontos de vida" de um programa, ICE ou daemon.', 'netrunning', 'Combate na NET', [], { exato: true }),
-    t('Cyberdeck', 'Cyberdeck', 'O computador do netrunner, com slots para programas e hardware. Em 2077, é um sistema operacional instalado no Neural Link.', 'net2077', 'Cyberdecks de 2077', ['cyberdecks']),
+    t('Cyberdeck', 'Cyberdeck', 'O computador do netrunner, com slots para programas e hardware. Nos anos 2070, encaixa na Neuroport Cyberdeck Port (50 m de alcance contra Neuroports); no suplemento de fã, é um sistema operacional no Neural Link.', 'net2077', 'Cyberdecks de 2077', ['cyberdecks']),
 
     // ---------------- Netrunning de 2077 ----------------
-    t('RAM', 'RAM', 'Em 2077, cada ação NET e cada quickhack gasta RAM do deck: mais cara na LocalNet (+1) e na SubNet (+2).', 'net2077', 'Resolução, RAM e cooling', [], { exato: true }),
+    t('RAM', 'RAM', 'Na rede do suplemento de fã de 2077, cada ação NET e cada quickhack gasta RAM do deck. Com as regras do Mission Kit, os quickhacks não gastam RAM.', 'net2077', 'Resolução, RAM e cooling', [], { exato: true }),
     t('Cooling', 'Cooling', 'Quanta RAM o deck recupera ao esfriar com uma Ação Carnal. Com um minuto de folga, esfria por completo.', 'net2077', 'Resolução, RAM e cooling'),
-    t('Quickhack', 'Quickhack', 'Hack rápido de 2077 contra uma pessoa ou máquina: custa RAM, só resiste quem percebe, e o dano ignora a armadura.', 'quickhacks', 'Como funcionam os quickhacks', ['quickhacks']),
+    t('Quickhack', 'Quickhack', 'Hack rápido contra o Neuroport de uma pessoa (Mission Kit): Interface + 1d10 contra a DV do nível (6, 8, 10 ou 12), um por alvo por turno. O nível que o netrunner faz depende do Rank de Interface.', 'quickhacks', 'Como funcionam os quickhacks', ['quickhacks']),
+    t('Jack In', 'Jack In', 'A Ação NET que entra no Neuroport de um alvo à vista (Mission Kit): Interface + 1d10 contra WILL + 1d10. Falhando, você entra, mas o alvo percebe.', 'net2077', 'Quickhacks no Neuroport', ['Jack Out']),
+    t('Passwall', 'Passwall', 'A barreira que cada Self-ICE põe no Neuroport (Mission Kit). Passa-se com um Breach por Passwall, contra DV 6, 8 ou 10.', 'net2077', 'O Neuroport como arquitetura NET', ['Passwalls']),
     t('Daemon', 'Daemon', 'Programa de 2077 instalado num alvo ou arquitetura para combater ou dar suporte (ICEpick, Datamine...).', 'quickhacks', 'Daemons', ['daemons']),
-    t('Breach', 'Breach', 'Quebrar uma senha ou abrir conexão direta com um nó para invadir um aparelho ou uma pessoa.', 'net2077', 'Habilidades de Interface nas três camadas'),
-    t('SubNet', 'SubNet', 'Camada da rede de 2077 que cobre de uma sala a uma torre inteira. Ações nela custam +2 de RAM até invadir o ponto de acesso.', 'net2077', 'As três camadas da rede', ['SubNets']),
-    t('LocalNet', 'LocalNet', 'Camada da rede de 2077 entre pessoas, como uma VPN. Ações nela custam +1 de RAM.', 'net2077', 'As três camadas da rede', ['LocalNets']),
-    t('White ICE', 'White ICE', 'ICE de defesa que soma o Rating nos testes NET de defesa (do Heaven Pup ao Kami Chip).', 'net2077', 'ICE em 2077'),
+    t('Breach', 'Breach', 'A Ação NET que passa um Passwall do Neuroport (o Self-ICE), Interface contra a DV dele. No Mission Kit, é o novo nome do Backdoor do RED.', 'net2077', 'Quickhacks no Neuroport'),
+    t('SubNet', 'SubNet', 'Camada da rede do suplemento de fã de 2077 que cobre de uma sala a uma torre inteira. Ações nela custam +2 de RAM até invadir o ponto de acesso.', 'net2077', 'As três camadas da rede', ['SubNets']),
+    t('LocalNet', 'LocalNet', 'Camada da rede do suplemento de fã de 2077 entre pessoas, como uma VPN. Ações nela custam +1 de RAM.', 'net2077', 'As três camadas da rede', ['LocalNets']),
+    t('White ICE', 'White ICE', 'ICE de defesa do suplemento de fã (do Heaven Pup ao Kami Chip). Com as regras do Kit, soma o Rating na WILL contra o Jack In e para expulsar o netrunner.', 'net2077', 'ICE em 2077'),
 
     // ---------------- Cyberware ----------------
     t('Neural Link', 'Neural Link', 'Implante-base que liga o cérebro ao cyberware. É exigido pelos Interface Plugs, pelo Chipware e pelo Speedware.', 'cyberware', 'Neuralware'),
@@ -83,25 +87,36 @@
     t('Fashionware', 'Fashionware', 'Cyberware cosmético, de baixa perda de Humanidade.', 'cyberware2077', 'Fashionware'),
     t('Borgware', 'Borgware', 'Cyberware pesado que transforma o corpo, como o Linear Frame e os braços extras.', 'cyberware', 'Borgware'),
     t('Ripperdoc', 'Ripperdoc', 'Médico de rua que instala, conserta e troca cyberware.', 'cyberware2077', 'Antes de instalar', ['ripperdocs']),
-    t('Smart Link', 'Smartgun Link', 'Cyberware de 2077 que permite usar armas Smart e liga a óptica ao sistema da arma. No RED, o Smartgun Link é um acessório de arma: +1 nos ataques à distância, com plugs de interface.', 'cyberware2077', 'Smart Link', ['smartgun link', 'Smartgun Link']),
+    t('Smart Link', 'Smart Link', 'Cyberware do suplemento de fã de 2077 que conecta a arma Smart, como o Subdermal Grip. Não confunda com o Smartgun Link do RED, um acessório de arma (+1 nos ataques à distância, com plugs de interface) que não faz de uma arma uma arma Smart.', 'cyberware2077', 'Smart Link', ['smartgun link', 'Smartgun Link']),
+    t('Neuroport', 'Neuroport', 'O pacote de cyberware dos anos 2070 (Mission Kit): Neural Link de 5 slots, Holophone, Biomonitor, Virtu, HUD, dois Shard Slots e Personal Link. Todo personagem começa com um, de graça e sem perda de Humanidade.', 'cyberware2077', 'Neuroport', ['Neuroports']),
 
     // ---------------- Armas de 2077 ----------------
-    t('Arma Power', 'Power weapon', 'A arma de fogo clássica de 2077. Todas têm o modo Ricochete.', 'weapons2077', 'Os três tipos', ['armas Power']),
-    t('Arma Tech', 'Tech weapon', 'Railgun miniaturizado de 2077: exótica, usa flechettes e tem a carga Tech.', 'weapons2077', 'Os três tipos', ['armas Tech']),
-    t('Arma Smart', 'Smart weapon', 'Arma de balas guiadas de 2077. Só funciona com o Smart Link; o ataque Smart é 10 + 1d10 (12 + 1d10 com várias balas).', 'weapons2077', 'Armas Smart', ['armas Smart']),
-    t('Ricochete', 'Ricochet', 'Modo das armas Power: tiro único contra um alvo atrás de cobertura, com a DV da tabela de autofogo e um dado a menos de dano.', 'weapons2077', 'Ricochete (Power)', ['ricochetear', 'ricocheteando']),
-    t('Carga Tech', 'Tech Charge', 'Modo das armas Tech: atravessa cobertura e abla mais a armadura; depois a arma precisa de uma rodada para esfriar.', 'weapons2077', 'Carga Tech'),
+    t('Rebuild', 'Rebuild', 'Acessório do Mission Kit (1.000eb, 2 slots, 1 hora para instalar) que transforma uma arma de fogo do RED em arma Power, Smart ou Tech.', 'weapons2077', 'Rebuilds', ['Rebuilds']),
+    t('Arma Power', 'Power weapon', 'Arma de fogo com Power Rebuild (Mission Kit): a lesão crítica causa 10 de dano bônus em vez de 5, e o tiro pode ricochetear com −4.', 'weapons2077', 'Power', ['armas Power']),
+    t('Arma Tech', 'Tech weapon', 'Arma eletromagnética com Tech Rebuild (Mission Kit): a mira vê vultos através de cobertura fina e, carregada, o próximo ataque atravessa a cobertura fina e ignora metade do SP.', 'weapons2077', 'Tech', ['armas Tech']),
+    t('Arma Smart', 'Smart weapon', 'Arma de balas guiadas com Smart Rebuild (Mission Kit): +1 nos ataques à distância, e só dispara conectada pelo Personal Link do Neuroport ou pelo Subdermal Grip.', 'weapons2077', 'Smart', ['armas Smart']),
+    t('Munição Smart melhorada', 'Improved Smart Ammunition', 'Munição do Mission Kit para armas Smart (50eb por 10): ignora escuridão, fumaça e neblina, e errar a DV por 5 ou menos dá outra chance com 14 + 1d10.', 'weapons2077', 'Munição Smart melhorada', ['Improved Smart Ammunition']),
+    t('Ricochete', 'Ricochet', 'Tiro de arma Power que ricocheteia numa superfície para acertar um alvo atrás de cobertura ou fora da linha de visão: −4 no ataque (no tiro mirado, só a penalidade do mirado).', 'weapons2077', 'Power', ['ricochetear', 'ricocheteando']),
+    t('Carga Tech', 'Tech Charge', 'Carregar a arma Tech gasta a Ação de Movimento e dura até disparar ou 20 rodadas: o próximo ataque é de CDT 1, atravessa cobertura fina e ignora metade do SP, e a cobertura não perde HP.', 'weapons2077', 'Tech'),
     t('Qualidade da arma', 'Weapon Quality', 'Ruim: emperra numa falha crítica. Excelente: +1 no ataque. Armas exóticas são de qualidade padrão.', 'weapons2077', 'Qualidade das armas', ['qualidade ruim', 'qualidade excelente']),
 
     // ---------------- Economia e Roles ----------------
     t('Eurodólar', 'Eurodollar (eb)', 'A moeda de Night City, escrita "eb". Na rua: eddies.', 'economy', 'Categorias de preço', ['eurodólares', 'eddies']),
-    t('Categoria de preço', 'Price Category', 'Faixas de preço dos itens. Em 2077: Barato 20eb, Cotidiano 50eb, Oneroso 100eb, Premium 500eb, Caro 1.000eb, Muito caro 5.000eb, Luxo 10.000eb, Super luxo 20.000eb ou mais.', 'economy', 'Categorias de preço', ['categorias de preço']),
+    t('Categoria de preço', 'Price Category', 'Faixas de preço dos itens (RED, que vale no Mission Kit): Barato 10eb, Cotidiano 20eb, Oneroso 50eb, Premium 100eb, Caro 500eb, Muito Caro 1.000eb, Luxuoso 5.000eb, Super Luxuoso 10.000eb ou mais.', 'economy', 'Categorias de preço', ['categorias de preço']),
     t('Estilo de vida', 'Lifestyle', 'Quanto o personagem gasta por mês com comida e cotidiano, além da moradia.', 'economy', 'Estilo de vida', ['estilos de vida']),
     t('Role', 'Role', 'A profissão do personagem (Solo, Netrunner, Fixer...), com uma habilidade especial que sobe por Rank, de 1 a 10.', 'roles', 'As dez Roles do RED', [], { semLink: true }),
     t('Rank', 'Rank', 'Nível da habilidade de Role, de 1 a 10.', 'roles', 'As dez Roles do RED', [], { exato: true }),
-    t('Night Market', 'Night Market', 'Mercado improvisado, montado por um fixer, que vende duas categorias de itens. A Economia de 2077 tem o gerador.', 'economy', 'Night Market', ['Night Markets', 'mercado noturno', 'mercados noturnos']),
-    t('Impacto Carismático', 'Charismatic Impact', 'Habilidade do Face em 2077 (do Rockerboy no RED): Rank + 1d10 contra DV 8 (uma pessoa), 10 (até 6) ou 12 (grupo enorme) para conseguir favores.', 'roles2077', 'Face', ['Charismatic Impact']),
-    t('Investigator', 'Investigator', 'Habilidade do Lawman em 2077, no lugar de Backup: casos ativos e um bônus de caso em Educação e Percepção.', 'roles2077', 'Lawman'),
+    t('Night Market', 'Night Market', 'Mercado improvisado, montado por um fixer, que vende duas categorias de itens. A página Economia tem o gerador.', 'economy', 'Night Market', ['Night Markets', 'mercado noturno', 'mercados noturnos']),
+    t('Impacto Carismático', 'Charismatic Impact', 'A habilidade de Role do Rockerboy: os fãs fazem favores para ele, maiores conforme o Rank.', 'roles', 'As dez Roles do RED', ['Charismatic Impact']),
+    t('Investigator', 'Investigator', 'Habilidade opcional do Lawman no suplemento de fã de 2077, no lugar de Backup: casos ativos e um bônus de caso em Educação e Percepção.', 'roles2077', 'Lawman com Investigator (suplemento de fã)'),
+
+    // ---------------- Black Chrome ----------------
+    t('Acesso Nômade', 'Nomad Access', 'Regra do Black Chrome: quando sobe o Rank de Moto, o Nomad pode pôr na frota da família qualquer veículo com Acesso Nômade igual ou menor que o novo Rank, com todos os upgrades que ele já traz.', 'bcGuia', 'Acesso Nômade', ['Nomad Access']),
+    t('CBK', 'CBK (Cee Book)', 'O app grátis de Agente dos Mercados Noturnos (Black Chrome): mostra os anúncios de cada barraca, recebe os avisos do fixer e faz a compra.', 'bcGuia', 'O que é o Black Chrome', [], { exato: true }),
+    t('Cyberdedo', 'Cyberfinger', 'Cyberware em forma de dedo (Black Chrome), instalado no shopping numa Modular Finger Cyberhand (5 dedos) ou na Enthusiast da Dynalar (8 dedos).', 'bcCyberware', 'Cyberdedos', ['cyberdedos', 'Cyberfinger', 'Cyberfingers']),
+    t('Quadro linear', 'Linear Frame', 'Exoesqueleto que aumenta o BODY enquanto está ligado. Externo: vestido e ligado por Interface Plugs. Interno: instalado como borgware. Os do Black Chrome deixam o BODY em 12.', 'bcQuadros', 'Quadros lineares', ['quadros lineares', 'Linear Frame', 'Linear Frames']),
+    t('Combinação', 'Combination', 'Palavra-chave do Black Chrome: a arma junta duas ou mais armas, com um modo para cada uma. Você escolhe o modo a cada ataque, sem gastar Ação.', 'bcGuia', 'Palavras-chave', [], { semLink: true }),
+    t('Dano direto no HP', 'Direct HP damage', 'Dano que sai direto do HP: a armadura não reduz nem se desgasta, e o lugar do corpo não multiplica.', 'bcGuia', 'Palavras-chave', ['direto no HP']),
 
     // ---------------- Avanço e equipamento ----------------
     t('Pontos de Melhoria', 'Improvement Points (IP)', 'Ganhos no fim de cada sessão. Subir uma perícia custa 20 × o novo nível (×2 nas difíceis); subir o Rank da Role, 60 × o novo Rank.', 'advancement', 'Gastar Pontos de Melhoria', ['Ponto de Melhoria', 'Improvement Points']),

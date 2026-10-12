@@ -570,7 +570,7 @@ Quem sai deixa algo para trás. Estes documentos entram quando a decisão do gru
 ### H-29 · A canção proibida
 
 - **Para os jogadores:** Luzes acesas (canção)
-- **Onde:** qualquer momento. Rádios piratas, um chip numa feira, ou a lembrança do personagem com o gancho de Rockerboy ou Face (a música de protesto de [Ganchos dos personagens](ganchos-dos-personagens.md#ganchos-por-role)).
+- **Onde:** qualquer momento. Rádios piratas, um chip numa feira, ou a lembrança do personagem com o gancho de Rockerboy (a música de protesto de [Ganchos dos personagens](ganchos-dos-personagens.md#ganchos-por-role)).
 - **Revela:** nada de objetivo. É a memória cultural do Campo-4: "um hospital que queimou com as luzes acesas".
 - **Para que serve:** o jogador pode cantar o refrão. Se alguém recitar para Tamsin, ela se levanta.
 

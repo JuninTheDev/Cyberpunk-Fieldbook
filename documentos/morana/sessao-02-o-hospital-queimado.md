@@ -230,9 +230,8 @@ Destaques: quem chegou ao andar 6 da arquitetura e aguentou o olhar de Morana (E
 
 ### Depois da sessão
 
-- Atualize os três relógios no diário da campanha.
-- Anote onde está cada parte de Morana (Chave, Gatilho, Coleira).
-- Anote o que Iskra sabe sobre Kobo e o que o grupo sabe sobre "K.E.".
+- Em Estado da campanha, na wiki: marque os três relógios, com quem está cada parte de Morana (Chave, Gatilho, Coleira), a situação de Endo e de Iskra e os segredos revelados.
+- Anote ali o que Iskra sabe sobre Kobo e o que o grupo sabe sobre "K.E." (o campo "Na mesa" de cada um).
 
 ### Perguntas para fechar a sessão
 

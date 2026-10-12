@@ -113,7 +113,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Instalar** desconta a Humanidade pela perda rolada (Shift: pela média).
   - **Humanidade máxima:** 10 × EMP, menos 2 por peça instalada que tem perda de Humanidade (borgware, menos 4). Peça sem perda, como o cyberware grátis de 2077, não reduz.
   - Os efeitos do cyberware só valem instalado. O Kerenzikov, por exemplo, dá +2 na iniciativa.
-  - **Tirar** devolve a Humanidade.
+  - **Tirar** não devolve a Humanidade perdida: o máximo volta a subir (a peça deixa de contar), e a Humanidade perdida só volta com terapia, como na wiki e no CORE.
+  - **Editor de Dor:** tira só a penalidade de gravemente ferido (−2); a de mortalmente ferido (−4) continua.
 - **Janela "Personagens da wiki"** (só o mestre; botão no alto da aba de Atores): cada personagem da wiki com o que dá para fazer neste mundo, que é importar (como foi criado), importar da mesa (como está no Foundry 12) ou abrir a ficha, com o dono no Foundry escolhido na linha. Também mostra os pedidos da loja que esperam o mestre, com Aprovar (entrega na hora) e Recusar (com o motivo, que o jogador vê). Os avisos da última importação ficam no alto. Pela macro: `game.system.api.abrirJanelaDaWiki()`.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
   - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e a especialização, e dinheiro (no extrato, a linha "Dinheiro inicial (criador da wiki)");
@@ -130,7 +131,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - os itens como estavam: equipados ou guardados, o pente carregado e com qual munição, o SP que sobrou, o cyberware instalado, o que está dentro do deck, da arma e do veículo;
   - cada item acha o catálogo pelo uid da wiki (da criação, de um pedido, da família do Nomad) ou, sem uid, pelo nome do CORE. O que não achar vira aviso;
   - os STATs base vêm da criação: a ficha da mesa manda os de agora, já com a armadura e as lesões, que aqui voltam pelos itens.
-- **Pedidos da loja:** o jogador pede na loja da wiki e o mestre aprova na página do personagem, na wiki. A cada minuto, o mestre ativo entrega o aprovado: cria os itens (no lugar e com a munição que o jogador pediu), desconta o dinheiro (no extrato, "Compra na wiki: " e os itens) e marca o pedido como entregue. O cyberware chega sem instalar (instale pela ficha, que rola a Humanidade). Sem dinheiro na mesa, o pedido fica aprovado com o erro, e a wiki mostra "Tentar de novo". Cada item leva o uid do pedido, então nada sai em dobro. Pela macro: `game.system.api.wiki.entregarPedidos()`. Tudo o que a loja da wiki vende (o CORE e o conteúdo de 2077) existe aqui. Um item que um dia não existir vira aviso e não conta como entregue para a wiki.
+- **Pedidos da loja:** o jogador pede na loja da wiki e o mestre aprova na página do personagem, na wiki. A cada minuto, o mestre ativo entrega o aprovado: cria os itens (no lugar e com a munição que o jogador pediu), desconta o dinheiro (no extrato, "Compra na wiki: " e os itens) e marca o pedido como entregue. O cyberware chega sem instalar (instale pela ficha, que rola a Humanidade). Sem dinheiro na mesa, o pedido fica aprovado com o erro, e a wiki mostra "Tentar de novo". Cada item leva o uid do pedido, então nada sai em dobro. Pela macro: `game.system.api.wiki.entregarPedidos()`. Tudo o que a loja da wiki vende existe aqui (o CORE e o 2077, o do Mission Kit e o do suplemento de fã), **menos o Black Chrome**, que ainda falta. Um item que não existir vira aviso e não conta como entregue para a wiki.
+  - **Só o ator ligado:** entrega e manda a ficha só o ator ligado ao personagem na wiki (o da última importação). Uma cópia antiga no mundo, ou o mundo antigo do Foundry 12 aberto depois da migração, a wiki recusa (409 "ator antigo"), e o sistema para de mandar sem avisar.
 
 ## Configurações (Configurações → Sistema)
 
@@ -154,7 +156,7 @@ As do módulo cpr-2077, para as armas de 2077, com os mesmos padrões:
 - **A carga Tech esfria uma rodada** (padrão: sim).
 
 E as da wiki:
-- **Endereço da wiki** (padrão: `http://localhost:8000`).
+- **Endereço da wiki** (padrão: vazio). Vazio, o sistema deduz como o cpr-2077: `wiki.<domínio>` quando a mesa abre em `mesa.<domínio>` (o servidor), ou `http://localhost:8000` com tudo no mesmo computador.
 - **Mandar a ficha para a wiki** (de cada navegador; padrão: sim): veja "Na mesa".
 
 E a do navegador de cada um:
@@ -163,7 +165,11 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
-- **Das armas de 2077,** as regras de alguns modelos (a Satara, a Burya, a Senkoh, o +1 entre 13 e 50 m: veja o ROADMAP), e o cyberware que é arma.
+- **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
+- **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
+  Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
+  flag `arma2077`.
+- **O cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm).
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
@@ -174,7 +180,7 @@ E a do navegador de cada um:
   - **Onde instala:** em `%LOCALAPPDATA%\FoundryVTT\Data\systems\cpr-fieldbook` (`FOUNDRY_DATA=...` troca a pasta).
   - **Compêndios:** na primeira vez, ou quando o catálogo muda, o instalador gera os compêndios em `packs/` (fora do git) com o npx, e para isso precisa de internet.
   - **Foundry aberto:** feche e abra de novo para ele ver o sistema. Depois, crie um mundo novo com o sistema **Cyberpunk RED — Fieldbook**.
-- **Endereço da wiki:** em *Configurações → Sistema → Endereço da wiki*.
+- **Endereço da wiki:** com a mesa em `mesa.<domínio>`, o sistema deduz sozinho. Senão, ou para outro endereço, em *Configurações → Sistema → Endereço da wiki*.
 
 ## Conteúdo
 
@@ -186,9 +192,25 @@ E a do navegador de cada um:
   - 22 lesões críticas e as duas tabelas, com o nome e o texto em português das tabelas da wiki;
   - as 61 perícias, com os nomes em português da tabela da wiki;
   - as 13 tabelas de DV.
-- **2077:** `build/conteudo-2077.mjs` converte o suplemento de fã da própria wiki (`system-2077.js` e `system-net.js`), os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele: 46 armas e 5 flechettes, 57 cyberwares, 21 cyberdecks, 16 quickhacks e 5 daemons. A classe de cada arma (Power, Tech ou Smart) e as opções dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`); as balas da rajada Tech saem do texto de cada arma.
+- **2077:** `build/conteudo-2077.mjs` converte o 2077 da própria wiki (`system-2077.js` e `system-net.js`): o do **Mission Kit** (a base) e o do suplemento de fã adaptado. São os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele:
+  - 46 armas, os 3 Rebuilds e as 9 munições Smart melhorada do Kit;
+  - 61 cyberwares (com o Neuroport e as opções do Kit) e a droga Immunoblockers;
+  - 21 cyberdecks, 22 quickhacks (os 11 do Kit não se compram) e 5 daemons.
+
+  A classe de cada arma (Power, Tech ou Smart), a origem (Kit ou fã) e as regras próprias dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`). Os modos ainda seguem o suplemento de fã (ROADMAP).
 - **Os mesmos ids da loja da wiki** (`core_weapons:assault-rifle`, `armas-2077:arasaka-hjke-11-yukimura`): é por eles que o importador acha cada item.
 - **Efeitos situacionais** do CORE (Audição Amplificada, Image Enhance, as lesões de olho, ouvido, mão e mandíbula, o Agent, a iniciativa do Sandevistan) entram como efeitos à parte, que não somam sozinhos: a janela de rolagem os oferece, e o rolar direto usa os ligados por padrão. A luneta de precisão não vira efeito: a regra dela, pela distância do alvo, está nas regras do ataque. O build lista o que fica de fora.
+
+## Migração da mesa do Foundry 12
+
+O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As ferramentas:
+- **Personagens:** `game.system.api.wiki.importarDaMesa(id, donoId)`, pela ficha "Na mesa" (acima).
+- **Cenas, diários e playlists:** `node foundry-sistema/migracao/pacote-das-cenas.mjs --data <pasta Data do Foundry 12> --mundo <id> --saida <pasta>`.
+  - Gera o módulo `arquivo-da-mesa`, com uma Aventura e os arquivos que as cenas usam: mapas, vídeos, músicas e os retratos dos tokens.
+  - Os caminhos passam a apontar para dentro do módulo, então nada depende do sistema CORE, dos módulos antigos nem da pasta do mundo antigo.
+  - Os tokens vêm sem ator. Atores, itens, combates e macros ficam de fora.
+  - O script só lê o mundo: copia os bancos antes de abrir. No Foundry 14, copie o módulo para `Data/modules`, ligue-o no mundo novo e importe a Aventura.
+- **Backup antes:** `sudo bash servidor/backup-completo.sh`, no servidor.
 
 ## Teste
 

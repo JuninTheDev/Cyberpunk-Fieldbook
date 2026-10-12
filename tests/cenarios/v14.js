@@ -93,7 +93,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 51 && t['cyberware-2077'] === 57 && t['netrunning-2077'] === 42 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 58 && t['cyberware-2077'] === 62 && t['netrunning-2077'] === 48 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -208,6 +208,21 @@ module.exports = async ({ edge, servidores, r }) => {
         return { antes, depois: { ini: a.system.iniciativa, efeitoAtivo: ker.effects.contents[0]?.active, hum: a.system.humanidade.value, humMax: a.system.humanidade.max, emp: a.system.empAtual, sp: a.system.armadura.corpo.sp }, itens: a.items.size, tamanhoCatalogo: Object.keys(cat).length };
       })()`);
       return [info.antes.ini === 8 && info.antes.efeitoAtivo === false && info.depois.ini === 10 && info.depois.efeitoAtivo === true && info.depois.hum === 36 && info.depois.humMax === 48 && info.depois.emp === 3 && info.depois.sp === 11 && info.itens === 4,
+        JSON.stringify(info)];
+    });
+
+    await r.passo('desinstalar cyberware: a Humanidade perdida não volta (só a terapia devolve); o máximo sobe 2 e o efeito para', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const a = game.actors.getName('Atiradora');
+        const ker = a.items.getName('Kerenzikov');
+        await a.desinstalarCyberware(ker);
+        const fora = { hum: a.system.humanidade.value, humMax: a.system.humanidade.max, ini: a.system.iniciativa, efeitoAtivo: ker.effects.contents[0]?.active };
+        // Os passos seguintes contam com o Kerenzikov instalado e a Humanidade 36: devolve o estado de antes.
+        await a.instalarCyberware(ker, { rolar: false });
+        await a.update({ 'system.humanidade.value': 36 });
+        return { fora, volta: { hum: a.system.humanidade.value, humMax: a.system.humanidade.max, ini: a.system.iniciativa } };
+      })()`);
+      return [info.fora.hum === 36 && info.fora.humMax === 50 && info.fora.ini === 8 && info.fora.efeitoAtivo === false && info.volta.hum === 36 && info.volta.humMax === 48 && info.volta.ini === 10,
         JSON.stringify(info)];
     });
 
@@ -1020,13 +1035,23 @@ module.exports = async ({ edge, servidores, r }) => {
         await pronta.recarregar();
         return { arma: pronta, municao: criados.find(i => i.type === 'municao') };
       };
+      // Instala um cyberware de 2077 na Atiradora e, ao tirar, devolve a Humanidade de antes: desinstalar não a devolve
+      // (só a terapia), e os passos seguintes contam com ela.
+      window.__humanidadeAntes = {};
       window.__cyber2077 = async id => {
         const cat = await game.system.api.wiki.carregarCatalogo();
         const [item] = await __ator('Atiradora').createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat[id])]);
+        window.__humanidadeAntes[item.id] = __ator('Atiradora').system.humanidade.value;
         await __ator('Atiradora').instalarCyberware(item, { rolar: false });
         return item;
       };
-      window.__tirarCyber = async item => { await __ator('Atiradora').desinstalarCyberware(item); await item.delete(); };
+      window.__tirarCyber = async item => {
+        await __ator('Atiradora').desinstalarCyberware(item);
+        await item.delete();
+        const antes = window.__humanidadeAntes[item.id];
+        if (antes !== undefined) await __ator('Atiradora').update({ 'system.humanidade.value': antes });
+        delete window.__humanidadeAntes[item.id];
+      };
       window.__linhaDaArma = arma => document.querySelector('.application.ficha-personagem tr[data-item-id="' + arma.id + '"]');
       window.__comAvisos = async acao => {
         const avisos = [];
@@ -1565,7 +1590,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const a = __ator('Atiradora');
         const capanga = __ator('Capanga');
         const rifle = a.items.getName('Assault Rifle');
-        const inicio = { hp: capanga.system.hp.value, pente: rifle.system.pente.value };
+        const inicio = { hp: capanga.system.hp.value, pente: rifle.system.pente.value, humanidade: capanga.system.humanidade.value };
         const [tuner] = await capanga.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['cyberware-2077:reflex-tuner'])]);
         await capanga.instalarCyberware(tuner, { rolar: false });
         const lamina = foundry.utils.deepClone(cat['core_weapons:medium-melee']);
@@ -1607,7 +1632,8 @@ module.exports = async ({ edge, servidores, r }) => {
           await capanga.desinstalarCyberware(tuner);
           await tuner.delete();
           await capanga.unsetFlag('${S}', 'atingido');
-          await capanga.update({ 'system.hp.value': inicio.hp });
+          // Desinstalar não devolve a Humanidade (só a terapia): o passo a devolve.
+          await capanga.update({ 'system.hp.value': inicio.hp, 'system.humanidade.value': inicio.humanidade });
           await rifle.update({ 'system.pente.value': inicio.pente });
           window.__fila = [];
         }
@@ -2552,7 +2578,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = info.veiculos.length === 2
         && JSON.stringify(info.veiculos[0]) === JSON.stringify({ nome: 'Compact Groundcar', sdp: [70, 70], assentos: 6, familia: true, upgrades: ['Heavy Chassis', 'Seating Upgrade'] })
         && JSON.stringify(info.veiculos[1]) === JSON.stringify({ nome: 'Roadbike', sdp: [35, 35], assentos: 2, familia: true, upgrades: [] })
-        && JSON.stringify(info.de2077) === JSON.stringify([['Arasaka HJKE-11 Yukimura', 'smart', 30, 1]]) && info.notas.length === 0
+        && JSON.stringify(info.de2077) === JSON.stringify([['Arasaka HJKE-11 Yukimura', 'smart', 30, 0]]) && info.notas.length === 0
         && [carro.uid, moto.uid, ...carro.upgrades.map(u => u.uid), 'loja:teste-2077'].every(uid => entregues.includes(uid))
         && info.moto.rank === 4 && info.moto.pericias.every(t => t === 'Moto 4') && info.moto.partes.includes('Moto 4') && info.moto.fora === null;
       return [ok, `${JSON.stringify(info)} · entregues: ${entregues.length}`];

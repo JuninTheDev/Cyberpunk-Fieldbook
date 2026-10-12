@@ -1,7 +1,7 @@
 // Os outros módulos da mesa, sempre pela API pública deles e só quando estão ligados:
-// - cpr-2077: a classe da arma (Power, Tech, Smart), os modos de 2077 (Ricochete, Carga, Rajada, Smart), o aviso do
-//   Smart Link, o "esfriando" da carga Tech e a coronha retrátil. Os modos rolam pelo createRoll do sistema, que o
-//   cpr-2077 troca; o painel só grava a mesma flag que a ficha grava.
+// - cpr-2077: a classe da arma (Power, Tech, Smart, com as regras do Mission Kit), o modo Ricochete, a munição Smart
+//   melhorada, os avisos (sem conexão Smart) e os botões de estado (carregar a arma Tech, o ferrolho, a coronha). O
+//   Ricochete rola pelo createRoll do sistema, que o cpr-2077 troca; o painel só grava a mesma flag que a ficha grava.
 // - Fluxo de Combate: os ataques do painel passam pelo cartão do sistema (CPRChat.RenderRollCard), que o Fluxo pega;
 //   o painel mostra se o ataque vai entrar no fluxo (alvo marcado, mestre na mesa) e o status Suprimido.
 // - NET Architect: o token conectado ganha o selo NET (ponto de acesso, Ações NET do turno), o botão que abre a janela

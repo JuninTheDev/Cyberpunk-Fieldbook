@@ -97,10 +97,10 @@ module.exports = async ({ edge, servidores, r }) => {
     const titulo = await edge.evaluate(`[...document.querySelectorAll('#cc-step h3')].map(h => h.textContent).find(t => /Lifepath da Role/.test(t)) || ''`);
     return [respostas.length === 4 && respostas.every(Boolean) && /Solo/.test(titulo), `${titulo} · respostas ${respostas.join(',')}`];
   });
-  await r.passo('passo 5: pacote do Solo; Neural Link já vem grátis; EMP 5 → 4', async () => {
+  await r.passo('passo 5: pacote do Solo; Neural Link já vem no Neuroport; EMP 5 → 4', async () => {
     await passo(5);
     const t = await texto('#cc-step');
-    return [/já vem grátis em 2077/.test(t) && /Humanidade 43\/50/.test(t) && /EMP 4/.test(t), t.match(/Humanidade[^P]*/)?.[0]];
+    return [/já vem no Neuroport/.test(t) && /Humanidade 43\/50/.test(t) && /EMP 4/.test(t), (t.match(/Humanidade \d[^P]*/) || [])[0]];
   });
   // Montagem: o pacote já vem montado; descarregar uma arma e tirar a armadura aparecem na ficha.
   const abaMontagem = async aba => clicar(`[data-mont-tab="${aba}"]`, 200);
@@ -156,7 +156,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await escolherRadio('[data-moradia="capsula"]');
     const barato = await totalMoradia();
     await escolherRadio('[data-moradia="conteiner"]');
-    await escolherRadio('[data-estilo-vida="generico"]');
+    await escolherRadio('[data-estilo-vida="kibble"]');
     const final = await totalMoradia();
     return [/Por mês 600eb/.test(barato) && /depois disso 500eb/.test(barato) && /1º mês grátis/.test(final), `${barato} · ${final}`];
   });
@@ -306,14 +306,14 @@ module.exports = async ({ edge, servidores, r }) => {
     const red = await texto('#cc-step');
     await edge.evaluate("(() => { const r = document.querySelector('[data-kitnet=\"2077\"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()");
     await edge.sleep(250);
-    for (const id of ['short-circuit', 'overheat', 'bait']) {
+    for (const id of ['weapon-glitch', 'request-backup', 'bait']) {
       await edge.evaluate(`(() => { const c = document.querySelector('[data-quickhack="netrunning-2077:${id}"]'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
       await edge.sleep(200);
     }
     const travado = await edge.evaluate("document.querySelector('[data-quickhack=\"netrunning-2077:reboot-optics\"]').disabled");
     const itens = await edge.evaluate("[...document.querySelectorAll('.cc-items li')].map(li => li.textContent)");
     const pacote = itens.join(' | ');
-    return [/Cyberdeck/.test(red) && /Militech Hunter MK\.1/.test(pacote) && /Short Circuit/.test(pacote) && /Bait/.test(pacote) && !/Cyberdeck/.test(pacote) && !/Worm/.test(pacote) && travado, `quarto travado: ${travado} · ${pacote.slice(0, 160)}`];
+    return [/Cyberdeck/.test(red) && /Militech Hunter MK\.1/.test(pacote) && /Weapon Glitch/.test(pacote) && /Bait/.test(pacote) && !/Cyberdeck/.test(pacote) && !/Worm/.test(pacote) && travado, `quarto travado: ${travado} · ${pacote.slice(0, 160)}`];
   });
 
   // ---------- Pacote Completo e loja ----------
@@ -424,6 +424,17 @@ module.exports = async ({ edge, servidores, r }) => {
     }
     const aviso = await texto('#cc-shop .note-status');
     return [achados['linear frame'] === 0 && achados['malorian arms'] === 0 && achados['rifle de assalto (excelente)'] === 0 && achados.medscanner > 0 && /itens avançados ficam fora/.test(aviso), JSON.stringify(achados)];
+  });
+  await r.passo('loja de criação: o Black Chrome fica à venda e marcado (o Cyberdedo laser sim; a Weeping Reaver, acima do teto, não)', async () => {
+    await buscarNaLoja('cyberdedo laser');
+    const dedo = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="black-chrome_cyberware:laser-pointer-cyberfinger"]').length`);
+    const marca = await edge.evaluate(`(document.querySelector('[data-shop-row="black-chrome_cyberware:laser-pointer-cyberfinger"] .cc-shop-sub') || {}).textContent || ''`);
+    await buscarNaLoja('weeping reaver');
+    // A katana passa do teto; os três fluidos dela (100eb) aparecem.
+    const katana = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="black-chrome_weapons:arasaka-weeping-reaver-katana"]').length`);
+    const fluidos = await edge.evaluate(`document.querySelectorAll('[data-shop-buy^="black-chrome_ammo:arasaka-"]').length`);
+    await buscarNaLoja('');
+    return [dedo === 1 && /Black Chrome/.test(marca) && katana === 0 && fluidos === 3, `cyberdedo: ${dedo} · "${marca}" · katana: ${katana} · fluidos: ${fluidos}`];
   });
   await r.passo('comprar sem dinheiro deixa o saldo negativo e avisa', async () => {
     await buscarNaLoja('medscanner');
@@ -660,22 +671,22 @@ module.exports = async ({ edge, servidores, r }) => {
     await abrir(edge, 'personagens', 1000);
     return [/Lin.*1 esperando você/.test(quadro) && /aprovado, esperando o Foundry entregar/.test(pedidos) && jaAberto && /1 para aprovar/.test(alerta), `${quadro.slice(0, 120)} · ${pedidos.slice(0, 120)} · abriu nos pedidos ${jaAberto} (${alerta})`];
   });
-  await r.passo('regras da loja atrás da engrenagem: baixar o teto para 500eb esconde os de 1.000eb', async () => {
+  await r.passo('loja do mestre: pedidos, regras e catálogo à vista; baixar o teto para 500eb esconde os de 1.000eb', async () => {
     await abrir(edge, 'loja', 1500);
-    const fechado = await edge.evaluate(`document.querySelector('[data-cc-rules]').hidden`);
-    await clicar('[data-shop-config]');
-    const temQuadro = await edge.evaluate(`!document.querySelector('[data-cc-rules]').hidden && document.querySelector('[data-rule-teto]').offsetHeight > 0`) && fechado;
+    const quadros = await edge.evaluate(`({ regras: !document.querySelector('[data-cc-rules]').hidden && document.querySelector('[data-rule-teto]').offsetHeight > 0, pedidos: !!document.querySelector('[data-gm-orders]'), titulo: document.querySelector('#content h2').textContent })`);
     await edge.shot('loja-mestre');
     await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '500'; })()`);
     await clicar('[data-rule-save]', 1500);
     const salvo = await texto('#cc-rules-msg');
     await buscarNaLoja('medscanner');
-    const comprar = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="core_gear:medscanner"]').length`);
+    const situacao = await texto('[data-shop-row="core_gear:medscanner"] .shop-status');
     await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '1000'; })()`);
     await clicar('[data-rule-save]', 1500);
+    const depois = await texto('[data-shop-row="core_gear:medscanner"] .shop-status');
     const teto = (await (await fetch(`${gm}/api/loja/regras`)).json()).regras.teto;
     await abrir(edge, 'personagens', 1200);
-    return [temQuadro && /Regras salvas/.test(salvo) && comprar === 0 && teto === 1000, `engrenagem abre o quadro ${temQuadro} · ${salvo} · medscanner à venda com 500: ${comprar} · teto final ${teto}`];
+    return [quadros.regras && quadros.pedidos && /mestre/i.test(quadros.titulo) && /Regras salvas/.test(salvo) && /acima de 500eb/i.test(situacao) && /Visível/i.test(depois) && teto === 1000,
+      `${JSON.stringify(quadros)} · ${salvo} · medscanner com 500: "${situacao}", com 1.000: "${depois}" · teto final ${teto}`];
   });
   await r.passo('mestre cria um código pela tela', async () => {
     await digitar('#cc-account-name', 'Caio');

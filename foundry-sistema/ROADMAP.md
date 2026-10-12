@@ -40,6 +40,26 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
   - **ficam para a janela de rolagem (P1), porque são situacionais:** o Investigator do Lawman (o Rank em Educação e
     Percepção, e nas perícias da especialização, com pista de caso ativo) e o Netrunner de 2077 (o Rank de Interface nos
     testes técnicos enquanto corre a NET). No Foundry 12, o do Lawman se marca na janela de rolagem.
+- [x] **Editor de Dor** (desvio de regra, achado na revisão de 2026-10-12): zerava também o −4 de mortalmente ferido.
+  Fonte: a wiki ("Pain Editor: Ignora penalidades de Seriously Wounded", system-catalog.js) e o CORE
+  (`getWoundStateMods`). Agora tira só o −2 de gravemente ferido. (Ciclo 31)
+- [x] **Desinstalar cyberware devolvia a Humanidade** (desvio de regra, achado na revisão de 2026-10-12): dava para
+  tirar e pôr de novo para rolar a perda outra vez. Fonte: a wiki ("Humanidade, terapia e drogas": cada peça reduz o
+  máximo, e a Humanidade volta pela terapia) e o CORE (`uninstallCyberware` só recalcula o máximo). (Ciclo 31)
+- [x] **O master na branch** (Mission Kit, Black Chrome, visual novo): o build quebrava no grupo `neuroport` do Kit, e
+  os testes de regra caíam para 29 de 31. Agora o conversor de 2077 segue o Kit. (Ciclo 31)
+- [ ] **As armas de 2077 pelo Mission Kit** (desvio de regra desde a integração da revisão, ciclos 31 e 32): a wiki
+  trocou as regras do suplemento de fã pelas do Kit, e os modos dos ciclos 17 e 18 ainda seguem o suplemento:
+  - os modos de cada classe: a Power (+5 na lesão crítica e o Ricochete a −4, −2 com o Ballistic Coprocessor), a Smart
+    (+1, e só dispara conectada pelo Personal Link ou pelo Subdermal Grip) e a Tech (Carregar gasta a Ação de Movimento;
+    carregada, o próximo ataque é de CDT 1, atravessa cobertura fina e ignora metade do SP);
+  - as regras de cada arma que a wiki guarda em `regras` (as balas por tiro e o dano com menos, a carga da Burya e da
+    Omaha, o BODY mínimo, a lesão de quem dispara sem cromo) e o +1 em tiro único entre 13 e 50 m (Nowaki, Masamune,
+    Kyubi);
+  - os Rebuilds e a segunda chance da munição Smart melhorada.
+
+  As armas já entram com a classe, a origem e as regras próprias na flag `arma2077` (Ciclos 12 e 31). O
+  `foundry-2077/scripts/armas2077.mjs` do master tem a implementação do Foundry 12.
 
 ## P1: bugs, testes de regressão e confiabilidade
 
@@ -94,6 +114,14 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
   aprovar e recusar pedidos (Ciclo 16).
 - [ ] **Da wiki, o resto:** "Atualizar da wiki" (hoje, importar de novo cria outro ator), os avisos de envio, o retrato e
   a campanha da wiki de cada mundo (a janela lista os personagens de todas as campanhas).
+- [x] **A mesa no servidor e a migração** (Ciclo 31):
+  - o endereço da wiki deduzido de `mesa.<domínio>`, como o cpr-2077;
+  - só o ator ligado ao personagem entrega pedidos e manda a ficha (a wiki recusa o "ator antigo");
+  - o pacote das cenas: as cenas, os diários e as playlists do mundo do Foundry 12 num módulo, com os arquivos.
+- [ ] **Black Chrome** (bloqueador da migração para quem tiver os itens): os 176 itens da loja.
+  - Converter dos compêndios do CORE (`black-chrome_*` e `dlc_black-chrome-plus`): armas com Combinação, cyberdedos, Linear Frames, moda, equipamento e veículos.
+  - Mais as regras novas (dano direto no HP, Combinação).
+  - Hoje o importador e os pedidos avisam e não entregam.
 - [ ] **Inventário:** usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da
@@ -143,24 +171,15 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
   cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.
-- [x] **Armas de 2077, os modos de cada classe** (bloqueador da migração, Ciclo 17): o Ricochete da Power (DV da tabela
+- [x] **Armas de 2077, os modos de cada classe** (bloqueador da migração, Ciclo 17; pelo suplemento de fã, e o Kit
+  está no P0): o Ricochete da Power (DV da tabela
   de autofogo, um dado a menos, +2 do Ballistic Coprocessor); a Carga e a Rajada Tech (a janela pergunta a cobertura, o
   que atravessa, a ablação 4 ou 2, as balas da rajada de cada arma, a arma que esfria uma rodada); o teste Smart (10 ou
   12 + 1d10, só com o Smart Link), com as três configurações do cpr-2077 (os mesmos padrões).
 - [x] **Armas de 2077, as regras de cada modelo que o texto deixa claras** (Ciclo 18): os dois canos da Palica (teste
   Smart 12 + 1d10) e da Testera (4d6), com 2 cartuchos; os dois alvos da Kappa; a coronha recolhida da Dian (−1, pelo
   botão da ficha); as 7 balas do autofogo da Lexington. As que só disparam cartucho não mostram o Ricochete.
-- [ ] **Armas de 2077, o resto das regras de cada modelo:**
-  - **esperam a decisão da mesa** (MIGRATION_STATUS, dúvidas): a carga da Satara (os dois cartuchos, 4d6), a Burya
-    (todo tiro é carga), o supressivo da Senkoh pela carga (as 30 balas), e se "dispara três balas" e "só dispara em
-    rajadas de três" gastam 3 balas por tiro;
-  - **o +1 em tiro único entre 13 e 50 m** da Nowaki, da Masamune e da Kyubi: um bônus pela distância de cada alvo,
-    como a luneta de precisão (ciclo 25);
-  - **o que não é regra de ataque:** o BODY mínimo (Burya, Grad, SOR-22) e a recarga de duas Ações.
-
-  A descrição de cada arma diz o que o sistema faz e que o resto é com o mestre, e a carga com cartucho é recusada com
-  aviso.
-- [ ] **Cyberware que é arma** (Wolvers, Mantis Blades, Gorilla Arms, o lança-granadas embutido): hoje é só cyberware e
+- [ ] **Cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm, o lança-granadas embutido): hoje é só cyberware e
   não ataca.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
   do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente; o EMP, que desliga os itens

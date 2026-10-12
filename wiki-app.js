@@ -101,7 +101,7 @@
       { id: 'combat', label: 'Combate', icon: 'C' },
       { id: 'damage', label: 'Dano, ferimentos e cura', icon: 'D' },
       { id: 'humanity', label: 'Humanidade e drogas', icon: 'H' },
-      { id: 'economy', label: 'Economia de 2077', icon: 'EB' },
+      { id: 'economy', label: 'Economia', icon: 'EB' },
       { id: 'creation', label: 'Criação de personagens', icon: 'P' },
       { id: 'lifepath', label: 'Lifepath', icon: 'LP' },
       { id: 'advancement', label: 'Avanço e Pontos de Melhoria', icon: 'IP' }
@@ -117,17 +117,27 @@
       { id: 'weapons2077', label: 'Armas de 2077', icon: 'W' },
       { id: 'cyberware2077', label: 'Cyberware de 2077', icon: 'CW' },
       { id: 'roles', label: 'Roles', icon: 'F' },
-      { id: 'roles2077', label: 'Roles de 2077', icon: 'F77' },
+      { id: 'roles2077', label: 'Roles nos anos 2070', icon: 'F77' },
       { id: 'cyberware', label: 'Cyberware do RED', icon: 'K' },
       { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' }
     ]},
-    { group: 'Variante 2077 e fontes', pages: [
-      { id: 'supplement2077', label: 'Suplemento 2077', icon: '77' },
+    { group: 'Black Chrome', pages: [
+      { id: 'bcGuia', label: 'Como usar o Black Chrome', icon: 'BC' },
+      { id: 'bcArmas', label: 'Armas', icon: 'BW' },
+      { id: 'bcCyberware', label: 'Cyberware', icon: 'BCW' },
+      { id: 'bcModa', label: 'Moda e armadura', icon: 'BM' },
+      { id: 'bcEquipamento', label: 'Equipamento e apps', icon: 'BE' },
+      { id: 'bcQuadros', label: 'Quadros lineares', icon: 'LF' },
+      { id: 'bcVeiculos', label: 'Veículos', icon: 'BV' },
+      { id: 'bcMercados', label: 'Mercados Noturnos', icon: 'NM' }
+    ]},
+    { group: 'Suplemento de fã e fontes', pages: [
+      { id: 'supplement2077', label: 'Suplemento de fã', icon: '77' },
       { id: 'sources', label: 'Livros de referência', icon: 'L' }
     ]}
   ];
 
-  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
+  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemBlackChrome || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
   Object.entries(markdownDocs).forEach(([id, doc]) => {
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
   });
@@ -359,6 +369,9 @@
       if (location.hash === routedHash) return;
       routedHash = location.hash;
       const { id, section } = readHash();
+      // Página que saiu e virou parte de outra (config.aliases: #docQuemEQuem → Pessoas e facções, na tabela).
+      const alias = !pageContent[id] && (config.aliases || {})[id];
+      if (alias) { openPage(alias.id, { section: section || alias.section }, 'replace'); return; }
       if (!pageContent[id]) { openPage(homePage(), undefined, 'replace'); return; }
       openPage(id, section ? { section } : undefined, 'none');
     }
@@ -377,6 +390,8 @@
 
     // target (opcional): { unit, term } ou { section } abre a página já na seção indicada, com o termo destacado.
     function openPage(id, target, historyMode = 'push') {
+      const alias = !pageContent[id] && (config.aliases || {})[id];
+      if (alias) return openPage(alias.id, target || (alias.section ? { section: alias.section } : undefined), historyMode);
       const page = pageContent[id];
       if (!page) return;
       const targetWorkspace = pageWorkspace[id];
@@ -393,14 +408,16 @@
       // As abas da entrada do menu (Sessão 01: Resumo, Roteiro completo, Handouts...), no topo da página.
       const host = tabHost(id);
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
-      content.innerHTML = `${tabs}${pinnable(id) ? pinButton(id) : ''}<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
+      // O título e, logo abaixo, a linha em ciano (o eyebrow, com // no lugar de /), como no padrão visual da Loja.
+      const eyebrow = String(page.eyebrow || '').replace(/ \/ /g, ' // ');
+      content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><h2 class="cyber-h">${page.title}</h2><p class="eyebrow">${eyebrow}</p></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
       if (document.body.classList.contains('sidebar-open')) setDrawer(false);
       document.dispatchEvent(new CustomEvent('wiki:pagina', { detail: { id, target } }));
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
-      if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml });
+      if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml, target });
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
       if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target, rollTable, rollDice, showRoll, linkGlossary });
       linkGlossary(content);
@@ -884,8 +901,9 @@
     // Links nos textos em Markdown: [texto](#pagina/secao) abre uma página da wiki; [texto](https://...) abre fora, em
     // outra aba; [texto](arquivo.md) e o nome de um documento entre crases (`ganchos-dos-personagens.md`) abrem a página
     // daquele documento. Outro destino (javascript:, data:...) fica só como texto.
-    // O documento inteiro, não uma página que mostra só um pedaço dele (os handouts de uma sessão).
-    const docPageFor = name => { const base = String(name).split('/').pop(); const ids = Object.keys(markdownDocs).filter(id => markdownDocs[id].file.split('/').pop() === base); return ids.find(id => !markdownDocs[id].transform) || ids[0] || ''; };
+    // O documento inteiro, não uma página que mostra só um pedaço dele ou uma visão dele (vista: os handouts de uma
+    // sessão, o resumo, as páginas montadas da base da campanha).
+    const docPageFor = name => { const base = String(name).split('/').pop(); const ids = Object.keys(markdownDocs).filter(id => markdownDocs[id].file.split('/').pop() === base); return ids.find(id => !markdownDocs[id].vista) || ids[0] || ''; };
     function linkHref(target) {
       const value = target.replace(/&amp;/g, '&');
       if (/^#[\w-]+(\/[\w-]+)?$/.test(value)) return value;
@@ -959,9 +977,9 @@
     // O primeiro título do arquivo repete o título da página.
     const stripDocTitle = text => text.replace(/^﻿?#\s+.*\r?\n/, '');
 
+    // transform pode devolver o texto ou uma Promise (o Dossiê junta trechos de outros documentos).
     function showMarkdownDoc(id, target) {
-      loadMarkdownDoc(id).then(raw => {
-        const text = markdownDocs[id].transform ? markdownDocs[id].transform(raw) : raw;
+      loadMarkdownDoc(id).then(raw => (markdownDocs[id].transform ? markdownDocs[id].transform(raw) : raw)).then(text => {
         const container = document.getElementById('md-doc');
         if (currentPage !== id || !container) return;
         container.innerHTML = renderMarkdown(stripDocTitle(text));
@@ -1070,7 +1088,8 @@
       else document.getElementById('map-marker-detail').innerHTML = '<h3>Nenhum ponto neste filtro</h3><p>Altere o ato ou o tipo de local para ver outras operações.</p>';
     }
 
-    function setupCampaignMap() {
+    // #campaignMap/<id do ponto> abre o mapa já no ponto (os lugares da base da campanha têm o link).
+    function setupCampaignMap(content, { target } = {}) {
       const data = mapData();
       if (!data) return;
       const svg = document.getElementById('nightcity-map');
@@ -1153,6 +1172,7 @@
         setCampaignMapView({ x: Math.max(0, Math.min(data.width - width, centerX - width / 2)), y: Math.max(0, Math.min(data.height - height, centerY - height / 2)), width, height });
       };
       applyCampaignMapFilters();
+      if (target && target.section && data.markers.some(marker => marker.id === target.section)) showCampaignMapMarker(target.section);
     }
 
     // Normaliza caractere por caractere para manter as posições do texto original no trecho exibido.
@@ -1170,8 +1190,10 @@
         if (page.semBusca || (markdownDocs[id] && markdownDocs[id].semBusca)) return;
         if (markdownDocs[id] && !markdownCache[id]) return;
         const holder = document.createElement('div');
+        // O texto como a página mostra (com as citações da base, nas páginas que têm transform na hora).
+        const docText = () => { const raw = markdownCache[id]; const shown = markdownDocs[id].transform ? markdownDocs[id].transform(raw) : raw; return typeof shown === 'string' ? shown : raw; };
         // Espaço entre as tags para o texto de blocos vizinhos não grudar no trecho exibido.
-        holder.innerHTML = (markdownDocs[id] ? `<div id="md-doc">${renderMarkdown(stripDocTitle(markdownCache[id]))}</div>` : page.html).replace(/></g, '> <');
+        holder.innerHTML = (markdownDocs[id] ? `<div id="md-doc">${renderMarkdown(stripDocTitle(docText()))}</div>` : page.html).replace(/></g, '> <');
         const pageTitle = strip(page.title).replace(/\s+/g, ' ').trim();
         const units = searchUnits(holder);
         // O texto de uma seção não inclui os cartões dela: cada cartão é uma entrada própria.
@@ -1266,6 +1288,8 @@
         if (entry.unit === null) score -= 5; // texto solto da página por último
         // O glossário define o termo; quem busca o nome de um item quer o cartão do item primeiro.
         if (entry.id === 'glossary') score -= 60;
+        // As páginas da base da campanha (Pessoas e facções, Lugares e peças) vêm antes da ficha de combate do mesmo nome.
+        score += (markdownDocs[entry.id] && markdownDocs[entry.id].prioridade) || 0;
         const firstText = perTerm.map(found => found.text[0]).filter(Boolean).sort((a, b) => a[0] - b[0])[0];
         return [{ entry, score, at: firstText ? firstText[0] : 0 }];
       }).sort((first, second) => second.score - first.score);
@@ -1386,7 +1410,7 @@
     buildNavigation();
     labelMenuButton();
     // Abre a página do endereço (link direto, recarregar) ou a inicial.
-    if (pageContent[readHash().id]) routeFromHash();
+    if (pageContent[readHash().id] || (config.aliases || {})[readHash().id]) routeFromHash();
     else openPage(homePage(), undefined, 'replace');
     // A mesa do mestre e as preferências da conta chegam do servidor depois da primeira página.
     document.addEventListener('wiki:mesa', () => { if (currentPage === 'home' && !search.value.trim()) openPage('home', undefined, 'none'); });

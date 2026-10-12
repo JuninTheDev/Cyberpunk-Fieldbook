@@ -147,9 +147,12 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
   // Os relógios (o valor de cada um), o bloco de notas e quais relógios os jogadores veem (com o nome e os passos,
   // que o servidor não conhece de outro jeito). Antes ficavam só no navegador do mestre; aqui entram no backup.
   //   campanhas/<id>/mesa.json → { relogios: { nome: valor }, notas, publicos: { nome: { nome, passos } },
-  //                               paginas: { chave: { npcs: [nomes das fichas], notas } }, atualizado }
+  //                               paginas: { chave: { npcs: [nomes das fichas], notas } },
+  //                               estado: { registro: { situacao, onde, atitude, nota } }, segredos: { registro: true }, atualizado }
   // paginas: o que o mestre guarda em cada página da campanha (as abas NPCs e Notas de cada sessão, as fichas do elenco).
-  const emptyTable = () => ({ relogios: {}, notas: '', publicos: {}, paginas: {}, atualizado: null });
+  // estado e segredos: o que mudou na mesa para cada registro da base da campanha (campanha-base.js); campo vazio apaga.
+  const emptyTable = () => ({ relogios: {}, notas: '', publicos: {}, paginas: {}, estado: {}, segredos: {}, atualizado: null });
+  const STATE_FIELDS = { situacao: 120, onde: 200, atitude: 40, nota: 300 };
   const readTable = id => ({ ...emptyTable(), ...(readFile(path.join(folder(id), 'mesa.json')) || {}) });
   async function writeTable(id, patch) {
     if (!patch || typeof patch !== 'object') throw Object.assign(new Error('Mande { relogios, notas, publicos }.'), { status: 400 });
@@ -171,6 +174,21 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
       if (value.npcs !== undefined) page.npcs = (Array.isArray(value.npcs) ? value.npcs : []).map(name => String(name).trim().slice(0, 80)).filter(Boolean).slice(0, 40);
       if (value.notas !== undefined) page.notas = String(value.notas).slice(0, 50000);
       table.paginas[key] = page;
+    }
+    for (const [key, value] of Object.entries(patch.estado || {})) {
+      if (!/^[a-z0-9-]{1,80}$/.test(key)) continue;
+      if (!value || typeof value !== 'object') { delete table.estado[key]; continue; }
+      const entry = { ...(table.estado[key] || {}) };
+      for (const [field, max] of Object.entries(STATE_FIELDS)) {
+        if (value[field] === undefined) continue;
+        const text = String(value[field] || '').trim().slice(0, max);
+        if (text) entry[field] = text; else delete entry[field];
+      }
+      if (Object.keys(entry).length) table.estado[key] = entry; else delete table.estado[key];
+    }
+    for (const [key, value] of Object.entries(patch.segredos || {})) {
+      if (!/^[a-z0-9-]{1,80}$/.test(key)) continue;
+      if (value) table.segredos[key] = true; else delete table.segredos[key];
     }
     table.atualizado = new Date().toISOString();
     fs.mkdirSync(folder(id), { recursive: true });

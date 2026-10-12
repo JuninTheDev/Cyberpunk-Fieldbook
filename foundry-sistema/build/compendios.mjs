@@ -37,14 +37,14 @@ function documentoDeItem(id, { ator = null, mudar = null } = {}) {
   return { ...dados, _id, _key: ator ? `!actors.items!${ator}.${_id}` : `!items!${_id}`, effects, folder: null, sort: 0, ownership: { default: 0 }, _stats: estatisticas };
 }
 
-// Cada compêndio de itens e os tipos que entram nele.
 // Cada compêndio de itens: a origem (o prefixo do id no catálogo) e os tipos que entram nele. O conteúdo de 2077 fica
-// nos compêndios dele.
+// nos compêndios dele: as armas com os Rebuilds e a munição Smart melhorada do Mission Kit, e o cyberware com a droga
+// do Kit (Immunoblockers), como no cpr-2077.
 const PACKS_DE_ITENS = {
   armas: ['core_', ['arma']], armaduras: ['core_', ['armadura']], municao: ['core_', ['municao']], cyberware: ['core_', ['cyberware']],
   equipamento: ['core_', ['equipamento']], roupas: ['core_', ['roupa']], drogas: ['core_', ['droga']], netrunning: ['core_', ['cyberdeck', 'programa']],
   upgrades: ['core_', ['upgrade']], veiculos: ['core_', ['veiculo']], lesoes: ['core_', ['lesao']],
-  'armas-2077': ['armas-2077:', ['arma', 'municao']], 'cyberware-2077': ['cyberware-2077:', ['cyberware']], 'netrunning-2077': ['netrunning-2077:', ['cyberdeck', 'programa']]
+  'armas-2077': ['armas-2077:', ['arma', 'municao', 'upgrade']], 'cyberware-2077': ['cyberware-2077:', ['cyberware', 'droga']], 'netrunning-2077': ['netrunning-2077:', ['cyberdeck', 'programa']]
 };
 
 // ---------------- Personagens de exemplo ----------------

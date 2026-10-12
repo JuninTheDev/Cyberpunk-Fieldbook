@@ -2,6 +2,9 @@
 // wiki e no livro ("REF 8+", "DEX + Evasão").
 export const SISTEMA = 'cpr-fieldbook';
 export const caminho = arquivo => `systems/${SISTEMA}/${arquivo}`;
+// Endereço padrão da wiki, como no módulo cpr-2077: com o Foundry em mesa.<domínio> (o servidor da mesa), a wiki fica em
+// wiki.<domínio>; com tudo no mesmo computador, em localhost:8000.
+export const enderecoPadraoDaWiki = ({ protocol = 'http:', hostname = '' } = {}) => (/^mesa\./.test(hostname) ? `${protocol}//wiki.${hostname.slice(5)}` : 'http://localhost:8000');
 
 export const ATRIBUTOS = ['int', 'ref', 'dex', 'tech', 'cool', 'will', 'luck', 'move', 'body', 'emp'];
 export const SIGLA = { int: 'INT', ref: 'REF', dex: 'DEX', tech: 'TECH', cool: 'COOL', will: 'WILL', luck: 'LUCK', move: 'MOVE', body: 'BODY', emp: 'EMP' };

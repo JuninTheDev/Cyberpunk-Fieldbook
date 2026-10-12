@@ -590,14 +590,15 @@ function tableSnapshot(actor) {
     itens: items
   };
 }
-// Ator que foi para outra campanha (crossover): para de mandar. A wiki também recusa (409) se o mundo for o antigo.
+// Ator que foi para outra campanha (crossover) ou que não é mais o ligado ao personagem (importado de novo noutro
+// mundo, como na migração para o Foundry 14): para de mandar. A wiki também recusa (409) nos dois casos.
 const movedAway = new Set();
 async function syncActor(actor) {
   const link = actor?.getFlag(MODULE_ID, 'wiki');
   if (!link || actor.getFlag(MODULE_ID, 'saiu') || movedAway.has(actor.id)) return null;
   const campaign = await tableCampaign();
   return wikiFetch(`/api/personagens/${link.id}/mesa`, { method: 'PUT', body: { ...tableSnapshot(actor), ...(campaign?.id ? { campanha: campaign.id } : {}) } })
-    .catch(error => { if (/outra campanha/.test(error.message)) movedAway.add(actor.id); throw error; });
+    .catch(error => { if (/outra campanha|ator antigo/.test(error.message)) movedAway.add(actor.id); throw error; });
 }
 const syncTimers = new Map();
 let syncWarned = false;
@@ -641,7 +642,7 @@ async function deliverOrder(actor, wikiId, pedido) {
     const wealth = Number(actor.system.wealth?.value) || 0;
     if (wealth < pedido.total) {
       const erro = `Dinheiro insuficiente na mesa: ${wealth}eb de ${pedido.total}eb.`;
-      await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/erro`, { method: 'POST', body: { erro } }).catch(() => null);
+      await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/erro`, { method: 'POST', body: { erro, ator: actor.id } }).catch(() => null);
       return { ok: false, notes: [erro] };
     }
     const datas = [];
@@ -655,7 +656,7 @@ async function deliverOrder(actor, wikiId, pedido) {
     await actor.setLedgerProperty('wealth', wealth - pedido.total, `Compra na wiki: ${pedido.itens.map(line => line.nome).join(', ')}`);
     if (pedido.itens.some(line => line.cyber)) notes.push('Cyberware: instale pela ficha (o sistema cobra a instalação e rola a Humanidade).');
   }
-  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notes } });
+  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notes, ator: actor.id } });
   return { ok: true, notes };
 }
 // Aprovar aqui e entregar na hora.
@@ -680,8 +681,11 @@ async function refuseOrder(wikiId, pedido) {
 async function pendingOrders(list, { deliver = true } = {}) {
   const pending = [];
   for (const item of (list.personagens || []).filter(entry => !entry.publico && entry.pedidos && (entry.pedidos.pendentes || entry.pedidos.aprovados))) {
-    const actor = actorOf(item.id);
-    if (!actor) continue;
+    // Só o ator ligado ao personagem na wiki entrega (o da última importação, mesmo que haja uma cópia antiga neste
+    // mundo). Sem ele aqui, o personagem foi importado noutro mundo (a migração para o Foundry 14): este não entrega.
+    const linked = item.foundry?.ator ? game.actors.get(item.foundry.ator) : null;
+    const actor = linked?.getFlag(MODULE_ID, 'wiki')?.id === item.id ? linked : actorOf(item.id);
+    if (!actor || (item.foundry?.ator && item.foundry.ator !== actor.id)) continue;
     const doc = (await wikiFetch(`/api/personagens/${item.id}`).catch(() => ({}))).personagem;
     for (const pedido of (doc?.pedidos || [])) {
       if (pedido.status === 'aprovado' && !pedido.erro && deliver) {

@@ -5,7 +5,7 @@ module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
   await edge.evaluate(`document.querySelector('#tab-system').click()`);
 
-  const minimos = { netArsenal: 56, net2077: 12, quickhacks: 21, os2077: 8 };
+  const minimos = { netArsenal: 56, net2077: 10, quickhacks: 21, os2077: 8 };
   for (const [pagina, minimo] of Object.entries(minimos)) {
     await r.passo(`${pagina}: pelo menos ${minimo} cartões`, async () => {
       await abrir(edge, pagina, 200);
@@ -24,10 +24,10 @@ module.exports = async ({ edge, servidores, r }) => {
   await buscaCai('falcon', 'os2077', 'Militech Falcon Sandevistan');
   await buscaCai('gosma', 'netArsenal', 'Gosma');
 
-  await r.passo('quickhacks: chip "Quickhacks definitivos" leva à seção e fica ativo', async () => {
+  await r.passo('quickhacks: chip "Avançados (DV12)" leva à seção e fica ativo', async () => {
     await abrir(edge, 'quickhacks');
-    const c = await clicarChip(edge, 'Quickhacks definitivos');
-    return [c.ativo === 'Quickhacks definitivos' && c.topo >= c.barra - 2 && c.topo <= c.barra + 40, JSON.stringify(c)];
+    const c = await clicarChip(edge, 'Avançados (DV12)');
+    return [c.ativo === 'Avançados (DV12)' && c.topo >= c.barra - 2 && c.topo <= c.barra + 40, JSON.stringify(c)];
   });
   await edge.shot('quickhacks');
 

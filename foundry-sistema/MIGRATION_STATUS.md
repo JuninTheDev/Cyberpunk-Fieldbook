@@ -39,10 +39,11 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | a janela "Ataque!" (a reação do alvo: quem ataca, a conta de cada escolha, a barra do tempo; o X e o tempo valem a escolha padrão) | portada no ciclo 28, no visual do sistema |
 | Fluxo de Combate | um ataque por vez no mestre, quem vê o cartão do resultado, esconder ou não o total do ataque, texto e animação no token | portados no ciclo 29 (com diferenças: ver as dúvidas) |
 | Fluxo de Combate | Reflex Tuner | portado no ciclo 30, pela wiki (ver as dúvidas) |
-| cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
-| cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo |
-| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17 |
-| cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, com as que o Foundry 12 não tinha e o texto deixa claras (os dois cartuchos da Testera, o autofogo de 7 balas da Lexington); as que esperam a mesa estão nas dúvidas |
+| cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077), menos o Black Chrome, e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
+| cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; no ciclo 31, com o Mission Kit (Neuroport, Rebuilds, munição Smart melhorada, Immunoblockers, quickhacks do Kit) |
+| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, P0) |
+| cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, pelo suplemento de fã (com os dois cartuchos da Testera, que o Kit manteve). Com o Kit, a wiki mudou várias (a Lexington, a Yukimura, a Burya, a Omaha): ROADMAP, P0 |
+| wiki | o Black Chrome (176 itens da loja) | falta |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
 | cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
 | cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
@@ -65,8 +66,9 @@ os bloqueadores abaixo resolvidos, backup e autorização.
      os nomes do CORE, então quase sempre acha);
    - **pelos atores do Foundry 12** (a exportação do mundo, ou o envio de crossover que a wiki já recebe), convertidos
      do formato do CORE para este sistema: mais completo, e mais trabalho.
-4. **Falta a NET,** que a campanha usa. As armas de 2077 entraram nos ciclos 17 e 18 (os modos de cada classe e as
-   regras de cada modelo que o Foundry 12 tinha); as de alguns modelos esperam a decisão da mesa (dúvidas abaixo).
+4. **Faltam a NET, as regras do Mission Kit nos modos das armas de 2077 e o Black Chrome,** que a campanha usa. Os
+   modos de 2077 entraram nos ciclos 17 e 18 pelo suplemento de fã; com o Kit, a wiki trocou essas regras, e os modos
+   precisam segui-lo. As macros Ricochete e Ataque Smart do mundo do Foundry 12 dependem dos modos de 2077 do cpr-2077.
 5. **Sem migração de dados entre versões deste sistema** (ainda não há mundo real para migrar).
 
 ## Comparação com o CORE (2026-10-12)
@@ -753,20 +755,6 @@ O usuário decidiu migrar pela ficha "Na mesa" (ROADMAP, decisões).
   - as notas do ator, os efeitos ligados à mão e os itens renomeados no Foundry 12 sem uid não acham o catálogo pelo
     nome e viram aviso.
 
-## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
-
-1. **Backup:** o mundo do Foundry 12 inteiro (a pasta do mundo no servidor) e os dados da wiki (os personagens).
-2. **No Foundry 12:** confirme que "Mandar a ficha para a wiki" está ligado e abra o mundo como mestre. Ao entrar, o
-   módulo manda a ficha de todos os atores da wiki. Confira na wiki que cada personagem mostra "Na mesa" com a data de
-   hoje.
-3. **Feche o mundo do Foundry 12,** para ele não mandar mais a ficha da mesa.
-4. **No Foundry 14, num mundo novo com este sistema:** crie os usuários dos jogadores e configure o endereço da wiki.
-   Na aba de Atores, abra "Personagens da wiki" e, para cada personagem, escolha o dono e clique em "Importar da mesa".
-   Leia os avisos que a janela mostra no alto: um item que não achou o catálogo precisa ser criado à mão. Sem a janela:
-   `game.system.api.wiki.importarDaMesa('<id na wiki>', '<id do usuário dono>')`.
-5. **Confira cada ficha** contra a da mesa na wiki: HP, dinheiro, itens, munição, lesões e Humanidade.
-6. **Fora deste procedimento:** os NPCs, as cenas, os diários e as macros do mundo antigo (o Foundry 14 abre mundos do
-   12, mas os atores e os itens do CORE não existem neste sistema).
 - **Commit:** `b58df95`.
 
 ### Ciclo 16 (2026-10-11): a janela "Personagens da wiki" (P2)
@@ -1465,3 +1453,86 @@ de ser atingido, +1 para se esquivar pelo resto da rodada".
   - "Dano: manual".
 - **Próximo:** o P2 pela ordem do ROADMAP: as rolagens das Roles, a Briga e as Artes Marciais e o Facedown; depois, o
   cyberware que é arma.
+
+### Ciclo 31 (2026-10-12): o master na branch, o Mission Kit no catálogo, três correções e as ferramentas da migração
+
+Da revisão de 2026-10-12, feita para o plano da migração da mesa para o Foundry 14, na branch `revisao-v14`, que partiu
+do ciclo 15. Lá ele se chamava "ciclo 16"; na integração (ciclo 32), virou o 31.
+
+- **Implementado:**
+  - **Mescla do master:** o Mission Kit, o Black Chrome, o visual novo e os backups do servidor.
+    - Teve um conflito, em `servidor/atualizar.sh`.
+    - O gatilho do módulo do Foundry 12 ficou com os arquivos novos do master e com o filtro do `foundry-sistema/`.
+  - **O conversor de 2077 segue o Mission Kit**, como o build do cpr-2077:
+    - **Armas:** a origem e as regras próprias vão na flag `arma2077`. A arma comum tem 1 slot de acessório (o Rebuild
+      ocupa 2 de 3), e a munição de cada arma segue as regras novas (só cartucho; balote e cartucho; pistola muito pesada);
+    - **Itens novos do Kit:** os 3 Rebuilds (upgrades de 2 slots) e as 9 munições Smart melhorada;
+    - **Cyberware:** o grupo Neuroport (o Neuroport é base, com 5 slots de opção) e as opções do Kit: Mantis Blade,
+      Gorilla Arm, Berserk Implant e David's Experimental Sandevistan;
+    - **Droga:** a Immunoblockers;
+    - **Quickhacks:** os do Kit vêm sem preço (todo netrunner faz os do nível dele); os do suplemento, com o preço opcional;
+    - **Flechettes:** saíram, como na wiki.
+
+    O catálogo foi de 686 para 704 itens (168 de 2077). Os compêndios de 2077 passaram a incluir os upgrades e a droga.
+  - **Editor de Dor:** tira só o −2 de gravemente ferido (`regras.penalidadeDoFerimento`).
+  - **Desinstalar cyberware:** não devolve a Humanidade.
+  - **Endereço da wiki:** deduzido de `mesa.<domínio>` (`wiki.enderecoPadraoDaWiki`). A configuração vem vazia.
+  - **Ator antigo:**
+    - a entrega e o erro dos pedidos mandam o ator;
+    - só o ator ligado entrega (o `entregarPedidos` acha o ligado, mesmo com uma cópia antiga no mundo);
+    - a ficha recusada como "ator antigo" para de ser mandada, sem aviso;
+    - a wiki recusa os dois (commit `30692f7` no master).
+  - **Pacote das cenas:** `migracao/pacote-das-cenas.mjs`. O lint passou a cobrir `migracao/`.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros. Com um erro plantado em `migracao/`, o lint pegou;
+  - G3: 35 de 35.
+    - **Novos:** o Editor de Dor (falhou com a regra antiga), o endereço padrão da wiki, a loja inteira (o que falta é só
+      o Black Chrome) e os itens do Mission Kit.
+    - **Ajustados:** os 157 itens de 2077 e os 35 acessórios da loja; a contagem de drogas conta só as do CORE;
+  - **G4 não rodou: não há Foundry 14 instalado neste PC.** O cenário mudou sem rodar:
+    - os compêndios de 2077 com 58, 62 e 48 itens (o build gerou esses números);
+    - a Yukimura com bônus 0 (no Kit ela é de qualidade padrão);
+    - um passo novo, o do desinstalar.
+
+    Rode o G4 antes de confiar nesta versão;
+  - **O pacote das cenas,** com o mundo `edgerunners-storys` tirado do backup completo de 2026-10-12:
+    - saíram 13 cenas, 3 diários, 3 playlists e 48 arquivos (286 MB);
+    - nenhum caminho antigo sobrou, e todo caminho novo existe;
+    - importado no Foundry 12 de teste sem erro nem aviso: as paredes, as luzes, os tiles (com a flag do NET Architect),
+      a playlist da Intro e os arquivos abrindo;
+    - no Foundry 14, não foi testado;
+  - G5 (a suíte da wiki no master, com a trava do ator antigo): tudo certo.
+- **Ficou:**
+  - o G4;
+  - o Black Chrome;
+  - as regras de 2077 do Kit;
+  - o `importarDaMesa` avisar sem necessidade das bases de corpo do CORE (no ensaio com o Qyan, a "Internal (7 Option
+    Slots)", que este sistema não usa).
+- **Commit:** `3a73abd` (na `revisao-v14`), depois da mescla `edd0624`.
+
+## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
+
+O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
+passa para um mundo novo, e o Foundry 12 fica instalado ao lado, só para consulta.
+
+1. **Backup completo:** com a mesa vazia, rode no servidor `sudo bash servidor/backup-completo.sh` (o Foundry para alguns
+   segundos). Baixe o `.tar` para o PC e confira o `.sha256`. O primeiro foi feito em 2026-10-12.
+2. **No Foundry 12:** confirme que "Mandar a ficha para a wiki" está ligado e abra o mundo como mestre. Ao entrar, o
+   módulo manda a ficha de todos os atores da wiki. Confira na wiki que cada personagem mostra "Na mesa" com a data de
+   hoje.
+3. **Pacote das cenas:** `node foundry-sistema/migracao/pacote-das-cenas.mjs --data /srv/foundry/data/Data --mundo <id>
+   --saida /srv/backups/pacote-das-cenas`. O script só lê o mundo.
+4. **Feche o mundo do Foundry 12 e desligue nele o cpr-2077** (Gerenciar módulos), para ele não mandar mais a ficha nem
+   entregar pedidos. Depois do passo 5, a wiki recusa a ficha e a entrega do ator antigo; desligar evita o resto.
+5. **No Foundry 14, num mundo novo com este sistema,** de preferência com o mesmo id do antigo:
+   - o endereço da wiki se deduz sozinho em `mesa.<domínio>`;
+   - crie os usuários com os mesmos nomes;
+   - na aba de Atores, abra "Personagens da wiki" e, para cada personagem, escolha o dono e clique em "Importar da mesa"
+     (sem a janela: `game.system.api.wiki.importarDaMesa('<id na wiki>', '<id do usuário dono>')`, como mestre);
+   - leia os avisos que a janela mostra no alto: um item que não achou o catálogo precisa ser criado à mão.
+6. **As cenas:** copie o módulo `arquivo-da-mesa` para `Data/modules`, ligue-o no mundo novo e importe a Aventura do
+   compêndio "Arquivo da mesa". Os tokens vêm sem ator: ponha os atores novos por cima.
+7. **Confira cada ficha** contra a da mesa na wiki: HP, dinheiro, itens, munição, lesões e Humanidade.
+8. **Fora deste procedimento:** os NPCs (atores do CORE), as arquiteturas da NET (itens do CORE) e as macros do mundo
+   antigo. Estão no backup completo, e o Foundry 12 os abre.

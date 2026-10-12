@@ -5,12 +5,12 @@ module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
   const titulos = resultados => resultados.map(res => res.titulo);
 
-  await r.passo('"pistola smart" acha a Yukimura entre os primeiros', async () => {
-    const res = titulos(await buscar(edge, 'pistola smart'));
+  await r.passo('"smg smart" acha a Yukimura entre os primeiros', async () => {
+    const res = titulos(await buscar(edge, 'smg smart'));
     return [res.slice(0, 5).includes('Arasaka HJKE-11 Yukimura'), res.slice(0, 5).join(' | ')];
   });
-  await r.passo('a ordem das palavras não importa ("smart pistola")', async () => {
-    const res = titulos(await buscar(edge, 'smart pistola'));
+  await r.passo('a ordem das palavras não importa ("smart smg")', async () => {
+    const res = titulos(await buscar(edge, 'smart smg'));
     return [res.slice(0, 5).includes('Arasaka HJKE-11 Yukimura'), res.slice(0, 5).join(' | ')];
   });
   await r.passo('nome exato vem primeiro ("Kerenzikov")', async () => {

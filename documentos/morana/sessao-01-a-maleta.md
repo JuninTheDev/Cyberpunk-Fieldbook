@@ -10,6 +10,22 @@ Há um segundo interessado: a equipe de Iskra Voss, tenente de Sato, foi quem at
 
 A sessão termina quando Wakako encontra a assinatura de Reina Sato no conteúdo da maleta e percebe que o passado que ela tentou enterrar voltou para Night City.
 
+### Roteiro de bolso
+
+| Cena | O que acontece | Pista ou virada |
+|---|---|---|
+| 1. O salão | Wakako oferece metade adiantada: recuperar uma maleta preta, sem abrir nem conectar. | Ela sabe mais sobre Endo do que revela. |
+| 2. Kabuki | Investigar o território Tyger Claws: câmeras, comerciantes e rastros. | O mensageiro estava vivo; sete minutos das câmeras foram apagados. |
+| 3. Endo | O Dr. Kenzo Endo ferido, com a maleta presa ao pulso, e o corpo de Kobo entre as prateleiras. | Kobo morreu pelo próprio cyberarm: Morana protegeu o portador da Chave. Endo mente que "era só um entregador". |
+| 4. Vega | A equipe de recuperação chega, prioriza o objeto e aceita negociar. | A ordem criptografada liga o contrato à Arasaka; entrega nas Arasaka Industrial Docks. |
+| 5. Fúria | Um implante, uma arma ou um monitor reage por alguns segundos. | Não é cyberpsicose: dê escolha e agência, não controle total. |
+| 6. Retorno | Wakako reconhece o nome, descobre que Sato voltou e admite um encobrimento antigo. | O novo trabalho: localizar o Gatilho e a Coleira. |
+
+### Pistas que não devem travar
+
+- Use os comerciantes Tyger Claws, as câmeras, o sangue e o óleo, ou o funcionário escondido. Uma descrição específica já pode revelar que Endo está vivo ou que a gravação foi apagada: não esconda toda pista atrás de um único teste.
+- Se os personagens perderem a maleta, uma gravação de Endo, um mercenário ou o comunicador de Vega dá uma rota de perseguição. A campanha continua.
+
 ## Objetivos da sessão
 
 Ao final da sessão, os jogadores devem saber que:

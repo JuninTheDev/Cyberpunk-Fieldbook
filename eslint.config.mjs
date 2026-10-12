@@ -44,8 +44,8 @@ export default [
     rules: regras
   },
   {
-    // Build, instalador e testes de referência (Node, módulos).
-    files: ['foundry-sistema/build/**/*.mjs', 'foundry-sistema/instalar.mjs', 'tests/sistema/**/*.mjs'],
+    // Build, instalador, ferramentas da migração e testes de referência (Node, módulos).
+    files: ['foundry-sistema/build/**/*.mjs', 'foundry-sistema/migracao/**/*.mjs', 'foundry-sistema/instalar.mjs', 'tests/sistema/**/*.mjs'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: node },
     rules: regras
   },

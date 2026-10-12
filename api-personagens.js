@@ -15,7 +15,9 @@ const path = require('path');
 const { createCampaigns } = require('./api-campanhas');
 const { createAccountStores } = require('./api-contas');
 
-const ROLES = ['face', 'solo', 'netrunner', 'corpo', 'tech', 'medtech', 'media', 'lawman', 'nomad'];
+// As 10 Roles do RED (com os ajustes dos anos 2070 do Mission Kit). Face e Corpo, do suplemento de fã, viram as do RED.
+const ROLES = ['rockerboy', 'solo', 'netrunner', 'tech', 'medtech', 'media', 'exec', 'lawman', 'fixer', 'nomad'];
+const ROLES_ANTIGAS = { face: 'rockerboy', corpo: 'exec' };
 const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
@@ -238,6 +240,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     for (const field of SERVER_FIELDS) delete doc[field];
     doc.nome = String(doc.nome || '').trim().slice(0, 80);
     doc.apelido = String(doc.apelido || '').trim().slice(0, 80);
+    if (ROLES_ANTIGAS[doc.role]) doc.role = ROLES_ANTIGAS[doc.role];
     if (doc.role && !ROLES.includes(doc.role)) doc.role = '';
     if (doc.retratoLink && !/^https:\/\/[^\s"'<>]+$/.test(String(doc.retratoLink))) doc.retratoLink = '';
     if (doc.retratoLink) doc.retratoLink = String(doc.retratoLink).slice(0, 500);
@@ -259,6 +262,13 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     }
     if (doc.envio) return doc.envio.resultadoHash === now ? 'enviado' : 'enviado-mudou';
     return 'novo';
+  }
+  // A ficha da mesa (ou a entrega de um pedido) que chega de um ator que não é mais o ligado ao personagem: o mundo
+  // antigo aberto depois da migração para outro mundo, ou uma cópia do ator. Só o ator ligado (o da última importação)
+  // grava. Sem o ator no pedido (módulo antigo), vale como antes.
+  function staleActor(doc, ator) {
+    if (!ator || !doc.foundry || !doc.foundry.importado || !doc.foundry.ator || String(ator) === doc.foundry.ator) return null;
+    return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} está ligado a outro ator do Foundry (${doc.foundry.nomeAtor || doc.foundry.ator}): este é um ator antigo.`, ator: doc.foundry.ator } };
   }
   // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
@@ -303,8 +313,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // ---------------- Regras da loja inicial ----------------
   // O que a loja de criação esconde, em cada campanha. Os jogadores da campanha leem; só o mestre muda.
   // Campanha sem regras gravadas usa as do Protocolo Morana (a campanha nova começa com uma cópia delas).
-  const SHOP_TAGS = ['exotica', 'excelente', 'borgware', 'municao-rara', 'raro'];
-  const DEFAULT_SHOP_RULES = { teto: 1000, esconder: [...SHOP_TAGS], liberados: [], bloqueados: [] };
+  // blackchrome: os itens do Black Chrome, que ficam à venda por padrão (o mestre esconde pela engrenagem da Loja).
+  const SHOP_TAGS = ['exotica', 'excelente', 'borgware', 'municao-rara', 'raro', 'blackchrome'];
+  const DEFAULT_SHOP_RULES = { teto: 1000, esconder: SHOP_TAGS.filter(tag => tag !== 'blackchrome'), liberados: [], bloqueados: [] };
   const readShopRules = id => ({ ...DEFAULT_SHOP_RULES, ...(id ? campaigns.readShopRules(id) || campaigns.readShopRules(campaigns.first) || {} : {}) });
   const itemIds = list => (Array.isArray(list) ? list : []).map(String).filter(id => /^[a-z0-9_-]+:[a-z0-9-]+$/.test(id)).slice(0, 2000);
   const cleanShopRules = input => ({
@@ -694,6 +705,11 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const done = await update(doc => {
           const pedido = ordersOf(doc).find(item => item.id === pid);
           if (!pedido) return { status: 404, data: { erro: 'Pedido não encontrado.' } };
+          // A entrega (ou o erro dela) vale só do ator ligado: o mundo antigo não entrega mais depois da migração.
+          if (action === 'entregue' || action === 'erro') {
+            const stale = staleActor(doc, input.ator);
+            if (stale) return stale;
+          }
           const now = new Date().toISOString();
           if (action === 'cancelar') {
             if (pedido.status !== 'pendente') return { status: 400, data: { erro: 'Só dá para cancelar um pedido que ainda espera o mestre.' } };
@@ -725,6 +741,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const done = await update(doc => {
           // Depois de um crossover, o mundo antigo para de mandar a ficha (a da mesa nova é que vale).
           if (input.campanha && realId(input.campanha) !== campaignOf(doc)) return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} agora é de outra campanha na wiki.`, campanha: campaignOf(doc) } };
+          // Depois de importar de novo (num mundo novo ou noutro ator), só o ator ligado manda a ficha.
+          const stale = staleActor(doc, input.ator);
+          if (stale) return stale;
           delete input.campanha;
           doc.mesa = { ...input, recebido: new Date().toISOString() };
           return null;

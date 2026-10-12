@@ -34,11 +34,7 @@ O projeto foi declarado destruído, mas isso era mentira. A divisão de seguran�
 
 ### As três partes de Morana
 
-| Parte | O que é | Onde está no início da campanha |
-|---|---|---|
-| A Chave | Fragmento do vírus com as credenciais e o mapa das outras partes | Na maleta de Endo (Sessão 1) |
-| O Gatilho | Servidor com a rotina de ativação em escala urbana | Sob o hospital de campanha incendiado em 2070, em Northside |
-| A Coleira | Servidor com a rotina de desligamento - o "antídoto" | Num datafort da Militech em Arroyo, que a guarda sem saber tudo o que tem |
+{{base:pecas}}
 
 Nenhuma parte faz nada sozinha. Juntas, no **Núcleo** - o nó central da rede de emergência da cidade, sob o City Center -, elas ativam ou desligam Morana. Quem controla a Chave decide onde as outras duas podem ser usadas; por isso a maleta é disputada desde a primeira cena.
 
@@ -140,10 +136,10 @@ Isso explica o comportamento dela na Sessão 1:
 ## Quem tem o poder?
 
 - **Wakako Okada:** possui contatos, informantes e acesso ao mercado clandestino. Ela é a única que sabe onde procurar a maleta de Endo (e acha que ela guarda a prova do encobrimento, não a Chave de Morana), mas esconde sua participação no encobrimento original.
-- **Arasaka:** quer recuperar Morana para controlar a cidade durante a crise e transformar o vírus em uma arma militar.
-- **Militech:** quer destruir o projeto publicamente, mas pretende guardar uma cópia para usar contra Arasaka - e esconder que a Coleira nasceu em seus laboratórios.
-- **Um grupo de sobreviventes, liderado por Tamsin "Fuse" Ilyin:** pessoas afetadas pelo teste original querem revelar a verdade e impedir que outros sejam usados como cobaias.
-- **NetWatch (opcional):** se o mestre quiser aumentar a escala da ameaça, NetWatch pode começar a monitorar o tráfego estranho gerado por Morana. Eles não querem destruir nem vender o vírus - querem estudá-lo e contê-lo, com medo de que um programa que "toma decisões próprias" seja o tipo de coisa que se aproxima demais do Blackwall. Uma NetWatch batendo à porta no Ato 4 muda o tom da negociação final.
+
+As forças (o que cada uma quer, quando aparece e quem é o rosto dela) estão na base da campanha:
+
+{{base:faccoes}}
 
 O poder imediato está nas mãos de quem controla as três partes. O poder político está nas mãos de quem consegue dizer ao público quem foi responsável pelo desastre.
 
@@ -258,20 +254,13 @@ Prepare cada sessão com apenas cinco elementos:
 4. Uma nova informação sobre Morana.
 5. Uma consequência caso os jogadores falhem ou demorem.
 
-### Relógio de Sato (6 segmentos)
+### Os relógios
 
-Mantenha um relógio visível na mesa. O plano de Sato continua mesmo sem os personagens. Ao fim de cada sessão em que o grupo não atrapalhou o plano, marque o próximo segmento. Marque um segmento extra quando o grupo falhar feio, demorar ou deixar uma testemunha exposta. Se o grupo bloquear uma etapa (por exemplo, ficar com a Chave), Sato pula para a próxima possível e manda Iskra atrás do que falta - o que gera a próxima cena.
+Mantenha os relógios visíveis na mesa (marque em Estado da campanha, na wiki).
 
-1. **Recuperar a Chave** (a maleta de Endo).
-2. **Garantir o Gatilho.**
-3. **Garantir a Coleira.**
-4. **Silenciar testemunhas:** Endo, Tomas Vale e os sobreviventes que podem depor.
-5. **Atentado de fachada:** um teste público de Morana que culpa uma corporação rival.
-6. **Ativação no Núcleo:** o ultimato à cidade e o leilão do antídoto.
+{{base:relogio:sato}}
 
-As etapas 1 a 3 precisam estar completas (por Sato ou por quem ela conseguir roubar) para a etapa 6 acontecer. Se o relógio chegar ao fim sem elas, Sato tenta a ativação incompleta - e perde o controle de Morana.
-
-Relógio da cidade: use em paralelo as oito fases dos eventos de 2077 descritas no guia de Night City.
+{{base:relogio:city}}
 
 ## Possíveis conclusões
 

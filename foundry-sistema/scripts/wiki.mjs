@@ -5,7 +5,7 @@
 //   ("core_weapons:assault-rifle"); o que não existir vira um aviso, e o resto entra.
 // - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra.
 import { carregarCatalogo } from './catalogo.mjs';
-import { ATRIBUTOS, LIFEPATH, SISTEMA, USOS } from './config.mjs';
+import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { linhaDoExtrato } from './regras.mjs';
@@ -22,12 +22,13 @@ const especializacaoDaWiki = role => roleDaWiki(role?.nome ?? '')?.especializaco
 // O Lifepath que o criador da wiki manda pronto, em texto (resultado.lifepath, com os nomes do CORE).
 const lifepathDaWiki = lifepath => Object.fromEntries(LIFEPATH.map(({ chave, wiki }) => [chave, String(lifepath?.[wiki] ?? '')]));
 
-export { carregarCatalogo };
+export { carregarCatalogo, enderecoPadraoDaWiki };
 
 export function registrarWiki() {
   game.settings.register(SISTEMA, 'wikiUrl', {
-    name: 'Endereço da wiki', hint: 'De onde o mestre importa os personagens (o servidor da wiki da mesa).',
-    scope: 'world', config: true, type: String, default: 'http://localhost:8000'
+    name: 'Endereço da wiki',
+    hint: 'De onde o mestre importa os personagens (o servidor da wiki da mesa). Vazio: wiki.seudominio quando a mesa abre em mesa.seudominio, ou http://localhost:8000 com tudo no mesmo computador.',
+    scope: 'world', config: true, type: String, default: ''
   });
   game.settings.register(SISTEMA, 'wikiMesa', {
     name: 'Mandar a ficha para a wiki',
@@ -37,7 +38,7 @@ export function registrarWiki() {
   registrarVoltaParaWiki();
 }
 
-const wikiUrl = () => String(game.settings.get(SISTEMA, 'wikiUrl') || '').replace(/\/+$/, '');
+const wikiUrl = () => String(game.settings.get(SISTEMA, 'wikiUrl') || enderecoPadraoDaWiki(globalThis.location)).trim().replace(/\/+$/, '');
 // Com o cookie da wiki (o mestre entra na wiki neste navegador) e sem cache: a ficha muda o tempo todo.
 async function wikiFetch(rota, { method = 'GET', body } = {}) {
   let resposta;
@@ -252,11 +253,15 @@ export async function mandarFicha(ator) {
 const ESPERA_DA_VOLTA = 4000;
 const esperando = new Map();
 let avisouFalha = false;
+// Atores que a wiki recusou por não serem mais os ligados ao personagem (ele foi importado de novo noutro ator, como no
+// "Importar da mesa"): param de mandar, sem aviso. Só o ator ligado grava a ficha da mesa.
+const atoresAntigos = new Set();
 const souQuemManda = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id) && game.settings.get(SISTEMA, 'wikiMesa');
 async function mandarAgora(id) {
   const ator = game.actors.get(id);
-  if (!ator) return;
+  if (!ator || atoresAntigos.has(id)) return;
   await mandarFicha(ator).then(() => { avisouFalha = false; }).catch(erro => {
+    if (/ator antigo/.test(erro.message)) { atoresAntigos.add(id); return; }
     if (!avisouFalha) { avisouFalha = true; console.warn(`${SISTEMA} | Na mesa (wiki):`, erro.message); }
   });
 }
@@ -302,7 +307,7 @@ export async function entregarPedido(ator, wikiId, pedido) {
   if (!jaEntregue) {
     if (ator.system.dinheiro < pedido.total) {
       const erro = `Dinheiro insuficiente na mesa: ${ator.system.dinheiro}eb de ${pedido.total}eb.`;
-      await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/erro`, { method: 'POST', body: { erro } }).catch(() => null);
+      await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/erro`, { method: 'POST', body: { erro, ator: ator.id } }).catch(() => null);
       return { ok: false, notas: [erro] };
     }
     const linhas = (pedido.itens || []).map(linha => ({ ...linha, uso: 'carregando' }));
@@ -313,8 +318,18 @@ export async function entregarPedido(ator, wikiId, pedido) {
     await ator.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: pedido.total, motivo: `Compra na wiki: ${(pedido.itens || []).map(linha => linha.nome).join(', ')}` });
     if (linhas.some(linha => linha.cyber)) notas.push('Cyberware: instale pela ficha (a instalação rola a Humanidade).');
   }
-  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notas } });
+  await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notas, ator: ator.id } });
   return { ok: true, notas };
+}
+
+// O ator ligado ao personagem na wiki (o da última importação: foundry.ator), mesmo com uma cópia antiga neste mundo. Sem
+// a ligação na wiki, o que tiver a flag do personagem. A cópia que não é a ligada não entrega: a wiki a recusa como "ator
+// antigo" (409).
+function atorLigado(personagem, wikiId) {
+  const ligadoId = personagem?.foundry?.ator || null;
+  const ligado = ligadoId ? game.actors.get(ligadoId) : null;
+  const ator = ligado?.getFlag(SISTEMA, 'wiki')?.id === wikiId ? ligado : game.actors.find(a => a.getFlag(SISTEMA, 'wiki')?.id === wikiId);
+  return ator && (!ligadoId || ligadoId === ator.id) ? ator : null;
 }
 
 // Os pedidos aprovados dos personagens que estão neste mundo (pelo id da wiki na flag do ator).
@@ -323,7 +338,8 @@ export async function entregarPedidos() {
   const { personagens = [] } = await wikiFetch('/api/personagens');
   const resultados = [];
   for (const resumo of personagens.filter(p => !p.publico && p.pedidos?.aprovados)) {
-    const ator = game.actors.find(a => a.getFlag(SISTEMA, 'wiki')?.id === resumo.id);
+    // Só o ator ligado ao personagem na wiki (o da última importação) entrega, mesmo que haja uma cópia antiga neste mundo.
+    const ator = atorLigado(resumo, resumo.id);
     if (!ator) continue;
     const { personagem } = await wikiFetch(`/api/personagens/${resumo.id}`);
     for (const pedido of (personagem?.pedidos || []).filter(p => p.status === 'aprovado' && !p.erro)) {
@@ -477,8 +493,14 @@ export async function personagensDaWiki() {
 
 // Aprovar na wiki e entregar já, no ator deste mundo. Um aprovado que deu erro é aprovado de novo (a wiki limpa o erro).
 export async function aprovarPedido(wikiId, pedidoId) {
-  const ator = game.actors.find(a => a.getFlag(SISTEMA, 'wiki')?.id === wikiId);
-  if (!ator) throw new Error('Este personagem ainda não está neste mundo: importe antes.');
+  // Como na entrega de cada minuto: só o ator ligado ao personagem entrega. Confere antes de aprovar.
+  const { personagem: antes } = await wikiFetch(`/api/personagens/${wikiId}`);
+  const ator = atorLigado(antes, wikiId);
+  if (!ator) {
+    throw new Error(game.actors.some(a => a.getFlag(SISTEMA, 'wiki')?.id === wikiId)
+      ? 'Neste mundo só há uma cópia antiga deste personagem: a wiki entrega ao ator ligado (o da última importação).'
+      : 'Este personagem ainda não está neste mundo: importe antes.');
+  }
   await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedidoId}/aprovar`, { method: 'POST', body: {} });
   const { personagem } = await wikiFetch(`/api/personagens/${wikiId}`);
   const pedido = (personagem?.pedidos || []).find(p => p.id === pedidoId);

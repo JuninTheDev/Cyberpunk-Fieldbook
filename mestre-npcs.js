@@ -1,5 +1,5 @@
-// Fichas prontas de NPC: as 10 do livro do RED ("Mooks and Grunts", p. 412–416), a Trauma Team (p. 224)
-// e variantes para as facções de Night City em 2077.
+// Fichas prontas de NPC: as 10 do livro do RED ("Mooks and Grunts", p. 412–416), as 10 do Cyberpunk Edgerunners
+// Mission Kit (p. 118–126), a Trauma Team (p. 224) e variantes para as facções de Night City em 2077.
 // Só a wiki do mestre carrega este arquivo: o servidor não o entrega aos jogadores.
 (() => {
   const table = (headers, rows) => `<div class="table-wrap dense"><table><thead><tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -48,11 +48,12 @@
     mook: 'Capanga (Mook) · conta como 1 personagem',
     lieutenant: 'Tenente (Lieutenant) · conta como 2',
     miniBoss: 'Mini-chefe (Mini Boss) · conta como 3',
-    boss: 'Chefe (Boss) · luta final'
+    boss: 'Chefe (Boss) · luta final',
+    aliado: 'Aliado'
   };
 
   // weapons: [nome, dano, CDT, perícia do livro, observação]
-  const npc = ({ name, book, tier, page, stats, hp, wounded, deathSave, initiative, armor, weapons, skills, gear, extra = '', tip }) => {
+  const npc = ({ name, book, tier, page, rep, stats, hp, wounded, deathSave, initiative, armor, weapons, skills, gear, extra = '', tip }) => {
     const parsed = parseSkills(skills);
     const base = en => (parsed.find(skill => skill.en === en) || {}).value || '—';
     const roleAbility = parsed.filter(skill => roleAbilities.includes(skill.en));
@@ -62,7 +63,7 @@
       `${weapon}${note ? ` <small>${note}</small>` : ''}`, damage, rof,
       `${skillNames[skill]} ${base(skill)}${skill === 'Shoulder Arms' && base('Autofire') !== '—' && /autofogo/.test(note || '') ? ` · autofogo ${base('Autofire')}` : ''}`
     ]);
-    return `<article class="entry npc" data-toc="${name}"><header><h4>${name}</h4><span class="entry-tag">${tiers[tier]} · ${book}${page ? ` · p. ${page}` : ''}</span></header>
+    return `<article class="entry npc" data-toc="${name}"><header><h4>${name}</h4><span class="entry-tag">${tiers[tier]} · ${book}${page ? ` · p. ${page}` : ''}${rep !== undefined ? ` · REP ${rep}` : ''}</span></header>
       <div class="npc-stats">${stats.map((value, index) => `<span><b>${statNames[index]}</b>${value}</span>`).join('')}</div>
       <div class="entry-stats"><span><b>PV</b> ${hp}</span><span><b>Gravemente Ferido</b> ${wounded}</span><span><b>Death Save</b> ${deathSave}</span><span><b>Iniciativa</b> ${initiative}</span></div>
       <div class="entry-stats"><span><b>Armadura</b> ${armor}</span></div>
@@ -183,6 +184,125 @@
   // ---------------- O elenco do Protocolo Morana ----------------
   // Fichas próprias da campanha, no formato das do livro (bases = STAT + perícia; PV = 10 + 5 × (BODY + WILL) ÷ 2,
   // para cima). O build do módulo do Foundry cria um ator para cada uma, na pasta "Protocolo Morana".
+  // ---------------- As fichas do Cyberpunk Edgerunners Mission Kit (Kit p. 118–126) ----------------
+  // Mesmo formato das do livro. weapons: [nome, dano, CDT, perícia do livro, observação, molde no Foundry]
+  // ("2077:" = a arma do compêndio de 2077; "core:" = o molde do livro-base). `inclui`: o Rank da Role que o Kit já somou
+  // na base da perícia (no Foundry, a Role soma sozinha).
+  const kitArmor = (nome, sp, metade) => `${nome} · SP ${sp} na cabeça e no corpo (${metade} contra corpo a corpo e Tech carregada)`;
+  const kitNpcs = [
+    {
+      name: 'Falco', book: 'Mission Kit', tier: 'aliado', page: 118, rep: 7,
+      stats: [6, 8, 6, 5, 4, 6, 5, 6, 4], hp: 40, wounded: 20, deathSave: 6, initiative: '8 + 1d10',
+      armor: kitArmor('Light Armorjack', 11, 6),
+      weapons: [['Techtronika RT-46 Burya', '4d6', 1, 'Handgun', 'Tech; carrega sem gastar a Ação de Movimento', '2077:Techtronika RT-46 Burya']],
+      skills: 'Moto Family 6, Athletics 8, Brawling 12, Concentration 6, Conversation 10, Deduction 10, Drive Land Vehicle 20, Education 6, Endurance 10, Evasion 12, First Aid 11, Handgun 14, Human Perception 12, Local Expert (Your Home) 12, Perception 12, Persuasion 8, Resist Torture/Drugs 10, Stealth 10, Streetwise 8, Tracking 12, Wardrobe & Style 8',
+      inclui: { 'Drive Land Vehicle': 6 },
+      gear: 'Neuroport (com o holophone), EMP Threading (as linhas no rosto), cyberbraço Arasaka (dispara a Burya sem quebrar o braço)',
+      tip: 'O nômade motorista da equipe do anime. Nomad 6: o +6 em Conduzir Veículo Terrestre já está na base (20). Na missão The Jacket, é quem tinha a jaqueta.'
+    },
+    {
+      name: 'Dalton Estevan-Luis', book: 'Mission Kit', tier: 'aliado', page: 119, rep: 1,
+      stats: [5, 6, 6, 7, 4, 6, 5, 4, 4], hp: 35, wounded: 18, deathSave: 4, initiative: '6 + 1d10',
+      armor: kitArmor('Light Armorjack', 11, 6),
+      weapons: [['Constitutional Arms Unity', '3d6', 2, 'Handgun', 'Power; 4d6 no tiro mirado', '2077:Constitutional Arms Unity']],
+      skills: 'Maker 4, Athletics 8, Brawling 8, Concentration 8, Conversation 6, Drive Land Vehicle 10, Education 7, Electronics/Security Tech 17, Evasion 12, First Aid 13, Handgun 12, Human Perception 16, Local Expert (Your Home) 7, Perception 7, Persuasion 6, Resist Torture/Drugs 10, Stealth 10, Streetwise 8',
+      gear: 'Neuroport (com o holophone), Techhair (cabelo artificial vermelho e azul, programável), cyberbraço de ferramentas Dynalar (a mão se abre em um monte de ferramentas)',
+      tip: 'O ladrão da jaqueta na missão The Jacket: um mecânico decente e membro de baixo escalão dos Valentinos, que só queria uma vida melhor. Tech 4: o Kit já somou +4 em Tecnologia Eletrônica/Segurança (17).'
+    },
+    {
+      name: 'Socorrista da Reo Meatwagon', book: 'Mission Kit', tier: 'mook', page: 120, rep: 0,
+      stats: [5, 4, 5, 7, 3, 4, 4, 4, 3], hp: 30, wounded: 15, deathSave: 4, initiative: '4 + 1d10',
+      armor: kitArmor('Kevlar', 7, 4),
+      weapons: [['Constitutional Arms Unity', '3d6', 2, 'Handgun', 'Power; 4d6 no tiro mirado', '2077:Constitutional Arms Unity']],
+      skills: 'Medicine 2, Athletics 7, Brawling 7, Evasion 8, Handgun 12, Human Perception 6, Paramedic 12, Perception 8',
+      gear: 'Neuroport (com o holophone)',
+      tip: 'Gonk da ambulância particular. Medtech 2: ganha a perícia Cirurgia. Só as perícias essenciais estão no Kit.'
+    },
+    {
+      name: 'Policial da NCPD', book: 'Mission Kit', tier: 'mook', page: 120, rep: 1,
+      stats: [3, 4, 5, 4, 4, 4, 4, 5, 3], hp: 35, wounded: 18, deathSave: 5, initiative: '4 + 1d10',
+      armor: kitArmor('Light Armorjack', 11, 6),
+      weapons: [['Militech M-10AF Lexington', '3d6', 2, 'Handgun', 'Power', '2077:Militech M-10AF Lexington']],
+      skills: 'Athletics 10, Brawling 8, Evasion 10, Handgun 12, Human Perception 8, Perception 12',
+      gear: 'Neuroport (com o holophone)',
+      tip: 'O patrulheiro comum da NCPD, sem Role. A Lexington é a pistola preferida da polícia de Night City desde 2030.'
+    },
+    {
+      name: 'Gonk edgerunner', book: 'Mission Kit', tier: 'mook', page: 121, rep: 1,
+      stats: [4, 4, 6, 4, 3, 4, 4, 5, 2], hp: 35, wounded: 18, deathSave: 5, initiative: '4 + 2 + 1d10',
+      armor: kitArmor('Kevlar', 7, 4),
+      weapons: [['Lâmina longa', '3d6', 2, 'Melee Weapon', 'arma branca', 'core:Heavy Melee'], ['Rostovic DB-2 Satara', '5d6', 1, 'Shoulder Arms', 'Tech; balote 5d6, cartucho 3d6', '2077:Rostovic DB-2 Satara']],
+      skills: 'Combat Awareness 2, Athletics 8, Brawling 8, Evasion 10, Human Perception 6, Melee Weapon 13, Perception 7, Shoulder Arms 11, Stealth 10',
+      gear: 'Neuroport (com o holophone)',
+      tip: 'Mercenário de rua sem futuro. Solo 2: +2 na iniciativa.'
+    },
+    {
+      name: 'Netrunner inimigo', book: 'Mission Kit', tier: 'lieutenant', page: 121, rep: 1,
+      stats: [5, 4, 4, 6, 3, 4, 4, 4, 2], hp: 30, wounded: 15, deathSave: 4, initiative: '4 + 1d10',
+      armor: kitArmor('Light Armorjack', 11, 6),
+      weapons: [['Constitutional Arms Unity', '3d6', 2, 'Handgun', 'Power; 4d6 no tiro mirado', '2077:Constitutional Arms Unity']],
+      skills: 'Interface 3, Athletics 6, Brawling 6, Evasion 8, Handgun 10, Human Perception 8, Perception 8, Stealth 10',
+      gear: 'Neuroport com um cyberdeck: faz quickhacks',
+      tip: 'Interface 3: faz os quickhacks Simples, Padrão e Difíceis (até DV10) e passa direto pelo firewall de fábrica dos Neuroports. O Kit dá 2 Ações NET por turno; com as regras do RED, Interface 3 também dá 2.'
+    },
+    {
+      name: 'Soldado da Arasaka', book: 'Mission Kit', tier: 'mook', page: 122, rep: 2,
+      stats: [4, 7, 5, 3, 5, 6, 5, 6, 3], hp: 40, wounded: 20, deathSave: 6, initiative: '7 + 2 + 1d10',
+      armor: kitArmor('Light Armorjack', 11, 6),
+      weapons: [['Arasaka HJSH-18 Masamune', '5d6', 1, 'Shoulder Arms', 'Power; 3 balas no tiro único; autofogo (4)', '2077:Arasaka HJSH-18 Masamune']],
+      skills: 'Combat Awareness 2, Athletics 10, Autofire 13, Brawling 10, Evasion 11, Human Perception 9, Perception 10, Shoulder Arms 13, Tactics 10',
+      gear: 'Neuroport (com o holophone), Self-ICE ×2: para hackear, um netrunner precisa passar 2 Passwalls (DV8)',
+      tip: 'A tropa corporativa. Solo 2: +2 na iniciativa. Os dois Self-ICE seguram um netrunner fraco.'
+    },
+    {
+      name: 'Gonk dos Valentinos', book: 'Mission Kit', tier: 'mook', page: 122, rep: 1,
+      stats: [4, 6, 6, 4, 3, 4, 4, 5, 3], hp: 35, wounded: 18, deathSave: 5, initiative: '6 + 2 + 1d10',
+      armor: kitArmor('Light Armorjack', 11, 6),
+      weapons: [['Taco de beisebol com pregos', '3d6', 2, 'Melee Weapon', 'arma branca', 'core:Heavy Melee'], ['Militech M-76E Omaha', '3d6', 2, 'Handgun', 'Tech; carregada, CDT 2 e até 3 balas', '2077:Militech M-76E Omaha']],
+      skills: 'Combat Awareness 2, Athletics 8, Brawling 10, Evasion 12, Handgun 12, Human Perception 8, Melee Weapon 10, Perception 8',
+      gear: 'Neuroport (com o holophone)',
+      tip: 'Gangueiro dos Valentinos de Heywood. Solo 2: +2 na iniciativa.'
+    },
+    {
+      name: 'Adam Smasher', book: 'Mission Kit', tier: 'boss', page: 123, rep: 10,
+      stats: [6, 8, 8, 6, 5, 8, 8, 17, 0], hp: 75, wounded: '—', deathSave: 17, initiative: '8 + 9 + 1d10 (mas sempre age primeiro)',
+      armor: 'Blindagem de borg · SP 18 na cabeça e no corpo (18 também contra corpo a corpo e Tech carregada)',
+      weapons: [
+        ['Punhos de Adam Smasher', '5d6', 2, 'Brawling', 'ignoram metade do SP', 'core:Very Heavy Melee'],
+        ['Lança-foguetes no ombro', '9d6', 1, 'Heavy Weapons', 'Smart; explosivo; 4 foguetes', 'core:Rocket Launcher'],
+        ['Autoespingarda pop-up', '6d6', 2, 'Shoulder Arms', 'Power; 16 tiros', 'core:Shotgun'],
+        ['Metralhadora de cano rotativo', '2d6', 1, 'Heavy Weapons', 'Power; só autofogo (×5); 80 tiros', 'core:Tsunami Arms Helix']
+      ],
+      skills: 'Combat Awareness 9, Athletics 14, Autofire 18, Brawling 18, Bureaucracy 10, Conceal/Reveal Object 12, Concentration 16, Conversation 2, Cybertech 16, Drive Land Vehicle 12, Education 10, Electronics/Security Tech 10, Endurance 18, Evasion 18, First Aid 10, Handgun 18, Heavy Weapons 18, Human Perception 3, Interrogation 15, Local Expert (Your Home) 8, Melee Weapon 18, Paramedic 10, Perception 16, Persuasion 8, Resist Torture/Drugs 18, Shoulder Arms 18, Stealth 12, Streetwise 10, Tactics 13, Wardrobe & Style 12',
+      gear: 'toda a munição é perfurante (abla 2 em vez de 1). Neuroport; Self-ICE ×3 (3 Passwalls DV10); Self-ICE Regenerator (no começo do turno dele, todo netrunner no Neuroport é expulso e os Passwalls voltam); receptor de comunicação com decodificador (uma Ação e Tecnologia Eletrônica/Segurança DV13: escuta holos e rádios a até 50 m); Jumpboosters (ignora as penalidades de salto); matriz de regeneração da armadura (na primeira vez que fica com 40 PV ou menos, a armadura volta a SP 18); corpo de borg completo (ignora estrangulamento e lesões críticas, inclusive o dano bônus; não respira, não come, não bebe); Berserk Implant (ignora Gravemente e Mortalmente Ferido, mas faz Death Save a 0 PV); a Sandevistan experimental dele (sempre ligada em combate: uma Ação de Movimento ou de ataque a mais por turno, sem custo de Humanidade nem de PV)',
+      extra: '<p class="note-status">Para o RED, o Kit sugere somar Low Light/Infrared/UV ×2, Anti-Dazzle ×2, Hardened Shielding em todo o cyberware e um Level Damper, e o que mais o mestre achar que ele precisa. O corpo de borg dele é único.</p>',
+      tip: 'O chefe final do anime: o equipamento e o cromo são únicos, refeitos pelos melhores Techs da Arasaka. EMP —: não tem Humanidade a perder. Solo 9.'
+    },
+    {
+      name: 'Maria Torres', book: 'Mission Kit', tier: 'lieutenant', page: 125, rep: 5,
+      stats: [6, 8, 8, 6, 6, 6, 6, 7, 5], hp: 45, wounded: 23, deathSave: 7, initiative: '8 + 6 + 1d10',
+      armor: kitArmor('Light Armorjack', 11, 6),
+      weapons: [['Mantis Blade ×2', '3d6', 1, 'Melee Weapon', 'excelente; sem gastar Ação para sacar', 'core:Heavy Melee'], ['Techtronika RT-46 Burya', '4d6', 1, 'Handgun', 'Tech; carrega sem gastar a Ação de Movimento', '2077:Techtronika RT-46 Burya']],
+      skills: 'Combat Awareness 6, Athletics 16, Brawling 14, Bribery 10, Concentration 8, Conversation 7, Drive Land Vehicle 10, Education 8, Endurance 10, Evasion 16, First Aid 8, Handgun 16, Human Perception 9, Interrogation 12, Local Expert (Your Home) 10, Melee Weapon 16, Perception 12, Persuasion 10, Resist Torture/Drugs 12, Stealth 10, Streetwise 12, Tactics 10, Wardrobe & Style 8',
+      gear: 'Neuroport (com o holophone), EMP Threading (as linhas no rosto), dois cyberbraços Arasaka com Mantis Blade, Berserk Implant (ativado, ignora Gravemente e Mortalmente Ferido, mas faz Death Save a 0 PV)',
+      tip: 'A tenente de Gustavo Orta, dos Valentinos, na missão The Jacket: quer achar Dalton, e tem ordem de matá-lo. Solo 6: +6 na iniciativa.'
+    }
+  ];
+
+  // A ficha do Black Chrome (p. 153): Rex Royale, o fixer do mercado F (Rex’s Casino Royale). As outras fichas de fixer
+  // dos Mercados Noturnos estão nas páginas que faltam no PDF do projeto.
+  const bcNpcs = [
+    {
+      name: 'Rex Royale', book: 'Black Chrome', tier: 'aliado', page: 153, rep: 7,
+      stats: [7, 7, 7, 4, 8, 6, 4, 6, 4], hp: 40, wounded: 20, deathSave: 6, initiative: '7 + 1d10',
+      armor: 'Subdermal Armor e Corporate Island · SP 11 na cabeça (Subdermal Armor) e 12 no corpo (Corporate Island melhorada por um Tech)',
+      weapons: [['Kendachi Mono-Three', '4d6', 1, 'Melee Weapon', 'exótica', 'core:Kendachi Mono-Three'], ['Westwood', '4d6', 1, 'Handgun', 'Black Chrome; excelente, melhorada por um Tech', 'bc:Westwood']],
+      skills: 'Operator 8, Athletics 9, Brawling 13, Bribery 12, Conceal/Reveal Object 15, Concentration 8, Conversation 6, Education 9, Evasion 13, First Aid 6, Gamble 17, Handgun 16, Human Perception 6, Language (English) 11, Language (Cantonese Chinese) 11, Language (Italian) 11, Language (Japanese) 11, Language (Korean) 11, Language (Russian) 11, Language (Spanish) 11, Language (Streetslang) 9, Lip Reading 9, Local Expert (Little China) 13, Local Expert (University District) 13, Local Expert (Upper Marina) 13, Melee Weapon 16, Perception 11, Persuasion 14, Resist Torture/Drugs 10, Stealth 9, Streetwise 14, Trading 16, Wardrobe & Style 10',
+      gear: '12 balas básicas de pistola muito pesada, Agent, baralho, óculos inteligentes com Image Enhancement e um ônibus TetraCorp America Badger Corporate Bus; implante anticoncepcional, dois Cybereyes com Blindagem reforçada e Low Light/Infrared/UV, dois Shift Tacts, Subdermal Armor',
+      tip: 'O fixer do Rex’s Casino Royale, o mercado F do Black Chrome, e o dono da rede de proteção do bairro One Block. Apareceu primeiro no Jumpstart Kit do RED, com o chefe dos capangas dele, o Solo Grant Jung ("Royal"). Prefere receber em favores, e a casa sempre ganha. A Westwood é de qualidade excelente; no Foundry, ela e a Corporate Island vêm do compêndio Black Chrome.'
+    }
+  ];
+
   const campaignCast = [
     {
       name: 'Wakako Okada', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
@@ -303,8 +423,8 @@
     faction('6th Street', 'Santo Domingo e Heywood', ['Operativo de segurança', 'ex-militares: troque o rifle ruim por um Militech M251s Ajax (5d6, qualidade padrão, não emperra).'],
       ['Oficial de segurança', 'como no livro.'],
       'Lutam em formação: metade dá fogo supressivo enquanto a outra metade flanqueia.', 'adaptação'),
-    faction('Animals', 'Pacifica', ['Guarda-costas', 'tire a espingarda; adicione Gorilla Arms (Briga causa 3d6 como uma arma, contra a armadura; +2 em Atletismo).'],
-      ['Chefe reclaimer', 'com Gorilla Arms e Grafted Muscle and Bone Lace: BODY 8, PV 45, Gravemente Ferido 23, Death Save 8.'],
+    faction('Animals', 'Pacifica', ['Guarda-costas', 'tire a espingarda; adicione um cyberbraço com Gorilla Arm (o punho é arma branca pesada excelente: 3d6, CDT 2, +1 no ataque; empunha como BODY 11).'],
+      ['Chefe reclaimer', 'com dois Gorilla Arms e Grafted Muscle and Bone Lace: BODY 8, PV 45, Gravemente Ferido 23, Death Save 8.'],
       'Preferem os punhos às armas. Tiro de longe irrita, mas não os faz recuar.', 'adaptação'),
     faction('Voodoo Boys', 'Pacifica', ['Boosterganger', 'guardas do prédio, como no livro.'],
       ['Netrunner', 'como no livro; eles lutam na NET: encha a arquitetura com Black ICE e demônios do Arsenal.'],
@@ -458,7 +578,7 @@
   const pages = {
     npcs: {
       eyebrow: 'Na mesa / livro-base p. 399–422', title: 'Fichas de NPC',
-      lede: 'As 10 fichas prontas do livro do RED, a Trauma Team e variantes para as facções de Night City em 2077. As bases de perícia já somam STAT + perícia + bônus: role base + 1d10. Esta página só aparece na wiki do mestre.',
+      lede: 'As 10 fichas prontas do livro do RED, as 10 do Mission Kit, a Trauma Team e variantes para as facções de Night City em 2077. As bases de perícia já somam STAT + perícia + bônus: role base + 1d10. Esta página só aparece na wiki do mestre.',
       html: `${section('Como usar', '399–400 e 412', `${list([
         'Os NPCs não têm Role, habilidade de Role nem LUCK, a não ser quando a ficha diz (Netrunner, Outrider e Pyro).',
         'Arma de <b>qualidade ruim</b> emperra num 1 no dado de ataque; desemperrar custa uma Ação (p. 342).',
@@ -479,6 +599,8 @@
         ${section('Tenentes', '414–415', npcGrid(lieutenants))}
         ${section('Mini-chefes', '415–416', npcGrid(bosses))}
         ${section('Chefe', '416', npcGrid(boss))}
+        ${section('Fichas do Mission Kit', 'Kit p. 118–126', `<div class="callout">As fichas do Cyberpunk Edgerunners Mission Kit, da missão The Jacket e do anime. Todos têm <b>Neuroport</b>: dá para hackear qualquer um com quickhacks. A armadura tem dois SP: contra a maioria dos ataques e contra corpo a corpo e Tech carregada (a metade). As bases de perícia já somam o bônus da Role, quando o Kit diz. No Foundry, estão na pasta <b>Mission Kit</b> do compêndio de NPCs.</div>${npcGrid(kitNpcs)}<p>${button('net2077', 'Quickhacks no Neuroport')} ${button('weapons2077', 'Armas de 2077')}</p>`)}
+        ${section('Fichas do Black Chrome', 'BC p. 153', `<div class="callout">Os fixers dos Mercados Noturnos do Black Chrome. O PDF do projeto só tem a ficha de Rex Royale, do mercado F: as dos mercados A a E estão nas páginas que faltam. No Foundry, está na pasta <b>Black Chrome</b> do compêndio de NPCs.</div>${npcGrid(bcNpcs)}<p>${button('bcMercados', 'Mercados Noturnos do Black Chrome')}</p>`)}
         ${section('Trauma Team', '224', traumaTeam)}
         ${section('Facções de 2077', '417–422', `<div class="callout">O livro monta os encontros de rua trocando o equipamento destas fichas ("use o Boosterganger, troque o couro por…"). As variantes marcadas com <b>livro</b> vêm das tabelas de encontros (p. 417–422); as marcadas com <b>adaptação</b> seguem o mesmo método para as gangues de 2077. As armas citadas estão em Armas de 2077.</div><div class="entry-grid">${factions.join('')}</div>`)}
         ${section('Protocolo Morana: o elenco', '', `<p>Os NPCs nomeados da campanha, no formato das fichas do livro. No Foundry, o módulo cpr-2077 traz um ator para cada um, na pasta <b>Protocolo Morana</b> do compêndio de NPCs. A personalidade, os segredos e as falas estão em Personagens.</p>${npcGrid(campaignCast)}<p>${button('docPersonagens', 'Personagens')} ${button('docSessao01', 'Sessão 01 completa')} ${button('docSessao02', 'Sessão 02')}</p>`)}`
@@ -493,5 +615,5 @@
   };
 
   // data: as fichas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
-  window.npcStatBlocks = { pages, data: { mooks, lieutenants, bosses, boss, campaignCast, skillNames, parseSkills } };
+  window.npcStatBlocks = { pages, data: { mooks, lieutenants, bosses, boss, kit: kitNpcs, blackChrome: bcNpcs, campaignCast, skillNames, parseSkills } };
 })();

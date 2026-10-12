@@ -379,7 +379,7 @@ export const operacoes = {
     if (descendo) {
       if (corredor.preso > 0) throw erro('O Kraken te prende: não dá para avançar até o fim do seu próximo turno.');
       const senha = conteudosDe(arq, corredor.no).find(conteudo => conteudo.tipo === 'senha' && !est.feitos.includes(conteudo.chave));
-      if (senha) throw erro(`A senha deste andar (DV ${senha.dv}) trava a descida: use Backdoor.`);
+      if (senha) throw erro(`A senha deste andar (DV ${senha.dv}) trava a descida: use Breach.`);
       const preso = quemSegura(arq, est, corredor)[0];
       if (preso) throw erro(preso.tipo === 'demonio' ? `O demônio ${nomeDoInimigo(preso)} te segura: derrube-o (Zap ou programa). Slide não funciona contra demônios.` : `O ${nomeDoInimigo(preso)} deste andar te segura: derrube-o (Zap ou programa) ou use Slide.`);
     }
