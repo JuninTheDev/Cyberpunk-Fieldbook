@@ -180,6 +180,30 @@ module.exports = async ({ servidores, r }) => {
     return [jogadorAprova.status === 403 && mestreAprova.status === 200 && cancelaDepois.status === 400 && entregue.status === 200 && cancela.status === 200 && estados === 'entregue,cancelado',
       `jogador aprova ${jogadorAprova.status} · mestre ${mestreAprova.status} · cancelar aprovado ${cancelaDepois.status} · entregue ${entregue.status} · ${estados}`];
   });
+  await r.passo('ator antigo: importado de novo noutro ator (a migração), a ficha da mesa e a entrega do ator antigo são recusadas', async () => {
+    const { id } = r.pedidoTeste;
+    const mesa = ator => api(gm, `/api/personagens/${id}/mesa`, { method: 'PUT', body: { ...(ator ? { ator } : {}), hp: { atual: { x1: 30, z9: 1, x2: 25 }[ator] ?? 24, max: 40 } } });
+    // Ligado ao x1 (passo dos pedidos): a ficha do x1 vale; a de outro ator, não.
+    const doLigado = await mesa('x1');
+    const deOutro = await mesa('z9');
+    // O mundo novo importa num ator novo (x2): o antigo (x1) não grava mais; sem ator na ficha (módulo antigo), vale.
+    await api(gm, `/api/personagens/${id}/foundry`, { method: 'PUT', body: { ator: 'x2', nomeAtor: 'Compras' } });
+    const doAntigo = await mesa('x1');
+    const doNovo = await mesa('x2');
+    const semAtor = await mesa('');
+    // Um pedido aprovado: a entrega e o erro vindos do ator antigo são recusados; a do novo marca entregue.
+    const pedido = (await api(rede, `/api/personagens/${id}/pedidos`, { method: 'POST', cookie: ana, body: { itens: [{ id: 'core_gear:agent', qtd: 1 }] } })).dados.pedido;
+    const acao = (nome, body) => api(gm, `/api/personagens/${id}/pedidos/${pedido.id}/${nome}`, { method: 'POST', body });
+    await acao('aprovar', {});
+    const entregaAntiga = await acao('entregue', { ator: 'x1', avisos: [] });
+    const erroAntigo = await acao('erro', { ator: 'x1', erro: 'Dinheiro insuficiente na mesa.' });
+    const entregaNova = await acao('entregue', { ator: 'x2', avisos: [] });
+    const doc = (await api(gm, `/api/personagens/${id}`)).dados.personagem;
+    const final = (doc.pedidos || []).find(item => item.id === pedido.id) || {};
+    return [doLigado.status === 200 && deOutro.status === 409 && /ator antigo/.test(deOutro.dados?.erro || '') && doAntigo.status === 409 && doNovo.status === 200 && semAtor.status === 200 && doc.mesa?.hp?.atual === 24
+      && entregaAntiga.status === 409 && erroAntigo.status === 409 && entregaNova.status === 200 && final.status === 'entregue' && !final.erro,
+      `ligado ${doLigado.status} · outro ${deOutro.status} · antigo ${doAntigo.status} · novo ${doNovo.status} · sem ator ${semAtor.status} (HP ${doc.mesa?.hp?.atual}) · entrega antiga ${entregaAntiga.status} · erro antigo ${erroAntigo.status} · nova ${entregaNova.status} (${final.status})`];
+  });
   await r.passo('IP: só o mestre dá; gastar mais do que tem é recusado', async () => {
     const jogador = await api(rede, `/api/personagens/${ficha.id}/ip`, { method: 'POST', cookie: ana, body: { qtd: 500 } });
     const mestre = await api(gm, `/api/personagens/${ficha.id}/ip`, { method: 'POST', body: { qtd: 100, motivo: 'Sessão 1' } });

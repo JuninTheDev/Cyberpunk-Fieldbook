@@ -263,6 +263,13 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     if (doc.envio) return doc.envio.resultadoHash === now ? 'enviado' : 'enviado-mudou';
     return 'novo';
   }
+  // A ficha da mesa (ou a entrega de um pedido) que chega de um ator que não é mais o ligado ao personagem: o mundo
+  // antigo aberto depois da migração para outro mundo, ou uma cópia do ator. Só o ator ligado (o da última importação)
+  // grava. Sem o ator no pedido (módulo antigo), vale como antes.
+  function staleActor(doc, ator) {
+    if (!ator || !doc.foundry || !doc.foundry.importado || !doc.foundry.ator || String(ator) === doc.foundry.ator) return null;
+    return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} está ligado a outro ator do Foundry (${doc.foundry.nomeAtor || doc.foundry.ator}): este é um ator antigo.`, ator: doc.foundry.ator } };
+  }
   // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
   const ipSpent = doc => (Array.isArray(doc.avanco) ? doc.avanco : []).reduce((sum, entry) => sum + Math.max(0, Number(entry.custo) || 0), 0);
@@ -698,6 +705,11 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const done = await update(doc => {
           const pedido = ordersOf(doc).find(item => item.id === pid);
           if (!pedido) return { status: 404, data: { erro: 'Pedido não encontrado.' } };
+          // A entrega (ou o erro dela) vale só do ator ligado: o mundo antigo não entrega mais depois da migração.
+          if (action === 'entregue' || action === 'erro') {
+            const stale = staleActor(doc, input.ator);
+            if (stale) return stale;
+          }
           const now = new Date().toISOString();
           if (action === 'cancelar') {
             if (pedido.status !== 'pendente') return { status: 400, data: { erro: 'Só dá para cancelar um pedido que ainda espera o mestre.' } };
@@ -729,6 +741,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const done = await update(doc => {
           // Depois de um crossover, o mundo antigo para de mandar a ficha (a da mesa nova é que vale).
           if (input.campanha && realId(input.campanha) !== campaignOf(doc)) return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} agora é de outra campanha na wiki.`, campanha: campaignOf(doc) } };
+          // Depois de importar de novo (num mundo novo ou noutro ator), só o ator ligado manda a ficha.
+          const stale = staleActor(doc, input.ator);
+          if (stale) return stale;
           delete input.campanha;
           doc.mesa = { ...input, recebido: new Date().toISOString() };
           return null;
