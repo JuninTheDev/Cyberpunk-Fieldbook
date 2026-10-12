@@ -21,6 +21,10 @@
     {
       "src": "styles/sistema.css",
       "layer": "system"
+    },
+    {
+      "src": "styles/ficha.css",
+      "layer": "system"
     }
   ],
   "languages": [

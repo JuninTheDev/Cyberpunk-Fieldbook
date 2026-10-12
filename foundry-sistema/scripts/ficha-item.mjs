@@ -13,7 +13,8 @@ const ligaAMao = item => item.type === 'droga' || (item.type === 'equipamento' &
 
 export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static DEFAULT_OPTIONS = {
-    classes: [SISTEMA, 'ficha-item'],
+    // O tema escuro da ficha do personagem (styles/ficha.css), qualquer que seja o da interface.
+    classes: [SISTEMA, 'ficha-item', 'themed', 'theme-dark'],
     position: { width: 560, height: 620 },
     window: { resizable: true },
     form: { submitOnChange: true },

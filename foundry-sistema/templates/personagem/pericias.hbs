@@ -1,19 +1,106 @@
 <section class="tab pericias {{tab.cssClass}}" data-group="primary" data-tab="pericias">
-  <div class="grupos">
-    {{#each grupos}}
-    <div class="grupo">
-      <h3>{{nome}}</h3>
-      <ol>
-        {{#each pericias}}
-        <li class="pericia {{#if nivel}}tem{{/if}}" data-pericia="{{id}}">
-          <a class="nome" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{sigla}} + {{nome}} + 1d10">{{nome}}{{#if dificil}} <small>x2</small>{{/if}}</a>
+  <div class="geral">
+    <div class="coluna">
+      <section class="painel corte">
+        <div class="titulo">ATRIBUTOS<span>CLIQUE PARA ROLAR</span></div>
+        <ol class="atributos">
+          {{#each atributos}}
+          <li class="atributo" data-atributo="{{chave}}">
+            <input type="number" name="system.atributos.{{chave}}.valor" value="{{base}}" min="0" max="20" aria-label="{{sigla}}">
+            {{#if (ne valor base)}}<span class="efetivo" data-tooltip="Com a armadura, as lesões e os efeitos: {{valor}}">{{valor}}</span>{{/if}}
+            <button type="button" class="rolar" data-action="rolarAtributo" data-atributo="{{chave}}" data-tooltip="Rolar {{sigla}} + 1d10">{{sigla}}</button>
+          </li>
+          {{/each}}
+        </ol>
+      </section>
+
+      <section class="painel corte vitais crescer">
+        <div class="titulo">VITAIS<span>AO VIVO</span></div>
+        <div class="medida"><span>PONTOS DE VIDA</span><b>{{sistema.hp.value}} / {{sistema.hp.max}}</b></div>
+        <div class="barra"><div class="hp" style="width: {{vitais.hp}}%"></div></div>
+        <div class="medida"><span>HUMANIDADE</span><b><input type="number" name="system.humanidade.value" value="{{sistema.humanidade.value}}" aria-label="Humanidade atual"> / {{sistema.humanidade.max}}</b></div>
+        <div class="barra"><div class="hum" style="width: {{vitais.humanidade}}%"></div></div>
+        <div class="medida"><span>EMP ATUAL</span><b>{{sistema.empAtual}}</b></div>
+        <div class="medida"><span>GRAVEMENTE FERIDO</span><b data-tooltip="Abaixo da metade do HP: −2 em tudo">&lt; {{vitais.grave}}</b></div>
+        <div class="medida death-save">
+          <span>DEATH SAVE</span>
+          <b>
+            <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
+            {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves">zerar</a>{{/if}}
+          </b>
+        </div>
+        <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}</div>
+      </section>
+    </div>
+
+    <section class="painel corte pericias-painel">
+      <div class="titulo">
+        PERÍCIAS
+        <span>{{#if todasAsPericias}}TODAS AS {{periciasTotal}}{{else}}{{periciasComNivel}} COM NÍVEL{{/if}}
+          <button type="button" class="alternar-pericias" data-action="alternarPericias" data-tooltip="{{periciasComNivel}} com nível e {{periciasSemNivel}} sem">{{#if todasAsPericias}}SÓ COM NÍVEL{{else}}VER TODAS{{/if}}</button>
+        </span>
+      </div>
+      <div class="linha-pericia cabeca"><span>NOME</span><span>ATRIB</span><span>NÍV</span><span>BASE</span></div>
+      <ol class="lista-pericias">
+        {{#each linhasDePericia}}
+        {{#if grupo}}
+        <li class="grupo-pericias">{{grupo}}</li>
+        {{else}}
+        <li class="pericia linha-pericia {{#if nivel}}tem{{/if}} {{#if alta}}alta{{/if}}" data-pericia="{{id}}">
+          <span class="celula-nome">
+            <a class="nome" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>
+            {{#if tirar}}<a class="tirar" data-action="tirarPericia" data-pericia="{{id}}" data-tooltip="Tirar esta perícia da ficha">✕</a>{{/if}}
+          </span>
           <span class="sigla">{{sigla}}</span>
-          <input type="number" name="system.pericias.{{id}}.nivel" value="{{nivel}}" min="0" max="10">
-          <span class="total" data-tooltip="Total sem o dado{{#if bonus}} (bônus +{{bonus}}){{/if}}">{{total}}</span>
+          <input type="number" name="system.pericias.{{id}}.nivel" value="{{nivel}}" min="0" max="10" aria-label="Nível de {{nome}}">
+          <span class="total" data-tooltip="{{dicaTotal}}">{{total}}</span>
         </li>
+        {{/if}}
+        {{else}}
+        <li class="vazio caixa-vazia">NENHUMA PERÍCIA COM NÍVEL: VER TODAS</li>
         {{/each}}
       </ol>
+      {{#if todasAsPericias}}<button type="button" class="acao novo" data-action="novaPericia" data-tooltip="Linguagem, Especialista Local, Ciências, Artes Marciais ou Tocar Instrumento">+ PERÍCIA DE FAMÍLIA</button>{{/if}}
+    </section>
+
+    <div class="coluna">
+      <section class="painel corte vermelho">
+        <div class="titulo">ARMADURA<span>SP</span></div>
+        <div class="sp-caixas">
+          <div><b>{{sistema.armadura.cabeca.sp}}</b>CABEÇA</div>
+          <div><b>{{sistema.armadura.corpo.sp}}</b>CORPO</div>
+        </div>
+        {{#each armadurasVestidas}}
+        <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem">{{nome}}<small>{{detalhe}}</small></a></div>
+        {{else}}<div class="caixa-vazia">NENHUMA ARMADURA VESTIDA</div>{{/each}}
+      </section>
+
+      <section class="painel corte">
+        <div class="titulo">ARMAS<span>{{armasEquipadas.length}} EQUIPADA{{#unless (eq armasEquipadas.length 1)}}S{{/unless}}</span></div>
+        {{#each armasEquipadas}}
+        <div class="item-linha" data-item-id="{{id}}">
+          <a class="nome" data-action="editarItem">{{nome}}<small>{{resumo}}</small></a>
+          <button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T): +{{ataque}}{{#if dicaAtaque}}. {{dicaAtaque}}{{/if}}">ATACAR</button>
+        </div>
+        {{else}}<div class="caixa-vazia">NENHUMA ARMA EQUIPADA</div>{{/each}}
+      </section>
+
+      <section class="painel corte">
+        <div class="titulo">CYBERWARE<span>{{cyberInstalado.length}} INSTALADO{{#unless (eq cyberInstalado.length 1)}}S{{/unless}}</span></div>
+        {{#each cyberInstalado}}
+        <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem">{{nome}}<small>{{detalhe}}</small></a></div>
+        {{else}}<div class="caixa-vazia">NENHUM CYBERWARE INSTALADO</div>{{/each}}
+      </section>
+
+      <section class="painel corte perigo crescer lesoes">
+        <div class="titulo">LESÕES CRÍTICAS<span>{{lesoes.length}} ATIVA{{#unless (eq lesoes.length 1)}}S{{/unless}}</span></div>
+        {{#each lesoes}}
+        <div class="item-linha" data-item-id="{{id}}">
+          <a class="nome" data-action="editarItem" data-tooltip="{{resumo}}">{{nome}}<small>{{tratar}}</small></a>
+          <button type="button" class="acao" data-action="apagarItem" data-tooltip="Tratada: tirar da ficha">TRATADA</button>
+        </div>
+        {{else}}<div class="caixa-vazia">SEM LESÕES</div>{{/each}}
+      </section>
     </div>
-    {{/each}}
   </div>
 </section>

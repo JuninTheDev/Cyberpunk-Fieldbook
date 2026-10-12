@@ -1,22 +1,35 @@
-// Ficha do personagem (ApplicationV2 do Foundry 14): cabeçalho com os vitais, e abas de atributos e combate, perícias,
-// equipamento, cyberware e notas. Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
-import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+// Ficha do personagem (ApplicationV2 do Foundry 14), no visual do modelo da mesa ("Modelo de ficha/"): o cabeçalho com
+// a Role, o nome, o apelido e os indicadores (HP, Sorte, dinheiro, IP, reputação), e as abas Perícias (o painel geral:
+// atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
+// (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
+import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { acoesDe2077 } from './combate.mjs';
-import { FAMILIAS, PERICIAS } from './gerado.mjs';
+import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 const parte = arquivo => ({ template: caminho(`templates/personagem/${arquivo}.hbs`) });
+const aba = arquivo => ({ ...parte(arquivo), scrollable: [''] });
+const porcento = (valor, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round((valor / max) * 100))) : 0);
+const slug = texto => String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// As perícias mais altas ficam em destaque no painel geral, como no modelo.
+const EM_DESTAQUE = 6;
+// A Role pelo nome ou pelo id da lista de 2077 da wiki ("Solo", "netrunner").
+const roleDaWiki = nome => ROLES.find(role => [role.nome, role.id].some(valor => valor.toLowerCase() === String(nome).trim().toLowerCase())) ?? null;
 
 export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static DEFAULT_OPTIONS = {
-    classes: [SISTEMA, 'ficha-personagem'],
-    position: { width: 820, height: 860 },
+    // O visual do modelo é escuro: a ficha fica no tema escuro do Foundry, qualquer que seja o tema da interface.
+    classes: [SISTEMA, 'ficha-personagem', 'themed', 'theme-dark'],
+    position: { width: 1060, height: 900 },
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: {
       rolarAtributo: FichaPersonagem.#rolarAtributo,
       rolarPericia: FichaPersonagem.#rolarPericia,
+      alternarPericias: FichaPersonagem.#alternarPericias,
+      novaPericia: FichaPersonagem.#novaPericia,
+      tirarPericia: FichaPersonagem.#tirarPericia,
       atacar: FichaPersonagem.#atacar,
       mirar: FichaPersonagem.#mirar,
       deathSave: FichaPersonagem.#deathSave,
@@ -33,24 +46,32 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   };
 
   static PARTS = {
-    cabecalho: parte('cabecalho'),
+    topo: parte('topo'),
     tabs: { template: 'templates/generic/tab-navigation.hbs' },
-    principal: { ...parte('principal'), scrollable: [''] },
-    pericias: { ...parte('pericias'), scrollable: [''] },
-    equipamento: { ...parte('equipamento'), scrollable: [''] },
-    cyberware: { ...parte('cyberware'), scrollable: [''] },
-    notas: { ...parte('notas'), scrollable: [''] }
+    pericias: aba('pericias'),
+    combate: aba('combate'),
+    equipamento: aba('equipamento'),
+    cyberware: aba('cyberware'),
+    role: aba('role'),
+    net: aba('net'),
+    vida: aba('vida'),
+    rodape: parte('rodape')
   };
 
   static TABS = {
     primary: {
       tabs: [
-        { id: 'principal', label: 'Atributos e combate' }, { id: 'pericias', label: 'Perícias' }, { id: 'equipamento', label: 'Equipamento' },
-        { id: 'cyberware', label: 'Cyberware' }, { id: 'notas', label: 'Notas' }
+        { id: 'pericias', label: 'Perícias', icon: 'fa-solid fa-list-check' }, { id: 'combate', label: 'Combate', icon: 'fa-solid fa-crosshairs' },
+        { id: 'equipamento', label: 'Equipamento', icon: 'fa-solid fa-briefcase' }, { id: 'cyberware', label: 'Cyberware', icon: 'fa-solid fa-microchip' },
+        { id: 'role', label: 'Role', icon: 'fa-solid fa-id-badge' }, { id: 'net', label: 'NET', icon: 'fa-solid fa-network-wired' },
+        { id: 'vida', label: 'Vida', icon: 'fa-solid fa-book-open' }
       ],
-      initial: 'principal'
+      initial: 'pericias'
     }
   };
+
+  // Todas as perícias ou só as que têm nível (o painel geral). Sem escolha, todas quando nenhuma tem nível.
+  #todasAsPericias = null;
 
   async _prepareContext(options) {
     const contexto = await super._prepareContext(options);
@@ -64,37 +85,96 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       const { partes } = arma.partesDoAtaque(null, { smart: de2077.smart });
       return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
         classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
-        dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo };
+        dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo,
+        resumo: [arma.system.dano, `CDT ${arma.system.cdt}`, arma.system.pente.max ? `${arma.system.pente.value}/${arma.system.pente.max}` : ''].filter(Boolean).join(' // ') };
     };
-    // Perícias: as comuns sempre (nível 0 também), e as de família que o personagem tem, no grupo da família.
+    const armas = itens('arma').map(linhaArma);
+
+    // Perícias: as comuns sempre (nível 0 também) e as de família que o personagem tem. No painel geral, só as que têm
+    // nível (das mais altas para as mais baixas) ou todas, no grupo de cada uma.
     const linhaPericia = id => {
       const p = s.pericia(id);
-      return { ...p, sigla: SIGLA[p.atributo], total: s.atributos[p.atributo].valor + p.nivel + p.bonus + s.penalidade };
+      const total = s.atributos[p.atributo].valor + p.nivel + p.bonus + s.penalidade;
+      return { ...p, familia: Boolean(s.pericias[id]?.familia), sigla: SIGLA[p.atributo], total,
+        dica: `${SIGLA[p.atributo]} + ${p.nome} + 1d10${p.bonus ? ` (bônus +${p.bonus})` : ''}`,
+        dicaTotal: `Atributo + nível${p.bonus ? ' + bônus' : ''}${s.penalidade ? ` ${s.penalidade} do ferimento` : ''}, sem o dado` };
     };
+    const todas = [...PERICIAS.map(p => linhaPericia(p.id)), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia).map(([id]) => linhaPericia(id))];
+    const comNivel = todas.filter(p => p.nivel > 0).sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+    comNivel.slice(0, EM_DESTAQUE).forEach(p => { p.alta = true; });
+    const mostrarTodas = this.#todasAsPericias ?? comNivel.length === 0;
+    // Tirar uma perícia de família só na lista completa, onde a lista se edita.
+    if (mostrarTodas) for (const p of todas) p.tirar = p.familia;
+    const grupoDe = p => PERICIAS.find(base => base.id === p.id)?.grupo ?? FAMILIAS[s.pericias[p.id]?.familia]?.grupo ?? 'Educação';
+    const grupos = Map.groupBy(todas, grupoDe);
+    const linhasDePericia = mostrarTodas
+      ? [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
+        .flatMap(([grupo, lista]) => [{ grupo }, ...lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))])
+      : comNivel;
+
     // Inventário: um detalhe de cada tipo e o uso (o botão passa por equipado, carregando e guardado).
     const vezes = item => (item.system.quantidade > 1 ? `×${item.system.quantidade}` : '');
     const linhaDoInventario = (item, ...detalhes) => ({
-      id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', usoNome: USOS[item.system.uso] ?? item.system.uso
+      id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', guardado: item.system.uso === 'guardado',
+      usoNome: USOS[item.system.uso] ?? item.system.uso
     });
-    const grupos = new Map();
-    const noGrupo = (grupo, linha) => { if (!grupos.has(grupo)) grupos.set(grupo, []); grupos.get(grupo).push(linha); };
-    for (const p of PERICIAS) noGrupo(p.grupo, linhaPericia(p.id));
-    for (const [id, propria] of Object.entries(s.pericias)) if (propria.familia) noGrupo(FAMILIAS[propria.familia]?.grupo || 'Educação', linhaPericia(id));
+    const sp = (armadura, local) => (armadura.system.sp[local].max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${armadura.system.sp[local].value}/${armadura.system.sp[local].max}` : '');
+    const armaduras = itens('armadura').map(armadura => ({
+      id: armadura.id, nome: armadura.name, img: armadura.img, equipada: armadura.system.equipada,
+      detalhe: [sp(armadura, 'cabeca'), sp(armadura, 'corpo'), armadura.system.escudo ? `escudo ${armadura.system.pvEscudo.value}/${armadura.system.pvEscudo.max} PV` : '',
+        armadura.system.penalidade ? `penalidade ${armadura.system.penalidade}` : ''].filter(Boolean).join(' · ')
+    }));
+    const cyberwares = itens('cyberware').map(item => ({ id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', ') }));
+    // As lesões, com o paliativo e o tratamento (as DVs de cada perícia).
+    const dvs = pares => pares.filter(([, dv]) => dv).map(([pericia, dv]) => `${pericia} DV${dv}`).join(' ou ');
+    const lesoes = itens('lesao').map(item => {
+      const { paliativo, tratamento } = item.system;
+      const p = dvs([['Primeiros Socorros', paliativo.primeirosSocorros], ['Paramédico', paliativo.paramedico]]);
+      const t = dvs([['Paramédico', tratamento.paramedico], ['Cirurgia', tratamento.cirurgia]]);
+      return { id: item.id, nome: item.name, img: item.img, sistema: item.system, tratar: [p && `PALIATIVO: ${p}`, t && `TRATAMENTO: ${t}`].filter(Boolean).join(' // '),
+        resumo: item.system.descricao.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(' Paliativo:')[0] };
+    });
+
+    // Iniciativa e esquiva (a esquiva média, sem o dado).
+    const esquiva = ator.partesDaPericia('evasion').partes.reduce((soma, p) => soma + p.valor, 0);
+    const bonusDeIniciativa = s.iniciativa - s.atributos.ref.valor;
+
+    // A Role: a de 2077 da wiki e as especialidades (Solo, Tech, Medtech) com os pontos; o efeito de cada uma do Solo.
+    const role = roleDaWiki(s.role.nome);
+    const especialidades = role && HABILIDADES_DE_ROLE[role.id];
+    const efeitoDoSolo = {
+      'Initiative Reaction': s.consciencia.iniciativa && `+${s.consciencia.iniciativa} na Iniciativa`,
+      'Precision Attack': s.consciencia.ataque && `+${s.consciencia.ataque} no ataque`,
+      'Spot Weakness': s.consciencia.pontoFraco && `+${s.consciencia.pontoFraco} no dano`,
+      'Threat Detection': s.consciencia.percepcao && `+${s.consciencia.percepcao} em Percepção`,
+      'Damage Deflection': s.consciencia.deflexao && `−${s.consciencia.deflexao} no dano sofrido`,
+      'Fumble Recovery': s.consciencia.semFalhaCritica && 'sem falha crítica'
+    };
+    const daEspecialidade = new Set(especialidades?.itens.map(item => item.id) ?? []);
+
+    // NET: os cyberdecks (com o que está instalado) e os programas; a Interface é o Rank do Netrunner.
+    const decks = itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')));
+
     return Object.assign(contexto, {
-      ator, sistema: s, fonte, editavel: this.isEditable,
+      ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')),
+      roles: ROLES,
       atributos: ATRIBUTOS.map(chave => ({ chave, sigla: SIGLA[chave], valor: s.atributos[chave].valor, base: fonte.atributos[chave].valor })),
-      armas: itens('arma').map(linhaArma),
-      armaduras: itens('armadura'),
-      lesoes: itens('lesao').map(item => ({ id: item.id, nome: item.name, img: item.img, sistema: item.system, resumo: item.system.descricao.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(' Paliativo:')[0] })),
+      vitais: { hp: porcento(s.hp.value, s.hp.max), humanidade: porcento(s.humanidade.value, s.humanidade.max), grave: Math.ceil(s.hp.max / 2) },
       deathSavePenalidade: s.deathSave.base + s.deathSave.penalidade,
+      todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length,
+      armas, armasEquipadas: armas.filter(arma => arma.sistema.equipada),
+      armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
+      cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
+      lesoes,
+      iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
+      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8,
       municoes: itens('municao'),
       inventario: [
-        { titulo: 'Equipamento', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, vezes(item), item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
-        { titulo: 'Roupas', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, vezes(item), TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
-        { titulo: 'Drogas', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item, `${item.system.quantidade} ${item.system.quantidade === 1 ? 'dose' : 'doses'}`)) },
-        // NET: só aparece para quem tem cyberdeck.
-        { titulo: 'Cyberdecks', opcional: true, itens: itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', '))) }
+        { titulo: 'EQUIPAMENTO', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, vezes(item), item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
+        { titulo: 'ROUPAS', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, vezes(item), TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
+        { titulo: 'DROGAS', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item, `${item.system.quantidade} ${item.system.quantidade === 1 ? 'dose' : 'doses'}`)) }
       ],
+      decks,
       programas: itens('programa').map(p => ({
         id: p.id, nome: p.name, img: p.img,
         detalhe: [
@@ -103,6 +183,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
           p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'
         ].join(' · ')
       })),
+      interface: role?.id === 'netrunner' ? s.role.rank : 0,
       veiculos: itens('veiculo').map(v => ({
         id: v.id, nome: v.name, img: v.img,
         detalhe: [`SDP ${v.system.sdp.value}/${v.system.sdp.max}`, `${v.system.assentos} assentos`, `MOVE ${v.system.velocidade.combate}`, v.system.familia ? 'da família' : '', v.instalados.map(i => i.name).join(', ')].filter(Boolean).join(' · ')
@@ -111,9 +192,14 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         id: u.id, nome: u.name, img: u.img,
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
-      cyberwares: itens('cyberware').map(item => ({ id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', ') })),
-      grupos: [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR')).map(([nome, pericias]) => ({ nome, pericias: pericias.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')) })),
-      habilidades: Object.entries(s.role.habilidades).map(([nome, rank]) => ({ nome, rank })),
+      roleDaWiki: role,
+      especialidades: especialidades && {
+        ...especialidades,
+        itens: especialidades.itens.map(item => ({ ...item, pontos: Number(s.role.habilidades[item.id]) || 0, efeito: role.id === 'solo' ? efeitoDoSolo[item.id] || '' : '' })),
+        distribuidos: especialidades.itens.reduce((soma, item) => soma + (Number(s.role.habilidades[item.id]) || 0), 0)
+      },
+      outrasHabilidades: Object.entries(s.role.habilidades).filter(([nome]) => !daEspecialidade.has(nome)).map(([nome, pontos]) => ({ nome, pontos })),
+      lifepath: LIFEPATH.map(({ chave, rotulo }) => ({ chave, rotulo, valor: s.lifepath[chave], largo: ['amigos', 'inimigos', 'amores', 'role'].includes(chave), linhas: chave === 'role' ? 4 : 2 })),
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
   }
@@ -130,12 +216,36 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo); }
   static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia); }
+  static #alternarPericias() {
+    this.#todasAsPericias = !(this.#todasAsPericias ?? !Object.values(this.actor.system.pericias).some(p => p.nivel > 0));
+    return this.render();
+  }
+  // Uma perícia de família nova (uma Linguagem, um Especialista Local...): a chave é a família e o nome, como na
+  // importação da wiki ("language-streetslang").
+  static async #novaPericia() {
+    const opcoes = Object.entries(FAMILIAS).map(([id, f]) => `<option value="${id}">${foundry.utils.escapeHTML(f.nome)}</option>`).join('');
+    const resposta = await DialogV2.prompt({
+      window: { title: 'Perícia de família' }, classes: [SISTEMA, 'nova-pericia'], rejectClose: false,
+      content: `<label>Família <select name="familia">${opcoes}</select></label><label>Qual (a língua, o lugar, a ciência...) <input type="text" name="nome" autofocus></label>`,
+      ok: { label: 'Acrescentar', callback: (evento, botao) => ({ familia: botao.form.elements.familia.value, nome: botao.form.elements.nome.value.trim() }) }
+    });
+    if (!resposta?.nome) return null;
+    const chave = `${resposta.familia}-${slug(resposta.nome)}`;
+    if (this.actor.system.pericias[chave]) { ui.notifications.warn(`${this.actor.name} já tem essa perícia.`); return null; }
+    return this.actor.update({ [`system.pericias.${chave}`]: { familia: resposta.familia, nome: resposta.nome, nivel: 0 } });
+  }
+  static async #tirarPericia(evento, alvo) {
+    const chave = alvo.dataset.pericia;
+    const nome = this.actor.system.pericia(chave).nome;
+    const ok = await DialogV2.confirm({ window: { title: 'Tirar perícia' }, content: `<p>Tirar <b>${foundry.utils.escapeHTML(nome)}</b> da ficha?</p>` });
+    return ok ? this.actor.update({ [`system.pericias.${chave}`]: new foundry.data.operators.ForcedDeletion() }) : null;
+  }
   static #atacar(evento, alvo) { return this.#item(alvo)?.atacar({ local: alvo.dataset.local || 'corpo', modo: alvo.dataset.modo || null }); }
   // Tiro (ou golpe) mirado: escolhe o local e ataca.
   static async #mirar(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return null;
-    const local = await foundry.applications.api.DialogV2.wait({
+    const local = await DialogV2.wait({
       window: { title: `Mirar com ${item.name}` }, classes: [SISTEMA, 'mirar'], rejectClose: false,
       content: '<p>Onde mirar? O ataque leva −8.</p><ul><li><b>Cabeça:</b> o dano que passa da armadura dobra.</li><li><b>Perna:</b> se passar dano, Perna quebrada.</li><li><b>Item na mão:</b> se passar dano, o alvo larga o item.</li></ul>',
       buttons: [{ action: 'cabeca', label: 'Cabeça', default: true }, { action: 'perna', label: 'Perna' }, { action: 'item', label: 'Item na mão' }]
@@ -170,7 +280,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static async #apagarItem(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return;
-    const ok = await foundry.applications.api.DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${foundry.utils.escapeHTML(item.name)}</b> da ficha?</p>` });
+    const ok = await DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${foundry.utils.escapeHTML(item.name)}</b> da ficha?</p>` });
     if (ok) await item.delete();
   }
 }

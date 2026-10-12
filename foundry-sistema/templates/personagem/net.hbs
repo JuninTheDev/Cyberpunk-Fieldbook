@@ -1,0 +1,35 @@
+<section class="tab net {{tab.cssClass}}" data-group="primary" data-tab="net">
+  <section class="painel corte">
+    <div class="titulo">INTERFACE<span>{{#if interface}}RANK {{interface}}{{else}}SÓ O NETRUNNER{{/if}}</span></div>
+    <p class="dica">As regras da NET (a corrida, os programas em ação, o Black ICE) ainda não estão neste sistema: a ficha guarda o cyberdeck e os programas.</p>
+  </section>
+
+  <section class="painel corte">
+    <div class="titulo">CYBERDECKS<span>{{decks.length}}</span></div>
+    <ol class="itens">
+      {{#each decks}}
+      <li data-item-id="{{id}}" class="{{#if guardado}}guardada{{/if}}">
+        <img src="{{img}}" alt="">
+        <a class="nome" data-action="editarItem">{{nome}}</a>
+        <span class="detalhe">{{detalhe}}</span>
+        <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado">{{usoNome}}</button>
+        <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+      </li>
+      {{else}}<li class="vazio">Sem cyberdeck.</li>{{/each}}
+    </ol>
+  </section>
+
+  <section class="painel corte">
+    <div class="titulo">PROGRAMAS<span>{{programas.length}}</span></div>
+    <ol class="itens">
+      {{#each programas}}
+      <li data-item-id="{{id}}">
+        <img src="{{img}}" alt="">
+        <a class="nome" data-action="editarItem">{{nome}}</a>
+        <span class="detalhe">{{detalhe}}</span>
+        <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+      </li>
+      {{else}}<li class="vazio">Sem programas.</li>{{/each}}
+    </ol>
+  </section>
+</section>

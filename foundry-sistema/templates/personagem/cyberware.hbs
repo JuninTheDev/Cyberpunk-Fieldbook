@@ -1,14 +1,23 @@
 <section class="tab cyberware {{tab.cssClass}}" data-group="primary" data-tab="cyberware">
-  <p class="dica">Instalar desconta a Humanidade pela perda rolada (Shift: pela média). O efeito do cyberware só vale instalado.</p>
-  <ol class="itens">
-    {{#each cyberwares}}
-    <li data-item-id="{{id}}">
-      <img src="{{img}}" alt="">
-      <a class="nome" data-action="editarItem">{{nome}}</a>
-      <span class="detalhe">{{tipo}}{{#if sistema.fundacional}} · base{{/if}} · {{sistema.perdaHumanidade.formula}} ({{sistema.perdaHumanidade.media}}){{#if sistema.perdaHumanidade.sofrida}} · custou {{sistema.perdaHumanidade.sofrida}}{{/if}}{{#if efeitos}} · {{efeitos}}{{/if}}</span>
-      <button type="button" class="alternar {{#if sistema.instalado}}ligado{{/if}}" data-action="instalar">{{#if sistema.instalado}}Instalado{{else}}Instalar{{/if}}</button>
-      <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
-    </li>
-    {{else}}<li class="vazio">Sem cyberware.</li>{{/each}}
-  </ol>
+  <section class="painel corte">
+    <div class="titulo">HUMANIDADE<span>EMP ATUAL {{sistema.empAtual}}</span></div>
+    <div class="medida"><span>HUMANIDADE</span><b>{{sistema.humanidade.value}} / {{sistema.humanidade.max}}</b></div>
+    <div class="barra"><div class="hum" style="width: {{vitais.humanidade}}%"></div></div>
+    <p class="dica">Instalar desconta a Humanidade pela perda rolada (Shift: pela média); tirar devolve. Cada peça instalada com perda tira 2 do máximo (borgware, 4). O efeito do cyberware só vale instalado.</p>
+  </section>
+
+  <section class="painel corte">
+    <div class="titulo">CYBERWARE<span>{{cyberInstalado.length}} DE {{cyberwares.length}} INSTALADO{{#unless (eq cyberInstalado.length 1)}}S{{/unless}}</span></div>
+    <ol class="itens">
+      {{#each cyberwares}}
+      <li data-item-id="{{id}}" class="{{#unless sistema.instalado}}guardada{{/unless}}">
+        <img src="{{img}}" alt="">
+        <a class="nome" data-action="editarItem">{{nome}}</a>
+        <span class="detalhe">{{tipo}}{{#if sistema.fundacional}} · base{{/if}} · {{sistema.perdaHumanidade.formula}} ({{sistema.perdaHumanidade.media}}){{#if sistema.perdaHumanidade.sofrida}} · custou {{sistema.perdaHumanidade.sofrida}}{{/if}}{{#if efeitos}} · {{efeitos}}{{/if}}</span>
+        <button type="button" class="alternar {{#if sistema.instalado}}ligado{{/if}}" data-action="instalar">{{#if sistema.instalado}}Instalado{{else}}Instalar{{/if}}</button>
+        <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+      </li>
+      {{else}}<li class="vazio">Sem cyberware.</li>{{/each}}
+    </ol>
+  </section>
 </section>

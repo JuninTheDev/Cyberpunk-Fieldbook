@@ -1,0 +1,22 @@
+<section class="tab vida {{tab.cssClass}}" data-group="primary" data-tab="vida">
+  <section class="painel corte">
+    <div class="titulo">LIFEPATH<span>RED p. 40–70</span></div>
+    <div class="lifepath">
+      {{#each lifepath}}
+      <label class="campo-lifepath {{#if largo}}largo{{/if}}">
+        <span>{{rotulo}}</span>
+        <textarea name="system.lifepath.{{chave}}" rows="{{linhas}}" aria-label="{{rotulo}}">{{valor}}</textarea>
+      </label>
+      {{/each}}
+    </div>
+  </section>
+
+  <section class="painel corte notas">
+    <div class="titulo">NOTAS<span>APARÊNCIA, HISTÓRIA, O QUE QUISER</span></div>
+    {{#if editavel}}
+    <prose-mirror name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+    {{else}}
+    <div class="texto">{{{notasRicas}}}</div>
+    {{/if}}
+  </section>
+</section>

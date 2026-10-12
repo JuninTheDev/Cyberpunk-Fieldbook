@@ -1,0 +1,38 @@
+<header class="topo">
+  <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" data-action="editImage" data-edit="img" data-tooltip="Trocar o retrato">
+  <div class="identidade">
+    <p class="linha-id">
+      <span>ATOR://</span>
+      <input class="role" type="text" name="system.role.nome" value="{{fonte.role.nome}}" placeholder="ROLE" list="cprf-roles-{{ator.id}}" aria-label="Role">
+      <datalist id="cprf-roles-{{ator.id}}">{{#each roles}}<option value="{{nome}}">{{habilidade}}</option>{{/each}}</datalist>
+      <span>// RANK</span>
+      <input class="rank" type="number" name="system.role.rank" value="{{fonte.role.rank}}" min="0" max="10" aria-label="Rank">
+    </p>
+    <div class="nome-linha">
+      <input class="nome" type="text" name="name" value="{{ator.name}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>
+      <span class="apelido">“<input type="text" name="system.apelido" value="{{fonte.apelido}}" placeholder="apelido" aria-label="Apelido">”</span>
+    </div>
+    <div class="indicadores">
+      <label class="indicador hp corte estado-{{sistema.ferimento.chave}}" data-tooltip="Pontos de vida: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}">
+        <span class="valor"><input type="number" name="system.hp.value" value="{{sistema.hp.value}}" aria-label="HP atual"><small>/{{sistema.hp.max}}</small></span>
+        <i>HP</i>
+      </label>
+      <label class="indicador corte" data-tooltip="Sorte que ainda dá para gastar nesta sessão (o máximo é o LUCK)">
+        <span class="valor"><input type="number" name="system.sorte.value" value="{{sistema.sorte.value}}" aria-label="Sorte atual"><small>/{{sistema.sorte.max}}</small></span>
+        <i>SORTE</i>
+      </label>
+      <label class="indicador corte">
+        <span class="valor"><input class="largo" type="number" name="system.dinheiro" value="{{fonte.dinheiro}}" aria-label="Eurodólares"></span>
+        <i>EURODÓLARES</i>
+      </label>
+      <label class="indicador corte" data-tooltip="Pontos de Melhoria">
+        <span class="valor"><input type="number" name="system.pontosDeMelhoria" value="{{fonte.pontosDeMelhoria}}" aria-label="Pontos de Melhoria"></span>
+        <i>IP</i>
+      </label>
+      <label class="indicador corte">
+        <span class="valor"><input type="number" name="system.reputacao" value="{{fonte.reputacao}}" aria-label="Reputação"></span>
+        <i>REPUTAÇÃO</i>
+      </label>
+    </div>
+  </div>
+</header>

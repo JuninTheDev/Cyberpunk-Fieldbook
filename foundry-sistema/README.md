@@ -6,9 +6,19 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## O que já faz
 
-- **Ficha do personagem**, com estas partes:
-  - cabeçalho com HP, Humanidade (e a EMP de agora), Sorte, SP da cabeça e do corpo e Death Save;
-  - abas de atributos, armas e lesões, perícias, equipamento, cyberware e notas.
+- **Ficha do personagem**, no visual do modelo de ficha da mesa (Cyberpunk 2077: amarelo, ciano e vermelho sobre o escuro, com as fontes Rajdhani e Share Tech Mono embutidas). A ficha é sempre escura, qualquer que seja o tema do Foundry. Tem estas partes:
+  - **Cabeçalho:** o retrato, a Role e o Rank (com a lista das Roles de 2077), o nome, o apelido e os indicadores de HP, Sorte, Eurodólares, IP e Reputação.
+  - **Perícias:** o painel geral, em três colunas.
+    - **Esquerda:** os atributos (clique para rolar) e os vitais (as barras de HP e Humanidade, a EMP de agora, o limite de gravemente ferido, o Death Save e o estado).
+    - **Centro:** as perícias com nível, das mais altas para as mais baixas, ou todas, no grupo de cada uma. Na lista completa, dá para acrescentar uma perícia de família (uma Linguagem, um Especialista Local...) e tirá-la.
+    - **Direita:** a armadura (o SP de cada local), as armas equipadas com o botão Atacar, o cyberware instalado e as lesões críticas, com o paliativo e o tratamento.
+  - **Combate:** as armas com todos os modos de ataque, a armadura vestida, a Iniciativa, a esquiva, o Death Save e a munição.
+  - **Equipamento:** armas, armaduras, munição, equipamento, roupas, drogas, upgrades e veículos.
+  - **Cyberware:** a Humanidade e cada peça, com instalar e tirar.
+  - **Role:** a Role de 2077 da wiki, com a habilidade e o resumo. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora.
+  - **NET:** o cyberdeck e os programas (as regras da NET ainda não).
+  - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
+- **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
 - **Rolagens nativas do Foundry 14**, com o crítico do d10 como o modificador `crit` (`1d10crit + 12`):
   - um 10 natural soma mais um d10;
   - um 1 natural tira um d10;
@@ -87,6 +97,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Janela "Personagens da wiki"** (só o mestre; botão no alto da aba de Atores): cada personagem da wiki com o que dá para fazer neste mundo, que é importar (como foi criado), importar da mesa (como está no Foundry 12) ou abrir a ficha, com o dono no Foundry escolhido na linha. Também mostra os pedidos da loja que esperam o mestre, com Aprovar (entrega na hora) e Recusar (com o motivo, que o jogador vê). Os avisos da última importação ficam no alto. Pela macro: `game.system.api.abrirJanelaDaWiki()`.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
   - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e dinheiro;
+  - o apelido e o Lifepath (em texto, como o criador da wiki monta);
   - armas carregadas, armaduras vestidas e cyberware instalado;
   - equipamento, roupas e drogas, com a quantidade e o uso da montagem da wiki (equipado, carregando ou guardado);
   - o cyberdeck, com os programas e o hardware instalados nele, e os acessórios nas armas, como a montagem da wiki (com o carregador maior, a arma entra com o pente maior cheio);

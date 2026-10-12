@@ -1,0 +1,41 @@
+<section class="tab role {{tab.cssClass}}" data-group="primary" data-tab="role">
+  <section class="painel corte">
+    <div class="titulo">ROLE<span>{{#if roleDaWiki}}{{roleDaWiki.habilidade}} · RANK {{sistema.role.rank}}{{else}}RANK {{sistema.role.rank}}{{/if}}</span></div>
+    {{#if roleDaWiki}}
+    <p class="role-nome">{{roleDaWiki.nome}} <small>// {{roleDaWiki.habilidade}}{{#if (ne roleDaWiki.habilidade roleDaWiki.en)}} ({{roleDaWiki.en}}){{/if}}</small></p>
+    <p class="texto">{{roleDaWiki.resumo}}</p>
+    {{else}}
+    <div class="caixa-vazia">{{#if sistema.role.nome}}A ROLE “{{sistema.role.nome}}” NÃO ESTÁ ENTRE AS DE 2077 DA WIKI{{else}}ESCOLHA A ROLE NO CABEÇALHO{{/if}}</div>
+    {{/if}}
+  </section>
+
+  {{#if especialidades}}
+  <section class="painel corte">
+    <div class="titulo">{{especialidades.titulo}}<span>{{especialidades.distribuidos}} PONTO{{#unless (eq especialidades.distribuidos 1)}}S{{/unless}} DISTRIBUÍDO{{#unless (eq especialidades.distribuidos 1)}}S{{/unless}} · {{especialidades.pagina}}</span></div>
+    <ol class="habilidades">
+      {{#each especialidades.itens}}
+      <li class="habilidade {{#if pontos}}tem{{/if}}">
+        <span class="nome">{{nome}}<small>{{desc}}</small></span>
+        {{#if efeito}}<span class="efeito">{{efeito}}</span>{{/if}}
+        <input type="number" name="system.role.habilidades.{{id}}" value="{{pontos}}" min="0" max="10" aria-label="Pontos em {{nome}}">
+      </li>
+      {{/each}}
+    </ol>
+    <p class="dica">{{especialidades.nota}} No Rank 4, a wiki dá {{especialidades.pontos}} pontos, até {{especialidades.max}} em cada.</p>
+  </section>
+  {{/if}}
+
+  {{#if outrasHabilidades.length}}
+  <section class="painel corte">
+    <div class="titulo">OUTRAS HABILIDADES<span>COMO VIERAM DA IMPORTAÇÃO</span></div>
+    <ol class="habilidades">
+      {{#each outrasHabilidades}}
+      <li class="habilidade tem">
+        <span class="nome">{{nome}}</span>
+        <input type="number" name="system.role.habilidades.{{nome}}" value="{{pontos}}" min="0" max="10" aria-label="Pontos em {{nome}}">
+      </li>
+      {{/each}}
+    </ol>
+  </section>
+  {{/if}}
+</section>

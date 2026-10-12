@@ -5,8 +5,11 @@
 //   ("core_weapons:assault-rifle"); o que não existir vira um aviso, e o resto entra.
 // - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra.
 import { carregarCatalogo } from './catalogo.mjs';
-import { ATRIBUTOS, SISTEMA, USOS } from './config.mjs';
+import { ATRIBUTOS, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
+
+// O Lifepath que o criador da wiki manda pronto, em texto (resultado.lifepath, com os nomes do CORE).
+const lifepathDaWiki = lifepath => Object.fromEntries(LIFEPATH.map(({ chave, wiki }) => [chave, String(lifepath?.[wiki] ?? '')]));
 
 export { carregarCatalogo };
 
@@ -162,6 +165,8 @@ export async function importarPersonagem(id, donoId = '') {
       pericias,
       role: { nome: r.role?.nome || '', rank: Number(r.role?.rank) || 4, habilidades },
       dinheiro: Number(r.dinheiro?.saldo) || 0,
+      apelido: doc.apelido || '',
+      lifepath: lifepathDaWiki(r.lifepath),
       notas: notasHtml
     },
     items: [...itensDaWiki(catalogo, r.itens || [], notas), ...veiculos.itens],
@@ -402,6 +407,7 @@ export async function importarDaMesa(id, donoId = '') {
         habilidades: Object.fromEntries((m.role?.habilidades || []).map(([nome, rank]) => [nome, Number(rank) || 0]))
       },
       dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0,
+      apelido: doc.apelido || '', lifepath: lifepathDaWiki(r.lifepath),
       notas: `<p><i>Migrado da ficha da mesa do Foundry 12 (${origem}) em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`
     },
     flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), origem: 'mesa' } } }

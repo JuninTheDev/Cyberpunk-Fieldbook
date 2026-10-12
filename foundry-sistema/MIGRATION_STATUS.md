@@ -813,3 +813,82 @@ de uma leitura viraram dúvidas.
 - **Próximo:** pela ordem do ROADMAP, o resto do P2: o cyberware que é arma e, na rolagem, a Sorte, a Briga e as
   Artes Marciais. A NET (P3) é o último bloqueador da migração. O que a mesa decidir sobre as dúvidas de 2077 entra
   antes.
+- **Commit:** `1ca9dda`.
+
+### Ciclo 19 (2026-10-12): a ficha nova, no visual do modelo da mesa (P2)
+
+O usuário trouxe um modelo de ficha (`Modelo de ficha/`, HTML e CSS estáticos, no visual de Cyberpunk 2077) e pediu a
+ficha do sistema por ele, com o que faltava. O modelo virou a base. A ficha antiga (cabeçalho com os vitais e cinco
+abas) saiu.
+
+- **Implementado:**
+  - **o visual do modelo:**
+    - a paleta (amarelo, ciano e vermelho sobre o escuro), os painéis com o canto cortado, as linhas de varredura e as
+      abas amarelas;
+    - as fontes Rajdhani e Share Tech Mono, embutidas em `fontes/` (SIL OFL, com a licença e o SHA-256 de cada
+      arquivo), para funcionar sem internet;
+    - a ficha fica sempre no tema escuro do Foundry (`themed theme-dark`), qualquer que seja o tema da interface. A
+      ficha do item ganhou o mesmo tema;
+  - **o cabeçalho:** o retrato, a linha "ATOR:// Role // RANK" (a Role com a lista das nove Roles de 2077 da wiki), o
+    nome e o apelido, e os indicadores HP, Sorte, Eurodólares, IP e Reputação, editáveis;
+  - **a aba Perícias, o painel geral do modelo, em três colunas:**
+    - à esquerda, os atributos e os vitais (as barras de HP e Humanidade, a EMP, o limite de gravemente ferido, o
+      Death Save e o estado);
+    - no centro, as perícias com nível, das mais altas para as mais baixas, com as seis primeiras em destaque, ou todas
+      (o botão "Ver todas"). Na lista completa, "+ perícia de família" acrescenta uma Linguagem, um Especialista
+      Local, uma Ciência, uma Arte Marcial ou um Instrumento, com a mesma chave da importação (`language-japones`), e
+      o ✕ tira;
+    - à direita, a armadura (o SP de cada local), as armas equipadas com Atacar, o cyberware instalado e as lesões,
+      com o paliativo e o tratamento;
+  - **as outras abas:**
+    - **Combate:** a tabela das armas com todos os modos, a armadura vestida, a Iniciativa, a esquiva, o Death Save e a
+      munição;
+    - **Equipamento** e **Cyberware:** em painéis;
+    - **Role:** a Role de 2077 da wiki (a habilidade e o resumo) e, para o Solo, o Tech e o Medtech, as especialidades
+      com os nomes e as descrições em português, os pontos editáveis e, no Solo, o efeito de agora;
+    - **NET:** o cyberdeck e os programas, que saíram de Equipamento;
+    - **Vida:** os 17 campos do Lifepath e as notas;
+  - **dados novos:**
+    - no personagem, o `apelido` e o `lifepath` (texto);
+    - no build, as Roles e as especialidades saem do criador da wiki (`system-criacao.js`) para o `gerado.mjs`;
+    - a importação da wiki (criar e "Importar da mesa") traz o apelido e o Lifepath que o criador monta;
+  - **janela estreita:** o painel geral passa a duas colunas e depois a uma (container query).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 39 de 39. Dois testes de referência novos:
+    - as Roles e as especialidades geradas são as do criador da wiki, e as chaves da Consciência de Combate são as
+      que as regras leem;
+    - o Lifepath tem os campos e os rótulos do criador (`criador.js`);
+  - G4: 57 de 57, cerca de 61 s, em duas rodadas seguidas da versão final, e 58 de 58 numa rodada com um passo
+    temporário de captura da ficha do item, tirado depois. O que mudou:
+    - **o passo da ficha:** confere o tema escuro, as três fontes carregadas, as 7 abas, os 10 atributos, as 3 perícias
+      com nível da Atiradora e as 61 ou mais depois de "Ver todas";
+    - **um passo novo, com o Solo importado da wiki:**
+      - o cabeçalho (Solo, Rank 4, o nome e o apelido "Lab");
+      - a aba Role, com as seis habilidades do Solo em português, os pontos 2 e 2 e os efeitos "+2 na Iniciativa" e
+        "+2 em Percepção";
+      - a aba Vida, com o Lifepath igual ao da wiki;
+      - o painel geral, com as armas equipadas, o SP e a barra de HP;
+      - a perícia de família criada e tirada pela ficha;
+    - **a importação do Netrunner** procura os programas na aba NET;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado em seguida:
+    - G3: um rótulo do Lifepath e um nome de especialidade gerado;
+    - G4: a importação do apelido e o efeito da Reação de Iniciativa;
+  - **conferência visual:** as capturas de todas as abas e das duas fichas de item. Elas levaram a três ajustes: os
+    campos com a altura de linha do Foundry (as perícias ficavam altas demais); o cabeçalho, com os campos do tamanho do
+    texto (`field-sizing: content`, que precisa de `width: auto`); e o título das perícias, mais curto;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Escolhas e dúvidas:**
+  - **os pontos de Role por Rank:** a wiki dá os números do Rank 4 (o Solo, 4 pontos; o Tech, 8; o Medtech, 4) e diz
+    como o Tech e o Medtech ganham pontos por Rank, mas não diz isso do Solo. A ficha mostra quantos pontos estão
+    distribuídos e a nota da wiki, sem conferir o total nem travar;
+  - **o apelido e o Lifepath** vêm da wiki na importação e não voltam na ficha "Na mesa" (a wiki já os tem);
+  - **a pasta `Modelo de ficha/`** é do usuário e ficou fora do commit.
+- **Ficou:**
+  - a conferência dos pontos de Role por Rank;
+  - os cartões do chat no visual novo;
+  - um botão para gastar Sorte;
+  - a NET em ação.
+- **Próximo:** pela ordem do ROADMAP, o resto do P2: o cyberware que é arma e, na rolagem, a Sorte, a Briga e as
+  Artes Marciais.

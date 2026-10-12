@@ -1,0 +1,281 @@
+/* Cyberpunk RED — Fieldbook: a ficha do personagem no visual do modelo da mesa ("Modelo de ficha/": Cyberpunk 2077,
+   amarelo, ciano e vermelho sobre o escuro), e o mesmo tema na ficha do item. As fontes vêm embutidas (fontes/, SIL OFL)
+   e a ficha fica sempre no tema escuro do Foundry (classes "themed theme-dark"). Tudo fica dentro das duas fichas. */
+@font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fontes/rajdhani-500.woff2') format('woff2'); }
+@font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fontes/rajdhani-700.woff2') format('woff2'); }
+@font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
+
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item {
+  --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
+  --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
+  --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
+  --cp-titulo: 'Rajdhani', 'Signika', sans-serif; --cp-dados: 'Share Tech Mono', 'Courier New', monospace;
+}
+
+/* ---------- Janela ---------- */
+.cpr-fieldbook.ficha-personagem .window-header, .cpr-fieldbook.ficha-item .window-header {
+  background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); color: var(--cp-amarelo);
+  font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .window-content, .cpr-fieldbook.ficha-item .window-content {
+  background-color: var(--cp-fundo);
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
+  color: var(--cp-texto); font-family: var(--cp-titulo); font-weight: 500; font-size: 15px;
+}
+.cpr-fieldbook.ficha-personagem .window-content { display: flex; flex-direction: column; gap: 12px; padding: 16px; overflow: hidden; container-type: inline-size; }
+
+/* Campos: no poço escuro, com a fonte de dados; os números sem as setinhas. */
+.cpr-fieldbook.ficha-personagem :is(input[type="text"], input[type="number"], select, textarea),
+.cpr-fieldbook.ficha-item :is(input[type="text"], input[type="number"], select, textarea) {
+  background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0; box-shadow: none; color: var(--cp-texto); font-family: var(--cp-dados);
+}
+.cpr-fieldbook.ficha-personagem :is(input, select, textarea):focus, .cpr-fieldbook.ficha-item :is(input, select, textarea):focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+.cpr-fieldbook.ficha-personagem input[type="number"], .cpr-fieldbook.ficha-item input[type="number"] { appearance: textfield; }
+/* A altura de linha do Foundry deixa os campos altos demais: aqui cada campo tem a dele. */
+.cpr-fieldbook.ficha-personagem :is(input[type="text"], input[type="number"]) { line-height: 1.2; min-height: 0; }
+.cpr-fieldbook.ficha-personagem input[type="number"]::-webkit-inner-spin-button, .cpr-fieldbook.ficha-personagem input[type="number"]::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.cpr-fieldbook.ficha-personagem :is(button, a, input, textarea):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 2px; }
+.cpr-fieldbook.ficha-personagem small { color: var(--cp-fraco); }
+
+/* ---------- Peças do modelo ---------- */
+.cpr-fieldbook.ficha-personagem .corte { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+.cpr-fieldbook.ficha-personagem .painel { background: var(--cp-painel); border-left: 3px solid var(--cp-amarelo); padding: 14px 16px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .painel.vermelho, .cpr-fieldbook.ficha-personagem .painel.perigo { border-left-color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .titulo {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 10px;
+  font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; color: var(--cp-amarelo); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .titulo span { color: var(--cp-fraco); text-align: right; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.cpr-fieldbook.ficha-personagem .perigo .titulo { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .caixa-vazia, .cpr-fieldbook.ficha-personagem .estado-caixa {
+  border: 1px dashed #3a3a4a; padding: 10px; margin-top: 8px; text-align: center;
+  font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.15em; color: var(--cp-fraco); text-transform: uppercase; list-style: none;
+}
+.cpr-fieldbook.ficha-personagem .estado-caixa.estado-leve { color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .estado-caixa:is(.estado-grave, .estado-mortal) { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .dica { margin: 10px 0 0; font-family: var(--cp-dados); font-size: 12px; line-height: 1.5; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .vazio { color: var(--cp-fraco); font-style: italic; }
+/* O botão do modelo: contorno amarelo, cheio ao passar o mouse. */
+.cpr-fieldbook.ficha-personagem :is(.acao, .alternar-pericias, table.lista td.acoes button) {
+  flex: none; width: auto; height: auto; min-height: 0; padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.1em; line-height: 1.2; cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem :is(.acao, .alternar-pericias, table.lista td.acoes button):hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .perigo .acao { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .perigo .acao:hover { background: var(--cp-vermelho); color: var(--cp-fundo); }
+
+/* ---------- Cabeçalho ---------- */
+.cpr-fieldbook.ficha-personagem .topo { display: flex; gap: 20px; flex: none; }
+.cpr-fieldbook.ficha-personagem .topo .retrato {
+  flex: none; width: 150px; height: 170px; object-fit: cover; border: none; cursor: pointer;
+  background: repeating-linear-gradient(135deg, #1c1c28 0 8px, var(--cp-painel) 8px 16px);
+}
+.cpr-fieldbook.ficha-personagem .identidade { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.cpr-fieldbook.ficha-personagem .linha-id {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0;
+  font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.2em; color: var(--cp-ciano); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .linha-id input {
+  height: auto; padding: 0 2px; background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--cp-ciano);
+  font: inherit; letter-spacing: inherit; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .linha-id input:is(:hover, :focus) { border-bottom-color: var(--cp-ciano); background: transparent; }
+.cpr-fieldbook.ficha-personagem .linha-id input.role { width: auto; field-sizing: content; min-width: 5ch; }
+.cpr-fieldbook.ficha-personagem .linha-id input.rank { width: 3ch; text-align: center; }
+.cpr-fieldbook.ficha-personagem .nome-linha { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 10px; }
+.cpr-fieldbook.ficha-personagem .nome-linha .nome {
+  width: auto; field-sizing: content; min-width: 6ch; max-width: 100%; height: auto; padding: 0; background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--cp-texto); font: 700 46px/1.05 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .nome-linha .nome:is(:hover, :focus) { border-bottom-color: var(--cp-linha); background: transparent; }
+.cpr-fieldbook.ficha-personagem .apelido { display: inline-flex; align-items: baseline; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .apelido input {
+  width: auto; field-sizing: content; min-width: 4ch; height: auto; padding: 0; background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--cp-amarelo); font: inherit; text-transform: uppercase; text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .apelido input:is(:hover, :focus) { border-bottom-color: var(--cp-amarelo); background: transparent; }
+.cpr-fieldbook.ficha-personagem .indicadores { display: flex; flex-wrap: wrap; gap: 10px; }
+.cpr-fieldbook.ficha-personagem .indicador {
+  display: flex; flex-direction: column; align-items: center; min-width: 88px; padding: 8px 14px;
+  background: var(--cp-painel); border-top: 2px solid var(--cp-amarelo); text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .indicador .valor { display: flex; align-items: baseline; justify-content: center; }
+.cpr-fieldbook.ficha-personagem .indicador input {
+  width: 2.6ch; height: auto; padding: 0; background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .indicador input.largo { width: 6ch; }
+.cpr-fieldbook.ficha-personagem .indicador input:is(:hover, :focus) { border-bottom-color: currentColor; background: transparent; }
+.cpr-fieldbook.ficha-personagem .indicador small { font-family: var(--cp-dados); font-size: 14px; }
+.cpr-fieldbook.ficha-personagem .indicador i { font-family: var(--cp-dados); font-size: 11px; font-style: normal; letter-spacing: 0.15em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .indicador.hp { border-top-color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .indicador.hp input { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .indicador.hp:is(.estado-grave, .estado-mortal) { background: color-mix(in srgb, var(--cp-vermelho) 18%, var(--cp-painel)); }
+
+/* ---------- Abas ---------- */
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs {
+  display: flex; flex: none; gap: 4px; margin: 0; padding: 0; overflow-x: auto; justify-content: flex-start;
+  border: none; border-bottom: 2px solid var(--cp-amarelo);
+}
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs > a {
+  display: flex; align-items: center; gap: 8px; flex: none; padding: 10px 18px; border: none; background: var(--cp-painel); color: #c9c7bb;
+  font: 700 15px var(--cp-titulo); letter-spacing: 0.15em; text-transform: uppercase; text-shadow: none;
+}
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs > a:hover { color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs > a.active { background: var(--cp-amarelo); color: var(--cp-fundo); }
+.cpr-fieldbook.ficha-personagem section.tab { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
+.cpr-fieldbook.ficha-personagem section.tab.active { display: flex; flex-direction: column; gap: 16px; }
+.cpr-fieldbook.ficha-personagem section.tab:not(.active) { display: none; }
+.cpr-fieldbook.ficha-personagem .duas-colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+/* ---------- Perícias: o painel geral em três colunas ---------- */
+.cpr-fieldbook.ficha-personagem .geral { display: grid; grid-template-columns: 300px minmax(0, 1fr) 330px; gap: 16px; }
+.cpr-fieldbook.ficha-personagem .coluna { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .crescer { flex: 1; }
+.cpr-fieldbook.ficha-personagem .atributos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .atributo {
+  position: relative; display: flex; flex-direction: column; align-items: center; padding: 6px 0 4px;
+  background: var(--cp-poco); border-top: 2px solid var(--cp-ciano);
+}
+.cpr-fieldbook.ficha-personagem .atributo input {
+  width: 100%; height: auto; padding: 0; background: transparent; border: none; color: var(--cp-amarelo);
+  font: 700 28px/1 var(--cp-titulo); text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .atributo .rolar {
+  width: 100%; height: auto; min-height: 0; padding: 2px 0 0; background: none; border: none; color: var(--cp-fraco);
+  font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; line-height: 1.2; cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem .atributo .rolar:hover { color: var(--cp-amarelo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .atributo .efetivo { position: absolute; top: 2px; right: 4px; font-family: var(--cp-dados); font-size: 12px; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .medida { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 10px 0 3px; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .medida b { font-family: var(--cp-dados); font-weight: 400; text-transform: none; text-align: right; }
+.cpr-fieldbook.ficha-personagem .medida input { width: 4ch; height: 24px; padding: 0 2px; text-align: right; font-size: 15px; }
+.cpr-fieldbook.ficha-personagem .barra { height: 12px; background: var(--cp-poco); }
+.cpr-fieldbook.ficha-personagem .barra > div { height: 100%; }
+.cpr-fieldbook.ficha-personagem .barra .hp { background: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .barra .hum { background: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .death-save a { cursor: pointer; color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .death-save .zerar { margin-left: 6px; color: var(--cp-fraco); text-decoration: underline; }
+
+/* As perícias: nome, atributo, nível e a base (sem o dado). */
+.cpr-fieldbook.ficha-personagem .lista-pericias { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .linha-pericia {
+  display: grid; grid-template-columns: minmax(0, 1fr) 44px 40px 44px; align-items: center; gap: 6px;
+  padding: 4px 0; border-bottom: 1px solid var(--cp-linha); font-size: 16px;
+}
+.cpr-fieldbook.ficha-personagem .linha-pericia > :nth-child(n+2) { text-align: center; font-family: var(--cp-dados); }
+.cpr-fieldbook.ficha-personagem .linha-pericia.cabeca { padding-top: 0; font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .celula-nome { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .pericia .nome { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.ficha-personagem .pericia .nome:hover { color: var(--cp-amarelo); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem .pericia .tirar { color: var(--cp-fraco); font-size: 11px; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem .pericia .tirar:hover { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .pericia input { width: 100%; height: 24px; padding: 0; background: transparent; border-color: transparent; text-align: center; font-size: 16px; }
+.cpr-fieldbook.ficha-personagem .pericia input:is(:hover, :focus) { background: var(--cp-poco); border-color: var(--cp-linha); }
+.cpr-fieldbook.ficha-personagem .pericia:not(.tem) :is(.nome, input, .total) { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .pericia.alta input { color: var(--cp-amarelo); font-weight: 700; }
+.cpr-fieldbook.ficha-personagem .pericia .sigla { font-size: 12px; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .grupo-pericias {
+  padding: 12px 0 4px; border-bottom: 1px solid var(--cp-linha);
+  font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.2em; color: var(--cp-amarelo); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .alternar-pericias { padding: 2px 8px; font-size: 11px; }
+.cpr-fieldbook.ficha-personagem .pericias-painel .novo { margin-top: 12px; }
+
+/* A coluna da direita: armadura, armas, cyberware e lesões. */
+.cpr-fieldbook.ficha-personagem .sp-caixas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.cpr-fieldbook.ficha-personagem .sp-caixas > div {
+  padding: 8px; background: var(--cp-poco); border-top: 2px solid var(--cp-vermelho); text-align: center; font-size: 14px; letter-spacing: 0.1em;
+}
+.cpr-fieldbook.ficha-personagem .sp-caixas b { display: block; color: var(--cp-vermelho); font: 700 34px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .sp-caixas small { display: block; font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.1em; }
+.cpr-fieldbook.ficha-personagem .item-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--cp-linha); font-size: 16px; }
+.cpr-fieldbook.ficha-personagem .item-linha .nome { min-width: 0; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem .item-linha .nome:hover { color: var(--cp-amarelo); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem .item-linha small { display: block; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; }
+.cpr-fieldbook.ficha-personagem .lesoes .item-linha .nome { color: var(--cp-vermelho); }
+
+/* ---------- Listas de itens (Combate, Equipamento, Cyberware, NET) ---------- */
+.cpr-fieldbook.ficha-personagem ol.itens { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem ol.itens > li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--cp-linha); font-size: 16px; }
+.cpr-fieldbook.ficha-personagem ol.itens > li.vazio { border: none; font-size: 14px; }
+.cpr-fieldbook.ficha-personagem ol.itens > li.guardada { opacity: 0.55; }
+.cpr-fieldbook.ficha-personagem ol.itens img { flex: none; width: 24px; height: 24px; border: none; }
+.cpr-fieldbook.ficha-personagem ol.itens .nome { flex: 0 1 auto; font-weight: 700; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem ol.itens .nome:hover { color: var(--cp-amarelo); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem ol.itens .detalhe { flex: 1; min-width: 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem ol.itens button {
+  flex: none; width: auto; height: auto; min-height: 0; padding: 3px 8px; border: 1px solid var(--cp-linha); border-radius: 0;
+  background: transparent; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; line-height: 1.2;
+}
+.cpr-fieldbook.ficha-personagem ol.itens button:hover { border-color: var(--cp-amarelo); color: var(--cp-amarelo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem ol.itens button.alternar.ligado { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem ol.itens button.apagar { border-color: transparent; }
+.cpr-fieldbook.ficha-personagem ol.itens button.apagar:hover { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
+
+/* A tabela das armas (aba Combate), com os botões de cada modo. */
+.cpr-fieldbook.ficha-personagem table.lista { width: 100%; margin: 0; border: none; border-collapse: collapse; background: transparent; }
+.cpr-fieldbook.ficha-personagem table.lista thead { background: transparent; text-shadow: none; }
+.cpr-fieldbook.ficha-personagem table.lista th {
+  padding: 0 4px 6px; border: none; background: transparent; text-align: left;
+  font-family: var(--cp-dados); font-size: 11px; font-weight: 400; letter-spacing: 0.15em; color: var(--cp-fraco); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem table.lista tr { background: transparent; }
+.cpr-fieldbook.ficha-personagem table.lista td { padding: 6px 4px; border: none; border-top: 1px solid var(--cp-linha); vertical-align: middle; font-size: 16px; }
+.cpr-fieldbook.ficha-personagem table.lista td.num { text-align: center; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 17px; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 700; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome img { width: 24px; height: 24px; border: none; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome a { cursor: pointer; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome small { font-family: var(--cp-dados); font-size: 11px; font-weight: 400; }
+.cpr-fieldbook.ficha-personagem table.lista td.acoes .botoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.cpr-fieldbook.ficha-personagem table.lista td.acoes button { padding: 3px 8px; font-size: 12px; }
+.cpr-fieldbook.ficha-personagem table.lista tr.guardada { opacity: 0.5; }
+.cpr-fieldbook.ficha-personagem .classe-2077 { color: var(--cp-ciano) !important; }
+.cpr-fieldbook.ficha-personagem .aviso-2077 { color: var(--cp-vermelho) !important; font-weight: 700; }
+
+/* ---------- Role ---------- */
+.cpr-fieldbook.ficha-personagem .role-nome { margin: 0; font: 700 28px/1.1 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .role-nome small { font-family: var(--cp-dados); font-size: 14px; font-weight: 400; letter-spacing: 0.1em; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .texto { margin: 6px 0 0; line-height: 1.4; }
+.cpr-fieldbook.ficha-personagem .habilidades { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .habilidade { display: grid; grid-template-columns: minmax(0, 1fr) auto 56px; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-personagem .habilidade .nome { font-size: 17px; font-weight: 700; }
+.cpr-fieldbook.ficha-personagem .habilidade .nome small { display: block; font-family: var(--cp-dados); font-size: 12px; font-weight: 400; line-height: 1.4; }
+.cpr-fieldbook.ficha-personagem .habilidade .efeito { font-family: var(--cp-dados); font-size: 13px; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .habilidade input { height: auto; padding: 2px 0; text-align: center; color: var(--cp-amarelo); font: 700 22px var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .habilidade:not(.tem) input { color: var(--cp-fraco); }
+
+/* ---------- Vida: o Lifepath e as notas ---------- */
+.cpr-fieldbook.ficha-personagem .lifepath { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.cpr-fieldbook.ficha-personagem .campo-lifepath { display: flex; flex-direction: column; gap: 3px; }
+.cpr-fieldbook.ficha-personagem .campo-lifepath.largo { grid-column: 1 / -1; }
+.cpr-fieldbook.ficha-personagem .campo-lifepath span { font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-amarelo); text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .campo-lifepath textarea { min-height: 2.8em; resize: vertical; font-family: var(--cp-titulo); font-size: 15px; line-height: 1.35; }
+.cpr-fieldbook.ficha-personagem .notas prose-mirror { min-height: 18rem; background: var(--cp-poco); }
+
+/* ---------- Rodapé ---------- */
+.cpr-fieldbook.ficha-personagem .rodape {
+  display: flex; justify-content: space-between; gap: 12px; flex: none;
+  font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.2em; color: var(--cp-fraco); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .rodape span:first-child { color: var(--cp-ciano); }
+
+/* ---------- Janela estreita ---------- */
+@container (max-width: 1020px) {
+  .cpr-fieldbook.ficha-personagem .geral { grid-template-columns: 280px minmax(0, 1fr); }
+  .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 700px) {
+  .cpr-fieldbook.ficha-personagem .topo { flex-direction: column; }
+  .cpr-fieldbook.ficha-personagem .nome-linha .nome { font-size: 34px; }
+  .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .lifepath) { grid-template-columns: minmax(0, 1fr); }
+  .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Ficha do item: o mesmo tema ---------- */
+.cpr-fieldbook.ficha-item .cabecalho { border-bottom: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.ficha-item .cabecalho .retrato { border: none; border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.cpr-fieldbook.ficha-item .cabecalho .nome { background: transparent; border: none; color: var(--cp-texto); font: 700 26px/1.1 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .campos label { font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.04em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-item :is(.nota, .fonte, .efeitos) { font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.ficha-item h3 { border-bottom: 1px solid var(--cp-linha); color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }

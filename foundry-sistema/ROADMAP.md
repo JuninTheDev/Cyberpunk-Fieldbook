@@ -67,9 +67,13 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [ ] **Na rolagem:** Sorte; Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
   Falhas do Solo; Facedown.
-- [ ] **Consciência de Combate na ficha:** redistribuir os pontos (a wiki permite antes do combate ou com uma ação) e
-  mostrar os nomes em português. Hoje a ficha só lista as habilidades, com os nomes do CORE, e os pontos vêm da
-  importação.
+- [x] **A ficha nova** (Ciclo 19), no visual do modelo de ficha da mesa: o painel geral em três colunas, as abas
+  Combate, Equipamento, Cyberware, Role, NET e Vida, o apelido e o Lifepath (com a importação da wiki), as perícias de
+  família pela ficha e o tema escuro com as fontes embutidas, também na ficha do item. A aba Role mostra as
+  especialidades (Solo, Tech, Medtech) com os nomes em português e os pontos editáveis, o que dá para redistribuir a
+  Consciência de Combate.
+- [ ] **A ficha, o que falta:** a conferência do total de pontos de Role por Rank (a wiki só dá os números do Rank 4);
+  a NET em ação; um botão para gastar Sorte; os cartões do chat no mesmo visual.
 - [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
 - [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a luneta
   de precisão (+1 em tiro único ou mirado a 51 m ou mais); a arma sob o cano (lança-granadas e espingarda) como
@@ -110,7 +114,7 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 
 - [ ] Dividir o `combate.mjs` (pedidos pelo socket, modos, cartão).
 - [ ] Tradução para inglês (hoje, o arquivo `en` aponta para o português).
-- [ ] Acessibilidade das fichas: teclado e contraste no tema claro.
+- [ ] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura).
 - [ ] Ícones próprios no lugar dos genéricos do Foundry.
 
 ## Decisões tomadas

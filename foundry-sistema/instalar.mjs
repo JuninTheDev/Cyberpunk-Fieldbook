@@ -1,6 +1,6 @@
 // Instala o sistema Cyberpunk RED — Fieldbook na pasta de sistemas do Foundry 14: copia o manifesto, os scripts, os
-// templates, o estilo, a tradução, os ícones, os dados e os compêndios. Os compêndios (packs/, fora do git) são gerados
-// de novo quando o catálogo ou o build deles mudam (precisa do npx na primeira vez).
+// templates, o estilo, as fontes, a tradução, os ícones, os dados e os compêndios. Os compêndios (packs/, fora do git)
+// são gerados de novo quando o catálogo ou o build deles mudam (precisa do npx na primeira vez).
 // Uso: node instalar.mjs   (FOUNDRY_DATA=... troca a pasta Data do Foundry; só instala se ela for de um Foundry 14)
 import fs from 'node:fs';
 import os from 'node:os';
@@ -43,7 +43,7 @@ if (!fs.existsSync(marca) || fs.statSync(marca).mtimeMs < Math.max(mudou('dados/
 
 fs.rmSync(destino, { recursive: true, force: true });
 fs.mkdirSync(destino, { recursive: true });
-for (const item of ['system.json', 'README.md', 'scripts', 'templates', 'styles', 'lang', 'icones', 'dados', 'packs']) {
+for (const item of ['system.json', 'README.md', 'scripts', 'templates', 'styles', 'fontes', 'lang', 'icones', 'dados', 'packs']) {
   if (fs.existsSync(path.join(fonte, item))) fs.cpSync(path.join(fonte, item), path.join(destino, item), { recursive: true, filter: origem => path.basename(origem) !== '.gerado' });
 }
 console.log(`${manifesto.title} ${manifesto.version} instalado em ${destino}`);

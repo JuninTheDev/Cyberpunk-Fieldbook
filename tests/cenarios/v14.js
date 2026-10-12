@@ -129,16 +129,25 @@ module.exports = async ({ edge, servidores, r }) => {
         `10+3: ${alto.total} (${alto.formula}) · 1−4: ${baixo.total} · 5: ${normal.total} · cartão ${JSON.stringify(cartao)}`];
     });
 
-    await r.passo('ficha: abre com as abas e rola pelo atributo', async () => {
+    await r.passo('ficha: abre no tema escuro, com as fontes do modelo, as 7 abas, os 10 atributos e só as perícias com nível (o botão mostra todas); rola pelo atributo', async () => {
       await edge.evaluate(`game.actors.getName('Atiradora').sheet.render({ force: true })`);
+      const olhar = () => edge.evaluate(`(() => { const f = document.querySelector('.cpr-fieldbook.ficha-personagem'); return f && {
+        abas: f.querySelectorAll('nav.tabs [data-tab]').length, atributos: f.querySelectorAll('.atributo').length, pericias: f.querySelectorAll('.pericia').length,
+        hp: f.querySelector('.indicador.hp .valor')?.textContent.trim(), escuro: f.classList.contains('themed') && f.classList.contains('theme-dark'),
+        botao: f.querySelector('[data-action="alternarPericias"]')?.textContent.trim() }; })()`);
       let ficha = null;
-      for (let i = 0; i < 30 && !ficha; i++) { await edge.sleep(200); ficha = await edge.evaluate(`(() => { const f = document.querySelector('.cpr-fieldbook.ficha-personagem'); return f && { abas: f.querySelectorAll('nav.tabs [data-tab]').length, atributos: f.querySelectorAll('.atributo').length, pericias: f.querySelectorAll('.pericia').length, hp: f.querySelector('.vital.hp .valor')?.textContent.trim() }; })()`); }
+      for (let i = 0; i < 30 && !ficha; i++) { await edge.sleep(200); ficha = await olhar(); }
+      const fontes = await edge.evaluate(`document.fonts.ready.then(async () => { await Promise.all([document.fonts.load('500 16px Rajdhani'), document.fonts.load('700 16px Rajdhani'), document.fonts.load('16px "Share Tech Mono"')]); return document.fonts.check('700 16px Rajdhani') && document.fonts.check('16px "Share Tech Mono"') && [...document.fonts].filter(f => /Rajdhani|Share Tech Mono/.test(f.family) && f.status === 'loaded').length; })`);
+      await edge.evaluate(`document.querySelector('.cpr-fieldbook.ficha-personagem [data-action="alternarPericias"]').click()`);
+      let todas = null;
+      for (let i = 0; i < 30 && !(todas?.pericias > ficha?.pericias); i++) { await edge.sleep(200); todas = await olhar(); }
       const antes = await edge.evaluate('game.messages.size');
       await edge.evaluate(`document.querySelector('.cpr-fieldbook.ficha-personagem .atributo[data-atributo="ref"] .rolar').click()`);
       await edge.sleep(800);
       const depois = await edge.evaluate('game.messages.size');
       await edge.shot('ficha');
-      return [ficha && ficha.abas === 5 && ficha.atributos === 10 && ficha.pericias >= 61 && depois === antes + 1, `${JSON.stringify(ficha)} · mensagens ${antes} → ${depois}`];
+      return [ficha && ficha.abas === 7 && ficha.atributos === 10 && ficha.pericias === 3 && ficha.escuro && ficha.hp === '/45' && ficha.botao === 'VER TODAS' && fontes === 3
+        && todas?.pericias >= 61 && todas.botao === 'SÓ COM NÍVEL' && depois === antes + 1, `${JSON.stringify({ ficha, todas, fontes })} · mensagens ${antes} → ${depois}`];
     });
 
     await r.passo('ficha: mudar o REF e o nível de Furtividade na ficha grava no ator', async () => {
@@ -1361,6 +1370,67 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(1200);
     await edge.shot('importado');
 
+    await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha', async () => {
+      const lp = solo.resultado.lifepath;
+      const info = await edge.evaluate(`(async () => {
+        const ator = game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
+        await ator.sheet.render({ force: true });
+        await __esperar(() => ator.sheet.element?.querySelector('.tab.role .habilidade'));
+        const f = () => ator.sheet.element;
+        const valor = nome => f().querySelector('[name="' + nome + '"]')?.value;
+        const texto = seletor => f().querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const topo = { role: valor('system.role.nome'), rank: valor('system.role.rank'), nome: valor('name'), apelido: valor('system.apelido') };
+        const role = {
+          nome: texto('.tab.role .role-nome'), titulo: texto('.tab.role .painel:nth-of-type(2) .titulo'),
+          habilidades: [...f().querySelectorAll('.tab.role .habilidade')].map(li => [li.querySelector('.nome').firstChild.textContent.trim(), li.querySelector('input').value, li.querySelector('.efeito')?.textContent.trim() ?? ''])
+        };
+        const vida = { origem: valor('system.lifepath.origem'), meta: valor('system.lifepath.meta'), campos: f().querySelectorAll('.tab.vida textarea').length };
+        const equipadas = ator.items.filter(i => i.type === 'arma' && i.system.equipada).length;
+        const geral = {
+          atacar: f().querySelectorAll('.tab.pericias .item-linha [data-action="atacar"]').length, equipadas,
+          sp: [...f().querySelectorAll('.tab.pericias .sp-caixas b')].map(b => b.textContent.trim()), barraHp: f().querySelector('.tab.pericias .barra .hp')?.style.width,
+          pericias: f().querySelectorAll('.tab.pericias .pericia').length, comNivel: Object.values(ator.system.pericias).filter(p => p.nivel > 0).length
+        };
+        // A perícia de família: ver todas, "+ perícia de família", Linguagem "Japonês"; depois o ✕ tira.
+        f().querySelector('[data-action="alternarPericias"]').click();
+        await __esperar(() => f()?.querySelector('[data-action="novaPericia"]'));
+        f().querySelector('[data-action="novaPericia"]').click();
+        const janela = classe => document.querySelector('.application.dialog.' + classe + ':not(.minimizing)');
+        await __esperar(() => janela('nova-pericia')?.querySelector('input[name="nome"]'));
+        janela('nova-pericia').querySelector('select[name="familia"]').value = 'language';
+        janela('nova-pericia').querySelector('input[name="nome"]').value = 'Japonês';
+        janela('nova-pericia').querySelector('button[data-action="ok"]').click();
+        await __esperar(() => f()?.querySelector('.pericia[data-pericia="language-japones"] .tirar'));
+        const nova = { dados: ator.system.pericias['language-japones'] ?? null, linha: texto('.pericia[data-pericia="language-japones"] .nome') };
+        f().querySelector('.pericia[data-pericia="language-japones"] .tirar').click();
+        await __esperar(() => janela('dialog')?.querySelector('button[data-action="yes"]'));
+        janela('dialog').querySelector('button[data-action="yes"]').click();
+        await __esperar(() => !ator.system.pericias['language-japones']);
+        const tirada = !ator.system.pericias['language-japones'] && !f()?.querySelector('.pericia[data-pericia="language-japones"]');
+        // De volta ao modo compacto (o do modelo), para a captura.
+        f().querySelector('[data-action="alternarPericias"]').click();
+        await __esperar(() => f()?.querySelector('[data-action="alternarPericias"]')?.textContent.trim() === 'VER TODAS');
+        return { topo, role, vida, geral, nova, tirada };
+      })()`);
+      // As outras abas, para a conferência visual (a ficha fica aberta; o passo seguinte fecha).
+      for (const aba of ['pericias', 'combate', 'equipamento', 'role', 'vida']) {
+        await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)}).sheet.changeTab('${aba}', 'primary')`);
+        await edge.sleep(400);
+        await edge.shot(`ficha-${aba}`);
+      }
+      await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)}).sheet.close().then(() => true)`);
+      const { topo, role, vida, geral, nova } = info;
+      const habilidade = nome => role.habilidades.find(([n]) => n === nome);
+      const ok = topo.role === 'Solo' && topo.rank === '4' && topo.nome === 'Teste Sistema' && topo.apelido === 'Lab'
+        && /SOLO/i.test(role.nome) && /Consciência de Combate/.test(role.nome) && /4 PONTOS DISTRIBUÍDOS/.test(role.titulo) && role.habilidades.length === 6
+        && habilidade('Reação de Iniciativa')?.[1] === '2' && habilidade('Reação de Iniciativa')[2] === '+2 na Iniciativa'
+        && habilidade('Detecção de Ameaça')?.[1] === '2' && habilidade('Detecção de Ameaça')[2] === '+2 em Percepção' && habilidade('Ponto Fraco')?.[1] === '0'
+        && vida.campos === 17 && vida.origem && vida.origem === lp.culturalOrigin && vida.meta === lp.lifeGoals
+        && geral.atacar === geral.equipadas && geral.equipadas > 0 && geral.sp[1] === '11' && geral.barraHp === '100%' && geral.pericias === geral.comNivel
+        && nova.dados?.familia === 'language' && nova.dados.nome === 'Japonês' && nova.dados.nivel === 0 && /Linguagem \(Japonês\)/.test(nova.linha) && info.tirada;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('na mesa: a cada mudança, a ficha volta para a wiki no formato que ela já lê (HP, dinheiro, armas com o pente, armadura, cyberware, inventário, perícias, Role)', async () => {
       // O Solo importado perde 15 HP e gasta 100eb; a volta espera 4 s depois da última mudança.
       await edge.evaluate(`(async () => {
@@ -1500,13 +1570,14 @@ module.exports = async ({ edge, servidores, r }) => {
           programas: ator.items.filter(i => i.type === 'programa').map(p => ({ uid: p.getFlag('${S}', 'wikiUid'), nome: p.name, noDeck: p.system.instaladoEm === deck?.id })),
           notas
         };
-        // As fichas: a linha do deck e a lista de programas na ficha do personagem; o "Instalado em" na ficha do programa.
+        // As fichas: a linha do deck e a lista de programas na aba NET da ficha do personagem; o "Instalado em" na ficha do
+        // programa.
         const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
         await ator.sheet.render({ force: true });
         await esperar(() => ator.sheet.element?.querySelector('li[data-item-id="' + deck.id + '"] .detalhe'));
         resultado.ficha = {
           deck: ator.sheet.element.querySelector('li[data-item-id="' + deck.id + '"] .detalhe').textContent,
-          programas: [...ator.sheet.element.querySelectorAll('.tab.equipamento li[data-item-id]')].filter(li => li.textContent.includes('ATK')).length
+          programas: [...ator.sheet.element.querySelectorAll('.tab.net li[data-item-id]')].filter(li => li.textContent.includes('ATK')).length
         };
         await ator.sheet.close();
         const programa = ator.items.find(i => i.type === 'programa');

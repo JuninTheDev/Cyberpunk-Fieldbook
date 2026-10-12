@@ -1,7 +1,7 @@
 // Modelos de dados (TypeDataModel do Foundry 14): o personagem, as armas, armaduras, munição e cyberware, e o efeito
 // que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP, bônus dos efeitos)
 // é calculado na preparação, a cada vez.
-import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, LIFEPATH, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 
@@ -37,6 +37,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       dinheiro: inteiro(0),
       pontosDeMelhoria: inteiro(0),
       reputacao: inteiro(0),
+      // O apelido (o nome de rua) e o Lifepath, em texto (a wiki manda pronto do criador).
+      apelido: texto(),
+      lifepath: new fields.SchemaField(Object.fromEntries(LIFEPATH.map(({ chave }) => [chave, texto()]))),
       notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
     };
   }

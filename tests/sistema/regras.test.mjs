@@ -9,8 +9,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
-import { FAMILIAS, PERICIAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { CLASSES_PROGRAMA, ESTILOS_ROUPA, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
+import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
+import { CLASSES_PROGRAMA, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -570,4 +570,38 @@ test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os do
   assert.equal(regras.mudaDeAlvo(4.5), true);
   assert.equal(regras.mudaDeAlvo(4.6), false);
   assert.equal(regras.mudaDeAlvo(null), false);
+});
+
+// ---------------- Ficha ----------------
+test('Ficha: as Roles de 2077 e as habilidades de Role (Solo, Tech, Medtech) são as do criador da wiki; as da Consciência de Combate são as que as regras leem', () => {
+  const contexto = { window: {} };
+  for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-criacao.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, arquivo), 'utf8'), contexto);
+  const { roles, roleAbilities } = contexto.window.systemCreation;
+  // Array.from: os arrays do contexto da wiki (vm) são de outro reino, e o deepStrictEqual compara o protótipo.
+  assert.deepEqual(ROLES.map(role => [role.id, role.nome, role.habilidade, role.resumo]), Array.from(roles, role => [role.id, role.nome, role.habilidade, role.resumo]));
+  assert.deepEqual(Object.keys(HABILIDADES_DE_ROLE), Object.keys(roleAbilities));
+  for (const [id, wikiRole] of Object.entries(roleAbilities)) {
+    const nossa = HABILIDADES_DE_ROLE[id];
+    assert.deepEqual(nossa.itens.map(item => [item.id, item.nome, item.desc]), Array.from(wikiRole.itens, item => [item.id, item.nome, item.desc]), id);
+    assert.deepEqual([nossa.titulo, nossa.pontos, nossa.max, nossa.nota], [wikiRole.titulo, wikiRole.pontos, wikiRole.max, wikiRole.nota], id);
+  }
+  // As chaves das seis habilidades do Solo são as que regras.consciencia lê: 4 pontos em cada uma valem tudo.
+  const c = regras.consciencia(Object.fromEntries(HABILIDADES_DE_ROLE.solo.itens.map(item => [item.id, 4])));
+  assert.deepEqual([c.iniciativa, c.ataque, c.pontoFraco, c.percepcao, c.deflexao, c.semFalhaCritica], [4, 1, 4, 4, 2, true]);
+});
+
+test('Ficha: o Lifepath tem os campos e os rótulos do criador da wiki (criador.js), com o campo do resultado de onde cada um vem', () => {
+  const criador = fs.readFileSync(path.join(raiz, 'criador.js'), 'utf8');
+  const inicio = criador.indexOf('const lifepathFields = [');
+  const bloco = criador.slice(inicio, criador.indexOf('];', inicio));
+  const campos = [...bloco.matchAll(/\['(\w+)', '([^']+)', '(\w+)'\]/g)].map(([, , rotulo, wiki]) => ({ rotulo, wiki }));
+  assert.equal(campos.length, 13);
+  for (const campo of campos) assert.ok(LIFEPATH.some(l => l.rotulo === campo.rotulo && l.wiki === campo.wiki), `${campo.rotulo} (${campo.wiki})`);
+  // Os quatro que o criador monta à parte: amigos, inimigos, amores e o Lifepath da Role.
+  for (const wiki of ['friends', 'enemies', 'tragicLoveAffairs', 'roleLifepath']) {
+    assert.ok(LIFEPATH.some(l => l.wiki === wiki), wiki);
+    assert.ok(criador.includes(`texts.${wiki} =`), `${wiki} no criador`);
+  }
+  assert.equal(LIFEPATH.length, 17);
+  assert.equal(new Set(LIFEPATH.map(l => l.chave)).size, 17);
 });

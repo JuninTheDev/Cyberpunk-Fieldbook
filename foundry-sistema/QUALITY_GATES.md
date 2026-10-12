@@ -40,6 +40,9 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 - **Janela fechando:** no Edge sem janela, uma janela do Foundry fica no DOM com a classe `minimizing` por até 1 s
   depois do clique (o `close` espera a animação). Para contar janelas abertas, e para achar a que vai receber o
   clique, use `:not(.minimizing)`: a janela que fecha também tem os botões, e o clique nela se perde.
+- **Mudança na ficha:** o cenário captura cada aba da ficha (`tests/.saida/v14-ficha-*.png`). Confira as capturas antes
+  do commit: o teste pega o que a ficha mostra, não se ficou bonita. No ciclo 19 as capturas acharam as linhas de
+  perícia altas demais e o cabeçalho quebrado, com todos os testes passando.
 - **Limpeza no `finally`:** o passo que cria combate, marca alvo ou abre janela desfaz isso num `finally`. Uma falha no
   meio não pode arrastar os passos seguintes: no ciclo 17, um combate e um alvo marcado que sobraram derrubaram três
   passos de fogo supressivo e de turnos.

@@ -27,10 +27,24 @@ export const ESTILOS_ROUPA = {
   genericChic: 'Genérico Chic', highFashion: 'Alta moda', leisurewear: 'Roupa de lazer', nomadLeathers: 'Couro nômade', urbanFlash: 'Flash urbano'
 };
 
+// Lifepath (RED p. 40–70), com os rótulos do criador de personagens da wiki (criador.js, lifepathFields) e o campo do
+// resultado da wiki de onde cada um vem (os nomes do CORE).
+export const LIFEPATH = [
+  { chave: 'origem', rotulo: 'Origem cultural', wiki: 'culturalOrigin' }, { chave: 'personalidade', rotulo: 'Personalidade', wiki: 'personality' },
+  { chave: 'roupa', rotulo: 'Estilo de roupa', wiki: 'clothingStyle' }, { chave: 'cabelo', rotulo: 'Penteado', wiki: 'hairStyle' },
+  { chave: 'adorno', rotulo: 'Adorno', wiki: 'affectations' }, { chave: 'valor', rotulo: 'O que mais valoriza', wiki: 'valueMost' },
+  { chave: 'pessoas', rotulo: 'O que sente pelas pessoas', wiki: 'aboutPeople' }, { chave: 'pessoa', rotulo: 'Pessoa mais valiosa', wiki: 'valuedPerson' },
+  { chave: 'posse', rotulo: 'Posse mais valiosa', wiki: 'valuedPossession' }, { chave: 'familia', rotulo: 'Família original', wiki: 'familyBackground' },
+  { chave: 'infancia', rotulo: 'Ambiente de infância', wiki: 'childhoodEnvironment' }, { chave: 'crise', rotulo: 'Crise familiar', wiki: 'familyCrisis' },
+  { chave: 'meta', rotulo: 'Meta de vida', wiki: 'lifeGoals' }, { chave: 'amigos', rotulo: 'Amigos', wiki: 'friends' },
+  { chave: 'inimigos', rotulo: 'Inimigos', wiki: 'enemies' }, { chave: 'amores', rotulo: 'Amores trágicos', wiki: 'tragicLoveAffairs' },
+  { chave: 'role', rotulo: 'Lifepath da Role', wiki: 'roleLifepath' }
+];
+
 // Upgrades: onde cada um instala (o "type" do itemUpgrade do CORE).
 export const ALVOS_UPGRADE = { arma: 'Arma', cyberdeck: 'Cyberdeck', veiculo: 'Veículo' };
 
-// Armas de 2077: a classe (as regras de cada uma ainda não estão neste sistema).
+// Armas de 2077: a classe (as regras de cada uma estão em regras.mjs).
 export const CLASSES_2077 = { power: 'Power', tech: 'Tech', smart: 'Smart' };
 
 // Programas: a classe do CORE, com o nome da página de NET da wiki, e os quickhacks e daemons de 2077.

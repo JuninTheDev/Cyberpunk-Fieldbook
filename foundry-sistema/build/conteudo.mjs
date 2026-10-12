@@ -4,13 +4,15 @@
 // Na primeira vez baixa os compêndios-fonte (YAML) da tag do GitLab para .cache/; o js-yaml vem da CDN (sem npm).
 // Saída:
 //   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle");
-//   scripts/gerado.mjs   as perícias (com os nomes em português da wiki) e as tabelas de DV.
+//   scripts/gerado.mjs   as perícias (com os nomes em português da wiki), as tabelas de DV e as Roles de 2077 com as
+//                        habilidades (do criador de personagens da wiki).
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import https from 'node:https';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import vm from 'node:vm';
 import { converter2077 } from './conteudo-2077.mjs';
 
 const VERSAO = 'v0.92.4';
@@ -113,6 +115,21 @@ function nomesDaWiki() {
   for (const [, pt, en, , grupo, , basica] of texto.matchAll(/\['([^']+)', '([^']+)', '(INT|REF|DEX|TECH|COOL|WILL|EMP)', '([^']+)', (true|false), (true|false)\]/g)) nomes[en] = { pt, grupo, basica: basica === 'true' };
   return nomes;
 }
+// As Roles de 2077 que a mesa usa e as sub-habilidades de Role (Solo, Tech, Medtech), com os nomes, as descrições e
+// as notas do criador de personagens da wiki (system-criacao.js): a aba Role da ficha. Os pontos e o máximo são os do
+// Rank 4, como a wiki os dá.
+function rolesDaWiki() {
+  const contexto = { window: {} };
+  for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-criacao.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, '..', arquivo), 'utf8'), contexto);
+  const { roles, roleAbilities } = contexto.window.systemCreation;
+  return {
+    roles: roles.map(({ id, nome, habilidade, en, resumo }) => ({ id, nome, habilidade, en, resumo })),
+    habilidades: Object.fromEntries(Object.entries(roleAbilities).map(([id, r]) => [id, {
+      titulo: r.titulo, pagina: r.pagina, pontos: r.pontos, max: r.max, nota: r.nota, itens: r.itens.map(({ id: chave, nome, desc }) => ({ id: chave, nome, desc }))
+    }]))
+  };
+}
+
 function converterPericias(yaml) {
   const wiki = nomesDaWiki();
   const familias = {};
@@ -391,13 +408,16 @@ async function main() {
   fs.mkdirSync(path.join(raiz, 'dados'), { recursive: true });
   const catalogo = { fonte: `Cyberpunk RED - CORE ${VERSAO} (GPL-3, The Project Red Team), convertido por build/conteudo.mjs`, itens };
   fs.writeFileSync(path.join(raiz, 'dados', 'catalogo.json'), JSON.stringify(catalogo));
+  const roles = rolesDaWiki();
   const gerado = [
-    `// Gerado por build/conteudo.mjs a partir do Cyberpunk RED - CORE ${VERSAO} (GPL-3) e da tabela de perícias da wiki.`,
+    `// Gerado por build/conteudo.mjs a partir do Cyberpunk RED - CORE ${VERSAO} (GPL-3), da tabela de perícias e do criador da wiki.`,
     '// Não edite à mão: rode o build de novo.',
     `export const PERICIAS = ${JSON.stringify(pericias)};`,
     `export const FAMILIAS = ${JSON.stringify(familias)};`,
     `export const TABELAS_DV = ${JSON.stringify(tabelas)};`,
     `export const TABELAS_LESAO = ${JSON.stringify(lesoes)};`,
+    `export const ROLES = ${JSON.stringify(roles.roles)};`,
+    `export const HABILIDADES_DE_ROLE = ${JSON.stringify(roles.habilidades)};`,
     ''
   ].join('\n');
   fs.writeFileSync(path.join(raiz, 'scripts', 'gerado.mjs'), gerado);
