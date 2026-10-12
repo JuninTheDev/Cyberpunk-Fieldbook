@@ -1,7 +1,7 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
-import { caminho, SIGLA, SISTEMA } from './config.mjs';
-import { aplicarDano, ehCoprocessador, ehSmartLink, localDaArmadura, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, sorteParaGastar } from './regras.mjs';
+import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
+import { aplicarDano, ehCoprocessador, ehSmartLink, linhaDoExtrato, localDaArmadura, novoSaldo, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, sorteParaGastar } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
@@ -9,6 +9,40 @@ export class AtorCPR extends Actor {
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
     if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, bar1: { attribute: 'hp' }, sight: { enabled: true } } });
+  }
+
+  // O extrato fica completo: uma mudança de Eurodólares, IP ou Reputação que não veio de mudarComExtrato (uma macro, o
+  // campo mudado por fora) entra como "definir", sem motivo.
+  async _preUpdate(mudancas, opcoes, usuario) {
+    if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
+    if (this.type !== 'personagem' || opcoes.cprfExtrato) return;
+    for (const campo of Object.keys(EXTRATOS)) {
+      const novo = foundry.utils.getProperty(mudancas, `system.${campo}`);
+      if (novo === undefined || Number(novo) === this._source.system[campo]) continue;
+      const linha = linhaDoExtrato({ acao: 'definir', antes: this._source.system[campo], saldo: Number(novo), usuario: usuario?.name ?? game.users.get(usuario)?.name ?? '' });
+      foundry.utils.setProperty(mudancas, `system.extratos.${campo}`, [...this._source.system.extratos[campo], linha]);
+    }
+  }
+
+  // Muda Eurodólares, IP ou Reputação com o extrato, como o ledger do CORE: somar, subtrair (sempre tira) ou definir, com
+  // o motivo e quem mudou. O valor e a linha entram na mesma atualização.
+  async mudarComExtrato(campo, { acao, valor, motivo = '' }) {
+    if (!EXTRATOS[campo]) throw new Error(`Sem extrato: ${campo}`);
+    const antes = this._source.system[campo];
+    const saldo = novoSaldo(antes, acao, valor);
+    const linha = linhaDoExtrato({ acao, antes, saldo, motivo, usuario: game.user.name });
+    await this.update({ [`system.${campo}`]: saldo, [`system.extratos.${campo}`]: [...this._source.system.extratos[campo], linha] }, { cprfExtrato: true });
+    return linha;
+  }
+
+  // Tira uma linha do extrato (só o mestre, como no CORE). Com desfazer, o saldo também volta a diferença daquela linha;
+  // sem, não muda.
+  apagarDoExtrato(campo, indice, { desfazer = false } = {}) {
+    const linhas = this._source.system.extratos[campo];
+    if (!linhas[indice]) return null;
+    const mudancas = { [`system.extratos.${campo}`]: linhas.filter((outra, i) => i !== indice) };
+    if (desfazer) mudancas[`system.${campo}`] = this._source.system[campo] - linhas[indice].delta;
+    return this.update(mudancas, { cprfExtrato: true });
   }
 
   // Partes fixas que entram em todo teste: a penalidade de ferimento e a das lesões (−2 em todas as ações).

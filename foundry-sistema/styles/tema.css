@@ -1,12 +1,13 @@
 /* Cyberpunk RED — Fieldbook: o visual do modelo de ficha da mesa ("Modelo de ficha/": Cyberpunk 2077, amarelo, ciano e
    vermelho sobre o escuro) na ficha do personagem, na ficha do item e nos cartões do chat. As fontes vêm embutidas
-   (fontes/, SIL OFL) e as fichas ficam sempre no tema escuro do Foundry (classes "themed theme-dark"). Nas mensagens do
-   chat, só as que têm um cartão deste sistema (a classe cprf-mensagem, que combate.mjs põe ao desenhar). */
+   (fontes/, SIL OFL) e as fichas e a janela do extrato ficam sempre no tema escuro do Foundry (classes "themed
+   theme-dark"). Nas mensagens do chat, só as que têm um cartão deste sistema (a classe cprf-mensagem, que combate.mjs põe
+   ao desenhar). */
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fontes/rajdhani-500.woff2') format('woff2'); }
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fontes/rajdhani-700.woff2') format('woff2'); }
 @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
 
-.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .chat-message.cprf-mensagem {
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .chat-message.cprf-mensagem {
   --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
   --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
   --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
@@ -14,11 +15,11 @@
 }
 
 /* ---------- Janela ---------- */
-.cpr-fieldbook.ficha-personagem .window-header, .cpr-fieldbook.ficha-item .window-header {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato) .window-header {
   background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); color: var(--cp-amarelo);
   font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
 }
-.cpr-fieldbook.ficha-personagem .window-content, .cpr-fieldbook.ficha-item .window-content {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato) .window-content {
   background-color: var(--cp-fundo);
   background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
   color: var(--cp-texto); font-family: var(--cp-titulo); font-weight: 500; font-size: 15px;
@@ -122,6 +123,15 @@
 .cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes b { min-width: 3ch; text-align: center; font-family: var(--cp-dados); font-size: 12px; font-weight: 400; color: var(--cp-fraco); }
 .cpr-fieldbook.ficha-personagem .indicador.sorte.preparada { border-top-color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .indicador.sorte.preparada .sorte-acoes b { color: var(--cp-ciano); }
+/* Eurodólares, IP e Reputação: o indicador é um botão que abre o extrato (o valor muda por lá, com o motivo). */
+.cpr-fieldbook.ficha-personagem .indicador.com-extrato {
+  width: auto; height: auto; min-height: 0; gap: 0; margin: 0; border: none; border-top: 2px solid var(--cp-amarelo); border-radius: 0;
+  background: var(--cp-painel); box-shadow: none; color: var(--cp-texto); font: inherit; line-height: 1; cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem .indicador.com-extrato:hover { border-top-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 10%, var(--cp-painel)); }
+.cpr-fieldbook.ficha-personagem .indicador.com-extrato b { min-width: 2.6ch; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .indicador.com-extrato b.negativo { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .indicador.com-extrato i { margin-top: 4px; }
 
 /* ---------- Abas ---------- */
 .cpr-fieldbook.ficha-personagem nav.sheet-tabs {
@@ -223,6 +233,11 @@
 .cpr-fieldbook.ficha-personagem ol.itens button.alternar.ligado { border-color: var(--cp-ciano); color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem ol.itens button.apagar { border-color: transparent; }
 .cpr-fieldbook.ficha-personagem ol.itens button.apagar:hover { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
+/* O painel de Eurodólares (aba Equipamento): o saldo, o botão do extrato e as últimas mudanças. */
+.cpr-fieldbook.ficha-personagem .dinheiro .titulo span { color: var(--cp-amarelo); font-size: 14px; letter-spacing: 0.1em; }
+.cpr-fieldbook.ficha-personagem .extrato-recente .mudanca { flex: none; min-width: 9ch; font-family: var(--cp-dados); font-size: 15px; }
+.cpr-fieldbook.ficha-personagem .extrato-recente .entrou .mudanca { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .extrato-recente .saiu .mudanca { color: var(--cp-vermelho); }
 
 /* A tabela das armas (aba Combate), com os botões de cada modo. */
 .cpr-fieldbook.ficha-personagem table.lista { width: 100%; margin: 0; border: none; border-collapse: collapse; background: transparent; }
@@ -290,6 +305,55 @@
   .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .lifepath) { grid-template-columns: minmax(0, 1fr); }
   .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- O extrato (Eurodólares, IP e Reputação) ---------- */
+.cpr-fieldbook.extrato .window-content { padding: 16px; overflow: hidden; }
+.cpr-fieldbook.extrato .extrato-conteudo { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+.cpr-fieldbook.extrato .corte { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+.cpr-fieldbook.extrato :is(button, a, input):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 2px; }
+/* O saldo, grande, no painel amarelo. */
+.cpr-fieldbook.extrato .saldo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px; background: var(--cp-painel); border-left: 3px solid var(--cp-amarelo); }
+.cpr-fieldbook.extrato .saldo i { font-family: var(--cp-dados); font-size: 12px; font-style: normal; letter-spacing: 0.2em; color: var(--cp-amarelo); text-transform: uppercase; }
+.cpr-fieldbook.extrato .saldo b { color: var(--cp-amarelo); font: 700 40px/1 var(--cp-titulo); }
+.cpr-fieldbook.extrato .saldo b.negativo { color: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .saldo b small { font-family: var(--cp-dados); font-size: 16px; font-weight: 400; color: var(--cp-fraco); }
+/* O menu: a quantia, o motivo e os três botões (somar em ciano, subtrair em vermelho, definir em amarelo). */
+.cpr-fieldbook.extrato .mudar { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 10px 12px; padding: 12px 16px; background: var(--cp-painel); border-left: 3px solid var(--cp-ciano); }
+.cpr-fieldbook.extrato .mudar label { display: flex; flex-direction: column; gap: 4px; font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-fraco); text-transform: uppercase; }
+.cpr-fieldbook.extrato .mudar input {
+  height: 30px; min-height: 0; padding: 0 8px; background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0; box-shadow: none;
+  color: var(--cp-texto); font-family: var(--cp-dados); font-size: 15px; letter-spacing: normal; line-height: 1.2; text-transform: none;
+}
+.cpr-fieldbook.extrato .mudar input:focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+.cpr-fieldbook.extrato .mudar input[type="number"] { appearance: textfield; }
+.cpr-fieldbook.extrato .mudar input[type="number"]::-webkit-inner-spin-button, .cpr-fieldbook.extrato .mudar input[type="number"]::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.cpr-fieldbook.extrato .mudar .botoes { grid-column: 1 / -1; display: flex; gap: 8px; }
+.cpr-fieldbook.extrato .mudar .botoes button {
+  --cor: var(--cp-amarelo);
+  flex: 1; height: auto; min-height: 0; padding: 6px 10px; border: 1px solid var(--cor); border-radius: 0; background: transparent; box-shadow: none;
+  color: var(--cor); font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.1em; line-height: 1.2; cursor: pointer;
+}
+.cpr-fieldbook.extrato .mudar .botoes button[data-action="somar"] { --cor: var(--cp-ciano); }
+.cpr-fieldbook.extrato .mudar .botoes button[data-action="subtrair"] { --cor: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .mudar .botoes button:hover { background: var(--cor); color: var(--cp-fundo); box-shadow: none; }
+/* O histórico, do mais novo para o mais antigo: só a lista rola, o cabeçalho fica. */
+.cpr-fieldbook.extrato .historico { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 12px 16px; background: var(--cp-painel); border-left: 3px solid var(--cp-amarelo); }
+.cpr-fieldbook.extrato .historico ol { flex: 1; min-height: 0; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.cpr-fieldbook.extrato .historico .linha {
+  display: grid; grid-template-columns: 2.2rem 7.4rem 7.6rem 4.6rem minmax(0, 1fr) 6.5rem 1.4rem; align-items: baseline; gap: 6px;
+  padding: 6px 0; border-bottom: 1px solid var(--cp-linha); font-family: var(--cp-dados); font-size: 13px;
+}
+.cpr-fieldbook.extrato .historico .linha.cabeca { padding-top: 0; font-size: 11px; letter-spacing: 0.15em; color: var(--cp-fraco); }
+.cpr-fieldbook.extrato .historico :is(.numero, .quando, .usuario) { color: var(--cp-fraco); font-size: 12px; }
+.cpr-fieldbook.extrato .historico .usuario { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.extrato .historico .saldo-linha { color: var(--cp-amarelo); }
+.cpr-fieldbook.extrato .historico .saldo-linha.negativo { color: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .historico .motivo { font-family: var(--cp-titulo); font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+.cpr-fieldbook.extrato .historico .entrou .mudanca { color: var(--cp-ciano); }
+.cpr-fieldbook.extrato .historico .saiu .mudanca { color: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .historico .apagar { color: var(--cp-fraco); text-align: center; cursor: pointer; }
+.cpr-fieldbook.extrato .historico .apagar:hover { color: var(--cp-vermelho); text-shadow: none; }
+.cpr-fieldbook.extrato .historico .vazio { padding: 10px 0; color: var(--cp-fraco); font-style: italic; }
 
 /* ---------- Cartões do chat ---------- */
 /* A mensagem inteira: o fundo, a borda (amarela; vermelha no dano e na morte) e quem falou. */

@@ -2,7 +2,8 @@
 // a Role, o nome, o apelido e os indicadores (HP, Sorte, dinheiro, IP, reputação), e as abas Perícias (o painel geral:
 // atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
-import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { pontosDeRole } from './regras.mjs';
@@ -38,6 +39,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarDano: FichaPersonagem.#rolarDano,
       recarregar: FichaPersonagem.#recarregar,
       prepararSorte: FichaPersonagem.#prepararSorte,
+      abrirExtrato: FichaPersonagem.#abrirExtrato,
       recarregarSorte: FichaPersonagem.#recarregarSorte,
       alternarCoronha: FichaPersonagem.#alternarCoronha,
       equipar: FichaPersonagem.#equipar,
@@ -161,6 +163,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return Object.assign(contexto, {
       ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
       roles: ROLES,
+      // Eurodólares, IP e Reputação: o botão do cabeçalho abre o extrato (como o ledger do CORE).
+      extratos: [['dinheiro', 'EURODÓLARES'], ['pontosDeMelhoria', 'IP'], ['reputacao', 'REPUTAÇÃO']].map(([campo, sigla]) => ({
+        campo, sigla, valor: s[campo], dica: `${EXTRATOS[campo].rotulo}: somar, subtrair ou definir, com o motivo; e o histórico`
+      })),
+      extratoRecente: s.extratos.dinheiro.slice(-5).reverse().map(linha => ({
+        mudanca: linha.acao === 'definir' ? `= ${linha.saldo} eb` : `${linha.delta > 0 ? '+' : '−'}${Math.abs(linha.delta)} eb`, saldo: linha.saldo, motivo: linha.motivo, usuario: linha.usuario,
+        quando: linha.quando ? new Date(linha.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
+        classe: linha.delta > 0 ? 'entrou' : linha.delta < 0 ? 'saiu' : ''
+      })),
       atributos: ATRIBUTOS.map(chave => ({ chave, sigla: SIGLA[chave], valor: s.atributos[chave].valor, base: fonte.atributos[chave].valor })),
       vitais: { hp: porcento(s.hp.value, s.hp.max), humanidade: porcento(s.humanidade.value, s.humanidade.max), grave: Math.ceil(s.hp.max / 2) },
       deathSavePenalidade: s.deathSave.base + s.deathSave.penalidade,
@@ -271,6 +282,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // Sorte: um ponto a mais ou a menos para o próximo teste; no começo da sessão, volta ao máximo.
   static #prepararSorte(evento, alvo) { return this.actor.prepararSorte(this.actor.sortePreparada + Number(alvo.dataset.delta)); }
   static #recarregarSorte() { return this.actor.recarregarSorte(); }
+  static #abrirExtrato(evento, alvo) { return abrirExtrato(this.actor, alvo.dataset.campo); }
   // A coronha retrátil (a Dian, de 2077): recolhida, dá para esconder a arma, e os ataques têm −1.
   static #alternarCoronha(evento, alvo) {
     const item = this.#item(alvo);

@@ -55,6 +55,18 @@ export function pontosDeRole(roleId, rank) {
 }
 export const moveFinal = (move, mortal) => Math.max(1, Number(move) + (mortal ? PENALIDADE_MOVE_MORTAL : 0));
 
+// O extrato (o ledger do CORE no Foundry 12: Eurodólares, IP e Reputação): o saldo depois de somar, subtrair ou definir.
+// Como no CORE, subtrair sempre tira (um valor negativo também), e somar soma o valor como veio.
+export function novoSaldo(saldo, acao, valor) {
+  const v = Math.trunc(Number(valor) || 0);
+  if (acao === 'definir') return v;
+  if (acao === 'subtrair') return Number(saldo) - Math.abs(v);
+  return Number(saldo) + v;
+}
+// Uma linha do extrato: quando, a ação, a diferença, o saldo depois, o motivo e quem mudou.
+export const linhaDoExtrato = ({ acao, antes, saldo, motivo = '', usuario = '', quando = new Date().toISOString() }) =>
+  ({ quando, acao, delta: Number(saldo) - Number(antes), saldo: Number(saldo), motivo: String(motivo ?? '').trim(), usuario: String(usuario ?? '') });
+
 // O efeito de um equipamento vale com o uso de agora? Pela ativação do item: "equipado" só equipado; "carregando"
 // equipado ou carregando (guardado em casa, não); "manual" sempre, e quem decide é o efeito, ligado ou desligado.
 export function efeitoValeNoUso(ativacao, uso) {

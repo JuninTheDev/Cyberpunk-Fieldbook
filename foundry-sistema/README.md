@@ -7,19 +7,26 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 ## O que já faz
 
 - **Ficha do personagem**, no visual do modelo de ficha da mesa (Cyberpunk 2077: amarelo, ciano e vermelho sobre o escuro, com as fontes Rajdhani e Share Tech Mono embutidas). A ficha é sempre escura, qualquer que seja o tema do Foundry. Tem estas partes:
-  - **Cabeçalho:** o retrato, a Role e o Rank (com a lista das Roles de 2077), o nome, o apelido e os indicadores de HP, Sorte (com os botões da Sorte, abaixo), Eurodólares, IP e Reputação.
+  - **Cabeçalho:** o retrato, a Role e o Rank (com a lista das Roles de 2077), o nome, o apelido e os indicadores de HP, Sorte (com os botões da Sorte, abaixo), Eurodólares, IP e Reputação (cada um abre o extrato dele, abaixo).
   - **Perícias:** o painel geral, em três colunas.
     - **Esquerda:** os atributos (clique para rolar) e os vitais (as barras de HP e Humanidade, a EMP de agora, o limite de gravemente ferido, o Death Save e o estado).
     - **Centro:** as perícias com nível, das mais altas para as mais baixas, ou todas, no grupo de cada uma. Na lista completa, dá para acrescentar uma perícia de família (uma Linguagem, um Especialista Local...) e tirá-la.
     - **Direita:** a armadura (o SP de cada local), as armas equipadas com o botão Atacar, o cyberware instalado e as lesões críticas, com o paliativo e o tratamento.
   - **Combate:** as armas com todos os modos de ataque, a armadura vestida, a Iniciativa, a esquiva, o Death Save e a munição.
-  - **Equipamento:** armas, armaduras, munição, equipamento, roupas, drogas, upgrades e veículos.
+  - **Equipamento:** os Eurodólares, com as últimas mudanças do extrato; armas, armaduras, munição, equipamento, roupas, drogas, upgrades e veículos.
   - **Cyberware:** a Humanidade e cada peça, com instalar e tirar.
   - **Role:** a Role de 2077 da wiki, com a habilidade e o resumo. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora. A ficha confere os pontos com o Rank: o total (o Tech ganha 2 por Rank; o Solo e o Medtech, 1) e o máximo em cada especialidade (o Rank). Ela avisa o que passou e o que sobra, sem travar.
   - **NET:** o cyberdeck e os programas (as regras da NET ainda não).
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
 - **Cartões do chat** (testes, ataques, dano, Death Save) no mesmo visual: a mensagem inteira fica escura, com a borda amarela (vermelha no dano e na morte), as partes do teste em etiquetas e o total grande. As mensagens que não são do sistema não mudam.
+- **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12. O botão de cada um no cabeçalho da ficha abre a janela dele:
+  - **o menu:** a quantia e o motivo, com Somar, Subtrair e Definir. Como no CORE, Subtrair sempre tira (um valor negativo também), e perder mais do que tem deixa o saldo negativo, com um aviso;
+  - **o histórico,** do mais novo para o mais antigo: a data, a mudança, o saldo depois, o motivo e quem mudou. Uma mudança feita por fora (uma macro, outro módulo) entra como "mudança direta";
+  - **o mestre** tira uma linha e escolhe, como no CORE, se a mudança também é desfeita;
+  - **as linhas que entram sozinhas:** o dinheiro inicial da importação da wiki, os valores migrados do Foundry 12 e as compras da loja da wiki ("Compra na wiki: …", o texto do módulo da mesa).
+
+  Por macro: `ator.mudarComExtrato('dinheiro', { acao: 'somar', valor: 100, motivo: 'Pagamento do fixer' })` (`'subtrair'`, `'definir'`; os campos são `dinheiro`, `pontosDeMelhoria` e `reputacao`) e `game.system.api.abrirExtrato(ator, campo)`.
 - **Rolagens nativas do Foundry 14**, com o crítico do d10 como o modificador `crit` (`1d10crit + 12`):
   - um 10 natural soma mais um d10;
   - um 1 natural tira um d10;
@@ -98,7 +105,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Tirar** devolve a Humanidade.
 - **Janela "Personagens da wiki"** (só o mestre; botão no alto da aba de Atores): cada personagem da wiki com o que dá para fazer neste mundo, que é importar (como foi criado), importar da mesa (como está no Foundry 12) ou abrir a ficha, com o dono no Foundry escolhido na linha. Também mostra os pedidos da loja que esperam o mestre, com Aprovar (entrega na hora) e Recusar (com o motivo, que o jogador vê). Os avisos da última importação ficam no alto. Pela macro: `game.system.api.abrirJanelaDaWiki()`.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
-  - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e dinheiro;
+  - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e dinheiro (no extrato, a linha "Dinheiro inicial (criador da wiki)");
   - o apelido e o Lifepath (em texto, como o criador da wiki monta);
   - armas carregadas, armaduras vestidas e cyberware instalado;
   - equipamento, roupas e drogas, com a quantidade e o uso da montagem da wiki (equipado, carregando ou guardado);
@@ -108,11 +115,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   A wiki marca o personagem como "no Foundry".
 - **Na mesa:** a cada mudança num personagem que veio da wiki (HP, dinheiro, munição, itens, lesões…), o mestre ativo manda a ficha de volta, 4 s depois da última mudança, e a wiki a mostra no lugar da ficha da criação. O formato é o mesmo do módulo cpr-2077 do Foundry 12, então a wiki não muda. Pela macro: `game.system.api.wiki.mandarFicha(ator)`; para mandar já o que está esperando, `mandarPendentes()`.
 - **Importar da mesa** (a migração do Foundry 12): `game.system.api.wiki.importarDaMesa(id, donoId)` monta o ator pela ficha "Na mesa" que o Foundry 12 mandou para a wiki, com o estado de jogo:
-  - HP, Humanidade, Sorte, dinheiro, IP, reputação, a Role, as perícias e as lesões (pelo nome do CORE);
+  - HP, Humanidade, Sorte, dinheiro, IP, reputação, a Role, as perícias e as lesões (pelo nome do CORE). No extrato, o dinheiro, o IP e a reputação entram com a linha "Migrado da ficha da mesa do Foundry 12": o histórico do ledger do Foundry 12 não vem, porque a ficha "Na mesa" só manda o saldo;
   - os itens como estavam: equipados ou guardados, o pente carregado e com qual munição, o SP que sobrou, o cyberware instalado, o que está dentro do deck, da arma e do veículo;
   - cada item acha o catálogo pelo uid da wiki (da criação, de um pedido, da família do Nomad) ou, sem uid, pelo nome do CORE. O que não achar vira aviso;
   - os STATs base vêm da criação: a ficha da mesa manda os de agora, já com a armadura e as lesões, que aqui voltam pelos itens.
-- **Pedidos da loja:** o jogador pede na loja da wiki e o mestre aprova na página do personagem, na wiki. A cada minuto, o mestre ativo entrega o aprovado: cria os itens (no lugar e com a munição que o jogador pediu), desconta o dinheiro e marca o pedido como entregue. O cyberware chega sem instalar (instale pela ficha, que rola a Humanidade). Sem dinheiro na mesa, o pedido fica aprovado com o erro, e a wiki mostra "Tentar de novo". Cada item leva o uid do pedido, então nada sai em dobro. Pela macro: `game.system.api.wiki.entregarPedidos()`. Tudo o que a loja da wiki vende (o CORE e o conteúdo de 2077) existe aqui. Um item que um dia não existir vira aviso e não conta como entregue para a wiki.
+- **Pedidos da loja:** o jogador pede na loja da wiki e o mestre aprova na página do personagem, na wiki. A cada minuto, o mestre ativo entrega o aprovado: cria os itens (no lugar e com a munição que o jogador pediu), desconta o dinheiro (no extrato, "Compra na wiki: " e os itens) e marca o pedido como entregue. O cyberware chega sem instalar (instale pela ficha, que rola a Humanidade). Sem dinheiro na mesa, o pedido fica aprovado com o erro, e a wiki mostra "Tentar de novo". Cada item leva o uid do pedido, então nada sai em dobro. Pela macro: `game.system.api.wiki.entregarPedidos()`. Tudo o que a loja da wiki vende (o CORE e o conteúdo de 2077) existe aqui. Um item que um dia não existir vira aviso e não conta como entregue para a wiki.
 
 ## Configurações (Configurações → Sistema)
 
@@ -185,6 +192,8 @@ E as da wiki:
   - a defesa e o ataque de um jogador num segundo navegador, com o dano rolado por ele, o ataque dele sem mestre na mesa e o mestre respondendo por ele quando demora;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
+  - a Sorte preparada na ficha e o visual dos cartões do chat;
+  - o extrato: somar, subtrair e definir com o motivo, a mudança direta, o saldo negativo com o aviso, o mestre tirando linhas (só a linha ou desfazendo a mudança) e as linhas da importação, da migração e da loja;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 
 Da pasta de dados do Foundry do PC só sai a licença. `FOUNDRY14_APP=...` e `FOUNDRY14_DADOS=...` trocam o programa e a pasta de onde vem a licença.

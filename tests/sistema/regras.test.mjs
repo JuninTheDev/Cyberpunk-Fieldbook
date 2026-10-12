@@ -623,3 +623,20 @@ test('Pontos de Role por Rank: no Rank 4 dão os números que o criador da wiki 
   assert.deepEqual(regras.pontosDeRole('medtech', 2), { total: 2, max: 2 });
   assert.equal(regras.pontosDeRole('netrunner', 4), null);
 });
+
+test('Extrato (o ledger do CORE, cpr-actor-sheet.js _gainLedger/_loseLedger/_setLedger): somar soma o valor como veio, subtrair sempre tira, definir troca o saldo', () => {
+  assert.equal(regras.novoSaldo(500, 'somar', 100), 600);
+  assert.equal(regras.novoSaldo(500, 'somar', -100), 400);
+  assert.equal(regras.novoSaldo(500, 'subtrair', 100), 400);
+  assert.equal(regras.novoSaldo(500, 'subtrair', -100), 400);
+  assert.equal(regras.novoSaldo(50, 'subtrair', 80), -30);
+  assert.equal(regras.novoSaldo(500, 'definir', 50), 50);
+  assert.equal(regras.novoSaldo(500, 'somar', 12.9), 512);
+  assert.equal(regras.novoSaldo(500, 'somar', 'x'), 500);
+  // A linha: a diferença e o saldo depois, o motivo sem espaços nas pontas e quem mudou.
+  const linha = regras.linhaDoExtrato({ acao: 'subtrair', antes: 500, saldo: 400, motivo: '  Munição  ', usuario: 'Gamemaster', quando: '2026-10-12T10:00:00.000Z' });
+  assert.deepEqual(linha, { quando: '2026-10-12T10:00:00.000Z', acao: 'subtrair', delta: -100, saldo: 400, motivo: 'Munição', usuario: 'Gamemaster' });
+  const inicial = regras.linhaDoExtrato({ acao: 'definir', antes: 0, saldo: 2500 });
+  assert.deepEqual([inicial.delta, inicial.saldo, inicial.motivo, inicial.usuario], [2500, 2500, '', '']);
+  assert.match(inicial.quando, /^\d{4}-\d\d-\d\dT\d\d:\d\d/);
+});

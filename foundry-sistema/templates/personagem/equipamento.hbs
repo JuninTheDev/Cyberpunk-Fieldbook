@@ -1,4 +1,16 @@
 <section class="tab equipamento {{tab.cssClass}}" data-group="primary" data-tab="equipamento">
+  <section class="painel corte dinheiro">
+    <div class="titulo">EURODÓLARES<span>{{sistema.dinheiro}} eb <button type="button" class="acao" data-action="abrirExtrato" data-campo="dinheiro" data-tooltip="Somar, subtrair ou definir, com o motivo; e o histórico inteiro">EXTRATO</button></span></div>
+    <ol class="itens extrato-recente">
+      {{#each extratoRecente}}
+      <li class="{{classe}}">
+        <span class="mudanca">{{mudanca}}</span>
+        <span class="detalhe">{{quando}} · {{#if motivo}}{{motivo}}{{else}}mudança direta{{/if}}{{#if usuario}} · {{usuario}}{{/if}} · saldo {{saldo}}</span>
+      </li>
+      {{else}}<li class="vazio">Nada no histórico ainda: o botão Extrato soma, subtrai ou define, com o motivo.</li>{{/each}}
+    </ol>
+  </section>
+
   <div class="duas-colunas">
     <section class="painel corte">
       <div class="titulo">ARMAS<span>EQUIPADA OU GUARDADA</span></div>

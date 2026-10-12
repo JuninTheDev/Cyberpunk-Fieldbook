@@ -30,7 +30,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | habilidades das outras Roles | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
-| CORE | o ledger de Eurodólares, IP e Reputação | falta (ciclo 21) |
+| CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
@@ -153,6 +153,19 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 - **Lexington e Testera: muda o que a mesa vê.** O autofogo da Lexington gasta 7 balas ("gastando só 7 balas por
   ataque"; no Foundry 12, as 10 do CORE). A Testera ganhou o botão dos dois cartuchos (4d6), que o Foundry 12 não tinha.
   Os dois canos da Palica são um botão, e não mais a pergunta antes de cada tiro Smart; a regra é a mesma.
+
+- **Extrato: muda o que a mesa vê.** O extrato segue o ledger do CORE (o `CPRLedger` e o `_gainLedger`,
+  `_loseLedger` e `_setLedger` da ficha): Subtrair sempre tira, e Somar soma o valor como veio. As diferenças:
+  - **os valores não se editam mais no cabeçalho:** o botão de cada um abre o extrato;
+  - **a mudança por fora entra no extrato,** como "mudança direta", com quem mudou. No CORE, uma macro que muda o valor
+    não deixa linha;
+  - **o motivo e quem mudou ficam em colunas separadas** (o CORE junta "motivo - usuário" no texto da linha);
+  - **ao tirar uma linha,** o mestre escolhe entre desfazer a mudança (o saldo volta a diferença guardada na linha) e só
+    tirar a linha. O CORE lê o primeiro número do texto e pergunta se soma ou subtrai;
+  - **o aviso de quem perde mais do que tem** sai quando o saldo fica abaixo de 0. O CORE avisa também no 0 exato
+    (`resultantValue > 0`), apesar do texto "Perdeu mais do que tem";
+  - **o histórico do Foundry 12 não vem na migração:** a ficha "Na mesa" só manda o saldo, e o extrato começa com a
+    linha "Migrado da ficha da mesa do Foundry 12". Trazer o histórico pede uma mudança no módulo da mesa (ROADMAP).
 
 ## Registro dos ciclos
 
@@ -946,3 +959,65 @@ Pedidos do usuário depois da ficha nova, com o extrato de Eurodólares, que fic
   - G5 não rodou de novo: o ciclo não mexeu na wiki.
 - **Escolhas:** a Sorte preparada na ficha e os pontos do Solo por Rank (nas dúvidas, acima).
 - **Próximo:** ciclo 21, o extrato de Eurodólares, IP e Reputação, como o ledger do CORE.
+- **Commit:** `be9b2af`.
+
+### Ciclo 21 (2026-10-12): o extrato de Eurodólares, IP e Reputação (P2)
+
+O último dos pedidos do usuário depois da ficha nova: o histórico de gastos de Eurodólares e o menu para somar e
+subtrair, como no sistema do Foundry 12.
+
+- **Implementado:**
+  - **o extrato** (`scripts/extrato.mjs` e `templates/extrato.hbs`), como o ledger do CORE:
+    - no cabeçalho da ficha, Eurodólares, IP e Reputação viram botões que abrem a janela de cada um;
+    - **o menu:** a quantia e o motivo, com Somar, Subtrair (sempre tira) e Definir (`regras.novoSaldo`). Sem a
+      quantia, avisa; perder mais do que tem deixa o saldo negativo, com um aviso;
+    - **o histórico,** do mais novo para o mais antigo: a data, a mudança, o saldo depois, o motivo e quem mudou
+      (`regras.linhaDoExtrato`), guardado em `system.extratos` (campo novo no modelo do personagem);
+    - **a mudança feita por fora** (`AtorCPR._preUpdate`) entra como "mudança direta";
+    - **o mestre tira uma linha:** a pergunta, como a do CORE, deixa desfazer a mudança ou só tirar a linha. A linha é
+      procurada de novo depois da resposta, caso o extrato tenha mudado no meio;
+    - **a janela entra nas janelas do ator** (`ator.apps`), como a ficha: muda junto com ele, também no ator do token,
+      e fecha se ele for apagado;
+  - **a aba Equipamento** mostra os Eurodólares, as cinco últimas mudanças e o botão do extrato;
+  - **as linhas que entram sozinhas** (`AtorCPR.mudarComExtrato`):
+    - a importação da wiki: "Dinheiro inicial (criador da wiki)", como o cpr-2077;
+    - a migração: "Migrado da ficha da mesa do Foundry 12", no dinheiro, no IP e na reputação;
+    - a loja da wiki: "Compra na wiki: " e os itens, o texto do cpr-2077.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 42 de 42. Um teste novo: somar, subtrair (também com valor negativo) e definir como o CORE, só inteiros, e a
+    linha do extrato;
+  - G4: 59 de 59, cerca de 63 s. O que mudou:
+    - **um passo novo, o extrato,** pela ficha da Atiradora:
+      - o botão de Eurodólares abre a janela;
+      - Somar 100, Subtrair 30 e Definir 50, cada um com o motivo e "Gamemaster";
+      - sem quantia, só o aviso;
+      - Subtrair 80 deixa −30, em vermelho, com o aviso;
+      - um `update` direto vira a linha "= 200 (+230) · mudança direta";
+      - o mestre tira a linha da munição só tirando (o saldo fica em 200) e a do pagamento desfazendo (vai para 100),
+        com o texto e os botões da pergunta conferidos;
+      - o cabeçalho e a aba Equipamento acompanham;
+      - o IP tem o extrato dele;
+    - **na importação do Solo:** a linha do dinheiro inicial;
+    - **nos pedidos da loja:** a mudança da mesa no passo anterior (−100 por fora, sem motivo) e a compra com os itens;
+    - **na migração:** as três linhas da mesa;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado (conferido pelo md5):
+    - **G3:** subtrair sem o valor absoluto;
+    - **G4, no passo do extrato:**
+      - a janela fora de `ator.apps`;
+      - tirar a linha sem tirar;
+      - desfazer sem desfazer;
+      - sem o aviso do saldo negativo;
+    - **G4, em outros passos:**
+      - a mudança por fora sem linha (o extrato e os pedidos);
+      - a wiki sem o extrato inicial (a importação, os pedidos e a migração);
+      - a loja sem o extrato (os pedidos);
+  - **conferência visual:**
+    - a captura da janela do extrato (o −30 do histórico em vermelho, conferido pela cor do pixel);
+    - o cabeçalho e a aba Equipamento;
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Escolhas:** as diferenças do CORE (nas dúvidas, acima).
+- **Ficou:** o histórico do ledger do Foundry 12 na migração (ROADMAP; mexe no módulo da mesa, decisão do usuário).
+- **Próximo:** pela ordem do ROADMAP, o resto do P2: o cyberware que é arma, e a Briga e as Artes Marciais na
+  rolagem.

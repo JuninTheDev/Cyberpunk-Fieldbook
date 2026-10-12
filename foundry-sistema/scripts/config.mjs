@@ -41,6 +41,13 @@ export const LIFEPATH = [
   { chave: 'role', rotulo: 'Lifepath da Role', wiki: 'roleLifepath' }
 ];
 
+// Os valores com extrato (o ledger do CORE no Foundry 12): o rótulo e a unidade.
+export const EXTRATOS = {
+  dinheiro: { rotulo: 'Eurodólares', unidade: 'eb' },
+  pontosDeMelhoria: { rotulo: 'Pontos de Melhoria', unidade: 'IP' },
+  reputacao: { rotulo: 'Reputação', unidade: '' }
+};
+
 // Upgrades: onde cada um instala (o "type" do itemUpgrade do CORE).
 export const ALVOS_UPGRADE = { arma: 'Arma', cyberdeck: 'Cyberdeck', veiculo: 'Veículo' };
 

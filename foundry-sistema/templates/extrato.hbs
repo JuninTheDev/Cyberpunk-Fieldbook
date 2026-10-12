@@ -1,0 +1,35 @@
+<div class="extrato-conteudo">
+  <section class="saldo corte">
+    <i>{{rotulo}}</i>
+    <b class="{{#if (lt saldo 0)}}negativo{{/if}}">{{saldo}}{{#if unidade}} <small>{{unidade}}</small>{{/if}}</b>
+  </section>
+
+  {{#if editavel}}
+  <section class="mudar corte">
+    <label>Quantia <input type="number" name="quantia" placeholder="0" autofocus></label>
+    <label class="largo">Motivo <input type="text" name="motivo" placeholder="O que foi (aparece no histórico)"></label>
+    <div class="botoes">
+      <button type="button" data-action="somar" data-tooltip="Soma a quantia ao saldo"><i class="fa-solid fa-circle-plus" inert></i> SOMAR</button>
+      <button type="button" data-action="subtrair" data-tooltip="Tira a quantia do saldo"><i class="fa-solid fa-circle-minus" inert></i> SUBTRAIR</button>
+      <button type="button" data-action="definir" data-tooltip="O saldo passa a ser a quantia"><i class="fa-solid fa-circle-chevron-right" inert></i> DEFINIR</button>
+    </div>
+  </section>
+  {{/if}}
+
+  <section class="historico">
+    <div class="linha cabeca"><span>Nº</span><span>QUANDO</span><span>MUDANÇA</span><span>SALDO</span><span>MOTIVO</span><span>QUEM</span>{{#if mestre}}<span></span>{{/if}}</div>
+    <ol>
+      {{#each linhas}}
+      <li class="linha {{classe}}" data-indice="{{indice}}">
+        <span class="numero">{{numero}}</span>
+        <span class="quando">{{quando}}</span>
+        <span class="mudanca">{{mudanca}}</span>
+        <span class="saldo-linha {{#if negativo}}negativo{{/if}}">{{saldo}}</span>
+        <span class="motivo">{{motivo}}</span>
+        <span class="usuario">{{usuario}}</span>
+        {{#if ../mestre}}<a class="apagar" data-action="apagar" data-tooltip="Tirar esta linha do histórico (o saldo não muda)"><i class="fa-solid fa-trash-can" inert></i></a>{{/if}}
+      </li>
+      {{else}}<li class="vazio">Nada no histórico ainda.</li>{{/each}}
+    </ol>
+  </section>
+</div>

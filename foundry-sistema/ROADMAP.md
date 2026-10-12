@@ -76,8 +76,13 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   Consciência de Combate.
 - [x] **A ficha, o resto do visual e da Role** (Ciclo 20): os cartões do chat no visual da ficha e a conferência dos
   pontos de Role pelo Rank.
-- [ ] **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12: o histórico e o menu de somar,
-  subtrair e definir, com o motivo (Ciclo 21).
+- [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
+  cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança
+  direta); o mestre tira linhas, desfazendo ou não a mudança; a importação, a migração e a loja da wiki escrevem as
+  linhas delas.
+- [ ] **Na migração, o histórico do ledger do Foundry 12:** a ficha "Na mesa" só manda o saldo, e o extrato começa com
+  ele. Trazer o histórico exige que o módulo da mesa (cpr-2077) mande as `transactions`, o que mexe no Foundry 12 da
+  campanha (decisão do usuário).
 - [ ] **Do Fluxo de Combate:** quem vê o cartão do resultado; texto e animação no token.
 - [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a luneta
   de precisão (+1 em tiro único ou mirado a 51 m ou mais); a arma sob o cano (lança-granadas e espingarda) como

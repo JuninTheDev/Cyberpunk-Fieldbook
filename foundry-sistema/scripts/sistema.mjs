@@ -11,6 +11,7 @@ import {
 import { AtorCPR, ItemCPR } from './documentos.mjs';
 import { FichaItem } from './ficha-item.mjs';
 import { FichaPersonagem } from './ficha-personagem.mjs';
+import { abrirExtrato } from './extrato.mjs';
 import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
 import * as regras from './regras.mjs';
@@ -38,7 +39,7 @@ Hooks.once('init', () => {
   });
 
   wiki.registrarWiki();
-  game.system.api = { combate, lesoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki };
+  game.system.api = { combate, lesoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
 });
 
 Hooks.once('ready', () => {

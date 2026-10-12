@@ -50,6 +50,13 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   pode abrir uma dessas janelas fora da vez fecha e anota a janela inesperada, e confere a lista vazia. Assim ele falha
   em vez de travar a suíte: no ciclo 18, uma mutação travou o G4 por mais de 10 minutos. Depois de clicar numa janela,
   espere ela sair do estado desenhado (`!app.rendered`), porque o fechamento só começa depois do clique.
+- **Janela que redesenha:** depois de um clique que muda um documento, espere a janela mostrar o estado novo (a linha
+  nova, o saldo novo), e não só o dado do documento. O redesenho vem depois e troca os campos: preencher a janela antes
+  dele perde o que foi escrito. Por isso a janela que acompanha um documento entra em `documento.apps`, como as fichas,
+  e não num gancho com um `render()` a mais: dois redesenhos por mudança abrem essa brecha entre um e outro.
+- **Pergunta do DialogV2:** o texto fica em `.dialog-content`, e os botões em `.form-footer`. O `.window-content` e um
+  `button[data-action]` solto pegam também os botões e os controles do cabeçalho (no ciclo 21, duas rodadas do G4
+  falharam por isso, com o sistema certo).
 
 ## Build
 

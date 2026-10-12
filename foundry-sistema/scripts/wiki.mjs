@@ -7,6 +7,12 @@
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
+import { linhaDoExtrato } from './regras.mjs';
+
+// O extrato de quem chega da wiki: uma linha para cada valor que não começa em zero (o dinheiro inicial, como o
+// cpr-2077 fazia no ledger do CORE).
+const extratosIniciais = (valores, motivo) => Object.fromEntries(Object.entries(valores).map(([campo, valor]) =>
+  [campo, valor ? [linhaDoExtrato({ acao: 'definir', antes: 0, saldo: valor, motivo, usuario: game.user.name })] : []]));
 
 // O Lifepath que o criador da wiki manda pronto, em texto (resultado.lifepath, com os nomes do CORE).
 const lifepathDaWiki = lifepath => Object.fromEntries(LIFEPATH.map(({ chave, wiki }) => [chave, String(lifepath?.[wiki] ?? '')]));
@@ -165,6 +171,7 @@ export async function importarPersonagem(id, donoId = '') {
       pericias,
       role: { nome: r.role?.nome || '', rank: Number(r.role?.rank) || 4, habilidades },
       dinheiro: Number(r.dinheiro?.saldo) || 0,
+      extratos: extratosIniciais({ dinheiro: Number(r.dinheiro?.saldo) || 0 }, 'Dinheiro inicial (criador da wiki)'),
       apelido: doc.apelido || '',
       lifepath: lifepathDaWiki(r.lifepath),
       notas: notasHtml
@@ -298,7 +305,7 @@ export async function entregarPedido(ator, wikiId, pedido) {
     if (dados.length) await ator.createEmbeddedDocuments('Item', dados);
     await instalarNoLugar(ator, linhas);
     await carregarArmas(ator, linhas);
-    await ator.update({ 'system.dinheiro': ator.system.dinheiro - pedido.total });
+    await ator.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: pedido.total, motivo: `Compra na wiki: ${(pedido.itens || []).map(linha => linha.nome).join(', ')}` });
     if (linhas.some(linha => linha.cyber)) notas.push('Cyberware: instale pela ficha (a instalação rola a Humanidade).');
   }
   await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notas } });
@@ -407,6 +414,7 @@ export async function importarDaMesa(id, donoId = '') {
         habilidades: Object.fromEntries((m.role?.habilidades || []).map(([nome, rank]) => [nome, Number(rank) || 0]))
       },
       dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0,
+      extratos: extratosIniciais({ dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0 }, 'Migrado da ficha da mesa do Foundry 12'),
       apelido: doc.apelido || '', lifepath: lifepathDaWiki(r.lifepath),
       notas: `<p><i>Migrado da ficha da mesa do Foundry 12 (${origem}) em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`
     },

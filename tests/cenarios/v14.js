@@ -276,6 +276,115 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('extrato (o ledger do CORE): o botão de Eurodólares no cabeçalho abre o extrato; somar 100, subtrair 30 e definir 50, cada um com o motivo e quem mudou; sem quantia não muda; perder mais do que tem fica negativo, com o aviso; uma mudança por fora entra como "mudança direta"; o mestre tira uma linha e escolhe, como no CORE, se a mudança também é desfeita; a aba Equipamento mostra as últimas; o IP tem o seu', async () => {
+      const ID = `'${S}-extrato-' + a.id + '-'`;
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const a = game.actors.getName('Atiradora');
+          const inicio = { dinheiro: a.system.dinheiro, ip: a.system.pontosDeMelhoria, linhas: a.system.extratos.dinheiro.length };
+          await a.sheet.render({ force: true });
+          await esperar(() => a.sheet.element?.querySelector('.indicador.com-extrato[data-campo="dinheiro"]'));
+          const f = () => a.sheet.element;
+          const cabecalho = [...f().querySelectorAll('.indicador.com-extrato')].map(b => b.dataset.campo + ' ' + b.querySelector('b').textContent.trim() + ' ' + b.querySelector('i').textContent.trim());
+          // O botão de Eurodólares abre a janela.
+          f().querySelector('.indicador.com-extrato[data-campo="dinheiro"]').click();
+          const janela = campo => foundry.applications.instances.get(${ID} + campo);
+          await esperar(() => janela('dinheiro')?.rendered);
+          const j = () => janela('dinheiro').element;
+          const linhas = () => [...j().querySelectorAll('.historico li.linha')];
+          const saldoNaJanela = el => el.querySelector('.saldo b').firstChild.textContent.trim();
+          const avisos = [];
+          ui.notifications.warn = m => { avisos.push(String(m)); };
+          // Cada mudança redesenha a janela uma vez: espera a linha nova e o saldo novo nela antes da próxima.
+          const mudar = async (acao, quantia, motivo, saldo, nAvisos = avisos.length) => {
+            const n = linhas().length;
+            j().querySelector('[name="quantia"]').value = quantia;
+            j().querySelector('[name="motivo"]').value = motivo;
+            j().querySelector('[data-action="' + acao + '"]').click();
+            await esperar(() => a.system.dinheiro === saldo && linhas().length === n + 1 && saldoNaJanela(j()) === String(saldo) && avisos.length === nAvisos);
+          };
+          try {
+            await mudar('somar', 100, 'Pagamento do fixer', inicio.dinheiro + 100);
+            await mudar('subtrair', 30, 'Munição', inicio.dinheiro + 70);
+            await mudar('definir', 50, 'Acerto de contas', 50);
+            // Sem quantia: só o aviso.
+            j().querySelector('[name="quantia"]').value = '';
+            j().querySelector('[data-action="somar"]').click();
+            await esperar(() => avisos.length === 1);
+            await mudar('subtrair', 80, 'Conserto', -30, 2);
+          } finally { delete ui.notifications.warn; }
+          const ler = li => ['mudanca', 'saldo-linha', 'motivo', 'usuario'].map(c => li.querySelector('.' + c).textContent.trim()).join(' | ');
+          const naJanela = { saldo: j().querySelector('.saldo b').textContent.replace(/\\s+/g, ' ').trim(), negativo: j().querySelector('.saldo b').classList.contains('negativo'), historico: linhas().map(ler), campos: [j().querySelector('[name="quantia"]').value, j().querySelector('[name="motivo"]').value] };
+          // Uma mudança por fora (uma macro, outro módulo): entra no extrato como "mudança direta", com quem mudou.
+          await a.update({ 'system.dinheiro': 200 });
+          await esperar(() => linhas().length === inicio.linhas + 5 && saldoNaJanela(j()) === '200');
+          const direta = { linha: a.system.extratos.dinheiro.at(-1), naJanela: ler(linhas()[0]) };
+          // O mestre tira linhas, e a janela pergunta, como a do CORE, se a mudança também é desfeita.
+          const pergunta = () => document.querySelector('.application.dialog.extrato-apagar:not(.minimizing)');
+          const tirar = async (motivo, escolha, saldo) => {
+            const n = linhas().length;
+            linhas().find(li => li.querySelector('.motivo').textContent.trim() === motivo).querySelector('[data-action="apagar"]').click();
+            await esperar(() => pergunta()?.querySelector('button[data-action="' + escolha + '"]'));
+            const texto = [...pergunta().querySelectorAll('.dialog-content p')].map(p => p.textContent.trim()).join(' ');
+            const botoes = [...pergunta().querySelectorAll('.form-footer button[data-action]')].map(b => b.dataset.action).join();
+            pergunta().querySelector('button[data-action="' + escolha + '"]').click();
+            await esperar(() => linhas().length === n - 1 && saldoNaJanela(j()) === saldo);
+            return { texto, botoes };
+          };
+          // A da munição, só tirada: o saldo fica em 200.
+          const perguntaMunicao = await tirar('Munição', 'tirar', '200');
+          const apagada = { dinheiro: a.system.dinheiro, motivos: a.system.extratos.dinheiro.map(l => l.motivo), lixeiras: j().querySelectorAll('.historico [data-action="apagar"]').length, pergunta: perguntaMunicao };
+          // A do pagamento, desfeita: o saldo volta os 100.
+          const perguntaPagamento = await tirar('Pagamento do fixer', 'desfazer', '100');
+          const desfeita = { dinheiro: a.system.dinheiro, motivos: a.system.extratos.dinheiro.map(l => l.motivo), pergunta: perguntaPagamento };
+          // A ficha: o cabeçalho com o saldo novo e a aba Equipamento com as últimas mudanças.
+          await esperar(() => f()?.querySelector('.indicador.com-extrato[data-campo="dinheiro"] b')?.textContent.trim() === '100');
+          const naFicha = {
+            cabecalho: f().querySelector('.indicador.com-extrato[data-campo="dinheiro"] b').textContent.trim(),
+            painel: [...f().querySelectorAll('.tab.equipamento .extrato-recente li:not(.vazio)')].map(li => li.querySelector('.mudanca').textContent.trim() + ' ' + li.className)
+          };
+          // O IP tem o extrato dele, aberto pelo botão IP do cabeçalho.
+          f().querySelector('.indicador.com-extrato[data-campo="pontosDeMelhoria"]').click();
+          await esperar(() => janela('pontosDeMelhoria')?.rendered);
+          const ji = janela('pontosDeMelhoria').element;
+          ji.querySelector('[name="quantia"]').value = 5;
+          ji.querySelector('[name="motivo"]').value = 'Sessão 3';
+          ji.querySelector('[data-action="somar"]').click();
+          await esperar(() => a.system.pontosDeMelhoria === inicio.ip + 5 && ji.querySelectorAll('.historico li.linha').length === 1 && saldoNaJanela(ji) === '5');
+          const ip = { valor: a.system.pontosDeMelhoria, titulo: ji.querySelector('.window-title')?.textContent.trim(), linha: ji.querySelector('.historico li.linha .mudanca').textContent.trim(), dinheiro: a.system.extratos.dinheiro.length };
+          await janela('pontosDeMelhoria').close();
+          return { inicio, cabecalho, avisos, naJanela, direta, apagada, desfeita, naFicha, ip };
+        })()`);
+        // A janela do extrato, para a conferência visual.
+        await edge.sleep(500);
+        await edge.shot('extrato');
+        const { inicio, naJanela, direta, apagada, desfeita, naFicha, ip } = info;
+        const usuario = 'Gamemaster';
+        const ok = inicio.dinheiro === 0 && inicio.linhas === 0 && info.cabecalho.join() === 'dinheiro 0 EURODÓLARES,pontosDeMelhoria 0 IP,reputacao 0 REPUTAÇÃO'
+          && naJanela.historico.join(' / ') === [`−80 eb | -30 | Conserto | ${usuario}`, `= 50 (−20) | 50 | Acerto de contas | ${usuario}`, `−30 eb | 70 | Munição | ${usuario}`, `+100 eb | 100 | Pagamento do fixer | ${usuario}`].join(' / ')
+          && naJanela.saldo === '-30 eb' && naJanela.negativo && naJanela.campos.join() === ','
+          && info.avisos.length === 2 && /quantia/.test(info.avisos[0]) && /saiu mais do que tinha/.test(info.avisos[1])
+          && direta.linha.acao === 'definir' && direta.linha.delta === 230 && direta.linha.saldo === 200 && direta.linha.motivo === '' && direta.linha.usuario === usuario && /^\d{4}-\d\d-\d\dT/.test(direta.linha.quando)
+          && direta.naJanela === `= 200 (+230) | 200 | mudança direta | ${usuario}`
+          && apagada.dinheiro === 200 && apagada.motivos.join() === 'Pagamento do fixer,Acerto de contas,Conserto,' && apagada.lixeiras === 4
+          && apagada.pergunta.texto === 'Tirar do histórico a linha −30 eb, Munição. A mudança também é desfeita? O saldo vai de 200 para 230.' && apagada.pergunta.botoes === 'desfazer,tirar,cancelar'
+          && desfeita.dinheiro === 100 && desfeita.motivos.join() === 'Acerto de contas,Conserto,' && /O saldo vai de 200 para 100\./.test(desfeita.pergunta.texto)
+          && naFicha.cabecalho === '100' && naFicha.painel.join() === '= 200 eb entrou,−80 eb saiu,= 50 eb saiu'
+          && ip.valor === 5 && ip.titulo === 'Pontos de Melhoria: Atiradora' && ip.linha === '+5 IP' && ip.dinheiro === 3;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const a = game.actors.getName('Atiradora');
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes.includes('extrato-apagar')) await app.close();
+          for (const campo of ['dinheiro', 'pontosDeMelhoria', 'reputacao']) await foundry.applications.instances.get(${ID} + campo)?.close();
+          await a.update({ 'system.dinheiro': 0, 'system.pontosDeMelhoria': 0, 'system.extratos': { dinheiro: [], pontosDeMelhoria: [], reputacao: [] } }, { cprfExtrato: true });
+          await a.sheet.close();
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
@@ -1402,6 +1511,7 @@ module.exports = async ({ edge, servidores, r }) => {
           armas: ator.items.filter(i => i.type === 'arma').map(i => [i.name, i.system.equipada, i.system.pente.value, i.system.pente.max]),
           armaduras: ator.items.filter(i => i.type === 'armadura').map(i => [i.name, i.system.equipada]), sp: s.armadura.corpo.sp,
           cyber: ator.items.filter(i => i.type === 'cyberware').map(i => [i.name, i.system.instalado]), dinheiro: s.dinheiro, notas,
+          extrato: Object.values(s.extratos).map(linhas => linhas.map(l => [l.acao, l.delta, l.saldo, l.motivo].join(' '))),
           pecasComPerda: ator.items.filter(i => i.type === 'cyberware' && i.system.instalado && i.system.perdaHumanidade.media > 0 && i.system.tipo !== 'borgware').length, emp: s.atributos.emp.valor,
           porUid: ator.items.map(i => [i.getFlag('${S}', 'wikiUid'), i.type, i.system.uso ?? null, i.system.quantidade ?? null])
         };
@@ -1418,6 +1528,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const armasOk = info.armas.length > 0 && info.armas.filter(([, , , max]) => max > 0).every(([, equipada, valor, max]) => equipada && valor === max);
       return [info.nome === 'Teste Sistema' && statsOk && info.hp[0] === solo.resultado.derivados.hp && info.hp[1] === solo.resultado.derivados.hp && info.role[0] === 'Solo' && info.role[1] === 4
         && info.role[2]['Initiative Reaction'] === 2 && info.evasao >= 2 && info.lingua.length >= 1 && armasOk && info.armaduras.every(([, v]) => v) && info.sp === 11 && info.cyber.every(([, inst]) => inst) && info.hum[0] === solo.resultado.humanidade.atual && info.hum[1] === info.emp * 10 - 2 * info.pecasComPerda && info.pecasComPerda > 0 && info.dinheiro === solo.resultado.dinheiro.saldo
+        && JSON.stringify(info.extrato) === JSON.stringify([[`definir ${info.dinheiro} ${info.dinheiro} Dinheiro inicial (criador da wiki)`], [], []])
         && inventarioOk && doc.foundry?.ator,
         `inventário da wiki: ${doInventario.map(i => `${i.nome} (${i.uso})`).join(', ')} · ${JSON.stringify({ ...info, porUid: undefined })} · wiki: ${doc.estadoFoundry} ${doc.foundry?.ator || ''}`];
     });
@@ -1536,6 +1647,7 @@ module.exports = async ({ edge, servidores, r }) => {
         let resultados;
         try { resultados = await game.system.api.wiki.entregarPedidos(); } finally { delete ui.notifications.info; delete ui.notifications.warn; }
         const rifle = a.items.getName('Assault Rifle');
+        const extrato = a.system.extratos.dinheiro.slice(-2).map(l => [l.acao, l.delta, l.motivo].join(' '));
         const depois = {
           dinheiro: a.system.dinheiro, pente: rifle.system.pente.max, acessorios: rifle.instalados.map(i => i.name),
           municao: a.items.filter(i => i.type === 'municao').map(i => i.name + ' ' + i.system.quantidade), linear: a.items.filter(i => i.name.startsWith('Linear Frame')).length
@@ -1544,14 +1656,16 @@ module.exports = async ({ edge, servidores, r }) => {
         // em dobro, e a wiki recusa marcar de novo (já resolvido).
         const itensAntes = a.items.size;
         const deNovo = await game.system.api.wiki.entregarPedido(a, ${JSON.stringify(solo.id)}, ${JSON.stringify(pedido)}).then(r => r.ok, e => e.message);
-        return { antes, resultados: resultados.map(r => r.ok), mensagens, depois, deNovo, itensAntes, itensDepois: a.items.size, dinheiroDepois: a.system.dinheiro };
+        return { antes, resultados: resultados.map(r => r.ok), mensagens, depois, extrato, deNovo, itensAntes, itensDepois: a.items.size, dinheiroDepois: a.system.dinheiro, linhasDepois: a.system.extratos.dinheiro.length };
       })()`);
       const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
       const status = id => doc.pedidos.find(p => p.id === id);
       const d = info.depois;
       const ok = info.resultados.join() === 'true,false' && d.dinheiro === info.antes - 110 && d.pente === 35 && d.acessorios.join() === 'Extended Magazine (Assault Rifle)'
         && d.municao.includes('Rifle (Basic) 10') && d.linear === 0 && status(pedido.id).status === 'entregue' && status(caro.id).status === 'aprovado' && /Dinheiro insuficiente/.test(status(caro.id).erro)
-        && info.mensagens.some(m => /entregue na ficha/.test(m)) && info.mensagens.some(m => /não foi entregue/.test(m)) && /já foi resolvido/.test(info.deNovo) && info.itensDepois === info.itensAntes && info.dinheiroDepois === d.dinheiro;
+        && info.mensagens.some(m => /entregue na ficha/.test(m)) && info.mensagens.some(m => /não foi entregue/.test(m)) && /já foi resolvido/.test(info.deNovo) && info.itensDepois === info.itensAntes && info.dinheiroDepois === d.dinheiro
+        // No extrato: a mudança da mesa no passo anterior (−100 por fora, sem motivo) e a compra, com os itens.
+        && info.extrato.join(' / ') === `definir -100  / subtrair -110 Compra na wiki: ${pedido.itens.map(linha => linha.nome).join(', ')}` && info.linhasDepois === 3;
       return [ok, JSON.stringify({ ...info, wiki: [status(pedido.id).status, status(caro.id).status, status(caro.id).erro] })];
     });
 
@@ -1597,7 +1711,8 @@ module.exports = async ({ edge, servidores, r }) => {
           lesoes: ator.items.filter(i => i.type === 'lesao').map(i => i.name),
           pistola: [pistola.system.equipada, pistola.system.pente.value, pistola.municaoCarregada?.name, pistola.municaoCarregada?.system.quantidade],
           faca: item('Combat Knife')?.system.equipada, agent: item('Agent')?.system.uso, sp: s.armadura.corpo.sp,
-          deck: item('Cyberdeck')?.instalados.map(i => i.name), ker: item('Kerenzikov')?.system.instalado, notas
+          deck: item('Cyberdeck')?.instalados.map(i => i.name), ker: item('Kerenzikov')?.system.instalado, notas,
+          extrato: Object.values(s.extratos).map(linhas => linhas.map(l => [l.acao, l.saldo, l.motivo].join(' ')).join())
         };
         await ator.delete();
         return resultado;
@@ -1605,7 +1720,8 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = info.hp.join() === '20,40' && info.hum.join() === '41,48' && info.sorte === 3 && info.dinheiro === 1234 && info.ip === 12 && info.rep === 2
         && info.move === 2 && info.ref === 8 && info.pericias.join() === '6,4' && info.habilidades['Initiative Reaction'] === 2 && info.lesoes.join() === 'Perna quebrada'
         && info.pistola.join() === 'true,5,Heavy Pistol (Basic),17' && info.faca === false && info.agent === 'carregando' && info.sp === 10
-        && info.deck.join() === 'Sword,Worm' && info.ker === true && info.notas.length === 1 && info.notas[0].startsWith('Coisa Desconhecida:');
+        && info.deck.join() === 'Sword,Worm' && info.ker === true && info.notas.length === 1 && info.notas[0].startsWith('Coisa Desconhecida:')
+        && info.extrato.join(' / ') === ['definir 1234', 'definir 12', 'definir 2'].map(t => t + ' Migrado da ficha da mesa do Foundry 12').join(' / ');
       return [ok, JSON.stringify(info)];
     });
 
