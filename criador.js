@@ -1065,9 +1065,9 @@
 
   // ================= Loja (componente usado no criador e na página Loja) =================
   // Regras da loja inicial (o que fica de fora da criação). Vêm do servidor; o mestre muda na engrenagem da Loja.
-  const SHOP_TAG_NAMES = { exotica: 'armas exóticas', excelente: 'qualidade excelente', borgware: 'borgware', 'municao-rara': 'munição inteligente, biotoxina, EMP e sonífera', raro: 'Linear Frame, Cryotank e Cryopump' };
+  const SHOP_TAG_NAMES = { exotica: 'armas exóticas', excelente: 'qualidade excelente', borgware: 'borgware', 'municao-rara': 'munição inteligente, biotoxina, EMP e sonífera', raro: 'Linear Frame, Cryotank e Cryopump', blackchrome: 'itens do Black Chrome' };
   // Cada campanha tem as suas: as carregadas são as da campanha do personagem aberto (ou da escolhida no menu).
-  let shopRules = { teto: 1000, esconder: Object.keys(SHOP_TAG_NAMES), liberados: [], bloqueados: [] };
+  let shopRules = { teto: 1000, esconder: Object.keys(SHOP_TAG_NAMES).filter(tag => tag !== 'blackchrome'), liberados: [], bloqueados: [] };
   let shopRulesCampaign = null;
   async function loadShopRules(campaignId = (activeCampaign() || {}).id) {
     const answer = await api(`api/loja/regras${campaignQuery(campaignId)}`);
@@ -1147,12 +1147,12 @@
     const terms = fold(shopState.busca).split(/\s+/).filter(Boolean);
     const subs = [...new Set(items.filter(item => item.cat === shopState.cat).map(item => item.sub))];
     const visible = items.filter(item => (terms.length || item.cat === shopState.cat) && (!shopState.sub || terms.length || item.sub === shopState.sub)
-      && terms.every(term => fold(`${item.nome} ${item.en} ${item.sub} ${item.resumo || ''}`).includes(term)));
+      && terms.every(term => fold(`${item.nome} ${item.en} ${item.sub} ${item.livro || ''} ${item.resumo || ''}`).includes(term)));
     const filters = `<div class="cc-shop-filters"><div class="map-filter-list">${shop.categorias.map(category => `<button type="button" class="map-filter${category.id === shopState.cat && !terms.length ? ' active' : ''}" data-shop-cat="${category.id}">${category.nome}</button>`).join('')}</div>
       <div class="cc-shop-row"><input type="search" data-shop-busca placeholder="Buscar em todas as categorias" value="${esc(shopState.busca)}" aria-label="Buscar item"><select data-shop-sub aria-label="Grupo"><option value="">Todos os grupos</option>${subs.map(sub => `<option${sub === shopState.sub ? ' selected' : ''}>${esc(sub)}</option>`).join('')}</select></div></div>`;
     return { visible, shown: visible.slice(0, 150), filters };
   }
-  const shopRow = (item, { open, badges = '', notes = '', actions = '', extraClass = '' }) => `<div class="cc-shop-item${item.desc ? ' cc-has-desc' : ''}${open ? ' cc-open' : ''}${extraClass}" data-shop-row="${item.id}"><div class="cc-shop-info"><b>${esc(item.nome)}</b>${badges}<small class="cc-shop-sub">${esc([item.sub, item.resumo].filter(Boolean).join(' · '))}</small>${notes}${item.desc ? `<small class="cc-desc">${esc(item.desc)}</small>` : ''}</div>
+  const shopRow = (item, { open, badges = '', notes = '', actions = '', extraClass = '' }) => `<div class="cc-shop-item${item.desc ? ' cc-has-desc' : ''}${open ? ' cc-open' : ''}${extraClass}" data-shop-row="${item.id}"><div class="cc-shop-info"><b>${esc(item.nome)}</b>${badges}<small class="cc-shop-sub">${esc([item.sub, item.livro && !String(item.sub).includes(item.livro) ? item.livro : '', item.resumo].filter(Boolean).join(' · '))}</small>${notes}${item.desc ? `<small class="cc-desc">${esc(item.desc)}</small>` : ''}</div>
     <span class="cc-shop-preco">${eb(item.preco)}${item.lote > 1 ? `<small>/${item.lote}</small>` : ''}</span><div class="cc-shop-actions">${actions}</div></div>`;
   const badge = (text, kind) => `<small class="cc-badge cc-${kind}">${text}</small>`;
   // Redesenha guardando a rolagem da lista (comprar um item lá embaixo não volta a lista para o topo).

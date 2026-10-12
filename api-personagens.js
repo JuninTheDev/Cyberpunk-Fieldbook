@@ -306,8 +306,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // ---------------- Regras da loja inicial ----------------
   // O que a loja de criação esconde, em cada campanha. Os jogadores da campanha leem; só o mestre muda.
   // Campanha sem regras gravadas usa as do Protocolo Morana (a campanha nova começa com uma cópia delas).
-  const SHOP_TAGS = ['exotica', 'excelente', 'borgware', 'municao-rara', 'raro'];
-  const DEFAULT_SHOP_RULES = { teto: 1000, esconder: [...SHOP_TAGS], liberados: [], bloqueados: [] };
+  // blackchrome: os itens do Black Chrome, que ficam à venda por padrão (o mestre esconde pela engrenagem da Loja).
+  const SHOP_TAGS = ['exotica', 'excelente', 'borgware', 'municao-rara', 'raro', 'blackchrome'];
+  const DEFAULT_SHOP_RULES = { teto: 1000, esconder: SHOP_TAGS.filter(tag => tag !== 'blackchrome'), liberados: [], bloqueados: [] };
   const readShopRules = id => ({ ...DEFAULT_SHOP_RULES, ...(id ? campaigns.readShopRules(id) || campaigns.readShopRules(campaigns.first) || {} : {}) });
   const itemIds = list => (Array.isArray(list) ? list : []).map(String).filter(id => /^[a-z0-9_-]+:[a-z0-9-]+$/.test(id)).slice(0, 2000);
   const cleanShopRules = input => ({

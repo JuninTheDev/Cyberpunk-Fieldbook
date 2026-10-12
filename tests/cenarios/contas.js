@@ -96,7 +96,8 @@ module.exports = async ({ servidores, r }) => {
     const jogador = await api(rede, '/api/loja/regras', { method: 'PUT', cookie: ana, body: { teto: 99999 } });
     const mestre = await api(gm, '/api/loja/regras', { method: 'PUT', body: { teto: '500', esconder: ['exotica', 'inventada'], liberados: ['core_weapons:sword-excellent', 'lixo!'], bloqueados: [] } });
     const depois = (await api(rede, '/api/loja/regras', { cookie: ana })).dados?.regras;
-    await api(gm, '/api/loja/regras', { method: 'PUT', body: { teto: 1000, esconder: lidas.dados.etiquetas, liberados: [], bloqueados: [] } });
+    // Volta as regras como estavam (o padrão não esconde todas as etiquetas: o Black Chrome fica à venda).
+    await api(gm, '/api/loja/regras', { method: 'PUT', body: { ...lidas.dados.regras } });
     return [lidas.dados?.regras?.teto === 1000 && jogador.status === 403 && mestre.status === 200 && depois.teto === 500 && depois.esconder.join() === 'exotica' && depois.liberados.join() === 'core_weapons:sword-excellent', `${jogador.status}/${mestre.status} · ${JSON.stringify(depois)}`];
   });
   await r.passo('enviar para o mestre: o dono pode, o outro jogador não; a versão não muda', async () => {

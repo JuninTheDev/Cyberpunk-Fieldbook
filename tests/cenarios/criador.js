@@ -425,6 +425,17 @@ module.exports = async ({ edge, servidores, r }) => {
     const aviso = await texto('#cc-shop .note-status');
     return [achados['linear frame'] === 0 && achados['malorian arms'] === 0 && achados['rifle de assalto (excelente)'] === 0 && achados.medscanner > 0 && /itens avançados ficam fora/.test(aviso), JSON.stringify(achados)];
   });
+  await r.passo('loja de criação: o Black Chrome fica à venda e marcado (o Cyberdedo laser sim; a Weeping Reaver, acima do teto, não)', async () => {
+    await buscarNaLoja('cyberdedo laser');
+    const dedo = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="black-chrome_cyberware:laser-pointer-cyberfinger"]').length`);
+    const marca = await edge.evaluate(`(document.querySelector('[data-shop-row="black-chrome_cyberware:laser-pointer-cyberfinger"] .cc-shop-sub') || {}).textContent || ''`);
+    await buscarNaLoja('weeping reaver');
+    // A katana passa do teto; os três fluidos dela (100eb) aparecem.
+    const katana = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="black-chrome_weapons:arasaka-weeping-reaver-katana"]').length`);
+    const fluidos = await edge.evaluate(`document.querySelectorAll('[data-shop-buy^="black-chrome_ammo:arasaka-"]').length`);
+    await buscarNaLoja('');
+    return [dedo === 1 && /Black Chrome/.test(marca) && katana === 0 && fluidos === 3, `cyberdedo: ${dedo} · "${marca}" · katana: ${katana} · fluidos: ${fluidos}`];
+  });
   await r.passo('comprar sem dinheiro deixa o saldo negativo e avisa', async () => {
     await buscarNaLoja('medscanner');
     for (let i = 0; i < 3; i++) await clicar('[data-shop-buy="core_gear:medscanner"]', 150);

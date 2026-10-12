@@ -42,8 +42,10 @@ module.exports = async ({ edge, servidores, r }) => {
   await r.passo('wiki: Netrunner com o kit do RED e um Solo do Pacote Completo com a montagem mudada', async () => {
     netrunner = await criar({ ...base, nome: 'Teste Netrunner', role: 'netrunner' });
     // Rifle, luneta, munição e dois cyberbraços; o lança-granadas vai no segundo braço (o padrão seria o primeiro).
+    // E um ChipVault do Black Chrome, que o importador puxa do compêndio Black Chrome do sistema.
     const itens = [['rifle', 'core_weapons:assault-rifle', 1], ['luneta', 'core_upgrades:sniping-scope', 1], ['municao', 'core_ammo:rifle-basic', 50],
-      ['braco1', 'core_cyberware:cyberarm', 1], ['braco2', 'core_cyberware:cyberarm', 1], ['lanca', 'core_cyberware:popup-grenade-launcher', 1]].map(([uid, id, qtd]) => ({ uid: `loja:${uid}`, id, qtd }));
+      ['braco1', 'core_cyberware:cyberarm', 1], ['braco2', 'core_cyberware:cyberarm', 1], ['lanca', 'core_cyberware:popup-grenade-launcher', 1],
+      ['chipvault', 'black-chrome_gear:chipvault-by-secsystems', 1]].map(([uid, id, qtd]) => ({ uid: `loja:${uid}`, id, qtd }));
     montado = await criar({ nome: 'Teste Montagem', role: 'solo', metodo: 'pacote', lingua: 'Portuguese', casa: 'Heywood', itens, montagem: { 'loja:lanca': { em: 'loja:braco2' } } });
     const linhas = Object.fromEntries((montado.resultado?.itens || []).map(item => [item.uid, item]));
     const deckUid = ((netrunner.resultado?.itens || []).find(item => item.id === 'core_gear:cyberdeck') || {}).uid;
@@ -202,6 +204,10 @@ module.exports = async ({ edge, servidores, r }) => {
       const braco2 = itens.find(item => item.uid === 'loja:braco2');
       return [rifle && rifle.dentro.includes('Sniping Scope') && rifle.pente === 25 && municao?.sobra === 25 && braco2?.dentro.includes('Popup Grenade Launcher') && !(braco1?.dentro || []).includes('Popup Grenade Launcher'),
         JSON.stringify(itens)];
+    });
+    await r.passo('Black Chrome: o ChipVault comprado na loja vem do compêndio Black Chrome do sistema', async () => {
+      const nomes = await edge.evaluate(`game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(montado.id)}).items.map(i => i.name)`);
+      return [nomes.includes('ChipVault by SecSystems'), nomes.join(', ')];
     });
     await r.passo('Nomad: veículos da família, com os upgrades instalados', async () => {
       const a = await importar(nomad.id);

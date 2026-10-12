@@ -78,7 +78,7 @@ Armas importadas antes desta versão guardam as opções antigas do suplemento d
 O jeito fácil: feche o Foundry e dê dois cliques em `atualizar-modulo.bat`, na pasta da wiki. Ele faz o mesmo que estes comandos, rodados nesta pasta com o Foundry fechado (ou sem nenhum mundo que use o módulo aberto):
 
 ```
-node build/extract-core.mjs   # só na primeira vez ou quando o sistema atualizar
+node build/extract-core.mjs   # na primeira vez, quando o sistema atualizar e quando a lista de pacotes mudar (o Black Chrome entrou em 2026-10)
 node build/build.mjs
 ```
 
@@ -99,7 +99,7 @@ Depois é só ativar **Cyberpunk RED: 2077** em *Configurar módulos* no mundo.
 | `scripts/armas2077.mjs` | Armas de 2077 no menu de ataque: classe na ficha do item (ou pelo Rebuild), o Ricochete e o Carregar na ficha e no Combat HUD, as regras de Power, Smart e Tech do Mission Kit e as de cada arma. |
 | `scripts/macros.mjs` | Atalhos Ricochete e Carregar arma Tech. |
 | `scripts/wiki.mjs` | Importar da wiki e Atualizar da wiki (personagens do criador). |
-| `build/loja.mjs` | Gera o `loja-catalogo.js` da wiki (também roda sozinho). |
+| `build/loja.mjs` | Gera o `loja-catalogo.js` da wiki (também roda sozinho): os itens do RED, do Black Chrome e do Black Chrome Plus (compêndios do sistema, com o nome e a descrição das páginas Black Chrome da wiki) e os de 2077 do módulo. |
 | `build/roles.mjs` | O Lawman com Investigator (opcional, do suplemento de fã). |
 | `data/loja-nomes.json` | Nomes em português dos itens do sistema na loja. |
 | `styles/cpr-2077.css` | Visual dos diários e das mensagens no chat. |

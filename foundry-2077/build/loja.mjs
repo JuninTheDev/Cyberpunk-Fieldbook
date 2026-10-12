@@ -1,4 +1,4 @@
-// Catálogo da loja da wiki (loja-catalogo.js, na raiz da wiki): os itens do sistema (RED) e os de 2077 do módulo,
+// Catálogo da loja da wiki (loja-catalogo.js, na raiz da wiki): os itens do sistema (RED e Black Chrome) e os de 2077 do módulo,
 // com nome em português, preço, resumo e o compêndio de onde o importador do Foundry puxa cada um.
 // Roda junto com o build do módulo, ou sozinho: node build/loja.mjs (não precisa fechar o Foundry).
 import fs from 'node:fs';
@@ -141,6 +141,71 @@ function coreEntries() {
   }
 }
 
+// ---------------- Black Chrome (do sistema) ----------------
+// Os compêndios Black Chrome e Black Chrome Plus do sistema, com o nome e a descrição dos cartões das páginas do
+// Black Chrome na wiki (system-blackchrome.js), ligados pelo nome do item no Foundry. Veículos ficam de fora, como os do RED.
+const bcCards = {};
+for (const list of Object.values(wiki.blackChrome || {})) for (const item of Array.isArray(list) ? list : []) if (item && item.raw) bcCards[item.raw.en] = item.raw;
+// Itens do compêndio que são versões de um cartão só: as dez Mimic Clothing, as munições sucata e de caça pequena e
+// os quadros lineares internos (cyberware), que usam o cartão do quadro.
+const bcCardOf = en => bcCards[en] || bcCards[en.replace(/^Implanted /, '')]
+  || (/^Mimic Clothing \(/.test(en) && bcCards['Mimic Clothing (Generic Chic)'])
+  || (/ \(Junk\)$/.test(en) && bcCards['Heavy Pistol (Junk)'])
+  || (/ \(Small Game\)$/.test(en) && bcCards['Heavy Pistol (Small Game)']) || null;
+const BC_PACKS = ['black-chrome_weapons', 'black-chrome_ammo', 'black-chrome_armor', 'black-chrome_clothing', 'black-chrome_cyberware',
+  'black-chrome_gear', 'black-chrome_upgrades', 'dlc_black-chrome-plus'];
+const bcVariants = { Junk: 'sucata', 'Small Game': 'caça pequena' };
+const semTags = html => String(html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+function blackChromeEntries() {
+  for (const name of BC_PACKS) {
+    const origem = name === 'dlc_black-chrome-plus' ? 'Black Chrome Plus' : 'Black Chrome';
+    for (const doc of corePack(name)) {
+      const s = doc.system;
+      if (!s.price?.market) continue; // as pedras do Nomad Rocker: munição de graça
+      if (/^ModFire 10X \((SMG|Rifle)\)$/.test(doc.name)) continue; // a ModFire 10X se vende no modo pistola
+      const card = bcCardOf(doc.name);
+      // Sem as tags (o texto dos cartões já tem espaço onde precisa: strip() deixaria um antes da vírgula).
+      const desc = (card ? semTags(card.text) : strip(s.description?.value)).slice(0, 260);
+      const nome = card ? card.name : doc.name;
+      const pack = `${CORE}.${name}`;
+      const bc = { origem, tags: ['blackchrome'] };
+      if (doc.type === 'weapon') {
+        const exotica = /exótic/.test(card?.tipo || '') || /\bExotic\b/.test(strip(s.description?.value));
+        if (exotica) bc.tags.push('exotica');
+        if (s.quality === 'excellent') bc.tags.push('excelente');
+        const grupo = s.weaponType === 'thrownWeapon' ? 'Arremesso e explosivos' : weaponGroups[s.weaponType] || 'Outras';
+        add(pack, doc, { nome, cat: 'armas', sub: `${grupo} (${origem})`, resumo: weaponSummary(s), desc, arma: weaponData(s, exotica), bc });
+      } else if (doc.type === 'ammo') {
+        const lote = s.amount || 1;
+        const variante = doc.name.match(/^(.*) \((Junk|Small Game)\)$/);
+        const calibre = variante ? names.municao[variante[1]] || variante[1] : s.variety === 'grenade' ? names.municao.Grenade : '';
+        add(pack, doc, { nome: variante ? `${calibre} · ${bcVariants[variante[2]]}` : nome, cat: 'municao', sub: calibre || (/Fluido/.test(card?.tipo || '') ? `Fluidos da Weeping Reaver (${origem})` : `Munições especiais (${origem})`), lote,
+          resumo: lote > 1 ? `Preço por ${lote}` : 'Preço por unidade', desc, municao: { variedade: s.variety || '', tipo: s.type || '' }, bc });
+      } else if (doc.type === 'armor') {
+        const estilo = doc.name.match(/^Mimic Clothing \((.*)\)$/);
+        add(pack, doc, { nome: estilo ? `Mimic Clothing (${estilo[1]})` : nome, cat: 'armaduras', sub: `Armaduras (${origem})`, resumo: armorSummary(s), desc,
+          armadura: { cabeca: s.isHeadLocation ? s.headLocation?.sp || 0 : 0, corpo: s.isBodyLocation ? s.bodyLocation?.sp || 0 : 0, penalidade: s.penalty || 0, escudo: s.isShield ? s.shieldHitPoints?.max || 0 : 0 }, bc });
+      } else if (doc.type === 'clothing') {
+        add(pack, doc, { nome, cat: 'moda', sub: `Moda (${origem})`, moda: true, resumo: '', desc, roupa: { tipo: s.type || '', estilo: s.style || '' }, bc });
+      } else if (doc.type === 'cyberware') {
+        const interno = /^Implanted /.test(doc.name);
+        if (interno || s.type === 'borgware') bc.tags.push(interno ? 'raro' : 'borgware');
+        const sub = /Cyberfinger/.test(doc.name) ? `Cyberdedos (${origem})` : `${cyberGroups[s.type] || 'Outros'} (${origem})`;
+        add(pack, doc, { nome: interno ? `${nome} (interno)` : nome, cat: 'cyberware', sub, desc, resumo: cyberSummary(s),
+          cyber: { tipo: s.type, base: Boolean(s.isFoundational), tamanho: s.size ?? 1, slots: s.isFoundational ? s.installedItems?.slots || 0 : 0, hl: s.humanityLoss?.static || 0, rolagem: s.humanityLoss?.roll || '0', instalacao: s.installLocation || '' }, bc });
+      } else if (doc.type === 'itemUpgrade') { // os apps de Agente
+        add(pack, doc, { nome, cat: 'equipamento', sub: `Apps de Agente (${origem})`, desc, resumo: 'App', bc });
+      } else if (doc.type === 'drug') {
+        add(pack, doc, { nome, cat: 'drogas', sub: `Drogas (${origem})`, desc, resumo: 'Preço por dose', bc });
+      } else {
+        const quadro = /Linear Frame$/.test(doc.name);
+        if (quadro) bc.tags.push('raro');
+        add(pack, doc, { nome: quadro ? `${nome} (externo)` : nome, cat: 'equipamento', sub: `Equipamento (${origem})`, desc, resumo: '', bc });
+      }
+    }
+  }
+}
+
 // ---------------- Itens de 2077 (do módulo) ----------------
 function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
   const items = docs => docs.filter(doc => doc._key?.startsWith('!items!'));
@@ -186,6 +251,8 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
 // (regras-loja.json), além de tudo acima do teto de preço. Os modelos de 2077 até o teto ficam à venda.
 const RARE_GEAR = new Set(['Linear Frame β (Beta)', 'Linear Frame ∑ (Sigma)', 'Cryotank', 'Cryopump']);
 function tagsOf(entry) {
+  // Os do Black Chrome já trazem as etiquetas (blackchrome, exotica, excelente, borgware, raro).
+  if (entry.bc) return [...new Set(entry.bc.tags)];
   const tags = [];
   if (entry.cat === 'armas' && entry.sub === 'Exóticas') tags.push('exotica');
   if (/^core_(weapons|gear):/.test(entry.id) && / \(Excellent\)$/.test(entry.en)) tags.push('excelente');
@@ -198,10 +265,12 @@ function tagsOf(entry) {
 export function buildCatalog(moduleDocs) {
   entries.length = 0;
   coreEntries();
+  blackChromeEntries();
   moduleEntries(moduleDocs);
   for (const entry of entries) {
     const tags = tagsOf(entry);
     if (tags.length) entry.tags = tags;
+    if (entry.bc) { entry.livro = entry.bc.origem; delete entry.bc; }
   }
   const ids = new Set();
   for (const entry of entries) {
