@@ -80,11 +80,19 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
   de autofogo, um dado a menos, +2 do Ballistic Coprocessor); a Carga e a Rajada Tech (a janela pergunta a cobertura, o
   que atravessa, a ablação 4 ou 2, as balas da rajada de cada arma, a arma que esfria uma rodada); o teste Smart (10 ou
   12 + 1d10, só com o Smart Link), com as três configurações do cpr-2077 (os mesmos padrões).
-- [ ] **Armas de 2077, as opções de cada modelo:** os dois canos da Palica (12 + 1d10, dois cartuchos), os dois alvos da
-  Kappa, a coronha recolhida da Dian (−1), a carga da Satara (os dois cartuchos, 4d6), a Burya (todo tiro é carga), o
-  supressivo da Senkoh pela carga (as 30 balas), as 7 balas do autofogo da Lexington, o +1 da Nowaki, da Masamune e da
-  Kyubi entre 13 e 50 m, e os dois cartuchos juntos da Testera. Hoje a descrição de cada arma diz que isso é com o
-  mestre, e a carga com cartucho é recusada com aviso.
+- [x] **Armas de 2077, as regras de cada modelo que o texto deixa claras** (Ciclo 18): os dois canos da Palica (teste
+  Smart 12 + 1d10) e da Testera (4d6), com 2 cartuchos; os dois alvos da Kappa; a coronha recolhida da Dian (−1, pelo
+  botão da ficha); as 7 balas do autofogo da Lexington. As que só disparam cartucho não mostram o Ricochete.
+- [ ] **Armas de 2077, o resto das regras de cada modelo:**
+  - **esperam a decisão da mesa** (MIGRATION_STATUS, dúvidas): a carga da Satara (os dois cartuchos, 4d6), a Burya
+    (todo tiro é carga), o supressivo da Senkoh pela carga (as 30 balas), e se "dispara três balas" e "só dispara em
+    rajadas de três" gastam 3 balas por tiro;
+  - **o +1 em tiro único entre 13 e 50 m** da Nowaki, da Masamune e da Kyubi: um bônus pela distância de cada alvo,
+    como a luneta de precisão (Acessórios);
+  - **o que não é regra de ataque:** o BODY mínimo (Burya, Grad, SOR-22) e a recarga de duas Ações.
+
+  A descrição de cada arma diz o que o sistema faz e que o resto é com o mestre, e a carga com cartucho é recusada com
+  aviso.
 - [ ] **Cyberware que é arma** (Wolvers, Mantis Blades, Gorilla Arms, o lança-granadas embutido): hoje é só cyberware e
   não ataca.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e

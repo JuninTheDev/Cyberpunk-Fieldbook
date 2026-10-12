@@ -524,3 +524,50 @@ test('Teste Smart (wiki): 10 + 1d10 (12 com várias balas) no tiro da arma Smart
   assert.equal(regras.ehCoprocessador(catalogo['cyberware-2077:ballistic-coprocessor'].name), true);
   assert.equal(regras.ehCoprocessador('Smart Link'), false);
 });
+
+test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os dois canos da Palica (12 + 1d10) e da Testera (4d6), os dois alvos da Kappa, a coronha da Dian e as 7 balas do autofogo da Lexington', () => {
+  // "Disparar os dois canos sobe o teste Smart para 12 + 1d10" (Palica); "dá para disparar os dois de uma vez, e o dano
+  // sobe para 4d6" (Testera); "trava em dois alvos a até 4 m um do outro" (Kappa); "os ataques têm −1 até estendê-la"
+  // (Dian); "autofogo (2) gastando só 7 balas por ataque" (Lexington).
+  const palica = perfilDe('armas-2077:rostovic-db-4-palica');
+  const testera = perfilDe('armas-2077:rostovic-db-2-testera');
+  assert.deepEqual(palica.doisCanos, { teste: 12 });
+  assert.equal(palica.smart, 10);
+  assert.deepEqual(testera.doisCanos, { dano: '4d6' });
+  assert.equal(perfilDe('armas-2077:rostovic-db-4-igla').doisCanos, null);
+  assert.equal(perfilDe('armas-2077:rostovic-db-2-satara').doisCanos, null);
+  assert.equal(perfilDe('armas-2077:tsunami-kappa').doisAlvos, true);
+  assert.equal(perfilDe('armas-2077:arasaka-hjke-11-yukimura').doisAlvos, false);
+  assert.equal(perfilDe('armas-2077:kang-tao-g-58-dian').coronhaRetratil, true);
+  // A coronha dobrável da Ajax e da Sidewinder só esconde: sem −1 no texto.
+  assert.equal(perfilDe('armas-2077:militech-m251s-ajax').coronhaRetratil, false);
+  assert.equal(perfilDe('armas-2077:nokota-d5-sidewinder').coronhaRetratil, false);
+  assert.equal(regras.PENALIDADE_CORONHA, -1);
+  assert.equal(perfilDe('armas-2077:militech-m-10af-lexington').balasDoAutofogo, 7);
+  assert.equal(perfilDe('armas-2077:nokota-d5-copperhead').balasDoAutofogo, regras.BALAS_RAJADA);
+  // As que só disparam cartucho não ricocheteiam (o ricochete é um tiro único); a de balote e cartucho, sim.
+  assert.equal(testera.ricocheteia, false);
+  assert.equal(perfilDe('armas-2077:rostovic-db-4-igla').ricocheteia, false);
+  assert.equal(perfilDe('armas-2077:budget-arms-carnage').ricocheteia, true);
+  // Os dois canos: 2 cartuchos; o teste Smart da Palica sobe para 12 (só com o Smart Link); a Testera não é Smart.
+  assert.equal(regras.balasDoModo('cartucho', { doisCanos: true }), 2);
+  assert.equal(regras.balasDoModo('autofogo', { autofogo: 7 }), 7);
+  assert.equal(regras.balasDoModo('autofogo'), regras.BALAS_RAJADA);
+  assert.equal(regras.testeSmart({ perfil: palica, modo: 'cartucho', smartLink: true }), 10);
+  assert.equal(regras.testeSmart({ perfil: palica, modo: 'cartucho', pedido: 'doisCanos', smartLink: true }), 12);
+  assert.equal(regras.testeSmart({ perfil: palica, modo: 'cartucho', pedido: 'doisCanos', smartLink: true, smartAtaque: 'alternativa' }), 12);
+  assert.equal(regras.testeSmart({ perfil: testera, modo: 'cartucho', pedido: 'doisCanos', smartLink: true }), 0);
+  assert.equal(regras.impedimento2077({ modo: 'cartucho', perfil: testera, pedido: 'doisCanos', pelaMunicao: 'cartucho' }), null);
+  assert.equal(regras.impedimento2077({ modo: 'cartucho', perfil: palica, pedido: 'doisCanos', pelaMunicao: 'cartucho', smartLink: true }), null);
+  assert.match(regras.impedimento2077({ modo: 'cartucho', perfil: palica, pedido: 'doisCanos', pelaMunicao: 'cartucho', smartSemLink: 'comum' }), /precisa do Smart Link/);
+  assert.match(regras.impedimento2077({ modo: 'cartucho', perfil: perfilDe('armas-2077:rostovic-db-4-igla'), pedido: 'doisCanos' }), /não dispara os dois canos/);
+  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: null, pedido: 'doisCanos' }), /não dispara os dois canos/);
+  assert.equal(regras.descreverAtaque({ modo: 'cartucho', smart: 12, doisCanos: true }), 'Espingarda com cartucho (Smart), os dois canos');
+  assert.equal(regras.descreverAtaque({ modo: 'cartucho', doisCanos: true }), 'Espingarda com cartucho, os dois canos');
+  // Os dois alvos: as balas mudam de alvo a até 4 m do primeiro (meio metro de folga para a grade).
+  assert.equal(regras.ALCANCE_DOS_DOIS_ALVOS, 4);
+  assert.equal(regras.mudaDeAlvo(2), true);
+  assert.equal(regras.mudaDeAlvo(4.5), true);
+  assert.equal(regras.mudaDeAlvo(4.6), false);
+  assert.equal(regras.mudaDeAlvo(null), false);
+});

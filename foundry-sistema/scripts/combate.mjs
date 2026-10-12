@@ -95,8 +95,8 @@ export function jogadorDe(ator) {
 // ---------------- No cliente de quem ataca ----------------
 // alvos (ou alvo, um só): Tokens ou TokenDocuments; padrão, os marcados. local: "corpo" ou mirado ("cabeca", "perna",
 // "item"). modo: os botões da ficha ("autofogo", "supressivo" e os de 2077: "ricochete", "carga", "rajadaTech",
-// "smart"); senão, a arma e a munição dizem (tiro, cartucho, explosivo). cobertura: a do alvo na carga Tech
-// ("nenhuma", "fina", "grossa"); sem ela, a janela pergunta a quem atira.
+// "smart", "doisCanos"); senão, a arma e a munição dizem (tiro, cartucho, explosivo). cobertura: a do alvo na carga
+// Tech ("nenhuma", "fina", "grossa"); sem ela, a janela pergunta a quem atira.
 export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, cobertura = null } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
@@ -123,8 +123,9 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
     impedido = R.impedimento2077({ ...de2077, cobertura });
   }
   if (impedido) { ui.notifications.warn(`${arma.name}: ${impedido}`); return null; }
+  const doisCanos = pedido === 'doisCanos';
   if (arma.system.aDistancia && arma.system.pente.max) {
-    const balas = R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech });
+    const balas = R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech, autofogo: perfil?.balasDoAutofogo, doisCanos });
     if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
     await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
   }
@@ -136,14 +137,14 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
   if (modo === 'ricochete' && atacante.temCoprocessador) partes.push({ rotulo: 'Ballistic Coprocessor', valor: R.BONUS_COPROCESSADOR });
   if (!tech) cobertura = null;
-  const descricao = R.descreverAtaque({ modo, local, smart, cobertura });
+  const descricao = R.descreverAtaque({ modo, local, smart, cobertura, doisCanos });
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
   const { total, mensagem } = await testar(atacante, {
     rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes, modo: 'gm', dados: { ataque: true }, semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    smart, cobertura, carga
+    smart, cobertura, carga, doisCanos
   };
   if (game.user.isGM) return resolver(dados, game.user);
   game.socket.emit(CANAL, { tipo: 'ataque', pedido: dados, de: game.user.id });
@@ -229,15 +230,22 @@ async function contexto(pedido, usuario) {
 
 // A regra de 2077 deste ataque, para o cartão.
 function notasDe2077(pedido, arma) {
-  if (pedido.smart) return [`Teste Smart: ${pedido.smart} + 1d10 no lugar de REF + perícia.`];
+  const notas = [];
+  if (pedido.smart) notas.push(`Teste Smart: ${pedido.smart} + 1d10 no lugar de REF + perícia.`);
+  if (pedido.doisCanos) {
+    const dano = arma.perfil2077?.doisCanos?.dano;
+    notas.push(`Os dois canos de uma vez: gastou 2 cartuchos${dano ? `, e o dano é ${dano}` : ''}.`);
+  }
   if (pedido.modo === 'ricochete') {
-    return [`Ricochete: DV da tabela ${R.tabelaDoRicochete(arma.system.tipo).replace('DV ', '')} e ${R.umDadoAMenos(arma.system.dano)} de dano (um dado a menos).`];
+    notas.push(`Ricochete: DV da tabela ${R.tabelaDoRicochete(arma.system.tipo).replace('DV ', '')} e ${R.umDadoAMenos(arma.system.dano)} de dano (um dado a menos).`);
   }
   const cobertura = R.COBERTURAS[pedido.cobertura];
-  if (!cobertura) return [];
-  const onde = pedido.cobertura === 'nenhuma' ? 'sem cobertura' : `através de ${cobertura.rotulo}`;
-  const esfria = pedido.carga && config('cargaEsfria') ? ' A arma esfria uma rodada.' : '';
-  return [`${R.MODOS[pedido.modo]} ${onde}: chega ${Math.round(cobertura[pedido.modo] * 100)}% do dano, e a armadura perde ${cobertura.ablacao} de SP se o dano passar dela.${esfria}`];
+  if (cobertura) {
+    const onde = pedido.cobertura === 'nenhuma' ? 'sem cobertura' : `através de ${cobertura.rotulo}`;
+    const esfria = pedido.carga && config('cargaEsfria') ? ' A arma esfria uma rodada.' : '';
+    notas.push(`${R.MODOS[pedido.modo]} ${onde}: chega ${Math.round(cobertura[pedido.modo] * 100)}% do dano, e a armadura perde ${cobertura.ablacao} de SP se o dano passar dela.${esfria}`);
+  }
+  return notas;
 }
 
 // Defesa, acerto, dano e o cartão do resultado. Devolve o resumo (macros e o teste leem).
@@ -451,10 +459,27 @@ function semDano(ctx, linhas) {
   return true;
 }
 
+// Arma Smart que trava dois alvos (a Tsunami Kappa), no teste Smart: o tiro vai no primeiro marcado; se não pegar, as
+// balas mudam para o segundo, se ele estiver a até 4 m do primeiro. Os outros marcados ficam de fora.
+async function redirecionado(ctx) {
+  const [primeiro, segundo, ...resto] = ctx.alvos;
+  if (resto.length) ctx.notas.push(`${ctx.arma.name} trava dois alvos: ${resto.map(token => token.name).join(', ')} ${resto.length > 1 ? 'ficaram' : 'ficou'} de fora.`);
+  const pegou = await resolverAlvo(ctx, primeiro);
+  if (pegou) return [pegou];
+  if (!R.mudaDeAlvo(distancia(primeiro, segundo))) {
+    ctx.notas.push(`${segundo.name} está a mais de ${R.ALCANCE_DOS_DOIS_ALVOS} m de ${primeiro.name}: as balas Smart não mudam de alvo.`);
+    return [];
+  }
+  const linha = await resolverAlvo(ctx, segundo);
+  ctx.linhas.at(-1).notas.push(`As balas Smart mudaram de alvo: ${primeiro.name} não foi atingido.`);
+  return [linha];
+}
+
 // Tiro, autofogo, corpo a corpo e os modos de 2077: cada alvo se defende; o dano sai para cada um que foi atingido. O
 // autofogo e a rajada Tech rolam 2d6 × o multiplicador (até o da arma); o ricochete, um dado a menos.
 async function individual(ctx) {
-  const atingidas = new Set((await Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token)))).filter(Boolean));
+  const doisAlvos = ctx.pedido.smart && ctx.perfil?.doisAlvos && ctx.alvos.length >= 2;
+  const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
   const pegas = ctx.linhas.filter(l => atingidas.has(l));
   if (semDano(ctx, pegas)) return;
   const rajada = ctx.modo === 'autofogo' || ctx.modo === 'rajadaTech';
@@ -499,7 +524,8 @@ async function cartucho(ctx) {
     if (alvo.metros !== null && alvo.metros > R.ALCANCE_CARTUCHO + 0.5) { linha.resultado = 'fora'; linha.notas.push(`Além dos ${R.ALCANCE_CARTUCHO} m do cartucho.`); return; }
     if (await defesaDoAlvo(ctx, linha, alvo, R.DV_CARTUCHO)) pegas.push(linha);
   }));
-  await danoNaArea(ctx, pegas, '3d6');
+  // Os dois cartuchos de uma vez (a Testera): o dano da arma para isso.
+  await danoNaArea(ctx, pegas, (ctx.pedido.doisCanos && ctx.perfil?.doisCanos?.dano) || '3d6');
 }
 
 // Tokens com o centro na área de 10 × 10 m em volta do alvo, menos os escondidos.
@@ -577,12 +603,26 @@ export async function suprimir(ator) {
 }
 
 // ---------------- Na ficha: as armas de 2077 ----------------
-// Os botões dos modos de 2077 na linha da arma, os avisos (sem Smart Link, esfriando) e o teste Smart que o "Atacar" usa.
+// Na linha da arma: os botões dos modos de 2077 (modos), os que trocam um estado da arma (alternar: a coronha), os
+// avisos (sem Smart Link, esfriando, coronha recolhida), o teste Smart que o "Atacar" usa, com a dica, e as balas do
+// autofogo.
 export function acoesDe2077(arma) {
   const perfil = arma.perfil2077;
   const ator = arma.actor;
-  const resultado = { modos: [], avisos: [], smart: 0 };
+  const resultado = { modos: [], alternar: [], avisos: [], smart: 0, dicaAtaque: '', balasAutofogo: perfil?.balasDoAutofogo ?? R.BALAS_RAJADA };
   if (!perfil || !ator) return resultado;
+  const doisAlvos = perfil.doisAlvos ? ` Trava dois alvos: marque os dois (o primeiro é o alvo); se o tiro não pegar, as balas vão para o segundo, a até ${R.ALCANCE_DOS_DOIS_ALVOS} m dele.` : '';
+  if (perfil.doisCanos && (perfil.doisCanos.dano || ator.temSmartLink)) {
+    const efeito = perfil.doisCanos.teste ? `teste Smart ${perfil.doisCanos.teste} + 1d10` : `${perfil.doisCanos.dano} de dano`;
+    resultado.modos.push({ modo: 'doisCanos', rotulo: 'Dois canos', dica: `Os dois canos de uma vez: ${efeito}, e gasta os 2 cartuchos.` });
+  }
+  if (perfil.coronhaRetratil) {
+    const recolhida = arma.coronhaRecolhida;
+    resultado.alternar.push(recolhida
+      ? { acao: 'alternarCoronha', rotulo: 'Estender', dica: 'Estender a coronha (uma Ação): os ataques voltam ao normal.' }
+      : { acao: 'alternarCoronha', rotulo: 'Recolher', dica: 'Recolher a coronha: dá para esconder a arma, mas os ataques têm −1 até estender de novo (uma Ação).' });
+    if (recolhida) resultado.avisos.push({ texto: 'coronha recolhida (−1)', dica: 'Dá para esconder a arma; os ataques têm −1 até estender a coronha (uma Ação).' });
+  }
   if (perfil.ricocheteia) {
     const coprocessador = ator.temCoprocessador ? ` Ballistic Coprocessor: +${R.BONUS_COPROCESSADOR}.` : '';
     resultado.modos.push({ modo: 'ricochete', rotulo: 'Ricochete', dica: `Ricochete: tiro único num alvo atrás de cobertura. DV da tabela de autofogo, um dado a menos de dano; REF 8+ esquiva.${coprocessador}` });
@@ -598,8 +638,9 @@ export function acoesDe2077(arma) {
   if (perfil.classe === 'smart') {
     const smartLink = ator.temSmartLink;
     if (!smartLink) resultado.avisos.push({ texto: 'sem Smart Link', dica: config('smartSemLink') === 'naoDispara' ? 'As armas Smart só disparam com o cyberware Smart Link instalado.' : 'Sem o Smart Link, dispara como arma comum (REF + perícia).' });
-    else if (config('smartAtaque') === 'alternativa') resultado.modos.push({ modo: 'smart', rotulo: 'Smart', dica: `Teste Smart: ${perfil.smart} + 1d10 no lugar de REF + perícia.` });
+    else if (config('smartAtaque') === 'alternativa') resultado.modos.push({ modo: 'smart', rotulo: 'Smart', dica: `Teste Smart: ${perfil.smart} + 1d10 no lugar de REF + perícia.${doisAlvos}` });
     resultado.smart = R.testeSmart({ perfil, modo: 'tiro', smartLink, smartAtaque: config('smartAtaque') });
+    if (resultado.smart) resultado.dicaAtaque = `Teste Smart: ${resultado.smart} + 1d10 no lugar de REF + perícia.${doisAlvos}`;
   }
   return resultado;
 }

@@ -1,7 +1,7 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
 import { caminho, SIGLA, SISTEMA } from './config.mjs';
-import { aplicarDano, ehCoprocessador, ehSmartLink, localDaArmadura, passouNoDeathSave, perfil2077 } from './regras.mjs';
+import { aplicarDano, ehCoprocessador, ehSmartLink, localDaArmadura, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
@@ -156,6 +156,11 @@ export class ItemCPR extends Item {
     return this.type === 'arma' ? perfil2077(this.getFlag(SISTEMA, 'arma2077'), this.system) : null;
   }
 
+  // A coronha retrátil está recolhida agora? (a flag coronhaRecolhida, que o botão da ficha troca)
+  get coronhaRecolhida() {
+    return Boolean(this.perfil2077?.coronhaRetratil && this.getFlag(SISTEMA, 'coronhaRecolhida'));
+  }
+
   // A munição no pente (um item de munição do mesmo ator), ou null.
   get municaoCarregada() {
     return this.type === 'arma' && this.system.carregada ? this.actor?.items.get(this.system.carregada) ?? null : null;
@@ -175,6 +180,8 @@ export class ItemCPR extends Item {
     const daLesao = this.system.aDistancia ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
     if (daLesao) partes.push({ rotulo: 'Lesões', valor: daLesao });
     if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });
+    // A coronha retrátil recolhida (a Dian, de 2077): dá para esconder a arma, mas o ataque leva −1 até estender.
+    if (this.coronhaRecolhida) partes.push({ rotulo: 'Coronha recolhida', valor: PENALIDADE_CORONHA });
     // Acessórios com bônus de ataque (o Smartgun Link). O mesmo acessório duas vezes não faz nada (wiki).
     const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && item.system.modificadores.ataque).map(item => [item.name, item.system.modificadores.ataque]));
     for (const [rotulo, valor] of comBonus) partes.push({ rotulo, valor });

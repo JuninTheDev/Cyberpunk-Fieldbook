@@ -801,6 +801,197 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('os dois canos (2077): a Palica dispara os dois com o teste Smart 12 + 1d10; a Testera, com 4d6; cada um gasta 2 cartuchos, e com 1 no pente não dá; nas que só disparam cartucho não há Ricochete', async () => {
+      // O Capanga vai para x 500 (4 m), dentro dos 6 m do cartucho. Palica, os dois canos: d10 3 → 12 + 3 = 15 > 13; dano
+      // 3d6: 2 + 2 + 2 = 6. Testera, os dois cartuchos: d10 5 → REF 8 + Armas Pesadas 4 + 5 = 17 > 13; dano 4d6:
+      // 1 + 2 + 3 + 4 = 10 (o quinto dado da fila sobra).
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const capanga = __token('Capanga');
+        const hpDoCapanga = __ator('Capanga').system.hp.value;
+        const criados = [];
+        let link = null;
+        try {
+          await capanga.update({ x: 500 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 500);
+          link = await __cyber2077('cyberware-2077:smart-link');
+          const palica = await __arma2077('armas-2077:rostovic-db-4-palica', 'core_ammo:shotgun-shell-basic', 4);
+          const testera = await __arma2077('armas-2077:rostovic-db-2-testera', 'core_ammo:shotgun-shell-basic', 4);
+          criados.push(palica.arma.id, palica.municao.id, testera.arma.id, testera.municao.id);
+          await a.update({ 'system.pericias.heavy-weapons.nivel': 4 });
+          await a.sheet.render({ force: true });
+          await __esperar(() => __linhaDaArma(palica.arma) && __linhaDaArma(testera.arma));
+          const botoes = arma => [...(__linhaDaArma(arma)?.querySelectorAll('button[data-modo]') ?? [])].map(b => b.dataset.modo);
+          const ficha = { palica: botoes(palica.arma), testera: botoes(testera.arma) };
+          window.__fila = [[3, 10], [2, 6], [2, 6], [2, 6]];
+          const r1 = await palica.arma.atacar({ alvo: capanga, modo: 'doisCanos' });
+          const teste1 = __ultimoTeste();
+          window.__fila = [[5, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]];
+          const r2 = await testera.arma.atacar({ alvo: capanga, modo: 'doisCanos' });
+          const teste2 = __ultimoTeste();
+          const penteDaTestera = testera.arma.system.pente.value;
+          const sobrou = window.__fila.length;
+          window.__fila = [];
+          await testera.arma.update({ 'system.pente.value': 1 });
+          const umSo = await __comAvisos(() => testera.arma.atacar({ alvo: capanga, modo: 'doisCanos' }));
+          const resumo = r => ({ ataque: r.ataque, descricao: r.descricao, notas: r.notas, linhas: __linhas(r) });
+          return {
+            ficha, r1: { ...resumo(r1), formula: teste1.formula, pente: palica.arma.system.pente.value }, r2: { ...resumo(r2), formula: teste2.formula, pente: penteDaTestera }, sobrou,
+            umSo: { r: umSo.r, avisos: umSo.avisos, pente: testera.arma.system.pente.value }, perdeu: hpDoCapanga - __ator('Capanga').system.hp.value
+          };
+        } finally {
+          await a.sheet.close();
+          if (link) await __tirarCyber(link);
+          await a.deleteEmbeddedDocuments('Item', criados);
+          await __ator('Capanga').update({ 'system.hp.value': hpDoCapanga });
+          await capanga.update({ x: 900 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 900);
+        }
+      })()`);
+      const { r1, r2, umSo } = info;
+      const ok = info.ficha.palica.join() === 'doisCanos' && info.ficha.testera.join() === 'doisCanos'
+        && r1.ataque === 15 && r1.formula === '1d10crit + 12' && r1.descricao === 'Espingarda com cartucho (Smart), os dois canos' && r1.pente === 0
+        && r1.notas.includes('Teste Smart: 12 + 1d10 no lugar de REF + perícia.') && r1.notas.includes('Os dois canos de uma vez: gastou 2 cartuchos.')
+        && r1.linhas[0].resultado === 'acertou' && r1.linhas[0].dano?.dano === 6
+        && r2.ataque === 17 && r2.formula === '1d10crit + 8 + 4' && r2.descricao === 'Espingarda com cartucho, os dois canos'
+        && r2.notas.includes('Os dois canos de uma vez: gastou 2 cartuchos, e o dano é 4d6.') && r2.linhas[0].dano?.dano === 10 && r2.pente === 0 && info.sobrou === 1
+        && umSo.r === null && umSo.pente === 1 && umSo.avisos.join() === 'Rostovic DB-2 Testera: precisa de 2 balas no pente (tem 1). Recarregue.'
+        && info.perdeu === 16;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Dian e Lexington (2077): a coronha recolhida pelo botão da ficha dá −1 no ataque (o aviso aparece, e o botão estende de volta); o autofogo da Lexington gasta 7 balas, e com menos não dá', async () => {
+      // Dian (Smart, excelente) contra o Alvo a 10 m (DV 13, SMG): com a coronha recolhida, d10 7 → 10 + 1 − 1 + 7 = 17;
+      // dano 2d6: 1 + 1. Lexington, autofogo no Alvo a 10 m: d10 9 → REF 8 + Autofogo 4 + 9 = 21 contra 17 (SMG Autofire):
+      // ×2 (o máximo da arma), 2d6: 1 + 1 = 2 × 2 = 4, a armadura segura.
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const alvo = __token('Alvo');
+        const hpDoAlvo = __ator('Alvo').system.hp.value;
+        const criados = [];
+        let link = null;
+        try {
+          link = await __cyber2077('cyberware-2077:smart-link');
+          const dian = await __arma2077('armas-2077:kang-tao-g-58-dian', 'core_ammo:medium-pistol-basic', 30);
+          const lex = await __arma2077('armas-2077:militech-m-10af-lexington', 'core_ammo:medium-pistol-basic', 21);
+          criados.push(dian.arma.id, dian.municao.id, lex.arma.id, lex.municao.id);
+          await a.update({ 'system.pericias.autofire.nivel': 4 });
+          await a.sheet.render({ force: true });
+          await __esperar(() => __linhaDaArma(dian.arma) && __linhaDaArma(lex.arma));
+          const linha = arma => ({ ataque: __linhaDaArma(arma)?.querySelector('td.num')?.textContent.trim(), avisos: [...(__linhaDaArma(arma)?.querySelectorAll('.aviso-2077') ?? [])].map(e => e.textContent.trim()),
+            alternar: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-action="alternarCoronha"]') ?? [])].map(b => b.textContent.trim()) });
+          const estendida = linha(dian.arma);
+          __linhaDaArma(dian.arma).querySelector('button[data-action="alternarCoronha"]').click();
+          await __esperar(() => linha(dian.arma).avisos.length);
+          const recolhida = linha(dian.arma);
+          window.__fila = [[7, 10], [1, 6], [1, 6]];
+          const tiro = await dian.arma.atacar({ alvo });
+          const testeDian = __ultimoTeste();
+          __linhaDaArma(dian.arma).querySelector('button[data-action="alternarCoronha"]').click();
+          await __esperar(() => !linha(dian.arma).avisos.length);
+          const deVolta = { ...linha(dian.arma), flag: dian.arma.getFlag('${S}', 'coronhaRecolhida') };
+          const dicaDoAutofogo = __linhaDaArma(lex.arma)?.querySelector('button[data-modo="autofogo"]')?.dataset.tooltip ?? '';
+          window.__fila = [[9, 10], [1, 6], [1, 6]];
+          const rajada = await lex.arma.atacar({ alvo, modo: 'autofogo' });
+          const penteDepois = lex.arma.system.pente.value;
+          await lex.arma.update({ 'system.pente.value': 5 });
+          const poucas = await __comAvisos(() => lex.arma.atacar({ alvo, modo: 'autofogo' }));
+          return {
+            estendida, recolhida, deVolta, tiro: { ataque: tiro.ataque, formula: testeDian.formula, partes: testeDian.partes }, dicaDoAutofogo,
+            rajada: { ataque: rajada.ataque, linhas: __linhas(rajada) }, penteDepois, poucas: { r: poucas.r, avisos: poucas.avisos, pente: lex.arma.system.pente.value }, fila: window.__fila.length
+          };
+        } finally {
+          await a.sheet.close();
+          if (link) await __tirarCyber(link);
+          await a.deleteEmbeddedDocuments('Item', criados);
+          await __ator('Alvo').update({ 'system.hp.value': hpDoAlvo });
+        }
+      })()`);
+      const { estendida, recolhida, deVolta, tiro, rajada, poucas } = info;
+      const [l] = rajada.linhas;
+      const ok = estendida.ataque === '+11' && estendida.avisos.length === 0 && estendida.alternar.join() === 'Recolher'
+        && recolhida.ataque === '+10' && recolhida.avisos.join() === 'coronha recolhida (−1)' && recolhida.alternar.join() === 'Estender'
+        && tiro.ataque === 17 && tiro.formula === '1d10crit + 10 + 1 - 1' && tiro.partes.includes('Coronha recolhida -1')
+        && deVolta.ataque === '+11' && deVolta.alternar.join() === 'Recolher' && deVolta.flag === false
+        && info.dicaDoAutofogo === 'Autofogo (×2): 7 balas'
+        && rajada.ataque === 21 && l.dv === 17 && l.mult === 2 && l.dano?.dano === 4 && info.penteDepois === 14
+        && poucas.r === null && poucas.pente === 5 && poucas.avisos.join() === 'Militech M-10AF Lexington: precisa de 7 balas no pente (tem 5). Recarregue.' && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Kappa (2077), dois alvos: o Alvo (REF 8) esquiva do tiro Smart e as balas vão para o Capanga, a 2 m dele; com o segundo a 18 m, não mudam; com três marcados, o terceiro fica de fora', async () => {
+      // Kappa (Smart de três balas, excelente): d10 6 → 12 + 1 + 6 = 19. O Alvo esquiva pela janela do mestre: DEX 7 +
+      // Evasão 2 + 10 + 1 = 20 (empate e acima são dele). O Capanga (REF 6) não esquiva: 19 contra DV 15 (12 m); dano 2d6:
+      // 3 + 4 = 7. Com o Longe (18 m do Alvo), as balas não mudam. Com o Capanga primeiro (pega), dano 1 + 1 = 2.
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const [alvo, capanga, longe] = ['Alvo', 'Capanga', 'Longe'].map(__token);
+        const hpDoCapanga = __ator('Capanga').system.hp.value;
+        const criados = [];
+        let link = null;
+        // A janela da defesa do NPC (do mestre): só a que está aberta.
+        // A janela da defesa do NPC não tem prazo. Uma que não devia aparecer (um alvo perguntado fora da vez) fecha
+        // sozinha e fica anotada: o passo falha em vez de travar. A que fecha depois do clique não conta (não está rendered).
+        const janelasDeDefesa = () => [...foundry.applications.instances.values()].filter(app => app.rendered && app.options.classes?.includes('defesa'));
+        // Esquiva pela janela do mestre e espera ela começar a fechar (o fechamento começa depois do clique).
+        const esquivar = async () => {
+          await __esperar(() => janelasDeDefesa()[0]?.element.querySelector('.form-footer button[data-action="esquivar"]'));
+          const [janela] = janelasDeDefesa();
+          janela.element.querySelector('.form-footer button[data-action="esquivar"]').click();
+          await __esperar(() => !janela.rendered);
+        };
+        const inesperadas = [];
+        const vigiar = async promessa => {
+          let ativo = true;
+          (async () => {
+            while (ativo) {
+              for (const app of janelasDeDefesa()) { inesperadas.push(app.options.window?.title ?? ''); await app.close(); }
+              await new Promise(r => setTimeout(r, 200));
+            }
+          })();
+          try { return await promessa; } finally { ativo = false; }
+        };
+        try {
+          await __ator('Alvo').update({ 'system.atributos.ref.valor': 8 });
+          link = await __cyber2077('cyberware-2077:smart-link');
+          const kappa = await __arma2077('armas-2077:tsunami-kappa', 'core_ammo:medium-pistol-basic', 30);
+          criados.push(kappa.arma.id, kappa.municao.id);
+          await a.sheet.render({ force: true });
+          await __esperar(() => __linhaDaArma(kappa.arma));
+          const dica = __linhaDaArma(kappa.arma).querySelector('td.num')?.dataset.tooltip ?? '';
+          window.__fila = [[6, 10], [10, 10], [1, 10], [3, 6], [4, 6]];
+          let promessa = kappa.arma.atacar({ alvos: [alvo, capanga] });
+          await esquivar();
+          const r1 = await vigiar(promessa);
+          const sobrou1 = window.__fila.length;
+          window.__fila = [[6, 10], [10, 10], [1, 10]];
+          promessa = kappa.arma.atacar({ alvos: [alvo, longe] });
+          await esquivar();
+          const r2 = await vigiar(promessa);
+          window.__fila = [[6, 10], [1, 6], [1, 6]];
+          const r3 = await vigiar(kappa.arma.atacar({ alvos: [capanga, alvo, longe] }));
+          const resumo = r => ({ ataque: r.ataque, notas: r.notas, linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, escolha: l.escolha, defesa: l.defesa, dano: l.dano?.dano ?? null, notas: l.notas })) });
+          return { dica, r1: resumo(r1), sobrou1, r2: resumo(r2), r3: resumo(r3), inesperadas, perdeu: hpDoCapanga - __ator('Capanga').system.hp.value, fila: window.__fila.length };
+        } finally {
+          await a.sheet.close();
+          if (link) await __tirarCyber(link);
+          await a.deleteEmbeddedDocuments('Item', criados);
+          for (const app of janelasDeDefesa()) await app.close();
+          await __ator('Alvo').update({ 'system.atributos.ref.valor': 6 });
+          await __ator('Capanga').update({ 'system.hp.value': hpDoCapanga });
+        }
+      })()`);
+      const { r1, r2, r3 } = info;
+      const linha = (r, nome) => r.linhas.find(l => l.nome === nome);
+      const ok = /Trava dois alvos/.test(info.dica) && info.inesperadas.length === 0
+        && r1.ataque === 19 && r1.linhas.length === 2 && linha(r1, 'Alvo')?.resultado === 'esquivou' && linha(r1, 'Alvo').defesa === 20
+        && linha(r1, 'Capanga')?.resultado === 'acertou' && linha(r1, 'Capanga').dano === 7 && linha(r1, 'Capanga').notas.includes('As balas Smart mudaram de alvo: Alvo não foi atingido.') && info.sobrou1 === 0
+        && r2.linhas.length === 1 && linha(r2, 'Alvo')?.resultado === 'esquivou' && r2.notas.includes('Longe está a mais de 4 m de Alvo: as balas Smart não mudam de alvo.')
+        && r3.linhas.length === 1 && linha(r3, 'Capanga')?.resultado === 'acertou' && linha(r3, 'Capanga').dano === 2 && r3.notas.includes('Tsunami Kappa trava dois alvos: Longe ficou de fora.')
+        && info.perdeu === 9 && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('escudo e a janela do mestre: o Capanga (NPC) pode aguentar ou usar o escudo; o mestre vê o total, escolhe o escudo, que leva os 10 PV dele; o Desfazer devolve', async () => {
       // Ataque: d10 8 → REF 8 + Armas de Ombro 4 + 8 = 20 contra DV 16 (12 m). Dano 5d6: 3 × 5 = 15; o escudo (10 PV) leva
       // 10, e o resto de um tiro se perde (wiki: cobertura).

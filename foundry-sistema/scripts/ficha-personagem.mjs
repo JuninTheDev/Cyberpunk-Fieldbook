@@ -23,6 +23,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       zerarDeathSave: FichaPersonagem.#zerarDeathSave,
       rolarDano: FichaPersonagem.#rolarDano,
       recarregar: FichaPersonagem.#recarregar,
+      alternarCoronha: FichaPersonagem.#alternarCoronha,
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
       instalar: FichaPersonagem.#instalar,
@@ -62,7 +63,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       const de2077 = acoesDe2077(arma);
       const { partes } = arma.partesDoAtaque(null, { smart: de2077.smart });
       return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
-        classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, avisos2077: de2077.avisos, smart: de2077.smart };
+        classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
+        dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo };
     };
     // Perícias: as comuns sempre (nível 0 também), e as de família que o personagem tem, no grupo da família.
     const linhaPericia = id => {
@@ -144,6 +146,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #zerarDeathSave() { return this.actor.zerarDeathSave(); }
   static #rolarDano(evento, alvo) { return this.#item(alvo)?.rolarDano(); }
   static #recarregar(evento, alvo) { return this.#item(alvo)?.recarregar(); }
+  // A coronha retrátil (a Dian, de 2077): recolhida, dá para esconder a arma, e os ataques têm −1.
+  static #alternarCoronha(evento, alvo) {
+    const item = this.#item(alvo);
+    return item?.setFlag(SISTEMA, 'coronhaRecolhida', !item.coronhaRecolhida);
+  }
   static #equipar(evento, alvo) {
     const item = this.#item(alvo);
     return item?.update({ 'system.equipada': !item.system.equipada });

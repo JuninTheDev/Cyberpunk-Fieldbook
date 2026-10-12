@@ -43,6 +43,10 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 - **Limpeza no `finally`:** o passo que cria combate, marca alvo ou abre janela desfaz isso num `finally`. Uma falha no
   meio não pode arrastar os passos seguintes: no ciclo 17, um combate e um alvo marcado que sobraram derrubaram três
   passos de fogo supressivo e de turnos.
+- **Janela sem prazo:** a janela de defesa de NPC do mestre espera o clique para sempre. O passo em que um defeito
+  pode abrir uma dessas janelas fora da vez fecha e anota a janela inesperada, e confere a lista vazia. Assim ele falha
+  em vez de travar a suíte: no ciclo 18, uma mutação travou o G4 por mais de 10 minutos. Depois de clicar numa janela,
+  espere ela sair do estado desenhado (`!app.rendered`), porque o fechamento só começa depois do clique.
 
 ## Build
 

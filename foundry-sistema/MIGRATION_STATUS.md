@@ -33,7 +33,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | quem vê o cartão, texto e animação no token, Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo |
-| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17; as opções de cada modelo (Palica, Kappa, Dian, Satara...) faltam |
+| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17 |
+| cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, com as que o Foundry 12 não tinha e o texto deixa claras (os dois cartuchos da Testera, o autofogo de 7 balas da Lexington); as que esperam a mesa estão nas dúvidas |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
 | cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
 | cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
@@ -56,8 +57,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
      os nomes do CORE, então quase sempre acha);
    - **pelos atores do Foundry 12** (a exportação do mundo, ou o envio de crossover que a wiki já recebe), convertidos
      do formato do CORE para este sistema: mais completo, e mais trabalho.
-4. **Falta a NET,** que a campanha usa. Os modos das armas de 2077 entraram no ciclo 17; as opções próprias de alguns
-   modelos (os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian, a carga da Satara) ainda são com o mestre.
+4. **Falta a NET,** que a campanha usa. As armas de 2077 entraram nos ciclos 17 e 18 (os modos de cada classe e as
+   regras de cada modelo que o Foundry 12 tinha); as de alguns modelos esperam a decisão da mesa (dúvidas abaixo).
 5. **Sem migração de dados entre versões deste sistema** (ainda não há mundo real para migrar).
 
 ## Dúvidas de regra e discrepâncias
@@ -122,9 +123,24 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   combate, não conta.
 
 - **Ricochete com cartucho ou explosivo: recusado.** O texto diz "um tiro único", e o sistema recusa o ricochete com
-  cartucho de espingarda (a espingarda Power com balote ricocheteia). A carga Tech com cartucho também é recusada, mas
-  por outro motivo: a Satara, a única Tech de cartucho, tem regra própria (os dois cartuchos, 4d6), que ainda não está
-  no sistema.
+  cartucho de espingarda (a espingarda Power com balote ricocheteia). As que só disparam cartucho (a Igla e a Testera)
+  nem mostram o botão. A carga Tech com cartucho também é recusada, mas por outro motivo: a Satara, a única Tech de
+  cartucho, tem regra própria (os dois cartuchos, 4d6), que espera a mesa (abaixo).
+
+- **Armas de 2077, regras de modelo que esperam a mesa.** O texto de cada uma admite mais de uma leitura. Até a mesa
+  decidir, o sistema não faz nada próprio para elas, e a descrição da arma diz que é com o mestre:
+  - **Satara:** "na carga Tech, dispara os dois cartuchos e causa 4d6". A carga é o ataque de área do cartucho (DV 13,
+    todos à frente até 6 m), com a cobertura, a ablação e o esfriamento da carga? Ou vira um tiro único?
+  - **Burya:** "todo disparo já é uma carga Tech". O "Atacar" vira carga (com a pergunta da cobertura)? E a arma esfria
+    entre um tiro e outro, o que faz ela disparar uma rodada sim, outra não?
+  - **Senkoh:** "na carga Tech (rajada), dispara as 30 balas do pente, o que permite usar fogo supressivo". O botão
+    Supressivo comum (10 balas) continua? E o supressivo carregado esfria a arma?
+  - **"Dispara três balas Smart"** (Yukimura, Chao, Kappa, Shingen) **e "só dispara em rajadas de três"** (Nowaki,
+    Masamune): cada tiro gasta 3 balas? O Foundry 12 gasta 1, e o sistema também, por enquanto.
+
+- **Lexington e Testera: muda o que a mesa vê.** O autofogo da Lexington gasta 7 balas ("gastando só 7 balas por
+  ataque"; no Foundry 12, as 10 do CORE). A Testera ganhou o botão dos dois cartuchos (4d6), que o Foundry 12 não tinha.
+  Os dois canos da Palica são um botão, e não mais a pergunta antes de cada tiro Smart; a regra é a mesma.
 
 ## Registro dos ciclos
 
@@ -745,3 +761,55 @@ a mesa já usa.
   - o cyberware que é arma;
   - a NET.
 - **Próximo:** as opções de cada modelo de 2077, que completam as armas da campanha, ou a NET, o último bloqueador.
+- **Commit:** `22a6fb9`.
+
+### Ciclo 18 (2026-10-11): armas de 2077, as regras de cada modelo (P2, bloqueador da migração)
+
+O texto de cada arma vem da wiki (system-2077.js). Entraram as regras que o Foundry 12 já fazia (a Palica, a Kappa e a
+Dian, no cpr-2077 e no Fluxo de Combate) e as que o texto deixa claras (a Testera e a Lexington). As que admitem mais
+de uma leitura viraram dúvidas.
+
+- **Implementado:**
+  - **os dois canos:** o botão "Dois canos" dispara os dois de uma vez e gasta 2 cartuchos; com 1 no pente, não dá. A
+    Palica sobe o teste Smart para 12 + 1d10 (só com o Smart Link). A Testera causa 4d6 no cartucho, no lugar de 3d6;
+  - **os dois alvos da Kappa,** no tiro Smart, como o Fluxo do Foundry 12: o tiro vai no primeiro alvo marcado; se não
+    pegar, as balas vão para o segundo, se ele estiver a até 4 m do primeiro. Os outros marcados ficam de fora, com uma
+    nota no cartão. A dica do ataque na ficha explica;
+  - **a coronha da Dian:** o botão "Recolher" (depois, "Estender") na linha da arma. Recolhida, a ficha avisa
+    "coronha recolhida (−1)", e todo ataque com ela leva −1;
+  - **o autofogo da Lexington** gasta 7 balas, e com menos no pente não dá. A dica do botão Autofogo mostra as balas;
+  - **as que só disparam cartucho** (a Igla e a Testera) não mostram o Ricochete;
+  - **no conversor:** as flags `doisCartuchosDano` (Testera) e `balasDoAutofogo` (Lexington), e a descrição de cada
+    arma de 2077 diz o que o sistema faz das regras dela.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 37 de 37. Um teste de referência novo, com o perfil de cada modelo pelo texto da wiki, os 2 cartuchos, o 12 da
+    Palica, o alcance dos dois alvos e o que impede;
+  - G4: 56 de 56, cerca de 58 s, em três rodadas (a última depois dos ajustes da revisão), e 57 de 57 numa quarta, com
+    um passo temporário só para a captura da ficha, tirado depois. Três passos novos, com os dados fixos:
+    - **os dois canos:** a Palica faz 12 + 3 = 15 contra a DV 13 do cartucho e gasta os 2; a Testera rola 4d6 (o quinto
+      dado da fila sobra) e, com 1 cartucho, recusa; nenhuma das duas mostra o Ricochete;
+    - **Dian e Lexington:** o botão recolhe a coronha (o ataque na ficha vai de +11 a +10, o aviso aparece, a fórmula
+      tem o −1) e estende de volta; o autofogo da Lexington gasta 7 (21 → 14), ×2 no máximo, e com 5 balas recusa;
+    - **Kappa:** o Alvo (REF 8) esquiva pela janela do mestre (20 contra 19), e as balas vão para o Capanga, a 2 m dele
+      (7 de dano). Com o Longe, a 18 m do Alvo, não mudam. Com três marcados, o terceiro fica de fora;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado em seguida:
+    - G3: o 12 da Palica, o alcance dos dois alvos e os 2 cartuchos;
+    - G4: o redirecionamento da Kappa, o 4d6 da Testera e o −1 da coronha;
+  - **conferência visual:** a ficha com as seis armas (os botões Dois canos, Estender e Ricochete onde cabem, e o aviso
+    da coronha);
+  - G5 não rodou de novo: o ciclo não mexeu na wiki.
+- **Achado do teste:** sem o redirecionamento (a mutação), o teste da Kappa travou em vez de falhar. Os alvos passavam a
+  ser resolvidos juntos, e a janela de defesa do Alvo, que é NPC, esperava o mestre, sem prazo. O passo agora fecha
+  sozinho uma janela de defesa que não devia aparecer e a anota, e assim falha em 58 s. Também espera a janela clicada
+  começar a fechar antes de vigiar. As duas regras foram para o QUALITY_GATES.
+- **Ficou:**
+  - as regras de modelo que esperam a mesa (Satara, Burya, Senkoh e as três balas, nas dúvidas);
+  - o +1 entre 13 e 50 m (Nowaki, Masamune, Kyubi), com a luneta;
+  - o BODY mínimo e a recarga de duas Ações;
+  - o cyberware que é arma;
+  - a NET.
+- **Próximo:** pela ordem do ROADMAP, o resto do P2: o cyberware que é arma e, na rolagem, a Sorte, a Briga e as
+  Artes Marciais. A NET (P3) é o último bloqueador da migração. O que a mesa decidir sobre as dúvidas de 2077 entra
+  antes.

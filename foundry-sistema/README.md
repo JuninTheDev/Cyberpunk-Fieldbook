@@ -62,10 +62,15 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Desfazer:** o cartão do resultado tem o botão, só para o mestre. Devolve o HP, o SP e o escudo, tira as lesões e o Suprimido, e devolve o Ponto Fraco e a Deflexão que o ataque gastou (e a carga Tech da arma).
 - **Munição:** cada tiro sai do pente, e **↻** recarrega com a munição compatível da ficha. O ataque de um jogador sem mestre na mesa para antes de gastar a bala.
 - **Armas de 2077** (o suplemento de fã da mesa, como a página de 2077 da wiki descreve). A classe aparece ao lado do nome da arma, e os modos são botões na linha dela:
-  - **Power, Ricochete:** tiro único num alvo atrás de cobertura, com a perícia da arma e a DV da tabela de autofogo (pistolas e SMGs: a da SMG; as outras, a do rifle de assalto). Rola um dado a menos de dano, e o Ballistic Coprocessor instalado dá +2. As que só disparam rajadas não ricocheteiam.
+  - **Power, Ricochete:** tiro único num alvo atrás de cobertura, com a perícia da arma e a DV da tabela de autofogo (pistolas e SMGs: a da SMG; as outras, a do rifle de assalto). Rola um dado a menos de dano, e o Ballistic Coprocessor instalado dá +2. As que só disparam rajadas ou cartucho não ricocheteiam.
   - **Tech, Carga e Rajada:** a janela pergunta a cobertura do alvo. A carga deixa passar tudo, metade da fina ou um quarto da grossa; a rajada (o autofogo carregado, com a tabela da SMG e o multiplicador até o da arma), tudo ou um quarto da fina. Se o dano passar da armadura, ela perde 4 de SP (2 através de cobertura). A rajada gasta as balas que a arma diz (a Kenshin 2, a Senkoh o pente todo). Depois de uma carga, a arma esfria uma rodada: a ficha mostra até quando.
   - **Smart:** sem o cyberware Smart Link instalado, não dispara (a ficha avisa). Com ele, o tiro é o teste Smart, 10 + 1d10 (12 + 1d10 nos modelos de várias balas), no lugar de REF + perícia; o bônus da arma e as penalidades continuam, e o autofogo e o mirado são REF + perícia.
-  - **O que é próprio de um modelo** (os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian, a carga da Satara e outros), o mestre resolve: a descrição da arma diz.
+  - **Regras de cada modelo:**
+    - **Dois canos:** o botão dispara os dois de uma vez e gasta 2 cartuchos. A Palica sobe o teste Smart para 12 + 1d10; a Testera causa 4d6.
+    - **Kappa:** com dois alvos marcados, se o tiro Smart não pegar o primeiro, as balas vão para o segundo, a até 4 m dele.
+    - **Dian:** o botão Recolher recolhe a coronha. Dá para esconder a arma, mas os ataques têm −1 até estender.
+    - **Lexington:** o autofogo gasta 7 balas.
+    - **O resto** (a carga da Satara, a Burya, o supressivo da Senkoh, o +1 entre 13 e 50 m), o mestre resolve: a descrição da arma diz.
 - **Inventário** (aba Equipamento): equipamento, roupas e drogas, com a quantidade e o uso (equipado, carregando ou guardado; o botão da linha passa de um para o outro).
   - **Efeitos do equipamento** valem conforme o uso, como no CORE: o Agent (+2 em Pesquisa em Biblioteca) e o Techscanner valem equipados ou carregando; o Medscanner e o Linear Frame, só equipados.
   - **Drogas** vêm com os efeitos desligados. Quem usa liga o efeito na ficha do item (o Boost dá +2 INT).
@@ -126,7 +131,7 @@ E as da wiki:
   - o Reflex Tuner;
   - a Sorte na rolagem.
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
-- **Das armas de 2077,** as regras próprias de alguns modelos (veja o ROADMAP), e o cyberware que é arma.
+- **Das armas de 2077,** as regras de alguns modelos (a Satara, a Burya, a Senkoh, o +1 entre 13 e 50 m: veja o ROADMAP), e o cyberware que é arma.
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
