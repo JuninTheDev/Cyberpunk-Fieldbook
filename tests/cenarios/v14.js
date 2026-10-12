@@ -142,7 +142,8 @@ module.exports = async ({ edge, servidores, r }) => {
       let todas = null;
       for (let i = 0; i < 30 && !(todas?.pericias > ficha?.pericias); i++) { await edge.sleep(200); todas = await olhar(); }
       const antes = await edge.evaluate('game.messages.size');
-      await edge.evaluate(`document.querySelector('.cpr-fieldbook.ficha-personagem .atributo[data-atributo="ref"] .rolar').click()`);
+      // Ctrl + clique: rola direto, sem a janela de rolagem (o passo da janela confere o clique comum).
+      await edge.evaluate(`document.querySelector('.cpr-fieldbook.ficha-personagem .atributo[data-atributo="ref"] .rolar').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }))`);
       await edge.sleep(800);
       const depois = await edge.evaluate('game.messages.size');
       await edge.shot('ficha');
@@ -240,9 +241,10 @@ module.exports = async ({ edge, servidores, r }) => {
         await a.prepararSorte(99);
         const teto = a.sortePreparada;
         await a.prepararSorte(2);
-        // O teste de perícia, pelo nome na ficha.
+        // O teste de perícia, pelo nome na ficha, direto (Ctrl + clique): a Sorte preparada entra sozinha.
         const antes = game.messages.size;
-        await clicar('.tab.pericias .pericia[data-pericia="handgun"] .nome', () => game.messages.size > antes && a.sortePreparada === 0);
+        f().querySelector('.tab.pericias .pericia[data-pericia="handgun"] .nome').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+        await esperar(() => game.messages.size > antes && a.sortePreparada === 0);
         const teste = game.messages.contents.at(-1);
         const partes = [...new DOMParser().parseFromString(teste.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.trim());
         const depois = { sorte: a.system.sorte.value, preparada: a.sortePreparada, total: teste.rolls[0].total, formula: teste.rolls[0].formula, partes };
@@ -274,6 +276,118 @@ module.exports = async ({ edge, servidores, r }) => {
         && visual.teste.length > 0 && visual.teste.every(c => c === 'cprf-mensagem cprf-teste') && visual.dano.length > 0 && visual.dano.every(c => c === 'cprf-dano cprf-mensagem') && visual.danoTotal === 15
         && recarregada.sorte === 6 && recarregada.max === 6 && recarregada.preparada === 0 && info.fila === 0;
       return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('janela de rolagem (como a do CORE): o clique na perícia abre a janela com as partes, os situacionais (do cyberware, das lesões e da Role; o Olho danificado vem ligado), os 12 modificadores comuns da wiki, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste e a Sorte sai; cancelar não rola; Ctrl + clique rola direto, com os ligados por padrão; no atributo, só os de todas as ações; "Rolar direto" inverte', async () => {
+      await fixar(edge, [[5, 10], [6, 10], [7, 10], [8, 10]]);
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const pegar = id => foundry.utils.deepClone(cat[id]);
+          const a = await Actor.implementation.create({ name: 'Teste Janela', type: 'personagem', system: { atributos: { int: { valor: 6 } }, sorte: { value: 3 }, pericias: { perception: { nivel: 4 } }, role: { nome: 'Lawman', rank: 4, especializacao: 'street-cop' } } });
+          const ouvido = pegar('core_cyberware:amplified-hearing');
+          ouvido.system.instalado = true;
+          await a.createEmbeddedDocuments('Item', [ouvido, pegar('core_critical-injuries-head:damaged-eye'), pegar('core_critical-injuries-body:crushed-fingers')]);
+          await a.prepararSorte(1);
+          await a.sheet.render({ force: true });
+          await esperar(() => a.sheet.element?.querySelector('.tab.pericias .pericia[data-pericia="perception"] .nome'));
+          const f = () => a.sheet.element;
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const textoDe = el => el.textContent.replace(/\\s+/g, ' ').trim();
+          const ler = j => ({
+            titulo: textoDe(j.querySelector('.window-title')), partes: [...j.querySelectorAll('.partes li')].map(textoDe),
+            situacionais: [...j.querySelectorAll('[name="situacional"]')].map(c => textoDe(c.closest('label')) + (c.checked ? ' [x]' : ' [ ]')).sort(),
+            comuns: j.querySelectorAll('[name="comum"]').length, sorte: j.querySelector('[name="sorte"]').value, total: textoDe(j.querySelector('.total-sem-dado'))
+          });
+          const caixa = (j, nome, texto) => [...j.querySelectorAll('[name="' + nome + '"]')].find(c => c.closest('label').textContent.includes(texto));
+          const marcar = (c, sim) => { c.checked = sim; c.dispatchEvent(new Event('change', { bubbles: true })); };
+          const partesDa = m => [...new DOMParser().parseFromString(m.content, 'text/html').querySelectorAll('.partes li')].map(textoDe);
+          const pericia = () => f().querySelector('.tab.pericias .pericia[data-pericia="perception"] .nome');
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+
+          // 1. O clique abre a janela; marca, soma e rola.
+          pericia().click();
+          await esperar(() => janela()?.querySelector('.total-sem-dado'));
+          let j = janela();
+          const aberta = ler(j);
+          marcar(caixa(j, 'situacional', 'pela audição'), true);
+          marcar(caixa(j, 'situacional', 'pela visão'), false);
+          marcar(caixa(j, 'situacional', 'Investigator'), true);
+          marcar(caixa(j, 'comum', 'Iluminação noturna'), true);
+          const outro = j.querySelector('[name="outro"]');
+          outro.value = 2;
+          outro.dispatchEvent(new Event('input', { bubbles: true }));
+          // A Sorte da janela (2) no lugar da preparada (1).
+          const sorte = j.querySelector('[name="sorte"]');
+          sorte.value = 2;
+          sorte.dispatchEvent(new Event('input', { bubbles: true }));
+          const totalMarcado = textoDe(j.querySelector('.total-sem-dado'));
+          let antes = game.messages.size;
+          j.querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          let m = game.messages.contents.at(-1);
+          const marcado = { partes: partesDa(m), total: m.rolls[0].total, sorte: a.system.sorte.value, preparada: a.sortePreparada };
+
+          // 2. Cancelar não rola.
+          pericia().click();
+          await esperar(() => janela()?.querySelector('button[data-action="cancelar"]'));
+          antes = game.messages.size;
+          janela().querySelector('button[data-action="cancelar"]').click();
+          await esperar(() => !janela());
+          await new Promise(r => setTimeout(r, 300));
+          const cancelou = game.messages.size === antes;
+
+          // 3. Ctrl + clique: direto, com o Olho danificado (ligado por padrão) e sem Sorte (a preparada já saiu).
+          antes = game.messages.size;
+          ctrl(pericia());
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const direto = { partes: partesDa(m), total: m.rolls[0].total, janela: Boolean(janela()) };
+
+          // 4. No atributo, a janela só traz os situacionais de todas as ações.
+          f().querySelector('.atributo[data-atributo="int"] .rolar').click();
+          await esperar(() => janela()?.querySelector('.total-sem-dado'));
+          j = janela();
+          const atributo = ler(j);
+          antes = game.messages.size;
+          j.querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          const atributoTotal = game.messages.contents.at(-1).rolls[0].total;
+
+          // 5. "Rolar direto" (deste navegador) inverte: o clique rola, e Ctrl + clique abre a janela.
+          await game.settings.set('${S}', 'rolarDireto', true);
+          antes = game.messages.size;
+          pericia().click();
+          await esperar(() => game.messages.size > antes);
+          const invertido = { rolou: game.messages.size === antes + 1, janela: Boolean(janela()) };
+          ctrl(pericia());
+          await esperar(() => janela()?.querySelector('button[data-action="cancelar"]'));
+          invertido.abriu = Boolean(janela());
+          return { aberta, totalMarcado, marcado, cancelou, direto, atributo, atributoTotal, invertido };
+        })()`);
+        // A janela aberta (a do passo 5), para a conferência visual.
+        await edge.sleep(400);
+        await edge.shot('janela-rolagem');
+        const { aberta, marcado, direto, atributo, invertido } = info;
+        const tem = (lista, ...itens) => itens.every(item => lista.includes(item));
+        const ok = aberta.titulo === 'Teste: Percepção' && aberta.partes.join() === 'INT +6,Percepção +4,1d10'
+          && aberta.situacionais.join(' / ') === ['Amplified Hearing: Percepção pela audição +2 [ ]', 'Dedos esmagados: Todas as ações com as mãos −4 [ ]', 'Investigator: pista de caso ativo +4 [ ]', 'Olho danificado: Percepção pela visão −2 [x]'].join(' / ')
+          && aberta.comuns === 12 && aberta.sorte === '1' && aberta.total === '9' && info.totalMarcado === '19'
+          && tem(marcado.partes, 'INT +6', 'Percepção +4', 'Amplified Hearing: Percepção pela audição +2', 'Investigator: pista de caso ativo +4', 'Iluminação noturna ou fraca -1', 'Modificador do mestre +2', 'Sorte +2')
+          && !marcado.partes.some(parte => parte.includes('pela visão')) && marcado.total === 24 && marcado.sorte === 1 && marcado.preparada === 0
+          && info.cancelou && !direto.janela && tem(direto.partes, 'Olho danificado: Percepção pela visão -2') && !direto.partes.some(parte => parte.startsWith('Sorte')) && direto.total === 14
+          && atributo.titulo === 'Teste: INT' && atributo.partes.join() === 'INT +6,1d10' && atributo.situacionais.join() === 'Dedos esmagados: Todas as ações com as mãos −4 [ ]' && info.atributoTotal === 13
+          && invertido.rolou && !invertido.janela && invertido.abriu;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          await game.settings.set('${S}', 'rolarDireto', false);
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close();
+          for (const a of game.actors.filter(a => a.name === 'Teste Janela')) { await a.sheet?.close(); await a.delete(); }
+          return true;
+        })()`);
+      }
     });
 
     await r.passo('extrato (o ledger do CORE): o botão de Eurodólares no cabeçalho abre o extrato; somar 100, subtrair 30 e definir 50, cada um com o motivo e quem mudou; sem quantia não muda; perder mais do que tem fica negativo, com o aviso; uma mudança por fora entra como "mudança direta"; o mestre tira uma linha e escolhe, como no CORE, se a mudança também é desfeita; a aba Equipamento mostra as últimas; o IP tem o seu', async () => {

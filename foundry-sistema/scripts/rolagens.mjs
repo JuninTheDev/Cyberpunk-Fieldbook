@@ -1,6 +1,6 @@
 // Rolagens: o crítico do d10, os testes (atributo + perícia + 1d10) e o dano, com os cartões do chat.
 import { caminho, SISTEMA } from './config.mjs';
-import { BONUS_CRITICO, danoCritico } from './regras.mjs';
+import { BONUS_CRITICO, danoCritico, sorteParaGastar } from './regras.mjs';
 
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(caminho(`templates/chat/${arquivo}`), dados);
 
@@ -35,15 +35,16 @@ export function criticoDo(roll) {
 // partes: [{ rotulo, valor }]; as de valor 0 não entram. modo: o messageMode do Foundry 14 ("public", "gm"...).
 // semFalhaCritica: o 1 natural não tira um d10 (Recuperação de Falhas do Solo, nos ataques); o 10 ainda soma (o "xo"
 // do core: explode uma vez).
-// A Sorte que o ator preparou na ficha entra no teste, +1 por ponto, e sai da Sorte dele (RED p. 130).
-export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false }) {
-  const sorte = ator?.sortePreparada ?? 0;
+// A Sorte entra no teste, +1 por ponto, e sai da Sorte do ator (RED p. 130): a escolhida na janela de rolagem (sorte) ou,
+// sem a janela, a que ele preparou na ficha.
+export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false, sorte: escolhida }) {
+  const sorte = escolhida === undefined ? (ator?.sortePreparada ?? 0) : sorteParaGastar(escolhida, ator?.system.sorte.value);
   const usadas = [...partes, ...(sorte ? [{ rotulo: 'Sorte', valor: sorte }] : [])].filter(parte => Number(parte.valor));
   const formula = [semFalhaCritica ? '1d10xo' : '1d10crit', ...usadas.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ');
   const roll = await new Roll(formula).evaluate();
   const critico = semFalhaCritica && criticoDo(roll) === 'falha' ? null : criticoDo(roll);
   const resultado = { roll, total: roll.total, critico, natural: roll.dice[0].results[0].result, sorte };
-  if (sorte) await ator.gastarSortePreparada();
+  if (ator && (sorte || escolhida !== undefined)) await ator.gastarSorte(sorte);
   if (!falar) return resultado;
   const content = await renderizar('teste.hbs', { rotulo, sabor, partes: usadas, total: roll.total, critico, dados: await roll.render() });
   resultado.mensagem = await ChatMessage.implementation.create({

@@ -7,7 +7,7 @@
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fontes/rajdhani-700.woff2') format('woff2'); }
 @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
 
-.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .chat-message.cprf-mensagem {
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .chat-message.cprf-mensagem {
   --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
   --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
   --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
@@ -15,11 +15,11 @@
 }
 
 /* ---------- Janela ---------- */
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato) .window-header {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem) .window-header {
   background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); color: var(--cp-amarelo);
   font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
 }
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato) .window-content {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem) .window-content {
   background-color: var(--cp-fundo);
   background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
   color: var(--cp-texto); font-family: var(--cp-titulo); font-weight: 500; font-size: 15px;
@@ -362,6 +362,36 @@
 .cpr-fieldbook.extrato .historico .apagar { color: var(--cp-fraco); text-align: center; cursor: pointer; }
 .cpr-fieldbook.extrato .historico .apagar:hover { color: var(--cp-vermelho); text-shadow: none; }
 .cpr-fieldbook.extrato .historico .vazio { padding: 10px 0; color: var(--cp-fraco); font-style: italic; }
+
+/* ---------- A janela de rolagem ---------- */
+.cpr-fieldbook.janela-rolagem .window-content { padding: 14px 16px; }
+.cpr-fieldbook.janela-rolagem .dialog-content { display: flex; flex-direction: column; gap: 10px; }
+.cpr-fieldbook.janela-rolagem .partes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-rolagem .partes li { padding: 3px 8px; background: var(--cp-poco); border-top: 1px solid var(--cp-ciano); color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-rolagem .partes li b { color: var(--cp-texto); font-weight: 400; }
+.cpr-fieldbook.janela-rolagem .partes li.dado { border-top-color: var(--cp-amarelo); color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-rolagem fieldset {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 0; padding: 8px 12px 10px;
+  background: var(--cp-painel); border: none; border-left: 3px solid var(--cp-amarelo);
+}
+.cpr-fieldbook.janela-rolagem fieldset.situacionais { grid-template-columns: minmax(0, 1fr); border-left-color: var(--cp-ciano); }
+.cpr-fieldbook.janela-rolagem legend { padding: 0 4px; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+.cpr-fieldbook.janela-rolagem fieldset label { display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 1.25; cursor: pointer; }
+.cpr-fieldbook.janela-rolagem fieldset label span { flex: 1; min-width: 0; }
+.cpr-fieldbook.janela-rolagem fieldset label b { color: var(--cp-fraco); font-family: var(--cp-dados); font-weight: 400; }
+.cpr-fieldbook.janela-rolagem fieldset label:has(input:checked) b { color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-rolagem input[type="checkbox"] { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-rolagem .linha { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.cpr-fieldbook.janela-rolagem .linha label { display: flex; align-items: center; gap: 8px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.janela-rolagem .linha input {
+  width: 6ch; height: 28px; min-height: 0; padding: 0 4px; background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0;
+  color: var(--cp-texto); font-family: var(--cp-dados); font-size: 15px; text-align: center;
+}
+.cpr-fieldbook.janela-rolagem .linha input:focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+.cpr-fieldbook.janela-rolagem .total { display: flex; justify-content: space-between; align-items: baseline; margin: 0; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; }
+.cpr-fieldbook.janela-rolagem .total b { font: 700 32px/1 var(--cp-titulo); letter-spacing: 0; }
+.cpr-fieldbook.janela-rolagem .form-footer button { border-radius: 0; font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.janela-rolagem .form-footer button[data-action="rolar"] { background: var(--cp-amarelo); border-color: var(--cp-amarelo); color: var(--cp-fundo); }
 
 /* ---------- Cartões do chat ---------- */
 /* A mensagem inteira: o fundo, a borda (amarela; vermelha no dano e na morte) e quem falou. */

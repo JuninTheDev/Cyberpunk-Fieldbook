@@ -682,3 +682,42 @@ test('Bônus de Role: as perícias vêm da wiki (o Moto: "Dirigir, Pilotar e Tec
   assert.match(texto2077, /'Especialização', 'Soma o Rank de Impacto Carismático em'/);
   assert.match(texto2077, /'Especialização', 'O bônus de caso também vale em'/);
 });
+
+test('Janela de rolagem: os modificadores comuns são os da tabela da wiki (RED p. 130), com o valor de cada um', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  for (const { rotulo, valor } of regras.MODIFICADORES_COMUNS.filter(m => m.valor < 0)) assert.ok(regrasDaWiki.includes(`['${rotulo}', '−${Math.abs(valor)}']`), rotulo);
+  assert.match(regrasDaWiki, /<b>Perícia complementar:<\/b>[^']*dá \+1/);
+  assert.match(regrasDaWiki, /<b>Tempo extra:<\/b> aceitar levar 4× mais tempo dá \+1/);
+  assert.deepEqual(regras.MODIFICADORES_COMUNS.filter(m => m.valor > 0).map(m => [m.id, m.valor]), [['complementar', 1], ['tempo-extra', 1]]);
+  assert.equal(new Set(regras.MODIFICADORES_COMUNS.map(m => m.id)).size, 12);
+});
+
+test('Situacionais de Role (2077): o Investigator do Lawman em Educação, Percepção e nas perícias da especialização; o Netrunner em todo teste de perícia; sempre desligados', () => {
+  const streetCop = ROLES.find(r => r.id === 'lawman').especializacoes.find(e => e.id === 'street-cop');
+  const lawman = periciaId => regras.situacionaisDeRole({ roleId: 'lawman', rank: 4, especializacao: streetCop, periciaId });
+  for (const id of ['education', 'perception', 'streetwise', 'athletics', 'bribery']) assert.deepEqual(lawman(id), [{ id: 'investigator', rotulo: 'Investigator: pista de caso ativo', valor: 4, ligado: false }], id);
+  assert.deepEqual(lawman('acting'), []);
+  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'lawman', rank: 4, periciaId: 'streetwise' }), []);
+  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'netrunner', rank: 6, periciaId: 'basic-tech' }).map(s => [s.id, s.valor, s.ligado]), [['interface-2077', 6, false]]);
+  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'netrunner', rank: 6 }), []);
+  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'solo', rank: 4, periciaId: 'perception' }), []);
+});
+
+test('Situacionais do CORE no catálogo: cada mudança situacional vira um efeito à parte, com o alvo e o "ligado por padrão" do CORE; o que vale sempre fica no efeito de sempre', () => {
+  const sit = id => catalogo[id].effects.filter(e => e.system.situacional?.sim).map(e => [e.system.situacional.alvo, e.system.changes.map(c => `${c.key.replace('system.bonus.', '')}=${c.value}`).join(), e.system.situacional.ligadoPorPadrao]);
+  assert.deepEqual(sit('core_cyberware:amplified-hearing'), [['Percepção pela audição', 'pericias.perception=2', false]]);
+  assert.deepEqual(sit('core_cyberware:image-enhance'), [['Leitura Labial', 'pericias.lip-reading=2', false], ['Esconder/Revelar Objeto', 'pericias.conceal-reveal-object=2', false], ['Percepção pela visão', 'pericias.perception=2', false]]);
+  assert.deepEqual(sit('core_critical-injuries-body:crushed-fingers'), [['Todas as ações com as mãos', 'todasAcoes=-4', false]]);
+  assert.deepEqual(sit('core_critical-injuries-head:broken-jaw'), [['Todas as ações com a fala', 'todasAcoes=-4', false]]);
+  assert.deepEqual(sit('core_critical-injuries-head:damaged-ear'), [['Percepção pela audição', 'pericias.perception=-2', false]]);
+  assert.deepEqual(sit('core_critical-injuries-head:lost-ear'), [['Percepção pela audição', 'pericias.perception=-4', false]]);
+  assert.deepEqual(sit('core_critical-injuries-head:damaged-eye'), [['Percepção pela visão', 'pericias.perception=-2', true]]);
+  assert.deepEqual(sit('core_critical-injuries-head:lost-eye'), [['Percepção pela visão', 'pericias.perception=-4', true]]);
+  assert.deepEqual(sit('core_gear:agent'), [['Guarda-roupa e Estilo', 'pericias.wardrobe-style=2', false]]);
+  // O Olho perdido continua com o −4 nos tiros, que vale sempre; o Agent, com o +2 em Pesquisa em Biblioteca.
+  const sempre = id => catalogo[id].effects.filter(e => !e.system.situacional).flatMap(e => e.system.changes.map(c => `${c.key.replace('system.bonus.', '')}=${c.value}`));
+  assert.deepEqual(sempre('core_critical-injuries-head:lost-eye'), ['distancia=-4']);
+  assert.deepEqual(sempre('core_gear:agent'), ['pericias.library-search=2']);
+  // A iniciativa do Sandevistan e a luneta esperam a janela chegar na iniciativa e no ataque.
+  assert.deepEqual(sit('core_cyberware:sandevistan'), []);
+});

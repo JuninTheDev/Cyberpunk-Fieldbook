@@ -349,13 +349,27 @@ export class DadosLesao extends foundry.abstract.TypeDataModel {
 // Efeito que vem de um item só vale com o item em uso: cyberware instalado, arma ou armadura equipada, equipamento no uso
 // que a ativação pede. O Foundry 14 pergunta isso ao modelo de dados do efeito (ActiveEffect#isSuppressed →
 // system.isSuppressed); null deixa o core decidir (efeito desligado ou expirado), como nos efeitos ligados à mão.
+// O efeito situacional (do CORE: a Percepção pela audição, todas as ações com as mãos) não soma sozinho: a janela de
+// rolagem o oferece no teste certo, ligado ou não por padrão; o rolar direto usa os ligados por padrão.
 export class DadosEfeito extends foundry.data.ActiveEffectTypeDataModel {
-  get isSuppressed() {
+  static defineSchema() {
+    return {
+      ...super.defineSchema(),
+      situacional: new fields.SchemaField({ sim: new fields.BooleanField({ initial: false }), ligadoPorPadrao: new fields.BooleanField({ initial: false }), alvo: texto() })
+    };
+  }
+
+  // O item está fora do uso que o efeito pede? null quando o efeito não vem de item.
+  get foraDeUso() {
     const item = this.parent?.parent;
     if (!(item instanceof Item)) return null;
     if (item.type === 'cyberware') return !item.system.instalado;
     if (item.type === 'arma' || item.type === 'armadura') return !item.system.equipada;
     if (item.type === 'equipamento' && item.system.ativacao !== 'manual') return !regras.efeitoValeNoUso(item.system.ativacao, item.system.uso);
     return null;
+  }
+
+  get isSuppressed() {
+    return this.situacional.sim || this.foraDeUso;
   }
 }

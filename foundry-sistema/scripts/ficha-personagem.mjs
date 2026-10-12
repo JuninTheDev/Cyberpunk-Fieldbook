@@ -3,6 +3,7 @@
 // atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
@@ -15,6 +16,8 @@ const parte = arquivo => ({ template: caminho(`templates/personagem/${arquivo}.h
 const aba = arquivo => ({ ...parte(arquivo), scrollable: [''] });
 const porcento = (valor, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round((valor / max) * 100))) : 0);
 const slug = texto => String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// A janela de rolagem abre no clique; Ctrl (ou ⌘) + clique rola direto. "Rolar direto" (deste navegador) inverte.
+const comJanela = evento => Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto'));
 // As perícias mais altas ficam em destaque no painel geral, como no modelo.
 const EM_DESTAQUE = 6;
 
@@ -245,8 +248,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   #item(alvo) {
     return this.actor.items.get(alvo.closest('[data-item-id]')?.dataset.itemId);
   }
-  static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo); }
-  static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia); }
+  static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo, { perguntar: comJanela(evento) }); }
+  static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia, { perguntar: comJanela(evento) }); }
   static #alternarPericias() {
     this.#todasAsPericias = !(this.#todasAsPericias ?? !Object.values(this.actor.system.pericias).some(p => p.nivel > 0));
     return this.render();

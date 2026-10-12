@@ -30,7 +30,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad; a especialização do Face; o Investigator do Lawman) | portados no ciclo 23 os que valem sempre (o Moto e a especialização do Face, com a especialização vinda da wiki); o Investigator do Lawman e o Netrunner de 2077 esperam a janela de rolagem |
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta |
-| CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | falta; a Sorte entrou pela ficha (ciclo 20) |
+| CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada no ciclo 24 nos testes de atributo e de perícia; falta no ataque, na defesa, no dano, no Death Save e na iniciativa |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga, Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
@@ -91,7 +91,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
   | Área | No Foundry 12 | Aqui | ROADMAP |
   | --- | --- | --- | --- |
-  | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | rola direto; a Sorte vai pela ficha | P1 |
+  | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | nos testes, desde o ciclo 24; o ataque, a defesa, o dano, o Death Save e a iniciativa rolam direto | P1 |
   | Rolagens | Facedown (COOL + Reputação + 1d10) | falta | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta | P2 |
@@ -198,6 +198,15 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   criador da wiki; o Solo ficou com 1 por Rank, como os 4 do Rank 4 que a wiki dá, mas ela não diz a regra do Solo por
   Rank. O máximo em cada especialidade é o Rank (o "até 4 em cada" do Rank 4). A ficha só avisa: se a mesa ler
   diferente, é só trocar `PONTOS_DE_ROLE_POR_RANK` (regras.mjs).
+
+- **Netrunner de 2077: quais testes são "técnicos"?** A wiki diz que ele "soma o Rank de Interface em todos os testes
+  técnicos enquanto estiver correndo a NET", mas não lista as perícias. A janela de rolagem oferece o bônus (desligado)
+  em todo teste de perícia, e a mesa decide quando marcar. Se a mesa quiser uma lista (as perícias de TECH, por
+  exemplo), é só trocar em `regras.situacionaisDeRole`.
+
+- **Sandevistan e luneta: muda o que a mesa vê, até a janela chegar na iniciativa e no ataque.** No CORE, o Sandevistan
+  instalado dá +3 na iniciativa, ligado por padrão (a iniciativa de quem o tem abre a janela, onde dá para desligar), e
+  a luneta dá +1 situacional no ataque. Aqui os dois ainda não somam (ROADMAP, "A janela de rolagem no resto").
 
 - **Lexington e Testera: muda o que a mesa vê.** O autofogo da Lexington gasta 7 balas ("gastando só 7 balas por
   ataque"; no Foundry 12, as 10 do CORE). A Testera ganhou o botão dos dois cartuchos (4d6), que o Foundry 12 não tinha.
@@ -1126,3 +1135,56 @@ nada somava.
   - **conferência visual:** a captura da aba Role do Face (`v14-role-face.png`).
 - **Ficou:** os bônus situacionais (o Investigator do Lawman e o Netrunner de 2077), com a janela de rolagem (P1).
 - **Próximo:** a janela de rolagem (P1).
+- **Commit:** `0df785f`.
+
+### Ciclo 24 (2026-10-12): a janela de rolagem nos testes (P1)
+
+A janela de rolagem do CORE, que no Foundry 12 todo teste abre e da qual os módulos da mesa dependem.
+
+- **Implementado:**
+  - **a janela** (`scripts/janela-rolagem.mjs`, `templates/janela-rolagem.hbs`): o clique no atributo ou na perícia, na
+    ficha, abre a janela antes do teste. Ela mostra as partes fixas e o total sem o dado, que acompanha o que se marca, e
+    oferece:
+    - os situacionais, ligados ou não por padrão, como no CORE (`AtorCPR.situacionaisDoTeste`): os efeitos dos itens
+      em uso na perícia, na família dela ou em todas as ações, e os da Role (`regras.situacionaisDeRole`: o
+      Investigator do Lawman em Educação, Percepção e nas perícias da especialização; o Netrunner de 2077 em todo teste
+      de perícia, dúvida acima);
+    - os 12 modificadores comuns do livro, pela tabela da wiki (`regras.MODIFICADORES_COMUNS`, RED p. 130);
+    - o modificador do mestre e a Sorte, que vem com a preparada na ficha e sai da Sorte ao rolar;
+  - **Ctrl + clique** rola direto, com a Sorte preparada e os situacionais ligados por padrão (o rolar direto do CORE).
+    A configuração "Rolar direto, sem a janela de rolagem", deste navegador, inverte (o `invertRollCtrlFunction` do
+    CORE). Fechar ou cancelar a janela não rola;
+  - **os situacionais do CORE no catálogo:** o build converte cada mudança situacional num efeito à parte
+    (`system.situacional`, com o alvo e o "ligado por padrão"), que não soma sozinho (`DadosEfeito.isSuppressed`).
+    São 11 mudanças em 9 itens: Amplified Hearing, Image Enhance, o Agent e seis lesões. O que vale sempre continua no
+    efeito de sempre (o −4 nos tiros do Olho perdido). A iniciativa do Sandevistan e a luneta ficam de fora até a janela
+    chegar na iniciativa e no ataque;
+  - **o resto que usa a perícia** (o ataque, a esquiva, a Concentração) leva os situacionais ligados por padrão, como o
+    teste direto.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 47 de 47. Três testes novos:
+    - os modificadores comuns contra a tabela da wiki;
+    - os situacionais de Role;
+    - os situacionais do catálogo: cada um com o alvo, o valor e o "ligado por padrão" do CORE, e o que vale sempre no
+      efeito de sempre;
+  - G4: 61 de 61, cerca de 68 s. O que mudou:
+    - **um passo novo, a janela,** com um Lawman com Amplified Hearing, Olho danificado e Dedos esmagados:
+      - a janela da Percepção traz as partes, os quatro situacionais (o Olho danificado já marcado), os 12 comuns, a
+        Sorte preparada (1) e o total 9;
+      - marcar a audição e o Investigator, desmarcar a visão, marcar pouca luz, somar 2 e pôr Sorte 2 dá 19, e o teste
+        sai com essas partes: 24 com o dado 5, e a Sorte vai de 3 a 1;
+      - cancelar não rola;
+      - Ctrl + clique rola direto, com o Olho danificado: 14;
+      - no atributo, a janela só traz os Dedos esmagados;
+      - com "Rolar direto", o clique rola e Ctrl + clique abre a janela;
+    - **o passo da ficha e o da Sorte** rolam com Ctrl + clique, como antes;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado (conferido pelo md5):
+    - G3: um modificador comum com o valor errado;
+    - G4: o situacional somando sozinho, a janela sem os situacionais da Role, o teste direto com todos os
+      situacionais, a ficha sem abrir a janela, a Sorte da janela ignorada, os situacionais sem "todas as ações" e o total
+      parado;
+  - **conferência visual:** a captura da janela (`v14-janela-rolagem.png`).
+- **Ficou:** a janela no ataque, na defesa, no dano, no Death Save e na iniciativa (com o Sandevistan e a luneta).
+- **Próximo:** a janela de rolagem no resto (P1).

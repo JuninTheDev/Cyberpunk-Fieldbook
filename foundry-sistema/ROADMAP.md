@@ -58,16 +58,19 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
 - [x] **Lacunas de teste** (Ciclo 6): escudo (com o explosivo que passa do escudo destruído), "responder pelo
   jogador", corpo a corpo com esquiva, armadura pesada, janela do mestre para a defesa de NPC e os erros da importação.
   A munição de borracha ganhou teste no ciclo 4.
-- [ ] **A janela de rolagem** (achado na comparação com o CORE): no Foundry 12, todo teste passa pela janela do CORE, e
-  os três módulos da mesa dependem dela (o Fluxo, o NET Architect e o Painel Tático: "confere os modificadores, põe
-  Sorte e confirma"; Ctrl pula). Aqui o teste rola direto. Falta:
+- [x] **A janela de rolagem nos testes de atributo e de perícia** (achado na comparação com o CORE; Ciclo 24): no Foundry
+  12, todo teste passa pela janela do CORE, e os três módulos da mesa dependem dela (o Fluxo, o NET Architect e o Painel
+  Tático: "confere os modificadores, põe Sorte e confirma"; Ctrl pula). Agora a ficha abre a janela, com:
   - o modificador avulso (o que o mestre manda somar);
   - os modificadores comuns do livro, pela tabela da wiki (RED p. 130, system-rules.js): noite ou pouca luz e nunca fez
     antes (−1); tarefa complexa, sem as ferramentas certas, dormiu mal e tensão extrema (−2); exausto, muito bêbado ou
     sedado, em segredo e encoberta por fumaça ou escuridão (−4); perícia complementar e tempo extra (+1);
   - os efeitos situacionais, ligados ou não na hora: os que hoje ficam de fora (Audição Amplificada, Image Enhance, o
     Sandevistan ligado, Dedos esmagados), o Investigator do Lawman e o Netrunner de 2077 (P0, acima);
-  - a Sorte na própria janela (hoje, preparada na ficha, ciclo 20), para o jogador que prefere assim.
+  - a Sorte na própria janela (vem com a preparada na ficha, ciclo 20).
+- [ ] **A janela de rolagem no resto:** o ataque (com a luneta, +1 situacional no CORE), a defesa do jogador (a esquiva e
+  a Concentração), o dano, o Death Save e a iniciativa (o Sandevistan, +3 ligado por padrão no CORE: no Foundry 12, a
+  iniciativa de quem tem um situacional abre a janela).
 
 ## P2: fichas, inventário, equipamento, armas e combate
 

@@ -33,7 +33,13 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - uma vez só.
 
   Funcionam no chat, em macros e no Dice So Nice.
-- **Testes:** clique no atributo (STAT + 1d10) ou na perícia (STAT + perícia + 1d10). Entram:
+- **Janela de rolagem** (como a do CORE): o clique no atributo ou na perícia abre a janela antes do teste. Ela mostra as partes fixas e o total sem o dado, que acompanha o que se marca, e oferece:
+  - os **situacionais**, que não somam sozinhos: os do cyberware, do equipamento e das lesões (Amplified Hearing e Image Enhance na Percepção pela audição ou pela visão, o Olho danificado, os Dedos esmagados em todas as ações com as mãos, o Agent em Guarda-roupa e Estilo...), ligados ou não como no CORE, e os da Role (o Investigator do Lawman e o Netrunner de 2077);
+  - os **modificadores comuns** do livro (RED p. 130, a tabela da wiki: pouca luz −1, tarefa complexa −2, exausto −4, tempo extra +1...);
+  - o **modificador do mestre** e a **Sorte** (vem com a preparada na ficha).
+
+  **Ctrl + clique** rola direto, com a Sorte preparada e os situacionais ligados por padrão; a configuração "Rolar direto" (deste navegador) inverte. O ataque, a defesa, o dano, o Death Save e a iniciativa ainda rolam direto.
+- **Testes:** atributo (STAT + 1d10) ou perícia (STAT + perícia + 1d10). Entram:
   - o bônus dos efeitos;
   - a penalidade de ferimento (−2 gravemente; −4 mortalmente, que também tira 6 de MOVE, com mínimo 1);
   - as lesões (−2 em todas as ações da Concussão, por exemplo);
@@ -144,6 +150,9 @@ E as da wiki:
 - **Endereço da wiki** (padrão: `http://localhost:8000`).
 - **Mandar a ficha para a wiki** (de cada navegador; padrão: sim): veja "Na mesa".
 
+E a do navegador de cada um:
+- **Rolar direto, sem a janela de rolagem** (padrão: não, como no CORE): ligado, o clique rola na hora e Ctrl + clique abre a janela.
+
 ## Ainda não faz
 
 - **Do Fluxo de Combate:**
@@ -176,7 +185,7 @@ E as da wiki:
   - as 13 tabelas de DV.
 - **2077:** `build/conteudo-2077.mjs` converte o suplemento de fã da própria wiki (`system-2077.js` e `system-net.js`), os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele: 46 armas e 5 flechettes, 57 cyberwares, 21 cyberdecks, 16 quickhacks e 5 daemons. A classe de cada arma (Power, Tech ou Smart) e as opções dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`); as balas da rajada Tech saem do texto de cada arma.
 - **Os mesmos ids da loja da wiki** (`core_weapons:assault-rifle`, `armas-2077:arasaka-hjke-11-yukimura`): é por eles que o importador acha cada item.
-- **Efeitos situacionais** (Audição Amplificada, Image Enhance, o Sandevistan ligado, Dedos esmagados) ficam de fora por enquanto: aplicados sempre, dariam bônus errado. O build lista quais são.
+- **Efeitos situacionais** do CORE (Audição Amplificada, Image Enhance, as lesões de olho, ouvido, mão e mandíbula, o Agent) entram como efeitos à parte, que não somam sozinhos: a janela de rolagem os oferece. Ficam de fora, até a janela chegar na iniciativa e no ataque, a iniciativa do Sandevistan e a luneta. O build lista quais são.
 
 ## Teste
 
@@ -194,6 +203,7 @@ E as da wiki:
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - a Sorte preparada na ficha e o visual dos cartões do chat;
+  - a janela de rolagem: as partes, os situacionais (do cyberware, das lesões e da Role), os modificadores comuns, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste; cancelar não rola; Ctrl + clique e o "Rolar direto";
   - os bônus de Role: o Moto do Nomad importado da wiki de teste, e um Face sintético com a especialização pela importação e pela migração, no teste, no total da ficha e trocada na aba Role (o Lawman guarda a dele sem somar);
   - o extrato: somar, subtrair e definir com o motivo, a mudança direta, o saldo negativo com o aviso, o mestre tirando linhas (só a linha ou desfazendo a mudança) e as linhas da importação, da migração e da loja;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.

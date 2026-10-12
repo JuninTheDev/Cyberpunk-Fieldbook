@@ -1,7 +1,9 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
 import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
-import { aplicarDano, ehCoprocessador, ehSmartLink, linhaDoExtrato, localDaArmadura, novoSaldo, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, sorteParaGastar } from './regras.mjs';
+import { roleDaWiki } from './dados.mjs';
+import { perguntarTeste } from './janela-rolagem.mjs';
+import { aplicarDano, ehCoprocessador, ehSmartLink, linhaDoExtrato, localDaArmadura, novoSaldo, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, situacionaisDeRole, sorteParaGastar } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
@@ -53,23 +55,61 @@ export class AtorCPR extends Actor {
     return partes;
   }
 
-  // Atributo + 1d10 (p. 129).
-  rolarAtributo(chave, opcoes = {}) {
-    const valor = this.system.atributos[chave].valor;
-    return testar(this, { rotulo: SIGLA[chave], partes: [{ rotulo: SIGLA[chave], valor }, ...this.#penalidade()], ...opcoes });
+  // Os situacionais que a janela de rolagem oferece num teste ({ id, rotulo, valor, ligado }): os efeitos situacionais dos
+  // itens em uso (na perícia ou na família dela; "todas as ações" em todo teste) e os bônus de Role que dependem da
+  // situação (regras.situacionaisDeRole). O teste sem a janela usa os ligados por padrão, como o CORE.
+  situacionaisDoTeste(periciaId = null) {
+    const familia = periciaId ? this.system.pericias[periciaId]?.familia : '';
+    const chaves = new Set(['system.bonus.todasAcoes', ...[periciaId, familia].filter(Boolean).map(id => `system.bonus.pericias.${id}`)]);
+    const lista = [];
+    for (const efeito of this.allApplicableEffects()) {
+      const dados = efeito.system;
+      if (!dados?.situacional?.sim || efeito.disabled || dados.foraDeUso) continue;
+      const valor = dados.changes.filter(mudanca => chaves.has(mudanca.key)).reduce((soma, mudanca) => soma + (Number(mudanca.value) || 0), 0);
+      const origem = efeito.parent instanceof Item ? efeito.parent.name : efeito.name;
+      if (valor) lista.push({ id: efeito.uuid, rotulo: `${origem}: ${dados.situacional.alvo}`, valor, ligado: dados.situacional.ligadoPorPadrao });
+    }
+    const { role, especializacao } = this.system;
+    return [...lista, ...situacionaisDeRole({ roleId: roleDaWiki(role.nome)?.id, rank: role.rank, especializacao, periciaId })];
+  }
+  // Os situacionais que entram: os escolhidos na janela ou, sem ela, os ligados por padrão.
+  #situacionais(escolhidos, periciaId = null) {
+    return (escolhidos ?? this.situacionaisDoTeste(periciaId).filter(s => s.ligado)).map(({ rotulo, valor }) => ({ rotulo, valor }));
   }
 
-  // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas) e o da Role (o Moto, a especialização).
-  partesDaPericia(id) {
+  // O teste, com ou sem a janela de rolagem (perguntar). A janela mostra as partes fixas e oferece os situacionais, os
+  // modificadores comuns, um modificador do mestre e a Sorte; fechada ou cancelada, não rola.
+  async #testarComJanela({ rotulo, perguntar, partes, situacionais }, opcoes) {
+    if (!perguntar) return testar(this, { rotulo, partes: partes(null), ...opcoes });
+    const fixas = partes([]);
+    const escolha = await perguntarTeste(this, { rotulo, partes: fixas, situacionais: situacionais() });
+    if (!escolha) return null;
+    return testar(this, { rotulo, partes: [...fixas, ...escolha.partes], sorte: escolha.sorte, ...opcoes });
+  }
+
+  // Atributo + 1d10 (p. 129).
+  partesDoAtributo(chave, { situacionais = null } = {}) {
+    return [{ rotulo: SIGLA[chave], valor: this.system.atributos[chave].valor }, ...this.#penalidade(), ...this.#situacionais(situacionais)];
+  }
+  rolarAtributo(chave, { perguntar = false, ...opcoes } = {}) {
+    return this.#testarComJanela({
+      rotulo: SIGLA[chave], perguntar, partes: situacionais => this.partesDoAtributo(chave, { situacionais }), situacionais: () => this.situacionaisDoTeste()
+    }, opcoes);
+  }
+
+  // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto, a especialização) e os
+  // situacionais.
+  partesDaPericia(id, { situacionais = null } = {}) {
     const p = this.system.pericia(id);
     const partes = [{ rotulo: SIGLA[p.atributo], valor: this.system.atributos[p.atributo].valor }, { rotulo: p.nome, valor: p.nivel }];
     if (p.bonus) partes.push({ rotulo: 'Bônus', valor: p.bonus });
     if (p.role) partes.push({ rotulo: p.role.rotulo, valor: p.role.valor });
-    return { pericia: p, partes: [...partes, ...this.#penalidade()] };
+    return { pericia: p, partes: [...partes, ...this.#penalidade(), ...this.#situacionais(situacionais, id)] };
   }
-  rolarPericia(id, opcoes = {}) {
-    const { pericia, partes } = this.partesDaPericia(id);
-    return testar(this, { rotulo: pericia.nome, partes, ...opcoes });
+  rolarPericia(id, { perguntar = false, ...opcoes } = {}) {
+    return this.#testarComJanela({
+      rotulo: this.system.pericia(id).nome, perguntar, partes: situacionais => this.partesDaPericia(id, { situacionais }).partes, situacionais: () => this.situacionaisDoTeste(id)
+    }, opcoes);
   }
 
   // Death Save (p. 186): 1d10 + penalidades contra BODY, sem crítico. Passou: a próxima fica 1 mais difícil.
@@ -99,9 +139,12 @@ export class AtorCPR extends Actor {
   prepararSorte(pontos) {
     return this.setFlag(SISTEMA, 'sorte', sorteParaGastar(pontos, this.system.sorte.value));
   }
+  // Gasta os pontos de Sorte (até a que resta) e zera os preparados.
+  gastarSorte(pontos) {
+    return this.update({ 'system.sorte.value': this.system.sorte.value - sorteParaGastar(pontos, this.system.sorte.value), [`flags.${SISTEMA}.sorte`]: 0 });
+  }
   gastarSortePreparada() {
-    const pontos = this.sortePreparada;
-    return this.update({ 'system.sorte.value': this.system.sorte.value - pontos, [`flags.${SISTEMA}.sorte`]: 0 });
+    return this.gastarSorte(this.sortePreparada);
   }
   recarregarSorte() {
     return this.update({ 'system.sorte.value': this.system.sorte.max, [`flags.${SISTEMA}.sorte`]: 0 });

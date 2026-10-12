@@ -186,18 +186,45 @@ function chaveNova(chave, camel) {
   if (m && camel[m[1]]) return `system.bonus.pericias.${camel[m[1]]}`;
   return null;
 }
-function converterEfeitos(doc, camel, foraDoMapa) {
-  return doc.filhos.map(efeito => {
+// Os situacionais do CORE (isSituational) que a janela de rolagem oferece: numa perícia (a Percepção pela audição ou pela
+// visão é a Percepção, com o "quando") ou em toda ação (com as mãos, com a fala). A iniciativa (Sandevistan) e o ataque
+// (luneta) ficam de fora até a janela chegar neles.
+const SITUACIONAIS = {
+  perceptionHearing: ['perception', 'pela audição'], perceptionSight: ['perception', 'pela visão'],
+  allActionsHands: ['todasAcoes', 'com as mãos'], allActionsSpeech: ['todasAcoes', 'com a fala']
+};
+function chaveSituacional(chave, camel, nomes) {
+  const m = chave.match(/^bonuses\.([A-Za-z]+)$/);
+  const [alvo, quando] = SITUACIONAIS[m?.[1]] ?? (camel[m?.[1]] ? [camel[m[1]], ''] : []);
+  if (!alvo) return null;
+  if (alvo === 'todasAcoes') return { key: 'system.bonus.todasAcoes', alvo: `Todas as ações ${quando}` };
+  return { key: `system.bonus.pericias.${alvo}`, alvo: [nomes[alvo], quando].filter(Boolean).join(' ') };
+}
+// Cada efeito do CORE vira um efeito com as mudanças que valem sempre e um efeito à parte para cada mudança situacional,
+// que não soma sozinho (DadosEfeito.isSuppressed): a janela de rolagem o oferece, ligado ou não (onByDefault).
+function converterEfeitos(doc, camel, foraDoMapa, nomes) {
+  return doc.filhos.flatMap(efeito => {
     const situacional = efeito.flags?.['cyberpunk-red-core']?.changes?.situational || {};
     const changes = [];
+    const situacionais = [];
     (efeito.changes || []).forEach((c, i) => {
+      if (situacional[i]?.isSituational) {
+        const alvo = chaveSituacional(c.key, camel, nomes);
+        if (!alvo) { foraDoMapa.push(`${doc.name}: ${c.key} (situacional)`); return; }
+        situacionais.push({
+          name: `${alvo.alvo} (situacional)`, img: 'icons/svg/upgrade.svg', type: 'base', transfer: true, disabled: false, description: efeito.description || '',
+          system: { changes: [{ key: alvo.key, type: MODOS[c.mode] || 'add', value: String(c.value), phase: 'initial', priority: null }], situacional: { sim: true, ligadoPorPadrao: Boolean(situacional[i].onByDefault), alvo: alvo.alvo } }
+        });
+        return;
+      }
       const chave = chaveNova(c.key, camel);
-      if (!chave || situacional[i]?.isSituational) { foraDoMapa.push(`${doc.name}: ${c.key}${situacional[i]?.isSituational ? ' (situacional)' : ''}`); return; }
+      if (!chave) { foraDoMapa.push(`${doc.name}: ${c.key}`); return; }
       const valor = chave.endsWith('supressaoDeDor') ? 'true' : String(c.value);
       changes.push({ key: chave, type: MODOS[c.mode] || 'add', value: valor, phase: 'initial', priority: null });
     });
-    return { name: efeito.name, img: 'icons/svg/upgrade.svg', type: 'base', system: { changes }, disabled: Boolean(efeito.disabled), transfer: true, description: efeito.description || '' };
-  }).filter(efeito => efeito.system.changes.length);
+    const sempre = { name: efeito.name, img: 'icons/svg/upgrade.svg', type: 'base', system: { changes }, disabled: Boolean(efeito.disabled), transfer: true, description: efeito.description || '' };
+    return [...(changes.length ? [sempre] : []), ...situacionais];
+  });
 }
 
 // ---------------- Itens ----------------
@@ -387,6 +414,7 @@ function traduzirLesoes(itens, tabelas) {
 async function main() {
   const yaml = await prepararFonte();
   const { pericias, familias, camel, semNome } = converterPericias(yaml);
+  const nomesDasPericias = Object.fromEntries(pericias.map(p => [p.id, p.nome]));
   const tabelas = converterTabelas(yaml);
   const lesoes = converterLesoes(yaml);
   const itens = {};
@@ -398,7 +426,7 @@ async function main() {
     for (const doc of lerPack(yaml, pack)) {
       const item = converter(doc, doc.system || {}, foraDoMapa);
       if (!item) { semTipo.push(`${doc.name} (${doc.type})`); continue; }
-      item.effects = converterEfeitos(doc, camel, foraDoMapa);
+      item.effects = converterEfeitos(doc, camel, foraDoMapa, nomesDasPericias);
       item.flags = { 'cpr-fieldbook': { catalogo: `${curto}:${slug(doc.name)}`, origem: { sistema: 'cyberpunk-red-core', versao: VERSAO, id: doc._id } } };
       itens[`${curto}:${slug(doc.name)}`] = item;
       contagem[curto] = (contagem[curto] || 0) + 1;

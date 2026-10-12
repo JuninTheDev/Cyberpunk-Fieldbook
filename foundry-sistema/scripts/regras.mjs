@@ -73,6 +73,38 @@ export function bonusDeRole({ roleId, rank, especializacao = null }) {
   return {};
 }
 
+// Os bônus de Role que dependem da situação, que a janela de rolagem oferece desligados num teste de perícia:
+// - o Investigator do Lawman de 2077: o Rank em Educação e Percepção, e nas perícias da especialização, "quando acha que
+//   está lidando com uma pista de um caso ativo" (system-2077.js);
+// - o Netrunner de 2077: o Rank de Interface "em todos os testes técnicos enquanto estiver correndo a NET". Qual teste é
+//   técnico, a wiki não lista: a janela oferece em todo teste de perícia, e a mesa decide (MIGRATION_STATUS, dúvidas).
+export function situacionaisDeRole({ roleId, rank, especializacao = null, periciaId = null }) {
+  const valor = Math.max(0, Math.trunc(Number(rank) || 0));
+  if (!valor || !periciaId) return [];
+  if (roleId === 'lawman' && ['education', 'perception', ...(especializacao?.pericias ?? [])].includes(periciaId)) {
+    return [{ id: 'investigator', rotulo: 'Investigator: pista de caso ativo', valor, ligado: false }];
+  }
+  if (roleId === 'netrunner') return [{ id: 'interface-2077', rotulo: 'Interface: teste técnico correndo a NET', valor, ligado: false }];
+  return [];
+}
+
+// Os modificadores comuns do livro (RED p. 130), pela tabela "Modificadores comuns" da wiki e pelos bônus de "Bônus e
+// novas tentativas" (system-rules.js). A janela de rolagem oferece todos em todo teste.
+export const MODIFICADORES_COMUNS = [
+  { id: 'pouca-luz', rotulo: 'Iluminação noturna ou fraca', valor: -1 },
+  { id: 'nunca-fez', rotulo: 'Nunca fez isso antes', valor: -1 },
+  { id: 'complexa', rotulo: 'Tarefa complexa', valor: -2 },
+  { id: 'sem-ferramentas', rotulo: 'Sem as ferramentas ou peças certas', valor: -2 },
+  { id: 'dormiu-mal', rotulo: 'Dormiu mal na noite anterior', valor: -2 },
+  { id: 'tensao', rotulo: 'Sob tensão extrema', valor: -2 },
+  { id: 'exausto', rotulo: 'Exausto', valor: -4 },
+  { id: 'bebado', rotulo: 'Extremamente bêbado ou sedado', valor: -4 },
+  { id: 'segredo', rotulo: 'Tentando fazer em segredo', valor: -4 },
+  { id: 'encoberta', rotulo: 'Tarefa encoberta por fumaça, escuridão etc.', valor: -4 },
+  { id: 'complementar', rotulo: 'Perícia complementar', valor: 1 },
+  { id: 'tempo-extra', rotulo: 'Tempo extra (4× mais tempo)', valor: 1 }
+];
+
 // O extrato (o ledger do CORE no Foundry 12: Eurodólares, IP e Reputação): o saldo depois de somar, subtrair ou definir.
 // Como no CORE, subtrair sempre tira (um valor negativo também), e somar soma o valor como veio.
 export function novoSaldo(saldo, acao, valor) {
