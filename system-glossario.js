@@ -110,6 +110,14 @@
     t('Impacto Carismático', 'Charismatic Impact', 'A habilidade de Role do Rockerboy: os fãs fazem favores para ele, maiores conforme o Rank.', 'roles', 'As dez Roles do RED', ['Charismatic Impact']),
     t('Investigator', 'Investigator', 'Habilidade opcional do Lawman no suplemento de fã de 2077, no lugar de Backup: casos ativos e um bônus de caso em Educação e Percepção.', 'roles2077', 'Lawman com Investigator (suplemento de fã)'),
 
+    // ---------------- Black Chrome ----------------
+    t('Acesso Nômade', 'Nomad Access', 'Regra do Black Chrome: quando sobe o Rank de Moto, o Nomad pode pôr na frota da família qualquer veículo com Acesso Nômade igual ou menor que o novo Rank, com todos os upgrades que ele já traz.', 'bcGuia', 'Acesso Nômade', ['Nomad Access']),
+    t('CBK', 'CBK (Cee Book)', 'O app grátis de Agente dos Mercados Noturnos (Black Chrome): mostra os anúncios de cada barraca, recebe os avisos do fixer e faz a compra.', 'bcGuia', 'O que é o Black Chrome', [], { exato: true }),
+    t('Cyberdedo', 'Cyberfinger', 'Cyberware em forma de dedo (Black Chrome), instalado no shopping numa Modular Finger Cyberhand (5 dedos) ou na Enthusiast da Dynalar (8 dedos).', 'bcCyberware', 'Cyberdedos', ['cyberdedos', 'Cyberfinger', 'Cyberfingers']),
+    t('Quadro linear', 'Linear Frame', 'Exoesqueleto que aumenta o BODY enquanto está ligado. Externo: vestido e ligado por Interface Plugs. Interno: instalado como borgware. Os do Black Chrome deixam o BODY em 12.', 'bcQuadros', 'Quadros lineares', ['quadros lineares', 'Linear Frame', 'Linear Frames']),
+    t('Combinação', 'Combination', 'Palavra-chave do Black Chrome: a arma junta duas ou mais armas, com um modo para cada uma. Você escolhe o modo a cada ataque, sem gastar Ação.', 'bcGuia', 'Palavras-chave', [], { semLink: true }),
+    t('Dano direto no HP', 'Direct HP damage', 'Dano que sai direto do HP: a armadura não reduz nem se desgasta, e o lugar do corpo não multiplica.', 'bcGuia', 'Palavras-chave', ['direto no HP']),
+
     // ---------------- Avanço e equipamento ----------------
     t('Pontos de Melhoria', 'Improvement Points (IP)', 'Ganhos no fim de cada sessão. Subir uma perícia custa 20 × o novo nível (×2 nas difíceis); subir o Rank da Role, 60 × o novo Rank.', 'advancement', 'Gastar Pontos de Melhoria', ['Ponto de Melhoria', 'Improvement Points']),
     t('Lifepath', 'Lifepath', 'As tabelas do passado do personagem: origem, personalidade, família, amigos, inimigos, amores trágicos e meta de vida.', 'lifepath', 'Origem cultural'),

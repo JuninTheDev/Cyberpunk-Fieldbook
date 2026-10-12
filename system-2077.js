@@ -343,8 +343,9 @@
   });
 
   // data: as listas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
+  // compareTable: a vista de tabela, que as páginas do Black Chrome (system-blackchrome.js) também usam.
   window.system2077 = {
-    pages,
+    pages, compareTable,
     data: {
       weapons: { pistols, revolvers, smgs, shotguns, rifles, machineGuns, snipers },
       cyberware: { neuroport, fashionware, neural, optics, internal, external, limbs }

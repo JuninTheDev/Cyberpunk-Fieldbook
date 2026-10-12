@@ -121,13 +121,23 @@
       { id: 'cyberware', label: 'Cyberware do RED', icon: 'K' },
       { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' }
     ]},
+    { group: 'Black Chrome', pages: [
+      { id: 'bcGuia', label: 'Como usar o Black Chrome', icon: 'BC' },
+      { id: 'bcArmas', label: 'Armas', icon: 'BW' },
+      { id: 'bcCyberware', label: 'Cyberware', icon: 'BCW' },
+      { id: 'bcModa', label: 'Moda e armadura', icon: 'BM' },
+      { id: 'bcEquipamento', label: 'Equipamento e apps', icon: 'BE' },
+      { id: 'bcQuadros', label: 'Quadros lineares', icon: 'LF' },
+      { id: 'bcVeiculos', label: 'Veículos', icon: 'BV' },
+      { id: 'bcMercados', label: 'Mercados Noturnos', icon: 'NM' }
+    ]},
     { group: 'Suplemento de fã e fontes', pages: [
       { id: 'supplement2077', label: 'Suplemento de fã', icon: '77' },
       { id: 'sources', label: 'Livros de referência', icon: 'L' }
     ]}
   ];
 
-  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
+  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemBlackChrome || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
   Object.entries(markdownDocs).forEach(([id, doc]) => {
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
   });

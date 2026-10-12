@@ -6,13 +6,14 @@ import { wikiDir } from './paths.mjs';
 
 const require = createRequire(import.meta.url);
 globalThis.window = globalThis.window || {};
-for (const file of ['system-catalog.js', 'system-rules.js', 'system-net.js', 'system-2077.js', 'mestre-npcs.js']) require(path.join(wikiDir, file));
+for (const file of ['system-catalog.js', 'system-rules.js', 'system-net.js', 'system-2077.js', 'system-blackchrome.js', 'mestre-npcs.js']) require(path.join(wikiDir, file));
 
 export const wiki = {
   weapons: window.system2077.data.weapons,
   cyberware: window.system2077.data.cyberware,
   net: window.systemNet.data,
   catalog: window.systemCatalog,
+  blackChrome: window.systemBlackChrome.data,
   skills: window.systemRules.data.skills,
   npcs: window.npcStatBlocks.data,
   // A base da campanha (documentos/morana/base-da-campanha.md): quem é cada pessoa do elenco, para a ficha do ator.
