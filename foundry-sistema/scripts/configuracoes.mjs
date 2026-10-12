@@ -26,6 +26,18 @@ export function registrarConfiguracoes() {
   });
   registrar('area', { name: 'Explosivos pegam toda a área', hint: 'Granadas e foguetes que acertam pegam todos os tokens na área de 10 × 10 m em volta do alvo, não só os marcados.', type: Boolean, default: true });
   registrar('supressao', { name: 'Fogo supressivo sem alvo pega todos à vista', hint: 'Sem alvo marcado, o fogo supressivo pega todos a até 25 m e sem parede no meio. Com alvos marcados, só eles.', type: Boolean, default: true });
+  registrar('escondeAtaque', {
+    name: 'Esconder o total do ataque até a defesa', hint: 'O cartão do ataque fica só com o mestre e quem atacou até o alvo decidir (para não esquivar sabendo o número). Depois, aparece para todos. Desligado, todos o veem desde o começo, e a janela de reação do alvo mostra o total.',
+    type: Boolean, default: true
+  });
+  registrar('resultado', {
+    name: 'Quem vê o cartão do resultado', hint: 'O cartão com a defesa, o dano e o Desfazer, e o texto em cima do token.',
+    type: String, default: 'publico', choices: { publico: 'Todos', envolvidos: 'O mestre, quem atacou e os donos dos alvos', mestre: 'Só o mestre' }
+  });
+  registrar('animacoes', {
+    name: 'Efeitos na mesa', hint: 'Texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro.',
+    type: String, default: 'auto', choices: { auto: 'Texto e animação', texto: 'Só o texto', nao: 'Nenhum' }
+  });
   // Armas de 2077 (as do cpr-2077 do Foundry 12, com os mesmos padrões).
   registrar('smartAtaque', {
     name: 'Ataque das armas Smart (2077)', hint: 'O suplemento diz que o ataque Smart é 10 + 1d10 (12 + 1d10 com várias balas), mas não diz se troca REF + perícia ou se é uma opção: a wiki manda combinar com a mesa. Substitui: o tiro da arma Smart é sempre o teste Smart (o autofogo e o mirado continuam REF + perícia). Alternativa: a arma ganha o botão "Smart", e o "Atacar" continua REF + perícia.',

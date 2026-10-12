@@ -37,7 +37,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | a janela "Ataque!" (a reação do alvo: quem ataca, a conta de cada escolha, a barra do tempo; o X e o tempo valem a escolha padrão) | portada no ciclo 28, no visual do sistema |
-| Fluxo de Combate | um ataque por vez no mestre, quem vê o cartão, esconder ou não o total do ataque, texto e animação no token, Reflex Tuner | falta |
+| Fluxo de Combate | um ataque por vez no mestre, quem vê o cartão do resultado, esconder ou não o total do ataque, texto e animação no token | portados no ciclo 29 (com diferenças: ver as dúvidas) |
+| Fluxo de Combate | Reflex Tuner | falta |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo |
 | cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17 |
@@ -237,6 +238,19 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     (`resultantValue > 0`), apesar do texto "Perdeu mais do que tem";
   - **o histórico do Foundry 12 não vem na migração:** a ficha "Na mesa" só manda o saldo, e o extrato começa com a
     linha "Migrado da ficha da mesa do Foundry 12". Trazer o histórico pede uma mudança no módulo da mesa (ROADMAP).
+
+- **O fluxo de combate (ciclos 28 e 29): muda o que a mesa vê.** O sistema segue o Fluxo de Combate, com estas
+  diferenças:
+  - **o texto em cima do token segue quem vê o cartão do resultado.** No Fluxo, ele aparecia para todos na cena, mesmo
+    com o cartão só para o mestre ou para os envolvidos, e contava o resultado (o HP perdido) a quem não via o cartão;
+  - **o Desfazer não espera a fila.** No Fluxo, todo pedido ao mestre passava pela mesma fila, e o Desfazer esperava o
+    ataque em curso (a defesa pode levar todo o tempo do jogador);
+  - **com o total à vista** ("Esconder o total do ataque" desligado), a janela de reação do jogador mostra o total. No
+    Fluxo, ela continuava dizendo que ele não o via, embora o cartão do ataque já fosse de todos;
+  - **sem resposta no tempo, ou com a janela de reação fechada no X, a escolha padrão rola direto.** No Fluxo, com "O
+    jogador rola os próprios dados", a janela de rolagem do sistema ainda abria depois;
+  - **a janela do mestre fechada no X deixa o sistema escolher,** como a pergunta antiga deste sistema. No Fluxo, valia a
+    escolha padrão (aguentar).
 
 ## Registro dos ciclos
 
@@ -1364,3 +1378,47 @@ combate fica para o próximo (ROADMAP, P2, "Do Fluxo de Combate").
     aparece. O cenário não reproduz esse instante. O retrato de quem ataca só aparece nas capturas.
 - **Próximo:** o resto do fluxo de combate, pelo Fluxo: um ataque por vez no mestre; as configurações de quem vê o
   cartão do resultado e de esconder ou não o total do ataque; o texto e a animação no token; o Reflex Tuner.
+- **Commit:** `3c443a7`. Foi o commit "att incompleta" do usuário, que levou o ciclo inteiro junto com o
+  `Modelo de ficha/` e a cópia do CORE de desenvolvimento (`fvtt-cyberpunk-red-core-dev/`).
+
+### Ciclo 29 (2026-10-12): o que a mesa vê do ataque, como o Fluxo (pedido do usuário)
+
+O resto do pedido do ciclo 28 ("trabalhe melhor no fluxo de combate"), pelo Fluxo de Combate: a fila, as configurações
+de quem vê o quê e o texto em cima do token. O Reflex Tuner fica para o próximo ciclo.
+
+- **Implementado:**
+  - **um ataque por vez no mestre** (`naFila` em `combate.mjs`, como o do Fluxo): o ataque que chega, do jogador pelo
+    socket ou do próprio mestre, espera o anterior terminar (a defesa, o dano e o cartão). Antes, dois ataques ao mesmo
+    tempo abriam duas janelas de reação e misturavam os pedidos. O Desfazer não entra na fila;
+  - **"Esconder o total do ataque até a defesa"** (padrão: sim, como antes). Desligado, o cartão do ataque é de todos
+    desde o começo, e a janela de reação do jogador mostra o total;
+  - **"Quem vê o cartão do resultado":** todos (padrão, como antes), os envolvidos (o mestre, quem atacou e os donos
+    dos alvos) ou só o mestre;
+  - **"Efeitos na mesa"** (`efeitos.mjs`, como o `fx.mjs` do Fluxo):
+    - o texto que sobe em cima de cada alvo, nas cores do tema e só para quem vê o cartão ("Esquivou!", "Errou",
+      "−12 HP · crítico!", "A armadura segurou", "No escudo", "Suprimido!", "Firme");
+    - com o Sequencer e o JB2A ativos, a animação do acerto e do erro; com o Diwako, o som do acerto;
+    - as escolhas: texto e animação (padrão), só o texto, ou nada;
+  - **`regras.textoNoToken`:** o texto e a cor de cada resultado.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 52 de 52. Um teste novo: o texto em cima do token (o HP perdido, o crítico, a armadura e o escudo que
+    seguraram, cada resultado sem dano e o "sem DV", que não tem texto);
+  - G4: 65 de 65, de 100 a 126 s. A diferença é do PC: o passo novo leva cerca de 5 s. Esse passo, com o mestre e o
+    jogador, dá seis tiros que o Alvo aguenta e que erram:
+    - a fila: o segundo tiro sai enquanto o primeiro espera a defesa; o jogador vê uma janela por vez, e os cartões
+      saem na ordem;
+    - o texto "Errou" em cima do Alvo nos dois navegadores;
+    - só o mestre: o cartão vai só para ele, e o jogador não vê o conteúdo nem o texto;
+    - os envolvidos: o cartão vai para o mestre e para o dono do Alvo, que vê o texto;
+    - "Efeitos na mesa: Nenhum": nenhum texto;
+    - o total à vista: o cartão do ataque é de todos antes da defesa, e a janela de reação mostra "Total do ataque: 14 ·
+      DV 16";
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o "−0 HP" quando a armadura segura tudo;
+    - G4: sem a fila (o jogador viu duas janelas juntas), o cartão sempre para todos, os envolvidos sem os donos dos
+      alvos, o texto para quem não vê o cartão, o texto só no mestre (sem o socket), "Nenhum" sem efeito, o cartão do
+      ataque sempre escondido e o total à vista fora da janela de reação;
+  - **sem teste:** a animação do Sequencer com o JB2A e o som do Diwako. Os módulos não estão no Foundry 14 de teste.
+- **Próximo:** o Reflex Tuner (wiki: depois de ser atingido, +1 para se esquivar pelo resto da rodada).

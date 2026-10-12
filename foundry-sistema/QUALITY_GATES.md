@@ -73,7 +73,11 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   `.application.cpr-fieldbook.janela-defesa`, e o X é `.window-header [data-action="close"]`. Fechar a janela do jogador
   vale a escolha padrão e responde ao mestre: o `finally` que fecha uma janela de reação que sobrou manda essa resposta
   (o mestre que já não espera a ignora). O passo que espera o tempo acabar baixa a configuração "Tempo" (o mínimo é
-  10 s) e a devolve no `finally`.
+  10 s) e a devolve no `finally`. Para responder a uma segunda janela logo depois da primeira, espere uma janela com
+  outro `id`: a que acabou de ser respondida pode ainda estar no DOM, e o clique nela se perde.
+- **Texto em cima do token** (ciclo 29): o cenário grava o que o `canvas.interface.createScrollingText` mostra, com uma
+  função posta no próprio objeto que chama a do protótipo. O `finally` apaga essa função (`delete`), e a do protótipo
+  volta.
 
 ## Build
 

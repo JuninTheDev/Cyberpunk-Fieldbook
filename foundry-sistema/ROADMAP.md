@@ -130,10 +130,11 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
   - [x] a janela de reação do alvo no visual do sistema, como a "Ataque!" do Fluxo: quem ataca e quem é atacado, a
     arma e a distância, cada escolha com a conta (a esquiva média, a DV, os PV do escudo) e a barra do tempo; fechada
     no X ou sem resposta no tempo, vale a escolha padrão, rolada direto (Ciclo 28);
-  - [ ] um ataque por vez no mestre (a fila), como o Fluxo;
-  - [ ] as configurações do Fluxo que faltam: quem vê o cartão do resultado e esconder ou não o total do ataque até a
-    defesa (hoje, sempre escondido);
-  - [ ] texto e animação no token;
+  - [x] um ataque por vez no mestre (a fila), como o Fluxo (Ciclo 29);
+  - [x] as configurações do Fluxo que faltavam: quem vê o cartão do resultado e esconder ou não o total do ataque até a
+    defesa (Ciclo 29);
+  - [x] texto e animação no token: o texto para quem vê o cartão; a animação com o Sequencer e o JB2A, e o som do
+    Diwako, quando estão ativos (Ciclo 29);
   - [ ] o Reflex Tuner (wiki: depois de ser atingido, +1 para se esquivar pelo resto da rodada).
 - [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como
   segunda arma; o pente que fica acima do máximo quando o carregador sai.

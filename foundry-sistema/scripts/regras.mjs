@@ -288,6 +288,19 @@ export function contaDaDefesa(partes) {
   return { texto: `${texto} + 1d10`, media: partes.reduce((soma, parte) => soma + parte.valor, 0) + MEDIA_D10 };
 }
 
+// O texto que sobe em cima do token quando o ataque se resolve (como o Fluxo de Combate): o HP perdido (e "crítico!"
+// com lesão), o que a armadura ou o escudo seguraram, ou o resultado sem dano. estilo: a cor ("acerto", "erro",
+// "defesa"). Sem texto (sem DV: o mestre decide): null.
+export function textoNoToken({ resultado, dano = null }) {
+  if (dano) {
+    const perdeu = dano.hpAntes - dano.hpDepois;
+    if (perdeu > 0) return { texto: `−${perdeu} HP${dano.lesoes?.length ? ' · crítico!' : ''}`, estilo: 'acerto' };
+    return { texto: dano.escudo ? 'No escudo' : 'A armadura segurou', estilo: 'defesa' };
+  }
+  const texto = { esquivou: 'Esquivou!', errou: 'Errou', fora: 'Fora do alcance', suprimido: 'Suprimido!', firme: 'Firme', acertou: 'Acertou' }[resultado];
+  return texto ? { texto, estilo: resultado === 'suprimido' || resultado === 'acertou' ? 'acerto' : 'erro' } : null;
+}
+
 // O ataque pegou? true / false; null quando falta a DV (o mestre decide).
 // Na Concentração, true quer dizer que o alvo perdeu (foi suprimido).
 export function acertou({ modo, escolha, ataque, defesa = null, dv = null }) {

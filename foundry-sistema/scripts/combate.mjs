@@ -8,6 +8,7 @@
 //   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga e a rajada Tech e o teste Smart.
 import { DEFESAS, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
+import { animar, textoFlutuante } from './efeitos.mjs';
 import { TABELAS_DV } from './gerado.mjs';
 import { JanelaDeDefesa } from './janela-defesa.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
@@ -63,10 +64,20 @@ const TRATADORES = {
   }
 };
 
+// Um ataque por vez no mestre, como o Fluxo: o próximo só começa quando o anterior termina (a defesa, o dano e o
+// cartão), para as janelas de reação e os pedidos não se misturarem. O "Desfazer" não entra na fila: o mestre não
+// espera o ataque em curso para desfazer outro.
+let fila = Promise.resolve();
+function naFila(tarefa) {
+  const resultado = fila.then(tarefa, tarefa);
+  fila = resultado.catch(() => {});
+  return resultado;
+}
+
 export function registrarCombate() {
   game.socket.on(CANAL, async mensagem => {
     if (mensagem.tipo === 'ataque' && souOMestreAtivo()) {
-      await resolver(mensagem.pedido, game.users.get(mensagem.de)).catch(erro => console.error(`${SISTEMA} | ataque`, erro));
+      await naFila(() => resolver(mensagem.pedido, game.users.get(mensagem.de))).catch(erro => console.error(`${SISTEMA} | ataque`, erro));
     } else if (mensagem.tipo === 'pedido' && mensagem.usuario === game.user.id) {
       const tratar = TRATADORES[mensagem.pedido];
       const resposta = tratar ? await tratar(mensagem.dados, mensagem.id).catch(erro => { console.error(`${SISTEMA} | ${mensagem.pedido}`, erro); return null; }) : null;
@@ -78,6 +89,8 @@ export function registrarCombate() {
       const janela = janelas.get(mensagem.id);
       if (janela?.expirar) janela.expirar(); else janela?.close();
       janelas.delete(mensagem.id);
+    } else if (mensagem.tipo === 'texto') {
+      textoFlutuante(mensagem.dados);
     }
   });
 }
@@ -153,14 +166,14 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // A carga marca a rodada na arma, para esfriar; o "Desfazer" do mestre tira a marca.
   const carga = tech ? await marcarCarga(arma) : null;
   const { total, mensagem } = await testar(atacante, {
-    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: 'gm', dados: { ataque: true },
+    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true },
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
     smart, cobertura, carga, doisCanos
   };
-  if (game.user.isGM) return resolver(dados, game.user);
+  if (game.user.isGM) return naFila(() => resolver(dados, game.user));
   game.socket.emit(CANAL, { tipo: 'ataque', pedido: dados, de: game.user.id });
   return dados;
 }
@@ -286,7 +299,7 @@ export async function resolver(pedido, usuario = game.user) {
   else if (ctx.modo === 'explosivo') await explosao(ctx);
   else if (ctx.modo === 'cartucho') await cartucho(ctx);
   else await individual(ctx);
-  // O total do ataque, escondido até a defesa, aparece para todos.
+  // O total do ataque, escondido até a defesa ("Esconder o total do ataque"), aparece para todos.
   const mensagem = game.messages.get(pedido.mensagem);
   if (mensagem?.whisper.length) await mensagem.update({ whisper: [] });
   return cartaoDoResultado(ctx);
@@ -332,9 +345,10 @@ function avisoDeEspera(alvo, id, opcoes) {
 async function defender(ctx, alvo, { opcoes, dv = null }) {
   const padrao = R.escolhaPadrao(opcoes);
   if (opcoes.length === 1 && !precisaRolar(opcoes[0])) return { escolha: opcoes[0] };
+  // O total só vai para o jogador quando ele está à vista ("Esconder o total do ataque" desligado).
   const pacote = {
     alvo: alvo.token.uuid, arma: ctx.arma.uuid, atacante: ctx.nomeAtq, imgAtq: ctx.tokenAtq?.texture?.src || ctx.atacante.img, modo: ctx.modo, descricao: ctx.descricao,
-    metros: ctx.modo === 'corpo' ? null : alvo.metros, dv, opcoes, padrao
+    metros: ctx.modo === 'corpo' ? null : alvo.metros, dv, opcoes, padrao, ...(config('escondeAtaque') ? {} : { total: ctx.pedido.total })
   };
   if (alvo.dono) {
     const promessa = pedir(alvo.dono, 'defesa', pacote);
@@ -697,8 +711,38 @@ async function cartaoDoResultado(ctx) {
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map(l => ({ ...l, contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 });
-  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, flags: { [SISTEMA]: { ataque: resumo, desfazer, marcas: ctx.marcas } } });
+  const para = destinatarios(ctx);
+  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, desfazer, marcas: ctx.marcas } } });
+  mostrarNaMesa(ctx, para);
   return resumo;
+}
+
+// Quem vê o cartão do resultado ("Quem vê o cartão do resultado"): todos (null), os envolvidos (o mestre, quem atacou e
+// os donos dos alvos) ou só o mestre.
+function destinatarios(ctx) {
+  const modo = config('resultado');
+  if (modo === 'publico') return null;
+  const ids = new Set(game.users.filter(usuario => usuario.isGM).map(usuario => usuario.id));
+  if (modo === 'envolvidos') {
+    ids.add(ctx.usuario.id);
+    for (const linha of ctx.linhas) for (const usuario of game.users) if (linha.token.actor?.testUserPermission(usuario, 'OWNER')) ids.add(usuario.id);
+  }
+  return [...ids];
+}
+
+// O texto em cima de cada alvo, para quem vê o cartão (aqui e, pelo socket, nos outros clientes), e a animação
+// (efeitos.mjs), pela configuração "Efeitos na mesa".
+function mostrarNaMesa(ctx, para) {
+  const modo = config('animacoes');
+  if (modo === 'nao') return;
+  for (const linha of ctx.linhas) {
+    const resumo = R.textoNoToken(linha);
+    if (!resumo) continue;
+    const dados = { cena: linha.token.parent.id, token: linha.token.id, ...resumo, para };
+    textoFlutuante(dados);
+    game.socket.emit(CANAL, { tipo: 'texto', dados });
+    if (modo === 'auto' && !linha.token.hidden) animar(linha.token, resumo.estilo).catch(erro => console.warn(`${SISTEMA} | efeito`, erro));
+  }
 }
 
 // Desfaz o resultado de um ataque: HP, armadura e escudo voltam, e as lesões e o Suprimido saem da ficha. O Ponto Fraco

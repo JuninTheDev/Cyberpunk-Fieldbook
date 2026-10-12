@@ -5,11 +5,13 @@
     <figure><img src="{{alvo.img}}" alt=""><figcaption>{{alvo.nome}}</figcaption></figure>
   </header>
   <p class="arma"><b>{{arma}}</b> · {{descricao}}{{#if metrosTexto}} · {{metrosTexto}} m{{/if}}</p>
-  {{#if mestre}}
+  {{#if verTotal}}
   <p class="total">Total do ataque: <b>{{total}}</b>{{#if dv}} · DV {{dv}}{{/if}}</p>
-  <p class="nota">Fechada sem escolher, o sistema escolhe (como na defesa automática).</p>
   {{else}}
   <p class="nota">Você não vê o total do ataque: decida antes.</p>
+  {{/if}}
+  {{#if mestre}}
+  <p class="nota">Fechada sem escolher, o sistema escolhe (como na defesa automática).</p>
   {{/if}}
   <div class="opcoes">
     {{#each opcoes}}

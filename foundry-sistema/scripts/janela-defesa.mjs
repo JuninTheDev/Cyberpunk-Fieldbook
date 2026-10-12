@@ -1,9 +1,10 @@
 // A janela de reação do alvo, como a "Ataque!" do Fluxo de Combate do Foundry 12, no visual do sistema: quem ataca e
 // quem é atacado, a arma, a distância e as escolhas (esquivar, aguentar, o escudo, a Concentração), cada uma com a conta
-// que vale (a esquiva média, a DV do alcance, os PV do escudo). O jogador não vê o total do ataque; o mestre, pelos NPCs,
-// vê. A barra mostra o tempo que resta: sem resposta no tempo, ou fechada no X, vale a escolha padrão. Quando o mestre
-// desiste de esperar (ou responde pelo jogador), ele a fecha sem resposta (expirar). A do mestre, pelos NPCs, não tem
-// tempo; fechada no X, fica sem resposta, e o sistema escolhe como na defesa automática (como a janela antiga).
+// que vale (a esquiva média, a DV do alcance, os PV do escudo). O jogador não vê o total do ataque (menos com "Esconder o
+// total do ataque" desligado); o mestre, pelos NPCs, vê. A barra mostra o tempo que resta: sem resposta no tempo, ou
+// fechada no X, vale a escolha padrão. Quando o mestre desiste de esperar (ou responde pelo jogador), ele a fecha sem
+// resposta (expirar). A do mestre, pelos NPCs, não tem tempo; fechada no X, fica sem resposta, e o sistema escolhe como
+// na defesa automática (como a janela antiga).
 import { caminho, SISTEMA } from './config.mjs';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -81,7 +82,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
     const contexto = await super._prepareContext(options);
     const d = this.dados;
     return Object.assign(contexto, {
-      ...d, metrosTexto: d.metros ? numero(d.metros) : '', padraoTexto: ROTULO[d.padrao] ?? d.padrao,
+      ...d, metrosTexto: d.metros ? numero(d.metros) : '', padraoTexto: ROTULO[d.padrao] ?? d.padrao, verTotal: d.mestre || Number.isFinite(d.total),
       opcoes: d.opcoes.map(escolha => ({
         escolha, icone: ICONES[escolha] ?? 'fa-circle',
         titulo: { esquivar: d.modo === 'explosivo' ? 'Esquivar da explosão' : 'Esquivar', aguentar: d.modo === 'explosivo' ? 'Ficar' : 'Aguentar', escudo: 'Usar o escudo', concentrar: 'Rolar a Concentração' }[escolha] ?? escolha,

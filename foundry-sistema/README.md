@@ -56,10 +56,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Espingarda com cartucho** (pela munição): um ataque contra DV 13. Se acertar, cada alvo a até 6 m leva 3d6, rolados uma vez.
   - **Explosivo** (lança-granadas, foguete ou granada no pente): o ataque contra a DV do alcance do alvo. Se acertar, todos na área de 10 × 10 m levam o mesmo dano, menos quem esquivar passando do ataque.
 - **A defesa, como no Fluxo de Combate:**
-  - o total do ataque fica só com o mestre e quem atacou até a defesa; depois aparece para todos;
+  - o total do ataque fica só com o mestre e quem atacou até a defesa; depois aparece para todos (com "Esconder o total do ataque" desligado, todos o veem desde o começo, também na janela de reação);
   - quem controla cada alvo recebe a janela de reação no computador dele ("Você está sendo atacado!", como a "Ataque!" do Fluxo): quem ataca e quem é atacado, a arma e a distância, e cada escolha (Esquivar, Aguentar, Escudo) com a conta (a esquiva e a média dela, a DV do alcance, os PV do escudo), sem o total do ataque. Ele escolhe e rola a própria Evasão;
   - de tiro, só esquiva quem tem REF 8+; no corpo a corpo, todos; sem perna, ninguém; empate é do defensor;
   - pelos NPCs, o mestre escolhe na mesma janela, vendo o total (fechada sem escolher, o sistema escolhe), ou o sistema decide pela esquiva média;
+  - um ataque por vez: o mestre resolve um ataque inteiro (a defesa, o dano e o cartão) antes de começar o próximo, como o Fluxo. O "Desfazer" não espera a fila;
   - passados 8 s sem resposta, o mestre ganha um cartão para responder pelo jogador. A barra da janela mostra o tempo que resta; quando ele acaba, ou quando o jogador fecha a janela no X, vale a escolha padrão (aguentar; a Concentração no fogo supressivo; no corpo a corpo, a esquiva), rolada direto, e o cartão do resultado anota.
 - **Dano na ficha**, com as regras do CORE:
   - **Quem rola:** quem atacou rola o dano no computador dele; se ele não responder, o mestre rola.
@@ -142,6 +143,9 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
 - **Death Save no começo do turno:** jogadores e NPCs, só jogadores, ou desligado (padrão: todos).
 - **Explosivos pegam toda a área** (padrão: sim).
 - **Fogo supressivo sem alvo pega todos à vista** (padrão: sim).
+- **Esconder o total do ataque até a defesa** (padrão: sim).
+- **Quem vê o cartão do resultado:** todos, os envolvidos (o mestre, quem atacou e os donos dos alvos) ou só o mestre (padrão: todos). O texto em cima do token segue o cartão.
+- **Efeitos na mesa:** o texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro; só o texto; ou nada (padrão: texto e animação).
 
 As do módulo cpr-2077, para as armas de 2077, com os mesmos padrões:
 - **Ataque das armas Smart:** substitui REF + perícia, ou é uma alternativa, com o botão Smart (padrão: substitui).
@@ -157,10 +161,7 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Do Fluxo de Combate:**
-  - a animação e o texto em cima do token;
-  - quem vê o cartão do resultado (hoje, todos);
-  - o Reflex Tuner.
+- **Do Fluxo de Combate:** o Reflex Tuner.
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
 - **Das armas de 2077,** as regras de alguns modelos (a Satara, a Burya, a Senkoh, o +1 entre 13 e 50 m: veja o ROADMAP), e o cyberware que é arma.
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
@@ -202,6 +203,7 @@ E a do navegador de cada um:
   - o escudo (com a janela do mestre para a defesa de um NPC, que mostra o total e, fechada no X, deixa o sistema escolher, e o explosivo que passa do escudo destruído), o corpo a corpo com esquiva e a armadura pesada;
   - a Consciência de Combate do Solo (com o Ponto Fraco e a Deflexão por rodada e o Desfazer) e o MOVE do mortalmente ferido;
   - a defesa e o ataque de um jogador num segundo navegador: a janela de reação (o texto sem o total, a conta da esquiva, a DV e a barra do tempo), o X e o tempo esgotado valendo a escolha padrão, o dano rolado por ele, o ataque dele sem mestre na mesa e o mestre respondendo por ele quando demora;
+  - o que a mesa vê do ataque: um ataque por vez no mestre, quem vê o cartão do resultado (todos, os envolvidos, só o mestre), o texto em cima do token nos dois navegadores, os efeitos desligados e o total à vista;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - a Sorte preparada na ficha e o visual dos cartões do chat;

@@ -1726,6 +1726,112 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('o que a mesa vê do ataque (como o Fluxo): um ataque por vez no mestre (o segundo espera o primeiro); o texto em cima do token para quem vê o cartão; "Quem vê o cartão do resultado" (só o mestre, os envolvidos); "Efeitos na mesa" desligado; e, com "Esconder o total do ataque" desligado, o total à vista desde o começo, também na janela de reação', async () => {
+      // Seis tiros da Atiradora no Alvo, que aguenta: d10 2 → REF 8 + Armas de Ombro 4 + 2 = 14 (e d10 3 → 15) contra a
+      // DV 16 (10 m): errou, sem dano.
+      const janela = `document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing)')`;
+      const contarJanelas = `document.querySelectorAll('.application.cpr-fieldbook.janela-defesa:not(.minimizing)').length`;
+      const rifle = `__ator('Atiradora').items.getName('Assault Rifle')`;
+      // Os textos em cima do token, nos dois navegadores: o createScrollingText grava o que mostra.
+      const gravar = `(() => {
+        window.__textos = [];
+        const original = canvas.interface.constructor.prototype.createScrollingText;
+        canvas.interface.createScrollingText = function (origem, texto, opcoes) { window.__textos.push(texto); return original.call(this, origem, texto, opcoes); };
+        return true;
+      })()`;
+      const textos = async () => [await edge.evaluate(`window.__textos.splice(0)`), await jogador.evaluate(`window.__textos.splice(0)`)];
+      const configurar = (chave, valor) => edge.evaluate(`game.settings.set('${S}', '${chave}', ${JSON.stringify(valor)}).then(() => true)`);
+      // No jogador: espera uma janela de reação que não é a anterior (pelo id) e aguenta nela.
+      const proximaJanela = async (anterior = null) => {
+        for (let i = 0; i < 60; i++) {
+          const id = await jogador.evaluate(`${janela}?.id ?? null`);
+          if (id && id !== anterior) return id;
+          await jogador.sleep(250);
+        }
+        return null;
+      };
+      const aguentar = id => jogador.evaluate(`document.getElementById('${id}').querySelector('button.opcao[data-escolha="aguentar"]').click()`);
+      // Um tiro do mestre no Alvo; o jogador aguenta. Devolve o resumo, quem recebeu o cartão do resultado e se o jogador
+      // vê o conteúdo dele. "antes" roda com a janela de reação aberta.
+      const tiro = async (d10, antes = null) => {
+        await fixar(edge, [[d10, 10]]);
+        await edge.evaluate(`(() => { window.__tiro = ${rifle}.atacar({ alvo: __token('Alvo') }); return true; })()`);
+        const lido = antes ? await antes() : null;
+        const texto = await responder(jogador, 'aguentar');
+        const r = await edge.evaluate(`window.__tiro.then(r => {
+          const cartao = game.messages.contents.findLast(m => m.getFlag('${S}', 'ataque')?.id === r.id);
+          return { id: r.id, ataque: r.ataque, resultado: r.linhas[0]?.resultado, whisper: cartao.whisper.map(id => game.users.get(id).name).sort() };
+        })`);
+        await jogador.sleep(400);
+        const viu = await jogador.evaluate(`Boolean(game.messages.contents.find(m => m.getFlag('${S}', 'ataque')?.id === '${r.id}')?.isContentVisible)`);
+        return { ...r, viu, texto, lido };
+      };
+      try {
+        await edge.evaluate(gravar);
+        await jogador.evaluate(gravar);
+        await edge.evaluate(`(() => { window.__penteAntes = ${rifle}.system.pente.value; return true; })()`);
+
+        // 1. A fila: o segundo tiro sai enquanto o primeiro espera a defesa, e a janela dele só abre depois.
+        await fixar(edge, [[2, 10], [3, 10]]);
+        await edge.evaluate(`(() => { window.__primeiro = ${rifle}.atacar({ alvo: __token('Alvo') }); return true; })()`);
+        const primeira = await proximaJanela();
+        await edge.evaluate(`(() => { window.__segundo = ${rifle}.atacar({ alvo: __token('Alvo') }); return true; })()`);
+        await jogador.sleep(1500);
+        const juntas = await jogador.evaluate(contarJanelas);
+        if (primeira) await aguentar(primeira);
+        const segunda = await proximaJanela(primeira);
+        if (segunda) await aguentar(segunda);
+        const fila = await edge.evaluate(`Promise.all([window.__primeiro, window.__segundo]).then(rs => rs.map(r => r.ataque + ' ' + r.linhas[0]?.resultado))`);
+        await jogador.sleep(400);
+        const [textosA, textosAJogador] = await textos();
+
+        // 2. Só o mestre vê o cartão (e o texto); 3. os envolvidos (o mestre e o dono do Alvo); 4. sem efeitos na mesa.
+        await configurar('resultado', 'mestre');
+        const soMestre = await tiro(2);
+        const [textosB, textosBJogador] = await textos();
+        await configurar('resultado', 'envolvidos');
+        const envolvidos = await tiro(2);
+        const [textosC, textosCJogador] = await textos();
+        await configurar('resultado', 'publico');
+        await configurar('animacoes', 'nao');
+        const semEfeito = await tiro(2);
+        const [textosD, textosDJogador] = await textos();
+
+        // 5. O total à vista: o cartão do ataque é de todos antes da defesa, e a janela de reação mostra o total.
+        await configurar('animacoes', 'auto');
+        await configurar('escondeAtaque', false);
+        const aVista = await tiro(2, async () => {
+          await proximaJanela();
+          return jogador.evaluate(`Boolean(game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.ataque).at(-1)?.isContentVisible)`);
+        });
+        const info = {
+          primeira: Boolean(primeira), juntas, segunda: Boolean(segunda) && segunda !== primeira, fila, textosA, textosAJogador,
+          soMestre: { ...soMestre, texto: undefined }, textosB, textosBJogador, envolvidos: { ...envolvidos, texto: undefined }, textosC, textosCJogador,
+          semEfeito: { ...semEfeito, texto: undefined }, textosD, textosDJogador, aVista
+        };
+        const ok = info.primeira && juntas === 1 && info.segunda && fila.join() === '14 errou,15 errou' && textosA.join() === 'Errou,Errou' && textosAJogador.join() === 'Errou,Errou'
+          && soMestre.whisper.join() === 'Gamemaster' && !soMestre.viu && soMestre.resultado === 'errou' && textosB.join() === 'Errou' && textosBJogador.length === 0
+          && envolvidos.whisper.join() === 'Gamemaster,Jogador' && envolvidos.viu && textosC.join() === 'Errou' && textosCJogador.join() === 'Errou'
+          && semEfeito.whisper.length === 0 && semEfeito.viu && textosD.length === 0 && textosDJogador.length === 0
+          && aVista.lido === true && /Total do ataque: 14 · DV 16/.test(aVista.texto ?? '') && !/Você não vê o total/.test(aVista.texto ?? '') && aVista.resultado === 'errou';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => {
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-defesa')) await app.close();
+          window.__fila = [];
+          delete canvas.interface.createScrollingText;
+          return true;
+        })()`);
+        await edge.evaluate(`(async () => {
+          for (const [chave, valor] of [['resultado', 'publico'], ['animacoes', 'auto'], ['escondeAtaque', true]]) await game.settings.set('${S}', chave, valor);
+          if (window.__penteAntes !== undefined) await ${rifle}.update({ 'system.pente.value': window.__penteAntes });
+          window.__fila = [];
+          delete canvas.interface.createScrollingText;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('explosivo: lança-granadas (perfurante) contra DV 15; explode na área: o Alvo (aguentou) e o Capanga ao lado levam os mesmos 12; o Longe fica fora', async () => {
       // Ataque: d10 9 → REF 8 + Armas Pesadas 4 + 9 = 21 contra DV 15 (Grenade Launcher, 7–12 m). Dano 6d6: 1, 2, 3, 1, 2, 3 = 12.
       await edge.evaluate(`(async () => {

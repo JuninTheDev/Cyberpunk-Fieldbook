@@ -765,6 +765,19 @@ test('A conta da defesa na janela de reação (como a "Ataque!" do Fluxo): as pa
   assert.deepEqual(regras.contaDaDefesa([{ rotulo: 'DEX', valor: 0 }]), { texto: 'DEX 0 + 1d10', media: 5.5 });
 });
 
+test('O texto em cima do token (como o Fluxo de Combate): o HP perdido, o crítico, a armadura e o escudo que seguraram, e cada resultado sem dano', () => {
+  const dano = (hpAntes, hpDepois, extra = {}) => ({ hpAntes, hpDepois, lesoes: [], ...extra });
+  assert.deepEqual(regras.textoNoToken({ resultado: 'acertou', dano: dano(45, 33) }), { texto: '−12 HP', estilo: 'acerto' });
+  assert.deepEqual(regras.textoNoToken({ resultado: 'acertou', dano: dano(45, 30, { lesoes: [{ nome: 'Braço quebrado' }] }) }), { texto: '−15 HP · crítico!', estilo: 'acerto' });
+  assert.deepEqual(regras.textoNoToken({ resultado: 'acertou', dano: dano(45, 45) }), { texto: 'A armadura segurou', estilo: 'defesa' });
+  assert.deepEqual(regras.textoNoToken({ resultado: 'acertou', dano: dano(45, 45, { escudo: 'Bullet Proof Shield' }) }), { texto: 'No escudo', estilo: 'defesa' });
+  assert.deepEqual(['esquivou', 'errou', 'fora', 'suprimido', 'firme', 'acertou'].map(resultado => regras.textoNoToken({ resultado })), [
+    { texto: 'Esquivou!', estilo: 'erro' }, { texto: 'Errou', estilo: 'erro' }, { texto: 'Fora do alcance', estilo: 'erro' },
+    { texto: 'Suprimido!', estilo: 'acerto' }, { texto: 'Firme', estilo: 'erro' }, { texto: 'Acertou', estilo: 'acerto' }
+  ]);
+  assert.equal(regras.textoNoToken({ resultado: 'semDv' }), null);
+});
+
 test('Dano com o modificador do mestre (a janela de rolagem): entra depois do multiplicador do autofogo, como o CORE', () => {
   assert.equal(regras.expressaoDoDano('5d6'), '5d6');
   assert.equal(regras.expressaoDoDano('5d6', { modificador: 2 }), '5d6 + 2');
