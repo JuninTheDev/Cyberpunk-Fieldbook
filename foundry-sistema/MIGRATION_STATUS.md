@@ -28,7 +28,11 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
-| CORE | habilidades das outras Roles | falta |
+| CORE | os bônus de Role nas perícias (o Moto do Nomad; a especialização do Face; o Investigator do Lawman) | falta: P0, as perícias saem menores que na mesa (comparação com o CORE, abaixo) |
+| CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta |
+| CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | falta; a Sorte entrou pela ficha (ciclo 20) |
+| CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
+| CORE | ficha de capanga, Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
@@ -62,6 +66,50 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 4. **Falta a NET,** que a campanha usa. As armas de 2077 entraram nos ciclos 17 e 18 (os modos de cada classe e as
    regras de cada modelo que o Foundry 12 tinha); as de alguns modelos esperam a decisão da mesa (dúvidas abaixo).
 5. **Sem migração de dados entre versões deste sistema** (ainda não há mundo real para migrar).
+
+## Comparação com o CORE (2026-10-12)
+
+Pedido do usuário: conferir o que o sistema do Foundry 12 ainda tem e este não. O "sistema do Foundry 12" da mesa é o
+CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel Tático).
+
+- **Método:**
+  - **o código do CORE** em `fvtt-cyberpunk-red-core-dev/` (fora do git): as fichas (personagem, capanga, contêiner,
+    Black ICE, demônio), as rolagens e a janela de rolagem (`modules/rolls`, `modules/dialog`), os itens e os mixins,
+    as configurações, os ganchos e os textos da interface (`lang/en.json`);
+  - **a versão:** a pasta é a 0.93, de desenvolvimento. O que entrou depois da 0.92.4 veio do CHANGELOG (fica fora do
+    plano, no ROADMAP). O comportamento da 0.92.4 se confere no GitLab, pela tag, e os compêndios dela estão no
+    `.cache` do build;
+  - **as Roles da mesa:** os itens de Role do CORE e os do cpr-2077 (`foundry-2077/build/roles.mjs`), que a importação
+    do Foundry 12 põe na ficha, contra o texto da wiki (system-catalog.js, system-2077.js e system-criacao.js);
+  - **os módulos:** os READMEs do Fluxo, do NET Architect e do Painel Tático.
+- **O que muda número na mesa (P0):** os bônus de Role nas perícias. No CORE, o item de Role soma Rank ÷ `bonusRatio`
+  nas perícias da lista dele, sempre ou marcado na janela de rolagem (`getRoleMods` em `cpr-role.js`). Na mesa: o
+  Nomad soma 4 (Rank 4) nas seis perícias de veículo; o Face soma 4 nas duas da especialização; o Lawman marca o
+  Investigator na janela. Aqui nada soma, e a especialização nem é guardada.
+- **O que o Foundry 12 faz e o sistema não:**
+
+  | Área | No Foundry 12 | Aqui | ROADMAP |
+  | --- | --- | --- | --- |
+  | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | rola direto; a Sorte vai pela ficha | P1 |
+  | Rolagens | Facedown (COOL + Reputação + 1d10) | falta | P2 |
+  | Roles | os bônus nas perícias | falta | P0 |
+  | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | falta | P2 |
+  | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
+  | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
+  | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
+  | Cyberware | a base com os slots das opções | falta | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | falta | P3 |
+  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | falta | P3 |
+  | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
+  | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
+
+- **Já está aqui e bate com o Foundry 12:** a ficha, os atributos e as perícias (com as de família), a iniciativa
+  (1d10 + REF + bônus, sem crítico, como o padrão do CORE), os testes com o crítico do d10, o Death Save, o combate do
+  Fluxo, a armadura (SP do local, ablação, pesada, arma branca), o escudo, as lesões, o cyberware com a Humanidade, as
+  munições, os upgrades do livro básico (pente, ataque, SDP e assentos: os únicos modificadores que o conteúdo do CORE
+  usa, fora a luneta e as armas sob o cano), os veículos, o cyberdeck com os programas (sem a NET), o extrato, a Sorte,
+  o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
 
@@ -1021,3 +1069,16 @@ subtrair, como no sistema do Foundry 12.
 - **Ficou:** o histórico do ledger do Foundry 12 na migração (ROADMAP; mexe no módulo da mesa, decisão do usuário).
 - **Próximo:** pela ordem do ROADMAP, o resto do P2: o cyberware que é arma, e a Briga e as Artes Marciais na
   rolagem.
+- **Commit:** `8fa9390`.
+
+### Ciclo 22 (2026-10-12): a comparação com o CORE (documentação)
+
+O usuário pôs o CORE inteiro na pasta `fvtt-cyberpunk-red-core-dev/` e pediu para conferir o que falta.
+
+- **Feito:** a comparação (seção acima), com o plano no ROADMAP: um item novo no P0 (os bônus de Role nas perícias),
+  um no P1 (a janela de rolagem), quatro no P2 (as rolagens das Roles, o que falta na ficha e no inventário, o EMP) e
+  os do P3 e do P4; e o que só existe na 0.93, fora do plano.
+- **Testes:** não se aplicam (só documentos). O código não mudou.
+- **Próximo:** o P0 novo, os bônus de Role nas perícias (o Moto do Nomad e a especialização do Face), com a
+  especialização guardada pela importação e pela migração. Depois, a janela de rolagem (P1), que os bônus situacionais
+  pedem.

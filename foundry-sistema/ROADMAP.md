@@ -2,7 +2,8 @@
 
 Ordem de trabalho: P0 → P4. Não começa uma prioridade enquanto houver problema crítico conhecido numa acima. Cada
 tarefa só fecha com os portões de [QUALITY_GATES.md](QUALITY_GATES.md) passando e o [MIGRATION_STATUS.md](MIGRATION_STATUS.md)
-atualizado. Os achados vêm da auditoria de 2026-10-11.
+atualizado. Os achados vêm da auditoria de 2026-10-11 e da comparação com o CORE de 2026-10-12 (o que o Foundry 12 da
+mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
 
 ## P0: dados, integridade das regras e compatibilidade básica
 
@@ -26,6 +27,18 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [x] **Munição que não causa dano** (Ciclo 5): a wiki diz que biotoxina, veneno, EMP, flashbang, sonífera e gás
   lacrimogêneo "não causam dano", e a fumaça só cobre a área, mas o sistema aplicava o dano da arma. Agora quem é pego
   não leva dano, e o cartão diz o efeito com o texto da wiki. Os testes de resistência automáticos ficam para o P2.
+- [ ] **Bônus de Role nas perícias** (desvio de regra, achado na comparação com o CORE): no Foundry 12, o item de Role
+  soma o Rank em perícias, e aqui nada soma. Quem migra fica com essas perícias menores que na mesa. Fonte: a wiki
+  (system-catalog.js e system-2077.js) e os itens de Role do CORE e do cpr-2077 (`foundry-2077/build/roles.mjs`):
+  - **Nomad, Moto:** o Rank em Conduzir Veículo Terrestre, Pilotar Veículo Aéreo e Marítimo, e Tecnologia de Veículos
+    Terrestres, de Aeronaves e Marítimos;
+  - **Face, a especialização:** o Rank em duas perícias (Siren: Conversação e Cuidados Pessoais; Rockerboy: Tocar
+    Instrumento e Manha; Model: Atuação e Comércio);
+  - **a especialização vem da wiki:** a importação e a migração não guardam a escolhida (o `resultado.role.especializacao`
+    do criador), e a ficha "Na mesa" não a manda: ela vem da criação;
+  - **situacionais, com a janela de rolagem (P1):** o Investigator do Lawman (o Rank em Educação e Percepção, e nas
+    perícias da especialização, com pista de caso ativo) e o Netrunner de 2077 (o Rank de Interface nos testes técnicos
+    enquanto corre a NET). No Foundry 12, o do Lawman se marca na janela de rolagem.
 
 ## P1: bugs, testes de regressão e confiabilidade
 
@@ -44,6 +57,16 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [x] **Lacunas de teste** (Ciclo 6): escudo (com o explosivo que passa do escudo destruído), "responder pelo
   jogador", corpo a corpo com esquiva, armadura pesada, janela do mestre para a defesa de NPC e os erros da importação.
   A munição de borracha ganhou teste no ciclo 4.
+- [ ] **A janela de rolagem** (achado na comparação com o CORE): no Foundry 12, todo teste passa pela janela do CORE, e
+  os três módulos da mesa dependem dela (o Fluxo, o NET Architect e o Painel Tático: "confere os modificadores, põe
+  Sorte e confirma"; Ctrl pula). Aqui o teste rola direto. Falta:
+  - o modificador avulso (o que o mestre manda somar);
+  - os modificadores comuns do livro, pela tabela da wiki (RED p. 130, system-rules.js): noite ou pouca luz e nunca fez
+    antes (−1); tarefa complexa, sem as ferramentas certas, dormiu mal e tensão extrema (−2); exausto, muito bêbado ou
+    sedado, em segredo e encoberta por fumaça ou escuridão (−4); perícia complementar e tempo extra (+1);
+  - os efeitos situacionais, ligados ou não na hora: os que hoje ficam de fora (Audição Amplificada, Image Enhance, o
+    Sandevistan ligado, Dedos esmagados), o Investigator do Lawman e o Netrunner de 2077 (P0, acima);
+  - a Sorte na própria janela (hoje, preparada na ficha, ciclo 20), para o jogador que prefere assim.
 
 ## P2: fichas, inventário, equipamento, armas e combate
 
@@ -68,7 +91,18 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da
   Sorte; o ↺ do começo da sessão.
 - [ ] **Na rolagem, o resto:** Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
-  Falhas do Solo; Facedown.
+  Falhas do Solo; Facedown (COOL + Reputação + 1d10, como o CORE).
+- [ ] **As rolagens das Roles** (o CORE rola pelo item de Role; aqui só o Solo tem efeito):
+  - Impacto Carismático do Face (Rank + 1d10 contra DV 8, 10 ou 12) e Credibilidade da Media (Rank + 1d10);
+  - Barganha do Corpo (o Operator do Fixer: COOL + Comércio + Rank + 1d10, teste enfrentado);
+  - as especialidades do Tech (Field, Upgrade, Fabrication e Invention Expertise);
+  - Cirurgia e Tecnologia Médica do Medtech: só ele tem as duas perícias, que hoje não existem para rolar (TECH + 2 por
+    ponto de Cirurgia; TECH + os pontos de Farmacêutica e de Criossistemas, como a wiki e o CORE 0.92.3).
+- [ ] **Na ficha, o que o CORE e o Painel Tático têm:** consertar a armadura com um clique (hoje, só editando o SP na
+  ficha do item); rolar uma lesão crítica à mão (uma queda, uma explosão fora do ataque); macros na barra (arrastar
+  uma arma ou uma perícia).
+- [ ] **Inventário, o resto do CORE:** juntar itens iguais ao soltar na ficha (munição, equipamento) e dividir uma
+  pilha; avisar quando as armas equipadas pedem mais mãos do que há.
 - [x] **A ficha nova** (Ciclo 19), no visual do modelo de ficha da mesa: o painel geral em três colunas, as abas
   Combate, Equipamento, Cyberware, Role, NET e Vida, o apelido e o Lifepath (com a importação da wiki), as perícias de
   família pela ficha e o tema escuro com as fontes embutidas, também na ficha do item. A aba Role mostra as
@@ -109,7 +143,8 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [ ] **Cyberware que é arma** (Wolvers, Mantis Blades, Gorilla Arms, o lança-granadas embutido): hoje é só cyberware e
   não ataca.
 - [ ] **Efeitos das munições especiais:** os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
-  do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente.
+  do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente; o EMP, que desliga os itens
+  eletrônicos (o CORE marca cada item e tem a macro "Get EMP'd").
 
 ## P3: Netrunning, cyberware, NPCs e ferramentas do mestre
 
@@ -117,7 +152,11 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [ ] **Cyberware:** base e slots ao instalar (com as opções na base, como a montagem da wiki), terapia e ciberpsicose.
 - [ ] **NET de 2077:** a RAM e o Cooling do deck, os quickhacks e os daemons.
 - [ ] **NPCs:** ficha de capanga (mook), Black ICE e demônios como atores.
-- [ ] **Ferramentas do mestre:** o Painel Tático dentro do sistema.
+- [ ] **Ferramentas do mestre:** o Painel Tático dentro do sistema; o contêiner do CORE (loja, saque e esconderijo, com
+  o registro das trocas).
+- [ ] **Conteúdo fora do livro básico:** o Black Chrome e os DLCs do CORE 0.92.4, as tabelas de arquitetura da NET e as
+  macros e cenas do CORE. A loja da wiki não vende esses itens; se o mestre deu algum no Foundry 12, a migração avisa
+  item a item. Converter o que a mesa usar.
 
 ## P4: refatoração, desempenho, acessibilidade e documentação
 
@@ -125,6 +164,16 @@ atualizado. Os achados vêm da auditoria de 2026-10-11.
 - [ ] Tradução para inglês (hoje, o arquivo `en` aponta para o português).
 - [ ] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura).
 - [ ] Ícones próprios no lugar dos genéricos do Foundry.
+- [ ] Conveniências do CORE: a régua que mostra o DV da arma pela distância e o DV no HUD do token (o ataque já calcula
+  o DV sozinho); "Hardened" (Danger Gal Dossier p. 150, fora da wiki: só se a mesa quiser).
+
+## Fora do plano: o que só existe no CORE 0.93
+
+A pasta `fvtt-cyberpunk-red-core-dev/` é a 0.93, de desenvolvimento; a mesa usa a 0.92.4. Pelo CHANGELOG, isto entrou
+depois e a mesa não tem: o navegador de documentos com o carrinho de compras (a loja da wiki faz esse papel), os
+modificadores `red` e `dmg` nas fórmulas, o crítico configurável por arma e munição (aqui a munição já diz o que não
+causa lesão), a Sorte caseira do JonJon, os marcadores de turno e o tema estendido ao Foundry. Entram só se o usuário
+pedir.
 
 ## Decisões tomadas
 
