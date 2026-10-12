@@ -3,7 +3,10 @@
 import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
-import { aplicarDano, ehCoprocessador, ehLuneta, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave, PENALIDADE_CORONHA, perfil2077, situacionaisDeRole, sorteParaGastar } from './regras.mjs';
+import {
+  aplicarDano, deLonge, ehCoprocessador, ehLuneta, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  PENALIDADE_CORONHA, perfil2077, situacionaisDeRole, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+} from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
@@ -79,14 +82,21 @@ export class AtorCPR extends Actor {
     }
     return lista;
   }
-  // Os situacionais de um ataque: os efeitos na perícia da arma e em todas as ações (os de Role não: são de teste) e a
-  // luneta de precisão da arma, num tiro único ou mirado, ligada quando a regra vale (regras.lunetaVale, pela distância
-  // do alvo e pelo bônus do cyberware óptico nesse tiro).
+  // Os situacionais de um ataque: os efeitos na perícia da arma e em todas as ações (os de Role não: são de teste) e, num
+  // tiro único ou mirado com arma à distância, os bônus de longe (a 51 m ou mais, wiki), ligados quando a regra vale: os
+  // TeleOptics instalados que servem nesse tiro (regras.teleopticsNoTiro) e a luneta de precisão da arma, que não acumula
+  // com cyberware óptico (regras.lunetaVale).
   situacionaisDoAtaque(arma, { pericia, modo, local = 'corpo', metros = null }) {
     const lista = this.#efeitosSituacionais(this.#chavesDoTeste(pericia));
-    const luneta = arma.system.aDistancia && ehTiroUnico(modo) ? arma.instalados.find(item => item.type === 'upgrade' && ehLuneta(item.name, item.getFlag(SISTEMA, 'catalogo'))) : null;
+    if (!arma.system.aDistancia || !ehTiroUnico(modo)) return lista;
+    const mirado = Boolean(LOCAIS_MIRADOS[local]);
+    const tiro = mirado ? 'tiro mirado' : 'tiro único';
+    const instalados = this.items.filter(item => item.type === 'cyberware' && item.system.instalado).map(item => tipoDeTeleOptics(item.name, item.getFlag(SISTEMA, 'catalogo')));
+    const teleoptics = teleopticsNoTiro(instalados, { mirado });
+    for (const tipo of teleoptics) lista.push({ id: tipo, rotulo: `${TELEOPTICS[tipo].nome}: ${tiro} a ${LONGE} m ou mais`, valor: 1, ligado: deLonge(metros) });
+    const luneta = arma.instalados.find(item => item.type === 'upgrade' && ehLuneta(item.name, item.getFlag(SISTEMA, 'catalogo')));
     if (luneta) {
-      const bonusOptico = LOCAIS_MIRADOS[local] ? this.system.bonus.tiroMirado : this.system.bonus.tiroUnico;
+      const bonusOptico = (mirado ? this.system.bonus.tiroMirado : this.system.bonus.tiroUnico) + (teleoptics.length && deLonge(metros) ? 1 : 0);
       lista.push({ id: luneta.uuid, rotulo: `${luneta.name}: alvo a ${LUNETA.metros} m ou mais`, valor: LUNETA.valor, ligado: lunetaVale({ metros, bonusOptico }) });
     }
     return lista;

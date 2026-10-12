@@ -737,3 +737,23 @@ test('Luneta de precisão (wiki: "+1 em tiro único ou tiro mirado contra alvo a
   const loja = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
   assert.match(loja, /\+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais\. Não acumula com cyberware óptico\./);
 });
+
+test('TeleOptics pela wiki (decisão do usuário): o do RED, +1 no tiro mirado a 51 m ou mais; o de 2077, no tiro único ou no mirado; cada tipo uma vez; o catálogo sem o +1 de sempre do CORE', () => {
+  const catalogoDaWiki = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  assert.match(catalogoDaWiki, /\['TeleOptics', 'Visão detalhada até 800 m; \+1 em tiros mirados contra alvos a 51 m ou mais\.'/);
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.match(de2077, /ware\('TeleOptics \(2077\)'.*Contra alvos a 51 m ou mais, <b>\+1 em tiro único ou mirado<\/b>\. Instalar mais de um não soma, e não acumula com a Sniping Scope da arma\./);
+  assert.equal(regras.tipoDeTeleOptics('TeleOptics'), 'core_cyberware:teleoptics');
+  assert.equal(regras.tipoDeTeleOptics('Olhos', 'cyberware-2077:teleoptics-2077'), 'cyberware-2077:teleoptics-2077');
+  assert.equal(regras.tipoDeTeleOptics('Kiroshi Optics'), null);
+  const red = 'core_cyberware:teleoptics';
+  const v2077 = 'cyberware-2077:teleoptics-2077';
+  assert.deepEqual(regras.teleopticsNoTiro([red, v2077, null], { mirado: true }), [red, v2077]);
+  assert.deepEqual(regras.teleopticsNoTiro([red, v2077], { mirado: false }), [v2077]);
+  assert.deepEqual(regras.teleopticsNoTiro([v2077, v2077], { mirado: false }), [v2077]);
+  assert.equal(regras.deLonge(51), true);
+  assert.equal(regras.deLonge(50.9), false);
+  assert.equal(regras.deLonge(undefined), false);
+  assert.deepEqual(catalogo[red].effects, []);
+  assert.deepEqual(catalogo[v2077].effects, []);
+});

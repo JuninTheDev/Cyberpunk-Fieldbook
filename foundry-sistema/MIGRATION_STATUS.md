@@ -210,10 +210,15 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   janela a soma sozinho. "Não acumula" virou: se o cyberware óptico já dá o bônus nesse tiro (o de tiro mirado ou o de
   tiro único), a luneta vem desmarcada.
 
-- **TeleOptics: a wiki e o CORE não batem.** A wiki: "+1 em tiros mirados contra alvos a 51 m ou mais". O CORE (e a
-  mesa do Foundry 12): +1 no tiro mirado e +1 no tiro único, sempre, sem olhar a distância. Aqui: +1 no mirado, sempre
-  (o efeito do CORE), e nada no tiro único (o bônus de tiro único que o efeito do CORE dá nunca entrou no ataque). A mesa
-  decide: a regra da wiki (pela distância, como a luneta) ou a do CORE.
+- **TeleOptics: muda o que a mesa vê (decidido em 2026-10-12, pela wiki).** O CORE (a mesa do Foundry 12) dá +1 no
+  tiro mirado e +1 no tiro único, sempre. Agora vale a wiki: o do RED dá "+1 em tiros mirados contra alvos a 51 m ou
+  mais"; o de 2077, "+1 em tiro único ou mirado" a 51 m ou mais ("instalar mais de um não soma, e não acumula com a
+  Sniping Scope da arma"). Os dois entram como a luneta, pela distância do primeiro alvo.
+  - **Para a mesa saber:** a wiki de 2077 diz que, nos itens com o mesmo nome de um do RED (Kerenzikov, TeleOptics,
+    Biomonitor), "vale a versão de 2077". A loja da wiki vende as duas versões, e o sistema segue a regra de cada uma.
+    Se a mesa quiser só a de 2077, é tirar a do RED da loja.
+  - **Um ator que já tinha o TeleOptics do RED** (importado antes do ciclo 26) guarda o efeito antigo do CORE (+1 no
+    mirado, sempre) até ser importado de novo; os novos vêm sem ele.
 
 - **Lexington e Testera: muda o que a mesa vê.** O autofogo da Lexington gasta 7 balas ("gastando só 7 balas por
   ataque"; no Foundry 12, as 10 do CORE). A Testera ganhou o botão dos dois cartuchos (4d6), que o Foundry 12 não tinha.
@@ -1234,3 +1239,28 @@ A janela de rolagem do CORE, que no Foundry 12 todo teste abre e da qual os mód
       sem a janela e o que se marca fora do ataque;
 - **Ficou:** a janela na defesa do jogador, no dano e no Death Save; o TeleOptics (dúvida acima).
 - **Próximo:** a janela de rolagem no resto (P1).
+- **Commit:** `a9f0447`.
+
+### Ciclo 26 (2026-10-12): o TeleOptics pela wiki (decisão do usuário)
+
+- **Decisão:** o usuário escolheu a regra da wiki para o TeleOptics, no lugar da do CORE.
+- **Implementado:**
+  - **a regra** (`regras.TELEOPTICS`, `tipoDeTeleOptics`, `teleopticsNoTiro`, `deLonge`): o do RED serve no tiro
+    mirado; o de 2077, no tiro único e no mirado; cada tipo uma vez; o bônus vale com o alvo a 51 m ou mais;
+  - **no ataque** (`AtorCPR.situacionaisDoAtaque`): os TeleOptics instalados que servem no tiro entram como os
+    situacionais de longe, marcados quando o alvo está a 51 m ou mais; a luneta não acumula com eles;
+  - **no catálogo:** o build tira os efeitos do CORE do TeleOptics do RED (+1 no mirado e no tiro único, sempre);
+    `REGRA_DA_WIKI` lista o item e o motivo.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 49 de 49. Um teste novo: o TeleOptics contra o texto da wiki (os dois), as regras e o catálogo sem o efeito do
+    CORE;
+  - G4: 62 de 62, cerca de 90 s. No passo da janela no ataque, uma fase nova, contra o alvo a 52,9 m:
+    - com o TeleOptics do RED, o Mirar traz o TeleOptics marcado e a luneta desmarcada (não acumula), e o tiro único só
+      a luneta;
+    - com o de 2077, o tiro único traz o TeleOptics marcado e a luneta desmarcada;
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado (conferido pelo md5):
+    - G3: o TeleOptics do RED no tiro único;
+    - G4: a luneta acumulando com o TeleOptics e o TeleOptics nunca marcado.
+- **Próximo:** a janela de rolagem na defesa do jogador, no dano e no Death Save (P1).

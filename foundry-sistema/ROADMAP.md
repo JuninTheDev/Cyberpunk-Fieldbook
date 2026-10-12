@@ -186,6 +186,10 @@ pedir.
 - **2026-10-11, migração da campanha:** pela ficha "Na mesa" que o Foundry 12 manda para a wiki ("Importar da
   mesa"), e não pela conversão dos atores do Foundry 12. Decisão do usuário.
 
+- **2026-10-12, TeleOptics:** a regra da wiki, e não a do CORE: o do RED dá +1 no tiro mirado contra alvo a 51 m ou mais;
+  o de 2077, +1 no tiro único ou no mirado, a 51 m ou mais. O CORE (a mesa do Foundry 12) dava +1 no mirado e no tiro
+  único, sempre. Decisão do usuário (Ciclo 26).
+
 - **2026-10-11, arma branca contra SP ímpar:** vale SP efetivo 6 para SP 11, como o CORE e o Fluxo de Combate (o que a
   mesa usa hoje). A wiki diz "ignoram metade do SP (arredondado p/ cima)", e o texto também cabe na leitura 5.
   Decisão do usuário.

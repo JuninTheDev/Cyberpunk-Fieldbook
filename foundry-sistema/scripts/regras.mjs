@@ -180,11 +180,26 @@ const MODOS_PEDIDOS = ['autofogo', 'supressivo', 'ricochete', 'carga', 'rajadaTe
 export const LOCAIS_MIRADOS = { cabeca: 'cabeça', perna: 'perna', item: 'item na mão' };
 // Os modos que são um tiro só (o tiro, o mirado, os de 2077 de um tiro): no CORE, os que levam o bônus de tiro único.
 export const ehTiroUnico = modo => !['autofogo', 'supressivo', 'rajadaTech', 'cartucho', 'explosivo'].includes(modo);
+// "A 51 m ou mais": a distância dos bônus de longe (a luneta e os TeleOptics, wiki).
+export const LONGE = 51;
+export const deLonge = metros => metros !== null && metros !== undefined && Number(metros) >= LONGE;
 // A luneta de precisão (wiki: "+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais. Não acumula com cyberware
 // óptico"; no CORE, +1 situacional): vale com o alvo a 51 m ou mais, se o cyberware óptico já não dá o bônus nesse tiro.
-export const LUNETA = { valor: 1, metros: 51 };
+export const LUNETA = { valor: 1, metros: LONGE };
 export const ehLuneta = (nome, catalogo = '') => catalogo === 'core_upgrades:sniping-scope' || /^sniping scope$/i.test(String(nome).trim());
-export const lunetaVale = ({ metros, bonusOptico = 0 }) => metros !== null && Number(metros) >= LUNETA.metros && !(Number(bonusOptico) > 0);
+export const lunetaVale = ({ metros, bonusOptico = 0 }) => deLonge(metros) && !(Number(bonusOptico) > 0);
+// TeleOptics (cyberóptico), pela wiki (decisão do usuário, 2026-10-12; o CORE dava +1 no mirado e no tiro único, sempre):
+// o do RED dá "+1 em tiros mirados contra alvos a 51 m ou mais"; o de 2077, "+1 em tiro único ou mirado" contra alvos a
+// 51 m ou mais ("instalar mais de um não soma, e não acumula com a Sniping Scope da arma").
+export const TELEOPTICS = {
+  'core_cyberware:teleoptics': { nome: 'TeleOptics', tiroUnico: false },
+  'cyberware-2077:teleoptics-2077': { nome: 'TeleOptics (2077)', tiroUnico: true }
+};
+// Qual TeleOptics é o item, pelo id do catálogo ou pelo nome; null se não é um.
+export const tipoDeTeleOptics = (nome, catalogo = '') => (TELEOPTICS[catalogo] ? catalogo : Object.keys(TELEOPTICS).find(id => TELEOPTICS[id].nome.toLowerCase() === String(nome).trim().toLowerCase()) ?? null);
+// Os TeleOptics (os tipos) que servem neste tiro: o do RED no mirado; o de 2077 no tiro único ou no mirado. Cada tipo,
+// uma vez.
+export const teleopticsNoTiro = (tipos, { mirado }) => [...new Set(tipos.filter(Boolean))].filter(tipo => mirado || TELEOPTICS[tipo]?.tiroUnico);
 export const DV_CARTUCHO = 13;
 export const ALCANCE_CARTUCHO = 6;
 export const RAIO_SUPRESSAO = 25;

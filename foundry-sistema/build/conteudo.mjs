@@ -366,6 +366,12 @@ function veiculo(doc, s) {
 const TIPOS_DO_PACK_DE_EQUIPAMENTO = { gear: equipamento, cyberware, cyberdeck };
 const doPackDeEquipamento = (doc, s) => TIPOS_DO_PACK_DE_EQUIPAMENTO[doc.type]?.(doc, s) ?? null;
 
+// Itens em que a regra é a da wiki, e não o efeito do CORE: a regra fica nas regras do sistema, e o efeito sai.
+const REGRA_DA_WIKI = {
+  // A wiki: "+1 em tiros mirados contra alvos a 51 m ou mais"; o CORE dá +1 no mirado e no tiro único, sempre. Decisão do
+  // usuário (2026-10-12): a da wiki, pela distância (regras.TELEOPTICS).
+  'core_cyberware:teleoptics': 'a regra da wiki, pela distância, está em regras.TELEOPTICS'
+};
 const CONVERSORES = {
   'core/weapons': arma, 'core/armor': armadura, 'core/ammo': municao, 'core/cyberware': cyberware,
   'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao,
@@ -426,9 +432,11 @@ async function main() {
     for (const doc of lerPack(yaml, pack)) {
       const item = converter(doc, doc.system || {}, foraDoMapa);
       if (!item) { semTipo.push(`${doc.name} (${doc.type})`); continue; }
-      item.effects = converterEfeitos(doc, camel, foraDoMapa, nomesDasPericias);
-      item.flags = { 'cpr-fieldbook': { catalogo: `${curto}:${slug(doc.name)}`, origem: { sistema: 'cyberpunk-red-core', versao: VERSAO, id: doc._id } } };
-      itens[`${curto}:${slug(doc.name)}`] = item;
+      const id = `${curto}:${slug(doc.name)}`;
+      item.effects = REGRA_DA_WIKI[id] ? [] : converterEfeitos(doc, camel, foraDoMapa, nomesDasPericias);
+      if (REGRA_DA_WIKI[id]) foraDoMapa.push(`${doc.name}: os efeitos do CORE (${REGRA_DA_WIKI[id]})`);
+      item.flags = { 'cpr-fieldbook': { catalogo: id, origem: { sistema: 'cyberpunk-red-core', versao: VERSAO, id: doc._id } } };
+      itens[id] = item;
       contagem[curto] = (contagem[curto] || 0) + 1;
     }
   }
