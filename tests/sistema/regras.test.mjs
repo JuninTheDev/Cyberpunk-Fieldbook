@@ -778,6 +778,17 @@ test('O texto em cima do token (como o Fluxo de Combate): o HP perdido, o críti
   assert.equal(regras.textoNoToken({ resultado: 'semDv' }), null);
 });
 
+test('Reflex Tuner (wiki, 2077: "depois de ser atingido, +1 para se esquivar pelo resto da rodada"): o item pelo catálogo e pelo nome, e o +1', () => {
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.match(de2077, /ware\('Reflex Tuner'.*depois de ser atingido, <b>\+1 para se esquivar<\/b> pelo resto da rodada\./);
+  assert.equal(regras.REFLEX_TUNER, 1);
+  assert.equal(regras.ehReflexTuner('Outro nome', 'cyberware-2077:reflex-tuner'), true);
+  assert.equal(regras.ehReflexTuner(' Reflex Tuner '), true);
+  assert.equal(regras.ehReflexTuner('Reflex Booster'), false);
+  assert.equal(regras.ehReflexTuner('Kerenzikov'), false);
+  assert.equal(catalogo['cyberware-2077:reflex-tuner']?.name, 'Reflex Tuner');
+});
+
 test('Dano com o modificador do mestre (a janela de rolagem): entra depois do multiplicador do autofogo, como o CORE', () => {
   assert.equal(regras.expressaoDoDano('5d6'), '5d6');
   assert.equal(regras.expressaoDoDano('5d6', { modificador: 2 }), '5d6 + 2');

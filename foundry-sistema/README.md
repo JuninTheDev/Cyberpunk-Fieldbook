@@ -59,6 +59,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - o total do ataque fica só com o mestre e quem atacou até a defesa; depois aparece para todos (com "Esconder o total do ataque" desligado, todos o veem desde o começo, também na janela de reação);
   - quem controla cada alvo recebe a janela de reação no computador dele ("Você está sendo atacado!", como a "Ataque!" do Fluxo): quem ataca e quem é atacado, a arma e a distância, e cada escolha (Esquivar, Aguentar, Escudo) com a conta (a esquiva e a média dela, a DV do alcance, os PV do escudo), sem o total do ataque. Ele escolhe e rola a própria Evasão;
   - de tiro, só esquiva quem tem REF 8+; no corpo a corpo, todos; sem perna, ninguém; empate é do defensor;
+  - o **Reflex Tuner** (2077): no combate, quem o tem e é atingido ganha +1 para se esquivar pelo resto da rodada (na conta da janela de reação e na esquiva); o "Desfazer" do ataque tira o +1;
   - pelos NPCs, o mestre escolhe na mesma janela, vendo o total (fechada sem escolher, o sistema escolhe), ou o sistema decide pela esquiva média;
   - um ataque por vez: o mestre resolve um ataque inteiro (a defesa, o dano e o cartão) antes de começar o próximo, como o Fluxo. O "Desfazer" não espera a fila;
   - passados 8 s sem resposta, o mestre ganha um cartão para responder pelo jogador. A barra da janela mostra o tempo que resta; quando ele acaba, ou quando o jogador fecha a janela no X, vale a escolha padrão (aguentar; a Concentração no fogo supressivo; no corpo a corpo, a esquiva), rolada direto, e o cartão do resultado anota.
@@ -161,7 +162,6 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Do Fluxo de Combate:** o Reflex Tuner.
 - **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
 - **Das armas de 2077,** as regras de alguns modelos (a Satara, a Burya, a Senkoh, o +1 entre 13 e 50 m: veja o ROADMAP), e o cyberware que é arma.
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
@@ -200,6 +200,7 @@ E a do navegador de cada um:
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o mirado na cabeça e na perna;
   - o autofogo, o explosivo em área, o cartucho, a munição de borracha e a que não causa dano;
+  - o Reflex Tuner: o +1 na esquiva depois de atingido, o "Desfazer" que o tira e o fim na rodada seguinte;
   - o escudo (com a janela do mestre para a defesa de um NPC, que mostra o total e, fechada no X, deixa o sistema escolher, e o explosivo que passa do escudo destruído), o corpo a corpo com esquiva e a armadura pesada;
   - a Consciência de Combate do Solo (com o Ponto Fraco e a Deflexão por rodada e o Desfazer) e o MOVE do mortalmente ferido;
   - a defesa e o ataque de um jogador num segundo navegador: a janela de reação (o texto sem o total, a conta da esquiva, a DV e a barra do tempo), o X e o tempo esgotado valendo a escolha padrão, o dano rolado por ele, o ataque dele sem mestre na mesa e o mestre respondendo por ele quando demora;

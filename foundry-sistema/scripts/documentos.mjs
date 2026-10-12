@@ -4,8 +4,8 @@ import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  aplicarDano, deLonge, ehCoprocessador, ehLuneta, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  PENALIDADE_CORONHA, perfil2077, situacionaisDeRole, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+  aplicarDano, deLonge, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, situacionaisDeRole, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
@@ -142,6 +142,8 @@ export class AtorCPR extends Actor {
     const partes = [{ rotulo: SIGLA[p.atributo], valor: this.system.atributos[p.atributo].valor }, { rotulo: p.nome, valor: p.nivel }];
     if (p.bonus) partes.push({ rotulo: 'Bônus', valor: p.bonus });
     if (p.role) partes.push({ rotulo: p.role.rotulo, valor: p.role.valor });
+    // O Reflex Tuner (2077): +1 para se esquivar pelo resto da rodada em que foi atingido.
+    if (id === 'evasion' && this.reflexTunerAtivo) partes.push({ rotulo: 'Reflex Tuner', valor: REFLEX_TUNER });
     return { pericia: p, partes: [...partes, ...this.#penalidade(), ...this.#situacionais(situacionais, id)] };
   }
   rolarPericia(id, { perguntar = false, ...opcoes } = {}) {
@@ -204,6 +206,15 @@ export class AtorCPR extends Actor {
   }
   get temSmartLink() { return this.#instalado(ehSmartLink); }
   get temCoprocessador() { return this.#instalado(ehCoprocessador); }
+  get temReflexTuner() { return this.#instalado(ehReflexTuner); }
+
+  // O Reflex Tuner vale nesta rodada: o ator foi atingido nela (a marca "atingido" que o ataque põe, no combate em curso).
+  get reflexTunerAtivo() {
+    if (!this.temReflexTuner) return false;
+    const marca = this.getFlag(SISTEMA, 'atingido');
+    const combate = marca && game.combats.get(marca.combate);
+    return Boolean(combate?.started && combate.round === marca.rodada);
+  }
 
   // O escudo equipado com mais pontos (que ainda segura algo), ou null.
   get escudo() {

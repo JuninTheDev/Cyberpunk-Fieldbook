@@ -481,6 +481,9 @@ async function ferir(ctx, linha, dano, { escudo = false } = {}) {
     linha.notas.push('Já estava mortalmente ferido: uma lesão crítica a mais.');
     await lesao({});
   }
+  // Reflex Tuner (2077): atingido, +1 para se esquivar pelo resto da rodada. A marca vai para o cartão, e o "Desfazer"
+  // a tira.
+  if (ator.temReflexTuner) await marcarRodada(ctx, ator, 'atingido');
 }
 
 // ---------------- Modos ----------------

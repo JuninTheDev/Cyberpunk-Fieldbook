@@ -415,6 +415,9 @@ export function perfil2077(flag, { aDistancia = true, pericia = '', municoes = [
 // O cyberware que as regras de 2077 procuram: pelo id do catálogo (vale depois de renomear) ou pelo nome.
 export const ehSmartLink = (nome, catalogo = '') => catalogo === 'cyberware-2077:smart-link' || /^smart ?link\b/i.test(String(nome).trim());
 export const ehCoprocessador = (nome, catalogo = '') => catalogo === 'cyberware-2077:ballistic-coprocessor' || /ballistic coprocessor/i.test(String(nome));
+// Reflex Tuner (wiki, system-2077.js): "depois de ser atingido, +1 para se esquivar pelo resto da rodada".
+export const REFLEX_TUNER = 1;
+export const ehReflexTuner = (nome, catalogo = '') => catalogo === 'cyberware-2077:reflex-tuner' || /^reflex tuner\b/i.test(String(nome).trim());
 
 // O valor do teste Smart neste ataque (10 ou 12), ou 0. Pelo botão "Smart" (pedido "smart", na configuração
 // "alternativa") ou, na "substitui", em todo tiro e cartucho não mirado da arma Smart; o autofogo, o supressivo e o

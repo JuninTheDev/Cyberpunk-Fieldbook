@@ -38,7 +38,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | a janela "Ataque!" (a reação do alvo: quem ataca, a conta de cada escolha, a barra do tempo; o X e o tempo valem a escolha padrão) | portada no ciclo 28, no visual do sistema |
 | Fluxo de Combate | um ataque por vez no mestre, quem vê o cartão do resultado, esconder ou não o total do ataque, texto e animação no token | portados no ciclo 29 (com diferenças: ver as dúvidas) |
-| Fluxo de Combate | Reflex Tuner | falta |
+| Fluxo de Combate | Reflex Tuner | portado no ciclo 30, pela wiki (ver as dúvidas) |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077) e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo |
 | cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17 |
@@ -251,6 +251,13 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     jogador rola os próprios dados", a janela de rolagem do sistema ainda abria depois;
   - **a janela do mestre fechada no X deixa o sistema escolher,** como a pergunta antiga deste sistema. No Fluxo, valia a
     escolha padrão (aguentar).
+
+- **Reflex Tuner: o que é "ser atingido"?** A wiki: "depois de ser atingido, +1 para se esquivar pelo resto da rodada".
+  O sistema segue o Fluxo: vale todo ataque que pega e rola o dano, mesmo quando a armadura ou o escudo seguram tudo.
+  A rodada é a do combate de que o personagem participa; fora de combate, não vale. Duas diferenças do Fluxo:
+  - **o "Desfazer" do ataque tira o +1,** como faz com o Ponto Fraco e a Deflexão. No Fluxo, a marca ficava;
+  - **o +1 entra em toda Evasão da rodada:** na conta da janela de reação, na esquiva e na escolha automática dos NPCs.
+    No Fluxo, entrava só na esquiva.
 
 ## Registro dos ciclos
 
@@ -1422,3 +1429,39 @@ de quem vê o quê e o texto em cima do token. O Reflex Tuner fica para o próxi
       ataque sempre escondido e o total à vista fora da janela de reação;
   - **sem teste:** a animação do Sequencer com o JB2A e o som do Diwako. Os módulos não estão no Foundry 14 de teste.
 - **Próximo:** o Reflex Tuner (wiki: depois de ser atingido, +1 para se esquivar pelo resto da rodada).
+- **Commit:** `5a10d5f`.
+
+### Ciclo 30 (2026-10-12): o Reflex Tuner (pedido do usuário, o fluxo de combate)
+
+O último item do Fluxo de Combate que faltava. A regra é a da wiki (system-2077.js): "Coprocessador de emergência: depois
+de ser atingido, +1 para se esquivar pelo resto da rodada".
+
+- **Implementado:**
+  - **a regra** (`regras.ehReflexTuner` e `REFLEX_TUNER`): o item pelo id do catálogo (`cyberware-2077:reflex-tuner`) ou
+    pelo nome;
+  - **no ator** (`AtorCPR.temReflexTuner` e `reflexTunerAtivo`): instalado, e com a marca "atingido" na rodada atual
+    do combate dela, a Evasão ganha a parte "Reflex Tuner +1". Com isso o +1 aparece na conta da janela de reação, na
+    janela de rolagem e na esquiva, e entra na escolha automática dos NPCs;
+  - **no ataque** (`ferir`, em `combate.mjs`): quem tem o Reflex Tuner e é atingido ganha a marca da rodada, que vai
+    para o cartão. O "Desfazer" a tira.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 53 de 53. Um teste novo: o texto da wiki, o item pelo catálogo e pelo nome e o +1;
+  - G4: 66 de 66, cerca de 100 s. Um passo novo, no combate (com o mestre), com o Reflex Tuner no Capanga:
+    - antes do tiro, a Evasão dele é DEX 5 + Evasão 0;
+    - atingido pelo tiro, ganha o "Reflex Tuner 1";
+    - o "Desfazer" do tiro tira o +1;
+    - atingido de novo, esquiva o golpe de lâmina com o +1 (6 + d10 9 = 15 contra 12);
+    - na rodada seguinte, o +1 acabou;
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o nome que pega o "Reflex Booster";
+    - G4: o atingido sem a marca, o +1 em qualquer rodada, a marca fora do cartão (o "Desfazer" não a tira) e o +1 fora
+      da Evasão.
+- **Fica do Fluxo (opções, sem pressa):** três chaves que o sistema não tem. O comportamento padrão delas já é o do
+  sistema (ROADMAP, P2):
+  - "Resolver os ataques", que liga e desliga a automação;
+  - "O jogador rola os próprios dados", em que, desligada, o mestre rola a defesa e o Death Save;
+  - "Dano: manual".
+- **Próximo:** o P2 pela ordem do ROADMAP: as rolagens das Roles, a Briga e as Artes Marciais e o Facedown; depois, o
+  cyberware que é arma.

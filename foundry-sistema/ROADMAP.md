@@ -125,7 +125,7 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
 - [ ] **Na migração, o histórico do ledger do Foundry 12:** a ficha "Na mesa" só manda o saldo, e o extrato começa com
   ele. Trazer o histórico exige que o módulo da mesa (cpr-2077) mande as `transactions`, o que mexe no Foundry 12 da
   campanha (decisão do usuário).
-- [ ] **Do Fluxo de Combate** (pedido do usuário, 2026-10-12: "trabalhe melhor no fluxo de combate", com o módulo
+- [x] **Do Fluxo de Combate** (pedido do usuário, 2026-10-12: "trabalhe melhor no fluxo de combate", com o módulo
   `foundry-fluxo-de-combate/` de exemplo):
   - [x] a janela de reação do alvo no visual do sistema, como a "Ataque!" do Fluxo: quem ataca e quem é atacado, a
     arma e a distância, cada escolha com a conta (a esquiva média, a DV, os PV do escudo) e a barra do tempo; fechada
@@ -135,7 +135,10 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
     defesa (Ciclo 29);
   - [x] texto e animação no token: o texto para quem vê o cartão; a animação com o Sequencer e o JB2A, e o som do
     Diwako, quando estão ativos (Ciclo 29);
-  - [ ] o Reflex Tuner (wiki: depois de ser atingido, +1 para se esquivar pelo resto da rodada).
+  - [x] o Reflex Tuner (wiki: depois de ser atingido, +1 para se esquivar pelo resto da rodada) (Ciclo 30).
+- [ ] **Do Fluxo de Combate, as chaves que faltam** (opções; o comportamento padrão delas já é o do sistema):
+  "Resolver os ataques" (liga e desliga a automação), "O jogador rola os próprios dados" (desligada, o mestre rola a
+  defesa e o Death Save; o dano já tem "Quem atacou rola o dano") e "Dano: manual".
 - [ ] **Acessórios:** o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
 - [ ] **Veículos no combate:** o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como

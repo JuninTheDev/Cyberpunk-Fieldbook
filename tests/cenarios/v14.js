@@ -1556,6 +1556,69 @@ module.exports = async ({ edge, servidores, r }) => {
         && s.ataque === 18 && s.defesa === 7 && s.resultado === 'acertou' && s.recebido === 7 && info.perdeu === 7 && !info.janelas.length, JSON.stringify(info)];
     });
 
+    await r.passo('Reflex Tuner (2077, wiki): no combate, o Capanga atingido ganha +1 para se esquivar pelo resto da rodada (nas partes da Evasão e na esquiva do golpe); o Desfazer do tiro tira o +1; na rodada seguinte, acaba', async () => {
+      // O tiro da Atiradora no Capanga (REF 6: só aguenta): d10 9 → 8 + 4 + 9 = 21 contra a DV 16; dano 5d6 de 1 = 5
+      // (o Capanga não tem armadura). O golpe de lâmina: DEX 7 + Arma Branca 3 + d10 2 = 12 contra a esquiva do Capanga,
+      // com o +1, e o d10 9.
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const rifle = a.items.getName('Assault Rifle');
+        const inicio = { hp: capanga.system.hp.value, pente: rifle.system.pente.value };
+        const [tuner] = await capanga.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['cyberware-2077:reflex-tuner'])]);
+        await capanga.instalarCyberware(tuner, { rolar: false });
+        const lamina = foundry.utils.deepClone(cat['core_weapons:medium-melee']);
+        lamina.system.equipada = true;
+        const [arma] = await a.createEmbeddedDocuments('Item', [lamina]);
+        const cena = canvas.scene;
+        const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+        const partes = () => __ator('Capanga').partesDaPericia('evasion').partes;
+        const lista = () => partes().map(p => p.rotulo + ' ' + p.valor);
+        const soma = () => partes().reduce((total, p) => total + p.valor, 0);
+        try {
+          await combate.createEmbeddedDocuments('Combatant', ['Atiradora', 'Capanga'].map(n => ({ tokenId: __token(n).id, sceneId: cena.id, actorId: __ator(n).id })));
+          await combate.startCombat();
+          const antes = lista();
+          const somaAntes = soma();
+          // 1. O tiro que pega: a marca (e o +1).
+          window.__fila = [[9, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]];
+          const tiro = await rifle.atacar({ alvo: __token('Capanga') });
+          const atingido = lista();
+          // 2. O Desfazer do tiro tira a marca (e o +1).
+          const desfeito = await game.system.api.combate.desfazer(game.messages.contents.at(-1));
+          const semMarca = lista();
+          // 3. O tiro de novo e, depois, o golpe: a esquiva do Capanga com o +1.
+          window.__fila = [[9, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]];
+          await rifle.atacar({ alvo: __token('Capanga') });
+          const somaAtingido = soma();
+          window.__fila = [[2, 10], [9, 10]];
+          const golpe = await arma.atacar({ alvo: __token('Capanga') });
+          // 4. Na rodada seguinte, acabou.
+          await combate.nextRound();
+          const depois = lista();
+          return {
+            antes, somaAntes, tiro: tiro.linhas[0].resultado, atingido, desfeito, semMarca, somaAtingido, depois,
+            golpe: { ataque: golpe.ataque, escolha: golpe.linhas[0].escolha, defesa: golpe.linhas[0].defesa, resultado: golpe.linhas[0].resultado }
+          };
+        } finally {
+          await combate.delete();
+          await a.deleteEmbeddedDocuments('Item', [arma.id]);
+          await capanga.desinstalarCyberware(tuner);
+          await tuner.delete();
+          await capanga.unsetFlag('${S}', 'atingido');
+          await capanga.update({ 'system.hp.value': inicio.hp });
+          await rifle.update({ 'system.pente.value': inicio.pente });
+          window.__fila = [];
+        }
+      })()`);
+      const comTuner = lista => lista.includes('Reflex Tuner 1');
+      const ok = !comTuner(info.antes) && info.tiro === 'acertou' && comTuner(info.atingido) && info.desfeito && !comTuner(info.semMarca)
+        && info.somaAtingido === info.somaAntes + 1 && info.golpe.ataque === 12 && info.golpe.escolha === 'esquivar' && info.golpe.defesa === info.somaAtingido + 9
+        && info.golpe.resultado === 'esquivou' && !comTuner(info.depois);
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('armadura pesada: a maior penalidade das vestidas sai de REF, DEX e MOVE (e da iniciativa); o SP é o maior de cada local', async () => {
       // Heavy Armorjack no corpo (SP 13, −2) e Metalgear na cabeça (SP 18, −4): vale o −4. Tirada a Metalgear, o −2.
       const info = await edge.evaluate(`(async () => {
