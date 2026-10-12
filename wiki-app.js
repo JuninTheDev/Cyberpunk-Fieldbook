@@ -408,7 +408,9 @@
       // As abas da entrada do menu (Sessão 01: Resumo, Roteiro completo, Handouts...), no topo da página.
       const host = tabHost(id);
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
-      content.innerHTML = `${tabs}${pinnable(id) ? pinButton(id) : ''}<p class="eyebrow">${page.eyebrow}</p><h2 class="cyber-h">${page.title}</h2><p class="lede">${page.lede}</p>${page.html}`;
+      // O título e, logo abaixo, a linha em ciano (o eyebrow, com // no lugar de /), como no padrão visual da Loja.
+      const eyebrow = String(page.eyebrow || '').replace(/ \/ /g, ' // ');
+      content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><h2 class="cyber-h">${page.title}</h2><p class="eyebrow">${eyebrow}</p></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');

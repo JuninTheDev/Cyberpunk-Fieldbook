@@ -671,22 +671,22 @@ module.exports = async ({ edge, servidores, r }) => {
     await abrir(edge, 'personagens', 1000);
     return [/Lin.*1 esperando você/.test(quadro) && /aprovado, esperando o Foundry entregar/.test(pedidos) && jaAberto && /1 para aprovar/.test(alerta), `${quadro.slice(0, 120)} · ${pedidos.slice(0, 120)} · abriu nos pedidos ${jaAberto} (${alerta})`];
   });
-  await r.passo('regras da loja atrás da engrenagem: baixar o teto para 500eb esconde os de 1.000eb', async () => {
+  await r.passo('loja do mestre: pedidos, regras e catálogo à vista; baixar o teto para 500eb esconde os de 1.000eb', async () => {
     await abrir(edge, 'loja', 1500);
-    const fechado = await edge.evaluate(`document.querySelector('[data-cc-rules]').hidden`);
-    await clicar('[data-shop-config]');
-    const temQuadro = await edge.evaluate(`!document.querySelector('[data-cc-rules]').hidden && document.querySelector('[data-rule-teto]').offsetHeight > 0`) && fechado;
+    const quadros = await edge.evaluate(`({ regras: !document.querySelector('[data-cc-rules]').hidden && document.querySelector('[data-rule-teto]').offsetHeight > 0, pedidos: !!document.querySelector('[data-gm-orders]'), titulo: document.querySelector('#content h2').textContent })`);
     await edge.shot('loja-mestre');
     await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '500'; })()`);
     await clicar('[data-rule-save]', 1500);
     const salvo = await texto('#cc-rules-msg');
     await buscarNaLoja('medscanner');
-    const comprar = await edge.evaluate(`document.querySelectorAll('[data-shop-buy="core_gear:medscanner"]').length`);
+    const situacao = await texto('[data-shop-row="core_gear:medscanner"] .shop-status');
     await edge.evaluate(`(() => { const t = document.querySelector('[data-rule-teto]'); t.value = '1000'; })()`);
     await clicar('[data-rule-save]', 1500);
+    const depois = await texto('[data-shop-row="core_gear:medscanner"] .shop-status');
     const teto = (await (await fetch(`${gm}/api/loja/regras`)).json()).regras.teto;
     await abrir(edge, 'personagens', 1200);
-    return [temQuadro && /Regras salvas/.test(salvo) && comprar === 0 && teto === 1000, `engrenagem abre o quadro ${temQuadro} · ${salvo} · medscanner à venda com 500: ${comprar} · teto final ${teto}`];
+    return [quadros.regras && quadros.pedidos && /mestre/i.test(quadros.titulo) && /Regras salvas/.test(salvo) && /acima de 500eb/i.test(situacao) && /Visível/i.test(depois) && teto === 1000,
+      `${JSON.stringify(quadros)} · ${salvo} · medscanner com 500: "${situacao}", com 1.000: "${depois}" · teto final ${teto}`];
   });
   await r.passo('mestre cria um código pela tela', async () => {
     await digitar('#cc-account-name', 'Caio');

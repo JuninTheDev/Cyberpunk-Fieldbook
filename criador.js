@@ -1127,13 +1127,25 @@
     else (doc.itens = doc.itens || []).push({ uid: `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, id, qtd: qty });
   };
 
-  const shopState = { cat: 'armas', sub: '', busca: '', verTudo: false, painel: '' };
-  // Peças comuns às duas lojas: uma barra com o dinheiro e os botões que abrem os painéis (um aberto por vez),
-  // os filtros e as linhas compactas da lista (um toque na linha mostra a descrição inteira).
-  const fold = text => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const panelButton = (id, label) => `<button type="button" class="cc-tab${shopState.painel === id ? ' active' : ''}" data-shop-painel="${id}" aria-expanded="${shopState.painel === id}">${label}</button>`;
-  const shopPanel = (id, html, attrs = '') => `<div class="cc-shop-panel" data-painel="${id}"${attrs}${shopState.painel === id ? '' : ' hidden'}>${html}</div>`;
+  const shopState = { cat: 'armas', sub: '', busca: '', verTudo: false, painel: '', mostrar: 60 };
+  // Peças comuns às duas lojas, no visual do exemplo da Loja: os chips de categoria com a contagem, a busca, os chips de
+  // grupo, a grade de cartões (nome, etiquetas, números, preço e o botão) e, ao lado, a gaveta com o dinheiro e o pedido.
+  // Numa coluna estreita (o passo 5 do criador, o celular) a gaveta vai para cima e cada quadro dela abre e fecha pelo título.
+  const fold = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const NARROW_SHOP = 960;
+  const narrowShop = target => target.clientWidth > 0 && target.clientWidth < NARROW_SHOP;
+  const PAGE = 60;
+  // Os grupos se juntam pelo nome base: "Pistolas" mostra também as do Black Chrome (o cartão traz a etiqueta do livro).
+  const subKey = sub => String(sub || '').replace(/ \((Black Chrome|Black Chrome Plus)\)$/, '');
+  function drawerBox(target, id, title, html, attrs = '') {
+    const narrow = narrowShop(target);
+    const open = !narrow || shopState.painel === id;
+    return `<section class="shop-box"><button type="button" class="shop-box-head${narrow && open ? ' active' : ''}" data-shop-painel="${id}" aria-expanded="${open}">${title}</button>
+      <div class="cc-shop-panel" data-painel="${id}"${attrs}${open ? '' : ' hidden'}>${html}</div></section>`;
+  }
+  // Na coluna estreita, o título do quadro abre e fecha (um aberto por vez); na larga, os quadros ficam sempre abertos.
   function togglePanel(target, id) {
+    if (!narrowShop(target)) return;
     shopState.painel = shopState.painel === id ? '' : id;
     for (const panel of target.querySelectorAll('[data-painel]')) panel.hidden = panel.dataset.painel !== shopState.painel;
     for (const tab of target.querySelectorAll('[data-shop-painel]')) {
@@ -1142,39 +1154,100 @@
       tab.setAttribute('aria-expanded', String(on));
     }
   }
-  // Os itens que passam pelos filtros (categoria e grupo, ou a busca em todas as categorias).
+  // Os itens que passam pelos filtros (categoria e grupo, ou a busca em todas as categorias), e a barra dos filtros.
   function shopFilter(items) {
     const terms = fold(shopState.busca).split(/\s+/).filter(Boolean);
-    const subs = [...new Set(items.filter(item => item.cat === shopState.cat).map(item => item.sub))];
-    const visible = items.filter(item => (terms.length || item.cat === shopState.cat) && (!shopState.sub || terms.length || item.sub === shopState.sub)
+    const counts = {};
+    for (const item of items) counts[item.cat] = (counts[item.cat] || 0) + 1;
+    if (!counts[shopState.cat] && !terms.length) shopState.cat = (shop.categorias.find(category => counts[category.id]) || { id: shopState.cat }).id;
+    const subs = [...new Set(items.filter(item => item.cat === shopState.cat).map(item => subKey(item.sub)))];
+    if (shopState.sub && !subs.includes(shopState.sub)) shopState.sub = '';
+    const visible = items.filter(item => (terms.length || item.cat === shopState.cat) && (!shopState.sub || terms.length || subKey(item.sub) === shopState.sub)
       && terms.every(term => fold(`${item.nome} ${item.en} ${item.sub} ${item.livro || ''} ${item.resumo || ''}`).includes(term)));
-    const filters = `<div class="cc-shop-filters"><div class="map-filter-list">${shop.categorias.map(category => `<button type="button" class="map-filter${category.id === shopState.cat && !terms.length ? ' active' : ''}" data-shop-cat="${category.id}">${category.nome}</button>`).join('')}</div>
-      <div class="cc-shop-row"><input type="search" data-shop-busca placeholder="Buscar em todas as categorias" value="${esc(shopState.busca)}" aria-label="Buscar item"><select data-shop-sub aria-label="Grupo"><option value="">Todos os grupos</option>${subs.map(sub => `<option${sub === shopState.sub ? ' selected' : ''}>${esc(sub)}</option>`).join('')}</select></div></div>`;
-    return { visible, shown: visible.slice(0, 150), filters };
+    const chip = (attr, value, label, active, count = '') => `<button type="button" class="map-filter shop-chip${active ? ' active' : ''}" ${attr}="${esc(value)}">${label}${count !== '' ? `<b>${count}</b>` : ''}</button>`;
+    const filters = `<div class="cc-shop-filters">
+      <div class="map-filter-list shop-rail">${shop.categorias.filter(category => counts[category.id]).map(category => chip('data-shop-cat', category.id, category.nome, category.id === shopState.cat && !terms.length, counts[category.id])).join('')}</div>
+      <div class="cc-shop-row"><input type="search" class="shop-search" data-shop-busca placeholder="Buscar em todas as categorias" value="${esc(shopState.busca)}" aria-label="Buscar item"></div>
+      ${terms.length ? `<p class="shop-hint">Buscando em todas as categorias: ${visible.length} ${visible.length === 1 ? 'item' : 'itens'}.</p>`
+        : subs.length > 1 ? `<div class="map-filter-list shop-rail shop-subs">${chip('data-shop-sub', '', 'Todos', !shopState.sub)}${subs.map(sub => chip('data-shop-sub', sub, esc(sub), sub === shopState.sub)).join('')}</div>` : ''}</div>`;
+    return { visible, shown: visible.slice(0, shopState.mostrar), filters };
   }
-  const shopRow = (item, { open, badges = '', notes = '', actions = '', extraClass = '' }) => `<div class="cc-shop-item${item.desc ? ' cc-has-desc' : ''}${open ? ' cc-open' : ''}${extraClass}" data-shop-row="${item.id}"><div class="cc-shop-info"><b>${esc(item.nome)}</b>${badges}<small class="cc-shop-sub">${esc([item.sub, item.livro && !String(item.sub).includes(item.livro) ? item.livro : '', item.resumo].filter(Boolean).join(' · '))}</small>${notes}${item.desc ? `<small class="cc-desc">${esc(item.desc)}</small>` : ''}</div>
-    <span class="cc-shop-preco">${eb(item.preco)}${item.lote > 1 ? `<small>/${item.lote}</small>` : ''}</span><div class="cc-shop-actions">${actions}</div></div>`;
+  const moreButton = (visible, shown) => (visible.length > shown.length ? `<p class="shop-more"><button type="button" class="action cc-ghost" data-shop-mais>Mostrar mais (${shown.length} de ${visible.length})</button></p>` : '');
+
+  // ---------------- O cartão do item ----------------
+  const INSTALL_PT = { mall: 'Shopping', clinic: 'Clínica', hospital: 'Hospital', none: '—' };
+  const shopTag = (text, color) => `<span class="shop-tag" style="--k2:${color}">${esc(text)}</span>`;
+  function itemTags(item) {
+    const tags = (item.tags || []);
+    const out = [];
+    if (item.arma && item.arma.oculta) out.push(shopTag('oculta', 'var(--c)'));
+    if (/\(excelente\)/i.test(item.nome) || tags.includes('excelente')) out.push(shopTag('excelente', 'var(--c)'));
+    if (/\(ruim\)/i.test(item.nome)) out.push(shopTag('ruim', 'var(--mu)'));
+    if ((item.arma && item.arma.exotica) || tags.includes('exotica')) out.push(shopTag('exótica', 'var(--r)'));
+    if (tags.includes('borgware')) out.push(shopTag('borgware', 'var(--r)'));
+    if (item.foundry && /^cpr-2077\./.test(item.foundry.pack)) out.push(shopTag('2077', 'var(--y)'));
+    if (item.livro) out.push(shopTag(item.livro, 'var(--y)'));
+    return out.join('');
+  }
+  // Os números do cartão (quatro, no máximo), conforme o tipo do item.
+  function itemStats(item) {
+    const cells = [];
+    const cell = (label, value) => cells.push(`<div><small>${label}</small><b>${esc(String(value))}</b></div>`);
+    if (item.arma) {
+      const a = item.arma;
+      cell('Dano', a.dano || '—'); cell('CDT', a.cdt || '—'); cell('Pente', a.distancia && a.pente ? a.pente : '—'); cell('Mãos', a.maos || 1);
+    } else if (item.armadura) {
+      const a = item.armadura;
+      if (a.escudo) cell('Escudo', `${a.escudo} HP`);
+      else { cell('SP corpo', a.corpo || '—'); cell('SP cabeça', a.cabeca || '—'); }
+      cell('Penalidade', a.penalidade ? `−${a.penalidade}` : '—');
+    } else if (item.cyber) {
+      const c = item.cyber;
+      cell('Humanidade', `${c.hl}${c.rolagem && c.rolagem !== '0' ? ` (${c.rolagem})` : ''}`);
+      cell('Instala', INSTALL_PT[c.instalacao] || c.instalacao || '—');
+      cell(c.base ? 'Slots' : 'Ocupa', c.base ? c.slots : c.tamanho);
+    } else if (item.programa) {
+      const p = item.programa;
+      cell('ATK', p.atk || '—'); cell('DEF', p.def || '—'); cell('REZ', p.rez || '—'); cell('Ocupa', p.tamanho ?? 1);
+    } else if (item.deck) cell('Slots', item.deck.slots);
+    else if (item.acessorio) cell('Ocupa', `${item.acessorio.tamanho} slot${item.acessorio.tamanho > 1 ? 's' : ''}`);
+    else if (item.hardware) cell('Ocupa', `${item.hardware.tamanho} slot${item.hardware.tamanho > 1 ? 's' : ''}`);
+    if (item.lote > 1) cell('Lote', item.lote);
+    return cells.length ? `<div class="shop-stats">${cells.slice(0, 4).join('')}</div>` : '';
+  }
+  const priceOf = (item, bad = false) => `<span class="cc-shop-preco shop-price${bad ? ' cc-bad' : ''}">${Math.round(item.preco).toLocaleString('pt-BR')}<small>eb${item.lote > 1 ? ` / ${item.lote}` : ''}</small></span>`;
+  // Linha de baixo do nome: o grupo, o livro (se o grupo não diz) e, nas armas, a perícia; o resumo só quando não há números.
+  const subLine = item => [item.sub, item.livro && !String(item.sub).includes(item.livro) ? item.livro : '', item.arma && item.arma.pericia ? skillPt(item.arma.pericia) : '',
+    itemStats(item) ? '' : item.resumo].filter(Boolean).join(' · ');
+  const shopCard = (item, { open, badges = '', notes = '', foot = '', extraClass = '' }) => `<article class="cc-shop-item shop-card${item.desc ? ' cc-has-desc' : ''}${open ? ' cc-open' : ''}${extraClass}" data-shop-row="${item.id}">
+    <header class="cc-shop-info"><b>${esc(item.nome)}</b>${badges}</header>
+    ${itemTags(item) ? `<div class="shop-tags">${itemTags(item)}</div>` : ''}
+    <small class="cc-shop-sub">${esc(subLine(item))}</small>${notes}
+    ${itemStats(item)}
+    ${item.desc ? `<p class="cc-desc">${esc(item.desc)}</p>` : ''}
+    <footer class="shop-foot">${foot}</footer></article>`;
   const badge = (text, kind) => `<small class="cc-badge cc-${kind}">${text}</small>`;
-  // Redesenha guardando a rolagem da lista (comprar um item lá embaixo não volta a lista para o topo).
+  // Redesenha guardando a rolagem da página (comprar um item lá embaixo não volta para o topo).
   function keepingScroll(target, paint, reset) {
-    const list = target.querySelector('.cc-shop-list');
-    const scroll = list && !reset ? list.scrollTop : 0;
+    const y = window.scrollY;
     paint();
-    const fresh = target.querySelector('.cc-shop-list');
-    if (fresh) fresh.scrollTop = scroll;
+    if (!reset) window.scrollTo(0, y);
     // No celular as categorias rolam de lado: a escolhida fica à vista.
     const chips = target.querySelector('.cc-shop-filters .map-filter-list');
     const active = chips && chips.querySelector('.active');
     if (active && chips.scrollWidth > chips.clientWidth) chips.scrollLeft += active.getBoundingClientRect().left - chips.getBoundingClientRect().left - 8;
   }
-  // Eventos comuns: categoria, grupo, busca, abrir painel e abrir a descrição da linha. true = já tratou.
+  // Eventos comuns: categoria, grupo, busca, mostrar mais, abrir quadro da gaveta e abrir a descrição do cartão. true = já tratou.
   function shopCommonClick(event, target, draw, openRows) {
     const cat = event.target.closest('[data-shop-cat]');
-    if (cat) { shopState.cat = cat.dataset.shopCat; shopState.sub = ''; shopState.busca = ''; draw(true); return true; }
+    if (cat) { shopState.cat = cat.dataset.shopCat; shopState.sub = ''; shopState.busca = ''; shopState.mostrar = PAGE; draw(true); return true; }
+    const sub = event.target.closest('[data-shop-sub]');
+    if (sub) { shopState.sub = sub.dataset.shopSub; shopState.mostrar = PAGE; draw(); return true; }
+    if (event.target.closest('[data-shop-mais]')) { shopState.mostrar += PAGE; draw(); return true; }
     const tab = event.target.closest('[data-shop-painel]');
     if (tab) { togglePanel(target, tab.dataset.shopPainel); return true; }
     const row = event.target.closest('[data-shop-row]');
-    if (row && !event.target.closest('button, select, input, a')) {
+    if (row && !event.target.closest('button, select, input, a, textarea')) {
       const id = row.dataset.shopRow;
       if (openRows.has(id)) openRows.delete(id); else openRows.add(id);
       row.classList.toggle('cc-open', openRows.has(id));
@@ -1185,14 +1258,16 @@
   function shopSearchInput(event, target, draw) {
     if (!event.target.matches('[data-shop-busca]')) return false;
     shopState.busca = event.target.value;
+    shopState.mostrar = PAGE;
     const position = event.target.selectionStart;
-    draw(true);
+    draw();
     const input = target.querySelector('[data-shop-busca]');
     input.focus();
     try { input.setSelectionRange(position, position); } catch { /* campo sem cursor */ }
     return true;
   }
 
+  // ================= Loja inicial (antes do Foundry) =================
   // doc pode faltar (o mestre olhando a loja sem personagem): aí só navega e ajusta as regras.
   function renderShop(target, doc, { onChange = () => {}, readOnly = false, gm = false, onRules } = {}) {
     const canBuy = Boolean(doc) && !readOnly;
@@ -1209,30 +1284,36 @@
       const kit = doc && doc.metodo === 'pacote' && canBuy ? kitFor(doc) : [];
       const kitMain = kit.filter(entry => !isFashion(entry.item));
       const kitFashion = kit.filter(entry => isFashion(entry.item));
-      const actions = item => {
+      // O que sobra para este item: a moda gasta primeiro a verba de moda.
+      const spare = item => (!cash ? Infinity : isFashion(item) ? cash.saldo + Math.max(0, cash.moda - cash.usadoModa) : cash.saldo);
+      const foot = item => {
         const reason = hiddenReason(item);
         const buy = canBuy && !reason ? `<button class="action" type="button" data-shop-buy="${item.id}">Comprar</button>` : '';
-        if (!gm) return buy;
-        return buy + (reason
+        const rule = gm ? (reason
           ? `<button class="action cc-ghost" type="button" data-shop-allow="${item.id}">Liberar</button>`
-          : `<button class="action cc-ghost cc-ghost-danger" type="button" data-shop-block="${item.id}" title="Tirar da loja de criação">Esconder</button>`);
+          : `<button class="action cc-ghost cc-ghost-danger" type="button" data-shop-block="${item.id}" title="Tirar da loja de criação">Esconder</button>`) : '';
+        return `${priceOf(item, item.preco > spare(item))}<span class="shop-buttons">${rule}${buy}</span>`;
       };
       const boughtList = bought.length
-        ? `<ul class="cc-items cc-bought">${bought.map(entry => `<li><span><b>${esc(entry.item.nome)}</b> ×${entry.qtd} · ${eb(lineCost(entry))}</span>${readOnly ? '' : `<button class="action cc-ghost cc-ghost-danger" type="button" data-shop-return="${entry.uid}">Devolver</button>`}</li>`).join('')}</ul>`
+        ? `<ul class="cc-items cc-bought">${bought.map(entry => `<li><span><b>${esc(entry.item.nome)}</b> ×${entry.qtd}<small>${esc(entry.item.sub)}</small></span><span class="shop-line-end"><b>${eb(lineCost(entry))}</b>${readOnly ? '' : `<button class="action cc-ghost cc-ghost-danger" type="button" data-shop-return="${entry.uid}">Devolver</button>`}</span></li>`).join('')}</ul>`
         : '<p class="note-status">Nada comprado ainda.</p>';
-      target.innerHTML = `${doc ? `<div class="cc-shop-bar">${cash ? `<div class="cc-wallet"><span>Dinheiro: <b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b> de ${eb(cash.inicial)}</span>${cash.moda ? `<span title="Só moda e fashionware; a sobra some">Moda: <b>${eb(cash.usadoModa)}</b> de ${eb(cash.moda)}</span>` : ''}</div>` : ''}
-          <div class="cc-shop-tabs">${panelButton('comprado', `Comprados <b class="cc-count">${bought.length}</b>`)}</div>
-          <p class="cc-shop-msg" id="cc-shop-msg" role="status"></p></div>
-        ${shopPanel('comprado', boughtList, ' data-cc-bought')}` : ''}
-        ${readOnly && doc ? '<div class="callout">Este personagem já está no Foundry: a loja inicial fechou. Compras durante a sessão chegam numa próxima versão.</div>' : ''}
-        ${kit.length ? `<div class="cc-kit"><span><b>Kit sugerido</b> (Rato de Rua de ${esc(roleName(doc.role))}): ${eb(kitCost(kitMain))}${kitFashion.length ? ` + ${eb(kitCost(kitFashion))} de moda` : ''}. Depois dá para devolver item por item.</span><button class="action" type="button" data-shop-kit>Comprar o kit</button></div>` : ''}
-        ${filters}
-        <div class="cc-shop-list">${shown.map(item => {
-          const reason = hiddenReason(item);
-          return shopRow(item, { open: openRows.has(item.id), extraClass: reason ? ' cc-hidden-item' : '', badges: owned.get(item.id) ? badge(`tem ${owned.get(item.id)}`, 'ok') : '', notes: gm && reason ? ` <small class="cc-bad">fora da criação: ${esc(reason)}</small>` : '', actions: actions(item) });
-        }).join('') || '<p class="note-status">Nada encontrado.</p>'}
-          ${visible.length > shown.length ? `<p class="note-status cc-shop-foot">Mostrando ${shown.length} de ${visible.length}: use a busca para achar o resto.</p>` : ''}
-          ${hiddenCount && !showHidden ? `<p class="note-status cc-shop-foot">${hiddenCount} itens avançados ficam fora da loja de criação (acima de ${eb(shopRules.teto)}, ${shopRules.esconder.map(tag => SHOP_TAG_NAMES[tag]).join(', ') || 'nenhuma etiqueta'}). O mestre libera o que quiser.</p>` : ''}</div>`;
+      const wallet = cash ? `<section class="shop-box shop-wallet-box"><div class="cc-wallet shop-wallet"><span class="wl-main"><small>Dinheiro: </small><b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b><small> de ${eb(cash.inicial)}</small></span>${cash.moda ? `<span class="wl-sub" title="Só moda e fashionware; a sobra some">Moda: <b>${eb(cash.usadoModa)}</b> de ${eb(cash.moda)}</span>` : ''}${cash.moradia ? `<span class="wl-sub">Moradia (1º mês): <b>${eb(cash.moradia)}</b></span>` : ''}</div></section>` : '';
+      target.innerHTML = `<div class="shop-layout${doc ? '' : ' shop-solo'}${narrowShop(target) ? ' shop-narrow' : ''}">
+        <div class="shop-main">
+          ${readOnly && doc ? '<div class="callout">Este personagem já está no Foundry: a loja inicial fechou. Compras durante a sessão chegam numa próxima versão.</div>' : ''}
+          ${kit.length ? `<div class="cc-kit shop-kit"><span><b>Kit sugerido</b> (Rato de Rua de ${esc(roleName(doc.role))}): ${eb(kitCost(kitMain))}${kitFashion.length ? ` + ${eb(kitCost(kitFashion))} de moda` : ''}. Depois dá para devolver item por item.</span><button class="action" type="button" data-shop-kit>Comprar o kit</button></div>` : ''}
+          ${filters}
+          ${hiddenCount && !showHidden ? `<p class="note-status shop-note">${hiddenCount} itens avançados ficam fora da loja de criação (acima de ${eb(shopRules.teto)}, ${shopRules.esconder.map(tag => SHOP_TAG_NAMES[tag]).join(', ') || 'nenhuma etiqueta'}). O mestre libera o que quiser.</p>` : ''}
+          <div class="cc-shop-list shop-grid">${shown.map(item => {
+            const reason = hiddenReason(item);
+            const has = owned.get(item.id);
+            return shopCard(item, { open: openRows.has(item.id), extraClass: `${reason ? ' cc-hidden-item' : ''}${has ? ' shop-in' : ''}`, badges: has ? badge(`tem ${has}`, 'ok') : '', notes: gm && reason ? `<small class="cc-bad shop-reason">fora da criação: ${esc(reason)}</small>` : '', foot: foot(item) });
+          }).join('') || '<p class="shop-empty">Nada encontrado.</p>'}</div>
+          ${moreButton(visible, shown)}
+        </div>
+        ${doc ? `<div class="shop-drawer cc-shop-bar">${wallet}<p class="cc-shop-msg" id="cc-shop-msg" role="status"></p>
+          ${drawerBox(target, 'comprado', `Comprados <b class="cc-count">${bought.length}</b>`, boughtList, ' data-cc-bought')}</div>` : ''}
+      </div>`;
     };
     const draw = (reset = false) => keepingScroll(target, paint, reset);
     const say = (text, bad = false) => { const el = target.querySelector('#cc-shop-msg'); if (el) { el.textContent = text; el.classList.toggle('cc-bad', bad); } };
@@ -1293,9 +1374,7 @@
         return onChange();
       }
     };
-    target.onchange = event => {
-      if (event.target.matches('[data-shop-sub]')) { shopState.sub = event.target.value; draw(true); }
-    };
+    target.onchange = null;
     target.oninput = event => shopSearchInput(event, target, draw);
     draw(true);
     return { redraw: () => draw() };
@@ -1307,6 +1386,8 @@
   // escolheu). Cyberware chega sem instalar: o mestre instala pela ficha do Foundry, que cobra e rola a Humanidade.
   // O dinheiro e os itens de onde escolher vêm da ficha da mesa (doc.mesa).
   const ORDER_STATUS = { pendente: 'esperando o mestre', aprovado: 'aprovado, esperando o Foundry entregar', entregue: 'entregue', recusado: 'recusado', cancelado: 'cancelado' };
+  const ORDER_CHIP = { pendente: ['Pendente', 'var(--y)'], aprovado: ['Aprovado', 'var(--c)'], entregue: ['Entregue', 'var(--g)'], recusado: ['Recusado', 'var(--r)'], cancelado: ['Cancelado', 'var(--mu)'] };
+  const statusChip = status => { const [label, color] = ORDER_CHIP[status] || [status, 'var(--mu)']; return `<span class="shop-status" style="--k:${color}">${label}</span>`; };
   const carts = new Map(); // o pedido em montagem, por personagem (fica enquanto a página estiver aberta)
   let catalogByEn = null;
   const catalogEntryOf = name => {
@@ -1314,6 +1395,7 @@
     return catalogByEn.get(name) || null;
   };
   const cartCost = line => { const item = catalog.get(line.id); return item ? item.preco * (item.lote > 1 ? line.qtd / item.lote : line.qtd) : 0; };
+  const ONE_PER_LINE = ['arma', 'armadura', 'deck', 'cyberBase'];
 
   function renderCampaignShop(target, doc, { gm = false } = {}) {
     const cart = carts.get(doc.id) || [];
@@ -1335,6 +1417,7 @@
       const { visible, shown, filters } = shopFilter(shop.itens);
       const total = cart.reduce((sum, line) => sum + cartCost(line), 0);
       const money = mesa ? Number(mesa.dinheiro) || 0 : null;
+      const left = money === null ? null : money - total;
       const inCart = new Map();
       for (const line of cart) inCart.set(line.id, (inCart.get(line.id) || 0) + line.qtd);
       // Onde cada linha do pedido pode ir: um item da ficha ou outra linha do pedido ("@N").
@@ -1354,29 +1437,45 @@
       };
       const cartBox = cart.length ? `<ul class="cc-items cc-cart">${cart.map((line, index) => {
         const item = catalog.get(line.id) || {};
-        return `<li><div><b>${esc(item.nome || line.id)}</b> ×${line.qtd} · ${eb(cartCost(line))}${item.cyber ? ' <small class="cc-wait">o mestre instala pela ficha (Humanidade e instalação)</small>' : ''}</div>
-          <div class="cc-mount-controls">${ammoSelect(line, index)}${placeSelect(line, index)}<button type="button" class="action cc-ghost" data-pedido-menos="${index}" aria-label="Menos">−</button><button type="button" class="action cc-ghost" data-pedido-mais="${index}" aria-label="Mais">+</button><button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-tirar="${index}">Tirar</button></div></li>`;
+        return `<li><div class="shop-line"><span><b>${esc(item.nome || line.id)}</b> ×${line.qtd}<small>${esc(item.sub || '')}${item.lote > 1 ? ` · ${eb(item.preco)} por ${item.lote}` : ` · ${eb(item.preco || 0)} cada`}</small></span><b>${eb(cartCost(line))}</b></div>
+          ${item.cyber ? '<small class="cc-wait">O mestre instala pela ficha (Humanidade e instalação).</small>' : ''}
+          <div class="cc-mount-controls">${ammoSelect(line, index)}${placeSelect(line, index)}<span class="shop-stepper"><button type="button" data-pedido-menos="${index}" aria-label="Menos">−</button><button type="button" data-pedido-mais="${index}" aria-label="Mais">+</button></span><button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-tirar="${index}">Tirar</button></div></li>`;
       }).join('')}</ul>
-        <div class="cc-cart-send"><label>Recado para o mestre (opcional)<textarea data-pedido-nota rows="1" maxlength="300">${esc(target.dataset.nota || '')}</textarea></label><button type="button" class="action" data-pedido-enviar>Pedir ao mestre (${eb(total)})</button></div>` : '<p class="note-status">Nada no pedido ainda: use “Pôr no pedido” na lista.</p>';
+        <div class="shop-total"><span>Total</span><b>${eb(total)}</b></div>
+        ${left !== null ? `<div class="shop-total shop-after"><span>Saldo após o pedido</span><span class="${left < 0 ? 'cc-bad' : ''}">${eb(left)}</span></div>` : ''}
+        <div class="cc-cart-send"><label>Recado para o mestre (opcional)<textarea data-pedido-nota rows="3" maxlength="300">${esc(target.dataset.nota || '')}</textarea></label><button type="button" class="action shop-send" data-pedido-enviar>Enviar pedido · ${eb(total)}</button></div>`
+        : '<p class="note-status">Nada no pedido ainda: use Adicionar nos cartões.</p>';
       const orders = (doc.pedidos || []).slice().reverse();
       const waiting = orders.filter(pedido => pedido.status === 'pendente').length;
       const going = orders.filter(pedido => pedido.status === 'aprovado').length;
-      const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div><b>${when(pedido.criado)}</b> · ${eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span>${pedido.motivo ? ` <small>(${esc(pedido.motivo)})</small>` : ''}${pedido.erro ? ` <small class="cc-bad">${esc(pedido.erro)}</small>` : ''}<br>
-        <small>${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}${pedido.nota ? ` · “${esc(pedido.nota)}”` : ''}${(pedido.avisos || []).length ? ` · ${esc(pedido.avisos.join(' '))}` : ''}</small></div>
-        <div class="cc-mount-controls">${pedido.status === 'pendente' ? `${gm ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Aprovar</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-${gm ? 'recusar' : 'cancelar'}="${pedido.id}">${gm ? 'Recusar' : 'Cancelar'}</button>` : ''}${gm && pedido.status === 'aprovado' ? `${pedido.erro ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Tentar de novo</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-recusar="${pedido.id}">Recusar</button>` : ''}</div></li>`;
+      const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div class="shop-line"><span><b>${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span></small></span>${statusChip(pedido.status)}</div>
+        ${pedido.motivo || pedido.nota || pedido.erro || (pedido.avisos || []).length ? `<small>${pedido.nota ? `“${esc(pedido.nota)}”` : ''}${pedido.motivo ? ` Motivo: ${esc(pedido.motivo)}.` : ''}${(pedido.avisos || []).length ? ` ${esc(pedido.avisos.join(' '))}` : ''}${pedido.erro ? ` <span class="cc-bad">${esc(pedido.erro)}</span>` : ''}</small>` : ''}
+        ${pedido.status === 'pendente' || (gm && pedido.status === 'aprovado') ? `<div class="cc-mount-controls">${pedido.status === 'pendente' ? `${gm ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Aprovar</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-${gm ? 'recusar' : 'cancelar'}="${pedido.id}">${gm ? 'Recusar' : 'Cancelar'}</button>` : ''}${gm && pedido.status === 'aprovado' ? `${pedido.erro ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Tentar de novo</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-recusar="${pedido.id}">Recusar</button>` : ''}</div>` : ''}</li>`;
       const alert = waiting ? `<span class="cc-tab-alert">${waiting} ${gm ? 'para aprovar' : 'com o mestre'}</span>` : going ? `<span class="cc-tab-alert cc-tab-alert-go">${going} a caminho</span>` : '';
-      target.innerHTML = `<div class="cc-shop-bar"><div class="cc-wallet"><span>Dinheiro na mesa: <b>${money === null ? '—' : eb(money)}</b>${money === null ? ' <small>(chega quando o mestre abrir o mundo no Foundry)</small>' : ''}</span></div>
-          <div class="cc-shop-tabs">${panelButton('pedido', `Seu pedido <b class="cc-count">${cart.length}</b>${total ? ` · <span class="${money !== null && total > money ? 'cc-bad' : ''}">${eb(total)}</span>` : ''}`)}${panelButton('pedidos', `Pedidos <b class="cc-count">${orders.length}</b>${alert}`)}</div>
-          <p class="cc-shop-msg" data-pedido-msg role="status"></p></div>
-        ${shopPanel('pedido', `<p class="note-status">Cada pedido passa pelo mestre. Aprovado, o Foundry entrega: os itens entram na ficha, o dinheiro sai, a arma vem carregada e o acessório ou o programa vai onde você escolher. Cyberware chega sem instalar.</p>${cartBox}`, ' data-cc-cart')}
-        ${shopPanel('pedidos', orders.length ? `<ul class="cc-items cc-orders">${orders.map(orderLine).join('')}</ul>` : '<p class="note-status">Nenhum pedido enviado ainda.</p>', ' data-cc-orders')}
-        ${filters}
-        <div class="cc-shop-list">${shown.map(item => shopRow(item, {
-          open: openRows.has(item.id),
-          badges: (onSheet.get(item.id) ? badge(`na ficha ${onSheet.get(item.id)}`, 'ok') : '') + (inCart.get(item.id) ? badge(`no pedido ${inCart.get(item.id)}`, 'wait') : ''),
-          actions: `<button class="action" type="button" data-pedido-por="${item.id}">Pôr no pedido</button>`
-        })).join('') || '<p class="note-status">Nada encontrado.</p>'}
-          ${visible.length > shown.length ? `<p class="note-status cc-shop-foot">Mostrando ${shown.length} de ${visible.length}: use a busca para achar o resto.</p>` : ''}</div>`;
+      const foot = item => {
+        const qty = inCart.get(item.id) || 0;
+        const tooMuch = left !== null && !qty && item.preco > left;
+        if (qty) return `${priceOf(item)}<span class="shop-stepper"><button type="button" data-pedido-card-menos="${item.id}" aria-label="Diminuir">−</button><b>${qty}</b><button type="button" data-pedido-por="${item.id}" aria-label="Aumentar">+</button></span>`;
+        return `${priceOf(item, tooMuch)}${tooMuch ? '<button class="action" type="button" disabled>Sem saldo</button>' : `<button class="action" type="button" data-pedido-por="${item.id}">Adicionar</button>`}`;
+      };
+      target.innerHTML = `<div class="shop-layout${narrowShop(target) ? ' shop-narrow' : ''}">
+        <div class="shop-main">
+          ${filters}
+          <div class="cc-shop-list shop-grid">${shown.map(item => shopCard(item, {
+            open: openRows.has(item.id),
+            extraClass: inCart.get(item.id) ? ' shop-in' : '',
+            badges: (onSheet.get(item.id) ? badge(`na ficha ${onSheet.get(item.id)}`, 'ok') : '') + (inCart.get(item.id) ? badge(`no pedido ${inCart.get(item.id)}`, 'wait') : ''),
+            foot: foot(item)
+          })).join('') || '<p class="shop-empty">Nada encontrado.</p>'}</div>
+          ${moreButton(visible, shown)}
+        </div>
+        <div class="shop-drawer cc-shop-bar">
+          <section class="shop-box shop-wallet-box"><div class="cc-wallet shop-wallet"><span class="wl-main"><small>Dinheiro na mesa: </small><b>${money === null ? '—' : eb(money)}</b></span>${money === null ? '<span class="wl-sub">Chega quando o mestre abrir o mundo no Foundry.</span>' : ''}</div></section>
+          <p class="cc-shop-msg" data-pedido-msg role="status"></p>
+          ${drawerBox(target, 'pedido', `Seu pedido <b class="cc-count">${cart.length}</b>${total ? ` · <span class="${money !== null && total > money ? 'cc-bad' : ''}">${eb(total)}</span>` : ''}`, `<p class="note-status shop-howto">Cada pedido passa pelo mestre. Aprovado, o Foundry entrega: os itens entram na ficha, o dinheiro sai, a arma vem carregada e o acessório ou o programa vai onde você escolher. Cyberware chega sem instalar.</p>${cartBox}`, ' data-cc-cart')}
+          ${drawerBox(target, 'pedidos', `Pedidos <b class="cc-count">${orders.length}</b>${alert}`, orders.length ? `<ul class="cc-items cc-orders">${orders.map(orderLine).join('')}</ul>` : '<p class="note-status">Nenhum pedido enviado ainda.</p>', ' data-cc-orders')}
+        </div>
+      </div>`;
     };
     const draw = (reset = false) => keepingScroll(target, paint, reset);
     const message = (text, bad = false) => { const el = target.querySelector('[data-pedido-msg]'); if (el) { el.textContent = text; el.classList.toggle('cc-bad', bad); } };
@@ -1393,10 +1492,20 @@
       if (add) {
         const item = catalog.get(add.dataset.pedidoPor);
         const step = item.lote > 1 ? item.lote : 1;
-        const existing = cart.find(line => line.id === item.id && !['arma', 'armadura', 'deck', 'cyberBase'].includes(kindOf(item)));
+        const existing = cart.find(line => line.id === item.id && !ONE_PER_LINE.includes(kindOf(item)));
         if (existing) existing.qtd += step; else cart.push({ id: item.id, qtd: step, em: '', municao: '' });
         draw();
-        return message(`No pedido: ${item.nome}. Abra “Seu pedido” para escolher onde vai e mandar ao mestre.`);
+        return message(`No pedido: ${item.nome}.`);
+      }
+      // O − do cartão: tira uma unidade (ou um lote) da última linha deste item.
+      const cardLess = event.target.closest('[data-pedido-card-menos]');
+      if (cardLess) {
+        const item = catalog.get(cardLess.dataset.pedidoCardMenos);
+        const step = item.lote > 1 ? item.lote : 1;
+        let at = -1;
+        cart.forEach((line, index) => { if (line.id === item.id) at = index; });
+        if (at >= 0) { cart[at].qtd -= step; if (cart[at].qtd <= 0) removeLine(at); }
+        return draw();
       }
       const index = name => Number((event.target.closest(`[data-pedido-${name}]`) || {}).dataset?.[`pedido${name[0].toUpperCase()}${name.slice(1)}`]);
       if (event.target.closest('[data-pedido-mais]') || event.target.closest('[data-pedido-menos]')) {
@@ -1407,16 +1516,7 @@
         line.qtd = Math.max(step, line.qtd + (plus ? step : -step));
         return draw();
       }
-      if (event.target.closest('[data-pedido-tirar]')) {
-        const removed = index('tirar');
-        cart.splice(removed, 1);
-        // Referências a linhas do pedido ("@N") andam junto.
-        for (const line of cart) for (const field of ['em', 'municao']) {
-          const ref = String(line[field] || '').match(/^@(\d+)$/);
-          if (ref) line[field] = Number(ref[1]) === removed ? '' : Number(ref[1]) > removed ? `@${Number(ref[1]) - 1}` : line[field];
-        }
-        return draw();
-      }
+      if (event.target.closest('[data-pedido-tirar]')) { removeLine(index('tirar')); return draw(); }
       if (event.target.closest('[data-pedido-enviar]')) {
         const nota = (target.querySelector('[data-pedido-nota]') || {}).value || '';
         const answer = await api(`api/personagens/${doc.id}/pedidos`, { method: 'POST', body: { itens: cart, nota } });
@@ -1433,19 +1533,22 @@
       const refuse = event.target.closest('[data-pedido-recusar]');
       if (refuse) {
         const pedido = (doc.pedidos || []).find(entry => entry.id === refuse.dataset.pedidoRecusar) || { itens: [] };
-        const motivo = await wikiPopup.prompt({
-          title: 'Recusar o pedido',
-          html: `<p>${esc(doc.nome || 'Personagem')}: ${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')} (${eb(pedido.total || 0)}).</p>`,
-          label: 'Motivo (opcional, o jogador vê)', placeholder: 'Ex.: não tem na loja da Afterlife', maxlength: 200, ok: 'Recusar', danger: true
-        });
+        const motivo = await askRefusal(doc.nome, pedido);
         if (motivo !== null) return act(`${refuse.dataset.pedidoRecusar}/recusar`, { motivo });
         return;
       }
       const cancel = event.target.closest('[data-pedido-cancelar]');
       if (cancel) return act(`${cancel.dataset.pedidoCancelar}/cancelar`);
     };
+    // Tirar uma linha: as referências a linhas do pedido ("@N") andam junto.
+    function removeLine(removed) {
+      cart.splice(removed, 1);
+      for (const line of cart) for (const field of ['em', 'municao']) {
+        const ref = String(line[field] || '').match(/^@(\d+)$/);
+        if (ref) line[field] = Number(ref[1]) === removed ? '' : Number(ref[1]) > removed ? `@${Number(ref[1]) - 1}` : line[field];
+      }
+    }
     target.onchange = event => {
-      if (event.target.matches('[data-shop-sub]')) { shopState.sub = event.target.value; return draw(true); }
       if (event.target.matches('[data-pedido-em]')) { cart[Number(event.target.dataset.pedidoEm)].em = event.target.value; return draw(); }
       if (event.target.matches('[data-pedido-municao]')) { cart[Number(event.target.dataset.pedidoMunicao)].municao = event.target.value; return draw(); }
     };
@@ -1455,6 +1558,77 @@
     };
     draw(true);
     return { redraw: () => draw() };
+  }
+  const askRefusal = (nome, pedido) => wikiPopup.prompt({
+    title: 'Recusar o pedido',
+    html: `<p>${esc(nome || 'Personagem')}: ${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')} (${eb(pedido.total || 0)}).</p>`,
+    label: 'Motivo (opcional, o jogador vê)', placeholder: 'Ex.: não tem na loja da Afterlife', maxlength: 200, ok: 'Recusar', danger: true
+  });
+
+  // ================= Loja do mestre (sem personagem escolhido) =================
+  // O catálogo inteiro em linhas, com a situação de cada item na loja de criação (à venda ou escondido, e por quê) e os
+  // botões Esconder e Liberar, que gravam as regras na hora.
+  const VIEWS = { todos: 'Todos', venda: 'À venda na criação', fora: 'Fora da criação' };
+  function renderGmCatalog(target, { onRules } = {}) {
+    let view = 'todos';
+    const paint = () => {
+      const pool = shop.itens.filter(item => view === 'todos' || (view === 'venda') === !hiddenReason(item));
+      const { visible, shown, filters } = shopFilter(pool);
+      const row = item => {
+        const reason = hiddenReason(item);
+        return `<div class="shop-row cc-shop-item${item.desc ? ' cc-has-desc' : ''}" data-shop-row="${item.id}">
+          <span class="cc-shop-info"><b>${esc(item.nome)}</b>${itemTags(item) ? `<span class="shop-tags">${itemTags(item)}</span>` : ''}</span>
+          <span class="cc-shop-sub shop-row-details">${esc([item.sub, item.resumo].filter(Boolean).join(' · '))}</span>
+          ${priceOf(item)}
+          <span class="shop-status" style="--k:${reason ? 'var(--r)' : 'var(--c)'}">${reason ? `Escondido // ${esc(reason)}` : 'Visível'}</span>
+          ${reason ? `<button class="action cc-ghost" type="button" data-shop-allow="${item.id}">Liberar</button>` : `<button class="action cc-ghost cc-ghost-danger" type="button" data-shop-block="${item.id}">Esconder</button>`}
+          ${item.desc ? `<small class="cc-desc">${esc(item.desc)}</small>` : ''}</div>`;
+      };
+      target.innerHTML = `${filters}<div class="map-filter-list shop-rail shop-views">${Object.entries(VIEWS).map(([id, label]) => `<button type="button" class="map-filter shop-chip${id === view ? ' active' : ''}" data-shop-view="${id}">${label}</button>`).join('')}</div>
+        <div class="shop-rows cc-shop-list"><div class="shop-row shop-row-head"><span>Item</span><span class="shop-row-details">Detalhes</span><span>Preço</span><span>Situação</span><span></span></div>${shown.map(row).join('') || '<p class="shop-empty">Nada encontrado.</p>'}</div>
+        ${moreButton(visible, shown)}`;
+    };
+    const draw = (reset = false) => keepingScroll(target, paint, reset);
+    const openRows = new Set();
+    async function changeRules(change) {
+      const rules = { ...shopRules, liberados: [...shopRules.liberados], bloqueados: [...shopRules.bloqueados] };
+      change(rules);
+      const answer = await saveShopRules(rules);
+      if (answer.status === 200) shopRules = answer.data.regras;
+      draw();
+      if (onRules) onRules();
+    }
+    target.onclick = event => {
+      const pick = event.target.closest('[data-shop-view]');
+      if (pick) { view = pick.dataset.shopView; shopState.mostrar = PAGE; return draw(); }
+      if (shopCommonClick(event, target, draw, openRows)) return;
+      const allow = event.target.closest('[data-shop-allow]');
+      if (allow) return changeRules(rules => { rules.bloqueados = rules.bloqueados.filter(id => id !== allow.dataset.shopAllow); if (hiddenReason(catalog.get(allow.dataset.shopAllow), rules)) rules.liberados.push(allow.dataset.shopAllow); });
+      const block = event.target.closest('[data-shop-block]');
+      if (block) return changeRules(rules => { rules.liberados = rules.liberados.filter(id => id !== block.dataset.shopBlock); rules.bloqueados.push(block.dataset.shopBlock); });
+    };
+    target.onchange = null;
+    target.oninput = event => shopSearchInput(event, target, draw);
+    draw(true);
+    return { redraw: () => draw() };
+  }
+
+  // Os pedidos esperando o mestre em todos os personagens da campanha, com Aprovar e Recusar.
+  async function renderGmOrders(target, list) {
+    const pending = list.filter(item => item.pedidos && (item.pedidos.pendentes || item.pedidos.aprovados));
+    const answers = await Promise.all(pending.map(item => api(`api/personagens/${item.id}/pedidos`).then(answer => ({ item, pedidos: (answer.data && answer.data.pedidos) || [] }))));
+    const open = answers.flatMap(({ item, pedidos }) => pedidos.filter(pedido => pedido.status === 'pendente' || pedido.status === 'aprovado').map(pedido => ({ item, pedido })));
+    open.sort((a, b) => (a.pedido.status === b.pedido.status ? String(a.pedido.criado).localeCompare(String(b.pedido.criado)) : a.pedido.status === 'pendente' ? -1 : 1));
+    const count = open.filter(entry => entry.pedido.status === 'pendente').length;
+    const card = ({ item, pedido }) => `<div class="shop-order" style="--k:${(ORDER_CHIP[pedido.status] || [])[1] || 'var(--y)'}"><header><span>${esc(item.nome || 'Sem nome')}${item.donoNome ? ` <small>de ${esc(item.donoNome)}</small>` : ''}</span>${statusChip(pedido.status)}</header>
+      <div class="shop-order-items">${pedido.itens.map(entry => `${esc(entry.nome)}${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}`).join(' · ')} // ${eb(pedido.total)}</div>
+      ${pedido.nota ? `<p>${esc(pedido.nota)}</p>` : ''}${pedido.erro ? `<p class="cc-bad">${esc(pedido.erro)}</p>` : ''}
+      <div class="shop-order-actions">${pedido.status === 'pendente' || pedido.erro ? `<button type="button" class="action" data-gm-aprovar="${item.id}:${pedido.id}">${pedido.status === 'pendente' ? 'Aprovar' : 'Tentar de novo'}</button>` : '<small class="note-status">Esperando o Foundry entregar.</small>'}
+        <button type="button" class="action cc-ghost cc-ghost-danger" data-gm-recusar="${item.id}:${pedido.id}">Recusar</button>
+        <button type="button" class="action cc-ghost" data-gm-abrir="${item.id}">Abrir a loja</button></div></div>`;
+    target.innerHTML = `<h4 class="shop-panel-title">Pedidos da campanha<span>${count} ${count === 1 ? 'pendente' : 'pendentes'}</span></h4>
+      ${open.length ? open.map(card).join('') : '<p class="note-status">Nenhum pedido esperando você.</p>'}<p class="cc-shop-msg" data-gm-msg role="status"></p>`;
+    return open;
   }
 
   // ================= Salvamento =================
@@ -2042,14 +2216,14 @@
   }
 
   // ================= Página: Loja =================
-  // Ícone de engrenagem (Feather, MIT) para o botão das regras da loja.
-  const GEAR_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  const ruleCount = () => `${shopRules.liberados.length} liberados e ${shopRules.bloqueados.length} escondidos um a um (botões Liberar e Esconder no catálogo).`;
 
   async function setupShopPage(content, helpers) {
     esc = helpers.escapeHtml;
     const token = ++renderToken;
     shopState.busca = '';
     shopState.painel = '';
+    shopState.mostrar = PAGE;
     const root = content.querySelector('#cc-root');
     const [me, list] = await Promise.all([identity(), api(`api/personagens${campaignQuery()}`), loadShopRules()]);
     if (token !== renderToken) return;
@@ -2057,49 +2231,26 @@
     const gm = me.data.papel === 'mestre';
     const mine = (list.data.personagens || []).filter(item => !item.publico);
     const inUse = window.playerAccount && window.playerAccount.selected();
-    const chosen = (helpers.target && helpers.target.section) || (mine.some(item => item.id === inUse) ? inUse : (mine[0] || {}).id);
-    // As regras da loja de criação ficam atrás da engrenagem, fora do redesenho da loja (o que o mestre digita não se perde).
-    const ruleCount = () => `${shopRules.liberados.length} liberados e ${shopRules.bloqueados.length} escondidos um a um (botões Liberar e Esconder na lista).`;
-    const rulesPanel = gm ? `<div class="cc-shop-panel cc-rules-panel" data-cc-rules hidden><h4>Regras da loja de criação</h4>
-      <p class="note-status">O que fica de fora quando os jogadores montam o personagem. A loja da campanha (depois do Foundry) mostra tudo: lá, cada pedido passa por você.</p>
-      <div class="cc-rules"><label>Teto de preço por item <input type="number" min="0" step="50" data-rule-teto value="${shopRules.teto}"></label>
-      ${Object.entries(SHOP_TAG_NAMES).map(([tag, name]) => `<label class="cc-radio"><input type="checkbox" data-rule-tag="${tag}"${shopRules.esconder.includes(tag) ? ' checked' : ''}> Esconder ${esc(name)}</label>`).join('')}</div>
-      <label class="cc-radio"><input type="checkbox" data-shop-all${shopState.verTudo ? ' checked' : ''}> Mostrar na lista também os itens fora da criação</label>
-      <div class="cc-toolbar"><button class="action" type="button" data-rule-save>Salvar regras</button><span class="cc-save" id="cc-rules-msg" role="status"></span></div>
-      <p class="note-status" data-rule-count>${ruleCount()}</p></div>` : '';
-    const picker = mine.length ? `<label>Personagem <select data-shop-pc>${mine.map(item => `<option value="${item.id}"${item.id === chosen ? ' selected' : ''}>${esc(item.nome || 'Sem nome')}</option>`).join('')}</select></label> <span class="cc-save" id="cc-save" role="status"></span>` : '';
-    const gear = gm ? `<button type="button" class="cc-tab cc-gear" data-shop-config aria-expanded="false" title="Regras da loja de criação">${GEAR_ICON}<span>Regras da loja</span></button>` : '';
-    root.innerHTML = `${picker || gear ? `<div class="cc-shop-top">${picker}${gear}</div>` : ''}${rulesPanel}<div id="cc-shop"></div>`;
-    let view = { redraw() {} };
-    if (gm) {
-      const panel = root.querySelector('[data-cc-rules]');
-      const gearButton = root.querySelector('[data-shop-config]');
-      gearButton.onclick = () => {
-        panel.hidden = !panel.hidden;
-        gearButton.classList.toggle('active', !panel.hidden);
-        gearButton.setAttribute('aria-expanded', String(!panel.hidden));
-      };
-      root.querySelector('[data-shop-all]').onchange = event => { shopState.verTudo = event.target.checked; view.redraw(); };
-      root.querySelector('[data-rule-save]').onclick = async () => {
-        const rules = { ...shopRules, teto: Number(root.querySelector('[data-rule-teto]').value) || 0, esconder: [...root.querySelectorAll('[data-rule-tag]:checked')].map(input => input.dataset.ruleTag) };
-        const answer = await saveShopRules(rules);
-        const status = root.querySelector('#cc-rules-msg');
-        if (answer.status !== 200) { status.textContent = answer.data.erro || 'Não consegui salvar.'; status.className = 'cc-save bad'; return; }
-        shopRules = answer.data.regras;
-        status.textContent = 'Regras salvas.';
-        status.className = 'cc-save ok';
-        root.querySelector('[data-rule-count]').textContent = ruleCount();
-        view.redraw();
-      };
-    }
-    const onRules = () => { const count = root.querySelector('[data-rule-count]'); if (count) count.textContent = ruleCount(); };
+    const wanted = helpers.target && helpers.target.section;
+    // O mestre começa na visão dele (pedidos, regras e catálogo) e escolhe um personagem para ver a loja daquele.
+    const chosen = wanted || (gm ? '' : mine.some(item => item.id === inUse) ? inUse : (mine[0] || {}).id);
+    // O título e a linha de baixo mudam com o modo (loja inicial, loja da campanha, visão do mestre).
+    const head = content.querySelector('.page-head');
+    const setHead = (title, line) => {
+      if (!head) return;
+      head.querySelector('h2').innerHTML = title;
+      head.querySelector('.eyebrow').textContent = line;
+    };
+    const picker = mine.length || gm ? `<label class="shop-picker"><span>${gm ? 'Ver a loja de' : 'Personagem'}</span><select data-shop-pc>${gm ? `<option value=""${chosen ? '' : ' selected'}>Visão do mestre</option>` : ''}${mine.map(item => `<option value="${item.id}"${item.id === chosen ? ' selected' : ''}>${esc(item.nome || 'Sem nome')}</option>`).join('')}</select></label><span class="cc-save" id="cc-save" role="status"></span>` : '';
+    root.innerHTML = `${picker ? `<div class="cc-shop-top">${picker}</div>` : ''}<div id="cc-shop"></div>`;
+    const select = root.querySelector('[data-shop-pc]');
+    if (select) select.onchange = event => helpers.openPage('loja', event.target.value ? { section: event.target.value } : undefined, 'replace');
     const shopEl = root.querySelector('#cc-shop');
-    if (!mine.length) {
-      if (!gm) { shopEl.innerHTML = `<div class="callout">${me.data.papel === 'visitante' ? 'Entre com o seu código em Personagens para comprar.' : 'Crie um personagem primeiro, em Personagens.'}</div>`; return; }
-      view = renderShop(shopEl, null, { gm, onRules });
-      return;
+    if (gm && !chosen) {
+      setHead('Loja <span class="h2-sub">// mestre</span>', 'Pedidos, regras e catálogo da campanha');
+      return setupGmShop(shopEl, mine, helpers, token);
     }
-    root.querySelector('[data-shop-pc]').onchange = event => helpers.openPage('loja', { section: event.target.value }, 'replace');
+    if (!mine.length) { shopEl.innerHTML = `<div class="callout">${me.data.papel === 'visitante' ? 'Entre com o seu código em Personagens para comprar.' : 'Crie um personagem primeiro, em Personagens.'}</div>`; return; }
     const answer = await api(`api/personagens/${chosen}`);
     if (token !== renderToken) return;
     const loaded = answer.data.personagem;
@@ -2107,14 +2258,79 @@
     const doc = { ...blank(), ...loaded };
     if (C.roleAliases[doc.role]) doc.role = C.roleAliases[doc.role];
     if (!doc.metodo) {
-      if (gm) { view = renderShop(shopEl, null, { gm, onRules }); return; }
+      if (gm) { setHead('Loja', 'Catálogo // sem método de criação'); renderShop(shopEl, null, { gm }); return; }
       shopEl.innerHTML = '<div class="callout">Escolha o método de criação no criador antes de comprar: ele define quanto dinheiro você tem.</div>';
       return;
     }
     // Depois do Foundry: a loja da campanha (pedidos que o mestre aprova).
-    if (doc.foundry && doc.foundry.importado) { view = renderCampaignShop(shopEl, doc, { gm }); return; }
+    if (doc.foundry && doc.foundry.importado) {
+      setHead('Loja', `Loja da campanha // pedidos para o mestre${doc.nome ? ` // ${doc.nome}` : ''}`);
+      renderCampaignShop(shopEl, doc, { gm });
+      return;
+    }
+    setHead('Loja', `Loja inicial // criação do personagem${doc.nome ? ` // ${doc.nome}` : ''}`);
     const saver = createSaver(doc, root.querySelector('#cc-save'), helpers.storage);
-    view = renderShop(shopEl, doc, { onChange: () => saver.changed(), readOnly: Boolean(doc.foundry), gm, onRules });
+    renderShop(shopEl, doc, { onChange: () => saver.changed(), readOnly: Boolean(doc.foundry), gm });
+  }
+
+  // A visão do mestre: os pedidos da campanha, as regras da loja inicial (fora do redesenho do catálogo, para o que ele
+  // digita não se perder) e o catálogo com os botões Esconder e Liberar.
+  async function setupGmShop(target, list, helpers, token) {
+    target.innerHTML = `<div class="shop-gm">
+      <div class="shop-g2">
+        <section class="shop-panel" data-gm-orders><h4 class="shop-panel-title">Pedidos da campanha</h4><p class="note-status">Carregando os pedidos…</p></section>
+        <section class="shop-panel cc-rules-panel" data-cc-rules><h4 class="shop-panel-title">Regras da loja inicial<span>${esc((activeCampaign() || {}).name || 'campanha atual')}</span></h4>
+          <p class="note-status">O que fica de fora quando os jogadores montam o personagem. A loja da campanha (depois do Foundry) mostra tudo: lá, cada pedido passa por você.</p>
+          <label class="shop-field">Teto de preço por item (eb)<input type="number" min="0" step="50" data-rule-teto value="${shopRules.teto}"></label>
+          <span class="shop-label">Escondido na criação</span>
+          <div class="map-filter-list shop-toggles">${Object.entries(SHOP_TAG_NAMES).map(([tag, name]) => `<button type="button" class="map-filter shop-chip" data-rule-tag="${tag}" aria-pressed="${shopRules.esconder.includes(tag)}">${esc(name)}</button>`).join('')}</div>
+          <div class="cc-toolbar"><button class="action" type="button" data-rule-save>Salvar regras</button><span class="cc-save" id="cc-rules-msg" role="status"></span></div>
+          <p class="note-status" data-rule-count>${ruleCount()}</p>
+        </section>
+      </div>
+      <section class="shop-panel shop-catalog-panel"><h4 class="shop-panel-title">Catálogo com controles do mestre<span>${shop.itens.length} itens</span></h4><div data-gm-catalog></div></section>
+    </div>`;
+    const rulesBox = target.querySelector('[data-cc-rules]');
+    const ordersBox = target.querySelector('[data-gm-orders]');
+    const onRules = () => { rulesBox.querySelector('[data-rule-count]').textContent = ruleCount(); };
+    const catalogView = renderGmCatalog(target.querySelector('[data-gm-catalog]'), { onRules });
+    rulesBox.onclick = async event => {
+      const tag = event.target.closest('[data-rule-tag]');
+      if (tag) { tag.setAttribute('aria-pressed', String(tag.getAttribute('aria-pressed') !== 'true')); return; }
+      if (!event.target.closest('[data-rule-save]')) return;
+      const rules = { ...shopRules, teto: Number(rulesBox.querySelector('[data-rule-teto]').value) || 0, esconder: [...rulesBox.querySelectorAll('[data-rule-tag][aria-pressed="true"]')].map(button => button.dataset.ruleTag) };
+      const answer = await saveShopRules(rules);
+      const status = rulesBox.querySelector('#cc-rules-msg');
+      if (answer.status !== 200) { status.textContent = answer.data.erro || 'Não consegui salvar.'; status.className = 'cc-save bad'; return; }
+      shopRules = answer.data.regras;
+      status.textContent = 'Regras salvas.';
+      status.className = 'cc-save ok';
+      onRules();
+      catalogView.redraw();
+    };
+    // Aprovar, recusar ou abrir a loja do personagem; depois, os pedidos de novo.
+    const refresh = async () => {
+      const fresh = await api(`api/personagens${campaignQuery()}`);
+      if (token !== renderToken) return [];
+      return renderGmOrders(ordersBox, (fresh.data.personagens || []).filter(item => !item.publico));
+    };
+    let open = await renderGmOrders(ordersBox, list);
+    ordersBox.onclick = async event => {
+      const pick = event.target.closest('[data-gm-aprovar], [data-gm-recusar], [data-gm-abrir]');
+      if (!pick) return;
+      if (pick.dataset.gmAbrir) return helpers.openPage('loja', { section: pick.dataset.gmAbrir });
+      const [cid, pid] = (pick.dataset.gmAprovar || pick.dataset.gmRecusar).split(':');
+      const entry = open.find(item => item.item.id === cid && item.pedido.id === pid);
+      let body = {};
+      if (pick.dataset.gmRecusar) {
+        const motivo = await askRefusal(entry && entry.item.nome, (entry && entry.pedido) || { itens: [] });
+        if (motivo === null) return;
+        body = { motivo };
+      }
+      const answer = await api(`api/personagens/${cid}/pedidos/${pid}/${pick.dataset.gmAprovar ? 'aprovar' : 'recusar'}`, { method: 'POST', body });
+      if (answer.status !== 200) { const msg = ordersBox.querySelector('[data-gm-msg]'); if (msg) { msg.textContent = answer.data.erro || 'Não consegui.'; msg.classList.add('cc-bad'); } return; }
+      open = await refresh();
+    };
   }
 
   // O personagem em uso mudou (no menu da conta): a lista de Personagens marca o novo.
