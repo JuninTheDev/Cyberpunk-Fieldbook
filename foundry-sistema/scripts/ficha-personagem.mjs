@@ -5,6 +5,7 @@
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
+import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { pontosDeRole } from './regras.mjs';
 
@@ -16,8 +17,6 @@ const porcento = (valor, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round
 const slug = texto => String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 // As perícias mais altas ficam em destaque no painel geral, como no modelo.
 const EM_DESTAQUE = 6;
-// A Role pelo nome ou pelo id da lista de 2077 da wiki ("Solo", "netrunner").
-const roleDaWiki = nome => ROLES.find(role => [role.nome, role.id].some(valor => valor.toLowerCase() === String(nome).trim().toLowerCase())) ?? null;
 
 export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static DEFAULT_OPTIONS = {
@@ -99,10 +98,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     // nível (das mais altas para as mais baixas) ou todas, no grupo de cada uma.
     const linhaPericia = id => {
       const p = s.pericia(id);
-      const total = s.atributos[p.atributo].valor + p.nivel + p.bonus + s.penalidade;
+      const total = s.atributos[p.atributo].valor + p.nivel + p.bonus + (p.role?.valor ?? 0) + s.penalidade;
       return { ...p, familia: Boolean(s.pericias[id]?.familia), sigla: SIGLA[p.atributo], total,
-        dica: `${SIGLA[p.atributo]} + ${p.nome} + 1d10${p.bonus ? ` (bônus +${p.bonus})` : ''}`,
-        dicaTotal: `Atributo + nível${p.bonus ? ' + bônus' : ''}${s.penalidade ? ` ${s.penalidade} do ferimento` : ''}, sem o dado` };
+        dica: `${SIGLA[p.atributo]} + ${p.nome} + 1d10${p.bonus ? ` (bônus +${p.bonus})` : ''}${p.role ? ` (${p.role.rotulo} +${p.role.valor})` : ''}`,
+        dicaTotal: `Atributo + nível${p.bonus ? ' + bônus' : ''}${p.role ? ` + ${p.role.rotulo}` : ''}${s.penalidade ? ` ${s.penalidade} do ferimento` : ''}, sem o dado` };
     };
     const todas = [...PERICIAS.map(p => linhaPericia(p.id)), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia).map(([id]) => linhaPericia(id))];
     const comNivel = todas.filter(p => p.nivel > 0).sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -156,6 +155,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       'Fumble Recovery': s.consciencia.semFalhaCritica && 'sem falha crítica'
     };
     const daEspecialidade = new Set(especialidades?.itens.map(item => item.id) ?? []);
+    // Os bônus da Role nas perícias (regras.bonusDeRole): o Moto do Nomad e a especialização do Face somam sempre; a do
+    // Lawman fica guardada, e o bônus de caso dele espera a janela de rolagem.
+    const nomeDaPericia = id => PERICIAS.find(p => p.id === id)?.nome ?? FAMILIAS[id]?.nome ?? id;
+    const ativos = Object.entries(s.bonusDeRole);
+    const bonusDaRole = role && (role.id === 'nomad' || role.especializacoes) ? {
+      especializacoes: role.especializacoes?.map(e => ({ id: e.id, nome: e.nome, pericias: e.pericias.map(nomeDaPericia).join(', '), escolhida: e.id === s.role.especializacao })) ?? null,
+      rotulo: ativos[0]?.[1].rotulo ?? '', valor: ativos[0]?.[1].valor ?? 0, pericias: ativos.map(([id]) => nomeDaPericia(id)).join(', '),
+      situacional: role.id === 'lawman'
+    } : null;
 
     // NET: os cyberdecks (com o que está instalado) e os programas; a Interface é o Rank do Netrunner.
     const decks = itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')));
@@ -206,7 +214,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         id: u.id, nome: u.name, img: u.img,
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
-      roleDaWiki: role,
+      roleDaWiki: role, bonusDaRole,
       especialidades: especialidades && this.#especialidades(especialidades, role, efeitoDoSolo),
       outrasHabilidades: Object.entries(s.role.habilidades).filter(([nome]) => !daEspecialidade.has(nome)).map(([nome, pontos]) => ({ nome, pontos })),
       lifepath: LIFEPATH.map(({ chave, rotulo }) => ({ chave, rotulo, valor: s.lifepath[chave], largo: ['amigos', 'inimigos', 'amores', 'role'].includes(chave), linhas: chave === 'role' ? 4 : 2 })),

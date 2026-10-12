@@ -28,7 +28,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
-| CORE | os bônus de Role nas perícias (o Moto do Nomad; a especialização do Face; o Investigator do Lawman) | falta: P0, as perícias saem menores que na mesa (comparação com o CORE, abaixo) |
+| CORE | os bônus de Role nas perícias (o Moto do Nomad; a especialização do Face; o Investigator do Lawman) | portados no ciclo 23 os que valem sempre (o Moto e a especialização do Face, com a especialização vinda da wiki); o Investigator do Lawman e o Netrunner de 2077 esperam a janela de rolagem |
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | falta; a Sorte entrou pela ficha (ciclo 20) |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
@@ -85,14 +85,15 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 - **O que muda número na mesa (P0):** os bônus de Role nas perícias. No CORE, o item de Role soma Rank ÷ `bonusRatio`
   nas perícias da lista dele, sempre ou marcado na janela de rolagem (`getRoleMods` em `cpr-role.js`). Na mesa: o
   Nomad soma 4 (Rank 4) nas seis perícias de veículo; o Face soma 4 nas duas da especialização; o Lawman marca o
-  Investigator na janela. Aqui nada soma, e a especialização nem é guardada.
+  Investigator na janela. Aqui nada somava, e a especialização nem era guardada: os que valem sempre entraram no ciclo
+  23.
 - **O que o Foundry 12 faz e o sistema não:**
 
   | Área | No Foundry 12 | Aqui | ROADMAP |
   | --- | --- | --- | --- |
   | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | rola direto; a Sorte vai pela ficha | P1 |
   | Rolagens | Facedown (COOL + Reputação + 1d10) | falta | P2 |
-  | Roles | os bônus nas perícias | falta | P0 |
+  | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta | P2 |
   | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | falta | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
@@ -1082,3 +1083,46 @@ O usuário pôs o CORE inteiro na pasta `fvtt-cyberpunk-red-core-dev/` e pediu p
 - **Próximo:** o P0 novo, os bônus de Role nas perícias (o Moto do Nomad e a especialização do Face), com a
   especialização guardada pela importação e pela migração. Depois, a janela de rolagem (P1), que os bônus situacionais
   pedem.
+- **Commit:** `eaf019f`.
+
+### Ciclo 23 (2026-10-12): os bônus de Role nas perícias (P0, regra)
+
+O P0 achado na comparação com o CORE: no Foundry 12, o item de Role soma o Rank em perícias (`getRoleMods`), e aqui
+nada somava.
+
+- **Implementado:**
+  - **a regra** (`regras.bonusDeRole`), com a fonte de cada uma:
+    - o Moto do Nomad soma o Rank nas seis perícias de veículo (`PERICIAS_DO_MOTO`; wiki: "soma o Rank a Dirigir,
+      Pilotar e Tech de veículos terrestres, aéreos e marítimos");
+    - a especialização do Face soma o Rank nas duas perícias dela (system-2077.js: "Soma o Rank de Impacto Carismático
+      em"). O Rockerboy soma na família Tocar Instrumento, em todo instrumento;
+    - o Lawman soma nada sozinho: a especialização dele é o "bônus de caso", com pista de caso ativo, e entra com a
+      janela de rolagem;
+  - **as especializações vêm da wiki:** o build tira do criador (system-criacao.js) as do Face e do Lawman, com as
+    perícias pelos ids daqui (`ROLES` em gerado.mjs). Uma perícia que não existir para o build;
+  - **o modelo:** `system.role.especializacao` (o id da wiki) e o bônus na perícia (`pericia(id).role`), na própria
+    perícia ou na família dela;
+  - **o teste e a ficha:** o bônus entra como uma parte ("Moto +4", "Siren +4") e no total da perícia; a aba Role ganhou
+    o painel "Bônus nas perícias", com a escolha da especialização e o que soma;
+  - **a importação e a migração** guardam a especialização da criação na wiki (a ficha "Na mesa" não a manda).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 44 de 44. Dois testes novos:
+    - o bônus de cada Role (Nomad no Rank 4 e no 6, as três do Face, o Lawman e as outras sem nada);
+    - as perícias contra a wiki: o Moto é o conjunto das perícias de veículo do CORE, com a frase da wiki; as
+      especializações geradas são as do criador; o texto de 2077 diz que a do Face soma e a do Lawman é bônus de caso;
+  - G4: 60 de 60, cerca de 66 s. O que mudou:
+    - **no passo do Nomad:** o Moto 4 nas seis perícias de veículo, e "Moto 4" nas partes do teste de Conduzir;
+    - **um passo novo, a especialização,** com um Face sintético na wiki de teste:
+      - a importação e a migração guardam a Siren;
+      - o teste de Conversação dá EMP 7 + 4 + Siren 4 + 5 = 20, com "Siren +4" no cartão, e a ficha mostra 15;
+      - na aba Role, a troca para Rockerboy soma no violão (família) e em Malandragem, e tira da Conversação;
+      - como Lawman, a Street Cop fica guardada e nada soma;
+  - **mutações:** cada uma derrubou o teste dela, e o arquivo foi restaurado (conferido pelo md5):
+    - G3: o Moto sem bônus;
+    - G4: a perícia sem o bônus (o Nomad e o Face), a wiki sem a especialização, o teste sem a parte da Role (o Nomad e
+      o Face), o total da ficha sem a Role, o bônus sem a família e a migração sem a especialização;
+  - **conferência visual:** a captura da aba Role do Face (`v14-role-face.png`).
+- **Ficou:** os bônus situacionais (o Investigator do Lawman e o Netrunner de 2077), com a janela de rolagem (P1).
+- **Próximo:** a janela de rolagem (P1).

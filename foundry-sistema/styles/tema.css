@@ -278,6 +278,14 @@
   font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.12em;
 }
 .cpr-fieldbook.ficha-personagem .conferencia.erro { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+/* O que a Role soma nas perícias: a especialização (Face e Lawman) e o Moto do Nomad. */
+.cpr-fieldbook.ficha-personagem .bonus-role .especializacao {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-fraco); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .bonus-role select { flex: 1; height: 30px; font-size: 14px; letter-spacing: normal; text-transform: none; }
+.cpr-fieldbook.ficha-personagem .bonus-role .soma { margin: 0; font-size: 16px; line-height: 1.4; }
+.cpr-fieldbook.ficha-personagem .bonus-role .soma b { color: var(--cp-ciano); font-family: var(--cp-dados); font-weight: 400; }
 
 /* ---------- Vida: o Lifepath e as notas ---------- */
 .cpr-fieldbook.ficha-personagem .lifepath { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }

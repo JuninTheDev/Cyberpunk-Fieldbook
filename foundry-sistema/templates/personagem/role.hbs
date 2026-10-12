@@ -9,6 +9,27 @@
     {{/if}}
   </section>
 
+  {{#if bonusDaRole}}
+  <section class="painel corte bonus-role">
+    <div class="titulo">BÔNUS NAS PERÍCIAS<span>{{#if bonusDaRole.situacional}}COM PISTA DE CASO ATIVO{{else}}SEMPRE · RANK {{sistema.role.rank}}{{/if}}</span></div>
+    {{#if bonusDaRole.especializacoes}}
+    <label class="especializacao">Especialização
+      <select name="system.role.especializacao">
+        <option value="">—</option>
+        {{#each bonusDaRole.especializacoes}}<option value="{{id}}" {{#if escolhida}}selected{{/if}}>{{nome}} ({{pericias}})</option>{{/each}}
+      </select>
+    </label>
+    {{/if}}
+    {{#if bonusDaRole.pericias}}
+    <p class="soma"><b>{{bonusDaRole.rotulo}} +{{bonusDaRole.valor}}</b> em {{bonusDaRole.pericias}}.</p>
+    {{else if bonusDaRole.situacional}}
+    <p class="dica">Investigator: o Rank em Educação e Percepção, e nas perícias da especialização, quando há uma pista de um caso ativo. Ainda não entra sozinho no teste: o mestre soma até chegar a janela de rolagem.</p>
+    {{else}}
+    <p class="dica">Escolha a especialização: o Rank de {{roleDaWiki.habilidade}} soma nas perícias dela.</p>
+    {{/if}}
+  </section>
+  {{/if}}
+
   {{#if especialidades}}
   <section class="painel corte">
     <div class="titulo">{{especialidades.titulo}}<span class="{{#if especialidades.passou}}conta-erro{{/if}}">{{especialidades.distribuidos}} DE {{especialidades.total}} PONTOS · {{especialidades.pagina}}</span></div>

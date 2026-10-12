@@ -55,6 +55,24 @@ export function pontosDeRole(roleId, rank) {
 }
 export const moveFinal = (move, mortal) => Math.max(1, Number(move) + (mortal ? PENALIDADE_MOVE_MORTAL : 0));
 
+// Os bônus de Role nas perícias, como o item de Role do CORE (getRoleMods, em cpr-role.js: o Rank nas perícias da lista
+// dele). Valem sempre:
+// - o Moto do Nomad (wiki, system-catalog.js: "soma o Rank a Dirigir, Pilotar e Tech de veículos terrestres, aéreos e
+//   marítimos"; as seis do item Nomad do CORE);
+// - a especialização do Face (system-2077.js: "Soma o Rank de Impacto Carismático em" duas perícias).
+// O Investigator do Lawman, com a especialização dele, só vale com pista de caso ativo ("O bônus de caso também vale
+// em"), e o Netrunner de 2077 só correndo a NET: ficam para a janela de rolagem (ROADMAP, P1).
+export const PERICIAS_DO_MOTO = ['drive-land-vehicle', 'pilot-air-vehicle', 'pilot-sea-vehicle', 'land-vehicle-tech', 'air-vehicle-tech', 'sea-vehicle-tech'];
+// Pela perícia (ou família): { rotulo, valor }. especializacao: { nome, pericias } (as da wiki, em gerado.mjs).
+export function bonusDeRole({ roleId, rank, especializacao = null }) {
+  const valor = Math.max(0, Math.trunc(Number(rank) || 0));
+  const em = (pericias, rotulo) => Object.fromEntries(pericias.map(id => [id, { rotulo, valor }]));
+  if (!valor) return {};
+  if (roleId === 'nomad') return em(PERICIAS_DO_MOTO, 'Moto');
+  if (roleId === 'face' && especializacao) return em(especializacao.pericias, especializacao.nome);
+  return {};
+}
+
 // O extrato (o ledger do CORE no Foundry 12: Eurodólares, IP e Reputação): o saldo depois de somar, subtrair ou definir.
 // Como no CORE, subtrair sempre tira (um valor negativo também), e somar soma o valor como veio.
 export function novoSaldo(saldo, acao, valor) {

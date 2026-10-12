@@ -1742,6 +1742,74 @@ module.exports = async ({ edge, servidores, r }) => {
       return [JSON.stringify(info.antes) === JSON.stringify(info.depois) && info.notas.length === 0, JSON.stringify(info)];
     });
 
+    await r.passo('Role, a especialização: a do Face vem da criação da wiki, na importação e na migração (a ficha "Na mesa" não a traz), e soma o Rank: Siren em Conversação e Cuidados Pessoais ("Siren +4" no teste e no total da ficha); a aba Role mostra e troca a especialização (o Rockerboy soma em todo instrumento); a do Lawman fica guardada e não soma (bônus de caso)', async () => {
+      const stats = { INT: 6, REF: 6, DEX: 6, TECH: 5, COOL: 8, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 7 };
+      const pericias = [{ nome: 'Conversation', nivel: 4 }, { nome: 'Personal Grooming', nivel: 2 }, { nome: 'Play Instrument (Guitar)', nivel: 3 }];
+      const { personagem } = await api('/api/personagens', 'POST', {
+        nome: 'Teste Face', apelido: 'Voz', resultado: {
+          stats, derivados: { hp: 40 }, humanidade: { atual: 70 }, dinheiro: { saldo: 0 }, pericias, itens: [], veiculos: [],
+          role: { nome: 'Face', rank: 4, especializacao: { nome: 'Siren', pericias: ['Conversation', 'Personal Grooming'] } }
+        }
+      });
+      // A ficha da mesa do Foundry 12: a Role sem a especialização (o formato do cpr-2077).
+      await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
+        ator: 'atorFace', nomeAtor: 'Teste Face', quando: '2026-10-01T22:00:00.000Z', stats,
+        hp: { atual: 40, max: 40 }, humanidade: { atual: 70, max: 70 }, sorte: { atual: 5, max: 5 }, sp: { cabeca: 0, corpo: 0 }, dinheiro: 0, ip: 0, reputacao: 0,
+        role: { nome: 'Face', rank: 4, habilidades: [] }, pericias: pericias.map(p => ({ ...p, stat: 'EMP' })), lesoes: [], itens: []
+      });
+      await fixar(edge, [[5, 10]]);
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const importado = (await game.system.api.wiki.importarPersonagem(${JSON.stringify(personagem.id)}, '')).ator;
+          const daImportacao = importado.system.role.especializacao;
+          await importado.delete();
+          const { ator } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)}, '');
+          // ator.system, a cada vez: o Foundry monta um objeto novo a cada mudança.
+          const s = () => ator.system;
+          const emp = s().atributos.emp.valor;
+          const papel = id => s().pericia(id).role;
+          const siren = { especializacao: s().role.especializacao, conversa: papel('conversation'), cuidados: papel('personal-grooming'), violao: papel('play-instrument-guitar'), manha: papel('streetwise') };
+          // O teste de Conversação: EMP + 4 + Siren 4 + o d10 (5).
+          const teste = await ator.rolarPericia('conversation');
+          const partes = [...new DOMParser().parseFromString(teste.mensagem.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.trim());
+          // A ficha: o total da perícia e a aba Role, com a especialização trocada pelo select.
+          await ator.sheet.render({ force: true });
+          await esperar(() => ator.sheet.element?.querySelector('.tab.role .bonus-role select'));
+          const f = () => ator.sheet.element;
+          const texto = seletor => f()?.querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const naFicha = { total: texto('.tab.pericias .pericia[data-pericia="conversation"] .total'), select: f().querySelector('.tab.role .bonus-role select').value, soma: texto('.tab.role .bonus-role .soma'),
+            opcoes: [...f().querySelectorAll('.tab.role .bonus-role option')].map(o => o.value).join() };
+          const select = f().querySelector('.tab.role .bonus-role select');
+          select.value = 'rockerboy';
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => s().role.especializacao === 'rockerboy' && texto('.tab.role .bonus-role .soma').startsWith('Rockerboy'));
+          const rockerboy = { violao: papel('play-instrument-guitar'), manha: papel('streetwise'), conversa: papel('conversation'), soma: texto('.tab.role .bonus-role .soma') };
+          // O Lawman: a especialização fica guardada, mas o bônus de caso não soma sozinho.
+          await ator.update({ 'system.role.nome': 'Lawman', 'system.role.especializacao': 'street-cop' });
+          await esperar(() => texto('.tab.role .bonus-role .dica').startsWith('Investigator'));
+          const lawman = { especializacao: s().role.especializacao, manha: papel('streetwise'), atletismo: papel('athletics'), titulo: texto('.tab.role .bonus-role .titulo span'), dica: texto('.tab.role .bonus-role .dica') };
+          // De volta ao Face (Siren), na aba Role, para a captura (o finally fecha e apaga).
+          await ator.update({ 'system.role.nome': 'Face', 'system.role.especializacao': 'siren' });
+          await esperar(() => texto('.tab.role .bonus-role .soma').startsWith('Siren'));
+          ator.sheet.changeTab('role', 'primary');
+          return { daImportacao, emp, siren, partes, total: teste.total, naFicha, rockerboy, lawman };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('role-face');
+        const { siren, naFicha, rockerboy, lawman } = info;
+        const quatro = rotulo => b => b?.rotulo === rotulo && b.valor === 4;
+        const ok = info.daImportacao === 'siren' && siren.especializacao === 'siren' && quatro('Siren')(siren.conversa) && quatro('Siren')(siren.cuidados) && siren.violao === null && siren.manha === null
+          && info.partes.includes('Siren +4') && info.total === info.emp + 4 + 4 + 5
+          && naFicha.total === String(info.emp + 4 + 4) && naFicha.select === 'siren' && naFicha.soma === 'Siren +4 em Conversação, Cuidados Pessoais.' && naFicha.opcoes === ',siren,rockerboy,model'
+          && quatro('Rockerboy')(rockerboy.violao) && quatro('Rockerboy')(rockerboy.manha) && rockerboy.conversa === null && rockerboy.soma === 'Rockerboy +4 em Tocar Instrumento, Malandragem.'
+          && lawman.especializacao === 'street-cop' && lawman.manha === null && lawman.atletismo === null && lawman.titulo === 'COM PISTA DE CASO ATIVO' && /Educação e Percepção/.test(lawman.dica);
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => a.name === 'Teste Face')) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');
@@ -1781,15 +1849,21 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('wiki: importa o Nomad com os veículos da família e os upgrades instalados (SDP 50 + 20, 4 + 2 assentos) e a arma de 2077 da loja (Smart); tudo entregue', async () => {
+    await r.passo('wiki: importa o Nomad com os veículos da família e os upgrades instalados (SDP 50 + 20, 4 + 2 assentos) e a arma de 2077 da loja (Smart); tudo entregue; o Moto soma o Rank nas perícias de veículo', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '');
         const veiculos = ator.items.filter(i => i.type === 'veiculo').map(v => ({
           nome: v.name, sdp: [v.system.sdp.value, v.system.sdp.max], assentos: v.system.assentos, familia: v.system.familia, upgrades: v.instalados.map(i => i.name)
         }));
         const de2077 = ator.items.filter(i => i.getFlag('${S}', 'arma2077')).map(i => [i.name, i.getFlag('${S}', 'arma2077').classe, i.system.pente.max, i.system.bonusAtaque]);
+        // O Moto (Rank 4) nas seis perícias de veículo, e no teste como uma parte.
+        const moto = {
+          rank: ator.system.role.rank,
+          pericias: ['drive-land-vehicle', 'pilot-air-vehicle', 'pilot-sea-vehicle', 'land-vehicle-tech', 'air-vehicle-tech', 'sea-vehicle-tech'].map(id => ator.system.pericia(id).role?.rotulo + ' ' + ator.system.pericia(id).role?.valor),
+          partes: ator.partesDaPericia('drive-land-vehicle').partes.map(parte => parte.rotulo + ' ' + parte.valor), fora: ator.system.pericia('athletics').role
+        };
         await ator.delete();
-        return { veiculos, de2077, notas };
+        return { veiculos, de2077, notas, moto };
       })()`);
       const doc = (await api(`/api/personagens/${nomad.id}`)).personagem;
       const entregues = doc.foundry?.entregues || [];
@@ -1798,7 +1872,8 @@ module.exports = async ({ edge, servidores, r }) => {
         && JSON.stringify(info.veiculos[0]) === JSON.stringify({ nome: 'Compact Groundcar', sdp: [70, 70], assentos: 6, familia: true, upgrades: ['Heavy Chassis', 'Seating Upgrade'] })
         && JSON.stringify(info.veiculos[1]) === JSON.stringify({ nome: 'Roadbike', sdp: [35, 35], assentos: 2, familia: true, upgrades: [] })
         && JSON.stringify(info.de2077) === JSON.stringify([['Arasaka HJKE-11 Yukimura', 'smart', 30, 1]]) && info.notas.length === 0
-        && [carro.uid, moto.uid, ...carro.upgrades.map(u => u.uid), 'loja:teste-2077'].every(uid => entregues.includes(uid));
+        && [carro.uid, moto.uid, ...carro.upgrades.map(u => u.uid), 'loja:teste-2077'].every(uid => entregues.includes(uid))
+        && info.moto.rank === 4 && info.moto.pericias.every(t => t === 'Moto 4') && info.moto.partes.includes('Moto 4') && info.moto.fora === null;
       return [ok, `${JSON.stringify(info)} · entregues: ${entregues.length}`];
     });
 

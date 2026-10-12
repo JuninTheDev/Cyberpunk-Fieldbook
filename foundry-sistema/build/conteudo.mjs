@@ -118,12 +118,19 @@ function nomesDaWiki() {
 // As Roles de 2077 que a mesa usa e as sub-habilidades de Role (Solo, Tech, Medtech), com os nomes, as descrições e
 // as notas do criador de personagens da wiki (system-criacao.js): a aba Role da ficha. Os pontos e o máximo são os do
 // Rank 4, como a wiki os dá.
-function rolesDaWiki() {
+function rolesDaWiki(pericias, familias) {
   const contexto = { window: {} };
   for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-criacao.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, '..', arquivo), 'utf8'), contexto);
   const { roles, roleAbilities } = contexto.window.systemCreation;
+  // As especializações (Face e Lawman, de 2077) com as perícias pelos ids daqui: as comuns e as de família ("Play
+  // Instrument" é uma família). Perícia que não existir para o build.
+  const periciaPeloNome = nome => pericias.find(p => p.en === nome)?.id ?? Object.entries(familias).find(([, f]) => f.en === nome)?.[0]
+    ?? (() => { throw new Error(`Especialização da wiki com a perícia ${nome}, que este sistema não tem.`); })();
   return {
-    roles: roles.map(({ id, nome, habilidade, en, resumo }) => ({ id, nome, habilidade, en, resumo })),
+    roles: roles.map(({ id, nome, habilidade, en, resumo, especializacoes }) => ({
+      id, nome, habilidade, en, resumo,
+      ...(especializacoes ? { especializacoes: especializacoes.map(e => ({ id: e.id, nome: e.nome, pericias: e.pericias.map(periciaPeloNome) })) } : {})
+    })),
     habilidades: Object.fromEntries(Object.entries(roleAbilities).map(([id, r]) => [id, {
       titulo: r.titulo, pagina: r.pagina, pontos: r.pontos, max: r.max, nota: r.nota, itens: r.itens.map(({ id: chave, nome, desc }) => ({ id: chave, nome, desc }))
     }]))
@@ -408,7 +415,7 @@ async function main() {
   fs.mkdirSync(path.join(raiz, 'dados'), { recursive: true });
   const catalogo = { fonte: `Cyberpunk RED - CORE ${VERSAO} (GPL-3, The Project Red Team), convertido por build/conteudo.mjs`, itens };
   fs.writeFileSync(path.join(raiz, 'dados', 'catalogo.json'), JSON.stringify(catalogo));
-  const roles = rolesDaWiki();
+  const roles = rolesDaWiki(pericias, familias);
   const gerado = [
     `// Gerado por build/conteudo.mjs a partir do Cyberpunk RED - CORE ${VERSAO} (GPL-3), da tabela de perícias e do criador da wiki.`,
     '// Não edite à mão: rode o build de novo.',

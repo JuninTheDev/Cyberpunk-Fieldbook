@@ -6,6 +6,7 @@
 // - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra.
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, LIFEPATH, SISTEMA, USOS } from './config.mjs';
+import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { linhaDoExtrato } from './regras.mjs';
 
@@ -13,6 +14,10 @@ import { linhaDoExtrato } from './regras.mjs';
 // cpr-2077 fazia no ledger do CORE).
 const extratosIniciais = (valores, motivo) => Object.fromEntries(Object.entries(valores).map(([campo, valor]) =>
   [campo, valor ? [linhaDoExtrato({ acao: 'definir', antes: 0, saldo: valor, motivo, usuario: game.user.name })] : []]));
+
+// A especialização que o criador da wiki manda ({ nome, pericias }), pelo id daqui ("siren"). Ela vem da criação: a ficha
+// "Na mesa" do Foundry 12 não a manda.
+const especializacaoDaWiki = role => roleDaWiki(role?.nome ?? '')?.especializacoes?.find(e => e.nome === role?.especializacao?.nome)?.id ?? '';
 
 // O Lifepath que o criador da wiki manda pronto, em texto (resultado.lifepath, com os nomes do CORE).
 const lifepathDaWiki = lifepath => Object.fromEntries(LIFEPATH.map(({ chave, wiki }) => [chave, String(lifepath?.[wiki] ?? '')]));
@@ -169,7 +174,7 @@ export async function importarPersonagem(id, donoId = '') {
       humanidade: { value: Number(r.humanidade?.atual ?? r.humanidade?.max) || 0 },
       sorte: { value: stat('luck') },
       pericias,
-      role: { nome: r.role?.nome || '', rank: Number(r.role?.rank) || 4, habilidades },
+      role: { nome: r.role?.nome || '', rank: Number(r.role?.rank) || 4, habilidades, especializacao: especializacaoDaWiki(r.role) },
       dinheiro: Number(r.dinheiro?.saldo) || 0,
       extratos: extratosIniciais({ dinheiro: Number(r.dinheiro?.saldo) || 0 }, 'Dinheiro inicial (criador da wiki)'),
       apelido: doc.apelido || '',
@@ -411,7 +416,8 @@ export async function importarDaMesa(id, donoId = '') {
       pericias,
       role: {
         nome: m.role?.nome || r.role?.nome || '', rank: Number(m.role?.rank) || 4,
-        habilidades: Object.fromEntries((m.role?.habilidades || []).map(([nome, rank]) => [nome, Number(rank) || 0]))
+        habilidades: Object.fromEntries((m.role?.habilidades || []).map(([nome, rank]) => [nome, Number(rank) || 0])),
+        especializacao: especializacaoDaWiki({ nome: m.role?.nome || r.role?.nome, especializacao: r.role?.especializacao })
       },
       dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0,
       extratos: extratosIniciais({ dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0 }, 'Migrado da ficha da mesa do Foundry 12'),

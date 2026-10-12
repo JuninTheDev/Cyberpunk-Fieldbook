@@ -59,11 +59,12 @@ export class AtorCPR extends Actor {
     return testar(this, { rotulo: SIGLA[chave], partes: [{ rotulo: SIGLA[chave], valor }, ...this.#penalidade()], ...opcoes });
   }
 
-  // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas).
+  // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas) e o da Role (o Moto, a especialização).
   partesDaPericia(id) {
     const p = this.system.pericia(id);
     const partes = [{ rotulo: SIGLA[p.atributo], valor: this.system.atributos[p.atributo].valor }, { rotulo: p.nome, valor: p.nivel }];
     if (p.bonus) partes.push({ rotulo: 'Bônus', valor: p.bonus });
+    if (p.role) partes.push({ rotulo: p.role.rotulo, valor: p.role.valor });
     return { pericia: p, partes: [...partes, ...this.#penalidade()] };
   }
   rolarPericia(id, opcoes = {}) {

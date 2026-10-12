@@ -27,18 +27,19 @@ mesa faz e o sistema não; método e evidências no MIGRATION_STATUS).
 - [x] **Munição que não causa dano** (Ciclo 5): a wiki diz que biotoxina, veneno, EMP, flashbang, sonífera e gás
   lacrimogêneo "não causam dano", e a fumaça só cobre a área, mas o sistema aplicava o dano da arma. Agora quem é pego
   não leva dano, e o cartão diz o efeito com o texto da wiki. Os testes de resistência automáticos ficam para o P2.
-- [ ] **Bônus de Role nas perícias** (desvio de regra, achado na comparação com o CORE): no Foundry 12, o item de Role
-  soma o Rank em perícias, e aqui nada soma. Quem migra fica com essas perícias menores que na mesa. Fonte: a wiki
-  (system-catalog.js e system-2077.js) e os itens de Role do CORE e do cpr-2077 (`foundry-2077/build/roles.mjs`):
+- [x] **Bônus de Role nas perícias que valem sempre** (desvio de regra, achado na comparação com o CORE; Ciclo 23): no
+  Foundry 12, o item de Role soma o Rank em perícias, e aqui nada somava. Quem migrasse ficava com essas perícias menores
+  que na mesa. Fonte: a wiki (system-catalog.js e system-2077.js) e os itens de Role do CORE e do cpr-2077
+  (`foundry-2077/build/roles.mjs`):
   - **Nomad, Moto:** o Rank em Conduzir Veículo Terrestre, Pilotar Veículo Aéreo e Marítimo, e Tecnologia de Veículos
     Terrestres, de Aeronaves e Marítimos;
   - **Face, a especialização:** o Rank em duas perícias (Siren: Conversação e Cuidados Pessoais; Rockerboy: Tocar
     Instrumento e Manha; Model: Atuação e Comércio);
-  - **a especialização vem da wiki:** a importação e a migração não guardam a escolhida (o `resultado.role.especializacao`
-    do criador), e a ficha "Na mesa" não a manda: ela vem da criação;
-  - **situacionais, com a janela de rolagem (P1):** o Investigator do Lawman (o Rank em Educação e Percepção, e nas
-    perícias da especialização, com pista de caso ativo) e o Netrunner de 2077 (o Rank de Interface nos testes técnicos
-    enquanto corre a NET). No Foundry 12, o do Lawman se marca na janela de rolagem.
+  - **a especialização vem da wiki:** a importação e a migração guardam a escolhida (o `resultado.role.especializacao`
+    do criador; a ficha "Na mesa" não a manda), e a aba Role a mostra e troca;
+  - **ficam para a janela de rolagem (P1), porque são situacionais:** o Investigator do Lawman (o Rank em Educação e
+    Percepção, e nas perícias da especialização, com pista de caso ativo) e o Netrunner de 2077 (o Rank de Interface nos
+    testes técnicos enquanto corre a NET). No Foundry 12, o do Lawman se marca na janela de rolagem.
 
 ## P1: bugs, testes de regressão e confiabilidade
 

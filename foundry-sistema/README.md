@@ -15,7 +15,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Combate:** as armas com todos os modos de ataque, a armadura vestida, a Iniciativa, a esquiva, o Death Save e a munição.
   - **Equipamento:** os Eurodólares, com as últimas mudanças do extrato; armas, armaduras, munição, equipamento, roupas, drogas, upgrades e veículos.
   - **Cyberware:** a Humanidade e cada peça, com instalar e tirar.
-  - **Role:** a Role de 2077 da wiki, com a habilidade e o resumo. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora. A ficha confere os pontos com o Rank: o total (o Tech ganha 2 por Rank; o Solo e o Medtech, 1) e o máximo em cada especialidade (o Rank). Ela avisa o que passou e o que sobra, sem travar.
+  - **Role:** a Role de 2077 da wiki, com a habilidade e o resumo, e o que ela soma nas perícias: o Moto do Nomad (o Rank nas seis perícias de veículo) e a especialização do Face (o Rank nas duas perícias dela; o Rockerboy soma em todo instrumento). A especialização (Face e Lawman) se escolhe ali; a do Lawman fica guardada, e o bônus de caso dele ainda não entra sozinho no teste. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora. A ficha confere os pontos com o Rank: o total (o Tech ganha 2 por Rank; o Solo e o Medtech, 1) e o máximo em cada especialidade (o Rank). Ela avisa o que passou e o que sobra, sem travar.
   - **NET:** o cyberdeck e os programas (as regras da NET ainda não).
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
@@ -38,6 +38,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - a penalidade de ferimento (−2 gravemente; −4 mortalmente, que também tira 6 de MOVE, com mínimo 1);
   - as lesões (−2 em todas as ações da Concussão, por exemplo);
   - a armadura pesada, que tira de REF, DEX e MOVE;
+  - o bônus da Role na perícia (o Moto, a especialização do Face), que aparece no cartão como uma parte ("Moto +4");
   - a **Sorte** preparada na ficha (RED p. 130: antes de rolar, +1 por ponto). Os botões − e + no indicador da Sorte escolhem quantos pontos vão no próximo teste (atributo, perícia, ataque ou defesa), e eles saem da Sorte quando ele rola. O ↺ é o começo da sessão: a Sorte volta ao máximo (a LUCK).
 - **Ataque, defesa e dano** (o Fluxo de Combate dentro do sistema). Marque os alvos (T) e use os botões da arma:
   - **Atacar:** tiro, ou corpo a corpo com arma branca.
@@ -105,7 +106,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Tirar** devolve a Humanidade.
 - **Janela "Personagens da wiki"** (só o mestre; botão no alto da aba de Atores): cada personagem da wiki com o que dá para fazer neste mundo, que é importar (como foi criado), importar da mesa (como está no Foundry 12) ou abrir a ficha, com o dono no Foundry escolhido na linha. Também mostra os pedidos da loja que esperam o mestre, com Aprovar (entrega na hora) e Recusar (com o motivo, que o jogador vê). Os avisos da última importação ficam no alto. Pela macro: `game.system.api.abrirJanelaDaWiki()`.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
-  - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e dinheiro (no extrato, a linha "Dinheiro inicial (criador da wiki)");
+  - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades e a especialização, e dinheiro (no extrato, a linha "Dinheiro inicial (criador da wiki)");
   - o apelido e o Lifepath (em texto, como o criador da wiki monta);
   - armas carregadas, armaduras vestidas e cyberware instalado;
   - equipamento, roupas e drogas, com a quantidade e o uso da montagem da wiki (equipado, carregando ou guardado);
@@ -115,7 +116,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   A wiki marca o personagem como "no Foundry".
 - **Na mesa:** a cada mudança num personagem que veio da wiki (HP, dinheiro, munição, itens, lesões…), o mestre ativo manda a ficha de volta, 4 s depois da última mudança, e a wiki a mostra no lugar da ficha da criação. O formato é o mesmo do módulo cpr-2077 do Foundry 12, então a wiki não muda. Pela macro: `game.system.api.wiki.mandarFicha(ator)`; para mandar já o que está esperando, `mandarPendentes()`.
 - **Importar da mesa** (a migração do Foundry 12): `game.system.api.wiki.importarDaMesa(id, donoId)` monta o ator pela ficha "Na mesa" que o Foundry 12 mandou para a wiki, com o estado de jogo:
-  - HP, Humanidade, Sorte, dinheiro, IP, reputação, a Role, as perícias e as lesões (pelo nome do CORE). No extrato, o dinheiro, o IP e a reputação entram com a linha "Migrado da ficha da mesa do Foundry 12": o histórico do ledger do Foundry 12 não vem, porque a ficha "Na mesa" só manda o saldo;
+  - HP, Humanidade, Sorte, dinheiro, IP, reputação, a Role, as perícias e as lesões (pelo nome do CORE). A especialização da Role vem da criação na wiki: a ficha "Na mesa" não a manda. No extrato, o dinheiro, o IP e a reputação entram com a linha "Migrado da ficha da mesa do Foundry 12": o histórico do ledger do Foundry 12 não vem, porque a ficha "Na mesa" só manda o saldo;
   - os itens como estavam: equipados ou guardados, o pente carregado e com qual munição, o SP que sobrou, o cyberware instalado, o que está dentro do deck, da arma e do veículo;
   - cada item acha o catálogo pelo uid da wiki (da criação, de um pedido, da família do Nomad) ou, sem uid, pelo nome do CORE. O que não achar vira aviso;
   - os STATs base vêm da criação: a ficha da mesa manda os de agora, já com a armadura e as lesões, que aqui voltam pelos itens.
@@ -193,6 +194,7 @@ E as da wiki:
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - a Sorte preparada na ficha e o visual dos cartões do chat;
+  - os bônus de Role: o Moto do Nomad importado da wiki de teste, e um Face sintético com a especialização pela importação e pela migração, no teste, no total da ficha e trocada na aba Role (o Lawman guarda a dele sem somar);
   - o extrato: somar, subtrair e definir com o motivo, a mudança direta, o saldo negativo com o aviso, o mestre tirando linhas (só a linha ou desfazendo a mudança) e as linhas da importação, da migração e da loja;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 

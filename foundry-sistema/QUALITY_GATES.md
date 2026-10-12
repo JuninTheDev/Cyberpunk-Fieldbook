@@ -54,6 +54,9 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   nova, o saldo novo), e não só o dado do documento. O redesenho vem depois e troca os campos: preencher a janela antes
   dele perde o que foi escrito. Por isso a janela que acompanha um documento entra em `documento.apps`, como as fichas,
   e não num gancho com um `render()` a mais: dois redesenhos por mudança abrem essa brecha entre um e outro.
+- **Estado do ator no cenário:** leia `ator.system` a cada vez. O Foundry monta um objeto novo a cada mudança, e o que
+  ficou guardado numa variável mostra o estado de antes (no ciclo 23, uma espera esgotou e a checagem leu a
+  especialização antiga, com o sistema certo).
 - **Pergunta do DialogV2:** o texto fica em `.dialog-content`, e os botões em `.form-footer`. O `.window-content` e um
   `button[data-action]` solto pegam também os botões e os controles do cabeçalho (no ciclo 21, duas rodadas do G4
   falharam por isso, com o sistema certo).
