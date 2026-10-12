@@ -26,10 +26,11 @@ for pasta in "$DATA"/modules/cpr-2077 "$DATA"/modules/net-architect "$DATA"/modu
   [ -d "$pasta" ] && chown -R mesa:mesa "$pasta" && chmod -R u+rwX "$pasta"
 done
 cd "$WIKI/foundry-2077"
-# Cópia dos compêndios do sistema: na primeira vez e sempre que o sistema for atualizado no Foundry.
+# Cópia dos compêndios do sistema: na primeira vez, sempre que o sistema for atualizado no Foundry e quando a lista do
+# extrator mudar (os compêndios do Black Chrome entraram assim, com o sistema na mesma versão, e o build ficou sem eles).
 sistema=$(node -p "require('$DATA/systems/cyberpunk-red-core/system.json').version")
 copia=$(node -p "try { require('./.cache/core/versao.json').version } catch { '' }")
-if [ "$sistema" != "$copia" ]; then como_mesa node build/extract-core.mjs; fi
+if [ "$sistema" != "$copia" ] || [ build/extract-core.mjs -nt .cache/core/versao.json ]; then como_mesa node build/extract-core.mjs; fi
 como_mesa node build/build.mjs
 # O build também regrava o catálogo da loja; no servidor vale o do GitHub.
 como_mesa git -C "$WIKI" checkout -q -- loja-catalogo.js 2>/dev/null || true
