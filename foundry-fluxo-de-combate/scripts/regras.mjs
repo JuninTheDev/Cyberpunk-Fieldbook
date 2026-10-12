@@ -9,6 +9,8 @@
 // - Explosivo: dano em todos numa área de 10 × 10 m em volta do alvo.
 // - Fogo supressivo: quem está até 25 m rola WILL + Concentração + 1d10 contra o ataque; quem perder é suprimido.
 // - Escudo: recebe o ataque todo, mas quem usa não esquiva.
+// - Munição Smart melhorada (Mission Kit p. 32): errou a DV (ou a esquiva) por 5 ou menos, tenta de novo com 14 + 1d10
+//   contra o mesmo número, com as penalidades do primeiro tiro.
 
 export const MODOS = {
   corpo: 'Corpo a corpo',
@@ -24,6 +26,14 @@ export const ALCANCE_CARTUCHO = 6;
 export const RAIO_SUPRESSAO = 25;
 export const AREA_EXPLOSIVO = 10;
 export const MEDIA_D10 = 5.5;
+export const SEGUNDA_CHANCE = { base: 14, margem: 5 };
+
+// A munição Smart melhorada dá a segunda chance? Só quando o ataque não passou e ficou a até 5 do número.
+export function temSegundaChance({ ataque, contra }) {
+  if (contra === null || contra === undefined || !Number.isFinite(Number(contra))) return false;
+  const falta = Number(contra) - Number(ataque);
+  return falta >= 0 && falta <= SEGUNDA_CHANCE.margem;
+}
 
 // O modo do ataque pela rolagem do sistema, pela arma e pela munição carregada.
 export function classificar({ rolagem = 'attack', aDistancia = false, tipoDeArma = '', municao = '' }) {

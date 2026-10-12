@@ -243,7 +243,7 @@ São 14 ganchos rápidos, 5 sub-quests prontas no formato de preparação da cam
 | Gancho | Onde | NPC de entrada | Ligação com Morana | Ato ideal |
 |---|---|---|---|---|
 | O ciberpsico que chorava | Watson | Regina Jones | O alvo pede ajuda entre os surtos: não é ciberpsico, é vítima. A MaxTac chega em 10 minutos. | 1 |
-| Colheita | Kabuki | Scavengers | Os Scavs levaram o corpo de Kobo, o agente de Sato morto no depósito, e estão revendendo o cyberarm e os implantes dele. Cada venda espalha Morana. | 1 |
+| Colheita | Kabuki | Scavengers | Se o grupo deixou o corpo de Kobo (o agente de Sato morto no depósito) para trás, os Scavs o levaram e estão revendendo o cyberarm e os implantes dele. Cada venda espalha Morana. | 1 |
 | Dollchip em loop | Clouds e Lizzie's Bar | Judy e os Moxes | Bonecas repetem a mesma frase em transe: um endereço e um nome, "Sato". | 1–2 |
 | Recall silencioso | Fábrica em Santo Domingo | Executivo da Kang Tao | Um lote de armas inteligentes escolheu alvos errados. A Kang Tao quer tudo de volta antes da imprensa. | 2 |
 | Cliente Platinum | City Center | Gerente da Trauma Team | Um cliente morreu com o suporte de vida desligado. A TT quer o log do implante antes da família. | 2 |
@@ -339,11 +339,12 @@ Cyberpunk RED se passa em 2045, então rodar 2077 pede três ajustes: tecnologia
 
 ### Regras de 2077 no sistema RED
 
-- **Use o suplemento do projeto.** *Cyberpunk 2077 – A Cyberpunk RED Supplement* é material de fã, não oficial. Ele converte quickhacks, cyberdecks como implantes, Sandevistan, Berserk, armas tecnológicas e o custo de vida de 2077.
-- **Quickhacks como base de Morana.** Os quickhacks do suplemento Cyberware Malfunction, Contagion (que se espalha entre alvos próximos) e Cyberpsychosis servem de molde para os efeitos do vírus.
+- **Use o Mission Kit e, como opção, o suplemento de fã.** O *Cyberpunk Edgerunners Mission Kit* (R. Talsorian e CD Projekt, 2024) é oficial e traz as regras dos anos 2070: Neuroport, quickhacks, armas Power, Smart e Tech, as Roles e a Humanidade. O *Cyberpunk 2077 – A Cyberpunk RED Supplement* é material de fã, não oficial; o que só ele tem (quickhacks, implantes e armas a mais) fica na wiki como opção marcada "suplemento de fã".
+- **Quickhacks como base de Morana.** O Cyberware Malfunction do Kit e os quickhacks Contagion (que se espalha entre alvos próximos) e Cyberpsychosis do suplemento de fã servem de molde para os efeitos do vírus.
 - **Teste de resistência sugerido.** Quem tem cromo conectado numa zona afetada rola WILL + Concentração + 1d10 e precisa superar a DV. A dificuldade sobe com o estágio: DV 13 como Programa, 15 como Enxame, 17 como Entidade.
 - **Efeito da falha.** Programa: um implante trava por 1 rodada. Enxame: o personagem ataca o alvo marcado mais próximo por 1d6 rodadas (pode repetir o teste no fim de cada turno para se libertar). Entidade: perde 2d6 de Humanidade e age como ciberpsico até alguém cortar a conexão.
-- **O antídoto também queima.** Quando a Coleira é usada, role 1d10 para cada implante *neural ou conectado à rede* do alvo (Neural Link e opções, cyberdecks, olhos e armas inteligentes). Com 1 a 3, o implante queima para sempre. Membros e implantes sem conexão não são afetados. Isso mantém o custo real sem destruir de uma vez um Solo cheio de cromo.
+- **O antídoto também queima.** Quando a Coleira é usada, role 1d10 para cada implante *neural ou conectado à rede* do alvo (o Neuroport e as opções de neuralware, cyberdecks, olhos e armas inteligentes). Com 1 a 3, o implante queima para sempre. Membros e implantes sem conexão não rolam. Isso mantém o custo real sem destruir de uma vez um Solo cheio de cromo.
+- **Se o Neuroport queimar.** No Mission Kit, quase todo cyberware que não é médico depende do Neuroport: se ele queimar, esse cromo para de funcionar (inclusive os membros, que não rolaram) até um Neuroport novo ser instalado no hospital (veja Cyberware de 2077). O cyberware médico continua funcionando. É o pior resultado da rolagem: avise antes de rolar, e deixe o jogador decidir se se conecta.
 
 ### Dois relógios
 
@@ -394,5 +395,6 @@ A maior parte da lore vem do jogo base, de Phantom Liberty, do anime Edgerunners
 - Lucius Rhyne — Cyberpunk Wiki
 - Kurt Hansen — Fextralife
 - Barghest — Fextralife
+- Cyberpunk Edgerunners Mission Kit (arquivo do projeto, oficial). A lore do Kit está resumida e comparada com este guia em `lore-dos-anos-2070.md`, sem mudar nada aqui.
 - Cyberpunk 2077 – A Cyberpunk RED Supplement (arquivo do projeto, material de fã)
 - Campanha: Protocolo Morana (`fundacao-da-campanha.md`)

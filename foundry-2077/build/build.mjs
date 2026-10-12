@@ -26,9 +26,8 @@ if (!fs.existsSync(path.join(cacheDir, 'core', 'versao.json'))) {
 const withEffects = docs => docs.map(doc => doc._key.startsWith('!items!') ? applyEffects(doc) : doc);
 const weapons = withEffects(buildWeapons());
 const macros = [
-  ['Ataque Smart', 'icons/svg/target.svg', 'ataqueSmart'],
   ['Ricochete', 'icons/svg/explosion.svg', 'ricochete'],
-  ['Carga Tech', 'icons/svg/lightning.svg', 'cargaTech']
+  ['Carregar arma Tech', 'icons/svg/lightning.svg', 'carregarTech']
 ].map(([name, img, fn]) => macroDoc({ seed: `macro:${fn}`, name, img, command: `// Selecione o token do personagem antes de rodar.\ngame.modules.get('cpr-2077')?.api?.${fn}();` }));
 
 const packs = {

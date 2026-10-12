@@ -21,7 +21,7 @@ As Sessões 1 a 3 estão escritas. Da 4 em diante, a tabela é o plano: escreva 
 
 - **A fase da cidade depende do tempo, não da sessão.** Se a Sessão 2 acontece logo depois da noite da Konpeki, a cidade ainda está na fase 2; se passou uma semana, já está na 3. É por isso que a Sessão 2 diz "3, ou 2 se pouco tempo passou". Avance uma fase a cada uma ou duas sessões, ou quando o grupo demorar.
 - **O relógio de Sato** marca a etapa quando o grupo não atrapalha. As etapas 1 a 3 (as três partes) precisam estar completas para a 6; sem elas, Sato tenta a ativação incompleta e perde o controle de Morana.
-- **O estágio de Morana** sobe pelos gatilhos (a Chave conectada, o Gatilho ligado ou destruído, o atentado de fachada, a ativação incompleta). O estágio define a DV do teste de resistência: Programa 13, Enxame 15, Entidade 17. Os gatilhos estão em Notas e relógios, na wiki.
+- **O estágio de Morana** sobe pelos gatilhos (a Chave conectada, o Gatilho ligado ou destruído, o atentado de fachada, a ativação incompleta). O estágio define a DV do teste de resistência, e os gatilhos para marcar e desmarcar estão no Estágio de Morana, na [base da campanha](base-da-campanha.md#estagio-de-morana) (marque em Estado da campanha, na wiki).
 
 ## As revelações, em ordem
 

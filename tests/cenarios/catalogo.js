@@ -16,21 +16,28 @@ module.exports = async ({ edge, servidores, r }) => {
     const cartoesVisiveis = await edge.evaluate(`[...document.querySelectorAll('#content .entry')].filter(e => e.offsetParent).length`);
     return [l.length === 46 && cartoesVisiveis === 0, `${l.length} linhas, ${cartoesVisiveis} cartões visíveis`];
   });
-  await r.passo('ordenar por dano põe as de 6d6 no topo', async () => {
+  await r.passo('ordenar por dano põe a de 6d6 no topo, depois as de 5d6', async () => {
     await ordenar('Dano');
     const l = await linhas();
-    return [l[0][5].startsWith('6d6') && l[1][5].startsWith('6d6'), l.slice(0, 3).map(x => `${x[0]} ${x[5]}`).join(' | ')];
+    return [l[0][6].startsWith('6d6') && l[1][6].startsWith('5d6'), l.slice(0, 3).map(x => `${x[0]} ${x[6]}`).join(' | ')];
   });
   await r.passo('ordenar por preço (maior primeiro)', async () => {
     await ordenar('Preço');
     const l = await linhas();
-    return [/5\.000eb/.test(l[0][10]), l.slice(0, 2).map(x => `${x[0]} ${x[10]}`).join(' | ')];
+    return [/5\.000eb/.test(l[0][11]), l.slice(0, 2).map(x => `${x[0]} ${x[11]}`).join(' | ')];
   });
   await r.passo('filtro Classe = Smart dá 9 armas', async () => {
     await filtrar('Classe', 'Smart');
     const l = await linhas();
     const contagem = await edge.evaluate(`document.querySelector('.compare-count').textContent`);
-    return [l.length === 9 && l.every(x => x[2] === 'Smart'), `${l.length} | ${contagem}`];
+    return [l.length === 9 && l.every(x => x[3] === 'Smart'), `${l.length} | ${contagem}`];
+  });
+  await r.passo('filtro Origem = Mission Kit dá as 13 armas do Kit', async () => {
+    await filtrar('Classe', '');
+    await filtrar('Origem', 'Mission Kit');
+    const l = await linhas();
+    await filtrar('Origem', '');
+    return [l.length === 13 && l.every(x => x[1] === 'Mission Kit'), `${l.length} | ${l.map(x => x[0].split(' ').pop()).join(', ')}`];
   });
   await edge.shot('tabela-armas');
   await r.passo('a vista fica salva ao voltar à página', async () => {
@@ -61,16 +68,16 @@ module.exports = async ({ edge, servidores, r }) => {
   await verComo('cards');
 
   await abrir(edge, 'cyberware2077');
-  await r.passo('Cyberware de 2077: tabela com 42 implantes, Humanidade do maior para o menor', async () => {
+  await r.passo('Cyberware de 2077: tabela com 48 implantes, Humanidade do maior para o menor', async () => {
     await verComo('table');
     await ordenar('Humanidade');
     const l = await linhas();
-    return [l.length === 42 && l[0][3].startsWith('14'), `${l.length} | ${l[0][0]} ${l[0][3]}`];
+    return [l.length === 48 && l[0][4].startsWith('14'), `${l.length} | ${l[0][0]} ${l[0][4]}`];
   });
   await r.passo('filtro de instalação no hospital', async () => {
     await filtrar('Instalação', 'Hospital');
     const l = await linhas();
-    return [l.length > 0 && l.every(x => x[2] === 'Hospital'), `${l.length} implantes`];
+    return [l.length > 0 && l.every(x => x[3] === 'Hospital'), `${l.length} implantes`];
   });
   await verComo('cards');
 

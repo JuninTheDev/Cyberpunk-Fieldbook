@@ -18,7 +18,7 @@ export const acoesPorRank = rank => (rank >= 10 ? 5 : rank >= 7 ? 4 : rank >= 4 
 // Habilidades de Interface (RED p. 199). `alvo` diz onde a habilidade vale.
 export const HABILIDADES = {
   pathfinder: { nome: 'Pathfinder', alvo: 'arquitetura', texto: 'Revela o mapa da arquitetura (contra o DV da arquitetura).' },
-  backdoor: { nome: 'Backdoor', alvo: 'senha', texto: 'Quebra a senha deste andar (contra o DV da senha).' },
+  backdoor: { nome: 'Breach', alvo: 'senha', texto: 'Quebra a senha deste andar (contra o DV da senha). É o Backdoor do RED, que nos anos 2070 se chama Breach.' },
   eyedee: { nome: 'Eye-Dee', alvo: 'arquivo', texto: 'Identifica e copia o arquivo deste andar (contra o DV do arquivo).' },
   control: { nome: 'Control', alvo: 'controle', texto: 'Assume o nó de controle deste andar (contra o DV do nó).' },
   zap: { nome: 'Zap', alvo: 'ice', texto: 'Ataca o Black ICE deste andar: 1d6 de REZ se vencer a defesa dele.' },

@@ -4,7 +4,7 @@
 // críticas na ficha. No fim, mostra o cartão do ataque para todos e posta o cartão do resultado, com "Desfazer".
 import { MODULE_ID, PERICIAS, ITENS, TIPOS_DE_ATOR, STATUS_SUPRIMIDO } from './constantes.mjs';
 import * as R from './regras.mjs';
-import { faixasDaTabela, rolarDano, aplicarDano, desfazerDano, lesaoCritica } from './sistema.mjs';
+import { faixasDaTabela, rolarDano, rolarSegundaChance, aplicarDano, desfazerDano, lesaoCritica } from './sistema.mjs';
 import { erro, perguntarAoJogador } from './socket.mjs';
 import { JanelaDeDefesa, rolarEscolha } from './defesa.mjs';
 import { postarResultado, resumoDoAlvo } from './cartao.mjs';
@@ -84,9 +84,11 @@ async function contexto(dados, usuario) {
   return {
     dados, usuario, cena, tokenAtq, atacante, arma, municao, modo, mirado,
     local: mirado ? dados.local || 'head' : 'body',
-    // Ajustes de quem pediu por macro (cpr-2077): tabela de DV, fórmula de dano, multiplicador máximo da rajada,
-    // ablação, fração que atravessa a cobertura e notas.
+    // Ajustes do cpr-2077: tabela de DV, fórmula de dano, multiplicador máximo do autofogo, ablação, parte do SP
+    // ignorada, fração que atravessa a cobertura, a segunda chance da Smart melhorada e notas.
     extra: dados.extra || {},
+    // O total do ataque (a segunda chance da Smart melhorada troca, nos ataques de área).
+    total: dados.total,
     descricao: (dados.extra && dados.extra.descricao) || R.descreverAtaque({ modo, mirado, local: dados.local || 'head' }),
     alvos: (dados.alvos || []).map(id => cena.tokens.get(id)).filter(token => token && token.actor),
     mensagem: game.messages.get(dados.mensagem) || null,
@@ -203,16 +205,27 @@ async function defesaDoAlvo(ctx, linha, alvo, dv) {
   linha.defesa = resposta.total ?? null;
   linha.dv = dv;
   if (alvo.semPerna && ctx.modo !== 'supressivo') linha.notas.push('Sem a perna, não esquiva.');
-  const pegou = R.acertou({ modo: ctx.modo, escolha: resposta.escolha, ataque: ctx.dados.total, defesa: linha.defesa, dv });
+  const pegou = R.acertou({ modo: ctx.modo, escolha: resposta.escolha, ataque: ctx.total, defesa: linha.defesa, dv });
   linha.pegou = pegou;
   linha.resultado = pegou === null ? 'semDv' : pegou ? 'acertou' : resposta.escolha === 'esquivar' ? 'esquivou' : 'errou';
   return pegou;
 }
 
 // ---------------- Dano ----------------
-const ajustesDoDano = ctx => ({ formula: ctx.extra.formula || null, multiplicadorMax: Number(ctx.extra.multiplicadorMax) || null, ablacao: Number(ctx.extra.ablacao) || null });
+const ajustesDoDano = ctx => ({ formula: ctx.extra.formula || null, multiplicadorMax: Number(ctx.extra.multiplicadorMax) || null, ablacao: Number(ctx.extra.ablacao) || null, ignorarSP: Number(ctx.extra.ignorarSP) || null });
 
-// Carga Tech através de cobertura: só a fração chega ao alvo (o resto fica na cobertura). Nada passa: null.
+// Munição Smart melhorada (Mission Kit p. 32): errou por 5 ou menos, 14 + 1d10 contra o mesmo número. Devolve o total
+// novo, ou null se não houve segunda chance. A nota vai para `onde` (a linha do alvo ou o cartão).
+async function tentarDeNovo(ctx, contra, onde = ctx.notas) {
+  if (!ctx.extra.segundaChance || ['corpo', 'supressivo'].includes(ctx.modo)) return null;
+  if (!R.temSegundaChance({ ataque: ctx.total, contra })) return null;
+  const penalidades = Number(ctx.extra.penalidades) || 0;
+  const nova = await rolarSegundaChance({ actor: ctx.atacante, token: ctx.tokenAtq, arma: ctx.arma, base: R.SEGUNDA_CHANCE.base, penalidades });
+  onde.push(`Segunda chance da munição Smart melhorada: ${R.SEGUNDA_CHANCE.base} + 1d10${penalidades ? ` ${penalidades}` : ''} = ${nova.total} contra ${contra}: ${nova.total > contra ? 'acertou' : 'errou de novo'}.`);
+  return nova.total;
+}
+
+// Ataque através de cobertura (extra.fracao, de quem pedir): só a fração chega ao alvo (o resto fica na cobertura). Nada passa: null.
 function atravessar(ctx, linha, dano) {
   const fracao = ctx.extra.fracao;
   if (fracao === undefined || fracao === null || Number(fracao) >= 1) return dano;
@@ -277,7 +290,14 @@ async function resolverAlvo(ctx, token) {
     if (achada.fora) { linha.resultado = 'fora'; return null; }
     dv = achada.dv ?? (await dvDoMestre(ctx, alvo));
   }
-  return (await defesaDoAlvo(ctx, linha, alvo, dv)) ? { linha, alvo } : null;
+  if (await defesaDoAlvo(ctx, linha, alvo, dv)) return { linha, alvo };
+  // Errou (ou o alvo esquivou) por pouco: a segunda chance da Smart melhorada, só contra este alvo.
+  if (!['errou', 'esquivou'].includes(linha.resultado)) return null;
+  const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
+  const nova = await tentarDeNovo(ctx, contra, linha.notas);
+  if (nova === null || !(nova > contra)) return null;
+  Object.assign(linha, { ataque: nova, pegou: true, resultado: 'acertou' });
+  return { linha, alvo };
 }
 
 // Arma Smart que trava dois alvos (Tsunami Kappa): o ataque vai no primeiro; se não pegar, as balas mudam para o
@@ -303,7 +323,7 @@ async function individual(ctx) {
   if (config('dano') === 'manual') { for (const { linha } of pendentes) linha.notas.push('Role o dano pelo botão do cartão do ataque.'); return; }
   for (const { linha } of ctx.linhas.map(l => pendentes.find(p => p.linha === l)).filter(Boolean)) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
-    const multiplicador = ctx.modo === 'autofogo' ? R.multiplicadorDeAutofogo(ctx.dados.total, contra) : 1;
+    const multiplicador = ctx.modo === 'autofogo' ? R.multiplicadorDeAutofogo(linha.ataque ?? ctx.total, contra) : 1;
     const dano = atravessar(ctx, linha, await rolarDanoDoAtaque(ctx, { multiplicador, titulo: ctx.alvos.length > 1 ? `${ctx.arma.name} em ${linha.nome}` : '' }));
     if (dano) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
   }
@@ -322,7 +342,8 @@ async function danoNaArea(ctx, pegos) {
 
 // Espingarda com cartucho: um ataque contra DV 13; se acertar, cada alvo à frente, até 6 m, leva 3d6 (rolado uma vez).
 async function cartucho(ctx) {
-  const passou = ctx.dados.total > R.DV_CARTUCHO;
+  if (!(ctx.total > R.DV_CARTUCHO)) ctx.total = (await tentarDeNovo(ctx, R.DV_CARTUCHO)) ?? ctx.total;
+  const passou = ctx.total > R.DV_CARTUCHO;
   ctx.cabecalho = `contra DV ${R.DV_CARTUCHO} do cartucho: ${passou ? 'acertou' : 'errou'}`;
   const pegos = [];
   await Promise.all(ctx.alvos.map(async token => {
@@ -356,7 +377,8 @@ async function explosao(ctx) {
     return;
   }
   const dv = achada.dv ?? (await dvDoMestre(ctx, infoPrincipal));
-  if (dv === null || ctx.dados.total <= dv) {
+  if (dv !== null && ctx.total <= dv) ctx.total = (await tentarDeNovo(ctx, dv)) ?? ctx.total;
+  if (dv === null || ctx.total <= dv) {
     ctx.cabecalho = dv === null ? 'sem DV' : `contra DV ${dv} (${R.formatarMedia(infoPrincipal.distancia)} m): errou. O mestre decide onde caiu.`;
     Object.assign(linhaDe(ctx, principal), { resultado: 'errou', dv, distancia: infoPrincipal.distancia });
     return;
@@ -429,9 +451,9 @@ export const operacoes = {
     for (const linha of ctx.linhas) mostrarResultado(linha.token, resumoDoAlvo(ctx, linha)).catch(error => console.warn(`${MODULE_ID} | efeito`, error));
     const cartao = await postarResultado(ctx);
     ultimo = {
-      ataque: dados.id, modo: ctx.modo, total: dados.total, cartao: cartao && cartao.id, mensagem: dados.mensagem, notas: ctx.notas, cabecalho: ctx.cabecalho,
+      ataque: dados.id, modo: ctx.modo, total: ctx.total, cartao: cartao && cartao.id, mensagem: dados.mensagem, notas: ctx.notas, cabecalho: ctx.cabecalho,
       descricao: ctx.descricao,
-      linhas: ctx.linhas.map(l => ({ token: l.token.id, nome: l.nome, resultado: l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null, dv: l.dv ?? null, distancia: l.distancia ?? null, dano: l.dano ? { ...l.dano } : null, cobertura: l.cobertura || null, suprimido: Boolean(l.suprimido), notas: l.notas }))
+      linhas: ctx.linhas.map(l => ({ token: l.token.id, nome: l.nome, resultado: l.resultado, ataque: l.ataque ?? null, escolha: l.escolha ?? null, defesa: l.defesa ?? null, dv: l.dv ?? null, distancia: l.distancia ?? null, dano: l.dano ? { ...l.dano } : null, cobertura: l.cobertura || null, suprimido: Boolean(l.suprimido), notas: l.notas }))
     };
     return ultimo;
   },

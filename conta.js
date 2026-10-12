@@ -40,7 +40,7 @@
     render();
   }
   let toasted = null; // os já avisados nesta visita (o primeiro carregamento não avisa)
-  const ROLES = { face: 'Face', solo: 'Solo', netrunner: 'Netrunner', corpo: 'Corpo', tech: 'Tech', medtech: 'Medtech', media: 'Media', lawman: 'Lawman', nomad: 'Nomad' };
+  const ROLES = { rockerboy: 'Rockerboy', solo: 'Solo', netrunner: 'Netrunner', tech: 'Tech', medtech: 'Medtech', media: 'Media', exec: 'Exec', lawman: 'Lawman', fixer: 'Fixer', nomad: 'Nomad', face: 'Rockerboy', corpo: 'Exec' };
 
   async function api(path, { method = 'GET', body } = {}) {
     try {

@@ -87,21 +87,22 @@ As mesmas da wiki da mesa (o teste confere o texto da wiki):
 
 ## Armas de 2077 (cpr-2077)
 
-Os modos de 2077 do menu de ataque do sistema (cpr-2077: Ricochete, Carga e Rajada Tech, teste Smart) chegam pela rolagem do próprio sistema, como qualquer ataque. Os ajustes de cada modo vêm na rolagem (`cprRoll.fluxoExtra`):
+Os ataques com as armas de 2077 (cpr-2077, com as regras do Mission Kit) chegam pela rolagem do próprio sistema, como qualquer ataque. Os ajustes vêm junto (`cprRoll.fluxoExtra`):
 
-| Modo | O que muda no Fluxo |
+| Regra | O que o Fluxo faz |
 |---|---|
-| **Teste Smart** | Nada na defesa: o ataque é 10 ou 12 + 1d10. Com a **Kappa** (dois alvos marcados): se não pegar o primeiro, as balas vão para o segundo, se ele estiver a até 4 m. |
-| **Ricochete** | DV da tabela de autofogo (pistolas e SMGs usam a da SMG) e um dado a menos de dano. |
-| **Carga Tech** | A armadura perde 4 de SP (2 através de cobertura) se o dano passar. Através de cobertura fina, chega metade do dano; grossa, um quarto. |
-| **Rajada Tech** | Como o autofogo, com a tabela da SMG e o máximo da rajada da arma (×3 na Senkoh LX). Através de cobertura fina, chega um quarto; grossa, nada. |
+| **Ricochete** (Power) | Nada a mais: o −4 já está no ataque, e a DV é a da arma. A lesão crítica das armas Power causa 10 de dano bônus. |
+| **Smart** | O +1 já está no ataque. Com a **Kappa** (dois alvos marcados): se não pegar o primeiro, as balas vão para o segundo, se ele estiver a até 4 m. |
+| **Munição Smart melhorada** | Errou a DV (ou a esquiva) por 5 ou menos: rola a segunda chance, 14 + 1d10 com as penalidades do primeiro tiro (cartão do sistema), contra o mesmo número. Vale no tiro, no autofogo, no cartucho e no explosivo. |
+| **Carga Tech** | O dano ignora metade do SP do alvo. |
+| **Balas e dano de cada arma** | A fórmula de dano do tiro (menos balas no pente, tiro mirado da Unity, os dois canos da Palica). |
 
 ## Macros
 
 `game.modules.get('fluxo-de-combate').api` tem:
 
 - `pronto(alvos)`: o Fluxo vai resolver um ataque nesses alvos (ligado, com mestre e com alvo);
-- `atacar({ token, arma, total, alvos, rolagem, local, mensagem, revelar, extra })`: o mesmo pedido que o cartão do ataque faz ao mestre. Em `extra` (ou em `cprRoll.fluxoExtra`, numa rolagem do sistema), os ajustes: `descricao`, `tabela` (de DV), `formula` (de dano), `multiplicadorMax` (da rajada), `ablacao`, `fracao` (que atravessa a cobertura), `redirecionar` (dois alvos) e `notas`;
+- `atacar({ token, arma, total, alvos, rolagem, local, mensagem, revelar, extra })`: o mesmo pedido que o cartão do ataque faz ao mestre. Em `extra` (ou em `cprRoll.fluxoExtra`, numa rolagem do sistema), os ajustes: `descricao`, `tabela` (de DV), `formula` (de dano), `multiplicadorMax` (do autofogo), `ablacao`, `ignorarSP` (a parte do SP que o tiro ignora: 50 na carga Tech), `fracao` (que atravessa a cobertura), `redirecionar` (dois alvos), `segundaChance` (a munição Smart melhorada; a captura junta as `penalidades` do tiro) e `notas`;
 - `esconderDe(alvos)` e `sussurro()`: se o cartão da macro deve ficar escondido até a defesa, e para quem sussurrar;
 - `desfazer(mensagem)`: desfaz o cartão de resultado;
 - `ultimo` (no mestre): o último ataque resolvido, com o resultado de cada alvo;

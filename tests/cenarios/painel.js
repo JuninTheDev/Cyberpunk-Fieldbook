@@ -2,7 +2,7 @@
 // de verdade em dois navegadores. O painel mostra o token controlado; o retrato troca de PNG pelo estado de ferimento
 // (com o efeito automático onde falta imagem e o FLATLINE do morto); HP, armadura e Sorte pelos botões; as rolagens
 // saem pelo caminho da ficha (Ctrl pula a janela); os modos do sistema e os de 2077 gravam a flag da ficha; o ATK com
-// alvo entra no Fluxo de Combate; a carga Tech do cpr-2077 pergunta a cobertura; sem alvo, a mira; o selo e o painel
+// alvo entra no Fluxo de Combate; o botão Carregar das armas Tech do cpr-2077 liga e desliga a carga; sem alvo, a mira; o selo e o painel
 // da NET com o NET Architect; o estilo de cada jogador (tema, ordem das seções, código PT1, posição arrastada) e a
 // janela do retrato. O jogador vê o próprio personagem sem selecionar nada e tem o estilo dele.
 // A parte do Foundry só roda com a mesa do servidor vazia (a licença vale para uma mesa por vez).
@@ -208,9 +208,9 @@ module.exports = async ({ edge, servidores, r }) => {
           etapa = 'armas';
           const ids = { pc: pc.id, npc: npc.id, usuario: usuario.id, nome: pc.name };
           ids.pistola = await carregar(pc, await arma('Heavy Pistol'), await municao('heavyPistol'), 16);
-          ids.power = await carregar(pc, await de2077('Militech M-10AF Lexington'), await municao('medPistol'), 21);
+          ids.power = await carregar(pc, await de2077('Militech M-10AF Lexington'), await municao('heavyPistol'), 21);
           ids.tech = await carregar(pc, await de2077('Arasaka Senkoh LX'), await municao('medPistol'), 60);
-          ids.smart = await carregar(pc, await de2077('Arasaka TKI-20 Shingen'), await municao('medPistol'), 30);
+          ids.smart = await carregar(pc, await de2077('Arasaka TKI-20 Shingen'), await municao('heavyPistol'), 30);
           etapa = 'armadura e escudo';
           const vestes = await pc.createEmbeddedDocuments('Item', await Promise.all(['Kevlar® (Body)', 'Kevlar® (Head)', 'Bullet Proof Shield'].map(armadura)));
           await pc.updateEmbeddedDocuments('Item', [ids.pistola, ids.power, ids.tech, ids.smart, ...vestes.map(i => i.id)].map(id => ({ _id: id, 'system.equipped': 'equipped' })));
@@ -250,14 +250,16 @@ module.exports = async ({ edge, servidores, r }) => {
         classes: [...p.querySelectorAll('.pt-pilula[class*="pt-classe-"]')].map(e => e.textContent.trim()).sort().join(),
         alertas: [...p.querySelectorAll('.pt-pilula.pt-alerta')].map(e => e.textContent.trim()).join(),
         modos2077: [...p.querySelectorAll('.pt-modo-2077')].map(b => b.dataset.modo).sort().join(),
+        acoes2077: [...p.querySelectorAll('[data-acao="acao2077"]')].map(b => b.dataset.chave).sort().join(),
         escudo: !!p.querySelector('[data-acao="armadura"][data-local="shield"]'),
         net: !!p.querySelector('[data-painel="net"]'),
         combatHud: (() => { const h = document.querySelector('#cpr-combat-hud'); return h ? getComputedStyle(h).display : 'sem'; })()
       }; })()`);
       await sleep(500);
       await edge.shot('mestre');
+      // O netrunner da wiki tem Interface Plugs: a arma Smart está conectada (sem o alerta).
       const ok = info && info.nome === ids.nome && info.hp === `${ids.hpMax}/${ids.hpMax}` && info.stats === 10 && info.armas === 4 && info.classes === 'Power,Smart,Tech'
-        && /sem Smart Link/.test(info.alertas) && info.modos2077 === 'cargaTech,rajadaTech,ricochete' && info.escudo && info.net && /pt-retrato-moldura/.test(info.retrato) && ['sem', 'none'].includes(info.combatHud);
+        && !/sem conexão Smart/.test(info.alertas) && info.modos2077 === 'ricochete' && info.acoes2077 === 'carga' && info.escudo && info.net && /pt-retrato-moldura/.test(info.retrato) && ['sem', 'none'].includes(info.combatHud);
       return [ok, JSON.stringify(info)];
     });
 
@@ -381,20 +383,18 @@ module.exports = async ({ edge, servidores, r }) => {
       return [alvo === 'Alvo Painel' && u && u.linhas[0][0] === ids.tNpc && cartao, `alvo ${alvo} · defesa ${opcoes} · ${JSON.stringify(u)} · cartão do Fluxo ${cartao}`];
     });
 
-    await passo('Carga Tech pelo painel: o cpr-2077 pergunta a cobertura antes da janela do sistema (fechar cancela sem rolar)', async () => {
+    await passo('Carregar pelo painel: o botão da Senkoh carrega a arma (anúncio no chat, botão ativo) e, clicado de novo, descarrega', async () => {
       await sleep(500);
-      await clicar(edge, `#painel-tatico .pt-modo[data-modo="cargaTech"][data-item="${ids.tech}"]`);
-      await esperar(edge, `${ator()}.getFlag('cyberpunk-red-core', 'firetype-${ids.tech}') === 'cargaTech' && document.querySelector('#painel-tatico .pt-modo[data-modo="cargaTech"].pt-ativa')`);
       const antes = await mensagens();
-      await clicar(edge, `#painel-tatico .pt-atk[data-item="${ids.tech}"]`);
-      const pergunta = await esperar(edge, `(() => { const d = [...foundry.applications.instances.values()].find(a => /Carga Tech/.test(a.title || '') && a.rendered); return d ? d.title + ' | ' + (d.element.querySelector('select[name="cobertura"]') ? 'cobertura' : '') : null; })()`);
+      const carga = `${ator()}.items.get(${JSON.stringify(ids.tech)}).getFlag('cpr-2077', 'carga')`;
+      const botao = `#painel-tatico [data-acao="acao2077"][data-chave="carga"][data-item="${ids.tech}"]`;
+      await clicar(edge, botao);
+      const ligou = await esperar(edge, `${carga}?.carregada === true && document.querySelector('${botao}.pt-ativa') ? document.querySelector('${botao}').textContent.trim() : null`);
       await edge.shot('carga-tech');
-      await no(`(() => { const d = [...foundry.applications.instances.values()].find(a => /Carga Tech/.test(a.title || '')); return d && d.close(); })()`);
-      await sleep(800);
       const depois = await mensagens();
-      await clicar(edge, `#painel-tatico .pt-modo[data-modo="cargaTech"][data-item="${ids.tech}"]`);
-      await esperar(edge, `!${ator()}.getFlag('cyberpunk-red-core', 'firetype-${ids.tech}')`);
-      return [/cobertura/.test(pergunta || '') && depois === antes, `pergunta "${pergunta}" · mensagens ${antes}→${depois}`];
+      await clicar(edge, botao);
+      const desligou = await esperar(edge, `!${carga} && document.querySelector('${botao}:not(.pt-ativa)') ? true : null`);
+      return [/Carregada/.test(ligou || '') && depois === antes + 1 && desligou, `botão "${ligou}" · mensagens ${antes}→${depois} · descarregou ${desligou}`];
     });
 
     await passo('sem alvo marcado, ATK vira mira no mapa; Esc (tecla de verdade) cancela sem rolar e sem soltar o token', async () => {

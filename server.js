@@ -49,7 +49,7 @@ const contentTypes = {
 // não é arquivo: vem pela API (/api/visao), só para quem joga nela.
 const playerFiles = new Set([
   '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
-  '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-glossario.js',
+  '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
   '/system-criacao.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
   '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   // A wiki instalada no celular: o manifesto, o service worker (sw.js) e os ícones.

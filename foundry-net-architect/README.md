@@ -79,7 +79,7 @@ Com **O jogador rola as próprias rolagens** ligado (padrão), o mestre pede ao 
   | Habilidade | Teste | Resultado |
   |---|---|---|
   | **Pathfinder** | revela andares | Tantos quanto o resultado, a partir de onde o netrunner está. Uma obstrução com DV maior aparece, mas o que vem depois dela não. |
-  | **Backdoor** | contra o DV da senha | Sem ela, não se desce. |
+  | **Breach** (o Backdoor do RED) | contra o DV da senha | Sem ela, não se desce. Nos anos 2070 (Mission Kit), o Backdoor se chama Breach. |
   | **Eye-Dee** | contra o DV do arquivo | Copia o arquivo para um **diário** (pasta "Arquivos da NET") que o dono do netrunner abre pela janela; o chat avisa com o link. |
   | **Control** | contra o DV do nó | Depois, cada comando gasta 1 Ação NET: os botões das coisas ligadas na cena, ou um comando livre que o mestre narra. |
   | **Zap** | contra a defesa do alvo + 1d10 | 1d6 de REZ (Black ICE, demônio) ou no HP (netrunner inimigo). A defesa é a DEF do ICE, a Interface do demônio ou a rolagem de defesa do netrunner inimigo. |

@@ -236,8 +236,7 @@ Destaques: o plano de entrada que funcionou sem tiros (Socializador ou Explorado
 
 ### Depois da sessão
 
-- Atualize os três relógios no diário da campanha.
-- Anote onde está cada parte de Morana (Chave, Gatilho, Coleira) e quem tem cópias.
+- Em Estado da campanha, na wiki: marque os três relógios e com quem está cada parte de Morana (Chave, Gatilho, Coleira), e quem tem cópias (o campo "Nota" da peça).
 - Anote o que o grupo sabe sobre o preço do antídoto e sobre a origem do código.
 
 ### Perguntas para fechar a sessão

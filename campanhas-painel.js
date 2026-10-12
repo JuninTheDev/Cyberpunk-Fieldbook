@@ -383,7 +383,7 @@
     const pageSetup = {};
     const docs = {};
     for (const def of defs) {
-      if (def.kind === 'handouts') docs[def.id] = { file: def.file, eyebrow: def.eyebrow || 'Para entregar / handouts da sessão', title: def.title, lede: def.lede || 'Os documentos que o grupo pode encontrar nesta sessão, prontos para entregar.', transform: text => pickHandouts(text, def.handouts), semBusca: true, entregar: campaign };
+      if (def.kind === 'handouts') docs[def.id] = { file: def.file, eyebrow: def.eyebrow || 'Para entregar / handouts da sessão', title: def.title, lede: def.lede || 'Os documentos que o grupo pode encontrar nesta sessão, prontos para entregar.', transform: text => pickHandouts(text, def.handouts), semBusca: true, vista: true, entregar: campaign };
       if (def.kind === 'npcs') { pages[def.id] = npcPage(def); pageSetup[def.id] = content => setupNpcPage(content, campaign, def); }
       if (def.kind === 'notas') { pages[def.id] = sessionNotesPage(def); pageSetup[def.id] = content => setupSessionNotes(content, campaign, def); }
     }

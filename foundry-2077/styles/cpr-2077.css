@@ -44,8 +44,10 @@
 .text-pill.cpr2077-tech { color: #d6a8ff; }
 .text-pill.cpr2077-power { color: #ffc46b; }
 .text-pill.cpr2077-alerta { color: #ff7a8a; font-weight: bold; }
-a.cpr2077-coronha { cursor: pointer; }
-a.cpr2077-coronha.cpr2077-ativa { color: #ff7a8a; }
+a.cpr2077-acao { cursor: pointer; }
+a.cpr2077-acao.cpr2077-ativa { color: #ff7a8a; font-weight: bold; }
+.cpr2077-carga { padding: 4px 6px; border-left: 3px solid #2a7fff; background: rgba(42, 127, 255, 0.07); }
+.cpr2077-carga i { color: #2a7fff; }
 .cpr2077-modos { display: inline-flex; gap: 0.6em; margin-left: auto; padding-right: 0.3em; white-space: nowrap; }
 .cpr2077-modos a.cpr2077-modo { cursor: pointer; }
 .cpr2077-modos a.cpr2077-modo.cpr2077-ativa { font-weight: bold; }
