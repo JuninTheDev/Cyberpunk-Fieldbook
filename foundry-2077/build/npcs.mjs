@@ -29,10 +29,14 @@ const armorTemplates = {
   Kevlar: ['Kevlar® (Body)', 'Kevlar® (Head)'], Couro: ['Leathers (Body)', 'Leathers (Head)'], 'Light Armorjack': ['Light Armorjack (Body)', 'Light Armorjack (Head)'],
   'Medium Armorjack': ['Medium Armorjack (Body)', 'Medium Armorjack (Head)'], 'Heavy Armorjack': ['Heavy Armorjack (Body)', 'Heavy Armorjack (Head)'],
   'Bodyweight Suit': ['Bodyweight Suit'], 'Subdermal Armor': ['Subdermal Armor'],
+  // Rex Royale (Black Chrome p. 153): Subdermal Armor só na cabeça e a Corporate Island (bc: = compêndio Black Chrome) no corpo.
+  'Subdermal Armor e Corporate Island': ['Subdermal Armor', 'bc:Corporate Island'],
   // A blindagem de borg de Adam Smasher (Mission Kit): SP 18, como a Metalgear, mas sem a penalidade.
   'Blindagem de borg': ['Metalgear® (Body)', 'Metalgear® (Head)']
 };
 const armorOverrides = { 'Blindagem de borg': { penalty: 0 } };
+// Ajustes de uma peça só: a Corporate Island de Rex foi melhorada por um Tech (SP 12).
+const pieceOverrides = { 'Subdermal Armor e Corporate Island': { 'Subdermal Armor': { isBodyLocation: false }, 'bc:Corporate Island': { bodyLocation: { sp: 12, ablation: 0 } } } };
 // Munição que já vem carregada em cada arma de NPC (o pente cheio e mais duas recargas).
 const ammoNames = { medPistol: 'pistola média', heavyPistol: 'pistola pesada', vHeavyPistol: 'pistola muito pesada', rifle: 'rifle', shotgunShell: 'cartucho de espingarda', shotgunSlug: 'balote de espingarda', arrow: 'flecha', grenade: 'granada', rocket: 'foguete' };
 const ammoTemplates = { medPistol: 'Medium Pistol (Basic)', heavyPistol: 'Heavy Pistol (Basic)', vHeavyPistol: 'Very Heavy Pistol (Basic)', rifle: 'Rifle (Basic)', shotgunShell: 'Shotgun Shell (Basic)', shotgunSlug: 'Shotgun Slug (Basic)', arrow: 'Arrow (Basic)', grenade: 'Grenade (Armor-Piercing)', rocket: 'Rocket (Armor-Piercing)' };
@@ -53,6 +57,7 @@ function embedded(actorSeed, template, name, system = {}) {
 function weaponItem(actorSeed, name, origin, skill, weapons2077, card = {}) {
   let template;
   if (origin?.startsWith('2077:')) template = weapons2077.get(origin.slice(5));
+  else if (origin?.startsWith('bc:')) template = coreDoc('black-chrome_weapons', origin.slice(3));
   else template = coreDoc('core_weapons', origin ? origin.replace(/^core:/, '') : weaponTemplates[name]);
   if (!template) throw new Error(`Arma sem molde: ${name} (${origin})`);
   const system = { equipped: 'equipped', magazine: { value: template.system.magazine.max, max: template.system.magazine.max, ammoData: null } };
@@ -108,16 +113,20 @@ function buildNpc(card, { seed, name, weapons2077, variant = {}, campanha = '' }
   }
   for (const [weaponName, origin, skill] of variant.armas || []) items.push(...weaponItem(seed, weaponName, origin, skill, weapons2077));
 
-  const armorName = variant.armadura || Object.keys(armorTemplates).find(key => card.armor.startsWith(key));
+  // A chave mais longa que combina ("Subdermal Armor e Corporate Island" antes de "Subdermal Armor").
+  const armorName = variant.armadura || Object.keys(armorTemplates).filter(key => card.armor.startsWith(key)).sort((a, b) => b.length - a.length)[0];
   // Sem armadura ("Sem armadura" na ficha): nenhuma peça.
-  for (const piece of armorTemplates[armorName] || []) items.push(embedded(seed, coreDoc('core_armor', piece), piece, { equipped: 'equipped', ...(armorOverrides[armorName] || {}) }));
+  for (const piece of armorTemplates[armorName] || []) {
+    const template = piece.startsWith('bc:') ? coreDoc('black-chrome_armor', piece.slice(3)) : coreDoc('core_armor', piece);
+    items.push(embedded(seed, template, piece.replace(/^bc:/, ''), { equipped: 'equipped', ...(armorOverrides[armorName] || {}), ...((pieceOverrides[armorName] || {})[piece] || {}) }));
+  }
   if (/escudo à prova de balas/.test(card.gear)) items.push(embedded(seed, coreDoc('core_armor', 'Bullet Proof Shield'), 'Escudo à prova de balas'));
 
   const hp = variant.hp ?? card.hp;
   const role = roles[0];
   const netRole = items.find(item => item.type === 'role' && item.name === 'Netrunner');
   const description = [
-    `<p><b>${tierLabels[card.tier]}</b> · ${card.book === 'Mission Kit' ? `ficha do Cyberpunk Edgerunners Mission Kit, p. ${card.page} · REP ${card.rep}` : card.page ? `ficha do livro do RED: ${card.book}, p. ${card.page}` : `ficha da campanha ${card.book}`}${variant.fonte ? ` · variante: ${variant.fonte}` : ''}</p>`,
+    `<p><b>${tierLabels[card.tier]}</b> · ${card.book === 'Mission Kit' ? `ficha do Cyberpunk Edgerunners Mission Kit, p. ${card.page} · REP ${card.rep}` : card.book === 'Black Chrome' ? `ficha do Black Chrome, p. ${card.page} · REP ${card.rep}` : card.page ? `ficha do livro do RED: ${card.book}, p. ${card.page}` : `ficha da campanha ${card.book}`}${variant.fonte ? ` · variante: ${variant.fonte}` : ''}</p>`,
     variant.texto ? para(variant.texto) : '',
     para(`${card.armor}. Iniciativa ${card.initiative}.`, 'Armadura'),
     para(`${card.gear}.`, 'Cyberware e equipamento'),
@@ -149,6 +158,7 @@ export function buildNpcs(weaponDocs) {
   const factionFolder = folderDoc('Actor', 'Facções de 2077', Object.keys(folders).length);
   const castFolder = folderDoc('Actor', 'Protocolo Morana', Object.keys(folders).length + 1);
   const kitFolder = folderDoc('Actor', 'Mission Kit', Object.keys(folders).length + 2);
+  const bcFolder = folderDoc('Actor', 'Black Chrome', Object.keys(folders).length + 3);
   const book = cards.map(card => {
     const actor = buildNpc(card, { seed: `npc:${card.book}`, name: `${card.name} (${card.book})`.replace(`${card.book} (${card.book})`, card.book), weapons2077 });
     actor.folder = folders[card.tier]._id;
@@ -176,13 +186,19 @@ export function buildNpcs(weaponDocs) {
     actor.folder = kitFolder._id;
     return actor;
   });
-  return [...Object.values(folders), factionFolder, castFolder, kitFolder, ...book, ...variants, ...cast, ...kitNpcs];
+  // As fichas do Black Chrome (os fixers dos Mercados Noturnos).
+  const bcNpcs = (wiki.npcs.blackChrome || []).map(card => {
+    const actor = buildNpc(card, { seed: `npc:bc:${card.name}`, name: card.name, weapons2077 });
+    actor.folder = bcFolder._id;
+    return actor;
+  });
+  return [...Object.values(folders), factionFolder, castFolder, kitFolder, bcFolder, ...book, ...variants, ...cast, ...kitNpcs, ...bcNpcs];
 }
 
 // Conferência: a base de cada perícia (STAT + nível) tem de bater com o livro.
 export function checkNpcSkills(actors) {
   const problems = [];
-  const cards = [...wiki.npcs.mooks, ...wiki.npcs.lieutenants, ...wiki.npcs.bosses, ...wiki.npcs.boss, ...(wiki.npcs.campaignCast || []), ...(wiki.npcs.kit || [])];
+  const cards = [...wiki.npcs.mooks, ...wiki.npcs.lieutenants, ...wiki.npcs.bosses, ...wiki.npcs.boss, ...(wiki.npcs.campaignCast || []), ...(wiki.npcs.kit || []), ...(wiki.npcs.blackChrome || [])];
   for (const actor of actors.filter(doc => doc._key.startsWith('!actors!') && !doc.flags['cpr-2077'].variante)) {
     const card = cards.find(item => item.name === actor.flags['cpr-2077'].base);
     for (const { en, value } of wiki.npcs.parseSkills(card.skills)) {

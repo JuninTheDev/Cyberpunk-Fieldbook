@@ -289,6 +289,20 @@
     }
   ];
 
+  // A ficha do Black Chrome (p. 153): Rex Royale, o fixer do mercado F (Rex’s Casino Royale). As outras fichas de fixer
+  // dos Mercados Noturnos estão nas páginas que faltam no PDF do projeto.
+  const bcNpcs = [
+    {
+      name: 'Rex Royale', book: 'Black Chrome', tier: 'aliado', page: 153, rep: 7,
+      stats: [7, 7, 7, 4, 8, 6, 4, 6, 4], hp: 40, wounded: 20, deathSave: 6, initiative: '7 + 1d10',
+      armor: 'Subdermal Armor e Corporate Island · SP 11 na cabeça (Subdermal Armor) e 12 no corpo (Corporate Island melhorada por um Tech)',
+      weapons: [['Kendachi Mono-Three', '4d6', 1, 'Melee Weapon', 'exótica', 'core:Kendachi Mono-Three'], ['Westwood', '4d6', 1, 'Handgun', 'Black Chrome; excelente, melhorada por um Tech', 'bc:Westwood']],
+      skills: 'Operator 8, Athletics 9, Brawling 13, Bribery 12, Conceal/Reveal Object 15, Concentration 8, Conversation 6, Education 9, Evasion 13, First Aid 6, Gamble 17, Handgun 16, Human Perception 6, Language (English) 11, Language (Cantonese Chinese) 11, Language (Italian) 11, Language (Japanese) 11, Language (Korean) 11, Language (Russian) 11, Language (Spanish) 11, Language (Streetslang) 9, Lip Reading 9, Local Expert (Little China) 13, Local Expert (University District) 13, Local Expert (Upper Marina) 13, Melee Weapon 16, Perception 11, Persuasion 14, Resist Torture/Drugs 10, Stealth 9, Streetwise 14, Trading 16, Wardrobe & Style 10',
+      gear: '12 balas básicas de pistola muito pesada, Agent, baralho, óculos inteligentes com Image Enhancement e um ônibus TetraCorp America Badger Corporate Bus; implante anticoncepcional, dois Cybereyes com Blindagem reforçada e Low Light/Infrared/UV, dois Shift Tacts, Subdermal Armor',
+      tip: 'O fixer do Rex’s Casino Royale, o mercado F do Black Chrome, e o dono da rede de proteção do bairro One Block. Apareceu primeiro no Jumpstart Kit do RED, com o chefe dos capangas dele, o Solo Grant Jung ("Royal"). Prefere receber em favores, e a casa sempre ganha. A Westwood é de qualidade excelente; no Foundry, ela e a Corporate Island vêm do compêndio Black Chrome.'
+    }
+  ];
+
   const campaignCast = [
     {
       name: 'Wakako Okada', book: 'Protocolo Morana', tier: 'lieutenant', page: null,
@@ -586,6 +600,7 @@
         ${section('Mini-chefes', '415–416', npcGrid(bosses))}
         ${section('Chefe', '416', npcGrid(boss))}
         ${section('Fichas do Mission Kit', 'Kit p. 118–126', `<div class="callout">As fichas do Cyberpunk Edgerunners Mission Kit, da missão The Jacket e do anime. Todos têm <b>Neuroport</b>: dá para hackear qualquer um com quickhacks. A armadura tem dois SP: contra a maioria dos ataques e contra corpo a corpo e Tech carregada (a metade). As bases de perícia já somam o bônus da Role, quando o Kit diz. No Foundry, estão na pasta <b>Mission Kit</b> do compêndio de NPCs.</div>${npcGrid(kitNpcs)}<p>${button('net2077', 'Quickhacks no Neuroport')} ${button('weapons2077', 'Armas de 2077')}</p>`)}
+        ${section('Fichas do Black Chrome', 'BC p. 153', `<div class="callout">Os fixers dos Mercados Noturnos do Black Chrome. O PDF do projeto só tem a ficha de Rex Royale, do mercado F: as dos mercados A a E estão nas páginas que faltam. No Foundry, está na pasta <b>Black Chrome</b> do compêndio de NPCs.</div>${npcGrid(bcNpcs)}<p>${button('bcMercados', 'Mercados Noturnos do Black Chrome')}</p>`)}
         ${section('Trauma Team', '224', traumaTeam)}
         ${section('Facções de 2077', '417–422', `<div class="callout">O livro monta os encontros de rua trocando o equipamento destas fichas ("use o Boosterganger, troque o couro por…"). As variantes marcadas com <b>livro</b> vêm das tabelas de encontros (p. 417–422); as marcadas com <b>adaptação</b> seguem o mesmo método para as gangues de 2077. As armas citadas estão em Armas de 2077.</div><div class="entry-grid">${factions.join('')}</div>`)}
         ${section('Protocolo Morana: o elenco', '', `<p>Os NPCs nomeados da campanha, no formato das fichas do livro. No Foundry, o módulo cpr-2077 traz um ator para cada um, na pasta <b>Protocolo Morana</b> do compêndio de NPCs. A personalidade, os segredos e as falas estão em Personagens.</p>${npcGrid(campaignCast)}<p>${button('docPersonagens', 'Personagens')} ${button('docSessao01', 'Sessão 01 completa')} ${button('docSessao02', 'Sessão 02')}</p>`)}`
@@ -600,5 +615,5 @@
   };
 
   // data: as fichas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
-  window.npcStatBlocks = { pages, data: { mooks, lieutenants, bosses, boss, kit: kitNpcs, campaignCast, skillNames, parseSkills } };
+  window.npcStatBlocks = { pages, data: { mooks, lieutenants, bosses, boss, kit: kitNpcs, blackChrome: bcNpcs, campaignCast, skillNames, parseSkills } };
 })();

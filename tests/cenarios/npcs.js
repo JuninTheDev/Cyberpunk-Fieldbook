@@ -6,11 +6,12 @@ module.exports = async ({ edge, servidores, r }) => {
   await edge.evaluate(`document.querySelector('#tab-system').click()`);
   await abrir(edge, 'npcs', 400);
 
-  await r.passo('10 fichas do livro, as 10 do Mission Kit, 12 facções e as 9 fichas do elenco do Protocolo Morana', async () => {
+  await r.passo('10 fichas do livro, as 10 do Mission Kit, a do Black Chrome, 12 facções e as 9 fichas do elenco do Protocolo Morana', async () => {
     const elenco = `#content .section[data-toc="Protocolo Morana: o elenco"]`;
     const kit = `#content .section[data-toc="Fichas do Mission Kit"]`;
-    const n = await edge.evaluate(`({ npc: [...document.querySelectorAll('#content .entry.npc')].filter(card => !card.closest('${elenco}') && !card.closest('${kit}')).length, kit: document.querySelectorAll('${kit} .entry.npc').length, faccoes: document.querySelectorAll('#content .entry:not(.npc)').length, elenco: document.querySelectorAll('${elenco} .entry.npc').length })`);
-    return [n.npc === 10 && n.kit === 10 && n.faccoes === 12 && n.elenco === 9, JSON.stringify(n)];
+    const bc = `#content .section[data-toc="Fichas do Black Chrome"]`;
+    const n = await edge.evaluate(`({ npc: [...document.querySelectorAll('#content .entry.npc')].filter(card => !card.closest('${elenco}') && !card.closest('${kit}') && !card.closest('${bc}')).length, kit: document.querySelectorAll('${kit} .entry.npc').length, bc: document.querySelectorAll('${bc} .entry.npc').length, faccoes: document.querySelectorAll('#content .entry:not(.npc)').length, elenco: document.querySelectorAll('${elenco} .entry.npc').length })`);
+    return [n.npc === 10 && n.kit === 10 && n.bc === 1 && n.faccoes === 12 && n.elenco === 9, JSON.stringify(n)];
   });
   await r.passo('Oficial de segurança mostra REF com e sem armadura', async () => {
     const stats = await edge.evaluate(`[...[...document.querySelectorAll('#content .entry.npc')].find(c => c.dataset.toc === 'Oficial de segurança').querySelectorAll('.npc-stats span')].map(s => s.textContent).join(' ')`);

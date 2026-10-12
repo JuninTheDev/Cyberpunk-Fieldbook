@@ -306,6 +306,37 @@
     ['Aparência de moda <i>X</i>', 'A armadura parece roupa daquele estilo: só Guarda-roupa e Estilo DV13 ou Percepção DV15 percebem que é armadura.']
   ];
 
+
+  // ---------------- Mercado Noturno (RED p. 337–338, BC p. 7) ----------------
+  // Em que categoria do Mercado Noturno do RED cada item do Black Chrome aparece. O livro só diz que há uma chance de achar
+  // itens do Black Chrome; a categoria é uma sugestão da wiki. Veículos não entram: o Mercado Noturno do RED não vende veículos.
+  const CATEGORIAS = ['Comida e drogas', 'Eletrônica pessoal', 'Armas e blindagens', 'Cyberware', 'Roupas e fashionware', 'Equipamento de sobrevivência'];
+  const categoriaFixa = {
+    'Shower•in•a•Can': 6, 'KillStrom Banshee Microphone': 2, 'KillStrom Sonic Boom Amp': 2, 'KillStrom Typhoid Speaker': 2, 'Laser Light Electric Guitar': 2,
+    'Drink Master 3000': 1, 'Hydrosubsidium Universal Aqualung': 6, 'Jeeves Executive Garment Bag': 5, 'Zetatech Porta-Printer': 2, 'ChipVault by SecSystems': 2,
+    'KTech Doberman 500': 2, 'Doberman 500 Marking Scent': 3, 'RapiDeploy Sheath': 3, 'Streetcase by SecSystems': 3, 'WorldSat Aerial Sphere': 2, 'Triti-Fizz': 1,
+    'Masetto Holo-Wear': 5, 'CO2 Tank': 6, 'MechaMan Smart Glove': 4, 'Heuristic Health Monitor': 5, 'Piranha Smash': 1, 'Solo of Fortune Bodypillow': 6,
+    'Bullet To Slug Adapter Casings': 3
+  };
+  const paginaDoPlus = item => item.raw.pericia || /Munição/.test(item.raw.tipo) ? 'bcArmas' : /Armadura/.test(item.raw.tipo) ? 'bcModa' : 'bcEquipamento';
+  const noMercado = [
+    [apps, 2, 'bcEquipamento'], [cyberware, 4, 'bcCyberware'], [cyberdedos, 4, 'bcCyberware'], [moda, item => /Aparência de moda/.test(item.text) ? 5 : 3, 'bcModa'],
+    [equipamento, 6, 'bcEquipamento'], [quadros, 6, 'bcQuadros'], [explosivos, 3, 'bcArmas'], [corpoACorpo, 3, 'bcArmas'], [arremesso, 3, 'bcArmas'],
+    [armasDeFogo, 3, 'bcArmas'], [municao, 3, 'bcArmas'], [plus, 3, paginaDoPlus]
+  ].flatMap(([lista, categoria, pagina]) => lista.filter(item => item.raw.eb).map(item => ({
+    item, pagina: typeof pagina === 'function' ? pagina(item) : pagina,
+    categoria: categoriaFixa[item.raw.en] || (typeof categoria === 'function' ? categoria(item) : categoria)
+  })));
+  // Mesma normalização do endereço da wiki (#página/seção).
+  const slug = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const linkDoItem = ({ item, pagina }) => `<a href="#${pagina}/${slug(item.name)}">${item.name}</a> <small>${preco(item.raw.eb)}</small>`;
+  const daCategoria = numero => noMercado.filter(entrada => entrada.categoria === numero);
+  const mercadoHTML = `<p>O livro manda gerar o mercado pelas regras do RED (duas categorias, RED p. 337–338) e diz que os compradores podem achar também itens do Black Chrome, sem dar um número: quantos aparecem fica com o mestre. Os botões sorteiam <b>1d6 itens</b> do Black Chrome de uma categoria, para o mestre escolher quais estão nas barracas.</p>
+    <div class="roll-buttons">${CATEGORIAS.map((nome, index) => `<button class="action" type="button" data-bc-mercado="${index + 1}">${index + 1}. ${nome}</button>`).join('')}</div>
+    <p class="note-status">A categoria de cada item é uma sugestão da wiki. Veículos não entram: o Mercado Noturno do RED não vende veículos.</p>
+    <details class="roll-table"><summary>Os itens do Black Chrome por categoria</summary>${table(['Categoria', 'Itens'], CATEGORIAS.map((nome, index) => [`<b>${index + 1}. ${nome}</b> <small>${daCategoria(index + 1).length} itens</small>`, daCategoria(index + 1).map(linkDoItem).join(' · ')]))}</details>
+    <p>${button('economy', 'Gerar o Mercado Noturno do RED')}</p>`;
+
   // ---------------- Páginas ----------------
   const NOS_ANOS_2070 = 'Os itens do Black Chrome são de <b>2045</b>, mas continuam à venda nos anos 2070: aparecem na wiki e na loja com a etiqueta <b>Black Chrome</b> e o preço do RED (o mesmo do Mission Kit). Quase todas as armas do livro são <b>exóticas</b>: um Rebuild de Power, Smart ou Tech só entra se sobrar um slot (ver Armas de 2077).';
   const pages = {
@@ -371,7 +402,8 @@
       lede: 'Onde se compra em Night City: o Mercado Noturno de Rex Royale e as lojas de todo dia (p. 131–156).',
       html: `<div class="callout">O PDF do projeto não tem as páginas 125–151: a <b>Economia 101</b> e os Mercados Noturnos A a E. Esta página traz o que está nele: o mercado F (Rex Royale) e as outras lojas da cidade.</div>
         ${section('Rex’s Casino Royale (mercado F)', '152–155', `${list(['<b>O clima:</b> Las Vegas num porão reformado de prédio abandonado. Fumaça, lustre antigo, carpete vermelho, vendedores de colete em mesas de carteado e um bar. Venha de terno ou vestido de festa.', '<b>O que vende:</b> o que Rex usa, armadura e arma, quanto mais vistosas melhor, e outras coisas quando aparece a oportunidade. Dizem que ele dá desconto a quem o vence no jogo, mas prefere receber em favores. A casa sempre ganha.', '<b>Onde e quando:</b> uma vez por mês, mais ou menos, ou antes, se chega uma carga grande. Nunca duas vezes no mesmo lugar: a mobília vai num caminhão, e o lustre funciona a bateria. Prefere porões fortes ao norte da divisa entre Little China e Upper Marina.', '<b>Convite:</b> 52 cartas assinadas de um baralho marcado, entregues em mão por Rex. Cada convidado leva um ou dois acompanhantes. Curinga não entra.', '<b>Quem manda:</b> Rex Royale, fixer que toca uma rede de proteção no bairro One Block, onde se encontram Upper Marina, Little China e a Hot Zone. Os capangas dele andam com o que ele vende e seguram o pior da Zona de Combate.', '<b>Segurança:</b> os capangas de Rex, chefiados pelo Solo Grant Jung, o "Royal": sério em serviço, simpático de folga, e tão viciado em cartas quanto o chefe.', '<b>Entrar no negócio:</b> Rex aluga mesa a fixers com <b>Operator 4</b> ou mais, que vendem o que quiserem. Ele prefere parceiros de pôquer. Dica: para ganhar a mesa, não ganhe o jogo.'])}
-          ${entry({ name: 'Rex Royale', tag: 'Fixer · Operator 8 · REP 7 · BC p. 153', stats: [['STATs', 'INT 7 · REF 7 · DEX 7 · TECH 4 · COOL 8 · WILL 6 · MOVE 4 · BODY 6 · EMP 4'], ['HP', '40 (Gravemente Ferido 20)'], ['Death Save', '6'], ['Armadura', 'Subdermal Armor SP 11 (cabeça) · Corporate Island melhorada SP 12 (corpo)']], text: '<b>Armas:</b> Kendachi Mono-Three (4d6, CDT 1) e uma Westwood excelente melhorada (4d6, CDT 1); "melhorada" quer dizer que um Tech mexeu nela com a habilidade Maker. <b>Bases de perícia:</b> Armas Brancas 16, Armas de uma Mão 16, Atletismo 9, Briga 13, Concentração 8, Conversação 6, Educação 9, Esconder/Revelar Objeto 15, Especialista Local (Little China, University District, Upper Marina) 13, Evasão 13, Furtividade 9, Guarda-roupa e Estilo 10, Jogos de Azar 17, Leitura Labial 9, Linguagem (inglês, cantonês, italiano, japonês, coreano, russo, espanhol) 11, Linguagem (Streetslang) 9, Malandragem 14, Negociação 16, Percepção 11, Percepção Humana 6, Persuasão 14, Primeiros Socorros 6, Resistir Tortura/Drogas 10, Subornar 12. <b>Equipamento:</b> 12 balas básicas de pistola muito pesada, Agente, baralho, óculos inteligentes com Image Enhancement e um TetraCorp America Badger Corporate Bus. <b>Cyberware:</b> implante anticoncepcional, dois Cybereyes com Blindagem reforçada e Low Light/Infrared/UV, dois Shift Tacts, Subdermal Armor.', tip: 'Rex e Royal apareceram primeiro no Jumpstart Kit do RED. As barracas do mapa: cyberware, armas longas, armadura, outros equipamentos e pistolas.' })}`)}
+          <p class="entry-tip"><b>Na mesa:</b> a ficha de Rex Royale (Fixer, Operator 8, REP 7) está em Fichas de NPC, na wiki do mestre, e no compêndio de NPCs do Foundry (pasta Black Chrome). As barracas do mapa: F1 cyberware, F2 armas longas, F3 armadura, F4 outros equipamentos e F5 pistolas.</p>`)}
+        ${section('Itens do Black Chrome num Mercado Noturno', '7', mercadoHTML)}
         ${section('Outros lugares para comprar', '156', `<p>Quase tudo que custa até <b>100eb</b> (Premium) se compra numa loja.</p>${list(['<b>Oasis:</b> a loja de conveniência da Continental Brands, que quer ser a única fonte de comida e de itens básicos. Só tem as marcas dela e de aliados (munição Militech Urban Avenger, escova de dente toda de plástico).', '<b>Bodegas:</b> mercadinhos de esquina, menores que a sala de um apartamento corporativo, com o que as caravanas nômades trazem da América Central e do Sul, do Canadá, da Rússia e do Japão.', '<b>Mercados Diurnos:</b> o outro lado do Mercado Noturno. Barracas, mesas e cobertores que vendem o que não interessa aos peixes grandes: chips de música usados, cobertores de plástico reciclado, carteiras "de marca".', '<b>Hundred Under Haven</b> (Euro Shop): a rede da Petrochem em que tudo custa menos de 100eb e cheira a plástico, com lojas na Confederação do Pacífico e no Estado Livre do Texas.', '<b>Great River:</b> piloto da Ziggurat. Você pede e paga pela CitiNet e um drone entrega em 1 hora, só em partes dos centros em reconstrução.', '<b>Pop-ups:</b> lojas que abrem por poucos dias num imóvel vazio para desovar estoque: Militech Urban Avenger em Watson, Everest VentureWare em Santo Domingo, a Ghostglobe Halloween da Nu-Tek em Little Europe.', '<b>Máquinas de venda:</b> cheias de bobagem e protegidas por lança-chamas. Nos bairros bons, pracinhas de máquinas; nos violentos, uma ou duas, protegidas pela gangue que levou propina. Os <b>Venditmobiles</b>, caminhões de máquinas com música chiptune, encantam as crianças.'])}`)}`
     }
   };
@@ -400,10 +432,23 @@
     filters: [['Tipo', row => row.tipo.split(' (')[0]], ['Acesso Nômade', row => String(row.acesso)]]
   });
 
+  // Sorteio dos itens do Black Chrome de uma categoria do Mercado Noturno: 1d6 itens diferentes.
+  pages.bcMercados.setup = (content, { rollDice, showRoll }) => {
+    content.querySelectorAll('[data-bc-mercado]').forEach(botao => botao.addEventListener('click', () => {
+      const numero = Number(botao.dataset.bcMercado);
+      const lista = daCategoria(numero);
+      const quantidade = Math.min(rollDice('1d6'), lista.length);
+      const escolhidos = new Set();
+      while (escolhidos.size < quantidade) escolhidos.add(rollDice(`1d${lista.length}`) - 1);
+      showRoll(botao, `<p><span class="roll-value">1d6: ${quantidade}</span> <b>${CATEGORIAS[numero - 1]}</b> do Black Chrome</p><ul>${[...escolhidos].map(index => `<li>${linkDoItem(lista[index])}</li>`).join('')}</ul>`);
+    }));
+  };
+
   // data: as listas cruas, lidas pela loja (foundry-2077/build/loja.mjs) e pelos testes.
   window.systemBlackChrome = {
     pages,
     data: { apps, cyberware, cyberdedos, moda, equipamento, quadros, aereos, terrestres, explosivos, corpoACorpo, arremesso, armasDeFogo, municao, plus, palavras },
+    mercado: { categorias: CATEGORIAS, itens: noMercado.map(({ item, pagina, categoria }) => ({ nome: item.name, en: item.raw.en, pagina, categoria })) },
     preco
   };
 })();

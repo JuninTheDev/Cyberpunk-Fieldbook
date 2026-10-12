@@ -50,6 +50,22 @@ module.exports = async ({ edge, servidores, r }) => {
     const texto = await edge.evaluate(`document.querySelector('#content').textContent`);
     return [/Combinação/.test(texto) && /Acesso Nômade/.test(texto) && /Moto/.test(texto) && /CBK/.test(texto), texto.slice(0, 80)];
   });
+  await r.passo('Mercados: sortear itens do Black Chrome de Cyberware dá de 1 a 6 itens, com link para o cartão (a MechaMan Smart Glove é cyberware no mercado, mas o cartão está em Moda)', async () => {
+    await abrir(edge, 'bcMercados', 400);
+    await edge.evaluate(`document.querySelector('[data-bc-mercado="4"]').click()`);
+    await edge.sleep(200);
+    const links = await edge.evaluate(`[...document.querySelectorAll('#content .roll-result a')].map(a => a.getAttribute('href'))`);
+    await edge.evaluate(`document.querySelector('#content .roll-result').scrollIntoView({ block: 'center' })`);
+    await edge.shot('blackchrome-mercado');
+    return [links.length >= 1 && links.length <= 6 && links.every(href => /^#bc(Cyberware|Moda)\//.test(href)), links.join(' ')];
+  });
+  await r.passo('Mercados: o link do sorteio abre o cartão do item', async () => {
+    const alvo = await edge.evaluate(`document.querySelector('#content .roll-result a').textContent`);
+    await edge.evaluate(`document.querySelector('#content .roll-result a').click()`);
+    await edge.sleep(900);
+    const foco = await edge.evaluate(`(document.querySelector('#content .flash') || {}).dataset?.toc || ''`);
+    return [foco === alvo, `${alvo} → ${foco}`];
+  });
   await r.passo('Mercados: Rex Royale com a ficha e as outras lojas', async () => {
     await abrir(edge, 'bcMercados', 400);
     const texto = await edge.evaluate(`document.querySelector('#content').textContent`);
