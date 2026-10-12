@@ -78,8 +78,9 @@ module.exports = async ({ edge, servidores, r }) => {
     require(path.join(raiz, 'mestre-npcs.js'));
     const dados = window.npcStatBlocks.data;
     const slug = texto => fold(texto).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const fichas = new Set([...dados.mooks, ...dados.lieutenants, ...dados.bosses, ...dados.boss, ...dados.campaignCast].map(card => slug(card.name)));
+    const fichas = new Set([...dados.mooks, ...dados.lieutenants, ...dados.bosses, ...dados.boss, ...dados.campaignCast, ...(dados.kit || [])].map(card => slug(card.name)));
     fichas.add('protocolo-morana-o-elenco');
+    fichas.add('fichas-do-mission-kit');
     const quebrados = docs.flatMap(doc => linhas(doc).flatMap(({ texto, onde }) => [...texto.matchAll(/\]\(#npcs\/([\w-]+)\)/g)].filter(m => !fichas.has(m[1])).map(m => `${onde} #npcs/${m[1]}`)));
     return [!quebrados.length, quebrados.slice(0, 6).join(' · ') || `${fichas.size} fichas; links conferidos`];
   });
