@@ -3784,6 +3784,26 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('compêndio "Arquiteturas da NET" (as da campanha, do documento da wiki; os exemplos do NET Architect): 7 arquiteturas, na pasta do sistema e escondidas dos jogadores; O Gatilho mostra os 6 andares no mapa', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const pack = game.packs.get('${S}.arquiteturas');
+        const indice = await pack.getIndex();
+        const gatilho = await pack.getDocument(indice.find(e => e.name.startsWith('O Gatilho'))._id);
+        await gatilho.sheet.render({ force: true });
+        await window.__esperar(() => gatilho.sheet.element?.querySelector('.mapa-net .no'));
+        const mapa = [...gatilho.sheet.element.querySelectorAll('.mapa-net .no')].map(textoDe);
+        await gatilho.sheet.close();
+        return { tamanho: indice.size, nomes: [...indice].map(e => e.name).sort(), tipos: [...new Set([...indice].map(e => e.type))], pasta: pack.folder?.name, mapa };
+      })()`);
+      const doJogador = jogador ? await jogador.evaluate(`({ visivel: game.packs.get('${S}.arquiteturas')?.visible })`) : { visivel: 'sem o navegador do jogador' };
+      const ok = info.tamanho === 7 && info.tipos.join() === 'arquitetura' && info.pasta === 'Cyberpunk RED — Fieldbook'
+        && ['Apartamento de um fixer', 'Armazém da TLB (exemplo do livro)', 'A Coleira (datafort da Militech, Arroyo)', 'Clínica de ripperdoc (ramificada)', 'O Gatilho (hospital queimado, Northside)', 'O Núcleo (rede de emergência, sob o City Center)', 'O retransmissor RT-07 (depósito de Kabuki)'].every(nome => info.nomes.includes(nome))
+        && info.mapa.join(' | ') === '1A Senha DV 8 | 2A Raven | 3A Arquivo DV 10 | 4A Nó de controle DV 10 | 5A Hellhound | 6A Arquivo DV 12'
+        && (!jogador || doJogador.visivel === false);
+      return [ok, JSON.stringify({ ...info, doJogador })];
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

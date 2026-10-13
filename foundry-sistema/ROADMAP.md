@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 48). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 49). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -93,8 +93,9 @@ de compêndio; entram só as partes do sistema.
   - [x] o tipo de item arquitetura, com os andares (um conteúdo por linha: a senha, o arquivo e o nó de controle com o
     DV; o Black ICE, o demônio e o netrunner inimigo), os ramos, o DV e o mapa na ficha, como o `netarch` do CORE e o
     NET Architect: ciclo 47;
-  - [ ] o compêndio das arquiteturas (as da campanha, do documento da wiki, e os exemplos do NET Architect) e a geração
-    pelas tabelas do CORE (3d6 andares, o lobby, a dificuldade);
+  - [x] o compêndio "Arquiteturas da NET", escondido dos jogadores: as 4 da campanha, do documento da wiki (como o build do
+    cpr-2077 o lê), e os 3 exemplos do NET Architect: ciclo 48;
+  - [ ] a geração pelas tabelas do CORE (3d6 andares, os ramos, o lobby, a dificuldade);
   - [ ] o ponto de acesso nos tiles e a conexão do token;
   - [ ] a janela da NET e o motor no mestre (andar, as habilidades contra os andares, o registro);
   - [ ] os inimigos (o Black ICE e o demônio no andar, a velocidade, o ataque, os efeitos) e o combate;

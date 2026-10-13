@@ -1,7 +1,8 @@
 // Gera os compêndios do sistema em packs/ (fora do git) a partir de dados/catalogo.json: armas, armaduras, munição,
 // cyberware, equipamento, roupas, drogas, netrunning (cyberdecks e programas), upgrades (acessórios de arma, hardware
-// de deck e upgrades de veículo), veículos e lesões críticas; o conteúdo de 2077 (armas, cyberware e netrunning); e
-// dois personagens de exemplo prontos para o combate (um Solo e um Capanga).
+// de deck e upgrades de veículo), veículos e lesões críticas; o conteúdo de 2077 (armas, cyberware e netrunning); dois
+// personagens de exemplo prontos para o combate (um Solo e um Capanga); e as arquiteturas da NET (build/arquiteturas.mjs:
+// as da campanha, do documento da wiki, e os exemplos do NET Architect).
 // Compila com a ferramenta oficial do Foundry (@foundryvtt/foundryvtt-cli) pelo npx, como o build do cpr-2077.
 // Uso: node build/compendios.mjs   (o instalar.mjs chama sozinho quando o catálogo ou este arquivo mudam)
 import { execSync } from 'node:child_process';
@@ -10,6 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from './arquiteturas.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifesto = JSON.parse(fs.readFileSync(path.join(raiz, 'system.json'), 'utf8'));
@@ -112,6 +114,13 @@ const EXEMPLOS = [
   })
 ];
 
+// ---------------- Arquiteturas da NET ----------------
+// As da campanha (do documento da wiki) e os exemplos do NET Architect, com o id de sempre pelo nome.
+function documentoDeArquitetura(dados) {
+  const _id = fazerId(`arquitetura:${dados.name}`);
+  return { ...dados, _id, _key: `!items!${_id}`, effects: [], folder: null, sort: 0, ownership: { default: 0 }, _stats: estatisticas };
+}
+
 // ---------------- Compilar ----------------
 function fvtt(args) {
   // No Windows o npx é um .cmd: roda pelo shell. Os argumentos vão entre aspas por causa dos espaços nos caminhos.
@@ -123,6 +132,7 @@ export function gerar() {
   const fonte = fs.mkdtempSync(path.join(os.tmpdir(), 'cpr-fieldbook-packs-'));
   const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, [prefixo, tipos]]) => [nome, Object.entries(catalogo).filter(([id, item]) => [prefixo].flat().some(p => id.startsWith(p)) && tipos.includes(item.type)).map(([id]) => documentoDeItem(id))]));
   packs.exemplos = EXEMPLOS;
+  packs.arquiteturas = [...arquiteturasDaCampanha(path.join(raiz, '..')), ...ARQUITETURAS_DE_EXEMPLO].map(documentoDeArquitetura);
   fs.rmSync(packsDir, { recursive: true, force: true });
   fs.mkdirSync(packsDir, { recursive: true });
   try {

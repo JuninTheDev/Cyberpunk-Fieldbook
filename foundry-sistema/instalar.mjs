@@ -1,6 +1,7 @@
 // Instala o sistema Cyberpunk RED — Fieldbook na pasta de sistemas do Foundry 14: copia o manifesto, os scripts, os
 // templates, o estilo, as fontes, a tradução, os ícones, os dados e os compêndios. Os compêndios (packs/, fora do git)
-// são gerados de novo quando o catálogo ou o build deles mudam (precisa do npx na primeira vez).
+// são gerados de novo quando o catálogo, o build deles ou o documento das arquiteturas da campanha (na wiki) mudam
+// (precisa do npx na primeira vez).
 // Uso: node instalar.mjs   (FOUNDRY_DATA=... troca a pasta Data do Foundry; só instala se ela for de um Foundry 14)
 import fs from 'node:fs';
 import os from 'node:os';
@@ -36,7 +37,8 @@ if (geracao !== 14) {
 
 const mudou = arquivo => fs.statSync(path.join(fonte, arquivo)).mtimeMs;
 const marca = path.join(fonte, 'packs', '.gerado');
-if (!fs.existsSync(marca) || fs.statSync(marca).mtimeMs < Math.max(mudou('dados/catalogo.json'), mudou('build/compendios.mjs'), mudou('system.json'))) {
+const fontesDosPacks = ['dados/catalogo.json', 'build/compendios.mjs', 'build/arquiteturas.mjs', 'system.json', '../documentos/morana/arquiteturas-da-campanha.md'];
+if (!fs.existsSync(marca) || fs.statSync(marca).mtimeMs < Math.max(...fontesDosPacks.map(mudou))) {
   const { gerar } = await import('./build/compendios.mjs');
   console.log(`Compêndios: ${Object.entries(gerar()).map(([nome, n]) => `${nome} ${n}`).join(' · ')}`);
 }

@@ -33,8 +33,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Arquitetura da NET** (o netarch do CORE, com o que o NET Architect da mesa junta): um item com os andares, um conteúdo
   por linha (o andar, de 1 a 18, e o ramo, de A a H; a senha, o arquivo e o nó de controle com o DV; o Black ICE e o
   demônio pelo modelo da wiki; o netrunner inimigo pela ficha), o DV da arquitetura (o maior dos andares, ou o do item)
-  e o mapa na ficha: o ramo novo sai do andar de cima do ramo à esquerda. O ponto de acesso, a janela da NET e o combate
-  ainda não (o C8).
+  e o mapa na ficha: o ramo novo sai do andar de cima do ramo à esquerda. O compêndio **Arquiteturas da NET** (escondido
+  dos jogadores) traz as 4 da campanha, do documento da wiki (`documentos/morana/arquiteturas-da-campanha.md`: mudar um
+  andar lá muda o compêndio no próximo build), e os 3 exemplos do NET Architect. O ponto de acesso, a janela da NET e o
+  combate ainda não (o C8).
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
@@ -160,7 +162,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Netrunning:** o cyberdeck (os slots, com os programas instalados nele e quantos slots ocupam) e os programas (classe, ATK, DEF, REZ, o dano e o deck onde estão). Só aparece na ficha de quem tem um dos dois. O combate na NET fica na aba NET.
   - **Upgrades e acessórios:** cada um diz onde instala (arma, cyberdeck ou veículo), quantos slots ocupa e em que item está. Instalado numa arma, o carregador estendido ou tambor troca o tamanho do pente (o rifle de assalto vai de 25 a 35 ou 45, como a tabela de carregadores da wiki), e o Smartgun Link dá +1 no ataque (o mesmo acessório duas vezes não soma). O hardware ocupa slots do deck.
   - **Veículos:** SDP, assentos, MOVE (a velocidade de combate) e a velocidade narrativa. Os upgrades instalados somam SDP e assentos (o Chassis pesado dá +20 SDP; o Upgrade de assento, +2 assentos). Os da família do Nomad vêm marcados.
-- **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Equipamento, Roupas, Drogas, Netrunning (cyberdecks, programas e os 12 Black ICE da wiki, o Black ICE próprio do netrunner), Upgrades e acessórios, Veículos, Armas de 2077, Cyberware de 2077, Netrunning de 2077, Lesões críticas e Personagens de exemplo. Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
+- **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Equipamento, Roupas, Drogas, Netrunning (cyberdecks, programas e os 12 Black ICE da wiki, o Black ICE próprio do netrunner), Upgrades e acessórios, Veículos, Armas de 2077, Cyberware de 2077, Netrunning de 2077, Lesões críticas, Personagens de exemplo e Arquiteturas da NET (estas duas, escondidas dos jogadores). Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
 - **Cyberware:**
   - **Instalar** desconta a Humanidade pela perda rolada (Shift: pela média).
   - **Humanidade máxima:** 10 × EMP, menos 2 por peça instalada que tem perda de Humanidade (borgware, menos 4). Peça sem perda, como o cyberware grátis de 2077, não reduz.
@@ -292,6 +294,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
+  - o compêndio das arquiteturas: as 7 (as 4 da campanha e os 3 exemplos), escondidas do jogador, e O Gatilho no mapa;
   - a arquitetura da NET: a ficha com os andares da clínica de ripperdoc e o mapa (o ramo B sai do andar 2), o andar novo, a linha que vira Black ICE e a linha tirada;
   - o programa de Black ICE do netrunner: o Hellhound do compêndio de Netrunning instalado no deck (2 slots), com o tipo e os números na aba NET e na ficha do item;
   - o Black ICE rezzado: o Hellhound ativado no deck põe o token ao lado do netrunner (pelo mestre, também quando o jogador ativa no computador dele), a REZ que o token perde volta para o programa, e desativar ou zerar a REZ tira o token;

@@ -54,6 +54,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | a Interface do Netrunner (as 9 habilidades, a Defesa e a Velocidade, as Ações NET, os boosters ativos) | portada no ciclo 40 |
 | CORE | os programas no combate da NET (a REZ, o ataque, o dano sem crítico; o dano no cérebro e num programa, pelo mestre) | portados nos ciclos 41 e 42 (o Shield e o Armor pela wiki) |
 | NET Architect | a arquitetura (o item, os andares com os demônios e os netrunners inimigos, o mapa) | portada no ciclo 47 (o C8, parte 1) |
+| NET Architect e cpr-2077 | o compêndio das arquiteturas (os exemplos do NET Architect; as da campanha, do documento da wiki, como o build do cpr-2077) | portado no ciclo 48 (o C8, parte 2) |
 | NET Architect | o ponto de acesso, a janela da NET, os inimigos e o combate, as rolagens do jogador, os nós de controle, os arquivos, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
@@ -2329,6 +2330,39 @@ em partes (o ROADMAP lista).
       do Foundry 14 já converte (`_cast`), então a conversão era código a mais e saiu; o G4 passou de novo sem ela.
 - **Próximo:** o C8, parte 2: o compêndio das arquiteturas (as 4 da campanha, do documento da wiki, como o build do
   cpr-2077 faz, e os 3 exemplos do NET Architect) e a geração pelas tabelas do CORE.
+- **Commit:** `e683cdd`.
+
+### Ciclo 48 (2026-10-13): o compêndio "Arquiteturas da NET" (o C8, parte 2; sessão KouArt)
+
+O build das arquiteturas da campanha do cpr-2077 (`foundry-2077/build/arquiteturas.mjs`, que lê
+`documentos/morana/arquiteturas-da-campanha.md`) e o compêndio do mundo do NET Architect (`compendio.mjs`, com os três
+exemplos).
+
+- **Implementado:**
+  - **`build/arquiteturas.mjs`:** lê o documento da campanha como o cpr-2077 (cada "## Nome" com a tabela Andar | Ramo |
+    Conteúdo | DV | O que tem vira uma arquitetura; a seção sem tabela fica de fora; um andar que não vale para o RED
+    para o build, com o nome da arquitetura e o andar), com a descrição da seção (o negrito vira `<b>`), e traz os 3
+    exemplos do NET Architect no formato do sistema;
+  - **o compêndio "Arquiteturas da NET"** (`packs/arquiteturas`, na pasta do sistema), escondido dos jogadores como o do
+    NET Architect: as 4 da campanha (o RT-07, O Gatilho, A Coleira, O Núcleo) e os 3 exemplos, com o ícone `tower`;
+  - **o instalador** gera os compêndios de novo também quando o build das arquiteturas ou o documento da campanha mudam.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 71 de 75. Um teste novo (com o que o cenário do NET Architect conferia das arquiteturas da campanha): as 4 da
+    campanha, na ordem do documento; O Gatilho com os 6 andares (o Raven no 2, o Hellhound no 5, o arquivo DV 12 no 6, a
+    senha do handout no 1); A Coleira com o 4B saindo do 3A e os fundos 8A e 5B; O Núcleo com o 6B saindo do 5A; a
+    descrição com o negrito; a seção sem tabela de fora; os 3 exemplos; e os erros de um documento torto (o Black ICE
+    desconhecido, o andar 19, o DV 3, o conteúdo desconhecido). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 78 de 83, cerca de 139 s. Um passo novo: o compêndio com as 7 arquiteturas, só de arquitetura, na pasta do
+    sistema; O Gatilho no mapa (1A Senha DV 8 a 6A Arquivo DV 12); no navegador do jogador, o compêndio não aparece. Os
+    avisos do passo "nenhum aviso" foram conferidos: só os dois da Lexington. As 5 falhas são as das armas de 2077
+    (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o ramo do documento ignorado; o DV do documento sem conferência; a descrição sem o negrito;
+    - G4: o compêndio sem as arquiteturas; o compêndio à vista dos jogadores.
+- **Próximo:** o C8, parte 3: a geração pelas tabelas do CORE (3d6 andares, os ramos, o lobby e a tabela da
+  dificuldade, do compêndio de tabelas do CORE).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
@@ -2353,5 +2387,7 @@ passa para um mundo novo, e o Foundry 12 fica instalado ao lado, só para consul
 6. **As cenas:** copie o módulo `arquivo-da-mesa` para `Data/modules`, ligue-o no mundo novo e importe a Aventura do
    compêndio "Arquivo da mesa". Os tokens vêm sem ator: ponha os atores novos por cima.
 7. **Confira cada ficha** contra a da mesa na wiki: HP, dinheiro, itens, munição, lesões e Humanidade.
-8. **Fora deste procedimento:** os NPCs (atores do CORE), as arquiteturas da NET (itens do CORE) e as macros do mundo
-   antigo. Estão no backup completo, e o Foundry 12 os abre. Um NPC da campanha se refaz com o tipo Capanga (ciclo 36).
+8. **Fora deste procedimento:** os NPCs (atores do CORE), as arquiteturas da NET feitas à mão no mundo antigo (itens do
+   CORE) e as macros do mundo antigo. Estão no backup completo, e o Foundry 12 os abre. Um NPC da campanha se refaz com o
+   tipo Capanga (ciclo 36); as arquiteturas da campanha (as do documento da wiki) já vêm no compêndio "Arquiteturas da
+   NET" (ciclo 48).

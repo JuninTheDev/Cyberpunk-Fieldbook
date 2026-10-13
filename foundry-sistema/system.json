@@ -303,6 +303,17 @@
         "PLAYER": "NONE",
         "ASSISTANT": "OWNER"
       }
+    },
+    {
+      "name": "arquiteturas",
+      "label": "Arquiteturas da NET",
+      "path": "packs/arquiteturas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "NONE",
+        "ASSISTANT": "OWNER"
+      }
     }
   ],
   "packFolders": [
@@ -325,7 +336,8 @@
         "cyberware-2077",
         "netrunning-2077",
         "lesoes",
-        "exemplos"
+        "exemplos",
+        "arquiteturas"
       ]
     }
   ],
