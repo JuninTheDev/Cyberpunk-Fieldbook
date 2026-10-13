@@ -326,6 +326,11 @@ export class DadosPrograma extends foundry.abstract.TypeDataModel {
       ativo: new fields.BooleanField({ initial: false }),
       // A REZ perdida no combate da NET (a atual é rez − rezPerdida; regras.rezAtual).
       rezPerdida: inteiro(0, { min: 0 }),
+      // O Black ICE próprio do netrunner (a classe blackice; o blackIceType do CORE): o tipo, PER e SPD. O ATK, a DEF, a REZ
+      // e o dano são os de todo programa.
+      tipoDeIce: new fields.StringField({ required: true, blank: false, initial: 'antipersonnel', choices: Object.keys(CLASSES_BLACK_ICE) }),
+      per: inteiro(0, { min: 0 }),
+      spd: inteiro(0, { min: 0 }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };

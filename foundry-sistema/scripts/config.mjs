@@ -57,9 +57,10 @@ export const ALVOS_UPGRADE = { arma: 'Arma', cyberdeck: 'Cyberdeck', veiculo: 'V
 // Armas de 2077: a classe (as regras de cada uma estão em regras.mjs).
 export const CLASSES_2077 = { power: 'Power', tech: 'Tech', smart: 'Smart' };
 
-// Programas: a classe do CORE, com o nome da página de NET da wiki, e os quickhacks e daemons de 2077.
+// Programas: a classe do CORE, com o nome da página de NET da wiki (o Black ICE próprio do netrunner também), e os
+// quickhacks e daemons de 2077.
 export const CLASSES_PROGRAMA = {
-  booster: 'Booster', defender: 'Defensor', antiprogramattacker: 'Ataque anti-programa', antipersonnelattacker: 'Ataque anti-pessoal',
+  booster: 'Booster', defender: 'Defensor', antiprogramattacker: 'Ataque anti-programa', antipersonnelattacker: 'Ataque anti-pessoal', blackice: 'Black ICE',
   quickhack: 'Quickhack (2077)', daemon: 'Daemon (2077)'
 };
 

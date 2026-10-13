@@ -37,12 +37,13 @@ function documentoDeItem(id, { ator = null, mudar = null } = {}) {
   return { ...dados, _id, _key: ator ? `!actors.items!${ator}.${_id}` : `!items!${_id}`, effects, folder: null, sort: 0, ownership: { default: 0 }, _stats: estatisticas };
 }
 
-// Cada compêndio de itens: a origem (o prefixo do id no catálogo) e os tipos que entram nele. O conteúdo de 2077 fica
-// nos compêndios dele: as armas com os Rebuilds e a munição Smart melhorada do Mission Kit, e o cyberware com a droga
-// do Kit (Immunoblockers), como no cpr-2077.
+// Cada compêndio de itens: a origem (o prefixo do id no catálogo, ou uma lista deles) e os tipos que entram nele. O
+// conteúdo de 2077 fica nos compêndios dele: as armas com os Rebuilds e a munição Smart melhorada do Mission Kit, e o
+// cyberware com a droga do Kit (Immunoblockers), como no cpr-2077. Os Black ICE da tabela da wiki (o Black ICE próprio do
+// netrunner) entram no de Netrunning.
 const PACKS_DE_ITENS = {
   armas: ['core_', ['arma']], armaduras: ['core_', ['armadura']], municao: ['core_', ['municao']], cyberware: ['core_', ['cyberware']],
-  equipamento: ['core_', ['equipamento']], roupas: ['core_', ['roupa']], drogas: ['core_', ['droga']], netrunning: ['core_', ['cyberdeck', 'programa']],
+  equipamento: ['core_', ['equipamento']], roupas: ['core_', ['roupa']], drogas: ['core_', ['droga']], netrunning: [['core_', 'black-ice:'], ['cyberdeck', 'programa']],
   upgrades: ['core_', ['upgrade']], veiculos: ['core_', ['veiculo']], lesoes: ['core_', ['lesao']],
   'armas-2077': ['armas-2077:', ['arma', 'municao', 'upgrade']], 'cyberware-2077': ['cyberware-2077:', ['cyberware', 'droga']], 'netrunning-2077': ['netrunning-2077:', ['cyberdeck', 'programa']]
 };
@@ -120,7 +121,7 @@ function fvtt(args) {
 
 export function gerar() {
   const fonte = fs.mkdtempSync(path.join(os.tmpdir(), 'cpr-fieldbook-packs-'));
-  const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, [prefixo, tipos]]) => [nome, Object.entries(catalogo).filter(([id, item]) => id.startsWith(prefixo) && tipos.includes(item.type)).map(([id]) => documentoDeItem(id))]));
+  const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, [prefixo, tipos]]) => [nome, Object.entries(catalogo).filter(([id, item]) => [prefixo].flat().some(p => id.startsWith(p)) && tipos.includes(item.type)).map(([id]) => documentoDeItem(id))]));
   packs.exemplos = EXEMPLOS;
   fs.rmSync(packsDir, { recursive: true, force: true });
   fs.mkdirSync(packsDir, { recursive: true });

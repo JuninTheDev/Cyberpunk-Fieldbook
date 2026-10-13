@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 45). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 46). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -85,7 +85,9 @@ de compêndio; entram só as partes do sistema.
     MIGRATION_STATUS): ciclo 43;
   - [x] o dano: o do Black ICE no netrunner (no cérebro, sem o Shield, ou num programa, que o anti-programa destrói) e o
     dos programas e do Zap na REZ do Black ICE e do demônio, com o Zap do demônio: ciclo 44;
-  - [ ] o token "rezzado" pelo programa de Black ICE do netrunner (a parte 3).
+  - [x] os programas de Black ICE do netrunner (o Black ICE próprio, de 2 slots): os 12 da tabela da wiki no compêndio de
+    Netrunning, com o tipo, PER e SPD no programa: ciclo 45;
+  - [ ] o token "rezzado" pelo programa de Black ICE do netrunner, ao ativá-lo no deck (a parte 3b).
 - [ ] **C8. Arquiteturas e o NET Architect dentro do sistema:**
   - o tipo de item arquitetura, com os andares e as DVs, como o `netarch` do CORE;
   - o que o NET Architect faz na mesa: pontos de acesso nos tiles, a janela da NET, os inimigos no combate, o jogador

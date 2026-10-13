@@ -2,7 +2,7 @@
 // a Role, o nome, o apelido e os indicadores (HP, Sorte, dinheiro, IP, reputação), e as abas Perícias (o painel geral:
 // atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
-import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
@@ -219,7 +219,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         id: p.id, nome: p.name, img: p.img,
         detalhe: [
           CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe,
-          p.system.classe === 'quickhack' ? `RAM ${p.system.ram}` : p.system.classe === 'daemon' ? `REZ ${p.system.rez}` : `ATK ${p.system.atk} · DEF ${p.system.def}`,
+          p.system.classe === 'quickhack' ? `RAM ${p.system.ram}` : p.system.classe === 'daemon' ? `REZ ${p.system.rez}`
+            : p.system.classe === 'blackice' ? `${CLASSES_BLACK_ICE[p.system.tipoDeIce] ?? p.system.tipoDeIce} · PER ${p.system.per} · SPD ${p.system.spd} · ATK ${p.system.atk} · DEF ${p.system.def}`
+              : `ATK ${p.system.atk} · DEF ${p.system.def}`,
           p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'
         ].join(' · '),
         // O de ataque (num deck, com Interface) ataca e rola o dano; o que tem REZ ativa, perde e restaura REZ.

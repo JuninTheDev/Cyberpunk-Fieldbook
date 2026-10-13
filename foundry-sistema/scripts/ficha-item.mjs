@@ -1,6 +1,6 @@
 // Ficha dos itens (ApplicationV2): os campos de cada tipo, a descrição e os efeitos que o item dá. Nos efeitos ligados
 // à mão (droga, equipamento como a lanterna), um botão liga e desliga.
-import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -45,6 +45,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       tiposRoupa: comAtual(TIPOS_ROUPA, tipo === 'roupa' && fonte.tipo),
       estilosRoupa: comAtual(ESTILOS_ROUPA, tipo === 'roupa' && fonte.estilo),
       classesPrograma: comAtual(CLASSES_PROGRAMA, tipo === 'programa' && fonte.classe),
+      // O Black ICE próprio do netrunner: o tipo, PER e SPD.
+      blackIce: tipo === 'programa' && fonte.classe === 'blackice', classesDoIce: CLASSES_BLACK_ICE,
       alvosUpgrade: comAtual(ALVOS_UPGRADE, tipo === 'upgrade' && fonte.alvo),
       // Onde o programa ou o upgrade pode ser instalado: os itens do tipo certo no mesmo ator. Um lugar que não existe mais
       // conta como não instalado.

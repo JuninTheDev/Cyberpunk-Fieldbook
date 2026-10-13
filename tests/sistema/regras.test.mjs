@@ -818,6 +818,28 @@ test('Dano da NET com o Black ICE e o demônio (wiki, "Black ICE", "Como ler os 
   assert.equal(regras.rezDepoisDoDano(5, 2.9), 3);
 });
 
+test('Black ICE próprio do netrunner (wiki, "Black ICE": "Black ICE próprio ocupa 2 slots no deck"; o programa blackice do CORE): os 12 da tabela da wiki no catálogo, como programas da classe Black ICE, com o tipo, PER, SPD, ATK, DEF, a REZ, o dano do efeito, o custo e 2 slots; fora da loja da wiki', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes('Black ICE próprio ocupa <b>2 slots</b> no deck.'));
+  assert.equal(CLASSES_PROGRAMA.blackice, 'Black ICE');
+  // Na ordem da tabela da wiki.
+  assert.deepEqual(Object.keys(catalogo).filter(id => id.startsWith('black-ice:')), BLACK_ICE.map(ice => `black-ice:${ice.id}`));
+  for (const ice of BLACK_ICE) {
+    const p = catalogo[`black-ice:${ice.id}`];
+    assert.deepEqual([p.type, p.name, p.img], ['programa', ice.nome, 'icons/svg/ice-aura.svg'], ice.nome);
+    const s = p.system;
+    assert.deepEqual(
+      [s.classe, s.tipoDeIce, s.per, s.spd, s.atk, s.def, s.rez, s.dano.padrao, s.dano.blackIce, s.preco, s.tamanho, s.descricao],
+      ['blackice', ice.classe, ice.per, ice.spd, ice.atk, ice.def, ice.rez, ice.dano || '0', '0', ice.custo, 2, `<p>${ice.efeito}</p>`], ice.nome);
+    assert.equal(p.flags['cpr-fieldbook'].catalogo, `black-ice:${ice.id}`);
+  }
+  // O Hellhound, conferido contra a linha da tabela da wiki.
+  assert.deepEqual(catalogo['black-ice:hellhound'].system.dano, { padrao: '2d6', blackIce: '0' });
+  assert.equal(catalogo['black-ice:asp'].system.dano.padrao, '0');
+  // A loja da wiki não vende Black ICE: o netrunner recebe pelo compêndio de Netrunning (o mestre dá).
+  assert.ok(!Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).some(item => item.id.startsWith('black-ice:') || /hellhound|sabertooth/i.test(item.en ?? '')));
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

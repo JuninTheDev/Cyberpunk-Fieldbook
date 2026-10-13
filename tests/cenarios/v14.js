@@ -93,7 +93,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const t = info.tamanhos;
       const s = info.resumo;
       // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 18 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 58 && t['cyberware-2077'] === 62 && t['netrunning-2077'] === 48 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 30 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 58 && t['cyberware-2077'] === 62 && t['netrunning-2077'] === 48 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 
@@ -3457,10 +3457,15 @@ module.exports = async ({ edge, servidores, r }) => {
           const dem = await Actor.implementation.create({ name: 'Teste Demônio Fila', type: 'demonio', system: { interface: 4 } });
           const docs = [];
           for (const [ator, x] of [[n, 1500], [ice, 1600], [dem, 1700]]) docs.push((await ator.getTokenDocument({ x, y: 900 })).toObject());
-          const [tn, ti, td] = await canvas.scene.createEmbeddedDocuments('Token', docs);
+          // Um por vez: a lista que o createEmbeddedDocuments devolve nem sempre vem na ordem pedida (QUALITY_GATES).
+          const tokens = [];
+          for (const doc of docs) tokens.push((await canvas.scene.createEmbeddedDocuments('Token', [doc]))[0]);
+          const [tn, ti, td] = tokens;
           await esperar(() => canvas.tokens.get(td.id));
           const combate = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
-          const [cn, ci, cd] = await combate.createEmbeddedDocuments('Combatant', [tn, ti, td].map(t => ({ tokenId: t.id, sceneId: canvas.scene.id, actorId: t.actorId })));
+          const combatentes = [];
+          for (const t of tokens) combatentes.push((await combate.createEmbeddedDocuments('Combatant', [{ tokenId: t.id, sceneId: canvas.scene.id, actorId: t.actorId }]))[0]);
+          const [cn, ci, cd] = combatentes;
           const iniciativa = c => combate.combatants.get(c.id).initiative;
           // 1. O "rolar todos" do começo da luta: o netrunner rola (13), e o ICE e o demônio entram acima, um de cada vez.
           window.__fila = [[7, 10]];
@@ -3525,7 +3530,10 @@ module.exports = async ({ edge, servidores, r }) => {
           const imp = await Actor.implementation.create({ name: 'Imp', type: 'demonio', system: { rez: { value: 15, max: 15 }, interface: 3, acoes: 2 } });
           const docs = [];
           for (const [ator, x] of [[b, 1500], [hellhound, 1600], [imp, 1700]]) docs.push((await ator.getTokenDocument({ x, y: 1100 })).toObject());
-          const [tb, th, ti] = await canvas.scene.createEmbeddedDocuments('Token', docs);
+          // Um por vez: a lista que o createEmbeddedDocuments devolve nem sempre vem na ordem pedida (QUALITY_GATES).
+          const tokens = [];
+          for (const doc of docs) tokens.push((await canvas.scene.createEmbeddedDocuments('Token', [doc]))[0]);
+          const [tb, th, ti] = tokens;
           await esperar(() => canvas.tokens.get(ti.id));
           // Marca o alvo, rola o dano e clica no botão do cartão; devolve o cartão do dano e o do resultado.
           const aplicar = async (rolar, onde, fila, alvo) => {
@@ -3582,6 +3590,53 @@ module.exports = async ({ edge, servidores, r }) => {
           for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
           return true;
         })()`);
+      }
+    });
+
+    await r.passo('programa de Black ICE do netrunner (wiki: "Black ICE próprio ocupa 2 slots no deck"; o programa blackice do CORE): o Hellhound do compêndio de Netrunning, instalado no deck com o Sword, ocupa 2 slots (3 de 7); a aba NET mostra o tipo e os números, com a REZ e o botão Ativo; a ficha do item tem o tipo de Black ICE, PER e SPD, e a do Sword não', async () => {
+      const nomes = ['Teste Netrunner Black ICE'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const pack = game.packs.get('${S}.netrunning');
+          const doPack = async nome => (await pack.getDocument(pack.index.find(e => e.name === nome)._id)).toObject();
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const a = await Actor.implementation.create({
+            name: 'Teste Netrunner Black ICE', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } },
+            items: [foundry.utils.deepClone(cat['core_gear:cyberdeck']), await doPack('Hellhound'), await doPack('Sword')]
+          });
+          const deck = a.items.find(i => i.type === 'cyberdeck');
+          await deck.update({ 'system.uso': 'equipado' });
+          await a.updateEmbeddedDocuments('Item', a.items.filter(i => i.type === 'programa').map(p => ({ _id: p.id, 'system.instaladoEm': deck.id })));
+          const hh = a.items.getName('Hellhound');
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('net', 'primary');
+          const f = () => a.sheet.element;
+          await esperar(() => f()?.querySelector('.tab.net li[data-item-id="' + hh.id + '"]'));
+          const linha = f().querySelector('.tab.net li[data-item-id="' + hh.id + '"]');
+          const naNet = {
+            detalhe: textoDe(linha.querySelector('.detalhe')), rez: textoDe(linha.querySelector('.rez')), ativar: textoDe(linha.querySelector('[data-action="ativarPrograma"]')),
+            deck: textoDe(f().querySelector('.tab.net li[data-item-id="' + deck.id + '"] .detalhe'))
+          };
+          await a.sheet.close();
+          // A ficha do item: o tipo de Black ICE, PER e SPD no Hellhound; o Sword não tem.
+          const campos = async item => {
+            await item.sheet.render({ force: true });
+            await esperar(() => item.sheet.element?.querySelector('[name="system.classe"]'));
+            const lidos = ['system.classe', 'system.tipoDeIce', 'system.per', 'system.spd', 'system.tamanho'].map(nome => item.sheet.element.querySelector('[name="' + nome + '"]')?.value ?? null);
+            await item.sheet.close();
+            return lidos;
+          };
+          return { naNet, slots: deck.slotsUsados, hellhound: await campos(hh), sword: await campos(a.items.getName('Sword')), img: hh.img, origem: hh.getFlag('${S}', 'catalogo') };
+        })()`);
+        const { naNet: n, hellhound: h, sword: w } = info;
+        const ok = n.detalhe === 'Black ICE · Anti-pessoal · PER 6 · SPD 6 · ATK 6 · DEF 2 · no Cyberdeck' && n.rez === 'REZ 20/20' && n.ativar === 'Inativo'
+          && n.deck.startsWith('3/7 slots') && info.slots === 3 && info.img === 'icons/svg/ice-aura.svg' && info.origem === 'black-ice:hellhound'
+          && h.join() === 'blackice,antipersonnel,6,6,2' && w[0] === 'antiprogramattacker' && w.slice(1, 4).every(valor => valor === null);
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => ${JSON.stringify(nomes)}.includes(a.name))) { for (const i of a.items) await i.sheet?.close(); await a.sheet?.close(); await a.delete(); } return true; })()`);
       }
     });
 

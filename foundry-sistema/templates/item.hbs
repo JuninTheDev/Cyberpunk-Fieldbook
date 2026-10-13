@@ -55,6 +55,11 @@
     {{/if}}
     {{#if eh.programa}}
     <label>Classe <select name="system.classe">{{selectOptions classesPrograma selected=fonte.classe}}</select></label>
+    {{#if blackIce}}
+    <label>Tipo de Black ICE <select name="system.tipoDeIce">{{selectOptions classesDoIce selected=fonte.tipoDeIce}}</select></label>
+    <label>PER <input type="number" name="system.per" value="{{fonte.per}}" min="0"></label>
+    <label>SPD <input type="number" name="system.spd" value="{{fonte.spd}}" min="0"></label>
+    {{/if}}
     <label>ATK <input type="number" name="system.atk" value="{{fonte.atk}}"></label>
     <label>DEF <input type="number" name="system.def" value="{{fonte.def}}"></label>
     <label>REZ <input type="number" name="system.rez" value="{{fonte.rez}}" min="0"></label>

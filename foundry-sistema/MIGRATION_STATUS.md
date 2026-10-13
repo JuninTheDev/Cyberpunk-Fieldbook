@@ -34,7 +34,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE | consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
-| CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); falta o token que o programa rezza (parte 3) |
+| CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); falta o token que o programa rezza (parte 3b) |
 | CORE | contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
@@ -109,7 +109,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
-  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores nos ciclos 43 e 44; o resto falta | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores nos ciclos 43 e 44, e os programas de Black ICE no 45; o resto falta | P3 |
   | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
@@ -273,6 +273,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   também. Por isso o Zap do netrunner tem o botão da REZ. O dano "em Black ICE" dos programas vale também no demônio
   (Black ICE inteligente), como no NET Architect. O demônio "só usa Zap e Control": o botão do Zap dele vai no intruso
   (no cérebro ou num programa), como o NET Architect (que o põe no cérebro).
+
+- **Os programas de Black ICE: da tabela da wiki.** O CORE 0.92.4 não traz programas de Black ICE (o mestre os faz à
+  mão), e a loja da wiki não os vende. Os 12 da tabela da wiki entram no compêndio de Netrunning como programas da classe
+  Black ICE, com 2 slots (a wiki: "Black ICE próprio ocupa 2 slots no deck"), o efeito e o dano dele; o netrunner os
+  recebe do mestre. O id no catálogo é "black-ice:<nome>", porque não há id da loja; a ficha da mesa manda os itens para a
+  wiki pelo nome, e não pelo id.
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2193,6 +2199,45 @@ a wiki ("Black ICE", "Como ler os cartões", os programas e os defensores; RED p
       Zap do demônio com os três botões; o cartão do Black ICE sem os botões; e o dano na REZ procurando os alvos com HP.
 - **Próximo:** o C7, parte 3: o programa de Black ICE do netrunner, que rezza um token ao ser ativado (o CORE 0.92.4 e a
   loja da wiki não trazem nenhum: os 12 da tabela da wiki entrariam no compêndio de Netrunning; ver as dúvidas).
+- **Commit:** `5c12cd3`.
+
+### Ciclo 45 (2026-10-13): os programas de Black ICE do netrunner (o C7, parte 3a; sessão KouArt)
+
+O programa da classe `blackice` do CORE (`program-datamodel.js`: o `blackIceType`, PER, SPD, ATK, DEF e a REZ) e a wiki
+("Black ICE": a tabela e "Black ICE próprio ocupa 2 slots no deck"; RED p. 204–207).
+
+- **Implementado:**
+  - **o programa de Black ICE:** a classe `blackice` ("Black ICE") e, no `DadosPrograma`, o tipo (`tipoDeIce`: anti-pessoal,
+    anti-programa ou outro), PER e SPD. O ATK, a DEF, a REZ, o dano e os slots são os de todo programa;
+  - **os 12 da tabela da wiki** no catálogo (`black-ice:hellhound`...; o build, `programaDeBlackIce`) e no compêndio de
+    Netrunning (que passou a aceitar mais de um prefixo do catálogo): 2 slots, o efeito na descrição, o dano do efeito, o
+    custo e o ícone `ice-aura`. Os 704 itens que já estavam no catálogo não mudaram (conferido item a item);
+  - **a ficha do item** mostra o tipo de Black ICE, PER e SPD (só na classe Black ICE); **a aba NET** mostra o tipo e os
+    números na lista de programas, com a REZ e o botão Ativo;
+  - a dica da aba NET deixou de dizer que o dano da NET e o Black ICE não estão no sistema (vieram nos ciclos 42 a 44);
+  - **correção nos testes:** a falha que vinha e voltava no passo da iniciativa (ciclo 43) não era o `resetAll`: a
+    lista que o `createEmbeddedDocuments` devolve nem sempre vem na ordem pedida, e o passo pegava os tokens e os
+    combatentes pela posição (o ICE e o demônio trocavam de lugar). Numa das mutações deste ciclo, o passo do dano do
+    Black ICE (ciclo 44) marcou o Imp no lugar do Hellhound pelo mesmo motivo. Os dois passos passaram a criar um por vez,
+    e a lição do QUALITY_GATES foi corrigida.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 69 de 73. Um teste novo: os 12 programas do catálogo contra a tabela da wiki (na ordem dela: o tipo, os números,
+    o dano, o custo, 2 slots, a descrição) e fora da loja da wiki. As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 75 de 80 (nas duas rodadas do fim), cerca de 118 s. Um passo novo: o Hellhound do compêndio de Netrunning instalado num deck com o
+    Sword (3 de 7 slots); a aba NET mostra "Black ICE · Anti-pessoal · PER 6 · SPD 6 · ATK 6 · DEF 2", a REZ 20/20 e o botão
+    Ativo; a ficha do item tem o tipo, PER e SPD, e a do Sword não. O passo dos compêndios passou a esperar 30 itens no de
+    Netrunning (eram 18). As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o Hellhound do catálogo com 1 slot; a classe Black ICE sem rótulo;
+    - G4: o compêndio de Netrunning sem os Black ICE; a aba NET mostrando o Black ICE como os outros programas; a ficha
+      do item sem o tipo, PER e SPD; e o programa sem o campo PER.
+
+    Na mutação da ficha do item, o passo do dano do Black ICE também caiu: foi a ordem dos tokens (acima), corrigida
+    depois; as duas rodadas do G4 do fim do ciclo passaram nele.
+- **Próximo:** o C7, parte 3b: ativar o programa de Black ICE num deck rezza o token dele ao lado do netrunner (e
+  desativar tira), com a REZ do token voltando para o programa, como o CORE.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

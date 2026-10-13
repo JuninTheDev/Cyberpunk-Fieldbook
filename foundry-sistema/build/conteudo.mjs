@@ -3,7 +3,8 @@
 // Uso: node build/conteudo.mjs
 // Na primeira vez baixa os compêndios-fonte (YAML) da tag do GitLab para .cache/; o js-yaml vem da CDN (sem npm).
 // Saída:
-//   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle");
+//   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"), e os Black ICE da tabela
+//                        da wiki como programas ("black-ice:hellhound");
 //   scripts/gerado.mjs   as perícias (com os nomes em português da wiki), as tabelas de DV, as Roles de 2077 com as
 //                        habilidades (do criador de personagens da wiki) e os Black ICE e demônios (das regras da wiki).
 import { execFileSync } from 'node:child_process';
@@ -154,6 +155,21 @@ function netDaWiki() {
     .map(([, nome, rez, interfaceDoDemonio, acoes, valorDeCombate]) => ({ id: slug(nome), nome, rez: Number(rez), interface: Number(interfaceDoDemonio), acoes: Number(acoes), valorDeCombate: Number(valorDeCombate) }));
   if (!ice.length || !demonios.length) throw new Error('As tabelas de Black ICE e de demônios não estão no system-rules.js da wiki.');
   return { ice, demonios };
+}
+
+// Um Black ICE da tabela da wiki como programa do netrunner (o Black ICE próprio: "ocupa 2 slots no deck"; o CORE 0.92.4
+// e a loja da wiki não trazem nenhum), com o efeito na descrição e o dano do efeito.
+function programaDeBlackIce(ice) {
+  const id = `black-ice:${ice.id}`;
+  return {
+    name: ice.nome, type: 'programa', img: 'icons/svg/ice-aura.svg',
+    system: {
+      descricao: `<p>${ice.efeito}</p>`, classe: 'blackice', tipoDeIce: ice.classe, per: ice.per, spd: ice.spd, atk: ice.atk, def: ice.def, rez: ice.rez,
+      dano: { padrao: ice.dano || '0', blackIce: '0' }, tamanho: 2, instaladoEm: '', preco: ice.custo, fonte: { livro: 'Core', pagina: 204 }
+    },
+    effects: [],
+    flags: { 'cpr-fieldbook': { catalogo: id, origem: { fonte: 'wiki', livro: 'Core' } } }
+  };
 }
 
 function converterPericias(yaml) {
@@ -473,11 +489,14 @@ async function main() {
     contagem[prefixo] = (contagem[prefixo] || 0) + 1;
   }
   Object.assign(itens, de2077);
+  // Os Black ICE da tabela da wiki, como programas do netrunner.
+  const net = netDaWiki();
+  for (const ice of net.ice) itens[`black-ice:${ice.id}`] = programaDeBlackIce(ice);
+  contagem['black-ice'] = net.ice.length;
   fs.mkdirSync(path.join(raiz, 'dados'), { recursive: true });
   const catalogo = { fonte: `Cyberpunk RED - CORE ${VERSAO} (GPL-3, The Project Red Team), convertido por build/conteudo.mjs`, itens };
   fs.writeFileSync(path.join(raiz, 'dados', 'catalogo.json'), JSON.stringify(catalogo));
   const roles = rolesDaWiki();
-  const net = netDaWiki();
   const gerado = [
     `// Gerado por build/conteudo.mjs a partir do Cyberpunk RED - CORE ${VERSAO} (GPL-3), da tabela de perícias e do criador da wiki.`,
     '// Não edite à mão: rode o build de novo.',
