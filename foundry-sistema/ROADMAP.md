@@ -32,7 +32,7 @@ de compêndio; entram só as partes do sistema.
     depois da virada uma mudança de campo estragaria os atores do mundo real.
   - **O quê:** a versão dos dados no mundo e os passos em ordem, no mestre ativo (atores, tokens, itens e compêndios
     do mundo), com o aviso e o backup antes; e o `migrateData` dos modelos para as mudanças simples.
-- [ ] **C2. Capanga (mook) como tipo de ator.**
+- [~] **C2. Capanga (mook) como tipo de ator.** Em andamento: sessão KouArt, 2026-10-12.
   - **A ficha:** curta, como a do CORE (perícias com nível, armas, armadura, cyberware).
   - **O token:** solto por padrão, com o próprio HP de cada capanga. Hoje todo ator nasce ligado.
   - **Arrastar um item** equipa ou instala.
