@@ -1,12 +1,13 @@
 // Ficha da arquitetura da NET (o netarch do CORE, com o que o NET Architect da mesa junta): a lista dos andares, um
 // conteúdo por linha (o andar, o ramo, o tipo; o DV da senha, do arquivo e do nó de controle; qual Black ICE, demônio ou
 // netrunner inimigo; o nome e o que tem lá), e o mapa que ela forma (arquitetura.lerArquitetura): o andar 1 do ramo A
-// sai do ponto de acesso, e um ramo novo sai do andar de cima do ramo à esquerda.
-import { COM_DV, ENTRADA, lerArquitetura, novaLinha, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
+// sai do ponto de acesso, e um ramo novo sai do andar de cima do ramo à esquerda. "Gerar pelas tabelas" troca os andares
+// pelos das tabelas do livro (arquitetura.gerarAndares), na dificuldade escolhida.
+import { COM_DV, DIFICULDADES, ENTRADA, gerarAndares, lerArquitetura, novaLinha, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
 import { caminho, SISTEMA } from './config.mjs';
-import { BLACK_ICE, DEMONIOS } from './gerado.mjs';
+import { BLACK_ICE, DEMONIOS, TABELAS_DA_NET } from './gerado.mjs';
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 const ICES = Object.fromEntries(BLACK_ICE.map(ice => [ice.id, ice.nome]));
 const NOMES_DOS_DEMONIOS = Object.fromEntries(DEMONIOS.map(demonio => [demonio.id, demonio.nome]));
@@ -27,7 +28,7 @@ export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
     position: { width: 900, height: 760 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { novaLinha: FichaArquitetura.#novaLinha, tirarLinha: FichaArquitetura.#tirarLinha }
+    actions: { novaLinha: FichaArquitetura.#novaLinha, tirarLinha: FichaArquitetura.#tirarLinha, gerar: FichaArquitetura.#gerar }
   };
 
   static PARTS = {
@@ -70,6 +71,19 @@ export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
   static #novaLinha() {
     const andares = this.item._source.system.andares;
     return this.item.update({ 'system.andares': [...andares, novaLinha(andares)] });
+  }
+  // A dificuldade pela janela; os dados rolam sem cartão (como as tabelas do CORE), e cada andar guarda a tabela, a
+  // rolagem e o resultado.
+  static async #gerar() {
+    const substitui = this.item._source.system.andares.length ? ' <b>Os andares de agora saem.</b>' : '';
+    const dificuldade = await DialogV2.wait({
+      window: { title: `${this.item.name}: gerar pelas tabelas` }, classes: [SISTEMA, 'gerar-arquitetura'], rejectClose: false,
+      content: `<p>As tabelas do livro (RED p. 210–211): 3d6 andares, um ramo a mais a cada 7+ no 1d10, os 2 primeiros andares pelo lobby e os outros pela tabela da dificuldade.${substitui}</p>`,
+      buttons: Object.entries(DIFICULDADES).map(([action, label]) => ({ action, label }))
+    });
+    if (!DIFICULDADES[dificuldade]) return null;
+    const { andares } = await gerarAndares({ dificuldade, tabelas: TABELAS_DA_NET, rolar: async formula => (await new Roll(formula).evaluate()).total });
+    return this.item.update({ 'system.andares': andares });
   }
   static #tirarLinha(evento, alvo) {
     const indice = Number(alvo.dataset.indice);

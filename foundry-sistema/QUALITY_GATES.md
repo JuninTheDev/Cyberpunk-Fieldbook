@@ -71,6 +71,8 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   gancho apagam o mesmo token, e o passo cai com "Token … does not exist" (ciclo 46).
 - **O passo "nenhum aviso" falhando pelos avisos conhecidos:** enquanto os avisos da Lexington (2077) o derrubam, um erro
   novo do sistema ficaria escondido nele. Confira o detalhe a cada G4: tem de ter só os dois da Lexington.
+- **Rolagem síncrona no Foundry 14:** `new Roll('3d6').evaluateSync()` lança erro ("This Roll contains terms that cannot be
+  synchronously evaluated"): os dados não rolam síncronos no modo estrito. Use `await roll.evaluate()` (ciclo 49).
 - **Mensagem do chat na página:** ela aparece duas vezes (no chat e na notificação), cada uma com os botões ligados.
   Para contar os botões de um cartão, procure dentro de uma das duas (`document.querySelector('[data-message-id=...]')`);
   no documento inteiro, a lista vem dobrada (ciclo 42).

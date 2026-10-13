@@ -6,7 +6,8 @@
 //   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"), e os Black ICE da tabela
 //                        da wiki como programas ("black-ice:hellhound");
 //   scripts/gerado.mjs   as perícias (com os nomes em português da wiki), as tabelas de DV, as Roles de 2077 com as
-//                        habilidades (do criador de personagens da wiki) e os Black ICE e demônios (das regras da wiki).
+//                        habilidades (do criador de personagens da wiki), os Black ICE e demônios (das regras da wiki)
+//                        e as tabelas de andares da NET (do CORE).
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -170,6 +171,44 @@ function programaDeBlackIce(ice) {
     effects: [],
     flags: { 'cpr-fieldbook': { catalogo: id, origem: { fonte: 'wiki', livro: 'Core' } } }
   };
+}
+
+// As tabelas de andares da NET do CORE (internal/net-rolltables; RED p. 210–211): o lobby (1d6, os dois primeiros
+// andares) e os demais andares de cada dificuldade (3d6). Cada resultado vira os conteúdos do andar, com o rótulo em
+// português: "Password DV8" é a senha DV 8 ("File" o arquivo, "Control Node" o nó de controle); "Hellhound x2, Liche" é
+// um Black ICE por linha (o modelo da wiki).
+const TABELAS_DA_NET_DO_CORE = {
+  'First Two Floors (The Lobby)': 'lobby', 'All Other Floors (Basic)': 'basica', 'All Other Floors (Standard)': 'padrao',
+  'All Other Floors (Uncommon)': 'incomum', 'All Other Floors (Advanced)': 'avancada'
+};
+const COM_DV_DO_CORE = { Password: ['senha', 'Senha'], File: ['arquivo', 'Arquivo'], 'Control Node': ['controle', 'Nó de controle'] };
+function andarDaTabela(texto, ices) {
+  const comDv = texto.match(/^(Password|File|Control Node) DV(\d+)$/);
+  if (comDv) {
+    const [tipo, rotulo] = COM_DV_DO_CORE[comDv[1]];
+    return { rotulo: `${rotulo} DV ${comDv[2]}`, conteudos: [{ tipo, dv: Number(comDv[2]) }] };
+  }
+  const partes = texto.split(/,\s*/).map(parte => {
+    const [, nome, vezes] = parte.match(/^(\w+)(?: x(\d+))?$/) ?? [];
+    const ice = ices.find(modelo => modelo.id === nome?.toLowerCase());
+    if (!ice) throw new Error(`Tabela de andares da NET do CORE: resultado desconhecido "${texto}"`);
+    return { ice, vezes: Number(vezes) || 1 };
+  });
+  return {
+    rotulo: partes.map(({ ice, vezes }) => (vezes > 1 ? `${ice.nome} ×${vezes}` : ice.nome)).join(', '),
+    conteudos: partes.flatMap(({ ice, vezes }) => Array.from({ length: vezes }, () => ({ tipo: 'ice', ice: ice.id })))
+  };
+}
+function tabelasDaNet(yaml, ices) {
+  const tabelas = {};
+  for (const doc of lerPack(yaml, 'internal/net-rolltables')) {
+    const id = TABELAS_DA_NET_DO_CORE[doc.name];
+    if (!id) continue;
+    const resultados = doc.filhos.map(r => ({ min: r.range[0], max: r.range[1], ...andarDaTabela(String(r.text ?? r.name ?? '').trim(), ices) })).sort((a, b) => a.min - b.min);
+    tabelas[id] = { formula: doc.formula, resultados };
+  }
+  if (Object.keys(tabelas).length !== Object.keys(TABELAS_DA_NET_DO_CORE).length) throw new Error('As tabelas de andares da NET do CORE não estão todas no compêndio internal/net-rolltables.');
+  return tabelas;
 }
 
 function converterPericias(yaml) {
@@ -509,6 +548,7 @@ async function main() {
     `export const HABILIDADES_DE_ROLE = ${JSON.stringify(roles.habilidades)};`,
     `export const BLACK_ICE = ${JSON.stringify(net.ice)};`,
     `export const DEMONIOS = ${JSON.stringify(net.demonios)};`,
+    `export const TABELAS_DA_NET = ${JSON.stringify(tabelasDaNet(yaml, net.ice))};`,
     ''
   ].join('\n');
   fs.writeFileSync(path.join(raiz, 'scripts', 'gerado.mjs'), gerado);

@@ -39,7 +39,7 @@ descrição. --}}
       {{/each}}
     </tbody>
   </table>
-  {{#if editavel}}<div class="acoes-arquitetura"><button type="button" class="acao" data-action="novaLinha">+ Andar</button></div>{{/if}}
+  {{#if editavel}}<div class="acoes-arquitetura"><button type="button" class="acao" data-action="gerar" data-tooltip="As tabelas do livro: 3d6 andares, os ramos pelo 1d10 e os andares pelo lobby e pela dificuldade">Gerar pelas tabelas</button><button type="button" class="acao" data-action="novaLinha">+ Andar</button></div>{{/if}}
 
   <h3>Mapa</h3>
   <div class="mapa-net" style="--colunas: {{ramosDoMapa.length}}">
@@ -52,7 +52,7 @@ descrição. --}}
     {{#if this}}
     <div class="no" data-no="{{id}}">
       <b>{{id}}</b>{{#if desvio}} <small>de {{desvio}}</small>{{/if}}
-      <ul>{{#each conteudos}}<li>{{this}}</li>{{/each}}</ul>
+      <ul>{{#each conteudos}}<li>{{this}}</li> {{/each}}</ul>
     </div>
     {{else}}<span class="sem-no"></span>{{/if}}
     {{/each}}

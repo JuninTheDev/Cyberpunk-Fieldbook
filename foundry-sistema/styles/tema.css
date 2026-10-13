@@ -570,7 +570,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-arquitetura table.andares td :is(input, select) { width: 100%; }
 .cpr-fieldbook.ficha-arquitetura table.andares td:nth-child(2) select { width: 3.5rem; }
 .cpr-fieldbook.ficha-arquitetura table.andares td:last-child { width: 2rem; text-align: center; }
-.cpr-fieldbook.ficha-arquitetura .acoes-arquitetura { display: flex; justify-content: flex-end; margin: 6px 0; }
+.cpr-fieldbook.ficha-arquitetura .acoes-arquitetura { display: flex; justify-content: flex-end; gap: 8px; margin: 6px 0; }
 .cpr-fieldbook.ficha-arquitetura .acao {
   padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em;
 }

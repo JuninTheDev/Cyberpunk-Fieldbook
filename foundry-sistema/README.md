@@ -33,7 +33,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Arquitetura da NET** (o netarch do CORE, com o que o NET Architect da mesa junta): um item com os andares, um conteúdo
   por linha (o andar, de 1 a 18, e o ramo, de A a H; a senha, o arquivo e o nó de controle com o DV; o Black ICE e o
   demônio pelo modelo da wiki; o netrunner inimigo pela ficha), o DV da arquitetura (o maior dos andares, ou o do item)
-  e o mapa na ficha: o ramo novo sai do andar de cima do ramo à esquerda. O compêndio **Arquiteturas da NET** (escondido
+  e o mapa na ficha: o ramo novo sai do andar de cima do ramo à esquerda. O botão **Gerar pelas tabelas** troca os andares pelos
+  das tabelas do livro, como o CORE: 3d6 andares, um ramo a mais a cada 7+ no 1d10, os 2 primeiros andares pelo lobby e
+  os outros pela tabela da dificuldade escolhida (básica, padrão, incomum, avançada), sem repetir um resultado (menos
+  arquivo e nó de controle); cada Black ICE de um resultado vira uma linha. O compêndio **Arquiteturas da NET** (escondido
   dos jogadores) traz as 4 da campanha, do documento da wiki (`documentos/morana/arquiteturas-da-campanha.md`: mudar um
   andar lá muda o compêndio no próximo build), e os 3 exemplos do NET Architect. O ponto de acesso, a janela da NET e o
   combate ainda não (o C8).
@@ -294,6 +297,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
+  - a arquitetura pelas tabelas: a padrão com os dados fixos (o resultado que não repete, o ramo B do andar 3 e os dois Hellhound no mesmo andar);
   - o compêndio das arquiteturas: as 7 (as 4 da campanha e os 3 exemplos), escondidas do jogador, e O Gatilho no mapa;
   - a arquitetura da NET: a ficha com os andares da clínica de ripperdoc e o mapa (o ramo B sai do andar 2), o andar novo, a linha que vira Black ICE e a linha tirada;
   - o programa de Black ICE do netrunner: o Hellhound do compêndio de Netrunning instalado no deck (2 slots), com o tipo e os números na aba NET e na ficha do item;

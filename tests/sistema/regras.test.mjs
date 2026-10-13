@@ -12,7 +12,7 @@ import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
 import * as arquitetura from '../../foundry-sistema/scripts/arquitetura.mjs';
 import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from '../../foundry-sistema/build/arquiteturas.mjs';
-import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
+import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DA_NET, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
 import { ATORES_DA_NET, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -929,6 +929,49 @@ test('Arquiteturas da NET do compêndio (o documento da campanha na wiki, lido c
   } finally {
     fs.rmSync(temporaria, { recursive: true, force: true });
   }
+});
+
+test('Arquitetura pelas tabelas (wiki, "Montando uma arquitetura", RED p. 210–211; as tabelas e o _netarchGenerateFromTables do CORE): o lobby igual ao da wiki; as 4 dificuldades com o DV delas; 3d6 andares, um ramo a cada 7+ no 1d10, sem repetir um resultado (menos arquivo e nó de controle), o ramo novo no andar 3 e um Black ICE por linha', async () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes('<b>Dois primeiros andares (lobby), 1d6:</b> 1 arquivo DV6 · 2 senha DV6 · 3 senha DV8 · 4 Skunk · 5 Wisp · 6 Killer.'));
+  assert.ok(regrasDaWiki.includes('<b>Andares:</b> 3d6. Role 1d10: com 7+, a arquitetura tem um ramo (role de novo para mais). Não ramifica antes do 2º andar'));
+  // O lobby do CORE é o da wiki.
+  assert.deepEqual(TABELAS_DA_NET.lobby.formula, '1d6');
+  assert.deepEqual(TABELAS_DA_NET.lobby.resultados.map(r => [r.min, r.rotulo]), [[1, 'Arquivo DV 6'], [2, 'Senha DV 6'], [3, 'Senha DV 8'], [4, 'Skunk'], [5, 'Wisp'], [6, 'Killer']]);
+  // As 4 dificuldades (3d6, de 3 a 18), com o DV da tabela de dificuldades da wiki nas senhas, nos arquivos e nos nós.
+  assert.deepEqual(arquitetura.DIFICULDADES, { basica: 'Básica', padrao: 'Padrão', incomum: 'Incomum', avancada: 'Avançada' });
+  for (const [id, dv] of [['basica', 6], ['padrao', 8], ['incomum', 10], ['avancada', 12]]) {
+    const tabela = TABELAS_DA_NET[id];
+    assert.equal(tabela.formula, '3d6', id);
+    assert.deepEqual(tabela.resultados.map(r => r.min), Array.from({ length: 16 }, (_, i) => i + 3), id);
+    assert.deepEqual([...new Set(tabela.resultados.flatMap(r => r.conteudos).filter(c => c.dv).map(c => c.dv))], [dv], id);
+  }
+  // Vários Black ICE num resultado: um por linha.
+  assert.deepEqual(TABELAS_DA_NET.avancada.resultados.find(r => r.min === 17), {
+    min: 17, max: 17, rotulo: 'Raven, Wisp, Hellhound', conteudos: [{ tipo: 'ice', ice: 'raven' }, { tipo: 'ice', ice: 'wisp' }, { tipo: 'ice', ice: 'hellhound' }]
+  });
+  assert.deepEqual(TABELAS_DA_NET.avancada.resultados.find(r => r.min === 3).conteudos.map(c => c.ice), ['hellhound', 'hellhound', 'hellhound']);
+  // A geração com os dados fixos: 6 andares (3d6), um ramo (8 no 1d10, depois 2); o lobby 1 e 1 (o arquivo pode repetir);
+  // na padrão, 9 (a senha), 9 de novo (não repete: rola outra vez), 3 (Hellhound ×2), 18 (Liche e Raven) e 11 (o nó).
+  const fila = [6, 8, 2, 1, 1, 9, 9, 3, 18, 11];
+  const gerada = await arquitetura.gerarAndares({ dificuldade: 'padrao', tabelas: TABELAS_DA_NET, rolar: () => fila.shift() });
+  assert.deepEqual([gerada.total, gerada.ramosAMais, fila.length], [6, 1, 0]);
+  assert.deepEqual(gerada.andares.map(l => `${l.andar}${l.ramo} ${l.tipo} ${l.dv || l.ice}`), [
+    '1a arquivo 6', '2a arquivo 6', '3a senha 8', '3b ice hellhound', '3b ice hellhound', '4b ice liche', '4b ice raven', '5b controle 8'
+  ]);
+  assert.deepEqual([gerada.andares[0].descricao, gerada.andares[3].descricao], ['Lobby, 1: Arquivo DV 6', 'Padrão, 3: Hellhound ×2']);
+  // O ramo B começa no andar 3 e sai do 2A (a wiki: não ramifica antes do 2º andar); o DV da arquitetura é o da padrão.
+  const mapa = arquitetura.lerArquitetura({ andares: gerada.andares });
+  assert.deepEqual([mapa.nos['3b'].pai, mapa.nos['4b'].pai, mapa.nos['5b'].pai, mapa.dv], ['2a', '3b', '4b', 8]);
+  // O 1d10 sempre 7 ou mais: o ramo para no H (7 a mais), sem rolar o oitavo.
+  let rolagensDoD10 = 0;
+  const rolarCheio = formula => {
+    if (formula !== '1d10') return formula === '1d6' ? 1 : 10;
+    rolagensDoD10 += 1;
+    return 10;
+  };
+  const cheia = await arquitetura.gerarAndares({ dificuldade: 'basica', tabelas: TABELAS_DA_NET, rolar: rolarCheio });
+  assert.deepEqual([cheia.ramosAMais, rolagensDoD10], [7, 7]);
 });
 
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {

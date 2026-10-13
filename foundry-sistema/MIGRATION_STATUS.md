@@ -55,6 +55,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | os programas no combate da NET (a REZ, o ataque, o dano sem crítico; o dano no cérebro e num programa, pelo mestre) | portados nos ciclos 41 e 42 (o Shield e o Armor pela wiki) |
 | NET Architect | a arquitetura (o item, os andares com os demônios e os netrunners inimigos, o mapa) | portada no ciclo 47 (o C8, parte 1) |
 | NET Architect e cpr-2077 | o compêndio das arquiteturas (os exemplos do NET Architect; as da campanha, do documento da wiki, como o build do cpr-2077) | portado no ciclo 48 (o C8, parte 2) |
+| CORE | a geração da arquitetura pelas tabelas (o lobby e as 4 dificuldades) | portada no ciclo 49 (o C8, parte 3), com um Black ICE por linha (ver as dúvidas) |
 | NET Architect | o ponto de acesso, a janela da NET, os inimigos e o combate, as rolagens do jogador, os nós de controle, os arquivos, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
@@ -292,6 +293,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   inimigos nas flags do item. Aqui é uma lista só, um conteúdo por linha, com os valores simples (o tipo, o DV, o modelo
   do Black ICE e do demônio da wiki). As arquiteturas da mesa do Foundry 12 (o `netarch` com as flags) não se leem aqui
   direto: as da campanha vêm do documento da wiki, na parte 2 do C8.
+
+- **A geração pelas tabelas: as do CORE, com um Black ICE por linha.** A wiki traz a tabela do lobby e a de
+  dificuldades, e diz que os demais andares saem da tabela de 3d6 da dificuldade, no livro (p. 211). Essas tabelas vêm
+  do CORE (o lobby dele é igual ao da wiki). Num resultado com vários Black ICE ("Raven, Wisp, Hellhound"), o CORE guarda
+  só o texto na descrição e deixa o andar sem ICE escolhido; aqui cada um vira uma linha no mesmo andar, como o livro
+  descreve o andar.
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2363,6 +2370,44 @@ exemplos).
     - G4: o compêndio sem as arquiteturas; o compêndio à vista dos jogadores.
 - **Próximo:** o C8, parte 3: a geração pelas tabelas do CORE (3d6 andares, os ramos, o lobby e a tabela da
   dificuldade, do compêndio de tabelas do CORE).
+- **Commit:** `68dc398`.
+
+### Ciclo 49 (2026-10-13): a arquitetura gerada pelas tabelas (o C8, parte 3; sessão KouArt)
+
+O `_netarchGenerateFromTables` e o `_netarchDrawFromTableCustom` da ficha do item do CORE (`cpr-item-sheet.js`), as
+tabelas de andares do CORE (`internal/net-rolltables`) e a wiki ("Montando uma arquitetura": os andares, o lobby e as
+dificuldades; RED p. 210–211).
+
+- **Implementado:**
+  - **as tabelas no build** (`gerado.TABELAS_DA_NET`): o lobby (1d6) e as 4 dificuldades (3d6), cada resultado com os
+    conteúdos do andar e o rótulo em português ("Password DV8" é a senha DV 8; "Hellhound x2, Liche" são três linhas
+    de Black ICE);
+  - **`arquitetura.gerarAndares`** (sem Foundry): 3d6 andares; o 1d10 de novo a cada 7+, um ramo a mais (até o H); os 2
+    primeiros andares pelo lobby e os outros pela dificuldade, sem repetir um resultado (menos o arquivo e o nó de
+    controle); os ramos entram como no CORE (o novo começa no andar 3, o seguinte no 4...); cada andar guarda a tabela,
+    a rolagem e o resultado;
+  - **o botão "Gerar pelas tabelas"** da ficha: a janela pergunta a dificuldade e avisa que os andares de agora saem; os
+    dados rolam sem cartão, como as tabelas do CORE.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 72 de 76. Um teste novo: o lobby igual ao da wiki; as 4 dificuldades (de 3 a 18, com o DV da tabela de
+    dificuldades); os vários Black ICE num resultado; a geração com os dados fixos (6 andares e um ramo, o 9 que não
+    repete, o ramo B do 3 saindo do 2A, os dois Hellhound no mesmo andar, o DV 8); e o 1d10 sempre 7+, que para no H. As 4
+    falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 79 de 84, cerca de 120 s. Um passo novo: o botão da ficha, a janela com as 4 dificuldades e o aviso, e a Padrão
+    com os dados fixos (as 8 linhas e o mapa, com o "3B de 2A Hellhound Hellhound"). A primeira rodada caiu: o
+    `evaluateSync` do Foundry 14 não rola dados (o gerador passou a esperar a rolagem; a lição está no QUALITY_GATES). A
+    segunda caiu em dois detalhes do teste: a lista de botões pegou o controle do cabeçalho da janela (o QUALITY_GATES já
+    avisava: agora só os do rodapé) e o texto de um andar com dois conteúdos saía grudado (o mapa ganhou um espaço entre
+    eles). Os avisos do passo "nenhum aviso" foram conferidos: só os dois da Lexington. As 5 falhas são as das armas de
+    2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o mesmo resultado saindo de novo; o arquivo e o nó de controle sem poder repetir; o ramo novo no andar 2; só o
+      primeiro Black ICE de um resultado;
+    - G4: a janela sem o aviso; a dificuldade escolhida sem valer.
+- **Próximo:** o C8, parte 4: o ponto de acesso nos tiles e a conexão do token (como o NET Architect: o marcador, o
+  alcance, os requisitos, o status de conectado).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

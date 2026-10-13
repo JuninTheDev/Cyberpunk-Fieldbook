@@ -84,6 +84,56 @@ export function revelarPathfinder(arq, origem, total) {
   return revelados;
 }
 
+// As dificuldades da wiki ("Montando uma arquitetura": o DV de senha, arquivo e nó de 6, 8, 10 e 12), com a tabela de
+// andares de cada uma (gerado.TABELAS_DA_NET, do CORE).
+export const DIFICULDADES = { basica: 'Básica', padrao: 'Padrão', incomum: 'Incomum', avancada: 'Avançada' };
+
+// A geração pelas tabelas (a wiki, RED p. 210–211; o _netarchGenerateFromTables do CORE): 3d6 andares; o 1d10 de novo
+// enquanto der 7 ou mais, um ramo a mais a cada vez (até o H); os 2 primeiros andares pela tabela do lobby (1d6) e os
+// outros pela da dificuldade (3d6), sem repetir um resultado, menos os de arquivo e de nó de controle. Os ramos entram como
+// no CORE: o ramo novo começa no andar 3 (o seguinte no 4...) quando o andar passa do total dividido pelos ramos que
+// faltam mais um, e nunca no último resultado. Um resultado com vários Black ICE ("Hellhound ×2, Liche") vira uma linha
+// por ICE no mesmo andar; o CORE guarda só o texto. rolar(formula) devolve o total, ou a promessa dele (no Foundry, a
+// rolagem; o teste fixa os dados).
+export async function gerarAndares({ dificuldade, tabelas, rolar }) {
+  const total = await rolar('3d6');
+  let ramosAMais = 0;
+  while (ramosAMais < RAMOS.length - 1 && (await rolar('1d10')) >= 7) ramosAMais += 1;
+  const sortear = async (id, quantos) => {
+    const tabela = tabelas[id];
+    const saidos = [];
+    const vistos = new Set();
+    for (let tentativa = 0; saidos.length < quantos && tentativa < 1000; tentativa++) {
+      const rolagem = await rolar(tabela.formula);
+      const resultado = tabela.resultados.find(r => rolagem >= r.min && rolagem <= r.max);
+      if (!resultado || vistos.has(rolagem)) continue;
+      if (!resultado.conteudos.every(c => c.tipo === 'arquivo' || c.tipo === 'controle')) vistos.add(rolagem);
+      saidos.push({ id, rolagem, resultado });
+    }
+    return saidos;
+  };
+  const resultados = [...(await sortear('lobby', 2)), ...(await sortear(dificuldade, total - 2))];
+  const andares = [];
+  let andar = 1;
+  let inicioDoRamo = 3;
+  let ramo = 0;
+  let faltam = ramosAMais;
+  resultados.forEach(({ id, rolagem, resultado }, indice) => {
+    if (faltam > 0 && andar > inicioDoRamo && andar > total / (faltam + 1) && indice !== total - 1) {
+      andar = inicioDoRamo;
+      inicioDoRamo += 1;
+      ramo += 1;
+      faltam -= 1;
+    }
+    const descricao = `${id === 'lobby' ? 'Lobby' : DIFICULDADES[id]}, ${rolagem}: ${resultado.rotulo}`;
+    for (const conteudo of resultado.conteudos) {
+      andares.push({ andar, ramo: RAMOS[ramo], tipo: conteudo.tipo, dv: conteudo.dv ?? 0, ice: conteudo.ice ?? '', demonio: '', ator: '', nome: '', descricao });
+    }
+    andar += 1;
+  });
+  return { andares, total, ramosAMais };
+}
+
 // A linha nova da ficha: o andar seguinte ao mais fundo do ramo A (ou o 1), uma senha DV 6.
 export function novaLinha(andares = []) {
   const doRamoA = andares.filter(linha => (linha.ramo || 'a') === 'a').map(linha => Number(linha.andar) || 0);

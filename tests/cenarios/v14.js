@@ -3804,6 +3804,48 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...info, doJogador })];
     });
 
+    await r.passo('arquitetura pelas tabelas (wiki, RED p. 210–211; o CORE): "Gerar pelas tabelas" na ficha, na Padrão, com os dados fixos: 6 andares e um ramo; o lobby 1 e 1; a padrão 9, 9 (não repete), 3, 18 e 11; o ramo B do andar 3, com os dois Hellhound, sai do 2A; a janela avisa que os andares de agora saem', async () => {
+      await fixar(edge, []);
+      const nomes = ['Teste Gerada'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const item = await Item.implementation.create({ name: 'Teste Gerada', type: 'arquitetura', system: { andares: [{ andar: 1, ramo: 'a', tipo: 'senha', dv: 6 }] } });
+          await item.sheet.render({ force: true });
+          const f = () => item.sheet.element;
+          await esperar(() => f()?.querySelector('[data-action="gerar"]'));
+          // Um dado por par [face, lados]: 3d6 = 6; 1d10 = 8 e 2; 1d6 = 1 e 1; 3d6 = 9, 9, 3, 18 e 11.
+          window.__fila = [[2, 6], [2, 6], [2, 6], [8, 10], [2, 10], [1, 6], [1, 6], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6], [1, 6], [1, 6], [1, 6], [6, 6], [6, 6], [6, 6], [3, 6], [4, 6], [4, 6]];
+          f().querySelector('[data-action="gerar"]').click();
+          const janela = () => document.querySelector('.application.dialog.gerar-arquitetura:not(.minimizing)');
+          await esperar(() => janela()?.querySelector('button[data-action="padrao"]'));
+          const aviso = textoDe(janela().querySelector('.window-content'));
+          // Só os do rodapé: os controles do cabeçalho da janela também têm data-action (QUALITY_GATES).
+          const botoes = [...janela().querySelectorAll('footer button[data-action]')].map(b => b.dataset.action);
+          janela().querySelector('button[data-action="padrao"]').click();
+          await esperar(() => item.system.andares.length === 8 && f()?.querySelectorAll('.mapa-net .no').length === 6);
+          const mapa = [...f().querySelectorAll('.mapa-net .no')].map(textoDe);
+          return {
+            aviso, botoes, sobrou: window.__fila.length, mapa, descricao: item.system.andares[3].descricao,
+            linhas: item.system.andares.map(l => l.andar + l.ramo + ' ' + l.tipo + ' ' + (l.dv || l.ice))
+          };
+        })()`);
+        const ok = /Os andares de agora saem/.test(info.aviso) && info.botoes.join() === 'basica,padrao,incomum,avancada' && info.sobrou === 0
+          && info.linhas.join() === '1a arquivo 6,2a arquivo 6,3a senha 8,3b ice hellhound,3b ice hellhound,4b ice liche,4b ice raven,5b controle 8'
+          && info.mapa.join(' | ') === '1A Arquivo DV 6 | 2A Arquivo DV 6 | 3A Senha DV 8 | 3B de 2A Hellhound Hellhound | 4B Liche Raven | 5B Nó de controle DV 8'
+          && info.descricao === 'Padrão, 3: Hellhound ×2';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('gerar-arquitetura')) await app.close();
+          for (const i of game.items.filter(i => ${JSON.stringify(nomes)}.includes(i.name))) { await i.sheet?.close(); await i.delete(); }
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');
