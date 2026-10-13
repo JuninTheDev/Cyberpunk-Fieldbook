@@ -3,7 +3,6 @@ const { abrir, buscar, tecla, ondeParou } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
-  await edge.evaluate(`document.querySelector('#tab-system').click()`);
   const linhas = () => edge.evaluate(`[...document.querySelectorAll('.compare-table tbody tr')].map(tr => [...tr.cells].map(td => td.textContent))`);
   const verComo = vista => edge.evaluate(`document.querySelector('.view-switch [data-view="${vista}"]').click()`);
   const filtrar = (rotulo, valor) => edge.evaluate(`(() => { const s = document.querySelector('[data-filter="${rotulo}"]'); s.value = ${JSON.stringify(valor)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);

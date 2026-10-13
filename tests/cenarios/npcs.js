@@ -3,7 +3,6 @@ const { abrir, buscar, tecla, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
-  await edge.evaluate(`document.querySelector('#tab-system').click()`);
   await abrir(edge, 'npcs', 400);
 
   await r.passo('10 fichas do livro, as 10 do Mission Kit, a do Black Chrome, 12 facções e as 9 fichas do elenco do Protocolo Morana', async () => {
@@ -34,7 +33,6 @@ module.exports = async ({ edge, servidores, r }) => {
   if (!servidores.rede) return;
   await r.passo('jogador pela rede: Fichas de NPC não aparece e o arquivo é bloqueado', async () => {
     await edge.ir(`${servidores.rede}/`);
-    await edge.evaluate(`document.querySelector('#tab-system').click()`);
     const temPagina = await edge.evaluate(`[...document.querySelectorAll('.nav-item')].some(b => b.dataset.page === 'npcs')`);
     const status = (await fetch(`${servidores.rede}/mestre-npcs.js`)).status;
     return [!temPagina && status === 403, `página no menu: ${temPagina} | arquivo: HTTP ${status}`];

@@ -415,7 +415,7 @@
       // O mesmo desenho do Protocolo Morana: a campanha em cima, a mesa (o que se usa durante e entre as sessões) e os
       // personagens dos jogadores.
       return { id: item.id, name: item.nome, color: item.cor, groups: [
-        { group: 'Campanha', pages: [{ id: home, label: 'Visão geral', icon: '00' }] },
+        { group: 'Campanha', pages: [{ id: home, label: 'Resumo', icon: '00' }] },
         { group: 'Mesa', pages: [{ id: 'notas', label: 'Notas e relógio da cidade', icon: 'N' }, { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' }, { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' }, { id: 'campanhas', label: 'Campanhas', icon: 'CP' }] },
         { group: 'Personagens dos jogadores', pages: [{ id: 'personagens', label: 'Personagens e códigos', icon: 'PC' }, { id: 'loja', label: 'Loja', icon: 'EB' }] },
         ...(own.length ? [{ group: 'Documentos', pages: own }] : []),

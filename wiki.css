@@ -1282,3 +1282,230 @@ h2 .h2-sub { color: var(--tx); }
   .shop-row-head.shop-row { display: none; }
   .shop-picker select { min-width: 0; width: 100%; }
 }
+
+/* ================= Visual 2026, parte 2: os exemplos do Resumo, Personagens, Ficha e Escudo do mestre =================
+   A barra de cima vai de ponta a ponta, com a marca à esquerda e a busca, a campanha e a conta à direita. A barra lateral
+   tem 208 px e é uma lista só: os grupos em cinza, as páginas em caixa normal (os ícones só na barra compacta), o grupo
+   fechado numa linha com a contagem e a mesa do Foundry no pé. Títulos em caixa normal, com a linha em ciano em cima;
+   botões vazados para o que só navega; e os quadros de cada página dos exemplos. Vem depois da parte 1 e vale para as
+   duas wikis. */
+
+/* ---------- Estrutura: a barra de cima por cima de tudo ---------- */
+.shell { grid-template-columns: 208px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+.topbar { grid-column: 1 / -1; position: sticky; z-index: 30; top: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 0; padding: 14px 24px; border-bottom: 1px solid var(--l); background: #0b0d0f; }
+.topbar .brand { display: block; min-height: 0; margin: 0 auto 0 0; padding: 0; border: 0; }
+.topbar .brand-name { font: 700 20px/1.1 var(--ui); letter-spacing: .12em; }
+.topbar .brand-mark, .topbar .brand p { display: none; }
+.topbar .search-wrap { flex: 0 1 280px; min-width: 180px; max-width: 280px; }
+.topbar .top-meta { margin-left: 0; }
+.topbar .nav-toggle { width: 44px; height: 44px; }
+aside { top: var(--topbar-h, 73px); display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h, 73px)); padding: 8px 0 0; }
+aside #navigation { flex: 1 0 auto; padding-bottom: 12px; }
+
+/* ---------- Barra lateral ---------- */
+.nav-group { margin-top: 0; }
+button.nav-group-toggle { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 16px 22px 4px; border: 0; background: none; color: #7d847f; cursor: pointer; font: 400 10px/1.3 var(--lbl); letter-spacing: .2em; text-align: left; text-transform: uppercase; }
+button.nav-group-toggle:hover, button.nav-group-toggle:focus-visible { color: var(--tx); outline: none; }
+.nav-label.nav-campaign { color: #7d847f; }
+.nav-pinned button.nav-group-toggle { color: var(--y); }
+.nav-chevron { display: none; }
+/* O grupo fechado vira uma linha, como as páginas, com quantas páginas ele tem (o data-count) à direita. */
+.nav-group.collapsed button.nav-group-toggle { padding: 9px 22px 9px 25px; color: var(--mu); font-size: 11px; letter-spacing: .1em; }
+.nav-group.collapsed button.nav-group-toggle::after { content: attr(data-count); margin-left: auto; color: var(--mu); letter-spacing: 0; }
+.nav-group.collapsed button.nav-group-toggle:hover { background: var(--p); color: var(--tx); }
+.nav-group-toggle .nav-badge { margin-left: 6px; }
+.nav-item { gap: 8px; padding: 9px 16px 9px 22px; border-left: 3px solid transparent; color: var(--mu); font: 500 13px/1.3 var(--ui); letter-spacing: .05em; text-transform: none; }
+.nav-item:hover { background: var(--p); color: var(--tx); }
+.nav-item.active { border-left-color: var(--y); background: var(--p); color: var(--y); }
+.nav-item.session-item { padding-left: 22px; }
+.nav-icon { display: none; }
+.campaign-picker { margin: 12px 16px 4px; }
+.campaign-picker .nav-label { color: #7d847f; font-size: 10px; letter-spacing: .2em; }
+/* A mesa do Foundry no pé da barra, sempre à vista: verde aberta, amarela sem mundo, cinza fora do ar. */
+.side-status { position: sticky; z-index: 2; bottom: 0; display: grid; gap: 8px; margin: 0; padding: 12px 16px 14px; border: 0; border-top: 2px solid var(--g); background: var(--p); box-shadow: 0 -10px 18px rgb(11 13 15 / 80%); }
+.side-status:has(.table-idle) { border-top-color: var(--y); }
+.side-status:has(.table-off), .side-status:not(:has(.table-status)) { border-top-color: var(--l); }
+.table-status { gap: 0; color: var(--mu); font: 400 11px/1.4 var(--lbl); letter-spacing: .1em; text-transform: uppercase; }
+.table-status.table-on { color: var(--g); font-size: 12px; }
+.table-status.table-idle { color: var(--y); }
+.table-dot { display: none; }
+.side-status .table-link { justify-self: stretch; width: 100%; min-height: 44px; }
+
+/* Barra compacta: só os ícones, como antes. */
+body.sidebar-compact .nav-icon { display: inline; width: auto; color: var(--c); }
+body.sidebar-compact .nav-item.active .nav-icon { color: var(--y); }
+body.sidebar-compact .nav-item { padding: 9px 0; border-left-width: 3px; }
+body.sidebar-compact .side-status { padding: 9px 0; box-shadow: none; }
+
+/* ---------- Cabeçalho da página: a linha em ciano em cima do título ---------- */
+.content { padding: 24px 24px 72px; }
+.page-head { align-items: flex-start; gap: 12px 18px; }
+.page-head .eyebrow { margin: 0; color: var(--c); font: 400 11px var(--lbl); letter-spacing: .18em; text-transform: uppercase; }
+h2, h2.cyber-h { margin: 0; color: var(--tx); font: 700 clamp(30px, 3.4vw, 44px)/1.05 var(--ui); letter-spacing: .04em; text-transform: none; }
+.page-head h2 { margin: 4px 0 0; }
+.page-head .pin-page { margin-top: 4px; }
+.lede { max-width: 72ch; margin: 8px 0 0; color: var(--mu); font-size: 16px; line-height: 1.5; }
+.lede b { color: var(--tx); }
+
+/* ---------- Quadros, cartões e botões ---------- */
+.section { margin-top: 16px; padding: 16px 18px; }
+.section h3 { gap: 8px; margin: 0 0 8px; font: 700 22px/1.2 var(--ui); letter-spacing: .02em; text-transform: none; }
+.section h3 .ref { padding: 2px 8px; border-color: var(--c); color: var(--c); font: 400 11px var(--lbl); letter-spacing: .15em; }
+.section .table-wrap { border: 0; background: none; }
+/* O botão que só leva a outra página: vazado em amarelo (o cheio fica para a ação principal). */
+.action.ghost, .tile button { border: 1px solid var(--y); background: transparent; color: var(--y); }
+.action.ghost:hover, .tile button:hover { border-color: var(--y); background: rgb(248 239 2 / 10%); color: var(--y); }
+.formula { padding: 6px 10px; border: 0; border-left: 3px solid var(--y); background: var(--w); color: var(--y); font: 400 15px var(--lbl); letter-spacing: .02em; }
+.section > .formula, .quick-card > .formula { display: block; margin: 4px 0 8px; padding: 12px 16px; font-size: 17px; }
+
+/* Os cartões de página (a página inicial e as visões gerais): borda de cima amarela, sem o canto cortado. */
+.grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 16px; }
+.tile, .tile.wide { grid-column: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: 16px; border: 1px solid var(--l); border-top: 2px solid var(--y); background: var(--p); clip-path: none; }
+.tile.wide { grid-column: span 2; }
+.tile .tag { margin: 0; color: var(--c); font: 400 11px var(--lbl); letter-spacing: .18em; }
+.tile h3 { margin: 0; font: 700 22px/1.2 var(--ui); letter-spacing: .02em; text-transform: none; }
+.tile p { margin: 0; color: var(--mu); font-size: 15px; line-height: 1.45; }
+.tile button { align-self: flex-start; margin-top: auto; }
+@media (max-width: 1000px) { .tile.wide { grid-column: auto; } }
+/* O botão que só leva a outra página (data-page) é vazado, como nos exemplos; .solid é a exceção (a Ficha do personagem
+   em uso, no Resumo do jogador). */
+.action[data-page]:not(.solid) { border: 1px solid var(--y); background: transparent; color: var(--y); }
+.action[data-page]:not(.solid):hover { border-color: var(--y); background: rgb(248 239 2 / 10%); color: var(--y); }
+
+/* O personagem em uso, no Resumo do jogador: o mesmo cartão da página Personagens. */
+.pv-me-card { gap: 14px; padding: 16px; border: 1px solid var(--l); border-top: 2px solid var(--c); background: var(--p); clip-path: var(--cut); }
+.pv-me-card .cc-initials, .pv-me-portrait { flex: 0 0 64px; width: 64px; height: 64px; border: 0; }
+.pv-me-text .tag { color: var(--c); font: 400 11px var(--lbl); letter-spacing: .18em; text-transform: uppercase; }
+.pv-me-text h3 { margin: 4px 0 2px; color: var(--tx); font: 700 20px/1.15 var(--ui); letter-spacing: .01em; text-transform: none; }
+.pv-me-text h3 small { color: var(--c); font: 500 15px var(--ui); }
+.pv-me-text p { color: var(--mu); font: 400 11px var(--lbl); letter-spacing: .08em; text-transform: uppercase; }
+
+/* ---------- Página inicial: a próxima sessão e "Na mesa agora" ---------- */
+.desk-next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding: 10px 16px; border-left: 3px solid var(--y); background: var(--p); }
+.desk-next .tag { color: var(--c); font: 400 11px var(--lbl); letter-spacing: .18em; text-transform: uppercase; }
+.desk-next b { color: var(--y); }
+.desk-next .action { margin: 0; }
+.home-desk .desk-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 4px; }
+.home-desk .tag { color: var(--c); font: 400 11px var(--lbl); letter-spacing: .18em; }
+.home-desk .desk-buttons { gap: 6px; margin-top: 8px; }
+.home-desk ul { margin: 8px 0 0; padding: 0; list-style: none; }
+.home-desk li { padding: 8px 0; border-top: 1px solid var(--row); }
+.home-desk li small { display: block; color: var(--mu); font: 400 11px var(--lbl); letter-spacing: .02em; }
+.home-desk .desk-recent li small { display: inline; }
+.home-desk .desk-recent a { color: var(--tx); text-decoration: none; }
+.home-desk .desk-recent a:hover { color: var(--y); }
+.home-desk .desk-clocks + .action { margin-top: 10px; }
+.desk-clock { display: flex; gap: 3px; margin: 6px 0 4px; }
+.desk-clock i { width: 22px; height: 10px; border: 1px solid var(--mu); background: var(--w); }
+.desk-clock i.on { border-color: var(--y); background: var(--y); }
+
+/* ---------- Escudo do mestre ---------- */
+.quick-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); grid-auto-flow: row dense; gap: 12px; margin-top: 16px; align-items: stretch; }
+.quick-grid .section { margin-top: 0; padding: 16px 18px; }
+.quick-grid .section h3 { font-size: 22px; }
+.quick-grid .section p, .quick-grid .section li { font-size: 15px; line-height: 1.5; }
+.quick-grid .section ul { padding-left: 20px; }
+/* A DV vai de ponta a ponta; o outro quadro largo (Ferimentos) ocupa duas colunas, e a grade tapa os buracos. */
+.quick-card.wide { grid-column: span 2; }
+.quick-card.wide:has(.dv-finder) { grid-column: 1 / -1; }
+@media (max-width: 700px) { .quick-card.wide { grid-column: auto; } }
+.quick-card td:first-child { color: var(--y); font: 400 15px var(--lbl); }
+/* Qual é a DV? Os campos e o DV grande numa linha; embaixo, uma caixa por faixa, com a da distância acesa. */
+.dv-finder { gap: 16px; align-items: flex-end; }
+.dv-finder .map-control { display: flex; flex-direction: column; gap: 6px; color: var(--mu); font: 400 11px var(--lbl); letter-spacing: .15em; text-transform: uppercase; }
+.dv-finder select, .dv-finder input { min-height: 44px; padding: 0 12px; border: 1px solid var(--l); background: var(--w); color: var(--tx); font: 400 15px var(--lbl); letter-spacing: 0; text-transform: none; }
+.dv-finder input { width: 120px; }
+.dv-result { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 2px; margin: 0; }
+.dv-result small { color: var(--mu); font: 400 12px var(--lbl); letter-spacing: .12em; text-transform: uppercase; }
+.dv-big { color: var(--y); font: 700 54px/1 var(--ui); }
+.dv-bands { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin-top: 12px; }
+.dv-bands div { padding: 8px 4px; background: var(--w); color: var(--mu); font: 400 11px var(--lbl); text-align: center; }
+.dv-bands b { display: block; color: var(--tx); font: 700 18px var(--ui); }
+.dv-bands div.on { background: var(--y); color: #0b0d0f; }
+.dv-bands div.on b { color: #0b0d0f; }
+.dv-note { margin: 8px 0 0; }
+@media (max-width: 700px) { .dv-bands { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ---------- Celular ---------- */
+@media (max-width: 820px) {
+  .topbar { gap: 8px; padding: 8px 11px; }
+  .topbar .brand { display: none; }
+  .topbar .search-wrap { flex: 1 1 160px; max-width: none; }
+  aside { top: 0; height: 100%; padding-top: 14px; }
+}
+
+/* ---------- Personagens: a grade de cartões (o exemplo de Personagens) ---------- */
+/* O quadro que só leva a grade fica sem moldura: o título em cima e os cartões soltos, como no exemplo. */
+.section.cc-box:has(> .cc-card-grid) { padding: 0; border: 0; background: none; }
+.cc-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 4px; }
+.cc-card-grid .cc-card { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--l); border-top: 2px solid var(--c); background: var(--p); clip-path: var(--cut); box-shadow: none; }
+.cc-card-grid .cc-card.cc-selected { padding-left: 16px; border-color: var(--c); background: #121d1d; box-shadow: none; }
+.cc-card-top { display: flex; gap: 14px; align-items: center; min-width: 0; }
+.cc-card-grid .cc-thumb, .cc-initials { flex: 0 0 64px; width: 64px; height: 64px; }
+.cc-card-grid .cc-thumb { border: 0; }
+.cc-initials { display: flex; align-items: center; justify-content: center; background: var(--y); color: #0b0d0f; font: 700 24px var(--ui); }
+.cc-card-grid .cc-card-text { flex: 1 1 auto; min-width: 0; }
+.cc-card-grid .cc-card strong { color: var(--tx); font: 700 20px/1.15 var(--ui); }
+.cc-card-grid .cc-handle { color: var(--c); font: 500 15px var(--ui); }
+.cc-card-role { display: block; margin-top: 4px; color: var(--mu); font: 400 11px var(--lbl); letter-spacing: .08em; text-transform: uppercase; }
+.cc-card-info { display: block; margin-top: 4px; color: var(--mu); font: 400 11px/1.45 var(--lbl); letter-spacing: .03em; }
+.cc-card-info:empty { display: none; }
+.cc-card-info b { font-weight: 400; }
+.cc-card-numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.cc-card-numbers div { min-width: 0; padding: 6px; background: var(--w); text-align: center; }
+.cc-card-numbers small { display: block; overflow: hidden; color: var(--mu); font: 400 9px var(--lbl); letter-spacing: .12em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.cc-card-numbers b { color: var(--y); font: 700 17px var(--ui); }
+.cc-card-numbers b.cc-bad { color: var(--r); }
+.cc-card-grid .cc-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.cc-card-grid .cc-card-actions .action { min-height: 40px; margin: 0; padding: 0 14px; }
+.cc-card-grid .cc-in-use { display: none; align-items: center; padding: 3px 8px; border: 1px solid var(--c); color: var(--c); font: 400 10px var(--lbl); letter-spacing: .12em; text-transform: uppercase; }
+.cc-card-grid .cc-selected .cc-in-use { display: inline-flex; }
+.cc-card-grid .cc-card.cc-card-new { align-items: center; justify-content: center; gap: 8px; min-height: 200px; border: 1px dashed var(--l); border-top: 2px dashed var(--l); background: none; clip-path: var(--cut); color: var(--mu); text-align: center; }
+.cc-card-new b { color: var(--tx); font: 700 20px var(--ui); text-transform: uppercase; }
+.cc-card-new small { font: 400 11px var(--lbl); letter-spacing: .08em; text-transform: uppercase; }
+.cc-card-new .action { margin: 4px 0 0; }
+
+/* ---------- Ficha: duas colunas e as abas (o exemplo da Ficha) ---------- */
+.cc-toolbar { gap: 6px; margin: 16px 0 0; }
+.cc-sheet { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 16px; }
+.cc-sheet-side, .cc-sheet-main, .cc-sheet-panel, .cc-sheet-panel > [data-cc-part] { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.cc-sheet-panel[hidden] { display: none; }
+.cc-sheet .section, .cc-sheet-panel > .section { margin-top: 0; }
+.cc-sheet-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.cc-sheet-tab { min-height: 44px; padding: 0 12px; font-size: 12px; }
+.cc-sheet .cc-identity > .cc-portrait { float: none; width: 100%; height: 220px; margin: 0 0 12px; border: 0; object-fit: cover; }
+.cc-portrait-slot { display: flex; align-items: flex-end; justify-content: center; height: 160px; margin-bottom: 12px; padding-bottom: 8px; background: repeating-linear-gradient(135deg, #1c2124 0 8px, #15191b 8px 16px); color: var(--c); font: 400 11px var(--lbl); letter-spacing: .15em; text-transform: uppercase; }
+.cc-sheet .cc-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.cc-sheet .cc-stat { display: block; padding: 6px 0; border: 0; border-bottom: 2px solid var(--y); background: var(--w); text-align: center; }
+.cc-sheet .cc-stat span { display: block; color: var(--mu); font: 400 10px var(--lbl); letter-spacing: .06em; }
+.cc-sheet .cc-stat b { color: var(--y); font: 700 26px/1.1 var(--ui); }
+.cc-hpbar { height: 14px; border: 1px solid var(--l); background: var(--w); }
+.cc-hpbar span { display: block; height: 100%; background: var(--r); }
+.cc-sheet .cc-vitals { display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
+.cc-sheet .cc-vital { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 7px 0; border: 0; border-top: 1px solid var(--row); background: none; }
+.cc-sheet .cc-vital:first-child { border-top: 0; }
+.cc-sheet .cc-vital span:first-child { color: var(--tx); font: 500 15px var(--ui); letter-spacing: 0; text-transform: none; }
+.cc-sheet .cc-vital b { color: var(--tx); font: 400 15px var(--lbl); }
+.cc-sheet .cc-vital-bad b { color: var(--r); }
+.cc-about p { margin: 0 0 6px; }
+.cc-about p:last-child { margin-bottom: 0; }
+.cc-skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; }
+.cc-skill { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; border-left: 2px solid var(--c); background: var(--w); }
+.cc-skill span { min-width: 0; }
+.cc-skill small { margin-left: 6px; color: var(--mu); font: 400 10px var(--lbl); letter-spacing: .04em; white-space: nowrap; }
+.cc-skill b { color: var(--y); font: 400 16px var(--lbl); }
+.cc-purchases li { padding: 10px 0; border-top: 1px solid var(--row); }
+.cc-purchases li:first-child { border-top: 0; }
+.cc-purchases small { display: block; margin-top: 2px; color: var(--mu); font: 400 11px var(--lbl); letter-spacing: .04em; }
+.cc-sheet-panel .note-area, .cc-sheet-panel .cc-notes { min-height: 110px; background: var(--p); font: 500 14px var(--ui); }
+@media (max-width: 1000px) { .cc-sheet { grid-template-columns: minmax(0, 1fr); } }
+@media print {
+  .cc-sheet { display: block; }
+  .cc-sheet-panel[hidden] { display: flex !important; }
+  .cc-sheet-tabs { display: none !important; }
+  .cc-hpbar span { background: #000 !important; }
+}
+
+/* A revisão do criador (passo 7): a ficha inteira, sem abas, com o nome em cima. */
+.cc-review-name { margin: 16px 0 0; color: var(--tx); font: 700 22px/1.2 var(--ui); letter-spacing: .02em; }
+.cc-review-name + .cc-sheet { margin-top: 12px; }

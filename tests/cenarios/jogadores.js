@@ -73,7 +73,6 @@ module.exports = async ({ edge, servidores, r }) => {
       return [n > 0, `${n} pinos`];
     });
     await r.passo('jogador: regras sem notas de campanha nem segredos', async () => {
-      await edge.evaluate(`document.querySelector('#tab-system').click()`);
       const vazamentos = [];
       for (const pagina of ['humanity', 'netrunning', 'creation', 'cyberware', 'netArsenal', 'quickhacks', 'weapons2077', 'cyberware2077', 'supplement2077', 'economy', 'screen']) {
         await abrir(edge, pagina, 120);
@@ -88,7 +87,6 @@ module.exports = async ({ edge, servidores, r }) => {
       return [n === 0, `${n} resultados`];
     });
     await r.passo('jogador: notícia publicada pelo mestre aparece sozinha (até 20 s)', async () => {
-      await edge.evaluate(`document.querySelector('#tab-campaigns').click()`);
       await abrir(edge, 'pvNews', 200);
       const antes = await edge.evaluate(`document.querySelectorAll('#content .section h3').length`);
       const { atualizado: _data, ...mestre } = await lerPublicar();

@@ -99,8 +99,9 @@ module.exports = async ({ edge, r }) => {
       await edge.evaluate(`document.querySelector('[data-cc-restore]').click()`);
       await edge.sleep(400);
       await responder(true);
-      await esperar(`/Vera/.test(document.querySelector('.cc-identity h3')?.textContent || '') && !/estragada/.test(document.querySelector('.cc-identity h3')?.textContent || '')`);
-      const nome = await texto('.cc-identity h3');
+      // O nome do personagem é o título da página da ficha.
+      await esperar(`/Vera/.test(document.querySelector('#content .page-head h2')?.textContent || '') && !/estragada/.test(document.querySelector('#content .page-head h2')?.textContent || '')`);
+      const nome = await texto('#content .page-head h2');
       const doc = (await pedir(`/api/personagens/${criado.id}`)).dados.personagem;
       const depois = await texto('[data-cc-history]');
       return [/v1/.test(caixa) && /muda: nome/.test(caixa) && nome === 'Vera' && doc.notas === 'versão original' && doc.versao === salvo.versao + 1 && doc.anotacoes?.texto === 'Deve 200eb ao Brakk.' && /v2/.test(depois),

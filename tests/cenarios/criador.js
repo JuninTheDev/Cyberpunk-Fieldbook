@@ -657,8 +657,9 @@ module.exports = async ({ edge, servidores, r }) => {
   await r.passo('mestre vê quem está esperando no Foundry, e o selo na lista', async () => {
     const esperando = (await texto('[data-cc-waiting]')).replace(/\s+/g, ' ');
     const selos = await edge.evaluate(`[...document.querySelectorAll('.cc-card small b')].map(b => b.textContent)`);
-    // Lin foi para o Foundry e depois o jogador mudou o Lifepath: o selo avisa que mudou, e a lista mostra o HP da mesa.
-    return [/Jay \(de Ana\): importar/.test(esperando) && /Importar da wiki/.test(esperando) && !/Lin/.test(esperando) && selos.includes('esperando o mestre') && selos.includes('mudou depois de importar') && selos.includes('HP 20/40 na mesa'), `${esperando.slice(0, 100)} · selos: ${[...new Set(selos)].join(', ')}`];
+    // Lin foi para o Foundry e depois o jogador mudou o Lifepath: o selo avisa que mudou, e o cartão mostra o HP da mesa.
+    const hpDoLin = await edge.evaluate(`(() => { const card = [...document.querySelectorAll('.cc-card')].find(c => c.querySelector('strong')?.textContent === 'Lin'); const hp = card?.querySelector('.cc-card-numbers div'); return hp ? hp.textContent.replace(/\\s+/g, ' ').trim() : ''; })()`);
+    return [/Jay \(de Ana\): importar/.test(esperando) && /Importar da wiki/.test(esperando) && !/Lin/.test(esperando) && selos.includes('esperando o mestre') && selos.includes('mudou depois de importar') && hpDoLin === 'HP na mesa20/40', `${esperando.slice(0, 100)} · selos: ${[...new Set(selos)].join(', ')} · HP do Lin: ${hpDoLin}`];
   });
   await r.passo('mestre: o quadro "Pedidos da campanha" mostra o pedido; aprovado na Loja, fica esperando o Foundry', async () => {
     const quadro = (await texto('[data-cc-orders-gm]')).replace(/\s+/g, ' ');

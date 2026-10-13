@@ -6,7 +6,6 @@ module.exports = async ({ edge, servidores, r }) => {
   const links = secao => edge.evaluate(`[...[...document.querySelectorAll('#content .section')].find(s => s.dataset.toc === ${JSON.stringify(secao)}).querySelectorAll('a.gloss')].map(a => a.textContent + '→' + a.getAttribute('href'))`);
 
   await r.passo('página Glossário no menu "Na mesa", com todos os termos', async () => {
-    await edge.evaluate(`document.querySelector('#tab-system').click()`);
     const temNoMenu = await edge.evaluate(`!!document.querySelector('.nav-item[data-page="glossary"]')`);
     await abrir(edge, 'glossary');
     const n = await edge.evaluate(`document.querySelectorAll('#content .glossary-entry').length`);

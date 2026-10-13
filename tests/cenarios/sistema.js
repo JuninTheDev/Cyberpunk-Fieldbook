@@ -4,13 +4,16 @@ const { abrir, buscarEAbrir, buscar, tecla, paginaAtual, semRolagemLateral, clic
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
 
-  await r.passo('aba Sistema lista as páginas de regras', async () => {
-    const ids = await edge.evaluate(`document.querySelector('#tab-system').click(), [...document.querySelectorAll('.nav-item')].map(b => b.dataset.page)`);
+  await r.passo('o menu lista as páginas de regras', async () => {
+    const ids = await edge.evaluate(`[...document.querySelectorAll('.nav-item')].map(b => b.dataset.page)`);
     const esperadas = ['screen', 'skills', 'npcs', 'checks', 'combat', 'damage', 'humanity', 'economy', 'creation', 'netrunning', 'weapons2077', 'cyberware2077', 'gear'];
     const faltam = esperadas.filter(id => !ids.includes(id));
     return [!faltam.length, faltam.length ? `faltam ${faltam.join(', ')}` : `${ids.length} páginas`];
   });
-  await r.passo('aba Sistema abre no Escudo do mestre', async () => { const atual = await paginaAtual(edge); return [atual === 'screen', atual]; });
+  await r.passo('o grupo "Na mesa" da barra começa no Escudo do mestre', async () => {
+    const primeira = await edge.evaluate(`document.querySelector('#navigation .nav-group[data-group-key="system:Na mesa"] .nav-item')?.dataset.page || ''`);
+    return [primeira === 'screen', primeira];
+  });
 
   for (const pagina of ['screen', 'skills', 'checks', 'combat', 'damage', 'humanity', 'netrunning', 'economy', 'creation', 'roles', 'cyberware', 'gear', 'supplement2077', 'sources']) {
     await r.passo(`página ${pagina} abre`, async () => {

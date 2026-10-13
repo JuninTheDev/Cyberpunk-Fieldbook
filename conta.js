@@ -118,7 +118,7 @@
   const campaignList = (items, active) => (items.length > 1 ? section('Campanha', items.map(item => `<button type="button" class="account-item account-radio" aria-current="${item.id === active}" data-account-campaign="${esc(item.id)}"><span class="account-swatch" style="background:${esc(item.cor || item.color || '#888')}"></span>${esc(item.nome || item.name)}</button>`).join('')) : '');
 
   function menuHtml() {
-    if (!me) return '<p class="account-msg">Sem conexão com o servidor da wiki. As regras continuam na aba Regras.</p>';
+    if (!me) return '<p class="account-msg">Sem conexão com o servidor da wiki. As regras continuam na barra lateral.</p>';
     if (me.papel === 'visitante') {
       return `<p class="account-head">Entrar na wiki</p>
         <form class="account-login" data-account-login><label for="account-code">Código do jogador</label><div><input id="account-code" name="codigo" autocomplete="off" placeholder="NC-XXXX-XXXX"><button class="action" type="submit">Entrar</button></div></form>

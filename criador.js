@@ -644,9 +644,24 @@
     const others = characters.filter(item => item.publico);
     // O jogador escolhe com qual personagem está (o retrato no botão da conta, a Ficha e a Loja abrem nele).
     const inUse = papel === 'jogador' && window.playerAccount ? window.playerAccount.selected() : null;
-    const card = item => `<div class="cc-card${item.id === inUse ? ' cc-selected' : ''}" data-cc-card="${item.id}">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.metodo ? ` · ${esc((methodById(item.metodo) || {}).nome || '')}` : ''}${papel === 'mestre' && item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}${foundryBadge(item)}${item.mesa && item.mesa.hp ? ` · <b class="${item.mesa.hp.atual < item.mesa.hp.max ? 'cc-bad' : 'cc-ok'}">HP ${item.mesa.hp.atual}/${item.mesa.hp.max} na mesa</b>` : ''}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}${item.temAnotacoes ? ' · anotações' : ''}</small></div>
-      <div class="cc-card-actions">${papel === 'jogador' ? `<span class="cc-in-use">Em uso</span><button class="action cc-use" type="button" data-cc-select="${item.id}">Usar</button>` : ''}<button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button><button class="action" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button>${papel === 'mestre' && campaignsOfMe.length > 1 ? `<button class="action" type="button" data-cc-move="${item.id}">Mover</button>` : ''}<button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
-    const publicCard = item => `<div class="cc-card">${portraitImg(item.retrato, 'cc-thumb')}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<br><small>${esc(roleName(item.role))}${item.donoNome ? ` · de ${esc(item.donoNome)}` : ''}</small></div></div>`;
+    // O cartão, como no exemplo de Personagens: o retrato (ou as iniciais), o nome, a Role e o Rank, os selos, os números
+    // (HP, IP e eurodólares: os da mesa, quando o Foundry já mandou a ficha, ou os da criação) e os botões. O personagem
+    // em uso tem a borda em ciano e o selo "Em uso" no lugar do Usar.
+    const initials = name => (String(name || '').match(/\p{L}+/gu) || ['?']).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+    const face = item => (item.retrato ? portraitImg(item.retrato, 'cc-thumb', item.nome) : `<span class="cc-initials" aria-hidden="true">${esc(initials(item.nome))}</span>`);
+    const head = (item, rank) => `<div class="cc-card-top">${face(item)}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<span class="cc-card-role">${esc(roleName(item.role))}${rank ? ` // Rank ${rank}` : ''}</span>`;
+    const count = value => (Number.isFinite(value) ? value.toLocaleString('pt-BR') : '—');
+    const card = item => {
+      const n = item.numeros || {};
+      const hurt = n.hp && n.hp.atual < n.hp.max;
+      return `<div class="cc-card${item.id === inUse ? ' cc-selected' : ''}" data-cc-card="${item.id}">${head(item, n.rank)}
+        <small class="cc-card-info">${[item.metodo ? esc((methodById(item.metodo) || {}).nome || '') : '', papel === 'mestre' && item.donoNome ? `de ${esc(item.donoNome)}` : ''].filter(Boolean).join(' · ')}${foundryBadge(item)}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}${item.temAnotacoes ? ' · anotações' : ''}</small></div></div>
+        <div class="cc-card-numbers" title="${n.naMesa ? 'Os números da mesa (a ficha que o Foundry mandou)' : 'Os números da criação'}"><div><small>HP${n.naMesa ? ' na mesa' : ''}</small><b class="${hurt ? 'cc-bad' : ''}">${n.hp ? `${n.hp.atual}/${n.hp.max}` : '—'}</b></div><div><small>IP</small><b>${count(n.ip)}</b></div><div><small>Eddies</small><b>${count(n.eb)}</b></div></div>
+        <div class="cc-card-actions">${papel === 'jogador' ? `<span class="cc-in-use">Em uso</span><button class="action ghost cc-use" type="button" data-cc-select="${item.id}">Usar</button>` : ''}<button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action ghost" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button><button class="action ghost" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button>${papel === 'mestre' && campaignsOfMe.length > 1 ? `<button class="action ghost" type="button" data-cc-move="${item.id}">Mover</button>` : ''}<button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
+    };
+    const publicCard = item => `<div class="cc-card cc-card-public">${head(item, null)}<small class="cc-card-info">${item.donoNome ? `de ${esc(item.donoNome)}` : ''}</small></div></div></div>`;
+    // O cartão tracejado do fim da grade cria um personagem novo (o criador abre com a loja inicial).
+    const newCard = '<div class="cc-card cc-card-new"><b>Novo personagem</b><small>Criador // loja inicial</small><button class="action" type="button" data-cc-new>Criar</button></div>';
 
     let who = '';
     const campaignName = campaign ? esc(campaign.name) : '';
@@ -664,8 +679,8 @@
     const withNotes = papel === 'mestre' ? mine.filter(item => item.temAnotacoes).sort((x, y) => String(y.anotacoesEm || '').localeCompare(String(x.anotacoesEm || ''))) : [];
     const notesBoxGm = withNotes.length ? box('Anotações dos jogadores', `<ul class="cc-notes-list">${withNotes.map(item => `<li><b>${esc(item.nome || 'Sem nome')}</b><small class="note-status">${item.donoNome ? `de ${esc(item.donoNome)} · ` : ''}${when(item.anotacoesEm)}</small><span>${esc(item.anotacoesTrecho)}${item.anotacoesTrecho.length >= 220 ? '…' : ''}</span><button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Abrir a ficha</button></li>`).join('')}</ul>`, ' data-cc-notes-gm') : '';
     root.innerHTML = `${waitingBox}${ordersBox}${notesBoxGm}${who ? box(papel === 'jogador' ? 'Sem campanha' : 'Quem é você', who) : ''}
-      ${canCreate ? box(papel === 'mestre' ? (campaign && campaignsOfMe.length > 1 ? `Personagens de ${campaignName}` : 'Todos os personagens') : 'Meus personagens', `${mine.length ? mine.map(card).join('') : '<p class="note-status">Nenhum personagem ainda.</p>'}<p><button class="action" type="button" data-cc-new>Novo personagem</button></p>`) : ''}
-      ${others.length ? box('O grupo', others.map(publicCard).join('')) : ''}
+      ${canCreate ? box(papel === 'mestre' ? (campaign && campaignsOfMe.length > 1 ? `Personagens de ${campaignName}` : 'Todos os personagens') : 'Meus personagens', `${mine.length ? '' : '<p class="note-status">Nenhum personagem ainda.</p>'}<div class="cc-card-grid">${mine.map(card).join('')}${newCard}</div>`) : ''}
+      ${others.length ? box('O grupo', `<div class="cc-card-grid">${others.map(publicCard).join('')}</div>`) : ''}
       ${papel === 'mestre' ? box(campaign && campaignsOfMe.length > 1 ? `Códigos dos jogadores de ${campaignName}` : 'Códigos dos jogadores', '<div id="cc-accounts">Carregando…</div>') : ''}`;
     if (papel === 'mestre') renderAccounts(root.querySelector('#cc-accounts'), campaign, campaignsOfMe);
 
@@ -899,7 +914,6 @@
     const spec = (role.especializacoes || []).find(item => item.id === doc.especializacao);
     const lp = lifepathTexts(doc);
     const lpRows = [...lifepathFields.map(([, label, field]) => [label, lp[field]]), ['Amigos', lp.friends], ['Inimigos', lp.enemies], ['Amores trágicos', lp.tragicLoveAffairs], ['Lifepath da Role', lp.roleLifepath]].filter(([, text]) => text);
-    const bar = (now, max) => max ? ` <span class="cc-bar" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, Math.round(now / max * 100)))}%"></span></span>` : '';
     const vital = (label, value, extra = '', bad = false) => `<div class="cc-vital${bad ? ' cc-vital-bad' : ''}"><span>${label} </span><b>${value}</b>${extra}</div>`;
     const usoTag = uso => uso && uso !== 'equipado' && USOS[uso] ? ` <small class="cc-mount-note">${USOS[uso].toLowerCase()}</small>` : '';
     const names = list => list.map(name => esc(name)).join(', ');
@@ -910,17 +924,17 @@
       ? `<p class="cc-source cc-ok">Na mesa: a ficha do Foundry${model.quando ? `, atualizada em ${when(model.quando)}` : ''}. Os números agora mudam lá.</p>`
       : `<p class="cc-source">Ficha da criação.${doc.foundry ? ' O Foundry ainda não mandou a ficha da mesa.' : ' Depois que o mestre importar no Foundry, esta ficha passa a mostrar a mesa.'}</p>`;
 
-    const vitals = `<div class="section cc-box" data-toc="Vitais"><h3>Vitais</h3><div class="cc-vitals">
-        ${vital('HP', mesa ? `${model.hp.atual}/${model.hp.max}` : model.hp.max, bar(model.hp.atual, model.hp.max), hurt)}
-        ${vital('Gravemente Ferido', model.gravemente)}${vital('Death Save', model.deathSave)}
-        ${vital('Humanidade', `${model.humanidade.atual}/${model.humanidade.max}`, bar(model.humanidade.atual, model.humanidade.max))}
-        ${vital('Sorte', mesa ? `${model.sorte.atual}/${model.sorte.max}` : model.sorte.max)}
+    // Vitais, na coluna do lado, como no exemplo da Ficha: a barra do HP (vermelha) e um valor por linha.
+    const hpPct = model.hp.max ? Math.max(0, Math.min(100, Math.round(model.hp.atual / model.hp.max * 100))) : 0;
+    const vitals = `<div class="section cc-box cc-vitals-box" data-toc="Vitais"><h3>Vitais</h3><div class="cc-hpbar" aria-hidden="true"><span style="width:${hpPct}%"></span></div><div class="cc-vitals">
+        ${vital('HP', mesa ? `${model.hp.atual}/${model.hp.max}` : model.hp.max, '', hurt)}
+        ${vital('Humanidade', `${model.humanidade.atual}/${model.humanidade.max}`)}
         ${vital('SP cabeça', model.sp.cabeca)}${vital('SP corpo', model.sp.corpo)}
+        ${vital('Sorte', mesa ? `${model.sorte.atual}/${model.sorte.max}` : model.sorte.max)}
+        ${vital('Gravemente Ferido', model.gravemente)}${vital('Death Save', model.deathSave)}
         ${vital('Andar', `${model.andar} m`)}${vital('Correr', `${model.correr} m`)}
         ${vital('Dinheiro', eb(model.dinheiro))}${model.ip !== null ? vital('Pontos de Melhoria', model.ip) : ''}${model.reputacao !== null ? vital('Reputação', model.reputacao) : ''}</div>
-        ${model.lesoes.length ? `<p class="cc-warn">Lesões críticas: ${names(model.lesoes)}.</p>` : ''}
-        <h4>STATs</h4><div class="cc-stats">${statKeys.map(statCell).join('')}</div>
-        ${model.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${model.penalidade} em REF, DEX e MOVE (já descontado no ataque e nas perícias).</p>` : ''}</div>`;
+        ${model.lesoes.length ? `<p class="cc-warn">Lesões críticas: ${names(model.lesoes)}.</p>` : ''}</div>`;
 
     const worn = model.armaduras.filter(item => item.uso === 'equipado');
     const armorText = item => [item.cabeca ? `SP ${item.cabeca} na cabeça` : '', item.corpo ? `SP ${item.corpo} no corpo` : '', item.escudo ? `escudo ${item.escudo} HP` : ''].filter(Boolean).join(', ');
@@ -938,10 +952,11 @@
       ${model.habilidades.length ? `${abilityTitle !== role.habilidade ? `<h4>${esc(abilityTitle)}</h4>` : ''}<ul class="cc-items">${model.habilidades.map(([name, value, desc]) => `<li><b>${esc(name)}</b> ${value}${desc ? `<small> · ${esc(desc)}</small>` : ''}</li>`).join('')}</ul>` : ''}
       ${model.veiculos.length ? `<h4>Veículos da família</h4><ul class="cc-items">${model.veiculos.map(item => `<li><b>${esc(item.nome)}</b>${item.dentro.length ? `: ${names(item.dentro)}` : ''}</li>`).join('')}</ul><p class="note-status">Um de cada vez com você; o resto fica com a família.</p>` : ''}</div>` : '';
 
-    const byGroup = SKILL_GROUPS.map(group => [group, model.pericias.filter(skill => skill.grupo === group).sort((a, b) => a.label.localeCompare(b.label, 'pt'))]).filter(([, list]) => list.length);
-    const skillRow = skill => `<tr><td>${esc(skill.label)}${skill.origem ? ' <small>(origem)</small>' : ''}</td><td><small>${skill.stat}</small></td><td>${skill.nivel}</td><td><b>${skill.base}</b></td></tr>`;
-    const skills = `<div class="section cc-box" data-toc="Perícias"><h3>Perícias</h3><div class="cc-skill-groups">${byGroup.map(([group, list]) => `<div class="cc-skill-group"><h4>${group}</h4><table class="cc-skill-table"><tbody>${list.map(skillRow).join('')}</tbody></table></div>`).join('')}</div>
-      <p class="note-status">Nível e, em negrito, a base do teste (STAT + nível). Some 1d10.</p></div>`;
+    // Perícias, como no exemplo da Ficha: uma caixa por perícia, da maior base do teste para a menor, com a STAT e o nível.
+    const bySkill = model.pericias.slice().sort((a, b) => b.base - a.base || a.label.localeCompare(b.label, 'pt'));
+    const skillCell = skill => `<div class="cc-skill" title="${esc(skill.grupo || '')}"><span>${esc(skill.label)}<small>${skill.stat} + ${skill.nivel}${skill.origem ? ' · origem' : ''}</small></span><b>${skill.base}</b></div>`;
+    const skills = `<div class="section cc-box" data-toc="Perícias"><h3>Perícias<span class="ref">${bySkill.length} com nível</span></h3><div class="cc-skill-grid">${bySkill.map(skillCell).join('') || '<p class="note-status">Nenhuma perícia com nível.</p>'}</div>
+      <p class="note-status">A base do teste (STAT + nível). Some 1d10.</p></div>`;
 
     const tree = list => `<ul class="cc-tree">${list.map(item => `<li><b>${esc(item.nome)}</b>${item.ativo ? ' <small class="cc-ok">deck ativo</small>' : ''}${item.dentro.length ? `<ul>${item.dentro.map(name => `<li>${esc(name)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>`;
     const nothingCyber = !model.cyber.length && !model.noCorpo.length && !model.decks.length;
@@ -972,15 +987,42 @@
           <dt>Por mês</dt><dd><b>${eb(home.mensal)}</b>, no dia 1º${home.primeiroMes ? ` · o primeiro mês custou ${eb(home.primeiroMes)} do dinheiro inicial` : ' · o primeiro mês foi de graça'}</dd></dl>`;
     }
 
-    return `<div class="cc-sheet">
-      <div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome)}<h3>${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
-        <p><b>${esc(role.nome || 'Sem Role')}</b> · ${esc(role.habilidade || '')} Rank ${rank}${spec ? ` · ${esc(spec.nome)}` : ''} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}${doc.foundry ? ` · <b class="cc-ok">No Foundry desde ${new Date(doc.foundry.importado).toLocaleDateString('pt-BR')}</b>` : ''}</p>
-        ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}${source}</div>
-      ${vitals}${combat}${roleBox}${skills}${cyber}${equipment}
-      <div class="section cc-box" data-toc="Moradia"><h3>Moradia e estilo de vida</h3>${homeBox}</div>
-      <div class="section cc-box" data-toc="Lifepath"><h3>Lifepath</h3>${lpRows.length ? `<dl class="cc-lifepath">${lpRows.map(([label, text]) => `<dt>${label}</dt><dd>${esc(text)}</dd>`).join('')}</dl>` : '<p class="note-status">Ainda não preenchido.</p>'}</div>
-      ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}</div>`;
+    // As partes da ficha, que o setupSheet monta em duas colunas, com abas: o lado (o retrato com os STATs, e os vitais)
+    // e o que vai nas abas Resumo, Perícias e Equipamento. A ficha da mesa, quando muda, redesenha só estas partes.
+    const identity = `<div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait-slot" aria-hidden="true">Retrato</div>'}
+        <div class="cc-stats">${statKeys.map(statCell).join('')}</div>
+        ${model.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${model.penalidade} em REF, DEX e MOVE (já descontado no ataque e nas perícias).</p>` : ''}</div>`;
+    const line = `${esc(role.nome || 'Sem Role')} · ${esc(role.habilidade || '')} Rank ${rank}${spec ? ` · ${esc(spec.nome)}` : ''} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}`;
+    const about = `<div class="section cc-box cc-about" data-toc="Personagem"><p><b>${line}</b>${doc.foundry ? ` · <b class="cc-ok">No Foundry desde ${new Date(doc.foundry.importado).toLocaleDateString('pt-BR')}</b>` : ''}</p>
+        ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}${source}</div>`;
+    return {
+      lede: `${esc(role.nome || 'Sem Role')}, Rank ${rank}. A ficha, as compras e as anotações${mesa ? ', com os números da mesa' : ''}.`,
+      lado: `${identity}${vitals}`,
+      resumo: `${about}${combat}${roleBox}
+        <div class="section cc-box" data-toc="Moradia"><h3>Moradia e estilo de vida</h3>${homeBox}</div>
+        <div class="section cc-box" data-toc="Lifepath"><h3>Lifepath</h3>${lpRows.length ? `<dl class="cc-lifepath">${lpRows.map(([label, text]) => `<dt>${label}</dt><dd>${esc(text)}</dd>`).join('')}</dl>` : '<p class="note-status">Ainda não preenchido.</p>'}</div>
+        ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}`,
+      pericias: skills,
+      equipamento: `${cyber}${equipment}`
+    };
   }
+
+  // A aba Compras: os pedidos da loja deste personagem, do mais novo para o mais velho, com a situação de cada um.
+  function purchasesBox(doc) {
+    const orders = (doc.pedidos || []).slice().reverse();
+    const lineOf = pedido => `<li class="cc-order cc-order-${esc(pedido.status)}"><div class="shop-line"><span><b>${(pedido.itens || []).map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${eb(pedido.total || 0)}${pedido.motivo ? ` · Motivo: ${esc(pedido.motivo)}` : ''}</small></span>${statusChip(pedido.status)}</div></li>`;
+    return box(`Compras<span class="ref">${orders.length} pedido${orders.length === 1 ? '' : 's'}</span>`, `${orders.length ? `<ul class="cc-items cc-orders cc-purchases">${orders.map(lineOf).join('')}</ul>` : '<p class="note-status">Nenhum pedido na loja ainda.</p>'}<p><button class="action ghost" type="button" data-cc-shop>Abrir a loja</button></p>`, ' data-toc="Compras"');
+  }
+
+  // A ficha inteira, sem abas, com o nome em cima: a revisão do criador (passo 7) mostra assim.
+  function sheetFull(doc) {
+    const parts = sheetHtml(doc);
+    return `<h3 class="cc-review-name">${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
+      <div class="cc-sheet"><div class="cc-sheet-side">${parts.lado}</div><div class="cc-sheet-main">${parts.resumo}${parts.pericias}${parts.equipamento}</div></div>`;
+  }
+
+  // As abas da coluna principal da ficha (a última escolhida fica lembrada neste aparelho).
+  const SHEET_TABS =[['resumo', 'Resumo'], ['pericias', 'Perícias'], ['equipamento', 'Equipamento'], ['compras', 'Compras'], ['anotacoes', 'Anotações']];
 
   // O quadro de anotações da ficha: só o dono e o mestre leem (pistas, contatos, dívidas, o que o NPC prometeu).
   const notesBox = (doc, papel) => box('Anotações', `<p class="note-status">Pistas, contatos, dívidas, o que o NPC prometeu. ${papel === 'mestre' ? 'O jogador escreve aqui; você também pode.' : 'Só você e o mestre leem.'} Fica salvo sozinho, em qualquer aparelho.</p><textarea class="note-area cc-notes" data-cc-notes rows="8" placeholder="Ex.: Brakk quer 500eb até sexta. A senha do depósito é 4471.">${esc((doc.anotacoes || {}).texto || '')}</textarea><p class="note-status" data-cc-notes-status>${doc.anotacoes && doc.anotacoes.atualizado ? `Salvo em ${when(doc.anotacoes.atualizado)}${doc.anotacoes.por ? ` (${esc(doc.anotacoes.por)})` : ''}.` : ''}</p>`, ' data-cc-notes-box data-toc="Anotações"');
@@ -1014,7 +1056,30 @@
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
     if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), a Role (${esc(roleName(doc.role))}) e o retrato.</div>`; return; }
-    root.innerHTML = `<p class="cc-toolbar"><button class="action" type="button" data-cc-edit>Editar</button><button class="action" type="button" data-cc-shop>Loja</button><button class="action" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action" type="button" data-cc-back>Personagens</button></p>${foundryBox(doc, papel)}<div data-cc-sheet-body>${sheetHtml(doc)}</div>${notesBox(doc, papel)}${papel === 'mestre' ? historyBox() : ''}`;
+    // Como no exemplo da Ficha: o título da página vira o nome (o apelido em ciano), a linha de cima diz a campanha, e a
+    // ficha tem duas colunas: o retrato, os STATs e os vitais do lado; o resto em abas.
+    const parts = sheetHtml(doc);
+    const head = content.querySelector('.page-head h2');
+    if (head) head.innerHTML = `${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}`;
+    const eyebrow = content.querySelector('.page-head .eyebrow');
+    if (eyebrow && activeCampaign()) eyebrow.textContent = `${activeCampaign().name} / personagem`;
+    const lede = content.querySelector('.lede');
+    if (lede) lede.innerHTML = parts.lede;
+    const saved = helpers.storage ? helpers.storage.get('ficha-aba') : null;
+    const current = SHEET_TABS.some(([key]) => key === saved) ? saved : 'resumo';
+    const panel = (key, html) => `<div class="cc-sheet-panel" data-cc-panel="${key}" role="tabpanel"${key === current ? '' : ' hidden'}>${html}</div>`;
+    root.innerHTML = `<p class="cc-toolbar"><button class="action ghost" type="button" data-cc-edit>Editar</button><button class="action ghost" type="button" data-cc-shop>Loja</button><button class="action ghost" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action ghost" type="button" data-cc-back>Personagens</button></p>
+      <div class="cc-sheet" data-cc-sheet-body>
+        <div class="cc-sheet-side" data-cc-part="lado">${parts.lado}</div>
+        <div class="cc-sheet-main">
+          <div class="cc-sheet-tabs" role="tablist" aria-label="Partes da ficha">${SHEET_TABS.map(([key, label]) => `<button type="button" class="map-filter cc-sheet-tab${key === current ? ' active' : ''}" role="tab" aria-selected="${key === current}" data-cc-tab="${key}">${label}</button>`).join('')}</div>
+          ${panel('resumo', `${foundryBox(doc, papel)}<div data-cc-part="resumo">${parts.resumo}</div>`)}
+          ${panel('pericias', `<div data-cc-part="pericias">${parts.pericias}</div>`)}
+          ${panel('equipamento', `<div data-cc-part="equipamento">${parts.equipamento}</div>`)}
+          ${panel('compras', purchasesBox(doc))}
+          ${panel('anotacoes', `${notesBox(doc, papel)}${papel === 'mestre' ? historyBox() : ''}`)}
+        </div>
+      </div>`;
     if (papel === 'mestre') drawHistory(root, id);
     // Anotações: salvam sozinhas (um instante depois de parar de digitar), sem mudar a versão do personagem.
     const notes = root.querySelector('[data-cc-notes]');
@@ -1041,11 +1106,23 @@
         if (!next || ((next.mesa || {}).recebido || '') === seen) return;
         seen = (next.mesa || {}).recebido || '';
         Object.assign(doc, next);
-        const body = root.querySelector('[data-cc-sheet-body]');
-        if (body) body.innerHTML = sheetHtml(doc);
+        // Só as partes que a mesa muda: as anotações (que alguém pode estar escrevendo) e a aba aberta ficam.
+        const redrawn = sheetHtml(doc);
+        for (const key of ['lado', 'resumo', 'pericias', 'equipamento']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
+        const buying = root.querySelector('[data-cc-panel="compras"]');
+        if (buying) buying.innerHTML = purchasesBox(doc);
+        const top = content.querySelector('.lede');
+        if (top) top.innerHTML = redrawn.lede;
       }, 30000);
     }
     root.onclick = async event => {
+      const tab = event.target.closest('[data-cc-tab]');
+      if (tab) {
+        root.querySelectorAll('[data-cc-tab]').forEach(button => { const on = button === tab; button.classList.toggle('active', on); button.setAttribute('aria-selected', String(on)); });
+        root.querySelectorAll('[data-cc-panel]').forEach(item => { item.hidden = item.dataset.ccPanel !== tab.dataset.ccTab; });
+        if (helpers.storage) helpers.storage.set('ficha-aba', tab.dataset.ccTab);
+        return;
+      }
       if (event.target.closest('[data-cc-print]')) return window.print();
       if (event.target.closest('[data-cc-send]')) return sendToGm(doc, papel, root);
       const restore = event.target.closest('[data-cc-restore]');
@@ -2053,7 +2130,7 @@
     // ---------- 7. Revisão ----------
     function drawReview() {
       const issues = pending(doc);
-      return `${box('Pendências', issues.length ? `<ul class="cc-warn">${issues.map(issue => `<li><button type="button" class="cc-link" data-step="${issue.step}">${steps[issue.step - 1]}</button>: ${esc(issue.text)}</li>`).join('')}</ul><p class="note-status">Nada aqui impede de salvar nem de enviar: o mestre decide quando importar.</p>` : '<p class="cc-ok">Tudo certo. Envie para o mestre no quadro abaixo.</p>')}${foundryBox(doc, papel)}${sheetHtml(doc)}`;
+      return `${box('Pendências', issues.length ? `<ul class="cc-warn">${issues.map(issue => `<li><button type="button" class="cc-link" data-step="${issue.step}">${steps[issue.step - 1]}</button>: ${esc(issue.text)}</li>`).join('')}</ul><p class="note-status">Nada aqui impede de salvar nem de enviar: o mestre decide quando importar.</p>` : '<p class="cc-ok">Tudo certo. Envie para o mestre no quadro abaixo.</p>')}${foundryBox(doc, papel)}${sheetFull(doc)}`;
     }
 
     // ---------- Eventos ----------

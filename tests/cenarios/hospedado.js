@@ -117,7 +117,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const texto = await textoDe('#side-status');
       const link = await edge.evaluate(`document.querySelector('#side-status .table-link')?.href || ''`);
       const menu = await menuDaConta();
-      return [/Mesa aberta · 2 conectados/.test(texto) && link === 'https://mesa.exemplo.com/' && /Entrar como mestre/.test(menu), `${texto} · ${link} · menu: ${menu}`];
+      return [/Mesa aberta \/\/ 2 conectados/.test(texto) && link === 'https://mesa.exemplo.com/' && /Entrar como mestre/.test(menu), `${texto} · ${link} · menu: ${menu}`];
     });
     await edge.shot('barra-jogador');
     await r.passo('tela /mestre: com a senha, abre a wiki do mestre; o menu da conta tem "Sair" e a versão', async () => {

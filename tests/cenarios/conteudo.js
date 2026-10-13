@@ -13,7 +13,6 @@ module.exports = async ({ edge, servidores, r }) => {
   const secoes = () => edge.evaluate(`[...document.querySelectorAll('#content .section')].map(s => s.dataset.toc)`);
 
   await r.passo('menu tem Lifepath, Avanço, Roles nos anos 2070 e Encontros', async () => {
-    await edge.evaluate(`document.querySelector('#tab-system').click()`);
     const ids = await edge.evaluate(`[...document.querySelectorAll('.nav-item')].map(b => b.dataset.page)`);
     const faltam = ['lifepath', 'advancement', 'roles2077', 'encounters'].filter(id => !ids.includes(id));
     return [!faltam.length, faltam.join(', ') || 'todos'];
@@ -171,7 +170,7 @@ module.exports = async ({ edge, servidores, r }) => {
   await r.passo('visão dos jogadores: Lifepath e Roles nos anos 2070 sim, Encontros não', async () => {
     await edge.ir(`${servidores.rede}/#encounters`, 2500);
     const pagina = await edge.evaluate('wikiApp.currentPage()');
-    const ids = await edge.evaluate(`(() => { document.querySelector('#tab-system').click(); return [...document.querySelectorAll('.nav-item')].map(b => b.dataset.page); })()`);
+    const ids = await edge.evaluate(`[...document.querySelectorAll('.nav-item')].map(b => b.dataset.page)`);
     const arquivo = (await fetch(`${servidores.rede}/mestre-npcs.js`)).status;
     const ok = pagina !== 'encounters' && !ids.includes('encounters') && ids.includes('lifepath') && ids.includes('roles2077') && ids.includes('advancement') && arquivo === 403;
     return [ok, `abriu ${pagina} | mestre-npcs.js HTTP ${arquivo}`];

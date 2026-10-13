@@ -194,7 +194,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
   // O que os outros jogadores da campanha veem: nome, apelido, Role e retrato. O resto só o dono e o mestre.
   const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', retrato: portraitOf(doc), donoNome: ownerName(accounts, doc.dono), campanha: campaignOf(doc), publico: true });
-  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null, estadoFoundry: foundryState(doc), mesa: doc.mesa ? { hp: doc.mesa.hp || null, recebido: doc.mesa.recebido } : null,
+  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null, estadoFoundry: foundryState(doc), mesa: doc.mesa ? { hp: doc.mesa.hp || null, recebido: doc.mesa.recebido } : null, numeros: numbersOf(doc),
     // resolvidos: o que o mestre decidiu (ou o Foundry entregou), para o botão da conta do jogador avisar.
     pedidos: { pendentes: (doc.pedidos || []).filter(item => item.status === 'pendente').length, aprovados: (doc.pedidos || []).filter(item => item.status === 'aprovado').length,
       resolvidos: (doc.pedidos || []).filter(item => ['aprovado', 'recusado', 'entregue'].includes(item.status)).slice(-10).map(item => ({ id: item.id, status: item.status, quando: item.entregue || item.decidido || item.criado, erro: Boolean(item.erro), total: item.total })) },
@@ -273,6 +273,20 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
   const ipSpent = doc => (Array.isArray(doc.avanco) ? doc.avanco : []).reduce((sum, entry) => sum + Math.max(0, Number(entry.custo) || 0), 0);
+  // Os números do cartão da lista (HP, IP, eurodólares e o Rank): os da mesa, quando o Foundry já mandou a ficha; senão,
+  // os da criação (o IP é o que o mestre deu menos o que o avanço gastou).
+  const numbersOf = doc => {
+    const mesa = doc.mesa || null;
+    const created = doc.resultado || {};
+    const hp = created.derivados && created.derivados.hp;
+    return {
+      hp: mesa && mesa.hp ? { atual: Number(mesa.hp.atual) || 0, max: Number(mesa.hp.max) || 0 } : (hp ? { atual: hp, max: hp } : null),
+      ip: mesa && Number.isFinite(mesa.ip) ? mesa.ip : ipGranted(doc) - ipSpent(doc),
+      eb: mesa && Number.isFinite(mesa.dinheiro) ? mesa.dinheiro : (created.dinheiro && Number.isFinite(created.dinheiro.saldo) ? created.dinheiro.saldo : null),
+      rank: (mesa && mesa.role && mesa.role.rank) || (created.role && created.role.rank) || null,
+      naMesa: Boolean(mesa && mesa.hp)
+    };
+  };
 
   // ---------------- Histórico de versões ----------------
   // Antes de uma rodada de edição, a versão de antes vai para personagens/historico/<id>/<quando>-v<versão>.json: no

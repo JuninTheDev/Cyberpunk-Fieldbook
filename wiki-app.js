@@ -16,7 +16,7 @@
   // wiki sem servidor: só no aparelho. O que o aparelho já tinha e a conta ainda não sobe na primeira vez.
   // O menu da conta e a visão dos jogadores guardam aqui as deles (wikiApp.prefs) e ouvem "wiki:preferencias",
   // quando o servidor responde.
-  const SYNCED = ['fixadas', 'grupos-fechados', 'barra-compacta', 'recentes'];
+  const SYNCED = ['fixadas', 'grupos-fechados', 'grupos-abertos', 'barra-compacta', 'recentes'];
   const prefs = (() => {
     let owner = localGet('night-city-dono') || 'aparelho'; // a conta do último que entrou neste aparelho
     let server = null; // null = sem conta (ou ainda não leu)
@@ -178,7 +178,6 @@
     const content = document.getElementById('content');
     const search = document.getElementById('search');
     let currentPage = 'home';
-    let currentWorkspace = storage.get('workspace') || 'campaigns';
     let activeCampaignId = storage.get('active-campaign') || (campaigns[0] || {}).id;
     let campaignMapCategory = 'all';
     let campaignMapAct = 'all';
@@ -224,17 +223,23 @@
     }
 
     // ---------------- Barra lateral ----------------
-    // Grupos que recolhem (clique no nome do grupo; o aparelho lembra), selos de novidade nas páginas (setBadges) e
-    // o botão ☰ da barra de cima: no computador deixa a barra compacta (só os ícones); no celular abre a gaveta.
+    // Uma lista só, como nos exemplos de 2026: as fixadas, os grupos da campanha (o primeiro com o nome dela) e os das
+    // regras. Os grupos recolhem (clique no nome; a conta lembra) e, fechados, mostram quantas páginas têm. Também há os
+    // selos de novidade nas páginas (setBadges) e o botão ☰ da barra de cima: no computador deixa a barra compacta (só os
+    // ícones); no celular abre a gaveta.
     const narrow = window.matchMedia('(max-width: 820px)');
     const badges = {};
-    const closedGroups = () => { try { return new Set(JSON.parse(storage.get('grupos-fechados') || '[]')); } catch { return new Set(); } };
-    const saveClosedGroups = set => storage.set('grupos-fechados', JSON.stringify([...set]));
+    const readSet = key => { try { return new Set(JSON.parse(storage.get(key) || '[]')); } catch { return new Set(); } };
+    const closedGroups = () => readSet('grupos-fechados');
+    const openedGroups = () => readSet('grupos-abertos');
+    // Começam fechados os grupos das regras que não são de mesa. O que a pessoa abre ou fecha fica como ela deixou.
+    const CLOSED_BY_DEFAULT = new Set(['system:Netrunning', 'system:Catálogos', 'system:Black Chrome', 'system:Suplemento de fã e fontes']);
+    const isClosed = (key, closed, opened) => closed.has(key) || (CLOSED_BY_DEFAULT.has(key) && !opened.has(key));
     const compact = () => document.body.classList.contains('sidebar-compact') && !narrow.matches;
 
     // ---------------- Páginas fixadas ----------------
-    // O botão "Fixar" ao lado do título põe a página no grupo Fixadas, no topo da barra lateral (nas duas abas), neste
-    // aparelho. Até 8; a mais antiga sai quando passa disso.
+    // O botão "Fixar" ao lado do título põe a página no grupo Fixadas, no topo da barra lateral. Até 8; a mais antiga sai
+    // quando passa disso.
     const PIN_LIMIT = 8;
     const pinned = () => { try { return JSON.parse(storage.get('fixadas') || '[]').filter(id => pageContent[id]); } catch { return []; } };
     const pinnable = id => Boolean(pageContent[id]) && id !== 'criador';
@@ -265,28 +270,28 @@
     function buildNavigation() {
       const campaign = activeCampaign();
       activeCampaignId = campaign.id;
-      // key: o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela). Fixadas: nas duas abas.
+      // key: a área e o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela), as mesmas chaves
+      // de quando a barra tinha as abas Campanhas e Sistema: o que cada um fechou continua fechado.
       const pins = pinned().map(navEntry);
-      const groups = [...(pins.length ? [{ key: 'fixadas', group: 'Fixadas', pages: pins, shared: true }] : []), ...(currentWorkspace === 'campaigns'
-        ? campaign.groups.map((group, index) => ({ ...group, key: group.group, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
-        : systemSections.map(group => ({ ...group, key: group.group })))];
+      const groups = [...(pins.length ? [{ key: 'fixadas', group: 'Fixadas', pages: pins, shared: true }] : []),
+        ...campaign.groups.map((group, index) => ({ ...group, key: `campaigns:${group.group}`, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 })),
+        ...systemSections.map(group => ({ ...group, key: `system:${group.group}` }))];
       // Páginas que não existem nesta visão (ex.: só do mestre) somem do menu.
       const visibleGroups = groups.map(group => ({ ...group, pages: group.pages.filter(page => pageContent[page.id]) })).filter(group => group.pages.length);
-      const campaignPicker = currentWorkspace === 'campaigns' && campaigns.length > 1
+      const campaignPicker = campaigns.length > 1
         ? `<label class="campaign-picker"><span class="nav-label">Campanha ativa</span><select id="campaign-picker">${campaigns.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === campaign.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>`
         : '';
       const closed = closedGroups();
+      const opened = openedGroups();
       const rail = compact();
       const item = page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"${rail ? ` title="${escapeHtml(String(page.label).replace(/<[^>]+>/g, ''))}"` : ''}><span class="nav-icon">${page.icon}</span><span class="nav-text">${page.label}</span>${badges[page.id] ? `<span class="nav-badge" aria-label="${badges[page.id]} novidade(s)">${badges[page.id]}</span>` : ''}</button>`;
       navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => {
-        const key = group.shared ? group.key : `${currentWorkspace}:${group.key}`;
-        const shut = closed.has(key) && !group.pages.some(page => page.id === navIdOf(currentPage));
+        const key = group.key;
+        const shut = isClosed(key, closed, opened) && !group.pages.some(page => page.id === navIdOf(currentPage));
         const news = group.pages.reduce((sum, page) => sum + (badges[page.id] || 0), 0);
-        return `<div class="nav-group${shut ? ' collapsed' : ''}${group.shared ? ' nav-pinned' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
+        // A contagem do grupo fechado vem do data-count, pelo CSS: o texto do botão fica só com o nome.
+        return `<div class="nav-group${shut ? ' collapsed' : ''}${group.shared ? ' nav-pinned' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}" data-count="${group.pages.length}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
       }).join('')}`;
-      document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
-      document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
-      document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(currentPage)));
     }
     // Selos de novidade: { idDaPágina: quantidade } (0 tira o selo). A visão dos jogadores marca o que o mestre
@@ -328,24 +333,19 @@
     backdrop.addEventListener('click', () => setDrawer(false));
     narrow.addEventListener('change', () => { document.body.classList.remove('sidebar-open'); buildNavigation(); labelMenuButton(); });
     if (storage.get('barra-compacta') === '1') document.body.classList.add('sidebar-compact');
-    // Abreviação das abas para a barra compacta (CAM, SIS, REG).
-    document.querySelectorAll('.workspace-tab').forEach(tab => { tab.dataset.short = tab.textContent.trim().slice(0, 3).toUpperCase(); });
     navigation.addEventListener('click', event => {
       const toggle = event.target.closest('.nav-group-toggle');
       if (!toggle) return;
       const group = toggle.closest('.nav-group');
-      const set = closedGroups();
-      if (group.classList.toggle('collapsed')) set.add(group.dataset.groupKey); else set.delete(group.dataset.groupKey);
-      toggle.setAttribute('aria-expanded', String(!group.classList.contains('collapsed')));
-      saveClosedGroups(set);
+      const key = group.dataset.groupKey;
+      const closed = closedGroups();
+      const opened = openedGroups();
+      const shut = group.classList.toggle('collapsed');
+      if (shut) { closed.add(key); opened.delete(key); } else { closed.delete(key); opened.add(key); }
+      toggle.setAttribute('aria-expanded', String(!shut));
+      storage.set('grupos-fechados', JSON.stringify([...closed]));
+      storage.set('grupos-abertos', JSON.stringify([...opened]));
     });
-
-    function setWorkspace(workspace) {
-      if (workspace !== 'campaigns' && workspace !== 'system') return;
-      currentWorkspace = workspace;
-      storage.set('workspace', workspace);
-      buildNavigation();
-    }
 
     // ---------------- Endereço: #página ou #página/seção ----------------
     // Trocar de página empilha no histórico (o Voltar do navegador funciona); ir a uma seção só troca o endereço atual.
@@ -394,8 +394,6 @@
       if (alias) return openPage(alias.id, target || (alias.section ? { section: alias.section } : undefined), historyMode);
       const page = pageContent[id];
       if (!page) return;
-      const targetWorkspace = pageWorkspace[id];
-      if (targetWorkspace && targetWorkspace !== currentWorkspace) setWorkspace(targetWorkspace);
       // Página que só existe em outra campanha (um resultado de busca do mestre): troca para ela.
       const owners = campaigns.filter(campaign => pagesOf(campaign).includes(id));
       if (owners.length && !owners.some(campaign => campaign.id === activeCampaignId)) setCampaign(owners[0].id);
@@ -408,9 +406,8 @@
       // As abas da entrada do menu (Sessão 01: Resumo, Roteiro completo, Handouts...), no topo da página.
       const host = tabHost(id);
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
-      // O título e, logo abaixo, a linha em ciano (o eyebrow, com // no lugar de /), como no padrão visual da Loja.
-      const eyebrow = String(page.eyebrow || '').replace(/ \/ /g, ' // ');
-      content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><h2 class="cyber-h">${page.title}</h2><p class="eyebrow">${eyebrow}</p></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
+      // A linha em ciano (o eyebrow) em cima do título, como nos exemplos de 2026.
+      content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
@@ -768,6 +765,9 @@
       document.documentElement.style.setProperty('--topbar-h', `${document.querySelector('.topbar').offsetHeight}px`);
     }
     window.addEventListener('resize', updateStickyOffset);
+    // A barra de cima muda de altura sem a janela mudar (a conta entra depois, a busca quebra a linha): a barra lateral e
+    // a faixa "Nesta página" grudam logo abaixo dela.
+    if (window.ResizeObserver) new ResizeObserver(updateStickyOffset).observe(document.querySelector('.topbar'));
 
     function setupScreen() {
       const data = window.systemRules && window.systemRules.data;
@@ -784,10 +784,14 @@
         const band = data.rangeBandLimits.findIndex(limit => meters <= limit);
         const dv = band < 0 ? null : selected.dv[band];
         const autofire = selected.autofire ? (band < 0 ? null : selected.autofire[band] ?? null) : undefined;
+        // O DV grande ao lado dos campos (a faixa aparece em cima dele pelo CSS) e, embaixo, uma caixa por faixa, com a
+        // da distância acesa, como no exemplo do Escudo.
         document.getElementById('dv-result').innerHTML = dv === null
           ? '<span class="dv-big">Fora de alcance</span>'
-          : `<span class="dv-big">DV ${dv}</span><span>${data.rangeBands[band]}</span>${autofire !== undefined ? `<span>Autofogo: ${autofire === null ? 'fora de alcance' : `DV ${autofire}`}</span>` : ''}<span class="note-status">Alvo com REF 8+ pode trocar a DV por DEX + Evasão + 1d10.</span>`;
-        document.getElementById('dv-row').innerHTML = `<div class="table-wrap dense"><table><thead><tr>${data.rangeBands.map((label, index) => `<th class="${index === band ? 'current' : ''}">${label}</th>`).join('')}</tr></thead><tbody><tr>${selected.dv.map((value, index) => `<td class="num ${index === band ? 'current' : ''}">${value === null ? '—' : value}</td>`).join('')}</tr></tbody></table></div>`;
+          : `<span class="dv-big">DV ${dv}</span><small>Faixa ${data.rangeBands[band]}</small>`;
+        const note = document.getElementById('dv-note');
+        if (note) note.textContent = [autofire === undefined ? '' : `Autofogo: ${autofire === null ? 'fora de alcance' : `DV ${autofire}`}.`, 'Alvo com REF 8+ pode trocar a DV por DEX + Evasão + 1d10.'].filter(Boolean).join(' ');
+        document.getElementById('dv-row').innerHTML = data.rangeBands.map((label, index) => `<div class="${index === band ? 'on' : ''}">${label}<b>${selected.dv[index] === null ? '—' : selected.dv[index]}</b></div>`).join('');
         write('night-city-dv-weapon', weapon.value);
         write('night-city-dv-distance', distance.value);
       };
@@ -1330,13 +1334,6 @@
     }
 
     document.addEventListener('click', event => {
-      const workspaceTab = event.target.closest('[data-workspace]');
-      if (workspaceTab) {
-        setWorkspace(workspaceTab.dataset.workspace);
-        const defaultPage = workspaceTab.dataset.workspace === 'campaigns' ? homePage() : 'screen';
-        if (pageWorkspace[currentPage] !== currentWorkspace) openPage(defaultPage);
-        return;
-      }
       const tocChip = event.target.closest('[data-toc-index]');
       if (tocChip) {
         tocChip.parentElement.querySelectorAll('[data-toc-index]').forEach(chip => chip.classList.toggle('active', chip === tocChip));
@@ -1404,7 +1401,6 @@
       switchCampaign(wanted);
     });
     search.addEventListener('input', () => searchPages(search.value));
-    if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
     updateStickyOffset();
     showCampaign();
     buildNavigation();
@@ -1465,14 +1461,15 @@
         box = document.createElement('div');
         box.id = 'side-status';
         box.className = 'side-status';
-        document.querySelector('aside .brand')?.after(box);
+        // No pé da barra lateral, como no exemplo ("Mesa aberta // 3 conectados"), sempre à vista (CSS: sticky).
+        document.querySelector('aside')?.append(box);
       }
       const mesa = state.mesa;
       let table = '';
       if (mesa && mesa.url) {
         // Com mais de uma campanha, a mesa aberta diz de qual é (o servidor só conta a quem joga nela).
         const [kind, text] = !mesa.online ? ['off', 'Mesa fora do ar']
-          : mesa.aberta ? ['on', `Mesa aberta${mesa.campanha && campaigns.length > 1 ? `: ${mesa.campanha.nome}` : ''}${mesa.usuarios ? ` · ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
+          : mesa.aberta ? ['on', `Mesa aberta${mesa.campanha && campaigns.length > 1 ? `: ${mesa.campanha.nome}` : ''}${mesa.usuarios ? ` // ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
           : ['idle', 'Foundry ligado, sem mundo aberto'];
         table = `<div class="table-status table-${kind}" title="${escapeHtml(text)}"><span class="table-dot" aria-hidden="true"></span><span class="table-text">${escapeHtml(text)}</span></div>
           ${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;

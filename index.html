@@ -13,26 +13,23 @@
 </head>
 <body>
   <div class="shell">
-    <aside>
+    <!-- A barra de cima vai de ponta a ponta, com a marca à esquerda (como nos exemplos de 2026). -->
+    <header class="topbar">
       <div class="brand">
         <b class="brand-name">NIGHT CITY <em>FIELDBOOK</em></b>
         <div class="brand-mark">Guia de mesa // 2045–2077</div>
         <p>Regras rápidas e arquivo da campanha</p>
       </div>
-      <div class="workspace-tabs" role="tablist" aria-label="Área da wiki">
-        <button class="workspace-tab" id="tab-campaigns" type="button" role="tab" aria-selected="true" data-workspace="campaigns">Campanhas</button>
-        <button class="workspace-tab" id="tab-system" type="button" role="tab" aria-selected="false" data-workspace="system">Sistema</button>
+      <div class="search-wrap">
+        <span class="search-glyph" aria-hidden="true">⌕</span>
+        <input id="search" type="search" placeholder="Buscar   ( / )" autocomplete="off" aria-label="Buscar na wiki: regra, NPC, local, pista">
       </div>
+      <div class="top-meta">PROTOCOLO MORANA / ARQUIVO LOCAL</div>
+    </header>
+    <aside>
       <nav id="navigation" aria-label="Seções da wiki"></nav>
     </aside>
     <main>
-      <header class="topbar">
-        <div class="search-wrap">
-          <span class="search-glyph" aria-hidden="true">⌕</span>
-          <input id="search" type="search" placeholder="Buscar regra, NPC, local, pista…   ( / )" autocomplete="off" aria-label="Buscar na wiki">
-        </div>
-        <div class="top-meta">PROTOCOLO MORANA / ARQUIVO LOCAL</div>
-      </header>
       <article class="content" id="content" aria-live="polite"></article>
     </main>
   </div>
@@ -67,7 +64,7 @@
     const sessionTabs = (n, first) => [...first, { id: `sessao${n}Handouts`, label: 'Handouts' }, { id: `sessao${n}Npcs`, label: 'NPCs' }, { id: `sessao${n}Notas`, label: 'Notas' }];
     const morana = { id: 'morana', name: 'Protocolo Morana', color: '#00ffd2', groups: [
         { group: 'Campanha ativa', pages: [
-          { id: 'home', label: 'Visão geral', icon: '00' },
+          { id: 'home', label: 'Resumo', icon: '00' },
           { id: 'campaign', label: 'A campanha', icon: '01', tabs: [
             { id: 'campaign', label: 'Dossiê' }, { id: 'docFundacao', label: 'Fundação' }, { id: 'docRoteiro', label: 'Roteiro' }, { id: 'docDiario', label: 'Diário' }, { id: 'docBase', label: 'Base' }
           ] },
@@ -147,9 +144,9 @@
 
     const pageContent = {
       home: {
-        eyebrow: 'Caderno de campo / Night City', title: 'Tudo que importa,<br>sem sair da mesa.',
+        eyebrow: 'Resumo', title: 'Night City Fieldbook',
         lede: 'Um ponto de consulta rápido para Cyberpunk RED, o Mission Kit dos anos 2070 e a campanha Protocolo Morana. Pesquise qualquer termo ou navegue pelos arquivos.',
-        html: `<hr class="rule"><div class="grid">
+        html: `<div class="grid">
           <section class="tile wide"><span class="tag">Arquivo ativo / campanha</span><h3>Protocolo Morana</h3><p>Uma maleta desaparecida, uma cidade cheia de implantes conectados e escolhas que não têm saída limpa.</p><button data-page="campaign">Abrir dossiê</button></section>
           <section class="tile"><span class="tag">Consulta rápida</span><h3>Resolução básica</h3><p>STAT + perícia + 1d10 contra uma Dificuldade (DV), ou contra o teste de outro personagem.</p><button data-page="checks">Ver mecânicas</button></section>
           <section class="tile"><span class="tag">Consulta do sistema</span><h3>Escudo do mestre</h3><p>DV por alcance, ferimentos, Death Save, lesões críticas, cobertura e autofogo numa tela só.</p><button data-page="screen">Abrir escudo</button></section>
@@ -188,28 +185,31 @@
       const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02'], ['docSessao03', 'Sessão 03'], ['docHandouts', 'Handouts']];
       const clockNames = Object.fromEntries(((window.campaignBase.base || {}).relogios || []).map(item => [item.chave, item.nome]));
       const recent = recentPages();
-      const clocks = clockState().map(({ name, steps, value }) => `<li><b>${escapeHtml(clockNames[name] || name)}: ${value}/${steps.length}</b><br><small>${value ? `Último marcado: ${escapeHtml(steps[value - 1])}` : 'Nenhum segmento marcado'}${value < steps.length ? ` · próximo: ${escapeHtml(steps[value])}` : ''}</small></li>`).join('');
+      // Cada relógio com a barra de segmentos (os marcados em amarelo), o último marcado e o próximo.
+      const segments = (steps, value) => `<span class="desk-clock" aria-hidden="true">${steps.map((_, index) => `<i${index < value ? ' class="on"' : ''}></i>`).join('')}</span>`;
+      const clocks = clockState().map(({ name, steps, value }) => `<li><b>${escapeHtml(clockNames[name] || name)}: ${value}/${steps.length}</b>${segments(steps, value)}<small>${value ? `Último marcado: ${escapeHtml(steps[value - 1])}` : 'Nenhum segmento marcado'}${value < steps.length ? ` · próximo: ${escapeHtml(steps[value])}` : ''}</small></li>`).join('');
       const block = document.createElement('div');
       block.className = 'section home-desk';
       block.dataset.unitSkip = '';
+      // Os atalhos só navegam: botões vazados, como no exemplo do Resumo.
       block.innerHTML = `<h3>Na mesa agora</h3><div class="desk-grid">
-          <div><span class="tag">Atalhos</span><div class="desk-buttons">${shortcuts.map(([id, label]) => `<button class="action" type="button" data-page="${id}">${label}</button>`).join('')}</div></div>
+          <div><span class="tag">Atalhos</span><div class="desk-buttons">${shortcuts.map(([id, label]) => `<button class="action ghost" type="button" data-page="${id}">${label}</button>`).join('')}</div></div>
           <div><span class="tag">Continuar de onde parou</span>${recent.length ? `<ul class="desk-recent">${recent.map(item => `<li><a href="${escapeHtml(item.hash)}">${escapeHtml(item.title)}</a>${item.section ? `<small> › ${escapeHtml(item.section)}</small>` : ''}</li>`).join('')}</ul>` : '<p class="note-status">As páginas que você abrir aparecem aqui.</p>'}</div>
-          <div><span class="tag">Relógios</span><ul class="desk-clocks">${clocks}</ul><button class="action" type="button" data-page="notes">Estado da campanha</button></div>
+          <div><span class="tag">Relógios</span><ul class="desk-clocks">${clocks}</ul><button class="action ghost" type="button" data-page="notes">Estado da campanha</button></div>
         </div>`;
       (content.querySelector('.rule') || content.querySelector('.lede')).after(block);
-      // A próxima sessão do Protocolo Morana (da Agenda das mesas, no servidor), logo abaixo do título.
+      // A próxima sessão do Protocolo Morana (da Agenda das mesas, no servidor), numa faixa entre o título e "Na mesa agora".
       fetch('api/agenda', { cache: 'no-store' }).then(response => (response.ok ? response.json() : null)).then(data => {
         if (!data || !block.isConnected) return;
         const next = (data.sessoes || []).find(item => item.campanha === 'morana' && Date.parse(item.inicio) + item.duracao * 60000 > Date.now());
         const when = next && window.wikiApp.sessionTime(next);
-        const line = document.createElement('p');
+        const line = document.createElement('div');
         line.className = 'desk-next';
         line.innerHTML = next
-          ? `<span class="tag">Próxima sessão</span> <b>${escapeHtml(when.curto)}</b> · ${escapeHtml(when.relativo)}${next.titulo ? ` · ${escapeHtml(next.titulo)}` : ''} <button class="action" type="button" data-page="agenda">Agenda</button>`
-          : '<span class="tag">Próxima sessão</span> nenhuma marcada <button class="action" type="button" data-page="agenda">Marcar</button>';
-        block.querySelector('h3').after(line);
-      }).catch(() => { /* sem servidor: o bloco fica sem a agenda */ });
+          ? `<span class="tag">Próxima sessão</span><b>${escapeHtml(when.curto)}</b><span>${escapeHtml(when.relativo)}${next.titulo ? ` · ${escapeHtml(next.titulo)}` : ''}</span><button class="action ghost" type="button" data-page="agenda">Agenda</button>`
+          : '<span class="tag">Próxima sessão</span><span>nenhuma marcada</span><button class="action ghost" type="button" data-page="agenda">Marcar</button>';
+        block.before(line);
+      }).catch(() => { /* sem servidor: a página fica sem a agenda */ });
     }
 
     // Livros de referência: os PDFs ficam fora do git (são grandes e de terceiros), então só existem no PC do mestre.

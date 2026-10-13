@@ -60,8 +60,9 @@ module.exports = async ({ edge, r }) => {
     await r.passo('Ficha e Loja (no menu lateral) abrem no personagem em uso; o Resumo mostra "Seu personagem"', async () => {
       const resumo = await texto('#pv-me');
       await edge.evaluate(`document.querySelector('.nav-item[data-page="ficha"]').click()`);
-      await esperar(`/Rin/.test(document.getElementById('cc-root')?.textContent || '')`);
-      const ficha = await texto('#cc-root');
+      // O nome do personagem é o título da página da ficha.
+      await esperar(`/Rin/.test(document.querySelector('#content .page-head h2')?.textContent || '')`);
+      const ficha = await texto('#content');
       await edge.evaluate(`document.querySelector('.nav-item[data-page="loja"]').click()`);
       await esperar(`!!document.querySelector('[data-shop-pc]')`);
       const loja = await edge.evaluate(`document.querySelector('[data-shop-pc]')?.value`);
@@ -147,18 +148,18 @@ module.exports = async ({ edge, r }) => {
       const depois = await edge.evaluate(`!!document.querySelector('.account-dot')`);
       return [!antes && numero === '1' && /Rin: pedido aprovado/.test(aviso) && /pedido aprovado/.test(noMenu) && !depois, `antes ${antes} · número ${numero} · aviso "${aviso}" · menu "${noMenu}" · depois da Loja ${depois}`];
     });
-    await r.passo('fixar: a página vai para Fixadas no topo da barra (nas duas abas), o aparelho lembra; tirar remove', async () => {
+    await r.passo('fixar: a página vai para Fixadas no topo da barra (antes dos grupos da campanha), o aparelho lembra; tirar remove', async () => {
       await edge.evaluate(`wikiApp.openPage('combat')`);
       await edge.sleep(300);
       await edge.evaluate(`document.querySelector('[data-pin="combat"]').click()`);
       const naRegras = await edge.evaluate(`!!document.querySelector('.nav-pinned .nav-item[data-page="combat"]')`);
-      await edge.evaluate(`document.querySelector('#tab-campaigns').click()`);
-      const naCampanha = await edge.evaluate(`!!document.querySelector('.nav-pinned .nav-item[data-page="combat"]')`);
+      // A barra é uma lista só: as Fixadas vêm antes do primeiro grupo, o da campanha.
+      const naCampanha = await edge.evaluate(`(() => { const grupos = [...document.querySelectorAll('#navigation .nav-group')]; return grupos[0]?.classList.contains('nav-pinned') && Boolean(grupos[1]?.querySelector('.nav-campaign')); })()`);
       await edge.ir(`${base}/jogadores.html#combat`, 1200);
       const lembrou = await edge.evaluate(`!!document.querySelector('.nav-pinned .nav-item[data-page="combat"]') && document.querySelector('[data-pin="combat"]').getAttribute('aria-pressed') === 'true'`);
       await edge.evaluate(`document.querySelector('[data-pin="combat"]').click()`);
       const tirou = await edge.evaluate(`!document.querySelector('.nav-pinned')`);
-      return [naRegras && naCampanha && lembrou && tirou, `na aba Regras ${naRegras} · na aba Campanha ${naCampanha} · depois de recarregar ${lembrou} · tirou ${tirou}`];
+      return [naRegras && naCampanha && lembrou && tirou, `nas Fixadas ${naRegras} · antes da campanha ${naCampanha} · depois de recarregar ${lembrou} · tirou ${tirou}`];
     });
 
     await r.passo('preferências acompanham a conta: a página fixada num aparelho aparece em outro (aparelho limpo)', async () => {

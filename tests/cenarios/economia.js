@@ -3,7 +3,6 @@ const { abrir, buscar, tecla, ondeParou, semRolagemLateral } = require('../lib/w
 
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
-  await edge.evaluate(`document.querySelector('#tab-system').click()`);
   await abrir(edge, 'economy');
 
   await r.passo('categorias de preço do RED (Barato 10eb ... Super Luxuoso)', async () => {
