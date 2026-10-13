@@ -73,9 +73,9 @@ Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os j
 - **Nota do mestre** (campo tracejado em vermelho): lembretes seus, como o nome verdadeiro de um NPC. Nunca vai para os jogadores: o servidor tira as notas e o que não foi revelado antes de mandar.
 - Clique em **Publicar**. A página dos jogadores se atualiza sozinha em até 15 segundos e avisa "O mestre publicou novidades". Trocar de campanha com alterações não publicadas pergunta antes.
 
-Os jogadores entram com o código deles pelo botão **Entrar**, no canto de cima (ou na página inicial). Sem código, a pessoa vê só as regras. Veja **Conta e navegação**.
+Os jogadores entram com o código deles pelo botão **Entrar**, no canto de cima (ou na página inicial). Sem código, a pessoa vê só a aba **Regras**. Veja **Conta e navegação**.
 
-Os jogadores também veem as regras inteiras (Escudo do mestre, combate, netrunning, armas, cyberware...), sem as notas de campanha. Nas páginas de regras da wiki do mestre, essas notas aparecem com **contorno tracejado vermelho**: é o que só você vê. Elas ficam no `index.html` (em `gmNotes`), e não nos arquivos `system-*.js`, que os jogadores baixam.
+Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, netrunning, armas, cyberware...), sem as notas de campanha. Nas páginas de regras da wiki do mestre, essas notas aparecem com **contorno tracejado vermelho**: é o que só você vê. Elas ficam no `index.html` (em `gmNotes`), e não nos arquivos `system-*.js`, que os jogadores baixam.
 
 **Não escreva segredos** em `jogadores.html`, `wiki-app.js`, `wiki.css` ou `system-*.js`: esses arquivos vão para os aparelhos dos jogadores.
 
@@ -124,7 +124,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `jogadores.html` | A visão dos jogadores: resumo, pessoas, mapa e notícias publicados pelo mestre na campanha do jogador, as Notícias de Night City e as regras. |
 | `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre (o Publicar de cada campanha e as Notícias de Night City). |
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
-| `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. As últimas camadas do `wiki.css` são o visual de 2026. A parte 1 é o padrão da Loja: fundo quase preto, amarelo, ciano e vermelho, Oxanium no texto e Share Tech Mono nos rótulos (as duas do Google Fonts, licença OFL, em `cyberpunk-css-main/cyberpunk-css-main/fonts/`). A parte 2 segue os exemplos do Resumo, de Personagens, da Ficha e do Escudo: a barra de cima de ponta a ponta, a barra lateral numa lista só, os títulos em caixa normal e os botões vazados para o que só navega. |
+| `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. As últimas camadas do `wiki.css` são o visual de 2026. A parte 1 é o padrão da Loja: fundo quase preto, amarelo, ciano e vermelho, Oxanium no texto e Share Tech Mono nos rótulos (as duas do Google Fonts, licença OFL, em `cyberpunk-css-main/cyberpunk-css-main/fonts/`). A parte 2 segue os exemplos do Resumo, de Personagens, da Ficha e do Escudo: a barra de cima de ponta a ponta, a barra lateral em caixa normal (com as abas Campanhas e Sistema), os títulos em caixa normal e os botões vazados para o que só navega. |
 | `campaign-map.js` | Pinos do mapa de operações. Os lugares da base apontam para eles (`#campaignMap/<ponto>` abre o mapa já no ponto). |
 | `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
@@ -293,9 +293,9 @@ Notas:
 - **Páginas com abas (wiki do mestre):** cada assunto da campanha é uma entrada só na barra lateral, com abas no topo da página. **A campanha:** Dossiê, Fundação, Roteiro, Diário e Base. **Elenco:** Pessoas e facções, Personagens e Fichas. **Night City:** Mapa, Lugares e peças, Guia de 2077 e Arquiteturas NET. **Sessão zero:** a conversa e os ganchos. **Cada sessão:** Resumo ou Roteiro, Handouts (os da sessão, com os botões de entregar), NPCs (as fichas que você escolhe num seletor com todas as fichas da wiki) e Notas (o que aconteceu, com o modelo do diário). As fichas e as notas ficam na mesa do servidor, por campanha. Os endereços de antes (`#docSessao01/cena-3-o-mensageiro`) continuam valendo, e a busca acha o texto de todas as abas.
 - **Barra de cima:** de ponta a ponta, com a marca, a busca (tecla **/**), a campanha e o botão da conta.
 - **Barra lateral:**
-  - **Uma lista só:** os grupos da campanha (o primeiro com o nome dela) e depois os das regras (Na mesa, Regras do RED, Netrunning, Catálogos, Black Chrome e o Suplemento).
-  - **Fixadas:** o botão **☆ Fixar**, ao lado do título de qualquer página (Combate, Escudo do mestre, a Ficha…), põe a página no grupo **Fixadas**, no topo da barra lateral. Até 8, lembradas no aparelho; **★ Fixada** tira.
-  - **Grupos que recolhem:** clique no nome do grupo. O grupo fechado vira uma linha com quantas páginas tem. Netrunning, Catálogos, Black Chrome e o Suplemento começam fechados; o que cada um abre ou fecha a conta lembra. Abrir uma página de um grupo recolhido mostra o grupo.
+  - **Duas áreas:** as abas **Campanhas** e **Sistema** (na wiki dos jogadores, **Campanha** e **Regras**). Campanhas tem os grupos da campanha (o primeiro com o nome dela); Sistema, os das regras (Na mesa, Regras do RED, Netrunning, Catálogos, Black Chrome e o Suplemento). Abrir uma página da outra área troca a aba.
+  - **Fixadas:** o botão **☆ Fixar**, ao lado do título de qualquer página (Combate, Escudo do mestre, a Ficha…), põe a página no grupo **Fixadas**, no topo da barra lateral, nas duas abas. Até 8, lembradas no aparelho; **★ Fixada** tira.
+  - **Grupos que recolhem:** clique no nome do grupo. O grupo fechado vira uma linha com quantas páginas tem. Em Sistema, Netrunning, Catálogos, Black Chrome e o Suplemento começam fechados; o que cada um abre ou fecha a conta lembra. Abrir uma página de um grupo recolhido mostra o grupo.
   - **Barra compacta:** o botão ☰ (ou a tecla **[**) deixa só os ícones; parar o mouse num ícone mostra o nome. O aparelho lembra.
   - **No celular,** a barra lateral é uma gaveta: o ☰ abre, escolher uma página fecha. O conteúdo começa logo abaixo da barra de cima.
   - **Mesa:** o quadro no pé da barra, sempre à vista, diz se a mesa está aberta (e de qual campanha) e quantos estão conectados, com **Entrar na mesa**; para o mestre, também a saúde do servidor.
@@ -322,7 +322,7 @@ Notas:
   - As palavras podem vir em qualquer ordem ("smg smart" acha a Yukimura). A busca ignora acentos e aceita termos em inglês e sinônimos (CDT/ROF, HP/PV, eb/eddies, Death Save...).
   - **↑ ↓** escolhem o resultado, **Enter** abre já na seção certa, com os termos destacados, e **Esc** volta para a página.
   - Os chips **Tudo / Regras / Campanha** filtram os resultados.
-- **Glossário** (barra lateral → Na mesa): termos como DV, SP, Death Save e Smart Link viram links nas páginas de regras. Passe o mouse para ler a definição; clique para abrir o glossário, que tem o botão "Ver a regra".
+- **Glossário** (aba Sistema → Na mesa): termos como DV, SP, Death Save e Smart Link viram links nas páginas de regras. Passe o mouse para ler a definição; clique para abrir o glossário, que tem o botão "Ver a regra".
 - **Índice A–Z:** todos os cartões e fichas da wiki em ordem alfabética, com filtro.
 - **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por origem (Mission Kit ou suplemento de fã), classe, tipo ou instalação.
 - Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.

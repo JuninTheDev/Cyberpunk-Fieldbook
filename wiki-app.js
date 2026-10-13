@@ -178,6 +178,7 @@
     const content = document.getElementById('content');
     const search = document.getElementById('search');
     let currentPage = 'home';
+    let currentWorkspace = storage.get('workspace') || 'campaigns';
     let activeCampaignId = storage.get('active-campaign') || (campaigns[0] || {}).id;
     let campaignMapCategory = 'all';
     let campaignMapAct = 'all';
@@ -223,10 +224,10 @@
     }
 
     // ---------------- Barra lateral ----------------
-    // Uma lista só, como nos exemplos de 2026: as fixadas, os grupos da campanha (o primeiro com o nome dela) e os das
-    // regras. Os grupos recolhem (clique no nome; a conta lembra) e, fechados, mostram quantas páginas têm. Também há os
-    // selos de novidade nas páginas (setBadges) e o botão ☰ da barra de cima: no computador deixa a barra compacta (só os
-    // ícones); no celular abre a gaveta.
+    // Duas áreas, nas abas de cima da barra: Campanhas (os grupos da campanha, o primeiro com o nome dela) e Sistema (os
+    // das regras). As fixadas aparecem nas duas. Os grupos recolhem (clique no nome; a conta lembra) e, fechados, mostram
+    // quantas páginas têm. Também há os selos de novidade nas páginas (setBadges) e o botão ☰ da barra de cima: no
+    // computador deixa a barra compacta (só os ícones); no celular abre a gaveta.
     const narrow = window.matchMedia('(max-width: 820px)');
     const badges = {};
     const readSet = key => { try { return new Set(JSON.parse(storage.get(key) || '[]')); } catch { return new Set(); } };
@@ -238,8 +239,8 @@
     const compact = () => document.body.classList.contains('sidebar-compact') && !narrow.matches;
 
     // ---------------- Páginas fixadas ----------------
-    // O botão "Fixar" ao lado do título põe a página no grupo Fixadas, no topo da barra lateral. Até 8; a mais antiga sai
-    // quando passa disso.
+    // O botão "Fixar" ao lado do título põe a página no grupo Fixadas, no topo da barra lateral (nas duas abas). Até 8; a
+    // mais antiga sai quando passa disso.
     const PIN_LIMIT = 8;
     const pinned = () => { try { return JSON.parse(storage.get('fixadas') || '[]').filter(id => pageContent[id]); } catch { return []; } };
     const pinnable = id => Boolean(pageContent[id]) && id !== 'criador';
@@ -270,15 +271,15 @@
     function buildNavigation() {
       const campaign = activeCampaign();
       activeCampaignId = campaign.id;
-      // key: a área e o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela), as mesmas chaves
-      // de quando a barra tinha as abas Campanhas e Sistema: o que cada um fechou continua fechado.
+      // key: a área e o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela). Fixadas: nas duas
+      // abas.
       const pins = pinned().map(navEntry);
-      const groups = [...(pins.length ? [{ key: 'fixadas', group: 'Fixadas', pages: pins, shared: true }] : []),
-        ...campaign.groups.map((group, index) => ({ ...group, key: `campaigns:${group.group}`, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 })),
-        ...systemSections.map(group => ({ ...group, key: `system:${group.group}` }))];
+      const groups = [...(pins.length ? [{ key: 'fixadas', group: 'Fixadas', pages: pins, shared: true }] : []), ...(currentWorkspace === 'campaigns'
+        ? campaign.groups.map((group, index) => ({ ...group, key: `campaigns:${group.group}`, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
+        : systemSections.map(group => ({ ...group, key: `system:${group.group}` })))];
       // Páginas que não existem nesta visão (ex.: só do mestre) somem do menu.
       const visibleGroups = groups.map(group => ({ ...group, pages: group.pages.filter(page => pageContent[page.id]) })).filter(group => group.pages.length);
-      const campaignPicker = campaigns.length > 1
+      const campaignPicker = currentWorkspace === 'campaigns' && campaigns.length > 1
         ? `<label class="campaign-picker"><span class="nav-label">Campanha ativa</span><select id="campaign-picker">${campaigns.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === campaign.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>`
         : '';
       const closed = closedGroups();
@@ -292,6 +293,9 @@
         // A contagem do grupo fechado vem do data-count, pelo CSS: o texto do botão fica só com o nome.
         return `<div class="nav-group${shut ? ' collapsed' : ''}${group.shared ? ' nav-pinned' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}" data-count="${group.pages.length}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
       }).join('')}`;
+      document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
+      document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
+      document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(currentPage)));
     }
     // Selos de novidade: { idDaPágina: quantidade } (0 tira o selo). A visão dos jogadores marca o que o mestre
@@ -333,6 +337,8 @@
     backdrop.addEventListener('click', () => setDrawer(false));
     narrow.addEventListener('change', () => { document.body.classList.remove('sidebar-open'); buildNavigation(); labelMenuButton(); });
     if (storage.get('barra-compacta') === '1') document.body.classList.add('sidebar-compact');
+    // Abreviação das abas para a barra compacta (CAM, SIS, REG).
+    document.querySelectorAll('.workspace-tab').forEach(tab => { tab.dataset.short = tab.textContent.trim().slice(0, 3).toUpperCase(); });
     navigation.addEventListener('click', event => {
       const toggle = event.target.closest('.nav-group-toggle');
       if (!toggle) return;
@@ -346,6 +352,13 @@
       storage.set('grupos-fechados', JSON.stringify([...closed]));
       storage.set('grupos-abertos', JSON.stringify([...opened]));
     });
+
+    function setWorkspace(workspace) {
+      if (workspace !== 'campaigns' && workspace !== 'system') return;
+      currentWorkspace = workspace;
+      storage.set('workspace', workspace);
+      buildNavigation();
+    }
 
     // ---------------- Endereço: #página ou #página/seção ----------------
     // Trocar de página empilha no histórico (o Voltar do navegador funciona); ir a uma seção só troca o endereço atual.
@@ -394,6 +407,8 @@
       if (alias) return openPage(alias.id, target || (alias.section ? { section: alias.section } : undefined), historyMode);
       const page = pageContent[id];
       if (!page) return;
+      const targetWorkspace = pageWorkspace[id];
+      if (targetWorkspace && targetWorkspace !== currentWorkspace) setWorkspace(targetWorkspace);
       // Página que só existe em outra campanha (um resultado de busca do mestre): troca para ela.
       const owners = campaigns.filter(campaign => pagesOf(campaign).includes(id));
       if (owners.length && !owners.some(campaign => campaign.id === activeCampaignId)) setCampaign(owners[0].id);
@@ -1334,6 +1349,13 @@
     }
 
     document.addEventListener('click', event => {
+      const workspaceTab = event.target.closest('[data-workspace]');
+      if (workspaceTab) {
+        setWorkspace(workspaceTab.dataset.workspace);
+        const defaultPage = workspaceTab.dataset.workspace === 'campaigns' ? homePage() : 'screen';
+        if (pageWorkspace[currentPage] !== currentWorkspace) openPage(defaultPage);
+        return;
+      }
       const tocChip = event.target.closest('[data-toc-index]');
       if (tocChip) {
         tocChip.parentElement.querySelectorAll('[data-toc-index]').forEach(chip => chip.classList.toggle('active', chip === tocChip));
@@ -1401,6 +1423,7 @@
       switchCampaign(wanted);
     });
     search.addEventListener('input', () => searchPages(search.value));
+    if (!['campaigns', 'system'].includes(currentWorkspace)) currentWorkspace = 'campaigns';
     updateStickyOffset();
     showCampaign();
     buildNavigation();

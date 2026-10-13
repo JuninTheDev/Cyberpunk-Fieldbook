@@ -27,6 +27,10 @@
       <div class="top-meta">NIGHT CITY 2077 / VISÃO DOS JOGADORES</div>
     </header>
     <aside>
+      <div class="workspace-tabs" role="tablist" aria-label="Área da wiki">
+        <button class="workspace-tab" id="tab-campaigns" type="button" role="tab" aria-selected="true" data-workspace="campaigns">Campanha</button>
+        <button class="workspace-tab" id="tab-system" type="button" role="tab" aria-selected="false" data-workspace="system">Regras</button>
+      </div>
       <nav id="navigation" aria-label="Seções da wiki"></nav>
     </aside>
     <main>
@@ -55,7 +59,7 @@
       eyebrow: 'Night City / para os jogadores', title: 'Como jogamos',
       lede: 'O sistema, o seu personagem na wiki, como se ganha experiência e os combinados da mesa. O mestre confirma tudo na sessão zero.',
       html: `<div class="section" data-toc="O sistema"><h3>O sistema</h3><ul>
-          <li><b>Cyberpunk RED</b>, com as regras dos anos 2070 do <b>Cyberpunk Edgerunners Mission Kit</b> (oficial) e, como opção, o suplemento comunitário <b>Cyberpunk 2077</b> (feito por fãs, não oficial). Nas páginas de regras (na barra lateral), cada uma diz o que é do RED, do Kit e do suplemento de fã.</li>
+          <li><b>Cyberpunk RED</b>, com as regras dos anos 2070 do <b>Cyberpunk Edgerunners Mission Kit</b> (oficial) e, como opção, o suplemento comunitário <b>Cyberpunk 2077</b> (feito por fãs, não oficial). Na aba Regras, cada página diz o que é do RED, do Kit e do suplemento de fã.</li>
           <li>O catálogo oficial do <b>Black Chrome</b> (de 2045) continua à venda: armas, cyberware, moda e armadura, equipamento e veículos, com a etiqueta Black Chrome.</li>
           <li>Os eventos do jogo Cyberpunk 2077 acontecem em paralelo à campanha, como pano de fundo. Não é preciso ter jogado; V não aparece.</li>
         </ul><p>${button('supplement2077', 'Suplemento de fã')} ${button('roles2077', 'Roles nos anos 2070')} ${button('economy', 'Economia')}</p></div>
@@ -260,9 +264,9 @@
       // Sem campanha para mostrar: sem código (entra aqui mesmo), código sem campanha, ou sem servidor.
       function emptyPages(kind) {
         const text = {
-          visitante: 'Entre com o código que o mestre te passou para ver o que o seu grupo sabe. As regras estão na barra lateral.',
+          visitante: 'Entre com o código que o mestre te passou para ver o que o seu grupo sabe. As regras estão na aba Regras.',
           semCampanha: 'O seu código ainda não está em nenhuma campanha. Fale com o mestre.',
-          offline: 'Esta página precisa ser aberta pelo servidor do mestre (o endereço que ele passou). As regras continuam disponíveis na barra lateral.'
+          offline: 'Esta página precisa ser aberta pelo servidor do mestre (o endereço que ele passou). As regras continuam disponíveis na aba Regras.'
         }[kind];
         const callout = `<div class="callout">${text}</div>`;
         const login = kind === 'visitante' ? '<div class="section" data-toc="Entrar"><h3>Entrar</h3><form class="cc-login" data-pv-login><input id="pv-code" autocomplete="off" placeholder="NC-XXXX-XXXX" aria-label="Código do jogador"><button class="action" type="submit">Entrar</button></form><p class="cc-msg" id="pv-login-msg"></p></div>' : '';

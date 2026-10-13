@@ -3,6 +3,7 @@ const { abrir, buscarEAbrir, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
+  await edge.evaluate(`document.querySelector('#tab-system').click()`);
   const linhas = () => edge.evaluate(`[...document.querySelectorAll('.compare-table tbody tr')].map(tr => [...tr.cells].map(td => td.textContent))`);
   const verComo = vista => edge.evaluate(`document.querySelector('.view-switch [data-view="${vista}"]').click()`);
   const filtrar = (rotulo, valor) => edge.evaluate(`(() => { const s = document.querySelector('[data-filter="${rotulo}"]'); s.value = ${JSON.stringify(valor)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
@@ -85,6 +86,7 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   await r.passo('visão dos jogadores: as páginas do Black Chrome abrem', async () => {
     await edge.ir(`${servidores.local}/jogadores.html`, 1200);
+    await edge.evaluate(`document.querySelector('#tab-system') && document.querySelector('#tab-system').click()`);
     await abrir(edge, 'bcVeiculos', 400);
     const n = await cartoes();
     return [n === 31, `${n} cartões`];

@@ -63,9 +63,9 @@ module.exports = async ({ edge, servidores, r }) => {
     const e = await estado();
     return [e.pagina === 'home' && e.hash === '#home', JSON.stringify(e)];
   });
-  await r.passo('o Resumo da barra, a partir de uma regra, vai para a página inicial', async () => {
+  await r.passo('aba Campanhas a partir de uma regra vai para a página inicial', async () => {
     await abrir(edge, 'combat');
-    await edge.evaluate(`document.querySelector('#navigation .nav-item[data-page="home"]').click()`);
+    await edge.evaluate(`document.querySelector('#tab-campaigns').click()`);
     await edge.sleep(300);
     const e = await estado();
     return [e.pagina === 'home' && e.hash === '#home', JSON.stringify(e)];

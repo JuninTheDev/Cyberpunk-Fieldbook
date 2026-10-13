@@ -14,8 +14,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.ir(`${base}/?recarregar#home`, 1500);
     await r.passo('barra lateral do Protocolo Morana: só as entradas; os documentos viraram abas', async () => {
       // Os documentos de documentos/night-city/ (de todas as campanhas, como a missão The Jacket) ficam num grupo próprio.
-      // A barra é uma lista só: as entradas da campanha são as dos grupos dela (os das regras vêm depois).
-      const itens = (await edge.evaluate(`[...document.querySelectorAll('#navigation .nav-group[data-group-key^="campaigns:"] .nav-item')].map(b => b.dataset.page)`)).filter(id => !id.startsWith('doc-night-city-'));
+      const itens = (await edge.evaluate(`[...document.querySelectorAll('#navigation .nav-item')].map(b => b.dataset.page)`)).filter(id => !id.startsWith('doc-night-city-'));
       const esperados = ['home', 'campaign', 'people', 'campaignMap', 'docSessaoZero', 'session1', 'docSessao02', 'docSessao03', 'docHandouts', 'notes', 'playerView', 'agenda', 'campanhas', 'personagens', 'loja'];
       const viraramAba = ['docSessao01', 'docFundacao', 'docRoteiro', 'docDiario', 'docBase', 'docPersonagens', 'lugares', 'docGuia', 'docArquiteturas', 'docGanchos'];
       const faltam = esperados.filter(id => !itens.includes(id));

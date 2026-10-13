@@ -1285,8 +1285,9 @@ h2 .h2-sub { color: var(--tx); }
 
 /* ================= Visual 2026, parte 2: os exemplos do Resumo, Personagens, Ficha e Escudo do mestre =================
    A barra de cima vai de ponta a ponta, com a marca à esquerda e a busca, a campanha e a conta à direita. A barra lateral
-   tem 208 px e é uma lista só: os grupos em cinza, as páginas em caixa normal (os ícones só na barra compacta), o grupo
-   fechado numa linha com a contagem e a mesa do Foundry no pé. Títulos em caixa normal, com a linha em ciano em cima;
+   tem 208 px, com as abas Campanhas e Sistema em cima (o usuário quer as duas áreas separadas): os grupos em cinza, as
+   páginas em caixa normal (os ícones só na barra compacta), o grupo fechado numa linha com a contagem e a mesa do
+   Foundry no pé. Títulos em caixa normal, com a linha em ciano em cima;
    botões vazados para o que só navega; e os quadros de cada página dos exemplos. Vem depois da parte 1 e vale para as
    duas wikis. */
 

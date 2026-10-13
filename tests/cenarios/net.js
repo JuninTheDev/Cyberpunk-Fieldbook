@@ -3,6 +3,7 @@ const { abrir, buscarEAbrir, semRolagemLateral, clicarChip } = require('../lib/w
 
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
+  await edge.evaluate(`document.querySelector('#tab-system').click()`);
 
   const minimos = { netArsenal: 56, net2077: 10, quickhacks: 21, os2077: 8 };
   for (const [pagina, minimo] of Object.entries(minimos)) {
