@@ -63,7 +63,7 @@ de compêndio; entram só as partes do sistema.
 
 ### Fase 2: a NET
 
-- [ ] **C5. Interface:**
+- [~] **C5. Interface:** Em andamento: sessão KouArt, 2026-10-13.
   - as 9 habilidades (Scanner, Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Slide, Virus e Zap; `CPRInterfaceRoll`),
     com os bônus dos programas;
   - as Ações de NET pelo Rank;
