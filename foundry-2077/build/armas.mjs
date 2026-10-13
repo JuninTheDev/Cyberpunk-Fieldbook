@@ -1,11 +1,12 @@
-// Armas de 2077 (Mission Kit p. 31–35 e suplemento de fã p. 32–50), os três Rebuilds e a munição Smart melhorada do Kit.
+// Armas de 2077 (Mission Kit p. 31–35 e as do suplemento de fã que a mesa aprovou, p. 32–50), os três Rebuilds e a munição
+// Smart melhorada do Kit.
 import { KIT, SUPPLEMENT, coreDoc, coreImg, folderDoc, itemFrom, para, parseEb, sourceNote } from './lib.mjs';
 import { wiki } from './wiki.mjs';
 
 // Grupo da wiki → pasta do compêndio e página do suplemento de fã (as do Kit trazem a página nas regras).
 const groups = {
   pistols: ['Pistolas', 32], revolvers: ['Revólveres e pistolas muito pesadas', 35], smgs: ['Submetralhadoras', 38],
-  shotguns: ['Espingardas', 40], rifles: ['Rifles de assalto', 44], machineGuns: ['Metralhadoras', 47], snipers: ['Rifles de precisão', 48]
+  shotguns: ['Espingardas', 40], rifles: ['Rifles de assalto', 44], snipers: ['Rifles de precisão', 48]
 };
 
 // Tipo da wiki → tipo de arma do sistema e molde do livro-base.
@@ -30,8 +31,8 @@ export const classRules = {
   tech: '<b>Tech</b> (Mission Kit): a mira vê o contorno dos alvos através de cobertura fina. <b>Carregar</b> (na ficha, no Painel Tático e na macro "Carregar arma Tech") gasta a Ação de Movimento e dura até disparar ou 20 rodadas; carregada, o próximo ataque é de CDT 1, atravessa cobertura fina e ignora metade do SP do alvo, e a cobertura não perde HP.'
 };
 
-// Armas que o livro só descreve em texto: dano e DV do autofogo seguem a Tsunami Arms Helix do livro-base.
-const autofireOnly = new Set(['Constitutional Arms M2067 Defender', 'Militech Mk.31 HMG']);
+// Armas que só fazem autofogo (as metralhadoras do suplemento de fã, que saíram na revisão de 2026-10-13): nenhuma hoje.
+const autofireOnly = new Set();
 
 // As regras próprias de cada arma (system-2077.js), como flags do item: o armas2077.mjs lê estas e nada mais.
 const REGRAS = ['balas', 'danoComMenos', 'minimoDeBalas', 'danoFixo', 'danoMirado', 'exigeBody', 'lesao', 'lesaoSemCromo', 'cargaSemMovimento',

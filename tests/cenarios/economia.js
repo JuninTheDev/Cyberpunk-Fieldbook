@@ -40,6 +40,27 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(200);
     return [(await edge.evaluate('wikiApp.currentPage()')) === 'economy', ''];
   });
+  // Nos anos 2070, todo Night Market de cyberware tem um Berserk ou um Sandevistan à venda, sorteado entre os de Cyberware de 2077.
+  await r.passo('Night Market de cyberware: também à venda um Berserk ou Sandevistan (até 40 rolagens)', async () => {
+    await abrir(edge, 'economy');
+    const achou = await edge.evaluate(`(() => {
+      const botao = document.querySelector('[data-night-market]');
+      for (let i = 0; i < 40; i += 1) {
+        botao.click();
+        const saida = botao.closest('.roll-buttons').nextElementSibling;
+        const categorias = [...saida.querySelectorAll('p b')].map(b => b.textContent);
+        const extra = saida.querySelector('.night-market-os');
+        if (categorias.includes('Cyberware')) return extra ? extra.textContent : 'mercado de cyberware sem o Berserk ou Sandevistan';
+        if (extra) return 'Berserk ou Sandevistan num mercado sem cyberware';
+      }
+      return 'nenhum mercado de cyberware em 40 rolagens';
+    })()`);
+    return [/Também à venda \(anos 2070\): .*(Berserk|Sandevistan), [\d.]+eb\./.test(achou), achou];
+  });
+  await r.passo('Night Market: a tabela tem o Kibble do RED (o "antigo Kibble" era do suplemento de fã)', async () => {
+    const tabela = await edge.evaluate(`document.querySelector('#content details.roll-table')?.textContent || ''`);
+    return [/Kibble \(10eb\)/.test(tabela) && !/antigo Kibble/.test(tabela), tabela.slice(0, 80)];
+  });
   await r.passo('armas do RED: o preço do RED e a nota do Rebuild (sem a coluna "Preço 2077" do suplemento de fã)', async () => {
     await abrir(edge, 'gear');
     const ths = await edge.evaluate(`[...document.querySelectorAll('#content th')].map(th => th.textContent)`);

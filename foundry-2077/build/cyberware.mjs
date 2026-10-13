@@ -1,5 +1,5 @@
-// Cyberware de 2077: o do Mission Kit (Kit p. 35–37) e o do suplemento de fã (p. 27–30), a neuralware de netrunning
-// (p. 13) e Berserk e Sandevistan (p. 24–26) do suplemento.
+// Cyberware de 2077: o do Mission Kit (Kit p. 35–37), o do suplemento de fã que a mesa aprovou (p. 23 e 27–30) e os Berserk
+// e Sandevistan dos anos 2070 (p. 24–26, mais caros e mais fracos que no suplemento). Todos vêm das listas da wiki.
 import { KIT, SUPPLEMENT, coreDoc, folderDoc, humanityLoss, itemFrom, para, parseEb, sourceNote, stripTags } from './lib.mjs';
 import { wiki } from './wiki.mjs';
 
@@ -11,11 +11,7 @@ const categories = [
   [/^Neuroport \(base\)/, 'neuralWare', 'Neural Link', true],
   [/^Fashionware/, 'fashionware', 'Light Tattoo', false],
   [/^Neuralware/, 'neuralWare', 'Tactile Boost', false],
-  [/^Cyberóptico \(base\)/, 'cyberEye', 'Cybereye', true],
-  [/^Cyberóptico \(opção\)/, 'cyberEye', 'TeleOptics', false],
   [/^Cyberware interno/, 'cyberwareInternal', 'Enhanced Antibodies', false],
-  [/placa base/, 'cyberwareExternal', 'Skin Weave', true],
-  [/^Opção de placa/, 'cyberwareExternal', 'Subdermal Pocket', false],
   [/^Cyberware externo/, 'cyberwareExternal', 'Subdermal Armor', false],
   [/^Opção de cyberbraço|^Cyberbraços/, 'cyberArm', 'Grapple Hand', false],
   [/^Opção de cyberperna/, 'cyberLeg', 'Grip Foot', false]
@@ -32,8 +28,8 @@ const weapons = {
 // Grupo da wiki → pasta, página do suplemento de fã e página do Kit.
 const kitPages = { neuroport: 36, neural: 35, limbs: 36 };
 // O que o armas2077.mjs procura no ator: a conexão da arma Smart e o Ballistic Coprocessor.
-const markers = { Neuroport: { conexaoSmart: true, neuroport: true }, 'Smart Link': { conexaoSmart: true, smartLink: true }, 'Ballistic Coprocessor': { ballisticCoprocessor: true }, 'Feedback Circuit': { feedbackCircuit: true } };
-const groups = { neuroport: ['Neuroport', 36], fashionware: ['Fashionware', 27], neural: ['Neuralware', 27], optics: ['Cyberópticos', 28], internal: ['Cyberware interno', 28], external: ['Cyberware externo e placas', 29], limbs: ['Cybermembros', 30] };
+const markers = { Neuroport: { conexaoSmart: true, neuroport: true }, 'Ballistic Coprocessor': { ballisticCoprocessor: true }, 'Feedback Circuit': { feedbackCircuit: true } };
+const groups = { neuroport: ['Neuroport', 36], fashionware: ['Fashionware', 27], neural: ['Neuralware', 27], osware: ['Berserk e Sandevistan', 24], internal: ['Cyberware interno', 28], external: ['Cyberware externo', 29], limbs: ['Cybermembros', 30] };
 
 function slotsFrom(text, fallback) {
   const match = text.match(/(\d|um|uma|dois|duas|três) slots? (?:de opção|de placa)/i);
@@ -47,7 +43,8 @@ function convert(raw, group, folder) {
   const kit = raw.origem === 'kit';
   const page = kit ? kitPages[group] || 36 : groups[group][1];
   const size = foundational ? 0 : /ocupa dois slots/i.test(text) ? 2 : 1;
-  return itemFrom(coreDoc('core_cyberware', weaponTemplate || templateName), {
+  // Berserk e Sandevistan saem do molde da Sandevistan do livro-base (o ícone).
+  return itemFrom(coreDoc('core_cyberware', weaponTemplate || (group === 'osware' ? 'Sandevistan' : templateName)), {
     seed: `cyberware:${raw.name}`, name: raw.name, folder,
     system: {
       type, isFoundational: foundational, isWeapon: Boolean(weaponStats), ...(weaponStats || {}),
@@ -58,24 +55,6 @@ function convert(raw, group, folder) {
       description: { value: `<p><b>${raw.category}</b> · instalação: ${raw.install} · Humanidade ${raw.humanity} · ${raw.cost} · ${kit ? 'Mission Kit' : 'suplemento de fã'}</p>${para(raw.text)}${para(raw.tip, 'Na mesa')}${sourceNote(kit ? 'Cyberpunk Edgerunners Mission Kit' : 'Suplemento de fã Cyberpunk 2077', page)}` }
     },
     flags: { grupo: group, origem: kit ? 'kit' : 'fa', ...(markers[raw.name] || {}) }
-  });
-}
-
-// Cartões de netrunning e sistemas operacionais: { name, tag, stats: [[rótulo, valor]], text, extra, tip }
-const stat = (card, label) => (card.stats.find(([name]) => name === label) || [])[1];
-function convertCard(card, { templateName, page, folder, category, extraSystem = {} }) {
-  const humanity = stat(card, 'Perda de Humanidade');
-  const cost = stat(card, 'Custo') ?? stat(card, 'Preço');
-  const details = card.stats.map(([label, value]) => `${label}: ${value}`).join(' · ');
-  return itemFrom(coreDoc('core_cyberware', templateName), {
-    seed: `cyberware:${card.name}`, name: card.name, folder,
-    system: {
-      type: 'neuralWare', isFoundational: false, isWeapon: false, size: 1, installLocation: 'clinic',
-      humanityLoss: humanityLoss(humanity), price: { market: parseEb(cost) ?? 0 }, ...extraSystem,
-      source: { book: SUPPLEMENT, page },
-      description: { value: `<p><b>${category}</b> · ${details}</p>${para(card.text)}${card.extra || ''}${para(card.tip, 'Na mesa')}${sourceNote('Suplemento Cyberpunk 2077', page)}` }
-    },
-    flags: { grupo: category }
   });
 }
 
@@ -90,15 +69,10 @@ function buildDrugs(folder) {
 }
 
 export function buildCyberware() {
-  const folders = Object.values(groups).map(([name], index) => folderDoc('Item', name, index));
-  const drugFolder = folderDoc('Item', 'Drogas (Mission Kit)', folders.length + 2);
-  const netFolder = folderDoc('Item', 'Neuralware de netrunning', folders.length);
-  const osFolder = folderDoc('Item', 'Berserk e Sandevistan', folders.length + 1);
-  const items = Object.entries(wiki.cyberware).flatMap(([group, list]) => list.map(entry => convert(entry.raw, group, folders[Object.keys(groups).indexOf(group)]._id)));
-  const net = wiki.net.neuralware.map(card => convertCard(card, { templateName: 'Tactile Boost', page: 13, folder: netFolder._id, category: 'Neuralware de netrunning (opção do Neural Link)' }));
-  const os = [...wiki.net.berserks, ...wiki.net.sandevistans].map(card => convertCard(card, {
-    templateName: 'Sandevistan', page: 24, folder: osFolder._id,
-    category: `${card.tag} (instalado no Neural Link)`
-  }));
-  return [...folders, netFolder, osFolder, drugFolder, ...items, ...net, ...os, ...buildDrugs(drugFolder._id)];
+  // Uma pasta por grupo da wiki que tem itens, na ordem dos grupos.
+  const present = Object.keys(groups).filter(group => (wiki.cyberware[group] || []).length);
+  const folders = Object.fromEntries(present.map((group, index) => [group, folderDoc('Item', groups[group][0], index)]));
+  const drugFolder = folderDoc('Item', 'Drogas (Mission Kit)', present.length);
+  const items = Object.entries(wiki.cyberware).flatMap(([group, list]) => list.map(entry => convert(entry.raw, group, folders[group]._id)));
+  return [...Object.values(folders), drugFolder, ...items, ...buildDrugs(drugFolder._id)];
 }

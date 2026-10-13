@@ -412,15 +412,15 @@
   });
   const factions = [
     faction('Tyger Claws', 'Japantown e Kabuki', ['Boosterganger', 'troque os Rippers por uma katana (arma branca pesada, 3d6, CDT 2, Armas Brancas 11) e o couro por Kevlar (SP 7); adicione cyberolhos Kiroshi. Muitos chegam de moto.'],
-      ['Oficial de segurança', 'troque o rifle por uma katana (Armas Brancas 10) e uma SMG (2d6, autofogo); a elite troca o Kerenzikov por um Sandevistan.'],
+      ['Oficial de segurança', 'troque o rifle por uma katana (Armas Brancas 10) e uma Arasaka Shigure (SMG, 2d6, autofogo); a elite troca o Kerenzikov por um Sandevistan.'],
       'A gangue de Wakako. Para Mina Kuroda, a guarda-costas dela, use o tenente com a katana.', 'adaptação'),
     faction('Maelstrom', 'Northside, Watson', ['Boosterganger', 'troque o couro por Light Armorjack (SP 11); mantenha os Rippers ou troque por outra arma cibernética. Óticas vermelhas por toda parte.'],
       ['Oficial de segurança', 'adicione uma arma cibernética à escolha.'],
       'O culto do hospital queimado (Sessão 02): cultistas como capangas e Brakk como Chefe reclaimer com Wolvers.', 'livro, p. 422'),
-    faction('Valentinos', 'Heywood', ['Guarda-costas', 'troque a espingarda ruim por uma pistola pesada banhada a ouro (3d6, CDT 2).'],
-      ['Oficial de segurança', 'troque o rifle por uma espingarda (5d6).'],
+    faction('Valentinos', 'Heywood', ['Guarda-costas', 'troque a espingarda ruim por uma pistola pesada banhada a ouro (Constitutional Arms Liberty, 3d6, CDT 2).'],
+      ['Oficial de segurança', 'troque o rifle por uma espingarda (Constitutional Arms M2038 Tactician, 5d6).'],
       'Honra e família: não atacam quem está sob a palavra de um Valentino, e nunca esquecem uma dívida.', 'adaptação'),
-    faction('6th Street', 'Santo Domingo e Heywood', ['Operativo de segurança', 'ex-militares: troque o rifle ruim por um rifle de assalto de qualidade padrão (5d6, não emperra).'],
+    faction('6th Street', 'Santo Domingo e Heywood', ['Operativo de segurança', 'ex-militares: troque o rifle ruim por um Militech M251s Ajax (5d6, qualidade padrão, não emperra).'],
       ['Oficial de segurança', 'como no livro.'],
       'Lutam em formação: metade dá fogo supressivo enquanto a outra metade flanqueia.', 'adaptação'),
     faction('Animals', 'Pacifica', ['Guarda-costas', 'tire a espingarda; adicione um cyberbraço com Gorilla Arm (o punho é arma branca pesada excelente: 3d6, CDT 2, +1 no ataque; empunha como BODY 11).'],
@@ -442,10 +442,10 @@
       ['Oficial de segurança', 'patrulha à noite. Depois da meia-noite, adicione Interface Plugs e Smartgun Link.'],
       'Atiram primeiro e preenchem o relatório depois, se alguém sacar uma arma.', 'livro, p. 417–422'),
     faction('MaxTac', 'toda Night City', ['—', 'a MaxTac não tem capangas.'],
-      ['Outrider como mini-chefe', 'tire Moto e Afinidade com Animais; troque a Light Armorjack por Heavy Armorjack (SP 13, −2 em REF, DEX e MOVE e nas perícias deles, como o Oficial de segurança); rifle de assalto; adicione Mantis Blades (3d6) ou um Sandevistan. Cada agente conta como 3 personagens.'],
+      ['Outrider como mini-chefe', 'tire Moto e Afinidade com Animais; troque a Light Armorjack por Heavy Armorjack (SP 13, −2 em REF, DEX e MOVE e nas perícias deles, como o Oficial de segurança); rifle Militech M251s Ajax; adicione Mantis Blades (3d6) ou um Militech Falcon Sandevistan. Cada agente conta como 3 personagens.'],
       'Chega 10 minutos depois de um surto ser reportado (ganchos dos personagens). É o relógio da cena, não uma luta para vencer.', 'adaptação'),
     faction('Segurança corporativa', 'Arasaka, Militech, Kang Tao', ['Operativo de segurança', 'de dia: Light Armorjack e SMG ruim no lugar do rifle. À noite: Heavy Armorjack e SMG pesada ruim.'],
-      ['Oficial de segurança', 'depois da meia-noite: SMG pesada, Interface Plugs e Smartgun Link. Em 2077, uma SMG Smart (Arasaka TKI-20 Shingen).'],
+      ['Oficial de segurança', 'depois da meia-noite: SMG pesada, Interface Plugs e Smartgun Link. Em 2077, uma SMG Smart (Arasaka TKI-20 Shingen ou Kang Tao G-58 Dian).'],
       'A equipe de Iskra (Sessões 01 e 02) e a segurança do datafort da Militech em Arroyo, onde está a Coleira.', 'livro, p. 417–421 + adaptação')
   ];
 

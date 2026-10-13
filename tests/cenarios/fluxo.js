@@ -114,7 +114,6 @@ module.exports = async ({ edge, servidores, r }) => {
       'Crusher: pistola muito pesada que só dispara cartucho': [`${s('Militech Crusher (207X)').weaponType}:${s('Militech Crusher (207X)').ammoVariety.join()}:${s('Militech Crusher (207X)').weaponSkill}`, 'vHeavyPistol:shotgunShell:Handgun'],
       'Lexington: Power que ricocheteia': [p('Militech M-10AF Lexington').ricocheteia, true],
       'Nowaki (fã): 3 balas e ricocheteia': [`${p('Arasaka Nowaki').balas}:${p('Arasaka Nowaki').ricocheteia}`, '3:true'],
-      'Defender: só autofogo, não ricocheteia': [p('Constitutional Arms M2067 Defender').ricocheteia, false],
       'Senkoh LX (fã): Tech, sem rajada': [`${p('Arasaka Senkoh LX').classe}:${'rajada' in p('Arasaka Senkoh LX')}`, 'tech:false'],
       'Shingen do Kit: padrão (sem bônus)': [s('Arasaka TKI-20 Shingen').attackmod, 0],
       'Tsunami Nue (fã) excelente: +1': [s('Tsunami Nue').attackmod, 1],

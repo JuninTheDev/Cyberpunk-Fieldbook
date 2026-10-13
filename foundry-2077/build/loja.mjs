@@ -236,14 +236,11 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
   }
   for (const doc of items(net)) {
     if (doc.type === 'netarch') continue; // as arquiteturas da campanha não se compram
-    // Os cyberdecks de 2077 são feitos a partir do Cyberdeck do RED (tipo cyberdeck); quickhacks e daemons são programas.
-    const deck = doc.type === 'cyberdeck';
-    const f = doc.flags?.['cpr-2077'] || {};
-    // White ICE não se compra; os quickhacks do Mission Kit também não (todo netrunner faz os do nível dele).
-    const sub = deck ? 'Cyberdecks de 2077' : f.daemon ? 'Daemons de 2077' : f.whiteIce || (f.quickhack && f.origem === 'kit') ? null : 'Quickhacks de 2077 (suplemento de fã)';
-    if (!sub) continue;
-    add('cpr-2077.netrunning-2077', doc, { nome: doc.name, cat: 'netrunning', sub, resumo: deck ? `RAM ${doc.flags['cpr-2077'].ram} · ${doc.system.installedItems?.slots || 0} slots` : '', desc: strip(doc.system.description?.value).slice(0, 220),
-      ...(deck ? { deck: { slots: doc.system.installedItems?.slots || 0, ram: doc.flags['cpr-2077'].ram } } : { programa: programData(doc.system) }) });
+    // Só os cyberdecks com marca se compram: são o Cyberdeck do RED (tipo cyberdeck) da qualidade de cada um. Os quickhacks
+    // não (todo netrunner faz os do nível dele, pelo Rank de Interface).
+    if (doc.type !== 'cyberdeck') continue;
+    const slots = doc.system.installedItems?.slots || 0;
+    add('cpr-2077.netrunning-2077', doc, { nome: doc.name, cat: 'netrunning', sub: 'Cyberdecks de 2077', resumo: `${slots} slots`, desc: strip(doc.system.description?.value).slice(0, 220), deck: { slots } });
   }
 }
 

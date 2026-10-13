@@ -129,17 +129,17 @@
       { id: 'bcMercados', label: 'Mercados Noturnos', icon: 'NM' }
     ]},
     { group: 'Fontes', pages: [
-      { id: 'supplement2077', label: 'Suplemento de fã (em revisão)', icon: '77' },
+      { id: 'supplement2077', label: 'Suplemento de fã', icon: '77' },
       { id: 'sources', label: 'Livros de referência', icon: 'L' }
     ]}
   ];
 
-  // Páginas de regra que viraram parte de outra quando as regras foram unificadas (Mission Kit sobre o RED; o suplemento
-  // de fã só com itens em revisão): o endereço antigo continua abrindo. Cada wiki pode somar os dela (config.aliases).
+  // Páginas de regra que viraram parte de outra quando as regras foram unificadas (Mission Kit sobre o RED; do suplemento
+  // de fã, só os itens aprovados): o endereço antigo continua abrindo. Cada wiki pode somar os dela (config.aliases).
   const aliases = {
     net2077: { id: 'netrunning', section: 'quickhacks-no-neuroport' },
     roles2077: { id: 'roles', section: 'nos-anos-2070' },
-    os2077: { id: 'supplement2077', section: 'berserk-e-sandevistan' },
+    os2077: { id: 'cyberware2077', section: 'berserk-e-sandevistan' },
     ...(config.aliases || {})
   };
   const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemBlackChrome || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
@@ -1324,7 +1324,7 @@
         // O glossário define o termo; quem busca o nome de um item quer o cartão do item primeiro.
         if (entry.id === 'glossary') score -= 60;
         // As páginas da base da campanha (Pessoas e facções, Lugares e peças) vêm antes da ficha de combate do mesmo nome.
-        // Uma página de regras com prioridade negativa (os itens do suplemento de fã, em revisão) fica depois da regra que vale.
+        // Uma página de regras com prioridade negativa (o que saiu do suplemento de fã) fica depois da regra que vale.
         score += (markdownDocs[entry.id] && markdownDocs[entry.id].prioridade) || (pageContent[entry.id] && pageContent[entry.id].prioridade) || 0;
         const firstText = perTerm.map(found => found.text[0]).filter(Boolean).sort((a, b) => a[0] - b[0])[0];
         return [{ entry, score, at: firstText ? firstText[0] : 0 }];

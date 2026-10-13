@@ -1,17 +1,17 @@
 # Cyberpunk RED: 2077 (módulo do Foundry VTT)
 
-Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Traz os anos 2070: as regras e os itens do **Cyberpunk Edgerunners Mission Kit** (oficial) e, como opcional, o conteúdo do suplemento de fã "Cyberpunk 2077", adaptado às regras do Kit:
+Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Traz os anos 2070: as regras e os itens do **Cyberpunk Edgerunners Mission Kit** (oficial) e os itens do suplemento de fã "Cyberpunk 2077" que o mestre aprovou (revisão de 2026-10-13), com as regras do Kit:
 
 - **Compêndios:**
-  - armas Power, Tech e Smart (as 13 do Kit e as do suplemento), os Rebuilds e a munição Smart melhorada;
-  - cyberware (o Neuroport e o cromo do Kit, mais o do suplemento);
-  - netrunning de 2077 (cyberdecks, quickhacks, daemons, White ICE) e as arquiteturas NET do Protocolo Morana (lidas de `documentos/morana/arquiteturas-da-campanha.md`; o NET Architect as oferece nos pontos de acesso);
+  - armas Power, Tech e Smart (as 13 do Kit e 28 do suplemento), os Rebuilds e a munição Smart melhorada;
+  - cyberware (o Neuroport e o cromo do Kit, o do suplemento e os Berserk e Sandevistan dos anos 2070, mais caros e mais fracos que no suplemento);
+  - netrunning de 2077 (os quickhacks do Kit e do suplemento, de graça pelo Rank, e os cyberdecks com marca) e as arquiteturas NET do Protocolo Morana (lidas de `documentos/morana/arquiteturas-da-campanha.md`; o NET Architect as oferece nos pontos de acesso);
   - veículos adaptados do jogo;
   - NPCs prontos (só o mestre vê), com o elenco do Protocolo Morana na pasta própria;
   - regras em diários.
 - **Preços:** valem as categorias do RED, como no Mission Kit (a economia do suplemento de fã saiu).
 - **Armas de 2077 no menu de ataque do sistema:** as regras de Power, Smart e Tech do Kit; veja a seção abaixo. As macros Ricochete e Carregar arma Tech são atalhos para o mesmo caminho.
-- **Roles:** as 10 do RED (os ajustes do Mission Kit são de compra de itens e de quickhack, sem mudar o item de Role). O compêndio Roles de 2077 tem só o Lawman com Investigator, opcional, do suplemento de fã.
+- **Roles:** as 10 do RED (os ajustes do Mission Kit são de compra de itens e de quickhack, sem mudar o item de Role). O compêndio Roles de 2077 saiu com o Lawman com Investigator do suplemento de fã.
 - **Personagens da wiki:**
   - **Importar da wiki** (aba Atores, só o mestre) cria o ator a partir do criador de personagem da wiki.
     - O retrato do personagem é copiado para `worlds/<mundo>/retratos-wiki` e vai para a ficha e o token.
@@ -48,7 +48,7 @@ As armas do compêndio "Armas de 2077" já vêm com a classe e as regras de cada
 | Classe | Na ficha e nos HUDs | Regra |
 |---|---|---|
 | **Power** | Modo **Ricochete** | A lesão crítica causa 10 de dano bônus em vez de 5 (o botão de dano e o Fluxo de Combate já usam). Ricochete: −4 no ataque (−2 com o Ballistic Coprocessor), com a tabela de DV da própria arma. Num tiro mirado, use o modo mirado: vale só a penalidade dele. |
-| **Smart** | Pílula da classe; aviso "sem conexão Smart" | +1 nos ataques à distância. **Só dispara conectada:** o Neuroport (Personal Link), Interface Plugs, Subdermal Grip ou o Smart Link do suplemento. Com a **munição Smart melhorada** carregada, a nota do cartão traz a segunda chance, que o Fluxo de Combate rola: errou a DV (ou a esquiva) por 5 ou menos, 14 + 1d10 com as penalidades do primeiro tiro. |
+| **Smart** | Pílula da classe; aviso "sem conexão Smart" | +1 nos ataques à distância. **Só dispara conectada:** o Neuroport (Personal Link), Interface Plugs ou Subdermal Grip. Com a **munição Smart melhorada** carregada, a nota do cartão traz a segunda chance, que o Fluxo de Combate rola: errou a DV (ou a esquiva) por 5 ou menos, 14 + 1d10 com as penalidades do primeiro tiro. |
 | **Tech** | Botão **Carregar** | Carregar gasta a Ação de Movimento e anuncia no chat. Carregada (até disparar ou 20 rodadas), o próximo ataque ignora metade do SP do alvo (o botão de dano e o Fluxo de Combate já usam) e atravessa cobertura fina; disparar descarrega. |
 
 As regras de cada modelo (flags do compêndio):
@@ -100,7 +100,6 @@ Depois é só ativar **Cyberpunk RED: 2077** em *Configurar módulos* no mundo.
 | `scripts/macros.mjs` | Atalhos Ricochete e Carregar arma Tech. |
 | `scripts/wiki.mjs` | Importar da wiki e Atualizar da wiki (personagens do criador). |
 | `build/loja.mjs` | Gera o `loja-catalogo.js` da wiki (também roda sozinho): os itens do RED, do Black Chrome e do Black Chrome Plus (compêndios do sistema, com o nome e a descrição das páginas Black Chrome da wiki) e os de 2077 do módulo. |
-| `build/roles.mjs` | O Lawman com Investigator (opcional, do suplemento de fã). |
 | `data/loja-nomes.json` | Nomes em português dos itens do sistema na loja. |
 | `styles/cpr-2077.css` | Visual dos diários e das mensagens no chat. |
 | `data/veiculos-2077.json` | Veículos do jogo e a classe do RED usada em cada um. |

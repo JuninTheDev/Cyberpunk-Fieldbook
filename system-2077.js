@@ -45,8 +45,7 @@
     weapon('Darra Polytechnic DR-5 Nova', 'Pistola muito pesada Power, exótica', 'padrão', 'Armas de uma Mão', '4d6', '6 (fixo)', 1, 1, 'Sim', '50eb', '—', 'Revólver com tambor fixo de 6 balas; não aceita upgrade de pente.'),
     weapon('Malorian Overture', 'Pistola muito pesada Power, exótica', 'excelente', 'Armas de uma Mão', '4d6', '6 (fixo)', 1, 1, 'Sim', '100eb', 'Qualidade excelente (+1 no ataque)', 'Revólver de qualidade excelente com tambor fixo de 6 balas; não aceita upgrade de pente.'),
     weapon('Militech Crusher (207X)', 'Pistola muito pesada Power, exótica', 'padrão', 'Armas de uma Mão', '3d6 (cartucho)', '12 (cartucho)', 1, 1, 'Não', '1.000eb', 'Só cartucho de espingarda', 'Só de ver, o amante de armas se emociona. Lançada em 2020 para combate de perto, virou um ícone da época; a versão de hoje foi atualizada sem perder o visual. É uma <b>pistola muito pesada</b> de 12 tiros que <b>só dispara cartucho</b>: Armas de uma Mão contra DV 13, e 3d6 em todos numa área de 6 m à frente.', '', { kit: true, pagina: 33, soCartucho: true }),
-    weapon('Techtronika RT-46 Burya', 'Pistola muito pesada Tech, exótica', 'padrão', 'Armas de uma Mão', '4d6', '4 (pistola muito pesada)', 1, 1, 'Não', '1.000eb', 'Carrega sem gastar a Ação de Movimento; sem cromo no braço, quebra o braço', 'Feia, inconveniente e insegura, e mesmo assim eficiente demais. A pistola eletromagnética neossoviética fura parede sem precisar carregar e é densa como uma estrela de nêutrons. Carrega <b>sem gastar a Ação de Movimento</b>. Quem dispara sem <b>Grafted Muscle and Bone Lace</b> ou um <b>cyberbraço</b> sofre a lesão crítica <b>Braço Quebrado</b> (se ainda não tiver).', '', { kit: true, pagina: 34, cargaSemMovimento: true, lesaoSemCromo: 'Broken Arm' }),
-    weapon('Darra Polytechnic DR-12 Quasar', 'Pistola muito pesada Tech, exótica', 'padrão', 'Armas de uma Mão', '4d6', '20 (fixo)', 1, 1, 'Não', '5.000eb', '—', 'Pistola Tech com pente fixo de 20.', 'no suplemento de fã, a carga disparava uma rajada de 10 balas; com as regras do Kit, não há rajada carregada.')
+    weapon('Techtronika RT-46 Burya', 'Pistola muito pesada Tech, exótica', 'padrão', 'Armas de uma Mão', '4d6', '4 (pistola muito pesada)', 1, 1, 'Não', '1.000eb', 'Carrega sem gastar a Ação de Movimento; sem cromo no braço, quebra o braço', 'Feia, inconveniente e insegura, e mesmo assim eficiente demais. A pistola eletromagnética neossoviética fura parede sem precisar carregar e é densa como uma estrela de nêutrons. Carrega <b>sem gastar a Ação de Movimento</b>. Quem dispara sem <b>Grafted Muscle and Bone Lace</b> ou um <b>cyberbraço</b> sofre a lesão crítica <b>Braço Quebrado</b> (se ainda não tiver).', '', { kit: true, pagina: 34, cargaSemMovimento: true, lesaoSemCromo: 'Broken Arm' })
   ];
   const smgs = [
     weapon('Arasaka Shigure', 'SMG Power', 'padrão', 'Armas de uma Mão', '2d6', '30 (pistola média)', 1, 1, 'Sim', '100eb', 'Autofogo (3); fogo supressivo', 'Antecessora da Militech Saratoga.'),
@@ -78,13 +77,7 @@
     weapon('Tsunami Kyubi', 'Rifle de assalto Power, exótico', 'excelente', 'Armas de Ombro', '5d6', '20 (rifle)', 1, 2, 'Não', '1.000eb', 'Qualidade excelente', 'Sem autofogo nem supressão. A mira fixa dá +1 em tiros únicos ou mirados entre 13 e 50 m.'),
     weapon('Nokota D5 Sidewinder', 'Rifle de assalto Smart, exótico', 'padrão', 'Armas de Ombro', '5d6', '30 (rifle)', 1, 2, 'Não / Sim', '1.000eb', 'Autofogo (4); fogo supressivo; coronha dobrável', 'Arma Smart. O irmão mais novo e mais esperto do Copperhead, de material melhor, mas longe das armas Smart da Arasaka e da Kang Tao.')
   ];
-  const machineGuns = [
-    weapon('Constitutional Arms M2067 Defender', 'Metralhadora Power, exótica', 'padrão', 'Disparo Automático', '—', '100 (rifle)', 1, 2, 'Não', '500eb', 'Autofogo (4); fogo supressivo; bipé', 'Não faz tiro único: só autofogo (tabela do rifle de assalto). Exige <b>BODY 6</b> ou mais, a menos que esteja montada.'),
-    weapon('Midnight Arms MA70 HB', 'Metralhadora Power, exótica', 'padrão', 'Disparo Automático (o texto diz Armas Pesadas)', '4d6', '70 (rifle)', 1, 2, 'Não', '1.000eb', 'Autofogo (4); fogo supressivo; bipé', 'Faz tiro único e autofogo. Exige <b>BODY 6</b> ou mais, a menos que esteja montada.'),
-    weapon('Militech Mk.31 HMG', 'Metralhadora Power, exótica', 'padrão', 'Disparo Automático', '—', '300', 1, 2, 'Não', 'ver nota', 'Autofogo (4); fogo supressivo; bipé', 'Não faz tiro único: só autofogo. Exige <b>BODY 11</b> ou mais, a menos que esteja montada. Recarregar leva duas Ações, em dois turnos.', 'a tabela do livro repete a da Defender (500eb, pente 100). Defina o preço com a mesa; o suplemento a trata como uma arma bem mais pesada.')
-  ];
   const snipers = [
-    weapon('Midnight Arms SOR-22', 'Rifle de precisão Power, exótico', 'padrão', 'Armas de Ombro', '6d6 (texto) / 5d6 (tabela)', '12 (texto) / 30 (tabela)', 1, 2, 'Não', '1.000eb', 'Só tiro único; mira de sniper; só munição perfurante', 'Rifle de precisão: sem autofogo nem supressão, um tiro por vez. Exige <b>BODY 6</b> ou mais, a menos que esteja montado, e recarregar leva duas Ações.', 'o texto e a tabela do livro não batem (dano e pente). O texto parece o certo.'),
     weapon('Militech M-179 Achilles', 'Rifle de precisão Tech, exótico', 'padrão', 'Armas de Ombro', '5d6', '9 (fixo)', 1, 2, 'Não', '1.000eb', 'Mira de sniper', 'Sem autofogo nem supressão. O preferido da <b>MaxTac</b> contra ciberpsicóticos, pelo dano e pela penetração de armadura.'),
     weapon('Techtronika SPT32 Grad', 'Rifle de precisão Power, exótico', 'excelente', 'Armas de Ombro', '5d6', '4 (rifle)', 1, 2, 'Não', '500eb', 'Qualidade excelente; ferrolho; aceita munição especial', 'Quando o mundo pediu rifles novos para furar armaduras cada vez mais pesadas, a neossoviética SPT32 Grad foi a primeira a responder; para muitos, é o sniper mais poderoso do mercado. Não tem o capricho das rivais da Arasaka e da Militech, mas, nas mãos de um atirador treinado que dispensa a leitura de vento da arma, é devastadora. Mesmo exótica, aceita munição especial. Depois de cada disparo, é preciso <b>uma Ação para manejar o ferrolho</b> antes de atirar de novo.', '', { kit: true, pagina: 34, ferrolho: true }),
     weapon('Tsunami Nekomata', 'Rifle de precisão Tech', 'padrão', 'Armas de Ombro', '5d6', '4 (rifle)', 1, 2, 'Não', '1.000eb', 'Carregado, vê e atira através de cobertura fina e grossa', 'Uma arma exigente: pede cuidado, manutenção e tempo para aprender, mas vale muito a pena. É quase impossível para um mercenário sem emprego num governo ou numa megacorp pôr as mãos num... quase. <b>Carregado</b>, vê o contorno dos alvos e atira através de cobertura <b>fina e grossa</b>.', '', { kit: true, pagina: 35, cargaGrossa: true }),
@@ -110,38 +103,20 @@
   const neural = [
     ware('Berserk Implant', 'Neuralware (opção do Neural Link)', 'Clínica', '1.000eb', 7, 'Regula os hormônios de luta ou fuga e solta uma descarga de adrenalina sob comando. Ativado com uma Ação: por <b>60 segundos (20 rodadas)</b> você ignora os efeitos de <b>Gravemente</b> e <b>Mortalmente Ferido</b>, com uma exceção: Mortalmente Ferido continua fazendo Death Saves. Depois, só ativa de novo em 1 hora.', '', { kit: true }),
     ware('David\'s Experimental Sandevistan', 'Neuralware (opção do Neural Link; borgware, speedware)', 'Hospital', '250.000eb', 14, 'Só existem algumas no mundo, e esta custou a vida de pelo menos duas pessoas. Tem certeza? Ocupa dois slots de neuralware; é borgware e speedware (só uma speedware por pessoa). Ativar não gasta Ação, nem em combate, mas custa <b>2d6 de Humanidade</b>. Ativada no começo do combate, você vai para o <b>topo da iniciativa</b>; no meio dele, sobe para o topo na hora. Ativada no seu turno, você ganha <b>uma Ação de Movimento ou outra Ação</b> a mais. Com Humanidade negativa, a perda vira <b>dano direto no HP</b> (passa pela armadura sem ablar) e o personagem entra em <b>ciberpsicose extrema</b>: a ficha vai para o mestre, que joga com o pior dele.', 'a Sandevistan do David, do anime. Super Luxuosa: não se compra na loja.', { kit: true }),
-    ware('Adrenaline Converter', 'Neuralware (opção do Neural Link)', 'Clínica', '500eb', 7, 'Converte adrenalina em ação imediata: <b>+2 na iniciativa</b>.'),
-    ware('Kerenzikov (2077)', 'Neuralware (opção do Neural Link)', 'Clínica', '500eb', 14, 'Speedware sempre ligado, com reação e movimento melhores: <b>+1 em tiros mirados</b> (acumula com a Targeting Scope).', 'no RED o Kerenzikov dá +2 de iniciativa; no suplemento de fã ele muda de função.'),
     ware('Reflex Tuner', 'Neuralware (opção do Neural Link)', 'Clínica', '500eb', 7, 'Coprocessador de emergência: depois de ser atingido, <b>+1 para se esquivar</b> pelo resto da rodada.'),
     ware('Stabber', 'Neuralware (opção do Neural Link)', 'Clínica', '500eb', 7, 'Corrige o alinhamento da lâmina no meio do golpe: <b>+1 de dano com armas de lâmina</b>.'),
     ware('Synaptic Accelerator', 'Neuralware (opção do Neural Link)', 'Clínica', '1.000eb', 7, 'Dispara as sinapses em resposta a estímulo negativo: <b>uma vez por hora</b>, pode rolar de novo uma falha crítica num teste físico, e fica com o novo resultado.'),
-    ware('Visual Cortex Support', 'Neuralware (opção do Neural Link)', 'Clínica', '1.000eb', 7, 'Melhora o processamento visual: lê lábios automaticamente nos idiomas que conhece e ganha <b>+1 em Percepção</b>.')
-  ];
-  const optics = [
-    ware('Basic Kiroshi Optics', 'Cyberóptico (base)', 'Clínica', '100eb (o par)', 14, 'Par de olhos artificiais com <b>Scan Mode</b>, zoom de 4×, Chyron e Virtuality embutidos. Dois slots de opção para cyberolho.'),
-    ware('TeleOptics (2077)', 'Cyberóptico (opção)', 'Clínica', '500eb', 3, 'Zoom de até 27×. Contra alvos a 51 m ou mais, <b>+1 em tiro único ou mirado</b>. Instalar mais de um não soma, e não acumula com a Sniping Scope da arma. Exige cyberolho.')
+    ware('Visual Cortex Support', 'Neuralware (opção do Neural Link)', 'Clínica', '1.000eb', 7, 'Melhora o processamento visual: lê lábios automaticamente nos idiomas que conhece e ganha <b>+1 em Percepção</b>.'),
+    ware('Memory Boost', 'Neuralware (opção do Neural Link)', 'Clínica', '5.000eb', 14, 'Otimiza a sincronia entre cérebro e cyberware. Em vez de ocupar um slot do Neural Link, <b>dá um slot a mais</b>: com o Neuroport, ficam 6.', 'no suplemento de fã, era neuralware de netrunning; a mesa aprovou como opção do Neural Link para qualquer um.')
   ];
   const internal = [
-    ware('Biomonitor (2077)', 'Cyberware interno', 'Clínica', '1.000eb', 3, 'Monitora os sinais vitais e pode mandar os dados à Trauma Team pelo cartão. Guarda químicos médicos que dispara quando você fica Gravemente ou Mortalmente Ferido (definido antes) para tentar te estabilizar sozinho: <b>+6 no teste de estabilização</b>. Leva 24 horas para recarregar.', 'o Neuroport já traz um Biomonitor simples (só os sinais vitais no HUD); este é o do suplemento de fã, com os químicos.'),
-    ware('Blood Pump', 'Cyberware interno', 'Hospital', '1.000eb', 7, 'Oxigena o sangue mais rápido: a cura natural fica <b>1,5 vez mais rápida</b>.'),
     ware('Clutch Padding', 'Cyberware interno', 'Clínica', '500eb', 3, 'Reserva de sangue oxigenado liberada em trauma grave: ignora o <b>primeiro aumento da penalidade do Death Save</b>. Depois, 24 horas para recarregar.'),
-    ware('Dense Marrow', 'Cyberware interno', 'Hospital', '5.000eb', 14, 'Medula biônica: mais peso e força, à custa de velocidade. Com armas brancas (exceto leves), a CDT não passa de 1, mas o golpe causa <b>1 dado a mais</b> de dano. Incompatível com Microrotors.'),
-    ware('Epimorphic Skeleton / Titanium Bones', 'Cyberware interno', 'Clínica', '1.000eb', 14, 'Funciona como o <b>Grafted Muscle and Bone Lace</b> do RED (+2 BODY, até 10).'),
+    ware('Dense Marrow', 'Cyberware interno', 'Hospital', '5.000eb', 14, 'Medula biônica: mais peso e força, à custa de velocidade. Com armas brancas (exceto leves), a CDT não passa de 1, mas o golpe causa <b>1 dado a mais</b> de dano.'),
     ware('Feedback Circuit', 'Cyberware interno', 'Clínica', '500eb', 7, 'Capacitores que convertem EMP e corrente elétrica em energia para arma Tech: quando você sofre EMP ou choque, o efeito é anulado e a sua arma Tech fica <b>carregada sem gastar a Ação de Movimento</b>. Depois precisa de uma hora para recarregar.', 'no suplemento de fã, o próximo tiro Tech atravessava 100% da cobertura fina; com as regras do Kit, a carga já faz isso.'),
-    ware('Kinetic Frame / Scarab', 'Cyberware interno', 'Hospital', '1.000eb', 7, 'Reforço e travamento do esqueleto: <b>+1 de SP</b> se você não se moveu.'),
-    ware('Microrotors', 'Cyberware interno', 'Clínica', '1.000eb', 7, 'Rotores nos ombros: <b>+1 na CDT</b> com armas brancas muito pesadas.'),
     ware('ThreatEvac', 'Cyberware interno', 'Clínica', '1.000eb', 7, 'Coagulantes e inibidores de dor: ao ficar Gravemente Ferido, ativa e você ignora os efeitos do estado de ferimento e das lesões críticas por <b>dois turnos</b>. Não impede o dano extra das lesões. Recarrega em 24 horas.')
   ];
   const external = [
-    ware('Skin Weave', 'Cyberware externo (placa base)', 'Hospital', '500eb', 7, 'Placa base com <b>SP 7</b> no corpo e na cabeça e <b>dois slots de placa</b>, que não ocupam os slots de cyberware externo. As opções de placa param de funcionar se todo o SP for ablado.', 'o suplemento não dá o SP das placas base, então vale o do livro-base: SP 7 aqui e SP 11 no Subdermal Armour. O Skin Weave troca 4 de SP por um slot a mais.'),
-    ware('Subdermal Armour (2077)', 'Cyberware externo (placa base)', 'Hospital', '1.000eb', 14, 'Placa base com <b>SP 11</b> no corpo e na cabeça e <b>um slot de placa</b>, que não ocupa slot de cyberware externo. A opção de placa para se todo o SP for ablado.', 'o SP é o do Subdermal Armor do livro-base, porque o suplemento não dá o das placas base. Comparado ao Skin Weave: +4 de SP e um slot a menos.'),
-    ware('Carapace', 'Opção de placa', 'Hospital', '500eb', 7, 'Placas extras nas laterais e nas costas: <b>+1 de SP</b> contra ataques de lado ou de trás. Exige Skin Weave ou Subdermal Armour.'),
-    ware('Countershell', 'Opção de placa', 'Hospital', '1.000eb', 14, 'Placa de fluido não newtoniano que endurece com o impacto: quando você sofreria uma <b>lesão crítica</b>, ignora a lesão e sofre só o dano. Para funcionar de novo, a placa base precisa se recuperar naturalmente. Exige Skin Weave ou Subdermal Armour.'),
-    ware('Nano-plating', 'Opção de placa', 'Hospital', '500eb', 7, 'Placa de nanopartículas ativada por trauma e movimento: <b>+1 de SP</b> depois de ser atingido ou de se mover, até o início do seu próximo turno. Exige Skin Weave ou Subdermal Armour.'),
-    ware('ProxiShield', 'Opção de placa', 'Clínica', '1.000eb', 7, 'Malha reativa nas partes mais atingidas em corpo a corpo: <b>+1 de SP contra ataques corpo a corpo</b>. Exige Skin Weave ou Subdermal Armour.'),
-    ware('RangeGuard', 'Opção de placa', 'Hospital', '500eb', 7, 'Placa reativa contra projéteis rápidos: <b>+1 de SP contra ataques à distância</b>. Exige Skin Weave ou Subdermal Armour.'),
-    ware('Optical Camo', 'Cyberware externo', 'Hospital', '1.000eb', 14, 'Dobra a luz visível em volta do corpo e do equipamento. Ativada com uma Ação: você fica <b>invisível</b> no espectro visível, impossível de ver a olho nu ou pelo scan nesse modo. Dura 3 rodadas ou até desativar (uma Ação). Depois precisa de um minuto para recarregar.'),
-    ware('Pain Editor (2077)', 'Cyberware externo', 'Clínica', '1.000eb', 14, 'Versão interna do chipware Pain Editor do RED (ignora as penalidades de Gravemente Ferido).'),
+    ware('Optical Camo', 'Cyberware externo', 'Hospital', '1.000eb', 14, 'Dobra a luz visível em volta do corpo e do equipamento. Ativada com uma Ação: você fica <b>invisível</b> no espectro visível: ninguém te vê a olho nu nem por câmera comum (a visão infravermelha ainda vê o seu calor). Dura 3 rodadas ou até desativar (uma Ação). Depois precisa de um minuto para recarregar. Enquanto você está invisível, quem não te vê ataca com <b>−4</b>, a penalidade de escuridão total (RED p. 130); a munição Smart melhorada ignora essa penalidade.', 'ajuste da mesa: o suplemento não dizia o que a invisibilidade faz no combate; o −4 é o da escuridão total do RED.'),
     ware('Painducer', 'Cyberware externo', 'Clínica', '5.000eb', 14, 'Malha que desvia o sinal de dor: ao sofrer dano, você sofre <b>metade na hora e a outra metade no início do seu próximo turno</b>. Só vale para o último dano recebido: se for atingido de novo, o dano anterior entra inteiro e só o último é dividido.')
   ];
   const limbs = [
@@ -152,61 +127,84 @@
     ware('Ballistic Coprocessor', 'Opção de cyberbraço', 'Clínica', '100eb', 3, 'Liga arma e óptica para acompanhar munição e trajetória: o <b>ricochete</b> das armas Power sai com <b>−2</b> em vez de −4. Pode ser a única peça de cyberware num braço de carne.', 'no suplemento de fã, dava +2 no teste de ricochete; dá no mesmo.'),
     ware('Microgenerator', 'Opção de cyberbraço', 'Clínica', '500eb', 3, '<b>+1 no segundo ataque corpo a corpo</b> depois do primeiro. Exige cyberbraço.'),
     ware('Shock Absorber', 'Opção de cyberbraço', 'Clínica', '1.000eb', 7, '<b>+2 no teste de autofogo</b>. Exige cyberbraço e ocupa dois slots.'),
-    ware('Smart Link', 'Opção de cyberbraço', 'Clínica', '100eb', 3, 'Liga a arma Smart ao seu sistema como o <b>Subdermal Grip</b>: conta como a conexão que a arma Smart exige, com os dados da arma em tempo real no implante óptico. Pode ser a única peça num braço de carne.', 'no Mission Kit, o Personal Link do Neuroport já faz essa conexão; o Smart Link fica para quem quer a arma ligada sem cabo.'),
-    ware('Fortified Ankle / Jump Boost', 'Opção de cyberperna (par)', 'Clínica', '500eb', 3, 'Tornozelo reforçado com fibras e cápsulas de nanogel: funciona como o <b>Jump Booster</b> do RED. Exige duas cyberpernas, ocupa dois slots, em par.'),
-    ware('Jenkins\' Tendons', 'Opção de cyberperna (par)', 'Clínica', '500eb', 3, 'Tendões artificiais de resposta rápida: <b>+2 de MOVE</b> andando em linha reta. Pode ser a única peça numa perna de carne; em par.'),
     ware('Leeroy Ligament System', 'Opção de cyberperna (par)', 'Clínica', '500eb', 3, 'Revisão completa dos ligamentos: <b>+2 de MOVE</b>. Exige duas cyberpernas, ocupa dois slots, em par.'),
     ware('Lynx Paws', 'Opção de cyberperna (par)', 'Clínica', '500eb', 3, 'Tecido biomecânico nos músculos da perna: <b>+2 em Furtividade</b> para se mover em silêncio. Pode ser a única peça numa perna de carne; em par.'),
     ware('Reinforced Tendons', 'Opção de cyberperna (par)', 'Clínica', '500eb', 3, 'No meio do salto, com uma Ação, você muda a direção ou sobe mais 2 m. Exige duas cyberpernas, ocupa dois slots, em par.')
   ];
+  // Berserk e Sandevistan dos anos 2070 (sup. p. 24–26): os modelos do suplemento de fã, revisados pela mesa, mais caros e
+  // mais fracos que no suplemento, e à venda em todo Night Market de cyberware (decisão do mestre, 2026-10-13). O efeito
+  // dura 3 rodadas; ativar é uma Ação, e o implante precisa de 1 hora para ser usado de novo.
+  const osware = [
+    ware('Moore Tech Berserk', 'Neuralware (opção do Neural Link; Berserk)', 'Clínica', '5.000eb', 14, 'O clássico, testado em combate de alto risco. Por 3 rodadas: <b>+1 em BODY e MOVE</b>, <b>+1 de dano</b> corpo a corpo e de arremesso, e você ignora o estado <b>Gravemente Ferido</b>.', 'no suplemento de fã: 1.000eb, +2 em BODY e MOVE, SP 7 e queda de 30 m sem dano.'),
+    ware('Biodyne Berserk', 'Neuralware (opção do Neural Link; Berserk)', 'Clínica', '10.000eb', 14, 'O modelo acessível e versátil da BioDyne. Por 3 rodadas: <b>+2 em BODY e MOVE</b>, <b>+1 de dano</b> corpo a corpo e de arremesso, e você ignora o estado <b>Gravemente Ferido</b> e cai até 10 m sem se machucar.', 'no suplemento de fã: 5.000eb, +3 em BODY e MOVE, SP 11, +1 de dano por dado e queda de 30 m.'),
+    ware('Zetatech Berserk', 'Neuralware (opção do Neural Link; Berserk)', 'Clínica', '10.000eb', 14, 'Uma máquina de matar magra e cruel. Por 3 rodadas: <b>+1 em BODY e MOVE</b>, <b>+2 de dano</b> corpo a corpo e de arremesso, e você ignora o estado <b>Gravemente Ferido</b>. Enquanto dura, a armadura do corpo não perde SP por ablação.', 'no suplemento de fã: 10.000eb, +3 em BODY e MOVE, SP 12 sem ablação e +3 de dano.'),
+    ware('Militech Berserk', 'Neuralware (opção do Neural Link; Berserk)', 'Clínica', '20.000eb', 14, 'O único Berserk oficial da Militech, nanotecnológico e feito para regenerar. Por 3 rodadas: <b>+2 em BODY e MOVE</b>, <b>+2 de dano</b> corpo a corpo e de arremesso, e você ignora os estados <b>Gravemente e Mortalmente Ferido</b> (o Death Save continua). No fim de cada turno, recupera <b>2 HP</b>.', 'no suplemento de fã: 10.000eb, +4 em BODY e MOVE, SP 11, +2 de dano por dado e metade do BODY em HP por turno.'),
+    ware('Zetatech Sandevistan', 'Neuralware (opção do Neural Link; Sandevistan, speedware)', 'Clínica', '5.000eb', 14, 'O Sandevistan popular de massa: minimalista, fácil de usar e bom no ar. Por 3 rodadas: <b>+1 em DEX, REF e MOVE</b> e <b>uma Ação de Movimento a mais</b> em cada turno; quedas de até 10 m não machucam.', 'no suplemento de fã: 1.000eb, +2 em DEX, REF e MOVE, uma Ação a mais (para mover ou atacar) e quedas de até 20 m.'),
+    ware('Dynalar Sandevistan', 'Neuralware (opção do Neural Link; Sandevistan, speedware)', 'Clínica', '10.000eb', 14, 'O padrão de soldados e mercenários: velocidade e apoio de combate. Por 3 rodadas: <b>+2 em DEX, REF e MOVE</b> e <b>uma Ação de Movimento a mais</b> em cada turno.', 'no suplemento de fã: 5.000eb, e a lesão crítica saía com 5 ou 6 nos dados.'),
+    ware('QianT Warp Dancer Sandevistan', 'Neuralware (opção do Neural Link; Sandevistan, speedware)', 'Clínica', '10.000eb', 14, 'Defesa acima de tudo. Por 3 rodadas: <b>+1 em DEX, REF e MOVE</b>, <b>uma Ação de Movimento a mais</b> em cada turno, e você esquiva de ataques à distância qualquer que seja o seu REF.', 'no suplemento de fã: 5.000eb, +2 em DEX, REF e MOVE, e rebatia até dois ataques à distância de volta em quem atirou.'),
+    ware('Militech Falcon Sandevistan', 'Neuralware (opção do Neural Link; Sandevistan, speedware)', 'Clínica', '20.000eb', 14, 'O melhor Sandevistan à venda, antes restrito à elite da Militech. Ao ativar, você vai para o <b>topo da iniciativa</b>. Por 3 rodadas: <b>+2 em DEX, REF e MOVE</b> e <b>uma Ação de Movimento a mais</b> em cada turno.', 'no suplemento de fã: 10.000eb, +3 em DEX, REF e MOVE, uma Ação a mais para mover ou atacar, lesão crítica com 5 ou 6 e HP ao matar.')
+  ];
 
-  // As páginas de regra mostram só os itens do Mission Kit; os do suplemento de fã vão para a página de revisão.
-  const doKit = list => list.filter(item => item.raw.origem === 'kit');
-  const doFa = list => list.filter(item => item.raw.origem === 'fa');
-  const weaponGroups = [['Pistolas', pistols], ['Revólveres e pistolas muito pesadas', revolvers], ['Submetralhadoras', smgs], ['Espingardas', shotguns], ['Rifles de assalto', rifles], ['Metralhadoras', machineGuns], ['Rifles de precisão e sniper', snipers]];
-  const cyberGroups = [['Fashionware', fashionware], ['Neuralware', neural], ['Cyberópticos', optics], ['Cyberware interno', internal], ['Cyberware externo e placas', external], ['Cybermembros', limbs]];
-  // Os itens do suplemento de fã, um <h4> por grupo (só os grupos que têm algum).
-  const fanGrid = groups => groups.map(([title, items]) => [title, doFa(items)]).filter(([, items]) => items.length).map(([title, items]) => `<h4>${title}</h4>${grid(items)}`).join('');
-
+  // Os itens do Mission Kit e os do suplemento de fã que a mesa aprovou (revisão de 2026-10-13), juntos: a etiqueta de
+  // cada cartão diz de onde vem. Os recusados saíram das listas e só aparecem por nome na página do suplemento.
   const pages = {
     weapons2077: {
       eyebrow: 'Catálogo / armas dos anos 2070', title: 'Armas de 2077',
-      lede: 'Nos anos 2070, as armas Power, Smart e Tech são armas do RED com um Rebuild, um acessório que refaz o miolo da arma. Aqui estão as regras delas e as 13 armas do Cyberpunk Edgerunners Mission Kit, com nome e sobrenome. As armas do RED continuam valendo e aceitam um Rebuild.',
-      html: `${section('Rebuilds', 'Kit p. 31–32', `${list(['Um <b>Rebuild</b> transforma uma arma de fogo do RED em arma <b>Power</b>, <b>Smart</b> ou <b>Tech</b>. Cada um custa <b>1.000eb</b> (Muito Caro), ocupa <b>2 slots de acessório</b> e leva <b>1 hora</b> para instalar ou tirar. Só cabe um por arma.', 'Serve em qualquer arma de longo alcance que não seja exótica; o Tech Rebuild não serve em lança-granadas nem em lança-foguetes. Numa arma exótica, o Rebuild entra num slot só, se a arma tiver um livre.', 'As armas desta página já vêm com o Rebuild: o tipo de cada uma diz qual.'])}${button('cyberware2077', 'Cyberware de 2077')}`)}
-        ${section('Power', 'Kit p. 31–32', list(['Quando a arma causa uma <b>lesão crítica</b>, o dano bônus da lesão sobe <b>5</b>: 10 em vez de 5.', '<b>Ricochete:</b> você acerta um alvo que sabe onde está, mas que fica atrás de cobertura ou fora da linha de visão, ricocheteando o tiro numa superfície. O ataque tem <b>−4</b>; num <b>tiro mirado</b>, vale só a penalidade do tiro mirado. Precisa de um caminho livre entre o ponto do ricochete e o alvo.', 'O alcance continua sendo a distância entre você e o alvo.', 'Para ricochetear um <b>cartucho</b>, escolha uma superfície a até 6 m de você: ela vira a nova origem do leque, que atinge todos numa área de 6 m na direção que você escolher (com bom senso: o tiro não ricocheteia para trás da superfície).']))}
+      lede: 'Nos anos 2070, as armas Power, Smart e Tech são armas do RED com um Rebuild, um acessório que refaz o miolo da arma. Aqui estão as regras delas e as armas com nome e sobrenome: as 13 do Cyberpunk Edgerunners Mission Kit e as 28 do suplemento de fã que a mesa aprovou. As armas do RED continuam valendo e aceitam um Rebuild.',
+      html: `<div class="callout"><b>De onde vem cada arma:</b> as marcadas <b>Mission Kit</b> são as do anime, com os números do Kit. As marcadas <b>suplemento de fã</b> passaram pela revisão da mesa: os números são os do suplemento, e as regras de Power, Smart e Tech são as do Kit. A nota de cada uma diz o que mudou.</div>
+        ${section('Rebuilds', 'Kit p. 31–32', `${list(['Um <b>Rebuild</b> transforma uma arma de fogo do RED em arma <b>Power</b>, <b>Smart</b> ou <b>Tech</b>. Cada um custa <b>1.000eb</b> (Muito Caro), ocupa <b>2 slots de acessório</b> e leva <b>1 hora</b> para instalar ou tirar. Só cabe um por arma.', 'Serve em qualquer arma de longo alcance que não seja exótica; o Tech Rebuild não serve em lança-granadas nem em lança-foguetes. Numa arma exótica, o Rebuild entra num slot só, se a arma tiver um livre.', 'As armas desta página já vêm com o Rebuild: o tipo de cada uma diz qual.'])}${button('cyberware2077', 'Cyberware de 2077')}`)}
+        ${section('Power', 'Kit p. 31–32', list(['Quando a arma causa uma <b>lesão crítica</b>, o dano bônus da lesão sobe <b>5</b>: 10 em vez de 5.', '<b>Ricochete:</b> você acerta um alvo que sabe onde está, mas que fica atrás de cobertura ou fora da linha de visão, ricocheteando o tiro numa superfície. O ataque tem <b>−4</b>; num <b>tiro mirado</b>, vale só a penalidade do tiro mirado. Precisa de um caminho livre entre o ponto do ricochete e o alvo.', 'O alcance continua sendo a distância entre você e o alvo.', 'Para ricochetear um <b>cartucho</b>, escolha uma superfície a até 6 m de você: ela vira a nova origem do leque, que atinge todos numa área de 6 m na direção que você escolher (com bom senso: o tiro não ricocheteia para trás da superfície).', 'O Ballistic Coprocessor reduz a penalidade do ricochete para −2.']))}
         ${section('Smart', 'Kit p. 32', list(['A arma precisa estar <b>conectada</b> a você por um <b>Personal Link</b> (o Interface Plug que vem no Neuroport) ou por um <b>Subdermal Grip</b>. Sem conexão, não dispara.', '<b>+1</b> nos ataques à distância com a arma.', 'Aceita a <b>munição Smart melhorada</b> dos tipos que dispara. Com outra munição, fica só o +1.', 'O Smart Rebuild não vai numa arma com <b>Smartgun Link</b>, e o Smartgun Link não faz de uma arma uma arma Smart.']))}
         ${section('Munição Smart melhorada', 'Kit p. 32', list(['Custa <b>50eb</b> (Oneroso) por 10 flechas, balas, balotes ou cartuchos, e <b>500eb</b> (Caro) por granada ou foguete.', 'Só funciona em arma Smart; uma arma com Smartgun Link não conta.', 'Ignora as penalidades de escuridão, fumaça, neblina e de qualquer outra coisa que atrapalhe a visão.', '<b>Segunda chance:</b> se o ataque à distância errar a DV por <b>5 ou menos</b>, você tenta de novo na hora, com <b>14 + 1d10</b> (dá para somar Sorte) no lugar de STAT + perícia + bônus, contra a mesma DV. As penalidades do primeiro tiro continuam valendo.']))}
         ${section('Tech', 'Kit p. 32', list(['A mira vê o <b>contorno dos alvos</b> através de cobertura fina.', '<b>Carregar:</b> você gasta a <b>Ação de Movimento</b>, e a arma fica carregada até disparar ou por 60 segundos (20 rodadas).', 'Carregada, o <b>próximo ataque</b> que não seja explosivo é de <b>CDT 1</b>, atravessa <b>cobertura fina</b> e <b>ignora metade do SP</b> do alvo (arredondado para cima). A cobertura atravessada não perde HP: os furos são pequenos demais para estragá-la.', 'Por isso a ficha de armadura do Kit mostra o SP contra corpo a corpo e contra Tech carregada: a metade.']))}
         ${section('Qualidade das armas', '342', list(['<b>Ruim:</b> emperra numa <b>falha crítica</b> (1 no dado de ataque); é preciso uma Ação para desemperrar.', '<b>Excelente:</b> <b>+1 no ataque</b>.', 'Armas exóticas são sempre de qualidade padrão, a não ser que a descrição diga outra coisa.', 'Armas de longo alcance que não são exóticas têm 3 slots de acessório; com o Rebuild, sobra 1.']))}
-        ${section('Pistolas', 'Kit p. 33–34', grid(doKit(pistols)))}
-        ${section('Revólveres e pistolas muito pesadas', 'Kit p. 33–34', grid(doKit(revolvers)))}
-        ${section('Submetralhadoras', 'Kit p. 32–33', grid(doKit(smgs)))}
-        ${section('Espingardas', 'Kit p. 33–34', grid(doKit(shotguns)))}
-        ${section('Rifles de assalto', 'Kit p. 33', grid(doKit(rifles)))}
-        ${section('Rifles de precisão', 'Kit p. 34–35', grid(doKit(snipers)))}
-        ${section('Veja também', '', `<p>${button('economy', 'Preços por categoria')} ${button('gear', 'Armas genéricas do RED')} ${button('supplement2077', 'Armas do suplemento de fã (em revisão)')}</p><p class="note-status">Armas brancas, arcos e lança-granadas seguem o RED. Os de longo alcance aceitam Rebuild como qualquer arma (o Tech não serve em lança-granadas).</p>`)}`
+        ${section('Pistolas', 'Kit p. 33–34 · sup. p. 32–35', grid(pistols))}
+        ${section('Revólveres e pistolas muito pesadas', 'Kit p. 33–34 · sup. p. 35–37', grid(revolvers))}
+        ${section('Submetralhadoras', 'Kit p. 32–33 · sup. p. 38–40', grid(smgs))}
+        ${section('Espingardas', 'Kit p. 33–34 · sup. p. 40–44', grid(shotguns))}
+        ${section('Rifles de assalto', 'Kit p. 33 · sup. p. 44–47', grid(rifles))}
+        ${section('Rifles de precisão e sniper', 'Kit p. 34–35 · sup. p. 48–50', grid(snipers))}
+        ${section('Veja também', '', `<p>${button('economy', 'Preços por categoria')} ${button('gear', 'Armas genéricas do RED')} ${button('supplement2077', 'O que saiu do suplemento de fã')}</p><p class="note-status">Armas brancas, arcos e lança-granadas seguem o RED. Os de longo alcance aceitam Rebuild como qualquer arma (o Tech não serve em lança-granadas).</p>`)}`
     },
 
     cyberware2077: {
       eyebrow: 'Catálogo / cyberware dos anos 2070', title: 'Cyberware de 2077',
-      lede: 'O cromo do RED continua em uso nos anos 2070, adaptado ao Neuroport. Aqui está o que o Cyberpunk Edgerunners Mission Kit traz de novo, com custo, local de instalação e perda de Humanidade. O resto está no catálogo do RED.',
-      html: `${section('Antes de instalar', 'Kit p. 26 e 36', `${list(['<b>Neuroport:</b> na criação, todo personagem pode instalar um, <b>de graça e sem perda de Humanidade</b>. Ele é o pré-requisito de todo cyberware que não seja de grau médico e já traz Neural Link (5 slots), Holophone, Biomonitor, Virtu, HUD, dois Shard Slots e o Personal Link.', '<b>O cyberware do RED</b> continua valendo, com os mesmos números: até o cromo antigo foi adaptado para funcionar com o Neuroport.', 'Onde instalar: <b>Loja</b> (DV13, 100eb), <b>Clínica</b> (DV15, 500eb), <b>Hospital</b> (DV17, 1.000eb). Veja Dano, ferimentos e cura.'])}<p>${button('cyberware', 'Cyberware do RED')} ${button('netrunning', 'Netrunning e o Neuroport')} ${button('supplement2077', 'Cyberware do suplemento de fã (em revisão)')}</p>`)}
+      lede: 'O cromo do RED continua em uso nos anos 2070, adaptado ao Neuroport. Aqui está o cromo novo: o do Cyberpunk Edgerunners Mission Kit, o do suplemento de fã que a mesa aprovou e os Berserk e Sandevistan dos anos 2070, com custo, local de instalação e perda de Humanidade. O resto está no catálogo do RED.',
+      html: `${section('Antes de instalar', 'Kit p. 26 e 36', `${list(['<b>Neuroport:</b> na criação, todo personagem pode instalar um, <b>de graça e sem perda de Humanidade</b>. Ele é o pré-requisito de todo cyberware que não seja de grau médico e já traz Neural Link (5 slots), Holophone, Biomonitor, Virtu, HUD, dois Shard Slots e o Personal Link.', '<b>O cyberware do RED</b> continua valendo, com os mesmos números: até o cromo antigo foi adaptado para funcionar com o Neuroport.', 'Cada item diz de onde vem: <b>Mission Kit</b> (oficial) ou <b>suplemento de fã</b> (aprovado pela mesa, com as regras do Kit).', 'Onde instalar: <b>Loja</b> (DV13, 100eb), <b>Clínica</b> (DV15, 500eb), <b>Hospital</b> (DV17, 1.000eb). Veja Dano, ferimentos e cura.'])}<p>${button('cyberware', 'Cyberware do RED')} ${button('netrunning', 'Netrunning e o Neuroport')}</p>`)}
         ${section('Neuroport', 'Kit p. 36–37', grid(neuroport))}
-        ${section('Neuralware', 'Kit p. 35', `<p>Opções do Neural Link do Neuroport, que tem 5 slots.</p>${grid(doKit(neural))}`)}
-        ${section('Cybermembros', 'Kit p. 36–37 e 41', `<p>As opções de cyberbraço exigem um <b>cyberbraço</b>, o do RED: 500eb, Hospital, perda 7 (2d6) e <b>4 slots de opção</b>. Com BODY 4 ou menos, a Briga com ele causa <b>2d6</b>, e ele consegue danificar cobertura de aço.</p>${grid(doKit(limbs))}`)}`
+        ${section('Fashionware', 'sup. p. 27', grid(fashionware))}
+        ${section('Neuralware', 'Kit p. 35 · sup. p. 23 e 27', `<p>Opções do Neural Link do Neuroport, que tem 5 slots.</p>${grid(neural)}`)}
+        ${section('Berserk e Sandevistan', 'sup. p. 24–26', `<p>Nos anos 2070, os Berserk e Sandevistan de linha são comuns: <b>todo Night Market de cyberware tem um à venda</b>. São os modelos do suplemento de fã, mais caros e mais fracos que lá. Os do Mission Kit (o Berserk Implant e a Sandevistan do David, em Neuralware) valem como no livro.</p>${list(['Cada um é uma opção do <b>Neural Link</b> (1 slot). O <b>Sandevistan</b> é speedware: só cabe um, e ele não soma com o Kerenzikov, a Sandevistan do RED nem a do David.', 'Ativar é uma <b>Ação</b>. O efeito dura <b>3 rodadas</b>, e depois o implante precisa de <b>1 hora</b> para ser usado de novo.', 'Os STATs não passam de 10, e o HP não muda com o BODY.', 'Todos causam <b>14 (4d6)</b> de perda de Humanidade.'])}${grid(osware)}<p><button class="action" data-page="economy" data-section="night-market" type="button">Night Market</button></p>`)}
+        ${section('Cyberware interno', 'sup. p. 28–29', `<p>Sete slots de opção interna disponíveis.</p>${grid(internal)}`)}
+        ${section('Cyberware externo', 'sup. p. 29', `<p>Sete slots de opção externa disponíveis.</p>${grid(external)}`)}
+        ${section('Cybermembros', 'Kit p. 36–37 e 41 · sup. p. 30', `<p>As opções de cyberbraço exigem um <b>cyberbraço</b>, o do RED: 500eb, Hospital, perda 7 (2d6) e <b>4 slots de opção</b>. Com BODY 4 ou menos, a Briga com ele causa <b>2d6</b>, e ele consegue danificar cobertura de aço.</p>${grid(limbs)}`)}`
     },
 
-    // O suplemento de fã de 2077: as regras saíram da mesa; os itens ficam aqui, fora das páginas de regra, até o mestre
-    // revisar. Os de netrunning vêm do system-net.js (window.systemNet.revisao), que carrega antes deste arquivo.
+    // O suplemento de fã de 2077: as regras saíram da mesa, e os itens passaram pela revisão do mestre (2026-10-13).
+    // Os aprovados estão nos catálogos com a etiqueta "suplemento de fã"; aqui fica a lista do que saiu e por quê.
     supplement2077: {
-      eyebrow: 'Fontes / em revisão', title: 'Suplemento de fã: itens em revisão',
-      // Na busca, depois das páginas que valem: o Kerenzikov do RED vem antes do Kerenzikov (2077) do suplemento.
+      eyebrow: 'Fontes / suplemento de fã', title: 'Suplemento de fã: o que saiu',
+      // Na busca, depois das páginas que valem: o Kerenzikov do RED vem antes do Kerenzikov (2077) que saiu.
       prioridade: -60,
-      lede: 'O suplemento de fã "Cyberpunk 2077 – A Cyberpunk RED Supplement", de Queen Otter, não é mais usado nas regras da mesa: valem o Cyberpunk Edgerunners Mission Kit e, no que ele não muda, o RED. Alguns itens do suplemento ainda podem entrar, depois de revisados. Até lá, ficam aqui.',
-      html: `<div class="callout"><b>Nada desta página vale na mesa</b> até o mestre aprovar. O item aprovado vai para o catálogo, com as regras do Kit e do RED. A nota de cada cartão diz o que já foi adaptado, e as regras do suplemento que saíram estão no fim da página.</div>
-        ${section('Armas', 'sup. p. 32–50', `<p>Os números são os do suplemento; as regras de Power, Smart e Tech são as do Kit.</p>${fanGrid(weaponGroups)}`)}
-        ${section('Cyberware', 'sup. p. 27–30', `<p>Os itens com o nome de um do RED (Kerenzikov, TeleOptics, Biomonitor, Pain Editor, Subdermal Armour) são outra versão: enquanto não forem aprovados, vale a do RED.</p>${fanGrid(cyberGroups)}`)}
-        ${(window.systemNet && window.systemNet.revisao) || ''}
+      lede: 'O suplemento de fã "Cyberpunk 2077 – A Cyberpunk RED Supplement", de Queen Otter, não é mais usado nas regras da mesa: valem o Cyberpunk Edgerunners Mission Kit e, no que ele não muda, o RED. Os itens dele passaram por uma revisão: os que entraram estão nos catálogos, com a etiqueta "suplemento de fã". Aqui fica o que saiu, e por quê.',
+      html: `${section('O que entrou', 'revisão da mesa', `${list([
+          '<b>Armas:</b> 28, com as regras de Power, Smart e Tech do Kit.',
+          '<b>Cyberware:</b> 17, mais o Memory Boost e o Optical Camo (com um ajuste: −4 para atacar quem não se vê).',
+          '<b>Berserk e Sandevistan:</b> os 8 modelos, mais caros e mais fracos, e à venda em todo Night Market de cyberware.',
+          '<b>Quickhacks:</b> 5 (Reboot Optics, Request Backup, Weapon Glitch, Contagion e Memory Wipe), como os do Kit: todo netrunner faz os do nível dele, sem comprar.',
+          '<b>Cyberdecks:</b> os 21 modelos, só como a marca de um deck do RED (ruim, padrão ou excelente).'
+        ])}<p>${button('weapons2077', 'Armas de 2077')} ${button('cyberware2077', 'Cyberware de 2077')} ${button('quickhacks', 'Quickhacks')} ${button('netArsenal', 'Arsenal da NET')}</p>`)}
+        ${section('Itens que saíram', 'revisão da mesa', list([
+          '<b>Armas:</b> a <b>DR-12 Quasar</b> (sem a rajada de 10 balas, sobra uma pistola Tech de 5.000eb que a Burya do Kit faz por 1.000eb); a <b>Defender</b>, a <b>MA70 HB</b> e a <b>Mk.31 HMG</b> (o RED e o Kit não têm metralhadora, e o suplemento se contradiz na perícia da MA70 e no preço da Mk.31); e a <b>SOR-22</b> (o texto e a tabela não batem, e 6d6 passa do rifle sniper do RED).',
+          '<b>Cyberware que repete um do RED</b> (vale o do RED): o <b>Kerenzikov</b>, o <b>TeleOptics</b>, o <b>Pain Editor</b>, o <b>Subdermal Armour</b> e o <b>Biomonitor</b> de 2077; o <b>Epimorphic Skeleton / Titanium Bones</b> (o Grafted Muscle and Bone Lace); o <b>Fortified Ankle / Jump Boost</b> (o Jump Booster); o <b>Smart Link</b> (o Subdermal Grip); o <b>Basic Kiroshi Optics</b> (o Cybereye, com opções de graça); e o <b>Blood Pump</b> (o Reinforced Antibodies).',
+          '<b>Adrenaline Converter:</b> +2 de iniciativa sem ser speedware, então somaria com o Kerenzikov.',
+          '<b>Skin Weave</b> de 2077 e as placas <b>Carapace</b>, <b>Countershell</b>, <b>Nano-plating</b>, <b>ProxiShield</b> e <b>RangeGuard</b>: o sistema de placas do suplemento, que o RED não tem; quatro dão +1 de SP, e o RED não tem bônus de SP. O <b>Kinetic Frame / Scarab</b> sai pelo mesmo +1 de SP.',
+          '<b>Microrotors:</b> quebram a CDT 1 das armas brancas muito pesadas. <b>Jenkins\' Tendons:</b> +2 de MOVE barato, até numa perna de carne, e somariam com o Leeroy.',
+          '<b>Quickhacks:</b> o <b>Bait</b> (o Lure do Kit por DV6); o <b>Cripple Legs / Arms</b> (mais forte que o Slow e o Cyberware Malfunction, de DV10); o <b>Detonate Grenade</b> e o <b>Suicide</b> (o Puppet já faz); o <b>Cyberpsychosis</b> (no Kit, a ciberpsicose vem da Humanidade); e o <b>System Collapse</b> (o System Reset por 24 horas, no mesmo DV12).',
+          '<b>Daemons</b> (Imp, Efreet e Balron de 2077, ICEpick e Datamine) e <b>White ICE</b> (DataClear, Heaven Pup, Heaven Dog, Heaven Hound e Kami Chip): o RED já tem os Demônios, o Worm faz o que o ICEpick faz, e o Kit protege o Neuroport com o Self-ICE.',
+          '<b>Neuralware de netrunning:</b> o <b>RAM Reallocator</b> e o <b>RAM Upgrade</b> (a RAM saiu), o <b>Bioconductor</b> (os quickhacks do Kit não rolam dano crítico) e o <b>Mechatronic Core</b> (no Kit, só se hackeia quem tem Neuroport).',
+          '<b>Dos cyberdecks:</b> a RAM, o cooling e as especialidades. Os modelos ficaram como marca.'
+        ]))}
         ${section('Regras que saíram', 'sup.', `${list([
           '<b>Roles:</b> o Face e o Corpo (valem as dez Roles do RED), o Lawman com Investigator e o desconto do clã do Nomad.',
           '<b>Economia:</b> as categorias de preço um degrau acima, o fim do Kibble, o aluguel subsidiado do megaprédio, o hustle de 1,5×, o desconto do item usado, as zonas sem combate com a autodefesa e os preços dos quatro estilos de moda.',
@@ -214,7 +212,7 @@
           '<b>Armas:</b> o teste Smart (10 ou 12 + 1d10), a rajada carregada, o "esfriar" e as flechettes das armas Tech.',
           '<b>Cyberware:</b> o cyberware inicial de graça (Neural Link, Cyberaudio Suite, Internal Agent, Personal Link e dois Chipware Sockets). No Kit, é o Neuroport.',
           '<b>Itens repetidos:</b> as 13 armas do Kit, o Ex-Disk, o Self-ICE, a Gorilla Arms, as Mantis Blades, o Monowire, o Projectile Launch System e cinco quickhacks. Ficou a versão do Kit.'
-        ])}<p>${button('roles', 'Roles')} ${button('economy', 'Economia')} ${button('netrunning', 'Netrunning')} ${button('weapons2077', 'Armas de 2077')} ${button('cyberware2077', 'Cyberware de 2077')}</p>`)}`
+        ])}<p>${button('roles', 'Roles')} ${button('economy', 'Economia')} ${button('netrunning', 'Netrunning')}</p>`)}`
     }
   };
 
@@ -289,23 +287,24 @@
     };
   }
 
-  // As tabelas das páginas de regra: só os itens do Mission Kit, como os cartões.
-  const weaponRows = doKit(Object.values({ pistols, revolvers, smgs, shotguns, rifles, machineGuns, snipers }).flat()).map(entry => entry.raw);
+  // As tabelas das páginas: os itens do Kit e os do suplemento de fã aprovados, com a coluna Origem.
+  const weaponRows = Object.values({ pistols, revolvers, smgs, shotguns, rifles, snipers }).flat().map(entry => entry.raw);
   const weaponClass = row => /smart/i.test(row.kind) ? 'Smart' : /tech/i.test(row.kind) ? 'Tech' : 'Power';
+  const origin = row => ORIGENS[row.origem];
   const weaponType = row => row.kind.replace(/\s+(Power|Tech|Smart)/, '').replace(/, exótic[ao]$/, '');
   pages.weapons2077.setup = compareTable({
     pageId: 'weapons2077', rows: weaponRows, noun: 'armas',
-    columns: [['Arma', row => row.name], ['Tipo', weaponType], ['Classe', weaponClass], ['Qualidade', row => row.quality], ['Perícia', row => row.skill.split(' (')[0]],
+    columns: [['Arma', row => row.name], ['Origem', origin], ['Tipo', weaponType], ['Classe', weaponClass], ['Qualidade', row => row.quality], ['Perícia', row => row.skill.split(' (')[0]],
       ['Dano', row => row.damage, 'numero'], ['CDT', row => String(row.rof), 'numero'], ['Pente', row => row.magazine, 'numero'], ['Mãos', row => String(row.hands), 'numero'],
       ['Oculta', row => row.conceal], ['Preço', row => row.cost, 'numero']],
-    filters: [['Classe', weaponClass], ['Tipo', weaponType], ['Perícia', row => row.skill.split(' (')[0]]]
+    filters: [['Origem', origin], ['Classe', weaponClass], ['Tipo', weaponType], ['Perícia', row => row.skill.split(' (')[0]]]
   });
-  const cyberRows = doKit(Object.values({ neuroport, fashionware, neural, optics, internal, external, limbs }).flat()).map(entry => entry.raw);
+  const cyberRows = Object.values({ neuroport, fashionware, neural, osware, internal, external, limbs }).flat().map(entry => entry.raw);
   const cyberGroup = row => row.category.split(' (')[0];
   pages.cyberware2077.setup = compareTable({
     pageId: 'cyberware2077', rows: cyberRows, noun: 'implantes',
-    columns: [['Implante', row => row.name], ['Categoria', row => row.category], ['Instalação', row => row.install], ['Humanidade', row => String(row.humanity), 'numero'], ['Preço', row => row.cost, 'numero']],
-    filters: [['Categoria', cyberGroup], ['Instalação', row => row.install]]
+    columns: [['Implante', row => row.name], ['Origem', origin], ['Categoria', row => row.category], ['Instalação', row => row.install], ['Humanidade', row => String(row.humanity), 'numero'], ['Preço', row => row.cost, 'numero']],
+    filters: [['Origem', origin], ['Categoria', cyberGroup], ['Instalação', row => row.install]]
   });
 
   // data: as listas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).
@@ -313,8 +312,8 @@
   window.system2077 = {
     pages, compareTable,
     data: {
-      weapons: { pistols, revolvers, smgs, shotguns, rifles, machineGuns, snipers },
-      cyberware: { neuroport, fashionware, neural, optics, internal, external, limbs }
+      weapons: { pistols, revolvers, smgs, shotguns, rifles, snipers },
+      cyberware: { neuroport, fashionware, neural, osware, internal, external, limbs }
     }
   };
 })();

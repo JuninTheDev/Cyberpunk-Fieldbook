@@ -392,7 +392,7 @@
     ['Comida embalada (10eb)', 'Programa ou hardware de cyberdeck de até 100eb', 'Pistola pesada ou muito pesada (100eb)', 'Cyberaudio (500eb)', 'Cores de gangue', 'Protetores auriculares (1.000eb)'],
     ['Comida congelada (10eb)', 'Gravador de áudio (100eb)', 'SMG (100eb)', 'Neural Link (500eb)', 'Genérico Chic', 'Binóculos (50eb)'],
     ['Grãos a granel (20eb)', 'Detector de escutas (500eb)', 'SMG pesada (100eb)', 'Cyberbraço (500eb)', 'Boêmio', 'Carryall (20eb)'],
-    ['Prepak genérico, o antigo Kibble (10eb)', 'Analisador químico (1.000eb)', 'Espingarda (500eb)', 'Cyberperna (100eb)', 'Roupa de lazer', 'Lanterna (20eb)'],
+    ['Kibble (10eb)', 'Analisador químico (1.000eb)', 'Espingarda (500eb)', 'Cyberperna (100eb)', 'Roupa de lazer', 'Lanterna (20eb)'],
     ['Bolsas de Prepak (20eb)', 'Computador (50eb)', 'Rifle de assalto (500eb)', 'Cyberware externo de exatamente 1.000eb', 'Couro nômade', 'Fita adesiva (20eb)'],
     ['Drogas de rua de até 20eb', 'Cyberdeck (500eb)', 'Rifle de precisão (500eb)', 'Cyberware externo de até 500eb', 'Asia Pop', 'Cama inflável e saco de dormir (20eb)'],
     ['Álcool ruim (10eb)', 'Celular descartável (50eb)', 'Arco ou besta (100eb)', 'Cyberware interno de exatamente 1.000eb', 'Flash urbano', 'Kit de arrombamento (20eb)'],
@@ -411,6 +411,15 @@
   ];
   const nightMarketTable = table(['d100', ...nightMarketCategories], nightMarketRows.map((row, index) => [`<b>${String(index * 5 + 1).padStart(2, '0')}–${index === 19 ? '00' : String(index * 5 + 5).padStart(2, '0')}</b>`, ...row]), 'dense');
   const nightMarketNotes = { 4: 'O cyberware de base que o item exigir também está à venda, e o seu ripperdoc instala de graça.', 5: 'O fashionware é instalado ali mesmo, no mercado.' };
+  // Nos anos 2070, Berserk e Sandevistan de linha são comuns: todo Night Market de cyberware tem um à venda, sorteado entre
+  // os de Cyberware de 2077 (system-2077.js, que carrega depois deste arquivo: a lista é lida na hora de rolar).
+  function osOnSale(rollDice) {
+    const list = ((window.system2077 && window.system2077.data.cyberware.osware) || []).map(item => item.raw);
+    if (!list.length) return '';
+    const roll = rollDice(`1d${list.length}`);
+    const item = list[roll - 1];
+    return `<p class="note-status night-market-os"><span class="roll-value">1d${list.length}: ${roll}</span> Também à venda (anos 2070): ${item.name}, ${item.cost}.</p>`;
+  }
 
   function setupNightMarket(content, { rollDice, showRoll }) {
     const button = content.querySelector('[data-night-market]');
@@ -431,7 +440,7 @@
           items.push(`<li><small>${roll === 100 ? '00' : roll}</small> ${nightMarketRows[row][category - 1]}</li>`);
         }
         const note = nightMarketNotes[category] ? `<br><small>${nightMarketNotes[category]}</small>` : '';
-        return `<p><span class="roll-value">1d6: ${category}</span> <b>${nightMarketCategories[category - 1]}</b>: ${quantity} ${quantity === 1 ? 'item' : 'itens'}${note}</p><ul>${items.join('')}</ul>`;
+        return `<p><span class="roll-value">1d6: ${category}</span> <b>${nightMarketCategories[category - 1]}</b>: ${quantity} ${quantity === 1 ? 'item' : 'itens'}${note}</p><ul>${items.join('')}</ul>${category === 4 ? osOnSale(rollDice) : ''}`;
       });
       showRoll(button, parts.join(''));
     });
@@ -676,7 +685,7 @@
         ${section('Estilo de vida', 'RED p. 377 · Kit p. 29', `${table(['Estilo', 'Como é', 'Por mês'], [['Kibble', 'A ração de Night City: sem gosto, sem cheiro e com todos os nutrientes.', '<b>100eb</b>'], ['Prepak genérico', 'Comida pronta e barata, um passo acima do Kibble.', '300eb'], ['Prepak bom', 'Comida de restaurante, quase como a de verdade. Bons bares; um show ou evento por mês.', '600eb'], ['Comida fresca', 'Comida de verdade. Bar executivo, hotel quando precisar, um restaurante de primeira por mês.', '1.500eb']], 'dense')}<p><b>Humanidade:</b> no começo de cada mês, depois de pagar o estilo de vida, viver de <b>Kibble</b>, de Prepak numa cidade grande ou dormir num <b>hotel cápsula</b> faz perder Humanidade; comida fresca e um conapt corporativo ou melhor fazem ganhar. Veja Humanidade e drogas.</p><p class="note-status">Quem não paga o estilo de vida cai para o de baixo (RED p. 377).</p>`)}
         ${section('Moradia', 'RED p. 377', table(['Moradia', 'Aluguel por mês', 'Compra'], [['Na rua / num veículo', '—', '—'], ['Hotel cápsula', '500eb', '—'], ['Contêiner de carga', '1.000eb', '15.000eb'], ['Quitinete', '1.500eb', '25.000eb'], ['Apartamento de dois quartos', '2.500eb', '35.000eb'], ['Conapt corporativo', 'Dado pela corporação', '—'], ['Conapt de luxo', '7.500eb', '85.000eb'], ['Cobertura de luxo', '15.000eb', 'ver livro'], ['Casa corporativa em Beaverville', 'Dada pela corporação', '200.000eb'], ['Mansão corporativa em Beaverville', 'Dada pela corporação', 'ver livro']], 'dense'))}
         ${section('Comprar, vender e pechinchar', 'RED p. 385', list(['Os preços das listas são de item <b>novo de fábrica</b>.', '<b>Pechinchar</b> é do Fixer (Operator): veja Roles.', 'Serviços como hospital, terapia, instalação de cyberware e Trauma Team: veja Dano, ferimentos e cura.']))}
-        ${section('Night Market', '337–339', `<p>Um mercado improvisado, montado por um fixer, que aparece e some rápido. Cada um vende duas categorias de coisas. Para gerar um:</p>${list(['Role <b>1d6 duas vezes</b> para as duas categorias (role de novo se repetir).', 'Para cada categoria, role <b>1d10</b>: é o número de itens à venda.', 'Para cada item, role <b>d100</b> na coluna da categoria; role de novo se repetir a linha.', '<b>Cyberware:</b> o cyberware de base que o item exigir também está à venda, e o seu ripperdoc instala de graça. <b>Fashionware:</b> instalado ali mesmo.'])}${rollButtons(['<button class="action" data-night-market type="button">Gerar um Night Market</button>'])}<details class="roll-table"><summary>Tabela de itens (d100) / 20 linhas</summary>${nightMarketTable}</details><p class="note-status"><b>Midnight Market:</b> a versão secreta, só para convidados ricos e poderosos, com 1d10 + 5 itens raros escolhidos pelo mestre. Só um fixer de Rank 9 ou mais monta um.</p>`)}
+        ${section('Night Market', '337–339', `<p>Um mercado improvisado, montado por um fixer, que aparece e some rápido. Cada um vende duas categorias de coisas. Para gerar um:</p>${list(['Role <b>1d6 duas vezes</b> para as duas categorias (role de novo se repetir).', 'Para cada categoria, role <b>1d10</b>: é o número de itens à venda.', 'Para cada item, role <b>d100</b> na coluna da categoria; role de novo se repetir a linha.', '<b>Cyberware:</b> o cyberware de base que o item exigir também está à venda, e o seu ripperdoc instala de graça. <b>Fashionware:</b> instalado ali mesmo.', '<b>Nos anos 2070:</b> Berserk e Sandevistan de linha são comuns. Todo Night Market de cyberware tem um à venda, além dos itens rolados: o gerador sorteia o modelo entre os de Cyberware de 2077.'])}${rollButtons(['<button class="action" data-night-market type="button">Gerar um Night Market</button>'])}<details class="roll-table"><summary>Tabela de itens (d100) / 20 linhas</summary>${nightMarketTable}</details><p class="note-status"><b>Midnight Market:</b> a versão secreta, só para convidados ricos e poderosos, com 1d10 + 5 itens raros escolhidos pelo mestre. Só um fixer de Rank 9 ou mais monta um.</p>`)}
         ${section('Trabalhos e hustle', '381–384', `${table(['Trabalho', 'Como é', 'Pagamento por pessoa'], [['Fácil', 'Não se espera resistência armada. Mas nunca se sabe.', '500eb'], ['Típico', 'Resistência armada esperada, mas dá para se preparar.', '1.000eb'], ['Perigoso', 'Resistência esmagadora. Sem muita preparação, você morre.', '2.000eb']], 'dense')}${list(['<b>Hustle:</b> com 7 dias inteiros livres, o personagem trabalha na própria Role e rola 1d6 na tabela da Role, conforme o Rank da habilidade (RED p. 382–384).'])}`)}
         ${section('Sono e cansaço', '377', list(['Menos de 6 horas de sono num dia: −2 em tudo, por dia sem dormir 6 horas.', 'Dormir mal deixa <b>cansado</b> no dia seguinte: mais −2 em tudo.', 'Dorme mal quem divide um lugar com mais gente que 1 + o número de quartos (hotel cápsula: mais de uma pessoa por cápsula).', 'Na rua: Resistência DV15 para não acordar cansado. No mato: Sobrevivência DV15 (outra pessoa pode rolar por você).']))}`
     },

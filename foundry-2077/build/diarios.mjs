@@ -10,9 +10,7 @@ const journals = [
   ['weapons2077', null], ['cyberware2077', null], ['netrunning', null], ['quickhacks', null], ['roles', null],
   ['economy', null], ['humanity', null],
   // Das fichas de NPC, só o que não cita a campanha: o resto está no compêndio de NPCs.
-  ['npcs', ['Como usar', 'Trauma Team']],
-  // Os itens do suplemento de fã, em revisão (fora das regras da mesa).
-  ['supplement2077', null]
+  ['npcs', ['Como usar', 'Trauma Team']]
 ];
 
 // Botões de navegação da wiki não fazem sentido no Foundry.

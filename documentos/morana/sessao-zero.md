@@ -6,7 +6,7 @@ A conversa antes da primeira sessão: o que a mesa combina, o que cada jogador a
 
 1. **O tom** (5 minutos). Cyberpunk RED em Night City, 2077: dinheiro curto, cromo caro, corporações que mandam. É uma campanha de investigação e escolhas difíceis, com combate perigoso. Ninguém é herói perfeito; as escolhas custam.
 2. **Os combinados** (20 minutos): linhas e véus, a carta X e o consentimento de Morana (abaixo).
-3. **As regras da casa** (10 minutos): o RED com as regras dos anos 2070 do Mission Kit, e o que fazer com os itens do suplemento de fã de 2077.
+3. **As regras da casa** (10 minutos): o RED com as regras dos anos 2070 do Mission Kit, e os itens do suplemento de fã de 2077 que o mestre aprovou.
 4. **Os personagens** (o resto): criar na wiki, as cinco perguntas e os ganchos.
 
 ## Linhas e véus
@@ -51,7 +51,7 @@ Decida e anote. Os padrões abaixo são os que a wiki já usa.
 
 | Assunto | Padrão da wiki | O que a mesa decidiu |
 |---|---|---|
-| Sistema | Cyberpunk RED, com as regras dos anos 2070 do *Cyberpunk Edgerunners Mission Kit* (oficial). Uma regra só: quando os dois dizem coisas diferentes, vale o Kit. O suplemento de fã de 2077 (não oficial) não é usado nas regras; alguns itens dele podem entrar, depois de revisados pelo mestre. | |
+| Sistema | Cyberpunk RED, com as regras dos anos 2070 do *Cyberpunk Edgerunners Mission Kit* (oficial). Uma regra só: quando os dois dizem coisas diferentes, vale o Kit. O suplemento de fã de 2077 (não oficial) não é usado nas regras; os itens dele que o mestre aprovou estão nos catálogos, marcados "suplemento de fã". | |
 | Criação | Três métodos (Rato de Rua, Edgerunner, Pacote Completo), na wiki. | |
 | Loja inicial | Teto de 1.000eb por item e as categorias que o mestre esconde (engrenagem da Loja). | |
 | Depois do Foundry | O Foundry manda: na wiki o jogador só muda nome, apelido, aparência, notas, retrato e Lifepath. Compras viram pedidos que o mestre aprova. | |
