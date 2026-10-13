@@ -1,5 +1,6 @@
-// Armas e cyberware de 2077: os do Cyberpunk Edgerunners Mission Kit (oficial, Kit p. 31–37) e os do suplemento de fã
-// "Cyberpunk 2077 – A Cyberpunk RED Supplement" (p. 27–50), estes adaptados às regras de Power, Smart e Tech do Kit.
+// Armas e cyberware dos anos 2070. As páginas de regra mostram os do Cyberpunk Edgerunners Mission Kit (oficial,
+// Kit p. 31–37). Os do suplemento de fã "Cyberpunk 2077 – A Cyberpunk RED Supplement" (p. 27–50) ficam na página
+// de revisão (supplement2077) até o mestre decidir quais entram; as listas cruas (data) continuam com todos.
 // Um cartão (.entry) por item, no mesmo formato do netrunning.
 (() => {
   const table = (headers, rows) => `<div class="table-wrap dense"><table><thead><tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -10,8 +11,8 @@
   const entry = ({ name, tag, stats = [], text, extra = '', tip }) => `<article class="entry" data-toc="${name}"><header><h4>${name}</h4>${tag ? `<span class="entry-tag">${tag}</span>` : ''}</header>${stats.length ? `<div class="entry-stats">${stats.map(([label, value]) => `<span><b>${label}</b> ${value}</span>`).join('')}</div>` : ''}<p>${text}</p>${extra}${tip ? `<p class="entry-tip"><b>Na mesa:</b> ${tip}</p>` : ''}</article>`;
   const grid = entries => `<div class="entry-grid">${entries.map(entry).join('')}</div>`;
 
-  // Origem de cada item: o Cyberpunk Edgerunners Mission Kit (oficial, 2024) ou o suplemento de fã de 2077 (opcional,
-  // com as regras de Power, Smart e Tech do Kit).
+  // Origem de cada item: o Cyberpunk Edgerunners Mission Kit (oficial, 2024) ou o suplemento de fã de 2077 (em revisão,
+  // com as notas do que muda pelas regras de Power, Smart e Tech do Kit).
   const ORIGENS = { kit: 'Mission Kit', fa: 'suplemento de fã' };
 
   // ---------------- Armas ----------------
@@ -144,8 +145,8 @@
     ware('Painducer', 'Cyberware externo', 'Clínica', '5.000eb', 14, 'Malha que desvia o sinal de dor: ao sofrer dano, você sofre <b>metade na hora e a outra metade no início do seu próximo turno</b>. Só vale para o último dano recebido: se for atingido de novo, o dano anterior entra inteiro e só o último é dividido.')
   ];
   const limbs = [
-    ware('Gorilla Arm', 'Opção de cyberbraço', 'Hospital', '1.000eb', 14, 'O reforço clássico para trabalho pesado. Ocupa dois slots do cyberbraço. O punho é uma <b>arma branca pesada de qualidade excelente</b> (3d6, CDT 2, +1 no ataque). Nessa mão, você empunha armas como se tivesse <b>BODY 11</b> (inclusive armas de duas mãos com uma só, respeitando a CDT). Com dois, um em cada cyberbraço, também força portas e move cobertura grossa, estrangula e derruba (Choke e Slam) como se tivesse BODY 11.', 'no suplemento de fã eram um par só (Gorilla Arms) e usavam Briga; no Kit, cada braço tem o seu, e o punho é arma branca.', { kit: true }),
-    ware('Mantis Blade', 'Opção de cyberbraço', 'Hospital', '500eb', 14, 'Lâminas de braço icônicas, letais e fáceis de esconder. Ocupa dois slots do cyberbraço. <b>Arma branca pesada de uma mão, de qualidade excelente</b> (3d6, CDT 2, +1 no ataque), escondida sem teste e sacada ou guardada <b>sem gastar Ação</b>. Com a lâmina para fora, a mão desse braço não segura nada. Com duas, uma em cada cyberbraço, e as duas para fora, você ignora a penalidade de movimento para escalar.', 'no suplemento de fã eram um par só e davam o salto sobre o alvo; no Kit, cada braço tem a sua.', { kit: true }),
+    ware('Gorilla Arm', 'Opção de cyberbraço', 'Hospital', '1.000eb', 14, 'O reforço clássico para trabalho pesado. Ocupa dois slots do cyberbraço. O punho é uma <b>arma branca pesada de qualidade excelente</b> (3d6, CDT 2, +1 no ataque). Nessa mão, você empunha armas como se tivesse <b>BODY 11</b> (inclusive armas de duas mãos com uma só, respeitando a CDT). Com dois, um em cada cyberbraço, também força portas e move cobertura grossa, estrangula e derruba (Choke e Slam) como se tivesse BODY 11.', '', { kit: true }),
+    ware('Mantis Blade', 'Opção de cyberbraço', 'Hospital', '500eb', 14, 'Lâminas de braço icônicas, letais e fáceis de esconder. Ocupa dois slots do cyberbraço. <b>Arma branca pesada de uma mão, de qualidade excelente</b> (3d6, CDT 2, +1 no ataque), escondida sem teste e sacada ou guardada <b>sem gastar Ação</b>. Com a lâmina para fora, a mão desse braço não segura nada. Com duas, uma em cada cyberbraço, e as duas para fora, você ignora a penalidade de movimento para escalar.', '', { kit: true }),
     ware('Monowire', 'Opção de cyberbraço', 'Clínica', '1.000eb', 7, 'Chicote de fio monofilamento com um gume de uma molécula, escondido sem teste. <b>Arma branca pesada exótica de uma mão</b> (3d6, CDT 2) que ataca a até <b>6 m</b>. Quando causa uma lesão crítica, quem atacou rola <b>duas vezes</b> na tabela e escolhe a que a vítima sofre.', '', { kit: true }),
     ware('Projectile Launch System', 'Opção de cyberbraço (borgware)', 'Clínica', '1.000eb', 14, 'Um lançador de explosivos na palma da mão (quase literalmente). Borgware; ocupa dois slots do cyberbraço. <b>Lança-foguetes ou lança-granadas de uma mão</b> com um tiro no pente: com foguete, é lança-foguetes; com granada, lança-granadas. Escondido sem teste e sacado ou guardado sem gastar Ação. Não aceita acessório nenhum, só o Smart Rebuild. Aberto, a mão desse braço não segura nada.', '', { kit: true }),
     ware('Ballistic Coprocessor', 'Opção de cyberbraço', 'Clínica', '100eb', 3, 'Liga arma e óptica para acompanhar munição e trajetória: o <b>ricochete</b> das armas Power sai com <b>−2</b> em vez de −4. Pode ser a única peça de cyberware num braço de carne.', 'no suplemento de fã, dava +2 no teste de ricochete; dá no mesmo.'),
@@ -159,96 +160,61 @@
     ware('Reinforced Tendons', 'Opção de cyberperna (par)', 'Clínica', '500eb', 3, 'No meio do salto, com uma Ação, você muda a direção ou sobe mais 2 m. Exige duas cyberpernas, ocupa dois slots, em par.')
   ];
 
+  // As páginas de regra mostram só os itens do Mission Kit; os do suplemento de fã vão para a página de revisão.
+  const doKit = list => list.filter(item => item.raw.origem === 'kit');
+  const doFa = list => list.filter(item => item.raw.origem === 'fa');
+  const weaponGroups = [['Pistolas', pistols], ['Revólveres e pistolas muito pesadas', revolvers], ['Submetralhadoras', smgs], ['Espingardas', shotguns], ['Rifles de assalto', rifles], ['Metralhadoras', machineGuns], ['Rifles de precisão e sniper', snipers]];
+  const cyberGroups = [['Fashionware', fashionware], ['Neuralware', neural], ['Cyberópticos', optics], ['Cyberware interno', internal], ['Cyberware externo e placas', external], ['Cybermembros', limbs]];
+  // Os itens do suplemento de fã, um <h4> por grupo (só os grupos que têm algum).
+  const fanGrid = groups => groups.map(([title, items]) => [title, doFa(items)]).filter(([, items]) => items.length).map(([title, items]) => `<h4>${title}</h4>${grid(items)}`).join('');
+
   const pages = {
     weapons2077: {
-      eyebrow: 'Catálogo / Mission Kit', title: 'Armas de 2077',
-      lede: 'Nos anos 2070, as armas Power, Smart e Tech são armas do RED com um Rebuild, um acessório que refaz o miolo da arma. Aqui estão as regras do Cyberpunk Edgerunners Mission Kit (oficial) e as armas com nome e sobrenome: as 13 do Kit e as do suplemento de fã, adaptadas às regras do Kit.',
-      html: `<div class="callout"><b>De onde vem cada arma:</b> as marcadas <b>Mission Kit</b> são as do anime, com os números do Kit. As marcadas <b>suplemento de fã</b> são opcionais: os números são os do suplemento de 2077 de Queen Otter, e as regras de Power, Smart e Tech são as do Kit.</div>
-        ${section('Rebuilds', 'Kit p. 31–32', `${list(['Um <b>Rebuild</b> transforma uma arma de fogo do RED em arma <b>Power</b>, <b>Smart</b> ou <b>Tech</b>. Cada um custa <b>1.000eb</b> (Muito Caro), ocupa <b>2 slots de acessório</b> e leva <b>1 hora</b> para instalar ou tirar. Só cabe um por arma.', 'Serve em qualquer arma de longo alcance que não seja exótica; o Tech Rebuild não serve em lança-granadas nem em lança-foguetes. Numa arma exótica, o Rebuild entra num slot só, se a arma tiver um livre.', 'As armas desta página já vêm com o Rebuild: o tipo de cada uma diz qual.'])}${button('cyberware2077', 'Cyberware de 2077')}`)}
-        ${section('Power', 'Kit p. 31–32', list(['Quando a arma causa uma <b>lesão crítica</b>, o dano bônus da lesão sobe <b>5</b>: 10 em vez de 5.', '<b>Ricochete:</b> você acerta um alvo que sabe onde está, mas que fica atrás de cobertura ou fora da linha de visão, ricocheteando o tiro numa superfície. O ataque tem <b>−4</b>; num <b>tiro mirado</b>, vale só a penalidade do tiro mirado. Precisa de um caminho livre entre o ponto do ricochete e o alvo.', 'O alcance continua sendo a distância entre você e o alvo.', 'Para ricochetear um <b>cartucho</b>, escolha uma superfície a até 6 m de você: ela vira a nova origem do leque, que atinge todos numa área de 6 m na direção que você escolher (com bom senso: o tiro não ricocheteia para trás da superfície).', 'O Ballistic Coprocessor reduz a penalidade do ricochete para −2.']))}
-        ${section('Smart', 'Kit p. 32', `${list(['A arma precisa estar <b>conectada</b> a você por um <b>Personal Link</b> (o Interface Plug que vem no Neuroport) ou por um <b>Subdermal Grip</b>. Sem conexão, não dispara.', '<b>+1</b> nos ataques à distância com a arma.', 'Aceita a <b>munição Smart melhorada</b> dos tipos que dispara. Com outra munição, fica só o +1.', 'O Smart Rebuild não vai numa arma com <b>Smartgun Link</b>, e o Smartgun Link não faz de uma arma uma arma Smart.'])}<div class="callout">O <b>Smart Link</b> do suplemento de fã conta como conexão, como o Subdermal Grip.</div>`)}
+      eyebrow: 'Catálogo / armas dos anos 2070', title: 'Armas de 2077',
+      lede: 'Nos anos 2070, as armas Power, Smart e Tech são armas do RED com um Rebuild, um acessório que refaz o miolo da arma. Aqui estão as regras delas e as 13 armas do Cyberpunk Edgerunners Mission Kit, com nome e sobrenome. As armas do RED continuam valendo e aceitam um Rebuild.',
+      html: `${section('Rebuilds', 'Kit p. 31–32', `${list(['Um <b>Rebuild</b> transforma uma arma de fogo do RED em arma <b>Power</b>, <b>Smart</b> ou <b>Tech</b>. Cada um custa <b>1.000eb</b> (Muito Caro), ocupa <b>2 slots de acessório</b> e leva <b>1 hora</b> para instalar ou tirar. Só cabe um por arma.', 'Serve em qualquer arma de longo alcance que não seja exótica; o Tech Rebuild não serve em lança-granadas nem em lança-foguetes. Numa arma exótica, o Rebuild entra num slot só, se a arma tiver um livre.', 'As armas desta página já vêm com o Rebuild: o tipo de cada uma diz qual.'])}${button('cyberware2077', 'Cyberware de 2077')}`)}
+        ${section('Power', 'Kit p. 31–32', list(['Quando a arma causa uma <b>lesão crítica</b>, o dano bônus da lesão sobe <b>5</b>: 10 em vez de 5.', '<b>Ricochete:</b> você acerta um alvo que sabe onde está, mas que fica atrás de cobertura ou fora da linha de visão, ricocheteando o tiro numa superfície. O ataque tem <b>−4</b>; num <b>tiro mirado</b>, vale só a penalidade do tiro mirado. Precisa de um caminho livre entre o ponto do ricochete e o alvo.', 'O alcance continua sendo a distância entre você e o alvo.', 'Para ricochetear um <b>cartucho</b>, escolha uma superfície a até 6 m de você: ela vira a nova origem do leque, que atinge todos numa área de 6 m na direção que você escolher (com bom senso: o tiro não ricocheteia para trás da superfície).']))}
+        ${section('Smart', 'Kit p. 32', list(['A arma precisa estar <b>conectada</b> a você por um <b>Personal Link</b> (o Interface Plug que vem no Neuroport) ou por um <b>Subdermal Grip</b>. Sem conexão, não dispara.', '<b>+1</b> nos ataques à distância com a arma.', 'Aceita a <b>munição Smart melhorada</b> dos tipos que dispara. Com outra munição, fica só o +1.', 'O Smart Rebuild não vai numa arma com <b>Smartgun Link</b>, e o Smartgun Link não faz de uma arma uma arma Smart.']))}
         ${section('Munição Smart melhorada', 'Kit p. 32', list(['Custa <b>50eb</b> (Oneroso) por 10 flechas, balas, balotes ou cartuchos, e <b>500eb</b> (Caro) por granada ou foguete.', 'Só funciona em arma Smart; uma arma com Smartgun Link não conta.', 'Ignora as penalidades de escuridão, fumaça, neblina e de qualquer outra coisa que atrapalhe a visão.', '<b>Segunda chance:</b> se o ataque à distância errar a DV por <b>5 ou menos</b>, você tenta de novo na hora, com <b>14 + 1d10</b> (dá para somar Sorte) no lugar de STAT + perícia + bônus, contra a mesma DV. As penalidades do primeiro tiro continuam valendo.']))}
-        ${section('Tech', 'Kit p. 32', `${list(['A mira vê o <b>contorno dos alvos</b> através de cobertura fina.', '<b>Carregar:</b> você gasta a <b>Ação de Movimento</b>, e a arma fica carregada até disparar ou por 60 segundos (20 rodadas).', 'Carregada, o <b>próximo ataque</b> que não seja explosivo é de <b>CDT 1</b>, atravessa <b>cobertura fina</b> e <b>ignora metade do SP</b> do alvo (arredondado para cima). A cobertura atravessada não perde HP: os furos são pequenos demais para estragá-la.', 'Por isso a ficha de armadura do Kit mostra o SP contra corpo a corpo e contra Tech carregada: a metade.'])}<div class="callout">Do suplemento de fã saem a rajada carregada, o "esfriar" depois da carga e as flechettes: as armas Tech usam a munição de sempre.</div>`)}
+        ${section('Tech', 'Kit p. 32', list(['A mira vê o <b>contorno dos alvos</b> através de cobertura fina.', '<b>Carregar:</b> você gasta a <b>Ação de Movimento</b>, e a arma fica carregada até disparar ou por 60 segundos (20 rodadas).', 'Carregada, o <b>próximo ataque</b> que não seja explosivo é de <b>CDT 1</b>, atravessa <b>cobertura fina</b> e <b>ignora metade do SP</b> do alvo (arredondado para cima). A cobertura atravessada não perde HP: os furos são pequenos demais para estragá-la.', 'Por isso a ficha de armadura do Kit mostra o SP contra corpo a corpo e contra Tech carregada: a metade.']))}
         ${section('Qualidade das armas', '342', list(['<b>Ruim:</b> emperra numa <b>falha crítica</b> (1 no dado de ataque); é preciso uma Ação para desemperrar.', '<b>Excelente:</b> <b>+1 no ataque</b>.', 'Armas exóticas são sempre de qualidade padrão, a não ser que a descrição diga outra coisa.', 'Armas de longo alcance que não são exóticas têm 3 slots de acessório; com o Rebuild, sobra 1.']))}
-        ${section('Pistolas', 'Kit p. 32–34 · sup. p. 32–35', grid(pistols))}
-        ${section('Revólveres e pistolas muito pesadas', 'Kit p. 33–34 · sup. p. 35–37', grid(revolvers))}
-        ${section('Submetralhadoras', 'Kit p. 32–33 · sup. p. 38–40', grid(smgs))}
-        ${section('Espingardas', 'Kit p. 33–34 · sup. p. 40–44', grid(shotguns))}
-        ${section('Rifles de assalto', 'Kit p. 33 · sup. p. 44–47', grid(rifles))}
-        ${section('Metralhadoras', 'sup. p. 47–48', grid(machineGuns))}
-        ${section('Rifles de precisão e sniper', 'Kit p. 34–35 · sup. p. 48–50', grid(snipers))}
-        ${section('Veja também', '', `<p>${button('economy', 'Preços por categoria')} ${button('gear', 'Armas genéricas do RED')}</p><p class="note-status">Armas brancas, arcos e lança-granadas seguem o RED. Os de longo alcance aceitam Rebuild como qualquer arma (o Tech não serve em lança-granadas).</p>`)}`
+        ${section('Pistolas', 'Kit p. 33–34', grid(doKit(pistols)))}
+        ${section('Revólveres e pistolas muito pesadas', 'Kit p. 33–34', grid(doKit(revolvers)))}
+        ${section('Submetralhadoras', 'Kit p. 32–33', grid(doKit(smgs)))}
+        ${section('Espingardas', 'Kit p. 33–34', grid(doKit(shotguns)))}
+        ${section('Rifles de assalto', 'Kit p. 33', grid(doKit(rifles)))}
+        ${section('Rifles de precisão', 'Kit p. 34–35', grid(doKit(snipers)))}
+        ${section('Veja também', '', `<p>${button('economy', 'Preços por categoria')} ${button('gear', 'Armas genéricas do RED')} ${button('supplement2077', 'Armas do suplemento de fã (em revisão)')}</p><p class="note-status">Armas brancas, arcos e lança-granadas seguem o RED. Os de longo alcance aceitam Rebuild como qualquer arma (o Tech não serve em lança-granadas).</p>`)}`
     },
 
     cyberware2077: {
-      eyebrow: 'Catálogo / Mission Kit', title: 'Cyberware de 2077',
-      lede: 'Boa parte do cromo do RED continua em uso, só mais bonito, e há muita coisa nova. Aqui está o cyberware dos anos 2070: o do Mission Kit (oficial) e o do suplemento de fã (opcional), com custo, local de instalação e perda de Humanidade. A neuralware de netrunning do suplemento fica na página de Netrunning de 2077.',
-      html: `${section('Antes de instalar', 'Kit p. 26 e 36', `${list(['<b>Neuroport:</b> nos anos 2070, todo personagem começa com um, <b>de graça e sem perda de Humanidade</b>. Ele é o pré-requisito de todo cyberware que não seja de grau médico e já traz Neural Link (5 slots), Holophone, Biomonitor, Virtu, HUD, dois Shard Slots e o Personal Link.', 'Onde instalar: <b>Loja</b> (DV13, 100eb), <b>Clínica</b> (DV15, 500eb), <b>Hospital</b> (DV17, 1.000eb). Veja Dano, ferimentos e cura.', 'Cada item diz de onde vem: <b>Mission Kit</b> (oficial) ou <b>suplemento de fã</b> (opcional, adaptado às regras do Kit).', 'Itens do suplemento com o mesmo nome de um do RED (Kerenzikov, TeleOptics, Biomonitor) mudaram: se usar o suplemento, vale a versão dele.'])}<p>${button('os2077', 'Berserk e Sandevistan')} ${button('net2077', 'Neuralware de netrunning')}</p>`)}
+      eyebrow: 'Catálogo / cyberware dos anos 2070', title: 'Cyberware de 2077',
+      lede: 'O cromo do RED continua em uso nos anos 2070, adaptado ao Neuroport. Aqui está o que o Cyberpunk Edgerunners Mission Kit traz de novo, com custo, local de instalação e perda de Humanidade. O resto está no catálogo do RED.',
+      html: `${section('Antes de instalar', 'Kit p. 26 e 36', `${list(['<b>Neuroport:</b> na criação, todo personagem pode instalar um, <b>de graça e sem perda de Humanidade</b>. Ele é o pré-requisito de todo cyberware que não seja de grau médico e já traz Neural Link (5 slots), Holophone, Biomonitor, Virtu, HUD, dois Shard Slots e o Personal Link.', '<b>O cyberware do RED</b> continua valendo, com os mesmos números: até o cromo antigo foi adaptado para funcionar com o Neuroport.', 'Onde instalar: <b>Loja</b> (DV13, 100eb), <b>Clínica</b> (DV15, 500eb), <b>Hospital</b> (DV17, 1.000eb). Veja Dano, ferimentos e cura.'])}<p>${button('cyberware', 'Cyberware do RED')} ${button('netrunning', 'Netrunning e o Neuroport')} ${button('supplement2077', 'Cyberware do suplemento de fã (em revisão)')}</p>`)}
         ${section('Neuroport', 'Kit p. 36–37', grid(neuroport))}
-        ${section('Fashionware', 'sup. p. 27', grid(fashionware))}
-        ${section('Neuralware', 'Kit p. 35 · sup. p. 27', `<p>Opções do Neural Link do Neuroport, que tem 5 slots.</p>${grid(neural)}`)}
-        ${section('Cyberópticos', 'sup. p. 27–28', grid(optics))}
-        ${section('Cyberware interno', 'sup. p. 28–29', `<p>Sete slots de opção interna disponíveis.</p>${grid(internal)}`)}
-        ${section('Cyberware externo e placas', 'sup. p. 29', `<p>Sete slots de opção externa. As placas (Carapace, Countershell...) exigem uma placa base: Skin Weave ou Subdermal Armour.</p>${grid(external)}`)}
-        ${section('Cybermembros', 'Kit p. 36–37 e 41 · sup. p. 30', `<p>As opções de cyberbraço exigem um <b>cyberbraço</b>, o do RED: 500eb, Hospital, perda 7 (2d6) e <b>4 slots de opção</b>. Com BODY 4 ou menos, a Briga com ele causa <b>2d6</b>, e ele consegue danificar cobertura de aço.</p>${grid(limbs)}`)}`
+        ${section('Neuralware', 'Kit p. 35', `<p>Opções do Neural Link do Neuroport, que tem 5 slots.</p>${grid(doKit(neural))}`)}
+        ${section('Cybermembros', 'Kit p. 36–37 e 41', `<p>As opções de cyberbraço exigem um <b>cyberbraço</b>, o do RED: 500eb, Hospital, perda 7 (2d6) e <b>4 slots de opção</b>. Com BODY 4 ou menos, a Briga com ele causa <b>2d6</b>, e ele consegue danificar cobertura de aço.</p>${grid(doKit(limbs))}`)}`
     },
 
-    roles2077: {
-      eyebrow: 'Mission Kit / Roles', title: 'Roles nos anos 2070',
-      lede: 'Nos anos 2070 do Mission Kit valem as 10 Roles do RED, com poucos ajustes: o que cada uma consegue comprar e os quickhacks do Netrunner. O Face e o Corpo do suplemento de fã saíram; o Investigator do Lawman e o desconto do clã do Nomad ficam como opcionais.',
-      html: `${section('Resumo', 'Kit p. 26', `${table(['Role', 'Habilidade', 'Nos anos 2070'], [
-          ['<b>Rockerboy</b>', 'Impacto Carismático', 'Consegue itens <b>Caros</b> a partir do Rank 4.'],
-          ['<b>Solo</b>', 'Consciência de Combate', 'Igual ao RED.'],
-          ['<b>Netrunner</b>', 'Interface', 'Faz <b>quickhacks</b> no Neuroport das pessoas, pelo Rank. O Scanner vira Ação NET. No Rank 3, passa direto pelo firewall de fábrica do Neuroport.'],
-          ['<b>Tech</b>', 'Maker', 'Igual ao RED.'],
-          ['<b>Medtech</b>', 'Medicine', 'Igual ao RED.'],
-          ['<b>Media</b>', 'Credibility', 'Consegue itens <b>Caros</b> a partir do Rank 4.'],
-          ['<b>Exec</b>', 'Teamwork', 'Consegue itens <b>Caros</b> a partir do Rank 4.'],
-          ['<b>Lawman</b>', 'Backup', 'Consegue os itens <b>Caros do trabalho</b> (armas, armadura e o equipamento que o mestre aceitar) a partir do Rank 4.'],
-          ['<b>Fixer</b>', 'Operator', 'Consegue itens <b>Caros</b> desde o Rank 1, <b>Muito Caros</b> no Rank 4, <b>Luxuosos</b> no 7 e <b>Super Luxuosos</b> no 9.'],
-          ['<b>Nomad</b>', 'Moto', 'Consegue <b>qualquer veículo</b> e upgrade de veículo desde o Rank 1.']
-        ])}${list([
-          'No RED, sem um Fixer ou um Night Market, só se compra até <b>Premium</b> (100eb). Estas Roles conseguem, <b>peça por peça</b>, itens das categorias acima, mesmo quando eles não estão à venda.',
-          'As habilidades de Role e os Ranks são os do RED: o item de Role do Foundry é o do sistema.'
-        ])}<p>${button('roles', 'As 10 Roles do RED')} ${button('economy', 'Economia e categorias de preço')}</p>`)}
-        ${section('Netrunner', 'Kit p. 26', `${list([
-          'Faz quickhacks como parte da Interface, sem comprar nada: os <b>Simples (DV6)</b> no Rank 1, os <b>Padrão (DV8)</b> no Rank 2, os <b>Difíceis (DV10)</b> no Rank 3 e os <b>Avançados (DV12)</b> no Rank 4.',
-          'O <b>Scanner</b> deixa de ser Ação Carnal e vira Ação NET.',
-          'No <b>Rank 3</b>, passa direto pelo firewall de fábrica do Neuroport, sem teste (no Rank 1 e no 2, é um teste de Interface contra DV6).'
-        ])}<p>${button('net2077', 'Netrunning de 2077')} ${button('quickhacks', 'Os quickhacks')}</p>`)}
-        ${section('Comprar direto do fabricante', 'Kit p. 26', list([
-          'Nos anos 2070, a escassez "acabou", mas acabou mais para os ricos. Sem o alcance para conseguir um item, dá para comprar <b>direto do fabricante</b> ou de um revendedor licenciado, sem Fixer nem Night Market.',
-          'O preço é <b>o dobro</b>, a não ser que o item seja feito sob encomenda, único, ou que o mestre não deixe.',
-          'Ninguém compra do seu personagem por esse preço, nem um Fixer nem um Exec: é preço de desesperado ou de quem tem dinheiro para queimar.'
-        ]))}
-        ${section('Do suplemento de fã (opcional)', 'sup. p. 2–6', '<div class="callout">O suplemento de fã de 2077 trocava as Roles: o Face no lugar do Rockerboy, o Corpo juntando o Exec e o Fixer. Com o Mission Kit, valem as 10 do RED, e os personagens que eram Face ou Corpo viram Rockerboy e Exec. Ficam, como opcionais, as duas regras abaixo. As mudanças do suplemento na Interface do Netrunner dependem da rede de três camadas e estão em Netrunning de 2077.</div>')}
-        ${section('Lawman com Investigator (suplemento de fã)', 'sup. p. 6', `<p>Pedir reforço não é coisa para o policial que segue os próprios casos e mete o nariz onde não deve, ainda mais com a polícia em estilo corporativo. O Lawman <b>perde Backup</b> e ganha <b>Investigator</b>.</p><ul><li><b>Casos ativos:</b> 1 no Rank 1, 2 no Rank 4 e 3 no Rank 7.</li><li><b>Trocar de caso:</b> só no tempo livre, levando mais ou menos um dia para se familiarizar.</li><li><b>Bônus de caso:</b> soma o Rank de Investigator nos testes de <b>Educação</b> e <b>Percepção</b> quando acha que está lidando com uma pista de um caso ativo. Se o mestre disser que não tem relação, o Lawman sabe que não é pertinente. Vale por sessão até o Rank de Investigator.</li></ul><h4>Especializações</h4><div class="table-wrap dense"><table><thead><tr><th>Especialização</th><th>O bônus de caso também vale em</th></tr></thead><tbody><tr><td><b>Street Cop</b></td><td>Manha (Streetwise), Atletismo e Suborno</td></tr><tr><td><b>Undercover</b></td><td>Atuação, Furtividade e Guarda-roupa e Estilo</td></tr><tr><td><b>Interrogator</b></td><td>Interrogatório, Persuasão e Percepção Humana</td></tr></tbody></table></div><p class="note-status">Opcional: no Foundry, o compêndio Roles de 2077 tem o item "Lawman (Investigator, suplemento de fã)".</p>`)}
-        ${section('Nomad: o desconto do clã (suplemento de fã)', 'sup. p. 6', `<p>Levar coisas de A para B sempre vai ser preciso, e o Nomad é quem faz acontecer. <b>Mudança:</b> com o próprio clã, upgrades e reparos saem pela <b>metade do preço</b>, se ele não tiver estragado a relação.</p>`)}
-        ${section('Veja também', '', `<p>${button('roles', 'Roles do RED')} ${button('advancement', 'Avanço e Pontos de Melhoria')}</p>`)}`
-    },
-
-    // Resumo do suplemento (antes ficava no index.html).
+    // O suplemento de fã de 2077: as regras saíram da mesa; os itens ficam aqui, fora das páginas de regra, até o mestre
+    // revisar. Os de netrunning vêm do system-net.js (window.systemNet.revisao), que carrega antes deste arquivo.
     supplement2077: {
-      eyebrow: 'Variante comunitária / opcional', title: '2077: suplemento de fã',
-      lede: 'O suplemento de fã "Cyberpunk 2077 – A Cyberpunk RED Supplement", de Queen Otter, adaptava o RED para 2077. Desde o Cyberpunk Edgerunners Mission Kit (oficial), a mesa usa as regras do Kit; do suplemento ficaram, como opcionais e adaptados ao Kit, os itens e as regras abaixo.',
-      html: `<div class="callout"><b>Como ler a wiki:</b> cada item e cada regra diz de onde vem. <b>Mission Kit</b> é a regra. <b>Suplemento de fã</b> é opcional: combine com o grupo o que entra, e nunca some as duas versões de uma regra.</div>
-        ${section('O que ficou (opcional)', 'sup.', `${list([
-          '<b>Armas:</b> 33 modelos, com as regras de Power, Smart e Tech do Kit. A dica de cada arma diz o que mudou.',
-          '<b>Cyberware:</b> cerca de 30 implantes (cyberolhos, placas, cybermembros, neuralware).',
-          '<b>Netrunning:</b> 11 quickhacks com o nível de DV do Kit, daemons, White ICE, cyberdecks e, se a mesa quiser, a rede de três camadas com RAM.',
-          '<b>Berserk e Sandevistan</b> como sistemas operacionais do Neural Link.',
-          '<b>Roles:</b> o Lawman com Investigator e o desconto do clã do Nomad.',
-          '<b>Economia:</b> a quitinete em megaprédio, o hustle de 1,5×, os quatro estilos de moda e as zonas de 2077.',
-          '<b>Veículos de 2077</b> no Foundry: uma adaptação, nem o Mission Kit nem o suplemento de fã trazem veículos.'
-        ])}<p>${button('weapons2077', 'Armas de 2077')} ${button('cyberware2077', 'Cyberware de 2077')} ${button('net2077', 'Netrunning de 2077')} ${button('os2077', 'Berserk e Sandevistan')} ${button('roles2077', 'Roles nos anos 2070')} ${button('economy', 'Economia')}</p>`)}
-        ${section('O que saiu', 'Kit', list([
-          'O <b>Face</b> e o <b>Corpo</b>: valem as 10 Roles do RED.',
-          'As <b>categorias de preço um degrau acima</b>: valem as do RED.',
-          'O <b>teste Smart</b> (10 ou 12 + 1d10), a <b>rajada carregada</b>, o "esfriar" e as <b>flechettes</b> das armas Tech: valem as regras de Power, Smart e Tech do Kit.',
-          'O <b>cyberware inicial gratuito</b> do suplemento (Neural Link, Cyberaudio Suite, Internal Agent, Personal Link e dois Chipware Sockets): no Kit, é o <b>Neuroport</b>.',
-          'O <b>Ex-Disk</b>, o <b>Self-ICE</b>, a <b>Gorilla Arms</b>, as <b>Mantis Blades</b>, o <b>Monowire</b>, o <b>Projectile Launch System</b> e os quickhacks repetidos: ficou a versão do Kit.',
-          'O fim do <b>Kibble</b>: o Kit ainda tem o Kibble (e ele custa Humanidade).'
-        ]))}`
+      eyebrow: 'Fontes / em revisão', title: 'Suplemento de fã: itens em revisão',
+      // Na busca, depois das páginas que valem: o Kerenzikov do RED vem antes do Kerenzikov (2077) do suplemento.
+      prioridade: -60,
+      lede: 'O suplemento de fã "Cyberpunk 2077 – A Cyberpunk RED Supplement", de Queen Otter, não é mais usado nas regras da mesa: valem o Cyberpunk Edgerunners Mission Kit e, no que ele não muda, o RED. Alguns itens do suplemento ainda podem entrar, depois de revisados. Até lá, ficam aqui.',
+      html: `<div class="callout"><b>Nada desta página vale na mesa</b> até o mestre aprovar. O item aprovado vai para o catálogo, com as regras do Kit e do RED. A nota de cada cartão diz o que já foi adaptado, e as regras do suplemento que saíram estão no fim da página.</div>
+        ${section('Armas', 'sup. p. 32–50', `<p>Os números são os do suplemento; as regras de Power, Smart e Tech são as do Kit.</p>${fanGrid(weaponGroups)}`)}
+        ${section('Cyberware', 'sup. p. 27–30', `<p>Os itens com o nome de um do RED (Kerenzikov, TeleOptics, Biomonitor, Pain Editor, Subdermal Armour) são outra versão: enquanto não forem aprovados, vale a do RED.</p>${fanGrid(cyberGroups)}`)}
+        ${(window.systemNet && window.systemNet.revisao) || ''}
+        ${section('Regras que saíram', 'sup.', `${list([
+          '<b>Roles:</b> o Face e o Corpo (valem as dez Roles do RED), o Lawman com Investigator e o desconto do clã do Nomad.',
+          '<b>Economia:</b> as categorias de preço um degrau acima, o fim do Kibble, o aluguel subsidiado do megaprédio, o hustle de 1,5×, o desconto do item usado, as zonas sem combate com a autodefesa e os preços dos quatro estilos de moda.',
+          '<b>Netrunning:</b> a rede de três camadas (arquitetura, LocalNet e SubNet), com RAM e cooling; as mudanças na Interface (bônus de netrunning, RAM e slots extras, a fila de ações); o cyberdeck como sistema operacional do Neural Link; o Rating do White ICE contra o Breach; e o mercado de só quatro peças de hardware.',
+          '<b>Armas:</b> o teste Smart (10 ou 12 + 1d10), a rajada carregada, o "esfriar" e as flechettes das armas Tech.',
+          '<b>Cyberware:</b> o cyberware inicial de graça (Neural Link, Cyberaudio Suite, Internal Agent, Personal Link e dois Chipware Sockets). No Kit, é o Neuroport.',
+          '<b>Itens repetidos:</b> as 13 armas do Kit, o Ex-Disk, o Self-ICE, a Gorilla Arms, as Mantis Blades, o Monowire, o Projectile Launch System e cinco quickhacks. Ficou a versão do Kit.'
+        ])}<p>${button('roles', 'Roles')} ${button('economy', 'Economia')} ${button('netrunning', 'Netrunning')} ${button('weapons2077', 'Armas de 2077')} ${button('cyberware2077', 'Cyberware de 2077')}</p>`)}`
     }
   };
 
@@ -323,23 +289,23 @@
     };
   }
 
-  const weaponRows = Object.values({ pistols, revolvers, smgs, shotguns, rifles, machineGuns, snipers }).flat().map(entry => entry.raw);
+  // As tabelas das páginas de regra: só os itens do Mission Kit, como os cartões.
+  const weaponRows = doKit(Object.values({ pistols, revolvers, smgs, shotguns, rifles, machineGuns, snipers }).flat()).map(entry => entry.raw);
   const weaponClass = row => /smart/i.test(row.kind) ? 'Smart' : /tech/i.test(row.kind) ? 'Tech' : 'Power';
-  const origin = row => ORIGENS[row.origem];
   const weaponType = row => row.kind.replace(/\s+(Power|Tech|Smart)/, '').replace(/, exótic[ao]$/, '');
   pages.weapons2077.setup = compareTable({
     pageId: 'weapons2077', rows: weaponRows, noun: 'armas',
-    columns: [['Arma', row => row.name], ['Origem', origin], ['Tipo', weaponType], ['Classe', weaponClass], ['Qualidade', row => row.quality], ['Perícia', row => row.skill.split(' (')[0]],
+    columns: [['Arma', row => row.name], ['Tipo', weaponType], ['Classe', weaponClass], ['Qualidade', row => row.quality], ['Perícia', row => row.skill.split(' (')[0]],
       ['Dano', row => row.damage, 'numero'], ['CDT', row => String(row.rof), 'numero'], ['Pente', row => row.magazine, 'numero'], ['Mãos', row => String(row.hands), 'numero'],
       ['Oculta', row => row.conceal], ['Preço', row => row.cost, 'numero']],
-    filters: [['Origem', origin], ['Classe', weaponClass], ['Tipo', weaponType], ['Perícia', row => row.skill.split(' (')[0]]]
+    filters: [['Classe', weaponClass], ['Tipo', weaponType], ['Perícia', row => row.skill.split(' (')[0]]]
   });
-  const cyberRows = Object.values({ neuroport, fashionware, neural, optics, internal, external, limbs }).flat().map(entry => entry.raw);
+  const cyberRows = doKit(Object.values({ neuroport, fashionware, neural, optics, internal, external, limbs }).flat()).map(entry => entry.raw);
   const cyberGroup = row => row.category.split(' (')[0];
   pages.cyberware2077.setup = compareTable({
     pageId: 'cyberware2077', rows: cyberRows, noun: 'implantes',
-    columns: [['Implante', row => row.name], ['Origem', origin], ['Categoria', row => row.category], ['Instalação', row => row.install], ['Humanidade', row => String(row.humanity), 'numero'], ['Preço', row => row.cost, 'numero']],
-    filters: [['Origem', origin], ['Categoria', cyberGroup], ['Instalação', row => row.install]]
+    columns: [['Implante', row => row.name], ['Categoria', row => row.category], ['Instalação', row => row.install], ['Humanidade', row => String(row.humanity), 'numero'], ['Preço', row => row.cost, 'numero']],
+    filters: [['Categoria', cyberGroup], ['Instalação', row => row.install]]
   });
 
   // data: as listas cruas, lidas pelo build do módulo do Foundry (foundry-2077/build).

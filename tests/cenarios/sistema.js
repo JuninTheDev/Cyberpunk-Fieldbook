@@ -1,4 +1,4 @@
-// Regras do RED: navegação, Escudo do mestre, perícias, barra "Nesta página", busca e teclado.
+// Regras: navegação, Escudo do mestre, perícias, barra "Nesta página", busca e teclado.
 const { abrir, buscarEAbrir, buscar, tecla, paginaAtual, semRolagemLateral, clicarChip } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
@@ -64,7 +64,8 @@ module.exports = async ({ edge, servidores, r }) => {
   await buscaCai('supressivo', ['combat', 'screen']);
   await buscaCai('hellhound', ['netArsenal'], 'Hellhound');
   await buscaCai('Tamsin', ['docPersonagens', 'people']);
-  await buscaCai('Kerenzikov', ['cyberware2077', 'cyberware'], 'Kerenzikov');
+  // O Kerenzikov que vale é o do RED (o do suplemento de fã está em revisão): a busca abre o glossário ou o catálogo do RED.
+  await buscaCai('Kerenzikov', ['glossary', 'cyberware']);
   await r.passo('busca aceita nome de perícia em inglês ("Wardrobe")', async () => { const resultados = await buscar(edge, 'Wardrobe'); return [resultados.length > 0, `${resultados.length} resultados`]; });
 
   await r.passo('tecla / põe o cursor na busca', async () => {

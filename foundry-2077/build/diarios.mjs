@@ -1,4 +1,4 @@
-// Regras de 2077 em diários: as páginas da wiki, uma página de diário por seção.
+// Regras de 2077 em diários: as páginas da wiki (as regras unificadas, Mission Kit sobre o RED), uma página de diário por seção.
 import fs from 'node:fs';
 import path from 'node:path';
 import { journalDoc } from './lib.mjs';
@@ -7,11 +7,12 @@ import { wiki } from './wiki.mjs';
 
 // [página da wiki, seções a incluir (null = todas)]
 const journals = [
-  ['weapons2077', null], ['cyberware2077', null], ['net2077', null], ['quickhacks', null], ['os2077', null],
-  ['supplement2077', null], ['economy', null],
+  ['weapons2077', null], ['cyberware2077', null], ['netrunning', null], ['quickhacks', null], ['roles', null],
+  ['economy', null], ['humanity', null],
   // Das fichas de NPC, só o que não cita a campanha: o resto está no compêndio de NPCs.
   ['npcs', ['Como usar', 'Trauma Team']],
-  ['roles2077', null]
+  // Os itens do suplemento de fã, em revisão (fora das regras da mesa).
+  ['supplement2077', null]
 ];
 
 // Botões de navegação da wiki não fazem sentido no Foundry.

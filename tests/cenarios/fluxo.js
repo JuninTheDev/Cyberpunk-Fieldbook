@@ -133,7 +133,8 @@ module.exports = async ({ edge, servidores, r }) => {
       'Rebuild: 1.000eb, 2 slots, 1 hora': /custa <b>1\.000eb<\/b> \(Muito Caro\), ocupa <b>2 slots de acessório<\/b> e leva <b>1 hora<\/b>/,
       'Power: lesão crítica +5': /o dano bônus da lesão sobe <b>5<\/b>: 10 em vez de 5/,
       'Power: ricochete −4, mirado só o mirado': /O ataque tem <b>−4<\/b>; num <b>tiro mirado<\/b>, vale só a penalidade do tiro mirado/,
-      'Power: coprocessador −2': /O Ballistic Coprocessor reduz a penalidade do ricochete para −2/,
+      // O Ballistic Coprocessor é do suplemento de fã (em revisão): a regra fica no cartão dele, não nas regras de Power.
+      'Ballistic Coprocessor (fã): ricochete −2': /o <b>ricochete<\/b> das armas Power sai com <b>−2<\/b> em vez de −4/,
       'Smart: conexão': /<b>Personal Link<\/b> \(o Interface Plug que vem no Neuroport\) ou por um <b>Subdermal Grip<\/b>\. Sem conexão, não dispara/,
       'Smart: +1': /<b>\+1<\/b> nos ataques à distância com a arma/,
       'Smart melhorada: 5 ou menos, 14 + 1d10': /errar a DV por <b>5 ou menos<\/b>, você tenta de novo na hora, com <b>14 \+ 1d10<\/b>/,

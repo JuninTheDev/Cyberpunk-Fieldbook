@@ -96,28 +96,25 @@
       { id: 'glossary', label: 'Glossário', icon: 'G' },
       { id: 'indice', label: 'Índice A–Z', icon: 'AZ' }
     ]},
-    { group: 'Regras do RED', pages: [
+    { group: 'Regras', pages: [
       { id: 'checks', label: 'Testes e dificuldades', icon: 'R' },
       { id: 'combat', label: 'Combate', icon: 'C' },
       { id: 'damage', label: 'Dano, ferimentos e cura', icon: 'D' },
       { id: 'humanity', label: 'Humanidade e drogas', icon: 'H' },
       { id: 'economy', label: 'Economia', icon: 'EB' },
+      { id: 'roles', label: 'Roles', icon: 'F' },
       { id: 'creation', label: 'Criação de personagens', icon: 'P' },
       { id: 'lifepath', label: 'Lifepath', icon: 'LP' },
       { id: 'advancement', label: 'Avanço e Pontos de Melhoria', icon: 'IP' }
     ]},
     { group: 'Netrunning', pages: [
-      { id: 'netrunning', label: 'Regras do RED', icon: 'N' },
-      { id: 'netArsenal', label: 'Arsenal: ICE, programas, upgrades', icon: 'ICE' },
-      { id: 'net2077', label: 'Netrunning de 2077', icon: '77' },
-      { id: 'quickhacks', label: 'Quickhacks e daemons', icon: 'QH' },
-      { id: 'os2077', label: 'Berserk e Sandevistan', icon: 'OS' }
+      { id: 'netrunning', label: 'Regras de netrunning', icon: 'N' },
+      { id: 'quickhacks', label: 'Quickhacks', icon: 'QH' },
+      { id: 'netArsenal', label: 'Arsenal: ICE, programas, upgrades', icon: 'ICE' }
     ]},
     { group: 'Catálogos', pages: [
       { id: 'weapons2077', label: 'Armas de 2077', icon: 'W' },
       { id: 'cyberware2077', label: 'Cyberware de 2077', icon: 'CW' },
-      { id: 'roles', label: 'Roles', icon: 'F' },
-      { id: 'roles2077', label: 'Roles nos anos 2070', icon: 'F77' },
       { id: 'cyberware', label: 'Cyberware do RED', icon: 'K' },
       { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' }
     ]},
@@ -131,12 +128,20 @@
       { id: 'bcVeiculos', label: 'Veículos', icon: 'BV' },
       { id: 'bcMercados', label: 'Mercados Noturnos', icon: 'NM' }
     ]},
-    { group: 'Suplemento de fã e fontes', pages: [
-      { id: 'supplement2077', label: 'Suplemento de fã', icon: '77' },
+    { group: 'Fontes', pages: [
+      { id: 'supplement2077', label: 'Suplemento de fã (em revisão)', icon: '77' },
       { id: 'sources', label: 'Livros de referência', icon: 'L' }
     ]}
   ];
 
+  // Páginas de regra que viraram parte de outra quando as regras foram unificadas (Mission Kit sobre o RED; o suplemento
+  // de fã só com itens em revisão): o endereço antigo continua abrindo. Cada wiki pode somar os dela (config.aliases).
+  const aliases = {
+    net2077: { id: 'netrunning', section: 'quickhacks-no-neuroport' },
+    roles2077: { id: 'roles', section: 'nos-anos-2070' },
+    os2077: { id: 'supplement2077', section: 'berserk-e-sandevistan' },
+    ...(config.aliases || {})
+  };
   const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemBlackChrome || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
   Object.entries(markdownDocs).forEach(([id, doc]) => {
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
@@ -234,7 +239,7 @@
     const closedGroups = () => readSet('grupos-fechados');
     const openedGroups = () => readSet('grupos-abertos');
     // Começam fechados os grupos das regras que não são de mesa. O que a pessoa abre ou fecha fica como ela deixou.
-    const CLOSED_BY_DEFAULT = new Set(['system:Netrunning', 'system:Catálogos', 'system:Black Chrome', 'system:Suplemento de fã e fontes']);
+    const CLOSED_BY_DEFAULT = new Set(['system:Netrunning', 'system:Catálogos', 'system:Black Chrome', 'system:Fontes']);
     const isClosed = (key, closed, opened) => closed.has(key) || (CLOSED_BY_DEFAULT.has(key) && !opened.has(key));
     const compact = () => document.body.classList.contains('sidebar-compact') && !narrow.matches;
 
@@ -382,8 +387,8 @@
       if (location.hash === routedHash) return;
       routedHash = location.hash;
       const { id, section } = readHash();
-      // Página que saiu e virou parte de outra (config.aliases: #docQuemEQuem → Pessoas e facções, na tabela).
-      const alias = !pageContent[id] && (config.aliases || {})[id];
+      // Página que saiu e virou parte de outra (aliases: #docQuemEQuem → Pessoas e facções, na tabela).
+      const alias = !pageContent[id] && aliases[id];
       if (alias) { openPage(alias.id, { section: section || alias.section }, 'replace'); return; }
       if (!pageContent[id]) { openPage(homePage(), undefined, 'replace'); return; }
       openPage(id, section ? { section } : undefined, 'none');
@@ -403,7 +408,7 @@
 
     // target (opcional): { unit, term } ou { section } abre a página já na seção indicada, com o termo destacado.
     function openPage(id, target, historyMode = 'push') {
-      const alias = !pageContent[id] && (config.aliases || {})[id];
+      const alias = !pageContent[id] && aliases[id];
       if (alias) return openPage(alias.id, target || (alias.section ? { section: alias.section } : undefined), historyMode);
       const page = pageContent[id];
       if (!page) return;
@@ -423,6 +428,7 @@
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
       // A linha em ciano (o eyebrow) em cima do título, como nos exemplos de 2026.
       content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
+      tocClicked = -1;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
@@ -759,6 +765,13 @@
     }
 
     let tocFrame = 0;
+    // O chip clicado. Numa página curta, a última seção não chega ao topo, e a rolagem acenderia o chip anterior: no fim
+    // da página, com a seção clicada na tela, ele continua aceso, até o leitor rolar por conta própria.
+    let tocClicked = -1;
+    const releaseToc = () => { tocClicked = -1; };
+    window.addEventListener('wheel', releaseToc, { passive: true });
+    window.addEventListener('touchstart', releaseToc, { passive: true });
+    window.addEventListener('keydown', releaseToc);
     window.addEventListener('scroll', () => {
       if (tocFrame) return;
       tocFrame = requestAnimationFrame(() => {
@@ -767,7 +780,10 @@
         if (!toc) return;
         const limit = toc.getBoundingClientRect().bottom + 24;
         let current = -1;
-        pageUnits(content).forEach((unit, index) => { if (unit.getBoundingClientRect().top <= limit) current = index; });
+        const units = pageUnits(content);
+        units.forEach((unit, index) => { if (unit.getBoundingClientRect().top <= limit) current = index; });
+        const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+        if (tocClicked > current && atBottom && units[tocClicked] && units[tocClicked].getBoundingClientRect().top < window.innerHeight) current = tocClicked;
         toc.querySelectorAll('[data-toc-index]').forEach(chip => {
           const active = Number(chip.dataset.tocIndex) === current;
           if (active && !chip.classList.contains('active')) toc.scrollTo({ left: chip.offsetLeft - toc.clientWidth / 3, behavior: 'smooth' });
@@ -1308,7 +1324,8 @@
         // O glossário define o termo; quem busca o nome de um item quer o cartão do item primeiro.
         if (entry.id === 'glossary') score -= 60;
         // As páginas da base da campanha (Pessoas e facções, Lugares e peças) vêm antes da ficha de combate do mesmo nome.
-        score += (markdownDocs[entry.id] && markdownDocs[entry.id].prioridade) || 0;
+        // Uma página de regras com prioridade negativa (os itens do suplemento de fã, em revisão) fica depois da regra que vale.
+        score += (markdownDocs[entry.id] && markdownDocs[entry.id].prioridade) || (pageContent[entry.id] && pageContent[entry.id].prioridade) || 0;
         const firstText = perTerm.map(found => found.text[0]).filter(Boolean).sort((a, b) => a[0] - b[0])[0];
         return [{ entry, score, at: firstText ? firstText[0] : 0 }];
       }).sort((first, second) => second.score - first.score);
@@ -1359,7 +1376,8 @@
       const tocChip = event.target.closest('[data-toc-index]');
       if (tocChip) {
         tocChip.parentElement.querySelectorAll('[data-toc-index]').forEach(chip => chip.classList.toggle('active', chip === tocChip));
-        focusUnit(pageUnits(content)[Number(tocChip.dataset.tocIndex)], undefined, true);
+        tocClicked = Number(tocChip.dataset.tocIndex);
+        focusUnit(pageUnits(content)[tocClicked], undefined, true);
         return;
       }
       const filterButton = event.target.closest('[data-search-filter]');
@@ -1429,7 +1447,7 @@
     buildNavigation();
     labelMenuButton();
     // Abre a página do endereço (link direto, recarregar) ou a inicial.
-    if (pageContent[readHash().id] || (config.aliases || {})[readHash().id]) routeFromHash();
+    if (pageContent[readHash().id] || aliases[readHash().id]) routeFromHash();
     else openPage(homePage(), undefined, 'replace');
     // A mesa do mestre e as preferências da conta chegam do servidor depois da primeira página.
     document.addEventListener('wiki:mesa', () => { if (currentPage === 'home' && !search.value.trim()) openPage('home', undefined, 'none'); });

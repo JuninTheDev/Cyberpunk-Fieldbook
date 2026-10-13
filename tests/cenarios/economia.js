@@ -1,4 +1,4 @@
-// Economia dos anos 2070 (os preços do RED, que valem no Mission Kit) e o resumo do suplemento de fã.
+// Economia dos anos 2070 (os preços do RED, que valem no Mission Kit), sem as regras do suplemento de fã.
 const { abrir, buscar, tecla, ondeParou, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
@@ -12,10 +12,14 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   await edge.shot('economia');
 
-  // O Kibble também está na Humanidade: no Mission Kit, viver de Kibble custa Humanidade todo mês.
-  // Os documentos de Night City entram na busca (a missão The Jacket tem "Ping: o Megaprédio H4"): no filtro Sistema,
-  // o termo ainda cai na Economia.
-  for (const termo of ['kibble', 'megapredio', 'neokitsch', 'hustle']) {
+  // O Kibble também está na Humanidade: viver de Kibble custa Humanidade todo mês.
+  // Os documentos de Night City entram na busca: no filtro Sistema, o termo ainda cai na Economia.
+  await r.passo('sem as regras do suplemento de fã (megaprédio, hustle de 1,5×, zonas, os quatro estilos de moda)', async () => {
+    const texto = await edge.evaluate(`document.getElementById('content').textContent`);
+    const secoes = await edge.evaluate(`[...document.querySelectorAll('#content .section')].map(s => s.dataset.toc)`);
+    return [!/suplemento|megaprédio|1,5×|Neokitsch|Em 2077 não há a Role Fixer/.test(texto) && !secoes.some(s => /Zonas|Moda/.test(s)), secoes.join(', ')];
+  });
+  for (const termo of ['kibble', 'quitinete', 'hustle']) {
     await r.passo(`busca "${termo}" cai na Economia${termo === 'kibble' ? ' (ou na Humanidade)' : ''}, no filtro Sistema`, async () => {
       await buscar(edge, termo);
       await edge.evaluate(`document.querySelector('[data-search-filter="system"]')?.click()`);
@@ -30,7 +34,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [(parou.pagina === 'economy' || (termo === 'kibble' && parou.pagina === 'humanity')) && parou.marcas > 0, `${parou.pagina} | ${parou.marcas} marcas`];
     });
   }
-  await r.passo('suplemento 2077 tem botão para a Economia', async () => {
+  await r.passo('a página do suplemento de fã leva à Economia que vale', async () => {
     await abrir(edge, 'supplement2077');
     await edge.evaluate(`document.querySelector('#content [data-page=economy]').click()`);
     await edge.sleep(200);

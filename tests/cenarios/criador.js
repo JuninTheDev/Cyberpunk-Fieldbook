@@ -297,23 +297,17 @@ module.exports = async ({ edge, servidores, r }) => {
     return [/não vale mais/.test(invalida) && /Oficina da Família: falta 1 escolha/.test(pend), `${invalida} · ${pend.slice(0, 120)}`];
   });
 
-  // ---------- Netrunner de 2077 ----------
-  await r.passo('Netrunner (Rato de Rua): o kit de 2077 troca o cyberdeck e os programas pelo Hunter e 3 quickhacks', async () => {
+  // ---------- Netrunner ----------
+  // O kit de 2077 do suplemento de fã (Hunter MK.1 e 3 quickhacks) saiu com as regras dele: o pacote é o do RED.
+  await r.passo('Netrunner (Rato de Rua): o pacote do RED, com o cyberdeck e os programas, sem o kit do suplemento de fã', async () => {
     await novo();
     await clicar('[data-role="netrunner"]');
     await clicar('[data-method="ratoderua"]');
     await passo(5);
-    const red = await texto('#cc-step');
-    await edge.evaluate("(() => { const r = document.querySelector('[data-kitnet=\"2077\"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()");
-    await edge.sleep(250);
-    for (const id of ['weapon-glitch', 'request-backup', 'bait']) {
-      await edge.evaluate(`(() => { const c = document.querySelector('[data-quickhack="netrunning-2077:${id}"]'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
-      await edge.sleep(200);
-    }
-    const travado = await edge.evaluate("document.querySelector('[data-quickhack=\"netrunning-2077:reboot-optics\"]').disabled");
-    const itens = await edge.evaluate("[...document.querySelectorAll('.cc-items li')].map(li => li.textContent)");
-    const pacote = itens.join(' | ');
-    return [/Cyberdeck/.test(red) && /Militech Hunter MK\.1/.test(pacote) && /Weapon Glitch/.test(pacote) && /Bait/.test(pacote) && !/Cyberdeck/.test(pacote) && !/Worm/.test(pacote) && travado, `quarto travado: ${travado} · ${pacote.slice(0, 160)}`];
+    const pagina = await texto('#cc-step');
+    const escolha = await edge.evaluate("document.querySelectorAll('[data-kitnet], [data-quickhack]').length");
+    const pacote = (await edge.evaluate("[...document.querySelectorAll('.cc-items li')].map(li => li.textContent)")).join(' | ');
+    return [/Cyberdeck/.test(pacote) && /Worm|Sword/.test(pacote) && !/Militech Hunter/.test(pagina) && !/suplemento de fã/.test(pagina) && escolha === 0, `${escolha} opções de kit · ${pacote.slice(0, 160)}`];
   });
 
   // ---------- Pacote Completo e loja ----------

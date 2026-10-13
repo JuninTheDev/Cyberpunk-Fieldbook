@@ -243,7 +243,7 @@
       weapons: [['Constitutional Arms Unity', '3d6', 2, 'Handgun', 'Power; 4d6 no tiro mirado', '2077:Constitutional Arms Unity']],
       skills: 'Interface 3, Athletics 6, Brawling 6, Evasion 8, Handgun 10, Human Perception 8, Perception 8, Stealth 10',
       gear: 'Neuroport com um cyberdeck: faz quickhacks',
-      tip: 'Interface 3: faz os quickhacks Simples, Padrão e Difíceis (até DV10) e passa direto pelo firewall de fábrica dos Neuroports. O Kit dá 2 Ações NET por turno; com as regras do RED, Interface 3 também dá 2.'
+      tip: 'Interface 3: faz os quickhacks Simples, Padrão e Difíceis (até DV10) e passa direto pelo firewall de fábrica dos Neuroports. Interface 3 dá 2 Ações NET por turno.'
     },
     {
       name: 'Soldado da Arasaka', book: 'Mission Kit', tier: 'mook', page: 122, rep: 2,
@@ -411,16 +411,16 @@
     tip: campaign
   });
   const factions = [
-    faction('Tyger Claws', 'Japantown e Kabuki', ['Boosterganger', 'troque os Rippers por uma katana (arma branca pesada, 3d6, CDT 2, Armas Brancas 11) e o couro por Kevlar (SP 7); adicione Basic Kiroshi Optics. Muitos chegam de moto.'],
-      ['Oficial de segurança', 'troque o rifle por uma katana (Armas Brancas 10) e uma Arasaka Shigure (SMG, 2d6, autofogo); a elite troca o Kerenzikov por um Sandevistan.'],
+    faction('Tyger Claws', 'Japantown e Kabuki', ['Boosterganger', 'troque os Rippers por uma katana (arma branca pesada, 3d6, CDT 2, Armas Brancas 11) e o couro por Kevlar (SP 7); adicione cyberolhos Kiroshi. Muitos chegam de moto.'],
+      ['Oficial de segurança', 'troque o rifle por uma katana (Armas Brancas 10) e uma SMG (2d6, autofogo); a elite troca o Kerenzikov por um Sandevistan.'],
       'A gangue de Wakako. Para Mina Kuroda, a guarda-costas dela, use o tenente com a katana.', 'adaptação'),
     faction('Maelstrom', 'Northside, Watson', ['Boosterganger', 'troque o couro por Light Armorjack (SP 11); mantenha os Rippers ou troque por outra arma cibernética. Óticas vermelhas por toda parte.'],
       ['Oficial de segurança', 'adicione uma arma cibernética à escolha.'],
       'O culto do hospital queimado (Sessão 02): cultistas como capangas e Brakk como Chefe reclaimer com Wolvers.', 'livro, p. 422'),
-    faction('Valentinos', 'Heywood', ['Guarda-costas', 'troque a espingarda ruim por uma pistola pesada banhada a ouro (Constitutional Arms Liberty, 3d6, CDT 2).'],
-      ['Oficial de segurança', 'troque o rifle por uma espingarda (Constitutional Arms M2038 Tactician, 5d6).'],
+    faction('Valentinos', 'Heywood', ['Guarda-costas', 'troque a espingarda ruim por uma pistola pesada banhada a ouro (3d6, CDT 2).'],
+      ['Oficial de segurança', 'troque o rifle por uma espingarda (5d6).'],
       'Honra e família: não atacam quem está sob a palavra de um Valentino, e nunca esquecem uma dívida.', 'adaptação'),
-    faction('6th Street', 'Santo Domingo e Heywood', ['Operativo de segurança', 'ex-militares: troque o rifle ruim por um Militech M251s Ajax (5d6, qualidade padrão, não emperra).'],
+    faction('6th Street', 'Santo Domingo e Heywood', ['Operativo de segurança', 'ex-militares: troque o rifle ruim por um rifle de assalto de qualidade padrão (5d6, não emperra).'],
       ['Oficial de segurança', 'como no livro.'],
       'Lutam em formação: metade dá fogo supressivo enquanto a outra metade flanqueia.', 'adaptação'),
     faction('Animals', 'Pacifica', ['Guarda-costas', 'tire a espingarda; adicione um cyberbraço com Gorilla Arm (o punho é arma branca pesada excelente: 3d6, CDT 2, +1 no ataque; empunha como BODY 11).'],
@@ -442,10 +442,10 @@
       ['Oficial de segurança', 'patrulha à noite. Depois da meia-noite, adicione Interface Plugs e Smartgun Link.'],
       'Atiram primeiro e preenchem o relatório depois, se alguém sacar uma arma.', 'livro, p. 417–422'),
     faction('MaxTac', 'toda Night City', ['—', 'a MaxTac não tem capangas.'],
-      ['Outrider como mini-chefe', 'tire Moto e Afinidade com Animais; troque a Light Armorjack por Heavy Armorjack (SP 13, −2 em REF, DEX e MOVE e nas perícias deles, como o Oficial de segurança); rifle Militech M251s Ajax; adicione Mantis Blades (3d6) ou um Militech Falcon Sandevistan. Cada agente conta como 3 personagens.'],
+      ['Outrider como mini-chefe', 'tire Moto e Afinidade com Animais; troque a Light Armorjack por Heavy Armorjack (SP 13, −2 em REF, DEX e MOVE e nas perícias deles, como o Oficial de segurança); rifle de assalto; adicione Mantis Blades (3d6) ou um Sandevistan. Cada agente conta como 3 personagens.'],
       'Chega 10 minutos depois de um surto ser reportado (ganchos dos personagens). É o relógio da cena, não uma luta para vencer.', 'adaptação'),
     faction('Segurança corporativa', 'Arasaka, Militech, Kang Tao', ['Operativo de segurança', 'de dia: Light Armorjack e SMG ruim no lugar do rifle. À noite: Heavy Armorjack e SMG pesada ruim.'],
-      ['Oficial de segurança', 'depois da meia-noite: SMG pesada, Interface Plugs e Smartgun Link. Em 2077, uma SMG Smart (Arasaka TKI-20 Shingen ou Kang Tao G-58 Dian).'],
+      ['Oficial de segurança', 'depois da meia-noite: SMG pesada, Interface Plugs e Smartgun Link. Em 2077, uma SMG Smart (Arasaka TKI-20 Shingen).'],
       'A equipe de Iskra (Sessões 01 e 02) e a segurança do datafort da Militech em Arroyo, onde está a Coleira.', 'livro, p. 417–421 + adaptação')
   ];
 
@@ -599,7 +599,7 @@
         ${section('Tenentes', '414–415', npcGrid(lieutenants))}
         ${section('Mini-chefes', '415–416', npcGrid(bosses))}
         ${section('Chefe', '416', npcGrid(boss))}
-        ${section('Fichas do Mission Kit', 'Kit p. 118–126', `<div class="callout">As fichas do Cyberpunk Edgerunners Mission Kit, da missão The Jacket e do anime. Todos têm <b>Neuroport</b>: dá para hackear qualquer um com quickhacks. A armadura tem dois SP: contra a maioria dos ataques e contra corpo a corpo e Tech carregada (a metade). As bases de perícia já somam o bônus da Role, quando o Kit diz. No Foundry, estão na pasta <b>Mission Kit</b> do compêndio de NPCs.</div>${npcGrid(kitNpcs)}<p>${button('net2077', 'Quickhacks no Neuroport')} ${button('weapons2077', 'Armas de 2077')}</p>`)}
+        ${section('Fichas do Mission Kit', 'Kit p. 118–126', `<div class="callout">As fichas do Cyberpunk Edgerunners Mission Kit, da missão The Jacket e do anime. Todos têm <b>Neuroport</b>: dá para hackear qualquer um com quickhacks. A armadura tem dois SP: contra a maioria dos ataques e contra corpo a corpo e Tech carregada (a metade). As bases de perícia já somam o bônus da Role, quando o Kit diz. No Foundry, estão na pasta <b>Mission Kit</b> do compêndio de NPCs.</div>${npcGrid(kitNpcs)}<p><button class="action" data-page="netrunning" data-section="quickhacks-no-neuroport" type="button">Quickhacks no Neuroport</button> ${button('weapons2077', 'Armas de 2077')}</p>`)}
         ${section('Fichas do Black Chrome', 'BC p. 153', `<div class="callout">Os fixers dos Mercados Noturnos do Black Chrome. O PDF do projeto só tem a ficha de Rex Royale, do mercado F: as dos mercados A a E estão nas páginas que faltam. No Foundry, está na pasta <b>Black Chrome</b> do compêndio de NPCs.</div>${npcGrid(bcNpcs)}<p>${button('bcMercados', 'Mercados Noturnos do Black Chrome')}</p>`)}
         ${section('Trauma Team', '224', traumaTeam)}
         ${section('Facções de 2077', '417–422', `<div class="callout">O livro monta os encontros de rua trocando o equipamento destas fichas ("use o Boosterganger, troque o couro por…"). As variantes marcadas com <b>livro</b> vêm das tabelas de encontros (p. 417–422); as marcadas com <b>adaptação</b> seguem o mesmo método para as gangues de 2077. As armas citadas estão em Armas de 2077.</div><div class="entry-grid">${factions.join('')}</div>`)}

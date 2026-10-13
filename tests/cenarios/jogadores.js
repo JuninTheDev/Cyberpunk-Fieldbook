@@ -21,10 +21,10 @@ module.exports = async ({ edge, servidores, r }) => {
         return [n > 0, `${n} notas`];
       });
     }
-    await r.passo('mestre: Armas de 2077 tem 46 armas', async () => {
+    await r.passo('mestre: Armas de 2077 tem as 13 armas do Mission Kit', async () => {
       await abrir(edge, 'weapons2077');
       const n = await edge.evaluate(`document.querySelectorAll('#content .entry').length`);
-      return [n === 46, `${n} cartões`];
+      return [n === 13, `${n} cartões`];
     });
 
     await abrir(edge, 'playerView', 1200);

@@ -144,18 +144,9 @@
       armas: [w('very-heavy-pistol'), a('very-heavy-pistol-basic', 50), ...lightArmor],
       equipamento: [g('agent'), g('cyberdeck'), g('virtuality-goggles'), prog('armor'), prog('sword'), ou(prog('see-ya'), prog('eraser')), ou(prog('sword'), prog('vrizzbolt')), ou(prog('worm'), prog('sword'))],
       moda: [cl('generic-chic', 'top', 10), cl('leisurewear', 'footwear', 2), cl('leisurewear', 'jewelry'), cl('leisurewear', 'bottoms', 2), cl('urban-flash', 'jacket')],
-      cyberware: [cw('interface-plugs'), cw('neural-link'), cw('shift-tacts')], humanidade: 14,
-      // Em 2077, o jogador pode trocar o cyberdeck e os programas do RED pelo deck de 2077 com 3 quickhacks de 100eb do
-      // suplemento de fã (sup. p. 16–20). Os do Mission Kit o netrunner já faz pelo Rank de Interface. O resto do pacote não muda.
-      kit2077: {
-        deck: 'netrunning-2077:militech-hunter-mk-1', escolher: 3,
-        quickhacks: [
-          ['netrunning-2077:reboot-optics', 'Simples (DV6): embaralha os cyberópticos do alvo (Olho Danificado).'],
-          ['netrunning-2077:weapon-glitch', 'Padrão (DV8): trava a arma Smart do alvo.'],
-          ['netrunning-2077:bait', 'Simples (DV6): um som no Cyberaudio do alvo atrai ele até você.'],
-          ['netrunning-2077:request-backup', 'Padrão (DV8): simula um pedido de reforço do alvo para os aliados dele.']
-        ]
-      }
+      // Os quickhacks do Mission Kit o netrunner faz pelo Rank de Interface, sem comprar nada. O kit de 2077 do suplemento de
+      // fã (o deck Hunter MK.1 com 3 quickhacks no lugar do cyberdeck e dos programas) saiu com as regras do suplemento.
+      cyberware: [cw('interface-plugs'), cw('neural-link'), cw('shift-tacts')], humanidade: 14
     },
     tech: {
       armas: [ou(w('shotgun'), w('assault-rifle')), ou(a('shotgun-shell-basic', 100), a('rifle-basic', 100)), a('grenade-flashbang'), ...lightArmor],
@@ -290,8 +281,8 @@
     exec: [{ id: 'core_clothing:businesswear-top', qtd: 1 }, { id: 'core_clothing:businesswear-bottoms', qtd: 1 }, { id: 'core_clothing:businesswear-footwear', qtd: 1 }]
   };
 
-  // Moradia, estilo de vida, Trauma Team e moda (RED p. 223 e 377–378; a quitinete em megaprédio e os estilos de moda
-  // são do suplemento de fã, p. 7–8 e 31, opcionais).
+  // Moradia, estilo de vida, Trauma Team e moda (RED p. 223 e 377–378; os estilos de moda são os dos anos 2070, do
+  // Lifepath do Mission Kit, p. 21).
   // O padrão de cada Role tem o primeiro mês de graça. Escolher algo melhor paga a diferença do primeiro mês
   // com o dinheiro inicial; escolher pior não devolve nada (regra da mesa). `roles`: só para essas Roles.
   const housing = {
@@ -299,8 +290,7 @@
       { id: 'rua', nome: 'Na rua ou num veículo', aluguel: 0, desc: 'Sem casa. Na rua, Resistência DV15 para não acordar cansado.' },
       { id: 'capsula', nome: 'Hotel cápsula', aluguel: 500, desc: 'Só uma cápsula para dormir. Com mais de uma pessoa por cápsula, todos dormem mal.' },
       { id: 'conteiner', nome: 'Contêiner de carga', aluguel: 1000, desc: 'Um contêiner adaptado, num pátio ou empilhado.' },
-      { id: 'megapredio', nome: 'Quitinete em megaprédio (suplemento de fã)', aluguel: 1000, desc: 'Opcional, do suplemento de fã: subsidiada, custa o mesmo que o contêiner (sup. p. 31).' },
-      { id: 'quitinete', nome: 'Quitinete fora de megaprédio', aluguel: 1500, desc: 'Um cômodo só, num prédio comum.' },
+      { id: 'quitinete', nome: 'Quitinete', aluguel: 1500, desc: 'Um cômodo só, num prédio comum ou num megaprédio.' },
       { id: 'dois-quartos', nome: 'Apartamento de dois quartos', aluguel: 2500, desc: 'Espaço para mais gente dormir bem.' },
       { id: 'conapt-luxo', nome: 'Conapt de luxo', aluguel: 7500, desc: 'Prédio com segurança e serviços.' },
       { id: 'cobertura', nome: 'Cobertura de luxo', aluguel: 15000, desc: 'O topo de um arranha-céu.' },
@@ -308,7 +298,7 @@
       { id: 'cla', nome: 'Com a família do clã', aluguel: 0, roles: ['nomad'], desc: 'Mora no comboio ou no acampamento do clã (Moto).' }
     ],
     estilos: [
-      { id: 'kibble', nome: 'Kibble', custo: 100, desc: 'A ração de Night City: sem gosto, sem cheiro e com todos os nutrientes. No Mission Kit, viver de Kibble custa Humanidade todo mês.' },
+      { id: 'kibble', nome: 'Kibble', custo: 100, desc: 'A ração de Night City: sem gosto, sem cheiro e com todos os nutrientes. Viver de Kibble custa Humanidade todo mês.' },
       { id: 'generico', nome: 'Prepak genérico', custo: 300, desc: 'Comida pronta e barata, um passo acima do Kibble.' },
       { id: 'bom', nome: 'Prepak bom', custo: 600, desc: 'Comida de restaurante, quase como a de verdade. Bons bares e um show ou evento por mês.' },
       { id: 'fresca', nome: 'Comida fresca', custo: 1500, desc: 'Comida de verdade, bar executivo, hotel quando precisar e um restaurante de primeira por mês.' },
@@ -321,10 +311,12 @@
     ],
     modas: [
       { id: '', nome: 'Nenhum em especial', desc: '' },
-      { id: 'entropismo', nome: 'Entropismo', desc: 'Robusto, quadradão, feio, mas funciona. Necessidade acima de estilo.' },
-      { id: 'kitsch', nome: 'Kitsch', desc: 'Espalhafatoso e colorido, com cyberware à mostra. Estilo acima de substância.' },
-      { id: 'neomilitarismo', nome: 'Neomilitarismo', desc: 'Monolítico, prático, dominante. O visual das megacorps.' },
-      { id: 'neokitsch', nome: 'Neokitsch', desc: 'Ostensivo, dourado, materiais naturais de verdade. O visual do 0,1%.' }
+      { id: 'entropismo', nome: 'Entropismo', desc: 'Funcional, mas sem capricho: necessidade acima de estilo.' },
+      { id: 'kitsch', nome: 'Kitsch', desc: 'Uma volta ao passado, com cores fortes e moda chamativa: estilo acima de substância.' },
+      { id: 'neomilitarismo', nome: 'Neomilitarismo', desc: 'Utilitário e duro, o visual das megacorps: substância acima de estilo.' },
+      { id: 'neokitsch', nome: 'Neokitsch', desc: 'A volta da moda clássica, misturando o velho e o novo: substância e estilo.' },
+      { id: 'couro-nomade', nome: 'Couro nômade', desc: 'Quase nunca é couro de verdade, mas é rústico e resistente, inspirado na vida na estrada.' },
+      { id: 'alta-moda', nome: 'Alta moda', desc: 'Sempre na tendência do momento e nas grifes caras, sejam quais forem.' }
     ],
     // O que cada Role tem de graça no primeiro mês (o Exec: conapt da corporação e Prepak bom).
     padrao: { geral: { moradia: 'conteiner', estilo: 'kibble' }, exec: { moradia: 'conapt-corp', estilo: 'bom' } }

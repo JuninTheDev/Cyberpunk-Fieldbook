@@ -101,7 +101,8 @@
 
   // ---------------- Itens ----------------
   // Pacote da Role (Rato de Rua e Edgerunner) com as escolhas feitas, mais o Neuroport de graça e o que foi comprado.
-  // Kit do Netrunner: o do RED (cyberdeck e programas do pacote) ou o do suplemento de fã (Hunter MK.1 e 3 quickhacks).
+  // Kit do Netrunner: um pacote pode ter kit2077, um kit que troca o cyberdeck e os programas do RED (nenhum tem hoje:
+  // o do suplemento de fã saiu com as regras dele).
   const isRedDeckEntry = entry => (entry.ou ? entry.ou.flat() : [entry]).every(([id]) => id === 'core_gear:cyberdeck' || id.startsWith('core_programs:'));
   const uses2077Kit = (doc, pack) => Boolean(pack && pack.kit2077 && doc.kitNet === '2077');
   const chosenQuickhacks = (doc, pack) => (doc.quickhacks || []).filter(id => pack.kit2077.quickhacks.some(([option]) => option === id)).slice(0, pack.kit2077.escolher);
@@ -324,14 +325,15 @@
   // ---------------- Moradia ----------------
   // Moradia, estilo de vida, Trauma Team e moda. O padrão da Role tem o primeiro mês de graça; o que for melhor
   // paga a diferença do primeiro mês (o que for pior não devolve). Opção que não serve para a Role volta ao padrão.
-  // Personagens antigos guardavam moradia 'padrao' ou 'familia' (Nomad com o clã).
+  // Personagens antigos guardavam moradia 'padrao' ou 'familia' (Nomad com o clã), ou a quitinete em megaprédio do
+  // suplemento de fã, que saiu (vira o contêiner, que tinha o mesmo aluguel).
   const allowedFor = (option, role) => !option.roles || option.roles.includes(role);
   const housingBase = doc => C.housing.padrao[doc.role] || C.housing.padrao.geral;
   function housing(doc) {
     const H = C.housing;
     const base = housingBase(doc);
     const pick = (list, id, fallback) => list.find(item => item.id === id && allowedFor(item, doc.role)) || list.find(item => item.id === fallback);
-    const home = pick(H.moradias, { padrao: '', familia: 'cla' }[doc.moradia] ?? doc.moradia, base.moradia);
+    const home = pick(H.moradias, { padrao: '', familia: 'cla', megapredio: 'conteiner' }[doc.moradia] ?? doc.moradia, base.moradia);
     const life = pick(H.estilos, doc.estiloVida || (doc.moradia === 'familia' ? 'cla' : ''), base.estilo);
     const trauma = pick(H.traumaTeam, doc.traumaTeam, 'nenhum');
     const fashion = H.modas.find(item => item.id === (doc.estiloModa || '')) || H.modas[0];
@@ -521,9 +523,9 @@
       <ul><li>As 13 <b>básicas</b> (em negrito) todo personagem tem, no nível 2 pelo menos.</li><li>Perícias <b>×2</b> custam 2 pontos por nível.</li><li>Na criação, o nível máximo é 6.</li><li>A <b>língua da origem</b> vem de graça, no nível 4.</li></ul>
       <p>Não sabe por onde começar? <b>Distribuir sugerido</b> põe os níveis do Rato de Rua da sua Role, e você ajusta a partir deles.</p>`],
     4: ['RED p. 45–53', '<p>O Lifepath conta de onde o personagem veio: origem, família, amigos, inimigos e amores. Role ou escolha cada item.</p><p>Os resultados são ganchos para o mestre usar em jogo. Nenhum deles obriga nada.</p>'],
-    5: ['RED p. 98–117 · cyberware grátis: suplemento p. 8', `<ul><li><b>Rato de Rua e Edgerunner:</b> o pacote da Role, escolhendo nas linhas com opções, e mais 500eb.</li><li><b>Pacote Completo:</b> 2.550eb para a loja e mais 800eb só para moda. A loja de criação mostra só itens iniciais.</li>
+    5: ['RED p. 98–117 · Neuroport de graça: Kit p. 26', `<ul><li><b>Rato de Rua e Edgerunner:</b> o pacote da Role, escolhendo nas linhas com opções, e mais 500eb.</li><li><b>Pacote Completo:</b> 2.550eb para a loja e mais 800eb só para moda. A loja de criação mostra só itens iniciais.</li>
       <li><b>Cyberware custa Humanidade:</b> a cada 10 pontos perdidos, a EMP cai 1. As opções precisam de uma base, como o cyberbraço para as armas de braço.</li></ul>`],
-    6: ['RED p. 223 e 377–378 · suplemento p. 7–8 e 31', `<p>Onde o personagem mora, como vive e se tem Trauma Team. No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro.</p>
+    6: ['RED p. 223 e 377–378 · Kit p. 21 e 28–29', `<p>Onde o personagem mora, como vive e se tem Trauma Team. No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro.</p>
       <ul><li>O <b>padrão</b> da sua Role tem o primeiro mês de graça.</li><li>Escolher algo <b>melhor</b> paga a diferença do primeiro mês com o dinheiro inicial. Escolher pior não devolve nada.</li><li>O <b>Trauma Team</b> paga o primeiro mês inteiro.</li><li>Quem não paga o estilo de vida tem uma semana; depois, Death Save no começo de cada dia sem pagar.</li></ul>`],
     7: ['', '<p>Cada pendência leva ao passo certo. Nada impede de salvar nem de enviar. Quando estiver pronto, <b>envie para o mestre</b>: o Foundry dele avisa, e ele importa.</p>']
   };
@@ -1855,7 +1857,7 @@
           <p class="note-status">A imagem é reduzida para 512 px antes de ir para a wiki. Se houver imagem enviada, ela vale no lugar do link. O retrato vai para a ficha e o token no Foundry.</p></div></div>`)}
         ${lockBox(`${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
-          <p><button class="action" type="button" data-page="roles2077">Ler as Roles nos anos 2070</button></p>`)}
+          <p><button class="action" type="button" data-page="roles">Ler as Roles</button></p>`)}
         ${drawRoleAbilities()}${drawMotorpool()}
         ${box('Método de criação', `<div class="cc-choices">${C.methods.map(item => `<button type="button" class="cc-choice${item.id === doc.metodo ? ' active' : ''}" data-method="${item.id}"><b>${item.nome}</b><span>${esc(item.resumo)}</span></button>`).join('')}</div>`)}`)}`;
     }
@@ -2119,11 +2121,11 @@
       const modas = `<select data-moda aria-label="Estilo de moda">${H.modas.map(item => `<option value="${item.id}"${item.id === modaId ? ' selected' : ''}>${esc(item.nome)}</option>`).join('')}</select>${home.moda ? `<p class="note-status">${esc(home.moda.desc)}</p>` : ''}`;
       const cash = money(doc);
       const total = `<p class="cc-derived cc-housing-total"><span>Por mês <b>${eb(home.mensal)}</b></span><span>1º mês <b>${home.primeiroMes ? eb(home.primeiroMes) : 'grátis'}</b></span>${doc.metodo ? `<span>Dinheiro depois disso <b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b></span>` : ''}</p>`;
-      return `${lockBox(`${box('Quanto custa', `${total}<p class="note-status">No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro. No Mission Kit, viver de Kibble ou em hotel cápsula também custa Humanidade todo mês.</p>`)}
+      return `${lockBox(`${box('Quanto custa', `${total}<p class="note-status">No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team saem do dinheiro. Viver de Kibble ou em hotel cápsula também custa Humanidade todo mês.</p>`)}
         ${box('Moradia', `<div class="cc-options">${homes}</div>`)}
         ${box('Estilo de vida', `<div class="cc-options">${lives}</div>`)}
         ${box('Trauma Team', `<div class="cc-options">${traumas}</div><p class="note-status">Com Agent e Biomonitor, a Trauma Team é chamada sozinha quando o HP fica abaixo do BODY ou há desmembramento (RED p. 223).</p>`)}
-        ${box('Estilo de moda', `<p>O visual do personagem nas quatro modas do suplemento de fã (p. 7–8, opcional). Ajuda a escolher as roupas na loja e a descrever o personagem.</p>${modas}`)}`)}
+        ${box('Estilo de moda', `<p>O visual do personagem nas modas dos anos 2070 (Lifepath do Mission Kit, p. 21). Ajuda a escolher as roupas na loja e a descrever o personagem.</p>${modas}`)}`)}
         ${box('Notas', `<label>Aparência da casa, contatos, o que quiser<textarea data-campo="notas" rows="3" maxlength="5000">${esc(doc.notas)}</textarea></label>`)}`;
     }
 

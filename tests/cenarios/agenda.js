@@ -114,7 +114,7 @@ module.exports = async ({ edge, r }) => {
       const secoes = await edge.evaluate(`[...document.querySelectorAll('#content .section')].map(s => s.dataset.toc)`);
       const tabela = await edge.evaluate(`[...document.querySelectorAll('#content .section[data-toc="Ciberpsicose"] tbody tr')].map(tr => tr.cells[0].textContent)`);
       const tracos = await edge.evaluate(`document.querySelectorAll('#content .section[data-toc="Ciberpsicose"] ul')[0]?.children.length || 0`);
-      return [secoes.includes('Ciberpsicose') && secoes.includes('Perda de Humanidade por trauma') && tabela.join('|') === '3 ou mais|2|1|0|0, com Humanidade negativa' && tracos === 9, `${secoes.join(', ')} · ${tabela.join('|')} · ${tracos} traços`];
+      return [secoes.includes('Ciberpsicose') && secoes.includes('Perda e ganho de Humanidade') && !secoes.includes('Perda de Humanidade por trauma') && tabela.join('|') === '3 ou mais|2|1|0|0, com Humanidade negativa' && tracos === 9, `${secoes.join(', ')} · ${tabela.join('|')} · ${tracos} traços`];
     });
 
     // ---------------- Jogador: Próxima sessão no Resumo ----------------
