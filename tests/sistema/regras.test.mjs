@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
+import { CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -636,6 +636,25 @@ test('Ficha: o Lifepath tem os campos e os rótulos do criador da wiki (criador.
   }
   assert.equal(LIFEPATH.length, 17);
   assert.equal(new Set(LIFEPATH.map(l => l.chave)).size, 17);
+});
+
+test('Capanga (o mook do CORE): um tipo de ator a mais, com o nome em português; ao receber um item, instala o cyberware e equipa o que o CORE equipa (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento)', () => {
+  const sistema = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'system.json'), 'utf8'));
+  assert.deepEqual(Object.keys(sistema.documentTypes.Actor), ['personagem', 'capanga']);
+  assert.deepEqual(sistema.documentTypes.Actor.capanga, { htmlFields: ['notas'] });
+  const idioma = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'lang', 'pt-BR.json'), 'utf8'));
+  assert.equal(idioma.TYPES.Actor.capanga, 'Capanga');
+  // O que se equipa no CORE 0.92.4 (os modelos com EquippableSchema, em modules/datamodels/item), com os tipos daqui; o
+  // cyberware instala (o handleMookDraggedItem do CORE, em modules/actor/cpr-actor.js).
+  const EQUIPAVEIS_DO_CORE = { armor: 'armadura', clothing: 'roupa', cyberdeck: 'cyberdeck', drug: 'droga', gear: 'equipamento', weapon: 'arma' };
+  assert.deepEqual(Object.keys(regras.AO_RECEBER_CAPANGA).sort(), [...Object.values(EQUIPAVEIS_DO_CORE), 'cyberware'].sort());
+  assert.equal(regras.AO_RECEBER_CAPANGA.cyberware, 'instalar');
+  for (const tipo of ['arma', 'armadura']) assert.deepEqual(regras.AO_RECEBER_CAPANGA[tipo], { 'system.equipada': true }, tipo);
+  for (const tipo of ['roupa', 'cyberdeck', 'droga', 'equipamento']) assert.deepEqual(regras.AO_RECEBER_CAPANGA[tipo], { 'system.uso': 'equipado' }, tipo);
+  for (const tipo of Object.keys(regras.AO_RECEBER_CAPANGA)) assert.ok(sistema.documentTypes.Item[tipo], tipo);
+  assert.ok(Object.hasOwn(USOS, 'equipado'));
+  // O resto fica como veio.
+  for (const tipo of ['municao', 'programa', 'upgrade', 'veiculo', 'lesao']) assert.equal(regras.AO_RECEBER_CAPANGA[tipo], undefined, tipo);
 });
 
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {

@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 36). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 37). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 
@@ -33,10 +33,14 @@ de compêndio; entram só as partes do sistema.
   - **O quê:** a versão dos dados no mundo e os passos em ordem, no mestre ativo (atores, tokens, itens e compêndios
     do mundo), com o aviso e o backup antes; e o `migrateData` dos modelos para as mudanças simples.
 - [~] **C2. Capanga (mook) como tipo de ator.** Em andamento: sessão KouArt, 2026-10-12.
-  - **A ficha:** curta, como a do CORE (perícias com nível, armas, armadura, cyberware).
-  - **O token:** solto por padrão, com o próprio HP de cada capanga. Hoje todo ator nasce ligado.
-  - **Arrastar um item** equipa ou instala.
-  - **O combate:** igual ao do personagem.
+  - [x] **A ficha:** curta, como a do CORE (perícias com nível, armas, armadura, cyberware): uma página só, ciclo 36.
+  - [x] **O token:** solto por padrão, com o próprio HP de cada capanga: ciclo 36. O nome mudado na ficha de um token vai
+    para o token na cena, como no CORE.
+  - [x] **Arrastar um item** equipa ou instala: ciclo 36.
+  - [x] **O combate:** igual ao do personagem (o tiro, a munição e o Death Save de cada token): ciclo 36.
+  - [ ] **A ficha limitada:** quem tem só a permissão Limitada vê a imagem, o nome e as notas, como no CORE
+    (`cpr-mook-sheet-limited.hbs`). Hoje vê a ficha inteira, sem editar (a permissão mínima para ver uma ficha no
+    Foundry 14 é a Limitada).
 - [x] **C3. As Roles do RED e as rolagens delas.** Feito nos ciclos 33 a 35 (sessão KouArt, 2026-10-12).
   - [x] As 10 Roles da wiki (o P0 "As Roles pelo RED"): ciclo 33.
   - A rolagem de cada habilidade, pelo item de Role do CORE (`_createRoleRoll`, `getRoleMods`) e pelo texto da wiki:

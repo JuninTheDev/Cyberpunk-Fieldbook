@@ -305,6 +305,12 @@
 }
 .cpr-fieldbook.ficha-personagem .rodape span:first-child { color: var(--cp-ciano); }
 
+/* ---------- Capanga (o mook do CORE): uma página só, entre o cabeçalho e o rodapé ---------- */
+.cpr-fieldbook.ficha-capanga .corpo-capanga { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; }
+.cpr-fieldbook.ficha-capanga .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }
+.cpr-fieldbook.ficha-capanga .indicador b { min-width: 2.6ch; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-capanga .indicador i { margin-top: 4px; }
+
 /* ---------- Janela estreita ---------- */
 @container (max-width: 1020px) {
   .cpr-fieldbook.ficha-personagem .geral { grid-template-columns: 280px minmax(0, 1fr); }

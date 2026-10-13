@@ -10,10 +10,13 @@ import {
 import { rolarDano, testar } from './rolagens.mjs';
 
 export class AtorCPR extends Actor {
-  // Personagem novo: o token fica ligado à ficha, com o HP na barra.
+  // Personagem novo: o token fica ligado à ficha, com o HP na barra. Capanga novo (o mook do CORE): o token fica solto, e
+  // cada um na cena tem o próprio HP; o que já vem com o token (uma cópia, o compêndio) fica como veio.
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
-    if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, bar1: { attribute: 'hp' }, sight: { enabled: true } } });
+    const token = { bar1: { attribute: 'hp' }, sight: { enabled: true } };
+    if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, ...token } });
+    if (this.type === 'capanga' && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, ...token } });
   }
 
   // O extrato fica completo: uma mudança de Eurodólares, IP ou Reputação que não veio de mudarComExtrato (uma macro, o

@@ -9,6 +9,7 @@ import {
   DadosVeiculo
 } from './dados.mjs';
 import { AtorCPR, ItemCPR } from './documentos.mjs';
+import { FichaCapanga } from './ficha-capanga.mjs';
 import { FichaItem } from './ficha-item.mjs';
 import { FichaPersonagem } from './ficha-personagem.mjs';
 import { abrirExtrato } from './extrato.mjs';
@@ -26,6 +27,9 @@ Hooks.once('init', () => {
   CONFIG.Combat.documentClass = CombateCPR;
   CONFIG.Combatant.documentClass = CombatenteCPR;
   CONFIG.Actor.dataModels.personagem = DadosPersonagem;
+  // O capanga (o mook do CORE) tem os dados do personagem, como no CORE (o mook e o character dividem o CommonSchema): as
+  // regras e o combate são os mesmos. Mudam a ficha e o token, que fica solto (documentos.mjs).
+  CONFIG.Actor.dataModels.capanga = DadosPersonagem;
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,
     cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo
@@ -37,6 +41,7 @@ Hooks.once('init', () => {
 
   const { DocumentSheetConfig } = foundry.applications.apps;
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaPersonagem, { types: ['personagem'], makeDefault: true, label: 'Ficha do RED' });
+  DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaCapanga, { types: ['capanga'], makeDefault: true, label: 'Ficha de capanga do RED' });
   DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaItem, {
     types: ['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'], makeDefault: true, label: 'Item do RED'
   });

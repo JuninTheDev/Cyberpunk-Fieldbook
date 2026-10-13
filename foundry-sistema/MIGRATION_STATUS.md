@@ -32,7 +32,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | portadas nos ciclos 34 e 35, com as Roles do RED: pelo item de Role do CORE e pelo texto da wiki (a Barganha é a pechincha do Fixer; o Backup do Lawman, pela wiki). A Interface do Netrunner é o C5 |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
-| CORE | ficha de capanga, Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
+| CORE | ficha de capanga (o mook) | portada no ciclo 36: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página e o item arrastado que entra equipado ou instalado. Falta a ficha limitada |
+| CORE | Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
@@ -105,7 +106,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
   | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | falta | P3 |
-  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | falta | P3 |
+  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga no ciclo 36 (menos a ficha limitada); o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
 
@@ -218,6 +219,10 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   números fora dessa conta passa a rolar pela conta; o número antigo fica guardado na ficha, sem uso. Como na Consciência
   de Combate do Solo, os pontos das especialidades valem como estão na ficha: o criador da wiki corta cada um no máximo
   (4), e a ficha só avisa quando passam do Rank.
+
+- **O capanga e a perda de Humanidade: sem a opção "nenhuma".** No CORE, instalar cyberware (também no item arrastado
+  para o mook) pergunta a perda: rolada (a padrão), a média ou nenhuma. Aqui o capanga faz como o botão Instalar da ficha:
+  rola, e com Shift usa a média. Para um capanga sem perda, a Humanidade se acerta na ficha.
 
 - **Os opcionais de Role da wiki: com o mestre.** Com as Roles do RED, a wiki deixa como opcionais do suplemento de fã o
   Investigator do Lawman (no lugar do Backup) e o desconto do clã do Nomad. O sistema não os automatiza, porque a mesa não
@@ -1719,6 +1724,58 @@ as quatro Expertises do Tech (`stat: tech`, `skill: varying`) e o "Surgery Skill
       às outras habilidades; e a Cirurgia pelo valor guardado, não pelas especialidades.
 - **O C3 fecha aqui** (ciclos 33 a 35).
 - **Próximo:** o C2 (o capanga como tipo de ator), o próximo item livre do plano. O C1 está com a sessão Junin.
+- **Commit:** `ce950fc`.
+
+### Ciclo 36 (2026-10-12): o capanga como tipo de ator (o C2, parte 1; sessão KouArt)
+
+O mook do CORE (`modules/actor/cpr-mook.js`, `sheet/cpr-mook-sheet.js`, `datamodels/actor/mook-datamodel.js` e o
+`handleMookDraggedItem` de `cpr-actor.js`): o NPC descartável, com a ficha "de relance", o token solto e o item
+arrastado que já entra em uso.
+
+- **Implementado:**
+  - **o tipo de ator "Capanga"** (`system.json` e `lang/pt-BR.json`), com os dados do personagem (`DadosPersonagem`),
+    como no CORE, onde o mook e o character dividem o `CommonSchema`. As regras e o combate são os mesmos;
+  - **o token:** o capanga novo nasce com o token solto (`actorLink` falso), o HP na barra e a visão ligada. Um capanga que
+    já vem com o token (uma cópia, um compêndio) fica como veio;
+  - **a ficha** (`ficha-capanga.mjs`, uma subclasse da ficha do personagem, com as mesmas ações), numa página só:
+    - o cabeçalho: o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se é a ficha do ator (o modelo dos tokens)
+      ou a de um token;
+    - o painel geral da ficha do personagem, sem as armas, e a tabela de armas da aba Combate. Os dois viraram blocos
+      (`templates/personagem/bloco-geral.hbs` e `bloco-armas.hbs`), que as duas fichas usam;
+    - os itens, com o botão de cada tipo (equipar, vestir, instalar, o uso), e as notas;
+    - na ficha de um token, o nome é o do token, e mudar o nome muda o do token na cena (o `_changeMookName` do CORE);
+  - **arrastar um item** para a ficha (`regras.AO_RECEBER_CAPANGA`): o cyberware é instalado, rolando a perda de
+    Humanidade, como o botão Instalar (com Shift, a média). Arma, armadura, roupa, cyberdeck, droga e equipamento entram
+    equipados (o "equippable" do CORE). O resto fica como veio;
+  - **o Death Save no turno** vale também para o capanga (a configuração "Jogadores e NPCs", a padrão).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 56 de 60. Um teste novo: o tipo e o nome em português, e o que o capanga equipa ou instala (o "equippable" do
+    CORE e o cyberware). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 65 de 70, cerca de 106 s. Um passo novo, no fim da parte de combate:
+    - o token nasce solto, com o HP na barra; a ficha do ator abre sem abas, com o painel geral (sem as armas), as armas,
+      os itens e as notas;
+    - seis itens do compêndio arrastados para a ficha, pelo drop:
+      - a pistola e a armadura entram equipadas, e o Medscanner, em uso;
+      - o Kerenzikov é instalado com a perda rolada (12), e o Grip Foot, com Shift, com a média (3);
+      - a Humanidade fica em 35 de 46, e a iniciativa, 8 (REF 6 + Kerenzikov 2);
+      - a munição fica como veio;
+    - dois capangas na cena:
+      - o tiro no primeiro (DV 15 a 10 m, 16 de dano, a SP 11 segura 11) deixa só ele com HP 30 e SP 10;
+      - o segundo recarrega e atira (DV 20 a 14 m, 12 de dano) com a pistola e a munição dele (pente 7, munição 2), sem
+        mexer nas do outro nem nas do ator;
+      - no combate, o Death Save no turno é só do primeiro, que caiu;
+      - o nome novo na ficha do segundo vai para o token dele, e só para ele;
+    - a captura `v14-capanga`.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a droga que não entra em uso, e o cyberware marcado como instalado sem a perda de Humanidade;
+    - G4: o token que nasce ligado; o item arrastado como veio; o Death Save do turno só para o personagem; o Shift que
+      não vale; e o painel geral do capanga com as armas.
+- **Próximo:** o C2, parte 2: a ficha limitada (quem só tem a permissão Limitada vê a imagem, o nome e as notas, como no
+  CORE).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
@@ -1744,4 +1801,4 @@ passa para um mundo novo, e o Foundry 12 fica instalado ao lado, só para consul
    compêndio "Arquivo da mesa". Os tokens vêm sem ator: ponha os atores novos por cima.
 7. **Confira cada ficha** contra a da mesa na wiki: HP, dinheiro, itens, munição, lesões e Humanidade.
 8. **Fora deste procedimento:** os NPCs (atores do CORE), as arquiteturas da NET (itens do CORE) e as macros do mundo
-   antigo. Estão no backup completo, e o Foundry 12 os abre.
+   antigo. Estão no backup completo, e o Foundry 12 os abre. Um NPC da campanha se refaz com o tipo Capanga (ciclo 36).

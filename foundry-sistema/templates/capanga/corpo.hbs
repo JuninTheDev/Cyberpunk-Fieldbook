@@ -1,0 +1,29 @@
+<div class="corpo-capanga">
+  {{> "systems/cpr-fieldbook/templates/personagem/bloco-geral.hbs"}}
+  {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
+  <div class="duas-colunas">
+    <section class="painel corte itens-capanga">
+      <div class="titulo">ITENS<span>ARRASTE PARA A FICHA: ENTRA EQUIPADO</span></div>
+      <ol class="itens">
+        {{#each itensDoCapanga}}
+        <li data-item-id="{{id}}" class="{{#if acao}}{{#unless ligado}}guardada{{/unless}}{{/if}}">
+          <img src="{{img}}" alt="">
+          <a class="nome" data-action="editarItem">{{nome}}</a>
+          <span class="detalhe">{{tipo}}{{#if detalhe}} · {{detalhe}}{{/if}}</span>
+          {{#if acao}}<button type="button" class="alternar {{#if ligado}}ligado{{/if}}" data-action="{{acao}}"{{#if dica}} data-tooltip="{{dica}}"{{/if}}>{{rotulo}}</button>{{/if}}
+          <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+        </li>
+        {{else}}<li class="vazio">Sem itens: arraste armas, armadura e cyberware para a ficha.</li>{{/each}}
+      </ol>
+    </section>
+
+    <section class="painel corte notas">
+      <div class="titulo">NOTAS<span>QUEM É, O QUE QUER</span></div>
+      {{#if editavel}}
+      <prose-mirror name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+      {{else}}
+      <div class="texto">{{{notasRicas}}}</div>
+      {{/if}}
+    </section>
+  </div>
+</div>

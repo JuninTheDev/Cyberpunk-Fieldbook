@@ -1,7 +1,8 @@
 {
   "TYPES": {
     "Actor": {
-      "personagem": "Personagem"
+      "personagem": "Personagem",
+      "capanga": "Capanga"
     },
     "Item": {
       "arma": "Arma",

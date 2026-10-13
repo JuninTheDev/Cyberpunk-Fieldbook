@@ -19,6 +19,16 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **NET:** o cyberdeck e os programas (as regras da NET ainda não).
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
+- **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
+  (as regras e o combate são os mesmos), numa página só:
+  - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
+    tokens) ou a de um token na cena;
+  - **Corpo:** o painel geral da ficha do personagem (sem as armas), a tabela de armas com os ataques, os itens (equipar,
+    vestir, instalar e o uso de cada um) e as notas;
+  - **O token** nasce solto, com o HP na barra: cada capanga na cena tem o próprio HP, a própria munição e o próprio Death
+    Save. O nome mudado na ficha de um token vai para o token na cena;
+  - **Arrastar um item** para a ficha já equipa a arma, a armadura, a roupa, o cyberdeck, a droga e o equipamento, e
+    instala o cyberware rolando a perda de Humanidade (com Shift, a média), como o CORE.
 - **Cartões do chat** (testes, ataques, dano, Death Save) no mesmo visual: a mensagem inteira fica escura, com a borda amarela (vermelha no dano e na morte), as partes do teste em etiquetas e o total grande. As mensagens que não são do sistema não mudam.
 - **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12. O botão de cada um no cabeçalho da ficha abre a janela dele:
   - **o menu:** a quantia e o motivo, com Somar, Subtrair e Definir. Como no CORE, Subtrair sempre tira (um valor negativo também), e perder mais do que tem deixa o saldo negativo, com um aviso;
@@ -164,7 +174,10 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **NPCs e Black ICE**, a NET (o NET Architect) e o Painel Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), **o Black ICE**, a NET (o NET Architect) e
+  o Painel Tático.
+- **A ficha limitada do capanga** (o C2 do ROADMAP): quem só tem a permissão Limitada vê a ficha inteira, sem editar; no
+  CORE, vê só a imagem, o nome e as notas.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
@@ -230,6 +243,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - a defesa e o ataque de um jogador num segundo navegador: a janela de reação (o texto sem o total, a conta da esquiva, a DV e a barra do tempo), o X e o tempo esgotado valendo a escolha padrão, o dano rolado por ele, o ataque dele sem mestre na mesa e o mestre respondendo por ele quando demora;
   - o que a mesa vê do ataque: um ataque por vez no mestre, quem vê o cartão do resultado (todos, os envolvidos, só o mestre), o texto em cima do token nos dois navegadores, os efeitos desligados e o total à vista;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
+  - o capanga: o token solto, a ficha de uma página, os itens do compêndio arrastados para ela (equipados ou instalados, a Humanidade rolada e, com Shift, a média), o tiro que muda só o HP do capanga atingido, o outro capanga recarregando e atirando com a própria munição, o Death Save só de quem caiu e o nome novo na ficha do token;
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - a Sorte preparada na ficha e o visual dos cartões do chat;
   - a janela de rolagem do jogador, no computador dele: a esquiva com o modificador do mestre e a Sorte, a janela que fecha quando o mestre responde por ele no fim do prazo, o dano com o modificador e o Death Save pedido pelo mestre;

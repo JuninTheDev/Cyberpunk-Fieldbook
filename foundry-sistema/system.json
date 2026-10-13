@@ -45,6 +45,11 @@
         "htmlFields": [
           "notas"
         ]
+      },
+      "capanga": {
+        "htmlFields": [
+          "notas"
+        ]
       }
     },
     "Item": {

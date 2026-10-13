@@ -14,6 +14,8 @@ const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 const parte = arquivo => ({ template: caminho(`templates/personagem/${arquivo}.hbs`) });
 const aba = arquivo => ({ ...parte(arquivo), scrollable: [''] });
+// Os blocos que a ficha do capanga também usa (partials: o Foundry os carrega e registra pelo caminho).
+export const bloco = arquivo => caminho(`templates/personagem/bloco-${arquivo}.hbs`);
 const porcento = (valor, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round((valor / max) * 100))) : 0);
 const slug = texto => String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 // A janela de rolagem abre no clique; Ctrl (ou ⌘) + clique rola direto. "Rolar direto" (deste navegador) inverte.
@@ -56,8 +58,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static PARTS = {
     topo: parte('topo'),
     tabs: { template: 'templates/generic/tab-navigation.hbs' },
-    pericias: aba('pericias'),
-    combate: aba('combate'),
+    pericias: { ...aba('pericias'), templates: [bloco('geral')] },
+    combate: { ...aba('combate'), templates: [bloco('armas')] },
     equipamento: aba('equipamento'),
     cyberware: aba('cyberware'),
     role: aba('role'),

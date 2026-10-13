@@ -77,6 +77,15 @@ export function bonusDeRole({ roleId, rank }) {
   return Object.fromEntries(PERICIAS_DO_MOTO.map(id => [id, { rotulo: 'Moto', valor }]));
 }
 
+// O capanga (o mook do CORE) equipa ou instala o que recebe, como o handleMookDraggedItem do CORE: o cyberware é
+// instalado, e o que se equipa no CORE (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento) entra
+// equipado. O resto (munição, programa, upgrade, veículo, lesão) fica como veio.
+export const AO_RECEBER_CAPANGA = {
+  arma: { 'system.equipada': true }, armadura: { 'system.equipada': true },
+  roupa: { 'system.uso': 'equipado' }, cyberdeck: { 'system.uso': 'equipado' }, droga: { 'system.uso': 'equipado' }, equipamento: { 'system.uso': 'equipado' },
+  cyberware: 'instalar'
+};
+
 // As rolagens de habilidade de Role do RED, como o item de Role do CORE (_createRoleRoll, nas habilidades com hasRoll) e
 // o texto da wiki (system-catalog.js, "As dez Roles do RED"):
 // - Rockerboy, Impacto Carismático: "Rolagem: Rank + 1d10; DV 8 para uma pessoa, 10 para até seis, 12 para um grupo

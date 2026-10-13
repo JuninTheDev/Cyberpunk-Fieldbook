@@ -2206,6 +2206,146 @@ module.exports = async ({ edge, servidores, r }) => {
     });
 
     // ---------- Importar da wiki ----------
+    await r.passo('capanga (o mook do CORE): o token nasce solto, com o HP na barra; a ficha é uma página só (o painel geral sem as armas, a tabela de armas, os itens e as notas); o que se arrasta para ela entra equipado (a pistola, a armadura, o Medscanner) ou instalado (o Kerenzikov rola a perda de Humanidade; com Shift, o Grip Foot fica com a média); dois capangas na cena: o tiro num muda só o HP e a SP dele, o outro recarrega e atira com a própria munição, e o Death Save no turno é só do que caiu', async () => {
+      // Kerenzikov: 4d6 3 + 3 + 3 + 3 = 12. Tiro no capanga 1 (10 m, DV 15): REF 6 + Pistola 6 + d10 9 = 21; dano 3d6 6 + 5 +
+      // 5 = 16, a SP 11 segura 11 e entram 5. Tiro do capanga 2 no atirador (14 m, DV 20): 6 + 6 + 9 = 21; dano 3d6 4 + 4 + 4
+      // = 12, sem armadura. Death Save do capanga 1 (HP 0): d10 3 < BODY 5. O 6 depois do Kerenzikov seria o 1d6 do Grip Foot
+      // se o Shift não valesse.
+      await fixar(edge, []);
+      const nomes = ['Teste Capanga', 'Teste Atirador', 'Capanga Dois'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          // O capanga: REF 6, DEX 6, BODY 5 e WILL 5 (HP 35), EMP 5 (Humanidade 50), Pistola 6.
+          const capanga = await Actor.implementation.create({ name: 'Teste Capanga', type: 'capanga', system: {
+            atributos: { ref: { valor: 6 }, dex: { valor: 6 }, body: { valor: 5 }, will: { valor: 5 }, emp: { valor: 5 } }, hp: { value: 35 }, humanidade: { value: 50 }, pericias: { handgun: { nivel: 6 } }
+          } });
+          const token = { ligado: capanga.prototypeToken.actorLink, barra: capanga.prototypeToken.bar1.attribute, visao: capanga.prototypeToken.sight.enabled };
+
+          // 1. A ficha do ator: uma página, sem abas.
+          await capanga.sheet.render({ force: true });
+          const f = () => capanga.sheet.element;
+          await esperar(() => f()?.querySelector('.corpo-capanga'));
+          const ficha = {
+            classes: ['ficha-capanga', 'ficha-personagem'].every(classe => f().classList.contains(classe)), abas: f().querySelectorAll('nav.tabs').length,
+            modelo: textoDe(f().querySelector('.linha-id .modelo')), titulos: [...f().querySelectorAll('.corpo-capanga .titulo')].map(titulo => titulo.firstChild.textContent.trim())
+          };
+
+          // 2. Os itens do compêndio arrastados para a ficha (o drop, como o do mouse).
+          const uuidDe = (pack, nome) => { const p = game.packs.get('${S}.' + pack); const e = p.index.find(x => x.name === nome); return e.uuid ?? ('Compendium.' + p.collection + '.Item.' + e._id); };
+          const soltar = async (pack, nome, pronto, shiftKey = false) => {
+            const dados = new DataTransfer();
+            dados.setData('text/plain', JSON.stringify({ type: 'Item', uuid: uuidDe(pack, nome) }));
+            f().querySelector('.corpo-capanga').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados, shiftKey }));
+            await esperar(() => { const item = capanga.items.getName(nome); return Boolean(item && pronto(item)); });
+            return capanga.items.getName(nome);
+          };
+          window.__fila = [[3, 6], [3, 6], [3, 6], [3, 6], [6, 6]];
+          const pistola = await soltar('armas', 'Heavy Pistol', item => item.system.equipada);
+          const armadura = await soltar('armaduras', 'Light Armorjack (Body)', item => item.system.equipada);
+          const kerenzikov = await soltar('cyberware', 'Kerenzikov', item => item.system.instalado);
+          const grip = await soltar('cyberware', 'Grip Foot', item => item.system.instalado, true);
+          const medscanner = await soltar('equipamento', 'Medscanner', item => item.system.uso === 'equipado');
+          const bala = await soltar('municao', 'Heavy Pistol (Basic)', () => true);
+          await esperar(() => capanga.system.humanidade.value === 35 && f().querySelectorAll('.itens-capanga li[data-item-id]').length === 6);
+          const s = capanga.system;
+          const recebidos = {
+            pistola: pistola.system.equipada, armadura: armadura.system.equipada, kerenzikov: kerenzikov.system.perdaHumanidade.sofrida, grip: grip.system.perdaHumanidade.sofrida,
+            instalados: [kerenzikov, grip].every(item => item.system.instalado), medscanner: medscanner.system.uso, bala: bala.system.quantidade,
+            hum: s.humanidade.value, humMax: s.humanidade.max, ini: s.iniciativa, sp: s.armadura.corpo.sp,
+            itens: [...f().querySelectorAll('.itens-capanga li[data-item-id]')].map(li => [textoDe(li.querySelector('.nome')), textoDe(li.querySelector('button.alternar'))]),
+            tabela: [...f().querySelectorAll('table.lista.armas tbody tr')].map(tr => textoDe(tr.querySelector('td.nome a'))),
+            cabecalho: [...f().querySelectorAll('.topo .indicador:not(.hp)')].map(textoDe)
+          };
+          await capanga.sheet.close();
+
+          // 3. Dois capangas na cena, soltos, e quem atira neles.
+          const pistolaDoAtirador = foundry.utils.deepClone(cat['core_weapons:heavy-pistol']);
+          pistolaDoAtirador.system.equipada = true;
+          const atirador = await Actor.implementation.create({ name: 'Teste Atirador', type: 'personagem', system: { atributos: { ref: { valor: 6 }, body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 }, pericias: { handgun: { nivel: 6 } } }, items: [pistolaDoAtirador, foundry.utils.deepClone(cat['core_ammo:heavy-pistol-basic'])] });
+          await atirador.items.getName('Heavy Pistol').recarregar();
+          const cena = canvas.scene;
+          const ids = [foundry.utils.randomID(), foundry.utils.randomID(), foundry.utils.randomID()];
+          const doc = async (ator, x, _id) => ({ ...(await ator.getTokenDocument({ x, y: 900 })).toObject(), _id });
+          await cena.createEmbeddedDocuments('Token', [await doc(atirador, 300, ids[0]), await doc(capanga, 800, ids[1]), await doc(capanga, 1000, ids[2])], { keepId: true });
+          await esperar(() => ids.every(id => canvas.tokens.get(id)));
+          await new Promise(r => setTimeout(r, 500));
+          const [tA, t1, t2] = ids.map(id => cena.tokens.get(id));
+          const soltos = [t1, t2].map(t => !t.actorLink && t.actor !== capanga && t.actor.isToken);
+
+          // O tiro no capanga 1.
+          window.__fila = [[9, 10], [6, 6], [5, 6], [5, 6]];
+          const r1 = await atirador.items.getName('Heavy Pistol').atacar({ alvo: t1 });
+          const vida = t => [t.actor.system.hp.value, t.actor.system.armadura.corpo.sp];
+          const tiro1 = { linha: __linhas(r1)[0], t1: vida(t1), t2: vida(t2), ator: [capanga.system.hp.value, capanga.system.armadura.corpo.sp] };
+
+          // O capanga 2 recarrega e atira no atirador, com a pistola e a munição dele.
+          const pistola2 = t2.actor.items.getName('Heavy Pistol');
+          await pistola2.recarregar();
+          window.__fila = [[9, 10], [4, 6], [4, 6], [4, 6]];
+          const r2 = await pistola2.atacar({ alvo: tA });
+          const municao = t => [t.items.getName('Heavy Pistol').system.pente.value, t.items.getName('Heavy Pistol (Basic)').system.quantidade];
+          const tiro2 = { linha: __linhas(r2)[0], atirador: atirador.system.hp.value, t2: municao(t2.actor), t1: municao(t1.actor), ator: municao(capanga) };
+
+          // 4. O Death Save no turno: só o capanga 1, que caiu.
+          await t1.actor.update({ 'system.hp.value': 0 });
+          const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+          await combate.createEmbeddedDocuments('Combatant', [{ tokenId: tA.id, sceneId: cena.id, actorId: atirador.id }, { tokenId: t1.id, sceneId: cena.id, actorId: capanga.id }]);
+          for (const [t, valor] of [[tA, 20], [t1, 10]]) await combate.setInitiative(combate.combatants.find(c => c.tokenId === t.id).id, valor);
+          await combate.startCombat();
+          await new Promise(r => setTimeout(r, 400));
+          window.__fila = [[3, 10]];
+          await combate.nextTurn();
+          await esperar(() => t1.actor.system.deathSave.penalidade === 1, 50);
+          const morte = { vez: combate.combatant?.tokenId === t1.id, t1: t1.actor.system.deathSave.penalidade, t2: t2.actor.system.deathSave.penalidade, ator: capanga.system.deathSave.penalidade };
+          await combate.delete();
+
+          // 5. A ficha do token: a dele, com o HP dele; o nome novo vai para o token na cena, e só para ele.
+          await t2.actor.sheet.render({ force: true });
+          await esperar(() => t2.actor.sheet.element?.querySelector('.corpo-capanga'));
+          const g = () => t2.actor.sheet.element;
+          const fichaDoToken = { modelo: textoDe(g().querySelector('.linha-id .modelo')), hp: g().querySelector('.topo [name="system.hp.value"]').value, pente: textoDe(g().querySelector('table.lista.armas tbody tr td:nth-child(5)')) };
+          const campo = g().querySelector('.topo input[name="name"]');
+          campo.value = 'Capanga Dois';
+          campo.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => t2.name === 'Capanga Dois');
+          await esperar(() => g()?.querySelector('.topo input[name="name"]')?.value === 'Capanga Dois');
+          fichaDoToken.nomes = [t2.name, t1.name, capanga.name, g().querySelector('.topo input[name="name"]').value];
+          return { token, ficha, recebidos, soltos, tiro1, tiro2, morte, fichaDoToken };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('capanga');
+        const { token, ficha, recebidos: c, soltos, tiro1, tiro2, morte, fichaDoToken } = info;
+        const ok = !token.ligado && token.barra === 'hp' && token.visao
+          && ficha.classes && ficha.abas === 0 && ficha.modelo === 'MODELO DOS TOKENS'
+          && ficha.titulos.join() === 'ATRIBUTOS,VITAIS,PERÍCIAS,ARMADURA,CYBERWARE,LESÕES CRÍTICAS,ARMAS,ITENS,NOTAS'
+          && c.pistola && c.armadura && c.instalados && c.kerenzikov === 12 && c.grip === 3 && c.medscanner === 'equipado' && c.bala === 10
+          && c.hum === 35 && c.humMax === 46 && c.ini === 8 && c.sp === 11
+          && JSON.stringify(c.itens) === JSON.stringify([['Heavy Pistol', 'Equipada'], ['Light Armorjack (Body)', 'Vestida'], ['Heavy Pistol (Basic)', ''], ['Grip Foot', 'Instalado'], ['Kerenzikov', 'Instalado'], ['Medscanner', 'Equipado']])
+          && c.tabela.join() === 'Heavy Pistol' && c.cabecalho.join('|') === '0/11 SP CABEÇA/CORPO|8 INICIATIVA|6 ESQUIVA'
+          && soltos.every(Boolean)
+          && tiro1.linha.resultado === 'acertou' && tiro1.linha.dv === 15 && tiro1.linha.dano?.dano === 16 && tiro1.linha.dano.recebido === 5
+          && tiro1.t1.join() === '30,10' && tiro1.t2.join() === '35,11' && tiro1.ator.join() === '35,11'
+          && tiro2.linha.resultado === 'acertou' && tiro2.linha.dv === 20 && tiro2.atirador === 28 && tiro2.t2.join() === '7,2' && tiro2.t1.join() === '0,10' && tiro2.ator.join() === '0,10'
+          && morte.vez && morte.t1 === 1 && morte.t2 === 0 && morte.ator === 0
+          && fichaDoToken.modelo === 'ESTE TOKEN' && fichaDoToken.hp === '35' && /^7\/8/.test(fichaDoToken.pente) && fichaDoToken.nomes.join() === 'Capanga Dois,Teste Capanga,Teste Capanga,Capanga Dois';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          const nomes = ${JSON.stringify(nomes)};
+          for (const combate of game.combats.filter(c => c.combatants.some(x => nomes.includes(x.name)))) await combate.delete();
+          const tokens = canvas.scene.tokens.filter(t => nomes.includes(t.name));
+          for (const t of tokens) await t.actor?.sheet?.close();
+          await canvas.scene.deleteEmbeddedDocuments('Token', tokens.map(t => t.id));
+          for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Solo com STATs, HP, perícias, Role, armas carregadas, armadura vestida, cyberware instalado e o inventário (equipamento e roupas, com o uso da wiki)', async () => {
       await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)})`);
       const info = await edge.evaluate(`(async () => {

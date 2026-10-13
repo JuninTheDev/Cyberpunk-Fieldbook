@@ -1,0 +1,34 @@
+<header class="topo">
+  <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" data-action="editImage" data-edit="img" data-tooltip="Trocar o retrato">
+  <div class="identidade">
+    <p class="linha-id">
+      <span>CAPANGA://</span>
+      {{#if naCena}}
+      <span class="modelo" data-tooltip="A ficha deste token: o que muda aqui (HP, munição) não muda os outros capangas do mesmo ator">ESTE TOKEN</span>
+      {{else}}
+      <span class="modelo" data-tooltip="A ficha do ator: os capangas na cena seguem o que ela tem, menos o que cada um já mudou (HP, munição)">MODELO DOS TOKENS</span>
+      {{/if}}
+    </p>
+    <div class="nome-linha">
+      <input class="nome" type="text" name="name" value="{{nomeNaFicha}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>
+    </div>
+    <div class="indicadores">
+      <label class="indicador hp corte estado-{{sistema.ferimento.chave}}" data-tooltip="Pontos de vida: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}">
+        <span class="valor"><input type="number" name="system.hp.value" value="{{sistema.hp.value}}" aria-label="HP atual"><small>/{{sistema.hp.max}}</small></span>
+        <i>HP</i>
+      </label>
+      <div class="indicador corte sp" data-tooltip="SP da cabeça e do corpo: a maior das armaduras vestidas">
+        <span class="valor"><b>{{sistema.armadura.cabeca.sp}}</b><small>/{{sistema.armadura.corpo.sp}}</small></span>
+        <i>SP CABEÇA/CORPO</i>
+      </div>
+      <div class="indicador corte iniciativa" data-tooltip="{{iniciativa.dica}}">
+        <span class="valor"><b>{{iniciativa.valor}}</b></span>
+        <i>INICIATIVA</i>
+      </div>
+      <div class="indicador corte esquiva" data-tooltip="DEX + Evasão (+ 1d10 contra o ataque){{#unless podeEsquivarTiro}}; de tiro, só com REF 8+{{/unless}}">
+        <span class="valor"><b>{{esquiva}}</b></span>
+        <i>ESQUIVA</i>
+      </div>
+    </div>
+  </div>
+</header>

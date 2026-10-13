@@ -1,33 +1,5 @@
 <section class="tab combate {{tab.cssClass}}" data-group="primary" data-tab="combate">
-  <section class="painel corte">
-    <div class="titulo">ARMAS<span>MARQUE O ALVO (T) E ATAQUE</span></div>
-    {{#if armas.length}}
-    <table class="lista armas">
-      <thead><tr><th>Arma</th><th>Ataque</th><th>Dano</th><th>CDT</th><th>Pente</th><th></th></tr></thead>
-      <tbody>
-        {{#each armas}}
-        <tr data-item-id="{{id}}" class="{{#unless sistema.equipada}}guardada{{/unless}}">
-          <td class="nome"><img src="{{img}}" alt=""> <a data-action="editarItem">{{nome}}</a>{{#if qualidade}} <small>{{qualidade}}</small>{{/if}}{{#if classe2077}} <small class="classe-2077">{{classe2077}}</small>{{/if}}{{#each avisos2077}} <small class="aviso-2077" data-tooltip="{{dica}}">{{texto}}</small>{{/each}}</td>
-          <td class="num"{{#if dicaAtaque}} data-tooltip="{{dicaAtaque}}"{{/if}}>+{{ataque}}</td>
-          <td>{{sistema.dano}}</td>
-          <td class="num">{{sistema.cdt}}</td>
-          <td>{{#if sistema.pente.max}}{{sistema.pente.value}}/{{sistema.pente.max}}{{#if municao}} <small>{{municao}}</small>{{/if}}{{else}}—{{/if}}</td>
-          <td class="acoes"><div class="botoes">
-            <button type="button" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">Atacar</button>
-            <button type="button" data-action="mirar" data-tooltip="Mirado (−8): cabeça, perna ou item na mão">Mirar</button>
-            {{#if sistema.autofogo}}<button type="button" data-action="atacar" data-modo="autofogo" data-tooltip="Autofogo (×{{sistema.autofogo}}): {{balasAutofogo}} balas">Autofogo</button>{{/if}}
-            {{#if sistema.supressivo}}<button type="button" data-action="atacar" data-modo="supressivo" data-tooltip="Fogo supressivo: 10 balas, todos a até 25 m">Supressivo</button>{{/if}}
-            {{#each modos2077}}<button type="button" data-action="atacar" data-modo="{{modo}}" data-tooltip="{{dica}}">{{rotulo}}</button>{{/each}}
-            {{#each alternar2077}}<button type="button" data-action="{{acao}}" data-tooltip="{{dica}}">{{rotulo}}</button>{{/each}}
-            <button type="button" data-action="rolarDano" data-tooltip="Só rolar o dano">Dano</button>
-            {{#if sistema.pente.max}}<button type="button" data-action="recarregar" data-tooltip="Recarregar">↻</button>{{/if}}
-          </div></td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
-    {{else}}<div class="caixa-vazia">SEM ARMAS: ARRASTE UMA ARMA PARA A FICHA</div>{{/if}}
-  </section>
+  {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
 
   <div class="duas-colunas">
     <section class="painel corte vermelho">

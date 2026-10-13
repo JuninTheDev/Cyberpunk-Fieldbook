@@ -1,7 +1,7 @@
 // A cada turno do combate (no mestre ativo):
 // - o Suprimido sai no fim do próximo turno de quem foi suprimido (ele já gastou o movimento indo para a cobertura);
 // - no começo do turno de quem está mortalmente ferido (HP abaixo de 1), o Death Save: o jogador rola no computador
-//   dele; o mestre rola pelos NPCs. Falhou: morto (status e combatente derrotado).
+//   dele; o mestre rola pelos NPCs e pelos capangas. Falhou: morto (status e combatente derrotado).
 import { jogadorDe, pedir, souOMestreAtivo, STATUS_SUPRIMIDO } from './combate.mjs';
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
@@ -25,7 +25,7 @@ async function deathSave(combate) {
   const token = combatente?.token;
   const ator = token?.actor;
   const modo = config('deathSave');
-  if (!ator || modo === 'nao' || ator.type !== 'personagem' || combatente.isDefeated) return;
+  if (!ator || modo === 'nao' || !['personagem', 'capanga'].includes(ator.type) || combatente.isDefeated) return;
   if (ator.system.hp.value >= 1 || ator.statuses.has(CONFIG.specialStatusEffects.DEFEATED)) return;
   const jogador = jogadorDe(ator);
   if (!jogador && modo === 'jogadores') return;
