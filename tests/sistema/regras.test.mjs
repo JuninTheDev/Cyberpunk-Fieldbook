@@ -706,8 +706,8 @@ test('Rolagens de Role do RED (wiki, "As dez Roles do RED"; o item de Role do CO
   assert.match(catalogoDaWiki, /<b>Credibility:<\/b>[^']*Rank \+ 1d10, pelo menos duas vezes por semana/);
   assert.match(catalogoDaWiki, /Haggling é um teste enfrentado de COOL \+ Trading \+ Operator \+ 1d10\./);
   assert.match(catalogoDaWiki, /<b>Backup \/ Reforços:<\/b> como ação, rola 1d10 e obtém resposta se o resultado for igual ou inferior ao Rank\. Um d6 determina em quantas rodadas chega o grupo; um 6 chama uma força um nível acima \(no Rank 10, dois grupos\)\./);
-  assert.deepEqual(Object.keys(regras.ROLAGENS_DE_ROLE).sort(), ['fixer', 'lawman', 'media', 'rockerboy']);
-  assert.deepEqual(Object.values(regras.ROLAGENS_DE_ROLE).flat().map(r => [r.id, r.formula]), [
+  assert.deepEqual(Object.keys(regras.ROLAGENS_DE_ROLE).sort(), ['fixer', 'lawman', 'media', 'medtech', 'rockerboy', 'tech']);
+  assert.deepEqual(['rockerboy', 'media', 'fixer', 'lawman'].flatMap(id => regras.ROLAGENS_DE_ROLE[id]).map(r => [r.id, r.formula]), [
     ['impacto-carismatico', 'Rank + 1d10'], ['credibilidade', 'Rank + 1d10'], ['pechinchar', 'COOL + Negociação + Operator + 1d10'], ['backup', '1d10 até o Rank']
   ]);
   for (const id of Object.keys(regras.ROLAGENS_DE_ROLE)) assert.ok(ROLES.some(role => role.id === id), id);
@@ -719,6 +719,34 @@ test('Rolagens de Role do RED (wiki, "As dez Roles do RED"; o item de Role do CO
   assert.deepEqual(regras.backup({ d10: 4, rank: 4, d6: 6 }), { veio: true, rodadas: 6, acima: true, grupos: 1 });
   assert.deepEqual(regras.backup({ d10: 5, rank: 4 }), { veio: false, rodadas: null, acima: false, grupos: 0 });
   assert.deepEqual(regras.backup({ d10: 10, rank: 10, d6: 2 }), { veio: true, rodadas: 2, acima: false, grupos: 2 });
+});
+
+test('Rolagens de Role do Tech e do Medtech (wiki, "As dez Roles do RED", e o criador; o item de Role do CORE): as quatro Expertises (TECH + uma perícia de TECH a escolher + os pontos + 1d10) e a Cirurgia e a Tecnologia Médica (TECH + a perícia + 1d10), com o nível que vem das especialidades', () => {
+  const catalogoDaWiki = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  assert.match(catalogoDaWiki, /<b>Maker \/ Artífice:<\/b> cada avanço concede um Rank em duas especialidades distintas\. Field Expertise soma o Rank a testes técnicos relevantes e permite reparos temporários; Upgrade Expertise melhora um item; Fabrication produz itens existentes; Invention projeta um item ou upgrade novo com aprovação do GM\./);
+  assert.match(catalogoDaWiki, /<b>Medicine:<\/b> a cada Rank, coloca 1 ponto em uma especialidade\. Surgery aumenta a perícia Surgery em 2 por ponto \(máximo 10\); Pharmaceuticals aumenta Medical Tech e libera fármacos; Cryosystem Operation aumenta Medical Tech e libera cryopumps\/cryotanks\./);
+  // As derivadas do criador (a Cirurgia e a Tecnologia Médica do Medtech) vão para o gerado.mjs como estão. JSON: os objetos
+  // do contexto da wiki (vm) são de outro reino.
+  const { roleAbilities } = daWiki('system-criacao.js', 'systemCreation');
+  assert.deepEqual(HABILIDADES_DE_ROLE.medtech.derivadas, JSON.parse(JSON.stringify(roleAbilities.medtech.derivadas)));
+  assert.deepEqual(Object.keys(HABILIDADES_DE_ROLE).filter(id => HABILIDADES_DE_ROLE[id].derivadas), ['medtech']);
+  // Tech: uma rolagem por Expertise, com a chave e o nome do criador; TECH + uma perícia de TECH a escolher + os pontos.
+  const { tech, medtech } = regras.ROLAGENS_DE_ROLE;
+  assert.deepEqual(tech.map(r => [r.especialidade, r.rotulo]), HABILIDADES_DE_ROLE.tech.itens.map(item => [item.id, item.nome]));
+  for (const r of tech) assert.deepEqual([r.atributo, r.escolherPericia, r.formula], ['tech', true, 'TECH + perícia + pontos + 1d10'], r.id);
+  // As perícias de TECH para escolher: as 15 comuns e as de Tocar Instrumento (família).
+  assert.equal(PERICIAS.filter(p => p.atributo === 'tech').length, 15);
+  assert.deepEqual(Object.keys(FAMILIAS).filter(id => FAMILIAS[id].atributo === 'tech'), ['play-instrument']);
+  // Medtech: a Cirurgia e a Tecnologia Médica, com TECH, pelas derivadas.
+  assert.deepEqual(medtech.map(r => [r.id, r.derivada, r.atributo, r.formula]), [
+    ['cirurgia', 'Surgery Skill', 'tech', 'TECH + Cirurgia + 1d10'], ['tecnologia-medica', 'Medical Tech Skill', 'tech', 'TECH + Tecnologia Médica + 1d10']
+  ]);
+  // O nível: a Cirurgia é 2 por ponto, até 10; a Tecnologia Médica, Farmacêutica + Criossistemas. Ponto negativo vale 0.
+  const derivadas = HABILIDADES_DE_ROLE.medtech.derivadas;
+  assert.deepEqual(regras.periciasDerivadas(derivadas, { Surgery: 2 }), { 'Surgery Skill': 4, 'Medical Tech Skill': 0 });
+  assert.deepEqual(regras.periciasDerivadas(derivadas, { Surgery: 6 }), { 'Surgery Skill': 10, 'Medical Tech Skill': 0 });
+  assert.deepEqual(regras.periciasDerivadas(derivadas, { Surgery: -1, 'Medical Tech (Pharmaceuticals)': 1, 'Medical Tech (Cryosystem Operation)': 2 }), { 'Surgery Skill': 0, 'Medical Tech Skill': 3 });
+  assert.deepEqual(regras.periciasDerivadas(undefined, { Surgery: 2 }), {});
 });
 
 test('Janela de rolagem: os modificadores comuns são os da tabela da wiki (RED p. 130), com o valor de cada um', () => {

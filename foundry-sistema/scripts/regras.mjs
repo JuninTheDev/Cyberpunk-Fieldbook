@@ -84,15 +84,44 @@ export function bonusDeRole({ roleId, rank }) {
 // - Media, Credibilidade: os rumores, "Rank + 1d10, pelo menos duas vezes por semana";
 // - Fixer, Operator: "Haggling é um teste enfrentado de COOL + Trading + Operator + 1d10" (o "Haggle" do item do CORE);
 // - Lawman, Backup: "rola 1d10 e obtém resposta se o resultado for igual ou inferior ao Rank" (regras.backup). O item do
-//   CORE não rola o Backup; a wiki diz como.
-// O Netrunner (a Interface) fica no C5 do ROADMAP; o Tech e o Medtech, na parte 3 do C3. O Solo, o Exec e o Nomad não
-// rolam a habilidade de Role.
+//   CORE não rola o Backup; a wiki diz como;
+// - Tech, Artífice: as quatro Expertises ("Field Expertise soma o Rank a testes técnicos relevantes e permite reparos
+//   temporários; Upgrade Expertise melhora um item; Fabrication produz itens existentes; Invention projeta um item ou
+//   upgrade novo com aprovação do GM"). No item do CORE, cada uma rola TECH + uma perícia de TECH a escolher ("varying") +
+//   os pontos dela;
+// - Medtech, Medicina: a Cirurgia e a Tecnologia Médica, as perícias que só o Medtech tem (o "Surgery Skill" e o "Medical
+//   Tech Skill" do item do CORE): TECH + a perícia + 1d10, com o nível que vem das especialidades (periciasDerivadas).
+// O Netrunner (a Interface) fica no C5 do ROADMAP. O Solo, o Exec e o Nomad não rolam a habilidade de Role.
+// Os campos: habilidade (o rótulo do Rank, quando não é o da rolagem), pericia (a perícia do teste), especialidade (os
+// pontos dela no lugar do Rank), escolherPericia (uma perícia do atributo, a escolher), derivada (o nível no lugar do Rank),
+// atributo e backup.
+const EXPERTISE = { atributo: 'tech', escolherPericia: true, formula: 'TECH + perícia + pontos + 1d10' };
 export const ROLAGENS_DE_ROLE = {
   rockerboy: [{ id: 'impacto-carismatico', rotulo: 'Impacto Carismático', formula: 'Rank + 1d10', dica: 'DV 8 para uma pessoa, 10 para até seis, 12 para um grupo maior.' }],
   media: [{ id: 'credibilidade', rotulo: 'Credibilidade', formula: 'Rank + 1d10', dica: 'Os rumores: pelo menos duas vezes por semana, se não estiver fora do radar.' }],
   fixer: [{ id: 'pechinchar', rotulo: 'Pechinchar', formula: 'COOL + Negociação + Operator + 1d10', habilidade: 'Operator', pericia: 'trading', dica: 'Teste enfrentado.' }],
-  lawman: [{ id: 'backup', rotulo: 'Backup', formula: '1d10 até o Rank', backup: true, dica: 'Vem se o d10 for igual ou menor que o Rank; um d6 diz em quantas rodadas.' }]
+  lawman: [{ id: 'backup', rotulo: 'Backup', formula: '1d10 até o Rank', backup: true, dica: 'Vem se o d10 for igual ou menor que o Rank; um d6 diz em quantas rodadas.' }],
+  tech: [
+    { id: 'campo', rotulo: 'Especialização de Campo', especialidade: 'Field Expertise', ...EXPERTISE, dica: 'Testes técnicos fora do Artífice e reparos temporários (como uma Ação).' },
+    { id: 'upgrade', rotulo: 'Especialização de Upgrade', especialidade: 'Upgrade Expertise', ...EXPERTISE, dica: 'Melhorar um item.' },
+    { id: 'fabricacao', rotulo: 'Especialização de Fabricação', especialidade: 'Fabrication Expertise', ...EXPERTISE, dica: 'Fabricar um item que já existe.' },
+    { id: 'invencao', rotulo: 'Especialização de Invenção', especialidade: 'Invention Expertise', ...EXPERTISE, dica: 'Inventar um item ou upgrade novo, com o mestre.' }
+  ],
+  medtech: [
+    { id: 'cirurgia', rotulo: 'Cirurgia', derivada: 'Surgery Skill', atributo: 'tech', formula: 'TECH + Cirurgia + 1d10', dica: 'Lesões críticas graves e instalação de cyberware.' },
+    { id: 'tecnologia-medica', rotulo: 'Tecnologia Médica', derivada: 'Medical Tech Skill', atributo: 'tech', formula: 'TECH + Tecnologia Médica + 1d10', dica: 'Fabricar fármacos e operar cryopumps e cryotanks.' }
+  ]
 };
+// As perícias que vêm das especialidades de Role, como as derivadas do criador da wiki (system-criacao.js, roleAbilities;
+// roleAbilityRanks, em criador.js): a Cirurgia do Medtech é 2 por ponto em Cirurgia, até 10, e a Tecnologia Médica, 1 por
+// ponto em Farmacêutica e em Criossistemas. Como na Consciência de Combate do Solo, os pontos valem como estão na ficha (ela
+// avisa quando passam do Rank). { id: nível }.
+export function periciasDerivadas(derivadas = [], habilidades = {}) {
+  return Object.fromEntries(derivadas.map(({ id, de, max = null }) => {
+    const soma = Object.entries(de).reduce((total, [especialidade, fator]) => total + Math.max(0, Number(habilidades?.[especialidade]) || 0) * fator, 0);
+    return [id, max === null ? soma : Math.min(max, soma)];
+  }));
+}
 // O Backup do Lawman (wiki): "rola 1d10 e obtém resposta se o resultado for igual ou inferior ao Rank. Um d6 determina em
 // quantas rodadas chega o grupo; um 6 chama uma força um nível acima (no Rank 10, dois grupos)". O 6 é o do d6.
 export function backup({ d10, rank, d6 = null }) {

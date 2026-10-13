@@ -2,7 +2,7 @@
 // que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP, bônus dos efeitos)
 // é calculado na preparação, a cada vez.
 import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, EXTRATOS, LIFEPATH, USOS } from './config.mjs';
-import { FAMILIAS, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
+import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 
 const { fields } = foundry.data;
@@ -79,8 +79,11 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     a.move.valor = regras.moveFinal(a.move.valor, this.ferimento.chave === 'mortal');
     // Consciência de Combate do Solo (pelos pontos de cada habilidade da Role).
     this.consciencia = regras.consciencia(this.role.habilidades);
-    // Os bônus de Role nas perícias (o Moto do Nomad), como o item de Role do CORE.
-    this.bonusDeRole = regras.bonusDeRole({ roleId: roleDaWiki(this.role.nome)?.id, rank: this.role.rank });
+    // Os bônus de Role nas perícias (o Moto do Nomad), como o item de Role do CORE, e as perícias que só o Medtech tem (a
+    // Cirurgia e a Tecnologia Médica), pelas especialidades de Medicina.
+    const roleId = roleDaWiki(this.role.nome)?.id;
+    this.bonusDeRole = regras.bonusDeRole({ roleId, rank: this.role.rank });
+    this.periciasDeRole = regras.periciasDerivadas(HABILIDADES_DE_ROLE[roleId]?.derivadas, this.role.habilidades);
     // Editor de dor (supressão de dor): tira só a penalidade de gravemente ferido, não a de mortalmente ferido.
     this.penalidade = regras.penalidadeDoFerimento(this.ferimento, this.bonus.supressaoDeDor);
     // Death Save: a penalidade de base vem das lesões que a aumentam; a outra sobe a cada sucesso.

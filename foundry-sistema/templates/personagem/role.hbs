@@ -33,6 +33,11 @@
       </li>
       {{/each}}
     </ol>
+    {{#if especialidades.derivadas.length}}
+    <ul class="derivadas">
+      {{#each especialidades.derivadas}}<li data-derivada="{{id}}"><b>Perícia {{nome}}: {{nivel}}</b> <small>{{conta}}</small></li>{{/each}}
+    </ul>
+    {{/if}}
     {{#if especialidades.passou}}<div class="conferencia erro">PASSOU DO TOTAL DO RANK {{especialidades.rank}}: {{especialidades.distribuidos}} DE {{especialidades.total}} PONTOS</div>
     {{else if especialidades.sobra}}<div class="conferencia">SOBRA{{#unless (eq especialidades.sobra 1)}}M{{/unless}} {{especialidades.sobra}} PONTO{{#unless (eq especialidades.sobra 1)}}S{{/unless}} PARA DISTRIBUIR</div>{{/if}}
     {{#if especialidades.acima}}<div class="conferencia erro">MAIS QUE O RANK ({{especialidades.max}}) EM: {{especialidades.acima}}</div>{{/if}}

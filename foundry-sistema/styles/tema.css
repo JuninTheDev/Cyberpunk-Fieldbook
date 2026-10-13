@@ -278,6 +278,10 @@
   font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.12em;
 }
 .cpr-fieldbook.ficha-personagem .conferencia.erro { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+/* As perícias que vêm das especialidades (a Cirurgia e a Tecnologia Médica do Medtech). */
+.cpr-fieldbook.ficha-personagem .derivadas { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 10px 0 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .derivadas b { color: var(--cp-ciano); font-family: var(--cp-dados); font-weight: 400; font-size: 15px; }
+.cpr-fieldbook.ficha-personagem .derivadas small { margin-left: 4px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
 /* As rolagens da habilidade de Role (o Impacto Carismático, a pechincha, o Backup...). */
 .cpr-fieldbook.ficha-personagem .rolagens-role { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .cpr-fieldbook.ficha-personagem .rolagens-role .acao small { margin-left: 6px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; text-transform: none; }

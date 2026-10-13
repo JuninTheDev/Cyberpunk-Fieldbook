@@ -130,7 +130,9 @@ function rolesDaWiki() {
     roles: roles.map(({ id, nome, habilidade, en, resumo }) => ({ id, nome, habilidade, en, resumo })),
     antigas: roleAliases,
     habilidades: Object.fromEntries(Object.entries(roleAbilities).map(([id, r]) => [id, {
-      titulo: r.titulo, pagina: r.pagina, pontos: r.pontos, max: r.max, nota: r.nota, itens: r.itens.map(({ id: chave, nome, desc }) => ({ id: chave, nome, desc }))
+      titulo: r.titulo, pagina: r.pagina, pontos: r.pontos, max: r.max, nota: r.nota, itens: r.itens.map(({ id: chave, nome, desc }) => ({ id: chave, nome, desc })),
+      // As perícias que vêm das especialidades (a Cirurgia e a Tecnologia Médica do Medtech): { id, de: { especialidade: fator }, max }.
+      ...(r.derivadas ? { derivadas: r.derivadas.map(({ id: chave, de, max }) => ({ id: chave, de, ...(max ? { max } : {}) })) } : {})
     }]))
   };
 }

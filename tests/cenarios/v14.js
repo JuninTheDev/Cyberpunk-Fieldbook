@@ -2591,6 +2591,87 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('rolagens de Role do Tech e do Medtech pela aba Role: a Especialização de Campo pergunta a perícia de TECH (da mais alta para a mais baixa, com as de família) e rola TECH + a perícia + os pontos + 1d10 pela janela, e fechar a pergunta não rola; a Cirurgia do Medtech (2 por ponto de Cirurgia, até 10) rola TECH + Cirurgia + 1d10 com Ctrl + clique; o painel de Medicina mostra as perícias que vêm das especialidades, e a importada fica de fora das outras habilidades', async () => {
+      // d10 6: TECH 7 + Tecnologia de Armas 5 + Campo 3 + 6 = 21. d10 4: TECH 7 + Cirurgia 6 (3 pontos) + 4 = 17.
+      await fixar(edge, [[6, 10], [4, 10]]);
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const a = await Actor.implementation.create({ name: 'Teste Roles', type: 'personagem', system: {
+            atributos: { tech: { valor: 7 } }, pericias: { weaponstech: { nivel: 5 }, 'basic-tech': { nivel: 2 }, 'play-instrument-guitarra': { familia: 'play-instrument', nome: 'Guitarra', nivel: 3 } },
+            role: { nome: 'Tech', rank: 4, habilidades: { 'Field Expertise': 3, 'Upgrade Expertise': 1 } }
+          } });
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('role', 'primary');
+          const f = () => a.sheet.element;
+          const botoes = () => [...(f()?.querySelectorAll('.tab.role .rolagens-role [data-action="rolarRole"]') ?? [])].map(b => b.dataset.rolagem);
+          const botao = id => f().querySelector('.tab.role .rolagens-role [data-rolagem="' + id + '"]');
+          const pergunta = () => document.querySelector('.application.dialog.escolher-pericia:not(.minimizing)');
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const html = m => new DOMParser().parseFromString(m.content, 'text/html');
+          const partesDa = m => [...html(m).querySelectorAll('.partes li')].map(textoDe);
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          await esperar(() => botoes().length);
+
+          // 1. Tech: o clique pergunta a perícia; fechada a pergunta, não rola.
+          const tech = { botoes: botoes(), texto: textoDe(botao('campo')) };
+          let antes = game.messages.size;
+          botao('campo').click();
+          await esperar(() => pergunta()?.querySelector('select[name="pericia"]'));
+          tech.titulo = textoDe(pergunta().querySelector('.window-title'));
+          tech.opcoes = [...pergunta().querySelectorAll('select[name="pericia"] option')].map(o => o.value);
+          pergunta().querySelector('.window-header [data-action="close"]').click();
+          await esperar(() => !pergunta());
+          await new Promise(r => setTimeout(r, 300));
+          tech.fechada = { mensagens: game.messages.size - antes, janela: Boolean(janela()) };
+          // De novo: Tecnologia de Armas, e a janela de rolagem.
+          botao('campo').click();
+          await esperar(() => pergunta()?.querySelector('select[name="pericia"]'));
+          pergunta().querySelector('select[name="pericia"]').value = 'weaponstech';
+          pergunta().querySelector('button[data-action="ok"]').click();
+          await esperar(() => janela()?.querySelector('[name="outro"]'));
+          tech.janela = { titulo: textoDe(janela().querySelector('.window-title')), partes: [...janela().querySelectorAll('.partes li')].map(textoDe) };
+          janela().querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          let m = game.messages.contents.at(-1);
+          Object.assign(tech, { total: m.rolls[0].total, cartao: partesDa(m), rotulo: m.getFlag('${S}', 'teste')?.rotulo, sabor: textoDe(html(m).querySelector('.sabor')) });
+
+          // 2. Medtech: 3 pontos em Cirurgia, 1 em Farmacêutica e 2 em Criossistemas; a "Surgery Skill" 8 que veio de uma
+          // importação antiga não vale (a ficha calcula) e não fica entre as outras habilidades.
+          await a.update({ 'system.role.nome': 'Medtech', 'system.role.habilidades.Surgery': 3, 'system.role.habilidades.Medical Tech (Pharmaceuticals)': 1, 'system.role.habilidades.Medical Tech (Cryosystem Operation)': 2, 'system.role.habilidades.Surgery Skill': 8 });
+          await esperar(() => botoes().join() === 'cirurgia,tecnologia-medica' && f().querySelector('.tab.role .derivadas'));
+          const medtech = {
+            botoes: botoes(), niveis: { ...a.system.periciasDeRole },
+            derivadas: [...f().querySelectorAll('.tab.role .derivadas li')].map(li => [li.dataset.derivada, textoDe(li.querySelector('b')), textoDe(li.querySelector('small'))]),
+            outras: [...f().querySelectorAll('.tab.role input[name^="system.role.habilidades."]')].map(input => input.name.slice('system.role.habilidades.'.length)).sort()
+          };
+          antes = game.messages.size;
+          ctrl(botao('cirurgia'));
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          Object.assign(medtech, { total: m.rolls[0].total, cartao: partesDa(m), janela: Boolean(janela()) });
+          return { tech, medtech };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('role-medtech');
+        const { tech, medtech } = info;
+        const ok = tech.botoes.join() === 'campo,upgrade,fabricacao,invencao' && tech.texto === 'Especialização de Campo TECH + perícia + pontos + 1d10'
+          && tech.titulo === 'Especialização de Campo' && tech.opcoes.length === 16 && tech.opcoes.slice(0, 3).join() === 'weaponstech,play-instrument-guitarra,basic-tech'
+          && tech.fechada.mensagens === 0 && !tech.fechada.janela
+          && tech.janela.titulo === 'Teste: Especialização de Campo (Tecnologia de Armas)' && tech.janela.partes.join() === 'TECH +7,Tecnologia de Armas +5,Especialização de Campo +3,1d10'
+          && tech.total === 21 && tech.cartao.join() === '1d10,TECH +7,Tecnologia de Armas +5,Especialização de Campo +3'
+          && tech.rotulo === 'Especialização de Campo (Tecnologia de Armas)' && tech.sabor === 'Testes técnicos fora do Artífice e reparos temporários (como uma Ação).'
+          && medtech.botoes.join() === 'cirurgia,tecnologia-medica' && medtech.niveis['Surgery Skill'] === 6 && medtech.niveis['Medical Tech Skill'] === 3
+          && JSON.stringify(medtech.derivadas) === JSON.stringify([['Surgery Skill', 'Perícia Cirurgia: 6', '2 por ponto de Cirurgia, até 10'], ['Medical Tech Skill', 'Perícia Tecnologia Médica: 3', 'Farmacêutica + Operação de Criossistemas']])
+          && medtech.outras.join() === 'Field Expertise,Medical Tech (Cryosystem Operation),Medical Tech (Pharmaceuticals),Surgery,Upgrade Expertise'
+          && !medtech.janela && medtech.total === 17 && medtech.cartao.join() === '1d10,TECH +7,Cirurgia +6';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => a.name === 'Teste Roles')) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

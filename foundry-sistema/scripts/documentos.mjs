@@ -134,8 +134,7 @@ export class AtorCPR extends Actor {
     }, opcoes);
   }
 
-  // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto, a especialização) e os
-  // situacionais.
+  // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto do Nomad) e os situacionais.
   partesDaPericia(id, { situacionais = null } = {}) {
     const p = this.system.pericia(id);
     const partes = [{ rotulo: SIGLA[p.atributo], valor: this.system.atributos[p.atributo].valor }, { rotulo: p.nome, valor: p.nivel }];
@@ -152,27 +151,39 @@ export class AtorCPR extends Actor {
   }
 
   // As rolagens de habilidade de Role do RED (regras.ROLAGENS_DE_ROLE), como o _createRoleRoll do CORE: o Rank da
-  // habilidade (na pechincha do Fixer, com COOL e Negociação), as penalidades e os situacionais de todas as ações (e os da
+  // habilidade (na pechincha do Fixer, com COOL e Negociação), os pontos da Expertise do Tech (com TECH e a perícia
+  // escolhida) ou o nível da perícia do Medtech (com TECH), as penalidades e os situacionais de todas as ações (e os da
   // perícia), com a janela de rolagem. O Backup do Lawman é outra rolagem (rolarBackup). Sem a rolagem nesta Role: null.
   rolagemDeRole(id) {
     const role = roleDaWiki(this.system.role.nome);
     return (role && ROLAGENS_DE_ROLE[role.id]?.find(rolagem => rolagem.id === id)) || null;
   }
-  partesDaRole(id, { situacionais = null } = {}) {
+  partesDaRole(id, { situacionais = null, pericia = null } = {}) {
     const rolagem = this.rolagemDeRole(id);
-    const rank = { rotulo: rolagem.habilidade ?? rolagem.rotulo, valor: this.system.role.rank };
-    if (!rolagem.pericia) return [rank, ...this.#penalidade(), ...this.#situacionais(situacionais)];
-    // Atributo e perícia (e o bônus dela), o Rank, as penalidades e os situacionais.
-    const { partes } = this.partesDaPericia(rolagem.pericia, { situacionais });
-    partes.splice(2, 0, rank);
+    const { atributos, periciasDeRole, role } = this.system;
+    const valor = rolagem.especialidade ? Math.max(0, Number(role.habilidades[rolagem.especialidade]) || 0) : rolagem.derivada ? periciasDeRole[rolagem.derivada] ?? 0 : role.rank;
+    const habilidade = { rotulo: rolagem.habilidade ?? rolagem.rotulo, valor };
+    const periciaId = rolagem.pericia ?? (rolagem.escolherPericia ? pericia : null);
+    if (!periciaId) {
+      const atributo = rolagem.atributo ? [{ rotulo: SIGLA[rolagem.atributo], valor: atributos[rolagem.atributo].valor }] : [];
+      return [...atributo, habilidade, ...this.#penalidade(), ...this.#situacionais(situacionais)];
+    }
+    // Atributo e perícia (e o bônus dela), a habilidade, as penalidades e os situacionais.
+    const { partes } = this.partesDaPericia(periciaId, { situacionais });
+    partes.splice(2, 0, habilidade);
     return partes;
   }
-  rolarRole(id, { perguntar = false, ...opcoes } = {}) {
+  // As Expertises do Tech rolam com a perícia que vem em pericia (o "varying" do CORE: uma do atributo da rolagem); sem
+  // ela, ou com uma de outro atributo, não rolam.
+  rolarRole(id, { perguntar = false, pericia = null, ...opcoes } = {}) {
     const rolagem = this.rolagemDeRole(id);
     if (!rolagem) return null;
     if (rolagem.backup) return this.rolarBackup(opcoes);
+    if (rolagem.escolherPericia && (!pericia || this.system.pericia(pericia).atributo !== rolagem.atributo)) return null;
+    const periciaId = rolagem.pericia ?? (rolagem.escolherPericia ? pericia : null);
+    const rotulo = rolagem.escolherPericia ? `${rolagem.rotulo} (${this.system.pericia(pericia).nome})` : rolagem.rotulo;
     return this.#testarComJanela({
-      rotulo: rolagem.rotulo, perguntar, partes: situacionais => this.partesDaRole(id, { situacionais }), situacionais: () => this.situacionaisDoTeste(rolagem.pericia ?? null)
+      rotulo, perguntar, partes: situacionais => this.partesDaRole(id, { situacionais, pericia }), situacionais: () => this.situacionaisDoTeste(periciaId)
     }, { sabor: rolagem.dica, ...opcoes });
   }
 

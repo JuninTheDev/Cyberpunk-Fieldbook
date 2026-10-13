@@ -29,7 +29,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad) | portado no ciclo 23. Com as Roles do RED (ciclo 33), saíram a especialização do Face e os situacionais de 2077 (o Investigator, o Netrunner) |
-| CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta |
+| CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | portadas nos ciclos 34 e 35, com as Roles do RED: pelo item de Role do CORE e pelo texto da wiki (a Barganha é a pechincha do Fixer; o Backup do Lawman, pela wiki). A Interface do Netrunner é o C5 |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga, Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
@@ -98,7 +98,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | portada nos ciclos 24, 25 e 27 | feito |
   | Rolagens | Facedown (COOL + Reputação + 1d10) | falta | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
-  | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta | P2 |
+  | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
   | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | falta | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
@@ -211,6 +211,13 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   O único dado antes do "um 6" que pode dar 6 é o d6, e o sistema lê assim: o grupo chega em 6 rodadas e é um nível
   acima. O nível (composição, equipamento, proteção) fica com o mestre, porque a wiki não traz a tabela. O item de Role do
   CORE não rola o Backup; aqui ele rola pelo texto da wiki.
+
+- **As perícias do Medtech: pela conta da wiki, não pelo número digitado.** No CORE, o "Surgery Skill" e o "Medical Tech
+  Skill" são Ranks digitados no item de Role. Aqui, como no criador da wiki (as `derivadas`), vêm das especialidades: a
+  Cirurgia, 2 por ponto, até 10; a Tecnologia Médica, Farmacêutica + Criossistemas. Um Medtech migrado do CORE com os
+  números fora dessa conta passa a rolar pela conta; o número antigo fica guardado na ficha, sem uso. Como na Consciência
+  de Combate do Solo, os pontos das especialidades valem como estão na ficha: o criador da wiki corta cada um no máximo
+  (4), e a ficha só avisa quando passam do Rank.
 
 - **Os opcionais de Role da wiki: com o mestre.** Com as Roles do RED, a wiki deixa como opcionais do suplemento de fã o
   Investigator do Lawman (no lugar do Backup) e o desconto do clã do Nomad. O sistema não os automatiza, porque a mesa não
@@ -1658,6 +1665,60 @@ texto da wiki ("As dez Roles do RED", system-catalog.js).
     - G4: a pechincha sem o Rank de Operator (deu 18), e a rolagem de Role sem a janela.
 - **Próximo:** o C3, parte 3: as rolagens do Tech (as quatro Expertises) e do Medtech (a Cirurgia e a Tecnologia Médica,
   pelas especialidades).
+- **Commit:** `4628ce1`.
+
+### Ciclo 35 (2026-10-12): as rolagens de Role do Tech e do Medtech (o C3, parte 3; sessão KouArt)
+
+As habilidades do Tech e do Medtech que rolam no item de Role do CORE (`_createRoleRoll`, nas habilidades com `hasRoll`):
+as quatro Expertises do Tech (`stat: tech`, `skill: varying`) e o "Surgery Skill" e o "Medical Tech Skill" do Medtech
+(`stat: tech`). Os números vêm do texto da wiki ("As dez Roles do RED", system-catalog.js) e do criador
+(system-criacao.js: as especialidades e as `derivadas`).
+
+- **Implementado:**
+  - **`regras.ROLAGENS_DE_ROLE`:**
+    - o Tech: as Especializações de Campo, de Upgrade, de Fabricação e de Invenção, cada uma TECH + uma perícia de TECH a
+      escolher + os pontos dela + 1d10 (o "varying" do CORE: as perícias do atributo);
+    - o Medtech: a Cirurgia e a Tecnologia Médica, TECH + a perícia + 1d10. A Farmacêutica e os Criossistemas não rolam
+      sozinhos, como no item do CORE: somam na Tecnologia Médica;
+  - **`regras.periciasDerivadas`:** o nível das perícias que vêm das especialidades, pelas derivadas do criador (o
+    `roleAbilityRanks` de criador.js): a Cirurgia, 2 por ponto, até 10; a Tecnologia Médica, Farmacêutica +
+    Criossistemas. O build leva as derivadas para o `gerado.mjs`, e o ator calcula as duas na preparação
+    (`system.periciasDeRole`);
+  - **no ator:** o `rolarRole(id, { pericia })` e o `partesDaRole` somam os pontos da Expertise (com TECH, a perícia
+    escolhida e o bônus e os situacionais dela) ou o nível da perícia do Medtech (com TECH). Sem a perícia, ou com uma de
+    outro atributo, a Expertise não rola;
+  - **na ficha:**
+    - o botão da Expertise pergunta antes a perícia de TECH, da mais alta para a mais baixa, com as de família (Tocar
+      Instrumento). Fechada a pergunta, não rola. Depois vem a janela de rolagem, como nas outras (Ctrl + clique, direto);
+    - o painel de Medicina mostra as perícias que vêm das especialidades, com a conta;
+    - a "Surgery Skill" e a "Medical Tech Skill" que vinham prontas da importação da wiki saem das outras habilidades,
+      porque a ficha calcula. O valor guardado fica na ficha, sem uso.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 55 de 59. Um teste novo:
+    - contra o texto da wiki (o Maker e a Medicine) e o criador (as Expertises com a chave e o nome dele; as derivadas
+      iguais às do `gerado.mjs`);
+    - as fórmulas, e o `periciasDerivadas`: Cirurgia 2 dá 4, e 6 dá 10; o ponto negativo vale 0; Farmacêutica 1 +
+      Criossistemas 2 dá 3.
+
+    O teste das rolagens de Role do ciclo 34 passou a esperar as seis Roles que rolam. As 4 falhas são as das armas de
+    2077 (QUALITY_GATES);
+  - G4: 64 de 69, cerca de 164 s. Um passo novo, pela aba Role de um personagem de teste:
+    - o Tech: fechada a pergunta da perícia (16 opções, da mais alta para a mais baixa, com Tocar Instrumento), não rola;
+      com Tecnologia de Armas, a janela rola TECH 7 + Tecnologia de Armas 5 + Campo 3 + d10 6 = 21;
+    - o Medtech: a Cirurgia 6 (3 pontos) e a Tecnologia Médica 3 no painel. Com Ctrl + clique, a Cirurgia rola TECH 7 +
+      6 + d10 4 = 17, sem usar a "Surgery Skill" 8 guardada, que também não aparece nas outras habilidades;
+    - a captura `v14-role-medtech`.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES). Na primeira tentativa, o cenário pulou a parte do Foundry,
+    porque havia uma pessoa na mesa do servidor (a licença vale para uma mesa por vez). Rodou de novo com a mesa vazia;
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a Cirurgia sem o máximo 10, e o ponto negativo contando;
+    - G4: a Expertise com o Rank no lugar dos pontos dela; a ficha sem perguntar a perícia; a perícia importada de volta
+      às outras habilidades; e a Cirurgia pelo valor guardado, não pelas especialidades.
+- **O C3 fecha aqui** (ciclos 33 a 35).
+- **Próximo:** o C2 (o capanga como tipo de ator), o próximo item livre do plano. O C1 está com a sessão Junin.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

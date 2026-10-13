@@ -147,7 +147,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const esquiva = ator.partesDaPericia('evasion').partes.reduce((soma, p) => soma + p.valor, 0);
     const bonusDeIniciativa = s.iniciativa - s.atributos.ref.valor;
 
-    // A Role: a de 2077 da wiki e as especialidades (Solo, Tech, Medtech) com os pontos; o efeito de cada uma do Solo.
+    // A Role: a do RED da wiki e as especialidades (Solo, Tech, Medtech) com os pontos; o efeito de cada uma do Solo.
     const role = roleDaWiki(s.role.nome);
     const especialidades = role && HABILIDADES_DE_ROLE[role.id];
     const efeitoDoSolo = {
@@ -158,7 +158,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       'Damage Deflection': s.consciencia.deflexao && `−${s.consciencia.deflexao} no dano sofrido`,
       'Fumble Recovery': s.consciencia.semFalhaCritica && 'sem falha crítica'
     };
-    const daEspecialidade = new Set(especialidades?.itens.map(item => item.id) ?? []);
+    // As especialidades e as perícias que vêm delas (as do Medtech: a ficha calcula, não ficam entre as outras).
+    const daEspecialidade = new Set([...(especialidades?.itens ?? []), ...(especialidades?.derivadas ?? [])].map(item => item.id));
     // Os bônus da Role nas perícias (regras.bonusDeRole): o Moto do Nomad soma sempre.
     const nomeDaPericia = id => PERICIAS.find(p => p.id === id)?.nome ?? FAMILIAS[id]?.nome ?? id;
     const ativos = Object.entries(s.bonusDeRole);
@@ -231,7 +232,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       return { ...item, pontos, acima: pontos > max, efeito: role.id === 'solo' ? efeitoDoSolo[item.id] || '' : '' };
     });
     const distribuidos = itens.reduce((soma, item) => soma + item.pontos, 0);
-    return { ...especialidades, itens, distribuidos, total, max, rank, passou: distribuidos > total, sobra: Math.max(0, total - distribuidos), acima: itens.filter(item => item.acima).map(item => item.nome).join(', ') };
+    // As perícias que vêm das especialidades (a Cirurgia e a Tecnologia Médica do Medtech), com o nível e a conta.
+    const nomeDe = id => itens.find(item => item.id === id)?.nome ?? id;
+    const derivadas = (especialidades.derivadas ?? []).map(({ id, de, max: teto }) => ({
+      id, nome: ROLAGENS_DE_ROLE[role.id]?.find(rolagem => rolagem.derivada === id)?.rotulo ?? id, nivel: this.actor.system.periciasDeRole[id] ?? 0,
+      conta: `${Object.entries(de).map(([especialidade, fator]) => (fator === 1 ? nomeDe(especialidade) : `${fator} por ponto de ${nomeDe(especialidade)}`)).join(' + ')}${teto ? `, até ${teto}` : ''}`
+    }));
+    return { ...especialidades, itens, derivadas, distribuidos, total, max, rank, passou: distribuidos > total, sobra: Math.max(0, total - distribuidos), acima: itens.filter(item => item.acima).map(item => item.nome).join(', ') };
   }
 
   async _preparePartContext(partId, contexto, options) {
@@ -246,7 +253,29 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo, { perguntar: comJanela(evento) }); }
   static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia, { perguntar: comJanela(evento) }); }
-  static #rolarRole(evento, alvo) { return this.actor.rolarRole(alvo.dataset.rolagem, { perguntar: comJanela(evento) }); }
+  // As Expertises do Tech perguntam antes a perícia do teste.
+  static async #rolarRole(evento, alvo) {
+    const id = alvo.dataset.rolagem;
+    const perguntar = comJanela(evento);
+    const rolagem = this.actor.rolagemDeRole(id);
+    const pericia = rolagem?.escolherPericia ? await this.#escolherPericia(rolagem) : null;
+    if (rolagem?.escolherPericia && !pericia) return null;
+    return this.actor.rolarRole(id, { perguntar, pericia });
+  }
+  // A perícia de uma Expertise do Tech: as do atributo da rolagem (o "varying" do item de Role do CORE), as comuns e as de
+  // família que o personagem tem, da mais alta para a mais baixa. Fechada, null.
+  #escolherPericia(rolagem) {
+    const s = this.actor.system;
+    const ids = [...PERICIAS.map(p => p.id), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia).map(([id]) => id)];
+    const pericias = ids.map(id => s.pericia(id)).filter(p => p.atributo === rolagem.atributo)
+      .sort((a, b) => b.nivel - a.nivel || a.nome.localeCompare(b.nome, 'pt-BR'));
+    const opcoes = pericias.map(p => `<option value="${p.id}">${foundry.utils.escapeHTML(p.nome)} (${p.nivel})</option>`).join('');
+    return DialogV2.prompt({
+      window: { title: rolagem.rotulo }, classes: [SISTEMA, 'escolher-pericia'], rejectClose: false,
+      content: `<label>Perícia de ${SIGLA[rolagem.atributo]} <select name="pericia" autofocus>${opcoes}</select></label><p class="dica">${rolagem.formula}</p>`,
+      ok: { label: 'Usar esta perícia', callback: (evento, botao) => botao.form.elements.pericia.value }
+    });
+  }
   static #alternarPericias() {
     this.#todasAsPericias = !(this.#todasAsPericias ?? !Object.values(this.actor.system.pericias).some(p => p.nivel > 0));
     return this.render();

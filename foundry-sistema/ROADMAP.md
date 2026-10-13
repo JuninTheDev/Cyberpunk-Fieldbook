@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 33). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 36). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 
@@ -37,14 +37,17 @@ de compêndio; entram só as partes do sistema.
   - **O token:** solto por padrão, com o próprio HP de cada capanga. Hoje todo ator nasce ligado.
   - **Arrastar um item** equipa ou instala.
   - **O combate:** igual ao do personagem.
-- [~] **C3. As Roles do RED e as rolagens delas.** Em andamento: sessão KouArt, 2026-10-12.
+- [x] **C3. As Roles do RED e as rolagens delas.** Feito nos ciclos 33 a 35 (sessão KouArt, 2026-10-12).
   - [x] As 10 Roles da wiki (o P0 "As Roles pelo RED"): ciclo 33.
   - A rolagem de cada habilidade, pelo item de Role do CORE (`_createRoleRoll`, `getRoleMods`) e pelo texto da wiki:
     - [x] Impacto Carismático (Rockerboy), Credibilidade (Media), a pechincha do Operator (Fixer) e o Backup (Lawman):
       ciclo 34. O Teamwork (Exec) e o Moto (Nomad) não rolam: o Moto é o bônus nas perícias de veículo (ciclo 33);
-    - [ ] Maker (Tech): Field, Upgrade, Fabrication e Invention Expertise;
-    - [ ] Medicine (Medtech): Cirurgia, Farmacêutica e Criossistemas.
-  - Os bônus situacionais na janela de rolagem (as rolagens de Role já passam por ela).
+    - [x] Maker (Tech): Field, Upgrade, Fabrication e Invention Expertise, cada uma com TECH, uma perícia de TECH a
+      escolher e os pontos dela: ciclo 35;
+    - [x] Medicine (Medtech): a Cirurgia e a Tecnologia Médica (TECH + a perícia), com o nível que vem das especialidades
+      (2 por ponto de Cirurgia, até 10; Farmacêutica + Criossistemas): ciclo 35. A Farmacêutica e os Criossistemas não
+      rolam sozinhos, como no item do CORE.
+  - [x] Os bônus situacionais na janela de rolagem: as rolagens de Role passam por ela (ciclos 34 e 35).
   - A Interface fica na C5.
 - [ ] **C4. Facedown:** COOL + Reputação + 1d10 (o `CPRFacedownRoll`).
 
@@ -268,7 +271,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   Sorte; o ↺ do começo da sessão.
 - [ ] **Na rolagem, o resto:** (→ C4 e C10) Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
   Falhas do Solo; Facedown (COOL + Reputação + 1d10, como o CORE).
-- [ ] **As rolagens das Roles** (→ C3; as do Rockerboy, da Media, do Fixer e do Lawman no ciclo 34) (o CORE rola pelo item de Role; aqui só o Solo tem efeito):
+- [x] **As rolagens das Roles** (→ C3; ciclos 34 e 35, com as Roles do RED) (o CORE rola pelo item de Role; aqui só o Solo tinha efeito):
   - Impacto Carismático do Face (Rank + 1d10 contra DV 8, 10 ou 12) e Credibilidade da Media (Rank + 1d10);
   - Barganha do Corpo (o Operator do Fixer: COOL + Comércio + Rank + 1d10, teste enfrentado);
   - as especialidades do Tech (Field, Upgrade, Fabrication e Invention Expertise);

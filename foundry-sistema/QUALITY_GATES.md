@@ -55,6 +55,10 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 - **Janela fechando:** no Edge sem janela, uma janela do Foundry fica no DOM com a classe `minimizing` por até 1 s
   depois do clique (o `close` espera a animação). Para contar janelas abertas, e para achar a que vai receber o
   clique, use `:not(.minimizing)`: a janela que fecha também tem os botões, e o clique nela se perde.
+- **G4 com a mesa do servidor em uso:** o cenário pergunta à wiki online (`/api/estado`) se há gente na mesa do servidor
+  e, havendo, pula a parte do Foundry ("parte do Foundry pulada"), porque a licença vale para uma mesa por vez. Esse G4 dá
+  "Tudo certo" com 5 passos e não vale como portão: espere a mesa esvaziar e rode de novo (no ciclo 35, um laço conferiu
+  a mesa a cada 2 minutos). Não contorne a checagem.
 - **Mudança na ficha:** o cenário captura cada aba da ficha (`tests/.saida/v14-ficha-*.png`). Confira as capturas antes
   do commit: o teste pega o que a ficha mostra, não se ficou bonita. No ciclo 19 as capturas acharam as linhas de
   perícia altas demais e o cabeçalho quebrado, com todos os testes passando.
