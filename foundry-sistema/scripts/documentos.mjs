@@ -4,10 +4,14 @@ import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  aplicarDano, backup, DANO_DE_PROGRAMA, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+  aplicarDano, backup, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
+
+// Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
+const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo' };
+const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[onde] }));
 
 export class AtorCPR extends Actor {
   // Personagem novo: o token fica ligado à ficha, com o HP na barra. Capanga novo (o mook do CORE): o token fica solto, e
@@ -184,11 +188,31 @@ export class AtorCPR extends Actor {
     }, { sabor: 'Contra a Interface + 1d10 do netrunner ou a DEF + 1d10 do programa. O programa de ataque desativa sozinho depois de usado.', ...opcoes });
   }
 
-  // O dano do Zap (a wiki e o CORE): 1d6 no REZ de um programa ou direto no cérebro de um netrunner.
+  // O dano do Zap (a wiki e o CORE): 1d6 no REZ de um programa ou direto no cérebro de um netrunner, com os botões do
+  // mestre para aplicar.
   async rolarDanoDoZap() {
     const roll = await new Roll('1d6').evaluate();
-    await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), flavor: 'Zap: 1d6 no REZ de um programa ou direto no cérebro' });
+    const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
+      rotulo: 'Dano: Zap (no REZ de um programa ou no cérebro)', total: roll.total, critico: null, dados: await roll.render(), botoes: botoesDaNet(ONDE_O_DANO_ENTRA.zap)
+    });
+    await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { danoDePrograma: { zap: true, total: roll.total } } } });
     return roll;
+  }
+
+  // O programa deste ator ativo (num deck) pelo id do catálogo ou pelo nome (os defensores que mudam o dano no cérebro).
+  programaAtivo(id) {
+    return this.items.find(item => item.type === 'programa' && item.system.ativo && item.instaladoNo
+      && (item.getFlag(SISTEMA, 'catalogo') === `core_programs:${id}` || item.name.toLowerCase() === id)) ?? null;
+  }
+  // O dano no cérebro (regras.danoNoCerebro): direto no HP, sem a armadura nem crítico. O Shield ativo anula o primeiro
+  // dano de programa que não é Black ICE (o Zap não é programa) e se desativa; o Armor ativo reduz 4.
+  async receberDanoNoCerebro(dano, { dePrograma = true, deBlackIce = false } = {}) {
+    const [shield, armor] = [this.programaAtivo('shield'), this.programaAtivo('armor')];
+    const conta = danoNoCerebro({ dano, shield: Boolean(shield) && dePrograma && !deBlackIce, armor: Boolean(armor) });
+    if (conta.shield) await shield.update({ 'system.ativo': false });
+    const hpAntes = this.system.hp.value;
+    if (conta.recebido) await this.update({ 'system.hp.value': hpAntes - conta.recebido });
+    return { ...conta, dano, hpAntes, hpDepois: this.system.hp.value };
   }
 
   // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto do Nomad) e os situacionais.
@@ -427,7 +451,9 @@ export class ItemCPR extends Item {
     const roll = await new Roll(formula).evaluate();
     const resultado = { roll, total: roll.total, contra, formula };
     if (falar) {
-      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), { rotulo: `Dano: ${this.name} (${alvo.rotulo})`, total: roll.total, critico: null, dados: await roll.render() });
+      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
+        rotulo: `Dano: ${this.name} (${alvo.rotulo})`, total: roll.total, critico: null, dados: await roll.render(), botoes: botoesDaNet(ONDE_O_DANO_ENTRA[this.system.classe]?.[contra] ?? [])
+      });
       resultado.mensagem = await ChatMessage.implementation.create({
         speaker: ChatMessage.implementation.getSpeaker({ actor: this.actor }), content, rolls: [roll], flags: { [SISTEMA]: { danoDePrograma: { programa: this.uuid, contra, total: roll.total } } }
       });

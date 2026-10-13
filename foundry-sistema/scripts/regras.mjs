@@ -120,6 +120,20 @@ export const DANO_DE_PROGRAMA = {
   antipersonnelattacker: [{ id: 'padrao', rotulo: 'no cérebro' }]
 };
 export const programaDeAtaque = classe => Boolean(DANO_DE_PROGRAMA[classe]);
+// Onde o dano de cada um entra (os botões do mestre no cartão): o anti-pessoal no cérebro; o anti-programa num programa
+// (o dano em Black ICE entra no Black ICE, com o C7); o Zap, nos dois.
+export const ONDE_O_DANO_ENTRA = { antipersonnelattacker: { padrao: ['cerebro'] }, antiprogramattacker: { padrao: ['programa'] }, zap: ['cerebro', 'programa'] };
+// O dano no cérebro (a wiki, "Combate na NET" e os defensores; o _applyDamage "brain" do CORE): direto no HP, sem a
+// armadura e sem crítico. O Shield ativo anula o primeiro dano cerebral de programa que não é Black ICE (o Zap não é
+// programa) e se desativa; o Armor ativo reduz em 4 todo dano cerebral. Quem chama diz se o Shield vale (shield).
+export const REDUCAO_DO_ARMOR = 4;
+export function danoNoCerebro({ dano, shield = false, armor = false }) {
+  const bruto = Math.max(0, Math.trunc(Number(dano) || 0));
+  if (shield && bruto > 0) return { recebido: 0, shield: true, reduzido: 0 };
+  const reduzido = armor ? Math.min(REDUCAO_DO_ARMOR, bruto) : 0;
+  return { recebido: bruto - reduzido, shield: false, reduzido };
+}
+
 // A fórmula de dano que vale ('0' e vazio não rolam: o efeito do programa é outro, como o do DeckKRASH).
 export const formulaDeDano = formula => (formula && String(formula).trim() !== '0' ? String(formula).trim() : '');
 // A REZ são os "pontos de vida" do programa: a do catálogo menos a perdida, nunca abaixo de 0. Em 0, ele desativa.

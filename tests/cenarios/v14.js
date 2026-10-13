@@ -3094,7 +3094,7 @@ module.exports = async ({ edge, servidores, r }) => {
           f().querySelector('.tab.net [data-action="rolarDanoDoZap"]').click();
           await esperar(() => game.messages.size > antes);
           m = game.messages.contents.at(-1);
-          const zap = { total: m.rolls[0].total, formula: m.rolls[0].formula, flavor: m.flavor };
+          const zap = { total: m.rolls[0].total, formula: m.rolls[0].formula, titulo: textoDe(html(m).querySelector('h3')), botoes: [...html(m).querySelectorAll('[data-cprf-acao="aplicarNet"]')].map(b => b.dataset.onde) };
 
           // 4. A Velocidade com o Speedy Gonzalvez ativo, gravemente ferido.
           await a.items.getName('Speedy Gonzalvez').update({ 'system.ativo': true });
@@ -3134,7 +3134,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && cloak.total === 12 && cloak.cartao.join() === '1d10,Interface +4,Modificador do mestre +2' && cloak.sabor === '1 Ação NET. O resultado vira a DV: esconde seus rastros e seus vírus.'
           && ativo.cloak === '6' && ativo.pathfinder === '4' && ativo.botao === 'Ativo' && ativo.bonus === 2
           && comEraser.total === 11 && comEraser.cartao.join() === '1d10,Interface +4,Programas +2' && !comEraser.janela
-          && zap.total === 4 && zap.formula === '1d6' && zap.flavor === 'Zap: 1d6 no REZ de um programa ou direto no cérebro'
+          && zap.total === 4 && zap.formula === '1d6' && zap.titulo === 'Dano: Zap (no REZ de um programa ou no cérebro)' && zap.botoes.join() === 'cerebro,programa'
           && v.valor === '4' && v.total === 7 && v.cartao.join() === '1d10,Interface +4,Programas +2,Gravemente ferido -2' && v.rotulo === 'Velocidade'
           && foraDoDeck.cloak === '2' && foraDoDeck.bonus === 0 && !foraDoDeck.botao
           && solo.titulo === 'SÓ O NETRUNNER' && solo.botoes === 0 && solo.rola && solo.acoes === 0;
@@ -3235,6 +3235,87 @@ module.exports = async ({ edge, servidores, r }) => {
         return [ok, JSON.stringify(info)];
       } finally {
         await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => ${JSON.stringify(nomes)}.includes(a.name))) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
+    await r.passo('dano da NET aplicado pelo mestre (wiki; o CORE): o botão do cartão leva o dano do Hellbolt ao cérebro do alvo marcado (sem a armadura), com o Armor ativo reduzindo 4 e o Shield ativo anulando e se desativando; o do Sword vai à REZ do programa ativo do alvo, que em 0 desativa; o do Zap passa pelo Shield', async () => {
+      // Hellbolt 2d6 3 + 4 = 7 (três vezes). Sword 2d6 3 + 3 = 6 (duas vezes). Zap 1d6 5.
+      await fixar(edge, []);
+      const nomes = ['Teste Netrunner Atacante', 'Teste Netrunner Alvo'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const item = id => foundry.utils.deepClone(cat[id]);
+          const netrunner = async (name, programas, extra = {}) => {
+            const ator = await Actor.implementation.create({ name, type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 }, ...extra }, items: ['core_gear:cyberdeck', ...programas].map(item) });
+            const deck = ator.items.find(i => i.type === 'cyberdeck');
+            await deck.update({ 'system.uso': 'equipado' });
+            await ator.updateEmbeddedDocuments('Item', ator.items.filter(i => i.type === 'programa').map(p => ({ _id: p.id, 'system.instaladoEm': deck.id })));
+            return ator;
+          };
+          // O atacante (com Hellbolt e Sword) e o alvo (HP 40, com Armor e Shield, inativos), o alvo com um token na cena.
+          const a = await netrunner('Teste Netrunner Atacante', ['core_programs:hellbolt', 'core_programs:sword']);
+          const b = await netrunner('Teste Netrunner Alvo', ['core_programs:armor', 'core_programs:shield'], { atributos: { body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 } });
+          const [tb] = await canvas.scene.createEmbeddedDocuments('Token', [(await b.getTokenDocument({ x: 1500, y: 1000 })).toObject()]);
+          await esperar(() => canvas.tokens.get(tb.id));
+          canvas.tokens.setTargets([tb.id]);
+          // Rola o dano e clica no botão do cartão; devolve o cartão do resultado.
+          const aplicar = async (rolar, onde, fila) => {
+            window.__fila = fila;
+            let antes = game.messages.size;
+            await rolar();
+            await esperar(() => game.messages.size > antes);
+            const m = game.messages.contents.at(-1);
+            await esperar(() => document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarNet"]'));
+            // A mensagem aparece no chat e na notificação: os botões de uma delas.
+            const botoes = [...document.querySelector('[data-message-id="' + m.id + '"]').querySelectorAll('[data-cprf-acao="aplicarNet"]')].map(bt => bt.dataset.onde);
+            antes = game.messages.size;
+            document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarNet"][data-onde="' + onde + '"]').click();
+            await esperar(() => game.messages.size > antes);
+            const r = game.messages.contents.at(-1);
+            return { botoes, titulo: textoDe(new DOMParser().parseFromString(m.content, 'text/html').querySelector('h3')), resultado: textoDe(new DOMParser().parseFromString(r.content, 'text/html').querySelector('.cartao')), flag: r.getFlag('${S}', 'danoDaNet') };
+          };
+          const hellbolt = () => a.items.getName('Hellbolt').rolarDanoDePrograma('padrao');
+          const sword = () => a.items.getName('Sword').rolarDanoDePrograma('padrao');
+          const ativar = nome => b.items.getName(nome).update({ 'system.ativo': true });
+
+          // 1. No cérebro, sem defensor: 40 → 33.
+          const semDefesa = { ...(await aplicar(hellbolt, 'cerebro', [[3, 6], [4, 6]])), hp: b.system.hp.value };
+          // 2. Com o Armor ativo: 7 − 4 = 3 (33 → 30).
+          await ativar('Armor');
+          const comArmor = { ...(await aplicar(hellbolt, 'cerebro', [[3, 6], [4, 6]])), hp: b.system.hp.value };
+          // 3. Com o Shield ativo: anula e se desativa (fica 30).
+          await ativar('Shield');
+          const comShield = { ...(await aplicar(hellbolt, 'cerebro', [[3, 6], [4, 6]])), hp: b.system.hp.value, shield: b.items.getName('Shield').system.ativo };
+          // 4. O Sword num programa: o Armor, o único ativo com REZ, perde 6 (7 → 1); de novo, vai a 0 e desativa.
+          const swordUm = { ...(await aplicar(sword, 'programa', [[3, 6], [3, 6]])), rez: b.items.getName('Armor').rezAtual };
+          const swordDois = { ...(await aplicar(sword, 'programa', [[3, 6], [3, 6]])), rez: b.items.getName('Armor').rezAtual, armor: b.items.getName('Armor').system.ativo };
+          // 5. O Zap no cérebro, com o Shield ativo de novo: o Zap não é programa, e o Shield não o para (30 → 25).
+          await ativar('Shield');
+          const zap = { ...(await aplicar(() => a.rolarDanoDoZap(), 'cerebro', [[5, 6]])), hp: b.system.hp.value, shield: b.items.getName('Shield').system.ativo };
+          canvas.tokens.setTargets([]);
+          return { semDefesa, comArmor, comShield, swordUm, swordDois, zap };
+        })()`);
+        const { semDefesa: s, comArmor: ar, comShield: sh, swordUm: s1, swordDois: s2, zap: z } = info;
+        const ok = s.botoes.join() === 'cerebro' && s.titulo === 'Dano: Hellbolt (no cérebro)' && s.hp === 33 && s.resultado === 'Dano da NET: 7 no cérebro Teste Netrunner Alvo: perdeu 7 HP no cérebro (40 → 33).' && s.flag?.onde === 'cerebro'
+          && ar.hp === 30 && ar.resultado === 'Dano da NET: 7 no cérebro Teste Netrunner Alvo: perdeu 3 HP no cérebro (33 → 30); o Armor reduziu 4.'
+          && sh.hp === 30 && !sh.shield && sh.resultado === 'Dano da NET: 7 no cérebro Teste Netrunner Alvo: o Shield anulou o dano e se desativou.'
+          && s1.botoes.join() === 'programa' && s1.rez === 1 && s1.resultado === 'Dano da NET: 6 num programa Teste Netrunner Alvo: o Armor perdeu 6 de REZ (7 → 1).'
+          && s2.rez === 0 && !s2.armor && s2.resultado === 'Dano da NET: 6 num programa Teste Netrunner Alvo: o Armor perdeu 1 de REZ (1 → 0) e desativou.'
+          && z.botoes.join() === 'cerebro,programa' && z.titulo === 'Dano: Zap (no REZ de um programa ou no cérebro)' && z.hp === 25 && z.shield
+          && z.resultado === 'Dano da NET: 5 no cérebro Teste Netrunner Alvo: perdeu 5 HP no cérebro (30 → 25).';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          canvas.tokens.setTargets([]);
+          const nomes = ${JSON.stringify(nomes)};
+          await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => nomes.includes(t.name)).map(t => t.id));
+          for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
+          return true;
+        })()`);
       }
     });
 

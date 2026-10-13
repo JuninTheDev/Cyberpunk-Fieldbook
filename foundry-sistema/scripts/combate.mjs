@@ -12,6 +12,7 @@ import { animar, textoFlutuante } from './efeitos.mjs';
 import { TABELAS_DV } from './gerado.mjs';
 import { JanelaDeDefesa } from './janela-defesa.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
+import { aplicarDanoDeNet } from './net.mjs';
 import { lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
 import * as R from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
@@ -790,6 +791,7 @@ export function ligarBotoes(mensagem, html) {
       evento.preventDefault();
       if (botao.dataset.cprfAcao === 'desfazer') desfazer(mensagem);
       else if (botao.dataset.cprfAcao === 'responder') desistir(botao.dataset.pedido, { escolha: botao.dataset.escolha, forcada: true });
+      else if (botao.dataset.cprfAcao === 'aplicarNet') aplicarDanoDeNet(mensagem, botao.dataset.onde);
     });
   }
   if (mensagem.getFlag(SISTEMA, 'desfeito')) html.querySelector('.cartao.ataque')?.classList.add('desfeito');

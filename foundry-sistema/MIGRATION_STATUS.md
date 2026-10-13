@@ -51,6 +51,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
 | cpr-2077 | avisos de envio, a campanha da wiki de cada mundo, crossover entre campanhas, Atualizar da wiki, retrato | falta |
 | CORE | a Interface do Netrunner (as 9 habilidades, a Defesa e a Velocidade, as Ações NET, os boosters ativos) | portada no ciclo 40 |
+| CORE | os programas no combate da NET (a REZ, o ataque, o dano sem crítico; o dano no cérebro e num programa, pelo mestre) | portados nos ciclos 41 e 42 (o Shield e o Armor pela wiki) |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
@@ -107,7 +108,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
-  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface no ciclo 40; o resto falta | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o resto falta | P3 |
   | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
@@ -231,6 +232,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 - **O programa ativo veio antes do C6.** A wiki diz que os boosters somam "enquanto estiver ativo", e o CORE só aplica o
   efeito com o programa rezzado (`isRezzed`). Por isso o C5 trouxe o ativo simples (um botão, sem a REZ atual). O C6
   completa: a REZ atual, derrezzar no 0, as 2 Ações NET para religar.
+
+- **O Shield e o Armor: pela wiki.** No conteúdo do CORE, os dois defensores não têm efeito (só o texto), e o CORE tem o
+  bônus `brainDamageReduction` sem ninguém que o dê. Aqui o dano no cérebro olha os defensores ativos do alvo, pela
+  wiki: o Shield anula o primeiro dano cerebral de programa que não é Black ICE e se desativa; o Armor reduz 4. O Zap é
+  uma habilidade de Interface, não um programa: o Shield não o para, e o Armor reduz. O "uma vez por netrun" dos dois
+  (quantas vezes se ativa numa corrida) fica com o mestre.
 
 - **A defesa de um programa: DEF + 1d10, pela wiki.** A wiki dá o combate na NET como "Interface + ATK do programa +
   1d10 vs Interface + 1d10 (ou DEF do programa + 1d10)", e o CORE rola a defesa do programa como Interface + DEF + 1d10.
@@ -2020,6 +2027,45 @@ e a wiki ("Como ler os cartões", "Programas: ataque" e a tabela dos programas e
       ataque com o Ativo.
 - **Próximo:** o C6, parte 2: aplicar o dano da NET (no cérebro do netrunner, ignorando a armadura, e no REZ de um
   programa do alvo).
+- **Commit:** `84219ce`.
+
+### Ciclo 42 (2026-10-13): o dano da NET aplicado pelo mestre (o C6, parte 2; sessão KouArt)
+
+O "apply damage" do CORE (`cpr-chat.js`, com o dano "brain" de `_applyDamage` em `cpr-actor.js`) e a wiki ("Combate na
+NET", a tabela dos programas com os defensores e a do Zap; RED p. 201–204).
+
+- **Implementado:**
+  - **`regras.danoNoCerebro`:** o dano no cérebro vai direto no HP, sem a armadura e sem crítico; o Shield ativo anula o
+    primeiro dano de programa que não é Black ICE (o Zap não é programa) e se desativa; o Armor ativo reduz 4 todo dano
+    cerebral (`REDUCAO_DO_ARMOR`). `ONDE_O_DANO_ENTRA`: o anti-pessoal no cérebro, o anti-programa num programa, o Zap
+    nos dois;
+  - **no ator:** `programaAtivo` (o defensor ativo num deck, pelo id do catálogo ou pelo nome) e `receberDanoNoCerebro`;
+  - **o cartão do dano** (o do programa e, agora, o do Zap) tem os botões do mestre (`net.mjs`, `aplicarDanoDeNet`): nos
+    alvos marcados (T), no cérebro ou num programa ativo com REZ (escolhido na janela, se houver mais de um; sem nenhum,
+    o cartão diz que o anti-programa caça o netrunner, e o mestre decide). O resultado vai num cartão;
+  - o Zap passou do `roll.toMessage` ao cartão de dano do sistema, com os botões.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 66 de 70. Um teste novo: o texto da wiki (o Armor, o Shield, o Zap), o dano no cérebro (sem defensor, com o
+    Armor, com o Shield, o Shield que não se gasta sem dano) e onde cada dano entra. As 4 falhas são as das armas de
+    2077 (QUALITY_GATES);
+  - G4: 71 de 76, cerca de 109 s. Um passo novo, com dois Netrunners (o alvo com um token marcado, HP 40, com o Armor e
+    o Shield):
+    - o Hellbolt no cérebro: 40 → 33; com o Armor ativo, 7 − 4 = 3 (33 → 30); com o Shield ativo, nada, e o Shield se
+      desativa;
+    - o Sword num programa: o Armor, o único ativo com REZ, perde 6 (7 → 1) e, de novo, vai a 0 e desativa;
+    - o Zap no cérebro, com o Shield ativo: o Shield não para o Zap (30 → 25);
+    - o passo da Interface (ciclo 40) passou a esperar o Zap no cartão de dano, com os botões.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o Armor reduzindo 2; o Shield se gastando sem dano;
+    - G4: o Shield parando o Zap; o Shield sem se desativar; o dano num programa valendo também para os inativos; e o
+      cartão do Zap sem os botões.
+- **O C6 fecha aqui** (ciclos 40 a 42).
+- **Próximo:** o C7 (o Black ICE e o demônio como atores: as fichas, o dano na REZ, o token que o programa rezza e a
+  iniciativa pela SPD), com o dano em Black ICE.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

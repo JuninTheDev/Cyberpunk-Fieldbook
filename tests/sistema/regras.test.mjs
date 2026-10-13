@@ -722,6 +722,21 @@ test('Programas no combate da NET (wiki, "Como ler os cartões", "Programas: ata
   assert.deepEqual([regras.rezAtual(7, 0), regras.rezAtual(7, 3), regras.rezAtual(7, 9), regras.rezAtual(7, -2)], [7, 4, 0, 7]);
 });
 
+test('Dano da NET (wiki, "Combate na NET", os defensores e o Zap; o CORE, o dano "brain"): no cérebro, direto no HP, sem a armadura; o Shield anula o primeiro dano de programa e se desativa; o Armor reduz 4; o anti-pessoal entra no cérebro, o anti-programa num programa, o Zap nos dois', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes("['Armor', 'Defensor', '0 / 0 / 7', 'Reduz em 4 todo dano cerebral."));
+  assert.ok(regrasDaWiki.includes("['Shield', 'Defensor', '0 / 0 / 7', 'Anula o primeiro dano cerebral de programa não Black ICE e se desativa."));
+  assert.ok(regrasDaWiki.includes("'1d6 de dano no REZ de um programa ou direto no cérebro de um netrunner.'"));
+  assert.equal(regras.REDUCAO_DO_ARMOR, 4);
+  assert.deepEqual(regras.danoNoCerebro({ dano: 7 }), { recebido: 7, shield: false, reduzido: 0 });
+  assert.deepEqual(regras.danoNoCerebro({ dano: 7, armor: true }), { recebido: 3, shield: false, reduzido: 4 });
+  assert.deepEqual(regras.danoNoCerebro({ dano: 3, armor: true }), { recebido: 0, shield: false, reduzido: 3 });
+  assert.deepEqual(regras.danoNoCerebro({ dano: 7, shield: true, armor: true }), { recebido: 0, shield: true, reduzido: 0 });
+  // Sem dano, o Shield não se gasta.
+  assert.deepEqual(regras.danoNoCerebro({ dano: 0, shield: true }), { recebido: 0, shield: false, reduzido: 0 });
+  assert.deepEqual(regras.ONDE_O_DANO_ENTRA, { antipersonnelattacker: { padrao: ['cerebro'] }, antiprogramattacker: { padrao: ['programa'] }, zap: ['cerebro', 'programa'] });
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);
