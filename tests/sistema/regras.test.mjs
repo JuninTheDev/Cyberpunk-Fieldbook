@@ -737,7 +737,11 @@ test('Dano da NET (wiki, "Combate na NET", os defensores e o Zap; o CORE, o dano
   assert.deepEqual(regras.danoNoCerebro({ dano: 7, shield: true, armor: true }), { recebido: 0, shield: true, reduzido: 0 });
   // Sem dano, o Shield não se gasta.
   assert.deepEqual(regras.danoNoCerebro({ dano: 0, shield: true }), { recebido: 0, shield: false, reduzido: 0 });
-  assert.deepEqual(regras.ONDE_O_DANO_ENTRA, { antipersonnelattacker: { padrao: ['cerebro'] }, antiprogramattacker: { padrao: ['programa'] }, zap: ['cerebro', 'programa'] });
+  // O ciclo 44 (o C7) juntou o dano em Black ICE, o Zap na REZ, o Zap do demônio e o Black ICE.
+  assert.deepEqual(regras.ONDE_O_DANO_ENTRA, {
+    antipersonnelattacker: { padrao: ['cerebro'] }, antiprogramattacker: { padrao: ['programa'], blackIce: ['rez'] }, zap: ['cerebro', 'programa', 'rez'], zapDoDemonio: ['cerebro', 'programa'],
+    blackIce: { antipersonnel: ['cerebro'], antiprogram: ['programa'] }
+  });
 });
 
 test('Black ICE e demônio como atores (wiki, "Black ICE" e "Demônios", RED p. 204–212; o blackIce e o demon do CORE): as tabelas da wiki no gerado, a ficha pelo modelo, os números que rolam e a iniciativa no topo da fila', () => {
@@ -791,6 +795,27 @@ test('Black ICE e demônio como atores (wiki, "Black ICE" e "Demônios", RED p. 
   assert.equal(regras.iniciativaNoTopo([null, undefined]), 30);
   assert.equal(regras.iniciativaNoTopo([12, null, 8, 15]), 16);
   assert.equal(regras.iniciativaNoTopo([0]), 1);
+});
+
+test('Dano da NET com o Black ICE e o demônio (wiki, "Black ICE", "Como ler os cartões" e os programas; o NET Architect da mesa; o _applyDamage do Black ICE e do demônio no CORE): o Black ICE anti-pessoal no cérebro e o anti-programa num programa, que desativado é destruído; o dano "em Black ICE" dos programas e o Zap do netrunner na REZ do Black ICE e do demônio; o Zap do demônio no intruso; a REZ não passa de 0', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  const netDaWiki = fs.readFileSync(path.join(raiz, 'system-net.js'), 'utf8');
+  assert.ok(netDaWiki.includes('Anti-pessoal afeta netrunners; anti-programa afeta programas (e caça o netrunner se ele não tiver programas ativos).'));
+  assert.ok(regrasDaWiki.includes("'6d6 no REZ de um programa; se desativar, destrói.'"));
+  assert.ok(regrasDaWiki.includes("['Sword', 'Anti-programa', '1 / 0 / 0', '3d6 REZ em Black ICE; 2d6 em programa não Black ICE.', '50eb']"));
+  assert.ok(regrasDaWiki.includes("'Anula o primeiro dano cerebral de programa não Black ICE e se desativa."));
+  assert.ok(regrasDaWiki.includes("'1d6 de dano no REZ de um programa ou direto no cérebro de um netrunner.'"));
+  assert.ok(regrasDaWiki.includes('Sem DEF: defende com Interface + 1d10. Só usa Zap e Control.'));
+  // O Black ICE, pela classe; o dano "em Black ICE" dos programas na REZ; o Zap do netrunner nos três; o do demônio, no intruso.
+  assert.deepEqual(regras.ONDE_O_DANO_ENTRA.blackIce, { antipersonnel: ['cerebro'], antiprogram: ['programa'] });
+  assert.deepEqual(regras.ONDE_O_DANO_ENTRA.antiprogramattacker, { padrao: ['programa'], blackIce: ['rez'] });
+  assert.deepEqual(regras.ONDE_O_DANO_ENTRA.zap, ['cerebro', 'programa', 'rez']);
+  assert.deepEqual(regras.ONDE_O_DANO_ENTRA.zapDoDemonio, ['cerebro', 'programa']);
+  // A REZ do Black ICE e do demônio depois do dano: até 0.
+  assert.equal(regras.rezDepoisDoDano(20, 6), 14);
+  assert.equal(regras.rezDepoisDoDano(5, 7), 0);
+  assert.equal(regras.rezDepoisDoDano(5, -3), 5);
+  assert.equal(regras.rezDepoisDoDano(5, 2.9), 3);
 });
 
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {

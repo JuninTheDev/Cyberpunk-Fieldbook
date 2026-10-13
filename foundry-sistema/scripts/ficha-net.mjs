@@ -1,12 +1,13 @@
 // Fichas do Black ICE e do demônio (o cpr-black-ice-sheet e o cpr-demon-sheet do CORE): uma página curta, no visual da
 // ficha do personagem, com a imagem, o nome, a REZ, os números (clique para rolar o número + 1d10, pela janela do
-// modificador do mestre; Ctrl + clique rola direto) e as notas; no Black ICE, também a classe, o efeito, o dano e o custo.
+// modificador do mestre; Ctrl + clique rola direto) e as notas; no Black ICE, também a classe, o efeito, o dano (que rola
+// com os botões do mestre no cartão) e o custo; no demônio, o dano do Zap.
 // O modelo da wiki (os 12 Black ICE e os 3 demônios do RED, das tabelas da wiki) preenche o nome e os números, como o
 // "configurar pelo programa" do Black ICE do CORE. Na ficha de um token, o nome muda também o do token, como no capanga.
 import { caminho, CLASSES_BLACK_ICE, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { BLACK_ICE, DEMONIOS } from './gerado.mjs';
-import { fichaDoModelo, NUMEROS_DA_NET } from './regras.mjs';
+import { fichaDoModelo, formulaDeDano, NUMEROS_DA_NET } from './regras.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -21,7 +22,7 @@ class FichaDaNet extends HandlebarsApplicationMixin(ActorSheetV2) {
     position: { width: 640, height: 'auto' },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { rolarDaNet: FichaDaNet.#rolar }
+    actions: { rolarDaNet: FichaDaNet.#rolar, rolarDanoDoIce: FichaDaNet.#rolarDanoDoIce, rolarZap: FichaDaNet.#rolarZap }
   };
 
   async _prepareContext(options) {
@@ -34,6 +35,7 @@ class FichaDaNet extends HandlebarsApplicationMixin(ActorSheetV2) {
       naCena: ator.isToken, nomeNaFicha: this.token?.name ?? ator.name,
       modelos: Object.fromEntries(MODELOS[ator.type].map(modelo => [modelo.id, modelo.nome])),
       numeros: NUMEROS_DA_NET[ator.type].map(numero => ({ ...numero, valor: s[numero.id] })),
+      danoDoIce: ator.type === 'blackice' ? formulaDeDano(s.dano) : '',
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
   }
@@ -49,6 +51,8 @@ class FichaDaNet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   static #rolar(evento, alvo) { return this.actor.rolarDaNet(alvo.dataset.numero, { perguntar: comJanela(evento) }); }
+  static #rolarDanoDoIce() { return this.actor.rolarDanoDoIce(); }
+  static #rolarZap() { return this.actor.rolarDanoDoZap(); }
 }
 
 export class FichaBlackIce extends FichaDaNet {

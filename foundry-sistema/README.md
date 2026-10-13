@@ -25,7 +25,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     ou em Black ICE, o anti-pessoal no cérebro. Os que têm REZ (boosters e defensores) perdem 1 de REZ e voltam ao
     máximo pelos botões, e em 0 desativam. O cartão do dano (o do programa e o do Zap) tem os botões do mestre: no
     cérebro dos alvos marcados (T), direto no HP e sem a armadura (o Shield ativo anula o primeiro dano de programa e se
-    desativa; o Armor ativo reduz 4), ou num programa ativo do alvo (perde a REZ, e em 0 desativa).
+    desativa; o Armor ativo reduz 4), ou num programa ativo do alvo (perde a REZ, e em 0 desativa). O dano "em Black ICE"
+    e o Zap entram também na REZ do Black ICE ou do demônio marcado.
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
@@ -51,6 +52,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     para o token;
   - **a iniciativa:** não rolam; entram no topo da fila, com 1 a mais que a maior dos outros (30, sem ninguém), cada um
     acima de quem já está nela. A arma não os atinge: com só eles marcados, o ataque avisa e não rola.
+  - **o dano:** o botão da ficha do Black ICE rola o dano do efeito (sem crítico), com os botões do mestre no cartão: o
+    anti-pessoal no cérebro dos alvos marcados (o Shield não para Black ICE; o Armor reduz 4), o anti-programa num
+    programa ativo deles (desativado, o cartão avisa que é destruído, e o mestre apaga). O demônio tem o botão do Zap
+    (1d6), no cérebro do intruso ou num programa dele. Na REZ do Black ICE ou do demônio marcado entram o dano "em Black
+    ICE" dos programas anti-programa e o Zap do netrunner; em 0, ele é desativado.
 - **Cartões do chat** (testes, ataques, dano, Death Save) no mesmo visual: a mensagem inteira fica escura, com a borda amarela (vermelha no dano e na morte), as partes do teste em etiquetas e o total grande. As mensagens que não são do sistema não mudam.
 - **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12. O botão de cada um no cabeçalho da ficha abre a janela dele:
   - **o menu:** a quantia e o motivo, com Somar, Subtrair e Definir. Como no CORE, Subtrair sempre tira (um valor negativo também), e perder mais do que tem deixa o saldo negativo, com um aviso;
@@ -208,8 +214,8 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o dano do Black ICE e o dano na REZ dele (o C7,
-  parte 2), o programa de Black ICE do netrunner, as arquiteturas (o NET Architect) e o Painel Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o programa de Black ICE do netrunner (o C7,
+  parte 3), as arquiteturas (o NET Architect) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
@@ -276,6 +282,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
+  - o dano do Black ICE e na REZ dele: o Hellhound pela ficha no cérebro (o Shield ativo não o para, o Armor reduz), o Killer num programa (o aviso de que o destrói), o Sword em Black ICE e o Zap na REZ do Black ICE e do demônio da cena, e o Zap do demônio só no intruso;
   - o Black ICE e o demônio: o token solto com a REZ na barra, o modelo da wiki (o Hellhound e o Efreet), as rolagens pela janela e com Ctrl + clique, a REZ e o nome na ficha do token, a iniciativa no topo da fila (sozinho e no "rolar todos") e a arma que não os atinge;
   - o capanga: o token solto, a ficha de uma página, os itens do compêndio arrastados para ela (equipados ou instalados, a Humanidade rolada e, com Shift, a média), o tiro que muda só o HP do capanga atingido, o outro capanga recarregando e atirando com a própria munição, o Death Save só de quem caiu, o nome novo na ficha do token e, no navegador do jogador, a ficha limitada (só a imagem, o nome e as notas; o Observador vê tudo, sem editar);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);

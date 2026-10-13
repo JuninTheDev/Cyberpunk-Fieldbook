@@ -5,12 +5,15 @@ import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   aplicarDano, backup, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+  NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
+  tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
-const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo' };
+const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
+// O que o cartão do dano do Black ICE diz, pela classe.
+const DANO_DO_ICE = { antipersonnel: 'no cérebro', antiprogram: 'num programa' };
 const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[onde] }));
 
 export class AtorCPR extends Actor {
@@ -191,11 +194,12 @@ export class AtorCPR extends Actor {
   }
 
   // O dano do Zap (a wiki e o CORE): 1d6 no REZ de um programa ou direto no cérebro de um netrunner, com os botões do
-  // mestre para aplicar.
+  // mestre para aplicar: o do netrunner também na REZ de um Black ICE ou demônio; o do demônio, só no intruso.
   async rolarDanoDoZap() {
     const roll = await new Roll('1d6').evaluate();
     const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
-      rotulo: 'Dano: Zap (no REZ de um programa ou no cérebro)', total: roll.total, critico: null, dados: await roll.render(), botoes: botoesDaNet(ONDE_O_DANO_ENTRA.zap)
+      rotulo: 'Dano: Zap (no REZ de um programa ou no cérebro)', total: roll.total, critico: null, dados: await roll.render(),
+      botoes: botoesDaNet(this.type === 'demonio' ? ONDE_O_DANO_ENTRA.zapDoDemonio : ONDE_O_DANO_ENTRA.zap)
     });
     await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { danoDePrograma: { zap: true, total: roll.total } } } });
     return roll;
@@ -215,6 +219,34 @@ export class AtorCPR extends Actor {
     const hpAntes = this.system.hp.value;
     if (conta.recebido) await this.update({ 'system.hp.value': hpAntes - conta.recebido });
     return { ...conta, dano, hpAntes, hpDepois: this.system.hp.value };
+  }
+
+  // O dano do Black ICE (o do efeito, da tabela da wiki; no CORE, o do programa ligado ao token), sem crítico, com os
+  // botões do mestre pela classe (regras.ONDE_O_DANO_ENTRA.blackIce): o anti-pessoal no cérebro (o Shield não para Black
+  // ICE), o anti-programa num programa, que desativado é destruído.
+  async rolarDanoDoIce() {
+    const formula = this.type === 'blackice' ? formulaDeDano(this.system.dano) : '';
+    if (!formula) return null;
+    if (!foundry.dice.Roll.validate(formula)) { ui.notifications.warn(`${this.name}: o dano "${formula}" não é uma rolagem.`); return null; }
+    const roll = await new Roll(formula).evaluate();
+    const onde = DANO_DO_ICE[this.system.classe];
+    const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
+      rotulo: `Dano: ${this.name}${onde ? ` (${onde})` : ''}`, total: roll.total, critico: null, dados: await roll.render(), botoes: botoesDaNet(ONDE_O_DANO_ENTRA.blackIce[this.system.classe] ?? [])
+    });
+    await ChatMessage.implementation.create({
+      speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll],
+      flags: { [SISTEMA]: { danoDePrograma: { blackIce: true, destroi: this.system.classe === 'antiprogram', total: roll.total } } }
+    });
+    return roll;
+  }
+  // O dano na REZ do Black ICE e do demônio (o _applyDamage deles no CORE): sem armadura nem crítico, até 0
+  // (regras.rezDepoisDoDano). Em 0, ele é desativado.
+  async receberDanoNaRez(dano) {
+    if (!ATORES_DA_NET.includes(this.type)) return null;
+    const antes = this.system.rez.value;
+    const depois = rezDepoisDoDano(antes, dano);
+    if (depois !== antes) await this.update({ 'system.rez.value': depois });
+    return { dano, antes, depois, perdeu: antes - depois, desativado: depois === 0 };
   }
 
   // O Black ICE e o demônio rolam os números deles + 1d10 (regras.NUMEROS_DA_NET; o createStatRoll do CORE), com o crítico

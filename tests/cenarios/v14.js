@@ -3134,7 +3134,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && cloak.total === 12 && cloak.cartao.join() === '1d10,Interface +4,Modificador do mestre +2' && cloak.sabor === '1 Ação NET. O resultado vira a DV: esconde seus rastros e seus vírus.'
           && ativo.cloak === '6' && ativo.pathfinder === '4' && ativo.botao === 'Ativo' && ativo.bonus === 2
           && comEraser.total === 11 && comEraser.cartao.join() === '1d10,Interface +4,Programas +2' && !comEraser.janela
-          && zap.total === 4 && zap.formula === '1d6' && zap.titulo === 'Dano: Zap (no REZ de um programa ou no cérebro)' && zap.botoes.join() === 'cerebro,programa'
+          && zap.total === 4 && zap.formula === '1d6' && zap.titulo === 'Dano: Zap (no REZ de um programa ou no cérebro)' && zap.botoes.join() === 'cerebro,programa,rez'
           && v.valor === '4' && v.total === 7 && v.cartao.join() === '1d10,Interface +4,Programas +2,Gravemente ferido -2' && v.rotulo === 'Velocidade'
           && foraDoDeck.cloak === '2' && foraDoDeck.bonus === 0 && !foraDoDeck.botao
           && solo.titulo === 'SÓ O NETRUNNER' && solo.botoes === 0 && solo.rola && solo.acoes === 0;
@@ -3304,7 +3304,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && sh.hp === 30 && !sh.shield && sh.resultado === 'Dano da NET: 7 no cérebro Teste Netrunner Alvo: o Shield anulou o dano e se desativou.'
           && s1.botoes.join() === 'programa' && s1.rez === 1 && s1.resultado === 'Dano da NET: 6 num programa Teste Netrunner Alvo: o Armor perdeu 6 de REZ (7 → 1).'
           && s2.rez === 0 && !s2.armor && s2.resultado === 'Dano da NET: 6 num programa Teste Netrunner Alvo: o Armor perdeu 1 de REZ (1 → 0) e desativou.'
-          && z.botoes.join() === 'cerebro,programa' && z.titulo === 'Dano: Zap (no REZ de um programa ou no cérebro)' && z.hp === 25 && z.shield
+          && z.botoes.join() === 'cerebro,programa,rez' && z.titulo === 'Dano: Zap (no REZ de um programa ou no cérebro)' && z.hp === 25 && z.shield
           && z.resultado === 'Dano da NET: 5 no cérebro Teste Netrunner Alvo: perdeu 5 HP no cérebro (30 → 25).';
         return [ok, JSON.stringify(info)];
       } finally {
@@ -3490,6 +3490,94 @@ module.exports = async ({ edge, servidores, r }) => {
           canvas.tokens.setTargets([]);
           const nomes = ${JSON.stringify(nomes)};
           for (const combate of game.combats.filter(c => c.combatants.some(cb => nomes.includes(cb.name)))) await combate.delete();
+          await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => nomes.includes(t.name)).map(t => t.id));
+          for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
+          return true;
+        })()`);
+      }
+    });
+
+    await r.passo('dano do Black ICE e na REZ dele (wiki; o NET Architect da mesa; o CORE): o Hellhound, pela ficha, no cérebro do netrunner marcado passa pelo Shield ativo (o Armor reduz 4); o Killer num programa leva o Armor a 0, e o cartão diz que o anti-programa o destrói (o programa fica); o dano do Sword em Black ICE e o Zap do netrunner na REZ do Black ICE e do demônio marcados; o Zap do demônio só no intruso', async () => {
+      // Hellhound 2d6: 3 + 4 = 7 (40 → 37, com o Armor). Killer 4d6: 2 + 2 + 2 + 1 = 7 (o Armor, 7 → 0). Sword em Black ICE
+      // 3d6: 2 + 2 + 2 = 6 (o Hellhound na cena, 20 → 14). Zap 1d6: 5 (o Imp na cena, 15 → 10). Zap do Imp 1d6: 3 (37 → 34).
+      await fixar(edge, []);
+      const nomes = ['Teste Netrunner Ofensivo', 'Teste Netrunner Defensor', 'Hellhound', 'Killer', 'Imp'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const item = id => foundry.utils.deepClone(cat[id]);
+          const netrunner = async (name, programas, extra = {}) => {
+            const ator = await Actor.implementation.create({ name, type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 }, ...extra }, items: ['core_gear:cyberdeck', ...programas].map(item) });
+            const deck = ator.items.find(i => i.type === 'cyberdeck');
+            await deck.update({ 'system.uso': 'equipado' });
+            await ator.updateEmbeddedDocuments('Item', ator.items.filter(i => i.type === 'programa').map(p => ({ _id: p.id, 'system.instaladoEm': deck.id })));
+            return ator;
+          };
+          // O netrunner que ataca (com o Sword) e o que defende (HP 40, com o Armor e o Shield ativos); o Hellhound, o Killer e o Imp.
+          const a = await netrunner('Teste Netrunner Ofensivo', ['core_programs:sword']);
+          const b = await netrunner('Teste Netrunner Defensor', ['core_programs:armor', 'core_programs:shield'], { atributos: { body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 } });
+          await b.updateEmbeddedDocuments('Item', ['Armor', 'Shield'].map(nome => ({ _id: b.items.getName(nome).id, 'system.ativo': true })));
+          const ice = (name, system) => Actor.implementation.create({ name, type: 'blackice', system });
+          const hellhound = await ice('Hellhound', { classe: 'antipersonnel', per: 6, spd: 6, atk: 6, def: 2, rez: { value: 20, max: 20 }, dano: '2d6' });
+          const killer = await ice('Killer', { classe: 'antiprogram', per: 4, spd: 8, atk: 6, def: 2, rez: { value: 20, max: 20 }, dano: '4d6' });
+          const imp = await Actor.implementation.create({ name: 'Imp', type: 'demonio', system: { rez: { value: 15, max: 15 }, interface: 3, acoes: 2 } });
+          const docs = [];
+          for (const [ator, x] of [[b, 1500], [hellhound, 1600], [imp, 1700]]) docs.push((await ator.getTokenDocument({ x, y: 1100 })).toObject());
+          const [tb, th, ti] = await canvas.scene.createEmbeddedDocuments('Token', docs);
+          await esperar(() => canvas.tokens.get(ti.id));
+          // Marca o alvo, rola o dano e clica no botão do cartão; devolve o cartão do dano e o do resultado.
+          const aplicar = async (rolar, onde, fila, alvo) => {
+            canvas.tokens.setTargets([alvo]);
+            window.__fila = fila;
+            let antes = game.messages.size;
+            await rolar();
+            await esperar(() => game.messages.size > antes);
+            const m = game.messages.contents.at(-1);
+            await esperar(() => document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarNet"]'));
+            const botoes = [...document.querySelector('[data-message-id="' + m.id + '"]').querySelectorAll('[data-cprf-acao="aplicarNet"]')].map(bt => bt.dataset.onde);
+            antes = game.messages.size;
+            document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarNet"][data-onde="' + onde + '"]').click();
+            await esperar(() => game.messages.size > antes);
+            const r = game.messages.contents.at(-1);
+            return { botoes, titulo: textoDe(new DOMParser().parseFromString(m.content, 'text/html').querySelector('h3')), resultado: textoDe(new DOMParser().parseFromString(r.content, 'text/html').querySelector('.cartao')) };
+          };
+
+          // 1. O Hellhound pelo botão da ficha, no cérebro do defensor: o Shield ativo não para Black ICE; o Armor reduz 4.
+          await hellhound.sheet.render({ force: true });
+          await esperar(() => hellhound.sheet.element?.querySelector('[data-action="rolarDanoDoIce"]'));
+          const botaoDaFicha = textoDe(hellhound.sheet.element.querySelector('[data-action="rolarDanoDoIce"]'));
+          const cerebro = { ...(await aplicar(() => hellhound.sheet.element.querySelector('[data-action="rolarDanoDoIce"]').click(), 'cerebro', [[3, 6], [4, 6]], tb.id)), hp: b.system.hp.value, shield: b.items.getName('Shield').system.ativo };
+          await hellhound.sheet.close();
+          // 2. O Killer num programa: só o Armor ativo (o Shield desligado antes); vai a 0, e o cartão diz que é destruído.
+          await b.items.getName('Shield').update({ 'system.ativo': false });
+          const programa = { ...(await aplicar(() => killer.rolarDanoDoIce(), 'programa', [[2, 6], [2, 6], [2, 6], [1, 6]], tb.id)), rez: b.items.getName('Armor').rezAtual, ativo: b.items.getName('Armor').system.ativo, existe: Boolean(b.items.getName('Armor')) };
+          // 3. O Sword, em Black ICE, na REZ do Hellhound da cena (o token solto: o ator fica com 20).
+          const sword = { ...(await aplicar(() => a.items.getName('Sword').rolarDanoDePrograma('blackIce'), 'rez', [[2, 6], [2, 6], [2, 6]], th.id)), rezNaCena: th.actor.system.rez.value, rezDoAtor: hellhound.system.rez.value };
+          // 4. O Zap do netrunner na REZ do Imp da cena.
+          const zap = { ...(await aplicar(() => a.rolarDanoDoZap(), 'rez', [[5, 6]], ti.id)), rez: ti.actor.system.rez.value };
+          // 5. O Zap do Imp: só no intruso (no cérebro, sem o Armor, que desativou).
+          const doDemonio = { ...(await aplicar(() => imp.rolarDanoDoZap(), 'cerebro', [[3, 6]], tb.id)), hp: b.system.hp.value };
+          canvas.tokens.setTargets([]);
+          return { botaoDaFicha, cerebro, programa, sword, zap, doDemonio };
+        })()`);
+        const { botaoDaFicha, cerebro: c, programa: p, sword: s, zap: z, doDemonio: d } = info;
+        const ok = botaoDaFicha === 'Rolar o dano: 2d6'
+          && c.titulo === 'Dano: Hellhound (no cérebro)' && c.botoes.join() === 'cerebro' && c.hp === 37 && c.shield
+          && c.resultado === 'Dano da NET: 7 no cérebro Teste Netrunner Defensor: perdeu 3 HP no cérebro (40 → 37); o Armor reduziu 4.'
+          && p.titulo === 'Dano: Killer (num programa)' && p.botoes.join() === 'programa' && p.rez === 0 && !p.ativo && p.existe
+          && p.resultado === 'Dano da NET: 7 num programa Teste Netrunner Defensor: o Armor perdeu 7 de REZ (7 → 0) e desativou: o Black ICE anti-programa o destrói (o mestre apaga o programa).'
+          && s.titulo === 'Dano: Sword (em Black ICE)' && s.botoes.join() === 'rez' && s.rezNaCena === 14 && s.rezDoAtor === 20
+          && s.resultado === 'Dano da NET: 6 na REZ Hellhound: perdeu 6 de REZ (20 → 14).'
+          && z.botoes.join() === 'cerebro,programa,rez' && z.rez === 10 && z.resultado === 'Dano da NET: 5 na REZ Imp: perdeu 5 de REZ (15 → 10).'
+          && d.botoes.join() === 'cerebro,programa' && d.hp === 34 && d.resultado === 'Dano da NET: 3 no cérebro Teste Netrunner Defensor: perdeu 3 HP no cérebro (37 → 34).';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          canvas.tokens.setTargets([]);
+          const nomes = ${JSON.stringify(nomes)};
           await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => nomes.includes(t.name)).map(t => t.id));
           for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
           return true;

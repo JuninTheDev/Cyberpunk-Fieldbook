@@ -47,6 +47,11 @@ efeito, o dano, a classe e o custo; as notas. --}}
       <label>Custo <input type="number" name="system.custo" value="{{sistema.custo}}" min="0"><small>eb</small></label>
     </div>
     <textarea name="system.efeito" rows="2" placeholder="O que acontece quando o ataque acerta" aria-label="Efeito">{{sistema.efeito}}</textarea>
+    {{#if danoDoIce}}
+    <div class="acoes-net">
+      <button type="button" class="acao" data-action="rolarDanoDoIce" data-tooltip="Sem crítico, com os botões do mestre no cartão: no cérebro dos alvos (o anti-pessoal; o Shield não para Black ICE) ou num programa deles (o anti-programa; desativado, é destruído)">Rolar o dano: {{danoDoIce}}</button>
+    </div>
+    {{/if}}
   </section>
 
   <section class="painel corte notas">

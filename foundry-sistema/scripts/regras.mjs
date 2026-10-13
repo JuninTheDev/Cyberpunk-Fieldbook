@@ -120,9 +120,17 @@ export const DANO_DE_PROGRAMA = {
   antipersonnelattacker: [{ id: 'padrao', rotulo: 'no cérebro' }]
 };
 export const programaDeAtaque = classe => Boolean(DANO_DE_PROGRAMA[classe]);
-// Onde o dano de cada um entra (os botões do mestre no cartão): o anti-pessoal no cérebro; o anti-programa num programa
-// (o dano em Black ICE entra no Black ICE, com o C7); o Zap, nos dois.
-export const ONDE_O_DANO_ENTRA = { antipersonnelattacker: { padrao: ['cerebro'] }, antiprogramattacker: { padrao: ['programa'] }, zap: ['cerebro', 'programa'] };
+// Onde o dano de cada um entra (os botões do mestre no cartão): o anti-pessoal no cérebro; o anti-programa num programa e,
+// o "em Black ICE", na REZ do Black ICE ou do demônio marcado; o Zap do netrunner, nos três (o NET Architect da mesa: "Zap
+// vale contra qualquer inimigo"). O Zap do demônio (ele só usa Zap e Control) vai no intruso: no cérebro ou num programa.
+// O Black ICE, pela classe: o anti-pessoal no cérebro, o anti-programa num programa.
+export const ONDE_O_DANO_ENTRA = {
+  antipersonnelattacker: { padrao: ['cerebro'] },
+  antiprogramattacker: { padrao: ['programa'], blackIce: ['rez'] },
+  zap: ['cerebro', 'programa', 'rez'],
+  zapDoDemonio: ['cerebro', 'programa'],
+  blackIce: { antipersonnel: ['cerebro'], antiprogram: ['programa'] }
+};
 // O dano no cérebro (a wiki, "Combate na NET" e os defensores; o _applyDamage "brain" do CORE): direto no HP, sem a
 // armadura e sem crítico. O Shield ativo anula o primeiro dano cerebral de programa que não é Black ICE (o Zap não é
 // programa) e se desativa; o Armor ativo reduz em 4 todo dano cerebral. Quem chama diz se o Shield vale (shield).
@@ -168,6 +176,10 @@ export function iniciativaNoTopo(outras = []) {
 export function fichaDoModelo({ id, nome, rez, ...numeros }) {
   return { name: nome, system: { modelo: id, ...numeros, rez: { value: rez, max: rez } } };
 }
+// A REZ do Black ICE e do demônio depois do dano (o _applyDamage deles no CORE): sem armadura nem crítico, e nunca abaixo
+// de 0, como a dos programas. Em 0, ele é desativado (a wiki: "REZ: os pontos de vida do programa; em 0 ele fica
+// desativado").
+export const rezDepoisDoDano = (rez, dano) => Math.max(0, (Number(rez) || 0) - Math.max(0, Math.trunc(Number(dano) || 0)));
 
 // O capanga (o mook do CORE) equipa ou instala o que recebe, como o handleMookDraggedItem do CORE: o cyberware é
 // instalado, e o que se equipa no CORE (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento) entra

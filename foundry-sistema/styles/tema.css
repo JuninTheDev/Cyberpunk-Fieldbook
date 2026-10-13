@@ -352,6 +352,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-net .campos-net input { width: 7ch; }
 .cpr-fieldbook.ficha-net .efeito-net textarea { width: 100%; min-height: 2.8em; resize: vertical; font-family: var(--cp-titulo); font-size: 15px; line-height: 1.35; }
 .cpr-fieldbook.ficha-net .notas prose-mirror { min-height: 8rem; }
+.cpr-fieldbook.ficha-net .acoes-net { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
 /* ---------- Janela estreita ---------- */
 @container (max-width: 1020px) {

@@ -34,7 +34,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE | consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
-| CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); falta o dano (o C7, parte 2) e o token que o programa rezza (parte 3) |
+| CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); falta o token que o programa rezza (parte 3) |
 | CORE | contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
@@ -109,7 +109,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
-  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores no 43 (sem o dano); o resto falta | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores nos ciclos 43 e 44; o resto falta | P3 |
   | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
@@ -258,6 +258,21 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   ficha preenche o nome e os números pela tabela da wiki (os 12 Black ICE e os 3 demônios do RED, que o build lê das
   regras da wiki), com o efeito e o dano do efeito. O programa de Black ICE do netrunner, que rezza um token, é a parte 3
   do C7.
+
+- **O dano do Black ICE: o do efeito, pela wiki.** No CORE, o Black ICE rola o dano do programa ligado ao token (o
+  programa de Black ICE que o rezzou); sem programa ligado, a ficha mostra "N/A" e não rola. Aqui, o dano é o do efeito da
+  tabela da wiki (o "2d6 no cérebro" do Hellhound), que a ficha guarda e o mestre pode mudar; sem dano no efeito (o Asp,
+  o Liche, o Scorpion, o Skunk), o efeito fica com o mestre.
+
+- **O programa destruído pelo Black ICE anti-programa: o mestre apaga.** A wiki diz que, se o dano bastar para
+  desativá-lo, o programa é destruído. O sistema não apaga: o cartão avisa, e o programa fica na ficha, desativado, para o
+  mestre apagar (ou guardar, com um Backup Drive no deck).
+
+- **O Zap no Black ICE e no demônio, e o Zap do demônio.** A wiki dá o Zap "no REZ de um programa ou direto no cérebro
+  de um netrunner"; o Black ICE é um programa, e o NET Architect da mesa usa o Zap "contra qualquer inimigo", o demônio
+  também. Por isso o Zap do netrunner tem o botão da REZ. O dano "em Black ICE" dos programas vale também no demônio
+  (Black ICE inteligente), como no NET Architect. O demônio "só usa Zap e Control": o botão do Zap dele vai no intruso
+  (no cérebro ou num programa), como o NET Architect (que o põe no cérebro).
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2133,6 +2148,51 @@ ICE", "Como ler os cartões" e "Demônios", com as tabelas; RED p. 204–212).
 - **Próximo:** o C7, parte 2: o dano do Black ICE no netrunner (no cérebro, sem o Shield, ou num programa; o
   anti-programa que destrói o programa, só avisando o mestre) e o dos programas e do Zap na REZ do Black ICE e do
   demônio.
+- **Commit:** `6903c7d`.
+
+### Ciclo 44 (2026-10-13): o dano do Black ICE e na REZ dele (o C7, parte 2; sessão KouArt)
+
+O "apply damage" do CORE (`cpr-chat.js`, que aceita o Black ICE e o demônio) e o `_applyDamage` deles (a REZ), o NET
+Architect da mesa (o Zap "vale contra qualquer inimigo", o dano "em Black ICE" no demônio, o Zap do demônio no cérebro) e
+a wiki ("Black ICE", "Como ler os cartões", os programas e os defensores; RED p. 202–212).
+
+- **Implementado:**
+  - **o dano do Black ICE** (`AtorCPR.rolarDanoDoIce`, o botão "Rolar o dano" da ficha): o do efeito da tabela da wiki,
+    sem crítico, com os botões do mestre pela classe (`regras.ONDE_O_DANO_ENTRA.blackIce`): o anti-pessoal no cérebro
+    dos alvos (o Shield não para Black ICE; o Armor reduz 4), o anti-programa num programa ativo deles. O programa que o
+    anti-programa desativa é destruído: o cartão avisa, e o mestre apaga (o sistema não apaga nada). Um dano que não é
+    rolagem (o campo é livre) avisa e não rola;
+  - **o dano na REZ** (`AtorCPR.receberDanoNaRez`, `regras.rezDepoisDoDano`): o dano "em Black ICE" dos programas
+    anti-programa (o Sword, o Banhammer) e o Zap do netrunner têm o botão da REZ do Black ICE ou do demônio marcado. A
+    REZ vai até 0, e em 0 o cartão diz que ele foi desativado; o token solto perde a dele, e o ator fica como estava;
+  - **o Zap do demônio** (o botão da ficha): 1d6 no intruso, no cérebro ou num programa (sem o botão da REZ).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 68 de 72. Um teste novo: o texto da wiki (o anti-programa que caça o netrunner, o Dragon que destrói, o Sword em
+    Black ICE, o Shield "não Black ICE", o Zap, o demônio que só usa Zap e Control), onde cada dano entra e a REZ que não
+    passa de 0. O teste do dano da NET (ciclo 42) passou a esperar o mapa novo de onde o dano entra. As 4 falhas são as
+    das armas de 2077 (QUALITY_GATES);
+  - G4: 74 de 79, cerca de 117 s. Um passo novo, com dois Netrunners (o defensor com o Armor e o Shield ativos), o
+    Hellhound, o Killer e o Imp (o Hellhound e o Imp com o token na cena):
+    - o Hellhound pelo botão da ficha (2d6 = 7) no cérebro: o Shield ativo não para Black ICE, e o Armor reduz 4
+      (40 → 37);
+    - o Killer (4d6 = 7) num programa: o Armor vai a 0 e desativa, e o cartão diz que o anti-programa o destrói; o
+      programa continua na ficha;
+    - o Sword em Black ICE (3d6 = 6) na REZ do Hellhound da cena (20 → 14; o ator fica com 20);
+    - o Zap do netrunner (5) na REZ do Imp da cena (15 → 10), com os três botões;
+    - o Zap do Imp (3), só com os dois botões, no cérebro (37 → 34);
+    - os passos da Interface (ciclo 40) e do dano da NET (ciclo 42) passaram a esperar o Zap com os três botões.
+
+    A primeira rodada contou os botões duas vezes (o passo novo procurava no documento inteiro, e a mensagem aparece no
+    chat e na notificação: a lição do ciclo 42 no QUALITY_GATES); o passo passou a procurar dentro de uma mensagem. As 5
+    falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a REZ passando de 0 para baixo; o Zap sem a REZ;
+    - G4: o Shield parando o Black ICE; o anti-programa sem o aviso de que destrói; o dano na REZ que não muda a REZ; o
+      Zap do demônio com os três botões; o cartão do Black ICE sem os botões; e o dano na REZ procurando os alvos com HP.
+- **Próximo:** o C7, parte 3: o programa de Black ICE do netrunner, que rezza um token ao ser ativado (o CORE 0.92.4 e a
+  loja da wiki não trazem nenhum: os 12 da tabela da wiki entrariam no compêndio de Netrunning; ver as dúvidas).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
