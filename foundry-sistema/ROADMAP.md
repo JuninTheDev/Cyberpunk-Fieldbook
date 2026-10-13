@@ -37,7 +37,7 @@ de compêndio; entram só as partes do sistema.
   - **O token:** solto por padrão, com o próprio HP de cada capanga. Hoje todo ator nasce ligado.
   - **Arrastar um item** equipa ou instala.
   - **O combate:** igual ao do personagem.
-- [ ] **C3. As Roles do RED e as rolagens delas.**
+- [~] **C3. As Roles do RED e as rolagens delas.** Em andamento: sessão KouArt, 2026-10-12.
   - As 10 Roles da wiki (o P0 "As Roles pelo RED").
   - A rolagem de cada habilidade, pelo item de Role do CORE (`_createRoleRoll`, `getRoleMods`):
     - Impacto Carismático (Rockerboy), Credibilidade (Media), Operator (Fixer), Teamwork (Exec), Backup (Lawman) e
