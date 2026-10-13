@@ -20,7 +20,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     (Scanner, Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Slide, Virus e Zap), a Defesa e a Velocidade, cada uma com o
     valor sem o dado, o custo e o que faz; o dano do Zap (1d6); e as Ações NET por turno pelo Rank (2, 3, 4 ou 5). Os
     cyberdecks e os programas, com o botão Ativo (rezzado) dos que estão num deck: os boosters ativos (Eraser, See Ya,
-    Speedy Gonzalvez e Worm) somam +2 na habilidade deles.
+    Speedy Gonzalvez e Worm) somam +2 na habilidade deles. No combate na NET, os programas de ataque num deck atacam
+    (Interface + ATK + 1d10, pela janela) e rolam o dano contra o que atingem, sem crítico: o anti-programa em programa
+    ou em Black ICE, o anti-pessoal no cérebro. Os que têm REZ (boosters e defensores) perdem 1 de REZ e voltam ao
+    máximo pelos botões, e em 0 desativam.
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
@@ -192,8 +195,8 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), **o Black ICE**, o combate na NET (o ATK
-  dos programas, a REZ, o dano no cérebro), as arquiteturas (o NET Architect) e
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), **o Black ICE**, aplicar o dano da NET
+  (no cérebro, no REZ), as arquiteturas (o NET Architect) e
   o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o

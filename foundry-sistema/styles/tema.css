@@ -312,6 +312,11 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .habilidades-interface .acao b { margin-left: 4px; font-family: var(--cp-dados); font-weight: 400; }
 .cpr-fieldbook.ficha-personagem .habilidades-interface small { flex: 1; min-width: 0; font-family: var(--cp-dados); font-size: 11px; }
 
+/* Os programas no combate da NET: o ataque, o dano e a REZ de cada um. */
+.cpr-fieldbook.ficha-personagem .tab.net ol.itens > li { flex-wrap: wrap; }
+.cpr-fieldbook.ficha-personagem .tab.net ol.itens .rez { flex: none; font-family: var(--cp-dados); font-size: 13px; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .tab.net ol.itens .rez.zerada { color: var(--cp-vermelho); }
+
 /* ---------- Capanga (o mook do CORE): uma página só, entre o cabeçalho e o rodapé ---------- */
 .cpr-fieldbook.ficha-capanga .corpo-capanga { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; }
 .cpr-fieldbook.ficha-capanga .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }

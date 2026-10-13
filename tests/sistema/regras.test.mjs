@@ -695,6 +695,33 @@ test('Interface do Netrunner (wiki, "Habilidades de Interface", "Ações por tur
   for (const id of ['eraser', 'see-ya', 'speedy-gonzalvez', 'worm']) assert.match(catalogo[`core_programs:${id}`].system.descricao, /while Rezzed/, id);
 });
 
+test('Programas no combate da NET (wiki, "Como ler os cartões", "Programas: ataque", "Programas" e "Combate na NET"; o CORE): o ataque é Interface + ATK + 1d10; o anti-programa só afeta programas (em programa e em Black ICE) e o anti-pessoal só netrunners (no cérebro), com o dano do catálogo igual ao da wiki; a REZ em 0 desativa', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  const net = fs.readFileSync(path.join(raiz, 'system-net.js'), 'utf8');
+  assert.ok(net.includes('<b>ATK:</b> soma no ataque do programa (Interface + ATK + 1d10).'));
+  assert.ok(net.includes('<b>REZ:</b> os "pontos de vida" do programa; em 0 ele fica desativado.'));
+  assert.ok(net.includes('Anti-pessoal afeta netrunners; anti-programa afeta programas'));
+  assert.ok(net.includes('Desativam sozinhos depois de usados.'));
+  assert.ok(regrasDaWiki.includes("formula('Interface + ATK do programa + 1d10 vs Interface + 1d10 (ou DEF do programa + 1d10)')"));
+  // As classes de ataque e o alvo de cada dano.
+  assert.deepEqual(Object.fromEntries(Object.entries(regras.DANO_DE_PROGRAMA).map(([classe, danos]) => [classe, danos.map(dano => dano.id)])),
+    { antiprogramattacker: ['padrao', 'blackIce'], antipersonnelattacker: ['padrao'] });
+  assert.deepEqual(['antiprogramattacker', 'antipersonnelattacker', 'booster', 'defender'].map(regras.programaDeAtaque), [true, true, false, false]);
+  // O dano do catálogo é o da tabela da wiki: o Banhammer 3d6 em programa e 2d6 em Black ICE; o Sword, o contrário; o
+  // Hellbolt 2d6 e o Vrizzbolt 1d6 no cérebro.
+  assert.ok(regrasDaWiki.includes("['Banhammer', 'Anti-programa', '1 / 0 / 0', '3d6 REZ em programa não Black ICE; 2d6 em Black ICE.'"));
+  assert.ok(regrasDaWiki.includes("['Sword', 'Anti-programa', '1 / 0 / 0', '3d6 REZ em Black ICE; 2d6 em programa não Black ICE.'"));
+  assert.ok(regrasDaWiki.includes("['Hellbolt', 'Anti-pessoal', '2 / 0 / 0', '2d6 direto no cérebro;"));
+  assert.ok(regrasDaWiki.includes("['Vrizzbolt', 'Anti-pessoal', '1 / 0 / 0', '1d6 direto no cérebro"));
+  const dano = id => catalogo[`core_programs:${id}`].system.dano;
+  assert.deepEqual([dano('banhammer').padrao, dano('banhammer').blackIce, dano('sword').padrao, dano('sword').blackIce, dano('hellbolt').padrao, dano('vrizzbolt').padrao],
+    ['3d6', '2d6', '2d6', '3d6', '2d6', '1d6']);
+  // A fórmula que não rola (o efeito do programa é outro) e a REZ.
+  assert.deepEqual(['0', '', ' 0 ', '2d6'].map(regras.formulaDeDano), ['', '', '', '2d6']);
+  assert.equal(regras.formulaDeDano(dano('deckkrash').padrao), '');
+  assert.deepEqual([regras.rezAtual(7, 0), regras.rezAtual(7, 3), regras.rezAtual(7, 9), regras.rezAtual(7, -2)], [7, 4, 0, 7]);
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

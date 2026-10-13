@@ -4,8 +4,8 @@ import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  aplicarDano, backup, deLonge, FACEDOWN, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+  aplicarDano, backup, DANO_DE_PROGRAMA, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
@@ -170,6 +170,20 @@ export class AtorCPR extends Actor {
       rotulo: habilidade.rotulo, perguntar, partes: situacionais => this.partesDaInterface(id, { situacionais }), situacionais: () => this.situacionaisDaInterface(id)
     }, { sabor: `${habilidade.custo}. ${habilidade.dica}`, ...opcoes });
   }
+  // O ataque de um programa (regras.DANO_DE_PROGRAMA; o CPRInterfaceRoll "attack" do CORE): o Rank de Interface + o ATK
+  // do programa + 1d10, com as penalidades e os situacionais de todas as ações, pela janela de rolagem. Só os programas de
+  // ataque, num deck, de quem tem Interface.
+  partesDoAtaqueDePrograma(programa, { situacionais = null } = {}) {
+    const escolhidos = situacionais ?? this.situacionaisDoTeste().filter(s => s.ligado);
+    return [{ rotulo: 'Interface', valor: this.system.rankDeInterface }, { rotulo: 'ATK', valor: programa.system.atk }, ...this.#penalidade(), ...escolhidos.map(({ rotulo, valor }) => ({ rotulo, valor }))];
+  }
+  rolarAtaqueDePrograma(programa, { perguntar = false, ...opcoes } = {}) {
+    if (!programa || programa.parent !== this || !programaDeAtaque(programa.system.classe) || !programa.instaladoNo || !this.system.rankDeInterface) return null;
+    return this.#testarComJanela({
+      rotulo: `${programa.name}: ataque`, perguntar, partes: situacionais => this.partesDoAtaqueDePrograma(programa, { situacionais }), situacionais: () => this.situacionaisDoTeste()
+    }, { sabor: 'Contra a Interface + 1d10 do netrunner ou a DEF + 1d10 do programa. O programa de ataque desativa sozinho depois de usado.', ...opcoes });
+  }
+
   // O dano do Zap (a wiki e o CORE): 1d6 no REZ de um programa ou direto no cérebro de um netrunner.
   async rolarDanoDoZap() {
     const roll = await new Roll('1d6').evaluate();
@@ -389,6 +403,36 @@ export class ItemCPR extends Item {
 
   get slotsUsados() {
     return this.instalados.reduce((soma, item) => soma + (Number(item.system.tamanho) || 0), 0);
+  }
+
+  // A REZ atual do programa (regras.rezAtual); null nos outros itens.
+  get rezAtual() {
+    return this.type === 'programa' ? rezAtual(this.system.rez, this.system.rezPerdida) : null;
+  }
+  // O programa perde REZ no combate da NET; em 0, desativa (a wiki: "em 0 ele fica desativado").
+  perderRez(quanto = 1) {
+    if (this.type !== 'programa' || !this.system.rez) return null;
+    const perdida = Math.min(this.system.rez, this.system.rezPerdida + Math.max(0, Math.trunc(Number(quanto) || 0)));
+    return this.update({ 'system.rezPerdida': perdida, ...(rezAtual(this.system.rez, perdida) === 0 ? { 'system.ativo': false } : {}) });
+  }
+  restaurarRez() {
+    return this.type === 'programa' ? this.update({ 'system.rezPerdida': 0 }) : null;
+  }
+  // O dano de um programa de ataque (regras.DANO_DE_PROGRAMA): a fórmula contra o que ele pode atingir, sem crítico (na
+  // NET não há, como no CORE). O cartão diz onde o dano entra.
+  async rolarDanoDePrograma(contra = 'padrao', { falar = true } = {}) {
+    const alvo = DANO_DE_PROGRAMA[this.system.classe]?.find(dano => dano.id === contra);
+    const formula = alvo && formulaDeDano(this.system.dano[contra]);
+    if (!formula) return null;
+    const roll = await new Roll(formula).evaluate();
+    const resultado = { roll, total: roll.total, contra, formula };
+    if (falar) {
+      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), { rotulo: `Dano: ${this.name} (${alvo.rotulo})`, total: roll.total, critico: null, dados: await roll.render() });
+      resultado.mensagem = await ChatMessage.implementation.create({
+        speaker: ChatMessage.implementation.getSpeaker({ actor: this.actor }), content, rolls: [roll], flags: { [SISTEMA]: { danoDePrograma: { programa: this.uuid, contra, total: roll.total } } }
+      });
+    }
+    return resultado;
   }
 
   // O item (do mesmo ator) onde este está instalado, ou null: o deck de um programa, a arma de um acessório.

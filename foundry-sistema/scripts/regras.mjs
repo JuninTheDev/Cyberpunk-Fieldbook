@@ -111,6 +111,20 @@ export function acoesDeNet(rank) {
   return r >= 10 ? 5 : 2 + Math.floor((r - 1) / 3);
 }
 
+// Os programas no combate da NET (a wiki, "Como ler os cartões", "Programas: ataque" e "Combate na NET"; o CORE): o ataque
+// é Interface + ATK + 1d10, contra a Interface + 1d10 do netrunner (a Defesa) ou a DEF + 1d10 do programa. O programa de
+// ataque desativa sozinho depois de usado; o anti-programa só afeta programas (o dano padrão em programa, o outro em Black
+// ICE) e o anti-pessoal só afeta netrunners (no cérebro). Na NET não há crítico (o CORE).
+export const DANO_DE_PROGRAMA = {
+  antiprogramattacker: [{ id: 'padrao', rotulo: 'em programa' }, { id: 'blackIce', rotulo: 'em Black ICE' }],
+  antipersonnelattacker: [{ id: 'padrao', rotulo: 'no cérebro' }]
+};
+export const programaDeAtaque = classe => Boolean(DANO_DE_PROGRAMA[classe]);
+// A fórmula de dano que vale ('0' e vazio não rolam: o efeito do programa é outro, como o do DeckKRASH).
+export const formulaDeDano = formula => (formula && String(formula).trim() !== '0' ? String(formula).trim() : '');
+// A REZ são os "pontos de vida" do programa: a do catálogo menos a perdida, nunca abaixo de 0. Em 0, ele desativa.
+export const rezAtual = (rez, perdida) => Math.max(0, (Number(rez) || 0) - Math.max(0, Number(perdida) || 0));
+
 // O capanga (o mook do CORE) equipa ou instala o que recebe, como o handleMookDraggedItem do CORE: o cyberware é
 // instalado, e o que se equipa no CORE (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento) entra
 // equipado. O resto (munição, programa, upgrade, veículo, lesão) fica como veio.

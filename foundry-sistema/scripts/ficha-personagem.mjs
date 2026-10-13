@@ -8,7 +8,7 @@ import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
-import { HABILIDADES_DE_INTERFACE, pontosDeRole, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -38,6 +38,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarInterface: FichaPersonagem.#rolarInterface,
       rolarDanoDoZap: FichaPersonagem.#rolarDanoDoZap,
       ativarPrograma: FichaPersonagem.#ativarPrograma,
+      atacarComPrograma: FichaPersonagem.#atacarComPrograma,
+      rolarDanoDePrograma: FichaPersonagem.#rolarDanoDePrograma,
+      perderRez: FichaPersonagem.#perderRez,
+      restaurarRez: FichaPersonagem.#restaurarRez,
       alternarPericias: FichaPersonagem.#alternarPericias,
       novaPericia: FichaPersonagem.#novaPericia,
       tirarPericia: FichaPersonagem.#tirarPericia,
@@ -215,10 +219,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         id: p.id, nome: p.name, img: p.img,
         detalhe: [
           CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe,
-          p.system.classe === 'quickhack' ? `RAM ${p.system.ram}` : p.system.classe === 'daemon' ? `REZ ${p.system.rez}` : `ATK ${p.system.atk} · DEF ${p.system.def} · REZ ${p.system.rez}`,
+          p.system.classe === 'quickhack' ? `RAM ${p.system.ram}` : p.system.classe === 'daemon' ? `REZ ${p.system.rez}` : `ATK ${p.system.atk} · DEF ${p.system.def}`,
           p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'
         ].join(' · '),
-        ativo: p.system.ativo, podeAtivar: Boolean(p.instaladoNo)
+        // O de ataque (num deck, com Interface) ataca e rola o dano; o que tem REZ ativa, perde e restaura REZ.
+        ataque: programaDeAtaque(p.system.classe) && Boolean(p.instaladoNo) && s.rankDeInterface > 0 && { total: s.rankDeInterface + p.system.atk },
+        danos: programaDeAtaque(p.system.classe) && p.instaladoNo && s.rankDeInterface > 0
+          ? DANO_DE_PROGRAMA[p.system.classe].map(dano => ({ ...dano, formula: formulaDeDano(p.system.dano[dano.id]) })).filter(dano => dano.formula) : [],
+        rez: p.system.rez && !['quickhack', 'daemon'].includes(p.system.classe) ? { atual: p.rezAtual, max: p.system.rez } : null,
+        ativo: p.system.ativo, podeAtivar: Boolean(p.instaladoNo) && !programaDeAtaque(p.system.classe)
       })),
       net,
       veiculos: itens('veiculo').map(v => ({
@@ -271,11 +280,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #rolarFacedown(evento) { return this.actor.rolarFacedown({ perguntar: comJanela(evento) }); }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
-  // O programa ativo (rezzado): os boosters somam na habilidade deles. A REZ atual e o combate na NET são o C6.
+  // O programa ativo (rezzado): os boosters somam na habilidade deles.
   static #ativarPrograma(evento, alvo) {
     const item = this.#item(alvo);
     return item?.update({ 'system.ativo': !item.system.ativo });
   }
+  static #atacarComPrograma(evento, alvo) { return this.actor.rolarAtaqueDePrograma(this.#item(alvo), { perguntar: comJanela(evento) }); }
+  static #rolarDanoDePrograma(evento, alvo) { return this.#item(alvo)?.rolarDanoDePrograma(alvo.dataset.contra); }
+  static #perderRez(evento, alvo) { return this.#item(alvo)?.perderRez(1); }
+  static #restaurarRez(evento, alvo) { return this.#item(alvo)?.restaurarRez(); }
   // As Expertises do Tech perguntam antes a perícia do teste.
   static async #rolarRole(evento, alvo) {
     const id = alvo.dataset.rolagem;

@@ -232,6 +232,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   efeito com o programa rezzado (`isRezzed`). Por isso o C5 trouxe o ativo simples (um botão, sem a REZ atual). O C6
   completa: a REZ atual, derrezzar no 0, as 2 Ações NET para religar.
 
+- **A defesa de um programa: DEF + 1d10, pela wiki.** A wiki dá o combate na NET como "Interface + ATK do programa +
+  1d10 vs Interface + 1d10 (ou DEF do programa + 1d10)", e o CORE rola a defesa do programa como Interface + DEF + 1d10.
+  Os programas do RED que o netrunner usa têm DEF 0, e o sistema ainda não rola a defesa deles; o Black ICE, que
+  defende com DEF + 1d10, vem no C7.
+
 - **O Facedown leva a penalidade de ferimento: pela wiki, não pelo CORE.** O `CPRFacedownRoll` do CORE soma os
   modificadores de "todas as ações" das lesões (a Concussão, −2), mas não o do estado de ferimento. A wiki dá os dois com
   as mesmas palavras ("Gravemente Ferido: −2 em todas as ações"; "Concussão: −2 em todas as ações"), e aqui o Facedown leva
@@ -1972,6 +1977,49 @@ O `CPRInterfaceRoll` do CORE (`_createInterfaceRoll` em `cpr-cyberdeck.js`, `CPR
 - **O C5 fecha aqui.**
 - **Próximo:** o C6 (os programas no combate da NET: a REZ atual, o ataque de programa contra programa, Black ICE ou
   netrunner, com o dano no REZ ou no cérebro).
+- **Commit:** `ad0708a`.
+
+### Ciclo 41 (2026-10-13): os programas no combate da NET (o C6, parte 1; sessão KouArt)
+
+O `_createCyberdeckRoll` do CORE (o ATK e o dano do programa), o `reduceRezProgram` e o `resetRezProgram` (a REZ),
+e a wiki ("Como ler os cartões", "Programas: ataque" e a tabela dos programas em system-net.js e system-rules.js;
+"Combate na NET"; RED p. 201–204).
+
+- **Implementado:**
+  - **`regras.DANO_DE_PROGRAMA`:** o anti-programa só afeta programas (o dano padrão em programa, o outro em Black ICE)
+    e o anti-pessoal só netrunners (no cérebro), como a wiki; `programaDeAtaque`, `formulaDeDano` (o "0" não rola: o
+    efeito do programa é outro, como o do DeckKRASH) e `rezAtual`;
+  - **nos dados:** a REZ perdida do programa (`rezPerdida`): a atual é a do catálogo menos a perdida;
+  - **no item:** `perderRez` (em 0, o programa desativa, como a wiki), `restaurarRez` e `rolarDanoDePrograma`: a fórmula
+    contra o alvo, sem crítico (na NET não há, como no CORE), com o cartão de dano e uma flag (`danoDePrograma`) para a
+    parte 2 aplicar;
+  - **no ator:** `rolarAtaqueDePrograma` (Interface + ATK + 1d10, com as penalidades e os situacionais de todas as
+    ações, pela janela de rolagem). Só os programas de ataque, num deck, de quem tem Interface;
+  - **na ficha (aba NET):** o programa de ataque tem o ataque (com o total sem o dado) e os danos que valem; o que tem
+    REZ (boosters e defensores) mostra a REZ atual, com −1 e ↺, e o Ativo. O de ataque não tem o Ativo: desativa sozinho
+    depois de usado.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 65 de 69. Um teste novo: o texto da wiki (o ATK, a REZ em 0, quem cada classe afeta, o programa de ataque que
+    desativa sozinho, a fórmula do combate na NET), o dano do catálogo igual ao da tabela da wiki (o Banhammer, o Sword,
+    o Hellbolt e o Vrizzbolt), o "0" que não rola e a REZ atual. As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 70 de 75, cerca de 108 s. Um passo novo, na aba NET de um Netrunner Rank 4 com Sword, Hellbolt, Armor e
+    DeckKRASH num deck equipado:
+    - os botões de cada um: o Sword com ATK +5 e o dano em programa e em Black ICE; o Hellbolt com ATK +6 e o dano no
+      cérebro; o DeckKRASH só com o ataque; o Armor com a REZ 7/7, o −1, o ↺ e o Ativo;
+    - o ataque do Sword pela janela (4 + 1 + 7 = 12) e o dano em Black ICE (3d6 com dois 6 = 14, sem crítico);
+    - o ataque do Hellbolt com Ctrl + clique (9) e o dano no cérebro (7);
+    - o Armor ativo perde 1 de REZ (6/7), volta (7/7) e, perdendo tudo, fica em 0/7 e desativa;
+    - a captura `v14-ficha-net-programas`.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a REZ perdida negativa aumentando a REZ; o "0" rolando como dano;
+    - G4: o programa em 0 de REZ continuando ativo; o ataque sem o ATK do programa; o dano com crítico; e o programa de
+      ataque com o Ativo.
+- **Próximo:** o C6, parte 2: aplicar o dano da NET (no cérebro do netrunner, ignorando a armadura, e no REZ de um
+  programa do alvo).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

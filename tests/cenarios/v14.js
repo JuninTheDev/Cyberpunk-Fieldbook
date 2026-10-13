@@ -3144,6 +3144,100 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('programas no combate da NET (wiki; o CORE): na aba NET, o Sword e o Hellbolt atacam (Interface + ATK + 1d10, pela janela ou com Ctrl + clique) e rolam o dano só contra o que atingem, sem crítico; o DeckKRASH ataca sem dano; o Armor perde REZ (−1), volta (↺) e, em 0, desativa', async () => {
+      // Rank 4. Sword, d10 7: 4 + 1 + 7 = 12. Sword em Black ICE, 3d6 6 + 6 + 2 = 14 (dois 6, sem crítico). Hellbolt, d10 3:
+      // 4 + 2 + 3 = 9; no cérebro, 2d6 3 + 4 = 7.
+      await fixar(edge, []);
+      const nomes = ['Teste Netrunner Combate'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const html = m => new DOMParser().parseFromString(m.content, 'text/html');
+          const partesDa = m => [...html(m).querySelectorAll('.partes li')].map(textoDe);
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const item = id => foundry.utils.deepClone(cat[id]);
+
+          // O Netrunner Rank 4 com o deck equipado e quatro programas instalados nele.
+          const a = await Actor.implementation.create({ name: 'Teste Netrunner Combate', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } },
+            items: ['core_gear:cyberdeck', 'core_programs:sword', 'core_programs:hellbolt', 'core_programs:armor', 'core_programs:deckkrash'].map(item) });
+          const deck = a.items.find(i => i.type === 'cyberdeck');
+          await deck.update({ 'system.uso': 'equipado' });
+          await a.updateEmbeddedDocuments('Item', a.items.filter(i => i.type === 'programa').map(p => ({ _id: p.id, 'system.instaladoEm': deck.id })));
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('net', 'primary');
+          const f = () => a.sheet.element;
+          const linha = nome => f().querySelector('.tab.net li[data-item-id="' + a.items.getName(nome).id + '"]');
+          await esperar(() => linha('Sword')?.querySelector('[data-action="atacarComPrograma"]'));
+          const botoes = nome => [...linha(nome).querySelectorAll('button')].map(textoDe);
+          const lista = { sword: botoes('Sword'), hellbolt: botoes('Hellbolt'), armor: botoes('Armor'), deckkrash: botoes('DeckKRASH'), rezArmor: textoDe(linha('Armor').querySelector('.rez')) };
+
+          // 1. O ataque do Sword pela janela.
+          let antes = game.messages.size;
+          window.__fila = [[7, 10]];
+          linha('Sword').querySelector('[data-action="atacarComPrograma"]').click();
+          await esperar(() => janela()?.querySelector('[name="outro"]'));
+          const daJanela = { titulo: textoDe(janela().querySelector('.window-title')), partes: [...janela().querySelectorAll('.partes li')].map(textoDe) };
+          janela().querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          let m = game.messages.contents.at(-1);
+          const ataque = { total: m.rolls[0].total, cartao: partesDa(m), sabor: textoDe(html(m).querySelector('.sabor')) };
+
+          // 2. O dano do Sword em Black ICE: 3d6 com dois 6, sem crítico.
+          antes = game.messages.size;
+          window.__fila = [[6, 6], [6, 6], [2, 6]];
+          linha('Sword').querySelector('[data-action="rolarDanoDePrograma"][data-contra="blackIce"]').click();
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const danoSword = { total: m.rolls[0].total, titulo: textoDe(html(m).querySelector('h3')), critico: Boolean(html(m).querySelector('.critico')), flag: m.getFlag('${S}', 'danoDePrograma') };
+
+          // 3. O Hellbolt: o ataque com Ctrl + clique, sem a janela, e o dano no cérebro.
+          antes = game.messages.size;
+          window.__fila = [[3, 10]];
+          ctrl(linha('Hellbolt').querySelector('[data-action="atacarComPrograma"]'));
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const ataqueHellbolt = { total: m.rolls[0].total, janela: Boolean(janela()) };
+          antes = game.messages.size;
+          window.__fila = [[3, 6], [4, 6]];
+          linha('Hellbolt').querySelector('[data-action="rolarDanoDePrograma"]').click();
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const danoHellbolt = { total: m.rolls[0].total, titulo: textoDe(html(m).querySelector('h3')) };
+
+          // 4. O Armor: ativo, perde 1 de REZ, volta ao máximo; perde tudo e desativa.
+          linha('Armor').querySelector('[data-action="ativarPrograma"]').click();
+          await esperar(() => a.items.getName('Armor').system.ativo);
+          linha('Armor').querySelector('[data-action="perderRez"]').click();
+          await esperar(() => textoDe(linha('Armor').querySelector('.rez')) === 'REZ 6/7');
+          const perdeu = textoDe(linha('Armor').querySelector('.rez'));
+          linha('Armor').querySelector('[data-action="restaurarRez"]').click();
+          await esperar(() => textoDe(linha('Armor').querySelector('.rez')) === 'REZ 7/7');
+          await a.items.getName('Armor').perderRez(9);
+          await esperar(() => textoDe(linha('Armor').querySelector('.rez')) === 'REZ 0/7');
+          const armor = a.items.getName('Armor');
+          const zerou = { rez: textoDe(linha('Armor').querySelector('.rez')), zerada: linha('Armor').querySelector('.rez').classList.contains('zerada'), ativo: armor.system.ativo, perdida: armor.system.rezPerdida };
+          return { lista, daJanela, ataque, danoSword, ataqueHellbolt, danoHellbolt, perdeu, zerou };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('ficha-net-programas');
+        const { lista, daJanela: j, ataque, danoSword: s, ataqueHellbolt: h, danoHellbolt: d, perdeu, zerou } = info;
+        const ok = lista.sword.join('|') === 'ATK +5|2d6 em programa|3d6 em Black ICE|✕' && lista.hellbolt.join('|') === 'ATK +6|2d6 no cérebro|✕'
+          && lista.armor.join('|') === '−1|↺|Inativo|✕' && lista.deckkrash.join('|') === 'ATK +4|✕' && lista.rezArmor === 'REZ 7/7'
+          && j.titulo === 'Teste: Sword: ataque' && j.partes.join() === 'Interface +4,ATK +1,1d10'
+          && ataque.total === 12 && ataque.cartao.join() === '1d10,Interface +4,ATK +1'
+          && ataque.sabor === 'Contra a Interface + 1d10 do netrunner ou a DEF + 1d10 do programa. O programa de ataque desativa sozinho depois de usado.'
+          && s.total === 14 && s.titulo === 'Dano: Sword (em Black ICE)' && !s.critico && s.flag?.contra === 'blackIce' && s.flag.total === 14
+          && h.total === 9 && !h.janela && d.total === 7 && d.titulo === 'Dano: Hellbolt (no cérebro)'
+          && perdeu === 'REZ 6/7' && zerou.rez === 'REZ 0/7' && zerou.zerada && !zerou.ativo && zerou.perdida === 7;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => ${JSON.stringify(nomes)}.includes(a.name))) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

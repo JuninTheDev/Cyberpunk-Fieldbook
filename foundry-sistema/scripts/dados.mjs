@@ -289,6 +289,8 @@ export class DadosPrograma extends foundry.abstract.TypeDataModel {
       instaladoEm: texto(),
       // Ativo (rezzado, o isRezzed do CORE): os efeitos do programa (os boosters) só valem assim, instalado num deck.
       ativo: new fields.BooleanField({ initial: false }),
+      // A REZ perdida no combate da NET (a atual é rez − rezPerdida; regras.rezAtual).
+      rezPerdida: inteiro(0, { min: 0 }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };

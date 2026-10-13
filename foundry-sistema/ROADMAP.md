@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 41). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 42). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -71,8 +71,10 @@ de compêndio; entram só as partes do sistema.
     Velocidade (Interface + velocidade + 1d10 contra SPD + 1d10), e o ICE entra no topo da fila. A iniciativa do Black
     ICE e do demônio como atores é o C7.
 - [~] **C6. Programas no combate da NET:** Em andamento: sessão KouArt, 2026-10-13.
-  - rezzar e derrezzar, com ATK, DEF e REZ atuais (o ativo simples, sem a REZ, veio no ciclo 40);
-  - o ataque de programa contra programa, Black ICE ou netrunner, com o dano no REZ ou no cérebro;
+  - [x] rezzar e derrezzar, com a REZ atual (o ativo veio no ciclo 40; a REZ, que perde, volta e em 0 desativa, no 41).
+    A defesa de um programa (DEF + 1d10) vai com o Black ICE, no C7: nenhum programa do RED que o netrunner usa tem DEF;
+  - [x] o ataque de programa (Interface + ATK + 1d10) e o dano dele contra o que atinge, sem crítico: ciclo 41;
+  - [ ] aplicar o dano: no cérebro do netrunner ou no REZ de um programa (a parte 2);
   - [x] os boosters: no build e somando na Interface quando ativos (ciclo 40).
 - [~] **C7. Black ICE e demônio como atores:** Em andamento: sessão KouArt, 2026-10-13 (depois do C6).
   - **as fichas:** Black ICE com PER, SPD, ATK, DEF e REZ; demônio com REZ, Interface, Ações de NET e Combat Number;
