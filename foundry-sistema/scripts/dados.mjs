@@ -1,6 +1,7 @@
 // Modelos de dados (TypeDataModel do Foundry 14): o personagem, o Black ICE e o demônio, as armas, armaduras, munição e
 // cyberware, e o efeito que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP,
 // bônus dos efeitos) é calculado na preparação, a cada vez.
+import { ANDAR_MAX, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
 import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, USOS } from './config.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
@@ -331,6 +332,32 @@ export class DadosPrograma extends foundry.abstract.TypeDataModel {
       tipoDeIce: new fields.StringField({ required: true, blank: false, initial: 'antipersonnel', choices: Object.keys(CLASSES_BLACK_ICE) }),
       per: inteiro(0, { min: 0 }),
       spd: inteiro(0, { min: 0 }),
+      preco: inteiro(0, { min: 0 }),
+      fonte: fonte()
+    };
+  }
+}
+
+// A arquitetura da NET (o netarch do CORE, com os demônios e os netrunners inimigos do NET Architect da mesa): uma linha
+// por conteúdo, no andar (1 a 18) e no ramo (a a h). O DV é o da senha, do arquivo e do nó de controle; o Black ICE e o
+// demônio, pelo modelo da wiki; o netrunner inimigo, pela ficha (o uuid). O DV da arquitetura (o Pathfinder, o Cloak, o
+// Virus) é o maior dos andares, ou o daqui (dv > 0).
+export class DadosArquitetura extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      dv: inteiro(0, { min: 0 }),
+      andares: new fields.ArrayField(new fields.SchemaField({
+        andar: inteiro(1, { min: 1, max: ANDAR_MAX }),
+        ramo: new fields.StringField({ required: true, blank: false, initial: 'a', choices: [...RAMOS] }),
+        tipo: new fields.StringField({ required: true, blank: false, initial: 'senha', choices: Object.keys(TIPOS_DE_ANDAR) }),
+        dv: inteiro(6, { min: 0 }),
+        ice: texto(),
+        demonio: texto(),
+        ator: texto(),
+        nome: texto(),
+        descricao: texto()
+      })),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };

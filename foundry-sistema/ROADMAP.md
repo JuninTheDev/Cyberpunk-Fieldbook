@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 47). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 48). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -89,10 +89,17 @@ de compêndio; entram só as partes do sistema.
     Netrunning, com o tipo, PER e SPD no programa: ciclo 45;
   - [x] o token "rezzado" pelo programa de Black ICE do netrunner, ao ativá-lo no deck, pelo mestre ativo, com a REZ do
     token voltando para o programa: ciclo 46.
-- [~] **C8. Arquiteturas e o NET Architect dentro do sistema:** Em andamento: sessão KouArt, 2026-10-13.
-  - o tipo de item arquitetura, com os andares e as DVs, como o `netarch` do CORE;
-  - o que o NET Architect faz na mesa: pontos de acesso nos tiles, a janela da NET, os inimigos no combate, o jogador
-    rolando as próprias rolagens.
+- [~] **C8. Arquiteturas e o NET Architect dentro do sistema:** Em andamento: sessão KouArt, 2026-10-13. Em partes:
+  - [x] o tipo de item arquitetura, com os andares (um conteúdo por linha: a senha, o arquivo e o nó de controle com o
+    DV; o Black ICE, o demônio e o netrunner inimigo), os ramos, o DV e o mapa na ficha, como o `netarch` do CORE e o
+    NET Architect: ciclo 47;
+  - [ ] o compêndio das arquiteturas (as da campanha, do documento da wiki, e os exemplos do NET Architect) e a geração
+    pelas tabelas do CORE (3d6 andares, o lobby, a dificuldade);
+  - [ ] o ponto de acesso nos tiles e a conexão do token;
+  - [ ] a janela da NET e o motor no mestre (andar, as habilidades contra os andares, o registro);
+  - [ ] os inimigos (o Black ICE e o demônio no andar, a velocidade, o ataque, os efeitos) e o combate;
+  - [ ] o jogador rolando as próprias rolagens, pela janela de rolagem dele;
+  - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual.
 - [ ] **C9. A NET de 2077 (Mission Kit):**
   - os quickhacks pelo Neuroport, o Breach e a conexão direta;
   - a RAM e o Cooling dos decks.

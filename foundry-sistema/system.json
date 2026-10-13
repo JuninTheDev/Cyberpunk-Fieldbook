@@ -122,6 +122,11 @@
         "htmlFields": [
           "descricao"
         ]
+      },
+      "arquitetura": {
+        "htmlFields": [
+          "descricao"
+        ]
       }
     }
   },

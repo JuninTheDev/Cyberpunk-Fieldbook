@@ -5,11 +5,12 @@ import * as combate from './combate.mjs';
 import { caminho, SISTEMA } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
-  DadosArma, DadosArmadura, DadosBlackIce, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
+  DadosArma, DadosArmadura, DadosArquitetura, DadosBlackIce, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
   DadosRoupa, DadosUpgrade, DadosVeiculo
 } from './dados.mjs';
 import { AtorCPR, ItemCPR } from './documentos.mjs';
 import { FichaCapanga } from './ficha-capanga.mjs';
+import { FichaArquitetura } from './ficha-arquitetura.mjs';
 import { FichaItem } from './ficha-item.mjs';
 import { FichaBlackIce, FichaDemonio } from './ficha-net.mjs';
 import { FichaPersonagem } from './ficha-personagem.mjs';
@@ -38,7 +39,9 @@ Hooks.once('init', () => {
   CONFIG.Actor.dataModels.demonio = DadosDemonio;
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,
-    cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo
+    cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo,
+    // A arquitetura da NET (o netarch do CORE, com o NET Architect da mesa).
+    arquitetura: DadosArquitetura
   });
   CONFIG.ActiveEffect.dataModels.base = DadosEfeito;
   CONFIG.statusEffects.push({ id: combate.STATUS_SUPRIMIDO, name: 'Suprimido', img: caminho('icones/suprimido.svg') });
@@ -53,6 +56,7 @@ Hooks.once('init', () => {
   DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaItem, {
     types: ['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'], makeDefault: true, label: 'Item do RED'
   });
+  DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaArquitetura, { types: ['arquitetura'], makeDefault: true, label: 'Arquitetura da NET do RED' });
 
   wiki.registrarWiki();
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).

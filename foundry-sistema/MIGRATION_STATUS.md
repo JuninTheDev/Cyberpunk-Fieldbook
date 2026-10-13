@@ -53,7 +53,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | cpr-2077 | avisos de envio, a campanha da wiki de cada mundo, crossover entre campanhas, Atualizar da wiki, retrato | falta |
 | CORE | a Interface do Netrunner (as 9 habilidades, a Defesa e a Velocidade, as Ações NET, os boosters ativos) | portada no ciclo 40 |
 | CORE | os programas no combate da NET (a REZ, o ataque, o dano sem crítico; o dano no cérebro e num programa, pelo mestre) | portados nos ciclos 41 e 42 (o Shield e o Armor pela wiki) |
-| NET Architect | tudo | falta |
+| NET Architect | a arquitetura (o item, os andares com os demônios e os netrunners inimigos, o mapa) | portada no ciclo 47 (o C8, parte 1) |
+| NET Architect | o ponto de acesso, a janela da NET, os inimigos e o combate, as rolagens do jogador, os nós de controle, os arquivos, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -109,7 +110,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
-  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores e o Black ICE próprio do netrunner nos ciclos 43 a 46; faltam as arquiteturas (o C8) | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores e o Black ICE próprio do netrunner nos ciclos 43 a 46; a arquitetura (o item e o mapa) no 47; falta o NET Architect (o C8) | P3 |
   | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
@@ -284,6 +285,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   jogador sem a permissão de criar tokens não consegue. Aqui quem cria e tira o token é o mestre ativo, quando o programa
   muda. Como no CORE, só a REZ do token volta para o programa (o contrário não); o mestre que apaga o token à mão deixa o
   programa ativo. Sem mestre na mesa, o token não entra, nem depois, quando o mestre chega: desative e ative de novo.
+
+- **A arquitetura: o formato do sistema.** O `netarch` do CORE guarda os andares com textos de tradução ("CPR.netArchitecture.
+  floor.options.password") e o DV como texto ("N/A", "8"), e o NET Architect da mesa põe os demônios e os netrunners
+  inimigos nas flags do item. Aqui é uma lista só, um conteúdo por linha, com os valores simples (o tipo, o DV, o modelo
+  do Black ICE e do demônio da wiki). As arquiteturas da mesa do Foundry 12 (o `netarch` com as flags) não se leem aqui
+  direto: as da campanha vêm do documento da wiki, na parte 2 do C8.
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2284,6 +2291,44 @@ O `_rezBlackIceToken` e o `_derezBlackIceToken` do cyberdeck do CORE (`cpr-cyber
     ator, e não os do programa.
 - **O C7 fecha aqui** (ciclos 43 a 46).
 - **Próximo:** o C8 (as arquiteturas e o NET Architect dentro do sistema), o próximo item aberto do plano.
+- **Commit:** `33e05aa`.
+
+### Ciclo 47 (2026-10-13): a arquitetura da NET como item (o C8, parte 1; sessão KouArt)
+
+O `netarch` do CORE (`netarch-datamodel.js`, a ficha em `cpr-item-sheet.js`) e o NET Architect da mesa
+(`arquitetura.mjs`: os nós, os pais, o Pathfinder; os demônios e os netrunners inimigos nos andares). O C8 é grande: vai
+em partes (o ROADMAP lista).
+
+- **Implementado:**
+  - **o tipo de item `arquitetura`** (`DadosArquitetura`): uma linha por conteúdo, no andar (1 a 18) e no ramo (A a H);
+    o tipo (senha, arquivo, nó de controle, Black ICE, demônio, netrunner inimigo, andar vazio); o DV da senha, do
+    arquivo e do nó; o Black ICE e o demônio pelo modelo da wiki (`gerado.BLACK_ICE` e `DEMONIOS`); o netrunner
+    inimigo pela ficha (o uuid); o nome e o que tem lá. O DV da arquitetura é o maior dos andares, ou o do item;
+  - **a lógica do mapa** (`arquitetura.mjs`, sem Foundry): os nós (`lerArquitetura`), o pai de cada um (o andar de cima no
+    mesmo ramo; senão, o do ramo à esquerda mais próximo; senão, o mais fundo acima, de preferência no mesmo ramo), os
+    vizinhos, os fundos e o Pathfinder (revela até um DV maior que o resultado), como o NET Architect;
+  - **a ficha** (`ficha-arquitetura.mjs`): a tabela dos andares (o andar novo, a linha tirada; o DV, a lista de Black ICE,
+    de demônios ou de netrunners conforme o tipo) e o mapa, com o ponto de acesso no topo e, no nó de um ramo novo, de
+    onde ele sai.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 70 de 74. Um teste novo (portado do cenário do NET Architect): a clínica de ripperdoc (os pais, os filhos, os
+    fundos, os vizinhos, o DV 10), o ramo com buraco (o 4B sai do 3A, e não do 2B), o DV do item, o armazém da TLB (dois
+    Black ICE num andar), o Pathfinder (com 3, 9 e 20, e do 3B), as linhas que não valem e a linha nova; e a tabela de
+    dificuldades da wiki (o DV 6 da básica). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 77 de 82, cerca de 120 s. Um passo novo: a clínica de ripperdoc como item; a ficha (900 px) com as 8 linhas e o
+    mapa ("3B de 2A"); "+ Andar" põe o 6A, uma senha DV 6; a linha que vira Black ICE perde o DV e ganha a lista (o
+    Hellhound no mapa); tirar o Wisp do 2A faz o 3A e o 3B saírem do 1A. Os avisos do passo "nenhum aviso" foram
+    conferidos: só os dois da Lexington. As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações** (os arquivos foram restaurados, conferido pelo md5):
+    - derrubaram o teste delas: no G3, sem a regra do ramo à esquerda, o Pathfinder passando pelos DVs maiores e o DV
+      da arquitetura pelo menor; no G4, "+ Andar" sem a conta do andar seguinte e o mapa sem dizer de onde sai o nó do
+      ramo novo;
+    - uma passou: a ficha sem a conversão dos andares do formulário (do objeto { 0: …, 1: … } para a lista). O ArrayField
+      do Foundry 14 já converte (`_cast`), então a conversão era código a mais e saiu; o G4 passou de novo sem ela.
+- **Próximo:** o C8, parte 2: o compêndio das arquiteturas (as 4 da campanha, do documento da wiki, como o build do
+  cpr-2077 faz, e os 3 exemplos do NET Architect) e a geração pelas tabelas do CORE.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

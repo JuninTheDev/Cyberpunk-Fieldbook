@@ -30,6 +30,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     próprio: os 12 da wiki, no compêndio de Netrunning) mostram o tipo, PER, SPD, ATK e DEF, e ocupam 2 slots no deck.
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
+- **Arquitetura da NET** (o netarch do CORE, com o que o NET Architect da mesa junta): um item com os andares, um conteúdo
+  por linha (o andar, de 1 a 18, e o ramo, de A a H; a senha, o arquivo e o nó de controle com o DV; o Black ICE e o
+  demônio pelo modelo da wiki; o netrunner inimigo pela ficha), o DV da arquitetura (o maior dos andares, ou o do item)
+  e o mapa na ficha: o ramo novo sai do andar de cima do ramo à esquerda. O ponto de acesso, a janela da NET e o combate
+  ainda não (o C8).
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
@@ -219,8 +224,8 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), as arquiteturas (o NET Architect) e o Painel
-  Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o NET Architect (o ponto de acesso, a
+  janela da NET, os inimigos e o combate; a arquitetura já é um item) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
@@ -287,6 +292,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
+  - a arquitetura da NET: a ficha com os andares da clínica de ripperdoc e o mapa (o ramo B sai do andar 2), o andar novo, a linha que vira Black ICE e a linha tirada;
   - o programa de Black ICE do netrunner: o Hellhound do compêndio de Netrunning instalado no deck (2 slots), com o tipo e os números na aba NET e na ficha do item;
   - o Black ICE rezzado: o Hellhound ativado no deck põe o token ao lado do netrunner (pelo mestre, também quando o jogador ativa no computador dele), a REZ que o token perde volta para o programa, e desativar ou zerar a REZ tira o token;
   - o dano do Black ICE e na REZ dele: o Hellhound pela ficha no cérebro (o Shield ativo não o para, o Armor reduz), o Killer num programa (o aviso de que o destrói), o Sword em Black ICE e o Zap na REZ do Black ICE e do demônio da cena, e o Zap do demônio só no intruso;

@@ -9,6 +9,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
+import * as arquitetura from '../../foundry-sistema/scripts/arquitetura.mjs';
 import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
 import { ATORES_DA_NET, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
@@ -838,6 +839,51 @@ test('Black ICE próprio do netrunner (wiki, "Black ICE": "Black ICE próprio oc
   assert.equal(catalogo['black-ice:asp'].system.dano.padrao, '0');
   // A loja da wiki não vende Black ICE: o netrunner recebe pelo compêndio de Netrunning (o mestre dá).
   assert.ok(!Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).some(item => item.id.startsWith('black-ice:') || /hellhound|sabertooth/i.test(item.en ?? '')));
+});
+
+test('Arquitetura da NET (wiki, "Montando uma arquitetura", RED p. 209–211; o netarch do CORE; o NET Architect da mesa): os andares viram os nós do mapa, com o pai de cada um (o ramo novo sai do andar de cima do ramo à esquerda), os fundos e os vizinhos; o DV da arquitetura é o maior dos andares; o Pathfinder revela andares até um DV maior que o resultado', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes("[['Básica', '6', '2', '—'], ['Padrão', '8', '4', '2 ou menos'], ['Incomum', '10', '6', '4 ou menos'], ['Avançada', '12', '8', '6 ou menos']]"));
+  assert.equal(arquitetura.DV_SEM_ANDARES, 6);
+  assert.deepEqual(Object.keys(arquitetura.TIPOS_DE_ANDAR), ['senha', 'arquivo', 'controle', 'ice', 'demonio', 'netrunner', 'vazio']);
+  // A clínica de ripperdoc do NET Architect: o ramo B sai do andar 2 (o 3b), e os dois ramos descem até o 5.
+  const clinica = arquitetura.lerArquitetura({ nome: 'Clínica', andares: [
+    { andar: 1, ramo: 'a', tipo: 'senha', dv: 8 }, { andar: 2, ramo: 'a', tipo: 'ice', ice: 'wisp' }, { andar: 3, ramo: 'a', tipo: 'arquivo', dv: 8 },
+    { andar: 4, ramo: 'a', tipo: 'ice', ice: 'killer' }, { andar: 5, ramo: 'a', tipo: 'arquivo', dv: 10 },
+    { andar: 3, ramo: 'b', tipo: 'controle', dv: 8 }, { andar: 4, ramo: 'b', tipo: 'senha', dv: 10 }, { andar: 5, ramo: 'b', tipo: 'controle', dv: 10 }
+  ] });
+  const pais = Object.fromEntries(Object.values(clinica.nos).map(no => [no.id, no.pai]));
+  assert.deepEqual(pais, { '1a': 'entrada', '2a': '1a', '3a': '2a', '3b': '2a', '4a': '3a', '4b': '3b', '5a': '4a', '5b': '4b' });
+  assert.deepEqual(clinica.filhos['2a'], ['3a', '3b']);
+  assert.ok(arquitetura.ehFundo(clinica, '5a') && arquitetura.ehFundo(clinica, '5b') && !arquitetura.ehFundo(clinica, '3b') && !arquitetura.ehFundo(clinica, arquitetura.ENTRADA));
+  assert.deepEqual(arquitetura.vizinhos(clinica, '2a'), ['1a', '3a', '3b']);
+  assert.deepEqual([clinica.dv, clinica.colunas, clinica.andares], [10, 2, 5]);
+  // Um ramo com buraco: o 4B sai do andar de cima do ramo à esquerda (o 3A), e não do 2B, mais acima no mesmo ramo.
+  const buraco = arquitetura.lerArquitetura({ andares: ['1a', '2a', '2b', '3a', '4b'].map(id => ({ andar: Number(id[0]), ramo: id[1], tipo: 'vazio' })) });
+  assert.deepEqual([buraco.nos['2b'].pai, buraco.nos['4b'].pai], ['1a', '3a']);
+  // O DV do item manda (dv > 0); sem DV nos andares, a básica (6).
+  assert.equal(arquitetura.lerArquitetura({ andares: [{ andar: 1, tipo: 'senha', dv: 8 }], dv: 12 }).dv, 12);
+  assert.equal(arquitetura.lerArquitetura({ andares: [{ andar: 1, tipo: 'ice', ice: 'asp' }] }).dv, 6);
+  // O armazém da TLB (o exemplo do livro): dois Black ICE no mesmo andar viram um andar com dois conteúdos.
+  const armazem = arquitetura.lerArquitetura({ andares: [
+    { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 1, ramo: 'a', tipo: 'ice', ice: 'killer' }, { andar: 2, ramo: 'a', tipo: 'senha', dv: 8 },
+    { andar: 3, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 4, ramo: 'a', tipo: 'controle', dv: 8, descricao: 'Torreta automática' }
+  ] });
+  assert.deepEqual(armazem.nos['1a'].conteudos.map(c => [c.tipo, c.ice, c.dv]), [['ice', 'hellhound', null], ['ice', 'killer', null]]);
+  assert.deepEqual([armazem.nos['4a'].conteudos[0].tipo, armazem.nos['4a'].conteudos[0].descricao, armazem.dv], ['controle', 'Torreta automática', 8]);
+  // O Pathfinder (RED p. 199): até 20, todos; com 3, a senha DV 8 do andar 1 aparece e barra o resto; com 9, o 4b (DV 10) e
+  // o 5a aparecem, mas o 5b, atrás do 4b, não; do 3b com 9, só o 4b.
+  assert.equal(arquitetura.revelarPathfinder(clinica, arquitetura.ENTRADA, 20).length, 8);
+  assert.deepEqual(arquitetura.revelarPathfinder(clinica, arquitetura.ENTRADA, 3), ['1a']);
+  assert.deepEqual(arquitetura.revelarPathfinder(clinica, arquitetura.ENTRADA, 9), ['1a', '2a', '3a', '3b', '4a', '4b', '5a']);
+  assert.deepEqual(arquitetura.revelarPathfinder(clinica, '3b', 9), ['4b']);
+  // As linhas que não valem: andar fora de 1 a 18 sai; ramo desconhecido vira A; tipo desconhecido vira andar vazio.
+  const torta = arquitetura.lerArquitetura({ andares: [{ andar: 0, tipo: 'senha' }, { andar: 19, tipo: 'senha' }, { andar: 1, ramo: 'ab', tipo: 'xyz' }] });
+  assert.deepEqual(Object.keys(torta.nos), ['1a']);
+  assert.equal(torta.nos['1a'].conteudos[0].tipo, 'vazio');
+  // A linha nova da ficha: o andar seguinte ao mais fundo do ramo A, uma senha DV 6.
+  assert.deepEqual(arquitetura.novaLinha([{ andar: 3, ramo: 'a' }, { andar: 7, ramo: 'b' }]), { andar: 4, ramo: 'a', tipo: 'senha', dv: 6, ice: '', demonio: '', ator: '', nome: '', descricao: '' });
+  assert.equal(arquitetura.novaLinha().andar, 1);
 });
 
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {

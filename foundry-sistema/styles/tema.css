@@ -559,3 +559,28 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-item .campos label { font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.04em; color: var(--cp-fraco); }
 .cpr-fieldbook.ficha-item :is(.nota, .fonte, .efeitos) { font-family: var(--cp-dados); font-size: 12px; }
 .cpr-fieldbook.ficha-item h3 { border-bottom: 1px solid var(--cp-linha); color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }
+
+/* ---------- Ficha da arquitetura da NET: os andares (uma linha por conteúdo) e o mapa ---------- */
+.cpr-fieldbook.ficha-arquitetura .campos small { white-space: nowrap; }
+.cpr-fieldbook.ficha-arquitetura h3 small { margin-left: 8px; color: var(--cp-fraco); letter-spacing: 0.04em; text-transform: none; }
+.cpr-fieldbook.ficha-arquitetura table.andares { width: 100%; border-collapse: collapse; font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.ficha-arquitetura table.andares th { color: var(--cp-fraco); font-weight: 400; letter-spacing: 0.1em; text-align: left; text-transform: uppercase; }
+.cpr-fieldbook.ficha-arquitetura table.andares td { padding: 2px 4px; border-top: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-arquitetura table.andares td:first-child input { width: 3.5rem; }
+.cpr-fieldbook.ficha-arquitetura table.andares td :is(input, select) { width: 100%; }
+.cpr-fieldbook.ficha-arquitetura table.andares td:nth-child(2) select { width: 3.5rem; }
+.cpr-fieldbook.ficha-arquitetura table.andares td:last-child { width: 2rem; text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .acoes-arquitetura { display: flex; justify-content: flex-end; margin: 6px 0; }
+.cpr-fieldbook.ficha-arquitetura .acao {
+  padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em;
+}
+.cpr-fieldbook.ficha-arquitetura .acao:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net {
+  display: grid; grid-template-columns: 2.5rem repeat(var(--colunas, 1), minmax(0, 1fr)); gap: 6px; align-items: stretch;
+  font-family: var(--cp-dados); font-size: 11px;
+}
+.cpr-fieldbook.ficha-arquitetura .mapa-net .ramo { color: var(--cp-fraco); letter-spacing: 0.15em; text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .entrada { grid-column: 2 / -1; padding: 4px; border: 1px dashed var(--cp-ciano); color: var(--cp-ciano); letter-spacing: 0.2em; text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .andar { align-self: center; color: var(--cp-amarelo); font: 700 18px/1 var(--cp-titulo); text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no { padding: 4px 6px; background: var(--cp-poco); border-left: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no ul { margin: 2px 0 0; padding-left: 14px; color: var(--cp-texto); }

@@ -3729,6 +3729,61 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('arquitetura da NET (o netarch do CORE; o NET Architect da mesa): o item com os andares da clínica de ripperdoc; a ficha mostra a tabela e o mapa (o ramo B sai do andar 2); "+ Andar" põe o andar 6 do ramo A; a linha que vira Black ICE troca o DV pela lista, e o mapa mostra o Hellhound; tirar o Wisp do andar 2 faz o 3A e o 3B saírem do 1A', async () => {
+      const nomes = ['Teste Clínica'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const item = await Item.implementation.create({ name: 'Teste Clínica', type: 'arquitetura', system: { andares: [
+            { andar: 1, ramo: 'a', tipo: 'senha', dv: 8 }, { andar: 2, ramo: 'a', tipo: 'ice', ice: 'wisp' }, { andar: 3, ramo: 'a', tipo: 'arquivo', dv: 8, descricao: 'Prontuários' },
+            { andar: 4, ramo: 'a', tipo: 'ice', ice: 'killer' }, { andar: 5, ramo: 'a', tipo: 'arquivo', dv: 10 },
+            { andar: 3, ramo: 'b', tipo: 'controle', dv: 8 }, { andar: 4, ramo: 'b', tipo: 'senha', dv: 10 }, { andar: 5, ramo: 'b', tipo: 'controle', dv: 10 }
+          ] } });
+          await item.sheet.render({ force: true });
+          const f = () => item.sheet.element;
+          await esperar(() => f()?.querySelector('.mapa-net .no'));
+          const mapa = () => [...f().querySelectorAll('.mapa-net .no')].map(textoDe);
+          const linhas = () => f().querySelectorAll('table.andares tbody tr').length;
+          const antes = { linhas: linhas(), mapa: mapa(), dv: textoDe(f().querySelector('.campos label small')), rotulo: game.i18n.localize(CONFIG.Item.typeLabels.arquitetura), largura: item.sheet.position.width };
+          // + Andar: o andar 6 do ramo A, uma senha DV 6.
+          f().querySelector('[data-action="novaLinha"]').click();
+          await esperar(() => item.system.andares.length === 9 && linhas() === 9);
+          const nova = item.system.andares[8];
+          const novaLinha = { andar: nova.andar, ramo: nova.ramo, tipo: nova.tipo, dv: nova.dv };
+          // A linha nova vira Black ICE: o DV sai, entra a lista; o Hellhound.
+          const tipo = f().querySelector('[name="system.andares.8.tipo"]');
+          tipo.value = 'ice';
+          tipo.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => item.system.andares[8].tipo === 'ice' && f()?.querySelector('[name="system.andares.8.ice"]'));
+          const semDv = !f().querySelector('[name="system.andares.8.dv"]');
+          const ice = f().querySelector('[name="system.andares.8.ice"]');
+          ice.value = 'hellhound';
+          ice.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => item.system.andares[8].ice === 'hellhound' && mapa().includes('6A Hellhound'));
+          const comHellhound = { mapa: mapa(), outras: item.system.andares.slice(0, 8).map(l => l.andar + l.ramo + ':' + l.tipo).join() };
+          // Tirar o Wisp (a linha 2): o 3A e o 3B passam a sair do 1A.
+          f().querySelector('[data-action="tirarLinha"][data-indice="1"]').click();
+          await esperar(() => item.system.andares.length === 8 && !mapa().some(t => t.includes('Wisp')));
+          const semWisp = { mapa: mapa(), andares: item.system.andares.length };
+          // A ficha fica aberta para a captura, no mapa.
+          f().querySelector('.mapa-net').scrollIntoView();
+          return { antes, novaLinha, semDv, comHellhound, semWisp };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('ficha-arquitetura');
+        const { antes: a, novaLinha: n, comHellhound: h, semWisp: w } = info;
+        const ok = a.linhas === 8 && a.rotulo === 'Arquitetura da NET' && a.dv === 'o dos andares: 10' && a.largura === 900
+          && a.mapa.join(' | ') === '1A Senha DV 8 | 2A Wisp | 3A Arquivo DV 8 | 3B de 2A Nó de controle DV 8 | 4A Killer | 4B Senha DV 10 | 5A Arquivo DV 10 | 5B Nó de controle DV 10'
+          && n.andar === 6 && n.ramo === 'a' && n.tipo === 'senha' && n.dv === 6 && info.semDv
+          && h.mapa.includes('6A Hellhound') && h.outras === '1a:senha,2a:ice,3a:arquivo,4a:ice,5a:arquivo,3b:controle,4b:senha,5b:controle'
+          && w.andares === 8 && w.mapa.includes('3A de 1A Arquivo DV 8') && w.mapa.includes('3B de 1A Nó de controle DV 8');
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { for (const i of game.items.filter(i => ${JSON.stringify(nomes)}.includes(i.name))) { await i.sheet?.close(); await i.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');
