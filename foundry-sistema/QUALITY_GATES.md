@@ -97,6 +97,11 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 - **Texto em cima do token** (ciclo 29): o cenário grava o que o `canvas.interface.createScrollingText` mostra, com uma
   função posta no próprio objeto que chama a do protótipo. O `finally` apaga essa função (`delete`), e a do protótipo
   volta.
+- **Cena no cenário** (ciclo 38): crie com `active: false`. Sem cena ativa, o Foundry 14 liga a primeira que se cria
+  (`Scene._preCreateOperation`), o canvas começa a desenhar, e mexer no token durante o desenho quebra o core
+  (`canvas.pendingRenderFlags` ainda não existe). O passo que precisa do canvas ativa a cena e espera o `canvas.ready`.
+- **Token não ligado de personagem** (ciclo 38): o protótipo do personagem sai sempre ligado (`AtorCPR._preCreate`).
+  Peça o token solto na criação: `ator.getTokenDocument({ x, y, actorLink: false })`. O capanga já sai solto.
 
 ## Build
 

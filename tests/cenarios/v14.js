@@ -97,6 +97,96 @@ module.exports = async ({ edge, servidores, r }) => {
         JSON.stringify(info)];
     });
 
+    await r.passo('migração dos dados (C1): o mundo novo fica na versão atual sem perguntar; um mundo da versão 0 com o TeleOptics antigo (num ator, num token não ligado e num compêndio do mundo trancado) e um Cyberaudio que virou Fashionware: a pergunta lista o que muda e os passos; "Depois" não muda nada; "Migrar agora" muda só isso, tranca o compêndio de novo, grava a versão e deixa o registro no chat dos mestres; de novo, nada muda e não pergunta; dados de uma versão mais nova só avisam', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const api = game.system.api.migracao;
+        const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const versao = () => game.settings.get('${S}', 'versaoDosDados');
+        // O mundo novo: o ready gravou a versão, sem perguntar.
+        const novo = { gravada: await esperar(() => versao() === api.VERSAO_DOS_DADOS), atual: api.VERSAO_DOS_DADOS, pergunta: Boolean(document.querySelector('.application.dialog.migracao')) };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        // O TeleOptics como o catálogo o trazia até o ciclo 26: com o +1 de sempre do CORE.
+        const teleAntigo = () => {
+          const t = pegar('core_cyberware:teleoptics');
+          t.system.instalado = true;
+          t.effects = [{ name: 'TeleOptics', img: 'icons/svg/upgrade.svg', type: 'base', transfer: true, system: { changes: [
+            { key: 'system.bonus.tiroMirado', type: 'add', value: '1', phase: 'initial' }, { key: 'system.bonus.tiroUnico', type: 'add', value: '1', phase: 'initial' }] } }];
+          return t;
+        };
+        const avisos = [];
+        let ator, audio, capanga, cena, pacote, mensagem;
+        try {
+          ator = await Actor.implementation.create({ name: 'Migração: ator', type: 'personagem', items: [teleAntigo()] });
+          const dadosDoAudio = pegar('core_cyberware:amplified-hearing');
+          dadosDoAudio.system.tipo = 'fashionware';
+          audio = await Item.implementation.create(dadosDoAudio);
+          // O token não ligado com o TeleOptics só nele (no delta); o ator do mundo não tem. O protótipo do personagem sai
+          // sempre ligado (AtorCPR._preCreate): o token se desliga na criação.
+          capanga = await Actor.implementation.create({ name: 'Migração: capanga', type: 'personagem' });
+          // Desligada: sem cena ativa, o Foundry 14 liga a primeira que se cria, e o canvas desenhando o token quebra o core.
+          cena = await Scene.implementation.create({ name: 'Migração (teste)', active: false, width: 1000, height: 1000 });
+          const [token] = await cena.createEmbeddedDocuments('Token', [(await capanga.getTokenDocument({ x: 100, y: 100, actorLink: false })).toObject()]);
+          await token.actor.createEmbeddedDocuments('Item', [teleAntigo()]);
+          pacote = await foundry.documents.collections.CompendiumCollection.createCompendium({ type: 'Item', label: 'Migração (teste)', name: 'migracao-teste' });
+          await Item.implementation.create(teleAntigo(), { pack: pacote.collection });
+          await pacote.configure({ locked: true });
+          await game.settings.set('${S}', 'versaoDosDados', 0);
+          const teleDe = a => a.items.find(i => i.getFlag('${S}', 'catalogo') === 'core_cyberware:teleoptics');
+          const estado = async () => ({
+            ator: teleDe(game.actors.get(ator.id)).effects.size, bonus: game.actors.get(ator.id).system.bonus.tiroMirado, audio: game.items.get(audio.id).system.tipo,
+            token: teleDe(cena.tokens.get(token.id).actor).effects.size, capanga: game.actors.get(capanga.id).items.size,
+            pacote: (await pacote.getDocuments())[0].effects.size, trancado: pacote.locked, versao: versao()
+          });
+          const antes = await estado();
+          // A pergunta: o que muda e os passos. A segunda é outra janela (a primeira pode ainda estar no DOM).
+          const pergunta = () => document.querySelector('.application.dialog.migracao:not(.minimizing)');
+          const responder = async (escolha, outraQue) => {
+            const promessa = api.migrarMundo();
+            await esperar(() => pergunta() && pergunta().id !== outraQue);
+            const janela = pergunta();
+            const itens = [...janela.querySelectorAll('.dialog-content li')].map(li => li.textContent.trim());
+            const botoes = [...janela.querySelectorAll('.form-footer button[data-action]')].map(b => b.dataset.action);
+            janela.querySelector('button[data-action="' + escolha + '"]').click();
+            return { id: janela.id, itens, botoes, resultado: await promessa };
+          };
+          const depois = await responder('depois');
+          const adiado = await estado();
+          const migrar = await responder('migrar', depois.id);
+          const migrado = await estado();
+          mensagem = game.messages.contents.findLast(m => m.getFlag('${S}', 'migracao'));
+          const dados = mensagem?.getFlag('${S}', 'migracao');
+          const registro = { de: dados?.de, para: dados?.para, mudados: dados?.mudados, soMestres: Boolean(mensagem?.whisper.length) && mensagem.whisper.every(id => game.users.get(id).isGM) };
+          // De novo, desde a versão 0: os dados já estão no formato novo, e nada muda (sem perguntar).
+          await esperar(() => !pergunta());
+          const deNovo = await api.migrarMundo({ desde: 0 });
+          const semPergunta = !pergunta();
+          // Dados de uma versão mais nova que a do sistema: só o aviso.
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return {}; };
+          await game.settings.set('${S}', 'versaoDosDados', api.VERSAO_DOS_DADOS + 5);
+          await api.conferirMigracao();
+          const maisNova = { avisos: avisos.slice(), versao: versao() };
+          return { novo, antes, depois: { itens: depois.itens, botoes: depois.botoes, resultado: depois.resultado }, adiado, migrar: { itens: migrar.itens, resultado: migrar.resultado }, migrado, registro, deNovo, semPergunta, maisNova };
+        } finally {
+          delete ui.notifications.warn;
+          await game.settings.set('${S}', 'versaoDosDados', api.VERSAO_DOS_DADOS);
+          if (pacote) { await pacote.configure({ locked: false }); await pacote.deleteCompendium(); }
+          for (const documento of [cena, ator, capanga, audio, mensagem]) if (documento) await documento.delete();
+        }
+      })()`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const { novo, antes, adiado, migrado, registro, deNovo, maisNova } = info;
+      const lista = info.depois.itens.join(' | ');
+      const esperadoAntes = { ator: 1, bonus: 1, audio: 'fashionware', token: 1, capanga: 0, pacote: 1, trancado: true, versao: 0 };
+      const esperadoDepois = { ator: 0, bonus: 0, audio: 'cyberAudioSuite', token: 0, capanga: 0, pacote: 0, trancado: true, versao: novo.atual };
+      return [novo.gravada && !novo.pergunta && igual(antes, esperadoAntes) && igual(adiado, esperadoAntes) && info.depois.resultado.adiado === true && igual(info.depois.botoes, ['migrar', 'depois'])
+        && ['1 item do mundo', '1 ator do mundo', 'até 1 token não ligado', '1 documento do compêndio Migração (teste)', 'TeleOptics', 'Fashionware'].every(t => lista.includes(t))
+        && info.migrar.resultado.mudados === 4 && igual(migrado, esperadoDepois)
+        && registro.de === 0 && registro.para === novo.atual && registro.mudados?.length === 4 && registro.soMestres
+        && deNovo.mudados === 0 && !deNovo.adiado && info.semPergunta && maisNova.avisos.length === 1 && maisNova.avisos[0].includes('mais nova') && maisNova.versao === novo.atual + 5,
+        JSON.stringify(info)];
+    });
+
     await r.passo('personagem novo: HP 10 + 5 × (BODY + WILL) / 2, Humanidade EMP × 10, token ligado à ficha', async () => {
       const info = await edge.evaluate(`(async () => {
         const a = await Actor.implementation.create({ name: 'Atiradora', type: 'personagem', system: { atributos: { body: { valor: 6 }, will: { valor: 7 }, emp: { valor: 5 }, ref: { valor: 8 }, dex: { valor: 7 }, luck: { valor: 6 } }, hp: { value: 45 }, humanidade: { value: 50 }, pericias: { handgun: { nivel: 4 }, 'shoulder-arms': { nivel: 4 }, evasion: { nivel: 2 } } } });

@@ -27,11 +27,14 @@ de compêndio; entram só as partes do sistema.
 
 ### Fase 1: o mínimo para a campanha rodar no Foundry 14 (antes da virada)
 
-- [~] **C1. Migração de dados entre versões do sistema.** Em andamento: sessão Junin, 2026-10-12.
+- [x] **C1. Migração de dados entre versões do sistema.** Feito no ciclo 38 (sessão Junin, 2026-10-13).
   - **Por quê:** o CORE tem (`modules/system/migrate`, com a versão em `dataModelVersion`). Aqui não há nenhuma, e
     depois da virada uma mudança de campo estragaria os atores do mundo real.
   - **O quê:** a versão dos dados no mundo e os passos em ordem, no mestre ativo (atores, tokens, itens e compêndios
     do mundo), com o aviso e o backup antes; e o `migrateData` dos modelos para as mudanças simples.
+  - **Feito:** `scripts/migracao.mjs`, com os dois primeiros passos (o TeleOptics do ciclo 26 e o tipo de cyberware do
+    ciclo 7). O `migrateData` fica para quando um campo do modelo mudar de nome ou de formato: o começo do arquivo diz
+    quando usar cada um.
 - [x] **C2. Capanga (mook) como tipo de ator.** Feito nos ciclos 36 e 37 (sessão KouArt, 2026-10-12).
   - [x] **A ficha:** curta, como a do CORE (perícias com nível, armas, armadura, cyberware): uma página só, ciclo 36.
   - [x] **O token:** solto por padrão, com o próprio HP de cada capanga: ciclo 36. O nome mudado na ficha de um token vai

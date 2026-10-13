@@ -70,7 +70,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 4. **Faltam a NET, as regras do Mission Kit nos modos das armas de 2077 e o Black Chrome,** que a campanha usa. Os
    modos de 2077 entraram nos ciclos 17 e 18 pelo suplemento de fã; com o Kit, a wiki trocou essas regras, e os modos
    precisam segui-lo. As macros Ricochete e Ataque Smart do mundo do Foundry 12 dependem dos modos de 2077 do cpr-2077.
-5. **Sem migração de dados entre versões deste sistema** (ainda não há mundo real para migrar).
+5. ~~Sem migração de dados entre versões deste sistema~~: resolvido no ciclo 38 (o C1).
 
 ## Comparação com o CORE (2026-10-12)
 
@@ -1805,6 +1805,63 @@ a ficha inteira, sem editar.
 - **O C2 fecha aqui** (ciclos 36 e 37).
 - **Próximo:** o C4 (o Facedown: COOL + Reputação + 1d10, o `CPRFacedownRoll` do CORE), o próximo item livre do plano.
   O C1 está com a sessão Junin.
+
+### Ciclo 38 (2026-10-13): a migração dos dados entre versões do sistema (o C1; sessão Junin)
+
+O C1 do plano de paridade: o `dataModelVersion` e o MigrationRunner do CORE (`modules/system/migrate`).
+
+- **Feito:** `scripts/migracao.mjs`.
+  - **A versão dos dados:** fica na configuração escondida `versaoDosDados` (0, de antes da migração existir). A versão
+    do sistema é a do último passo (`VERSAO_DOS_DADOS`, hoje 2).
+  - **No `ready`, só o mestre ativo:**
+    - com os dados de uma versão anterior, confere os itens e os atores do mundo (com os itens deles), os tokens não
+      ligados e os compêndios do mundo (Actor e Item);
+    - se algum passo muda alguma coisa, pergunta: o que muda em cada grupo, os passos e o aviso do backup (Manage
+      Backups, na tela de configuração do Foundry). "Depois" deixa os dados como estão;
+    - se nada muda (o mundo novo), grava a versão sem perguntar;
+    - com os dados de uma versão mais nova, só avisa.
+  - **Como grava:**
+    - de cada documento, sai o plano: os dados de antes (`toObject`) contra os de depois dos passos, com o que muda nos
+      campos e, nas coleções embutidas (itens e efeitos), o que sai, o que entra e o que muda;
+    - o campo que some vai como o `_del` do Foundry 14 (o `-=` saiu);
+    - a ordem é a do CORE: itens do mundo, atores do mundo, os tokens não ligados e os compêndios. O plano de cada
+      documento sai de novo na hora de gravar, porque o token mostra o ator do mundo, que já pode ter mudado;
+    - o token que não guarda nada próprio (o delta vazio) é o ator do mundo e fica de fora;
+    - o compêndio trancado abre só durante a migração;
+    - os compêndios do sistema saem do build já no formato novo, e os dos módulos ficam como estão, como no CORE.
+  - **No fim:** grava a versão, avisa quantos documentos mudaram e deixa no chat, só para os mestres, os passos e o que
+    mudou (`flags.cpr-fieldbook.migracao`). Se um documento falha, para, avisa e não grava a versão: os passos só mexem
+    no formato antigo, então rodam de novo sem estragar nada.
+  - **Os dois primeiros passos:**
+    1. o TeleOptics do RED sem o +1 de sempre do CORE no tiro mirado e no tiro único, que o catálogo trouxe até o
+       ciclo 26 (vale a regra da wiki, pela distância). Só sai o efeito igual ao do CORE; o que o mestre mudou fica;
+    2. o tipo do cyberware que a ficha do item trocava por Fashionware até o ciclo 7 volta ao do catálogo (Cyberolho,
+       Cyberaudio, Interno e Externo, os quatro que a ficha não conhecia). O borgware e o Fashionware de verdade ficam.
+  - **Passo novo e `migrateData`:** o começo do arquivo explica. Renomear ou mudar o formato de um campo do modelo vai
+    no `migrateData` do modelo, que converte na leitura; os passos daqui são para o que precisa do catálogo, dos efeitos
+    ou de outro documento. A Role antiga (Face, Corpo) não precisa de passo: o C3 já a lê como a do RED
+    (`regras.acharRole`).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 61 de 65. São 5 testes novos em `tests/sistema/migracao.test.mjs`: os passos em ordem, cada um dos dois com os
+    dados de antes e de depois, o ator com os itens e a segunda vez sem mudança, e o plano (os campos, a lista, o
+    apagar e as coleções). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 67 de 72, cerca de 126 s, com os ciclos 33 a 37 da outra sessão já mesclados. O passo novo da migração passa.
+    É o mundo novo sem pergunta, mais um mundo da versão 0 com o TeleOptics antigo
+    num ator, num token não ligado e num compêndio trancado e um Cyberaudio que virou Fashionware. Ele confere a
+    pergunta, o "Depois", o "Migrar agora", o compêndio trancado de novo, o registro no chat, a segunda vez sem
+    pergunta e o aviso da versão mais nova. As 5 falhas são as conhecidas das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e o arquivo foi restaurado:
+    - G3 (8): o passo 1 sem efeito e tirando qualquer efeito, o passo 2 sem efeito e trocando todo Fashionware, o
+      `migrarDados` mudando a entrada, a diferença sem o apagar, os itens do ator sem os passos e o item novo sem `_id`
+      fora do plano;
+    - G4 (juntas, cada uma visível no estado do passo): os tokens fora da migração (o token ficou com o efeito), o
+      compêndio sem trancar de novo e o mundo novo sem gravar a versão.
+- **Achados do cenário** (no QUALITY_GATES):
+  - sem cena ativa, o Foundry 14 liga a primeira cena criada, e o canvas desenhando o token quebra o core;
+  - o token de personagem sai sempre ligado (`AtorCPR._preCreate`): o não ligado se pede no `getTokenDocument`.
+- **Próximo:** o próximo item livre do plano (o C4 ou outro que a outra sessão não tenha pegado).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

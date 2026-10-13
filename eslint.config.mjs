@@ -31,7 +31,7 @@ const regras = {
 
 const somenteLeitura = nomes => Object.fromEntries(nomes.map(nome => [nome, 'readonly']));
 const navegador = somenteLeitura(['window', 'document', 'console', 'fetch', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Event', 'HTMLElement', 'File', 'structuredClone', 'location', 'localStorage']);
-const foundry = somenteLeitura(['foundry', 'game', 'CONFIG', 'CONST', 'Hooks', 'ui', 'canvas', 'Actor', 'Item', 'ChatMessage', 'Roll', 'Scene', 'Combat', 'Combatant', 'User', 'Token', 'TokenDocument', 'ActiveEffect', 'fromUuid', 'fromUuidSync', 'Handlebars']);
+const foundry = somenteLeitura(['foundry', 'game', 'CONFIG', 'CONST', 'Hooks', 'ui', 'canvas', 'Actor', 'Item', 'ChatMessage', 'Roll', 'Scene', 'Combat', 'Combatant', 'User', 'Token', 'TokenDocument', 'ActiveEffect', 'fromUuid', 'fromUuidSync', 'Handlebars', '_del']);
 const node = somenteLeitura(['process', 'Buffer', 'require', 'module', '__dirname', '__filename', 'console', 'URL', 'setTimeout', 'clearTimeout', 'fetch', 'structuredClone', 'AbortSignal', 'WebSocket']);
 
 export default [

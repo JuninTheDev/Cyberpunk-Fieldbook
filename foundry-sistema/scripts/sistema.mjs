@@ -1,6 +1,6 @@
 // Ponto de entrada do sistema Cyberpunk RED — Fieldbook (Foundry 14): registra os modelos de dados, os documentos,
-// as fichas, o crítico do d10, as configurações, o combate, os turnos e a importação da wiki. A API fica em
-// game.system.api (macros e testes).
+// as fichas, o crítico do d10, as configurações, o combate, os turnos, a importação da wiki e a migração dos dados.
+// A API fica em game.system.api (macros e testes).
 import * as combate from './combate.mjs';
 import { caminho, SISTEMA } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
@@ -16,6 +16,7 @@ import { abrirExtrato } from './extrato.mjs';
 import { CombateCPR, CombatenteCPR } from './iniciativa.mjs';
 import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
+import * as migracao from './migracao.mjs';
 import * as regras from './regras.mjs';
 import { registrarCritico, rolarDano, testar } from './rolagens.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
@@ -47,11 +48,13 @@ Hooks.once('init', () => {
   });
 
   wiki.registrarWiki();
-  game.system.api = { combate, lesoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
+  game.system.api = { combate, lesoes, migracao, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
 });
 
 Hooks.once('ready', () => {
   combate.registrarCombate();
+  // A migração dos dados do mundo: só o mestre ativo, e só com os dados de uma versão anterior.
+  migracao.conferirMigracao().catch(erro => console.error(`${SISTEMA} | migração dos dados:`, erro));
 });
 
 Hooks.on('updateCombat', aoMudarTurno);

@@ -48,6 +48,8 @@ export function registrarConfiguracoes() {
     type: String, default: 'naoDispara', choices: { naoDispara: 'Não dispara', comum: 'Dispara como arma comum' }
   });
   registrar('cargaEsfria', { name: 'A carga Tech esfria uma rodada (2077)', hint: 'No combate, depois de uma carga (tiro ou rajada), a arma Tech só carrega de novo duas rodadas depois. Fora do combate, não conta.', type: Boolean, default: true });
+  // A versão dos dados do mundo (migracao.mjs), escondida, como o "dataModelVersion" do CORE. 0: de antes da migração.
+  game.settings.register(SISTEMA, 'versaoDosDados', { scope: 'world', config: false, type: Number, default: 0 });
   // Deste navegador, como o "invertRollCtrlFunction" do CORE.
   game.settings.register(SISTEMA, 'rolarDireto', {
     name: 'Rolar direto, sem a janela de rolagem', hint: 'Só neste navegador. Desligado (o padrão, como no CORE), o clique no atributo ou na perícia abre a janela de rolagem, e Ctrl + clique rola direto. Ligado, é o contrário. O teste direto usa a Sorte preparada na ficha e os situacionais ligados por padrão.',
