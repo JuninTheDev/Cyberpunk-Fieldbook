@@ -2346,6 +2346,52 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('capanga, a ficha limitada (como o CORE): o jogador só com a permissão Limitada vê a imagem, o nome e as notas, numa janela menor; com a de Observador, vê a ficha inteira, sem editar', async () => {
+      const nomes = ['Teste Limitado', 'Teste Observador'];
+      try {
+        await edge.evaluate(`(async () => {
+          const jogador = game.users.getName('Jogador');
+          const { LIMITED, OBSERVER } = CONST.DOCUMENT_OWNERSHIP_LEVELS;
+          const pistola = foundry.utils.deepClone((await game.system.api.wiki.carregarCatalogo())['core_weapons:heavy-pistol']);
+          pistola.system.equipada = true;
+          for (const [name, nivel] of [['Teste Limitado', LIMITED], ['Teste Observador', OBSERVER]]) {
+            await Actor.implementation.create({ name, type: 'capanga', ownership: { default: 0, [jogador.id]: nivel }, system: { notas: '<p>Capanga dos Tyger Claws. Fala pouco e atira primeiro.</p>', pericias: { handgun: { nivel: 6 } } }, items: [pistola] });
+          }
+          return true;
+        })()`);
+        const info = await jogador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const ver = async (nome, fechar = true) => {
+            await esperar(() => game.actors.getName(nome));
+            const ator = game.actors.getName(nome);
+            await ator.sheet.render({ force: true });
+            await esperar(() => ator.sheet.element?.querySelector('.capanga-limitado, .corpo-capanga'));
+            const f = ator.sheet.element;
+            const visto = {
+              limitado: Boolean(f.querySelector('.capanga-limitado')), corpo: Boolean(f.querySelector('.corpo-capanga')), nome: textoDe(f.querySelector('.capanga-limitado .nome')),
+              notas: textoDe(f.querySelector('.notas .texto')), campos: f.querySelector('.window-content').querySelectorAll('input:not([disabled]), select:not([disabled]), button:not([disabled])').length,
+              armas: f.querySelectorAll('table.lista.armas tbody tr').length, largura: ator.sheet.position.width
+            };
+            if (fechar) await ator.sheet.close();
+            return visto;
+          };
+          // A limitada fica aberta para a captura.
+          return { observador: await ver('Teste Observador'), limitado: await ver('Teste Limitado', false) };
+        })()`);
+        await jogador.sleep(400);
+        await jogador.shot('capanga-limitada');
+        const { limitado: l, observador: o } = info;
+        const notas = 'Capanga dos Tyger Claws. Fala pouco e atira primeiro.';
+        const ok = l.limitado && !l.corpo && l.nome === 'Teste Limitado' && l.notas === notas && l.campos === 0 && l.armas === 0 && l.largura === 560
+          && !o.limitado && o.corpo && o.notas === notas && o.armas === 1 && o.campos === 0 && o.largura === 980;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => { for (const a of game.actors.filter(a => ${JSON.stringify(nomes)}.includes(a.name))) await a.sheet?.close(); return true; })()`);
+        await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => ${JSON.stringify(nomes)}.includes(a.name))) await a.delete(); return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Solo com STATs, HP, perícias, Role, armas carregadas, armadura vestida, cyberware instalado e o inventário (equipamento e roupas, com o uso da wiki)', async () => {
       await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)})`);
       const info = await edge.evaluate(`(async () => {

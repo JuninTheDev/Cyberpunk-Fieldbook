@@ -32,7 +32,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | portadas nos ciclos 34 e 35, com as Roles do RED: pelo item de Role do CORE e pelo texto da wiki (a Barganha é a pechincha do Fixer; o Backup do Lawman, pela wiki). A Interface do Netrunner é o C5 |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
-| CORE | ficha de capanga (o mook) | portada no ciclo 36: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página e o item arrastado que entra equipado ou instalado. Falta a ficha limitada |
+| CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
@@ -106,7 +106,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
   | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | falta | P3 |
-  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga no ciclo 36 (menos a ficha limitada); o resto falta | P3 |
+  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
 
@@ -1776,6 +1776,35 @@ arrastado que já entra em uso.
       não vale; e o painel geral do capanga com as armas.
 - **Próximo:** o C2, parte 2: a ficha limitada (quem só tem a permissão Limitada vê a imagem, o nome e as notas, como no
   CORE).
+- **Commit:** `461f219`.
+
+### Ciclo 37 (2026-10-12): a ficha limitada do capanga (o C2, parte 2; sessão KouArt)
+
+O `cpr-mook-sheet-limited.hbs` do CORE: o jogador que o mestre deixou só com a permissão Limitada vê o capanga sem ver
+os números. No Foundry 14, a permissão mínima para abrir uma ficha é a Limitada (`viewPermission`), e antes ela mostrava
+a ficha inteira, sem editar.
+
+- **Implementado:**
+  - **na ficha do capanga:** com só a permissão Limitada, a ficha troca as partes por uma (`templates/capanga/limitado.hbs`):
+    o retrato, o nome (o do token, na ficha de um token) e as notas, numa janela de 560 px, da altura do que mostra. O
+    mestre vê sempre a ficha inteira, e o Observador também, sem editar (o Foundry desliga os campos e os botões);
+  - **o CSS** da ficha limitada.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 56 de 60 (as 4 falhas são as das armas de 2077, QUALITY_GATES);
+  - G4: 66 de 71, cerca de 108 s. Um passo novo, no navegador do jogador, com dois capangas com uma pistola e notas:
+    - com a permissão Limitada: só a imagem, o nome e as notas, nenhum campo, nenhuma arma, 560 px de largura;
+    - com a de Observador: a ficha inteira (as notas e a arma), com todos os campos e botões desligados, 980 px;
+    - a captura `v14-jogador-capanga-limitada`.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o passo novo, e o arquivo foi restaurado (conferido pelo md5): a ficha limitada
+    que nunca aparece; a ficha limitada para todo jogador, até o Observador; e a janela limitada do tamanho da ficha
+    inteira.
+- **O C2 fecha aqui** (ciclos 36 e 37).
+- **Próximo:** o C4 (o Facedown: COOL + Reputação + 1d10, o `CPRFacedownRoll` do CORE), o próximo item livre do plano.
+  O C1 está com a sessão Junin.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

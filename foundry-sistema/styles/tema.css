@@ -310,6 +310,10 @@
 .cpr-fieldbook.ficha-capanga .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }
 .cpr-fieldbook.ficha-capanga .indicador b { min-width: 2.6ch; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); }
 .cpr-fieldbook.ficha-capanga .indicador i { margin-top: 4px; }
+/* A ficha limitada: a imagem, o nome e as notas. */
+.cpr-fieldbook.ficha-capanga .capanga-limitado { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.cpr-fieldbook.ficha-capanga .capanga-limitado .retrato { width: 120px; height: 136px; cursor: default; }
+.cpr-fieldbook.ficha-capanga .capanga-limitado .nome-linha .nome { font-size: 34px; border-bottom: none; }
 
 /* ---------- Janela estreita ---------- */
 @container (max-width: 1020px) {

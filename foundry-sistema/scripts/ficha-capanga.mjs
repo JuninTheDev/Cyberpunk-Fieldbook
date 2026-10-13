@@ -2,6 +2,7 @@
 // iniciativa e a esquiva; se é a ficha do ator ou a de um token), o painel geral da ficha do personagem (atributos,
 // vitais, perícias, armadura vestida, cyberware instalado e lesões), a tabela de armas com os ataques, os itens e as notas.
 // As ações são as da ficha do personagem. Arrastar um item para a ficha já equipa ou instala (regras.AO_RECEBER_CAPANGA).
+// Quem só tem a permissão Limitada vê a imagem, o nome e as notas, como no CORE.
 import { caminho, USOS } from './config.mjs';
 import { bloco, FichaPersonagem } from './ficha-personagem.mjs';
 import { AO_RECEBER_CAPANGA } from './regras.mjs';
@@ -22,6 +23,19 @@ export class FichaCapanga extends FichaPersonagem {
 
   // Sem abas: tudo numa página.
   static TABS = {};
+
+  // A ficha limitada (o cpr-mook-sheet-limited.hbs do CORE): o jogador que o mestre deixou só com a permissão Limitada vê
+  // a imagem, o nome e as notas, numa janela menor. O mestre vê sempre a ficha inteira.
+  static #limitado = ator => !game.user.isGM && Boolean(ator?.limited);
+  _initializeApplicationOptions(options) {
+    const opcoes = super._initializeApplicationOptions(options);
+    if (FichaCapanga.#limitado(options.document)) Object.assign(opcoes.position, { width: 560, height: 'auto' });
+    return opcoes;
+  }
+  _configureRenderParts(options) {
+    if (!FichaCapanga.#limitado(this.actor)) return super._configureRenderParts(options);
+    return { limitado: { template: modelo('limitado'), templates: [], scrollable: [''] } };
+  }
 
   async _prepareContext(options) {
     const contexto = await super._prepareContext(options);
