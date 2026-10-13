@@ -15,7 +15,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Combate:** as armas com todos os modos de ataque, a armadura vestida, a Iniciativa, a esquiva, o Death Save e a munição.
   - **Equipamento:** os Eurodólares, com as últimas mudanças do extrato; armas, armaduras, munição, equipamento, roupas, drogas, upgrades e veículos.
   - **Cyberware:** a Humanidade e cada peça, com instalar e tirar.
-  - **Role:** a Role da wiki (as 10 do RED, desde o Mission Kit), com a habilidade e o resumo, e o que ela soma nas perícias: o Moto do Nomad (o Rank nas seis perícias de veículo). A ficha antiga com Face ou Corpo, as Roles do suplemento de fã que saíram, lê a do RED de onde vinham (Rockerboy e Exec), como a wiki. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora. A ficha confere os pontos com o Rank: o total (o Tech ganha 2 por Rank; o Solo e o Medtech, 1) e o máximo em cada especialidade (o Rank). Ela avisa o que passou e o que sobra, sem travar.
+  - **Role:** a Role da wiki (as 10 do RED, desde o Mission Kit), com a habilidade e o resumo, e o que ela soma nas perícias: o Moto do Nomad (o Rank nas seis perícias de veículo). A ficha antiga com Face ou Corpo, as Roles do suplemento de fã que saíram, lê a do RED de onde vinham (Rockerboy e Exec), como a wiki. Os botões da habilidade de Role rolam pela janela de rolagem (Ctrl + clique, direto): o Impacto Carismático do Rockerboy e a Credibilidade da Media (Rank + 1d10), a pechincha do Fixer (COOL + Negociação + Operator + 1d10) e o Backup do Lawman (1d10 até o Rank; vindo, o d6 diz em quantas rodadas chega). Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora. A ficha confere os pontos com o Rank: o total (o Tech ganha 2 por Rank; o Solo e o Medtech, 1) e o máximo em cada especialidade (o Rank). Ela avisa o que passou e o que sobra, sem travar.
   - **NET:** o cyberdeck e os programas (as regras da NET ainda não).
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
@@ -170,9 +170,9 @@ E a do navegador de cada um:
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
   flag `arma2077`.
 - **O cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm).
-- **As rolagens das Roles do RED** (o C3 do ROADMAP): o Impacto Carismático, a Credibilidade, o Backup, a pechincha do
-  Fixer, as Expertises do Tech e a Cirurgia e a Tecnologia Médica do Medtech. Os opcionais da wiki (o Investigator do
-  Lawman, o desconto do clã do Nomad) ficam com o mestre.
+- **As rolagens de Role do Tech e do Medtech** (o C3 do ROADMAP): as Expertises do Tech e a Cirurgia e a Tecnologia
+  Médica do Medtech. A Interface do Netrunner é o C5. Os opcionais da wiki (o Investigator do Lawman, o desconto do clã do
+  Nomad) ficam com o mestre.
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
@@ -235,7 +235,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - a Sorte preparada na ficha e o visual dos cartões do chat;
   - a janela de rolagem do jogador, no computador dele: a esquiva com o modificador do mestre e a Sorte, a janela que fecha quando o mestre responde por ele no fim do prazo, o dano com o modificador e o Death Save pedido pelo mestre;
   - a janela de rolagem: as partes, os situacionais (do cyberware e das lesões), os modificadores comuns, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste; cancelar não rola; Ctrl + clique e o "Rolar direto"; no ataque, a luneta marcada a 51 m ou mais e desmarcada perto, cancelar sem gastar bala e o que se marca entrando no ataque; na iniciativa, o Sandevistan (+3) pela janela e direto;
-  - as Roles do RED: o Moto do Nomad importado da wiki de teste; um personagem antigo com a Role Face entra como Rockerboy pela importação e pela migração, e a ficha com "Face" lê o Rockerboy; na aba Role, o Impacto Carismático sem bônus e o Moto do Nomad no total da ficha;
+  - as Roles do RED: as rolagens de Role pela aba Role (o Impacto Carismático pela janela, a pechincha com Ctrl + clique, o Backup que vem e o que não vem); o Moto do Nomad importado da wiki de teste; um personagem antigo com a Role Face entra como Rockerboy pela importação e pela migração, e a ficha com "Face" lê o Rockerboy; na aba Role, o Impacto Carismático sem bônus e o Moto do Nomad no total da ficha;
   - o extrato: somar, subtrair e definir com o motivo, a mudança direta, o saldo negativo com o aviso, o mestre tirando linhas (só a linha ou desfazendo a mudança) e as linhas da importação, da migração e da loja;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 

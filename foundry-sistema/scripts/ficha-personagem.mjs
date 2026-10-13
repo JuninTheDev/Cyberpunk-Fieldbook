@@ -8,7 +8,7 @@ import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
-import { pontosDeRole } from './regras.mjs';
+import { pontosDeRole, ROLAGENS_DE_ROLE } from './regras.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -31,6 +31,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     actions: {
       rolarAtributo: FichaPersonagem.#rolarAtributo,
       rolarPericia: FichaPersonagem.#rolarPericia,
+      rolarRole: FichaPersonagem.#rolarRole,
       alternarPericias: FichaPersonagem.#alternarPericias,
       novaPericia: FichaPersonagem.#novaPericia,
       tirarPericia: FichaPersonagem.#tirarPericia,
@@ -212,7 +213,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         id: u.id, nome: u.name, img: u.img,
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
-      roleDaWiki: role, bonusDaRole,
+      roleDaWiki: role, bonusDaRole, rolagensDaRole: (role && ROLAGENS_DE_ROLE[role.id]) ?? [],
       especialidades: especialidades && this.#especialidades(especialidades, role, efeitoDoSolo),
       outrasHabilidades: Object.entries(s.role.habilidades).filter(([nome]) => !daEspecialidade.has(nome)).map(([nome, pontos]) => ({ nome, pontos })),
       lifepath: LIFEPATH.map(({ chave, rotulo }) => ({ chave, rotulo, valor: s.lifepath[chave], largo: ['amigos', 'inimigos', 'amores', 'role'].includes(chave), linhas: chave === 'role' ? 4 : 2 })),
@@ -245,6 +246,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo, { perguntar: comJanela(evento) }); }
   static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia, { perguntar: comJanela(evento) }); }
+  static #rolarRole(evento, alvo) { return this.actor.rolarRole(alvo.dataset.rolagem, { perguntar: comJanela(evento) }); }
   static #alternarPericias() {
     this.#todasAsPericias = !(this.#todasAsPericias ?? !Object.values(this.actor.system.pericias).some(p => p.nivel > 0));
     return this.render();

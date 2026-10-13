@@ -206,6 +206,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 - **Netrunner de 2077: quais testes são "técnicos"?** Saiu no ciclo 33: com o Mission Kit, a wiki levou essa regra para
   "Netrunning de 2077", que depende da rede de três camadas (o C9 do ROADMAP). A pergunta volta lá.
 
+- **O Backup do Lawman: o "6" é o do d6.** A wiki: "rola 1d10 e obtém resposta se o resultado for igual ou inferior ao
+  Rank. Um d6 determina em quantas rodadas chega o grupo; um 6 chama uma força um nível acima (no Rank 10, dois grupos)".
+  O único dado antes do "um 6" que pode dar 6 é o d6, e o sistema lê assim: o grupo chega em 6 rodadas e é um nível
+  acima. O nível (composição, equipamento, proteção) fica com o mestre, porque a wiki não traz a tabela. O item de Role do
+  CORE não rola o Backup; aqui ele rola pelo texto da wiki.
+
 - **Os opcionais de Role da wiki: com o mestre.** Com as Roles do RED, a wiki deixa como opcionais do suplemento de fã o
   Investigator do Lawman (no lugar do Backup) e o desconto do clã do Nomad. O sistema não os automatiza, porque a mesa não
   disse se usa. Até o ciclo 32, o Investigator aparecia como situacional (desligado) na janela de rolagem de todo Lawman.
@@ -1613,6 +1619,45 @@ RED", achado na integração da revisão (ciclo 32): a wiki do master voltou às
   `regras.acharRole` dá a Role certa.
 - **Próximo:** o C3, parte 2: as rolagens de Role do RED, pelo item de Role do CORE e pelo texto da wiki (o Impacto
   Carismático, a Credibilidade, o Backup, a pechincha do Fixer); depois, a parte 3, as do Tech e do Medtech.
+- **Commit:** `0686760`.
+
+### Ciclo 34 (2026-10-12): as rolagens de Role do RED (o C3, parte 2; sessão KouArt)
+
+As habilidades de Role que rolam, pelo item de Role do CORE (`_createRoleRoll` nas habilidades com `hasRoll`) e pelo
+texto da wiki ("As dez Roles do RED", system-catalog.js).
+
+- **Implementado:**
+  - **`regras.ROLAGENS_DE_ROLE`:**
+    - o Impacto Carismático do Rockerboy: Rank + 1d10, com a DV da wiki no cartão (8 para uma pessoa, 10 para até seis,
+      12 para um grupo maior);
+    - a Credibilidade da Media: Rank + 1d10 (os rumores);
+    - a pechincha do Fixer: COOL + Negociação + Operator + 1d10, teste enfrentado (o "Haggle" do item do CORE);
+    - o Backup do Lawman: 1d10 até o Rank (`regras.backup`). O item do CORE não rola o Backup; a wiki diz como;
+  - **no ator:** `rolarRole(id)`, como o `_createRoleRoll` do CORE: o Rank, as penalidades de ferimento e os
+    situacionais de todas as ações (e os da Negociação, na pechincha), pela janela de rolagem, com o modificador do mestre
+    e a Sorte. O `rolarBackup()` rola o d10 e, vindo, o d6 das rodadas, e o cartão diz quem responde (a borda fica
+    vermelha quando ninguém vem);
+  - **na ficha:** os botões da habilidade na aba Role, com a fórmula. O clique abre a janela, e Ctrl + clique rola direto,
+    como nas perícias. O Solo, o Exec e o Nomad não rolam a habilidade de Role. A Interface é o C5; o Tech e o Medtech, a
+    parte 3.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 54 de 58. Um teste novo: as quatro rolagens contra o texto da wiki (as fórmulas, a DV do Impacto, a Negociação de
+    COOL na pechincha) e o Backup (vem com o d10 até o Rank, o 6 do d6, os dois grupos do Rank 10). As 4 falhas são as das
+    armas de 2077 (QUALITY_GATES);
+  - G4: 63 de 68, cerca de 107 s. Um passo novo, pela aba Role de um personagem de teste:
+    - o Rockerboy rola o Impacto Carismático pela janela: Rank 4 + d10 5 + 2 do mestre = 11, com a DV no cartão;
+    - o Fixer pechincha com Ctrl + clique, sem janela: COOL 8 + Negociação 3 + Operator 4 + d10 7 = 22;
+    - o Backup do Lawman vem (d10 3 até o Rank 4, e o d6 5: "Chega em 5 rodadas") e, depois, não vem (d10 6);
+    - o Solo não tem botão.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o Backup só com o d10 menor que o Rank, e a pechincha com outra perícia;
+    - G4: a pechincha sem o Rank de Operator (deu 18), e a rolagem de Role sem a janela.
+- **Próximo:** o C3, parte 3: as rolagens do Tech (as quatro Expertises) e do Medtech (a Cirurgia e a Tecnologia Médica,
+  pelas especialidades).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

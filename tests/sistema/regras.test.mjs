@@ -700,6 +700,27 @@ test('As Roles do RED (wiki, desde o Mission Kit): as 10 do criador, sem especia
   assert.deepEqual(['Nomad', 'nomad', ' Rockerboy ', 'Face', 'face', 'Corpo', 'Exec', 'Cowboy', '', null].map(id), ['nomad', 'nomad', 'rockerboy', 'rockerboy', 'rockerboy', 'exec', 'exec', null, null, null]);
 });
 
+test('Rolagens de Role do RED (wiki, "As dez Roles do RED"; o item de Role do CORE): o Impacto Carismático e a Credibilidade (Rank + 1d10), a pechincha do Fixer (COOL + Negociação + Operator + 1d10) e o Backup do Lawman (1d10 até o Rank, e o d6 das rodadas)', () => {
+  const catalogoDaWiki = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  assert.match(catalogoDaWiki, /<b>Impacto Carismático:<\/b>[^']*Rolagem: Rank \+ 1d10; DV 8 para uma pessoa, 10 para até seis, 12 para um grupo maior\./);
+  assert.match(catalogoDaWiki, /<b>Credibility:<\/b>[^']*Rank \+ 1d10, pelo menos duas vezes por semana/);
+  assert.match(catalogoDaWiki, /Haggling é um teste enfrentado de COOL \+ Trading \+ Operator \+ 1d10\./);
+  assert.match(catalogoDaWiki, /<b>Backup \/ Reforços:<\/b> como ação, rola 1d10 e obtém resposta se o resultado for igual ou inferior ao Rank\. Um d6 determina em quantas rodadas chega o grupo; um 6 chama uma força um nível acima \(no Rank 10, dois grupos\)\./);
+  assert.deepEqual(Object.keys(regras.ROLAGENS_DE_ROLE).sort(), ['fixer', 'lawman', 'media', 'rockerboy']);
+  assert.deepEqual(Object.values(regras.ROLAGENS_DE_ROLE).flat().map(r => [r.id, r.formula]), [
+    ['impacto-carismatico', 'Rank + 1d10'], ['credibilidade', 'Rank + 1d10'], ['pechinchar', 'COOL + Negociação + Operator + 1d10'], ['backup', '1d10 até o Rank']
+  ]);
+  for (const id of Object.keys(regras.ROLAGENS_DE_ROLE)) assert.ok(ROLES.some(role => role.id === id), id);
+  // A pechincha usa Trading (Negociação aqui), que é de COOL.
+  const trading = PERICIAS.find(p => p.id === regras.ROLAGENS_DE_ROLE.fixer[0].pericia);
+  assert.deepEqual([trading.en, trading.nome, trading.atributo], ['Trading', 'Negociação', 'cool']);
+  // O Backup: vem com o d10 até o Rank; o 6 do d6 chama uma força um nível acima; no Rank 10, dois grupos.
+  assert.deepEqual(regras.backup({ d10: 3, rank: 4, d6: 5 }), { veio: true, rodadas: 5, acima: false, grupos: 1 });
+  assert.deepEqual(regras.backup({ d10: 4, rank: 4, d6: 6 }), { veio: true, rodadas: 6, acima: true, grupos: 1 });
+  assert.deepEqual(regras.backup({ d10: 5, rank: 4 }), { veio: false, rodadas: null, acima: false, grupos: 0 });
+  assert.deepEqual(regras.backup({ d10: 10, rank: 10, d6: 2 }), { veio: true, rodadas: 2, acima: false, grupos: 2 });
+});
+
 test('Janela de rolagem: os modificadores comuns são os da tabela da wiki (RED p. 130), com o valor de cada um', () => {
   const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
   for (const { rotulo, valor } of regras.MODIFICADORES_COMUNS.filter(m => m.valor < 0)) assert.ok(regrasDaWiki.includes(`['${rotulo}', '−${Math.abs(valor)}']`), rotulo);

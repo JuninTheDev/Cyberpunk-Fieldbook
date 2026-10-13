@@ -4,6 +4,11 @@
     {{#if roleDaWiki}}
     <p class="role-nome">{{roleDaWiki.nome}} <small>// {{roleDaWiki.habilidade}}{{#if (ne roleDaWiki.habilidade roleDaWiki.en)}} ({{roleDaWiki.en}}){{/if}}</small></p>
     <p class="texto">{{roleDaWiki.resumo}}</p>
+    {{#if rolagensDaRole.length}}
+    <div class="rolagens-role">
+      {{#each rolagensDaRole}}<button type="button" class="acao" data-action="rolarRole" data-rolagem="{{id}}" data-tooltip="{{dica}}">{{rotulo}} <small>{{formula}}</small></button>{{/each}}
+    </div>
+    {{/if}}
     {{else}}
     <div class="caixa-vazia">{{#if sistema.role.nome}}A ROLE “{{sistema.role.nome}}” NÃO ESTÁ ENTRE AS DA WIKI{{else}}ESCOLHA A ROLE NO CABEÇALHO{{/if}}</div>
     {{/if}}

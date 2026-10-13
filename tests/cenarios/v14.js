@@ -2515,6 +2515,82 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('rolagens de Role do RED pela aba Role: o Impacto Carismático do Rockerboy (Rank + 1d10, pela janela, com o modificador do mestre); a pechincha do Fixer (COOL + Negociação + Operator + 1d10, com Ctrl + clique); o Backup do Lawman (1d10 até o Rank: vem, com o d6 das rodadas, ou ninguém responde); o Solo não tem rolagem', async () => {
+      // d10 5: 4 + 5 + 2 (mestre) = 11. d10 7: COOL 8 + Negociação 3 + Operator 4 + 7 = 22. Backup: d10 3 até o Rank 4, e o
+      // d6 5; depois o d10 6, maior que o Rank.
+      await fixar(edge, [[5, 10], [7, 10], [3, 10], [5, 6], [6, 10]]);
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const a = await Actor.implementation.create({ name: 'Teste Roles', type: 'personagem', system: { atributos: { cool: { valor: 8 } }, pericias: { trading: { nivel: 3 } }, role: { nome: 'Rockerboy', rank: 4 } } });
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('role', 'primary');
+          const f = () => a.sheet.element;
+          const botoes = () => [...(f()?.querySelectorAll('.tab.role .rolagens-role [data-action="rolarRole"]') ?? [])].map(b => b.dataset.rolagem);
+          const botao = id => f().querySelector('.tab.role .rolagens-role [data-rolagem="' + id + '"]');
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const html = m => new DOMParser().parseFromString(m.content, 'text/html');
+          const partesDa = m => [...html(m).querySelectorAll('.partes li')].map(textoDe);
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          await esperar(() => botoes().length);
+
+          // 1. Rockerboy: o clique abre a janela, com o Rank; +2 do mestre.
+          const rockerboy = { botoes: botoes(), texto: textoDe(botao('impacto-carismatico')) };
+          botao('impacto-carismatico').click();
+          await esperar(() => janela()?.querySelector('[name="outro"]'));
+          rockerboy.titulo = textoDe(janela().querySelector('.window-title'));
+          rockerboy.partes = [...janela().querySelectorAll('.partes li')].map(textoDe);
+          const outro = janela().querySelector('[name="outro"]');
+          outro.value = 2;
+          outro.dispatchEvent(new Event('input', { bubbles: true }));
+          let antes = game.messages.size;
+          janela().querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          let m = game.messages.contents.at(-1);
+          Object.assign(rockerboy, { total: m.rolls[0].total, cartao: partesDa(m), sabor: textoDe(html(m).querySelector('.sabor')) });
+
+          // 2. Fixer: Ctrl + clique rola direto.
+          await a.update({ 'system.role.nome': 'Fixer' });
+          await esperar(() => botoes().join() === 'pechinchar');
+          antes = game.messages.size;
+          ctrl(botao('pechinchar'));
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const fixer = { total: m.rolls[0].total, cartao: partesDa(m), janela: Boolean(janela()) };
+
+          // 3. Lawman: o Backup, que vem e que não vem.
+          await a.update({ 'system.role.nome': 'Lawman' });
+          await esperar(() => botoes().join() === 'backup');
+          const lerBackup = msg => ({ flag: msg.getFlag('${S}', 'backup'), texto: textoDe(html(msg).querySelector('.cartao')), falhou: html(msg).querySelector('.cartao').classList.contains('falhou') });
+          antes = game.messages.size;
+          botao('backup').click();
+          await esperar(() => game.messages.size > antes);
+          const veio = lerBackup(game.messages.contents.at(-1));
+          antes = game.messages.size;
+          botao('backup').click();
+          await esperar(() => game.messages.size > antes);
+          const naoVeio = lerBackup(game.messages.contents.at(-1));
+
+          // 4. Solo: sem rolagem de Role.
+          await a.update({ 'system.role.nome': 'Solo' });
+          await esperar(() => !f().querySelector('.tab.role .rolagens-role'));
+          return { rockerboy, fixer, veio, naoVeio, solo: botoes() };
+        })()`);
+        const { rockerboy, fixer, veio, naoVeio } = info;
+        const ok = rockerboy.botoes.join() === 'impacto-carismatico' && rockerboy.texto === 'Impacto Carismático Rank + 1d10'
+          && rockerboy.titulo === 'Teste: Impacto Carismático' && rockerboy.partes.join() === 'Impacto Carismático +4,1d10' && rockerboy.total === 11
+          && rockerboy.cartao.join() === '1d10,Impacto Carismático +4,Modificador do mestre +2' && rockerboy.sabor === 'DV 8 para uma pessoa, 10 para até seis, 12 para um grupo maior.'
+          && !fixer.janela && fixer.total === 22 && fixer.cartao.join() === '1d10,COOL +8,Negociação +3,Operator +4'
+          && veio.flag?.veio && veio.flag.d10 === 3 && veio.flag.d6 === 5 && veio.flag.rodadas === 5 && !veio.falhou && /1d10 = 3: o reforço vem\. Chega em 5 rodadas \(1d6\)\./.test(veio.texto)
+          && naoVeio.flag?.veio === false && naoVeio.flag.d10 === 6 && naoVeio.flag.d6 === null && naoVeio.falhou && /1d10 = 6: maior que o Rank, ninguém responde\./.test(naoVeio.texto)
+          && info.solo.length === 0;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => a.name === 'Teste Roles')) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

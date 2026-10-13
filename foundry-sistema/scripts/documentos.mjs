@@ -1,10 +1,11 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
 import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
+import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  aplicarDano, deLonge, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+  aplicarDano, backup, deLonge, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
@@ -148,6 +149,46 @@ export class AtorCPR extends Actor {
     return this.#testarComJanela({
       rotulo: this.system.pericia(id).nome, perguntar, partes: situacionais => this.partesDaPericia(id, { situacionais }).partes, situacionais: () => this.situacionaisDoTeste(id)
     }, opcoes);
+  }
+
+  // As rolagens de habilidade de Role do RED (regras.ROLAGENS_DE_ROLE), como o _createRoleRoll do CORE: o Rank da
+  // habilidade (na pechincha do Fixer, com COOL e Negociação), as penalidades e os situacionais de todas as ações (e os da
+  // perícia), com a janela de rolagem. O Backup do Lawman é outra rolagem (rolarBackup). Sem a rolagem nesta Role: null.
+  rolagemDeRole(id) {
+    const role = roleDaWiki(this.system.role.nome);
+    return (role && ROLAGENS_DE_ROLE[role.id]?.find(rolagem => rolagem.id === id)) || null;
+  }
+  partesDaRole(id, { situacionais = null } = {}) {
+    const rolagem = this.rolagemDeRole(id);
+    const rank = { rotulo: rolagem.habilidade ?? rolagem.rotulo, valor: this.system.role.rank };
+    if (!rolagem.pericia) return [rank, ...this.#penalidade(), ...this.#situacionais(situacionais)];
+    // Atributo e perícia (e o bônus dela), o Rank, as penalidades e os situacionais.
+    const { partes } = this.partesDaPericia(rolagem.pericia, { situacionais });
+    partes.splice(2, 0, rank);
+    return partes;
+  }
+  rolarRole(id, { perguntar = false, ...opcoes } = {}) {
+    const rolagem = this.rolagemDeRole(id);
+    if (!rolagem) return null;
+    if (rolagem.backup) return this.rolarBackup(opcoes);
+    return this.#testarComJanela({
+      rotulo: rolagem.rotulo, perguntar, partes: situacionais => this.partesDaRole(id, { situacionais }), situacionais: () => this.situacionaisDoTeste(rolagem.pericia ?? null)
+    }, { sabor: rolagem.dica, ...opcoes });
+  }
+
+  // O Backup do Lawman (regras.backup): 1d10 contra o Rank e, vindo, o d6 das rodadas.
+  async rolarBackup({ falar = true } = {}) {
+    const rank = this.system.role.rank;
+    const d10 = await new Roll('1d10').evaluate();
+    const d6 = d10.total <= rank ? await new Roll('1d6').evaluate() : null;
+    const resultado = { ...backup({ d10: d10.total, rank, d6: d6?.total ?? null }), d10: d10.total, d6: d6?.total ?? null, rank };
+    if (falar) {
+      const rolls = d6 ? [d10, d6] : [d10];
+      const dados = (await Promise.all(rolls.map(roll => roll.render()))).join('');
+      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/backup.hbs'), { nome: this.name, ...resultado, dados });
+      await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls, flags: { [SISTEMA]: { backup: resultado } } });
+    }
+    return resultado;
   }
 
   // Death Save (p. 186): 1d10 + penalidades contra BODY, sem crítico. Passou: a próxima fica 1 mais difícil. Com a janela

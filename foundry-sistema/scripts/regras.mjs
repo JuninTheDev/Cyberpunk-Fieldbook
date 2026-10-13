@@ -77,6 +77,29 @@ export function bonusDeRole({ roleId, rank }) {
   return Object.fromEntries(PERICIAS_DO_MOTO.map(id => [id, { rotulo: 'Moto', valor }]));
 }
 
+// As rolagens de habilidade de Role do RED, como o item de Role do CORE (_createRoleRoll, nas habilidades com hasRoll) e
+// o texto da wiki (system-catalog.js, "As dez Roles do RED"):
+// - Rockerboy, Impacto Carismático: "Rolagem: Rank + 1d10; DV 8 para uma pessoa, 10 para até seis, 12 para um grupo
+//   maior";
+// - Media, Credibilidade: os rumores, "Rank + 1d10, pelo menos duas vezes por semana";
+// - Fixer, Operator: "Haggling é um teste enfrentado de COOL + Trading + Operator + 1d10" (o "Haggle" do item do CORE);
+// - Lawman, Backup: "rola 1d10 e obtém resposta se o resultado for igual ou inferior ao Rank" (regras.backup). O item do
+//   CORE não rola o Backup; a wiki diz como.
+// O Netrunner (a Interface) fica no C5 do ROADMAP; o Tech e o Medtech, na parte 3 do C3. O Solo, o Exec e o Nomad não
+// rolam a habilidade de Role.
+export const ROLAGENS_DE_ROLE = {
+  rockerboy: [{ id: 'impacto-carismatico', rotulo: 'Impacto Carismático', formula: 'Rank + 1d10', dica: 'DV 8 para uma pessoa, 10 para até seis, 12 para um grupo maior.' }],
+  media: [{ id: 'credibilidade', rotulo: 'Credibilidade', formula: 'Rank + 1d10', dica: 'Os rumores: pelo menos duas vezes por semana, se não estiver fora do radar.' }],
+  fixer: [{ id: 'pechinchar', rotulo: 'Pechinchar', formula: 'COOL + Negociação + Operator + 1d10', habilidade: 'Operator', pericia: 'trading', dica: 'Teste enfrentado.' }],
+  lawman: [{ id: 'backup', rotulo: 'Backup', formula: '1d10 até o Rank', backup: true, dica: 'Vem se o d10 for igual ou menor que o Rank; um d6 diz em quantas rodadas.' }]
+};
+// O Backup do Lawman (wiki): "rola 1d10 e obtém resposta se o resultado for igual ou inferior ao Rank. Um d6 determina em
+// quantas rodadas chega o grupo; um 6 chama uma força um nível acima (no Rank 10, dois grupos)". O 6 é o do d6.
+export function backup({ d10, rank, d6 = null }) {
+  const veio = Number(d10) <= Number(rank);
+  return { veio, rodadas: veio ? d6 : null, acima: veio && d6 === 6, grupos: veio ? (Number(rank) >= 10 ? 2 : 1) : 0 };
+}
+
 // Os modificadores comuns do livro (RED p. 130), pela tabela "Modificadores comuns" da wiki e pelos bônus de "Bônus e
 // novas tentativas" (system-rules.js). A janela de rolagem oferece todos em todo teste.
 export const MODIFICADORES_COMUNS = [

@@ -1,0 +1,8 @@
+<div class="cpr-fieldbook cartao teste backup {{#unless veio}}falhou{{/unless}}">
+  <header><h3>Backup de {{nome}}</h3><span class="sabor">1d10 até o Rank {{rank}}</span></header>
+  <p>1d10 = <b>{{d10}}</b>{{#if veio}}: o reforço vem.{{else}}: maior que o Rank, ninguém responde.{{/if}}</p>
+  {{#if veio}}
+  <p class="resultado">Chega em <b>{{rodadas}}</b> rodada{{#unless (eq rodadas 1)}}s{{/unless}} (1d6){{#if (gt grupos 1)}}, com dois grupos (Rank 10){{/if}}.{{#if acima}} Um 6: vem uma força um nível acima.{{/if}}</p>
+  {{/if}}
+  {{{dados}}}
+</div>

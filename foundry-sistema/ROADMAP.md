@@ -39,12 +39,12 @@ de compêndio; entram só as partes do sistema.
   - **O combate:** igual ao do personagem.
 - [~] **C3. As Roles do RED e as rolagens delas.** Em andamento: sessão KouArt, 2026-10-12.
   - [x] As 10 Roles da wiki (o P0 "As Roles pelo RED"): ciclo 33.
-  - A rolagem de cada habilidade, pelo item de Role do CORE (`_createRoleRoll`, `getRoleMods`):
-    - Impacto Carismático (Rockerboy), Credibilidade (Media), Operator (Fixer), Teamwork (Exec), Backup (Lawman) e
-      Moto (Nomad);
-    - Maker (Tech): Field, Upgrade, Fabrication e Invention Expertise;
-    - Medicine (Medtech): Cirurgia, Farmacêutica e Criossistemas.
-  - Os bônus situacionais na janela de rolagem.
+  - A rolagem de cada habilidade, pelo item de Role do CORE (`_createRoleRoll`, `getRoleMods`) e pelo texto da wiki:
+    - [x] Impacto Carismático (Rockerboy), Credibilidade (Media), a pechincha do Operator (Fixer) e o Backup (Lawman):
+      ciclo 34. O Teamwork (Exec) e o Moto (Nomad) não rolam: o Moto é o bônus nas perícias de veículo (ciclo 33);
+    - [ ] Maker (Tech): Field, Upgrade, Fabrication e Invention Expertise;
+    - [ ] Medicine (Medtech): Cirurgia, Farmacêutica e Criossistemas.
+  - Os bônus situacionais na janela de rolagem (as rolagens de Role já passam por ela).
   - A Interface fica na C5.
 - [ ] **C4. Facedown:** COOL + Reputação + 1d10 (o `CPRFacedownRoll`).
 
@@ -268,7 +268,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   Sorte; o ↺ do começo da sessão.
 - [ ] **Na rolagem, o resto:** (→ C4 e C10) Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
   Falhas do Solo; Facedown (COOL + Reputação + 1d10, como o CORE).
-- [ ] **As rolagens das Roles** (→ C3) (o CORE rola pelo item de Role; aqui só o Solo tem efeito):
+- [ ] **As rolagens das Roles** (→ C3; as do Rockerboy, da Media, do Fixer e do Lawman no ciclo 34) (o CORE rola pelo item de Role; aqui só o Solo tem efeito):
   - Impacto Carismático do Face (Rank + 1d10 contra DV 8, 10 ou 12) e Credibilidade da Media (Rank + 1d10);
   - Barganha do Corpo (o Operator do Fixer: COOL + Comércio + Rank + 1d10, teste enfrentado);
   - as especialidades do Tech (Field, Upgrade, Fabrication e Invention Expertise);
