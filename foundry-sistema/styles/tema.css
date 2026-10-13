@@ -123,15 +123,16 @@
 .cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes b { min-width: 3ch; text-align: center; font-family: var(--cp-dados); font-size: 12px; font-weight: 400; color: var(--cp-fraco); }
 .cpr-fieldbook.ficha-personagem .indicador.sorte.preparada { border-top-color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .indicador.sorte.preparada .sorte-acoes b { color: var(--cp-ciano); }
-/* Eurodólares, IP e Reputação: o indicador é um botão que abre o extrato (o valor muda por lá, com o motivo). */
-.cpr-fieldbook.ficha-personagem .indicador.com-extrato {
+/* Eurodólares, IP e Reputação: o indicador é um botão que abre o extrato (o valor muda por lá, com o motivo). O Facedown
+do capanga é um botão do mesmo jeito, que rola. */
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola) {
   width: auto; height: auto; min-height: 0; gap: 0; margin: 0; border: none; border-top: 2px solid var(--cp-amarelo); border-radius: 0;
   background: var(--cp-painel); box-shadow: none; color: var(--cp-texto); font: inherit; line-height: 1; cursor: pointer;
 }
-.cpr-fieldbook.ficha-personagem .indicador.com-extrato:hover { border-top-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 10%, var(--cp-painel)); }
-.cpr-fieldbook.ficha-personagem .indicador.com-extrato b { min-width: 2.6ch; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola):hover { border-top-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 10%, var(--cp-painel)); }
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola) b { min-width: 2.6ch; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); }
 .cpr-fieldbook.ficha-personagem .indicador.com-extrato b.negativo { color: var(--cp-vermelho); }
-.cpr-fieldbook.ficha-personagem .indicador.com-extrato i { margin-top: 4px; }
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola) i { margin-top: 4px; }
 
 /* ---------- Abas ---------- */
 .cpr-fieldbook.ficha-personagem nav.sheet-tabs {
@@ -175,7 +176,7 @@
 .cpr-fieldbook.ficha-personagem .barra > div { height: 100%; }
 .cpr-fieldbook.ficha-personagem .barra .hp { background: var(--cp-vermelho); }
 .cpr-fieldbook.ficha-personagem .barra .hum { background: var(--cp-ciano); }
-.cpr-fieldbook.ficha-personagem .death-save a { cursor: pointer; color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem :is(.death-save, .rolavel) a { cursor: pointer; color: var(--cp-amarelo); }
 .cpr-fieldbook.ficha-personagem .death-save .zerar { margin-left: 6px; color: var(--cp-fraco); text-decoration: underline; }
 
 /* As perícias: nome, atributo, nível e a base (sem o dado). */

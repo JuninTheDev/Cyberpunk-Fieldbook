@@ -77,6 +77,14 @@ export function bonusDeRole({ roleId, rank }) {
   return Object.fromEntries(PERICIAS_DO_MOTO.map(id => [id, { rotulo: 'Moto', valor }]));
 }
 
+// Facedown (RED p. 194; a wiki, "Reputação e facedown" e o cartão rápido; o CPRFacedownRoll do CORE): COOL + Reputação +
+// 1d10, um teste enfrentado. A reputação de covarde conta negativa: a Reputação da ficha pode ser negativa. O que a wiki
+// diz do resultado vai no cartão.
+export const FACEDOWN = {
+  rotulo: 'Facedown', formula: 'COOL + Reputação + 1d10',
+  dica: 'Teste enfrentado. Empate: nada acontece. Quem perde recua ou fica com −2 nas ações contra o outro até derrotá-lo uma vez.'
+};
+
 // O capanga (o mook do CORE) equipa ou instala o que recebe, como o handleMookDraggedItem do CORE: o cyberware é
 // instalado, e o que se equipa no CORE (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento) entra
 // equipado. O resto (munição, programa, upgrade, veículo, lesão) fica como veio.

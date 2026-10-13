@@ -4,7 +4,7 @@ import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  aplicarDano, backup, deLonge, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  aplicarDano, backup, deLonge, FACEDOWN, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
@@ -135,6 +135,19 @@ export class AtorCPR extends Actor {
     return this.#testarComJanela({
       rotulo: SIGLA[chave], perguntar, partes: situacionais => this.partesDoAtributo(chave, { situacionais }), situacionais: () => this.situacionaisDoTeste()
     }, opcoes);
+  }
+
+  // Facedown (regras.FACEDOWN): COOL + Reputação + 1d10, com as penalidades e os situacionais de todas as ações, como os
+  // outros testes. A wiki dá o ferimento em "todas as ações", como as lesões; o CPRFacedownRoll do CORE só põe as lesões
+  // (ver as dúvidas no MIGRATION_STATUS).
+  partesDoFacedown({ situacionais = null } = {}) {
+    const [cool, ...resto] = this.partesDoAtributo('cool', { situacionais });
+    return [cool, { rotulo: 'Reputação', valor: this.system.reputacao }, ...resto];
+  }
+  rolarFacedown({ perguntar = false, ...opcoes } = {}) {
+    return this.#testarComJanela({
+      rotulo: FACEDOWN.rotulo, perguntar, partes: situacionais => this.partesDoFacedown({ situacionais }), situacionais: () => this.situacionaisDoTeste()
+    }, { sabor: FACEDOWN.dica, ...opcoes });
   }
 
   // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto do Nomad) e os situacionais.

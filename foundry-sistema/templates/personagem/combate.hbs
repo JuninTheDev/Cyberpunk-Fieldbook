@@ -23,6 +23,7 @@
       <div class="titulo">INICIATIVA E DEFESA<span>REF {{sistema.atributos.ref.valor}} · DEX {{sistema.atributos.dex.valor}} · MOVE {{sistema.atributos.move.valor}}</span></div>
       <div class="medida"><span>INICIATIVA</span><b data-tooltip="{{iniciativa.dica}}">{{iniciativa.valor}} + 1d10</b></div>
       <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
+      <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">{{facedown.valor}} + 1d10</a></b></div>
       <div class="medida"><span>PENALIDADE DE FERIMENTO</span><b>{{#if sistema.penalidade}}{{sistema.penalidade}} em tudo{{else}}nenhuma{{/if}}</b></div>
       <div class="medida death-save">
         <span>DEATH SAVE</span>

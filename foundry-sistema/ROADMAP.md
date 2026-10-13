@@ -21,9 +21,12 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 38). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 40). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
+- **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
+  mesmo número, ela fica com ele, e o seu passa para o seguinte ao integrar (o Facedown virou o ciclo 39 assim, depois do
+  ciclo 38 da sessão Junin).
 
 ### Fase 1: o mínimo para a campanha rodar no Foundry 14 (antes da virada)
 
@@ -55,7 +58,8 @@ de compêndio; entram só as partes do sistema.
       rolam sozinhos, como no item do CORE.
   - [x] Os bônus situacionais na janela de rolagem: as rolagens de Role passam por ela (ciclos 34 e 35).
   - A Interface fica na C5.
-- [~] **C4. Facedown:** COOL + Reputação + 1d10 (o `CPRFacedownRoll`). Em andamento: sessão KouArt, 2026-10-13.
+- [x] **C4. Facedown:** COOL + Reputação + 1d10 (o `CPRFacedownRoll`). Feito no ciclo 39 (sessão KouArt, 2026-10-13): na
+  aba Combate do personagem e no cabeçalho do capanga, pela janela de rolagem, com as penalidades de todas as ações.
 
 ### Fase 2: a NET
 
@@ -275,7 +279,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da
   Sorte; o ↺ do começo da sessão.
-- [ ] **Na rolagem, o resto:** (→ C4 e C10) Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
+- [ ] **Na rolagem, o resto:** (→ C4 e C10; o Facedown no ciclo 39) Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
   Falhas do Solo; Facedown (COOL + Reputação + 1d10, como o CORE).
 - [x] **As rolagens das Roles** (→ C3; ciclos 34 e 35, com as Roles do RED) (o CORE rola pelo item de Role; aqui só o Solo tinha efeito):
   - Impacto Carismático do Face (Rank + 1d10 contra DV 8, 10 ou 12) e Credibilidade da Media (Rank + 1d10);

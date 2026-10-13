@@ -34,6 +34,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarAtributo: FichaPersonagem.#rolarAtributo,
       rolarPericia: FichaPersonagem.#rolarPericia,
       rolarRole: FichaPersonagem.#rolarRole,
+      rolarFacedown: FichaPersonagem.#rolarFacedown,
       alternarPericias: FichaPersonagem.#alternarPericias,
       novaPericia: FichaPersonagem.#novaPericia,
       tirarPericia: FichaPersonagem.#tirarPericia,
@@ -147,6 +148,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     // Iniciativa e esquiva (a esquiva média, sem o dado).
     const esquiva = ator.partesDaPericia('evasion').partes.reduce((soma, p) => soma + p.valor, 0);
+    // O Facedown sem o dado (COOL, Reputação e as penalidades), com a conta na dica.
+    const partesDoFacedown = ator.partesDoFacedown({ situacionais: [] });
+    const facedown = { valor: partesDoFacedown.reduce((soma, p) => soma + p.valor, 0), dica: `${partesDoFacedown.map(p => `${p.rotulo} ${p.valor}`).join(' + ')} + 1d10: teste enfrentado` };
     const bonusDeIniciativa = s.iniciativa - s.atributos.ref.valor;
 
     // A Role: a do RED da wiki e as especialidades (Solo, Tech, Medtech) com os pontos; o efeito de cada uma do Solo.
@@ -191,7 +195,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
       lesoes,
       iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
-      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8,
+      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown,
       municoes: itens('municao'),
       inventario: [
         { titulo: 'EQUIPAMENTO', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, vezes(item), item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
@@ -255,6 +259,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo, { perguntar: comJanela(evento) }); }
   static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia, { perguntar: comJanela(evento) }); }
+  static #rolarFacedown(evento) { return this.actor.rolarFacedown({ perguntar: comJanela(evento) }); }
   // As Expertises do Tech perguntam antes a perícia do teste.
   static async #rolarRole(evento, alvo) {
     const id = alvo.dataset.rolagem;

@@ -657,6 +657,17 @@ test('Capanga (o mook do CORE): um tipo de ator a mais, com o nome em português
   for (const tipo of ['municao', 'programa', 'upgrade', 'veiculo', 'lesao']) assert.equal(regras.AO_RECEBER_CAPANGA[tipo], undefined, tipo);
 });
 
+test('Facedown (wiki, "Reputação e facedown" e o cartão rápido, RED p. 194; o CPRFacedownRoll do CORE): COOL + Reputação + 1d10, teste enfrentado, com o empate e o que acontece com quem perde; o ferimento entra, porque a wiki o dá em "todas as ações", como as lesões', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes("formula('Facedown: COOL + Reputação + 1d10 (reputação de covarde conta negativa)')"));
+  assert.ok(regrasDaWiki.includes("formula('COOL + Reputação + 1d10')"));
+  assert.ok(regrasDaWiki.includes('<p>Empate: nada acontece. O perdedor escolhe <b>recuar</b> ou sofrer <b>−2 em ações contra esse oponente</b> até derrotá-lo uma vez.</p>'));
+  assert.equal(regras.FACEDOWN.formula, 'COOL + Reputação + 1d10');
+  assert.equal(regras.FACEDOWN.dica, 'Teste enfrentado. Empate: nada acontece. Quem perde recua ou fica com −2 nas ações contra o outro até derrotá-lo uma vez.');
+  assert.match(regrasDaWiki, /'Gravemente Ferido[^\]]*'−2 em todas as ações'/);
+  assert.match(regrasDaWiki, /'Concussão', '−2 em todas as ações\.'/);
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

@@ -2414,7 +2414,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && c.pistola && c.armadura && c.instalados && c.kerenzikov === 12 && c.grip === 3 && c.medscanner === 'equipado' && c.bala === 10
           && c.hum === 35 && c.humMax === 46 && c.ini === 8 && c.sp === 11
           && JSON.stringify(c.itens) === JSON.stringify([['Heavy Pistol', 'Equipada'], ['Light Armorjack (Body)', 'Vestida'], ['Heavy Pistol (Basic)', ''], ['Grip Foot', 'Instalado'], ['Kerenzikov', 'Instalado'], ['Medscanner', 'Equipado']])
-          && c.tabela.join() === 'Heavy Pistol' && c.cabecalho.join('|') === '0/11 SP CABEÇA/CORPO|8 INICIATIVA|6 ESQUIVA'
+          && c.tabela.join() === 'Heavy Pistol' && c.cabecalho.join('|') === '0/11 SP CABEÇA/CORPO|8 INICIATIVA|6 ESQUIVA|REPUTAÇÃO|5 FACEDOWN'
           && soltos.every(Boolean)
           && tiro1.linha.resultado === 'acertou' && tiro1.linha.dv === 15 && tiro1.linha.dano?.dano === 16 && tiro1.linha.dano.recebido === 5
           && tiro1.t1.join() === '30,10' && tiro1.t2.join() === '35,11' && tiro1.ator.join() === '35,11'
@@ -2945,6 +2945,84 @@ module.exports = async ({ edge, servidores, r }) => {
         return [ok, JSON.stringify(info)];
       } finally {
         await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => a.name === 'Teste Roles')) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
+    await r.passo('Facedown (wiki, RED p. 194; o CORE): COOL + Reputação + 1d10 pela aba Combate do personagem, com a janela e a regra do empate no cartão; Ctrl + clique rola direto, e gravemente ferido entra o −2; no capanga, a Reputação no cabeçalho (a de covarde, negativa, tira) e o botão do Facedown', async () => {
+      // d10 6: COOL 7 + Reputação 3 + 6 + 2 do mestre = 18. Gravemente ferido (HP 19 de 40), d10 5: 7 + 3 − 2 + 5 = 13.
+      // Capanga: COOL 6, Reputação −2 (covarde), d10 4: 6 − 2 + 4 = 8.
+      await fixar(edge, []);
+      const nomes = ['Teste Facedown', 'Teste Capanga Facedown'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const html = m => new DOMParser().parseFromString(m.content, 'text/html');
+          const partesDa = m => [...html(m).querySelectorAll('.partes li')].map(textoDe);
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+
+          // 1. O personagem: COOL 7, Reputação 3, BODY 6 e WILL 6 (HP 40); na aba Combate, pela janela, com +2 do mestre.
+          const a = await Actor.implementation.create({ name: 'Teste Facedown', type: 'personagem', system: { atributos: { cool: { valor: 7 }, body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 }, reputacao: 3 } });
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('combate', 'primary');
+          const f = () => a.sheet.element;
+          const botao = () => f().querySelector('.tab.combate .medida.rolavel [data-action="rolarFacedown"]');
+          await esperar(() => botao());
+          const linha = { texto: textoDe(f().querySelector('.tab.combate .medida.rolavel b')), dica: botao().dataset.tooltip };
+          let antes = game.messages.size;
+          window.__fila = [[6, 10]];
+          botao().click();
+          await esperar(() => janela()?.querySelector('[name="outro"]'));
+          const daJanela = { titulo: textoDe(janela().querySelector('.window-title')), partes: [...janela().querySelectorAll('.partes li')].map(textoDe) };
+          const outro = janela().querySelector('[name="outro"]');
+          outro.value = 2;
+          outro.dispatchEvent(new Event('input', { bubbles: true }));
+          janela().querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          let m = game.messages.contents.at(-1);
+          const pelaJanela = { total: m.rolls[0].total, cartao: partesDa(m), sabor: textoDe(html(m).querySelector('.sabor')), rotulo: m.getFlag('${S}', 'teste')?.rotulo };
+
+          // 2. Gravemente ferido (HP 19 de 40): o −2 entra; Ctrl + clique rola sem a janela.
+          await a.update({ 'system.hp.value': 19 });
+          await esperar(() => textoDe(f().querySelector('.tab.combate .medida.rolavel b')) === '8 + 1d10');
+          const linhaFerido = textoDe(f().querySelector('.tab.combate .medida.rolavel b'));
+          antes = game.messages.size;
+          window.__fila = [[5, 10]];
+          ctrl(botao());
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const ferido = { linha: linhaFerido, total: m.rolls[0].total, cartao: partesDa(m), janela: Boolean(janela()) };
+          await a.sheet.close();
+
+          // 3. O capanga: COOL 6; a Reputação de covarde (−2) pelo cabeçalho; o botão do Facedown, com Ctrl + clique.
+          const c = await Actor.implementation.create({ name: 'Teste Capanga Facedown', type: 'capanga', system: { atributos: { cool: { valor: 6 } } } });
+          await c.sheet.render({ force: true });
+          const g = () => c.sheet.element;
+          await esperar(() => g()?.querySelector('.topo [name="system.reputacao"]'));
+          const campo = g().querySelector('.topo [name="system.reputacao"]');
+          campo.value = -2;
+          campo.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => c.system.reputacao === -2 && textoDe(g().querySelector('.topo .facedown b')) === '4');
+          antes = game.messages.size;
+          window.__fila = [[4, 10]];
+          ctrl(g().querySelector('.topo [data-action="rolarFacedown"]'));
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const capanga = { reputacao: c.system.reputacao, base: textoDe(g().querySelector('.topo .facedown b')), total: m.rolls[0].total, cartao: partesDa(m) };
+          await c.sheet.close();
+          return { linha, daJanela, pelaJanela, ferido, capanga };
+        })()`);
+        const { linha, daJanela: j, pelaJanela: p, ferido, capanga } = info;
+        const ok = linha.texto === '10 + 1d10' && linha.dica === 'COOL 7 + Reputação 3 + 1d10: teste enfrentado'
+          && j.titulo === 'Teste: Facedown' && j.partes.join() === 'COOL +7,Reputação +3,1d10'
+          && p.total === 18 && p.cartao.join() === '1d10,COOL +7,Reputação +3,Modificador do mestre +2' && p.rotulo === 'Facedown'
+          && p.sabor === 'Teste enfrentado. Empate: nada acontece. Quem perde recua ou fica com −2 nas ações contra o outro até derrotá-lo uma vez.'
+          && ferido.linha === '8 + 1d10' && !ferido.janela && ferido.total === 13 && ferido.cartao.join() === '1d10,COOL +7,Reputação +3,Gravemente ferido -2'
+          && capanga.reputacao === -2 && capanga.base === '4' && capanga.total === 8 && capanga.cartao.join() === '1d10,COOL +6,Reputação -2';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => ${JSON.stringify(nomes)}.includes(a.name))) { await a.sheet?.close(); await a.delete(); } return true; })()`);
       }
     });
 

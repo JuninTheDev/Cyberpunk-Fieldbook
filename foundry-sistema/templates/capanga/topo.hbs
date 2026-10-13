@@ -29,6 +29,14 @@
         <span class="valor"><b>{{esquiva}}</b></span>
         <i>ESQUIVA</i>
       </div>
+      <label class="indicador corte reputacao" data-tooltip="Reputação: soma no Facedown; a de covarde conta negativa">
+        <span class="valor"><input type="number" name="system.reputacao" value="{{sistema.reputacao}}" aria-label="Reputação"></span>
+        <i>REPUTAÇÃO</i>
+      </label>
+      <button type="button" class="indicador corte rola facedown" data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">
+        <span class="valor"><b>{{facedown.valor}}</b></span>
+        <i>FACEDOWN</i>
+      </button>
     </div>
   </div>
 </header>

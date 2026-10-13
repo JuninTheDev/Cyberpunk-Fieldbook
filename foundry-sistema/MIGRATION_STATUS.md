@@ -31,7 +31,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | os bônus de Role nas perícias (o Moto do Nomad) | portado no ciclo 23. Com as Roles do RED (ciclo 33), saíram a especialização do Face e os situacionais de 2077 (o Investigator, o Netrunner) |
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | portadas nos ciclos 34 e 35, com as Roles do RED: pelo item de Role do CORE e pelo texto da wiki (a Barganha é a pechincha do Fixer; o Backup do Lawman, pela wiki). A Interface do Netrunner é o C5 |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
-| CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
+| CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
+| CORE | consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
@@ -97,7 +98,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Área | No Foundry 12 | Aqui | ROADMAP |
   | --- | --- | --- | --- |
   | Rolagens | a janela de rolagem: o modificador avulso, os modificadores comuns do livro (RED p. 130, também na wiki), os efeitos situacionais e a Sorte; Ctrl pula | portada nos ciclos 24, 25 e 27 | feito |
-  | Rolagens | Facedown (COOL + Reputação + 1d10) | falta | P2 |
+  | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
   | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | falta | P2 |
@@ -219,6 +220,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   números fora dessa conta passa a rolar pela conta; o número antigo fica guardado na ficha, sem uso. Como na Consciência
   de Combate do Solo, os pontos das especialidades valem como estão na ficha: o criador da wiki corta cada um no máximo
   (4), e a ficha só avisa quando passam do Rank.
+
+- **O Facedown leva a penalidade de ferimento: pela wiki, não pelo CORE.** O `CPRFacedownRoll` do CORE soma os
+  modificadores de "todas as ações" das lesões (a Concussão, −2), mas não o do estado de ferimento. A wiki dá os dois com
+  as mesmas palavras ("Gravemente Ferido: −2 em todas as ações"; "Concussão: −2 em todas as ações"), e aqui o Facedown leva
+  os dois, como os outros testes. No Foundry 12, um personagem gravemente ferido tinha 2 a mais no Facedown. Se a mesa
+  preferir o jeito do CORE, é tirar o ferimento em `partesDoFacedown` (documentos.mjs).
 
 - **O capanga e a perda de Humanidade: sem a opção "nenhuma".** No CORE, instalar cyberware (também no item arrastado
   para o mook) pergunta a perda: rolada (a padrão), a média ou nenhuma. Aqui o capanga faz como o botão Instalar da ficha:
@@ -1805,6 +1812,7 @@ a ficha inteira, sem editar.
 - **O C2 fecha aqui** (ciclos 36 e 37).
 - **Próximo:** o C4 (o Facedown: COOL + Reputação + 1d10, o `CPRFacedownRoll` do CORE), o próximo item livre do plano.
   O C1 está com a sessão Junin.
+- **Commit:** `72c9e66`.
 
 ### Ciclo 38 (2026-10-13): a migração dos dados entre versões do sistema (o C1; sessão Junin)
 
@@ -1862,6 +1870,42 @@ O C1 do plano de paridade: o `dataModelVersion` e o MigrationRunner do CORE (`mo
   - sem cena ativa, o Foundry 14 liga a primeira cena criada, e o canvas desenhando o token quebra o core;
   - o token de personagem sai sempre ligado (`AtorCPR._preCreate`): o não ligado se pede no `getTokenDocument`.
 - **Próximo:** o próximo item livre do plano (o C4 ou outro que a outra sessão não tenha pegado).
+
+### Ciclo 39 (2026-10-13): o Facedown (o C4; sessão KouArt)
+
+O `CPRFacedownRoll` do CORE (`_createFacedownRoll` em `cpr-actor.js`) e a wiki ("Reputação e facedown" e o cartão rápido
+do Facedown, em system-rules.js; RED p. 194).
+
+- **Implementado:**
+  - **`regras.FACEDOWN`:** a fórmula (COOL + Reputação + 1d10) e o que a wiki diz do resultado, para o cartão: no empate,
+    nada acontece; quem perde recua ou fica com −2 nas ações contra o outro até derrotá-lo uma vez;
+  - **no ator:** `partesDoFacedown` e `rolarFacedown`, pela janela de rolagem, como os outros testes: o COOL, a Reputação,
+    as penalidades de todas as ações (o ferimento e as lesões) e os situacionais delas. A Reputação de covarde conta
+    negativa: a da ficha pode ser negativa;
+  - **nas fichas:** o personagem rola pela linha "Facedown" da aba Combate (com a conta sem o dado), e o capanga pelo
+    botão do cabeçalho, ao lado da Reputação, que ali se edita. O clique abre a janela, e Ctrl + clique rola direto.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 62 de 66, já com os 5 testes da migração (o ciclo 38). Um teste novo: a fórmula e o resultado contra o texto da
+    wiki, e a penalidade de gravemente ferido e a da Concussão, que a wiki dá igualmente em "todas as ações". As 4 falhas
+    são as das armas de 2077 (QUALITY_GATES);
+  - G4: 68 de 73, cerca de 108 s, já com o passo da migração (o ciclo 38). Um passo novo:
+    - o personagem (COOL 7, Reputação 3): a linha da aba Combate mostra 10 + 1d10; pela janela, com +2 do mestre, 18, e o
+      cartão traz a regra do empate;
+    - gravemente ferido, a linha cai para 8 + 1d10, e Ctrl + clique rola sem a janela: 7 + 3 − 2 + 5 = 13;
+    - o capanga (COOL 6): a Reputação de covarde (−2) pelo cabeçalho; o botão mostra 4 e rola 6 − 2 + 4 = 8.
+
+    O passo do capanga (ciclo 36) passou a esperar os dois indicadores novos do cabeçalho (a Reputação e o Facedown): na
+    primeira rodada, ele acusou a mudança. As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações** (antes de integrar o ciclo 38, com o mesmo código do Facedown): cada uma destas derrubou o teste dela, e
+    os arquivos foram restaurados (conferido pelo md5):
+    - G3: a fórmula sem a Reputação;
+    - G4: o Facedown sem a Reputação; sem o ferimento (como o CORE); o clique sem a janela; e o capanga sem o botão.
+- **O C4 fecha aqui.** Com ele, a fase 1 do plano fica pronta (o C1 fechou no ciclo 38, da sessão Junin, publicado antes;
+  por isso o Facedown é o ciclo 39).
+- **Próximo:** o C5 (a Interface do Netrunner: as 9 habilidades, as Ações de NET pelo Rank e a iniciativa na NET), o
+  primeiro item da fase 2.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
