@@ -89,7 +89,7 @@ de compêndio; entram só as partes do sistema.
     Netrunning, com o tipo, PER e SPD no programa: ciclo 45;
   - [x] o token "rezzado" pelo programa de Black ICE do netrunner, ao ativá-lo no deck, pelo mestre ativo, com a REZ do
     token voltando para o programa: ciclo 46.
-- [ ] **C8. Arquiteturas e o NET Architect dentro do sistema:**
+- [~] **C8. Arquiteturas e o NET Architect dentro do sistema:** Em andamento: sessão KouArt, 2026-10-13.
   - o tipo de item arquitetura, com os andares e as DVs, como o `netarch` do CORE;
   - o que o NET Architect faz na mesa: pontos de acesso nos tiles, a janela da NET, os inimigos no combate, o jogador
     rolando as próprias rolagens.
