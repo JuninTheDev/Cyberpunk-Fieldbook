@@ -4,8 +4,8 @@
 // Na primeira vez baixa os compêndios-fonte (YAML) da tag do GitLab para .cache/; o js-yaml vem da CDN (sem npm).
 // Saída:
 //   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle");
-//   scripts/gerado.mjs   as perícias (com os nomes em português da wiki), as tabelas de DV e as Roles de 2077 com as
-//                        habilidades (do criador de personagens da wiki).
+//   scripts/gerado.mjs   as perícias (com os nomes em português da wiki), as tabelas de DV, as Roles de 2077 com as
+//                        habilidades (do criador de personagens da wiki) e os Black ICE e demônios (das regras da wiki).
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -135,6 +135,25 @@ function rolesDaWiki() {
       ...(r.derivadas ? { derivadas: r.derivadas.map(({ id: chave, de, max }) => ({ id: chave, de, ...(max ? { max } : {}) })) } : {})
     }]))
   };
+}
+
+// Os Black ICE e os demônios do RED (as tabelas da wiki em system-rules.js, "Black ICE" e "Demônios", RED p. 204–212), para
+// preencher as fichas desses atores. O dano do Black ICE é o do efeito ("3d6 no cérebro", "6d6 no REZ de um programa");
+// vazio quando o efeito não tem dano (o Asp, o Liche, o Scorpion, o Skunk). A classe vai com o id do CORE.
+const CLASSES_DO_ICE = { 'Anti-pessoal': 'antipersonnel', 'Anti-programa': 'antiprogram' };
+function netDaWiki() {
+  const texto = fs.readFileSync(path.join(raiz, '..', 'system-rules.js'), 'utf8');
+  const tabela = cabecalho => texto.split(`table([${cabecalho.map(nome => `'${nome}'`).join(', ')}], [`)[1]?.split("], 'dense')")[0] ?? '';
+  const ice = [...tabela(['ICE', 'Classe', 'PER', 'SPD', 'ATK', 'DEF', 'REZ', 'Efeito', 'Custo'])
+    .matchAll(/\['([^']+)', '(Anti-pessoal|Anti-programa)', '(\d+)', '(\d+)', '(\d+)', '(\d+)', '(\d+)', '([^']+)', '([\d.]+)eb'\]/g)]
+    .map(([, nome, classe, per, spd, atk, def, rez, efeito, custo]) => ({
+      id: slug(nome), nome, classe: CLASSES_DO_ICE[classe], per: Number(per), spd: Number(spd), atk: Number(atk), def: Number(def), rez: Number(rez),
+      efeito, dano: efeito.match(/(?:^|\s)(\d+d6) (?:direto )?no (?:cérebro|REZ)/)?.[1] ?? '', custo: Number(custo.replace(/\./g, ''))
+    }));
+  const demonios = [...tabela(['Demônio', 'REZ', 'Interface', 'Ações NET', 'Valor de combate']).matchAll(/\['([^']+)', '(\d+)', '(\d+)', '(\d+)', '(\d+)'\]/g)]
+    .map(([, nome, rez, interfaceDoDemonio, acoes, valorDeCombate]) => ({ id: slug(nome), nome, rez: Number(rez), interface: Number(interfaceDoDemonio), acoes: Number(acoes), valorDeCombate: Number(valorDeCombate) }));
+  if (!ice.length || !demonios.length) throw new Error('As tabelas de Black ICE e de demônios não estão no system-rules.js da wiki.');
+  return { ice, demonios };
 }
 
 function converterPericias(yaml) {
@@ -458,6 +477,7 @@ async function main() {
   const catalogo = { fonte: `Cyberpunk RED - CORE ${VERSAO} (GPL-3, The Project Red Team), convertido por build/conteudo.mjs`, itens };
   fs.writeFileSync(path.join(raiz, 'dados', 'catalogo.json'), JSON.stringify(catalogo));
   const roles = rolesDaWiki();
+  const net = netDaWiki();
   const gerado = [
     `// Gerado por build/conteudo.mjs a partir do Cyberpunk RED - CORE ${VERSAO} (GPL-3), da tabela de perícias e do criador da wiki.`,
     '// Não edite à mão: rode o build de novo.',
@@ -468,12 +488,15 @@ async function main() {
     `export const ROLES = ${JSON.stringify(roles.roles)};`,
     `export const ROLES_ANTIGAS = ${JSON.stringify(roles.antigas)};`,
     `export const HABILIDADES_DE_ROLE = ${JSON.stringify(roles.habilidades)};`,
+    `export const BLACK_ICE = ${JSON.stringify(net.ice)};`,
+    `export const DEMONIOS = ${JSON.stringify(net.demonios)};`,
     ''
   ].join('\n');
   fs.writeFileSync(path.join(raiz, 'scripts', 'gerado.mjs'), gerado);
 
   const semItem = Object.values(lesoes).flat().filter(([, , id]) => !itens[id]).map(([, , id]) => id);
   console.log(`Itens: ${Object.entries(contagem).map(([k, n]) => `${k} ${n}`).join(' · ')}`);
+  console.log(`Black ICE: ${net.ice.length} · demônios: ${net.demonios.length}`);
   console.log(`Perícias: ${pericias.length} (+${Object.keys(familias).length} famílias) · tabelas de DV: ${Object.keys(tabelas).length} · tabelas de lesão: ${Object.keys(lesoes).join(', ')}`);
   if (semItem.length) console.log(`Resultados de lesão sem item no catálogo: ${semItem.join(', ')}`);
   if (semNome.length) console.log(`Perícias sem nome em português na wiki: ${semNome.join(', ')}`);

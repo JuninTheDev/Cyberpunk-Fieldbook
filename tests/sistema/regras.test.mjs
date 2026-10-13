@@ -9,8 +9,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
-import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
+import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
+import { ATORES_DA_NET, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -640,10 +640,13 @@ test('Ficha: o Lifepath tem os campos e os rótulos do criador da wiki (criador.
 
 test('Capanga (o mook do CORE): um tipo de ator a mais, com o nome em português; ao receber um item, instala o cyberware e equipa o que o CORE equipa (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento)', () => {
   const sistema = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'system.json'), 'utf8'));
-  assert.deepEqual(Object.keys(sistema.documentTypes.Actor), ['personagem', 'capanga']);
-  assert.deepEqual(sistema.documentTypes.Actor.capanga, { htmlFields: ['notas'] });
+  // O Black ICE e o demônio vieram no ciclo 43 (o C7).
+  assert.deepEqual(Object.keys(sistema.documentTypes.Actor), ['personagem', 'capanga', 'blackice', 'demonio']);
+  for (const tipo of ['capanga', 'blackice', 'demonio']) assert.deepEqual(sistema.documentTypes.Actor[tipo], { htmlFields: ['notas'] }, tipo);
   const idioma = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'lang', 'pt-BR.json'), 'utf8'));
   assert.equal(idioma.TYPES.Actor.capanga, 'Capanga');
+  assert.equal(idioma.TYPES.Actor.blackice, 'Black ICE');
+  assert.equal(idioma.TYPES.Actor.demonio, 'Demônio');
   // O que se equipa no CORE 0.92.4 (os modelos com EquippableSchema, em modules/datamodels/item), com os tipos daqui; o
   // cyberware instala (o handleMookDraggedItem do CORE, em modules/actor/cpr-actor.js).
   const EQUIPAVEIS_DO_CORE = { armor: 'armadura', clothing: 'roupa', cyberdeck: 'cyberdeck', drug: 'droga', gear: 'equipamento', weapon: 'arma' };
@@ -735,6 +738,59 @@ test('Dano da NET (wiki, "Combate na NET", os defensores e o Zap; o CORE, o dano
   // Sem dano, o Shield não se gasta.
   assert.deepEqual(regras.danoNoCerebro({ dano: 0, shield: true }), { recebido: 0, shield: false, reduzido: 0 });
   assert.deepEqual(regras.ONDE_O_DANO_ENTRA, { antipersonnelattacker: { padrao: ['cerebro'] }, antiprogramattacker: { padrao: ['programa'] }, zap: ['cerebro', 'programa'] });
+});
+
+test('Black ICE e demônio como atores (wiki, "Black ICE" e "Demônios", RED p. 204–212; o blackIce e o demon do CORE): as tabelas da wiki no gerado, a ficha pelo modelo, os números que rolam e a iniciativa no topo da fila', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  // As 12 linhas da tabela de Black ICE da wiki, na ordem dela.
+  assert.deepEqual(BLACK_ICE.map(ice => ice.id), ['asp', 'giant', 'hellhound', 'kraken', 'liche', 'raven', 'scorpion', 'skunk', 'wisp', 'dragon', 'killer', 'sabertooth']);
+  assert.ok(regrasDaWiki.includes("['Hellhound', 'Anti-pessoal', '6', '6', '6', '2', '20', '2d6 no cérebro; deck e roupa pegam fogo (2 no HP por turno).', '500eb']"));
+  assert.deepEqual(BLACK_ICE.find(ice => ice.id === 'hellhound'), {
+    id: 'hellhound', nome: 'Hellhound', classe: 'antipersonnel', per: 6, spd: 6, atk: 6, def: 2, rez: 20, efeito: '2d6 no cérebro; deck e roupa pegam fogo (2 no HP por turno).', dano: '2d6', custo: 500
+  });
+  assert.ok(regrasDaWiki.includes("['Dragon', 'Anti-programa', '6', '4', '6', '6', '30', '6d6 no REZ de um programa; se desativar, destrói.', '1.000eb']"));
+  assert.deepEqual(BLACK_ICE.find(ice => ice.id === 'dragon'), {
+    id: 'dragon', nome: 'Dragon', classe: 'antiprogram', per: 6, spd: 4, atk: 6, def: 6, rez: 30, efeito: '6d6 no REZ de um programa; se desativar, destrói.', dano: '6d6', custo: 1000
+  });
+  // Cada linha volta igual ao texto da wiki (a classe pelo nome, o custo com o ponto do milhar).
+  const custoNaWiki = custo => `${String(custo).replace(/\B(?=(\d{3})+$)/g, '.')}eb`;
+  for (const ice of BLACK_ICE) {
+    const linha = [ice.nome, ice.classe === 'antiprogram' ? 'Anti-programa' : 'Anti-pessoal', ice.per, ice.spd, ice.atk, ice.def, ice.rez, ice.efeito, custoNaWiki(ice.custo)].map(valor => `'${valor}'`).join(', ');
+    assert.ok(regrasDaWiki.includes(`[${linha}]`), ice.nome);
+    assert.ok(CLASSES_BLACK_ICE[ice.classe], ice.nome);
+  }
+  // O dano é o do efeito; sem dano no efeito (o Asp, o −1d6 em INT do Liche, o −1d6 no MOVE do Scorpion, o Skunk), vazio.
+  assert.deepEqual(Object.fromEntries(BLACK_ICE.map(ice => [ice.id, ice.dano])), {
+    asp: '', giant: '3d6', hellhound: '2d6', kraken: '3d6', liche: '', raven: '1d6', scorpion: '', skunk: '', wisp: '1d6', dragon: '6d6', killer: '4d6', sabertooth: '6d6'
+  });
+  // Os 3 demônios.
+  assert.ok(regrasDaWiki.includes("[['Imp', '15', '3', '2', '14'], ['Efreet', '25', '4', '3', '14'], ['Balron', '30', '7', '4', '14']]"));
+  assert.deepEqual(DEMONIOS, [
+    { id: 'imp', nome: 'Imp', rez: 15, interface: 3, acoes: 2, valorDeCombate: 14 },
+    { id: 'efreet', nome: 'Efreet', rez: 25, interface: 4, acoes: 3, valorDeCombate: 14 },
+    { id: 'balron', nome: 'Balron', rez: 30, interface: 7, acoes: 4, valorDeCombate: 14 }
+  ]);
+  // A ficha pelo modelo: o nome, os números e a REZ cheia.
+  assert.deepEqual(regras.fichaDoModelo(BLACK_ICE.find(ice => ice.id === 'hellhound')), {
+    name: 'Hellhound',
+    system: { modelo: 'hellhound', classe: 'antipersonnel', per: 6, spd: 6, atk: 6, def: 2, efeito: '2d6 no cérebro; deck e roupa pegam fogo (2 no HP por turno).', dano: '2d6', custo: 500, rez: { value: 20, max: 20 } }
+  });
+  assert.deepEqual(regras.fichaDoModelo(DEMONIOS[1]), { name: 'Efreet', system: { modelo: 'efreet', interface: 4, acoes: 3, valorDeCombate: 14, rez: { value: 25, max: 25 } } });
+  // Os números que rolam (o número + 1d10): PER, SPD, ATK e DEF do Black ICE; a Interface e o Valor de combate do demônio
+  // (a wiki: "defende com Interface + 1d10"; "ataca com drones e torretas usando o valor de combate + 1d10").
+  assert.deepEqual(regras.NUMEROS_DA_NET.blackice.map(n => n.id), ['per', 'spd', 'atk', 'def']);
+  assert.deepEqual(regras.NUMEROS_DA_NET.demonio.map(n => n.id), ['interface', 'valorDeCombate']);
+  assert.ok(regrasDaWiki.includes('Sem DEF: defende com Interface + 1d10. Só usa Zap e Control.'));
+  assert.ok(regrasDaWiki.includes('Ataca com drones e torretas usando o valor de combate + 1d10.'));
+  assert.deepEqual(ATORES_DA_NET, ['blackice', 'demonio']);
+  // A iniciativa: o Black ICE "entra no topo da fila de iniciativa"; o demônio "entra no topo da iniciativa". Um a mais que
+  // a maior dos outros; 30 se ninguém rolou (o CORE).
+  assert.ok(regrasDaWiki.includes('Depois ele entra no <b>topo da fila de iniciativa</b>'));
+  assert.ok(regrasDaWiki.includes('Entra no topo da iniciativa quando detecta um intruso'));
+  assert.equal(regras.iniciativaNoTopo([]), 30);
+  assert.equal(regras.iniciativaNoTopo([null, undefined]), 30);
+  assert.equal(regras.iniciativaNoTopo([12, null, 8, 15]), 16);
+  assert.equal(regras.iniciativaNoTopo([0]), 1);
 });
 
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {

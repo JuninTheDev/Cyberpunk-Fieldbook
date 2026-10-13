@@ -1,11 +1,11 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
-import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
+import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   aplicarDano, backup, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+  NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
@@ -15,12 +15,14 @@ const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[o
 
 export class AtorCPR extends Actor {
   // Personagem novo: o token fica ligado à ficha, com o HP na barra. Capanga novo (o mook do CORE): o token fica solto, e
-  // cada um na cena tem o próprio HP; o que já vem com o token (uma cópia, o compêndio) fica como veio.
+  // cada um na cena tem o próprio HP; o que já vem com o token (uma cópia, o compêndio) fica como veio. Black ICE e demônio
+  // novos (o blackIce e o demon do CORE): o token solto, com a REZ na barra.
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
     const token = { bar1: { attribute: 'hp' }, sight: { enabled: true } };
     if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, ...token } });
     if (this.type === 'capanga' && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, ...token } });
+    if (ATORES_DA_NET.includes(this.type) && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, bar1: { attribute: 'rez' } } });
   }
 
   // O extrato fica completo: uma mudança de Eurodólares, IP ou Reputação que não veio de mudarComExtrato (uma macro, o
@@ -215,6 +217,20 @@ export class AtorCPR extends Actor {
     return { ...conta, dano, hpAntes, hpDepois: this.system.hp.value };
   }
 
+  // O Black ICE e o demônio rolam os números deles + 1d10 (regras.NUMEROS_DA_NET; o createStatRoll do CORE), com o crítico
+  // do d10. Sem Sorte nem penalidade: a janela (perguntar) só tem o modificador do mestre, como a do CORE para eles.
+  async rolarDaNet(id, { perguntar = false, ...opcoes } = {}) {
+    const numero = NUMEROS_DA_NET[this.type]?.find(n => n.id === id);
+    if (!numero) return null;
+    const partes = [{ rotulo: numero.rotulo, valor: Number(this.system[id]) || 0 }];
+    if (perguntar) {
+      const escolha = await perguntarModificador({ titulo: `${this.name}: ${numero.rotulo}`, linhas: [`${numero.rotulo} ${partes[0].valor} + 1d10`] });
+      if (!escolha) return null;
+      if (escolha.modificador) partes.push({ rotulo: 'Modificador do mestre', valor: escolha.modificador });
+    }
+    return testar(this, { rotulo: numero.rotulo, partes, sabor: numero.dica, ...opcoes });
+  }
+
   // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto do Nomad) e os situacionais.
   partesDaPericia(id, { situacionais = null } = {}) {
     const p = this.system.pericia(id);
@@ -313,9 +329,10 @@ export class AtorCPR extends Actor {
   }
 
   // Sorte (RED p. 130): os pontos preparados na ficha para o próximo teste (+1 por ponto), que saem da Sorte quando ele
-  // rola (rolagens.mjs, testar). No começo da sessão, a Sorte volta ao máximo (a STAT LUCK).
+  // rola (rolagens.mjs, testar). No começo da sessão, a Sorte volta ao máximo (a STAT LUCK). O Black ICE e o demônio não
+  // têm Sorte.
   get sortePreparada() {
-    return sorteParaGastar(this.getFlag(SISTEMA, 'sorte'), this.system.sorte.value);
+    return this.system.sorte ? sorteParaGastar(this.getFlag(SISTEMA, 'sorte'), this.system.sorte.value) : 0;
   }
   prepararSorte(pontos) {
     return this.setFlag(SISTEMA, 'sorte', sorteParaGastar(pontos, this.system.sorte.value));

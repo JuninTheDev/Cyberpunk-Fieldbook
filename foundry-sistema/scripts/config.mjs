@@ -63,6 +63,11 @@ export const CLASSES_PROGRAMA = {
   quickhack: 'Quickhack (2077)', daemon: 'Daemon (2077)'
 };
 
+// Os atores da NET (o blackIce e o demon do CORE): sem corpo, atributos, HP nem Sorte; rolam os números deles + 1d10.
+export const ATORES_DA_NET = ['blackice', 'demonio'];
+// A classe do Black ICE: a do CORE (blackIceType), com o nome da tabela da wiki.
+export const CLASSES_BLACK_ICE = { antipersonnel: 'Anti-pessoal', antiprogram: 'Anti-programa', other: 'Outro' };
+
 // As chaves são as do conteúdo convertido do CORE (system.tipo do cyberware); os rótulos, os da loja da wiki.
 export const TIPOS_CYBERWARE = {
   fashionware: 'Fashionware', neuralWare: 'Neuralware', cyberEye: 'Cyberolho', cyberAudioSuite: 'Cyberaudio',

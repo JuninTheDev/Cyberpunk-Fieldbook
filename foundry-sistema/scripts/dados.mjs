@@ -1,7 +1,7 @@
-// Modelos de dados (TypeDataModel do Foundry 14): o personagem, as armas, armaduras, munição e cyberware, e o efeito
-// que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP, bônus dos efeitos)
-// é calculado na preparação, a cada vez.
-import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, EXTRATOS, LIFEPATH, USOS } from './config.mjs';
+// Modelos de dados (TypeDataModel do Foundry 14): o personagem, o Black ICE e o demônio, as armas, armaduras, munição e
+// cyberware, e o efeito que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP,
+// bônus dos efeitos) é calculado na preparação, a cada vez.
+import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, USOS } from './config.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 
@@ -119,6 +119,41 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     // O bônus da Role ({ rotulo, valor }), na perícia ou na família dela.
     const role = this.bonusDeRole?.[id] ?? (propria?.familia ? this.bonusDeRole?.[propria.familia] : null) ?? null;
     return { id, nome, atributo, nivel: propria?.nivel ?? 0, bonus, role, dificil: Boolean(base?.dificil ?? familia?.dificil) };
+  }
+}
+
+// ---------------- Os atores da NET ----------------
+// O Black ICE (o blackIce do CORE): a classe, PER, SPD, ATK, DEF, a REZ e o custo, com o efeito e o dano da tabela da
+// wiki. modelo é o id dela ("hellhound"; vazio no feito à mão).
+export class DadosBlackIce extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      modelo: texto(),
+      classe: new fields.StringField({ required: true, blank: false, initial: 'antipersonnel', choices: Object.keys(CLASSES_BLACK_ICE) }),
+      per: inteiro(0, { min: 0 }),
+      spd: inteiro(0, { min: 0 }),
+      atk: inteiro(0, { min: 0 }),
+      def: inteiro(0, { min: 0 }),
+      rez: recurso(10, 10),
+      efeito: texto(),
+      dano: texto(),
+      custo: inteiro(100, { min: 0 }),
+      notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
+    };
+  }
+}
+
+// O demônio (o demon do CORE): a REZ, a Interface, as Ações NET e o Valor de combate.
+export class DadosDemonio extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      modelo: texto(),
+      rez: recurso(10, 10),
+      interface: inteiro(0, { min: 0 }),
+      acoes: inteiro(2, { min: 0 }),
+      valorDeCombate: inteiro(14, { min: 0 }),
+      notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
+    };
   }
 }
 

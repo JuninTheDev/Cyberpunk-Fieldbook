@@ -1,14 +1,25 @@
 // A iniciativa (REF + 1d10, p. 168) com os situacionais, como o CORE: quem tem um situacional de iniciativa (o
 // Sandevistan, ligado por padrão) vê a janela de rolagem ao rolar, no computador de quem rola; sem a janela (ou com
-// "Rolar direto"), entram os ligados por padrão. A Sorte da janela entra na rolagem e sai da Sorte do ator.
+// "Rolar direto"), entram os ligados por padrão. A Sorte da janela entra na rolagem e sai da Sorte do ator. O Black ICE e o
+// demônio não rolam: entram no topo da fila (regras.iniciativaNoTopo), cada um acima de quem já está nela.
+import { ATORES_DA_NET } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
+import { iniciativaNoTopo } from './regras.mjs';
 
 // A escolha da janela de cada combatente, de rollInitiative até a rolagem dele.
 const escolhas = new WeakMap();
 const termo = valor => `${valor < 0 ? '-' : '+'} ${Math.abs(valor)}`;
 
+const daNet = combatente => ATORES_DA_NET.includes(combatente?.actor?.type);
+
 export class CombatenteCPR extends Combatant {
+  // O Black ICE e o demônio: 1 a mais que a maior iniciativa dos outros (ou 30, sem ninguém na fila).
+  _getInitiativeFormula() {
+    if (!daNet(this)) return super._getInitiativeFormula();
+    return String(iniciativaNoTopo(this.parent.combatants.filter(outro => outro.id !== this.id).map(outro => outro.initiative)));
+  }
+
   getInitiativeRoll(formula) {
     const ator = this.actor;
     const escolha = escolhas.get(this);
@@ -34,6 +45,12 @@ export class CombateCPR extends Combat {
       }
       lista.push(id);
     }
-    return lista.length ? super.rollInitiative(lista, opcoes) : this;
+    // O Black ICE e o demônio vão depois dos outros, um de cada vez: cada um entra acima de quem já rolou (o Foundry só
+    // grava as iniciativas no fim de cada rollInitiative).
+    const naNet = lista.filter(id => daNet(this.combatants.get(id)));
+    const outros = lista.filter(id => !naNet.includes(id));
+    if (outros.length) await super.rollInitiative(outros, opcoes);
+    for (const id of naNet) await super.rollInitiative([id], opcoes);
+    return this;
   }
 }

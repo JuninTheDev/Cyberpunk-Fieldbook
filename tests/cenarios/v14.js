@@ -3319,6 +3319,184 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('Black ICE e demônio como atores (wiki, RED p. 204–212; o blackIce e o demon do CORE): o ator novo tem o token solto com a REZ na barra; na ficha, o modelo da wiki preenche o Hellhound e o Efreet; os números rolam + 1d10, pela janela do modificador do mestre ou com Ctrl + clique; na ficha do token, a REZ e o nome são do token', async () => {
+      // Hellhound: SPD 6, d10 7 + 1 do mestre = 14 (pela janela); ATK 6, d10 4 = 10 (Ctrl + clique). Efreet: Interface 4, d10 5 = 9.
+      await fixar(edge, []);
+      const nomes = ['Teste Black ICE', 'Hellhound', 'Cão de Guarda', 'Teste Demônio', 'Efreet'];
+      try {
+        const ice = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const html = m => new DOMParser().parseFromString(m.content, 'text/html');
+          const partesDa = m => [...html(m).querySelectorAll('.partes li')].map(textoDe);
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem.modificador:not(.minimizing)');
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          const mudar = (f, nome, valor) => { const campo = f.querySelector('[name="' + nome + '"]'); campo.value = valor; campo.dispatchEvent(new Event('change', { bubbles: true })); };
+
+          // 1. O Black ICE novo: o token solto, com a REZ na barra; os valores iniciais do CORE (REZ 10, custo 100).
+          const a = await Actor.implementation.create({ name: 'Teste Black ICE', type: 'blackice' });
+          const novo = { link: a.prototypeToken.actorLink, barra: a.prototypeToken.bar1.attribute, rez: [a.system.rez.value, a.system.rez.max], custo: a.system.custo, classe: a.system.classe };
+          await a.sheet.render({ force: true });
+          const f = () => a.sheet.element;
+          await esperar(() => f()?.querySelector('[name="system.modelo"]'));
+          const opcoes = [...f().querySelectorAll('[name="system.modelo"] option')].map(o => o.textContent.trim());
+          // 2. O modelo da wiki: o Hellhound preenche o nome e os números.
+          mudar(f(), 'system.modelo', 'hellhound');
+          await esperar(() => a.name === 'Hellhound' && f()?.querySelector('.nome-linha .nome')?.value === 'Hellhound');
+          const s = a.system;
+          const hellhound = {
+            nome: a.name, modelo: s.modelo, classe: s.classe, numeros: [s.per, s.spd, s.atk, s.def], rez: [s.rez.value, s.rez.max], efeito: s.efeito, dano: s.dano, custo: s.custo,
+            botoes: [...f().querySelectorAll('[data-action="rolarDaNet"]')].map(b => b.textContent.trim()), campos: ['system.spd', 'system.dano', 'system.classe'].map(nome => f().querySelector('[name="' + nome + '"]').value)
+          };
+          // 3. A SPD pela janela, com +1 do mestre.
+          let antes = game.messages.size;
+          window.__fila = [[7, 10]];
+          f().querySelector('[data-action="rolarDaNet"][data-numero="spd"]').click();
+          await esperar(() => janela()?.querySelector('[name="outro"]'));
+          const daJanela = { titulo: textoDe(janela().querySelector('.window-title')), linhas: [...janela().querySelectorAll('.partes li')].map(textoDe) };
+          janela().querySelector('[name="outro"]').value = 1;
+          janela().querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          let m = game.messages.contents.at(-1);
+          const spd = { total: m.rolls[0].total, cartao: partesDa(m), titulo: textoDe(html(m).querySelector('h3')), sabor: textoDe(html(m).querySelector('.sabor')), falante: m.speaker.alias };
+          // 4. O ATK com Ctrl + clique: direto, sem a janela.
+          antes = game.messages.size;
+          window.__fila = [[4, 10]];
+          ctrl(f().querySelector('[data-action="rolarDaNet"][data-numero="atk"]'));
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const atk = { total: m.rolls[0].total, cartao: partesDa(m), janela: Boolean(janela()) };
+          await a.sheet.close();
+
+          // 5. Na cena: o token solto, com a REZ na barra; na ficha do token, a REZ e o nome mudam só no token.
+          const [t] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1700, y: 1100 })).toObject()]);
+          await esperar(() => canvas.tokens.get(t.id));
+          const barra = t.getBarAttribute('bar1');
+          await t.actor.sheet.render({ force: true });
+          const g = () => t.actor.sheet.element;
+          await esperar(() => g()?.querySelector('[name="system.rez.value"]'));
+          const daCena = textoDe(g().querySelector('.linha-id .modelo'));
+          mudar(g(), 'system.rez.value', 12);
+          await esperar(() => t.actor.system.rez.value === 12);
+          mudar(g(), 'name', 'Cão de Guarda');
+          await esperar(() => t.name === 'Cão de Guarda');
+          const token = { barra: [barra?.attribute, barra?.value, barra?.max], daCena, rezDoToken: t.actor.system.rez.value, rezDoAtor: a.system.rez.value, nome: t.name, nomeDoAtor: a.name };
+          await t.actor.sheet.close();
+          // A ficha do Hellhound fica aberta para a captura.
+          await a.sheet.render({ force: true });
+          await esperar(() => f()?.querySelector('[name="system.modelo"]'));
+          return { novo, opcoes, hellhound, daJanela, spd, atk, token };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('ficha-black-ice');
+        const demonio = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          await game.actors.getName('Hellhound')?.sheet.close();
+          // 6. O demônio novo: o token solto, com a REZ na barra; o Efreet da wiki; a Interface com Ctrl + clique.
+          const d = await Actor.implementation.create({ name: 'Teste Demônio', type: 'demonio' });
+          const novo = { link: d.prototypeToken.actorLink, barra: d.prototypeToken.bar1.attribute, numeros: [d.system.rez.max, d.system.interface, d.system.acoes, d.system.valorDeCombate] };
+          await d.sheet.render({ force: true });
+          const h = () => d.sheet.element;
+          await esperar(() => h()?.querySelector('[name="system.modelo"]'));
+          const campo = h().querySelector('[name="system.modelo"]');
+          campo.value = 'efreet';
+          campo.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => d.name === 'Efreet' && h()?.querySelector('.nome-linha .nome')?.value === 'Efreet');
+          const efreet = { nome: d.name, numeros: [d.system.rez.value, d.system.rez.max, d.system.interface, d.system.acoes, d.system.valorDeCombate], botoes: [...h().querySelectorAll('[data-action="rolarDaNet"]')].map(b => b.textContent.trim()) };
+          const antes = game.messages.size;
+          window.__fila = [[5, 10]];
+          ctrl(h().querySelector('[data-action="rolarDaNet"][data-numero="interface"]'));
+          await esperar(() => game.messages.size > antes);
+          const m = game.messages.contents.at(-1);
+          const partes = [...new DOMParser().parseFromString(m.content, 'text/html').querySelectorAll('.partes li')].map(textoDe);
+          // A ficha do Efreet fica aberta para a captura.
+          return { novo, efreet, interface: { total: m.rolls[0].total, cartao: partes, sabor: textoDe(new DOMParser().parseFromString(m.content, 'text/html').querySelector('.sabor')) } };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('ficha-demonio');
+        const info = { ice, demonio };
+        const { novo, opcoes, hellhound: hh, daJanela: j, spd, atk, token } = ice;
+        const ok = !novo.link && novo.barra === 'rez' && novo.rez.join() === '10,10' && novo.custo === 100 && novo.classe === 'antipersonnel'
+          && opcoes.length === 13 && opcoes[0] === 'À mão' && opcoes.includes('Hellhound') && opcoes.includes('Sabertooth')
+          && hh.nome === 'Hellhound' && hh.modelo === 'hellhound' && hh.classe === 'antipersonnel' && hh.numeros.join() === '6,6,6,2' && hh.rez.join() === '20,20'
+          && hh.efeito === '2d6 no cérebro; deck e roupa pegam fogo (2 no HP por turno).' && hh.dano === '2d6' && hh.custo === 500
+          && hh.botoes.join() === 'PER,SPD,ATK,DEF' && hh.campos.join() === '6,2d6,antipersonnel'
+          && j.titulo === 'Hellhound: SPD' && j.linhas.join() === 'SPD 6 + 1d10'
+          && spd.total === 14 && spd.cartao.join() === '1d10,SPD +6,Modificador do mestre +1' && spd.titulo === 'SPD' && spd.falante === 'Hellhound'
+          && spd.sabor === 'Ao ser encontrado à espreita, contra a Interface + velocidade + 1d10 do netrunner: se o ICE vencer, o netrunner sofre o efeito na hora.'
+          && atk.total === 10 && atk.cartao.join() === '1d10,ATK +6' && !atk.janela
+          && token.barra.join() === 'rez,20,20' && token.daCena === 'ESTE TOKEN' && token.rezDoToken === 12 && token.rezDoAtor === 20 && token.nome === 'Cão de Guarda' && token.nomeDoAtor === 'Hellhound'
+          && !demonio.novo.link && demonio.novo.barra === 'rez' && demonio.novo.numeros.join() === '10,0,2,14'
+          && demonio.efreet.nome === 'Efreet' && demonio.efreet.numeros.join() === '25,25,4,3,14' && demonio.efreet.botoes.join() === 'Interface,Valor de combate'
+          && demonio.interface.total === 9 && demonio.interface.cartao.join() === '1d10,Interface +4' && demonio.interface.sabor === 'Sem DEF: defende com Interface + 1d10. Só usa Zap e Control.';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close();
+          const nomes = ${JSON.stringify(nomes)};
+          await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => nomes.includes(t.name)).map(t => t.id));
+          for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
+          return true;
+        })()`);
+      }
+    });
+
+    await r.passo('iniciativa do Black ICE e do demônio (wiki: "entra no topo da fila"; o CPRCombat do CORE): sozinho na fila, 30; no "rolar todos", o netrunner rola e o ICE e o demônio entram acima, um de cada vez; a arma não atinge o Black ICE marcado', async () => {
+      // O netrunner: REF 6, d10 7 = 13; o ICE, 14; o demônio, 15.
+      await fixar(edge, []);
+      const nomes = ['Teste Netrunner Fila', 'Teste ICE Fila', 'Teste Demônio Fila'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const n = await Actor.implementation.create({ name: 'Teste Netrunner Fila', type: 'personagem', system: { atributos: { ref: { valor: 6 } } }, items: [foundry.utils.deepClone(cat['core_weapons:heavy-pistol'])] });
+          const ice = await Actor.implementation.create({ name: 'Teste ICE Fila', type: 'blackice', system: { spd: 6 } });
+          const dem = await Actor.implementation.create({ name: 'Teste Demônio Fila', type: 'demonio', system: { interface: 4 } });
+          const docs = [];
+          for (const [ator, x] of [[n, 1500], [ice, 1600], [dem, 1700]]) docs.push((await ator.getTokenDocument({ x, y: 900 })).toObject());
+          const [tn, ti, td] = await canvas.scene.createEmbeddedDocuments('Token', docs);
+          await esperar(() => canvas.tokens.get(td.id));
+          const combate = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          const [cn, ci, cd] = await combate.createEmbeddedDocuments('Combatant', [tn, ti, td].map(t => ({ tokenId: t.id, sceneId: canvas.scene.id, actorId: t.actorId })));
+          const iniciativa = c => combate.combatants.get(c.id).initiative;
+          // 1. O "rolar todos" do começo da luta: o netrunner rola (13), e o ICE e o demônio entram acima, um de cada vez.
+          window.__fila = [[7, 10]];
+          await combate.rollAll();
+          const todos = [cn, ci, cd].map(iniciativa);
+          const ordem = combate.turns.map(c => c.name);
+          // 2. Sozinho na fila (ninguém rolou): 30. Noutro combate, só com o ICE.
+          const outro = await Combat.implementation.create({ scene: canvas.scene.id, active: false });
+          const [so] = await outro.createEmbeddedDocuments('Combatant', [{ tokenId: ti.id, sceneId: canvas.scene.id, actorId: ti.actorId }]);
+          await outro.rollInitiative([so.id]);
+          const sozinho = outro.combatants.get(so.id).initiative;
+          // 3. A arma com só o Black ICE marcado: o aviso, e não ataca.
+          canvas.tokens.setTargets([ti.id]);
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          const mensagens = game.messages.size;
+          let ataque;
+          try { ataque = await game.system.api.combate.atacar(n.items.getName('Heavy Pistol')); } finally { delete ui.notifications.warn; canvas.tokens.setTargets([]); }
+          return { sozinho, todos, ordem, ataque, avisos, rolou: game.messages.size - mensagens, pente: n.items.getName('Heavy Pistol').system.pente.value };
+        })()`);
+        const ok = info.sozinho === 30 && info.todos.join() === '13,14,15' && info.ordem.join() === 'Teste Demônio Fila,Teste ICE Fila,Teste Netrunner Fila'
+          && info.ataque === null && info.avisos.join() === 'O Black ICE e o demônio estão na NET: a arma não os atinge.' && info.rolou === 0;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          canvas.tokens.setTargets([]);
+          const nomes = ${JSON.stringify(nomes)};
+          for (const combate of game.combats.filter(c => c.combatants.some(cb => nomes.includes(cb.name)))) await combate.delete();
+          await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => nomes.includes(t.name)).map(t => t.id));
+          for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

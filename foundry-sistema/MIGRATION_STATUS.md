@@ -34,7 +34,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE | consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
-| CORE | Black ICE, demônio e contêiner (loja, saque, esconderijo) | falta |
+| CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); falta o dano (o C7, parte 2) e o token que o programa rezza (parte 3) |
+| CORE | contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
@@ -108,7 +109,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
-  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o resto falta | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores no 43 (sem o dano); o resto falta | P3 |
   | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
@@ -243,6 +244,25 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   1d10 vs Interface + 1d10 (ou DEF do programa + 1d10)", e o CORE rola a defesa do programa como Interface + DEF + 1d10.
   Os programas do RED que o netrunner usa têm DEF 0, e o sistema ainda não rola a defesa deles; o Black ICE, que
   defende com DEF + 1d10, vem no C7.
+
+- **A iniciativa do Black ICE e do demônio: o topo da fila, sem somar a SPD.** A wiki diz que o Black ICE "entra no topo
+  da fila de iniciativa" (e o demônio, "no topo da iniciativa"), e o `CPRCombat` do CORE dá a ele 1 a mais que a maior
+  iniciativa da fila (30 sem ninguém). Mas o `CPRInitiative` do CORE soma ainda o número do ator (a SPD do ICE, a
+  Interface do demônio) a esse valor: um Hellhound (SPD 6) entra com a maior + 7, ou 36. Aqui fica a maior + 1 (ou 30),
+  como dizem a wiki e o comentário do CORE; o ICE fica no topo do mesmo jeito. A diferença aparece entre vários ICE: no
+  CORE, a SPD desempata; aqui, quem entra depois fica acima. No "rolar todos", o ICE e o demônio rolam depois dos outros,
+  um de cada vez (no Foundry, as iniciativas de um `rollInitiative` só se gravam no fim).
+
+- **O Black ICE pela tabela da wiki, não por um programa.** No CORE, o Black ICE se configura a partir de um programa de
+  Black ICE do mundo (o "configure from program" da ficha), e o CORE 0.92.4 não traz nenhum: o mestre os faz à mão. Aqui a
+  ficha preenche o nome e os números pela tabela da wiki (os 12 Black ICE e os 3 demônios do RED, que o build lê das
+  regras da wiki), com o efeito e o dano do efeito. O programa de Black ICE do netrunner, que rezza um token, é a parte 3
+  do C7.
+
+- **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
+  marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
+  eles marcados, avisa e não rola nem gasta bala): eles ficam na NET, e o dano neles vem dos programas e do Zap (o C7,
+  parte 2).
 
 - **O Facedown leva a penalidade de ferimento: pela wiki, não pelo CORE.** O `CPRFacedownRoll` do CORE soma os
   modificadores de "todas as ações" das lesões (a Concussão, −2), mas não o do estado de ferimento. A wiki dá os dois com
@@ -2066,6 +2086,53 @@ NET", a tabela dos programas com os defensores e a do Zap; RED p. 201–204).
 - **O C6 fecha aqui** (ciclos 40 a 42).
 - **Próximo:** o C7 (o Black ICE e o demônio como atores: as fichas, o dano na REZ, o token que o programa rezza e a
   iniciativa pela SPD), com o dano em Black ICE.
+- **Commit:** `3a96d50`.
+
+### Ciclo 43 (2026-10-13): o Black ICE e o demônio como atores (o C7, parte 1; sessão KouArt)
+
+O blackIce e o demon do CORE (`cpr-black-ice.js`, `cpr-demon.js`, as fichas deles e o `CPRCombat`) e a wiki ("Black
+ICE", "Como ler os cartões" e "Demônios", com as tabelas; RED p. 204–212).
+
+- **Implementado:**
+  - **os tipos de ator `blackice` e `demonio`** (`DadosBlackIce`: o modelo, a classe, PER, SPD, ATK, DEF, a REZ, o
+    efeito, o dano e o custo; `DadosDemonio`: o modelo, a REZ, a Interface, as Ações NET e o Valor de combate), sem
+    atributos, HP nem Sorte. O token nasce solto, com a REZ na barra;
+  - **as fichas** (`ficha-net.mjs`, no visual da ficha do personagem): os números rolam o número + 1d10
+    (`AtorCPR.rolarDaNet`, `regras.NUMEROS_DA_NET`, com o que cada um enfrenta no cartão), pela janela do modificador do
+    mestre (a do CORE para eles não tem a Sorte) ou com Ctrl + clique. Na ficha de um token, o nome vai para o token;
+  - **o modelo da wiki:** o build lê as tabelas de Black ICE e de demônios das regras da wiki (`gerado.BLACK_ICE` e
+    `DEMONIOS`, com o dano do efeito), e a lista da ficha preenche o nome e os números (`regras.fichaDoModelo`);
+  - **a iniciativa** (`iniciativa.mjs`, `regras.iniciativaNoTopo`): o Black ICE e o demônio não rolam; ficam com 1 a mais
+    que a maior dos outros (30, sem ninguém). No "rolar todos", rolam depois dos outros, um de cada vez;
+  - **a arma não atinge os atores da NET** (`combate.atacar`): com só eles marcados, avisa e não rola nem gasta bala;
+  - a Sorte preparada de quem não tem Sorte é 0 (o `testar` do Black ICE e do demônio);
+  - o README tirou a Interface da lista do que falta (veio no ciclo 40) e o "as regras da NET ainda não estão aqui" do
+    inventário.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 67 de 71. Um teste novo: as tabelas da wiki no gerado (as 12 linhas de Black ICE e as 3 de demônios, voltando
+    iguais ao texto da wiki; o dano do efeito), a ficha pelo modelo, os números que rolam e a iniciativa no topo da fila.
+    O teste do capanga passou a esperar os quatro tipos de ator do manifesto (com os nomes em português). As 4 falhas
+    são as das armas de 2077 (QUALITY_GATES);
+  - G4: 73 de 78, cerca de 113 s. Dois passos novos:
+    - o Black ICE novo (o token solto, a REZ na barra, a REZ 10 e o custo 100 do CORE); o Hellhound pelo modelo da wiki
+      (6/6/6/2, REZ 20, o efeito, o dano 2d6 e o custo 500); a SPD pela janela (6 + 7 + 1 do mestre = 14) e o ATK com
+      Ctrl + clique (6 + 4 = 10); na ficha do token, a REZ (12) e o nome mudam só no token; o Efreet pelo modelo
+      (REZ 25, Interface 4, 3 Ações NET, Valor de combate 14) e a Interface com Ctrl + clique (4 + 5 = 9);
+    - a iniciativa: no "rolar todos" do começo da luta, o netrunner 13 (REF 6 + 7), o ICE 14 e o demônio 15 (a fila: o
+      demônio, o ICE e o netrunner); sozinho noutro combate, 30; a pistola com só o Black ICE marcado avisa e não rola.
+      Numa rodada, a fila saiu na ordem antiga logo depois de um `resetAll` do teste, com as iniciativas certas (ver o
+      QUALITY_GATES); o passo passou a usar um combate para cada caso.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o topo da fila sem o +1; o modelo com a REZ vazia;
+    - G4: o token com o HP na barra; o "rolar todos" sem deixar o ICE e o demônio para depois; o modelo que não preenche a
+      ficha; a arma com só o Black ICE marcado seguindo; e a Sorte do Black ICE (que não tem).
+- **Próximo:** o C7, parte 2: o dano do Black ICE no netrunner (no cérebro, sem o Shield, ou num programa; o
+  anti-programa que destrói o programa, só avisando o mestre) e o dos programas e do Zap na REZ do Black ICE e do
+  demônio.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -139,6 +139,36 @@ export const formulaDeDano = formula => (formula && String(formula).trim() !== '
 // A REZ são os "pontos de vida" do programa: a do catálogo menos a perdida, nunca abaixo de 0. Em 0, ele desativa.
 export const rezAtual = (rez, perdida) => Math.max(0, (Number(rez) || 0) - Math.max(0, Number(perdida) || 0));
 
+// O Black ICE e o demônio (a wiki, "Black ICE", "Como ler os cartões" e "Demônios", RED p. 204–212; o blackIce e o demon
+// do CORE): os números que rolam (o número + 1d10, o createStatRoll do CORE) e o que cada um enfrenta. A REZ não rola, e
+// as Ações NET do demônio só contam.
+export const NUMEROS_DA_NET = {
+  blackice: [
+    { id: 'per', rotulo: 'PER', dica: 'Contra o Slide do netrunner (Interface + 1d10): quão difícil é driblar o ICE.' },
+    { id: 'spd', rotulo: 'SPD', dica: 'Ao ser encontrado à espreita, contra a Interface + velocidade + 1d10 do netrunner: se o ICE vencer, o netrunner sofre o efeito na hora.' },
+    { id: 'atk', rotulo: 'ATK', dica: 'O ataque, uma vez por turno: contra a Interface + 1d10 do netrunner.' },
+    { id: 'def', rotulo: 'DEF', dica: 'A defesa: contra o ataque do programa (Interface + ATK + 1d10) ou o Zap.' }
+  ],
+  demonio: [
+    { id: 'interface', rotulo: 'Interface', dica: 'Sem DEF: defende com Interface + 1d10. Só usa Zap e Control.' },
+    { id: 'valorDeCombate', rotulo: 'Valor de combate', dica: 'Ataca com os drones e as torretas dos nós de controle: valor de combate + 1d10.' }
+  ]
+};
+// A iniciativa do Black ICE e do demônio (a wiki: "entra no topo da fila de iniciativa"; o CPRCombat do CORE): não rolam e
+// ficam com 1 a mais que a maior iniciativa dos outros, ou 30 se ninguém rolou ainda. O CORE soma ainda a SPD (ou a
+// Interface) a esse número (ver as dúvidas no MIGRATION_STATUS).
+export const INICIATIVA_SEM_FILA = 30;
+export function iniciativaNoTopo(outras = []) {
+  const rolaram = outras.filter(Number.isFinite);
+  return rolaram.length ? Math.max(...rolaram) + 1 : INICIATIVA_SEM_FILA;
+}
+// A ficha pelo modelo da wiki (gerado.BLACK_ICE ou gerado.DEMONIOS): o nome, os números e a REZ cheia. É o "configurar
+// pelo programa" do Black ICE do CORE, com a tabela da wiki no lugar do programa (o CORE 0.92.4 não traz programas de
+// Black ICE).
+export function fichaDoModelo({ id, nome, rez, ...numeros }) {
+  return { name: nome, system: { modelo: id, ...numeros, rez: { value: rez, max: rez } } };
+}
+
 // O capanga (o mook do CORE) equipa ou instala o que recebe, como o handleMookDraggedItem do CORE: o cyberware é
 // instalado, e o que se equipa no CORE (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento) entra
 // equipado. O resto (munição, programa, upgrade, veículo, lesão) fica como veio.

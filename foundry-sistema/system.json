@@ -50,6 +50,16 @@
         "htmlFields": [
           "notas"
         ]
+      },
+      "blackice": {
+        "htmlFields": [
+          "notas"
+        ]
+      },
+      "demonio": {
+        "htmlFields": [
+          "notas"
+        ]
       }
     },
     "Item": {

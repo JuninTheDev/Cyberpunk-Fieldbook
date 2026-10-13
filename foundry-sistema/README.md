@@ -40,6 +40,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     instala o cyberware rolando a perda de Humanidade (com Shift, a média), como o CORE;
   - **A ficha limitada:** o jogador só com a permissão Limitada vê a imagem, o nome e as notas, como no CORE. Com a de
     Observador, vê a ficha inteira, sem editar.
+- **Ficha do Black ICE e do demônio** (o blackIce e o demon do CORE), os atores da NET, numa página só, no visual da ficha
+  do personagem:
+  - **Black ICE:** a REZ, PER, SPD, ATK e DEF (clique para rolar o número + 1d10, pela janela do modificador do mestre;
+    Ctrl + clique, direto), a classe, o dano, o custo e o efeito. **Demônio:** a REZ, as Ações NET, a Interface e o Valor
+    de combate (os dois últimos rolam);
+  - **o modelo da wiki:** a lista do cabeçalho preenche o nome e os números pela tabela da wiki (os 12 Black ICE e os 3
+    demônios do RED);
+  - **o token** nasce solto, com a REZ na barra: cada um na cena tem a própria REZ. O nome mudado na ficha de um token vai
+    para o token;
+  - **a iniciativa:** não rolam; entram no topo da fila, com 1 a mais que a maior dos outros (30, sem ninguém), cada um
+    acima de quem já está nela. A arma não os atinge: com só eles marcados, o ataque avisa e não rola.
 - **Cartões do chat** (testes, ataques, dano, Death Save) no mesmo visual: a mensagem inteira fica escura, com a borda amarela (vermelha no dano e na morte), as partes do teste em etiquetas e o total grande. As mensagens que não são do sistema não mudam.
 - **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12. O botão de cada um no cabeçalho da ficha abre a janela dele:
   - **o menu:** a quantia e o motivo, com Somar, Subtrair e Definir. Como no CORE, Subtrair sempre tira (um valor negativo também), e perder mais do que tem deixa o saldo negativo, com um aviso;
@@ -130,7 +141,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Efeitos do equipamento** valem conforme o uso, como no CORE: o Agent (+2 em Pesquisa em Biblioteca) e o Techscanner valem equipados ou carregando; o Medscanner e o Linear Frame, só equipados.
   - **Drogas** vêm com os efeitos desligados. Quem usa liga o efeito na ficha do item (o Boost dá +2 INT).
   - **Roupas** guardam o tipo e o estilo, com os nomes da loja da wiki.
-  - **Netrunning:** o cyberdeck (os slots, com os programas instalados nele e quantos slots ocupam) e os programas (classe, ATK, DEF, REZ, o dano e o deck onde estão). Só aparece na ficha de quem tem um dos dois. As regras da NET (a corrida, o Black ICE) ainda não estão aqui.
+  - **Netrunning:** o cyberdeck (os slots, com os programas instalados nele e quantos slots ocupam) e os programas (classe, ATK, DEF, REZ, o dano e o deck onde estão). Só aparece na ficha de quem tem um dos dois. O combate na NET fica na aba NET.
   - **Upgrades e acessórios:** cada um diz onde instala (arma, cyberdeck ou veículo), quantos slots ocupa e em que item está. Instalado numa arma, o carregador estendido ou tambor troca o tamanho do pente (o rifle de assalto vai de 25 a 35 ou 45, como a tabela de carregadores da wiki), e o Smartgun Link dá +1 no ataque (o mesmo acessório duas vezes não soma). O hardware ocupa slots do deck.
   - **Veículos:** SDP, assentos, MOVE (a velocidade de combate) e a velocidade narrativa. Os upgrades instalados somam SDP e assentos (o Chassis pesado dá +20 SDP; o Upgrade de assento, +2 assentos). Os da família do Nomad vêm marcados.
 - **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Equipamento, Roupas, Drogas, Netrunning (cyberdecks e programas), Upgrades e acessórios, Veículos, Armas de 2077, Cyberware de 2077, Netrunning de 2077, Lesões críticas e Personagens de exemplo. Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
@@ -197,15 +208,14 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), **o Black ICE**, as arquiteturas (o NET Architect) e
-  o Painel Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o dano do Black ICE e o dano na REZ dele (o C7,
+  parte 2), o programa de Black ICE do netrunner, as arquiteturas (o NET Architect) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
   flag `arma2077`.
 - **O cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm).
-- **A Interface do Netrunner** (o C5 do ROADMAP). Os opcionais de Role da wiki (o Investigator do Lawman, o desconto do
-  clã do Nomad) ficam com o mestre.
+- **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.
 - **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
@@ -266,6 +276,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
+  - o Black ICE e o demônio: o token solto com a REZ na barra, o modelo da wiki (o Hellhound e o Efreet), as rolagens pela janela e com Ctrl + clique, a REZ e o nome na ficha do token, a iniciativa no topo da fila (sozinho e no "rolar todos") e a arma que não os atinge;
   - o capanga: o token solto, a ficha de uma página, os itens do compêndio arrastados para ela (equipados ou instalados, a Humanidade rolada e, com Shift, a média), o tiro que muda só o HP do capanga atingido, o outro capanga recarregando e atirando com a própria munição, o Death Save só de quem caiu, o nome novo na ficha do token e, no navegador do jogador, a ficha limitada (só a imagem, o nome e as notas; o Observador vê tudo, sem editar);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar);
   - a Sorte preparada na ficha e o visual dos cartões do chat;

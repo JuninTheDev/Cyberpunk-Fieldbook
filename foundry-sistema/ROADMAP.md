@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 43). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 44). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -78,8 +78,14 @@ de compêndio; entram só as partes do sistema.
     wiki), ou na REZ de um programa ativo do alvo: ciclo 42. O dano em Black ICE entra no Black ICE, com o C7;
   - [x] os boosters: no build e somando na Interface quando ativos (ciclo 40).
 - [~] **C7. Black ICE e demônio como atores:** Em andamento: sessão KouArt, 2026-10-13 (depois do C6).
-  - **as fichas:** Black ICE com PER, SPD, ATK, DEF e REZ; demônio com REZ, Interface, Ações de NET e Combat Number;
-  - o dano no REZ, o token "rezzado" pelo programa e a iniciativa pela SPD.
+  - [x] **as fichas:** Black ICE com PER, SPD, ATK, DEF e REZ; demônio com REZ, Interface, Ações de NET e Combat Number;
+    com as rolagens (o número + 1d10), o token solto com a REZ na barra e o modelo da wiki (os 12 Black ICE e os 3
+    demônios do RED): ciclo 43;
+  - [x] a iniciativa: no topo da fila, pela wiki e pelo CORE (sem somar a SPD, que o CORE soma; ver as dúvidas no
+    MIGRATION_STATUS): ciclo 43;
+  - [ ] o dano: o do Black ICE no netrunner (no cérebro, sem o Shield, ou num programa) e o dos programas e do Zap na REZ
+    do Black ICE e do demônio (a parte 2);
+  - [ ] o token "rezzado" pelo programa de Black ICE do netrunner (a parte 3).
 - [ ] **C8. Arquiteturas e o NET Architect dentro do sistema:**
   - o tipo de item arquitetura, com os andares e as DVs, como o `netarch` do CORE;
   - o que o NET Architect faz na mesa: pontos de acesso nos tiles, a janela da NET, os inimigos no combate, o jogador

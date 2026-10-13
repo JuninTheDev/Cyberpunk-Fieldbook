@@ -2,7 +2,9 @@
   "TYPES": {
     "Actor": {
       "personagem": "Personagem",
-      "capanga": "Capanga"
+      "capanga": "Capanga",
+      "blackice": "Black ICE",
+      "demonio": "Demônio"
     },
     "Item": {
       "arma": "Arma",

@@ -327,6 +327,32 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-capanga .capanga-limitado .retrato { width: 120px; height: 136px; cursor: default; }
 .cpr-fieldbook.ficha-capanga .capanga-limitado .nome-linha .nome { font-size: 34px; border-bottom: none; }
 
+/* ---------- Black ICE e demônio (os atores da NET): uma página só, no visual da ficha do personagem ---------- */
+.cpr-fieldbook.ficha-net .window-content { overflow-y: auto; }
+.cpr-fieldbook.ficha-net .ficha-net-corpo { display: flex; flex-direction: column; gap: 14px; }
+/* A janela é estreita (640 px), mas o cabeçalho fica em linha: a imagem ao lado do nome. */
+.cpr-fieldbook.ficha-personagem.ficha-net .topo { flex-direction: row; }
+.cpr-fieldbook.ficha-personagem.ficha-net .topo .retrato { width: 120px; height: 136px; }
+.cpr-fieldbook.ficha-personagem.ficha-net .nome-linha .nome { font-size: 36px; }
+.cpr-fieldbook.ficha-net .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }
+.cpr-fieldbook.ficha-net .linha-id select {
+  width: auto; height: auto; padding: 0 2px; background: transparent; border: none; border-bottom: 1px solid var(--cp-linha);
+  color: var(--cp-amarelo); font: inherit; letter-spacing: inherit; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-net .linha-id select option { background: var(--cp-poco); color: var(--cp-texto); text-transform: none; }
+.cpr-fieldbook.ficha-net .indicador.rez { border-top-color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-net .indicador.rez input { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-net .atributos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cpr-fieldbook.ficha-net.ficha-demonio .atributos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cpr-fieldbook.ficha-net .atributo .rolar { text-transform: uppercase; }
+.cpr-fieldbook.ficha-net .campos-net { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-bottom: 8px; }
+.cpr-fieldbook.ficha-net .campos-net label {
+  display: flex; align-items: center; gap: 6px; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-net .campos-net input { width: 7ch; }
+.cpr-fieldbook.ficha-net .efeito-net textarea { width: 100%; min-height: 2.8em; resize: vertical; font-family: var(--cp-titulo); font-size: 15px; line-height: 1.35; }
+.cpr-fieldbook.ficha-net .notas prose-mirror { min-height: 8rem; }
+
 /* ---------- Janela estreita ---------- */
 @container (max-width: 1020px) {
   .cpr-fieldbook.ficha-personagem .geral { grid-template-columns: 280px minmax(0, 1fr); }

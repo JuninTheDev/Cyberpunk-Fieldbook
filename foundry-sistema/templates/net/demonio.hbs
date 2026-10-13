@@ -1,0 +1,57 @@
+{{!-- A ficha do demônio (ficha-net.mjs): o cabeçalho com o modelo da wiki, o nome, a REZ e as Ações NET; os números que
+rolam; as notas. --}}
+<div class="ficha-net-corpo">
+  <header class="topo">
+    <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" data-action="editImage" data-edit="img" data-tooltip="Trocar a imagem">
+    <div class="identidade">
+      <p class="linha-id">
+        <span>DEMÔNIO://</span>
+        <select name="system.modelo" aria-label="Modelo da wiki" data-tooltip="Da tabela de demônios da wiki: preenche o nome e os números" {{#unless editavel}}disabled{{/unless}}>
+          {{selectOptions modelos selected=sistema.modelo blank="À mão"}}
+        </select>
+        {{#if naCena}}
+        <span class="modelo" data-tooltip="A ficha deste token: a REZ que muda aqui não muda os outros tokens do mesmo ator">ESTE TOKEN</span>
+        {{else}}
+        <span class="modelo" data-tooltip="A ficha do ator: os tokens na cena seguem o que ela tem, menos o que cada um já mudou (a REZ)">MODELO DOS TOKENS</span>
+        {{/if}}
+      </p>
+      <div class="nome-linha">
+        <input class="nome" type="text" name="name" value="{{nomeNaFicha}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>
+      </div>
+      <div class="indicadores">
+        <label class="indicador corte rez" data-tooltip="REZ: os pontos de vida do demônio; em 0, ele é desativado">
+          <span class="valor"><input type="number" name="system.rez.value" value="{{sistema.rez.value}}" aria-label="REZ atual"><small>/</small><input type="number" name="system.rez.max" value="{{sistema.rez.max}}" aria-label="REZ máxima"></span>
+          <i>REZ</i>
+        </label>
+        <label class="indicador corte acoes" data-tooltip="Ações NET por turno: prioriza os nós de controle e só usa o Zap com as que sobram">
+          <span class="valor"><input type="number" name="system.acoes" value="{{sistema.acoes}}" min="0" aria-label="Ações NET"></span>
+          <i>AÇÕES NET</i>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <section class="painel corte">
+    <div class="titulo">NÚMEROS<span>CLIQUE PARA ROLAR + 1D10</span></div>
+    <ol class="atributos">
+      {{#each numeros}}
+      <li class="atributo" data-numero="{{id}}">
+        <input type="number" name="system.{{id}}" value="{{valor}}" min="0" aria-label="{{rotulo}}">
+        <button type="button" class="rolar" data-action="rolarDaNet" data-numero="{{id}}" data-tooltip="{{rotulo}} + 1d10. {{dica}}">{{rotulo}}</button>
+      </li>
+      {{/each}}
+    </ol>
+    <p class="dica">Sabe tudo da própria arquitetura: senhas não o param e ele sempre vence as disputas de velocidade. Sem PER nem SPD, não dá para usar Slide contra ele. Entra no topo da iniciativa quando detecta um intruso.</p>
+  </section>
+
+  <section class="painel corte notas">
+    <div class="titulo">NOTAS</div>
+    {{#if editavel}}
+    <prose-mirror name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+    {{else}}
+    <div class="texto">{{{notasRicas}}}</div>
+    {{/if}}
+  </section>
+
+  <footer class="rodape"><span>NIGHT CITY // CYBERPUNK RED — FIELDBOOK</span><span>FICHA DE DEMÔNIO · v{{versao}}</span></footer>
+</div>

@@ -5,12 +5,13 @@ import * as combate from './combate.mjs';
 import { caminho, SISTEMA } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
-  DadosArma, DadosArmadura, DadosCyberdeck, DadosCyberware, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma, DadosRoupa, DadosUpgrade,
-  DadosVeiculo
+  DadosArma, DadosArmadura, DadosBlackIce, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
+  DadosRoupa, DadosUpgrade, DadosVeiculo
 } from './dados.mjs';
 import { AtorCPR, ItemCPR } from './documentos.mjs';
 import { FichaCapanga } from './ficha-capanga.mjs';
 import { FichaItem } from './ficha-item.mjs';
+import { FichaBlackIce, FichaDemonio } from './ficha-net.mjs';
 import { FichaPersonagem } from './ficha-personagem.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { CombateCPR, CombatenteCPR } from './iniciativa.mjs';
@@ -31,6 +32,9 @@ Hooks.once('init', () => {
   // O capanga (o mook do CORE) tem os dados do personagem, como no CORE (o mook e o character dividem o CommonSchema): as
   // regras e o combate são os mesmos. Mudam a ficha e o token, que fica solto (documentos.mjs).
   CONFIG.Actor.dataModels.capanga = DadosPersonagem;
+  // O Black ICE e o demônio (o blackIce e o demon do CORE): os atores da NET, com a ficha curta e o token solto.
+  CONFIG.Actor.dataModels.blackice = DadosBlackIce;
+  CONFIG.Actor.dataModels.demonio = DadosDemonio;
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,
     cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo
@@ -43,6 +47,8 @@ Hooks.once('init', () => {
   const { DocumentSheetConfig } = foundry.applications.apps;
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaPersonagem, { types: ['personagem'], makeDefault: true, label: 'Ficha do RED' });
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaCapanga, { types: ['capanga'], makeDefault: true, label: 'Ficha de capanga do RED' });
+  DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaBlackIce, { types: ['blackice'], makeDefault: true, label: 'Ficha de Black ICE do RED' });
+  DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaDemonio, { types: ['demonio'], makeDefault: true, label: 'Ficha de demônio do RED' });
   DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaItem, {
     types: ['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'], makeDefault: true, label: 'Item do RED'
   });

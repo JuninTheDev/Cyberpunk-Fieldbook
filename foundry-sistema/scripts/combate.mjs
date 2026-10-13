@@ -6,7 +6,7 @@
 //   "Desfazer" para o mestre.
 // - Modos: tiro, mirado (cabeça, perna, item na mão), corpo a corpo, autofogo, fogo supressivo, espingarda com
 //   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga e a rajada Tech e o teste Smart.
-import { DEFESAS, SISTEMA } from './config.mjs';
+import { ATORES_DA_NET, DEFESAS, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { animar, textoFlutuante } from './efeitos.mjs';
 import { TABELAS_DV } from './gerado.mjs';
@@ -123,7 +123,11 @@ export function jogadorDe(ator) {
 export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, cobertura = null, perguntar = false } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
-  const lista = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
+  const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
+  // O Black ICE e o demônio ficam na NET: a arma não os atinge (o dano neles vem dos programas e do Zap).
+  const lista = marcados.filter(token => !ATORES_DA_NET.includes(token.actor.type));
+  if (lista.length < marcados.length) ui.notifications.warn('O Black ICE e o demônio estão na NET: a arma não os atinge.');
+  if (marcados.length && !lista.length) return null;
   const municao = arma.municaoCarregada;
   const pelaArma = { aDistancia: arma.system.aDistancia, tipoDeArma: arma.system.tipo, municao: municao?.system.tipo };
   const modo = R.classificar({ pedido, ...pelaArma });

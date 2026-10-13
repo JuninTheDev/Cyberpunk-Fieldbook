@@ -61,6 +61,10 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   a mesa a cada 2 minutos). Não contorne a checagem. Para mudar o código durante a espera, pare o laço só antes de ele
   começar o G4; se já começou, deixe terminar. O instalador copia o sistema no começo do G4, e a rodada fica com a versão
   de antes: serve de pista, não de portão (ciclo 36).
+- **A ordem dos turnos logo depois do `resetAll`:** no ciclo 43, depois de um `combate.resetAll()` (que regrava todos
+  os combatentes de uma vez) e de um `rollAll`, a lista de turnos (`combate.turns`) saiu uma vez na ordem de antes, com
+  as iniciativas novas certas; a rodada seguinte, igual, deu a ordem certa. Para conferir a ordem da fila, use um combate
+  novo em vez do `resetAll`.
 - **Mensagem do chat na página:** ela aparece duas vezes (no chat e na notificação), cada uma com os botões ligados.
   Para contar os botões de um cartão, procure dentro de uma das duas (`document.querySelector('[data-message-id=...]')`);
   no documento inteiro, a lista vem dobrada (ciclo 42).

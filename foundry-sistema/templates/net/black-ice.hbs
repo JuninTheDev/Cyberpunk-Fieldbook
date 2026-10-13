@@ -1,0 +1,62 @@
+{{!-- A ficha do Black ICE (ficha-net.mjs): o cabeçalho com o modelo da wiki, o nome e a REZ; os números que rolam; o
+efeito, o dano, a classe e o custo; as notas. --}}
+<div class="ficha-net-corpo">
+  <header class="topo">
+    <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" data-action="editImage" data-edit="img" data-tooltip="Trocar a imagem">
+    <div class="identidade">
+      <p class="linha-id">
+        <span>BLACK ICE://</span>
+        <select name="system.modelo" aria-label="Modelo da wiki" data-tooltip="Da tabela de Black ICE da wiki: preenche o nome e os números" {{#unless editavel}}disabled{{/unless}}>
+          {{selectOptions modelos selected=sistema.modelo blank="À mão"}}
+        </select>
+        {{#if naCena}}
+        <span class="modelo" data-tooltip="A ficha deste token: a REZ que muda aqui não muda os outros tokens do mesmo ator">ESTE TOKEN</span>
+        {{else}}
+        <span class="modelo" data-tooltip="A ficha do ator: os tokens na cena seguem o que ela tem, menos o que cada um já mudou (a REZ)">MODELO DOS TOKENS</span>
+        {{/if}}
+      </p>
+      <div class="nome-linha">
+        <input class="nome" type="text" name="name" value="{{nomeNaFicha}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>
+      </div>
+      <div class="indicadores">
+        <label class="indicador corte rez" data-tooltip="REZ: os pontos de vida do Black ICE; em 0, ele é desativado">
+          <span class="valor"><input type="number" name="system.rez.value" value="{{sistema.rez.value}}" aria-label="REZ atual"><small>/</small><input type="number" name="system.rez.max" value="{{sistema.rez.max}}" aria-label="REZ máxima"></span>
+          <i>REZ</i>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <section class="painel corte">
+    <div class="titulo">NÚMEROS<span>CLIQUE PARA ROLAR + 1D10</span></div>
+    <ol class="atributos">
+      {{#each numeros}}
+      <li class="atributo" data-numero="{{id}}">
+        <input type="number" name="system.{{id}}" value="{{valor}}" min="0" aria-label="{{rotulo}}">
+        <button type="button" class="rolar" data-action="rolarDaNet" data-numero="{{id}}" data-tooltip="{{rotulo}} + 1d10. {{dica}}">{{rotulo}}</button>
+      </li>
+      {{/each}}
+    </ol>
+  </section>
+
+  <section class="painel corte efeito-net">
+    <div class="titulo">EFEITO<span>QUANDO O ATAQUE ACERTA</span></div>
+    <div class="campos-net">
+      <label>Classe <select name="system.classe">{{selectOptions classesDoIce selected=sistema.classe}}</select></label>
+      <label data-tooltip="A rolagem do efeito: no cérebro (anti-pessoal) ou no REZ de um programa (anti-programa)">Dano <input type="text" name="system.dano" value="{{sistema.dano}}" placeholder="—"></label>
+      <label>Custo <input type="number" name="system.custo" value="{{sistema.custo}}" min="0"><small>eb</small></label>
+    </div>
+    <textarea name="system.efeito" rows="2" placeholder="O que acontece quando o ataque acerta" aria-label="Efeito">{{sistema.efeito}}</textarea>
+  </section>
+
+  <section class="painel corte notas">
+    <div class="titulo">NOTAS</div>
+    {{#if editavel}}
+    <prose-mirror name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+    {{else}}
+    <div class="texto">{{{notasRicas}}}</div>
+    {{/if}}
+  </section>
+
+  <footer class="rodape"><span>NIGHT CITY // CYBERPUNK RED — FIELDBOOK</span><span>FICHA DE BLACK ICE · v{{versao}}</span></footer>
+</div>
