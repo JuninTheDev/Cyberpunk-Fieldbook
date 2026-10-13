@@ -557,6 +557,12 @@ export async function atualizarDaWiki(actor) {
 // o Foundry do mestre manda um retrato da ficha para a wiki, alguns segundos depois da última mudança; a ficha da
 // wiki mostra em "Na mesa". Só um mestre manda (o ativo).
 const strip = html => String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+// Os slots de uma base de cyberware como estão na ficha (um upgrade pode mudar): os livres mais os usados.
+const totalSlots = item => {
+  const used = item.system.installedItems?.usedSlots || 0;
+  const free = typeof item.availableInstallSlots === 'function' ? item.availableInstallSlots() : NaN;
+  return Number.isFinite(free) ? free + used : item.system.installedItems?.slots || 0;
+};
 function tableSnapshot(actor) {
   const s = actor.system;
   const nameOf = id => actor.items.get(id)?.name || '';
@@ -571,7 +577,9 @@ function tableSnapshot(actor) {
     if (item.type === 'weapon') Object.assign(entry, { dano: x.damage, cdt: x.rof, pericia: x.weaponSkill, distancia: Boolean(x.isRanged), maos: x.handsReq || 1,
       pente: x.isRanged ? { atual: x.magazine?.value || 0, max: x.magazine?.max || 0 } : null, municao: (item.getInstalledItems?.('ammo') || [])[0]?.name || '' });
     if (item.type === 'armor') Object.assign(entry, { cabeca: x.isHeadLocation ? (x.headLocation?.sp || 0) - (x.headLocation?.ablation || 0) : 0, corpo: x.isBodyLocation ? (x.bodyLocation?.sp || 0) - (x.bodyLocation?.ablation || 0) : 0 });
-    if (item.type === 'cyberware') Object.assign(entry, { instalado: Boolean(x.isInstalled), base: Boolean(x.isFoundational) });
+    // O tipo, o tamanho e os slots vão para a aba Cyberware da ficha da wiki (o grupo do RED e os quadrados de cada base).
+    if (item.type === 'cyberware') Object.assign(entry, { instalado: Boolean(x.isInstalled), base: Boolean(x.isFoundational),
+      cyber: { tipo: x.type || '', tamanho: x.size ?? 1, slots: x.isFoundational ? totalSlots(item) : 0 } });
     if (x.installedItems?.list?.length) entry.dentro = x.installedItems.list.map(nameOf).filter(Boolean);
     return entry;
   });

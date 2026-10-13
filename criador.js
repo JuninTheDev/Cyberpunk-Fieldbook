@@ -860,9 +860,6 @@
       }),
       armaduras: rows.filter(row => row.tipo === 'armadura').map(row => ({ nome: nameOf(row), cabeca: row.item.armadura.cabeca, corpo: row.item.armadura.corpo, escudo: row.item.armadura.escudo, uso: row.uso })),
       pericias: skills.map(skill => ({ label: skill.base ? specialName(skill.base, skill.tipo) : skillLabelOf(doc, skill.nome), grupo: skill.base ? SPECIAL_GROUP[skill.base] : groupOfSkill(skill.nome), stat: skill.stat, nivel: skill.nivel, base: skill.nivel + (stats[skill.stat] || 0) - penalty(skill.stat), origem: skill.gratis })),
-      cyber: rows.filter(row => row.tipo === 'cyberBase').map(row => ({ nome: nameOf(row), dentro: inside(row) })),
-      noCorpo: rows.filter(row => row.tipo === 'cyberOpcao' && !NEEDS_BASE.includes(row.item.cyber.tipo)).map(nameOf),
-      semBase: rows.filter(row => row.tipo === 'cyberOpcao' && NEEDS_BASE.includes(row.item.cyber.tipo) && loose(row)).map(nameOf),
       decks: rows.filter(row => row.tipo === 'deck').map(row => ({ nome: nameOf(row), ativo: row.uso === 'equipado', dentro: inside(row) })),
       outros: rows.filter(row => ['item', 'municao', 'roupa'].includes(row.tipo) || (['acessorio', 'deckItem'].includes(row.tipo) && loose(row)))
         .map(row => ({ nome: nameOf(row), qtd: row.qtd, uso: row.tipo === 'municao' ? '' : row.uso, roupa: row.tipo === 'roupa', origem: row.origem })),
@@ -877,7 +874,6 @@
     const stats = m.stats || {};
     const level = name => ((m.pericias || []).find(skill => skill.nome === name) || {}).nivel || 0;
     const items = m.itens || [];
-    const cyberNames = new Set(items.filter(item => item.tipo === 'cyberware' && item.base).flatMap(item => item.dentro || []));
     const deckNames = new Set(items.filter(item => item.tipo === 'cyberdeck').flatMap(item => item.dentro || []));
     const weaponInside = new Set(items.filter(item => item.tipo === 'weapon').flatMap(item => item.dentro || []));
     const vehicleInside = new Set(items.filter(item => item.tipo === 'vehicle').flatMap(item => item.dentro || []));
@@ -898,15 +894,311 @@
       }),
       armaduras: items.filter(item => item.tipo === 'armor').map(item => ({ nome: item.nome, cabeca: item.cabeca, corpo: item.corpo, escudo: 0, uso: uso(item) })),
       pericias: (m.pericias || []).map(skill => ({ label: skillLabelOf(doc, skill.nome), grupo: groupOfSkill(skill.nome), stat: skill.stat, nivel: skill.nivel, base: skill.nivel + (Number(stats[skill.stat]) || 0) })),
-      cyber: items.filter(item => item.tipo === 'cyberware' && item.base).map(item => ({ nome: item.nome, dentro: item.dentro || [] })),
-      noCorpo: items.filter(item => item.tipo === 'cyberware' && !item.base && item.instalado && !cyberNames.has(item.nome)).map(item => item.nome),
-      semBase: items.filter(item => item.tipo === 'cyberware' && !item.base && !item.instalado).map(item => item.nome),
       decks: items.filter(item => item.tipo === 'cyberdeck').map(item => ({ nome: item.nome, ativo: item.uso === 'equipped', dentro: item.dentro || [] })),
       outros: items.filter(item => ['gear', 'ammo', 'clothing', 'drug'].includes(item.tipo) || (['program', 'itemUpgrade'].includes(item.tipo) && !deckNames.has(item.nome) && !weaponInside.has(item.nome) && !vehicleInside.has(item.nome)))
         .map(item => ({ nome: item.nome, qtd: item.qtd, uso: item.tipo === 'ammo' ? '' : uso(item), roupa: item.tipo === 'clothing' })),
       veiculos: items.filter(item => item.tipo === 'vehicle').map(item => ({ nome: item.nome, dentro: item.dentro || [] })),
       habilidades: ((m.role || {}).habilidades || []).filter(([name]) => !/Skill$/.test(name)).map(([name, rank]) => [abilityName(name), rank, ''])
     };
+  }
+
+  // ---------------- Cyberware: a aba da ficha ----------------
+  // No jeito da tela de cyberware do Cyberpunk 2077 (o corpo no meio, os grupos dos dois lados, um quadrado por slot),
+  // com os grupos e as regras do RED: cada base tem os slots dela (Neural Link 5, cyberolho 3, Cyberaudio Suite 3,
+  // cyberbraço 4, cyberperna 3), e o corpo tem 7 para o cyberware interno, 7 para o externo e 7 para o fashionware.
+  // O + de um slot livre abre a loja só com o que serve ali.
+  const BODY_TYPES = ['cyberwareInternal', 'cyberwareExternal', 'fashionware'];
+  const CYBER_GROUPS = [
+    { id: 'neural', nome: 'Neuralware', tipo: 'neuralWare', lado: 'esq', ancora: 'cabeca', slots: 5, vazio: 'Sem Neural Link', base: 'Neural Link', partes: ['neural'] },
+    { id: 'olhos', nome: 'Cyberolhos', tipo: 'cyberEye', lado: 'esq', ancora: 'olhos', slots: 3, par: true, vazio: 'Olho natural', base: 'Cyberolho', partes: ['olho-1', 'olho-2'] },
+    { id: 'audio', nome: 'Cyberaudio', tipo: 'cyberAudioSuite', lado: 'esq', ancora: 'ouvido', slots: 3, vazio: 'Ouvido natural', base: 'Cyberaudio Suite', partes: ['ouvido'] },
+    { id: 'borg', nome: 'Borgware', tipo: 'borgware', lado: 'esq', ancora: 'ombro', slots: 3, vazio: 'Nenhum', base: 'Borgware', partes: ['borg'] },
+    { id: 'bracos', nome: 'Cyberbraços', tipo: 'cyberArm', lado: 'esq', ancora: 'braco', slots: 4, par: true, vazio: 'Braço natural', base: 'Cyberbraço', partes: ['braco-1', 'braco-2'] },
+    { id: 'interno', nome: 'Cyberware interno', tipo: 'cyberwareInternal', lado: 'dir', ancora: 'peito', corpo: 7, partes: ['interno'] },
+    { id: 'externo', nome: 'Cyberware externo', tipo: 'cyberwareExternal', lado: 'dir', ancora: 'pele', corpo: 7, partes: ['pele'] },
+    { id: 'moda', nome: 'Fashionware', tipo: 'fashionware', lado: 'dir', ancora: 'moda', corpo: 7, partes: ['moda'] },
+    { id: 'pernas', nome: 'Cyberpernas', tipo: 'cyberLeg', lado: 'dir', ancora: 'perna', slots: 3, par: true, vazio: 'Perna natural', base: 'Cyberperna', partes: ['perna-1', 'perna-2'] }
+  ];
+
+  // As peças de cyberware, com o lugar de cada uma. Na criação: a montagem (a opção na base que o jogador escolheu).
+  // Na mesa: a ficha que o Foundry mandou (o que está instalado em cada base e o que ainda espera o mestre instalar).
+  // O Foundry novo manda o tipo e os slots de cada peça; o antigo, só o nome, e aí valem os do catálogo da loja.
+  function cyberParts(doc) {
+    const out = { bases: [], corpo: [], soltos: [], esperando: [], outros: [] };
+    if (doc.mesa && doc.foundry) {
+      const items = (doc.mesa.itens || []).filter(item => item.tipo === 'cyberware');
+      const piece = item => {
+        const entry = catalogEntryOf(item.nome);
+        const cyber = { ...((entry && entry.cyber) || {}), ...(item.cyber || {}) };
+        return { nome: item.nome, tipo: cyber.tipo || '', tamanho: cyber.tamanho ?? 1, slots: cyber.slots || 0, info: entry, qtd: 1, gratis: String(item.uid || '').startsWith('gratis:'), itens: [] };
+      };
+      // As opções vão para a base que as tem (pelo nome: duas iguais em bases diferentes saem uma para cada).
+      const options = items.filter(item => !item.base);
+      const take = name => { const at = options.findIndex(item => item.nome === name); return at < 0 ? null : options.splice(at, 1)[0]; };
+      for (const item of items.filter(entry => entry.base)) {
+        const base = piece(item);
+        base.itens = (item.dentro || []).map(take).filter(Boolean).map(piece);
+        (item.instalado ? out.bases : out.esperando).push(base);
+      }
+      for (const item of options) {
+        const option = piece(item);
+        if (!item.instalado) out.esperando.push(option);
+        else (BODY_TYPES.includes(option.tipo) ? out.corpo : out.outros).push(option);
+      }
+      return out;
+    }
+    const rows = assembly(doc).rows;
+    const piece = row => ({ nome: row.nome || row.item.nome, tipo: row.item.cyber.tipo, tamanho: row.item.cyber.tamanho, slots: row.item.cyber.slots, info: row.item, qtd: row.qtd || 1, gratis: row.origem === 'gratis2077', itens: [] });
+    for (const row of rows.filter(item => item.tipo === 'cyberBase')) out.bases.push({ ...piece(row), itens: rows.filter(item => item.em === row.uid).map(piece) });
+    for (const row of rows.filter(item => item.tipo === 'cyberOpcao')) {
+      if (!NEEDS_BASE.includes(row.item.cyber.tipo)) out.corpo.push(piece(row));
+      else if (!row.em || row.em === '-') out.soltos.push(piece(row));
+    }
+    return out;
+  }
+
+  // A sigla no quadrado do slot (o nome inteiro fica embaixo e na ficha do implante).
+  const SMALL_WORDS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'com', 'em', 'a', 'o', 'para', 'the', 'of']);
+  function cyberAbbr(name) {
+    const words = String(name).replace(/\([^)]*\)/g, ' ').split(/[^0-9A-Za-zÀ-ÿ]+/).filter(word => word && !SMALL_WORDS.has(word.toLowerCase()));
+    if (!words.length) return '•';
+    return (words.length === 1 ? words[0].slice(0, 3) : words.slice(0, 3).map(word => word[0]).join('')).toUpperCase();
+  }
+  // A ficha do implante, que abre embaixo do slot: os números do catálogo e a descrição.
+  function cyberDetail(piece, where) {
+    const item = piece.info;
+    const c = (item && item.cyber) || {};
+    const cells = [];
+    if (piece.gratis) cells.push(['Humanidade', 'nenhuma (de graça)']);
+    else if (c.hl !== undefined) cells.push(['Humanidade', `${c.hl}${c.rolagem && c.rolagem !== '0' ? ` (${c.rolagem})` : ''}`]);
+    if (c.instalacao) cells.push(['Instala', INSTALL_PT[c.instalacao] || c.instalacao]);
+    cells.push(piece.slots ? ['Slots', piece.slots] : ['Ocupa', piece.tamanho ? `${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}` : 'nenhum slot']);
+    if (item && item.preco && !piece.gratis) cells.push(['Preço', eb(item.preco)]);
+    return `<p class="cy-ficha-nome"><b>${esc(piece.nome)}</b>${item && item.nome !== piece.nome ? ` <small>${esc(item.nome)}</small>` : ''}</p>
+      <p class="cy-ficha-onde">${esc(where)}</p>
+      <div class="cy-nums">${cells.map(([label, value]) => `<div><small>${label}</small><b>${esc(String(value))}</b></div>`).join('')}</div>
+      ${item && item.desc ? `<p class="cy-ficha-desc">${esc(item.desc)}</p>` : item ? '' : '<p class="cy-ficha-desc note-status">Fora do catálogo da wiki: veja a descrição na ficha do Foundry.</p>'}`;
+  }
+
+  // O corpo do holograma, desenhado aqui (a wiki é pública: nada da arte do jogo). A metade esquerda em pontos,
+  // espelhada para a direita; cada parte com cyberware acende em ciano. As âncoras são onde chegam as linhas.
+  const BODY_ARM = [[78, 92], [68, 100], [63, 112], [60, 130], [56, 160], [52, 186], [47, 214], [42, 240], [39, 256], [34, 268], [31, 284], [33, 296], [38, 300], [43, 294], [45, 282], [48, 266], [53, 246], [60, 216], [65, 192], [70, 166], [74, 140]];
+  const BODY_SIDE = [[77, 160], [80, 186], [78, 208], [76, 226], [74, 246]];
+  const BODY_LEG = [[75, 266], [78, 300], [82, 340], [86, 376], [85, 400], [86, 430], [90, 466], [92, 488], [86, 500], [84, 508], [92, 512], [110, 512], [111, 500], [110, 488], [110, 460], [110, 410], [108, 384], [110, 350], [114, 310], [118, 284], [120, 280]];
+  const BODY_NECK = [[113, 64], [111, 80], [96, 86]];
+  const BODY_HEAD = 'M120 14C133 14 141 24 141 38C141 51 135 61 127 66L120 69L113 66C105 61 99 51 99 38C99 24 107 14 120 14Z';
+  const BODY_ANCHORS = { cabeca: [112, 29], olhos: [112, 40], ouvido: [99, 42], ombro: [74, 100], braco: [50, 214], peito: [133, 156], pele: [158, 196], moda: [190, 226], perna: [144, 400] };
+  const mirrorX = points => points.map(([x, y]) => [240 - x, y]);
+  const linePath = (points, close = true) => `M${points.map(([x, y]) => `${x} ${y}`).join('L')}${close ? 'Z' : ''}`;
+  let bodyCount = 0;
+  function bodySvg(lit, label) {
+    const n = ++bodyCount;
+    const half = [...BODY_NECK, ...BODY_ARM, ...BODY_SIDE, ...BODY_LEG];
+    const outline = [...half, ...mirrorX(half).reverse().slice(1)];
+    const torsoHalf = [...BODY_NECK, [78, 92], [74, 140], ...BODY_SIDE, [75, 266]];
+    const torso = [...torsoHalf, [120, 280], ...mirrorX(torsoHalf).reverse()];
+    // A parte acesa ganha as linhas do holograma em ciano e o contorno em ciano por cima do vermelho.
+    const part = (id, shapes, line = false) => `<g class="cy-parte${line ? ' cy-parte-linha' : ''}${lit[id] ? ' cy-on' : ''}" data-cy-parte="${id}" fill="${lit[id] && !line ? `url(#cy-scan-c-${n})` : 'none'}">${shapes}</g>`;
+    return `<svg viewBox="0 0 240 524" role="img" aria-label="${esc(label)}" focusable="false">
+      <defs>
+        <pattern id="cy-scan-${n}" width="6" height="3" patternUnits="userSpaceOnUse"><rect width="6" height="1" fill="currentColor"/></pattern>
+        <pattern id="cy-scan-c-${n}" width="6" height="3" patternUnits="userSpaceOnUse"><rect width="6" height="1.2" fill="#00ffd2" fill-opacity=".6"/></pattern>
+        <linearGradient id="cy-luz-${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff3158" stop-opacity="0"/><stop offset=".8" stop-color="#ff3158" stop-opacity=".35"/><stop offset="1" stop-color="#ff3158" stop-opacity="0"/></linearGradient>
+        <clipPath id="cy-recorte-${n}"><path d="${linePath(outline)}"/><path d="${BODY_HEAD}"/></clipPath>
+        <filter id="cy-brilho-${n}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <ellipse class="cy-chao" cx="120" cy="515" rx="66" ry="7"/><ellipse class="cy-chao" cx="120" cy="515" rx="40" ry="4"/>
+      <g class="cy-silhueta" fill="url(#cy-scan-${n})"><path d="${linePath(outline)}"/><path d="${BODY_HEAD}"/></g>
+      <g class="cy-contorno" filter="url(#cy-brilho-${n})"><path d="${linePath(outline, false)}"/><path d="${BODY_HEAD}"/></g>
+      ${part('pele', `<path d="${linePath(torso)}"/>`)}
+      ${part('braco-1', `<path d="${linePath(BODY_ARM)}"/>`)}${part('braco-2', `<path d="${linePath(mirrorX(BODY_ARM))}"/>`)}
+      ${part('perna-1', `<path d="${linePath(mirrorX(BODY_LEG))}"/>`)}${part('perna-2', `<path d="${linePath(BODY_LEG)}"/>`)}
+      <g class="cy-detalhe"><path d="M100 92Q110 97 120 95Q130 97 140 92M90 116Q104 132 120 128Q136 132 150 116M97 146Q120 156 143 146M99 160Q120 170 141 160M101 174Q120 184 139 174M120 96V250M108 196H132M108 212H132M110 228H130M82 250Q120 276 158 250"/>
+        <ellipse cx="98" cy="382" rx="7" ry="9"/><ellipse cx="142" cy="382" rx="7" ry="9"/>
+        ${[[72, 104], [168, 104], [58, 190], [182, 190], [44, 258], [196, 258], [90, 264], [150, 264], [101, 490], [139, 490]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2"/>`).join('')}</g>
+      ${part('interno', '<ellipse cx="107" cy="156" rx="9" ry="18"/><ellipse cx="133" cy="156" rx="9" ry="18"/><ellipse cx="120" cy="201" rx="13" ry="9"/>')}
+      ${part('borg', '<path d="M120 70V272"/><path d="M76 98Q86 88 98 88M164 98Q154 88 142 88"/>', true)}
+      ${part('neural', '<circle cx="120" cy="31" r="9"/><path d="M120 40V80"/>', true)}
+      ${part('olho-1', '<ellipse cx="112" cy="40" rx="4" ry="2.4"/>')}${part('olho-2', '<ellipse cx="128" cy="40" rx="4" ry="2.4"/>')}
+      ${part('ouvido', '<path d="M99 33Q93 40 99 48M141 33Q147 40 141 48"/>', true)}
+      ${part('moda', '<path d="M186 212l4 12M183 226l4 13M191 222l3 9"/>', true)}
+      <g clip-path="url(#cy-recorte-${n})"><rect class="cy-varredura" x="0" y="-40" width="240" height="40" fill="url(#cy-luz-${n})"/></g>
+      ${Object.entries(BODY_ANCHORS).map(([id, [x, y]]) => `<circle class="cy-ancora" data-cy-ancora="${id}" cx="${x}" cy="${y}" r="2.6"/>`).join('')}
+    </svg>`;
+  }
+
+  // A tela inteira: a barra de cima (Humanidade, EMP, implantes, dinheiro), os grupos com os slots, o corpo e, embaixo,
+  // o que está sem lugar. Cada peça tem um número; o slot e o nome abrem a mesma ficha (num <template>).
+  function cyberScreen(doc, model) {
+    const mesa = model.fonte === 'mesa';
+    const parts = cyberParts(doc);
+    // Uma base de tipo que nenhum grupo tem (um item feito à mão no Foundry) vai, com o que tem dentro, para "Outro cyberware".
+    const baseTypes = new Set(CYBER_GROUPS.filter(group => !group.corpo).map(group => group.tipo));
+    for (const base of parts.bases.filter(item => !baseTypes.has(item.tipo))) parts.outros.push(base, ...base.itens);
+    const fichas = [];
+    const card = (piece, where) => { fichas.push(cyberDetail(piece, where)); return fichas.length - 1; };
+    const lit = {};
+    let installed = 0;
+    const panel = '<div class="cy-ficha" data-cy-aberta="" hidden></div>';
+    const nameButton = (piece, k) => `<li><button type="button" class="cy-nome" data-cy-item="${k}">${esc(piece.nome)}${piece.qtd > 1 ? ` ×${piece.qtd}` : ''}${piece.tamanho ? '' : ' <small>sem slot</small>'}</button></li>`;
+    // showSlots: a base mostra os slots dela só quando o grupo tem mais de uma (senão a conta do grupo já diz).
+    const unitHtml = (group, unit, showSlots) => {
+      if (unit.falta) {
+        const base = group.base === 'Borgware' ? '' : '1';
+        return `<div class="cy-unit cy-natural"><div class="cy-unit-head"><span>${esc(unit.nome)}</span></div>
+          <div class="cy-slots"><button type="button" class="cy-slot cy-livre cy-base" data-cy-loja="${group.tipo}" data-cy-base="${base}" data-cy-nome="${esc(base ? `Base: ${group.base}` : group.nome)}" aria-label="Ver ${esc(group.base)} na loja">+ ${esc(group.base)}</button></div></div>`;
+      }
+      const where = `${group.nome} · ${unit.corpo ? 'no corpo' : `em ${unit.nome}`}`;
+      const cells = [];
+      const names = [];
+      let used = 0;
+      for (const piece of unit.itens) {
+        const k = card(piece, where);
+        installed += piece.qtd;
+        names.push(nameButton(piece, k));
+        for (let copy = 0; copy < piece.qtd && piece.tamanho; copy++) {
+          const over = used + piece.tamanho > unit.slots;
+          cells.push(`<button type="button" class="cy-slot cy-cheio${over ? ' cy-excesso' : ''}" style="--t:${piece.tamanho}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, ${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}">${esc(cyberAbbr(piece.nome))}</button>`);
+          used += piece.tamanho;
+        }
+      }
+      const label = unit.corpo ? group.nome : `Opções de ${group.nome}`;
+      for (let free = Math.max(0, unit.slots - used); free > 0; free--) cells.push(`<button type="button" class="cy-slot cy-livre" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-nome="${esc(label)}" aria-label="Slot livre ${unit.corpo ? `de ${esc(group.nome)}` : `em ${esc(unit.nome)}`}: ver na loja o que cabe">+</button>`);
+      let head = '';
+      if (!unit.corpo) {
+        installed += 1;
+        head = `<div class="cy-unit-head"><button type="button" class="cy-unit-name" data-cy-item="${card(unit.base, `${group.nome} · base com ${unit.slots} slots`)}">${esc(unit.nome)}</button>${showSlots ? ` <small>${used}/${unit.slots}</small>` : ''}</div>`;
+      }
+      unit.usados = used;
+      return `<div class="cy-unit" data-cy-holder>${head}<div class="cy-slots">${cells.join('')}</div>
+        ${used > unit.slots ? `<p class="cc-warn cy-cheia">Mais do que cabe: ${used} de ${unit.slots} slots.</p>` : ''}
+        ${names.length ? `<ul class="cy-nomes">${names.join('')}</ul>` : ''}${panel}</div>`;
+    };
+    const groupHtml = group => {
+      const units = group.corpo
+        ? [{ corpo: true, nome: group.nome, slots: group.corpo, itens: parts.corpo.filter(piece => piece.tipo === group.tipo) }]
+        : parts.bases.filter(base => base.tipo === group.tipo).map(base => ({ base, nome: base.nome, slots: base.slots || group.slots, itens: base.itens }));
+      const real = group.corpo ? (units[0].itens.length ? 1 : 0) : units.length;
+      group.partes.forEach((id, index) => { lit[id] = group.corpo ? real > 0 : real > index; });
+      if (!group.corpo) while (units.length < (group.par ? 2 : 1)) units.push({ falta: true, nome: group.vazio });
+      const html = units.map(unit => unitHtml(group, unit, !group.corpo && real > 1)).join('');
+      const counted = units.filter(unit => !unit.falta);
+      const count = counted.length ? `${counted.reduce((sum, unit) => sum + unit.usados, 0)}/${counted.reduce((sum, unit) => sum + unit.slots, 0)}` : '—';
+      return `<section class="cy-group" data-cy-grupo="${group.id}" data-cy-alvo="${group.ancora}" data-cy-lado="${group.lado}" aria-label="${esc(group.nome)}">
+        <h4 class="cy-group-head"><span>${esc(group.nome)}</span><small>${count}</small></h4>${html}</section>`;
+    };
+    const columns = side => CYBER_GROUPS.filter(group => group.lado === side).map(groupHtml).join('');
+    const left = columns('esq');
+    const right = columns('dir');
+    const chromed = CYBER_GROUPS.filter(group => group.partes.some(id => lit[id])).map(group => group.nome);
+
+    // O que está fora das bases: sem base (criação), esperando o mestre instalar ou sem grupo (mesa).
+    const extraLine = (title, pieces, where, note = '', warn = false) => pieces.length
+      ? `<div class="cy-holder" data-cy-holder><p class="cy-extra-titulo${warn ? ' cy-alerta' : ''}">${title}</p><ul class="cy-nomes">${pieces.map(piece => nameButton(piece, card(piece, where))).join('')}</ul>${note ? `<p class="note-status">${note}</p>` : ''}${panel}</div>` : '';
+    const extras = [
+      extraLine('Sem base, fora do corpo', parts.soltos, 'Sem base: fora do corpo', 'Compre a base do mesmo tipo (o + do grupo) ou tire a opção na Montagem, no passo 5 do criador.', true),
+      extraLine('Esperando o mestre instalar', parts.esperando, 'Esperando o mestre instalar', 'Chegou pela loja sem instalar: o mestre instala pela ficha do Foundry, que cobra e rola a Humanidade.'),
+      extraLine('Outro cyberware na ficha', parts.outros, 'Cyberware fora dos grupos')
+    ].join('');
+
+    const hum = mesa ? model.humanidade : humanity(doc, model.stats);
+    const pct = hum.max ? Math.max(0, Math.min(100, Math.round(hum.atual / hum.max * 100))) : 0;
+    const psychosis = cyberpsychosis(mesa ? { max: hum.max, perda: hum.max - hum.atual, atual: hum.atual, emp: Math.floor(hum.atual / 10) } : hum);
+    const source = mesa
+      ? `Na mesa: o que o Foundry mandou${model.quando ? ` em ${when(model.quando)}` : ''}. O mestre instala e tira pela ficha do Foundry.`
+      : 'Da criação: é assim que vai para o Foundry. A base de cada opção muda na Montagem, no passo 5 do criador.';
+    return `<div class="section cc-box cy-screen" data-toc="Cyberware">
+      <div class="cy-top"><h3>Cyberware</h3>
+        <div class="cy-hum"><small>Humanidade</small><b>${hum.atual}<span>/${hum.max}</span></b><div class="cy-bar" aria-hidden="true"><span style="width:${pct}%"></span></div></div>
+        <div class="cy-num"><small>EMP</small><b>${esc(String(model.empMostrada ?? '—'))}</b></div>
+        <div class="cy-num"><small>Implantes</small><b>${installed}</b></div>
+        <div class="cy-num"><small>Dinheiro</small><b>${eb(model.dinheiro)}</b></div></div>
+      ${psychosis ? `<p class="cc-warn cy-aviso">${esc(psychosis)}</p>` : ''}
+      <p class="cy-fonte note-status">${source}</p>
+      <div class="cy-stage">
+        <svg class="cy-links" aria-hidden="true"></svg>
+        <div class="cy-col cy-col-esq">${left}</div>
+        <div class="cy-body">${bodySvg(lit, chromed.length ? `O corpo, com cyberware em: ${chromed.join(', ')}.` : 'O corpo, sem cyberware.')}</div>
+        <div class="cy-col cy-col-dir">${right}</div>
+      </div>
+      ${extras ? `<div class="cy-extra">${extras}</div>` : ''}
+      <p class="cy-dica note-status">Toque num slot ou num nome para ver o implante. O + abre a loja só com o que serve ali.</p>
+      ${fichas.map((html, k) => `<template data-cy-ficha="${k}">${html}</template>`).join('')}
+    </div>`;
+  }
+
+  // As linhas de cada grupo até a parte do corpo, medidas na tela: mudam com a largura, e a aba escondida não tem
+  // tamanho. Um ResizeObserver redesenha quando a aba abre ou a largura muda.
+  const cyberStages = new Set();
+  const cyberObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => entries.forEach(entry => drawCyberLinks(entry.target))) : null;
+  function drawCyberLinks(stage) {
+    const svg = stage.querySelector('.cy-links');
+    const body = stage.querySelector('.cy-body');
+    if (!svg || !body || !stage.isConnected) return;
+    const box = stage.getBoundingClientRect();
+    if (!box.width || getComputedStyle(svg).display === 'none') { svg.innerHTML = ''; return; }
+    const bodyBox = body.getBoundingClientRect();
+    const round = value => Math.round(value * 10) / 10;
+    svg.setAttribute('viewBox', `0 0 ${round(box.width)} ${round(box.height)}`);
+    svg.innerHTML = [...stage.querySelectorAll('[data-cy-grupo]')].map(group => {
+      const anchor = stage.querySelector(`[data-cy-ancora="${group.dataset.cyAlvo}"]`);
+      const head = group.querySelector('.cy-group-head');
+      if (!anchor || !head) return '';
+      const h = head.getBoundingClientRect();
+      const a = anchor.getBoundingClientRect();
+      const left = group.dataset.cyLado === 'esq';
+      const y = h.bottom - box.top;
+      const edge = (left ? bodyBox.left : bodyBox.right) - box.left;
+      return `<path data-cy-linha="${group.dataset.cyGrupo}" d="M${round((left ? h.right : h.left) - box.left)} ${round(y)}H${round(edge)}L${round(a.left + a.width / 2 - box.left)} ${round(a.top + a.height / 2 - box.top)}"/>`;
+    }).join('');
+  }
+  // Liga as telas novas (a ficha redesenha a cada 30 segundos na mesa): as linhas e o destaque do grupo sob o mouse.
+  function wireCyber(root) {
+    for (const stage of [...cyberStages]) if (!stage.isConnected) { if (cyberObserver) cyberObserver.unobserve(stage); cyberStages.delete(stage); }
+    for (const stage of root.querySelectorAll('.cy-stage')) {
+      if (cyberStages.has(stage)) continue;
+      cyberStages.add(stage);
+      const focus = target => {
+        const group = target && target.closest ? target.closest('[data-cy-grupo]') : null;
+        const id = group ? group.dataset.cyGrupo : '';
+        if ((stage.dataset.foco || '') === id) return;
+        stage.dataset.foco = id;
+        stage.querySelectorAll('.cy-foco').forEach(item => item.classList.remove('cy-foco'));
+        if (!group) return;
+        group.classList.add('cy-foco');
+        for (const item of stage.querySelectorAll(`[data-cy-linha="${id}"], [data-cy-ancora="${group.dataset.cyAlvo}"]`)) item.classList.add('cy-foco');
+      };
+      stage.addEventListener('pointerover', event => focus(event.target));
+      stage.addEventListener('focusin', event => focus(event.target));
+      stage.addEventListener('pointerleave', () => focus(null));
+      if (cyberObserver) cyberObserver.observe(stage); else drawCyberLinks(stage);
+    }
+  }
+  // Toque num slot ou num nome: a ficha do implante abre embaixo (toque de novo fecha). O +: a loja do slot.
+  function cyberClick(event, openShop) {
+    const screen = event.target.closest('.cy-screen');
+    if (!screen) return false;
+    const item = event.target.closest('[data-cy-item]');
+    if (item) {
+      const place = item.closest('[data-cy-holder]');
+      const panel = place && place.querySelector('.cy-ficha');
+      const template = screen.querySelector(`template[data-cy-ficha="${item.dataset.cyItem}"]`);
+      if (!panel || !template) return true;
+      const closing = !panel.hidden && panel.dataset.cyAberta === item.dataset.cyItem;
+      screen.querySelectorAll('.cy-ficha').forEach(other => { other.hidden = true; other.dataset.cyAberta = ''; });
+      screen.querySelectorAll('.cy-sel').forEach(other => other.classList.remove('cy-sel'));
+      if (closing) return true;
+      panel.innerHTML = template.innerHTML;
+      panel.dataset.cyAberta = item.dataset.cyItem;
+      panel.hidden = false;
+      place.querySelectorAll(`[data-cy-item="${item.dataset.cyItem}"]`).forEach(other => other.classList.add('cy-sel'));
+      return true;
+    }
+    const shop = event.target.closest('[data-cy-loja]');
+    if (!shop) return false;
+    const base = shop.dataset.cyBase;
+    openShop({ tipo: shop.dataset.cyLoja, base: base === '1' ? true : base === '0' ? false : undefined, nome: shop.dataset.cyNome || '' });
+    return true;
   }
 
   function sheetHtml(doc) {
@@ -960,12 +1252,9 @@
     const skills = `<div class="section cc-box" data-toc="Perícias"><h3>Perícias<span class="ref">${bySkill.length} com nível</span></h3><div class="cc-skill-grid">${bySkill.map(skillCell).join('') || '<p class="note-status">Nenhuma perícia com nível.</p>'}</div>
       <p class="note-status">A base do teste (STAT + nível). Some 1d10.</p></div>`;
 
+    // O cyberware tem a aba dele; no Equipamento fica o cyberdeck, com os programas dentro.
     const tree = list => `<ul class="cc-tree">${list.map(item => `<li><b>${esc(item.nome)}</b>${item.ativo ? ' <small class="cc-ok">deck ativo</small>' : ''}${item.dentro.length ? `<ul>${item.dentro.map(name => `<li>${esc(name)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>`;
-    const nothingCyber = !model.cyber.length && !model.noCorpo.length && !model.decks.length;
-    const cyber = `<div class="section cc-box" data-toc="Cyberware"><h3>Cyberware e netrunning</h3>
-      ${model.cyber.length ? tree(model.cyber) : ''}${model.noCorpo.length ? `<p><b>No corpo:</b> ${names(model.noCorpo)}.</p>` : ''}
-      ${model.semBase.length ? `<p class="cc-warn">Sem base, fora do corpo: ${names(model.semBase)}.</p>` : ''}
-      ${model.decks.length ? `<h4>Cyberdeck</h4>${tree(model.decks)}` : ''}${nothingCyber ? '<p class="note-status">Nenhum.</p>' : ''}</div>`;
+    const decks = model.decks.length ? `<div class="section cc-box" data-toc="Cyberdeck"><h3>Cyberdeck</h3>${tree(model.decks)}</div>` : '';
 
     const clothes = model.outros.filter(item => item.roupa);
     const gear = model.outros.filter(item => !item.roupa);
@@ -990,7 +1279,7 @@
     }
 
     // As partes da ficha, que o setupSheet monta em duas colunas, com abas: o lado (o retrato com os STATs, e os vitais)
-    // e o que vai nas abas Resumo, Perícias e Equipamento. A ficha da mesa, quando muda, redesenha só estas partes.
+    // e o que vai nas abas Resumo, Perícias, Equipamento e Cyberware. A ficha da mesa, quando muda, redesenha só estas partes.
     const identity = `<div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait-slot" aria-hidden="true">Retrato</div>'}
         <div class="cc-stats">${statKeys.map(statCell).join('')}</div>
         ${model.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${model.penalidade} em REF, DEX e MOVE (já descontado no ataque e nas perícias).</p>` : ''}</div>`;
@@ -1005,7 +1294,8 @@
         <div class="section cc-box" data-toc="Lifepath"><h3>Lifepath</h3>${lpRows.length ? `<dl class="cc-lifepath">${lpRows.map(([label, text]) => `<dt>${label}</dt><dd>${esc(text)}</dd>`).join('')}</dl>` : '<p class="note-status">Ainda não preenchido.</p>'}</div>
         ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}`,
       pericias: skills,
-      equipamento: `${cyber}${equipment}`
+      equipamento: `${decks}${equipment}`,
+      cyberware: cyberScreen(doc, model)
     };
   }
 
@@ -1020,11 +1310,11 @@
   function sheetFull(doc) {
     const parts = sheetHtml(doc);
     return `<h3 class="cc-review-name">${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}</h3>
-      <div class="cc-sheet"><div class="cc-sheet-side">${parts.lado}</div><div class="cc-sheet-main">${parts.resumo}${parts.pericias}${parts.equipamento}</div></div>`;
+      <div class="cc-sheet"><div class="cc-sheet-side">${parts.lado}</div><div class="cc-sheet-main">${parts.resumo}${parts.pericias}${parts.equipamento}${parts.cyberware}</div></div>`;
   }
 
   // As abas da coluna principal da ficha (a última escolhida fica lembrada neste aparelho).
-  const SHEET_TABS =[['resumo', 'Resumo'], ['pericias', 'Perícias'], ['equipamento', 'Equipamento'], ['compras', 'Compras'], ['anotacoes', 'Anotações']];
+  const SHEET_TABS = [['resumo', 'Resumo'], ['pericias', 'Perícias'], ['equipamento', 'Equipamento'], ['cyberware', 'Cyberware'], ['compras', 'Compras'], ['anotacoes', 'Anotações']];
 
   // O quadro de anotações da ficha: só o dono e o mestre leem (pistas, contatos, dívidas, o que o NPC prometeu).
   const notesBox = (doc, papel) => box('Anotações', `<p class="note-status">Pistas, contatos, dívidas, o que o NPC prometeu. ${papel === 'mestre' ? 'O jogador escreve aqui; você também pode.' : 'Só você e o mestre leem.'} Fica salvo sozinho, em qualquer aparelho.</p><textarea class="note-area cc-notes" data-cc-notes rows="8" placeholder="Ex.: Brakk quer 500eb até sexta. A senha do depósito é 4471.">${esc((doc.anotacoes || {}).texto || '')}</textarea><p class="note-status" data-cc-notes-status>${doc.anotacoes && doc.anotacoes.atualizado ? `Salvo em ${when(doc.anotacoes.atualizado)}${doc.anotacoes.por ? ` (${esc(doc.anotacoes.por)})` : ''}.` : ''}</p>`, ' data-cc-notes-box data-toc="Anotações"');
@@ -1054,7 +1344,8 @@
     const [answer, me] = await Promise.all([api(`api/personagens/${id}`), identity()]);
     if (token !== renderToken) return;
     if (!answer.status) { root.innerHTML = offline; return; }
-    const doc = answer.data.personagem;
+    // Os campos que faltarem (um personagem criado pela API, sem passar pelo criador) vêm do personagem em branco.
+    const doc = answer.data.personagem && { ...blank(), ...answer.data.personagem };
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
     if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), a Role (${esc(roleName(doc.role))}) e o retrato.</div>`; return; }
@@ -1078,10 +1369,12 @@
           ${panel('resumo', `${foundryBox(doc, papel)}<div data-cc-part="resumo">${parts.resumo}</div>`)}
           ${panel('pericias', `<div data-cc-part="pericias">${parts.pericias}</div>`)}
           ${panel('equipamento', `<div data-cc-part="equipamento">${parts.equipamento}</div>`)}
+          ${panel('cyberware', `<div data-cc-part="cyberware">${parts.cyberware}</div>`)}
           ${panel('compras', purchasesBox(doc))}
           ${panel('anotacoes', `${notesBox(doc, papel)}${papel === 'mestre' ? historyBox() : ''}`)}
         </div>
       </div>`;
+    wireCyber(root);
     if (papel === 'mestre') drawHistory(root, id);
     // Anotações: salvam sozinhas (um instante depois de parar de digitar), sem mudar a versão do personagem.
     const notes = root.querySelector('[data-cc-notes]');
@@ -1110,7 +1403,8 @@
         Object.assign(doc, next);
         // Só as partes que a mesa muda: as anotações (que alguém pode estar escrevendo) e a aba aberta ficam.
         const redrawn = sheetHtml(doc);
-        for (const key of ['lado', 'resumo', 'pericias', 'equipamento']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
+        for (const key of ['lado', 'resumo', 'pericias', 'equipamento', 'cyberware']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
+        wireCyber(root);
         const buying = root.querySelector('[data-cc-panel="compras"]');
         if (buying) buying.innerHTML = purchasesBox(doc);
         const top = content.querySelector('.lede');
@@ -1125,6 +1419,7 @@
         if (helpers.storage) helpers.storage.set('ficha-aba', tab.dataset.ccTab);
         return;
       }
+      if (cyberClick(event, slot => helpers.openPage('loja', { section: id, cyber: slot }))) return;
       if (event.target.closest('[data-cc-print]')) return window.print();
       if (event.target.closest('[data-cc-send]')) return sendToGm(doc, papel, root);
       const restore = event.target.closest('[data-cc-restore]');
@@ -1206,7 +1501,8 @@
     else (doc.itens = doc.itens || []).push({ uid: `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, id, qtd: qty });
   };
 
-  const shopState = { cat: 'armas', sub: '', busca: '', verTudo: false, painel: '', mostrar: 60 };
+  // cyber: o slot escolhido na aba Cyberware da ficha ({ tipo, base, nome }); a loja mostra só o que serve nele.
+  const shopState = { cat: 'armas', sub: '', busca: '', verTudo: false, painel: '', mostrar: 60, cyber: null };
   // Peças comuns às duas lojas, no visual do exemplo da Loja: os chips de categoria com a contagem, a busca, os chips de
   // grupo, a grade de cartões (nome, etiquetas, números, preço e o botão) e, ao lado, a gaveta com o dinheiro e o pedido.
   // Numa coluna estreita (o passo 5 do criador, o celular) a gaveta vai para cima e cada quadro dela abre e fecha pelo título.
@@ -1234,20 +1530,26 @@
     }
   }
   // Os itens que passam pelos filtros (categoria e grupo, ou a busca em todas as categorias), e a barra dos filtros.
+  // Vindo de um slot da aba Cyberware, só o cyberware daquele tipo (a base ou as opções), até escolher outro filtro.
+  const fitsSlot = (item, slot) => Boolean(item.cyber) && item.cyber.tipo === slot.tipo && (slot.base === undefined || Boolean(item.cyber.base) === slot.base);
   function shopFilter(items) {
     const terms = fold(shopState.busca).split(/\s+/).filter(Boolean);
+    const slot = !terms.length && shopState.cyber;
     const counts = {};
     for (const item of items) counts[item.cat] = (counts[item.cat] || 0) + 1;
+    if (slot) shopState.cat = 'cyberware';
     if (!counts[shopState.cat] && !terms.length) shopState.cat = (shop.categorias.find(category => counts[category.id]) || { id: shopState.cat }).id;
     const subs = [...new Set(items.filter(item => item.cat === shopState.cat).map(item => subKey(item.sub)))];
     if (shopState.sub && !subs.includes(shopState.sub)) shopState.sub = '';
-    const visible = items.filter(item => (terms.length || item.cat === shopState.cat) && (!shopState.sub || terms.length || subKey(item.sub) === shopState.sub)
-      && terms.every(term => fold(`${item.nome} ${item.en} ${item.sub} ${item.livro || ''} ${item.resumo || ''}`).includes(term)));
+    const visible = slot ? items.filter(item => fitsSlot(item, slot))
+      : items.filter(item => (terms.length || item.cat === shopState.cat) && (!shopState.sub || terms.length || subKey(item.sub) === shopState.sub)
+        && terms.every(term => fold(`${item.nome} ${item.en} ${item.sub} ${item.livro || ''} ${item.resumo || ''}`).includes(term)));
     const chip = (attr, value, label, active, count = '') => `<button type="button" class="map-filter shop-chip${active ? ' active' : ''}" ${attr}="${esc(value)}">${label}${count !== '' ? `<b>${count}</b>` : ''}</button>`;
     const filters = `<div class="cc-shop-filters">
       <div class="map-filter-list shop-rail">${shop.categorias.filter(category => counts[category.id]).map(category => chip('data-shop-cat', category.id, category.nome, category.id === shopState.cat && !terms.length, counts[category.id])).join('')}</div>
       <div class="cc-shop-row"><input type="search" class="shop-search" data-shop-busca placeholder="Buscar em todas as categorias" value="${esc(shopState.busca)}" aria-label="Buscar item"></div>
       ${terms.length ? `<p class="shop-hint">Buscando em todas as categorias: ${visible.length} ${visible.length === 1 ? 'item' : 'itens'}.</p>`
+        : slot ? `<div class="map-filter-list shop-rail shop-subs"><button type="button" class="map-filter shop-chip active shop-slot" data-shop-slot aria-label="Tirar o filtro do slot">Para o slot: ${esc(slot.nome || slot.tipo)}<b>${visible.length}</b> <span aria-hidden="true">✕</span></button></div>`
         : subs.length > 1 ? `<div class="map-filter-list shop-rail shop-subs">${chip('data-shop-sub', '', 'Todos', !shopState.sub)}${subs.map(sub => chip('data-shop-sub', sub, esc(sub), sub === shopState.sub)).join('')}</div>` : ''}</div>`;
     return { visible, shown: visible.slice(0, shopState.mostrar), filters };
   }
@@ -1319,9 +1621,10 @@
   // Eventos comuns: categoria, grupo, busca, mostrar mais, abrir quadro da gaveta e abrir a descrição do cartão. true = já tratou.
   function shopCommonClick(event, target, draw, openRows) {
     const cat = event.target.closest('[data-shop-cat]');
-    if (cat) { shopState.cat = cat.dataset.shopCat; shopState.sub = ''; shopState.busca = ''; shopState.mostrar = PAGE; draw(true); return true; }
+    if (cat) { shopState.cat = cat.dataset.shopCat; shopState.sub = ''; shopState.busca = ''; shopState.cyber = null; shopState.mostrar = PAGE; draw(true); return true; }
     const sub = event.target.closest('[data-shop-sub]');
     if (sub) { shopState.sub = sub.dataset.shopSub; shopState.mostrar = PAGE; draw(); return true; }
+    if (event.target.closest('[data-shop-slot]')) { shopState.cyber = null; shopState.mostrar = PAGE; draw(true); return true; }
     if (event.target.closest('[data-shop-mais]')) { shopState.mostrar += PAGE; draw(); return true; }
     const tab = event.target.closest('[data-shop-painel]');
     if (tab) { togglePanel(target, tab.dataset.shopPainel); return true; }
@@ -1337,6 +1640,7 @@
   function shopSearchInput(event, target, draw) {
     if (!event.target.matches('[data-shop-busca]')) return false;
     shopState.busca = event.target.value;
+    shopState.cyber = null;
     shopState.mostrar = PAGE;
     const position = event.target.selectionStart;
     draw();
@@ -1766,6 +2070,8 @@
     const token = ++renderToken;
     const root = content.querySelector('#cc-root');
     const id = helpers.target && helpers.target.section;
+    // A loja do passo 5 não herda o filtro de slot da página Loja.
+    shopState.cyber = null;
     if (!id) { root.innerHTML = '<p>Abra um personagem em Personagens, ou crie um novo.</p>'; return; }
     const [answer, me] = await Promise.all([api(`api/personagens/${id}`), identity()]);
     if (token !== renderToken) return;
@@ -1839,6 +2145,7 @@
     function draw() {
       const html = [drawIdentity, drawStats, drawSkills, drawLifepath, drawGear, drawHousing, drawReview][step - 1]();
       stepEl.innerHTML = [2, 3, 5].includes(step) ? lockBox(html) : html;
+      wireCyber(stepEl);
       if (step === 5 && doc.metodo === 'pacote') renderShop(stepEl.querySelector('#cc-shop'), doc, { onChange: changed, readOnly: Boolean(doc.foundry) });
       if (helpEl.dataset.step !== String(step)) { helpEl.dataset.step = String(step); drawHelp(); }
       if (helpers.linkGlossary) helpers.linkGlossary(stepEl);
@@ -2138,6 +2445,7 @@
     // ---------- Eventos ----------
     root.onclick = event => {
       const target = event.target;
+      if (cyberClick(event, slot => { saver.now(); helpers.openPage('loja', { section: doc.id, cyber: slot }); })) return;
       const stepButton = target.closest('[data-step]');
       if (stepButton) return go(Number(stepButton.dataset.step));
       const nav = target.closest('[data-nav]');
@@ -2303,6 +2611,9 @@
     shopState.busca = '';
     shopState.painel = '';
     shopState.mostrar = PAGE;
+    // O + de um slot da aba Cyberware: abre no cyberware, só com o que serve ali.
+    shopState.cyber = (helpers.target && helpers.target.section && helpers.target.cyber) || null;
+    if (shopState.cyber) { shopState.cat = 'cyberware'; shopState.sub = ''; }
     const root = content.querySelector('#cc-root');
     const [me, list] = await Promise.all([identity(), api(`api/personagens${campaignQuery()}`), loadShopRules()]);
     if (token !== renderToken) return;

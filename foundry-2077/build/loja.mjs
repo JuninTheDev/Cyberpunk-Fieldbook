@@ -11,6 +11,15 @@ import { wiki } from './wiki.mjs';
 const names = JSON.parse(fs.readFileSync(path.join(sourceDir, 'data', 'loja-nomes.json'), 'utf8'));
 const CORE = 'cyberpunk-red-core';
 const strip = html => String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+// O texto do cartão sem a linha de cima (o tipo, a instalação, a Humanidade e o preço, que o cartão já mostra em
+// números), cortado entre palavras.
+function cardText(html, max = 260) {
+  const text = strip(String(html || '').replace(/^<p><b>[^<]*<\/b>[^<]*<\/p>/, '')).replace(/ ([,.;:!?)])/g, '$1');
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:·.(]+$/, '')}…`;
+}
 
 export const categories = [
   ['armas', 'Armas'], ['municao', 'Munição'], ['armaduras', 'Armaduras'], ['acessorios', 'Acessórios de arma'], ['equipamento', 'Equipamento'],
@@ -229,8 +238,10 @@ function moduleEntries({ weapons = [], cyberware = [], net = [] }) {
       continue;
     }
     const s = doc.system;
+    // A etiqueta do suplemento de fã (a origem saía na linha de cima da descrição, que o cartão não repete mais).
+    const fan = doc.flags?.['cpr-2077']?.origem === 'fa';
     add('cpr-2077.cyberware-2077', doc, {
-      nome: doc.name, cat: 'cyberware', sub: 'Cyberware de 2077', resumo: cyberSummary(s), desc: strip(s.description?.value).slice(0, 260),
+      nome: doc.name, cat: 'cyberware', sub: 'Cyberware de 2077', resumo: cyberSummary(s), desc: cardText(s.description?.value), ...(fan ? { livro: 'suplemento de fã' } : {}),
       cyber: { tipo: s.type, base: Boolean(s.isFoundational), tamanho: s.size ?? 1, slots: s.isFoundational ? s.installedItems?.slots || 0 : 0, hl: s.humanityLoss?.static || 0, rolagem: s.humanityLoss?.roll || '0', instalacao: s.installLocation || '' }
     });
   }

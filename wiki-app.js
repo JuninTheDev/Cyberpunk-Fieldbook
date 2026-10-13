@@ -675,7 +675,7 @@
     // A primeira menção de cada termo em cada seção (ou cartão) vira um link para o glossário, com a definição no title.
     const glossary = window.systemGlossary;
     const glossarySkipPages = new Set(['glossary', 'playerView', 'notes', ...mapPages]);
-    const glossarySkip = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .eyebrow, .entry-tag, .npc-stats, .gloss, .home-desk, .view-switch, .compare-panel';
+    const glossarySkip = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .eyebrow, .entry-tag, .npc-stats, .gloss, .home-desk, .view-switch, .compare-panel, .cy-top';
     let glossaryMatchers = null;
     function buildGlossaryMatchers() {
       const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

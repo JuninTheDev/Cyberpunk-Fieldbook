@@ -125,6 +125,14 @@ module.exports = async ({ edge, servidores, r }) => {
       const rifle = (m.itens || []).find(item => item.nome === 'Assault Rifle');
       return [m.hp?.max === 45 && m.hp.atual === 45 && rifle?.pente?.atual === 25 && m.sp?.corpo === 11 && m.role?.nome === 'Solo', JSON.stringify({ hp: m.hp, sp: m.sp, rifle: rifle?.pente, municao: rifle?.municao, itens: (m.itens || []).length })];
     });
+    // A aba Cyberware da ficha da wiki lê o tipo e os slots que o Foundry manda (a base com os slots da ficha dela).
+    await r.passo('na mesa: o cyberware vem com o tipo e os slots (o Neuroport com 5 e o Sandevistan dentro)', async () => {
+      const itens = (await api(`/api/personagens/${solo.id}`)).personagem.mesa?.itens || [];
+      const neuroport = itens.find(item => item.nome === 'Neuroport');
+      const sande = itens.find(item => item.nome === 'Sandevistan');
+      return [neuroport?.cyber?.tipo === 'neuralWare' && neuroport.cyber.slots === 5 && neuroport.base && (neuroport.dentro || []).includes('Sandevistan') && sande?.cyber?.tipo === 'neuralWare' && sande.cyber.tamanho === 1 && sande.instalado,
+        JSON.stringify({ neuroport, sande })];
+    });
     await r.passo('na mesa: perder HP e gastar munição no Foundry chega na wiki sozinho', async () => {
       await edge.evaluate(`(async () => {
         const actor = game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(solo.id)});
@@ -279,5 +287,14 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`document.querySelector('[data-toc="Combate"]').scrollIntoView()`);
     await edge.shot('ficha-mesa-combate');
     return [/Na mesa/.test(t) && /HP 30\/45/.test(t) && /10\/25/.test(t) && /Consciência de Combate/.test(t), (t.match(/Vitais.{0,120}/) || [''])[0]];
+  });
+  // O Biomonitor e o Neural Link do pacote do Solo já vêm no Neuroport: o cyberware dele é o Neuroport com o Sandevistan.
+  await r.passo('ficha da wiki: a aba Cyberware mostra o que o Foundry instalou (o Sandevistan no Neuroport)', async () => {
+    await edge.evaluate(`document.querySelector('[data-cc-tab="cyberware"]').click()`);
+    await edge.sleep(500);
+    const neural = await edge.evaluate(`(document.querySelector('[data-cc-panel="cyberware"] [data-cy-grupo="neural"]') || {}).textContent?.replace(/\\s+/g, ' ').trim() || ''`);
+    const fonte = await edge.evaluate(`(document.querySelector('[data-cc-panel="cyberware"] .cy-fonte') || {}).textContent || ''`);
+    await edge.shot('ficha-mesa-cyberware');
+    return [/^Na mesa/.test(fonte) && /Neuroport/.test(neural) && /Sandevistan/.test(neural) && /1\/5/.test(neural), `${fonte.slice(0, 40)} · ${neural.slice(0, 80)}`];
   });
 };

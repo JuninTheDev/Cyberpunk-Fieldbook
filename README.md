@@ -254,7 +254,8 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 9. **A ficha da wiki** tem o desenho da ficha do Foundry e o botão **Imprimir ou salvar em PDF** (só a ficha, em fundo branco).
    - **Vitais:** HP e Humanidade com barra, SP na cabeça e no corpo, dinheiro.
    - **Combate:** a base de ataque já somada (STAT + perícia), dano, CDT, pente e munição.
-   - **O resto:** perícias pelos grupos do Foundry, a árvore de cyberware, o cyberdeck e o equipamento.
+   - **Cyberware:** a aba no jeito da tela de cyberware do Cyberpunk 2077, com os grupos do RED. Mostra o corpo em holograma (desenho da wiki) e um quadrado por slot: a sigla do implante instalado, o + no slot livre. O + abre a loja do personagem só com o que serve ali. Detalhes abaixo, em Personagens e Ficha.
+   - **O resto:** perícias pelos grupos do Foundry, o cyberdeck e o equipamento.
 
 Notas:
 
@@ -272,7 +273,15 @@ Notas:
   - Cada gravação relê o arquivo e grava na vez dela (uma fila por arquivo): a ficha do Foundry chegando enquanto o jogador salva não apaga uma à outra.
 - **Personagens e Ficha:**
   - a lista mostra um cartão por personagem: o retrato (ou as iniciais), a Role e o Rank, o HP, o IP e os eurodólares (os da mesa, quando o Foundry já mandou a ficha, ou os da criação) e os botões; o último cartão, tracejado, cria um novo;
-  - a **Ficha** tem duas colunas: o retrato, os STATs e os vitais do lado; e as abas **Resumo**, **Perícias** (da maior base para a menor), **Equipamento**, **Compras** (os pedidos da loja, com a situação) e **Anotações**;
+  - a **Ficha** tem duas colunas: o retrato, os STATs e os vitais do lado; e as abas **Resumo**, **Perícias** (da maior base para a menor), **Equipamento**, **Cyberware**, **Compras** (os pedidos da loja, com a situação) e **Anotações**;
+  - a aba **Cyberware** é a tela de cyberware do Cyberpunk 2077 com os grupos do RED:
+    - **Os grupos:** Neuralware, Cyberolhos, Cyberaudio, Borgware e Cyberbraços à esquerda; Cyberware interno, Cyberware externo, Fashionware e Cyberpernas à direita.
+    - **Os slots:** cada base mostra os slots dela (o Neural Link e o Neuroport têm 5, o cyberolho 3, a Cyberaudio Suite 3, o cyberbraço 4, a cyberperna 3). O corpo tem 7 para o cyberware interno, 7 para o externo e 7 para o fashionware.
+    - **O corpo:** a parte com cromo acende em ciano no holograma, e uma linha liga cada grupo a ela.
+    - **Tocar:** num slot ou num nome, abre a ficha do implante (Humanidade, instalação, slots, preço, descrição). Num +, abre a loja do personagem só com o que serve ali: as opções daquele tipo, ou as bases quando o membro é natural. O chip **Para o slot** tira o filtro.
+    - **De onde vem:** antes do Foundry, a tela sai da montagem do criador, e embaixo aparece o que ficou sem base. Na mesa, sai da ficha que o Foundry manda (o tipo e os slots de cada peça), e embaixo aparece o que espera o mestre instalar.
+    - **Celular:** o corpo vai para cima, menor, e os grupos ficam um embaixo do outro, sem as linhas.
+    - **A revisão do criador** (passo 7) mostra a mesma tela;
   - o título da página é o nome do personagem, e a aba escolhida fica lembrada no aparelho. **Imprimir** sai com tudo.
 - **Anotações:** a ficha tem a aba **Anotações** (pistas, contatos, dívidas, o que o NPC prometeu), que salva sozinho. Só o dono e o mestre leem; na página Personagens, o mestre vê o quadro **Anotações dos jogadores**, com as de todos, as mais novas primeiro.
 - **Histórico de versões (mestre):** antes de cada rodada de edição, a wiki guarda como o personagem estava (no máximo uma a cada 10 minutos; ficam as últimas 30, em `personagens/historico/`). Na **Ficha**, aba **Anotações**, o quadro **Histórico de versões** lista cada uma com o que ela tem de diferente da de agora, e **Restaurar** volta o que o jogador preenche (STATs, perícias, itens, Lifepath...). Foundry, ficha da mesa, pedidos, Pontos de Melhoria, retrato e anotações ficam como estão, e a versão de agora também vai para o histórico (dá para desfazer).
