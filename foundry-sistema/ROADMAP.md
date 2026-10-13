@@ -52,7 +52,7 @@ de compêndio; entram só as partes do sistema.
       rolam sozinhos, como no item do CORE.
   - [x] Os bônus situacionais na janela de rolagem: as rolagens de Role passam por ela (ciclos 34 e 35).
   - A Interface fica na C5.
-- [ ] **C4. Facedown:** COOL + Reputação + 1d10 (o `CPRFacedownRoll`).
+- [~] **C4. Facedown:** COOL + Reputação + 1d10 (o `CPRFacedownRoll`). Em andamento: sessão KouArt, 2026-10-13.
 
 ### Fase 2: a NET
 
