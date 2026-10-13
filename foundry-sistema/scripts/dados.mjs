@@ -2,7 +2,7 @@
 // que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP, bônus dos efeitos)
 // é calculado na preparação, a cada vez.
 import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, EXTRATOS, LIFEPATH, USOS } from './config.mjs';
-import { FAMILIAS, PERICIAS, ROLES } from './gerado.mjs';
+import { FAMILIAS, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 
 const { fields } = foundry.data;
@@ -14,8 +14,8 @@ const fonte = () => new fields.SchemaField({ livro: texto(), pagina: inteiro(0) 
 // Todas as chaves de perícia que um efeito pode somar: as comuns e as famílias (Linguagem etc.).
 export const CHAVES_PERICIAS = [...PERICIAS.map(p => p.id), ...Object.keys(FAMILIAS)];
 
-// A Role de 2077 da wiki pelo nome que está na ficha ("Nomad") ou pelo id ("nomad").
-export const roleDaWiki = nome => ROLES.find(role => [role.nome, role.id].some(valor => valor.toLowerCase() === String(nome).trim().toLowerCase())) ?? null;
+// A Role da wiki pelo nome que está na ficha ou pelo id (regras.acharRole: Face e Corpo são a do RED de onde vinham).
+export const roleDaWiki = nome => regras.acharRole(nome, ROLES, ROLES_ANTIGAS);
 
 export class DadosPersonagem extends foundry.abstract.TypeDataModel {
   static defineSchema() {
@@ -33,9 +33,7 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       role: new fields.SchemaField({
         nome: texto(),
         rank: inteiro(4, { min: 0 }),
-        habilidades: new fields.TypedObjectField(inteiro(0)),
-        // A especialização de 2077 (Face e Lawman), pelo id da wiki ("siren", "street-cop").
-        especializacao: texto()
+        habilidades: new fields.TypedObjectField(inteiro(0))
       }),
       // Sobe 1 a cada Death Save que passa; volta a zero quando o personagem estabiliza (botão na ficha).
       deathSave: new fields.SchemaField({ penalidade: inteiro(0, { min: 0 }) }),
@@ -81,10 +79,8 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     a.move.valor = regras.moveFinal(a.move.valor, this.ferimento.chave === 'mortal');
     // Consciência de Combate do Solo (pelos pontos de cada habilidade da Role).
     this.consciencia = regras.consciencia(this.role.habilidades);
-    // Os bônus de Role nas perícias (o Moto do Nomad, a especialização do Face), como o item de Role do CORE.
-    const role = roleDaWiki(this.role.nome);
-    this.especializacao = role?.especializacoes?.find(e => e.id === this.role.especializacao) ?? null;
-    this.bonusDeRole = regras.bonusDeRole({ roleId: role?.id, rank: this.role.rank, especializacao: this.especializacao });
+    // Os bônus de Role nas perícias (o Moto do Nomad), como o item de Role do CORE.
+    this.bonusDeRole = regras.bonusDeRole({ roleId: roleDaWiki(this.role.nome)?.id, rank: this.role.rank });
     // Editor de dor (supressão de dor): tira só a penalidade de gravemente ferido, não a de mortalmente ferido.
     this.penalidade = regras.penalidadeDoFerimento(this.ferimento, this.bonus.supressaoDeDor);
     // Death Save: a penalidade de base vem das lesões que a aumentam; a outra sobe a cada sucesso.
@@ -112,7 +108,7 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     // Os efeitos somam na perícia e na família dela; a Detecção de Ameaça do Solo soma na Percepção.
     const bonus = (this.bonus.pericias[id] || 0) + (propria?.familia ? this.bonus.pericias[propria.familia] || 0 : 0)
       + (id === 'perception' ? this.consciencia?.percepcao || 0 : 0);
-    // O bônus da Role ({ rotulo, valor }), na perícia ou na família dela (o Rockerboy do Face soma em todo instrumento).
+    // O bônus da Role ({ rotulo, valor }), na perícia ou na família dela.
     const role = this.bonusDeRole?.[id] ?? (propria?.familia ? this.bonusDeRole?.[propria.familia] : null) ?? null;
     return { id, nome, atributo, nivel: propria?.nivel ?? 0, bonus, role, dificil: Boolean(base?.dificil ?? familia?.dificil) };
   }

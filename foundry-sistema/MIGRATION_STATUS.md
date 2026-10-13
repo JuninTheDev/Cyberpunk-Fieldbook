@@ -28,7 +28,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
-| CORE | os bônus de Role nas perícias (o Moto do Nomad; a especialização do Face; o Investigator do Lawman) | portados no ciclo 23 os que valem sempre (o Moto e a especialização do Face, com a especialização vinda da wiki); o Investigator do Lawman e o Netrunner de 2077 esperam a janela de rolagem |
+| CORE | os bônus de Role nas perícias (o Moto do Nomad) | portado no ciclo 23. Com as Roles do RED (ciclo 33), saíram a especialização do Face e os situacionais de 2077 (o Investigator, o Netrunner) |
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | falta |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown; consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
@@ -203,10 +203,13 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   Rank. O máximo em cada especialidade é o Rank (o "até 4 em cada" do Rank 4). A ficha só avisa: se a mesa ler
   diferente, é só trocar `PONTOS_DE_ROLE_POR_RANK` (regras.mjs).
 
-- **Netrunner de 2077: quais testes são "técnicos"?** A wiki diz que ele "soma o Rank de Interface em todos os testes
-  técnicos enquanto estiver correndo a NET", mas não lista as perícias. A janela de rolagem oferece o bônus (desligado)
-  em todo teste de perícia, e a mesa decide quando marcar. Se a mesa quiser uma lista (as perícias de TECH, por
-  exemplo), é só trocar em `regras.situacionaisDeRole`.
+- **Netrunner de 2077: quais testes são "técnicos"?** Saiu no ciclo 33: com o Mission Kit, a wiki levou essa regra para
+  "Netrunning de 2077", que depende da rede de três camadas (o C9 do ROADMAP). A pergunta volta lá.
+
+- **Os opcionais de Role da wiki: com o mestre.** Com as Roles do RED, a wiki deixa como opcionais do suplemento de fã o
+  Investigator do Lawman (no lugar do Backup) e o desconto do clã do Nomad. O sistema não os automatiza, porque a mesa não
+  disse se usa. Até o ciclo 32, o Investigator aparecia como situacional (desligado) na janela de rolagem de todo Lawman.
+  Se a mesa usar, ele volta como uma configuração do mundo.
 
 - **Luneta de precisão: muda o que a mesa vê.** A wiki: "+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais.
   Não acumula com cyberware óptico". No CORE, é um +1 situacional desligado, que o jogador marca na janela. Aqui (ciclo
@@ -1563,6 +1566,53 @@ o guia.
     `foundry-2077/.cache` do Foundry 12 e os PDFs), e o `v14` pelas 6 da troca de regra.
 - **O guia** (`INTEGRAR-REVISAO.md`) saiu, como ele mesmo pedia.
 - **Próximo (P0, desvio de regra):** as armas de 2077 pelo Mission Kit e as Roles pelo RED, com os testes delas.
+
+### Ciclo 33 (2026-10-12): as Roles do RED (o C3, parte 1; sessão KouArt)
+
+O primeiro ciclo do plano de paridade nesta sessão (o C3 do ROADMAP, com o C1 na sessão Junin). É o P0 "As Roles pelo
+RED", achado na integração da revisão (ciclo 32): a wiki do master voltou às 10 Roles do RED.
+
+- **Implementado:**
+  - **as Roles:** as 10 do criador da wiki (`gerado.mjs`), sem as especializações de 2077, e as que saíram com o Mission
+    Kit (Face e Corpo) pelo `roleAliases` da wiki (`ROLES_ANTIGAS`, gerado pelo build);
+  - **`regras.acharRole`:** a Role pelo nome, pelo id ou pela antiga (Face é Rockerboy; Corpo, Exec). O
+    `dados.roleDaWiki` a usa: a ficha que já tinha "Face" lê o Rockerboy;
+  - **os bônus:** fica o Moto do Nomad (o texto do RED na wiki: "soma o Rank a Dirigir, Pilotar e Tech de veículos
+    terrestres, aéreos e marítimos"; o item Nomad do CORE). Saem a especialização do Face (o campo
+    `system.role.especializacao` e o select da aba Role) e os situacionais de Role de 2077 (o Investigator do Lawman e a
+    Interface do Netrunner, `regras.situacionaisDeRole`);
+  - **a importação e a migração** gravam a Role do RED: o personagem antigo da wiki, ou a ficha da mesa do Foundry 12 com
+    "Face", entra como Rockerboy;
+  - **a aba Role:** a habilidade e o resumo da Role do RED, e o Moto, quando é Nomad.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 53 de 57. Os três testes de Role foram reescritos pela regra nova, com a fonte:
+    - o bônus de Role: das 10 do RED, só o Moto do Nomad soma, nas seis perícias de veículo;
+    - as Roles do RED: as do criador, sem especialização; o `roleAliases` da wiki; a frase da wiki sobre Face e Corpo;
+      a busca pelo nome, pelo id e pela antiga;
+    - sem situacionais de Role: os textos da wiki sobre os opcionais e a Interface de 2077.
+
+    As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 62 de 67, cerca de 122 s. O que mudou:
+    - **a janela de rolagem** do Lawman de teste não tem mais o Investigator (o total marcado vai de 19 a 15, e o rolado
+      de 24 a 20);
+    - **um passo no lugar do da especialização do Face:**
+      - o personagem antigo da wiki com a Role Face entra como Rockerboy pela importação e pela migração, sem o campo da
+        especialização;
+      - a ficha com "Face" lê o Rockerboy;
+      - a aba Role mostra o Impacto Carismático, sem bônus;
+      - o Nomad soma o Moto nas seis perícias (Conduzir Veículo Terrestre: REF 6 + 3 + Moto 4 = 13 na ficha);
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES). A captura `v14-role-rockerboy.png` foi conferida;
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a Role antiga que não vira a do RED, o Moto para toda Role e o build sem as Roles que saíram;
+    - G4: a importação que guarda "Face".
+- **Para o C1 (sessão Junin):** não há ator real com a Role Face no Foundry 14. A campanha ainda está no Foundry 12, e a
+  importação já grava a do RED. Mesmo assim, se a migração quiser trocar o nome guardado nos mundos de teste, o
+  `regras.acharRole` dá a Role certa.
+- **Próximo:** o C3, parte 2: as rolagens de Role do RED, pelo item de Role do CORE e pelo texto da wiki (o Impacto
+  Carismático, a Credibilidade, o Backup, a pechincha do Fixer); depois, a parte 3, as do Tech e do Medtech.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

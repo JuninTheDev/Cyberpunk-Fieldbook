@@ -294,14 +294,14 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('janela de rolagem (como a do CORE): o clique na perícia abre a janela com as partes, os situacionais (do cyberware, das lesões e da Role; o Olho danificado vem ligado), os 12 modificadores comuns da wiki, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste e a Sorte sai; cancelar não rola; Ctrl + clique rola direto, com os ligados por padrão; no atributo, só os de todas as ações; "Rolar direto" inverte', async () => {
+    await r.passo('janela de rolagem (como a do CORE): o clique na perícia abre a janela com as partes, os situacionais (do cyberware e das lesões; o Olho danificado vem ligado), os 12 modificadores comuns da wiki, o modificador do mestre e a Sorte, com o total ao vivo; o que se marca entra no teste e a Sorte sai; cancelar não rola; Ctrl + clique rola direto, com os ligados por padrão; no atributo, só os de todas as ações; "Rolar direto" inverte', async () => {
       await fixar(edge, [[5, 10], [6, 10], [7, 10], [8, 10]]);
       try {
         const info = await edge.evaluate(`(async () => {
           const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
           const cat = await game.system.api.wiki.carregarCatalogo();
           const pegar = id => foundry.utils.deepClone(cat[id]);
-          const a = await Actor.implementation.create({ name: 'Teste Janela', type: 'personagem', system: { atributos: { int: { valor: 6 } }, sorte: { value: 3 }, pericias: { perception: { nivel: 4 } }, role: { nome: 'Lawman', rank: 4, especializacao: 'street-cop' } } });
+          const a = await Actor.implementation.create({ name: 'Teste Janela', type: 'personagem', system: { atributos: { int: { valor: 6 } }, sorte: { value: 3 }, pericias: { perception: { nivel: 4 } }, role: { nome: 'Lawman', rank: 4 } } });
           const ouvido = pegar('core_cyberware:amplified-hearing');
           ouvido.system.instalado = true;
           await a.createEmbeddedDocuments('Item', [ouvido, pegar('core_critical-injuries-head:damaged-eye'), pegar('core_critical-injuries-body:crushed-fingers')]);
@@ -329,7 +329,6 @@ module.exports = async ({ edge, servidores, r }) => {
           const aberta = ler(j);
           marcar(caixa(j, 'situacional', 'pela audição'), true);
           marcar(caixa(j, 'situacional', 'pela visão'), false);
-          marcar(caixa(j, 'situacional', 'Investigator'), true);
           marcar(caixa(j, 'comum', 'Iluminação noturna'), true);
           const outro = j.querySelector('[name="outro"]');
           outro.value = 2;
@@ -388,10 +387,10 @@ module.exports = async ({ edge, servidores, r }) => {
         const { aberta, marcado, direto, atributo, invertido } = info;
         const tem = (lista, ...itens) => itens.every(item => lista.includes(item));
         const ok = aberta.titulo === 'Teste: Percepção' && aberta.partes.join() === 'INT +6,Percepção +4,1d10'
-          && aberta.situacionais.join(' / ') === ['Amplified Hearing: Percepção pela audição +2 [ ]', 'Dedos esmagados: Todas as ações com as mãos −4 [ ]', 'Investigator: pista de caso ativo +4 [ ]', 'Olho danificado: Percepção pela visão −2 [x]'].join(' / ')
-          && aberta.comuns === 12 && aberta.sorte === '1' && aberta.total === '9' && info.totalMarcado === '19'
-          && tem(marcado.partes, 'INT +6', 'Percepção +4', 'Amplified Hearing: Percepção pela audição +2', 'Investigator: pista de caso ativo +4', 'Iluminação noturna ou fraca -1', 'Modificador do mestre +2', 'Sorte +2')
-          && !marcado.partes.some(parte => parte.includes('pela visão')) && marcado.total === 24 && marcado.sorte === 1 && marcado.preparada === 0
+          && aberta.situacionais.join(' / ') === ['Amplified Hearing: Percepção pela audição +2 [ ]', 'Dedos esmagados: Todas as ações com as mãos −4 [ ]', 'Olho danificado: Percepção pela visão −2 [x]'].join(' / ')
+          && aberta.comuns === 12 && aberta.sorte === '1' && aberta.total === '9' && info.totalMarcado === '15'
+          && tem(marcado.partes, 'INT +6', 'Percepção +4', 'Amplified Hearing: Percepção pela audição +2', 'Iluminação noturna ou fraca -1', 'Modificador do mestre +2', 'Sorte +2')
+          && !marcado.partes.some(parte => parte.includes('pela visão') || parte.startsWith('Investigator')) && marcado.total === 20 && marcado.sorte === 1 && marcado.preparada === 0
           && info.cancelou && !direto.janela && tem(direto.partes, 'Olho danificado: Percepção pela visão -2') && !direto.partes.some(parte => parte.startsWith('Sorte')) && direto.total === 14
           && atributo.titulo === 'Teste: INT' && atributo.partes.join() === 'INT +6,1d10' && atributo.situacionais.join() === 'Dedos esmagados: Todas as ações com as mãos −4 [ ]' && info.atributoTotal === 13
           && invertido.rolou && !invertido.janela && invertido.abriu;
@@ -2454,68 +2453,62 @@ module.exports = async ({ edge, servidores, r }) => {
         JSON.stringify({ ...info, religado: religado.foundry?.ator ?? religado })];
     });
 
-    await r.passo('Role, a especialização: a do Face vem da criação da wiki, na importação e na migração (a ficha "Na mesa" não a traz), e soma o Rank: Siren em Conversação e Cuidados Pessoais ("Siren +4" no teste e no total da ficha); a aba Role mostra e troca a especialização (o Rockerboy soma em todo instrumento); a do Lawman fica guardada e não soma (bônus de caso)', async () => {
+    await r.passo('Role do RED: quem era Face (na criação da wiki ou na ficha da mesa do Foundry 12) entra como Rockerboy, como a wiki faz com os personagens antigos, e a ficha antiga com "Face" lê o Rockerboy; a aba Role mostra o Impacto Carismático, sem bônus nas perícias; o Nomad soma o Moto nas seis perícias de veículo', async () => {
       const stats = { INT: 6, REF: 6, DEX: 6, TECH: 5, COOL: 8, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 7 };
-      const pericias = [{ nome: 'Conversation', nivel: 4 }, { nome: 'Personal Grooming', nivel: 2 }, { nome: 'Play Instrument (Guitar)', nivel: 3 }];
+      const pericias = [{ nome: 'Conversation', nivel: 4 }, { nome: 'Drive Land Vehicle', nivel: 3 }];
+      // Um personagem antigo da wiki, ainda com a Role Face do suplemento de fã (e a especialização dela).
       const { personagem } = await api('/api/personagens', 'POST', {
         nome: 'Teste Face', apelido: 'Voz', resultado: {
           stats, derivados: { hp: 40 }, humanidade: { atual: 70 }, dinheiro: { saldo: 0 }, pericias, itens: [], veiculos: [],
           role: { nome: 'Face', rank: 4, especializacao: { nome: 'Siren', pericias: ['Conversation', 'Personal Grooming'] } }
         }
       });
-      // A ficha da mesa do Foundry 12: a Role sem a especialização (o formato do cpr-2077).
+      // A ficha da mesa do Foundry 12 com a Role Face (o formato do cpr-2077).
       await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
         ator: 'atorFace', nomeAtor: 'Teste Face', quando: '2026-10-01T22:00:00.000Z', stats,
         hp: { atual: 40, max: 40 }, humanidade: { atual: 70, max: 70 }, sorte: { atual: 5, max: 5 }, sp: { cabeca: 0, corpo: 0 }, dinheiro: 0, ip: 0, reputacao: 0,
         role: { nome: 'Face', rank: 4, habilidades: [] }, pericias: pericias.map(p => ({ ...p, stat: 'EMP' })), lesoes: [], itens: []
       });
-      await fixar(edge, [[5, 10]]);
       try {
         const info = await edge.evaluate(`(async () => {
           const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
           const importado = (await game.system.api.wiki.importarPersonagem(${JSON.stringify(personagem.id)}, '')).ator;
-          const daImportacao = importado.system.role.especializacao;
+          const daImportacao = { role: importado.system.role.nome, campos: Object.keys(importado.toObject().system.role).sort().join() };
           await importado.delete();
           const { ator } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)}, '');
           // ator.system, a cada vez: o Foundry monta um objeto novo a cada mudança.
           const s = () => ator.system;
-          const emp = s().atributos.emp.valor;
           const papel = id => s().pericia(id).role;
-          const siren = { especializacao: s().role.especializacao, conversa: papel('conversation'), cuidados: papel('personal-grooming'), violao: papel('play-instrument-guitar'), manha: papel('streetwise') };
-          // O teste de Conversação: EMP + 4 + Siren 4 + o d10 (5).
-          const teste = await ator.rolarPericia('conversation');
-          const partes = [...new DOMParser().parseFromString(teste.mensagem.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.trim());
-          // A ficha: o total da perícia e a aba Role, com a especialização trocada pelo select.
+          const daMesa = { role: s().role.nome, conversa: papel('conversation'), dirigir: papel('drive-land-vehicle') };
           await ator.sheet.render({ force: true });
-          await esperar(() => ator.sheet.element?.querySelector('.tab.role .bonus-role select'));
           const f = () => ator.sheet.element;
           const texto = seletor => f()?.querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
-          const naFicha = { total: texto('.tab.pericias .pericia[data-pericia="conversation"] .total'), select: f().querySelector('.tab.role .bonus-role select').value, soma: texto('.tab.role .bonus-role .soma'),
-            opcoes: [...f().querySelectorAll('.tab.role .bonus-role option')].map(o => o.value).join() };
-          const select = f().querySelector('.tab.role .bonus-role select');
-          select.value = 'rockerboy';
-          select.dispatchEvent(new Event('change', { bubbles: true }));
-          await esperar(() => s().role.especializacao === 'rockerboy' && texto('.tab.role .bonus-role .soma').startsWith('Rockerboy'));
-          const rockerboy = { violao: papel('play-instrument-guitar'), manha: papel('streetwise'), conversa: papel('conversation'), soma: texto('.tab.role .bonus-role .soma') };
-          // O Lawman: a especialização fica guardada, mas o bônus de caso não soma sozinho.
-          await ator.update({ 'system.role.nome': 'Lawman', 'system.role.especializacao': 'street-cop' });
-          await esperar(() => texto('.tab.role .bonus-role .dica').startsWith('Investigator'));
-          const lawman = { especializacao: s().role.especializacao, manha: papel('streetwise'), atletismo: papel('athletics'), titulo: texto('.tab.role .bonus-role .titulo span'), dica: texto('.tab.role .bonus-role .dica') };
-          // De volta ao Face (Siren), na aba Role, para a captura (o finally fecha e apaga).
-          await ator.update({ 'system.role.nome': 'Face', 'system.role.especializacao': 'siren' });
-          await esperar(() => texto('.tab.role .bonus-role .soma').startsWith('Siren'));
+          await esperar(() => texto('.tab.role .role-nome').startsWith('Rockerboy'));
+          const rockerboy = { nome: texto('.tab.role .role-nome'), bonus: Boolean(f().querySelector('.tab.role .bonus-role')) };
+          // A ficha antiga, com "Face" no campo da Role: lê o Rockerboy.
+          await ator.update({ 'system.role.nome': 'Face' });
+          await esperar(() => s().role.nome === 'Face' && texto('.tab.role .role-nome').startsWith('Rockerboy'));
+          const antiga = { nome: texto('.tab.role .role-nome'), conversa: papel('conversation') };
+          // O Nomad: o Moto soma o Rank nas seis perícias de veículo, no total da ficha e na aba Role.
+          await ator.update({ 'system.role.nome': 'Nomad' });
+          await esperar(() => texto('.tab.role .bonus-role .soma').startsWith('Moto'));
+          const esperado = 'Moto +4 em ' + game.system.api.regras.PERICIAS_DO_MOTO.map(id => s().pericia(id).nome).join(', ') + '.';
+          const nomad = { dirigir: papel('drive-land-vehicle'), conversa: papel('conversation'), soma: texto('.tab.role .bonus-role .soma'), esperado, total: texto('.tab.pericias .pericia[data-pericia="drive-land-vehicle"] .total') };
+          // De volta ao Rockerboy, na aba Role, para a captura (o finally fecha e apaga).
+          await ator.update({ 'system.role.nome': 'Rockerboy' });
+          await esperar(() => texto('.tab.role .role-nome').startsWith('Rockerboy') && !f().querySelector('.tab.role .bonus-role'));
           ator.sheet.changeTab('role', 'primary');
-          return { daImportacao, emp, siren, partes, total: teste.total, naFicha, rockerboy, lawman };
+          return { daImportacao, daMesa, rockerboy, antiga, nomad, ref: s().atributos.ref.valor };
         })()`);
         await edge.sleep(400);
-        await edge.shot('role-face');
-        const { siren, naFicha, rockerboy, lawman } = info;
-        const quatro = rotulo => b => b?.rotulo === rotulo && b.valor === 4;
-        const ok = info.daImportacao === 'siren' && siren.especializacao === 'siren' && quatro('Siren')(siren.conversa) && quatro('Siren')(siren.cuidados) && siren.violao === null && siren.manha === null
-          && info.partes.includes('Siren +4') && info.total === info.emp + 4 + 4 + 5
-          && naFicha.total === String(info.emp + 4 + 4) && naFicha.select === 'siren' && naFicha.soma === 'Siren +4 em Conversação, Cuidados Pessoais.' && naFicha.opcoes === ',siren,rockerboy,model'
-          && quatro('Rockerboy')(rockerboy.violao) && quatro('Rockerboy')(rockerboy.manha) && rockerboy.conversa === null && rockerboy.soma === 'Rockerboy +4 em Tocar Instrumento, Malandragem.'
-          && lawman.especializacao === 'street-cop' && lawman.manha === null && lawman.atletismo === null && lawman.titulo === 'COM PISTA DE CASO ATIVO' && /Educação e Percepção/.test(lawman.dica);
+        await edge.shot('role-rockerboy');
+        const { daImportacao, daMesa, rockerboy, antiga, nomad } = info;
+        const moto = b => b?.rotulo === 'Moto' && b.valor === 4;
+        const ok = daImportacao.role === 'Rockerboy' && daImportacao.campos === 'habilidades,nome,rank'
+          && daMesa.role === 'Rockerboy' && daMesa.conversa === null && daMesa.dirigir === null
+          && /^Rockerboy \/\/ Impacto Carismático/.test(rockerboy.nome) && !rockerboy.bonus
+          && /^Rockerboy \/\/ Impacto Carismático/.test(antiga.nome) && antiga.conversa === null
+          && moto(nomad.dirigir) && nomad.conversa === null && nomad.soma === nomad.esperado && nomad.total === String(info.ref + 3 + 4);
         return [ok, JSON.stringify(info)];
       } finally {
         await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => a.name === 'Teste Face')) { await a.sheet?.close(); await a.delete(); } return true; })()`);

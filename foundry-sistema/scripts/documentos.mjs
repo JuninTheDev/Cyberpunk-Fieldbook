@@ -1,11 +1,10 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
 import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
-import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   aplicarDano, deLonge, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, situacionaisDeRole, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
+  PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
@@ -59,11 +58,10 @@ export class AtorCPR extends Actor {
   }
 
   // Os situacionais que a janela de rolagem oferece num teste ({ id, rotulo, valor, ligado }): os efeitos situacionais dos
-  // itens em uso (na perícia ou na família dela; "todas as ações" em todo teste) e os bônus de Role que dependem da
-  // situação (regras.situacionaisDeRole). O teste sem a janela usa os ligados por padrão, como o CORE.
+  // itens em uso (na perícia ou na família dela; "todas as ações" em todo teste). O teste sem a janela usa os ligados por
+  // padrão, como o CORE.
   situacionaisDoTeste(periciaId = null) {
-    const { role, especializacao } = this.system;
-    return [...this.#efeitosSituacionais(this.#chavesDoTeste(periciaId)), ...situacionaisDeRole({ roleId: roleDaWiki(role.nome)?.id, rank: role.rank, especializacao, periciaId })];
+    return this.#efeitosSituacionais(this.#chavesDoTeste(periciaId));
   }
   // As chaves dos efeitos que valem num teste: a perícia, a família dela e todas as ações.
   #chavesDoTeste(periciaId) {

@@ -55,37 +55,26 @@ export function pontosDeRole(roleId, rank) {
 }
 export const moveFinal = (move, mortal) => Math.max(1, Number(move) + (mortal ? PENALIDADE_MOVE_MORTAL : 0));
 
-// Os bônus de Role nas perícias, como o item de Role do CORE (getRoleMods, em cpr-role.js: o Rank nas perícias da lista
-// dele). Valem sempre:
-// - o Moto do Nomad (wiki, system-catalog.js: "soma o Rank a Dirigir, Pilotar e Tech de veículos terrestres, aéreos e
-//   marítimos"; as seis do item Nomad do CORE);
-// - a especialização do Face (system-2077.js: "Soma o Rank de Impacto Carismático em" duas perícias).
-// O Investigator do Lawman, com a especialização dele, só vale com pista de caso ativo ("O bônus de caso também vale
-// em"), e o Netrunner de 2077 só correndo a NET: ficam para a janela de rolagem (ROADMAP, P1).
-export const PERICIAS_DO_MOTO = ['drive-land-vehicle', 'pilot-air-vehicle', 'pilot-sea-vehicle', 'land-vehicle-tech', 'air-vehicle-tech', 'sea-vehicle-tech'];
-// Pela perícia (ou família): { rotulo, valor }. especializacao: { nome, pericias } (as da wiki, em gerado.mjs).
-export function bonusDeRole({ roleId, rank, especializacao = null }) {
-  const valor = Math.max(0, Math.trunc(Number(rank) || 0));
-  const em = (pericias, rotulo) => Object.fromEntries(pericias.map(id => [id, { rotulo, valor }]));
-  if (!valor) return {};
-  if (roleId === 'nomad') return em(PERICIAS_DO_MOTO, 'Moto');
-  if (roleId === 'face' && especializacao) return em(especializacao.pericias, especializacao.nome);
-  return {};
+// A Role pelo nome que está na ficha ("Nomad") ou pelo id ("nomad"), entre as da wiki. As do suplemento de fã que saíram
+// com o Mission Kit (Face, Corpo) são a do RED de onde vinham (antigas: o roleAliases da wiki), como a wiki faz com os
+// personagens antigos.
+export function acharRole(nome, roles, antigas = {}) {
+  const chave = String(nome ?? '').trim().toLowerCase();
+  if (!chave) return null;
+  const id = antigas[chave] ?? chave;
+  return roles.find(role => role.id === id || role.nome.toLowerCase() === chave) ?? null;
 }
 
-// Os bônus de Role que dependem da situação, que a janela de rolagem oferece desligados num teste de perícia:
-// - o Investigator do Lawman de 2077: o Rank em Educação e Percepção, e nas perícias da especialização, "quando acha que
-//   está lidando com uma pista de um caso ativo" (system-2077.js);
-// - o Netrunner de 2077: o Rank de Interface "em todos os testes técnicos enquanto estiver correndo a NET". Qual teste é
-//   técnico, a wiki não lista: a janela oferece em todo teste de perícia, e a mesa decide (MIGRATION_STATUS, dúvidas).
-export function situacionaisDeRole({ roleId, rank, especializacao = null, periciaId = null }) {
+// Os bônus de Role nas perícias, como o item de Role do CORE (getRoleMods, em cpr-role.js: o Rank nas perícias da lista
+// dele). Das 10 Roles do RED, só o Moto do Nomad soma sempre (wiki, system-catalog.js: "soma o Rank a Dirigir, Pilotar e
+// Tech de veículos terrestres, aéreos e marítimos"; as seis do item Nomad do CORE). A especialização do Face e o
+// Investigator do Lawman eram das Roles de 2077, que saíram com o Mission Kit.
+export const PERICIAS_DO_MOTO = ['drive-land-vehicle', 'pilot-air-vehicle', 'pilot-sea-vehicle', 'land-vehicle-tech', 'air-vehicle-tech', 'sea-vehicle-tech'];
+// Pela perícia: { rotulo, valor }.
+export function bonusDeRole({ roleId, rank }) {
   const valor = Math.max(0, Math.trunc(Number(rank) || 0));
-  if (!valor || !periciaId) return [];
-  if (roleId === 'lawman' && ['education', 'perception', ...(especializacao?.pericias ?? [])].includes(periciaId)) {
-    return [{ id: 'investigator', rotulo: 'Investigator: pista de caso ativo', valor, ligado: false }];
-  }
-  if (roleId === 'netrunner') return [{ id: 'interface-2077', rotulo: 'Interface: teste técnico correndo a NET', valor, ligado: false }];
-  return [];
+  if (!valor || roleId !== 'nomad') return {};
+  return Object.fromEntries(PERICIAS_DO_MOTO.map(id => [id, { rotulo: 'Moto', valor }]));
 }
 
 // Os modificadores comuns do livro (RED p. 130), pela tabela "Modificadores comuns" da wiki e pelos bônus de "Bônus e

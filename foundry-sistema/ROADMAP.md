@@ -38,7 +38,7 @@ de compêndio; entram só as partes do sistema.
   - **Arrastar um item** equipa ou instala.
   - **O combate:** igual ao do personagem.
 - [~] **C3. As Roles do RED e as rolagens delas.** Em andamento: sessão KouArt, 2026-10-12.
-  - As 10 Roles da wiki (o P0 "As Roles pelo RED").
+  - [x] As 10 Roles da wiki (o P0 "As Roles pelo RED"): ciclo 33.
   - A rolagem de cada habilidade, pelo item de Role do CORE (`_createRoleRoll`, `getRoleMods`):
     - Impacto Carismático (Rockerboy), Credibilidade (Media), Operator (Fixer), Teamwork (Exec), Backup (Lawman) e
       Moto (Nomad);
@@ -193,15 +193,13 @@ No fim de tudo, uma sessão de teste com a mesa.
 
   As armas já entram com a classe, a origem e as regras próprias na flag `arma2077` (Ciclos 12 e 31). O
   `foundry-2077/scripts/armas2077.mjs` do master tem a implementação do Foundry 12.
-- [ ] **As Roles pelo RED** (→ C3) (desvio de regra desde a integração da revisão, ciclo 32): a wiki do master voltou às 10
-  Roles do RED. O Face e o Corpo viraram Rockerboy e Exec, e as especializações de 2077 saíram do criador; ficam, como
-  opcionais, o Investigator do Lawman e o desconto do clã do Nomad (system-2077.js). A lista da ficha já vem do criador
-  (`gerado.mjs`). Falta rever, contra a wiki e o item de Role do CORE:
-  - o que o ciclo 23 soma (o Moto do Nomad, a especialização do Face);
-  - os situacionais de Role (o Investigator, o Netrunner de 2077);
-  - os atores que já têm a Role Face.
-
-  Os testes de referência que pegaram as duas mudanças estão no QUALITY_GATES, como falhas conhecidas.
+- [x] **As Roles pelo RED** (→ C3) (desvio de regra desde a integração da revisão, ciclo 32; Ciclo 33): a wiki do master
+  voltou às 10 Roles do RED. O Face e o Corpo viraram Rockerboy e Exec, e as especializações de 2077 saíram do criador:
+  - fica o Moto do Nomad (o texto do RED na wiki e o item do CORE); saem a especialização do Face e os situacionais de
+    2077 (o Investigator do Lawman, a Interface do Netrunner);
+  - a Role antiga (Face, Corpo) vira a do RED de onde vinha, pelo `roleAliases` da wiki: na importação, na migração e
+    na ficha que já tinha "Face";
+  - os opcionais da wiki (o Investigator, o desconto do clã do Nomad) ficam com o mestre (MIGRATION_STATUS, dúvidas).
 
 ## P1: bugs, testes de regressão e confiabilidade
 

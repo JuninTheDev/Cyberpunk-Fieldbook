@@ -158,15 +158,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       'Fumble Recovery': s.consciencia.semFalhaCritica && 'sem falha crítica'
     };
     const daEspecialidade = new Set(especialidades?.itens.map(item => item.id) ?? []);
-    // Os bônus da Role nas perícias (regras.bonusDeRole): o Moto do Nomad e a especialização do Face somam sempre; a do
-    // Lawman fica guardada, e o bônus de caso dele espera a janela de rolagem.
+    // Os bônus da Role nas perícias (regras.bonusDeRole): o Moto do Nomad soma sempre.
     const nomeDaPericia = id => PERICIAS.find(p => p.id === id)?.nome ?? FAMILIAS[id]?.nome ?? id;
     const ativos = Object.entries(s.bonusDeRole);
-    const bonusDaRole = role && (role.id === 'nomad' || role.especializacoes) ? {
-      especializacoes: role.especializacoes?.map(e => ({ id: e.id, nome: e.nome, pericias: e.pericias.map(nomeDaPericia).join(', '), escolhida: e.id === s.role.especializacao })) ?? null,
-      rotulo: ativos[0]?.[1].rotulo ?? '', valor: ativos[0]?.[1].valor ?? 0, pericias: ativos.map(([id]) => nomeDaPericia(id)).join(', '),
-      situacional: role.id === 'lawman'
-    } : null;
+    const bonusDaRole = ativos.length ? { rotulo: ativos[0][1].rotulo, valor: ativos[0][1].valor, pericias: ativos.map(([id]) => nomeDaPericia(id)).join(', ') } : null;
 
     // NET: os cyberdecks (com o que está instalado) e os programas; a Interface é o Rank do Netrunner.
     const decks = itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')));

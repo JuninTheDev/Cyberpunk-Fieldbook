@@ -9,7 +9,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
-import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
+import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
 import { CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -605,7 +605,7 @@ test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os do
 });
 
 // ---------------- Ficha ----------------
-test('Ficha: as Roles de 2077 e as habilidades de Role (Solo, Tech, Medtech) são as do criador da wiki; as da Consciência de Combate são as que as regras leem', () => {
+test('Ficha: as Roles e as habilidades de Role (Solo, Tech, Medtech) são as do criador da wiki; as da Consciência de Combate são as que as regras leem', () => {
   const contexto = { window: {} };
   for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-criacao.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, arquivo), 'utf8'), contexto);
   const { roles, roleAbilities } = contexto.window.systemCreation;
@@ -673,46 +673,31 @@ test('Extrato (o ledger do CORE, cpr-actor-sheet.js _gainLedger/_loseLedger/_set
   assert.match(inicial.quando, /^\d{4}-\d\d-\d\dT\d\d:\d\d/);
 });
 
-test('Bônus de Role nas perícias (o item de Role do CORE, getRoleMods): o Moto do Nomad e a especialização do Face somam o Rank; o Lawman e as outras, nada', () => {
+test('Bônus de Role nas perícias (o item de Role do CORE, getRoleMods): das 10 Roles do RED, só o Moto do Nomad soma o Rank, nas seis perícias de veículo', () => {
   const moto = regras.bonusDeRole({ roleId: 'nomad', rank: 4 });
   assert.deepEqual(Object.keys(moto).sort(), [...regras.PERICIAS_DO_MOTO].sort());
   assert.ok(Object.values(moto).every(b => b.rotulo === 'Moto' && b.valor === 4));
   assert.equal(regras.bonusDeRole({ roleId: 'nomad', rank: 6 })['drive-land-vehicle'].valor, 6);
-  const face = ROLES.find(r => r.id === 'face');
-  const siren = face.especializacoes.find(e => e.id === 'siren');
-  assert.deepEqual(regras.bonusDeRole({ roleId: 'face', rank: 4, especializacao: siren }), {
-    conversation: { rotulo: 'Siren', valor: 4 }, 'personal-grooming': { rotulo: 'Siren', valor: 4 }
-  });
-  // O Rockerboy soma na família Tocar Instrumento (todo instrumento).
-  assert.deepEqual(Object.keys(regras.bonusDeRole({ roleId: 'face', rank: 4, especializacao: face.especializacoes.find(e => e.id === 'rockerboy') })), ['play-instrument', 'streetwise']);
-  assert.deepEqual(regras.bonusDeRole({ roleId: 'face', rank: 4 }), {});
-  const lawman = ROLES.find(r => r.id === 'lawman');
-  assert.deepEqual(regras.bonusDeRole({ roleId: 'lawman', rank: 4, especializacao: lawman.especializacoes[0] }), {});
-  for (const roleId of ['solo', 'netrunner', 'corpo', 'tech', 'medtech', 'media']) assert.deepEqual(regras.bonusDeRole({ roleId, rank: 4 }), {}, roleId);
+  assert.deepEqual(ROLES.map(r => r.id).sort(), ['exec', 'fixer', 'lawman', 'media', 'medtech', 'netrunner', 'nomad', 'rockerboy', 'solo', 'tech']);
+  for (const roleId of ROLES.map(r => r.id).filter(id => id !== 'nomad')) assert.deepEqual(regras.bonusDeRole({ roleId, rank: 4 }), {}, roleId);
   assert.deepEqual(regras.bonusDeRole({ roleId: 'nomad', rank: 0 }), {});
 });
 
-test('Bônus de Role: as perícias vêm da wiki (o Moto: "Dirigir, Pilotar e Tech de veículos"; as especializações do criador, com o texto de 2077 dizendo qual soma sempre)', () => {
+test('As Roles do RED (wiki, desde o Mission Kit): as 10 do criador, sem especializações; as que saíram (Face e Corpo) viram a do RED de onde vinham; o Moto soma "a Dirigir, Pilotar e Tech de veículos"', () => {
   // O Moto: as seis perícias de veículo do CORE, e a frase da wiki.
   assert.deepEqual([...regras.PERICIAS_DO_MOTO].sort(), PERICIAS.filter(p => /Vehicle/.test(p.en)).map(p => p.id).sort());
   assert.match(fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8'), /<b>Moto:<\/b> soma o Rank a Dirigir, Pilotar e Tech de veículos terrestres, aéreos e marítimos/);
-  // As especializações geradas são as do criador da wiki, com cada perícia achada aqui (comum ou família).
+  // As Roles e as que saíram são as do criador da wiki (o roleAliases), e nenhuma tem especialização.
   const contexto = { window: {} };
   for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-criacao.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, arquivo), 'utf8'), contexto);
-  const daWikiComEspecializacao = Array.from(contexto.window.systemCreation.roles).filter(role => role.especializacoes);
-  assert.deepEqual(daWikiComEspecializacao.map(role => role.id), ['face', 'lawman']);
-  for (const wikiRole of daWikiComEspecializacao) {
-    const nossa = ROLES.find(r => r.id === wikiRole.id);
-    assert.deepEqual(nossa.especializacoes.map(e => [e.id, e.nome]), Array.from(wikiRole.especializacoes, e => [e.id, e.nome]), wikiRole.id);
-    for (const [i, e] of nossa.especializacoes.entries()) {
-      const nomes = e.pericias.map(id => PERICIAS.find(p => p.id === id)?.en ?? FAMILIAS[id]?.en);
-      assert.deepEqual(nomes, Array.from(wikiRole.especializacoes[i].pericias), `${wikiRole.id}: ${e.nome}`);
-    }
-  }
-  // Qual soma sempre, pelo texto de 2077: a do Face "soma o Rank"; a do Lawman é o "bônus de caso" (situacional).
-  const texto2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
-  assert.match(texto2077, /'Especialização', 'Soma o Rank de Impacto Carismático em'/);
-  assert.match(texto2077, /'Especialização', 'O bônus de caso também vale em'/);
+  const { roles, roleAliases } = contexto.window.systemCreation;
+  assert.deepEqual(ROLES_ANTIGAS, { ...roleAliases });
+  assert.deepEqual(ROLES_ANTIGAS, { face: 'rockerboy', corpo: 'exec' });
+  assert.ok(Array.from(roles).every(role => !role.especializacoes) && ROLES.every(role => !role.especializacoes));
+  assert.match(fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8'), /Com o Mission Kit, valem as 10 do RED, e os personagens que eram Face ou Corpo viram Rockerboy e Exec\./);
+  // A Role pelo nome, pelo id ou pela antiga.
+  const id = nome => regras.acharRole(nome, ROLES, ROLES_ANTIGAS)?.id ?? null;
+  assert.deepEqual(['Nomad', 'nomad', ' Rockerboy ', 'Face', 'face', 'Corpo', 'Exec', 'Cowboy', '', null].map(id), ['nomad', 'nomad', 'rockerboy', 'rockerboy', 'rockerboy', 'exec', 'exec', null, null, null]);
 });
 
 test('Janela de rolagem: os modificadores comuns são os da tabela da wiki (RED p. 130), com o valor de cada um', () => {
@@ -724,15 +709,12 @@ test('Janela de rolagem: os modificadores comuns são os da tabela da wiki (RED 
   assert.equal(new Set(regras.MODIFICADORES_COMUNS.map(m => m.id)).size, 12);
 });
 
-test('Situacionais de Role (2077): o Investigator do Lawman em Educação, Percepção e nas perícias da especialização; o Netrunner em todo teste de perícia; sempre desligados', () => {
-  const streetCop = ROLES.find(r => r.id === 'lawman').especializacoes.find(e => e.id === 'street-cop');
-  const lawman = periciaId => regras.situacionaisDeRole({ roleId: 'lawman', rank: 4, especializacao: streetCop, periciaId });
-  for (const id of ['education', 'perception', 'streetwise', 'athletics', 'bribery']) assert.deepEqual(lawman(id), [{ id: 'investigator', rotulo: 'Investigator: pista de caso ativo', valor: 4, ligado: false }], id);
-  assert.deepEqual(lawman('acting'), []);
-  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'lawman', rank: 4, periciaId: 'streetwise' }), []);
-  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'netrunner', rank: 6, periciaId: 'basic-tech' }).map(s => [s.id, s.valor, s.ligado]), [['interface-2077', 6, false]]);
-  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'netrunner', rank: 6 }), []);
-  assert.deepEqual(regras.situacionaisDeRole({ roleId: 'solo', rank: 4, periciaId: 'perception' }), []);
+test('Sem situacionais de Role no RED: o Investigator do Lawman e a Interface do Netrunner de 2077 saíram com o Mission Kit (o Investigator ficou como opcional da wiki, com o mestre)', () => {
+  assert.equal(regras.situacionaisDeRole, undefined);
+  const texto2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.match(texto2077, /Ficam, como opcionais, as duas regras abaixo\./);
+  assert.match(texto2077, /section\('Lawman com Investigator \(suplemento de fã\)'/);
+  assert.match(texto2077, /As mudanças do suplemento na Interface do Netrunner dependem da rede de três camadas e estão em Netrunning de 2077\./);
 });
 
 test('Situacionais do CORE no catálogo: cada mudança situacional vira um efeito à parte, com o alvo e o "ligado por padrão" do CORE; o que vale sempre fica no efeito de sempre', () => {
