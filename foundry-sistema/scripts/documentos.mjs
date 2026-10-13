@@ -4,7 +4,7 @@ import { caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  aplicarDano, backup, deLonge, FACEDOWN, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  aplicarDano, backup, deLonge, FACEDOWN, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   PENALIDADE_CORONHA, perfil2077, REFLEX_TUNER, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro, tipoDeTeleOptics
 } from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
@@ -148,6 +148,33 @@ export class AtorCPR extends Actor {
     return this.#testarComJanela({
       rotulo: FACEDOWN.rotulo, perguntar, partes: situacionais => this.partesDoFacedown({ situacionais }), situacionais: () => this.situacionaisDoTeste()
     }, { sabor: FACEDOWN.dica, ...opcoes });
+  }
+
+  // A Interface do Netrunner (regras.HABILIDADES_DE_INTERFACE; o CPRInterfaceRoll do CORE): o Rank de Interface + 1d10,
+  // com o bônus dos programas ativos naquela habilidade, as penalidades e os situacionais de todas as ações (e os da
+  // habilidade). Sem Interface (quem não é Netrunner), não rola.
+  situacionaisDaInterface(id) {
+    return this.#efeitosSituacionais(new Set(['system.bonus.todasAcoes', `system.bonus.interface.${id}`]));
+  }
+  partesDaInterface(id, { situacionais = null } = {}) {
+    const { bonus, rankDeInterface } = this.system;
+    const partes = [{ rotulo: 'Interface', valor: rankDeInterface }];
+    if (bonus.interface[id]) partes.push({ rotulo: 'Programas', valor: bonus.interface[id] });
+    const escolhidos = situacionais ?? this.situacionaisDaInterface(id).filter(s => s.ligado);
+    return [...partes, ...this.#penalidade(), ...escolhidos.map(({ rotulo, valor }) => ({ rotulo, valor }))];
+  }
+  rolarInterface(id, { perguntar = false, ...opcoes } = {}) {
+    const habilidade = HABILIDADES_DE_INTERFACE.find(h => h.id === id);
+    if (!habilidade || !this.system.rankDeInterface) return null;
+    return this.#testarComJanela({
+      rotulo: habilidade.rotulo, perguntar, partes: situacionais => this.partesDaInterface(id, { situacionais }), situacionais: () => this.situacionaisDaInterface(id)
+    }, { sabor: `${habilidade.custo}. ${habilidade.dica}`, ...opcoes });
+  }
+  // O dano do Zap (a wiki e o CORE): 1d6 no REZ de um programa ou direto no cérebro de um netrunner.
+  async rolarDanoDoZap() {
+    const roll = await new Roll('1d6').evaluate();
+    await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), flavor: 'Zap: 1d6 no REZ de um programa ou direto no cérebro' });
+    return roll;
   }
 
   // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto do Nomad) e os situacionais.

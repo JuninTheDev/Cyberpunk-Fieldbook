@@ -8,7 +8,7 @@ import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
-import { pontosDeRole, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { HABILIDADES_DE_INTERFACE, pontosDeRole, ROLAGENS_DE_ROLE } from './regras.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -35,6 +35,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarPericia: FichaPersonagem.#rolarPericia,
       rolarRole: FichaPersonagem.#rolarRole,
       rolarFacedown: FichaPersonagem.#rolarFacedown,
+      rolarInterface: FichaPersonagem.#rolarInterface,
+      rolarDanoDoZap: FichaPersonagem.#rolarDanoDoZap,
+      ativarPrograma: FichaPersonagem.#ativarPrograma,
       alternarPericias: FichaPersonagem.#alternarPericias,
       novaPericia: FichaPersonagem.#novaPericia,
       tirarPericia: FichaPersonagem.#tirarPericia,
@@ -173,6 +176,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     // NET: os cyberdecks (com o que está instalado) e os programas; a Interface é o Rank do Netrunner.
     const decks = itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')));
+    // A Interface: as rolagens (com o valor sem o dado) pelo cyberdeck equipado, como o CORE, e as Ações NET pelo Rank.
+    const net = {
+      rank: s.rankDeInterface, acoes: s.acoesDeNet, deck: itens('cyberdeck').find(deck => deck.system.uso === 'equipado')?.name ?? '',
+      habilidades: HABILIDADES_DE_INTERFACE.map(h => ({ ...h, valor: ator.partesDaInterface(h.id, { situacionais: [] }).reduce((soma, p) => soma + p.valor, 0) }))
+    };
 
     return Object.assign(contexto, {
       ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
@@ -209,9 +217,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
           CLASSES_PROGRAMA[p.system.classe] ?? p.system.classe,
           p.system.classe === 'quickhack' ? `RAM ${p.system.ram}` : p.system.classe === 'daemon' ? `REZ ${p.system.rez}` : `ATK ${p.system.atk} · DEF ${p.system.def} · REZ ${p.system.rez}`,
           p.instaladoNo ? `no ${p.instaladoNo.name}` : 'fora do deck'
-        ].join(' · ')
+        ].join(' · '),
+        ativo: p.system.ativo, podeAtivar: Boolean(p.instaladoNo)
       })),
-      interface: role?.id === 'netrunner' ? s.role.rank : 0,
+      net,
       veiculos: itens('veiculo').map(v => ({
         id: v.id, nome: v.name, img: v.img,
         detalhe: [`SDP ${v.system.sdp.value}/${v.system.sdp.max}`, `${v.system.assentos} assentos`, `MOVE ${v.system.velocidade.combate}`, v.system.familia ? 'da família' : '', v.instalados.map(i => i.name).join(', ')].filter(Boolean).join(' · ')
@@ -260,6 +269,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo, { perguntar: comJanela(evento) }); }
   static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia, { perguntar: comJanela(evento) }); }
   static #rolarFacedown(evento) { return this.actor.rolarFacedown({ perguntar: comJanela(evento) }); }
+  static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
+  static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
+  // O programa ativo (rezzado): os boosters somam na habilidade deles. A REZ atual e o combate na NET são o C6.
+  static #ativarPrograma(evento, alvo) {
+    const item = this.#item(alvo);
+    return item?.update({ 'system.ativo': !item.system.ativo });
+  }
   // As Expertises do Tech perguntam antes a perícia do teste.
   static async #rolarRole(evento, alvo) {
     const id = alvo.dataset.rolagem;

@@ -26,6 +26,8 @@ const efeitoDoTeleOpticsDoCore = efeito => {
 // Os tipos de cyberware do catálogo que a ficha do item não conhecia até o ciclo 7: salvar a ficha os trocava por
 // fashionware, a primeira opção.
 const TIPOS_QUE_VIRAVAM_FASHIONWARE = ['cyberEye', 'cyberAudioSuite', 'cyberwareInternal', 'cyberwareExternal'];
+// O efeito de um booster de Interface (system.bonus.interface), que o catálogo traz desde o ciclo 40.
+const efeitoDeInterface = efeito => (efeito.system?.changes ?? []).some(mudanca => String(mudanca.key).startsWith('system.bonus.interface.'));
 
 export const PASSOS = [
   {
@@ -43,6 +45,15 @@ export const PASSOS = [
       if (dados.type !== 'cyberware' || dados.system?.tipo !== 'fashionware') return;
       const tipo = catalogo?.[doCatalogo(dados)]?.system?.tipo;
       if (TIPOS_QUE_VIRAVAM_FASHIONWARE.includes(tipo)) dados.system.tipo = tipo;
+    }
+  },
+  {
+    versao: 3,
+    nome: 'Os boosters de Interface (Eraser, See Ya, Speedy Gonzalvez e Worm) ganham o +2 na habilidade deles, que o catálogo passou a trazer no ciclo 40',
+    item(dados, { catalogo }) {
+      if (dados.type !== 'programa' || (dados.effects ?? []).some(efeitoDeInterface)) return;
+      const efeitos = (catalogo?.[doCatalogo(dados)]?.effects ?? []).filter(efeitoDeInterface);
+      if (efeitos.length) dados.effects = [...(dados.effects ?? []), ...structuredClone(efeitos)];
     }
   }
 ];

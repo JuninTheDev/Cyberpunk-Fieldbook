@@ -306,6 +306,12 @@ do capanga é um botão do mesmo jeito, que rola. */
 }
 .cpr-fieldbook.ficha-personagem .rodape span:first-child { color: var(--cp-ciano); }
 
+/* ---------- NET: as rolagens da Interface ---------- */
+.cpr-fieldbook.ficha-personagem .habilidades-interface { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 16px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .habilidades-interface li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .habilidades-interface .acao b { margin-left: 4px; font-family: var(--cp-dados); font-weight: 400; }
+.cpr-fieldbook.ficha-personagem .habilidades-interface small { flex: 1; min-width: 0; font-family: var(--cp-dados); font-size: 11px; }
+
 /* ---------- Capanga (o mook do CORE): uma página só, entre o cabeçalho e o rodapé ---------- */
 .cpr-fieldbook.ficha-capanga .corpo-capanga { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; }
 .cpr-fieldbook.ficha-capanga .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }

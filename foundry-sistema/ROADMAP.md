@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 40). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 41). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -63,15 +63,17 @@ de compêndio; entram só as partes do sistema.
 
 ### Fase 2: a NET
 
-- [~] **C5. Interface:** Em andamento: sessão KouArt, 2026-10-13.
-  - as 9 habilidades (Scanner, Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Slide, Virus e Zap; `CPRInterfaceRoll`),
-    com os bônus dos programas;
-  - as Ações de NET pelo Rank;
-  - a iniciativa na NET.
+- [x] **C5. Interface:** Feito no ciclo 40 (sessão KouArt, 2026-10-13).
+  - [x] as 9 habilidades (Scanner, Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Slide, Virus e Zap; `CPRInterfaceRoll`),
+    com os bônus dos programas (os boosters, quando ativos), a Defesa e o dano do Zap;
+  - [x] as Ações de NET pelo Rank;
+  - [x] a iniciativa na NET: o netrunner usa a de sempre (REF + 1d10); quem age primeiro contra o Black ICE sai da
+    Velocidade (Interface + velocidade + 1d10 contra SPD + 1d10), e o ICE entra no topo da fila. A iniciativa do Black
+    ICE e do demônio como atores é o C7.
 - [ ] **C6. Programas no combate da NET:**
-  - rezzar e derrezzar, com ATK, DEF e REZ atuais;
+  - rezzar e derrezzar, com ATK, DEF e REZ atuais (o ativo simples, sem a REZ, veio no ciclo 40);
   - o ataque de programa contra programa, Black ICE ou netrunner, com o dano no REZ ou no cérebro;
-  - os boosters (hoje fora do build).
+  - [x] os boosters: no build e somando na Interface quando ativos (ciclo 40).
 - [ ] **C7. Black ICE e demônio como atores:**
   - **as fichas:** Black ICE com PER, SPD, ATK, DEF e REZ; demônio com REZ, Interface, Ações de NET e Combat Number;
   - o dano no REZ, o token "rezzado" pelo programa e a iniciativa pela SPD.

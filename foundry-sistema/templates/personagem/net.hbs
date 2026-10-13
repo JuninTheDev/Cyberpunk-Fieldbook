@@ -1,7 +1,24 @@
 <section class="tab net {{tab.cssClass}}" data-group="primary" data-tab="net">
-  <section class="painel corte">
-    <div class="titulo">INTERFACE<span>{{#if interface}}RANK {{interface}}{{else}}SÓ O NETRUNNER{{/if}}</span></div>
-    <p class="dica">As regras da NET (a corrida, os programas em ação, o Black ICE) ainda não estão neste sistema: a ficha guarda o cyberdeck e os programas.</p>
+  <section class="painel corte interface-net">
+    <div class="titulo">INTERFACE<span>{{#if net.rank}}RANK {{net.rank}} · {{net.acoes}} AÇÕES NET POR TURNO{{else}}SÓ O NETRUNNER{{/if}}</span></div>
+    {{#if net.rank}}
+    {{#if net.deck}}
+    <ol class="habilidades-interface">
+      {{#each net.habilidades}}
+      <li data-habilidade="{{id}}">
+        <button type="button" class="acao" data-action="rolarInterface" data-habilidade="{{id}}" data-tooltip="{{dica}}">{{rotulo}} <b>{{valor}}</b></button>
+        <small>{{custo}}</small>
+        {{#if (eq id "zap")}}<button type="button" class="acao dano-zap" data-action="rolarDanoDoZap" data-tooltip="O dano do Zap: 1d6 no REZ de um programa ou direto no cérebro">1d6</button>{{/if}}
+      </li>
+      {{/each}}
+    </ol>
+    <p class="dica">Pelo {{net.deck}}: Interface + 1d10 contra a DV (RED p. 198–201); os programas ativos somam na habilidade deles. No turno, uma Ação Carnal ou até {{net.acoes}} Ações NET, além da Ação de Movimento. O combate na NET (o ATK dos programas, a REZ, o Black ICE) ainda não está neste sistema.</p>
+    {{else}}
+    <div class="caixa-vazia">EQUIPE UM CYBERDECK PARA USAR A INTERFACE</div>
+    {{/if}}
+    {{else}}
+    <p class="dica">Só o Netrunner tem Interface: o Rank da Role.</p>
+    {{/if}}
   </section>
 
   <section class="painel corte">
@@ -27,6 +44,7 @@
         <img src="{{img}}" alt="">
         <a class="nome" data-action="editarItem">{{nome}}</a>
         <span class="detalhe">{{detalhe}}</span>
+        {{#if podeAtivar}}<button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="ativarPrograma" data-tooltip="Ativo (rezzado): os boosters somam na habilidade deles">{{#if ativo}}Ativo{{else}}Inativo{{/if}}</button>{{/if}}
         <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
       </li>
       {{else}}<li class="vazio">Sem programas.</li>{{/each}}

@@ -16,7 +16,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Equipamento:** os Eurodólares, com as últimas mudanças do extrato; armas, armaduras, munição, equipamento, roupas, drogas, upgrades e veículos.
   - **Cyberware:** a Humanidade e cada peça, com instalar e tirar.
   - **Role:** a Role da wiki (as 10 do RED, desde o Mission Kit), com a habilidade e o resumo, e o que ela soma nas perícias: o Moto do Nomad (o Rank nas seis perícias de veículo). A ficha antiga com Face ou Corpo, as Roles do suplemento de fã que saíram, lê a do RED de onde vinham (Rockerboy e Exec), como a wiki. Os botões da habilidade de Role rolam pela janela de rolagem (Ctrl + clique, direto): o Impacto Carismático do Rockerboy e a Credibilidade da Media (Rank + 1d10), a pechincha do Fixer (COOL + Negociação + Operator + 1d10) e o Backup do Lawman (1d10 até o Rank; vindo, o d6 diz em quantas rodadas chega). As quatro Expertises do Tech perguntam antes a perícia de TECH do teste (TECH + a perícia + os pontos da Expertise + 1d10). O Medtech rola a Cirurgia e a Tecnologia Médica (TECH + a perícia + 1d10), as perícias que só ele tem: o nível vem das especialidades (2 por ponto de Cirurgia, até 10; Farmacêutica + Criossistemas), e o painel de Medicina mostra a conta. Para o Solo, o Tech e o Medtech, as especialidades com os nomes em português, os pontos de cada uma (editáveis) e, no Solo, o efeito de agora. A ficha confere os pontos com o Rank: o total (o Tech ganha 2 por Rank; o Solo e o Medtech, 1) e o máximo em cada especialidade (o Rank). Ela avisa o que passou e o que sobra, sem travar.
-  - **NET:** o cyberdeck e os programas (as regras da NET ainda não).
+  - **NET:** a Interface do Netrunner (o Rank da Role), pelo cyberdeck equipado, como o CORE: as 9 habilidades
+    (Scanner, Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Slide, Virus e Zap), a Defesa e a Velocidade, cada uma com o
+    valor sem o dado, o custo e o que faz; o dano do Zap (1d6); e as Ações NET por turno pelo Rank (2, 3, 4 ou 5). Os
+    cyberdecks e os programas, com o botão Ativo (rezzado) dos que estão num deck: os boosters ativos (Eraser, See Ya,
+    Speedy Gonzalvez e Worm) somam +2 na habilidade deles.
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
 - **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
@@ -154,6 +158,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - migrado, grava a versão e deixa o registro no chat, só para os mestres (os passos e o que mudou). O compêndio trancado abre só durante a migração;
   - se nada muda (o mundo novo), só grava a versão, sem perguntar. Dados de uma versão mais nova que a do sistema só avisam;
   - se um documento falha, para e avisa, e o mundo fica na versão de antes. Os passos só mexem no formato antigo, então rodar de novo não estraga nada;
+  - o terceiro passo (ciclo 40): os boosters de Interface que vieram do catálogo antes do efeito ganham o +2 na
+    habilidade deles;
   - os dois primeiros passos: o TeleOptics do RED sem o +1 de sempre do CORE (desde o ciclo 26 vale a regra da wiki, pela distância) e o tipo do cyberware que a ficha do item trocava por Fashionware até o ciclo 7. Pela macro: `game.system.api.migracao.migrarMundo()`. Passo novo: veja o começo de `scripts/migracao.mjs`.
 
 ## Configurações (Configurações → Sistema)
@@ -186,7 +192,8 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), **o Black ICE**, a NET (o NET Architect) e
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), **o Black ICE**, o combate na NET (o ATK
+  dos programas, a REZ, o dano no cérebro), as arquiteturas (o NET Architect) e
   o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o

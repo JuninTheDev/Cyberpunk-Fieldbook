@@ -85,6 +85,32 @@ export const FACEDOWN = {
   dica: 'Teste enfrentado. Empate: nada acontece. Quem perde recua ou fica com −2 nas ações contra o outro até derrotá-lo uma vez.'
 };
 
+// A Interface do Netrunner (a wiki, "Habilidades de Interface", RED p. 198–201; o CPR.interfaceAbilities do CORE): o Rank de
+// Interface + 1d10 contra a DV, com o custo e o que cada habilidade faz (o cartão). A Defesa e a Velocidade são as outras
+// duas rolagens de Interface do CORE: a Defesa contra o ataque na NET ("Combate na NET": ATK + 1d10 contra Interface +
+// 1d10) e a Velocidade contra o Black ICE à espreita (a wiki, "Black ICE": Interface + bônus de velocidade + 1d10 contra
+// SPD do ICE + 1d10). A chave de cada uma é a do bônus dos programas (system.bonus.interface).
+export const HABILIDADES_DE_INTERFACE = [
+  { id: 'scanner', rotulo: 'Scanner', custo: '1 Ação Carnal', dica: 'Acha no mundo físico os pontos de acesso da área; quanto maior, mais longe.' },
+  { id: 'backdoor', rotulo: 'Backdoor', custo: '1 Ação NET', dica: 'Contra a DV da senha: passa por uma senha.' },
+  { id: 'cloak', rotulo: 'Cloak', custo: '1 Ação NET', dica: 'O resultado vira a DV: esconde seus rastros e seus vírus.' },
+  { id: 'control', rotulo: 'Control', custo: '1 Ação NET + 1 por comando', dica: 'Contra a DV do nó: toma um nó de controle (câmeras, torretas, portas, drones).' },
+  { id: 'eyedee', rotulo: 'Eye-Dee', custo: '1 Ação NET', dica: 'Contra a DV do arquivo: descobre o que é um arquivo e quanto vale.' },
+  { id: 'pathfinder', rotulo: 'Pathfinder', custo: '1 Ação NET', dica: 'Revela o mapa: andares iguais ao resultado, até a primeira obstrução com DV maior.' },
+  { id: 'slide', rotulo: 'Slide', custo: '1 Ação NET (1×/turno)', dica: 'Contra PER do Black ICE + 1d10: foge de um Black ICE não demoníaco para um andar vizinho.' },
+  { id: 'virus', rotulo: 'Virus', custo: 'Ações NET definidas pelo mestre', dica: 'Contra a DV do mestre, só no andar mais baixo: deixa até 2 mudanças.' },
+  { id: 'zap', rotulo: 'Zap', custo: '1 Ação NET', dica: 'Contra DEF do programa + 1d10 ou Interface + 1d10: 1d6 no REZ de um programa ou direto no cérebro.' },
+  { id: 'defesa', rotulo: 'Defesa', custo: 'contra um ataque na NET', dica: 'Contra o ATK do Black ICE ou do programa + 1d10.' },
+  { id: 'velocidade', rotulo: 'Velocidade', custo: 'ao encontrar Black ICE', dica: 'Contra SPD do Black ICE + 1d10: se o ICE vencer, você sofre o efeito na hora; depois ele entra no topo da fila de iniciativa.' }
+];
+// As Ações NET por turno pelo Rank de Interface (a wiki, "Ações por turno", RED p. 197): 2 do Rank 1 ao 3, 3 do 4 ao 6, 4
+// do 7 ao 9 e 5 no 10. Sem Interface, nenhuma.
+export function acoesDeNet(rank) {
+  const r = Math.trunc(Number(rank) || 0);
+  if (r < 1) return 0;
+  return r >= 10 ? 5 : 2 + Math.floor((r - 1) / 3);
+}
+
 // O capanga (o mook do CORE) equipa ou instala o que recebe, como o handleMookDraggedItem do CORE: o cyberware é
 // instalado, e o que se equipa no CORE (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento) entra
 // equipado. O resto (munição, programa, upgrade, veículo, lesão) fica como veio.

@@ -3026,6 +3026,124 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('Interface do Netrunner (wiki, RED p. 197–207; o CORE): na aba NET, as 9 habilidades, a Defesa e a Velocidade pelo cyberdeck equipado, com as Ações NET pelo Rank; o Cloak pela janela; o Eraser só soma ativo e no deck; Ctrl + clique; o dano do Zap; a Velocidade com o Speedy Gonzalvez e gravemente ferido; sem deck equipado, o aviso; quem não é Netrunner não tem Interface', async () => {
+      // Rank 4 (3 Ações NET). Cloak, d10 6: Interface 4 + 6 + 2 do mestre = 12; com o Eraser ativo, d10 5: 4 + 2 + 5 = 11.
+      // Zap: 1d6 4. Velocidade com o Speedy Gonzalvez, gravemente ferido (HP 19 de 40), d10 3: 4 + 2 − 2 + 3 = 7.
+      await fixar(edge, []);
+      const nomes = ['Teste Netrunner', 'Teste Sem Interface'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const html = m => new DOMParser().parseFromString(m.content, 'text/html');
+          const partesDa = m => [...html(m).querySelectorAll('.partes li')].map(textoDe);
+          const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const item = id => foundry.utils.deepClone(cat[id]);
+
+          // O Netrunner Rank 4 com um cyberdeck (carregando) e dois boosters instalados nele, inativos.
+          const a = await Actor.implementation.create({ name: 'Teste Netrunner', type: 'personagem', system: { atributos: { body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 }, role: { nome: 'Netrunner', rank: 4 } },
+            items: [item('core_gear:cyberdeck'), item('core_programs:eraser'), item('core_programs:speedy-gonzalvez')] });
+          const deck = a.items.find(i => i.type === 'cyberdeck');
+          await a.updateEmbeddedDocuments('Item', a.items.filter(i => i.type === 'programa').map(p => ({ _id: p.id, 'system.instaladoEm': deck.id })));
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('net', 'primary');
+          const f = () => a.sheet.element;
+          const titulo = () => textoDe(f().querySelector('.tab.net .interface-net .titulo span'));
+          await esperar(() => f()?.querySelector('.tab.net .interface-net'));
+          const semDeck = { titulo: titulo(), aviso: textoDe(f().querySelector('.tab.net .interface-net .caixa-vazia')), botoes: f().querySelectorAll('.tab.net [data-action="rolarInterface"]').length };
+
+          // Com o deck equipado: as 11 rolagens e o valor sem o dado.
+          await deck.update({ 'system.uso': 'equipado' });
+          const botao = id => f().querySelector('.tab.net [data-action="rolarInterface"][data-habilidade="' + id + '"]');
+          const valor = id => textoDe(botao(id)?.querySelector('b'));
+          await esperar(() => botao('cloak'));
+          const lista = { titulo: titulo(), ids: [...f().querySelectorAll('.tab.net [data-action="rolarInterface"]')].map(b => b.dataset.habilidade), cloak: valor('cloak'), velocidade: valor('velocidade'),
+            programas: [...f().querySelectorAll('.tab.net [data-action="ativarPrograma"]')].map(textoDe) };
+
+          // 1. O Cloak pela janela, com +2 do mestre (o Eraser inativo não soma).
+          let antes = game.messages.size;
+          window.__fila = [[6, 10]];
+          botao('cloak').click();
+          await esperar(() => janela()?.querySelector('[name="outro"]'));
+          const daJanela = { titulo: textoDe(janela().querySelector('.window-title')), partes: [...janela().querySelectorAll('.partes li')].map(textoDe) };
+          const outro = janela().querySelector('[name="outro"]');
+          outro.value = 2;
+          outro.dispatchEvent(new Event('input', { bubbles: true }));
+          janela().querySelector('button[data-action="rolar"]').click();
+          await esperar(() => game.messages.size > antes && !janela());
+          let m = game.messages.contents.at(-1);
+          const cloak = { total: m.rolls[0].total, cartao: partesDa(m), sabor: textoDe(html(m).querySelector('.sabor')) };
+
+          // 2. O Eraser ativo: +2 no Cloak, e só nele; Ctrl + clique rola sem a janela.
+          const eraser = () => f().querySelector('.tab.net li[data-item-id="' + a.items.getName('Eraser').id + '"] [data-action="ativarPrograma"]');
+          eraser().click();
+          await esperar(() => a.items.getName('Eraser').system.ativo && valor('cloak') === '6');
+          const ativo = { cloak: valor('cloak'), pathfinder: valor('pathfinder'), botao: textoDe(eraser()), bonus: a.system.bonus.interface.cloak };
+          antes = game.messages.size;
+          window.__fila = [[5, 10]];
+          ctrl(botao('cloak'));
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const comEraser = { total: m.rolls[0].total, cartao: partesDa(m), janela: Boolean(janela()) };
+
+          // 3. O dano do Zap.
+          antes = game.messages.size;
+          window.__fila = [[4, 6]];
+          f().querySelector('.tab.net [data-action="rolarDanoDoZap"]').click();
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const zap = { total: m.rolls[0].total, formula: m.rolls[0].formula, flavor: m.flavor };
+
+          // 4. A Velocidade com o Speedy Gonzalvez ativo, gravemente ferido.
+          await a.items.getName('Speedy Gonzalvez').update({ 'system.ativo': true });
+          await a.update({ 'system.hp.value': 19 });
+          await esperar(() => valor('velocidade') === '4' && valor('cloak') === '4');
+          antes = game.messages.size;
+          window.__fila = [[3, 10]];
+          ctrl(botao('velocidade'));
+          await esperar(() => game.messages.size > antes);
+          m = game.messages.contents.at(-1);
+          const velocidade = { valor: valor('velocidade'), total: m.rolls[0].total, cartao: partesDa(m), rotulo: m.getFlag('${S}', 'teste')?.rotulo };
+
+          // 5. O Eraser fora do deck não soma, mesmo ativo.
+          await a.items.getName('Eraser').update({ 'system.instaladoEm': '' });
+          await esperar(() => valor('cloak') === '2');
+          const foraDoDeck = { cloak: valor('cloak'), bonus: a.system.bonus.interface.cloak, botao: Boolean(eraser()) };
+
+          // 6. Quem não é Netrunner não tem Interface, mesmo com um deck equipado.
+          const b = await Actor.implementation.create({ name: 'Teste Sem Interface', type: 'personagem', system: { role: { nome: 'Solo', rank: 4 } }, items: [item('core_gear:cyberdeck')] });
+          await b.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          await b.sheet.render({ force: true });
+          b.sheet.changeTab('net', 'primary');
+          await esperar(() => b.sheet.element?.querySelector('.tab.net .interface-net'));
+          const solo = { titulo: textoDe(b.sheet.element.querySelector('.tab.net .interface-net .titulo span')), botoes: b.sheet.element.querySelectorAll('.tab.net [data-action="rolarInterface"]').length,
+            rola: b.rolarInterface('cloak') === null, acoes: b.system.acoesDeNet };
+          await b.sheet.close();
+          // A aba NET do Netrunner fica aberta para a captura.
+          a.sheet.bringToFront();
+          return { semDeck, lista, daJanela, cloak, ativo, comEraser, zap, velocidade, foraDoDeck, solo };
+        })()`);
+        await edge.sleep(400);
+        await edge.shot('ficha-net-interface');
+        const { semDeck, lista, daJanela: j, cloak, ativo, comEraser, zap, velocidade: v, foraDoDeck, solo } = info;
+        const ok = semDeck.titulo === 'RANK 4 · 3 AÇÕES NET POR TURNO' && semDeck.aviso === 'EQUIPE UM CYBERDECK PARA USAR A INTERFACE' && semDeck.botoes === 0
+          && lista.ids.join() === 'scanner,backdoor,cloak,control,eyedee,pathfinder,slide,virus,zap,defesa,velocidade' && lista.cloak === '4' && lista.velocidade === '4' && lista.programas.join() === 'Inativo,Inativo'
+          && j.titulo === 'Teste: Cloak' && j.partes.join() === 'Interface +4,1d10'
+          && cloak.total === 12 && cloak.cartao.join() === '1d10,Interface +4,Modificador do mestre +2' && cloak.sabor === '1 Ação NET. O resultado vira a DV: esconde seus rastros e seus vírus.'
+          && ativo.cloak === '6' && ativo.pathfinder === '4' && ativo.botao === 'Ativo' && ativo.bonus === 2
+          && comEraser.total === 11 && comEraser.cartao.join() === '1d10,Interface +4,Programas +2' && !comEraser.janela
+          && zap.total === 4 && zap.formula === '1d6' && zap.flavor === 'Zap: 1d6 no REZ de um programa ou direto no cérebro'
+          && v.valor === '4' && v.total === 7 && v.cartao.join() === '1d10,Interface +4,Programas +2,Gravemente ferido -2' && v.rotulo === 'Velocidade'
+          && foraDoDeck.cloak === '2' && foraDoDeck.bonus === 0 && !foraDoDeck.botao
+          && solo.titulo === 'SÓ O NETRUNNER' && solo.botoes === 0 && solo.rola && solo.acoes === 0;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => ${JSON.stringify(nomes)}.includes(a.name))) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

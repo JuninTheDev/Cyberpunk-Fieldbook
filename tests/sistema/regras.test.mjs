@@ -668,6 +668,33 @@ test('Facedown (wiki, "Reputação e facedown" e o cartão rápido, RED p. 194; 
   assert.match(regrasDaWiki, /'Concussão', '−2 em todas as ações\.'/);
 });
 
+test('Interface do Netrunner (wiki, "Habilidades de Interface", "Ações por turno" e "Black ICE", RED p. 197–207; o CPR.interfaceAbilities do CORE): as 9 habilidades com o custo da wiki, a Defesa e a Velocidade, as Ações NET pelo Rank e os boosters do catálogo na habilidade deles', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  const inicio = regrasDaWiki.indexOf("section('Habilidades de Interface'");
+  const trecho = regrasDaWiki.slice(inicio, regrasDaWiki.indexOf("section('Combate na NET'", inicio));
+  const linhas = [...trecho.matchAll(/\['([^']+)', '([^']+)', '([^']+)', '([^']+)'\]/g)].map(([, nome, custo]) => [nome, custo]).filter(([nome]) => nome !== 'Habilidade');
+  assert.equal(linhas.length, 9);
+  // As 9 do CORE (CPR.interfaceAbilities), na ordem e com o custo da tabela da wiki.
+  const nove = regras.HABILIDADES_DE_INTERFACE.slice(0, 9);
+  assert.deepEqual(nove.map(h => h.id), ['scanner', 'backdoor', 'cloak', 'control', 'eyedee', 'pathfinder', 'slide', 'virus', 'zap']);
+  nove.forEach((h, i) => {
+    assert.ok(linhas[i][0].startsWith(h.rotulo), `${h.id}: ${linhas[i][0]}`);
+    assert.equal(h.custo, linhas[i][1], h.id);
+  });
+  assert.deepEqual(regras.HABILIDADES_DE_INTERFACE.slice(9).map(h => h.id), ['defesa', 'velocidade']);
+  assert.match(regrasDaWiki, /formula\('Interface \+ 1d10 &gt; DV'\)/);
+  assert.match(regrasDaWiki, /Ao encontrar Black ICE à espreita: <b>Interface \+ bônus de velocidade \+ 1d10<\/b> contra <b>SPD do ICE \+ 1d10<\/b>/);
+  // As Ações NET pelo Rank, pela tabela da wiki: 2 do Rank 1 ao 3, 3 do 4 ao 6, 4 do 7 ao 9 e 5 no 10; sem Interface, 0.
+  assert.ok(regrasDaWiki.includes("table(['Rank de Interface', '1–3', '4–6', '7–9', '10'], [['Ações NET', '2', '3', '4', '5']], 'dense')"));
+  assert.deepEqual([0, 1, 3, 4, 6, 7, 9, 10].map(regras.acoesDeNet), [0, 2, 2, 3, 3, 4, 4, 5]);
+  // Os boosters do catálogo somam +2 na habilidade deles (no CORE: "+2 to Cloak Checks while Rezzed").
+  const boosters = Object.fromEntries(['eraser', 'see-ya', 'speedy-gonzalvez', 'worm'].map(id => [id, catalogo[`core_programs:${id}`].effects.flatMap(e => e.system.changes.map(c => `${c.key}=${c.value}`))]));
+  assert.deepEqual(boosters, {
+    eraser: ['system.bonus.interface.cloak=2'], 'see-ya': ['system.bonus.interface.pathfinder=2'], 'speedy-gonzalvez': ['system.bonus.interface.velocidade=2'], worm: ['system.bonus.interface.backdoor=2']
+  });
+  for (const id of ['eraser', 'see-ya', 'speedy-gonzalvez', 'worm']) assert.match(catalogo[`core_programs:${id}`].system.descricao, /while Rezzed/, id);
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

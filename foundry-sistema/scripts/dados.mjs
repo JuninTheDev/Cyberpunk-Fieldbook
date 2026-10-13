@@ -57,7 +57,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     // todasAcoes, corpoACorpo e distancia vêm das lesões (Concussão, Músculo Rompido, Olho Perdido).
     this.bonus = {
       iniciativa: 0, tiroMirado: 0, tiroUnico: 0, maos: 0, ataque: 0, todasAcoes: 0, corpoACorpo: 0, distancia: 0, supressaoDeDor: false,
-      pericias: Object.fromEntries(CHAVES_PERICIAS.map(id => [id, 0]))
+      pericias: Object.fromEntries(CHAVES_PERICIAS.map(id => [id, 0])),
+      // Os boosters ativos somam na habilidade de Interface deles (Eraser no Cloak, Speedy Gonzalvez na Velocidade...).
+      interface: Object.fromEntries(regras.HABILIDADES_DE_INTERFACE.map(({ id }) => [id, 0]))
     };
   }
 
@@ -84,6 +86,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     const roleId = roleDaWiki(this.role.nome)?.id;
     this.bonusDeRole = regras.bonusDeRole({ roleId, rank: this.role.rank });
     this.periciasDeRole = regras.periciasDerivadas(HABILIDADES_DE_ROLE[roleId]?.derivadas, this.role.habilidades);
+    // A Interface é o Rank do Netrunner (só ele tem), e ela dá as Ações NET por turno.
+    this.rankDeInterface = roleId === 'netrunner' ? Math.max(0, this.role.rank) : 0;
+    this.acoesDeNet = regras.acoesDeNet(this.rankDeInterface);
     // Editor de dor (supressão de dor): tira só a penalidade de gravemente ferido, não a de mortalmente ferido.
     this.penalidade = regras.penalidadeDoFerimento(this.ferimento, this.bonus.supressaoDeDor);
     // Death Save: a penalidade de base vem das lesões que a aumentam; a outra sobe a cada sucesso.
@@ -282,6 +287,8 @@ export class DadosPrograma extends foundry.abstract.TypeDataModel {
       dano: new fields.SchemaField({ padrao: texto('0'), blackIce: texto('0') }),
       tamanho: inteiro(1, { min: 0 }),
       instaladoEm: texto(),
+      // Ativo (rezzado, o isRezzed do CORE): os efeitos do programa (os boosters) só valem assim, instalado num deck.
+      ativo: new fields.BooleanField({ initial: false }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };
@@ -364,6 +371,7 @@ export class DadosEfeito extends foundry.data.ActiveEffectTypeDataModel {
     if (!(item instanceof Item)) return null;
     if (item.type === 'cyberware') return !item.system.instalado;
     if (item.type === 'arma' || item.type === 'armadura') return !item.system.equipada;
+    if (item.type === 'programa') return !item.system.ativo || !item.instaladoNo;
     if (item.type === 'equipamento' && item.system.ativacao !== 'manual') return !regras.efeitoValeNoUso(item.system.ativacao, item.system.uso);
     return null;
   }

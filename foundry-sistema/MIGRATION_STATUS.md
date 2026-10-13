@@ -50,6 +50,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
 | cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
 | cpr-2077 | avisos de envio, a campanha da wiki de cada mundo, crossover entre campanhas, Atualizar da wiki, retrato | falta |
+| CORE | a Interface do Netrunner (as 9 habilidades, a Defesa e a Velocidade, as Ações NET, os boosters ativos) | portada no ciclo 40 |
 | NET Architect | tudo | falta |
 | Painel Tático | tudo | falta |
 
@@ -106,7 +107,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
-  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | falta | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface no ciclo 40; o resto falta | P3 |
   | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
@@ -220,6 +221,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   números fora dessa conta passa a rolar pela conta; o número antigo fica guardado na ficha, sem uso. Como na Consciência
   de Combate do Solo, os pontos das especialidades valem como estão na ficha: o criador da wiki corta cada um no máximo
   (4), e a ficha só avisa quando passam do Rank.
+
+- **A iniciativa na NET (o C5): a de sempre, com a Velocidade contra o Black ICE.** O ROADMAP pedia "a iniciativa na
+  NET". No CORE e na wiki, o netrunner usa a iniciativa de sempre (REF + 1d10). O que decide quem age primeiro ao
+  encontrar um Black ICE à espreita é a Velocidade (Interface + bônus de velocidade + 1d10 contra SPD do ICE + 1d10), e
+  depois o ICE entra no topo da fila. A iniciativa do Black ICE (SPD) e a do demônio (Interface) como atores, no CORE, são
+  o C7.
+
+- **O programa ativo veio antes do C6.** A wiki diz que os boosters somam "enquanto estiver ativo", e o CORE só aplica o
+  efeito com o programa rezzado (`isRezzed`). Por isso o C5 trouxe o ativo simples (um botão, sem a REZ atual). O C6
+  completa: a REZ atual, derrezzar no 0, as 2 Ações NET para religar.
 
 - **O Facedown leva a penalidade de ferimento: pela wiki, não pelo CORE.** O `CPRFacedownRoll` do CORE soma os
   modificadores de "todas as ações" das lesões (a Concussão, −2), mas não o do estado de ferimento. A wiki dá os dois com
@@ -1906,6 +1917,61 @@ do Facedown, em system-rules.js; RED p. 194).
   por isso o Facedown é o ciclo 39).
 - **Próximo:** o C5 (a Interface do Netrunner: as 9 habilidades, as Ações de NET pelo Rank e a iniciativa na NET), o
   primeiro item da fase 2.
+- **Commit:** `117c456`.
+
+### Ciclo 40 (2026-10-13): a Interface do Netrunner (o C5; sessão KouArt)
+
+O `CPRInterfaceRoll` do CORE (`_createInterfaceRoll` em `cpr-cyberdeck.js`, `CPR.interfaceAbilities`, o painel
+`cpr-netActions.hbs`) e a página de Netrunning da wiki (system-rules.js: "Ações por turno", "Habilidades de Interface",
+"Combate na NET" e "Black ICE"; RED p. 197–207).
+
+- **Implementado:**
+  - **`regras.HABILIDADES_DE_INTERFACE`:** as 9 habilidades do CORE, com o custo da tabela da wiki e o que cada uma faz,
+    e as outras duas rolagens de Interface do CORE: a Defesa (contra o ATK do Black ICE ou do programa) e a Velocidade
+    (contra o SPD do Black ICE à espreita; quem vence age primeiro);
+  - **`regras.acoesDeNet`:** as Ações NET por turno pelo Rank de Interface, pela tabela da wiki (2, 3, 4 e 5);
+  - **nos dados:** o Rank de Interface é o do Netrunner (só ele tem), com as Ações NET; os bônus de Interface
+    (`system.bonus.interface`); e o programa ativo (rezzado, o `isRezzed` do CORE): os efeitos dele só valem ativo e
+    instalado num deck;
+  - **o build:** os boosters do CORE (Eraser no Cloak, See Ya no Pathfinder, Speedy Gonzalvez na Velocidade, Worm no
+    Backdoor) entram com o efeito de +2, que antes ficava de fora. Só esses 4 itens do catálogo mudaram;
+  - **no ator:** `partesDaInterface` e `rolarInterface`, pela janela de rolagem: o Rank de Interface, o bônus dos
+    programas ativos naquela habilidade, as penalidades de todas as ações e os situacionais; e `rolarDanoDoZap` (1d6);
+  - **na ficha (aba NET):** pelo cyberdeck equipado, como o CORE, as 11 rolagens com o valor sem o dado, o custo e o que
+    faz, o dano do Zap e as Ações NET no título. Sem deck equipado, o aviso; sem Interface, "só o Netrunner". Na lista
+    de programas, o botão Ativo dos que estão num deck;
+  - **a migração (o passo 3):** o booster que veio do catálogo antes do efeito ganha o +2 na habilidade dele. O passo só
+    mexe em quem não tem o efeito, e o efeito vem do catálogo.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 64 de 68. Dois testes novos:
+    - a Interface contra a wiki e o CORE: as 9 habilidades na ordem do CORE, com o custo da tabela da wiki; a Defesa e
+      a Velocidade; a fórmula e o teste contra o Black ICE; as Ações NET pela tabela; e os 4 boosters do catálogo com o +2
+      na habilidade deles ("while Rezzed", no texto do CORE);
+    - o passo 3 da migração: os 4 boosters sem o efeito ganham o dele; o que já tem, o Sword e o booster sem catálogo
+      ficam; o efeito novo entra no plano como criado.
+
+    As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 69 de 74, cerca de 106 s. Um passo novo, na aba NET de um Netrunner Rank 4 com um cyberdeck e dois boosters:
+    - com o deck só carregando, o aviso e nenhuma rolagem; equipado, as 11 rolagens e "3 Ações NET por turno";
+    - o Cloak pela janela (4 + 6 + 2 do mestre = 12), com o custo e o que faz no cartão;
+    - o Eraser ativo: o Cloak sobe para 6 (o Pathfinder não), e Ctrl + clique rola 4 + 2 + 5 = 11;
+    - o dano do Zap (1d6);
+    - a Velocidade com o Speedy Gonzalvez ativo, gravemente ferido: 4 + 2 − 2 + 3 = 7;
+    - o Eraser fora do deck não soma, mesmo ativo, e perde o botão;
+    - um Solo com um deck equipado não tem Interface nem Ações NET;
+    - a captura `v14-ficha-net-interface`.
+
+    As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: as Ações NET com a faixa errada; o custo do Slide sem o "1×/turno"; o passo 3 dando um segundo efeito a quem
+      já tem;
+    - G4: o efeito do programa sempre valendo; a Interface sem o deck equipado; sem a penalidade de ferimento; todo
+      mundo com Interface; e a rolagem sem o bônus dos programas.
+- **O C5 fecha aqui.**
+- **Próximo:** o C6 (os programas no combate da NET: a REZ atual, o ataque de programa contra programa, Black ICE ou
+  netrunner, com o dano no REZ ou no cérebro).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

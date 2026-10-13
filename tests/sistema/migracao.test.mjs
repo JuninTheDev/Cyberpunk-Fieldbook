@@ -81,6 +81,30 @@ test('Migração, passo 2 (o tipo do cyberware, ciclo 7): o que a ficha trocou p
   assert.equal(tipoDepois('core_cyberware:amplified-hearing', 'fashionware', d => { delete d.flags['cpr-fieldbook'].catalogo; return d; }), 'fashionware');
 });
 
+test('Migração, passo 3 (os boosters de Interface, ciclo 40): o booster que veio do catálogo antes do efeito ganha o +2 na habilidade dele; o que já tem, o booster sem catálogo e os outros programas ficam', () => {
+  const semEfeito = id => doCatalogo(id, dados => { dados.effects = []; return dados; });
+  const migrar = dados => migrarDados(dados, { documento: 'Item', passos: [passo(3)], catalogo });
+  const efeitosDepois = dados => migrar(dados).effects.flatMap(efeito => efeito.system.changes.map(c => `${c.key}=${c.value}`));
+  assert.deepEqual(efeitosDepois(semEfeito('core_programs:eraser')), ['system.bonus.interface.cloak=2']);
+  assert.deepEqual(efeitosDepois(semEfeito('core_programs:see-ya')), ['system.bonus.interface.pathfinder=2']);
+  assert.deepEqual(efeitosDepois(semEfeito('core_programs:speedy-gonzalvez')), ['system.bonus.interface.velocidade=2']);
+  assert.deepEqual(efeitosDepois(semEfeito('core_programs:worm')), ['system.bonus.interface.backdoor=2']);
+  // O que já tem o efeito não ganha outro (rodar de novo não muda nada).
+  const comEfeito = doCatalogo('core_programs:eraser');
+  assert.deepEqual(migrar(comEfeito), comEfeito);
+  // Um programa sem efeito no catálogo e o booster sem catálogo ficam.
+  const sword = semEfeito('core_programs:sword');
+  assert.deepEqual(migrar(sword), sword);
+  const semCatalogo = semEfeito('core_programs:eraser');
+  delete semCatalogo.flags['cpr-fieldbook'].catalogo;
+  assert.deepEqual(migrar(semCatalogo).effects, []);
+  // O efeito novo entra no plano como criado, sem _id (o Foundry dá um).
+  const antes = semEfeito('core_programs:worm');
+  const plano = planoDeMudanca(antes, migrar(antes));
+  assert.equal(plano.colecoes.ActiveEffect.criar.length, 1);
+  assert.equal(plano.colecoes.ActiveEffect.criar[0]._id, undefined);
+});
+
 test('Migração no ator: os itens dele passam por todos os passos; o plano tem só o que muda (o efeito que sai do TeleOptics, o tipo do Cyberaudio), e rodar de novo não muda nada', () => {
   const teleoptics = doCatalogo('core_cyberware:teleoptics', dados => ({ ...dados, effects: [efeitoAntigoDoTeleOptics('efeitoantigo0004')] }));
   const audio = doCatalogo('core_cyberware:amplified-hearing', dados => { dados.system.tipo = 'fashionware'; return dados; });

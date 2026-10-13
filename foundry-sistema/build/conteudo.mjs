@@ -178,11 +178,17 @@ const BONUS_DIRETOS = {
   // Das lesões: −2 em todas as ações (Concussão, Lesão Cerebral), no corpo a corpo (Músculo Rompido) e nos tiros (Olho).
   allActions: 'todasAcoes', melee: 'corpoACorpo', ranged: 'distancia'
 };
+// As habilidades de Interface do CORE (os boosters: bonuses.cloak, pathfinder, backdoor e speed) → regras.HABILIDADES_DE_INTERFACE.
+const BONUS_DE_INTERFACE = {
+  scanner: 'scanner', backdoor: 'backdoor', cloak: 'cloak', control: 'control', eyedee: 'eyedee', pathfinder: 'pathfinder', slide: 'slide', virus: 'virus', zap: 'zap',
+  defense: 'defesa', speed: 'velocidade'
+};
 function chaveNova(chave, camel) {
   let m = chave.match(/^system\.stats\.([a-z]+)\.value$/);
   if (m) return `system.atributos.${m[1]}.valor`;
   m = chave.match(/^bonuses\.([A-Za-z]+)$/);
   if (m && BONUS_DIRETOS[m[1]]) return `system.bonus.${BONUS_DIRETOS[m[1]]}`;
+  if (m && BONUS_DE_INTERFACE[m[1]]) return `system.bonus.interface.${BONUS_DE_INTERFACE[m[1]]}`;
   if (m && camel[m[1]]) return `system.bonus.pericias.${camel[m[1]]}`;
   return null;
 }
