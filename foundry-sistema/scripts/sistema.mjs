@@ -14,6 +14,7 @@ import { FichaItem } from './ficha-item.mjs';
 import { FichaBlackIce, FichaDemonio } from './ficha-net.mjs';
 import { FichaPersonagem } from './ficha-personagem.mjs';
 import { abrirExtrato } from './extrato.mjs';
+import { registrarIceRezzado } from './ice-rezzado.mjs';
 import { CombateCPR, CombatenteCPR } from './iniciativa.mjs';
 import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
@@ -54,6 +55,8 @@ Hooks.once('init', () => {
   });
 
   wiki.registrarWiki();
+  // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
+  registrarIceRezzado();
   game.system.api = { combate, lesoes, migracao, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
 });
 

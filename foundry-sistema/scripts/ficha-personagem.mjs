@@ -229,7 +229,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         danos: programaDeAtaque(p.system.classe) && p.instaladoNo && s.rankDeInterface > 0
           ? DANO_DE_PROGRAMA[p.system.classe].map(dano => ({ ...dano, formula: formulaDeDano(p.system.dano[dano.id]) })).filter(dano => dano.formula) : [],
         rez: p.system.rez && !['quickhack', 'daemon'].includes(p.system.classe) ? { atual: p.rezAtual, max: p.system.rez } : null,
-        ativo: p.system.ativo, podeAtivar: Boolean(p.instaladoNo) && !programaDeAtaque(p.system.classe)
+        ativo: p.system.ativo, podeAtivar: Boolean(p.instaladoNo) && !programaDeAtaque(p.system.classe),
+        dicaAtivo: p.system.classe === 'blackice' ? 'Ativo (rezzado): o mestre põe o token do Black ICE ao lado do seu na cena; desativado, ele sai' : 'Ativo (rezzado): os boosters somam na habilidade deles'
       })),
       net,
       veiculos: itens('veiculo').map(v => ({

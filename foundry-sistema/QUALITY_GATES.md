@@ -66,6 +66,11 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do
   `resetAll`; a lição registrada naquele ciclo foi corrigida no 45); no ciclo 45, o do dano do Black ICE marcou o Imp
   no lugar do Hellhound. Crie um por vez, ou ache cada um pelo `actorId` (o token) e pelo `tokenId` (o combatente).
+- **A limpeza de um passo com os ganchos do sistema:** apagar um ator pode fazer o mestre apagar outras coisas (apagar
+  o netrunner tira o token do Black ICE rezzado dele). Na limpeza, tire os tokens antes dos atores; senão, a limpeza e o
+  gancho apagam o mesmo token, e o passo cai com "Token … does not exist" (ciclo 46).
+- **O passo "nenhum aviso" falhando pelos avisos conhecidos:** enquanto os avisos da Lexington (2077) o derrubam, um erro
+  novo do sistema ficaria escondido nele. Confira o detalhe a cada G4: tem de ter só os dois da Lexington.
 - **Mensagem do chat na página:** ela aparece duas vezes (no chat e na notificação), cada uma com os botões ligados.
   Para contar os botões de um cartão, procure dentro de uma das duas (`document.querySelector('[data-message-id=...]')`);
   no documento inteiro, a lista vem dobrada (ciclo 42).

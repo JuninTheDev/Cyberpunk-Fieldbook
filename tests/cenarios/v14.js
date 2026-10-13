@@ -3640,6 +3640,95 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('Black ICE rezzado (o _rezBlackIceToken do CORE): ativar o Hellhound do netrunner no deck põe o token dele ao lado do netrunner (solto, com os números e a REZ do programa, o ator na pasta "Black ICE rezzado"); a REZ que o token perde volta para o programa; desativar tira o token; com a REZ do token em 0, o programa desativa e o token sai; o jogador ativa no computador dele, e o mestre põe o token', async () => {
+      const nomes = ['Teste Netrunner ICE', 'Teste Netrunner do Jogador', 'Hellhound'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const pack = game.packs.get('${S}.netrunning');
+          const hellhound = (await pack.getDocument(pack.index.find(e => e.name === 'Hellhound')._id)).toObject();
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          // O netrunner com o deck equipado e o Hellhound instalado nele, com o token na cena.
+          const netrunner = async (name, x, extra = {}) => {
+            const a = await Actor.implementation.create({ name, type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck']), foundry.utils.deepClone(hellhound)], ...extra });
+            const deck = a.items.find(i => i.type === 'cyberdeck');
+            await deck.update({ 'system.uso': 'equipado' });
+            await a.items.getName('Hellhound').update({ 'system.instaladoEm': deck.id });
+            const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x, y: 900 })).toObject()]);
+            await esperar(() => canvas.tokens.get(token.id));
+            return { a, token };
+          };
+          const doIce = programa => canvas.scene.tokens.find(t => t.getFlag('${S}', 'programa') === programa.uuid);
+          const { a, token: ta } = await netrunner('Teste Netrunner ICE', 1500);
+          const hh = a.items.getName('Hellhound');
+
+          // 1. Ativar: o token do Hellhound ao lado do netrunner, solto, com os números e a REZ do programa.
+          await hh.update({ 'system.ativo': true });
+          await esperar(() => doIce(hh) && hh.getFlag('${S}', 'iceRezzado'));
+          let t = doIce(hh);
+          const s = t?.actor.system;
+          const rezzado = {
+            nome: t?.name, dx: t ? t.x - ta.x : null, dy: t ? t.y - ta.y : null, grade: canvas.scene.grid.size, solto: t ? !t.actorLink : null, tipo: t?.actor.type,
+            numeros: s && [s.classe, s.per, s.spd, s.atk, s.def, s.rez.value, s.rez.max, s.dano], barra: t?.getBarAttribute('bar1')?.attribute,
+            marca: hh.getFlag('${S}', 'iceRezzado')?.token === t?.id, pasta: game.actors.find(x => x.type === 'blackice' && x.name === 'Hellhound')?.folder?.name
+          };
+          // 2. A REZ que o token perde volta para o programa (20 → 14).
+          await t.actor.receberDanoNaRez(6);
+          await esperar(() => hh.rezAtual === 14);
+          const rez = { token: t.actor.system.rez.value, programa: hh.rezAtual };
+          // 3. Desativar tira o token.
+          await hh.update({ 'system.ativo': false });
+          await esperar(() => !doIce(hh) && !hh.getFlag('${S}', 'iceRezzado'));
+          const desativado = { token: Boolean(doIce(hh)), marca: Boolean(hh.getFlag('${S}', 'iceRezzado')) };
+          // 4. De novo ativo, com a REZ 14 do programa; a REZ do token a 0: o programa desativa e o token sai.
+          await hh.update({ 'system.ativo': true });
+          await esperar(() => doIce(hh));
+          t = doIce(hh);
+          const rezDeNovo = t?.actor.system.rez.value;
+          await t.actor.receberDanoNaRez(20);
+          await esperar(() => !hh.system.ativo && !doIce(hh));
+          const zerado = { ativo: hh.system.ativo, programa: hh.rezAtual, token: Boolean(doIce(hh)) };
+
+          // O netrunner do jogador (dono dele), com o token na cena, para o passo 5.
+          const jogador = game.users.getName('Jogador');
+          if (jogador) await netrunner('Teste Netrunner do Jogador', 1700, { ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          return { rezzado, rez, desativado, rezDeNovo, zerado };
+        })()`);
+        // 5. O jogador ativa o Hellhound do netrunner dele, no computador dele: quem põe o token é o mestre.
+        let doJogador = 'sem o navegador do jogador';
+        if (jogador) {
+          const pediu = await jogador.evaluate(`(async () => {
+            for (let i = 0; i < 50 && !game.actors.getName('Teste Netrunner do Jogador')?.items.getName('Hellhound'); i++) await new Promise(r => setTimeout(r, 100));
+            const hh = game.actors.getName('Teste Netrunner do Jogador')?.items.getName('Hellhound');
+            if (!hh) return 'o jogador não vê o Hellhound';
+            await hh.update({ 'system.ativo': true });
+            return { gm: game.user.isGM, podeCriarToken: game.user.can('TOKEN_CREATE') };
+          })()`);
+          doJogador = await edge.evaluate(`(async () => {
+            const hh = game.actors.getName('Teste Netrunner do Jogador').items.getName('Hellhound');
+            const doIce = () => canvas.scene.tokens.find(t => t.getFlag('${S}', 'programa') === hh.uuid);
+            await window.__esperar(() => doIce());
+            return { pediu: ${JSON.stringify(pediu)}, ativo: hh.system.ativo, token: doIce()?.name ?? null };
+          })()`);
+        }
+        const { rezzado: z, rez, desativado: d, rezDeNovo, zerado: zr } = info;
+        const ok = z.nome === 'Hellhound' && z.dx === z.grade && z.dy === 0 && z.solto && z.tipo === 'blackice' && z.numeros?.join() === 'antipersonnel,6,6,6,2,20,20,2d6'
+          && z.barra === 'rez' && z.marca && z.pasta === 'Black ICE rezzado'
+          && rez.token === 14 && rez.programa === 14 && !d.token && !d.marca && rezDeNovo === 14 && !zr.ativo && zr.programa === 0 && !zr.token
+          && (!jogador || (doJogador.ativo && doJogador.token === 'Hellhound' && doJogador.pediu?.gm === false && doJogador.pediu?.podeCriarToken === false));
+        return [ok, JSON.stringify({ ...info, doJogador })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const nomes = ${JSON.stringify(nomes)};
+          // Os tokens antes dos atores: apagar o netrunner faz o mestre tirar o token do Black ICE dele.
+          await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => nomes.includes(t.name)).map(t => t.id));
+          for (const a of game.actors.filter(a => nomes.includes(a.name))) { await a.sheet?.close(); await a.delete(); }
+          for (const pasta of game.folders.filter(f => f.type === 'Actor' && f.name === 'Black ICE rezzado' && !f.contents.length)) await pasta.delete();
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

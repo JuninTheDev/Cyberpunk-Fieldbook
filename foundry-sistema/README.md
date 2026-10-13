@@ -58,6 +58,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     programa ativo deles (desativado, o cartão avisa que é destruído, e o mestre apaga). O demônio tem o botão do Zap
     (1d6), no cérebro do intruso ou num programa dele. Na REZ do Black ICE ou do demônio marcado entram o dano "em Black
     ICE" dos programas anti-programa e o Zap do netrunner; em 0, ele é desativado.
+  - **o Black ICE próprio do netrunner:** ativar um programa de Black ICE (do compêndio de Netrunning) num deck faz o mestre
+    ativo pôr o token dele ao lado do token do netrunner, solto, com os números e a REZ do programa (o ator fica na pasta
+    "Black ICE rezzado"). A REZ que o token perde volta para o programa, e em 0 o programa desativa e o token sai.
+    Desativar, tirar do deck ou apagar o programa tira o token. Sem mestre na mesa, o token não entra.
 - **Cartões do chat** (testes, ataques, dano, Death Save) no mesmo visual: a mensagem inteira fica escura, com a borda amarela (vermelha no dano e na morte), as partes do teste em etiquetas e o total grande. As mensagens que não são do sistema não mudam.
 - **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12. O botão de cada um no cabeçalho da ficha abre a janela dele:
   - **o menu:** a quantia e o motivo, com Somar, Subtrair e Definir. Como no CORE, Subtrair sempre tira (um valor negativo também), e perder mais do que tem deixa o saldo negativo, com um aviso;
@@ -215,8 +219,8 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o token que o programa de Black ICE do netrunner rezza (o C7,
-  parte 3b), as arquiteturas (o NET Architect) e o Painel Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), as arquiteturas (o NET Architect) e o Painel
+  Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
@@ -284,6 +288,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
   - o programa de Black ICE do netrunner: o Hellhound do compêndio de Netrunning instalado no deck (2 slots), com o tipo e os números na aba NET e na ficha do item;
+  - o Black ICE rezzado: o Hellhound ativado no deck põe o token ao lado do netrunner (pelo mestre, também quando o jogador ativa no computador dele), a REZ que o token perde volta para o programa, e desativar ou zerar a REZ tira o token;
   - o dano do Black ICE e na REZ dele: o Hellhound pela ficha no cérebro (o Shield ativo não o para, o Armor reduz), o Killer num programa (o aviso de que o destrói), o Sword em Black ICE e o Zap na REZ do Black ICE e do demônio da cena, e o Zap do demônio só no intruso;
   - o Black ICE e o demônio: o token solto com a REZ na barra, o modelo da wiki (o Hellhound e o Efreet), as rolagens pela janela e com Ctrl + clique, a REZ e o nome na ficha do token, a iniciativa no topo da fila (sozinho e no "rolar todos") e a arma que não os atinge;
   - o capanga: o token solto, a ficha de uma página, os itens do compêndio arrastados para ela (equipados ou instalados, a Humanidade rolada e, com Shift, a média), o tiro que muda só o HP do capanga atingido, o outro capanga recarregando e atirando com a própria munição, o Death Save só de quem caiu, o nome novo na ficha do token e, no navegador do jogador, a ficha limitada (só a imagem, o nome e as notas; o Observador vê tudo, sem editar);

@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 46). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 47). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -77,7 +77,7 @@ de compêndio; entram só as partes do sistema.
   - [x] aplicar o dano (os botões do mestre no cartão): no cérebro do netrunner, sem a armadura (o Shield e o Armor da
     wiki), ou na REZ de um programa ativo do alvo: ciclo 42. O dano em Black ICE entra no Black ICE, com o C7;
   - [x] os boosters: no build e somando na Interface quando ativos (ciclo 40).
-- [~] **C7. Black ICE e demônio como atores:** Em andamento: sessão KouArt, 2026-10-13 (depois do C6).
+- [x] **C7. Black ICE e demônio como atores:** Feito nos ciclos 43 a 46 (sessão KouArt, 2026-10-13).
   - [x] **as fichas:** Black ICE com PER, SPD, ATK, DEF e REZ; demônio com REZ, Interface, Ações de NET e Combat Number;
     com as rolagens (o número + 1d10), o token solto com a REZ na barra e o modelo da wiki (os 12 Black ICE e os 3
     demônios do RED): ciclo 43;
@@ -87,7 +87,8 @@ de compêndio; entram só as partes do sistema.
     dos programas e do Zap na REZ do Black ICE e do demônio, com o Zap do demônio: ciclo 44;
   - [x] os programas de Black ICE do netrunner (o Black ICE próprio, de 2 slots): os 12 da tabela da wiki no compêndio de
     Netrunning, com o tipo, PER e SPD no programa: ciclo 45;
-  - [ ] o token "rezzado" pelo programa de Black ICE do netrunner, ao ativá-lo no deck (a parte 3b).
+  - [x] o token "rezzado" pelo programa de Black ICE do netrunner, ao ativá-lo no deck, pelo mestre ativo, com a REZ do
+    token voltando para o programa: ciclo 46.
 - [ ] **C8. Arquiteturas e o NET Architect dentro do sistema:**
   - o tipo de item arquitetura, com os andares e as DVs, como o `netarch` do CORE;
   - o que o NET Architect faz na mesa: pontos de acesso nos tiles, a janela da NET, os inimigos no combate, o jogador
@@ -356,7 +357,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [ ] **NET:** (→ C5 a C8) o NET Architect dentro do sistema (Interface, programas, Black ICE, dano no cérebro).
 - [ ] **Cyberware:** (→ C21) base e slots ao instalar (com as opções na base, como a montagem da wiki), terapia e ciberpsicose.
 - [ ] **NET de 2077:** (→ C9) a RAM e o Cooling do deck, os quickhacks e os daemons.
-- [ ] **NPCs:** (→ C2 e C7) ficha de capanga (mook), Black ICE e demônios como atores.
+- [x] **NPCs:** (→ C2 e C7, feitos nos ciclos 36 e 37 e 43 a 46) ficha de capanga (mook), Black ICE e demônios como atores.
 - [ ] **Ferramentas do mestre:** (→ C24 e C25) o Painel Tático dentro do sistema; o contêiner do CORE (loja, saque e esconderijo, com
   o registro das trocas).
 - [ ] **Conteúdo fora do livro básico:** (conteúdo: fora do plano de paridade) o Black Chrome e os DLCs do CORE 0.92.4, as tabelas de arquitetura da NET e as

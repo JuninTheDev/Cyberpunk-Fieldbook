@@ -34,7 +34,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE | consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
-| CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); falta o token que o programa rezza (parte 3b) |
+| CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
 | CORE | contêiner (loja, saque, esconderijo) | falta |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
@@ -109,7 +109,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
-  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores nos ciclos 43 e 44, e os programas de Black ICE no 45; o resto falta | P3 |
+  | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores e o Black ICE próprio do netrunner nos ciclos 43 a 46; faltam as arquiteturas (o C8) | P3 |
   | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
@@ -279,6 +279,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   Black ICE, com 2 slots (a wiki: "Black ICE próprio ocupa 2 slots no deck"), o efeito e o dano dele; o netrunner os
   recebe do mestre. O id no catálogo é "black-ice:<nome>", porque não há id da loja; a ficha da mesa manda os itens para a
   wiki pelo nome, e não pelo id.
+
+- **O Black ICE rezzado: pelo mestre ativo.** No CORE, quem rezza o programa cria o token no próprio cliente; um
+  jogador sem a permissão de criar tokens não consegue. Aqui quem cria e tira o token é o mestre ativo, quando o programa
+  muda. Como no CORE, só a REZ do token volta para o programa (o contrário não); o mestre que apaga o token à mão deixa o
+  programa ativo. Sem mestre na mesa, o token não entra, nem depois, quando o mestre chega: desative e ative de novo.
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2238,6 +2243,47 @@ O programa da classe `blackice` do CORE (`program-datamodel.js`: o `blackIceType
     depois; as duas rodadas do G4 do fim do ciclo passaram nele.
 - **Próximo:** o C7, parte 3b: ativar o programa de Black ICE num deck rezza o token dele ao lado do netrunner (e
   desativar tira), com a REZ do token voltando para o programa, como o CORE.
+- **Commit:** `35130b3`.
+
+### Ciclo 46 (2026-10-13): o Black ICE rezzado na cena (o C7, parte 3b; sessão KouArt)
+
+O `_rezBlackIceToken` e o `_derezBlackIceToken` do cyberdeck do CORE (`cpr-cyberdeck.js`) e o `SyncBlackIceWithProgram`
+(`sync-black-ice-with-program.js`).
+
+- **Implementado** (`ice-rezzado.mjs`, no mestre ativo):
+  - **ativar um programa de Black ICE num deck** põe o token dele ao lado do token do netrunner (na cena vista, ou na
+    ativa), solto, com o nome, os números, o dano e a REZ do programa. O ator é o Black ICE do mundo com o nome do
+    programa ou, sem ele, um novo na pasta "Black ICE rezzado". O programa guarda qual é o token;
+  - **desativar, tirar do deck ou apagar o programa** (ou o netrunner) tira o token;
+  - **a REZ que o token perde volta para o programa** (a REZ perdida); em 0, o programa desativa, e o token sai;
+  - **quem faz é o mestre ativo:** no Foundry 14, o jogador não cria tokens (a permissão TOKEN_CREATE é de assistente para
+    cima), e o `updateItem` do programa que o jogador ativa chega no cliente do mestre. Sem o token do netrunner na
+    cena, o mestre recebe o aviso, e o programa fica ativo sem o token. As mudanças de um mesmo programa entram uma de
+    cada vez;
+  - na aba NET, a dica do botão Ativo do Black ICE diz o que acontece.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 69 de 73, sem teste novo (o ciclo é todo no Foundry). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 76 de 81, cerca de 119 s. Um passo novo, com o Hellhound do compêndio num deck:
+    - ativado, o token entra a um quadrado do netrunner: solto, 6/6/6/2, REZ 20/20, o dano 2d6, a barra da REZ, e o ator
+      na pasta "Black ICE rezzado";
+    - 6 de dano na REZ do token deixam o programa com 14;
+    - desativar tira o token e a marca;
+    - de novo ativo, o token entra com 14; 20 de dano zeram a REZ: o programa desativa e o token sai;
+    - no navegador do jogador (sem a permissão de criar tokens), ele ativa o Hellhound do netrunner dele, e o mestre põe
+      o token.
+
+    A primeira rodada caiu na limpeza do passo: o teste apagava o token do Black ICE que o mestre já tirava ao apagar o
+    netrunner ("Token … does not exist"); a limpeza passou a tirar os tokens antes dos atores (QUALITY_GATES). Os avisos
+    do passo "nenhum aviso" foram conferidos: só os dois da Lexington, os conhecidos. As 5 falhas são as das armas de 2077
+    (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5): os ganchos
+    não registrados; desativar sem tirar o token; a REZ do token sem voltar para o programa; só o cliente de quem mudou
+    o programa agindo (o jogador ativa e ninguém põe o token); o token em cima do netrunner; e o token com os números do
+    ator, e não os do programa.
+- **O C7 fecha aqui** (ciclos 43 a 46).
+- **Próximo:** o C8 (as arquiteturas e o NET Architect dentro do sistema), o próximo item aberto do plano.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
