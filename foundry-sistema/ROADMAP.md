@@ -70,11 +70,11 @@ de compêndio; entram só as partes do sistema.
   - [x] a iniciativa na NET: o netrunner usa a de sempre (REF + 1d10); quem age primeiro contra o Black ICE sai da
     Velocidade (Interface + velocidade + 1d10 contra SPD + 1d10), e o ICE entra no topo da fila. A iniciativa do Black
     ICE e do demônio como atores é o C7.
-- [ ] **C6. Programas no combate da NET:**
+- [~] **C6. Programas no combate da NET:** Em andamento: sessão KouArt, 2026-10-13.
   - rezzar e derrezzar, com ATK, DEF e REZ atuais (o ativo simples, sem a REZ, veio no ciclo 40);
   - o ataque de programa contra programa, Black ICE ou netrunner, com o dano no REZ ou no cérebro;
   - [x] os boosters: no build e somando na Interface quando ativos (ciclo 40).
-- [ ] **C7. Black ICE e demônio como atores:**
+- [~] **C7. Black ICE e demônio como atores:** Em andamento: sessão KouArt, 2026-10-13 (depois do C6).
   - **as fichas:** Black ICE com PER, SPD, ATK, DEF e REZ; demônio com REZ, Interface, Ações de NET e Combat Number;
   - o dano no REZ, o token "rezzado" pelo programa e a iniciativa pela SPD.
 - [ ] **C8. Arquiteturas e o NET Architect dentro do sistema:**
