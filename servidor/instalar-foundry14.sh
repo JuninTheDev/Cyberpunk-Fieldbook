@@ -8,9 +8,12 @@
 #   copia a licença e a senha de administrador do Foundry 12;
 # - o serviço foundry14.service, que não liga sozinho e não roda junto com o 12: ligar um desliga o outro, uma mesa por
 #   vez, como a licença pede. O Caddy não muda.
-# Pode rodar de novo: refaz o que faltar e troca o programa quando o zip for outro.
+# - a troca de mesa pela wiki: o mestre escolhe o Foundry 12 ou o 14 na barra lateral, e a wiki (o usuário mesa) liga um
+#   e desliga o outro pelo sudo, que este script libera só para esses comandos (/etc/sudoers.d/fieldbook-mesa).
+# Pode rodar de novo: refaz o que faltar e troca o programa quando o zip for outro (sem zip, fica o instalado).
 # Uso: sudo bash servidor/instalar-foundry14.sh [zip]   (padrão: o zip mais novo em /srv/foundry14)
-# Trocar de mesa: sudo systemctl start foundry14 (o 12 para) · sudo systemctl start foundry (o 14 para).
+# Trocar de mesa: pela wiki (o mestre, na barra lateral), ou aqui: sudo systemctl start foundry14 (o 12 para) · sudo
+# systemctl start foundry (o 14 para).
 # Na virada, para valer também depois de reiniciar o servidor: sudo systemctl disable foundry && sudo systemctl enable foundry14
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Rode com sudo."; exit 1; }
@@ -51,18 +54,21 @@ echo "Node do Foundry 14: $("$NODE/bin/node" -v)"
 
 # ---------------- Programa ----------------
 zip=${1:-$(ls -t "$BASE"/FoundryVTT-*.zip 2>/dev/null | head -n 1 || true)}
-if [ -z "$zip" ] || [ ! -f "$zip" ]; then
+if [ -n "$zip" ] && [ -f "$zip" ]; then
+  versao=$(basename "$zip" .zip)
+  if [ "$(cat "$APP/.instalado" 2>/dev/null || true)" != "$versao" ]; then
+    verde "Instalando $versao"
+    systemctl stop foundry14 2>/dev/null || true
+    rm -rf "$APP.novo" && mkdir -p "$APP.novo"
+    unzip -q "$zip" -d "$APP.novo"
+    rm -rf "$APP" && mv "$APP.novo" "$APP"
+    echo "$versao" > "$APP/.instalado"
+  fi
+elif [ -f "$APP/.instalado" ]; then
+  echo "Sem zip em $BASE: fica o Foundry 14 já instalado ($(cat "$APP/.instalado"))."
+else
   echo "Não achei o zip do Foundry 14 em $BASE. Baixe com o link da sua conta e rode de novo." >&2
   exit 1
-fi
-versao=$(basename "$zip" .zip)
-if [ "$(cat "$APP/.instalado" 2>/dev/null || true)" != "$versao" ]; then
-  verde "Instalando $versao"
-  systemctl stop foundry14 2>/dev/null || true
-  rm -rf "$APP.novo" && mkdir -p "$APP.novo"
-  unzip -q "$zip" -d "$APP.novo"
-  rm -rf "$APP" && mv "$APP.novo" "$APP"
-  echo "$versao" > "$APP/.instalado"
 fi
 
 # ---------------- Dados ----------------
@@ -105,6 +111,25 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-verde "Foundry 14 pronto em $APP ($(cat "$APP/.instalado")), desligado."
-echo "Ligar (desliga o Foundry 12): sudo systemctl start foundry14"
-echo "Voltar ao Foundry 12:        sudo systemctl start foundry"
+
+# ---------------- A troca de mesa pela wiki ----------------
+# O botão do mestre na barra lateral da wiki liga um Foundry (que continua ligado quando o servidor reinicia) e desliga o
+# outro. A wiki roda como $USUARIO, e a pasta dela vem do GitHub: o sudo libera só estes quatro comandos, inteiros, sem
+# argumento livre e sem script (no pior caso, quem mandar na wiki troca de mesa).
+regra=$(mktemp)
+cat > "$regra" <<EOF
+# Gerado por servidor/instalar-foundry14.sh: a wiki ($USUARIO) troca a mesa entre o Foundry 12 e o 14 (o botão do mestre).
+$USUARIO ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now foundry.service, /usr/bin/systemctl enable --now foundry14.service, /usr/bin/systemctl disable foundry.service, /usr/bin/systemctl disable foundry14.service
+EOF
+if visudo -cqf "$regra"; then
+  install -m 0440 -o root -g root "$regra" /etc/sudoers.d/fieldbook-mesa
+  echo "Troca de mesa pela wiki: liberada (o mestre, na barra lateral)."
+else
+  echo "A regra do sudo não passou no visudo: a troca pela wiki fica desligada (troque com o systemctl)." >&2
+fi
+rm -f "$regra"
+
+verde "Foundry 14 pronto em $APP ($(cat "$APP/.instalado")): $(systemctl is-active foundry14 || true)."
+echo "Trocar de mesa: pela wiki (o mestre, na barra lateral), ou"
+echo "  ligar o 14 (desliga o 12): sudo systemctl start foundry14"
+echo "  voltar ao 12:               sudo systemctl start foundry"

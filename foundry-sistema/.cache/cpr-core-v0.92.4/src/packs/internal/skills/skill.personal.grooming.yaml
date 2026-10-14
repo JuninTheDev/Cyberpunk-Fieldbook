@@ -1,0 +1,25 @@
+_id: fIq8FZsb8QgBN0sG
+_key: "!items!fIq8FZsb8QgBN0sG"
+effects: []
+flags:
+  cyberpunk-red-core:
+    _migration:
+      current: 33
+      previous: "24"
+img: icons/svg/item-bag.svg
+name: Personal Grooming
+system:
+  basic: false
+  category: socialSkills
+  core: true
+  description:
+    value: ""
+  difficulty: typical
+  favorite: false
+  level: 0
+  skillType: generic
+  source:
+    book: Core
+    page: 139
+  stat: cool
+type: skill

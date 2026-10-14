@@ -1,0 +1,70 @@
+_id: OHMbhkYy7we5ieIL
+_key: "!items!OHMbhkYy7we5ieIL"
+effects:
+  - DyNsjXqBcOOWFdG9
+flags:
+  cyberpunk-red-core:
+    _migration:
+      current: 33
+      previous: "24"
+img: systems/cyberpunk-red-core/icons/compendium/weapons/SniperRifle.svg
+name: Superchrome® Javelin
+system:
+  ammoVariety:
+    - rifle
+  attackmod: 0
+  brand: Centurian Essentials
+  canIgnoreArmor: false
+  concealable:
+    concealable: false
+    isConcealed: false
+  critFailEffect: jammed
+  damage: 5d6
+  description:
+    value: |
+      <p>
+        The Superchrome® Javelin is an Exotic Sniper Rifle. Gives the user a +2 bonus
+        to Wardrobe and Style when equipped.
+      </p>
+      <p>
+        <em
+          >*Note: Superchrome effects do not stack and will need to be managed in the
+          Effects tab if multiple Superchrome items are installed.</em
+        >
+      </p>
+  dvTable: DV Sniper Rifle
+  equipped: owned
+  favorite: false
+  fireModes:
+    autoFire: 0
+    suppressiveFire: false
+  handsReq: 2
+  ignoreArmorPercent: 0
+  ignoreBelowSP: 0
+  installedItems:
+    allowed: true
+    allowedTypes:
+      - itemUpgrade
+      - ammo
+    list: []
+    slots: 0
+    usedSlots: 0
+  isRanged: true
+  magazine:
+    ammoData: null
+    max: 4
+    value: 0
+  price:
+    market: 1000
+  quality: standard
+  revealed: true
+  rof: 1
+  source:
+    book: BC
+    page: 120
+  unarmedAutomaticCalculation: true
+  usage: toggled
+  usesType: magazine
+  weaponSkill: Shoulder Arms
+  weaponType: sniperRifle
+type: weapon

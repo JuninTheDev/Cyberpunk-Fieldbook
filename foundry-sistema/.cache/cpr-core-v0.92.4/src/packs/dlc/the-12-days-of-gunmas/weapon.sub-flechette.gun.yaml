@@ -1,0 +1,65 @@
+_id: iKzJWiFQqBcDQ7Gm
+_key: "!items!iKzJWiFQqBcDQ7Gm"
+effects: []
+flags:
+  cyberpunk-red-core:
+    _migration:
+      current: 33
+      previous: "24"
+img: systems/cyberpunk-red-core/icons/compendium/weapons/heavySMG_excellent.svg
+name: Sub-Flechette Gun
+system:
+  ammoVariety:
+    - custom
+  attackmod: 1
+  brand: Malorian Arms
+  canIgnoreArmor: false
+  concealable:
+    concealable: false
+    isConcealed: false
+  critFailEffect: jammed
+  damage: 3d6
+  description:
+    value: >
+      <p>
+        This SMG can only fire it's own custom Armor-Piercing Ammunition, however that
+        ammo ablates by 4 when dealing damage. Comes with a Smartgun Link*.
+      </p>
+
+      <p><em>*Smartgun Link must be manually added after acquiring the
+      weapon</em></p>
+  dvTable: DV SMG
+  equipped: owned
+  favorite: false
+  fireModes:
+    autoFire: 4
+    suppressiveFire: true
+  handsReq: 1
+  ignoreArmorPercent: 0
+  ignoreBelowSP: 0
+  installedItems:
+    allowed: true
+    allowedTypes:
+      - ammo
+    list: []
+    slots: 0
+    usedSlots: 0
+  isRanged: true
+  magazine:
+    ammoData: null
+    max: 25
+    value: 0
+  price:
+    market: 5000
+  quality: excellent
+  revealed: true
+  rof: 1
+  source:
+    book: 12DoG
+    page: 4
+  unarmedAutomaticCalculation: true
+  usage: equipped
+  usesType: magazine
+  weaponSkill: Handgun
+  weaponType: smg
+type: weapon

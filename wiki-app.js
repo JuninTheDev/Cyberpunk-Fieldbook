@@ -1491,6 +1491,8 @@
     // e, para o mestre, a versão no ar. Tudo vem de config.statusUrl (api/estado).
     let installPrompt = null;
     let lastState = null;
+    // A troca de mesa pedida pelo mestre ({ foundry, at }), até a mesa nova responder (ou 3 minutos).
+    let tableSwitch = null;
     // O quadro da barra lateral é a mesa (e, para o mestre, a saúde do servidor). Quem está usando a wiki, a versão no
     // ar, o backup, "Instalar no celular" e entrar ou sair ficam no menu da conta (conta.js), que ouve "wiki:estado".
     function drawStatus(state) {
@@ -1512,8 +1514,12 @@
         const [kind, text] = !mesa.online ? ['off', 'Mesa fora do ar']
           : mesa.aberta ? ['on', `Mesa aberta${mesa.campanha && campaigns.length > 1 ? `: ${mesa.campanha.nome}` : ''}${mesa.usuarios ? ` // ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
           : ['idle', 'Foundry ligado, sem mundo aberto'];
+        // O mestre, no servidor com o Foundry 12 e o 14: qual é a mesa, e o botão para trocar.
+        const mesas = state.servidor?.mesas || [];
+        if (tableSwitch && ((mesa.online && mesa.foundry === tableSwitch.foundry) || Date.now() - tableSwitch.at > 3 * 60 * 1000)) tableSwitch = null;
+        const switcher = mesas.length > 1 ? `<div class="table-switch" role="group" aria-label="Versão do Foundry na mesa"><span>Foundry</span>${mesas.map(foundry => `<button type="button" data-table-switch="${foundry}" aria-pressed="${mesa.online && mesa.foundry === foundry}"${tableSwitch ? ' disabled' : ''} title="${mesa.online && mesa.foundry === foundry ? `A mesa está no Foundry ${foundry}` : `Trocar a mesa para o Foundry ${foundry}`}">${foundry}</button>`).join('')}${tableSwitch ? `<span class="table-switching">ligando o ${tableSwitch.foundry}…</span>` : ''}</div>` : '';
         table = `<div class="table-status table-${kind}" title="${escapeHtml(text)}"><span class="table-dot" aria-hidden="true"></span><span class="table-text">${escapeHtml(text)}</span></div>
-          ${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
+          ${switcher}${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
       }
       // Saúde do servidor (só para o mestre, no servidor online): em vermelho com backup de mais de 2 dias ou disco quase cheio.
       const health = state.servidor;
@@ -1541,6 +1547,37 @@
     });
     checkStatus();
     setInterval(checkStatus, 60 * 1000);
+
+    // Trocar a mesa entre o Foundry 12 e o 14 (o mestre, no servidor): confirma, e com gente conectada confirma de novo; a
+    // barra confere a cada 5 s até a mesa nova responder.
+    async function switchTable(foundry) {
+      const mesa = (lastState && lastState.mesa) || {};
+      if (tableSwitch || (mesa.online && mesa.foundry === foundry)) return;
+      const atual = mesa.online && mesa.foundry ? `o Foundry ${mesa.foundry}` : 'o Foundry de agora';
+      const sure = await window.wikiPopup.confirm({ title: `Mesa no Foundry ${foundry}`, html: `<p>${atual[0].toUpperCase()}${atual.slice(1)} desliga e o Foundry ${foundry} liga: a mesa fica fora do ar por alguns segundos. Ele continua sendo a mesa mesmo quando o servidor reinicia.</p>`, ok: `Trocar para o ${foundry}` });
+      if (!sure) return;
+      const send = forcar => fetch('api/mestre/mesa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ foundry, forcar }) })
+        .then(async response => ({ status: response.status, data: await response.json().catch(() => ({})) }))
+        .catch(() => ({ status: 0, data: { erro: 'Sem resposta da wiki.' } }));
+      let result = await send(false);
+      if (result.status === 409 && result.data.confirmar) {
+        const force = await window.wikiPopup.confirm({ title: 'Tem gente na mesa', message: `${result.data.erro} Trocar mesmo assim?`, ok: 'Trocar mesmo assim', danger: true });
+        if (!force) return;
+        result = await send(true);
+      }
+      if (result.status !== 200) { window.wikiPopup.toast(result.data.erro || 'Não consegui trocar a mesa.', { tone: 'bad', ms: 8000 }); return; }
+      if (!result.data.jaEstava) {
+        tableSwitch = { foundry, at: Date.now() };
+        window.wikiPopup.toast(`Ligando o Foundry ${foundry}: a mesa volta em alguns segundos.`, { tone: 'ok' });
+        drawStatus(lastState);
+        const poll = setInterval(() => { if (tableSwitch) checkStatus(); else clearInterval(poll); }, 5000);
+      }
+      checkStatus();
+    }
+    document.addEventListener('click', event => {
+      const button = event.target.closest('[data-table-switch]');
+      if (button && !button.disabled) switchTable(Number(button.dataset.tableSwitch));
+    });
 
     // A wiki instalada (celular ou computador): o service worker guarda as regras e o que o mestre publicou para
     // abrir sem internet (sw.js). Quando o navegador deixa instalar, o menu da conta mostra "Instalar no celular".

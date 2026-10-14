@@ -644,6 +644,13 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .table-idle .table-dot { background: var(--yellow); }
 .table-off { color: var(--muted); }
 .side-status .table-link { justify-self: start; margin-top: 0; text-decoration: none; }
+/* A troca de mesa do mestre (Foundry 12 ou 14): o botão da mesa no ar fica aceso. */
+.table-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 11px var(--mono); text-transform: uppercase; color: var(--muted); }
+.table-switch button { min-width: 34px; padding: 2px 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.table-switch button:hover:not(:disabled) { color: var(--cyan); border-color: var(--cyan); }
+.table-switch button[aria-pressed="true"] { border-color: var(--lime); color: var(--lime); cursor: default; }
+.table-switch button:disabled { opacity: .55; cursor: wait; }
+.table-switching { text-transform: none; }
 .side-meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
 .side-link { padding: 0; border: 0; background: none; color: var(--cyan); cursor: pointer; font-size: 12px; }
 .side-version { color: var(--muted); font: 10px var(--mono); }
@@ -840,7 +847,7 @@ button.nav-group-toggle:hover, button.nav-group-toggle:focus-visible { color: va
 @media (min-width: 821px) {
   body.sidebar-compact .shell { grid-template-columns: 64px minmax(0, 1fr); }
   body.sidebar-compact aside { padding: 12px 6px; overflow-x: hidden; scrollbar-width: none; }
-  body.sidebar-compact .brand, body.sidebar-compact .campaign-picker, body.sidebar-compact .side-server, body.sidebar-compact .table-text, body.sidebar-compact .table-link, body.sidebar-compact .nav-group-toggle, body.sidebar-compact .nav-text { display: none; }
+  body.sidebar-compact .brand, body.sidebar-compact .campaign-picker, body.sidebar-compact .side-server, body.sidebar-compact .table-text, body.sidebar-compact .table-link, body.sidebar-compact .table-switch, body.sidebar-compact .nav-group-toggle, body.sidebar-compact .nav-text { display: none; }
   body.sidebar-compact .side-status { justify-items: center; margin: 2px; padding: 9px 0; }
   body.sidebar-compact .workspace-tabs { grid-template-columns: 1fr; margin: 8px 2px; }
   body.sidebar-compact .workspace-tab { padding: 7px 0; font-size: 0; }

@@ -1,0 +1,70 @@
+_id: kQ8ZI0Fv1wDnZ5Ru
+_key: "!items!kQ8ZI0Fv1wDnZ5Ru"
+effects:
+  - cbbjCrElwBdBKPvO
+flags:
+  cyberpunk-red-core:
+    _migration:
+      current: 33
+      previous: "24"
+img: systems/cyberpunk-red-core/icons/compendium/weapons/veryHeavyPistol.svg
+name: Superchrome® Sidearm
+system:
+  ammoVariety:
+    - vHeavyPistol
+  attackmod: 0
+  brand: Centurian Essentials
+  canIgnoreArmor: false
+  concealable:
+    concealable: false
+    isConcealed: false
+  critFailEffect: jammed
+  damage: 4d6
+  description:
+    value: |
+      <p>
+        The Superchrome® Sidearm is an Exotic Very Heavy Pistol. Gives the user a +2
+        bonus to Wardrobe and Style when equipped.
+      </p>
+      <p>
+        <em
+          >*Note: Superchrome effects do not stack and will need to be managed in the
+          Effects tab if multiple Superchrome items are installed.</em
+        >
+      </p>
+  dvTable: DV Pistol
+  equipped: owned
+  favorite: false
+  fireModes:
+    autoFire: 0
+    suppressiveFire: false
+  handsReq: 1
+  ignoreArmorPercent: 0
+  ignoreBelowSP: 0
+  installedItems:
+    allowed: true
+    allowedTypes:
+      - itemUpgrade
+      - ammo
+    list: []
+    slots: 0
+    usedSlots: 0
+  isRanged: true
+  magazine:
+    ammoData: null
+    max: 8
+    value: 0
+  price:
+    market: 1000
+  quality: standard
+  revealed: true
+  rof: 1
+  source:
+    book: BC
+    page: 121
+  unarmedAutomaticCalculation: true
+  usage: toggled
+  usesType: magazine
+  weaponSkill: Handgun
+  weaponType: vHeavyPistol
+type: weapon

@@ -35,7 +35,8 @@ if [ -f "$PASTA/foundry.tar.gz" ]; then
   chown -R mesa:mesa /srv/foundry/data
   chmod -R u+rwX,go-w /srv/foundry/data
   touch "$DADOS/.modulo-pendente" # o módulo cpr-2077 é gerado de novo aqui, com a versão do GitHub
-  systemctl start foundry 2>/dev/null || true
+  # Com o Foundry 14 no ar (a mesa trocada pela wiki), o 12 fica parado: ligá-lo desligaria o 14.
+  systemctl is-active --quiet foundry14 || systemctl start foundry 2>/dev/null || true
   echo "Foundry: mundos, sistemas e módulos recebidos."
 fi
 rm -rf "$PASTA"

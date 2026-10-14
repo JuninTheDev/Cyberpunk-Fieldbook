@@ -1,3 +1,4 @@
+const { execFile } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
@@ -127,7 +128,7 @@ async function tableStatus() {
     try {
       const response = await fetch(foundryStatusUrl, { signal: AbortSignal.timeout(2500), cache: 'no-store' });
       const status = await response.json();
-      result = { url: foundryUrl || null, online: true, mundo: status.world || null, aberta: Boolean(status.active && status.world), usuarios: Number(status.users) || 0 };
+      result = { url: foundryUrl || null, online: true, mundo: status.world || null, aberta: Boolean(status.active && status.world), usuarios: Number(status.users) || 0, foundry: Number.parseInt(status.version, 10) || null };
     } catch { /* Foundry desligado ou reiniciando */ }
     tableCache = { at: Date.now(), result };
   }
@@ -147,7 +148,53 @@ function serverHealth() {
   try { const s = fs.statfsSync(dataDir); disco = { livre: s.bavail * s.bsize, total: s.blocks * s.bsize }; } catch { /* sistema sem statfs */ }
   let registro = [];
   try { registro = fs.readFileSync(path.join(dataDir, 'atualizacoes.log'), 'utf8').trim().split('\n').slice(-6).reverse(); } catch { /* ainda sem publicações */ }
-  return { backup, disco, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), registro };
+  return { backup, disco, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), registro, mesas: tablesInstalled() };
+}
+
+// ---------------- Troca de mesa: o Foundry 12 ou o 14 (só no servidor) ----------------
+// Os dois usam a mesma porta e o mesmo endereço, e só um roda por vez (o foundry14.service tem Conflicts com o
+// foundry.service). O mestre troca pela barra lateral: a wiki liga um (que continua ligado quando o servidor reinicia) e
+// desliga o outro, pelo sudo que o servidor/instalar-foundry14.sh libera só para estes comandos. A mesa no ar é a versão
+// que o próprio Foundry responde em /api/status.
+const MESAS = { 12: 'foundry.service', 14: 'foundry14.service' };
+const systemdDir = process.env.SYSTEMD_DIR || '/etc/systemd/system';
+// O comando do systemctl, numa lista em JSON (os testes usam um de mentira).
+const systemctl = (() => {
+  try { const lista = JSON.parse(process.env.MESA_SYSTEMCTL || ''); if (Array.isArray(lista) && lista.length) return lista.map(String); } catch { /* o padrão */ }
+  return ['sudo', '-n', '/usr/bin/systemctl'];
+})();
+const tablesInstalled = () => (hosted ? Object.keys(MESAS).map(Number).filter(foundry => fs.existsSync(path.join(systemdDir, MESAS[foundry]))) : []);
+const runSystemctl = args => new Promise((resolve, reject) => {
+  execFile(systemctl[0], [...systemctl.slice(1), ...args], { timeout: 60_000 }, (error, stdout, stderr) => (error ? reject(new Error(String(stderr || error.message).trim())) : resolve()));
+});
+let switching = false;
+async function switchTable(request, response) {
+  let body;
+  try { body = await readJsonBody(request); } catch (error) { return sendJson(response, error.status || 400, { erro: error.message }); }
+  const alvo = Number(body.foundry);
+  const outra = alvo === 12 ? 14 : 12;
+  if (!MESAS[alvo]) return sendJson(response, 400, { erro: 'Escolha o Foundry 12 ou o 14.' });
+  if (!tablesInstalled().includes(alvo) || !tablesInstalled().includes(outra)) return sendJson(response, 400, { erro: `O Foundry ${tablesInstalled().includes(alvo) ? outra : alvo} não está instalado no servidor.` });
+  if (switching) return sendJson(response, 409, { erro: 'A mesa já está trocando.' });
+  // Quem está na mesa agora (sem o estado guardado): trocar derruba quem está jogando, então pede confirmação.
+  tableCache.at = 0;
+  const mesa = await tableStatus();
+  if (mesa && mesa.online && mesa.foundry === alvo) return sendJson(response, 200, { ok: true, foundry: alvo, jaEstava: true });
+  if (mesa && mesa.usuarios > 0 && !body.forcar) {
+    return sendJson(response, 409, { erro: `${mesa.usuarios} ${mesa.usuarios > 1 ? 'pessoas conectadas' : 'pessoa conectada'} na mesa agora: trocar derruba quem está jogando.`, usuarios: mesa.usuarios, confirmar: true });
+  }
+  switching = true;
+  try {
+    await runSystemctl(['enable', '--now', MESAS[alvo]]);
+    await runSystemctl(['disable', MESAS[outra]]);
+  } catch (error) {
+    return sendJson(response, 500, { erro: `O servidor não deixou trocar a mesa (${error.message}). Na primeira vez, rode no servidor: sudo bash /srv/fieldbook/wiki/servidor/instalar-foundry14.sh` });
+  } finally {
+    switching = false;
+    tableCache.at = 0;
+  }
+  console.log(`Mesa trocada para o Foundry ${alvo} pelo mestre.`);
+  return sendJson(response, 200, { ok: true, foundry: alvo });
 }
 
 // ---------------- Pasta de dados ----------------
@@ -215,10 +262,10 @@ const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, 
 
 // A mesa na barra lateral, para cada um. Mundo ligado a uma campanha (o "mundo do Foundry" dela): quem joga nela vê
 // a mesa aberta e o nome da campanha; quem não joga vê o Foundry sem mundo aberto (não fica sabendo de outra mesa).
-// O id do mundo só o mestre vê.
+// O id do mundo e a versão do Foundry só o mestre vê.
 function tableFor(identity, mesa) {
   if (!mesa) return null;
-  const { mundo, ...rest } = mesa;
+  const { mundo, foundry: _versao, ...rest } = mesa;
   const campaign = mesa.aberta ? characterApi.campaigns.byWorld(mundo) : null;
   const card = campaign ? characterApi.campaignCard(campaign, identity) : null;
   if (identity.papel === 'mestre') return { ...mesa, campanha: card };
@@ -249,6 +296,12 @@ http.createServer((request, response) => {
 
   if (pathname === '/api/mestre/entrar' && request.method === 'POST') return void gmLogin(request, response);
   if (pathname === '/api/mestre/sair' && request.method === 'POST') return sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie('', 0) });
+  // Trocar a mesa entre o Foundry 12 e o 14 (só o mestre, só no servidor).
+  if (pathname === '/api/mestre/mesa' && request.method === 'POST') {
+    if (!gameMaster) return sendJson(response, 403, { erro: 'Só o mestre.' });
+    if (!hosted) return sendJson(response, 400, { erro: 'A troca de mesa é só no servidor.' });
+    return void switchTable(request, response);
+  }
   // Estado para a barra lateral: a mesa do Foundry, a versão no ar e se este aparelho é o do mestre.
   if (pathname === '/api/estado') {
     return Promise.all([version(), tableStatus()]).then(([versao, mesa]) => sendJson(response, 200, { modo: hosted ? 'hospedado' : 'local', mestre: gameMaster, login: Boolean(gmKey), versao, mesa: tableFor(characterApi.who(request), mesa), backup: gameMaster && Boolean(backupDir), servidor: gameMaster ? serverHealth() : null }));
