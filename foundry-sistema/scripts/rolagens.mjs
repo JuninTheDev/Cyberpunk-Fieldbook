@@ -37,8 +37,9 @@ export function criticoDo(roll) {
 // semFalhaCritica: o 1 natural não tira um d10 (Recuperação de Falhas do Solo, nos ataques); o 10 ainda soma (o "xo"
 // do core: explode uma vez).
 // A Sorte entra no teste, +1 por ponto, e sai da Sorte do ator (RED p. 130): a escolhida na janela de rolagem (sorte) ou,
-// sem a janela, a que ele preparou na ficha.
-export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false, sorte: escolhida }) {
+// sem a janela, a que ele preparou na ficha. falante: o nome no cartão de quem não é ator (o Black ICE e o demônio de uma
+// arquitetura da NET); sem ele, fala o ator.
+export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false, sorte: escolhida, falante = '' }) {
   const sorte = escolhida === undefined ? (ator?.sortePreparada ?? 0) : sorteParaGastar(escolhida, ator?.system.sorte.value);
   const usadas = [...partes, ...(sorte ? [{ rotulo: 'Sorte', valor: sorte }] : [])].filter(parte => Number(parte.valor));
   const formula = [semFalhaCritica ? '1d10xo' : '1d10crit', ...usadas.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ');
@@ -49,7 +50,7 @@ export async function testar(ator, { rotulo, partes = [], modo, falar = true, sa
   if (!falar) return resultado;
   const content = await renderizar('teste.hbs', { rotulo, sabor, partes: usadas, total: roll.total, critico, dados: await roll.render() });
   resultado.mensagem = await ChatMessage.implementation.create({
-    speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: [roll],
+    speaker: falante ? { alias: falante } : ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: [roll],
     flags: { [SISTEMA]: { teste: { rotulo, total: roll.total, critico, ...dados } } }
   }, { messageMode: modo });
   return resultado;

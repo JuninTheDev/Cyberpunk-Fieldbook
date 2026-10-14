@@ -194,12 +194,13 @@ export class AtorCPR extends Actor {
   }
 
   // O dano do Zap (a wiki e o CORE): 1d6 no REZ de um programa ou direto no cérebro de um netrunner, com os botões do
-  // mestre para aplicar: o do netrunner também na REZ de um Black ICE ou demônio; o do demônio, só no intruso.
-  async rolarDanoDoZap() {
+  // mestre para aplicar: o do netrunner também na REZ de um Black ICE ou demônio; o do demônio, só no intruso. Sem os
+  // botões (botoes: false), para o motor da NET, que aplica o dano sozinho.
+  async rolarDanoDoZap({ botoes = true } = {}) {
     const roll = await new Roll('1d6').evaluate();
     const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
       rotulo: 'Dano: Zap (no REZ de um programa ou no cérebro)', total: roll.total, critico: null, dados: await roll.render(),
-      botoes: botoesDaNet(this.type === 'demonio' ? ONDE_O_DANO_ENTRA.zapDoDemonio : ONDE_O_DANO_ENTRA.zap)
+      botoes: botoes ? botoesDaNet(this.type === 'demonio' ? ONDE_O_DANO_ENTRA.zapDoDemonio : ONDE_O_DANO_ENTRA.zap) : []
     });
     await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { danoDePrograma: { zap: true, total: roll.total } } } });
     return roll;

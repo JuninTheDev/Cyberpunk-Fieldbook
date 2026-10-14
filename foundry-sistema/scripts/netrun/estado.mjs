@@ -1,13 +1,16 @@
 // O motor da NET (o estado.mjs do NET Architect da mesa), sempre no mestre ativo: conecta e desconecta os netrunners,
-// anda pela arquitetura, resolve as habilidades de Interface contra os andares e grava no Tile o estado público da
-// arquitetura (os andares que os jogadores enxergam, quem está onde, o registro). Os inimigos e o combate vêm nas
-// próximas partes do C8. No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
+// anda pela arquitetura, resolve as habilidades de Interface contra os andares e contra os inimigos (o Zap e o Slide) e
+// grava no Tile o estado público da arquitetura (os andares que os jogadores enxergam, quem está onde, a REZ dos
+// inimigos, o registro). Os ataques dos inimigos e o combate vêm nas próximas partes do C8. No Tile só vai o que os
+// jogadores podem ver; o resto fica no item da arquitetura.
 import { ENTRADA, filhosDe, lerArquitetura } from '../arquitetura.mjs';
 import { SISTEMA } from '../config.mjs';
-import { acoesDeNet } from '../regras.mjs';
+import { acoesDeNet, NUMEROS_DA_NET } from '../regras.mjs';
+import { testar } from '../rolagens.mjs';
 import { FLAG_CONEXAO, FLAG_ESTADO, FLAG_PONTO, STATUS_CONECTADO } from './constantes.mjs';
 import {
-  alcanceDo, alvoDaHabilidade, conteudosDoNo, distancia, faltasPara, gastarAcoes, motivoParaNaoAndar, netrunnerDo, resolverHabilidade, resumoDoAndar, vistaPublica
+  acharConteudo, alcanceDo, alvoDaHabilidade, conteudosDoNo, demonioDe, distancia, faltasPara, gastarAcoes, iceDe, inimigosAtivos, motivoParaNaoAndar, motivoParaNaoSlide,
+  mudarRez, netrunnerDo, nomeDoInimigo, resolverHabilidade, resolverSlide, resolverZap, resumoDoAndar, rezDe, vistaPublica
 } from './regras-da-net.mjs';
 import { erro } from './socket.mjs';
 
@@ -144,6 +147,41 @@ async function perguntarVirus(corredor, texto, emCombateAgora) {
   return resposta || null;
 }
 
+// ---------------- Os inimigos ----------------
+// A rolagem de um inimigo da arquitetura (o mestre rola; o cartão sai no nome dele): a PER, a SPD, o ATK ou a DEF do
+// Black ICE, a Interface do demônio (que não tem DEF), + 1d10. O netrunner inimigo ligado a uma ficha rola a Interface
+// dela; sem ficha, só o 1d10.
+async function rolagemDoInimigo(conteudo, id) {
+  const nome = nomeDoInimigo(conteudo);
+  if (conteudo.tipo === 'netrunner') {
+    const ator = conteudo.ator ? await fromUuid(conteudo.ator) : null;
+    if (ator?.system?.rankDeInterface) return (await ator.rolarInterface('defesa')).total;
+    return (await testar(null, { rotulo: 'Interface', partes: [], falante: nome })).total;
+  }
+  const tipo = conteudo.tipo === 'ice' ? 'blackice' : 'demonio';
+  const numero = NUMEROS_DA_NET[tipo].find(n => n.id === (tipo === 'demonio' ? 'interface' : id));
+  const valor = tipo === 'blackice' ? iceDe(conteudo.ice)?.[numero.id] ?? 0 : demonioDe(conteudo.demonio)[numero.id];
+  return (await testar(null, { rotulo: numero.rotulo, partes: [{ rotulo: numero.rotulo, valor }], sabor: numero.dica, falante: nome })).total;
+}
+
+// O Zap do netrunner no inimigo (a wiki): a defesa dele; acertando, o 1d6 (o cartão sem os botões do mestre: o motor
+// aplica) na REZ do Black ICE ou do demônio, ou no cérebro do netrunner inimigo (que cai da NET com o HP em 0).
+async function zap(ctx, alvo, total) {
+  const { est, corredor, ator } = ctx;
+  const defesa = await rolagemDoInimigo(alvo, 'def');
+  const dano = total > defesa ? (await ator.rolarDanoDoZap({ botoes: false })).total : 0;
+  const linha = resolverZap(est, corredor, alvo, { total, defesa, dano });
+  if (linha.acertou && alvo.tipo === 'netrunner') {
+    const inimigo = alvo.ator ? await fromUuid(alvo.ator) : null;
+    const resultado = await inimigo?.receberDanoNoCerebro?.(dano, { dePrograma: false });
+    if (resultado && resultado.hpDepois <= 0) {
+      est.fora = [...new Set([...(est.fora ?? []), alvo.chave])];
+      linha.texto += ` ${nomeDoInimigo(alvo)} caiu da NET.`;
+    } else if (!resultado) linha.texto += ' (sem ficha ligada: o mestre aplica o dano).';
+  }
+  return linha;
+}
+
 // ---------------- Operações (o que o socket chama, no mestre ativo) ----------------
 export const operacoes = {
   async conectar(dados, usuario) {
@@ -190,10 +228,13 @@ export const operacoes = {
     if (motivo) throw erro(motivo);
     const descendo = filhosDe(arq, corredor.no).includes(dados.destino);
     corredor.no = dados.destino;
+    const inimigos = inimigosAtivos(arq, est, corredor.no);
+    Object.assign(corredor, { engajado: inimigos.map(conteudo => conteudo.chave), escapou: [] });
     if (corredor.no === ENTRADA) registrar(est, `${corredor.nome} voltou ao ponto de acesso.`);
     else {
       if (!est.vistos.includes(corredor.no)) est.vistos = [...est.vistos, corredor.no];
       registrar(est, `${corredor.nome} ${descendo ? 'desceu' : 'subiu'} para ${lugar(arq, corredor.no)}: ${resumoDoAndar(arq, corredor.no)}.`);
+      if (inimigos.length) registrar(est, `${inimigos.map(nomeDoInimigo).join(' e ')} ${inimigos.length > 1 ? 'estão' : 'está'} neste andar: o Black ICE e o demônio seguram a descida até caírem.`, 'falha');
     }
     await concluir(ctx);
     return { no: corredor.no };
@@ -214,11 +255,18 @@ export const operacoes = {
     const agora = emCombate(token);
     const virus = chave === 'virus' ? await perguntarVirus(corredor, texto, agora) : null;
     if (chave === 'virus' && !virus) throw erro('O mestre não aceitou o vírus agora.');
+    const umSlide = chave === 'slide' ? motivoParaNaoSlide(corredor, agora) : null;
+    if (umSlide && !usuario.isGM) throw erro(umSlide);
     const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM, quantas: virus?.acoes ?? 1 });
     if (semAcao) throw erro(semAcao);
     const rolagem = await ator.rolarInterface(chave);
     if (!rolagem) throw erro('A rolagem da Interface não saiu.');
-    const linha = resolverHabilidade(arq, est, corredor, { chave, alvo, total: rolagem.total, dvVirus: virus?.dv, texto });
+    let linha;
+    if (chave === 'zap') linha = await zap(ctx, alvo, rolagem.total);
+    else if (chave === 'slide') {
+      if (agora) corredor.slides = (corredor.slides ?? 0) + 1;
+      linha = resolverSlide(corredor, alvo, { total: rolagem.total, per: await rolagemDoInimigo(alvo, 'per') });
+    } else linha = resolverHabilidade(arq, est, corredor, { chave, alvo, total: rolagem.total, dvVirus: virus?.dv, texto });
     registrar(est, linha.texto, linha.tipo);
     await concluir(ctx);
     return { total: rolagem.total };
@@ -254,11 +302,24 @@ export const operacoes = {
     return { ok: true };
   },
 
+  // O mestre muda a REZ de um Black ICE ou demônio da arquitetura (o dano que veio de fora, a REZ cheia de volta).
+  async ajustarRez(dados, usuario) {
+    if (!usuario.isGM) throw erro('Só o mestre ajusta a REZ dos inimigos.');
+    const ctx = await contexto(dados, usuario, { precisaCorredor: false });
+    const achado = acharConteudo(ctx.arq, dados.alvo);
+    if (!achado || !['ice', 'demonio'].includes(achado.conteudo.tipo)) throw erro('Este inimigo não está na arquitetura.');
+    const { conteudo } = achado;
+    const rez = mudarRez(ctx.est, conteudo, dados.cheia ? Infinity : rezDe(ctx.est, conteudo) + (Number(dados.delta) || 0));
+    registrar(ctx.est, `O mestre pôs a REZ do ${nomeDoInimigo(conteudo)} em ${rez}.`);
+    await concluir(ctx);
+    return { rez };
+  },
+
   // O começo do turno do netrunner (pelo combate, no mestre ativo, ou pelo botão do mestre): as Ações NET voltam.
   async zerarAcoes(dados, usuario) {
     if (!usuario.isGM) throw erro('Só o mestre zera as Ações NET.');
     const ctx = await contexto(dados, usuario);
-    Object.assign(ctx.corredor, { acoes: 0, programasNaRodada: [] });
+    Object.assign(ctx.corredor, { acoes: 0, programasNaRodada: [], slides: 0 });
     await concluir(ctx);
     return { ok: true };
   },

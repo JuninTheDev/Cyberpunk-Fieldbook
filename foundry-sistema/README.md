@@ -55,7 +55,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   andar mais fundo, tem a DV e as Ações NET que o mestre põe. Passa quem tira mais que a DV. Em combate, as Ações NET
   contam (as do Rank por turno, de volta no turno do netrunner); a desconexão insegura sai sem gastar. Por enquanto
   quem rola é o mestre, com a Sorte preparada na ficha. O mestre vê a arquitetura inteira, age pelo netrunner
-  escolhido, revela andares e zera as Ações NET. Os inimigos ainda não agem (o C8).
+  escolhido, revela andares e zera as Ações NET. O Black ICE e o demônio do andar seguram a descida até caírem (o Black
+  ICE também pelo Slide, uma vez por turno em combate, contra a PER + 1d10 dele); o Zap tira 1d6 da REZ deles (contra a
+  DEF + 1d10 do Black ICE ou a Interface + 1d10 do demônio, que o mestre rola no nome deles), e o mestre ajusta a REZ
+  pelo painel dele. Os ataques e os efeitos dos inimigos ainda não (o C8).
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
@@ -246,7 +249,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
-  (os inimigos e o combate na NET, os programas na janela, a janela de rolagem do jogador na NET, os nós de controle
+  (os ataques e os efeitos dos inimigos e o combate na NET, os programas na janela, a janela de rolagem do jogador na NET, os nós de controle
   ligados à cena, os arquivos copiados, o Scanner e o editor visual) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
@@ -316,6 +319,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
   - o ponto de acesso à NET, nos dois navegadores: a configuração pelo HUD do Tile (as arquiteturas do mundo e do compêndio, a imagem de terminal), o marcador (o oculto, só para o mestre), o jogador a 7 m que não conecta (nem pedindo direto ao mestre) e que conecta com o Range Upgrade (a flag, o status, o anel e a janela com o andar 1 como "?"), a queda ao sair do alcance, o "Desconectar" da janela, o reinício só pelo mestre e o token e o Tile apagados;
   - andar e as habilidades na NET, no navegador do jogador: o "?" do andar 1 que vira a senha ao chegar, a senha que trava a descida, o Backdoor que o mestre rola (o empate com a DV não passa), o Eye-Dee com o arquivo, o Pathfinder que para no nó de DV maior, o Control e o comando, o Virus no andar mais fundo com a DV e as Ações NET do mestre, e o mestre que vê o andar escondido e o revela;
+  - os inimigos no andar: o Hellhound, com os números da wiki, segura a descida; o Zap (a DEF do Hellhound rolada no nome dele) tira da REZ; o Slide passa, e de volta ao andar o Hellhound segura de novo; o Imp segura e não se dribla; o mestre derruba a REZ dele pelo painel;
   - as Ações NET em combate: o Virus de 2 Ações e o Cloak gastam as 3 do Rank 4, o Cloak seguinte e o desconectar seguro são recusados, a rodada seguinte as devolve e a desconexão insegura sai sem gastar;
   - a arquitetura pelas tabelas: a padrão com os dados fixos (o resultado que não repete, o ramo B do andar 3 e os dois Hellhound no mesmo andar);
   - o compêndio das arquiteturas: as 7 (as 4 da campanha e os 3 exemplos), escondidas do jogador, e O Gatilho no mapa;

@@ -75,6 +75,7 @@ esta janela representa, o painel do mestre e o registro. --}}
   <section class="habilidades">
     <h3>HABILIDADES DE INTERFACE</h3>
     {{#unless netrunner.pronto}}<p class="dica">Sem cyberdeck equipado ou sem Interface: as habilidades não rolam.</p>{{/unless}}
+    {{#if netrunner.alvos.length}}<label class="alvo">Alvo do Zap e do Slide <select data-texto="alvo">{{#each netrunner.alvos}}<option value="{{chave}}" {{#if escolhido}}selected{{/if}}>{{nome}}</option>{{/each}}</select></label>{{/if}}
     <div class="botoes">
       {{#each netrunner.habilidades}}<button type="button" data-action="habilidade" data-habilidade="{{id}}" data-tooltip="{{dica}}" {{#unless pode}}disabled{{/unless}}>{{rotulo}}</button>{{/each}}
     </div>
@@ -95,6 +96,11 @@ esta janela representa, o painel do mestre e o registro. --}}
       {{#if mestre.comCorredor}}<button type="button" data-action="zerarAcoes" data-tooltip="O começo do turno do netrunner: as Ações NET voltam">Zerar as Ações NET</button>{{/if}}
       {{#if mestre.semNinguem}}<button type="button" data-action="reiniciar" class="perigo">Reiniciar a arquitetura</button>{{/if}}
     </div>
+    {{#each mestre.inimigos}}
+    <div class="rez-inimigo" data-alvo="{{chave}}"><span><b>{{nome}}</b> <small>{{situacao}}</small></span>
+      <button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="-5">−5</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="-1">−1</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="1">+1</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-cheia="1">REZ cheia</button>
+    </div>
+    {{/each}}
   </section>
   {{/if}}
 

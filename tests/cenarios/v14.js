@@ -4239,7 +4239,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const virus = await jogador.evaluate(`(async () => window.__net.esperarRegistro('Virus ('))()`);
         const tem = (texto, parte) => String(texto ?? '').includes(parte);
         const ok = andou.antes === '1A ? desconhecido' && andou.no === '1a' && andou.detalhe === 'Senha DV 6 trancada' && andou.registro === `${NOME} desceu para o andar 1: Senha DV 6.`
-          && andou.habilidades === 'pathfinder+,backdoor+,eyedee-,control-,cloak+,virus-' && tem(andou.acoes, 'livres fora de combate (3 por turno em combate)')
+          && andou.habilidades === 'pathfinder+,backdoor+,eyedee-,control-,cloak+,virus-,zap-,slide-' && tem(andou.acoes, 'livres fora de combate (3 por turno em combate)')
           && andou.avisos.join() === 'A senha deste andar (DV 6) trava a descida: use Backdoor.' && andou.depois === '1a'
           && backdoor1 === `Backdoor (6 contra DV 6): ${NOME} não passou a senha.` && backdoor2 === `Backdoor (9 contra DV 6): ${NOME} quebrou a senha.`
           && cartao.rotulo === 'Backdoor' && cartao.total === 9 && cartao.quem === NOME && cartao.autor
@@ -4247,7 +4247,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && eyedee.linha === `Eye-Dee (10 contra DV 8): ${NOME} identificou o arquivo (Folha de pagamento: Os salários da clínica).` && eyedee.detalhe === 'Arquivo DV 8 identificado Folha de pagamento: Os salários da clínica.'
           && pathfinder.linha === `Pathfinder (7): ${NOME} revelou 2 andares.` && pathfinder.mapa === '1a,2a,3a,3b'
           && controle.vizinho === '4A ?' && controle.linha === `Control (11 contra DV 8): ${NOME} tomou o nó de controle (As câmeras do saguão).`
-          && controle.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-' && controle.comando === `${NOME} comanda o nó de controle: “Desligar as câmeras”.` && controle.detalhe === 'Nó de controle DV 8 tomado As câmeras do saguão'
+          && controle.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-,zap-,slide-' && controle.comando === `${NOME} comanda o nó de controle: “Desligar as câmeras”.` && controle.detalhe === 'Nó de controle DV 8 tomado As câmeras do saguão'
           && mestre.escondido && mestre.titulo === 'Andar 4 escondido dos jogadores' && mestre.depois && mestre.registro === 'O mestre revelou o andar 4.' && revelado === '4A Andar vazio'
           && fundo.no === '3b' && fundo.virusPronto && pergunta.texto === 'Apagar o registro da portaria' && pergunta.exemplos === 5
           && virus === `Virus (12 contra DV 10): ${NOME} deixou o vírus “Apagar o registro da portaria” (DV 12 para tirá-lo).`;
@@ -4337,6 +4337,112 @@ module.exports = async ({ edge, servidores, r }) => {
           && voltou.acoes === 0 && voltou.texto === 'Ações NET: sobram 3 de 3 neste turno'
           && !saiu.janela && !saiu.conectado && registro.includes(`${NOME} desconectou de forma insegura.`);
         return [ok, JSON.stringify({ inicio, gastou, voltou, saiu, registro: registro.slice(-4) })];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
+    await r.passo('os inimigos no andar (o NET Architect da mesa; wiki: o Zap e o Slide): o Hellhound do andar 1, com os números da wiki, segura a descida; o Zap (o mestre rola a DEF do Hellhound no nome dele) tira 4 da REZ; o Slide passa; no andar 2, o Imp segura e o Slide não vale contra ele; o mestre derruba a REZ do Imp pelo painel dele, e a descida fica livre', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Inimigos';
+      const ARQ = 'Teste Arquitetura dos Inimigos';
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [
+          { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 2, ramo: 'a', tipo: 'demonio', demonio: 'imp' }, { andar: 3, ramo: 'a', tipo: 'vazio' }
+        ] });
+        // 1. No andar 1: o Hellhound (os números e a REZ), o registro, os botões; descer, o aviso.
+        const chegou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await net.ir('1a');
+          const resultado = { registro: net.registro().slice(-2), detalhe: net.texto('.andar-escolhido li'), mapa: net.texto('[data-no="1a"]'),
+            habilidades: [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join() };
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            await net.ir('2a', { espera: false });
+            await window.__esperar(() => avisos.length && net.pronta());
+          } finally { delete ui.notifications.warn; }
+          return { ...resultado, avisos, no: net.eu()?.no };
+        })()`);
+        // 2. O Zap: 4 + 6 = 10 contra a DEF do Hellhound (2 + 3 = 5); o dano, 4, sai da REZ (20 → 16).
+        await fixar(edge, [[6, 10], [3, 10], [4, 6]]);
+        const zap = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('button[data-habilidade=zap]');
+          const linha = await net.esperarRegistro('Zap (');
+          await window.__esperar(() => (net.texto('[data-no="1a"]') ?? '').includes('16/20'));
+          return { linha, mapa: net.texto('[data-no="1a"]') };
+        })()`);
+        const cartaoDoIce = await edge.evaluate(`(() => {
+          const msg = game.messages.contents.filter(m => m.speaker.alias === 'Hellhound').at(-1);
+          return { rotulo: msg?.getFlag('${S}', 'teste')?.rotulo, total: msg?.getFlag('${S}', 'teste')?.total };
+        })()`);
+        // 3. O Slide: 4 + 7 = 11 contra a PER do Hellhound (6 + 2 = 8); depois, desce ao 2A.
+        await fixar(edge, [[7, 10], [2, 10]]);
+        const slide = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('button[data-habilidade=slide]');
+          const linha = await net.esperarRegistro('Slide (');
+          const no = await net.ir('2a');
+          return { linha, no, registro: net.registro().slice(-2),
+            habilidades: [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join() };
+        })()`);
+        // 4. O Imp segura (o aviso); o mestre derruba a REZ dele pelo painel (−5 três vezes); a descida fica livre.
+        const imp = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            await net.ir('3a', { espera: false });
+            await window.__esperar(() => avisos.length && net.pronta());
+          } finally { delete ui.notifications.warn; }
+          return avisos;
+        })()`);
+        const mestre = await edge.evaluate(`(async () => {
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const janela = game.system.api.netrun.janela(tile, { gm: true });
+          await window.__esperar(() => janela.element?.querySelector('[data-action=selecionar][data-no="2a"]'));
+          janela.element.querySelector('[data-action=selecionar][data-no="2a"]').click();
+          await window.__esperar(() => janela.element.querySelector('.rez-inimigo button[data-delta="-5"]'));
+          const antes = janela.element.querySelector('.rez-inimigo').textContent.replace(/\\s+/g, ' ').trim();
+          const rez = () => (game.system.api.netrun.estado(tile)?.ices ?? []).find(i => i.chave === '2a.0')?.rez;
+          for (const esperado of [10, 5, 0]) {
+            await window.__esperar(() => janela.element.querySelector('.rez-inimigo button[data-delta="-5"]') && !janela.ocupado);
+            janela.element.querySelector('.rez-inimigo button[data-delta="-5"]').click();
+            await window.__esperar(() => rez() === esperado);
+          }
+          await janela.close();
+          return { antes, rez: rez(), registro: game.system.api.netrun.estado(tile).log.at(-1).texto };
+        })()`);
+        const livre = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => (net.texto('[data-no="2a"]') ?? '').includes('derrubado'));
+          const mapa = net.texto('[data-no="2a"]');
+          const no = await net.ir('3a');
+          // De volta ao 1A, o Slide de antes não vale mais: o Hellhound segura de novo.
+          await net.ir('2a');
+          await net.ir('1a');
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            await net.ir('2a', { espera: false });
+            await window.__esperar(() => avisos.length && net.pronta());
+          } finally { delete ui.notifications.warn; }
+          return { mapa, no, volta: avisos };
+        })()`);
+        const ok = chegou.registro.join(' | ') === `${NOME} desceu para o andar 1: Hellhound. | Hellhound está neste andar: o Black ICE e o demônio seguram a descida até caírem.`
+          && chegou.detalhe.startsWith('Hellhound Black ICE REZ 20/20 PER 6 · SPD 6 · ATK 6 · DEF 2. ') && chegou.mapa === `1A Hellhound (REZ 20/20) ${NOME}`
+          && chegou.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-,zap+,slide+'
+          && chegou.avisos.join() === 'O Hellhound deste andar te segura: derrube a REZ dele ou use o Slide.' && chegou.no === '1a'
+          && zap.linha === `Zap (10 contra 5): ${NOME} acertou o Hellhound: 4 de REZ, fica com 16.` && zap.mapa === `1A Hellhound (REZ 16/20) ${NOME}`
+          && cartaoDoIce.rotulo === 'DEF' && cartaoDoIce.total === 5
+          && slide.linha === `Slide (11 contra 8): ${NOME} escapou do Hellhound e pode seguir para um andar vizinho.` && slide.no === '2a'
+          && slide.registro.join(' | ') === `${NOME} desceu para o andar 2: Imp. | Imp está neste andar: o Black ICE e o demônio seguram a descida até caírem.`
+          && slide.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-,zap+,slide-'
+          && imp.join() === 'O demônio Imp te segura: derrube a REZ dele (o Slide não funciona contra demônios).'
+          && mestre.antes.startsWith('Imp REZ 15/15') && mestre.rez === 0 && mestre.registro === 'O mestre pôs a REZ do Imp em 0.'
+          && livre.mapa === `2A Imp (derrubado) ${NOME}` && livre.no === '3a' && livre.volta.join() === 'O Hellhound deste andar te segura: derrube a REZ dele ou use o Slide.';
+        return [ok, JSON.stringify({ chegou, zap, cartaoDoIce, slide, imp, mestre, livre })];
       } finally {
         await desmontarNet({ nome: NOME, arquitetura: ARQ });
       }

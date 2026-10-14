@@ -1,13 +1,14 @@
 // A janela da NET (a janela.mjs do NET Architect): quem está na NET e onde, o mapa (o jogador vê o que os jogadores
 // enxergam; o mestre, a arquitetura inteira, com o que ainda está escondido), o andar escolhido no mapa (com "Ir para
-// cá" nos vizinhos), as habilidades de Interface contra os andares, o comando no nó de controle tomado, o registro e,
-// para o mestre, o painel dele (revelar, zerar as Ações NET, derrubar, reiniciar). Abre para o dono do token conectado e
-// para o mestre, que age pelo netrunner escolhido. Os inimigos, o combate e o deck vêm nas próximas partes do C8.
+// cá" nos vizinhos), as habilidades de Interface contra os andares e contra os inimigos (o Zap e o Slide, com o alvo), o
+// comando no nó de controle tomado, o registro e, para o mestre, o painel dele (revelar, a REZ dos inimigos, zerar as
+// Ações NET, derrubar, reiniciar). Abre para o dono do token conectado e para o mestre, que age pelo netrunner escolhido.
+// Os ataques dos inimigos, o combate e o deck vêm nas próximas partes do C8.
 import { ENTRADA, RAMOS, TIPOS_DE_ANDAR } from '../arquitetura.mjs';
 import { caminho, SISTEMA } from '../config.mjs';
 import { HABILIDADES_DE_INTERFACE } from '../regras.mjs';
 import { arquiteturaDoPonto, emCombate, estadoDoTile, pontoDoTile } from './estado.mjs';
-import { demonioDe, HABILIDADES_NA_NET, iceDe, netrunnerDo } from './regras-da-net.mjs';
+import { ehInimigo, HABILIDADES_NA_NET, inimigoAtivo, inimigoPublico, netrunnerDo } from './regras-da-net.mjs';
 import { pedir } from './socket.mjs';
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -15,12 +16,15 @@ const INIMIGOS = ['ice', 'demonio', 'netrunner'];
 const SITUACAO = { senha: ['trancada', 'quebrada'], arquivo: ['por identificar', 'identificado'], controle: ['livre', 'tomado'] };
 
 // O conteúdo de um andar como a janela mostra: o nome, o DV, a situação (a senha quebrada, o arquivo identificado, o nó
-// tomado, a REZ do inimigo) e o que o arquivo é e o que o nó controla (no estado público, só depois de feitos; o mestre
-// vê sempre).
+// tomado, a REZ do inimigo ou ele derrubado) e o que o arquivo é e o que o nó controla (no estado público, só depois de
+// feitos; o mestre vê sempre); do inimigo, os números da wiki e o efeito.
 function conteudoNaJanela(conteudo) {
   if (INIMIGOS.includes(conteudo.tipo)) {
     const inimigo = conteudo.inimigo ?? { nome: TIPOS_DE_ANDAR[conteudo.tipo] };
-    return { inimigo: true, nome: inimigo.nome, tipo: TIPOS_DE_ANDAR[conteudo.tipo], situacao: inimigo.rez ? `REZ ${inimigo.rezAtual}/${inimigo.rez}` : '' };
+    const numeros = conteudo.tipo === 'ice' ? `PER ${inimigo.per} · SPD ${inimigo.spd} · ATK ${inimigo.atk} · DEF ${inimigo.def}`
+      : conteudo.tipo === 'demonio' ? `Interface ${inimigo.interface} · ${inimigo.acoes} Ações NET · combate ${inimigo.valorDeCombate}` : '';
+    const situacao = conteudo.tipo === 'netrunner' ? (conteudo.feito ? 'fora da NET' : 'na NET') : conteudo.feito ? 'derrubado' : `REZ ${inimigo.rezAtual}/${inimigo.rez}`;
+    return { inimigo: true, chave: conteudo.chave, nome: inimigo.nome, tipo: TIPOS_DE_ANDAR[conteudo.tipo], feito: conteudo.feito, situacao, oQue: [numeros, inimigo.efeito].filter(Boolean).join('. '), comRez: Boolean(inimigo.rez) };
   }
   const [antes, depois] = SITUACAO[conteudo.tipo] ?? [];
   return {
@@ -28,7 +32,7 @@ function conteudoNaJanela(conteudo) {
     oQue: [conteudo.nome, conteudo.descricao].filter(Boolean).join(': ')
   };
 }
-const textoCurto = conteudo => (conteudo.inimigo ? conteudo.nome : `${conteudo.nome}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}${conteudo.feito ? ` (${conteudo.situacao})` : ''}`);
+const textoCurto = conteudo => (conteudo.inimigo ? `${conteudo.nome} (${conteudo.situacao})` : `${conteudo.nome}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}${conteudo.feito ? ` (${conteudo.situacao})` : ''}`);
 
 export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
   // As janelas abertas neste cliente, pela chave do Tile e de quem vê (o mestre ou o token).
@@ -59,7 +63,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       desconectar: JanelaDaNet.#desconectar, desconectarInseguro: JanelaDaNet.#desconectarInseguro, selecionar: JanelaDaNet.#selecionar, mover: JanelaDaNet.#mover,
       habilidade: JanelaDaNet.#habilidade, comandar: JanelaDaNet.#comandar, escolherCorredor: JanelaDaNet.#escolherCorredor, revelar: JanelaDaNet.#revelar,
-      zerarAcoes: JanelaDaNet.#zerarAcoes, reiniciar: JanelaDaNet.#reiniciar
+      zerarAcoes: JanelaDaNet.#zerarAcoes, reiniciar: JanelaDaNet.#reiniciar, ajustarRez: JanelaDaNet.#ajustarRez
     }
   };
 
@@ -86,17 +90,12 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!this.gm || !arq) return (est.nos ?? []).map(no => ({ ...no, publico: true }));
     const publicos = new Set((est.nos ?? []).filter(no => no.visto).map(no => no.id));
     const feitos = new Set(est.feitos ?? []);
-    const rez = Object.fromEntries((est.ices ?? []).map(item => [item.chave, item.rez]));
+    const estado = { ices: est.ices ?? [], fora: est.fora ?? [] };
     return Object.values(arq.nos).map(no => ({
       id: no.id, andar: no.andar, ramo: no.ramo, pai: no.pai, visto: true, publico: publicos.has(no.id) || Boolean(est.mapa),
-      conteudos: no.conteudos.map(conteudo => {
-        let inimigo = null;
-        if (conteudo.tipo === 'ice') inimigo = { nome: iceDe(conteudo.ice)?.nome ?? 'Black ICE', rez: iceDe(conteudo.ice)?.rez ?? 0 };
-        if (conteudo.tipo === 'demonio') inimigo = { nome: conteudo.nome || demonioDe(conteudo.demonio).nome, rez: demonioDe(conteudo.demonio).rez };
-        if (conteudo.tipo === 'netrunner') inimigo = { nome: conteudo.nome || 'Netrunner inimigo' };
-        if (inimigo?.rez) inimigo.rezAtual = rez[conteudo.chave] ?? inimigo.rez;
-        return { ...conteudo, inimigo, feito: feitos.has(conteudo.chave) };
-      })
+      conteudos: no.conteudos.map(conteudo => (ehInimigo(conteudo)
+        ? { ...conteudo, inimigo: inimigoPublico(estado, conteudo), feito: !inimigoAtivo(estado, conteudo) }
+        : { ...conteudo, feito: feitos.has(conteudo.chave) }))
     }));
   }
 
@@ -151,12 +150,19 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
       const naoFeito = tipo => conteudosAqui.some(conteudo => conteudo.tipo === tipo && !conteudo.feito);
       const fundo = aqui !== ENTRADA && !andares.some(no => no.pai === aqui);
       const pronto = Boolean(ator && netrunnerDo(ator).deck && ator.system.rankDeInterface);
-      const pode = { pathfinder: true, cloak: true, backdoor: naoFeito('senha'), eyedee: naoFeito('arquivo'), control: naoFeito('controle'), virus: fundo };
       const combate = Boolean(token && emCombate(token));
+      // Os inimigos ativos aqui: o alvo do Zap (qualquer um) e do Slide (o Black ICE; uma vez por turno em combate).
+      const inimigos = conteudosAqui.filter(conteudo => ehInimigo(conteudo) && !conteudo.feito);
+      if (!inimigos.some(conteudo => conteudo.chave === this.textos.alvo)) this.textos.alvo = inimigos[0]?.chave ?? '';
+      const pode = {
+        pathfinder: true, cloak: true, backdoor: naoFeito('senha'), eyedee: naoFeito('arquivo'), control: naoFeito('controle'), virus: fundo,
+        zap: inimigos.length > 0, slide: inimigos.some(conteudo => conteudo.tipo === 'ice') && !(combate && meu.slides > 0)
+      };
       netrunner = {
         nome: meu.nome, rank: ator?.system.rankDeInterface ?? 0, onde: ondeEsta(aqui), pronto, combate, sobram: Math.max(0, meu.max - meu.acoes), max: meu.max,
         sorte: ator?.sortePreparada ?? 0, fundo, textos: this.textos,
         controle: conteudosAqui.some(conteudo => conteudo.tipo === 'controle' && conteudo.feito),
+        alvos: inimigos.length > 1 ? inimigos.map(conteudo => ({ chave: conteudo.chave, nome: textoCurto(conteudoNaJanela(conteudo)), escolhido: conteudo.chave === this.textos.alvo })) : [],
         habilidades: Object.keys(HABILIDADES_NA_NET).map(id => {
           const { rotulo, custo, dica } = HABILIDADES_DE_INTERFACE.find(habilidade => habilidade.id === id);
           return { id, rotulo, dica: `${custo}. ${dica}`, pode: pronto && pode[id] && !this.ocupado };
@@ -172,7 +178,10 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
       corredores, ramos: ramos.map(ramo => ramo.toUpperCase()), mapa, naEntrada: quemEsta(ENTRADA),
       entrada: { classes: [aqui === ENTRADA ? 'atual' : '', vizinhos.has(ENTRADA) ? 'vizinho' : '', selecionado === ENTRADA ? 'selecionado' : ''].filter(Boolean).join(' ') },
       andar, netrunner, registro: [...(est.log ?? [])].reverse(),
-      mestre: this.gm && { revelarAndar: andar.escondido && !andar.entrada, revelarMapa: !est.mapa, comCorredor: Boolean(meu), semNinguem: !est.corredores.length }
+      mestre: this.gm && {
+        revelarAndar: andar.escondido && !andar.entrada, revelarMapa: !est.mapa, comCorredor: Boolean(meu), semNinguem: !est.corredores.length,
+        inimigos: andar.conteudos.filter(conteudo => conteudo.inimigo && conteudo.comRez)
+      }
     };
   }
 
@@ -219,7 +228,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #habilidade(evento, alvo) {
     const habilidade = alvo.dataset.habilidade;
-    if (await this.#pedir('habilidade', { habilidade, texto: habilidade === 'virus' ? this.textos.virus : '' }) && habilidade === 'virus') this.textos.virus = '';
+    if (await this.#pedir('habilidade', { habilidade, texto: habilidade === 'virus' ? this.textos.virus : '', alvo: this.textos.alvo }) && habilidade === 'virus') this.textos.virus = '';
   }
 
   static async #comandar() {
@@ -234,6 +243,10 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #revelar(evento, alvo) {
     await this.#pedir('revelar', { no: alvo.dataset.no, tudo: Boolean(alvo.dataset.tudo) });
+  }
+
+  static async #ajustarRez(evento, alvo) {
+    await this.#pedir('ajustarRez', { alvo: alvo.dataset.alvo, delta: Number(alvo.dataset.delta) || 0, cheia: Boolean(alvo.dataset.cheia) });
   }
 
   static async #zerarAcoes() {

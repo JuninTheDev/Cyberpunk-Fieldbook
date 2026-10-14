@@ -1029,14 +1029,14 @@ test('Ponto de acesso à NET (wiki, "Netrunning": "Precisa estar a até 6 m de u
   assert.deepEqual(vista.map(no => [no.id, no.visto]), [['1a', true], ['2a', true], ['3a', false], ['3b', false]]);
   assert.deepEqual(vista[0].conteudos, [{ chave: '1a.0', tipo: 'senha', dv: 8, feito: true }]);
   const wisp = BLACK_ICE.find(ice => ice.id === 'wisp');
-  assert.deepEqual(vista[1].conteudos[0].inimigo, { nome: wisp.nome, rez: wisp.rez, rezAtual: 5 });
+  assert.deepEqual(vista[1].conteudos[0].inimigo, { nome: wisp.nome, classe: wisp.classe, per: wisp.per, spd: wisp.spd, atk: wisp.atk, def: wisp.def, efeito: wisp.efeito, rez: wisp.rez, rezAtual: 5 });
   assert.equal(vista[2].conteudos, undefined);
   // O mapa revelado pelo mestre: todos os andares com o conteúdo; o demônio com a REZ da tabela e o netrunner inimigo pelo nome.
   const todo = netrun.vistaPublica(clinica, estado({ mapa: true }));
   assert.deepEqual(todo.map(no => [no.id, no.visto]), [['1a', true], ['2a', true], ['3a', true], ['3b', true], ['4b', true]]);
   const efreet = DEMONIOS.find(demonio => demonio.id === 'efreet');
-  assert.deepEqual(todo[3].conteudos[0].inimigo, { nome: efreet.nome, rez: efreet.rez, rezAtual: efreet.rez });
-  assert.deepEqual(todo[4].conteudos[0].inimigo, { nome: 'Raposa' });
+  assert.deepEqual(todo[3].conteudos[0].inimigo, { nome: efreet.nome, interface: efreet.interface, acoes: efreet.acoes, valorDeCombate: efreet.valorDeCombate, rez: efreet.rez, rezAtual: efreet.rez });
+  assert.deepEqual(todo[4].conteudos[0].inimigo, { nome: 'Raposa', ativo: true });
 });
 
 test('Andar e as habilidades contra os andares (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): andar não é Ação NET e vai até a próxima obstrução (a senha trava a descida); Interface + 1d10 > DV; o alvo de cada habilidade no andar; o Pathfinder, o Cloak e o Virus; as Ações NET contam só em combate', () => {
@@ -1066,7 +1066,8 @@ test('Andar e as habilidades contra os andares (wiki, "Ações NET" e "Habilidad
   assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'control').erro, 'Não há nó de controle livre neste andar.');
   assert.deepEqual(netrun.alvoDaHabilidade(arq, est, eu, 'pathfinder'), { alvo: null });
   assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'virus').erro, 'O Virus só vai no andar mais fundo da arquitetura.');
-  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'zap').erro, 'Esta habilidade não se usa contra os andares.');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'zap').erro, 'Não há inimigo ativo neste andar.');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'scanner').erro, 'Esta habilidade não se usa na NET.');
   // Backdoor: 6 contra a DV 6 não passa (tem de passar da DV); 9 quebra, e a senha não é mais alvo nem trava a descida.
   const { alvo: senha } = netrun.alvoDaHabilidade(arq, est, eu, 'backdoor');
   assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'backdoor', alvo: senha, total: 6 }), { texto: 'Backdoor (6 contra DV 6): Deck não passou a senha.', tipo: 'falha' });
@@ -1105,6 +1106,65 @@ test('Andar e as habilidades contra os andares (wiki, "Ações NET" e "Habilidad
   assert.equal(eu.acoes, 3);
   assert.equal(netrun.gastarAcoes(eu, { emCombate: true, mestre: true }), null);
   assert.equal(eu.acoes, 4);
+});
+
+test('Os inimigos no andar (o NET Architect da mesa; wiki, "Habilidades de Interface": o Zap e o Slide, RED p. 199–201): o Black ICE e o demônio seguram a descida, e o Black ICE driblado pelo Slide e o derrubado não; o netrunner inimigo não segura; o Zap tira da REZ (o empate é da defesa) e derruba em 0; o Slide, uma vez por turno; a REZ entre 0 e a da tabela', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes("['Slide', '1 Ação NET (1×/turno)', 'contra PER do Black ICE + 1d10', 'Foge de um Black ICE não demoníaco para um andar vizinho (não atravessa senha).']"));
+  assert.ok(regrasDaWiki.includes("['Zap', '1 Ação NET', 'contra DEF do programa + 1d10 ou Interface + 1d10', '1d6 de dano no REZ de um programa ou direto no cérebro de um netrunner.']"));
+  const arq = arquitetura.lerArquitetura({ andares: [
+    { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 1, ramo: 'a', tipo: 'netrunner', nome: 'Raposa' },
+    { andar: 2, ramo: 'a', tipo: 'demonio', demonio: 'imp' }, { andar: 3, ramo: 'a', tipo: 'vazio' }
+  ] });
+  const est = { mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [] };
+  const eu = { nome: 'Deck', no: '1a', escapou: [], acoes: 0, max: 3 };
+  const hellhound = BLACK_ICE.find(ice => ice.id === 'hellhound');
+  const imp = DEMONIOS.find(demonio => demonio.id === 'imp');
+  const [ice, raposa] = netrun.conteudosDoNo(arq, '1a');
+  // No 1A: o Hellhound e a Raposa estão ativos; só o Hellhound segura a descida; subir é livre.
+  assert.deepEqual(netrun.inimigosAtivos(arq, est, '1a').map(conteudo => conteudo.chave), ['1a.0', '1a.1']);
+  assert.deepEqual(netrun.quemSegura(arq, est, eu).map(conteudo => conteudo.chave), ['1a.0']);
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), 'O Hellhound deste andar te segura: derrube a REZ dele ou use o Slide.');
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, arquitetura.ENTRADA), null);
+  assert.equal(netrun.resumoDoAndar(arq, '1a'), 'Hellhound, Raposa');
+  // O alvo: o Zap em qualquer inimigo (o pedido, a Raposa); o Slide só no Black ICE.
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'zap').alvo.chave, '1a.0');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'zap', '1a.1').alvo.chave, '1a.1');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'slide', '1a.1').alvo.chave, '1a.0');
+  // O Zap: o empate é da defesa; acertando, o dano sai da REZ do Hellhound; na Raposa, vai ao cérebro.
+  assert.deepEqual(netrun.resolverZap(est, eu, ice, { total: 9, defesa: 9 }), { texto: 'Zap (9 contra 9): Deck errou o Hellhound.', tipo: 'falha', acertou: false });
+  assert.deepEqual(netrun.resolverZap(est, eu, ice, { total: 10, defesa: 5, dano: 4 }), { texto: `Zap (10 contra 5): Deck acertou o Hellhound: 4 de REZ, fica com ${hellhound.rez - 4}.`, tipo: 'ok', acertou: true });
+  assert.equal(netrun.rezDe(est, ice), hellhound.rez - 4);
+  assert.deepEqual(netrun.resolverZap(est, eu, raposa, { total: 10, defesa: 5, dano: 3 }), { texto: 'Zap (10 contra 5): Deck acertou Raposa: 3 no cérebro.', tipo: 'ok', acertou: true });
+  // O Slide: o empate é do ICE; passando, o Hellhound não segura mais.
+  assert.deepEqual(netrun.resolverSlide(eu, ice, { total: 8, per: 8 }), { texto: 'Slide (8 contra 8): o Hellhound não larga Deck.', tipo: 'falha' });
+  assert.deepEqual(netrun.resolverSlide(eu, ice, { total: 11, per: 8 }), { texto: 'Slide (11 contra 8): Deck escapou do Hellhound e pode seguir para um andar vizinho.', tipo: 'ok' });
+  assert.deepEqual(netrun.quemSegura(arq, est, eu), []);
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), null);
+  // O Slide é uma vez por turno, em combate; fora de combate, não há turno.
+  assert.equal(netrun.motivoParaNaoSlide({ slides: 1 }, true), 'O Slide é uma vez por turno.');
+  assert.equal(netrun.motivoParaNaoSlide({ slides: 1 }, false), null);
+  assert.equal(netrun.motivoParaNaoSlide({}, true), null);
+  // No 2A, o demônio segura e não se dribla; derrubado (a REZ não passa de 0 para baixo), não segura nem é alvo.
+  Object.assign(eu, { no: '2a', escapou: [] });
+  const [demonio] = netrun.conteudosDoNo(arq, '2a');
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '3a'), 'O demônio Imp te segura: derrube a REZ dele (o Slide não funciona contra demônios).');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'slide').erro, 'Não há Black ICE ativo neste andar (o Slide não funciona contra demônios nem netrunners).');
+  assert.deepEqual(netrun.resolverZap(est, eu, demonio, { total: 12, defesa: 4, dano: 6 }), { texto: `Zap (12 contra 4): Deck acertou o Imp: 6 de REZ, fica com ${imp.rez - 6}.`, tipo: 'ok', acertou: true });
+  assert.equal(netrun.mudarRez(est, demonio, -3), 0);
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '3a'), null);
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'zap').erro, 'Não há inimigo ativo neste andar.');
+  // O mapa dos jogadores: o Imp derrubado fica "feito", com os números da wiki; a Raposa, na NET.
+  est.vistos = ['1a', '2a'];
+  const mapa = netrun.vistaPublica(arq, { ...est, corredores: [eu] });
+  assert.deepEqual(mapa.find(no => no.id === '2a').conteudos[0], {
+    chave: '2a.0', tipo: 'demonio', dv: null, feito: true, inimigo: { nome: 'Imp', interface: imp.interface, acoes: imp.acoes, valorDeCombate: imp.valorDeCombate, rez: imp.rez, rezAtual: 0 }
+  });
+  assert.deepEqual(mapa.find(no => no.id === '1a').conteudos[1].inimigo, { nome: 'Raposa', ativo: true });
+  // A REZ cheia de volta (o mestre) e o conteúdo pela chave.
+  assert.equal(netrun.mudarRez(est, demonio, Infinity), imp.rez);
+  assert.equal(netrun.acharConteudo(arq, '2a.0').no.id, '2a');
+  assert.equal(netrun.acharConteudo(arq, '9z.0'), null);
 });
 
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {

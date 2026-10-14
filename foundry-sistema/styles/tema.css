@@ -658,3 +658,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.net-virus .colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .cpr-fieldbook.net-virus table.exemplos { width: 100%; font-size: 12px; }
 .cpr-fieldbook.net-virus table.exemplos td:not(:first-child), .cpr-fieldbook.net-virus table.exemplos th:not(:first-child) { width: 3.5rem; text-align: center; }
+.cpr-fieldbook.janela-net .habilidades label.alvo { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .habilidades label.alvo select { flex: 1; }
+.cpr-fieldbook.janela-net .mestre .rez-inimigo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .mestre .rez-inimigo span { flex: 1; }
+.cpr-fieldbook.janela-net .mestre .rez-inimigo small { color: var(--cp-fraco); }

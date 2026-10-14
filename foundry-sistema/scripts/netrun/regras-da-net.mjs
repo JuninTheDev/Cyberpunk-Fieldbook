@@ -51,8 +51,51 @@ export const alcanceDo = (ponto, cena, netrunner = null) =>
 // ---------------- O mapa que os jogadores enxergam ----------------
 export const iceDe = id => BLACK_ICE.find(ice => ice.id === id) ?? null;
 export const demonioDe = id => DEMONIOS.find(demonio => demonio.id === id) ?? DEMONIOS[0];
-const rezMaxDe = conteudo => (conteudo.tipo === 'ice' ? iceDe(conteudo.ice)?.rez ?? 0 : conteudo.tipo === 'demonio' ? demonioDe(conteudo.demonio).rez : null);
-const rezDe = (est, conteudo) => est.ices.find(item => item.chave === conteudo.chave)?.rez ?? rezMaxDe(conteudo);
+export const rezMaxDe = conteudo => (conteudo.tipo === 'ice' ? iceDe(conteudo.ice)?.rez ?? 0 : conteudo.tipo === 'demonio' ? demonioDe(conteudo.demonio).rez : null);
+export const rezDe = (est, conteudo) => est.ices.find(item => item.chave === conteudo.chave)?.rez ?? rezMaxDe(conteudo);
+
+// ---------------- Os inimigos no andar ----------------
+// O Black ICE e o demônio têm a REZ da tabela da wiki, menos o dano guardado no estado (est.ices); em 0, caem. O
+// netrunner inimigo cai da NET quando o HP dele chega a 0 (est.fora).
+const INIMIGOS = ['ice', 'demonio', 'netrunner'];
+export const ehInimigo = conteudo => INIMIGOS.includes(conteudo.tipo);
+export const inimigoAtivo = (est, conteudo) => (conteudo.tipo === 'netrunner' ? !(est.fora ?? []).includes(conteudo.chave) : rezDe(est, conteudo) > 0);
+export const inimigosAtivos = (arq, est, id) => conteudosDoNo(arq, id).filter(conteudo => ehInimigo(conteudo) && inimigoAtivo(est, conteudo));
+export function nomeDoInimigo(conteudo) {
+  if (conteudo.tipo === 'ice') return iceDe(conteudo.ice)?.nome ?? 'Black ICE';
+  if (conteudo.tipo === 'demonio') return conteudo.nome || demonioDe(conteudo.demonio).nome;
+  return conteudo.nome || 'Netrunner inimigo';
+}
+// Quem segura a descida (o NET Architect; a wiki: andar vai "até a próxima obstrução"): o Black ICE ativo, menos o que o
+// netrunner driblou com o Slide, e o demônio. O netrunner inimigo não segura.
+export const quemSegura = (arq, est, corredor) => inimigosAtivos(arq, est, corredor.no)
+  .filter(conteudo => conteudo.tipo === 'demonio' || (conteudo.tipo === 'ice' && !(corredor.escapou ?? []).includes(conteudo.chave)));
+// A REZ nova do inimigo (entre 0 e a da tabela), guardada no estado.
+export function mudarRez(est, conteudo, rez) {
+  const valor = Math.max(0, Math.min(rezMaxDe(conteudo), rez));
+  est.ices = [...est.ices.filter(item => item.chave !== conteudo.chave), { chave: conteudo.chave, rez: valor }];
+  return valor;
+}
+// O conteúdo da arquitetura pela chave ("2a.0"), com o andar dele.
+export function acharConteudo(arq, chave) {
+  for (const no of Object.values(arq.nos)) {
+    const conteudo = no.conteudos.find(item => item.chave === chave);
+    if (conteudo) return { no, conteudo };
+  }
+  return null;
+}
+// O que os jogadores sabem do inimigo que veem: os números da tabela da wiki e a REZ que sobra.
+export function inimigoPublico(est, conteudo) {
+  if (conteudo.tipo === 'ice') {
+    const ice = iceDe(conteudo.ice);
+    return { nome: nomeDoInimigo(conteudo), classe: ice?.classe ?? '', per: ice?.per ?? 0, spd: ice?.spd ?? 0, atk: ice?.atk ?? 0, def: ice?.def ?? 0, efeito: ice?.efeito ?? '', rez: rezMaxDe(conteudo), rezAtual: rezDe(est, conteudo) };
+  }
+  if (conteudo.tipo === 'demonio') {
+    const { interface: valor, acoes, valorDeCombate } = demonioDe(conteudo.demonio);
+    return { nome: nomeDoInimigo(conteudo), interface: valor, acoes, valorDeCombate, rez: rezMaxDe(conteudo), rezAtual: rezDe(est, conteudo) };
+  }
+  return { nome: nomeDoInimigo(conteudo), ativo: inimigoAtivo(est, conteudo) };
+}
 
 // Os andares vistos (com o conteúdo; com est.mapa, todos) e os vizinhos de quem está na NET, sem o conteúdo ("?"). O
 // estado (est) é o do Tile: vistos, feitos (as chaves dos conteúdos abertos), ices (a REZ que sobrou) e corredores.
@@ -69,9 +112,8 @@ export function vistaPublica(arq, est) {
       id, andar: no.andar, ramo: no.ramo, pai: no.pai, visto: true,
       conteudos: no.conteudos.map(conteudo => {
         const publico = { chave: conteudo.chave, tipo: conteudo.tipo, dv: conteudo.dv, feito: feitos.has(conteudo.chave) };
-        if (conteudo.tipo === 'ice') publico.inimigo = { nome: iceDe(conteudo.ice)?.nome ?? 'Black ICE', rez: rezMaxDe(conteudo), rezAtual: rezDe(est, conteudo) };
-        if (conteudo.tipo === 'demonio') publico.inimigo = { nome: conteudo.nome || demonioDe(conteudo.demonio).nome, rez: rezMaxDe(conteudo), rezAtual: rezDe(est, conteudo) };
-        if (conteudo.tipo === 'netrunner') publico.inimigo = { nome: conteudo.nome || 'Netrunner inimigo' };
+        // O inimigo derrubado (a REZ em 0, o netrunner fora da NET) fica "feito".
+        if (ehInimigo(conteudo)) Object.assign(publico, { inimigo: inimigoPublico(est, conteudo), feito: !inimigoAtivo(est, conteudo) });
         // O que o arquivo é (o Eye-Dee) e o que o nó controla (o Control), só depois de feitos.
         if (publico.feito && (conteudo.tipo === 'arquivo' || conteudo.tipo === 'controle')) Object.assign(publico, { nome: conteudo.nome, descricao: conteudo.descricao });
         return publico;
@@ -86,38 +128,68 @@ export function vistaPublica(arq, est) {
 export const conteudosDoNo = (arq, id) => (id === ENTRADA || !arq.nos[id] ? [] : arq.nos[id].conteudos);
 
 // O que há num andar, para o registro: "Senha DV 8, Hellhound".
-function nomeDoConteudo(conteudo) {
-  if (conteudo.tipo === 'ice') return iceDe(conteudo.ice)?.nome ?? 'Black ICE';
-  if (conteudo.tipo === 'demonio') return conteudo.nome || demonioDe(conteudo.demonio).nome;
-  if (conteudo.tipo === 'netrunner') return conteudo.nome || 'Netrunner inimigo';
-  return `${TIPOS_DE_ANDAR[conteudo.tipo]}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}`;
-}
+const nomeDoConteudo = conteudo => (ehInimigo(conteudo) ? nomeDoInimigo(conteudo) : `${TIPOS_DE_ANDAR[conteudo.tipo]}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}`);
 export const resumoDoAndar = (arq, id) => conteudosDoNo(arq, id).map(nomeDoConteudo).join(', ') || 'vazio';
 
-// Por que o netrunner não vai daqui para o destino (null: vai): só aos andares vizinhos; subir é livre; a senha que
-// ainda não foi quebrada trava a descida (a obstrução da wiki). O Black ICE e o demônio que seguram vêm com os inimigos.
+// Por que o netrunner não vai daqui para o destino (null: vai): só aos andares vizinhos; subir é livre; descer, até a
+// obstrução (a wiki): a senha que ainda não foi quebrada e o Black ICE ou o demônio que seguram.
 export function motivoParaNaoAndar(arq, est, corredor, destino) {
   if (!vizinhos(arq, corredor.no).includes(destino)) return 'Só dá para ir a um andar vizinho.';
   if (!filhosDe(arq, corredor.no).includes(destino)) return null;
   const senha = conteudosDoNo(arq, corredor.no).find(conteudo => conteudo.tipo === 'senha' && !est.feitos.includes(conteudo.chave));
-  return senha ? `A senha deste andar${senha.dv ? ` (DV ${senha.dv})` : ''} trava a descida: use Backdoor.` : null;
+  if (senha) return `A senha deste andar${senha.dv ? ` (DV ${senha.dv})` : ''} trava a descida: use Backdoor.`;
+  const preso = quemSegura(arq, est, corredor)[0];
+  if (!preso) return null;
+  return preso.tipo === 'demonio'
+    ? `O demônio ${nomeDoInimigo(preso)} te segura: derrube a REZ dele (o Slide não funciona contra demônios).`
+    : `O ${nomeDoInimigo(preso)} deste andar te segura: derrube a REZ dele ou use o Slide.`;
 }
 
-// As habilidades de Interface que a janela da NET usa contra os andares, com o alvo de cada uma. O Zap e o Slide vêm com
-// os inimigos; o Scanner é fora da NET.
-export const HABILIDADES_NA_NET = { pathfinder: 'arquitetura', backdoor: 'senha', eyedee: 'arquivo', control: 'controle', cloak: 'arquitetura', virus: 'fundo' };
-const SEM_ALVO = { senha: 'Não há senha trancada neste andar.', arquivo: 'Não há arquivo por identificar neste andar.', controle: 'Não há nó de controle livre neste andar.' };
+// As habilidades de Interface que a janela da NET usa, com o alvo de cada uma: contra os andares e contra os inimigos (o
+// Zap, em qualquer um; o Slide, só no Black ICE). O Scanner é fora da NET.
+export const HABILIDADES_NA_NET = { pathfinder: 'arquitetura', backdoor: 'senha', eyedee: 'arquivo', control: 'controle', cloak: 'arquitetura', virus: 'fundo', zap: 'inimigo', slide: 'ice' };
+const SEM_ALVO = {
+  senha: 'Não há senha trancada neste andar.', arquivo: 'Não há arquivo por identificar neste andar.', controle: 'Não há nó de controle livre neste andar.',
+  inimigo: 'Não há inimigo ativo neste andar.', ice: 'Não há Black ICE ativo neste andar (o Slide não funciona contra demônios nem netrunners).'
+};
 
-// O alvo da habilidade aqui: a senha, o arquivo ou o nó de controle do andar que ainda não foi feito (o pedido, se houver),
-// nenhum (o Pathfinder e o Cloak valem na arquitetura) ou o andar mais fundo (o Virus). Devolve { alvo } ou { erro }.
+// O alvo da habilidade aqui (o pedido, se houver): a senha, o arquivo ou o nó de controle do andar que ainda não foi feito;
+// o inimigo ativo (o Zap) ou o Black ICE ativo (o Slide); nenhum (o Pathfinder e o Cloak valem na arquitetura) ou o andar
+// mais fundo (o Virus). Devolve { alvo } ou { erro }.
 export function alvoDaHabilidade(arq, est, corredor, chave, pedido = '') {
   const tipo = HABILIDADES_NA_NET[chave];
-  if (!tipo) return { erro: 'Esta habilidade não se usa contra os andares.' };
+  if (!tipo) return { erro: 'Esta habilidade não se usa na NET.' };
   if (tipo === 'arquitetura') return { alvo: null };
   if (tipo === 'fundo') return ehFundo(arq, corredor.no) ? { alvo: null } : { erro: 'O Virus só vai no andar mais fundo da arquitetura.' };
-  const candidatos = conteudosDoNo(arq, corredor.no).filter(conteudo => conteudo.tipo === tipo && !est.feitos.includes(conteudo.chave));
+  const candidatos = tipo === 'inimigo' || tipo === 'ice'
+    ? inimigosAtivos(arq, est, corredor.no).filter(conteudo => tipo === 'inimigo' || conteudo.tipo === 'ice')
+    : conteudosDoNo(arq, corredor.no).filter(conteudo => conteudo.tipo === tipo && !est.feitos.includes(conteudo.chave));
   const alvo = candidatos.find(conteudo => conteudo.chave === pedido) ?? candidatos[0];
   return alvo ? { alvo } : { erro: SEM_ALVO[tipo] };
+}
+
+// O Slide é uma vez por turno (a wiki: "1 Ação NET (1×/turno)"); fora de combate, não há turno.
+export const motivoParaNaoSlide = (corredor, emCombate) => (emCombate && corredor.slides > 0 ? 'O Slide é uma vez por turno.' : null);
+
+// O Zap (a wiki: contra a DEF + 1d10 do Black ICE, a Interface + 1d10 do demônio ou do netrunner; o empate é da defesa).
+// Acertando, o 1d6 sai da REZ do Black ICE ou do demônio (em 0, ele cai); no netrunner inimigo, o motor põe o dano no
+// cérebro dele. Devolve a linha do registro e se acertou.
+export function resolverZap(est, corredor, alvo, { total, defesa, dano = 0 }) {
+  const contra = `Zap (${total} contra ${defesa})`;
+  const nome = nomeDoInimigo(alvo);
+  if (total <= defesa) return { texto: `${contra}: ${corredor.nome} errou ${alvo.tipo === 'netrunner' ? nome : `o ${nome}`}.`, tipo: 'falha', acertou: false };
+  if (alvo.tipo === 'netrunner') return { texto: `${contra}: ${corredor.nome} acertou ${nome}: ${dano} no cérebro.`, tipo: 'ok', acertou: true };
+  const rez = mudarRez(est, alvo, rezDe(est, alvo) - dano);
+  return { texto: `${contra}: ${corredor.nome} acertou o ${nome}: ${dano} de REZ, ${rez ? `fica com ${rez}` : 'e ele caiu'}.`, tipo: 'ok', acertou: true };
+}
+
+// O Slide (a wiki: contra a PER + 1d10 do Black ICE; o empate é do ICE): passando, aquele Black ICE não segura mais o
+// netrunner, que pode seguir para um andar vizinho (a senha ainda trava).
+export function resolverSlide(corredor, alvo, { total, per }) {
+  const nome = nomeDoInimigo(alvo);
+  if (total <= per) return { texto: `Slide (${total} contra ${per}): o ${nome} não larga ${corredor.nome}.`, tipo: 'falha' };
+  corredor.escapou = [...new Set([...(corredor.escapou ?? []), alvo.chave])];
+  return { texto: `Slide (${total} contra ${per}): ${corredor.nome} escapou do ${nome} e pode seguir para um andar vizinho.`, tipo: 'ok' };
 }
 
 // As Ações NET (a wiki): em combate, as do Rank por turno; fora de combate, não contam. O mestre passa do limite. Gasta e

@@ -59,7 +59,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | a geração da arquitetura pelas tabelas (o lobby e as 4 dificuldades) | portada no ciclo 49 (o C8, parte 3), com um Black ICE por linha (ver as dúvidas) |
 | NET Architect | o ponto de acesso nos tiles, a conexão do token (o alcance, os requisitos, o status, o anel) e a janela da NET mínima (quem está na NET, o mapa, o registro, o "Desconectar") | portados no ciclo 50 (o C8, parte 4), com o Range Upgrade (ver as dúvidas) |
 | NET Architect | andar e as habilidades contra os andares (o Pathfinder, o Backdoor, o Eye-Dee, o Control com os comandos, o Cloak, o Virus), as Ações NET em combate, a janela com o mapa e o painel do mestre | portados no ciclo 51 (o C8, parte 5); por enquanto o mestre rola (ver as dúvidas) |
-| NET Architect | os inimigos e o combate na NET (o Zap, o Slide, os programas na janela), as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | os inimigos no andar (seguram a descida), o Zap e o Slide contra eles, a REZ deles (no painel do mestre) | portados no ciclo 52 (o C8, parte 6) |
+| NET Architect | os ataques e os efeitos dos inimigos, o combate na NET, os programas na janela, as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -325,9 +326,13 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   e o vírus que pede mais do que sobra é recusado (o mestre divide por turnos, à mão, ou o netrunner o faz fora de
   combate, onde as Ações NET não contam). O sistema não guarda um vírus pela metade.
 
-- **Os inimigos no andar, por enquanto, não agem.** No NET Architect, o Black ICE e o demônio do andar seguram a descida
-  até caírem (o Zap, um programa) ou até o Slide, disputam a velocidade na chegada e atacam. Até a parte 6 do C8, eles
-  aparecem no mapa, com a REZ, mas não seguram nem atacam; só a senha trava a descida.
+- **Os inimigos, por enquanto, não atacam.** No NET Architect, o Black ICE disputa a velocidade na chegada e ataca na
+  vez dele, com o efeito de cada um. Desde o ciclo 52 eles seguram a descida e levam o Zap e o Slide; os ataques e os
+  efeitos vêm na parte seguinte do C8.
+
+- **O Slide: uma vez por turno, e só até sair do andar.** A wiki: "1 Ação NET (1×/turno)". O NET Architect não contava
+  as vezes; aqui, em combate, o segundo Slide do turno é recusado (fora de combate, não há turno). Como no NET Architect,
+  o Black ICE driblado volta a segurar quando o netrunner sai do andar e volta.
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2558,6 +2563,58 @@ habilidade; os exemplos de vírus da p. 200). Commit anterior: `1962f26` (ciclo 
   os arquivos copiados; o Scanner e a parede (ROADMAP, C8).
 - **Próximo:** o C8, parte 6: os inimigos e o combate na NET (o Black ICE e o demônio no andar, a velocidade, o
   ataque, os efeitos, o Zap, o Slide e os programas na janela).
+
+### Ciclo 52 (2026-10-14): os inimigos no andar, o Zap e o Slide (o C8, parte 6; sessão KouArt)
+
+O NET Architect da mesa (no `estado.mjs` dele: o `quemSegura`, a `defesaDo`, o `danoNoInimigo`, o Zap e o Slide do
+`resolverHabilidade`, o `ajustarIce`; a REZ e os números do inimigo na `janela.mjs`) e a wiki ("Habilidades de
+Interface": o Zap "contra DEF do programa + 1d10 ou Interface + 1d10", 1d6 de dano no REZ de um programa ou no cérebro; o
+Slide "1 Ação NET (1×/turno)", "contra PER do Black ICE + 1d10"; andar "até a próxima obstrução"). Commit anterior:
+`97590aa` (ciclo 51). A parte 6 do C8 ficou em três ciclos: este (o netrunner contra os inimigos), os ataques e os
+efeitos dos inimigos, e o combate com o deck na janela.
+
+- **Implementado:**
+  - **os inimigos seguram a descida:** o Black ICE ativo, até cair ou até o Slide do netrunner (que vale até ele sair do
+    andar), e o demônio, até cair; o netrunner inimigo não segura. Ao chegar num andar com inimigos ativos, o registro
+    avisa;
+  - **o Zap** contra qualquer inimigo do andar (com a escolha do alvo na janela, havendo mais de um): o mestre rola a
+    defesa do inimigo no nome dele (a DEF + 1d10 do Black ICE, a Interface + 1d10 do demônio, a Interface da ficha do
+    netrunner inimigo); acertando (o empate é da defesa), o 1d6 sai da REZ do Black ICE ou do demônio (em 0, ele cai e
+    não segura mais) ou vai ao cérebro do netrunner inimigo (com o HP em 0, ele cai da NET);
+  - **o Slide** contra o Black ICE: contra a PER + 1d10 dele (o empate é do ICE); uma vez por turno em combate;
+  - **a REZ dos inimigos** no estado do Tile, de volta cheia quando a arquitetura reinicia as defesas, e no painel do
+    mestre (−5, −1, +1, a REZ cheia);
+  - **a janela:** o andar escolhido mostra os números da wiki do inimigo (a PER, a SPD, o ATK e a DEF do Black ICE; a
+    Interface e as Ações do demônio), o efeito e a REZ (ou "derrubado"); o mapa também; os botões do Zap e do Slide;
+  - **o cartão das rolagens dos inimigos:** o `testar` do sistema ganhou o `falante` (o nome no cartão de quem não é
+    ator); o `rolarDanoDoZap` sai sem os botões do mestre quando o motor aplica o dano.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 75 de 79. Um teste novo: as frases da wiki; quem segura (o Hellhound sim, a Raposa não; o Hellhound driblado e
+    o Imp derrubado, não); o alvo do Zap e do Slide; o Zap com o empate, o dano na REZ e no cérebro; o Slide com o
+    empate; uma vez por turno; o demônio que não se dribla; a REZ que não passa de 0 nem da tabela; o mapa público com os
+    números. Os testes dos ciclos 50 e 51 mudaram onde o comportamento mudou de propósito (os números no inimigo do mapa;
+    o Zap, agora uma habilidade da NET). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 83 de 88, cerca de 130 s. Um passo novo, nos dois navegadores: no andar 1, o Hellhound com os números da wiki e
+    a REZ (no andar escolhido e no mapa), o registro do encontro, os botões do Zap e do Slide, e o aviso de que ele segura
+    a descida; o Zap (10 contra a DEF 2 + 3; o cartão da DEF no nome do Hellhound) tira 4 da REZ; o Slide (11 contra a PER
+    6 + 2) passa e o netrunner desce; no andar 2, o Imp segura, e o Slide fica desligado; o mestre, pelo painel dele, põe
+    a REZ do Imp em 0 (−5 três vezes); o mapa mostra o Imp derrubado e a descida fica livre; de volta ao andar 1, o
+    Hellhound segura de novo. O passo passou na primeira rodada; a volta ao andar 1 entrou depois (para pegar o Slide que
+    não acabava ao sair do andar), e a segunda rodada passou com ela. Os testes dos ciclos 50 e 51 mudaram onde o
+    comportamento mudou de propósito (os botões do Zap e do Slide na lista). Os avisos do passo "nenhum aviso" foram
+    conferidos: só os dois da Lexington. As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o Slide sem livrar do Black ICE; o empate do Zap para o netrunner; a REZ sem limites; o empate do Slide para o
+      netrunner; o Slide mais de uma vez por turno; o demônio sem segurar; o inimigo com a REZ em 0 ainda ativo;
+    - G4: o Zap sem tirar dano; a defesa do inimigo sem o número dele; o mestre sem mudar a REZ; a janela liberando o Slide
+      contra o demônio; o Slide valendo depois de sair do andar.
+- **Pendências:** os ataques e os efeitos dos inimigos (a velocidade na chegada, o ataque na vez dele, o dano no
+  cérebro e nos programas, o fogo do Hellhound, o Kraken, o Wisp, o Skunk, o Giant, a desconexão insegura com o efeito);
+  o combate na NET e o deck na janela; a janela de rolagem do jogador na NET; os nós de controle ligados à cena; os
+  arquivos copiados; o Scanner e a parede.
+- **Próximo:** o C8, parte 7: os ataques e os efeitos dos inimigos.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

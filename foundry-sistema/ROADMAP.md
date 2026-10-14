@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 52). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 53). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -103,8 +103,14 @@ de compêndio; entram só as partes do sistema.
   - [x] o motor no mestre para andar e para as habilidades contra os andares (o Pathfinder, o Backdoor, o Eye-Dee, o
     Control com os comandos, o Cloak e o Virus), com as Ações NET em combate, e a janela da NET com o mapa clicável, o
     andar escolhido, as habilidades e o painel do mestre: ciclo 51;
-  - [ ] os inimigos (o Black ICE e o demônio no andar, que seguram a descida, a velocidade, o ataque, os efeitos, o Zap
-    e o Slide) e o combate, com o deck na janela (ativar, desativar e atacar com os programas);
+  - [x] os inimigos no andar, que seguram a descida (o Black ICE até cair ou até o Slide; o demônio até cair), o Zap e
+    o Slide contra eles (o mestre rola a defesa e a PER no nome deles) e a REZ deles no estado e no painel do mestre:
+    ciclo 52;
+  - [ ] os ataques dos inimigos e os efeitos de cada Black ICE (a velocidade na chegada, o ataque na vez dele, o dano no
+    cérebro e nos programas, o fogo do Hellhound, o Kraken, o Wisp, o Skunk, o Giant, a desconexão insegura com o
+    efeito);
+  - [ ] o combate na NET (os inimigos na iniciativa, a vez deles pelo mestre) e o deck na janela (ativar, desativar e
+    atacar com os programas);
   - [ ] o jogador rolando as próprias rolagens, pela janela de rolagem dele;
   - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual;
   - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem
