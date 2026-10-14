@@ -7,7 +7,7 @@
 @font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fontes/rajdhani-700.woff2') format('woff2'); }
 @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
 
-.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .cpr-fieldbook.janela-defesa, .chat-message.cprf-mensagem {
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .cpr-fieldbook.janela-defesa, .cpr-fieldbook.net-config, .cpr-fieldbook.janela-net, .chat-message.cprf-mensagem {
   --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
   --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
   --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
@@ -15,11 +15,11 @@
 }
 
 /* ---------- Janela ---------- */
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa) .window-header {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net) .window-header {
   background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); color: var(--cp-amarelo);
   font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
 }
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa) .window-content {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net) .window-content {
   background-color: var(--cp-fundo);
   background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
   color: var(--cp-texto); font-family: var(--cp-titulo); font-weight: 500; font-size: 15px;
@@ -575,12 +575,46 @@ do capanga é um botão do mesmo jeito, que rola. */
   padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em;
 }
 .cpr-fieldbook.ficha-arquitetura .acao:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
-.cpr-fieldbook.ficha-arquitetura .mapa-net {
+.cpr-fieldbook:is(.ficha-arquitetura, .janela-net) .mapa-net {
   display: grid; grid-template-columns: 2.5rem repeat(var(--colunas, 1), minmax(0, 1fr)); gap: 6px; align-items: stretch;
   font-family: var(--cp-dados); font-size: 11px;
 }
-.cpr-fieldbook.ficha-arquitetura .mapa-net .ramo { color: var(--cp-fraco); letter-spacing: 0.15em; text-align: center; }
-.cpr-fieldbook.ficha-arquitetura .mapa-net .entrada { grid-column: 2 / -1; padding: 4px; border: 1px dashed var(--cp-ciano); color: var(--cp-ciano); letter-spacing: 0.2em; text-align: center; }
-.cpr-fieldbook.ficha-arquitetura .mapa-net .andar { align-self: center; color: var(--cp-amarelo); font: 700 18px/1 var(--cp-titulo); text-align: center; }
-.cpr-fieldbook.ficha-arquitetura .mapa-net .no { padding: 4px 6px; background: var(--cp-poco); border-left: 2px solid var(--cp-amarelo); }
-.cpr-fieldbook.ficha-arquitetura .mapa-net .no ul { margin: 2px 0 0; padding-left: 14px; color: var(--cp-texto); }
+.cpr-fieldbook:is(.ficha-arquitetura, .janela-net) .mapa-net .ramo { color: var(--cp-fraco); letter-spacing: 0.15em; text-align: center; }
+.cpr-fieldbook:is(.ficha-arquitetura, .janela-net) .mapa-net .entrada { grid-column: 2 / -1; padding: 4px; border: 1px dashed var(--cp-ciano); color: var(--cp-ciano); letter-spacing: 0.2em; text-align: center; }
+.cpr-fieldbook:is(.ficha-arquitetura, .janela-net) .mapa-net .andar { align-self: center; color: var(--cp-amarelo); font: 700 18px/1 var(--cp-titulo); text-align: center; }
+.cpr-fieldbook:is(.ficha-arquitetura, .janela-net) .mapa-net .no { padding: 4px 6px; background: var(--cp-poco); border-left: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook:is(.ficha-arquitetura, .janela-net) .mapa-net .no ul { margin: 2px 0 0; padding-left: 14px; color: var(--cp-texto); }
+
+/* ---------- A NET na mesa (netrun/): a configuração do ponto de acesso e a janela da NET ---------- */
+.cpr-fieldbook.net-config .window-content { padding: 14px 16px; }
+.cpr-fieldbook.net-config .net-config-corpo { display: flex; flex-direction: column; gap: 10px; font-family: var(--cp-dados); font-size: 13px; }
+.cpr-fieldbook.net-config label { display: flex; align-items: center; gap: 8px; color: var(--cp-fraco); }
+.cpr-fieldbook.net-config label:not(.caixa) > :is(input, select) { flex: 1; min-width: 0; }
+.cpr-fieldbook.net-config label.aviso { color: var(--cp-amarelo); }
+.cpr-fieldbook.net-config input[type="checkbox"] { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--cp-amarelo); }
+.cpr-fieldbook.net-config .colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.cpr-fieldbook.net-config fieldset { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-amarelo); }
+.cpr-fieldbook.net-config legend { padding: 0 4px; color: var(--cp-amarelo); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+.cpr-fieldbook.net-config .form-footer { display: flex; flex-wrap: wrap; gap: 8px; }
+.cpr-fieldbook.janela-net .window-content { padding: 14px 16px; overflow-y: auto; }
+.cpr-fieldbook.janela-net .janela-net-corpo { display: flex; flex-direction: column; gap: 14px; }
+.cpr-fieldbook.janela-net h2 { margin: 0; border: none; color: var(--cp-amarelo); font: 700 26px/1 var(--cp-titulo); letter-spacing: 0.06em; text-transform: uppercase; }
+.cpr-fieldbook.janela-net .net-cabecalho .arquitetura { margin: 4px 0 0; color: var(--cp-ciano); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.06em; }
+.cpr-fieldbook.janela-net h3 { margin: 0 0 6px; border-bottom: 1px solid var(--cp-linha); color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; }
+.cpr-fieldbook.janela-net .corredores ul { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-net .corredores li { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.cpr-fieldbook.janela-net .corredores li.vazio { color: var(--cp-fraco); font-style: italic; }
+.cpr-fieldbook.janela-net .corredores li.eu b { color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .corredores img { flex: none; width: 32px; height: 32px; border: none; object-fit: cover; }
+.cpr-fieldbook.janela-net .corredores span { flex: 1; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .corredores button {
+  flex: none; width: auto; height: auto; min-height: 0; padding: 3px 10px; border: 1px solid var(--cp-vermelho); border-radius: 0;
+  background: transparent; color: var(--cp-vermelho); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em;
+}
+.cpr-fieldbook.janela-net .corredores button:hover { background: var(--cp-vermelho); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.janela-net .mapa-net .no.desconhecido { border-left-color: var(--cp-linha); color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .mapa-net .interrogacao { margin-left: 6px; color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .mapa-net li.feito { color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .mapa-net .aqui { margin: 2px 0 0; color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .registro ol { max-height: 12rem; margin: 0; padding-left: 18px; overflow-y: auto; font-family: var(--cp-dados); font-size: 12px; line-height: 1.45; }
+.cpr-fieldbook.janela-net .registro li.falha { color: var(--cp-vermelho); }

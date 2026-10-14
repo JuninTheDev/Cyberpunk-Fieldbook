@@ -11,6 +11,8 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import * as regras from '../../foundry-sistema/scripts/regras.mjs';
 import * as arquitetura from '../../foundry-sistema/scripts/arquitetura.mjs';
+import * as netrun from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
+import { PONTO_PADRAO } from '../../foundry-sistema/scripts/netrun/constantes.mjs';
 import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from '../../foundry-sistema/build/arquiteturas.mjs';
 import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DA_NET, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
 import { ATORES_DA_NET, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
@@ -972,6 +974,69 @@ test('Arquitetura pelas tabelas (wiki, "Montando uma arquitetura", RED p. 210–
   };
   const cheia = await arquitetura.gerarAndares({ dificuldade: 'basica', tabelas: TABELAS_DA_NET, rolar: rolarCheio });
   assert.deepEqual([cheia.ramosAMais, rolagensDoD10], [7, 7]);
+});
+
+test('Ponto de acesso à NET (wiki, "Netrunning": "Precisa estar a até 6 m de um ponto de acesso, sem parede no meio (8 m com o upgrade de alcance)"; o Range Upgrade do CORE; o NET Architect da mesa): a distância do token ao Tile, o alcance, o que falta para conectar e o mapa que os jogadores enxergam (os andares vistos e, como "?", os vizinhos de quem está na NET)', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes('Precisa estar a até <b>6 m</b> de um ponto de acesso, sem parede no meio (8 m com o upgrade de alcance).'));
+  assert.ok(regrasDaWiki.includes('<b>Sair do alcance conectado</b> = desconexão insegura'));
+  assert.equal(PONTO_PADRAO.alcance, 6);
+  // A cena com quadrados de 100 px e 2 m; o Tile de 2×2 quadrados em (1000, 1000). A distância vai do centro do token à
+  // borda mais próxima do Tile.
+  const cena = { grid: { size: 100, distance: 2 } };
+  const tile = { parent: cena, x: 1000, y: 1000, width: 200, height: 200 };
+  const token = (x, y, lado = 1) => ({ x, y, width: lado, height: lado });
+  assert.equal(netrun.distancia(tile, token(1050, 1050)), 0);
+  assert.equal(netrun.distancia(tile, token(1300, 1000)), 3);
+  assert.equal(netrun.distancia(tile, token(700, 1000, 2)), 4);
+  assert.equal(netrun.distancia(tile, token(1500, 1500)), Math.hypot(3.5, 3.5) * 2);
+  // O token do Foundry andando: o x dele ainda é o de antes, e o _source já é o destino (Foundry 14).
+  assert.equal(netrun.distancia(tile, { ...token(1050, 1050), _source: token(1300, 1000) }), 3);
+  // O netrunner: o deck equipado, os programas instalados nele e o Range Upgrade (pelo catálogo ou pelo nome, instalado no
+  // deck equipado).
+  const ator = (rank, ...itens) => ({ system: { rankDeInterface: rank }, items: itens });
+  const deck = { id: 'deck', type: 'cyberdeck', name: 'Deck', system: { uso: 'equipado' } };
+  const reserva = { id: 'reserva', type: 'cyberdeck', name: 'Reserva', system: { uso: 'carregando' } };
+  const range = { id: 'r', type: 'upgrade', name: 'Range Upgrade', system: { instaladoEm: 'deck' }, flags: { 'cpr-fieldbook': { catalogo: netrun.RANGE_UPGRADE } } };
+  const programa = { id: 'p1', type: 'programa', name: 'Sword', system: { instaladoEm: 'deck' } };
+  const solto = { id: 'p2', type: 'programa', name: 'Armor', system: { instaladoEm: '' } };
+  const n = netrun.netrunnerDo(ator(4, reserva, deck, programa, solto, range));
+  assert.deepEqual([n.deck.id, n.programas.map(item => item.id), n.rank, n.rangeUpgrade], ['deck', ['p1'], 4, true]);
+  assert.equal(netrun.netrunnerDo(ator(4, deck, { ...range, name: 'Melhoria de alcance' })).rangeUpgrade, true);
+  assert.equal(netrun.netrunnerDo(ator(4, deck, { ...range, flags: {} })).rangeUpgrade, true);
+  assert.equal(netrun.netrunnerDo(ator(4, deck, { ...range, system: { instaladoEm: '' } })).rangeUpgrade, false);
+  assert.equal(netrun.netrunnerDo(ator(4, { ...deck, system: { uso: 'carregando' } }, range)).rangeUpgrade, false);
+  // O alcance: o do ponto (vazio, um quadrado da cena); com o Range Upgrade, 2 a mais (os 8 m da wiki).
+  assert.equal(netrun.alcanceDo({ alcance: 6 }, cena), 6);
+  assert.equal(netrun.alcanceDo({ alcance: 0 }, cena), 2);
+  assert.equal(netrun.alcanceDo({ alcance: 6 }, cena, n), 8);
+  assert.equal(netrun.alcanceDo({ alcance: 6 }, cena, netrun.netrunnerDo(ator(4, deck))), 6);
+  // O que falta para conectar: o deck equipado (se o ponto exige) e a Interface mínima.
+  assert.deepEqual(netrun.faltasPara(PONTO_PADRAO, ator(1, deck)), []);
+  assert.deepEqual(netrun.faltasPara({ exigeDeck: true, rankMinimo: 5 }, ator(0, reserva)), ['um cyberdeck equipado', 'Interface 5 (tem 0)']);
+  assert.deepEqual(netrun.faltasPara({ exigeDeck: false, rankMinimo: 0 }, ator(0)), []);
+  // O mapa que os jogadores enxergam (o que o mestre ativo grava no Tile).
+  const clinica = arquitetura.lerArquitetura({ nome: 'Clínica', andares: [
+    { andar: 1, ramo: 'a', tipo: 'senha', dv: 8 }, { andar: 2, ramo: 'a', tipo: 'ice', ice: 'wisp' }, { andar: 3, ramo: 'a', tipo: 'arquivo', dv: 8 },
+    { andar: 3, ramo: 'b', tipo: 'demonio', demonio: 'efreet' }, { andar: 4, ramo: 'b', tipo: 'netrunner', nome: 'Raposa' }
+  ] });
+  const estado = mudancas => ({ mapa: false, vistos: [], feitos: [], ices: [], corredores: [], ...mudancas });
+  assert.deepEqual(netrun.vistaPublica(clinica, estado()), []);
+  // Na entrada: o andar 1 aparece como "?", sem o conteúdo.
+  assert.deepEqual(netrun.vistaPublica(clinica, estado({ corredores: [{ no: arquitetura.ENTRADA }] })), [{ id: '1a', andar: 1, ramo: 'a', pai: 'entrada', visto: false }]);
+  // No 2A, com o 1A e o 2A vistos: o 3A e o 3B (o ramo novo) como "?"; a senha aberta e o Wisp com a REZ que sobrou.
+  const vista = netrun.vistaPublica(clinica, estado({ vistos: ['1a', '2a'], feitos: ['1a.0'], ices: [{ chave: '2a.0', rez: 5 }], corredores: [{ no: '2a' }] }));
+  assert.deepEqual(vista.map(no => [no.id, no.visto]), [['1a', true], ['2a', true], ['3a', false], ['3b', false]]);
+  assert.deepEqual(vista[0].conteudos, [{ chave: '1a.0', tipo: 'senha', dv: 8, feito: true }]);
+  const wisp = BLACK_ICE.find(ice => ice.id === 'wisp');
+  assert.deepEqual(vista[1].conteudos[0].inimigo, { nome: wisp.nome, rez: wisp.rez, rezAtual: 5 });
+  assert.equal(vista[2].conteudos, undefined);
+  // O mapa revelado pelo mestre: todos os andares com o conteúdo; o demônio com a REZ da tabela e o netrunner inimigo pelo nome.
+  const todo = netrun.vistaPublica(clinica, estado({ mapa: true }));
+  assert.deepEqual(todo.map(no => [no.id, no.visto]), [['1a', true], ['2a', true], ['3a', true], ['3b', true], ['4b', true]]);
+  const efreet = DEMONIOS.find(demonio => demonio.id === 'efreet');
+  assert.deepEqual(todo[3].conteudos[0].inimigo, { nome: efreet.nome, rez: efreet.rez, rezAtual: efreet.rez });
+  assert.deepEqual(todo[4].conteudos[0].inimigo, { nome: 'Raposa' });
 });
 
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {

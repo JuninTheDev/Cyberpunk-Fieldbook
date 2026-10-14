@@ -1,0 +1,32 @@
+{{!-- A configuração do ponto de acesso (netrun/ponto-de-acesso.mjs, ConfigDoPonto): o mestre escolhe a arquitetura,
+o alcance, o DV, os requisitos e se o ponto é oculto. --}}
+<div class="net-config-corpo">
+  <label class="caixa"><input type="checkbox" name="ativo" {{checked ponto.ativo}}> Ponto de acesso ativo</label>
+  {{#if semImagem}}<label class="caixa aviso"><input type="checkbox" name="imagemPadrao" checked> Este Tile não tem imagem, e o Foundry não mostra Tile sem imagem para os jogadores: pôr a imagem de terminal do sistema.</label>{{/if}}
+  <label>Nome <input type="text" name="nome" value="{{ponto.nome}}" maxlength="60"></label>
+  <label>Arquitetura
+    <select name="arquitetura">
+      <option value="">(escolha)</option>
+      {{#each grupos}}<optgroup label="{{fonte}}">{{#each lista}}<option value="{{uuid}}" {{#if escolhida}}selected{{/if}}>{{nome}}</option>{{/each}}</optgroup>{{/each}}
+    </select>
+  </label>
+  <div class="colunas">
+    <label>Alcance ({{unidade}}) <input type="number" name="alcance" value="{{ponto.alcance}}" min="0" step="0.5"></label>
+    <label data-tooltip="Para o Pathfinder, o Cloak e o Virus. Vazio: o da arquitetura">DV da arquitetura <input type="number" name="dv" value="{{ponto.dv}}" min="2" max="30" placeholder="o da arquitetura"></label>
+  </div>
+  <fieldset>
+    <legend>Para conectar</legend>
+    <label class="caixa"><input type="checkbox" name="exigeDeck" {{checked ponto.exigeDeck}}> Cyberdeck equipado</label>
+    <label>Interface mínima <input type="number" name="rankMinimo" value="{{ponto.rankMinimo}}" min="0" max="10"></label>
+  </fieldset>
+  <div class="colunas">
+    <label class="caixa"><input type="checkbox" name="oculto" {{checked ponto.oculto}}> Oculto: os jogadores não veem o marcador até acharem o ponto</label>
+    <label>DV do Scanner <input type="number" name="dvScanner" value="{{ponto.dvScanner}}" min="2" max="30"></label>
+  </div>
+  <label class="caixa"><input type="checkbox" name="reiniciar" {{checked ponto.reiniciar}}> Sem ninguém conectado, a arquitetura reinicia as defesas (RED p. 198)</label>
+  <footer class="form-footer">
+    <button type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+    {{#if ponto.arquitetura}}<button type="button" data-action="abrirArquitetura">Abrir a arquitetura</button><button type="button" data-action="reiniciar">Reiniciar</button>{{/if}}
+    <button type="button" data-action="remover">Tirar o ponto</button>
+  </footer>
+</div>

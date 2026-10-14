@@ -19,7 +19,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
   do jogador um aviso provocado de propósito (o do "sem mestre na mesa"), antes de o passo passar a conferi-lo ele mesmo.
 - **APIs do v14 usadas e conferidas no código-fonte da instalação:** `system.changes` e `isSuppressed` nos efeitos;
   `messageMode` nas mensagens; ApplicationV2 nas fichas e janelas; `Die.MODIFIERS`; `measurePath`;
-  `polygonBackends.sight.testCollision`; `toggleStatusEffect`.
+  `polygonBackends.sight.testCollision`; `toggleStatusEffect`; no ciclo 50, o HUD do Tile (`TileHUD`, `bind`) e o
+  movimento do token (o `_source` com o destino enquanto o token anda; QUALITY_GATES).
 
 ## O que já foi portado
 
@@ -56,7 +57,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | a arquitetura (o item, os andares com os demônios e os netrunners inimigos, o mapa) | portada no ciclo 47 (o C8, parte 1) |
 | NET Architect e cpr-2077 | o compêndio das arquiteturas (os exemplos do NET Architect; as da campanha, do documento da wiki, como o build do cpr-2077) | portado no ciclo 48 (o C8, parte 2) |
 | CORE | a geração da arquitetura pelas tabelas (o lobby e as 4 dificuldades) | portada no ciclo 49 (o C8, parte 3), com um Black ICE por linha (ver as dúvidas) |
-| NET Architect | o ponto de acesso, a janela da NET, os inimigos e o combate, as rolagens do jogador, os nós de controle, os arquivos, o editor visual | falta (o C8) |
+| NET Architect | o ponto de acesso nos tiles, a conexão do token (o alcance, os requisitos, o status, o anel) e a janela da NET mínima (quem está na NET, o mapa, o registro, o "Desconectar") | portados no ciclo 50 (o C8, parte 4), com o Range Upgrade (ver as dúvidas) |
+| NET Architect | andar e as habilidades contra os andares, os inimigos e o combate, as rolagens do jogador, os nós de controle, os arquivos, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -299,6 +301,18 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   do CORE (o lobby dele é igual ao da wiki). Num resultado com vários Black ICE ("Raven, Wisp, Hellhound"), o CORE guarda
   só o texto na descrição e deixa o andar sem ICE escolhido; aqui cada um vira uma linha no mesmo andar, como o livro
   descreve o andar.
+
+- **O alcance do ponto de acesso: o Range Upgrade soma 2; a parede no meio fica com o mestre.** A wiki: "Precisa estar
+  a até 6 m de um ponto de acesso, sem parede no meio (8 m com o upgrade de alcance)". O NET Architect da mesa usa o
+  alcance da configuração do ponto (6 m de partida), sem o upgrade e sem a parede. Aqui o Range Upgrade instalado no
+  deck equipado soma 2 ao alcance do ponto (os 6 viram os 8 da wiki; um ponto com outro alcance ganha os mesmos 2). A
+  parede não se confere ainda: o mestre ativo, que resolve a conexão, pode estar vendo outra cena, sem as paredes dela
+  no canvas. Fica no ROADMAP (C8), com o Scanner.
+
+- **Sair do alcance: a queda sem o efeito do Black ICE, por enquanto.** A wiki: "Sair do alcance conectado = desconexão
+  insegura: sofre o efeito de todo Black ICE encontrado e ainda ativo". O sistema derruba o netrunner e registra a
+  desconexão insegura, como o NET Architect. Encontrar o Black ICE vem com o andar e os inimigos (o C8); até lá, não
+  há Black ICE encontrado para agir.
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2408,6 +2422,62 @@ dificuldades; RED p. 210–211).
     - G4: a janela sem o aviso; a dificuldade escolhida sem valer.
 - **Próximo:** o C8, parte 4: o ponto de acesso nos tiles e a conexão do token (como o NET Architect: o marcador, o
   alcance, os requisitos, o status de conectado).
+
+### Ciclo 50 (2026-10-14): o ponto de acesso, a conexão e a janela da NET (o C8, parte 4; sessão KouArt)
+
+O NET Architect da mesa (`foundry-net-architect/`: o `ponto-de-acesso.mjs`, o `estado.mjs`, o `socket.mjs`, o
+`token.mjs`, a `janela.mjs` e os ganchos do `net-architect.mjs`) e a wiki ("Netrunning": "Precisa estar a até 6 m de um
+ponto de acesso, sem parede no meio (8 m com o upgrade de alcance)"; "Ações NET": conectar e desconectar, e "Sair do
+alcance conectado = desconexão insegura"). O CORE não tem ponto de acesso. Commit anterior: `6caa47e` (ciclo 49).
+
+- **Implementado** (a pasta nova `scripts/netrun/`):
+  - **o ponto de acesso:** o botão no HUD do Tile (só o mestre) abre a configuração: a arquitetura (as do mundo e as dos
+    compêndios de itens, por compêndio), o alcance, o DV, os requisitos (o cyberdeck equipado, a Interface mínima), o
+    oculto (com o DV do Scanner, para a parte do Scanner), o reinício das defesas e a imagem de terminal para o Tile sem
+    imagem; "Abrir a arquitetura", "Reiniciar" e "Tirar o ponto";
+  - **o marcador** "NET" sobre o Tile, para todos (o oculto e o do Tile escondido, só para o mestre, mais apagado); o
+    clique no marcador vem antes do Foundry (não seleciona nem arrasta);
+  - **a conexão:** o jogador seleciona o token e clica no marcador; perto o bastante e com os requisitos, pede ao mestre
+    ativo, que confere tudo de novo (o dono do token, a distância, o deck, a Interface) e grava no Tile o estado público
+    (quem está na NET e onde, os andares que os jogadores enxergam, o registro). O mestre conecta qualquer token, sem os
+    requisitos, como no NET Architect. O token ganha a flag da conexão, o status "Conectado à NET" e o anel ciano;
+  - **o alcance pela wiki:** o Range Upgrade instalado no deck equipado soma 2 (ver as dúvidas);
+  - **a janela da NET**, para o dono do token e para o mestre (a dele mostra todos): quem está na NET e onde, o mapa que
+    os jogadores enxergam (o andar 1 como "?" a partir da entrada), o registro e o botão "Desconectar";
+  - **a queda:** sair do alcance derruba da NET (a desconexão insegura, no registro), e a janela do jogador fecha; o token
+    apagado sai da NET; o Tile apagado solta os tokens. Sem ninguém conectado, a arquitetura reinicia as defesas (RED p.
+    198); o mestre reinicia a arquitetura pela configuração (o jogador, não);
+  - **o socket da NET:** o canal do sistema, com os tipos próprios ("net-pedido", "net-resposta"); os pedidos entram um
+    de cada vez no mestre ativo;
+  - **as regras sem o Foundry** (`netrun/regras-da-net.mjs`): o netrunner do ator, o que falta para conectar, a
+    distância, o alcance e o mapa visível.
+- **Testes:**
+  - G1: 0 erros (agora com a subpasta `scripts/netrun/`);
+  - G2: 0 erros (o ESLint ganhou os globais `PIXI` e `performance`);
+  - G3: 73 de 77. Um teste novo: a frase da wiki, a distância do centro do token à borda do Tile (e pelo `_source` do
+    token que anda), o netrunner do ator (o deck equipado, os programas nele, o Range Upgrade pelo catálogo e pelo nome,
+    só no deck equipado), o alcance (6, um quadrado sem alcance, 8 com o upgrade), o que falta para conectar e o mapa
+    visível (vazio, a entrada com o 1A como "?", o 2A com a senha aberta e o Wisp com a REZ que sobrou, o mapa revelado com
+    o demônio e o netrunner inimigo). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 80 de 85, cerca de 125 s. Um passo novo, nos dois navegadores: a configuração pelo botão do HUD do Tile (as 7
+    arquiteturas do compêndio e a do mundo, a imagem de terminal), o marcador (o oculto some só para o jogador), o jogador a
+    7 m que não conecta (o aviso, e o pedido direto ao mestre recusado), o Range Upgrade instalado e a conexão (a janela
+    com o 1A como "?" e o registro; no mestre, o estado, a flag, o status, o anel e a janela dele), a queda ao sair do
+    alcance (a janela fecha; o aviso do mestre é capturado no passo), o "Desconectar" da janela, o reinício recusado ao
+    jogador e feito pelo mestre, o token apagado e o Tile apagado. A primeira rodada caiu: a queda só vinha no movimento
+    seguinte. Um diagnóstico no passo mostrou o porquê: no Foundry 14, no gancho do movimento, o `token.x` do mestre
+    ainda é o de antes, e o `_source` já é o destino; a distância passou a vir do `_source` (a lição está no
+    QUALITY_GATES). A mesma rodada pegou o teste olhando a janela do mestre antes de ela acabar de fechar. Os avisos do
+    passo "nenhum aviso" foram conferidos: só os dois da Lexington. As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o Range Upgrade sem somar; a distância do canto do token; os vizinhos de quem está na NET com o conteúdo; o
+      Range Upgrade só pelo nome; o deck exigido no ponto que não exige; a distância pelo `token.x`, e não pelo `_source`;
+    - G4: o mestre sem conferir a distância do pedido (conecta a 7 m); só o movimento em Y tirando do alcance; a janela do
+      jogador sem fechar quando ele sai da NET; o ponto oculto visível ao jogador; o jogador reiniciando a arquitetura; a
+      distância pelo `token.x` (a queda não vem).
+- **Pendências:** andar e as habilidades contra os andares (a próxima parte); o efeito do Black ICE na desconexão
+  insegura (com os inimigos); a parede entre o token e o ponto e o Scanner (ROADMAP, C8).
+- **Próximo:** o C8, parte 5: o motor no mestre e o resto da janela da NET (andar, as habilidades contra os andares).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

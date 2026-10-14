@@ -3846,6 +3846,230 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('ponto de acesso à NET (o NET Architect da mesa; wiki: "a até 6 m de um ponto de acesso ... 8 m com o upgrade de alcance" e "sair do alcance conectado = desconexão insegura"): o botão no HUD do Tile abre a configuração, que lista as arquiteturas do mundo e do compêndio e põe a imagem de terminal no Tile sem imagem; o marcador aparece para o jogador (o oculto, só para o mestre); a 7 m o jogador não conecta, nem pedindo direto ao mestre; com o Range Upgrade no deck, conecta: o token ganha a flag, o status e o anel, e a janela da NET mostra o andar 1 como "?" e o registro; saindo do alcance, cai (desconexão insegura) e a janela fecha; o "Desconectar" da janela; só o mestre reinicia; o token apagado e o Tile apagado tiram o netrunner da NET', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner NET';
+      const ARQ = 'Teste Arquitetura do Terminal';
+      const CONECTADO = 'cprf-conectado-na-net';
+      try {
+        // 1. O mestre: a arquitetura do mundo, o Tile sem imagem e a configuração pelo botão do HUD do Tile; o netrunner do
+        // jogador (Rank 4, o deck equipado) com o token a 7 m do Tile.
+        const m = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const api = game.system.api.netrun;
+          const arq = await Item.implementation.create({ name: '${ARQ}', type: 'arquitetura', system: { andares: [
+            { andar: 1, ramo: 'a', tipo: 'senha', dv: 6 }, { andar: 2, ramo: 'a', tipo: 'ice', ice: 'hellhound' },
+            { andar: 3, ramo: 'a', tipo: 'arquivo', dv: 8 }, { andar: 3, ramo: 'b', tipo: 'controle', dv: 8 }
+          ] } });
+          const [tile] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 1800, y: 800, width: 200, height: 200 }]);
+          await esperar(() => canvas.tiles.get(tile.id));
+          canvas.tiles.activate();
+          await canvas.tiles.hud.bind(canvas.tiles.get(tile.id));
+          await esperar(() => document.querySelector('#tile-hud .${S}-ponto'));
+          const botao = document.querySelector('#tile-hud .${S}-ponto');
+          botao?.click();
+          const config = () => foundry.applications.instances.get('${S}-ponto-' + tile.id);
+          await esperar(() => config()?.element?.querySelector('select[name=arquitetura]'));
+          const form = config().element;
+          const grupos = [...form.querySelectorAll('select[name=arquitetura] optgroup')].map(g => g.label + ':' + g.querySelectorAll('option').length);
+          const avisoDaImagem = Boolean(form.querySelector('[name=imagemPadrao]')?.checked);
+          form.querySelector('[name=nome]').value = 'Terminal da clínica';
+          form.querySelector('[name=arquitetura]').value = arq.uuid;
+          form.querySelector('button[type=submit]').click();
+          await esperar(() => tile.getFlag('${S}', 'pontoDeAcesso') && tile.texture.src && !config());
+          await canvas.tiles.hud.close();
+          canvas.tokens.activate();
+          const ponto = tile.getFlag('${S}', 'pontoDeAcesso');
+          await esperar(() => api.pontosDesenhados().length);
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const a = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await a.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1400, y: 900 })).toObject()]);
+          await esperar(() => canvas.tokens.get(token.id));
+          return {
+            botao: Boolean(botao), grupos, avisoDaImagem, imagem: tile.texture.src, tile: tile.id, token: token.id, marcadores: api.pontosDesenhados().map(p => p.nome),
+            ponto: ponto && [ponto.ativo, ponto.nome, ponto.arquitetura === arq.uuid, ponto.alcance, ponto.dv, ponto.exigeDeck, ponto.rankMinimo, ponto.oculto, ponto.reiniciar].join()
+          };
+        })()`);
+        const JANELA = `${S}-net-${m.tile}-${m.token}`;
+        // 2. O jogador vê o marcador; seleciona o netrunner e clica: a 7 m (alcance 6) não conecta, nem pedindo direto ao mestre.
+        const longe = await jogador.evaluate(`(async () => {
+          window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const api = game.system.api.netrun;
+          await window.__esperar(() => canvas.tokens.get('${m.token}') && api.pontosDesenhados().length);
+          const marcadores = api.pontosDesenhados().map(p => p.nome);
+          canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          let direto;
+          try {
+            await api.abrir(tile);
+            direto = await api.pedir('conectar', { tile: tile.uuid, token: '${m.token}' }).then(() => 'conectou', falha => falha.message);
+          } finally { delete ui.notifications.warn; }
+          return { cena: canvas.scene.name, marcadores, avisos, direto, conexao: canvas.scene.tokens.get('${m.token}').getFlag('${S}', 'conexaoNaNet') ?? null };
+        })()`);
+        // 3. O ponto oculto: o jogador não vê o marcador; o mestre vê.
+        const oculto = await edge.evaluate(`(async () => {
+          await canvas.scene.tiles.get('${m.tile}').setFlag('${S}', 'pontoDeAcesso', { oculto: true });
+          await new Promise(r => setTimeout(r, 300));
+          return game.system.api.netrun.pontosDesenhados().map(p => p.nome);
+        })()`);
+        const ocultoNoJogador = await jogador.evaluate(`(async () => { await window.__esperar(() => !game.system.api.netrun.pontosDesenhados().length, 30); return game.system.api.netrun.pontosDesenhados().length; })()`);
+        // 4. O mestre tira o oculto e instala o Range Upgrade no deck do netrunner.
+        await edge.evaluate(`(async () => {
+          await canvas.scene.tiles.get('${m.tile}').setFlag('${S}', 'pontoDeAcesso', { oculto: false });
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const a = game.actors.getName('${NOME}');
+          const range = foundry.utils.deepClone(cat['core_upgrades:range-upgrade']);
+          range.system.instaladoEm = a.items.find(i => i.type === 'cyberdeck').id;
+          await a.createEmbeddedDocuments('Item', [range]);
+          return true;
+        })()`);
+        // 5. Com o Range Upgrade (alcance 8), o jogador conecta a 7 m: a janela da NET abre com ele no ponto de acesso, o
+        // andar 1 como "?" e o registro.
+        const conectou = await jogador.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const api = game.system.api.netrun;
+          await esperar(() => game.actors.getName('${NOME}')?.items.some(i => i.type === 'upgrade') && api.pontosDesenhados().length);
+          canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+          await api.abrir(canvas.scene.tiles.get('${m.tile}'));
+          const janela = () => foundry.applications.instances.get('${JANELA}');
+          await esperar(() => janela()?.element?.querySelector('.corredores li[data-token]'));
+          const el = janela()?.element;
+          const token = canvas.tokens.get('${m.token}');
+          await esperar(() => token.children.some(c => c['${S}']));
+          return {
+            titulo: janela()?.title, corredor: el?.querySelector('.corredores li[data-token]')?.textContent.replace(/\\s+/g, ' ').trim(),
+            mapa: [...(el?.querySelectorAll('.mapa-net .no') ?? [])].map(no => no.dataset.no + (no.classList.contains('desconhecido') ? '?' : '')),
+            registro: el?.querySelector('.registro li')?.textContent, botao: Boolean(el?.querySelector('.corredores button[data-action=desconectar]')),
+            anel: token.children.some(c => c['${S}'])
+          };
+        })()`);
+        await jogador.shot('janela-net');
+        // 6. No mestre: o estado no Tile, a flag, o status e o anel do token; a janela do mestre com o botão de desconectar.
+        const noMestre = await edge.evaluate(`(async () => {
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const token = canvas.scene.tokens.get('${m.token}');
+          await window.__esperar(() => token.actor.statuses.has('${CONECTADO}') && canvas.tokens.get(token.id).children.some(c => c['${S}']));
+          const est = tile.getFlag('${S}', 'netrun');
+          const c = est?.corredores[0];
+          const janela = game.system.api.netrun.janela(tile, { gm: true });
+          await window.__esperar(() => janela.element?.querySelector('.corredores li[data-token]'));
+          const doMestre = { titulo: janela.title, botao: Boolean(janela.element?.querySelector('.corredores button[data-action=desconectar]')) };
+          await janela.close();
+          return {
+            corredor: c && [c.nome, c.no, c.usuario === game.users.getName('Jogador').id, c.acoes, c.max].join(), nos: est?.nos.map(n => n.id + ':' + n.visto).join(),
+            conexao: token.getFlag('${S}', 'conexaoNaNet')?.tile === tile.uuid, status: token.actor.statuses.has('${CONECTADO}'),
+            anel: canvas.tokens.get(token.id).children.some(c => c['${S}']), arquitetura: est?.nome, dv: est?.dv, doMestre
+          };
+        })()`);
+        // 7. O jogador sai do alcance (9 m): cai da NET (desconexão insegura) e a janela fecha. O aviso do mestre ("saiu do
+        // alcance") é capturado aqui. No Foundry 14, no gancho do movimento, o token.x do mestre ainda é o de antes: a
+        // queda vem pelo _source (o destino), na hora, e não no movimento seguinte.
+        await edge.evaluate(`(() => {
+          window.__avisosNet = [];
+          ui.notifications.warn = mensagem => { window.__avisosNet.push(String(mensagem)); };
+          return true;
+        })()`);
+        const saiu = await jogador.evaluate(`(async () => {
+          await canvas.scene.tokens.get('${m.token}').update({ x: 1300 });
+          await window.__esperar(() => !foundry.applications.instances.get('${JANELA}'));
+          return { janela: Boolean(foundry.applications.instances.get('${JANELA}')) };
+        })()`);
+        const caiu = await edge.evaluate(`(async () => {
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const token = canvas.scene.tokens.get('${m.token}');
+          try {
+            await window.__esperar(() => !tile.getFlag('${S}', 'netrun')?.corredores.length && !token.actor.statuses.has('${CONECTADO}') && !token.getFlag('${S}', 'conexaoNaNet')
+              && window.__avisosNet.length);
+          } finally { delete ui.notifications.warn; }
+          const est = tile.getFlag('${S}', 'netrun');
+          return {
+            corredores: est.corredores.length, log: est.log.map(l => l.texto), conexao: Boolean(token.getFlag('${S}', 'conexaoNaNet')), status: token.actor.statuses.has('${CONECTADO}'),
+            anel: canvas.tokens.get(token.id).children.some(c => c['${S}']), avisos: window.__avisosNet
+          };
+        })()`);
+        // 8. De volta a 3 m, conecta de novo e sai pelo "Desconectar" da janela; o jogador não reinicia a arquitetura.
+        const pelaJanela = await jogador.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const api = game.system.api.netrun;
+          await canvas.scene.tokens.get('${m.token}').update({ x: 1600 });
+          canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+          await api.abrir(canvas.scene.tiles.get('${m.tile}'));
+          await esperar(() => foundry.applications.instances.get('${JANELA}')?.element?.querySelector('button[data-action=desconectar]'));
+          const abriu = Boolean(foundry.applications.instances.get('${JANELA}'));
+          foundry.applications.instances.get('${JANELA}')?.element.querySelector('button[data-action=desconectar]').click();
+          await esperar(() => !foundry.applications.instances.get('${JANELA}'));
+          const reiniciar = await api.pedir('reiniciar', { tile: canvas.scene.tiles.get('${m.tile}').uuid }).then(() => 'reiniciou', falha => falha.message);
+          canvas.tokens.releaseAll();
+          return { abriu, fechou: !foundry.applications.instances.get('${JANELA}'), reiniciar };
+        })()`);
+        // 9. O mestre: o registro do "Desconectar"; reinicia; conecta o token e o apaga; conecta outro e apaga o Tile.
+        const fim = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const api = game.system.api.netrun;
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const textos = () => tile.getFlag('${S}', 'netrun').log.map(l => l.texto);
+          await esperar(() => !tile.getFlag('${S}', 'netrun')?.corredores.length);
+          const desconectou = textos();
+          await api.pedir('reiniciar', { tile: tile.uuid });
+          const reiniciado = textos();
+          const a = game.actors.getName('${NOME}');
+          await api.conectar(tile, canvas.scene.tokens.get('${m.token}'));
+          const peloMestre = tile.getFlag('${S}', 'netrun').corredores.length;
+          await canvas.scene.tokens.get('${m.token}').delete();
+          await esperar(() => !tile.getFlag('${S}', 'netrun').corredores.length);
+          const apagado = textos();
+          const [outro] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1600, y: 900 })).toObject()]);
+          await esperar(() => canvas.tokens.get(outro.id));
+          await api.conectar(tile, outro);
+          const antes = Boolean(outro.getFlag('${S}', 'conexaoNaNet')) && a.statuses.has('${CONECTADO}');
+          await tile.delete();
+          await esperar(() => !outro.getFlag('${S}', 'conexaoNaNet') && !a.statuses.has('${CONECTADO}'));
+          // A janela do mestre fecha com o Tile (o close espera a animação).
+          await esperar(() => !foundry.applications.instances.get('${S}-net-${m.tile}-mestre'));
+          return {
+            desconectou, reiniciado, peloMestre, apagado, antes, depois: Boolean(outro.getFlag('${S}', 'conexaoNaNet')) || a.statuses.has('${CONECTADO}'),
+            janelaDoMestre: Boolean(foundry.applications.instances.get('${S}-net-${m.tile}-mestre')), marcadores: api.pontosDesenhados().length
+          };
+        })()`);
+        const marcadoresNoFim = await jogador.evaluate(`(async () => { await window.__esperar(() => !game.system.api.netrun.pontosDesenhados().length, 30); return game.system.api.netrun.pontosDesenhados().length; })()`);
+        const tem = (lista, texto) => lista.some(linha => linha.includes(texto));
+        const [c, n] = [conectou, noMestre];
+        const ok = m.botao && m.avisoDaImagem && m.imagem === `systems/${S}/icones/terminal.svg` && m.grupos.includes('Arquiteturas da NET:7') && m.grupos.includes('Itens do mundo:1')
+          && m.ponto === 'true,Terminal da clínica,true,6,,true,1,false,true' && m.marcadores.join() === 'Terminal da clínica'
+          && longe.cena === 'Teste de combate' && longe.marcadores.join() === 'Terminal da clínica' && longe.conexao === null
+          && tem(longe.avisos, 'está longe demais: 7.0 m (alcance 6)') && longe.direto === 'Longe demais do ponto de acesso: 7.0 m (alcance 6).'
+          && oculto.join() === 'Terminal da clínica' && ocultoNoJogador === 0
+          && c.titulo === 'NET: Terminal da clínica' && c.corredor === `${NOME} no ponto de acesso Desconectar` && c.mapa.join() === '1a?'
+          && c.registro === `${NOME} conectou em Terminal da clínica.` && c.botao && c.anel
+          && n.corredor === `${NOME},entrada,true,0,3` && n.nos === '1a:false' && n.conexao && n.status && n.anel && n.arquitetura === ARQ && n.dv === 8
+          && n.doMestre.titulo === 'NET: Terminal da clínica (mestre)' && n.doMestre.botao
+          && !saiu.janela && caiu.corredores === 0 && tem(caiu.log, `${NOME} desconectou de forma insegura (saiu do alcance do ponto de acesso).`)
+          && tem(caiu.log, 'a arquitetura reiniciou as defesas') && !caiu.conexao && !caiu.status && !caiu.anel && caiu.avisos.join() === `${NOME} saiu do alcance e caiu da NET.`
+          && pelaJanela.abriu && pelaJanela.fechou && pelaJanela.reiniciar === 'Só o mestre reinicia a arquitetura.'
+          && fim.desconectou.includes(`${NOME} desconectou.`) && fim.reiniciado.join() === 'O mestre reiniciou a arquitetura.' && fim.peloMestre === 1
+          && tem(fim.apagado, `${NOME} desconectou (o token saiu da cena).`) && fim.antes && !fim.depois && !fim.janelaDoMestre && fim.marcadores === 0 && marcadoresNoFim === 0;
+        return [ok, JSON.stringify({ m, longe, oculto, ocultoNoJogador, conectou, noMestre, saiu, caiu, pelaJanela, fim, marcadoresNoFim })];
+      } finally {
+        const fechar = `for (const app of [...foundry.applications.instances.values()].filter(app => String(app.id).startsWith('${S}-net-') || String(app.id).startsWith('${S}-ponto-'))) await app.close();`;
+        await jogador.evaluate(`(async () => { ${fechar} canvas.tokens.releaseAll(); return true; })()`).catch(() => null);
+        await edge.evaluate(`(async () => {
+          ${fechar}
+          await canvas.tiles.hud?.close();
+          canvas.tokens.activate();
+          await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => t.name === '${NOME}').map(t => t.id));
+          await canvas.scene.deleteEmbeddedDocuments('Tile', canvas.scene.tiles.filter(t => t.x === 1800 && t.y === 800).map(t => t.id));
+          for (const a of game.actors.filter(a => a.name === '${NOME}')) { await a.sheet?.close(); await a.delete(); }
+          for (const i of game.items.filter(i => i.name === '${ARQ}')) await i.delete();
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

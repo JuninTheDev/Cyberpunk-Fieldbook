@@ -1,0 +1,47 @@
+{{!-- A janela da NET (netrun/janela.mjs): quem está na NET, o mapa que os jogadores enxergam e o registro. --}}
+<div class="janela-net-corpo">
+  <header class="net-cabecalho">
+    <h2>{{nome}}</h2>
+    <p class="arquitetura">{{#if arquitetura}}{{arquitetura}} · DV {{dv}}{{else}}Ninguém conectou ainda.{{/if}}</p>
+  </header>
+
+  <section class="corredores">
+    <h3>NA NET</h3>
+    <ul>
+      {{#each corredores}}
+      <li data-token="{{token}}" class="{{#if eu}}eu{{/if}}">
+        <img src="{{img}}" alt=""> <b>{{nome}}</b> <span>{{onde}}</span>
+        {{#if podeDesconectar}}<button type="button" data-action="desconectar" data-token="{{token}}" data-tooltip="Desconectar com segurança">Desconectar</button>{{/if}}
+      </li>
+      {{else}}
+      <li class="vazio">Ninguém conectado.</li>
+      {{/each}}
+    </ul>
+  </section>
+
+  <section class="mapa">
+    <h3>MAPA</h3>
+    <div class="mapa-net" style="--colunas: {{ramos.length}}">
+      <span class="canto"></span>
+      {{#each ramos}}<span class="ramo">RAMO {{this}}</span>{{/each}}
+      <div class="entrada">PONTO DE ACESSO{{#if naEntrada.length}}: {{#each naEntrada}}<b>{{this}}</b> {{/each}}{{/if}}</div>
+      {{#each mapa}}
+      <span class="andar">{{andar}}</span>
+      {{#each celulas}}
+      {{#if this}}
+      <div class="no{{#unless visto}} desconhecido{{/unless}}" data-no="{{id}}">
+        <b>{{rotulo}}</b>
+        {{#if visto}}<ul>{{#each conteudos}}<li class="{{#if feito}}feito{{/if}}">{{texto}}</li> {{/each}}</ul>{{else}}<span class="interrogacao">?</span>{{/if}}
+        {{#if corredores.length}}<p class="aqui">{{#each corredores}}<b>{{this}}</b> {{/each}}</p>{{/if}}
+      </div>
+      {{else}}<span class="sem-no"></span>{{/if}}
+      {{/each}}
+      {{/each}}
+    </div>
+  </section>
+
+  <section class="registro">
+    <h3>REGISTRO</h3>
+    <ol>{{#each registro}}<li class="{{tipo}}">{{texto}}</li>{{/each}}</ol>
+  </section>
+</div>

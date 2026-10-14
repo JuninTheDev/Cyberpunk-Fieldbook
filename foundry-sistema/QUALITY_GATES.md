@@ -6,7 +6,7 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 
 | Portão | Como roda | Passa quando | Estado |
 | --- | --- | --- | --- |
-| G1 Sintaxe | `node --check` em cada `.mjs` do sistema e nos testes | nenhum erro | ativo |
+| G1 Sintaxe | `node --check` em cada `.mjs` do sistema (com as subpastas, como `scripts/netrun/`) e nos testes | nenhum erro | ativo |
 | G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
 | G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam: as regras puras com os valores de referência, e o conteúdo gerado contra a própria wiki (tabelas de DV faixa por faixa, lesões pelo 2d6, perícias, os itens da loja) | ativo |
 | G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam, inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
@@ -73,6 +73,11 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   novo do sistema ficaria escondido nele. Confira o detalhe a cada G4: tem de ter só os dois da Lexington.
 - **Rolagem síncrona no Foundry 14:** `new Roll('3d6').evaluateSync()` lança erro ("This Roll contains terms that cannot be
   synchronously evaluated"): os dados não rolam síncronos no modo estrito. Use `await roll.evaluate()` (ciclo 49).
+- **Token andando no Foundry 14:** no gancho `updateToken` de um movimento, e enquanto o token anda, o `token.x` e o
+  `token.y` ainda são os de antes (visto no mestre, com o token movido pelo jogador); o `_source` e as mudanças do
+  gancho já têm o destino. Conta de distância vai pelo `_source`. No ciclo 50, o mestre media o netrunner que saiu do
+  alcance na posição antiga, e a queda só vinha no movimento seguinte: o diagnóstico registrou no gancho o `x` de antes
+  e o `x` novo nas mudanças.
 - **Mensagem do chat na página:** ela aparece duas vezes (no chat e na notificação), cada uma com os botões ligados.
   Para contar os botões de um cartão, procure dentro de uma das duas (`document.querySelector('[data-message-id=...]')`);
   no documento inteiro, a lista vem dobrada (ciclo 42).

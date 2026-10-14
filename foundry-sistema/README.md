@@ -38,8 +38,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   os outros pela tabela da dificuldade escolhida (básica, padrão, incomum, avançada), sem repetir um resultado (menos
   arquivo e nó de controle); cada Black ICE de um resultado vira uma linha. O compêndio **Arquiteturas da NET** (escondido
   dos jogadores) traz as 4 da campanha, do documento da wiki (`documentos/morana/arquiteturas-da-campanha.md`: mudar um
-  andar lá muda o compêndio no próximo build), e os 3 exemplos do NET Architect. O ponto de acesso, a janela da NET e o
-  combate ainda não (o C8).
+  andar lá muda o compêndio no próximo build), e os 3 exemplos do NET Architect.
+- **Ponto de acesso à NET** (o NET Architect da mesa, dentro do sistema): qualquer Tile vira um, pelo botão no HUD do
+  Tile (só o mestre). A configuração escolhe a arquitetura (as do mundo e as dos compêndios), o alcance (6 m, o do RED),
+  o DV, os requisitos (o cyberdeck equipado, a Interface mínima), se o ponto é oculto e se as defesas reiniciam sem
+  ninguém conectado; o Tile sem imagem ganha a de terminal (o Foundry não mostra aos jogadores um Tile sem imagem). No
+  mapa, o marcador "NET" fica sobre o Tile (o oculto, só para o mestre). O jogador seleciona o token e clica no
+  marcador: perto o bastante (o Range Upgrade no deck soma 2 m) e com os requisitos, conecta, e o mestre ativo confere
+  tudo de novo. O token conectado ganha o status "Conectado à NET" e um anel ciano. A **janela da NET** mostra quem está
+  na NET e onde, o mapa que os jogadores enxergam (o andar 1 como "?") e o registro, com o botão **Desconectar**. Sair
+  do alcance derruba da NET (a desconexão insegura); apagar o token ou o Tile também tira o netrunner. Andar, as
+  habilidades contra os andares e os inimigos ainda não (o C8).
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
@@ -229,8 +238,9 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o NET Architect (o ponto de acesso, a
-  janela da NET, os inimigos e o combate; a arquitetura já é um item) e o Painel Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
+  (andar, as habilidades contra os andares, os inimigos e o combate; a arquitetura, o ponto de acesso e a conexão já
+  existem) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
@@ -297,6 +307,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
+  - o ponto de acesso à NET, nos dois navegadores: a configuração pelo HUD do Tile (as arquiteturas do mundo e do compêndio, a imagem de terminal), o marcador (o oculto, só para o mestre), o jogador a 7 m que não conecta (nem pedindo direto ao mestre) e que conecta com o Range Upgrade (a flag, o status, o anel e a janela com o andar 1 como "?"), a queda ao sair do alcance, o "Desconectar" da janela, o reinício só pelo mestre e o token e o Tile apagados;
   - a arquitetura pelas tabelas: a padrão com os dados fixos (o resultado que não repete, o ramo B do andar 3 e os dois Hellhound no mesmo andar);
   - o compêndio das arquiteturas: as 7 (as 4 da campanha e os 3 exemplos), escondidas do jogador, e O Gatilho no mapa;
   - a arquitetura da NET: a ficha com os andares da clínica de ripperdoc e o mapa (o ramo B sai do andar 2), o andar novo, a linha que vira Black ICE e a linha tirada;

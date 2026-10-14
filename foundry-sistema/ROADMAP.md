@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 50). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 51). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -97,11 +97,15 @@ de compêndio; entram só as partes do sistema.
     cpr-2077 o lê), e os 3 exemplos do NET Architect: ciclo 48;
   - [x] a geração pelas tabelas do CORE (3d6 andares, os ramos, o lobby, a dificuldade), com um Black ICE por linha nos
     resultados de vários ICE: ciclo 49;
-  - [ ] o ponto de acesso nos tiles e a conexão do token;
-  - [ ] a janela da NET e o motor no mestre (andar, as habilidades contra os andares, o registro);
+  - [x] o ponto de acesso nos tiles (o botão no HUD, a configuração, o marcador, o oculto) e a conexão do token (o
+    alcance, com o Range Upgrade; o deck e a Interface mínima; o status e o anel), com a janela da NET mínima (quem está
+    na NET, o mapa que os jogadores enxergam, o registro e o "Desconectar") e a queda ao sair do alcance: ciclo 50;
+  - [ ] o motor no mestre e o resto da janela da NET (andar, as habilidades contra os andares, o deck na janela);
   - [ ] os inimigos (o Black ICE e o demônio no andar, a velocidade, o ataque, os efeitos) e o combate;
   - [ ] o jogador rolando as próprias rolagens, pela janela de rolagem dele;
-  - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual.
+  - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual;
+  - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem
+    parede no meio"; ver as dúvidas).
 - [ ] **C9. A NET de 2077 (Mission Kit):**
   - os quickhacks pelo Neuroport, o Breach e a conexão direta;
   - a RAM e o Cooling dos decks.
