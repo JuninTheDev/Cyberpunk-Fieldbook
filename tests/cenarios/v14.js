@@ -4070,10 +4070,13 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    // Os dois passos da NET do ciclo 51: a arquitetura, o ponto de acesso no Tile e o netrunner do jogador (Rank 4, o deck
-    // equipado) a 3 m do Tile; no navegador do jogador, os ajudantes para clicar na janela da NET e esperar o registro.
-    const montarNet = async ({ nome, arquitetura, andares }) => {
+    // Os passos da NET desde o ciclo 51: a arquitetura, o ponto de acesso no Tile e o netrunner do jogador (Rank 4, o deck
+    // equipado) a 3 m do Tile; no navegador do jogador, os ajudantes para clicar na janela da NET e esperar o registro. A
+    // configuração "Inimigos da NET no combate" fica desligada, menos no passo do combate (combate: true): os outros passos
+    // conferem a NET sem os inimigos na iniciativa.
+    const montarNet = async ({ nome, arquitetura, andares, combate = false }) => {
       const m = await edge.evaluate(`(async () => {
+        await game.settings.set('${S}', 'netNoCombate', ${combate});
         const arq = await Item.implementation.create({ name: '${arquitetura}', type: 'arquitetura', system: { andares: ${JSON.stringify(andares)} } });
         const ponto = { ativo: true, nome: 'Terminal do andar', arquitetura: arq.uuid, dv: null, alcance: 6, exigeDeck: true, rankMinimo: 1, oculto: false, dvScanner: 10, reiniciar: true, ligacoes: [], revelados: [] };
         const [tile] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 1800, y: 800, width: 200, height: 200, texture: { src: 'systems/${S}/icones/terminal.svg' }, flags: { '${S}': { pontoDeAcesso: ponto } } }]);
@@ -4121,8 +4124,12 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.evaluate(`(async () => {
         ${fechar}
         window.__fila = [];
+        for (const app of [...foundry.applications.instances.values()].filter(app => app.options.classes?.includes('net-vez'))) await app.close();
         for (const combate of game.combats.filter(c => c.combatants.some(cb => cb.name === '${nome}'))) await combate.delete();
-        await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => t.name === '${nome}').map(t => t.id));
+        await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => t.name === '${nome}' || t.getFlag('${S}', 'inimigoDaNet')).map(t => t.id));
+        for (const a of game.actors.filter(a => a.getFlag('${S}', 'modeloDaNet'))) await a.delete();
+        for (const f of game.folders.filter(f => f.type === 'Actor' && f.name === 'Inimigos da NET')) await f.delete();
+        await game.settings.set('${S}', 'netNoCombate', true);
         await canvas.scene.deleteEmbeddedDocuments('Tile', canvas.scene.tiles.filter(t => t.x === 1800 && t.y === 800).map(t => t.id));
         for (const a of game.actors.filter(a => a.name === '${nome}')) { await a.sheet?.close(); await a.delete(); }
         for (const i of game.items.filter(i => i.name === '${arquitetura}')) await i.delete();
@@ -4756,6 +4763,166 @@ module.exports = async ({ edge, servidores, r }) => {
           && raposaDepois === hpDaRaposa - 10
           && antiPrograma.avisos.join() === 'Sword é anti-programa: só afeta o Black ICE e os demônios.' && antiPrograma.acoes === 2;
         return [ok, JSON.stringify({ ids, sword, atacou, semAcao, hellbolt, hpDaRaposa, raposaDepois, antiPrograma })];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+        await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => a.name === '${RAPOSA}')) await a.delete(); return true; })()`);
+      }
+    });
+
+    await r.passo('o combate na NET (wiki: o Black ICE "entra no topo da fila de iniciativa", e "O mestre joga todos os turnos do Black ICE"; o NET Architect da mesa): ao chegar ao andar do Hellhound e da Raposa, a frase só fala de quem segura a descida; os dois entram no combate da cena (criado, sem começar), com o token escondido no ponto de acesso, o Hellhound no topo; na vez dele, o mestre escolhe atacar o netrunner (8 contra 13); na da Raposa, pula; na do netrunner, o Zap tira 4 da REZ, e o token acompanha; a REZ do token em 0 derruba o Hellhound no estado (derrotado, sem a janela da vez na rodada seguinte), e a Raposa que o mestre marca derrotada também fica sem ela; a desconexão tira os inimigos do combate e da cena, e o Tile apagado também', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Combate';
+      const ARQ = 'Teste Arquitetura do Combate';
+      const RAPOSA = 'Teste Raposa do Combate';
+      try {
+        const raposa = await edge.evaluate(`(async () => (await Actor.implementation.create({ name: '${RAPOSA}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 2 } } })).uuid)()`);
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, combate: true, andares: [
+          { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 1, ramo: 'a', tipo: 'netrunner', nome: 'Raposa', ator: raposa }, { andar: 2, ramo: 'a', tipo: 'vazio' }
+        ] });
+        // No mestre: o combate do netrunner, os tokens dos inimigos e a janela da vez.
+        await edge.evaluate(`(async () => {
+          window.__combateNet = {
+            combate: () => game.combats.find(c => c.combatants.some(cb => cb.tokenId === '${m.token}')),
+            inimigos: () => canvas.scene.tokens.filter(t => t.getFlag('${S}', 'inimigoDaNet')),
+            vez: () => [...foundry.applications.instances.values()].find(app => app.options.classes?.includes('net-vez') && app.rendered),
+            // Sem a janela da vez: de quem é a vez e a fila.
+            semJanela: () => ({ semJanela: true, vez: window.__combateNet.combate()?.combatant?.name, comecou: window.__combateNet.combate()?.started, fila: window.__combateNet.combate()?.turns.map(cb => cb.name + ':' + cb.initiative) })
+          };
+          // O combate que um passo anterior deixou na cena (o dos turnos não apaga o dele) sai: este passo começa sem combate.
+          for (const combate of game.combats.filter(c => c.scene?.id === canvas.scene.id)) await combate.delete();
+          return true;
+        })()`);
+        // 1. A chegada ao 1A: a velocidade (4 + 9 = 13 contra 6 + 2) e a iniciativa da Raposa (o 1d10 com 5).
+        await fixar(edge, [[9, 10], [2, 10], [5, 10]]);
+        const chegada = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await net.ir('1a');
+          await window.__esperar(() => net.registro().some(l => l.includes('um netrunner inimigo, está neste andar')) && net.pronta());
+          return { registro: net.registro().slice(-4), acoes: net.texto('.netrunner .acoes') };
+        })()`);
+        const fila = await edge.evaluate(`(async () => {
+          const c = window.__combateNet;
+          await window.__esperar(() => c.combate()?.combatants.size === 3 && c.combate().combatants.every(cb => cb.tokenId === '${m.token}' || Number.isFinite(cb.initiative)));
+          const combate = c.combate();
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const hellhound = c.inimigos().find(t => t.name === 'Hellhound');
+          return {
+            comecou: combate.started, ordem: combate.turns.map(cb => cb.name),
+            hellhound: hellhound ? {
+              escondido: hellhound.hidden, x: hellhound.x, y: hellhound.y, centro: [tile.x + tile.width / 2 - canvas.grid.size / 2, tile.y + tile.height / 2 - canvas.grid.size / 2],
+              chave: hellhound.getFlag('${S}', 'inimigoDaNet').chave, tipo: hellhound.actor.type, rez: hellhound.actor.system.rez.value + '/' + hellhound.actor.system.rez.max,
+              pasta: game.actors.get(hellhound.actorId)?.folder?.name ?? null
+            } : null,
+            raposa: c.inimigos().find(t => t.name === 'Raposa')?.actor?.name ?? null
+          };
+        })()`);
+        // 2. O mestre começa o combate: a vez do Hellhound (no topo). Ele ataca o netrunner: 6 + 2 = 8 contra 4 + 9 = 13.
+        await fixar(edge, [[2, 10], [9, 10]]);
+        const vezDoHellhound = await edge.evaluate(`(async () => {
+          const c = window.__combateNet;
+          await c.combate().startCombat();
+          await window.__esperar(() => c.vez());
+          const app = c.vez();
+          if (!app) return c.semJanela();
+          const dados = { titulo: app.options.window.title, botoes: [...app.element.querySelectorAll('footer button[data-action]')].map(b => b.textContent.trim()) };
+          app.element.querySelector('button[data-action="${m.token}"]').click();
+          await window.__esperar(() => !app.rendered);
+          return dados;
+        })()`);
+        if (vezDoHellhound.semJanela) return [false, JSON.stringify({ chegada, fila, vezDoHellhound })];
+        const ataque = await jogador.evaluate(`window.__net.esperarRegistro('O Hellhound ataca (')`);
+        // 3. A vez da Raposa: o mestre pula.
+        const vezDaRaposa = await edge.evaluate(`(async () => {
+          const c = window.__combateNet;
+          await c.combate().nextTurn();
+          await window.__esperar(() => c.vez());
+          const app = c.vez();
+          if (!app) return c.semJanela();
+          const dados = { titulo: app.options.window.title, vez: c.combate().combatant?.name };
+          app.element.querySelector('button[data-action=pular]').click();
+          await window.__esperar(() => !app.rendered);
+          return dados;
+        })()`);
+        if (vezDaRaposa.semJanela) return [false, JSON.stringify({ chegada, fila, vezDoHellhound, ataque, vezDaRaposa })];
+        // 4. A vez do netrunner: as Ações NET voltam; o Zap (4 + 6 = 10 contra 2 + 3) tira 4 da REZ do Hellhound, e o token
+        // dele acompanha (16).
+        await edge.evaluate(`window.__combateNet.combate().nextTurn().then(() => true)`);
+        await fixar(edge, [[6, 10], [3, 10], [4, 6]]);
+        const zap = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 3 de 3') && net.pronta());
+          const escolha = net.el().querySelector('select[data-texto=alvo]');
+          escolha.value = '1a.0';
+          escolha.dispatchEvent(new Event('input', { bubbles: true }));
+          net.clicar('button[data-habilidade=zap]');
+          return net.esperarRegistro('Zap (');
+        })()`);
+        const rezNoToken = await edge.evaluate(`(async () => {
+          const hellhound = () => window.__combateNet.inimigos().find(t => t.name === 'Hellhound');
+          await window.__esperar(() => hellhound()?.actor?.system.rez.value === 16);
+          return hellhound()?.actor?.system.rez.value;
+        })()`);
+        // 5. O mestre zera a REZ no token: o estado acompanha (o Hellhound cai), e o combatente fica derrotado.
+        const zerou = await edge.evaluate(`(async () => {
+          const c = window.__combateNet;
+          const hellhound = c.inimigos().find(t => t.name === 'Hellhound');
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const derrotado = () => c.combate().combatants.find(cb => cb.tokenId === hellhound.id)?.defeated;
+          await hellhound.actor.update({ 'system.rez.value': 0 });
+          await window.__esperar(() => (game.system.api.netrun.estado(tile).ices ?? []).some(i => i.chave === '1a.0' && i.rez === 0) && derrotado());
+          return { registro: game.system.api.netrun.estado(tile).log.at(-1).texto, derrotado: derrotado() };
+        })()`);
+        // 6. A rodada seguinte começa na vez do Hellhound, derrotado: a janela da vez não abre. A Raposa, ainda na NET, o
+        // mestre marca como derrotada no combate: na vez dela, a janela também não abre.
+        const semVez = await edge.evaluate(`(async () => {
+          const c = window.__combateNet;
+          await c.combate().nextRound();
+          await new Promise(r => setTimeout(r, 1500));
+          const hellhound = { vez: c.combate().combatant?.name, janela: Boolean(c.vez()) };
+          await c.combate().combatants.find(cb => cb.name === 'Raposa').update({ defeated: true });
+          await c.combate().nextTurn();
+          await new Promise(r => setTimeout(r, 1500));
+          return { ...hellhound, vezDaRaposa: c.combate().combatant?.name, janelaDaRaposa: Boolean(c.vez()) };
+        })()`);
+        // 7. O netrunner desconecta: ninguém na NET, a arquitetura reinicia, e os inimigos saem do combate e da cena.
+        await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('button[data-action=desconectar]');
+          await window.__esperar(() => !net.janela());
+          return true;
+        })()`);
+        const limpou = await edge.evaluate(`(async () => {
+          const c = window.__combateNet;
+          await window.__esperar(() => !c.inimigos().length);
+          return { tokens: c.inimigos().length, combatentes: c.combate()?.combatants.map(cb => cb.name) ?? [], registro: game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}')).log.slice(-2).map(l => l.texto) };
+        })()`);
+        // 8. De volta à NET e ao 1A pelo mestre: os inimigos voltam ao combate (a REZ cheia); o Tile apagado os tira.
+        await fixar(edge, [[9, 10], [2, 10], [5, 10]]);
+        const tileApagado = await edge.evaluate(`(async () => {
+          const c = window.__combateNet;
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          await game.system.api.netrun.pedir('conectar', { tile: tile.uuid, token: '${m.token}' });
+          await game.system.api.netrun.pedir('mover', { tile: tile.uuid, token: '${m.token}', destino: '1a' });
+          await window.__esperar(() => c.inimigos().length === 2 && c.combate()?.combatants.size === 3);
+          const antes = { tokens: c.inimigos().length, rez: c.inimigos().find(t => t.name === 'Hellhound')?.actor?.system.rez.value };
+          await tile.delete();
+          await window.__esperar(() => !c.inimigos().length);
+          return { antes, depois: c.inimigos().length, combatentes: c.combate()?.combatants.map(cb => cb.name) ?? [] };
+        })()`);
+        const ok = chegada.registro.includes('Hellhound está neste andar: o Black ICE e o demônio seguram a descida até caírem.')
+          && chegada.registro.includes('Raposa, um netrunner inimigo, está neste andar.') && !chegada.registro.some(l => l.includes('Hellhound e Raposa'))
+          && fila.comecou === false && fila.ordem.join() === `Hellhound,Raposa,${NOME}` && fila.raposa === RAPOSA
+          && fila.hellhound?.escondido === true && fila.hellhound.x === fila.hellhound.centro[0] && fila.hellhound.y === fila.hellhound.centro[1]
+          && fila.hellhound.chave === '1a.0' && fila.hellhound.tipo === 'blackice' && fila.hellhound.rez === '20/20' && fila.hellhound.pasta === 'Inimigos da NET'
+          && vezDoHellhound.titulo === 'A vez de Hellhound na NET' && vezDoHellhound.botoes.join() === `Atacar ${NOME},Pular a vez`
+          && ataque === `O Hellhound ataca (8 contra 13), e ${NOME} se defende.`
+          && vezDaRaposa.titulo === 'A vez de Raposa na NET' && vezDaRaposa.vez === 'Raposa'
+          && zap === `Zap (10 contra 5): ${NOME} acertou o Hellhound: 4 de REZ, fica com 16.` && rezNoToken === 16
+          && zerou.registro === 'A REZ do Hellhound mudou no token: ele caiu.' && zerou.derrotado === true
+          && semVez.vez === 'Hellhound' && semVez.janela === false && semVez.vezDaRaposa === 'Raposa' && semVez.janelaDaRaposa === false
+          && limpou.tokens === 0 && limpou.combatentes.join() === NOME && limpou.registro.at(-1).startsWith('Ninguém na NET: a arquitetura reiniciou as defesas')
+          && tileApagado.antes.tokens === 2 && tileApagado.antes.rez === 20 && tileApagado.depois === 0 && tileApagado.combatentes.join() === NOME;
+        return [ok, JSON.stringify({ chegada, fila, vezDoHellhound, ataque, vezDaRaposa, zap, rezNoToken, zerou, semVez, limpou, tileApagado })];
       } finally {
         await desmontarNet({ nome: NOME, arquitetura: ARQ });
         await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => a.name === '${RAPOSA}')) await a.delete(); return true; })()`);

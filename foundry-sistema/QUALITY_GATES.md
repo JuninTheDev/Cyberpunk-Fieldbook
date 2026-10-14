@@ -80,7 +80,13 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   e o `x` novo nas mudanças.
 - **Dados fixos em toda rolagem do passo:** o passo fixa os dados de tudo o que ele provoca, até do que ele não confere.
   No ciclo 53, a chegada ao andar com Black ICE passou a rolar a velocidade, e o passo dos inimigos do ciclo 52, que não
-  fixava esses dados, caiu (a velocidade saiu "24 contra 21" e mudou o registro); ele ganhou os dados fixos.
+  fixava esses dados, caiu (a velocidade saiu "24 contra 21" e mudou o registro); ele ganhou os dados fixos. No d10 de
+  um teste do sistema, o 1 tira outro d10 (o próximo da fila) e o 10 soma outro: o dado fixo vai de 2 a 9 (no ciclo 55,
+  o ataque do Hellhound com o 1 saiu "−2 contra 9", e a defesa rolou fora da fila).
+- **O combate que sobra na cena:** o passo dos turnos deixa o combate dele (a Atiradora, o Alvo e o Capanga) ativo até
+  o fim do cenário. O passo que depende do combate da cena (os inimigos da NET entram no combate ativo dela) apaga os
+  combates da cena antes de começar: no ciclo 55, o netrunner e os inimigos entraram no combate da Atiradora, e a vez
+  seguinte à do Hellhound foi a dela.
 - **Pergunta (DialogV2) no cenário:** ache a janela nas instâncias (`foundry.applications.instances`) pela classe
   (`options.classes`) ou pelo título (`options.window.title`) e clique no botão pelo `data-action` (`ok`, `yes`). Quando
   a pergunta abre no mestre por causa de um clique do jogador (o vírus na NET), o clique do jogador não espera: o passo

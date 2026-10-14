@@ -48,6 +48,10 @@ export function registrarConfiguracoes() {
     type: String, default: 'naoDispara', choices: { naoDispara: 'Não dispara', comum: 'Dispara como arma comum' }
   });
   registrar('cargaEsfria', { name: 'A carga Tech esfria uma rodada (2077)', hint: 'No combate, depois de uma carga (tiro ou rajada), a arma Tech só carrega de novo duas rodadas depois. Fora do combate, não conta.', type: Boolean, default: true });
+  registrar('netNoCombate', {
+    name: 'Inimigos da NET no combate', hint: 'O Black ICE, os demônios e os netrunners inimigos (com ficha) encontrados na NET entram na iniciativa da cena, com um token escondido no ponto de acesso (o Black ICE e o demônio no topo). A REZ do token e a da NET andam juntas. Na vez deles, o mestre escolhe quem atacar.',
+    type: Boolean, default: true
+  });
   // A versão dos dados do mundo (migracao.mjs), escondida, como o "dataModelVersion" do CORE. 0: de antes da migração.
   game.settings.register(SISTEMA, 'versaoDosDados', { scope: 'world', config: false, type: Number, default: 0 });
   // Deste navegador, como o "invertRollCtrlFunction" do CORE.

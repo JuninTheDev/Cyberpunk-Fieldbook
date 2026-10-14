@@ -3,8 +3,9 @@
 // registrarNet() no init.
 import { souOMestreAtivo } from '../combate.mjs';
 import { SISTEMA } from '../config.mjs';
-import { STATUS_EM_CHAMAS } from './constantes.mjs';
-import { conexaoDoToken, estadoDoTile, operacoes, pontoDoTile, removerCorredorApagado, soltarTokens } from './estado.mjs';
+import { vezDoInimigo } from './combate.mjs';
+import { FLAG_INIMIGO, STATUS_EM_CHAMAS } from './constantes.mjs';
+import { alvosNaVez, conexaoDoToken, estadoDoTile, operacoes, pontoDoTile, removerCorredorApagado, soltarTokens } from './estado.mjs';
 import { JanelaDaNet } from './janela.mjs';
 import { alcanceDo, distancia, netrunnerDo } from './regras-da-net.mjs';
 import { abrirPonto, apagarPontos, arquiteturasDisponiveis, botaoNoHud, configurar, conectar, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
@@ -75,7 +76,8 @@ export function registrarNet() {
   Hooks.on('deleteTile', tile => {
     if (daCenaAtual(tile)) desenharPontos();
     for (const janela of [...JanelaDaNet.abertas.values()]) if (janela.tile.id === tile.id) janela.close();
-    // Os tokens que estavam na NET por este Tile saem dela (a flag e o status), no mestre ativo.
+    // Os tokens que estavam na NET por este Tile saem dela (a flag e o status), e os inimigos saem do combate e da cena;
+    // no mestre ativo.
     if (souOMestreAtivo()) soltarTokens(tile).catch(falha => console.warn(`${SISTEMA} | NET: Tile apagado`, falha));
   });
   Hooks.on('updateTile', (tile, mudancas) => {
@@ -116,8 +118,9 @@ export function registrarNet() {
     if (conexao) removerCorredorApagado(conexao.tile, token.id).catch(falha => console.warn(`${SISTEMA} | NET: token apagado`, falha));
   });
 
-  // O combate: no começo do turno do netrunner conectado, as Ações NET voltam (o mestre ativo); a janela mostra se
-  // elas contam (em combate) e quantas sobram.
+  // O combate: no começo do turno do netrunner conectado, as Ações NET voltam (o mestre ativo); na vez de um inimigo da
+  // NET, o mestre escolhe quem ele ataca (o combate.mjs); a janela mostra se as Ações NET contam (em combate) e quantas
+  // sobram.
   Hooks.on('updateCombat', (combate, mudancas) => {
     JanelaDaNet.redesenhar();
     if (!souOMestreAtivo() || !combate.started || !('turn' in mudancas || 'round' in mudancas)) return;
@@ -127,11 +130,19 @@ export function registrarNet() {
     const token = combate.combatant?.token;
     const conexao = token && conexaoDoToken(token);
     if (conexao) pedir('zerarAcoes', { tile: conexao.tile, token: token.id }).catch(falha => console.warn(`${SISTEMA} | NET: Ações NET do turno`, falha));
+    else if (token?.getFlag(SISTEMA, FLAG_INIMIGO)) vezDoInimigo(combate.combatant, { alvos: alvosNaVez, pedir }).catch(falha => ui.notifications.warn(falha.message));
   });
   for (const gancho of ['deleteCombat', 'createCombatant', 'deleteCombatant']) Hooks.on(gancho, () => JanelaDaNet.redesenhar());
 
   // A ficha do netrunner (a Sorte preparada, o cyberdeck, a Interface): a janela dele redesenha.
   const janelasDoAtor = ator => JanelaDaNet.redesenhar(janela => (estadoDoTile(janela.tile)?.corredores ?? []).some(corredor => corredor.ator === ator?.id));
   Hooks.on('updateActor', janelasDoAtor);
+  // A REZ mudada no token de um inimigo no combate (a barra, o dano aplicado pelo cartão) volta para o estado da NET (o
+  // mestre ativo; igual à do estado, nada muda).
+  Hooks.on('updateActor', (ator, mudancas) => {
+    const marca = ator.isToken && ator.token?.getFlag(SISTEMA, FLAG_INIMIGO);
+    if (!marca || !souOMestreAtivo() || !foundry.utils.hasProperty(mudancas, 'system.rez.value')) return;
+    pedir('ajustarRez', { tile: marca.tile, alvo: marca.chave, rez: ator.system.rez.value }).catch(falha => console.warn(`${SISTEMA} | NET: REZ do token`, falha));
+  });
   for (const gancho of ['createItem', 'updateItem', 'deleteItem']) Hooks.on(gancho, item => janelasDoAtor(item.parent));
 }

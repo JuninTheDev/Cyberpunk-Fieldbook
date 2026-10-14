@@ -4,7 +4,7 @@
 // comando no nó de controle tomado, a situação do netrunner (o fogo, o Kraken, o Skunk, o Wisp), o deck (ativar,
 // desativar e atacar com os programas), o registro e, para o mestre, o painel dele (a vez dos inimigos, revelar, a REZ
 // dos inimigos, zerar as Ações NET, derrubar, reiniciar). Abre para o dono do token conectado e para o mestre, que age
-// pelo netrunner escolhido. O combate (os inimigos na iniciativa) vem na próxima parte do C8.
+// pelo netrunner escolhido. Em combate, a vez de cada inimigo também vem pela iniciativa (o combate.mjs).
 import { ENTRADA, RAMOS, TIPOS_DE_ANDAR } from '../arquitetura.mjs';
 import { caminho, CLASSES_PROGRAMA, SISTEMA } from '../config.mjs';
 import { HABILIDADES_DE_INTERFACE, programaDeAtaque } from '../regras.mjs';

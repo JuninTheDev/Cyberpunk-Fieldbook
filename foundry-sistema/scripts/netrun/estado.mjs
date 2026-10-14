@@ -2,17 +2,18 @@
 // anda pela arquitetura, resolve as habilidades de Interface contra os andares e contra os inimigos (o Zap e o Slide) e
 // grava no Tile o estado público da arquitetura (os andares que os jogadores enxergam, quem está onde, a REZ dos
 // inimigos, o registro); o encontro com o Black ICE (a velocidade), o ataque dos inimigos (pelo mestre) e os efeitos de
-// cada Black ICE na ficha; o deck (ativar, desativar e atacar com os programas). O combate (os inimigos na iniciativa)
-// vem na próxima parte do C8. No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
+// cada Black ICE na ficha; o deck (ativar, desativar e atacar com os programas); os inimigos encontrados no combate da
+// cena (o combate.mjs). No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
 import { ENTRADA, filhosDe, lerArquitetura } from '../arquitetura.mjs';
 import { caminho, SISTEMA } from '../config.mjs';
 import { acoesDeNet, formulaDeDano, NUMEROS_DA_NET, programaDeAtaque } from '../regras.mjs';
 import { testar } from '../rolagens.mjs';
+import { entrarNoCombate, sincronizarInimigos, tirarInimigos } from './combate.mjs';
 import { FLAG_CONEXAO, FLAG_ESTADO, FLAG_PONTO, STATUS_CONECTADO, STATUS_EM_CHAMAS } from './constantes.mjs';
 import {
-  acharConteudo, alcanceDo, alvoDaHabilidade, alvoDoPrograma, comecoDoTurno, conteudosDoNo, demonioDe, distancia, efeitoDoIce, faltasPara, gastarAcoes, iceDaQueda, iceDe, inimigosAtivos,
-  inimigosQueAtacam, motivoParaNaoAndar, motivoParaNaoDesconectar, motivoParaNaoMudarPrograma, motivoParaNaoSlide, mudarRez, netrunnerDo, nomeDoInimigo, penalidadeDoSkunk, PRISAO_DO_KRAKEN,
-  resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, resumoDoAndar, rezDe, vistaPublica
+  acharConteudo, alcanceDo, alvoDaHabilidade, alvoDoPrograma, alvosDoInimigo, comecoDoTurno, conteudosDoNo, demonioDe, distancia, efeitoDoIce, faltasPara, fraseDaChegada, gastarAcoes, iceDaQueda,
+  iceDe, inimigosAtivos, inimigosQueAtacam, motivoParaNaoAndar, motivoParaNaoDesconectar, motivoParaNaoMudarPrograma, motivoParaNaoSlide, mudarRez, netrunnerDo, nomeDoInimigo, penalidadeDoSkunk,
+  PRISAO_DO_KRAKEN, resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, resumoDoAndar, rezDe, rezMaxDe, vistaPublica
 } from './regras-da-net.mjs';
 import { erro } from './socket.mjs';
 
@@ -93,15 +94,20 @@ async function marcarToken(token, tile, ligado) {
   await token.actor?.toggleStatusEffect(STATUS_CONECTADO, { active: ligado });
 }
 
-// Fecha a operação: o reinício das defesas (sem ninguém mais na NET), a gravação e os tokens que saíram.
+// Fecha a operação: o reinício das defesas (sem ninguém mais na NET), a gravação, os tokens que saíram e os inimigos no
+// combate (a REZ nos tokens deles; no reinício, eles saem). Os tokens que saíram perdem a marca antes: o turno que o
+// Foundry acerta quando um inimigo sai do combate não dá a vez a quem já não está na NET.
 async function concluir(ctx) {
   const { est, tile, arq, ponto } = ctx;
-  if (ctx.havia > 0 && !est.corredores.length && ponto.reiniciar !== false) reiniciarDefesas(ctx);
+  const reinicia = ctx.havia > 0 && !est.corredores.length && ponto.reiniciar !== false;
+  if (reinicia) reiniciarDefesas(ctx);
   await gravar(tile, arq, est);
   for (const id of ctx.desmarcar) {
     const token = tile.parent.tokens.get(id);
     if (token) await marcarToken(token, tile, false);
   }
+  if (reinicia) await tirarInimigos(tile);
+  else await sincronizarInimigos(tile, arq, est);
 }
 
 // O token apagado da cena sai da NET (no mestre ativo).
@@ -117,12 +123,26 @@ export async function removerCorredorApagado(tileUuid, tokenId) {
   await concluir(ctx);
 }
 
-// O Tile apagado com gente na NET: os tokens saem dela (a flag e o status), no mestre ativo.
+// O Tile apagado: os tokens que estavam na NET saem dela (a flag e o status), e os inimigos saem do combate e da cena; no
+// mestre ativo.
 export async function soltarTokens(tile) {
   for (const corredor of estadoDoTile(tile)?.corredores ?? []) {
     const token = tile.parent?.tokens.get(corredor.token);
     if (token) await marcarToken(token, tile, false);
   }
+  await tirarInimigos(tile);
+}
+
+// Quem o inimigo pode atacar na vez dele no combate (o index.mjs): [{ token, nome }] dos netrunners no andar dele, ou null
+// se o ponto de acesso ou o inimigo não estão mais lá.
+export async function alvosNaVez(tileUuid, chave) {
+  const tile = await fromUuid(tileUuid);
+  const ponto = pontoDoTile(tile);
+  const est = estadoDoTile(tile);
+  if (!ponto?.ativo || !est || est.arquitetura !== ponto.arquitetura) return null;
+  const arq = await arquiteturaDoPonto(ponto);
+  if (!acharConteudo(arq, chave)) return null;
+  return alvosDoInimigo(arq, est, chave).map(corredor => ({ token: corredor.token, nome: corredor.nome }));
 }
 
 // ---------------- Andar e as habilidades ----------------
@@ -349,7 +369,8 @@ export const operacoes = {
     return { desconectado: true };
   },
 
-  // Andar a um andar vizinho (a wiki: não é Ação NET; vai até a próxima obstrução). O andar a que chega fica visto.
+  // Andar a um andar vizinho (a wiki: não é Ação NET; vai até a próxima obstrução). O andar a que chega fica visto; os
+  // inimigos encontrados nele entram no combate da cena (o combate.mjs).
   async mover(dados, usuario) {
     const ctx = await contexto(dados, usuario);
     const { arq, est, corredor } = ctx;
@@ -363,8 +384,10 @@ export const operacoes = {
     else {
       if (!est.vistos.includes(corredor.no)) est.vistos = [...est.vistos, corredor.no];
       registrar(est, `${corredor.nome} ${descendo ? 'desceu' : 'subiu'} para ${lugar(arq, corredor.no)}: ${resumoDoAndar(arq, corredor.no)}.`);
-      if (inimigos.length) registrar(est, `${inimigos.map(nomeDoInimigo).join(', ').replace(/, ([^,]*)$/, ' e $1')} ${inimigos.length > 1 ? 'estão' : 'está'} neste andar: o Black ICE e o demônio seguram a descida até caírem.`, 'falha');
+      const seguram = fraseDaChegada(arq, est, corredor);
+      if (seguram) registrar(est, seguram, 'falha');
       for (const conteudo of inimigos) if (est.corredores.includes(corredor)) await encontrar(ctx, corredor, conteudo);
+      if (est.corredores.includes(corredor)) await entrarNoCombate(ctx, inimigos);
     }
     await concluir(ctx);
     return { no: corredor.no };
@@ -433,15 +456,20 @@ export const operacoes = {
     return { ok: true };
   },
 
-  // O mestre muda a REZ de um Black ICE ou demônio da arquitetura (o dano que veio de fora, a REZ cheia de volta).
+  // O mestre muda a REZ de um Black ICE ou demônio da arquitetura (o dano que veio de fora, a REZ cheia de volta). Com
+  // dados.rez, é a REZ que mudou no token do inimigo no combate (o index.mjs): igual à do estado, nada muda.
   async ajustarRez(dados, usuario) {
     if (!usuario.isGM) throw erro('Só o mestre ajusta a REZ dos inimigos.');
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
     const achado = acharConteudo(ctx.arq, dados.alvo);
     if (!achado || !['ice', 'demonio'].includes(achado.conteudo.tipo)) throw erro('Este inimigo não está na arquitetura.');
     const { conteudo } = achado;
-    const rez = mudarRez(ctx.est, conteudo, dados.cheia ? Infinity : rezDe(ctx.est, conteudo) + (Number(dados.delta) || 0));
-    registrar(ctx.est, `O mestre pôs a REZ do ${nomeDoInimigo(conteudo)} em ${rez}.`);
+    const antes = rezDe(ctx.est, conteudo);
+    const doToken = dados.rez !== undefined;
+    const pedida = doToken ? Number(dados.rez) || 0 : dados.cheia ? Infinity : antes + (Number(dados.delta) || 0);
+    if (doToken && Math.max(0, Math.min(rezMaxDe(conteudo), pedida)) === antes) return { rez: antes };
+    const rez = mudarRez(ctx.est, conteudo, pedida);
+    registrar(ctx.est, doToken ? `A REZ do ${nomeDoInimigo(conteudo)} mudou no token: ${rez ? `fica com ${rez}` : 'ele caiu'}.` : `O mestre pôs a REZ do ${nomeDoInimigo(conteudo)} em ${rez}.`);
     await concluir(ctx);
     return { rez };
   },
@@ -547,6 +575,7 @@ export const operacoes = {
     const est = estadoNovo(ctx.ponto, ctx.arq);
     registrar(est, 'O mestre reiniciou a arquitetura.', 'info');
     await gravar(ctx.tile, ctx.arq, est);
+    await tirarInimigos(ctx.tile);
     return { reiniciado: true };
   }
 };

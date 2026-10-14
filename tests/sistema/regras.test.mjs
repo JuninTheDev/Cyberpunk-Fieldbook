@@ -1273,6 +1273,39 @@ test('O deck na janela da NET (wiki, "Ações NET": "Ativar ou desativar um prog
   assert.equal(netrun.alvoDoPrograma(arq, est, eu, hellbolt).erro, 'Não há netrunner inimigo ativo neste andar.');
 });
 
+test('O combate na NET (o NET Architect da mesa; wiki, "Black ICE" e "Demônios", RED p. 204 e 212: o Black ICE "entra no topo da fila de iniciativa"): a frase da chegada só com quem segura a descida, e quem o inimigo ataca na vez dele', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes('Depois ele entra no <b>topo da fila de iniciativa</b> e ataca uma vez por turno (ATK + 1d10 contra Interface + 1d10) até ser desativado ou driblado com Slide.'));
+  assert.ok(regrasDaWiki.includes('Entra no topo da iniciativa quando detecta um intruso'));
+  const arq = arquitetura.lerArquitetura({ andares: [
+    { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 1, ramo: 'a', tipo: 'netrunner', nome: 'Raposa' },
+    { andar: 2, ramo: 'a', tipo: 'demonio', demonio: 'imp' }, { andar: 2, ramo: 'a', tipo: 'ice', ice: 'wisp' }, { andar: 3, ramo: 'a', tipo: 'netrunner', nome: 'Lobo' }
+  ] });
+  const deck = { nome: 'Deck', token: 't1', no: '1a', escapou: [] };
+  const outro = { nome: 'Outro', token: 't2', no: '2a', escapou: [] };
+  const est = { mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [deck, outro] };
+  // A frase da chegada: só quem segura a descida (o netrunner inimigo, não; o encontro fala dele).
+  assert.equal(netrun.fraseDaChegada(arq, est, deck), 'Hellhound está neste andar: o Black ICE e o demônio seguram a descida até caírem.');
+  assert.equal(netrun.fraseDaChegada(arq, est, outro), 'Imp e Wisp estão neste andar: o Black ICE e o demônio seguram a descida até caírem.');
+  assert.equal(netrun.fraseDaChegada(arq, est, { ...deck, no: '3a' }), null);
+  // Na vez do inimigo, ele ataca os netrunners do andar dele.
+  const nomes = chave => netrun.alvosDoInimigo(arq, est, chave).map(corredor => corredor.nome);
+  assert.deepEqual(nomes('1a.0'), ['Deck']);
+  assert.deepEqual(nomes('1a.1'), ['Deck']);
+  assert.deepEqual(nomes('2a.0'), ['Outro']);
+  assert.deepEqual(nomes('3a.0'), []);
+  // O Black ICE driblado com o Slide não ataca quem o driblou; o netrunner inimigo, sim.
+  deck.escapou = ['1a.0'];
+  assert.deepEqual(nomes('1a.0'), []);
+  assert.deepEqual(nomes('1a.1'), ['Deck']);
+  // O demônio com a REZ em 0 e o netrunner inimigo fora da NET não atacam.
+  netrun.mudarRez(est, netrun.conteudosDoNo(arq, '2a')[0], 0);
+  est.fora = ['1a.1'];
+  assert.deepEqual(nomes('2a.0'), []);
+  assert.deepEqual(nomes('1a.1'), []);
+  assert.deepEqual(nomes('2a.1'), ['Outro']);
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

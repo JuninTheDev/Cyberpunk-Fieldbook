@@ -76,6 +76,13 @@ export function nomeDoInimigo(conteudo) {
 // netrunner driblou com o Slide, e o demônio. O netrunner inimigo não segura.
 export const quemSegura = (arq, est, corredor) => inimigosAtivos(arq, est, corredor.no)
   .filter(conteudo => conteudo.tipo === 'demonio' || (conteudo.tipo === 'ice' && !(corredor.escapou ?? []).includes(conteudo.chave)));
+// A frase da chegada ao andar: quem segura a descida (o netrunner inimigo não segura; o encontro fala dele), ou null.
+export function fraseDaChegada(arq, est, corredor) {
+  const seguram = quemSegura(arq, est, corredor);
+  if (!seguram.length) return null;
+  const nomes = seguram.map(nomeDoInimigo).join(', ').replace(/, ([^,]*)$/, ' e $1');
+  return `${nomes} ${seguram.length > 1 ? 'estão' : 'está'} neste andar: o Black ICE e o demônio seguram a descida até caírem.`;
+}
 // A REZ nova do inimigo (entre 0 e a da tabela), guardada no estado.
 export function mudarRez(est, conteudo, rez) {
   const valor = Math.max(0, Math.min(rezMaxDe(conteudo), rez));
@@ -263,6 +270,8 @@ export function resolverAtaque(corredor, inimigo, { ataque, defesa }) {
 // wiki: o Black ICE ataca "até ser desativado ou driblado com Slide").
 export const inimigosQueAtacam = (arq, est, corredor) => inimigosAtivos(arq, est, corredor.no)
   .filter(conteudo => conteudo.tipo !== 'ice' || !(corredor.escapou ?? []).includes(conteudo.chave));
+// Quem o inimigo ataca na vez dele no combate: os netrunners que ele pode atacar no andar dele.
+export const alvosDoInimigo = (arq, est, chave) => est.corredores.filter(corredor => inimigosQueAtacam(arq, est, corredor).some(conteudo => conteudo.chave === chave));
 
 // O efeito de cada Black ICE (a tabela da wiki): o dano no cérebro (a fórmula da tabela), no REZ de um programa ativo (os
 // anti-programa; se desativar, destrói), o programa destruído (o Asp), o defensor desativado (o Raven, antes do dano), a

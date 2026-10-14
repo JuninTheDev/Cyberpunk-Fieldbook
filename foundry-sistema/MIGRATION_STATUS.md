@@ -62,7 +62,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | os inimigos no andar (seguram a descida), o Zap e o Slide contra eles, a REZ deles (no painel do mestre) | portados no ciclo 52 (o C8, parte 6) |
 | NET Architect | o encontro (a velocidade), o ataque dos inimigos pelo mestre, os efeitos de cada Black ICE na ficha (o fogo, as penalidades, os programas destruídos, o Kraken, o Wisp, o Skunk, o Giant), a desconexão insegura com o efeito | portados no ciclo 53 (o C8, parte 7; ver as dúvidas) |
 | NET Architect | o deck na janela (ativar, desativar e atacar com os programas) | portado no ciclo 54 (o C8, parte 8; ver as dúvidas) |
-| NET Architect | o combate na NET (os inimigos na iniciativa), as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | o combate na NET (os inimigos encontrados na iniciativa, com um token escondido; a vez deles pela janela do mestre; a REZ do token e a do estado juntas; a configuração "Inimigos da NET no combate") | portado no ciclo 55 (o C8, parte 9; ver as dúvidas) |
+| NET Architect | as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -328,10 +329,10 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   e o vírus que pede mais do que sobra é recusado (o mestre divide por turnos, à mão, ou o netrunner o faz fora de
   combate, onde as Ações NET não contam). O sistema não guarda um vírus pela metade.
 
-- **Os inimigos atacam pelo painel do mestre, por enquanto fora da iniciativa.** No NET Architect, o Black ICE e o
-  demônio encontrados entram na fila do combate (com um token escondido) e, na vez de cada um, o mestre escolhe quem ele
-  ataca. Desde o ciclo 53 o ataque é o botão "X ataca" no painel do mestre; a fila do combate vem na parte seguinte do
-  C8.
+- **Os inimigos atacam na vez deles no combate e pelo painel do mestre.** Como no NET Architect, desde o ciclo 55 o
+  Black ICE, o demônio e o netrunner inimigo com ficha encontrados entram na fila do combate (com um token escondido), e
+  na vez de cada um a janela do mestre pergunta quem ele ataca. O botão "X ataca" do painel do mestre (ciclo 53)
+  continua, para o ataque fora da fila (sem combate, ou com a configuração "Inimigos da NET no combate" desligada).
 
 - **O empate na velocidade do encontro: do netrunner.** A wiki: "Se o ICE vencer, você sofre o efeito na hora"; o empate
   não é vitória do ICE. O NET Architect dava o empate ao ICE. No ataque, o empate é da defesa, nos dois.
@@ -363,6 +364,17 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 - **O anti-programa contra o netrunner inimigo: na janela, não.** A wiki: o anti-programa "só afeta programas". Os
   programas do netrunner inimigo não fazem parte da arquitetura, e a janela só dá o anti-programa no Black ICE e no
   demônio; o mestre resolve à mão o ataque aos programas do netrunner inimigo.
+
+- **A vez do inimigo no combate: um ataque.** A wiki: o Black ICE "ataca uma vez por turno"; o demônio "só usa Zap com
+  as ações que sobram" (2 a 4 Ações NET). Como no NET Architect, a janela da vez dá um ataque; os outros Zaps do
+  demônio, o mestre faz pelo painel ("X ataca"), e os nós de controle, à mão.
+
+- **O combate que a NET cria e o netrunner inimigo nele.** Como no NET Architect: com um combate ativo na cena, os
+  inimigos encontrados entram nele; sem combate, o encontro cria um, sem começar (as Ações NET só passam a contar quando
+  o mestre o começa). O Black ICE e o demônio caídos (REZ em 0) ficam no combate, derrotados, até a arquitetura
+  reiniciar. A wiki não diz como o netrunner inimigo entra: o que tem ficha entra com a iniciativa dela (REF + 1d10,
+  rolada pelo mestre); sem ficha, não entra. Fora da NET (o cérebro em 0), ele não fica derrotado sozinho: vale a
+  ficha dele. A configuração "Inimigos da NET no combate" (padrão: ligada) desliga tudo isso.
 
 - **O Slide: uma vez por turno, e só até sair do andar.** A wiki: "1 Ação NET (1×/turno)". O NET Architect não contava
   as vezes; aqui, em combate, o segundo Slide do turno é recusado (fora de combate, não há turno). Como no NET Architect,
@@ -2765,6 +2777,75 @@ do programa + 1d10)" e "Programa anti-pessoal só afeta netrunners; anti-program
   para o ciclo 55, com os inimigos.
 - **Próximo:** o C8, parte 9: o combate na NET (os inimigos encontrados na iniciativa, com um token; a vez deles pelo
   combate; a REZ do token e a do estado juntas).
+
+### Ciclo 55 (2026-10-14): o combate na NET (o C8, parte 9; sessão KouArt)
+
+O NET Architect da mesa (o `combate.mjs`: os inimigos encontrados na iniciativa, com um token escondido; a REZ no token;
+a vez de cada um pelo mestre; os tokens que saem no reinício) e a wiki ("Black ICE", RED p. 204: "Depois ele entra no
+topo da fila de iniciativa e ataca uma vez por turno (ATK + 1d10 contra Interface + 1d10) até ser desativado ou
+driblado com Slide", e "O mestre joga todos os turnos do Black ICE"; "Demônios", p. 212: "Entra no topo da iniciativa
+quando detecta um intruso"). Commit anterior: `db23c51` (ciclo 54).
+
+- **Implementado:**
+  - **os inimigos no combate** (o `netrun/combate.mjs`): ao chegar ao andar, o Black ICE, o demônio e o netrunner
+    inimigo com ficha entram no combate ativo da cena (sem combate, um novo, sem começar), com o netrunner; cada inimigo
+    ganha um token escondido no ponto de acesso (o Black ICE e o demônio com um ator por modelo da wiki, na pasta
+    "Inimigos da NET"; o netrunner inimigo, com a ficha dele) e rola a iniciativa (a do sistema põe o Black ICE e o
+    demônio no topo; o netrunner inimigo rola a dele). O inimigo que já tem token (de outro encontro) usa o dele;
+  - **a REZ junta:** a do estado vai para o token (a barra) depois de cada operação, e em 0 o combatente fica
+    derrotado; a mudada no token (a barra, o dano aplicado pelo cartão) volta para o estado ("A REZ do X mudou no
+    token"); igual à do estado, nada muda;
+  - **a vez do inimigo:** no turno dele, o mestre ativo vê a janela "A vez de X na NET" com "Atacar" para cada
+    netrunner que ele pode atacar no andar dele (o Black ICE driblado com o Slide, não) e "Pular a vez"; o derrotado não
+    tem a janela. O ataque é o mesmo do painel do mestre (o botão continua);
+  - **a saída:** no reinício da arquitetura (ninguém mais na NET, ou o mestre) e com o Tile apagado, os inimigos saem do
+    combate e da cena; os tokens que saíram da NET perdem a marca antes, para o turno que o Foundry acerta não chamar
+    quem já saiu;
+  - **a configuração "Inimigos da NET no combate"** (padrão: ligada, como no NET Architect) desliga tudo isso;
+  - **a frase da chegada** só fala de quem segura a descida (o Black ICE e o demônio); o netrunner inimigo tem a linha
+    do encontro (a pendência do ciclo 54).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 78 de 82. Um teste novo: as frases da wiki; a frase da chegada (o Hellhound sozinho, mesmo com a Raposa no
+    andar; o Imp e o Wisp juntos; o andar só com o netrunner inimigo, sem frase); quem o inimigo ataca na vez dele (o
+    netrunner do andar; não o de outro andar; o Black ICE driblado não ataca quem o driblou, o netrunner inimigo sim; o
+    demônio com a REZ em 0 e o netrunner inimigo fora da NET, ninguém). As 4 falhas são as das armas de 2077
+    (QUALITY_GATES);
+  - G4: 87 de 92, cerca de 140 s. Um passo novo, nos dois navegadores, com a configuração ligada: a chegada ao andar do
+    Hellhound e da Raposa (com ficha) dá só "Hellhound está neste andar" e a linha da Raposa; o combate é criado sem
+    começar (as Ações NET seguem livres), com a fila Hellhound, Raposa e o netrunner; o token do Hellhound fica
+    escondido no centro do ponto de acesso, com a REZ 20/20, o ator na pasta "Inimigos da NET"; o mestre começa o
+    combate e, na vez do Hellhound, a janela dá "Atacar" o netrunner e "Pular a vez" (o ataque, 8 contra 13); na vez da
+    Raposa, o mestre pula; na vez do netrunner, as Ações NET voltam e o Zap tira 4 da REZ (o token fica com 16); a REZ
+    do token em 0 derruba o Hellhound no estado ("A REZ do Hellhound mudou no token: ele caiu.") e o deixa derrotado; na
+    rodada seguinte, a vez dele não abre a janela, e a da Raposa, que o mestre marcou derrotada ainda na NET, também não;
+    a desconexão reinicia a arquitetura e tira os dois do combate e da
+    cena; de volta ao andar, eles entram de novo com a REZ cheia, e o Tile apagado os tira. Os passos da NET dos ciclos
+    51 a 54 rodam com a configuração desligada (o `montarNet`; eles conferem a NET sem os inimigos na iniciativa), e a
+    limpeza (`desmontarNet`) apaga o que sobrar dos inimigos e religa a configuração. Cinco rodadas: na primeira, o
+    mundo de teste não ficou pronto no navegador (62 s; o ambiente: a segunda abriu sem mudança); na segunda, o passo
+    caiu sem a janela da vez, e ele ganhou o diagnóstico (de quem é a vez e a fila); na terceira, o diagnóstico mostrou o
+    combate que o passo dos turnos deixa na cena (o netrunner entrou nele, e a vez seguinte foi a da Atiradora), o 1 no
+    dado fixo do ataque (falha crítica: "−2 contra 9") e os botões do cabeçalho na lista; o passo passou a apagar os
+    combates da cena antes de começar, com o 2 no dado e os botões do rodapé, e a quarta passou (as lições estão no
+    QUALITY_GATES); depois das mutações, o passo ganhou a Raposa marcada derrotada (ver as mutações), e a quinta, limpa,
+    passou também. Os avisos do passo "nenhum aviso" foram conferidos: só os dois da Lexington. As 5 falhas são as das
+    armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a frase da chegada com o netrunner inimigo entre quem segura a descida; o Black ICE driblado atacando na vez
+      dele;
+    - G4: os inimigos fora do combate; o token do inimigo à vista dos jogadores; a REZ do estado sem ir para o token; o
+      inimigo com a REZ em 0 sem ficar derrotado; a REZ do token sem voltar para o estado; a vez do inimigo sem a janela
+      do mestre; o reinício e o Tile apagado deixando os inimigos no combate e na cena (duas mutações); a REZ do token
+      igual à do estado entrando no registro; o inimigo derrotado com a janela da vez. Esta última sobreviveu à primeira
+      versão do passo: o Hellhound com a REZ em 0 já não tem a quem atacar, e a janela não abre de qualquer jeito. O
+      passo ganhou a Raposa, ainda na NET, marcada derrotada pelo mestre, e a mutação passou a cair (na vez dela, a
+      janela abria).
+- **Pendências:** a janela de rolagem do jogador na NET; os nós de controle ligados à cena (e o demônio que os opera);
+  os arquivos copiados; o Scanner e a parede; o editor visual.
+- **Próximo:** o C8, parte 10: o jogador rolando as próprias rolagens na NET, pela janela de rolagem dele (hoje o mestre
+  rola, com a Sorte preparada na ficha).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
