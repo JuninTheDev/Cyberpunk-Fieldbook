@@ -72,6 +72,10 @@ esta janela representa, o painel do mestre e o registro. --}}
   </div>
 
   {{#if netrunner}}
+  {{#if netrunner.emChamas}}<div class="aviso-net fogo"><span>Em chamas: 2 no HP no fim de cada turno.</span><button type="button" data-action="apagarFogo" {{#if ocupado}}disabled{{/if}}>Apagar o fogo (Ação Carnal)</button></div>{{/if}}
+  {{#if netrunner.preso}}<div class="aviso-net">Preso pelo Kraken: não avança nem desconecta com segurança até o fim do próximo turno.</div>{{/if}}
+  {{#if netrunner.skunk}}<div class="aviso-net">Skunk: {{netrunner.skunk}} no Slide enquanto ele estiver ativo.</div>{{/if}}
+  {{#if netrunner.menosAcoes}}<div class="aviso-net">Wisp: 1 Ação NET a menos no próximo turno.</div>{{/if}}
   <section class="habilidades">
     <h3>HABILIDADES DE INTERFACE</h3>
     {{#unless netrunner.pronto}}<p class="dica">Sem cyberdeck equipado ou sem Interface: as habilidades não rolam.</p>{{/unless}}
@@ -96,6 +100,7 @@ esta janela representa, o painel do mestre e o registro. --}}
       {{#if mestre.comCorredor}}<button type="button" data-action="zerarAcoes" data-tooltip="O começo do turno do netrunner: as Ações NET voltam">Zerar as Ações NET</button>{{/if}}
       {{#if mestre.semNinguem}}<button type="button" data-action="reiniciar" class="perigo">Reiniciar a arquitetura</button>{{/if}}
     </div>
+    {{#if mestre.ataques.length}}<div class="botoes ataques">{{#each mestre.ataques}}<button type="button" data-action="inimigoAtaca" data-alvo="{{chave}}" class="perigo" data-tooltip="A vez dele: ataca {{contra}}">{{nome}} ataca</button>{{/each}}</div>{{/if}}
     {{#each mestre.inimigos}}
     <div class="rez-inimigo" data-alvo="{{chave}}"><span><b>{{nome}}</b> <small>{{situacao}}</small></span>
       <button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="-5">−5</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="-1">−1</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="1">+1</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-cheia="1">REZ cheia</button>

@@ -4350,11 +4350,14 @@ module.exports = async ({ edge, servidores, r }) => {
         const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [
           { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 2, ramo: 'a', tipo: 'demonio', demonio: 'imp' }, { andar: 3, ramo: 'a', tipo: 'vazio' }
         ] });
-        // 1. No andar 1: o Hellhound (os números e a REZ), o registro, os botões; descer, o aviso.
+        // 1. No andar 1: o Hellhound (os números e a REZ), o registro, os botões; descer, o aviso. Na chegada, o netrunner
+        // vence a velocidade (4 + 9 = 13 contra a SPD 6 + 2).
+        await fixar(edge, [[9, 10], [2, 10]]);
         const chegou = await jogador.evaluate(`(async () => {
           const net = window.__net;
           await net.ir('1a');
-          const resultado = { registro: net.registro().slice(-2), detalhe: net.texto('.andar-escolhido li'), mapa: net.texto('[data-no="1a"]'),
+          await window.__esperar(() => net.registro().some(l => l.startsWith('Velocidade (')));
+          const resultado = { registro: net.registro().slice(-3), detalhe: net.texto('.andar-escolhido li'), mapa: net.texto('[data-no="1a"]'),
             habilidades: [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join() };
           const avisos = [];
           ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
@@ -4384,7 +4387,7 @@ module.exports = async ({ edge, servidores, r }) => {
           net.clicar('button[data-habilidade=slide]');
           const linha = await net.esperarRegistro('Slide (');
           const no = await net.ir('2a');
-          return { linha, no, registro: net.registro().slice(-2),
+          return { linha, no, registro: net.registro().slice(-3),
             habilidades: [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join() };
         })()`);
         // 4. O Imp segura (o aviso); o mestre derruba a REZ dele pelo painel (−5 três vezes); a descida fica livre.
@@ -4414,6 +4417,8 @@ module.exports = async ({ edge, servidores, r }) => {
           await janela.close();
           return { antes, rez: rez(), registro: game.system.api.netrun.estado(tile).log.at(-1).texto };
         })()`);
+        // De volta ao 1A, o netrunner vence a velocidade de novo (13 contra 8).
+        await fixar(edge, [[9, 10], [2, 10]]);
         const livre = await jogador.evaluate(`(async () => {
           const net = window.__net;
           await window.__esperar(() => (net.texto('[data-no="2a"]') ?? '').includes('derrubado'));
@@ -4430,19 +4435,209 @@ module.exports = async ({ edge, servidores, r }) => {
           } finally { delete ui.notifications.warn; }
           return { mapa, no, volta: avisos };
         })()`);
-        const ok = chegou.registro.join(' | ') === `${NOME} desceu para o andar 1: Hellhound. | Hellhound está neste andar: o Black ICE e o demônio seguram a descida até caírem.`
+        const ok = chegou.registro.join(' | ') === `${NOME} desceu para o andar 1: Hellhound. | Hellhound está neste andar: o Black ICE e o demônio seguram a descida até caírem. | Velocidade (13 contra 8): ${NOME} viu o Hellhound a tempo.`
           && chegou.detalhe.startsWith('Hellhound Black ICE REZ 20/20 PER 6 · SPD 6 · ATK 6 · DEF 2. ') && chegou.mapa === `1A Hellhound (REZ 20/20) ${NOME}`
           && chegou.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-,zap+,slide+'
           && chegou.avisos.join() === 'O Hellhound deste andar te segura: derrube a REZ dele ou use o Slide.' && chegou.no === '1a'
           && zap.linha === `Zap (10 contra 5): ${NOME} acertou o Hellhound: 4 de REZ, fica com 16.` && zap.mapa === `1A Hellhound (REZ 16/20) ${NOME}`
           && cartaoDoIce.rotulo === 'DEF' && cartaoDoIce.total === 5
           && slide.linha === `Slide (11 contra 8): ${NOME} escapou do Hellhound e pode seguir para um andar vizinho.` && slide.no === '2a'
-          && slide.registro.join(' | ') === `${NOME} desceu para o andar 2: Imp. | Imp está neste andar: o Black ICE e o demônio seguram a descida até caírem.`
+          && slide.registro.join(' | ') === `${NOME} desceu para o andar 2: Imp. | Imp está neste andar: o Black ICE e o demônio seguram a descida até caírem. | O demônio Imp detectou ${NOME} (o demônio sempre vence a velocidade).`
           && slide.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-,zap+,slide-'
           && imp.join() === 'O demônio Imp te segura: derrube a REZ dele (o Slide não funciona contra demônios).'
           && mestre.antes.startsWith('Imp REZ 15/15') && mestre.rez === 0 && mestre.registro === 'O mestre pôs a REZ do Imp em 0.'
           && livre.mapa === `2A Imp (derrubado) ${NOME}` && livre.no === '3a' && livre.volta.join() === 'O Hellhound deste andar te segura: derrube a REZ dele ou use o Slide.';
         return [ok, JSON.stringify({ chegou, zap, cartaoDoIce, slide, imp, mestre, livre })];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
+    // O ataque de um inimigo pelo painel do mestre, na janela dele (a vez do inimigo); espera o registro.
+    const ataqueDoMestre = (m, alvo, texto) => edge.evaluate(`(async () => {
+      const tile = canvas.scene.tiles.get('${m.tile}');
+      const janela = game.system.api.netrun.janela(tile, { gm: true });
+      const botao = () => janela.element?.querySelector('button[data-action=inimigoAtaca][data-alvo="${alvo}"]');
+      await window.__esperar(() => botao() && !janela.ocupado);
+      const antes = game.system.api.netrun.estado(tile).log.length;
+      botao().click();
+      await window.__esperar(() => game.system.api.netrun.estado(tile).log.slice(antes).some(l => l.texto.includes(${JSON.stringify(texto)})) && !janela.ocupado);
+      return game.system.api.netrun.estado(tile).log.slice(antes).map(l => l.texto);
+    })()`);
+
+    await r.passo('o encontro e o ataque dos inimigos (wiki, "Black ICE": a velocidade, o ATK + 1d10 contra a Interface + 1d10, os efeitos): ao chegar, o Wisp vence a velocidade e age na hora (1d6 no cérebro, 1 Ação NET a menos); o Hellhound e o Skunk perdem; o mestre faz o Hellhound atacar (2d6 no cérebro e o fogo) e o Skunk (−2 no Slide, no cartão do Slide); em combate, o Wisp tira 1 Ação NET no começo do turno e o fogo queima 2 no HP no fim; "Apagar o fogo" na janela', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Ataques';
+      const ARQ = 'Teste Arquitetura dos Ataques';
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [
+          { andar: 1, ramo: 'a', tipo: 'ice', ice: 'wisp' }, { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 1, ramo: 'a', tipo: 'ice', ice: 'skunk' },
+          { andar: 2, ramo: 'a', tipo: 'vazio' }
+        ] });
+        const hp = () => edge.evaluate(`game.actors.getName('${NOME}').system.hp.value`);
+        const hp0 = await hp();
+        // 1. A chegada: o Wisp (4 + 2 = 6 contra SPD 4 + 5 = 9) age: 3 no cérebro; o Hellhound (13 contra 6 + 2) e o Skunk (13
+        // contra 4 + 2) perdem a velocidade.
+        await fixar(edge, [[2, 10], [5, 10], [3, 6], [9, 10], [2, 10], [9, 10], [2, 10]]);
+        const chegou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await net.ir('1a');
+          await window.__esperar(() => net.registro().some(l => l.includes('viu o Skunk a tempo')) && net.el().querySelector('.aviso-net'));
+          return { registro: net.registro().slice(-8), avisos: [...net.el().querySelectorAll('.aviso-net')].map(a => a.textContent.replace(/\\s+/g, ' ').trim()) };
+        })()`);
+        const hp1 = await hp();
+        // 2. O Hellhound ataca (6 + 5 = 11 contra a defesa 4 + 2 = 6): 3 + 4 = 7 no cérebro e o fogo.
+        await fixar(edge, [[5, 10], [2, 10], [3, 6], [4, 6]]);
+        const hellhound = await ataqueDoMestre(m, '1a.1', 'pegou fogo');
+        const emChamas = await edge.evaluate(`game.actors.getName('${NOME}').statuses.has('cprf-em-chamas')`);
+        await edge.shot('janela-net-mestre-ataques');
+        const hp2 = await hp();
+        // 3. O Skunk ataca (4 + 6 = 10 contra 6): −2 no Slide; o Slide no Wisp (4 − 2 + 9 = 11 contra a PER 4 + 2) passa.
+        await fixar(edge, [[6, 10], [2, 10]]);
+        const skunk = await ataqueDoMestre(m, '1a.2', 'Slide enquanto este Skunk');
+        await fixar(edge, [[9, 10], [2, 10]]);
+        const slide = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => net.el().querySelector('select[data-texto=alvo]') && (net.texto('.aviso-net:not(.fogo)') ?? '') && net.pronta());
+          const avisos = [...net.el().querySelectorAll('.aviso-net')].map(a => a.textContent.replace(/\\s+/g, ' ').trim());
+          const escolha = net.el().querySelector('select[data-texto=alvo]');
+          escolha.value = '1a.0';
+          escolha.dispatchEvent(new Event('input', { bubbles: true }));
+          net.clicar('button[data-habilidade=slide]');
+          return { avisos, linha: await net.esperarRegistro('Slide (') };
+        })()`);
+        await jogador.shot('janela-net-avisos');
+        const cartaoDoSlide = await edge.evaluate(`(() => { const msg = game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.rotulo === 'Slide').at(-1); return { total: msg?.getFlag('${S}', 'teste')?.total, skunk: msg?.content.includes('Skunk') }; })()`);
+        // 4. Em combate: o começo do turno tira 1 Ação NET (o Wisp); a rodada seguinte, o fogo queima 2 no fim do turno.
+        const combate = await edge.evaluate(`(async () => {
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const token = canvas.scene.tokens.get('${m.token}');
+          const c = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          await c.createEmbeddedDocuments('Combatant', [{ tokenId: token.id, sceneId: canvas.scene.id, actorId: token.actorId }]);
+          await c.startCombat();
+          await window.__esperar(() => game.system.api.netrun.estado(tile).log.some(l => l.texto.includes('começa o turno com 1 Ação NET a menos')));
+          const acoes = game.system.api.netrun.estado(tile).corredores[0].acoes;
+          const hpAntes = token.actor.system.hp.value;
+          await c.nextRound();
+          await window.__esperar(() => token.actor.system.hp.value === hpAntes - 2 && game.messages.contents.some(m => m.content.includes('está em chamas')));
+          const queimou = { hp: hpAntes - token.actor.system.hp.value, mensagem: game.messages.contents.filter(m => m.content.includes('está em chamas')).at(-1)?.content.replace(/<[^>]+>/g, '') };
+          await window.__esperar(() => game.system.api.netrun.estado(tile).corredores[0].acoes === 0);
+          const depois = game.system.api.netrun.estado(tile).corredores[0].acoes;
+          await c.delete();
+          return { acoes, queimou, depois };
+        })()`);
+        // 5. "Apagar o fogo" na janela do jogador (o pedido ao mestre).
+        const apagou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => net.el().querySelector('button[data-action=apagarFogo]') && net.pronta());
+          net.clicar('button[data-action=apagarFogo]');
+          const linha = await net.esperarRegistro('apagou o fogo');
+          await window.__esperar(() => !net.el().querySelector('button[data-action=apagarFogo]'));
+          return { linha, botao: Boolean(net.el().querySelector('button[data-action=apagarFogo]')), status: game.actors.getName('${NOME}').statuses.has('cprf-em-chamas') };
+        })()`);
+        const tem = (lista, texto) => lista.some(linha => linha.includes(texto));
+        const ok = tem(chegou.registro, 'Velocidade (6 contra 9): o Wisp foi mais rápido e age na hora.') && tem(chegou.registro, 'Wisp: 1d6 no cérebro e −1 Ação NET no próximo turno (mínimo 2).')
+          && tem(chegou.registro, `${NOME} levou 3 no cérebro (o Wisp): HP ${hp0 - 3}/`) && tem(chegou.registro, `${NOME} terá 1 Ação NET a menos no próximo turno (no mínimo 2).`)
+          && tem(chegou.registro, `Velocidade (13 contra 8): ${NOME} viu o Hellhound a tempo.`) && tem(chegou.registro, `Velocidade (13 contra 6): ${NOME} viu o Skunk a tempo.`)
+          && chegou.avisos.join() === 'Wisp: 1 Ação NET a menos no próximo turno.' && hp1 === hp0 - 3
+          && tem(hellhound, `O Hellhound ataca (11 contra 6) e acerta ${NOME}.`) && tem(hellhound, `${NOME} levou 7 no cérebro (o Hellhound): HP ${hp0 - 10}/`) && tem(hellhound, `${NOME} pegou fogo:`)
+          && emChamas && hp2 === hp0 - 10
+          && tem(skunk, `O Skunk ataca (10 contra 6) e acerta ${NOME}.`) && slide.avisos.includes('Skunk: −2 no Slide enquanto ele estiver ativo.')
+          && slide.linha === `Slide (11 contra 6): ${NOME} escapou do Wisp e pode seguir para um andar vizinho.` && cartaoDoSlide.total === 11 && cartaoDoSlide.skunk
+          && combate.acoes === 1 && combate.queimou.hp === 2 && combate.queimou.mensagem.includes(`${NOME} está em chamas: 2 no HP`) && combate.depois === 0
+          && apagou.linha === `${NOME} apagou o fogo (uma Ação Carnal).` && !apagou.botao && !apagou.status;
+        return [ok, JSON.stringify({ hp0, hp1, hp2, chegou, hellhound, emChamas, skunk, slide, cartaoDoSlide, combate, apagou })];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
+    await r.passo('os efeitos do Black ICE nos programas e na ficha (wiki, a tabela do Black ICE e o hardware do deck): o Killer zera a REZ do Armor ativo, que é destruído (fica, com "(destruído)", fora do deck); o Asp destrói o Sword; o Liche tira 4 de INT, REF e DEX por 1 hora; o Kraken prende (não avança nem desconecta com segurança); com a KRASH Barrier, o Giant não derruba; sem ela, derruba, e o Black ICE do andar age na desconexão insegura', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Efeitos';
+      const ARQ = 'Teste Arquitetura dos Efeitos';
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [
+          { andar: 1, ramo: 'a', tipo: 'ice', ice: 'asp' }, { andar: 1, ramo: 'a', tipo: 'ice', ice: 'killer' }, { andar: 1, ramo: 'a', tipo: 'ice', ice: 'kraken' },
+          { andar: 1, ramo: 'a', tipo: 'ice', ice: 'liche' }, { andar: 1, ramo: 'a', tipo: 'ice', ice: 'giant' }, { andar: 2, ramo: 'a', tipo: 'vazio' }
+        ] });
+        // O deck com o Sword e o Armor (ativo); os atributos de antes.
+        const antes = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const a = game.actors.getName('${NOME}');
+          const deck = a.items.find(i => i.type === 'cyberdeck');
+          const programas = ['core_programs:sword', 'core_programs:armor'].map(id => ({ ...foundry.utils.deepClone(cat[id]), system: { ...cat[id].system, instaladoEm: deck.id, ativo: id.endsWith('armor') } }));
+          for (const programa of programas) await a.createEmbeddedDocuments('Item', [programa]);
+          return { int: a.system.atributos.int.valor, ref: a.system.atributos.ref.valor, dex: a.system.atributos.dex.valor, hp: a.system.hp.value };
+        })()`);
+        // A chegada: o netrunner (4 + 9 = 13) vence a velocidade dos cinco (SPD + 2).
+        await fixar(edge, [[9, 10], [2, 10], [9, 10], [2, 10], [9, 10], [2, 10], [9, 10], [2, 10], [9, 10], [2, 10]]);
+        const chegou = await jogador.evaluate(`(async () => { await window.__net.ir('1a'); await window.__esperar(() => window.__net.registro().some(l => l.includes('viu o Giant a tempo'))); return window.__net.registro().filter(l => l.startsWith('Velocidade (')); })()`);
+        // O Killer (6 + 5 contra 4 + 2): 2 + 2 + 2 + 2 = 8 no REZ do Armor (7), que é destruído.
+        await fixar(edge, [[5, 10], [2, 10], [2, 6], [2, 6], [2, 6], [2, 6]]);
+        const killer = await ataqueDoMestre(m, '1a.1', 'foi destruído');
+        // O Asp (2 + 8 contra 6): destrói o Sword, o único programa que sobrou no deck.
+        await fixar(edge, [[8, 10], [2, 10]]);
+        const asp = await ataqueDoMestre(m, '1a.0', 'O Asp destruiu');
+        const programas = await edge.evaluate(`game.actors.getName('${NOME}').items.filter(i => i.type === 'programa').map(i => [i.name, i.system.instaladoEm, i.system.ativo, Boolean(i.getFlag('${S}', 'destruido'))].join('|')).sort()`);
+        // O Liche (6 + 5 contra 6): −4 em INT, REF e DEX por 1 hora (um efeito na ficha).
+        await fixar(edge, [[5, 10], [2, 10], [4, 6]]);
+        const liche = await ataqueDoMestre(m, '1a.3', 'por 1 hora.');
+        const ficha = await edge.evaluate(`(() => { const a = game.actors.getName('${NOME}'); const e = a.effects.find(ef => ef.getFlag('${S}', 'efeitoDaNet') === 'liche'); return { int: a.system.atributos.int.valor, ref: a.system.atributos.ref.valor, dex: a.system.atributos.dex.valor, efeito: e?.name, duracao: [e?.duration.value, e?.duration.units].join(' ') }; })()`);
+        // O Kraken (8 + 5 contra 6): 2 + 2 + 2 = 6 no cérebro e a prisão: descer e o desconectar seguro, recusados.
+        await fixar(edge, [[5, 10], [2, 10], [2, 6], [2, 6], [2, 6]]);
+        const kraken = await ataqueDoMestre(m, '1a.2', 'prende');
+        const preso = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            await window.__esperar(() => net.el().querySelector('.aviso-net') && net.pronta());
+            await net.ir('2a', { espera: false });
+            await window.__esperar(() => avisos.length === 1 && net.pronta());
+            net.clicar('.corredores button[data-action=desconectar]');
+            await window.__esperar(() => avisos.length === 2);
+          } finally { delete ui.notifications.warn; }
+          return { avisos, aviso: [...net.el().querySelectorAll('.aviso-net')].map(a => a.textContent.replace(/\\s+/g, ' ').trim()) };
+        })()`);
+        // Com a KRASH Barrier no deck, o Giant (8 + 5 contra 6; 1 + 1 + 1 no cérebro) não derruba.
+        await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const a = game.actors.getName('${NOME}');
+          const krash = foundry.utils.deepClone(cat['core_upgrades:krash-barrier']);
+          krash.system.instaladoEm = a.items.find(i => i.type === 'cyberdeck').id;
+          await a.createEmbeddedDocuments('Item', [krash]);
+          return true;
+        })()`);
+        await fixar(edge, [[5, 10], [2, 10], [1, 6], [1, 6], [1, 6]]);
+        const comKrash = await ataqueDoMestre(m, '1a.4', 'KRASH Barrier');
+        // Sem ela, o Giant derruba: a desconexão insegura, com o Kraken (1 + 1 + 1) e o Liche (−2) agindo de novo; o Asp e o
+        // Killer não acham programa.
+        await edge.evaluate(`(async () => { const a = game.actors.getName('${NOME}'); await a.items.find(i => i.name === 'KRASH Barrier').delete(); return true; })()`);
+        await fixar(edge, [[5, 10], [2, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6], [2, 6]]);
+        const derrubado = await ataqueDoMestre(m, '1a.4', 'derrubado pelo Giant');
+        const final = await edge.evaluate(`(async () => {
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          await window.__esperar(() => !game.system.api.netrun.estado(tile).corredores.length);
+          const a = game.actors.getName('${NOME}');
+          return { log: game.system.api.netrun.estado(tile).log.map(l => l.texto).slice(-12), hp: a.system.hp.value, liches: a.effects.filter(ef => ef.getFlag('${S}', 'efeitoDaNet') === 'liche').length, conexao: Boolean(canvas.scene.tokens.get('${m.token}').getFlag('${S}', 'conexaoNaNet')) };
+        })()`);
+        const janelaFechou = await jogador.evaluate(`(async () => { await window.__esperar(() => !window.__net.janela()); return !window.__net.janela(); })()`);
+        const tem = (lista, texto) => lista.some(linha => linha.includes(texto));
+        const ok = chegou.length === 5 && chegou.every(l => l.startsWith('Velocidade (13 contra'))
+          && tem(killer, `O Killer ataca (11 contra 6) e acerta ${NOME}.`) && tem(killer, 'Armor levou 8 de REZ, desativou e foi destruído.')
+          && tem(asp, `O Asp ataca (10 contra 6) e acerta ${NOME}.`) && tem(asp, 'O Asp destruiu Sword.')
+          && programas.join() === 'Armor (destruído)||false|true,Sword (destruído)||false|true'
+          && tem(liche, `${NOME}: −4 em INT, REF e DEX por 1 hora.`) && ficha.int === antes.int - 4 && ficha.ref === antes.ref - 4 && ficha.dex === antes.dex - 4
+          && ficha.efeito === 'Liche (−4 em INT, REF e DEX, 1 hora)' && ficha.duracao === '1 hours'
+          && tem(kraken, `${NOME} levou 6 no cérebro (o Kraken): HP ${antes.hp - 6}/`) && tem(kraken, `O Kraken prende ${NOME}: até o fim do próximo turno, não avança nem desconecta com segurança.`)
+          && preso.avisos.join(' | ') === 'O Kraken te prende: até o fim do seu próximo turno, não dá para avançar. | O Kraken te prende: até o fim do seu próximo turno, só a desconexão insegura.'
+          && preso.aviso.includes('Preso pelo Kraken: não avança nem desconecta com segurança até o fim do próximo turno.')
+          && tem(comKrash, `${NOME} levou 3 no cérebro (o Giant)`) && tem(comKrash, `A KRASH Barrier do deck segurou a conexão: o Giant não derrubou ${NOME}.`)
+          && tem(derrubado, `${NOME} desconectou de forma insegura (derrubado pelo Giant).`) && tem(final.log, 'O Asp não achou programa no deck.')
+          && tem(final.log, 'O Killer não achou programa ativo no deck.') && tem(final.log, `${NOME}: −2 em INT, REF e DEX por 1 hora.`)
+          && final.hp === antes.hp - 6 - 3 - 3 - 3 && final.liches === 2 && !final.conexao && janelaFechou;
+        return [ok, JSON.stringify({ antes, chegou, killer, asp, programas, liche, ficha, kraken, preso, comKrash, derrubado, final, janelaFechou })];
       } finally {
         await desmontarNet({ nome: NOME, arquitetura: ARQ });
       }

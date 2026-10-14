@@ -60,7 +60,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | o ponto de acesso nos tiles, a conexão do token (o alcance, os requisitos, o status, o anel) e a janela da NET mínima (quem está na NET, o mapa, o registro, o "Desconectar") | portados no ciclo 50 (o C8, parte 4), com o Range Upgrade (ver as dúvidas) |
 | NET Architect | andar e as habilidades contra os andares (o Pathfinder, o Backdoor, o Eye-Dee, o Control com os comandos, o Cloak, o Virus), as Ações NET em combate, a janela com o mapa e o painel do mestre | portados no ciclo 51 (o C8, parte 5); por enquanto o mestre rola (ver as dúvidas) |
 | NET Architect | os inimigos no andar (seguram a descida), o Zap e o Slide contra eles, a REZ deles (no painel do mestre) | portados no ciclo 52 (o C8, parte 6) |
-| NET Architect | os ataques e os efeitos dos inimigos, o combate na NET, os programas na janela, as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | o encontro (a velocidade), o ataque dos inimigos pelo mestre, os efeitos de cada Black ICE na ficha (o fogo, as penalidades, os programas destruídos, o Kraken, o Wisp, o Skunk, o Giant), a desconexão insegura com o efeito | portados no ciclo 53 (o C8, parte 7; ver as dúvidas) |
+| NET Architect | o combate na NET (os inimigos na iniciativa), os programas na janela, as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -326,9 +327,29 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   e o vírus que pede mais do que sobra é recusado (o mestre divide por turnos, à mão, ou o netrunner o faz fora de
   combate, onde as Ações NET não contam). O sistema não guarda um vírus pela metade.
 
-- **Os inimigos, por enquanto, não atacam.** No NET Architect, o Black ICE disputa a velocidade na chegada e ataca na
-  vez dele, com o efeito de cada um. Desde o ciclo 52 eles seguram a descida e levam o Zap e o Slide; os ataques e os
-  efeitos vêm na parte seguinte do C8.
+- **Os inimigos atacam pelo painel do mestre, por enquanto fora da iniciativa.** No NET Architect, o Black ICE e o
+  demônio encontrados entram na fila do combate (com um token escondido) e, na vez de cada um, o mestre escolhe quem ele
+  ataca. Desde o ciclo 53 o ataque é o botão "X ataca" no painel do mestre; a fila do combate vem na parte seguinte do
+  C8.
+
+- **O empate na velocidade do encontro: do netrunner.** A wiki: "Se o ICE vencer, você sofre o efeito na hora"; o empate
+  não é vitória do ICE. O NET Architect dava o empate ao ICE. No ataque, o empate é da defesa, nos dois.
+
+- **A desconexão insegura: o Black ICE driblado também age.** A wiki: "sofre o efeito de todo Black ICE encontrado e
+  ainda ativo". O NET Architect tirava da conta o Black ICE que o netrunner driblou com o Slide; aqui ele age, porque foi
+  encontrado e segue ativo. Fica de fora o que causou a queda (o Giant).
+
+- **O programa destruído na arquitetura: o mestre apaga.** O Asp e o anti-programa que zera a REZ destroem o programa;
+  como o NET Architect, o sistema não apaga o item: ele sai do deck, desativado, com "(destruído)" no nome. Vale o mesmo
+  do dano do anti-programa pela ficha do Black ICE (acima).
+
+- **O fogo do Hellhound.** A wiki: "deck e roupa pegam fogo (2 no HP por turno)", até uma Ação Carnal apagar. O sistema
+  põe o status "Em chamas" e, em combate, tira 2 do HP no fim do turno de quem está em chamas; fora de combate, o mestre
+  narra. "Apagar o fogo" na janela da NET tira o status (a Ação Carnal não se conta). O Insulated Wiring no deck impede
+  o fogo, como na wiki; o NET Architect também.
+
+- **O Liche e o Scorpion: 1 hora no tempo do mundo.** O −1d6 vira um efeito na ficha com a duração de 1 hora; o Foundry
+  o suprime quando o tempo do mundo passa da hora (o mestre também pode apagá-lo).
 
 - **O Slide: uma vez por turno, e só até sair do andar.** A wiki: "1 Ação NET (1×/turno)". O NET Architect não contava
   as vezes; aqui, em combate, o segundo Slide do turno é recusado (fora de combate, não há turno). Como no NET Architect,
@@ -2615,6 +2636,69 @@ efeitos dos inimigos, e o combate com o deck na janela.
   o combate na NET e o deck na janela; a janela de rolagem do jogador na NET; os nós de controle ligados à cena; os
   arquivos copiados; o Scanner e a parede.
 - **Próximo:** o C8, parte 7: os ataques e os efeitos dos inimigos.
+
+### Ciclo 53 (2026-10-14): os ataques dos inimigos e os efeitos do Black ICE (o C8, parte 7; sessão KouArt)
+
+O NET Architect da mesa (o `encontrarInimigos`, o `ataqueDoInimigo` e o `inimigoAtaca` do `estado.mjs`; o `efeitos.mjs`
+com o efeito de cada Black ICE e o fogo; a desconexão insegura do `retirar`) e a wiki ("Black ICE", RED p. 204–207: "Ao
+encontrar Black ICE à espreita: Interface + bônus de velocidade + 1d10 contra SPD do ICE + 1d10. Se o ICE vencer, você
+sofre o efeito na hora"; o ataque "ATK + 1d10 contra Interface + 1d10"; a tabela com o efeito de cada um; "Demônios": o
+Zap; o hardware do deck: o Insulated Wiring e a KRASH Barrier). Commit anterior: `cb6bfd7` (ciclo 52).
+
+- **Implementado:**
+  - **o encontro:** ao chegar num andar, o Black ICE ativo disputa a velocidade (a Interface + a velocidade + 1d10 do
+    netrunner contra a SPD + 1d10 do ICE; o empate é do netrunner); vencendo, age na hora. O demônio sempre vence e só
+    detecta; o netrunner inimigo só está ali;
+  - **o ataque dos inimigos,** pelo painel do mestre ("X ataca", a vez dele): o Black ICE com o ATK + 1d10; o demônio e o
+    netrunner inimigo com o Zap (a Interface + 1d10; acertando, 1d6 no cérebro); contra a Interface + 1d10 do netrunner (o
+    empate é da defesa). O Black ICE driblado com o Slide não ataca quem o driblou;
+  - **os efeitos da tabela da wiki,** na ficha, pelo mestre ativo: o dano no cérebro (o Armor ativo reduz 4; o Shield não
+    para Black ICE); o Asp destrói um programa do deck; o Raven desativa um defensor ativo antes do dano; o Dragon, o
+    Killer e o Sabertooth tiram da REZ de um programa ativo, que em 0 é destruído; o programa destruído fica na ficha,
+    fora do deck e desativado, com "(destruído)" no nome (o mestre apaga); o Liche e o Scorpion, −1d6 em INT, REF e DEX
+    ou no MOVE, um efeito de 1 hora na ficha; o Skunk, −2 no Slide enquanto estiver ativo (acumula; entra no cartão do
+    Slide); o Kraken prende até o fim do próximo turno (não avança nem desconecta com segurança); o Wisp tira 1 Ação NET
+    no começo do próximo turno (no mínimo 2 livres); o Giant derruba da NET (a KRASH Barrier no deck segura); o Hellhound
+    põe fogo (o status "Em chamas"; o Insulated Wiring no deck impede);
+  - **o fogo:** em combate, quem acaba o turno em chamas perde 2 no HP (o aviso no chat); "Apagar o fogo (Ação Carnal)" na
+    janela da NET;
+  - **a desconexão insegura** (a do jogador, a queda por sair do alcance, a do mestre e a do Giant): o Black ICE que o
+    netrunner encontrou no andar e ainda está ativo age de graça, até o driblado com o Slide, menos o que causou a queda;
+  - **a janela:** os avisos da situação do netrunner (o fogo com o botão, o Kraken, o Skunk, o Wisp) e, no painel do
+    mestre, os botões da vez de cada inimigo que pode atacar o netrunner escolhido.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 76 de 80. Um teste novo: as frases da wiki (o encontro, o ataque, o hardware); os 12 Black ICE da tabela com o
+    efeito deles (a fórmula de dano onde há dano; o anti-programa no REZ de um programa); a velocidade e o ataque com os
+    empates; quem pode atacar; a queda; o Skunk; o Kraken; o começo do turno (o Wisp e a prisão); o hardware do deck. As 4
+    falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 85 de 90, cerca de 140 s. Dois passos novos, nos dois navegadores:
+    - o encontro e o ataque: ao chegar, o Wisp vence a velocidade (6 contra 9) e age na hora (3 no cérebro e 1 Ação NET a
+      menos, com o aviso na janela); o Hellhound e o Skunk perdem; o mestre faz o Hellhound atacar (11 contra 6: 7 no
+      cérebro e o fogo) e o Skunk (−2 no Slide); o Slide no Wisp, com o alvo escolhido na janela, tira os 2 do Skunk (o
+      cartão mostra o Skunk); em combate, o começo do turno começa com 1 Ação NET gasta (o Wisp) e a rodada seguinte
+      queima 2 no HP (o aviso no chat); "Apagar o fogo" na janela tira o status;
+    - os efeitos: o Killer zera a REZ do Armor ativo, que é destruído; o Asp destrói o Sword (os dois ficam na ficha, fora
+      do deck, com "(destruído)"); o Liche tira 4 de INT, REF e DEX por 1 hora (o efeito na ficha); o Kraken dá 6 no
+      cérebro e prende (descer e o desconectar seguro são recusados, com o aviso na janela); com a KRASH Barrier, o Giant
+      dá o dano e não derruba; sem ela, derruba, e na queda o Asp e o Killer não acham programa, o Kraken e o Liche agem de
+      novo; a janela do jogador fecha.
+    Os dois passaram na primeira rodada. O passo dos inimigos do ciclo 52 caiu nela: a chegada ao Black ICE passou a rolar
+    a velocidade, e ele não fixava esses dados; ganhou os dados fixos e o registro novo (a lição está no QUALITY_GATES), e
+    a segunda rodada passou. Os avisos do passo "nenhum aviso" foram conferidos: só os dois da Lexington. As 5 falhas são
+    as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o empate da velocidade para o ICE; o empate do ataque para o inimigo; o Black ICE driblado atacando; o Wisp
+      tirando a Ação NET abaixo das 2 livres; o Kraken sem segurar a descida; o Skunk derrubado tirando do Slide; o Black
+      ICE que derrubou agindo na queda;
+    - G4: sem o encontro na chegada; o Hellhound sem fogo; a KRASH Barrier sem segurar o Giant; o fogo sem queimar no fim
+      do turno; o Slide sem o −2 do Skunk; o Kraken deixando desconectar com segurança; a desconexão insegura sem o efeito
+      do Black ICE do andar.
+- **Pendências:** o combate na NET (os inimigos na iniciativa, a vez deles pelo combate) e o deck na janela; a janela de
+  rolagem do jogador na NET; os nós de controle ligados à cena; os arquivos copiados; o Scanner e a parede.
+- **Próximo:** o C8, parte 8: o combate na NET (os inimigos na iniciativa) e o deck na janela (ativar, desativar e atacar
+  com os programas).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

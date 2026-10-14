@@ -6,6 +6,8 @@ export const FLAG_PONTO = 'pontoDeAcesso';
 export const FLAG_ESTADO = 'netrun';
 export const FLAG_CONEXAO = 'conexaoNaNet';
 export const STATUS_CONECTADO = 'cprf-conectado-na-net';
+// O fogo do Hellhound (a wiki: "deck e roupa pegam fogo (2 no HP por turno)"), até uma Ação Carnal apagar.
+export const STATUS_EM_CHAMAS = 'cprf-em-chamas';
 export const ICONE_CONECTADO = caminho('icones/conectado.svg');
 export const IMAGEM_DO_TERMINAL = caminho('icones/terminal.svg');
 

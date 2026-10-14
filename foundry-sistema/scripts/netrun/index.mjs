@@ -3,6 +3,7 @@
 // registrarNet() no init.
 import { souOMestreAtivo } from '../combate.mjs';
 import { SISTEMA } from '../config.mjs';
+import { STATUS_EM_CHAMAS } from './constantes.mjs';
 import { conexaoDoToken, estadoDoTile, operacoes, pontoDoTile, removerCorredorApagado, soltarTokens } from './estado.mjs';
 import { JanelaDaNet } from './janela.mjs';
 import { alcanceDo, distancia, netrunnerDo } from './regras-da-net.mjs';
@@ -28,6 +29,16 @@ function aoAbrirCena() {
     reabertas.add(token.id);
     JanelaDaNet.abrir(tile, { tokenId: token.id });
   }
+}
+
+// O fogo: 2 no HP de quem está em chamas, no fim do turno dele, com o aviso no chat.
+async function queimar(ator, nome) {
+  const hp = Math.max(0, ator.system.hp.value - 2);
+  await ator.update({ 'system.hp.value': hp });
+  await ChatMessage.implementation.create({
+    speaker: ChatMessage.implementation.getSpeaker({ actor: ator }),
+    content: `<p><b>${foundry.utils.escapeHTML(nome)}</b> está em chamas: 2 no HP (fica com ${hp}/${ator.system.hp.max}). Uma Ação Carnal apaga o fogo.</p>`
+  });
 }
 
 export function registrarNet() {
@@ -110,6 +121,9 @@ export function registrarNet() {
   Hooks.on('updateCombat', (combate, mudancas) => {
     JanelaDaNet.redesenhar();
     if (!souOMestreAtivo() || !combate.started || !('turn' in mudancas || 'round' in mudancas)) return;
+    // O fogo do Hellhound (a wiki: 2 no HP por turno): quem acabou o turno em chamas queima.
+    const anterior = combate.combatants.get(combate.previous?.combatantId);
+    if (anterior?.actor?.statuses.has(STATUS_EM_CHAMAS)) queimar(anterior.actor, anterior.name).catch(falha => console.warn(`${SISTEMA} | NET: fogo`, falha));
     const token = combate.combatant?.token;
     const conexao = token && conexaoDoToken(token);
     if (conexao) pedir('zerarAcoes', { tile: conexao.tile, token: token.id }).catch(falha => console.warn(`${SISTEMA} | NET: Ações NET do turno`, falha));

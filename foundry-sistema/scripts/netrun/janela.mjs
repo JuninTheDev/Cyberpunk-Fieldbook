@@ -1,12 +1,14 @@
 // A janela da NET (a janela.mjs do NET Architect): quem está na NET e onde, o mapa (o jogador vê o que os jogadores
 // enxergam; o mestre, a arquitetura inteira, com o que ainda está escondido), o andar escolhido no mapa (com "Ir para
 // cá" nos vizinhos), as habilidades de Interface contra os andares e contra os inimigos (o Zap e o Slide, com o alvo), o
-// comando no nó de controle tomado, o registro e, para o mestre, o painel dele (revelar, a REZ dos inimigos, zerar as
-// Ações NET, derrubar, reiniciar). Abre para o dono do token conectado e para o mestre, que age pelo netrunner escolhido.
-// Os ataques dos inimigos, o combate e o deck vêm nas próximas partes do C8.
+// comando no nó de controle tomado, a situação do netrunner (o fogo, o Kraken, o Skunk, o Wisp), o registro e, para o
+// mestre, o painel dele (a vez dos inimigos, revelar, a REZ dos inimigos, zerar as Ações NET, derrubar, reiniciar). Abre
+// para o dono do token conectado e para o mestre, que age pelo netrunner escolhido. O combate e o deck vêm na próxima
+// parte do C8.
 import { ENTRADA, RAMOS, TIPOS_DE_ANDAR } from '../arquitetura.mjs';
 import { caminho, SISTEMA } from '../config.mjs';
 import { HABILIDADES_DE_INTERFACE } from '../regras.mjs';
+import { STATUS_EM_CHAMAS } from './constantes.mjs';
 import { arquiteturaDoPonto, emCombate, estadoDoTile, pontoDoTile } from './estado.mjs';
 import { ehInimigo, HABILIDADES_NA_NET, inimigoAtivo, inimigoPublico, netrunnerDo } from './regras-da-net.mjs';
 import { pedir } from './socket.mjs';
@@ -63,7 +65,8 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       desconectar: JanelaDaNet.#desconectar, desconectarInseguro: JanelaDaNet.#desconectarInseguro, selecionar: JanelaDaNet.#selecionar, mover: JanelaDaNet.#mover,
       habilidade: JanelaDaNet.#habilidade, comandar: JanelaDaNet.#comandar, escolherCorredor: JanelaDaNet.#escolherCorredor, revelar: JanelaDaNet.#revelar,
-      zerarAcoes: JanelaDaNet.#zerarAcoes, reiniciar: JanelaDaNet.#reiniciar, ajustarRez: JanelaDaNet.#ajustarRez
+      zerarAcoes: JanelaDaNet.#zerarAcoes, reiniciar: JanelaDaNet.#reiniciar, ajustarRez: JanelaDaNet.#ajustarRez, inimigoAtaca: JanelaDaNet.#inimigoAtaca,
+      apagarFogo: JanelaDaNet.#apagarFogo
     }
   };
 
@@ -163,6 +166,10 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
         sorte: ator?.sortePreparada ?? 0, fundo, textos: this.textos,
         controle: conteudosAqui.some(conteudo => conteudo.tipo === 'controle' && conteudo.feito),
         alvos: inimigos.length > 1 ? inimigos.map(conteudo => ({ chave: conteudo.chave, nome: textoCurto(conteudoNaJanela(conteudo)), escolhido: conteudo.chave === this.textos.alvo })) : [],
+        // A situação: o fogo do Hellhound (com o botão de apagar), a prisão do Kraken, o −2 no Slide do Skunk ativo e a Ação
+        // NET a menos do Wisp.
+        emChamas: Boolean(ator?.statuses?.has(STATUS_EM_CHAMAS)), preso: meu.preso > 0, menosAcoes: Boolean(meu.menosAcoes),
+        skunk: (n => (n ? '−' + (2 * n) : ''))((meu.skunks ?? []).filter(chave => andares.some(no => (no.conteudos ?? []).some(conteudo => conteudo.chave === chave && !conteudo.feito))).length),
         habilidades: Object.keys(HABILIDADES_NA_NET).map(id => {
           const { rotulo, custo, dica } = HABILIDADES_DE_INTERFACE.find(habilidade => habilidade.id === id);
           return { id, rotulo, dica: `${custo}. ${dica}`, pode: pronto && pode[id] && !this.ocupado };
@@ -180,7 +187,11 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
       andar, netrunner, registro: [...(est.log ?? [])].reverse(),
       mestre: this.gm && {
         revelarAndar: andar.escondido && !andar.entrada, revelarMapa: !est.mapa, comCorredor: Boolean(meu), semNinguem: !est.corredores.length,
-        inimigos: andar.conteudos.filter(conteudo => conteudo.inimigo && conteudo.comRez)
+        inimigos: andar.conteudos.filter(conteudo => conteudo.inimigo && conteudo.comRez),
+        // A vez dos inimigos: os que podem atacar o netrunner escolhido (os ativos no andar dele, menos o Black ICE que ele
+        // driblou com o Slide).
+        ataques: meu ? (porId[aqui]?.conteudos ?? []).filter(conteudo => ehInimigo(conteudo) && !conteudo.feito && (conteudo.tipo !== 'ice' || !(meu.escapou ?? []).includes(conteudo.chave)))
+          .map(conteudo => ({ chave: conteudo.chave, nome: conteudo.inimigo?.nome ?? conteudo.tipo, contra: meu.nome })) : []
       }
     };
   }
@@ -247,6 +258,14 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #ajustarRez(evento, alvo) {
     await this.#pedir('ajustarRez', { alvo: alvo.dataset.alvo, delta: Number(alvo.dataset.delta) || 0, cheia: Boolean(alvo.dataset.cheia) });
+  }
+
+  static async #inimigoAtaca(evento, alvo) {
+    await this.#pedir('inimigoAtaca', { alvo: alvo.dataset.alvo });
+  }
+
+  static async #apagarFogo() {
+    await this.#pedir('apagarFogo');
   }
 
   static async #zerarAcoes() {

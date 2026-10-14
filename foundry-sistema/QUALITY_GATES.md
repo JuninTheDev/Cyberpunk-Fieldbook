@@ -78,6 +78,9 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   gancho já têm o destino. Conta de distância vai pelo `_source`. No ciclo 50, o mestre media o netrunner que saiu do
   alcance na posição antiga, e a queda só vinha no movimento seguinte: o diagnóstico registrou no gancho o `x` de antes
   e o `x` novo nas mudanças.
+- **Dados fixos em toda rolagem do passo:** o passo fixa os dados de tudo o que ele provoca, até do que ele não confere.
+  No ciclo 53, a chegada ao andar com Black ICE passou a rolar a velocidade, e o passo dos inimigos do ciclo 52, que não
+  fixava esses dados, caiu (a velocidade saiu "24 contra 21" e mudou o registro); ele ganhou os dados fixos.
 - **Pergunta (DialogV2) no cenário:** ache a janela nas instâncias (`foundry.applications.instances`) pela classe
   (`options.classes`) ou pelo título (`options.window.title`) e clique no botão pelo `data-action` (`ok`, `yes`). Quando
   a pergunta abre no mestre por causa de um clique do jogador (o vírus na NET), o clique do jogador não espera: o passo

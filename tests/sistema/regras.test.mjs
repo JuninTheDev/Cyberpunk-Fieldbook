@@ -1167,6 +1167,75 @@ test('Os inimigos no andar (o NET Architect da mesa; wiki, "Habilidades de Inter
   assert.equal(netrun.acharConteudo(arq, '9z.0'), null);
 });
 
+test('Os ataques dos inimigos e os efeitos do Black ICE (wiki, "Black ICE", RED p. 204–207; o NET Architect da mesa): a velocidade no encontro (o empate não é do ICE), o ataque contra a Interface + 1d10 (o empate é da defesa), quem pode atacar, o efeito de cada um dos 12 da tabela, o Kraken, o Wisp, o Skunk, a desconexão insegura e o hardware do deck (o Insulated Wiring e a KRASH Barrier)', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes('Ao encontrar Black ICE à espreita: <b>Interface + bônus de velocidade + 1d10</b> contra <b>SPD do ICE + 1d10</b>. Se o ICE vencer, você sofre o efeito na hora.'));
+  assert.ok(regrasDaWiki.includes('Depois ele entra no <b>topo da fila de iniciativa</b> e ataca uma vez por turno (ATK + 1d10 contra Interface + 1d10) até ser desativado ou driblado com Slide.'));
+  assert.ok(regrasDaWiki.includes("['Insulated Wiring', 'O deck não pega fogo por efeito de programa.', '1', '100eb'], ['KRASH Barrier', 'Imune a efeitos que forçam desconexão.', '2', '100eb']"));
+  // O efeito de cada Black ICE da tabela: os que dão dano no cérebro têm a fórmula; os anti-programa, no REZ de um programa.
+  assert.deepEqual(Object.keys(netrun.EFEITOS_DO_ICE).sort(), BLACK_ICE.map(ice => ice.id).sort());
+  for (const ice of BLACK_ICE) {
+    const efeito = netrun.efeitoDoIce(ice.id);
+    assert.equal(Boolean(efeito.programa), ice.classe === 'antiprogram', ice.id);
+    if (efeito.cerebro || efeito.programa) assert.ok(regras.formulaDeDano(ice.dano), ice.id);
+  }
+  assert.deepEqual(netrun.efeitoDoIce('feito-pelo-mestre'), { cerebro: true });
+  assert.deepEqual(netrun.efeitoDoIce('liche').penalidade, ['int', 'ref', 'dex']);
+  assert.deepEqual(netrun.efeitoDoIce('scorpion').penalidade, ['move']);
+  const arq = arquitetura.lerArquitetura({ andares: [
+    { andar: 1, ramo: 'a', tipo: 'ice', ice: 'skunk' }, { andar: 1, ramo: 'a', tipo: 'ice', ice: 'kraken' }, { andar: 1, ramo: 'a', tipo: 'demonio', demonio: 'imp' },
+    { andar: 1, ramo: 'a', tipo: 'netrunner', nome: 'Raposa' }, { andar: 2, ramo: 'a', tipo: 'ice', ice: 'skunk' }, { andar: 3, ramo: 'a', tipo: 'vazio' }
+  ] });
+  const est = { mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [] };
+  const eu = { nome: 'Deck', no: '1a', escapou: [], engajado: ['1a.0', '1a.1', '1a.2', '1a.3'], acoes: 0, max: 3 };
+  const [skunk, kraken, imp, raposa] = netrun.conteudosDoNo(arq, '1a');
+  // A velocidade: o ICE que passa age na hora; o empate é do netrunner (a wiki: "se o ICE vencer").
+  assert.deepEqual(netrun.resolverVelocidade(eu, kraken, { meu: 9, dele: 9 }), { iceVence: false, texto: 'Velocidade (9 contra 9): Deck viu o Kraken a tempo.', tipo: 'ok' });
+  assert.deepEqual(netrun.resolverVelocidade(eu, kraken, { meu: 8, dele: 9 }), { iceVence: true, texto: 'Velocidade (8 contra 9): o Kraken foi mais rápido e age na hora.', tipo: 'falha' });
+  // O ataque: o Black ICE ataca; o demônio e o netrunner inimigo usam o Zap; o empate é da defesa.
+  assert.deepEqual(netrun.resolverAtaque(eu, kraken, { ataque: 12, defesa: 12 }), { acertou: false, texto: 'O Kraken ataca (12 contra 12), e Deck se defende.', tipo: 'ok' });
+  assert.deepEqual(netrun.resolverAtaque(eu, kraken, { ataque: 13, defesa: 12 }), { acertou: true, texto: 'O Kraken ataca (13 contra 12) e acerta Deck.', tipo: 'falha' });
+  assert.equal(netrun.resolverAtaque(eu, imp, { ataque: 9, defesa: 4 }).texto, 'O Imp usa o Zap (9 contra 4) e acerta Deck.');
+  assert.equal(netrun.resolverAtaque(eu, raposa, { ataque: 9, defesa: 4 }).texto, 'Raposa usa o Zap (9 contra 4) e acerta Deck.');
+  // Quem ataca: todos os ativos do andar; o Black ICE driblado com o Slide, não.
+  assert.deepEqual(netrun.inimigosQueAtacam(arq, est, eu).map(conteudo => conteudo.chave), ['1a.0', '1a.1', '1a.2', '1a.3']);
+  eu.escapou = ['1a.1'];
+  assert.deepEqual(netrun.inimigosQueAtacam(arq, est, eu).map(conteudo => conteudo.chave), ['1a.0', '1a.2', '1a.3']);
+  // A desconexão insegura: o Black ICE encontrado e ativo age (o driblado também; a wiki), menos o que causou a queda;
+  // o demônio e o netrunner inimigo, não; o derrubado, não.
+  assert.deepEqual(netrun.iceDaQueda(arq, est, eu).map(conteudo => conteudo.chave), ['1a.0', '1a.1']);
+  assert.deepEqual(netrun.iceDaQueda(arq, est, eu, '1a.1').map(conteudo => conteudo.chave), ['1a.0']);
+  // O Skunk: −2 no Slide por Skunk ativo que acertou (acumula); o derrubado não conta.
+  eu.skunks = ['1a.0', '2a.0'];
+  assert.equal(netrun.penalidadeDoSkunk(arq, est, eu), -4);
+  netrun.mudarRez(est, skunk, 0);
+  assert.equal(netrun.penalidadeDoSkunk(arq, est, eu), -2);
+  assert.deepEqual(netrun.iceDaQueda(arq, est, eu).map(conteudo => conteudo.chave), ['1a.1']);
+  // O Kraken: até o fim do próximo turno, não avança nem desconecta com segurança (a prisão anda no começo do turno).
+  Object.assign(eu, { preso: netrun.PRISAO_DO_KRAKEN, escapou: ['1a.1'] });
+  netrun.mudarRez(est, imp, 0);
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), 'O Kraken te prende: até o fim do seu próximo turno, não dá para avançar.');
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, arquitetura.ENTRADA), null);
+  assert.equal(netrun.motivoParaNaoDesconectar(eu), 'O Kraken te prende: até o fim do seu próximo turno, só a desconexão insegura.');
+  // O começo do turno: a prisão anda (2 → 1, ainda preso; 1 → 0, livre), o Wisp tira 1 Ação NET (mínimo 2 livres) e o
+  // Slide volta.
+  Object.assign(eu, { acoes: 3, menosAcoes: 1, slides: 1 });
+  assert.equal(netrun.comecoDoTurno(eu), 1);
+  assert.deepEqual([eu.acoes, eu.menosAcoes, eu.preso, eu.slides], [1, 0, 1, 0]);
+  assert.ok(netrun.motivoParaNaoDesconectar(eu));
+  assert.equal(netrun.comecoDoTurno(eu), 0);
+  assert.deepEqual([eu.acoes, eu.preso], [0, 0]);
+  assert.equal(netrun.motivoParaNaoDesconectar(eu), null);
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), null);
+  assert.equal(netrun.comecoDoTurno({ max: 2, menosAcoes: 1 }), 0);
+  // O hardware do deck: o Insulated Wiring e a KRASH Barrier, pelo catálogo ou pelo nome, instalados no deck equipado.
+  const deck = { id: 'deck', type: 'cyberdeck', name: 'Deck', system: { uso: 'equipado' } };
+  const hardware = (catalogo, nome, instaladoEm = 'deck') => ({ id: catalogo, type: 'upgrade', name: nome, system: { instaladoEm }, flags: { 'cpr-fieldbook': { catalogo } } });
+  const n = netrun.netrunnerDo({ system: { rankDeInterface: 4 }, items: [deck, hardware('core_upgrades:insulated-wiring', 'Fiação isolada'), { ...hardware('x', 'KRASH Barrier'), flags: {} }] });
+  assert.deepEqual([n.isolado, n.krash, n.rangeUpgrade], [true, true, false]);
+  assert.deepEqual(Object.values(netrun.netrunnerDo({ system: {}, items: [deck, hardware('core_upgrades:krash-barrier', 'KRASH Barrier', '')] })).slice(3), [false, false, false]);
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

@@ -9,16 +9,21 @@ import { BLACK_ICE, DEMONIOS } from '../gerado.mjs';
 // O Range Upgrade (o hardware de cyberdeck do CORE, "8m/yds ... instead of 6m/yds"): 2 a mais no alcance do ponto.
 export const RANGE_UPGRADE = 'core_upgrades:range-upgrade';
 export const ALCANCE_DO_RANGE_UPGRADE = 2;
-const ehRangeUpgrade = item => item.type === 'upgrade' && (item.flags?.[SISTEMA]?.catalogo === RANGE_UPGRADE || item.name === 'Range Upgrade');
+// O hardware do deck que a NET olha (pelo catálogo do CORE ou pelo nome): o Range Upgrade, o Insulated Wiring (a wiki: o
+// deck não pega fogo por efeito de programa) e a KRASH Barrier (a wiki: imune a efeitos que forçam a desconexão).
+const HARDWARE_DA_NET = {
+  rangeUpgrade: [RANGE_UPGRADE, 'Range Upgrade'], isolado: ['core_upgrades:insulated-wiring', 'Insulated Wiring'], krash: ['core_upgrades:krash-barrier', 'KRASH Barrier']
+};
+const temHardware = (instalados, [catalogo, nome]) => instalados.some(item => item.type === 'upgrade' && (item.flags?.[SISTEMA]?.catalogo === catalogo || item.name === nome));
 
 // O netrunner do ator (a ficha do sistema): a Interface (o Rank da Role de Netrunner), o cyberdeck equipado, os
-// programas instalados nele e se ele tem o Range Upgrade.
+// programas instalados nele e o hardware dele que a NET olha.
 export function netrunnerDo(ator) {
   const deck = ator?.items.find(item => item.type === 'cyberdeck' && item.system.uso === 'equipado') ?? null;
   const instalados = deck ? ator.items.filter(item => item.system?.instaladoEm === deck.id) : [];
   return {
     deck, programas: instalados.filter(item => item.type === 'programa'), rank: Number(ator?.system?.rankDeInterface) || 0,
-    rangeUpgrade: instalados.some(ehRangeUpgrade)
+    ...Object.fromEntries(Object.entries(HARDWARE_DA_NET).map(([chave, hardware]) => [chave, temHardware(instalados, hardware)]))
   };
 }
 
@@ -136,6 +141,7 @@ export const resumoDoAndar = (arq, id) => conteudosDoNo(arq, id).map(nomeDoConte
 export function motivoParaNaoAndar(arq, est, corredor, destino) {
   if (!vizinhos(arq, corredor.no).includes(destino)) return 'Só dá para ir a um andar vizinho.';
   if (!filhosDe(arq, corredor.no).includes(destino)) return null;
+  if (corredor.preso > 0) return 'O Kraken te prende: até o fim do seu próximo turno, não dá para avançar.';
   const senha = conteudosDoNo(arq, corredor.no).find(conteudo => conteudo.tipo === 'senha' && !est.feitos.includes(conteudo.chave));
   if (senha) return `A senha deste andar${senha.dv ? ` (DV ${senha.dv})` : ''} trava a descida: use Backdoor.`;
   const preso = quemSegura(arq, est, corredor)[0];
@@ -228,4 +234,65 @@ export function resolverHabilidade(arq, est, corredor, { chave, alvo = null, tot
   est.feitos = [...est.feitos, alvo.chave];
   const oQue = chave === 'backdoor' ? '' : [alvo.nome, alvo.descricao].filter(Boolean).join(': ').replace(/[.!?…\s]+$/, '');
   return { texto: `${contra}: ${nome} ${{ backdoor: 'quebrou a senha', eyedee: 'identificou o arquivo', control: 'tomou o nó de controle' }[chave]}${oQue ? ` (${oQue})` : ''}.`, tipo: 'ok' };
+}
+
+// ---------------- Os ataques dos inimigos e os efeitos (a wiki, "Black ICE", RED p. 204–207) ----------------
+// A velocidade no encontro: a Interface + a velocidade + 1d10 do netrunner contra a SPD + 1d10 do Black ICE. A wiki: "Se o
+// ICE vencer, você sofre o efeito na hora"; o empate não é vitória (ver as dúvidas).
+export function resolverVelocidade(corredor, ice, { meu, dele }) {
+  const nome = nomeDoInimigo(ice);
+  return dele > meu
+    ? { iceVence: true, texto: `Velocidade (${meu} contra ${dele}): o ${nome} foi mais rápido e age na hora.`, tipo: 'falha' }
+    : { iceVence: false, texto: `Velocidade (${meu} contra ${dele}): ${corredor.nome} viu o ${nome} a tempo.`, tipo: 'ok' };
+}
+
+// O ataque do inimigo na vez dele (a wiki): o Black ICE com o ATK + 1d10; o demônio e o netrunner inimigo com o Zap
+// (Interface + 1d10); contra a Interface + 1d10 do netrunner. O empate é da defesa.
+export function resolverAtaque(corredor, inimigo, { ataque, defesa }) {
+  const nome = nomeDoInimigo(inimigo);
+  const quem = `${inimigo.tipo === 'netrunner' ? nome : `O ${nome}`} ${inimigo.tipo === 'ice' ? 'ataca' : 'usa o Zap'} (${ataque} contra ${defesa})`;
+  return ataque > defesa
+    ? { acertou: true, texto: `${quem} e acerta ${corredor.nome}.`, tipo: 'falha' }
+    : { acertou: false, texto: `${quem}, e ${corredor.nome} se defende.`, tipo: 'ok' };
+}
+
+// Quem pode atacar o netrunner na vez dele: os inimigos ativos no andar, menos o Black ICE que ele driblou com o Slide (a
+// wiki: o Black ICE ataca "até ser desativado ou driblado com Slide").
+export const inimigosQueAtacam = (arq, est, corredor) => inimigosAtivos(arq, est, corredor.no)
+  .filter(conteudo => conteudo.tipo !== 'ice' || !(corredor.escapou ?? []).includes(conteudo.chave));
+
+// O efeito de cada Black ICE (a tabela da wiki): o dano no cérebro (a fórmula da tabela), no REZ de um programa ativo (os
+// anti-programa; se desativar, destrói), o programa destruído (o Asp), o defensor desativado (o Raven, antes do dano), a
+// penalidade de 1 hora (o Liche e o Scorpion, −1d6), o fogo (o Hellhound), a prisão (o Kraken), a Ação NET a menos (o
+// Wisp), o −2 no Slide (o Skunk) e a desconexão insegura (o Giant). O Black ICE de fora da tabela: o dano no cérebro.
+export const EFEITOS_DO_ICE = {
+  asp: { destroiPrograma: true }, giant: { cerebro: true, derruba: true }, hellhound: { cerebro: true, fogo: true }, kraken: { cerebro: true, prende: true },
+  liche: { penalidade: ['int', 'ref', 'dex'] }, raven: { desativaDefensor: true, cerebro: true }, scorpion: { penalidade: ['move'] }, skunk: { skunk: true },
+  wisp: { cerebro: true, menosAcoes: true }, dragon: { programa: true }, killer: { programa: true }, sabertooth: { programa: true }
+};
+export const efeitoDoIce = id => EFEITOS_DO_ICE[id] ?? { cerebro: true };
+// A prisão do Kraken: "até o fim do próximo turno" (o começo do turno conta 1 e libera no seguinte).
+export const PRISAO_DO_KRAKEN = 2;
+
+// O desconectar seguro com o Kraken: só a desconexão insegura.
+export const motivoParaNaoDesconectar = corredor => (corredor.preso > 0 ? 'O Kraken te prende: até o fim do seu próximo turno, só a desconexão insegura.' : null);
+
+// O Skunk: −2 no Slide por Skunk ativo que acertou o netrunner (acumula; até ser desativado).
+export const penalidadeDoSkunk = (arq, est, corredor) => -2 * (corredor.skunks ?? []).filter(chave => {
+  const achado = acharConteudo(arq, chave);
+  return achado && inimigoAtivo(est, achado.conteudo);
+}).length;
+
+// A desconexão insegura (a wiki: "sofre o efeito de todo Black ICE encontrado e ainda ativo"): o Black ICE que o netrunner
+// encontrou neste andar e ainda está ativo, até o driblado com o Slide; menos o que causou a queda (o Giant).
+export const iceDaQueda = (arq, est, corredor, exceto = null) => (corredor.engajado ?? [])
+  .map(chave => acharConteudo(arq, chave)?.conteudo)
+  .filter(conteudo => conteudo?.tipo === 'ice' && conteudo.chave !== exceto && inimigoAtivo(est, conteudo));
+
+// O começo do turno do netrunner: as Ações NET voltam (com o Wisp, 1 a menos, mas a wiki dá no mínimo 2 livres), a prisão
+// do Kraken anda e o Slide do turno volta. Devolve as Ações NET já gastas no começo.
+export function comecoDoTurno(corredor) {
+  const acoes = corredor.menosAcoes ? Math.min(corredor.menosAcoes, Math.max(0, corredor.max - 2)) : 0;
+  Object.assign(corredor, { acoes, menosAcoes: 0, preso: Math.max(0, (corredor.preso ?? 0) - 1), slides: 0, programasNaRodada: [] });
+  return acoes;
 }

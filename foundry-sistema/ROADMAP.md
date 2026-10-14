@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 53). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 54). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -106,9 +106,9 @@ de compêndio; entram só as partes do sistema.
   - [x] os inimigos no andar, que seguram a descida (o Black ICE até cair ou até o Slide; o demônio até cair), o Zap e
     o Slide contra eles (o mestre rola a defesa e a PER no nome deles) e a REZ deles no estado e no painel do mestre:
     ciclo 52;
-  - [ ] os ataques dos inimigos e os efeitos de cada Black ICE (a velocidade na chegada, o ataque na vez dele, o dano no
-    cérebro e nos programas, o fogo do Hellhound, o Kraken, o Wisp, o Skunk, o Giant, a desconexão insegura com o
-    efeito);
+  - [x] os ataques dos inimigos e os efeitos de cada Black ICE (a velocidade na chegada, o ataque na vez dele pelo
+    painel do mestre, o dano no cérebro e nos programas, o fogo do Hellhound, o Liche e o Scorpion, o Kraken, o Wisp, o
+    Skunk, o Giant e a KRASH Barrier, a desconexão insegura com o efeito): ciclo 53;
   - [ ] o combate na NET (os inimigos na iniciativa, a vez deles pelo mestre) e o deck na janela (ativar, desativar e
     atacar com os programas);
   - [ ] o jogador rolando as próprias rolagens, pela janela de rolagem dele;

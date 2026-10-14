@@ -663,3 +663,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.janela-net .mestre .rez-inimigo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-family: var(--cp-dados); font-size: 12px; }
 .cpr-fieldbook.janela-net .mestre .rez-inimigo span { flex: 1; }
 .cpr-fieldbook.janela-net .mestre .rez-inimigo small { color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .aviso-net { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 6px 10px; background: color-mix(in srgb, var(--cp-vermelho) 12%, var(--cp-poco)); border-left: 3px solid var(--cp-vermelho); color: var(--cp-texto); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .aviso-net.fogo { border-left-color: #ff8a1f; }
+.cpr-fieldbook.janela-net .aviso-net button { flex: none; width: auto; height: auto; min-height: 0; padding: 3px 10px; border: 1px solid #ff8a1f; border-radius: 0; background: transparent; color: #ff8a1f; font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .aviso-net button:hover:not(:disabled) { background: #ff8a1f; color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.janela-net .mestre .botoes.ataques { margin-top: 6px; }
