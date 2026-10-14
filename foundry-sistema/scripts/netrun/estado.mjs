@@ -2,17 +2,17 @@
 // anda pela arquitetura, resolve as habilidades de Interface contra os andares e contra os inimigos (o Zap e o Slide) e
 // grava no Tile o estado público da arquitetura (os andares que os jogadores enxergam, quem está onde, a REZ dos
 // inimigos, o registro); o encontro com o Black ICE (a velocidade), o ataque dos inimigos (pelo mestre) e os efeitos de
-// cada Black ICE na ficha. O combate (os inimigos na iniciativa) vem na próxima parte do C8. No Tile só vai o que os
-// jogadores podem ver; o resto fica no item da arquitetura.
+// cada Black ICE na ficha; o deck (ativar, desativar e atacar com os programas). O combate (os inimigos na iniciativa)
+// vem na próxima parte do C8. No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
 import { ENTRADA, filhosDe, lerArquitetura } from '../arquitetura.mjs';
 import { caminho, SISTEMA } from '../config.mjs';
-import { acoesDeNet, formulaDeDano, NUMEROS_DA_NET } from '../regras.mjs';
+import { acoesDeNet, formulaDeDano, NUMEROS_DA_NET, programaDeAtaque } from '../regras.mjs';
 import { testar } from '../rolagens.mjs';
 import { FLAG_CONEXAO, FLAG_ESTADO, FLAG_PONTO, STATUS_CONECTADO, STATUS_EM_CHAMAS } from './constantes.mjs';
 import {
-  acharConteudo, alcanceDo, alvoDaHabilidade, comecoDoTurno, conteudosDoNo, demonioDe, distancia, efeitoDoIce, faltasPara, gastarAcoes, iceDaQueda, iceDe, inimigosAtivos,
-  inimigosQueAtacam, motivoParaNaoAndar, motivoParaNaoDesconectar, motivoParaNaoSlide, mudarRez, netrunnerDo, nomeDoInimigo, penalidadeDoSkunk, PRISAO_DO_KRAKEN,
-  resolverAtaque, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, resumoDoAndar, rezDe, vistaPublica
+  acharConteudo, alcanceDo, alvoDaHabilidade, alvoDoPrograma, comecoDoTurno, conteudosDoNo, demonioDe, distancia, efeitoDoIce, faltasPara, gastarAcoes, iceDaQueda, iceDe, inimigosAtivos,
+  inimigosQueAtacam, motivoParaNaoAndar, motivoParaNaoDesconectar, motivoParaNaoMudarPrograma, motivoParaNaoSlide, mudarRez, netrunnerDo, nomeDoInimigo, penalidadeDoSkunk, PRISAO_DO_KRAKEN,
+  resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, resumoDoAndar, rezDe, vistaPublica
 } from './regras-da-net.mjs';
 import { erro } from './socket.mjs';
 
@@ -188,13 +188,14 @@ async function encontrar(ctx, corredor, conteudo) {
   if (linha.iceVence) await aplicarEfeito(ctx, corredor, conteudo);
 }
 
-// O cartão de dano de um inimigo da arquitetura, no nome dele, sem os botões do mestre (o motor aplica).
-async function cartaoDeDano(falante, rotulo, formula) {
-  const roll = await new Roll(formula).evaluate();
+// O cartão de dano sem os botões do mestre (o motor aplica): o de um inimigo da arquitetura, no nome dele; o do programa
+// do netrunner, já rolado, no nome do netrunner.
+async function cartaoDoRoll(roll, rotulo, speaker) {
   const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), { rotulo, total: roll.total, critico: null, dados: await roll.render(), botoes: [] });
-  await ChatMessage.implementation.create({ speaker: { alias: falante }, content, rolls: [roll] });
+  await ChatMessage.implementation.create({ speaker, content, rolls: [roll] });
   return roll.total;
 }
+const cartaoDeDano = async (falante, rotulo, formula) => cartaoDoRoll(await new Roll(formula).evaluate(), rotulo, { alias: falante });
 
 // O dano no cérebro (a ficha: o Armor ativo reduz 4; o Shield não para o Black ICE nem o Zap).
 async function danoNoCerebro(ctx, corredor, total, { fonte, deBlackIce = true, dePrograma = true }) {
@@ -460,6 +461,61 @@ export const operacoes = {
     registrar(est, linha.texto, linha.tipo);
     if (linha.acertou && inimigo.tipo === 'ice') await aplicarEfeito(ctx, corredor, inimigo);
     else if (linha.acertou) await danoNoCerebro(ctx, corredor, await cartaoDeDano(nome, `Dano: Zap do ${nome} (no cérebro)`, '1d6'), { fonte: `o Zap do ${nome}`, deBlackIce: false, dePrograma: false });
+    await concluir(ctx);
+    return { acertou: linha.acertou };
+  },
+
+  // O deck (a wiki, "Ações NET" e "Programas: ataque"): ativar ou desativar um programa instalado no deck equipado é 1
+  // Ação NET (em combate, cada programa uma vez por rodada); atacar com um programa de ataque ativo é 1 Ação NET (o
+  // Interface + ATK + 1d10 contra a defesa do inimigo; o anti-pessoal só em netrunner, o anti-programa só no Black ICE e no
+  // demônio), e ele desativa sozinho depois de usado.
+  async programa(dados, usuario) {
+    const ctx = await contexto(dados, usuario);
+    const { arq, est, corredor, token, ator } = ctx;
+    exigirNetrunner(ator);
+    const programa = netrunnerDo(ator).programas.find(item => item.id === dados.programa);
+    if (!programa) throw erro('Este programa não está instalado no cyberdeck equipado.');
+    const agora = emCombate(token);
+    if (dados.acao === 'ativar' || dados.acao === 'desativar') {
+      const ativar = dados.acao === 'ativar';
+      if (programa.system.ativo === ativar) return { ok: true };
+      const motivo = usuario.isGM ? null : motivoParaNaoMudarPrograma(programa, corredor, { emCombate: agora, ativar });
+      if (motivo) throw erro(motivo);
+      const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM });
+      if (semAcao) throw erro(semAcao);
+      if (agora) corredor.programasNaRodada = [...new Set([...(corredor.programasNaRodada ?? []), programa.id])];
+      await programa.update({ 'system.ativo': ativar });
+      registrar(est, `${corredor.nome} ${ativar ? 'ativou' : 'desativou'} ${programa.name}.`);
+      await concluir(ctx);
+      return { ok: true };
+    }
+    if (dados.acao !== 'atacar') throw erro('Ação de programa desconhecida.');
+    if (!programaDeAtaque(programa.system.classe)) throw erro(`${programa.name} não é um programa de ataque.`);
+    if (!programa.system.ativo) throw erro(`Ative ${programa.name} antes de atacar com ele.`);
+    const { alvo, erro: problema } = alvoDoPrograma(arq, est, corredor, programa, dados.alvo);
+    if (problema) throw erro(problema);
+    const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM });
+    if (semAcao) throw erro(semAcao);
+    const ataque = (await ator.rolarAtaqueDePrograma(programa)).total;
+    const defesa = await rolagemDoInimigo(alvo, 'def');
+    let dano = 0;
+    if (ataque > defesa) {
+      const contra = alvo.tipo === 'netrunner' ? 'padrao' : 'blackIce';
+      const rolagem = await programa.rolarDanoDePrograma(contra, { falar: false });
+      dano = rolagem ? await cartaoDoRoll(rolagem.roll, `Dano: ${programa.name} (${alvo.tipo === 'netrunner' ? 'no cérebro' : 'na REZ'} de ${nomeDoInimigo(alvo)})`, ChatMessage.implementation.getSpeaker({ actor: ator })) : 0;
+    }
+    const linha = resolverAtaqueDePrograma(est, corredor, programa, alvo, { ataque, defesa, dano });
+    if (linha.acertou && alvo.tipo === 'netrunner') {
+      const inimigo = alvo.ator ? await fromUuid(alvo.ator) : null;
+      const resultado = await inimigo?.receberDanoNoCerebro?.(dano, { dePrograma: true });
+      if (resultado && resultado.hpDepois <= 0) {
+        est.fora = [...new Set([...(est.fora ?? []), alvo.chave])];
+        linha.texto += ` ${nomeDoInimigo(alvo)} caiu da NET.`;
+      } else if (!resultado) linha.texto += ' (sem ficha ligada: o mestre aplica o dano).';
+    }
+    registrar(est, linha.texto, linha.tipo);
+    await programa.update({ 'system.ativo': false });
+    registrar(est, `${programa.name} desativou depois do ataque (o programa de ataque desativa sozinho depois de usado).`);
     await concluir(ctx);
     return { acertou: linha.acertou };
   },

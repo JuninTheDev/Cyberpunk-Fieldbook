@@ -668,3 +668,10 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.janela-net .aviso-net button { flex: none; width: auto; height: auto; min-height: 0; padding: 3px 10px; border: 1px solid #ff8a1f; border-radius: 0; background: transparent; color: #ff8a1f; font-family: var(--cp-dados); font-size: 12px; }
 .cpr-fieldbook.janela-net .aviso-net button:hover:not(:disabled) { background: #ff8a1f; color: var(--cp-fundo); box-shadow: none; }
 .cpr-fieldbook.janela-net .mestre .botoes.ataques { margin-top: 6px; }
+.cpr-fieldbook.janela-net .habilidades .deck { margin-top: 10px; }
+.cpr-fieldbook.janela-net .habilidades .deck h4 { margin: 0 0 6px; border-bottom: 1px solid var(--cp-linha); color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; }
+.cpr-fieldbook.janela-net .habilidades .deck h4 small { margin-left: 6px; color: var(--cp-fraco); letter-spacing: 0.05em; }
+.cpr-fieldbook.janela-net .habilidades .deck .programa { display: flex; align-items: center; gap: 6px; padding: 4px 6px; margin-bottom: 4px; background: var(--cp-poco); border-left: 2px solid var(--cp-linha); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .habilidades .deck .programa.ativo { border-left-color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .habilidades .deck .programa span { flex: 1; min-width: 0; }
+.cpr-fieldbook.janela-net .habilidades .deck .programa small { color: var(--cp-fraco); }

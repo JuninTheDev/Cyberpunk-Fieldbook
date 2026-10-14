@@ -63,7 +63,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   Black ICE faz o efeito da tabela da wiki na ficha: o dano no cérebro (o Armor reduz), nos programas (o destruído fica
   com "(destruído)" no nome, fora do deck), o fogo do Hellhound (2 no HP no fim do turno, até "Apagar o fogo"), o Liche
   e o Scorpion (1 hora), o Kraken, o Wisp, o Skunk e o Giant; o Insulated Wiring e a KRASH Barrier no deck valem. A
-  desconexão insegura traz o efeito do Black ICE do andar. O combate na NET (a iniciativa) ainda não (o C8).
+  desconexão insegura traz o efeito do Black ICE do andar. No deck da janela, o netrunner ativa e desativa os programas
+  (1 Ação NET; em combate, cada um uma vez por rodada; com a REZ em 0, não ativa) e ataca com o programa de ataque ativo
+  (1 Ação NET: Interface + ATK + 1d10 contra a defesa do alvo; o anti-programa no Black ICE e no demônio, o anti-pessoal
+  no netrunner inimigo), que desativa depois de usado. O combate na NET (a iniciativa) ainda não (o C8).
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
@@ -254,7 +257,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
-  (o combate na NET, os programas na janela, a janela de rolagem do jogador na NET, os nós de controle
+  (o combate na NET, a janela de rolagem do jogador na NET, os nós de controle
   ligados à cena, os arquivos copiados, o Scanner e o editor visual) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
@@ -324,6 +327,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
   - o ponto de acesso à NET, nos dois navegadores: a configuração pelo HUD do Tile (as arquiteturas do mundo e do compêndio, a imagem de terminal), o marcador (o oculto, só para o mestre), o jogador a 7 m que não conecta (nem pedindo direto ao mestre) e que conecta com o Range Upgrade (a flag, o status, o anel e a janela com o andar 1 como "?"), a queda ao sair do alcance, o "Desconectar" da janela, o reinício só pelo mestre e o token e o Tile apagados;
   - andar e as habilidades na NET, no navegador do jogador: o "?" do andar 1 que vira a senha ao chegar, a senha que trava a descida, o Backdoor que o mestre rola (o empate com a DV não passa), o Eye-Dee com o arquivo, o Pathfinder que para no nó de DV maior, o Control e o comando, o Virus no andar mais fundo com a DV e as Ações NET do mestre, e o mestre que vê o andar escondido e o revela;
+  - o deck na janela da NET, em combate: o Sword ativado ataca o Hellhound e tira da REZ dele, desativa e não religa na mesma rodada; sem Ação NET, o Hellbolt não ataca; na rodada seguinte, o Hellbolt acerta o cérebro da netrunner inimiga (a ficha dela); o Sword contra ela é recusado;
   - o encontro e o ataque dos inimigos: o Wisp que vence a velocidade e age na hora, o Hellhound que ataca (o dano e o fogo), o Skunk (−2 no cartão do Slide), o Wisp tirando 1 Ação NET e o fogo queimando 2 no HP em combate, e "Apagar o fogo";
   - os efeitos do Black ICE: o Killer que destrói o Armor ativo, o Asp que destrói o Sword, o Liche (−4 por 1 hora), o Kraken que prende, a KRASH Barrier que segura o Giant e o Giant que derruba, com o efeito do Black ICE do andar na queda;
   - os inimigos no andar: o Hellhound, com os números da wiki, segura a descida; o Zap (a DEF do Hellhound rolada no nome dele) tira da REZ; o Slide passa, e de volta ao andar o Hellhound segura de novo; o Imp segura e não se dribla; o mestre derruba a REZ dele pelo painel;

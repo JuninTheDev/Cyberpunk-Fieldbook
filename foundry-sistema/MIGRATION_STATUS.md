@@ -61,7 +61,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | andar e as habilidades contra os andares (o Pathfinder, o Backdoor, o Eye-Dee, o Control com os comandos, o Cloak, o Virus), as Ações NET em combate, a janela com o mapa e o painel do mestre | portados no ciclo 51 (o C8, parte 5); por enquanto o mestre rola (ver as dúvidas) |
 | NET Architect | os inimigos no andar (seguram a descida), o Zap e o Slide contra eles, a REZ deles (no painel do mestre) | portados no ciclo 52 (o C8, parte 6) |
 | NET Architect | o encontro (a velocidade), o ataque dos inimigos pelo mestre, os efeitos de cada Black ICE na ficha (o fogo, as penalidades, os programas destruídos, o Kraken, o Wisp, o Skunk, o Giant), a desconexão insegura com o efeito | portados no ciclo 53 (o C8, parte 7; ver as dúvidas) |
-| NET Architect | o combate na NET (os inimigos na iniciativa), os programas na janela, as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | o deck na janela (ativar, desativar e atacar com os programas) | portado no ciclo 54 (o C8, parte 8; ver as dúvidas) |
+| NET Architect | o combate na NET (os inimigos na iniciativa), as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -350,6 +351,18 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 - **O Liche e o Scorpion: 1 hora no tempo do mundo.** O −1d6 vira um efeito na ficha com a duração de 1 hora; o Foundry
   o suprime quando o tempo do mundo passa da hora (o mestre também pode apagá-lo).
+
+- **O programa de ataque desativa depois de usado; atacar é 1 Ação NET.** A wiki ("Programas: ataque", RED p. 203–204):
+  "Desativam sozinhos depois de usados." O NET Architect deixava o programa ativo; na janela da NET, ele desativa depois
+  do ataque, e para atacar de novo é preciso ativá-lo outra vez. A desativação sozinha não conta como a vez da rodada: o
+  programa ativado numa rodada anterior pode ser ativado de novo na rodada do ataque; o ativado nesta rodada, só na
+  seguinte. Atacar com o programa custa 1 Ação NET, como no NET Architect; a lista de Ações NET da wiki não o traz à
+  parte. A aba NET da ficha (ciclo 41) ainda rola o ataque do programa sem pedir que ele esteja ativo, fora da janela da
+  NET.
+
+- **O anti-programa contra o netrunner inimigo: na janela, não.** A wiki: o anti-programa "só afeta programas". Os
+  programas do netrunner inimigo não fazem parte da arquitetura, e a janela só dá o anti-programa no Black ICE e no
+  demônio; o mestre resolve à mão o ataque aos programas do netrunner inimigo.
 
 - **O Slide: uma vez por turno, e só até sair do andar.** A wiki: "1 Ação NET (1×/turno)". O NET Architect não contava
   as vezes; aqui, em combate, o segundo Slide do turno é recusado (fora de combate, não há turno). Como no NET Architect,
@@ -2699,6 +2712,59 @@ Zap; o hardware do deck: o Insulated Wiring e a KRASH Barrier). Commit anterior:
   rolagem do jogador na NET; os nós de controle ligados à cena; os arquivos copiados; o Scanner e a parede.
 - **Próximo:** o C8, parte 8: o combate na NET (os inimigos na iniciativa) e o deck na janela (ativar, desativar e atacar
   com os programas).
+
+### Ciclo 54 (2026-10-14): o deck na janela da NET (o C8, parte 8; sessão KouArt)
+
+O NET Architect da mesa (o `programa` do `estado.mjs`: ativar, desativar e atacar; o deck na `janela.mjs`) e a wiki
+("Ações NET": "Ativar ou desativar um programa: 1 Ação NET. Cada programa uma vez por rodada"; "Programas: ataque":
+"Desativam sozinhos depois de usados"; "Combate na NET": "Interface + ATK do programa + 1d10 vs Interface + 1d10 (ou DEF
+do programa + 1d10)" e "Programa anti-pessoal só afeta netrunners; anti-programa só afeta programas"). Commit anterior:
+`73f70ad` (ciclo 53). A parte 8 do C8 ficou em dois ciclos: este (o deck) e o seguinte (o combate na NET).
+
+- **Implementado:**
+  - **o deck na janela:** os programas instalados no cyberdeck equipado (os destruídos ficam de fora), com a classe, o
+    ATK, a DEF e a REZ; "Ativar" e "Desativar" (1 Ação NET; em combate, cada programa uma vez por rodada; o que tem REZ
+    não ativa com ela em 0) e "Atacar" no programa de ataque ativo que tem alvo no andar;
+  - **o ataque do programa** (1 Ação NET, como o NET Architect): o Interface + ATK + 1d10 do netrunner contra a defesa do
+    alvo (a DEF + 1d10 do Black ICE, a Interface + 1d10 do demônio ou da ficha do netrunner inimigo; o empate é da
+    defesa). O anti-programa só no Black ICE e no demônio (o dano "em Black ICE", na REZ deles); o anti-pessoal só no
+    netrunner inimigo (o dano no cérebro da ficha dele, que cai da NET com o HP em 0); o alvo de outra classe é recusado.
+    O cartão do dano sai no nome do netrunner, sem os botões do mestre (o motor aplica). Depois do ataque, o programa
+    desativa (a wiki);
+  - **o alvo** da janela vale para o Zap, o Slide e os programas;
+  - **as regras sem o Foundry:** o que impede ativar ou desativar, o alvo do programa e o ataque (o mesmo cálculo do
+    Zap).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 77 de 81. Um teste novo: as frases da wiki; uma vez por rodada em combate (fora dele, não); a REZ em 0 que não
+    ativa (desativar, sim; o programa de ataque, sem REZ, ativa); o alvo do anti-programa (o Black ICE, o demônio) e do
+    anti-pessoal (o netrunner inimigo), com o de outra classe recusado; o ataque com o empate e o dano na REZ. As 4 falhas
+    são as das armas de 2077 (QUALITY_GATES);
+  - G4: 86 de 91, cerca de 140 s. Um passo novo, nos dois navegadores: o deck em combate. O "Atacar" só aparece no
+    programa ativo; o Sword ativado (1 Ação NET) ataca o Hellhound (12 contra 8) e tira 11 da REZ dele (o mapa mostra
+    9/20); o Sword desativa e não religa na mesma rodada (o botão desligado e o pedido direto recusado); o Hellbolt,
+    ativado com a 3ª Ação NET, não ataca sem Ação NET; na rodada seguinte, o Hellbolt acerta a Raposa, netrunner inimiga
+    com ficha (14 contra 5), e tira 10 do HP dela; o Sword, ativado de novo, contra a Raposa é recusado (anti-programa),
+    sem gastar a Ação NET. O passo passou na primeira rodada. Depois dela, ganhou a conferência de que o "Atacar" não
+    aparece antes de ativar (para a mutação da janela), e a rodada limpa passou; depois das mutações, ganhou a captura
+    do deck (`v14-jogador-janela-net-deck.png`: o Sword ativo, com "Atacar" e o "Desativar" apagado; o Hellbolt
+    desativado, com "Ativar"), conferida, e a última rodada passou também. Os avisos do passo "nenhum aviso" foram
+    conferidos: só os dois da Lexington. As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: o programa mudando mais de uma vez por rodada; o programa com a REZ em 0 ativando; o programa de ataque
+      atingindo qualquer inimigo; o alvo de outra classe sem ser recusado; o empate do golpe para o netrunner (derruba
+      também o teste do Zap, que usa o mesmo cálculo);
+    - G4: o programa de ataque sem desativar depois de usado; ativar sem gastar Ação NET; o dano do programa sem sair; o
+      "Atacar" no programa desativado (pega pela conferência que o passo ganhou depois da primeira rodada); o
+      anti-pessoal sem chegar ao cérebro do netrunner inimigo.
+- **Pendências:** o combate na NET (os inimigos na iniciativa, a vez deles pelo combate); a janela de rolagem do jogador
+  na NET; os nós de controle ligados à cena; os arquivos copiados; o Scanner e a parede. Vista na captura do deck: a
+  frase da chegada ao andar (do ciclo 52) lista o netrunner inimigo junto de quem segura a descida ("Hellhound e Raposa
+  estão neste andar: o Black ICE e o demônio seguram a descida até caírem."), e ele não segura (o `quemSegura`); fica
+  para o ciclo 55, com os inimigos.
+- **Próximo:** o C8, parte 9: o combate na NET (os inimigos encontrados na iniciativa, com um token; a vez deles pelo
+  combate; a REZ do token e a do estado juntas).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

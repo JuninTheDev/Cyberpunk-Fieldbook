@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 54). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 55). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -109,8 +109,11 @@ de compêndio; entram só as partes do sistema.
   - [x] os ataques dos inimigos e os efeitos de cada Black ICE (a velocidade na chegada, o ataque na vez dele pelo
     painel do mestre, o dano no cérebro e nos programas, o fogo do Hellhound, o Liche e o Scorpion, o Kraken, o Wisp, o
     Skunk, o Giant e a KRASH Barrier, a desconexão insegura com o efeito): ciclo 53;
-  - [ ] o combate na NET (os inimigos na iniciativa, a vez deles pelo mestre) e o deck na janela (ativar, desativar e
-    atacar com os programas);
+  - [x] o deck na janela (ativar e desativar, 1 Ação NET, cada programa uma vez por rodada; atacar com o programa de
+    ataque ativo, o anti-programa no Black ICE e no demônio e o anti-pessoal no netrunner inimigo; o programa desativa
+    depois de usado): ciclo 54;
+  - [ ] o combate na NET (os inimigos encontrados na iniciativa, com um token; a vez deles pelo combate; a REZ do token
+    e a do estado juntas; a frase da chegada ao andar sem o netrunner inimigo entre quem segura a descida);
   - [ ] o jogador rolando as próprias rolagens, pela janela de rolagem dele;
   - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual;
   - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem

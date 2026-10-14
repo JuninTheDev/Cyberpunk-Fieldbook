@@ -79,7 +79,7 @@ esta janela representa, o painel do mestre e o registro. --}}
   <section class="habilidades">
     <h3>HABILIDADES DE INTERFACE</h3>
     {{#unless netrunner.pronto}}<p class="dica">Sem cyberdeck equipado ou sem Interface: as habilidades não rolam.</p>{{/unless}}
-    {{#if netrunner.alvos.length}}<label class="alvo">Alvo do Zap e do Slide <select data-texto="alvo">{{#each netrunner.alvos}}<option value="{{chave}}" {{#if escolhido}}selected{{/if}}>{{nome}}</option>{{/each}}</select></label>{{/if}}
+    {{#if netrunner.alvos.length}}<label class="alvo">Alvo (o Zap, o Slide e os programas) <select data-texto="alvo">{{#each netrunner.alvos}}<option value="{{chave}}" {{#if escolhido}}selected{{/if}}>{{nome}}</option>{{/each}}</select></label>{{/if}}
     <div class="botoes">
       {{#each netrunner.habilidades}}<button type="button" data-action="habilidade" data-habilidade="{{id}}" data-tooltip="{{dica}}" {{#unless pode}}disabled{{/unless}}>{{rotulo}}</button>{{/each}}
     </div>
@@ -87,6 +87,18 @@ esta janela representa, o painel do mestre e o registro. --}}
     {{#if netrunner.controle}}
     <div class="comando"><input type="text" data-texto="comando" maxlength="200" value="{{netrunner.textos.comando}}" placeholder="Comando para o nó de controle tomado (o mestre narra)"><button type="button" data-action="comandar" {{#if ocupado}}disabled{{/if}}>Comandar</button></div>
     {{/if}}
+    <div class="deck">
+      <h4>DECK{{#if netrunner.deck}} <small>{{netrunner.deck}}</small>{{/if}}</h4>
+      {{#each netrunner.programas}}
+      <div class="programa{{#if ativo}} ativo{{/if}}" data-programa="{{id}}">
+        <span><b>{{nome}}</b> <small>{{classe}}{{#if numeros}} · {{numeros}}{{/if}}</small></span>
+        {{#if podeAtacar}}<button type="button" data-action="programa" data-programa="{{id}}" data-acao="atacar" data-tooltip="1 Ação NET: Interface + ATK + 1d10 contra a defesa do alvo; desativa depois">Atacar</button>{{/if}}
+        <button type="button" data-action="programa" data-programa="{{id}}" data-acao="{{#if ativo}}desativar{{else}}ativar{{/if}}" {{#unless podeMudar}}disabled{{/unless}} data-tooltip="1 Ação NET (em combate, uma vez por rodada)">{{#if ativo}}Desativar{{else}}Ativar{{/if}}</button>
+      </div>
+      {{else}}
+      <p class="dica">Nenhum programa instalado no cyberdeck equipado.</p>
+      {{/each}}
+    </div>
     <div class="sair"><button type="button" data-action="desconectarInseguro" class="perigo" {{#if ocupado}}disabled{{/if}} data-tooltip="Sai na hora, sem Ação NET">{{#if gm}}Derrubar da NET{{else}}Desconexão insegura{{/if}}</button></div>
   </section>
   {{/if}}

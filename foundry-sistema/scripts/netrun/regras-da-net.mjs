@@ -5,6 +5,7 @@
 import { ehFundo, ENTRADA, filhosDe, revelarPathfinder, TIPOS_DE_ANDAR, vizinhos } from '../arquitetura.mjs';
 import { SISTEMA } from '../config.mjs';
 import { BLACK_ICE, DEMONIOS } from '../gerado.mjs';
+import { rezAtual } from '../regras.mjs';
 
 // O Range Upgrade (o hardware de cyberdeck do CORE, "8m/yds ... instead of 6m/yds"): 2 a mais no alcance do ponto.
 export const RANGE_UPGRADE = 'core_upgrades:range-upgrade';
@@ -177,17 +178,19 @@ export function alvoDaHabilidade(arq, est, corredor, chave, pedido = '') {
 // O Slide é uma vez por turno (a wiki: "1 Ação NET (1×/turno)"); fora de combate, não há turno.
 export const motivoParaNaoSlide = (corredor, emCombate) => (emCombate && corredor.slides > 0 ? 'O Slide é uma vez por turno.' : null);
 
-// O Zap (a wiki: contra a DEF + 1d10 do Black ICE, a Interface + 1d10 do demônio ou do netrunner; o empate é da defesa).
-// Acertando, o 1d6 sai da REZ do Black ICE ou do demônio (em 0, ele cai); no netrunner inimigo, o motor põe o dano no
-// cérebro dele. Devolve a linha do registro e se acertou.
-export function resolverZap(est, corredor, alvo, { total, defesa, dano = 0 }) {
-  const contra = `Zap (${total} contra ${defesa})`;
+// O golpe do netrunner num inimigo, o Zap ou o programa de ataque (a wiki: contra a DEF + 1d10 do Black ICE, a Interface
+// + 1d10 do demônio ou do netrunner; o empate é da defesa). Acertando, o dano sai da REZ do Black ICE ou do demônio (em 0,
+// ele cai); no netrunner inimigo, o motor põe o dano no cérebro dele. Devolve a linha do registro e se acertou.
+function resolverGolpe(est, corredor, alvo, { rotulo, ataque, defesa, dano }) {
+  const contra = `${rotulo} (${ataque} contra ${defesa})`;
   const nome = nomeDoInimigo(alvo);
-  if (total <= defesa) return { texto: `${contra}: ${corredor.nome} errou ${alvo.tipo === 'netrunner' ? nome : `o ${nome}`}.`, tipo: 'falha', acertou: false };
+  if (ataque <= defesa) return { texto: `${contra}: ${corredor.nome} errou ${alvo.tipo === 'netrunner' ? nome : `o ${nome}`}.`, tipo: 'falha', acertou: false };
   if (alvo.tipo === 'netrunner') return { texto: `${contra}: ${corredor.nome} acertou ${nome}: ${dano} no cérebro.`, tipo: 'ok', acertou: true };
   const rez = mudarRez(est, alvo, rezDe(est, alvo) - dano);
   return { texto: `${contra}: ${corredor.nome} acertou o ${nome}: ${dano} de REZ, ${rez ? `fica com ${rez}` : 'e ele caiu'}.`, tipo: 'ok', acertou: true };
 }
+// O Zap: o 1d6 (a wiki).
+export const resolverZap = (est, corredor, alvo, { total, defesa, dano = 0 }) => resolverGolpe(est, corredor, alvo, { rotulo: 'Zap', ataque: total, defesa, dano });
 
 // O Slide (a wiki: contra a PER + 1d10 do Black ICE; o empate é do ICE): passando, aquele Black ICE não segura mais o
 // netrunner, que pode seguir para um andar vizinho (a senha ainda trava).
@@ -296,3 +299,29 @@ export function comecoDoTurno(corredor) {
   Object.assign(corredor, { acoes, menosAcoes: 0, preso: Math.max(0, (corredor.preso ?? 0) - 1), slides: 0, programasNaRodada: [] });
   return acoes;
 }
+
+// ---------------- O deck na janela (a wiki, "Ações NET", "Programas: ataque" e "Combate na NET") ----------------
+// Ativar ou desativar um programa: 1 Ação NET; em combate, cada programa uma vez por rodada. O programa com REZ que está em
+// 0 não ativa (o mestre restaura a REZ na ficha). Devolve o motivo de não poder, ou null.
+export function motivoParaNaoMudarPrograma(programa, corredor, { emCombate, ativar }) {
+  if (emCombate && (corredor.programasNaRodada ?? []).includes(programa.id)) return 'Cada programa só pode ser ativado ou desativado uma vez por rodada.';
+  if (ativar && programa.system.rez > 0 && rezAtual(programa.system.rez, programa.system.rezPerdida) === 0) return `${programa.name} está com a REZ em 0.`;
+  return null;
+}
+
+// O alvo do programa de ataque no andar (a wiki: "Programa anti-pessoal só afeta netrunners; anti-programa só afeta
+// programas"): o anti-pessoal, o netrunner inimigo; o anti-programa, o Black ICE e o demônio. O pedido de outra classe é
+// recusado. Devolve { alvo } ou { erro }.
+export function alvoDoPrograma(arq, est, corredor, programa, pedido = '') {
+  const antipessoal = programa.system.classe === 'antipersonnelattacker';
+  const ativos = inimigosAtivos(arq, est, corredor.no);
+  const candidatos = ativos.filter(conteudo => (conteudo.tipo === 'netrunner') === antipessoal);
+  if (pedido && ativos.some(conteudo => conteudo.chave === pedido) && !candidatos.some(conteudo => conteudo.chave === pedido)) {
+    return { erro: antipessoal ? `${programa.name} é anti-pessoal: só afeta netrunners.` : `${programa.name} é anti-programa: só afeta o Black ICE e os demônios.` };
+  }
+  const alvo = candidatos.find(conteudo => conteudo.chave === pedido) ?? candidatos[0];
+  return alvo ? { alvo } : { erro: antipessoal ? 'Não há netrunner inimigo ativo neste andar.' : 'Não há Black ICE nem demônio ativo neste andar.' };
+}
+
+// O ataque do programa: Interface + ATK + 1d10 contra a defesa do inimigo; acertando, o dano do programa.
+export const resolverAtaqueDePrograma = (est, corredor, programa, alvo, { ataque, defesa, dano = 0 }) => resolverGolpe(est, corredor, alvo, { rotulo: programa.name, ataque, defesa, dano });

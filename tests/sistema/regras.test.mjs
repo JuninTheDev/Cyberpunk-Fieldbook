@@ -1236,6 +1236,43 @@ test('Os ataques dos inimigos e os efeitos do Black ICE (wiki, "Black ICE", RED 
   assert.deepEqual(Object.values(netrun.netrunnerDo({ system: {}, items: [deck, hardware('core_upgrades:krash-barrier', 'KRASH Barrier', '')] })).slice(3), [false, false, false]);
 });
 
+test('O deck na janela da NET (wiki, "Ações NET": "Ativar ou desativar um programa: 1 Ação NET. Cada programa uma vez por rodada"; "Programas: ataque": "Desativam sozinhos depois de usados"; "Combate na NET"): uma vez por rodada em combate, a REZ em 0 que não ativa, o alvo do anti-programa e do anti-pessoal, e o ataque do programa (o empate é da defesa)', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  const paginaDaNet = fs.readFileSync(path.join(raiz, 'system-net.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes('<b>Ativar ou desativar um programa</b>: 1 Ação NET. Cada programa uma vez por rodada.'));
+  assert.ok(regrasDaWiki.includes("'Programa anti-pessoal só afeta netrunners; anti-programa só afeta programas.'"));
+  assert.ok(paginaDaNet.includes('Desativam sozinhos depois de usados.'));
+  const programa = (nome, classe, extra = {}) => ({ id: nome, name: nome, system: { classe, rez: 0, rezPerdida: 0, ativo: false, ...extra } });
+  const sword = programa('Sword', 'antiprogramattacker');
+  const hellbolt = programa('Hellbolt', 'antipersonnelattacker');
+  const armor = programa('Armor', 'defender', { rez: 7, rezPerdida: 7 });
+  const eu = { nome: 'Deck', no: '1a', programasNaRodada: ['Sword'] };
+  // Uma vez por rodada, só em combate.
+  assert.equal(netrun.motivoParaNaoMudarPrograma(sword, eu, { emCombate: true, ativar: true }), 'Cada programa só pode ser ativado ou desativado uma vez por rodada.');
+  assert.equal(netrun.motivoParaNaoMudarPrograma(sword, eu, { emCombate: false, ativar: true }), null);
+  // O programa com REZ em 0 não ativa (desativar, sim); o de ataque, sem REZ, ativa.
+  assert.equal(netrun.motivoParaNaoMudarPrograma(armor, eu, { emCombate: false, ativar: true }), 'Armor está com a REZ em 0.');
+  assert.equal(netrun.motivoParaNaoMudarPrograma(armor, eu, { emCombate: false, ativar: false }), null);
+  assert.equal(netrun.motivoParaNaoMudarPrograma(hellbolt, eu, { emCombate: true, ativar: true }), null);
+  // O alvo: o anti-programa no Black ICE e no demônio; o anti-pessoal no netrunner inimigo; o de outra classe, recusado.
+  const arq = arquitetura.lerArquitetura({ andares: [
+    { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 1, ramo: 'a', tipo: 'demonio', demonio: 'imp' }, { andar: 1, ramo: 'a', tipo: 'netrunner', nome: 'Raposa' }
+  ] });
+  const est = { mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [] };
+  assert.equal(netrun.alvoDoPrograma(arq, est, eu, sword).alvo.chave, '1a.0');
+  assert.equal(netrun.alvoDoPrograma(arq, est, eu, sword, '1a.1').alvo.chave, '1a.1');
+  assert.equal(netrun.alvoDoPrograma(arq, est, eu, sword, '1a.2').erro, 'Sword é anti-programa: só afeta o Black ICE e os demônios.');
+  assert.equal(netrun.alvoDoPrograma(arq, est, eu, hellbolt).alvo.chave, '1a.2');
+  assert.equal(netrun.alvoDoPrograma(arq, est, eu, hellbolt, '1a.0').erro, 'Hellbolt é anti-pessoal: só afeta netrunners.');
+  // O ataque: o empate é da defesa; acertando, o dano em Black ICE sai da REZ (20 − 11).
+  const [ice] = netrun.conteudosDoNo(arq, '1a');
+  assert.deepEqual(netrun.resolverAtaqueDePrograma(est, eu, sword, ice, { ataque: 8, defesa: 8 }), { texto: 'Sword (8 contra 8): Deck errou o Hellhound.', tipo: 'falha', acertou: false });
+  assert.deepEqual(netrun.resolverAtaqueDePrograma(est, eu, sword, ice, { ataque: 12, defesa: 8, dano: 11 }), { texto: 'Sword (12 contra 8): Deck acertou o Hellhound: 11 de REZ, fica com 9.', tipo: 'ok', acertou: true });
+  // O netrunner inimigo fora da NET não é mais alvo.
+  est.fora = ['1a.2'];
+  assert.equal(netrun.alvoDoPrograma(arq, est, eu, hellbolt).erro, 'Não há netrunner inimigo ativo neste andar.');
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

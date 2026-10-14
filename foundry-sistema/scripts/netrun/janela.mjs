@@ -1,13 +1,13 @@
 // A janela da NET (a janela.mjs do NET Architect): quem está na NET e onde, o mapa (o jogador vê o que os jogadores
 // enxergam; o mestre, a arquitetura inteira, com o que ainda está escondido), o andar escolhido no mapa (com "Ir para
 // cá" nos vizinhos), as habilidades de Interface contra os andares e contra os inimigos (o Zap e o Slide, com o alvo), o
-// comando no nó de controle tomado, a situação do netrunner (o fogo, o Kraken, o Skunk, o Wisp), o registro e, para o
-// mestre, o painel dele (a vez dos inimigos, revelar, a REZ dos inimigos, zerar as Ações NET, derrubar, reiniciar). Abre
-// para o dono do token conectado e para o mestre, que age pelo netrunner escolhido. O combate e o deck vêm na próxima
-// parte do C8.
+// comando no nó de controle tomado, a situação do netrunner (o fogo, o Kraken, o Skunk, o Wisp), o deck (ativar,
+// desativar e atacar com os programas), o registro e, para o mestre, o painel dele (a vez dos inimigos, revelar, a REZ
+// dos inimigos, zerar as Ações NET, derrubar, reiniciar). Abre para o dono do token conectado e para o mestre, que age
+// pelo netrunner escolhido. O combate (os inimigos na iniciativa) vem na próxima parte do C8.
 import { ENTRADA, RAMOS, TIPOS_DE_ANDAR } from '../arquitetura.mjs';
-import { caminho, SISTEMA } from '../config.mjs';
-import { HABILIDADES_DE_INTERFACE } from '../regras.mjs';
+import { caminho, CLASSES_PROGRAMA, SISTEMA } from '../config.mjs';
+import { HABILIDADES_DE_INTERFACE, programaDeAtaque } from '../regras.mjs';
 import { STATUS_EM_CHAMAS } from './constantes.mjs';
 import { arquiteturaDoPonto, emCombate, estadoDoTile, pontoDoTile } from './estado.mjs';
 import { ehInimigo, HABILIDADES_NA_NET, inimigoAtivo, inimigoPublico, netrunnerDo } from './regras-da-net.mjs';
@@ -66,7 +66,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
       desconectar: JanelaDaNet.#desconectar, desconectarInseguro: JanelaDaNet.#desconectarInseguro, selecionar: JanelaDaNet.#selecionar, mover: JanelaDaNet.#mover,
       habilidade: JanelaDaNet.#habilidade, comandar: JanelaDaNet.#comandar, escolherCorredor: JanelaDaNet.#escolherCorredor, revelar: JanelaDaNet.#revelar,
       zerarAcoes: JanelaDaNet.#zerarAcoes, reiniciar: JanelaDaNet.#reiniciar, ajustarRez: JanelaDaNet.#ajustarRez, inimigoAtaca: JanelaDaNet.#inimigoAtaca,
-      apagarFogo: JanelaDaNet.#apagarFogo
+      apagarFogo: JanelaDaNet.#apagarFogo, programa: JanelaDaNet.#programa
     }
   };
 
@@ -170,6 +170,21 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
         // NET a menos do Wisp.
         emChamas: Boolean(ator?.statuses?.has(STATUS_EM_CHAMAS)), preso: meu.preso > 0, menosAcoes: Boolean(meu.menosAcoes),
         skunk: (n => (n ? '−' + (2 * n) : ''))((meu.skunks ?? []).filter(chave => andares.some(no => (no.conteudos ?? []).some(conteudo => conteudo.chave === chave && !conteudo.feito))).length),
+        // O deck: os programas instalados no deck equipado. Ativar ou desativar (em combate, uma vez por rodada; o que tem
+        // REZ, não em 0); atacar, com o programa de ataque ativo e um alvo da classe dele no andar.
+        deck: ator ? netrunnerDo(ator).deck?.name ?? '' : '',
+        programas: (ator ? netrunnerDo(ator).programas : []).map(programa => {
+          const s = programa.system;
+          const naRodada = combate && (meu.programasNaRodada ?? []).includes(programa.id);
+          const antipessoal = s.classe === 'antipersonnelattacker';
+          const comAlvo = inimigos.some(conteudo => (conteudo.tipo === 'netrunner') === antipessoal);
+          return {
+            id: programa.id, nome: programa.name, classe: CLASSES_PROGRAMA[s.classe] ?? s.classe, ativo: s.ativo,
+            numeros: [s.atk ? `ATK ${s.atk}` : '', s.def ? `DEF ${s.def}` : '', s.rez ? `REZ ${programa.rezAtual}/${s.rez}` : ''].filter(Boolean).join(' · '),
+            podeMudar: pronto && !this.ocupado && !naRodada && (s.ativo || !s.rez || programa.rezAtual > 0),
+            podeAtacar: pronto && !this.ocupado && programaDeAtaque(s.classe) && s.ativo && comAlvo
+          };
+        }),
         habilidades: Object.keys(HABILIDADES_NA_NET).map(id => {
           const { rotulo, custo, dica } = HABILIDADES_DE_INTERFACE.find(habilidade => habilidade.id === id);
           return { id, rotulo, dica: `${custo}. ${dica}`, pode: pronto && pode[id] && !this.ocupado };
@@ -262,6 +277,10 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #inimigoAtaca(evento, alvo) {
     await this.#pedir('inimigoAtaca', { alvo: alvo.dataset.alvo });
+  }
+
+  static async #programa(evento, alvo) {
+    await this.#pedir('programa', { programa: alvo.dataset.programa, acao: alvo.dataset.acao, alvo: this.textos.alvo });
   }
 
   static async #apagarFogo() {

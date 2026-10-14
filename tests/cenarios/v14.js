@@ -4643,6 +4643,125 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('o deck na janela da NET (wiki: "Ativar ou desativar um programa: 1 Ação NET. Cada programa uma vez por rodada"; os programas de ataque "desativam sozinhos depois de usados"): em combate, o Sword ativado ataca o Hellhound (Interface + ATK + 1d10 contra a DEF + 1d10) e o 3d6 sai da REZ dele; o Sword desativa e não religa na mesma rodada; sem Ação NET, o Hellbolt não ataca; na rodada seguinte, o Hellbolt acerta a Raposa (o dano no cérebro da ficha dela); o Sword contra a Raposa é recusado (anti-programa)', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Deck';
+      const ARQ = 'Teste Arquitetura do Deck';
+      const RAPOSA = 'Teste Raposa';
+      try {
+        // A Raposa, netrunner inimiga com ficha (Interface 2), e a arquitetura com ela e o Hellhound no andar 1.
+        const raposa = await edge.evaluate(`(async () => (await Actor.implementation.create({ name: '${RAPOSA}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 2 } } })).uuid)()`);
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [
+          { andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 1, ramo: 'a', tipo: 'netrunner', nome: 'Raposa', ator: raposa }, { andar: 2, ramo: 'a', tipo: 'vazio' }
+        ] });
+        // O Sword e o Hellbolt instalados no deck, desativados; a chegada ao andar 1 (o netrunner vence a velocidade, 13 contra 8).
+        const ids = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const a = game.actors.getName('${NOME}');
+          const deck = a.items.find(i => i.type === 'cyberdeck');
+          for (const id of ['core_programs:sword', 'core_programs:hellbolt']) await a.createEmbeddedDocuments('Item', [{ ...foundry.utils.deepClone(cat[id]), system: { ...cat[id].system, instaladoEm: deck.id, ativo: false } }]);
+          return { sword: a.items.getName('Sword').id, hellbolt: a.items.getName('Hellbolt').id };
+        })()`);
+        await fixar(edge, [[9, 10], [2, 10]]);
+        await jogador.evaluate(`window.__net.ir('1a')`);
+        // Em combate (o começo do turno do netrunner).
+        await edge.evaluate(`(async () => {
+          const token = canvas.scene.tokens.get('${m.token}');
+          const c = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          await c.createEmbeddedDocuments('Combatant', [{ tokenId: token.id, sceneId: canvas.scene.id, actorId: token.actorId }]);
+          await c.startCombat();
+          return true;
+        })()`);
+        const botao = (programa, acao) => `.deck .programa[data-programa="${programa}"] button[data-acao="${acao}"]`;
+        // 1. Ativa o Sword (1 Ação NET) e ataca o Hellhound: 4 + 1 + 7 = 12 contra 2 + 6; 3 + 4 + 4 = 11 na REZ (20 → 9).
+        const sword = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 3 de 3') && net.el().querySelector('${botao(ids.sword, 'ativar')}'));
+          const linhaDoDeck = net.texto('.deck .programa[data-programa="${ids.sword}"]');
+          const semAtaqueAntes = !net.el().querySelector('${botao(ids.sword, 'atacar')}');
+          net.clicar('${botao(ids.sword, 'ativar')}');
+          const ativou = await net.esperarRegistro('ativou Sword');
+          await window.__esperar(() => net.el().querySelector('${botao(ids.sword, 'atacar')}') && net.pronta());
+          const escolha = net.el().querySelector('select[data-texto=alvo]');
+          escolha.value = '1a.0';
+          escolha.dispatchEvent(new Event('input', { bubbles: true }));
+          return { linhaDoDeck, semAtaqueAntes, ativou };
+        })()`);
+        // O deck na captura: o Sword ativo, com "Atacar"; o Hellbolt desativado.
+        await jogador.shot('janela-net-deck');
+        await fixar(edge, [[7, 10], [6, 10], [3, 6], [4, 6], [4, 6]]);
+        const atacou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('${botao(ids.sword, 'atacar')}');
+          await net.esperarRegistro('Sword desativou depois do ataque');
+          await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 1 de 3'));
+          const registro = net.registro().slice(-2);
+          // O Sword não religa na mesma rodada: o botão desligado e o pedido direto recusado.
+          const desligado = net.el().querySelector('${botao(ids.sword, 'ativar')}')?.disabled;
+          const direto = await game.system.api.netrun.pedir('programa', { tile: canvas.scene.tiles.get('${m.tile}').uuid, token: '${m.token}', programa: '${ids.sword}', acao: 'ativar' }).then(() => 'ativou', falha => falha.message);
+          return { registro, desligado, direto, mapa: net.texto('[data-no="1a"]') };
+        })()`);
+        // 2. Ativa o Hellbolt (a 3ª Ação NET) e tenta atacar a Raposa: sem Ação NET.
+        const semAcao = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('${botao(ids.hellbolt, 'ativar')}');
+          await net.esperarRegistro('ativou Hellbolt');
+          await window.__esperar(() => net.el().querySelector('${botao(ids.hellbolt, 'atacar')}') && net.pronta());
+          const escolha = net.el().querySelector('select[data-texto=alvo]');
+          escolha.value = '1a.1';
+          escolha.dispatchEvent(new Event('input', { bubbles: true }));
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            net.clicar('${botao(ids.hellbolt, 'atacar')}');
+            await window.__esperar(() => avisos.length && net.pronta());
+          } finally { delete ui.notifications.warn; }
+          return avisos;
+        })()`);
+        // 3. A rodada seguinte: o Hellbolt acerta a Raposa (4 + 2 + 8 = 14 contra a Interface 2 + 3) e 5 + 5 vai ao cérebro dela.
+        const hpDaRaposa = await edge.evaluate(`(async () => {
+          const antes = game.actors.getName('${RAPOSA}').system.hp.value;
+          await game.combats.find(c => c.combatants.some(cb => cb.tokenId === '${m.token}')).nextRound();
+          await window.__esperar(() => game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}')).corredores[0].acoes === 0);
+          return antes;
+        })()`);
+        await fixar(edge, [[8, 10], [3, 10], [5, 6], [5, 6]]);
+        const hellbolt = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 3 de 3') && net.el().querySelector('${botao(ids.hellbolt, 'atacar')}') && net.pronta());
+          net.clicar('${botao(ids.hellbolt, 'atacar')}');
+          await net.esperarRegistro('Hellbolt desativou depois do ataque');
+          return net.registro().slice(-2);
+        })()`);
+        const raposaDepois = await edge.evaluate(`game.actors.getName('${RAPOSA}').system.hp.value`);
+        // 4. O Sword (ativado de novo, na rodada nova) contra a Raposa: recusado, sem gastar a Ação NET do ataque.
+        const antiPrograma = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('${botao(ids.sword, 'ativar')}');
+          await net.esperarRegistro('ativou Sword');
+          await window.__esperar(() => net.el().querySelector('${botao(ids.sword, 'atacar')}') && net.pronta());
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            net.clicar('${botao(ids.sword, 'atacar')}');
+            await window.__esperar(() => avisos.length && net.pronta());
+          } finally { delete ui.notifications.warn; }
+          return { avisos, acoes: net.eu()?.acoes };
+        })()`);
+        const ok = sword.linhaDoDeck.startsWith('Sword Ataque anti-programa · ATK 1') && sword.semAtaqueAntes && sword.ativou === `${NOME} ativou Sword.`
+          && atacou.registro.join(' | ') === `Sword (12 contra 8): ${NOME} acertou o Hellhound: 11 de REZ, fica com 9. | Sword desativou depois do ataque (o programa de ataque desativa sozinho depois de usado).`
+          && atacou.desligado === true && atacou.direto === 'Cada programa só pode ser ativado ou desativado uma vez por rodada.' && atacou.mapa.startsWith('1A Hellhound (REZ 9/20)')
+          && semAcao.join() === 'Sem Ações NET neste turno (3 de 3).'
+          && hellbolt.join(' | ') === `Hellbolt (14 contra 5): ${NOME} acertou Raposa: 10 no cérebro. | Hellbolt desativou depois do ataque (o programa de ataque desativa sozinho depois de usado).`
+          && raposaDepois === hpDaRaposa - 10
+          && antiPrograma.avisos.join() === 'Sword é anti-programa: só afeta o Black ICE e os demônios.' && antiPrograma.acoes === 2;
+        return [ok, JSON.stringify({ ids, sword, atacou, semAcao, hellbolt, hpDaRaposa, raposaDepois, antiPrograma })];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+        await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => a.name === '${RAPOSA}')) await a.delete(); return true; })()`);
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');
