@@ -1,17 +1,18 @@
-{{!-- A janela da NET (netrun/janela.mjs): quem está na NET, o mapa que os jogadores enxergam e o registro. --}}
-<div class="janela-net-corpo">
+{{!-- A janela da NET (netrun/janela.mjs): quem está na NET, o mapa (o andar escolhido ao lado), as habilidades de quem
+esta janela representa, o painel do mestre e o registro. --}}
+<div class="janela-net-corpo{{#if ocupado}} ocupada{{/if}}">
   <header class="net-cabecalho">
     <h2>{{nome}}</h2>
-    <p class="arquitetura">{{#if arquitetura}}{{arquitetura}} · DV {{dv}}{{else}}Ninguém conectou ainda.{{/if}}</p>
+    <p class="arquitetura">{{#if arquitetura}}{{arquitetura}} · DV {{dv}}{{#if mapaRevelado}} · mapa revelado{{/if}}{{else}}Ninguém conectou ainda.{{/if}}</p>
   </header>
 
   <section class="corredores">
     <h3>NA NET</h3>
     <ul>
       {{#each corredores}}
-      <li data-token="{{token}}" class="{{#if eu}}eu{{/if}}">
+      <li data-token="{{token}}" class="{{#if eu}}eu{{/if}}"{{#if @root.gm}} data-action="escolherCorredor" data-tooltip="O mestre age por este netrunner"{{/if}}>
         <img src="{{img}}" alt=""> <b>{{nome}}</b> <span>{{onde}}</span>
-        {{#if podeDesconectar}}<button type="button" data-action="desconectar" data-token="{{token}}" data-tooltip="Desconectar com segurança">Desconectar</button>{{/if}}
+        {{#if podeDesconectar}}<button type="button" data-action="desconectar" data-token="{{token}}" data-tooltip="Desconectar com segurança (1 Ação NET em combate)">Desconectar</button>{{/if}}
       </li>
       {{else}}
       <li class="vazio">Ninguém conectado.</li>
@@ -19,26 +20,83 @@
     </ul>
   </section>
 
-  <section class="mapa">
-    <h3>MAPA</h3>
-    <div class="mapa-net" style="--colunas: {{ramos.length}}">
-      <span class="canto"></span>
-      {{#each ramos}}<span class="ramo">RAMO {{this}}</span>{{/each}}
-      <div class="entrada">PONTO DE ACESSO{{#if naEntrada.length}}: {{#each naEntrada}}<b>{{this}}</b> {{/each}}{{/if}}</div>
-      {{#each mapa}}
-      <span class="andar">{{andar}}</span>
-      {{#each celulas}}
-      {{#if this}}
-      <div class="no{{#unless visto}} desconhecido{{/unless}}" data-no="{{id}}">
-        <b>{{rotulo}}</b>
-        {{#if visto}}<ul>{{#each conteudos}}<li class="{{#if feito}}feito{{/if}}">{{texto}}</li> {{/each}}</ul>{{else}}<span class="interrogacao">?</span>{{/if}}
-        {{#if corredores.length}}<p class="aqui">{{#each corredores}}<b>{{this}}</b> {{/each}}</p>{{/if}}
+  {{#if netrunner}}
+  <section class="netrunner">
+    <p><b>{{netrunner.nome}}</b> · Interface {{netrunner.rank}} · {{netrunner.onde}}</p>
+    <p class="numeros">
+      {{#if netrunner.combate}}<span class="acoes">Ações NET: sobram <b>{{netrunner.sobram}}</b> de {{netrunner.max}} neste turno</span>{{else}}<span class="acoes">Ações NET livres fora de combate ({{netrunner.max}} por turno em combate)</span>{{/if}}
+      <span data-tooltip="Os pontos de Sorte preparados na ficha entram na próxima rolagem">Sorte preparada: <b>{{netrunner.sorte}}</b></span>
+    </p>
+  </section>
+  {{/if}}
+
+  <div class="net-meio">
+    <section class="mapa">
+      <h3>MAPA</h3>
+      <div class="mapa-net" style="--colunas: {{ramos.length}}">
+        <span class="canto"></span>
+        {{#each ramos}}<span class="ramo">RAMO {{this}}</span>{{/each}}
+        <div class="entrada {{entrada.classes}}" data-action="selecionar" data-no="entrada">PONTO DE ACESSO{{#if naEntrada.length}}: {{#each naEntrada}}<b>{{this}}</b> {{/each}}{{/if}}</div>
+        {{#each mapa}}
+        <span class="andar">{{andar}}</span>
+        {{#each celulas}}
+        {{#if this}}
+        <div class="no {{classes}}" data-action="selecionar" data-no="{{id}}">
+          <b>{{rotulo}}</b>
+          {{#if visto}}<ul>{{#each conteudos}}<li>{{this}}</li> {{/each}}</ul>{{else}}<span class="interrogacao">?</span>{{/if}}
+          {{#if corredores.length}}<p class="aqui">{{#each corredores}}<b>{{this}}</b> {{/each}}</p>{{/if}}
+        </div>
+        {{else}}<span class="sem-no"></span>{{/if}}
+        {{/each}}
+        {{/each}}
       </div>
-      {{else}}<span class="sem-no"></span>{{/if}}
-      {{/each}}
-      {{/each}}
+    </section>
+
+    <section class="andar-escolhido">
+      <h3>{{andar.titulo}}{{#if andar.escondido}} <small>escondido dos jogadores</small>{{/if}}</h3>
+      {{#if andar.entrada}}
+      <p class="dica">Onde a conexão começa. Andar pela arquitetura não é Ação NET; desconectar com segurança é 1 em combate.</p>
+      {{else if andar.visto}}
+      <ul>
+        {{#each andar.conteudos}}
+        <li class="{{#if inimigo}}inimigo{{/if}}{{#if feito}} feito{{/if}}"><b>{{nome}}</b>{{#if dv}} <small>DV {{dv}}</small>{{/if}}{{#if tipo}} <small>{{tipo}}</small>{{/if}}{{#if situacao}} <span class="situacao">{{situacao}}</span>{{/if}}{{#if oQue}} <p>{{oQue}}</p>{{/if}}</li>
+        {{else}}
+        <li class="vazio">Andar vazio.</li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="dica">Ainda não revelado: chegue até ele ou use o Pathfinder.</p>
+      {{/if}}
+      {{#if andar.ir}}<button type="button" data-action="mover" data-no="{{andar.id}}" {{#if ocupado}}disabled{{/if}}><i class="fa-solid fa-route"></i> Ir para cá</button>{{/if}}
+    </section>
+  </div>
+
+  {{#if netrunner}}
+  <section class="habilidades">
+    <h3>HABILIDADES DE INTERFACE</h3>
+    {{#unless netrunner.pronto}}<p class="dica">Sem cyberdeck equipado ou sem Interface: as habilidades não rolam.</p>{{/unless}}
+    <div class="botoes">
+      {{#each netrunner.habilidades}}<button type="button" data-action="habilidade" data-habilidade="{{id}}" data-tooltip="{{dica}}" {{#unless pode}}disabled{{/unless}}>{{rotulo}}</button>{{/each}}
+    </div>
+    {{#if netrunner.fundo}}<input type="text" data-texto="virus" maxlength="200" value="{{netrunner.textos.virus}}" placeholder="O que o vírus faz (o mestre define a DV e as Ações NET)">{{/if}}
+    {{#if netrunner.controle}}
+    <div class="comando"><input type="text" data-texto="comando" maxlength="200" value="{{netrunner.textos.comando}}" placeholder="Comando para o nó de controle tomado (o mestre narra)"><button type="button" data-action="comandar" {{#if ocupado}}disabled{{/if}}>Comandar</button></div>
+    {{/if}}
+    <div class="sair"><button type="button" data-action="desconectarInseguro" class="perigo" {{#if ocupado}}disabled{{/if}} data-tooltip="Sai na hora, sem Ação NET">{{#if gm}}Derrubar da NET{{else}}Desconexão insegura{{/if}}</button></div>
+  </section>
+  {{/if}}
+
+  {{#if mestre}}
+  <section class="mestre">
+    <h3>MESTRE</h3>
+    <div class="botoes">
+      {{#if mestre.revelarAndar}}<button type="button" data-action="revelar" data-no="{{andar.id}}">Revelar este andar</button>{{/if}}
+      {{#if mestre.revelarMapa}}<button type="button" data-action="revelar" data-tudo="1">Revelar o mapa</button>{{/if}}
+      {{#if mestre.comCorredor}}<button type="button" data-action="zerarAcoes" data-tooltip="O começo do turno do netrunner: as Ações NET voltam">Zerar as Ações NET</button>{{/if}}
+      {{#if mestre.semNinguem}}<button type="button" data-action="reiniciar" class="perigo">Reiniciar a arquitetura</button>{{/if}}
     </div>
   </section>
+  {{/if}}
 
   <section class="registro">
     <h3>REGISTRO</h3>

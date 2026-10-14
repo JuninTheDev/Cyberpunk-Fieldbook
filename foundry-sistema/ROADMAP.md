@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 51). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 52). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -100,8 +100,11 @@ de compêndio; entram só as partes do sistema.
   - [x] o ponto de acesso nos tiles (o botão no HUD, a configuração, o marcador, o oculto) e a conexão do token (o
     alcance, com o Range Upgrade; o deck e a Interface mínima; o status e o anel), com a janela da NET mínima (quem está
     na NET, o mapa que os jogadores enxergam, o registro e o "Desconectar") e a queda ao sair do alcance: ciclo 50;
-  - [ ] o motor no mestre e o resto da janela da NET (andar, as habilidades contra os andares, o deck na janela);
-  - [ ] os inimigos (o Black ICE e o demônio no andar, a velocidade, o ataque, os efeitos) e o combate;
+  - [x] o motor no mestre para andar e para as habilidades contra os andares (o Pathfinder, o Backdoor, o Eye-Dee, o
+    Control com os comandos, o Cloak e o Virus), com as Ações NET em combate, e a janela da NET com o mapa clicável, o
+    andar escolhido, as habilidades e o painel do mestre: ciclo 51;
+  - [ ] os inimigos (o Black ICE e o demônio no andar, que seguram a descida, a velocidade, o ataque, os efeitos, o Zap
+    e o Slide) e o combate, com o deck na janela (ativar, desativar e atacar com os programas);
   - [ ] o jogador rolando as próprias rolagens, pela janela de rolagem dele;
   - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual;
   - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem

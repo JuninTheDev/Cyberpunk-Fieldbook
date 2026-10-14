@@ -58,7 +58,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect e cpr-2077 | o compêndio das arquiteturas (os exemplos do NET Architect; as da campanha, do documento da wiki, como o build do cpr-2077) | portado no ciclo 48 (o C8, parte 2) |
 | CORE | a geração da arquitetura pelas tabelas (o lobby e as 4 dificuldades) | portada no ciclo 49 (o C8, parte 3), com um Black ICE por linha (ver as dúvidas) |
 | NET Architect | o ponto de acesso nos tiles, a conexão do token (o alcance, os requisitos, o status, o anel) e a janela da NET mínima (quem está na NET, o mapa, o registro, o "Desconectar") | portados no ciclo 50 (o C8, parte 4), com o Range Upgrade (ver as dúvidas) |
-| NET Architect | andar e as habilidades contra os andares, os inimigos e o combate, as rolagens do jogador, os nós de controle, os arquivos, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | andar e as habilidades contra os andares (o Pathfinder, o Backdoor, o Eye-Dee, o Control com os comandos, o Cloak, o Virus), as Ações NET em combate, a janela com o mapa e o painel do mestre | portados no ciclo 51 (o C8, parte 5); por enquanto o mestre rola (ver as dúvidas) |
+| NET Architect | os inimigos e o combate na NET (o Zap, o Slide, os programas na janela), as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -313,6 +314,20 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   insegura: sofre o efeito de todo Black ICE encontrado e ainda ativo". O sistema derruba o netrunner e registra a
   desconexão insegura, como o NET Architect. Encontrar o Black ICE vem com o andar e os inimigos (o C8); até lá, não
   há Black ICE encontrado para agir.
+
+- **Quem rola na NET, por enquanto: o mestre.** No NET Architect, com "O jogador rola as próprias rolagens" (ligado de
+  partida), a habilidade abre a janela de rolagem no computador do jogador, e o mestre só rola quando ele não responde
+  a tempo. Aqui, até a parte das rolagens do jogador (C8), o mestre ativo rola a Interface do netrunner (o cartão no
+  chat, com a Sorte que o jogador preparou na ficha). Muda o que a mesa vê; vale só na sistema-v14 até lá.
+
+- **O Virus de muitas Ações NET.** A wiki: "Ações NET definidas pelo mestre", com exemplos de 1 a 10 Ações (RED p.
+  200). O NET Architect gastava sempre 1. Aqui o mestre põe a DV e as Ações NET na hora; em combate elas saem do turno,
+  e o vírus que pede mais do que sobra é recusado (o mestre divide por turnos, à mão, ou o netrunner o faz fora de
+  combate, onde as Ações NET não contam). O sistema não guarda um vírus pela metade.
+
+- **Os inimigos no andar, por enquanto, não agem.** No NET Architect, o Black ICE e o demônio do andar seguram a descida
+  até caírem (o Zap, um programa) ou até o Slide, disputam a velocidade na chegada e atacam. Até a parte 6 do C8, eles
+  aparecem no mapa, com a REZ, mas não seguram nem atacam; só a senha trava a descida.
 
 - **A arma não atinge o Black ICE nem o demônio.** No CORE, o "aplicar dano" do chat aceita o Black ICE e o demônio
   marcados, com qualquer dano (até o de uma arma), e tira da REZ. Aqui a arma ignora os atores da NET marcados (com só
@@ -2478,6 +2493,71 @@ alcance conectado = desconexão insegura"). O CORE não tem ponto de acesso. Com
 - **Pendências:** andar e as habilidades contra os andares (a próxima parte); o efeito do Black ICE na desconexão
   insegura (com os inimigos); a parede entre o token e o ponto e o Scanner (ROADMAP, C8).
 - **Próximo:** o C8, parte 5: o motor no mestre e o resto da janela da NET (andar, as habilidades contra os andares).
+
+### Ciclo 51 (2026-10-14): andar e as habilidades contra os andares na NET (o C8, parte 5; sessão KouArt)
+
+O NET Architect da mesa (o `mover`, o `habilidade`, o `comandar`, o `revelar` e o `zerarAcoes` do `estado.mjs`; a
+`janela.mjs`; o gancho do turno no `net-architect.mjs`) e a wiki ("Ações NET" e "Habilidades de Interface", RED p.
+198–201: Interface + 1d10 > DV; "Não são Ações NET: andar pela arquitetura (até a próxima obstrução)"; o custo de cada
+habilidade; os exemplos de vírus da p. 200). Commit anterior: `1962f26` (ciclo 50).
+
+- **Implementado:**
+  - **andar:** na janela, o jogador clica num andar do mapa e em "Ir para cá" (só os vizinhos). Andar não é Ação NET; a
+    senha que ainda não foi quebrada trava a descida; o andar a que chega fica visto, e o registro diz o que há nele;
+  - **as habilidades contra os andares**, com o alvo no andar onde o netrunner está: o Pathfinder revela andares até a
+    obstrução com DV maior que o total; o Backdoor quebra a senha; o Eye-Dee identifica o arquivo (o nome e a
+    descrição aparecem só depois); o Control toma o nó de controle, que passa a aceitar comandos (1 Ação NET cada; o
+    mestre narra); o Cloak põe o total como a DV dos rastros; o Virus, só no andar mais fundo, pergunta ao mestre a DV
+    e as Ações NET (com os exemplos da wiki). Passa quem tira mais que a DV;
+  - **as Ações NET:** em combate, as do Rank por turno (as habilidades, os comandos e o desconectar seguro gastam;
+    sem Ação, recusa), de volta no começo do turno do netrunner (o mestre ativo, pelo combate); fora de combate, não
+    contam. O mestre passa do limite;
+  - **quem rola, por enquanto:** o mestre, pela rolagem de Interface do sistema (o cartão no chat, com a Sorte que o
+    jogador preparou na ficha). A janela de rolagem no computador do jogador vem numa próxima parte (ver as dúvidas);
+  - **a janela:** o mapa clicável (o andar onde o netrunner está, os vizinhos, o escolhido), o andar escolhido com o
+    que tem e a situação de cada coisa, as habilidades que dão ali, a caixa do vírus e a do comando, as Ações NET que
+    sobram, a Sorte preparada e a desconexão insegura (com a pergunta). O mestre vê a arquitetura inteira (o que os
+    jogadores ainda não viram fica marcado), age pelo netrunner escolhido, revela um andar ou o mapa, zera as Ações NET,
+    derruba da NET e reinicia a arquitetura vazia;
+  - **as regras sem o Foundry** (`netrun/regras-da-net.mjs`): o que trava a descida, o alvo de cada habilidade, as
+    Ações NET e o resultado de cada habilidade.
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 74 de 78. Um teste novo: as frases da wiki; o resumo do andar; andar (só aos vizinhos, a senha travando a
+    descida até o Backdoor, subir livre); o alvo de cada habilidade; o Backdoor com 6 contra a DV 6 (não passa) e 9
+    (passa); o Eye-Dee e o que o mapa público mostra antes e depois; o Pathfinder com 7 (o 3A com DV 8 aparece e barra o
+    4A); o Control, o Cloak e o Virus; as Ações NET fora e dentro de combate e o mestre passando do limite. As 4 falhas
+    são as das armas de 2077 (QUALITY_GATES);
+  - G4: 82 de 87, cerca de 130 s. Dois passos novos, nos dois navegadores:
+    - andar e as habilidades: na janela do jogador, o "?" do andar 1 vira a senha DV 6 ao chegar; a senha trava a
+      descida (o aviso); o Backdoor rola no mestre (o cartão no chat, com o nome do netrunner): 6 contra a DV 6 não
+      passa, 9 passa; o Eye-Dee mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B e para no nó DV 8 (o 4A segue
+      escondido); o Control toma o nó e o comando, pela caixa de texto, vai ao registro; o mestre, na janela dele, vê o 4A
+      marcado como escondido e o revela; no 3B (o fundo), o Virus com a DV 10 e as 2 Ações NET que o mestre responde;
+    - as Ações NET em combate: no começo do turno, 3 de 3; o Virus de 2 Ações e um Cloak gastam as 3; o Cloak seguinte e
+      o desconectar seguro são recusados (os avisos); a rodada seguinte as devolve; a desconexão insegura, com a pergunta,
+      sai sem gastar.
+    Os dois passaram na primeira rodada; o passo das Ações NET ganhou depois o Virus em combate (para provar as Ações do
+    mestre), e a segunda rodada passou com ele. As capturas da janela do jogador e da do mestre foram conferidas. Os
+    avisos do passo "nenhum aviso" foram conferidos: só os dois da Lexington. As 5 falhas são as das armas de 2077
+    (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a senha sem travar a descida; o empate com a DV passando; o Pathfinder sem revelar; as Ações NET contando
+      fora de combate; o mestre preso ao limite das Ações NET; o alvo podendo ser o que já foi feito; o que o arquivo é
+      aparecendo antes do Eye-Dee;
+    - G4: o começo do turno sem devolver as Ações NET; o andar a que se chega sem ficar visto; o Virus gastando 1 Ação NET,
+      e não as do mestre; o desconectar seguro sem gastar Ação NET; a janela liberando o Backdoor sem senha no andar.
+    Duas lições delas. A do Backdoor sobreviveu na primeira rodada: o passo só conferia os botões no andar 1, onde o
+    Backdoor vale de todo jeito; ele passou a conferir também no andar 3, sem senha. A do andar sem ficar visto achou um
+    erro de verdade na janela: o andar onde o netrunner está, fora do mapa (como na arquitetura editada no meio da
+    corrida), quebrava a janela (`Cannot read properties of undefined`); agora a janela volta ao ponto de acesso. O
+    ajudante do passo também passou a esperar a janela redesenhada sem o estado "ocupado".
+- **Pendências:** os inimigos (o Black ICE e o demônio no andar ainda não seguram a descida nem atacam), o Zap, o
+  Slide e os programas na janela (a parte 6); a janela de rolagem do jogador na NET; os nós de controle ligados à cena;
+  os arquivos copiados; o Scanner e a parede (ROADMAP, C8).
+- **Próximo:** o C8, parte 6: os inimigos e o combate na NET (o Black ICE e o demônio no andar, a velocidade, o
+  ataque, os efeitos, o Zap, o Slide e os programas na janela).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

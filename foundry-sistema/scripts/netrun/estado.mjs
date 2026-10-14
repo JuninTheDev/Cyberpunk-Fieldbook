@@ -1,12 +1,14 @@
-// O motor da NET (o estado.mjs do NET Architect da mesa), sempre no mestre ativo: conecta e desconecta os netrunners e
-// grava no Tile o estado público da arquitetura (os andares que os jogadores enxergam, quem está onde, o registro). Andar,
-// as habilidades, os inimigos e o combate vêm nas próximas partes do C8. No Tile só vai o que os jogadores podem ver; o
-// resto fica no item da arquitetura.
-import { ENTRADA, lerArquitetura } from '../arquitetura.mjs';
+// O motor da NET (o estado.mjs do NET Architect da mesa), sempre no mestre ativo: conecta e desconecta os netrunners,
+// anda pela arquitetura, resolve as habilidades de Interface contra os andares e grava no Tile o estado público da
+// arquitetura (os andares que os jogadores enxergam, quem está onde, o registro). Os inimigos e o combate vêm nas
+// próximas partes do C8. No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
+import { ENTRADA, filhosDe, lerArquitetura } from '../arquitetura.mjs';
 import { SISTEMA } from '../config.mjs';
 import { acoesDeNet } from '../regras.mjs';
 import { FLAG_CONEXAO, FLAG_ESTADO, FLAG_PONTO, STATUS_CONECTADO } from './constantes.mjs';
-import { alcanceDo, distancia, faltasPara, netrunnerDo, vistaPublica } from './regras-da-net.mjs';
+import {
+  alcanceDo, alvoDaHabilidade, conteudosDoNo, distancia, faltasPara, gastarAcoes, motivoParaNaoAndar, netrunnerDo, resolverHabilidade, resumoDoAndar, vistaPublica
+} from './regras-da-net.mjs';
 import { erro } from './socket.mjs';
 
 const LOG_MAX = 60;
@@ -113,6 +115,35 @@ export async function soltarTokens(tile) {
   }
 }
 
+// ---------------- Andar e as habilidades ----------------
+// Quem age na NET tem o cyberdeck equipado e a Interface (o Rank de Netrunner), como na aba NET da ficha.
+function exigirNetrunner(ator) {
+  if (!netrunnerDo(ator).deck) throw erro('Sem cyberdeck equipado: não dá para agir na NET.');
+  if (!ator.system.rankDeInterface) throw erro('Sem Interface (o Rank de Netrunner): só o Netrunner usa as habilidades na NET.');
+}
+const lugar = (arq, id) => `o andar ${arq.nos[id].andar}${arq.nos[id].ramo !== 'a' ? ` (ramo ${arq.nos[id].ramo.toUpperCase()})` : ''}`;
+
+// O Virus (a wiki: "Ações NET definidas pelo mestre", "contra a DV do mestre"): o mestre responde na hora, com os
+// exemplos da wiki (RED p. 200). Fechada a janela, nada acontece.
+const EXEMPLOS_DE_VIRUS = [
+  ['Muda o ícone de um tipo de Black ICE', 6, 1], ['Desativa um Black ICE até o vírus ser removido', 10, 2], ['Faz um nó de controle falhar até o vírus ser removido', 10, 2],
+  ['Apaga todo o Black ICE da arquitetura', 12, 10], ['Corta pela metade os andares da arquitetura, para sempre', 12, 10]
+];
+async function perguntarVirus(corredor, texto, emCombateAgora) {
+  const esc = valor => foundry.utils.escapeHTML(String(valor ?? ''));
+  const exemplos = EXEMPLOS_DE_VIRUS.map(([oQue, dv, acoes]) => `<tr><td>${oQue}</td><td>${dv}</td><td>${acoes}</td></tr>`).join('');
+  const sobram = emCombateAgora ? `<p>Ações NET que sobram a ${esc(corredor.nome)} neste turno: <b>${corredor.max - corredor.acoes} de ${corredor.max}</b>.</p>` : '<p>Fora de combate, as Ações NET não contam.</p>';
+  const resposta = await foundry.applications.api.DialogV2.prompt({
+    window: { title: `Virus: ${corredor.nome}` }, classes: [SISTEMA, 'net-virus'],
+    content: `<p><b>${esc(corredor.nome)}</b> quer deixar um vírus:</p><blockquote>${esc(texto)}</blockquote>
+      <div class="colunas"><label>DV <input type="number" name="dv" value="10" min="2" max="30"></label><label>Ações NET <input type="number" name="acoes" value="1" min="1" max="10"></label></div>
+      ${sobram}<table class="exemplos"><thead><tr><th>Exemplos da wiki (RED p. 200)</th><th>DV</th><th>Ações</th></tr></thead><tbody>${exemplos}</tbody></table>`,
+    ok: { label: 'Rolar o vírus', callback: (evento, botao) => ({ dv: Math.max(2, Number(botao.form.elements.dv.value) || 10), acoes: Math.max(1, Number(botao.form.elements.acoes.value) || 1) }) },
+    rejectClose: false
+  });
+  return resposta || null;
+}
+
 // ---------------- Operações (o que o socket chama, no mestre ativo) ----------------
 export const operacoes = {
   async conectar(dados, usuario) {
@@ -140,11 +171,96 @@ export const operacoes = {
     return { conectado: true };
   },
 
+  // Desconectar com segurança é 1 Ação NET (a wiki); a desconexão insegura, não.
   async desconectar(dados, usuario) {
     const ctx = await contexto(dados, usuario);
-    retirar(ctx, ctx.corredor, { inseguro: Boolean(dados.inseguro), motivo: dados.motivo || '' });
+    const inseguro = Boolean(dados.inseguro);
+    const semAcao = inseguro ? null : gastarAcoes(ctx.corredor, { emCombate: emCombate(ctx.token), mestre: usuario.isGM });
+    if (semAcao) throw erro(`${semAcao} Espere o seu turno ou faça a desconexão insegura.`);
+    retirar(ctx, ctx.corredor, { inseguro, motivo: dados.motivo || '' });
     await concluir(ctx);
     return { desconectado: true };
+  },
+
+  // Andar a um andar vizinho (a wiki: não é Ação NET; vai até a próxima obstrução). O andar a que chega fica visto.
+  async mover(dados, usuario) {
+    const ctx = await contexto(dados, usuario);
+    const { arq, est, corredor } = ctx;
+    const motivo = motivoParaNaoAndar(arq, est, corredor, dados.destino);
+    if (motivo) throw erro(motivo);
+    const descendo = filhosDe(arq, corredor.no).includes(dados.destino);
+    corredor.no = dados.destino;
+    if (corredor.no === ENTRADA) registrar(est, `${corredor.nome} voltou ao ponto de acesso.`);
+    else {
+      if (!est.vistos.includes(corredor.no)) est.vistos = [...est.vistos, corredor.no];
+      registrar(est, `${corredor.nome} ${descendo ? 'desceu' : 'subiu'} para ${lugar(arq, corredor.no)}: ${resumoDoAndar(arq, corredor.no)}.`);
+    }
+    await concluir(ctx);
+    return { no: corredor.no };
+  },
+
+  // Uma habilidade de Interface contra os andares: o alvo aqui, a Ação NET (em combate), a rolagem e o resultado. Por
+  // enquanto quem rola é o mestre (com a Sorte que o jogador preparou na ficha); a janela de rolagem no computador do
+  // jogador vem numa próxima parte do C8. O Virus pergunta ao mestre a DV e as Ações NET.
+  async habilidade(dados, usuario) {
+    const ctx = await contexto(dados, usuario);
+    const { arq, est, corredor, token, ator } = ctx;
+    const chave = dados.habilidade;
+    const { alvo, erro: problema } = alvoDaHabilidade(arq, est, corredor, chave, dados.alvo);
+    if (problema) throw erro(problema);
+    exigirNetrunner(ator);
+    const texto = String(dados.texto ?? '').trim().slice(0, 200);
+    if (chave === 'virus' && !texto) throw erro('Escreva o que o vírus faz: o mestre define a DV e as Ações NET.');
+    const agora = emCombate(token);
+    const virus = chave === 'virus' ? await perguntarVirus(corredor, texto, agora) : null;
+    if (chave === 'virus' && !virus) throw erro('O mestre não aceitou o vírus agora.');
+    const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM, quantas: virus?.acoes ?? 1 });
+    if (semAcao) throw erro(semAcao);
+    const rolagem = await ator.rolarInterface(chave);
+    if (!rolagem) throw erro('A rolagem da Interface não saiu.');
+    const linha = resolverHabilidade(arq, est, corredor, { chave, alvo, total: rolagem.total, dvVirus: virus?.dv, texto });
+    registrar(est, linha.texto, linha.tipo);
+    await concluir(ctx);
+    return { total: rolagem.total };
+  },
+
+  // Um comando no nó de controle tomado neste andar (a wiki: 1 Ação NET por comando); o mestre narra.
+  async comandar(dados, usuario) {
+    const ctx = await contexto(dados, usuario);
+    const { arq, est, corredor, token } = ctx;
+    if (!conteudosDoNo(arq, corredor.no).some(conteudo => conteudo.tipo === 'controle' && est.feitos.includes(conteudo.chave))) throw erro('Não há nó de controle tomado neste andar.');
+    const texto = String(dados.texto ?? '').trim().slice(0, 200);
+    if (!texto) throw erro('Escreva o comando.');
+    const semAcao = gastarAcoes(corredor, { emCombate: emCombate(token), mestre: usuario.isGM });
+    if (semAcao) throw erro(semAcao);
+    registrar(est, `${corredor.nome} comanda o nó de controle: “${texto}”.`);
+    await concluir(ctx);
+    return { ok: true };
+  },
+
+  // O mestre revela um andar ou o mapa inteiro.
+  async revelar(dados, usuario) {
+    if (!usuario.isGM) throw erro('Só o mestre revela andares.');
+    const ctx = await contexto(dados, usuario, { precisaCorredor: false });
+    const { arq, est } = ctx;
+    if (dados.tudo) {
+      est.mapa = true;
+      registrar(est, 'O mestre revelou o mapa da arquitetura.');
+    } else if (arq.nos[dados.no] && !est.vistos.includes(dados.no)) {
+      est.vistos = [...est.vistos, dados.no];
+      registrar(est, `O mestre revelou ${lugar(arq, dados.no)}.`);
+    }
+    await concluir(ctx);
+    return { ok: true };
+  },
+
+  // O começo do turno do netrunner (pelo combate, no mestre ativo, ou pelo botão do mestre): as Ações NET voltam.
+  async zerarAcoes(dados, usuario) {
+    if (!usuario.isGM) throw erro('Só o mestre zera as Ações NET.');
+    const ctx = await contexto(dados, usuario);
+    Object.assign(ctx.corredor, { acoes: 0, programasNaRodada: [] });
+    await concluir(ctx);
+    return { ok: true };
   },
 
   // O mestre volta a arquitetura ao começo (ninguém conectado): as defesas, o mapa e o registro.

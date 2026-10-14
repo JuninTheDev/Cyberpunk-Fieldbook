@@ -618,3 +618,43 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.janela-net .mapa-net .aqui { margin: 2px 0 0; color: var(--cp-ciano); }
 .cpr-fieldbook.janela-net .registro ol { max-height: 12rem; margin: 0; padding-left: 18px; overflow-y: auto; font-family: var(--cp-dados); font-size: 12px; line-height: 1.45; }
 .cpr-fieldbook.janela-net .registro li.falha { color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .registro li.ok { color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .corredores li[data-action] { cursor: pointer; }
+.cpr-fieldbook.janela-net .netrunner p { margin: 0; }
+.cpr-fieldbook.janela-net .netrunner .numeros { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 2px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .netrunner .numeros b { color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .net-meio { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; }
+.cpr-fieldbook.janela-net .mapa { max-height: 26rem; overflow-y: auto; }
+.cpr-fieldbook.janela-net .mapa-net :is(.no, .entrada) { cursor: pointer; }
+.cpr-fieldbook.janela-net .mapa-net :is(.no, .entrada).vizinho { outline: 1px dashed var(--cp-ciano); outline-offset: -1px; }
+.cpr-fieldbook.janela-net .mapa-net :is(.no, .entrada).selecionado { background: color-mix(in srgb, var(--cp-amarelo) 12%, var(--cp-poco)); }
+.cpr-fieldbook.janela-net .mapa-net :is(.no, .entrada).atual { box-shadow: inset 0 0 0 2px var(--cp-ciano); }
+.cpr-fieldbook.janela-net .mapa-net .no.escondido { opacity: 0.6; border-left-style: dotted; }
+.cpr-fieldbook.janela-net .mapa-net .no.feito { border-left-color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .andar-escolhido h3 small { margin-left: 6px; color: var(--cp-vermelho); letter-spacing: 0.05em; }
+.cpr-fieldbook.janela-net .andar-escolhido ul { margin: 0 0 8px; padding: 0; list-style: none; font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-net .andar-escolhido li { padding: 4px 6px; margin-bottom: 4px; background: var(--cp-poco); border-left: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .andar-escolhido li.inimigo { border-left-color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .andar-escolhido li.feito { border-left-color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .andar-escolhido li small { color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .andar-escolhido .situacao { float: right; color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .andar-escolhido li.feito .situacao { color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .andar-escolhido li p { margin: 2px 0 0; color: var(--cp-texto); }
+.cpr-fieldbook.janela-net .dica { margin: 0 0 8px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; line-height: 1.45; }
+.cpr-fieldbook.janela-net :is(.andar-escolhido, .habilidades, .mestre) button {
+  flex: none; width: auto; height: auto; min-height: 0; padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em;
+}
+.cpr-fieldbook.janela-net :is(.andar-escolhido, .habilidades, .mestre) button:hover:not(:disabled) { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.janela-net :is(.habilidades, .mestre) button.perigo { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net :is(.habilidades, .mestre) button.perigo:hover:not(:disabled) { background: var(--cp-vermelho); color: var(--cp-fundo); }
+.cpr-fieldbook.janela-net button:disabled { opacity: 0.35; cursor: not-allowed; }
+.cpr-fieldbook.janela-net :is(.habilidades, .mestre) .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.cpr-fieldbook.janela-net .habilidades input[type="text"] { width: 100%; margin-top: 8px; }
+.cpr-fieldbook.janela-net .habilidades .comando { display: flex; gap: 6px; margin-top: 8px; }
+.cpr-fieldbook.janela-net .habilidades .comando input[type="text"] { flex: 1; margin-top: 0; }
+.cpr-fieldbook.janela-net .habilidades .sair { display: flex; justify-content: flex-end; margin-top: 8px; }
+.cpr-fieldbook.janela-net .janela-net-corpo.ocupada { cursor: progress; }
+.cpr-fieldbook.net-virus .colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cpr-fieldbook.net-virus table.exemplos { width: 100%; font-size: 12px; }
+.cpr-fieldbook.net-virus table.exemplos td:not(:first-child), .cpr-fieldbook.net-virus table.exemplos th:not(:first-child) { width: 3.5rem; text-align: center; }

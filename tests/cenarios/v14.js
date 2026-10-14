@@ -4070,6 +4070,278 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    // Os dois passos da NET do ciclo 51: a arquitetura, o ponto de acesso no Tile e o netrunner do jogador (Rank 4, o deck
+    // equipado) a 3 m do Tile; no navegador do jogador, os ajudantes para clicar na janela da NET e esperar o registro.
+    const montarNet = async ({ nome, arquitetura, andares }) => {
+      const m = await edge.evaluate(`(async () => {
+        const arq = await Item.implementation.create({ name: '${arquitetura}', type: 'arquitetura', system: { andares: ${JSON.stringify(andares)} } });
+        const ponto = { ativo: true, nome: 'Terminal do andar', arquitetura: arq.uuid, dv: null, alcance: 6, exigeDeck: true, rankMinimo: 1, oculto: false, dvScanner: 10, reiniciar: true, ligacoes: [], revelados: [] };
+        const [tile] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 1800, y: 800, width: 200, height: 200, texture: { src: 'systems/${S}/icones/terminal.svg' }, flags: { '${S}': { pontoDeAcesso: ponto } } }]);
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const jogador = game.users.getName('Jogador');
+        const a = await Actor.implementation.create({ name: '${nome}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+          ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+        await a.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+        const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1600, y: 900 })).toObject()]);
+        await window.__esperar(() => canvas.tokens.get(token.id) && canvas.tiles.get(tile.id));
+        return { tile: tile.id, token: token.id };
+      })()`);
+      await jogador.evaluate(`(async () => {
+        window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const tile = () => canvas.scene.tiles.get('${m.tile}');
+        const net = window.__net = {
+          janela: () => foundry.applications.instances.get('${S}-net-${m.tile}-${m.token}'),
+          el: () => net.janela()?.element,
+          texto: seletor => net.el()?.querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? null,
+          clicar: seletor => { const alvo = net.el()?.querySelector(seletor); alvo?.click(); return Boolean(alvo); },
+          registro: () => (game.system.api.netrun.estado(tile())?.log ?? []).map(linha => linha.texto),
+          eu: () => game.system.api.netrun.estado(tile())?.corredores.find(c => c.token === '${m.token}') ?? null,
+          // Pronta: o pedido acabou e a janela já redesenhou sem o estado ocupado (os botões valem).
+          pronta: () => Boolean(net.janela()?.rendered && !net.janela().ocupado && net.el()?.querySelector('.janela-net-corpo:not(.ocupada)')),
+          esperarRegistro: async texto => { await window.__esperar(() => net.registro().some(linha => linha.includes(texto)) && net.pronta()); return net.registro().at(-1); },
+          // Escolhe o andar no mapa e clica em "Ir para cá"; espera chegar (ou o aviso).
+          ir: async (no, { espera = true } = {}) => {
+            net.clicar('[data-action=selecionar][data-no="' + no + '"]');
+            await window.__esperar(() => net.el()?.querySelector('.andar-escolhido button[data-action=mover]'));
+            net.clicar('.andar-escolhido button[data-action=mover]');
+            if (espera) await window.__esperar(() => net.eu()?.no === no && net.pronta());
+            return net.eu()?.no;
+          }
+        };
+        canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+        await game.system.api.netrun.abrir(tile());
+        await window.__esperar(() => net.el()?.querySelector('.mapa-net .no') && net.pronta());
+        return true;
+      })()`);
+      return m;
+    };
+    const desmontarNet = async ({ nome, arquitetura }) => {
+      const fechar = `for (const app of [...foundry.applications.instances.values()].filter(app => String(app.id).startsWith('${S}-net-'))) await app.close();`;
+      await jogador.evaluate(`(async () => { ${fechar} canvas.tokens.releaseAll(); return true; })()`).catch(() => null);
+      await edge.evaluate(`(async () => {
+        ${fechar}
+        window.__fila = [];
+        for (const combate of game.combats.filter(c => c.combatants.some(cb => cb.name === '${nome}'))) await combate.delete();
+        await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => t.name === '${nome}').map(t => t.id));
+        await canvas.scene.deleteEmbeddedDocuments('Tile', canvas.scene.tiles.filter(t => t.x === 1800 && t.y === 800).map(t => t.id));
+        for (const a of game.actors.filter(a => a.name === '${nome}')) { await a.sheet?.close(); await a.delete(); }
+        for (const i of game.items.filter(i => i.name === '${arquitetura}')) await i.delete();
+        return true;
+      })()`);
+    };
+
+    await r.passo('andar e as habilidades na NET (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): na janela do jogador, o "?" do andar 1 vira a senha DV 6 ao chegar; a senha trava a descida; o Backdoor rola no mestre (6 contra a DV 6 não passa; 9 passa); o Eye-Dee mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B e para no nó DV 8; o Control toma o nó e o comando vai ao registro; no andar mais fundo, o Virus com a DV e as Ações NET do mestre; o mestre vê o andar 4 escondido e o revela', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Andar';
+      const ARQ = 'Teste Arquitetura do Andar';
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [
+          { andar: 1, ramo: 'a', tipo: 'senha', dv: 6 }, { andar: 2, ramo: 'a', tipo: 'arquivo', dv: 8, nome: 'Folha de pagamento', descricao: 'Os salários da clínica.' },
+          { andar: 3, ramo: 'a', tipo: 'controle', dv: 8, descricao: 'As câmeras do saguão' }, { andar: 3, ramo: 'b', tipo: 'vazio' }, { andar: 4, ramo: 'a', tipo: 'vazio' }
+        ] });
+        // 1. Até o andar 1 pelo mapa; a senha trava a descida (o aviso).
+        const andou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          const antes = net.texto('[data-no="1a"]') + (net.el().querySelector('[data-no="1a"]').classList.contains('desconhecido') ? ' desconhecido' : '');
+          const no = await net.ir('1a');
+          const resultado = { antes, no, detalhe: net.texto('.andar-escolhido li'), registro: net.registro().at(-1),
+            habilidades: [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join(), acoes: net.texto('.netrunner .acoes') };
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            await net.ir('2a', { espera: false });
+            await window.__esperar(() => avisos.length && net.pronta());
+          } finally { delete ui.notifications.warn; }
+          return { ...resultado, avisos, depois: net.eu()?.no };
+        })()`);
+        // 2. O Backdoor: o mestre rola (os dados fixos no navegador dele): 4 + 2 = 6 não passa da DV 6; 4 + 5 = 9 passa.
+        await fixar(edge, [[2, 10]]);
+        const backdoor1 = await jogador.evaluate(`(async () => { window.__net.clicar('button[data-habilidade=backdoor]'); return window.__net.esperarRegistro('Backdoor ('); })()`);
+        await fixar(edge, [[5, 10]]);
+        const backdoor2 = await jogador.evaluate(`(async () => { window.__net.clicar('button[data-habilidade=backdoor]'); return window.__net.esperarRegistro('quebrou a senha'); })()`);
+        const cartao = await edge.evaluate(`(() => { const msg = game.messages.contents.at(-1); return { rotulo: msg?.getFlag('${S}', 'teste')?.rotulo, total: msg?.getFlag('${S}', 'teste')?.total, quem: msg?.speaker.alias, autor: msg?.author?.isGM }; })()`);
+        // 3. Desce ao 2A; o Eye-Dee (4 + 6 = 10 contra a DV 8) mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B.
+        const desceu = await jogador.evaluate(`(async () => { await window.__net.ir('2a'); return window.__net.registro().at(-1); })()`);
+        await fixar(edge, [[6, 10]]);
+        const eyedee = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('button[data-habilidade=eyedee]');
+          const linha = await net.esperarRegistro('Eye-Dee (');
+          await window.__esperar(() => net.el().querySelector('.andar-escolhido li p'));
+          return { linha, detalhe: net.texto('.andar-escolhido li') };
+        })()`);
+        await fixar(edge, [[3, 10]]);
+        const pathfinder = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('button[data-habilidade=pathfinder]');
+          const linha = await net.esperarRegistro('Pathfinder (');
+          await window.__esperar(() => net.el().querySelector('[data-no="3b"]:not(.desconhecido)'));
+          return { linha, mapa: [...net.el().querySelectorAll('.mapa-net .no')].map(no => no.dataset.no + (no.classList.contains('desconhecido') ? '?' : '')).join() };
+        })()`);
+        // 4. No 3A, o Control (4 + 7 = 11 contra a DV 8) toma o nó; o comando, pela caixa de texto, vai ao registro.
+        await fixar(edge, [[7, 10]]);
+        const controle = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await net.ir('3a');
+          const vizinho = net.texto('[data-no="4a"]');
+          net.clicar('button[data-habilidade=control]');
+          const linha = await net.esperarRegistro('Control (');
+          await window.__esperar(() => net.el().querySelector('input[data-texto=comando]'));
+          const caixa = net.el().querySelector('input[data-texto=comando]');
+          caixa.value = 'Desligar as câmeras';
+          caixa.dispatchEvent(new Event('input', { bubbles: true }));
+          net.clicar('button[data-action=comandar]');
+          const comando = await net.esperarRegistro('comanda o nó de controle');
+          const habilidades = [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join();
+          return { vizinho, linha, comando, detalhe: net.texto('.andar-escolhido li'), habilidades };
+        })()`);
+        await jogador.shot('janela-net-andar');
+        // 5. O mestre, na janela dele: o andar 4 escondido dos jogadores; revelado, o jogador o vê.
+        const mestre = await edge.evaluate(`(async () => {
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const janela = game.system.api.netrun.janela(tile, { gm: true });
+          await window.__esperar(() => janela.element?.querySelector('[data-no="4a"]'));
+          const escondido = janela.element.querySelector('[data-no="4a"]').classList.contains('escondido');
+          janela.element.querySelector('[data-action=selecionar][data-no="4a"]').click();
+          await window.__esperar(() => janela.element.querySelector('button[data-action=revelar][data-no="4a"]'));
+          const titulo = janela.element.querySelector('.andar-escolhido h3').textContent.replace(/\\s+/g, ' ').trim();
+          janela.element.querySelector('button[data-action=revelar][data-no="4a"]').click();
+          await window.__esperar(() => (game.system.api.netrun.estado(tile)?.vistos ?? []).includes('4a') && !janela.element.querySelector('[data-no="4a"]').classList.contains('escondido'));
+          const depois = !janela.element.querySelector('[data-no="4a"]').classList.contains('escondido');
+          return { escondido, titulo, depois, registro: game.system.api.netrun.estado(tile).log.at(-1).texto };
+        })()`);
+        await edge.shot('janela-net-mestre');
+        await edge.evaluate(`game.system.api.netrun.janela(canvas.scene.tiles.get('${m.tile}'), { gm: true }).close().then(() => true)`);
+        const revelado = await jogador.evaluate(`(async () => { await window.__esperar(() => window.__net.el()?.querySelector('[data-no="4a"]:not(.desconhecido)')); return window.__net.texto('[data-no="4a"]'); })()`);
+        // 6. No 3B (o fundo, pelo 2A), o Virus: o mestre responde a DV 10 e 2 Ações NET; 4 + 8 = 12 passa.
+        const fundo = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await net.ir('2a');
+          await net.ir('3b');
+          const virusPronto = !net.el().querySelector('button[data-habilidade=virus]').disabled;
+          const caixa = net.el().querySelector('input[data-texto=virus]');
+          caixa.value = 'Apagar o registro da portaria';
+          caixa.dispatchEvent(new Event('input', { bubbles: true }));
+          net.clicar('button[data-habilidade=virus]');
+          return { no: net.eu()?.no, virusPronto };
+        })()`);
+        await fixar(edge, [[8, 10]]);
+        const pergunta = await edge.evaluate(`(async () => {
+          const dialogo = () => [...foundry.applications.instances.values()].find(app => app.options.classes?.includes('net-virus'));
+          await window.__esperar(() => dialogo()?.element?.querySelector('input[name=dv]'));
+          const el = dialogo().element;
+          const texto = el.querySelector('blockquote').textContent;
+          el.querySelector('input[name=dv]').value = '10';
+          el.querySelector('input[name=acoes]').value = '2';
+          el.querySelector('button[data-action=ok]').click();
+          return { texto, exemplos: el.querySelectorAll('table.exemplos tbody tr').length };
+        })()`);
+        const virus = await jogador.evaluate(`(async () => window.__net.esperarRegistro('Virus ('))()`);
+        const tem = (texto, parte) => String(texto ?? '').includes(parte);
+        const ok = andou.antes === '1A ? desconhecido' && andou.no === '1a' && andou.detalhe === 'Senha DV 6 trancada' && andou.registro === `${NOME} desceu para o andar 1: Senha DV 6.`
+          && andou.habilidades === 'pathfinder+,backdoor+,eyedee-,control-,cloak+,virus-' && tem(andou.acoes, 'livres fora de combate (3 por turno em combate)')
+          && andou.avisos.join() === 'A senha deste andar (DV 6) trava a descida: use Backdoor.' && andou.depois === '1a'
+          && backdoor1 === `Backdoor (6 contra DV 6): ${NOME} não passou a senha.` && backdoor2 === `Backdoor (9 contra DV 6): ${NOME} quebrou a senha.`
+          && cartao.rotulo === 'Backdoor' && cartao.total === 9 && cartao.quem === NOME && cartao.autor
+          && desceu === `${NOME} desceu para o andar 2: Arquivo DV 8.`
+          && eyedee.linha === `Eye-Dee (10 contra DV 8): ${NOME} identificou o arquivo (Folha de pagamento: Os salários da clínica).` && eyedee.detalhe === 'Arquivo DV 8 identificado Folha de pagamento: Os salários da clínica.'
+          && pathfinder.linha === `Pathfinder (7): ${NOME} revelou 2 andares.` && pathfinder.mapa === '1a,2a,3a,3b'
+          && controle.vizinho === '4A ?' && controle.linha === `Control (11 contra DV 8): ${NOME} tomou o nó de controle (As câmeras do saguão).`
+          && controle.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-' && controle.comando === `${NOME} comanda o nó de controle: “Desligar as câmeras”.` && controle.detalhe === 'Nó de controle DV 8 tomado As câmeras do saguão'
+          && mestre.escondido && mestre.titulo === 'Andar 4 escondido dos jogadores' && mestre.depois && mestre.registro === 'O mestre revelou o andar 4.' && revelado === '4A Andar vazio'
+          && fundo.no === '3b' && fundo.virusPronto && pergunta.texto === 'Apagar o registro da portaria' && pergunta.exemplos === 5
+          && virus === `Virus (12 contra DV 10): ${NOME} deixou o vírus “Apagar o registro da portaria” (DV 12 para tirá-lo).`;
+        return [ok, JSON.stringify({ andou, backdoor1, backdoor2, cartao, desceu, eyedee, pathfinder, controle, mestre, revelado, fundo, pergunta, virus })];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
+    await r.passo('Ações NET em combate e a desconexão insegura (wiki: "Conectar / Desconectar (1 Ação NET...)" e as Ações NET pelo Rank): em combate, a janela conta as que sobram; no andar mais fundo, o Virus que o mestre põe em 2 Ações NET e um Cloak gastam as 3 do Rank 4, e o Cloak seguinte é recusado, como o desconectar seguro; na rodada seguinte, no turno do netrunner, elas voltam; a desconexão insegura sai na hora, sem Ação NET', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Combate NET';
+      const ARQ = 'Teste Arquitetura do Combate';
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [{ andar: 1, ramo: 'a', tipo: 'vazio' }] });
+        // No 1A, o andar mais fundo desta arquitetura de um andar só (andar não é Ação NET).
+        await jogador.evaluate(`window.__net.ir('1a')`);
+        // O combate com o netrunner: no começo do turno dele, as Ações NET voltam (o mestre ativo).
+        await edge.evaluate(`(async () => {
+          const token = canvas.scene.tokens.get('${m.token}');
+          const combate = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          await combate.createEmbeddedDocuments('Combatant', [{ tokenId: token.id, sceneId: canvas.scene.id, actorId: token.actorId }]);
+          await combate.startCombat();
+          return true;
+        })()`);
+        // O Virus que o mestre põe em 2 Ações NET (4 + 8 = 12 contra a DV 6) e um Cloak (4 + 4) gastam as 3 do turno.
+        await fixar(edge, [[8, 10], [4, 10]]);
+        const inicio = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 3 de 3') && net.el().querySelector('input[data-texto=virus]'));
+          const texto = net.texto('.netrunner .acoes');
+          const caixa = net.el().querySelector('input[data-texto=virus]');
+          caixa.value = 'Trancar a porta dos fundos';
+          caixa.dispatchEvent(new Event('input', { bubbles: true }));
+          net.clicar('button[data-habilidade=virus]');
+          return texto;
+        })()`);
+        await edge.evaluate(`(async () => {
+          const dialogo = () => [...foundry.applications.instances.values()].find(app => app.options.classes?.includes('net-virus'));
+          await window.__esperar(() => dialogo()?.element?.querySelector('input[name=dv]'));
+          dialogo().element.querySelector('input[name=dv]').value = '6';
+          dialogo().element.querySelector('input[name=acoes]').value = '2';
+          dialogo().element.querySelector('button[data-action=ok]').click();
+          return true;
+        })()`);
+        const gastou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          const virus = await net.esperarRegistro('Virus (');
+          await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 1 de 3'));
+          const depoisDoVirus = net.texto('.netrunner .acoes');
+          net.clicar('button[data-habilidade=cloak]');
+          await net.esperarRegistro('Cloak (');
+          await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 0 de 3'));
+          const depois = net.texto('.netrunner .acoes');
+          // Sem Ação NET: o Cloak e o desconectar seguro são recusados (os avisos, capturados aqui).
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            net.clicar('button[data-habilidade=cloak]');
+            await window.__esperar(() => avisos.length === 1 && net.pronta());
+            net.clicar('.corredores button[data-action=desconectar]');
+            await window.__esperar(() => avisos.length === 2);
+          } finally { delete ui.notifications.warn; }
+          return { virus, depoisDoVirus, depois, avisos, acoes: net.eu()?.acoes, cloaks: net.registro().filter(l => l.startsWith('Cloak (')).length, conectado: Boolean(net.eu()) };
+        })()`);
+        // A rodada seguinte: o turno do netrunner começa e as Ações NET voltam.
+        await edge.evaluate(`(async () => { await game.combats.find(c => c.combatants.some(cb => cb.tokenId === '${m.token}')).nextRound(); return true; })()`);
+        const voltou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => net.eu()?.acoes === 0 && (net.texto('.netrunner .acoes') ?? '').includes('sobram 3 de 3'));
+          return { acoes: net.eu()?.acoes, texto: net.texto('.netrunner .acoes') };
+        })()`);
+        // A desconexão insegura: a pergunta, e sai na hora, sem gastar Ação NET.
+        const saiu = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('button[data-action=desconectarInseguro]');
+          const pergunta = () => [...foundry.applications.instances.values()].find(app => app.options.window?.title === 'Desconexão insegura');
+          await window.__esperar(() => pergunta()?.element?.querySelector('button[data-action=yes]'));
+          pergunta().element.querySelector('button[data-action=yes]').click();
+          await window.__esperar(() => !net.janela());
+          return { janela: Boolean(net.janela()), conectado: Boolean(net.eu()) };
+        })()`);
+        const registro = await edge.evaluate(`game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}')).log.map(l => l.texto)`);
+        const ok = inicio === 'Ações NET: sobram 3 de 3 neste turno' && gastou.virus === `Virus (12 contra DV 6): ${NOME} deixou o vírus “Trancar a porta dos fundos” (DV 12 para tirá-lo).`
+          && gastou.depoisDoVirus === 'Ações NET: sobram 1 de 3 neste turno' && gastou.depois === 'Ações NET: sobram 0 de 3 neste turno' && gastou.cloaks === 1 && gastou.acoes === 3
+          && gastou.avisos.join(' | ') === 'Sem Ações NET neste turno (3 de 3). | Sem Ações NET neste turno (3 de 3). Espere o seu turno ou faça a desconexão insegura.' && gastou.conectado
+          && voltou.acoes === 0 && voltou.texto === 'Ações NET: sobram 3 de 3 neste turno'
+          && !saiu.janela && !saiu.conectado && registro.includes(`${NOME} desconectou de forma insegura.`);
+        return [ok, JSON.stringify({ inicio, gastou, voltou, saiu, registro: registro.slice(-4) })];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
     await r.passo('wiki: importa o Netrunner com o cyberdeck e os programas instalados nele, como a montagem da wiki', async () => {
       const info = await edge.evaluate(`(async () => {
         const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, '');

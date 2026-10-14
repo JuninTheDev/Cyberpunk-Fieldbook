@@ -104,4 +104,20 @@ export function registrarNet() {
     const conexao = souOMestreAtivo() && conexaoDoToken(token);
     if (conexao) removerCorredorApagado(conexao.tile, token.id).catch(falha => console.warn(`${SISTEMA} | NET: token apagado`, falha));
   });
+
+  // O combate: no começo do turno do netrunner conectado, as Ações NET voltam (o mestre ativo); a janela mostra se
+  // elas contam (em combate) e quantas sobram.
+  Hooks.on('updateCombat', (combate, mudancas) => {
+    JanelaDaNet.redesenhar();
+    if (!souOMestreAtivo() || !combate.started || !('turn' in mudancas || 'round' in mudancas)) return;
+    const token = combate.combatant?.token;
+    const conexao = token && conexaoDoToken(token);
+    if (conexao) pedir('zerarAcoes', { tile: conexao.tile, token: token.id }).catch(falha => console.warn(`${SISTEMA} | NET: Ações NET do turno`, falha));
+  });
+  for (const gancho of ['deleteCombat', 'createCombatant', 'deleteCombatant']) Hooks.on(gancho, () => JanelaDaNet.redesenhar());
+
+  // A ficha do netrunner (a Sorte preparada, o cyberdeck, a Interface): a janela dele redesenha.
+  const janelasDoAtor = ator => JanelaDaNet.redesenhar(janela => (estadoDoTile(janela.tile)?.corredores ?? []).some(corredor => corredor.ator === ator?.id));
+  Hooks.on('updateActor', janelasDoAtor);
+  for (const gancho of ['createItem', 'updateItem', 'deleteItem']) Hooks.on(gancho, item => janelasDoAtor(item.parent));
 }

@@ -78,6 +78,10 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   gancho já têm o destino. Conta de distância vai pelo `_source`. No ciclo 50, o mestre media o netrunner que saiu do
   alcance na posição antiga, e a queda só vinha no movimento seguinte: o diagnóstico registrou no gancho o `x` de antes
   e o `x` novo nas mudanças.
+- **Pergunta (DialogV2) no cenário:** ache a janela nas instâncias (`foundry.applications.instances`) pela classe
+  (`options.classes`) ou pelo título (`options.window.title`) e clique no botão pelo `data-action` (`ok`, `yes`). Quando
+  a pergunta abre no mestre por causa de um clique do jogador (o vírus na NET), o clique do jogador não espera: o passo
+  responde no navegador do mestre e depois espera o resultado no do jogador (ciclo 51).
 - **Mensagem do chat na página:** ela aparece duas vezes (no chat e na notificação), cada uma com os botões ligados.
   Para contar os botões de um cartão, procure dentro de uma das duas (`document.querySelector('[data-message-id=...]')`);
   no documento inteiro, a lista vem dobrada (ciclo 42).

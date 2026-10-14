@@ -1039,6 +1039,74 @@ test('Ponto de acesso à NET (wiki, "Netrunning": "Precisa estar a até 6 m de u
   assert.deepEqual(todo[4].conteudos[0].inimigo, { nome: 'Raposa' });
 });
 
+test('Andar e as habilidades contra os andares (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): andar não é Ação NET e vai até a próxima obstrução (a senha trava a descida); Interface + 1d10 > DV; o alvo de cada habilidade no andar; o Pathfinder, o Cloak e o Virus; as Ações NET contam só em combate', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes("formula('Interface + 1d10 &gt; DV')"));
+  assert.ok(regrasDaWiki.includes('<b>Não são Ações NET:</b> andar pela arquitetura (até a próxima obstrução) e copiar arquivos para o deck.'));
+  assert.ok(regrasDaWiki.includes("['Faz um nó de controle falhar até o vírus ser removido', '10', '2']"));
+  // O terminal: a senha no 1A, o arquivo no 2A, o nó de controle no 3A e o ramo B (o 3B, vazio, o mais fundo) saindo do 2A.
+  const arq = arquitetura.lerArquitetura({ nome: 'Terminal', andares: [
+    { andar: 1, ramo: 'a', tipo: 'senha', dv: 6 }, { andar: 2, ramo: 'a', tipo: 'arquivo', dv: 8, nome: 'Folha de pagamento', descricao: 'Os salários da clínica.' },
+    { andar: 3, ramo: 'a', tipo: 'controle', dv: 8, descricao: 'As câmeras do saguão' }, { andar: 3, ramo: 'b', tipo: 'vazio' }, { andar: 4, ramo: 'a', tipo: 'ice', ice: 'hellhound' }
+  ] });
+  const est = { mapa: false, vistos: [], feitos: [], ices: [], corredores: [] };
+  const eu = { nome: 'Deck', no: arquitetura.ENTRADA, acoes: 0, max: 3 };
+  assert.equal(netrun.resumoDoAndar(arq, '1a'), 'Senha DV 6');
+  assert.equal(netrun.resumoDoAndar(arq, '3b'), 'Andar vazio');
+  assert.equal(netrun.resumoDoAndar(arq, '4a'), 'Hellhound');
+  // Andar: só aos vizinhos; da entrada ao 1A; a senha do 1A trava a descida até ser quebrada; subir é livre.
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), 'Só dá para ir a um andar vizinho.');
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '1a'), null);
+  eu.no = '1a';
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), 'A senha deste andar (DV 6) trava a descida: use Backdoor.');
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, arquitetura.ENTRADA), null);
+  // O alvo: a senha daqui (o Eye-Dee e o Control não têm alvo neste andar); o Virus só no fundo; o Zap não é contra andar.
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'backdoor').alvo.chave, '1a.0');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'eyedee').erro, 'Não há arquivo por identificar neste andar.');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'control').erro, 'Não há nó de controle livre neste andar.');
+  assert.deepEqual(netrun.alvoDaHabilidade(arq, est, eu, 'pathfinder'), { alvo: null });
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'virus').erro, 'O Virus só vai no andar mais fundo da arquitetura.');
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'zap').erro, 'Esta habilidade não se usa contra os andares.');
+  // Backdoor: 6 contra a DV 6 não passa (tem de passar da DV); 9 quebra, e a senha não é mais alvo nem trava a descida.
+  const { alvo: senha } = netrun.alvoDaHabilidade(arq, est, eu, 'backdoor');
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'backdoor', alvo: senha, total: 6 }), { texto: 'Backdoor (6 contra DV 6): Deck não passou a senha.', tipo: 'falha' });
+  assert.deepEqual(est.feitos, []);
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'backdoor', alvo: senha, total: 9 }), { texto: 'Backdoor (9 contra DV 6): Deck quebrou a senha.', tipo: 'ok' });
+  assert.deepEqual(est.feitos, ['1a.0']);
+  assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'backdoor').erro, 'Não há senha trancada neste andar.');
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), null);
+  // Eye-Dee no 2A: identificado, o registro conta o que o arquivo é; o mapa público mostra o nome e a descrição só agora.
+  eu.no = '2a';
+  est.vistos = ['1a', '2a'];
+  const { alvo: arquivo } = netrun.alvoDaHabilidade(arq, est, eu, 'eyedee');
+  assert.equal(netrun.vistaPublica(arq, { ...est, corredores: [eu] }).find(no => no.id === '2a').conteudos[0].descricao, undefined);
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'eyedee', alvo: arquivo, total: 10 }), { texto: 'Eye-Dee (10 contra DV 8): Deck identificou o arquivo (Folha de pagamento: Os salários da clínica).', tipo: 'ok' });
+  assert.deepEqual(netrun.vistaPublica(arq, { ...est, corredores: [eu] }).find(no => no.id === '2a').conteudos[0], { chave: '2a.0', tipo: 'arquivo', dv: 8, feito: true, nome: 'Folha de pagamento', descricao: 'Os salários da clínica.' });
+  // Pathfinder do 2A com 7: o 3A (o nó DV 8, maior que 7) aparece e barra o 4A; o 3B aparece. De novo, nada novo.
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'pathfinder', total: 7 }), { texto: 'Pathfinder (7): Deck revelou 2 andares.', tipo: 'ok' });
+  assert.deepEqual(est.vistos, ['1a', '2a', '3a', '3b']);
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'pathfinder', total: 7 }), { texto: 'Pathfinder (7): nada novo à vista.', tipo: 'falha' });
+  // Control no 3A; o Cloak põe o total como a DV dos rastros; o Virus no 3B (o fundo), contra a DV do mestre.
+  eu.no = '3a';
+  const { alvo: no } = netrun.alvoDaHabilidade(arq, est, eu, 'control');
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'control', alvo: no, total: 11 }), { texto: 'Control (11 contra DV 8): Deck tomou o nó de controle (As câmeras do saguão).', tipo: 'ok' });
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'cloak', total: 13 }), { texto: 'Cloak (13): Deck escondeu os rastros (DV 13 para achá-los).', tipo: 'ok' });
+  assert.equal(eu.rastro, 13);
+  eu.no = '3b';
+  assert.deepEqual(netrun.alvoDaHabilidade(arq, est, eu, 'virus'), { alvo: null });
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'virus', total: 12, dvVirus: 10, texto: 'Apaga a portaria' }), { texto: 'Virus (12 contra DV 10): Deck deixou o vírus “Apaga a portaria” (DV 12 para tirá-lo).', tipo: 'ok' });
+  assert.equal(netrun.resolverHabilidade(arq, est, eu, { chave: 'virus', total: 10, dvVirus: 10, texto: 'x' }).tipo, 'falha');
+  // As Ações NET: fora de combate não contam; em combate, as do Rank (3); o mestre passa do limite; o Virus pede as dele.
+  assert.equal(netrun.gastarAcoes(eu, { emCombate: false, quantas: 5 }), null);
+  assert.equal(eu.acoes, 0);
+  assert.equal(netrun.gastarAcoes(eu, { emCombate: true }), null);
+  assert.equal(netrun.gastarAcoes(eu, { emCombate: true, quantas: 2 }), null);
+  assert.equal(netrun.gastarAcoes(eu, { emCombate: true }), 'Sem Ações NET neste turno (3 de 3).');
+  assert.equal(eu.acoes, 3);
+  assert.equal(netrun.gastarAcoes(eu, { emCombate: true, mestre: true }), null);
+  assert.equal(eu.acoes, 4);
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

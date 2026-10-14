@@ -47,8 +47,15 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   marcador: perto o bastante (o Range Upgrade no deck soma 2 m) e com os requisitos, conecta, e o mestre ativo confere
   tudo de novo. O token conectado ganha o status "Conectado à NET" e um anel ciano. A **janela da NET** mostra quem está
   na NET e onde, o mapa que os jogadores enxergam (o andar 1 como "?") e o registro, com o botão **Desconectar**. Sair
-  do alcance derruba da NET (a desconexão insegura); apagar o token ou o Tile também tira o netrunner. Andar, as
-  habilidades contra os andares e os inimigos ainda não (o C8).
+  do alcance derruba da NET (a desconexão insegura); apagar o token ou o Tile também tira o netrunner.
+- **Na NET** (o motor do NET Architect, no mestre ativo): o jogador anda pelo mapa da janela (clica no andar e em "Ir
+  para cá"; andar não é Ação NET, e a senha trava a descida) e usa as habilidades de Interface contra os andares: o
+  Pathfinder revela o mapa até a obstrução com DV maior, o Backdoor quebra a senha, o Eye-Dee identifica o arquivo, o
+  Control toma o nó de controle (e manda os comandos, que o mestre narra), o Cloak esconde os rastros e o Virus, no
+  andar mais fundo, tem a DV e as Ações NET que o mestre põe. Passa quem tira mais que a DV. Em combate, as Ações NET
+  contam (as do Rank por turno, de volta no turno do netrunner); a desconexão insegura sai sem gastar. Por enquanto
+  quem rola é o mestre, com a Sorte preparada na ficha. O mestre vê a arquitetura inteira, age pelo netrunner
+  escolhido, revela andares e zera as Ações NET. Os inimigos ainda não agem (o C8).
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
@@ -239,8 +246,8 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
-  (andar, as habilidades contra os andares, os inimigos e o combate; a arquitetura, o ponto de acesso e a conexão já
-  existem) e o Painel Tático.
+  (os inimigos e o combate na NET, os programas na janela, a janela de rolagem do jogador na NET, os nós de controle
+  ligados à cena, os arquivos copiados, o Scanner e o editor visual) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
@@ -308,6 +315,8 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
   - o ponto de acesso à NET, nos dois navegadores: a configuração pelo HUD do Tile (as arquiteturas do mundo e do compêndio, a imagem de terminal), o marcador (o oculto, só para o mestre), o jogador a 7 m que não conecta (nem pedindo direto ao mestre) e que conecta com o Range Upgrade (a flag, o status, o anel e a janela com o andar 1 como "?"), a queda ao sair do alcance, o "Desconectar" da janela, o reinício só pelo mestre e o token e o Tile apagados;
+  - andar e as habilidades na NET, no navegador do jogador: o "?" do andar 1 que vira a senha ao chegar, a senha que trava a descida, o Backdoor que o mestre rola (o empate com a DV não passa), o Eye-Dee com o arquivo, o Pathfinder que para no nó de DV maior, o Control e o comando, o Virus no andar mais fundo com a DV e as Ações NET do mestre, e o mestre que vê o andar escondido e o revela;
+  - as Ações NET em combate: o Virus de 2 Ações e o Cloak gastam as 3 do Rank 4, o Cloak seguinte e o desconectar seguro são recusados, a rodada seguinte as devolve e a desconexão insegura sai sem gastar;
   - a arquitetura pelas tabelas: a padrão com os dados fixos (o resultado que não repete, o ramo B do andar 3 e os dois Hellhound no mesmo andar);
   - o compêndio das arquiteturas: as 7 (as 4 da campanha e os 3 exemplos), escondidas do jogador, e O Gatilho no mapa;
   - a arquitetura da NET: a ficha com os andares da clínica de ripperdoc e o mapa (o ramo B sai do andar 2), o andar novo, a linha que vira Black ICE e a linha tirada;
