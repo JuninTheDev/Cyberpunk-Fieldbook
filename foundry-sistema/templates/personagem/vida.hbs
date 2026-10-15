@@ -1,15 +1,19 @@
+{{!-- A aba Vida, no jeito da maquete "Lifepath Tab" do usuário: o Lifepath em painéis (as origens, os valores, a família,
+as metas e as pessoas), o Lifepath da Role e as notas. --}}
 <section class="tab vida {{tab.cssClass}}" data-group="primary" data-tab="vida">
-  <section class="painel corte">
-    <div class="titulo">LIFEPATH<span>RED p. 40–70</span></div>
-    <div class="lifepath">
-      {{#each lifepath}}
-      <label class="campo-lifepath {{#if largo}}largo{{/if}}">
+  <div class="duas-colunas lifepath-grupos">
+    {{#each lifepathGrupos}}
+    <section class="painel corte grupo-lifepath {{#if largo}}largo{{/if}}">
+      <div class="titulo">{{titulo}}<span>{{sub}}</span></div>
+      {{#each campos}}
+      <label class="campo-lifepath">
         <span>{{rotulo}}</span>
         <textarea name="system.lifepath.{{chave}}" rows="{{linhas}}" aria-label="{{rotulo}}">{{valor}}</textarea>
       </label>
       {{/each}}
-    </div>
-  </section>
+    </section>
+    {{/each}}
+  </div>
 
   <section class="painel corte notas">
     <div class="titulo">NOTAS<span>APARÊNCIA, HISTÓRIA, O QUE QUISER</span></div>

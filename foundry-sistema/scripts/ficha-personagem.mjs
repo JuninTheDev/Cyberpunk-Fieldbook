@@ -22,6 +22,14 @@ const slug = texto => String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 const comJanela = evento => Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto'));
 // As perícias mais altas ficam em destaque no painel geral, como no modelo.
 const EM_DESTAQUE = 6;
+// A aba Vida em painéis, como a maquete "Lifepath Tab" do usuário: os 17 campos do Lifepath (config.LIFEPATH) por grupo.
+const GRUPOS_DO_LIFEPATH = [
+  { titulo: 'ORIGENS', sub: 'QUEM VOCÊ É', chaves: ['origem', 'personalidade', 'roupa', 'cabelo', 'adorno'] },
+  { titulo: 'VALORES', sub: 'O QUE IMPORTA', chaves: ['valor', 'pessoas', 'pessoa', 'posse'] },
+  { titulo: 'FAMÍLIA', sub: 'DE ONDE VEIO', chaves: ['familia', 'infancia', 'crise'] },
+  { titulo: 'METAS E PESSOAS', sub: 'AMIGOS E INIMIGOS', chaves: ['meta', 'amigos', 'inimigos', 'amores'] },
+  { titulo: 'LIFEPATH DA ROLE', sub: 'RED p. 40–70', chaves: ['role'], largo: true }
+];
 
 export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static DEFAULT_OPTIONS = {
@@ -244,7 +252,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       roleDaWiki: role, bonusDaRole, rolagensDaRole: (role && ROLAGENS_DE_ROLE[role.id]) ?? [],
       especialidades: especialidades && this.#especialidades(especialidades, role, efeitoDoSolo),
       outrasHabilidades: Object.entries(s.role.habilidades).filter(([nome]) => !daEspecialidade.has(nome)).map(([nome, pontos]) => ({ nome, pontos })),
-      lifepath: LIFEPATH.map(({ chave, rotulo }) => ({ chave, rotulo, valor: s.lifepath[chave], largo: ['amigos', 'inimigos', 'amores', 'role'].includes(chave), linhas: chave === 'role' ? 4 : 2 })),
+      lifepathGrupos: GRUPOS_DO_LIFEPATH.map(grupo => ({
+        ...grupo, campos: grupo.chaves.map(chave => ({ chave, rotulo: LIFEPATH.find(campo => campo.chave === chave).rotulo, valor: s.lifepath[chave], linhas: chave === 'role' ? 4 : 2 }))
+      })),
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
   }

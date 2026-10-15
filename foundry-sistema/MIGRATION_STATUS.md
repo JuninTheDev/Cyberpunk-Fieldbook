@@ -67,7 +67,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | as rolagens do jogador na janela de rolagem dele (a configuração "O jogador rola as rolagens da NET") | portado no ciclo 56 (o C8, parte 10; ver as dúvidas) |
 | NET Architect | a janela da NET no visual novo (o topo com o netrunner e as Ações NET em losangos, o mapa com a cor de cada andar e os cabos, o painel ao lado, as habilidades com a base da rolagem, o registro com a hora) | refeita no ciclo 58 (o pedido do usuário, a partir da maquete dele, que não cobre tudo) |
 | sistema | os cartões do chat no visual novo (a faixa e o tipo na linha de cima, os dados em caixas com o total grande, as etiquetas do resultado e a barra de HP) | refeitos no ciclo 59 (o pedido do usuário, pela maquete dele; os botões da maquete sem função no sistema ficaram de fora) |
-| sistema | a ficha nas abas das maquetes (Combate, Equipamento e Cyberware em duas colunas, com os números em grande) | refeitas no ciclo 60 (Role, NET, Vida e as fichas dos itens, depois; as funções das maquetes que o sistema não tem ficaram de fora) |
+| sistema | a ficha nas abas das maquetes (Combate, Equipamento, Cyberware, Role e NET em duas colunas, com os números em grande; a Vida em painéis) | refeitas nos ciclos 60 e 61 (as fichas dos itens, depois; as funções das maquetes que o sistema não tem ficaram de fora) |
 | NET Architect | os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
@@ -473,7 +473,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **o +1 entra em toda Evasão da rodada:** na conta da janela de reação, na esquiva e na escolha automática dos NPCs.
     No Fluxo, entrava só na esquiva.
 
-- **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 e 60): pergunta ao usuário.** As maquetes
+- **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 a 61): pergunta ao usuário.** As maquetes
   de 2026-10-15 mostram botões e campos sem função no sistema hoje. O visual seguiu as maquetes só com o que existe; cada
   um destes vira um item, se o usuário quiser:
   - **no chat:** "+ Luck" e "Reroll" no cartão do teste (a Sorte se prepara na ficha antes), "Add to tracker" na
@@ -482,7 +482,9 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **na ficha:** "Roll initiative" (a iniciativa rola pelo combate do Foundry), o local do acerto (Head, Body,
     Random), as ações Take Cover e Grapple, "Fix" na lesão, "Luck used" no cabeçalho (a ficha mostra a Sorte que resta),
     a quantidade com − e + e "Use" no equipamento, a hierarquia de fundação e opções no cyberware ("+ Foundation",
-    "+ Option") e as notas de ciberpsicose.
+    "+ Option") e as notas de ciberpsicose (ciclo 60); as notas de Role, "Jack in" e "Jack out" na ficha, os slots do
+    deck em barras, a arquitetura ao vivo na aba NET, o estado de cada programa (guardado, carregado, ativo) e "Run"
+    (ciclo 61).
 
 ## Registro dos ciclos
 
@@ -3170,6 +3172,43 @@ Commit anterior: `f8bd09a` (ciclo 59).
 - **Pendências:** a ficha, parte 2 (as abas Role, NET e Vida, e as fichas dos itens); as perguntas acima; os botões da
   maquete do chat (ciclo 59). Depois, o C8, parte 11: os nós de controle ligados à cena.
 - **Próximo:** a ficha, parte 2 (ciclo 61).
+
+### Ciclo 61 (2026-10-15): a ficha no visual novo, parte 2: Role, NET e Vida (o pedido do usuário; sessão KouArt)
+
+As maquetes "Role Tab", "Net Tab" e "Lifepath Tab", no mesmo padrão do ciclo 60. Commit anterior: `dbc1261` (ciclo 60).
+
+- **Implementado** (`templates/personagem/role.hbs`, `net.hbs`, `vida.hbs`, `scripts/ficha-personagem.mjs` e
+  `styles/tema.css`):
+  - **Role:** à esquerda, a Role em grande (o nome e a habilidade, o Rank, os pontos distribuídos, o resumo e os botões
+    da habilidade) e o bônus nas perícias; à direita, as especialidades e as outras habilidades. Cada especialidade
+    mostra os pontos também em caixas, até o máximo do Rank (só o desenho; o número continua no campo, editável). A Role
+    sem especialidades diz isso na coluna do conteúdo;
+  - **NET:** à esquerda, a Interface em grande (o Rank; "—" para quem não é Netrunner), as Ações NET por turno e o deck
+    equipado, e os cyberdecks; à direita, as habilidades de Interface em cartões (o nome, o valor sem o dado e o custo;
+    o 1d6 do Zap no canto) e os programas;
+  - **Vida:** o Lifepath em cinco painéis (as origens, os valores, a família, as metas e as pessoas, e o Lifepath da
+    Role, largo), com os 17 campos de sempre (`GRUPOS_DO_LIFEPATH`, na ficha), e as notas. A grade antiga do Lifepath
+    (um painel só) saiu do CSS.
+  - **No teste,** o seletor do painel das especialidades da Role era a posição (`.painel:nth-of-type(2)`) e passou a ser
+    a classe dele (`.painel.especialidades`): com as duas colunas, a posição mudou. O teste lê o mesmo título e confere
+    o mesmo.
+- **Fora, de propósito:** o que as maquetes destas abas mostram e o sistema não tem (as notas de Role, "Jack in" e
+  "Jack out", os slots do deck em barras, a arquitetura ao vivo na aba NET, o estado de cada programa, "Run") ficou de
+  fora, como as outras perguntas (ver as dúvidas).
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 89 de 94, 170 s, de primeira. O passo da ficha nova ganhou a Role (o nome na coluna dos números, as 6
+    especialidades com as caixas iguais ao número de cada campo) e a Vida (os campos nos cinco painéis: 5, 4, 3, 4 e
+    1); o da Interface do Netrunner, a Interface em grande (4) e os 11 cartões das habilidades na coluna do conteúdo. As
+    5 falhas são as das armas de 2077, e os avisos do passo "nenhum aviso", só os dois da Lexington. As capturas das
+    abas foram conferidas;
+  - **mutações:** as 6 caíram, e os arquivos voltaram (conferido pelo md5). No passo da ficha nova: as especialidades
+    sem a classe do painel (R1), as caixas sem os pontos (R2), a Vida sem um campo nos valores (R3) e a Role fora da
+    coluna dos números (R6); no da Interface: a Interface grande mostrando as Ações NET (R4) e as habilidades fora da
+    coluna do conteúdo (R5). Nenhuma rodada deixou Edge nem perfil para trás.
+- **Pendências:** as fichas dos itens (a maquete "Item Sheets"); as perguntas das maquetes (ver as dúvidas). Depois, o
+  C8, parte 11: os nós de controle ligados à cena.
+- **Próximo:** as fichas dos itens (ciclo 62).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

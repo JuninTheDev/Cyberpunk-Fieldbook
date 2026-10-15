@@ -2528,7 +2528,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(1200);
     await edge.shot('importado');
 
-    await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha; as abas Combate, Equipamento e Cyberware no jeito das maquetes (a iniciativa, o dinheiro e a Humanidade em grande na coluna dos números, com 290 px; as armas, as lesões, a munição e o cyberware)', async () => {
+    await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha; as abas Combate, Equipamento, Cyberware, Role e Vida no jeito das maquetes (a iniciativa, o dinheiro, a Humanidade e a Role na coluna dos números, com 290 px; as armas, as lesões, a munição, o cyberware e as especialidades com as caixas dos pontos; o Lifepath em cinco painéis)', async () => {
       const lp = solo.resultado.lifepath;
       const info = await edge.evaluate(`(async () => {
         const ator = game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
@@ -2539,12 +2539,12 @@ module.exports = async ({ edge, servidores, r }) => {
         const texto = seletor => f().querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
         const topo = { role: valor('system.role.nome'), rank: valor('system.role.rank'), nome: valor('name'), apelido: valor('system.apelido') };
         const role = {
-          nome: texto('.tab.role .role-nome'), titulo: texto('.tab.role .painel:nth-of-type(2) .titulo'),
+          nome: texto('.tab.role .role-nome'), titulo: texto('.tab.role .painel.especialidades .titulo'),
           habilidades: [...f().querySelectorAll('.tab.role .habilidade')].map(li => [li.querySelector('.nome').firstChild.textContent.trim(), li.querySelector('input').value, li.querySelector('.efeito')?.textContent.trim() ?? ''])
         };
         // A conferência dos pontos: um ponto a mais no Ponto Fraco passa do total do Rank 4; tirado, volta.
         const mudar = async (nome, valorNovo) => { const campo = f().querySelector('[name="' + nome + '"]'); campo.value = valorNovo; campo.dispatchEvent(new Event('change', { bubbles: true })); };
-        const tituloDaRole = () => texto('.tab.role .painel:nth-of-type(2) .titulo span');
+        const tituloDaRole = () => texto('.tab.role .painel.especialidades .titulo span');
         await mudar('system.role.habilidades.Spot Weakness', 1);
         await __esperar(() => tituloDaRole().startsWith('5 DE 4'));
         role.passou = { titulo: tituloDaRole(), vermelho: Boolean(f().querySelector('.tab.role .titulo .conta-erro')), aviso: texto('.tab.role .conferencia.erro') };
@@ -2586,7 +2586,12 @@ module.exports = async ({ edge, servidores, r }) => {
           dinheiro: texto('.tab.equipamento .coluna-resumo .numero-grande b'), saldo: String(ator.system.dinheiro),
           municao: f().querySelectorAll('.tab.equipamento .coluna-resumo li[data-item-id]').length, municoes: ator.items.filter(i => i.type === 'municao').length,
           humanidade: texto('.tab.cyberware .coluna-resumo .numero-grande b'), hum: String(ator.system.humanidade.value),
-          cyber: f().querySelectorAll('.tab.cyberware .coluna-principal li[data-item-id]').length, cyberDoAtor: ator.items.filter(i => i.type === 'cyberware').length
+          cyber: f().querySelectorAll('.tab.cyberware .coluna-principal li[data-item-id]').length, cyberDoAtor: ator.items.filter(i => i.type === 'cyberware').length,
+          // A Role (o nome na coluna dos números; cada especialidade com as caixas iguais ao número do campo) e a Vida
+          // (os campos do Lifepath em painéis).
+          roleNoResumo: Boolean(f().querySelector('.tab.role .coluna-resumo .role-nome')), especialidades: f().querySelectorAll('.tab.role .coluna-principal .especialidades .habilidade').length,
+          caixas: [...f().querySelectorAll('.tab.role .especialidades .habilidade')].map(li => (li.querySelector('.pontos-visuais')?.style.getPropertyValue('--pontos').trim() ?? '') + '=' + li.querySelector('input').value).join(),
+          grupos: [...f().querySelectorAll('.tab.vida .grupo-lifepath')].map(g => g.querySelectorAll('textarea').length).join()
         };
         return { topo, role, vida, geral, nova, tirada, abas };
       })()`);
@@ -2609,7 +2614,9 @@ module.exports = async ({ edge, servidores, r }) => {
         && nova.dados?.familia === 'language' && nova.dados.nome === 'Japonês' && nova.dados.nivel === 0 && /Linguagem \(Japonês\)/.test(nova.linha) && info.tirada
         && abas.iniciativa === abas.ini && abas.resumo === 3 && abas.armas === abas.armasDoAtor && abas.armas > 0 && abas.lesoes && /^290px /.test(abas.grade)
         && abas.dinheiro === abas.saldo && abas.municao === abas.municoes && abas.municoes > 0
-        && abas.humanidade === abas.hum && abas.cyber === abas.cyberDoAtor && abas.cyber > 0;
+        && abas.humanidade === abas.hum && abas.cyber === abas.cyberDoAtor && abas.cyber > 0
+        && abas.roleNoResumo && abas.especialidades === 6 && abas.caixas.split(',').every(par => { const [c, v] = par.split('='); return c === v && v !== ''; })
+        && abas.grupos === '5,4,3,4,1';
       return [ok, JSON.stringify(info)];
     });
 
@@ -3050,7 +3057,7 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    await r.passo('Interface do Netrunner (wiki, RED p. 197–207; o CORE): na aba NET, as 9 habilidades, a Defesa e a Velocidade pelo cyberdeck equipado, com as Ações NET pelo Rank; o Cloak pela janela; o Eraser só soma ativo e no deck; Ctrl + clique; o dano do Zap; a Velocidade com o Speedy Gonzalvez e gravemente ferido; sem deck equipado, o aviso; quem não é Netrunner não tem Interface', async () => {
+    await r.passo('Interface do Netrunner (wiki, RED p. 197–207; o CORE): na aba NET (no jeito da maquete: a Interface em grande na coluna dos números, as habilidades em cartões), as 9 habilidades, a Defesa e a Velocidade pelo cyberdeck equipado, com as Ações NET pelo Rank; o Cloak pela janela; o Eraser só soma ativo e no deck; Ctrl + clique; o dano do Zap; a Velocidade com o Speedy Gonzalvez e gravemente ferido; sem deck equipado, o aviso; quem não é Netrunner não tem Interface', async () => {
       // Rank 4 (3 Ações NET). Cloak, d10 6: Interface 4 + 6 + 2 do mestre = 12; com o Eraser ativo, d10 5: 4 + 2 + 5 = 11.
       // Zap: 1d6 4. Velocidade com o Speedy Gonzalvez, gravemente ferido (HP 19 de 40), d10 3: 4 + 2 − 2 + 3 = 7.
       await fixar(edge, []);
@@ -3084,7 +3091,9 @@ module.exports = async ({ edge, servidores, r }) => {
           const valor = id => textoDe(botao(id)?.querySelector('b'));
           await esperar(() => botao('cloak'));
           const lista = { titulo: titulo(), ids: [...f().querySelectorAll('.tab.net [data-action="rolarInterface"]')].map(b => b.dataset.habilidade), cloak: valor('cloak'), velocidade: valor('velocidade'),
-            programas: [...f().querySelectorAll('.tab.net [data-action="ativarPrograma"]')].map(textoDe) };
+            programas: [...f().querySelectorAll('.tab.net [data-action="ativarPrograma"]')].map(textoDe),
+            // A aba no jeito da maquete: a Interface em grande na coluna dos números e as habilidades em cartões ao lado.
+            rankGrande: textoDe(f().querySelector('.tab.net .coluna-resumo .numero-grande b')), cartoes: f().querySelectorAll('.tab.net .coluna-principal .interface-net .habilidades-interface li').length };
 
           // 1. O Cloak pela janela, com +2 do mestre (o Eraser inativo não soma).
           let antes = game.messages.size;
@@ -3154,6 +3163,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const { semDeck, lista, daJanela: j, cloak, ativo, comEraser, zap, velocidade: v, foraDoDeck, solo } = info;
         const ok = semDeck.titulo === 'RANK 4 · 3 AÇÕES NET POR TURNO' && semDeck.aviso === 'EQUIPE UM CYBERDECK PARA USAR A INTERFACE' && semDeck.botoes === 0
           && lista.ids.join() === 'scanner,backdoor,cloak,control,eyedee,pathfinder,slide,virus,zap,defesa,velocidade' && lista.cloak === '4' && lista.velocidade === '4' && lista.programas.join() === 'Inativo,Inativo'
+          && lista.rankGrande === '4' && lista.cartoes === 11
           && j.titulo === 'Teste: Cloak' && j.partes.join() === 'Interface +4,1d10'
           && cloak.total === 12 && cloak.cartao.join() === '1d10,Interface +4,Modificador do mestre +2' && cloak.sabor === '1 Ação NET. O resultado vira a DV: esconde seus rastros e seus vírus.'
           && ativo.cloak === '6' && ativo.pathfinder === '4' && ativo.botao === 'Ativo' && ativo.bonus === 2

@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 61). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 62). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -356,7 +356,10 @@ No fim de tudo, uma sessão de teste com a mesa.
   - [x] a ficha, parte 1: as abas Combate, Equipamento e Cyberware em duas colunas (à esquerda os números em grande:
     a Iniciativa e os vitais, os Eurodólares e a munição, a Humanidade; à direita as listas), e as lesões críticas
     também na aba Combate: ciclo 60;
-  - [ ] a ficha, parte 2: as abas Role, NET e Vida (o Lifepath), e as fichas dos itens.
+  - [x] a ficha, parte 2: as abas Role (a Role em grande à esquerda; as especialidades com os pontos em caixas), NET
+    (a Interface em grande e os cyberdecks à esquerda; as habilidades em cartões e os programas) e Vida (o Lifepath em
+    cinco painéis): ciclo 61;
+  - [ ] as fichas dos itens.
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
   cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança
   direta); o mestre tira linhas, desfazendo ou não a mudança; a importação, a migração e a loja da wiki escrevem as

@@ -160,6 +160,42 @@ do capanga é um botão do mesmo jeito, que rola. */
 /* O painel ciano (a Humanidade, a NET): a borda e o número grande na cor. */
 .cpr-fieldbook.ficha-personagem .painel.ciano { border-left-color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .painel.ciano .numero-grande b { color: var(--cp-ciano); }
+/* A Role: cada especialidade com os pontos em caixas (o desenho; o número continua no campo), como a maquete "Role Tab". */
+.cpr-fieldbook.ficha-personagem .habilidade { grid-template-columns: minmax(0, 1fr) auto auto 56px; }
+.cpr-fieldbook.ficha-personagem .habilidade > .nome { grid-column: 1; }
+.cpr-fieldbook.ficha-personagem .habilidade > .efeito { grid-column: 2; }
+.cpr-fieldbook.ficha-personagem .habilidade > .pontos-visuais { grid-column: 3; }
+.cpr-fieldbook.ficha-personagem .habilidade > input { grid-column: 4; }
+.cpr-fieldbook.ficha-personagem .pontos-visuais {
+  --passo: 20px; width: max(0px, calc(var(--max) * var(--passo) - 4px)); height: 12px;
+  background:
+    linear-gradient(90deg, var(--cp-amarelo) calc(var(--pontos) * var(--passo)), transparent 0),
+    linear-gradient(var(--cp-fraco), var(--cp-fraco)) top / 100% 1px no-repeat,
+    linear-gradient(var(--cp-fraco), var(--cp-fraco)) bottom / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--cp-fraco) 0 1px, transparent 1px calc(var(--passo) - 5px), var(--cp-fraco) calc(var(--passo) - 5px) calc(var(--passo) - 4px), transparent calc(var(--passo) - 4px) var(--passo));
+  mask: repeating-linear-gradient(90deg, #000 0 calc(var(--passo) - 4px), transparent calc(var(--passo) - 4px) var(--passo));
+}
+/* A NET: as habilidades de Interface em cartões (o nome grande, o valor sem o dado e o custo), como a maquete "Net Tab". */
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li {
+  position: relative; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px 9px; background: var(--cp-poco); border-top: 2px solid var(--cp-ciano);
+}
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li > .acao:first-child {
+  padding: 0; border: none; background: transparent; color: var(--cp-texto); font: 700 18px/1.1 var(--cp-titulo); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li > .acao:first-child b { color: var(--cp-ciano); font: 400 15px var(--cp-dados); }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li > .acao:first-child:hover { color: var(--cp-amarelo); background: transparent; }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li small { color: var(--cp-fraco); letter-spacing: 0.06em; }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface .dano-zap { position: absolute; top: 8px; right: 8px; padding: 1px 6px; font-size: 11px; }
+/* A Vida: o Lifepath em painéis, como a maquete "Lifepath Tab"; o da Role, largo. */
+.cpr-fieldbook.ficha-personagem .lifepath-grupos { align-items: start; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath { display: flex; flex-direction: column; gap: 10px; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath.largo { grid-column: 1 / -1; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath .campo-lifepath { padding-bottom: 8px; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath .campo-lifepath:last-child { padding-bottom: 0; border-bottom: none; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath .campo-lifepath span { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath textarea { min-height: 2.2em; background: transparent; border-color: transparent; font-size: 17px; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath textarea:hover { border-color: var(--cp-linha); }
 .cpr-fieldbook.ficha-personagem .coluna-resumo .barra { margin-top: 4px; }
 .cpr-fieldbook.ficha-personagem .coluna-resumo .estado-caixa { margin-top: 12px; }
 
@@ -311,9 +347,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .bonus-role .soma b { color: var(--cp-ciano); font-family: var(--cp-dados); font-weight: 400; }
 
 /* ---------- Vida: o Lifepath e as notas ---------- */
-.cpr-fieldbook.ficha-personagem .lifepath { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
 .cpr-fieldbook.ficha-personagem .campo-lifepath { display: flex; flex-direction: column; gap: 3px; }
-.cpr-fieldbook.ficha-personagem .campo-lifepath.largo { grid-column: 1 / -1; }
 .cpr-fieldbook.ficha-personagem .campo-lifepath span { font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-amarelo); text-transform: uppercase; }
 .cpr-fieldbook.ficha-personagem .campo-lifepath textarea { min-height: 2.8em; resize: vertical; font-family: var(--cp-titulo); font-size: 15px; line-height: 1.35; }
 .cpr-fieldbook.ficha-personagem .notas prose-mirror { min-height: 18rem; background: var(--cp-poco); }
@@ -381,7 +415,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 @container (max-width: 700px) {
   .cpr-fieldbook.ficha-personagem .topo { flex-direction: column; }
   .cpr-fieldbook.ficha-personagem .nome-linha .nome { font-size: 34px; }
-  .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .lifepath, .aba-colunas) { grid-template-columns: minmax(0, 1fr); }
+  .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .aba-colunas) { grid-template-columns: minmax(0, 1fr); }
   .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-template-columns: minmax(0, 1fr); }
 }
 
