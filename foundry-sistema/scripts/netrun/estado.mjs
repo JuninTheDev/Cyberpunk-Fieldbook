@@ -5,7 +5,9 @@
 // cada Black ICE na ficha; o deck (ativar, desativar e atacar com os programas); os inimigos encontrados no combate da
 // cena (o combate.mjs). No Tile só vai o que os jogadores podem ver; o resto fica no item da arquitetura.
 import { ENTRADA, filhosDe, lerArquitetura } from '../arquitetura.mjs';
+import { pedir as pedirAoJogador } from '../combate.mjs';
 import { caminho, SISTEMA } from '../config.mjs';
+import { config } from '../configuracoes.mjs';
 import { acoesDeNet, formulaDeDano, NUMEROS_DA_NET, programaDeAtaque } from '../regras.mjs';
 import { testar } from '../rolagens.mjs';
 import { entrarNoCombate, sincronizarInimigos, tirarInimigos } from './combate.mjs';
@@ -13,7 +15,8 @@ import { FLAG_CONEXAO, FLAG_ESTADO, FLAG_PONTO, STATUS_CONECTADO, STATUS_EM_CHAM
 import {
   acharConteudo, alcanceDo, alvoDaHabilidade, alvoDoPrograma, alvosDoInimigo, comecoDoTurno, conteudosDoNo, demonioDe, distancia, efeitoDoIce, faltasPara, fraseDaChegada, gastarAcoes, iceDaQueda,
   iceDe, inimigosAtivos, inimigosQueAtacam, motivoParaNaoAndar, motivoParaNaoDesconectar, motivoParaNaoMudarPrograma, motivoParaNaoSlide, mudarRez, netrunnerDo, nomeDoInimigo, penalidadeDoSkunk,
-  PRISAO_DO_KRAKEN, resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, resumoDoAndar, rezDe, rezMaxDe, vistaPublica
+  PRISAO_DO_KRAKEN, quemRolaNaNet, resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, respostaDoJogador, resumoDoAndar, rezDe, rezMaxDe,
+  vistaPublica
 } from './regras-da-net.mjs';
 import { erro } from './socket.mjs';
 
@@ -191,9 +194,25 @@ async function rolagemDoInimigo(conteudo, id) {
   return (await testar(null, { rotulo: numero.rotulo, partes: [{ rotulo: numero.rotulo, valor }], sabor: numero.dica, falante: nome })).total;
 }
 
-// O netrunner rola a Interface (o mestre, por enquanto); sem Interface, só o 1d10.
-async function rolarDoNetrunner(ator, id) {
-  return (await ator.rolarInterface(id))?.total ?? (await testar(ator, { rotulo: id, partes: [] })).total;
+// As rolagens do netrunner (o rolagens.mjs do NET Architect): com a configuração "O jogador rola as rolagens da NET", o
+// dono do netrunner, conectado, rola no computador dele, pela janela de rolagem (os modificadores e a Sorte): as ações
+// que ele pediu (as habilidades de Interface, o ataque dos programas) e as reações (a velocidade contra o Black ICE, a
+// defesa), mesmo quando quem pediu foi o mestre. Na ação, a janela cancelada desfaz a ação. Sem resposta no prazo (o
+// "Tempo para o jogador responder"), ou com a janela da reação fechada, o mestre rola, com a Sorte preparada na ficha.
+// extras: as partes a mais (o Skunk no Slide). Sem Interface, só o 1d10.
+const donoDo = ator => game.users.find(user => !user.isGM && user.active && ator.testUserPermission(user, 'OWNER')) ?? null;
+async function rolarNoNetrunner(ctx, { rolagem = null, programa = null, extras = [], reacao = false, aviso = '' }) {
+  const { ator, usuario } = ctx;
+  const jogador = quemRolaNaNet({ ligado: config('netJogadorRola'), pediu: usuario, reacao, dono: reacao ? donoDo(ator) : null });
+  if (jogador) {
+    const resposta = await pedirAoJogador(jogador, 'net', { ator: ator.uuid, rolagem, programa: programa?.id ?? null, extras, aviso });
+    const { total, erro: cancelou, registro } = respostaDoJogador(resposta, { reacao, jogador: jogador.name, netrunner: ctx.corredor?.nome ?? ator.name });
+    if (cancelou) throw erro(cancelou);
+    if (total !== undefined) return total;
+    if (ctx.est) registrar(ctx.est, registro);
+  }
+  const resultado = programa ? await ator.rolarAtaqueDePrograma(programa) : await ator.rolarInterface(rolagem, { extras });
+  return resultado?.total ?? (await testar(ator, { rotulo: rolagem, partes: extras })).total;
 }
 
 // O encontro ao chegar (a wiki): o Black ICE disputa a velocidade (vencendo, age na hora); o demônio sempre vence a
@@ -202,7 +221,7 @@ async function encontrar(ctx, corredor, conteudo) {
   const nome = nomeDoInimigo(conteudo);
   if (conteudo.tipo === 'demonio') return registrar(ctx.est, `O demônio ${nome} detectou ${corredor.nome} (o demônio sempre vence a velocidade).`, 'falha');
   if (conteudo.tipo === 'netrunner') return registrar(ctx.est, `${nome}, um netrunner inimigo, está neste andar.`, 'falha');
-  const meu = await rolarDoNetrunner(ctx.ator, 'velocidade');
+  const meu = await rolarNoNetrunner(ctx, { rolagem: 'velocidade', reacao: true, aviso: `${nome} no andar: role a velocidade (Interface + 1d10 contra a SPD + 1d10 dele).` });
   const linha = resolverVelocidade(corredor, conteudo, { meu, dele: await rolagemDoInimigo(conteudo, 'spd') });
   registrar(ctx.est, linha.texto, linha.tipo);
   if (linha.iceVence) await aplicarEfeito(ctx, corredor, conteudo);
@@ -393,9 +412,8 @@ export const operacoes = {
     return { no: corredor.no };
   },
 
-  // Uma habilidade de Interface contra os andares: o alvo aqui, a Ação NET (em combate), a rolagem e o resultado. Por
-  // enquanto quem rola é o mestre (com a Sorte que o jogador preparou na ficha); a janela de rolagem no computador do
-  // jogador vem numa próxima parte do C8. O Virus pergunta ao mestre a DV e as Ações NET.
+  // Uma habilidade de Interface contra os andares: o alvo aqui, a Ação NET (em combate), a rolagem (o jogador que pediu
+  // rola, ou o mestre: rolarNoNetrunner) e o resultado. O Virus pergunta ao mestre a DV e as Ações NET.
   async habilidade(dados, usuario) {
     const ctx = await contexto(dados, usuario);
     const { arq, est, corredor, token, ator } = ctx;
@@ -413,8 +431,7 @@ export const operacoes = {
     const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM, quantas: virus?.acoes ?? 1 });
     if (semAcao) throw erro(semAcao);
     const skunk = chave === 'slide' ? penalidadeDoSkunk(arq, est, corredor) : 0;
-    const rolagem = await ator.rolarInterface(chave, skunk ? { partes: [...ator.partesDaInterface(chave), { rotulo: 'Skunk', valor: skunk }] } : {});
-    if (!rolagem) throw erro('A rolagem da Interface não saiu.');
+    const rolagem = { total: await rolarNoNetrunner(ctx, { rolagem: chave, extras: skunk ? [{ rotulo: 'Skunk', valor: skunk }] : [] }) };
     let linha;
     if (chave === 'zap') linha = await zap(ctx, alvo, rolagem.total);
     else if (chave === 'slide') {
@@ -479,12 +496,12 @@ export const operacoes = {
   async inimigoAtaca(dados, usuario) {
     if (!usuario.isGM) throw erro('Só o mestre joga a vez dos inimigos.');
     const ctx = await contexto(dados, usuario);
-    const { arq, est, corredor, ator } = ctx;
+    const { arq, est, corredor } = ctx;
     const inimigo = inimigosQueAtacam(arq, est, corredor).find(conteudo => conteudo.chave === dados.alvo);
     if (!inimigo) throw erro(`Este inimigo não ataca ${corredor.nome} agora (não está ativo no andar dele, ou foi driblado com o Slide).`);
     const nome = nomeDoInimigo(inimigo);
     const ataque = await rolagemDoInimigo(inimigo, inimigo.tipo === 'ice' ? 'atk' : 'zap');
-    const defesa = await rolarDoNetrunner(ator, 'defesa');
+    const defesa = await rolarNoNetrunner(ctx, { rolagem: 'defesa', reacao: true, aviso: `${nome} ataca (${ataque}): role a defesa (Interface + 1d10).` });
     const linha = resolverAtaque(corredor, inimigo, { ataque, defesa });
     registrar(est, linha.texto, linha.tipo);
     if (linha.acertou && inimigo.tipo === 'ice') await aplicarEfeito(ctx, corredor, inimigo);
@@ -524,7 +541,7 @@ export const operacoes = {
     if (problema) throw erro(problema);
     const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM });
     if (semAcao) throw erro(semAcao);
-    const ataque = (await ator.rolarAtaqueDePrograma(programa)).total;
+    const ataque = await rolarNoNetrunner(ctx, { programa });
     const defesa = await rolagemDoInimigo(alvo, 'def');
     let dano = 0;
     if (ataque > defesa) {

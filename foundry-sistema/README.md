@@ -69,7 +69,9 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   no netrunner inimigo), que desativa depois de usado. Os inimigos encontrados entram na iniciativa da cena (sem
   combate, num novo, sem começar), com um token escondido no ponto de acesso (o Black ICE e o demônio no topo); a REZ do
   token e a da NET andam juntas (em 0, o inimigo fica derrotado), e na vez de cada um o mestre escolhe numa janela quem
-  ele ataca, ou pula. Eles saem do combate quando a arquitetura reinicia.
+  ele ataca, ou pula. Eles saem do combate quando a arquitetura reinicia. As rolagens do netrunner (as habilidades, o
+  ataque dos programas, a velocidade e a defesa) abrem a janela de rolagem no computador do jogador, com os
+  modificadores e a Sorte; cancelar a janela desfaz a ação, e sem resposta no prazo o mestre rola.
 - **Ficha do capanga** (o mook do CORE), para os NPCs descartáveis. O tipo de ator "Capanga" tem os dados do personagem
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
@@ -251,6 +253,7 @@ As do módulo cpr-2077, para as armas de 2077, com os mesmos padrões:
 - **A carga Tech esfria uma rodada** (padrão: sim).
 
 A do NET Architect:
+- **O jogador rola as rolagens da NET** (padrão: sim): as rolagens do netrunner abrem a janela de rolagem no computador do jogador; sem resposta no tempo para o jogador responder, o mestre rola. Desligado, o mestre rola sempre, com a Sorte preparada na ficha.
 - **Inimigos da NET no combate** (padrão: sim): o Black ICE, os demônios e os netrunners inimigos (com ficha) encontrados entram na iniciativa, com um token escondido no ponto de acesso; na vez deles, o mestre escolhe quem atacar.
 
 E as da wiki:
@@ -263,7 +266,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
-  (a janela de rolagem do jogador na NET, os nós de controle
+  (os nós de controle
   ligados à cena, os arquivos copiados, o Scanner e o editor visual) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
@@ -334,6 +337,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o ponto de acesso à NET, nos dois navegadores: a configuração pelo HUD do Tile (as arquiteturas do mundo e do compêndio, a imagem de terminal), o marcador (o oculto, só para o mestre), o jogador a 7 m que não conecta (nem pedindo direto ao mestre) e que conecta com o Range Upgrade (a flag, o status, o anel e a janela com o andar 1 como "?"), a queda ao sair do alcance, o "Desconectar" da janela, o reinício só pelo mestre e o token e o Tile apagados;
   - andar e as habilidades na NET, no navegador do jogador: o "?" do andar 1 que vira a senha ao chegar, a senha que trava a descida, o Backdoor que o mestre rola (o empate com a DV não passa), o Eye-Dee com o arquivo, o Pathfinder que para no nó de DV maior, o Control e o comando, o Virus no andar mais fundo com a DV e as Ações NET do mestre, e o mestre que vê o andar escondido e o revela;
   - o deck na janela da NET, em combate: o Sword ativado ataca o Hellhound e tira da REZ dele, desativa e não religa na mesma rodada; sem Ação NET, o Hellbolt não ataca; na rodada seguinte, o Hellbolt acerta o cérebro da netrunner inimiga (a ficha dela); o Sword contra ela é recusado;
+  - o jogador rola na NET, na janela de rolagem dele: a velocidade, o Zap cancelado (não acontece), o Zap com Sorte (que sai da ficha), o ataque do Sword, e a defesa que ele não rola no prazo (o mestre rola, o registro avisa e a janela fecha);
   - o combate na NET: o Hellhound e a netrunner inimiga encontrados entram num combate novo, com o token escondido no ponto de acesso e o Hellhound no topo; na vez dele, a janela do mestre ataca o netrunner; na dela, o mestre pula; o Zap tira da REZ e o token acompanha; a REZ do token em 0 derruba o Hellhound (derrotado, sem a janela da vez), e a netrunner inimiga que o mestre marca derrotada também fica sem ela; a desconexão e o Tile apagado tiram os inimigos;
   - o encontro e o ataque dos inimigos: o Wisp que vence a velocidade e age na hora, o Hellhound que ataca (o dano e o fogo), o Skunk (−2 no cartão do Slide), o Wisp tirando 1 Ação NET e o fogo queimando 2 no HP em combate, e "Apagar o fogo";
   - os efeitos do Black ICE: o Killer que destrói o Armor ativo, o Asp que destrói o Sword, o Liche (−4 por 1 hora), o Kraken que prende, a KRASH Barrier que segura o Giant e o Giant que derruba, com o efeito do Black ICE do andar na queda;

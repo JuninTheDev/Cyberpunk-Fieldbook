@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 56). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 57). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -115,7 +115,8 @@ de compêndio; entram só as partes do sistema.
   - [x] o combate na NET (os inimigos encontrados na iniciativa, com um token escondido; a vez deles pela janela do
     mestre; a REZ do token e a do estado juntas; a saída no reinício e com o Tile apagado; a frase da chegada sem o
     netrunner inimigo entre quem segura a descida): ciclo 55;
-  - [ ] o jogador rolando as próprias rolagens, pela janela de rolagem dele;
+  - [x] o jogador rolando as próprias rolagens, pela janela de rolagem dele (a configuração "O jogador rola as rolagens
+    da NET"; o mestre rola sem resposta no prazo): ciclo 56;
   - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual;
   - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem
     parede no meio"; ver as dúvidas).

@@ -48,6 +48,10 @@ export function registrarConfiguracoes() {
     type: String, default: 'naoDispara', choices: { naoDispara: 'Não dispara', comum: 'Dispara como arma comum' }
   });
   registrar('cargaEsfria', { name: 'A carga Tech esfria uma rodada (2077)', hint: 'No combate, depois de uma carga (tiro ou rajada), a arma Tech só carrega de novo duas rodadas depois. Fora do combate, não conta.', type: Boolean, default: true });
+  registrar('netJogadorRola', {
+    name: 'O jogador rola as rolagens da NET', hint: 'As rolagens do netrunner na NET (as habilidades de Interface, o ataque dos programas, a velocidade contra o Black ICE e a defesa) abrem a janela de rolagem no computador do dono dele, com os modificadores e a Sorte. Sem resposta no tempo para o jogador responder, o mestre rola. Desligado, o mestre rola sempre, com a Sorte preparada na ficha.',
+    type: Boolean, default: true
+  });
   registrar('netNoCombate', {
     name: 'Inimigos da NET no combate', hint: 'O Black ICE, os demônios e os netrunners inimigos (com ficha) encontrados na NET entram na iniciativa da cena, com um token escondido no ponto de acesso (o Black ICE e o demônio no topo). A REZ do token e a da NET andam juntas. Na vez deles, o mestre escolhe quem atacar.',
     type: Boolean, default: true

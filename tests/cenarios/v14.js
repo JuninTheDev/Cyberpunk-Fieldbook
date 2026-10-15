@@ -4073,10 +4073,12 @@ module.exports = async ({ edge, servidores, r }) => {
     // Os passos da NET desde o ciclo 51: a arquitetura, o ponto de acesso no Tile e o netrunner do jogador (Rank 4, o deck
     // equipado) a 3 m do Tile; no navegador do jogador, os ajudantes para clicar na janela da NET e esperar o registro. A
     // configuração "Inimigos da NET no combate" fica desligada, menos no passo do combate (combate: true): os outros passos
-    // conferem a NET sem os inimigos na iniciativa.
-    const montarNet = async ({ nome, arquitetura, andares, combate = false }) => {
+    // conferem a NET sem os inimigos na iniciativa. Do mesmo jeito, "O jogador rola as rolagens da NET" fica desligada (o
+    // mestre rola, com os dados fixos no navegador dele), menos no passo da rolagem do jogador (jogadorRola: true).
+    const montarNet = async ({ nome, arquitetura, andares, combate = false, jogadorRola = false }) => {
       const m = await edge.evaluate(`(async () => {
         await game.settings.set('${S}', 'netNoCombate', ${combate});
+        await game.settings.set('${S}', 'netJogadorRola', ${jogadorRola});
         const arq = await Item.implementation.create({ name: '${arquitetura}', type: 'arquitetura', system: { andares: ${JSON.stringify(andares)} } });
         const ponto = { ativo: true, nome: 'Terminal do andar', arquitetura: arq.uuid, dv: null, alcance: 6, exigeDeck: true, rankMinimo: 1, oculto: false, dvScanner: 10, reiniciar: true, ligacoes: [], revelados: [] };
         const [tile] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 1800, y: 800, width: 200, height: 200, texture: { src: 'systems/${S}/icones/terminal.svg' }, flags: { '${S}': { pontoDeAcesso: ponto } } }]);
@@ -4120,7 +4122,12 @@ module.exports = async ({ edge, servidores, r }) => {
     };
     const desmontarNet = async ({ nome, arquitetura }) => {
       const fechar = `for (const app of [...foundry.applications.instances.values()].filter(app => String(app.id).startsWith('${S}-net-'))) await app.close();`;
-      await jogador.evaluate(`(async () => { ${fechar} canvas.tokens.releaseAll(); return true; })()`).catch(() => null);
+      await jogador.evaluate(`(async () => {
+        ${fechar}
+        for (const app of [...foundry.applications.instances.values()].filter(app => app.options.classes?.includes('janela-rolagem'))) await app.close();
+        canvas.tokens.releaseAll();
+        return true;
+      })()`).catch(() => null);
       await edge.evaluate(`(async () => {
         ${fechar}
         window.__fila = [];
@@ -4130,6 +4137,7 @@ module.exports = async ({ edge, servidores, r }) => {
         for (const a of game.actors.filter(a => a.getFlag('${S}', 'modeloDaNet'))) await a.delete();
         for (const f of game.folders.filter(f => f.type === 'Actor' && f.name === 'Inimigos da NET')) await f.delete();
         await game.settings.set('${S}', 'netNoCombate', true);
+        await game.settings.set('${S}', 'netJogadorRola', true);
         await canvas.scene.deleteEmbeddedDocuments('Tile', canvas.scene.tiles.filter(t => t.x === 1800 && t.y === 800).map(t => t.id));
         for (const a of game.actors.filter(a => a.name === '${nome}')) { await a.sheet?.close(); await a.delete(); }
         for (const i of game.items.filter(i => i.name === '${arquitetura}')) await i.delete();
@@ -4926,6 +4934,100 @@ module.exports = async ({ edge, servidores, r }) => {
       } finally {
         await desmontarNet({ nome: NOME, arquitetura: ARQ });
         await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => a.name === '${RAPOSA}')) await a.delete(); return true; })()`);
+      }
+    });
+
+    await r.passo('o jogador rola na NET (o NET Architect da mesa: "O jogador rola as próprias rolagens"): na janela de rolagem do computador dele, a velocidade ao chegar ao Hellhound; o Zap cancelado na janela não acontece; o Zap com 2 de Sorte (que sai da ficha); o ataque do Sword; e a defesa que ele não rola no prazo: o mestre rola, o registro avisa e a janela dele fecha', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Rola';
+      const ARQ = 'Teste Arquitetura da Rolagem';
+      const tempoAntes = await edge.evaluate(`game.settings.get('${S}', 'tempo')`);
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, jogadorRola: true, andares: [{ andar: 1, ramo: 'a', tipo: 'ice', ice: 'hellhound' }, { andar: 2, ramo: 'a', tipo: 'vazio' }] });
+        // A Sorte 6 e o Sword ativo no deck.
+        await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const a = game.actors.getName('${NOME}');
+          await a.update({ 'system.atributos.luck.valor': 6, 'system.sorte.value': 6 });
+          const deck = a.items.find(i => i.type === 'cyberdeck');
+          await a.createEmbeddedDocuments('Item', [{ ...foundry.utils.deepClone(cat['core_programs:sword']), system: { ...cat['core_programs:sword'].system, instaladoEm: deck.id, ativo: true } }]);
+          return true;
+        })()`);
+        await jogador.evaluate(`game.settings.set('${S}', 'rolarDireto', false).then(() => true)`);
+        const janelaDoJogador = `document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)')`;
+        // No navegador do jogador: espera a janela de rolagem (o título) e clica num botão dela (com a Sorte).
+        const esperarJanela = async () => {
+          for (let i = 0; i < 60; i++) {
+            await jogador.sleep(250);
+            const titulo = await jogador.evaluate(`${janelaDoJogador}?.querySelector('.window-title')?.textContent.trim() ?? null`).catch(() => null);
+            if (titulo) return titulo;
+          }
+          return null;
+        };
+        const naJanela = (acao, sorte = null) => jogador.evaluate(`(() => {
+          const j = ${janelaDoJogador};
+          if (!j) return false;
+          if (${sorte} !== null) { const c = j.querySelector('[name="sorte"]'); c.value = ${sorte}; c.dispatchEvent(new Event('input', { bubbles: true })); }
+          j.querySelector('button[data-action="${acao}"]').click();
+          return true;
+        })()`);
+        // 1. A chegada ao 1A: a velocidade é do jogador (o d10 9 no navegador dele: 4 + 9 = 13) contra a SPD do Hellhound (6 + 2).
+        await fixar(jogador, [[9, 10]]);
+        await fixar(edge, [[2, 10]]);
+        await jogador.evaluate(`window.__net.ir('1a', { espera: false }).then(() => true)`);
+        const janelaDaVelocidade = await esperarJanela();
+        await naJanela('rolar');
+        const velocidade = await jogador.evaluate(`window.__net.esperarRegistro('Velocidade (')`);
+        const autorDaVelocidade = await edge.evaluate(`game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.rotulo === 'Velocidade').at(-1)?.author?.name ?? null`);
+        // 2. O Zap cancelado na janela: o aviso, e nada no registro.
+        await jogador.evaluate(`(() => {
+          window.__avisosNet = [];
+          ui.notifications.warn = mensagem => { window.__avisosNet.push(String(mensagem)); };
+          window.__registroAntes = window.__net.registro().length;
+          window.__net.clicar('button[data-habilidade=zap]');
+          return true;
+        })()`);
+        const janelaDoZap = await esperarJanela();
+        await naJanela('cancelar');
+        const cancelado = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => window.__avisosNet.length && net.pronta());
+          delete ui.notifications.warn;
+          return { avisos: window.__avisosNet, novas: net.registro().length - window.__registroAntes };
+        })()`);
+        // 3. O Zap com 2 de Sorte: 4 + 6 + 2 = 12 contra a DEF 2 + 3; o dano (4) sai da REZ (20 → 16); a Sorte, da ficha (6 → 4).
+        await fixar(jogador, [[6, 10]]);
+        await fixar(edge, [[3, 10], [4, 6]]);
+        await jogador.evaluate(`(() => { window.__net.clicar('button[data-habilidade=zap]'); return true; })()`);
+        await esperarJanela();
+        await naJanela('rolar', 2);
+        const zap = await jogador.evaluate(`window.__net.esperarRegistro('Zap (')`);
+        const sorte = await edge.evaluate(`game.actors.getName('${NOME}').system.sorte.value`);
+        // 4. O ataque do Sword (ativo): 4 + 1 + 7 = 12 contra 2 + 6; 3 + 4 + 4 = 11 na REZ (16 → 5).
+        await fixar(jogador, [[7, 10]]);
+        await fixar(edge, [[6, 10], [3, 6], [4, 6], [4, 6]]);
+        await jogador.evaluate(`(() => { window.__net.clicar('.deck .programa button[data-acao="atacar"]'); return true; })()`);
+        const janelaDoSword = await esperarJanela();
+        await naJanela('rolar');
+        const sword = await jogador.evaluate(`(async () => { await window.__net.esperarRegistro('Sword desativou'); return window.__net.registro().slice(-2); })()`);
+        // 5. A defesa: o mestre faz o Hellhound atacar (6 + 2 = 8); o jogador não rola no prazo (10 s + 15); o mestre rola
+        //    (4 + 9 = 13), o registro avisa, e a janela do jogador fecha.
+        await edge.evaluate(`game.settings.set('${S}', 'tempo', 10).then(() => true)`);
+        await fixar(edge, [[2, 10], [9, 10]]);
+        await edge.evaluate(`(() => { window.__ataqueNet = game.system.api.netrun.pedir('inimigoAtaca', { tile: canvas.scene.tiles.get('${m.tile}').uuid, token: '${m.token}', alvo: '1a.0' }); return true; })()`);
+        const janelaDaDefesa = await esperarJanela();
+        const defesa = await edge.evaluate(`window.__ataqueNet.then(() => game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}')).log.slice(-2).map(l => l.texto))`);
+        await jogador.sleep(800);
+        const fechou = !(await jogador.evaluate(`Boolean(${janelaDoJogador})`));
+        const ok = janelaDaVelocidade === 'Teste: Velocidade' && velocidade === `Velocidade (13 contra 8): ${NOME} viu o Hellhound a tempo.` && autorDaVelocidade === 'Jogador'
+          && janelaDoZap === 'Teste: Zap' && cancelado.avisos.join() === 'Rolagem cancelada: nada aconteceu.' && cancelado.novas === 0
+          && zap === `Zap (12 contra 5): ${NOME} acertou o Hellhound: 4 de REZ, fica com 16.` && sorte === 4
+          && janelaDoSword === 'Teste: Sword: ataque' && sword[0] === `Sword (12 contra 8): ${NOME} acertou o Hellhound: 11 de REZ, fica com 5.`
+          && janelaDaDefesa === 'Teste: Defesa' && defesa.join(' | ') === `Jogador não rolou a tempo: o mestre rolou por ${NOME}. | O Hellhound ataca (8 contra 13), e ${NOME} se defende.` && fechou;
+        return [ok, JSON.stringify({ janelaDaVelocidade, velocidade, autorDaVelocidade, janelaDoZap, cancelado, zap, sorte, janelaDoSword, sword, janelaDaDefesa, defesa, fechou })];
+      } finally {
+        await edge.evaluate(`game.settings.set('${S}', 'tempo', ${JSON.stringify(tempoAntes)}).then(() => true)`);
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
       }
     });
 

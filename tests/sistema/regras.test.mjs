@@ -1306,6 +1306,28 @@ test('O combate na NET (o NET Architect da mesa; wiki, "Black ICE" e "Demônios"
   assert.deepEqual(nomes('2a.1'), ['Outro']);
 });
 
+test('O jogador rola na NET (o NET Architect da mesa, o rolagens.mjs): quem rola (o jogador que pediu; na reação, o dono conectado; senão, o mestre) e a resposta dele (o total; a ação cancelada; sem resposta, o mestre rola)', () => {
+  const mestre = { name: 'Mestre', isGM: true, active: true };
+  const jogador = { name: 'Jogador', isGM: false, active: true };
+  const ausente = { name: 'Ausente', isGM: false, active: false };
+  // Desligado, o mestre rola sempre.
+  assert.equal(netrun.quemRolaNaNet({ ligado: false, pediu: jogador, reacao: false, dono: jogador }), null);
+  // A ação: o jogador que pediu rola; o mestre que pediu rola ele mesmo.
+  assert.equal(netrun.quemRolaNaNet({ ligado: true, pediu: jogador, reacao: false, dono: null }), jogador);
+  assert.equal(netrun.quemRolaNaNet({ ligado: true, pediu: mestre, reacao: false, dono: jogador }), null);
+  // A reação pedida pelo mestre (o ataque do inimigo): o dono conectado; desconectado, ou sem dono, o mestre.
+  assert.equal(netrun.quemRolaNaNet({ ligado: true, pediu: mestre, reacao: true, dono: jogador }), jogador);
+  assert.equal(netrun.quemRolaNaNet({ ligado: true, pediu: mestre, reacao: true, dono: ausente }), null);
+  assert.equal(netrun.quemRolaNaNet({ ligado: true, pediu: mestre, reacao: true, dono: null }), null);
+  // A resposta: o total (até 0); a ação cancelada é recusada; a reação fechada e o prazo vencido, o mestre rola.
+  const quem = { jogador: 'Jogador', netrunner: 'Deck' };
+  assert.deepEqual(netrun.respostaDoJogador({ total: 12 }, { reacao: false, ...quem }), { total: 12 });
+  assert.deepEqual(netrun.respostaDoJogador({ total: 0 }, { reacao: true, ...quem }), { total: 0 });
+  assert.deepEqual(netrun.respostaDoJogador({ cancelado: true }, { reacao: false, ...quem }), { erro: 'Rolagem cancelada: nada aconteceu.' });
+  assert.deepEqual(netrun.respostaDoJogador({ cancelado: true }, { reacao: true, ...quem }), { registro: 'Jogador fechou a janela: o mestre rolou por Deck.' });
+  assert.deepEqual(netrun.respostaDoJogador(null, { reacao: false, ...quem }), { registro: 'Jogador não rolou a tempo: o mestre rolou por Deck.' });
+});
+
 test('Sorte (wiki, RED p. 130): os pontos preparados para o próximo teste vão de 0 até a Sorte que resta', () => {
   assert.equal(regras.sorteParaGastar(2, 5), 2);
   assert.equal(regras.sorteParaGastar(7, 5), 5);

@@ -58,6 +58,17 @@ const registrarJanela = id => (id ? janela => janelas.set(id, janela) : null);
 const TRATADORES = {
   defesa: (dados, id) => perguntarDefesa(dados, { id }),
   dano: (dados, id) => rolarDanoDoAtacante(dados, { id }),
+  // A rolagem do netrunner na NET (o netrun/estado.mjs pede): a Interface ou o ataque do programa, pela janela de
+  // rolagem. A janela cancelada volta como { cancelado }.
+  net: async ({ ator, rolagem, programa, extras, aviso }, id) => {
+    const quem = await fromUuid(ator);
+    if (!quem) return null;
+    if (aviso) ui.notifications.info(aviso);
+    const opcoes = { perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) };
+    const resultado = programa ? await quem.rolarAtaqueDePrograma(quem.items.get(programa), opcoes) : await quem.rolarInterface(rolagem, { ...opcoes, extras: extras ?? [] });
+    janelas.delete(id);
+    return resultado ? { total: resultado.total } : { cancelado: true };
+  },
   deathSave: async ({ ator }, id) => {
     const resultado = await (await fromUuid(ator)).rolarDeathSave({ perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
     janelas.delete(id);

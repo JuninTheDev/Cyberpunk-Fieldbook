@@ -63,7 +63,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | o encontro (a velocidade), o ataque dos inimigos pelo mestre, os efeitos de cada Black ICE na ficha (o fogo, as penalidades, os programas destruídos, o Kraken, o Wisp, o Skunk, o Giant), a desconexão insegura com o efeito | portados no ciclo 53 (o C8, parte 7; ver as dúvidas) |
 | NET Architect | o deck na janela (ativar, desativar e atacar com os programas) | portado no ciclo 54 (o C8, parte 8; ver as dúvidas) |
 | NET Architect | o combate na NET (os inimigos encontrados na iniciativa, com um token escondido; a vez deles pela janela do mestre; a REZ do token e a do estado juntas; a configuração "Inimigos da NET no combate") | portado no ciclo 55 (o C8, parte 9; ver as dúvidas) |
-| NET Architect | as rolagens do jogador, os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | as rolagens do jogador na janela de rolagem dele (a configuração "O jogador rola as rolagens da NET") | portado no ciclo 56 (o C8, parte 10; ver as dúvidas) |
+| NET Architect | os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -319,10 +320,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   desconexão insegura, como o NET Architect. Encontrar o Black ICE vem com o andar e os inimigos (o C8); até lá, não
   há Black ICE encontrado para agir.
 
-- **Quem rola na NET, por enquanto: o mestre.** No NET Architect, com "O jogador rola as próprias rolagens" (ligado de
-  partida), a habilidade abre a janela de rolagem no computador do jogador, e o mestre só rola quando ele não responde
-  a tempo. Aqui, até a parte das rolagens do jogador (C8), o mestre ativo rola a Interface do netrunner (o cartão no
-  chat, com a Sorte que o jogador preparou na ficha). Muda o que a mesa vê; vale só na sistema-v14 até lá.
+- **Quem rola na NET: o jogador, com o prazo da esquiva.** Como no NET Architect, desde o ciclo 56 a configuração "O
+  jogador rola as rolagens da NET" (ligada de partida) abre a janela de rolagem no computador do dono do netrunner: as
+  ações que ele pediu e as reações (a velocidade, a defesa). O prazo é o "Tempo para o jogador responder" da esquiva
+  (60 s de partida, mais 15 s), e não os 120 s da configuração própria do NET Architect. A janela da reação fechada no
+  jogador: o mestre rola (no NET Architect, o jogador rolava assim mesmo, sem os ajustes). A ação que o mestre faz pelo
+  netrunner, pela janela dele, o mestre rola.
 
 - **O Virus de muitas Ações NET.** A wiki: "Ações NET definidas pelo mestre", com exemplos de 1 a 10 Ações (RED p.
   200). O NET Architect gastava sempre 1. Aqui o mestre põe a DV e as Ações NET na hora; em combate elas saem do turno,
@@ -2846,6 +2849,57 @@ quando detecta um intruso"). Commit anterior: `db23c51` (ciclo 54).
   os arquivos copiados; o Scanner e a parede; o editor visual.
 - **Próximo:** o C8, parte 10: o jogador rolando as próprias rolagens na NET, pela janela de rolagem dele (hoje o mestre
   rola, com a Sorte preparada na ficha).
+
+### Ciclo 56 (2026-10-15): o jogador rola na NET (o C8, parte 10; sessão KouArt)
+
+O NET Architect da mesa (o `rolagens.mjs`: a rolagem do netrunner na janela de rolagem do computador do jogador; o
+`rolarNetrunner` do `estado.mjs`: quem rola e o prazo; a configuração "O jogador rola as próprias rolagens", ligada de
+partida). Commit anterior: `9e5309d` (ciclo 55).
+
+- **Implementado:**
+  - **a configuração "O jogador rola as rolagens da NET"** (padrão: ligada, como no NET Architect). Desligada, o mestre
+    rola sempre, com a Sorte preparada na ficha (como até o ciclo 55);
+  - **quem rola:** o motor pede ao dono do netrunner as ações que ele mesmo pediu (as habilidades de Interface, o ataque
+    dos programas) e as reações (a velocidade contra o Black ICE, a defesa), também quando quem provocou foi o mestre (o
+    ataque do inimigo). No computador dele abre a janela de rolagem (os modificadores e a Sorte; com "Rolar direto",
+    rola direto), com o aviso do que é ("Hellhound no andar: role a velocidade…", "Hellhound ataca (8): role a
+    defesa…"), e o cartão sai no nome do netrunner, pelo jogador. A ação que o mestre faz pelo netrunner, o mestre rola;
+  - **a resposta:** na ação, cancelar a janela desfaz a ação ("Rolagem cancelada: nada aconteceu.", sem gastar a Ação
+    NET). Sem resposta no prazo (o "Tempo para o jogador responder", mais 15 s), ou com a janela da reação fechada, o
+    mestre rola, o registro avisa ("Jogador não rolou a tempo: o mestre rolou por …") e a janela do jogador fecha;
+  - **o pedido** é o mesmo da esquiva e do Death Save (o `pedir` do `combate.mjs`, com o tratador "net"). As rolagens do
+    ator passam a janela ao pedido (para o mestre fechá-la no fim do prazo) e aceitam as partes da situação (o Skunk no
+    Slide), no jogador e no mestre;
+  - **as regras sem o Foundry:** quem rola (`quemRolaNaNet`) e o que fazer com a resposta (`respostaDoJogador`).
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 79 de 83. Um teste novo: quem rola (desligada, o mestre; a ação do jogador, ele; a do mestre, o mestre; a reação
+    que o mestre provoca, o dono conectado; desconectado ou sem dono, o mestre) e a resposta (o total, até o 0; a ação
+    cancelada recusada; a reação fechada e o prazo vencido, o mestre rola, com a linha do registro). As 4 falhas são as
+    das armas de 2077 (QUALITY_GATES);
+  - G4: 88 de 93, cerca de 175 s. Um passo novo, nos dois navegadores, com a configuração ligada: a velocidade ao chegar
+    ao Hellhound sai da janela do jogador (o cartão é dele; 13 contra 8); o Zap cancelado na janela não acontece (o
+    aviso, nada no registro); o Zap com 2 de Sorte na janela (12 contra 5; a Sorte sai da ficha, 6 → 4); o ataque do
+    Sword pela janela (12 contra 8); e a defesa contra o ataque que o mestre provoca, que o jogador não rola no prazo (o
+    "Tempo para o jogador responder" em 10 s): o mestre rola (8 contra 13), o registro avisa e a janela do jogador fecha.
+    Os passos da NET dos ciclos 51 a 55 rodam com a configuração desligada (o `montarNet`; o mestre rola, com os dados
+    fixos no navegador dele), e a limpeza fecha a janela de rolagem que sobrar no jogador e religa a configuração. Duas
+    rodadas: a primeira esperou quase 1 hora a mesa do servidor esvaziar e, ao começar, o mundo de teste não ficou pronto
+    no navegador (como na primeira rodada do ciclo 55; a lição está no QUALITY_GATES); a segunda, sem mudança no código,
+    passou. Os avisos do passo "nenhum aviso" foram conferidos: só os dois da Lexington. As 5 falhas são as das armas de
+    2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - G3: a configuração desligada pedindo ao jogador; a ação do mestre indo para o dono; o dono desconectado recebendo o
+      pedido; a ação cancelada seguindo; o total 0 valendo como sem resposta;
+    - G4: a rolagem no jogador sem a janela de rolagem; a janela que não chega ao pedido (o mestre não a fecha no fim do
+      prazo); a defesa que o mestre provoca sem ir para o jogador; o Skunk fora da rolagem do mestre (pega pelo passo do
+      ciclo 53, que roda com a configuração desligada); o ataque do programa sem ir para o jogador; a ação cancelada no
+      jogador seguindo (o passo cai com a linha vazia que ela deixa no registro).
+- **Pendências:** os nós de controle ligados à cena; os arquivos copiados; o Scanner e a parede; o editor visual.
+- **Próximo:** o pedido do usuário de 2026-10-15: a importação dos personagens da wiki no Foundry 12 e no 14 (cada um
+  com o seu vínculo; o Foundry 14 confere se o ator está no mundo e importa de novo quando ele sumiu). A parte da wiki
+  fica no master; a do sistema é o ciclo 57. Depois, o C8, parte 11: os nós de controle ligados à cena.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

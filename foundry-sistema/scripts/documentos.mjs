@@ -128,10 +128,11 @@ export class AtorCPR extends Actor {
 
   // O teste, com ou sem a janela de rolagem (perguntar). A janela mostra as partes fixas e oferece os situacionais, os
   // modificadores comuns, um modificador do mestre e a Sorte; fechada ou cancelada, não rola.
-  async #testarComJanela({ rotulo, perguntar, partes, situacionais }, opcoes) {
+  // aoAbrir: recebe a janela de rolagem quando ela abre (o pedido do mestre a fecha quando o prazo acaba).
+  async #testarComJanela({ rotulo, perguntar, partes, situacionais }, { aoAbrir = null, ...opcoes } = {}) {
     if (!perguntar) return testar(this, { rotulo, partes: partes(null), ...opcoes });
     const fixas = partes([]);
-    const escolha = await perguntarTeste(this, { rotulo, partes: fixas, situacionais: situacionais() });
+    const escolha = await perguntarTeste(this, { rotulo, partes: fixas, situacionais: situacionais(), aoAbrir });
     if (!escolha) return null;
     return testar(this, { rotulo, partes: [...fixas, ...escolha.partes], sorte: escolha.sorte, ...opcoes });
   }
@@ -172,11 +173,12 @@ export class AtorCPR extends Actor {
     const escolhidos = situacionais ?? this.situacionaisDaInterface(id).filter(s => s.ligado);
     return [...partes, ...this.#penalidade(), ...escolhidos.map(({ rotulo, valor }) => ({ rotulo, valor }))];
   }
-  rolarInterface(id, { perguntar = false, ...opcoes } = {}) {
+  // extras: as partes a mais da situação (o Skunk no Slide, na NET).
+  rolarInterface(id, { perguntar = false, extras = [], ...opcoes } = {}) {
     const habilidade = HABILIDADES_DE_INTERFACE.find(h => h.id === id);
     if (!habilidade || !this.system.rankDeInterface) return null;
     return this.#testarComJanela({
-      rotulo: habilidade.rotulo, perguntar, partes: situacionais => this.partesDaInterface(id, { situacionais }), situacionais: () => this.situacionaisDaInterface(id)
+      rotulo: habilidade.rotulo, perguntar, partes: situacionais => [...this.partesDaInterface(id, { situacionais }), ...extras], situacionais: () => this.situacionaisDaInterface(id)
     }, { sabor: `${habilidade.custo}. ${habilidade.dica}`, ...opcoes });
   }
   // O ataque de um programa (regras.DANO_DE_PROGRAMA; o CPRInterfaceRoll "attack" do CORE): o Rank de Interface + o ATK

@@ -309,6 +309,24 @@ export function comecoDoTurno(corredor) {
   return acoes;
 }
 
+// ---------------- Quem rola (o rolagens.mjs do NET Architect) ----------------
+// A rolagem do netrunner, com a configuração "O jogador rola as rolagens da NET" ligada: o jogador que pediu a ação; numa
+// reação (a velocidade contra o Black ICE, a defesa), o dono conectado, mesmo quando quem pediu foi o mestre. null: o
+// mestre rola.
+export function quemRolaNaNet({ ligado, pediu, reacao, dono }) {
+  if (!ligado) return null;
+  if (pediu && !pediu.isGM) return pediu;
+  return reacao && dono?.active && !dono.isGM ? dono : null;
+}
+
+// A resposta do jogador: o total; na ação, a janela cancelada desfaz a ação (o erro); sem resposta no prazo, ou com a
+// janela da reação fechada, o mestre rola (a linha do registro).
+export function respostaDoJogador(resposta, { reacao, jogador, netrunner }) {
+  if (Number.isFinite(resposta?.total)) return { total: resposta.total };
+  if (resposta?.cancelado && !reacao) return { erro: 'Rolagem cancelada: nada aconteceu.' };
+  return { registro: `${jogador} ${resposta?.cancelado ? 'fechou a janela' : 'não rolou a tempo'}: o mestre rolou por ${netrunner}.` };
+}
+
 // ---------------- O deck na janela (a wiki, "Ações NET", "Programas: ataque" e "Combate na NET") ----------------
 // Ativar ou desativar um programa: 1 Ação NET; em combate, cada programa uma vez por rodada. O programa com REZ que está em
 // 0 não ativa (o mestre restaura a REZ na ficha). Devolve o motivo de não poder, ou null.
