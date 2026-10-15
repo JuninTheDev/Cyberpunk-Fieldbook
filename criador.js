@@ -580,7 +580,10 @@
       avisado: `<p class="cc-wait">Mudou depois da importação. O mestre foi avisado em ${sent} e ainda não atualizou.</p>${button('Avisar o mestre de novo')}`,
       'outra-mesa': `<p class="cc-wait">Este personagem veio de outra campanha. A ficha dele está no Foundry da mesa antiga${actor}; o mestre traz para o Foundry desta campanha.</p>`
     }[state] || '';
-    return box('Levar para o Foundry', `${text}<p class="cc-msg" data-cc-send-msg role="status"></p>${papel === 'mestre' ? GM_FOUNDRY_HELP : ''}`, ' data-cc-foundry');
+    // O mestre vê cada Foundry: o ator ligado no 12 e no 14 (e o aviso do 14 quando o ator foi apagado: importar de novo).
+    const tables = papel === 'mestre' ? [[12, doc.foundry12], [14, doc.foundry14]].filter(([, link]) => link && link.importado) : [];
+    const perTable = tables.length ? `<ul class="cc-foundries">${tables.map(([n, link]) => `<li>Foundry ${n}: ${link.removido ? `<span class="cc-wait">o ator <b>${esc(link.nomeAtor || link.ator)}</b> foi apagado em ${when(link.removido)}; importe de novo no Foundry ${n}.</span>` : `ator <b>${esc(link.nomeAtor || link.ator)}</b>, desde ${new Date(link.importado).toLocaleDateString('pt-BR')}.`}</li>`).join('')}</ul>` : '';
+    return box('Levar para o Foundry', `${text}${perTable}<p class="cc-msg" data-cc-send-msg role="status"></p>${papel === 'mestre' ? GM_FOUNDRY_HELP : ''}`, ' data-cc-foundry');
   }
   // Envia e redesenha o quadro. `before` salva o que estiver pendente (no criador).
   async function sendToGm(doc, papel, scope, before) {

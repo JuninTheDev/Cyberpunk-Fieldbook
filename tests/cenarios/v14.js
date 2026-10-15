@@ -5171,6 +5171,48 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...info, wiki: [status(aprovar.id).status, status(recusar.id).status, status(recusar.id).motivo] })];
     });
 
+    await r.passo('wiki no Foundry 12 e no 14: o Netrunner ligado a um ator do Foundry 12 (o vínculo que o módulo cpr-2077 grava) e com o ator do 14 apagado no passo anterior: a wiki guardou o apagado; a janela diz onde ele está e oferece "Importar de novo"; importado, cada Foundry fica com o seu vínculo, e a ficha da mesa vale dos dois atores, não de um terceiro', async () => {
+      // O ator do 14 apagado no passo anterior: a wiki fica sabendo (o aviso vai sem esperar).
+      let antes = null;
+      for (let i = 0; i < 30 && !antes?.foundry14?.removido; i++) {
+        antes = (await api(`/api/personagens/${netrunner.id}`)).personagem;
+        if (!antes?.foundry14?.removido) await edge.sleep(200);
+      }
+      // O Foundry 12 liga o Netrunner a um ator dele (o módulo cpr-2077 manda sem geracao).
+      await api(`/api/personagens/${netrunner.id}/foundry`, 'PUT', { ator: 'ator-do-12', nomeAtor: 'Netrunner no 12' });
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        await game.system.api.abrirJanelaDaWiki();
+        const janela = () => foundry.applications.instances.get('${S}-wiki')?.element;
+        const linha = (seletor = '') => janela()?.querySelector('ol.personagens li[data-wiki-id="${netrunner.id}"]' + seletor);
+        await esperar(() => linha(' [data-action="importar"]'));
+        const situacao = linha(' small')?.textContent.trim();
+        const botao = linha(' [data-action="importar"]')?.textContent.trim();
+        linha(' [data-action="importar"]').click();
+        // A janela é a mesma do passo anterior (o "importado" dele ainda está no alto): espera o ator novo.
+        const doNetrunner = () => game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(netrunner.id)});
+        await esperar(() => doNetrunner() && linha(' [data-action="abrir"]'));
+        const ator = doNetrunner();
+        const depois = linha(' small')?.textContent.trim();
+        // A ficha da mesa do 14 vai para a wiki.
+        await game.system.api.wiki.mandarFicha(ator);
+        await foundry.applications.instances.get('${S}-wiki').close();
+        return { situacao, botao, ator: ator?.id ?? null, depois };
+      })()`);
+      const doc = (await api(`/api/personagens/${netrunner.id}`)).personagem;
+      // A ficha da mesa do ator do 12 ainda vale; a de um terceiro, não.
+      const mesa = ator => fetch(`${wiki}/api/personagens/${netrunner.id}/mesa`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ator, hp: { atual: 20, max: 40 } }) });
+      const [do12, deOutro] = [(await mesa('ator-do-12')).status, (await mesa('ator-velho')).status];
+      // O ator do 14 sai de novo (a wiki marca o apagado), como no passo anterior.
+      await edge.evaluate(`(async () => { await game.actors.get(${JSON.stringify(info.ator)})?.delete(); return true; })()`);
+      const ok = Boolean(antes?.foundry14?.removido)
+        && /O ator do Foundry 14 \(.+\) foi apagado em /.test(info.situacao) && /No Foundry 12: Netrunner no 12\./.test(info.situacao) && info.botao === 'Importar de novo'
+        && Boolean(info.ator) && /^Neste mundo: /.test(info.depois)
+        && doc.foundry12?.ator === 'ator-do-12' && doc.foundry14?.ator === info.ator && !doc.foundry14?.removido && doc.foundry14?.geracao === 14 && doc.mesa?.geracao === 14
+        && do12 === 200 && deOutro === 409;
+      return [ok, JSON.stringify({ antes: { f12: antes?.foundry12?.ator ?? null, f14: antes?.foundry14?.ator ?? null, removido: antes?.foundry14?.removido ?? null }, info, depois: { f12: doc.foundry12?.ator, f14: doc.foundry14?.ator, removido: doc.foundry14?.removido ?? null, mesa: doc.mesa?.geracao }, do12, deOutro })];
+    });
+
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {
         // As voltas da ficha que estão esperando vão antes de a wiki "cair".

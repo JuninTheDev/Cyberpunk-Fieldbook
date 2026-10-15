@@ -51,6 +51,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
 | cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
 | cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
+| cpr-2077 | a importação no Foundry 12 e no 14 ao mesmo tempo (cada um com o seu vínculo na wiki) | nova no ciclo 57 (o pedido do usuário; o módulo do 12 não muda; ver as dúvidas) |
 | cpr-2077 | avisos de envio, a campanha da wiki de cada mundo, crossover entre campanhas, Atualizar da wiki, retrato | falta |
 | CORE | a Interface do Netrunner (as 9 habilidades, a Defesa e a Velocidade, as Ações NET, os boosters ativos) | portada no ciclo 40 |
 | CORE | os programas no combate da NET (a REZ, o ataque, o dano sem crítico; o dano no cérebro e num programa, pelo mestre) | portados nos ciclos 41 e 42 (o Shield e o Armor pela wiki) |
@@ -378,6 +379,19 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   reiniciar. A wiki não diz como o netrunner inimigo entra: o que tem ficha entra com a iniciativa dela (REF + 1d10,
   rolada pelo mestre); sem ficha, não entra. Fora da NET (o cérebro em 0), ele não fica derrotado sozinho: vale a
   ficha dele. A configuração "Inimigos da NET no combate" (padrão: ligada) desliga tudo isso.
+
+- **O Foundry 12 não avisa o ator apagado.** O módulo cpr-2077 do 12 não mudou (a decisão do usuário: não há Foundry 12
+  neste PC para testar de ponta a ponta). Ele grava o vínculo do 12 como antes, e no 12 importar de novo continua
+  criando outro ator (o vínculo passa a ele). Só o 14 avisa a wiki quando o ator ligado é apagado.
+
+- **Com os dois vínculos, a wiki segue o do 12.** O estado do personagem na wiki ("no Foundry", "mudou depois de
+  importar"), o ator que ela mostra e o crossover seguem o vínculo do 12; o do 14 vale sozinho para quem só foi para
+  ele. O mestre vê os dois no quadro "Levar para o Foundry". A ficha da mesa é a última que chegou (do 12 ou do 14: a
+  mesa roda um por vez), e a janela do 14 diz de qual Foundry ela é.
+
+- **O pedido aprovado entrega no primeiro Foundry que o pegar.** Com os dois ligados, o pedido da loja aprovado na wiki
+  é entregue pelo Foundry que estiver aberto (o 12 ou o 14), e o outro não entrega de novo: os itens ficam no ator
+  daquele Foundry.
 
 - **O Slide: uma vez por turno, e só até sair do andar.** A wiki: "1 Ação NET (1×/turno)". O NET Architect não contava
   as vezes; aqui, em combate, o segundo Slide do turno é recusado (fora de combate, não há turno). Como no NET Architect,
@@ -2900,6 +2914,65 @@ partida). Commit anterior: `9e5309d` (ciclo 55).
 - **Próximo:** o pedido do usuário de 2026-10-15: a importação dos personagens da wiki no Foundry 12 e no 14 (cada um
   com o seu vínculo; o Foundry 14 confere se o ator está no mundo e importa de novo quando ele sumiu). A parte da wiki
   fica no master; a do sistema é o ciclo 57. Depois, o C8, parte 11: os nós de controle ligados à cena.
+
+### Ciclo 57 (2026-10-15): a importação da wiki no Foundry 12 e no 14 (o pedido do usuário; sessão KouArt)
+
+O pedido do usuário (2026-10-15): os personagens da wiki podem ser importados tanto no Foundry 12 quanto no 14, com a
+conferência de que o personagem ainda está na mesa e a importação de novo quando precisar. As decisões dele: só a wiki e
+o Foundry 14 mudam (o módulo cpr-2077 do 12 fica como está: não há Foundry 12 neste PC para testar de ponta a ponta), e
+"Importar de novo" aparece quando o ator não está no mundo (com o ator lá, abre a ficha). A causa: a wiki guardava um
+vínculo só por personagem, e importar no 14 tornava o ator do 12 um "ator antigo" (a ficha da mesa e as entregas dele
+eram recusadas), e vice-versa. Commit anterior: `1970c40` (ciclo 56).
+
+- **Implementado:**
+  - **na wiki** (o `api-personagens.js`, o mesmo no master, que o usuário publica): cada Foundry com o seu vínculo. O do
+    12 continua em `doc.foundry` (o módulo cpr-2077 grava sem mudar); o do 14 em `doc.foundry14` (o sistema manda
+    `geracao: 14`). A ficha da mesa e as entregas dos pedidos valem dos atores ligados nos dois; de um terceiro, não (o
+    "ator antigo" continua valendo dentro de cada Foundry: reimportar no 14 só troca o do 14). O 14 avisa quando o ator
+    ligado é apagado (`removido`, com a data; o aviso de outro ator não muda nada). A wiki mostra um vínculo só (o do
+    12, ou o do 14 para quem só foi para ele: conta como importado, com pedidos e a ficha travada) e, ao mestre, os dois
+    à parte (`foundry12`, `foundry14`), que o jogador não vê. O jogador salvar a ficha mantém o vínculo do 14. O quadro
+    "Levar para o Foundry" mostra ao mestre o ator de cada Foundry e o aviso do apagado;
+  - **no sistema:** a importação (da criação e da mesa), a ficha da mesa e o aviso do ator apagado vão com
+    `geracao: 14`. A janela "Personagens da wiki" diz onde o personagem está (neste mundo; o ator do Foundry 14
+    apagado, ou em outro mundo; no Foundry 12; a ficha da mesa e de qual Foundry ela veio) e, sem o ator neste mundo,
+    oferece "Importar" ou, se ele já esteve no 14, "Importar de novo".
+- **Testes:**
+  - G1: 0 erros;
+  - G2: 0 erros;
+  - G3: 79 de 83 (sem teste novo: a regra nova é da API da wiki, testada no cenário dela). As 4 falhas são as das armas
+    de 2077 (QUALITY_GATES);
+  - **wiki** (o cenário `contas`, aqui e no master): 36 de 36. Um passo novo: o 14 importa com `geracao: 14` sem tirar o
+    12; a ficha da mesa vale dos dois atores, não de um terceiro; reimportar no 14 torna antigo só o ator velho do 14; o
+    aviso do apagado de outro ator não muda nada, e o do ator ligado marca a data; o jogador não vê os vínculos à parte, e
+    salvar a ficha mantém o do 14; o personagem só do 14 conta como importado e faz pedidos. O passo do "ator antigo"
+    (dentro do 12) continua passando;
+  - G4: 89 de 94, cerca de 170 s. Um passo novo: o Netrunner, cujo ator do 14 o passo anterior apagou, ligado a um ator
+    do Foundry 12 (como o módulo cpr-2077 grava): a wiki guardou o apagado; a janela diz "O ator do Foundry 14 (…) foi
+    apagado em … No Foundry 12: …" e oferece "Importar de novo"; importado, cada Foundry fica com o seu vínculo (o do 14
+    sem o apagado), a ficha da mesa chega com o Foundry 14, e a ficha do ator do 12 ainda vale (a de um terceiro, não).
+    Duas rodadas: na primeira, o passo leu o "importado" que o passo anterior deixou no alto da janela (a mesma janela) e
+    não esperou o ator novo; ele passou a esperar o ator, e a segunda passou. Os avisos do passo "nenhum aviso" foram
+    conferidos: só os dois da Lexington. As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **mutações:** cada uma destas derrubou o teste dela, e os arquivos foram restaurados (conferido pelo md5):
+    - wiki: a ficha da mesa só do ator do 12; a geracao ignorada (o 14 por cima do 12); o aviso do apagado sem conferir o
+      ator; o salvamento do jogador perdendo o vínculo do 14; o jogador vendo os vínculos à parte;
+    - G4: o ator apagado sem avisar a wiki; o Foundry 14 gravando como o 12 (o vínculo do 12 por cima); a janela sem
+      "Importar de novo"; a janela sem dizer que o ator do 14 foi apagado; a ficha da mesa sem o Foundry. A última
+      precisou de quatro rodadas: na primeira, a mesa do servidor estava em uso, e o G4 pulou a parte do Foundry (5
+      passos; não vale); nas duas seguintes, o mundo de teste não ficou pronto (a corrida dos endereços, abaixo); na
+      quarta, depois da correção do `entrarComo`, ela caiu no passo dela.
+  - **o mundo de teste que não ficava pronto** (o ajudante dos testes, `tests/lib/foundry14.js`): nos ciclos 55, 56 e 57
+    o G4 caiu algumas vezes no começo. O `servidor.log` do Foundry de teste mostra a causa: o Foundry 14 aceita a entrada
+    antes de saber os próprios endereços, e o envio do mundo cai em `Express.getInvitationLinks` ("reading 'local'"). O
+    `subir` já esperava 2 s por isso, e nem sempre basta (aqui, três rodadas seguidas). O `entrarComo` passa a entrar de
+    novo uma vez quando o mundo não ficou pronto e o log tem esse erro, e avisa no relatório; outro motivo, ou a segunda
+    vez, derruba o passo como antes. A segunda entrada ainda não foi exercida (as rodadas depois da correção abriram de
+    primeira). A lição está no QUALITY_GATES;
+- **Pendências:** a parte da wiki está no master sem commit: o usuário publica (o `api-personagens.js`, o `criador.js`,
+  o cenário `contas` e o README da wiki). Os nós de controle ligados à cena; os arquivos copiados; o Scanner e a parede;
+  o editor visual.
+- **Próximo:** o C8, parte 11: os nós de controle ligados à cena.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

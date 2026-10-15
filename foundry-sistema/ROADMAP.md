@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 57). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 58). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -306,6 +306,9 @@ No fim de tudo, uma sessão de teste com a mesa.
   Foundry 12 manda para a wiki (Ciclo 15). Procedimento no MIGRATION_STATUS.
 - [x] **Da wiki, a janela "Personagens da wiki"** (botão na aba de Atores): Importar, Importar da mesa, abrir a ficha,
   aprovar e recusar pedidos (Ciclo 16).
+- [x] **Da wiki, o Foundry 12 e o 14 juntos** (o pedido do usuário de 2026-10-15): cada Foundry com o seu vínculo na
+  wiki (o 14 manda `geracao: 14`); a janela diz onde o personagem está e importa de novo quando o ator do 14 sumiu; o
+  ator apagado avisa a wiki (Ciclo 57; a parte da wiki também no master, para o usuário publicar).
 - [ ] **Da wiki, o resto:** (→ C27) "Atualizar da wiki" (hoje, importar de novo cria outro ator), os avisos de envio, o retrato e
   a campanha da wiki de cada mundo (a janela lista os personagens de todas as campanhas).
 - [x] **A mesa no servidor e a migração** (Ciclo 31):

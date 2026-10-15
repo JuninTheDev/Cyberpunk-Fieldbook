@@ -77,9 +77,25 @@ async function subir() {
   throw new Error(`O Foundry 14 de teste não abriu o mundo (veja ${path.join(PASTA, 'servidor.log')}).`);
 }
 
-// Entra com um usuário pelo nome (sem senha no mundo de teste) e espera o jogo ficar pronto.
-// O Foundry 14 chama o campo de "userId"; o 12 chamava de "userid".
+// A corrida dos endereços (ver subir): o envio do mundo caiu porque o Foundry ainda não sabia os próprios endereços
+// ("reading 'local'" no servidor.log, em Express#getInvitationLinks), mesmo depois da espera de 2 s.
+const semEnderecos = () => {
+  try { return /reading 'local'/.test(fs.readFileSync(path.join(PASTA, 'servidor.log'), 'utf8')); } catch { return false; }
+};
+
+// Entra com um usuário pelo nome (sem senha no mundo de teste) e espera o jogo ficar pronto. Se o mundo não ficou pronto
+// pela corrida dos endereços, entra de novo uma vez (aí o Foundry já os sabe); qualquer outro motivo, ou a segunda vez,
+// derruba o passo como antes.
 async function entrarComo(edge, url, nome) {
+  try {
+    await entrarUmaVez(edge, url, nome);
+  } catch (erro) {
+    if (!semEnderecos()) throw erro;
+    console.log('  (o Foundry de teste ainda não sabia os próprios endereços ao enviar o mundo: entrando de novo)');
+    await entrarUmaVez(edge, url, nome);
+  }
+}
+async function entrarUmaVez(edge, url, nome) {
   const padrao = nome instanceof RegExp ? nome : new RegExp(`^\\s*${nome}\\s*$`);
   const seletor = 'select[name="userId"], select[name="userid"]';
   await edge.send('Page.navigate', { url: `${url}/join` });

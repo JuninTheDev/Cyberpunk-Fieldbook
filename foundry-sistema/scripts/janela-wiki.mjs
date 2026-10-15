@@ -1,6 +1,7 @@
-// A janela "Personagens da wiki" (só o mestre), com o botão na aba de Atores: cada personagem da wiki com o que dá para
-// fazer neste mundo (importar da criação, importar da mesa do Foundry 12, abrir a ficha) e os pedidos da loja que esperam
-// o mestre (aprovar, que entrega na hora, ou recusar). Os avisos da última importação ficam no alto da janela.
+// A janela "Personagens da wiki" (só o mestre), com o botão na aba de Atores: cada personagem da wiki com onde ele está
+// (neste mundo; no Foundry 12; o ator do Foundry 14 apagado ou em outro mundo) e o que dá para fazer aqui (importar da
+// criação, importar da ficha da mesa, importar de novo quando o ator deste Foundry sumiu, abrir a ficha) e os pedidos da
+// loja que esperam o mestre (aprovar, que entrega na hora, ou recusar). Os avisos da última importação ficam no alto.
 import { caminho, SISTEMA } from './config.mjs';
 import * as wiki from './wiki.mjs';
 
@@ -39,10 +40,20 @@ export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {
         ultimo: this.#ultimo, jogadores,
         personagens: personagens.map(p => {
           const ator = atorDa(p.id);
-          const situacao = ator ? `Neste mundo: ${ator.name}.`
-            : p.mesa ? `Ficha da mesa do Foundry 12${p.mesa.hp ? ` (HP ${p.mesa.hp.atual}/${p.mesa.hp.max})` : ''}, de ${quando(p.mesa.recebido)}.`
-              : p.foundry?.importado ? 'Importado em outro mundo.' : 'Ainda não foi para o Foundry.';
-          return { id: p.id, nome: p.nome || 'Sem nome', apelido: p.apelido, role: p.role ? p.role[0].toUpperCase() + p.role.slice(1) : '', donoNome: p.donoNome || 'sem dono', ator: Boolean(ator), mesa: Boolean(p.mesa), situacao, donoSugerido: dono(p.donoNome) };
+          // Onde ele está: neste mundo; senão, o vínculo deste Foundry (o ator apagado, ou em outro mundo), o do Foundry 12 e
+          // a ficha da mesa. Uma wiki sem os vínculos à parte (foundry12, foundry14) cai no "Importado em outro mundo".
+          const no14 = p.foundry14;
+          const nomeDe = vinculo => vinculo.nomeAtor || vinculo.ator;
+          const frases = ator ? [`Neste mundo: ${ator.name}.`] : [
+            no14?.removido ? `O ator do Foundry 14 (${nomeDe(no14)}) foi apagado em ${quando(no14.removido)}.` : no14 ? `No Foundry 14, o ator ${nomeDe(no14)} não está neste mundo.` : '',
+            p.foundry12 ? `No Foundry 12: ${nomeDe(p.foundry12)}.` : '',
+            p.mesa ? `Ficha da mesa do Foundry ${p.mesa.geracao ?? 12}${p.mesa.hp ? ` (HP ${p.mesa.hp.atual}/${p.mesa.hp.max})` : ''}, de ${quando(p.mesa.recebido)}.` : ''
+          ].filter(Boolean);
+          const situacao = frases.join(' ') || (p.foundry?.importado ? 'Importado em outro mundo.' : 'Ainda não foi para o Foundry.');
+          return {
+            id: p.id, nome: p.nome || 'Sem nome', apelido: p.apelido, role: p.role ? p.role[0].toUpperCase() + p.role.slice(1) : '', donoNome: p.donoNome || 'sem dono', ator: Boolean(ator),
+            mesa: Boolean(p.mesa), mesaDoFoundry: p.mesa?.geracao ?? 12, reimportar: Boolean(no14), situacao, donoSugerido: dono(p.donoNome)
+          };
         }),
         pedidos: pedidos.map(({ wikiId, nome, pedido }) => ({
           wikiId, nome, id: pedido.id, total: pedido.total, erro: pedido.erro || '', nota: pedido.nota || '', temAtor: Boolean(atorDa(wikiId)),

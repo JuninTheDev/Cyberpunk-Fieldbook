@@ -61,11 +61,13 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   a mesa a cada 2 minutos). Não contorne a checagem. Para mudar o código durante a espera, pare o laço só antes de ele
   começar o G4; se já começou, deixe terminar. O instalador copia o sistema no começo do G4, e a rodada fica com a versão
   de antes: serve de pista, não de portão (ciclo 36).
-- **O mundo de teste que não fica pronto:** a primeira rodada do G4 depois de muito tempo parado (no ciclo 56, quase 1
-  hora esperando a mesa do servidor) pode cair no começo, com "O mundo de teste não ficou pronto no navegador" em 60 s,
-  e todos os passos seguintes caem com ela. Aconteceu nos ciclos 55 e 56, e nas duas vezes a rodada seguinte, sem
-  mudança no código, abriu o mundo. Rode de novo antes de procurar o defeito; se a segunda também não abrir, é o código
-  (um erro no carregamento do sistema).
+- **O mundo de teste que não fica pronto:** o Foundry 14 aceita a entrada antes de saber os próprios endereços (logo
+  depois de "Server started"), e quem entra nesse intervalo derruba o envio do mundo: o `servidor.log` do Foundry de
+  teste (`%LOCALAPPDATA%\FieldbookTeste\foundry14`) mostra "Cannot read properties of null (reading 'local')" em
+  `Express.getInvitationLinks`, e o navegador fica sem o mundo ("O mundo de teste não ficou pronto no navegador"; os
+  passos seguintes caem todos). A espera de 2 s depois de subir nem sempre basta: aconteceu nos ciclos 55, 56 e 57 (no
+  57, em três rodadas seguidas). Desde o ciclo 57, o `entrarComo` entra de novo uma vez quando o log tem esse erro, e
+  o relatório avisa; outro motivo, ou a segunda vez, derruba o passo como antes.
 - **A ordem do que o `createEmbeddedDocuments` devolve:** criando vários documentos de uma vez (tokens, combatentes), a
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do

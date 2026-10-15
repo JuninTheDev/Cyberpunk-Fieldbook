@@ -32,8 +32,8 @@
       <button type="button" data-action="abrir">Abrir ficha</button>
       {{else}}
       <select name="dono-{{id}}" aria-label="Dono no Foundry">{{selectOptions ../jogadores selected=donoSugerido}}</select>
-      <button type="button" data-action="importar" data-tooltip="O personagem como foi criado na wiki">Importar</button>
-      {{#if mesa}}<button type="button" data-action="importarDaMesa" data-tooltip="O personagem como está na mesa do Foundry 12">Importar da mesa</button>{{/if}}
+      <button type="button" data-action="importar" data-tooltip="O personagem como foi criado na wiki">{{#if reimportar}}Importar de novo{{else}}Importar{{/if}}</button>
+      {{#if mesa}}<button type="button" data-action="importarDaMesa" data-tooltip="O personagem como está na ficha da mesa do Foundry {{mesaDoFoundry}}">Importar da mesa</button>{{/if}}
       {{/if}}
     </li>
     {{else}}<li class="vazio">Nenhum personagem na wiki.</li>{{/each}}

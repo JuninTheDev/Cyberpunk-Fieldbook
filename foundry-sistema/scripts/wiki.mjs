@@ -4,11 +4,16 @@
 //   no deck, acessórios na arma, veículos da família). Os itens vêm de dados/catalogo.json pelo mesmo id da loja da wiki
 //   ("core_weapons:assault-rifle"); o que não existir vira um aviso, e o resto entra.
 // - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra.
+// - O vínculo deste Foundry: a importação, a ficha da mesa e o ator apagado vão para a wiki com geracao: 14 (o vínculo do
+//   Foundry 14, ao lado do vínculo do 12, que o módulo cpr-2077 grava). Um não derruba o outro.
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { linhaDoExtrato } from './regras.mjs';
+
+// O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
+const GERACAO = 14;
 
 // O extrato de quem chega da wiki: uma linha para cada valor que não começa em zero (o dinheiro inicial, como o
 // cpr-2077 fazia no ledger do CORE).
@@ -194,7 +199,7 @@ export async function importarPersonagem(id, donoId = '') {
   // A wiki passa a mostrar o personagem como "no Foundry".
   // Entregues: só o que entrou na ficha. O que virou aviso fica de fora, para uma atualização futura poder trazê-lo.
   const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
-  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues } })
+  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
 }
@@ -228,7 +233,7 @@ export function fichaParaAWiki(ator) {
     return linha;
   });
   return {
-    ator: ator.id, nomeAtor: ator.name, quando: new Date().toISOString(),
+    ator: ator.id, nomeAtor: ator.name, quando: new Date().toISOString(), geracao: GERACAO,
     stats: Object.fromEntries(Object.entries(s.atributos).map(([chave, atributo]) => [chave.toUpperCase(), chave === 'emp' ? s.empAtual : atributo.valor])),
     hp: { atual: s.hp.value, max: s.hp.max }, humanidade: { atual: s.humanidade.value, max: s.humanidade.max }, sorte: { atual: s.sorte.value, max: s.sorte.max },
     sp: { cabeca: s.armadura.cabeca.sp, corpo: s.armadura.corpo.sp }, dinheiro: s.dinheiro, ip: s.pontosDeMelhoria, reputacao: s.reputacao,
@@ -290,6 +295,13 @@ function registrarVoltaParaWiki() {
   });
   // Ao entrar: manda todos os atores da wiki uma vez.
   Hooks.once('ready', () => { for (const ator of game.actors) agendarVolta(ator); });
+  // O ator ligado apagado: a wiki fica sabendo (no vínculo deste Foundry), e o personagem pode ser importado de novo.
+  Hooks.on('deleteActor', ator => {
+    const vinculo = ator.getFlag(SISTEMA, 'wiki');
+    if (!vinculo?.id || ator.isToken || !souOMestreAtivo()) return;
+    wikiFetch(`/api/personagens/${vinculo.id}/foundry`, { method: 'PUT', body: { geracao: GERACAO, ator: ator.id, removido: true } })
+      .catch(erro => console.debug(`${SISTEMA} | wiki: ator apagado`, erro.message));
+  });
 }
 
 // ---------------- Pedidos da loja ----------------
@@ -470,7 +482,7 @@ export async function importarDaMesa(id, donoId = '') {
   if (opcoesDeCyberware) notas.push('Opções de cyberware: entram instaladas, mas este sistema ainda não liga a opção à base.');
 
   const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
-  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues } })
+  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
 }
