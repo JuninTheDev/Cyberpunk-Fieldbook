@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 62). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 63). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -343,8 +343,9 @@ No fim de tudo, uma sessão de teste com a mesa.
   Consciência de Combate.
 - [x] **A ficha, o resto do visual e da Role** (Ciclo 20): os cartões do chat no visual da ficha e a conferência dos
   pontos de Role pelo Rank.
-- [~] **O visual novo** (o pedido do usuário de 2026-10-15, com as maquetes dele em `Exemplos/`, fora do git): Em
-  andamento: sessão KouArt, 2026-10-15. Em partes, cada uma com os mesmos textos e ganchos que os testes leem:
+- [x] **O visual novo** (o pedido do usuário de 2026-10-15, com as maquetes dele em `Exemplos/`, fora do git): feito
+  pela sessão KouArt, ciclos 58 a 62, em partes, cada uma com os mesmos textos e ganchos que os testes leem. As funções
+  das maquetes que o sistema não tem ficaram como pergunta ao usuário (MIGRATION_STATUS, dúvidas):
   - [x] a janela da NET, além da maquete (que não cobre tudo): o topo com a conexão e o netrunner (a Interface, a Sorte
     preparada, as Ações NET em losangos e a desconexão insegura); os avisos lado a lado; o mapa com a cor do que manda
     em cada andar e um cabo até o andar de onde se chega; ao lado, quem está na NET, o painel do mestre, o andar
@@ -359,7 +360,8 @@ No fim de tudo, uma sessão de teste com a mesa.
   - [x] a ficha, parte 2: as abas Role (a Role em grande à esquerda; as especialidades com os pontos em caixas), NET
     (a Interface em grande e os cyberdecks à esquerda; as habilidades em cartões e os programas) e Vida (o Lifepath em
     cinco painéis): ciclo 61;
-  - [ ] as fichas dos itens.
+  - [x] as fichas dos itens: o tipo na cor dele, o resumo e as etiquetas no alto; as abas Detalhes, Descrição e
+    Efeitos; os campos em células; o uso em três botões (a ficha da arquitetura não mudou): ciclo 62.
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
   cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança
   direta); o mestre tira linhas, desfazendo ou não a mudança; a importação, a migração e a loja da wiki escrevem as

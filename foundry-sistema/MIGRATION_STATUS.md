@@ -67,7 +67,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | as rolagens do jogador na janela de rolagem dele (a configuração "O jogador rola as rolagens da NET") | portado no ciclo 56 (o C8, parte 10; ver as dúvidas) |
 | NET Architect | a janela da NET no visual novo (o topo com o netrunner e as Ações NET em losangos, o mapa com a cor de cada andar e os cabos, o painel ao lado, as habilidades com a base da rolagem, o registro com a hora) | refeita no ciclo 58 (o pedido do usuário, a partir da maquete dele, que não cobre tudo) |
 | sistema | os cartões do chat no visual novo (a faixa e o tipo na linha de cima, os dados em caixas com o total grande, as etiquetas do resultado e a barra de HP) | refeitos no ciclo 59 (o pedido do usuário, pela maquete dele; os botões da maquete sem função no sistema ficaram de fora) |
-| sistema | a ficha nas abas das maquetes (Combate, Equipamento, Cyberware, Role e NET em duas colunas, com os números em grande; a Vida em painéis) | refeitas nos ciclos 60 e 61 (as fichas dos itens, depois; as funções das maquetes que o sistema não tem ficaram de fora) |
+| sistema | a ficha nas abas das maquetes (Combate, Equipamento, Cyberware, Role e NET em duas colunas, com os números em grande; a Vida em painéis) e as fichas dos itens (o tipo na cor, as abas, as células) | refeitas nos ciclos 60 a 62 (as funções das maquetes que o sistema não tem ficaram de fora) |
 | NET Architect | os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
@@ -473,7 +473,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **o +1 entra em toda Evasão da rodada:** na conta da janela de reação, na esquiva e na escolha automática dos NPCs.
     No Fluxo, entrava só na esquiva.
 
-- **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 a 61): pergunta ao usuário.** As maquetes
+- **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 a 62): pergunta ao usuário.** As maquetes
   de 2026-10-15 mostram botões e campos sem função no sistema hoje. O visual seguiu as maquetes só com o que existe; cada
   um destes vira um item, se o usuário quiser:
   - **no chat:** "+ Luck" e "Reroll" no cartão do teste (a Sorte se prepara na ficha antes), "Add to tracker" na
@@ -484,7 +484,9 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     a quantidade com − e + e "Use" no equipamento, a hierarquia de fundação e opções no cyberware ("+ Foundation",
     "+ Option") e as notas de ciberpsicose (ciclo 60); as notas de Role, "Jack in" e "Jack out" na ficha, os slots do
     deck em barras, a arquitetura ao vivo na aba NET, o estado de cada programa (guardado, carregado, ativo) e "Run"
-    (ciclo 61).
+    (ciclo 61);
+  - **na ficha do item** (ciclo 62): "Attack", "Reload", "Repair", "Ablate", "Install option", "Roll humanity", "Run",
+    "Reset REZ", "Use", "Drop", "Quick fix" e "Treat", os "hits taken" e a trilha do SP da armadura.
 
 ## Registro dos ciclos
 
@@ -3209,6 +3211,40 @@ As maquetes "Role Tab", "Net Tab" e "Lifepath Tab", no mesmo padrão do ciclo 60
 - **Pendências:** as fichas dos itens (a maquete "Item Sheets"); as perguntas das maquetes (ver as dúvidas). Depois, o
   C8, parte 11: os nós de controle ligados à cena.
 - **Próximo:** as fichas dos itens (ciclo 62).
+
+### Ciclo 62 (2026-10-15): as fichas dos itens no visual novo (o pedido do usuário; sessão KouArt)
+
+A última parte do pedido de 2026-10-15: a maquete "Item Sheets". Commit anterior: `bea6c77` (ciclo 61).
+
+- **Implementado** (`templates/item.hbs`, `scripts/ficha-item.mjs` e `styles/tema.css`; a ficha da arquitetura, com o
+  mapa, não mudou):
+  - **no alto:** o tipo na cor dele (vermelho na arma e na lesão; ciano no cyberware, no programa e no cyberdeck;
+    amarelo no resto) e "FICHA DO ITEM"; o retrato, o nome, o resumo do item por tipo (`cabecalhoDoItem`: a perícia e o
+    alcance da arma, o SP da armadura, o tipo e a perda de Humanidade do cyberware, a classe do programa e onde ele
+    está...) e as etiquetas (a qualidade, a penalidade, o uso; cheias, as que valem agora: equipado, vestido,
+    instalado, ativo);
+  - **as abas** Detalhes, Descrição e Efeitos (as abas do `ApplicationV2`, `TABS`): os campos em células (o rótulo
+    pequeno em cima, o valor grande embaixo, a borda na cor do tipo), os de marcar em caixas, e o uso (equipamento,
+    roupa, droga, cyberdeck) em três botões lado a lado, no lugar da lista (grava igual, `system.uso`);
+  - os campos e os botões que os testes usam continuam os mesmos, pelo `name` e pela ação.
+- **Fora, de propósito:** os botões da maquete que a ficha do item não tem ("Attack", "Reload", "Repair", "Ablate",
+  "Install option", "Roll humanity", "Run", "Reset REZ", "Use", "Drop", "Quick fix", "Treat"), os "hits taken" e a trilha
+  do SP da armadura: o ataque, a recarga, a REZ e a instalação ficam na ficha do personagem. Ver as dúvidas.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 90 de 95, 171 s, de primeira (95 passos com o novo). As 5 falhas são as das armas de 2077, e os avisos do passo
+    "nenhum aviso", só os dois da Lexington. Um passo novo, a ficha do item no jeito da maquete: numa pistola do catálogo, o tipo traduzido e na cor
+    da arma, o resumo ("Armas de uma Mão // à distância", do catálogo), a etiqueta da qualidade ("Padrão"), as três abas
+    com os Detalhes abertos, as células, e a troca para a Descrição pelo clique (os Detalhes somem); num cyberdeck, a cor
+    dele, os três botões do uso e a troca pelo clique, que grava no item. As capturas das duas fichas foram
+    conferidas;
+  - **mutações:** as 6 derrubaram o passo da ficha do item, e os arquivos voltaram (conferido pelo md5): a ficha abrindo
+    na Descrição (I1), a arma sem a cor dela (I2), o resumo da arma sem o alcance (I3), o uso com o nome errado, que não
+    grava (I4), a etiqueta da qualidade sumindo (I5) e o tipo sem o rótulo traduzido (I6). Nenhuma rodada deixou Edge
+    nem perfil para trás.
+- **Pendências:** as perguntas das maquetes (ver as dúvidas). Com isto, o pedido do visual novo está feito; volta o C8,
+  parte 11: os nós de controle ligados à cena.
+- **Próximo:** o C8, parte 11 (ciclo 63).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

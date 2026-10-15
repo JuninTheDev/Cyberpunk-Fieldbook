@@ -284,6 +284,55 @@ module.exports = async ({ edge, servidores, r }) => {
         JSON.stringify(info)];
     });
 
+    await r.passo('ficha do item no jeito da maquete "Item Sheets" do usuário: o tipo na cor dele, o resumo e as etiquetas no alto; as abas Detalhes, Descrição e Efeitos, trocadas pelo clique; os campos em células; o uso em três botões, que gravam', async () => {
+      const arma = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const criados = await Item.implementation.create([foundry.utils.deepClone(cat['core_weapons:heavy-pistol']), foundry.utils.deepClone(cat['core_gear:cyberdeck'])]);
+        window.__itensDaFicha = { arma: criados.find(i => i.type === 'arma'), deck: criados.find(i => i.type === 'cyberdeck') };
+        const item = window.__itensDaFicha.arma;
+        await item.sheet.render({ force: true });
+        await esperar(() => item.sheet.element?.querySelector('.ficha-de-item .tab.detalhes label.celula'));
+        const f = () => item.sheet.element;
+        const lido = {
+          tipo: textoDe(f().querySelector('.linha-tipo .tipo')), rotulo: game.i18n.localize(CONFIG.Item.typeLabels.arma), resumo: textoDe(f().querySelector('.resumo')),
+          etiquetas: [...f().querySelectorAll('.etiqueta')].map(textoDe), abas: [...f().querySelectorAll('.abas-do-item a')].map(a => a.dataset.tab + (a.classList.contains('active') ? '*' : '')).join(),
+          celulas: f().querySelectorAll('.tab.detalhes label.celula').length, cor: getComputedStyle(f().querySelector('.ficha-de-item')).getPropertyValue('--cor-tipo').trim()
+        };
+        // A troca de aba pelo clique: a Descrição aparece e os Detalhes somem; de volta, para a captura.
+        f().querySelector('.abas-do-item a[data-tab="descricao"]').click();
+        await esperar(() => f().querySelector('.tab.descricao.active'));
+        lido.depois = [...f().querySelectorAll('section.tab')].map(s => s.dataset.tab + (s.classList.contains('active') ? '*' : '')).join();
+        lido.detalhesSomem = getComputedStyle(f().querySelector('.tab.detalhes')).display;
+        f().querySelector('.abas-do-item a[data-tab="detalhes"]').click();
+        await esperar(() => f().querySelector('.tab.detalhes.active'));
+        return lido;
+      })()`);
+      await edge.shot('ficha-item-arma');
+      const deck = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const { arma, deck: item } = window.__itensDaFicha;
+        await arma.sheet.close();
+        await item.sheet.render({ force: true });
+        await esperar(() => item.sheet.element?.querySelector('.ficha-de-item .uso .segmento'));
+        const f = () => item.sheet.element;
+        const antes = item.system.uso;
+        const outro = [...f().querySelectorAll('.uso .segmento input')].find(input => input.value !== antes);
+        outro.closest('label').click();
+        await esperar(() => item.system.uso === outro.value && f()?.querySelector('.uso .segmento.ativo input')?.value === outro.value);
+        return { antes, escolhido: outro.value, depois: item.system.uso, ativo: f().querySelector('.uso .segmento.ativo input')?.value, segmentos: f().querySelectorAll('.uso .segmento').length,
+          cor: getComputedStyle(f().querySelector('.ficha-de-item')).getPropertyValue('--cor-tipo').trim() };
+      })()`);
+      await edge.shot('ficha-item-cyberdeck');
+      await edge.evaluate(`(async () => { const { arma, deck } = window.__itensDaFicha; await deck.sheet.close(); await Item.deleteDocuments([arma.id, deck.id]); delete window.__itensDaFicha; return true; })()`);
+      const ok = arma.tipo === arma.rotulo && arma.tipo !== '' && arma.resumo === 'Armas de uma Mão // à distância' && arma.etiquetas.join() === 'Padrão'
+        && arma.abas === 'detalhes*,descricao,efeitos' && arma.celulas >= 8 && /ff2a4a/i.test(arma.cor)
+        && arma.depois === 'detalhes,descricao*,efeitos' && arma.detalhesSomem === 'none'
+        && deck.segmentos === 3 && deck.escolhido !== deck.antes && deck.depois === deck.escolhido && deck.ativo === deck.escolhido && /02d7f2/i.test(deck.cor);
+      return [ok, JSON.stringify({ arma, deck })];
+    });
+
     await r.passo('catálogo: rifle, armadura, munição e Kerenzikov entram na ficha; o efeito só vale instalado', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();

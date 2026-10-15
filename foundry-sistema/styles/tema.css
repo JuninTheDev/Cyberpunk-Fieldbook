@@ -640,6 +640,62 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-item .campos label { font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.04em; color: var(--cp-fraco); }
 .cpr-fieldbook.ficha-item :is(.nota, .fonte, .efeitos) { font-family: var(--cp-dados); font-size: 12px; }
 .cpr-fieldbook.ficha-item h3 { border-bottom: 1px solid var(--cp-linha); color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }
+/* A ficha do item no jeito da maquete "Item Sheets" do usuário (a da arquitetura não muda): a cor do tipo (vermelho na
+   arma e na lesão; ciano no cyberware, no programa e no deck; amarelo no resto) no rótulo, nas abas e nas células. */
+.cpr-fieldbook.ficha-item .ficha-de-item { --cor-tipo: var(--cp-amarelo); gap: 10px; }
+.cpr-fieldbook.ficha-item .ficha-de-item:is(.tipo-arma, .tipo-lesao) { --cor-tipo: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-item .ficha-de-item:is(.tipo-cyberware, .tipo-programa, .tipo-cyberdeck) { --cor-tipo: var(--cp-ciano); }
+.cpr-fieldbook.ficha-item .ficha-de-item .cabecalho { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px; border-bottom: 2px solid var(--cor-tipo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .linha-tipo { display: flex; justify-content: space-between; margin: 0; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.18em; }
+.cpr-fieldbook.ficha-item .ficha-de-item .linha-tipo .tipo { color: var(--cor-tipo); text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .identidade { display: flex; align-items: flex-start; gap: 14px; }
+.cpr-fieldbook.ficha-item .ficha-de-item .retrato { flex: none; width: 72px; height: 72px; object-fit: cover; background: repeating-linear-gradient(135deg, #1c1c28 0 8px, var(--cp-painel) 8px 16px); }
+.cpr-fieldbook.ficha-item .ficha-de-item .nome-e-resumo { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.cpr-fieldbook.ficha-item .ficha-de-item .cabecalho .nome { width: 100%; height: auto; padding: 0; font-size: 24px; }
+.cpr-fieldbook.ficha-item .ficha-de-item .resumo { margin: 0; color: var(--cp-fraco); font: 400 12px/1.4 var(--cp-dados); letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; }
+.cpr-fieldbook.ficha-item .ficha-de-item .etiqueta { padding: 2px 8px; border: 1px solid var(--cor-tipo); color: var(--cor-tipo); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.12em; }
+.cpr-fieldbook.ficha-item .ficha-de-item .etiqueta.cheia { background: var(--cor-tipo); color: var(--cp-fundo); }
+/* As abas: o texto em mono, a ativa cheia na cor do tipo. */
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item { display: flex; gap: 4px; margin: 0; padding: 0 0 6px; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item a {
+  flex: none; padding: 5px 12px; color: var(--cp-fraco); font: 400 12px/1.2 var(--cp-dados); letter-spacing: 0.15em; text-transform: uppercase; text-shadow: none; cursor: pointer;
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item a:hover { color: var(--cor-tipo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item a.active { background: var(--cor-tipo); color: var(--cp-fundo); }
+.cpr-fieldbook.ficha-item .ficha-de-item section.tab:not(.active) { display: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item section.tab.active { display: flex; flex-direction: column; gap: 10px; }
+/* Os detalhes em células: o rótulo pequeno em cima, o valor grande embaixo e a borda na cor do tipo. */
+.cpr-fieldbook.ficha-item .ficha-de-item .campos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula {
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 2px; min-width: 0; padding: 6px 10px 5px;
+  background: var(--cp-poco); border-bottom: 2px solid var(--cor-tipo);
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula.larga { grid-column: 1 / -1; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula > span:first-child { color: var(--cp-fraco); font: 400 10px/1.3 var(--cp-dados); letter-spacing: 0.15em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula :is(input, select) {
+  width: 100%; height: auto; min-height: 0; padding: 0; border: none; background: transparent; color: var(--cp-texto); font: 700 18px/1.3 var(--cp-titulo);
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula select option { background: var(--cp-painel); }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula .par { display: flex; align-items: baseline; gap: 6px; color: var(--cp-fraco); font: 400 14px var(--cp-dados); }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula .par input { flex: 1; min-width: 0; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.caixa { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--cp-linha); color: var(--cp-texto); font: 400 12px/1.3 var(--cp-dados); letter-spacing: 0.06em; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.caixa input { width: 16px; height: 16px; margin: 0; accent-color: var(--cor-tipo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos .nota { grid-column: 1 / -1; margin: 0; color: var(--cp-fraco); }
+/* O uso (possuído, carregando, equipado) em três botões lado a lado. */
+.cpr-fieldbook.ficha-item .ficha-de-item .uso { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento {
+  display: flex; justify-content: center; padding: 6px 4px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento + .segmento { border-left: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento input { position: absolute; opacity: 0; pointer-events: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento.ativo { background: var(--cor-tipo); color: var(--cp-fundo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento:focus-within { outline: 2px solid var(--cp-ciano); outline-offset: -2px; }
+/* A descrição e os efeitos. */
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 0; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos li.vazio { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos li b { color: var(--cor-tipo); }
 
 /* ---------- Ficha da arquitetura da NET: os andares (uma linha por conteúdo) e o mapa ---------- */
 .cpr-fieldbook.ficha-arquitetura .campos small { white-space: nowrap; }

@@ -30,7 +30,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     e o Zap entram também na REZ do Black ICE ou do demônio marcado. Os programas de Black ICE do netrunner (o Black ICE
     próprio: os 12 da wiki, no compêndio de Netrunning) mostram o tipo, PER, SPD, ATK e DEF, e ocupam 2 slots no deck.
   - **Vida:** o Lifepath (os 17 campos do criador da wiki, que a importação traz) e as notas.
-- **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores.
+- **Ficha do item:** o mesmo tema escuro, com as mesmas fontes e cores, no jeito da maquete "Item Sheets" do usuário (ciclo 62). No alto, o tipo na cor dele (vermelho na arma e na lesão; ciano no cyberware, no programa e no cyberdeck; amarelo no resto), o nome, o resumo (a perícia e o alcance da arma, o SP da armadura, a classe do programa e onde ele está...) e as etiquetas (a qualidade, o uso; cheias, as que valem agora: equipado, vestido, instalado, ativo). Embaixo, as abas Detalhes (os campos em células: o rótulo pequeno em cima e o valor grande embaixo; o uso de equipamento, roupa, droga e cyberdeck em três botões lado a lado), Descrição e Efeitos (com o botão de ligar e desligar dos efeitos à mão). A ficha da arquitetura da NET continua a dela.
 - **Arquitetura da NET** (o netarch do CORE, com o que o NET Architect da mesa junta): um item com os andares, um conteúdo
   por linha (o andar, de 1 a 18, e o ramo, de A a H; a senha, o arquivo e o nó de controle com o DV; o Black ICE e o
   demônio pelo modelo da wiki; o netrunner inimigo pela ficha), o DV da arquitetura (o maior dos andares, ou o do item)
@@ -340,6 +340,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
 - **No Foundry 14:** `node tests/rodar.js v14`, na raiz da wiki. Sobe o Foundry 14 do PC sem janela, num mundo vazio e numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`), e confere estes pontos, com dados fixos onde a conta importa:
   - os compêndios, a ficha e o crítico do d10;
   - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item, os acessórios na arma e o hardware no deck);
+  - a ficha do item no jeito da maquete: numa pistola, o tipo na cor dele, o resumo, a etiqueta da qualidade, as três abas (a troca pelo clique) e as células; num cyberdeck, o uso pelos três botões, que grava;
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o mirado na cabeça e na perna;
   - o autofogo, o explosivo em área, o cartucho, a munição de borracha e a que não causa dano;

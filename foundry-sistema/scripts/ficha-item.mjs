@@ -11,6 +11,32 @@ const comAtual = (opcoes, atual) => (atual && !(atual in opcoes) ? { ...opcoes, 
 // Os efeitos que se ligam à mão: os da droga e os do equipamento de ativação manual.
 const ligaAMao = item => item.type === 'droga' || (item.type === 'equipamento' && item.system.ativacao === 'manual');
 
+// O alto da ficha, como a maquete "Item Sheets" do usuário: o resumo (o que o item é) e as etiquetas (o estado dele; as
+// cheias são as que valem agora: equipado, vestido, instalado, ativo).
+function cabecalhoDoItem(item) {
+  const s = item.system;
+  const nomeDaPericia = id => PERICIAS.find(p => p.id === id)?.nome ?? id;
+  const cheia = texto => ({ texto, classe: 'cheia' });
+  const vazada = texto => ({ texto, classe: '' });
+  const sp = local => (s.sp?.[local]?.max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${s.sp[local].value}/${s.sp[local].max}` : '');
+  const porTipo = {
+    arma: () => [[nomeDaPericia(s.pericia), s.aDistancia ? 'à distância' : 'corpo a corpo'], [QUALIDADES[s.qualidade] && vazada(QUALIDADES[s.qualidade]), s.equipada && cheia('EQUIPADA')]],
+    armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE')]],
+    municao: () => [[s.tipo, `${s.quantidade} tiros`], []],
+    cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`], [s.instalado && cheia('INSTALADO'), s.fundacional && vazada('FUNDACIONAL')]],
+    lesao: () => [['Lesão crítica', s.local === 'cabeca' ? 'cabeça' : 'corpo'], [cheia('ATIVA')]],
+    programa: () => [[CLASSES_PROGRAMA[s.classe] ?? s.classe, item.instaladoNo ? `no ${item.instaladoNo.name}` : 'fora do deck'], [s.ativo && cheia('ATIVO')]],
+    cyberdeck: () => [[`${item.slotsUsados} de ${s.slots} slots`, QUALIDADES[s.qualidade]], []],
+    roupa: () => [[TIPOS_ROUPA[s.tipo] ?? s.tipo, ESTILOS_ROUPA[s.estilo] ?? s.estilo], []],
+    equipamento: () => [[], [s.eletronico && vazada('ELETRÔNICO'), s.ocultavel && vazada('OCULTÁVEL')]],
+    upgrade: () => [[`para ${(ALVOS_UPGRADE[s.alvo] ?? s.alvo).toLowerCase()}`, item.instaladoNo ? `em ${item.instaladoNo.name}` : 'não instalado'], []],
+    veiculo: () => [[`SDP ${s.sdp?.value}/${s.sdp?.max}`, `${s.assentos} assentos`], [s.familia && vazada('DA FAMÍLIA')]]
+  };
+  const [resumo, etiquetas] = porTipo[item.type]?.() ?? [[], []];
+  if ('uso' in s && USOS[s.uso]) etiquetas.push(s.uso === 'equipado' ? cheia(USOS[s.uso].toUpperCase()) : vazada(USOS[s.uso].toUpperCase()));
+  return { resumo: resumo.filter(Boolean).join(' // '), etiquetas: etiquetas.filter(Boolean) };
+}
+
 export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static DEFAULT_OPTIONS = {
     // O tema escuro da ficha do personagem (styles/tema.css), qualquer que seja o da interface.
@@ -22,7 +48,12 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   };
 
   static PARTS = {
-    ficha: { template: caminho('templates/item.hbs'), scrollable: [''] }
+    ficha: { template: caminho('templates/item.hbs'), scrollable: ['.tab'] }
+  };
+
+  // As abas da ficha (a maquete): os campos, a descrição e os efeitos.
+  static TABS = {
+    item: { tabs: [{ id: 'detalhes', label: 'Detalhes' }, { id: 'descricao', label: 'Descrição' }, { id: 'efeitos', label: 'Efeitos' }], initial: 'detalhes' }
   };
 
   async _prepareContext(options) {
@@ -32,7 +63,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const tipo = item.type;
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     return Object.assign(contexto, {
-      item, sistema: item.system, fonte, editavel: this.isEditable,
+      item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item),
+      tipoRotulo: game.i18n.localize(CONFIG.Item.typeLabels[tipo] ?? tipo),
+      usosLista: Object.entries(USOS).map(([id, rotulo]) => ({ id, rotulo, ativo: fonte.uso === id })),
       eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'].map(t => [t, tipo === t])),
       temQuantidade: tipo !== 'municao' && 'quantidade' in fonte,
       temUso: 'uso' in fonte,

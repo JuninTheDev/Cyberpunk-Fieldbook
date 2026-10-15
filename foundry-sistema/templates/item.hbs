@@ -1,118 +1,137 @@
-<div class="item-ficha">
+{{!-- A ficha do item, no jeito da maquete "Item Sheets" do usuário: o tipo na cor dele, o nome, o resumo e as etiquetas
+no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
+<div class="item-ficha ficha-de-item tipo-{{item.type}}">
   <header class="cabecalho">
-    <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img">
-    <input class="nome" type="text" name="name" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
+    <p class="linha-tipo"><span class="tipo">{{tipoRotulo}}</span><span>FICHA DO ITEM</span></p>
+    <div class="identidade">
+      <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img">
+      <div class="nome-e-resumo">
+        <input class="nome" type="text" name="name" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
+        {{#if resumo}}<p class="resumo">{{resumo}}</p>{{/if}}
+        {{#if etiquetas.length}}<p class="etiquetas">{{#each etiquetas}}<span class="etiqueta {{classe}}">{{texto}}</span>{{/each}}</p>{{/if}}
+      </div>
+    </div>
   </header>
 
-  <div class="campos">
-    {{#if eh.arma}}
-    <label>Perícia <select name="system.pericia">{{selectOptions pericias selected=fonte.pericia}}</select></label>
-    <label>Dano <input type="text" name="system.dano" value="{{fonte.dano}}"></label>
-    <label>CDT <input type="number" name="system.cdt" value="{{fonte.cdt}}"></label>
-    <label>Bônus de ataque <input type="number" name="system.bonusAtaque" value="{{fonte.bonusAtaque}}"></label>
-    <label>Pente <input type="number" name="system.pente.value" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" value="{{fonte.pente.max}}"></label>
-    <label>Tabela de DV <input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
-    <label>Qualidade <select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
-    <label>Ignora armadura (%) <input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
-    <label>Slots de acessório <input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
-    {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
-    <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
-    <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>
-    {{/if}}
-    {{#if eh.armadura}}
-    <label>SP cabeça <input type="number" name="system.sp.cabeca.value" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" value="{{fonte.sp.cabeca.max}}"></label>
-    <label>SP corpo <input type="number" name="system.sp.corpo.value" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" value="{{fonte.sp.corpo.max}}"></label>
-    <label>Penalidade <input type="number" name="system.penalidade" value="{{fonte.penalidade}}"></label>
-    <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Vestida</label>
-    {{/if}}
-    {{#if eh.municao}}
-    <label>Tipo <input type="text" name="system.tipo" value="{{fonte.tipo}}"></label>
-    <label>Quantidade <input type="number" name="system.quantidade" value="{{fonte.quantidade}}"></label>
-    <label>Ablação <input type="number" name="system.ablacao" value="{{fonte.ablacao}}"></label>
-    {{/if}}
-    {{#if eh.lesao}}
-    <label>Local <select name="system.local">{{selectOptions locaisLesao selected=fonte.local}}</select></label>
-    <label class="caixa"><input type="checkbox" name="system.aumentaDeathSave" {{checked fonte.aumentaDeathSave}}> Death Save base +1</label>
-    <label>Paliativo: Primeiros Socorros DV <input type="number" name="system.paliativo.primeirosSocorros" value="{{fonte.paliativo.primeirosSocorros}}"></label>
-    <label>Paliativo: Paramédico DV <input type="number" name="system.paliativo.paramedico" value="{{fonte.paliativo.paramedico}}"></label>
-    <label>Tratamento: Paramédico DV <input type="number" name="system.tratamento.paramedico" value="{{fonte.tratamento.paramedico}}"></label>
-    <label>Tratamento: Cirurgia DV <input type="number" name="system.tratamento.cirurgia" value="{{fonte.tratamento.cirurgia}}"></label>
-    {{/if}}
-    {{#if eh.cyberware}}
-    <label>Tipo <select name="system.tipo">{{selectOptions tiposCyberware selected=fonte.tipo}}</select></label>
-    <label>Perda de Humanidade <input type="text" name="system.perdaHumanidade.formula" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" value="{{fonte.perdaHumanidade.media}}"></label>
-    <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
-    <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
-    {{/if}}
-    {{#if temQuantidade}}<label>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}} <input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>{{/if}}
-    {{#if temUso}}<label>Uso <select name="system.uso">{{selectOptions usos selected=fonte.uso}}</select></label>{{/if}}
-    {{#if eh.cyberdeck}}
-    <label>Slots <input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
-    <label>Qualidade <select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
-    <label>RAM (2077) <input type="number" name="system.ram" value="{{fonte.ram}}" min="0"></label>
-    <label>Cooling (2077) <input type="number" name="system.resfriamento" value="{{fonte.resfriamento}}" min="0"></label>
-    <p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso{{#if instalados}}: {{instalados}}{{/if}}.</p>
-    {{/if}}
-    {{#if eh.programa}}
-    <label>Classe <select name="system.classe">{{selectOptions classesPrograma selected=fonte.classe}}</select></label>
-    {{#if blackIce}}
-    <label>Tipo de Black ICE <select name="system.tipoDeIce">{{selectOptions classesDoIce selected=fonte.tipoDeIce}}</select></label>
-    <label>PER <input type="number" name="system.per" value="{{fonte.per}}" min="0"></label>
-    <label>SPD <input type="number" name="system.spd" value="{{fonte.spd}}" min="0"></label>
-    {{/if}}
-    <label>ATK <input type="number" name="system.atk" value="{{fonte.atk}}"></label>
-    <label>DEF <input type="number" name="system.def" value="{{fonte.def}}"></label>
-    <label>REZ <input type="number" name="system.rez" value="{{fonte.rez}}" min="0"></label>
-    <label>RAM (quickhack) <input type="number" name="system.ram" value="{{fonte.ram}}" min="0"></label>
-    <label>Dano <input type="text" name="system.dano.padrao" value="{{fonte.dano.padrao}}"> contra Black ICE <input type="text" name="system.dano.blackIce" value="{{fonte.dano.blackIce}}"></label>
-    <label>Slots no deck <input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
-    <label>Instalado em <select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
-    {{/if}}
-    {{#if eh.veiculo}}
-    <label>SDP <input type="number" name="system.sdp.value" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" value="{{fonte.sdp.max}}" min="0"></label>
-    <label>Assentos <input type="number" name="system.assentos" value="{{fonte.assentos}}" min="0"></label>
-    {{#if instalados}}<p class="nota">Com os upgrades ({{instalados}}): SDP máximo {{sistema.sdp.max}}, {{sistema.assentos}} assentos.</p>{{/if}}
-    <label>MOVE (velocidade de combate) <input type="number" name="system.velocidade.combate" value="{{fonte.velocidade.combate}}" min="0"></label>
-    <label>Velocidade narrativa <input type="text" name="system.velocidade.narrativa" value="{{fonte.velocidade.narrativa}}"></label>
-    <label class="caixa"><input type="checkbox" name="system.familia" {{checked fonte.familia}}> Da família (Nomad)</label>
-    {{/if}}
-    {{#if eh.upgrade}}
-    <label>Para <select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
-    <label>Slots <input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
-    <label>Pente (carregador) <input type="number" name="system.modificadores.pente" value="{{fonte.modificadores.pente}}" min="0"></label>
-    <label>Bônus de ataque <input type="number" name="system.modificadores.ataque" value="{{fonte.modificadores.ataque}}"></label>
-    <label>SDP do veículo <input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
-    <label>Assentos do veículo <input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
-    <label>Instalado em <select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
-    {{/if}}
-    {{#if eh.equipamento}}
-    <label>Os efeitos valem <select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>
-    <label class="caixa"><input type="checkbox" name="system.eletronico" {{checked fonte.eletronico}}> Eletrônico</label>
-    <label class="caixa"><input type="checkbox" name="system.ocultavel" {{checked fonte.ocultavel}}> Ocultável</label>
-    {{/if}}
-    {{#if eh.roupa}}
-    <label>Tipo <select name="system.tipo">{{selectOptions tiposRoupa selected=fonte.tipo}}</select></label>
-    <label>Estilo <select name="system.estilo">{{selectOptions estilosRoupa selected=fonte.estilo}}</select></label>
-    {{/if}}
-    {{#if eh.droga}}{{#if fonte.consumo}}<p class="nota">Ao usar: ligue o efeito "{{fonte.consumo}}" abaixo.</p>{{/if}}{{/if}}
-    {{#unless eh.lesao}}<label>Preço (eb) <input type="number" name="system.preco" value="{{fonte.preco}}"></label>{{/unless}}
-  </div>
+  <nav class="tabs abas-do-item" data-group="item">
+    {{#each tabs}}<a class="{{cssClass}}" data-action="tab" data-group="item" data-tab="{{id}}">{{label}}</a>{{/each}}
+  </nav>
 
-  {{#if efeitos.length}}
-  <h3>Efeitos</h3>
-  <ol class="efeitos">
-    {{#each efeitos}}
-    <li class="{{#unless ativo}}inativo{{/unless}}">
-      <b>{{nome}}</b> {{mudancas}}{{#unless ativo}} <small>(sem efeito agora)</small>{{/unless}}
-      {{#if ligavel}}<button type="button" class="alternar {{#unless desligado}}ligado{{/unless}}" data-action="alternarEfeito" data-efeito="{{id}}">{{#if desligado}}Ligar{{else}}Desligar{{/if}}</button>{{/if}}
-    </li>
-    {{/each}}
-  </ol>
-  {{/if}}
+  <section class="tab detalhes {{tabs.detalhes.cssClass}}" data-group="item" data-tab="detalhes">
+    <div class="campos">
+      {{#if eh.arma}}
+      <label class="celula"><span>Perícia</span><select name="system.pericia">{{selectOptions pericias selected=fonte.pericia}}</select></label>
+      <label class="celula"><span>Dano</span><input type="text" name="system.dano" value="{{fonte.dano}}"></label>
+      <label class="celula"><span>CDT</span><input type="number" name="system.cdt" value="{{fonte.cdt}}"></label>
+      <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.bonusAtaque" value="{{fonte.bonusAtaque}}"></label>
+      <label class="celula"><span>Pente</span><span class="par"><input type="number" name="system.pente.value" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" value="{{fonte.pente.max}}"></span></label>
+      <label class="celula"><span>Tabela de DV</span><input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
+      <label class="celula"><span>Qualidade</span><select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
+      <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
+      <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
+      {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
+      <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
+      <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>
+      {{/if}}
+      {{#if eh.armadura}}
+      <label class="celula"><span>SP cabeça</span><span class="par"><input type="number" name="system.sp.cabeca.value" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" value="{{fonte.sp.cabeca.max}}"></span></label>
+      <label class="celula"><span>SP corpo</span><span class="par"><input type="number" name="system.sp.corpo.value" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" value="{{fonte.sp.corpo.max}}"></span></label>
+      <label class="celula"><span>Penalidade</span><input type="number" name="system.penalidade" value="{{fonte.penalidade}}"></label>
+      <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Vestida</label>
+      {{/if}}
+      {{#if eh.municao}}
+      <label class="celula"><span>Tipo</span><input type="text" name="system.tipo" value="{{fonte.tipo}}"></label>
+      <label class="celula"><span>Quantidade</span><input type="number" name="system.quantidade" value="{{fonte.quantidade}}"></label>
+      <label class="celula"><span>Ablação</span><input type="number" name="system.ablacao" value="{{fonte.ablacao}}"></label>
+      {{/if}}
+      {{#if eh.lesao}}
+      <label class="celula"><span>Local</span><select name="system.local">{{selectOptions locaisLesao selected=fonte.local}}</select></label>
+      <label class="celula"><span>Paliativo: Primeiros Socorros DV</span><input type="number" name="system.paliativo.primeirosSocorros" value="{{fonte.paliativo.primeirosSocorros}}"></label>
+      <label class="celula"><span>Paliativo: Paramédico DV</span><input type="number" name="system.paliativo.paramedico" value="{{fonte.paliativo.paramedico}}"></label>
+      <label class="celula"><span>Tratamento: Paramédico DV</span><input type="number" name="system.tratamento.paramedico" value="{{fonte.tratamento.paramedico}}"></label>
+      <label class="celula"><span>Tratamento: Cirurgia DV</span><input type="number" name="system.tratamento.cirurgia" value="{{fonte.tratamento.cirurgia}}"></label>
+      <label class="caixa"><input type="checkbox" name="system.aumentaDeathSave" {{checked fonte.aumentaDeathSave}}> Death Save base +1</label>
+      {{/if}}
+      {{#if eh.cyberware}}
+      <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposCyberware selected=fonte.tipo}}</select></label>
+      <label class="celula"><span>Perda de Humanidade</span><span class="par"><input type="text" name="system.perdaHumanidade.formula" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" value="{{fonte.perdaHumanidade.media}}"></span></label>
+      <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
+      <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
+      {{/if}}
+      {{#if temQuantidade}}<label class="celula"><span>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}}</span><input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>{{/if}}
+      {{#if eh.cyberdeck}}
+      <label class="celula"><span>Slots</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
+      <label class="celula"><span>Qualidade</span><select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
+      <label class="celula"><span>RAM (2077)</span><input type="number" name="system.ram" value="{{fonte.ram}}" min="0"></label>
+      <label class="celula"><span>Cooling (2077)</span><input type="number" name="system.resfriamento" value="{{fonte.resfriamento}}" min="0"></label>
+      <p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso{{#if instalados}}: {{instalados}}{{/if}}.</p>
+      {{/if}}
+      {{#if eh.programa}}
+      <label class="celula"><span>Classe</span><select name="system.classe">{{selectOptions classesPrograma selected=fonte.classe}}</select></label>
+      {{#if blackIce}}
+      <label class="celula"><span>Tipo de Black ICE</span><select name="system.tipoDeIce">{{selectOptions classesDoIce selected=fonte.tipoDeIce}}</select></label>
+      <label class="celula"><span>PER</span><input type="number" name="system.per" value="{{fonte.per}}" min="0"></label>
+      <label class="celula"><span>SPD</span><input type="number" name="system.spd" value="{{fonte.spd}}" min="0"></label>
+      {{/if}}
+      <label class="celula"><span>ATK</span><input type="number" name="system.atk" value="{{fonte.atk}}"></label>
+      <label class="celula"><span>DEF</span><input type="number" name="system.def" value="{{fonte.def}}"></label>
+      <label class="celula"><span>REZ</span><input type="number" name="system.rez" value="{{fonte.rez}}" min="0"></label>
+      <label class="celula"><span>RAM (quickhack)</span><input type="number" name="system.ram" value="{{fonte.ram}}" min="0"></label>
+      <label class="celula larga"><span>Dano · contra Black ICE</span><span class="par"><input type="text" name="system.dano.padrao" value="{{fonte.dano.padrao}}"> · <input type="text" name="system.dano.blackIce" value="{{fonte.dano.blackIce}}"></span></label>
+      <label class="celula"><span>Slots no deck</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
+      <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+      {{/if}}
+      {{#if eh.veiculo}}
+      <label class="celula"><span>SDP</span><span class="par"><input type="number" name="system.sdp.value" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" value="{{fonte.sdp.max}}" min="0"></span></label>
+      <label class="celula"><span>Assentos</span><input type="number" name="system.assentos" value="{{fonte.assentos}}" min="0"></label>
+      {{#if instalados}}<p class="nota">Com os upgrades ({{instalados}}): SDP máximo {{sistema.sdp.max}}, {{sistema.assentos}} assentos.</p>{{/if}}
+      <label class="celula"><span>MOVE (combate)</span><input type="number" name="system.velocidade.combate" value="{{fonte.velocidade.combate}}" min="0"></label>
+      <label class="celula"><span>Velocidade narrativa</span><input type="text" name="system.velocidade.narrativa" value="{{fonte.velocidade.narrativa}}"></label>
+      <label class="caixa"><input type="checkbox" name="system.familia" {{checked fonte.familia}}> Da família (Nomad)</label>
+      {{/if}}
+      {{#if eh.upgrade}}
+      <label class="celula"><span>Para</span><select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
+      <label class="celula"><span>Slots</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
+      <label class="celula"><span>Pente (carregador)</span><input type="number" name="system.modificadores.pente" value="{{fonte.modificadores.pente}}" min="0"></label>
+      <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.modificadores.ataque" value="{{fonte.modificadores.ataque}}"></label>
+      <label class="celula"><span>SDP do veículo</span><input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
+      <label class="celula"><span>Assentos do veículo</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
+      <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+      {{/if}}
+      {{#if eh.equipamento}}
+      <label class="celula"><span>Os efeitos valem</span><select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>
+      <label class="caixa"><input type="checkbox" name="system.eletronico" {{checked fonte.eletronico}}> Eletrônico</label>
+      <label class="caixa"><input type="checkbox" name="system.ocultavel" {{checked fonte.ocultavel}}> Ocultável</label>
+      {{/if}}
+      {{#if eh.roupa}}
+      <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposRoupa selected=fonte.tipo}}</select></label>
+      <label class="celula"><span>Estilo</span><select name="system.estilo">{{selectOptions estilosRoupa selected=fonte.estilo}}</select></label>
+      {{/if}}
+      {{#if eh.droga}}{{#if fonte.consumo}}<p class="nota">Ao usar: ligue o efeito "{{fonte.consumo}}" na aba Efeitos.</p>{{/if}}{{/if}}
+      {{#unless eh.lesao}}<label class="celula"><span>Preço (eb)</span><input type="number" name="system.preco" value="{{fonte.preco}}"></label>{{/unless}}
+    </div>
+    {{#if temUso}}
+    <div class="uso" role="radiogroup" aria-label="Uso">
+      {{#each usosLista}}<label class="segmento {{#if ativo}}ativo{{/if}}"><input type="radio" name="system.uso" value="{{id}}" {{checked ativo}}>{{rotulo}}</label>{{/each}}
+    </div>
+    {{/if}}
+  </section>
 
-  <h3>Descrição</h3>
-  {{#if editavel}}
-  <prose-mirror name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
-  {{else}}<div class="texto">{{{descricaoRica}}}</div>{{/if}}
-  {{#if sistema.fonte.livro}}<p class="fonte">{{sistema.fonte.livro}}, p. {{sistema.fonte.pagina}}</p>{{/if}}
+  <section class="tab descricao {{tabs.descricao.cssClass}}" data-group="item" data-tab="descricao">
+    {{#if editavel}}
+    <prose-mirror name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
+    {{else}}<div class="texto">{{{descricaoRica}}}</div>{{/if}}
+    {{#if sistema.fonte.livro}}<p class="fonte">{{sistema.fonte.livro}}, p. {{sistema.fonte.pagina}}</p>{{/if}}
+  </section>
+
+  <section class="tab efeitos-do-item {{tabs.efeitos.cssClass}}" data-group="item" data-tab="efeitos">
+    <ol class="efeitos">
+      {{#each efeitos}}
+      <li class="{{#unless ativo}}inativo{{/unless}}">
+        <b>{{nome}}</b> {{mudancas}}{{#unless ativo}} <small>(sem efeito agora)</small>{{/unless}}
+        {{#if ligavel}}<button type="button" class="alternar {{#unless desligado}}ligado{{/unless}}" data-action="alternarEfeito" data-efeito="{{id}}">{{#if desligado}}Ligar{{else}}Desligar{{/if}}</button>{{/if}}
+      </li>
+      {{else}}<li class="vazio">Sem efeitos.</li>{{/each}}
+    </ol>
+  </section>
 </div>
