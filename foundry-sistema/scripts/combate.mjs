@@ -182,7 +182,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // A carga marca a rodada na arma, para esfriar; o "Desfazer" do mestre tira a marca.
   const carga = tech ? await marcarCarga(arma) : null;
   const { total, mensagem } = await testar(atacante, {
-    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true },
+    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   const dados = {
@@ -267,7 +267,7 @@ async function rolarDefesa(ator, nome, escolha, { perguntar = false, aoAbrir = n
     partes = [...fixas, ...resposta.partes];
     sorte = resposta.sorte;
   }
-  const { total } = await testar(ator, { rotulo, partes, sorte, dados: { defesa: escolha } });
+  const { total } = await testar(ator, { rotulo, partes, sorte, dados: { defesa: escolha }, categoria: 'defesa' });
   return { escolha, defesa: total };
 }
 
@@ -719,6 +719,12 @@ const RESULTADOS = {
   suprimido: 'suprimido: gasta o próximo movimento indo para a cobertura', firme: 'ficou firme'
 };
 
+// A barra de HP do alvo no cartão (só o desenho: o número está na linha do dano), em texto (o 0 também desenha).
+const barraDeHp = linha => {
+  const max = linha.token?.actor?.system.hp?.max;
+  return linha.dano && max ? String(Math.max(0, Math.min(100, Math.round((100 * linha.dano.hpDepois) / max)))) : null;
+};
+
 async function cartaoDoResultado(ctx) {
   const linhas = ctx.linhas.map(l => ({
     nome: l.nome, img: l.img, resultado: l.resultado, rotulo: RESULTADOS[l.resultado] ?? l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null,
@@ -729,7 +735,7 @@ async function cartaoDoResultado(ctx) {
     ator: l.token.actor.uuid, suprimido: Boolean(l.suprimido), lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
-  const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map(l => ({ ...l, contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 });
+  const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 });
   const para = destinatarios(ctx);
   await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, desfazer, marcas: ctx.marcas } } });
   mostrarNaMesa(ctx, para);

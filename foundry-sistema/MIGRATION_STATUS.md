@@ -66,6 +66,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | o combate na NET (os inimigos encontrados na iniciativa, com um token escondido; a vez deles pela janela do mestre; a REZ do token e a do estado juntas; a configuração "Inimigos da NET no combate") | portado no ciclo 55 (o C8, parte 9; ver as dúvidas) |
 | NET Architect | as rolagens do jogador na janela de rolagem dele (a configuração "O jogador rola as rolagens da NET") | portado no ciclo 56 (o C8, parte 10; ver as dúvidas) |
 | NET Architect | a janela da NET no visual novo (o topo com o netrunner e as Ações NET em losangos, o mapa com a cor de cada andar e os cabos, o painel ao lado, as habilidades com a base da rolagem, o registro com a hora) | refeita no ciclo 58 (o pedido do usuário, a partir da maquete dele, que não cobre tudo) |
+| sistema | os cartões do chat no visual novo (a faixa e o tipo na linha de cima, os dados em caixas com o total grande, as etiquetas do resultado e a barra de HP) | refeitos no ciclo 59 (o pedido do usuário, pela maquete dele; os botões da maquete sem função no sistema ficaram de fora) |
 | NET Architect | os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
@@ -3058,6 +3059,61 @@ anterior: `023f2c1` (ciclo 57).
 - **Pendências:** os cartões do chat e a ficha (as abas e as fichas dos itens), pelas maquetes. O `tests/lib/edge.js`
   corrigido no master (o usuário publica). Depois, o C8, parte 11: os nós de controle ligados à cena.
 - **Próximo:** os cartões do chat no visual novo (ciclo 59).
+
+### Ciclo 59 (2026-10-15): os cartões do chat no visual novo (o pedido do usuário; sessão KouArt)
+
+A segunda parte do pedido de 2026-10-15 (ver o ciclo 58): os cartões do chat pela maquete "Chat Cards" do usuário. Os
+textos e os ganchos que os testes leem continuam os mesmos (as partes, o título, a regra, o texto inteiro do Backup e do
+dano da NET, as classes `cprf-` da mensagem). Commit anterior: `e7d11fa` (ciclo 58).
+
+- **Implementado:**
+  - **a mensagem é o cartão** (`styles/tema.css`, a seção dos cartões do chat refeita): o painel com o canto cortado e a
+    faixa de cima na cor do tipo, num elemento à parte (a cor do jogador que o Foundry põe na borda não a troca). O tipo
+    vem do cartão dentro da mensagem (`:has`) e o rótulo dele é do CSS: TESTE (amarelo), ATAQUE e DEFESA (os testes do
+    ataque e da esquiva), NET (o teste da Interface e o dos inimigos da NET), RESULTADO, DANO, DANO NET, LESÃO e MORTE
+    (vermelho), BACKUP e DEATH SAVE (ciano; o Backup que não vem e o Death Save que falha mudam de cor), DEFESA (a
+    espera, cinza) e SISTEMA. Na linha de cima, o tipo e quem rolou ("TESTE // ATIRADORA"), com a hora;
+  - **o corpo** (a ordem é do CSS, sem mudar o HTML): o título grande; o que soma ao d10 como subtítulo ("1D10 · REF +8 ·
+    ARMAS DE UMA MÃO +4"); os dados; o crítico numa etiqueta; a frase do Death Save e do Backup na linha de baixo; a regra
+    (o sabor); as notas; os botões;
+  - **os dados em caixas** (`scripts/dados-do-cartao.mjs`, novo, sem Foundry: o G3 o importa), no lugar do bloco de
+    rolagem do Foundry (a fórmula e a lista que abre no clique): cada dado numa caixa, o que soma além dos dados e o
+    total grande. O 10 do crítico em amarelo; o 1 da falha crítica e o d10 que ele tira, em vermelho, com o menos (RED p.
+    130, como o `registrarCritico` monta); no dano crítico, os 6 em amarelo; o × do autofogo, com o modificador depois
+    dele (como o `expressaoDoDano`). O Death Save, a tabela da lesão e o Backup não marcam o crítico; o Backup mostra o
+    d10 e o d6 lado a lado, sem total. O Roll continua na mensagem (`rolls`);
+  - **o tipo do teste** (`testar`, a `categoria`): o ataque e a esquiva (`combate.mjs`) e os números dos inimigos da NET
+    (`rolarDaNet`) dizem o tipo; sem ele, é da NET o teste de quem não é ator e o da Interface. O dano do Zap, do Black
+    ICE, dos programas e o do motor da NET levam a marca da NET;
+  - **o resultado do ataque:** o total do ataque grande, cada alvo com a etiqueta do que aconteceu (acertou cheia em
+    vermelho; esquivou e ficou firme em ciano; o resto em cinza) e a barra de HP depois do dano (o HP do alvo sobre o
+    máximo, só o desenho). O ataque desfeito fica desbotado, com "DESFEITO".
+- **Fora, de propósito:** os botões da maquete que o sistema não tem ("+ LUCK", "REROLL", "ADD TO TRACKER", "APPLY
+  DAMAGE", "ROLL CRITICAL", "APPLY"): a Sorte se prepara na ficha antes do teste, e o dano, a lesão e a iniciativa já
+  entram pelo fluxo do ataque e pelo combate. Ficam como pergunta ao usuário, se ele quiser algum deles.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros (com o `dados-do-cartao.mjs` e o `cartoes.test.mjs`);
+  - G2: 0 erros;
+  - G3: 83 de 87. Um arquivo novo, `tests/sistema/cartoes.test.mjs`, com 4 testes de referência dos dados (o teste
+    comum, o crítico e a falha crítica do d10, sem o crítico, os 6 do dano crítico, o × do autofogo com o modificador, o
+    Backup com dois Rolls e os dados descartados). As 4 falhas são as das armas de 2077 (QUALITY_GATES);
+  - G4: 89 de 94, 170 s, de primeira. O passo da Sorte e do chat ganhou o visual: no cartão do teste e no do dano, os
+    dados das caixas iguais aos do Roll, o total do cartão, o rótulo do tipo na linha de cima ("TESTE // ", "DANO // ",
+    lido do `::before`), a faixa amarela e a vermelha e nenhum bloco de rolagem do Foundry. Os outros passos que leem os
+    cartões (as partes, a regra, o texto do Backup e do dano da NET) passaram sem mudança. Os avisos do passo "nenhum
+    aviso": só os dois da Lexington. As 5 falhas são as das armas de 2077;
+  - **a captura do chat** do G4 foi conferida, e uma prévia estática (os templates com 14 cartões de exemplo, o tema e o
+    CSS do Foundry) serviu para ajustar antes: ela mostrou o dado do crítico indo para depois do total (a classe da
+    caixa batia com a do `p.critico`; as caixas passaram a usar `maximo` e `minimo`);
+  - **mutações:** as 8 caíram, e os arquivos voltaram (conferido pelo md5). No G3 (os testes de referência dos dados):
+    sem as marcas do crítico (C1), sem o total (C2), o sinal do resto trocado (C3), o × do autofogo fora do resto (C8).
+    No G4 (o passo da Sorte e do chat): o teste de volta ao bloco de rolagem do Foundry (C4), o tipo sem o rótulo na
+    linha de cima (C5), o dano sem a cor e o rótulo dele (C6), o dano da arma de volta ao bloco do Foundry (C7). As
+    rodadas do G4 não deixaram Edge nem perfil para trás (o ajudante corrigido no ciclo 58).
+- **Pendências:** a ficha (as abas Combate, Equipamento, Cyberware, Role, NET e Vida, e as fichas dos itens), pelas
+  maquetes. Os botões da maquete do chat, se o usuário quiser. Depois, o C8, parte 11: os nós de controle ligados à
+  cena.
+- **Próximo:** a ficha no visual novo (ciclo 60).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

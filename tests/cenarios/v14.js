@@ -327,7 +327,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.pente === 25 && info.sobra === 25 && info.carregada === 'Rifle (Basic)', JSON.stringify(info)];
     });
 
-    await r.passo('Sorte e o visual do chat: os pontos preparados pela ficha (− e +, até a Sorte que resta) entram no teste de perícia, +1 cada, e saem da Sorte; o ↺ do começo da sessão volta ao máximo; o teste e o dano saem no visual do tema', async () => {
+    await r.passo('Sorte e o visual do chat: os pontos preparados pela ficha (− e +, até a Sorte que resta) entram no teste de perícia, +1 cada, e saem da Sorte; o ↺ do começo da sessão volta ao máximo; o teste e o dano saem no visual do tema (os dados em caixas com o total grande, no lugar do bloco do Foundry; o tipo na linha de cima, pelo CSS; a faixa amarela do teste e a vermelha do dano)', async () => {
       // Armas de uma Mão com +2 de Sorte: d10 5 → REF 8 + 4 + 2 + 5 = 19. Dano do rifle: 5d6, 3 em cada = 15.
       await fixar(edge, [[5, 10], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]);
       const info = await edge.evaluate(`(async () => {
@@ -362,7 +362,15 @@ module.exports = async ({ edge, servidores, r }) => {
         // O visual do tema na mensagem inteira (no chat e na notificação, onde houver).
         await esperar(() => document.querySelector('.chat-message[data-message-id="' + dano.id + '"]'));
         const classes = id => [...document.querySelectorAll('.chat-message[data-message-id="' + id + '"]')].map(li => [...li.classList].filter(c => c.startsWith('cprf-')).sort().join(' '));
-        const visual = { teste: classes(teste.id), dano: classes(dano.id), danoTotal: dano.rolls[0].total };
+        // O cartão no visual novo: as caixas dos dados e o total grande (do cartão, não do Foundry), o tipo na linha de
+        // cima (desenhado pelo CSS) e a cor da faixa de cima.
+        const cartao = id => {
+          const li = document.querySelector('#chat .chat-message[data-message-id="' + id + '"]') ?? document.querySelector('.chat-message[data-message-id="' + id + '"]');
+          return { dados: [...li.querySelectorAll('.dados-do-cartao .dado')].map(d => d.textContent).join(), total: li.querySelector('.dados-do-cartao .total')?.textContent,
+            tipo: getComputedStyle(li.querySelector('.message-sender'), '::before').content, faixa: getComputedStyle(li, '::before').backgroundColor, foundry: Boolean(li.querySelector('.dice-roll')) };
+        };
+        const visual = { teste: classes(teste.id), dano: classes(dano.id), danoTotal: dano.rolls[0].total, cartaoDoTeste: cartao(teste.id), cartaoDoDano: cartao(dano.id),
+          dadosDoTeste: teste.rolls[0].dice.flatMap(d => d.results.filter(r => r.active).map(r => r.result)).join(), dadosDoDano: dano.rolls[0].dice.flatMap(d => d.results.filter(r => r.active).map(r => r.result)).join() };
         // ↺: começo da sessão.
         await a.prepararSorte(1);
         await clicar('.indicador.sorte [data-action="recarregarSorte"]', () => a.system.sorte.value === a.system.sorte.max && a.sortePreparada === 0);
@@ -380,6 +388,8 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = info.sorteAntes === 5 && naFicha.preparada === '+2' && naFicha.destaque && info.teto === 5
         && depois.total === 19 && depois.formula === '1d10crit + 8 + 4 + 2' && depois.partes.includes('Sorte +2') && depois.sorte === 3 && depois.preparada === 0
         && visual.teste.length > 0 && visual.teste.every(c => c === 'cprf-mensagem cprf-teste') && visual.dano.length > 0 && visual.dano.every(c => c === 'cprf-dano cprf-mensagem') && visual.danoTotal === 15
+        && visual.cartaoDoTeste.dados === visual.dadosDoTeste && visual.cartaoDoTeste.total === '19' && /TESTE/.test(visual.cartaoDoTeste.tipo) && visual.cartaoDoTeste.faixa === 'rgb(252, 238, 9)' && !visual.cartaoDoTeste.foundry
+        && visual.cartaoDoDano.dados === visual.dadosDoDano && visual.cartaoDoDano.total === '15' && /DANO/.test(visual.cartaoDoDano.tipo) && visual.cartaoDoDano.faixa === 'rgb(255, 42, 74)' && !visual.cartaoDoDano.foundry
         && recarregada.sorte === 6 && recarregada.max === 6 && recarregada.preparada === 0 && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });

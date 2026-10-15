@@ -21,6 +21,7 @@
         <li><b>Perdeu {{dano.recebido}} HP</b> ({{dano.hpAntes}} → {{dano.hpDepois}}){{#if dano.ablado}}; a armadura perdeu {{dano.ablado}} de SP{{/if}}.</li>
         {{#each dano.lesoes}}<li class="lesao">Lesão crítica: <b>{{nome}}</b>.</li>{{/each}}
       </ul>
+      {{#if hp}}<span class="barra-hp" style="--hp: {{hp}}%"></span>{{/if}}
       {{/if}}
       {{#each notas}}<p class="nota">{{this}}</p>{{/each}}
     </li>

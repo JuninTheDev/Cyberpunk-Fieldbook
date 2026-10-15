@@ -8,6 +8,7 @@ import {
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics
 } from './regras.mjs';
+import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
@@ -201,7 +202,7 @@ export class AtorCPR extends Actor {
   async rolarDanoDoZap({ botoes = true } = {}) {
     const roll = await new Roll('1d6').evaluate();
     const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
-      rotulo: 'Dano: Zap (no REZ de um programa ou no cérebro)', total: roll.total, critico: null, dados: await roll.render(),
+      rotulo: 'Dano: Zap (no REZ de um programa ou no cérebro)', total: roll.total, critico: null, net: true, dados: dadosDoCartao(roll),
       botoes: botoes ? botoesDaNet(this.type === 'demonio' ? ONDE_O_DANO_ENTRA.zapDoDemonio : ONDE_O_DANO_ENTRA.zap) : []
     });
     await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { danoDePrograma: { zap: true, total: roll.total } } } });
@@ -234,7 +235,7 @@ export class AtorCPR extends Actor {
     const roll = await new Roll(formula).evaluate();
     const onde = DANO_DO_ICE[this.system.classe];
     const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
-      rotulo: `Dano: ${this.name}${onde ? ` (${onde})` : ''}`, total: roll.total, critico: null, dados: await roll.render(), botoes: botoesDaNet(ONDE_O_DANO_ENTRA.blackIce[this.system.classe] ?? [])
+      rotulo: `Dano: ${this.name}${onde ? ` (${onde})` : ''}`, total: roll.total, critico: null, net: true, dados: dadosDoCartao(roll), botoes: botoesDaNet(ONDE_O_DANO_ENTRA.blackIce[this.system.classe] ?? [])
     });
     await ChatMessage.implementation.create({
       speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll],
@@ -263,7 +264,7 @@ export class AtorCPR extends Actor {
       if (!escolha) return null;
       if (escolha.modificador) partes.push({ rotulo: 'Modificador do mestre', valor: escolha.modificador });
     }
-    return testar(this, { rotulo: numero.rotulo, partes, sabor: numero.dica, ...opcoes });
+    return testar(this, { rotulo: numero.rotulo, partes, sabor: numero.dica, categoria: 'net', ...opcoes });
   }
 
   // Atributo + perícia + 1d10, com o bônus dos efeitos (cyberware, drogas), o da Role (o Moto do Nomad) e os situacionais.
@@ -327,7 +328,7 @@ export class AtorCPR extends Actor {
     const resultado = { ...backup({ d10: d10.total, rank, d6: d6?.total ?? null }), d10: d10.total, d6: d6?.total ?? null, rank };
     if (falar) {
       const rolls = d6 ? [d10, d6] : [d10];
-      const dados = (await Promise.all(rolls.map(roll => roll.render()))).join('');
+      const dados = dadosDoCartao(rolls, { critico: false, total: false });
       const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/backup.hbs'), { nome: this.name, ...resultado, dados });
       await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls, flags: { [SISTEMA]: { backup: resultado } } });
     }
@@ -352,7 +353,7 @@ export class AtorCPR extends Actor {
     if (passou) await this.update({ 'system.deathSave.penalidade': penalidade + 1 });
     if (falar) {
       const mestre = modificador ? `${modificador < 0 ? '−' : '+'} ${Math.abs(modificador)}` : '';
-      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/death-save.hbs'), { nome: this.name, total: roll.total, body, base, penalidade, mestre, passou, natural, dados: await roll.render() });
+      const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/death-save.hbs'), { nome: this.name, total: roll.total, body, base, penalidade, mestre, passou, natural, dados: dadosDoCartao(roll, { critico: false }) });
       await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { deathSave: { total: roll.total, passou } } } });
     }
     return { roll, total: roll.total, natural, passou };
@@ -504,7 +505,7 @@ export class ItemCPR extends Item {
     const resultado = { roll, total: roll.total, contra, formula };
     if (falar) {
       const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), {
-        rotulo: `Dano: ${this.name} (${alvo.rotulo})`, total: roll.total, critico: null, dados: await roll.render(), botoes: botoesDaNet(ONDE_O_DANO_ENTRA[this.system.classe]?.[contra] ?? [])
+        rotulo: `Dano: ${this.name} (${alvo.rotulo})`, total: roll.total, critico: null, net: true, dados: dadosDoCartao(roll), botoes: botoesDaNet(ONDE_O_DANO_ENTRA[this.system.classe]?.[contra] ?? [])
       });
       resultado.mensagem = await ChatMessage.implementation.create({
         speaker: ChatMessage.implementation.getSpeaker({ actor: this.actor }), content, rolls: [roll], flags: { [SISTEMA]: { danoDePrograma: { programa: this.uuid, contra, total: roll.total } } }

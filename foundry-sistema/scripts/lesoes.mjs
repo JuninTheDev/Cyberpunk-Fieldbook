@@ -2,6 +2,7 @@
 // o alvo já tem; o item entra na ficha com os efeitos (Perna quebrada: −4 MOVE) e o cartão sai no chat.
 import { itemDoCatalogo } from './catalogo.mjs';
 import { caminho, SISTEMA } from './config.mjs';
+import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { TABELAS_LESAO } from './gerado.mjs';
 import { lesaoNaTabela } from './regras.mjs';
 
@@ -26,7 +27,7 @@ export async function lesaoCritica(ator, { cabeca = false, id = null, naFicha = 
   const [item] = naFicha && !repetida ? await ator.createEmbeddedDocuments('Item', [dados]) : [null];
   if (falar) {
     const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/lesao.hbs'), {
-      alvo: ator.name, nome: dados.name, descricao: dados.system.descricao, cabeca, repetida, naFicha, dados: roll ? await roll.render() : ''
+      alvo: ator.name, nome: dados.name, descricao: dados.system.descricao, cabeca, repetida, naFicha, dados: roll ? dadosDoCartao(roll, { critico: false }) : ''
     });
     await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: roll ? [roll] : [], flags: { [SISTEMA]: { lesao: { id: escolhido, nome: dados.name } } } });
   }

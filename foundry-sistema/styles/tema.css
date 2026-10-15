@@ -485,72 +485,100 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.janela-defesa .tempo span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, var(--cp-vermelho), var(--cp-amarelo)); transition: width 0.25s linear; }
 
 /* ---------- Cartões do chat ---------- */
-/* A mensagem inteira: o fundo, a borda (amarela; vermelha no dano e na morte) e quem falou. */
+/* A mensagem inteira é o cartão (as maquetes do usuário): o painel com o canto cortado e a faixa de cima na cor do tipo;
+   na linha de cima, o tipo e quem rolou, com a hora. O tipo vem do cartão dentro da mensagem (:has), e o rótulo dele é
+   desenhado pelo CSS, para o texto do cartão continuar o mesmo. */
 .chat-message.cprf-mensagem {
-  background-color: var(--cp-fundo);
-  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
-  border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-amarelo); border-radius: 0;
+  --acento: var(--cp-amarelo); --tipo: 'TESTE';
+  position: relative; padding: 12px 14px 12px; border: none; border-radius: 0; background-color: var(--cp-painel);
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   color: var(--cp-texto); font-family: var(--cp-titulo); font-size: 14px;
 }
-.chat-message.cprf-mensagem:is(.cprf-dano, .cprf-morte, .cprf-falhou) { border-left-color: var(--cp-vermelho); }
-.chat-message.cprf-mensagem:is(.cprf-espera) { border-left-color: var(--cp-fraco); }
-.chat-message.cprf-mensagem .message-header { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
-.chat-message.cprf-mensagem .message-sender { color: var(--cp-amarelo); font: 700 15px/1.2 var(--cp-titulo); letter-spacing: 0.06em; text-transform: uppercase; }
-.chat-message.cprf-mensagem :is(.message-metadata, .whisper-to, .flavor-text) { color: var(--cp-fraco); }
-.cpr-fieldbook.cartao { color: var(--cp-texto); font-family: var(--cp-titulo); }
-.cpr-fieldbook.cartao header {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding-bottom: 4px;
-  border-bottom: 1px solid var(--cp-linha);
-}
-.cpr-fieldbook.cartao header h3 { margin: 0; border: none; color: var(--cp-texto); font: 700 16px/1.15 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
-.cpr-fieldbook.cartao .sabor { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.04em; text-align: right; }
-.cpr-fieldbook.cartao p { margin: 4px 0; }
+/* A faixa de cima (um elemento à parte: a cor do jogador que o Foundry põe na borda não a troca). */
+.chat-message.cprf-mensagem::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--acento); }
+.chat-message.cprf-mensagem:has(.cartao.tipo-ataque) { --acento: var(--cp-vermelho); --tipo: 'ATAQUE'; }
+.chat-message.cprf-mensagem:has(.cartao.tipo-defesa) { --acento: var(--cp-ciano); --tipo: 'DEFESA'; }
+.chat-message.cprf-mensagem:has(.cartao.tipo-net) { --acento: var(--cp-ciano); --tipo: 'NET'; }
+.chat-message.cprf-mensagem:has(.cartao.backup) { --acento: var(--cp-ciano); --tipo: 'BACKUP'; }
+.chat-message.cprf-mensagem:has(.cartao.backup.falhou) { --acento: var(--cp-fraco); }
+.chat-message.cprf-mensagem:has(.cartao.ataque) { --acento: var(--cp-vermelho); --tipo: 'RESULTADO'; }
+.chat-message.cprf-mensagem:has(.cartao.dano) { --acento: var(--cp-vermelho); --tipo: 'DANO'; }
+.chat-message.cprf-mensagem:has(.cartao.dano.net) { --acento: var(--cp-ciano); --tipo: 'DANO NET'; }
+.chat-message.cprf-mensagem:has(.cartao.dano-net) { --acento: var(--cp-ciano); --tipo: 'NET'; }
+.chat-message.cprf-mensagem:has(.cartao.death-save) { --acento: var(--cp-ciano); --tipo: 'DEATH SAVE'; }
+.chat-message.cprf-mensagem:has(.cartao.death-save.falhou) { --acento: var(--cp-vermelho); }
+.chat-message.cprf-mensagem:has(.cartao.lesao) { --acento: var(--cp-vermelho); --tipo: 'LESÃO'; }
+.chat-message.cprf-mensagem:has(.cartao.espera) { --acento: var(--cp-fraco); --tipo: 'DEFESA'; }
+.chat-message.cprf-mensagem:has(.cartao.morte) { --acento: var(--cp-vermelho); --tipo: 'MORTE'; }
+.chat-message.cprf-mensagem:has(.cartao.migracao) { --acento: var(--cp-fraco); --tipo: 'SISTEMA'; }
+/* A linha de cima: o tipo na cor dele, quem rolou e, à direita, a hora e o apagar. */
+.chat-message.cprf-mensagem .message-header { align-items: baseline; margin: 0 0 4px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.12em; }
+.chat-message.cprf-mensagem .message-sender { overflow: hidden; color: var(--cp-texto); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.14em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.chat-message.cprf-mensagem .message-sender::before { content: var(--tipo) ' // '; color: var(--acento); }
+.chat-message.cprf-mensagem :is(.message-metadata, .whisper-to, .flavor-text) { color: var(--cp-fraco); font-family: var(--cp-dados); }
+.chat-message.cprf-mensagem .message-content { margin: 0; }
+
+/* O corpo: o título grande, o que soma (o subtítulo), os dados com o total, o resultado, a regra e os botões. A ordem
+   é do CSS (o cabeçalho do cartão some na caixa dele: o título vem primeiro e a regra vai para baixo). */
+.cpr-fieldbook.cartao { display: flex; flex-direction: column; gap: 6px; color: var(--cp-texto); font-family: var(--cp-titulo); }
+.cpr-fieldbook.cartao > * { order: 4; margin: 0; }
+.cpr-fieldbook.cartao header { display: contents; }
+.cpr-fieldbook.cartao h3 { order: 1; margin: 0; border: none; color: var(--cp-texto); font: 700 21px/1.1 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.cartao p { margin: 0; line-height: 1.35; }
 .cpr-fieldbook.cartao b { color: var(--cp-amarelo); }
-/* As partes do teste (atributo, perícia, bônus, Sorte...). */
-.cpr-fieldbook.cartao .partes { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 6px; padding: 0; list-style: none; }
-.cpr-fieldbook.cartao .partes li { padding: 1px 6px; background: var(--cp-poco); border-top: 1px solid var(--cp-ciano); color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
-.cpr-fieldbook.cartao .partes li b { font-weight: 400; }
-.cpr-fieldbook.cartao .critico { margin: 4px 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
-.cpr-fieldbook.cartao.critico-sucesso .critico { color: var(--cp-ciano); }
+/* O que soma ao 1d10, como o subtítulo da maquete: "1D10 · REF +8 · ARMAS DE UMA MÃO +4". */
+.cpr-fieldbook.cartao .partes { order: 2; display: flex; flex-wrap: wrap; gap: 2px 0; padding: 0; list-style: none; color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.06em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .partes li + li::before { content: '·'; margin: 0 6px; color: var(--cp-linha); }
+.cpr-fieldbook.cartao .partes li b { color: var(--acento, var(--cp-amarelo)); font-weight: 400; }
+/* Os dados: cada um numa caixa (o 10 do crítico em amarelo, o 1 da falha em vermelho), o resto e o total grande. */
+.cpr-fieldbook.cartao .dados-do-cartao { order: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 0; }
+.cpr-fieldbook.cartao .dados-do-cartao .dado {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 4px;
+  border: 1px solid var(--cp-fraco); background: var(--cp-poco); color: var(--cp-texto); font: 700 20px/1 var(--cp-titulo);
+}
+.cpr-fieldbook.cartao .dados-do-cartao .dado.maximo { border-color: var(--cp-amarelo); color: var(--cp-amarelo); }
+.cpr-fieldbook.cartao .dados-do-cartao .dado.minimo { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao .dados-do-cartao i { color: var(--cp-fraco); font: 400 15px/1 var(--cp-dados); font-style: normal; }
+.cpr-fieldbook.cartao .dados-do-cartao .total { margin-left: auto; padding-left: 8px; color: var(--acento, var(--cp-amarelo)); font: 700 42px/1 var(--cp-titulo); }
+/* O resultado: o crítico numa etiqueta, e a frase do Death Save e do Backup na linha de baixo. */
+.cpr-fieldbook.cartao :is(.critico, .resultado) { order: 5; font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .critico { align-self: flex-start; padding: 3px 8px; border: 1px solid currentColor; color: var(--cp-ciano); }
 .cpr-fieldbook.cartao.critico-falha .critico { color: var(--cp-vermelho); }
-/* Os dados (o roll.render do Foundry): a fórmula, os dados e o total grande. */
-.cpr-fieldbook.cartao .dice-roll { margin-top: 6px; }
-.cpr-fieldbook.cartao .dice-formula { background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
-.cpr-fieldbook.cartao .dice-tooltip { background: var(--cp-poco); color: var(--cp-texto); }
-.cpr-fieldbook.cartao .dice-tooltip :is(.part-formula, .part-total) { color: var(--cp-fraco); font-family: var(--cp-dados); }
-.cpr-fieldbook.cartao .dice-total {
-  background: var(--cp-poco); border: 1px solid var(--cp-amarelo); border-radius: 0; box-shadow: none;
-  color: var(--cp-amarelo); font: 700 24px/1.3 var(--cp-titulo);
-}
-.cpr-fieldbook.cartao:is(.dano, .death-save.falhou) .dice-total { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
-.cpr-fieldbook.cartao.death-save.passou .dice-total { border-color: var(--cp-ciano); color: var(--cp-ciano); }
-/* O resultado do ataque: cada alvo, o dano e as notas. */
-.cpr-fieldbook.cartao .placar { margin: 0 0 6px; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; color: var(--cp-fraco); }
-.cpr-fieldbook.cartao .placar b { font: 700 20px var(--cp-titulo); }
-.cpr-fieldbook.cartao .alvos { margin: 0; padding: 0; list-style: none; }
-.cpr-fieldbook.cartao .alvo { padding: 5px 0; border-top: 1px solid var(--cp-linha); }
-.cpr-fieldbook.cartao .alvo .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.cpr-fieldbook.cartao .alvo .linha b { color: var(--cp-texto); }
-.cpr-fieldbook.cartao .alvo img { width: 28px; height: 28px; border: none; object-fit: cover; }
-.cpr-fieldbook.cartao .alvo .rotulo { font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
-.cpr-fieldbook.cartao .alvo:is(.resultado-acertou, .resultado-suprimido) .rotulo { color: var(--cp-vermelho); }
-.cpr-fieldbook.cartao .alvo:is(.resultado-esquivou, .resultado-firme) .rotulo { color: var(--cp-ciano); }
-.cpr-fieldbook.cartao .alvo:is(.resultado-errou, .resultado-fora, .resultado-semDv) .rotulo { color: var(--cp-fraco); }
-.cpr-fieldbook.cartao .contra { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
-.cpr-fieldbook.cartao .dano { margin: 4px 0 0; padding-left: 16px; font-size: 13px; }
-.cpr-fieldbook.cartao .dano .lesao, .cpr-fieldbook.cartao .dano .lesao b { color: var(--cp-vermelho); }
-.cpr-fieldbook.cartao .nota { margin: 4px 0 0; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; line-height: 1.4; }
-.cpr-fieldbook.cartao .botoes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
-.cpr-fieldbook.cartao .botoes button {
-  flex: none; width: auto; height: auto; min-height: 0; padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0;
-  background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; line-height: 1.2;
-}
-.cpr-fieldbook.cartao .botoes button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
-.cpr-fieldbook.cartao.desfeito { opacity: 0.5; }
-.cpr-fieldbook.cartao.desfeito .botoes { display: none; }
-.cpr-fieldbook.cartao .resultado { font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.cpr-fieldbook.cartao.dano .critico { color: var(--cp-amarelo); }
+.cpr-fieldbook.cartao .resultado { padding-top: 6px; border-top: 1px solid var(--cp-linha); }
 .cpr-fieldbook.cartao.death-save.passou .resultado { color: var(--cp-ciano); }
 .cpr-fieldbook.cartao.death-save.falhou .resultado, .cpr-fieldbook.cartao.morte { color: var(--cp-vermelho); }
+/* A regra (o sabor), as notas e os botões, no fim. */
+.cpr-fieldbook.cartao .sabor { order: 6; color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.03em; }
+.cpr-fieldbook.cartao .nota { order: 7; color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); }
+.cpr-fieldbook.cartao .botoes { order: 8; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); }
+.cpr-fieldbook.cartao .botoes button {
+  flex: none; width: auto; height: auto; min-height: 0; margin: 0; padding: 5px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; box-shadow: none; color: var(--cp-amarelo); font: 400 11px/1.2 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.cpr-fieldbook.cartao .botoes button:hover { background: var(--cp-amarelo); box-shadow: none; color: var(--cp-fundo); }
+/* O resultado do ataque: o total do ataque grande, cada alvo com a etiqueta do que aconteceu, o dano e a barra de HP. */
+.cpr-fieldbook.cartao .placar { order: 3; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .placar b { color: var(--acento); font: 700 34px/1 var(--cp-titulo); letter-spacing: 0; }
+.cpr-fieldbook.cartao .alvos { order: 4; display: flex; flex-direction: column; gap: 6px; padding: 0; list-style: none; }
+.cpr-fieldbook.cartao .alvo { padding: 6px 0 0; border-top: 1px solid var(--cp-linha); }
+.cpr-fieldbook.cartao .alvo .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cpr-fieldbook.cartao .alvo .linha b { color: var(--cp-texto); font-weight: 700; }
+.cpr-fieldbook.cartao .alvo img { width: 28px; height: 28px; border: 1px solid var(--cp-linha); object-fit: cover; }
+.cpr-fieldbook.cartao .alvo .rotulo { padding: 2px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .alvo:is(.resultado-acertou, .resultado-suprimido) .rotulo { border-color: var(--cp-vermelho); background: var(--cp-vermelho); color: var(--cp-fundo); }
+.cpr-fieldbook.cartao .alvo:is(.resultado-esquivou, .resultado-firme) .rotulo { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.cartao .contra { color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.06em; }
+.cpr-fieldbook.cartao .dano { margin: 4px 0 0; padding-left: 16px; color: var(--cp-texto); font-size: 13px; line-height: 1.35; }
+.cpr-fieldbook.cartao .dano .lesao, .cpr-fieldbook.cartao .dano .lesao b { color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao .barra-hp { display: block; height: 8px; margin: 6px 0 2px; background: linear-gradient(90deg, var(--cp-vermelho) var(--hp), var(--cp-poco) var(--hp)); }
+/* A lesão crítica: o texto do item. */
+.cpr-fieldbook.cartao.lesao > :is(p, ul) { color: var(--cp-texto); font-size: 14px; }
+/* O Desfazer: o cartão desbotado, com o carimbo. */
+.cpr-fieldbook.cartao.desfeito { opacity: 0.55; }
+.cpr-fieldbook.cartao.desfeito::after { content: 'DESFEITO'; order: 9; align-self: flex-start; padding: 2px 8px; border: 1px solid var(--cp-vermelho); color: var(--cp-vermelho); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.2em; }
+.cpr-fieldbook.cartao.desfeito .botoes { display: none; }
 
 /* ---------- Ficha do item: o mesmo tema ---------- */
 .cpr-fieldbook.ficha-item .cabecalho { border-bottom: 2px solid var(--cp-amarelo); }

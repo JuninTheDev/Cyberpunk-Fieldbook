@@ -9,6 +9,7 @@ import { pedir as pedirAoJogador } from '../combate.mjs';
 import { caminho, SISTEMA } from '../config.mjs';
 import { config } from '../configuracoes.mjs';
 import { acoesDeNet, formulaDeDano, NUMEROS_DA_NET, programaDeAtaque } from '../regras.mjs';
+import { dadosDoCartao } from '../dados-do-cartao.mjs';
 import { testar } from '../rolagens.mjs';
 import { entrarNoCombate, sincronizarInimigos, tirarInimigos } from './combate.mjs';
 import { FLAG_CONEXAO, FLAG_ESTADO, FLAG_PONTO, STATUS_CONECTADO, STATUS_EM_CHAMAS } from './constantes.mjs';
@@ -212,7 +213,7 @@ async function rolarNoNetrunner(ctx, { rolagem = null, programa = null, extras =
     if (ctx.est) registrar(ctx.est, registro);
   }
   const resultado = programa ? await ator.rolarAtaqueDePrograma(programa) : await ator.rolarInterface(rolagem, { extras });
-  return resultado?.total ?? (await testar(ator, { rotulo: rolagem, partes: extras })).total;
+  return resultado?.total ?? (await testar(ator, { rotulo: rolagem, partes: extras, categoria: 'net' })).total;
 }
 
 // O encontro ao chegar (a wiki): o Black ICE disputa a velocidade (vencendo, age na hora); o demônio sempre vence a
@@ -230,7 +231,7 @@ async function encontrar(ctx, corredor, conteudo) {
 // O cartão de dano sem os botões do mestre (o motor aplica): o de um inimigo da arquitetura, no nome dele; o do programa
 // do netrunner, já rolado, no nome do netrunner.
 async function cartaoDoRoll(roll, rotulo, speaker) {
-  const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), { rotulo, total: roll.total, critico: null, dados: await roll.render(), botoes: [] });
+  const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/dano.hbs'), { rotulo, total: roll.total, critico: null, net: true, dados: dadosDoCartao(roll), botoes: [] });
   await ChatMessage.implementation.create({ speaker, content, rolls: [roll] });
   return roll.total;
 }

@@ -1,5 +1,6 @@
 // Rolagens: o crítico do d10, os testes (atributo + perícia + 1d10) e o dano, com os cartões do chat.
 import { caminho, SISTEMA } from './config.mjs';
+import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { perguntarModificador } from './janela-rolagem.mjs';
 import { BONUS_CRITICO, danoCritico, expressaoDoDano, sorteParaGastar } from './regras.mjs';
 
@@ -38,8 +39,9 @@ export function criticoDo(roll) {
 // do core: explode uma vez).
 // A Sorte entra no teste, +1 por ponto, e sai da Sorte do ator (RED p. 130): a escolhida na janela de rolagem (sorte) ou,
 // sem a janela, a que ele preparou na ficha. falante: o nome no cartão de quem não é ator (o Black ICE e o demônio de uma
-// arquitetura da NET); sem ele, fala o ator.
-export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false, sorte: escolhida, falante = '' }) {
+// arquitetura da NET); sem ele, fala o ator. categoria: o tipo no cartão (ataque, defesa, net); sem ela, é da NET o teste
+// de quem não é ator e o da Interface.
+export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false, sorte: escolhida, falante = '', categoria = '' }) {
   const sorte = escolhida === undefined ? (ator?.sortePreparada ?? 0) : sorteParaGastar(escolhida, ator?.system.sorte.value);
   const usadas = [...partes, ...(sorte ? [{ rotulo: 'Sorte', valor: sorte }] : [])].filter(parte => Number(parte.valor));
   const formula = [semFalhaCritica ? '1d10xo' : '1d10crit', ...usadas.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ');
@@ -48,7 +50,8 @@ export async function testar(ator, { rotulo, partes = [], modo, falar = true, sa
   const resultado = { roll, total: roll.total, critico, natural: roll.dice[0].results[0].result, sorte };
   if (ator && (sorte || escolhida !== undefined)) await ator.gastarSorte(sorte);
   if (!falar) return resultado;
-  const content = await renderizar('teste.hbs', { rotulo, sabor, partes: usadas, total: roll.total, critico, dados: await roll.render() });
+  const tipo = categoria || (falante || usadas.some(parte => parte.rotulo === 'Interface') ? 'net' : '');
+  const content = await renderizar('teste.hbs', { rotulo, sabor, partes: usadas, total: roll.total, critico, categoria: tipo, dados: dadosDoCartao(roll, { critico: !semFalhaCritica || critico === 'sucesso' }) });
   resultado.mensagem = await ChatMessage.implementation.create({
     speaker: falante ? { alias: falante } : ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: [roll],
     flags: { [SISTEMA]: { teste: { rotulo, total: roll.total, critico, ...dados } } }
@@ -74,7 +77,7 @@ export async function rolarDano(arma, { falar = false, modo, formula = null, mul
   const critico = danoCritico(resultados);
   const resultado = { roll, total: roll.total, critico, bonus: critico ? BONUS_CRITICO : 0, resultados, formula: expressao };
   if (falar) {
-    const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, dados: await roll.render() });
+    const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
     resultado.mensagem = await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: arma.actor }), content, rolls: [roll] }, { messageMode: modo });
   }
   return resultado;
