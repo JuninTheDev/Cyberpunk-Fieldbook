@@ -149,6 +149,19 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem section.tab.active { display: flex; flex-direction: column; gap: 16px; }
 .cpr-fieldbook.ficha-personagem section.tab:not(.active) { display: none; }
 .cpr-fieldbook.ficha-personagem .duas-colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+/* As abas no jeito das maquetes do usuário: à esquerda, a coluna dos números (os painéis de resumo); à direita, o
+   conteúdo (as listas e as tabelas). */
+.cpr-fieldbook.ficha-personagem .aba-colunas { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 16px; align-items: start; }
+.cpr-fieldbook.ficha-personagem :is(.coluna-resumo, .coluna-principal) { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .numero-grande { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 2px; }
+.cpr-fieldbook.ficha-personagem .numero-grande b { color: var(--cp-amarelo); font: 700 48px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .numero-grande small { color: var(--cp-fraco); font: 700 22px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .medida b.destaque { color: var(--cp-amarelo); font-size: 18px; }
+/* O painel ciano (a Humanidade, a NET): a borda e o número grande na cor. */
+.cpr-fieldbook.ficha-personagem .painel.ciano { border-left-color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .painel.ciano .numero-grande b { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .coluna-resumo .barra { margin-top: 4px; }
+.cpr-fieldbook.ficha-personagem .coluna-resumo .estado-caixa { margin-top: 12px; }
 
 /* ---------- Perícias: o painel geral em três colunas ---------- */
 .cpr-fieldbook.ficha-personagem .geral { display: grid; grid-template-columns: 300px minmax(0, 1fr) 330px; gap: 16px; }
@@ -235,7 +248,13 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem ol.itens button.apagar { border-color: transparent; }
 .cpr-fieldbook.ficha-personagem ol.itens button.apagar:hover { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
 /* O painel de Eurodólares (aba Equipamento): o saldo, o botão do extrato e as últimas mudanças. */
-.cpr-fieldbook.ficha-personagem .dinheiro .titulo span { color: var(--cp-amarelo); font-size: 14px; letter-spacing: 0.1em; }
+.cpr-fieldbook.ficha-personagem .dinheiro .titulo span { color: var(--cp-fraco); font-size: 12px; letter-spacing: 0.15em; }
+.cpr-fieldbook.ficha-personagem .botoes-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+/* Na coluna estreita, o histórico recente: a mudança em cima, o detalhe embaixo. */
+.cpr-fieldbook.ficha-personagem .coluna-resumo .extrato-recente > li { flex-wrap: wrap; gap: 0 8px; }
+.cpr-fieldbook.ficha-personagem .coluna-resumo .extrato-recente .detalhe { flex-basis: 100%; }
+/* As outras listas da coluna (a munição): o número numa linha só, à direita. */
+.cpr-fieldbook.ficha-personagem .coluna-resumo ol.itens:not(.extrato-recente) .detalhe { flex: none; color: var(--cp-amarelo); text-align: right; white-space: nowrap; }
 .cpr-fieldbook.ficha-personagem .extrato-recente .mudanca { flex: none; min-width: 9ch; font-family: var(--cp-dados); font-size: 15px; }
 .cpr-fieldbook.ficha-personagem .extrato-recente .entrou .mudanca { color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .extrato-recente .saiu .mudanca { color: var(--cp-vermelho); }
@@ -250,7 +269,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem table.lista tr { background: transparent; }
 .cpr-fieldbook.ficha-personagem table.lista td { padding: 6px 4px; border: none; border-top: 1px solid var(--cp-linha); vertical-align: middle; font-size: 16px; }
 .cpr-fieldbook.ficha-personagem table.lista td.num { text-align: center; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 17px; }
-.cpr-fieldbook.ficha-personagem table.lista td.nome { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 700; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 190px; font-weight: 700; }
 .cpr-fieldbook.ficha-personagem table.lista td.nome img { width: 24px; height: 24px; border: none; }
 .cpr-fieldbook.ficha-personagem table.lista td.nome a { cursor: pointer; }
 .cpr-fieldbook.ficha-personagem table.lista td.nome small { font-family: var(--cp-dados); font-size: 11px; font-weight: 400; }
@@ -362,7 +381,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 @container (max-width: 700px) {
   .cpr-fieldbook.ficha-personagem .topo { flex-direction: column; }
   .cpr-fieldbook.ficha-personagem .nome-linha .nome { font-size: 34px; }
-  .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .lifepath) { grid-template-columns: minmax(0, 1fr); }
+  .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .lifepath, .aba-colunas) { grid-template-columns: minmax(0, 1fr); }
   .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-template-columns: minmax(0, 1fr); }
 }
 

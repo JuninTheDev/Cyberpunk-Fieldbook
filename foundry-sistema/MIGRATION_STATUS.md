@@ -67,6 +67,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | as rolagens do jogador na janela de rolagem dele (a configuração "O jogador rola as rolagens da NET") | portado no ciclo 56 (o C8, parte 10; ver as dúvidas) |
 | NET Architect | a janela da NET no visual novo (o topo com o netrunner e as Ações NET em losangos, o mapa com a cor de cada andar e os cabos, o painel ao lado, as habilidades com a base da rolagem, o registro com a hora) | refeita no ciclo 58 (o pedido do usuário, a partir da maquete dele, que não cobre tudo) |
 | sistema | os cartões do chat no visual novo (a faixa e o tipo na linha de cima, os dados em caixas com o total grande, as etiquetas do resultado e a barra de HP) | refeitos no ciclo 59 (o pedido do usuário, pela maquete dele; os botões da maquete sem função no sistema ficaram de fora) |
+| sistema | a ficha nas abas das maquetes (Combate, Equipamento e Cyberware em duas colunas, com os números em grande) | refeitas no ciclo 60 (Role, NET, Vida e as fichas dos itens, depois; as funções das maquetes que o sistema não tem ficaram de fora) |
 | NET Architect | os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
@@ -471,6 +472,17 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **o "Desfazer" do ataque tira o +1,** como faz com o Ponto Fraco e a Deflexão. No Fluxo, a marca ficava;
   - **o +1 entra em toda Evasão da rodada:** na conta da janela de reação, na esquiva e na escolha automática dos NPCs.
     No Fluxo, entrava só na esquiva.
+
+- **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 e 60): pergunta ao usuário.** As maquetes
+  de 2026-10-15 mostram botões e campos sem função no sistema hoje. O visual seguiu as maquetes só com o que existe; cada
+  um destes vira um item, se o usuário quiser:
+  - **no chat:** "+ Luck" e "Reroll" no cartão do teste (a Sorte se prepara na ficha antes), "Add to tracker" na
+    iniciativa, "Apply damage" e "Roll critical" no dano, "Apply" na perda de Humanidade (o fluxo do ataque e a
+    instalação já aplicam);
+  - **na ficha:** "Roll initiative" (a iniciativa rola pelo combate do Foundry), o local do acerto (Head, Body,
+    Random), as ações Take Cover e Grapple, "Fix" na lesão, "Luck used" no cabeçalho (a ficha mostra a Sorte que resta),
+    a quantidade com − e + e "Use" no equipamento, a hierarquia de fundação e opções no cyberware ("+ Foundation",
+    "+ Option") e as notas de ciberpsicose.
 
 ## Registro dos ciclos
 
@@ -3114,6 +3126,50 @@ dano da NET, as classes `cprf-` da mensagem). Commit anterior: `e7d11fa` (ciclo 
   maquetes. Os botões da maquete do chat, se o usuário quiser. Depois, o C8, parte 11: os nós de controle ligados à
   cena.
 - **Próximo:** a ficha no visual novo (ciclo 60).
+
+### Ciclo 60 (2026-10-15): a ficha no visual novo, parte 1: Combate, Equipamento e Cyberware (o pedido do usuário; sessão KouArt)
+
+A terceira parte do pedido de 2026-10-15 (ver o ciclo 58): a ficha pelas maquetes "Fight Tab", "Gear Tab" e "Cyberware
+Tab". O cabeçalho e as abas já estavam no visual das maquetes desde o ciclo 19 (o "Modelo de ficha" da mesa); o que as
+maquetes mudam é a organização de cada aba: à esquerda, a coluna dos números (os painéis de resumo, com o número
+principal em grande); à direita, as listas e as tabelas. A aba Perícias (o painel geral) não tem maquete e não mudou.
+Commit anterior: `f8bd09a` (ciclo 59).
+
+- **Implementado** (`templates/personagem/combate.hbs`, `equipamento.hbs`, `cyberware.hbs` e `styles/tema.css`):
+  - **a grade das abas** (`.aba-colunas`): a coluna dos números com 290 px e o conteúdo ao lado; estreita (menos de 700
+    px), uma coluna só. O número grande (`.numero-grande`) e o painel ciano;
+  - **Combate:** à esquerda, a Iniciativa em grande (com a conta na dica), os vitais (o HP com a barra, o limite de
+    gravemente ferido, a penalidade, o Death Save com o "zerar", o MOVE e o estado) e a defesa (a esquiva e o Facedown);
+    à direita, as armas (a mesma tabela), a armadura vestida, as lesões críticas (as mesmas do painel geral, com o
+    paliativo, o tratamento e "Tratada", que a maquete põe aqui) e a munição. O nome da arma ganhou largura mínima na
+    tabela (na coluna mais estreita, o ícone ficava sozinho numa linha);
+  - **Equipamento:** à esquerda, os Eurodólares em grande, com o extrato e as últimas mudanças, e a munição (a
+    quantidade numa linha só); à direita, armas, armaduras, equipamento, roupas, drogas, upgrades e veículos;
+  - **Cyberware:** à esquerda, a Humanidade em grande, com a barra e o EMP de agora e o de base; à direita, as peças.
+  - Os ganchos que os testes usam (as linhas das armas, o Facedown, as listas do Equipamento, o histórico do extrato)
+    continuam os mesmos, dentro da mesma aba.
+- **Fora, de propósito (perguntas ao usuário):** as maquetes mostram coisas que o sistema não tem: "Roll initiative" na
+  ficha (a iniciativa rola pelo combate do Foundry), o local do acerto (Head, Body, Random), as ações Take Cover e
+  Grapple, "Fix" na lesão, "Luck used" no cabeçalho (a ficha mostra a Sorte que resta), quantidade com − e + e "Use" no
+  equipamento, a hierarquia de fundação e opções no cyberware e "+ Foundation / + Option", e as notas de ciberpsicose.
+  Nada disso foi inventado; cada um vira um item se o usuário quiser.
+- **Testes:**
+  - G1, G2 e G3: sem mudança de código JS (os templates e o CSS); G3 continua em 83 de 87;
+  - G4: 89 de 94, de 170 a 171 s, em quatro rodadas: a primeira só com a Combate; a segunda com a Equipamento; a terceira
+    com a Cyberware e as checagens novas; a quarta com a grade e a munição numa linha só. O passo da ficha nova (a do
+    Solo importado) ganhou a ficha nas abas novas: a Iniciativa, o dinheiro e a Humanidade em grande iguais aos do ator,
+    os três painéis da coluna dos números da aba Combate, todas as armas na tabela, o painel das lesões, a munição e o
+    cyberware nas colunas certas e a grade (a coluna dos números com 290 px). As capturas das abas (agora também a
+    Cyberware) foram conferidas. As 5 falhas são as das armas de 2077, e os avisos do passo "nenhum aviso", só os dois
+    da Lexington. Depois da última rodada, só a descrição desse passo mudou: ela tinha ido, por engano, para o passo da
+    importação (as mutações mostraram onde as checagens estão);
+  - **mutações:** as 7 derrubaram o passo da ficha nova, e os arquivos voltaram (conferido pelo md5): a Iniciativa sem
+    o número grande (F1), o dinheiro grande mostrando o IP (F2), a aba Combate sem as lesões (F3), a aba Equipamento sem
+    a coluna dos números (F4), a Humanidade grande mostrando o EMP (F5), a grade desfeita no CSS (F6) e o cyberware fora
+    da coluna do conteúdo (F7). Nenhuma rodada deixou Edge nem perfil para trás.
+- **Pendências:** a ficha, parte 2 (as abas Role, NET e Vida, e as fichas dos itens); as perguntas acima; os botões da
+  maquete do chat (ciclo 59). Depois, o C8, parte 11: os nós de controle ligados à cena.
+- **Próximo:** a ficha, parte 2 (ciclo 61).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

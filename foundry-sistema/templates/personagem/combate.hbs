@@ -1,50 +1,78 @@
+{{!-- A aba Combate, no jeito da maquete "Fight Tab" do usuário: à esquerda, os números (a iniciativa, os vitais e a
+defesa); à direita, as armas, a armadura, as lesões críticas e a munição. --}}
 <section class="tab combate {{tab.cssClass}}" data-group="primary" data-tab="combate">
-  {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
+  <div class="aba-colunas">
+    <aside class="coluna-resumo">
+      <section class="painel corte">
+        <div class="titulo">INICIATIVA<span>REF {{sistema.atributos.ref.valor}}</span></div>
+        <p class="numero-grande" data-tooltip="{{iniciativa.dica}}"><b>{{iniciativa.valor}}</b><small>+ 1d10</small></p>
+      </section>
 
-  <div class="duas-colunas">
-    <section class="painel corte vermelho">
-      <div class="titulo">ARMADURA<span>{{#if sistema.penalidadeArmadura}}−{{sistema.penalidadeArmadura}} EM REF, DEX E MOVE{{else}}SEM PENALIDADE{{/if}}</span></div>
-      <div class="sp-caixas">
-        <div><b>{{sistema.armadura.cabeca.sp}}</b>CABEÇA{{#if sistema.armadura.cabeca.max}}<small>de {{sistema.armadura.cabeca.max}}</small>{{/if}}</div>
-        <div><b>{{sistema.armadura.corpo.sp}}</b>CORPO{{#if sistema.armadura.corpo.max}}<small>de {{sistema.armadura.corpo.max}}</small>{{/if}}</div>
-      </div>
-      <ol class="itens">
-        {{#each armaduras}}
-        <li data-item-id="{{id}}" class="{{#unless equipada}}guardada{{/unless}}">
-          <a class="nome" data-action="editarItem">{{nome}}</a>
-          <span class="detalhe">{{detalhe}}</span>
-          <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
-        </li>
-        {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
-      </ol>
-    </section>
+      <section class="painel corte vitais">
+        <div class="titulo">VITAIS<span>AO VIVO</span></div>
+        <div class="medida"><span>PONTOS DE VIDA</span><b class="destaque">{{sistema.hp.value}} / {{sistema.hp.max}}</b></div>
+        <div class="barra"><div class="hp" style="width: {{vitais.hp}}%"></div></div>
+        <div class="medida"><span>GRAVEMENTE FERIDO</span><b data-tooltip="Abaixo da metade do HP: −2 em tudo">&lt; {{vitais.grave}}</b></div>
+        <div class="medida"><span>PENALIDADE</span><b>{{#if sistema.penalidade}}{{sistema.penalidade}} em tudo{{else}}nenhuma{{/if}}</b></div>
+        <div class="medida death-save">
+          <span>DEATH SAVE</span>
+          <b>
+            <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
+            {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves">zerar</a>{{/if}}
+          </b>
+        </div>
+        <div class="medida"><span>MOVE</span><b>{{sistema.atributos.move.valor}}</b></div>
+        <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.semPerna}} · SEM A PERNA: NÃO ESQUIVA{{/if}}</div>
+      </section>
 
-    <section class="painel corte">
-      <div class="titulo">INICIATIVA E DEFESA<span>REF {{sistema.atributos.ref.valor}} · DEX {{sistema.atributos.dex.valor}} · MOVE {{sistema.atributos.move.valor}}</span></div>
-      <div class="medida"><span>INICIATIVA</span><b data-tooltip="{{iniciativa.dica}}">{{iniciativa.valor}} + 1d10</b></div>
-      <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
-      <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">{{facedown.valor}} + 1d10</a></b></div>
-      <div class="medida"><span>PENALIDADE DE FERIMENTO</span><b>{{#if sistema.penalidade}}{{sistema.penalidade}} em tudo{{else}}nenhuma{{/if}}</b></div>
-      <div class="medida death-save">
-        <span>DEATH SAVE</span>
-        <b>
-          <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
-          {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves">zerar</a>{{/if}}
-        </b>
-      </div>
-      <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.semPerna}} · SEM A PERNA: NÃO ESQUIVA{{/if}}</div>
-    </section>
+      <section class="painel corte">
+        <div class="titulo">DEFESA<span>DEX {{sistema.atributos.dex.valor}}</span></div>
+        <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
+        <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">{{facedown.valor}} + 1d10</a></b></div>
+      </section>
+    </aside>
+
+    <div class="coluna-principal">
+      {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
+
+      <section class="painel corte vermelho">
+        <div class="titulo">ARMADURA<span>{{#if sistema.penalidadeArmadura}}−{{sistema.penalidadeArmadura}} EM REF, DEX E MOVE{{else}}SEM PENALIDADE{{/if}}</span></div>
+        <div class="sp-caixas">
+          <div><b>{{sistema.armadura.cabeca.sp}}</b>CABEÇA{{#if sistema.armadura.cabeca.max}}<small>de {{sistema.armadura.cabeca.max}}</small>{{/if}}</div>
+          <div><b>{{sistema.armadura.corpo.sp}}</b>CORPO{{#if sistema.armadura.corpo.max}}<small>de {{sistema.armadura.corpo.max}}</small>{{/if}}</div>
+        </div>
+        <ol class="itens">
+          {{#each armaduras}}
+          <li data-item-id="{{id}}" class="{{#unless equipada}}guardada{{/unless}}">
+            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <span class="detalhe">{{detalhe}}</span>
+            <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
+          </li>
+          {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
+        </ol>
+      </section>
+
+      <section class="painel corte perigo lesoes">
+        <div class="titulo">LESÕES CRÍTICAS<span>{{lesoes.length}} ATIVA{{#unless (eq lesoes.length 1)}}S{{/unless}}</span></div>
+        {{#each lesoes}}
+        <div class="item-linha" data-item-id="{{id}}">
+          <a class="nome" data-action="editarItem" data-tooltip="{{resumo}}">{{nome}}<small>{{tratar}}</small></a>
+          <button type="button" class="acao" data-action="apagarItem" data-tooltip="Tratada: tirar da ficha">TRATADA</button>
+        </div>
+        {{else}}<div class="caixa-vazia">SEM LESÕES</div>{{/each}}
+      </section>
+
+      <section class="painel corte">
+        <div class="titulo">MUNIÇÃO<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}</span></div>
+        <ol class="itens">
+          {{#each municoes}}
+          <li data-item-id="{{id}}">
+            <a class="nome" data-action="editarItem">{{name}}</a>
+            <span class="detalhe">{{system.quantidade}} tiros{{#if system.ablacao}}{{#unless (eq system.ablacao 1)}} · ablação {{system.ablacao}}{{/unless}}{{else}} · não abla{{/if}}</span>
+          </li>
+          {{else}}<li class="vazio">Sem munição.</li>{{/each}}
+        </ol>
+      </section>
+    </div>
   </div>
-
-  <section class="painel corte">
-    <div class="titulo">MUNIÇÃO<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}</span></div>
-    <ol class="itens">
-      {{#each municoes}}
-      <li data-item-id="{{id}}">
-        <a class="nome" data-action="editarItem">{{name}}</a>
-        <span class="detalhe">{{system.quantidade}} tiros{{#if system.ablacao}}{{#unless (eq system.ablacao 1)}} · ablação {{system.ablacao}}{{/unless}}{{else}} · não abla{{/if}}</span>
-      </li>
-      {{else}}<li class="vazio">Sem munição.</li>{{/each}}
-    </ol>
-  </section>
 </section>

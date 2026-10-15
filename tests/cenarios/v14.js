@@ -2528,7 +2528,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(1200);
     await edge.shot('importado');
 
-    await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha', async () => {
+    await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha; as abas Combate, Equipamento e Cyberware no jeito das maquetes (a iniciativa, o dinheiro e a Humanidade em grande na coluna dos números, com 290 px; as armas, as lesões, a munição e o cyberware)', async () => {
       const lp = solo.resultado.lifepath;
       const info = await edge.evaluate(`(async () => {
         const ator = game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
@@ -2577,16 +2577,27 @@ module.exports = async ({ edge, servidores, r }) => {
         // De volta ao modo compacto (o do modelo), para a captura.
         f().querySelector('[data-action="alternarPericias"]').click();
         await __esperar(() => f()?.querySelector('[data-action="alternarPericias"]')?.textContent.trim() === 'VER TODAS');
-        return { topo, role, vida, geral, nova, tirada };
+        // As abas no jeito das maquetes: a coluna dos números (a iniciativa e o dinheiro em grande) e o conteúdo ao lado.
+        const abas = {
+          iniciativa: texto('.tab.combate .coluna-resumo .numero-grande b'), ini: String(ator.system.iniciativa), resumo: f().querySelectorAll('.tab.combate .coluna-resumo .painel').length,
+          grade: getComputedStyle(f().querySelector('.tab.combate .aba-colunas')).gridTemplateColumns,
+          armas: f().querySelectorAll('.tab.combate .coluna-principal tr[data-item-id]').length, armasDoAtor: ator.items.filter(i => i.type === 'arma').length,
+          lesoes: Boolean(f().querySelector('.tab.combate .coluna-principal .lesoes')),
+          dinheiro: texto('.tab.equipamento .coluna-resumo .numero-grande b'), saldo: String(ator.system.dinheiro),
+          municao: f().querySelectorAll('.tab.equipamento .coluna-resumo li[data-item-id]').length, municoes: ator.items.filter(i => i.type === 'municao').length,
+          humanidade: texto('.tab.cyberware .coluna-resumo .numero-grande b'), hum: String(ator.system.humanidade.value),
+          cyber: f().querySelectorAll('.tab.cyberware .coluna-principal li[data-item-id]').length, cyberDoAtor: ator.items.filter(i => i.type === 'cyberware').length
+        };
+        return { topo, role, vida, geral, nova, tirada, abas };
       })()`);
       // As outras abas, para a conferência visual (a ficha fica aberta; o passo seguinte fecha).
-      for (const aba of ['pericias', 'combate', 'equipamento', 'role', 'vida']) {
+      for (const aba of ['pericias', 'combate', 'equipamento', 'cyberware', 'role', 'vida']) {
         await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)}).sheet.changeTab('${aba}', 'primary')`);
         await edge.sleep(400);
         await edge.shot(`ficha-${aba}`);
       }
       await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)}).sheet.close().then(() => true)`);
-      const { topo, role, vida, geral, nova } = info;
+      const { topo, role, vida, geral, nova, abas } = info;
       const habilidade = nome => role.habilidades.find(([n]) => n === nome);
       const ok = topo.role === 'Solo' && topo.rank === '4' && topo.nome === 'Teste Sistema' && topo.apelido === 'Lab'
         && /SOLO/i.test(role.nome) && /Consciência de Combate/.test(role.nome) && /4 DE 4 PONTOS/.test(role.titulo) && role.habilidades.length === 6
@@ -2595,7 +2606,10 @@ module.exports = async ({ edge, servidores, r }) => {
         && habilidade('Detecção de Ameaça')?.[1] === '2' && habilidade('Detecção de Ameaça')[2] === '+2 em Percepção' && habilidade('Ponto Fraco')?.[1] === '0'
         && vida.campos === 17 && vida.origem && vida.origem === lp.culturalOrigin && vida.meta === lp.lifeGoals
         && geral.atacar === geral.equipadas && geral.equipadas > 0 && geral.sp[1] === '11' && geral.barraHp === '100%' && geral.pericias === geral.comNivel
-        && nova.dados?.familia === 'language' && nova.dados.nome === 'Japonês' && nova.dados.nivel === 0 && /Linguagem \(Japonês\)/.test(nova.linha) && info.tirada;
+        && nova.dados?.familia === 'language' && nova.dados.nome === 'Japonês' && nova.dados.nivel === 0 && /Linguagem \(Japonês\)/.test(nova.linha) && info.tirada
+        && abas.iniciativa === abas.ini && abas.resumo === 3 && abas.armas === abas.armasDoAtor && abas.armas > 0 && abas.lesoes && /^290px /.test(abas.grade)
+        && abas.dinheiro === abas.saldo && abas.municao === abas.municoes && abas.municoes > 0
+        && abas.humanidade === abas.hum && abas.cyber === abas.cyberDoAtor && abas.cyber > 0;
       return [ok, JSON.stringify(info)];
     });
 

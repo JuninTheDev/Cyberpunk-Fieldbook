@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 60). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 61). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -353,7 +353,10 @@ No fim de tudo, uma sessão de teste com a mesa.
   - [x] os cartões do chat: a mensagem inteira como o cartão da maquete (a faixa na cor do tipo, o tipo e quem rolou na
     linha de cima), os dados em caixas com o total grande (no lugar do bloco de rolagem do Foundry), o crítico numa
     etiqueta, e no resultado do ataque as etiquetas de cada alvo e a barra de HP: ciclo 59;
-  - [ ] a ficha: as abas Combate, Equipamento, Cyberware, Role, NET e Vida (o Lifepath), e as fichas dos itens.
+  - [x] a ficha, parte 1: as abas Combate, Equipamento e Cyberware em duas colunas (à esquerda os números em grande:
+    a Iniciativa e os vitais, os Eurodólares e a munição, a Humanidade; à direita as listas), e as lesões críticas
+    também na aba Combate: ciclo 60;
+  - [ ] a ficha, parte 2: as abas Role, NET e Vida (o Lifepath), e as fichas dos itens.
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
   cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança
   direta); o mestre tira linhas, desfazendo ou não a mudança; a importação, a migração e a loja da wiki escrevem as
