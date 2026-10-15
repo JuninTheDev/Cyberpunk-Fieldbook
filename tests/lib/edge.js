@@ -1,6 +1,6 @@
 // Abre o Microsoft Edge sem janela e controla a página pelo protocolo do DevTools.
 // O perfil do Edge fica numa pasta temporária fora do OneDrive e é apagado no fim.
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -10,6 +10,35 @@ const candidates = [
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
 ];
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Fecha o Edge e apaga o perfil. No Windows, o msedge.exe lançado passa o navegador para outro processo e sai: matar o
+// processo lançado não fecha nada, o navegador e os filhos dele (o renderizador, a GPU) seguram o perfil, que não se
+// apaga, e continuam gravando nele (no ciclo 58, 49 perfis e 427 processos de rodadas anteriores encheram o disco). Por
+// isso: o Browser.close pelo protocolo (o próprio Edge fecha os processos dele); depois, no Windows, o que ainda tiver
+// este perfil na linha de comando; e o perfil tentado de novo enquanto o Edge solta os arquivos.
+async function encerrar(proc, perfil, porta) {
+  try {
+    const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${porta}/json/version`)).json();
+    await new Promise(resolve => {
+      const ws = new WebSocket(webSocketDebuggerUrl);
+      const fim = setTimeout(resolve, 3000);
+      const pronto = () => { clearTimeout(fim); resolve(); };
+      ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
+      ws.onclose = pronto;
+      ws.onerror = pronto;
+    });
+  } catch { /* o Edge já tinha fechado */ }
+  proc.kill();
+  if (process.platform === 'win32') {
+    const filtro = `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -like '*${path.basename(perfil)}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`;
+    spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', filtro], { stdio: 'ignore' });
+  }
+  for (let i = 0; i < 10; i++) {
+    await sleep(500);
+    try { fs.rmSync(perfil, { recursive: true, force: true }); return; } catch { /* o Edge ainda segura arquivos */ }
+  }
+  console.warn(`O perfil do Edge ficou em ${perfil}: apague à mão.`);
+}
 
 async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 1000 }) {
   const edge = candidates.find(file => fs.existsSync(file));
@@ -21,7 +50,7 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
   for (let i = 0; i < 60 && !targets; i++) {
     try { targets = await (await fetch(`http://127.0.0.1:${porta}/json/list`)).json(); } catch { await sleep(250); }
   }
-  if (!targets) { proc.kill(); throw new Error('O Edge não abriu a porta de depuração.'); }
+  if (!targets) { await encerrar(proc, perfil, porta); throw new Error('O Edge não abriu a porta de depuração.'); }
   const ws = new WebSocket(targets.find(target => target.type === 'page').webSocketDebuggerUrl);
   await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
 
@@ -71,9 +100,7 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
   };
   const fechar = async () => {
     try { ws.close(); } catch { /* já fechado */ }
-    proc.kill();
-    await sleep(500);
-    try { fs.rmSync(perfil, { recursive: true, force: true }); } catch { /* o Edge às vezes segura arquivos por um instante */ }
+    await encerrar(proc, perfil, porta);
   };
 
   await send('Runtime.enable');
