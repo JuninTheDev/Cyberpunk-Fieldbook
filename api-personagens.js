@@ -194,7 +194,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
   // O que os outros jogadores da campanha veem: nome, apelido, Role e retrato. O resto só o dono e o mestre.
   const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', retrato: portraitOf(doc), donoNome: ownerName(accounts, doc.dono), campanha: campaignOf(doc), publico: true });
-  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: doc.foundry || null, envio: doc.envio || null, estadoFoundry: foundryState(doc), mesa: doc.mesa ? { hp: doc.mesa.hp || null, recebido: doc.mesa.recebido } : null, numeros: numbersOf(doc),
+  const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: linkOf(doc), foundry12: doc.foundry || null, foundry14: doc.foundry14 || null, envio: doc.envio || null, estadoFoundry: foundryState(doc), mesa: doc.mesa ? { hp: doc.mesa.hp || null, recebido: doc.mesa.recebido, geracao: Number(doc.mesa.geracao) || 12 } : null, numeros: numbersOf(doc),
     // resolvidos: o que o mestre decidiu (ou o Foundry entregou), para o botão da conta do jogador avisar.
     pedidos: { pendentes: (doc.pedidos || []).filter(item => item.status === 'pendente').length, aprovados: (doc.pedidos || []).filter(item => item.status === 'aprovado').length,
       resolvidos: (doc.pedidos || []).filter(item => ['aprovado', 'recusado', 'entregue'].includes(item.status)).slice(-10).map(item => ({ id: item.id, status: item.status, quando: item.entregue || item.decidido || item.criado, erro: Boolean(item.erro), total: item.total })) },
@@ -213,7 +213,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // de campanha fica só com o mestre.
   function forViewer(identity, doc) {
     if (identity.papel === 'mestre' || !doc) return doc;
-    const { transferencias: _moves, ...rest } = doc;
+    const { transferencias: _moves, foundry12: _f12, foundry14: _f14, ...rest } = doc;
     return { ...rest, ...(rest.campanha ? { campanha: idFor(identity, rest.campanha) } : {}), ...(rest.foundry && rest.foundry.campanha ? { foundry: { ...rest.foundry, campanha: idFor(identity, rest.foundry.campanha) } } : {}) };
   }
 
@@ -231,7 +231,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota). Os três últimos
   // a API calcula na resposta e não vão para o arquivo.
   // A campanha (e o histórico de mudanças de campanha) só o mestre muda, pela rota /campanha.
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico'];
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'foundry12', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico'];
   // O que o jogador não muda mais pela wiki depois que o personagem foi importado no Foundry.
   const LOCKED_AFTER_IMPORT = ['role', 'especializacao', 'metodo', 'stats', 'sorteio', 'pericias', 'tipos', 'extras', 'lingua', 'casa', 'kitNet', 'quickhacks', 'escolhas', 'itens',
     'habilidades', 'oficina', 'montagem', 'moradia', 'estiloVida', 'traumaTeam', 'estiloModa'];
@@ -250,26 +250,36 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // se algo mudou depois do envio ou da importação: a versão sobe até quando o jogador só troca de passo.
   // O retrato entra só quando existe (as impressões gravadas antes dele continuam valendo).
   const resultHash = doc => crypto.createHash('sha1').update(JSON.stringify({ ...(doc.resultado || {}), pendencias: undefined, ...(portraitOf(doc) ? { retrato: portraitOf(doc) } : {}) })).digest('hex').slice(0, 16);
+  // Os vínculos com o Foundry: o do 12 (doc.foundry, gravado pelo módulo cpr-2077) e o do 14 (doc.foundry14, gravado pelo
+  // sistema novo, que manda geracao: 14). Cada Foundry tem o seu, e um não derruba o outro. A wiki mostra um só: o do 12,
+  // ou o do 14 quando o personagem só foi para ele.
+  const linksOf = doc => [doc.foundry, doc.foundry14].filter(link => link && link.importado);
+  const linkOf = doc => linksOf(doc)[0] || doc.foundry || null;
   // novo · enviado · enviado-mudou (mudou depois do envio) · importado · mudou (depois da importação) · avisado (mudou e foi enviado de novo)
   // · outra-mesa (importado no Foundry de outra campanha e depois mudou de campanha: o Foundry desta ainda não tem)
   function foundryState(doc) {
     const now = resultHash(doc);
-    if (doc.foundry && doc.foundry.importado && doc.foundry.campanha && doc.foundry.campanha !== campaignOf(doc)) return 'outra-mesa';
-    if (doc.foundry && doc.foundry.importado) {
-      if (!doc.foundry.resultadoHash || doc.foundry.resultadoHash === now) return 'importado';
-      const resent = doc.envio && new Date(doc.envio.quando) > new Date(doc.foundry.sincronizado || doc.foundry.importado) && doc.envio.resultadoHash === now;
+    const link = linkOf(doc);
+    if (link && link.importado && link.campanha && link.campanha !== campaignOf(doc)) return 'outra-mesa';
+    if (link && link.importado) {
+      if (!link.resultadoHash || link.resultadoHash === now) return 'importado';
+      const resent = doc.envio && new Date(doc.envio.quando) > new Date(link.sincronizado || link.importado) && doc.envio.resultadoHash === now;
       return resent ? 'avisado' : 'mudou';
     }
     if (doc.envio) return doc.envio.resultadoHash === now ? 'enviado' : 'enviado-mudou';
     return 'novo';
   }
   // A ficha da mesa (ou a entrega de um pedido) que chega de um ator que não é mais o ligado ao personagem: o mundo
-  // antigo aberto depois da migração para outro mundo, ou uma cópia do ator. Só o ator ligado (o da última importação)
-  // grava. Sem o ator no pedido (módulo antigo), vale como antes.
+  // antigo aberto depois da migração para outro mundo, ou uma cópia do ator. Só os atores ligados (o da última importação
+  // em cada Foundry, o 12 e o 14) gravam. Sem o ator no pedido (módulo antigo), vale como antes.
   function staleActor(doc, ator) {
-    if (!ator || !doc.foundry || !doc.foundry.importado || !doc.foundry.ator || String(ator) === doc.foundry.ator) return null;
-    return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} está ligado a outro ator do Foundry (${doc.foundry.nomeAtor || doc.foundry.ator}): este é um ator antigo.`, ator: doc.foundry.ator } };
+    const links = linksOf(doc).filter(link => link.ator);
+    if (!ator || !links.length || links.some(link => String(ator) === link.ator)) return null;
+    return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} está ligado a outro ator do Foundry (${links.map(link => link.nomeAtor || link.ator).join(' e ')}): este é um ator antigo.`, ator: links[0].ator } };
   }
+  const importedSomewhere = doc => linksOf(doc).length > 0;
+  // A ficha inteira como sai: o vínculo que a wiki mostra (foundry), os dois à parte (foundry12 e foundry14) e o estado.
+  const withLinks = doc => ({ ...doc, foundry: linkOf(doc), foundry12: doc.foundry || null, foundry14: doc.foundry14 || null, estadoFoundry: foundryState(doc) });
   // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
   const ipSpent = doc => (Array.isArray(doc.avanco) ? doc.avanco : []).reduce((sum, entry) => sum + Math.max(0, Number(entry.custo) || 0), 0);
@@ -621,21 +631,31 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
 
       // Volta do Foundry: o importador grava o ator e o que já entregou. Não muda a versão (não atrapalha quem está editando).
       // campanha: a do mundo que importou (o Foundry de cada campanha manda a sua; sem ela, a do personagem agora).
+      // geracao: 14 é o vínculo do Foundry 14 (doc.foundry14); sem ela, o do 12 (doc.foundry). Com removido, o Foundry
+      // avisa que o ator ligado foi apagado (o vínculo fica, com a data, e a importação seguinte o troca).
       if (extra === 'foundry') {
         if (method !== 'PUT') return reply(405, { erro: 'Use PUT.' });
         if (identity.papel !== 'mestre') return gmOnly();
         const input = cleanValue(await readJson(request));
+        // O aviso de ator apagado não é importação: a campanha do mundo não importa aqui.
+        if (input.removido) delete input.campanha;
         const done = await update(doc => {
           // O mundo de outra campanha (o antigo, depois de um crossover) não grava mais neste personagem.
           if (input.campanha && realId(input.campanha) !== campaignOf(doc)) return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} agora é de outra campanha na wiki: importe no mundo dela.`, campanha: campaignOf(doc) } };
           const now = new Date().toISOString();
-          const sameActor = doc.foundry && doc.foundry.importado && doc.foundry.ator === String(input.ator || '');
+          const field = Number(input.geracao) === 14 ? 'foundry14' : 'foundry';
+          const current = doc[field];
+          if (input.removido) {
+            if (current && current.ator === String(input.ator || '')) current.removido = now;
+            return null;
+          }
+          const sameActor = current && current.importado && current.ator === String(input.ator || '');
           const table = campaigns.get(realId(input.campanha)) ? realId(input.campanha) : campaignOf(doc);
-          const sameTable = sameActor && (doc.foundry.campanha || campaignOf(doc)) === table;
-          doc.foundry = { ator: String(input.ator || ''), nomeAtor: String(input.nomeAtor || ''), campanha: table, importado: sameTable ? doc.foundry.importado : String(input.importado || now), sincronizado: now, versao: Number(input.versao) || doc.versao, entregues: Array.isArray(input.entregues) ? input.entregues.map(String) : [], resultadoHash: resultHash(doc) };
+          const sameTable = sameActor && (current.campanha || campaignOf(doc)) === table;
+          doc[field] = { ...(field === 'foundry14' ? { geracao: 14 } : {}), ator: String(input.ator || ''), nomeAtor: String(input.nomeAtor || ''), campanha: table, importado: sameTable ? current.importado : String(input.importado || now), sincronizado: now, versao: Number(input.versao) || doc.versao, entregues: Array.isArray(input.entregues) ? input.entregues.map(String) : [], resultadoHash: resultHash(doc) };
           return null;
         });
-        return answer(done, doc => reply(200, { foundry: doc.foundry, estadoFoundry: foundryState(doc) }));
+        return answer(done, doc => reply(200, { foundry: Number(input.geracao) === 14 ? doc.foundry14 : doc.foundry, estadoFoundry: foundryState(doc) }));
       }
       // Crossover: o mestre leva o personagem para outra campanha. O dono passa a jogar nela também (sem sair das
       // que já tinha). O ator do Foundry fica no mundo antigo; o estado "outra-mesa" avisa o Foundry da campanha nova.
@@ -647,7 +667,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const done = await update(doc => {
           const from = campaignOf(doc);
           if (target.id === from) return { status: 400, data: { erro: 'O personagem já está nesta campanha.' } };
-          if (doc.foundry && doc.foundry.importado && !doc.foundry.campanha) doc.foundry.campanha = from;
+          for (const link of linksOf(doc)) if (!link.campanha) link.campanha = from;
           doc.campanha = target.id;
           doc.transferencias = [...(Array.isArray(doc.transferencias) ? doc.transferencias : []), { de: from, para: target.id, quando: new Date().toISOString() }].slice(-20);
           return null;
@@ -673,7 +693,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const ordersOf = doc => (Array.isArray(doc.pedidos) ? doc.pedidos : []);
         // Os erros de sempre já com o que estava no arquivo; dentro de update() confere de novo, com o arquivo relido.
         const orderBlock = doc => {
-          if (!(doc.foundry && doc.foundry.importado)) return { status: 400, data: { erro: 'Antes do Foundry, as compras são na loja inicial.' } };
+          if (!importedSomewhere(doc)) return { status: 400, data: { erro: 'Antes do Foundry, as compras são na loja inicial.' } };
           if (ordersOf(doc).filter(item => item.status === 'pendente').length >= 5) return { status: 400, data: { erro: 'Já há 5 pedidos esperando o mestre.' } };
           return null;
         };
@@ -873,22 +893,22 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           snapshot(doc, true);
           return { doc: restored };
         });
-        return answer(done, doc => reply(200, { personagem: { ...doc, estadoFoundry: foundryState(doc) }, restaurada: old.versao }));
+        return answer(done, doc => reply(200, { personagem: withLinks(doc), restaurada: old.versao }));
       }
       if (extra) return reply(404, { erro: 'Rota não encontrada.' });
 
-      if (method === 'GET') return reply(200, { personagem: forViewer(identity, canEdit(identity, stored) ? { ...stored, campanha: campaignOf(stored), donoNome: ownerName(accounts, stored.dono), estadoFoundry: foundryState(stored) } : publicView(stored, accounts)) });
+      if (method === 'GET') return reply(200, { personagem: forViewer(identity, canEdit(identity, stored) ? { ...withLinks(stored), campanha: campaignOf(stored), donoNome: ownerName(accounts, stored.dono) } : publicView(stored, accounts)) });
       if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
       if (method === 'PUT') {
         const input = await readJson(request);
         const done = await update(current => {
           // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
-          if (Number(input.versao) !== current.versao) return { status: 409, data: { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, current) } };
-          const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] || null]));
+          if (Number(input.versao) !== current.versao) return { status: 409, data: { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, withLinks(current)) } };
+          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] || null]));
           const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : current.dono, campanha: campaignOf(current), versao: current.versao + 1, criado: current.criado, atualizado: new Date().toISOString() };
           // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
           // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.
-          if (current.foundry && current.foundry.importado && identity.papel !== 'mestre') {
+          if (importedSomewhere(current) && identity.papel !== 'mestre') {
             for (const field of LOCKED_AFTER_IMPORT) doc[field] = current[field] === undefined ? doc[field] : current[field];
             if (current.resultado) doc.resultado = { ...current.resultado, lifepath: (input.resultado && input.resultado.lifepath) || current.resultado.lifepath };
           }
@@ -897,7 +917,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           snapshot(current);
           return { doc };
         });
-        return answer(done, doc => reply(200, { personagem: forViewer(identity, { ...doc, estadoFoundry: foundryState(doc) }) }));
+        return answer(done, doc => reply(200, { personagem: forViewer(identity, withLinks(doc)) }));
       }
       if (method === 'DELETE') {
         await lockOn(fileOf(id), async () => {

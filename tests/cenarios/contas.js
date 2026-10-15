@@ -204,6 +204,39 @@ module.exports = async ({ servidores, r }) => {
       && entregaAntiga.status === 409 && erroAntigo.status === 409 && entregaNova.status === 200 && final.status === 'entregue' && !final.erro,
       `ligado ${doLigado.status} · outro ${deOutro.status} · antigo ${doAntigo.status} · novo ${doNovo.status} · sem ator ${semAtor.status} (HP ${doc.mesa?.hp?.atual}) · entrega antiga ${entregaAntiga.status} · erro antigo ${erroAntigo.status} · nova ${entregaNova.status} (${final.status})`];
   });
+  await r.passo('Foundry 12 e 14: cada um com o seu vínculo (o 14 manda geracao: 14); a ficha da mesa vale dos dois atores ligados; reimportar no 14 só troca o do 14; o 14 avisa o ator apagado; o personagem só do 14 conta como importado; o jogador não vê os vínculos à parte', async () => {
+    const { id } = r.pedidoTeste;
+    const vincular = body => api(gm, `/api/personagens/${id}/foundry`, { method: 'PUT', body });
+    const mesa = (ator, geracao) => api(gm, `/api/personagens/${id}/mesa`, { method: 'PUT', body: { ator, ...(geracao ? { geracao } : {}), hp: { atual: 10, max: 40 } } });
+    // Ligado ao x2 no 12 (o passo anterior). O 14 importa no y1.
+    const doQuatorze = await vincular({ ator: 'y1', nomeAtor: 'Compras 14', geracao: 14 });
+    const [do12, do14, deOutro] = [await mesa('x2'), await mesa('y1', 14), await mesa('z9')];
+    // Reimportar no 14 (y2): o y1 vira antigo; o x2 (o 12) continua valendo.
+    await vincular({ ator: 'y2', nomeAtor: 'Compras 14', geracao: 14 });
+    const [doY1, doX2, doY2] = [await mesa('y1', 14), await mesa('x2'), await mesa('y2', 14)];
+    // O 14 avisa o ator apagado: o de outro ator não muda nada; o do y2 marca a data.
+    await vincular({ ator: 'y9', geracao: 14, removido: true });
+    const semMudar = (await api(gm, `/api/personagens/${id}`)).dados.personagem.foundry14?.removido;
+    await vincular({ ator: 'y2', geracao: 14, removido: true });
+    const doc = (await api(gm, `/api/personagens/${id}`)).dados.personagem;
+    const lista = ((await api(gm, '/api/personagens')).dados.personagens || []).find(p => p.id === id);
+    const doJogador = (await api(rede, `/api/personagens/${id}`, { cookie: ana })).dados.personagem;
+    // O jogador salva a ficha: o vínculo do 14 fica.
+    const salvo = (await api(rede, `/api/personagens/${id}`, { method: 'PUT', cookie: ana, body: { ...doJogador, notas: 'depois dos dois Foundry' } })).dados?.personagem;
+    const depoisDeSalvar = (await api(gm, `/api/personagens/${id}`)).dados.personagem;
+    // Um personagem que só foi para o 14: importado na wiki, com pedidos.
+    const so14 = (await api(rede, '/api/personagens', { method: 'POST', cookie: ana, body: { nome: 'Só no 14' } })).dados.personagem;
+    await api(gm, `/api/personagens/${so14.id}/foundry`, { method: 'PUT', body: { ator: 'w1', nomeAtor: 'Só no 14', geracao: 14 } });
+    const pedidoSo14 = await api(rede, `/api/personagens/${so14.id}/pedidos`, { method: 'POST', cookie: ana, body: { itens: [{ id: 'core_gear:agent', qtd: 1 }] } });
+    const docSo14 = (await api(gm, `/api/personagens/${so14.id}`)).dados.personagem;
+    const ok = doQuatorze.status === 200 && doQuatorze.dados.foundry?.ator === 'y1' && do12.status === 200 && do14.status === 200 && deOutro.status === 409
+      && doY1.status === 409 && doX2.status === 200 && doY2.status === 200 && !semMudar
+      && doc.foundry?.ator === 'x2' && doc.foundry12?.ator === 'x2' && doc.foundry14?.ator === 'y2' && doc.foundry14?.geracao === 14 && Boolean(doc.foundry14?.removido)
+      && lista?.foundry12?.ator === 'x2' && lista?.foundry14?.ator === 'y2' && lista?.mesa?.geracao === 14
+      && !('foundry14' in doJogador) && !('foundry12' in doJogador) && doJogador.foundry?.ator === 'x2' && Boolean(salvo) && depoisDeSalvar.foundry14?.ator === 'y2'
+      && pedidoSo14.status === 201 && docSo14.foundry?.ator === 'w1' && docSo14.foundry12 === null && docSo14.estadoFoundry === 'importado';
+    return [ok, JSON.stringify({ quatorze: doQuatorze.status, mesa: [do12.status, do14.status, deOutro.status], reimportado: [doY1.status, doX2.status, doY2.status], semMudar, f12: doc.foundry12?.ator, f14: doc.foundry14?.ator, removido: doc.foundry14?.removido, mesaDaLista: lista?.mesa?.geracao, jogador: Object.keys(doJogador).filter(k => k.startsWith('foundry')), salvo: Boolean(salvo), depois: depoisDeSalvar.foundry14?.ator, so14: [pedidoSo14.status, docSo14.foundry?.ator, docSo14.estadoFoundry] })];
+  });
   await r.passo('IP: só o mestre dá; gastar mais do que tem é recusado', async () => {
     const jogador = await api(rede, `/api/personagens/${ficha.id}/ip`, { method: 'POST', cookie: ana, body: { qtd: 500 } });
     const mestre = await api(gm, `/api/personagens/${ficha.id}/ip`, { method: 'POST', body: { qtd: 100, motivo: 'Sessão 1' } });

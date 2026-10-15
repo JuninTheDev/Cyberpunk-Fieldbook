@@ -229,6 +229,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Não aparece o botão nem o aviso?** O módulo instalado está velho: feche o Foundry e rode `atualizar-modulo.bat`.
    - O aviso pode ser desligado em Configurações do módulo → Avisos da wiki.
    - Depois disso, a loja inicial daquele personagem fecha, e a Loja vira a **loja da campanha** (veja abaixo).
+   - **No Foundry 12 e no 14:** cada Foundry tem o seu vínculo com o personagem. Importar no 14 não tira o do 12: a ficha da mesa e as entregas dos pedidos valem dos dois atores ligados (de um terceiro, não). Na janela **Personagens da wiki** do Foundry 14, cada personagem diz onde está (neste mundo, no Foundry 12, ou o ator do 14 apagado) e, sem o ator no mundo, oferece **Importar** (ou **Importar de novo**). Na wiki, o quadro **Levar para o Foundry** mostra ao mestre o ator de cada Foundry e avisa quando o do 14 foi apagado.
 6. **Depois de importado, o Foundry manda.**
    - **Na wiki:** o criador avisa e trava STATs, perícias, Role, equipamento e moradia; o servidor faz o mesmo.
    - **O que o jogador ainda muda:** o nome, o retrato, a aparência, as notas e o Lifepath.
