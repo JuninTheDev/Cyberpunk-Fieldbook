@@ -473,9 +473,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **o +1 entra em toda Evasão da rodada:** na conta da janela de reação, na esquiva e na escolha automática dos NPCs.
     No Fluxo, entrava só na esquiva.
 
-- **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 a 62): pergunta ao usuário.** As maquetes
-  de 2026-10-15 mostram botões e campos sem função no sistema hoje. O visual seguiu as maquetes só com o que existe; cada
-  um destes vira um item, se o usuário quiser:
+- **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 a 62): decidido em 2026-10-15, cada uma
+  vira um item do ROADMAP** ("As funções das maquetes que o sistema não tem", ciclo 63). As maquetes de 2026-10-15
+  mostram botões e campos sem função no sistema hoje. O visual seguiu as maquetes só com o que existe. Dois itens
+  contrariam a wiki e esperam a decisão da mesa antes de virar código: a Sorte depois de rolar (a wiki: "antes de
+  rolar") e o local aleatório do acerto (no RED, o acerto é no corpo, e a cabeça só pelo tiro mirado). A lista:
   - **no chat:** "+ Luck" e "Reroll" no cartão do teste (a Sorte se prepara na ficha antes), "Add to tracker" na
     iniciativa, "Apply damage" e "Roll critical" no dano, "Apply" na perda de Humanidade (o fluxo do ataque e a
     instalação já aplicam);
@@ -3245,6 +3247,23 @@ A última parte do pedido de 2026-10-15: a maquete "Item Sheets". Commit anterio
 - **Pendências:** as perguntas das maquetes (ver as dúvidas). Com isto, o pedido do visual novo está feito; volta o C8,
   parte 11: os nós de controle ligados à cena.
 - **Próximo:** o C8, parte 11 (ciclo 63).
+
+### Ciclo 63 (2026-10-15): as funções das maquetes viram itens do ROADMAP (a decisão do usuário; sessão KouArt)
+
+A resposta do usuário à dúvida das maquetes (2026-10-15): "cada um vira um item". Ciclo só de documentação. Commit
+anterior: `c254a97` (ciclo 62).
+
+- **Feito:** no ROADMAP, o item "As funções das maquetes que o sistema não tem", com 19 itens em três grupos (o chat,
+  a ficha e a ficha do item), cada um marcado com o que precisa: só a interface (a ficha ou o cartão chamando o que o
+  sistema já faz), a regra da wiki que ele segue (agarrar, p. 177; a cobertura, p. 182; a correção rápida da lesão, DV
+  13; a tabela da lesão, p. 187) ou a decisão da mesa (a Sorte depois de rolar e o local aleatório do acerto, que
+  contrariam a wiki; "rolar de novo", que o RED não tem). Duas regras ainda a conferir na wiki antes do ciclo delas: os
+  slots de opção do cyberware e o conserto da armadura. A dúvida passou a "decidido".
+- **Testes:** sem código. G1, G2 e G3 sem mudança (49 arquivos, 0 erros; 83 de 87); G4 e mutações não se aplicam.
+- **Pendências:** a decisão da mesa nos itens que contrariam a wiki; os itens, um por ciclo.
+- **Próximo:** o C8, parte 11 (os nós de controle ligados à cena), ou os itens das maquetes, na ordem que o usuário
+  preferir; sem outra indicação, os itens das maquetes de interface primeiro (o fim do pedido do visual), começando
+  por "Aplicar dano" e "Rolar a lesão" no cartão do dano.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
