@@ -25,6 +25,10 @@ chown mesa:mesa "$tmp"
 # A branch do sistema, sem mexer na cópia do master que a wiki usa.
 como_mesa git -C "$WIKI" fetch -q origin sistema-v14
 como_mesa bash -c "git -C '$WIKI' archive origin/sistema-v14 foundry-sistema | tar -x -C '$tmp'"
+# O compêndio das arquiteturas traz as da campanha (documentos/morana/arquiteturas-da-campanha.md, fora da
+# foundry-sistema/): vai o documento da wiki do servidor (o master), o mesmo que o módulo do Foundry 12 usa.
+como_mesa mkdir -p "$tmp/documentos/morana"
+como_mesa cp "$WIKI/documentos/morana/arquiteturas-da-campanha.md" "$tmp/documentos/morana/"
 echo "Sistema da sistema-v14 em $(como_mesa git -C "$WIKI" log -1 --format='%h %s' origin/sistema-v14)"
 
 if [ "$estava" = active ]; then systemctl stop foundry14; fi
