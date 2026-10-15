@@ -26,15 +26,34 @@ function conteudoNaJanela(conteudo) {
     const numeros = conteudo.tipo === 'ice' ? `PER ${inimigo.per} · SPD ${inimigo.spd} · ATK ${inimigo.atk} · DEF ${inimigo.def}`
       : conteudo.tipo === 'demonio' ? `Interface ${inimigo.interface} · ${inimigo.acoes} Ações NET · combate ${inimigo.valorDeCombate}` : '';
     const situacao = conteudo.tipo === 'netrunner' ? (conteudo.feito ? 'fora da NET' : 'na NET') : conteudo.feito ? 'derrubado' : `REZ ${inimigo.rezAtual}/${inimigo.rez}`;
-    return { inimigo: true, chave: conteudo.chave, nome: inimigo.nome, tipo: TIPOS_DE_ANDAR[conteudo.tipo], feito: conteudo.feito, situacao, oQue: [numeros, inimigo.efeito].filter(Boolean).join('. '), comRez: Boolean(inimigo.rez) };
+    return {
+      inimigo: true, chave: conteudo.chave, tipoId: conteudo.tipo, nome: inimigo.nome, tipo: TIPOS_DE_ANDAR[conteudo.tipo], feito: conteudo.feito, situacao,
+      oQue: [numeros, inimigo.efeito].filter(Boolean).join('. '), comRez: Boolean(inimigo.rez),
+      // A barra de REZ (só o desenho; o número está na situação).
+      rez: inimigo.rez && !conteudo.feito ? Math.max(0, Math.min(100, Math.round((100 * inimigo.rezAtual) / inimigo.rez))) : null
+    };
   }
   const [antes, depois] = SITUACAO[conteudo.tipo] ?? [];
   return {
-    nome: TIPOS_DE_ANDAR[conteudo.tipo] ?? conteudo.tipo, dv: conteudo.dv, feito: conteudo.feito, situacao: conteudo.feito ? depois : antes,
+    tipoId: conteudo.tipo, nome: TIPOS_DE_ANDAR[conteudo.tipo] ?? conteudo.tipo, dv: conteudo.dv, feito: conteudo.feito, situacao: conteudo.feito ? depois : antes,
     oQue: [conteudo.nome, conteudo.descricao].filter(Boolean).join(': ')
   };
 }
 const textoCurto = conteudo => (conteudo.inimigo ? `${conteudo.nome} (${conteudo.situacao})` : `${conteudo.nome}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}${conteudo.feito ? ` (${conteudo.situacao})` : ''}`);
+
+// O visual: o ícone de cada conteúdo (Font Awesome; a senha quebrada abre o cadeado) e a cor do andar no mapa, pelo que
+// manda nele: o inimigo ativo (hostil), a senha trancada, o nó de controle, o arquivo; o resto é livre.
+const ICONES = { ice: 'fa-skull-crossbones', demonio: 'fa-ghost', netrunner: 'fa-user-secret', senha: 'fa-lock', arquivo: 'fa-file-lines', controle: 'fa-gears', vazio: 'fa-circle-dot' };
+const iconeDe = conteudo => (conteudo.tipoId === 'senha' && conteudo.feito ? 'fa-lock-open' : ICONES[conteudo.tipoId] ?? 'fa-circle-dot');
+function tipoDoAndar(conteudos) {
+  if (conteudos.some(conteudo => conteudo.inimigo && !conteudo.feito)) return 'hostil';
+  for (const tipo of ['senha', 'controle', 'arquivo']) if (conteudos.some(conteudo => conteudo.tipoId === tipo && !conteudo.feito)) return tipo;
+  return 'livre';
+}
+const ICONES_DAS_HABILIDADES = {
+  pathfinder: 'fa-route', backdoor: 'fa-key', eyedee: 'fa-magnifying-glass', control: 'fa-sliders', cloak: 'fa-user-secret', virus: 'fa-virus', zap: 'fa-bolt', slide: 'fa-wind'
+};
+const hora = t => (t ? new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '');
 
 export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
   // As janelas abertas neste cliente, pela chave do Tile e de quem vê (o mestre ou o token).
@@ -58,10 +77,11 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     Object.assign(this, { tile, gm, tokenId, selecionado: null, ocupado: false, textos: { virus: '', comando: '' } });
   }
 
+  // O mapa, o painel ao lado e o registro rolam por dentro (a janela tem altura fixa; o Foundry encolhe para caber na tela).
   static DEFAULT_OPTIONS = {
     classes: [SISTEMA, 'janela-net', 'themed', 'theme-dark'],
     window: { icon: 'fa-solid fa-network-wired', resizable: true },
-    position: { width: 780, height: 'auto' },
+    position: { width: 1060, height: 780 },
     actions: {
       desconectar: JanelaDaNet.#desconectar, desconectarInseguro: JanelaDaNet.#desconectarInseguro, selecionar: JanelaDaNet.#selecionar, mover: JanelaDaNet.#mover,
       habilidade: JanelaDaNet.#habilidade, comandar: JanelaDaNet.#comandar, escolherCorredor: JanelaDaNet.#escolherCorredor, revelar: JanelaDaNet.#revelar,
@@ -70,7 +90,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   };
 
-  static PARTS = { corpo: { template: caminho('templates/netrun/janela.hbs'), scrollable: ['.registro ol', '.mapa'] } };
+  static PARTS = { corpo: { template: caminho('templates/netrun/janela.hbs'), scrollable: ['.registro ol', '.mapa', '.net-lado'] } };
 
   get title() {
     return `NET: ${pontoDoTile(this.tile)?.nome ?? 'Ponto de acesso'}${this.gm ? ' (mestre)' : ''}`;
@@ -129,9 +149,22 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
         const no = porId[`${i + 1}${ramo}`];
         if (!no) return null;
         const conteudos = (no.conteudos ?? []).map(conteudoNaJanela);
+        // O cabo até o andar de onde se chega: reto, do andar de cima no mesmo ramo (ou do ponto de acesso); em degrau, de um
+        // ramo à esquerda (o salto é quantas colunas ele atravessa); só a ponta, quando o pai não está no andar de cima (um
+        // buraco na numeração) ou não aparece neste mapa.
+        const pai = porId[no.pai];
+        const degraus = no.pai === ENTRADA ? no.andar : pai ? no.andar - pai.andar : 0;
+        const salto = pai ? RAMOS.indexOf(no.ramo) - RAMOS.indexOf(pai.ramo) : 0;
         const classes = [no.visto ? '' : 'desconhecido', no.id === aqui ? 'atual' : '', vizinhos.has(no.id) ? 'vizinho' : '', no.id === selecionado ? 'selecionado' : '',
-          no.publico ? '' : 'escondido', no.visto && conteudos.length && conteudos.every(conteudo => conteudo.feito) ? 'feito' : ''].filter(Boolean).join(' ');
-        return { id: no.id, rotulo: no.id.toUpperCase(), visto: no.visto, classes, conteudos: conteudos.map(textoCurto), corredores: quemEsta(no.id) };
+          no.publico ? '' : 'escondido', no.visto && conteudos.length && conteudos.every(conteudo => conteudo.feito) ? 'feito' : '', no.visto ? tipoDoAndar(conteudos) : '',
+          degraus !== 1 ? 'solto' : salto > 0 ? 'ramifica' : 'liga'].filter(Boolean).join(' ');
+        return {
+          id: no.id, rotulo: no.id.toUpperCase(), visto: no.visto, classes, salto,
+          conteudos: conteudos.map(conteudo => ({
+            texto: textoCurto(conteudo), icone: iconeDe(conteudo), rez: conteudo.rez ?? null, classe: [conteudo.inimigo ? 'inimigo' : '', conteudo.feito ? 'feito' : ''].filter(Boolean).join(' ')
+          })),
+          corredores: quemEsta(no.id)
+        };
       })
     }));
 
@@ -140,7 +173,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     const andar = {
       id: selecionado, entrada: selecionado === ENTRADA, visto: selecionado === ENTRADA || Boolean(escolhido?.visto), escondido: Boolean(escolhido && !escolhido.publico),
       titulo: selecionado === ENTRADA ? 'Ponto de acesso' : `Andar ${escolhido.andar}${escolhido.ramo !== 'a' ? ` · ramo ${escolhido.ramo.toUpperCase()}` : ''}`,
-      conteudos: (escolhido?.conteudos ?? []).map(conteudoNaJanela), ir: Boolean(meu) && vizinhos.has(selecionado)
+      conteudos: (escolhido?.conteudos ?? []).map(conteudoNaJanela).map(conteudo => ({ ...conteudo, icone: iconeDe(conteudo) })), ir: Boolean(meu) && vizinhos.has(selecionado)
     };
 
     // O netrunner por quem esta janela age: a Interface, as Ações NET, a Sorte preparada na ficha e as habilidades que
@@ -161,15 +194,19 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
         pathfinder: true, cloak: true, backdoor: naoFeito('senha'), eyedee: naoFeito('arquivo'), control: naoFeito('controle'), virus: fundo,
         zap: inimigos.length > 0, slide: inimigos.some(conteudo => conteudo.tipo === 'ice') && !(combate && meu.slides > 0)
       };
+      // Os Skunks ativos que acertaram o netrunner (−2 cada no Slide).
+      const skunks = (meu.skunks ?? []).filter(chave => andares.some(no => (no.conteudos ?? []).some(conteudo => conteudo.chave === chave && !conteudo.feito))).length;
       netrunner = {
         nome: meu.nome, rank: ator?.system.rankDeInterface ?? 0, onde: ondeEsta(aqui), pronto, combate, sobram: Math.max(0, meu.max - meu.acoes), max: meu.max,
+        // Os losangos das Ações NET: em combate, as que sobram acesas; fora dele, todas livres.
+        pips: Array.from({ length: meu.max }, (_, i) => (!combate ? 'livre' : i < meu.max - meu.acoes ? 'cheio' : 'gasto')),
         sorte: ator?.sortePreparada ?? 0, fundo, textos: this.textos,
         controle: conteudosAqui.some(conteudo => conteudo.tipo === 'controle' && conteudo.feito),
         alvos: inimigos.length > 1 ? inimigos.map(conteudo => ({ chave: conteudo.chave, nome: textoCurto(conteudoNaJanela(conteudo)), escolhido: conteudo.chave === this.textos.alvo })) : [],
         // A situação: o fogo do Hellhound (com o botão de apagar), a prisão do Kraken, o −2 no Slide do Skunk ativo e a Ação
         // NET a menos do Wisp.
         emChamas: Boolean(ator?.statuses?.has(STATUS_EM_CHAMAS)), preso: meu.preso > 0, menosAcoes: Boolean(meu.menosAcoes),
-        skunk: (n => (n ? '−' + (2 * n) : ''))((meu.skunks ?? []).filter(chave => andares.some(no => (no.conteudos ?? []).some(conteudo => conteudo.chave === chave && !conteudo.feito))).length),
+        skunk: skunks ? '−' + (2 * skunks) : '',
         // O deck: os programas instalados no deck equipado. Ativar ou desativar (em combate, uma vez por rodada; o que tem
         // REZ, não em 0); atacar, com o programa de ataque ativo e um alvo da classe dele no andar.
         deck: ator ? netrunnerDo(ator).deck?.name ?? '' : '',
@@ -185,11 +222,18 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
             podeAtacar: pronto && !this.ocupado && programaDeAtaque(s.classe) && s.ativo && comAlvo
           };
         }),
+        // As habilidades, com a base da rolagem (as partes da Interface na ficha, como a rolagem as soma ao 1d10: a
+        // Interface, os programas ativos, as penalidades e os situacionais ligados; no Slide, o Skunk).
         habilidades: Object.keys(HABILIDADES_NA_NET).map(id => {
           const { rotulo, custo, dica } = HABILIDADES_DE_INTERFACE.find(habilidade => habilidade.id === id);
-          return { id, rotulo, dica: `${custo}. ${dica}`, pode: pronto && pode[id] && !this.ocupado };
+          const base = pronto ? ator.partesDaInterface(id).reduce((soma, parte) => soma + parte.valor, 0) - (id === 'slide' ? 2 * skunks : 0) : null;
+          return {
+            id, rotulo, dica: `${custo}. ${dica}`, pode: pronto && pode[id] && !this.ocupado, icone: ICONES_DAS_HABILIDADES[id],
+            base: base === null ? '' : `1d10${base < 0 ? '−' : '+'}${Math.abs(base)}`, combate: ['zap', 'slide'].includes(id)
+          };
         })
       };
+      netrunner.avisos = netrunner.emChamas || netrunner.preso || Boolean(netrunner.skunk) || netrunner.menosAcoes;
     }
 
     const corredores = est.corredores.map(corredor => ({
@@ -197,9 +241,9 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     }));
     return {
       nome: ponto.nome ?? 'Ponto de acesso', arquitetura: est.nome ?? '', dv: est.dv, mapaRevelado: Boolean(est.mapa), gm: this.gm, ocupado: this.ocupado,
-      corredores, ramos: ramos.map(ramo => ramo.toUpperCase()), mapa, naEntrada: quemEsta(ENTRADA),
+      corredores, ramos: ramos.map(ramo => ramo.toUpperCase()), mapa, naEntrada: quemEsta(ENTRADA), andares: mapa.length,
       entrada: { classes: [aqui === ENTRADA ? 'atual' : '', vizinhos.has(ENTRADA) ? 'vizinho' : '', selecionado === ENTRADA ? 'selecionado' : ''].filter(Boolean).join(' ') },
-      andar, netrunner, registro: [...(est.log ?? [])].reverse(),
+      andar, netrunner, registro: [...(est.log ?? [])].reverse().map(linha => ({ ...linha, hora: hora(linha.t) })),
       mestre: this.gm && {
         revelarAndar: andar.escondido && !andar.entrada, revelarMapa: !est.mapa, comCorredor: Boolean(meu), semNinguem: !est.corredores.length,
         inimigos: andar.conteudos.filter(conteudo => conteudo.inimigo && conteudo.comRez),

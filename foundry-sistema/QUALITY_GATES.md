@@ -68,6 +68,16 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   passos seguintes caem todos). A espera de 2 s depois de subir nem sempre basta: aconteceu nos ciclos 55, 56 e 57 (no
   57, em três rodadas seguidas). Desde o ciclo 57, o `entrarComo` entra de novo uma vez quando o log tem esse erro, e
   o relatório avisa; outro motivo, ou a segunda vez, derruba o passo como antes.
+- **O Edge dos testes que não fechava** (ciclo 58): o `msedge.exe` lançado passa o navegador para outro processo e sai,
+  e o `proc.kill()` do `fechar()` não fechava nada. Cada rodada deixava dois Edges inteiros (uns 13 processos cada) e os
+  perfis em `%TEMP%\wiki-testes-edge-*`, que continuavam crescendo. No ciclo 58 eram 49 perfis e 427 processos (uns 13 GB),
+  e o disco encheu no meio das mutações (a rodada daquela hora não vale). Desde então o `tests/lib/edge.js` fecha pelo
+  `Browser.close` do protocolo, mata o que ainda tiver o perfil na linha de comando e apaga o perfil (tentando de novo),
+  avisando se ele ficar. Matar a árvore do processo lançado (`taskkill /T`) não basta: ele já saiu (a primeira tentativa,
+  e cinco rodadas deixaram 90 processos). Conferido: com o ajudante antigo, três aberturas deixaram 47 processos e 3
+  perfis; com o novo, nenhum, também depois de duas rodadas inteiras do G4. Uma rodada parada à força (o `fechar()` não
+  roda) ainda deixa o Edge aberto; confira com `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object
+  { $_.CommandLine -like '*wiki-testes-edge-*' }` e feche só esses (os outros são o Edge do usuário).
 - **A ordem do que o `createEmbeddedDocuments` devolve:** criando vários documentos de uma vez (tokens, combatentes), a
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do
@@ -142,6 +152,16 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   (`canvas.pendingRenderFlags` ainda não existe). O passo que precisa do canvas ativa a cena e espera o `canvas.ready`.
 - **Token não ligado de personagem** (ciclo 38): o protótipo do personagem sai sempre ligado (`AtorCPR._preCreate`).
   Peça o token solto na criação: `ator.getTokenDocument({ x, y, actorLink: false })`. O capanga já sai solto.
+- **O tema de uma janela e os botões do cabeçalho** (ciclo 58): os controles do cabeçalho do Foundry 14 (fechar, o menu)
+  são `<button>` com o ícone na classe do próprio botão (`fa-solid fa-xmark`). Uma regra como `.janela-net button
+  { font: … }` troca a fonte deles e o ícone vira "▯". As regras de botão e de campo do tema ficam no corpo da janela
+  (`.janela-net .janela-net-corpo button`); o G4 confere a fonte do botão de fechar da janela da NET.
+- **Texto que os testes leem e o visual** (ciclo 58): os passos leem o `textContent` (o mapa, o andar escolhido, as Ações
+  NET, os avisos, o deck) e, no registro, o texto exato da linha. Rótulos e enfeites novos vêm do CSS (`::before`,
+  `::after`, `attr()`) ou de elementos vazios (os ícones, os losangos, a barra de REZ); a hora do registro vai no
+  `data-hora` da linha, desenhada pelo CSS.
+- **Finais de linha:** o `sed -i` do Git Bash troca o CRLF de um arquivo por LF (no ciclo 58, o `tema.css` inteiro).
+  Edite com a ferramenta de edição ou com um script do Node, e confira os finais de linha de cada arquivo mexido.
 
 ## Build
 

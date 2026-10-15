@@ -65,6 +65,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | o deck na janela (ativar, desativar e atacar com os programas) | portado no ciclo 54 (o C8, parte 8; ver as dúvidas) |
 | NET Architect | o combate na NET (os inimigos encontrados na iniciativa, com um token escondido; a vez deles pela janela do mestre; a REZ do token e a do estado juntas; a configuração "Inimigos da NET no combate") | portado no ciclo 55 (o C8, parte 9; ver as dúvidas) |
 | NET Architect | as rolagens do jogador na janela de rolagem dele (a configuração "O jogador rola as rolagens da NET") | portado no ciclo 56 (o C8, parte 10; ver as dúvidas) |
+| NET Architect | a janela da NET no visual novo (o topo com o netrunner e as Ações NET em losangos, o mapa com a cor de cada andar e os cabos, o painel ao lado, as habilidades com a base da rolagem, o registro com a hora) | refeita no ciclo 58 (o pedido do usuário, a partir da maquete dele, que não cobre tudo) |
 | NET Architect | os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
@@ -2973,6 +2974,90 @@ eram recusadas), e vice-versa. Commit anterior: `1970c40` (ciclo 56).
   o cenário `contas` e o README da wiki). Os nós de controle ligados à cena; os arquivos copiados; o Scanner e a parede;
   o editor visual.
 - **Próximo:** o C8, parte 11: os nós de controle ligados à cena.
+
+### Ciclo 58 (2026-10-15): o visual novo da janela da NET (o pedido do usuário; sessão KouArt)
+
+O pedido do usuário (2026-10-15), antes de seguir os ciclos: atualizar o visual da ficha, dos cartões do chat e da
+janela da NET pelas maquetes dele (`Exemplos/`, fora do git: os cartões do chat, as abas Combate, Equipamento,
+Cyberware, Role, NET e Lifepath, as fichas dos itens e a "Net Exemplo"), e "trabalhar melhor no visual da NET: o exemplo
+não cobre todas as funcionalidades e ainda pode ser melhorado visualmente". Este ciclo é a janela da NET; os cartões do
+chat e a ficha vêm depois. Nenhuma regra mudou, e os textos e os ganchos que os testes leem continuam os mesmos. Commit
+anterior: `023f2c1` (ciclo 57).
+
+- **Implementado** (`templates/netrun/janela.hbs`, `scripts/netrun/janela.mjs` e `styles/tema.css`):
+  - **o topo:** o selo da conexão (piscando; "MESTRE" na janela do mestre; "SEM CONEXÃO" sem netrunner), o nome do
+    ponto, a arquitetura com o DV (para o mestre, também quantos andares), a desconexão insegura (antes, no fim das
+    habilidades) e a faixa do netrunner: onde está, a Interface, a Sorte preparada e as Ações NET, com um losango por
+    ação (em combate, aceso o que sobra; fora dele, só o contorno);
+  - **os avisos** (o fogo com "Apagar o fogo", o Kraken, o Skunk e o Wisp), lado a lado, logo abaixo do topo;
+  - **o mapa:** a maquete põe os andares em posições fixas, com os cabos num SVG; aqui é uma grade (uma linha por andar,
+    uma coluna por ramo), que serve a qualquer arquitetura. O fundo quadriculado; em cada andar, "ANDAR 1A", a etiqueta
+    do que manda nele (HOSTIL, SENHA, CONTROLE, ARQUIVO, LIVRE, LIMPO, SEM SINAL; para o mestre, OCULTO) e a cor dela, o
+    ícone de cada conteúdo, a barra de REZ dos inimigos e a etiqueta de quem está ali; o brilho onde o netrunner está, o
+    contorno dos vizinhos e do escolhido, e o inimigo ativo pulsando. Os cabos vão de cada andar até o andar de onde se
+    chega (o `pai` da arquitetura): retos no mesmo ramo ou do ponto de acesso, em degrau quando vêm de um ramo à
+    esquerda, e só a ponta quando o andar de cima não está no mapa (um buraco na numeração). Os dados correm por eles
+    (mais rápido e em vermelho até o inimigo; parados e em cinza até o desconhecido);
+  - **ao lado** (rola por dentro): quem está na NET, o painel do mestre (antes, embaixo de tudo), o andar escolhido
+    (cada conteúdo com o ícone, a situação numa etiqueta e a barra de REZ) e o deck (o "ATIVO" do programa ativo, o
+    "Atacar" em vermelho);
+  - **embaixo:** as habilidades de Interface numa grade de 4, cada uma com o ícone e a base da rolagem, que é a soma das
+    partes que a rolagem usa (`partesDaInterface`, e o Skunk no Slide, como o `penalidadeDoSkunk`); o Zap e o Slide em
+    vermelho. O registro, como um terminal: a hora de cada linha (do `t` que o estado já guardava), o cursor na mais
+    nova e a cor das linhas do Black ICE (`ice`), das que passam (`ok`) e das que falham (`falha`);
+  - **a janela:** 1060 × 780 (antes, 780 de largura e a altura do conteúdo); o mapa, o painel e o registro rolam por
+    dentro, e o Foundry guarda a rolagem dos três. Estreita (menos de 860 px, por container query), fica tudo numa
+    coluna. Com "reduzir movimento" no sistema, nada se anima. As regras do `.mapa-net` que a janela dividia com a ficha
+    da arquitetura ficam só na ficha (que não mudou);
+  - **os textos que os testes leem** não mudaram: os rótulos novos vêm do CSS (`::before`, `attr()`) ou de elementos
+    vazios (os ícones, os losangos, as barras), e a hora vai no `data-hora` da linha (a lição está no QUALITY_GATES).
+- **Testes:**
+  - G1: 47 arquivos, 0 erros;
+  - G2: 0 erros;
+  - G3: 79 de 83 (sem teste novo: não há regra nova; a janela se testa no G4). As 4 falhas são as das armas de 2077
+    (QUALITY_GATES);
+  - G4: 89 de 94, de 170 a 205 s, em cinco rodadas: as duas primeiras com o visual antes dos testes novos, a terceira e a
+    quarta com eles (a quarta, com a base do Slide e o painel do mestre no alto), e a quinta com o ajudante do Edge
+    corrigido (abaixo), sem deixar Edge nem perfil para trás. Os avisos do passo "nenhum aviso" foram conferidos: só os
+    dois da Lexington. Os passos da NET ganharam o visual: no do andar, a classe do andar (a senha, o netrunner ali, o cabo
+    reto; depois do Backdoor, limpo), o cabo em degrau do 3B (do 2A, um salto), a base do Backdoor (1d10+4), as Ações NET
+    livres fora de combate, a hora no registro e a fonte do botão de fechar da janela (o Font Awesome); no das Ações NET
+    em combate, os losangos (um aceso depois do Virus, nenhum depois do Cloak, os três na rodada seguinte); no dos
+    ataques, a base do Slide com o Skunk (1d10+2). As 5 falhas são as das armas de 2077 (QUALITY_GATES);
+  - **as capturas** dos passos da NET (a janela do jogador, a do mestre, os avisos, o deck) foram conferidas a cada
+    rodada. Entre as rodadas, uma prévia estática (o template com contextos de exemplo, o tema e o Font Awesome do
+    Foundry, capturada pelo Edge sem janela, fora do repositório) serviu para ajustar o visual: ela mostrou o rodapé fora
+    do lugar sem avisos e a janela estreita; o G4 mostrou os botões do cabeçalho;
+  - **mutações:** cada uma destas derrubou um passo do G4, e os arquivos voltaram (conferido pelo md5): o andar sem a cor
+    do que manda nele (M1); o cabo sempre reto (M2); a base sem a Interface (M3); os losangos que não apagam as Ações NET
+    gastas (M4); a hora no texto da linha do registro (M5: caem o passo do ponto de acesso e o do andar, que leem a linha
+    exata); a regra dos botões do tema valendo para o cabeçalho da janela (M6); os avisos que não aparecem (M7); o texto
+    das Ações NET colado nos losangos (M8b); a base do Slide sem o Skunk (M9). A M8 tirava só um dos dois espaços entre
+    "Ações NET:" e a frase, e o texto lido não mudava (uma mutação equivalente, não um buraco no teste): ela passou, e a
+    M8b, que cola de verdade, caiu. Na rodada da M3 caiu também, fora da NET, o passo da esquiva do jogador (a barra de
+    tempo da janela de defesa não foi lida); não se repetiu nas outras nove rodadas. A primeira rodada da M5 foi parada
+    com o disco cheio (abaixo) e não vale; a M5 foi feita de novo e caiu.
+- **Corrigido no caminho:**
+  - os botões do cabeçalho da janela (fechar, o menu) sem os ícones ("▯"): a regra de botão do tema valia para a janela
+    inteira, e o ícone deles é a fonte do próprio botão. As regras de botão e de campo ficam no corpo da janela, e o G4
+    confere;
+  - sem avisos, o meio caía na faixa do tamanho do conteúdo e o rodapé saía da janela (a grade contava as faixas pela
+    ordem dos filhos): as faixas agora têm nome;
+  - o `tema.css` perdeu o CRLF num `sed -i` do Git Bash e voltou (a lição está no QUALITY_GATES);
+  - **o disco cheio e o Edge dos testes que não fechava** (`tests/lib/edge.js`): no meio das mutações, o disco do PC
+    chegou a 0 bytes livres. A causa: o `fechar()` matava só o `msedge.exe` lançado, que já tinha passado o navegador
+    para outro processo, e cada rodada (do G4, das mutações, da suíte da wiki) deixava os Edges abertos e os perfis em
+    `%TEMP%\wiki-testes-edge-*`, crescendo: 49 perfis e 427 processos, uns 13 GB. A rodada da M5 foi parada (o arquivo
+    mutado voltou à mão, pelo md5), só os processos com o perfil dos testes foram fechados (o Edge do usuário ficou), e
+    os perfis foram apagados (dados descartáveis dos testes): 18,6 GB livres. O `fechar()` agora fecha pelo
+    `Browser.close` do protocolo, mata o que ainda tiver o perfil na linha de comando e apaga o perfil tentando de novo;
+    três aberturas com o ajudante antigo deixaram 47 processos e 3 perfis, com o novo, nenhum. A primeira tentativa (o
+    `taskkill /T` no processo lançado) não bastava: cinco rodadas deixaram 90 processos. O master tem o mesmo
+    `tests/lib/edge.js` (a suíte da wiki vaza igual): o arquivo corrigido fica no master sem commit, para o usuário
+    publicar.
+- **Pendências:** os cartões do chat e a ficha (as abas e as fichas dos itens), pelas maquetes. O `tests/lib/edge.js`
+  corrigido no master (o usuário publica). Depois, o C8, parte 11: os nós de controle ligados à cena.
+- **Próximo:** os cartões do chat no visual novo (ciclo 59).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

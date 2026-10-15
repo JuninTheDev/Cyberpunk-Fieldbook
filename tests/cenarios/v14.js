@@ -4145,7 +4145,7 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
     };
 
-    await r.passo('andar e as habilidades na NET (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): na janela do jogador, o "?" do andar 1 vira a senha DV 6 ao chegar; a senha trava a descida; o Backdoor rola no mestre (6 contra a DV 6 não passa; 9 passa); o Eye-Dee mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B e para no nó DV 8; o Control toma o nó e o comando vai ao registro; no andar mais fundo, o Virus com a DV e as Ações NET do mestre; o mestre vê o andar 4 escondido e o revela', async () => {
+    await r.passo('andar e as habilidades na NET (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): na janela do jogador, o "?" do andar 1 vira a senha DV 6 ao chegar; a senha trava a descida; o Backdoor rola no mestre (6 contra a DV 6 não passa; 9 passa); o Eye-Dee mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B e para no nó DV 8; o Control toma o nó e o comando vai ao registro; no andar mais fundo, o Virus com a DV e as Ações NET do mestre; o mestre vê o andar 4 escondido e o revela. O visual: o andar com a cor da senha (limpo depois do Backdoor), o cabo em degrau do 3B (do 2A), a base do Backdoor (1d10+4), as Ações NET livres fora de combate, a hora no registro e os botões do cabeçalho da janela com os ícones', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Andar';
       const ARQ = 'Teste Arquitetura do Andar';
@@ -4160,7 +4160,12 @@ module.exports = async ({ edge, servidores, r }) => {
           const antes = net.texto('[data-no="1a"]') + (net.el().querySelector('[data-no="1a"]').classList.contains('desconhecido') ? ' desconhecido' : '');
           const no = await net.ir('1a');
           const resultado = { antes, no, detalhe: net.texto('.andar-escolhido li'), registro: net.registro().at(-1),
-            habilidades: [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join(), acoes: net.texto('.netrunner .acoes') };
+            habilidades: [...net.el().querySelectorAll('button[data-action=habilidade]')].map(b => b.dataset.habilidade + (b.disabled ? '-' : '+')).join(), acoes: net.texto('.netrunner .acoes'),
+            // O visual: as classes do andar (a cor e o cabo), a base da rolagem no botão, os losangos das Ações NET, a hora do
+            // registro (desenhada pelo CSS) e a fonte do botão de fechar (o ícone; o tema da janela não pode tirá-la).
+            visual: { no1a: net.el().querySelector('[data-no="1a"]').className, base: net.texto('button[data-habilidade=backdoor] small'),
+              pips: [...net.el().querySelectorAll('.netrunner .acoes .pips i')].map(i => i.className).join(), hora: net.el().querySelector('.registro li')?.dataset.hora,
+              fechar: getComputedStyle(net.el().querySelector('.window-header [data-action=close]')).fontFamily } };
           const avisos = [];
           ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
           try {
@@ -4191,7 +4196,9 @@ module.exports = async ({ edge, servidores, r }) => {
           net.clicar('button[data-habilidade=pathfinder]');
           const linha = await net.esperarRegistro('Pathfinder (');
           await window.__esperar(() => net.el().querySelector('[data-no="3b"]:not(.desconhecido)'));
-          return { linha, mapa: [...net.el().querySelectorAll('.mapa-net .no')].map(no => no.dataset.no + (no.classList.contains('desconhecido') ? '?' : '')).join() };
+          const no3b = net.el().querySelector('[data-no="3b"]');
+          return { linha, mapa: [...net.el().querySelectorAll('.mapa-net .no')].map(no => no.dataset.no + (no.classList.contains('desconhecido') ? '?' : '')).join(),
+            cabo: [no3b.classList.contains('ramifica') ? 'ramifica' : 'reto', no3b.style.getPropertyValue('--salto').trim()].join(' '), no1a: net.el().querySelector('[data-no="1a"]').className };
         })()`);
         // 4. No 3A, o Control (4 + 7 = 11 contra a DV 8) toma o nó; o comando, pela caixa de texto, vai ao registro.
         await fixar(edge, [[7, 10]]);
@@ -4253,7 +4260,11 @@ module.exports = async ({ edge, servidores, r }) => {
         })()`);
         const virus = await jogador.evaluate(`(async () => window.__net.esperarRegistro('Virus ('))()`);
         const tem = (texto, parte) => String(texto ?? '').includes(parte);
-        const ok = andou.antes === '1A ? desconhecido' && andou.no === '1a' && andou.detalhe === 'Senha DV 6 trancada' && andou.registro === `${NOME} desceu para o andar 1: Senha DV 6.`
+        const classes = texto => String(texto ?? '').split(/\s+/);
+        const visualOk = ['senha', 'atual', 'liga'].every(c => classes(andou.visual.no1a).includes(c)) && !classes(andou.visual.no1a).includes('feito')
+          && andou.visual.base === '1d10+4' && andou.visual.pips === 'livre,livre,livre' && /^\d{2}:\d{2}:\d{2}$/.test(andou.visual.hora ?? '') && /Font Awesome/.test(andou.visual.fechar)
+          && pathfinder.cabo === 'ramifica 1' && ['feito', 'livre'].every(c => classes(pathfinder.no1a).includes(c)) && !classes(pathfinder.no1a).includes('senha');
+        const ok = visualOk && andou.antes === '1A ? desconhecido' && andou.no === '1a' && andou.detalhe === 'Senha DV 6 trancada' && andou.registro === `${NOME} desceu para o andar 1: Senha DV 6.`
           && andou.habilidades === 'pathfinder+,backdoor+,eyedee-,control-,cloak+,virus-,zap-,slide-' && tem(andou.acoes, 'livres fora de combate (3 por turno em combate)')
           && andou.avisos.join() === 'A senha deste andar (DV 6) trava a descida: use Backdoor.' && andou.depois === '1a'
           && backdoor1 === `Backdoor (6 contra DV 6): ${NOME} não passou a senha.` && backdoor2 === `Backdoor (9 contra DV 6): ${NOME} quebrou a senha.`
@@ -4272,7 +4283,7 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    await r.passo('Ações NET em combate e a desconexão insegura (wiki: "Conectar / Desconectar (1 Ação NET...)" e as Ações NET pelo Rank): em combate, a janela conta as que sobram; no andar mais fundo, o Virus que o mestre põe em 2 Ações NET e um Cloak gastam as 3 do Rank 4, e o Cloak seguinte é recusado, como o desconectar seguro; na rodada seguinte, no turno do netrunner, elas voltam; a desconexão insegura sai na hora, sem Ação NET', async () => {
+    await r.passo('Ações NET em combate e a desconexão insegura (wiki: "Conectar / Desconectar (1 Ação NET...)" e as Ações NET pelo Rank): em combate, a janela conta as que sobram (o texto e os losangos acesos); no andar mais fundo, o Virus que o mestre põe em 2 Ações NET e um Cloak gastam as 3 do Rank 4, e o Cloak seguinte é recusado, como o desconectar seguro; na rodada seguinte, no turno do netrunner, elas voltam; a desconexão insegura sai na hora, sem Ação NET', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Combate NET';
       const ARQ = 'Teste Arquitetura do Combate';
@@ -4313,10 +4324,14 @@ module.exports = async ({ edge, servidores, r }) => {
           const virus = await net.esperarRegistro('Virus (');
           await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 1 de 3'));
           const depoisDoVirus = net.texto('.netrunner .acoes');
+          // Os losangos: o que sobra aceso.
+          const losangos = () => [...net.el().querySelectorAll('.netrunner .acoes .pips i')].map(i => i.className).join();
+          const pips = [losangos()];
           net.clicar('button[data-habilidade=cloak]');
           await net.esperarRegistro('Cloak (');
           await window.__esperar(() => (net.texto('.netrunner .acoes') ?? '').includes('sobram 0 de 3'));
           const depois = net.texto('.netrunner .acoes');
+          pips.push(losangos());
           // Sem Ação NET: o Cloak e o desconectar seguro são recusados (os avisos, capturados aqui).
           const avisos = [];
           ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
@@ -4326,14 +4341,14 @@ module.exports = async ({ edge, servidores, r }) => {
             net.clicar('.corredores button[data-action=desconectar]');
             await window.__esperar(() => avisos.length === 2);
           } finally { delete ui.notifications.warn; }
-          return { virus, depoisDoVirus, depois, avisos, acoes: net.eu()?.acoes, cloaks: net.registro().filter(l => l.startsWith('Cloak (')).length, conectado: Boolean(net.eu()) };
+          return { virus, depoisDoVirus, depois, pips, avisos, acoes: net.eu()?.acoes, cloaks: net.registro().filter(l => l.startsWith('Cloak (')).length, conectado: Boolean(net.eu()) };
         })()`);
         // A rodada seguinte: o turno do netrunner começa e as Ações NET voltam.
         await edge.evaluate(`(async () => { await game.combats.find(c => c.combatants.some(cb => cb.tokenId === '${m.token}')).nextRound(); return true; })()`);
         const voltou = await jogador.evaluate(`(async () => {
           const net = window.__net;
           await window.__esperar(() => net.eu()?.acoes === 0 && (net.texto('.netrunner .acoes') ?? '').includes('sobram 3 de 3'));
-          return { acoes: net.eu()?.acoes, texto: net.texto('.netrunner .acoes') };
+          return { acoes: net.eu()?.acoes, texto: net.texto('.netrunner .acoes'), pips: [...net.el().querySelectorAll('.netrunner .acoes .pips i')].map(i => i.className).join() };
         })()`);
         // A desconexão insegura: a pergunta, e sai na hora, sem gastar Ação NET.
         const saiu = await jogador.evaluate(`(async () => {
@@ -4350,6 +4365,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && gastou.depoisDoVirus === 'Ações NET: sobram 1 de 3 neste turno' && gastou.depois === 'Ações NET: sobram 0 de 3 neste turno' && gastou.cloaks === 1 && gastou.acoes === 3
           && gastou.avisos.join(' | ') === 'Sem Ações NET neste turno (3 de 3). | Sem Ações NET neste turno (3 de 3). Espere o seu turno ou faça a desconexão insegura.' && gastou.conectado
           && voltou.acoes === 0 && voltou.texto === 'Ações NET: sobram 3 de 3 neste turno'
+          && gastou.pips.join(' | ') === 'cheio,gasto,gasto | gasto,gasto,gasto' && voltou.pips === 'cheio,cheio,cheio'
           && !saiu.janela && !saiu.conectado && registro.includes(`${NOME} desconectou de forma insegura.`);
         return [ok, JSON.stringify({ inicio, gastou, voltou, saiu, registro: registro.slice(-4) })];
       } finally {
@@ -4480,7 +4496,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return game.system.api.netrun.estado(tile).log.slice(antes).map(l => l.texto);
     })()`);
 
-    await r.passo('o encontro e o ataque dos inimigos (wiki, "Black ICE": a velocidade, o ATK + 1d10 contra a Interface + 1d10, os efeitos): ao chegar, o Wisp vence a velocidade e age na hora (1d6 no cérebro, 1 Ação NET a menos); o Hellhound e o Skunk perdem; o mestre faz o Hellhound atacar (2d6 no cérebro e o fogo) e o Skunk (−2 no Slide, no cartão do Slide); em combate, o Wisp tira 1 Ação NET no começo do turno e o fogo queima 2 no HP no fim; "Apagar o fogo" na janela', async () => {
+    await r.passo('o encontro e o ataque dos inimigos (wiki, "Black ICE": a velocidade, o ATK + 1d10 contra a Interface + 1d10, os efeitos): ao chegar, o Wisp vence a velocidade e age na hora (1d6 no cérebro, 1 Ação NET a menos); o Hellhound e o Skunk perdem; o mestre faz o Hellhound atacar (2d6 no cérebro e o fogo) e o Skunk (−2 no Slide, no cartão do Slide e na base do botão); em combate, o Wisp tira 1 Ação NET no começo do turno e o fogo queima 2 no HP no fim; "Apagar o fogo" na janela', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Ataques';
       const ARQ = 'Teste Arquitetura dos Ataques';
@@ -4515,11 +4531,13 @@ module.exports = async ({ edge, servidores, r }) => {
           const net = window.__net;
           await window.__esperar(() => net.el().querySelector('select[data-texto=alvo]') && (net.texto('.aviso-net:not(.fogo)') ?? '') && net.pronta());
           const avisos = [...net.el().querySelectorAll('.aviso-net')].map(a => a.textContent.replace(/\\s+/g, ' ').trim());
+          // A base no botão do Slide já com o Skunk (a Interface 4 − 2), como o cartão.
+          const base = net.texto('button[data-habilidade=slide] small');
           const escolha = net.el().querySelector('select[data-texto=alvo]');
           escolha.value = '1a.0';
           escolha.dispatchEvent(new Event('input', { bubbles: true }));
           net.clicar('button[data-habilidade=slide]');
-          return { avisos, linha: await net.esperarRegistro('Slide (') };
+          return { avisos, base, linha: await net.esperarRegistro('Slide (') };
         })()`);
         await jogador.shot('janela-net-avisos');
         const cartaoDoSlide = await edge.evaluate(`(() => { const msg = game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.rotulo === 'Slide').at(-1); return { total: msg?.getFlag('${S}', 'teste')?.total, skunk: msg?.content.includes('Skunk') }; })()`);
@@ -4557,7 +4575,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && chegou.avisos.join() === 'Wisp: 1 Ação NET a menos no próximo turno.' && hp1 === hp0 - 3
           && tem(hellhound, `O Hellhound ataca (11 contra 6) e acerta ${NOME}.`) && tem(hellhound, `${NOME} levou 7 no cérebro (o Hellhound): HP ${hp0 - 10}/`) && tem(hellhound, `${NOME} pegou fogo:`)
           && emChamas && hp2 === hp0 - 10
-          && tem(skunk, `O Skunk ataca (10 contra 6) e acerta ${NOME}.`) && slide.avisos.includes('Skunk: −2 no Slide enquanto ele estiver ativo.')
+          && tem(skunk, `O Skunk ataca (10 contra 6) e acerta ${NOME}.`) && slide.avisos.includes('Skunk: −2 no Slide enquanto ele estiver ativo.') && slide.base === '1d10+2'
           && slide.linha === `Slide (11 contra 6): ${NOME} escapou do Wisp e pode seguir para um andar vizinho.` && cartaoDoSlide.total === 11 && cartaoDoSlide.skunk
           && combate.acoes === 1 && combate.queimou.hp === 2 && combate.queimou.mensagem.includes(`${NOME} está em chamas: 2 no HP`) && combate.depois === 0
           && apagou.linha === `${NOME} apagou o fogo (uma Ação Carnal).` && !apagou.botao && !apagou.status;

@@ -48,6 +48,22 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   tudo de novo. O token conectado ganha o status "Conectado à NET" e um anel ciano. A **janela da NET** mostra quem está
   na NET e onde, o mapa que os jogadores enxergam (o andar 1 como "?") e o registro, com o botão **Desconectar**. Sair
   do alcance derruba da NET (a desconexão insegura); apagar o token ou o Tile também tira o netrunner.
+- **O visual da janela da NET** (ciclo 58, no jeito de um terminal de netrunner):
+  - no topo, a conexão, a arquitetura e o netrunner: a Interface, a Sorte preparada, as Ações NET (um losango por ação,
+    aceso enquanto sobra; fora de combate, só o contorno) e a desconexão insegura; os avisos (o fogo, o Kraken, o Skunk,
+    o Wisp) logo abaixo, lado a lado;
+  - no meio, o mapa num fundo quadriculado: cada andar na cor do que manda nele (vermelho, o inimigo ativo, pulsando;
+    amarelo, a senha; verde, o nó de controle; roxo, o arquivo; ciano, livre; cinza, limpo ou sem sinal), a barra de
+    REZ dos inimigos, a etiqueta de quem está no andar e um cabo até o andar de onde se chega (reto, ou em degrau quando
+    vem de um ramo à esquerda), com os dados correndo. Para o mestre, o que os jogadores não viram fica apagado, com
+    "OCULTO";
+  - ao lado, quem está na NET, o painel do mestre, o andar escolhido (cada conteúdo com o ícone, a situação e a barra de
+    REZ) e o deck;
+  - embaixo, as habilidades de Interface com a base da rolagem (o que a rolagem soma ao 1d10: a Interface, os programas
+    ativos, as penalidades e os situacionais ligados na ficha; no Slide, o Skunk; o Zap e o Slide em vermelho) e o
+    registro, com a hora de cada linha (as do Black ICE em rosa, as que passam em verde, as que falham em vermelho);
+  - a janela abre em 1060 × 780 e o mapa, o painel e o registro rolam por dentro; estreita (menos de 860 px), fica tudo
+    numa coluna. Com "reduzir movimento" no sistema, nada se anima.
 - **Na NET** (o motor do NET Architect, no mestre ativo): o jogador anda pelo mapa da janela (clica no andar e em "Ir
   para cá"; andar não é Ação NET, e a senha trava a descida) e usa as habilidades de Interface contra os andares: o
   Pathfinder revela o mapa até a obstrução com DV maior, o Backdoor quebra a senha, o Eye-Dee identifica o arquivo, o
@@ -335,7 +351,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 11 rolagens, os boosters ativos, as Ações NET), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
   - o ponto de acesso à NET, nos dois navegadores: a configuração pelo HUD do Tile (as arquiteturas do mundo e do compêndio, a imagem de terminal), o marcador (o oculto, só para o mestre), o jogador a 7 m que não conecta (nem pedindo direto ao mestre) e que conecta com o Range Upgrade (a flag, o status, o anel e a janela com o andar 1 como "?"), a queda ao sair do alcance, o "Desconectar" da janela, o reinício só pelo mestre e o token e o Tile apagados;
-  - andar e as habilidades na NET, no navegador do jogador: o "?" do andar 1 que vira a senha ao chegar, a senha que trava a descida, o Backdoor que o mestre rola (o empate com a DV não passa), o Eye-Dee com o arquivo, o Pathfinder que para no nó de DV maior, o Control e o comando, o Virus no andar mais fundo com a DV e as Ações NET do mestre, e o mestre que vê o andar escondido e o revela;
+  - andar e as habilidades na NET, no navegador do jogador: o "?" do andar 1 que vira a senha ao chegar, a senha que trava a descida, o Backdoor que o mestre rola (o empate com a DV não passa), o Eye-Dee com o arquivo, o Pathfinder que para no nó de DV maior, o Control e o comando, o Virus no andar mais fundo com a DV e as Ações NET do mestre, e o mestre que vê o andar escondido e o revela; o visual da janela (o andar com a cor da senha e depois limpo, o cabo em degrau do ramo B, a base do Backdoor no botão, as Ações NET livres, a hora no registro e os ícones do cabeçalho da janela);
   - o deck na janela da NET, em combate: o Sword ativado ataca o Hellhound e tira da REZ dele, desativa e não religa na mesma rodada; sem Ação NET, o Hellbolt não ataca; na rodada seguinte, o Hellbolt acerta o cérebro da netrunner inimiga (a ficha dela); o Sword contra ela é recusado;
   - a wiki no Foundry 12 e no 14: com o personagem ligado a um ator do 12, a janela da wiki mostra o ator do 14 apagado e "Importar de novo"; importado, cada Foundry fica com o seu vínculo, e a ficha da mesa vale dos dois atores (de um terceiro, não);
   - o jogador rola na NET, na janela de rolagem dele: a velocidade, o Zap cancelado (não acontece), o Zap com Sorte (que sai da ficha), o ataque do Sword, e a defesa que ele não rola no prazo (o mestre rola, o registro avisa e a janela fecha);
@@ -343,7 +359,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o encontro e o ataque dos inimigos: o Wisp que vence a velocidade e age na hora, o Hellhound que ataca (o dano e o fogo), o Skunk (−2 no cartão do Slide), o Wisp tirando 1 Ação NET e o fogo queimando 2 no HP em combate, e "Apagar o fogo";
   - os efeitos do Black ICE: o Killer que destrói o Armor ativo, o Asp que destrói o Sword, o Liche (−4 por 1 hora), o Kraken que prende, a KRASH Barrier que segura o Giant e o Giant que derruba, com o efeito do Black ICE do andar na queda;
   - os inimigos no andar: o Hellhound, com os números da wiki, segura a descida; o Zap (a DEF do Hellhound rolada no nome dele) tira da REZ; o Slide passa, e de volta ao andar o Hellhound segura de novo; o Imp segura e não se dribla; o mestre derruba a REZ dele pelo painel;
-  - as Ações NET em combate: o Virus de 2 Ações e o Cloak gastam as 3 do Rank 4, o Cloak seguinte e o desconectar seguro são recusados, a rodada seguinte as devolve e a desconexão insegura sai sem gastar;
+  - as Ações NET em combate (o texto e os losangos acesos na janela): o Virus de 2 Ações e o Cloak gastam as 3 do Rank 4, o Cloak seguinte e o desconectar seguro são recusados, a rodada seguinte as devolve e a desconexão insegura sai sem gastar;
   - a arquitetura pelas tabelas: a padrão com os dados fixos (o resultado que não repete, o ramo B do andar 3 e os dois Hellhound no mesmo andar);
   - o compêndio das arquiteturas: as 7 (as 4 da campanha e os 3 exemplos), escondidas do jogador, e O Gatilho no mapa;
   - a arquitetura da NET: a ficha com os andares da clínica de ripperdoc e o mapa (o ramo B sai do andar 2), o andar novo, a linha que vira Black ICE e a linha tirada;
