@@ -4,6 +4,7 @@ import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA,
 import { config } from './configuracoes.mjs';
 import { PERICIAS } from './gerado.mjs';
 import { programaDeAtaque } from './regras.mjs';
+import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -47,7 +48,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade,
-      atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar, rodar: FichaItem.#rodar, restaurarRez: FichaItem.#restaurarRez
+      atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar, rodar: FichaItem.#rodar, restaurarRez: FichaItem.#restaurarRez,
+      corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou
     }
   };
 
@@ -70,6 +72,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
       // A arma de um personagem ataca e recarrega pela ficha dela; a armadura mostra o SP de cada local em caixas.
       armaDeAtor: tipo === 'arma' && Boolean(item.actor),
+      // A lesão de um personagem: a correção rápida e o tratamento (o que ela permite) e se está corrigida.
+      lesaoDeAtor: tipo === 'lesao' && Boolean(item.actor) ? { correcao: opcoesDaLesao(fonte, 'correcao').length > 0, tratamento: opcoesDaLesao(fonte, 'tratamento').length > 0, corrigida: Boolean(item.getFlag(SISTEMA, 'corrigida')) } : null,
       // O programa: liga e desliga num deck (os de ataque, não), e a REZ (os que têm, menos o quickhack e o daemon).
       rodavel: tipo === 'programa' && Boolean(item.instaladoNo) && !programaDeAtaque(fonte.classe),
       rezDoPrograma: tipo === 'programa' && fonte.rez && !['quickhack', 'daemon'].includes(fonte.classe) ? { atual: item.rezAtual, max: fonte.rez } : null,
@@ -120,6 +124,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const sp = this.item.system.sp?.[alvo.dataset.local];
     return sp ? this.item.update({ [`system.sp.${alvo.dataset.local}.value`]: Math.max(0, sp.value - 1) }) : null;
   }
+  // A correção rápida, o tratamento e o "Voltou" na lesão de um personagem (tratamento.mjs).
+  static #corrigir() { return tratarLesao(this.item, 'correcao'); }
+  static #tratar() { return tratarLesao(this.item, 'tratamento'); }
+  static #voltou() { return voltouALesao(this.item); }
   // "Rodar" e "Restaurar REZ" no programa (as maquetes do usuário): liga ou desliga o programa num deck (o "Ativo" da aba
   // NET; os de ataque não ligam, atacam) e devolve a REZ perdida.
   static #rodar() {

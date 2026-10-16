@@ -82,6 +82,11 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   perfis; com o novo, nenhum, também depois de duas rodadas inteiras do G4. Uma rodada parada à força (o `fechar()` não
   roda) ainda deixa o Edge aberto; confira com `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object
   { $_.CommandLine -like '*wiki-testes-edge-*' }` e feche só esses (os outros são o Edge do usuário).
+- **A janela que sai com animação** (ciclo 77): o `DialogV2` fecha com uma animação, e o elemento fica no DOM por um
+  instante. Um passo que abre uma janela atrás da outra precisa esperar a anterior sumir antes do próximo clique; senão,
+  a resposta vai para a velha, a nova fica aberta e o passo lê o que não aconteceu. E uma janela que sobra aberta
+  derruba outros passos (o `.application.dialog` que eles procuram acha a sobra): o `finally` do passo fecha as janelas
+  que ele abriu.
 - **A ordem do que o `createEmbeddedDocuments` devolve:** criando vários documentos de uma vez (tokens, combatentes), a
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do

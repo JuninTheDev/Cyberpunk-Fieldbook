@@ -1307,6 +1307,81 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('a correção rápida e o tratamento da lesão (wiki, p. 223; as maquetes): quem trata (o token selecionado; o próprio ferido, também selecionado, só na correção) rola TECH + Paramédico + 1d10 e precisa superar a DV; a correção da Perna quebrada (DV13) tira o −4 de MOVE até o fim do dia, e o "Voltou" o devolve; o tratamento (DV15) empatado falha, e passando, a lesão sai', async () => {
+      // O Medtech de teste: TECH 8 + Paramédico 4 = 12. Correção: d10 2 = 14 > 13. Tratamento: d10 3 = 15 (não supera 15); d10 4 = 16.
+      await fixar(edge, [[2, 10], [3, 10], [4, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const alvo = __ator('Alvo');
+        const medico = await Actor.implementation.create({ name: 'Teste Medtech', type: 'personagem', system: { atributos: { tech: { valor: 8 } }, pericias: { paramedic: { nivel: 4 } } } });
+        const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await medico.getTokenDocument({ x: 300, y: 300 })).toObject()]);
+        const [perna] = await alvo.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_critical-injuries-body:broken-leg'])]);
+        const move = () => alvo.system.atributos.move.valor;
+        const dialogo = () => document.querySelector('.application.dialog.tratar-lesao');
+        const ultimo = () => game.messages.contents.at(-1).getFlag('${S}', 'tratamento');
+        const f = () => alvo.sheet.element;
+        const linha = () => f()?.querySelector('.tab.combate .lesoes .item-linha[data-item-id="' + perna.id + '"]');
+        const responder = async () => {
+          await __esperar(() => dialogo()?.querySelector('select[name="quem"]'));
+          const lido = { quem: [...dialogo().querySelectorAll('select[name="quem"] option')].map(o => o.textContent).join(), opcoes: [...dialogo().querySelectorAll('select[name="opcao"] option')].map(o => o.textContent).join() };
+          dialogo().querySelector('select[name="quem"]').value = medico.uuid;
+          dialogo().querySelector('select[name="opcao"]').value = '0';
+          dialogo().querySelector('button[data-action="ok"]').click();
+          // A janela sai com a animação: o próximo clique só depois que ela some (senão a resposta vai para a velha).
+          await __esperar(() => !dialogo());
+          return lido;
+        };
+        try {
+          await __esperar(() => canvas.tokens.get(token.id));
+          // O Medtech e o próprio Alvo selecionados: o tratamento não pode ser em si mesmo, e o Alvo não pode aparecer nele.
+          canvas.tokens.get(token.id).control({ releaseOthers: true });
+          __token('Alvo').object.control({ releaseOthers: false });
+          await alvo.sheet.render({ force: true });
+          alvo.sheet.changeTab('combate', 'primary');
+          await __esperar(() => linha()?.querySelector('[data-action="corrigirLesao"]'));
+          const antes = { move: move(), botoes: [...linha().querySelectorAll('[data-action]')].map(b => b.dataset.action).join() };
+          // A correção rápida: o −4 de MOVE sai, e a lesão fica marcada.
+          let mensagens = game.messages.size;
+          linha().querySelector('[data-action="corrigirLesao"]').click();
+          const dialogoDaCorrecao = await responder();
+          await __esperar(() => game.messages.size > mensagens + 1 && ultimo());
+          await __esperar(() => linha()?.querySelector('[data-action="voltouLesao"]'));
+          const corrigida = { move: move(), resultado: ultimo().resultado, total: ultimo().total, botoes: [...linha().querySelectorAll('[data-action]')].map(b => b.dataset.action).join(), marca: linha().querySelector('.corrigida')?.textContent.trim() };
+          // "Voltou": o efeito volta.
+          linha().querySelector('[data-action="voltouLesao"]').click();
+          await __esperar(() => move() === antes.move && linha()?.querySelector('[data-action="corrigirLesao"]'));
+          const voltou = move();
+          // O tratamento: empatado com a DV, falha; passando, a lesão sai.
+          mensagens = game.messages.size;
+          linha().querySelector('[data-action="tratarLesao"]').click();
+          const dialogoDoTratamento = await responder();
+          await __esperar(() => game.messages.size > mensagens + 1 && ultimo());
+          const falhou = { resultado: ultimo().resultado, total: ultimo().total, ainda: alvo.items.has(perna.id) };
+          mensagens = game.messages.size;
+          linha().querySelector('[data-action="tratarLesao"]').click();
+          await responder();
+          await __esperar(() => game.messages.size > mensagens + 1 && !alvo.items.has(perna.id));
+          const curada = { resultado: ultimo().resultado, total: ultimo().total, move: move(), texto: new DOMParser().parseFromString(game.messages.contents.at(-1).content, 'text/html').body.textContent.trim() };
+          return { antes, dialogoDaCorrecao, corrigida, voltou, dialogoDoTratamento, falhou, curada };
+        } finally {
+          // Uma janela de tratamento que tenha sobrado (o passo falhou no meio) atrapalharia os passos seguintes.
+          for (const app of [...foundry.applications.instances.values()].filter(app => app.element?.classList.contains('tratar-lesao'))) await app.close();
+          await alvo.sheet.close();
+          if (alvo.items.has(perna.id)) await alvo.deleteEmbeddedDocuments('Item', [perna.id]);
+          canvas.tokens.releaseAll();
+          await canvas.scene.deleteEmbeddedDocuments('Token', [token.id]);
+          await medico.delete();
+        }
+      })()`);
+      const { antes, dialogoDaCorrecao: c, corrigida, voltou, dialogoDoTratamento: t, falhou, curada } = info;
+      const ok = antes.move === 1 && antes.botoes === 'editarItem,corrigirLesao,tratarLesao,apagarItem'
+        && c.quem === 'Teste Medtech,Alvo' && c.opcoes === 'Paramédico DV13' && corrigida.resultado === 'corrigida' && corrigida.total === 14 && corrigida.move === 5
+        && corrigida.botoes === 'editarItem,voltouLesao,tratarLesao,apagarItem' && corrigida.marca === 'CORRIGIDA' && voltou === 1
+        && t.quem === 'Teste Medtech' && t.opcoes === 'Paramédico DV15,Cirurgia DV13' && falhou.resultado === 'falhou' && falhou.total === 15 && falhou.ainda
+        && curada.resultado === 'curada' && curada.total === 16 && curada.move === 5 && curada.texto === 'Teste Medtech tratou Perna quebrada de Alvo (Paramédico 16 contra DV15).';
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);

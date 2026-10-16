@@ -9,6 +9,7 @@ import { acoesDe2077 } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
+import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -74,7 +75,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       usarItem: FichaPersonagem.#usarItem,
       instalar: FichaPersonagem.#instalar,
       editarItem: FichaPersonagem.#editarItem,
-      apagarItem: FichaPersonagem.#apagarItem
+      apagarItem: FichaPersonagem.#apagarItem,
+      corrigirLesao: FichaPersonagem.#corrigirLesao,
+      tratarLesao: FichaPersonagem.#tratarLesao,
+      voltouLesao: FichaPersonagem.#voltouLesao
     }
   };
 
@@ -166,6 +170,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       const p = dvs([['Primeiros Socorros', paliativo.primeirosSocorros], ['Paramédico', paliativo.paramedico]]);
       const t = dvs([['Paramédico', tratamento.paramedico], ['Cirurgia', tratamento.cirurgia]]);
       return { id: item.id, nome: item.name, img: item.img, sistema: item.system, tratar: [p && `PALIATIVO: ${p}`, t && `TRATAMENTO: ${t}`].filter(Boolean).join(' // '),
+        // A correção rápida e o tratamento (tratamento.mjs): o que a lesão permite e se ela está corrigida até o fim do dia.
+        temCorrecao: opcoesDaLesao(item.system, 'correcao').length > 0, temTratamento: opcoesDaLesao(item.system, 'tratamento').length > 0, corrigida: Boolean(item.getFlag(SISTEMA, 'corrigida')),
         resumo: item.system.descricao.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(' Paliativo:')[0] };
     });
 
@@ -447,6 +453,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return item.system.instalado ? this.actor.desinstalarCyberware(item) : this.actor.instalarCyberware(item, { rolar: !evento.shiftKey });
   }
   static #editarItem(evento, alvo) { return this.#item(alvo)?.sheet.render(true); }
+  // A correção rápida, o tratamento e o "Voltou" da lesão (tratamento.mjs, pela wiki).
+  static #corrigirLesao(evento, alvo) { const item = this.#item(alvo); return item && tratarLesao(item, 'correcao'); }
+  static #tratarLesao(evento, alvo) { const item = this.#item(alvo); return item && tratarLesao(item, 'tratamento'); }
+  static #voltouLesao(evento, alvo) { const item = this.#item(alvo); return item && voltouALesao(item); }
   static async #apagarItem(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return;

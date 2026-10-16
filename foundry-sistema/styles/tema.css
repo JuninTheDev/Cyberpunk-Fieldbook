@@ -285,6 +285,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .item-linha .nome:hover { color: var(--cp-amarelo); text-shadow: none; }
 .cpr-fieldbook.ficha-personagem .item-linha small { display: block; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; }
 .cpr-fieldbook.ficha-personagem .lesoes .item-linha .nome { color: var(--cp-vermelho); }
+/* A lesão corrigida até o fim do dia (a correção rápida): a marca em ciano. */
+.cpr-fieldbook.ficha-personagem .lesoes .corrigida { flex: none; padding: 1px 8px; border: 1px solid var(--cp-ciano); color: var(--cp-ciano); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
 
 /* ---------- Listas de itens (Combate, Equipamento, Cyberware, NET) ---------- */
 .cpr-fieldbook.ficha-personagem ol.itens { margin: 0; padding: 0; list-style: none; }
@@ -591,6 +593,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 .chat-message.cprf-mensagem:has(.cartao.migracao) { --acento: var(--cp-fraco); --tipo: 'SISTEMA'; }
 .chat-message.cprf-mensagem:has(.cartao.conserto) { --acento: var(--cp-ciano); --tipo: 'CONSERTO'; }
 .chat-message.cprf-mensagem:has(.cartao.humanidade) { --acento: var(--cp-vermelho); --tipo: 'HUMANIDADE'; }
+.chat-message.cprf-mensagem:has(.cartao.tratamento) { --acento: var(--cp-ciano); --tipo: 'TRATAMENTO'; }
+.chat-message.cprf-mensagem:has(.cartao.tratamento.falhou) { --acento: var(--cp-fraco); }
 /* A linha de cima: o tipo na cor dele, quem rolou e, à direita, a hora e o apagar. */
 .chat-message.cprf-mensagem .message-header { align-items: baseline; margin: 0 0 4px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.12em; }
 .chat-message.cprf-mensagem .message-sender { overflow: hidden; color: var(--cp-texto); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.14em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }

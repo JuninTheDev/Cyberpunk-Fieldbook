@@ -54,6 +54,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Tratamento: Paramédico DV</span><input type="number" name="system.tratamento.paramedico" value="{{fonte.tratamento.paramedico}}"></label>
       <label class="celula"><span>Tratamento: Cirurgia DV</span><input type="number" name="system.tratamento.cirurgia" value="{{fonte.tratamento.cirurgia}}"></label>
       <label class="caixa"><input type="checkbox" name="system.aumentaDeathSave" {{checked fonte.aumentaDeathSave}}> Death Save base +1</label>
+      {{#if lesaoDeAtor}}<div class="acoes-do-item">{{#if lesaoDeAtor.corrigida}}<button type="button" class="acao" data-action="voltou" data-tooltip="O dia acabou: o efeito volta">VOLTOU</button>{{else}}{{#if lesaoDeAtor.correcao}}<button type="button" class="acao" data-action="corrigir" data-tooltip="Correção rápida: tira o efeito até o fim do dia">CORREÇÃO RÁPIDA</button>{{/if}}{{/if}}{{#if lesaoDeAtor.tratamento}}<button type="button" class="acao" data-action="tratar" data-tooltip="Tratamento: tira de vez (não em si mesmo)">TRATAR</button>{{/if}}</div>{{/if}}
       {{/if}}
       {{#if eh.cyberware}}
       <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposCyberware selected=fonte.tipo}}</select></label>

@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 77). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 78). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -386,8 +386,9 @@ No fim de tudo, uma sessão de teste com a mesa.
       corpo, e a cabeça só pelo tiro mirado, −8, como a wiki; o "Mirar" da ficha já faz);
     - [ ] as ações "Agarrar" (regra: a wiki, "Agarrar e arremessar", p. 177) e "Proteger-se" (regra: a cobertura, p.
       182; é a Ação de Movimento até a cobertura);
-    - [ ] a correção rápida e o tratamento da lesão pela ficha (regra: as DVs de cada lesão na wiki, como a correção
-      rápida de Primeiros Socorros ou Paramédico DV 13);
+    - [x] a correção rápida e o tratamento da lesão, na aba Combate e na ficha da lesão (wiki, p. 128 e 223: TECH + a
+      perícia + 1d10 superando a DV da lesão; a correção tira o efeito até o fim do dia, com o "Voltou", e na lesão sem
+      tratamento resolve de vez; o tratamento cura e não pode ser em si mesmo): ciclo 77;
     - [x] a Sorte usada na sessão no cabeçalho (o máximo menos a que resta; o ↺ zera): ciclo 66;
     - [x] a quantidade com − e + no inventário (equipamento, roupas e drogas; sem passar de 0): ciclo 67;
     - [ ] "Usar" a droga (regra, conferida na wiki em 2026-10-16: ao tomar, WILL + Resistir Tortura/Drogas + 1d10 contra a
@@ -415,8 +416,9 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [x] "Rodar" e "Restaurar REZ" na ficha do programa (liga e desliga no deck, como o "Ativo" da aba NET; a REZ
       atual e a volta ao máximo): ciclo 75;
     - [x] "Rolar Humanidade" no cyberware de um ator (a perda rolada sem instalar, no cartão do "Aplicar"): ciclo 73;
-    - [ ] "Instalar opção" no cyberware, "Usar" e
-      "Largar" no equipamento, "Correção rápida" e "Tratar" na lesão (interface, com as mesmas regras da ficha).
+    - [ ] "Instalar opção" no cyberware (vem com a fundação e as opções, acima), "Usar" a droga (o item de regra, acima) e
+      "Largar" no equipamento (o que ele faz, a confirmar com o usuário). A correção rápida e o tratamento na ficha da
+      lesão: ciclo 77.
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
   cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança
   direta); o mestre tira linhas, desfazendo ou não a mudança; a importação, a migração e a loja da wiki escrevem as

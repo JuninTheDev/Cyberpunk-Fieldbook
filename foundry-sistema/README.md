@@ -179,6 +179,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Tabelas:** 2d6 na tabela do corpo, ou na da cabeça no tiro mirado na cabeça, sem repetir uma que o alvo já tem.
   - **Na ficha:** a lesão entra com os efeitos (Perna quebrada: −4 MOVE, mínimo 1) e o texto da wiki, com o paliativo e o tratamento.
   - **Mortalmente ferido:** quem já está com HP abaixo de 1 ganha uma lesão a cada acerto.
+  - **Correção rápida e tratamento** (ciclo 77; a wiki, p. 128 e 223), na aba Combate e na ficha da lesão: quem trata (o token selecionado de quem clica, o personagem dele ou, na correção, o próprio ferido) escolhe a perícia e rola TECH + a perícia + 1d10, que precisa superar a DV da lesão (Primeiros Socorros ou Paramédico; no tratamento, Paramédico ou a Cirurgia do Medtech). A correção rápida tira o efeito até o fim do dia (a lesão fica "CORRIGIDA", e o "Voltou" liga o efeito de novo; o sistema não tem relógio) e, na lesão sem tratamento, resolve de vez; o tratamento tira a lesão e não pode ser em si mesmo. O cartão "TRATAMENTO" diz quem tratou, o total e a DV.
 - **Facedown** (o `CPRFacedownRoll` do CORE e a wiki, RED p. 194): COOL + Reputação + 1d10, um teste enfrentado, pela
   janela de rolagem (Ctrl + clique, direto). Na aba Combate do personagem e no cabeçalho do capanga, onde a Reputação também
   se edita. Entram as penalidades de todas as ações (o ferimento e as lesões), e a Reputação de covarde conta negativa. O
@@ -347,6 +348,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - "Rolar Humanidade" na ficha do cyberware e "Aplicar" no cartão: a perda rolada sem instalar, tirada uma vez da Humanidade do dono pelo botão do mestre;
   - "Atacar" e "Recarregar" na ficha da arma (a janela no clique, direto com Ctrl; o pente cheio da munição carregada) e o SP da armadura em caixas, com o "−1" até o 0;
   - "Rodar" e "Restaurar REZ" na ficha do programa: sem o "Rodar" fora do deck; no deck, liga e desliga; a REZ perdida volta;
+  - a correção rápida e o tratamento da Perna quebrada por um Medtech de teste: a correção (14 contra DV13) tira o −4 de MOVE até o "Voltou"; o tratamento empatado (15 contra DV15) falha, e o de 16 tira a lesão;
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o dano rolado à parte pelos botões do cartão: "Aplicar dano" no alvo marcado (com a armadura, e o Desfazer) e, no crítico, os +5 sem a lesão e "Rolar a lesão" uma vez por alvo;
   - "Rolar iniciativa" na aba Combate: sem combate, o do mestre cria um, põe o token na fila e rola; de novo no mesmo combate, o aviso;

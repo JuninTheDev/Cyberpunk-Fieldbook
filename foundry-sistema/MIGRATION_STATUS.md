@@ -3624,6 +3624,52 @@ O item "Architecture, live" da maquete "Net Tab". Commit anterior: `fdc9632` (ci
   droga, a fundação e as opções do cyberware) e o "Largar" (o que ele faz, a confirmar com o usuário).
 - **Próximo:** os itens de regra das maquetes (ciclo 77).
 
+### Ciclo 77 (2026-10-16): a correção rápida e o tratamento da lesão (um item de regra das maquetes; sessão KouArt)
+
+Os itens "Quick fix" e "Treat" das maquetes, pela regra da wiki ("Dano e cura", p. 223; o teste básico, p. 128).
+Commit anterior: `2456f61` (ciclo 76).
+
+- **A regra (a wiki):** quem trata rola TECH + Primeiros Socorros ou Paramédico + 1d10 (no tratamento, Paramédico ou
+  Cirurgia) e precisa **superar** a DV da lesão (empatar não basta). A correção rápida tira o efeito pelo resto do dia
+  (1 minuto; pode ser em si mesmo); o tratamento tira de vez (4 horas; não em si mesmo). Na lesão em que "a correção
+  rápida resolve de vez" (o Músculo rompido, o Objeto estranho alojado: as que não têm tratamento), a correção cura.
+  As DVs são as que a lesão já guarda (paliativo e tratamento); nenhum campo novo.
+- **Implementado** (`scripts/tratamento.mjs`, novo):
+  - **a parte de regra em funções puras** (`opcoesDaLesao`, `resultadoDoTratamento`, `resolveDeVez`), que o G3 testa;
+  - **o fluxo** (`tratarLesao`): a janela pergunta quem trata (os tokens selecionados de quem clica, o personagem dele
+    e, na correção, o próprio ferido; no tratamento, nunca o ferido) e a perícia (as que a lesão aceita, com a DV); a
+    rolagem é a perícia (ou a Cirurgia, a rolagem de Role do Medtech; quem não a tem recebe o aviso), direta, com a
+    Sorte preparada; o resultado: curada (a lesão sai), corrigida (os efeitos desligam e a lesão fica marcada) ou
+    falhou; o cartão "TRATAMENTO" diz quem tratou, o total e a DV;
+  - **o "Voltou"** (`voltouALesao`): o sistema não tem relógio, então a lesão corrigida fica "CORRIGIDA" até alguém
+    dizer que o dia acabou; aí os efeitos ligam de novo;
+  - **os botões:** "Correção", "Tratar" e "Voltou" na linha da lesão da aba Combate (o painel geral continua só com o
+    "Tratada", que também é o da ficha do capanga) e na ficha da lesão de um personagem.
+- **Testes:**
+  - G1: 52 arquivos, 0 erros (com o `tratamento.mjs` e o teste dele); G2: 0 erros;
+  - G3: 85 de 89. Um arquivo novo, `tests/sistema/tratamento.test.mjs`, com 2 testes de referência: as perícias e as
+    DVs da Perna quebrada, do Músculo rompido e do Braço desmembrado (a tabela da wiki), e o resultado (13 contra DV13
+    falha; 14 corrige; no Músculo rompido, cura; o tratamento de 15 contra DV15 falha, o de 16 cura). As 4 falhas são
+    as das armas de 2077;
+  - G4: 98 de 103, 183 s, nas duas últimas rodadas (as 5 falhas são as das armas de 2077, e os avisos, só os dois da
+    Lexington). Um passo novo, antes do tiro mirado: um Medtech de teste (TECH 8, Paramédico 4) selecionado e a Perna
+    quebrada no Alvo (MOVE 1); na aba Combate, "Correção" abre a janela com o Medtech e o Alvo e só "Paramédico DV13";
+    14 corrige (MOVE 5, "CORRIGIDA" e o "Voltou"); o "Voltou" devolve o MOVE 1; o "Tratar" oferece só o Medtech, com
+    "Paramédico DV15" e "Cirurgia DV13"; 15 falha e a lesão fica; 16 a tira (MOVE 5), e o cartão diz "Teste Medtech
+    tratou Perna quebrada de Alvo (Paramédico 16 contra DV15).". A primeira rodada caiu por defeito do passo: ele
+    respondeu a janela do tratamento na da correção, que ainda saía com a animação, e a janela nova ficou aberta; ela
+    derrubou depois o passo da ficha nova (que procura uma janela de confirmação). O passo agora espera cada janela
+    sumir e fecha as que sobrarem no `finally` (a lição está no QUALITY_GATES). A mutação do "não em si mesmo" (L3)
+    sobreviveu na segunda rodada: o Alvo nunca estava entre os tokens selecionados, então a guarda não era exercitada.
+    O passo passou a selecionar também o token do Alvo (na correção ele aparece; no tratamento, não);
+  - **mutações:** as 5 caíram, e o arquivo voltou (conferido pelo md5). No G3: empatar com a DV bastando (L1) e a lesão
+    sem tratamento que não resolve de vez (L5). No G4: a correção que não desliga o efeito (L2), o tratamento também em
+    si mesmo (L3, na terceira rodada, com o Alvo selecionado) e o "Voltou" que não liga o efeito (L4). Nenhuma rodada
+    deixou Edge para trás.
+- **Pendências:** "Usar" a droga, Agarrar e Proteger-se, a fundação e as opções do cyberware; o "Largar" (o que ele faz,
+  a confirmar com o usuário).
+- **Próximo:** "Usar" a droga (ciclo 78).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
