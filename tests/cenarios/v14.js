@@ -4374,6 +4374,67 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
     };
 
+    await r.passo('"Conectar" e "Desconectar" na aba NET da ficha (as maquetes do usuário): a 7 m de um ponto de alcance 6, o aviso de longe demais e nada muda; com o Range Upgrade (alcance 8), conecta no ponto mais perto (a ficha mostra o nome dele, "Abrir a NET" e "Desconectar"); "Desconectar" sai com segurança', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = window.__esperar;
+        const { PONTO_PADRAO } = await import('/systems/${S}/scripts/netrun/constantes.mjs');
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const criados = { atores: [], itens: [], tiles: [] };
+        const avisos = [];
+        try {
+          const arq = await Item.implementation.create({ name: 'Teste Arquitetura da Ficha', type: 'arquitetura', system: { andares: [{ andar: 1, ramo: 'a', tipo: 'senha', dv: 6 }] } });
+          criados.itens.push(arq);
+          const [tile] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 1800, y: 800, width: 200, height: 200, flags: { '${S}': { pontoDeAcesso: { ...PONTO_PADRAO, nome: 'Terminal da ficha', arquitetura: arq.uuid } } } }]);
+          criados.tiles.push(tile);
+          const a = await Actor.implementation.create({ name: 'Teste Netrunner da Ficha', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])] });
+          criados.atores.push(a);
+          await a.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1400, y: 900 })).toObject()]);
+          await esperar(() => canvas.tokens.get(token.id));
+          await a.sheet.render({ force: true });
+          await esperar(() => a.sheet.element?.querySelector('[data-action="conectarNaNet"]'));
+          a.sheet.changeTab('net', 'primary');
+          const f = () => a.sheet.element;
+          const texto = seletor => f()?.querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const antes = texto('.tab.net .conexao');
+          // A 7 m (alcance 6): o aviso, e o token não conecta.
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            f().querySelector('[data-action="conectarNaNet"]').click();
+            await esperar(() => avisos.length === 1);
+            await new Promise(r => setTimeout(r, 300));
+          } finally { delete ui.notifications.warn; }
+          const longe = { avisos: [...avisos], conexao: token.getFlag('${S}', 'conexaoNaNet') ?? null };
+          // Com o Range Upgrade no deck (alcance 8): conecta.
+          const range = foundry.utils.deepClone(cat['core_upgrades:range-upgrade']);
+          range.system.instaladoEm = a.items.find(i => i.type === 'cyberdeck').id;
+          await a.createEmbeddedDocuments('Item', [range]);
+          await esperar(() => f()?.querySelector('[data-action="conectarNaNet"]'));
+          f().querySelector('[data-action="conectarNaNet"]').click();
+          await esperar(() => token.getFlag('${S}', 'conexaoNaNet')?.tile === tile.uuid && f()?.querySelector('[data-action="desconectarDaNet"]'));
+          const perto = { conexao: token.getFlag('${S}', 'conexaoNaNet')?.tile === tile.uuid, nome: texto('.tab.net .conexao'), corredores: game.system.api.netrun.estado(tile)?.corredores?.length ?? 0,
+            botoes: [...f().querySelectorAll('.tab.net .coluna-resumo .botoes-resumo [data-action]')].map(b => b.dataset.action).join() };
+          // "Desconectar": sai com segurança, e a ficha volta ao "Conectar".
+          f().querySelector('[data-action="desconectarDaNet"]').click();
+          await esperar(() => !token.getFlag('${S}', 'conexaoNaNet') && f()?.querySelector('[data-action="conectarNaNet"]'));
+          const saiu = { conexao: token.getFlag('${S}', 'conexaoNaNet') ?? null, nome: texto('.tab.net .conexao'), corredores: game.system.api.netrun.estado(tile)?.corredores?.length ?? 0 };
+          return { antes, longe, perto, saiu };
+        } finally {
+          for (const a of criados.atores) await a.sheet?.close();
+          for (const tile of criados.tiles) if (canvas.scene.tiles.has(tile.id)) await tile.delete();
+          for (const a of criados.atores) {
+            await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => t.actorId === a.id).map(t => t.id));
+            await a.delete();
+          }
+          for (const item of criados.itens) await item.delete();
+        }
+      })()`);
+      const ok = info.antes === 'desconectado' && info.longe.avisos.length === 1 && /longe demais/.test(info.longe.avisos[0]) && !info.longe.conexao
+        && info.perto.conexao && info.perto.nome === 'Terminal da ficha' && info.perto.botoes === 'abrirNet,desconectarDaNet' && info.perto.corredores === 1
+        && !info.saiu.conexao && info.saiu.nome === 'desconectado' && info.saiu.corredores === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('andar e as habilidades na NET (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): na janela do jogador, o "?" do andar 1 vira a senha DV 6 ao chegar; a senha trava a descida; o Backdoor rola no mestre (6 contra a DV 6 não passa; 9 passa); o Eye-Dee mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B e para no nó DV 8; o Control toma o nó e o comando vai ao registro; no andar mais fundo, o Virus com a DV e as Ações NET do mestre; o mestre vê o andar 4 escondido e o revela. O visual: o andar com a cor da senha (limpo depois do Backdoor), o cabo em degrau do 3B (do 2A), a base do Backdoor (1d10+4), as Ações NET livres fora de combate, a hora no registro e os botões do cabeçalho da janela com os ícones', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Andar';

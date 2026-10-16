@@ -8,6 +8,7 @@ import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077 } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
+import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -44,6 +45,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarRole: FichaPersonagem.#rolarRole,
       rolarFacedown: FichaPersonagem.#rolarFacedown,
       rolarIniciativa: FichaPersonagem.#rolarIniciativa,
+      conectarNaNet: FichaPersonagem.#conectarNaNet,
+      abrirNet: FichaPersonagem.#abrirNet,
+      desconectarDaNet: FichaPersonagem.#desconectarDaNet,
       rolarInterface: FichaPersonagem.#rolarInterface,
       rolarDanoDoZap: FichaPersonagem.#rolarDanoDoZap,
       ativarPrograma: FichaPersonagem.#ativarPrograma,
@@ -196,6 +200,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rank: s.rankDeInterface, acoes: s.acoesDeNet, deck: itens('cyberdeck').find(deck => deck.system.uso === 'equipado')?.name ?? '',
       habilidades: HABILIDADES_DE_INTERFACE.map(h => ({ ...h, valor: ator.partesDaInterface(h.id, { situacionais: [] }).reduce((soma, p) => soma + p.valor, 0) }))
     };
+    // A conexão na NET (os botões da aba, as maquetes do usuário): o token do ator nesta cena que está num ponto de acesso,
+    // com o nome do ponto.
+    const conectado = ator.getActiveTokens(false, true).map(token => ({ token, conexao: token.getFlag(SISTEMA, FLAG_CONEXAO) })).find(c => c.conexao);
+    net.conexao = conectado ? {
+      tile: conectado.conexao.tile, token: conectado.token.id, ponto: fromUuidSync(conectado.conexao.tile)?.getFlag(SISTEMA, FLAG_PONTO)?.nome || 'Ponto de acesso'
+    } : null;
 
     return Object.assign(contexto, {
       ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
@@ -306,6 +316,22 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
+  // "Conectar", "Abrir a NET" e "Desconectar" na aba NET (as maquetes do usuário), pelo motor da NET (netrun): as mesmas
+  // conferências do clique no marcador e a desconexão segura da janela. A conexão fica no token, e a ficha se redesenha.
+  static async #conectarNaNet() {
+    await game.system.api.netrun.conectarPelaFicha(this.actor);
+    return this.render();
+  }
+  static #abrirNet(evento, alvo) {
+    const tile = fromUuidSync(alvo.dataset.tile);
+    return tile ? game.system.api.netrun.janela(tile, game.user.isGM ? { gm: true } : { tokenId: alvo.dataset.token }) : null;
+  }
+  static async #desconectarDaNet(evento, alvo) {
+    const token = canvas.scene?.tokens.get(alvo.dataset.token);
+    if (!token) return null;
+    await game.system.api.netrun.desconectar(token).catch(falha => ui.notifications.warn(falha.message));
+    return this.render();
+  }
   // O programa ativo (rezzado): os boosters somam na habilidade deles.
   static #ativarPrograma(evento, alvo) {
     const item = this.#item(alvo);

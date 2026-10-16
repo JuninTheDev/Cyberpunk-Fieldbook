@@ -3429,6 +3429,34 @@ Commit anterior: `2c8068c` (ciclo 67).
 - **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
 - **Próximo:** "Conectar" e "Desconectar" na aba NET (ciclo 69).
 
+### Ciclo 69 (2026-10-16): "Conectar" e "Desconectar" na aba NET (as maquetes; sessão KouArt)
+
+O item "Jack in" e "Jack out" das maquetes. Commit anterior: `8bfa990` (ciclo 68).
+
+- **Implementado:**
+  - **as conferências numa função só** (`netrun/ponto-de-acesso.mjs`, `conectarComAsRegras`): o que o clique do jogador
+    no marcador já conferia (o token já conectado ali só abre a janela; em outro ponto, não; sem arquitetura; sem o
+    que o ponto exige, o deck e o Rank; fora do alcance), com os mesmos avisos. O clique do jogador passou a usá-la;
+  - **"Conectar" pela ficha** (`conectarPelaFicha`, na API da NET): o token do ator nesta cena (o selecionado, se
+    houver) no ponto de acesso mais perto que quem clica vê, pelas mesmas conferências, para o jogador e para o mestre
+    (o mestre que quiser passar por cima continua com o clique no marcador);
+  - **a aba NET** (só para quem tem Interface): a conexão no painel da Interface ("desconectado", ou o nome do ponto,
+    em ciano) e os botões "Conectar", ou "Abrir a NET" e "Desconectar" (a desconexão segura da janela, com as regras
+    dela; o aviso, se ela recusar). A conexão fica no token, e a ficha se redesenha depois de cada botão.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 93 de 98, 181 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington; o
+    passo do ponto de acesso, que usa as conferências extraídas no clique do jogador, passou). Um passo novo, depois do
+    passo do ponto de acesso (com o ponto, a arquitetura, o netrunner e o token
+    dele, todos do passo e apagados no fim): a 7 m de um ponto de alcance 6, "Conectar" avisa "longe demais" e o token
+    não conecta; com o Range Upgrade no deck (alcance 8), conecta (a ficha mostra "Terminal da ficha", "Abrir a NET" e
+    "Desconectar", e o ponto tem 1 netrunner); "Desconectar" sai, e a ficha volta a "desconectado";
+  - **mutações:** as 4 derrubaram só o passo novo, e os arquivos voltaram (conferido pelo md5): a ficha conectando
+    sem as conferências (K1), sem ver a conexão (K2), "Desconectar" sem efeito (K3) e o botão "Conectar" sem a ação
+    (K4). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
+- **Próximo:** os itens das maquetes (ciclo 70).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

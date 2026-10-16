@@ -8,6 +8,17 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
         <p class="numero-grande"><b>{{#if net.rank}}{{net.rank}}{{else}}—{{/if}}</b><small>RANK</small></p>
         <div class="medida"><span>AÇÕES NET POR TURNO</span><b class="destaque">{{#if net.rank}}{{net.acoes}}{{else}}—{{/if}}</b></div>
         <div class="medida"><span>DECK EQUIPADO</span><b>{{#if net.deck}}{{net.deck}}{{else}}nenhum{{/if}}</b></div>
+        {{#if net.rank}}
+        <div class="medida"><span>CONEXÃO</span><b class="conexao {{#if net.conexao}}conectado{{/if}}">{{#if net.conexao}}{{net.conexao.ponto}}{{else}}desconectado{{/if}}</b></div>
+        <div class="botoes-resumo">
+          {{#if net.conexao}}
+          <button type="button" class="acao" data-action="abrirNet" data-tile="{{net.conexao.tile}}" data-token="{{net.conexao.token}}">ABRIR A NET</button>
+          <button type="button" class="acao" data-action="desconectarDaNet" data-token="{{net.conexao.token}}" data-tooltip="Desconectar com segurança (em combate, 1 Ação NET)">DESCONECTAR</button>
+          {{else}}
+          <button type="button" class="acao" data-action="conectarNaNet" data-tooltip="Conecta o token no ponto de acesso mais perto, dentro do alcance (6 m; 8 com o upgrade de alcance)">CONECTAR</button>
+          {{/if}}
+        </div>
+        {{/if}}
       </section>
 
       <section class="painel corte">

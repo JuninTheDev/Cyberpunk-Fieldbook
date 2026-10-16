@@ -8,7 +8,7 @@ import { FLAG_INIMIGO, STATUS_EM_CHAMAS } from './constantes.mjs';
 import { alvosNaVez, conexaoDoToken, estadoDoTile, operacoes, pontoDoTile, removerCorredorApagado, soltarTokens } from './estado.mjs';
 import { JanelaDaNet } from './janela.mjs';
 import { alcanceDo, distancia, netrunnerDo } from './regras-da-net.mjs';
-import { abrirPonto, apagarPontos, arquiteturasDisponiveis, botaoNoHud, configurar, conectar, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
+import { abrirPonto, apagarPontos, arquiteturasDisponiveis, botaoNoHud, configurar, conectar, conectarPelaFicha, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
 import { iniciarSocketDaNet, pedir } from './socket.mjs';
 import { desenharAnel, pararPulso, registrarStatusDaNet } from './token.mjs';
 
@@ -52,6 +52,8 @@ export function registrarNet() {
       configurar: tile => configurar(doc(tile)),
       abrir: (tile, opcoes = {}) => abrirPonto(doc(tile), opcoes),
       conectar: (tile, token) => conectar(doc(tile), doc(token)),
+      // A ficha: "Conectar" (o ponto de acesso mais perto, com as conferências do clique) e a janela de quem está conectado.
+      conectarPelaFicha: ator => conectarPelaFicha(ator),
       desconectar: (token, { inseguro = false } = {}) => {
         const conexao = conexaoDoToken(doc(token));
         return conexao ? pedir('desconectar', { tile: conexao.tile, token: doc(token).id, inseguro }) : Promise.resolve(null);

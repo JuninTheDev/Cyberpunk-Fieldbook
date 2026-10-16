@@ -118,8 +118,28 @@ export async function abrirPonto(tile, { shift = false } = {}) {
   }
   const token = tokenDoJogador(tile);
   if (!token) return ui.notifications.warn('Selecione o seu token perto do ponto de acesso.');
+  return conectarComAsRegras(tile, token);
+}
+
+// O "Conectar" da ficha (as maquetes do usuário): o token do ator nesta cena (o selecionado, se houver) no ponto de acesso
+// mais perto que quem clica vê, com as mesmas conferências do clique no marcador.
+export async function conectarPelaFicha(ator) {
+  if (!canvas.ready || !canvas.scene) return ui.notifications.warn('Abra a cena do ponto de acesso.');
+  const tokens = ator.getActiveTokens(false, true);
+  if (!tokens.length) return ui.notifications.warn(`${ator.name} não tem token nesta cena.`);
+  const token = tokens.find(doc => doc.object?.controlled) ?? tokens[0];
+  const pontos = canvas.scene.tiles.filter(tile => pontoDoTile(tile)?.ativo && visivelPara(tile, pontoDoTile(tile), game.user));
+  if (!pontos.length) return ui.notifications.warn('Nenhum ponto de acesso à NET nesta cena.');
+  const [tile] = pontos.sort((a, b) => distancia(a, token) - distancia(b, token));
+  return conectarComAsRegras(tile, token);
+}
+
+// As conferências para conectar um token (o clique do jogador no marcador e o "Conectar" da ficha): já conectado ali, só
+// abre a janela; em outro ponto, não; sem arquitetura, sem o que o ponto exige (o deck, o Rank) ou fora do alcance, avisa.
+async function conectarComAsRegras(tile, token) {
+  const ponto = pontoDoTile(tile);
   const conexao = conexaoDoToken(token);
-  if (conexao?.tile === tile.uuid) return JanelaDaNet.abrir(tile, { tokenId: token.id });
+  if (conexao?.tile === tile.uuid) return JanelaDaNet.abrir(tile, game.user.isGM ? { gm: true } : { tokenId: token.id });
   if (conexao) return ui.notifications.warn(`${token.name} já está conectado em outro ponto de acesso.`);
   if (!ponto.arquitetura) return ui.notifications.warn('Este ponto de acesso ainda não tem arquitetura.');
   const faltas = faltasPara(ponto, token.actor);
