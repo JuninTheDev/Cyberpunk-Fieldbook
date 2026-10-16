@@ -444,6 +444,24 @@ export function escolhaAutomatica({ opcoes, modo, dv = null, mediaEsquiva = 0 })
 // resistência (o teste resistido: empate é do defensor, p. 128). Agarrados, os dois têm −2 em todas as ações.
 export const AGARRAO = { penalidade: -2 };
 export const venceuOAgarrao = (ataque, defesa) => Number(ataque) > Number(defesa);
+// Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria
+// abaixo de 0, fica com 1 HP e desmaia" (quem já está abaixo de 1 não sobe), e na terceira rodada seguida desmaia.
+// motivo: 'abaixoDeZero' ou 'tresRodadas' quando desmaia.
+export function danoDoAgarrao({ hp, body, estrangular = false, vezes = 1 }) {
+  const resto = Number(hp) - Number(body);
+  if (estrangular && resto < 0) return { hp: Math.min(Number(hp), 1), desmaiou: true, motivo: 'abaixoDeZero' };
+  const tres = estrangular && vezes >= 3;
+  return { hp: resto, desmaiou: tres, motivo: tres ? 'tresRodadas' : null };
+}
+// As rodadas seguidas estrangulando: a de agora conta com a anterior se ela foi na rodada de antes, no mesmo combate; na
+// mesma rodada, não conta outra. Fora de combate não há rodada: toda vez conta.
+export function vezesEstrangulando(anterior, { combate = null, rodada = null } = {}) {
+  if (!anterior?.vezes) return 1;
+  if (!combate || !anterior.combate) return combate || anterior.combate ? 1 : anterior.vezes + 1;
+  if (anterior.combate !== combate) return 1;
+  if (anterior.rodada === rodada) return anterior.vezes;
+  return anterior.rodada === rodada - 1 ? anterior.vezes + 1 : 1;
+}
 
 // A conta de uma perícia de defesa (a esquiva, a Concentração) pelas partes que o teste vai usar, para a janela de reação:
 // "DEX 7 + Evasão 2 − Gravemente ferido 2 + 1d10" e a média (o d10 vale 5,5).

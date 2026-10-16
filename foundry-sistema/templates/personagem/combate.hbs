@@ -30,10 +30,8 @@ defesa); à direita, as armas, a armadura, as lesões críticas e a munição. -
         <div class="titulo">DEFESA<span>DEX {{sistema.atributos.dex.valor}}</span></div>
         <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
         <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">{{facedown.valor}} + 1d10</a></b></div>
-        <div class="botoes-resumo"><button type="button" class="acao {{#if emCobertura}}ligado{{/if}}" data-action="protegerSe" data-tooltip="Atrás de algo que para a bala e fora da linha de visão (a Ação de Movimento até lá; wiki, p. 182): o cartão do tiro avisa o mestre">{{#if emCobertura}}EM COBERTURA{{else}}PROTEGER-SE{{/if}}</button>
-          {{#if (eq agarrao.papel "agarrando")}}<button type="button" class="acao ligado" data-action="soltar" data-tooltip="Quem agarra solta quando quiser (wiki, p. 177)">SOLTAR</button>
-          {{else}}<button type="button" class="acao" data-action="agarrar" data-tooltip="Uma Ação, com uma mão livre: DEX + Briga + 1d10 contra o do alvo marcado (T), que resiste na janela de reação; empate é dele (wiki, p. 177)">AGARRAR</button>{{/if}}</div>
-        {{#if agarrao}}<div class="medida agarrao" data-tooltip="Agarrados, os dois têm −2 em todas as ações; quem é agarrado não usa a Ação de Movimento e é arrastado; ninguém usa arma de duas mãos (wiki, p. 177)"><span>{{#if (eq agarrao.papel "agarrando")}}AGARRANDO{{else}}AGARRADO POR{{/if}}</span><b>{{#if agarrao.outro}}{{agarrao.outro}}{{else}}—{{/if}} · −2 em tudo</b></div>{{/if}}
+        <div class="botoes-resumo"><button type="button" class="acao {{#if emCobertura}}ligado{{/if}}" data-action="protegerSe" data-tooltip="Atrás de algo que para a bala e fora da linha de visão (a Ação de Movimento até lá; wiki, p. 182): o cartão do tiro avisa o mestre">{{#if emCobertura}}EM COBERTURA{{else}}PROTEGER-SE{{/if}}</button></div>
+        {{> "systems/cpr-fieldbook/templates/personagem/bloco-agarrao.hbs"}}
       </section>
     </aside>
 

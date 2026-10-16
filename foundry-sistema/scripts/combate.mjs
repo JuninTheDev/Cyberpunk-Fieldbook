@@ -372,7 +372,7 @@ async function defender(ctx, alvo, { opcoes, dv = null }) {
   // O total só vai para o jogador quando ele está à vista ("Esconder o total do ataque" desligado).
   const pacote = {
     alvo: alvo.token.uuid, arma: ctx.arma?.uuid ?? null, rotulo: ctx.rotulo ?? null, atacante: ctx.nomeAtq, imgAtq: ctx.tokenAtq?.texture?.src || ctx.atacante.img, modo: ctx.modo,
-    descricao: ctx.descricao, metros: ['corpo', 'agarrar'].includes(ctx.modo) ? null : alvo.metros, dv, opcoes, padrao, ...(config('escondeAtaque') ? {} : { total: ctx.pedido.total })
+    descricao: ctx.descricao, metros: ['corpo', 'agarrar', 'escapar'].includes(ctx.modo) ? null : alvo.metros, dv, opcoes, padrao, ...(config('escondeAtaque') ? {} : { total: ctx.pedido.total })
   };
   if (alvo.dono) {
     const promessa = pedir(alvo.dono, 'defesa', pacote);
@@ -435,7 +435,7 @@ async function defesaDoAlvo(ctx, linha, alvo, dv) {
 // "O primeiro da rodada" (Ponto Fraco e Deflexão de Dano do Solo): uma vez por rodada do combate de que o ator participa,
 // marcado nele; fora de combate não há rodada, e toda vez conta como a primeira. As marcas do ataque (e a da carga Tech,
 // na arma) vão para o cartão: o "Desfazer" as devolve.
-const combateDe = ator => game.combats.find(combate => combate.started && combate.combatants.some(c => c.actor === ator)) ?? null;
+export const combateDe = ator => game.combats.find(combate => combate.started && combate.combatants.some(c => c.actor === ator)) ?? null;
 function primeiraNaRodada(ator, chave) {
   const combate = combateDe(ator);
   const marca = combate ? ator.getFlag(SISTEMA, chave) : null;

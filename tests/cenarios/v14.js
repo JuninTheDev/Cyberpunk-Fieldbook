@@ -2241,7 +2241,7 @@ module.exports = async ({ edge, servidores, r }) => {
         } finally {
           await a.sheet.close();
           canvas.tokens.setTargets([]);
-          for (const ator of [a, capanga]) for (const papel of marcas(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false });
+          for (const ator of [a, capanga]) for (const papel of marcas(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false }).catch(() => {});
           await a.update({ 'system.pericias.brawling.nivel': antes.atiradora });
           await capanga.update({ 'system.pericias.brawling.nivel': antes.capanga });
         }
@@ -2250,6 +2250,79 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = empate.resultado === 'resistiu' && empate.ataque === 13 && empate.defesa === 13 && !info.depoisDoEmpate.length
         && g.cartao.resultado === 'agarrou' && g.cartao.ataque === 18 && g.cartao.defesa === 9 && g.linha === 'AGARRANDO | Capanga · −2 em tudo' && g.penalidade.join() === '-2,-2'
         && info.soltou === 'Atiradora soltou Capanga: o agarrão acabou.' && !info.depoisDeSoltar.length && info.novos === 2 && !info.linhaDepois;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('o resto do agarrão (wiki, p. 177): Estrangular (o BODY direto no HP, sem a armadura; fora de combate, toda vez conta, e na 3ª desmaia; abaixo de 0, fica com 1 e desmaia), Derrubar (cai, e o agarrão acaba) e Escapar (o empate é de quem segura); os botões da aba Combate de cada lado', async () => {
+      // A Atiradora (BODY 6, DEX 7, Briga 3) agarra o Capanga (DEX 5, Briga 2, HP 20): d10 8 → 18 contra 5 + 2 + 2 = 9.
+      // Estrangula três vezes: 20 → 14 → 8 → 2, e na 3ª desmaia. Com 4 de HP: levaria a −2, fica com 1 e desmaia. Com 20,
+      // derruba: 14, caído, e o agarrão acaba. Agarrado de novo, o Capanga tenta escapar, os dois com o −2 do agarrão:
+      // 5 + 2 − 2 + d10 6 = 11 contra 7 + 3 − 2 + d10 3 = 11, a Atiradora segura; depois, d10 9 → 14 contra d10 2 → 10.
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const api = game.system.api.agarrao;
+        const marcas = ator => ['agarrando', 'agarrado'].filter(papel => ator.statuses.has('${S}-' + papel));
+        const botoes = ator => [...(ator.sheet.element?.querySelectorAll('.tab.combate .botoes-resumo.agarrao [data-action]') ?? [])].map(b => b.dataset.action).join();
+        const ultimo = () => game.messages.contents.at(-1).content.replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();
+        const estado = () => ({ hp: capanga.system.hp.value, desmaiado: capanga.statuses.has('unconscious'), caido: capanga.statuses.has('prone'), marcas: [...marcas(a), ...marcas(capanga)].join() });
+        const tirar = async status => { if (capanga.statuses.has(status)) await capanga.toggleStatusEffect(status, { active: false }); };
+        const agarrar = async () => { window.__fila = [[8, 10], [2, 10]]; return (await api.agarrar(a, { alvo: __token('Capanga') }))?.resultado; };
+        const antes = { body: a.system.atributos.body.valor, briga: [a.system.pericia('brawling').nivel, capanga.system.pericia('brawling').nivel], hp: capanga.system.hp.value };
+        await a.update({ 'system.pericias.brawling.nivel': 3 });
+        await capanga.update({ 'system.pericias.brawling.nivel': 2, 'system.hp.value': 20 });
+        try {
+          const r = { body: a.system.atributos.body.valor, agarrou: await agarrar(), estrangulou: [] };
+          for (let i = 0; i < 3; i++) {
+            const c = await api.estrangular(a);
+            r.estrangulou.push({ hp: c.hp, vezes: c.vezes, desmaiou: c.desmaiou, ...estado() });
+          }
+          r.cartaoDoTerceiro = ultimo();
+          await tirar('unconscious');
+          await capanga.update({ 'system.hp.value': 4 });
+          const quarta = await api.estrangular(a);
+          r.abaixoDeZero = { hp: quarta.hp, ...estado(), cartao: ultimo() };
+          await tirar('unconscious');
+          await capanga.update({ 'system.hp.value': 20 });
+          await api.derrubar(a);
+          r.derrubou = { cartao: ultimo() };
+          await __esperar(() => !marcas(capanga).length);
+          Object.assign(r.derrubou, estado());
+          await tirar('prone');
+          // Com 14 de 35, o Capanga estaria gravemente ferido (−2 na fuga).
+          await capanga.update({ 'system.hp.value': capanga.system.hp.max });
+          r.deNovo = await agarrar();
+          for (const ator of [a, capanga]) { await ator.sheet.render({ force: true }); ator.sheet.changeTab('combate', 'primary'); }
+          await __esperar(() => botoes(capanga) === 'escapar' && botoes(a) === 'estrangular,derrubar,soltar');
+          r.botoes = { capanga: botoes(capanga), atiradora: botoes(a) };
+          window.__fila = [[6, 10], [3, 10]];
+          const segurou = await api.escapar(capanga);
+          r.segurou = { resultado: segurou.resultado, ataque: segurou.ataque, defesa: segurou.defesa, cartao: ultimo(), marcas: estado().marcas };
+          window.__fila = [[9, 10], [2, 10]];
+          const escapou = await api.escapar(capanga);
+          r.escapou = { resultado: escapou.resultado, ataque: escapou.ataque, defesa: escapou.defesa, cartao: ultimo() };
+          await __esperar(() => !marcas(a).length && botoes(capanga) === 'agarrar');
+          Object.assign(r.escapou, { marcas: estado().marcas, botoes: botoes(capanga) });
+          return r;
+        } finally {
+          for (const ator of [a, capanga]) await ator.sheet.close();
+          for (const ator of [a, capanga]) for (const papel of marcas(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false }).catch(() => {});
+          for (const status of ['unconscious', 'prone']) await tirar(status);
+          await a.update({ 'system.pericias.brawling.nivel': antes.briga[0] });
+          await capanga.update({ 'system.pericias.brawling.nivel': antes.briga[1], 'system.hp.value': antes.hp });
+        }
+      })()`);
+      const [e1, e2, e3] = info.estrangulou;
+      const ok = info.body === 6 && info.agarrou === 'agarrou'
+        && e1.hp === 14 && e1.vezes === 1 && !e1.desmaiado && e2.hp === 8 && e2.vezes === 2 && !e2.desmaiado && e3.hp === 2 && e3.vezes === 3 && e3.desmaiou && e3.desmaiado && e3.marcas === 'agarrando,agarrado'
+        && info.cartaoDoTerceiro === 'Atiradora estrangulou Capanga: 6 de dano direto no HP, sem a armadura (8 → 2): é a 3ª rodada seguida, e Capanga desmaia.'
+        && info.abaixoDeZero.hp === 1 && info.abaixoDeZero.desmaiado && info.abaixoDeZero.cartao === 'Atiradora estrangulou Capanga: 6 de dano direto no HP, sem a armadura (4 → 1): o dano o levaria abaixo de 0, então fica com 1 e desmaia.'
+        && info.derrubou.hp === 14 && info.derrubou.caido && !info.derrubou.marcas && info.derrubou.cartao === 'Atiradora derrubou Capanga: 6 de dano direto no HP, sem a armadura (20 → 14); Capanga caiu, e o agarrão acabou.'
+        && info.deNovo === 'agarrou' && info.botoes.capanga === 'escapar' && info.botoes.atiradora === 'estrangular,derrubar,soltar'
+        && info.segurou.resultado === 'segurou' && info.segurou.ataque === 11 && info.segurou.defesa === 11 && info.segurou.marcas === 'agarrando,agarrado'
+        && info.segurou.cartao === 'Atiradora segurou Capanga (11 contra 11: o empate é de quem segura): o agarrão continua.'
+        && info.escapou.resultado === 'escapou' && info.escapou.ataque === 14 && info.escapou.defesa === 10 && !info.escapou.marcas && info.escapou.botoes === 'agarrar'
+        && info.escapou.cartao === 'Capanga escapou do agarrão de Atiradora (14 contra 10): o agarrão acabou.';
       return [ok, JSON.stringify(info)];
     });
 
@@ -2432,9 +2505,53 @@ module.exports = async ({ edge, servidores, r }) => {
       } finally {
         await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-defesa')) await app.close(); return true; })()`).catch(() => {});
         await edge.evaluate(`(async () => {
-          for (const ator of [__ator('Atiradora'), __ator('Alvo')]) for (const papel of ${marcas}(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false });
+          for (const ator of [__ator('Atiradora'), __ator('Alvo')]) for (const papel of ${marcas}(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false }).catch(() => {});
           await __ator('Atiradora').update({ 'system.pericias.brawling.nivel': window.__briga[0] });
           await __ator('Alvo').update({ 'system.pericias.brawling.nivel': window.__briga[1] });
+          return true;
+        })()`);
+      }
+    });
+
+    await r.passo('jogador: o Alvo agarra o Capanga, e a fuga do Capanga chega na janela de reação dele ("Estão escapando do seu agarrão!": só Resistir, com a conta da Briga e o −2 do agarrão); ele empata e segura', async () => {
+      // Mestre: o Alvo (DEX 7, Briga 1) agarra o Capanga (DEX 5, Briga 2): d10 9 → 17 contra 5 + 2 + d10 2 = 9. A fuga,
+      // os dois com o −2: Capanga 5 + 2 − 2 + d10 5 = 10; Jogador: 7 + 1 − 2 + d10 4 = 10, empate: segura.
+      await edge.evaluate(`(async () => {
+        window.__briga = [__ator('Alvo').system.pericia('brawling').nivel, __ator('Capanga').system.pericia('brawling').nivel];
+        window.__hpCapanga = __ator('Capanga').system.hp.value;
+        await __ator('Alvo').update({ 'system.pericias.brawling.nivel': 1 });
+        // Com o HP cheio, o Capanga não tem a penalidade de ferido.
+        await __ator('Capanga').update({ 'system.pericias.brawling.nivel': 2, 'system.hp.value': __ator('Capanga').system.hp.max });
+        return true;
+      })()`);
+      const marcas = `(ator => ['agarrando', 'agarrado'].filter(papel => ator.statuses.has('${S}-' + papel)))`;
+      try {
+        await fixar(edge, [[9, 10], [2, 10]]);
+        const agarrou = await edge.evaluate(`game.system.api.agarrao.agarrar(__ator('Alvo'), { alvo: __token('Capanga') }).then(r => r?.resultado)`);
+        await fixar(edge, [[5, 10]]);
+        await fixar(jogador, [[4, 10]]);
+        await edge.evaluate(`(() => { window.__fuga = game.system.api.agarrao.escapar(__ator('Capanga')); return true; })()`);
+        let janela = null;
+        for (let i = 0; i < 40 && !janela; i++) {
+          await jogador.sleep(250);
+          janela = await jogador.evaluate(`(() => {
+            const d = document.querySelector('.application.cpr-fieldbook.janela-defesa');
+            return d && { titulo: d.querySelector('.window-title')?.textContent.trim(), texto: d.querySelector('.window-content').textContent.replace(/\\s+/g, ' ').trim(), botoes: [...d.querySelectorAll('button.opcao[data-escolha]')].map(b => b.dataset.escolha) };
+          })()`);
+        }
+        if (janela) await jogador.evaluate(`document.querySelector('.application.cpr-fieldbook.janela-defesa button.opcao[data-escolha="resistir"]').click()`);
+        const fuga = await edge.evaluate(`window.__fuga.then(r => r && { resultado: r.resultado, ataque: r.ataque, defesa: r.defesa, marcas: [...${marcas}(__ator('Alvo')), ...${marcas}(__ator('Capanga'))].join() })`);
+        const textos = [/^Capanga Alvo Escapar do agarrão · DEX \+ Briga \+ 1d10 /, / Resistir DEX 7 \+ Briga 1 − Agarrão 2 \+ 1d10 \(média 11,5\) contra a fuga\. Empate é seu\. Perdeu: o agarrão acaba\. /];
+        const info = { agarrou, janela, fuga };
+        return [agarrou === 'agarrou' && janela && janela.titulo === 'Estão escapando do seu agarrão!' && janela.botoes.join() === 'resistir' && textos.every(t => t.test(janela.texto))
+          && fuga?.resultado === 'segurou' && fuga.ataque === 10 && fuga.defesa === 10 && fuga.marcas === 'agarrando,agarrado', JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-defesa')) await app.close(); return true; })()`).catch(() => {});
+        await edge.evaluate(`(async () => {
+          for (const ator of [__ator('Alvo'), __ator('Capanga')]) for (const papel of ${marcas}(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false }).catch(() => {});
+          await __esperar(() => !${marcas}(__ator('Alvo')).length && !${marcas}(__ator('Capanga')).length);
+          await __ator('Alvo').update({ 'system.pericias.brawling.nivel': window.__briga[0] });
+          await __ator('Capanga').update({ 'system.pericias.brawling.nivel': window.__briga[1], 'system.hp.value': window.__hpCapanga });
           return true;
         })()`);
       }
@@ -2932,7 +3049,7 @@ module.exports = async ({ edge, servidores, r }) => {
     });
 
     // ---------- Importar da wiki ----------
-    await r.passo('capanga (o mook do CORE): o token nasce solto, com o HP na barra; a ficha é uma página só (o painel geral sem as armas, a tabela de armas, os itens e as notas); o que se arrasta para ela entra equipado (a pistola, a armadura, o Medscanner) ou instalado (o Kerenzikov rola a perda de Humanidade; com Shift, o Grip Foot fica com a média); dois capangas na cena: o tiro num muda só o HP e a SP dele, o outro recarrega e atira com a própria munição, e o Death Save no turno é só do que caiu', async () => {
+    await r.passo('capanga (o mook do CORE): o token nasce solto, com o HP na barra; a ficha é uma página só (o painel geral sem as armas, a tabela de armas, o agarrão, os itens e as notas); o que se arrasta para ela entra equipado (a pistola, a armadura, o Medscanner) ou instalado (o Kerenzikov rola a perda de Humanidade; com Shift, o Grip Foot fica com a média); dois capangas na cena: o tiro num muda só o HP e a SP dele, o outro recarrega e atira com a própria munição, e o Death Save no turno é só do que caiu', async () => {
       // Kerenzikov: 4d6 3 + 3 + 3 + 3 = 12. Tiro no capanga 1 (10 m, DV 15): REF 6 + Pistola 6 + d10 9 = 21; dano 3d6 6 + 5 +
       // 5 = 16, a SP 11 segura 11 e entram 5. Tiro do capanga 2 no atirador (14 m, DV 20): 6 + 6 + 9 = 21; dano 3d6 4 + 4 + 4
       // = 12, sem armadura. Death Save do capanga 1 (HP 0): d10 3 < BODY 5. O 6 depois do Kerenzikov seria o 1d6 do Grip Foot
@@ -2956,7 +3073,7 @@ module.exports = async ({ edge, servidores, r }) => {
           await esperar(() => f()?.querySelector('.corpo-capanga'));
           const ficha = {
             classes: ['ficha-capanga', 'ficha-personagem'].every(classe => f().classList.contains(classe)), abas: f().querySelectorAll('nav.tabs').length,
-            modelo: textoDe(f().querySelector('.linha-id .modelo')), titulos: [...f().querySelectorAll('.corpo-capanga .titulo')].map(titulo => titulo.firstChild.textContent.trim())
+            modelo: textoDe(f().querySelector('.linha-id .modelo')), titulos: [...f().querySelectorAll('.corpo-capanga .titulo')].map(titulo => titulo.firstChild.textContent.trim()), agarrar: Boolean(f().querySelector('.agarrao-capanga [data-action="agarrar"]'))
           };
 
           // 2. Os itens do compêndio arrastados para a ficha (o drop, como o do mouse).
@@ -3046,7 +3163,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const { token, ficha, recebidos: c, soltos, tiro1, tiro2, morte, fichaDoToken } = info;
         const ok = !token.ligado && token.barra === 'hp' && token.visao
           && ficha.classes && ficha.abas === 0 && ficha.modelo === 'MODELO DOS TOKENS'
-          && ficha.titulos.join() === 'ATRIBUTOS,VITAIS,PERÍCIAS,ARMADURA,CYBERWARE,LESÕES CRÍTICAS,ARMAS,ITENS,NOTAS'
+          && ficha.titulos.join() === 'ATRIBUTOS,VITAIS,PERÍCIAS,ARMADURA,CYBERWARE,LESÕES CRÍTICAS,ARMAS,AGARRÃO,ITENS,NOTAS' && ficha.agarrar
           && c.pistola && c.armadura && c.instalados && c.kerenzikov === 12 && c.grip === 3 && c.medscanner === 'equipado' && c.bala === 10
           && c.hum === 35 && c.humMax === 46 && c.ini === 8 && c.sp === 11
           && JSON.stringify(c.itens) === JSON.stringify([['Heavy Pistol', 'Equipada'], ['Light Armorjack (Body)', 'Vestida'], ['Heavy Pistol (Basic)', ''], ['Grip Foot', 'Instalado'], ['Kerenzikov', 'Instalado'], ['Medscanner', 'Equipado']])

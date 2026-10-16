@@ -26,7 +26,11 @@ function textoDaEscolha(escolha, d) {
   if (escolha === 'aguentar') return { explosivo: 'Fica na área e leva o dano da explosão.', cartucho: 'Leva os 3d6 do cartucho.', corpo: 'O golpe pega.' }[d.modo] ?? contraDv;
   if (escolha === 'escudo') return `${esc(d.escudo?.nome)} (${d.escudo?.pv ?? 0} PV) recebe o ataque todo. Sem esquiva.${aDistancia ? ` ${contraDv}` : ''}`;
   if (escolha === 'concentrar') return `${d.concentracao ? `${esc(d.concentracao.texto)} (média ${numero(d.concentracao.media)})` : 'WILL + Concentração + 1d10'} contra o ataque. Empate é seu. Perdeu: fica Suprimido e usa a próxima Ação de Movimento para ir para a cobertura (se não bastar, a Ação também).`;
-  if (escolha === 'resistir') return `${d.briga ? `${esc(d.briga.texto)} (média ${numero(d.briga.media)})` : 'DEX + Briga + 1d10'} contra o agarrão. Empate é seu. Perdeu: os dois ficam agarrados (−2 em todas as ações), e você não usa a Ação de Movimento.`;
+  if (escolha === 'resistir') {
+    const briga = d.briga ? `${esc(d.briga.texto)} (média ${numero(d.briga.media)})` : 'DEX + Briga + 1d10';
+    if (d.modo === 'escapar') return `${briga} contra a fuga. Empate é seu. Perdeu: o agarrão acaba.`;
+    return `${briga} contra o agarrão. Empate é seu. Perdeu: os dois ficam agarrados (−2 em todas as ações), e você não usa a Ação de Movimento.`;
+  }
   return '';
 }
 
@@ -63,6 +67,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
 
   get title() {
     if (this.dados.modo === 'agarrar') return this.dados.mestre ? `Agarrão em ${this.dados.alvo.nome}` : 'Estão agarrando você!';
+    if (this.dados.modo === 'escapar') return this.dados.mestre ? `Fuga do agarrão de ${this.dados.alvo.nome}` : 'Estão escapando do seu agarrão!';
     return this.dados.mestre ? `Ataque em ${this.dados.alvo.nome}` : 'Você está sendo atacado!';
   }
 

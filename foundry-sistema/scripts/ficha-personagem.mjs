@@ -3,7 +3,7 @@
 // atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
-import { agarraoDe, agarrar, soltar } from './agarrao.mjs';
+import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
@@ -51,6 +51,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       protegerSe: FichaPersonagem.#protegerSe,
       agarrar: FichaPersonagem.#agarrar,
       soltar: FichaPersonagem.#soltar,
+      estrangular: FichaPersonagem.#estrangular,
+      derrubar: FichaPersonagem.#derrubar,
+      escapar: FichaPersonagem.#escapar,
       conectarNaNet: FichaPersonagem.#conectarNaNet,
       abrirNet: FichaPersonagem.#abrirNet,
       desconectarDaNet: FichaPersonagem.#desconectarDaNet,
@@ -93,7 +96,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     topo: parte('topo'),
     tabs: { template: 'templates/generic/tab-navigation.hbs' },
     pericias: { ...aba('pericias'), templates: [bloco('geral')] },
-    combate: { ...aba('combate'), templates: [bloco('armas')] },
+    combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao')] },
     equipamento: aba('equipamento'),
     cyberware: aba('cyberware'),
     role: aba('role'),
@@ -342,10 +345,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     await this.actor.toggleStatusEffect(STATUS_COBERTURA);
     return this.render();
   }
-  // "Agarrar" e "Soltar" (as maquetes do usuário; a wiki, p. 177): o alvo marcado (T) resiste pela janela de reação do
-  // dono (agarrao.mjs); quem agarra solta quando quiser.
+  // O agarrão (as maquetes do usuário; a wiki, p. 177; agarrao.mjs): "Agarrar" (o alvo marcado, T, resiste pela janela
+  // de reação do dono); agarrando, "Estrangular", "Derrubar" e "Soltar"; agarrado, "Escapar" (quem agarra resiste).
   static #agarrar(evento) { return agarrar(this.actor, { perguntar: comJanela(evento) }); }
   static #soltar() { return soltar(this.actor); }
+  static #estrangular() { return estrangular(this.actor); }
+  static #derrubar() { return derrubar(this.actor); }
+  static #escapar(evento) { return escapar(this.actor, { perguntar: comJanela(evento) }); }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
   // "Conectar", "Abrir a NET" e "Desconectar" na aba NET (as maquetes do usuário), pelo motor da NET (netrun): as mesmas

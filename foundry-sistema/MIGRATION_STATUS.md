@@ -498,6 +498,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **na ficha do item** (ciclo 62): "Attack", "Reload", "Repair", "Ablate", "Install option", "Roll humanity", "Run",
     "Reset REZ", "Use", "Drop", "Quick fix" e "Treat", os "hits taken" e a trilha do SP da armadura.
 
+- **Estrangular "abaixo de 0"** (ciclo 81). A wiki diz "Se levaria abaixo de 0, fica com 1 HP e desmaia", e o sistema
+  segue a letra: o estrangular que leva o HP a exatamente 0 deixa em 0 (mortalmente ferido), sem desmaiar; abaixo de
+  0, fica com 1 e desmaia. Se a mesa ler "abaixo de 1" (o estrangular nunca deixa mortalmente ferido), muda uma linha
+  (`regras.danoDoAgarrao`) e o teste de referência. Quem já está abaixo de 1 não sobe para 1 (a wiki não diz; o
+  estrangular não cura).
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -3799,6 +3805,59 @@ de 2026-10-16 (o alvo resiste pela janela do dono, como a esquiva). Commit anter
 - **Pendências:** o resto do agarrão (Estrangular, Derrubar, Escapar e o botão no capanga: o mestre agarra pelo NPC
   pela API), e a fundação e as opções do cyberware.
 - **Próximo:** o resto do agarrão.
+
+### Ciclo 81 (2026-10-16): o resto do agarrão: Estrangular, Derrubar e Escapar (sessão KouArt)
+
+O resto da regra "Agarrar e arremessar" da wiki (p. 177), depois do ciclo 80. Commit anterior: `8bc077a` (a marca `[~]`).
+
+- **A regra (a wiki):** "Estrangular (Ação): dano igual ao BODY direto no HP, ignorando armadura. Se levaria abaixo de 0,
+  fica com 1 HP e desmaia. Três rodadas seguidas: desmaia."; "Derrubar (Ação): dano igual ao BODY direto no HP; o alvo
+  cai e o agarrão acaba."; "o defensor escapa com um teste de agarrar vencido (Ação)". O "abaixo de 0" fica nas dúvidas.
+- **Implementado:**
+  - **a regra pura** (`regras.mjs`: `danoDoAgarrao`, com o motivo do desmaio, e `vezesEstrangulando`: no mesmo
+    combate, a rodada de antes conta junto, pular uma recomeça, a mesma rodada não conta outra; fora de combate, toda
+    vez conta), que o G3 testa;
+  - **"Estrangular" e "Derrubar"** (`agarrao.mjs`), de quem agarra, sem rolagem: o mestre ativo tira o BODY do HP do
+    outro. Estrangulando, as vezes seguidas ficam na marca de quem agarra, e o desmaio liga a marca de inconsciente do
+    Foundry. Derrubando, o outro fica caído (a marca do Foundry), e o agarrão acaba. O cartão diz o dano, o HP de antes e
+    o de depois, e por que desmaiou;
+  - **"Escapar"**, de quem é agarrado: DEX + Briga + 1d10 (com o −2 do agarrão), e quem agarra resiste pela mesma
+    defesa (a janela de reação do dono, "Estão escapando do seu agarrão!", com o texto "contra a fuga ... Perdeu: o
+    agarrão acaba"; pelo NPC, o mestre rola). O empate é de quem segura. O token de quem segura precisa estar na cena;
+  - **o pedido ao mestre** ficou um só para as quatro ações (`{ tipo: 'agarrao', acao }` pelo socket, na fila dos
+    ataques);
+  - **na ficha:** os botões saíram para um bloco (`bloco-agarrao.hbs`), na Defesa da aba Combate do personagem e num
+    painel "AGARRÃO" da ficha do capanga: sem agarrão, "AGARRAR"; agarrando, "ESTRANGULAR", "DERRUBAR" e "SOLTAR";
+    agarrado, "ESCAPAR".
+- **Testes:**
+  - G1: 55 arquivos, 0 erros; G2: 0 erros;
+  - G3: 91 de 95. Dois testes de referência novos em `regras.test.mjs`: o texto da wiki (o Estrangular, o Derrubar e o
+    "escapa com um teste de agarrar vencido") e o `danoDoAgarrao` (14, 8, 2 com o desmaio na terceira; 4 → 1 com o
+    desmaio; 6 → 0 sem desmaio; quem está em 0 não sobe; o Derrubar sem o limite); e as vezes seguidas. As 4 falhas são
+    as das armas de 2077;
+  - G4: 104 de 109 (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). Dois passos novos:
+    - depois do Agarrar no Capanga, a Atiradora (BODY 6) agarra o Capanga e estrangula três vezes fora de combate (20 →
+      14 → 8 → 2, e na terceira ele desmaia, com o cartão "é a 3ª rodada seguida"); com 4 de HP, o estrangular o deixa
+      com 1 e desmaiado ("o dano o levaria abaixo de 0"); com 20, o Derrubar deixa 14, caído e sem as marcas. Agarrado
+      de novo, os botões de cada lado ("ESCAPAR"; "ESTRANGULAR", "DERRUBAR", "SOLTAR"); a fuga empata (11 contra 11, os
+      dois com o −2), e a Atiradora segura; depois, 14 contra 10, ele escapa, as marcas saem e volta o "AGARRAR";
+    - no jogador: o Alvo agarra o Capanga, e a fuga do Capanga chega na janela de reação dele ("Estão escapando do seu
+      agarrão!", "DEX 7 + Briga 1 − Agarrão 2 + 1d10 (média 11,5) contra a fuga. Empate é seu. Perdeu: o agarrão
+      acaba."); 10 contra 10, ele segura;
+    - o passo do capanga (o mook) confere o painel "AGARRÃO" na lista dos títulos e o botão "AGARRAR" nele;
+    - rodou três vezes até passar, sem mudar o código: na primeira, a conta da fuga esqueceu que o Capanga, com 14 de
+      35 depois do Derrubar, estava gravemente ferido (−2); o passo volta o HP dele ao máximo antes da fuga. Na segunda,
+      a limpeza do passo novo do jogador apagava as duas marcas e corria contra o mestre, que já apaga a do outro lado
+      ("ActiveEffect ... does not exist!"; e o erro no `finally` escondia o resultado do passo): a limpeza dos quatro
+      passos do agarrão passou a tolerar essa corrida e a esperar as marcas sumirem;
+  - **mutações:** as 11 caíram, e os arquivos voltaram (conferido pelo md5). No G3: chegar a 0 contar como abaixo de 0
+    (B1) e pular uma rodada não recomeçar a conta (B2). No G4: o estrangular sem tirar o HP (B3), o desmaio sem a marca
+    (B4), as rodadas seguidas sem guardar (B5), o Derrubar que não acaba o agarrão (B6) e que não deixa caído (B7), o
+    empate da fuga para quem foge (B8), a fuga que não tira as marcas (B9), a janela da fuga com o título do agarrão
+    (B10) e a ficha de quem é agarrado sem o "ESCAPAR" (B11).
+- **Pendências:** a fundação e as opções do cyberware; o "abaixo de 0" do Estrangular, se a mesa ler diferente (ver as
+  dúvidas).
+- **Próximo:** a fundação e as opções do cyberware.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

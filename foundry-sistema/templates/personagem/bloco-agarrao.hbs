@@ -1,0 +1,14 @@
+{{!-- O agarrão (agarrao.mjs; a wiki, "Agarrar e arremessar", p. 177): na Defesa da aba Combate do personagem e na ficha
+do capanga. Sem agarrão, "Agarrar"; agarrando, "Estrangular", "Derrubar" e "Soltar"; agarrado, "Escapar". --}}
+<div class="botoes-resumo agarrao">
+  {{#if (eq agarrao.papel "agarrando")}}
+  <button type="button" class="acao" data-action="estrangular" data-tooltip="Uma Ação: o seu BODY direto no HP de quem você agarra, sem a armadura; se o levaria abaixo de 0, ele fica com 1 e desmaia; três rodadas seguidas, desmaia (wiki, p. 177)">ESTRANGULAR</button>
+  <button type="button" class="acao" data-action="derrubar" data-tooltip="Uma Ação: o seu BODY direto no HP de quem você agarra, sem a armadura; ele cai, e o agarrão acaba (wiki, p. 177)">DERRUBAR</button>
+  <button type="button" class="acao ligado" data-action="soltar" data-tooltip="Quem agarra solta quando quiser (wiki, p. 177)">SOLTAR</button>
+  {{else if (eq agarrao.papel "agarrado")}}
+  <button type="button" class="acao" data-action="escapar" data-tooltip="Uma Ação: DEX + Briga + 1d10 contra o de quem agarra, que resiste na janela de reação; empate é dele (wiki, p. 177)">ESCAPAR</button>
+  {{else}}
+  <button type="button" class="acao" data-action="agarrar" data-tooltip="Uma Ação, com uma mão livre: DEX + Briga + 1d10 contra o do alvo marcado (T), que resiste na janela de reação; empate é dele (wiki, p. 177)">AGARRAR</button>
+  {{/if}}
+</div>
+{{#if agarrao}}<div class="medida agarrao" data-tooltip="Agarrados, os dois têm −2 em todas as ações; quem é agarrado não usa a Ação de Movimento e é arrastado; ninguém usa arma de duas mãos (wiki, p. 177)"><span>{{#if (eq agarrao.papel "agarrando")}}AGARRANDO{{else}}AGARRADO POR{{/if}}</span><b>{{#if agarrao.outro}}{{agarrao.outro}}{{else}}—{{/if}} · −2 em tudo</b></div>{{/if}}

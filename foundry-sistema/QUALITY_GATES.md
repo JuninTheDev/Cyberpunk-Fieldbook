@@ -90,6 +90,9 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 - **O `__esperar` não falha** (ciclo 80): ele devolve a condição quando o tempo acaba, sem erro. Esperar não é conferir:
   o passo lê o estado depois da espera e confere no `ok`. No ciclo 80, a mutação "o Soltar não tira a marca do outro"
   sobreviveu porque o passo só esperava as marcas sumirem.
+- **Um erro no `finally` esconde o resultado do passo** (ciclo 81): ele substitui o que o `try` devolveu. Na limpeza de
+  coisas que um gancho do sistema apaga em par (as duas marcas do agarrão: o mestre apaga a do outro lado), apagar as
+  duas corre contra o gancho ("does not exist"); a limpeza tolera a corrida (`.catch`) e espera o estado final.
 - **A ordem do que o `createEmbeddedDocuments` devolve:** criando vários documentos de uma vez (tokens, combatentes), a
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do

@@ -1529,6 +1529,29 @@ test('Agarrar (wiki, "Agarrar e arremessar", p. 177, e o teste resistido, p. 128
   assert.equal(regras.AGARRAO.penalidade, -2);
 });
 
+test('Estrangular e Derrubar (wiki, p. 177): o BODY de quem agarra direto no HP; estrangulando, abaixo de 0 fica com 1 e desmaia, e na terceira rodada seguida desmaia; escapar é o teste de agarrar vencido', () => {
+  const texto = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.match(texto, /<b>Estrangular<\/b> \(Ação\): dano igual ao BODY direto no HP, ignorando armadura\. Se levaria abaixo de 0, fica com 1 HP e desmaia\. Três rodadas seguidas: desmaia\./, 'a regra da wiki mudou');
+  assert.match(texto, /<b>Derrubar<\/b> \(Ação\): dano igual ao BODY direto no HP; o alvo cai e o agarrão acaba\./, 'a regra da wiki mudou');
+  assert.match(texto, /o defensor escapa com um teste de agarrar vencido \(Ação\)/, 'a regra da wiki mudou');
+  assert.deepEqual(regras.danoDoAgarrao({ hp: 20, body: 6, estrangular: true, vezes: 1 }), { hp: 14, desmaiou: false, motivo: null });
+  assert.deepEqual(regras.danoDoAgarrao({ hp: 8, body: 6, estrangular: true, vezes: 3 }), { hp: 2, desmaiou: true, motivo: 'tresRodadas' });
+  assert.deepEqual(regras.danoDoAgarrao({ hp: 4, body: 6, estrangular: true, vezes: 1 }), { hp: 1, desmaiou: true, motivo: 'abaixoDeZero' });
+  assert.deepEqual(regras.danoDoAgarrao({ hp: 6, body: 6, estrangular: true, vezes: 1 }), { hp: 0, desmaiou: false, motivo: null }, 'chegar a 0 não é abaixo de 0 (a wiki)');
+  assert.deepEqual(regras.danoDoAgarrao({ hp: 0, body: 6, estrangular: true }), { hp: 0, desmaiou: true, motivo: 'abaixoDeZero' }, 'não cura quem já está abaixo de 1');
+  assert.deepEqual(regras.danoDoAgarrao({ hp: 4, body: 6 }), { hp: -2, desmaiou: false, motivo: null }, 'derrubar não tem o limite do estrangular');
+});
+
+test('Estrangular, as "três rodadas seguidas" (wiki, p. 177): no mesmo combate, a rodada de antes conta junto; pular uma rodada recomeça; na mesma rodada não conta outra; fora de combate, toda vez conta', () => {
+  assert.equal(regras.vezesEstrangulando(null, {}), 1);
+  assert.equal(regras.vezesEstrangulando({ combate: null, rodada: null, vezes: 2 }, {}), 3);
+  assert.equal(regras.vezesEstrangulando({ combate: 'c', rodada: 2, vezes: 1 }, { combate: 'c', rodada: 3 }), 2);
+  assert.equal(regras.vezesEstrangulando({ combate: 'c', rodada: 2, vezes: 2 }, { combate: 'c', rodada: 4 }), 1, 'pulou uma rodada');
+  assert.equal(regras.vezesEstrangulando({ combate: 'c', rodada: 3, vezes: 2 }, { combate: 'c', rodada: 3 }), 2, 'na mesma rodada');
+  assert.equal(regras.vezesEstrangulando({ combate: 'c', rodada: 2, vezes: 2 }, { combate: 'd', rodada: 3 }), 1, 'outro combate');
+  assert.equal(regras.vezesEstrangulando({ combate: null, rodada: null, vezes: 2 }, { combate: 'c', rodada: 1 }), 1, 'o combate começou');
+});
+
 test('O texto em cima do token (como o Fluxo de Combate): o HP perdido, o crítico, a armadura e o escudo que seguraram, e cada resultado sem dano', () => {
   const dano = (hpAntes, hpDepois, extra = {}) => ({ hpAntes, hpDepois, lesoes: [], ...extra });
   assert.deepEqual(regras.textoNoToken({ resultado: 'acertou', dano: dano(45, 33) }), { texto: '−12 HP', estilo: 'acerto' });

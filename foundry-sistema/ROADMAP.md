@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 81). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 82). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -389,9 +389,9 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [x] "Agarrar" (a wiki, "Agarrar e arremessar", p. 177; a decisão do usuário de 2026-10-16: o alvo resiste pela
       janela do dono, como a esquiva): DEX + Briga + 1d10 dos dois lados, o empate do defensor; agarrados, os dois com
       −2 em todas as ações; "Soltar": ciclo 80;
-    - [~] (sessão KouArt) o resto do agarrão (a mesma página): Estrangular (o BODY de quem agarra direto no HP; abaixo de 0, fica com 1
+    - [x] o resto do agarrão (a mesma página): Estrangular (o BODY de quem agarra direto no HP; abaixo de 0, fica com 1
       e desmaia; três rodadas seguidas, desmaia), Derrubar (o BODY, o alvo cai e o agarrão acaba), Escapar (o teste de
-      agarrar vencido, uma Ação) e o botão no capanga;
+      agarrar vencido, uma Ação) e os botões na ficha do capanga: ciclo 81;
     - [x] a correção rápida e o tratamento da lesão, na aba Combate e na ficha da lesão (wiki, p. 128 e 223: TECH + a
       perícia + 1d10 superando a DV da lesão; a correção tira o efeito até o fim do dia, com o "Voltou", e na lesão sem
       tratamento resolve de vez; o tratamento cura e não pode ser em si mesmo): ciclo 77;
