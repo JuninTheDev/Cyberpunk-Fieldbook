@@ -71,6 +71,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
       mudarQuantidade: FichaPersonagem.#mudarQuantidade,
+      usarItem: FichaPersonagem.#usarItem,
       instalar: FichaPersonagem.#instalar,
       editarItem: FichaPersonagem.#editarItem,
       apagarItem: FichaPersonagem.#apagarItem
@@ -149,7 +150,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const linhaDoInventario = (item, ...detalhes) => ({
       quantidade: 'quantidade' in item.system ? item.system.quantidade : null, unidade: item.type === 'droga' ? 'Doses' : 'Quantidade',
       id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', guardado: item.system.uso === 'guardado',
-      usoNome: USOS[item.system.uso] ?? item.system.uso
+      usoNome: USOS[item.system.uso] ?? item.system.uso, usavel: item.usavelAMao, emUso: item.emUso
     });
     const sp = (armadura, local) => (armadura.system.sp[local].max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${armadura.system.sp[local].value}/${armadura.system.sp[local].max}` : '');
     const armaduras = itens('armadura').map(armadura => ({
@@ -425,6 +426,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   // − e + na quantidade do inventário (as maquetes do usuário): de 1 em 1. O 0 é o piso do modelo (o min: 0 do campo,
   // que o Foundry 14 aplica ao limpar os dados); o item fica, com 0.
+  // "Usar" o equipamento ligado à mão (ItemCPR.usar): liga ou desliga os efeitos dele.
+  static #usarItem(evento, alvo) {
+    return this.#item(alvo)?.usar();
+  }
   static #mudarQuantidade(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return null;

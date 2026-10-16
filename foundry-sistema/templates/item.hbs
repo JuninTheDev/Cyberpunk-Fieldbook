@@ -103,6 +103,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Os efeitos valem</span><select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>
       <label class="caixa"><input type="checkbox" name="system.eletronico" {{checked fonte.eletronico}}> Eletrônico</label>
       <label class="caixa"><input type="checkbox" name="system.ocultavel" {{checked fonte.ocultavel}}> Ocultável</label>
+      {{#if usavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="usar" data-tooltip="Liga ou desliga os efeitos (ativação à mão)">{{#if emUso}}DESLIGAR{{else}}USAR{{/if}}</button></div>{{/if}}
       {{/if}}
       {{#if eh.roupa}}
       <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposRoupa selected=fonte.tipo}}</select></label>

@@ -495,6 +495,19 @@ export class ItemCPR extends Item {
   restaurarRez() {
     return this.type === 'programa' ? this.update({ 'system.rezPerdida': 0 }) : null;
   }
+  // "Usar" o equipamento ligado à mão (as maquetes do usuário): liga os efeitos dele, ou desliga, se algum está ligado.
+  // No equipamento de ativação à mão, o efeito vale pelo liga e desliga, e não pelo uso (dados.mjs). Os outros: null.
+  get usavelAMao() {
+    return this.type === 'equipamento' && this.system.ativacao === 'manual' && this.effects.size > 0;
+  }
+  get emUso() {
+    return this.usavelAMao && this.effects.some(efeito => !efeito.disabled);
+  }
+  usar() {
+    if (!this.usavelAMao) return null;
+    const desligar = this.emUso;
+    return this.updateEmbeddedDocuments('ActiveEffect', this.effects.map(efeito => ({ _id: efeito.id, disabled: desligar })));
+  }
   // "Consertar" a armadura (as maquetes do usuário): o SP de cada local volta ao máximo, e o chat diz que o personagem a
   // consertou. A wiki só diz que a armadura perde o SP "até ser reparada" (p. 186), sem o teste, o custo ou o tempo: o
   // mestre narra o conserto (a decisão do usuário de 2026-10-16). Inteira, só avisa.

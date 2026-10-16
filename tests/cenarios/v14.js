@@ -669,7 +669,7 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso, e muda a quantidade com − e + (sem passar de 0 e sem erro no 0)', async () => {
+    await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso, e muda a quantidade com − e + (sem passar de 0 e sem erro no 0); o "Usar" do equipamento ligado à mão liga e desliga o efeito (na linha e na ficha do item)', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
         const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
@@ -711,15 +711,35 @@ module.exports = async ({ edge, servidores, r }) => {
         a.sheet.element.querySelector('li[data-item-id="' + agent.id + '"] [data-action="mudarUso"]').click();
         await esperar(() => agent.system.uso === 'equipado');
         passos.push({ uso: agent.system.uso, biblioteca: bonus('library-search') });
+        // "Usar" o equipamento ligado à mão (as maquetes): uma lanterna feita à mão, com +1 em Percepção, desligada. O botão
+        // da linha liga (e a Percepção sobe); o da ficha do item desliga.
+        const [lanterna] = await a.createEmbeddedDocuments('Item', [{ name: 'Lanterna de Teste', type: 'equipamento', system: { ativacao: 'manual', uso: 'carregando' },
+          effects: [{ name: 'Lanterna acesa', type: 'base', transfer: true, disabled: true, system: { changes: [{ key: 'system.bonus.pericias.perception', type: 'add', value: '1', phase: 'initial', priority: null }] } }] }]);
+        const botaoDaLinha = () => a.sheet.element.querySelector('li[data-item-id="' + lanterna.id + '"] [data-action="usarItem"]');
+        await esperar(() => botaoDaLinha());
+        const usar = { antes: [bonus('perception'), botaoDaLinha().textContent.trim()].join() };
+        botaoDaLinha().click();
+        await esperar(() => lanterna.emUso && botaoDaLinha()?.textContent.trim() === 'Em uso');
+        usar.ligada = [bonus('perception'), botaoDaLinha().textContent.trim()].join();
+        await lanterna.sheet.render({ force: true });
+        await esperar(() => lanterna.sheet.element?.querySelector('[data-action="usar"]'));
+        const botaoDaFicha = lanterna.sheet.element.querySelector('[data-action="usar"]').textContent.trim();
+        lanterna.sheet.element.querySelector('[data-action="usar"]').click();
+        await esperar(() => !lanterna.emUso && lanterna.sheet.element?.querySelector('[data-action="usar"]')?.textContent.trim() === 'USAR');
+        usar.desligada = [bonus('perception'), botaoDaFicha].join();
+        await lanterna.sheet.close();
+        // Os outros equipamentos (os do catálogo, sem ativação à mão) não têm o botão.
+        usar.semBotao = [agent, med].every(item => !a.sheet.element.querySelector('li[data-item-id="' + item.id + '"] [data-action="usarItem"]'));
         await a.sheet.close();
         await a.delete();
-        return { passos, linhas, quantidade, errosNoZero };
+        return { passos, linhas, quantidade, errosNoZero, usar };
       })()`);
       const [p0, p1, p2, p3] = info.passos;
       const linhas = info.linhas.join(' ; ');
       return [p0.biblioteca === 2 && p0.primeirosSocorros === 0 && p0.int === 5 && p1.biblioteca === 0 && p1.primeirosSocorros === 2 && p2.int === 7 && p2.ligados.join() === 'Boost Primary'
         && p3.uso === 'equipado' && p3.biblioteca === 2 && /Agent \|[^;]*\| 1 \| Guardado/.test(linhas) && /Medscanner \|[^;]*Medscanner[^;]*\| 1 \| Equipado/.test(linhas) && /Boost \|  \| 1 \| Carregando/.test(linhas)
-        && /High Fashion Footwear \| Calçado · Alta moda \| 1 \| Equipado/.test(linhas) && info.quantidade.join() === '2,1,0,0,0' && info.errosNoZero.length === 0, JSON.stringify(info)];
+        && /High Fashion Footwear \| Calçado · Alta moda \| 1 \| Equipado/.test(linhas) && info.quantidade.join() === '2,1,0,0,0' && info.errosNoZero.length === 0
+        && info.usar.antes === '0,Usar' && info.usar.ligada === '1,Em uso' && info.usar.desligada === '0,DESLIGAR' && info.usar.semBotao, JSON.stringify(info)];
     });
 
     await r.passo('acessórios: o carregador estendido põe o pente do rifle em 35 (a recarga enche 35); o Smartgun Link dá +1, e dois dão +1 só; tirados, volta a 25; o hardware ocupa slots do deck', async () => {

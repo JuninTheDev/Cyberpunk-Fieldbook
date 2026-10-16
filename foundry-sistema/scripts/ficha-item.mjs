@@ -44,7 +44,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     position: { width: 560, height: 620 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar }
+    actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar }
   };
 
   static PARTS = {
@@ -63,7 +63,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const tipo = item.type;
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     return Object.assign(contexto, {
-      item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item),
+      item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
       tipoRotulo: game.i18n.localize(CONFIG.Item.typeLabels[tipo] ?? tipo),
       usosLista: Object.entries(USOS).map(([id, rotulo]) => ({ id, rotulo, ativo: fonte.uso === id })),
       eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'].map(t => [t, tipo === t])),
@@ -95,6 +95,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     });
   }
 
+  // "Usar" o equipamento ligado à mão (ItemCPR.usar).
+  static #usar() {
+    return this.item.usar();
+  }
   // "Consertar" a armadura (ItemCPR.consertar): o SP volta ao máximo, e o chat diz quem consertou.
   static #consertar() {
     return this.item.consertar();

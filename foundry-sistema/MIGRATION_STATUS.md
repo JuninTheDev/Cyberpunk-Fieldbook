@@ -3482,6 +3482,31 @@ que o personagem consertou a armadura". Commit anterior: `4fbdb02` (ciclo 69).
 - **Pendências:** os outros itens das maquetes.
 - **Próximo:** "Usar" no equipamento ligado à mão (ciclo 71).
 
+### Ciclo 71 (2026-10-16): "Usar" no equipamento ligado à mão (as maquetes; sessão KouArt)
+
+O item "Usar" do equipamento das maquetes (o "Use" do "Gear Tab"), na parte que é só interface. Commit anterior:
+`df0c15b` (ciclo 70).
+
+- **Implementado:**
+  - **`ItemCPR.usar`** (`scripts/documentos.mjs`), com `usavelAMao` e `emUso`: no equipamento de ativação à mão que tem
+    efeito, liga os efeitos dele, ou desliga, se algum está ligado. É o que a ficha do item já fazia efeito por
+    efeito: no equipamento à mão, o efeito vale pelo liga e desliga, e não pelo uso (`dados.mjs`);
+  - **o botão** "Usar" (ou "Em uso") na linha do inventário da aba Equipamento e "Usar" (ou "Desligar") entre as ações
+    da ficha do item. Nenhum dos 46 equipamentos à mão do catálogo tem efeito: o botão aparece nos feitos à mão (a
+    lanterna da mesa com +1 em Percepção, por exemplo).
+  - O "Usar" da droga continua um item de regra (o efeito secundário da wiki).
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 94 de 99, 185 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). O
+    passo do inventário ganhou uma lanterna feita à mão (+1 em Percepção, desligada): o "Usar" da linha
+    liga (a Percepção vai de 0 a 1, e o botão diz "Em uso"); o da ficha do item desliga (de volta a 0); o Agent e o
+    Medscanner, que não são à mão, não têm o botão;
+  - **mutações:** as 4 derrubaram o passo do inventário, e os arquivos voltaram (conferido pelo md5): o "Usar" que só
+    desliga (S1), o botão também no equipamento que não é à mão, o Agent (S2), o botão da linha sem a ação (S3) e a
+    ficha do item sem o botão (S4). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes.
+- **Próximo:** os slots do deck em caixas e o estado de cada programa, na aba NET (ciclo 72).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
