@@ -34,7 +34,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       role: new fields.SchemaField({
         nome: texto(),
         rank: inteiro(4, { min: 0 }),
-        habilidades: new fields.TypedObjectField(inteiro(0))
+        habilidades: new fields.TypedObjectField(inteiro(0)),
+        // As notas da Role (as maquetes do usuário): texto livre, na aba Role.
+        notas: texto()
       }),
       // Sobe 1 a cada Death Save que passa; volta a zero quando o personagem estabiliza (botão na ficha).
       deathSave: new fields.SchemaField({ penalidade: inteiro(0, { min: 0 }) }),
@@ -49,6 +51,8 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       extratos: new fields.SchemaField(Object.fromEntries(Object.keys(EXTRATOS).map(campo => [campo, new fields.ArrayField(new fields.SchemaField({
         quando: texto(), acao: texto('definir'), delta: inteiro(0), saldo: inteiro(0), motivo: texto(), usuario: texto()
       }))]))),
+      // As notas de ciberpsicose (as maquetes do usuário): os episódios, em texto livre, na aba Cyberware.
+      notasCiberpsicose: texto(),
       notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
     };
   }

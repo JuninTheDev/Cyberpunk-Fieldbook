@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 68). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 69). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -396,7 +396,8 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [ ] a fundação e as opções do cyberware ("+ Fundação", "+ Opção"; as opções dentro da fundação, com os slots)
       (regra: conferida em 2026-10-15, os slots de opção de cada fundação estão na wiki, `system-catalog.js`: o Neural
       Link com 5, o Cybereye com 3 por olho, o Cyberaudio Suite com 3, o Sensor Array soma 5 ao Cyberaudio...);
-    - [ ] as notas de ciberpsicose na aba Cyberware e as notas da Role (interface: campos de texto);
+    - [x] as notas de ciberpsicose na aba Cyberware e as notas da Role (dois campos de texto novos no personagem, vazios
+      por padrão): ciclo 68;
     - [ ] "Conectar" e "Desconectar" na aba NET (interface; o ponto de acesso mais perto, como o marcador da cena);
     - [ ] os slots do deck em barras e o estado de cada programa (guardado, carregado, ativo) com "Rodar" (interface;
       os estados são os do deck e o "Ativo" de hoje);

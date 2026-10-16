@@ -26,6 +26,11 @@ o resumo e os botões da habilidade) e o bônus nas perícias; à direita, as es
         <p class="soma"><b>{{bonusDaRole.rotulo}} +{{bonusDaRole.valor}}</b> em {{bonusDaRole.pericias}}.</p>
       </section>
       {{/if}}
+
+      <section class="painel corte notas-curtas">
+        <div class="titulo">NOTAS DA ROLE<span>TEXTO LIVRE</span></div>
+        <textarea name="system.role.notas" rows="4" placeholder="Contatos, dívidas, o que a Role deve ou cobra..." aria-label="Notas da Role">{{fonte.role.notas}}</textarea>
+      </section>
     </aside>
 
     <div class="coluna-principal">

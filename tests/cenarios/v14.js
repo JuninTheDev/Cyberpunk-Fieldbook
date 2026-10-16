@@ -2707,7 +2707,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.sleep(1200);
     await edge.shot('importado');
 
-    await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha; as abas Combate, Equipamento, Cyberware, Role e Vida no jeito das maquetes (a iniciativa, o dinheiro, a Humanidade e a Role na coluna dos números, com 290 px; as armas, as lesões, a munição, o cyberware e as especialidades com as caixas dos pontos; o Lifepath em cinco painéis)', async () => {
+    await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha; as abas Combate, Equipamento, Cyberware, Role e Vida no jeito das maquetes (a iniciativa, o dinheiro, a Humanidade e a Role na coluna dos números, com 290 px; as armas, as lesões, a munição, o cyberware e as especialidades com as caixas dos pontos; o Lifepath em cinco painéis; as notas da Role e as de ciberpsicose, que gravam)', async () => {
       const lp = solo.resultado.lifepath;
       const info = await edge.evaluate(`(async () => {
         const ator = game.actors.find(a => a.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(solo.id)});
@@ -2772,6 +2772,19 @@ module.exports = async ({ edge, servidores, r }) => {
           caixas: [...f().querySelectorAll('.tab.role .especialidades .habilidade')].map(li => (li.querySelector('.pontos-visuais')?.style.getPropertyValue('--pontos').trim() ?? '') + '=' + li.querySelector('input').value).join(),
           grupos: [...f().querySelectorAll('.tab.vida .grupo-lifepath')].map(g => g.querySelectorAll('textarea').length).join()
         };
+        // As notas da Role e as de ciberpsicose (as maquetes): campos de texto na coluna dos números, que gravam no ator.
+        const escrever = async (nome, texto, pronto) => {
+          const campo = f().querySelector('[name="' + nome + '"]');
+          campo.value = texto;
+          campo.dispatchEvent(new Event('change', { bubbles: true }));
+          await __esperar(pronto);
+        };
+        abas.notas = { naRole: Boolean(f().querySelector('.tab.role .coluna-resumo [name="system.role.notas"]')), naCyberware: Boolean(f().querySelector('.tab.cyberware .coluna-resumo [name="system.notasCiberpsicose"]')),
+          antes: [ator.system.role.notas, ator.system.notasCiberpsicose].join('|') };
+        await escrever('system.role.notas', 'Deve um favor ao fixer.', () => ator.system.role.notas === 'Deve um favor ao fixer.');
+        await escrever('system.notasCiberpsicose', 'Sessão 2: surto leve.', () => ator.system.notasCiberpsicose === 'Sessão 2: surto leve.');
+        await __esperar(() => valor('system.notasCiberpsicose') === 'Sessão 2: surto leve.');
+        Object.assign(abas.notas, { role: ator.system.role.notas, ciber: ator.system.notasCiberpsicose, naFicha: [valor('system.role.notas'), valor('system.notasCiberpsicose')].join('|') });
         return { topo, role, vida, geral, nova, tirada, abas };
       })()`);
       // As outras abas, para a conferência visual (a ficha fica aberta; o passo seguinte fecha).
@@ -2794,6 +2807,8 @@ module.exports = async ({ edge, servidores, r }) => {
         && abas.iniciativa === abas.ini && abas.resumo === 3 && abas.armas === abas.armasDoAtor && abas.armas > 0 && abas.lesoes && /^290px /.test(abas.grade)
         && abas.dinheiro === abas.saldo && abas.municao === abas.municoes && abas.municoes > 0
         && abas.humanidade === abas.hum && abas.cyber === abas.cyberDoAtor && abas.cyber > 0
+        && abas.notas.naRole && abas.notas.naCyberware && abas.notas.antes === '|' && abas.notas.role === 'Deve um favor ao fixer.' && abas.notas.ciber === 'Sessão 2: surto leve.'
+        && abas.notas.naFicha === 'Deve um favor ao fixer.|Sessão 2: surto leve.'
         && abas.roleNoResumo && abas.especialidades === 6 && abas.caixas.split(',').every(par => { const [c, v] = par.split('='); return c === v && v !== ''; })
         && abas.grupos === '5,4,3,4,1';
       return [ok, JSON.stringify(info)];
@@ -2990,7 +3005,8 @@ module.exports = async ({ edge, servidores, r }) => {
         await edge.shot('role-rockerboy');
         const { daImportacao, daMesa, rockerboy, antiga, nomad } = info;
         const moto = b => b?.rotulo === 'Moto' && b.valor === 4;
-        const ok = daImportacao.role === 'Rockerboy' && daImportacao.campos === 'habilidades,nome,rank'
+        // Os campos da Role são os do modelo (as notas da Role, vazias, desde o ciclo 68), sem nada a mais da importação.
+        const ok = daImportacao.role === 'Rockerboy' && daImportacao.campos === 'habilidades,nome,notas,rank'
           && daMesa.role === 'Rockerboy' && daMesa.conversa === null && daMesa.dirigir === null
           && /^Rockerboy \/\/ Impacto Carismático/.test(rockerboy.nome) && !rockerboy.bonus
           && /^Rockerboy \/\/ Impacto Carismático/.test(antiga.nome) && antiga.conversa === null

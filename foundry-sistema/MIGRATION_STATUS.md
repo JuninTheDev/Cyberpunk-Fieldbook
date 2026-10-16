@@ -3402,6 +3402,33 @@ O item "a quantidade com − e + e Usar" das maquetes, só a quantidade. Commit 
 - **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
 - **Próximo:** os itens das maquetes (ciclo 68).
 
+### Ciclo 68 (2026-10-16): as notas da Role e as de ciberpsicose (as maquetes; sessão KouArt)
+
+O item "as notas de ciberpsicose e as notas da Role" das maquetes ("Role notes, free text" e "Notes, cyberpsychosis").
+Commit anterior: `2c8068c` (ciclo 67).
+
+- **Implementado:**
+  - **o modelo do personagem** (`scripts/dados.mjs`) ganhou dois campos de texto, vazios por padrão:
+    `system.role.notas` e `system.notasCiberpsicose`. Sem passo de migração: o Foundry preenche o padrão nas fichas que
+    já existem, e nada mais lê esses campos (a volta da ficha para a wiki, a importação e a migração da mesa não mudam);
+  - **os painéis** na coluna dos números: "Notas da Role" na aba Role (contatos, dívidas...) e "Notas · ciberpsicose"
+    na aba Cyberware (vermelho, os episódios), cada um com um campo de texto que grava ao sair dele.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077; os testes da migração não leem o
+    modelo, e passaram);
+  - G4: 92 de 97, 180 s (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). O passo da
+    ficha nova confere que os dois campos estão nas colunas dos números das abas Role e
+    Cyberware, vazios no ator importado, escreve as duas notas pela ficha e confere no ator e na ficha de novo. A
+    primeira rodada derrubou o passo "Role do RED", que confere a lista exata de campos da Role do ator importado (para
+    a importação não trazer nada além do modelo): com o campo novo, a lista certa é "habilidades, nome, notas, rank", e
+    a expectativa foi atualizada (a proteção contra um campo a mais continua);
+  - **mutações:** as 3 derrubaram o passo da ficha nova, e os arquivos voltaram (conferido pelo md5): as notas da Role
+    fora do modelo (T1; o Foundry descarta o que grava, e o passo "Role do RED" também caiu, pela lista de campos), o
+    campo da ciberpsicose com o nome errado (T2) e o das notas da Role com o nome errado (T3). Nenhuma rodada deixou
+    Edge para trás.
+- **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
+- **Próximo:** "Conectar" e "Desconectar" na aba NET (ciclo 69).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

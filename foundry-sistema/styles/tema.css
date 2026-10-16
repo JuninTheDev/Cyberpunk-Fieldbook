@@ -163,6 +163,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 /* O painel ciano (a Humanidade, a NET): a borda e o número grande na cor. */
 .cpr-fieldbook.ficha-personagem .painel.ciano { border-left-color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .painel.ciano .numero-grande b { color: var(--cp-ciano); }
+/* As notas curtas da coluna dos números (a Role, a ciberpsicose): um campo de texto que ocupa o painel. */
+.cpr-fieldbook.ficha-personagem .notas-curtas textarea { width: 100%; min-height: 5.5em; margin-top: 8px; resize: vertical; font: 400 15px/1.4 var(--cp-titulo); }
 /* A Role: cada especialidade com os pontos em caixas (o desenho; o número continua no campo), como a maquete "Role Tab". */
 .cpr-fieldbook.ficha-personagem .habilidade { grid-template-columns: minmax(0, 1fr) auto auto 56px; }
 .cpr-fieldbook.ficha-personagem .habilidade > .nome { grid-column: 1; }
