@@ -3749,6 +3749,57 @@ A ação "Take Cover" da maquete "Fight Tab", pela regra da wiki (a cobertura, p
 - **Pendências:** Agarrar (o próximo ciclo) e a fundação e as opções do cyberware.
 - **Próximo:** o Agarrar.
 
+### Ciclo 80 (2026-10-16): "Agarrar" e "Soltar" (um item de regra das maquetes; sessão KouArt)
+
+A ação "Grapple" da maquete "Fight Tab", pela regra da wiki ("Agarrar e arremessar", p. 177) e pela decisão do usuário
+de 2026-10-16 (o alvo resiste pela janela do dono, como a esquiva). Commit anterior: `0bbcec9` (a marca `[~]`).
+
+- **A regra (a wiki):** "Agarrar (Ação, precisa de mão livre): os dois rolam DEX + Briga + 1d10. Quem vence agarra";
+  "Agarrados: −2 em todas as ações; o defensor não usa Ação de Movimento e é arrastado; ninguém usa arma de duas mãos";
+  "O atacante solta quando quiser". O empate é do defensor: "Teste resistido (p. 128) ... Empate: o defensor vence". O
+  glossário da wiki confirma o −2 dos dois.
+- **Implementado:**
+  - **a regra pura** (`regras.mjs`: `AGARRAO`, `venceuOAgarrao`), que o G3 testa;
+  - **o fluxo** (`scripts/agarrao.mjs`, novo): quem agarra marca o alvo (T), um só, e rola DEX + Briga + 1d10 (a
+    janela de rolagem, com o total escondido como o do ataque); o mestre ativo pede a resistência pela mesma defesa
+    do ataque (`combate.defesaContra`, novo: a janela de reação do dono, com o prazo, o "responder por ele" e a
+    escolha padrão; pelo NPC, o mestre rola) e, vencendo, marca os dois. O cartão diz o resultado (e, no empate, que
+    ele é do defensor) e lembra o que a regra proíbe, sem impedir. O jogador manda o pedido pelo socket, como o
+    ataque, e os pedidos entram na mesma fila do mestre;
+  - **a escolha "Resistir" na janela de reação** (`janela-defesa.mjs` e `combate.mjs`): o título "Estão agarrando
+    você!", a conta da Briga (DEX + Briga, com as penalidades, e a média) e o texto do que acontece se perder;
+  - **as marcas** "Agarrando" e "Agarrado" (efeitos de status, no HUD do token), cada uma com o outro ator. A marca
+    apagada (o "Soltar" ou o HUD) leva a do outro junto (o mestre ativo apaga, pelo `deleteActiveEffect`);
+  - **o −2** em todo teste de quem tem uma das marcas (a parte "Agarrão", junto das penalidades de ferimento e das
+    lesões, em `documentos.mjs`);
+  - **na ficha**, na Defesa da aba Combate: "AGARRAR" ao lado de "PROTEGER-SE" e, agarrando, "SOLTAR"; a linha
+    "AGARRANDO" ou "AGARRADO POR", com o nome do outro e o −2.
+- **Testes:**
+  - G1: 55 arquivos, 0 erros; G2: 0 erros;
+  - G3: 89 de 93. Um teste de referência novo em `regras.test.mjs`: o texto da wiki (os dois rolam DEX + Briga, o −2
+    dos dois e o empate do defensor) e o `venceuOAgarrao` (14 contra 13 agarra; 13 contra 13, não). As 4 falhas são
+    as das armas de 2077;
+  - G4: 102 de 107 (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). Dois passos novos:
+    - depois do corpo a corpo, a Atiradora (DEX 7, Briga 3) agarra o Capanga (NPC, DEX 5, Briga 2): pela API, 13
+      contra 13, resistiu, sem marca; pelo botão da aba Combate, com o Capanga marcado, 18 contra 9: os dois
+      marcados, o −2 na Evasão dos dois e a linha "AGARRANDO | Capanga · −2 em tudo"; "SOLTAR" tira as duas marcas,
+      e o cartão diz "Atiradora soltou Capanga: o agarrão acabou.";
+    - no jogador, depois da primeira esquiva: a janela "Estão agarrando você!" só com "Resistir" e o texto "DEX 7 +
+      Briga 1 + 1d10 (média 13,5) contra o agarrão. Empate é seu.", sem o total, que só fica visível para ele depois;
+      ele rola 12 contra 19 e fica agarrado, com o −2 no computador dele; o "Soltar" do mestre tira as marcas;
+    - os dois passos rodaram três vezes até passar: na primeira, o teste lia `system.pericias.brawling` (que só existe
+      depois de mexida; a ficha lê por `system.pericia(id)`); na segunda, a linha da ficha lida inteira juntava o
+      `<span>` e o `<b>` ("AGARRANDOCapanga"). O código não mudou entre elas;
+  - **mutações:** as 9 caíram, e os arquivos voltaram (conferido pelo md5). No G3: empatar agarra (A1). No G4:
+    agarrados sem o −2 (A2), vencer sem marcar ninguém (A3), o "Soltar" que não tira a marca do outro (A4), a
+    resistência pela Evasão (A5), a janela sem a conta da Briga (A6) e com o título do ataque (A7), a ficha sem o
+    "SOLTAR" (A8) e o total de quem agarrou escondido depois da resistência (A9). A A4 sobreviveu na primeira rodada:
+    o `__esperar` do teste devolve a condição e não falha quando o tempo acaba, e nada conferia as marcas depois do
+    "Soltar". Os dois passos passaram a conferir; o G4 rodou de novo (102 de 107), e a A4 caiu.
+- **Pendências:** o resto do agarrão (Estrangular, Derrubar, Escapar e o botão no capanga: o mestre agarra pelo NPC
+  pela API), e a fundação e as opções do cyberware.
+- **Próximo:** o resto do agarrão.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -2206,6 +2206,53 @@ module.exports = async ({ edge, servidores, r }) => {
         && !p.notas.includes('em cobertura') && !s.notas.includes('em cobertura'), JSON.stringify(info)];
     });
 
+    await r.passo('Agarrar (wiki, p. 177; as maquetes): DEX + Briga + 1d10 contra o do Capanga (NPC: o mestre rola, sem janela); empate é dele; pelo botão da aba Combate, vence: os dois agarrados, com −2 em todas as ações, e a ficha mostra; "Soltar" tira as duas marcas', async () => {
+      // Atiradora: DEX 7 + Briga 3. 1º (pela API): d10 3 → 13 contra o Capanga, DEX 5 + Briga 2 + d10 6 = 13: empate,
+      // resistiu. 2º (pelo botão, com o Capanga marcado): d10 8 → 18 contra 5 + 2 + 2 = 9: agarrou.
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const marcas = ator => ['agarrando', 'agarrado'].filter(papel => ator.statuses.has('${S}-' + papel));
+        const botao = acao => a.sheet.element?.querySelector('.tab.combate [data-action="' + acao + '"]');
+        const cartoes = () => game.messages.contents.filter(m => m.getFlag('${S}', 'agarrao')).map(m => m.getFlag('${S}', 'agarrao'));
+        const antes = { atiradora: a.system.pericia('brawling').nivel, capanga: capanga.system.pericia('brawling').nivel, cartoes: cartoes().length };
+        await a.update({ 'system.pericias.brawling.nivel': 3 });
+        await capanga.update({ 'system.pericias.brawling.nivel': 2 });
+        try {
+          window.__fila = [[3, 10], [6, 10]];
+          const empate = await game.system.api.agarrao.agarrar(a, { alvo: __token('Capanga') });
+          const depoisDoEmpate = [...marcas(a), ...marcas(capanga)];
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('combate', 'primary');
+          await __esperar(() => botao('agarrar'));
+          canvas.tokens.setTargets([__token('Capanga').id]);
+          window.__fila = [[8, 10], [2, 10]];
+          botao('agarrar').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          await __esperar(() => marcas(a).join() === 'agarrando' && marcas(capanga).join() === 'agarrado' && botao('soltar'));
+          const agarrados = {
+            cartao: cartoes().at(-1), linha: [...a.sheet.element.querySelector('.tab.combate .medida.agarrao')?.children ?? []].map(parte => parte.textContent.trim()).join(' | '),
+            penalidade: [a, capanga].map(ator => ator.partesDaPericia('evasion').partes.find(p => p.rotulo === 'Agarrão')?.valor ?? null)
+          };
+          botao('soltar').click();
+          await __esperar(() => !marcas(a).length && !marcas(capanga).length && botao('agarrar'));
+          const soltou = game.messages.contents.at(-1).content.replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();
+          const depoisDeSoltar = [...marcas(a), ...marcas(capanga)];
+          return { empate, depoisDoEmpate, agarrados, soltou, depoisDeSoltar, novos: cartoes().length - antes.cartoes, linhaDepois: Boolean(a.sheet.element.querySelector('.tab.combate .medida.agarrao')) };
+        } finally {
+          await a.sheet.close();
+          canvas.tokens.setTargets([]);
+          for (const ator of [a, capanga]) for (const papel of marcas(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false });
+          await a.update({ 'system.pericias.brawling.nivel': antes.atiradora });
+          await capanga.update({ 'system.pericias.brawling.nivel': antes.capanga });
+        }
+      })()`);
+      const { empate, agarrados: g } = info;
+      const ok = empate.resultado === 'resistiu' && empate.ataque === 13 && empate.defesa === 13 && !info.depoisDoEmpate.length
+        && g.cartao.resultado === 'agarrou' && g.cartao.ataque === 18 && g.cartao.defesa === 9 && g.linha === 'AGARRANDO | Capanga · −2 em tudo' && g.penalidade.join() === '-2,-2'
+        && info.soltou === 'Atiradora soltou Capanga: o agarrão acabou.' && !info.depoisDeSoltar.length && info.novos === 2 && !info.linhaDepois;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('Reflex Tuner (2077, wiki): no combate, o Capanga atingido ganha +1 para se esquivar pelo resto da rodada (nas partes da Evasão e na esquiva do golpe); o Desfazer do tiro tira o +1; na rodada seguinte, acaba', async () => {
       // O tiro da Atiradora no Capanga (REF 6: só aguenta): d10 9 → 8 + 4 + 9 = 21 contra a DV 16; dano 5d6 de 1 = 5
       // (o Capanga não tem armadura). O golpe de lâmina: DEX 7 + Arma Branca 3 + d10 2 = 12 contra a esquiva do Capanga,
@@ -2338,6 +2385,59 @@ module.exports = async ({ edge, servidores, r }) => {
       return [janela && janela.titulo === 'Você está sendo atacado!' && janela.botoes.join() === 'esquivar,aguentar' && !janela.total && !/Total do ataque/.test(janela.texto) && textos.every(t => t.test(janela.texto))
         && barra > 50 && barra < 100 && !antes && depois && l.escolha === 'esquivar' && l.defesa === 25 && l.resultado === 'esquivou' && info.hp === 45,
         `janela ${JSON.stringify(janela)} · barra ${barra} · total visível ao jogador antes ${antes}, depois ${depois} · ${JSON.stringify(info)}`];
+    });
+
+    await r.passo('jogador: o agarrão no Alvo chega na janela de reação dele ("Estão agarrando você!": só Resistir, com a conta DEX + Briga, sem o total); ele rola, perde e fica agarrado, com o −2 também no computador dele; o "Soltar" tira as marcas', async () => {
+      // Mestre: Atiradora DEX 7 + Briga 3 + d10 9 = 19. Jogador: Alvo DEX 7 + Briga 1 + d10 4 = 12.
+      await edge.evaluate(`(async () => {
+        window.__briga = [__ator('Atiradora').system.pericia('brawling').nivel, __ator('Alvo').system.pericia('brawling').nivel];
+        await __ator('Atiradora').update({ 'system.pericias.brawling.nivel': 3 });
+        await __ator('Alvo').update({ 'system.pericias.brawling.nivel': 1 });
+        return true;
+      })()`);
+      await fixar(edge, [[9, 10]]);
+      await fixar(jogador, [[4, 10]]);
+      const marcas = `(ator => ['agarrando', 'agarrado'].filter(papel => ator.statuses.has('${S}-' + papel)))`;
+      // O total de quem agarrou, escondido do jogador até a resistência ("Esconder o total do ataque"), como no ataque.
+      const totalVisivel = `Boolean(game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.agarrar).at(-1)?.isContentVisible)`;
+      try {
+        await edge.evaluate(`(() => { window.__agarrao = game.system.api.agarrao.agarrar(__ator('Atiradora'), { alvo: __token('Alvo') }); return true; })()`);
+        let janela = null;
+        for (let i = 0; i < 40 && !janela; i++) {
+          await jogador.sleep(250);
+          janela = await jogador.evaluate(`(() => {
+            const d = document.querySelector('.application.cpr-fieldbook.janela-defesa');
+            return d && { titulo: d.querySelector('.window-title')?.textContent.trim(), texto: d.querySelector('.window-content').textContent.replace(/\\s+/g, ' ').trim(), total: Boolean(d.querySelector('.total')), botoes: [...d.querySelectorAll('button.opcao[data-escolha]')].map(b => b.dataset.escolha) };
+          })()`);
+        }
+        const antes = await jogador.evaluate(totalVisivel);
+        if (janela) await jogador.evaluate(`document.querySelector('.application.cpr-fieldbook.janela-defesa button.opcao[data-escolha="resistir"]').click()`);
+        const resumo = await edge.evaluate(`window.__agarrao`);
+        const noJogador = await jogador.evaluate(`(async () => {
+          const alvo = game.actors.getName('Alvo');
+          for (let i = 0; i < 30 && !(alvo.statuses.has('${S}-agarrado') && ${totalVisivel}); i++) await new Promise(resolve => setTimeout(resolve, 100));
+          return { marcas: ${marcas}(alvo), penalidade: alvo.partesDaPericia('evasion').partes.find(p => p.rotulo === 'Agarrão')?.valor ?? null, totalVisivel: ${totalVisivel} };
+        })()`);
+        const soltou = await edge.evaluate(`(async () => {
+          await game.system.api.agarrao.soltar(__ator('Atiradora'));
+          await __esperar(() => !${marcas}(__ator('Atiradora')).length && !${marcas}(__ator('Alvo')).length);
+          return [...${marcas}(__ator('Atiradora')), ...${marcas}(__ator('Alvo'))];
+        })()`);
+        const textos = [/^Atiradora Alvo Agarrar · DEX \+ Briga \+ 1d10 Você não vê o total do ataque: decida antes\. /,
+          / Resistir DEX 7 \+ Briga 1 \+ 1d10 \(média 13,5\) contra o agarrão\. Empate é seu\. /, / Sem resposta em \d+ s: rola a resistência\.$/];
+        const info = { janela, antes, resumo, noJogador, soltou };
+        return [janela && janela.titulo === 'Estão agarrando você!' && janela.botoes.join() === 'resistir' && !janela.total && textos.every(t => t.test(janela.texto))
+          && resumo?.resultado === 'agarrou' && resumo.ataque === 19 && resumo.defesa === 12 && noJogador.marcas.join() === 'agarrado' && noJogador.penalidade === -2 && !antes && noJogador.totalVisivel && !soltou.length,
+          JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-defesa')) await app.close(); return true; })()`).catch(() => {});
+        await edge.evaluate(`(async () => {
+          for (const ator of [__ator('Atiradora'), __ator('Alvo')]) for (const papel of ${marcas}(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false });
+          await __ator('Atiradora').update({ 'system.pericias.brawling.nivel': window.__briga[0] });
+          await __ator('Alvo').update({ 'system.pericias.brawling.nivel': window.__briga[1] });
+          return true;
+        })()`);
+      }
     });
 
     await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {

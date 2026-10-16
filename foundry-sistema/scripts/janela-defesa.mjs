@@ -1,17 +1,17 @@
 // A janela de reação do alvo, como a "Ataque!" do Fluxo de Combate do Foundry 12, no visual do sistema: quem ataca e
 // quem é atacado, a arma, a distância e as escolhas (esquivar, aguentar, o escudo, a Concentração), cada uma com a conta
-// que vale (a esquiva média, a DV do alcance, os PV do escudo). O jogador não vê o total do ataque (menos com "Esconder o
-// total do ataque" desligado); o mestre, pelos NPCs, vê. A barra mostra o tempo que resta: sem resposta no tempo, ou
-// fechada no X, vale a escolha padrão. Quando o mestre desiste de esperar (ou responde pelo jogador), ele a fecha sem
-// resposta (expirar). A do mestre, pelos NPCs, não tem tempo; fechada no X, fica sem resposta, e o sistema escolhe como
-// na defesa automática (como a janela antiga).
+// que vale (a esquiva média, a DV do alcance, os PV do escudo); no agarrão (agarrao.mjs), só "Resistir". O jogador não
+// vê o total do ataque (menos com "Esconder o total do ataque" desligado); o mestre, pelos NPCs, vê. A barra mostra o
+// tempo que resta: sem resposta no tempo, ou fechada no X, vale a escolha padrão. Quando o mestre desiste de esperar (ou
+// responde pelo jogador), ele a fecha sem resposta (expirar). A do mestre, pelos NPCs, não tem tempo; fechada no X, fica
+// sem resposta, e o sistema escolhe como na defesa automática (como a janela antiga).
 import { caminho, SISTEMA } from './config.mjs';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const numero = valor => String(Math.round(valor * 10) / 10).replace('.', ',');
-const ROTULO = { esquivar: 'esquiva', aguentar: 'aguenta', escudo: 'usa o escudo', concentrar: 'rola a Concentração' };
-const ICONES = { esquivar: 'fa-person-running', aguentar: 'fa-user-shield', escudo: 'fa-shield-halved', concentrar: 'fa-brain' };
+const ROTULO = { esquivar: 'esquiva', aguentar: 'aguenta', escudo: 'usa o escudo', concentrar: 'rola a Concentração', resistir: 'rola a resistência' };
+const ICONES = { esquivar: 'fa-person-running', aguentar: 'fa-user-shield', escudo: 'fa-shield-halved', concentrar: 'fa-brain', resistir: 'fa-hand-fist' };
 
 // O que cada escolha faz, com a conta (HTML: os nomes vêm escapados).
 function textoDaEscolha(escolha, d) {
@@ -26,6 +26,7 @@ function textoDaEscolha(escolha, d) {
   if (escolha === 'aguentar') return { explosivo: 'Fica na área e leva o dano da explosão.', cartucho: 'Leva os 3d6 do cartucho.', corpo: 'O golpe pega.' }[d.modo] ?? contraDv;
   if (escolha === 'escudo') return `${esc(d.escudo?.nome)} (${d.escudo?.pv ?? 0} PV) recebe o ataque todo. Sem esquiva.${aDistancia ? ` ${contraDv}` : ''}`;
   if (escolha === 'concentrar') return `${d.concentracao ? `${esc(d.concentracao.texto)} (média ${numero(d.concentracao.media)})` : 'WILL + Concentração + 1d10'} contra o ataque. Empate é seu. Perdeu: fica Suprimido e usa a próxima Ação de Movimento para ir para a cobertura (se não bastar, a Ação também).`;
+  if (escolha === 'resistir') return `${d.briga ? `${esc(d.briga.texto)} (média ${numero(d.briga.media)})` : 'DEX + Briga + 1d10'} contra o agarrão. Empate é seu. Perdeu: os dois ficam agarrados (−2 em todas as ações), e você não usa a Ação de Movimento.`;
   return '';
 }
 
@@ -61,6 +62,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   get title() {
+    if (this.dados.modo === 'agarrar') return this.dados.mestre ? `Agarrão em ${this.dados.alvo.nome}` : 'Estão agarrando você!';
     return this.dados.mestre ? `Ataque em ${this.dados.alvo.nome}` : 'Você está sendo atacado!';
   }
 
@@ -85,7 +87,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
       ...d, metrosTexto: d.metros ? numero(d.metros) : '', padraoTexto: ROTULO[d.padrao] ?? d.padrao, verTotal: d.mestre || Number.isFinite(d.total),
       opcoes: d.opcoes.map(escolha => ({
         escolha, icone: ICONES[escolha] ?? 'fa-circle',
-        titulo: { esquivar: d.modo === 'explosivo' ? 'Esquivar da explosão' : 'Esquivar', aguentar: d.modo === 'explosivo' ? 'Ficar' : 'Aguentar', escudo: 'Usar o escudo', concentrar: 'Rolar a Concentração' }[escolha] ?? escolha,
+        titulo: { esquivar: d.modo === 'explosivo' ? 'Esquivar da explosão' : 'Esquivar', aguentar: d.modo === 'explosivo' ? 'Ficar' : 'Aguentar', escudo: 'Usar o escudo', concentrar: 'Rolar a Concentração', resistir: 'Resistir' }[escolha] ?? escolha,
         texto: textoDaEscolha(escolha, d), padrao: escolha === d.padrao
       }))
     });

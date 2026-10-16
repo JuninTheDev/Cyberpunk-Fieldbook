@@ -1518,6 +1518,17 @@ test('A conta da defesa na janela de reação (como a "Ataque!" do Fluxo): as pa
   assert.deepEqual(regras.contaDaDefesa([{ rotulo: 'DEX', valor: 0 }]), { texto: 'DEX 0 + 1d10', media: 5.5 });
 });
 
+test('Agarrar (wiki, "Agarrar e arremessar", p. 177, e o teste resistido, p. 128): DEX + Briga + 1d10 dos dois lados; quem agarra precisa superar (empate é do defensor); agarrados, os dois com −2', () => {
+  const texto = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.match(texto, /os dois rolam DEX \+ Briga \+ 1d10\. Quem vence agarra/, 'a regra da wiki mudou');
+  assert.match(texto, /Agarrados: <b>−2 em todas as ações<\/b>/, 'a regra da wiki mudou');
+  assert.match(texto, /Quando outra pessoa resiste, o teste dela vira a DV\. <b>Empate: o defensor vence\.<\/b>/, 'a regra da wiki mudou');
+  assert.equal(regras.venceuOAgarrao(14, 13), true);
+  assert.equal(regras.venceuOAgarrao(13, 13), false, 'empate é do defensor');
+  assert.equal(regras.venceuOAgarrao(9, 13), false);
+  assert.equal(regras.AGARRAO.penalidade, -2);
+});
+
 test('O texto em cima do token (como o Fluxo de Combate): o HP perdido, o crítico, a armadura e o escudo que seguraram, e cada resultado sem dano', () => {
   const dano = (hpAntes, hpDepois, extra = {}) => ({ hpAntes, hpDepois, lesoes: [], ...extra });
   assert.deepEqual(regras.textoNoToken({ resultado: 'acertou', dano: dano(45, 33) }), { texto: '−12 HP', estilo: 'acerto' });

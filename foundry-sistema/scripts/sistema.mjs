@@ -1,8 +1,9 @@
 // Ponto de entrada do sistema Cyberpunk RED — Fieldbook (Foundry 14): registra os modelos de dados, os documentos,
 // as fichas, o crítico do d10, as configurações, o combate, os turnos, a NET na mesa, a importação da wiki e a migração
 // dos dados. A API fica em game.system.api (macros e testes).
+import * as agarrao from './agarrao.mjs';
 import * as combate from './combate.mjs';
-import { caminho, SISTEMA } from './config.mjs';
+import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
   DadosArma, DadosArmadura, DadosArquitetura, DadosBlackIce, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
@@ -47,6 +48,8 @@ Hooks.once('init', () => {
   CONFIG.ActiveEffect.dataModels.base = DadosEfeito;
   CONFIG.statusEffects.push({ id: combate.STATUS_SUPRIMIDO, name: 'Suprimido', img: caminho('icones/suprimido.svg') });
   CONFIG.statusEffects.push({ id: combate.STATUS_COBERTURA, name: 'Em cobertura', img: 'icons/svg/shield.svg' });
+  CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrando, name: 'Agarrando', img: 'icons/svg/combat.svg' });
+  CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrado, name: 'Agarrado', img: 'icons/svg/net.svg' });
   registrarCritico();
   registrarConfiguracoes();
 
@@ -63,13 +66,14 @@ Hooks.once('init', () => {
   wiki.registrarWiki();
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
   registrarIceRezzado();
-  game.system.api = { combate, lesoes, migracao, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
+  game.system.api = { agarrao, combate, lesoes, migracao, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });
 
 Hooks.once('ready', () => {
   combate.registrarCombate();
+  agarrao.registrarAgarrao();
   // A migração dos dados do mundo: só o mestre ativo, e só com os dados de uma versão anterior.
   migracao.conferirMigracao().catch(erro => console.error(`${SISTEMA} | migração dos dados:`, erro));
 });

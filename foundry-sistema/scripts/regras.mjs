@@ -440,6 +440,11 @@ export function escolhaAutomatica({ opcoes, modo, dv = null, mediaEsquiva = 0 })
   return opcoes.includes('aguentar') ? 'aguentar' : opcoes[0];
 }
 
+// Agarrar (a wiki, "Agarrar e arremessar", p. 177): os dois rolam DEX + Briga + 1d10, e quem agarra precisa superar a
+// resistência (o teste resistido: empate é do defensor, p. 128). Agarrados, os dois têm −2 em todas as ações.
+export const AGARRAO = { penalidade: -2 };
+export const venceuOAgarrao = (ataque, defesa) => Number(ataque) > Number(defesa);
+
 // A conta de uma perícia de defesa (a esquiva, a Concentração) pelas partes que o teste vai usar, para a janela de reação:
 // "DEX 7 + Evasão 2 − Gravemente ferido 2 + 1d10" e a média (o d10 vale 5,5).
 export function contaDaDefesa(partes) {

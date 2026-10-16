@@ -1,10 +1,10 @@
 // Documentos do sistema: o ator (testes, Death Save, dano na ficha, instalar cyberware) e o item (ataque, dano,
 // recarregar).
-import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA } from './config.mjs';
+import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  aplicarDano, backup, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  AGARRAO, aplicarDano, backup, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics
 } from './regras.mjs';
@@ -64,11 +64,13 @@ export class AtorCPR extends Actor {
     return this.update(mudancas, { cprfExtrato: true });
   }
 
-  // Partes fixas que entram em todo teste: a penalidade de ferimento e a das lesões (−2 em todas as ações).
+  // Partes fixas que entram em todo teste: a penalidade de ferimento, a das lesões (−2 em todas as ações) e a do agarrão
+  // (agarrao.mjs: agarrados, os dois têm −2 em todas as ações; a wiki, p. 177).
   #penalidade() {
     const { penalidade, ferimento, bonus } = this.system;
     const partes = penalidade ? [{ rotulo: ferimento.rotulo, valor: penalidade }] : [];
     if (bonus.todasAcoes) partes.push({ rotulo: 'Lesões', valor: bonus.todasAcoes });
+    if (Object.values(STATUS_AGARRAO).some(status => this.statuses.has(status))) partes.push({ rotulo: 'Agarrão', valor: AGARRAO.penalidade });
     return partes;
   }
 

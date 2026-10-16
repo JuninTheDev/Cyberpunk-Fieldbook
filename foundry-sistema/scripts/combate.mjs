@@ -27,9 +27,10 @@ const { DialogV2 } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(`systems/${SISTEMA}/templates/chat/${arquivo}`, dados);
 export const souOMestreAtivo = () => game.user.isGM && game.users.activeGM?.id === game.user.id;
-const ROTULO = { esquivar: 'esquivou', aguentar: 'aguentou', escudo: 'usou o escudo', concentrar: 'rolou a Concentração' };
-const BOTAO = { ...DEFESAS, escudo: 'Escudo', concentrar: 'Rolar Concentração' };
-const precisaRolar = escolha => escolha === 'esquivar' || escolha === 'concentrar';
+// "resistir": a resistência ao agarrão (agarrao.mjs), pela mesma janela de reação.
+const ROTULO = { esquivar: 'esquivou', aguentar: 'aguentou', escudo: 'usou o escudo', concentrar: 'rolou a Concentração', resistir: 'rolou a resistência' };
+const BOTAO = { ...DEFESAS, escudo: 'Escudo', concentrar: 'Rolar Concentração', resistir: 'Resistir' };
+const precisaRolar = escolha => ['esquivar', 'concentrar', 'resistir'].includes(escolha);
 
 // ---------------- Pedidos pelo socket (com resposta) ----------------
 // O mestre pede algo a um jogador (a defesa, o dano, o Death Save) e espera; passou o tempo, segue sem a resposta.
@@ -84,7 +85,7 @@ const TRATADORES = {
 // cartão), para as janelas de reação e os pedidos não se misturarem. O "Desfazer" não entra na fila: o mestre não
 // espera o ataque em curso para desfazer outro.
 let fila = Promise.resolve();
-function naFila(tarefa) {
+export function naFila(tarefa) {
   const resultado = fila.then(tarefa, tarefa);
   fila = resultado.catch(() => {});
   return resultado;
@@ -113,7 +114,7 @@ export function registrarCombate() {
 
 // ---------------- Tokens e distância ----------------
 // O token de um ator na cena (o do próprio ataque, se o ator é de um token).
-const tokenNaCena = (ator, cena = canvas.scene) => ator.token ?? cena?.tokens.find(token => token.actorId === ator.id) ?? null;
+export const tokenNaCena = (ator, cena = canvas.scene) => ator.token ?? cena?.tokens.find(token => token.actorId === ator.id) ?? null;
 export const centroDe = token => ({ x: token.x + (token.width * token.parent.grid.size) / 2, y: token.y + (token.height * token.parent.grid.size) / 2 });
 // Distância em metros entre dois tokens da mesma cena, pela grade da cena, com a diferença de elevação.
 export function distancia(a, b) {
@@ -231,17 +232,18 @@ async function rolarDanoDoAtacante({ arma, multiplicador, formula }, { id = null
 // tempo) e a rolagem dele. O mestre a fechou (desistiu de esperar ou respondeu por ele): null. Sem resposta no tempo, ou
 // fechada no X, vale a escolha padrão (a resposta diz qual dos dois).
 export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}) {
-  const [arma, alvo] = await Promise.all([fromUuid(pacote.arma), fromUuid(pacote.alvo)]);
+  // Sem arma (o agarrão), a janela mostra o rótulo da ação.
+  const [arma, alvo] = await Promise.all([pacote.arma ? fromUuid(pacote.arma) : null, fromUuid(pacote.alvo)]);
   const ator = alvo.actor;
   let resposta = pacote.opcoes.length === 1 && !precisaRolar(pacote.opcoes[0]) ? { escolha: pacote.opcoes[0] } : null;
   if (!resposta) {
-    // A conta de cada escolha sai do ator, aqui: a esquiva, a Concentração e o escudo.
+    // A conta de cada escolha sai do ator, aqui: a esquiva, a Concentração, a Briga (contra o agarrão) e o escudo.
     const escudo = ator.escudo;
     resposta = await JanelaDeDefesa.perguntar({
-      ...pacote, mestre, arma: arma.name, tempo: mestre ? 0 : Number(config('tempo')) || 0,
+      ...pacote, mestre, arma: arma?.name ?? pacote.rotulo, tempo: mestre ? 0 : Number(config('tempo')) || 0,
       atacante: { nome: pacote.atacante, img: pacote.imgAtq || 'icons/svg/mystery-man.svg' }, alvo: { nome: alvo.name, img: alvo.texture?.src || ator.img },
       esquiva: R.contaDaDefesa(ator.partesDaPericia('evasion').partes), concentracao: R.contaDaDefesa(ator.partesDaPericia('concentration').partes),
-      escudo: escudo ? { nome: escudo.name, pv: escudo.system.pvEscudo.value } : null
+      briga: R.contaDaDefesa(ator.partesDaPericia('brawling').partes), escudo: escudo ? { nome: escudo.name, pv: escudo.system.pvEscudo.value } : null
     }, registrarJanela(id));
     if (id) janelas.delete(id);
     if (!resposta) return null;
@@ -257,11 +259,13 @@ export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}
   return resultado && { ...resultado, ...comoFoi };
 }
 
-// Esquiva (DEX + Evasão + 1d10) ou Concentração (WILL + Concentração + 1d10), com as penalidades do alvo. Com a janela de
-// rolagem (perguntar), os situacionais, os modificadores comuns, o do mestre e a Sorte; fechada, null.
+// Esquiva (DEX + Evasão + 1d10), Concentração (WILL + Concentração + 1d10) ou a resistência ao agarrão (DEX + Briga +
+// 1d10), com as penalidades do alvo. Com a janela de rolagem (perguntar), os situacionais, os modificadores comuns, o do
+// mestre e a Sorte; fechada, null.
+const PERICIA_DA_DEFESA = { concentrar: ['concentration', 'Concentração'], resistir: ['brawling', 'Resistência ao agarrão'] };
 async function rolarDefesa(ator, nome, escolha, { perguntar = false, aoAbrir = null } = {}) {
-  const pericia = escolha === 'concentrar' ? 'concentration' : 'evasion';
-  const rotulo = `${escolha === 'concentrar' ? 'Concentração' : 'Esquiva'} de ${nome}`;
+  const [pericia, titulo] = PERICIA_DA_DEFESA[escolha] ?? ['evasion', 'Esquiva'];
+  const rotulo = `${titulo} de ${nome}`;
   let { partes } = ator.partesDaPericia(pericia);
   let sorte;
   if (perguntar) {
@@ -367,8 +371,8 @@ async function defender(ctx, alvo, { opcoes, dv = null }) {
   if (opcoes.length === 1 && !precisaRolar(opcoes[0])) return { escolha: opcoes[0] };
   // O total só vai para o jogador quando ele está à vista ("Esconder o total do ataque" desligado).
   const pacote = {
-    alvo: alvo.token.uuid, arma: ctx.arma.uuid, atacante: ctx.nomeAtq, imgAtq: ctx.tokenAtq?.texture?.src || ctx.atacante.img, modo: ctx.modo, descricao: ctx.descricao,
-    metros: ctx.modo === 'corpo' ? null : alvo.metros, dv, opcoes, padrao, ...(config('escondeAtaque') ? {} : { total: ctx.pedido.total })
+    alvo: alvo.token.uuid, arma: ctx.arma?.uuid ?? null, rotulo: ctx.rotulo ?? null, atacante: ctx.nomeAtq, imgAtq: ctx.tokenAtq?.texture?.src || ctx.atacante.img, modo: ctx.modo,
+    descricao: ctx.descricao, metros: ['corpo', 'agarrar'].includes(ctx.modo) ? null : alvo.metros, dv, opcoes, padrao, ...(config('escondeAtaque') ? {} : { total: ctx.pedido.total })
   };
   if (alvo.dono) {
     const promessa = pedir(alvo.dono, 'defesa', pacote);
@@ -394,6 +398,15 @@ async function defender(ctx, alvo, { opcoes, dv = null }) {
   }
   const escolha = opcoes.length > 1 ? R.escolhaAutomatica({ opcoes, modo: ctx.modo, dv, mediaEsquiva: alvo.mediaEsquiva }) : opcoes[0];
   return precisaRolar(escolha) ? rolarDefesa(alvo.ator, alvo.nome, escolha) : { escolha };
+}
+
+// A resistência a uma ação que não é de arma (o agarrão, agarrao.mjs), pela mesma defesa do ataque: a janela de reação do
+// dono (sem o total, com o prazo e o "responder por ele" do mestre) ou, pelo NPC, o mestre rola. alvo: o TokenDocument.
+// Devolve a resposta ({ escolha, defesa }) e as notas da espera, para o cartão.
+export async function defesaContra({ atacante, tokenAtq = null, alvo, total, modo, rotulo, descricao, opcoes }) {
+  const ctx = { pedido: { total }, atacante, tokenAtq, arma: null, rotulo, nomeAtq: tokenAtq?.name ?? atacante.name, modo, descricao, notas: [] };
+  const resposta = await defender(ctx, infoDoAlvo(ctx, alvo), { opcoes });
+  return { resposta, notas: ctx.notas };
 }
 
 const linhaDe = (ctx, token) => {
@@ -751,8 +764,8 @@ async function cartaoDoResultado(ctx) {
 }
 
 // Quem vê o cartão do resultado ("Quem vê o cartão do resultado"): todos (null), os envolvidos (o mestre, quem atacou e
-// os donos dos alvos) ou só o mestre.
-function destinatarios(ctx) {
+// os donos dos alvos) ou só o mestre. O cartão do agarrão também usa (agarrao.mjs).
+export function destinatarios(ctx) {
   const modo = config('resultado');
   if (modo === 'publico') return null;
   const ids = new Set(game.users.filter(usuario => usuario.isGM).map(usuario => usuario.id));

@@ -13,6 +13,9 @@ export const LOCAIS = { corpo: 'corpo', cabeca: 'cabeça' };
 
 export const DEFESAS = { esquivar: 'Esquivar', aguentar: 'Aguentar' };
 
+// As marcas do agarrão (agarrao.mjs): quem agarra e quem é agarrado (efeitos de status do Foundry).
+export const STATUS_AGARRAO = { agarrando: `${SISTEMA}-agarrando`, agarrado: `${SISTEMA}-agarrado` };
+
 export const QUALIDADES = { poor: 'Ruim', standard: 'Padrão', excellent: 'Excelente' };
 
 // Inventário (equipamento, roupa e droga): o uso de cada item, como na montagem da wiki.
