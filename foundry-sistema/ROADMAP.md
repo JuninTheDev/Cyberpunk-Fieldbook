@@ -409,7 +409,7 @@ No fim de tudo, uma sessão de teste com a mesa.
       instalada na primeira fundação compatível do mesmo ator, os slots das fundações pelo catálogo, e a que não couber
       "sem fundação", marcada na ficha) e a importação da wiki (a opção na fundação dela, pelo criador e pela ficha "Na
       mesa"): ciclo 83;
-    - [ ] a fundação e as opções do cyberware, parte 3: "+ Opção" na fundação e "Instalar opção" na ficha da opção (a
+    - [~] (sessão KouArt) a fundação e as opções do cyberware, parte 3: "+ Opção" na fundação e "Instalar opção" na ficha da opção (a
       escolha da fundação);
     - [x] as notas de ciberpsicose na aba Cyberware e as notas da Role (dois campos de texto novos no personagem, vazios
       por padrão): ciclo 68;
