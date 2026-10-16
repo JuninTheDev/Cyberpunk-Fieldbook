@@ -3529,6 +3529,30 @@ O item "os slots do deck em barras e o estado de cada programa com Rodar" das ma
 - **Pendências:** os outros itens das maquetes.
 - **Próximo:** "Rolar Humanidade" no cyberware e "Aplicar" no cartão (ciclo 73).
 
+### Ciclo 73 (2026-10-16): "Rolar Humanidade" no cyberware e "Aplicar" no cartão (as maquetes; sessão KouArt)
+
+Os itens "Roll humanity" (a ficha do cyberware) e "Apply" (o cartão da perda) das maquetes. Commit anterior: `fc94f41`
+(ciclo 72).
+
+- **Implementado** (`scripts/humanidade.mjs`, novo; `documentos.mjs`, `combate.mjs`, `ficha-item.mjs`, `item.hbs`):
+  - **"Rolar Humanidade"** na ficha do cyberware de um personagem (a peça precisa de dono e de fórmula): rola a perda
+    sem instalar, num cartão "HUMANIDADE" (vermelho) com os dados, a fórmula e a média, e o botão "Aplicar";
+  - **"Aplicar"** (só o mestre, como os outros botões dos cartões): tira o total da Humanidade atual do dono, sem passar
+    de 0, uma vez; o cartão troca o botão por "Aplicada em <dono>: Humanidade 50 → 43." (a flag guarda o antes e o
+    depois). O máximo não muda: ele vem das peças instaladas;
+  - **a instalação continua igual:** rola e aplica sozinha. O caminho novo é para o que a mesa quiser rolar fora dela
+    (uma peça que já veio instalada, um episódio narrado...).
+- **Testes:**
+  - G1: 50 arquivos, 0 erros (com o `humanidade.mjs`); G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 95 de 100, 182 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington).
+    Um passo novo, antes do tiro mirado: um Neural Link (2d6) não instalado no Alvo; o botão rola 3 + 4 = 7
+    sem instalar e sem mexer na Humanidade; o "Aplicar" tira 7 uma vez, e o cartão perde o botão e diz o que mudou;
+  - **mutações:** as 4 derrubaram só o passo novo, e os arquivos voltaram (conferido pelo md5): o "Aplicar" que não
+    tira nada (H1), o cartão que fica com o botão depois de aplicar (H2), a ficha do cyberware sem o botão (H3) e o
+    botão do cartão sem efeito (H4). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes.
+- **Próximo:** "Atacar" e "Recarregar" na ficha da arma, e o SP da armadura em caixas (ciclo 74).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

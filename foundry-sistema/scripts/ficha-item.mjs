@@ -44,7 +44,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     position: { width: 560, height: 620 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar }
+    actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade }
   };
 
   static PARTS = {
@@ -64,6 +64,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
+      rolaHumanidade: tipo === 'cyberware' && Boolean(item.actor) && Boolean(fonte.perdaHumanidade?.formula) && fonte.perdaHumanidade.formula !== '0',
       tipoRotulo: game.i18n.localize(CONFIG.Item.typeLabels[tipo] ?? tipo),
       usosLista: Object.entries(USOS).map(([id, rotulo]) => ({ id, rotulo, ativo: fonte.uso === id })),
       eh: Object.fromEntries(['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'].map(t => [t, tipo === t])),
@@ -95,6 +96,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     });
   }
 
+  // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
+  static #rolarHumanidade() {
+    return this.item.rolarHumanidade();
+  }
   // "Usar" o equipamento ligado à mão (ItemCPR.usar).
   static #usar() {
     return this.item.usar();

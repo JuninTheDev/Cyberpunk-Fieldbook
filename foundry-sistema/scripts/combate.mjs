@@ -13,6 +13,7 @@ import { TABELAS_DV } from './gerado.mjs';
 import { JanelaDeDefesa } from './janela-defesa.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
 import { aplicarDanoDeNet } from './net.mjs';
+import { aplicarPerdaDeHumanidade } from './humanidade.mjs';
 import { lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
 import * as R from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
@@ -862,6 +863,7 @@ export function ligarBotoes(mensagem, html) {
       else if (botao.dataset.cprfAcao === 'aplicarNet') aplicarDanoDeNet(mensagem, botao.dataset.onde);
       else if (botao.dataset.cprfAcao === 'aplicarDano') aplicarDanoDoCartao(mensagem);
       else if (botao.dataset.cprfAcao === 'rolarLesao') rolarLesaoDoCartao(mensagem);
+      else if (botao.dataset.cprfAcao === 'aplicarHumanidade') aplicarPerdaDeHumanidade(mensagem);
     });
   }
   if (mensagem.getFlag(SISTEMA, 'desfeito')) html.querySelector('.cartao.ataque')?.classList.add('desfeito');

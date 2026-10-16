@@ -9,6 +9,7 @@ import {
   tipoDeTeleOptics
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
+import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
@@ -494,6 +495,11 @@ export class ItemCPR extends Item {
   }
   restaurarRez() {
     return this.type === 'programa' ? this.update({ 'system.rezPerdida': 0 }) : null;
+  }
+  // "Rolar Humanidade" no cyberware (as maquetes do usuário): a perda rolada sem instalar, num cartão com o "Aplicar" do
+  // mestre (humanidade.mjs).
+  rolarHumanidade() {
+    return rolarPerdaDeHumanidade(this);
   }
   // "Usar" o equipamento ligado à mão (as maquetes do usuário): liga os efeitos dele, ou desliga, se algum está ligado.
   // No equipamento de ativação à mão, o efeito vale pelo liga e desliga, e não pelo uso (dados.mjs). Os outros: null.

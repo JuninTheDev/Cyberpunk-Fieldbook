@@ -1185,6 +1185,38 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('"Rolar Humanidade" na ficha do cyberware e "Aplicar" no cartão (as maquetes): a perda rolada sem instalar a peça (2d6: 3 + 4 = 7) e, pelo botão do mestre, tirada uma vez da Humanidade do dono; o cartão diz o que mudou e perde o botão', async () => {
+      await fixar(edge, [[3, 6], [4, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const alvo = __ator('Alvo');
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const [peca] = await alvo.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_cyberware:neural-link'])]);
+        const humanidade = alvo.system.humanidade.value;
+        try {
+          await peca.sheet.render({ force: true });
+          await __esperar(() => peca.sheet.element?.querySelector('[data-action="rolarHumanidade"]'));
+          const antes = game.messages.size;
+          peca.sheet.element.querySelector('[data-action="rolarHumanidade"]').click();
+          await __esperar(() => game.messages.size > antes && game.messages.contents.at(-1).getFlag('${S}', 'perdaDeHumanidade'));
+          const m = game.messages.contents.at(-1);
+          const rolado = { total: m.getFlag('${S}', 'perdaDeHumanidade').total, instalado: peca.system.instalado, humanidade: alvo.system.humanidade.value };
+          await __esperar(() => document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarHumanidade"]'));
+          document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarHumanidade"]').click();
+          await __esperar(() => m.getFlag('${S}', 'perdaDeHumanidade')?.aplicado && !document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarHumanidade"]'));
+          const texto = new DOMParser().parseFromString(m.content, 'text/html').querySelector('.resultado')?.textContent.trim();
+          return { humanidade, rolado, depois: alvo.system.humanidade.value, texto, aplicado: m.getFlag('${S}', 'perdaDeHumanidade').aplicado,
+            botao: Boolean(document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarHumanidade"]')) };
+        } finally {
+          await peca.sheet.close();
+          await alvo.deleteEmbeddedDocuments('Item', [peca.id]);
+          await alvo.update({ 'system.humanidade.value': humanidade });
+        }
+      })()`);
+      const ok = info.rolado.total === 7 && !info.rolado.instalado && info.rolado.humanidade === info.humanidade && info.depois === info.humanidade - 7 && !info.botao
+        && info.texto === 'Aplicada em Alvo: Humanidade ' + info.humanidade + ' → ' + (info.humanidade - 7) + '.' && info.aplicado.antes === info.humanidade && info.aplicado.depois === info.humanidade - 7;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);

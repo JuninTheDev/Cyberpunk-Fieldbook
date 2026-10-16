@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 73). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 74). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -374,7 +374,8 @@ No fim de tudo, uma sessão de teste com a mesa.
       uma vez por alvo: ciclo 64;
     - [x] "Adicionar ao combate" no cartão da iniciativa: coberto pelo "Rolar iniciativa" da ficha, que põe o ator na
       fila e rola lá (o Foundry já não deixa uma iniciativa solta para adicionar): ciclo 65;
-    - [ ] "Aplicar" na perda de Humanidade rolada à parte (interface; a instalação já aplica);
+    - [x] "Aplicar" na perda de Humanidade rolada à parte: o botão do mestre no cartão tira o total da Humanidade atual do
+      dono uma vez, e o cartão diz o que mudou (a instalação continua aplicando sozinha): ciclo 73;
     - [x] ~~"+ Sorte" no cartão do teste já rolado~~: não entra (a decisão do usuário de 2026-10-15: a Sorte só antes
       de rolar, como a wiki);
     - [x] ~~"Rolar de novo" no cartão do teste~~: não entra (a decisão do usuário de 2026-10-15: o RED não tem).
@@ -409,7 +410,8 @@ No fim de tudo, uma sessão de teste com a mesa.
       ser reparada", p. 186; a decisão do usuário de 2026-10-16: o mestre narra o conserto): ciclo 70;
     - [ ] "Atacar" e "Recarregar" na arma, "Ablar −1" na armadura, com os acertos recebidos e a trilha do SP
       (interface; as ações da ficha do personagem);
-    - [ ] "Instalar opção" e "Rolar Humanidade" no cyberware, "Rodar" e "Restaurar REZ" no programa, "Usar" e
+    - [x] "Rolar Humanidade" no cyberware de um ator (a perda rolada sem instalar, no cartão do "Aplicar"): ciclo 73;
+    - [ ] "Instalar opção" no cyberware, "Rodar" e "Restaurar REZ" no programa, "Usar" e
       "Largar" no equipamento, "Correção rápida" e "Tratar" na lesão (interface, com as mesmas regras da ficha).
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
   cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança

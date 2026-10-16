@@ -218,6 +218,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Compêndios**, na pasta "Cyberpunk RED — Fieldbook": Armas, Armaduras, Munição, Cyberware, Equipamento, Roupas, Drogas, Netrunning (cyberdecks, programas e os 12 Black ICE da wiki, o Black ICE próprio do netrunner), Upgrades e acessórios, Veículos, Armas de 2077, Cyberware de 2077, Netrunning de 2077, Lesões críticas, Personagens de exemplo e Arquiteturas da NET (estas duas, escondidas dos jogadores). Os exemplos são um Solo e um Capanga, com armas carregadas, armadura vestida e cyberware instalado, prontos para testar o combate.
 - **Cyberware:**
   - **Instalar** desconta a Humanidade pela perda rolada (Shift: pela média).
+  - **Rolar Humanidade** (na ficha do cyberware de um personagem; ciclo 73): rola a perda da peça sem instalar, num cartão "HUMANIDADE" com o "Aplicar" do mestre, que tira o total da Humanidade atual do dono uma vez (o cartão passa a dizer o que mudou). Para o que a mesa quiser rolar fora da instalação, como uma peça que já veio instalada.
   - **Humanidade máxima:** 10 × EMP, menos 2 por peça instalada que tem perda de Humanidade (borgware, menos 4). Peça sem perda, como o cyberware grátis de 2077, não reduz.
   - Os efeitos do cyberware só valem instalado. O Kerenzikov, por exemplo, dá +2 na iniciativa.
   - **Tirar** não devolve a Humanidade perdida: o máximo volta a subir (a peça deixa de contar), e a Humanidade perdida só volta com terapia, como na wiki e no CORE.
@@ -343,6 +344,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item, a quantidade com − e + até o 0, o "Usar" do equipamento ligado à mão, os acessórios na arma e o hardware no deck);
   - a ficha do item no jeito da maquete: numa pistola, o tipo na cor dele, o resumo, a etiqueta da qualidade, as três abas (a troca pelo clique) e as células; num cyberdeck, o uso pelos três botões, que grava;
   - "Consertar" na ficha da armadura: o SP gasto volta ao máximo e o cartão "CONSERTO" diz quem consertou; inteira, o aviso, sem outra mensagem;
+  - "Rolar Humanidade" na ficha do cyberware e "Aplicar" no cartão: a perda rolada sem instalar, tirada uma vez da Humanidade do dono pelo botão do mestre;
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o dano rolado à parte pelos botões do cartão: "Aplicar dano" no alvo marcado (com a armadura, e o Desfazer) e, no crítico, os +5 sem a lesão e "Rolar a lesão" uma vez por alvo;
   - "Rolar iniciativa" na aba Combate: sem combate, o do mestre cria um, põe o token na fila e rola; de novo no mesmo combate, o aviso;

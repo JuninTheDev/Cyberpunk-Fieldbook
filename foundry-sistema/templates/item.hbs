@@ -58,6 +58,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Perda de Humanidade</span><span class="par"><input type="text" name="system.perdaHumanidade.formula" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" value="{{fonte.perdaHumanidade.media}}"></span></label>
       <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
       <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
+      {{#if rolaHumanidade}}<div class="acoes-do-item"><button type="button" class="acao" data-action="rolarHumanidade" data-tooltip="Rola a perda de Humanidade sem instalar; o mestre aplica pelo cartão">ROLAR HUMANIDADE</button></div>{{/if}}
       {{/if}}
       {{#if temQuantidade}}<label class="celula"><span>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}}</span><input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>{{/if}}
       {{#if eh.cyberdeck}}
