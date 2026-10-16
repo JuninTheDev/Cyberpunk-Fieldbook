@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 75). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 76). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -411,8 +411,10 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [x] "Atacar" e "Recarregar" na ficha da arma de um personagem (o fluxo da ficha dele) e o SP de cada local da
       armadura em caixas, com o "−1" (o "Ablate"; sem passar de 0): ciclo 74. Os "acertos recebidos" das maquetes ficam
       de fora: o sistema não os conta (o SP gasto já diz);
+    - [x] "Rodar" e "Restaurar REZ" na ficha do programa (liga e desliga no deck, como o "Ativo" da aba NET; a REZ
+      atual e a volta ao máximo): ciclo 75;
     - [x] "Rolar Humanidade" no cyberware de um ator (a perda rolada sem instalar, no cartão do "Aplicar"): ciclo 73;
-    - [ ] "Instalar opção" no cyberware, "Rodar" e "Restaurar REZ" no programa, "Usar" e
+    - [ ] "Instalar opção" no cyberware, "Usar" e
       "Largar" no equipamento, "Correção rápida" e "Tratar" na lesão (interface, com as mesmas regras da ficha).
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
   cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança

@@ -84,6 +84,8 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula larga"><span>Dano · contra Black ICE</span><span class="par"><input type="text" name="system.dano.padrao" value="{{fonte.dano.padrao}}"> · <input type="text" name="system.dano.blackIce" value="{{fonte.dano.blackIce}}"></span></label>
       <label class="celula"><span>Slots no deck</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
       <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+      {{#if rezDoPrograma}}<p class="nota rez-do-programa">REZ {{rezDoPrograma.atual}}/{{rezDoPrograma.max}}</p>{{/if}}
+      {{#if editavel}}{{#if (or rodavel rezDoPrograma)}}<div class="acoes-do-item">{{#if rodavel}}<button type="button" class="acao" data-action="rodar" data-tooltip="Liga ou desliga o programa no deck">{{#if sistema.ativo}}DESLIGAR{{else}}RODAR{{/if}}</button>{{/if}}{{#if rezDoPrograma}}<button type="button" class="acao" data-action="restaurarRez" data-tooltip="A REZ volta ao máximo">RESTAURAR REZ</button>{{/if}}</div>{{/if}}{{/if}}
       {{/if}}
       {{#if eh.veiculo}}
       <label class="celula"><span>SDP</span><span class="par"><input type="number" name="system.sdp.value" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" value="{{fonte.sdp.max}}" min="0"></span></label>

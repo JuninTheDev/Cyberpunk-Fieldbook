@@ -3580,6 +3580,24 @@ Commit anterior: `e9b6d9a` (ciclo 73).
 - **Pendências:** os outros itens das maquetes.
 - **Próximo:** "Rodar" e "Restaurar REZ" na ficha do programa (ciclo 75).
 
+### Ciclo 75 (2026-10-16): "Rodar" e "Restaurar REZ" na ficha do programa (as maquetes; sessão KouArt)
+
+Os botões da maquete "Item Sheets" para o programa ("Run", "Reset REZ"). Commit anterior: `10ff856` (ciclo 74).
+
+- **Implementado** (`scripts/ficha-item.mjs`, `templates/item.hbs`): na ficha do programa, a REZ atual ("REZ 4/7") e
+  os botões "Rodar" (ou "Desligar"), só num deck e fora os de ataque, que liga e desliga o programa como o "Ativo" da
+  aba NET, e "Restaurar REZ", que devolve a REZ perdida (os que têm REZ, fora o quickhack e o daemon, como a aba NET).
+- **Testes:**
+  - G1: 50 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 97 de 102, 184 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington).
+    Um passo novo, antes do tiro mirado: um Eraser fora do deck só tem o "Restaurar REZ"; no deck, aparece
+    o "Rodar", que liga ("Desligar") e desliga; com 3 de REZ perdidos (4/7), o "Restaurar REZ" volta a 7/7;
+  - **mutações:** as 4 derrubaram só o passo novo, e os arquivos voltaram (conferido pelo md5): o "Rodar" que só liga
+    (P1), o "Restaurar REZ" sem efeito (P2), o "Rodar" também fora do deck (P3) e a REZ mostrando o máximo (P4).
+    Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes.
+- **Próximo:** a arquitetura onde o netrunner está, ao vivo, na aba NET (ciclo 76).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

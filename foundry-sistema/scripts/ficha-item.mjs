@@ -3,6 +3,7 @@
 import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { PERICIAS } from './gerado.mjs';
+import { programaDeAtaque } from './regras.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -46,7 +47,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade,
-      atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar
+      atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar, rodar: FichaItem.#rodar, restaurarRez: FichaItem.#restaurarRez
     }
   };
 
@@ -69,6 +70,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
       // A arma de um personagem ataca e recarrega pela ficha dela; a armadura mostra o SP de cada local em caixas.
       armaDeAtor: tipo === 'arma' && Boolean(item.actor),
+      // O programa: liga e desliga num deck (os de ataque, não), e a REZ (os que têm, menos o quickhack e o daemon).
+      rodavel: tipo === 'programa' && Boolean(item.instaladoNo) && !programaDeAtaque(fonte.classe),
+      rezDoPrograma: tipo === 'programa' && fonte.rez && !['quickhack', 'daemon'].includes(fonte.classe) ? { atual: item.rezAtual, max: fonte.rez } : null,
       trilhas: tipo === 'armadura' ? ['cabeca', 'corpo'].filter(local => item.system.sp[local].max).map(local => ({ local, rotulo: local === 'cabeca' ? 'cabeça' : 'corpo', valor: item.system.sp[local].value, max: item.system.sp[local].max })) : [],
       rolaHumanidade: tipo === 'cyberware' && Boolean(item.actor) && Boolean(fonte.perdaHumanidade?.formula) && fonte.perdaHumanidade.formula !== '0',
       tipoRotulo: game.i18n.localize(CONFIG.Item.typeLabels[tipo] ?? tipo),
@@ -115,6 +119,14 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static #ablar(evento, alvo) {
     const sp = this.item.system.sp?.[alvo.dataset.local];
     return sp ? this.item.update({ [`system.sp.${alvo.dataset.local}.value`]: Math.max(0, sp.value - 1) }) : null;
+  }
+  // "Rodar" e "Restaurar REZ" no programa (as maquetes do usuário): liga ou desliga o programa num deck (o "Ativo" da aba
+  // NET; os de ataque não ligam, atacam) e devolve a REZ perdida.
+  static #rodar() {
+    return this.item.update({ 'system.ativo': !this.item.system.ativo });
+  }
+  static #restaurarRez() {
+    return this.item.restaurarRez();
   }
   // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
   static #rolarHumanidade() {

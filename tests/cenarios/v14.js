@@ -1271,6 +1271,42 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('"Rodar" e "Restaurar REZ" na ficha do programa (as maquetes): fora do deck, sem o "Rodar"; no deck, liga e desliga o programa (o "Ativo" da aba NET); a REZ perdida volta ao máximo', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = await Actor.implementation.create({ name: 'Teste Netrunner do Programa', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } },
+          items: [foundry.utils.deepClone(cat['core_gear:cyberdeck']), foundry.utils.deepClone(cat['core_programs:eraser'])] });
+        const eraser = a.items.getName('Eraser');
+        try {
+          await eraser.sheet.render({ force: true });
+          await __esperar(() => eraser.sheet.element?.querySelector('.tab.detalhes'));
+          const f = () => eraser.sheet.element;
+          const acoes = () => [...(f()?.querySelectorAll('.acoes-do-item [data-action]') ?? [])].map(b => b.dataset.action + ':' + b.textContent.trim()).join();
+          const foraDoDeck = acoes();
+          await eraser.update({ 'system.instaladoEm': a.items.find(i => i.type === 'cyberdeck').id });
+          await __esperar(() => f()?.querySelector('[data-action="rodar"]'));
+          const noDeck = acoes();
+          f().querySelector('[data-action="rodar"]').click();
+          await __esperar(() => eraser.system.ativo && acoes().includes('rodar:DESLIGAR'));
+          const ligado = acoes();
+          f().querySelector('[data-action="rodar"]').click();
+          await __esperar(() => !eraser.system.ativo && acoes().includes('rodar:RODAR'));
+          await eraser.perderRez(3);
+          await __esperar(() => f()?.querySelector('.rez-do-programa')?.textContent.includes('4/7'));
+          const ferido = f().querySelector('.rez-do-programa').textContent.trim();
+          f().querySelector('[data-action="restaurarRez"]').click();
+          await __esperar(() => eraser.rezAtual === 7 && f()?.querySelector('.rez-do-programa')?.textContent.includes('7/7'));
+          return { foraDoDeck, noDeck, ligado, desligado: !eraser.system.ativo, ferido, restaurado: eraser.rezAtual };
+        } finally {
+          await eraser.sheet.close();
+          await a.delete();
+        }
+      })()`);
+      const ok = info.foraDoDeck === 'restaurarRez:RESTAURAR REZ' && info.noDeck === 'rodar:RODAR,restaurarRez:RESTAURAR REZ' && info.ligado === 'rodar:DESLIGAR,restaurarRez:RESTAURAR REZ'
+        && info.desligado && info.ferido === 'REZ 4/7' && info.restaurado === 7;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);
