@@ -1073,6 +1073,38 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ simples, critico })];
     });
 
+    await r.passo('"Rolar iniciativa" na aba Combate da ficha (as maquetes do usuário): sem combate, o do mestre cria um, põe o token na fila e rola (REF 6 + 1d10 7 = 13); de novo no mesmo combate, não rola outra vez (o aviso)', async () => {
+      await fixar(edge, [[7, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const alvo = __ator('Alvo');
+        const antes = { combate: Boolean(game.combat), situacionais: alvo.situacionaisDaIniciativa().length, base: alvo.system.iniciativa };
+        let criado = null;
+        const avisos = [];
+        try {
+          await alvo.sheet.render({ force: true });
+          await __esperar(() => alvo.sheet.element?.querySelector('[data-action="rolarIniciativa"]'));
+          alvo.sheet.changeTab('combate', 'primary');
+          alvo.sheet.element.querySelector('[data-action="rolarIniciativa"]').click();
+          await __esperar(() => Number.isFinite(game.combat?.combatants.find(c => c.actor === alvo)?.initiative));
+          criado = game.combat;
+          const combatente = criado.combatants.find(c => c.actor === alvo);
+          const lido = { ...antes, cena: criado.scene?.id === canvas.scene.id, token: combatente.token?.name ?? null, iniciativa: combatente.initiative, fila: criado.combatants.size };
+          ui.notifications.info = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            alvo.sheet.element.querySelector('[data-action="rolarIniciativa"]').click();
+            await __esperar(() => avisos.length === 1);
+          } finally { delete ui.notifications.info; }
+          return { ...lido, avisos, depois: combatente.initiative, fila2: criado.combatants.size };
+        } finally {
+          await alvo.sheet.close();
+          if (criado && !antes.combate) await criado.delete();
+        }
+      })()`);
+      const ok = !info.combate && info.situacionais === 0 && info.base === 6 && info.cena && info.token === 'Alvo' && info.fila === 1 && info.iniciativa === 13
+        && info.avisos.join() === 'Alvo já tem iniciativa 13 neste combate.' && info.depois === 13 && info.fila2 === 1;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);

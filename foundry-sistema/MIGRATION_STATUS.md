@@ -3314,6 +3314,37 @@ reparada", p. 186: a proposta do botão espera ele). E os dois primeiros itens d
   o SP ao máximo).
 - **Próximo:** os itens das maquetes de interface (ciclo 65).
 
+### Ciclo 65 (2026-10-15): "Rolar iniciativa" na ficha (as maquetes; sessão KouArt)
+
+Os itens "Rolar a iniciativa" (a ficha) e "Adicionar ao combate" (o cartão) das maquetes. Commit anterior: `ddda6ce`
+(ciclo 64).
+
+- **Implementado:**
+  - **"Rolar iniciativa"** no painel da Iniciativa da aba Combate (`ficha-personagem.mjs`, `#rolarIniciativa`): o
+    `Actor#rollInitiative` do Foundry 14 com `createCombatants`, que entra no combate (o do mestre cria um na cena, se
+    não houver; o jogador dono do ator entra no combate que existe, pela permissão do Foundry, e sem combate recebe o
+    aviso dele) e rola na fila, pela iniciativa do sistema (`iniciativa.mjs`: a janela dos situacionais, como o
+    Sandevistan, e a Sorte). Quem já tem iniciativa naquele combate não rola de novo (o aviso diz o valor): o RED rola
+    a iniciativa uma vez, no começo do combate;
+  - **"Adicionar ao combate"** fica coberto por ele: a rolagem cai direto na fila, e não sobra uma iniciativa solta no
+    chat para adicionar;
+  - **o cartão do resultado** mostra "Ataque" só quando há o total do ataque (`ne ataque null`): no ciclo 64, o
+    `{{#if ataque}}` esconderia um ataque de total 0 (possível com o −8 do mirado). Sem teste: nenhum passo chega a
+    um ataque de total 0.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 92 de 97, 198 s, de primeira. As 5 falhas são as das armas de 2077, e os avisos do passo "nenhum aviso", só os
+    dois da Lexington. Um passo novo, depois do dano rolado à parte: na ficha do Alvo (REF 6, sem situacionais de
+    iniciativa), sem combate, o botão cria o combate na cena, põe o token na fila e rola 6 + 7 = 13; o segundo clique
+    avisa "Alvo já tem iniciativa 13 neste combate." sem rolar nem pôr outro na fila; o combate criado sai no fim;
+  - **mutações:** as 3 derrubaram só o passo novo, e os arquivos voltaram (conferido pelo md5; o executor novo esperou
+    a mesa antes de cada uma): o botão sem a ação (N1), a rolagem sem pôr o ator na fila (N2) e sem a conferência de
+    quem já rolou (N3). Na N2, o combate criado sem combatente ficou no mundo de teste (o `finally` do passo só apagava
+    o combate que tinha lido); não derrubou nada, e a limpeza foi corrigida no ciclo 66. Nenhuma rodada deixou Edge nem
+    perfil para trás.
+- **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
+- **Próximo:** a Sorte usada na sessão, no cabeçalho (ciclo 66).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

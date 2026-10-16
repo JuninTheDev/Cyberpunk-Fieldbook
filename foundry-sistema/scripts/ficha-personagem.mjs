@@ -43,6 +43,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarPericia: FichaPersonagem.#rolarPericia,
       rolarRole: FichaPersonagem.#rolarRole,
       rolarFacedown: FichaPersonagem.#rolarFacedown,
+      rolarIniciativa: FichaPersonagem.#rolarIniciativa,
       rolarInterface: FichaPersonagem.#rolarInterface,
       rolarDanoDoZap: FichaPersonagem.#rolarDanoDoZap,
       ativarPrograma: FichaPersonagem.#ativarPrograma,
@@ -291,6 +292,14 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #rolarAtributo(evento, alvo) { return this.actor.rolarAtributo(alvo.dataset.atributo, { perguntar: comJanela(evento) }); }
   static #rolarPericia(evento, alvo) { return this.actor.rolarPericia(alvo.dataset.pericia, { perguntar: comJanela(evento) }); }
   static #rolarFacedown(evento) { return this.actor.rolarFacedown({ perguntar: comJanela(evento) }); }
+  // "Rolar iniciativa" (as maquetes do usuário): o ator entra no combate (o Foundry cria um, se o mestre clicar sem
+  // nenhum) e rola na fila, pela iniciativa do sistema (iniciativa.mjs: a janela dos situacionais e a Sorte). Quem já
+  // rolou neste combate não rola de novo: o RED rola a iniciativa uma vez, no começo do combate.
+  static #rolarIniciativa() {
+    const ja = game.combat?.combatants.find(combatente => combatente.actor === this.actor && combatente.initiative !== null);
+    if (ja) return ui.notifications.info(`${this.actor.name} já tem iniciativa ${ja.initiative} neste combate.`);
+    return this.actor.rollInitiative({ createCombatants: true });
+  }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
   // O programa ativo (rezzado): os boosters somam na habilidade deles.

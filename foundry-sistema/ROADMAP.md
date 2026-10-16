@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 65). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 66). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -372,13 +372,15 @@ No fim de tudo, uma sessão de teste com a mesa.
       crítico, como o fluxo do ataque faz, e o "Desfazer": ciclo 64;
     - [x] "Rolar a lesão" no cartão do dano crítico rolado à parte: a tabela do corpo (p. 187) em cada alvo marcado,
       uma vez por alvo: ciclo 64;
-    - [ ] "Adicionar ao combate" no cartão da iniciativa (interface);
+    - [x] "Adicionar ao combate" no cartão da iniciativa: coberto pelo "Rolar iniciativa" da ficha, que põe o ator na
+      fila e rola lá (o Foundry já não deixa uma iniciativa solta para adicionar): ciclo 65;
     - [ ] "Aplicar" na perda de Humanidade rolada à parte (interface; a instalação já aplica);
     - [x] ~~"+ Sorte" no cartão do teste já rolado~~: não entra (a decisão do usuário de 2026-10-15: a Sorte só antes
       de rolar, como a wiki);
     - [x] ~~"Rolar de novo" no cartão do teste~~: não entra (a decisão do usuário de 2026-10-15: o RED não tem).
   - **Na ficha:**
-    - [ ] "Rolar a iniciativa" na aba Combate (interface; o combate do Foundry rola com a fórmula do sistema);
+    - [x] "Rolar iniciativa" na aba Combate: entra no combate (o do mestre cria um, se não houver) e rola na fila, pela
+      iniciativa do sistema; quem já rolou naquele combate não rola de novo: ciclo 65;
     - [x] ~~o local do acerto (cabeça, corpo, aleatório)~~: não entra (a decisão do usuário de 2026-10-15: o acerto é no
       corpo, e a cabeça só pelo tiro mirado, −8, como a wiki; o "Mirar" da ficha já faz);
     - [ ] as ações "Agarrar" (regra: a wiki, "Agarrar e arremessar", p. 177) e "Proteger-se" (regra: a cobertura, p.
