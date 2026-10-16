@@ -38,6 +38,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>SP corpo</span><span class="par"><input type="number" name="system.sp.corpo.value" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" value="{{fonte.sp.corpo.max}}"></span></label>
       <label class="celula"><span>Penalidade</span><input type="number" name="system.penalidade" value="{{fonte.penalidade}}"></label>
       <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Vestida</label>
+      {{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="consertar" data-tooltip="O SP volta ao máximo; o mestre narra o conserto">CONSERTAR</button></div>{{/if}}
       {{/if}}
       {{#if eh.municao}}
       <label class="celula"><span>Tipo</span><input type="text" name="system.tipo" value="{{fonte.tipo}}"></label>

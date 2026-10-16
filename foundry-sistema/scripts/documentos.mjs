@@ -495,6 +495,26 @@ export class ItemCPR extends Item {
   restaurarRez() {
     return this.type === 'programa' ? this.update({ 'system.rezPerdida': 0 }) : null;
   }
+  // "Consertar" a armadura (as maquetes do usuário): o SP de cada local volta ao máximo, e o chat diz que o personagem a
+  // consertou. A wiki só diz que a armadura perde o SP "até ser reparada" (p. 186), sem o teste, o custo ou o tempo: o
+  // mestre narra o conserto (a decisão do usuário de 2026-10-16). Inteira, só avisa.
+  async consertar() {
+    if (this.type !== 'armadura') return null;
+    const locais = ['cabeca', 'corpo'].filter(local => this.system.sp[local].max && this.system.sp[local].value < this.system.sp[local].max);
+    if (!locais.length) {
+      ui.notifications.info(`${this.name} já está inteira.`);
+      return null;
+    }
+    const mudancas = locais.map(local => ({ local, antes: this.system.sp[local].value, depois: this.system.sp[local].max }));
+    await this.update(Object.fromEntries(mudancas.map(m => [`system.sp.${m.local}.value`, m.depois])));
+    const nome = foundry.utils.escapeHTML(this.actor?.name ?? 'Alguém');
+    const partes = mudancas.map(m => `o SP ${m.local === 'cabeca' ? 'da cabeça' : 'do corpo'} volta de ${m.antes} para ${m.depois}`).join(', e ');
+    return ChatMessage.implementation.create({
+      speaker: ChatMessage.implementation.getSpeaker({ actor: this.actor }),
+      content: `<div class="${SISTEMA} cartao conserto"><p><b>${nome}</b> consertou ${foundry.utils.escapeHTML(this.name)}: ${partes}.</p></div>`,
+      flags: { [SISTEMA]: { conserto: { item: this.uuid, mudancas } } }
+    });
+  }
   // O dano de um programa de ataque (regras.DANO_DE_PROGRAMA): a fórmula contra o que ele pode atingir, sem crítico (na
   // NET não há, como no CORE). O cartão diz onde o dano entra.
   async rolarDanoDePrograma(contra = 'padrao', { falar = true } = {}) {

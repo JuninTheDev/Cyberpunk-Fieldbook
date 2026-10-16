@@ -1126,6 +1126,45 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('"Consertar" na ficha da armadura (as maquetes; a decisão do usuário de 2026-10-16): o SP gasto volta ao máximo e o chat diz que o personagem consertou (o cartão "CONSERTO"); inteira, só avisa, sem outra mensagem', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const alvo = __ator('Alvo');
+        const armadura = alvo.items.find(i => i.type === 'armadura' && i.system.sp.corpo.max);
+        const max = armadura.system.sp.corpo.max;
+        const cabeca = armadura.system.sp.cabeca;
+        await armadura.update({ 'system.sp.corpo.value': max - 3 });
+        const avisos = [];
+        try {
+          await armadura.sheet.render({ force: true });
+          await __esperar(() => armadura.sheet.element?.querySelector('[data-action="consertar"]'));
+          const antes = game.messages.size;
+          armadura.sheet.element.querySelector('[data-action="consertar"]').click();
+          await __esperar(() => armadura.system.sp.corpo.value === max && game.messages.size > antes);
+          const m = game.messages.contents.at(-1);
+          await __esperar(() => document.querySelector('.chat-message[data-message-id="' + m.id + '"] .message-sender'));
+          const li = document.querySelector('#chat .chat-message[data-message-id="' + m.id + '"]') ?? document.querySelector('.chat-message[data-message-id="' + m.id + '"]');
+          const esperado = 'Alvo consertou ' + armadura.name + ': o SP do corpo volta de ' + (max - 3) + ' para ' + max + '.';
+          const lido = { sp: armadura.system.sp.corpo.value, max, cabecaInteira: cabeca.value === cabeca.max, texto: new DOMParser().parseFromString(m.content, 'text/html').body.textContent.trim(), esperado,
+            mudancas: (m.getFlag('${S}', 'conserto')?.mudancas ?? []).map(x => x.local + ' ' + x.antes + '→' + x.depois).join(), tipo: getComputedStyle(li.querySelector('.message-sender'), '::before').content };
+          // De novo, inteira: o aviso, sem outra mensagem.
+          const depois = game.messages.size;
+          ui.notifications.info = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            armadura.sheet.element.querySelector('[data-action="consertar"]').click();
+            await __esperar(() => avisos.length === 1);
+            await new Promise(r => setTimeout(r, 300));
+          } finally { delete ui.notifications.info; }
+          return { ...lido, avisos, nome: armadura.name, novas: game.messages.size - depois };
+        } finally {
+          await armadura.sheet.close();
+          await armadura.update({ 'system.sp.corpo.value': max });
+        }
+      })()`);
+      const ok = info.sp === info.max && info.cabecaInteira && info.texto === info.esperado && info.mudancas === 'corpo ' + (info.max - 3) + '→' + info.max && info.tipo === '"CONSERTO // "'
+        && info.avisos.join() === info.nome + ' já está inteira.' && info.novas === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);

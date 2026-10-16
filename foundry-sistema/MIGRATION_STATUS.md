@@ -479,8 +479,9 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   contrariam a wiki ou o RED foram decididos pelo usuário em 2026-10-15 e **não entram**: a Sorte só antes de rolar
   (a wiki: "antes de rolar"); o acerto no corpo, e na cabeça só pelo tiro mirado (sem local aleatório); e sem "rolar
   de novo" (o RED não tem). Conferidos na wiki no mesmo dia: os slots de opção do cyberware estão no
-  `system-catalog.js`; o conserto da armadura, só "até ser reparada" (p. 186), sem teste nem custo (a proposta do
-  botão, voltar o SP ao máximo, espera o usuário antes do ciclo). A lista:
+  `system-catalog.js`; o conserto da armadura, só "até ser reparada" (p. 186), sem teste nem custo. **Decidido pelo
+  usuário em 2026-10-16:** o botão "Consertar" volta o SP ao máximo e o chat diz que o personagem consertou a
+  armadura; o mestre narra o conserto (ciclo 70). A lista:
   - **no chat:** "+ Luck" e "Reroll" no cartão do teste (a Sorte se prepara na ficha antes), "Add to tracker" na
     iniciativa, "Apply damage" e "Roll critical" no dano, "Apply" na perda de Humanidade (o fluxo do ataque e a
     instalação já aplicam);
@@ -3456,6 +3457,30 @@ O item "Jack in" e "Jack out" das maquetes. Commit anterior: `8bfa990` (ciclo 68
     (K4). Nenhuma rodada deixou Edge para trás.
 - **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
 - **Próximo:** os itens das maquetes (ciclo 70).
+
+### Ciclo 70 (2026-10-16): "Consertar" na armadura (a decisão do usuário; sessão KouArt)
+
+A resposta do usuário (2026-10-16) à pergunta do conserto: "o botão volta o SP ao máximo; apenas faça aparecer no chat
+que o personagem consertou a armadura". Commit anterior: `4fbdb02` (ciclo 69).
+
+- **Implementado:**
+  - **`ItemCPR.consertar`** (`scripts/documentos.mjs`): na armadura, o SP de cada local gasto (a cabeça e o corpo,
+    onde há máximo) volta ao máximo, e o chat recebe o cartão "CONSERTO" (ciano): "<personagem> consertou <armadura>:
+    o SP do corpo volta de 8 para 11.", com a flag do que mudou. Sem teste, custo ou tempo (a wiki não diz; o mestre
+    narra). Inteira, só avisa, sem mensagem. O escudo (os PV dele) não entra: o pedido foi o SP;
+  - **o botão** "Consertar" na aba Detalhes da ficha da armadura (para quem pode editar o item), no jeito dos botões
+    das maquetes.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 94 de 99, 181 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). Um
+    passo novo, antes do tiro mirado: a armadura do Alvo com 3 de SP gastos no corpo; o botão volta o
+    SP ao máximo, a cabeça não muda, o cartão diz o texto inteiro e tem o tipo "CONSERTO"; de novo, inteira, o aviso e
+    nenhuma mensagem nova;
+  - **mutações:** as 4 derrubaram só o passo novo, e os arquivos voltaram (conferido pelo md5): o SP que não volta
+    ao máximo (X1), sem a mensagem (X2), a armadura inteira consertada de novo, com outra mensagem (X3) e o botão sem a
+    ação (X4). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes.
+- **Próximo:** "Usar" no equipamento ligado à mão (ciclo 71).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

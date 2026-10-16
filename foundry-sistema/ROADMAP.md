@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 70). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 71). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -404,10 +404,10 @@ No fim de tudo, uma sessão de teste com a mesa.
       os estados são os do deck e o "Ativo" de hoje);
     - [ ] a arquitetura onde o netrunner está, ao vivo, na aba NET (interface; o estado do ponto de acesso).
   - **Na ficha do item:**
-    - [ ] "Atacar" e "Recarregar" na arma, "Consertar" e "Ablar −1" na armadura, com os acertos recebidos e a trilha
-      do SP (interface; as ações da ficha do personagem. Consertar, conferido em 2026-10-15: a wiki só diz que a armadura
-      perde o SP "até ser reparada", p. 186, sem o teste, o custo ou o tempo; a proposta é o botão voltar o SP ao máximo
-      e o mestre narrar o conserto, a confirmar com o usuário antes do ciclo);
+    - [x] "Consertar" na armadura: o SP volta ao máximo, e o chat diz que o personagem consertou (a wiki só diz "até
+      ser reparada", p. 186; a decisão do usuário de 2026-10-16: o mestre narra o conserto): ciclo 70;
+    - [ ] "Atacar" e "Recarregar" na arma, "Ablar −1" na armadura, com os acertos recebidos e a trilha do SP
+      (interface; as ações da ficha do personagem);
     - [ ] "Instalar opção" e "Rolar Humanidade" no cyberware, "Rodar" e "Restaurar REZ" no programa, "Usar" e
       "Largar" no equipamento, "Correção rápida" e "Tratar" na lesão (interface, com as mesmas regras da ficha).
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no

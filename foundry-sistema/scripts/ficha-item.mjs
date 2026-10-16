@@ -44,7 +44,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     position: { width: 560, height: 620 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { alternarEfeito: FichaItem.#alternarEfeito }
+    actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar }
   };
 
   static PARTS = {
@@ -93,6 +93,11 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       })),
       descricaoRica: await foundry.applications.ux.TextEditor.implementation.enrichHTML(item.system.descricao, { relativeTo: item })
     });
+  }
+
+  // "Consertar" a armadura (ItemCPR.consertar): o SP volta ao máximo, e o chat diz quem consertou.
+  static #consertar() {
+    return this.item.consertar();
   }
 
   // Liga ou desliga um efeito do item (o principal da droga quando alguém a usa, por exemplo).
