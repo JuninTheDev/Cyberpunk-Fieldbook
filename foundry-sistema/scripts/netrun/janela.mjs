@@ -55,6 +55,21 @@ const ICONES_DAS_HABILIDADES = {
 };
 const hora = t => (t ? new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '');
 
+// A arquitetura como o netrunner a conhece (o estado público: os andares vistos e os "?" que faltam), para a aba NET da
+// ficha (as maquetes do usuário: a arquitetura ao vivo): o andar, o que há nele e o estado (hostil: um inimigo ativo;
+// trancado: a senha, o arquivo ou o nó de controle por fazer; liberado: o que havia, feito; livre; desconhecido).
+export function andaresConhecidos(est) {
+  return [...(est?.nos ?? [])].sort((a, b) => a.andar - b.andar || RAMOS.indexOf(a.ramo) - RAMOS.indexOf(b.ramo)).map(no => {
+    const rotulo = no.id.toUpperCase();
+    if (!no.visto) return { rotulo, texto: '?', estado: 'desconhecido' };
+    const conteudos = (no.conteudos ?? []).map(conteudoNaJanela);
+    const tipo = tipoDoAndar(conteudos);
+    const estado = tipo === 'hostil' ? 'hostil' : tipo === 'livre' ? (conteudos.some(conteudo => conteudo.feito) ? 'liberado' : 'livre') : 'trancado';
+    return { rotulo, texto: conteudos.map(textoCurto).join(' · ') || 'vazio', estado };
+  });
+}
+
+
 export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
   // As janelas abertas neste cliente, pela chave do Tile e de quem vê (o mestre ou o token).
   static abertas = new Map();

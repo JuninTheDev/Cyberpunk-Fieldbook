@@ -3598,6 +3598,32 @@ Os botões da maquete "Item Sheets" para o programa ("Run", "Reset REZ"). Commit
 - **Pendências:** os outros itens das maquetes.
 - **Próximo:** a arquitetura onde o netrunner está, ao vivo, na aba NET (ciclo 76).
 
+### Ciclo 76 (2026-10-16): a arquitetura ao vivo na aba NET (as maquetes; sessão KouArt)
+
+O item "Architecture, live" da maquete "Net Tab". Commit anterior: `fdc9632` (ciclo 75).
+
+- **Implementado:**
+  - **`andaresConhecidos`** (`netrun/janela.mjs`, na API da NET): os andares como o netrunner os conhece (o estado
+    público do ponto, o mesmo que a janela do jogador usa), em ordem, cada um com o rótulo ("1A"), o que há nele (o
+    mesmo texto curto da janela, como "Senha DV 6") e o estado: hostil (um inimigo ativo), trancado (a senha, o arquivo
+    ou o nó de controle por fazer), liberado (o que havia, feito), livre, ou "?" (ainda não visto). O mestre também vê
+    só o que o netrunner sabe: o mapa inteiro continua na janela dele;
+  - **a aba NET**, conectado: o painel "Arquitetura · ao vivo · N andares" na coluna dos números;
+  - **ao vivo** (`netrun/index.mjs`): quando o estado do ponto muda, as fichas abertas de quem está conectado ali se
+    redesenham, como a janela da NET já fazia.
+- **Testes:**
+  - G1: 50 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 97 de 102, 184 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). O
+    passo do "Conectar" da ficha (ciclo 69) ganhou a arquitetura: conectado, "1A | ? | desconhecido";
+    o netrunner desce para o andar 1 (a operação `mover` do motor), e a ficha aberta passa a "1A | Senha DV 6 |
+    trancado" sem reabrir; desconectado, o painel some;
+  - **mutações:** as 4 derrubaram o passo do "Conectar", e os arquivos voltaram (conferido pelo md5): o andar não visto
+    mostrando o que há nele (V1), a ficha que não se redesenha quando o estado muda (V2), a senha por fazer como livre
+    (V3) e o painel fora da aba (V4). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os itens de regra das maquetes (Agarrar e Proteger-se, a correção rápida e o tratamento, "Usar" a
+  droga, a fundação e as opções do cyberware) e o "Largar" (o que ele faz, a confirmar com o usuário).
+- **Próximo:** os itens de regra das maquetes (ciclo 77).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

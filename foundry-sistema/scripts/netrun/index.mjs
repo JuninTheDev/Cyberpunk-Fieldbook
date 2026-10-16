@@ -6,7 +6,7 @@ import { SISTEMA } from '../config.mjs';
 import { vezDoInimigo } from './combate.mjs';
 import { FLAG_INIMIGO, STATUS_EM_CHAMAS } from './constantes.mjs';
 import { alvosNaVez, conexaoDoToken, estadoDoTile, operacoes, pontoDoTile, removerCorredorApagado, soltarTokens } from './estado.mjs';
-import { JanelaDaNet } from './janela.mjs';
+import { andaresConhecidos, JanelaDaNet } from './janela.mjs';
 import { alcanceDo, distancia, netrunnerDo } from './regras-da-net.mjs';
 import { abrirPonto, apagarPontos, arquiteturasDisponiveis, botaoNoHud, configurar, conectar, conectarPelaFicha, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
 import { iniciarSocketDaNet, pedir } from './socket.mjs';
@@ -54,6 +54,7 @@ export function registrarNet() {
       conectar: (tile, token) => conectar(doc(tile), doc(token)),
       // A ficha: "Conectar" (o ponto de acesso mais perto, com as conferências do clique) e a janela de quem está conectado.
       conectarPelaFicha: ator => conectarPelaFicha(ator),
+      andaresConhecidos: tile => andaresConhecidos(estadoDoTile(doc(tile))),
       desconectar: (token, { inseguro = false } = {}) => {
         const conexao = conexaoDoToken(doc(token));
         return conexao ? pedir('desconectar', { tile: conexao.tile, token: doc(token).id, inseguro }) : Promise.resolve(null);
@@ -86,6 +87,11 @@ export function registrarNet() {
     if (daCenaAtual(tile)) desenharPontos();
     if (!mudouAFlag(mudancas)) return;
     const estado = estadoDoTile(tile);
+    // A aba NET de quem está conectado aqui mostra a arquitetura ao vivo: a ficha aberta se redesenha.
+    for (const corredor of estado?.corredores ?? []) {
+      const ficha = tile.parent?.tokens.get(corredor.token)?.actor?.sheet;
+      if (ficha?.rendered) ficha.render();
+    }
     for (const janela of [...JanelaDaNet.abertas.values()]) {
       if (janela.tile.id !== tile.id) continue;
       // O jogador que saiu (ou caiu) da NET: a janela fecha.

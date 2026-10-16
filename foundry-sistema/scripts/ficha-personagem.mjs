@@ -207,7 +207,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     // com o nome do ponto.
     const conectado = ator.getActiveTokens(false, true).map(token => ({ token, conexao: token.getFlag(SISTEMA, FLAG_CONEXAO) })).find(c => c.conexao);
     net.conexao = conectado ? {
-      tile: conectado.conexao.tile, token: conectado.token.id, ponto: fromUuidSync(conectado.conexao.tile)?.getFlag(SISTEMA, FLAG_PONTO)?.nome || 'Ponto de acesso'
+      tile: conectado.conexao.tile, token: conectado.token.id, ponto: fromUuidSync(conectado.conexao.tile)?.getFlag(SISTEMA, FLAG_PONTO)?.nome || 'Ponto de acesso',
+      // A arquitetura ao vivo: os andares como o netrunner os conhece (o motor da NET).
+      andares: (tile => (tile ? game.system.api.netrun?.andaresConhecidos(tile) ?? [] : []))(fromUuidSync(conectado.conexao.tile))
     } : null;
 
     return Object.assign(contexto, {

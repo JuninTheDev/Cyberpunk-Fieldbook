@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 76). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 77). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -404,7 +404,8 @@ No fim de tudo, uma sessão de teste com a mesa.
       clique no marcador (a arquitetura, o deck e o Rank, o alcance), "Abrir a NET" e a desconexão segura: ciclo 69;
     - [x] os slots do deck em caixas (no painel da Interface) e o estado de cada programa (guardado, carregado, ativo);
       o "Rodar" é o botão "Ativo" de sempre: ciclo 72;
-    - [ ] a arquitetura onde o netrunner está, ao vivo, na aba NET (interface; o estado do ponto de acesso).
+    - [x] a arquitetura onde o netrunner está, ao vivo, na aba NET (os andares como ele os conhece, com o estado de
+      cada um; a ficha se redesenha quando o estado do ponto muda): ciclo 76.
   - **Na ficha do item:**
     - [x] "Consertar" na armadura: o SP volta ao máximo, e o chat diz que o personagem consertou (a wiki só diz "até
       ser reparada", p. 186; a decisão do usuário de 2026-10-16: o mestre narra o conserto): ciclo 70;

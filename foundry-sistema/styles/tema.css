@@ -171,6 +171,13 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .estado-programa { flex: none; padding: 1px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
 .cpr-fieldbook.ficha-personagem .estado-programa.estado-carregado { border-color: var(--cp-ciano); color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .estado-programa.estado-ativo { border-color: var(--cp-amarelo); background: var(--cp-amarelo); color: var(--cp-fundo); }
+/* A arquitetura ao vivo, na aba NET: o andar, o que há nele e o estado (hostil em vermelho, trancado em ciano). */
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo li { flex-wrap: wrap; }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .rotulo-andar { flex: none; min-width: 3ch; color: var(--cp-ciano); font: 700 14px var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .detalhe { flex: 1 1 8ch; color: var(--cp-texto); white-space: normal; text-align: left; }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .estado-andar { flex: none; padding: 1px 6px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 10px/1.4 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .andar-hostil .estado-andar { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .andar-trancado .estado-andar { border-color: var(--cp-ciano); color: var(--cp-ciano); }
 /* As notas curtas da coluna dos números (a Role, a ciberpsicose): um campo de texto que ocupa o painel. */
 .cpr-fieldbook.ficha-personagem .notas-curtas textarea { width: 100%; min-height: 5.5em; margin-top: 8px; resize: vertical; font: 400 15px/1.4 var(--cp-titulo); }
 /* A Role: cada especialidade com os pontos em caixas (o desenho; o número continua no campo), como a maquete "Role Tab". */

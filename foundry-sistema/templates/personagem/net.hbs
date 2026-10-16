@@ -22,6 +22,15 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
         {{/if}}
       </section>
 
+      {{#if net.conexao}}
+      <section class="painel corte ciano arquitetura-ao-vivo">
+        <div class="titulo">ARQUITETURA<span>AO VIVO · {{net.conexao.andares.length}} ANDARES</span></div>
+        <ol class="itens">
+          {{#each net.conexao.andares}}<li class="andar-{{estado}}"><b class="rotulo-andar">{{rotulo}}</b><span class="detalhe">{{texto}}</span><span class="estado-andar">{{estado}}</span></li>{{/each}}
+        </ol>
+      </section>
+      {{/if}}
+
       <section class="painel corte">
         <div class="titulo">CYBERDECKS<span>{{decks.length}}</span></div>
         <ol class="itens">

@@ -4559,7 +4559,7 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
     };
 
-    await r.passo('"Conectar" e "Desconectar" na aba NET da ficha (as maquetes do usuário): a 7 m de um ponto de alcance 6, o aviso de longe demais e nada muda; com o Range Upgrade (alcance 8), conecta no ponto mais perto (a ficha mostra o nome dele, "Abrir a NET" e "Desconectar"); "Desconectar" sai com segurança', async () => {
+    await r.passo('"Conectar" e "Desconectar" na aba NET da ficha (as maquetes do usuário): a 7 m de um ponto de alcance 6, o aviso de longe demais e nada muda; com o Range Upgrade (alcance 8), conecta no ponto mais perto (a ficha mostra o nome dele, "Abrir a NET", "Desconectar" e a arquitetura ao vivo, que acompanha o netrunner descer); "Desconectar" sai com segurança', async () => {
       const info = await edge.evaluate(`(async () => {
         const esperar = window.__esperar;
         const { PONTO_PADRAO } = await import('/systems/${S}/scripts/netrun/constantes.mjs');
@@ -4599,10 +4599,16 @@ module.exports = async ({ edge, servidores, r }) => {
           await esperar(() => token.getFlag('${S}', 'conexaoNaNet')?.tile === tile.uuid && f()?.querySelector('[data-action="desconectarDaNet"]'));
           const perto = { conexao: token.getFlag('${S}', 'conexaoNaNet')?.tile === tile.uuid, nome: texto('.tab.net .conexao'), corredores: game.system.api.netrun.estado(tile)?.corredores?.length ?? 0,
             botoes: [...f().querySelectorAll('.tab.net .coluna-resumo .botoes-resumo [data-action]')].map(b => b.dataset.action).join() };
+          // A arquitetura ao vivo (as maquetes): o andar 1 como "?"; o netrunner desce, e a ficha mostra a senha, sem reabrir.
+          const andares = () => [...(f()?.querySelectorAll('.tab.net .arquitetura-ao-vivo li') ?? [])].map(li => ['.rotulo-andar', '.detalhe', '.estado-andar'].map(seletor => li.querySelector(seletor)?.textContent.trim()).join('|')).join(';');
+          perto.andares = andares();
+          await game.system.api.netrun.pedir('mover', { tile: tile.uuid, token: token.id, destino: '1a' });
+          await esperar(() => andares() !== perto.andares);
+          perto.desceu = andares();
           // "Desconectar": sai com segurança, e a ficha volta ao "Conectar".
           f().querySelector('[data-action="desconectarDaNet"]').click();
           await esperar(() => !token.getFlag('${S}', 'conexaoNaNet') && f()?.querySelector('[data-action="conectarNaNet"]'));
-          const saiu = { conexao: token.getFlag('${S}', 'conexaoNaNet') ?? null, nome: texto('.tab.net .conexao'), corredores: game.system.api.netrun.estado(tile)?.corredores?.length ?? 0 };
+          const saiu = { conexao: token.getFlag('${S}', 'conexaoNaNet') ?? null, nome: texto('.tab.net .conexao'), corredores: game.system.api.netrun.estado(tile)?.corredores?.length ?? 0, painel: Boolean(f()?.querySelector('.tab.net .arquitetura-ao-vivo')) };
           return { antes, longe, perto, saiu };
         } finally {
           for (const a of criados.atores) await a.sheet?.close();
@@ -4616,7 +4622,8 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       const ok = info.antes === 'desconectado' && info.longe.avisos.length === 1 && /longe demais/.test(info.longe.avisos[0]) && !info.longe.conexao
         && info.perto.conexao && info.perto.nome === 'Terminal da ficha' && info.perto.botoes === 'abrirNet,desconectarDaNet' && info.perto.corredores === 1
-        && !info.saiu.conexao && info.saiu.nome === 'desconectado' && info.saiu.corredores === 0;
+        && !info.saiu.conexao && info.saiu.nome === 'desconectado' && info.saiu.corredores === 0
+        && info.perto.andares === '1A|?|desconhecido' && info.perto.desceu === '1A|Senha DV 6|trancado' && !info.saiu.painel;
       return [ok, JSON.stringify(info)];
     });
 
