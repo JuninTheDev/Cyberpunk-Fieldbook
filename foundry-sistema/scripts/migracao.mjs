@@ -13,6 +13,7 @@
 // passos daqui são para o que precisa do catálogo, dos efeitos ou de outro documento.
 import { carregarCatalogo } from './catalogo.mjs';
 import { SISTEMA } from './config.mjs';
+import { cabeNaFundacao, pedeFundacao } from './regras.mjs';
 
 const doCatalogo = dados => dados.flags?.[SISTEMA]?.catalogo ?? '';
 
@@ -28,6 +29,12 @@ const efeitoDoTeleOpticsDoCore = efeito => {
 const TIPOS_QUE_VIRAVAM_FASHIONWARE = ['cyberEye', 'cyberAudioSuite', 'cyberwareInternal', 'cyberwareExternal'];
 // O efeito de um booster de Interface (system.bonus.interface), que o catálogo traz desde o ciclo 40.
 const efeitoDeInterface = efeito => (efeito.system?.changes ?? []).some(mudanca => String(mudanca.key).startsWith('system.bonus.interface.'));
+// O cyberware como a regra do encaixe o lê (regras.cabeNaFundacao), nos dados: sem os slots (de antes do ciclo 82), os do
+// catálogo.
+const encaixeNosDados = (dados, catalogo) => ({
+  tipo: dados.system?.tipo ?? '', catalogo: doCatalogo(dados), tamanho: Number(dados.system?.tamanho) || 0,
+  slots: Number(dados.system?.slots) || Number(catalogo?.[doCatalogo(dados)]?.system?.slots) || 0
+});
 
 export const PASSOS = [
   {
@@ -54,6 +61,29 @@ export const PASSOS = [
       if (dados.type !== 'programa' || (dados.effects ?? []).some(efeitoDeInterface)) return;
       const efeitos = (catalogo?.[doCatalogo(dados)]?.effects ?? []).filter(efeitoDeInterface);
       if (efeitos.length) dados.effects = [...(dados.effects ?? []), ...structuredClone(efeitos)];
+    }
+  },
+  {
+    versao: 4,
+    nome: 'A fundação e as opções do cyberware (ciclo 82): a fundação ganha os slots do catálogo, e cada opção já instalada vai na primeira fundação instalada do mesmo ator em que cabe (a que não couber fica sem fundação, marcada na ficha; a decisão do usuário de 2026-10-16)',
+    // No ator, antes dos itens: os slots da fundação vêm do catálogo quando ela ainda não os tem.
+    ator(dados, { catalogo }) {
+      const cyber = (dados.items ?? []).filter(item => item.type === 'cyberware' && item.system);
+      const fundacoes = cyber.filter(item => item.system.fundacional && item.system.instalado);
+      const tamanho = item => Number(item.system.tamanho) || 0;
+      const usados = new Map(fundacoes.map(fundacao => [fundacao._id, cyber.filter(item => item.system.instaladoEm === fundacao._id).reduce((soma, item) => soma + tamanho(item), 0)]));
+      const soltas = cyber.filter(item => !item.system.fundacional && item.system.instalado && !item.system.instaladoEm && pedeFundacao(encaixeNosDados(item, catalogo)));
+      for (const opcao of soltas) {
+        const fundacao = fundacoes.find(f => cabeNaFundacao({ fundacao: encaixeNosDados(f, catalogo), opcao: encaixeNosDados(opcao, catalogo), usados: usados.get(f._id) }).cabe);
+        if (!fundacao) continue;
+        opcao.system.instaladoEm = fundacao._id;
+        usados.set(fundacao._id, usados.get(fundacao._id) + tamanho(opcao));
+      }
+    },
+    item(dados, { catalogo }) {
+      if (dados.type !== 'cyberware' || !dados.system?.fundacional || dados.system.slots) return;
+      const slots = Number(catalogo?.[doCatalogo(dados)]?.system?.slots) || 0;
+      if (slots) dados.system.slots = slots;
     }
   }
 ];

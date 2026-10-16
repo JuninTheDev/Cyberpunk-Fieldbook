@@ -3921,6 +3921,46 @@ pela regra da wiki. Commit anterior: `43316d3` (a marca `[~]`).
   dúvidas (os slots das fundações que a wiki não diz).
 - **Próximo:** a fundação e as opções do cyberware, parte 2.
 
+### Ciclo 83 (2026-10-16): a fundação e as opções do cyberware, parte 2: a migração e a importação (sessão KouArt)
+
+O cyberware que já está nas fichas e o que chega da wiki, com a fundação e as opções do ciclo 82. Commit anterior:
+`c2eaa94` (a marca `[~]`).
+
+- **A decisão do usuário (2026-10-16):** "A migração põe cada opção instalada na primeira fundação compatível do mesmo
+  ator; a que não couber fica 'sem fundação', com aviso na ficha" (o aviso é a marca "SEM FUNDAÇÃO" do ciclo 82).
+- **Implementado:**
+  - **o quarto passo da migração** (`migracao.mjs`, a versão 4 dos dados): no ator, cada opção instalada e sem fundação
+    (que pede uma) vai na primeira fundação instalada do mesmo ator em que cabe, na ordem dos itens, pela mesma regra do
+    encaixe (`regras.cabeNaFundacao`), com os slots da fundação pelo catálogo quando ela ainda não os tem; no item, a
+    fundação sem slots ganha os do catálogo. A opção desinstalada, a de categoria e a que não cabe ficam; a fundação
+    feita à mão (sem o catálogo) fica com os slots dela; rodar de novo não muda nada;
+  - **a importação da wiki** (`wiki.mjs`): pelo criador (a montagem: o "em" de cada item), a opção de cyberware entra na
+    fundação em que a wiki a pôs; pela ficha "Na mesa" (o "dentro" de cada item), também. No cyberware só entra opção de
+    cyberware, e nos outros (o deck, a arma, o veículo), o que não é cyberware. A nota "Opções de cyberware: entram
+    instaladas, mas este sistema ainda não liga a opção à base" saiu. A ficha que o sistema manda para a wiki já levava o
+    "dentro" de quem tem itens instalados; agora a fundação leva as opções dela, e a ida e volta se mantém.
+- **Testes:**
+  - G1: 55 arquivos, 0 erros; G2: 0 erros;
+  - G3: 93 de 97. Um teste de referência novo em `migracao.test.mjs`: um ator de antes do ciclo 82 (o Cybereye guardado
+    antes do instalado, o Neural Link, o Kerenzikov, o Low Light/IR/UV, o Dartgun, o Anti-Dazzle desinstalado, o
+    Techhair e um Cyberarm feito à mão com a Grapple Hand): os slots 5, 3 e 3 pelo catálogo; o Kerenzikov no Neural Link;
+    o Low Light no Cybereye instalado (não no guardado); o Dartgun (3) não cabe depois do Low Light (2); os outros ficam;
+    rodar de novo, nada. As 4 falhas são as das armas de 2077;
+  - G4: 105 de 110, de primeira (as 5 falhas são as das armas de 2077). Dois passos mudaram, com dados a mais:
+    - a migração (C1, no começo): o ator de teste ganhou um Neural Link sem os slots e um Kerenzikov sem a fundação, os
+      dois instalados; migrado, o Neural Link tem 5 slots e o Kerenzikov está nele, e a pergunta lista o passo novo. Os
+      documentos mudados continuam 4 (o Neural Link e o Kerenzikov são do mesmo ator);
+    - a importação "Na mesa": a ficha do Foundry 12 ganhou um Neural Link com o Kerenzikov dentro (e a Humanidade máxima
+      46, com os dois); importado, o Neural Link está instalado, com 5 slots e o Kerenzikov dentro;
+  - **mutações:** as 5 caíram, e os arquivos voltaram (conferido pelo md5). No G3: a migração que encaixa a opção
+    desinstalada (D1), a fundação guardada que recebe (D2), os slots usados que não sobem a cada opção encaixada (D3) e a
+    fundação sem os slots do catálogo (D4). No G4: a importação "Na mesa" sem ligar a opção à fundação (D5).
+- **Sem teste no G4:** o caminho do criador (o "em" da montagem) usa a mesma regra do "Na mesa" (`entraEm`), mas os
+  personagens de teste do criador vêm dos dados da wiki do master, sem cyberware montado numa base; e a regra de que o
+  cyberware não entra no deck nem na arma (nem o contrário) não tem um caso nos dados de teste.
+- **Pendências:** a parte 3 ("+ Opção" e "Instalar opção").
+- **Próximo:** a parte 3.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

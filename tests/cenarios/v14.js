@@ -97,7 +97,7 @@ module.exports = async ({ edge, servidores, r }) => {
         JSON.stringify(info)];
     });
 
-    await r.passo('migração dos dados (C1): o mundo novo fica na versão atual sem perguntar; um mundo da versão 0 com o TeleOptics antigo (num ator, num token não ligado e num compêndio do mundo trancado) e um Cyberaudio que virou Fashionware: a pergunta lista o que muda e os passos; "Depois" não muda nada; "Migrar agora" muda só isso, tranca o compêndio de novo, grava a versão e deixa o registro no chat dos mestres; de novo, nada muda e não pergunta; dados de uma versão mais nova só avisam', async () => {
+    await r.passo('migração dos dados (C1): o mundo novo fica na versão atual sem perguntar; um mundo da versão 0 com o TeleOptics antigo (num ator, num token não ligado e num compêndio do mundo trancado), um Cyberaudio que virou Fashionware e, no ator, um Neural Link e um Kerenzikov de antes da fundação e das opções (o Kerenzikov vai no Neural Link, que ganha os 5 slots): a pergunta lista o que muda e os passos; "Depois" não muda nada; "Migrar agora" muda só isso, tranca o compêndio de novo, grava a versão e deixa o registro no chat dos mestres; de novo, nada muda e não pergunta; dados de uma versão mais nova só avisam', async () => {
       const info = await edge.evaluate(`(async () => {
         const api = game.system.api.migracao;
         const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
@@ -117,7 +117,9 @@ module.exports = async ({ edge, servidores, r }) => {
         const avisos = [];
         let ator, audio, capanga, cena, pacote, mensagem;
         try {
-          ator = await Actor.implementation.create({ name: 'Migração: ator', type: 'personagem', items: [teleAntigo()] });
+          // O cyberware de antes do ciclo 82: instalado, a fundação sem os slots e a opção sem a fundação.
+          const cyberAntigo = id => { const c = pegar(id); Object.assign(c.system, { instalado: true, slots: 0, instaladoEm: '' }); return c; };
+          ator = await Actor.implementation.create({ name: 'Migração: ator', type: 'personagem', items: [teleAntigo(), cyberAntigo('core_cyberware:neural-link'), cyberAntigo('core_cyberware:kerenzikov')] });
           const dadosDoAudio = pegar('core_cyberware:amplified-hearing');
           dadosDoAudio.system.tipo = 'fashionware';
           audio = await Item.implementation.create(dadosDoAudio);
@@ -136,7 +138,8 @@ module.exports = async ({ edge, servidores, r }) => {
           const estado = async () => ({
             ator: teleDe(game.actors.get(ator.id)).effects.size, bonus: game.actors.get(ator.id).system.bonus.tiroMirado, audio: game.items.get(audio.id).system.tipo,
             token: teleDe(cena.tokens.get(token.id).actor).effects.size, capanga: game.actors.get(capanga.id).items.size,
-            pacote: (await pacote.getDocuments())[0].effects.size, trancado: pacote.locked, versao: versao()
+            pacote: (await pacote.getDocuments())[0].effects.size, trancado: pacote.locked, versao: versao(),
+            fundacao: (a => { const doCat = id => a.items.find(i => i.getFlag('${S}', 'catalogo') === id); return [doCat('core_cyberware:neural-link').system.slots, doCat('core_cyberware:kerenzikov').system.instaladoEm === doCat('core_cyberware:neural-link').id]; })(game.actors.get(ator.id))
           });
           const antes = await estado();
           // A pergunta: o que muda e os passos. A segunda é outra janela (a primeira pode ainda estar no DOM).
@@ -177,10 +180,10 @@ module.exports = async ({ edge, servidores, r }) => {
       const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const { novo, antes, adiado, migrado, registro, deNovo, maisNova } = info;
       const lista = info.depois.itens.join(' | ');
-      const esperadoAntes = { ator: 1, bonus: 1, audio: 'fashionware', token: 1, capanga: 0, pacote: 1, trancado: true, versao: 0 };
-      const esperadoDepois = { ator: 0, bonus: 0, audio: 'cyberAudioSuite', token: 0, capanga: 0, pacote: 0, trancado: true, versao: novo.atual };
+      const esperadoAntes = { ator: 1, bonus: 1, audio: 'fashionware', token: 1, capanga: 0, pacote: 1, trancado: true, versao: 0, fundacao: [0, false] };
+      const esperadoDepois = { ator: 0, bonus: 0, audio: 'cyberAudioSuite', token: 0, capanga: 0, pacote: 0, trancado: true, versao: novo.atual, fundacao: [5, true] };
       return [novo.gravada && !novo.pergunta && igual(antes, esperadoAntes) && igual(adiado, esperadoAntes) && info.depois.resultado.adiado === true && igual(info.depois.botoes, ['migrar', 'depois'])
-        && ['1 item do mundo', '1 ator do mundo', 'até 1 token não ligado', '1 documento do compêndio Migração (teste)', 'TeleOptics', 'Fashionware'].every(t => lista.includes(t))
+        && ['1 item do mundo', '1 ator do mundo', 'até 1 token não ligado', '1 documento do compêndio Migração (teste)', 'TeleOptics', 'Fashionware', 'A fundação e as opções do cyberware'].every(t => lista.includes(t))
         && info.migrar.resultado.mudados === 4 && igual(migrado, esperadoDepois)
         && registro.de === 0 && registro.para === novo.atual && registro.mudados?.length === 4 && registro.soMestres
         && deNovo.mudados === 0 && !deNovo.adiado && info.semPergunta && maisNova.avisos.length === 1 && maisNova.avisos[0].includes('mais nova') && maisNova.versao === novo.atual + 5,
@@ -3499,7 +3502,7 @@ module.exports = async ({ edge, servidores, r }) => {
       await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
         ator: 'atorDoF12', nomeAtor: 'Teste Migração', quando: '2026-10-01T22:00:00.000Z',
         stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 2, BODY: 6, EMP: 4 },
-        hp: { atual: 20, max: 40 }, humanidade: { atual: 41, max: 48 }, sorte: { atual: 3, max: 5 }, sp: { cabeca: 0, corpo: 10 }, dinheiro: 1234, ip: 12, reputacao: 2,
+        hp: { atual: 20, max: 40 }, humanidade: { atual: 41, max: 46 }, sorte: { atual: 3, max: 5 }, sp: { cabeca: 0, corpo: 10 }, dinheiro: 1234, ip: 12, reputacao: 2,
         role: { nome: 'Solo', rank: 4, habilidades: [['Initiative Reaction', 2], ['Threat Detection', 2]] },
         pericias: [{ nome: 'Handgun', nivel: 6, stat: 'REF' }, { nome: 'Language (Streetslang)', nivel: 4, stat: 'INT' }],
         lesoes: ['Broken Leg'],
@@ -3511,6 +3514,7 @@ module.exports = async ({ edge, servidores, r }) => {
           { nome: 'Agent', tipo: 'gear', qtd: 1, uso: 'carried', uid: '' },
           { nome: 'Cyberdeck', tipo: 'cyberdeck', qtd: 1, uso: 'equipped', uid: '', dentro: ['Sword', 'Worm'] },
           { nome: 'Sword', tipo: 'program', qtd: 1, uso: '', uid: '' }, { nome: 'Worm', tipo: 'program', qtd: 1, uso: '', uid: '' },
+          { nome: 'Neural Link', tipo: 'cyberware', qtd: 1, uso: '', uid: '', instalado: true, base: true, dentro: ['Kerenzikov'] },
           { nome: 'Kerenzikov', tipo: 'cyberware', qtd: 1, uso: '', uid: '', instalado: true, base: false },
           { nome: 'Coisa Desconhecida', tipo: 'gear', qtd: 1, uso: 'carried', uid: '' }
         ]
@@ -3527,15 +3531,16 @@ module.exports = async ({ edge, servidores, r }) => {
           pistola: [pistola.system.equipada, pistola.system.pente.value, pistola.municaoCarregada?.name, pistola.municaoCarregada?.system.quantidade],
           faca: item('Combat Knife')?.system.equipada, agent: item('Agent')?.system.uso, sp: s.armadura.corpo.sp,
           deck: item('Cyberdeck')?.instalados.map(i => i.name), ker: item('Kerenzikov')?.system.instalado, notas,
+          link: [item('Neural Link')?.system.instalado, item('Neural Link')?.system.slots, item('Neural Link')?.instalados.map(i => i.name).join()],
           extrato: Object.values(s.extratos).map(linhas => linhas.map(l => [l.acao, l.saldo, l.motivo].join(' ')).join())
         };
         await ator.delete();
         return resultado;
       })()`);
-      const ok = info.hp.join() === '20,40' && info.hum.join() === '41,48' && info.sorte === 3 && info.dinheiro === 1234 && info.ip === 12 && info.rep === 2
+      const ok = info.hp.join() === '20,40' && info.hum.join() === '41,46' && info.sorte === 3 && info.dinheiro === 1234 && info.ip === 12 && info.rep === 2
         && info.move === 2 && info.ref === 8 && info.pericias.join() === '6,4' && info.habilidades['Initiative Reaction'] === 2 && info.lesoes.join() === 'Perna quebrada'
         && info.pistola.join() === 'true,5,Heavy Pistol (Basic),17' && info.faca === false && info.agent === 'carregando' && info.sp === 10
-        && info.deck.join() === 'Sword,Worm' && info.ker === true && info.notas.length === 1 && info.notas[0].startsWith('Coisa Desconhecida:')
+        && info.deck.join() === 'Sword,Worm' && info.ker === true && info.link.join() === 'true,5,Kerenzikov' && info.notas.length === 1 && info.notas[0].startsWith('Coisa Desconhecida:')
         && info.extrato.join(' / ') === ['definir 1234', 'definir 12', 'definir 2'].map(t => t + ' Migrado da ficha da mesa do Foundry 12').join(' / ');
       return [ok, JSON.stringify(info)];
     });

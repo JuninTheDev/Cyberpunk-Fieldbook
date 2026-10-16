@@ -140,13 +140,16 @@ async function carregarArmas(ator, entradas) {
 }
 
 // Cada programa, hardware e acessório no lugar em que a montagem da wiki o pôs ("em": o uid do pai): o cyberdeck ou a
-// arma, ou o upgrade no veículo. As opções de cyberware (na base de cyberware) ainda não têm onde entrar aqui.
+// arma, ou o upgrade no veículo; e a opção de cyberware na fundação dela (ciclo 83), como a wiki montou.
+const recebe = item => ['cyberdeck', 'arma', 'veiculo'].includes(item.type) || (item.type === 'cyberware' && item.system.fundacional);
+// O que entra no pai: no cyberware, só a opção de cyberware; nos outros, o que não é cyberware.
+const entraEm = (pai, item) => 'instaladoEm' in item.system && item.id !== pai.id && (pai.type === 'cyberware') === (item.type === 'cyberware') && !item.system.fundacional;
 async function instalarNoLugar(ator, entradas) {
   const mudancas = [];
   for (const entrada of entradas.filter(e => e.em)) {
-    const [pai] = porUid(ator, entrada.em).filter(item => ['cyberdeck', 'arma', 'veiculo'].includes(item.type));
+    const [pai] = porUid(ator, entrada.em).filter(recebe);
     if (!pai) continue;
-    for (const item of porUid(ator, entrada.uid).filter(item => 'instaladoEm' in item.system)) mudancas.push({ _id: item.id, 'system.instaladoEm': pai.id });
+    for (const item of porUid(ator, entrada.uid).filter(item => entraEm(pai, item))) mudancas.push({ _id: item.id, 'system.instaladoEm': pai.id });
   }
   if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
 }
@@ -458,12 +461,11 @@ export async function importarDaMesa(id, donoId = '') {
   await ator.createEmbeddedDocuments('Item', dados, { keepId: true });
   const criados = dados.map(data => ator.items.get(data._id));
 
-  // O que está dentro de cada item (programa no deck, acessório na arma, upgrade no veículo) e a munição no pente, pelos
-  // nomes que a mesa manda. Cada item de dentro vai para um pai só.
+  // O que está dentro de cada item (programa no deck, acessório na arma, upgrade no veículo, a opção na fundação do
+  // cyberware) e a munição no pente, pelos nomes que a mesa manda. Cada item de dentro vai para um pai só.
   const mudancas = [];
   const usados = new Set();
   const livrePorNome = (nome, aceita) => criados.find(item => !usados.has(item.id) && item.name === nome && aceita(item));
-  let opcoesDeCyberware = false;
   linhas.forEach((item, indice) => {
     const pai = criados[indice];
     if (pai.type === 'arma' && item.municao) {
@@ -471,15 +473,14 @@ export async function importarDaMesa(id, donoId = '') {
       if (municao) mudancas.push({ _id: pai.id, 'system.carregada': municao.id });
     }
     for (const nome of (item.dentro || []).filter(nome => nome !== item.municao)) {
-      if (pai.type === 'cyberware') { opcoesDeCyberware = true; continue; }
-      const filho = livrePorNome(nome, outro => 'instaladoEm' in outro.system && outro.id !== pai.id);
+      if (pai.type === 'cyberware' && !pai.system.fundacional) continue;
+      const filho = livrePorNome(nome, outro => entraEm(pai, outro));
       if (!filho) continue;
       usados.add(filho.id);
       mudancas.push({ _id: filho.id, 'system.instaladoEm': pai.id });
     }
   });
   if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
-  if (opcoesDeCyberware) notas.push('Opções de cyberware: entram instaladas, mas este sistema ainda não liga a opção à base.');
 
   const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO } })

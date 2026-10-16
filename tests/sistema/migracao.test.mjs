@@ -105,6 +105,37 @@ test('Migração, passo 3 (os boosters de Interface, ciclo 40): o booster que ve
   assert.equal(plano.colecoes.ActiveEffect.criar[0]._id, undefined);
 });
 
+test('Migração, passo 4 (a fundação e as opções do cyberware, ciclo 82; a decisão do usuário de 2026-10-16): a fundação ganha os slots do catálogo; cada opção instalada vai na primeira fundação instalada do mesmo ator em que cabe; a que não couber, a desinstalada, a de categoria e a da fundação feita à mão sem slots ficam sem fundação; rodar de novo não muda nada', () => {
+  // Os dados de antes do ciclo 82: sem os slots e sem o instaladoEm.
+  const antigo = (id, instalado = true) => doCatalogo(id, dados => {
+    delete dados.system.slots;
+    delete dados.system.instaladoEm;
+    dados.system.instalado = instalado;
+    return dados;
+  });
+  const olhoGuardado = antigo('core_cyberware:cybereye', false);
+  const link = antigo('core_cyberware:neural-link');
+  const olho = antigo('core_cyberware:cybereye');
+  const keren = antigo('core_cyberware:kerenzikov');
+  const lowLight = antigo('core_cyberware:low-light-ir-uv');
+  const dartgun = antigo('core_cyberware:dartgun');
+  const antiDazzle = antigo('core_cyberware:anti-dazzle', false);
+  const techhair = antigo('core_cyberware:techhair');
+  const braco = antigo('core_cyberware:cyberarm');
+  delete braco.flags['cpr-fieldbook'].catalogo;
+  const garra = antigo('core_cyberware:grapple-hand');
+  const ator = { _id: 'ator000000000004', name: 'Cromado', type: 'personagem', system: {}, items: [olhoGuardado, link, olho, keren, lowLight, dartgun, antiDazzle, techhair, braco, garra], effects: [], flags: {} };
+  const migrar = dados => migrarDados(dados, { documento: 'Actor', passos: [passo(4)], catalogo });
+  const depois = migrar(ator);
+  const de = item => depois.items.find(outro => outro._id === item._id).system;
+  assert.deepEqual([link, olho, olhoGuardado].map(item => de(item).slots), [5, 3, 3]);
+  assert.equal(de(braco).slots, undefined, 'a fundação sem catálogo fica com os slots dela');
+  assert.equal(de(keren).instaladoEm, link._id);
+  assert.equal(de(lowLight).instaladoEm, olho._id, 'a fundação guardada não recebe');
+  assert.deepEqual([dartgun, antiDazzle, techhair, garra].map(item => de(item).instaladoEm), [undefined, undefined, undefined, undefined], 'o Dartgun (3) não cabe depois do Low Light (2)');
+  assert.ok(planoVazio(planoDeMudanca(depois, migrar(depois))));
+});
+
 test('Migração no ator: os itens dele passam por todos os passos; o plano tem só o que muda (o efeito que sai do TeleOptics, o tipo do Cyberaudio), e rodar de novo não muda nada', () => {
   const teleoptics = doCatalogo('core_cyberware:teleoptics', dados => ({ ...dados, effects: [efeitoAntigoDoTeleOptics('efeitoantigo0004')] }));
   const audio = doCatalogo('core_cyberware:amplified-hearing', dados => { dados.system.tipo = 'fashionware'; return dados; });
