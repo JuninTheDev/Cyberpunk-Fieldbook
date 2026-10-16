@@ -209,6 +209,10 @@ const CATEGORIAS = [
 const PAGINA_DO_CYBERWARE = { neuroport: 36, fashionware: 27, neural: 27, optics: 28, internal: 28, external: 29, limbs: 30 };
 const PAGINA_DO_KIT = { neuroport: 36, neural: 35, limbs: 36 };
 
+// Os slots de opção das fundações de 2077, pela wiki (system-2077.js): o Neuroport traz o Neural Link "com 5 slots de
+// opção"; as Basic Kiroshi Optics, "dois slots de opção para cyberolho" (o par); o Skin Weave, "dois slots de placa"; o
+// Subdermal Armour, "um slot de placa".
+const SLOTS_2077 = { Neuroport: 5, 'Basic Kiroshi Optics': 2, 'Skin Weave': 2, 'Subdermal Armour (2077)': 1 };
 function cyberware(raw, grupo) {
   const categoria = CATEGORIAS.find(([padrao]) => padrao.test(raw.category));
   if (!categoria) throw new Error(`Categoria de cyberware desconhecida em ${raw.name}: ${raw.category}`);
@@ -220,7 +224,7 @@ function cyberware(raw, grupo) {
     name: raw.name, type: 'cyberware', img: 'icons/svg/clockwork.svg',
     system: {
       descricao: `<p><b>${raw.category}</b> · instalação: ${raw.install} · Humanidade ${raw.humanity} · ${raw.cost} · ${kit ? 'Mission Kit' : 'suplemento de fã'}</p>${paragrafo(raw.text)}${paragrafo(raw.tip, 'Na mesa')}${fonteNaWiki(livro, pagina)}`,
-      tipo, fundacional, tamanho: fundacional ? 0 : /ocupa dois slots/i.test(texto) ? 2 : 1, perdaHumanidade: perdaDeHumanidade(raw.humanity),
+      tipo, fundacional, tamanho: fundacional ? 0 : /ocupa dois slots/i.test(texto) ? 2 : 1, slots: fundacional ? (SLOTS_2077[raw.name] ?? 0) : 0, instaladoEm: '', perdaHumanidade: perdaDeHumanidade(raw.humanity),
       local: INSTALACOES[raw.install] || 'clinic', instalado: false, preco: precoEm(raw.cost) ?? 0, fonte: fonte(livro, pagina)
     }
   };
@@ -234,7 +238,7 @@ function cyberwareDoCartao(cartao, categoria, pagina) {
     name: cartao.name, type: 'cyberware', img: 'icons/svg/clockwork.svg',
     system: {
       descricao: `<p><b>${categoria}</b> · ${detalhes(cartao)}</p>${paragrafo(cartao.text)}${cartao.extra || ''}${paragrafo(cartao.tip, 'Na mesa')}${fonteNaWiki(SUPLEMENTO, pagina)}`,
-      tipo: 'neuralWare', fundacional: false, tamanho: 1, perdaHumanidade: perdaDeHumanidade(doCartao(cartao, 'Perda de Humanidade')), local: 'clinic', instalado: false,
+      tipo: 'neuralWare', fundacional: false, tamanho: 1, slots: 0, instaladoEm: '', perdaHumanidade: perdaDeHumanidade(doCartao(cartao, 'Perda de Humanidade')), local: 'clinic', instalado: false,
       preco: precoEm(doCartao(cartao, 'Custo') ?? doCartao(cartao, 'Preço')) ?? 0, fonte: fonte(SUPLEMENTO, pagina)
     }
   };

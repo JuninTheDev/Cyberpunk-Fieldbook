@@ -27,7 +27,9 @@ function cabecalhoDoItem(item) {
     arma: () => [[nomeDaPericia(s.pericia), s.aDistancia ? 'à distância' : 'corpo a corpo'], [QUALIDADES[s.qualidade] && vazada(QUALIDADES[s.qualidade]), s.equipada && cheia('EQUIPADA')]],
     armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE')]],
     municao: () => [[s.tipo, `${s.quantidade} tiros`], []],
-    cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`], [s.instalado && cheia('INSTALADO'), s.fundacional && vazada('FUNDACIONAL')]],
+    // A fundação: os slots usados; a opção: em qual fundação está (no cyberware de um ator).
+    cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`, s.fundacional ? `${item.slotsUsados} de ${s.slots} slots` : item.instaladoNo && `na ${item.instaladoNo.name}`],
+      [s.instalado && cheia('INSTALADO'), s.fundacional && vazada('FUNDACIONAL'), item.semFundacao && vazada('SEM FUNDAÇÃO')]],
     lesao: () => [['Lesão crítica', s.local === 'cabeca' ? 'cabeça' : 'corpo'], [cheia('ATIVA')]],
     programa: () => [[CLASSES_PROGRAMA[s.classe] ?? s.classe, item.instaladoNo ? `no ${item.instaladoNo.name}` : 'fora do deck'], [s.ativo && cheia('ATIVO')]],
     cyberdeck: () => [[`${item.slotsUsados} de ${s.slots} slots`, QUALIDADES[s.qualidade]], []],

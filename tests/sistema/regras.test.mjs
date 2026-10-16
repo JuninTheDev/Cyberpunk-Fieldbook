@@ -1542,6 +1542,30 @@ test('Estrangular e Derrubar (wiki, p. 177): o BODY de quem agarra direto no HP;
   assert.deepEqual(regras.danoDoAgarrao({ hp: 4, body: 6 }), { hp: -2, desmaiou: false, motivo: null }, 'derrubar não tem o limite do estrangular');
 });
 
+test('Fundação e opções do cyberware (wiki, system-catalog.js e system-2077.js): os slots de cada fundação no catálogo; a opção vai na fundação do mesmo tipo, o Sensor Array recebe as do Cyberaudio e as placas base de 2077 só as de placa; as de categoria não pedem fundação', () => {
+  const wikiCatalogo = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
+  const wiki2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  for (const trecho of ['Pré-requisito para Neuralware; oferece cinco slots de opção.', 'Implante-base para opções ópticas; três slots de opção por olho.', 'Implante-base com três slots de opção.',
+    'Membro-base com quatro slots', 'Membro-base com três slots', 'Acrescenta cinco slots de opção ao Cyberaudio.', 'Fashionware, cyberware interno e externo usam slots de categoria']) {
+    assert.ok(wikiCatalogo.includes(trecho), `a regra da wiki mudou: ${trecho}`);
+  }
+  for (const trecho of ['com <b>5 slots de opção</b>', 'Dois slots de opção para cyberolho.', '<b>dois slots de placa</b>', '<b>um slot de placa</b>']) assert.ok(wiki2077.includes(trecho), `a regra da wiki mudou: ${trecho}`);
+  const fundacoes = ['core_cyberware:neural-link', 'core_cyberware:cybereye', 'core_cyberware:cyberaudio-suite', 'core_cyberware:cyberarm', 'core_cyberware:cyberleg', 'core_cyberware:sensor-array',
+    'cyberware-2077:neuroport', 'cyberware-2077:basic-kiroshi-optics', 'cyberware-2077:skin-weave', 'cyberware-2077:subdermal-armour-2077'];
+  assert.deepEqual(fundacoes.map(id => catalogo[id].system.slots), [5, 3, 3, 4, 3, 5, 5, 2, 2, 1], 'o Sensor Array tem 3 no CORE; vale a wiki');
+  const item = id => ({ tipo: catalogo[id].system.tipo, catalogo: id, slots: catalogo[id].system.slots, tamanho: catalogo[id].system.tamanho });
+  const cabe = (fundacao, opcao, usados = 0) => regras.cabeNaFundacao({ fundacao: item(fundacao), opcao: item(opcao), usados });
+  assert.deepEqual(cabe('core_cyberware:neural-link', 'core_cyberware:kerenzikov'), { cabe: true, motivo: null });
+  assert.deepEqual(cabe('core_cyberware:neural-link', 'core_cyberware:kerenzikov', 4), { cabe: true, motivo: null }, 'o quinto slot');
+  assert.deepEqual(cabe('core_cyberware:neural-link', 'core_cyberware:kerenzikov', 5), { cabe: false, motivo: 'slots' });
+  assert.deepEqual(cabe('core_cyberware:cybereye', 'core_cyberware:dartgun', 2), { cabe: false, motivo: 'slots' }, 'o Dartgun ocupa 3');
+  assert.deepEqual(cabe('core_cyberware:neural-link', 'core_cyberware:anti-dazzle'), { cabe: false, motivo: 'encaixe' });
+  assert.equal(cabe('core_cyberware:sensor-array', 'core_cyberware:amplified-hearing').cabe, true);
+  assert.equal(cabe('cyberware-2077:skin-weave', 'cyberware-2077:carapace').cabe, true);
+  assert.deepEqual(cabe('cyberware-2077:skin-weave', 'core_cyberware:hidden-holster'), { cabe: false, motivo: 'encaixe' });
+  assert.deepEqual(['core_cyberware:kerenzikov', 'cyberware-2077:carapace', 'core_cyberware:hidden-holster', 'core_cyberware:techhair'].map(id => regras.pedeFundacao(item(id))), [true, true, false, false]);
+});
+
 test('Estrangular, as "três rodadas seguidas" (wiki, p. 177): no mesmo combate, a rodada de antes conta junto; pular uma rodada recomeça; na mesma rodada não conta outra; fora de combate, toda vez conta', () => {
   assert.equal(regras.vezesEstrangulando(null, {}), 1);
   assert.equal(regras.vezesEstrangulando({ combate: null, rodada: null, vezes: 2 }, {}), 3);

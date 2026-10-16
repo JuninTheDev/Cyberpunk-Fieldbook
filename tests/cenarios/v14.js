@@ -1432,6 +1432,50 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('fundação e opções do cyberware (wiki: "Um implante-base abre slots para opções compatíveis"): a opção entra na fundação instalada do mesmo tipo com slot livre; sem ela, entra "sem fundação", com o recado (a fashionware não pede); a aba Cyberware mostra a fundação com as opções logo abaixo e os slots; a fundação que sai deixa as opções sem fundação', async () => {
+      // O Anti-Dazzle antes do Cybereye: sem fundação. O Kerenzikov no Neural Link (1 de 5); o Low Light/IR/UV (2) no
+      // Cybereye (3); o Dartgun (3) não cabe mais: sem fundação. O Techhair (fashionware) não pede fundação.
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const ator = await Actor.implementation.create({ name: 'Teste Fundações', type: 'personagem' });
+        // O recado do sem fundação (info: a instalação deu certo).
+        const avisos = [];
+        ui.notifications.info = mensagem => { avisos.push(String(mensagem)); };
+        try {
+          const ids = ['core_cyberware:neural-link', 'core_cyberware:kerenzikov', 'core_cyberware:cybereye', 'core_cyberware:low-light-ir-uv', 'core_cyberware:dartgun', 'core_cyberware:anti-dazzle', 'core_cyberware:techhair'];
+          await ator.createEmbeddedDocuments('Item', ids.map(id => foundry.utils.deepClone(cat[id])));
+          const [link, keren, olho, lowLight, dartgun, antiDazzle, techhair] = ids.map(id => ator.items.find(item => item.getFlag('${S}', 'catalogo') === id));
+          await ator.instalarCyberware(antiDazzle, { rolar: false });
+          const r = { semOlho: { em: antiDazzle.system.instaladoEm, sem: antiDazzle.semFundacao } };
+          for (const item of [link, keren, olho, lowLight, dartgun, techhair]) await ator.instalarCyberware(item, { rolar: false });
+          Object.assign(r, {
+            keren: keren.system.instaladoEm === link.id, lowLight: lowLight.system.instaladoEm === olho.id, dartgun: { em: dartgun.system.instaladoEm, sem: dartgun.semFundacao },
+            techhair: { em: techhair.system.instaladoEm, sem: techhair.semFundacao }, slots: [link.slotsUsados, link.system.slots, olho.slotsUsados, olho.system.slots], avisos: avisos.slice()
+          });
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('cyberware', 'primary');
+          await __esperar(() => ator.sheet.element?.querySelectorAll('.tab.cyberware .coluna-principal li[data-item-id]').length === 7);
+          r.linhas = [...ator.sheet.element.querySelectorAll('.tab.cyberware .coluna-principal li[data-item-id]')].map(li => (li.classList.contains('opcao') ? '└' : '')
+            + li.querySelector('.nome').textContent.replace('└', '').trim() + (li.querySelector('.slots') ? ' ' + li.querySelector('.slots').textContent.trim() : '') + (li.querySelector('.sem-fundacao') ? ' !' : ''));
+          // O Neural Link sai: o Kerenzikov fica instalado, sem fundação.
+          await ator.desinstalarCyberware(link);
+          r.saiu = { instalado: keren.system.instalado, em: keren.system.instaladoEm, sem: keren.semFundacao, aviso: avisos.at(-1), avisos: avisos.length };
+          return r;
+        } finally {
+          delete ui.notifications.info;
+          await ator.sheet.close();
+          await ator.delete();
+        }
+      })()`);
+      const l = info.linhas ?? [];
+      const embaixo = (fundacao, opcao) => l.indexOf(fundacao) >= 0 && l[l.indexOf(fundacao) + 1] === opcao;
+      const ok = !info.semOlho.em && info.semOlho.sem && info.keren && info.lowLight && !info.dartgun.em && info.dartgun.sem && !info.techhair.em && !info.techhair.sem && info.slots.join() === '1,5,2,3'
+        && info.avisos.join(' | ') === 'Anti-Dazzle entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre. | Dartgun entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre.'
+        && l.length === 7 && embaixo('Neural Link 1 / 5 slots', '└Kerenzikov') && embaixo('Cybereye 2 / 3 slots', '└Low Light/IR/UV') && l.includes('Anti-Dazzle !') && l.includes('Dartgun !') && l.includes('Techhair')
+        && info.saiu.instalado && !info.saiu.em && info.saiu.sem && info.saiu.aviso === 'Neural Link saiu: Kerenzikov ficou sem fundação.' && info.saiu.avisos === 3;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('"Proteger-se" na aba Combate (as maquetes; a decisão do usuário: só a marca, wiki p. 182): o botão marca o Alvo "Em cobertura"; o tiro contra ele avisa o mestre no cartão, que decide; o botão de novo tira a marca', async () => {
       // Ataque: d10 7 → 19 contra DV 16. Dano 5d6, 1 em cada = 5 contra SP 11: a armadura segura, e o Alvo não muda.
       await fixar(edge, [[7, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]]);

@@ -4,8 +4,8 @@ import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  AGARRAO, aplicarDano, backup, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
+  AGARRAO, aplicarDano, backup, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
@@ -17,6 +17,9 @@ const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num progra
 // O que o cartão do dano do Black ICE diz, pela classe.
 const DANO_DO_ICE = { antipersonnel: 'no cérebro', antiprogram: 'num programa' };
 const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[onde] }));
+
+// O cyberware como a regra do encaixe o lê (regras.cabeNaFundacao): o tipo, o id do catálogo, os slots e o tamanho.
+export const encaixeDe = item => ({ tipo: item.system.tipo, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', slots: item.system.slots, tamanho: item.system.tamanho });
 
 export class AtorCPR extends Actor {
   // Personagem novo: o token fica ligado à ficha, com o HP na barra. Capanga novo (o mook do CORE): o token fica solto, e
@@ -451,8 +454,11 @@ export class AtorCPR extends Actor {
   }
 
   // Instala um cyberware: a Humanidade cai pela perda rolada (ou pela média, para quem prefere) e o efeito passa a valer.
+  // A opção entra na fundação escolhida (instaladoEm), se ainda cabe, ou na primeira instalada em que cabe; sem nenhuma,
+  // entra sem fundação, com o recado (a ficha marca; a fashionware e o cyberware interno e externo não pedem uma).
   async instalarCyberware(item, { rolar = true } = {}) {
     if (item.system.instalado) return null;
+    const fundacao = item.system.fundacional ? null : this.fundacaoPara(item);
     const { formula, media } = item.system.perdaHumanidade;
     let perda = media;
     if (rolar && formula && formula !== '0') {
@@ -460,25 +466,40 @@ export class AtorCPR extends Actor {
       perda = roll.total;
       await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), flavor: `Perda de Humanidade: ${item.name}` });
     }
-    await item.update({ 'system.instalado': true, 'system.perdaHumanidade.sofrida': perda });
+    await item.update({ 'system.instalado': true, 'system.perdaHumanidade.sofrida': perda, 'system.instaladoEm': fundacao?.id ?? '' });
     await this.update({ 'system.humanidade.value': Math.max(0, this.system.humanidade.value - perda) });
+    if (!fundacao && !item.system.fundacional && pedeFundacao(encaixeDe(item))) ui.notifications.info(`${item.name} entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre.`);
     return perda;
+  }
+
+  // A fundação instalada (deste ator) onde a opção cabe: a que ela já aponta, se ainda cabe, ou a primeira (regras.cabeNaFundacao).
+  fundacaoPara(item) {
+    const fundacoes = this.items.filter(outro => outro.type === 'cyberware' && outro.system.fundacional && outro.system.instalado && outro.id !== item.id);
+    const cabe = fundacao => cabeNaFundacao({ fundacao: encaixeDe(fundacao), opcao: encaixeDe(item), usados: fundacao.instalados.filter(outro => outro.id !== item.id).reduce((soma, outro) => soma + outro.system.tamanho, 0) }).cabe;
+    const escolhida = fundacoes.find(fundacao => fundacao.id === item.system.instaladoEm);
+    return escolhida && cabe(escolhida) ? escolhida : fundacoes.find(cabe) ?? null;
   }
 
   // Tirar o cyberware não devolve a Humanidade perdida: o máximo volta a subir sozinho (a peça deixa de contar), e a
   // Humanidade só volta com terapia. Fontes: a wiki ("Humanidade, terapia e drogas": não dá para recuperar toda a
   // Humanidade sem tirar cyberware, porque cada peça reduz o máximo) e o CORE (uninstallCyberware só recalcula o máximo).
+  // A fundação que sai deixa as opções dela instaladas, sem fundação (com o recado).
   async desinstalarCyberware(item) {
     if (!item.system.instalado) return;
-    await item.update({ 'system.instalado': false, 'system.perdaHumanidade.sofrida': 0 });
+    const opcoes = item.instalados;
+    await item.update({ 'system.instalado': false, 'system.perdaHumanidade.sofrida': 0, 'system.instaladoEm': '' });
+    if (!opcoes.length) return;
+    await this.updateEmbeddedDocuments('Item', opcoes.map(opcao => ({ _id: opcao.id, 'system.instaladoEm': '' })));
+    ui.notifications.info(`${item.name} saiu: ${opcoes.map(opcao => opcao.name).join(', ')} ${opcoes.length === 1 ? 'ficou' : 'ficaram'} sem fundação.`);
   }
 }
 
 export class ItemCPR extends Item {
-  // Cyberdeck, arma e veículo: os itens instalados neles (programas, hardware, acessórios, upgrades, no mesmo ator) e os
-  // slots que ocupam.
+  // Cyberdeck, arma, veículo e a fundação do cyberware: os itens instalados neles (programas, hardware, acessórios,
+  // upgrades, as opções do cyberware, no mesmo ator) e os slots que ocupam.
   get instalados() {
-    return ['cyberdeck', 'arma', 'veiculo'].includes(this.type) ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
+    const recebe = ['cyberdeck', 'arma', 'veiculo'].includes(this.type) || (this.type === 'cyberware' && this.system.fundacional);
+    return recebe ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
   }
 
   get slotsUsados() {
@@ -559,6 +580,11 @@ export class ItemCPR extends Item {
   get instaladoNo() {
     const id = this.system.instaladoEm;
     return (id && this.actor?.items.get(id)) || null;
+  }
+  // O cyberware instalado que pede uma fundação (regras.pedeFundacao) e está sem nenhuma: a ficha marca.
+  get semFundacao() {
+    const s = this.system;
+    return this.type === 'cyberware' && s.instalado && !s.fundacional && !this.instaladoNo && pedeFundacao(encaixeDe(this));
   }
 
   // A classe de 2077 da arma (Power, Tech, Smart) e o que ela pode fazer (regras.mjs, perfil2077), ou null.

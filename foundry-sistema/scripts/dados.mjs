@@ -238,6 +238,10 @@ export class DadosCyberware extends foundry.abstract.TypeDataModel {
       tipo: texto(),
       fundacional: new fields.BooleanField({ initial: false }),
       tamanho: inteiro(0, { min: 0 }),
+      // A fundação: os slots de opção que ela abre (o CORE e a wiki). A opção: o id, no mesmo ator, da fundação onde está;
+      // vazio, sem fundação (regras.pedeFundacao: a fashionware e o cyberware interno e externo usam os slots de categoria).
+      slots: inteiro(0, { min: 0 }),
+      instaladoEm: texto(),
       // Fórmula e média do livro; "sofrida" é o quanto custou na instalação (volta se tirar).
       perdaHumanidade: new fields.SchemaField({ formula: texto('0'), media: inteiro(0, { min: 0 }), sofrida: inteiro(0, { min: 0 }) }),
       local: texto('mall'),

@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 82). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 83). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -402,9 +402,13 @@ No fim de tudo, uma sessão de teste com a mesa.
       2d6; doses a mais estendem o efeito primário): gasta a dose, liga o efeito primário e rola o secundário;
     - [x] "Usar" no equipamento de ativação à mão (liga e desliga os efeitos dele; na linha do inventário e na ficha do
       item; nenhum dos 46 do catálogo tem efeito, vale para os feitos à mão): ciclo 71;
-    - [~] (sessão KouArt) a fundação e as opções do cyberware ("+ Fundação", "+ Opção"; as opções dentro da fundação, com os slots)
-      (regra: conferida em 2026-10-15, os slots de opção de cada fundação estão na wiki, `system-catalog.js`: o Neural
-      Link com 5, o Cybereye com 3 por olho, o Cyberaudio Suite com 3, o Sensor Array soma 5 ao Cyberaudio...);
+    - [x] a fundação e as opções do cyberware, parte 1 (a wiki, `system-catalog.js` e `system-2077.js`): os slots de
+      cada fundação no catálogo, o encaixe (o mesmo tipo; o Sensor Array recebe as do Cyberaudio; as placas base de 2077,
+      as de placa), a opção que entra na fundação ao instalar e a árvore na aba Cyberware: ciclo 82;
+    - [ ] a fundação e as opções do cyberware, parte 2: "+ Opção" na fundação e "Instalar opção" na ficha da opção (a
+      escolha da fundação), a migração (a decisão do usuário de 2026-10-16: cada opção já instalada na primeira fundação
+      compatível do mesmo ator, os slots das fundações pelo catálogo, e a que não couber "sem fundação", com aviso) e a
+      importação da wiki, que ainda não liga a opção à base;
     - [x] as notas de ciberpsicose na aba Cyberware e as notas da Role (dois campos de texto novos no personagem, vazios
       por padrão): ciclo 68;
     - [x] "Conectar" e "Desconectar" na aba NET: o token do ator no ponto de acesso mais perto, com as conferências do

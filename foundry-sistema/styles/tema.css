@@ -310,6 +310,10 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .botoes-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
 /* O botão que liga um estado (o "Em cobertura"): ligado, cheio em ciano. */
 .cpr-fieldbook.ficha-personagem .botoes-resumo .acao.ligado { border-color: var(--cp-ciano); background: var(--cp-ciano); color: var(--cp-fundo); }
+/* A aba Cyberware em árvore: as opções logo abaixo da fundação, os slots dela e a opção sem fundação. */
+.cpr-fieldbook.ficha-personagem .tab.cyberware li.opcao { padding-left: 18px; }
+.cpr-fieldbook.ficha-personagem .tab.cyberware .detalhe .slots { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .tab.cyberware .detalhe .sem-fundacao { color: var(--cp-amarelo); }
 /* A quantidade do inventário com − e + (as maquetes do usuário). */
 .cpr-fieldbook.ficha-personagem ol.itens .quantidade { display: flex; flex: none; align-items: center; gap: 6px; }
 /* A droga viciada (o efeito secundário até a terapia). */

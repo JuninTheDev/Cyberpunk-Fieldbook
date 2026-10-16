@@ -174,7 +174,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       detalhe: [sp(armadura, 'cabeca'), sp(armadura, 'corpo'), armadura.system.escudo ? `escudo ${armadura.system.pvEscudo.value}/${armadura.system.pvEscudo.max} PV` : '',
         armadura.system.penalidade ? `penalidade ${armadura.system.penalidade}` : ''].filter(Boolean).join(' · ')
     }));
-    const cyberwares = itens('cyberware').map(item => ({ id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', ') }));
+    // O cyberware em árvore, como a maquete "Cyberware Tab": cada fundação com as opções dela logo abaixo (└) e os slots
+    // usados; o resto na ordem de sempre. A opção instalada sem a fundação que ela pede fica marcada.
+    const doCyber = itens('cyberware');
+    const naFundacao = item => item.instaladoNo?.type === 'cyberware' && item.instaladoNo.system.fundacional;
+    const arvore = doCyber.filter(item => !naFundacao(item)).flatMap(item => [{ item, opcao: false }, ...item.instalados.map(outro => ({ item: outro, opcao: true }))]);
+    const cyberwares = arvore.map(({ item, opcao }) => ({
+      id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', '),
+      opcao, slots: item.system.fundacional ? `${item.slotsUsados} / ${item.system.slots}` : '', semFundacao: item.semFundacao
+    }));
     // As lesões, com o paliativo e o tratamento (as DVs de cada perícia).
     const dvs = pares => pares.filter(([, dv]) => dv).map(([pericia, dv]) => `${pericia} DV${dv}`).join(' ou ');
     const lesoes = itens('lesao').map(item => {

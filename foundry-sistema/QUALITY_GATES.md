@@ -28,8 +28,9 @@ pegaram isso. Eles ficam falhando até o Kit, e não se tiram nem se mudam para 
 - **G3 (4):** contra o texto da wiki, o perfil de 2077 pela flag (a rajada e as balas das Tech), o Ricochete, a Carga
   Tech e as regras de cada modelo;
 - **G4 (5):** os passos da arma Smart (a Yukimura agora é de qualidade padrão), da carga Tech (sem flechettes nem
-  rajada), da Dian e Lexington (a Lexington sem autofogo) e da Kappa (3d6), e a checagem de avisos (os dois avisos da
-  Lexington, do passo dela).
+  rajada), da Dian e Lexington (a Lexington sem autofogo) e da Kappa (3d6), e a checagem de avisos (os avisos da
+  Lexington, do passo dela: desde o ciclo 82, só o "sem munição compatível" chega ao console; o "não tem autofogo" sai
+  do mesmo jeito, mas fica na fila das notificações, ver "A fila das notificações" abaixo).
 
 As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED.
 
@@ -93,6 +94,12 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 - **Um erro no `finally` esconde o resultado do passo** (ciclo 81): ele substitui o que o `try` devolveu. Na limpeza de
   coisas que um gancho do sistema apaga em par (as duas marcas do agarrão: o mestre apaga a do outro lado), apagar as
   duas corre contra o gancho ("does not exist"); a limpeza tolera a corrida (`.catch`) e espera o estado final.
+- **A fila das notificações** (ciclo 82): o Foundry 14 mostra no máximo 5 ao mesmo tempo, por 5 s cada, e só manda para o
+  console (onde a checagem de avisos as pega) quando a notificação aparece. Um recado a mais num passo (o "entrou sem
+  fundação" de cada opção instalada sem fundação) pode deixar o aviso de outro passo na fila. Antes de concluir que um
+  aviso sumiu, confira o fluxo (no ciclo 82, um G4 de diagnóstico mostrou que a rajada da Lexington voltava nula, com 5
+  notificações na tela, como antes). E o recado que não é problema (a instalação deu certo) vai como `info`, que o
+  console registra como `info`, fora da checagem.
 - **A ordem do que o `createEmbeddedDocuments` devolve:** criando vários documentos de uma vez (tokens, combatentes), a
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do

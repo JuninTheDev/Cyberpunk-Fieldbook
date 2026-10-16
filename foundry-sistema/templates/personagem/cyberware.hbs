@@ -22,10 +22,10 @@ EMP); à direita, o cyberware. --}}
         <div class="titulo">CYBERWARE<span>{{cyberInstalado.length}} DE {{cyberwares.length}} INSTALADO{{#unless (eq cyberInstalado.length 1)}}S{{/unless}}</span></div>
         <ol class="itens">
           {{#each cyberwares}}
-          <li data-item-id="{{id}}" class="{{#unless sistema.instalado}}guardada{{/unless}}">
+          <li data-item-id="{{id}}" class="{{#unless sistema.instalado}}guardada{{/unless}}{{#if opcao}} opcao{{/if}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
-            <span class="detalhe">{{tipo}}{{#if sistema.fundacional}} · base{{/if}} · {{sistema.perdaHumanidade.formula}} ({{sistema.perdaHumanidade.media}}){{#if sistema.perdaHumanidade.sofrida}} · custou {{sistema.perdaHumanidade.sofrida}}{{/if}}{{#if efeitos}} · {{efeitos}}{{/if}}</span>
+            <a class="nome" data-action="editarItem">{{#if opcao}}└ {{/if}}{{nome}}</a>
+            <span class="detalhe">{{tipo}}{{#if sistema.fundacional}} · base · <b class="slots" data-tooltip="Slots de opção usados / os da fundação">{{slots}} slots</b>{{/if}} · {{sistema.perdaHumanidade.formula}} ({{sistema.perdaHumanidade.media}}){{#if sistema.perdaHumanidade.sofrida}} · custou {{sistema.perdaHumanidade.sofrida}}{{/if}}{{#if efeitos}} · {{efeitos}}{{/if}}{{#if semFundacao}} · <b class="sem-fundacao" data-tooltip="Esta opção pede uma fundação instalada do mesmo tipo, com o slot livre">SEM FUNDAÇÃO</b>{{/if}}</span>
             <button type="button" class="alternar {{#if sistema.instalado}}ligado{{/if}}" data-action="instalar">{{#if sistema.instalado}}Instalado{{else}}Instalar{{/if}}</button>
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>

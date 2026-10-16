@@ -504,6 +504,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   (`regras.danoDoAgarrao`) e o teste de referência. Quem já está abaixo de 1 não sobe para 1 (a wiki não diz; o
   estrangular não cura).
 
+- **Os slots das fundações que a wiki não diz** (ciclo 82). Para o Artificial Shoulder Mount, o MultiOptic Mount e os
+  Implanted Linear Frames, a wiki fala de braços e olhos a mais, não de slots de opção; o catálogo fica com os 3 do
+  CORE, e nenhuma opção do catálogo encaixa neles (não há opção de borgware). O Meat Arm e a Meat Leg ficam com 3, e os
+  de grau médico com 0, como no CORE; a Battleglove com 3 e os Smart Glasses com 2, idem. O Sensor Array é o único que
+  diverge: 5 na wiki, 3 no CORE; vale a wiki.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -3858,6 +3864,62 @@ O resto da regra "Agarrar e arremessar" da wiki (p. 177), depois do ciclo 80. Co
 - **Pendências:** a fundação e as opções do cyberware; o "abaixo de 0" do Estrangular, se a mesa ler diferente (ver as
   dúvidas).
 - **Próximo:** a fundação e as opções do cyberware.
+
+### Ciclo 82 (2026-10-16): a fundação e as opções do cyberware, parte 1 (um item das maquetes; sessão KouArt)
+
+A hierarquia de fundação e opções da maquete "Cyberware Tab" (os slots usados de cada fundação, as opções logo abaixo),
+pela regra da wiki. Commit anterior: `43316d3` (a marca `[~]`).
+
+- **A regra (a wiki):** "Um implante-base abre slots para opções compatíveis; Fashionware, cyberware interno e externo usam
+  slots de categoria" (`system-catalog.js`), com os slots de cada fundação: o Neural Link "oferece cinco slots de opção",
+  o Cybereye "três slots de opção por olho", o Cyberaudio Suite "três slots de opção", o Cyberarm "quatro slots", o
+  Cyberleg "três slots", e o Sensor Array "acrescenta cinco slots de opção ao Cyberaudio". De 2077 (`system-2077.js`): o
+  Neuroport traz o Neural Link "com 5 slots de opção", as Basic Kiroshi Optics "dois slots de opção para cyberolho", o
+  Skin Weave "dois slots de placa" e o Subdermal Armour "um slot de placa", que "não ocupam os slots de cyberware externo".
+- **Implementado:**
+  - **dois campos no cyberware** (`dados.mjs`): os slots de opção da fundação e, na opção, o id da fundação onde ela está
+    (como o `instaladoEm` dos programas no deck); vazios por padrão;
+  - **o catálogo** (`build/conteudo.mjs` e `conteudo-2077.mjs`): os slots de cada fundação pela wiki onde ela diz, e os do
+    CORE (`installedItems.slots`) nas outras. O build continua reproduzindo o catálogo byte a byte antes da mudança
+    (conferido pelo md5); depois dela, só o `catalogo.json` muda;
+  - **a regra pura** (`regras.mjs`: `cabeNaFundacao`, `pedeFundacao`, `encaixeDaFundacao`, `encaixeDaOpcao`): a opção vai
+    numa fundação do mesmo tipo; o Sensor Array recebe as opções do Cyberaudio; o Skin Weave e o Subdermal Armour, só as
+    opções de placa (Carapace, Countershell, Nano-plating, ProxiShield, RangeGuard); a fashionware e o cyberware interno
+    e externo não pedem fundação;
+  - **a instalação** (`documentos.mjs`): a opção entra na fundação instalada em que cabe (a que já aponta, se ainda cabe;
+    senão, a primeira); sem nenhuma, entra sem fundação, com um recado (`info`: a instalação deu certo, e a ficha marca).
+    A fundação que sai deixa as opções dela instaladas, sem fundação, com o recado. A fundação conta as opções nos slots
+    (`instalados`, como o deck);
+  - **na ficha:** a aba Cyberware em árvore (cada fundação com "usados / slots" e as opções logo abaixo, com └; a opção
+    sem a fundação que pede, marcada "SEM FUNDAÇÃO"); na ficha do cyberware, os slots da fundação ou os que a opção ocupa,
+    e o alto com os slots usados ou com a fundação da opção.
+- **Testes:**
+  - G1: 55 arquivos, 0 erros; G2: 0 erros;
+  - G3: 92 de 96. Um teste de referência novo em `regras.test.mjs`: os trechos da wiki, os slots das dez fundações no
+    catálogo (o Sensor Array com os 5 da wiki) e o encaixe (o Kerenzikov no Neural Link até o quinto slot; o Dartgun, de
+    3, não cabe no Cybereye com 2 usados; o Anti-Dazzle não encaixa no Neural Link; o Sensor Array recebe o Amplified
+    Hearing; o Skin Weave, a Carapace e não o Hidden Holster; quem pede fundação). As 4 falhas são as das armas de 2077;
+  - G4: 105 de 110 (as 5 falhas são as das armas de 2077). Um passo novo, antes do Proteger-se: num ator de teste, o
+    Anti-Dazzle instalado antes do Cybereye entra sem fundação; o Kerenzikov entra no Neural Link (1 / 5); o Low
+    Light/IR/UV (2) no Cybereye (2 / 3); o Dartgun (3) não cabe e entra sem fundação; o Techhair não pede fundação. A
+    aba mostra o Kerenzikov logo abaixo do Neural Link e o Low Light logo abaixo do Cybereye, com os slots, e os dois sem
+    fundação marcados; os recados são os dois do "entrou sem fundação" e o do Neural Link que sai ("Kerenzikov ficou sem
+    fundação"), e o Kerenzikov continua instalado;
+    - na primeira rodada, o recado era um `warn`, e a checagem de avisos pegou oito dele, dos passos que instalam uma
+      opção sem fundação (o Kerenzikov no capanga, o Smart Link e o Ballistic Coprocessor nas armas de 2077, o Grip
+      Foot): a instalação deu certo, e a ficha marca; o recado virou `info`;
+    - nas duas rodadas, a checagem de avisos mostrou só um dos dois da Lexington. Um G4 de diagnóstico (com o passo da
+      Dian instrumentado numa cópia, depois devolvida, conferida pelo md5) mostrou o fluxo de sempre: o tiro da Dian sai,
+      a rajada da Lexington volta nula (a falha conhecida: a arma sem autofogo), e o aviso "não tem autofogo" sai, mas
+      com 5 notificações na tela, o máximo do Foundry, ele fica na fila e não chega ao console (ver o QUALITY_GATES);
+  - **mutações:** as 8 caíram, e os arquivos voltaram (conferido pelo md5). No G3: a opção que cabe com o slot estourado
+    (C1), o Sensor Array sem as opções do Cyberaudio (C2) e a opção de placa sem pedir fundação (C3). No G4: a opção que
+    não procura a fundação (C4), sem o recado (C5), a fundação que sai sem soltar as opções (C6), a aba sem a árvore (C7)
+    e a fundação sem contar as opções nos slots (C8). Os slots do catálogo, o build os gera, e o G3 os confere no
+    catálogo gerado; uma mutação no build não vale (ela não roda o build).
+- **Pendências:** a parte 2 (o "+ Opção" e o "Instalar opção", a migração e a importação da wiki); ver também as
+  dúvidas (os slots das fundações que a wiki não diz).
+- **Próximo:** a fundação e as opções do cyberware, parte 2.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

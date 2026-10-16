@@ -338,11 +338,16 @@ function municao(doc, s) {
     system: { descricao: s.description?.value || '', tipo: s.variety || '', efeito: s.type || 'basic', quantidade: Number(s.amount) || 0, ablacao: Number(s.ablationValue ?? 1), preco: Number(s.price?.market) || 0, fonte: fonteDo(s) }
   };
 }
+// Os slots de opção das fundações pela wiki (system-catalog.js), onde ela diz; nas outras, os do CORE (installedItems).
+// O Sensor Array: 5 na wiki ("Acrescenta cinco slots de opção ao Cyberaudio"), 3 no CORE.
+const SLOTS_DA_WIKI = { 'Neural Link': 5, Cybereye: 3, 'Cyberaudio Suite': 3, Cyberarm: 4, Cyberleg: 3, 'Sensor Array': 5 };
 function cyberware(doc, s) {
+  const fundacional = Boolean(s.isFoundational);
   return {
     name: doc.name, type: 'cyberware', img: 'icons/svg/clockwork.svg',
     system: {
-      descricao: s.description?.value || '', tipo: s.type || '', fundacional: Boolean(s.isFoundational), tamanho: Number(s.size) || 0,
+      descricao: s.description?.value || '', tipo: s.type || '', fundacional, tamanho: Number(s.size) || 0,
+      slots: fundacional ? (SLOTS_DA_WIKI[doc.name] ?? (Number(s.installedItems?.slots) || 0)) : 0, instaladoEm: '',
       perdaHumanidade: { formula: s.humanityLoss?.roll || '0', media: Number(s.humanityLoss?.static) || 0, sofrida: 0 },
       local: s.installLocation || 'mall', instalado: false, preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
     }
