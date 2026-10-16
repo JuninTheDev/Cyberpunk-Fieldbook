@@ -195,10 +195,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const bonusDaRole = ativos.length ? { rotulo: ativos[0][1].rotulo, valor: ativos[0][1].valor, pericias: ativos.map(([id]) => nomeDaPericia(id)).join(', ') } : null;
 
     // NET: os cyberdecks (com o que está instalado) e os programas; a Interface é o Rank do Netrunner.
+    // O deck equipado e os slots dele (as maquetes do usuário: as caixas dos slots no painel da Interface).
+    const deckEquipado = itens('cyberdeck').find(deck => deck.system.uso === 'equipado');
     const decks = itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')));
     // A Interface: as rolagens (com o valor sem o dado) pelo cyberdeck equipado, como o CORE, e as Ações NET pelo Rank.
     const net = {
-      rank: s.rankDeInterface, acoes: s.acoesDeNet, deck: itens('cyberdeck').find(deck => deck.system.uso === 'equipado')?.name ?? '',
+      rank: s.rankDeInterface, acoes: s.acoesDeNet, deck: deckEquipado?.name ?? '', slots: deckEquipado ? { usados: deckEquipado.slotsUsados, total: deckEquipado.system.slots } : null,
       habilidades: HABILIDADES_DE_INTERFACE.map(h => ({ ...h, valor: ator.partesDaInterface(h.id, { situacionais: [] }).reduce((soma, p) => soma + p.valor, 0) }))
     };
     // A conexão na NET (os botões da aba, as maquetes do usuário): o token do ator nesta cena que está num ponto de acesso,
@@ -253,6 +255,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         danos: programaDeAtaque(p.system.classe) && p.instaladoNo && s.rankDeInterface > 0
           ? DANO_DE_PROGRAMA[p.system.classe].map(dano => ({ ...dano, formula: formulaDeDano(p.system.dano[dano.id]) })).filter(dano => dano.formula) : [],
         rez: p.system.rez && !['quickhack', 'daemon'].includes(p.system.classe) ? { atual: p.rezAtual, max: p.system.rez } : null,
+        // O estado (as maquetes do usuário): fora do deck, guardado; no deck, carregado; rezzado, ativo.
+        estado: !p.instaladoNo ? 'guardado' : p.system.ativo ? 'ativo' : 'carregado',
         ativo: p.system.ativo, podeAtivar: Boolean(p.instaladoNo) && !programaDeAtaque(p.system.classe),
         dicaAtivo: p.system.classe === 'blackice' ? 'Ativo (rezzado): o mestre põe o token do Black ICE ao lado do seu na cena; desativado, ele sai' : 'Ativo (rezzado): os boosters somam na habilidade deles'
       })),

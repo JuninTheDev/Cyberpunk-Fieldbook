@@ -3347,7 +3347,10 @@ module.exports = async ({ edge, servidores, r }) => {
           const lista = { titulo: titulo(), ids: [...f().querySelectorAll('.tab.net [data-action="rolarInterface"]')].map(b => b.dataset.habilidade), cloak: valor('cloak'), velocidade: valor('velocidade'),
             programas: [...f().querySelectorAll('.tab.net [data-action="ativarPrograma"]')].map(textoDe),
             // A aba no jeito da maquete: a Interface em grande na coluna dos números e as habilidades em cartões ao lado.
-            rankGrande: textoDe(f().querySelector('.tab.net .coluna-resumo .numero-grande b')), cartoes: f().querySelectorAll('.tab.net .coluna-principal .interface-net .habilidades-interface li').length };
+            rankGrande: textoDe(f().querySelector('.tab.net .coluna-resumo .numero-grande b')), cartoes: f().querySelectorAll('.tab.net .coluna-principal .interface-net .habilidades-interface li').length,
+            // Os slots do deck em caixas e o estado de cada programa (as maquetes): os dois boosters no deck, carregados.
+            slots: (s => s && s.style.getPropertyValue('--pontos').trim() + '/' + s.style.getPropertyValue('--max').trim())(f().querySelector('.tab.net .coluna-resumo .pontos-visuais.slots')), slotsDoDeck: deck.slotsUsados + '/' + deck.system.slots,
+            estados: [...f().querySelectorAll('.tab.net .estado-programa')].map(textoDe).join() };
 
           // 1. O Cloak pela janela, com +2 do mestre (o Eraser inativo não soma).
           let antes = game.messages.size;
@@ -3367,7 +3370,8 @@ module.exports = async ({ edge, servidores, r }) => {
           const eraser = () => f().querySelector('.tab.net li[data-item-id="' + a.items.getName('Eraser').id + '"] [data-action="ativarPrograma"]');
           eraser().click();
           await esperar(() => a.items.getName('Eraser').system.ativo && valor('cloak') === '6');
-          const ativo = { cloak: valor('cloak'), pathfinder: valor('pathfinder'), botao: textoDe(eraser()), bonus: a.system.bonus.interface.cloak };
+          const ativo = { cloak: valor('cloak'), pathfinder: valor('pathfinder'), botao: textoDe(eraser()), bonus: a.system.bonus.interface.cloak,
+            estado: textoDe(f().querySelector('.tab.net li[data-item-id="' + a.items.getName('Eraser').id + '"] .estado-programa')) };
           antes = game.messages.size;
           window.__fila = [[5, 10]];
           ctrl(botao('cloak'));
@@ -3417,7 +3421,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const { semDeck, lista, daJanela: j, cloak, ativo, comEraser, zap, velocidade: v, foraDoDeck, solo } = info;
         const ok = semDeck.titulo === 'RANK 4 · 3 AÇÕES NET POR TURNO' && semDeck.aviso === 'EQUIPE UM CYBERDECK PARA USAR A INTERFACE' && semDeck.botoes === 0
           && lista.ids.join() === 'scanner,backdoor,cloak,control,eyedee,pathfinder,slide,virus,zap,defesa,velocidade' && lista.cloak === '4' && lista.velocidade === '4' && lista.programas.join() === 'Inativo,Inativo'
-          && lista.rankGrande === '4' && lista.cartoes === 11
+          && lista.rankGrande === '4' && lista.cartoes === 11 && lista.slots === '2/7' && lista.slotsDoDeck === '2/7' && lista.estados === 'carregado,carregado' && info.ativo.estado === 'ativo'
           && j.titulo === 'Teste: Cloak' && j.partes.join() === 'Interface +4,1d10'
           && cloak.total === 12 && cloak.cartao.join() === '1d10,Interface +4,Modificador do mestre +2' && cloak.sabor === '1 Ação NET. O resultado vira a DV: esconde seus rastros e seus vírus.'
           && ativo.cloak === '6' && ativo.pathfinder === '4' && ativo.botao === 'Ativo' && ativo.bonus === 2

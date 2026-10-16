@@ -166,6 +166,11 @@ do capanga é um botão do mesmo jeito, que rola. */
 /* A conexão na NET, na aba NET: o nome do ponto de acesso em ciano; desconectado, apagado. */
 .cpr-fieldbook.ficha-personagem .medida b.conexao { color: var(--cp-fraco); }
 .cpr-fieldbook.ficha-personagem .medida b.conexao.conectado { color: var(--cp-ciano); }
+/* Os slots do deck em caixas (ciano) e o estado de cada programa (guardado, carregado, ativo), como as maquetes. */
+.cpr-fieldbook.ficha-personagem .pontos-visuais.slots { --cor-pontos: var(--cp-ciano); --passo: 14px; display: inline-block; height: 10px; vertical-align: middle; }
+.cpr-fieldbook.ficha-personagem .estado-programa { flex: none; padding: 1px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .estado-programa.estado-carregado { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .estado-programa.estado-ativo { border-color: var(--cp-amarelo); background: var(--cp-amarelo); color: var(--cp-fundo); }
 /* As notas curtas da coluna dos números (a Role, a ciberpsicose): um campo de texto que ocupa o painel. */
 .cpr-fieldbook.ficha-personagem .notas-curtas textarea { width: 100%; min-height: 5.5em; margin-top: 8px; resize: vertical; font: 400 15px/1.4 var(--cp-titulo); }
 /* A Role: cada especialidade com os pontos em caixas (o desenho; o número continua no campo), como a maquete "Role Tab". */
@@ -177,7 +182,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .pontos-visuais {
   --passo: 20px; width: max(0px, calc(var(--max) * var(--passo) - 4px)); height: 12px;
   background:
-    linear-gradient(90deg, var(--cp-amarelo) calc(var(--pontos) * var(--passo)), transparent 0),
+    linear-gradient(90deg, var(--cor-pontos, var(--cp-amarelo)) calc(var(--pontos) * var(--passo)), transparent 0),
     linear-gradient(var(--cp-fraco), var(--cp-fraco)) top / 100% 1px no-repeat,
     linear-gradient(var(--cp-fraco), var(--cp-fraco)) bottom / 100% 1px no-repeat,
     repeating-linear-gradient(90deg, var(--cp-fraco) 0 1px, transparent 1px calc(var(--passo) - 5px), var(--cp-fraco) calc(var(--passo) - 5px) calc(var(--passo) - 4px), transparent calc(var(--passo) - 4px) var(--passo));

@@ -8,6 +8,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
         <p class="numero-grande"><b>{{#if net.rank}}{{net.rank}}{{else}}—{{/if}}</b><small>RANK</small></p>
         <div class="medida"><span>AÇÕES NET POR TURNO</span><b class="destaque">{{#if net.rank}}{{net.acoes}}{{else}}—{{/if}}</b></div>
         <div class="medida"><span>DECK EQUIPADO</span><b>{{#if net.deck}}{{net.deck}}{{else}}nenhum{{/if}}</b></div>
+        {{#if net.slots}}<div class="medida"><span>SLOTS</span><b data-tooltip="{{net.slots.usados}} de {{net.slots.total}} slots em uso"><span class="pontos-visuais slots" style="--pontos: {{net.slots.usados}}; --max: {{net.slots.total}}" aria-hidden="true"></span> {{net.slots.usados}}/{{net.slots.total}}</b></div>{{/if}}
         {{#if net.rank}}
         <div class="medida"><span>CONEXÃO</span><b class="conexao {{#if net.conexao}}conectado{{/if}}">{{#if net.conexao}}{{net.conexao.ponto}}{{else}}desconectado{{/if}}</b></div>
         <div class="botoes-resumo">
@@ -71,6 +72,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
             {{#if ataque}}<button type="button" class="acao" data-action="atacarComPrograma" data-tooltip="Interface + ATK + 1d10, contra a Interface + 1d10 do netrunner ou a DEF + 1d10 do programa">ATK +{{ataque.total}}</button>{{/if}}
             {{#each danos}}<button type="button" class="acao" data-action="rolarDanoDePrograma" data-contra="{{id}}" data-tooltip="O dano {{rotulo}} (sem crítico na NET)">{{formula}} {{rotulo}}</button>{{/each}}
             {{#if rez}}<span class="rez {{#unless rez.atual}}zerada{{/unless}}" data-tooltip="A REZ: os pontos de vida do programa; em 0, ele desativa">REZ {{rez.atual}}/{{rez.max}}</span><button type="button" data-action="perderRez" data-tooltip="Perde 1 de REZ">−1</button><button type="button" data-action="restaurarRez" data-tooltip="A REZ volta ao máximo">↺</button>{{/if}}
+            <span class="estado-programa estado-{{estado}}">{{estado}}</span>
             {{#if podeAtivar}}<button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="ativarPrograma" data-tooltip="{{dicaAtivo}}">{{#if ativo}}Ativo{{else}}Inativo{{/if}}</button>{{/if}}
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>

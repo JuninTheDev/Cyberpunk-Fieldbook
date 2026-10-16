@@ -3507,6 +3507,28 @@ O item "Usar" do equipamento das maquetes (o "Use" do "Gear Tab"), na parte que 
 - **Pendências:** os outros itens das maquetes.
 - **Próximo:** os slots do deck em caixas e o estado de cada programa, na aba NET (ciclo 72).
 
+### Ciclo 72 (2026-10-16): os slots do deck em caixas e o estado de cada programa (as maquetes; sessão KouArt)
+
+O item "os slots do deck em barras e o estado de cada programa com Rodar" das maquetes ("Net Tab"). Commit anterior:
+`344f767` (ciclo 71).
+
+- **Implementado** (`scripts/ficha-personagem.mjs`, `templates/personagem/net.hbs`, `styles/tema.css`):
+  - **os slots** do deck equipado no painel da Interface: uma caixa por slot, as usadas cheias em ciano, e o número
+    ("2/7"). É a mesma régua das caixas dos pontos da Role (ciclo 61), que ganhou a cor por variável;
+  - **o estado de cada programa** na lista: "guardado" (fora do deck), "carregado" (no deck, com a borda em ciano) e
+    "ativo" (rezzado, cheio em amarelo). O "Rodar" das maquetes é o botão "Ativo" de sempre, que liga e desliga o
+    programa no deck.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 94 de 99, 187 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). O
+    passo da Interface do Netrunner confere as caixas dos slots (2 de 7, os dois boosters, iguais aos do
+    deck), os dois programas "carregado" e, com o Eraser ligado, o estado dele "ativo";
+  - **mutações:** as 4 derrubaram o passo da Interface, e os arquivos voltaram (conferido pelo md5): o programa ativo
+    como carregado (B1), as caixas sem os slots em uso (B2), as caixas fora do painel (B3) e a etiqueta do estado vazia
+    (B4). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes.
+- **Próximo:** "Rolar Humanidade" no cyberware e "Aplicar" no cartão (ciclo 73).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
