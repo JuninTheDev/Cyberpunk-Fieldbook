@@ -3553,6 +3553,33 @@ Os itens "Roll humanity" (a ficha do cyberware) e "Apply" (o cartão da perda) d
 - **Pendências:** os outros itens das maquetes.
 - **Próximo:** "Atacar" e "Recarregar" na ficha da arma, e o SP da armadura em caixas (ciclo 74).
 
+### Ciclo 74 (2026-10-16): "Atacar" e "Recarregar" na arma e o SP da armadura na ficha do item (as maquetes; sessão KouArt)
+
+Os botões da maquete "Item Sheets" para a arma ("Attack", "Reload") e a armadura (a trilha do SP e "Ablate −1").
+Commit anterior: `e9b6d9a` (ciclo 73).
+
+- **Implementado** (`scripts/ficha-item.mjs`, `templates/item.hbs`, `styles/tema.css`):
+  - **na arma de um personagem**, "Atacar" e "Recarregar": o mesmo fluxo da ficha dele (o ataque com a janela de
+    rolagem no clique, direto com Ctrl, e "Rolar direto" inverte; a recarga da munição carregada, ou da primeira
+    compatível);
+  - **na armadura**, o SP de cada local que tem máximo em caixas (a régua da Role e dos slots, que passou a valer também
+    na ficha do item), com o número e o "−1", que tira um ponto sem passar de 0 (o modelo do SP não tem mínimo, então a
+    guarda fica na ficha); o "Consertar" do ciclo 70 devolve.
+- **Fora, de propósito:** os "acertos recebidos" da maquete: o sistema não conta acertos, e o SP gasto já diz.
+- **Testes:**
+  - G1: 50 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 96 de 101, 185 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington).
+    Um passo novo, antes do tiro mirado: na ficha do rifle da Atiradora, os botões "Atacar" e "Recarregar";
+    o clique pede o ataque com a janela, e o Ctrl + clique, direto (o ataque em si é o da ficha, conferido nos outros
+    passos; aqui, o que o botão pede); com 5 a menos no pente, "Recarregar" enche (25/25) e gasta 5 da munição. Na
+    armadura do Alvo com 1 de SP no corpo, as caixas mostram 1 de 11, o "−1" leva a 0, e o "−1" no 0 não desce (lido
+    depois de assentar). O pente, a munição e o SP voltam no fim;
+  - **mutações:** as 4 derrubaram só o passo novo, e os arquivos voltaram (conferido pelo md5): o Ctrl + clique que
+    também abre a janela (A1), a arma sem o "Recarregar" (A2), o "−1" que passa de 0 (A3) e as caixas mostrando o
+    máximo (A4). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes.
+- **Próximo:** "Rodar" e "Restaurar REZ" na ficha do programa (ciclo 75).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

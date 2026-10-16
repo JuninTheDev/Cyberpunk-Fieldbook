@@ -1217,6 +1217,60 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('"Atacar", "Recarregar" e o SP da armadura na ficha do item (as maquetes): a arma de um personagem ataca pelo fluxo da ficha (a janela no clique; Ctrl + clique, direto) e recarrega o pente; a armadura mostra o SP de cada local em caixas e perde 1 no "−1", sem passar de 0', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const rifle = __ator('Atiradora').items.getName('Assault Rifle');
+        const municao = rifle.municaoCarregada;
+        const guardado = { pente: rifle.system.pente.value, municao: municao?.system.quantidade };
+        const armadura = __ator('Alvo').items.find(i => i.type === 'armadura' && i.system.sp.corpo.max);
+        const corpo = armadura.system.sp.corpo;
+        const chamadas = [];
+        // O ataque em si é o da ficha (os outros passos o conferem): aqui, o que o botão pede a ele.
+        rifle.atacar = opcoes => { chamadas.push(opcoes.perguntar); return null; };
+        try {
+          await rifle.sheet.render({ force: true });
+          await __esperar(() => rifle.sheet.element?.querySelector('[data-action="atacar"]'));
+          const f = () => rifle.sheet.element;
+          const botoes = [...f().querySelectorAll('.acoes-do-item [data-action]')].map(b => b.dataset.action).join();
+          f().querySelector('[data-action="atacar"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          f().querySelector('[data-action="atacar"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          await __esperar(() => chamadas.length === 2);
+          // Recarregar: o pente com 5 a menos volta cheio, da munição carregada.
+          await rifle.update({ 'system.pente.value': rifle.system.pente.max - 5 });
+          const antes = municao.system.quantidade;
+          f().querySelector('[data-action="recarregar"]').click();
+          await __esperar(() => rifle.system.pente.value === rifle.system.pente.max);
+          const recarga = { pente: rifle.system.pente.value + '/' + rifle.system.pente.max, gastou: antes - municao.system.quantidade };
+          await rifle.sheet.close();
+          // A armadura: o SP do corpo em caixas; "−1" tira 1; no 0, não desce (lido depois de assentar).
+          await armadura.update({ 'system.sp.corpo.value': 1 });
+          await armadura.sheet.render({ force: true });
+          await __esperar(() => armadura.sheet.element?.querySelector('[data-action="ablar"][data-local="corpo"]'));
+          const g = () => armadura.sheet.element;
+          const trilha = () => (el => el && el.style.getPropertyValue('--pontos').trim() + '/' + el.style.getPropertyValue('--max').trim())(g()?.querySelector('.trilha-sp[data-local="corpo"] .pontos-visuais'));
+          const caixas = { antes: trilha(), locais: [...g().querySelectorAll('.trilha-sp')].map(t => t.dataset.local).join() };
+          g().querySelector('[data-action="ablar"][data-local="corpo"]').click();
+          await __esperar(() => armadura.system.sp.corpo.value === 0 && trilha() === '0/' + corpo.max);
+          caixas.depois = trilha();
+          g().querySelector('[data-action="ablar"][data-local="corpo"]').click();
+          await new Promise(r => setTimeout(r, 800));
+          caixas.noZero = armadura.system.sp.corpo.value + ',' + trilha();
+          return { botoes, chamadas, recarga, caixas, max: corpo.max };
+        } finally {
+          delete rifle.atacar;
+          await rifle.sheet.close();
+          await armadura.sheet.close();
+          await rifle.update({ 'system.pente.value': guardado.pente });
+          if (municao) await municao.update({ 'system.quantidade': guardado.municao });
+          await armadura.update({ 'system.sp.corpo.value': armadura.system.sp.corpo.max });
+        }
+      })()`);
+      const { botoes, chamadas, recarga, caixas, max } = info;
+      const ok = botoes === 'atacar,recarregar' && chamadas.join() === 'true,false' && recarga.pente === '25/25' && recarga.gastou === 5
+        && caixas.locais === 'corpo' && caixas.antes === '1/' + max && caixas.depois === '0/' + max && caixas.noZero === '0,0/' + max;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);

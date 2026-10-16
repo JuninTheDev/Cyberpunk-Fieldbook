@@ -179,7 +179,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .habilidade > .efeito { grid-column: 2; }
 .cpr-fieldbook.ficha-personagem .habilidade > .pontos-visuais { grid-column: 3; }
 .cpr-fieldbook.ficha-personagem .habilidade > input { grid-column: 4; }
-.cpr-fieldbook.ficha-personagem .pontos-visuais {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item) .pontos-visuais {
   --passo: 20px; width: max(0px, calc(var(--max) * var(--passo) - 4px)); height: 12px;
   background:
     linear-gradient(90deg, var(--cor-pontos, var(--cp-amarelo)) calc(var(--pontos) * var(--passo)), transparent 0),
@@ -703,11 +703,15 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-item .ficha-de-item .campos .nota { grid-column: 1 / -1; margin: 0; color: var(--cp-fraco); }
 /* Os botões das ações do item (o "Consertar" da armadura), na linha toda, no jeito dos botões das maquetes. */
 .cpr-fieldbook.ficha-item .ficha-de-item .acoes-do-item { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
-.cpr-fieldbook.ficha-item .ficha-de-item .acoes-do-item button {
+/* O SP de cada local da armadura em caixas, com o número e o "−1" (as maquetes do usuário: a trilha do SP). */
+.cpr-fieldbook.ficha-item .ficha-de-item .trilha-sp { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .trilha-sp .pontos-visuais { --passo: 14px; flex: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item .trilha-sp b { color: var(--cp-amarelo); font-size: 13px; }
+.cpr-fieldbook.ficha-item .ficha-de-item :is(.acoes-do-item, .trilha-sp) button {
   flex: none; width: auto; height: auto; padding: 5px 12px; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; box-shadow: none;
   color: var(--cp-amarelo); font: 400 12px/1.2 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase;
 }
-.cpr-fieldbook.ficha-item .ficha-de-item .acoes-do-item button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); }
+.cpr-fieldbook.ficha-item .ficha-de-item :is(.acoes-do-item, .trilha-sp) button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); }
 /* O uso (possuído, carregando, equipado) em três botões lado a lado. */
 .cpr-fieldbook.ficha-item .ficha-de-item .uso { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--cp-linha); }
 .cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento {

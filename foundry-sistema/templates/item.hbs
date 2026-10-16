@@ -32,12 +32,14 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
       <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
       <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>
+      {{#if armaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T); Ctrl + clique, direto">ATACAR</button>{{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Encher o pente">RECARREGAR</button>{{/if}}</div>{{/if}}
       {{/if}}
       {{#if eh.armadura}}
       <label class="celula"><span>SP cabeça</span><span class="par"><input type="number" name="system.sp.cabeca.value" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" value="{{fonte.sp.cabeca.max}}"></span></label>
       <label class="celula"><span>SP corpo</span><span class="par"><input type="number" name="system.sp.corpo.value" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" value="{{fonte.sp.corpo.max}}"></span></label>
       <label class="celula"><span>Penalidade</span><input type="number" name="system.penalidade" value="{{fonte.penalidade}}"></label>
       <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Vestida</label>
+      {{#each trilhas}}<div class="trilha-sp" data-local="{{local}}"><span>SP {{rotulo}}</span><span class="pontos-visuais" style="--pontos: {{valor}}; --max: {{max}}" aria-hidden="true"></span><b>{{valor}}/{{max}}</b>{{#if ../editavel}}<button type="button" data-action="ablar" data-local="{{local}}" data-tooltip="Um ponto de SP a menos ({{rotulo}})">−1</button>{{/if}}</div>{{/each}}
       {{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="consertar" data-tooltip="O SP volta ao máximo; o mestre narra o conserto">CONSERTAR</button></div>{{/if}}
       {{/if}}
       {{#if eh.municao}}

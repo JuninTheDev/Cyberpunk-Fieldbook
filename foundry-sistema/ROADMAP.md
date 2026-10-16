@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 74). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 75). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -408,8 +408,9 @@ No fim de tudo, uma sessão de teste com a mesa.
   - **Na ficha do item:**
     - [x] "Consertar" na armadura: o SP volta ao máximo, e o chat diz que o personagem consertou (a wiki só diz "até
       ser reparada", p. 186; a decisão do usuário de 2026-10-16: o mestre narra o conserto): ciclo 70;
-    - [ ] "Atacar" e "Recarregar" na arma, "Ablar −1" na armadura, com os acertos recebidos e a trilha do SP
-      (interface; as ações da ficha do personagem);
+    - [x] "Atacar" e "Recarregar" na ficha da arma de um personagem (o fluxo da ficha dele) e o SP de cada local da
+      armadura em caixas, com o "−1" (o "Ablate"; sem passar de 0): ciclo 74. Os "acertos recebidos" das maquetes ficam
+      de fora: o sistema não os conta (o SP gasto já diz);
     - [x] "Rolar Humanidade" no cyberware de um ator (a perda rolada sem instalar, no cartão do "Aplicar"): ciclo 73;
     - [ ] "Instalar opção" no cyberware, "Rodar" e "Restaurar REZ" no programa, "Usar" e
       "Largar" no equipamento, "Correção rápida" e "Tratar" na lesão (interface, com as mesmas regras da ficha).

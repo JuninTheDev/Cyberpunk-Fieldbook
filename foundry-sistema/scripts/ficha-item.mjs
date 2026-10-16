@@ -1,6 +1,7 @@
 // Ficha dos itens (ApplicationV2): os campos de cada tipo, a descrição e os efeitos que o item dá. Nos efeitos ligados
 // à mão (droga, equipamento como a lanterna), um botão liga e desliga.
 import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
+import { config } from './configuracoes.mjs';
 import { PERICIAS } from './gerado.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -44,7 +45,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     position: { width: 560, height: 620 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade }
+    actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade,
+      atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar
+    }
   };
 
   static PARTS = {
@@ -64,6 +67,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
+      // A arma de um personagem ataca e recarrega pela ficha dela; a armadura mostra o SP de cada local em caixas.
+      armaDeAtor: tipo === 'arma' && Boolean(item.actor),
+      trilhas: tipo === 'armadura' ? ['cabeca', 'corpo'].filter(local => item.system.sp[local].max).map(local => ({ local, rotulo: local === 'cabeca' ? 'cabeça' : 'corpo', valor: item.system.sp[local].value, max: item.system.sp[local].max })) : [],
       rolaHumanidade: tipo === 'cyberware' && Boolean(item.actor) && Boolean(fonte.perdaHumanidade?.formula) && fonte.perdaHumanidade.formula !== '0',
       tipoRotulo: game.i18n.localize(CONFIG.Item.typeLabels[tipo] ?? tipo),
       usosLista: Object.entries(USOS).map(([id, rotulo]) => ({ id, rotulo, ativo: fonte.uso === id })),
@@ -96,6 +102,20 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     });
   }
 
+  // "Atacar" e "Recarregar" na arma de um personagem (as maquetes do usuário): o fluxo da ficha dele (a janela de
+  // rolagem no clique; Ctrl + clique, direto; "Rolar direto" inverte).
+  static #atacar(evento) {
+    return this.item.atacar({ perguntar: Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto')) });
+  }
+  static #recarregar() {
+    return this.item.recarregar();
+  }
+  // "−1" no SP de um local da armadura (o "Ablate" das maquetes): sem passar de 0 (o modelo não tem o mínimo); o
+  // "Consertar" devolve.
+  static #ablar(evento, alvo) {
+    const sp = this.item.system.sp?.[alvo.dataset.local];
+    return sp ? this.item.update({ [`system.sp.${alvo.dataset.local}.value`]: Math.max(0, sp.value - 1) }) : null;
+  }
   // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
   static #rolarHumanidade() {
     return this.item.rolarHumanidade();
