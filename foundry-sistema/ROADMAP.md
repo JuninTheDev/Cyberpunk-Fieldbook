@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 64). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 65). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -368,18 +368,19 @@ No fim de tudo, uma sessão de teste com a mesa.
   é só a ficha ou o cartão chamando o que o sistema já faz; (regra: …) diz o que a wiki tem; (decisão da mesa) é o que
   a wiki não tem ou contraria.
   - **No chat:**
-    - [ ] "Aplicar dano" no cartão do dano: nos alvos marcados (T), com a armadura e o crítico, como o fluxo do ataque
-      faz (interface; o cálculo é o do `combate.mjs`);
-    - [ ] "Rolar a lesão" no cartão do dano crítico: a tabela de 2d6 no alvo (interface; regra: a wiki, p. 187, e o
-      `lesoes.mjs`);
+    - [x] "Aplicar dano" no cartão do dano rolado à parte: nos alvos marcados (T), no corpo, com a armadura e o +5 do
+      crítico, como o fluxo do ataque faz, e o "Desfazer": ciclo 64;
+    - [x] "Rolar a lesão" no cartão do dano crítico rolado à parte: a tabela do corpo (p. 187) em cada alvo marcado,
+      uma vez por alvo: ciclo 64;
     - [ ] "Adicionar ao combate" no cartão da iniciativa (interface);
     - [ ] "Aplicar" na perda de Humanidade rolada à parte (interface; a instalação já aplica);
-    - [ ] "+ Sorte" no cartão do teste já rolado (decisão da mesa: a wiki manda gastar a Sorte "antes de rolar");
-    - [ ] "Rolar de novo" no cartão do teste (decisão da mesa: o RED não tem rolar de novo, fora as habilidades que dizem).
+    - [x] ~~"+ Sorte" no cartão do teste já rolado~~: não entra (a decisão do usuário de 2026-10-15: a Sorte só antes
+      de rolar, como a wiki);
+    - [x] ~~"Rolar de novo" no cartão do teste~~: não entra (a decisão do usuário de 2026-10-15: o RED não tem).
   - **Na ficha:**
     - [ ] "Rolar a iniciativa" na aba Combate (interface; o combate do Foundry rola com a fórmula do sistema);
-    - [ ] o local do acerto (cabeça, corpo, aleatório) (decisão da mesa: no RED o acerto é no corpo, e a cabeça só pelo
-      tiro mirado, −8; não há local aleatório);
+    - [x] ~~o local do acerto (cabeça, corpo, aleatório)~~: não entra (a decisão do usuário de 2026-10-15: o acerto é no
+      corpo, e a cabeça só pelo tiro mirado, −8, como a wiki; o "Mirar" da ficha já faz);
     - [ ] as ações "Agarrar" (regra: a wiki, "Agarrar e arremessar", p. 177) e "Proteger-se" (regra: a cobertura, p.
       182; é a Ação de Movimento até a cobertura);
     - [ ] a correção rápida e o tratamento da lesão pela ficha (regra: as DVs de cada lesão na wiki, como a correção
@@ -387,7 +388,8 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [ ] a Sorte usada na sessão no cabeçalho (interface; a ficha guarda a que resta);
     - [ ] a quantidade com − e + e "Usar" no equipamento e na droga (interface; usar a droga liga o efeito dela);
     - [ ] a fundação e as opções do cyberware ("+ Fundação", "+ Opção"; as opções dentro da fundação, com os slots)
-      (regra: os slots de opção de cada fundação, a conferir na wiki antes do ciclo);
+      (regra: conferida em 2026-10-15, os slots de opção de cada fundação estão na wiki, `system-catalog.js`: o Neural
+      Link com 5, o Cybereye com 3 por olho, o Cyberaudio Suite com 3, o Sensor Array soma 5 ao Cyberaudio...);
     - [ ] as notas de ciberpsicose na aba Cyberware e as notas da Role (interface: campos de texto);
     - [ ] "Conectar" e "Desconectar" na aba NET (interface; o ponto de acesso mais perto, como o marcador da cena);
     - [ ] os slots do deck em barras e o estado de cada programa (guardado, carregado, ativo) com "Rodar" (interface;
@@ -395,7 +397,9 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [ ] a arquitetura onde o netrunner está, ao vivo, na aba NET (interface; o estado do ponto de acesso).
   - **Na ficha do item:**
     - [ ] "Atacar" e "Recarregar" na arma, "Consertar" e "Ablar −1" na armadura, com os acertos recebidos e a trilha
-      do SP (interface; as ações da ficha do personagem; consertar: a regra a conferir na wiki antes do ciclo);
+      do SP (interface; as ações da ficha do personagem. Consertar, conferido em 2026-10-15: a wiki só diz que a armadura
+      perde o SP "até ser reparada", p. 186, sem o teste, o custo ou o tempo; a proposta é o botão voltar o SP ao máximo
+      e o mestre narrar o conserto, a confirmar com o usuário antes do ciclo);
     - [ ] "Instalar opção" e "Rolar Humanidade" no cyberware, "Rodar" e "Restaurar REZ" no programa, "Usar" e
       "Largar" no equipamento, "Correção rápida" e "Tratar" na lesão (interface, com as mesmas regras da ficha).
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no

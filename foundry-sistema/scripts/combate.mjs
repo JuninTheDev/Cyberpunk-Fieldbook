@@ -464,8 +464,9 @@ const SEM_LESAO_DE_BORRACHA = 'Munição de borracha: sem lesão crítica.';
 // Aplica o dano num alvo e cuida das lesões: dois 6 (a tabela da cabeça só no tiro mirado na cabeça), tiro na perna
 // que passou da armadura (Perna quebrada), mortalmente ferido atingido de novo. A Deflexão de Dano do Solo tira do
 // primeiro dano que ele sofre na rodada. A munição de borracha não mata nem causa lesão crítica (wiki, munições). Na
-// carga Tech, a ablação é a da carga (4 sem cobertura, 2 através dela), no lugar da munição.
-async function ferir(ctx, linha, dano, { escudo = false } = {}) {
+// carga Tech, a ablação é a da carga (4 sem cobertura, 2 através dela), no lugar da munição. lesaoDoCritico: false no dano
+// aplicado pelo cartão, em que a lesão do crítico sai pelo botão "Rolar a lesão".
+async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true } = {}) {
   const ator = linha.token.actor;
   const jaMortal = ator.system.hp.value < 1;
   const municao = ctx.arma.municaoCarregada;
@@ -490,7 +491,7 @@ async function ferir(ctx, linha, dano, { escudo = false } = {}) {
     const feita = await lesaoCritica(ator, { naFicha: modo === 'ficha', ...opcoes });
     if (feita) linha.dano.lesoes.push({ nome: feita.nome, item: feita.item?.id ?? null });
   };
-  if (dano.critico) await lesao({ cabeca: ctx.local === 'cabeca' });
+  if (dano.critico && lesaoDoCritico) await lesao({ cabeca: ctx.local === 'cabeca' });
   if (ctx.local === 'perna' && efeito.passou) await lesao({ id: PERNA_QUEBRADA });
   if (ctx.local === 'item' && efeito.passou) linha.notas.push(`${linha.nome} larga o item na mão que ${ctx.nomeAtq} escolher.`);
   if (jaMortal && !borracha && config('mortalmenteFerido')) {
@@ -798,6 +799,52 @@ export async function desfazer(mensagem) {
   return true;
 }
 
+// ---------------- O dano rolado à parte, pelos botões do cartão ----------------
+// Os alvos marcados (T) do mestre que levam dano de arma: quem tem HP (personagem e capanga).
+const alvosComHp = () => [...game.user.targets].map(token => token.document ?? token).filter(token => ['personagem', 'capanga'].includes(token.actor?.type));
+
+// "Aplicar dano" (o "apply damage" das maquetes do usuário): o dano rolado pelo botão "Dano" da ficha, nos alvos marcados
+// (T), como o ataque aplica (ferir: a armadura, o +5 do crítico, a Deflexão, a munição de borracha, o mortalmente ferido).
+// No corpo: a cabeça só pelo tiro mirado (a decisão do usuário de 2026-10-15, pela wiki). A lesão do crítico sai pelo
+// "Rolar a lesão". O resultado vai no cartão do ataque, com o "Desfazer".
+export async function aplicarDanoDoCartao(mensagem) {
+  const dados = mensagem.getFlag(SISTEMA, 'danoDeArma');
+  if (!dados || !game.user.isGM) return null;
+  const arma = await fromUuid(dados.arma);
+  if (!arma?.actor) { ui.notifications.warn('A arma deste dano não está mais na ficha.'); return null; }
+  const alvos = alvosComHp();
+  if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) do dano.'); return null; }
+  const ctx = {
+    pedido: { id: foundry.utils.randomID(), total: null }, usuario: game.user, arma, atacante: arma.actor, tokenAtq: null, cena: alvos[0].parent, alvos,
+    modo: 'tiro', local: 'corpo', descricao: 'dano rolado à parte', nomeAtq: arma.actor.name, perfil: null, cobertura: null, linhas: [], rolagens: [], marcas: [],
+    notas: dados.critico ? ['Crítico: a lesão sai pelo botão "Rolar a lesão" do cartão do dano.'] : [], cabecalho: `${dados.total} de dano${dados.critico ? ', crítico' : ''}, no corpo`
+  };
+  for (const token of alvos) {
+    const linha = linhaDe(ctx, token);
+    linha.resultado = 'acertou';
+    await ferir(ctx, linha, { total: dados.total, bonus: dados.bonus, critico: dados.critico, formula: dados.formula }, { lesaoDoCritico: false });
+  }
+  return cartaoDoResultado(ctx);
+}
+
+// "Rolar a lesão" (o "roll critical" das maquetes): a tabela do corpo (RED p. 187) em cada alvo marcado, pelo cartão do
+// dano crítico rolado à parte, como o ataque faz no crítico. Uma vez por alvo neste cartão.
+export async function rolarLesaoDoCartao(mensagem) {
+  const dados = mensagem.getFlag(SISTEMA, 'danoDeArma');
+  if (!dados?.critico || !game.user.isGM) return null;
+  const modo = config('lesaoCritica');
+  if (modo === 'nao') { ui.notifications.warn('A configuração "Lesão crítica" está desligada.'); return null; }
+  const alvos = alvosComHp();
+  if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) da lesão.'); return null; }
+  const feitos = new Set(mensagem.getFlag(SISTEMA, 'lesoesRoladas') ?? []);
+  const novos = alvos.filter(token => !feitos.has(token.uuid));
+  if (!novos.length) { ui.notifications.warn('Este dano já rolou a lesão desses alvos.'); return null; }
+  const lesoes = [];
+  for (const token of novos) lesoes.push(await lesaoCritica(token.actor, { naFicha: modo === 'ficha' }));
+  await mensagem.setFlag(SISTEMA, 'lesoesRoladas', [...feitos, ...novos.map(token => token.uuid)]);
+  return lesoes;
+}
+
 // Os tipos de cartão que mudam o visual da mensagem inteira (styles/tema.css): a borda vermelha do dano e da morte.
 const TIPOS_DE_CARTAO = ['teste', 'ataque', 'dano', 'death-save', 'falhou', 'espera', 'morte'];
 
@@ -813,6 +860,8 @@ export function ligarBotoes(mensagem, html) {
       if (botao.dataset.cprfAcao === 'desfazer') desfazer(mensagem);
       else if (botao.dataset.cprfAcao === 'responder') desistir(botao.dataset.pedido, { escolha: botao.dataset.escolha, forcada: true });
       else if (botao.dataset.cprfAcao === 'aplicarNet') aplicarDanoDeNet(mensagem, botao.dataset.onde);
+      else if (botao.dataset.cprfAcao === 'aplicarDano') aplicarDanoDoCartao(mensagem);
+      else if (botao.dataset.cprfAcao === 'rolarLesao') rolarLesaoDoCartao(mensagem);
     });
   }
   if (mensagem.getFlag(SISTEMA, 'desfeito')) html.querySelector('.cartao.ataque')?.classList.add('desfeito');

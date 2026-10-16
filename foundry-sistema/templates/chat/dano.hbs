@@ -2,5 +2,5 @@
   <header><h3>{{rotulo}}</h3></header>
   {{#if critico}}<p class="critico">Crítico: dois ou mais 6. +5 direto no HP e uma Lesão Crítica.</p>{{/if}}
   {{{dados}}}
-  {{#if botoes.length}}<div class="botoes">{{#each botoes}}<button type="button" data-cprf-acao="aplicarNet" data-onde="{{onde}}">{{rotulo}}</button>{{/each}}</div>{{/if}}
+  {{#if botoes.length}}<div class="botoes">{{#each botoes}}<button type="button" data-cprf-acao="{{#if acao}}{{acao}}{{else}}aplicarNet{{/if}}"{{#if onde}} data-onde="{{onde}}"{{/if}}>{{rotulo}}</button>{{/each}}</div>{{/if}}
 </div>

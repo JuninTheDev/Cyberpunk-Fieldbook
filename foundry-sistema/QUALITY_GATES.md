@@ -60,7 +60,11 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   "Tudo certo" com 5 passos e não vale como portão: espere a mesa esvaziar e rode de novo (no ciclo 35, um laço conferiu
   a mesa a cada 2 minutos). Não contorne a checagem. Para mudar o código durante a espera, pare o laço só antes de ele
   começar o G4; se já começou, deixe terminar. O instalador copia o sistema no começo do G4, e a rodada fica com a versão
-  de antes: serve de pista, não de portão (ciclo 36).
+  de antes: serve de pista, não de portão (ciclo 36). **Nas mutações, o mesmo vale para cada uma:** a mutação rodada com
+  a mesa ocupada "passa" (5 passos, saída 0) sem testar nada, e parece um buraco no teste. No ciclo 64, a D6 rodou assim
+  (a mesa ficou ocupada entre uma mutação e outra) e foi refeita. O executor das mutações espera a mesa antes de cada
+  uma e marca como inválida a rodada que pulou o Foundry. E não mexa na worktree enquanto as mutações rodam: cada
+  rodada copia o sistema no começo, e a mudança entraria nela.
 - **O mundo de teste que não fica pronto:** o Foundry 14 aceita a entrada antes de saber os próprios endereços (logo
   depois de "Server started"), e quem entra nesse intervalo derruba o envio do mundo: o `servidor.log` do Foundry de
   teste (`%LOCALAPPDATA%\FieldbookTeste\foundry14`) mostra "Cannot read properties of null (reading 'local')" em

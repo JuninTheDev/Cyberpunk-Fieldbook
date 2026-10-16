@@ -61,8 +61,9 @@ export async function testar(ator, { rotulo, partes = [], modo, falar = true, sa
 
 // O dano de uma arma (p. 187): a fórmula da arma (ou outra: 2d6 do autofogo, 3d6 do cartucho), vezes o multiplicador do
 // autofogo (regras.expressaoDoDano). Dois ou mais 6 nos dados é crítico (+5 direto no HP e Lesão Crítica). Com a janela
-// (perguntar), o modificador do mestre; fechada, null.
-export async function rolarDano(arma, { falar = false, modo, formula = null, multiplicador = 1, perguntar = false, aoAbrir = null } = {}) {
+// (perguntar), o modificador do mestre; fechada, null. paraAplicar: o dano rolado à parte (o botão "Dano" da ficha), com
+// os botões do mestre no cartão (combate.aplicarDanoDoCartao e rolarLesaoDoCartao); o do fluxo do ataque, não.
+export async function rolarDano(arma, { falar = false, modo, formula = null, multiplicador = 1, perguntar = false, aoAbrir = null, paraAplicar = false } = {}) {
   const base = formula || arma.system.dano || '0';
   let modificador = 0;
   if (perguntar) {
@@ -77,8 +78,10 @@ export async function rolarDano(arma, { falar = false, modo, formula = null, mul
   const critico = danoCritico(resultados);
   const resultado = { roll, total: roll.total, critico, bonus: critico ? BONUS_CRITICO : 0, resultados, formula: expressao };
   if (falar) {
-    const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
-    resultado.mensagem = await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: arma.actor }), content, rolls: [roll] }, { messageMode: modo });
+    const botoes = paraAplicar ? [{ acao: 'aplicarDano', rotulo: 'Aplicar dano' }, ...(critico ? [{ acao: 'rolarLesao', rotulo: 'Rolar a lesão' }] : [])] : [];
+    const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, botoes, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
+    const flags = paraAplicar ? { [SISTEMA]: { danoDeArma: { arma: arma.uuid, total: roll.total, bonus: resultado.bonus, critico, formula: expressao } } } : {};
+    resultado.mensagem = await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: arma.actor }), content, rolls: [roll], flags }, { messageMode: modo });
   }
   return resultado;
 }

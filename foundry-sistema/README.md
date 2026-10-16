@@ -174,6 +174,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Ablação:** a armadura perde 1 de SP, ou a ablação da munição (a perfurante tira 2; a borracha, a biotoxina e a venenosa não tiram nada).
   - **Munição de borracha:** não mata (deixa o alvo com 1 HP), não tira SP e não causa lesão crítica.
   - **Munição que não causa dano** (biotoxina, veneno, EMP, flashbang, sonífera, fumaça e gás lacrimogêneo): o ataque e a área valem, mas ninguém leva o dano da arma. O cartão diz o efeito, com o texto da wiki, e o mestre resolve.
+  - **O dano rolado à parte** (o botão "Dano" da ficha, ciclo 64): o cartão tem os botões do mestre. "Aplicar dano" aplica nos alvos marcados (T), no corpo (a cabeça só pelo tiro mirado), com as mesmas regras do ataque (a armadura, o +5 do crítico, a ablação, a Deflexão, a borracha), e o resultado sai no cartão do ataque, com o "Desfazer". No dano crítico, "Rolar a lesão" rola a tabela do corpo em cada alvo marcado, uma vez por alvo naquele cartão. O dano rolado dentro do ataque não tem esses botões (o ataque já aplica).
 - **Lesão Crítica** (dois 6 no dano):
   - **Tabelas:** 2d6 na tabela do corpo, ou na da cabeça no tiro mirado na cabeça, sem repetir uma que o alvo já tem.
   - **Na ficha:** a lesão entra com os efeitos (Perna quebrada: −4 MOVE, mínimo 1) e o texto da wiki, com o paliativo e o tratamento.
@@ -342,6 +343,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item, os acessórios na arma e o hardware no deck);
   - a ficha do item no jeito da maquete: numa pistola, o tipo na cor dele, o resumo, a etiqueta da qualidade, as três abas (a troca pelo clique) e as células; num cyberdeck, o uso pelos três botões, que grava;
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
+  - o dano rolado à parte pelos botões do cartão: "Aplicar dano" no alvo marcado (com a armadura, e o Desfazer) e, no crítico, os +5 sem a lesão e "Rolar a lesão" uma vez por alvo;
   - o mirado na cabeça e na perna;
   - o autofogo, o explosivo em área, o cartucho, a munição de borracha e a que não causa dano;
   - o Reflex Tuner: o +1 na esquiva depois de atingido, o "Desfazer" que o tira e o fim na rodada seguinte;

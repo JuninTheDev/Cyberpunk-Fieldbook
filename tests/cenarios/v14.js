@@ -996,6 +996,83 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.botao && info.desfeito && info.hp === 45 && info.sp === 11 && info.move === 5 && info.lesoes === 0, JSON.stringify(info)];
     });
 
+    await r.passo('o dano rolado à parte (o botão "Dano" da ficha) pelos botões do cartão (as maquetes do usuário): "Aplicar dano" no alvo marcado (T), no corpo, com a armadura, como o ataque, e o "Desfazer"; no crítico, os +5 sem a lesão, e "Rolar a lesão" rola a tabela do corpo uma vez por alvo', async () => {
+      // A limpeza, também quando o passo falha no meio: o alvo inteiro de novo (HP, SP e sem a lesão) e sem a marca (T),
+      // para os passos seguintes (sem ela, uma falha aqui derrubava o fogo supressivo e os turnos).
+      const limpar = () => edge.evaluate(`(async () => {
+        const alvo = __ator('Alvo');
+        await alvo.deleteEmbeddedDocuments('Item', alvo.items.filter(i => i.type === 'lesao').map(i => i.id));
+        const armadura = alvo.items.find(i => i.type === 'armadura' && i.system.equipada && i.system.sp.corpo.max);
+        await alvo.update({ 'system.hp.value': 45 });
+        if (armadura) await armadura.update({ 'system.sp.corpo.value': armadura.system.sp.corpo.max });
+        __token('Alvo').object.setTarget(false, { releaseOthers: true });
+        return true;
+      })()`);
+      let simples;
+      let critico;
+      try {
+        // Sem crítico: 5d6 = 3 × 5 = 15 contra SP 11: passam 4 (HP 45 → 41; a armadura perde 1).
+        await fixar(edge, [[3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]);
+        simples = await edge.evaluate(`(async () => {
+          const rifle = __ator('Atiradora').items.getName('Assault Rifle');
+          const alvo = __ator('Alvo');
+          __token('Alvo').object.setTarget(true, { releaseOthers: true });
+          const r = await rifle.rolarDano({ perguntar: false });
+          const m = r.mensagem;
+          await __esperar(() => document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarDano"]'));
+          const botoes = [...document.querySelector('[data-message-id="' + m.id + '"]').querySelectorAll('[data-cprf-acao]')].map(b => b.dataset.cprfAcao).join();
+          const antes = game.messages.size;
+          document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarDano"]').click();
+          await __esperar(() => game.messages.size > antes && game.messages.contents.at(-1).getFlag('${S}', 'ataque'));
+          const resultado = game.messages.contents.at(-1);
+          const resumo = resultado.getFlag('${S}', 'ataque');
+          const lido = { total: r.total, critico: r.critico, botoes, hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp, cabecalho: resumo.cabecalho, ataque: resumo.ataque,
+            linha: resumo.linhas[0] && [resumo.linhas[0].resultado, resumo.linhas[0].dano?.recebido, resumo.linhas[0].dano?.local].join() };
+          // O "Desfazer" do cartão do resultado devolve o HP e o SP.
+          await __esperar(() => document.querySelector('[data-message-id="' + resultado.id + '"] [data-cprf-acao="desfazer"]'));
+          document.querySelector('[data-message-id="' + resultado.id + '"] [data-cprf-acao="desfazer"]').click();
+          await __esperar(() => resultado.getFlag('${S}', 'desfeito'));
+          return { ...lido, desfeito: { hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp } };
+        })()`);
+        // Crítico: 6, 6, 2, 3, 4 = 21 contra SP 11: passam 10, e os +5 do crítico (HP 45 → 30), sem a lesão. A lesão: 2d6 4 + 4 = 8 (Perna quebrada).
+        await fixar(edge, [[6, 6], [6, 6], [2, 6], [3, 6], [4, 6], [4, 6], [4, 6]]);
+        critico = await edge.evaluate(`(async () => {
+          const rifle = __ator('Atiradora').items.getName('Assault Rifle');
+          const alvo = __ator('Alvo');
+          const lesoes = () => alvo.items.filter(i => i.type === 'lesao').map(i => i.name);
+          const r = await rifle.rolarDano({ perguntar: false });
+          const m = r.mensagem;
+          await __esperar(() => document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="rolarLesao"]'));
+          const botoes = [...document.querySelector('[data-message-id="' + m.id + '"]').querySelectorAll('[data-cprf-acao]')].map(b => b.dataset.cprfAcao).join();
+          let antes = game.messages.size;
+          document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarDano"]').click();
+          await __esperar(() => game.messages.size > antes && game.messages.contents.at(-1).getFlag('${S}', 'ataque'));
+          const resumo = game.messages.contents.at(-1).getFlag('${S}', 'ataque');
+          const depoisDoDano = { hp: alvo.system.hp.value, lesoes: lesoes().join(), notas: resumo.notas.join(' ') };
+          antes = game.messages.size;
+          document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="rolarLesao"]').click();
+          await __esperar(() => lesoes().length === 1 && game.messages.size > antes);
+          const cartaoDaLesao = game.messages.contents.at(-1).getFlag('${S}', 'lesao')?.nome;
+          // De novo no mesmo alvo: não rola outra (o aviso, capturado aqui).
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="rolarLesao"]').click();
+            await __esperar(() => avisos.length === 1);
+          } finally { delete ui.notifications.warn; }
+          return { total: r.total, critico: r.critico, botoes, depoisDoDano, lesoes: lesoes().join(), cartaoDaLesao, avisos, rolados: (m.getFlag('${S}', 'lesoesRoladas') ?? []).length };
+        })()`);
+      } finally {
+        await limpar();
+      }
+      const ok = simples.total === 15 && !simples.critico && simples.botoes === 'aplicarDano' && simples.hp === 41 && simples.sp === 10
+        && simples.cabecalho === '15 de dano, no corpo' && simples.ataque === null && simples.linha === 'acertou,4,corpo' && simples.desfeito.hp === 45 && simples.desfeito.sp === 11
+        && critico.total === 21 && critico.critico && critico.botoes === 'aplicarDano,rolarLesao' && critico.depoisDoDano.hp === 30 && critico.depoisDoDano.lesoes === ''
+        && critico.depoisDoDano.notas.includes('Rolar a lesão') && critico.lesoes === 'Perna quebrada' && critico.cartaoDaLesao === 'Perna quebrada'
+        && critico.avisos.join() === 'Este dano já rolou a lesão desses alvos.' && critico.rolados === 1;
+      return [ok, JSON.stringify({ simples, critico })];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);

@@ -475,9 +475,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 - **As maquetes do visual novo e as funções que o sistema não tem (ciclos 59 a 62): decidido em 2026-10-15, cada uma
   vira um item do ROADMAP** ("As funções das maquetes que o sistema não tem", ciclo 63). As maquetes de 2026-10-15
-  mostram botões e campos sem função no sistema hoje. O visual seguiu as maquetes só com o que existe. Dois itens
-  contrariam a wiki e esperam a decisão da mesa antes de virar código: a Sorte depois de rolar (a wiki: "antes de
-  rolar") e o local aleatório do acerto (no RED, o acerto é no corpo, e a cabeça só pelo tiro mirado). A lista:
+  mostram botões e campos sem função no sistema hoje. O visual seguiu as maquetes só com o que existe. Os três que
+  contrariam a wiki ou o RED foram decididos pelo usuário em 2026-10-15 e **não entram**: a Sorte só antes de rolar
+  (a wiki: "antes de rolar"); o acerto no corpo, e na cabeça só pelo tiro mirado (sem local aleatório); e sem "rolar
+  de novo" (o RED não tem). Conferidos na wiki no mesmo dia: os slots de opção do cyberware estão no
+  `system-catalog.js`; o conserto da armadura, só "até ser reparada" (p. 186), sem teste nem custo (a proposta do
+  botão, voltar o SP ao máximo, espera o usuário antes do ciclo). A lista:
   - **no chat:** "+ Luck" e "Reroll" no cartão do teste (a Sorte se prepara na ficha antes), "Add to tracker" na
     iniciativa, "Apply damage" e "Roll critical" no dano, "Apply" na perda de Humanidade (o fluxo do ataque e a
     instalação já aplicam);
@@ -3264,6 +3267,52 @@ anterior: `c254a97` (ciclo 62).
 - **Próximo:** o C8, parte 11 (os nós de controle ligados à cena), ou os itens das maquetes, na ordem que o usuário
   preferir; sem outra indicação, os itens das maquetes de interface primeiro (o fim do pedido do visual), começando
   por "Aplicar dano" e "Rolar a lesão" no cartão do dano.
+
+### Ciclo 64 (2026-10-15): "Aplicar dano" e "Rolar a lesão" no cartão do dano (as maquetes; sessão KouArt)
+
+As decisões do usuário (2026-10-15) nos itens que contrariavam a wiki: a Sorte só antes de rolar, o acerto no corpo (a
+cabeça só pelo tiro mirado) e sem "rolar de novo"; os três não entram (o ROADMAP e as dúvidas dizem). Ele pediu também
+conferir na wiki os slots de opção do cyberware (estão no `system-catalog.js`) e o conserto da armadura (só "até ser
+reparada", p. 186: a proposta do botão espera ele). E os dois primeiros itens das maquetes. Commit anterior: `93040ce`
+(ciclo 63).
+
+- **Implementado:**
+  - **o dano rolado à parte** (o botão "Dano" da ficha; `rolagens.rolarDano` com `paraAplicar`, que só a ficha usa: o
+    dano rolado dentro do ataque não ganha os botões, porque o ataque já aplica): o cartão guarda o dano
+    (`danoDeArma`) e tem os botões do mestre (o `dano.hbs` aceita a ação de cada botão);
+  - **"Aplicar dano"** (`combate.aplicarDanoDoCartao`): nos alvos marcados (T) que têm HP, no corpo (a cabeça só pelo
+    tiro mirado, a decisão do usuário), pelo mesmo `ferir` do ataque (a armadura, a ablação da munição, o +5 do
+    crítico, a Deflexão do Solo, a borracha, o mortalmente ferido); o resultado sai no cartão do ataque ("15 de dano,
+    no corpo", sem o total do ataque), com o "Desfazer". No crítico, a lesão não sai sozinha: o cartão avisa do botão;
+  - **"Rolar a lesão"** (`combate.rolarLesaoDoCartao`, só no dano crítico): a tabela do corpo (p. 187) em cada alvo
+    marcado, pela configuração "Lesão crítica" (desligada, avisa); uma vez por alvo naquele cartão (o cartão guarda
+    quem já rolou, e o segundo clique avisa).
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 91 de 96, de primeira (181 s; a mesa do servidor estava em uso, e o G4 esperou 2 minutos), e de novo depois da
+    limpeza no passo (abaixo), 197 s. A segunda rodada pode ter levado o botão da iniciativa do ciclo 65, que entrou e
+    saiu da worktree enquanto ela copiava o sistema: é aditivo, e nenhum passo o usa. As 5 falhas são as das armas de
+    2077, e os avisos do passo "nenhum aviso", só os dois da Lexington. Um passo novo, depois do "Desfazer" do ataque: sem crítico (3 × 5 = 15 contra SP 11), o cartão só com
+    "Aplicar dano", o alvo de 45 para 41 HP e de 11 para 10 de SP, o cartão do resultado ("15 de dano, no corpo",
+    acertou, 4 no corpo) e o "Desfazer" que devolve os dois; no crítico (6, 6, 2, 3, 4 = 21), os dois botões, 45 → 30
+    HP (passam 10 e os +5) sem lesão e com o aviso no cartão, "Rolar a lesão" com 4 + 4 = 8 (Perna quebrada, a mesma
+    tabela do passo do tiro) e o segundo clique recusado;
+  - **mutações:** as 6 caíram no passo novo, e os arquivos voltaram (conferido pelo md5): o cartão sem os botões (D1),
+    o dano aplicado na cabeça (D2), o crítico aplicado rolando a lesão sozinho (D3), a lesão rolando de novo no mesmo
+    alvo (D4), o botão "Aplicar dano" sem efeito (D5) e o +5 do crítico fora do dano aplicado (D6). Duas correções no
+    caminho:
+    - **a D6 não valeu da primeira vez:** a mesa do servidor ficou ocupada entre uma mutação e outra, e o G4 pulou a
+      parte do Foundry (5 passos, saída 0, como se a mutação passasse). Foi refeita com a mesa livre e caiu. O executor
+      das mutações agora espera a mesa antes de cada uma e marca como inválida a rodada que pulou o Foundry (a lição
+      está no QUALITY_GATES);
+    - **o passo não se limpava quando falhava:** na D1 e na D5, o Alvo ficou marcado (T) e ferido, e três passos
+      seguintes caíram junto (o fogo supressivo e os turnos). A limpeza (o HP, o SP, a lesão e a marca) foi para um
+      `finally`; a D1 refeita derrubou só o passo dela.
+  - Nenhuma rodada deixou Edge nem perfil para trás.
+- **No master:** o usuário publicou o `tests/lib/edge.js` corrigido (`9ad764b`, a pendência do ciclo 58).
+- **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura (o botão voltar
+  o SP ao máximo).
+- **Próximo:** os itens das maquetes de interface (ciclo 65).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -562,8 +562,9 @@ export class ItemCPR extends Item {
     return game.system.api.combate.atacar(this, opcoes);
   }
 
+  // O dano rolado à parte, pela ficha: o cartão tem os botões do mestre (aplicar nos alvos marcados, rolar a lesão).
   rolarDano(opcoes = {}) {
-    return rolarDano(this, { falar: true, ...opcoes });
+    return rolarDano(this, { falar: true, paraAplicar: true, ...opcoes });
   }
 
   // Enche o pente com a munição carregada ou, sem ela, com a primeira munição compatível do ator.
