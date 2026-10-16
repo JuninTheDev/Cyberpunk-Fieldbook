@@ -197,6 +197,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     return Object.assign(contexto, {
       ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
+      // A Sorte usada na sessão (as maquetes do usuário, "Luck used"): o máximo menos a que resta.
+      sorteUsada: Math.max(0, s.sorte.max - s.sorte.value),
       roles: ROLES,
       // Eurodólares, IP e Reputação: o botão do cabeçalho abre o extrato (como o ledger do CORE).
       extratos: [['dinheiro', 'EURODÓLARES'], ['pontosDeMelhoria', 'IP'], ['reputacao', 'REPUTAÇÃO']].map(([campo, sigla]) => ({

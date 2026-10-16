@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 66). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 67). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -387,7 +387,7 @@ No fim de tudo, uma sessão de teste com a mesa.
       182; é a Ação de Movimento até a cobertura);
     - [ ] a correção rápida e o tratamento da lesão pela ficha (regra: as DVs de cada lesão na wiki, como a correção
       rápida de Primeiros Socorros ou Paramédico DV 13);
-    - [ ] a Sorte usada na sessão no cabeçalho (interface; a ficha guarda a que resta);
+    - [x] a Sorte usada na sessão no cabeçalho (o máximo menos a que resta; o ↺ zera): ciclo 66;
     - [ ] a quantidade com − e + e "Usar" no equipamento e na droga (interface; usar a droga liga o efeito dela);
     - [ ] a fundação e as opções do cyberware ("+ Fundação", "+ Opção"; as opções dentro da fundação, com os slots)
       (regra: conferida em 2026-10-15, os slots de opção de cada fundação estão na wiki, `system-catalog.js`: o Neural

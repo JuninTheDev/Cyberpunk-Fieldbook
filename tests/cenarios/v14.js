@@ -376,7 +376,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.pente === 25 && info.sobra === 25 && info.carregada === 'Rifle (Basic)', JSON.stringify(info)];
     });
 
-    await r.passo('Sorte e o visual do chat: os pontos preparados pela ficha (− e +, até a Sorte que resta) entram no teste de perícia, +1 cada, e saem da Sorte; o ↺ do começo da sessão volta ao máximo; o teste e o dano saem no visual do tema (os dados em caixas com o total grande, no lugar do bloco do Foundry; o tipo na linha de cima, pelo CSS; a faixa amarela do teste e a vermelha do dano)', async () => {
+    await r.passo('Sorte e o visual do chat: os pontos preparados pela ficha (− e +, até a Sorte que resta) entram no teste de perícia, +1 cada, e saem da Sorte (o cabeçalho mostra a Sorte usada na sessão); o ↺ do começo da sessão volta ao máximo (e a usada, a 0); o teste e o dano saem no visual do tema (os dados em caixas com o total grande, no lugar do bloco do Foundry; o tipo na linha de cima, pelo CSS; a faixa amarela do teste e a vermelha do dano)', async () => {
       // Armas de uma Mão com +2 de Sorte: d10 5 → REF 8 + 4 + 2 + 5 = 19. Dano do rifle: 5d6, 3 em cada = 15.
       await fixar(edge, [[5, 10], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]);
       const info = await edge.evaluate(`(async () => {
@@ -390,7 +390,9 @@ module.exports = async ({ edge, servidores, r }) => {
         const preparada = () => f()?.querySelector('.indicador.sorte .sorte-acoes b')?.textContent.trim();
         // + + − +: 2 pontos preparados, e a ficha mostra.
         for (const [delta, esperado] of [[1, 1], [1, 2], [-1, 1], [1, 2]]) await clicar('.indicador.sorte [data-delta="' + delta + '"]', () => a.sortePreparada === esperado && preparada() === '+' + esperado);
-        const naFicha = { preparada: preparada(), destaque: f().querySelector('.indicador.sorte').classList.contains('preparada') };
+        // A Sorte usada na sessão, no cabeçalho (as maquetes): o máximo menos a que resta.
+        const usada = () => f()?.querySelector('.indicador.sorte .usada')?.textContent.trim();
+        const naFicha = { preparada: preparada(), destaque: f().querySelector('.indicador.sorte').classList.contains('preparada'), usada: usada() };
         // Mais do que resta não dá: fica no que resta.
         await a.prepararSorte(99);
         const teto = a.sortePreparada;
@@ -401,7 +403,9 @@ module.exports = async ({ edge, servidores, r }) => {
         await esperar(() => game.messages.size > antes && a.sortePreparada === 0);
         const teste = game.messages.contents.at(-1);
         const partes = [...new DOMParser().parseFromString(teste.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.trim());
-        const depois = { sorte: a.system.sorte.value, preparada: a.sortePreparada, total: teste.rolls[0].total, formula: teste.rolls[0].formula, partes };
+        await esperar(() => usada() === 'USADA ' + (a.system.sorte.max - a.system.sorte.value));
+        const depois = { sorte: a.system.sorte.value, preparada: a.sortePreparada, total: teste.rolls[0].total, formula: teste.rolls[0].formula, partes, usada: usada(),
+          gasta: f().querySelector('.indicador.sorte .usada').classList.contains('gasta') };
         // O dano do rifle, pelo botão da aba Combate.
         const rifle = a.items.getName('Assault Rifle');
         const antesDoDano = game.messages.size;
@@ -423,7 +427,8 @@ module.exports = async ({ edge, servidores, r }) => {
         // ↺: começo da sessão.
         await a.prepararSorte(1);
         await clicar('.indicador.sorte [data-action="recarregarSorte"]', () => a.system.sorte.value === a.system.sorte.max && a.sortePreparada === 0);
-        const recarregada = { sorte: a.system.sorte.value, max: a.system.sorte.max, preparada: a.sortePreparada };
+        await esperar(() => usada() === 'USADA 0');
+        const recarregada = { sorte: a.system.sorte.value, max: a.system.sorte.max, preparada: a.sortePreparada, usada: usada(), gasta: f().querySelector('.indicador.sorte .usada').classList.contains('gasta') };
         await a.update({ 'system.sorte.value': sorteAntes });
         await a.sheet.close();
         return { sorteAntes, naFicha, teto, depois, visual, recarregada, fila: window.__fila.length };
@@ -434,7 +439,8 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.shot('chat');
       await edge.evaluate(`ui.sidebar.changeTab('actors', 'primary')`);
       const { naFicha, depois, visual, recarregada } = info;
-      const ok = info.sorteAntes === 5 && naFicha.preparada === '+2' && naFicha.destaque && info.teto === 5
+      const ok = info.sorteAntes === 5 && naFicha.preparada === '+2' && naFicha.destaque && info.teto === 5 && naFicha.usada === 'USADA 1' && depois.usada === 'USADA 3' && depois.gasta
+        && recarregada.usada === 'USADA 0' && !recarregada.gasta
         && depois.total === 19 && depois.formula === '1d10crit + 8 + 4 + 2' && depois.partes.includes('Sorte +2') && depois.sorte === 3 && depois.preparada === 0
         && visual.teste.length > 0 && visual.teste.every(c => c === 'cprf-mensagem cprf-teste') && visual.dano.length > 0 && visual.dano.every(c => c === 'cprf-dano cprf-mensagem') && visual.danoTotal === 15
         && visual.cartaoDoTeste.dados === visual.dadosDoTeste && visual.cartaoDoTeste.total === '19' && /TESTE/.test(visual.cartaoDoTeste.tipo) && visual.cartaoDoTeste.faixa === 'rgb(252, 238, 9)' && !visual.cartaoDoTeste.foundry
@@ -1097,7 +1103,7 @@ module.exports = async ({ edge, servidores, r }) => {
           return { ...lido, avisos, depois: combatente.initiative, fila2: criado.combatants.size };
         } finally {
           await alvo.sheet.close();
-          if (criado && !antes.combate) await criado.delete();
+          if (!antes.combate) await game.combat?.delete();
         }
       })()`);
       const ok = !info.combate && info.situacionais === 0 && info.base === 6 && info.cena && info.token === 'Alvo' && info.fila === 1 && info.iniciativa === 13

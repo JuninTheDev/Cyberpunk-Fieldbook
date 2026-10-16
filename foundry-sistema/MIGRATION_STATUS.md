@@ -3345,6 +3345,26 @@ Os itens "Rolar a iniciativa" (a ficha) e "Adicionar ao combate" (o cartão) das
 - **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
 - **Próximo:** a Sorte usada na sessão, no cabeçalho (ciclo 66).
 
+### Ciclo 66 (2026-10-16): a Sorte usada na sessão, no cabeçalho (as maquetes; sessão KouArt)
+
+O item "Luck used" das maquetes. Commit anterior: `3de6383` (ciclo 65).
+
+- **Implementado** (`templates/personagem/topo.hbs`, `scripts/ficha-personagem.mjs`, `styles/tema.css`): no
+  indicador da Sorte, embaixo do rótulo, "USADA n": o máximo (o LUCK) menos a que resta, sem dado novo na ficha (a
+  ficha guarda a que resta, e o ↺ do começo da sessão a devolve ao máximo, zerando a usada). Amarela quando já se
+  gastou alguma.
+- **No teste do ciclo 65:** o passo da iniciativa apaga o combate que o botão criou também quando falha antes de lê-lo
+  (a sobra da mutação N2).
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 92 de 97, 179 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). O
+    passo da Sorte e do chat lê a usada: 1 no começo (a Atiradora com 5 de 6), 3 depois do teste com os
+    2 pontos preparados (amarela) e 0 depois do ↺ (sem a cor);
+  - **mutações:** as 3 derrubaram só o passo da Sorte, e os arquivos voltaram (conferido pelo md5): a usada mostrando
+    a que resta (U1), sem a cor de gasta (U2) e fora do cabeçalho (U3). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
+- **Próximo:** a quantidade com − e + no inventário (ciclo 67).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

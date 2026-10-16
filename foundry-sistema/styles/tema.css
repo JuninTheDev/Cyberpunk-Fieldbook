@@ -110,6 +110,9 @@
 .cpr-fieldbook.ficha-personagem .indicador input:is(:hover, :focus) { border-bottom-color: currentColor; background: transparent; }
 .cpr-fieldbook.ficha-personagem .indicador small { font-family: var(--cp-dados); font-size: 14px; }
 .cpr-fieldbook.ficha-personagem .indicador i { font-family: var(--cp-dados); font-size: 11px; font-style: normal; letter-spacing: 0.15em; color: var(--cp-fraco); }
+/* A Sorte usada na sessão, embaixo do rótulo (amarela quando já se gastou alguma). */
+.cpr-fieldbook.ficha-personagem .indicador.sorte .usada { margin-top: 1px; font-size: 10px; letter-spacing: 0.15em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .indicador.sorte .usada.gasta { color: var(--cp-amarelo); }
 .cpr-fieldbook.ficha-personagem .indicador.hp { border-top-color: var(--cp-vermelho); }
 .cpr-fieldbook.ficha-personagem .indicador.hp input { color: var(--cp-vermelho); }
 .cpr-fieldbook.ficha-personagem .indicador.hp:is(.estado-grave, .estado-mortal) { background: color-mix(in srgb, var(--cp-vermelho) 18%, var(--cp-painel)); }

@@ -20,6 +20,7 @@
       <div class="indicador corte sorte {{#if sortePreparada}}preparada{{/if}}">
         <span class="valor" data-tooltip="Sorte que ainda dá para gastar nesta sessão (o máximo é o LUCK)"><input type="number" name="system.sorte.value" value="{{sistema.sorte.value}}" aria-label="Sorte atual"><small>/{{sistema.sorte.max}}</small></span>
         <i>SORTE</i>
+        <small class="usada {{#if sorteUsada}}gasta{{/if}}" data-tooltip="Sorte gasta nesta sessão: o máximo menos a que resta (o ↺ do começo da sessão zera)">USADA {{sorteUsada}}</small>
         <span class="sorte-acoes">
           <button type="button" data-action="prepararSorte" data-delta="-1" data-tooltip="Um ponto a menos no próximo teste" aria-label="Um ponto de Sorte a menos">−</button>
           <b data-tooltip="Pontos de Sorte no próximo teste: +1 por ponto, que saem da Sorte quando ele rola">{{#if sortePreparada}}+{{sortePreparada}}{{else}}0{{/if}}</b>
