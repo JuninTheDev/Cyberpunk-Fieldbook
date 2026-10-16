@@ -62,6 +62,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
       {{#if fonte.fundacional}}<label class="celula"><span>Slots de opção</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{else}}<label class="celula"><span>Slots que ocupa</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>{{/if}}
+      {{#if fundacoes}}<label class="celula"><span>Fundação</span><select name="system.instaladoEm">{{selectOptions fundacoes selected=fonte.instaladoEm}}</select></label>{{/if}}
       <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
       {{#if rolaHumanidade}}<div class="acoes-do-item"><button type="button" class="acao" data-action="rolarHumanidade" data-tooltip="Rola a perda de Humanidade sem instalar; o mestre aplica pelo cartão">ROLAR HUMANIDADE</button></div>{{/if}}
       {{/if}}

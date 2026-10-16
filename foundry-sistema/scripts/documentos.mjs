@@ -472,12 +472,26 @@ export class AtorCPR extends Actor {
     return perda;
   }
 
-  // A fundação instalada (deste ator) onde a opção cabe: a que ela já aponta, se ainda cabe, ou a primeira (regras.cabeNaFundacao).
-  fundacaoPara(item) {
-    const fundacoes = this.items.filter(outro => outro.type === 'cyberware' && outro.system.fundacional && outro.system.instalado && outro.id !== item.id);
+  // As fundações instaladas (deste ator) em que a opção cabe (regras.cabeNaFundacao, sem contar a própria opção nos
+  // slots): a ficha da opção e o "+ Opção" escolhem por elas.
+  fundacoesPara(item) {
     const cabe = fundacao => cabeNaFundacao({ fundacao: encaixeDe(fundacao), opcao: encaixeDe(item), usados: fundacao.instalados.filter(outro => outro.id !== item.id).reduce((soma, outro) => soma + outro.system.tamanho, 0) }).cabe;
-    const escolhida = fundacoes.find(fundacao => fundacao.id === item.system.instaladoEm);
-    return escolhida && cabe(escolhida) ? escolhida : fundacoes.find(cabe) ?? null;
+    return this.items.filter(outro => outro.type === 'cyberware' && outro.system.fundacional && outro.system.instalado && outro.id !== item.id && cabe(outro));
+  }
+  // A fundação onde a opção entra ao instalar: a que ela já aponta, se ainda cabe, ou a primeira.
+  fundacaoPara(item) {
+    const fundacoes = this.fundacoesPara(item);
+    return fundacoes.find(fundacao => fundacao.id === item.system.instaladoEm) ?? fundacoes[0] ?? null;
+  }
+  // As opções deste ator que cabem na fundação e ainda não estão nela (o "+ Opção" da aba Cyberware).
+  opcoesPara(fundacao) {
+    return this.items.filter(item => item.type === 'cyberware' && !item.system.fundacional && item.system.instaladoEm !== fundacao.id && this.fundacoesPara(item).includes(fundacao));
+  }
+  // "+ Opção": a opção vai na fundação; a que ainda não está instalada se instala nela (com a perda de Humanidade).
+  async instalarOpcao(opcao, fundacao, { rolar = true } = {}) {
+    if (!this.fundacoesPara(opcao).includes(fundacao)) return null;
+    await opcao.update({ 'system.instaladoEm': fundacao.id });
+    return opcao.system.instalado ? true : this.instalarCyberware(opcao, { rolar });
   }
 
   // Tirar o cyberware não devolve a Humanidade perdida: o máximo volta a subir sozinho (a peça deixa de contar), e a

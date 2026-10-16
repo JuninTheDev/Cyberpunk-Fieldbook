@@ -84,6 +84,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       usarDroga: FichaPersonagem.#usarDroga,
       acabouDroga: FichaPersonagem.#acabouDroga,
       instalar: FichaPersonagem.#instalar,
+      instalarOpcao: FichaPersonagem.#instalarOpcao,
       editarItem: FichaPersonagem.#editarItem,
       apagarItem: FichaPersonagem.#apagarItem,
       corrigirLesao: FichaPersonagem.#corrigirLesao,
@@ -487,6 +488,22 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const item = this.#item(alvo);
     if (!item) return null;
     return item.system.instalado ? this.actor.desinstalarCyberware(item) : this.actor.instalarCyberware(item, { rolar: !evento.shiftKey });
+  }
+  // "+ Opção" na fundação (a maquete "Cyberware Tab"): escolhe, entre as opções deste personagem que cabem nela, a que vai;
+  // a que ainda não está instalada se instala nela (Shift: a perda pela média).
+  static async #instalarOpcao(evento, alvo) {
+    const fundacao = this.#item(alvo);
+    if (!fundacao) return null;
+    const opcoes = this.actor.opcoesPara(fundacao);
+    if (!opcoes.length) return ui.notifications.info(`Nenhuma opção de ${this.actor.name} cabe em ${fundacao.name} (do mesmo tipo e com o slot livre).`);
+    const rotulo = opcao => `${foundry.utils.escapeHTML(opcao.name)} (${opcao.system.tamanho} slot${opcao.system.tamanho === 1 ? '' : 's'}${opcao.system.instalado ? ', instalada' : ''})`;
+    const escolha = await DialogV2.prompt({
+      window: { title: `+ Opção: ${fundacao.name}` }, classes: [SISTEMA, 'instalar-opcao'], rejectClose: false,
+      content: `<label>Opção <select name="opcao">${opcoes.map(opcao => `<option value="${opcao.id}">${rotulo(opcao)}</option>`).join('')}</select></label>`,
+      ok: { label: 'Instalar', callback: (e, botao) => botao.form.elements.opcao.value }
+    });
+    const opcao = escolha && this.actor.items.get(escolha);
+    return opcao ? this.actor.instalarOpcao(opcao, fundacao, { rolar: !evento.shiftKey }) : null;
   }
   static #editarItem(evento, alvo) { return this.#item(alvo)?.sheet.render(true); }
   // A correção rápida, o tratamento e o "Voltou" da lesão (tratamento.mjs, pela wiki).

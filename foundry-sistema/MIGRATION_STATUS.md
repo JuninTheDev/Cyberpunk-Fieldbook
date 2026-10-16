@@ -3961,6 +3961,36 @@ O cyberware que já está nas fichas e o que chega da wiki, com a fundação e a
 - **Pendências:** a parte 3 ("+ Opção" e "Instalar opção").
 - **Próximo:** a parte 3.
 
+### Ciclo 84 (2026-10-16): a fundação e as opções do cyberware, parte 3: o "+ Opção" e a fundação na ficha da opção (sessão KouArt)
+
+O "+ Foundation" e o "+ Option" da maquete "Cyberware Tab" e o "Install option" da maquete "Item Sheets". Commit anterior:
+`a6f6dbae` (a marca `[~]`).
+
+- **Implementado:**
+  - **no ator** (`documentos.mjs`): `fundacoesPara(opcao)` (as fundações instaladas em que ela cabe, sem contar a própria
+    opção nos slots), `opcoesPara(fundacao)` (as opções do ator que cabem nela e ainda não estão nela) e
+    `instalarOpcao(opcao, fundacao)` (a opção vai nela; a guardada se instala nela, com a perda de Humanidade). A
+    instalação de sempre (`fundacaoPara`) passou a usar a mesma lista;
+  - **"+ OPÇÃO"** na linha da fundação instalada, na aba Cyberware: a janela lista as opções que cabem (com os slots de
+    cada uma e se já está instalada noutro lugar) e instala a escolhida nela (Shift: a perda pela média); sem nenhuma, o
+    recado, sem a janela. O "+ Fundação" da maquete é o "Instalar" de cada fundação (não ganhou outro botão);
+  - **o seletor "Fundação"** na ficha da opção instalada de um ator: a fundação de agora, as instaladas em que ela cabe e
+    "Sem fundação". A opção guardada não tem o seletor (instalar escolhe a fundação, ou o "+ OPÇÃO").
+- **Testes:**
+  - G1: 55 arquivos, 0 erros; G2: 0 erros; G3: 93 de 97 (as 4 falhas são as das armas de 2077);
+  - G4: 106 de 111 (as 5 falhas são as das armas de 2077). Um passo novo, antes do Proteger-se: num ator de teste, o
+    Neural Link e dois Cybereyes instalados, um terceiro guardado (sem o "+ OPÇÃO"); o "+ OPÇÃO" do Neural Link (com Shift)
+    lista só "Kerenzikov (1 slot)" e o instala nele, com a perda pela média; de novo, o recado "Nenhuma opção de ... cabe
+    em Neural Link", sem a janela; o do segundo Cybereye põe o Anti-Dazzle nele, com o primeiro ainda com espaço; na ficha
+    do Low Light/IR/UV (no primeiro), o seletor tem "Sem fundação" e os dois Cybereyes, e trocar o leva ao segundo (3 de
+    3); a ficha do Chyron guardado não tem o seletor. A primeira versão do passo passou; antes das mutações, ele ganhou o
+    Cybereye guardado e o Anti-Dazzle no segundo (sem eles, duas das mutações sobreviveriam), e passou de novo;
+  - **mutações:** as 6 caíram, e os arquivos voltaram (conferido pelo md5): o "+ OPÇÃO" que lista a opção que já está na
+    fundação (E1) e as que não cabem (E2), que não põe a opção na fundação escolhida (E3), o botão na fundação guardada
+    (E4), o seletor na opção guardada (E5) e o seletor com todas as fundações (E6).
+- **Pendências:** nenhuma da fundação e das opções. Das maquetes, segue a lista do ROADMAP.
+- **Próximo:** o próximo item do ROADMAP.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

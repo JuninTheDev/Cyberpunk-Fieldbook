@@ -106,6 +106,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       lugarAtual: tipoDoLugar && item.instaladoNo?.type === tipoDoLugar ? item.instaladoNo.id : '',
       instalados: item.instalados.map(i => i.name).join(', '),
       slotsUsados: item.slotsUsados,
+      // A opção instalada de um ator: a fundação onde está, entre as instaladas em que ela cabe (e a de agora), ou nenhuma.
+      fundacoes: item.type === 'cyberware' && item.actor && item.system.instalado && !item.system.fundacional
+        ? Object.fromEntries([['', 'Sem fundação'], ...[...new Set([item.instaladoNo, ...item.actor.fundacoesPara(item)].filter(Boolean))].map(fundacao => [fundacao.id, fundacao.name])])
+        : null,
       efeitos: item.effects.map(efeito => ({
         id: efeito.id, nome: efeito.name, ativo: efeito.active, desligado: efeito.disabled, ligavel: ligaAMao(item),
         mudancas: efeito.system.changes.map(c => `${c.key.replace(/^system\./, '')} ${c.type === 'add' ? '+' : c.type} ${c.value}`).join(' · ')

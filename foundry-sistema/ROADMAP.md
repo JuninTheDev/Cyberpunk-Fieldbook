@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 84). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 85). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -156,7 +156,7 @@ de compêndio; entram só as partes do sistema.
 - [ ] **C19. Lesão crítica fora do ataque:** rolar na tabela à mão, e o paliativo e o tratamento com a DV.
 - [ ] **C20. Macros e favoritos:** arrastar arma, perícia ou item para a barra, e os favoritos na aba Combate.
 - [ ] **C21. Cyberware:**
-  - a base com os slots das opções (instalar dentro da base, como a montagem da wiki);
+  - a base com os slots das opções (instalar dentro da base, como a montagem da wiki): ciclos 82 a 84;
   - a terapia, que devolve Humanidade até o máximo;
   - a ciberpsicose.
 - [ ] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE). A wiki guarda, e o cpr-2077 manda na
@@ -362,7 +362,7 @@ No fim de tudo, uma sessão de teste com a mesa.
     cinco painéis): ciclo 61;
   - [x] as fichas dos itens: o tipo na cor dele, o resumo e as etiquetas no alto; as abas Detalhes, Descrição e
     Efeitos; os campos em células; o uso em três botões (a ficha da arquitetura não mudou): ciclo 62.
-- [ ] **As funções das maquetes que o sistema não tem** (a decisão do usuário de 2026-10-15: "cada um vira um item"; a
+- [x] **As funções das maquetes que o sistema não tem** (todas, até o ciclo 84) (a decisão do usuário de 2026-10-15: "cada um vira um item"; a
   lista da dúvida no MIGRATION_STATUS). Cada uma é um ciclo, com os portões; as que tocam regra seguem a wiki
   (`system-rules.js`), e as que a contrariam esperam a decisão da mesa, sem mudar a regra antes. As marcas: (interface)
   é só a ficha ou o cartão chamando o que o sistema já faz; (regra: …) diz o que a wiki tem; (decisão da mesa) é o que
@@ -409,8 +409,8 @@ No fim de tudo, uma sessão de teste com a mesa.
       instalada na primeira fundação compatível do mesmo ator, os slots das fundações pelo catálogo, e a que não couber
       "sem fundação", marcada na ficha) e a importação da wiki (a opção na fundação dela, pelo criador e pela ficha "Na
       mesa"): ciclo 83;
-    - [~] (sessão KouArt) a fundação e as opções do cyberware, parte 3: "+ Opção" na fundação e "Instalar opção" na ficha da opção (a
-      escolha da fundação);
+    - [x] a fundação e as opções do cyberware, parte 3: "+ Opção" na fundação e a escolha da fundação na ficha da opção
+      (o "Instalar opção" da maquete); o "+ Fundação" é o "Instalar" de cada fundação: ciclo 84;
     - [x] as notas de ciberpsicose na aba Cyberware e as notas da Role (dois campos de texto novos no personagem, vazios
       por padrão): ciclo 68;
     - [x] "Conectar" e "Desconectar" na aba NET: o token do ator no ponto de acesso mais perto, com as conferências do
@@ -428,7 +428,7 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [x] "Rodar" e "Restaurar REZ" na ficha do programa (liga e desliga no deck, como o "Ativo" da aba NET; a REZ
       atual e a volta ao máximo): ciclo 75;
     - [x] "Rolar Humanidade" no cyberware de um ator (a perda rolada sem instalar, no cartão do "Aplicar"): ciclo 73;
-    - [ ] "Instalar opção" no cyberware (vem com a fundação e as opções, acima). "Usar" a droga na ficha dela: ciclo 78.
+    - [x] "Instalar opção" no cyberware: o seletor da fundação na ficha da opção, ciclo 84. "Usar" a droga na ficha dela: ciclo 78.
       A correção rápida e o tratamento na ficha da lesão: ciclo 77. O "Largar" do equipamento não entra (a decisão do
       usuário de 2026-10-16: o botão do uso e o ✕ já cobrem).
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
@@ -473,7 +473,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 ## P3: Netrunning, cyberware, NPCs e ferramentas do mestre
 
 - [ ] **NET:** (→ C5 a C8) o NET Architect dentro do sistema (Interface, programas, Black ICE, dano no cérebro).
-- [ ] **Cyberware:** (→ C21) base e slots ao instalar (com as opções na base, como a montagem da wiki), terapia e ciberpsicose.
+- [ ] **Cyberware:** (→ C21) base e slots ao instalar (com as opções na base, como a montagem da wiki: ciclos 82 a 84), terapia e ciberpsicose.
 - [ ] **NET de 2077:** (→ C9) a RAM e o Cooling do deck, os quickhacks e os daemons.
 - [x] **NPCs:** (→ C2 e C7, feitos nos ciclos 36 e 37 e 43 a 46) ficha de capanga (mook), Black ICE e demônios como atores.
 - [ ] **Ferramentas do mestre:** (→ C24 e C25) o Painel Tático dentro do sistema; o contêiner do CORE (loja, saque e esconderijo, com

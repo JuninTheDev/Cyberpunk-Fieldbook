@@ -1479,6 +1479,83 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('"+ OPÇÃO" na fundação e a fundação na ficha da opção (a maquete "Cyberware Tab"): o botão da fundação instalada lista só as opções do personagem que cabem nela e instala a escolhida nela (Shift: a perda pela média); sem nenhuma que caiba, o recado; na ficha da opção instalada, a fundação muda entre as que cabem; a fundação guardada não tem o botão, e a opção guardada não tem o seletor', async () => {
+      // O Neural Link e dois Cybereyes instalados, e um terceiro guardado; o Low Light/IR/UV (2) no primeiro Cybereye; o
+      // Kerenzikov, o Anti-Dazzle e o Chyron guardados. O "+ OPÇÃO" do Neural Link lista só o Kerenzikov; o do segundo
+      // Cybereye põe o Anti-Dazzle nele (o primeiro ainda tem espaço). Movido o Low Light, o segundo fica cheio (3 de 3).
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const ator = await Actor.implementation.create({ name: 'Teste Mais Opção', type: 'personagem' });
+        const recados = [];
+        ui.notifications.info = mensagem => { recados.push(String(mensagem)); };
+        const dialogo = () => document.querySelector('.application.dialog.instalar-opcao:not(.minimizing)');
+        try {
+          const criar = async id => (await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat[id])]))[0];
+          const link = await criar('core_cyberware:neural-link');
+          const olho1 = await criar('core_cyberware:cybereye');
+          const olho2 = await criar('core_cyberware:cybereye');
+          const olho3 = await criar('core_cyberware:cybereye');
+          const keren = await criar('core_cyberware:kerenzikov');
+          const lowLight = await criar('core_cyberware:low-light-ir-uv');
+          const antiDazzle = await criar('core_cyberware:anti-dazzle');
+          const chyron = await criar('core_cyberware:chyron');
+          for (const item of [link, olho1, olho2, lowLight]) await ator.instalarCyberware(item, { rolar: false });
+          const hum = ator.system.humanidade.value;
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('cyberware', 'primary');
+          const linhaDe = item => ator.sheet.element?.querySelector('.tab.cyberware li[data-item-id="' + item.id + '"]');
+          const maisOpcao = item => linhaDe(item)?.querySelector('[data-action="instalarOpcao"]');
+          await __esperar(() => maisOpcao(link));
+          const botoes = { link: Boolean(maisOpcao(link)), olho: Boolean(maisOpcao(olho2)), guardado: Boolean(maisOpcao(olho3)), keren: Boolean(maisOpcao(keren)) };
+          maisOpcao(link).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+          await __esperar(() => dialogo());
+          const lista = [...dialogo().querySelectorAll('select[name="opcao"] option')].map(opcao => opcao.textContent.trim());
+          dialogo().querySelector('select[name="opcao"]').value = keren.id;
+          dialogo().querySelector('button[data-action="ok"]').click();
+          await __esperar(() => keren.system.instalado && keren.system.instaladoEm === link.id && maisOpcao(link));
+          const instalou = { instalado: keren.system.instalado, em: keren.system.instaladoEm === link.id, perda: hum - ator.system.humanidade.value, media: keren.system.perdaHumanidade.media };
+          await __esperar(() => !dialogo());
+          // Sem nenhuma opção que caiba no Neural Link: o recado, sem a janela.
+          maisOpcao(link).click();
+          await __esperar(() => recados.length);
+          const semOpcao = { recado: recados.at(-1), janela: Boolean(dialogo()) };
+          // O "+ OPÇÃO" do segundo Cybereye: o Anti-Dazzle vai nele, não no primeiro.
+          maisOpcao(olho2).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+          await __esperar(() => dialogo());
+          dialogo().querySelector('select[name="opcao"]').value = antiDazzle.id;
+          dialogo().querySelector('button[data-action="ok"]').click();
+          await __esperar(() => antiDazzle.system.instalado && !dialogo());
+          const noSegundo = antiDazzle.system.instaladoEm === olho2.id;
+          // Na ficha do Low Light: a fundação, entre as que cabem (os dois Cybereyes) e "Sem fundação".
+          await lowLight.sheet.render({ force: true });
+          const seletor = () => lowLight.sheet.element?.querySelector('select[name="system.instaladoEm"]');
+          await __esperar(() => seletor());
+          const nomes = { [olho1.id]: 'olho1', [olho2.id]: 'olho2' };
+          const opcoesDaFicha = [...seletor().options].map(opcao => nomes[opcao.value] ?? opcao.value);
+          seletor().value = olho2.id;
+          seletor().dispatchEvent(new Event('change', { bubbles: true }));
+          await __esperar(() => lowLight.system.instaladoEm === olho2.id);
+          const mudou = { em: nomes[lowLight.system.instaladoEm] ?? lowLight.system.instaladoEm, slots: [olho1.slotsUsados, olho2.slotsUsados] };
+          // A ficha da opção guardada: sem o seletor.
+          await chyron.sheet.render({ force: true });
+          await __esperar(() => chyron.sheet.element?.querySelector('[name="system.tamanho"]'));
+          const guardada = Boolean(chyron.sheet.element.querySelector('select[name="system.instaladoEm"]'));
+          return { botoes, lista, instalou, semOpcao, noSegundo, opcoesDaFicha, mudou, guardada };
+        } finally {
+          delete ui.notifications.info;
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('instalar-opcao')) await app.close();
+          for (const item of ator.items) await item.sheet?.close();
+          await ator.sheet.close();
+          await ator.delete();
+        }
+      })()`);
+      const ok = info.botoes.link && info.botoes.olho && !info.botoes.guardado && !info.botoes.keren && info.lista.join() === 'Kerenzikov (1 slot)' && info.noSegundo
+        && info.instalou.instalado && info.instalou.em && info.instalou.perda === info.instalou.media
+        && info.semOpcao.recado === 'Nenhuma opção de Teste Mais Opção cabe em Neural Link (do mesmo tipo e com o slot livre).' && !info.semOpcao.janela
+        && info.opcoesDaFicha.join() === ',olho1,olho2' && info.mudou.em === 'olho2' && info.mudou.slots.join() === '0,3' && !info.guardada;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('"Proteger-se" na aba Combate (as maquetes; a decisão do usuário: só a marca, wiki p. 182): o botão marca o Alvo "Em cobertura"; o tiro contra ele avisa o mestre no cartão, que decide; o botão de novo tira a marca', async () => {
       // Ataque: d10 7 → 19 contra DV 16. Dano 5d6, 1 em cada = 5 contra SP 11: a armadura segura, e o Alvo não muda.
       await fixar(edge, [[7, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]]);
