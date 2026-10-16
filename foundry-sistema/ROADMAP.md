@@ -405,7 +405,7 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [x] a fundação e as opções do cyberware, parte 1 (a wiki, `system-catalog.js` e `system-2077.js`): os slots de
       cada fundação no catálogo, o encaixe (o mesmo tipo; o Sensor Array recebe as do Cyberaudio; as placas base de 2077,
       as de placa), a opção que entra na fundação ao instalar e a árvore na aba Cyberware: ciclo 82;
-    - [ ] a fundação e as opções do cyberware, parte 2: "+ Opção" na fundação e "Instalar opção" na ficha da opção (a
+    - [~] (sessão KouArt) a fundação e as opções do cyberware, parte 2: "+ Opção" na fundação e "Instalar opção" na ficha da opção (a
       escolha da fundação), a migração (a decisão do usuário de 2026-10-16: cada opção já instalada na primeira fundação
       compatível do mesmo ator, os slots das fundações pelo catálogo, e a que não couber "sem fundação", com aviso) e a
       importação da wiki, que ainda não liga a opção à base;
