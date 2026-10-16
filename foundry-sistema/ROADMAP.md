@@ -402,7 +402,7 @@ No fim de tudo, uma sessão de teste com a mesa.
       2d6; doses a mais estendem o efeito primário): gasta a dose, liga o efeito primário e rola o secundário;
     - [x] "Usar" no equipamento de ativação à mão (liga e desliga os efeitos dele; na linha do inventário e na ficha do
       item; nenhum dos 46 do catálogo tem efeito, vale para os feitos à mão): ciclo 71;
-    - [ ] a fundação e as opções do cyberware ("+ Fundação", "+ Opção"; as opções dentro da fundação, com os slots)
+    - [~] (sessão KouArt) a fundação e as opções do cyberware ("+ Fundação", "+ Opção"; as opções dentro da fundação, com os slots)
       (regra: conferida em 2026-10-15, os slots de opção de cada fundação estão na wiki, `system-catalog.js`: o Neural
       Link com 5, o Cybereye com 3 por olho, o Cyberaudio Suite com 3, o Sensor Array soma 5 ao Cyberaudio...);
     - [x] as notas de ciberpsicose na aba Cyberware e as notas da Role (dois campos de texto novos no personagem, vazios
