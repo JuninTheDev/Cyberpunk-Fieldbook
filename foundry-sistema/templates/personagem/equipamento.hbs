@@ -72,6 +72,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
+            {{#if (ne quantidade null)}}<span class="quantidade" data-tooltip="{{unidade}}"><button type="button" data-action="mudarQuantidade" data-delta="-1" aria-label="Um a menos">−</button><b>{{quantidade}}</b><button type="button" data-action="mudarQuantidade" data-delta="1" aria-label="Um a mais">+</button></span>{{/if}}
             <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado">{{usoNome}}</button>
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>

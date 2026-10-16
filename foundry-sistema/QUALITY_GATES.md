@@ -164,8 +164,10 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   NET, os avisos, o deck) e, no registro, o texto exato da linha. Rótulos e enfeites novos vêm do CSS (`::before`,
   `::after`, `attr()`) ou de elementos vazios (os ícones, os losangos, a barra de REZ); a hora do registro vai no
   `data-hora` da linha, desenhada pelo CSS.
-- **Finais de linha:** o `sed -i` do Git Bash troca o CRLF de um arquivo por LF (no ciclo 58, o `tema.css` inteiro).
-  Edite com a ferramenta de edição ou com um script do Node, e confira os finais de linha de cada arquivo mexido.
+- **Finais de linha:** o `sed -i` do Git Bash troca o CRLF de um arquivo por LF (no ciclo 58, o `tema.css` inteiro; no
+  ciclo 67, de novo, o `tests/cenarios/v14.js`, para trocar uma palavra no nome de um passo). Não use `sed -i` nos
+  arquivos da worktree: edite com a ferramenta de edição ou com um script do Node, e confira os finais de linha de cada
+  arquivo mexido (o diff de um arquivo inteiro, numa mudança pequena, é o sinal).
 
 ## Build
 

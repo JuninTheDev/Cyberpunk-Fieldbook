@@ -66,6 +66,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       alternarCoronha: FichaPersonagem.#alternarCoronha,
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
+      mudarQuantidade: FichaPersonagem.#mudarQuantidade,
       instalar: FichaPersonagem.#instalar,
       editarItem: FichaPersonagem.#editarItem,
       apagarItem: FichaPersonagem.#apagarItem
@@ -140,8 +141,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       : comNivel;
 
     // Inventário: um detalhe de cada tipo e o uso (o botão passa por equipado, carregando e guardado).
-    const vezes = item => (item.system.quantidade > 1 ? `×${item.system.quantidade}` : '');
+    // A quantidade fica no controle com − e + (as maquetes do usuário), e não mais no detalhe; na droga, as doses.
     const linhaDoInventario = (item, ...detalhes) => ({
+      quantidade: 'quantidade' in item.system ? item.system.quantidade : null, unidade: item.type === 'droga' ? 'Doses' : 'Quantidade',
       id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', guardado: item.system.uso === 'guardado',
       usoNome: USOS[item.system.uso] ?? item.system.uso
     });
@@ -221,9 +223,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown,
       municoes: itens('municao'),
       inventario: [
-        { titulo: 'EQUIPAMENTO', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, vezes(item), item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
-        { titulo: 'ROUPAS', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, vezes(item), TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
-        { titulo: 'DROGAS', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item, `${item.system.quantidade} ${item.system.quantidade === 1 ? 'dose' : 'doses'}`)) }
+        { titulo: 'EQUIPAMENTO', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
+        { titulo: 'ROUPAS', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
+        { titulo: 'DROGAS', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item)) }
       ],
       decks,
       programas: itens('programa').map(p => ({
@@ -394,6 +396,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!item) return null;
     const ordem = Object.keys(USOS);
     return item.update({ 'system.uso': ordem[(ordem.indexOf(item.system.uso) + 1) % ordem.length] });
+  }
+  // − e + na quantidade do inventário (as maquetes do usuário): de 1 em 1. O 0 é o piso do modelo (o min: 0 do campo,
+  // que o Foundry 14 aplica ao limpar os dados); o item fica, com 0.
+  static #mudarQuantidade(evento, alvo) {
+    const item = this.#item(alvo);
+    if (!item) return null;
+    return item.update({ 'system.quantidade': item.system.quantidade + Number(alvo.dataset.delta) });
   }
   static #instalar(evento, alvo) {
     const item = this.#item(alvo);

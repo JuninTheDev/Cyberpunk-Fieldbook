@@ -669,7 +669,7 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso', async () => {
+    await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso, e muda a quantidade com − e + (sem passar de 0 e sem erro no 0)', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
         const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
@@ -692,19 +692,34 @@ module.exports = async ({ edge, servidores, r }) => {
         await a.sheet.render({ force: true });
         await esperar(() => a.sheet.element?.querySelector('.tab.equipamento [data-action="mudarUso"]'));
         const linhas = [...a.sheet.element.querySelectorAll('.tab.equipamento li[data-item-id]')].filter(li => li.querySelector('[data-action="mudarUso"]'))
-          .map(li => [li.querySelector('.nome').textContent, li.querySelector('.detalhe').textContent, li.querySelector('[data-action="mudarUso"]').textContent].join(' | '));
+          .map(li => [li.querySelector('.nome').textContent, li.querySelector('.detalhe').textContent, li.querySelector('.quantidade b')?.textContent ?? '-', li.querySelector('[data-action="mudarUso"]').textContent].join(' | '));
+        // A quantidade com − e + (as maquetes): o Boost vai de 1 a 2 e volta; no 0, o − não desce mais.
+        const doses = () => a.sheet.element.querySelector('li[data-item-id="' + boost.id + '"] .quantidade b')?.textContent;
+        const mudar = async (delta, esperado) => { a.sheet.element.querySelector('li[data-item-id="' + boost.id + '"] [data-action="mudarQuantidade"][data-delta="' + delta + '"]').click(); await esperar(() => boost.system.quantidade === esperado && doses() === String(esperado)); return boost.system.quantidade; };
+        const quantidade = [await mudar(1, 2), await mudar(-1, 1), await mudar(-1, 0)];
+        // O − no 0: fica no 0 e sem erro (o min: 0 do modelo segura; o Foundry 14 corta no mínimo ao limpar os dados).
+        const errosNoZero = [];
+        const pegar = evento => errosNoZero.push(String(evento.reason?.message ?? evento.reason));
+        window.addEventListener('unhandledrejection', pegar);
+        try {
+          // Aqui o "esperar a quantidade 0" já seria verdade antes de a mudança chegar: o passo espera ela assentar e só
+          // então lê o item e a ficha.
+          a.sheet.element.querySelector('li[data-item-id="' + boost.id + '"] [data-action="mudarQuantidade"][data-delta="-1"]').click();
+          await new Promise(r => setTimeout(r, 800));
+          quantidade.push(boost.system.quantidade, Number(doses()));
+        } finally { window.removeEventListener('unhandledrejection', pegar); }
         a.sheet.element.querySelector('li[data-item-id="' + agent.id + '"] [data-action="mudarUso"]').click();
         await esperar(() => agent.system.uso === 'equipado');
         passos.push({ uso: agent.system.uso, biblioteca: bonus('library-search') });
         await a.sheet.close();
         await a.delete();
-        return { passos, linhas };
+        return { passos, linhas, quantidade, errosNoZero };
       })()`);
       const [p0, p1, p2, p3] = info.passos;
       const linhas = info.linhas.join(' ; ');
       return [p0.biblioteca === 2 && p0.primeirosSocorros === 0 && p0.int === 5 && p1.biblioteca === 0 && p1.primeirosSocorros === 2 && p2.int === 7 && p2.ligados.join() === 'Boost Primary'
-        && p3.uso === 'equipado' && p3.biblioteca === 2 && /Agent \|[^;]*\| Guardado/.test(linhas) && /Medscanner \|[^;]*Medscanner[^;]*\| Equipado/.test(linhas) && /Boost \| 1 dose \| Carregando/.test(linhas)
-        && /High Fashion Footwear \| Calçado · Alta moda \| Equipado/.test(linhas), JSON.stringify(info)];
+        && p3.uso === 'equipado' && p3.biblioteca === 2 && /Agent \|[^;]*\| 1 \| Guardado/.test(linhas) && /Medscanner \|[^;]*Medscanner[^;]*\| 1 \| Equipado/.test(linhas) && /Boost \|  \| 1 \| Carregando/.test(linhas)
+        && /High Fashion Footwear \| Calçado · Alta moda \| 1 \| Equipado/.test(linhas) && info.quantidade.join() === '2,1,0,0,0' && info.errosNoZero.length === 0, JSON.stringify(info)];
     });
 
     await r.passo('acessórios: o carregador estendido põe o pente do rifle em 35 (a recarga enche 35); o Smartgun Link dá +1, e dois dão +1 só; tirados, volta a 25; o hardware ocupa slots do deck', async () => {

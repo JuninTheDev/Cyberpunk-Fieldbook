@@ -3365,6 +3365,43 @@ O item "Luck used" das maquetes. Commit anterior: `3de6383` (ciclo 65).
 - **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
 - **Próximo:** a quantidade com − e + no inventário (ciclo 67).
 
+### Ciclo 67 (2026-10-16): a quantidade com − e + no inventário (as maquetes; sessão KouArt)
+
+O item "a quantidade com − e + e Usar" das maquetes, só a quantidade. Commit anterior: `0772b53` (ciclo 66).
+
+- **Implementado** (`scripts/ficha-personagem.mjs`, `templates/personagem/equipamento.hbs`, `styles/tema.css`): nas
+  linhas do inventário da aba Equipamento (equipamento, roupas e drogas), o controle com − e + e o número (nas drogas,
+  as doses, na dica). Muda de 1 em 1, sem passar de 0 (o item fica na ficha, com 0). Quem segura o 0 é o modelo: o
+  campo tem `min: 0`, e o Foundry 14 corta no mínimo ao limpar os dados (`NumberField._cleanType`), sem erro. A
+  primeira versão tinha também um `Math.max(0, …)` na ficha, que repetia o modelo, e saiu.
+- **A mutação do piso que sobrevivia** (três rodadas) ensinou duas coisas. Primeiro, o código do Foundry: a guarda da
+  ficha repetia o `min: 0` do modelo (tirá-la não muda nada). Segundo, o meu teste: no clique do − com a quantidade já
+  em 0, ele esperava "a quantidade é 0", que já era verdade antes de a mudança chegar, e lia o 0 antigo; nem tirar o
+  `min: 0` do modelo ele via. O passo agora clica, espera a mudança assentar e só então lê o item e a ficha. A quantidade saiu do detalhe da
+  linha (o "×2" do equipamento e da roupa, o "1 dose" da droga), que agora repetiria o controle.
+- **O "Usar" separado:** a marca do ROADMAP estava errada. O "Usar" da droga não é só interface: a wiki manda rolar, ao
+  tomar, WILL + Resistir Tortura/Drogas + 1d10 contra a DV do efeito secundário (falhar dá o efeito secundário e o
+  vício), e algumas custam Humanidade (o Black Lace, 2d6); doses a mais estendem o primário. Virou um item de regra. O
+  "Usar" do equipamento de ativação à mão ficou num item próprio (nenhum dos 46 do catálogo tem efeito; vale para os
+  feitos à mão).
+- **No teste:** o passo do inventário lia o detalhe da droga ("Boost | 1 dose | Carregando"); com a quantidade fora do
+  detalhe, as linhas leem também o controle ("Boost |  | 1 | Carregando"), e as quatro linhas conferem o 1. O mesmo
+  passo ganhou o − e o + no Boost: 1 → 2 → 1 → 0, e o − no 0 não desce (no item e na ficha, lidos depois de a mudança
+  assentar) nem dá erro (nenhuma promessa rejeitada na página).
+- **Corrigido no caminho:** um `sed -i` para trocar uma palavra no nome do passo tirou o CRLF do `v14.js` inteiro (o
+  tropeço do ciclo 58, de novo); o CRLF voltou em todas as linhas e o diff ficou só com as do ciclo. A lição no
+  QUALITY_GATES ficou mais forte: nada de `sed -i` na worktree.
+- **Testes:**
+  - G1: 49 arquivos, 0 erros; G2: 0 erros; G3: 83 de 87 (as 4 das armas de 2077);
+  - G4: 92 de 97 nas quatro rodadas (177 a 183 s), a última com o passo final. As 5 falhas são as das armas de 2077, e
+    os avisos do passo "nenhum aviso", só os dois da Lexington;
+  - **mutações:** as 3 derrubaram o passo do inventário, e os arquivos voltaram (conferido pelo md5): o − somando
+    (Q1), a droga sem o `min: 0` no modelo (Q2: a quantidade foi a −1) e o controle fora da linha (Q3). A Q2 só caiu
+    na terceira forma do passo (acima). Nenhuma rodada deixou Edge para trás; a mesa do servidor ficou ocupada antes
+    da última, e o executor esperou.
+- **Pendências:** os outros itens das maquetes; a confirmação do usuário sobre o conserto da armadura.
+- **Próximo:** os itens das maquetes (ciclo 68).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

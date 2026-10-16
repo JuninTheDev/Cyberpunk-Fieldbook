@@ -208,7 +208,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     - **Dian:** o botão Recolher recolhe a coronha. Dá para esconder a arma, mas os ataques têm −1 até estender.
     - **Lexington:** o autofogo gasta 7 balas.
     - **O resto** (a carga da Satara, a Burya, o supressivo da Senkoh, o +1 entre 13 e 50 m), o mestre resolve: a descrição da arma diz.
-- **Inventário** (aba Equipamento): equipamento, roupas e drogas, com a quantidade e o uso (equipado, carregando ou guardado; o botão da linha passa de um para o outro).
+- **Inventário** (aba Equipamento): equipamento, roupas e drogas, com a quantidade (− e +, sem passar de 0; nas drogas, as doses; ciclo 67) e o uso (equipado, carregando ou guardado; o botão da linha passa de um para o outro).
   - **Efeitos do equipamento** valem conforme o uso, como no CORE: o Agent (+2 em Pesquisa em Biblioteca) e o Techscanner valem equipados ou carregando; o Medscanner e o Linear Frame, só equipados.
   - **Drogas** vêm com os efeitos desligados. Quem usa liga o efeito na ficha do item (o Boost dá +2 INT).
   - **Roupas** guardam o tipo e o estilo, com os nomes da loja da wiki.
@@ -340,7 +340,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
 - **Lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js`.
 - **No Foundry 14:** `node tests/rodar.js v14`, na raiz da wiki. Sobe o Foundry 14 do PC sem janela, num mundo vazio e numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`), e confere estes pontos, com dados fixos onde a conta importa:
   - os compêndios, a ficha e o crítico do d10;
-  - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item, os acessórios na arma e o hardware no deck);
+  - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item, a quantidade com − e + até o 0, os acessórios na arma e o hardware no deck);
   - a ficha do item no jeito da maquete: numa pistola, o tipo na cor dele, o resumo, a etiqueta da qualidade, as três abas (a troca pelo clique) e as células; num cyberdeck, o uso pelos três botões, que grava;
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
   - o dano rolado à parte pelos botões do cartão: "Aplicar dano" no alvo marcado (com a armadura, e o Desfazer) e, no crítico, os +5 sem a lesão e "Rolar a lesão" uma vez por alvo;

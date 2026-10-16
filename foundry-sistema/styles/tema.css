@@ -289,6 +289,10 @@ do capanga é um botão do mesmo jeito, que rola. */
 /* O painel de Eurodólares (aba Equipamento): o saldo, o botão do extrato e as últimas mudanças. */
 .cpr-fieldbook.ficha-personagem .dinheiro .titulo span { color: var(--cp-fraco); font-size: 12px; letter-spacing: 0.15em; }
 .cpr-fieldbook.ficha-personagem .botoes-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+/* A quantidade do inventário com − e + (as maquetes do usuário). */
+.cpr-fieldbook.ficha-personagem ol.itens .quantidade { display: flex; flex: none; align-items: center; gap: 6px; }
+.cpr-fieldbook.ficha-personagem ol.itens .quantidade b { min-width: 2ch; color: var(--cp-amarelo); font: 400 15px var(--cp-dados); text-align: center; }
+.cpr-fieldbook.ficha-personagem ol.itens .quantidade button { width: 24px; height: 24px; padding: 0; line-height: 1; }
 /* Na coluna estreita, o histórico recente: a mudança em cima, o detalhe embaixo. */
 .cpr-fieldbook.ficha-personagem .coluna-resumo .extrato-recente > li { flex-wrap: wrap; gap: 0 8px; }
 .cpr-fieldbook.ficha-personagem .coluna-resumo .extrato-recente .detalhe { flex-basis: 100%; }
