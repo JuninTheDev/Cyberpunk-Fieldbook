@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 78). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 79). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -391,7 +391,7 @@ No fim de tudo, uma sessão de teste com a mesa.
       tratamento resolve de vez; o tratamento cura e não pode ser em si mesmo): ciclo 77;
     - [x] a Sorte usada na sessão no cabeçalho (o máximo menos a que resta; o ↺ zera): ciclo 66;
     - [x] a quantidade com − e + no inventário (equipamento, roupas e drogas; sem passar de 0): ciclo 67;
-    - [ ] "Usar" a droga (regra, conferida na wiki em 2026-10-16: ao tomar, WILL + Resistir Tortura/Drogas + 1d10 contra a
+    - [x] "Usar" a droga (ciclo 78; regra, conferida na wiki em 2026-10-16: ao tomar, WILL + Resistir Tortura/Drogas + 1d10 contra a
       DV do efeito secundário, e falhar dá o efeito secundário e o vício; algumas custam Humanidade, como o Black Lace,
       2d6; doses a mais estendem o efeito primário): gasta a dose, liga o efeito primário e rola o secundário;
     - [x] "Usar" no equipamento de ativação à mão (liga e desliga os efeitos dele; na linha do inventário e na ficha do

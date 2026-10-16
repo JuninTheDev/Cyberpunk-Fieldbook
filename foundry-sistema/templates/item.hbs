@@ -115,7 +115,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposRoupa selected=fonte.tipo}}</select></label>
       <label class="celula"><span>Estilo</span><select name="system.estilo">{{selectOptions estilosRoupa selected=fonte.estilo}}</select></label>
       {{/if}}
-      {{#if eh.droga}}{{#if fonte.consumo}}<p class="nota">Ao usar: ligue o efeito "{{fonte.consumo}}" na aba Efeitos.</p>{{/if}}{{/if}}
+      {{#if drogaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação): o efeito primário vale">USAR</button>{{#if drogaDeAtor.sobEfeito}}<button type="button" class="acao" data-action="acabouDroga" data-tooltip="O efeito acabou: o teste do efeito secundário">O EFEITO ACABOU</button>{{/if}}</div>{{#if drogaDeAtor.viciado}}<p class="nota">Viciado: o efeito secundário fica até a terapia.</p>{{/if}}{{/if}}
       {{#unless eh.lesao}}<label class="celula"><span>Preço (eb)</span><input type="number" name="system.preco" value="{{fonte.preco}}"></label>{{/unless}}
     </div>
     {{#if temUso}}

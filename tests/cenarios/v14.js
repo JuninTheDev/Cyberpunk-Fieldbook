@@ -1382,6 +1382,56 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('"Usar" a droga (wiki, p. 227–229; as maquetes): gasta a dose e liga o efeito primário (o Black Lace tira 2d6 de Humanidade); quando o efeito acaba, WILL + Resistir Tortura/Drogas + 1d10 contra a DV do secundário: passando, a Humanidade volta; falhando (o Boost), o vício fica', async () => {
+      // Black Lace: 2d6 3 + 4 = 7 de Humanidade; o teste, WILL 6 + Resistir 4 + d10 8 = 18 > 17. Boost: d10 5 = 15, não supera 17.
+      await fixar(edge, [[3, 6], [4, 6], [8, 10], [5, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const lace = foundry.utils.deepClone(cat['core_drugs:black-lace']);
+        lace.system.quantidade = 2;
+        const a = await Actor.implementation.create({ name: 'Teste Usuário', type: 'personagem', system: { atributos: { will: { valor: 6 }, int: { valor: 6 } }, pericias: { 'resist-torture-drugs': { nivel: 4 } } },
+          items: [lace, foundry.utils.deepClone(cat['core_drugs:boost'])] });
+        const [blackLace, boost] = ['Black Lace', 'Boost'].map(nome => a.items.getName(nome));
+        const ligado = (droga, nome) => !droga.effects.getName(nome).disabled;
+        const ultimo = () => game.messages.contents.at(-1).getFlag('${S}', 'droga');
+        const f = () => a.sheet.element;
+        const botao = (droga, acao) => f()?.querySelector('li[data-item-id="' + droga.id + '"] [data-action="' + acao + '"]');
+        try {
+          const humanidade = a.system.humanidade.value;
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('equipamento', 'primary');
+          await __esperar(() => botao(blackLace, 'usarDroga'));
+          const semAcabou = !botao(blackLace, 'acabouDroga');
+          let antes = game.messages.size;
+          botao(blackLace, 'usarDroga').click();
+          await __esperar(() => game.messages.size > antes && ultimo() && botao(blackLace, 'acabouDroga'));
+          const usou = { doses: blackLace.system.quantidade, primario: ligado(blackLace, 'Black Lace Primary'), perdeu: humanidade - a.system.humanidade.value, flag: ultimo().humanidade };
+          antes = game.messages.size;
+          botao(blackLace, 'acabouDroga').click();
+          await __esperar(() => game.messages.size > antes + 1 && ultimo()?.resultado && !botao(blackLace, 'acabouDroga'));
+          const acabou = { resultado: ultimo().resultado, total: ultimo().total, dv: ultimo().dv, humanidade: a.system.humanidade.value === humanidade, primario: ligado(blackLace, 'Black Lace Primary'), vicio: ligado(blackLace, 'Black Lace Addiction') };
+          // O Boost: +2 INT sob efeito; falhando no teste, o vício (−2 INT) fica, com a marca.
+          antes = game.messages.size;
+          botao(boost, 'usarDroga').click();
+          await __esperar(() => game.messages.size > antes && a.system.atributos.int.valor === 8);
+          const sobBoost = a.system.atributos.int.valor;
+          antes = game.messages.size;
+          botao(boost, 'acabouDroga').click();
+          await __esperar(() => game.messages.size > antes + 1 && ultimo()?.resultado === 'viciou' && f()?.querySelector('li[data-item-id="' + boost.id + '"] .viciado'));
+          const viciou = { int: a.system.atributos.int.valor, vicio: ligado(boost, 'Boost Addiction'), doses: boost.system.quantidade, texto: new DOMParser().parseFromString(game.messages.contents.at(-1).content, 'text/html').body.textContent.trim() };
+          return { semAcabou, usou, acabou, sobBoost, viciou };
+        } finally {
+          await a.sheet.close();
+          await a.delete();
+        }
+      })()`);
+      const { semAcabou, usou, acabou, sobBoost, viciou } = info;
+      const ok = semAcabou && usou.doses === 1 && usou.primario && usou.perdeu === 7 && usou.flag === 7
+        && acabou.resultado === 'passou' && acabou.total === 18 && acabou.dv === 17 && acabou.humanidade && !acabou.primario && !acabou.vicio
+        && sobBoost === 8 && viciou.int === 4 && viciou.vicio && viciou.doses === 0 && viciou.texto === 'Teste Usuário ficou viciado em Boost (15 contra DV17): o efeito secundário fica, até a terapia.';
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);

@@ -10,6 +10,7 @@ import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
+import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -73,6 +74,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       mudarUso: FichaPersonagem.#mudarUso,
       mudarQuantidade: FichaPersonagem.#mudarQuantidade,
       usarItem: FichaPersonagem.#usarItem,
+      usarDroga: FichaPersonagem.#usarDroga,
+      acabouDroga: FichaPersonagem.#acabouDroga,
       instalar: FichaPersonagem.#instalar,
       editarItem: FichaPersonagem.#editarItem,
       apagarItem: FichaPersonagem.#apagarItem,
@@ -154,7 +157,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const linhaDoInventario = (item, ...detalhes) => ({
       quantidade: 'quantidade' in item.system ? item.system.quantidade : null, unidade: item.type === 'droga' ? 'Doses' : 'Quantidade',
       id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', guardado: item.system.uso === 'guardado',
-      usoNome: USOS[item.system.uso] ?? item.system.uso, usavel: item.usavelAMao, emUso: item.emUso
+      usoNome: USOS[item.system.uso] ?? item.system.uso,
+      // A droga (drogas.mjs): sob o efeito agora e viciada.
+      ehDroga: item.type === 'droga', sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')), usavel: item.usavelAMao, emUso: item.emUso
     });
     const sp = (armadura, local) => (armadura.system.sp[local].max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${armadura.system.sp[local].value}/${armadura.system.sp[local].max}` : '');
     const armaduras = itens('armadura').map(armadura => ({
@@ -438,6 +443,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   // − e + na quantidade do inventário (as maquetes do usuário): de 1 em 1. O 0 é o piso do modelo (o min: 0 do campo,
   // que o Foundry 14 aplica ao limpar os dados); o item fica, com 0.
+  // "Usar" a droga e "O efeito acabou" (drogas.mjs, pela wiki).
+  static #usarDroga(evento, alvo) { const item = this.#item(alvo); return item && usarDroga(item); }
+  static #acabouDroga(evento, alvo) { const item = this.#item(alvo); return item && acabouOEfeito(item); }
   // "Usar" o equipamento ligado à mão (ItemCPR.usar): liga ou desliga os efeitos dele.
   static #usarItem(evento, alvo) {
     return this.#item(alvo)?.usar();

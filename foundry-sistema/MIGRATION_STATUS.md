@@ -3670,6 +3670,50 @@ Commit anterior: `2456f61` (ciclo 76).
   a confirmar com o usuário).
 - **Próximo:** "Usar" a droga (ciclo 78).
 
+### Ciclo 78 (2026-10-16): "Usar" a droga (um item de regra das maquetes; sessão KouArt)
+
+O item "Use" das drogas das maquetes, pela regra da wiki ("Humanidade e drogas", "Drogas de rua", p. 227–229).
+Commit anterior: `9e69386` (ciclo 77).
+
+- **A regra (a wiki):** tomar é uma Ação; o efeito primário vale na hora; doses a mais estendem o primário. Quando ele
+  acaba, WILL + Resistir Tortura/Drogas + 1d10 contra a DV do efeito secundário, que precisa ser superada; falhar dá o
+  efeito secundário permanente e o vício, até a terapia. A tabela: Black Lace DV17 (tira 2d6 de Humanidade, devolvidos
+  se passar), Blue Glass 15, Boost 17, Smash 15, Synthcoke 15.
+- **Implementado** (`scripts/drogas.mjs`, novo):
+  - **a parte de regra pura** (`DROGAS_DE_RUA`, `efeitosDaDroga`, `resultadoDoSecundario`), que o G3 testa;
+  - **"Usar"** (`usarDroga`): gasta a dose (sem dose, avisa), liga o efeito primário (o do "consumo" da droga) e marca
+    a droga sob efeito; o Black Lace rola os 2d6 e os tira da Humanidade (guardados para devolver); sob efeito, a dose
+    a mais só estende. O cartão "DROGA" diz o que foi tomado;
+  - **"Acabou"** (`acabouOEfeito`): desliga o primário e, na droga de rua, rola o teste; superando, o Black Lace
+    devolve a Humanidade; senão, o vício (o efeito "Addiction" do CORE) liga e fica, com a marca "VICIADO". Quem já é
+    viciado rola também (a Humanidade pode voltar), mas segue viciado: só a terapia tira o vício;
+  - **o vício fora do efeito:** a wiki diz que o −2 do vício do Black Lace e do Synthcoke vale "quando não está sob
+    efeito": enquanto o primário dura, o vício dessas duas fica suspenso. O CORE faz essa conta no Synthcoke com um
+    efeito "Addicted Primary" (+3); ele não é usado aqui (daria a conta dobrada). No Boost e no Smash, o vício vale
+    sempre, como a wiki diz;
+  - **as outras drogas** (Speedheal, Stim, Rapidetox, os antibióticos, o Surge, os imunobloqueadores): sem efeito
+    secundário na wiki, "Usar" gasta a dose e liga o efeito, se houver. O que cada uma faz além disso (a cura do
+    Speedheal, por exemplo) o mestre aplica;
+  - **os botões** "Usar", "Acabou" e a marca "VICIADO" na linha do inventário, e "Usar" e "O efeito acabou" na ficha da
+    droga de um personagem (a nota antiga, "ligue o efeito na aba Efeitos", saiu).
+- **Testes:**
+  - G1: 54 arquivos, 0 erros; G2: 0 erros;
+  - G3: 88 de 92. Um arquivo novo, `tests/sistema/drogas.test.mjs`, com 3 testes de referência: a tabela das drogas de
+    rua, o primário e o vício de cada droga do catálogo (no Synthcoke, o "Primary", não o "Addicted Primary") e o
+    teste do secundário (empatar vicia). As 4 falhas são as das armas de 2077;
+  - G4: 99 de 104, 184 s, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington).
+    Um passo novo, antes do tiro mirado: num ator de teste (WILL 6, Resistir 4, INT 6), o Black Lace (2
+    doses): "Usar" gasta 1, liga o primário e tira 7 (3 + 4) de Humanidade; "Acabou" rola 18 contra DV17, devolve os 7
+    e desliga o primário, sem vício. O Boost: +2 INT (8); "Acabou" rola 15 contra DV17: o vício liga (INT 4), a marca
+    aparece e o cartão diz "Teste Usuário ficou viciado em Boost (15 contra DV17): o efeito secundário fica, até a
+    terapia.";
+  - **mutações:** as 5 caíram, e o arquivo voltou (conferido pelo md5). No G3: empatar com a DV passando (R4) e a DV do
+    Boost errada (R5). No G4: "Usar" sem gastar a dose (R1), o Black Lace que não devolve a Humanidade (R2) e o vício
+    que não liga ao falhar (R3). Nenhuma rodada deixou Edge para trás.
+- **Pendências:** Agarrar e Proteger-se, e a fundação e as opções do cyberware (as duas pedem escolhas de desenho: ver
+  as perguntas ao usuário); o "Largar".
+- **Próximo:** as perguntas ao usuário sobre os itens que faltam.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
