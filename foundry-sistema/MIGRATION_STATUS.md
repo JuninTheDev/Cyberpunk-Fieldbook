@@ -481,7 +481,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   de novo" (o RED não tem). Conferidos na wiki no mesmo dia: os slots de opção do cyberware estão no
   `system-catalog.js`; o conserto da armadura, só "até ser reparada" (p. 186), sem teste nem custo. **Decidido pelo
   usuário em 2026-10-16:** o botão "Consertar" volta o SP ao máximo e o chat diz que o personagem consertou a
-  armadura; o mestre narra o conserto (ciclo 70). A lista:
+  armadura; o mestre narra o conserto (ciclo 70). **Decididos pelo usuário em 2026-10-16, para os itens de regra que
+  faltavam:** no Agarrar, o alvo resiste pela janela do dono, como a esquiva (o NPC, o mestre rola); no Proteger-se, só a
+  marca "Em cobertura", e o cartão do ataque avisa o mestre, que decide (sem o HP da cobertura); na fundação e nas
+  opções do cyberware, a migração encaixa cada opção já instalada na primeira fundação compatível do mesmo ator, e a que
+  não couber fica "sem fundação", com aviso; e o "Largar" não entra (o botão do uso e o ✕ já cobrem). A lista:
   - **no chat:** "+ Luck" e "Reroll" no cartão do teste (a Sorte se prepara na ficha antes), "Add to tracker" na
     iniciativa, "Apply damage" e "Roll critical" no dano, "Apply" na perda de Humanidade (o fluxo do ataque e a
     instalação já aplicam);
@@ -3713,6 +3717,37 @@ Commit anterior: `9e69386` (ciclo 77).
 - **Pendências:** Agarrar e Proteger-se, e a fundação e as opções do cyberware (as duas pedem escolhas de desenho: ver
   as perguntas ao usuário); o "Largar".
 - **Próximo:** as perguntas ao usuário sobre os itens que faltam.
+
+### Ciclo 79 (2026-10-16): "Proteger-se" (um item de regra das maquetes; sessão KouArt)
+
+A ação "Take Cover" da maquete "Fight Tab", pela regra da wiki (a cobertura, p. 182) e pela decisão do usuário de
+2026-10-16 ("só a marca"). Commit anterior: `0f8fa9a` (ciclo 78).
+
+- **A regra (a wiki):** ir até a cobertura é a Ação de Movimento; atrás de algo que para a bala e fora da linha de
+  visão, o tiro para na cobertura, que tem os próprios PV. O sistema não sabe o que há entre os tokens, e o usuário
+  escolheu não guardar o HP da cobertura: o mestre decide.
+- **Implementado:**
+  - **a marca "Em cobertura"** (`STATUS_COBERTURA`, em `combate.mjs`), registrada nos efeitos de status do Foundry
+    (`sistema.mjs`), com o ícone do escudo: aparece no HUD do token, e o mestre também a liga e desliga por lá;
+  - **o botão "Proteger-se"** na Defesa da aba Combate (`ficha-personagem.mjs` e `combate.hbs`): liga a marca no ator
+    (nos tokens dele); ligado, ele vira "EM COBERTURA", em ciano, e o clique tira a marca;
+  - **o aviso no cartão do ataque:** na linha de cada alvo marcado, num ataque que não é corpo a corpo, a nota "<alvo>
+    está em cobertura: se ela para a bala e o tira da linha de visão, o tiro para nela (o mestre decide; wiki, p.
+    182)". O ataque segue como sempre (rola, acerta e fere): o mestre usa o "Desfazer" se a cobertura parou a bala.
+- **Testes:**
+  - G1: 54 arquivos, 0 erros; G2: 0 erros;
+  - G3: 88 de 92 (as 4 falhas são as das armas de 2077);
+  - G4: 100 de 105, de primeira (as 5 falhas são as das armas de 2077, e os avisos, só os dois da Lexington). Um passo
+    novo, antes do tiro mirado: na aba Combate do Alvo, "PROTEGER-SE" vira "EM COBERTURA", e a marca fica no token; o
+    tiro do rifle contra ele acerta como sempre (a armadura segura), com a nota "Alvo está em cobertura ... o mestre
+    decide"; o botão de novo tira a marca. O passo do corpo a corpo marca o Capanga em cobertura e confere que os dois
+    golpes não ganham o aviso. Depois das mutações, o `#protegerSe` foi para depois do `#rolarIniciativa` (tinha entrado
+    entre o comentário dele e a função); o G4 rodou de novo: 100 de 105;
+  - **mutações:** as 5 caíram, e os arquivos voltaram (conferido pelo md5): o cartão sem o aviso (P1), o aviso também
+    no corpo a corpo (P2, pelo passo do corpo a corpo), o botão que não liga a marca (P3), o botão que não mostra que
+    está ligado (P4) e a marca fora dos efeitos de status do Foundry (P5: o `toggleStatusEffect` dá erro).
+- **Pendências:** Agarrar (o próximo ciclo) e a fundação e as opções do cyberware.
+- **Próximo:** o Agarrar.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

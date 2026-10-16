@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 79). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 80). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -384,8 +384,11 @@ No fim de tudo, uma sessão de teste com a mesa.
       iniciativa do sistema; quem já rolou naquele combate não rola de novo: ciclo 65;
     - [x] ~~o local do acerto (cabeça, corpo, aleatório)~~: não entra (a decisão do usuário de 2026-10-15: o acerto é no
       corpo, e a cabeça só pelo tiro mirado, −8, como a wiki; o "Mirar" da ficha já faz);
-    - [ ] as ações "Agarrar" (regra: a wiki, "Agarrar e arremessar", p. 177) e "Proteger-se" (regra: a cobertura, p.
-      182; é a Ação de Movimento até a cobertura);
+    - [x] "Proteger-se" (a cobertura, p. 182; a decisão do usuário de 2026-10-16: só a marca): o botão na Defesa da aba
+      Combate marca o token "Em cobertura", e o cartão do tiro contra ele avisa o mestre, que decide: ciclo 79;
+    - [ ] "Agarrar" (a wiki, "Agarrar e arremessar", p. 177; a decisão do usuário de 2026-10-16: o alvo resiste pela
+      janela do dono, como a esquiva): DEX + Briga + 1d10 dos dois lados; agarrados, −2 em tudo, e o defensor sem Ação
+      de Movimento; depois, Estrangular (o BODY direto no HP), Derrubar (o BODY e o agarrão acaba), Soltar e Escapar;
     - [x] a correção rápida e o tratamento da lesão, na aba Combate e na ficha da lesão (wiki, p. 128 e 223: TECH + a
       perícia + 1d10 superando a DV da lesão; a correção tira o efeito até o fim do dia, com o "Voltou", e na lesão sem
       tratamento resolve de vez; o tratamento cura e não pode ser em si mesmo): ciclo 77;
@@ -416,9 +419,9 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [x] "Rodar" e "Restaurar REZ" na ficha do programa (liga e desliga no deck, como o "Ativo" da aba NET; a REZ
       atual e a volta ao máximo): ciclo 75;
     - [x] "Rolar Humanidade" no cyberware de um ator (a perda rolada sem instalar, no cartão do "Aplicar"): ciclo 73;
-    - [ ] "Instalar opção" no cyberware (vem com a fundação e as opções, acima), "Usar" a droga (o item de regra, acima) e
-      "Largar" no equipamento (o que ele faz, a confirmar com o usuário). A correção rápida e o tratamento na ficha da
-      lesão: ciclo 77.
+    - [ ] "Instalar opção" no cyberware (vem com a fundação e as opções, acima). "Usar" a droga na ficha dela: ciclo 78.
+      A correção rápida e o tratamento na ficha da lesão: ciclo 77. O "Largar" do equipamento não entra (a decisão do
+      usuário de 2026-10-16: o botão do uso e o ✕ já cobrem).
 - [x] **Extrato de Eurodólares, IP e Reputação** (Ciclo 21), como o ledger do CORE no Foundry 12: o botão de cada um no
   cabeçalho abre a janela com o menu (somar, subtrair, definir, com o motivo) e o histórico (quem mudou, a mudança
   direta); o mestre tira linhas, desfazendo ou não a mudança; a importação, a migração e a loja da wiki escrevem as

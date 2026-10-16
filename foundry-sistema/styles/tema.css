@@ -308,6 +308,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 /* O painel de Eurodólares (aba Equipamento): o saldo, o botão do extrato e as últimas mudanças. */
 .cpr-fieldbook.ficha-personagem .dinheiro .titulo span { color: var(--cp-fraco); font-size: 12px; letter-spacing: 0.15em; }
 .cpr-fieldbook.ficha-personagem .botoes-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+/* O botão que liga um estado (o "Em cobertura"): ligado, cheio em ciano. */
+.cpr-fieldbook.ficha-personagem .botoes-resumo .acao.ligado { border-color: var(--cp-ciano); background: var(--cp-ciano); color: var(--cp-fundo); }
 /* A quantidade do inventário com − e + (as maquetes do usuário). */
 .cpr-fieldbook.ficha-personagem ol.itens .quantidade { display: flex; flex: none; align-items: center; gap: 6px; }
 /* A droga viciada (o efeito secundário até a terapia). */

@@ -30,6 +30,7 @@ defesa); à direita, as armas, a armadura, as lesões críticas e a munição. -
         <div class="titulo">DEFESA<span>DEX {{sistema.atributos.dex.valor}}</span></div>
         <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
         <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">{{facedown.valor}} + 1d10</a></b></div>
+        <div class="botoes-resumo"><button type="button" class="acao {{#if emCobertura}}ligado{{/if}}" data-action="protegerSe" data-tooltip="Atrás de algo que para a bala e fora da linha de visão (a Ação de Movimento até lá; wiki, p. 182): o cartão do tiro avisa o mestre">{{#if emCobertura}}EM COBERTURA{{else}}PROTEGER-SE{{/if}}</button></div>
       </section>
     </aside>
 

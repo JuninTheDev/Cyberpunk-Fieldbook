@@ -46,6 +46,7 @@ Hooks.once('init', () => {
   });
   CONFIG.ActiveEffect.dataModels.base = DadosEfeito;
   CONFIG.statusEffects.push({ id: combate.STATUS_SUPRIMIDO, name: 'Suprimido', img: caminho('icones/suprimido.svg') });
+  CONFIG.statusEffects.push({ id: combate.STATUS_COBERTURA, name: 'Em cobertura', img: 'icons/svg/shield.svg' });
   registrarCritico();
   registrarConfiguracoes();
 

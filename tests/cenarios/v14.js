@@ -1432,6 +1432,39 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('"Proteger-se" na aba Combate (as maquetes; a decisão do usuário: só a marca, wiki p. 182): o botão marca o Alvo "Em cobertura"; o tiro contra ele avisa o mestre no cartão, que decide; o botão de novo tira a marca', async () => {
+      // Ataque: d10 7 → 19 contra DV 16. Dano 5d6, 1 em cada = 5 contra SP 11: a armadura segura, e o Alvo não muda.
+      await fixar(edge, [[7, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const alvo = __ator('Alvo');
+        const rifle = __ator('Atiradora').items.getName('Assault Rifle');
+        const pente = rifle.system.pente.value;
+        const botao = () => alvo.sheet.element?.querySelector('[data-action="protegerSe"]');
+        try {
+          await alvo.sheet.render({ force: true });
+          alvo.sheet.changeTab('combate', 'primary');
+          await __esperar(() => botao());
+          const antes = { texto: botao().textContent.trim(), marca: alvo.statuses.has('${S}-em-cobertura') };
+          botao().click();
+          await __esperar(() => alvo.statuses.has('${S}-em-cobertura') && botao()?.textContent.trim() === 'EM COBERTURA');
+          const marcado = { texto: botao().textContent.trim(), noToken: __token('Alvo').object.document.hasStatusEffect('${S}-em-cobertura') };
+          const r = await rifle.atacar({ alvo: __token('Alvo') });
+          const tiro = { resultado: r.linhas[0].resultado, notas: r.linhas[0].notas.join(' '), hp: alvo.system.hp.value };
+          botao().click();
+          await __esperar(() => !alvo.statuses.has('${S}-em-cobertura') && botao()?.textContent.trim() === 'PROTEGER-SE');
+          return { antes, marcado, tiro, depois: alvo.statuses.has('${S}-em-cobertura') };
+        } finally {
+          await alvo.sheet.close();
+          if (alvo.statuses.has('${S}-em-cobertura')) await alvo.toggleStatusEffect('${S}-em-cobertura', { active: false });
+          await rifle.update({ 'system.pente.value': pente });
+        }
+      })()`);
+      const { antes, marcado, tiro } = info;
+      const ok = antes.texto === 'PROTEGER-SE' && !antes.marca && marcado.texto === 'EM COBERTURA' && marcado.noToken
+        && tiro.resultado === 'acertou' && tiro.notas.includes('Alvo está em cobertura') && tiro.notas.includes('o mestre decide') && tiro.hp === 45 && !info.depois;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('mirado na cabeça sem armadura na cabeça: −8 no ataque e o dano dobra', async () => {
       // Ataque: d10 10 + 9 (crítico) → 8 + 4 + 19 − 8 = 23 contra DV 16. Dano: 1, 2, 3, 4, 5 = 15 → ×2 = 30.
       await fixar(edge, [[10, 10], [9, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]]);
@@ -2134,7 +2167,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [tiro.pv === 0 && tiro.perdeu === 0 && explosivo.pv === 0 && explosivo.perdeu === 12 && explosivoSegura.pv === 8 && explosivoSegura.perdeu === 0, JSON.stringify(info)];
     });
 
-    await r.passo('corpo a corpo: DEX + Arma Branca; o Capanga (REF 6) esquiva assim mesmo, sem janela; empate é dele; acertando, a arma branca leva 2d6', async () => {
+    await r.passo('corpo a corpo: DEX + Arma Branca; o Capanga (REF 6) esquiva assim mesmo, sem janela; empate é dele; acertando, a arma branca leva 2d6; em cobertura, o golpe não ganha o aviso do tiro', async () => {
       // Atiradora: DEX 7 + Arma Branca 3. 1º golpe: d10 3 → 13 contra a esquiva do Capanga, DEX 5 + d10 8 = 13: empate,
       // esquivou. 2º golpe: d10 8 → 18 contra 5 + 2 = 7: acertou. Dano 2d6: 4 + 3 = 7 (o Capanga não tem armadura).
       const info = await edge.evaluate(`(async () => {
@@ -2152,9 +2185,16 @@ module.exports = async ({ edge, servidores, r }) => {
           window.__fila = fila;
           const r = await arma.atacar({ alvo: __token('Capanga') });
           const [l] = r.linhas;
-          return { ataque: r.ataque, escolha: l.escolha, defesa: l.defesa, resultado: l.resultado, recebido: l.dano?.recebido ?? null };
+          return { ataque: r.ataque, escolha: l.escolha, defesa: l.defesa, resultado: l.resultado, recebido: l.dano?.recebido ?? null, notas: l.notas.join(' ') };
         };
-        const resultado = { partes: arma.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor), primeiro: await golpe([[3, 10], [8, 10]]), segundo: await golpe([[8, 10], [2, 10], [4, 6], [3, 6]]), perdeu: hp - capanga.system.hp.value };
+        // A cobertura para a bala (wiki, p. 182): no golpe, o cartão não avisa o mestre.
+        await capanga.toggleStatusEffect('${S}-em-cobertura', { active: true });
+        let resultado;
+        try {
+          resultado = { partes: arma.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor), primeiro: await golpe([[3, 10], [8, 10]]), segundo: await golpe([[8, 10], [2, 10], [4, 6], [3, 6]]), perdeu: hp - capanga.system.hp.value };
+        } finally {
+          await capanga.toggleStatusEffect('${S}-em-cobertura', { active: false });
+        }
         resultado.janelas = janelas();
         await a.deleteEmbeddedDocuments('Item', [arma.id]);
         await capanga.update({ 'system.hp.value': hp });
@@ -2162,7 +2202,8 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       const { primeiro: p, segundo: s } = info;
       return [info.partes[0] === 'DEX 7' && p.ataque === 13 && p.escolha === 'esquivar' && p.defesa === 13 && p.resultado === 'esquivou'
-        && s.ataque === 18 && s.defesa === 7 && s.resultado === 'acertou' && s.recebido === 7 && info.perdeu === 7 && !info.janelas.length, JSON.stringify(info)];
+        && s.ataque === 18 && s.defesa === 7 && s.resultado === 'acertou' && s.recebido === 7 && info.perdeu === 7 && !info.janelas.length
+        && !p.notas.includes('em cobertura') && !s.notas.includes('em cobertura'), JSON.stringify(info)];
     });
 
     await r.passo('Reflex Tuner (2077, wiki): no combate, o Capanga atingido ganha +1 para se esquivar pelo resto da rodada (nas partes da Evasão e na esquiva do golpe); o Desfazer do tiro tira o +1; na rodada seguinte, acaba', async () => {

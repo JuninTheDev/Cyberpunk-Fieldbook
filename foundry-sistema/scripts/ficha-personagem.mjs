@@ -5,7 +5,7 @@
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
-import { acoesDe2077 } from './combate.mjs';
+import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
@@ -47,6 +47,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarRole: FichaPersonagem.#rolarRole,
       rolarFacedown: FichaPersonagem.#rolarFacedown,
       rolarIniciativa: FichaPersonagem.#rolarIniciativa,
+      protegerSe: FichaPersonagem.#protegerSe,
       conectarNaNet: FichaPersonagem.#conectarNaNet,
       abrirNet: FichaPersonagem.#abrirNet,
       desconectarDaNet: FichaPersonagem.#desconectarDaNet,
@@ -246,7 +247,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
       lesoes,
       iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
-      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown,
+      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown, emCobertura: ator.statuses.has(STATUS_COBERTURA),
       municoes: itens('municao'),
       inventario: [
         { titulo: 'EQUIPAMENTO', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
@@ -331,6 +332,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const ja = game.combat?.combatants.find(combatente => combatente.actor === this.actor && combatente.initiative !== null);
     if (ja) return ui.notifications.info(`${this.actor.name} já tem iniciativa ${ja.initiative} neste combate.`);
     return this.actor.rollInitiative({ createCombatants: true });
+  }
+  // "Proteger-se" (as maquetes do usuário): marca ou tira o "Em cobertura" (combate.STATUS_COBERTURA); o cartão do tiro
+  // contra quem a tem avisa o mestre, que decide (a wiki, p. 182).
+  static async #protegerSe() {
+    await this.actor.toggleStatusEffect(STATUS_COBERTURA);
+    return this.render();
   }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }

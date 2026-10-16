@@ -20,6 +20,9 @@ import { rolarDano, testar } from './rolagens.mjs';
 
 const CANAL = `system.${SISTEMA}`;
 export const STATUS_SUPRIMIDO = `${SISTEMA}-suprimido`;
+// "Em cobertura" (o "Proteger-se" das maquetes; a wiki, p. 182: atrás de algo que para a bala e fora da linha de visão):
+// só a marca, a decisão do usuário de 2026-10-16. O tiro contra quem a tem avisa o mestre no cartão, e o mestre decide.
+export const STATUS_COBERTURA = `${SISTEMA}-em-cobertura`;
 const { DialogV2 } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(`systems/${SISTEMA}/templates/chat/${arquivo}`, dados);
@@ -395,6 +398,9 @@ async function defender(ctx, alvo, { opcoes, dv = null }) {
 
 const linhaDe = (ctx, token) => {
   const linha = { token, nome: token.name, img: token.texture?.src || token.actor.img, resultado: null, notas: [] };
+  if (ctx.modo !== 'corpo' && token.actor?.statuses.has(STATUS_COBERTURA)) {
+    linha.notas.push(`${token.name} está em cobertura: se ela para a bala e o tira da linha de visão, o tiro para nela (o mestre decide; wiki, p. 182).`);
+  }
   ctx.linhas.push(linha);
   return linha;
 };
