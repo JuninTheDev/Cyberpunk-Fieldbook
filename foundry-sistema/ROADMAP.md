@@ -389,7 +389,7 @@ No fim de tudo, uma sessão de teste com a mesa.
     - [x] "Agarrar" (a wiki, "Agarrar e arremessar", p. 177; a decisão do usuário de 2026-10-16: o alvo resiste pela
       janela do dono, como a esquiva): DEX + Briga + 1d10 dos dois lados, o empate do defensor; agarrados, os dois com
       −2 em todas as ações; "Soltar": ciclo 80;
-    - [ ] o resto do agarrão (a mesma página): Estrangular (o BODY de quem agarra direto no HP; abaixo de 0, fica com 1
+    - [~] (sessão KouArt) o resto do agarrão (a mesma página): Estrangular (o BODY de quem agarra direto no HP; abaixo de 0, fica com 1
       e desmaia; três rodadas seguidas, desmaia), Derrubar (o BODY, o alvo cai e o agarrão acaba), Escapar (o teste de
       agarrar vencido, uma Ação) e o botão no capanga;
     - [x] a correção rápida e o tratamento da lesão, na aba Combate e na ficha da lesão (wiki, p. 128 e 223: TECH + a
