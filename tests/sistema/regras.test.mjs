@@ -676,20 +676,22 @@ test('Facedown (wiki, "Reputação e facedown" e o cartão rápido, RED p. 194; 
   assert.match(regrasDaWiki, /'Concussão', '−2 em todas as ações\.'/);
 });
 
-test('Interface do Netrunner (wiki, "Habilidades de Interface", "Ações por turno" e "Black ICE", RED p. 197–207; o CPR.interfaceAbilities do CORE): as 9 habilidades com o custo da wiki, a Defesa e a Velocidade, as Ações NET pelo Rank e os boosters do catálogo na habilidade deles', () => {
+test('Interface do Netrunner (wiki, "Habilidades de Interface", "Ações por turno" e "Black ICE", RED p. 197–207 e Kit p. 26–27; o CPR.interfaceAbilities do CORE): as 10 habilidades com o nome e o custo da wiki (o Breach no lugar do Backdoor, o Scanner como Ação NET, o Quickhack), a Defesa e a Velocidade, as Ações NET pelo Rank e os boosters do catálogo na habilidade deles', () => {
   const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
   const inicio = regrasDaWiki.indexOf("section('Habilidades de Interface'");
   const trecho = regrasDaWiki.slice(inicio, regrasDaWiki.indexOf("section('Combate na NET'", inicio));
   const linhas = [...trecho.matchAll(/\['([^']+)', '([^']+)', '([^']+)', '([^']+)'\]/g)].map(([, nome, custo]) => [nome, custo]).filter(([nome]) => nome !== 'Habilidade');
-  assert.equal(linhas.length, 9);
-  // As 9 do CORE (CPR.interfaceAbilities), na ordem e com o custo da tabela da wiki.
-  const nove = regras.HABILIDADES_DE_INTERFACE.slice(0, 9);
-  assert.deepEqual(nove.map(h => h.id), ['scanner', 'backdoor', 'cloak', 'control', 'eyedee', 'pathfinder', 'slide', 'virus', 'zap']);
-  nove.forEach((h, i) => {
-    assert.ok(linhas[i][0].startsWith(h.rotulo), `${h.id}: ${linhas[i][0]}`);
+  assert.equal(linhas.length, 10);
+  assert.match(trecho, /o Backdoor do livro-base se chama Breach, e o Scanner deixou de ser Ação Carnal/);
+  // As 9 do CORE (CPR.interfaceAbilities; o Backdoor com o nome do Kit, a chave do CORE) e o Quickhack do Kit, na ordem e
+  // com o nome e o custo da tabela da wiki.
+  const dez = regras.HABILIDADES_DE_INTERFACE.slice(0, 10);
+  assert.deepEqual(dez.map(h => h.id), ['scanner', 'backdoor', 'cloak', 'control', 'eyedee', 'pathfinder', 'slide', 'virus', 'zap', 'quickhack']);
+  dez.forEach((h, i) => {
+    assert.equal(linhas[i][0], h.rotulo, h.id);
     assert.equal(h.custo, linhas[i][1], h.id);
   });
-  assert.deepEqual(regras.HABILIDADES_DE_INTERFACE.slice(9).map(h => h.id), ['defesa', 'velocidade']);
+  assert.deepEqual(regras.HABILIDADES_DE_INTERFACE.slice(10).map(h => h.id), ['defesa', 'velocidade']);
   assert.match(regrasDaWiki, /formula\('Interface \+ 1d10 &gt; DV'\)/);
   assert.match(regrasDaWiki, /Ao encontrar Black ICE à espreita: <b>Interface \+ bônus de velocidade \+ 1d10<\/b> contra <b>SPD do ICE \+ 1d10<\/b>/);
   // As Ações NET pelo Rank, pela tabela da wiki: 2 do Rank 1 ao 3, 3 do 4 ao 6, 4 do 7 ao 9 e 5 no 10; sem Interface, 0.
@@ -976,9 +978,11 @@ test('Arquitetura pelas tabelas (wiki, "Montando uma arquitetura", RED p. 210–
   assert.deepEqual([cheia.ramosAMais, rolagensDoD10], [7, 7]);
 });
 
-test('Ponto de acesso à NET (wiki, "Netrunning": "Precisa estar a até 6 m de um ponto de acesso, sem parede no meio (8 m com o upgrade de alcance)"; o Range Upgrade do CORE; o NET Architect da mesa): a distância do token ao Tile, o alcance, o que falta para conectar e o mapa que os jogadores enxergam (os andares vistos e, como "?", os vizinhos de quem está na NET)', () => {
+test('Ponto de acesso à NET (wiki, "Netrunning": o deck externo "a até 6 m do ponto de acesso ou do alvo, sem parede no meio (8 m com o Range Upgrade)"; o Range Upgrade do CORE; o NET Architect da mesa): a distância do token ao Tile, o alcance, o que falta para conectar e o mapa que os jogadores enxergam (os andares vistos e, como "?", os vizinhos de quem está na NET)', () => {
   const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
-  assert.ok(regrasDaWiki.includes('Precisa estar a até <b>6 m</b> de um ponto de acesso, sem parede no meio (8 m com o upgrade de alcance).'));
+  assert.ok(regrasDaWiki.includes('<b>Deck externo:</b> a até <b>6 m</b> do ponto de acesso ou do alvo, sem parede no meio (8 m com o Range Upgrade).'));
+  // O deck na Neuroport Cyberdeck Port (20 m contra arquiteturas, o Kit) ainda não está no sistema (ROADMAP, C9).
+  assert.ok(regrasDaWiki.includes('<b>Deck na Neuroport Cyberdeck Port:</b> <b>20 m</b> contra arquiteturas NET'));
   assert.ok(regrasDaWiki.includes('<b>Sair do alcance conectado</b> = desconexão insegura'));
   assert.equal(PONTO_PADRAO.alcance, 6);
   // A cena com quadrados de 100 px e 2 m; o Tile de 2×2 quadrados em (1000, 1000). A distância vai do centro do token à
@@ -1058,7 +1062,7 @@ test('Andar e as habilidades contra os andares (wiki, "Ações NET" e "Habilidad
   assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), 'Só dá para ir a um andar vizinho.');
   assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '1a'), null);
   eu.no = '1a';
-  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), 'A senha deste andar (DV 6) trava a descida: use Backdoor.');
+  assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), 'A senha deste andar (DV 6) trava a descida: use Breach.');
   assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, arquitetura.ENTRADA), null);
   // O alvo: a senha daqui (o Eye-Dee e o Control não têm alvo neste andar); o Virus só no fundo; o Zap não é contra andar.
   assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'backdoor').alvo.chave, '1a.0');
@@ -1068,11 +1072,12 @@ test('Andar e as habilidades contra os andares (wiki, "Ações NET" e "Habilidad
   assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'virus').erro, 'O Virus só vai no andar mais fundo da arquitetura.');
   assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'zap').erro, 'Não há inimigo ativo neste andar.');
   assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'scanner').erro, 'Esta habilidade não se usa na NET.');
-  // Backdoor: 6 contra a DV 6 não passa (tem de passar da DV); 9 quebra, e a senha não é mais alvo nem trava a descida.
+  // Breach (o Backdoor do RED, com o nome do Kit): 6 contra a DV 6 não passa (tem de passar da DV); 9 quebra, e a senha não
+  // é mais alvo nem trava a descida.
   const { alvo: senha } = netrun.alvoDaHabilidade(arq, est, eu, 'backdoor');
-  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'backdoor', alvo: senha, total: 6 }), { texto: 'Backdoor (6 contra DV 6): Deck não passou a senha.', tipo: 'falha' });
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'backdoor', alvo: senha, total: 6 }), { texto: 'Breach (6 contra DV 6): Deck não passou a senha.', tipo: 'falha' });
   assert.deepEqual(est.feitos, []);
-  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'backdoor', alvo: senha, total: 9 }), { texto: 'Backdoor (9 contra DV 6): Deck quebrou a senha.', tipo: 'ok' });
+  assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'backdoor', alvo: senha, total: 9 }), { texto: 'Breach (9 contra DV 6): Deck quebrou a senha.', tipo: 'ok' });
   assert.deepEqual(est.feitos, ['1a.0']);
   assert.equal(netrun.alvoDaHabilidade(arq, est, eu, 'backdoor').erro, 'Não há senha trancada neste andar.');
   assert.equal(netrun.motivoParaNaoAndar(arq, est, eu, '2a'), null);

@@ -164,7 +164,7 @@ export function botaoScannerNoHud(hud, html) {
   const botao = document.createElement('button');
   botao.type = 'button';
   botao.className = `control-icon ${SISTEMA}-scanner`;
-  botao.dataset.tooltip = 'Scanner: procurar pontos de acesso (Ação Carnal)';
+  botao.dataset.tooltip = 'Scanner: procurar pontos de acesso (1 Ação NET)';
   botao.innerHTML = '<i class="fa-solid fa-satellite-dish"></i>';
   botao.addEventListener('click', async evento => {
     evento.preventDefault();

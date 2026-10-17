@@ -4341,8 +4341,8 @@ module.exports = async ({ edge, servidores, r }) => {
         await edge.shot('ficha-net-interface');
         const { semDeck, lista, daJanela: j, cloak, ativo, comEraser, zap, velocidade: v, foraDoDeck, solo } = info;
         const ok = semDeck.titulo === 'RANK 4 · 3 AÇÕES NET POR TURNO' && semDeck.aviso === 'EQUIPE UM CYBERDECK PARA USAR A INTERFACE' && semDeck.botoes === 0
-          && lista.ids.join() === 'scanner,backdoor,cloak,control,eyedee,pathfinder,slide,virus,zap,defesa,velocidade' && lista.cloak === '4' && lista.velocidade === '4' && lista.programas.join() === 'Inativo,Inativo'
-          && lista.rankGrande === '4' && lista.cartoes === 11 && lista.slots === '2/7' && lista.slotsDoDeck === '2/7' && lista.estados === 'carregado,carregado' && info.ativo.estado === 'ativo'
+          && lista.ids.join() === 'scanner,backdoor,cloak,control,eyedee,pathfinder,slide,virus,zap,quickhack,defesa,velocidade' && lista.cloak === '4' && lista.velocidade === '4' && lista.programas.join() === 'Inativo,Inativo'
+          && lista.rankGrande === '4' && lista.cartoes === 12 && lista.slots === '2/7' && lista.slotsDoDeck === '2/7' && lista.estados === 'carregado,carregado' && info.ativo.estado === 'ativo'
           && j.titulo === 'Teste: Cloak' && j.partes.join() === 'Interface +4,1d10'
           && cloak.total === 12 && cloak.cartao.join() === '1d10,Interface +4,Modificador do mestre +2' && cloak.sabor === '1 Ação NET. O resultado vira a DV: esconde seus rastros e seus vírus.'
           && ativo.cloak === '6' && ativo.pathfinder === '4' && ativo.botao === 'Ativo' && ativo.bonus === 2
@@ -5496,7 +5496,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('andar e as habilidades na NET (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): na janela do jogador, o "?" do andar 1 vira a senha DV 6 ao chegar; a senha trava a descida; o Backdoor rola no mestre (6 contra a DV 6 não passa; 9 passa); o Eye-Dee mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B e para no nó DV 8; o Control toma o nó e o comando vai ao registro; no andar mais fundo, o Virus com a DV e as Ações NET do mestre; o mestre vê o andar 4 escondido e o revela. O visual: o andar com a cor da senha (limpo depois do Backdoor), o cabo em degrau do 3B (do 2A), a base do Backdoor (1d10+4), as Ações NET livres fora de combate, a hora no registro e os botões do cabeçalho da janela com os ícones', async () => {
+    await r.passo('andar e as habilidades na NET (wiki, "Ações NET" e "Habilidades de Interface", RED p. 198–201; o NET Architect da mesa): na janela do jogador, o "?" do andar 1 vira a senha DV 6 ao chegar; a senha trava a descida; o Breach (o Backdoor do RED, com o nome do Kit) rola no mestre (6 contra a DV 6 não passa; 9 passa); o Eye-Dee mostra o arquivo; o Pathfinder com 7 revela o 3A e o 3B e para no nó DV 8; o Control toma o nó e o comando vai ao registro; no andar mais fundo, o Virus com a DV e as Ações NET do mestre; o mestre vê o andar 4 escondido e o revela. O visual: o andar com a cor da senha (limpo depois do Backdoor), o cabo em degrau do 3B (do 2A), a base do Breach (1d10+4), as Ações NET livres fora de combate, a hora no registro e os botões do cabeçalho da janela com os ícones', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Andar';
       const ARQ = 'Teste Arquitetura do Andar';
@@ -5525,9 +5525,9 @@ module.exports = async ({ edge, servidores, r }) => {
           } finally { delete ui.notifications.warn; }
           return { ...resultado, avisos, depois: net.eu()?.no };
         })()`);
-        // 2. O Backdoor: o mestre rola (os dados fixos no navegador dele): 4 + 2 = 6 não passa da DV 6; 4 + 5 = 9 passa.
+        // 2. O Breach: o mestre rola (os dados fixos no navegador dele): 4 + 2 = 6 não passa da DV 6; 4 + 5 = 9 passa.
         await fixar(edge, [[2, 10]]);
-        const backdoor1 = await jogador.evaluate(`(async () => { window.__net.clicar('button[data-habilidade=backdoor]'); return window.__net.esperarRegistro('Backdoor ('); })()`);
+        const backdoor1 = await jogador.evaluate(`(async () => { window.__net.clicar('button[data-habilidade=backdoor]'); return window.__net.esperarRegistro('Breach ('); })()`);
         await fixar(edge, [[5, 10]]);
         const backdoor2 = await jogador.evaluate(`(async () => { window.__net.clicar('button[data-habilidade=backdoor]'); return window.__net.esperarRegistro('quebrou a senha'); })()`);
         const cartao = await edge.evaluate(`(() => { const msg = game.messages.contents.at(-1); return { rotulo: msg?.getFlag('${S}', 'teste')?.rotulo, total: msg?.getFlag('${S}', 'teste')?.total, quem: msg?.speaker.alias, autor: msg?.author?.isGM }; })()`);
@@ -5619,9 +5619,9 @@ module.exports = async ({ edge, servidores, r }) => {
           && pathfinder.cabo === 'ramifica 1' && ['feito', 'livre'].every(c => classes(pathfinder.no1a).includes(c)) && !classes(pathfinder.no1a).includes('senha');
         const ok = visualOk && andou.antes === '1A ? desconhecido' && andou.no === '1a' && andou.detalhe === 'Senha DV 6 trancada' && andou.registro === `${NOME} desceu para o andar 1: Senha DV 6.`
           && andou.habilidades === 'pathfinder+,backdoor+,eyedee-,control-,cloak+,virus-,zap-,slide-' && tem(andou.acoes, 'livres fora de combate (3 por turno em combate)')
-          && andou.avisos.join() === 'A senha deste andar (DV 6) trava a descida: use Backdoor.' && andou.depois === '1a'
-          && backdoor1 === `Backdoor (6 contra DV 6): ${NOME} não passou a senha.` && backdoor2 === `Backdoor (9 contra DV 6): ${NOME} quebrou a senha.`
-          && cartao.rotulo === 'Backdoor' && cartao.total === 9 && cartao.quem === NOME && cartao.autor
+          && andou.avisos.join() === 'A senha deste andar (DV 6) trava a descida: use Breach.' && andou.depois === '1a'
+          && backdoor1 === `Breach (6 contra DV 6): ${NOME} não passou a senha.` && backdoor2 === `Breach (9 contra DV 6): ${NOME} quebrou a senha.`
+          && cartao.rotulo === 'Breach' && cartao.total === 9 && cartao.quem === NOME && cartao.autor
           && desceu === `${NOME} desceu para o andar 2: Arquivo DV 8.`
           && eyedee.linha === `Eye-Dee (10 contra DV 8): ${NOME} identificou o arquivo (Folha de pagamento: Os salários da clínica).` && eyedee.detalhe === 'Arquivo DV 8 identificado Folha de pagamento: Os salários da clínica. Abrir o arquivo'
           && eyedee.copia === `${NOME} copiou o arquivo para o deck (diário “Arquivo: ${ARQ} · andar 2”).`
@@ -5912,7 +5912,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const r12 = await scanner(8, 'Terminal do andar,Terminal escondido');
         const info = { fechada, aberta, r9, r12 };
         const ok = fechada.avisos.join() === PAREDE && fechada.recusa === PAREDE && !fechada.conectado && aberta.conectado && !aberta.depois
-          && r9.botao && r9.dica === 'Scanner: procurar pontos de acesso (Ação Carnal)' && r9.aviso === 'Scanner (9): Terminal do andar (3 m).' && r9.pontos === 'Terminal do andar'
+          && r9.botao && r9.dica === 'Scanner: procurar pontos de acesso (1 Ação NET)' && r9.aviso === 'Scanner (9): Terminal do andar (3 m).' && r9.pontos === 'Terminal do andar'
           && r9.mestre.conteudo === 'Scanner (9, até 90 m): achou Terminal do andar (3 m).' && r9.mestre.sussurro === 'true,true' && r9.mestre.revelados === ''
           && r12.aviso === 'Scanner (12): Terminal do andar (3 m); Terminal escondido (13 m, estava oculto).' && r12.pontos === 'Terminal do andar,Terminal escondido'
           && r12.mestre.conteudo === 'Scanner (12, até 120 m): achou Terminal do andar (3 m); Terminal escondido (13 m, estava oculto).' && r12.mestre.revelados === 'Jogador';

@@ -105,14 +105,16 @@ export const FACEDOWN = {
   dica: 'Teste enfrentado. Empate: nada acontece. Quem perde recua ou fica com −2 nas ações contra o outro até derrotá-lo uma vez.'
 };
 
-// A Interface do Netrunner (a wiki, "Habilidades de Interface", RED p. 198–201; o CPR.interfaceAbilities do CORE): o Rank de
-// Interface + 1d10 contra a DV, com o custo e o que cada habilidade faz (o cartão). A Defesa e a Velocidade são as outras
+// A Interface do Netrunner (a wiki, "Habilidades de Interface", RED p. 198–201 e Kit p. 26–27; o CPR.interfaceAbilities do
+// CORE): o Rank de Interface + 1d10 contra a DV, com o custo e o que cada habilidade faz (o cartão). Com o Mission Kit, o
+// Backdoor do livro-base se chama Breach (a chave segue a do CORE, "backdoor"), o Scanner é 1 Ação NET, e entra o
+// Quickhack, contra o cyberware de quem tem Neuroport. A Defesa e a Velocidade são as outras
 // duas rolagens de Interface do CORE: a Defesa contra o ataque na NET ("Combate na NET": ATK + 1d10 contra Interface +
 // 1d10) e a Velocidade contra o Black ICE à espreita (a wiki, "Black ICE": Interface + bônus de velocidade + 1d10 contra
 // SPD do ICE + 1d10). A chave de cada uma é a do bônus dos programas (system.bonus.interface).
 export const HABILIDADES_DE_INTERFACE = [
-  { id: 'scanner', rotulo: 'Scanner', custo: '1 Ação Carnal', dica: 'Acha no mundo físico os pontos de acesso da área; quanto maior, mais longe.' },
-  { id: 'backdoor', rotulo: 'Backdoor', custo: '1 Ação NET', dica: 'Contra a DV da senha: passa por uma senha.' },
+  { id: 'scanner', rotulo: 'Scanner', custo: '1 Ação NET', dica: 'Acha no mundo físico os pontos de acesso da área; quanto maior, mais longe.' },
+  { id: 'backdoor', rotulo: 'Breach', custo: '1 Ação NET', dica: 'Contra a DV da senha ou do Passwall: passa por uma senha da arquitetura ou por um Passwall do Neuroport.' },
   { id: 'cloak', rotulo: 'Cloak', custo: '1 Ação NET', dica: 'O resultado vira a DV: esconde seus rastros e seus vírus.' },
   { id: 'control', rotulo: 'Control', custo: '1 Ação NET + 1 por comando', dica: 'Contra a DV do nó: toma um nó de controle (câmeras, torretas, portas, drones).' },
   { id: 'eyedee', rotulo: 'Eye-Dee', custo: '1 Ação NET', dica: 'Contra a DV do arquivo: descobre o que é um arquivo e quanto vale.' },
@@ -120,6 +122,7 @@ export const HABILIDADES_DE_INTERFACE = [
   { id: 'slide', rotulo: 'Slide', custo: '1 Ação NET (1×/turno)', dica: 'Contra PER do Black ICE + 1d10: foge de um Black ICE não demoníaco para um andar vizinho.' },
   { id: 'virus', rotulo: 'Virus', custo: 'Ações NET definidas pelo mestre', dica: 'Contra a DV do mestre, só no andar mais baixo: deixa até 2 mudanças.' },
   { id: 'zap', rotulo: 'Zap', custo: '1 Ação NET', dica: 'Contra DEF do programa + 1d10 ou Interface + 1d10: 1d6 no REZ de um programa ou direto no cérebro.' },
+  { id: 'quickhack', rotulo: 'Quickhack', custo: '1 Ação NET', dica: 'Contra a DV do quickhack: hackeia o cyberware de quem tem Neuroport. O Rank dá os níveis: DV6 no Rank 1, DV8 no 2, DV10 no 3 e DV12 no 4.' },
   { id: 'defesa', rotulo: 'Defesa', custo: 'contra um ataque na NET', dica: 'Contra o ATK do Black ICE ou do programa + 1d10.' },
   { id: 'velocidade', rotulo: 'Velocidade', custo: 'ao encontrar Black ICE', dica: 'Contra SPD do Black ICE + 1d10: se o ICE vencer, você sofre o efeito na hora; depois ele entra no topo da fila de iniciativa.' }
 ];

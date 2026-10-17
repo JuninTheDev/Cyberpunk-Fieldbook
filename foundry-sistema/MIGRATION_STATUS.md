@@ -4542,6 +4542,50 @@ suplemento. O C9 (a NET de 2077) depende dessas regras. Commit anterior: `3608b8
 - **Próximo:** o C29, a parte da NET (o Scanner como 1 Ação NET, o Breach e a 10ª habilidade de Interface), e depois o
   C9.
 
+### Ciclo 94 (2026-10-17): o C29, parte 1: a NET pela wiki do master (sessão KouArt)
+
+A primeira das falhas da integração do ciclo 93: a NET. A wiki do master ("Habilidades de Interface", RED p. 198–201 e
+Kit p. 26–27) segue o Mission Kit. Commit anterior: `6c987541` (ciclo 93).
+
+- **A referência (a wiki):**
+  - "Nos anos 2070 (Kit p. 26–27), o Backdoor do livro-base se chama Breach, e o Scanner deixou de ser Ação Carnal";
+  - a tabela tem 10 habilidades: as 9 do CORE (o Breach no lugar do Backdoor, "contra a DV da senha ou do Passwall")
+    e o Quickhack ("1 Ação NET, contra a DV do quickhack: hackeia o cyberware de quem tem Neuroport");
+  - o alcance é "Deck externo: a até 6 m do ponto de acesso ou do alvo, sem parede no meio (8 m com o Range Upgrade)",
+    e o deck na Neuroport Cyberdeck Port tem 20 m contra arquiteturas.
+- **Implementado:**
+  - **`regras.mjs`:**
+    - o Backdoor aparece como Breach. A chave segue a do CORE (`backdoor`): o bônus do Worm, os dados das fichas e o
+      `CPR.interfaceAbilities` não mudam;
+    - o Scanner é 1 Ação NET;
+    - entra o Quickhack, a 10ª habilidade, que a ficha rola (Interface + 1d10). O que ele faz no Neuroport é o C9;
+  - **a NET** (`regras-da-net.mjs`): o registro diz "Breach (9 contra DV 6)", e o aviso da senha, "use Breach";
+  - **o botão do Scanner no HUD** diz "(1 Ação NET)". Ele segue fora da arquitetura: as Ações NET fora dela (o Jack In,
+    o Quickhack) são do C9.
+- **Testes:**
+  - G1: 65 arquivos, 0 erros; G2: 0 erros;
+  - G3: 111 de 123 (as 4 das armas de 2077 e as 8 das outras partes do C29). Dois testes que falhavam desde a
+    integração voltam a passar:
+    - **a Interface do Netrunner:** as 10 da tabela da wiki, com o nome e o custo exatos, e a nota do Breach e do
+      Scanner;
+    - **o ponto de acesso:** o texto novo do deck externo e o do deck na porta;
+
+    No mesmo arquivo, o registro do Breach e o aviso da senha;
+  - G4: 109 de 118 (as falhas são as conhecidas da integração). Nos passos:
+    - a aba NET da ficha com o Quickhack (as 12 rolagens);
+    - o Breach no passo do andar e das habilidades (o registro, o aviso e o cartão do chat);
+    - o "(1 Ação NET)" no botão do Scanner;
+  - **mutações:** as 6 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o Breach com o nome do RED (B1);
+      - o Scanner de volta à Ação Carnal (B2);
+      - sem o Quickhack (B3);
+      - o registro (B4) e o aviso da senha (B5) com o nome do RED.
+    - **No G4:** o botão do HUD com a Ação Carnal (B6).
+- **Pendências:** as outras partes do C29 (as Roles, o TeleOptics de 2077, a fundação e as opções, o catálogo de
+  2077 e as armas de 2077) e o C9 (o Neuroport: o Jack In, o Breach nos Passwalls, os quickhacks e o deck na porta).
+- **Próximo:** o C9, a NET de 2077.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 94). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 95). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -203,8 +203,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   `servidor/instalar-sistema-v14.sh`.
 - [ ] **C29. A wiki do master de 2026-10-17 ("uma regra só na mesa": o Mission Kit sobre o RED).** O que os testes de
   referência acusaram na integração do ciclo 93 (QUALITY_GATES, "Falhas conhecidas desde a integração do master"):
-  - [ ] a NET (da sessão KouArt): o Scanner como 1 Ação NET, o Breach no lugar do Backdoor, a 10ª habilidade de
-    Interface e o texto novo do ponto de acesso;
+  - [x] a NET (da sessão KouArt): o Scanner como 1 Ação NET, o Breach no lugar do Backdoor, a 10ª habilidade de
+    Interface (o Quickhack) e o texto novo do ponto de acesso: ciclo 94;
   - [ ] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role;
   - [ ] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem);
   - [ ] a fundação e as opções sem os cyberópticos e as placas de 2077;

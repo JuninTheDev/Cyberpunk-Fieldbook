@@ -1,6 +1,6 @@
 // Testes de referência da parede entre o token e o ponto de acesso e do Scanner (foundry-sistema/scripts/netrun/
 // regras-da-net.mjs: paredeNoMeio, paredeEntre e achadosDoScanner), sem Foundry. A wiki ("Netrunning"): "a até 6 m do
-// ponto de acesso, sem parede no meio"; o Scanner, "1 Ação Carnal: acha no mundo físico os pontos de acesso da área;
+// ponto de acesso, sem parede no meio"; o Scanner, "1 Ação NET (o Kit): acha no mundo físico os pontos de acesso da área;
 // quanto maior, mais longe" (até o resultado × 10, como o NET Architect da mesa; o oculto, acima do DV do Scanner dele).
 // Uso: node --test "tests/sistema/*.test.mjs"
 import assert from 'node:assert/strict';

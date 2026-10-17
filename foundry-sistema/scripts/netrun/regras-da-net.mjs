@@ -70,8 +70,9 @@ export const paredeNoMeio = (paredes, de, para) =>
 export const paredeEntre = (tile, token) =>
   paredeNoMeio(tile.parent.walls, centroDoToken(token, tile.parent), { x: tile.x + tile.width / 2, y: tile.y + tile.height / 2 });
 
-// O Scanner (a wiki: "1 Ação Carnal, Interface + 1d10: acha no mundo físico os pontos de acesso da área; quanto maior,
-// mais longe"; o NET Architect da mesa): os pontos até o resultado × 10 (nas unidades da cena); o oculto, só com o
+// O Scanner (a wiki: "1 Ação NET, Interface + 1d10: acha no mundo físico os pontos de acesso da área; quanto maior, mais
+// longe"; no RED era Ação Carnal, e o Kit, p. 26–27, o fez Ação NET; o NET Architect da mesa): os pontos até o resultado
+// × 10 (nas unidades da cena); o oculto, só com o
 // resultado acima do DV do Scanner dele. Do mais perto ao mais longe. pontos: [{ longe, oculto, dvScanner, ... }].
 export const RAIO_DO_SCANNER = 10;
 export const achadosDoScanner = (pontos, total) => pontos
@@ -177,7 +178,7 @@ export function motivoParaNaoAndar(arq, est, corredor, destino) {
   if (!filhosDe(arq, corredor.no).includes(destino)) return null;
   if (corredor.preso > 0) return 'O Kraken te prende: até o fim do seu próximo turno, não dá para avançar.';
   const senha = conteudosDoNo(arq, corredor.no).find(conteudo => conteudo.tipo === 'senha' && !est.feitos.includes(conteudo.chave));
-  if (senha) return `A senha deste andar${senha.dv ? ` (DV ${senha.dv})` : ''} trava a descida: use Backdoor.`;
+  if (senha) return `A senha deste andar${senha.dv ? ` (DV ${senha.dv})` : ''} trava a descida: use Breach.`;
   const preso = quemSegura(arq, est, corredor)[0];
   if (!preso) return null;
   return preso.tipo === 'demonio'
@@ -265,7 +266,7 @@ export function resolverHabilidade(arq, est, corredor, { chave, alvo = null, tot
       : { texto: `Virus (${total} contra DV ${dvVirus}): o vírus não pegou.`, tipo: 'falha' };
   }
   const dv = alvo.dv ?? 0;
-  const contra = `${{ backdoor: 'Backdoor', eyedee: 'Eye-Dee', control: 'Control' }[chave]} (${total} contra DV ${dv})`;
+  const contra = `${{ backdoor: 'Breach', eyedee: 'Eye-Dee', control: 'Control' }[chave]} (${total} contra DV ${dv})`;
   if (total <= dv) return { texto: `${contra}: ${nome} não passou ${{ backdoor: 'a senha', eyedee: 'o arquivo', control: 'o nó de controle' }[chave]}.`, tipo: 'falha' };
   est.feitos = [...est.feitos, alvo.chave];
   const oQue = chave === 'backdoor' ? '' : [alvo.nome, alvo.descricao].filter(Boolean).join(': ').replace(/[.!?…\s]+$/, '');

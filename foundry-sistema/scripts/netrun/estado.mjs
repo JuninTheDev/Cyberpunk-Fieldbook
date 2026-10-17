@@ -368,8 +368,8 @@ export const PAREDE_NO_MEIO = 'Tem parede entre o netrunner e o ponto de acesso 
 
 // ---------------- Operações (o que o socket chama, no mestre ativo) ----------------
 export const operacoes = {
-  // O Scanner (1 Ação Carnal, fora da NET; o NET Architect da mesa): acha os pontos de acesso da cena até o resultado ×
-  // 10 m (regras-da-net.achadosDoScanner); o oculto, só com o resultado acima do DV do Scanner dele, e aí os donos do
+  // O Scanner (1 Ação NET pelo Kit, fora da arquitetura; o NET Architect da mesa): acha os pontos de acesso da cena até
+  // o resultado × 10 m (regras-da-net.achadosDoScanner); o oculto, só com o resultado acima do DV do Scanner dele, e aí os donos do
   // netrunner passam a vê-lo. O chat conta o que achou, só ao mestre e a eles.
   async scanner(dados, usuario) {
     const cena = game.scenes.get(dados.cena);
