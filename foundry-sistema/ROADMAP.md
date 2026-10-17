@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 90). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 91). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -126,7 +126,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     comandos na janela do netrunner que toma o nó): ciclo 85;
   - [x] os arquivos do Eye-Dee (o diário na pasta "Arquivos da NET", que o dono do netrunner abre pela janela, e o
     aviso no chat): ciclo 89;
-  - [ ] o editor visual;
+  - [x] o editor visual (no mapa da ficha da arquitetura: arrastar move ou troca o andar, o "+" cria um): ciclo 90;
   - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem
     parede no meio"; ver as dúvidas).
 - [ ] **C9. A NET de 2077 (Mission Kit):**

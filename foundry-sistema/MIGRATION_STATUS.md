@@ -72,7 +72,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | sistema | a ficha nas abas das maquetes (Combate, Equipamento, Cyberware, Role e NET em duas colunas, com os números em grande; a Vida em painéis) e as fichas dos itens (o tipo na cor, as abas, as células) | refeitas nos ciclos 60 a 62 (as funções das maquetes que o sistema não tem ficaram de fora) |
 | NET Architect | os nós de controle ligados à cena (as portas, as luzes, os sons e os tokens: a configuração no ponto e os comandos na janela) | portados no ciclo 85 (o C8, parte 11) |
 | NET Architect | os arquivos copiados pelo Eye-Dee (o diário, a permissão do dono, o aviso no chat, o "Abrir o arquivo") | portados no ciclo 89 (o C8, parte 12) |
-| NET Architect | o Scanner, o editor visual | falta (o C8) |
+| NET Architect | o editor visual (a grade, arrastar para mover e trocar, o "+" para criar) | portado no ciclo 90 (o C8, parte 13), no mapa da ficha da arquitetura: a tabela das linhas faz o papel do painel; sem o "Desfazer", porque cada mudança grava na hora, como o resto da ficha |
+| NET Architect | o Scanner | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -4308,6 +4309,70 @@ Codex). Feito como o 87, virou o 89 ao integrar: a sessão Codex publicou antes 
       tem um jogador só, e ele é o dono do netrunner.
 - **Pendências:** o C8 segue com o editor visual, e o Scanner e a parede.
 - **Próximo:** o C8, parte 13 (o editor visual).
+
+### Ciclo 90 (2026-10-17): o C8, parte 13: o editor visual da arquitetura (sessão KouArt)
+
+O editor visual do NET Architect da mesa (`foundry-net-architect/scripts/editor.mjs`), feito no mapa da ficha da
+arquitetura. Commit anterior: `236a070e` (ciclo 89).
+
+- **A referência:** o editor da mesa é uma janela à parte, com cinco partes:
+  - a grade dos andares (as linhas são os andares, as colunas são os ramos);
+  - arrastar um andar move ele, e soltar em cima de outro troca os dois;
+  - clicar num "+" cria um andar;
+  - um painel ao lado tem os conteúdos do andar escolhido;
+  - "Salvar" e "Desfazer" (as mudanças ficam na janela até salvar).
+- **A diferença,** registrada na tabela de compatibilidade: a ficha da arquitetura do sistema já tem a tabela das
+  linhas (que faz o papel do painel), o "Gerar pelas tabelas" e o mapa. O editor ficou no próprio mapa, e não numa
+  segunda janela com os mesmos campos. Sem o "Salvar" e o "Desfazer": cada mudança grava na hora, como o resto da
+  ficha.
+- **Implementado:**
+  - **`arquitetura.mjs`** (sem Foundry):
+    - a posição no mapa (o andar de 1 a 18, o ramo de A a H);
+    - arrastar: todas as linhas do andar vão para a célula nova, e em cima de outro andar os dois trocam (o resto de
+      cada linha vai junto);
+    - o "+": cria a senha DV 6 numa célula vazia;
+    - o que não muda nada (o mesmo lugar, a origem vazia, a posição fora da arquitetura, o "+" na célula ocupada)
+      devolve a mesma lista, e a ficha não grava;
+  - **a ficha** (`ficha-arquitetura.mjs`, `arquitetura.hbs` e o tema):
+    - quem pode editar vê o mapa com uma linha e uma coluna a mais;
+    - cada célula vazia tem o "+", com a dica "Criar o andar N no ramo X";
+    - os andares se arrastam, e a célula onde ele vai cair fica marcada;
+    - a ficha só para ver (o compêndio trancado, o jogador) mostra o mapa de sempre.
+- **Testes:**
+  - G1: 64 arquivos (1 novo: o teste), 0 erros; G2: 0 erros;
+  - G3: 115 de 119. Um arquivo novo, `tests/sistema/editor-visual.test.mjs`, com 4 testes de referência:
+    - a posição (e as que não valem);
+    - arrastar para o vazio e em cima de outro andar, com o resto da linha e a lista de antes intacta (o ramo sem letra
+      conta como o A);
+    - o arrastar sem efeito;
+    - o "+".
+
+    As 4 falhas são as das armas de 2077;
+  - G4: 111 de 116 (as 5 falhas são as das armas de 2077). Um passo novo, depois do da ficha da arquitetura:
+    - **a arquitetura de teste:** a senha DV 8 no 1A e, no 2A, o arquivo "Agenda" e o Wisp;
+    - **antes:** o mapa com o "+" no 1B, 2B, 3A e 3B (a dica "Criar o andar 3 no ramo A") e os dois andares
+      arrastáveis;
+    - **o "+" do 2B:** cria a senha DV 6 ali; o 2B sai do 1A, e a coluna C aparece;
+    - **arrastar** (com o `DataTransfer` de verdade: o `dragstart` põe a posição, o `drop` lê):
+      - o 2A em cima do 1A troca os dois (o arquivo e o Wisp vão juntos);
+      - o 2B no 3A vazio move;
+      - soltar no mesmo lugar não grava;
+    - **a ficha do compêndio trancado:** não pode editar, e não tem o "+" nem o arrastar;
+    - passou na primeira rodada;
+  - **mutações:** as 9 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o andar 19 como posição (E1);
+      - em cima de outro andar, sem a troca (E2);
+      - o "+" na célula ocupada (E3);
+      - a linha sem ramo fora do A (E4).
+    - **No G4:**
+      - sem a coluna a mais (E5);
+      - soltar sem gravar (E6);
+      - o "+" na ficha só para ver (E7);
+      - o "+" que lê o atributo errado (E8);
+      - os andares sem o `draggable` (E9).
+- **Pendências:** o C8 segue com o Scanner (achar o ponto oculto) e a parede entre o token e o ponto (ver as dúvidas).
+- **Próximo:** o C8, parte 14 (o Scanner e a parede).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

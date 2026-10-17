@@ -34,8 +34,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Arquitetura da NET** (o netarch do CORE, com o que o NET Architect da mesa junta): um item com os andares, um conteúdo
   por linha (o andar, de 1 a 18, e o ramo, de A a H; a senha, o arquivo e o nó de controle com o DV; o Black ICE e o
   demônio pelo modelo da wiki; o netrunner inimigo pela ficha), o DV da arquitetura (o maior dos andares, ou o do item)
-  e o mapa na ficha: o ramo novo sai do andar de cima do ramo à esquerda. O botão **Gerar pelas tabelas** troca os andares pelos
-  das tabelas do livro, como o CORE: 3d6 andares, um ramo a mais a cada 7+ no 1d10, os 2 primeiros andares pelo lobby e
+  e o mapa na ficha: o ramo novo sai do andar de cima do ramo à esquerda. O mapa é também o editor visual (ciclo 90,
+  como o do NET Architect da mesa): arrastar um andar leva todas as linhas dele para outra célula (em cima de outro
+  andar, os dois trocam), e o "+" de uma célula vazia cria ali uma senha DV 6. O botão **Gerar pelas tabelas** troca os
+  andares pelos das tabelas do livro, como o CORE: 3d6 andares, um ramo a mais a cada 7+ no 1d10, os 2 primeiros
+  andares pelo lobby e
   os outros pela tabela da dificuldade escolhida (básica, padrão, incomum, avançada), sem repetir um resultado (menos
   arquivo e nó de controle); cada Black ICE de um resultado vira uma linha. O compêndio **Arquiteturas da NET** (escondido
   dos jogadores) traz as 4 da campanha, do documento da wiki (`documentos/morana/arquiteturas-da-campanha.md`: mudar um
@@ -304,7 +307,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
-  (o Scanner e o editor visual) e o Painel Tático.
+  (o Scanner) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na

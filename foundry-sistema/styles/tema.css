@@ -772,6 +772,14 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-arquitetura .mapa-net .andar { align-self: center; color: var(--cp-amarelo); font: 700 18px/1 var(--cp-titulo); text-align: center; }
 .cpr-fieldbook.ficha-arquitetura .mapa-net .no { padding: 4px 6px; background: var(--cp-poco); border-left: 2px solid var(--cp-amarelo); }
 .cpr-fieldbook.ficha-arquitetura .mapa-net .no ul { margin: 2px 0 0; padding-left: 14px; color: var(--cp-texto); }
+/* O editor visual no mapa: o andar que se arrasta, a célula onde ele cai e o "+" das células vazias. */
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no[draggable] { cursor: grab; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no.arrastando { opacity: 0.4; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .sobre { outline: 1px dashed var(--cp-ciano); outline-offset: 2px; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .criar-andar {
+  min-height: 2.4rem; padding: 0; border: 1px dashed var(--cp-linha); border-radius: 0; background: transparent; color: var(--cp-fraco); font: 700 16px/1 var(--cp-dados);
+}
+.cpr-fieldbook.ficha-arquitetura .mapa-net .criar-andar:hover { border-color: var(--cp-amarelo); color: var(--cp-amarelo); box-shadow: none; }
 
 /* ---------- A NET na mesa (netrun/): a configuração do ponto de acesso e a janela da NET ---------- */
 .cpr-fieldbook.net-config .window-content { padding: 14px 16px; }

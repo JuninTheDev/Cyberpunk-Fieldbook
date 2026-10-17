@@ -4997,6 +4997,71 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('o editor visual da arquitetura (o editor do NET Architect da mesa, no mapa da ficha): uma linha e uma coluna a mais com o "+"; o "+" do 2B cria uma senha DV 6 ali; arrastar o 2A para o 1A troca os dois (todas as linhas do andar); arrastar o 2B para o 3A, vazio, move; o compêndio trancado não tem "+" nem arrastar', async () => {
+      const nomes = ['Teste Editor Visual'];
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const item = await Item.implementation.create({ name: 'Teste Editor Visual', type: 'arquitetura', system: { andares: [
+            { andar: 1, ramo: 'a', tipo: 'senha', dv: 8 }, { andar: 2, ramo: 'a', tipo: 'arquivo', dv: 8, nome: 'Agenda' }, { andar: 2, ramo: 'a', tipo: 'ice', ice: 'wisp' }
+          ] } });
+          await item.sheet.render({ force: true });
+          const f = () => item.sheet.element;
+          await esperar(() => f()?.querySelector('.mapa-net .no'));
+          const mapa = () => [...f().querySelectorAll('.mapa-net .no')].map(textoDe).join(' | ');
+          const mais = () => [...f().querySelectorAll('.mapa-net .criar-andar')].map(b => b.dataset.posicao).join();
+          const andares = () => item.system.andares.map(l => l.andar + l.ramo + ':' + l.tipo + (l.dv && ['senha', 'arquivo'].includes(l.tipo) ? l.dv : '')).join();
+          // Arrastar com o DataTransfer de verdade: o dragstart põe a posição, o drop lê.
+          const arrastar = (de, para) => {
+            const dados = new DataTransfer();
+            const origem = f().querySelector('.mapa-net .no[data-posicao="' + de + '"]');
+            const destino = f().querySelector('.mapa-net [data-posicao="' + para + '"]');
+            origem.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dados }));
+            destino.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dados }));
+            destino.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+            origem.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dados }));
+          };
+          const antes = { mapa: mapa(), mais: mais(), dica: f().querySelector('.criar-andar[data-posicao="3a"]')?.dataset.tooltip, arrastavel: f().querySelectorAll('.mapa-net .no[draggable="true"]').length };
+          // O "+" do 2B: uma senha DV 6.
+          f().querySelector('.criar-andar[data-posicao="2b"]').click();
+          await esperar(() => item.system.andares.length === 4 && f()?.querySelector('.mapa-net .no[data-posicao="2b"]'));
+          const criou = { andares: andares(), mapa: mapa(), mais: mais() };
+          // O 2A (o arquivo e o Wisp) em cima do 1A (a senha): os dois trocam.
+          arrastar('2a', '1a');
+          await esperar(() => item.system.andares[0].andar === 2 && mapa().startsWith('1A Arquivo'));
+          const trocou = { andares: andares(), mapa: mapa() };
+          // O 2B no 3A, vazio: move.
+          arrastar('2b', '3a');
+          await esperar(() => item.system.andares[3].andar === 3 && f()?.querySelector('.mapa-net .no[data-posicao="3a"]'));
+          const moveu = { andares: andares(), mapa: mapa() };
+          // Soltar no mesmo lugar não muda nada.
+          const versao = item._stats.modifiedTime;
+          arrastar('3a', '3a');
+          await new Promise(r => setTimeout(r, 300));
+          const parado = item._stats.modifiedTime === versao && andares() === moveu.andares;
+          await item.sheet.close();
+          // No compêndio trancado (a ficha só para ver): nada de "+" nem de arrastar.
+          const pack = game.packs.get('${S}.arquiteturas');
+          const doPack = await pack.getDocument((await pack.getIndex()).contents[0]._id);
+          await doPack.sheet.render({ force: true });
+          await esperar(() => doPack.sheet.element?.querySelector('.mapa-net .no'));
+          const trancado = { editavel: doPack.sheet.isEditable, mais: doPack.sheet.element.querySelectorAll('.mapa-net .criar-andar').length, arrastavel: doPack.sheet.element.querySelectorAll('.mapa-net .no[draggable]').length };
+          await doPack.sheet.close();
+          return { antes, criou, trocou, moveu, parado, trancado };
+        })()`);
+        const { antes: a, criou: c, trocou: t, moveu: m, trancado: p } = info;
+        const ok = a.mapa === '1A Senha DV 8 | 2A Arquivo DV 8 (Agenda) Wisp' && a.mais === '1b,2b,3a,3b' && a.dica === 'Criar o andar 3 no ramo A' && a.arrastavel === 2
+          && c.andares === '1a:senha8,2a:arquivo8,2a:ice,2b:senha6' && c.mapa === '1A Senha DV 8 | 2A Arquivo DV 8 (Agenda) Wisp | 2B de 1A Senha DV 6' && c.mais === '1b,1c,2c,3a,3b,3c'
+          && t.andares === '2a:senha8,1a:arquivo8,1a:ice,2b:senha6' && t.mapa === '1A Arquivo DV 8 (Agenda) Wisp | 2A Senha DV 8 | 2B de 1A Senha DV 6'
+          && m.andares === '2a:senha8,1a:arquivo8,1a:ice,3a:senha6' && m.mapa === '1A Arquivo DV 8 (Agenda) Wisp | 2A Senha DV 8 | 3A Senha DV 6'
+          && info.parado && p.editavel === false && p.mais === 0 && p.arrastavel === 0;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { for (const i of game.items.filter(i => ${JSON.stringify(nomes)}.includes(i.name))) { await i.sheet?.close(); await i.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('compêndio "Arquiteturas da NET" (as da campanha, do documento da wiki; os exemplos do NET Architect): 7 arquiteturas, na pasta do sistema e escondidas dos jogadores; O Gatilho mostra os 6 andares no mapa', async () => {
       const info = await edge.evaluate(`(async () => {
         const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';

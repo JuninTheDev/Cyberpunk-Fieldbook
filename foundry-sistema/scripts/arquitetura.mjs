@@ -139,3 +139,28 @@ export function novaLinha(andares = []) {
   const doRamoA = andares.filter(linha => (linha.ramo || 'a') === 'a').map(linha => Number(linha.andar) || 0);
   return { andar: Math.min(ANDAR_MAX, (doRamoA.length ? Math.max(...doRamoA) : 0) + 1), ramo: 'a', tipo: 'senha', dv: DV_SEM_ANDARES, ice: '', demonio: '', ator: '', nome: '', descricao: '' };
 }
+
+// ---------------- O editor visual no mapa da ficha (o editor.mjs do NET Architect da mesa) ----------------
+// A posição no mapa ("3b": o andar e o ramo), só dentro da arquitetura (andar 1 a 18, ramo A a H).
+export function lerPosicao(posicao) {
+  const texto = String(posicao ?? '');
+  const andar = Number(texto.slice(0, -1));
+  const ramo = texto.slice(-1);
+  return Number.isInteger(andar) && andar >= 1 && andar <= ANDAR_MAX && RAMOS.includes(ramo) && ramo ? { andar, ramo } : null;
+}
+const naPosicao = (linha, { andar, ramo }) => Number(linha.andar) === andar && (linha.ramo || 'a') === ramo;
+
+// Arrastar um andar: todas as linhas dele vão para a posição nova; em cima de outro andar, os dois trocam.
+export function moverAndar(andares, de, para) {
+  const origem = lerPosicao(de);
+  const destino = lerPosicao(para);
+  if (!origem || !destino || de === para || !andares.some(linha => naPosicao(linha, origem))) return andares;
+  return andares.map(linha => (naPosicao(linha, origem) ? { ...linha, ...destino } : naPosicao(linha, destino) ? { ...linha, ...origem } : linha));
+}
+
+// O "+" de uma célula vazia: o andar novo ali, com uma senha DV 6 (como a linha nova da ficha).
+export function criarAndar(andares, posicao) {
+  const lugar = lerPosicao(posicao);
+  if (!lugar || andares.some(linha => naPosicao(linha, lugar))) return andares;
+  return [...andares, { ...novaLinha(andares), ...lugar }];
+}
