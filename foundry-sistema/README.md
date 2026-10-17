@@ -67,8 +67,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   habilidade Breach + 1d10 contra a DV), que passa um por vez. Com os Passwalls passados, o **Quickhack** (ciclo 97) abre
   a escolha entre os do Rank do netrunner (os 11 do Kit e os 5 do suplemento que a mesa aprovou): a habilidade Quickhack +
   1d10 contra a DV dele, um por alvo por rodada de combate. O que dá certo alerta o alvo (menos o Lure e os que dizem que
-  não); o Synapse Burnout tira 3d6 direto do HP, e os outros vão ao cartão para o mestre narrar. Os outros efeitos simples
-  e a expulsão são as próximas partes do C9.
+  não). O sistema aplica o que é número (ciclo 98): o Synapse Burnout tira 3d6 direto do HP; o Overheat põe o alvo em
+  chamas (4 no HP no fim de cada turno dele, até tirarem o status no HUD do token); o Impair Movement e o Slow tiram 1 e
+  1d6 do MOVE por 20 rodadas (o efeito na ficha, que o Foundry acaba sozinho); e o System Reset deixa o alvo
+  inconsciente por 20 rodadas e caído, e o dano o acorda. Os outros vão ao cartão para o mestre narrar. A expulsão é a
+  próxima parte do C9.
 - **O visual da janela da NET** (ciclo 58, no jeito de um terminal de netrunner):
   - no topo, a conexão, a arquitetura e o netrunner: a Interface, a Sorte preparada, as Ações NET (um losango por ação,
     aceso enquanto sobra; fora de combate, só o contorno) e a desconexão insegura; os avisos (o fogo, o Kraken, o Skunk,
@@ -436,6 +439,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - os nós de controle ligados à cena (ciclo 85): a porta, a luz e a torreta ligadas pela configuração do ponto; quem toma o nó vê só as dele, abre a porta, apaga a luz e assume a torreta, que volta ao dono de sempre na desconexão;
   - os arquivos do Eye-Dee (ciclo 89): o diário na pasta "Arquivos da NET", a permissão do dono, o aviso no chat, o "Abrir o arquivo" (no jogador e no mestre), o mesmo diário depois do "Reiniciar" e um novo no lugar do apagado;
   - o editor visual da arquitetura (ciclo 90): o "+" que cria o andar, o andar arrastado que troca com outro e o que vai para a célula vazia, e a ficha do compêndio trancado sem nada disso;
+  - os efeitos dos quickhacks (ciclo 98): o Impair Movement e o Slow tiram o MOVE por 20 rodadas; o Overheat põe o fogo, que queima 4 no fim do turno do alvo; o System Reset deixa inconsciente e caído, a cura não acorda e o dano acorda;
   - os quickhacks (ciclo 97): antes dos Passwalls, avisa; no Rank 2, os 8 dos Ranks 1 e 2; o Lure passa sem alertar, o Synapse Burnout pela janela da ficha alerta e tira os 3d6 do HP, e o Puppet não passa da DV 12;
   - o Breach nos Passwalls (ciclo 96): o Capanga com dois Self-ICE (DV 8); o Breach pela ficha com 7 não passa, com 9 passa um e com 10 passa o último; depois, o botão sai e o Breach avisa;
   - o Jack In no Neuroport (ciclo 95): o Alvo do jogador resiste com a Vontade pela janela dele e percebe; o Capanga (o mestre rola) não percebe; as ligações nas duas fichas (o jogador não vê quem ele não percebeu), o Jack Out pela ficha, o cartão para o dono do alvo que percebeu e as recusas sem rolar (sem Neuroport, longe, sem ver o alvo);

@@ -1,6 +1,6 @@
 // O Neuroport (a NET de 2077, o C9 do ROADMAP; a wiki, "Quickhacks no Neuroport", Kit p. 16–17 e 26–27): o netrunner
-// entra no Neuroport de um alvo à vista, no alcance do deck, e de lá passa os Passwalls (o Breach) e faz os quickhacks (as
-// próximas partes do C9). Por enquanto, o Jack In, o Jack Out e o Breach:
+// entra no Neuroport de um alvo à vista, no alcance do deck, e de lá passa os Passwalls (o Breach) e faz os quickhacks. A
+// expulsão e as Ações NET fora da arquitetura são as próximas partes do C9. Por enquanto:
 // - Jack In: Interface + 1d10 contra a WILL + 1d10 do alvo. O alvo resiste pela janela de reação do dono, como no
 //   agarrão (a decisão do usuário de 2026-10-17: "rolagens e efeitos simples"); pelo NPC, o mestre rola. Falhando (o
 //   empate é do alvo), entra assim mesmo, mas o alvo percebe. Cada Neuroport é uma Ação NET, e dá para ficar ligado em
@@ -10,15 +10,17 @@
 //   habilidade Breach) + 1d10 contra a DV. Passa um por vez; o quickhack só vem depois de todos (ligacao.passados);
 // - Quickhack: com os Passwalls passados, um dos do Rank do netrunner (o catálogo: os 11 do Kit e os 5 do suplemento que
 //   a mesa aprovou), a habilidade Quickhack + 1d10 contra a DV dele; um por alvo por rodada de combate. O que deu certo
-//   alerta o alvo (menos o Lure e os que o cartão diz que não). O sistema aplica o que é número (o Synapse Burnout: 3d6
-//   direto no HP); o resto vai ao cartão, e o mestre narra.
+//   alerta o alvo (menos o Lure e os que o cartão diz que não). O sistema aplica o que é número (efeitoDoQuickhack: o
+//   dano do Synapse Burnout, o fogo do Overheat, o MOVE do Impair Movement e do Slow, o System Reset); o resto vai ao
+//   cartão, e o mestre narra.
 // A ligação fica nas flags dos dois atores, que o mestre ativo grava: no netrunner, neuroport.ligacoes ([{ alvo: o uuid do
 // token, nome, percebido }]); no alvo, neuroport.invasores ([{ netrunner: o uuid do ator, nome, percebido }]). A ficha do
 // netrunner mostra as dele; a do alvo, as que ele percebeu (o mestre vê todas).
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { centroDe, combateDe, defesaContra, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
-import { alcanceDoJackIn, fazOQuickhack, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from './regras.mjs';
+import { alcanceDoJackIn, EFEITOS_DE_QUICKHACK, fazOQuickhack, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from './regras.mjs';
+import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
 
 const CANAL = `system.${SISTEMA}`;
@@ -219,18 +221,61 @@ async function resolverBreach(ator, pedido) {
   return cartao({ ator, alvo: alvo.actor, percebido: false, falante: nome, frase, resumo: { resultado: passou ? 'passou' : 'barrado', total: pedido.total, dv, passados, quantos, netrunner: nome, alvo: alvo.name } });
 }
 
-// O que o quickhack faz quando dá certo: o Synapse Burnout, 3d6 direto no HP (sem a armadura e sem ablar); os outros, o
-// cartão com o efeito, para o mestre narrar (as próximas partes do C9 aplicam o fogo, o MOVE e o System Reset).
+// O que o quickhack faz quando dá certo (regras.EFEITOS_DE_QUICKHACK; a decisão do usuário: o sistema aplica o que é
+// número). Os que duram "60 segundos (20 rodadas)" o Foundry acaba sozinho, pela duração do efeito:
+// - Synapse Burnout: 3d6 direto no HP (sem a armadura e sem ablar);
+// - Overheat: o fogo (o status "Em chamas"), 4 no HP no fim de cada turno do alvo (netrun/index.mjs), até ele apagar;
+// - Impair Movement e Slow: o MOVE cai 1 e 1d6 (a mudança no MOVE);
+// - System Reset: inconsciente, ou até sofrer dano (acordarComODano), e caído;
+// - os outros: o cartão com o efeito, para o mestre narrar.
 async function efeitoDoQuickhack(id, item, alvo, falante) {
-  if (id === 'netrunning-2077:synapse-burnout') {
-    const rolagem = await new Roll('3d6').evaluate();
-    await rolagem.toMessage({ speaker: { alias: falante }, flavor: `Synapse Burnout em ${alvo.name}: 3d6 direto no HP` });
+  const regra = EFEITOS_DE_QUICKHACK[id.split(':')[1]] ?? {};
+  const duracao = regra.rodadas ? { duration: { value: regra.rodadas, units: 'rounds' } } : {};
+  const rolar = async (formula, rotulo) => {
+    const rolagem = await new Roll(formula).evaluate();
+    await rolagem.toMessage({ speaker: { alias: falante }, flavor: `${item.name} em ${alvo.name}: ${rotulo}` });
+    return rolagem.total;
+  };
+  if (regra.dano) {
+    const dano = await rolar(regra.dano, `${regra.dano} direto no HP`);
     const hpAntes = alvo.actor.system.hp.value;
-    await alvo.actor.update({ 'system.hp.value': hpAntes - rolagem.total });
-    return { dano: rolagem.total, texto: `${rolagem.total} de dano direto no HP de ${alvo.name}, sem a armadura (${hpAntes} → ${alvo.actor.system.hp.value}).` };
+    await alvo.actor.update({ 'system.hp.value': hpAntes - dano });
+    return { dano, texto: `${dano} de dano direto no HP de ${alvo.name}, sem a armadura (${hpAntes} → ${alvo.actor.system.hp.value}).` };
+  }
+  if (regra.fogo) {
+    if (!alvo.actor.statuses.has(STATUS_EM_CHAMAS)) {
+      const efeito = await ActiveEffect.implementation.fromStatusEffect(STATUS_EM_CHAMAS, { parent: alvo.actor });
+      efeito.updateSource({ [`flags.${SISTEMA}`]: { fogo: { dano: regra.fogo, de: item.name }, quickhack: id } });
+      await ActiveEffect.implementation.create(efeito.toObject(), { parent: alvo.actor, keepId: true });
+    }
+    return { texto: `${alvo.name} pegou fogo: ${regra.fogo} de dano direto no HP no fim de cada turno dele, até apagar o fogo (uma Ação, no turno dele).` };
+  }
+  if (regra.move) {
+    const quanto = /^\d+$/.test(regra.move) ? Number(regra.move) : await rolar(regra.move, `MOVE −${regra.move}`);
+    await ActiveEffect.implementation.create({
+      name: `${item.name}: MOVE −${quanto}`, img: 'icons/svg/downgrade.svg', ...duracao, flags: { [SISTEMA]: { quickhack: id } },
+      system: { changes: [{ key: 'system.atributos.move.valor', type: 'add', value: String(-quanto), phase: 'initial', priority: null }] }
+    }, { parent: alvo.actor });
+    return { move: quanto, texto: `O MOVE de ${alvo.name} cai ${quanto} por 60 segundos (20 rodadas). Com MOVE 0, ele não faz Ação de Movimento.` };
+  }
+  if (regra.inconsciente) {
+    const efeito = await ActiveEffect.implementation.fromStatusEffect('unconscious', { parent: alvo.actor });
+    efeito.updateSource({ name: `${item.name}: inconsciente`, ...duracao, [`flags.${SISTEMA}`]: { quickhack: id, ateDano: regra.ateDano } });
+    await ActiveEffect.implementation.create(efeito.toObject(), { parent: alvo.actor });
+    if (regra.caido) await alvo.actor.toggleStatusEffect('prone', { active: true });
+    return { texto: `${alvo.name} cai inconsciente por 60 segundos (20 rodadas), ou até sofrer dano, e fica caído.` };
   }
   const efeito = String(item.system.descricao ?? '').split('</p>')[1]?.replace(/<[^>]+>/g, '').trim();
   return { texto: `O mestre aplica: ${efeito || item.name}` };
+}
+
+// O System Reset acaba quando o alvo sofre dano (o HP cai): no cliente que muda o HP (o gancho do preUpdateActor, que
+// ainda vê o HP de antes; quem muda o ator pode apagar o efeito dele).
+function acordarComODano(ator, mudancas) {
+  const hp = foundry.utils.getProperty(mudancas, 'system.hp.value');
+  if (hp === undefined || !(Number(ator.system.hp.value) > Number(hp))) return;
+  const efeitos = ator.effects.filter(efeito => efeito.getFlag(SISTEMA, 'ateDano')).map(efeito => efeito.id);
+  if (efeitos.length) ator.deleteEmbeddedDocuments('ActiveEffect', efeitos).catch(erro => console.error(`${SISTEMA} | System Reset`, erro));
 }
 
 // O quickhack: as conferências de novo; a vez (a rodada) fica marcada, certo ou errado; o que deu certo alerta o alvo
@@ -274,4 +319,5 @@ export function registrarNeuroport() {
     if (mensagem.tipo !== 'neuroport' || !souOMestreAtivo()) return;
     naFila(() => resolver(mensagem.acao, mensagem.pedido, game.users.get(mensagem.de))).catch(erro => console.error(`${SISTEMA} | Neuroport`, erro));
   });
+  Hooks.on('preUpdateActor', acordarComODano);
 }

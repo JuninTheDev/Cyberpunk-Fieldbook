@@ -523,6 +523,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   de grau médico com 0, como no CORE; a Battleglove com 3 e os Smart Glasses com 2, idem. O Sensor Array é o único que
   diverge: 5 na wiki, 3 no CORE; vale a wiki.
 
+- **O MOVE 0 dos quickhacks** (ciclo 98). Os cartões do Impair Movement e do Slow dizem "Com MOVE 0, ele não faz Ação
+  de Movimento", e o sistema segue a wiki do mortalmente ferido: o MOVE tem mínimo 1 (`regras.moveFinal`, que vale
+  também para o que as lesões e a armadura tiram). Assim, o MOVE do alvo cai pelo efeito do quickhack, mas não chega a
+  0 na ficha; o cartão do quickhack traz a regra, e o mestre narra. Se a mesa quiser o MOVE 0 pelo quickhack, muda o
+  `moveFinal` (o mínimo só para o ferimento, as lesões e a armadura) e o teste de referência.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -4774,6 +4780,62 @@ Commit anterior: `18754f05` (ciclo 96).
   - as Ações NET fora da arquitetura e o Jack Out inseguro;
   - o deck na Neuroport Cyberdeck Port.
 - **Próximo:** o C9, parte 3b (os efeitos simples).
+
+### Ciclo 98 (2026-10-17): o C9, parte 3b: os outros efeitos simples dos quickhacks (sessão KouArt)
+
+Commit anterior: `87d3dc49` (ciclo 97).
+
+- **A referência (a wiki, os cartões do Kit, p. 16):**
+  - **Synapse Burnout:** "3d6 de dano direto no HP do alvo. Passa pela armadura sem ablar";
+  - **Overheat:** "O alvo pega fogo: sofre 4 de dano direto no HP no fim de cada turno dele, até apagar o fogo. [...]
+    Apagar é uma Ação (CDT 1), e só no turno do alvo";
+  - **Impair Movement e Slow:** "O MOVE do alvo cai 1 [1d6] por 60 segundos (20 rodadas). Com MOVE 0, ele não faz Ação
+    de Movimento";
+  - **System Reset:** "O alvo cai inconsciente por 60 segundos (20 rodadas), ou até sofrer dano, e fica caído (Prone)";
+  - **a decisão do usuário:** "rolagens e efeitos simples". O sistema aplica o que é número.
+- **Implementado:**
+  - **`regras.mjs`:** `EFEITOS_DE_QUICKHACK`, o que o sistema aplica de cada um, pelo id do catálogo (o dano, o fogo, o
+    MOVE, o inconsciente e caído, e as 20 rodadas);
+  - **`neuroport.mjs`, o quickhack que dá certo:**
+    - **o Synapse Burnout:** como no ciclo 97, agora pela tabela;
+    - **o Overheat:** o status "Em chamas" do Hellhound, com o dano 4 guardado no efeito;
+    - **o Impair Movement e o Slow:** um efeito que tira 1 (e 1d6, que o mestre rola) do MOVE, por 20 rodadas (o
+      Foundry acaba com ele sozinho);
+    - **o System Reset:** o inconsciente, por 20 rodadas, e o caído;
+    - **o dano acorda:** o HP que cai (o `preUpdateActor`, no cliente que muda o HP) apaga o inconsciente do System Reset;
+      o caído fica. A cura não acorda;
+  - **`netrun/index.mjs`, o fogo:** no fim do turno, queima o dano guardado no efeito (o do Hellhound continua 2), e o
+    aviso do Overheat diz "Uma Ação, no turno dele, apaga o fogo" (o do Hellhound, a Ação Carnal).
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 118 de 130 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, 1 teste de referência novo: o texto dos 5
+    cartões na wiki e a tabela do sistema, e cada id no catálogo;
+  - G4: 112 de 121 (as 9 conhecidas da integração). O passo novo, "Os efeitos dos quickhacks", passou na primeira rodada,
+    no Capanga só com o Neuroport (sem Passwall):
+    - **o Impair Movement** (7 contra DV 6): o MOVE cai 1, pelo efeito "Impair Movement: MOVE −1" de 20 rodadas, e o
+      Capanga percebe;
+    - **o Slow** (11 contra DV 10; o mestre rola o 1d6: 2): o MOVE cai mais 2;
+    - **o Overheat** (9 contra DV 8): o Capanga fica em chamas, com o dano 4 no efeito, e o HP não cai na hora;
+    - **o fogo em combate:** na rodada seguinte, o fim do turno do Capanga queima 4, com o aviso no chat;
+    - **o System Reset** (13 contra DV 12): inconsciente (o efeito de 20 rodadas) e caído;
+    - **a cura e o dano:** o HP que sobe 1 não o acorda; o dano de 3 acorda, e o caído fica;
+  - **mutações:** as 8 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o fogo do Overheat com o dano 2 (E1);
+      - o System Reset sem as 20 rodadas (E2).
+    - **No G4, todas no passo novo:**
+      - o MOVE que sobe em vez de cair (E3);
+      - o efeito do MOVE sem a duração (E4);
+      - o fogo que não lê o dano do efeito (E5);
+      - o gancho do dano fora (E6);
+      - a cura que acorda (E7);
+      - o System Reset sem o caído (E8).
+- **Dúvida nova** (nas dúvidas de regra): o MOVE 0 dos cartões e o mínimo 1 da wiki.
+- **Pendências** (as outras partes do C9):
+  - a expulsão;
+  - as Ações NET fora da arquitetura e o Jack Out inseguro;
+  - o deck na Neuroport Cyberdeck Port.
+- **Próximo:** o C9, parte 4 (a expulsão).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

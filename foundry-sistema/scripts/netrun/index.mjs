@@ -32,13 +32,16 @@ function aoAbrirCena() {
   }
 }
 
-// O fogo: 2 no HP de quem está em chamas, no fim do turno dele, com o aviso no chat.
+// O fogo: no fim do turno de quem está em chamas, o dano no HP, com o aviso no chat. O do Hellhound é 2 (a wiki); o do
+// quickhack Overheat (neuroport.mjs), 4, que o efeito guarda (flags.fogo.dano), e quem o apaga é uma Ação no turno dele.
 async function queimar(ator, nome) {
-  const hp = Math.max(0, ator.system.hp.value - 2);
+  const fogo = ator.effects.find(efeito => efeito.statuses.has(STATUS_EM_CHAMAS))?.getFlag(SISTEMA, 'fogo');
+  const dano = Number(fogo?.dano) || 2;
+  const hp = Math.max(0, ator.system.hp.value - dano);
   await ator.update({ 'system.hp.value': hp });
   await ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ actor: ator }),
-    content: `<p><b>${foundry.utils.escapeHTML(nome)}</b> está em chamas: 2 no HP (fica com ${hp}/${ator.system.hp.max}). Uma Ação Carnal apaga o fogo.</p>`
+    content: `<p><b>${foundry.utils.escapeHTML(nome)}</b> está em chamas: ${dano} no HP (fica com ${hp}/${ator.system.hp.max}). ${fogo ? 'Uma Ação, no turno dele, apaga o fogo.' : 'Uma Ação Carnal apaga o fogo.'}</p>`
   });
 }
 

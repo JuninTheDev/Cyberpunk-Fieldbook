@@ -8,7 +8,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { alcanceDoJackIn, DV_DO_PASSWALL, fazOQuickhack, JACK_IN, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from '../../foundry-sistema/scripts/regras.mjs';
+import { alcanceDoJackIn, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, fazOQuickhack, JACK_IN, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from '../../foundry-sistema/scripts/regras.mjs';
 import { barra, paredeNoMeio } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -87,4 +87,25 @@ test('os quickhacks no catálogo: os 16 da wiki (11 do Kit e 5 do suplemento), c
   assert.deepEqual(quickhacks.filter(q => !q.flags['cpr-fieldbook'].quickhack.alerta).map(q => q.name).sort(), ['Lure', 'Memory Wipe', 'Request Backup']);
   // O nível pelo Rank: DV6 no Rank 1, DV8 no 2, DV10 no 3, DV12 no 4.
   for (const q of quickhacks) assert.equal(q.flags['cpr-fieldbook'].quickhack.dv, { 1: 6, 2: 8, 3: 10, 4: 12 }[q.flags['cpr-fieldbook'].quickhack.rank], q.name);
+});
+
+test('os efeitos que o sistema aplica, pelos cartões da wiki: o dano do Synapse Burnout, o fogo do Overheat, o MOVE do Impair Movement e do Slow, e o System Reset (60 segundos são 20 rodadas)', () => {
+  const contexto = { window: {} };
+  for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-net.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, arquivo), 'utf8'), contexto);
+  const texto = nome => contexto.window.systemNet.data.quickhacks.kit.find(cartao => cartao.name === nome)?.text;
+  assert.equal(texto('Synapse Burnout'), '<b>3d6 de dano direto no HP</b> do alvo. Passa pela armadura sem ablar.');
+  assert.equal(texto('Overheat'), 'O alvo pega fogo: sofre <b>4 de dano direto no HP</b> no fim de cada turno dele, até apagar o fogo. O dano passa pela armadura sem ablar. Apagar é uma Ação (CDT 1), e só no turno do alvo.');
+  assert.equal(texto('Impair Movement'), 'O MOVE do alvo cai <b>1</b> por 60 segundos (20 rodadas). Com MOVE 0, ele não faz Ação de Movimento.');
+  assert.equal(texto('Slow'), 'O MOVE do alvo cai <b>1d6</b> por 60 segundos (20 rodadas). Com MOVE 0, ele não faz Ação de Movimento.');
+  assert.equal(texto('System Reset'), 'O alvo cai <b>inconsciente</b> por 60 segundos (20 rodadas), ou até sofrer dano, e fica caído (Prone).');
+  assert.deepEqual(EFEITOS_DE_QUICKHACK, {
+    'synapse-burnout': { dano: '3d6' },
+    overheat: { fogo: 4 },
+    'impair-movement': { move: '1', rodadas: 20 },
+    slow: { move: '1d6', rodadas: 20 },
+    'system-reset': { inconsciente: true, caido: true, ateDano: true, rodadas: 20 }
+  });
+  // Cada um é um quickhack do catálogo (o id que o sistema procura).
+  const catalogo = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'dados', 'catalogo.json'), 'utf8')).itens;
+  for (const id of Object.keys(EFEITOS_DE_QUICKHACK)) assert.equal(catalogo[`netrunning-2077:${id}`]?.system?.classe, 'quickhack', id);
 });

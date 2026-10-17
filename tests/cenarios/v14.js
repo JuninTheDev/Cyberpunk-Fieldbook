@@ -3268,6 +3268,112 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('Os efeitos dos quickhacks (wiki, os cartões do Mission Kit p. 16; a decisão do usuário: "o sistema aplica o que é número"): no Capanga sem Self-ICE, o Impair Movement tira 1 do MOVE e o Slow, 1d6 (o mestre rola), por 20 rodadas; o Overheat põe o fogo, que queima 4 no fim do turno dele; o System Reset o deixa inconsciente por 20 rodadas e caído; a cura não o acorda, o dano acorda (o caído fica)', async () => {
+      const NOME = 'Teste Netrunner Efeitos';
+      let montado = null;
+      try {
+        // O netrunner do jogador ao lado do Capanga; no Capanga, só o Neuroport (sem Passwall, o quickhack vem direto).
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await ator.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const capanga = __token('Capanga');
+          const ocupado = (x, y) => canvas.scene.tokens.some(t => t.x === x && t.y === y);
+          const lugar = [[capanga.x + 100, capanga.y], [capanga.x, capanga.y + 100], [capanga.x, capanga.y - 100], [capanga.x - 100, capanga.y]].find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y));
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
+          const itens = (await capanga.actor.createEmbeddedDocuments('Item', [foundry.utils.mergeObject(foundry.utils.deepClone(cat['cyberware-2077:neuroport']), { 'system.instalado': true })])).map(i => i.id);
+          await __esperar(() => canvas.tokens.get(token.id));
+          const a = capanga.actor;
+          return { ator: ator.id, token: token.id, itens, hp: a.system.hp.value, move: a.system.atributos.move.valor, efeitos: a.effects.map(e => e.id), statuses: [...a.statuses] };
+        })()`);
+        // O Jack In pela API (o jogador: 4 + 9 = 13; o mestre rola a WILL do Capanga: 5 + 1 = 6).
+        await fixar(jogador, [[9, 10]]);
+        await fixar(edge, [[1, 10]]);
+        await jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          await game.system.api.neuroport.jackIn(ator, { alvo: canvas.scene.tokens.find(t => t.name === 'Capanga') });
+          for (let i = 0; i < 80 && !(ator.getFlag('${S}', 'neuroport')?.ligacoes ?? []).length; i++) await new Promise(r => setTimeout(r, 100));
+          return true;
+        })()`);
+        const qhCartoes = `game.messages.contents.filter(m => ['quickhack', 'falhou'].includes(m.getFlag('${S}', 'neuroport')?.resultado)).map(m => ({ ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim() }))`;
+        const noCapanga = `(() => { const a = __token('Capanga').actor; return { move: a.system.atributos.move.valor, hp: a.system.hp.value, statuses: [...a.statuses],
+          efeitos: a.effects.filter(e => e.getFlag('${S}', 'quickhack')).map(e => ({ nome: e.name, rodadas: e.duration.value + ' ' + e.duration.units, mudancas: (e.system.changes ?? []).map(c => c.key + ' ' + c.value).join(), fogo: e.getFlag('${S}', 'fogo') ?? null, ateDano: e.getFlag('${S}', 'ateDano') ?? false })) }; })()`;
+        const qhAntes = await edge.evaluate(`${qhCartoes}.length`);
+        // Cada quickhack pela API (o d10 fixo no jogador; os dados do mestre, se houver): o cartão e o Capanga depois.
+        const quickhack = async (id, d10, n, doMestre = []) => {
+          await fixar(jogador, [[d10, 10]]);
+          if (doMestre.length) await fixar(edge, doMestre);
+          await jogador.evaluate(`game.system.api.neuroport.quickhack(game.actors.get('${montado.ator}'), canvas.scene.tokens.find(t => t.name === 'Capanga').uuid, { escolha: '${id}' }).then(() => true)`);
+          const cartao = await edge.evaluate(`(async () => { await __esperar(() => ${qhCartoes}.length === ${n}); return ${qhCartoes}.at(-1) ?? null; })()`);
+          return { cartao, capanga: await edge.evaluate(noCapanga) };
+        };
+        // O Impair Movement (4 + 3 = 7 contra DV 6), o Slow (4 + 7 = 11 contra 10; o mestre rola o 1d6: 2) e o Overheat (4 + 5
+        // = 9 contra 8).
+        const impair = await quickhack('netrunning-2077:impair-movement', 3, qhAntes + 1);
+        const slow = await quickhack('netrunning-2077:slow', 7, qhAntes + 2, [[2, 6]]);
+        const overheat = await quickhack('netrunning-2077:overheat', 5, qhAntes + 3);
+        // Em combate (o Capanga sozinho), a rodada seguinte: o fim do turno dele queima 4.
+        const fogo = await edge.evaluate(`(async () => {
+          const token = __token('Capanga');
+          const hpAntes = token.actor.system.hp.value;
+          const c = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          window.__combateDosEfeitos = c.id;
+          await c.createEmbeddedDocuments('Combatant', [{ tokenId: token.id, sceneId: canvas.scene.id, actorId: token.actorId }]);
+          await c.startCombat();
+          await c.nextRound();
+          await __esperar(() => token.actor.system.hp.value === hpAntes - 4 && game.messages.contents.some(m => m.content.includes('Capanga</b> está em chamas')));
+          const mensagem = game.messages.contents.filter(m => m.content.includes('Capanga</b> está em chamas')).at(-1)?.content.replace(/<[^>]+>/g, '');
+          await c.delete();
+          return { queimou: hpAntes - token.actor.system.hp.value, mensagem, max: token.actor.system.hp.max };
+        })()`);
+        // O System Reset (4 + 9 = 13 contra DV 12); depois, a cura (o HP sobe 1) não o acorda, e o dano (3) acorda.
+        const reset = await quickhack('netrunning-2077:system-reset', 9, qhAntes + 4);
+        const acordou = await edge.evaluate(`(async () => {
+          const a = __token('Capanga').actor;
+          await a.update({ 'system.hp.value': a.system.hp.value + 1 });
+          await new Promise(r => setTimeout(r, 600));
+          const curado = a.statuses.has('unconscious');
+          await a.update({ 'system.hp.value': a.system.hp.value - 3 });
+          await __esperar(() => !a.statuses.has('unconscious'));
+          return { curado, ...${noCapanga} };
+        })()`);
+        const info = { montado, impair, slow, overheat, fogo, reset, acordou };
+        const { hp: h, move: m } = montado;
+        const frase = (nome, conta, efeito) => `${NOME} fez o ${nome} em Capanga (${conta}), e Capanga percebeu. ${efeito}`;
+        const moveTexto = n => `O MOVE de Capanga cai ${n} por 60 segundos (20 rodadas). Com MOVE 0, ele não faz Ação de Movimento.`;
+        const ok = m > 3 && !montado.statuses.includes('unconscious') && !montado.statuses.includes('cprf-em-chamas')
+          && impair.cartao?.resultado === 'quickhack' && impair.cartao.total === 7 && impair.cartao.alertou === true && impair.cartao.texto === frase('Impair Movement', '7 contra DV 6', moveTexto(1))
+          && impair.capanga.move === m - 1 && JSON.stringify(impair.capanga.efeitos) === JSON.stringify([{ nome: 'Impair Movement: MOVE −1', rodadas: '20 rounds', mudancas: 'system.atributos.move.valor -1', fogo: null, ateDano: false }])
+          && slow.cartao?.total === 11 && slow.cartao.texto === frase('Slow', '11 contra DV 10', moveTexto(2)) && slow.capanga.move === m - 3
+          && slow.capanga.efeitos[1]?.nome === 'Slow: MOVE −2' && slow.capanga.efeitos[1].mudancas === 'system.atributos.move.valor -2' && slow.capanga.efeitos[1].rodadas === '20 rounds'
+          && overheat.cartao?.total === 9 && overheat.cartao.texto === frase('Overheat', '9 contra DV 8', 'Capanga pegou fogo: 4 de dano direto no HP no fim de cada turno dele, até apagar o fogo (uma Ação, no turno dele).')
+          && overheat.capanga.statuses.includes('cprf-em-chamas') && JSON.stringify(overheat.capanga.efeitos[2]?.fogo) === JSON.stringify({ dano: 4, de: 'Overheat' }) && overheat.capanga.hp === h
+          && fogo.queimou === 4 && fogo.mensagem === `Capanga está em chamas: 4 no HP (fica com ${h - 4}/${fogo.max}). Uma Ação, no turno dele, apaga o fogo.`
+          && reset.cartao?.total === 13 && reset.cartao.texto === frase('System Reset', '13 contra DV 12', 'Capanga cai inconsciente por 60 segundos (20 rodadas), ou até sofrer dano, e fica caído.')
+          && reset.capanga.statuses.includes('unconscious') && reset.capanga.statuses.includes('prone')
+          && JSON.stringify(reset.capanga.efeitos[3]) === JSON.stringify({ nome: 'System Reset: inconsciente', rodadas: '20 rounds', mudancas: '', fogo: null, ateDano: true })
+          && acordou.curado === true && !acordou.statuses.includes('unconscious') && acordou.statuses.includes('prone') && acordou.hp === h - 4 + 1 - 3 && acordou.efeitos.length === 3;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            await game.combats.get(window.__combateDosEfeitos)?.delete();
+            const ator = game.actors.get('${montado.ator}');
+            const capanga = __token('Capanga').actor;
+            await capanga.deleteEmbeddedDocuments('Item', ${JSON.stringify(montado.itens)}.filter(id => capanga.items.get(id)));
+            await capanga.deleteEmbeddedDocuments('ActiveEffect', capanga.effects.filter(e => !${JSON.stringify(montado.efeitos)}.includes(e.id)).map(e => e.id));
+            await capanga.unsetFlag('${S}', 'neuroport');
+            await capanga.update({ 'system.hp.value': ${montado.hp} });
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {
       // Ataque: d10 8 → 8 + 4 + 8 = 20 contra DV 16. Dano 5d6: 2 × 5 = 10 contra o SP do Alvo.
       await fixar(edge, [[8, 10], [2, 6], [2, 6], [2, 6], [2, 6], [2, 6]]);

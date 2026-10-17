@@ -492,6 +492,18 @@ export const passouOPasswall = (total, dv) => Number(total) > Number(dv);
 export const fazOQuickhack = (rankDeInterface, rankDoQuickhack) => Number(rankDoQuickhack) >= 1 && Number(rankDeInterface) >= Number(rankDoQuickhack);
 export const passouOQuickhack = (total, dv) => Number(total) > Number(dv);
 export const jaFezOQuickhack = (ultimo, agora) => Boolean(agora?.combate && ultimo?.combate === agora.combate && ultimo.rodada === agora.rodada);
+
+// O que o sistema aplica dos quickhacks que dão certo (os cartões do Kit, p. 16; a decisão do usuário: "o sistema aplica o
+// que é número"), pelo id do catálogo: o dano direto no HP (dano), o fogo por turno (fogo), o MOVE a menos (move) e o
+// inconsciente e caído até sofrer dano; "60 segundos" são 20 rodadas. O resto vai ao cartão.
+export const EFEITOS_DE_QUICKHACK = {
+  'synapse-burnout': { dano: '3d6' },
+  overheat: { fogo: 4 },
+  'impair-movement': { move: '1', rodadas: 20 },
+  slow: { move: '1d6', rodadas: 20 },
+  'system-reset': { inconsciente: true, caido: true, ateDano: true, rodadas: 20 }
+};
+
 // Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria
 // abaixo de 0, fica com 1 HP e desmaia" (quem já está abaixo de 1 não sobe), e na terceira rodada seguida desmaia.
 // motivo: 'abaixoDeZero' ou 'tresRodadas' quando desmaia.
