@@ -4837,6 +4837,64 @@ Commit anterior: `87d3dc49` (ciclo 97).
   - o deck na Neuroport Cyberdeck Port.
 - **Próximo:** o C9, parte 4 (a expulsão).
 
+### Ciclo 99 (2026-10-17): o C9, parte 4: a expulsão (sessão KouArt)
+
+Commit anterior: `4b558c2f` (ciclo 98).
+
+- **A referência (a wiki, "Quickhacks no Neuroport"):**
+  - **Expulsar:** "o alvo que percebe (um quickhack que deu certo alerta, menos o Lure) tenta te expulsar com uma Ação:
+    WILL + Concentração + 1d10 contra a sua Interface + 1d10. Outro netrunner sempre sabe quando entraram no Neuroport
+    dele";
+  - **o empate:** "Teste contra outra pessoa: empate = defensor vence". Quem defende é o netrunner;
+  - **a decisão do usuário:** "rolagens e efeitos simples": o outro lado rola pela janela de reação do dono, como no
+    agarrão.
+- **Implementado:**
+  - **`regras.mjs`:**
+    - `expulsou`: expulsa com o total acima da Interface do netrunner;
+    - `sabeDoJackIn`: o alvo com Interface (o Netrunner) sabe do Jack In;
+  - **`neuroport.mjs`:**
+    - **o Expulsar:** só contra quem o alvo percebeu; a Concentração (WILL + Concentração + 1d10) do alvo vai ao
+      mestre;
+    - **o mestre ativo:** confere de novo e pede a Interface + 1d10 do netrunner pela janela de reação do dono (pelo
+      NPC, o mestre rola). Expulso, a ligação some dos dois lados, e o cartão vai ao mestre e aos donos dos dois;
+    - **o Jack In no netrunner:** sem a resistência; ele sempre percebe, e o cartão diz;
+  - **`combate.mjs` e `janela-defesa.mjs`:** a defesa "interface" (o Rank + 1d10, sem o bônus de programa, com as
+    penalidades), na janela "Estão expulsando você de um Neuroport!";
+  - **a ficha:** o botão "Expulsar" ao lado de cada um que o alvo percebeu, em "No seu Neuroport".
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 119 de 131 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, 1 teste de referência novo: o texto da
+    wiki, o empate do defensor e o netrunner que sempre sabe;
+  - G4: 113 de 122 (as 9 conhecidas da integração). O passo novo, "A expulsão do Neuroport", passou na segunda rodada
+    (na primeira, o d10 fixo em 1 e em 10 fez crítico; a lição no QUALITY_GATES):
+    - **o Capanga netrunner** (Rank 1, só no passo): o Jack In (4 + 6 = 10) entra sem a Vontade dele, e ele percebe ("é
+      netrunner e sempre sabe");
+    - **o mestre, pela ficha do Capanga:** o Expulsar com a Concentração (5 + 3 = 8); o netrunner do jogador resiste pela
+      janela "Estão expulsando você de um Neuroport!" (só a Interface: "Interface 4 + 1d10 (média 9,5) contra a
+      expulsão. Empate é seu"), com 4 + 4 = 8: o empate é dele, e a ligação fica;
+    - **o Alvo, com o netrunner do mestre:** o mestre vê os dois invasores, e o Expulsar só no que o Alvo percebeu; o
+      jogador vê só esse;
+    - **o jogador, pela ficha do Alvo:** a Concentração (7 + 9 = 16) contra a Interface do netrunner (o mestre rola: 4 +
+      2 = 6) expulsa; a ligação some dos dois lados, e o cartão vai ao mestre e ao jogador;
+    - **quem o Alvo não percebeu:** o Expulsar avisa e não rola;
+    - **o passo do Jack In (ciclo 95)** tem o texto novo da lista "No seu Neuroport" (o botão Expulsar);
+  - **mutações:** as 8 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o empate que expulsa (X1);
+      - o netrunner de Rank 1 que não sabe do Jack In (X2).
+    - **No G4, todas no passo novo:**
+      - o Jack In no netrunner com a resistência (X3);
+      - o Expulsar sem a conferência de quem se percebeu (X4);
+      - o expulso que fica (X5);
+      - a defesa com a Vontade no lugar da Interface (X6);
+      - o botão também para quem não se percebeu (X7, pego pela ficha do mestre);
+      - a Interface da defesa pela WILL (X8).
+- **Pendências** (as outras partes do C9):
+  - as Ações NET fora da arquitetura e o Jack Out inseguro;
+  - o deck na Neuroport Cyberdeck Port;
+  - a ligação de quem saiu da cena (o token apagado).
+- **Próximo:** o C9, parte 5 (as Ações NET fora da arquitetura e o Jack Out inseguro).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

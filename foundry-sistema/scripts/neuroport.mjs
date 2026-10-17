@@ -1,10 +1,10 @@
 // O Neuroport (a NET de 2077, o C9 do ROADMAP; a wiki, "Quickhacks no Neuroport", Kit p. 16–17 e 26–27): o netrunner
-// entra no Neuroport de um alvo à vista, no alcance do deck, e de lá passa os Passwalls (o Breach) e faz os quickhacks. A
-// expulsão e as Ações NET fora da arquitetura são as próximas partes do C9. Por enquanto:
+// entra no Neuroport de um alvo à vista, no alcance do deck, e de lá passa os Passwalls (o Breach) e faz os quickhacks; o
+// alvo que percebeu tenta expulsá-lo. As Ações NET fora da arquitetura são a próxima parte do C9. Por enquanto:
 // - Jack In: Interface + 1d10 contra a WILL + 1d10 do alvo. O alvo resiste pela janela de reação do dono, como no
 //   agarrão (a decisão do usuário de 2026-10-17: "rolagens e efeitos simples"); pelo NPC, o mestre rola. Falhando (o
-//   empate é do alvo), entra assim mesmo, mas o alvo percebe. Cada Neuroport é uma Ação NET, e dá para ficar ligado em
-//   quantos quiser (a conta das Ações NET fora da arquitetura é outra parte);
+//   empate é do alvo), entra assim mesmo, mas o alvo percebe; o alvo netrunner sempre percebe, sem rolar. Cada Neuroport
+//   é uma Ação NET, e dá para ficar ligado em quantos quiser (a conta das Ações NET fora da arquitetura é outra parte);
 // - Jack Out: sai do Neuroport do alvo com segurança;
 // - Breach: passa um Passwall do alvo (um por Self-ICE, até 3; a DV de todos é 6, 8 ou 10, pelo número), Interface (a
 //   habilidade Breach) + 1d10 contra a DV. Passa um por vez; o quickhack só vem depois de todos (ligacao.passados);
@@ -12,14 +12,16 @@
 //   a mesa aprovou), a habilidade Quickhack + 1d10 contra a DV dele; um por alvo por rodada de combate. O que deu certo
 //   alerta o alvo (menos o Lure e os que o cartão diz que não). O sistema aplica o que é número (efeitoDoQuickhack: o
 //   dano do Synapse Burnout, o fogo do Overheat, o MOVE do Impair Movement e do Slow, o System Reset); o resto vai ao
-//   cartão, e o mestre narra.
+//   cartão, e o mestre narra;
+// - Expulsar: o alvo que percebeu, com uma Ação, WILL + Concentração + 1d10 contra a Interface + 1d10 do netrunner (o
+//   empate é do netrunner); expulso, a ligação some dos dois lados.
 // A ligação fica nas flags dos dois atores, que o mestre ativo grava: no netrunner, neuroport.ligacoes ([{ alvo: o uuid do
 // token, nome, percebido }]); no alvo, neuroport.invasores ([{ netrunner: o uuid do ator, nome, percebido }]). A ficha do
 // netrunner mostra as dele; a do alvo, as que ele percebeu (o mestre vê todas).
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { centroDe, combateDe, defesaContra, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
-import { alcanceDoJackIn, EFEITOS_DE_QUICKHACK, fazOQuickhack, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from './regras.mjs';
+import { alcanceDoJackIn, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn, sabeDoJackIn } from './regras.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
 
@@ -133,6 +135,18 @@ export async function quickhack(ator, alvo, { perguntar = false, escolha = null 
   return pedirAoMestre('quickhack', { ator: ator.uuid, alvo, id, total: teste.total });
 }
 
+// "Expulsar": no Neuroport deste ator, o netrunner (o uuid do ator) que ele percebeu; uma Ação: WILL + Concentração +
+// 1d10 contra a Interface + 1d10 do netrunner, que defende pela janela de reação do dono (pelo NPC, o mestre rola).
+export async function expulsar(ator, netrunner, { perguntar = false } = {}) {
+  const invasor = neuroportDe(ator).invasores.find(item => item.netrunner === netrunner);
+  if (!invasor) return avisar(`Esse netrunner não está no Neuroport de ${ator.name}.`);
+  if (!invasor.percebido) return avisar(`${ator.name} não percebeu ${invasor.nome}: só dá para expulsar quem se percebeu.`);
+  if (!game.user.isGM && !game.users.activeGM) return avisar('Sem mestre na mesa: a expulsão precisa do mestre para a Interface do netrunner.');
+  const teste = await ator.rolarPericia('concentration', { perguntar, sabor: `Expulsar ${invasor.nome} do Neuroport (uma Ação), contra a Interface + 1d10 dele`, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { expulsar: true } });
+  if (!teste) return null;
+  return pedirAoMestre('expulsar', { ator: ator.uuid, netrunner, total: teste.total, mensagem: teste.mensagem?.id ?? null });
+}
+
 // ---------------- No mestre ativo ----------------
 async function resolver(acao, pedido, usuario) {
   const ator = await fromUuid(pedido.ator);
@@ -173,14 +187,18 @@ async function resolverJackIn(ator, pedido) {
   const [meu, alvo] = await Promise.all([pedido.token, pedido.alvo].map(uuid => (uuid ? fromUuid(uuid) : null)));
   if (!alvo?.actor || !temNeuroport(alvo.actor) || neuroportDe(ator).ligacoes.some(item => item.alvo === alvo.uuid)) return null;
   const nome = meu?.name ?? ator.name;
-  const { resposta, notas } = await defesaContra({ atacante: ator, tokenAtq: meu, alvo, total: pedido.total, modo: 'jackin', rotulo: 'Jack In', descricao: 'Interface + 1d10', opcoes: ['vontade'] });
+  // O alvo netrunner sempre sabe (a wiki): sem a resistência.
+  const sabe = sabeDoJackIn(alvo.actor.system.rankDeInterface);
+  const { resposta, notas } = sabe ? { resposta: null, notas: [] }
+    : await defesaContra({ atacante: ator, tokenAtq: meu, alvo, total: pedido.total, modo: 'jackin', rotulo: 'Jack In', descricao: 'Interface + 1d10', opcoes: ['vontade'] });
   const defesa = resposta?.defesa ?? null;
-  const percebido = defesa === null || percebeuOJackIn(pedido.total, defesa);
+  const percebido = sabe || defesa === null || percebeuOJackIn(pedido.total, defesa);
   await mostrarTotal(pedido);
   await gravar(ator, alvo, { ligacao: { alvo: alvo.uuid, nome: alvo.name, percebido }, invasor: { netrunner: ator.uuid, nome, percebido } });
   const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
-  const conta = `${pedido.total} contra ${defesa ?? '—'}`;
-  const frase = percebido ? `${a} entrou no Neuroport de ${b} (${conta}), mas ${b} percebeu.` : `${a} entrou no Neuroport de ${b} (${conta}) sem ser percebido.`;
+  const conta = sabe ? `Jack In ${pedido.total}` : `${pedido.total} contra ${defesa ?? '—'}`;
+  const frase = sabe ? `${a} entrou no Neuroport de ${b} (${conta}), mas ${b} é netrunner e sempre sabe.`
+    : percebido ? `${a} entrou no Neuroport de ${b} (${conta}), mas ${b} percebeu.` : `${a} entrou no Neuroport de ${b} (${conta}) sem ser percebido.`;
   return cartao({ ator, alvo: alvo.actor, percebido, falante: nome, frase, notas, resumo: { resultado: percebido ? 'percebido' : 'entrou', ataque: pedido.total, defesa, netrunner: nome, alvo: alvo.name } });
 }
 
@@ -312,7 +330,29 @@ async function resolverQuickhack(ator, pedido) {
   });
 }
 
-const RESOLVER = { jackin: resolverJackIn, jackout: resolverJackOut, breach: resolverBreach, quickhack: resolverQuickhack };
+// A expulsão: a Interface do netrunner pela janela de reação do dono dele (pelo NPC, o mestre rola); expulso (o empate é
+// do netrunner; sem a defesa, sai), a ligação some dos dois lados. As conferências do cliente valem de novo aqui.
+async function resolverExpulsar(ator, pedido) {
+  const invasor = neuroportDe(ator).invasores.find(item => item.netrunner === pedido.netrunner);
+  const netrunner = await fromUuid(pedido.netrunner);
+  if (!invasor?.percebido || !netrunner) return null;
+  // A ligação do netrunner neste alvo (pelo token marcado no Jack In) e o token do netrunner na mesma cena.
+  const ligacao = neuroportDe(netrunner).ligacoes.find(item => fromUuidSync(item.alvo)?.actor === ator);
+  const alvo = ligacao ? await fromUuid(ligacao.alvo) : null;
+  const meu = alvo ? tokenNaCena(netrunner, alvo.parent) : null;
+  if (!meu) return null;
+  const { resposta, notas } = await defesaContra({ atacante: ator, tokenAtq: alvo, alvo: meu, total: pedido.total, modo: 'expulsar', rotulo: 'Expulsar', descricao: 'WILL + Concentração + 1d10', opcoes: ['interface'] });
+  const defesa = resposta?.defesa ?? null;
+  const fora = defesa === null || expulsou(pedido.total, defesa);
+  await mostrarTotal(pedido);
+  if (fora) await gravar(netrunner, alvo, {});
+  const [a, b] = [alvo.name, meu.name].map(texto => `<b>${esc(texto)}</b>`);
+  const conta = `${pedido.total} contra ${defesa ?? '—'}`;
+  const frase = fora ? `${a} expulsou ${b} do Neuroport dele (${conta}).` : `${a} não conseguiu expulsar ${b} do Neuroport dele (${conta}).`;
+  return cartao({ ator: netrunner, alvo: ator, percebido: true, falante: alvo.name, frase, notas, resumo: { resultado: fora ? 'expulso' : 'resistiu', ataque: pedido.total, defesa, netrunner: meu.name, alvo: alvo.name } });
+}
+
+const RESOLVER = { jackin: resolverJackIn, jackout: resolverJackOut, breach: resolverBreach, quickhack: resolverQuickhack, expulsar: resolverExpulsar };
 
 export function registrarNeuroport() {
   game.socket.on(CANAL, mensagem => {

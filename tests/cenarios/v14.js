@@ -3098,7 +3098,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && /Resistir com a Vontade WILL \d+[^(]*\+ 1d10 \(média [0-9,]+\) contra o Jack In no seu Neuroport\. Empate é seu\./.test(janela.texto)
           && noAlvo.r?.resultado === 'percebido' && noAlvo.r.ataque === 6 && noAlvo.r.defesa === w.Alvo + 5
           && noAlvo.cartao?.texto === `${NOME} entrou no Neuroport de Alvo (6 contra ${w.Alvo + 5}), mas Alvo percebeu.` && noAlvo.cartao.para === 'Gamemaster,Jogador'
-          && noAlvo.netrunner.ligacoes === 'Alvo:true' && noAlvo.alvo.invasores === `${NOME}:true` && fichaDoAlvo === `No seu Neuroport: ${NOME}`
+          && noAlvo.netrunner.ligacoes === 'Alvo:true' && noAlvo.alvo.invasores === `${NOME}:true` && fichaDoAlvo === `No seu Neuroport: ${NOME} Expulsar`
           && noCapanga.ligacoes.join(' | ') === 'Alvo percebeu Quickhack Jack Out | Capanga não percebeu Quickhack Jack Out' && noCapanga.titulo === 'NEUROPORTSJACK IN NO ALVO MARCADO · ATÉ 6 M'
           && depoisDoCapanga.cartao?.resultado === 'entrou' && depoisDoCapanga.cartao.ataque === 11 && depoisDoCapanga.cartao.defesa === w.Capanga + 2
           && depoisDoCapanga.cartao.texto === `${NOME} entrou no Neuroport de Capanga (11 contra ${w.Capanga + 2}) sem ser percebido.` && depoisDoCapanga.cartao.para === 'Gamemaster,Jogador'
@@ -3366,6 +3366,147 @@ module.exports = async ({ edge, servidores, r }) => {
             await capanga.deleteEmbeddedDocuments('ActiveEffect', capanga.effects.filter(e => !${JSON.stringify(montado.efeitos)}.includes(e.id)).map(e => e.id));
             await capanga.unsetFlag('${S}', 'neuroport');
             await capanga.update({ 'system.hp.value': ${montado.hp} });
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
+    await r.passo('A expulsão do Neuroport (wiki: "o alvo que percebe [...] tenta te expulsar com uma Ação: WILL + Concentração + 1d10 contra a sua Interface + 1d10. Outro netrunner sempre sabe quando entraram no Neuroport dele"): o Capanga netrunner percebe o Jack In sem rolar; o mestre tenta expulsar pela ficha do Capanga, e o netrunner do jogador resiste com a Interface pela janela de reação, no empate; no Alvo, o jogador expulsa pela ficha o netrunner do mestre (o mestre rola a Interface), e a ligação some dos dois lados; quem não percebeu não expulsa', async () => {
+      const NOME = 'Teste Netrunner Expulso';
+      let montado = null;
+      try {
+        // O netrunner do jogador ao lado do Capanga; o Neuroport no Alvo e no Capanga, que vira netrunner (Rank 1).
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await ator.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const capanga = __token('Capanga');
+          const ocupado = (x, y) => canvas.scene.tokens.some(t => t.x === x && t.y === y);
+          const lugar = [[capanga.x + 100, capanga.y], [capanga.x, capanga.y + 100], [capanga.x, capanga.y - 100], [capanga.x - 100, capanga.y]].find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y));
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
+          const neuroport = foundry.utils.mergeObject(foundry.utils.deepClone(cat['cyberware-2077:neuroport']), { 'system.instalado': true });
+          const itens = {};
+          for (const nome of ['Alvo', 'Capanga']) [itens[nome]] = (await __token(nome).actor.createEmbeddedDocuments('Item', [neuroport])).map(i => i.id);
+          const role = { nome: capanga.actor.system.role.nome, rank: capanga.actor.system.role.rank };
+          await capanga.actor.update({ 'system.role.nome': 'Netrunner', 'system.role.rank': 1 });
+          await __esperar(() => canvas.tokens.get(token.id));
+          const soma = partes => partes.reduce((s, p) => s + p.valor, 0);
+          const conc = a => soma(a.partesDaPericia('concentration', { situacionais: [] }).partes);
+          return { ator: ator.id, token: token.id, itens, role, conc: { Alvo: conc(__token('Alvo').actor), Capanga: conc(capanga.actor) }, interface: soma(ator.partesDaInterface('expulsar', { situacionais: [] })) };
+        })()`);
+        const ultimoCartao = `(() => { const m = game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).at(-1); return m && { ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, ''), para: m.whisper.map(id => game.users.get(id)?.name).sort().join() }; })()`;
+        const ligacoesDe = `(nome => { const a = canvas.scene.tokens.find(t => t.name === nome)?.actor ?? game.actors.getName(nome); const d = a?.getFlag('${S}', 'neuroport') ?? {}; return { ligacoes: (d.ligacoes ?? []).map(l => l.nome + ':' + l.percebido).join(), invasores: (d.invasores ?? []).map(l => l.nome + ':' + l.percebido).join() }; })`;
+        const vontades = `game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.defesa === 'vontade').length`;
+        // Os cartões do Neuroport contados (o último do passo anterior também é do Capanga).
+        const nCartoes = `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).length`;
+        const n0 = await edge.evaluate(nCartoes);
+        // 1. O Jack In no Capanga netrunner (4 + 6 = 10): sem a Vontade, ele percebe.
+        const vontadesAntes = await edge.evaluate(vontades);
+        await fixar(jogador, [[6, 10]]);
+        await jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          await game.system.api.neuroport.jackIn(ator, { alvo: canvas.scene.tokens.find(t => t.name === 'Capanga') });
+          for (let i = 0; i < 80 && !(ator.getFlag('${S}', 'neuroport')?.ligacoes ?? []).length; i++) await new Promise(r => setTimeout(r, 100));
+          return true;
+        })()`);
+        const jackIn = await edge.evaluate(`(async () => { await __esperar(() => ${nCartoes} === ${n0 + 1}); return { cartao: ${ultimoCartao}, capanga: ${ligacoesDe}('Capanga'), vontades: ${vontades} }; })()`);
+        // 2. O mestre, pela ficha do Capanga (Ctrl + clique: sem a janela de rolagem), tenta expulsar: a Concentração (d10
+        // 3); o jogador resiste com a Interface (4 + d10), no empate.
+        const dEmpate = montado.conc.Capanga + 3 - montado.interface;
+        await fixar(edge, [[3, 10]]);
+        await fixar(jogador, [[dEmpate, 10]]);
+        const botaoDoMestre = await edge.evaluate(`(async () => {
+          const ficha = __token('Capanga').actor.sheet;
+          await ficha.render({ force: true });
+          ficha.changeTab('net', 'primary');
+          for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports .no-meu [data-action=expulsar]'); i++) await new Promise(r => setTimeout(r, 100));
+          const texto = ficha.element?.querySelector('.neuroports .no-meu')?.textContent.replace(/\\s+/g, ' ').trim() ?? null;
+          ficha.element.querySelector('.neuroports .no-meu [data-action=expulsar]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          return texto;
+        })()`);
+        let janela = null;
+        for (let i = 0; i < 40 && !janela; i++) {
+          await jogador.sleep(250);
+          janela = await jogador.evaluate(`(() => {
+            const d = document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing)');
+            return d && { titulo: d.querySelector('.window-title')?.textContent.trim(), texto: d.querySelector('.window-content').textContent.replace(/\\s+/g, ' ').trim(), botoes: [...d.querySelectorAll('button.opcao')].map(b => b.dataset.escolha) };
+          })()`);
+        }
+        if (janela) await jogador.evaluate(`document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing) button.opcao[data-escolha="interface"]').click()`);
+        const resistiu = await edge.evaluate(`(async () => { await __esperar(() => ${nCartoes} === ${n0 + 2}); await __token('Capanga').actor.sheet.close(); return { cartao: ${ultimoCartao}, capanga: ${ligacoesDe}('Capanga'), netrunner: ${ligacoesDe}('${NOME}') }; })()`);
+        // 3. O netrunner passa a ser só do mestre, no Neuroport do Alvo (percebido), com um invasor que o Alvo não percebeu.
+        const vistoPeloMestre = await edge.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          await ator.update({ ['ownership.' + game.users.getName('Jogador').id]: 0 });
+          const alvo = __token('Alvo');
+          const d = ator.getFlag('${S}', 'neuroport');
+          await ator.setFlag('${S}', 'neuroport', { ...d, ligacoes: [...d.ligacoes, { alvo: alvo.uuid, nome: 'Alvo', percebido: true }] });
+          await alvo.actor.setFlag('${S}', 'neuroport', { ligacoes: [], invasores: [{ netrunner: ator.uuid, nome: '${NOME}', percebido: true }, { netrunner: 'Actor.fantasma', nome: 'Fantasma', percebido: false }] });
+          // O mestre vê os dois na ficha do Alvo, e o Expulsar só no que o Alvo percebeu.
+          const ficha = alvo.actor.sheet;
+          await ficha.render({ force: true });
+          ficha.changeTab('net', 'primary');
+          for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports .no-meu'); i++) await new Promise(r => setTimeout(r, 100));
+          const texto = ficha.element?.querySelector('.neuroports .no-meu')?.textContent.replace(/\\s+/g, ' ').trim() ?? null;
+          await ficha.close();
+          return texto;
+        })()`);
+        // 4. O jogador, pela ficha do Alvo: só o que ele percebeu, com o Expulsar; a Concentração (d10 9; o 10 e o 1 são
+        // críticos) contra a Interface do netrunner (o mestre: 4 + 2 = 6) expulsa. Quem ele não percebeu, pela API: o aviso,
+        // sem rolar.
+        await fixar(jogador, [[9, 10]]);
+        await fixar(edge, [[2, 10]]);
+        const pelaFicha = await jogador.evaluate(`(async () => {
+          const ficha = game.actors.getName('Alvo').sheet;
+          await ficha.render({ force: true });
+          ficha.changeTab('net', 'primary');
+          for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports .no-meu [data-action=expulsar]'); i++) await new Promise(r => setTimeout(r, 100));
+          const antes = ficha.element?.querySelector('.neuroports .no-meu')?.textContent.replace(/\\s+/g, ' ').trim() ?? null;
+          ficha.element.querySelector('.neuroports .no-meu [data-action=expulsar]').click();
+          const ator = game.actors.getName('Alvo');
+          for (let i = 0; i < 80 && (ator.getFlag('${S}', 'neuroport')?.invasores ?? []).some(i => i.nome === '${NOME}'); i++) await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 400));
+          const depois = ficha.element?.querySelector('.neuroports .no-meu')?.textContent ?? null;
+          await ficha.close();
+          const mensagens = game.messages.size;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try { await game.system.api.neuroport.expulsar(ator, 'Actor.fantasma'); } finally { delete ui.notifications.warn; }
+          return { antes, depois, avisos, rolou: game.messages.size !== mensagens };
+        })()`);
+        const expulso = await edge.evaluate(`(async () => { await __esperar(() => ${nCartoes} === ${n0 + 3}); return { cartao: ${ultimoCartao}, alvo: ${ligacoesDe}('Alvo'), netrunner: ${ligacoesDe}('${NOME}') }; })()`);
+        const info = { montado, jackIn, vontadesAntes, dEmpate, botaoDoMestre, janela, resistiu, vistoPeloMestre, pelaFicha, expulso };
+        const c = montado.conc;
+        const ok = dEmpate >= 2 && dEmpate <= 9 && montado.interface === 4
+          && jackIn.cartao?.resultado === 'percebido' && jackIn.cartao.ataque === 10 && jackIn.cartao.defesa === null && jackIn.vontades === vontadesAntes
+          && jackIn.cartao.texto === `${NOME} entrou no Neuroport de Capanga (Jack In 10), mas Capanga é netrunner e sempre sabe.` && jackIn.capanga.invasores === `${NOME}:true`
+          && botaoDoMestre === `No seu Neuroport: ${NOME} Expulsar`
+          && janela?.titulo === 'Estão expulsando você de um Neuroport!' && janela.botoes.join() === 'interface'
+          && janela.texto.includes('Resistir com a Interface Interface 4 + 1d10 (média 9,5) contra a expulsão. Empate é seu. Perdeu: você sai do Neuroport de Capanga.')
+          && resistiu.cartao?.resultado === 'resistiu' && resistiu.cartao.ataque === c.Capanga + 3 && resistiu.cartao.defesa === c.Capanga + 3 && resistiu.cartao.para === 'Gamemaster,Jogador'
+          && resistiu.cartao.texto === `Capanga não conseguiu expulsar ${NOME} do Neuroport dele (${c.Capanga + 3} contra ${c.Capanga + 3}).`
+          && resistiu.capanga.invasores === `${NOME}:true` && resistiu.netrunner.ligacoes === 'Capanga:true'
+          && vistoPeloMestre === `No seu Neuroport: ${NOME} Expulsar Fantasma (não percebeu)`
+          && pelaFicha.antes === `No seu Neuroport: ${NOME} Expulsar` && pelaFicha.depois === null
+          && pelaFicha.avisos.join() === 'Alvo não percebeu Fantasma: só dá para expulsar quem se percebeu.' && !pelaFicha.rolou
+          && expulso.cartao?.resultado === 'expulso' && expulso.cartao.ataque === c.Alvo + 9 && expulso.cartao.defesa === 6 && expulso.cartao.para === 'Gamemaster,Jogador'
+          && expulso.cartao.texto === `Alvo expulsou ${NOME} do Neuroport dele (${c.Alvo + 9} contra 6).`
+          && expulso.alvo.invasores === 'Fantasma:false' && expulso.netrunner.ligacoes === 'Capanga:true';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-defesa')) await app.close(); return true; })()`).catch(() => null);
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            const ator = game.actors.get('${montado.ator}');
+            await ator?.sheet?.close();
+            await __token('Capanga').actor.sheet?.close();
+            for (const [nome, id] of Object.entries(${JSON.stringify(montado.itens)})) { await __token(nome).actor.items.get(id)?.delete(); await __token(nome).actor.unsetFlag('${S}', 'neuroport'); }
+            await __token('Capanga').actor.update({ 'system.role.nome': ${JSON.stringify(montado.role.nome)}, 'system.role.rank': ${montado.role.rank} });
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;

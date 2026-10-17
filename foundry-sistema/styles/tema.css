@@ -212,6 +212,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .neuroports .passwalls { color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
 .cpr-fieldbook.ficha-personagem .neuroports .no-meu { margin: 6px 0 0; color: var(--cp-vermelho); font-family: var(--cp-dados); font-size: 12px; }
 .cpr-fieldbook.ficha-personagem .neuroports .no-meu small { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .neuroports .no-meu .expulsar { margin: 0 6px 0 2px; }
 /* A Vida: o Lifepath em painéis, como a maquete "Lifepath Tab"; o da Role, largo. */
 .cpr-fieldbook.ficha-personagem .lifepath-grupos { align-items: start; }
 .cpr-fieldbook.ficha-personagem .grupo-lifepath { display: flex; flex-direction: column; gap: 10px; }

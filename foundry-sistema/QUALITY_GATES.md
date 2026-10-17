@@ -118,6 +118,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O `__esperar` não falha** (ciclo 80): ele devolve a condição quando o tempo acaba, sem erro. Esperar não é conferir:
   o passo lê o estado depois da espera e confere no `ok`. No ciclo 80, a mutação "o Soltar não tira a marca do outro"
   sobreviveu porque o passo só esperava as marcas sumirem.
+- **O d10 fixo em 1 ou em 10 é crítico** (ciclo 99): o teste rola mais um dado (a falha tira, o sucesso soma), e o
+  dado a mais não é o que o passo fixou. Para conferir um total, fixe de 2 a 9. No ciclo 99, o mestre com o 1 deu −5
+  na Interface (4 + 1 − 10), e o jogador com o 10 deu 20 na Concentração.
 - **O crítico efetivo e os dois clientes** (ciclo 88): o Solo pode suprimir a falha do 1 natural. A consequência da
   arma lê o crítico já resolvido na mensagem da rolagem. Como o mestre usa essa mensagem para montar o resultado,
   o G4 também cria um ataque no navegador do jogador e confere flag e cartão nos dois, com o ataque escondido.

@@ -80,7 +80,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
         </ol>
         {{#if net.deck}}<button type="button" class="acao jack-in" data-action="jackIn" data-tooltip="Interface + 1d10 contra a WILL + 1d10 do alvo marcado (T), à vista e no alcance do deck">Jack In</button>{{/if}}
         {{/if}}
-        {{#if neuroport.invasores.length}}<p class="no-meu">No seu Neuroport: {{#each neuroport.invasores}}<b>{{nome}}</b>{{#unless percebido}} <small>(não percebeu)</small>{{/unless}} {{/each}}</p>{{/if}}
+        {{#if neuroport.invasores.length}}<p class="no-meu">No seu Neuroport: {{#each neuroport.invasores}}<b>{{nome}}</b>{{#if percebido}} <button type="button" class="acao expulsar" data-action="expulsar" data-netrunner="{{netrunner}}" data-tooltip="Uma Ação: WILL + Concentração + 1d10 contra a Interface + 1d10 dele (o empate é dele)">Expulsar</button>{{else}} <small>(não percebeu)</small>{{/if}} {{/each}}</p>{{/if}}
       </section>
       {{/if}}
 

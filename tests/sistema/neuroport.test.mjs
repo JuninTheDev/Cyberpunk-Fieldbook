@@ -8,7 +8,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { alcanceDoJackIn, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, fazOQuickhack, JACK_IN, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from '../../foundry-sistema/scripts/regras.mjs';
+import { alcanceDoJackIn, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, JACK_IN, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn, sabeDoJackIn } from '../../foundry-sistema/scripts/regras.mjs';
 import { barra, paredeNoMeio } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -20,6 +20,16 @@ test('o Jack In pela wiki: Interface + 1d10 contra a WILL + 1d10 do alvo; falhan
   assert.equal(percebeuOJackIn(7, 7), true);
   assert.equal(percebeuOJackIn(6, 9), true);
   assert.equal(percebeuOJackIn('12', '11'), false);
+});
+
+test('a expulsão pela wiki: quem percebeu rola WILL + Concentração + 1d10 contra a Interface + 1d10 do netrunner; o empate é do netrunner (o defensor); o alvo netrunner sempre sabe do Jack In', () => {
+  assert.ok(wiki.includes('<b>Expulsar:</b> o alvo que percebe (um quickhack que deu certo alerta, menos o Lure) tenta te expulsar com uma Ação: WILL + Concentração + 1d10 contra a sua Interface + 1d10. Outro netrunner sempre sabe quando entraram no Neuroport dele.'));
+  assert.ok(wiki.includes('Teste contra outra pessoa: empate = <b>defensor vence'));
+  assert.equal(expulsou(12, 11), true);
+  assert.equal(expulsou(11, 11), false);
+  assert.equal(expulsou(8, 13), false);
+  assert.equal(expulsou('14', '9'), true);
+  assert.deepEqual([0, 1, 4, '2', undefined].map(sabeDoJackIn), [false, true, true, true, false]);
 });
 
 test('o alcance do Jack In com o deck externo: 6 m, 8 m com o Range Upgrade', () => {

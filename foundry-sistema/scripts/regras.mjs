@@ -474,6 +474,8 @@ export const venceuOAgarrao = (ataque, defesa) => Number(ataque) > Number(defesa
 export const JACK_IN = { alcance: 6, rangeUpgrade: 2 };
 export const alcanceDoJackIn = ({ rangeUpgrade = false } = {}) => JACK_IN.alcance + (rangeUpgrade ? JACK_IN.rangeUpgrade : 0);
 export const percebeuOJackIn = (ataque, defesa) => !(Number(ataque) > Number(defesa));
+// "Outro netrunner sempre sabe quando entraram no Neuroport dele" (a wiki): o alvo com Interface percebe sem rolar.
+export const sabeDoJackIn = rankDeInterfaceDoAlvo => Number(rankDeInterfaceDoAlvo) > 0;
 
 // O Breach nos Passwalls (a wiki: "passa um Passwall (um por Self-ICE do alvo), Interface contra a DV dele: 6 com um
 // Self-ICE, 8 com dois, 10 com três"; o Self-ICE vai até 3). O Breach passa um por vez, com o resultado acima da DV, e
@@ -503,6 +505,10 @@ export const EFEITOS_DE_QUICKHACK = {
   slow: { move: '1d6', rodadas: 20 },
   'system-reset': { inconsciente: true, caido: true, ateDano: true, rodadas: 20 }
 };
+
+// A expulsão (a wiki: "o alvo que percebe [...] tenta te expulsar com uma Ação: WILL + Concentração + 1d10 contra a sua
+// Interface + 1d10"): o empate é do netrunner, que defende ("Teste contra outra pessoa: empate = o defensor vence").
+export const expulsou = (total, defesa) => Number(total) > Number(defesa);
 
 // Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria
 // abaixo de 0, fica com 1 HP e desmaia" (quem já está abaixo de 1 não sobe), e na terceira rodada seguida desmaia.
