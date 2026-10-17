@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 103). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 104). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -152,7 +152,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     age no Jack Out inseguro; o vírus de quem chega ao fundo);
   - [ ] a conexão direta pelo Personal Link (uma Ação NET a mais, passa direto pelos Passwalls; a mais de 2 m, desliga
     à força);
-  - [ ] o alvo que morre (o Jack Out inseguro de quem está nele) e a ligação de quem saiu da cena (o token apagado);
+  - [x] o alvo que morre (o Jack Out inseguro de quem está nele) e a ligação de quem saiu da cena (o token apagado):
+    ciclo 103;
   - (saiu) a RAM e o Cooling dos decks: desde a revisão da wiki de 2026-10-16, os decks com marca são cyberdecks do RED
     da qualidade deles (ciclo 93).
 

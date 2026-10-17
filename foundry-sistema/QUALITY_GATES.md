@@ -121,6 +121,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O d10 fixo em 1 ou em 10 é crítico** (ciclo 99): o teste rola mais um dado (a falha tira, o sucesso soma), e o
   dado a mais não é o que o passo fixou. Para conferir um total, fixe de 2 a 9. No ciclo 99, o mestre com o 1 deu −5
   na Interface (4 + 1 − 10), e o jogador com o 10 deu 20 na Concentração.
+- **A limpeza que dispara o sistema** (ciclo 103): apagar o token do netrunner ainda ligado a um Neuroport dispara a
+  varredura do `deleteToken`, que manda o cartão do Jack Out inseguro. Se o cartão chega no passo seguinte, ele conta
+  como o daquele passo (os passos esperam o número de cartões). A limpeza tira antes as flags do netrunner e dos alvos.
 - **O crítico efetivo e os dois clientes** (ciclo 88): o Solo pode suprimir a falha do 1 natural. A consequência da
   arma lê o crítico já resolvido na mensagem da rolagem. Como o mestre usa essa mensagem para montar o resultado,
   o G4 também cria um ataque no navegador do jogador e confere flag e cartão nos dois, com o ataque escondido.

@@ -5066,6 +5066,43 @@ Commit anterior: `d23e318a` (ciclo 101).
   morre (com a ligação do token apagado).
 - **Próximo:** o C9, parte 8 (o alvo que morre e o token apagado).
 
+### Ciclo 103 (2026-10-17): o C9, parte 8: o alvo que morre e o token que sai da cena (sessão KouArt)
+
+Commit anterior: `69e8a88a` (ciclo 102).
+
+- **A referência (a wiki, "Quickhacks no Neuroport"):** "Você fica ligado até ser expulso, sair do alcance, fazer o
+  Jack Out ou o alvo morrer. Desligado de qualquer jeito que não o Jack Out, é um Jack Out inseguro" (o teste de
+  referência do ciclo 100 confere o texto).
+- **Implementado (`neuroport.mjs`):**
+  - **o alvo que morre:** o status de derrotado (o do Death Save que falhou, ou o do HUD), no mestre ativo, derruba
+    quem está no Neuroport dele: o Jack Out inseguro (com o bloqueio de 60 minutos) e o cartão;
+  - **o token que sai da cena:** a varredura do `deleteToken`, no mestre ativo:
+    - as ligações que ficaram sem o alvo, ou sem o token do netrunner na cena do alvo, caem, com o cartão ("saiu da
+      cena");
+    - os invasores sem a ligação de volta saem do alvo.
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 122 de 134 (as 12 conhecidas; nenhuma regra pura nova);
+  - G4: 117 de 126 (as 9 conhecidas da integração). O passo novo, "O alvo que morre e o token que sai da cena", passou
+    na primeira rodada:
+    - **o netrunner no Capanga e no "Alvo de Passagem"** (um personagem do mestre, ao lado);
+    - **o token do netrunner apagado:** as duas ligações caem, um cartão cada ("saiu da cena"), e os invasores dos dois
+      somem;
+    - **de volta (um token novo), no Capanga, que morre** (o status): o cartão do Jack Out inseguro e o bloqueio de 3600
+      segundos;
+    - **o token do alvo de passagem apagado:** a ligação cai, com o cartão, e os invasores do ator (ligado) somem;
+  - **mutações:** as 6 caíram no passo novo, e o arquivo voltou (conferido pelo md5):
+    - sem o gancho da morte (M1);
+    - a morte por outro status, o inconsciente (M2);
+    - o alvo morto sem o Jack Out inseguro, só com o cartão (M3);
+    - sem o gancho do token apagado (M4);
+    - o netrunner sem token na cena que continua ligado (M5);
+    - os invasores sem a ligação de volta que ficam (M6).
+- **As limpezas dos passos do Neuroport** (os 7 de antes) tiram as flags do netrunner antes de apagar o token: senão a
+  varredura manda o cartão do Jack Out inseguro no meio do passo seguinte (a lição no QUALITY_GATES).
+- **Pendências do C9** (no ROADMAP): o Neuroport como arquitetura NET e a conexão direta pelo Personal Link.
+- **Próximo:** o C9, parte 9 (a conexão direta pelo Personal Link).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

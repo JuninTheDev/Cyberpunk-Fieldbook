@@ -3123,6 +3123,7 @@ module.exports = async ({ edge, servidores, r }) => {
             const ator = game.actors.get('${montado.ator}');
             await ator?.sheet?.close();
             for (const [nome, id] of Object.entries(${JSON.stringify(montado.itens)})) { await __token(nome).actor.items.get(id)?.delete(); await __token(nome).actor.unsetFlag('${S}', 'neuroport'); }
+            await ator?.unsetFlag('${S}', 'neuroport');
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;
@@ -3267,6 +3268,7 @@ module.exports = async ({ edge, servidores, r }) => {
             await capanga.deleteEmbeddedDocuments('Item', ${JSON.stringify(montado.itens)}.filter(id => capanga.items.get(id)));
             await capanga.unsetFlag('${S}', 'neuroport');
             await capanga.update({ 'system.hp.value': ${montado.hp} });
+            await ator?.unsetFlag('${S}', 'neuroport');
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;
@@ -3373,6 +3375,7 @@ module.exports = async ({ edge, servidores, r }) => {
             await capanga.deleteEmbeddedDocuments('ActiveEffect', capanga.effects.filter(e => !${JSON.stringify(montado.efeitos)}.includes(e.id)).map(e => e.id));
             await capanga.unsetFlag('${S}', 'neuroport');
             await capanga.update({ 'system.hp.value': ${montado.hp} });
+            await ator?.unsetFlag('${S}', 'neuroport');
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;
@@ -3519,6 +3522,7 @@ module.exports = async ({ edge, servidores, r }) => {
             await __token('Capanga').actor.sheet?.close();
             for (const [nome, id] of Object.entries(${JSON.stringify(montado.itens)})) { await __token(nome).actor.items.get(id)?.delete(); await __token(nome).actor.unsetFlag('${S}', 'neuroport'); }
             await __token('Capanga').actor.update({ 'system.role.nome': ${JSON.stringify(montado.role.nome)}, 'system.role.rank': ${montado.role.rank} });
+            await ator?.unsetFlag('${S}', 'neuroport');
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;
@@ -3650,6 +3654,7 @@ module.exports = async ({ edge, servidores, r }) => {
             const ator = game.actors.get('${montado.ator}');
             await ator?.sheet?.close();
             for (const [nome, id] of Object.entries(${JSON.stringify(montado.itens)})) { await __token(nome).actor.items.get(id)?.delete(); await __token(nome).actor.unsetFlag('${S}', 'neuroport'); }
+            await ator?.unsetFlag('${S}', 'neuroport');
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;
@@ -3743,6 +3748,7 @@ module.exports = async ({ edge, servidores, r }) => {
             const capanga = __token('Capanga').actor;
             await capanga.items.get('${montado.item}')?.delete();
             await capanga.unsetFlag('${S}', 'neuroport');
+            await ator?.unsetFlag('${S}', 'neuroport');
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;
@@ -3833,8 +3839,119 @@ module.exports = async ({ edge, servidores, r }) => {
             const capanga = __token('Capanga').actor;
             await capanga.items.get('${montado.item}')?.delete();
             await capanga.unsetFlag('${S}', 'neuroport');
+            await ator?.unsetFlag('${S}', 'neuroport');
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
+    await r.passo('O alvo que morre e o token que sai da cena (wiki: "Você fica ligado até ser expulso, sair do alcance, fazer o Jack Out ou o alvo morrer"): o netrunner no Capanga e num alvo de passagem; o token do netrunner apagado tira as duas ligações e os invasores dos dois; de volta, o Capanga morto (o status) derruba o netrunner (o Jack Out inseguro); e o alvo de passagem que sai da cena também', async () => {
+      const NOME = 'Teste Netrunner Queda';
+      let montado = null;
+      try {
+        // O netrunner do jogador ao lado do Capanga e, ao lado dele, o alvo de passagem (do mestre); o Neuroport nos dois.
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const neuroport = foundry.utils.mergeObject(foundry.utils.deepClone(cat['cyberware-2077:neuroport']), { 'system.instalado': true });
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await ator.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const ocupado = (x, y) => canvas.scene.tokens.some(t => t._source.x === x && t._source.y === y);
+          const livre = (cx, cy) => [[cx + 100, cy], [cx, cy + 100], [cx, cy - 100], [cx - 100, cy], [cx + 100, cy + 100], [cx - 100, cy - 100], [cx + 100, cy - 100], [cx - 100, cy + 100]]
+            .find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y));
+          const capanga = __token('Capanga');
+          const lugar = livre(capanga._source.x, capanga._source.y);
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
+          const passagem = await Actor.implementation.create({ name: 'Alvo de Passagem', type: 'personagem', items: [neuroport] });
+          const aoLado = livre(lugar[0], lugar[1]);
+          const [tokenPassagem] = await canvas.scene.createEmbeddedDocuments('Token', [(await passagem.getTokenDocument({ x: aoLado[0], y: aoLado[1] })).toObject()]);
+          const [item] = (await capanga.actor.createEmbeddedDocuments('Item', [neuroport])).map(i => i.id);
+          await __esperar(() => canvas.tokens.get(token.id) && canvas.tokens.get(tokenPassagem.id));
+          return { ator: ator.id, token: token.id, lugar, item, passagem: passagem.id, tokenPassagem: tokenPassagem.id };
+        })()`);
+        const nCartoes = `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).length`;
+        const cartoes = n => `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).slice(-${n}).map(m => ({ ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, '') }))`;
+        const estado = `(() => {
+          const ator = game.actors.get('${montado.ator}');
+          const invasores = a => (a?.getFlag('${S}', 'neuroport')?.invasores ?? []).map(i => i.nome).join();
+          return { ligacoes: (ator.getFlag('${S}', 'neuroport')?.ligacoes ?? []).map(l => l.nome).sort().join(), capanga: invasores(__token('Capanga').actor), passagem: invasores(game.actors.get('${montado.passagem}')),
+            bloqueios: (ator.getFlag('${S}', 'neuroport')?.bloqueios ?? []).map(b => b.nome + ':' + (b.ate - game.time.worldTime)).join() };
+        })()`;
+        const n0 = await edge.evaluate(nCartoes);
+        // O Jack In do jogador (4 + 9 = 13; o mestre rola a WILL do alvo: 5 + 2 = 7), e o cartão.
+        const jackIn = async (nome, n) => {
+          await fixar(jogador, [[9, 10]]);
+          await fixar(edge, [[2, 10]]);
+          await jogador.evaluate(`(async () => {
+            for (let i = 0; i < 50 && !canvas.scene.tokens.find(t => t.actorId === '${montado.ator}'); i++) await new Promise(r => setTimeout(r, 100));
+            await game.system.api.neuroport.jackIn(game.actors.get('${montado.ator}'), { alvo: canvas.scene.tokens.find(t => t.name === '${nome}') });
+            return true;
+          })()`);
+          return edge.evaluate(`(async () => { await __esperar(() => ${nCartoes} === ${n}); return ${cartoes(1)}[0]; })()`);
+        };
+        const ji1 = await jackIn('Capanga', n0 + 1);
+        const ji2 = await jackIn('Alvo de Passagem', n0 + 2);
+        const dentro = await edge.evaluate(estado);
+        // 1. O token do netrunner sai da cena: as duas ligações caem (um cartão cada), e os invasores somem.
+        const semToken = await edge.evaluate(`(async () => {
+          await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}']);
+          await __esperar(() => ${nCartoes} === ${n0 + 4});
+          await new Promise(r => setTimeout(r, 300));
+          return { cartoes: ${cartoes(2)}.map(c => c.motivo + ' ' + c.texto).sort(), ...${estado} };
+        })()`);
+        // 2. De volta (um token novo no mesmo lugar), no Capanga; o Capanga morre (o status): o Jack Out inseguro.
+        await edge.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: ${montado.lugar[0]}, y: ${montado.lugar[1]} })).toObject()]);
+          return true;
+        })()`);
+        const ji3 = await jackIn('Capanga', n0 + 5);
+        const morto = await edge.evaluate(`(async () => {
+          await __token('Capanga').actor.toggleStatusEffect('dead', { active: true, overlay: true });
+          await __esperar(() => ${nCartoes} === ${n0 + 6});
+          await new Promise(r => setTimeout(r, 300));
+          const r = { cartao: ${cartoes(1)}[0], ...${estado} };
+          await __token('Capanga').actor.toggleStatusEffect('dead', { active: false });
+          return r;
+        })()`);
+        // 3. No alvo de passagem, que sai da cena (o token apagado): a ligação cai, e os invasores do ator somem.
+        const ji4 = await jackIn('Alvo de Passagem', n0 + 7);
+        const saiu = await edge.evaluate(`(async () => {
+          await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.tokenPassagem}']);
+          await __esperar(() => ${nCartoes} === ${n0 + 8});
+          await new Promise(r => setTimeout(r, 300));
+          return { cartao: ${cartoes(1)}[0], ...${estado} };
+        })()`);
+        const info = { montado, ji1, ji2, dentro, semToken, ji3, morto, ji4, saiu };
+        const ok = ji1?.resultado === 'entrou' && ji2?.resultado === 'entrou' && dentro.ligacoes === 'Alvo de Passagem,Capanga' && dentro.capanga === NOME && dentro.passagem === NOME
+          && semToken.cartoes.join(' | ') === `cena ${NOME} caiu do Neuroport de Alvo de Passagem: ${NOME} saiu da cena. | cena ${NOME} caiu do Neuroport de Capanga: ${NOME} saiu da cena.`
+          && semToken.ligacoes === '' && semToken.capanga === '' && semToken.passagem === '' && semToken.bloqueios === ''
+          && ji3?.resultado === 'entrou'
+          && morto.cartao?.resultado === 'inseguro' && morto.cartao.motivo === 'morreu'
+          && morto.cartao.texto === `${NOME} caiu do Neuroport de Capanga: Capanga morreu.Jack Out inseguro: só entra de novo nesse Neuroport daqui a 60 minutos.`
+          && morto.ligacoes === '' && morto.capanga === '' && morto.bloqueios === 'Capanga:3600'
+          && ji4?.resultado === 'entrou'
+          && saiu.cartao?.motivo === 'cena' && saiu.cartao.texto === `${NOME} caiu do Neuroport de Alvo de Passagem: Alvo de Passagem saiu da cena.`
+          && saiu.ligacoes === '' && saiu.passagem === '';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            const capanga = __token('Capanga').actor;
+            if (capanga.statuses.has('dead')) await capanga.toggleStatusEffect('dead', { active: false });
+            await capanga.items.get('${montado.item}')?.delete();
+            await capanga.unsetFlag('${S}', 'neuroport');
+            const ator = game.actors.get('${montado.ator}');
+            const passagem = game.actors.get('${montado.passagem}');
+            await ator?.unsetFlag('${S}', 'neuroport');
+            await passagem?.unsetFlag('${S}', 'neuroport');
+            await canvas.scene.deleteEmbeddedDocuments('Token', canvas.scene.tokens.filter(t => [ator?.id, passagem?.id].includes(t.actorId)).map(t => t.id));
+            await ator?.delete();
+            await passagem?.delete();
             return true;
           })()`);
         }

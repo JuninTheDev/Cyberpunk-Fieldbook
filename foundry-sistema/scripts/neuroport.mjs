@@ -17,8 +17,9 @@
 //   cartão, e o mestre narra;
 // - Expulsar: o alvo que percebeu, com uma Ação, WILL + Concentração + 1d10 contra a Interface + 1d10 do netrunner (o
 //   empate é do netrunner); expulso, a ligação some dos dois lados;
-// - Jack Out inseguro: expulso ou fora do alcance (o netrunner ou o alvo andou), a ligação some, e o netrunner só entra de
-//   novo nesse alvo daqui a 60 minutos do tempo do mundo.
+// - Jack Out inseguro: expulso, fora do alcance (o netrunner ou o alvo andou) ou com o alvo morto, a ligação some, e o
+//   netrunner só entra de novo nesse alvo daqui a 60 minutos do tempo do mundo. O token que sai da cena leva junto as
+//   ligações dele (a varredura do deleteToken).
 // A ligação fica nas flags dos dois atores, que o mestre ativo grava: no netrunner, neuroport.ligacoes ([{ alvo: o uuid do
 // token, nome, percebido }]); no alvo, neuroport.invasores ([{ netrunner: o uuid do ator, nome, percebido }]). A ficha do
 // netrunner mostra as dele; a do alvo, as que ele percebeu (o mestre vê todas).
@@ -461,6 +462,51 @@ async function conferirAlcance(token) {
   }
 }
 
+// O alvo que morreu (o status de derrotado, o do Death Save que falhou): quem estava no Neuroport dele cai (o Jack Out
+// inseguro), com o cartão.
+async function alvoMorreu(ator) {
+  for (const invasor of neuroportDe(ator).invasores) {
+    const netrunner = fromUuidSync(invasor.netrunner);
+    const ligacao = netrunner ? neuroportDe(netrunner).ligacoes.find(item => fromUuidSync(item.alvo)?.actor === ator) : null;
+    const alvo = ligacao ? fromUuidSync(ligacao.alvo) : null;
+    if (!alvo) continue;
+    await desligarInseguro(netrunner, alvo);
+    const nome = tokenNaCena(netrunner, alvo.parent)?.name ?? netrunner.name;
+    const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
+    await cartao({
+      ator: netrunner, alvo: ator, percebido: ligacao.percebido, falante: nome, frase: `${a} caiu do Neuroport de ${b}: ${b} morreu.`,
+      notas: [NOTA_INSEGURO], resumo: { resultado: 'inseguro', motivo: 'morreu', netrunner: nome, alvo: alvo.name }
+    });
+  }
+}
+
+// O token que saiu da cena: as ligações que ficaram sem o alvo, ou sem o netrunner na cena do alvo, caem (com o cartão
+// ao netrunner que ficou), e os invasores sem a ligação de volta saem do alvo.
+async function limparLigacoes(cena) {
+  const atores = new Set([...game.actors, ...cena.tokens.map(token => token.actor).filter(Boolean)]);
+  for (const ator of atores) {
+    for (const ligacao of neuroportDe(ator).ligacoes) {
+      const alvo = fromUuidSync(ligacao.alvo);
+      if (alvo?.actor && tokenNaCena(ator, alvo.parent)) continue;
+      if (alvo?.actor) await gravar(ator, alvo, {});
+      else await ator.setFlag(SISTEMA, FLAG, { ...neuroportDe(ator), ligacoes: neuroportDe(ator).ligacoes.filter(item => item.alvo !== ligacao.alvo) });
+      const [a, b] = [ator.name, ligacao.nome].map(texto => `<b>${esc(texto)}</b>`);
+      await cartao({
+        ator, alvo: alvo?.actor ?? null, percebido: ligacao.percebido, falante: ator.name, frase: `${a} caiu do Neuroport de ${b}: ${alvo?.actor ? a : b} saiu da cena.`,
+        resumo: { resultado: 'inseguro', motivo: 'cena', netrunner: ator.name, alvo: ligacao.nome }
+      });
+    }
+  }
+  for (const ator of atores) {
+    const { invasores } = neuroportDe(ator);
+    const ficam = invasores.filter(invasor => {
+      const netrunner = fromUuidSync(invasor.netrunner);
+      return netrunner && neuroportDe(netrunner).ligacoes.some(item => fromUuidSync(item.alvo)?.actor === ator);
+    });
+    if (ficam.length !== invasores.length) await ator.setFlag(SISTEMA, FLAG, { ...neuroportDe(ator), invasores: ficam });
+  }
+}
+
 export function registrarNeuroport() {
   game.socket.on(CANAL, mensagem => {
     if (mensagem.tipo !== 'neuroport' || !souOMestreAtivo()) return;
@@ -470,5 +516,12 @@ export function registrarNeuroport() {
   Hooks.on('updateToken', (token, mudancas) => {
     if (!souOMestreAtivo() || !['x', 'y', 'elevation'].some(chave => chave in mudancas)) return;
     naFila(() => conferirAlcance(token)).catch(erro => console.error(`${SISTEMA} | Neuroport: o alcance`, erro));
+  });
+  Hooks.on('createActiveEffect', efeito => {
+    if (!souOMestreAtivo() || efeito.parent?.documentName !== 'Actor' || !efeito.statuses.has(CONFIG.specialStatusEffects.DEFEATED)) return;
+    naFila(() => alvoMorreu(efeito.parent)).catch(erro => console.error(`${SISTEMA} | Neuroport: o alvo morreu`, erro));
+  });
+  Hooks.on('deleteToken', token => {
+    if (souOMestreAtivo() && token.parent) naFila(() => limparLigacoes(token.parent)).catch(erro => console.error(`${SISTEMA} | Neuroport: o token saiu`, erro));
   });
 }
