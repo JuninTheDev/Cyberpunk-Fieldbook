@@ -5930,6 +5930,47 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('"Tirar o ponto" na configuração do ponto de acesso: com netrunner conectado, avisa e não tira; desconectado, o Tile perde o ponto e o estado, a configuração fecha e o marcador some no jogador, sem o aviso de API que saiu do Foundry 14 (o "-=" das flags)', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Tirar Ponto';
+      const ARQ = 'Teste Arquitetura do Tirar';
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [{ andar: 1, ramo: 'a', tipo: 'vazio' }] });
+        const tirar = () => edge.evaluate(`(async () => {
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const janela = await game.system.api.netrun.configurar(tile);
+          await window.__esperar(() => janela.element?.querySelector('button[data-action=remover]'));
+          const antes = window.__avisos.length;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            janela.element.querySelector('button[data-action=remover]').click();
+            await window.__esperar(() => avisos.length || !tile.getFlag('${S}', 'pontoDeAcesso'));
+            await window.__esperar(() => avisos.length || !janela.rendered);
+          } finally { delete ui.notifications.warn; }
+          const r = { avisos, ponto: Boolean(tile.getFlag('${S}', 'pontoDeAcesso')), estado: Boolean(tile.getFlag('${S}', 'netrun')), aberta: janela.rendered,
+            api: window.__avisos.slice(antes).filter(a => /deprecat|-=/i.test(a.texto)).map(a => a.texto.slice(0, 200)) };
+          if (janela.rendered) await janela.close();
+          return r;
+        })()`);
+        // 1. Com o netrunner conectado: o aviso, e o ponto fica.
+        const conectado = await tirar();
+        // 2. Desconectado: o ponto e o estado saem, a configuração fecha e o jogador deixa de ver o marcador.
+        await jogador.evaluate(`(async () => { const net = window.__net; net.clicar('.corredores button[data-action=desconectar]'); await window.__esperar(() => !net.eu()); return true; })()`);
+        const livre = await tirar();
+        const marcador = await jogador.evaluate(`(async () => {
+          await window.__esperar(() => !game.system.api.netrun.pontosDesenhados().some(p => p.tile === '${m.tile}'));
+          return game.system.api.netrun.pontosDesenhados().some(p => p.tile === '${m.tile}');
+        })()`);
+        const info = { conectado, livre, marcador };
+        const ok = conectado.avisos.join() === 'Tem netrunner conectado aqui: desconecte antes.' && conectado.ponto && conectado.estado && !conectado.api.length
+          && !livre.avisos.length && !livre.ponto && !livre.estado && !livre.aberta && !livre.api.length && !marcador;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
     await r.passo('Ações NET em combate e a desconexão insegura (wiki: "Conectar / Desconectar (1 Ação NET...)" e as Ações NET pelo Rank): em combate, a janela conta as que sobram (o texto e os losangos acesos); no andar mais fundo, o Virus que o mestre põe em 2 Ações NET e um Cloak gastam as 3 do Rank 4, e o Cloak seguinte é recusado, como o desconectar seguro; na rodada seguinte, no turno do netrunner, elas voltam; a desconexão insegura sai na hora, sem Ação NET', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Combate NET';

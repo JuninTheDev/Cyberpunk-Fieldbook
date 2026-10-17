@@ -4449,6 +4449,32 @@ a parede que a wiki pede e o da mesa não conferia. Commit anterior: `fc0fccea` 
   - **o "Tirar o ponto" da configuração** ainda apaga as flags com o "-=" (o Foundry 14 avisa que saiu).
 - **Próximo:** o C9 (a NET de 2077), na sessão KouArt, que é a das partes da NET.
 
+### Ciclo 92 (2026-10-17): "Tirar o ponto" sem o "-=" (sessão KouArt)
+
+A pendência da NET dos ciclos 85 a 91: o "Tirar o ponto" da configuração apagava as flags com o "-=", que o Foundry 14
+avisa que saiu. Commit anterior: `98056203` (ciclo 91).
+
+- **Implementado:** `ponto-de-acesso.mjs` apaga o ponto e o estado do Tile com o `ForcedDeletion`, como o Foundry 14 pede
+  (e como o `migracao.mjs` e a ficha já fazem).
+- **Testes:**
+  - G1: 65 arquivos, 0 erros; G2: 0 erros; G3: 119 de 123 (as 4 falhas são as das armas de 2077);
+  - G4: 113 de 118 (as 5 falhas são as das armas de 2077). Um passo novo, depois do da parede e do Scanner:
+    - **com o netrunner conectado:** o "Tirar o ponto" avisa ("Tem netrunner conectado aqui: desconecte antes."), e o
+      ponto e o estado ficam;
+    - **desconectado:** o Tile perde o ponto e o estado, a configuração fecha e o marcador some no jogador;
+    - **o aviso de API:** o passo lê os avisos que o navegador do mestre registrou durante o clique (o
+      `window.__avisos` do harness). A checagem "nenhum aviso" do fim já falha pelo aviso conhecido da Lexington, e um
+      aviso a mais não a mudaria de "✗" para "✗";
+  - **mutações:** as 2 caíram no G4, e o arquivo voltou (conferido pelo md5):
+    - **a volta ao "-=" (Q1):** o passo pegou os dois avisos do Foundry 14 ("The {-=pontoDeAcesso: null} syntax for
+      forced deletion ... is no longer supported");
+    - **tirar com o netrunner conectado (Q2).**
+- **Pendência (para a integração da wiki do master):** a wiki do master segue o Mission Kit na NET ("uma regra só na
+  mesa"). O Scanner é 1 Ação NET (no RED e na cópia da wiki desta branch, 1 Ação Carnal), e o Backdoor se chama Breach.
+  O sistema, a cópia da wiki desta branch e o NET Architect da mesa seguem o RED. A integração da wiki do master e o C9
+  esperam o usuário.
+- **Próximo:** o C9 (a NET de 2077), depois da decisão do usuário sobre a integração da wiki do master.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

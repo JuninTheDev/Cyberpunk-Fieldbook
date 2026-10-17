@@ -349,9 +349,11 @@ export class ConfigDoPonto extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  // Tira o ponto e o estado do Tile, com o ForcedDeletion (o "-=" saiu no Foundry 14, que avisa).
   static async #remover() {
     if (estadoDoTile(this.tile)?.corredores?.length) return ui.notifications.warn('Tem netrunner conectado aqui: desconecte antes.');
-    await this.tile.update({ [`flags.${SISTEMA}.-=${FLAG_PONTO}`]: null, [`flags.${SISTEMA}.-=${FLAG_ESTADO}`]: null });
+    const { ForcedDeletion } = foundry.data.operators;
+    await this.tile.update({ [`flags.${SISTEMA}.${FLAG_PONTO}`]: new ForcedDeletion(), [`flags.${SISTEMA}.${FLAG_ESTADO}`]: new ForcedDeletion() });
     return this.close();
   }
 }
