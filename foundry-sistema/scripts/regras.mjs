@@ -472,7 +472,10 @@ export const venceuOAgarrao = (ataque, defesa) => Number(ataque) > Number(defesa
 // com Interface + 1d10 contra WILL + 1d10 do alvo. Falhando (o teste resistido: o empate é do alvo), entra assim mesmo,
 // mas o alvo percebe. O alcance do deck externo é 6 m, 8 m com o Range Upgrade ("Do que o netrunner precisa").
 export const JACK_IN = { alcance: 6, rangeUpgrade: 2 };
-export const alcanceDoJackIn = ({ rangeUpgrade = false } = {}) => JACK_IN.alcance + (rangeUpgrade ? JACK_IN.rangeUpgrade : 0);
+// O deck na Neuroport Cyberdeck Port (a wiki, "Do que o netrunner precisa": "20 m contra arquiteturas NET e 50 m contra
+// Neuroports [...] ela não aceita hardware"): o alcance da porta, sem o Range Upgrade.
+export const DECK_NA_PORTA = { arquitetura: 20, neuroport: 50 };
+export const alcanceDoJackIn = ({ rangeUpgrade = false, naPorta = false } = {}) => (naPorta ? DECK_NA_PORTA.neuroport : JACK_IN.alcance + (rangeUpgrade ? JACK_IN.rangeUpgrade : 0));
 export const percebeuOJackIn = (ataque, defesa) => !(Number(ataque) > Number(defesa));
 // "Outro netrunner sempre sabe quando entraram no Neuroport dele" (a wiki): o alvo com Interface percebe sem rolar.
 export const sabeDoJackIn = rankDeInterfaceDoAlvo => Number(rankDeInterfaceDoAlvo) > 0;

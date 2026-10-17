@@ -5,7 +5,7 @@
 import { ehFundo, ENTRADA, filhosDe, revelarPathfinder, TIPOS_DE_ANDAR, vizinhos } from '../arquitetura.mjs';
 import { SISTEMA } from '../config.mjs';
 import { BLACK_ICE, DEMONIOS } from '../gerado.mjs';
-import { rezAtual } from '../regras.mjs';
+import { DECK_NA_PORTA, rezAtual } from '../regras.mjs';
 import { diarioDe } from './arquivos.mjs';
 
 // O Range Upgrade (o hardware de cyberdeck do CORE, "8m/yds ... instead of 6m/yds"): 2 a mais no alcance do ponto.
@@ -19,15 +19,22 @@ const HARDWARE_DA_NET = {
 const temHardware = (instalados, [catalogo, nome]) => instalados.some(item => item.type === 'upgrade' && (item.flags?.[SISTEMA]?.catalogo === catalogo || item.name === nome));
 
 // O netrunner do ator (a ficha do sistema): a Interface (o Rank da Role de Netrunner), o cyberdeck equipado, os
-// programas instalados nele e o hardware dele que a NET olha.
+// programas instalados nele e o hardware dele que a NET olha. O deck encaixado na Neuroport Cyberdeck Port (naPorta: a
+// flag do cyberdeck, com a porta instalada) não aceita hardware: o dele não vale.
 export function netrunnerDo(ator) {
   const deck = ator?.items.find(item => item.type === 'cyberdeck' && item.system.uso === 'equipado') ?? null;
   const instalados = deck ? ator.items.filter(item => item.system?.instaladoEm === deck.id) : [];
+  const naPorta = Boolean(deck?.flags?.[SISTEMA]?.naPorta) && temPortaDoDeck(ator);
   return {
-    deck, programas: instalados.filter(item => item.type === 'programa'), rank: Number(ator?.system?.rankDeInterface) || 0,
-    ...Object.fromEntries(Object.entries(HARDWARE_DA_NET).map(([chave, hardware]) => [chave, temHardware(instalados, hardware)]))
+    deck, naPorta, programas: instalados.filter(item => item.type === 'programa'), rank: Number(ator?.system?.rankDeInterface) || 0,
+    ...Object.fromEntries(Object.entries(HARDWARE_DA_NET).map(([chave, hardware]) => [chave, !naPorta && temHardware(instalados, hardware)]))
   };
 }
+
+// A Neuroport Cyberdeck Port instalada (o cyberware de 2077 do catálogo, ou o feito à mão com o mesmo nome).
+export const PORTA_DO_DECK = 'cyberware-2077:neuroport-cyberdeck-port';
+export const temPortaDoDeck = ator => (ator?.items ?? []).some(item => item.type === 'cyberware' && item.system?.instalado
+  && (item.flags?.[SISTEMA]?.catalogo === PORTA_DO_DECK || item.name === 'Neuroport Cyberdeck Port'));
 
 // O que falta para conectar aqui: o cyberdeck equipado e a Interface mínima do ponto.
 export function faltasPara(ponto, ator) {
@@ -54,9 +61,13 @@ export function distancia(tile, token) {
   return (Math.hypot(centro.x - perto.x, centro.y - perto.y) / cena.grid.size) * cena.grid.distance;
 }
 
-// O alcance do ponto (o da configuração; vazio ou 0, um quadrado da cena), com o Range Upgrade do deck do netrunner.
-export const alcanceDo = (ponto, cena, netrunner = null) =>
-  (Number(ponto.alcance) > 0 ? Number(ponto.alcance) : cena.grid.distance) + (netrunner?.rangeUpgrade ? ALCANCE_DO_RANGE_UPGRADE : 0);
+// O alcance do ponto (o da configuração; vazio ou 0, um quadrado da cena), com o Range Upgrade do deck do netrunner. Com o
+// deck na Neuroport Cyberdeck Port, os 20 m da porta (ou o do ponto, se for maior), sem hardware.
+export const alcanceDo = (ponto, cena, netrunner = null) => {
+  const doPonto = Number(ponto.alcance) > 0 ? Number(ponto.alcance) : cena.grid.distance;
+  if (netrunner?.naPorta) return Math.max(doPonto, DECK_NA_PORTA.arquitetura);
+  return doPonto + (netrunner?.rangeUpgrade ? ALCANCE_DO_RANGE_UPGRADE : 0);
+};
 
 // A parede no meio (a wiki: "a até 6 m de um ponto de acesso, sem parede no meio"): a linha do centro do token ao centro
 // do Tile cruza uma parede que barra o movimento (a porta aberta, não). Só o cruzamento de verdade conta: a linha que

@@ -9,10 +9,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
-  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, JACK_IN, JACK_OUT_INSEGURO, jaFezOQuickhack, passouOPasswall,
+  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, DECK_NA_PORTA, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, JACK_IN, JACK_OUT_INSEGURO, jaFezOQuickhack, passouOPasswall,
   passouOQuickhack, passwallsDoAlvo, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from '../../foundry-sistema/scripts/regras.mjs';
-import { barra, paredeNoMeio } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
+import { alcanceDo, barra, netrunnerDo, paredeNoMeio, PORTA_DO_DECK, RANGE_UPGRADE, temPortaDoDeck } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const wiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
@@ -63,6 +63,31 @@ test('o alcance do Jack In com o deck externo: 6 m, 8 m com o Range Upgrade', ()
   assert.deepEqual(JACK_IN, { alcance: 6, rangeUpgrade: 2 });
   assert.equal(alcanceDoJackIn(), 6);
   assert.equal(alcanceDoJackIn({ rangeUpgrade: true }), 8);
+});
+
+test('o deck na Neuroport Cyberdeck Port (a wiki: 20 m contra arquiteturas e 50 m contra Neuroports, sem hardware): o alcance do Jack In e o do ponto de acesso', () => {
+  assert.ok(wiki.includes('<b>Deck na Neuroport Cyberdeck Port:</b> <b>20 m</b> contra arquiteturas NET e <b>50 m</b> contra Neuroports. Paredes bloqueiam como sempre, e o Jack In precisa de linha de visão. Todo deck tem a versão para a porta pelo mesmo preço; ela não aceita hardware e usa o da sua Bodyweight (ou parecido). Encaixar ou tirar o deck da porta é uma Ação.'));
+  assert.deepEqual(DECK_NA_PORTA, { arquitetura: 20, neuroport: 50 });
+  assert.equal(alcanceDoJackIn({ naPorta: true }), 50);
+  assert.equal(alcanceDoJackIn({ naPorta: true, rangeUpgrade: true }), 50);
+  // O netrunner com o deck na porta: a flag no deck equipado e a porta instalada; o hardware do deck não vale.
+  const ator = (...itens) => ({ system: { rankDeInterface: 4 }, items: itens });
+  const deck = { id: 'deck', type: 'cyberdeck', name: 'Deck', system: { uso: 'equipado' }, flags: { 'cpr-fieldbook': { naPorta: true } } };
+  const porta = { id: 'porta', type: 'cyberware', name: 'Neuroport Cyberdeck Port', system: { instalado: true }, flags: { 'cpr-fieldbook': { catalogo: PORTA_DO_DECK } } };
+  const range = { id: 'r', type: 'upgrade', name: 'Range Upgrade', system: { instaladoEm: 'deck' }, flags: { 'cpr-fieldbook': { catalogo: RANGE_UPGRADE } } };
+  const n = netrunnerDo(ator(deck, porta, range));
+  assert.deepEqual([n.naPorta, n.rangeUpgrade], [true, false]);
+  assert.equal(temPortaDoDeck(ator({ ...porta, flags: {} })), true);
+  assert.equal(temPortaDoDeck(ator({ ...porta, system: { instalado: false } })), false);
+  assert.deepEqual([netrunnerDo(ator(deck, range)).naPorta, netrunnerDo(ator(deck, range)).rangeUpgrade], [false, true]);
+  assert.equal(netrunnerDo(ator({ ...deck, flags: {} }, porta)).naPorta, false);
+  assert.equal(netrunnerDo(ator({ ...deck, system: { uso: 'carregando' } }, porta)).naPorta, false);
+  // O ponto de acesso: os 20 m da porta (ou o do ponto, se for maior), sem o Range Upgrade.
+  const cena = { grid: { size: 100, distance: 2 } };
+  assert.equal(alcanceDo({ alcance: 6 }, cena, n), 20);
+  assert.equal(alcanceDo({ alcance: 0 }, cena, n), 20);
+  assert.equal(alcanceDo({ alcance: 30 }, cena, n), 30);
+  assert.equal(alcanceDo({ alcance: 6 }, cena, netrunnerDo(ator(deck, range))), 8);
 });
 
 test('"à vista": a parede que barra a visão para o Jack In; a janela (barra o movimento, não a visão) deixa', () => {

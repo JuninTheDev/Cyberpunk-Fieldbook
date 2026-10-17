@@ -535,6 +535,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   Neuroport na mesma rodada pode gastar nas duas; o mestre confere. Juntar as duas contas é mexer no estado da NET
   (`netrun/estado.mjs`) e na ficha.
 
+- **O hardware da Bodyweight no deck na porta** (ciclo 101). A wiki: o deck da Neuroport Cyberdeck Port "não aceita
+  hardware e usa o da sua Bodyweight (ou parecido)". O sistema não conta o hardware do deck na porta (o Range Upgrade,
+  o Insulated Wiring e a KRASH Barrier), e não tem o slot de hardware que a Bodyweight Suit do CORE dá ao deck ligado a
+  ela. Quem usa a Bodyweight com o deck na porta tem o hardware dela pelo mestre.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -4960,6 +4965,62 @@ Commit anterior: `e5972312` (ciclo 99).
 - **Itens novos no ROADMAP** (regras da wiki que o sistema ainda não tem): o firewall de fábrica, o Neuroport como
   arquitetura NET, a conexão direta pelo Personal Link e o alvo que morre (com a ligação do token apagado).
 - **Próximo:** o C9, parte 6 (o deck na Neuroport Cyberdeck Port).
+
+### Ciclo 101 (2026-10-17): o C9, parte 6: o deck na Neuroport Cyberdeck Port (sessão KouArt)
+
+Commit anterior: `30bc9e22` (ciclo 100).
+
+- **A referência (a wiki):**
+  - **"Do que o netrunner precisa":** "Deck na Neuroport Cyberdeck Port: 20 m contra arquiteturas NET e 50 m contra
+    Neuroports. Paredes bloqueiam como sempre, e o Jack In precisa de linha de visão. Todo deck tem a versão para a porta
+    pelo mesmo preço; ela não aceita hardware e usa o da sua Bodyweight (ou parecido). Encaixar ou tirar o deck da porta
+    é uma Ação";
+  - **o cartão da porta (o cyberware de 2077):** "Encaixado, você está totalmente conectado ao deck, que ganha o
+    hardware da sua Bodyweight (ou parecida), e o alcance sobe para 20 m contra Arquiteturas NET e 50 m contra
+    Neuroports".
+- **Implementado:**
+  - **`regras.mjs`:** `DECK_NA_PORTA` (20 e 50 m) e o `alcanceDoJackIn` com o deck na porta (50 m, sem o Range Upgrade);
+  - **`netrun/regras-da-net.mjs`:**
+    - `temPortaDoDeck`: a Neuroport Cyberdeck Port instalada (pelo catálogo ou pelo nome);
+    - `netrunnerDo`: o deck na porta (a flag `naPorta` do cyberdeck equipado, com a porta instalada), e o hardware do
+      deck não vale;
+    - `alcanceDo`: com o deck na porta, os 20 m (ou o alcance do ponto, se for maior), sem o Range Upgrade;
+  - **`neuroport.mjs`:** o Jack In e o gancho do alcance usam o alcance do deck na porta;
+  - **a ficha (a aba NET):**
+    - com a porta instalada, o cyberdeck equipado tem o botão "Externo" / "Na porta", que encaixa e tira o deck;
+    - o "DECK EQUIPADO" diz "na porta";
+    - o título dos Neuroports mostra o alcance (50 m).
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 121 de 133 (as 12 conhecidas):
+    - no `tests/sistema/neuroport.test.mjs`, 1 teste de referência novo: o texto da wiki, o alcance do Jack In e o do
+      ponto de acesso, o netrunner com o deck na porta (a flag e a porta) e o hardware que não vale;
+    - no `tests/sistema/regras.test.mjs`, o teste do hardware do deck lia o `netrunnerDo` pela posição das chaves
+      (`Object.values(...).slice(3)`); com a chave nova, lê pelo nome (a mesma conferência);
+  - G4: 115 de 124 (as 9 conhecidas da integração). O passo novo, "O deck na Neuroport Cyberdeck Port", passou na
+    primeira rodada:
+    - **o deck externo, a 16 m do Capanga:** o Jack In avisa "longe demais (alcance 6 m)" e não rola; o deck não tem o
+      botão da porta;
+    - **a porta instalada (o mestre):** o botão "Externo"; encaixado pela ficha, "Na porta", o "DECK EQUIPADO" diz "na
+      porta", e o título dos Neuroports, "ATÉ 50 M";
+    - **na porta:** o Jack In a 16 m entra;
+    - **andando um quadrado** (ainda a uns 16 m): continua ligado, sem o cartão do Jack Out inseguro;
+  - **mutações:** as 9 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o Jack In sem o alcance da porta (P1);
+      - o ponto de acesso sem o alcance da porta (P2);
+      - o hardware que vale também na porta (P3);
+      - na porta sem a porta instalada (P4).
+    - **No G4, todas no passo novo:**
+      - o Jack In do cliente sem a porta (P5);
+      - o alcance do gancho sem a porta (P6: o netrunner que anda cai);
+      - o botão da porta sem a porta instalada (P7);
+      - o botão que não encaixa (P8);
+      - o título da ficha sem a porta (P9).
+- **Dúvida nova** (nas dúvidas de regra): o hardware da Bodyweight no deck na porta.
+- **Pendências do C9** (no ROADMAP): o firewall de fábrica, o Neuroport como arquitetura NET, a conexão direta pelo
+  Personal Link e o alvo que morre (com a ligação do token apagado).
+- **Próximo:** o C9, parte 7 (o firewall de fábrica).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

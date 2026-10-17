@@ -3657,6 +3657,99 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('O deck na Neuroport Cyberdeck Port (wiki: "20 m contra arquiteturas NET e 50 m contra Neuroports [...] Encaixar ou tirar o deck da porta é uma Ação"): o netrunner a 16 m do Capanga não alcança com o deck externo (6 m); sem a porta, o deck não tem o botão; com a porta instalada, o deck encaixado pela ficha ("Na porta") leva o alcance a 50 m, e o Jack In entra; andando a 16 m, ele continua ligado', async () => {
+      const NOME = 'Teste Netrunner Porta';
+      let montado = null;
+      try {
+        // O netrunner do jogador longe do Capanga (no canto da cena); o Neuroport no Capanga.
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          const deck = ator.items.find(i => i.type === 'cyberdeck');
+          await deck.update({ 'system.uso': 'equipado' });
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 100, y: 100 })).toObject()]);
+          const capanga = __token('Capanga');
+          const [item] = (await capanga.actor.createEmbeddedDocuments('Item', [foundry.utils.mergeObject(foundry.utils.deepClone(cat['cyberware-2077:neuroport']), { 'system.instalado': true })])).map(i => i.id);
+          await __esperar(() => canvas.tokens.get(token.id));
+          return { ator: ator.id, deck: deck.id, token: token.id, item };
+        })()`);
+        const nCartoes = `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).length`;
+        const n0 = await edge.evaluate(nCartoes);
+        // A ficha do netrunner (a aba NET): o botão da porta no deck, o deck equipado e o título dos Neuroports.
+        const ficha = `(async () => {
+          const ficha = game.actors.get('${montado.ator}').sheet;
+          if (!ficha.rendered) { await ficha.render({ force: true }); ficha.changeTab('net', 'primary'); }
+          for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports .titulo'); i++) await new Promise(r => setTimeout(r, 100));
+          const deck = ficha.element.querySelector('li[data-item-id="${montado.deck}"]');
+          const medida = [...ficha.element.querySelectorAll('.medida')].find(m => m.textContent.includes('DECK EQUIPADO'));
+          return { porta: deck?.querySelector('[data-action=portaDoDeck]')?.textContent.trim() ?? null, equipado: medida?.querySelector('b')?.textContent.trim(), titulo: ficha.element.querySelector('.neuroports .titulo')?.textContent.replace(/\\s+/g, ' ').trim() };
+        })()`;
+        const jackIn = () => jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          const mensagens = game.messages.size;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try { await game.system.api.neuroport.jackIn(ator, { alvo: canvas.scene.tokens.find(t => t.name === 'Capanga') }); } finally { delete ui.notifications.warn; }
+          return { avisos, rolou: game.messages.size !== mensagens };
+        })()`);
+        // 1. Com o deck externo: longe demais, sem rolar; e o deck sem o botão da porta.
+        await jogador.evaluate(`(async () => { for (let i = 0; i < 50 && !canvas.scene.tokens.get('${montado.token}'); i++) await new Promise(r => setTimeout(r, 100)); return true; })()`);
+        const externo = await jackIn();
+        const semPorta = await jogador.evaluate(ficha);
+        // 2. A porta instalada (o mestre): o botão "Externo"; encaixado pela ficha, "Na porta" e o alcance de 50 m.
+        await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          await game.actors.get('${montado.ator}').createEmbeddedDocuments('Item', [foundry.utils.mergeObject(foundry.utils.deepClone(cat['cyberware-2077:neuroport-cyberdeck-port']), { 'system.instalado': true })]);
+          return true;
+        })()`);
+        const comPorta = await jogador.evaluate(`(async () => {
+          const ficha = game.actors.get('${montado.ator}').sheet;
+          for (let i = 0; i < 50 && !ficha.element?.querySelector('[data-action=portaDoDeck]'); i++) await new Promise(r => setTimeout(r, 100));
+          return (${ficha});
+        })()`);
+        const naPorta = await jogador.evaluate(`(async () => {
+          const ficha = game.actors.get('${montado.ator}').sheet;
+          ficha.element.querySelector('[data-action=portaDoDeck]').click();
+          for (let i = 0; i < 50 && ficha.element?.querySelector('[data-action=portaDoDeck]')?.textContent.trim() !== 'Na porta'; i++) await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 300));
+          return (${ficha});
+        })()`);
+        // 3. Na porta, o Jack In a 16 m entra (4 + 6 = 10 contra a WILL 5 + 2 do Capanga).
+        await fixar(jogador, [[6, 10]]);
+        await fixar(edge, [[2, 10]]);
+        const dentro = await jackIn();
+        const entrou = await edge.evaluate(`(async () => { await __esperar(() => ${nCartoes} === ${n0 + 1}); const m = game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).at(-1); return m?.getFlag('${S}', 'neuroport') ?? null; })()`);
+        // 4. Andando um quadrado (ainda a uns 16 m), continua ligado: nenhum cartão do Jack Out inseguro.
+        await edge.evaluate(`canvas.scene.tokens.get('${montado.token}').update({ x: 100, y: 200 }).then(() => true)`);
+        await jogador.sleep(1500);
+        const andou = await edge.evaluate(`({ cartoes: ${nCartoes}, ligacoes: (game.actors.get('${montado.ator}').getFlag('${S}', 'neuroport')?.ligacoes ?? []).map(l => l.nome).join() })`);
+        await jogador.evaluate(`game.actors.get('${montado.ator}').sheet.close().then(() => true)`);
+        const info = { montado, externo, semPorta, comPorta, naPorta, dentro, entrou, andou };
+        const ok = /^Capanga está longe demais para o Jack In: [0-9.]+ m \(alcance 6 m\)\.$/.test(externo.avisos.join()) && !externo.rolou
+          && semPorta.porta === null && semPorta.equipado === 'Cyberdeck' && semPorta.titulo === 'NEUROPORTSJACK IN NO ALVO MARCADO · ATÉ 6 M'
+          && comPorta.porta === 'Externo' && comPorta.titulo === 'NEUROPORTSJACK IN NO ALVO MARCADO · ATÉ 6 M'
+          && naPorta.porta === 'Na porta' && naPorta.equipado === 'Cyberdeck · na porta' && naPorta.titulo === 'NEUROPORTSJACK IN NO ALVO MARCADO · ATÉ 50 M'
+          && !dentro.avisos.length && dentro.rolou && entrou?.resultado === 'entrou' && entrou.alvo === 'Capanga'
+          && andou.cartoes === n0 + 1 && andou.ligacoes === 'Capanga';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            const ator = game.actors.get('${montado.ator}');
+            await ator?.sheet?.close();
+            const capanga = __token('Capanga').actor;
+            await capanga.items.get('${montado.item}')?.delete();
+            await capanga.unsetFlag('${S}', 'neuroport');
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {
       // Ataque: d10 8 → 8 + 4 + 8 = 20 contra DV 16. Dano 5d6: 2 × 5 = 10 contra o SP do Alvo.
       await fixar(edge, [[8, 10], [2, 6], [2, 6], [2, 6], [2, 6], [2, 6]]);

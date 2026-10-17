@@ -14,7 +14,7 @@ import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
-import { netrunnerDo } from './netrun/regras-da-net.mjs';
+import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -95,6 +95,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       alternarCoronha: FichaPersonagem.#alternarCoronha,
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
+      portaDoDeck: FichaPersonagem.#portaDoDeck,
       mudarQuantidade: FichaPersonagem.#mudarQuantidade,
       usarItem: FichaPersonagem.#usarItem,
       usarDroga: FichaPersonagem.#usarDroga,
@@ -240,10 +241,16 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     // NET: os cyberdecks (com o que está instalado) e os programas; a Interface é o Rank do Netrunner.
     // O deck equipado e os slots dele (as maquetes do usuário: as caixas dos slots no painel da Interface).
     const deckEquipado = itens('cyberdeck').find(deck => deck.system.uso === 'equipado');
-    const decks = itens('cyberdeck').map(deck => linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')));
+    // Com a Neuroport Cyberdeck Port, o deck equipado se encaixa nela (o botão "Na porta").
+    const temPorta = temPortaDoDeck(ator);
+    const decks = itens('cyberdeck').map(deck => ({
+      ...linhaDoInventario(deck, deck.system.ram ? `RAM ${deck.system.ram}` : '', `${deck.slotsUsados}/${deck.system.slots} slots`, deck.instalados.map(item => item.name).join(', ')),
+      porta: temPorta && deck.system.uso === 'equipado', naPorta: Boolean(deck.getFlag(SISTEMA, 'naPorta'))
+    }));
     // A Interface: as rolagens (com o valor sem o dado) pelo cyberdeck equipado, como o CORE, e as Ações NET pelo Rank.
     const net = {
-      rank: s.rankDeInterface, acoes: s.acoesDeNet, deck: deckEquipado?.name ?? '', slots: deckEquipado ? { usados: deckEquipado.slotsUsados, total: deckEquipado.system.slots } : null,
+      rank: s.rankDeInterface, acoes: s.acoesDeNet, deck: deckEquipado?.name ?? '', naPorta: netrunnerDo(ator).naPorta,
+      slots: deckEquipado ? { usados: deckEquipado.slotsUsados, total: deckEquipado.system.slots } : null,
       habilidades: HABILIDADES_DE_INTERFACE.map(h => ({ ...h, valor: ator.partesDaInterface(h.id, { situacionais: [] }).reduce((soma, p) => soma + p.valor, 0) }))
     };
     // O Neuroport (neuroport.mjs): as ligações do netrunner, o alcance do Jack In pelo deck e quem está no Neuroport deste
@@ -258,7 +265,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Em combate, as Ações NET da rodada fora da arquitetura (o Jack In, o Breach e o quickhack).
     const neuroport = {
       ligacoes: comPasswalls, invasores: game.user.isGM ? invasores : invasores.filter(item => item.percebido),
-      alcance: alcanceDoJackIn({ rangeUpgrade: netrunnerDo(ator).rangeUpgrade }), acoes: s.rankDeInterface ? acoesNetDe(ator) : null
+      alcance: alcanceDoJackIn(netrunnerDo(ator)), acoes: s.rankDeInterface ? acoesNetDe(ator) : null
     };
     // A conexão na NET (os botões da aba, as maquetes do usuário): o token do ator nesta cena que está num ponto de acesso,
     // com o nome do ponto.
@@ -507,6 +514,14 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!item) return null;
     const ordem = Object.keys(USOS);
     return item.update({ 'system.uso': ordem[(ordem.indexOf(item.system.uso) + 1) % ordem.length] });
+  }
+  // Encaixar ou tirar o cyberdeck da Neuroport Cyberdeck Port (a wiki: uma Ação; na porta, 20 m contra arquiteturas e 50 m
+  // contra Neuroports, e o hardware do deck não vale).
+  static #portaDoDeck(evento, alvo) {
+    const item = this.#item(alvo);
+    if (!item) return null;
+    if (!temPortaDoDeck(this.actor)) return ui.notifications.warn(`${this.actor.name} não tem a Neuroport Cyberdeck Port instalada.`);
+    return item.setFlag(SISTEMA, 'naPorta', !item.getFlag(SISTEMA, 'naPorta'));
   }
   // − e + na quantidade do inventário (as maquetes do usuário): de 1 em 1. O 0 é o piso do modelo (o min: 0 do campo,
   // que o Foundry 14 aplica ao limpar os dados); o item fica, com 0.

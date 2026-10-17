@@ -1239,7 +1239,8 @@ test('Os ataques dos inimigos e os efeitos do Black ICE (wiki, "Black ICE", RED 
   const hardware = (catalogo, nome, instaladoEm = 'deck') => ({ id: catalogo, type: 'upgrade', name: nome, system: { instaladoEm }, flags: { 'cpr-fieldbook': { catalogo } } });
   const n = netrun.netrunnerDo({ system: { rankDeInterface: 4 }, items: [deck, hardware('core_upgrades:insulated-wiring', 'Fiação isolada'), { ...hardware('x', 'KRASH Barrier'), flags: {} }] });
   assert.deepEqual([n.isolado, n.krash, n.rangeUpgrade], [true, true, false]);
-  assert.deepEqual(Object.values(netrun.netrunnerDo({ system: {}, items: [deck, hardware('core_upgrades:krash-barrier', 'KRASH Barrier', '')] })).slice(3), [false, false, false]);
+  const semHardware = netrun.netrunnerDo({ system: {}, items: [deck, hardware('core_upgrades:krash-barrier', 'KRASH Barrier', '')] });
+  assert.deepEqual([semHardware.isolado, semHardware.krash, semHardware.rangeUpgrade], [false, false, false]);
 });
 
 test('O deck na janela da NET (wiki, "Ações NET": "Ativar ou desativar um programa: 1 Ação NET. Cada programa uma vez por rodada"; "Programas: ataque": "Desativam sozinhos depois de usados"; "Combate na NET"): uma vez por rodada em combate, a REZ em 0 que não ativa, o alvo do anti-programa e do anti-pessoal, e o ataque do programa (o empate é da defesa)', () => {

@@ -75,7 +75,7 @@ export async function jackIn(ator, { alvo = null, perguntar = false } = {}) {
   const meu = tokenNaCena(ator, token.parent);
   if (!meu) return avisar(`Ponha o token de ${ator.name} na cena de ${token.name}.`);
   const longe = distancia(meu, token);
-  const alcance = alcanceDoJackIn({ rangeUpgrade: n.rangeUpgrade });
+  const alcance = alcanceDoJackIn(n);
   if (longe > alcance + 0.01) return avisar(`${token.name} está longe demais para o Jack In: ${longe.toFixed(1)} m (alcance ${alcance} m).`);
   if (paredeNoMeio(token.parent.walls, centroDe(meu), centroDe(token), 'sight')) return avisar(`${token.name} não está à vista: o Jack In precisa ver o alvo.`);
   if (faltaAcaoNet(ator)) return avisar(faltaAcaoNet(ator));
@@ -424,7 +424,7 @@ async function conferirAlcance(token) {
     if (meu) pares.push([netrunner, meu, token, ligacao]);
   }
   for (const [netrunner, meu, alvo, ligacao] of pares) {
-    const alcance = alcanceDoJackIn({ rangeUpgrade: netrunnerDo(netrunner).rangeUpgrade });
+    const alcance = alcanceDoJackIn(netrunnerDo(netrunner));
     const longe = distancia(noDestino(meu), noDestino(alvo));
     if (longe === null || longe <= alcance + 0.01) continue;
     await desligarInseguro(netrunner, alvo);

@@ -7,7 +7,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
         <div class="titulo">INTERFACE<span>NETRUNNER</span></div>
         <p class="numero-grande"><b>{{#if net.rank}}{{net.rank}}{{else}}—{{/if}}</b><small>RANK</small></p>
         <div class="medida"><span>AÇÕES NET POR TURNO</span><b class="destaque">{{#if net.rank}}{{net.acoes}}{{else}}—{{/if}}</b></div>
-        <div class="medida"><span>DECK EQUIPADO</span><b>{{#if net.deck}}{{net.deck}}{{else}}nenhum{{/if}}</b></div>
+        <div class="medida"><span>DECK EQUIPADO</span><b>{{#if net.deck}}{{net.deck}}{{#if net.naPorta}} · na porta{{/if}}{{else}}nenhum{{/if}}</b></div>
         {{#if net.slots}}<div class="medida"><span>SLOTS</span><b data-tooltip="{{net.slots.usados}} de {{net.slots.total}} slots em uso"><span class="pontos-visuais slots" style="--pontos: {{net.slots.usados}}; --max: {{net.slots.total}}" aria-hidden="true"></span> {{net.slots.usados}}/{{net.slots.total}}</b></div>{{/if}}
         {{#if net.rank}}
         <div class="medida"><span>CONEXÃO</span><b class="conexao {{#if net.conexao}}conectado{{/if}}">{{#if net.conexao}}{{net.conexao.ponto}}{{else}}desconectado{{/if}}</b></div>
@@ -40,6 +40,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
             <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado">{{usoNome}}</button>
+            {{#if porta}}<button type="button" class="alternar porta-do-deck {{#if naPorta}}ligado{{/if}}" data-action="portaDoDeck" data-tooltip="Encaixar ou tirar o deck da Neuroport Cyberdeck Port (uma Ação): na porta, 20 m contra arquiteturas e 50 m contra Neuroports, e o hardware do deck não vale">{{#if naPorta}}Na porta{{else}}Externo{{/if}}</button>{{/if}}
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>
           {{else}}<li class="vazio">Sem cyberdeck.</li>{{/each}}
