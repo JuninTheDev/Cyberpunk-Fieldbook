@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 87). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 88). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -141,7 +141,10 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - a arma sob o cano e a baioneta (o upgrade que ataca);
   - nos acessórios: o limite de slots, os plugs do Smartgun Link e o pente que fica acima do máximo quando o carregador
     sai.
-- [~] **C12. Mãos livres:** em andamento (sessão Codex, 2026-10-17). não equipar mais armas do que há mãos (`canHoldWeapon`).
+- [x] **C12. Mãos livres:** feito no ciclo 87 (sessão Codex, 2026-10-17).
+  - Duas mãos mais os bônus dos efeitos, menos as mãos das armas e dos escudos equipados.
+  - BODY 8+ usa arma branca de duas mãos com uma.
+  - Sem mãos, a nova equipagem é recusada nas fichas e no drop; guardar libera as mãos.
 - [ ] **C13. A falha crítica de cada arma** (emperra, quebra, quebra sem conserto; o `critFailEffect` do CORE) no cartão do
   ataque.
 - [ ] **C14. Munições especiais:**
@@ -341,8 +344,8 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [ ] **Na ficha, o que o CORE e o Painel Tático têm:** (→ C18, C19 e C20) consertar a armadura com um clique (hoje, só editando o SP na
   ficha do item); rolar uma lesão crítica à mão (uma queda, uma explosão fora do ataque); macros na barra (arrastar
   uma arma ou uma perícia).
-- [ ] **Inventário, o resto do CORE:** (→ C12 e C17) juntar itens iguais ao soltar na ficha (munição, equipamento) e dividir uma
-  pilha; avisar quando as armas equipadas pedem mais mãos do que há.
+- [ ] **Inventário, o resto do CORE:** (→ C17) juntar itens iguais ao soltar na ficha (munição, equipamento) e dividir uma
+  pilha. As mãos livres foram feitas no ciclo 87 (C12).
 - [x] **A ficha nova** (Ciclo 19), no visual do modelo de ficha da mesa: o painel geral em três colunas, as abas
   Combate, Equipamento, Cyberware, Role, NET e Vida, o apelido e o Lifepath (com a importação da wiki), as perícias de
   família pela ficha e o tema escuro com as fontes embutidas, também na ficha do item. A aba Role mostra as
@@ -507,6 +510,9 @@ causa lesão), a Sorte caseira do JonJon, os marcadores de turno e o tema estend
 pedir.
 
 ## Decisões tomadas
+
+- **2026-10-17, mãos livres (C12):** o usuário confirmou seguir a wiki para BODY 8+ empunhar arma branca de duas
+  mãos com uma e para o escudo ocupar uma mão; a conta básica segue o CORE 0.92.4.
 
 - **2026-10-11, migração da campanha:** pela ficha "Na mesa" que o Foundry 12 manda para a wiki ("Importar da
   mesa"), e não pela conversão dos atores do Foundry 12. Decisão do usuário.

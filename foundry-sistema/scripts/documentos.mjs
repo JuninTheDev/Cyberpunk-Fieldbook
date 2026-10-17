@@ -6,7 +6,7 @@ import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   AGARRAO, aplicarDano, backup, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
-  tipoDeTeleOptics
+  tipoDeTeleOptics, maosDaArma, maosLivres
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -22,6 +22,17 @@ const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[o
 export const encaixeDe = item => ({ tipo: item.system.tipo, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', slots: item.system.slots, tamanho: item.system.tamanho });
 
 export class AtorCPR extends Actor {
+  get maosLivres() {
+    const armas = this.items.filter(item => item.type === 'arma').map(item => item.system);
+    const escudos = this.items.filter(item => item.type === 'armadura' && item.system.escudo && item.system.equipada).length;
+    return maosLivres({ armas, escudos, bonus: this.system.bonus.maos, body: this.system.atributos.body.valor });
+  }
+  // O canHoldWeapon do CORE: cabe no que ainda sobra das mãos do ator.
+  podeEmpunhar(arma) {
+    const precisa = arma.type === 'armadura' ? 1 : maosDaArma(arma.system, this.system.atributos.body.valor);
+    return precisa <= this.maosLivres;
+  }
+
   // Personagem novo: o token fica ligado à ficha, com o HP na barra. Capanga novo (o mook do CORE): o token fica solto, e
   // cada um na cena tem o próprio HP; o que já vem com o token (uma cópia, o compêndio) fica como veio. Black ICE e demônio
   // novos (o blackIce e o demon do CORE): o token solto, com a REZ na barra.
@@ -509,6 +520,19 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
+  // A nova equipagem passa pela mesma conferência na ficha do personagem, na do item e no drop do capanga.
+  // Guardar e editar uma arma já equipada continuam possíveis, inclusive num estado antigo com excesso de armas.
+  async _preUpdate(mudancas, opcoes, usuario) {
+    if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
+    const sistema = { ...this.system, ...mudancas.system };
+    if (!(this.type === 'arma' || (this.type === 'armadura' && sistema.escudo)) || !this.actor || this.system.equipada || mudancas.system?.equipada !== true) return;
+    const arma = { type: this.type, system: sistema };
+    if (!this.actor.podeEmpunhar(arma)) {
+      ui.notifications.warn(`${this.actor.name} não tem mãos livres para equipar ${this.name}.`);
+      mudancas.system.equipada = false;
+    }
+  }
+
   // Cyberdeck, arma, veículo e a fundação do cyberware: os itens instalados neles (programas, hardware, acessórios,
   // upgrades, as opções do cyberware, no mesmo ator) e os slots que ocupam.
   get instalados() {

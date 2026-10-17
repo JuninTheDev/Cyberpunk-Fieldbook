@@ -15,6 +15,13 @@
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
 
+// Wiki, Corpo a corpo (p. 175–176): BODY 8+ usa a arma branca de duas mãos com uma.
+export const maosDaArma = (arma, body = 0) => arma.maos === 2 && arma.aDistancia === false && body >= 8 ? 1 : arma.maos ?? 0;
+// CORE 0.92.4 (_getHands e _getFreeHands): duas mãos + os efeitos, menos as armas empunhadas.
+// Wiki, Escudos (p. 183–184): cada escudo equipado ocupa uma mão, mesmo sem HP.
+export const maosLivres = ({ armas = [], bonus = 0, body = 0, escudos = 0 } = {}) =>
+  2 + bonus - escudos - armas.filter(arma => arma.equipada).reduce((soma, arma) => soma + maosDaArma(arma, body), 0);
+
 // Consciência de Combate do Solo (RED p. 146), pelos pontos de cada habilidade, como a wiki descreve (system-criacao.js)
 // e o CORE automatiza (bonusRatio de cada habilidade do item de Role):
 // - Reação de Iniciativa: +1 na Iniciativa por ponto;

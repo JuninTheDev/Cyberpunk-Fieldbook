@@ -99,7 +99,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     ciclo 81), os itens (equipar, vestir, instalar e o uso de cada um) e as notas;
   - **O token** nasce solto, com o HP na barra: cada capanga na cena tem o próprio HP, a própria munição e o próprio Death
     Save. O nome mudado na ficha de um token vai para o token na cena;
-  - **Arrastar um item** para a ficha já equipa a arma, a armadura, a roupa, o cyberdeck, a droga e o equipamento, e
+  - **Arrastar um item** para a ficha tenta equipar a arma e o escudo (sem mãos, ficam guardados), veste a armadura e a
+    roupa, equipa o cyberdeck, a droga e o equipamento, e
     instala o cyberware rolando a perda de Humanidade (com Shift, a média), como o CORE;
   - **A ficha limitada:** o jogador só com a permissão Limitada vê a imagem, o nome e as notas, como no CORE. Com a de
     Observador, vê a ficha inteira, sem editar.
@@ -213,6 +214,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     - **Lexington:** o autofogo gasta 7 balas.
     - **O resto** (a carga da Satara, a Burya, o supressivo da Senkoh, o +1 entre 13 e 50 m), o mestre resolve: a descrição da arma diz.
 - **Inventário** (aba Equipamento): equipamento, roupas e drogas, com a quantidade (− e +, sem passar de 0; nas drogas, as doses; ciclo 67) e o uso (equipado, carregando ou guardado; o botão da linha passa de um para o outro). O equipamento de ativação à mão que tem efeito ganha o "Usar" (na linha e na ficha do item; ciclo 71), que liga e desliga os efeitos dele.
+  - **Mãos livres** (C12, ciclo 87): equipar arma ou escudo confere se cabe nas duas mãos mais os bônus dos efeitos.
+    Cada arma ocupa as mãos que pede; com BODY 8+, a arma branca de duas mãos ocupa uma. Cada escudo equipado ocupa
+    uma, mesmo sem HP. Sem mãos livres, o item fica guardado e o aviso diz qual foi recusado; guardar libera as mãos.
+    Vale na ficha do personagem, na caixa da ficha do item e ao arrastar para personagem ou capanga, inclusive de
+    uma origem já equipada. A criação e a importação preservam o estado recebido dos itens.
   - **Efeitos do equipamento** valem conforme o uso, como no CORE: o Agent (+2 em Pesquisa em Biblioteca) e o Techscanner valem equipados ou carregando; o Medscanner e o Linear Frame, só equipados.
   - **Drogas** vêm com os efeitos desligados. Quem usa liga o efeito na ficha do item (o Boost dá +2 INT).
   - **"Usar" a droga** (ciclo 78; a wiki, "Drogas de rua", p. 227–229), na linha do inventário e na ficha da droga: gasta a dose e liga o efeito primário (sob efeito, a dose a mais estende); o Black Lace tira 2d6 de Humanidade. Quando o efeito acaba ("Acabou"), quem tomou rola WILL + Resistir Tortura/Drogas + 1d10 contra a DV do efeito secundário (Black Lace e Boost 17; Blue Glass, Smash e Synthcoke 15): superando, nada fica, e o Black Lace devolve a Humanidade; senão, o vício liga e fica até a terapia ("VICIADO"). No Black Lace e no Synthcoke, o −2 do vício vale só fora do efeito: enquanto o primário dura, ele fica suspenso. As outras drogas (Speedheal, Stim...) não têm efeito secundário: "Usar" gasta a dose e liga o efeito, se houver.
@@ -350,6 +356,8 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - os compêndios, a ficha e o crítico do d10;
   - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item, a quantidade com − e + até o 0, o "Usar" do equipamento ligado à mão, os acessórios na arma e o hardware no deck);
   - a ficha do item no jeito da maquete: numa pistola, o tipo na cor dele, o resumo, a etiqueta da qualidade, as três abas (a troca pelo clique) e as células; num cyberdeck, o uso pelos três botões, que grava;
+  - mãos livres (C12): limite exato, recusa na ficha e no item, a caixa que volta ao estado gravado, o drop de uma
+    origem equipada, as mãos do cyberware, BODY 7 e 8, o escudo sem HP e guardar mesmo num excesso antigo;
   - "Consertar" na ficha da armadura: o SP gasto volta ao máximo e o cartão "CONSERTO" diz quem consertou; inteira, o aviso, sem outra mensagem;
   - "Rolar Humanidade" na ficha do cyberware e "Aplicar" no cartão: a perda rolada sem instalar, tirada uma vez da Humanidade do dono pelo botão do mestre;
   - "Atacar" e "Recarregar" na ficha da arma (a janela no clique, direto com Ctrl; o pente cheio da munição carregada) e o SP da armadura em caixas, com o "−1" até o 0;

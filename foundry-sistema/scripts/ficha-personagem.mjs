@@ -36,6 +36,15 @@ const GRUPOS_DO_LIFEPATH = [
 ];
 
 export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
+  // A arma ou o escudo de outra ficha pode chegar equipado. Recebe guardado e tenta equipar pela mesma conferência.
+  async _onDropItem(evento, item) {
+    const empunhado = this.actor.uuid !== item.parent?.uuid && item.system.equipada
+      && (item.type === 'arma' || (item.type === 'armadura' && item.system.escudo));
+    const criado = await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
+    if (criado && empunhado) await criado.update({ 'system.equipada': true });
+    return criado;
+  }
+
   static DEFAULT_OPTIONS = {
     // O visual do modelo é escuro: a ficha fica no tema escuro do Foundry, qualquer que seja o tema da interface.
     classes: [SISTEMA, 'ficha-personagem', 'themed', 'theme-dark'],

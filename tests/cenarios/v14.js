@@ -563,6 +563,144 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('mãos livres (C12): limite na ficha, no item e no drop do capanga; guardar libera mãos e o cyberware soma mãos', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = (id, nome) => { const d = foundry.utils.deepClone(cat[id]); if (nome) d.name = nome; return d; };
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const avisos = [], estados = [];
+        const avisar = ui.notifications.warn;
+        let a, capanga, avulsa;
+        try {
+          ui.notifications.warn = m => avisos.push(String(m));
+          a = await Actor.implementation.create({ name: 'Teste Mãos', type: 'personagem', items: [
+            pegar('core_weapons:heavy-pistol', 'Pistola 1'), pegar('core_weapons:heavy-pistol', 'Pistola 2'),
+            pegar('core_weapons:heavy-pistol', 'Pistola 3'), pegar('core_weapons:assault-rifle', 'Rifle')
+          ] });
+          const p1 = a.items.getName('Pistola 1'), p2 = a.items.getName('Pistola 2'), p3 = a.items.getName('Pistola 3'), rifle = a.items.getName('Rifle');
+          await a.sheet.render({ force: true });
+          const botao = item => a.sheet.element?.querySelector('.tab.equipamento [data-item-id="' + item.id + '"] [data-action="equipar"]');
+          const clicar = async (item, equipada, rejeitada = false) => {
+            await esperar(() => botao(item)?.textContent.trim() === (item.system.equipada ? 'Equipada' : 'Guardada'));
+            const n = avisos.length;
+            botao(item).click();
+            await esperar(() => rejeitada ? avisos.length > n : item.system.equipada === equipada && botao(item)?.textContent.trim() === (equipada ? 'Equipada' : 'Guardada'));
+            estados.push([item.system.equipada, a.maosLivres]);
+          };
+          const inicio = a.maosLivres;
+          await clicar(p1, true);
+          await clicar(rifle, false, true);
+          await clicar(p2, true);
+          await clicar(p3, false, true);
+          await clicar(p1, false);
+          await clicar(p3, true);
+          // A caixa da ficha do item também confere antes de gravar.
+          await p1.sheet.render({ force: true });
+          await esperar(() => p1.sheet.element?.querySelector('[name="system.equipada"]'));
+          p1.sheet.element.querySelector('[name="system.equipada"]').click();
+          await esperar(() => avisos.length === 3);
+          estados.push([p1.system.equipada, a.maosLivres]);
+          await esperar(() => p1.sheet.element?.querySelector('[name="system.equipada"]')?.checked === false);
+          const caixaReposta = p1.sheet.element.querySelector('[name="system.equipada"]').checked === false;
+          const nome = p1.sheet.element.querySelector('[name="name"]');
+          nome.value = 'Pistola 1 editada';
+          nome.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => p1.name === 'Pistola 1 editada');
+          const editouNoItem = [caixaReposta, p1.name, p1.system.equipada, avisos.length];
+          await p1.sheet.close();
+          await p2.update({ name: 'Pistola 2 editada', 'system.equipada': true });
+          const editou = [p2.name, p2.system.equipada, avisos.length];
+          const zero = pegar('core_weapons:heavy-pistol', 'Sem mãos');
+          zero.system.maos = 0;
+          const [semMaos] = await a.createEmbeddedDocuments('Item', [zero]);
+          await semMaos.update({ 'system.equipada': true });
+          estados.push([semMaos.system.equipada, a.maosLivres]);
+          // O efeito real do catálogo já tem a tradução bonuses.hands -> system.bonus.maos.
+          const ombros = pegar('core_cyberware:artificial-shoulder-mount');
+          ombros.system.instalado = true;
+          const [montagem] = await a.createEmbeddedDocuments('Item', [ombros]);
+          const comBonus = [a.system.bonus.maos, a.maosLivres];
+          await rifle.update({ 'system.equipada': true });
+          estados.push([rifle.system.equipada, a.maosLivres]);
+          await montagem.update({ 'system.instalado': false });
+          const excesso = a.maosLivres;
+          // Mesmo em excesso, editar e guardar continuam possíveis.
+          await p2.update({ name: 'Editada no excesso' });
+          for (const item of [p2, p3, rifle]) await item.update({ 'system.equipada': false });
+          const recuperou = [a.maosLivres, p2.name, p2.system.equipada, rifle.system.equipada];
+          capanga = await Actor.implementation.create({ name: 'Capanga Mãos', type: 'capanga' });
+          await capanga.sheet.render({ force: true });
+          await esperar(() => capanga.sheet.element?.querySelector('.corpo-capanga'));
+          const soltar = async (nome, rejeitada = false) => {
+            const pack = game.packs.get('${S}.armas'), e = pack.index.find(i => i.name === nome);
+            const dados = new DataTransfer(), n = avisos.length;
+            dados.setData('text/plain', JSON.stringify({ type: 'Item', uuid: e.uuid ?? ('Compendium.' + pack.collection + '.Item.' + e._id) }));
+            capanga.sheet.element.querySelector('.corpo-capanga').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+            await esperar(() => capanga.items.getName(nome) && (rejeitada ? avisos.length > n : capanga.items.getName(nome).system.equipada));
+            return [capanga.items.getName(nome)?.system.equipada, capanga.maosLivres];
+          };
+          const rifleDoCapanga = await soltar('Assault Rifle');
+          const pistolaDoCapanga = await soltar('Heavy Pistol', true);
+          avulsa = await Item.implementation.create(pegar('core_weapons:heavy-pistol', 'Arma sem ator'));
+          await avulsa.update({ 'system.equipada': true });
+          // As duas diferenças da wiki confirmadas pelo usuário: BODY 8+ e o escudo na mão.
+          const lamina = pegar('core_weapons:heavy-melee', 'Lâmina duas mãos');
+          lamina.system.maos = 2;
+          await a.createEmbeddedDocuments('Item', [lamina, pegar('core_armor:bullet-proof-shield', 'Escudo')]);
+          const branca = a.items.getName('Lâmina duas mãos'), escudo = a.items.getName('Escudo');
+          await a.update({ 'system.atributos.body.valor': 7 });
+          await p1.update({ 'system.equipada': true });
+          await branca.update({ 'system.equipada': true });
+          const especial = { body7: [branca.system.equipada, a.maosLivres] };
+          await a.update({ 'system.atributos.body.valor': 8 });
+          await branca.update({ 'system.equipada': true });
+          especial.body8 = [branca.system.equipada, a.maosLivres];
+          await p1.update({ 'system.equipada': false });
+          await escudo.update({ 'system.equipada': true });
+          especial.escudo = [escudo.system.equipada, a.maosLivres];
+          await escudo.update({ 'system.pvEscudo.value': 0 });
+          especial.quebrado = a.maosLivres;
+          await branca.update({ 'system.equipada': false });
+          await rifle.update({ 'system.equipada': true });
+          especial.rifle = [rifle.system.equipada, a.maosLivres];
+          await escudo.update({ 'system.equipada': false });
+          await p1.update({ 'system.equipada': true });
+          await p2.update({ 'system.equipada': true });
+          await escudo.update({ 'system.equipada': true });
+          especial.cheio = [escudo.system.equipada, a.maosLivres];
+          // O drop de uma origem já equipada também precisa passar pela conferência, uma única vez.
+          const noPersonagem = await a.sheet._onDropItem({}, avulsa);
+          const noCapanga = await capanga.sheet._onDropItem({}, avulsa);
+          especial.drop = [noPersonagem.system.equipada, a.maosLivres, noCapanga.system.equipada, capanga.maosLivres];
+          return { inicio, estados, editou, editouNoItem, comBonus, excesso, recuperou, rifleDoCapanga, pistolaDoCapanga,
+            especial, avulsa: avulsa.system.equipada, avisos };
+        } finally {
+          ui.notifications.warn = avisar;
+          for (const ator of [a, capanga].filter(Boolean)) {
+            for (const item of ator.items) await item.sheet?.close();
+            await ator.sheet?.close();
+            await ator.delete();
+          }
+          await avulsa?.delete();
+        }
+      })()`);
+      const igual = (valor, esperado) => JSON.stringify(valor) === JSON.stringify(esperado);
+      const ok = info.inicio === 2 && igual(info.estados, [[true, 1], [false, 1], [true, 0], [false, 0], [false, 1], [true, 0], [false, 0], [true, 0], [true, 0]])
+        && igual(info.editou, ['Pistola 2 editada', true, 3]) && igual(info.comBonus, [2, 2]) && info.excesso === -2
+        && igual(info.editouNoItem, [true, 'Pistola 1 editada', false, 3])
+        && igual(info.recuperou, [2, 'Editada no excesso', false, false]) && igual(info.rifleDoCapanga, [true, 0])
+        && igual(info.especial, { body7: [false, 1], body8: [true, 0], escudo: [true, 0], quebrado: 0, rifle: [false, 1], cheio: [false, 0], drop: [false, 0, false, 0] })
+        && igual(info.pistolaDoCapanga, [false, 0]) && info.avulsa && igual(info.avisos, [
+          'Teste Mãos não tem mãos livres para equipar Rifle.', 'Teste Mãos não tem mãos livres para equipar Pistola 3.',
+          'Teste Mãos não tem mãos livres para equipar Pistola 1.', 'Capanga Mãos não tem mãos livres para equipar Heavy Pistol.',
+          'Teste Mãos não tem mãos livres para equipar Lâmina duas mãos.', 'Teste Mãos não tem mãos livres para equipar Rifle.',
+          'Teste Mãos não tem mãos livres para equipar Escudo.', 'Teste Mãos não tem mãos livres para equipar Arma sem ator.',
+          'Capanga Mãos não tem mãos livres para equipar Arma sem ator.'
+        ]);
+      return [ok, JSON.stringify(info)];
+    });
+
+
     await r.passo('extrato (o ledger do CORE): o botão de Eurodólares no cabeçalho abre o extrato; somar 100, subtrair 30 e definir 50, cada um com o motivo e quem mudou; sem quantia não muda; perder mais do que tem fica negativo, com o aviso; uma mudança por fora entra como "mudança direta"; o mestre tira uma linha e escolhe, como no CORE, se a mudança também é desfeita; a aba Equipamento mostra as últimas; o IP tem o seu', async () => {
       const ID = `'${S}-extrato-' + a.id + '-'`;
       try {
@@ -2352,7 +2490,8 @@ module.exports = async ({ edge, servidores, r }) => {
           canvas.tokens.setTargets([__token('Capanga').id]);
           window.__fila = [[8, 10], [2, 10]];
           botao('agarrar').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
-          await __esperar(() => marcas(a).join() === 'agarrando' && marcas(capanga).join() === 'agarrado' && botao('soltar'));
+          // As marcas chegam antes do cartão: aguarde também a mensagem deste agarrão, não a do empate anterior.
+          await __esperar(() => marcas(a).join() === 'agarrando' && marcas(capanga).join() === 'agarrado' && botao('soltar') && cartoes().length === antes.cartoes + 2);
           const agarrados = {
             cartao: cartoes().at(-1), linha: [...a.sheet.element.querySelector('.tab.combate .medida.agarrao')?.children ?? []].map(parte => parte.textContent.trim()).join(' | '),
             penalidade: [a, capanga].map(ator => ator.partesDaPericia('evasion').partes.find(p => p.rotulo === 'Agarrão')?.valor ?? null)

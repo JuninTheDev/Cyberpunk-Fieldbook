@@ -27,6 +27,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | De onde | O quê | Estado |
 | --- | --- | --- |
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
+| CORE e wiki | mãos livres (C12): impedir nova equipagem sem mãos, com os efeitos, BODY 8+ na arma branca e os escudos | portado no ciclo 87 (sessão Codex; a decisão nas dúvidas) |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad) | portado no ciclo 23. Com as Roles do RED (ciclo 33), saíram a especialização do Face e os situacionais de 2077 (o Investigator, o Netrunner) |
@@ -138,6 +139,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
+
+- **Mãos livres (C12, decidido em 2026-10-17):** a conta básica segue o CORE 0.92.4 (duas mãos mais os efeitos, menos
+  as armas equipadas), com as duas regras da wiki confirmadas pelo usuário: BODY 8+ usa arma branca de duas mãos
+  com uma; cada escudo equipado ocupa uma mão, inclusive sem HP. O CORE só avisa quando faltam mãos; o C12 impede
+  a nova equipagem. A criação e a importação preservam o estado recebido, e a conferência individual não reserva
+  mãos entre os itens de uma operação coletiva por macro.
 
 - **O criador da wiki mostra a Humanidade máxima como EMP × 10** (`humanity()` em criador.js), sem tirar 2 por peça.
   A página de regras da wiki e o CORE tiram. No Foundry 12, o importador antigo corrigia com o `setMaxHumanity()` do
@@ -4123,6 +4130,59 @@ O pedido do usuário: o Codex ajuda no projeto, como uma terceira sessão, no VS
     QUALITY_GATES e para o `AGENTS.md`.
 - **Pendências:** nenhuma da trava.
 - **Próximo:** o C8, parte 12, na sessão KouArt. A sessão Codex começa pelos itens fora da NET.
+
+### Ciclo 87 (2026-10-17): mãos livres (o C12; sessão Codex)
+
+O C12 do ROADMAP, reservado e enviado antes de começar (`4404fb3`). Commit anterior: `4404fb3` (a reserva).
+
+- **A referência e a decisão do usuário:**
+  - CORE 0.92.4, `modules/actor/cpr-actor.js`: `_getHands`, `_getFreeHands` e `canHoldWeapon`: duas mãos mais os
+    efeitos, menos as mãos das armas equipadas; sem `handsReq`, não desconta. O CORE só avisa; o C12 pede impedir a
+    equipagem sem mãos;
+  - a wiki (`system-rules.js`, Corpo a corpo, p. 175–176, e Escudos, p. 183–184) permite arma branca de duas mãos com
+    uma para BODY 8+ e diz que escudo ocupa uma mão. O usuário confirmou seguir a wiki nos dois casos, e o CORE na
+    conta básica (2026-10-17). Não houve mudança nos arquivos de regra da wiki.
+- **Implementado:**
+  - `regras.mjs`: `maosDaArma` e `maosLivres`, com o limiar de BODY 8 só na arma branca de duas mãos, zero mãos
+    preservado, os bônus dos efeitos e cada escudo equipado ocupando uma mão, inclusive sem HP;
+  - `documentos.mjs`: `AtorCPR.maosLivres` e `podeEmpunhar`; no `ItemCPR._preUpdate`, a tentativa de equipar arma ou
+    escudo que não cabe deixa o item guardado e avisa. Usa também as mãos propostas no mesmo formulário. Guardar,
+    editar outro campo e salvar de novo uma arma já equipada continuam possíveis, inclusive em excesso;
+  - `ficha-item.mjs`: depois do envio, a caixa Equipada volta ao estado gravado. O Foundry descarta um diff vazio
+    depois do `_preUpdate`: a recusa sozinha deixava a caixa marcada e atrapalhava a próxima edição;
+  - `ficha-personagem.mjs`: a arma ou o escudo arrastado já equipado chega por um clone efêmero guardado e tenta
+    equipar pela mesma conferência, sem alterar a origem. No capanga (`ficha-capanga.mjs`), essa tentativa não se
+    repete; o item do compêndio guardado continua tentando equipar ao chegar, e fica guardado se não couber.
+- **Testes:**
+  - G1: 60 arquivos, 0 erros; G2: 0 erros;
+  - G3: 105 de 109 (as 4 falhas conhecidas das armas de 2077). O novo `tests/sistema/maos.test.mjs` tem 4 testes de
+    referência: as duas mãos e as armas guardadas/equipadas, zero mãos e exigência ausente; os bônus e o excesso
+    negativo; BODY 7 e 8 na arma branca, sem reduzir a de tiro; o escudo sozinho e com arma;
+  - G4: 108 de 113 (as 5 falhas conhecidas das armas de 2077). O passo novo lê o estado depois de cada ação: duas
+    pistolas aceitas, a terceira e o rifle recusados, guardar e equipar de novo; a caixa do item desmarcada após a
+    recusa e o nome editado na mesma ficha; a atualização idempotente; a arma de zero mãos; o Artificial Shoulder
+    Mount real do catálogo (+2 mãos), o rifle aceito, o cyberware desinstalado e as armas guardadas mesmo em excesso;
+    o rifle arrastado para o capanga e a pistola recebida guardada; a lâmina de duas mãos recusada com BODY 7 e aceita
+    com BODY 8; o escudo equipado e sem HP, o rifle recusado com ele e o escudo recusado com as mãos cheias; uma
+    origem já equipada arrastada para personagem e capanga cheios, guardada nos dois e intacta na origem;
+  - uma primeira rodada completa, antes das duas regras confirmadas pelo usuário, também ficou em 108 de 113.
+    O passo ampliado passou sozinho no Foundry antes das mutações e na rodada completa final;
+  - a primeira rodada final deu 107 de 113 por uma corrida no passo antigo de Agarrar: as marcas já tinham chegado,
+    mas ele leu o cartão do empate anterior. O motor cria as marcas antes de publicar o cartão. A espera do teste
+    passou a exigir também o segundo cartão, mantendo todas as asserções; a rodada completa foi repetida;
+  - **mutações:** as 16 caíram, uma por vez, e os arquivos voltaram exatamente (md5 conferido):
+    - no G3: três mãos de base (H1), ignorar os bônus (H2), descontar arma guardada (H3), exigir BODY 9 (H4),
+      reduzir também a arma de tiro (H5), ignorar escudos (H6) e transformar zero mãos em uma (H7);
+    - no Foundry: recusar o limite exato (H8), pular a conferência (H9), o ator ignorar o escudo (H10) ou o BODY
+      (H11), deixar a caixa marcada (H12), receber a origem equipada sem o clone guardado (H13), tentar duas vezes no
+      capanga (H14), o ator ignorar o bônus real (H15) e conferir de novo a arma já equipada (H16).
+    O executor temporário usa o passo original, com o `rodar.js`, a trava e a checagem da mesa; uma rodada sem
+    mutação passou antes. A saída antecipada atravessa o `finally` do cenário. Não substitui o G4 completo.
+- **Limites:** a criação e a importação preservam o estado recebido dos itens, inclusive um excesso antigo; guardar
+  permite resolvê-lo. A conferência é por item: operações coletivas de equipagem por macro não reservam mãos entre
+  os itens. Lesões, agarrão e cyberarmas continuam com as automações que já tinham; as cyberarmas ficam no C11.
+- **Pendências:** nenhuma do C12 nas fichas.
+- **Próximo:** outro item fora da NET, conforme o ROADMAP.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

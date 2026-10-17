@@ -198,6 +198,14 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   arquivos da worktree: edite com a ferramenta de edição ou com um script do Node, e confira os finais de linha de cada
   arquivo mexido (o diff de um arquivo inteiro, numa mudança pequena, é o sinal).
 
+- **A caixa marcada sem equipar e o drop já equipado** (ciclo 87): corrigir a equipagem no `_preUpdate` pode deixar
+  o diff vazio, que o Foundry descarta sem redesenhar a ficha. O envio do formulário reconcilia a caixa com o estado
+  gravado; o G4 lê o documento e a caixa e edita outro campo na mesma ficha. E arrastar um item copia a equipagem da
+  origem: a conferência só na transição guardado → equipado não vê quem já nasce equipado. O drop usa um clone
+  efêmero guardado e tenta equipar uma vez; o G4 confere também a origem intacta e um só aviso no capanga.
+  Na mesma rodada, Agarrar mostrou outra ordem assíncrona: as marcas chegam antes do cartão. O passo espera também
+  a mensagem nova antes de ler o resultado, mantendo a conferência dos valores.
+
 ## Build
 
 - **O que o build baixa é conferido.** A tag do CORE tem de ser do commit `75b8c9d…`, e o js-yaml (código que roda no

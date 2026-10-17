@@ -44,6 +44,14 @@ function cabecalhoDoItem(item) {
 }
 
 export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
+  // A equipagem recusada pode não gerar diff nem redesenho; a caixa volta ao estado gravado.
+  async _processSubmitData(evento, form, dados, opcoes) {
+    const resultado = await super._processSubmitData(evento, form, dados, opcoes);
+    const caixa = this.element?.querySelector('[name="system.equipada"]');
+    if (caixa) caixa.checked = this.item.system.equipada;
+    return resultado;
+  }
+
   static DEFAULT_OPTIONS = {
     // O tema escuro da ficha do personagem (styles/tema.css), qualquer que seja o da interface.
     classes: [SISTEMA, 'ficha-item', 'themed', 'theme-dark'],

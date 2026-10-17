@@ -62,7 +62,8 @@ export class FichaCapanga extends FichaPersonagem {
     const criado = await super._onDropItem(evento, item);
     const acao = criado && !daFicha ? AO_RECEBER_CAPANGA[criado.type] : null;
     if (acao === 'instalar') await this.actor.instalarCyberware(criado, { rolar: !evento.shiftKey });
-    else if (acao) await criado.update(acao);
+    // O item já equipado na origem foi conferido pelo drop da ficha do personagem; não tente uma segunda vez.
+    else if (acao && !(item.system.equipada && (item.type === 'arma' || (item.type === 'armadura' && item.system.escudo)))) await criado.update(acao);
     return criado;
   }
 }
