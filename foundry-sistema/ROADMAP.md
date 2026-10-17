@@ -13,8 +13,8 @@ de compêndio; entram só as partes do sistema.
 - **As listas P0 a P4** mais abaixo ficam como histórico. Os itens abertos delas apontam para os deste plano (→ Cn).
 - **Fora deste plano:**
   - o conteúdo: Black Chrome, DLCs, NPCs, arquiteturas e macros do CORE;
-  - as armas de 2077 pelo Mission Kit, adiadas pelo usuário em 2026-10-12. Os testes delas seguem como falhas conhecidas
-    no QUALITY_GATES.
+  - (voltou ao plano) as armas de 2077 pelo Mission Kit: adiadas pelo usuário em 2026-10-12, entram no plano desde
+    2026-10-17 (decisão do usuário, com a "regra só na mesa" da wiki): o C29, parte das armas de 2077.
 
 **As sessões no mesmo plano** (três desde 2026-10-17: KouArt e Codex neste PC, Junin em outro; as instruções para os
 agentes de IA ficam no `AGENTS.md` da raiz):
@@ -130,7 +130,11 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] o editor visual (no mapa da ficha da arquitetura: arrastar move ou troca o andar, o "+" cria um): ciclo 90;
   - [x] o Scanner (achar o ponto oculto, com o DV da configuração, pelo HUD do token) e a parede entre o token e o
     ponto (a wiki: "sem parede no meio"): ciclo 91.
-- [ ] **C9. A NET de 2077 (Mission Kit):**
+- [~] **C9. A NET de 2077 (Mission Kit):** em andamento (sessão KouArt, 2026-10-17). Decisão do usuário (2026-10-17):
+  "rolagens e efeitos simples". O Jack In, o Breach e o Quickhack rolam como o Agarrar (o alvo rola a defesa pela janela
+  do dono), e a ligação aparece nas duas fichas. O sistema aplica o que é número: o dano direto do Synapse Burnout, o
+  fogo do Overheat, o MOVE do Impair Movement e do Slow, o inconsciente e caído do System Reset. O resto (Puppet, Lure,
+  Short Circuit) vai ao chat, e o mestre narra.
   - os quickhacks pelo Neuroport, o Breach e a conexão direta;
   - (saiu) a RAM e o Cooling dos decks: desde a revisão da wiki de 2026-10-16, os decks com marca são cyberdecks do RED
     da qualidade deles (ciclo 93).
@@ -209,8 +213,9 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [ ] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem);
   - [ ] a fundação e as opções sem os cyberópticos e as placas de 2077;
   - [ ] o catálogo de 2077: a loja da wiki, os tamanhos dos compêndios e o efeito de falha das armas;
-  - [ ] as armas de 2077 (o teste Smart sem o Smart Link, os dois canos), com as armas pelo Mission Kit (o adiamento
-    do usuário, de 2026-10-12, é de antes da "regra só na mesa": perguntar).
+  - [ ] as armas de 2077 pelo Mission Kit (decisão do usuário, 2026-10-17: entram no plano): os modos Power, Smart e
+    Tech e as regras de cada modelo pela wiki, o teste Smart sem o Smart Link e os dois canos. Os testes que falham
+    desde o ciclo 32 voltam a passar.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
