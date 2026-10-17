@@ -7,14 +7,18 @@
 //   quantos quiser (a conta das Ações NET fora da arquitetura é outra parte);
 // - Jack Out: sai do Neuroport do alvo com segurança;
 // - Breach: passa um Passwall do alvo (um por Self-ICE, até 3; a DV de todos é 6, 8 ou 10, pelo número), Interface (a
-//   habilidade Breach) + 1d10 contra a DV. Passa um por vez; o quickhack só vem depois de todos (ligacao.passados).
+//   habilidade Breach) + 1d10 contra a DV. Passa um por vez; o quickhack só vem depois de todos (ligacao.passados);
+// - Quickhack: com os Passwalls passados, um dos do Rank do netrunner (o catálogo: os 11 do Kit e os 5 do suplemento que
+//   a mesa aprovou), a habilidade Quickhack + 1d10 contra a DV dele; um por alvo por rodada de combate. O que deu certo
+//   alerta o alvo (menos o Lure e os que o cartão diz que não). O sistema aplica o que é número (o Synapse Burnout: 3d6
+//   direto no HP); o resto vai ao cartão, e o mestre narra.
 // A ligação fica nas flags dos dois atores, que o mestre ativo grava: no netrunner, neuroport.ligacoes ([{ alvo: o uuid do
 // token, nome, percebido }]); no alvo, neuroport.invasores ([{ netrunner: o uuid do ator, nome, percebido }]). A ficha do
 // netrunner mostra as dele; a do alvo, as que ele percebeu (o mestre vê todas).
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
-import { centroDe, defesaContra, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
-import { alcanceDoJackIn, passouOPasswall, passwallsDoAlvo, percebeuOJackIn } from './regras.mjs';
+import { centroDe, combateDe, defesaContra, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
+import { alcanceDoJackIn, fazOQuickhack, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from './regras.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
 
 const CANAL = `system.${SISTEMA}`;
@@ -85,6 +89,46 @@ export async function breach(ator, alvo, { perguntar = false } = {}) {
   const teste = await ator.rolarInterface('backdoor', { perguntar, sabor: `contra o Passwall de ${ligacao.nome} (DV ${dv})` });
   if (!teste) return null;
   return pedirAoMestre('breach', { ator: ator.uuid, alvo, total: teste.total });
+}
+
+// A rodada do combate em que o netrunner está (para o "um quickhack por alvo por turno"); fora de combate, null.
+const agoraDe = ator => {
+  const combate = combateDe(ator);
+  return combate ? { combate: combate.id, rodada: combate.round } : null;
+};
+
+// Os quickhacks que o netrunner faz: os do catálogo até o Rank de Interface dele ({ id, nome, dv, rank, alerta }).
+export async function quickhacksDe(ator) {
+  const catalogo = await game.system.api.wiki.carregarCatalogo();
+  return Object.entries(catalogo).filter(([, item]) => item.system?.classe === 'quickhack' && fazOQuickhack(ator.system.rankDeInterface, item.flags?.[SISTEMA]?.quickhack?.rank))
+    .map(([id, item]) => ({ id, nome: item.name, ...item.flags[SISTEMA].quickhack }));
+}
+
+async function escolherQuickhack(ator, ligacao, lista) {
+  const opcoes = lista.map(item => `<option value="${esc(item.id)}">${esc(item.nome)} (DV ${item.dv})</option>`).join('');
+  return foundry.applications.api.DialogV2.prompt({
+    window: { title: `Quickhack em ${ligacao.nome}` }, classes: [SISTEMA, 'escolher-quickhack'],
+    content: `<p>Os quickhacks até o Rank ${ator.system.rankDeInterface}: a habilidade Quickhack + 1d10 contra a DV dele.</p><select name="quickhack" aria-label="Quickhack">${opcoes}</select>`,
+    ok: { label: 'Rolar o quickhack', callback: (evento, botao) => botao.form.elements.quickhack.value },
+    rejectClose: false
+  }).catch(() => null);
+}
+
+// "Quickhack": no alvo com os Passwalls passados, o escolhido (na janela, ou pelo id do catálogo).
+export async function quickhack(ator, alvo, { perguntar = false, escolha = null } = {}) {
+  const ligacao = neuroportDe(ator).ligacoes.find(item => item.alvo === alvo);
+  if (!ligacao) return avisar(`${ator.name} não está nesse Neuroport.`);
+  const { quantos } = passwallsDoAlvo(selfIcesDe(fromUuidSync(alvo)?.actor));
+  if ((ligacao.passados ?? 0) < quantos) return avisar(`Passe antes os Passwalls de ${ligacao.nome} (o Breach).`);
+  if (jaFezOQuickhack(ligacao.ultimoQuickhack, agoraDe(ator))) return avisar(`Um quickhack por alvo por turno: ${ator.name} já tentou um em ${ligacao.nome} nesta rodada.`);
+  if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
+  const lista = await quickhacksDe(ator);
+  const id = escolha ?? await escolherQuickhack(ator, ligacao, lista);
+  const escolhido = lista.find(item => item.id === id);
+  if (!escolhido) return null;
+  const teste = await ator.rolarInterface('quickhack', { perguntar, sabor: `${escolhido.nome} contra ${ligacao.nome} (DV ${escolhido.dv})` });
+  if (!teste) return null;
+  return pedirAoMestre('quickhack', { ator: ator.uuid, alvo, id, total: teste.total });
 }
 
 // ---------------- No mestre ativo ----------------
@@ -175,7 +219,55 @@ async function resolverBreach(ator, pedido) {
   return cartao({ ator, alvo: alvo.actor, percebido: false, falante: nome, frase, resumo: { resultado: passou ? 'passou' : 'barrado', total: pedido.total, dv, passados, quantos, netrunner: nome, alvo: alvo.name } });
 }
 
-const RESOLVER = { jackin: resolverJackIn, jackout: resolverJackOut, breach: resolverBreach };
+// O que o quickhack faz quando dá certo: o Synapse Burnout, 3d6 direto no HP (sem a armadura e sem ablar); os outros, o
+// cartão com o efeito, para o mestre narrar (as próximas partes do C9 aplicam o fogo, o MOVE e o System Reset).
+async function efeitoDoQuickhack(id, item, alvo, falante) {
+  if (id === 'netrunning-2077:synapse-burnout') {
+    const rolagem = await new Roll('3d6').evaluate();
+    await rolagem.toMessage({ speaker: { alias: falante }, flavor: `Synapse Burnout em ${alvo.name}: 3d6 direto no HP` });
+    const hpAntes = alvo.actor.system.hp.value;
+    await alvo.actor.update({ 'system.hp.value': hpAntes - rolagem.total });
+    return { dano: rolagem.total, texto: `${rolagem.total} de dano direto no HP de ${alvo.name}, sem a armadura (${hpAntes} → ${alvo.actor.system.hp.value}).` };
+  }
+  const efeito = String(item.system.descricao ?? '').split('</p>')[1]?.replace(/<[^>]+>/g, '').trim();
+  return { texto: `O mestre aplica: ${efeito || item.name}` };
+}
+
+// O quickhack: as conferências de novo; a vez (a rodada) fica marcada, certo ou errado; o que deu certo alerta o alvo
+// (os dois lados da ligação passam a "percebido"), menos o que não alerta.
+async function resolverQuickhack(ator, pedido) {
+  const ligacao = neuroportDe(ator).ligacoes.find(item => item.alvo === pedido.alvo);
+  const alvo = await fromUuid(pedido.alvo);
+  if (!ligacao || !alvo?.actor) return null;
+  const { quantos } = passwallsDoAlvo(selfIcesDe(alvo.actor));
+  const agora = agoraDe(ator);
+  if ((ligacao.passados ?? 0) < quantos || jaFezOQuickhack(ligacao.ultimoQuickhack, agora)) return null;
+  const item = (await game.system.api.wiki.carregarCatalogo())[pedido.id];
+  const nivel = item?.flags?.[SISTEMA]?.quickhack;
+  if (!nivel || !fazOQuickhack(ator.system.rankDeInterface, nivel.rank)) return null;
+  const passou = passouOQuickhack(pedido.total, nivel.dv);
+  const alertou = passou && nivel.alerta;
+  const percebido = ligacao.percebido || alertou;
+  const meu = neuroportDe(ator);
+  await ator.setFlag(SISTEMA, FLAG, { ...meu, ligacoes: meu.ligacoes.map(outra => (outra.alvo === pedido.alvo ? { ...outra, ultimoQuickhack: agora, percebido } : outra)) });
+  if (alertou) {
+    const dele = neuroportDe(alvo.actor);
+    await alvo.actor.setFlag(SISTEMA, FLAG, { ...dele, invasores: dele.invasores.map(invasor => (invasor.netrunner === ator.uuid ? { ...invasor, percebido: true } : invasor)) });
+  }
+  const nome = tokenNaCena(ator, alvo.parent)?.name ?? ator.name;
+  const efeito = passou ? await efeitoDoQuickhack(pedido.id, item, alvo, nome) : null;
+  const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
+  const conta = `${pedido.total} contra DV ${nivel.dv}`;
+  const frase = passou
+    ? `${a} fez o ${esc(item.name)} em ${b} (${conta})${alertou ? `, e ${b} percebeu` : ' sem alertar o alvo'}.`
+    : `${a} não conseguiu o ${esc(item.name)} em ${b} (${conta}).`;
+  return cartao({
+    ator, alvo: alvo.actor, percebido, falante: nome, frase, notas: efeito ? [efeito.texto] : [],
+    resumo: { resultado: passou ? 'quickhack' : 'falhou', quickhack: item.name, total: pedido.total, dv: nivel.dv, alertou, dano: efeito?.dano ?? null, netrunner: nome, alvo: alvo.name }
+  });
+}
+
+const RESOLVER = { jackin: resolverJackIn, jackout: resolverJackOut, breach: resolverBreach, quickhack: resolverQuickhack };
 
 export function registrarNeuroport() {
   game.socket.on(CANAL, mensagem => {

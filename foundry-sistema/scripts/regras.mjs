@@ -484,6 +484,14 @@ export function passwallsDoAlvo(selfIces) {
   return { quantos, dv: DV_DO_PASSWALL[quantos] ?? null };
 }
 export const passouOPasswall = (total, dv) => Number(total) > Number(dv);
+
+// O quickhack (a wiki: "depois de passar todos os Passwalls, Interface contra a DV do quickhack. Um quickhack por alvo
+// por turno: errou o Puppet, não dá para tentar o Overheat no mesmo alvo nesse turno"; "O Rank dá os níveis: DV6 no Rank
+// 1, DV8 no 2, DV10 no 3 e DV12 no 4"): o netrunner faz os do Rank dele para baixo; passa com o resultado acima da DV. A
+// vez é por rodada de combate (fora de combate, não conta); errado ou certo, o quickhack daquela rodada já foi.
+export const fazOQuickhack = (rankDeInterface, rankDoQuickhack) => Number(rankDoQuickhack) >= 1 && Number(rankDeInterface) >= Number(rankDoQuickhack);
+export const passouOQuickhack = (total, dv) => Number(total) > Number(dv);
+export const jaFezOQuickhack = (ultimo, agora) => Boolean(agora?.combate && ultimo?.combate === agora.combate && ultimo.rodada === agora.rodada);
 // Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria
 // abaixo de 0, fica com 1 HP e desmaia" (quem já está abaixo de 1 não sobe), e na terceira rodada seguida desmaia.
 // motivo: 'abaixoDeZero' ou 'tresRodadas' quando desmaia.

@@ -4,7 +4,7 @@
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
-import { breach, jackIn, jackOut, neuroportDe, selfIcesDe } from './neuroport.mjs';
+import { breach, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
@@ -68,6 +68,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       jackIn: FichaPersonagem.#jackIn,
       jackOut: FichaPersonagem.#jackOut,
       breach: FichaPersonagem.#breach,
+      quickhack: FichaPersonagem.#quickhack,
       conectarNaNet: FichaPersonagem.#conectarNaNet,
       abrirNet: FichaPersonagem.#abrirNet,
       desconectarDaNet: FichaPersonagem.#desconectarDaNet,
@@ -390,6 +391,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #jackIn(evento) { return jackIn(this.actor, { perguntar: comJanela(evento) }); }
   static #jackOut(evento, alvo) { return jackOut(this.actor, alvo.dataset.alvo); }
   static #breach(evento, alvo) { return breach(this.actor, alvo.dataset.alvo, { perguntar: comJanela(evento) }); }
+  static #quickhack(evento, alvo) { return quickhack(this.actor, alvo.dataset.alvo, { perguntar: comJanela(evento) }); }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
   // "Conectar", "Abrir a NET" e "Desconectar" na aba NET (as maquetes do usuário), pelo motor da NET (netrun): as mesmas

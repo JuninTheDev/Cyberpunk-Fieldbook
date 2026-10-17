@@ -232,8 +232,9 @@ function cyberware(raw, grupo) {
   };
 }
 
-// Os cartões dos quickhacks: { name, tag, stats: [[rótulo, valor]], text, extra, tip }.
+// Os cartões dos quickhacks: { name, tag, stats: [[rótulo, valor]], text, extra, tip, raw: { dv, rank, origem } }.
 const detalhes = cartao => cartao.stats.map(([rotulo, valor]) => `${rotulo}: ${valor}`).join(' · ');
+const doCartao = (cartao, rotulo) => (cartao.stats.find(([nome]) => nome === rotulo) || [])[1];
 
 // A droga do Mission Kit (Kit p. 31). Os efeitos são de Humanidade e o mestre os resolve: a droga não tem efeito na ficha.
 const IMMUNOBLOCKERS = '<p><b>Droga do Mission Kit</b> · 100eb (Premium) a dose · não vicia</p><p><b>Efeito primário:</b> recupera 2d6 de Humanidade, sem passar da Humanidade máxima que a terapia permite. Dura um mês, mas pode acabar antes, num momento estressante (o mestre decide).</p><p><b>Efeito secundário (DV21):</b> perde a Humanidade ganha com a droga, e alucinações dão −2 em todo teste por 60 segundos (20 rodadas). Se nesse tempo não injetar 2 doses de Immunoblockers (uma Ação), perde 4d6 de Humanidade no fim dos 60 segundos (sem mexer na máxima). Abaixo de 0: ciberpsicose extrema, e o mestre pode dar +2 em todo teste até a Humanidade voltar a ser positiva.</p>';
@@ -260,16 +261,20 @@ function deck({ maker, model, quality, slots, cost, text }) {
   };
 }
 // Os quickhacks viram programas de preço 0: ninguém compra (todo netrunner faz os do nível dele, pelo Rank de
-// Interface), e a ficha mostra o cartão; o sistema não rola nada sozinho. Os do Kit, p. 16; os do suplemento, p. 17.
+// Interface), e a ficha mostra o cartão. Os do Kit, p. 16; os do suplemento, p. 17. O nível (a DV e o Rank de
+// Interface que o faz) e se alerta o alvo ficam na flag quickhack, para o Neuroport (neuroport.mjs): a wiki, "um
+// quickhack que deu certo alerta, menos o Lure"; os do suplemento dizem no cartão ("Alerta o alvo: não").
 function quickhack(cartao) {
   const kit = cartao.raw?.origem === 'kit';
   const [livro, pagina] = kit ? [KIT, 16] : [SUPLEMENTO, 17];
+  const alerta = !/não o alerta/.test(String(cartao.text)) && doCartao(cartao, 'Alerta o alvo') !== 'não';
   return {
     name: cartao.name, type: 'programa', img: 'icons/svg/lightning.svg',
     system: {
       descricao: `<p><b>${cartao.tag}</b> · ${detalhes(cartao)}</p>${paragrafo(cartao.text)}${cartao.extra || ''}${paragrafo(cartao.tip, 'Na mesa')}${fonteNaWiki(livro, pagina)}`,
       classe: 'quickhack', atk: 0, def: 0, rez: 0, ram: 0, dano: { padrao: '0', blackIce: '0' }, tamanho: 1, instaladoEm: '', preco: 0, fonte: fonte(livro, pagina)
-    }
+    },
+    flags: { [SISTEMA]: { quickhack: { dv: Number(cartao.raw?.dv) || 0, rank: Number(cartao.raw?.rank) || 0, alerta } } }
   };
 }
 

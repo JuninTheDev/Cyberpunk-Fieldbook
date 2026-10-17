@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 97). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 98). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -138,7 +138,9 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] o Jack In e o Jack Out (a WILL do alvo pela janela de reação, a ligação nas duas fichas, o alcance do deck
     externo e o alvo à vista): ciclo 95;
   - [x] o Breach nos Passwalls do Self-ICE: ciclo 96;
-  - [ ] os quickhacks (a DV pelo Rank, um por alvo por turno, os efeitos simples) e a expulsão;
+  - [x] os quickhacks (a DV pelo Rank, um por alvo por rodada, o alerta e o Synapse Burnout): ciclo 97;
+  - [ ] os outros efeitos simples dos quickhacks (o fogo do Overheat, o MOVE do Impair Movement e do Slow, o System
+    Reset) e a expulsão;
   - [ ] as Ações NET fora da arquitetura (o Jack In e o quickhack em combate) e o Jack Out inseguro (sair do alcance,
     os 60 minutos);
   - [ ] o deck na Neuroport Cyberdeck Port (20 m contra arquiteturas, 50 m contra Neuroports);

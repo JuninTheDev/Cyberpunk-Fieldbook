@@ -3099,7 +3099,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && noAlvo.r?.resultado === 'percebido' && noAlvo.r.ataque === 6 && noAlvo.r.defesa === w.Alvo + 5
           && noAlvo.cartao?.texto === `${NOME} entrou no Neuroport de Alvo (6 contra ${w.Alvo + 5}), mas Alvo percebeu.` && noAlvo.cartao.para === 'Gamemaster,Jogador'
           && noAlvo.netrunner.ligacoes === 'Alvo:true' && noAlvo.alvo.invasores === `${NOME}:true` && fichaDoAlvo === `No seu Neuroport: ${NOME}`
-          && noCapanga.ligacoes.join(' | ') === 'Alvo percebeu Jack Out | Capanga não percebeu Jack Out' && noCapanga.titulo === 'NEUROPORTSJACK IN NO ALVO MARCADO · ATÉ 6 M'
+          && noCapanga.ligacoes.join(' | ') === 'Alvo percebeu Quickhack Jack Out | Capanga não percebeu Quickhack Jack Out' && noCapanga.titulo === 'NEUROPORTSJACK IN NO ALVO MARCADO · ATÉ 6 M'
           && depoisDoCapanga.cartao?.resultado === 'entrou' && depoisDoCapanga.cartao.ataque === 11 && depoisDoCapanga.cartao.defesa === w.Capanga + 2
           && depoisDoCapanga.cartao.texto === `${NOME} entrou no Neuroport de Capanga (11 contra ${w.Capanga + 2}) sem ser percebido.` && depoisDoCapanga.cartao.para === 'Gamemaster,Jogador'
           && depoisDoCapanga.capanga.invasores === `${NOME}:false`
@@ -3124,7 +3124,7 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    await r.passo('Breach nos Passwalls do Neuroport (wiki: "passa um Passwall (um por Self-ICE do alvo), Interface contra a DV dele: 6 com um Self-ICE, 8 com dois, 10 com três"): o Capanga com dois Self-ICE (DV 8); pela ficha, o Breach com 7 não passa, com 9 passa um (falta 1) e com 10 passa o último (o Neuroport aberto aos quickhacks); depois, o Breach sai da ficha e avisa', async () => {
+    await r.passo('Breach nos Passwalls do Neuroport (wiki: "passa um Passwall (um por Self-ICE do alvo), Interface contra a DV dele: 6 com um Self-ICE, 8 com dois, 10 com três"): o Capanga com dois Self-ICE (DV 8); pela ficha, o Breach com 7 não passa, com 9 passa um (falta 1) e com 10 passa o último (o Neuroport aberto aos quickhacks); depois, o Breach sai da ficha e avisa; os quickhacks do Rank (fora de combate): o Lure passa sem alertar, o Synapse Burnout pela janela da ficha passa, alerta o Capanga e tira 3d6 do HP, e o Puppet não passa da DV 12', async () => {
       const NOME = 'Teste Netrunner Breach';
       let montado = null;
       try {
@@ -3142,7 +3142,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const instalado = id => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), { 'system.instalado': true });
           const itens = (await capanga.actor.createEmbeddedDocuments('Item', [instalado('cyberware-2077:neuroport'), instalado('cyberware-2077:self-ice'), instalado('cyberware-2077:self-ice')])).map(i => i.id);
           await __esperar(() => canvas.tokens.get(token.id));
-          return { ator: ator.id, token: token.id, itens };
+          return { ator: ator.id, token: token.id, itens, hp: capanga.actor.system.hp.value };
         })()`);
         const cartoes = `game.messages.contents.filter(m => ['passou', 'barrado'].includes(m.getFlag('${S}', 'neuroport')?.resultado)).map(m => ({ ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, '') }))`;
         // O Jack In pela API (o jogador: 4 + 9 = 13; o mestre rola a WILL do Capanga: 5 + 1 = 6).
@@ -3172,6 +3172,23 @@ module.exports = async ({ edge, servidores, r }) => {
         };
         const antes = await edge.evaluate(`${cartoes}.length`);
         const inicio = await jogador.evaluate(linha);
+        // Antes dos Passwalls, o quickhack avisa e não rola; e, no Rank 2, a lista tem só os 8 dos Ranks 1 e 2.
+        const antesDoBreach = await jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          const mensagens = game.messages.size;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try { await game.system.api.neuroport.quickhack(ator, canvas.scene.tokens.find(t => t.name === 'Capanga').uuid, { escolha: 'netrunning-2077:lure' }); } finally { delete ui.notifications.warn; }
+          return { avisos, rolou: game.messages.size !== mensagens };
+        })()`);
+        await edge.evaluate(`game.actors.get('${montado.ator}').update({ 'system.role.rank': 2 }).then(() => true)`);
+        const noRank2 = await jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          for (let i = 0; i < 40 && ator.system.rankDeInterface !== 2; i++) await new Promise(r => setTimeout(r, 100));
+          return (await game.system.api.neuroport.quickhacksDe(ator)).map(q => q.rank).join();
+        })()`);
+        await edge.evaluate(`game.actors.get('${montado.ator}').update({ 'system.role.rank': 4 }).then(() => true)`);
+        await jogador.evaluate(`(async () => { const ator = game.actors.get('${montado.ator}'); for (let i = 0; i < 40 && ator.system.rankDeInterface !== 4; i++) await new Promise(r => setTimeout(r, 100)); return true; })()`);
         const b7 = await breach(3, antes);
         const b9 = await breach(5, antes + 1);
         const b10 = await breach(6, antes + 2);
@@ -3182,13 +3199,57 @@ module.exports = async ({ edge, servidores, r }) => {
           try { await game.system.api.neuroport.breach(ator, canvas.scene.tokens.find(t => t.name === 'Capanga').uuid); } finally { delete ui.notifications.warn; }
           return { avisos, botao: Boolean(ator.sheet.element?.querySelector('.neuroports [data-action=breach]')), passados: ator.getFlag('${S}', 'neuroport').ligacoes[0].passados };
         })()`);
-        const info = { montado, inicio, b7, b9, b10, depois };
+        // Os quickhacks (fora de combate, sem a vez): o Lure (4 + 8 = 12 contra DV 10) passa sem alertar; o Synapse Burnout
+        // pela ficha (4 + 7 = 11 contra 10; o mestre rola os 3d6: 3 + 4 + 5 = 12) alerta e tira 12 do HP; o Puppet (4 + 2 =
+        // 6 contra 12) não passa.
+        const qhCartoes = `game.messages.contents.filter(m => ['quickhack', 'falhou'].includes(m.getFlag('${S}', 'neuroport')?.resultado)).map(m => ({ ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim() }))`;
+        const qhAntes = await edge.evaluate(`${qhCartoes}.length`);
+        const pelaApi = async (id, d10, n) => {
+          await fixar(jogador, [[d10, 10]]);
+          await jogador.evaluate(`game.system.api.neuroport.quickhack(game.actors.get('${montado.ator}'), canvas.scene.tokens.find(t => t.name === 'Capanga').uuid, { escolha: '${id}' }).then(() => true)`);
+          return edge.evaluate(`(async () => { await __esperar(() => ${qhCartoes}.length === ${n}); return ${qhCartoes}.at(-1) ?? null; })()`);
+        };
+        const lure = await pelaApi('netrunning-2077:lure', 8, qhAntes + 1);
+        await jogador.sleep(400);
+        const linhaLure = await jogador.evaluate(linha);
+        await fixar(jogador, [[7, 10]]);
+        await fixar(edge, [[3, 6], [4, 6], [5, 6]]);
+        const janelaQh = await jogador.evaluate(`(async () => {
+          const ficha = game.actors.get('${montado.ator}').sheet;
+          ficha.element.querySelector('.neuroports [data-action=quickhack]').click();
+          const dialogo = () => [...foundry.applications.instances.values()].find(app => app.options.classes?.includes('escolher-quickhack') && app.rendered);
+          for (let i = 0; i < 40 && !dialogo()?.element?.querySelector('select[name=quickhack]'); i++) await new Promise(r => setTimeout(r, 100));
+          const select = dialogo().element.querySelector('select[name=quickhack]');
+          const opcoes = [...select.options].map(o => o.textContent.trim());
+          select.value = 'netrunning-2077:synapse-burnout';
+          dialogo().element.querySelector('button[data-action=ok]').click();
+          return { opcoes: opcoes.length, primeira: opcoes[0], ultima: opcoes.at(-1) };
+        })()`);
+        const burnout = await edge.evaluate(`(async () => {
+          await __esperar(() => ${qhCartoes}.length === ${qhAntes + 2});
+          const capanga = __token('Capanga').actor;
+          return { cartao: ${qhCartoes}.at(-1) ?? null, hp: capanga.system.hp.value, invasor: (capanga.getFlag('${S}', 'neuroport')?.invasores ?? []).map(i => i.percebido).join() };
+        })()`);
+        await jogador.sleep(400);
+        const linhaBurnout = await jogador.evaluate(linha);
+        const puppet = await pelaApi('netrunning-2077:puppet', 2, qhAntes + 3);
+        const info = { montado, inicio, antesDoBreach, noRank2, b7, b9, b10, depois, lure, linhaLure, janelaQh, burnout, linhaBurnout, puppet };
+        const h = montado.hp;
         const ok = inicio === 'Capanga não percebeu PASSWALLS 0/2 · DV 8 Breach Jack Out'
+          && antesDoBreach.avisos.join() === 'Passe antes os Passwalls de Capanga (o Breach).' && !antesDoBreach.rolou && noRank2 === '1,1,2,2,1,2,2,2'
           && b7.cartao?.resultado === 'barrado' && b7.cartao.total === 7 && b7.cartao.texto === `${NOME} não passou o Passwall de Capanga (Breach 7 contra DV 8).` && b7.linha === inicio
           && b9.cartao?.resultado === 'passou' && b9.cartao.total === 9 && b9.cartao.texto === `${NOME} passou um Passwall de Capanga (Breach 9 contra DV 8): falta 1.` && b9.linha === 'Capanga não percebeu PASSWALLS 1/2 · DV 8 Breach Jack Out'
           && b10.cartao?.resultado === 'passou' && b10.cartao.passados === 2 && b10.cartao.texto === `${NOME} passou um Passwall de Capanga (Breach 10 contra DV 8): o Neuroport está aberto aos quickhacks.`
-          && b10.linha === 'Capanga não percebeu PASSWALLS 2/2 · DV 8 Jack Out'
-          && depois.avisos.join() === `${NOME} já passou os Passwalls de Capanga.` && !depois.botao && depois.passados === 2;
+          && b10.linha === 'Capanga não percebeu PASSWALLS 2/2 · DV 8 Quickhack Jack Out'
+          && depois.avisos.join() === `${NOME} já passou os Passwalls de Capanga.` && !depois.botao && depois.passados === 2
+          && lure?.resultado === 'quickhack' && lure.quickhack === 'Lure' && lure.total === 12 && lure.alertou === false
+          && lure.texto.startsWith(`${NOME} fez o Lure em Capanga (12 contra DV 10) sem alertar o alvo. O mestre aplica: No começo do próximo turno do alvo`)
+          && linhaLure === 'Capanga não percebeu PASSWALLS 2/2 · DV 8 Quickhack Jack Out'
+          && janelaQh.opcoes === 16 && janelaQh.primeira === 'Impair Movement (DV 6)' && janelaQh.ultima === 'Memory Wipe (DV 10)'
+          && burnout.cartao?.resultado === 'quickhack' && burnout.cartao.quickhack === 'Synapse Burnout' && burnout.cartao.total === 11 && burnout.cartao.alertou === true && burnout.cartao.dano === 12
+          && burnout.cartao.texto === `${NOME} fez o Synapse Burnout em Capanga (11 contra DV 10), e Capanga percebeu. 12 de dano direto no HP de Capanga, sem a armadura (${h} → ${h - 12}).`
+          && burnout.hp === h - 12 && burnout.invasor === 'true' && linhaBurnout === 'Capanga percebeu PASSWALLS 2/2 · DV 8 Quickhack Jack Out'
+          && puppet?.resultado === 'falhou' && puppet.total === 6 && puppet.texto === `${NOME} não conseguiu o Puppet em Capanga (6 contra DV 12).`;
         return [ok, JSON.stringify(info)];
       } finally {
         if (montado) {
@@ -3198,6 +3259,7 @@ module.exports = async ({ edge, servidores, r }) => {
             const capanga = __token('Capanga').actor;
             await capanga.deleteEmbeddedDocuments('Item', ${JSON.stringify(montado.itens)}.filter(id => capanga.items.get(id)));
             await capanga.unsetFlag('${S}', 'neuroport');
+            await capanga.update({ 'system.hp.value': ${montado.hp} });
             await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
             await ator?.delete();
             return true;

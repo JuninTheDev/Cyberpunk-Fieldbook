@@ -7,7 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { alcanceDoJackIn, DV_DO_PASSWALL, JACK_IN, passouOPasswall, passwallsDoAlvo, percebeuOJackIn } from '../../foundry-sistema/scripts/regras.mjs';
+import vm from 'node:vm';
+import { alcanceDoJackIn, DV_DO_PASSWALL, fazOQuickhack, JACK_IN, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn } from '../../foundry-sistema/scripts/regras.mjs';
 import { barra, paredeNoMeio } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -53,4 +54,37 @@ test('os Passwalls do Self-ICE (wiki: o Breach e o Self-ICE): um por Self-ICE, a
   assert.equal(passouOPasswall(8, 8), false);
   assert.equal(passouOPasswall(9, 8), true);
   assert.equal(passouOPasswall('7', 6), true);
+});
+
+test('o quickhack pela wiki: os do Rank do netrunner para baixo, contra a DV dele; um por alvo por rodada de combate (errado ou certo); fora de combate, sem a vez', () => {
+  assert.ok(wiki.includes('<b>Quickhack:</b> depois de passar todos os Passwalls, Interface contra a DV do quickhack. <b>Um quickhack por alvo por turno</b>: errou o Puppet, não dá para tentar o Overheat no mesmo alvo nesse turno.'));
+  assert.ok(wiki.includes('O Rank dá os níveis: DV6 no Rank 1, DV8 no 2, DV10 no 3 e DV12 no 4.'));
+  assert.deepEqual([[4, 4], [3, 4], [1, 1], [10, 2], [0, 1], [4, 0]].map(([meu, dele]) => fazOQuickhack(meu, dele)), [true, false, true, true, false, false]);
+  assert.equal(passouOQuickhack(10, 10), false);
+  assert.equal(passouOQuickhack(11, 10), true);
+  const agora = { combate: 'c1', rodada: 2 };
+  assert.equal(jaFezOQuickhack({ combate: 'c1', rodada: 2 }, agora), true);
+  assert.equal(jaFezOQuickhack({ combate: 'c1', rodada: 1 }, agora), false);
+  assert.equal(jaFezOQuickhack({ combate: 'c0', rodada: 2 }, agora), false);
+  assert.equal(jaFezOQuickhack(undefined, agora), false);
+  assert.equal(jaFezOQuickhack(null, null), false);
+  assert.equal(jaFezOQuickhack({ combate: null, rodada: null }, null), false);
+});
+
+test('os quickhacks no catálogo: os 16 da wiki (11 do Kit e 5 do suplemento), cada um com a DV e o Rank do cartão; não alertam o Lure e os que o cartão diz que não', () => {
+  const contexto = { window: {} };
+  for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-net.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, arquivo), 'utf8'), contexto);
+  const cartoes = [...contexto.window.systemNet.data.quickhacks.kit, ...contexto.window.systemNet.data.quickhacks.fa];
+  const catalogo = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'dados', 'catalogo.json'), 'utf8')).itens;
+  const quickhacks = Object.values(catalogo).filter(item => item.system?.classe === 'quickhack');
+  assert.equal(cartoes.length, 16);
+  assert.equal(quickhacks.length, 16);
+  for (const cartao of cartoes) {
+    const item = quickhacks.find(q => q.name === cartao.name);
+    assert.ok(item, cartao.name);
+    assert.deepEqual([item.flags['cpr-fieldbook'].quickhack.dv, item.flags['cpr-fieldbook'].quickhack.rank], [cartao.raw.dv, cartao.raw.rank], cartao.name);
+  }
+  assert.deepEqual(quickhacks.filter(q => !q.flags['cpr-fieldbook'].quickhack.alerta).map(q => q.name).sort(), ['Lure', 'Memory Wipe', 'Request Backup']);
+  // O nível pelo Rank: DV6 no Rank 1, DV8 no 2, DV10 no 3, DV12 no 4.
+  for (const q of quickhacks) assert.equal(q.flags['cpr-fieldbook'].quickhack.dv, { 1: 6, 2: 8, 3: 10, 4: 12 }[q.flags['cpr-fieldbook'].quickhack.rank], q.name);
 });

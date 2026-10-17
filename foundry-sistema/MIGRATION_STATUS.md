@@ -4710,6 +4710,71 @@ Commit anterior: `760cc297` (ciclo 95).
   - o deck na Neuroport Cyberdeck Port.
 - **Próximo:** o C9, parte 3 (os quickhacks).
 
+### Ciclo 97 (2026-10-17): o C9, parte 3a: os quickhacks (sessão KouArt)
+
+Commit anterior: `18754f05` (ciclo 96).
+
+- **A referência (a wiki):**
+  - **"Quickhacks no Neuroport":** "Quickhack: depois de passar todos os Passwalls, Interface contra a DV do quickhack.
+    Um quickhack por alvo por turno: errou o Puppet, não dá para tentar o Overheat no mesmo alvo nesse turno";
+    "Expulsar: o alvo que percebe (um quickhack que deu certo alerta, menos o Lure)";
+  - **a tabela das habilidades:** "O Rank dá os níveis: DV6 no Rank 1, DV8 no 2, DV10 no 3 e DV12 no 4";
+  - **os 16 cartões:** 11 do Kit e 5 do suplemento que a mesa aprovou, cada um com a DV, o Rank e o efeito. Dois do
+    suplemento dizem "Alerta o alvo: não";
+  - **a decisão do usuário:** "rolagens e efeitos simples". O sistema aplica o que é número, e o resto vai ao chat.
+- **Implementado:**
+  - **o build** (`conteudo-2077.mjs`): cada quickhack guarda a DV, o Rank e se alerta o alvo (a flag `quickhack`; não
+    alertam o Lure, o Request Backup e o Memory Wipe);
+  - **`regras.mjs`:**
+    - o netrunner faz os quickhacks do Rank dele para baixo;
+    - passa com o resultado acima da DV;
+    - um por alvo por rodada de combate, errado ou certo; fora de combate, a vez não conta;
+  - **`neuroport.mjs`:**
+    - **os quickhacks do netrunner:** os do catálogo até o Rank dele;
+    - **o quickhack:** com os Passwalls passados, a janela de escolha (o nome e a DV de cada um), a habilidade
+      Quickhack + 1d10 e a vez daquela rodada;
+    - **o mestre ativo:** confere tudo de novo e marca a vez;
+    - **o alerta:** o quickhack que deu certo alerta o alvo (os dois lados da ligação passam a "percebido"), menos o que
+      não alerta;
+    - **o Synapse Burnout:** 3d6 direto no HP, sem a armadura;
+    - **os outros:** o cartão traz o efeito ("O mestre aplica: ...");
+  - **a ficha:** o botão "Quickhack" na ligação sem Passwall pela frente.
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 117 de 129 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, 2 testes de referência:
+    - **as regras pelo texto da wiki:** o Rank, a DV e a vez por rodada;
+    - **o catálogo contra os 16 cartões:** a DV e o Rank de cada um, os 3 que não alertam e o nível pelo Rank;
+  - G4: 111 de 120 (as 9 conhecidas da integração). O passo do Breach (ciclo 96) ganhou os quickhacks e passou na
+    primeira rodada:
+    - **antes dos Passwalls:** o quickhack avisa ("Passe antes os Passwalls de Capanga (o Breach).") e não rola;
+    - **no Rank 2:** a lista tem só os 8 dos Ranks 1 e 2;
+    - **depois dos Passwalls, fora de combate:**
+      - o Lure (12 contra DV 10) passa sem alertar, com o efeito no cartão para o mestre narrar;
+      - o Synapse Burnout, pela janela da ficha, que lista os 16, passa (11 contra 10): o mestre rola os 3d6 (12), o HP
+        do Capanga cai 12, e a ligação passa a "percebeu" dos dois lados;
+      - o Puppet (6 contra DV 12) não passa;
+    - **a linha da ligação:** o botão "Quickhack" está nela, e por isso os passos do Jack In e do Breach têm o texto
+      novo;
+  - **mutações:** as 8 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o Rank igual que não faz (Q1);
+      - o empate com a DV que passa (Q2);
+      - a vez sem a rodada (Q3).
+    - **No G4:**
+      - nenhum quickhack alerta (Q5);
+      - o Synapse Burnout sem o dano (Q6);
+      - o quickhack sem os Passwalls passados (Q7);
+      - o botão com Passwall pela frente (Q8);
+      - a lista sem o Rank (Q9).
+    - **Fica sem mutação a flag do build** (se o quickhack alerta): o G3 confere o catálogo gerado contra a wiki, e a
+      mutação no build só valeria com o catálogo gerado de novo.
+- **Pendências** (as outras partes do C9):
+  - os outros efeitos simples (o fogo do Overheat, o MOVE do Impair Movement e do Slow, o System Reset);
+  - a expulsão;
+  - as Ações NET fora da arquitetura e o Jack Out inseguro;
+  - o deck na Neuroport Cyberdeck Port.
+- **Próximo:** o C9, parte 3b (os efeitos simples).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
