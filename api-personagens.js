@@ -14,10 +14,10 @@ const fs = require('fs');
 const path = require('path');
 const { createCampaigns } = require('./api-campanhas');
 const { createAccountStores } = require('./api-contas');
+const characterRoles = require('./personagem-roles');
+const characterCyberware = require('./personagem-cyberware');
+const creationRules = require('./system-criacao');
 
-// As 10 Roles do RED (com os ajustes dos anos 2070 do Mission Kit). Face e Corpo, do suplemento de fã, viram as do RED.
-const ROLES = ['rockerboy', 'solo', 'netrunner', 'tech', 'medtech', 'media', 'exec', 'lawman', 'fixer', 'nomad'];
-const ROLES_ANTIGAS = { face: 'rockerboy', corpo: 'exec' };
 const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
@@ -88,7 +88,10 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const randomFrom = (chars, length) => Array.from(crypto.randomBytes(length), byte => chars[byte % chars.length]).join('');
   const newCode = () => `NC-${randomFrom(CODE_CHARS, 4)}-${randomFrom(CODE_CHARS, 4)}`;
   const newId = () => randomFrom('abcdefghijkmnpqrstuvwxyz23456789', 10);
-  const playerCookie = request => decodeURIComponent(((request.headers.cookie || '').match(/(?:^|;\s*)jogador=([^;]+)/) || [])[1] || '');
+  const playerCookie = request => {
+    try { return decodeURIComponent(((request.headers.cookie || '').match(/(?:^|;\s*)jogador=([^;]+)/) || [])[1] || ''); }
+    catch { return ''; } // Um cookie malformado vale como ausente, sem interromper a wiki.
+  };
   const findAccount = code => code ? readAccounts().find(account => sameSecret(account.codigo, code)) : null;
   // O cookie do jogador: a sessão (só um identificador aleatório). Max-Age 0 apaga. No servidor (https), só vai por https.
   const sessionCookie = (token, maxAge = 31536000) => `jogador=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secureCookies ? '; Secure' : ''}`;
@@ -193,7 +196,11 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // Retrato: o arquivo enviado (servido por esta API) ou um link https colado pelo jogador.
   const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
   // O que os outros jogadores da campanha veem: nome, apelido, Role e retrato. O resto só o dono e o mestre.
-  const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', retrato: portraitOf(doc), donoNome: ownerName(accounts, doc.dono), campanha: campaignOf(doc), publico: true });
+  const roleSummary = doc => {
+    const mesa = characterRoles.listaMesa(doc);
+    return (mesa.length ? mesa : characterRoles.lista(doc)).map(({ id, rank }) => ({ id, rank }));
+  };
+  const publicView = (doc, accounts) => ({ id: doc.id, nome: doc.nome || '', apelido: doc.apelido || '', role: doc.role || '', roles: roleSummary(doc), retrato: portraitOf(doc), donoNome: ownerName(accounts, doc.dono), campanha: campaignOf(doc), publico: true });
   const summary = (doc, accounts) => ({ ...publicView(doc, accounts), publico: false, dono: doc.dono, metodo: doc.metodo || '', versao: doc.versao, atualizado: doc.atualizado, foundry: linkOf(doc), foundry12: doc.foundry || null, foundry14: doc.foundry14 || null, envio: doc.envio || null, estadoFoundry: foundryState(doc), mesa: doc.mesa ? { hp: doc.mesa.hp || null, recebido: doc.mesa.recebido, geracao: Number(doc.mesa.geracao) || 12 } : null, numeros: numbersOf(doc),
     // resolvidos: o que o mestre decidiu (ou o Foundry entregou), para o botão da conta do jogador avisar.
     pedidos: { pendentes: (doc.pedidos || []).filter(item => item.status === 'pendente').length, aprovados: (doc.pedidos || []).filter(item => item.status === 'aprovado').length,
@@ -231,19 +238,56 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota). Os três últimos
   // a API calcula na resposta e não vão para o arquivo.
   // A campanha (e o histórico de mudanças de campanha) só o mestre muda, pela rota /campanha.
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'foundry12', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico'];
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'foundry12', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico', 'roles'];
   // O que o jogador não muda mais pela wiki depois que o personagem foi importado no Foundry.
-  const LOCKED_AFTER_IMPORT = ['role', 'especializacao', 'metodo', 'stats', 'sorteio', 'pericias', 'tipos', 'extras', 'lingua', 'casa', 'kitNet', 'quickhacks', 'escolhas', 'itens',
+  const LOCKED_AFTER_IMPORT = ['role', 'rankRole', 'roleSecundaria', 'especializacao', 'metodo', 'stats', 'sorteio', 'pericias', 'tipos', 'extras', 'lingua', 'casa', 'kitNet', 'quickhacks', 'escolhas', 'itens',
     'habilidades', 'oficina', 'montagem', 'moradia', 'estiloVida', 'traumaTeam', 'estiloModa'];
+  function cleanCyberware(doc) {
+    const items = catalog();
+    const source = [...(Array.isArray(doc.itens) ? doc.itens : []), ...(Array.isArray(doc.resultado?.itens) ? doc.resultado.itens : [])];
+    const rows = new Map(source.filter(entry => entry && typeof entry === 'object' && entry.uid).map(entry => [entry.uid, entry]));
+    const mounts = doc.montagem && typeof doc.montagem === 'object' && !Array.isArray(doc.montagem) ? doc.montagem : {};
+    for (const [uid, mount] of Object.entries(mounts)) {
+      if (!mount || typeof mount !== 'object' || !Object.hasOwn(mount, 'local')) continue;
+      const item = items.get(rows.get(uid)?.id);
+      mount.local = characterCyberware.normalizar(mount.local, item ? item.cyber?.tipo || '' : undefined);
+    }
+    for (const entry of source) {
+      if (!entry || typeof entry !== 'object') continue;
+      const item = items.get(entry.id);
+      if (Object.hasOwn(entry, 'local')) entry.local = characterCyberware.normalizar(entry.local, item?.cyber?.tipo || '');
+      if (entry.local && !entry.uid) throw Object.assign(new Error('O cyberware precisa de um identificador por unidade para escolher seu local.'), { status: 400 });
+    }
+    const cyberRows = [...rows.values()].filter(entry => items.get(entry.id)?.cyber).map(entry => ({
+      ...entry, cyber: items.get(entry.id).cyber,
+      local: Object.hasOwn(mounts[entry.uid] || {}, 'local') ? mounts[entry.uid].local : entry.local || '',
+      em: mounts[entry.uid]?.em ?? entry.em
+    }));
+    const byUid = new Map(cyberRows.map(entry => [entry.uid, entry]));
+    for (const entry of cyberRows) {
+      const parent = byUid.get(entry.em);
+      if (parent && !entry.cyber.base) {
+        if (!parent.cyber.base || parent.cyber.tipo !== entry.cyber.tipo) throw Object.assign(new Error('A base escolhida não é compatível com este cyberware.'), { status: 400 });
+        entry.local = parent.local;
+      }
+      const output = rows.get(entry.uid);
+      if (entry.local || Object.hasOwn(output, 'local')) output.local = entry.local;
+    }
+    characterCyberware.duplicados(cyberRows);
+  }
   function cleanCharacter(input) {
-    const doc = cleanValue(input && typeof input === 'object' && !Array.isArray(input) ? input : {});
+    let doc = cleanValue(input && typeof input === 'object' && !Array.isArray(input) ? input : {});
     for (const field of SERVER_FIELDS) delete doc[field];
     doc.nome = String(doc.nome || '').trim().slice(0, 80);
     doc.apelido = String(doc.apelido || '').trim().slice(0, 80);
-    if (ROLES_ANTIGAS[doc.role]) doc.role = ROLES_ANTIGAS[doc.role];
-    if (doc.role && !ROLES.includes(doc.role)) doc.role = '';
+    doc = characterRoles.normalizar(doc);
+    if (doc.role) {
+      const roles = characterRoles.resultados(doc, creationRules);
+      doc.resultado = { ...(doc.resultado && typeof doc.resultado === 'object' && !Array.isArray(doc.resultado) ? doc.resultado : {}), role: roles[0], roles };
+    }
     if (doc.retratoLink && !/^https:\/\/[^\s"'<>]+$/.test(String(doc.retratoLink))) doc.retratoLink = '';
     if (doc.retratoLink) doc.retratoLink = String(doc.retratoLink).slice(0, 500);
+    cleanCyberware(doc);
     return doc;
   }
   // Impressão digital da ficha que vai para o Foundry (o `resultado`, sem as pendências). Serve para saber
@@ -279,7 +323,10 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   }
   const importedSomewhere = doc => linksOf(doc).length > 0;
   // A ficha inteira como sai: o vínculo que a wiki mostra (foundry), os dois à parte (foundry12 e foundry14) e o estado.
-  const withLinks = doc => ({ ...doc, foundry: linkOf(doc), foundry12: doc.foundry || null, foundry14: doc.foundry14 || null, estadoFoundry: foundryState(doc) });
+  const withLinks = doc => ({ ...doc,
+    // Expõe o contrato novo também para arquivos antigos, sem regravar a ficha ou mudar seu hash de importação.
+    ...(doc.resultado && !Array.isArray(doc.resultado.roles) ? { resultado: { ...doc.resultado, roles: doc.resultado.role ? [doc.resultado.role] : characterRoles.resultados(doc, creationRules) } } : {}),
+    foundry: linkOf(doc), foundry12: doc.foundry || null, foundry14: doc.foundry14 || null, estadoFoundry: foundryState(doc) });
   // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
   const ipSpent = doc => (Array.isArray(doc.avanco) ? doc.avanco : []).reduce((sum, entry) => sum + Math.max(0, Number(entry.custo) || 0), 0);
@@ -293,7 +340,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       hp: mesa && mesa.hp ? { atual: Number(mesa.hp.atual) || 0, max: Number(mesa.hp.max) || 0 } : (hp ? { atual: hp, max: hp } : null),
       ip: mesa && Number.isFinite(mesa.ip) ? mesa.ip : ipGranted(doc) - ipSpent(doc),
       eb: mesa && Number.isFinite(mesa.dinheiro) ? mesa.dinheiro : (created.dinheiro && Number.isFinite(created.dinheiro.saldo) ? created.dinheiro.saldo : null),
-      rank: (mesa && mesa.role && mesa.role.rank) || (created.role && created.role.rank) || null,
+      rank: (roleSummary(doc).find(role => role.id === doc.role) || {}).rank || (created.role && created.role.rank) || null,
       naMesa: Boolean(mesa && mesa.hp)
     };
   };
@@ -719,9 +766,26 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
               if (inOrder) return Number(inOrder[1]) < lines.length && Number(inOrder[1]) !== index ? `pedido:${pedidoId}:${inOrder[1]}` : '';
               return /^[\w:.-]{1,80}$/.test(text) ? text : '';
             };
-            itens.push({ uid: `pedido:${pedidoId}:${index}`, id: item.id, nome: item.nome, qtd, preco: item.preco, lote: item.lote || 1, foundry: item.foundry, cat: item.cat, cyber: Boolean(item.cyber), em: ref(line.em), municao: ref(line.municao) });
+            const local = characterCyberware.normalizar(line.local, item.cyber?.tipo || '');
+            if (local && qtd !== 1) return reply(400, { erro: `Escolha o local de cada unidade de ${item.nome} em uma linha separada.` });
+            itens.push({ uid: `pedido:${pedidoId}:${index}`, id: item.id, nome: item.nome, qtd, preco: item.preco, lote: item.lote || 1, foundry: item.foundry, cat: item.cat, cyber: Boolean(item.cyber), em: ref(line.em), municao: ref(line.municao), ...(local ? { local } : {}) });
           }
           if (!itens.length) return reply(400, { erro: 'O pedido está vazio.' });
+          // Opções seguem a base escolhida pelo UID, inclusive quando há duas peças com o mesmo nome.
+          for (const line of itens.filter(entry => entry.cyber && entry.em)) {
+            const parent = itens.find(entry => entry.uid === line.em) || (stored.mesa?.itens || []).find(entry => entry.uid === line.em || `foundry:${entry.id}` === line.em);
+            if (!parent && line.em.startsWith('foundry:')) return reply(400, { erro: 'A base escolhida não está mais na ficha. Atualize a loja e escolha novamente.' });
+            if (!parent) continue; // Um cliente antigo pode referenciar um UID ainda ausente no snapshot.
+            const cyber = items.get(line.id).cyber;
+            const base = items.get(parent.id)?.cyber || parent.cyber;
+            if (!base?.tipo) continue;
+            if (base.tipo !== cyber.tipo || !(base.base || parent.base)) return reply(400, { erro: 'A base escolhida não é compatível com este cyberware.' });
+            const local = characterCyberware.normalizar(parent.local || parent.localPlanejado, cyber.tipo);
+            if (line.local && local && line.local !== local) return reply(400, { erro: 'O local da opção deve ser o mesmo da base escolhida.' });
+            if (local && line.qtd !== 1) return reply(400, { erro: 'Escolha o local de cada unidade em uma linha separada.' });
+            if (local) line.local = local;
+          }
+          characterCyberware.duplicados(itens.map(entry => ({ ...entry, cyber: items.get(entry.id)?.cyber })));
           const total = itens.reduce((sum, line) => sum + line.preco * (line.lote > 1 ? line.qtd / line.lote : line.qtd), 0);
           const pedido = { id: pedidoId, criado: new Date().toISOString(), status: 'pendente', itens, total: Math.round(total), nota: String(input.nota || '').trim().slice(0, 300), por: identity.papel };
           const done = await update(doc => {
@@ -779,6 +843,18 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           const stale = staleActor(doc, input.ator);
           if (stale) return stale;
           delete input.campanha;
+          // Clientes antigos enviam só a Role ativa. Atualize essa entrada sem apagar as outras já conhecidas
+          // da mesma geração do Foundry. Não copie Roles entre o 12 e o 14 como se fossem o mesmo ator.
+          if (!Array.isArray(input.roles) && doc.mesa && Array.isArray(doc.mesa.roles) && Number(input.geracao || 12) === Number(doc.mesa.geracao || 12)) {
+            const roles = [...doc.mesa.roles];
+            if (input.role) {
+              const idRole = characterRoles.canonico(input.role.id || input.role.nome);
+              const index = roles.findIndex(role => idRole ? characterRoles.canonico(role.id || role.nome) === idRole : role.nome === input.role.nome);
+              if (index >= 0) roles[index] = input.role;
+              else roles.push(input.role);
+            }
+            input.roles = roles;
+          }
           doc.mesa = { ...input, recebido: new Date().toISOString() };
           return null;
         });
@@ -887,7 +963,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const old = readHistory(id, vid);
         if (!old) return reply(404, { erro: 'Versão não encontrada.' });
         const done = await update(doc => {
-          const kept = Object.fromEntries(['foundry', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, doc[field] || null]));
+          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, doc[field] || null]));
           const restored = { ...cleanCharacter(old), ...kept, id, dono: doc.dono, campanha: campaignOf(doc), versao: doc.versao + 1, criado: doc.criado, atualizado: new Date().toISOString() };
           if (ipSpent(restored) > ipGranted(restored)) return { status: 400, data: { erro: 'Essa versão gasta mais Pontos de Melhoria do que o personagem tem agora.' } };
           snapshot(doc, true);
@@ -897,7 +973,19 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       }
       if (extra) return reply(404, { erro: 'Rota não encontrada.' });
 
-      if (method === 'GET') return reply(200, { personagem: forViewer(identity, canEdit(identity, stored) ? { ...withLinks(stored), campanha: campaignOf(stored), donoNome: ownerName(accounts, stored.dono) } : publicView(stored, accounts)) });
+      if (method === 'GET') {
+        // O Foundry 14 ainda usa uma Role. O importador declara o suporte antes de ler a ficha para que
+        // um cliente antigo não crie um ator descartando a segunda. A navegação da própria wiki segue normal.
+        if (stored.roleSecundaria && foundryOrigins.has(request.headers.origin) && query.get('roles') !== '2') {
+          return reply(409, { erro: 'Este personagem tem duas Roles. Use o módulo atualizado do Foundry 12; a importação de duas Roles no Foundry 14 ainda não está disponível.' });
+        }
+        const temLocais = (stored.resultado?.itens || []).some(entry => entry?.local)
+          || Object.values(stored.montagem || {}).some(entry => entry?.local);
+        if (temLocais && foundryOrigins.has(request.headers.origin) && query.get('locais') !== '1') {
+          return reply(409, { erro: 'Este personagem tem locais de instalação de cyberware. Use o módulo atualizado do Foundry 12 para preservar os lados escolhidos; o importador do Foundry 14 ainda não oferece esse suporte.' });
+        }
+        return reply(200, { personagem: forViewer(identity, canEdit(identity, stored) ? { ...withLinks(stored), campanha: campaignOf(stored), donoNome: ownerName(accounts, stored.dono) } : publicView(stored, accounts)) });
+      }
       if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
       if (method === 'PUT') {
         const input = await readJson(request);
@@ -909,8 +997,12 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
           // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.
           if (importedSomewhere(current) && identity.papel !== 'mestre') {
-            for (const field of LOCKED_AFTER_IMPORT) doc[field] = current[field] === undefined ? doc[field] : current[field];
+            for (const field of LOCKED_AFTER_IMPORT) {
+              if (current[field] === undefined) delete doc[field];
+              else doc[field] = current[field];
+            }
             if (current.resultado) doc.resultado = { ...current.resultado, lifepath: (input.resultado && input.resultado.lifepath) || current.resultado.lifepath };
+            else delete doc.resultado;
           }
           if (ipSpent(doc) > ipGranted(doc)) return { status: 400, data: { erro: 'Pontos de Melhoria insuficientes para esse avanço.' } };
           // A versão de antes vai para o histórico (uma por rodada de edição).

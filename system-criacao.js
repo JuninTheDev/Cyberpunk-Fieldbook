@@ -207,6 +207,7 @@
   const free2077 = [{ id: 'cyberware-2077:neuroport', qtd: 1 }];
   const neuroportIncludes = ['core_cyberware:neural-link', 'core_cyberware:interface-plugs', 'core_cyberware:chipware-socket', 'core_cyberware:biomonitor', 'core_cyberware:virtuality', 'core_cyberware:chyron'];
   // Sub-habilidades da Role no Rank 4, com o nome que o item de Role do Foundry usa (`abilities`).
+  // personagem-roles.js recalcula os pontos e limites para o Rank escolhido em cada uma das duas Roles.
   // pontos: quantos distribuir; max: o máximo em cada uma. `derivadas`: campos que o Foundry espera calculados
   // (a perícia Cirurgia do Medtech vale 2 por ponto em Cirurgia; Tecnologia Médica, Farmacêutica + Criossistemas).
   const roleAbilities = {
@@ -588,8 +589,10 @@
     return { hp, gravemente: Math.ceil(hp / 2), deathSave: values.BODY, humanidade: values.EMP * 10, andar: values.MOVE * 2, correr: values.MOVE * 4 };
   };
 
-  window.systemCreation = {
+  const creation = {
     stats, statTables, roles, basicSkills, streetratSkills, edgerunnerSkills, specializedSkills, languages, originLanguages, homeDistricts,
     packages, methods, completePackage, edgerunnerRules, free2077, neuroportIncludes, housing, derived, roleLifepaths, roleAbilities, nomadMotorpool, roleFreeItems, roleAliases
   };
+  if (typeof module !== 'undefined' && module.exports) module.exports = creation;
+  else window.systemCreation = creation;
 })();

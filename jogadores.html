@@ -44,6 +44,8 @@
   <script src="system-blackchrome.js"></script>
   <script src="system-glossario.js"></script>
   <script src="system-criacao.js"></script>
+  <script src="personagem-roles.js"></script>
+  <script src="personagem-cyberware.js"></script>
   <script src="loja-catalogo.js"></script>
   <script src="popup.js"></script>
   <script src="criador.js"></script>
@@ -180,7 +182,7 @@
         // Sem retrato, as iniciais em amarelo, como nos cartões de Personagens.
         const initials = name => (String(name || '').match(/\p{L}+/gu) || ['?']).slice(0, 2).map(word => word[0]).join('').toUpperCase();
         holder.innerHTML = doc
-          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : `<span class="cc-initials" aria-hidden="true">${escapeHtml(initials(doc.nome))}</span>`}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.roleName(doc.role) || 'sem Role')}${escapeHtml(hp)}</p></div><div class="pv-me-actions"><button class="action solid" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action ghost" type="button" data-pv-switch>Trocar</button></div></div>`
+          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : `<span class="cc-initials" aria-hidden="true">${escapeHtml(initials(doc.nome))}</span>`}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.rolesLabel(doc))}${escapeHtml(hp)}</p></div><div class="pv-me-actions"><button class="action solid" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action ghost" type="button" data-pv-switch>Trocar</button></div></div>`
           : '<div class="pv-me-card pv-me-empty"><div class="pv-me-text"><span class="tag">Seu personagem</span><h3>Nenhum ainda</h3><p>Crie o seu personagem para esta campanha. O mestre leva para o Foundry quando estiver pronto.</p></div><div class="pv-me-actions"><button class="action" type="button" data-pv-new>Criar personagem</button></div></div>';
       }
       document.addEventListener('wiki:personagem', () => renderMe());

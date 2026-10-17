@@ -147,6 +147,8 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `conta.js` | O botão da conta no canto de cima (as duas wikis): entrar, o personagem em uso, novo personagem, trocar de campanha e sair; para o mestre, atalhos, versão, backup e sair. |
 | `popup.js` | Os pop-ups da wiki (confirmar, escrever um motivo, copiar um código) e os avisos rápidos no canto, no lugar das caixas do navegador. |
 | `system-criacao.js` | Regras de criação: as 10 Roles do RED com os ajustes do Mission Kit, tabelas de STAT, perícias, pacotes e Lifepath de cada Role e o Neuroport de graça. |
+| `personagem-roles.js` | As duas Roles pela regra da mesa: Ranks, habilidades, compatibilidade com personagens antigos e retorno da ficha do Foundry. Compartilhado pela wiki e pela API. |
+| `personagem-cyberware.js` | Locais de instalação de cyberbraços, cyberpernas e cyberolhos, com os lados separados e validação compartilhada entre a wiki e a API. |
 | `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
 | `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
@@ -196,17 +198,20 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 2. **Criar:** o jogador abre a wiki dos jogadores, clica em **Entrar** (canto de cima), digita o código uma vez (o aparelho lembra) e, no mesmo menu, clica em **Novo personagem**.
    - **Os passos:** identidade e Role, STATs, perícias, Lifepath, equipamento, moradia e revisão.
    - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 10 Roles do RED (os ajustes dos anos 2070 do Mission Kit) e o Neuroport de graça. Personagens antigos com as Roles do suplemento de fã viram Rockerboy (o Face) e Exec (o Corpo).
+   - **Duas Roles na criação (regra da mesa):** no passo 1, escolha a principal e, se quiser, uma segunda Role diferente. Defina o Rank de cada uma (1 a 10) com o mestre. Personagens antigos continuam com uma Role no Rank 4. Cada Role tem sua própria distribuição de habilidades e Lifepath; a principal continua definindo STATs, perícias e o único pacote/orçamento inicial. Esta escolha não cobra IP.
+     - A ficha, a lista de personagens e o menu da conta mostram as duas Roles e seus Ranks.
+     - Para importar as duas, use o módulo atualizado do **Foundry 12**. O sistema **v14 ainda aceita uma Role**; a wiki avisa e recusa a leitura de importadores antigos que não declaram suporte, antes de criarem um ator incompleto.
    - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
    - **Ajuda:** cada passo tem um "Como funciona" com a página do livro, e um resumo fixo mostra pontos, HP, Humanidade, dinheiro e pendências. As perícias têm a descrição do livro, e os termos de regra levam ao glossário.
    - **Lifepath da Role:** no passo 4, as perguntas próprias da Role (livro p. 54–70), para rolar ou escolher. As respostas vão para o campo Role Lifepath da ficha do Foundry, junto com as notas.
    - **Retrato:** no passo 1, o jogador envia uma imagem (PNG, JPEG ou WebP, reduzida para 512 px antes de sair do aparelho) ou cola um link `https`. Se houver imagem enviada, ela vale no lugar do link. O retrato aparece na ficha, em miniatura na lista de Personagens (inclusive para os outros jogadores) e vai para a ficha e o token no Foundry.
    - **Perícias sugeridas:** no Edgerunner e no Pacote Completo, **Distribuir sugerido** põe os níveis do Rato de Rua da Role (86 pontos certinhos). No Pacote Completo, as 20 perícias da Role aparecem primeiro.
    - **O que a Role ganha além do Rank** (passo 1). Tudo vai para o item de Role e para a ficha no Foundry.
-     - **Solo:** os 4 pontos da Consciência de Combate (RED p. 146).
-     - **Tech:** os 8 pontos das especialidades de Artífice, até 4 em cada (p. 147–148).
-     - **Medtech:** os 4 pontos de Medicina (p. 149). As perícias Cirurgia (2 por ponto) e Tecnologia Médica são calculadas.
-     - **Nomad:** as 4 escolhas da Oficina da Família (p. 161–165), entre veículos e upgrades. No Foundry, os veículos chegam com os upgrades instalados.
-     - **Corpo:** no Pacote Completo, ganha o terno de negócios de graça (o bônus de assinatura do Teamwork). Nos outros métodos, o pacote já traz o terno.
+     - **Solo:** um ponto de Consciência de Combate por Rank (RED p. 146).
+     - **Tech:** dois pontos por Rank nas especialidades de Artífice, até o Rank em cada uma (p. 147–148).
+     - **Medtech:** um ponto de Medicina por Rank (p. 149). As perícias Cirurgia (2 por ponto, até 10) e Tecnologia Médica são calculadas.
+     - **Nomad:** uma escolha da Oficina da Família por Rank (p. 161–165), entre veículos e upgrades. O catálogo do criador oferece os veículos básicos e upgrades de Rank 1; combine opções avançadas com o mestre. No Foundry, os veículos escolhidos chegam com os upgrades instalados.
+     - **Exec:** recebe o terno de negócios sem duplicar peças do pacote principal. A moradia corporativa fica disponível a partir do Rank 2, também quando Exec é a segunda Role.
    - **Montagem** (passo 5, no fim): o equipamento como ele chega no Foundry, em abas (Armas, Armadura e roupa, Cyberware, Netrunning e Outros).
      - Já vem montado: arma carregada com a munição compatível, a armadura de maior SP vestida em cada local, as opções de cyberware nas bases e os programas no cyberdeck.
      - O jogador muda o que quiser: descarregar ou trocar a munição, encaixar um acessório (só nas armas em que ele serve), escolher em qual cyberbraço vai cada opção, tirar um programa do deck, deixar um item guardado.
@@ -279,7 +284,9 @@ Notas:
     - **Os grupos:** Neuralware, Cyberolhos, Cyberaudio, Borgware e Cyberbraços à esquerda; Cyberware interno, Cyberware externo, Fashionware e Cyberpernas à direita.
     - **Os slots:** cada base mostra os slots dela (o Neural Link e o Neuroport têm 5, o cyberolho 3, a Cyberaudio Suite 3, o cyberbraço 4, a cyberperna 3). O corpo tem 7 para o cyberware interno, 7 para o externo e 7 para o fashionware.
     - **O corpo:** a parte com cromo acende em ciano no holograma, e uma linha liga cada grupo a ela.
-    - **Tocar:** num slot ou num nome, abre a ficha do implante (Humanidade, instalação, slots, preço, descrição). Num +, abre a loja do personagem só com o que serve ali: as opções daquele tipo, ou as bases quando o membro é natural. O chip **Para o slot** tira o filtro.
+    - **Local de instalação:** cyberbraços, cyberpernas e cyberolhos distinguem os lados esquerdo e direito. Escolha o local ao comprar ou na **Montagem**, aba **Cyberware**. Cada opção fica ligada ao identificador da base escolhida e herda seu local. Implantes antigos aparecem como **Local não definido**, até a escolha ser feita; a wiki não adivinha o lado.
+    - **Tocar:** num slot ou num nome, abre a ficha do implante (Humanidade, instalação, slots, preço, descrição). Num +, abre a loja do personagem só com o que serve ali, levando o local e a base específicos: as opções daquele tipo, ou as bases quando o membro é natural. O chip **Para o slot** tira o filtro.
+    - **Compra durante a campanha:** o pedido registra o local desejado e a base. O cyberware entregue continua aguardando instalação na ficha do Foundry pelo mestre, que aplica a perda de Humanidade. O retorno da mesa distingue o local instalado do planejamento.
     - **De onde vem:** antes do Foundry, a tela sai da montagem do criador, e embaixo aparece o que ficou sem base. Na mesa, sai da ficha que o Foundry manda (o tipo e os slots de cada peça), e embaixo aparece o que espera o mestre instalar.
     - **Celular:** o corpo vai para cima, menor, e os grupos ficam um embaixo do outro, sem as linhas.
     - **A revisão do criador** (passo 7) mostra a mesma tela;
@@ -352,6 +359,18 @@ O `publicar.bat` faz a mesma conferência e não publica enquanto houver arquivo
 
 ## Testes
 
+Para conferir o código, os documentos e a API enquanto outras sessões trabalham, rode:
+
+```
+node tests/validar.js
+```
+
+Esse comando não abre navegador, não reserva portas e não inicia o Foundry. Confere a sintaxe, os JSONs,
+os documentos e a base da campanha; também executa regressões da API em memória, com dados temporários
+próprios. Os cenários de documentos e base reutilizam essas mesmas verificações.
+Para escolher uma parte: `node tests/validar.js documentos base` ou `node tests/validar.js regressoes`.
+Os detalhes e os limites estão em [tests/README.md](tests/README.md).
+
 Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 
 ```
@@ -359,6 +378,9 @@ node tests/rodar.js
 ```
 
 Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8774), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), a conta e a barra lateral (personagem em uso, pedidos resolvidos, sessões, páginas fixadas, barra compacta, gaveta do celular), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+
+Rode essa suíte uma sessão por vez: as portas de teste e depuração do Edge e a pasta do Foundry de teste
+são compartilhadas entre worktrees. O `tests/validar.js` pode rodar em paralelo.
 
 **Teste dos documentos** (`node tests/rodar.js documentos`): confere os `.md` da campanha. Acusa termos fora do padrão da wiki ("Seriamente Ferido", "Canal", "Cybertech", "Enganação"), palavras comuns sem acento, nomes de perícia que não existem, arquivos citados que não existem, documentos fora da wiki e links para fichas que não existem.
 

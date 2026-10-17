@@ -62,9 +62,11 @@ const unresolvedHelp = campaign => `${campaign.erro} Ligue este mundo a uma: Con
 const esc = text => foundry.utils.escapeHTML ? foundry.utils.escapeHTML(String(text ?? '')) : String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 async function wikiFetch(path, { method = 'GET', body } = {}) {
+  // O contrato de duas Roles também é usado pelos pedidos e pela montagem. Importadores antigos não o anunciam.
+  const endpoint = method === 'GET' && /^\/api\/personagens\/[^/?]+$/.test(path) ? `${path}?roles=2&locais=1` : path;
   let response;
   try {
-    response = await fetch(`${wikiUrl()}${path}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', credentials: 'include' });
+    response = await fetch(`${wikiUrl()}${endpoint}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', credentials: 'include' });
   } catch {
     throw new Error(`Não consegui falar com a wiki em ${wikiUrl()}. Confira o endereço em Configurações do módulo → Endereço da wiki.`);
   }
@@ -90,6 +92,41 @@ async function fromPack(packId, name) {
 }
 
 const EQUIPPED = { equipado: 'equipped', carregando: 'carried', guardado: 'owned' };
+// O CORE usa installLocation para Shopping/Clínica/Hospital, não para o lado do corpo.
+const CYBER_LOCATIONS = {
+  'braco-esquerdo': { tipo: 'cyberArm', nome: 'Braço esquerdo' }, 'braco-direito': { tipo: 'cyberArm', nome: 'Braço direito' },
+  'olho-esquerdo': { tipo: 'cyberEye', nome: 'Olho esquerdo' }, 'olho-direito': { tipo: 'cyberEye', nome: 'Olho direito' },
+  'perna-esquerda': { tipo: 'cyberLeg', nome: 'Perna esquerda' }, 'perna-direita': { tipo: 'cyberLeg', nome: 'Perna direita' }
+};
+const CYBER_NEEDS_BASE = new Set(['neuralWare', 'cyberEye', 'cyberAudioSuite', 'cyberArm', 'cyberLeg', 'borgware']);
+function cyberLocal(value, type) {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string' || !CYBER_LOCATIONS[value] || CYBER_LOCATIONS[value].tipo !== type) throw new Error('Local anatômico inválido ou incompatível com o cyberware.');
+  return value;
+}
+const cyberLocalName = value => CYBER_LOCATIONS[value]?.nome || 'Local não definido';
+const plannedLocal = item => {
+  const value = item.getFlag(MODULE_ID, 'wikiLocal');
+  return CYBER_LOCATIONS[value]?.tipo === item.system.type ? value : '';
+};
+const parentItems = (actor, item) => actor.items.filter(parent => parent.system.installedItems?.list?.includes(item.id));
+// Só o caminho real de instalação define onde a peça está. A intenção de uma peça guardada não vira instalação.
+function actualCyberLocal(actor, item, seen = new Set()) {
+  if (seen.has(item.id)) return '';
+  seen.add(item.id);
+  const parents = parentItems(actor, item);
+  if (parents.length === 1) return actualCyberLocal(actor, parents[0], seen);
+  if (parents.length > 1 || !actor.system.installedItems?.list?.includes(item.id)) return '';
+  return plannedLocal(item);
+}
+function installedInActor(actor, item, seen = new Set()) {
+  if (seen.has(item.id)) return false;
+  seen.add(item.id);
+  if (actor.system.installedItems?.list?.includes(item.id)) return true;
+  return parentItems(actor, item).some(parent => installedInActor(actor, parent, new Set(seen)));
+}
+const referencedItems = (actor, reference) => String(reference || '').startsWith('foundry:')
+  ? [actor.items.get(reference.slice('foundry:'.length))].filter(Boolean) : itemsByUid(actor, reference);
 
 // Dados de um item da wiki prontos para entrar no ator.
 async function itemData(entry) {
@@ -97,6 +134,8 @@ async function itemData(entry) {
   if (!data) return null;
   const s = data.system || {};
   if (entry.renomear) data.name = entry.renomear;
+  const catalogName = data.name;
+  const local = data.type === 'cyberware' ? cyberLocal(entry.local, s.type) : '';
   // O cyberware grátis de 2077 não custa Humanidade (nem reduz a máxima).
   if (entry.semHumanidade && s.humanityLoss) {
     s.humanityLoss = { static: 0, roll: '0' };
@@ -108,25 +147,48 @@ async function itemData(entry) {
   // Uso escolhido na montagem da wiki; sem ele (personagem antigo), armas e armaduras equipadas e o resto carregando.
   if ('equipped' in s) s.equipped = EQUIPPED[entry.uso] || (['weapon', 'armor'].includes(data.type) ? 'equipped' : data.type === 'clothing' ? s.equipped : 'carried');
   data.flags = { ...(data.flags || {}), [MODULE_ID]: { ...((data.flags || {})[MODULE_ID] || {}), wikiUid: entry.uid } };
+  if (data.type === 'cyberware') {
+    Object.assign(data.flags[MODULE_ID], { wikiLocal: local, wikiEm: entry.em || '', wikiCatalogId: entry.id || '', wikiNomeCatalogo: catalogName });
+    if (s.isFoundational && local) data.name = `${catalogName} — ${cyberLocalName(local)}`;
+  }
   return Array.from({ length: stacks ? 1 : Math.max(1, entry.qtd) }, () => foundry.utils.deepClone(data));
 }
 
 // Monta o equipamento como na wiki (sem janela e sem rolar):
 //   1. as bases de cyberware no ator;
 //   2. cada item no lugar escolhido: acessório na arma, programa e hardware no cyberdeck, opção de cyberware na base;
-//      a opção sem lugar vai numa base do mesmo tipo com espaço (as do corpo, interno/externo/fashionware, já vêm na ficha);
+//      opções que exigem base só entram com um pai explícito; interno/externo/fashionware usam as bases do corpo;
 //   3. a munição em cada arma, e a arma recarregada (o que entra no pente sai da munição).
 // Os pais são achados pelo uid da wiki gravado em cada item: no Atualizar da wiki, o pai pode já estar na ficha.
 const itemsByUid = (actor, uid) => actor.items.filter(item => item.getFlag(MODULE_ID, 'wikiUid') === uid);
 const installedSomewhere = (actor, item) => (item.type === 'cyberware' && item.system.isInstalled) || actor.items.some(other => other.system.installedItems?.list?.includes(item.id));
+
+function pendingCyberLocation(actor, entries) {
+  const lines = [];
+  for (const entry of entries) for (const item of itemsByUid(actor, entry.uid).filter(item => item.type === 'cyberware')) {
+    const local = entry.local !== undefined ? cyberLocal(entry.local, item.system.type) : '';
+    const installed = installedInActor(actor, item);
+    if (entry.local !== undefined && local !== plannedLocal(item)) lines.push(`${item.name}: local → ${cyberLocalName(local)}`);
+    if (entry.em === '-' || (!entry.em && !item.system.isFoundational && CYBER_NEEDS_BASE.has(item.system.type))) continue;
+    if (local && !installed) lines.push(`${item.name}: ainda não instalado em ${cyberLocalName(local)}`);
+    if (local && installed && actualCyberLocal(actor, item) !== local) lines.push(`${item.name}: instalado em outro local; ajuste pela ficha do Foundry para ${cyberLocalName(local)}`);
+    if (entry.em) {
+      const targets = referencedItems(actor, entry.em);
+      const parents = parentItems(actor, item);
+      if (targets.length !== 1 || parents.length !== 1 || parents[0].id !== targets[0].id) lines.push(`${item.name}: o encaixe escolhido continua pendente; ajuste pela ficha do Foundry`);
+    }
+  }
+  return lines;
+}
 
 // O que da montagem da wiki ainda não está na ficha: tudo o que o assemble faria (a lista mostra exatamente o que o
 // Atualizar da wiki vai aplicar). Acontece com atores importados antes da montagem existir, ou com algo tirado na mão.
 function pendingAssembly(actor, entries) {
   const lines = [];
   const cyber = entries.filter(item => item.cyber).flatMap(entry => itemsByUid(actor, entry.uid).map(item => ({ entry, item }))).filter(({ item }) => item.type === 'cyberware');
+  lines.push(...pendingCyberLocation(actor, entries));
   for (const { item } of cyber.filter(({ item }) => item.system.isFoundational && !actor.system.installedItems.list.includes(item.id))) lines.push(`${item.name}: instalar`);
-  for (const { entry, item } of cyber.filter(({ entry, item }) => !entry.em && !item.system.isFoundational && !installedSomewhere(actor, item))) lines.push(`${item.name}: instalar numa base do mesmo tipo`);
+  for (const { entry, item } of cyber.filter(({ entry, item }) => !entry.em && !item.system.isFoundational && !CYBER_NEEDS_BASE.has(item.system.type) && !installedSomewhere(actor, item))) lines.push(`${item.name}: instalar na base do corpo`);
   for (const entry of entries.filter(item => item.municao)) {
     const ammo = itemsByUid(actor, entry.municao)[0];
     if (!ammo) continue;
@@ -135,7 +197,8 @@ function pendingAssembly(actor, entries) {
     }
   }
   for (const entry of entries.filter(item => item.em)) {
-    const target = itemsByUid(actor, entry.em)[0];
+    const targets = referencedItems(actor, entry.em);
+    const target = targets.length === 1 ? targets[0] : null;
     if (!target) continue;
     for (const item of itemsByUid(actor, entry.uid)) if (!installedSomewhere(actor, item)) lines.push(`${item.name} → ${target.name}`);
   }
@@ -146,23 +209,77 @@ async function assemble(actor, entries) {
   const notes = [];
   const byUid = uid => itemsByUid(actor, uid);
   const cyber = entries.flatMap(entry => byUid(entry.uid)).filter(item => item.type === 'cyberware');
+  const entryFor = item => entries.find(entry => entry.uid === item.getFlag(MODULE_ID, 'wikiUid'));
+  const occupied = new Set();
+  for (const item of actor.itemTypes.cyberware.filter(item => item.system.isFoundational && installedInActor(actor, item))) {
+    const entry = entryFor(item);
+    const local = entry?.local !== undefined ? cyberLocal(entry.local, item.system.type) : plannedLocal(item);
+    if (local && occupied.has(local)) throw new Error(`Duas bases instaladas ocupariam ${cyberLocalName(local)}. Ajuste o local pela ficha antes de aplicar.`);
+    if (local) occupied.add(local);
+  }
+  // Guarda mudanças de planejamento em peças da criação. Não move uma peça já instalada nem cobra Humanidade.
+  const plans = [];
+  for (const item of cyber) {
+    const entry = entryFor(item);
+    const update = { _id: item.id };
+    if (entry.local !== undefined) {
+      const local = cyberLocal(entry.local, item.system.type);
+      if (local !== plannedLocal(item)) update[`flags.${MODULE_ID}.wikiLocal`] = local;
+      const catalogName = item.getFlag(MODULE_ID, 'wikiNomeCatalogo') || item.name;
+      if (item.system.isFoundational && (local || item.getFlag(MODULE_ID, 'wikiNomeCatalogo'))) {
+        const name = local ? `${catalogName} — ${cyberLocalName(local)}` : catalogName;
+        if (item.name !== name) update.name = name;
+        if (!item.getFlag(MODULE_ID, 'wikiNomeCatalogo')) update[`flags.${MODULE_ID}.wikiNomeCatalogo`] = catalogName;
+      }
+    }
+    if (entry.em !== undefined && entry.em !== item.getFlag(MODULE_ID, 'wikiEm')) update[`flags.${MODULE_ID}.wikiEm`] = entry.em;
+    if (Object.keys(update).length > 1) plans.push(update);
+  }
+  if (plans.length) await actor.updateEmbeddedDocuments('Item', plans);
   const bases = cyber.filter(item => item.system.isFoundational && !actor.system.installedItems.list.includes(item.id));
-  for (const base of bases) await actor.installItems([base]);
+  for (const base of bases) {
+    const local = plannedLocal(base);
+    const same = local && actor.itemTypes.cyberware.some(item => item.id !== base.id && item.system.isFoundational && installedInActor(actor, item) && actualCyberLocal(actor, item) === local);
+    const duplicates = local && cyber.filter(item => item.system.isFoundational && plannedLocal(item) === local).length > 1;
+    if (same || duplicates) { notes.push(`${base.name}: já existe outra base em ${cyberLocalName(local)}; ficou sem instalar.`); continue; }
+    await actor.installItems([base]);
+  }
 
   for (const entry of entries.filter(item => item.em)) {
-    const target = byUid(entry.em)[0];
-    const items = byUid(entry.uid).filter(item => !installedSomewhere(actor, item));
+    const targets = referencedItems(actor, entry.em);
+    const target = targets.length === 1 ? targets[0] : null;
+    const items = byUid(entry.uid).filter(item => item.type !== 'cyberware' && !installedSomewhere(actor, item));
     if (!target || !items.length) continue;
     const ok = await target.installItems(items).catch(() => false);
     if (ok === false) notes.push(`${items[0].name}: não coube em ${target.name}; ficou no inventário.`);
   }
-  for (const item of cyber.filter(cw => !cw.system.isFoundational && !installedSomewhere(actor, cw))) {
-    const current = actor.items.get(item.id);
-    const options = actor.itemTypes.cyberware.filter(cw => cw.system.isFoundational && cw.system.type === current.system.type && actor.system.installedItems.list.includes(cw.id));
-    const target = options.find(base => base.availableInstallSlots() >= current.system.size);
-    if (target) await target.installItems([current]);
-    else notes.push(`${current.name}: sem base com espaço; ficou no inventário, sem instalar.`);
+  const pending = new Set(cyber.filter(item => !item.system.isFoundational && !installedSomewhere(actor, item)));
+  // Repete para permitir opção dentro de opção (por exemplo, chip no socket), sem depender da ordem dos rows.
+  for (let pass = 0; pass < cyber.length && pending.size; pass++) {
+    let progress = false;
+    for (const item of [...pending]) {
+      const entry = entryFor(item);
+      // O frontend exporta em='' tanto para "comprar solto" quanto para uma base que ficou indefinida. Um lado
+      // planejado não autoriza escolher o pai. Só as bases nativas do corpo têm instalação automática sem UID.
+      if (entry.em === '-' || (!entry.em && CYBER_NEEDS_BASE.has(item.system.type))) { pending.delete(item); continue; }
+      const local = plannedLocal(item);
+      let targets = entry.em && entry.em !== '-' ? referencedItems(actor, entry.em) : actor.itemTypes.cyberware.filter(base => base.system.isFoundational && base.system.type === item.system.type);
+      targets = targets.filter(base => base.id !== item.id && base.type === 'cyberware' && base.system.type === item.system.type && installedInActor(actor, base)
+        && (!local || actualCyberLocal(actor, base) === local) && base.availableInstallSlots() >= item.system.size);
+      if (targets.length !== 1) continue;
+      const ok = await targets[0].installItems([item]).catch(() => false);
+      if (ok === false) continue;
+      pending.delete(item);
+      progress = true;
+    }
+    if (!progress) break;
   }
+  for (const item of pending) {
+    const entry = entryFor(item);
+    notes.push(`${item.name}: ${entry.em && entry.em !== '-' ? 'o encaixe escolhido não está disponível' : 'escolha uma base única com espaço'}${plannedLocal(item) ? ` em ${cyberLocalName(plannedLocal(item))}` : ''}; ficou no inventário, sem instalar.`);
+  }
+  // Uma intenção nova nunca desinstala silenciosamente uma peça que o mestre já instalou na mesa.
+  notes.push(...pendingCyberLocation(actor, entries).filter(line => /instalado em outro local|ajuste pela ficha/.test(line)));
 
   for (const entry of entries.filter(item => item.municao)) {
     const ammo = byUid(entry.municao)[0];
@@ -201,24 +318,136 @@ async function applySkills(actor, skills, home) {
   if (creates.length) await actor.createEmbeddedDocuments('Item', creates);
   return missing.map(name => `Perícia ${name} não existe no Foundry.`);
 }
-async function addRole(actor, role) {
-  if (!role || !role.foundry) return ['Sem Role.'];
-  const data = await fromPack(role.foundry.pack, role.foundry.nome);
-  if (!data) return [`Role ${role.foundry.nome} não encontrada em ${role.foundry.pack}.`];
-  data.system.rank = role.rank || 4;
-  // Sub-habilidades (Solo, Tech, Medtech): os pontos distribuídos na wiki, pelo nome que o item de Role usa.
-  const notes = [];
+const ROLE_IDS = new Set(['rockerboy', 'solo', 'netrunner', 'tech', 'medtech', 'media', 'exec', 'lawman', 'fixer', 'nomad']);
+const changingRoles = new Set();
+const canonicalRole = value => {
+  const name = String(value || '').trim().toLowerCase();
+  return ROLE_IDS.has(name) ? name : ({ face: 'rockerboy', corpo: 'exec' }[name] || '');
+};
+const roleId = role => canonicalRole(role?.getFlag?.(MODULE_ID, 'wikiRole')) || canonicalRole(role?.id)
+  || canonicalRole(role?.foundry?.nome) || canonicalRole(role?.nome) || canonicalRole(role?.name);
+
+function rolesOfResult(result) {
+  const roles = Array.isArray(result.roles) && result.roles.length ? result.roles : [result.role].filter(Boolean);
+  if (!roles.length || roles.length > 2) throw new Error('Escolha uma ou duas Roles na wiki antes de importar.');
+  const ids = new Set();
+  const normalized = roles.map(role => {
+    const id = roleId(role);
+    const rank = role.rank ?? 4; // personagens antigos não mandavam o Rank
+    if (!id || ids.has(id)) throw new Error('As Roles da wiki precisam ser válidas e diferentes.');
+    if (!Number.isInteger(rank) || rank < 1 || rank > 10) throw new Error(`${role.nome || id}: o Rank precisa estar entre 1 e 10.`);
+    ids.add(id);
+    return { ...role, id, rank };
+  });
+  const primary = roleId(result.role) || normalized[0].id;
+  if (!ids.has(primary)) throw new Error('A Role principal não está na lista de Roles da wiki.');
+  return normalized.sort((a, b) => Number(b.id === primary) - Number(a.id === primary));
+}
+
+function roleAbilities(role, system) {
   const ranks = new Map((role.habilidades || []).map(entry => [entry.nome, entry.rank]));
-  if (ranks.size) {
-    data.system.abilities = (data.system.abilities || []).map(ability => ranks.has(ability.name) ? { ...ability, rank: ranks.get(ability.name) } : ability);
-    for (const name of ranks.keys()) if (!data.system.abilities.some(ability => ability.name === name)) notes.push(`Role: a sub-habilidade ${name} não existe no item ${data.name}.`);
+  const abilities = system.abilities || [];
+  for (const [name, rank] of ranks) {
+    if (!Number.isInteger(rank) || rank < 0 || !abilities.some(ability => ability.name === name)) {
+      throw new Error(`${role.nome || role.id}: a sub-habilidade ${name} não pode ser aplicada nesta ficha.`);
+    }
   }
-  // A especialização (Face, Lawman) soma o Rank nas perícias dela.
-  if (role.especializacao) data.system.bonuses = [...(data.system.bonuses || []), ...role.especializacao.pericias.filter(name => !(data.system.bonuses || []).some(b => b.name === name)).map(name => ({ name }))];
-  if (role.especializacao) data.system.description.value += `<p><b>Especialização:</b> ${esc(role.especializacao.nome)}.</p>`;
-  const [created] = await actor.createEmbeddedDocuments('Item', [data]);
-  await actor.update({ 'system.roleInfo.activeRole': created.name });
-  return notes;
+  return abilities.map(ability => ranks.has(ability.name) ? { ...ability, rank: ranks.get(ability.name) } : ability);
+}
+
+// Confere compêndios e sub-habilidades antes de criar ou mudar qualquer documento. Uma Role manual que já existe é
+// reaproveitada pelo nome, mas não recebe a marca do importador: só as criadas por ele podem ser retiradas depois.
+async function planRoles(actor, result) {
+  const roles = rolesOfResult(result);
+  const existing = actor?.itemTypes.role || [];
+  const entries = [];
+  const lines = [];
+  for (const role of roles) {
+    const item = existing.find(item => item.getFlag(MODULE_ID, 'wikiRole') === role.id)
+      || existing.find(item => roleId(item) === role.id);
+    if (item) {
+      const abilities = roleAbilities(role, item.system);
+      const update = { _id: item.id, 'system.rank': role.rank, 'system.abilities': abilities };
+      const changed = item.system.rank !== role.rank || JSON.stringify(item.system.abilities || []) !== JSON.stringify(abilities);
+      if (item.system.rank !== role.rank) lines.push(`${item.name}: Rank ${item.system.rank} → ${role.rank}`);
+      for (const ability of abilities) {
+        const before = (item.system.abilities || []).find(entry => entry.name === ability.name);
+        if (before?.rank !== ability.rank) lines.push(`${item.name} · ${ability.name}: ${before?.rank ?? 0} → ${ability.rank}`);
+      }
+      entries.push({ role, item, ...(changed ? { update } : {}) });
+      continue;
+    }
+    if (!role.foundry) throw new Error(`${role.nome || role.id}: a wiki não informou o compêndio da Role.`);
+    const data = await fromPack(role.foundry.pack, role.foundry.nome);
+    if (!data || data.type !== 'role') throw new Error(`Role ${role.foundry.nome} não encontrada em ${role.foundry.pack}.`);
+    data.system.rank = role.rank;
+    data.system.abilities = roleAbilities(role, data.system);
+    if (role.especializacao) {
+      data.system.bonuses = [...(data.system.bonuses || []), ...role.especializacao.pericias.filter(name => !(data.system.bonuses || []).some(b => b.name === name)).map(name => ({ name }))];
+      data.system.description.value += `<p><b>Especialização:</b> ${esc(role.especializacao.nome)}.</p>`;
+    }
+    data.flags = { ...(data.flags || {}), [MODULE_ID]: { ...data.flags?.[MODULE_ID], wikiRole: role.id } };
+    entries.push({ role, data });
+    lines.push(`Acrescentar Role ${data.name}, Rank ${role.rank}`);
+  }
+  const removed = existing.filter(item => item.getFlag(MODULE_ID, 'wikiRole') && !roles.some(role => role.id === item.getFlag(MODULE_ID, 'wikiRole')));
+  for (const item of removed) lines.push(`Retirar Role da wiki: ${item.name}`);
+  const net = entries.find(entry => entry.role.id === 'netrunner');
+  if (actor && net?.item && actor.system.roleInfo?.activeNetRole !== net.item.id) lines.push(`Usar ${net.item.name} para as rolagens de Interface`);
+  return { entries, removed, lines, primary: roles[0].id };
+}
+
+async function applyRoles(actor, plan) {
+  if (changingRoles.has(actor.id)) throw new Error('Já há uma atualização de Roles em andamento neste personagem.');
+  const created = [];
+  const previous = plan.entries.filter(entry => entry.update).map(entry => ({ _id: entry.item.id,
+    'system.rank': entry.item.system.rank, 'system.abilities': foundry.utils.deepClone(entry.item.system.abilities || []) }));
+  const removed = plan.removed.map(item => item.toObject());
+  const active = { 'system.roleInfo.activeRole': actor.system.roleInfo?.activeRole || '', 'system.roleInfo.activeNetRole': actor.system.roleInfo?.activeNetRole || '' };
+  changingRoles.add(actor.id);
+  clearTimeout(syncTimers.get(actor.id));
+  syncTimers.delete(actor.id);
+  try {
+    for (const entry of plan.entries.filter(entry => entry.data)) {
+      const [item] = await actor.createEmbeddedDocuments('Item', [entry.data]);
+      if (!item) throw new Error(`Não consegui criar a Role ${entry.data.name}.`);
+      created.push(item.id);
+    }
+    const updates = plan.entries.filter(entry => entry.update).map(entry => entry.update);
+    if (updates.length) await actor.updateEmbeddedDocuments('Item', updates);
+    if (plan.removed.length) await actor.deleteEmbeddedDocuments('Item', plan.removed.map(item => item.id));
+    const primary = actor.itemTypes.role.find(item => roleId(item) === plan.primary);
+    const net = actor.itemTypes.role.find(item => roleId(item) === 'netrunner' || /interface/i.test(item.system.mainRoleAbility || ''));
+    await actor.update({ 'system.roleInfo.activeRole': primary?.name || '', 'system.roleInfo.activeNetRole': net?.id || '' });
+    // Um hook pode recusar uma criação/atualização sem lançar erro. Confere o que ficou no ator antes de sincronizar.
+    for (const entry of plan.entries) {
+      const item = actor.itemTypes.role.find(item => item.getFlag(MODULE_ID, 'wikiRole') === entry.role.id)
+        || actor.itemTypes.role.find(item => roleId(item) === entry.role.id);
+      if (!item || item.system.rank !== entry.role.rank || (entry.role.habilidades || []).some(ability =>
+        !item.system.abilities?.some(current => current.name === ability.nome && current.rank === ability.rank))) {
+        throw new Error(`A Role ${entry.role.nome || entry.role.id} não ficou igual à da wiki.`);
+      }
+    }
+    if (plan.removed.some(item => actor.items.get(item.id))) throw new Error('O Foundry não retirou a antiga Role da wiki.');
+    if (actor.system.roleInfo.activeRole !== primary?.name || actor.system.roleInfo.activeNetRole !== (net?.id || '')) {
+      throw new Error('O Foundry não confirmou a seleção das Roles.');
+    }
+  } catch (error) {
+    // O Foundry não tem uma transação para todos os documentos. Tenta voltar as Roles ao estado anterior e deixa a
+    // importação pendente se algum passo falhou; nenhuma falha vira um resultadoHash sincronizado.
+    const failures = [];
+    const undo = async fn => { try { await fn(); } catch (error) { failures.push(error.message); } };
+    const fresh = created.filter(id => actor.items.get(id));
+    if (fresh.length) await undo(() => actor.deleteEmbeddedDocuments('Item', fresh));
+    const missing = removed.filter(item => !actor.items.get(item._id));
+    if (missing.length) await undo(() => actor.createEmbeddedDocuments('Item', missing, { keepId: true }));
+    const updates = previous.filter(item => actor.items.get(item._id));
+    if (updates.length) await undo(() => actor.updateEmbeddedDocuments('Item', updates));
+    await undo(() => actor.update(active));
+    throw new Error(`Não foi possível aplicar as Roles: ${error.message}${failures.length ? ` Confira a ficha: também houve falha ao desfazer (${failures.join('; ')}).` : ' As Roles anteriores foram restauradas.'}`);
+  } finally {
+    changingRoles.delete(actor.id);
+  }
 }
 
 // Veículos da família do Nomad (Oficina da Família), com os upgrades instalados em cada um.
@@ -364,6 +593,7 @@ async function importCharacter(id, ownerId, campaign = undefined) {
   }
   const r = doc.resultado;
   if (!r) throw new Error('Este personagem ainda não tem ficha pronta: abra no criador da wiki e deixe salvar.');
+  const rolePlan = await planRoles(null, r);
   const notes = [];
 
   const ownership = { default: 0 };
@@ -384,7 +614,12 @@ async function importCharacter(id, ownerId, campaign = undefined) {
     'system.derivedStats.humanity.max': r.humanidade.max, 'system.derivedStats.humanity.value': r.humanidade.max
   });
   notes.push(...await applySkills(actor, r.pericias, r.casa));
-  notes.push(...await addRole(actor, r.role));
+  try {
+    await applyRoles(actor, rolePlan);
+  } catch (error) {
+    try { await actor.delete(); } catch (cleanup) { throw new Error(`${error.message} O ator incompleto ficou na lista: ${cleanup.message}`); }
+    throw error;
+  }
 
   // Itens, agrupados por compêndio.
   const datas = [];
@@ -403,7 +638,7 @@ async function importCharacter(id, ownerId, campaign = undefined) {
   const description = [
     doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : '',
     doc.notas ? `<p>${esc(doc.notas)}</p>` : '',
-    `<p><i>Criado na wiki (${esc((r.role || {}).nome || '')}, ${esc(doc.apelido || '')}). Importado em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`
+    `<p><i>Criado na wiki (${rolePlan.entries.map(entry => `${esc(entry.role.nome)} ${entry.role.rank}`).join(' / ')}, ${esc(doc.apelido || '')}). Importado em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`
   ].join('');
   await actor.update({
     'system.lifepath': r.lifepath,
@@ -417,7 +652,7 @@ async function importCharacter(id, ownerId, campaign = undefined) {
 
   // Entregues: os itens e os veículos da família (com os upgrades), para o Atualizar da wiki não trazer de novo.
   const delivered = [...r.itens.map(item => item.uid), ...(r.veiculos || []).flatMap(vehicle => [vehicle.uid, ...(vehicle.upgrades || []).map(upgrade => upgrade.uid)])];
-  await actor.setFlag(MODULE_ID, 'wiki', { id: doc.id, versao: doc.versao, entregues: delivered, importado: new Date().toISOString(), retrato: portrait.applied });
+  await actor.setFlag(MODULE_ID, 'wiki', { id: doc.id, versao: doc.versao, entregues: delivered, importado: new Date().toISOString(), retrato: portrait.applied, rolePrincipal: rolePlan.primary });
   if (doc.estadoFoundry === 'outra-mesa') notes.push('Veio de outra campanha, mas a ficha da mesa antiga não tinha chegado: o ator saiu como foi criado na wiki.');
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered, ...(campaign?.id ? { campanha: campaign.id } : {}) } });
   // A wiki passa a mostrar a ficha da mesa logo depois da importação.
@@ -480,7 +715,8 @@ export async function importarDaWiki(preselect = '') {
 }
 
 // ---------------- Atualizar da wiki ----------------
-// Mostra o que mudou na wiki desde a importação e aplica o que o mestre marcar. Nunca apaga item da ficha.
+// Mostra o que mudou na wiki desde a importação e aplica o que o mestre marcar. Só retira Roles criadas por este
+// importador e removidas da wiki, com a retirada explícita na revisão; outros itens e Roles manuais ficam.
 export async function atualizarDaWiki(actor) {
   const link = actor?.getFlag(MODULE_ID, 'wiki');
   if (!link) return ui.notifications.warn('Este ator não veio da wiki.');
@@ -490,6 +726,9 @@ export async function atualizarDaWiki(actor) {
   const campaign = await tableCampaign();
   if (campaign?.id && doc.campanha && doc.campanha !== campaign.id) return ui.notifications.warn(`${actor.name} agora é de outra campanha na wiki: a ficha dele é do mundo dela.`);
   const r = doc.resultado || {};
+  let rolePlan;
+  try { rolePlan = await planRoles(actor, r); } catch (error) { return ui.notifications.error(error.message); }
+  const roleChanges = rolePlan.lines;
   const keys = { INT: 'int', REF: 'ref', DEX: 'dex', TECH: 'tech', COOL: 'cool', WILL: 'will', LUCK: 'luck', MOVE: 'move', BODY: 'body', EMP: 'emp' };
   const statChanges = Object.entries(keys).filter(([key, field]) => (field === 'emp' ? actor.system.stats.emp.max : actor.system.stats[field].value) !== r.stats?.[key]).map(([key, field]) => `${key} ${field === 'emp' ? actor.system.stats.emp.max : actor.system.stats[field].value} → ${r.stats[key]}`);
   const skillChanges = (r.pericias || []).filter(skill => { const item = actor.items.find(i => i.type === 'skill' && i.name === skill.nome); return !item || item.system.level !== skill.nivel; }).map(skill => `${skill.nome} → ${skill.nivel}`);
@@ -503,20 +742,22 @@ export async function atualizarDaWiki(actor) {
   const homeLines = [['housing', 'Moradia'], ['lifeStyle', 'Estilo de vida'], ['traumaTeam', 'Trauma Team']]
     .filter(([key]) => (ls[key]?.cost || 0) !== home[`system.lifestyle.${key}`].cost || (ls[key]?.description || '') !== home[`system.lifestyle.${key}`].description)
     .map(([key, label]) => `${label}: ${home[`system.lifestyle.${key}`].description || '—'} (${home[`system.lifestyle.${key}`].cost}eb/mês)`);
-  const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered, ...(campaign?.id ? { campanha: campaign.id } : {}) } }).catch(() => null);
+  const synced = delivered => wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: actor.id, nomeAtor: actor.name, versao: doc.versao, entregues: delivered, ...(campaign?.id ? { campanha: campaign.id } : {}) } });
   // Nada que este botão aplique (a mudança foi em moradia ou dinheiro, por exemplo): a wiki para de mostrar "mudou".
   const mountLines = pendingAssembly(actor, (r.itens || []).filter(item => (link.entregues || []).includes(item.uid)));
-  if (!statChanges.length && !skillChanges.length && !newItems.length && !lifepathChanged && !portraitChanged && !homeLines.length && !mountLines.length) {
+  if (!statChanges.length && !skillChanges.length && !newItems.length && !roleChanges.length && !lifepathChanged && !portraitChanged && !homeLines.length && !mountLines.length) {
+    await actor.setFlag(MODULE_ID, 'wiki', { ...link, rolePrincipal: rolePlan.primary });
     await synced(link.entregues || []);
     return ui.notifications.info('Nada para aplicar: a ficha já está igual à da wiki.');
   }
-  const section = (name, title, lines) => lines.length ? `<div class="form-group"><label><input type="checkbox" name="${name}" checked> ${title}</label></div><ul>${lines.slice(0, 12).map(line => `<li>${esc(line)}</li>`).join('')}${lines.length > 12 ? `<li>e mais ${lines.length - 12}</li>` : ''}</ul>` : '';
-  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}${portraitChanged ? section('portrait', 'Retrato', ['imagem da ficha e do token']) : ''}${section('lifestyle', 'Moradia e estilo de vida', homeLines)}${section('mount', 'Montagem (carregar armas, encaixar e instalar)', mountLines)}<p class="notes">Nada é apagado da ficha: itens perdidos ou gastos no jogo continuam como estão.</p></form>`;
+  const section = (name, title, lines) => lines.length ? `<div class="form-group"><label><input type="checkbox" name="${name}" checked> ${title}</label></div><ul>${(name === 'roles' ? lines : lines.slice(0, 12)).map(line => `<li>${esc(line)}</li>`).join('')}${name !== 'roles' && lines.length > 12 ? `<li>e mais ${lines.length - 12}</li>` : ''}</ul>` : '';
+  const content = `<form class="cpr2077-wiki">${section('stats', 'STATs', statChanges)}${section('skills', 'Perícias', skillChanges)}${section('roles', 'Roles (Ranks e sub-habilidades)', roleChanges)}${section('items', 'Itens novos', newItems.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`))}${lifepathChanged ? section('lifepath', 'Lifepath', ['texto do Lifepath']) : ''}${portraitChanged ? section('portrait', 'Retrato', ['imagem da ficha e do token']) : ''}${section('lifestyle', 'Moradia e estilo de vida', homeLines)}${section('mount', 'Montagem (carregar armas, encaixar e instalar)', mountLines)}<p class="notes">As retiradas de Roles da wiki estão listadas acima. Roles manuais e equipamentos perdidos ou gastos no jogo continuam como estão.</p></form>`;
   return Dialog.prompt({
     title: `Atualizar ${actor.name} da wiki`, content, label: 'Aplicar',
     callback: async html => {
       const form = html[0].querySelector('form');
       const checked = name => Boolean(form[name]?.checked);
+      if (checked('roles')) await applyRoles(actor, rolePlan);
       if (checked('stats')) {
         const update = {};
         for (const [key, field] of Object.entries(keys)) {
@@ -544,7 +785,16 @@ export async function atualizarDaWiki(actor) {
         if (result.applied) portrait = result.applied;
         for (const note of result.notes) ui.notifications.warn(note);
       }
-      await actor.setFlag(MODULE_ID, 'wiki', { ...link, versao: doc.versao, entregues: delivered, retrato: portrait });
+      const cyberPending = pendingCyberLocation(actor, r.itens || []);
+      if (cyberPending.length) {
+        await actor.setFlag(MODULE_ID, 'wiki', { ...link, entregues: delivered, retrato: portrait, rolePrincipal: rolePlan.primary });
+        return ui.notifications.warn(`A montagem do cyberware continua pendente: ${cyberPending.slice(0, 3).join('; ')}.`);
+      }
+      if (roleChanges.length && !checked('roles')) {
+        await actor.setFlag(MODULE_ID, 'wiki', { ...link, entregues: delivered, retrato: portrait });
+        return ui.notifications.warn('As Roles não foram aplicadas: a atualização da wiki continua pendente.');
+      }
+      await actor.setFlag(MODULE_ID, 'wiki', { ...link, versao: doc.versao, entregues: delivered, retrato: portrait, rolePrincipal: rolePlan.primary });
       await synced(delivered);
       ui.notifications.info(`${actor.name} atualizado da wiki.`);
     },
@@ -567,20 +817,39 @@ function tableSnapshot(actor) {
   const s = actor.system;
   const nameOf = id => actor.items.get(id)?.name || '';
   const armorSp = (is, key) => Math.max(0, ...actor.itemTypes.armor.filter(item => item.system.equipped === 'equipped' && item.system[is]).map(item => (item.system[key]?.sp || 0) - (item.system[key]?.ablation || 0)));
-  const role = actor.itemTypes.role.find(item => item.name === s.roleInfo?.activeRole) || actor.itemTypes.role[0];
+  const primary = actor.getFlag(MODULE_ID, 'wiki')?.rolePrincipal;
+  const role = actor.itemTypes.role.find(item => primary && roleId(item) === primary)
+    || actor.itemTypes.role.find(item => item.name === s.roleInfo?.activeRole) || actor.itemTypes.role[0];
+  const roleSnapshot = item => ({ ...(roleId(item) ? { id: roleId(item) } : {}), nome: item.name, rank: item.system.rank,
+    habilidades: (item.system.abilities || []).map(ability => [ability.name, ability.rank]) });
+  const roles = role ? [role, ...actor.itemTypes.role.filter(item => item.id !== role.id)] : [];
   const items = actor.items.filter(item => !['skill', 'role', 'criticalInjury'].includes(item.type)).filter(item => {
     // As bases do próprio corpo (Internal, External, Fashionware) o sistema cria sozinho: ficam de fora.
     return !(item.type === 'cyberware' && item.system.isFoundational && !item.getFlag(MODULE_ID, 'wikiUid'));
   }).map(item => {
     const x = item.system;
-    const entry = { nome: item.name, tipo: item.type, qtd: 'amount' in x ? x.amount : 1, uso: x.equipped || '', uid: item.getFlag(MODULE_ID, 'wikiUid') || '' };
+    const entry = { id: item.id, nome: item.name, tipo: item.type, qtd: 'amount' in x ? x.amount : 1, uso: x.equipped || '', uid: item.getFlag(MODULE_ID, 'wikiUid') || '' };
     if (item.type === 'weapon') Object.assign(entry, { dano: x.damage, cdt: x.rof, pericia: x.weaponSkill, distancia: Boolean(x.isRanged), maos: x.handsReq || 1,
       pente: x.isRanged ? { atual: x.magazine?.value || 0, max: x.magazine?.max || 0 } : null, municao: (item.getInstalledItems?.('ammo') || [])[0]?.name || '' });
     if (item.type === 'armor') Object.assign(entry, { cabeca: x.isHeadLocation ? (x.headLocation?.sp || 0) - (x.headLocation?.ablation || 0) : 0, corpo: x.isBodyLocation ? (x.bodyLocation?.sp || 0) - (x.bodyLocation?.ablation || 0) : 0 });
     // O tipo, o tamanho e os slots vão para a aba Cyberware da ficha da wiki (o grupo do RED e os quadrados de cada base).
-    if (item.type === 'cyberware') Object.assign(entry, { instalado: Boolean(x.isInstalled), base: Boolean(x.isFoundational),
-      cyber: { tipo: x.type || '', tamanho: x.size ?? 1, slots: x.isFoundational ? totalSlots(item) : 0 } });
-    if (x.installedItems?.list?.length) entry.dentro = x.installedItems.list.map(nameOf).filter(Boolean);
+    if (item.type === 'cyberware') {
+      const ref = parent => ({ id: parent.id, uid: parent.getFlag(MODULE_ID, 'wikiUid') || '', nome: parent.name });
+      const parents = parentItems(actor, item);
+      Object.assign(entry, { instalado: installedInActor(actor, item), base: Boolean(x.isFoundational),
+        local: actualCyberLocal(actor, item), localPlanejado: plannedLocal(item),
+        pai: parents.length === 1 ? ref(parents[0]) : null,
+        ...(parents.length > 1 ? { pais: parents.map(ref) } : {}),
+        nomeCatalogo: item.getFlag(MODULE_ID, 'wikiNomeCatalogo') || item.name,
+        idCatalogo: item.getFlag(MODULE_ID, 'wikiCatalogId') || '',
+        emPlanejado: item.getFlag(MODULE_ID, 'wikiEm') || '',
+        cyber: { tipo: x.type || '', tamanho: x.size ?? 1, slots: x.isFoundational ? totalSlots(item) : 0 } });
+    }
+    if (x.installedItems?.list?.length) {
+      entry.dentro = x.installedItems.list.map(nameOf).filter(Boolean);
+      entry.dentroIds = x.installedItems.list.filter(id => actor.items.get(id));
+      entry.dentroUids = entry.dentroIds.map(id => actor.items.get(id).getFlag(MODULE_ID, 'wikiUid')).filter(Boolean);
+    }
     return entry;
   });
   return {
@@ -591,7 +860,8 @@ function tableSnapshot(actor) {
     sorte: { atual: s.stats?.luck?.value ?? 0, max: s.stats?.luck?.max ?? 0 },
     sp: { cabeca: armorSp('isHeadLocation', 'headLocation'), corpo: armorSp('isBodyLocation', 'bodyLocation') },
     dinheiro: s.wealth?.value ?? 0, ip: s.improvementPoints?.value ?? 0, reputacao: s.reputation?.value ?? 0,
-    role: role ? { nome: role.name, rank: role.system.rank, habilidades: (role.system.abilities || []).map(ability => [ability.name, ability.rank]) } : null,
+    role: role ? roleSnapshot(role) : null,
+    roles: roles.map(roleSnapshot),
     pericias: actor.itemTypes.skill.filter(skill => skill.system.level > 0).map(skill => ({ nome: skill.name, nivel: skill.system.level, stat: String(skill.system.stat || '').toUpperCase() })),
     lesoes: actor.itemTypes.criticalInjury.map(injury => injury.name),
     moradia: Object.fromEntries(['housing', 'lifeStyle', 'traumaTeam'].map(key => [key, { custo: s.lifestyle?.[key]?.cost || 0, descricao: strip(s.lifestyle?.[key]?.description) }])),
@@ -612,7 +882,7 @@ const syncTimers = new Map();
 let syncWarned = false;
 const isSyncGm = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id) && game.settings.get(MODULE_ID, 'wikiMesa');
 function scheduleSync(actor) {
-  if (!actor || actor.documentName !== 'Actor' || !actor.getFlag(MODULE_ID, 'wiki') || !isSyncGm()) return;
+  if (!actor || changingRoles.has(actor.id) || actor.documentName !== 'Actor' || !actor.getFlag(MODULE_ID, 'wiki') || !isSyncGm()) return;
   clearTimeout(syncTimers.get(actor.id));
   syncTimers.set(actor.id, setTimeout(() => {
     syncTimers.delete(actor.id);

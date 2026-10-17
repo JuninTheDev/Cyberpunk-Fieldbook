@@ -51,7 +51,7 @@ const contentTypes = {
 const playerFiles = new Set([
   '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
-  '/system-criacao.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
+  '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
   '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   // A wiki instalada no celular: o manifesto, o service worker (sw.js) e os ícones.
   '/manifest.webmanifest', '/sw.js', '/icones/icone.svg', '/icones/icone-192.png', '/icones/icone-512.png'
@@ -72,7 +72,8 @@ const viaTunnel = request => Boolean(request.headers['cf-connecting-ip'] || requ
 const gmToken = gmKey ? crypto.createHmac('sha256', gmKey).update('fieldbook-mestre-v1').digest('hex') : '';
 const hasGmCookie = request => {
   if (!gmKey) return false;
-  const given = decodeURIComponent(cookieKey(request));
+  let given;
+  try { given = decodeURIComponent(cookieKey(request)); } catch { return false; }
   return sameSecret(given, gmToken) || sameSecret(given, gmKey); // o segundo: cookie antigo, de antes da assinatura
 };
 const isGameMaster = request => (!hosted && isLoopback(request.socket.remoteAddress) && !viaTunnel(request)) || hasGmCookie(request);

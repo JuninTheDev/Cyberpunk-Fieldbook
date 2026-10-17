@@ -5,6 +5,8 @@
 // o importador do Foundry lê.
 (() => {
   const C = window.systemCreation;
+  const R = window.characterRoles;
+  const CW = window.characterCyberware;
   const shop = window.shopCatalog || { itens: [], categorias: [] };
   const rules = window.systemRules || {};
   if (!C) return;
@@ -12,6 +14,19 @@
   const catalog = new Map(shop.itens.map(item => [item.id, item]));
   const statKeys = C.stats;
   const roleById = id => C.roles.find(role => role.id === id);
+  const rolesOf = doc => R.lista(doc);
+  const rankOf = (doc, id = doc.role) => (rolesOf(doc).find(role => role.id === R.canonico(id)) || {}).rank || 0;
+  const roleViews = doc => rolesOf(doc).map(role => R.contexto(doc, role));
+  const roleView = (doc, id) => roleViews(doc).find(view => view.role === id);
+  const roleState = (doc, id) => id === doc.role ? doc : doc.roleSecundaria && doc.roleSecundaria.id === id ? doc.roleSecundaria : null;
+  const roleAnswers = (doc, id) => id === doc.role ? doc.lifepath.role || {} : (roleState(doc, id) || {}).lifepath || {};
+  function setRoleAnswers(doc, id, answers) {
+    if (id === doc.role) doc.lifepath.role = answers;
+    else if (roleState(doc, id)) roleState(doc, id).lifepath = answers;
+  }
+  const shownRoles = doc => Array.isArray(doc.roles) ? doc.roles : doc.mesa && doc.foundry ? R.listaMesa(doc) : rolesOf(doc);
+  const rolesLabel = (doc, list = shownRoles(doc)) => list.map(role => `${R.nome(role.id) || role.nome || role.id} Rank ${role.rank}`).join(' / ') || 'sem Role';
+  const quickhacksAt = rank => Object.values(window.systemNet?.data?.quickhacks || {}).flat().filter(hack => (hack.raw?.rank || 1) <= rank);
   const methodById = id => C.methods.find(method => method.id === id);
   const SPECIAL = Object.keys(C.specializedSkills);
   const strip = html => String(html || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
@@ -127,8 +142,12 @@
     }
     return list;
   }
-  // Itens que a Role dá (o terno de negócios do Corpo): só no Pacote Completo, porque os pacotes já trazem.
-  const roleFree = doc => (doc.metodo === 'pacote' && C.roleFreeItems[doc.role]) || [];
+  // Bônus das duas Roles (o terno do Exec), descontando as peças que o pacote principal já traz.
+  const roleFree = doc => {
+    const inPackage = new Set(packageEntries(doc).map(item => item.id));
+    const entries = rolesOf(doc).filter(role => role.rank >= 1).flatMap(role => C.roleFreeItems[role.id] || []);
+    return [...new Map(entries.filter(item => !inPackage.has(item.id)).map(item => [item.id, item])).values()];
+  };
   function inventory(doc) {
     const free = [
       ...C.free2077.map(item => ({ uid: `gratis:${item.id}`, id: item.id, qtd: item.qtd, origem: 'gratis2077', nome: item.nome || '' })),
@@ -186,7 +205,8 @@
   // Cada item do inventário tem um uso (equipado, carregando, guardado) e, conforme o tipo, um lugar: a arma tem a
   // munição carregada; o acessório fica numa arma; programa e hardware, num cyberdeck; a opção de cyberware, numa
   // base (cyberbraço, cyberolho…). O que o jogador não mexeu sai montado sozinho, e doc.montagem guarda só o que ele
-  // mudou: { [uid]: { uso, municao, em } }, com '-' para "nenhuma" (descarregada, solto). Personagens antigos não têm
+  // mudou: { [uid]: { uso, municao, em, local } }, com '-' para "nenhuma" (descarregada, solto). Local anatômico não
+  // escolhe lado automaticamente: personagens antigos continuam com "Local não definido" até a pessoa escolher.
   // nada e ficam com o padrão. Uma escolha que deixou de valer (o item saiu, não cabe mais) volta ao padrão.
   const USOS = { equipado: 'Equipado', carregando: 'Carregando', guardado: 'Guardado' };
   const kindOf = item => item.arma ? 'arma' : item.municao ? 'municao' : item.armadura ? 'armadura' : item.acessorio ? 'acessorio' : item.deck ? 'deck'
@@ -213,14 +233,18 @@
   };
   // A armadura cobre a cabeça, o corpo ou as duas; o escudo é à parte.
   const armorLocations = item => [...(item.armadura.corpo ? ['corpo'] : []), ...(item.armadura.cabeca ? ['cabeca'] : [])];
+  const localSeguro = (local, tipo) => { try { return CW.normalizar(local, tipo); } catch { return ''; } };
+  const cyberLocalName = row => row.local ? CW.nome(row.local) : CW.locais(row.item?.cyber?.tipo || row.tipo).length ? 'Local não definido' : '';
+  const rowName = row => `${row.nome || row.item?.nome || ''}${cyberLocalName(row) ? ` · ${cyberLocalName(row)}` : ''}`;
+  const parentRef = item => item.uid || (item.id ? `foundry:${item.id}` : '');
 
   function assembly(doc, inv = inventory(doc)) {
     const overrides = doc.montagem || {};
-    const rows = inv.map(entry => ({ ...entry, tipo: kindOf(entry.item), uso: '', municao: '', em: '' }));
+    const rows = inv.map(entry => ({ ...entry, tipo: kindOf(entry.item), uso: '', municao: '', em: '', local: entry.item.cyber ? localSeguro(overrides[entry.uid]?.local, entry.item.cyber.tipo) : '' }));
     const byUid = new Map(rows.map(row => [row.uid, row]));
     const used = new Map();
     const free = parent => capacityOf(parent) - (used.get(parent.uid) || 0);
-    const place = (child, parent) => { child.em = parent.uid; used.set(parent.uid, (used.get(parent.uid) || 0) + sizeOf(child)); };
+    const place = (child, parent) => { child.em = parent.uid; if (child.item.cyber) child.local = parent.local; used.set(parent.uid, (used.get(parent.uid) || 0) + sizeOf(child)); };
     const childKinds = ['acessorio', 'deckItem', 'cyberOpcao'];
     // 1. Lugares escolhidos pelo jogador (só os que ainda valem), depois os do padrão: o primeiro que couber.
     for (const row of rows.filter(item => childKinds.includes(item.tipo))) {
@@ -228,11 +252,16 @@
       if (chosen === '-') { row.em = '-'; continue; }
       const parent = chosen && byUid.get(chosen);
       if (parent && parentFits(row, parent) && free(parent) >= sizeOf(row)) place(row, parent);
+      else if (chosen && row.tipo === 'cyberOpcao') row.em = '-'; // Uma base escolhida nunca vira outra silenciosamente.
     }
     for (const row of rows.filter(item => childKinds.includes(item.tipo) && !item.em)) {
       // Cyberware interno, externo e fashionware vai no próprio corpo: no Foundry, as bases já vêm na ficha.
       if (row.tipo === 'cyberOpcao' && !NEEDS_BASE.includes(row.item.cyber.tipo)) continue;
-      const parent = rows.find(item => parentFits(row, item) && free(item) >= sizeOf(row));
+      const compatible = rows.filter(item => parentFits(row, item));
+      const candidates = row.tipo === 'cyberOpcao' && row.local ? compatible.filter(item => item.local === row.local) : compatible;
+      const parent = row.tipo === 'cyberOpcao'
+        ? candidates.length === 1 && free(candidates[0]) >= sizeOf(row) ? candidates[0] : null
+        : candidates.find(item => free(item) >= sizeOf(row));
       if (parent) place(row, parent);
     }
     // 2. Munição carregada em cada arma de distância: a escolhida, ou a compatível (de preferência a básica).
@@ -318,7 +347,11 @@
     texts.enemies = (lp.inimigos || []).map(enemyText).join(' | ');
     texts.tragicLoveAffairs = (lp.amores || []).map(value => lpText('amor', value)).join(' | ');
     // Vai para o campo Role Lifepath do Foundry: as respostas das tabelas da Role e, depois, as notas do jogador.
-    texts.roleLifepath = [roleLpText(doc), lp.roleLifepath || ''].filter(Boolean).join('\n\n');
+    const paths = roleViews(doc).map(view => {
+      const text = roleLpText(view);
+      return text && (doc.roleSecundaria ? `${roleName(view.role)}:\n${text}` : text);
+    });
+    texts.roleLifepath = [...paths, lp.roleLifepath || ''].filter(Boolean).join('\n\n');
     return texts;
   }
 
@@ -327,12 +360,12 @@
   // paga a diferença do primeiro mês (o que for pior não devolve). Opção que não serve para a Role volta ao padrão.
   // Personagens antigos guardavam moradia 'padrao' ou 'familia' (Nomad com o clã), ou a quitinete em megaprédio do
   // suplemento de fã, que saiu (vira o contêiner, que tinha o mesmo aluguel).
-  const allowedFor = (option, role) => !option.roles || option.roles.includes(role);
-  const housingBase = doc => C.housing.padrao[doc.role] || C.housing.padrao.geral;
+  const allowedFor = (option, doc) => !option.roles || option.roles.some(id => rankOf(doc, id) >= (id === 'exec' && option.id === 'conapt-corp' ? 2 : 1));
+  const housingBase = doc => rankOf(doc, 'exec') >= 2 ? C.housing.padrao.exec : C.housing.padrao.geral;
   function housing(doc) {
     const H = C.housing;
     const base = housingBase(doc);
-    const pick = (list, id, fallback) => list.find(item => item.id === id && allowedFor(item, doc.role)) || list.find(item => item.id === fallback);
+    const pick = (list, id, fallback) => list.find(item => item.id === id && allowedFor(item, doc)) || list.find(item => item.id === fallback);
     const home = pick(H.moradias, { padrao: '', familia: 'cla', megapredio: 'conteiner' }[doc.moradia] ?? doc.moradia, base.moradia);
     const life = pick(H.estilos, doc.estiloVida || (doc.moradia === 'familia' ? 'cla' : ''), base.estilo);
     const trauma = pick(H.traumaTeam, doc.traumaTeam, 'nenhum');
@@ -349,21 +382,11 @@
   }
 
   // ---------------- Sub-habilidades da Role ----------------
-  // doc.habilidades: { nome no Foundry: pontos }. Só Solo, Tech e Medtech têm (C.roleAbilities).
-  const abilitySpec = doc => C.roleAbilities[doc.role] || null;
+  // Habilidades de cada contexto de Role: a principal em doc.habilidades; a outra em roleSecundaria.habilidades.
+  const abilitySpec = doc => R.especificacao(doc.role, rankOf(doc), C);
   const abilityPoints = doc => { const spec = abilitySpec(doc); return spec ? spec.itens.reduce((sum, item) => sum + (Number((doc.habilidades || {})[item.id]) || 0), 0) : 0; };
   // Os Ranks que vão para o item de Role do Foundry, com as derivadas (perícias Cirurgia e Tecnologia Médica do Medtech).
-  function roleAbilityRanks(doc) {
-    const spec = abilitySpec(doc);
-    if (!spec) return [];
-    const ranks = spec.itens.map(item => ({ nome: item.id, rank: Math.min(spec.max, Math.max(0, Number((doc.habilidades || {})[item.id]) || 0)) }));
-    const byName = Object.fromEntries(ranks.map(entry => [entry.nome, entry.rank]));
-    for (const derived of spec.derivadas || []) {
-      const value = Object.entries(derived.de).reduce((sum, [name, factor]) => sum + (byName[name] || 0) * factor, 0);
-      ranks.push({ nome: derived.id, rank: derived.max ? Math.min(derived.max, value) : value });
-    }
-    return ranks;
-  }
+  const roleAbilityRanks = doc => (R.resultados(doc, C)[0] || {}).habilidades || [];
 
   // ---------------- Oficina da Família (Nomad) ----------------
   // doc.oficina: as escolhas na ordem, 'v:<veículo>' ou 'u:<número da escolha do veículo>:<upgrade>'.
@@ -380,7 +403,7 @@
   }
   function motorpool(doc) {
     const vehicles = [];
-    const valid = (doc.oficina || []).slice(0, MP().escolhas).map((value, index) => {
+    const valid = (doc.oficina || []).slice(0, rankOf(doc, 'nomad')).map((value, index) => {
       const [kind, first, second] = String(value || '').split(':');
       if (kind === 'v' && vehicleById(first) && !vehicles.some(entry => entry.veiculo.id === first)) { vehicles.push({ escolha: index, veiculo: vehicleById(first), upgrades: [] }); return true; }
       const target = kind === 'u' && vehicles.find(entry => entry.escolha === Number(first));
@@ -392,7 +415,7 @@
   }
   // O que dá para escolher na linha `index`, a partir das escolhas válidas de antes.
   function motorpoolChoices(doc, index) {
-    const before = motorpool({ oficina: (doc.oficina || []).slice(0, index) });
+    const before = motorpool({ ...doc, oficina: (doc.oficina || []).slice(0, index) });
     const options = MP().veiculos.filter(vehicle => !before.veiculos.some(entry => entry.veiculo.id === vehicle.id)).map(vehicle => ({ value: `v:${vehicle.id}`, label: `Veículo: ${vehicle.nome}` }));
     for (const target of before.veiculos) {
       const installed = target.upgrades.map(entry => entry.upgrade.id);
@@ -411,13 +434,16 @@
     if (!doc.nome) add(1, 'Dê um nome ao personagem.');
     if (!doc.role) add(1, 'Escolha a Role.');
     if (!doc.metodo) add(1, 'Escolha o método de criação.');
-    const role = roleById(doc.role);
-    if (role && role.especializacoes && !doc.especializacao) add(1, `Escolha a especialização de ${role.nome}.`);
-    const spec = abilitySpec(doc);
-    if (spec && abilityPoints(doc) !== spec.pontos) add(1, `${spec.titulo}: distribua ${spec.pontos} pontos (agora: ${abilityPoints(doc)}).`);
-    if (doc.role === 'nomad') {
-      const pool = motorpool(doc);
-      if (pool.feitas < MP().escolhas) add(1, `Oficina da Família: falta${MP().escolhas - pool.feitas > 1 ? 'm' : ''} ${MP().escolhas - pool.feitas} escolha${MP().escolhas - pool.feitas > 1 ? 's' : ''} (veículos ou upgrades).`);
+    for (const view of roleViews(doc)) {
+      const role = roleById(view.role);
+      if (role && role.especializacoes && !view.especializacao) add(1, `Escolha a especialização de ${role.nome}.`);
+      const spec = abilitySpec(view);
+      if (spec && abilityPoints(view) !== spec.pontos) add(1, `${role.nome} — ${spec.titulo}: distribua ${spec.pontos} pontos (agora: ${abilityPoints(view)}).`);
+      if (spec && spec.itens.some(item => Number((view.habilidades || {})[item.id]) > spec.max)) add(1, `${role.nome}: cada especialidade vai até ${spec.max}.`);
+      if (view.role === 'nomad') {
+        const left = rankOf(view) - motorpool(view).feitas;
+        if (left > 0) add(1, `Oficina da Família: falta${left > 1 ? 'm' : ''} ${left} escolha${left > 1 ? 's' : ''} (veículos ou upgrades).`);
+      }
     }
     if (doc.metodo === 'ratoderua' && !doc.sorteio.linha) add(2, 'Role ou escolha a linha da tabela de STATs.');
     if (doc.metodo === 'edgerunner' && statKeys.some(stat => !doc.sorteio[stat])) add(2, 'Role 1d10 para cada STAT.');
@@ -442,8 +468,10 @@
     const lp = doc.lifepath || {};
     const missingLp = lifepathFields.filter(([key]) => !lp[key]).map(([, label]) => label);
     if (missingLp.length) add(4, `Lifepath sem: ${missingLp.join(', ')}.`);
-    const missingRole = roleLpMissing(doc).length;
-    if (missingRole) add(4, `Lifepath da Role: falta${missingRole > 1 ? 'm' : ''} ${missingRole} pergunta${missingRole > 1 ? 's' : ''}.`);
+    for (const view of roleViews(doc)) {
+      const missingRole = roleLpMissing(view).length;
+      if (missingRole) add(4, `Lifepath de ${roleName(view.role)}: falta${missingRole > 1 ? 'm' : ''} ${missingRole} pergunta${missingRole > 1 ? 's' : ''}.`);
+    }
     const netPack = C.packages[(roleById(doc.role) || {}).tabelas];
     if (['ratoderua', 'edgerunner'].includes(doc.metodo) && uses2077Kit(doc, netPack)) {
       const left = netPack.kit2077.escolher - chosenQuickhacks(doc, netPack).length;
@@ -452,6 +480,12 @@
     const cash = money(doc);
     if (doc.metodo && cash.saldo < 0) add(5, `Gastou ${eb(-cash.saldo)} a mais do que tinha.`);
     for (const entry of missingFoundations(doc)) add(5, `${entry.item.nome} precisa de ${{ neuralWare: 'Neural Link', cyberEye: 'um cyberolho', cyberAudioSuite: 'Cyberaudio Suite', cyberArm: 'um cyberbraço', cyberLeg: 'uma cyberperna', borgware: 'uma base de borgware' }[entry.item.cyber.tipo]}.`);
+    const chrome = assembly(doc).rows.filter(row => row.item.cyber);
+    for (const row of chrome) {
+      if (row.item.cyber.base && CW.locais(row.item.cyber.tipo).length && !row.local) add(5, `Escolha o local de ${row.item.nome}: esquerdo ou direito.`);
+      if (row.tipo === 'cyberOpcao' && NEEDS_BASE.includes(row.item.cyber.tipo) && (!row.em || row.em === '-')) add(5, `${row.item.nome}: escolha a base específica na Montagem.`);
+    }
+    try { CW.duplicados(chrome); } catch (error) { add(5, error.message); }
     const hum = humanity(doc, stats);
     const psychosis = doc.metodo ? cyberpsychosis(hum) : '';
     if (psychosis) add(5, psychosis);
@@ -463,20 +497,20 @@
     const stats = computeStats(doc);
     const derived = C.derived(stats);
     const hum = humanity(doc, stats);
-    const role = roleById(doc.role) || {};
-    const spec = (role.especializacoes || []).find(item => item.id === doc.especializacao);
+    const roles = R.resultados(doc, C);
+    const nomad = roleView(doc, 'nomad');
     const cash = money(doc);
     return {
       versaoRegras: 1,
       stats, derivados: derived, humanidade: hum,
-      role: role.id ? { id: role.id, nome: role.nome, rank: 4, foundry: role.foundry, especializacao: spec ? { nome: spec.nome, pericias: spec.pericias } : null, habilidades: roleAbilityRanks(doc) } : null,
+      role: roles[0] || null, roles,
       pericias: finalSkills(doc), casa: doc.casa,
       // renomear: só quando o item tem outro nome em 2077 (o plug de interface vira Personal Link).
       // A montagem vai junto: uso (equipado, carregando, guardado), a munição da arma e onde cada item fica (uid do pai).
       itens: assembly(doc).rows.map(row => ({ uid: row.uid, id: row.id, nome: row.item.nome, renomear: row.nome || '', qtd: row.qtd, origem: row.origem, foundry: row.item.foundry, cyber: Boolean(row.item.cyber), semHumanidade: row.origem === 'gratis2077',
-        uso: row.uso, municao: row.municao === '-' ? '' : row.municao, em: row.em === '-' ? '' : row.em })),
+        uso: row.uso, municao: row.municao === '-' ? '' : row.municao, em: row.em === '-' ? '' : row.em, ...(row.item.cyber ? { local: row.local } : {}) })),
       // Veículos da família do Nomad, com os upgrades de cada um (instalados no Foundry).
-      veiculos: doc.role === 'nomad' ? motorpool(doc).veiculos.map(entry => ({
+      veiculos: nomad ? motorpool(nomad).veiculos.map(entry => ({
         uid: `familia:${entry.escolha}`, nome: entry.veiculo.nome, familia: true, foundry: { pack: 'cyberpunk-red-core.core_vehicles', nome: entry.veiculo.id },
         upgrades: entry.upgrades.map(item => ({ uid: `familia:${item.escolha}`, nome: item.upgrade.nome, foundry: { pack: 'cyberpunk-red-core.core_upgrades', nome: item.upgrade.id } }))
       })) : [],
@@ -516,7 +550,7 @@
   // ---------------- Ajuda de cada passo ----------------
   const STAT_MEANING = { INT: 'Raciocínio, conhecimento e atenção.', REF: 'Reflexos: mira com armas de fogo e direção.', DEX: 'Coordenação: corpo a corpo, esquiva e atletismo.', TECH: 'Habilidade técnica e medicina.', COOL: 'Compostura e presença social.', WILL: 'Força de vontade e resistência.', LUCK: 'Pontos de sorte para gastar a cada sessão.', MOVE: 'Deslocamento: MOVE × 2 m por turno.', BODY: 'Constituição e força: HP e Death Save.', EMP: 'Empatia: define a Humanidade.' };
   const HELP = {
-    1: ['RED p. 72–73 · anos 2070: Mission Kit p. 26', `<p><b>Role</b> é o que o personagem faz em Night City. Cada uma tem uma habilidade especial, que começa no Rank 4. <b>Método</b> é o quanto você quer decidir:</p>
+    1: ['RED p. 72–73 · anos 2070: Mission Kit p. 26', `<p><b>Role</b> é o que o personagem faz em Night City. Pela regra da mesa, você pode começar com duas Roles, com os Ranks combinados com o mestre. A principal define as tabelas e o pacote; a segunda traz sua habilidade, sem outro orçamento ou custo em IP. <b>Método</b> é o quanto você quer decidir:</p>
       <ul><li><b>Rato de Rua:</b> 1 dado para os STATs; perícias e equipamento vêm prontos. O mais rápido.</li><li><b>Edgerunner:</b> 1 dado para cada STAT, 86 pontos nas 20 perícias da Role e as opções do pacote da Role.</li><li><b>Pacote Completo:</b> você distribui 62 pontos de STAT e 86 de perícia, e compra o equipamento com 2.550eb.</li></ul>`],
     2: ['RED p. 72–80', `<p>STATs são os atributos. Num teste, você soma <b>STAT + perícia + 1d10</b>.</p><dl class="cc-help-stats">${Object.entries(STAT_MEANING).map(([stat, text]) => `<dt>${stat}</dt><dd>${text}</dd>`).join('')}</dl><p>HP, Gravemente Ferido, Death Save e Humanidade saem dos STATs: veja Valores derivados, logo abaixo.</p>`],
     3: ['RED p. 81–90', `<p>Num teste: <b>STAT + perícia + 1d10</b> contra uma dificuldade (DV). A coluna Base já soma a STAT.</p>
@@ -553,7 +587,7 @@
     const title = `${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` "${esc(doc.apelido)}"` : ''}`;
     const short = doc.metodo ? `HP ${points ? derived.hp : '—'} · ${eb(cash.saldo)} · ${issues ? `${issues} pendência${issues > 1 ? 's' : ''}` : 'tudo certo'}` : 'escolha Role e método';
     return `<summary><b>${title}</b> <small>${short}</small></summary>
-      <p class="cc-summary-role">${esc(roleName(doc.role))}${doc.metodo ? ` · ${esc((methodById(doc.metodo) || {}).nome || '')}` : ''}</p>
+      <p class="cc-summary-role">${esc(rolesLabel(doc, rolesOf(doc)))}${doc.metodo ? ` · ${esc((methodById(doc.metodo) || {}).nome || '')}` : ''}</p>
       ${rows.length ? `<dl>${rows.map(([label, dd]) => `<dt>${label}</dt>${dd}`).join('')}</dl>` : ''}
       <p>${issues ? `<button type="button" class="cc-link" data-step="7">${issues} pendência${issues > 1 ? 's' : ''}</button>` : '<span class="cc-ok">Sem pendências</span>'}</p>`;
   }
@@ -585,7 +619,8 @@
     // O mestre vê cada Foundry: o ator ligado no 12 e no 14 (e o aviso do 14 quando o ator foi apagado: importar de novo).
     const tables = papel === 'mestre' ? [[12, doc.foundry12], [14, doc.foundry14]].filter(([, link]) => link && link.importado) : [];
     const perTable = tables.length ? `<ul class="cc-foundries">${tables.map(([n, link]) => `<li>Foundry ${n}: ${link.removido ? `<span class="cc-wait">o ator <b>${esc(link.nomeAtor || link.ator)}</b> foi apagado em ${when(link.removido)}; importe de novo no Foundry ${n}.</span>` : `ator <b>${esc(link.nomeAtor || link.ator)}</b>, desde ${new Date(link.importado).toLocaleDateString('pt-BR')}.`}</li>`).join('')}</ul>` : '';
-    return box('Levar para o Foundry', `${text}${perTable}<p class="cc-msg" data-cc-send-msg role="status"></p>${papel === 'mestre' ? GM_FOUNDRY_HELP : ''}`, ' data-cc-foundry');
+    const rolesNotice = rolesOf(doc).length > 1 ? '<div class="callout"><b>Este personagem tem duas Roles.</b> A importação das duas está disponível no Foundry 12. O Foundry 14 ainda aceita uma Role por personagem; use o Foundry 12 para esta ficha.</div>' : '';
+    return box('Levar para o Foundry', `${rolesNotice}${text}${perTable}<p class="cc-msg" data-cc-send-msg role="status"></p>${papel === 'mestre' ? GM_FOUNDRY_HELP : ''}`, ' data-cc-foundry');
   }
   // Envia e redesenha o quadro. `before` salva o que estiver pendente (no criador).
   async function sendToGm(doc, papel, scope, before) {
@@ -654,17 +689,17 @@
     // em uso tem a borda em ciano e o selo "Em uso" no lugar do Usar.
     const initials = name => (String(name || '').match(/\p{L}+/gu) || ['?']).slice(0, 2).map(word => word[0]).join('').toUpperCase();
     const face = item => (item.retrato ? portraitImg(item.retrato, 'cc-thumb', item.nome) : `<span class="cc-initials" aria-hidden="true">${esc(initials(item.nome))}</span>`);
-    const head = (item, rank) => `<div class="cc-card-top">${face(item)}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<span class="cc-card-role">${esc(roleName(item.role))}${rank ? ` // Rank ${rank}` : ''}</span>`;
+    const head = item => `<div class="cc-card-top">${face(item)}<div class="cc-card-text"><strong>${esc(item.nome || 'Sem nome')}</strong>${item.apelido ? ` <span class="cc-handle">"${esc(item.apelido)}"</span>` : ''}<span class="cc-card-role">${esc(rolesLabel(item))}</span>`;
     const count = value => (Number.isFinite(value) ? value.toLocaleString('pt-BR') : '—');
     const card = item => {
       const n = item.numeros || {};
       const hurt = n.hp && n.hp.atual < n.hp.max;
-      return `<div class="cc-card${item.id === inUse ? ' cc-selected' : ''}" data-cc-card="${item.id}">${head(item, n.rank)}
+      return `<div class="cc-card${item.id === inUse ? ' cc-selected' : ''}" data-cc-card="${item.id}">${head(item)}
         <small class="cc-card-info">${[item.metodo ? esc((methodById(item.metodo) || {}).nome || '') : '', papel === 'mestre' && item.donoNome ? `de ${esc(item.donoNome)}` : ''].filter(Boolean).join(' · ')}${foundryBadge(item)}${item.pedidos && item.pedidos.pendentes ? ' · <b class="cc-wait">pedido esperando o mestre</b>' : ''}${item.temAnotacoes ? ' · anotações' : ''}</small></div></div>
         <div class="cc-card-numbers" title="${n.naMesa ? 'Os números da mesa (a ficha que o Foundry mandou)' : 'Os números da criação'}"><div><small>HP${n.naMesa ? ' na mesa' : ''}</small><b class="${hurt ? 'cc-bad' : ''}">${n.hp ? `${n.hp.atual}/${n.hp.max}` : '—'}</b></div><div><small>IP</small><b>${count(n.ip)}</b></div><div><small>Eddies</small><b>${count(n.eb)}</b></div></div>
         <div class="cc-card-actions">${papel === 'jogador' ? `<span class="cc-in-use">Em uso</span><button class="action ghost cc-use" type="button" data-cc-select="${item.id}">Usar</button>` : ''}<button class="action" type="button" data-cc-open="ficha" data-id="${item.id}">Ficha</button><button class="action ghost" type="button" data-cc-open="loja" data-id="${item.id}">Loja</button><button class="action ghost" type="button" data-cc-open="criador" data-id="${item.id}">Editar</button>${papel === 'mestre' && campaignsOfMe.length > 1 ? `<button class="action ghost" type="button" data-cc-move="${item.id}">Mover</button>` : ''}<button class="action cc-danger" type="button" data-cc-delete="${item.id}">Apagar</button></div></div>`;
     };
-    const publicCard = item => `<div class="cc-card cc-card-public">${head(item, null)}<small class="cc-card-info">${item.donoNome ? `de ${esc(item.donoNome)}` : ''}</small></div></div></div>`;
+    const publicCard = item => `<div class="cc-card cc-card-public">${head(item)}<small class="cc-card-info">${item.donoNome ? `de ${esc(item.donoNome)}` : ''}</small></div></div></div>`;
     // O cartão tracejado do fim da grade cria um personagem novo (o criador abre com a loja inicial).
     const newCard = '<div class="cc-card cc-card-new"><b>Novo personagem</b><small>Criador // loja inicial</small><button class="action" type="button" data-cc-new>Criar</button></div>';
 
@@ -866,8 +901,7 @@
       decks: rows.filter(row => row.tipo === 'deck').map(row => ({ nome: nameOf(row), ativo: row.uso === 'equipado', dentro: inside(row) })),
       outros: rows.filter(row => ['item', 'municao', 'roupa'].includes(row.tipo) || (['acessorio', 'deckItem'].includes(row.tipo) && loose(row)))
         .map(row => ({ nome: nameOf(row), qtd: row.qtd, uso: row.tipo === 'municao' ? '' : row.uso, roupa: row.tipo === 'roupa', origem: row.origem })),
-      veiculos: doc.role === 'nomad' ? motorpool(doc).veiculos.map(entry => ({ nome: entry.veiculo.nome, dentro: entry.upgrades.map(item => item.upgrade.nome) })) : [],
-      habilidades: (abilitySpec(doc) || { itens: [] }).itens.map(item => [item.nome, Number((doc.habilidades || {})[item.id]) || 0, item.desc])
+      veiculos: roleView(doc, 'nomad') ? motorpool(roleView(doc, 'nomad')).veiculos.map(entry => ({ nome: entry.veiculo.nome, dentro: entry.upgrades.map(item => item.upgrade.nome) })) : []
     };
   }
 
@@ -881,8 +915,6 @@
     const weaponInside = new Set(items.filter(item => item.tipo === 'weapon').flatMap(item => item.dentro || []));
     const vehicleInside = new Set(items.filter(item => item.tipo === 'vehicle').flatMap(item => item.dentro || []));
     const uso = item => ({ equipped: 'equipado', carried: 'carregando', owned: 'guardado' })[item.uso] || '';
-    const spec = abilitySpec(doc);
-    const abilityName = name => ((spec && spec.itens.find(item => item.id === name)) || {}).nome || name;
     const body = Number(stats.BODY) || 0;
     const will = Number(stats.WILL) || 0;
     return {
@@ -900,8 +932,7 @@
       decks: items.filter(item => item.tipo === 'cyberdeck').map(item => ({ nome: item.nome, ativo: item.uso === 'equipped', dentro: item.dentro || [] })),
       outros: items.filter(item => ['gear', 'ammo', 'clothing', 'drug'].includes(item.tipo) || (['program', 'itemUpgrade'].includes(item.tipo) && !deckNames.has(item.nome) && !weaponInside.has(item.nome) && !vehicleInside.has(item.nome)))
         .map(item => ({ nome: item.nome, qtd: item.qtd, uso: item.tipo === 'ammo' ? '' : uso(item), roupa: item.tipo === 'clothing' })),
-      veiculos: items.filter(item => item.tipo === 'vehicle').map(item => ({ nome: item.nome, dentro: item.dentro || [] })),
-      habilidades: ((m.role || {}).habilidades || []).filter(([name]) => !/Skill$/.test(name)).map(([name, rank]) => [abilityName(name), rank, ''])
+      veiculos: items.filter(item => item.tipo === 'vehicle').map(item => ({ nome: item.nome, dentro: item.dentro || [] }))
     };
   }
 
@@ -931,16 +962,25 @@
     if (doc.mesa && doc.foundry) {
       const items = (doc.mesa.itens || []).filter(item => item.tipo === 'cyberware');
       const piece = item => {
-        const entry = catalogEntryOf(item.nome);
+        const entry = catalogItemOf(item);
         const cyber = { ...((entry && entry.cyber) || {}), ...(item.cyber || {}) };
-        return { nome: item.nome, tipo: cyber.tipo || '', tamanho: cyber.tamanho ?? 1, slots: cyber.slots || 0, info: entry, qtd: 1, gratis: String(item.uid || '').startsWith('gratis:'), itens: [] };
+        return { id: item.id || '', uid: item.uid || '', local: localSeguro(item.local, cyber.tipo), localPlanejado: localSeguro(item.localPlanejado, cyber.tipo), nome: item.nome, tipo: cyber.tipo || '', tamanho: cyber.tamanho ?? 1, slots: cyber.slots || 0, info: entry, qtd: Number(item.qtd) || 1, gratis: String(item.uid || '').startsWith('gratis:'), itens: [] };
       };
-      // As opções vão para a base que as tem (pelo nome: duas iguais em bases diferentes saem uma para cada).
+      // IDs/UIDs preservam opções iguais em bases diferentes. Nomes antigos só servem quando não há ambiguidade.
       const options = items.filter(item => !item.base);
-      const take = name => { const at = options.findIndex(item => item.nome === name); return at < 0 ? null : options.splice(at, 1)[0]; };
-      for (const item of items.filter(entry => entry.base)) {
+      const bases = items.filter(entry => entry.base);
+      for (const item of bases) {
         const base = piece(item);
-        base.itens = (item.dentro || []).map(take).filter(Boolean).map(piece);
+        const attached = options.filter(child => child.pai?.uid ? item.uid && child.pai.uid === item.uid
+          : child.pai?.id ? item.id && child.pai.id === item.id
+          : (child.uid && (item.dentroUids || []).includes(child.uid)) || (child.id && (item.dentroIds || []).includes(child.id)));
+        for (const name of item.dentro || []) {
+          const matches = options.filter(child => child.nome === name && !attached.includes(child) && !child.pai?.uid && !child.pai?.id
+            && !bases.some(parent => (child.uid && (parent.dentroUids || []).includes(child.uid)) || (child.id && (parent.dentroIds || []).includes(child.id))));
+          if (matches.length === 1 && bases.filter(parent => (parent.dentro || []).includes(name)).length === 1) attached.push(matches[0]);
+        }
+        base.itens = attached.map(child => ({ ...piece(child), local: base.local }));
+        for (const child of attached) options.splice(options.indexOf(child), 1);
         (item.instalado ? out.bases : out.esperando).push(base);
       }
       for (const item of options) {
@@ -951,11 +991,11 @@
       return out;
     }
     const rows = assembly(doc).rows;
-    const piece = row => ({ nome: row.nome || row.item.nome, tipo: row.item.cyber.tipo, tamanho: row.item.cyber.tamanho, slots: row.item.cyber.slots, info: row.item, qtd: row.qtd || 1, gratis: row.origem === 'gratis2077', itens: [] });
+    const piece = row => ({ uid: row.uid, local: row.local, nome: row.nome || row.item.nome, tipo: row.item.cyber.tipo, tamanho: row.item.cyber.tamanho, slots: row.item.cyber.slots, info: row.item, qtd: row.qtd || 1, gratis: row.origem === 'gratis2077', itens: [] });
     for (const row of rows.filter(item => item.tipo === 'cyberBase')) out.bases.push({ ...piece(row), itens: rows.filter(item => item.em === row.uid).map(piece) });
     for (const row of rows.filter(item => item.tipo === 'cyberOpcao')) {
       if (!NEEDS_BASE.includes(row.item.cyber.tipo)) out.corpo.push(piece(row));
-      else if (!row.em || row.em === '-') out.soltos.push(piece(row));
+      else if (!row.em || row.em === '-') out.soltos.push({ ...piece(row), local: '', localPlanejado: row.local });
     }
     return out;
   }
@@ -978,7 +1018,7 @@
     cells.push(piece.slots ? ['Slots', piece.slots] : ['Ocupa', piece.tamanho ? `${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}` : 'nenhum slot']);
     if (item && item.preco && !piece.gratis) cells.push(['Preço', eb(item.preco)]);
     return `<p class="cy-ficha-nome"><b>${esc(piece.nome)}</b>${item && item.nome !== piece.nome ? ` <small>${esc(item.nome)}</small>` : ''}</p>
-      <p class="cy-ficha-onde">${esc(where)}</p>
+      <p class="cy-ficha-onde">${esc(where)}${piece.localPlanejado && !piece.local ? ` · planejado: ${esc(CW.nome(piece.localPlanejado))}` : ''}</p>
       <div class="cy-nums">${cells.map(([label, value]) => `<div><small>${label}</small><b>${esc(String(value))}</b></div>`).join('')}</div>
       ${item && item.desc ? `<p class="cy-ficha-desc">${esc(item.desc)}</p>` : item ? '' : '<p class="cy-ficha-desc note-status">Fora do catálogo da wiki: veja a descrição na ficha do Foundry.</p>'}`;
   }
@@ -1043,15 +1083,15 @@
     const lit = {};
     let installed = 0;
     const panel = '<div class="cy-ficha" data-cy-aberta="" hidden></div>';
-    const nameButton = (piece, k) => `<li><button type="button" class="cy-nome" data-cy-item="${k}">${esc(piece.nome)}${piece.qtd > 1 ? ` ×${piece.qtd}` : ''}${piece.tamanho ? '' : ' <small>sem slot</small>'}</button></li>`;
+    const nameButton = (piece, k) => `<li><button type="button" class="cy-nome" data-cy-item="${k}">${esc(piece.nome)}${piece.qtd > 1 ? ` ×${piece.qtd}` : ''}${piece.local || piece.localPlanejado ? ` <small class="cy-location">${esc(CW.nome(piece.local || piece.localPlanejado))}${!piece.local ? ' (planejado)' : ''}</small>` : ''}${piece.tamanho ? '' : ' <small>sem slot</small>'}</button></li>`;
     // showSlots: a base mostra os slots dela só quando o grupo tem mais de uma (senão a conta do grupo já diz).
     const unitHtml = (group, unit, showSlots) => {
       if (unit.falta) {
         const base = group.base === 'Borgware' ? '' : '1';
-        return `<div class="cy-unit cy-natural"><div class="cy-unit-head"><span>${esc(unit.nome)}</span></div>
-          <div class="cy-slots"><button type="button" class="cy-slot cy-livre cy-base" data-cy-loja="${group.tipo}" data-cy-base="${base}" data-cy-nome="${esc(base ? `Base: ${group.base}` : group.nome)}" aria-label="Ver ${esc(group.base)} na loja">+ ${esc(group.base)}</button></div></div>`;
+        return `<div class="cy-unit cy-natural" data-cy-local="${unit.local || ''}"><div class="cy-unit-head">${unit.local ? `<span class="cy-location">${esc(CW.nome(unit.local))}</span>` : ''}<span>${esc(unit.nome)}</span></div>
+          <div class="cy-slots"><button type="button" class="cy-slot cy-livre cy-base" data-cy-loja="${group.tipo}" data-cy-base="${base}" data-cy-local="${unit.local || ''}" data-cy-nome="${esc(unit.local ? `${group.base} · ${CW.nome(unit.local)}` : base ? `Base: ${group.base}` : group.nome)}" aria-label="Comprar ${esc(group.base)}${unit.local ? ` para ${esc(CW.nome(unit.local))}` : ''}">+ ${esc(group.base)}</button></div></div>`;
       }
-      const where = `${group.nome} · ${unit.corpo ? 'no corpo' : `em ${unit.nome}`}`;
+      const where = `${group.nome} · ${unit.corpo ? 'no corpo' : `${unit.local ? CW.nome(unit.local) : group.par ? 'Local não definido' : unit.nome} · ${unit.nome}`}`;
       const cells = [];
       const names = [];
       let used = 0;
@@ -1066,24 +1106,33 @@
         }
       }
       const label = unit.corpo ? group.nome : `Opções de ${group.nome}`;
-      for (let free = Math.max(0, unit.slots - used); free > 0; free--) cells.push(`<button type="button" class="cy-slot cy-livre" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-nome="${esc(label)}" aria-label="Slot livre ${unit.corpo ? `de ${esc(group.nome)}` : `em ${esc(unit.nome)}`}: ver na loja o que cabe">+</button>`);
+      for (let free = Math.max(0, unit.slots - used); free > 0; free--) cells.push(`<button type="button" class="cy-slot cy-livre" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-local="${unit.local || ''}" data-cy-em="${esc(unit.base ? parentRef(unit.base) : '')}" data-cy-nome="${esc(unit.local ? `${label} · ${CW.nome(unit.local)}` : label)}" aria-label="Slot livre ${unit.local ? `no ${esc(CW.nome(unit.local).toLowerCase())}` : unit.corpo ? `de ${esc(group.nome)}` : `em ${esc(unit.nome)}`}: ver na loja o que cabe">+</button>`);
       let head = '';
       if (!unit.corpo) {
         installed += 1;
-        head = `<div class="cy-unit-head"><button type="button" class="cy-unit-name" data-cy-item="${card(unit.base, `${group.nome} · base com ${unit.slots} slots`)}">${esc(unit.nome)}</button>${showSlots ? ` <small>${used}/${unit.slots}</small>` : ''}</div>`;
+        head = `<div class="cy-unit-head">${group.par ? `<span class="cy-location">${esc(CW.nome(unit.local))}</span>` : ''}<button type="button" class="cy-unit-name" data-cy-item="${card(unit.base, `${where} · base com ${unit.slots} slots`)}">${esc(unit.nome)}</button>${showSlots ? ` <small>${used}/${unit.slots}</small>` : ''}</div>`;
       }
       unit.usados = used;
-      return `<div class="cy-unit" data-cy-holder>${head}<div class="cy-slots">${cells.join('')}</div>
+      return `<div class="cy-unit${group.par && !unit.local ? ' cy-unassigned' : ''}" data-cy-holder data-cy-local="${unit.local || ''}" data-cy-uid="${esc(unit.base ? parentRef(unit.base) : '')}">${head}<div class="cy-slots">${cells.join('')}</div>
         ${used > unit.slots ? `<p class="cc-warn cy-cheia">Mais do que cabe: ${used} de ${unit.slots} slots.</p>` : ''}
         ${names.length ? `<ul class="cy-nomes">${names.join('')}</ul>` : ''}${panel}</div>`;
     };
     const groupHtml = group => {
-      const units = group.corpo
+      let units = group.corpo
         ? [{ corpo: true, nome: group.nome, slots: group.corpo, itens: parts.corpo.filter(piece => piece.tipo === group.tipo) }]
-        : parts.bases.filter(base => base.tipo === group.tipo).map(base => ({ base, nome: base.nome, slots: base.slots || group.slots, itens: base.itens }));
+        : parts.bases.filter(base => base.tipo === group.tipo).map(base => ({ base, local: base.local, nome: base.nome, slots: base.slots || group.slots, itens: base.itens }));
       const real = group.corpo ? (units[0].itens.length ? 1 : 0) : units.length;
-      group.partes.forEach((id, index) => { lit[id] = group.corpo ? real > 0 : real > index; });
-      if (!group.corpo) while (units.length < (group.par ? 2 : 1)) units.push({ falta: true, nome: group.vazio });
+      if (group.par) {
+        const shapes = { 'braco-esquerdo': 'braco-2', 'braco-direito': 'braco-1', 'olho-esquerdo': 'olho-2', 'olho-direito': 'olho-1', 'perna-esquerda': 'perna-1', 'perna-direita': 'perna-2' };
+        units = [...CW.locais(group.tipo).flatMap(local => {
+          const installed = units.filter(unit => unit.local === local.id);
+          if (installed.length) lit[shapes[local.id]] = true;
+          return installed.length ? installed : [{ falta: true, local: local.id, nome: group.vazio }];
+        }), ...units.filter(unit => !unit.local)];
+      } else {
+        group.partes.forEach(id => { lit[id] = real > 0; });
+        if (!group.corpo && !units.length) units.push({ falta: true, nome: group.vazio });
+      }
       const html = units.map(unit => unitHtml(group, unit, !group.corpo && real > 1)).join('');
       const counted = units.filter(unit => !unit.falta);
       const count = counted.length ? `${counted.reduce((sum, unit) => sum + unit.usados, 0)}/${counted.reduce((sum, unit) => sum + unit.slots, 0)}` : '—';
@@ -1117,7 +1166,9 @@
         <div class="cy-num"><small>Implantes</small><b>${installed}</b></div>
         <div class="cy-num"><small>Dinheiro</small><b>${eb(model.dinheiro)}</b></div></div>
       ${psychosis ? `<p class="cc-warn cy-aviso">${esc(psychosis)}</p>` : ''}
-      <p class="cy-fonte note-status">${source}</p>
+      <p class="cy-fonte note-status">${source} Os lados são os do personagem.</p>
+      <div class="cy-summary" aria-label="Resumo dos implantes"><span class="cy-summary-item"><b>${installed}</b> instalados</span><span class="cy-summary-item"><b>${parts.esperando.reduce((sum, item) => sum + item.qtd, 0)}</b> aguardando instalação</span><span class="cy-summary-item"><b>${parts.bases.filter(base => CW.locais(base.tipo).length && !base.local).length}</b> bases sem local definido</span></div>
+      <div class="cy-legend"><span class="cy-legend-item"><i class="cy-legend-free" aria-hidden="true"></i>Slot livre</span><span class="cy-legend-item"><i class="cy-legend-filled" aria-hidden="true"></i>Ocupado</span><span class="cy-legend-item"><i class="cy-legend-unassigned" aria-hidden="true"></i>Local não definido</span></div>
       <div class="cy-stage">
         <svg class="cy-links" aria-hidden="true"></svg>
         <div class="cy-col cy-col-esq">${left}</div>
@@ -1200,15 +1251,13 @@
     const shop = event.target.closest('[data-cy-loja]');
     if (!shop) return false;
     const base = shop.dataset.cyBase;
-    openShop({ tipo: shop.dataset.cyLoja, base: base === '1' ? true : base === '0' ? false : undefined, nome: shop.dataset.cyNome || '' });
+    openShop({ tipo: shop.dataset.cyLoja, base: base === '1' ? true : base === '0' ? false : undefined, nome: shop.dataset.cyNome || '', ...(shop.dataset.cyLocal ? { local: shop.dataset.cyLocal } : {}), ...(shop.dataset.cyEm ? { em: shop.dataset.cyEm } : {}) });
     return true;
   }
 
   function sheetHtml(doc) {
     const model = sheetModel(doc);
     const mesa = model.fonte === 'mesa';
-    const role = roleById(doc.role) || {};
-    const spec = (role.especializacoes || []).find(item => item.id === doc.especializacao);
     const lp = lifepathTexts(doc);
     const lpRows = [...lifepathFields.map(([, label, field]) => [label, lp[field]]), ['Amigos', lp.friends], ['Inimigos', lp.enemies], ['Amores trágicos', lp.tragicLoveAffairs], ['Lifepath da Role', lp.roleLifepath]].filter(([, text]) => text);
     const vital = (label, value, extra = '', bad = false) => `<div class="cc-vital${bad ? ' cc-vital-bad' : ''}"><span>${label} </span><b>${value}</b>${extra}</div>`;
@@ -1216,7 +1265,7 @@
     const names = list => list.map(name => esc(name)).join(', ');
     const statCell = stat => `<div class="cc-stat"><span>${stat}</span><b>${stat === 'EMP' && !mesa && model.empMostrada !== model.stats.EMP ? `${model.empMostrada}<small>/${model.stats.EMP}</small>` : model.stats[stat] || '—'}</b></div>`;
     const hurt = model.hp.atual < model.hp.max;
-    const rank = mesa && doc.mesa.role ? doc.mesa.role.rank : 4;
+    const roleEntries = mesa ? R.listaMesa(doc) : R.resultados(doc, C).map(entry => ({ ...entry, habilidades: entry.habilidades.map(item => [item.nome, item.rank]) }));
     const source = mesa
       ? `<p class="cc-source cc-ok">Na mesa: a ficha do Foundry${model.quando ? `, atualizada em ${when(model.quando)}` : ''}. Os números agora mudam lá.</p>`
       : `<p class="cc-source">Ficha da criação.${doc.foundry ? ' O Foundry ainda não mandou a ficha da mesa.' : ' Depois que o mestre importar no Foundry, esta ficha passa a mostrar a mesa.'}</p>`;
@@ -1243,11 +1292,22 @@
       ${model.armas.length ? `<div class="table-wrap dense"><table class="cc-weapons"><thead><tr><th>Arma</th><th>Ataque</th><th>Dano</th><th>CDT</th><th>Pente</th><th>Mãos</th></tr></thead><tbody>${model.armas.map(weaponRow).join('')}</tbody></table></div>` : '<p class="note-status">Nenhuma arma.</p>'}
       <p><b>Armadura:</b> ${worn.length ? worn.map(item => `${esc(item.nome)} <small>(${armorText(item)})</small>`).join(' · ') : 'nenhuma vestida'}${carried.length ? ` <small>· carregando: ${names(carried.map(item => item.nome))}</small>` : ''}</p></div>`;
 
-    const abilityTitle = (abilitySpec(doc) || {}).titulo || 'Sub-habilidades';
-    const roleBox = model.habilidades.length || model.veiculos.length || spec ? `<div class="section cc-box" data-toc="Role"><h3>${esc(role.habilidade || 'Role')} Rank ${rank}${spec ? ` · ${esc(spec.nome)}` : ''}</h3>
-      ${spec ? `<p>Especialização: soma o Rank em ${spec.pericias.map(skillPt).join(', ')}.</p>` : ''}
-      ${model.habilidades.length ? `${abilityTitle !== role.habilidade ? `<h4>${esc(abilityTitle)}</h4>` : ''}<ul class="cc-items">${model.habilidades.map(([name, value, desc]) => `<li><b>${esc(name)}</b> ${value}${desc ? `<small> · ${esc(desc)}</small>` : ''}</li>`).join('')}</ul>` : ''}
-      ${model.veiculos.length ? `<h4>Veículos da família</h4><ul class="cc-items">${model.veiculos.map(item => `<li><b>${esc(item.nome)}</b>${item.dentro.length ? `: ${names(item.dentro)}` : ''}</li>`).join('')}</ul><p class="note-status">Um de cada vez com você; o resto fica com a família.</p>` : ''}</div>` : '';
+    const roleBox = roleEntries.map(entry => {
+      const definition = roleById(entry.id) || {};
+      const abilities = R.especificacao(entry.id, entry.rank, C);
+      const view = roleView(doc, entry.id);
+      const specialization = (definition.especializacoes || []).find(item => item.id === view?.especializacao);
+      const ranks = (entry.habilidades || []).filter(([name]) => !/Skill$/.test(name)).map(([name, value]) => {
+        const item = (abilities?.itens || []).find(option => option.id === name);
+        return `<li><b>${esc(item?.nome || name)}</b> ${value}${item?.desc ? `<small> · ${esc(item.desc)}</small>` : ''}</li>`;
+      });
+      const hacks = entry.id === 'netrunner' ? quickhacksAt(entry.rank) : [];
+      return `<div class="section cc-box" data-toc="Role: ${esc(R.nome(entry.id) || entry.nome)}"><h3>${esc(R.nome(entry.id) || entry.nome)} · ${esc(definition.habilidade || 'Habilidade da Role')} Rank ${entry.rank}</h3>
+        ${specialization ? `<p>Especialização: ${esc(specialization.nome)}, soma o Rank em ${specialization.pericias.map(skillPt).join(', ')}.</p>` : ''}
+        ${ranks.length ? `<ul class="cc-items">${ranks.join('')}</ul>` : ''}
+        ${hacks.length ? `<h4>Quickhacks de Interface ${entry.rank}</h4><p>${names(hacks.map(hack => hack.name))}. Gratuitos pelo Rank de Interface.</p>` : ''}
+        ${entry.id === 'nomad' && model.veiculos.length ? `<h4>Veículos da família</h4><ul class="cc-items">${model.veiculos.map(item => `<li><b>${esc(item.nome)}</b>${item.dentro.length ? `: ${names(item.dentro)}` : ''}</li>`).join('')}</ul><p class="note-status">Um de cada vez com você; o resto fica com a família.</p>` : ''}</div>`;
+    }).join('');
 
     // Perícias, como no exemplo da Ficha: uma caixa por perícia, da maior base do teste para a menor, com a STAT e o nível.
     const bySkill = model.pericias.slice().sort((a, b) => b.base - a.base || a.label.localeCompare(b.label, 'pt'));
@@ -1286,11 +1346,11 @@
     const identity = `<div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait-slot" aria-hidden="true">Retrato</div>'}
         <div class="cc-stats">${statKeys.map(statCell).join('')}</div>
         ${model.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${model.penalidade} em REF, DEX e MOVE (já descontado no ataque e nas perícias).</p>` : ''}</div>`;
-    const line = `${esc(role.nome || 'Sem Role')} · ${esc(role.habilidade || '')} Rank ${rank}${spec ? ` · ${esc(spec.nome)}` : ''} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}`;
+    const line = `${esc(rolesLabel(doc, roleEntries))} · ${esc((methodById(doc.metodo) || {}).nome || 'método não escolhido')}`;
     const about = `<div class="section cc-box cc-about" data-toc="Personagem"><p><b>${line}</b>${doc.foundry ? ` · <b class="cc-ok">No Foundry desde ${new Date(doc.foundry.importado).toLocaleDateString('pt-BR')}</b>` : ''}</p>
         ${doc.aparencia ? `<p>${esc(doc.aparencia)}</p>` : ''}${source}</div>`;
     return {
-      lede: `${esc(role.nome || 'Sem Role')}, Rank ${rank}. A ficha, as compras e as anotações${mesa ? ', com os números da mesa' : ''}.`,
+      lede: `${esc(rolesLabel(doc, roleEntries))}. A ficha, as compras e as anotações${mesa ? ', com os números da mesa' : ''}.`,
       lado: `${identity}${vitals}`,
       resumo: `${about}${combat}${roleBox}
         <div class="section cc-box" data-toc="Moradia"><h3>Moradia e estilo de vida</h3>${homeBox}</div>
@@ -1305,7 +1365,7 @@
   // A aba Compras: os pedidos da loja deste personagem, do mais novo para o mais velho, com a situação de cada um.
   function purchasesBox(doc) {
     const orders = (doc.pedidos || []).slice().reverse();
-    const lineOf = pedido => `<li class="cc-order cc-order-${esc(pedido.status)}"><div class="shop-line"><span><b>${(pedido.itens || []).map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${eb(pedido.total || 0)}${pedido.motivo ? ` · Motivo: ${esc(pedido.motivo)}` : ''}</small></span>${statusChip(pedido.status)}</div></li>`;
+    const lineOf = pedido => `<li class="cc-order cc-order-${esc(pedido.status)}"><div class="shop-line"><span><b>${(pedido.itens || []).map(item => `${esc(item.nome)}${item.local ? ` · ${esc(CW.nome(item.local))}` : ''}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${eb(pedido.total || 0)}${pedido.motivo ? ` · Motivo: ${esc(pedido.motivo)}` : ''}</small></span>${statusChip(pedido.status)}</div></li>`;
     return box(`Compras<span class="ref">${orders.length} pedido${orders.length === 1 ? '' : 's'}</span>`, `${orders.length ? `<ul class="cc-items cc-orders cc-purchases">${orders.map(lineOf).join('')}</ul>` : '<p class="note-status">Nenhum pedido na loja ainda.</p>'}<p><button class="action ghost" type="button" data-cc-shop>Abrir a loja</button></p>`, ' data-toc="Compras"');
   }
 
@@ -1323,7 +1383,7 @@
   const notesBox = (doc, papel) => box('Anotações', `<p class="note-status">Pistas, contatos, dívidas, o que o NPC prometeu. ${papel === 'mestre' ? 'O jogador escreve aqui; você também pode.' : 'Só você e o mestre leem.'} Fica salvo sozinho, em qualquer aparelho.</p><textarea class="note-area cc-notes" data-cc-notes rows="8" placeholder="Ex.: Brakk quer 500eb até sexta. A senha do depósito é 4471.">${esc((doc.anotacoes || {}).texto || '')}</textarea><p class="note-status" data-cc-notes-status>${doc.anotacoes && doc.anotacoes.atualizado ? `Salvo em ${when(doc.anotacoes.atualizado)}${doc.anotacoes.por ? ` (${esc(doc.anotacoes.por)})` : ''}.` : ''}</p>`, ' data-cc-notes-box data-toc="Anotações"');
 
   // Histórico de versões (só o mestre): como o personagem estava antes de cada rodada de edição, e Restaurar.
-  const HISTORY_FIELDS = { nome: 'nome', apelido: 'apelido', role: 'Role', especializacao: 'especialização', metodo: 'método', stats: 'STATs', sorteio: 'sorteio dos STATs', pericias: 'perícias', tipos: 'tipos de perícia', extras: 'perícias extras', lingua: 'língua', casa: 'bairro', itens: 'itens', quickhacks: 'quickhacks', kitNet: 'kit NET', escolhas: 'escolhas', habilidades: 'habilidade da Role', oficina: 'oficina', montagem: 'montagem', moradia: 'moradia', estiloVida: 'estilo de vida', traumaTeam: 'Trauma Team', estiloModa: 'moda', lifepath: 'Lifepath', avanco: 'avanço', aparencia: 'aparência', notas: 'notas', retratoLink: 'link do retrato' };
+  const HISTORY_FIELDS = { nome: 'nome', apelido: 'apelido', role: 'Role', rankRole: 'Rank da Role principal', roleSecundaria: 'segunda Role', especializacao: 'especialização', metodo: 'método', stats: 'STATs', sorteio: 'sorteio dos STATs', pericias: 'perícias', tipos: 'tipos de perícia', extras: 'perícias extras', lingua: 'língua', casa: 'bairro', itens: 'itens', quickhacks: 'quickhacks', kitNet: 'kit NET', escolhas: 'escolhas', habilidades: 'habilidade da Role', oficina: 'oficina', montagem: 'montagem', moradia: 'moradia', estiloVida: 'estilo de vida', traumaTeam: 'Trauma Team', estiloModa: 'moda', lifepath: 'Lifepath', avanco: 'avanço', aparencia: 'aparência', notas: 'notas', retratoLink: 'link do retrato' };
   const historyBox = () => box('Histórico de versões', '<p class="note-status">Antes de cada rodada de edição, a wiki guarda como o personagem estava (no máximo uma a cada 10 minutos; ficam as últimas 30). Restaurar volta o que o jogador preenche (STATs, perícias, itens, Lifepath...) daquela versão. Foundry, ficha da mesa, pedidos, Pontos de Melhoria, retrato e anotações ficam como estão agora, e a versão de agora também vai para o histórico.</p><div data-cc-history>Carregando…</div>', ' data-cc-history-box data-toc="Histórico de versões"');
   async function drawHistory(root, id) {
     const holder = root.querySelector('[data-cc-history]');
@@ -1351,7 +1411,7 @@
     const doc = answer.data.personagem && { ...blank(), ...answer.data.personagem };
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
-    if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), a Role (${esc(roleName(doc.role))}) e o retrato.</div>`; return; }
+    if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), as Roles (${esc(rolesLabel(doc))}) e o retrato.</div>`; return; }
     // Como no exemplo da Ficha: o título da página vira o nome (o apelido em ciano), a linha de cima diz a campanha, e a
     // ficha tem duas colunas: o retrato, os STATs e os vitais do lado; o resto em abas.
     const parts = sheetHtml(doc);
@@ -1493,10 +1553,17 @@
   }
   // Armas, armaduras, cyberdecks e bases de cyberware entram uma por linha: cada uma tem a sua montagem
   // (o segundo cyberbraço recebe outras opções). Munição e o resto somam na mesma linha.
-  const addItem = (doc, id, qty) => {
+  const addItem = (doc, id, qty, placement = {}) => {
     const item = catalog.get(id);
-    if (item && ['arma', 'armadura', 'deck', 'cyberBase'].includes(kindOf(item))) {
-      for (let i = 0; i < qty; i++) (doc.itens = doc.itens || []).push({ uid: `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, id, qtd: 1 });
+    if (item && (item.cyber || ['arma', 'armadura', 'deck'].includes(kindOf(item)))) {
+      for (let i = 0; i < qty; i++) {
+        const uid = `loja:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+        (doc.itens = doc.itens || []).push({ uid, id, qtd: 1 });
+        if (item.cyber && (placement.local || placement.em)) {
+          doc.montagem = doc.montagem || {};
+          doc.montagem[uid] = { local: placement.local || '', ...(placement.em ? { em: placement.em } : {}) };
+        }
+      }
       return;
     }
     const existing = (doc.itens || []).find(entry => entry.id === id);
@@ -1535,6 +1602,39 @@
   // Os itens que passam pelos filtros (categoria e grupo, ou a busca em todas as categorias), e a barra dos filtros.
   // Vindo de um slot da aba Cyberware, só o cyberware daquele tipo (a base ou as opções), até escolher outro filtro.
   const fitsSlot = (item, slot) => Boolean(item.cyber) && item.cyber.tipo === slot.tipo && (slot.base === undefined || Boolean(item.cyber.base) === slot.base);
+  function cyberPlacement(item, intent = {}, parents = []) {
+    if (!item?.cyber) return {};
+    let local = localSeguro(intent.local, item.cyber.tipo);
+    let em = intent.em || '';
+    const child = { item, qtd: 1 };
+    const compatible = parents.filter(parent => parentFits(child, parent));
+    if (em && em !== '-') {
+      const parent = compatible.find(row => row.uid === em);
+      if (parent) local = parent.local || '';
+      else em = '-';
+    } else if (!em && !item.cyber.base && NEEDS_BASE.includes(item.cyber.tipo)) {
+      const candidates = local ? compatible.filter(row => row.local === local) : compatible;
+      if (candidates.length === 1 && (!CW.locais(item.cyber.tipo).length || candidates[0].local)) {
+        em = candidates[0].uid; local = candidates[0].local || '';
+      }
+    }
+    return { local, em };
+  }
+  function cyberPlacementFields(item, placement, parents, prefix, key) {
+    if (!item.cyber) return '';
+    const places = CW.locais(item.cyber.tipo);
+    const child = { item, qtd: 1 };
+    const bases = parents.filter(parent => parent.uid && parentFits(child, parent));
+    const local = places.length ? `<label class="cc-mount-field cy-placement">Local <select class="cy-location-select" data-${prefix}-local="${esc(key)}"><option value="">Local não definido</option>${places.map(place => `<option value="${place.id}"${place.id === placement.local ? ' selected' : ''}${item.cyber.base && parents.some(parent => parent.item?.cyber?.base && parent.local === place.id) && place.id !== placement.local ? ' disabled' : ''}>${esc(place.nome)}</option>`).join('')}</select></label>` : '';
+    const base = !item.cyber.base && NEEDS_BASE.includes(item.cyber.tipo) ? `<label class="cc-mount-field cy-placement">Base específica <select class="cy-location-select" data-${prefix}-em="${esc(key)}"><option value="-"${!placement.em || placement.em === '-' ? ' selected' : ''}>Comprar solto, escolher a base depois</option>${bases.map(parent => `<option value="${esc(parent.uid)}"${parent.uid === placement.em ? ' selected' : ''}>${esc(rowName(parent))}${parent.uid.startsWith('@') ? ' (deste pedido)' : ''}</option>`).join('')}</select></label>` : '';
+    return local || base ? `<div class="cc-mount-controls cy-placement">${local}${base}</div>` : '';
+  }
+  function cyberPurchaseProblem(item, placement, parents) {
+    if (!item.cyber) return '';
+    if (CW.locais(item.cyber.tipo).length && !placement.local) return `Escolha esquerdo ou direito para ${item.nome}.`;
+    if (item.cyber.base && placement.local && parents.some(parent => parent.item?.cyber?.base && parent.local === placement.local)) return `Já há uma base no ${CW.nome(placement.local).toLowerCase()}. Escolha outro local.`;
+    return '';
+  }
   function shopFilter(items) {
     const terms = fold(shopState.busca).split(/\s+/).filter(Boolean);
     const slot = !terms.length && shopState.cyber;
@@ -1658,6 +1758,13 @@
   function renderShop(target, doc, { onChange = () => {}, readOnly = false, gm = false, onRules } = {}) {
     const canBuy = Boolean(doc) && !readOnly;
     const openRows = new Set();
+    const placements = new Map();
+    const placementFor = item => {
+      const intent = placements.get(item.id) || (shopState.cyber && fitsSlot(item, shopState.cyber) ? shopState.cyber : {});
+      const choice = cyberPlacement(item, intent, doc ? assembly(doc).rows : []);
+      if (item.cyber) placements.set(item.id, choice);
+      return choice;
+    };
     const paint = () => {
       const cash = doc ? money(doc) : null;
       const showHidden = gm && shopState.verTudo;
@@ -1666,7 +1773,7 @@
       const { visible, shown, filters } = shopFilter(available);
       const owned = new Map();
       if (doc) for (const entry of inventory(doc)) owned.set(entry.id, (owned.get(entry.id) || 0) + entry.qtd);
-      const bought = doc ? inventory(doc).filter(entry => entry.origem === 'loja') : [];
+      const bought = doc ? assembly(doc).rows.filter(entry => entry.origem === 'loja') : [];
       const kit = doc && doc.metodo === 'pacote' && canBuy ? kitFor(doc) : [];
       const kitMain = kit.filter(entry => !isFashion(entry.item));
       const kitFashion = kit.filter(entry => isFashion(entry.item));
@@ -1681,7 +1788,7 @@
         return `${priceOf(item, item.preco > spare(item))}<span class="shop-buttons">${rule}${buy}</span>`;
       };
       const boughtList = bought.length
-        ? `<ul class="cc-items cc-bought">${bought.map(entry => `<li><span><b>${esc(entry.item.nome)}</b> ×${entry.qtd}<small>${esc(entry.item.sub)}</small></span><span class="shop-line-end"><b>${eb(lineCost(entry))}</b>${readOnly ? '' : `<button class="action cc-ghost cc-ghost-danger" type="button" data-shop-return="${entry.uid}">Devolver</button>`}</span></li>`).join('')}</ul>`
+        ? `<ul class="cc-items cc-bought">${bought.map(entry => `<li><span><b>${esc(entry.item.nome)}</b> ×${entry.qtd}<small>${esc(entry.item.sub)}${entry.item.cyber && CW.locais(entry.item.cyber.tipo).length ? ` · ${esc(CW.nome(entry.local))}` : ''}</small></span><span class="shop-line-end"><b>${eb(lineCost(entry))}</b>${readOnly ? '' : `<button class="action cc-ghost cc-ghost-danger" type="button" data-shop-return="${entry.uid}">Devolver</button>`}</span></li>`).join('')}</ul>`
         : '<p class="note-status">Nada comprado ainda.</p>';
       const wallet = cash ? `<section class="shop-box shop-wallet-box"><div class="cc-wallet shop-wallet"><span class="wl-main"><small>Dinheiro: </small><b class="${cash.saldo < 0 ? 'cc-bad' : ''}">${eb(cash.saldo)}</b><small> de ${eb(cash.inicial)}</small></span>${cash.moda ? `<span class="wl-sub" title="Só moda e fashionware; a sobra some">Moda: <b>${eb(cash.usadoModa)}</b> de ${eb(cash.moda)}</span>` : ''}${cash.moradia ? `<span class="wl-sub">Moradia (1º mês): <b>${eb(cash.moradia)}</b></span>` : ''}</div></section>` : '';
       target.innerHTML = `<div class="shop-layout${doc ? '' : ' shop-solo'}${narrowShop(target) ? ' shop-narrow' : ''}">
@@ -1693,7 +1800,7 @@
           <div class="cc-shop-list shop-grid">${shown.map(item => {
             const reason = hiddenReason(item);
             const has = owned.get(item.id);
-            return shopCard(item, { open: openRows.has(item.id), extraClass: `${reason ? ' cc-hidden-item' : ''}${has ? ' shop-in' : ''}`, badges: has ? badge(`tem ${has}`, 'ok') : '', notes: gm && reason ? `<small class="cc-bad shop-reason">fora da criação: ${esc(reason)}</small>` : '', foot: foot(item) });
+            return shopCard(item, { open: openRows.has(item.id), extraClass: `${reason ? ' cc-hidden-item' : ''}${has ? ' shop-in' : ''}`, badges: has ? badge(`tem ${has}`, 'ok') : '', notes: (gm && reason ? `<small class="cc-bad shop-reason">fora da criação: ${esc(reason)}</small>` : '') + (canBuy && item.cyber ? cyberPlacementFields(item, placementFor(item), assembly(doc).rows, 'shop', item.id) : ''), foot: foot(item) });
           }).join('') || '<p class="shop-empty">Nada encontrado.</p>'}</div>
           ${moreButton(visible, shown)}
         </div>
@@ -1741,7 +1848,10 @@
       const buy = event.target.closest('[data-shop-buy]');
       if (buy) {
         const item = catalog.get(buy.dataset.shopBuy);
-        addItem(doc, item.id, item.lote > 1 ? item.lote : 1);
+        const placement = placementFor(item);
+        const problem = cyberPurchaseProblem(item, placement, assembly(doc).rows);
+        if (problem) return say(problem, true);
+        addItem(doc, item.id, item.lote > 1 ? item.lote : 1, placement);
         draw();
         const cash = money(doc);
         const needs = missingFoundations(doc).find(entry => entry.id === item.id);
@@ -1760,7 +1870,18 @@
         return onChange();
       }
     };
-    target.onchange = null;
+    target.onchange = event => {
+      const field = event.target;
+      const id = field.dataset.shopLocal || field.dataset.shopEm;
+      if (!id) return;
+      const item = catalog.get(id);
+      const placement = { ...placementFor(item) };
+      if (field.matches('[data-shop-local]')) { placement.local = field.value; if (placement.em !== '-') placement.em = ''; }
+      else if (field.matches('[data-shop-em]')) placement.em = field.value;
+      else return;
+      placements.set(id, cyberPlacement(item, placement, assembly(doc).rows));
+      draw();
+    };
     target.oninput = event => shopSearchInput(event, target, draw);
     draw(true);
     return { redraw: () => draw() };
@@ -1780,8 +1901,9 @@
     if (!catalogByEn) catalogByEn = new Map([...shop.itens].reverse().map(item => [item.en, item]));
     return catalogByEn.get(name) || null;
   };
+  const catalogItemOf = item => catalog.get(item.idCatalogo) || catalogEntryOf(item.nomeCatalogo || item.nome);
   const cartCost = line => { const item = catalog.get(line.id); return item ? item.preco * (item.lote > 1 ? line.qtd / item.lote : line.qtd) : 0; };
-  const ONE_PER_LINE = ['arma', 'armadura', 'deck', 'cyberBase'];
+  const ONE_PER_LINE = ['arma', 'armadura', 'deck', 'cyberBase', 'cyberOpcao'];
 
   function renderCampaignShop(target, doc, { gm = false } = {}) {
     const cart = carts.get(doc.id) || [];
@@ -1789,12 +1911,12 @@
     const openRows = new Set();
     const mesa = doc.mesa || null;
     // Itens da ficha (com uid da wiki) como "linhas" da montagem, para conferir onde cada coisa encaixa.
-    const tableRows = ((mesa && mesa.itens) || []).filter(item => item.uid).map(item => ({ uid: item.uid, nome: item.nome, item: catalogEntryOf(item.nome), qtd: 1, dentro: item.dentro || [] })).filter(row => row.item);
+    const tableRows = ((mesa && mesa.itens) || []).filter(item => parentRef(item)).map(item => ({ uid: parentRef(item), nome: item.nome, item: catalogItemOf(item) || (item.cyber ? { nome: item.nome, cyber: { ...item.cyber, base: item.base } } : null), local: item.local || '', qtd: 1, dentro: item.dentro || [] })).filter(row => row.item);
     const freeIn = row => capacityOf(row) - row.dentro.reduce((sum, name) => sum + (catalogEntryOf(name) ? sizeOf({ item: catalogEntryOf(name), qtd: 1 }) : 0), 0);
     // Quantos de cada item a ficha da mesa já tem (pelo nome do Foundry).
     const onSheet = new Map();
     for (const entry of (mesa && mesa.itens) || []) {
-      const item = catalogEntryOf(entry.nome);
+      const item = catalogItemOf(entry);
       if (item) onSheet.set(item.id, (onSheet.get(item.id) || 0) + (Number(entry.qtd) || 1));
     }
     // O mestre que abre a loja com pedido esperando já cai na lista de pedidos.
@@ -1807,10 +1929,15 @@
       const inCart = new Map();
       for (const line of cart) inCart.set(line.id, (inCart.get(line.id) || 0) + line.qtd);
       // Onde cada linha do pedido pode ir: um item da ficha ou outra linha do pedido ("@N").
-      const lineRows = cart.map((line, index) => ({ uid: `@${index}`, nome: (catalog.get(line.id) || {}).nome, item: catalog.get(line.id), qtd: line.qtd, dentro: [] }));
+      const lineRows = cart.map((line, index) => ({ uid: `@${index}`, nome: (catalog.get(line.id) || {}).nome, item: catalog.get(line.id), local: line.local || '', qtd: line.qtd, dentro: [] }));
       const placeSelect = (line, index) => {
         const child = { item: catalog.get(line.id), qtd: line.qtd };
         const kind = kindOf(child.item);
+        if (child.item.cyber) {
+          const parents = [...tableRows, ...lineRows.filter(row => row.uid !== `@${index}`)];
+          Object.assign(line, cyberPlacement(child.item, line, parents));
+          return cyberPlacementFields(child.item, line, parents, 'pedido', index);
+        }
         if (!['acessorio', 'deckItem'].includes(kind)) return '';
         const parents = [...tableRows.filter(row => parentFits(child, row) && freeIn(row) >= sizeOf(child)), ...lineRows.filter(row => row.uid !== `@${index}` && parentFits(child, row))];
         return `<label class="cc-mount-field">${kind === 'acessorio' ? 'Encaixar em' : 'Instalar em'} <select data-pedido-em="${index}"><option value="">solto, no inventário</option>${parents.map(row => `<option value="${esc(row.uid)}"${row.uid === line.em ? ' selected' : ''}>${esc(row.nome)}${row.uid.startsWith('@') ? ' (deste pedido)' : ''}</option>`).join('')}</select></label>`;
@@ -1834,7 +1961,7 @@
       const orders = (doc.pedidos || []).slice().reverse();
       const waiting = orders.filter(pedido => pedido.status === 'pendente').length;
       const going = orders.filter(pedido => pedido.status === 'aprovado').length;
-      const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div class="shop-line"><span><b>${pedido.itens.map(item => `${esc(item.nome)}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span></small></span>${statusChip(pedido.status)}</div>
+      const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div class="shop-line"><span><b>${pedido.itens.map(item => `${esc(item.nome)}${item.local ? ` · ${esc(CW.nome(item.local))}` : ''}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span></small></span>${statusChip(pedido.status)}</div>
         ${pedido.motivo || pedido.nota || pedido.erro || (pedido.avisos || []).length ? `<small>${pedido.nota ? `“${esc(pedido.nota)}”` : ''}${pedido.motivo ? ` Motivo: ${esc(pedido.motivo)}.` : ''}${(pedido.avisos || []).length ? ` ${esc(pedido.avisos.join(' '))}` : ''}${pedido.erro ? ` <span class="cc-bad">${esc(pedido.erro)}</span>` : ''}</small>` : ''}
         ${pedido.status === 'pendente' || (gm && pedido.status === 'aprovado') ? `<div class="cc-mount-controls">${pedido.status === 'pendente' ? `${gm ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Aprovar</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-${gm ? 'recusar' : 'cancelar'}="${pedido.id}">${gm ? 'Recusar' : 'Cancelar'}</button>` : ''}${gm && pedido.status === 'aprovado' ? `${pedido.erro ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Tentar de novo</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-recusar="${pedido.id}">Recusar</button>` : ''}</div>` : ''}</li>`;
       const alert = waiting ? `<span class="cc-tab-alert">${waiting} ${gm ? 'para aprovar' : 'com o mestre'}</span>` : going ? `<span class="cc-tab-alert cc-tab-alert-go">${going} a caminho</span>` : '';
@@ -1879,7 +2006,11 @@
         const item = catalog.get(add.dataset.pedidoPor);
         const step = item.lote > 1 ? item.lote : 1;
         const existing = cart.find(line => line.id === item.id && !ONE_PER_LINE.includes(kindOf(item)));
-        if (existing) existing.qtd += step; else cart.push({ id: item.id, qtd: step, em: '', municao: '' });
+        if (existing) existing.qtd += step;
+        else {
+          const placement = item.cyber ? cyberPlacement(item, shopState.cyber && fitsSlot(item, shopState.cyber) ? shopState.cyber : {}, tableRows) : {};
+          cart.push({ id: item.id, qtd: step, em: '', municao: '', ...placement });
+        }
         draw();
         return message(`No pedido: ${item.nome}.`);
       }
@@ -1898,14 +2029,25 @@
         const plus = Boolean(event.target.closest('[data-pedido-mais]'));
         const line = cart[index(plus ? 'mais' : 'menos')];
         const item = catalog.get(line.id);
+        if (item.cyber) {
+          if (plus) cart.push({ ...line, qtd: 1, local: '', em: '' });
+          else removeLine(index('menos'));
+          return draw();
+        }
         const step = item.lote > 1 ? item.lote : 1;
         line.qtd = Math.max(step, line.qtd + (plus ? step : -step));
         return draw();
       }
       if (event.target.closest('[data-pedido-tirar]')) { removeLine(index('tirar')); return draw(); }
       if (event.target.closest('[data-pedido-enviar]')) {
+        const parents = [...tableRows, ...cart.map((line, index) => ({ uid: `@${index}`, item: catalog.get(line.id), local: line.local || '' }))];
+        for (let index = 0; index < cart.length; index++) {
+          const line = cart[index];
+          const problem = cyberPurchaseProblem(catalog.get(line.id), line, parents.filter(parent => parent.uid !== `@${index}`));
+          if (problem) return message(problem, true);
+        }
         const nota = (target.querySelector('[data-pedido-nota]') || {}).value || '';
-        const answer = await api(`api/personagens/${doc.id}/pedidos`, { method: 'POST', body: { itens: cart, nota } });
+        const answer = await api(`api/personagens/${doc.id}/pedidos`, { method: 'POST', body: { itens: cart.map(line => ({ ...line, em: line.em === '-' ? '' : line.em })), nota } });
         if (answer.status !== 201) return message(answer.data.erro || 'Não consegui enviar o pedido.', true);
         cart.length = 0;
         target.dataset.nota = '';
@@ -1931,10 +2073,16 @@
       cart.splice(removed, 1);
       for (const line of cart) for (const field of ['em', 'municao']) {
         const ref = String(line[field] || '').match(/^@(\d+)$/);
-        if (ref) line[field] = Number(ref[1]) === removed ? '' : Number(ref[1]) > removed ? `@${Number(ref[1]) - 1}` : line[field];
+        if (ref) line[field] = Number(ref[1]) === removed ? (field === 'em' && catalog.get(line.id)?.cyber ? '-' : '') : Number(ref[1]) > removed ? `@${Number(ref[1]) - 1}` : line[field];
       }
     }
     target.onchange = event => {
+      if (event.target.matches('[data-pedido-local]')) {
+        const index = Number(event.target.dataset.pedidoLocal);
+        cart[index].local = event.target.value;
+        if (cart[index].em !== '-') cart[index].em = '';
+        return draw();
+      }
       if (event.target.matches('[data-pedido-em]')) { cart[Number(event.target.dataset.pedidoEm)].em = event.target.value; return draw(); }
       if (event.target.matches('[data-pedido-municao]')) { cart[Number(event.target.dataset.pedidoMunicao)].municao = event.target.value; return draw(); }
     };
@@ -2159,6 +2307,8 @@
     // ---------- 1. Identidade ----------
     function drawIdentity() {
       const role = roleById(doc.role);
+      const rankOptions = rank => Array.from({ length: 10 }, (_, index) => `<option value="${index + 1}"${index + 1 === rank ? ' selected' : ''}>${index + 1}</option>`).join('');
+      const secondary = rolesOf(doc)[1];
       return `${box('Quem é', `<div class="cc-form"><label>Nome<input data-campo="nome" value="${esc(doc.nome)}" maxlength="80"></label><label>Apelido (handle)<input data-campo="apelido" value="${esc(doc.apelido)}" maxlength="80"></label><label class="cc-wide">Aparência e jeito<textarea data-campo="aparencia" rows="2" maxlength="2000">${esc(doc.aparencia)}</textarea></label></div>`)}
         ${box('Retrato', `<div class="cc-portrait-edit">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait cc-portrait-empty">sem retrato</div>'}
           <div class="cc-portrait-tools"><p><label class="action cc-file">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" data-portrait-file></label>${portraitUrl(doc) ? ' <button type="button" class="action cc-danger" data-portrait-remove>Tirar retrato</button>' : ''}</p>
@@ -2166,38 +2316,45 @@
           <p class="cc-msg" data-portrait-msg role="status"></p>
           <p class="note-status">A imagem é reduzida para 512 px antes de ir para a wiki. Se houver imagem enviada, ela vale no lugar do link. O retrato vai para a ficha e o token no Foundry.</p></div></div>`)}
         ${lockBox(`${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
+          <p><label>Rank da Role principal <select data-role-rank="principal"${role ? '' : ' disabled'}>${rankOptions(rankOf(doc) || 4)}</select></label></p>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
+          <p><label>Segunda Role (opcional) <select data-role-secondary${role ? '' : ' disabled'}><option value="">Sem segunda Role</option>${C.roles.filter(item => item.id !== doc.role).map(item => `<option value="${item.id}"${item.id === secondary?.id ? ' selected' : ''}>${esc(item.nome)}</option>`).join('')}</select></label>
+            ${secondary ? `<label>Rank da segunda Role <select data-role-rank="secundaria">${rankOptions(secondary.rank)}</select></label>` : ''}</p>
+          <p class="note-status">Combine os Ranks com o mestre. As duas Roles têm habilidades próprias; STATs, perícias, equipamento inicial e orçamento vêm uma vez, pela principal. Esta regra da mesa não gasta IP.</p>
           <p><button class="action" type="button" data-page="roles">Ler as Roles</button></p>`)}
-        ${drawRoleAbilities()}${drawMotorpool()}
+        ${roleViews(doc).map(view => drawRoleAbilities(view) + drawMotorpool(view)).join('')}
         ${box('Método de criação', `<div class="cc-choices">${C.methods.map(item => `<button type="button" class="cc-choice${item.id === doc.metodo ? ' active' : ''}" data-method="${item.id}"><b>${item.nome}</b><span>${esc(item.resumo)}</span></button>`).join('')}</div>`)}`)}`;
     }
     // Sub-habilidades (Solo, Tech, Medtech): − e + em cada uma, até o máximo, com os pontos que faltam.
-    function drawRoleAbilities() {
-      const spec = abilitySpec(doc);
+    function drawRoleAbilities(view) {
+      const spec = abilitySpec(view);
       if (!spec) return '';
-      const used = abilityPoints(doc);
+      const used = abilityPoints(view);
       const rows = spec.itens.map(item => {
-        const value = Number((doc.habilidades || {})[item.id]) || 0;
+        const value = Number((view.habilidades || {})[item.id]) || 0;
         return `<tr><td><b>${esc(item.nome)}</b><br><small class="cc-desc">${esc(item.desc)}</small></td><td><span class="cc-level"><button type="button" class="action" data-hab-minus="${esc(item.id)}"${value <= 0 ? ' disabled' : ''} aria-label="Menos ${esc(item.nome)}">−</button><b>${value}</b><button type="button" class="action" data-hab-plus="${esc(item.id)}"${value >= spec.max || used >= spec.pontos ? ' disabled' : ''} aria-label="Mais ${esc(item.nome)}">+</button></span></td></tr>`;
       }).join('');
-      const derived = (spec.derivadas || []).length ? `<p class="note-status">No Foundry: ${roleAbilityRanks(doc).filter(entry => spec.derivadas.some(item => item.id === entry.nome)).map(entry => `${entry.nome === 'Surgery Skill' ? 'perícia Cirurgia' : 'perícia Tecnologia Médica'} ${entry.rank}`).join(' · ')}.</p>` : '';
-      return box(`${esc(spec.titulo)} <small>${spec.pagina}</small>`, `<p class="cc-points${used !== spec.pontos ? ' cc-bad' : ''}">Pontos: ${used} de ${spec.pontos}${spec.max < spec.pontos ? ` · até ${spec.max} em cada` : ''}</p>
-        <div class="table-wrap dense"><table class="cc-abilities"><tbody>${rows}</tbody></table></div><p class="note-status">${esc(spec.nota)}</p>${derived}`, ' data-cc-abilities');
+      const derived = (spec.derivadas || []).length ? `<p class="note-status">No Foundry: ${roleAbilityRanks(view).filter(entry => spec.derivadas.some(item => item.id === entry.nome)).map(entry => `${entry.nome === 'Surgery Skill' ? 'perícia Cirurgia' : 'perícia Tecnologia Médica'} ${entry.rank}`).join(' · ')}.</p>` : '';
+      const explanation = view.role === 'tech' ? `Distribua ${spec.pontos} pontos, até ${spec.max} em cada especialidade (duas por Rank).` : `Distribua ${spec.pontos} pontos para o Rank ${rankOf(view)}.`;
+      return box(`${esc(roleName(view.role))} · ${esc(spec.titulo)} <small>${spec.pagina}</small>`, `<p class="cc-points${used !== spec.pontos ? ' cc-bad' : ''}">Pontos: ${used} de ${spec.pontos}${spec.max < spec.pontos ? ` · até ${spec.max} em cada` : ''}</p>
+        <div class="table-wrap dense"><table class="cc-abilities"><tbody>${rows}</tbody></table></div><p class="note-status">${esc(explanation)}${view.role === 'solo' ? ` ${esc(spec.nota)}` : ''}</p>${derived}`, ` data-cc-abilities data-role-context="${view.role}"`);
     }
-    // Oficina da Família do Nomad: 4 escolhas, cada uma um veículo ou um upgrade num veículo já escolhido.
-    function drawMotorpool() {
-      if (doc.role !== 'nomad') return '';
-      const pool = motorpool(doc);
-      const rows = Array.from({ length: MP().escolhas }, (_, index) => {
-        const current = (doc.oficina || [])[index] || '';
-        const options = motorpoolChoices(doc, index);
+    // Oficina da Família do Nomad: uma escolha por Rank, em qualquer uma das duas Roles.
+    function drawMotorpool(view) {
+      if (view.role !== 'nomad') return '';
+      const choices = rankOf(view);
+      const pool = motorpool(view);
+      const rows = Array.from({ length: choices }, (_, index) => {
+        const current = (view.oficina || [])[index] || '';
+        const options = motorpoolChoices(view, index);
         const stale = current && !options.some(option => option.value === current);
         return `<label class="cc-motorpool-row">Escolha ${index + 1}<select data-oficina="${index}"><option value="">— escolha —</option>${stale ? `<option value="${esc(current)}" selected>(não vale mais) ${esc(current)}</option>` : ''}${options.map(option => `<option value="${esc(option.value)}"${option.value === current ? ' selected' : ''}>${esc(option.label)}</option>`).join('')}</select></label>`;
       }).join('');
       const fleet = pool.veiculos.length ? `<h4>Veículos da família</h4><ul class="cc-items">${pool.veiculos.map(entry => `<li><b>${esc(entry.veiculo.nome)}</b>${entry.upgrades.length ? `: ${entry.upgrades.map(item => esc(item.upgrade.nome)).join(', ')}` : ''}</li>`).join('')}</ul>` : '';
       const upgradeHelp = `<details class="cc-help-inline"><summary>O que cada upgrade faz</summary><dl class="cc-lifepath">${MP().upgrades.map(item => `<dt>${esc(item.nome)}</dt><dd>${esc(item.desc)}</dd>`).join('')}</dl></details>`;
-      return box(`Oficina da Família <small>${MP().pagina}</small>`, `<p>A cada Rank de Moto, o Nomad ganha um veículo de série da família ou um upgrade num veículo dela. No Rank 4: <b>${MP().escolhas} escolhas</b>, entre o Groundcar Compacto, a Moto Estradeira, o Jetski e o Girocóptero, e os upgrades de Rank 1.</p>
-        <div class="cc-motorpool">${rows}</div>${fleet}<p class="note-status">Só um veículo da família fica com você de cada vez: troca com a família de um dia para o outro. Destruído, a família conserta em uma semana, por 500eb.</p>${upgradeHelp}`, ' data-cc-motorpool');
+      return box(`Oficina da Família <small>${MP().pagina}</small>`, `<p>A cada Rank de Moto, o Nomad ganha um veículo de série da família ou um upgrade num veículo dela. No Rank ${choices}: <b>${choices} escolhas</b>.</p>
+        <p class="note-status">O catálogo deste criador oferece o Groundcar Compacto, a Moto Estradeira, o Jetski, o Girocóptero e upgrades de Rank 1. Combine opções avançadas com o mestre para montar no Foundry.</p>
+        <div class="cc-motorpool">${rows}</div>${fleet}<p class="note-status">Só um veículo da família fica com você de cada vez: troca com a família de um dia para o outro. Destruído, a família conserta em uma semana, por 500eb.</p>${upgradeHelp}`, ` data-cc-motorpool data-role-context="${view.role}"`);
     }
 
     // ---------- 2. STATs ----------
@@ -2269,7 +2426,7 @@
         ${box('Relações', `${list('Amigos', 'amigos', lp.amigos, (value, index) => lpSelect('amigo', value, `data-lp-item="amigos:${index}"`))}
           ${list('Inimigos', 'inimigos', lp.inimigos, (enemy, index) => ['quem', 'causa', 'recursos', 'vinganca'].map(part => lpSelect(part === 'vinganca' ? 'vinganca' : `inimigo-${part}`, enemy[part], `data-lp-enemy="${index}:${part}"`)).join(''))}
           ${list('Amores trágicos', 'amores', lp.amores, (value, index) => lpSelect('amor', value, `data-lp-item="amores:${index}"`))}`)}
-        ${drawRoleLifepath()}
+        ${roleViews(doc).length ? roleViews(doc).map(drawRoleLifepath).join('') : box('Lifepath da Role', '<p>Escolha a Role no passo 1 para ver as perguntas dela.</p>')}
         ${box('Notas do Lifepath', `<label>O que mais quiser contar da história do personagem. Vai junto para o Foundry, depois do Lifepath da Role.<textarea data-lp-text="roleLifepath" rows="3" maxlength="3000">${esc(lp.roleLifepath || '')}</textarea></label>`)}`;
     }
     async function uploadPortrait(file) {
@@ -2288,16 +2445,16 @@
         if (current) current.textContent = error.message;
       }
     }
-    function drawRoleLifepath() {
-      const role = roleById(doc.role);
+    function drawRoleLifepath(view) {
+      const role = roleById(view.role);
       if (!role) return box('Lifepath da Role', '<p>Escolha a Role no passo 1 para ver as perguntas dela.</p>');
-      const answers = doc.lifepath.role || {};
+      const answers = view.lifepath.role || {};
       const source = role.tabelas !== role.id ? ` O ${esc(role.nome)} de 2077 usa as tabelas do ${role.tabelas === 'exec' ? 'Exec' : 'Rockerboy'} do RED.` : '';
       const field = table => table.dado
         ? `<select data-rlp="${table.id}" aria-label="${esc(table.titulo)}"><option value="">Escolha…</option>${table.linhas.map((line, index) => `<option value="${index + 1}"${Number(answers[table.id]) === index + 1 ? ' selected' : ''}>${index + 1}. ${esc(line)}</option>`).join('')}</select><button type="button" class="action" data-rlp-roll="${table.id}">Rolar 1d${table.dado}</button>`
         : `<div class="cc-rlp-pick">${table.linhas.map((line, index) => `<button type="button" class="map-filter${Number(answers[table.id]) === index + 1 ? ' active' : ''}" data-rlp-pick="${table.id}:${index + 1}">${esc(line)}</button>`).join('')}</div>`;
       return box(`Lifepath da Role: ${esc(role.nome)}`, `<p>Perguntas próprias da Role (RED p. 54–70). Role cada uma ou escolha; algumas só aparecem depois de outra.${source} <button type="button" class="action" data-rlp-all>Rolar tudo da Role</button></p>
-        <div class="cc-lp-grid cc-rlp">${roleLpActive(doc).map(table => `<div class="cc-lp"><label>${esc(table.titulo)}</label>${field(table)}</div>`).join('')}</div>`);
+        <div class="cc-lp-grid cc-rlp">${roleLpActive(view).map(table => `<div class="cc-lp"><label>${esc(table.titulo)}</label>${field(table)}</div>`).join('')}</div>`, ` data-role-context="${view.role}"`);
     }
     const rollLp = key => helpers.rollDice('1d10');
     const newEnemy = () => ({ quem: rollLp(), causa: rollLp(), recursos: rollLp(), vinganca: rollLp() });
@@ -2348,7 +2505,9 @@
       if (!doc.role || !doc.metodo) return '';
       const mont = assembly(doc);
       const rows = mont.rows;
-      const label = row => `${esc(row.nome || row.item.nome)}${row.qtd > 1 ? ` ×${row.qtd}` : ''}`;
+      const label = row => `${esc(rowName(row))}${row.qtd > 1 ? ` ×${row.qtd}` : ''}`;
+      const localSelect = row => CW.locais(row.item.cyber?.tipo).length ? `<label class="cc-mount-field cy-placement">Local <select class="cy-location-select" data-mont-local="${row.uid}"><option value="">Local não definido</option>${CW.locais(row.item.cyber.tipo).map(place => `<option value="${place.id}"${row.local === place.id ? ' selected' : ''}${row.item.cyber.base && rows.some(other => other.uid !== row.uid && other.item.cyber?.base && other.local === place.id) && row.local !== place.id ? ' disabled' : ''}>${esc(place.nome)}</option>`).join('')}</select></label>` : '';
+      const splitButton = row => row.item.cyber && row.qtd > 1 && row.origem === 'loja' ? `<button type="button" class="action" data-mont-separar="${row.uid}">Separar unidades para escolher os locais</button>` : '';
       const usoSelect = row => `<select data-mont-uso="${row.uid}" aria-label="Uso">${Object.entries(USOS).map(([id, name]) => `<option value="${id}"${row.uso === id ? ' selected' : ''}>${name}</option>`).join('')}</select>`;
       const slotsText = row => `<small class="cc-slots${mont.free(row) < 0 ? ' cc-bad' : ''}">${capacityOf(row) - mont.free(row)} de ${capacityOf(row)} slots</small>`;
       const children = parent => rows.filter(row => row.em === parent.uid);
@@ -2389,9 +2548,9 @@
       } else if (mountTab === 'cyberware') {
         const bases = rows.filter(row => row.tipo === 'cyberBase' && NEEDS_BASE.includes(row.item.cyber.tipo));
         const options = rows.filter(row => row.tipo === 'cyberOpcao');
-        body = bases.map(base => `<div class="cc-mount-row"><div><b>${label(base)}</b></div><div class="cc-mount-children">${slotsText(base)}${children(base).length ? `<ul class="cc-items">${children(base).map(row => `<li>${label(row)} <small>${sizeOf(row)} slot${sizeOf(row) > 1 ? 's' : ''}</small> ${bases.filter(other => other.item.cyber.tipo === row.item.cyber.tipo).length > 1 ? moveSelect(row, bases, 'tirar') : ''}</li>`).join('')}</ul>` : ''}${addSelect(base, options, 'Instalar opção')}</div></div>`).join('');
+        body = `<p class="note-status">Escolha o lado de cada base e encaixe cada opção na base específica. Dados antigos sem lado ficam como Local não definido.</p>` + bases.map(base => `<div class="cc-mount-row"><div><b>${label(base)}</b>${splitButton(base)}</div><div class="cc-mount-controls">${localSelect(base)}</div><div class="cc-mount-children">${slotsText(base)}${children(base).length ? `<ul class="cc-items">${children(base).map(row => `<li>${label(row)} <small>${sizeOf(row)} slot${sizeOf(row) > 1 ? 's' : ''}</small> ${moveSelect(row, bases, 'tirar')}${splitButton(row)}</li>`).join('')}</ul>` : ''}${addSelect(base, options, 'Instalar opção')}</div></div>`).join('');
         const withoutBase = options.filter(row => NEEDS_BASE.includes(row.item.cyber.tipo) && (!row.em || row.em === '-'));
-        if (withoutBase.length) body += `<p class="cc-warn">Sem base (não instala no Foundry): ${withoutBase.map(label).join(', ')}. Compre ou escolha a base do mesmo tipo.</p>`;
+        if (withoutBase.length) body += `<h4>Opções sem base escolhida</h4><p class="cc-warn">Escolha a base ou compre uma do mesmo tipo. Estas opções vão sem instalar.</p>${withoutBase.map(row => `<div class="cc-mount-row"><div><b>${label(row)}</b>${splitButton(row)}</div><div class="cc-mount-controls">${localSelect(row)}${moveSelect(row, bases, 'sem base')}</div></div>`).join('')}`;
         const body2 = options.filter(row => !NEEDS_BASE.includes(row.item.cyber.tipo));
         if (body2.length) body += `<p class="note-status">No corpo (interno, externo e fashionware, sem base): ${body2.map(label).join(', ')}.</p>`;
         if (!body) body = '<p class="note-status">Nenhum cyberware com opções.</p>';
@@ -2423,8 +2582,8 @@
       // Cada opção mostra o preço por mês e, se for melhor que o padrão, quanto sai do dinheiro inicial no primeiro mês.
       const tag = (item, cost, baseCost, isBase) => isBase ? ' <small class="cc-ok">padrão da Role: 1º mês grátis</small>' : cost > baseCost ? ` <small class="cc-wait">+${eb(cost - baseCost)} no 1º mês</small>` : '';
       const option = (name, attr, item, checked, price, note) => `<label class="cc-radio cc-option"><input type="radio" name="${name}" ${attr}="${item.id}"${checked ? ' checked' : ''}> <b>${esc(item.nome)}</b> <small>${price}</small>${note}${item.desc ? `<small class="cc-desc">${esc(item.desc)}</small>` : ''}</label>`;
-      const homes = H.moradias.filter(item => allowedFor(item, doc.role)).map(item => option('moradia', 'data-moradia', item, item.id === home.tipo, item.aluguel ? `${eb(item.aluguel)}/mês` : 'sem aluguel', tag(item, item.aluguel, baseHome.aluguel, item.id === base.moradia))).join('');
-      const lives = H.estilos.filter(item => allowedFor(item, doc.role)).map(item => option('estilo-vida', 'data-estilo-vida', item, item.id === home.estiloId, item.custo ? `${eb(item.custo)}/mês` : 'sem custo', tag(item, item.custo, baseLife.custo, item.id === base.estilo))).join('');
+      const homes = H.moradias.filter(item => allowedFor(item, doc)).map(item => option('moradia', 'data-moradia', item, item.id === home.tipo, item.aluguel ? `${eb(item.aluguel)}/mês` : 'sem aluguel', tag(item, item.aluguel, baseHome.aluguel, item.id === base.moradia))).join('');
+      const lives = H.estilos.filter(item => allowedFor(item, doc)).map(item => option('estilo-vida', 'data-estilo-vida', item, item.id === home.estiloId, item.custo ? `${eb(item.custo)}/mês` : 'sem custo', tag(item, item.custo, baseLife.custo, item.id === base.estilo))).join('');
       const traumaId = (home.traumaTeam || {}).id || 'nenhum';
       const traumas = H.traumaTeam.map(item => option('trauma', 'data-trauma', item, item.id === traumaId, item.custo ? `${eb(item.custo)}/mês` : '', item.custo ? ` <small class="cc-wait">${eb(item.custo)} no 1º mês</small>` : '')).join('');
       const modaId = (home.moda || {}).id || '';
@@ -2446,32 +2605,44 @@
     }
 
     // ---------- Eventos ----------
-    root.onclick = event => {
+    root.onclick = async event => {
       const target = event.target;
-      if (cyberClick(event, slot => { saver.now(); helpers.openPage('loja', { section: doc.id, cyber: slot }); })) return;
+      const contextId = target.closest('[data-role-context]')?.dataset.roleContext || doc.role;
+      if (cyberClick(event, async slot => { await saver.now(); helpers.openPage('loja', { section: doc.id, cyber: slot }); })) return;
       const stepButton = target.closest('[data-step]');
       if (stepButton) return go(Number(stepButton.dataset.step));
       const nav = target.closest('[data-nav]');
       if (nav) return go(step + Number(nav.dataset.nav));
       if (target.closest('[data-cc-send]')) return sendToGm(doc, papel, stepEl, () => saver.now());
-      if (target.closest('[data-cc-sheet]')) { saver.now(); return helpers.openPage('ficha', { section: doc.id }); }
-      if (target.closest('[data-cc-shop]')) { saver.now(); return helpers.openPage('loja', { section: doc.id }); }
+      if (target.closest('[data-cc-sheet]')) { await saver.now(); return helpers.openPage('ficha', { section: doc.id }); }
+      if (target.closest('[data-cc-shop]')) { await saver.now(); return helpers.openPage('loja', { section: doc.id }); }
       const role = target.closest('[data-role]');
-      if (role) { if (doc.role !== role.dataset.role) { doc.role = role.dataset.role; doc.especializacao = ''; doc.escolhas = {}; doc.tipos = {}; doc.pericias = {}; doc.lifepath.role = {}; doc.habilidades = {}; doc.oficina = []; } draw(); return changed(); }
+      if (role) { if (doc.role !== role.dataset.role) { doc.role = role.dataset.role; doc.especializacao = ''; doc.escolhas = {}; doc.tipos = {}; doc.pericias = {}; doc.lifepath.role = {}; doc.habilidades = {}; doc.oficina = []; if (doc.roleSecundaria?.id === doc.role) doc.roleSecundaria = null; } draw(); return changed(); }
       // Montagem: abas e "Tirar" (o item fica solto no inventário).
       const mountTabButton = target.closest('[data-mont-tab]');
       if (mountTabButton) { mountTab = mountTabButton.dataset.montTab; return draw(); }
       const loosen = target.closest('[data-mont-soltar]');
       if (loosen) { setMount(loosen.dataset.montSoltar, 'em', '-'); draw(); return changed(); }
+      const split = target.closest('[data-mont-separar]');
+      if (split) {
+        const entry = doc.itens.find(item => item.uid === split.dataset.montSeparar);
+        if (!entry || entry.qtd <= 1) return;
+        const qty = entry.qtd; entry.qtd = 1;
+        for (let i = 1; i < qty; i++) addItem(doc, entry.id, 1);
+        draw(); return changed();
+      }
       // Sub-habilidades da Role: até o máximo de cada uma e o total de pontos.
       const habPlus = target.closest('[data-hab-plus]');
       const habMinus = target.closest('[data-hab-minus]');
       if (habPlus || habMinus) {
-        const abilitySpecNow = abilitySpec(doc);
+        const view = roleView(doc, contextId);
+        const state = roleState(doc, contextId);
+        if (!view || !state) return;
+        const abilitySpecNow = abilitySpec(view);
         const name = (habPlus || habMinus).dataset[habPlus ? 'habPlus' : 'habMinus'];
-        const value = Number((doc.habilidades = doc.habilidades || {})[name]) || 0;
-        if (habPlus && abilitySpecNow && value < abilitySpecNow.max && abilityPoints(doc) < abilitySpecNow.pontos) doc.habilidades[name] = value + 1;
-        if (habMinus && value > 0) doc.habilidades[name] = value - 1;
+        const value = Number((state.habilidades = state.habilidades || {})[name]) || 0;
+        if (habPlus && abilitySpecNow && value < abilitySpecNow.max && abilityPoints(view) < abilitySpecNow.pontos) state.habilidades[name] = value + 1;
+        if (habMinus && value > 0) state.habilidades[name] = value - 1;
         draw(); return changed();
       }
       const spec = target.closest('[data-spec]');
@@ -2534,18 +2705,28 @@
         doc.lifepath.amigos = Array.from({ length: count() }, rollLp);
         doc.lifepath.inimigos = Array.from({ length: count() }, newEnemy);
         doc.lifepath.amores = Array.from({ length: count() }, rollLp);
-        rollRoleLp(doc, sides => helpers.rollDice(`1d${sides}`));
+        for (const view of roleViews(doc)) {
+          rollRoleLp(view, sides => helpers.rollDice(`1d${sides}`));
+          setRoleAnswers(doc, view.role, view.lifepath.role);
+        }
         draw(); return changed();
       }
-      if (target.closest('[data-rlp-all]')) { rollRoleLp(doc, sides => helpers.rollDice(`1d${sides}`)); draw(); return changed(); }
+      if (target.closest('[data-rlp-all]')) {
+        const view = roleView(doc, contextId);
+        if (!view) return;
+        rollRoleLp(view, sides => helpers.rollDice(`1d${sides}`));
+        setRoleAnswers(doc, contextId, view.lifepath.role);
+        draw(); return changed();
+      }
       const rlpRoll = target.closest('[data-rlp-roll]');
       if (rlpRoll) {
-        const table = roleLpTables(doc).find(item => item.id === rlpRoll.dataset.rlpRoll);
-        if (table) doc.lifepath.role = { ...doc.lifepath.role, [table.id]: helpers.rollDice(`1d${table.dado}`) };
+        const view = roleView(doc, contextId);
+        const table = view && roleLpTables(view).find(item => item.id === rlpRoll.dataset.rlpRoll);
+        if (table) setRoleAnswers(doc, contextId, { ...roleAnswers(doc, contextId), [table.id]: helpers.rollDice(`1d${table.dado}`) });
         draw(); return changed();
       }
       const rlpPick = target.closest('[data-rlp-pick]');
-      if (rlpPick) { const [id, value] = rlpPick.dataset.rlpPick.split(':'); doc.lifepath.role = { ...doc.lifepath.role, [id]: Number(value) }; draw(); return changed(); }
+      if (rlpPick) { const [id, value] = rlpPick.dataset.rlpPick.split(':'); setRoleAnswers(doc, contextId, { ...roleAnswers(doc, contextId), [id]: Number(value) }); draw(); return changed(); }
       const lpCount = target.closest('[data-lp-count]');
       if (lpCount) {
         const kind = lpCount.dataset.lpCount;
@@ -2561,26 +2742,54 @@
     };
     root.onchange = event => {
       const target = event.target;
-      if (target.matches('[data-tipo]')) { doc.tipos[target.dataset.tipo] = target.value; }
+      const contextId = target.closest('[data-role-context]')?.dataset.roleContext || doc.role;
+      if (target.matches('[data-role-secondary]')) {
+        doc.roleSecundaria = target.value && target.value !== doc.role ? { id: target.value, rank: 1, habilidades: {}, oficina: [], lifepath: {}, especializacao: '' } : null;
+      }
+      else if (target.matches('[data-role-rank]')) {
+        const rank = Math.min(10, Math.max(1, Number(target.value) || 1));
+        if (target.dataset.roleRank === 'principal') doc.rankRole = rank;
+        else if (doc.roleSecundaria) doc.roleSecundaria.rank = rank;
+      }
+      else if (target.matches('[data-tipo]')) { doc.tipos[target.dataset.tipo] = target.value; }
       else if (target.matches('[data-lingua]')) { doc.lingua = target.value; }
       else if (target.matches('[data-casa]')) { doc.casa = target.value; }
       else if (target.matches('[data-extra-tipo]')) { doc.extras[Number(target.dataset.extraTipo)].tipo = target.value; }
       else if (target.matches('[data-lp]')) { doc.lifepath[target.dataset.lp] = Number(target.value) || ''; }
-      else if (target.matches('[data-rlp]')) { doc.lifepath.role = { ...doc.lifepath.role, [target.dataset.rlp]: Number(target.value) || '' }; }
+      else if (target.matches('[data-rlp]')) { setRoleAnswers(doc, contextId, { ...roleAnswers(doc, contextId), [target.dataset.rlp]: Number(target.value) || '' }); }
       else if (target.matches('[data-lp-item]')) { const [kind, index] = target.dataset.lpItem.split(':'); doc.lifepath[kind][Number(index)] = Number(target.value) || 1; }
       else if (target.matches('[data-lp-enemy]')) { const [index, part] = target.dataset.lpEnemy.split(':'); doc.lifepath.inimigos[Number(index)][part] = Number(target.value) || 1; }
       else if (target.matches('[data-escolha]')) { doc.escolhas[target.dataset.escolha] = Number(target.value); }
       else if (target.matches('[data-kitnet]')) { doc.kitNet = target.dataset.kitnet; }
       else if (target.matches('[data-mont-uso]')) { setMount(target.dataset.montUso, 'uso', target.value); }
       else if (target.matches('[data-mont-municao]')) { setMount(target.dataset.montMunicao, 'municao', target.value); }
-      else if (target.matches('[data-mont-em]')) { setMount(target.dataset.montEm, 'em', target.value); }
-      else if (target.matches('[data-mont-em-para]')) { if (!target.value) return; setMount(target.value, 'em', target.dataset.montEmPara); }
+      else if (target.matches('[data-mont-local]')) {
+        const uid = target.dataset.montLocal;
+        setMount(uid, 'local', target.value);
+        for (const row of assembly(doc).rows.filter(item => item.em === uid && item.item.cyber)) setMount(row.uid, 'local', target.value);
+      }
+      else if (target.matches('[data-mont-em]')) {
+        setMount(target.dataset.montEm, 'em', target.value);
+        const parent = assembly(doc).byUid.get(target.value);
+        if (parent?.item.cyber) setMount(target.dataset.montEm, 'local', parent.local || '');
+      }
+      else if (target.matches('[data-mont-em-para]')) {
+        if (!target.value) return;
+        setMount(target.value, 'em', target.dataset.montEmPara);
+        const parent = assembly(doc).byUid.get(target.dataset.montEmPara);
+        if (parent?.item.cyber) setMount(target.value, 'local', parent.local || '');
+      }
       else if (target.matches('[data-mont-armadura]')) {
         const location = target.dataset.montArmadura;
         for (const row of assembly(doc).rows.filter(item => item.tipo === 'armadura' && !item.item.armadura.escudo && armorLocations(item.item).includes(location))) setMount(row.uid, 'uso', row.uid === target.value ? 'equipado' : 'carregando');
       }
       else if (target.matches('[data-mont-vestir]')) { setMount(target.dataset.montVestir, 'uso', target.checked ? 'equipado' : 'carregando'); }
-      else if (target.matches('[data-oficina]')) { const list = Array.from({ length: MP().escolhas }, (_, index) => (doc.oficina || [])[index] || ''); list[Number(target.dataset.oficina)] = target.value; doc.oficina = list; }
+      else if (target.matches('[data-oficina]')) {
+        const state = roleState(doc, contextId);
+        if (!state) return;
+        const list = Array.from({ length: rankOf(doc, contextId) }, (_, index) => (state.oficina || [])[index] || '');
+        list[Number(target.dataset.oficina)] = target.value; state.oficina = list;
+      }
       else if (target.matches('[data-campo="retratoLink"]')) { doc.retratoLink = target.value.trim(); }
       else if (target.matches('[data-portrait-file]')) { uploadPortrait(target.files && target.files[0]); return; }
       else if (target.matches('[data-quickhack]')) {
@@ -2742,6 +2951,6 @@
       loja: { eyebrow: 'Personagens / loja', title: 'Loja', lede: 'Antes do Foundry, monta o equipamento da criação. Depois, vira pedidos que o mestre aprova e o Foundry entrega na ficha.', html: holder, setup: setupShopPage, manterAlvo: true }
     },
     // Para os testes e o importador: as mesmas contas que a tela usa.
-    regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank, applySuggested, rollRoleLp, roleLpText }
+    regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank, applySuggested, rollRoleLp, roleLpText, housing, motorpool, abilitySpec, roleAbilityRanks, sheetHtml, rolesLabel, quickhacksAt, foundryBox, assembly, cyberParts, cyberClick, cyberPlacement, cyberPurchaseProblem, addItem, renderShop, renderCampaignShop }
   };
 })();
