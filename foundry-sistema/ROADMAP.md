@@ -145,7 +145,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - Duas mãos mais os bônus dos efeitos, menos as mãos das armas e dos escudos equipados.
   - BODY 8+ usa arma branca de duas mãos com uma.
   - Sem mãos, a nova equipagem é recusada nas fichas e no drop; guardar libera as mãos.
-- [ ] **C13. A falha crítica de cada arma** (emperra, quebra, quebra sem conserto; o `critFailEffect` do CORE) no cartão do
+- [~] **C13. A falha crítica de cada arma** em andamento (sessão Codex, 2026-10-17): (emperra, quebra, quebra sem conserto; o `critFailEffect` do CORE) no cartão do
   ataque.
 - [ ] **C14. Munições especiais:**
   - os testes de resistência (biotoxina, veneno, sonífera, flashbang e gás);
