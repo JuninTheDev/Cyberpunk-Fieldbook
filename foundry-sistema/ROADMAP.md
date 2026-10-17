@@ -141,7 +141,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - a arma sob o cano e a baioneta (o upgrade que ataca);
   - nos acessórios: o limite de slots, os plugs do Smartgun Link e o pente que fica acima do máximo quando o carregador
     sai.
-- [ ] **C12. Mãos livres:** não equipar mais armas do que há mãos (`canHoldWeapon`).
+- [~] **C12. Mãos livres:** em andamento (sessão Codex, 2026-10-17). não equipar mais armas do que há mãos (`canHoldWeapon`).
 - [ ] **C13. A falha crítica de cada arma** (emperra, quebra, quebra sem conserto; o `critFailEffect` do CORE) no cartão do
   ataque.
 - [ ] **C14. Munições especiais:**
