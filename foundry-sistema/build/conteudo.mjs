@@ -315,7 +315,7 @@ function arma(doc, s) {
       descricao: s.description?.value || '', tipo: s.weaponType || '', pericia: slug(s.weaponSkill || ''), dano: s.damage || '1d6', cdt: Number(s.rof) || 1,
       pente: { value: 0, max: Number(s.magazine?.max) || 0 }, municoes: s.ammoVariety || [], aDistancia: Boolean(s.isRanged), maos: Number(s.handsReq) || 1,
       autofogo: Number(s.fireModes?.autoFire) || 0, supressivo: Boolean(s.fireModes?.suppressiveFire), bonusAtaque: Number(s.attackmod) || 0,
-      qualidade: s.quality || 'standard', ocultavel: Boolean(s.concealable?.concealable), tabelaDV: s.dvTable || '',
+      qualidade: s.quality || 'standard', falhaCritica: s.critFailEffect || 'jammed', ocultavel: Boolean(s.concealable?.concealable), tabelaDV: s.dvTable || '',
       ignorarArmadura: Number(s.ignoreArmorPercent) || 0, ignorarAbaixo: Number(s.ignoreBelowSP) || 0, slots: Number(s.installedItems?.slots) || 0, equipada: false,
       preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
     }

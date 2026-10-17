@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 88). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 89). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -145,8 +145,10 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - Duas mãos mais os bônus dos efeitos, menos as mãos das armas e dos escudos equipados.
   - BODY 8+ usa arma branca de duas mãos com uma.
   - Sem mãos, a nova equipagem é recusada nas fichas e no drop; guardar libera as mãos.
-- [~] **C13. A falha crítica de cada arma** em andamento (sessão Codex, 2026-10-17): (emperra, quebra, quebra sem conserto; o `critFailEffect` do CORE) no cartão do
-  ataque.
+- [x] **C13. A falha crítica de cada arma:** feito no ciclo 88 (sessão Codex, 2026-10-17).
+  - Na arma ruim, o `critFailEffect` do CORE: Emperra, Quebra, Quebra sem conserto e Cara ou coroa, pelo seletor da ficha.
+  - O cartão informa a consequência da falha efetiva, inclusive acertando; o Solo pode suprimi-la.
+  - A moeda e o estado da arma ficam com a mesa.
 - [ ] **C14. Munições especiais:**
   - os testes de resistência (biotoxina, veneno, sonífera, flashbang e gás);
   - a incendiária, a expansiva e a inteligente;

@@ -28,6 +28,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | --- | --- | --- |
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
 | CORE e wiki | mãos livres (C12): impedir nova equipagem sem mãos, com os efeitos, BODY 8+ na arma branca e os escudos | portado no ciclo 87 (sessão Codex; a decisão nas dúvidas) |
+| CORE e wiki | falha crítica da arma (C13): os quatro efeitos configuráveis na arma ruim, informados no cartão do ataque | portado no ciclo 88 (sessão Codex) |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad) | portado no ciclo 23. Com as Roles do RED (ciclo 33), saíram a especialização do Face e os situacionais de 2077 (o Investigator, o Netrunner) |
@@ -4182,6 +4183,54 @@ O C12 do ROADMAP, reservado e enviado antes de começar (`4404fb3`). Commit ante
   permite resolvê-lo. A conferência é por item: operações coletivas de equipagem por macro não reservam mãos entre
   os itens. Lesões, agarrão e cyberarmas continuam com as automações que já tinham; as cyberarmas ficam no C11.
 - **Pendências:** nenhuma do C12 nas fichas.
+- **Próximo:** outro item fora da NET, conforme o ROADMAP.
+
+### Ciclo 88 (2026-10-17): a falha crítica de cada arma (o C13; sessão Codex)
+
+O C13 do ROADMAP, reservado e enviado antes de começar (`08dc188`). Commit anterior: `08dc188` (a reserva).
+
+- **A referência:**
+  - CORE 0.92.4: `modules/datamodels/item/mixins/attackable-schema.js`, `config.attackableCritFailEffects` e
+    `templates/item/settings/mixin/cpr-quality.hbs`: o `critFailEffect`, padrão `jammed`, com as quatro opções e o
+    seletor só na arma de qualidade ruim. O CORE guarda e exibe esse campo, sem aplicá-lo no motor do ataque;
+  - wiki, `system-catalog.js`, Qualidade das armas: a arma ruim emperra na falha crítica e exige uma Ação para
+    desemperrar. `system-blackchrome.js`, Destruído e Destruído sem conserto: quebra reparável ou permanente.
+    `system-rules.js`, a falha crítica do ataque ainda pode acertar; `system-criacao.js`, a Recuperação de Falhas do
+    Solo a ignora. Os arquivos de regra da wiki não mudaram;
+  - Cara ou coroa conserva a indicação do enum do CORE. Não se generaliza para ela a regra de uma arma específica.
+- **Implementado:**
+  - `DadosArma.falhaCritica`: texto persistido, padrão `jammed`, também nos itens anteriores sem o campo;
+  - o build preserva `critFailEffect` nas 100 armas do CORE e usa o padrão nas 46 de 2077. No catálogo gerado, só
+    entrou esse campo nas 146 armas; o restante do conteúdo ficou igual;
+  - na ficha da arma ruim, "Na falha crítica": Emperra, Quebra, Quebra sem conserto e Cara ou coroa;
+  - `regras.mjs`: a consequência só para qualidade ruim e crítico efetivo de falha, sem aceitar efeito desconhecido;
+  - `combate.mjs` lê o crítico da mensagem original da rolagem, inclusive quando veio do jogador. O resumo, a flag
+    e o cartão do resultado levam a consequência, mesmo acertando. O Solo que suprimiu a falha fica sem aviso.
+- **Testes:**
+  - G1: 61 arquivos, 0 erros; G2: 0 erros;
+  - G3: 108 de 112 (as 4 falhas conhecidas das armas de 2077). O novo `falha-da-arma.test.mjs` tem 3 testes de
+    referência: os quatro efeitos e seus textos, o padrão e o desconhecido; qualidade ruim e crítico efetivo;
+    os campos das 100 armas CORE e das 46 de 2077;
+  - G4: 109 de 114 (as 5 falhas conhecidas das armas de 2077). Antes das mutações, o passo original do C13 passou no
+    Foundry com mestre e jogador, sem avisos ou erros; passou também na rodada completa final. Confere o padrão num
+    item sem o campo, opções e seleção gravada na ficha; os quatro
+    efeitos no resumo, flag e DOM; falha acertando com ataque 27, HP 50 → 44 e pente 8 → 7; qualidade padrão/excelente,
+    rolagem comum e Recuperação de Falhas do Solo sem aviso. Um jogador ataca com o total escondido e efeito não
+    padrão; os dois clientes conferem o autor da rolagem, o crítico e o mesmo aviso;
+  - **mutações:** as 19 caíram, uma por vez, com restauração exata por md5:
+    - G3: ignorar a qualidade (F1) ou o crítico (F2), trocar o padrão (F3), aceitar efeito desconhecido (F4) e trocar
+      o texto de cada uma das quatro consequências (F5–F8);
+    - build e G3: omitir o campo na conversão do CORE (F9) ou de 2077 (F10), reconstruindo o catálogo antes do teste
+      e restaurando também os dois arquivos gerados;
+    - Foundry: trocar o padrão do modelo (F11), mostrar uma seleção diferente da gravada (F12), mostrar o seletor
+      nas outras qualidades (F13), ignorar o efeito escolhido (F14), descartar o crítico da mensagem (F15), omitir
+      a consequência do resumo (F16) ou do cartão (F17), ler só o crítico do mestre (F18) e forçar a falha nos tiros
+      comum e do Solo (F19).
+    O executor temporário usa o passo original com o `rodar.js`, a trava e a checagem da mesa, e atravessa o `finally`
+    do cenário ao sair. Uma rodada sem mutação passou antes; esse foco não substitui o G4 completo.
+- **Limites:** o cartão informa; a mesa resolve a moeda e marca o estado da arma. Não há bloqueio automático da arma,
+  conserto ou rolagem automática da moeda. Não entrou conteúdo dos DLCs nem do Black Chrome.
+- **Pendências:** nenhuma do C13.
 - **Próximo:** outro item fora da NET, conforme o ROADMAP.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)

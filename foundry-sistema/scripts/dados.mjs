@@ -181,6 +181,8 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
       supressivo: new fields.BooleanField({ initial: false }),
       bonusAtaque: inteiro(0),
       qualidade: texto('standard'),
+      // O critFailEffect do CORE: consequência informada no cartão quando a arma ruim tem falha crítica.
+      falhaCritica: texto('jammed'),
       ocultavel: new fields.BooleanField({ initial: false }),
       tabelaDV: texto(),
       ignorarArmadura: inteiro(0, { min: 0, max: 100 }),

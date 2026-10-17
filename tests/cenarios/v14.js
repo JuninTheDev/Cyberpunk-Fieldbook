@@ -563,6 +563,157 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('falha crítica da arma (C13): seletor salvo, os quatro efeitos no cartão, só na arma ruim; mesmo acertando; a Recuperação de Falhas do Solo ignora', async () => {
+      let jogadorFalha = null;
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const esperar = async condicao => { for (let i = 0; i < 100 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          window.__c13 = { cenaAnterior: canvas.scene?.id, cenaAtiva: game.scenes.find(s => s.active)?.id, atores: [], mensagens: game.messages.map(m => m.id), dados: CONFIG.Dice.randomUniform };
+          const criar = async dados => { const a = await Actor.implementation.create(dados); __c13.atores.push(a.id); return a; };
+          const pistola = foundry.utils.deepClone(cat['core_weapons:heavy-pistol-poor']);
+          // O item de antes do C13 recebe o padrão do modelo, sem precisar migrar o mundo.
+          delete pistola.system.falhaCritica;
+          pistola.system.pente.value = 8;
+          const a = await criar({ name: 'Teste Falha da Arma', type: 'personagem', system: {
+            atributos: { ref: { valor: 8 } }, hp: { value: 40 }, pericias: { handgun: { nivel: 20 } }
+          }, items: [pistola] });
+          const alvo = await criar({ name: 'Alvo Falha da Arma', type: 'personagem', system: {
+            atributos: { ref: { valor: 0 }, body: { valor: 8 }, will: { valor: 8 } }, hp: { value: 50 }
+          } });
+          const arma = a.items.find(i => i.type === 'arma');
+          const padrao = arma.system.falhaCritica;
+          const cena = await Scene.implementation.create({ name: 'Falha da arma (teste)', active: false, width: 1600, height: 1200, grid: { size: 100, distance: 2, units: 'm' } });
+          __c13.cena = cena.id;
+          await cena.activate();
+          await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          for (const [ator, x] of [[a, 300], [alvo, 600]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 500 })).toObject()]);
+          await esperar(() => canvas.tokens.placeables.length === 2);
+          const tokenAlvo = cena.tokens.find(t => t.actorId === alvo.id);
+          await arma.sheet.render({ force: true });
+          const campo = () => arma.sheet.element?.querySelector('[name="system.falhaCritica"]');
+          await esperar(() => campo());
+          const opcoes = [...campo().options].map(o => [o.value, o.textContent.trim()]);
+          const escolher = async efeito => {
+            await esperar(() => campo());
+            campo().value = efeito;
+            campo().dispatchEvent(new Event('change', { bubbles: true }));
+            await esperar(() => arma.system.falhaCritica === efeito && campo()?.value === efeito);
+          };
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          const atirar = async (primeiro = 1, solo = false) => {
+            await alvo.update({ 'system.hp.value': 50 });
+            await arma.update({ 'system.pente.value': 8 });
+            window.__fila = [[primeiro, 10], ...(primeiro === 1 && !solo ? [[2, 10]] : []), [2, 6], [2, 6], [2, 6]];
+            const r = await arma.atacar({ alvo: tokenAlvo });
+            if (arma.system.qualidade === 'poor') await esperar(() => campo()?.value === arma.system.falhaCritica);
+            const mensagem = game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === r.id);
+            await esperar(() => document.querySelector('[data-message-id="' + mensagem.id + '"]'));
+            const caixa = document.querySelector('[data-message-id="' + mensagem.id + '"]');
+            const aviso = caixa?.querySelector('.falha-da-arma');
+            const teste = game.messages.filter(m => m.getFlag('${S}', 'teste')?.ataque).at(-1).getFlag('${S}', 'teste');
+            return { efeitoSalvo: arma.system.falhaCritica, efeitoNaFicha: campo()?.value ?? null, falha: r.falhaDaArma, flag: mensagem.getFlag('${S}', 'ataque').falhaDaArma,
+              texto: aviso?.textContent.trim() ?? null, quantidade: caixa?.querySelectorAll('.falha-da-arma').length,
+              critico: teste.critico, ataque: r.ataque, resultado: r.linhas[0].resultado, hp: alvo.system.hp.value, balas: arma.system.pente.value, fila: window.__fila.length };
+          };
+          const efeitos = [];
+          for (const efeito of ['jammed', 'destroyed', 'destroyedBeyondRepair', 'coinToss']) {
+            await escolher(efeito);
+            efeitos.push(await atirar());
+          }
+          const qualidades = [];
+          for (const qualidade of ['standard', 'excellent']) {
+            await arma.update({ 'system.qualidade': qualidade });
+            await esperar(() => !campo());
+            qualidades.push({ qualidade, semCampo: !campo(), tiro: await atirar() });
+          }
+          await arma.update({ 'system.qualidade': 'poor' });
+          await escolher('jammed');
+          const comum = await atirar(2);
+          await a.update({ 'system.role.habilidades.Fumble Recovery': 4 });
+          const solo = await atirar(1, true);
+          return { padrao, opcoes, efeitos, qualidades, comum, solo };
+        })()`);
+        await edge.shot('falha-da-arma');
+        // O mestre lê o crítico da mensagem criada no navegador do jogador, com o ataque escondido na configuração.
+        const entrada = await edge.evaluate(`(async () => {
+          const a = game.actors.getName('Teste Falha da Arma');
+          const alvo = game.actors.getName('Alvo Falha da Arma');
+          const arma = a.items.find(i => i.type === 'arma');
+          const u = await User.implementation.create({ name: 'Jogador Falha da Arma', role: CONST.USER_ROLES.PLAYER, character: a.id });
+          __c13.usuario = u.id;
+          __c13.config = Object.fromEntries(['escondeAtaque', 'jogadorRolaDano', 'resultado'].map(k => [k, game.settings.get('${S}', k)]));
+          await a.update({ ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, 'system.role.habilidades.Fumble Recovery': 0 });
+          await alvo.update({ 'system.hp.value': 50 });
+          await arma.update({ 'system.falhaCritica': 'destroyedBeyondRepair', 'system.pente.value': 8 });
+          await game.settings.set('${S}', 'escondeAtaque', true);
+          await game.settings.set('${S}', 'jogadorRolaDano', false);
+          await game.settings.set('${S}', 'resultado', 'publico');
+          window.__fila = [[2, 6], [2, 6], [2, 6]];
+          return { ator: a.id, arma: arma.id, alvo: canvas.scene.tokens.find(t => t.actorId === alvo.id).id, cena: canvas.scene.id, usuario: u.id };
+        })()`);
+        jogadorFalha = await abrirEdge({ porta: 9461, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-c13-jogador-' });
+        await foundry14.capturarAvisos(jogadorFalha);
+        await foundry14.entrarComo(jogadorFalha, mesa.url, 'Jogador Falha da Arma');
+        const pedido = await jogadorFalha.evaluate(`(async () => {
+          for (let i = 0; i < 100 && !(canvas.ready && canvas.scene?.id === '${entrada.cena}' && canvas.scene.tokens.has('${entrada.alvo}')); i++) await new Promise(r => setTimeout(r, 100));
+          window.__fila = [[1, 10], [2, 10]];
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          return game.actors.get('${entrada.ator}').items.get('${entrada.arma}').atacar({ alvo: canvas.scene.tokens.get('${entrada.alvo}') });
+        })()`);
+        const lerDoJogador = `(async () => {
+          const mensagem = () => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === '${pedido.id}');
+          for (let i = 0; i < 100 && !(mensagem() && document.querySelector('[data-message-id="' + mensagem().id + '"] .falha-da-arma')); i++) await new Promise(r => setTimeout(r, 100));
+          const m = mensagem();
+          const teste = game.messages.get('${pedido.mensagem}');
+          return { falha: m?.getFlag('${S}', 'ataque')?.falhaDaArma, texto: document.querySelector('[data-message-id="' + m?.id + '"] .falha-da-arma')?.textContent.trim() ?? null,
+            autor: teste?.author.id, critico: teste?.getFlag('${S}', 'teste')?.critico, fila: window.__fila.length };
+        })()`;
+        info.jogador = { mestre: await edge.evaluate(lerDoJogador), jogador: await jogadorFalha.evaluate(lerDoJogador), usuario: entrada.usuario, avisos: await foundry14.avisosDoSistema(jogadorFalha) };
+        await edge.shot('falha-da-arma-jogador');
+        const textos = [
+          'A arma emperrou. Gaste uma Ação para desemperrá-la.', 'A arma quebrou e está sem uso, mas tem conserto.',
+          'A arma quebrou sem conserto e está sem uso para sempre.', 'Cara ou coroa: jogue uma moeda para resolver a falha da arma.'
+        ];
+        const ids = ['jammed', 'destroyed', 'destroyedBeyondRepair', 'coinToss'];
+        const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+        const semAviso = tiro => tiro.falha === null && tiro.flag === null && tiro.texto === null && tiro.quantidade === 0 && tiro.balas === 7 && tiro.fila === 0;
+        const ok = info.padrao === 'jammed' && igual(info.opcoes, [['jammed', 'Emperra'], ['destroyed', 'Quebra'], ['destroyedBeyondRepair', 'Quebra sem conserto'], ['coinToss', 'Cara ou coroa']])
+          && info.efeitos.every((tiro, i) => igual(tiro.falha, { efeito: ids[i], texto: textos[i] }) && igual(tiro.flag, tiro.falha)
+            && tiro.efeitoSalvo === ids[i] && tiro.efeitoNaFicha === ids[i] && tiro.texto === 'Falha crítica da arma: ' + textos[i] && tiro.quantidade === 1
+            && tiro.critico === 'falha' && tiro.ataque === 27 && tiro.resultado === 'acertou' && tiro.hp === 44 && tiro.balas === 7 && tiro.fila === 0)
+          && info.qualidades.every(q => q.semCampo && q.tiro.critico === 'falha' && semAviso(q.tiro))
+          && info.comum.critico === null && info.comum.ataque === 30 && semAviso(info.comum)
+          && info.solo.critico === null && info.solo.ataque === 29 && semAviso(info.solo)
+          && [info.jogador.mestre, info.jogador.jogador].every(lado => igual(lado.falha, { efeito: 'destroyedBeyondRepair', texto: textos[2] })
+            && lado.texto === 'Falha crítica da arma: ' + textos[2] && lado.autor === info.jogador.usuario && lado.critico === 'falha' && lado.fila === 0)
+          && !info.jogador.avisos.length;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        if (jogadorFalha) {
+          await jogadorFalha.send('Page.navigate', { url: 'about:blank' }).catch(() => {});
+          edge.erros.push(...jogadorFalha.erros.filter(erro => /cpr-fieldbook/.test(erro)).map(erro => 'jogador C13: ' + erro));
+          await jogadorFalha.fechar();
+        }
+        await edge.evaluate(`(async () => {
+          const estado = window.__c13;
+          if (!estado) return true;
+          CONFIG.Dice.randomUniform = estado.dados;
+          window.__fila = [];
+          for (const id of estado.atores) { const ator = game.actors.get(id); for (const item of ator?.items ?? []) await item.sheet?.close(); await ator?.sheet?.close(); }
+          await game.scenes.get(estado.cena)?.delete();
+          for (const id of estado.atores) await game.actors.get(id)?.delete();
+          for (const m of game.messages.filter(m => !estado.mensagens.includes(m.id))) await m.delete();
+          await game.users.get(estado.usuario)?.delete();
+          for (const [chave, valor] of Object.entries(estado.config ?? {})) await game.settings.set('${S}', chave, valor);
+          if (game.scenes.has(estado.cenaAtiva)) await game.scenes.get(estado.cenaAtiva).activate();
+          if (game.scenes.has(estado.cenaAnterior)) await game.scenes.get(estado.cenaAnterior).view();
+          delete window.__c13;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('mãos livres (C12): limite na ficha, no item e no drop do capanga; guardar libera mãos e o cyberware soma mãos', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();

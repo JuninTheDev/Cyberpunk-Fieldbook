@@ -22,6 +22,19 @@ export const maosDaArma = (arma, body = 0) => arma.maos === 2 && arma.aDistancia
 export const maosLivres = ({ armas = [], bonus = 0, body = 0, escudos = 0 } = {}) =>
   2 + bonus - escudos - armas.filter(arma => arma.equipada).reduce((soma, arma) => soma + maosDaArma(arma, body), 0);
 
+// Os quatro critFailEffect do CORE 0.92.4. A wiki detalha o emperramento (qualidade ruim) e os dois tipos de quebra.
+// O cartão informa a consequência; a moeda e o estado da arma ficam com a mesa.
+export const FALHAS_DA_ARMA = {
+  jammed: { rotulo: 'Emperra', texto: 'A arma emperrou. Gaste uma Ação para desemperrá-la.' },
+  destroyed: { rotulo: 'Quebra', texto: 'A arma quebrou e está sem uso, mas tem conserto.' },
+  destroyedBeyondRepair: { rotulo: 'Quebra sem conserto', texto: 'A arma quebrou sem conserto e está sem uso para sempre.' },
+  coinToss: { rotulo: 'Cara ou coroa', texto: 'Cara ou coroa: jogue uma moeda para resolver a falha da arma.' }
+};
+export function falhaDaArma({ qualidade, efeito = 'jammed', critico }) {
+  return qualidade === 'poor' && critico === 'falha' && Object.hasOwn(FALHAS_DA_ARMA, efeito)
+    ? { efeito, texto: FALHAS_DA_ARMA[efeito].texto } : null;
+}
+
 // Consciência de Combate do Solo (RED p. 146), pelos pontos de cada habilidade, como a wiki descreve (system-criacao.js)
 // e o CORE automatiza (bonusRatio de cada habilidade do item de Role):
 // - Reação de Iniciativa: +1 na Iniciativa por ponto;

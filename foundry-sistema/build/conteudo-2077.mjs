@@ -146,7 +146,7 @@ function arma(raw, grupo) {
       pente: { value: 0, max: parseInt(raw.magazine, 10) || 0 }, municoes, aDistancia: true, maos: parseInt(raw.hands, 10) || 1,
       autofogo: soAutofogo ? 4 : Number((recursos.match(/autofogo \((\d)\)/i) || [])[1] || 0), supressivo: /supressivo/i.test(recursos),
       // Como as armas excelentes do livro-base: +1 no ataque (RED p. 342).
-      bonusAtaque: qualidade === 'excellent' ? 1 : 0, qualidade, ocultavel: /^sim/i.test(raw.conceal),
+      bonusAtaque: qualidade === 'excellent' ? 1 : 0, qualidade, falhaCritica: 'jammed', ocultavel: /^sim/i.test(raw.conceal),
       tabelaDV: soAutofogo ? 'DV Assault Rifle (Autofire)' : TABELA_DV[tipo], ignorarArmadura: 0, ignorarAbaixo: 0, slots, equipada: false,
       preco: precoEm(raw.cost) ?? 500, fonte: fonte(livro, pagina)
     },

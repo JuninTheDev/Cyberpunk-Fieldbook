@@ -3,7 +3,7 @@
 import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { PERICIAS } from './gerado.mjs';
-import { programaDeAtaque } from './regras.mjs';
+import { FALHAS_DA_ARMA, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 
@@ -99,6 +99,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       locaisLesao: comAtual({ corpo: 'Corpo', cabeca: 'Cabeça' }, tipo === 'lesao' && fonte.local),
       pericias: comAtual(Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), tipo === 'arma' && fonte.pericia),
       qualidades: comAtual(QUALIDADES, (tipo === 'arma' || tipo === 'cyberdeck') && fonte.qualidade),
+      falhasDaArma: comAtual(Object.fromEntries(Object.entries(FALHAS_DA_ARMA).map(([id, efeito]) => [id, efeito.rotulo])), tipo === 'arma' && fonte.falhaCritica),
       tiposCyberware: comAtual(TIPOS_CYBERWARE, tipo === 'cyberware' && fonte.tipo),
       usos: USOS,
       ativacoes: ATIVACOES,

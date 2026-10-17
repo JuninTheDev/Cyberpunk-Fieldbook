@@ -1,6 +1,7 @@
 <div class="cpr-fieldbook cartao ataque">
   <header><h3>{{atacante}}: {{descricao}}</h3><span class="sabor">{{arma}}</span></header>
   <p class="placar">{{#if (ne ataque null)}}Ataque <b>{{ataque}}</b>{{#if cabecalho}} · {{/if}}{{/if}}{{cabecalho}}</p>
+  {{#if falhaDaArma}}<p class="nota falha-da-arma"><b>Falha crítica da arma:</b> {{falhaDaArma.texto}}</p>{{/if}}
   <ol class="alvos">
     {{#each linhas}}
     <li class="alvo resultado-{{resultado}}">

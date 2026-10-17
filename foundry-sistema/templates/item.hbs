@@ -27,6 +27,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Pente</span><span class="par"><input type="number" name="system.pente.value" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" value="{{fonte.pente.max}}"></span></label>
       <label class="celula"><span>Tabela de DV</span><input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
       <label class="celula"><span>Qualidade</span><select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
+      {{#if (eq fonte.qualidade "poor")}}<label class="celula"><span>Na falha crítica</span><select name="system.falhaCritica">{{selectOptions falhasDaArma selected=fonte.falhaCritica}}</select></label>{{/if}}
       <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
       <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}

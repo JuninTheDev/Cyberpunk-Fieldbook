@@ -291,7 +291,8 @@ async function contexto(pedido, usuario) {
     pedido, usuario, arma, atacante, tokenAtq, cena: tokenAtq?.parent ?? alvos[0]?.parent ?? canvas.scene, alvos,
     modo: pedido.modo, local: pedido.local, descricao: R.descreverAtaque(pedido), nomeAtq: tokenAtq?.name ?? atacante.name,
     perfil: arma.perfil2077, cobertura: R.COBERTURAS[pedido.cobertura] ?? null,
-    linhas: [], notas: notasDe2077(pedido, arma), rolagens: [], marcas: pedido.carga ? [{ ator: arma.uuid, chave: 'carga', ...pedido.carga }] : [], cabecalho: ''
+    linhas: [], notas: notasDe2077(pedido, arma), rolagens: [], marcas: pedido.carga ? [{ ator: arma.uuid, chave: 'carga', ...pedido.carga }] : [], cabecalho: '',
+    falhaDaArma: R.falhaDaArma({ qualidade: arma.system.qualidade, efeito: arma.system.falhaCritica, critico: game.messages.get(pedido.mensagem)?.getFlag(SISTEMA, 'teste')?.critico })
   };
 }
 
@@ -751,7 +752,7 @@ async function cartaoDoResultado(ctx) {
     nome: l.nome, img: l.img, resultado: l.resultado, rotulo: RESULTADOS[l.resultado] ?? l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null,
     dv: l.dv ?? null, metros: l.metros ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, suprimido: Boolean(l.suprimido), notas: l.notas
   }));
-  const resumo = { id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, atacante: ctx.nomeAtq, arma: ctx.arma.name, cabecalho: ctx.cabecalho, notas: ctx.notas, linhas };
+  const resumo = { id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, atacante: ctx.nomeAtq, arma: ctx.arma.name, cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas };
   const desfazer = ctx.linhas.filter(l => l.dano || l.suprimido).map(l => ({
     ator: l.token.actor.uuid, suprimido: Boolean(l.suprimido), lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null

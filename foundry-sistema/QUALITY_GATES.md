@@ -98,6 +98,10 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 - **O `__esperar` não falha** (ciclo 80): ele devolve a condição quando o tempo acaba, sem erro. Esperar não é conferir:
   o passo lê o estado depois da espera e confere no `ok`. No ciclo 80, a mutação "o Soltar não tira a marca do outro"
   sobreviveu porque o passo só esperava as marcas sumirem.
+- **O crítico efetivo e os dois clientes** (ciclo 88): o Solo pode suprimir a falha do 1 natural. A consequência da
+  arma lê o crítico já resolvido na mensagem da rolagem. Como o mestre usa essa mensagem para montar o resultado,
+  o G4 também cria um ataque no navegador do jogador e confere flag e cartão nos dois, com o ataque escondido.
+  A mutação que só lê o crítico do mestre cai nesse caso; os tiros comum e do Solo pegam a falha forçada.
 - **Um erro no `finally` esconde o resultado do passo** (ciclo 81): ele substitui o que o `try` devolveu. Na limpeza de
   coisas que um gancho do sistema apaga em par (as duas marcas do agarrão: o mestre apaga a do outro lado), apagar as
   duas corre contra o gancho ("does not exist"); a limpeza tolera a corrida (`.catch`) e espera o estado final.

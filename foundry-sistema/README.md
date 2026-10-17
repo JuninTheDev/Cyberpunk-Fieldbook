@@ -203,6 +203,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   A rodada é a do combate de que o personagem participa. Fora de combate, o Ponto Fraco e a Deflexão valem toda vez.
 - **Desfazer:** o cartão do resultado tem o botão, só para o mestre. Devolve o HP, o SP e o escudo, tira as lesões e o Suprimido, e devolve o Ponto Fraco e a Deflexão que o ataque gastou (e a carga Tech da arma).
 - **Munição:** cada tiro sai do pente, e **↻** recarrega com a munição compatível da ficha. O ataque de um jogador sem mestre na mesa para antes de gastar a bala.
+- **Falha crítica da arma** (C13, ciclo 88): na ficha da arma de qualidade ruim, "Na falha crítica" escolhe Emperra,
+  Quebra, Quebra sem conserto ou Cara ou coroa. O resultado do ataque mostra a consequência numa falha crítica efetiva,
+  mesmo quando acerta. A Recuperação de Falhas do Solo a suprime. O padrão é Emperra, inclusive nas armas antigas.
+  O aviso informa a mesa; a moeda e o estado da arma são resolvidos à mão.
 - **Armas de 2077** (o suplemento de fã da mesa, como a página de 2077 da wiki descreve). A classe aparece ao lado do nome da arma, e os modos são botões na linha dela:
   - **Power, Ricochete:** tiro único num alvo atrás de cobertura, com a perícia da arma e a DV da tabela de autofogo (pistolas e SMGs: a da SMG; as outras, a do rifle de assalto). Rola um dado a menos de dano, e o Ballistic Coprocessor instalado dá +2. As que só disparam rajadas ou cartucho não ricocheteiam.
   - **Tech, Carga e Rajada:** a janela pergunta a cobertura do alvo. A carga deixa passar tudo, metade da fina ou um quarto da grossa; a rajada (o autofogo carregado, com a tabela da SMG e o multiplicador até o da arma), tudo ou um quarto da fina. Se o dano passar da armadura, ela perde 4 de SP (2 através de cobertura). A rajada gasta as balas que a arma diz (a Kenshin 2, a Senkoh o pente todo). Depois de uma carga, a arma esfria uma rodada: a ficha mostra até quando.
@@ -358,6 +362,9 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - a ficha do item no jeito da maquete: numa pistola, o tipo na cor dele, o resumo, a etiqueta da qualidade, as três abas (a troca pelo clique) e as células; num cyberdeck, o uso pelos três botões, que grava;
   - mãos livres (C12): limite exato, recusa na ficha e no item, a caixa que volta ao estado gravado, o drop de uma
     origem equipada, as mãos do cyberware, BODY 7 e 8, o escudo sem HP e guardar mesmo num excesso antigo;
+  - falha da arma (C13): padrão e seletor salvo, os quatro efeitos no cartão e na flag, inclusive acertando; sem aviso
+    na arma padrão/excelente, na rolagem comum e com a Recuperação de Falhas do Solo; o ataque do jogador, com o total
+    escondido, conferido nos dois clientes;
   - "Consertar" na ficha da armadura: o SP gasto volta ao máximo e o cartão "CONSERTO" diz quem consertou; inteira, o aviso, sem outra mensagem;
   - "Rolar Humanidade" na ficha do cyberware e "Aplicar" no cartão: a perda rolada sem instalar, tirada uma vez da Humanidade do dono pelo botão do mestre;
   - "Atacar" e "Recarregar" na ficha da arma (a janela no clique, direto com Ctrl; o pente cheio da munição carregada) e o SP da armadura em caixas, com o "−1" até o 0;
