@@ -140,7 +140,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
     Capanga, e a parede entre os dois não tinha linha para cortar;
   - logo depois do `update` de x e y, o `token.x` ainda é o de antes, enquanto o token anda (o destino está no
     `_source`). A conta que usa o lugar novo (onde pôr a parede) usa o lugar pedido, e o outro navegador espera o token
-    chegar antes de agir.
+    chegar antes de agir;
+  - o gancho do `updateToken` também vê o `token.x` de antes (ciclo 100): a conta do alcance do Neuroport, no gancho,
+    usa o `_source`, como a da arquitetura (`netrun/regras-da-net.mjs`). Com o `token.x`, o Jack Out inseguro do
+    netrunner levado para longe só caía quando ele voltava.
 - **Aviso novo com a checagem de avisos já falhando** (ciclo 92): a checagem "nenhum aviso" do fim do G4 falha pelo
   aviso conhecido da Lexington, e um aviso a mais (o de uma API que saiu, por exemplo) não muda o resultado dela. O
   passo que pode gerar um aviso lê o `window.__avisos` do navegador antes e depois da ação e confere os novos.

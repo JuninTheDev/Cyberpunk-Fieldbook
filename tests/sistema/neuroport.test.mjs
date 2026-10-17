@@ -8,7 +8,10 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { alcanceDoJackIn, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, JACK_IN, jaFezOQuickhack, passouOPasswall, passouOQuickhack, passwallsDoAlvo, percebeuOJackIn, sabeDoJackIn } from '../../foundry-sistema/scripts/regras.mjs';
+import {
+  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, JACK_IN, JACK_OUT_INSEGURO, jaFezOQuickhack, passouOPasswall,
+  passouOQuickhack, passwallsDoAlvo, percebeuOJackIn, sabeDoJackIn, semAcaoNet
+} from '../../foundry-sistema/scripts/regras.mjs';
 import { barra, paredeNoMeio } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -30,6 +33,29 @@ test('a expulsão pela wiki: quem percebeu rola WILL + Concentração + 1d10 con
   assert.equal(expulsou(8, 13), false);
   assert.equal(expulsou('14', '9'), true);
   assert.deepEqual([0, 1, 4, '2', undefined].map(sabeDoJackIn), [false, true, true, true, false]);
+});
+
+test('as Ações NET fora da arquitetura (cada Neuroport é uma; em combate, as do Rank por rodada) e o Jack Out inseguro (60 minutos sem entrar de novo naquele alvo)', () => {
+  assert.ok(wiki.includes('Cada Neuroport é uma Ação NET, e dá para ficar ligado em quantos quiser.'));
+  assert.ok(wiki.includes('Você fica ligado até ser expulso, sair do alcance, fazer o Jack Out ou o alvo morrer. Desligado de qualquer jeito que não o Jack Out, é um <b>Jack Out inseguro</b>, com as consequências de sempre, e você só entra de novo nesse alvo em 60 minutos.'));
+  const agora = { combate: 'c1', rodada: 3 };
+  assert.equal(acoesNetNaRodada({ combate: 'c1', rodada: 3, usadas: 2 }, agora), 2);
+  assert.equal(acoesNetNaRodada({ combate: 'c1', rodada: 2, usadas: 2 }, agora), 0);
+  assert.equal(acoesNetNaRodada({ combate: 'c0', rodada: 3, usadas: 2 }, agora), 0);
+  assert.equal(acoesNetNaRodada(null, agora), 0);
+  assert.equal(acoesNetNaRodada({ combate: 'c1', rodada: 3, usadas: 2 }, null), 0);
+  assert.equal(semAcaoNet({ combate: 'c1', rodada: 3, usadas: 1 }, agora, 2), false);
+  assert.equal(semAcaoNet({ combate: 'c1', rodada: 3, usadas: 2 }, agora, 2), true);
+  assert.equal(semAcaoNet({ combate: 'c1', rodada: 2, usadas: 2 }, agora, 2), false);
+  // Fora de combate, não contam.
+  assert.equal(semAcaoNet({ combate: 'c1', rodada: 3, usadas: 9 }, null, 2), false);
+  assert.deepEqual(JACK_OUT_INSEGURO, { segundos: 3600 });
+  const bloqueios = [{ alvo: 'A', ate: 4600 }, { alvo: 'B', ate: 900 }];
+  assert.equal(bloqueioDoAlvo(bloqueios, 'A', 1000)?.ate, 4600);
+  assert.equal(bloqueioDoAlvo(bloqueios, 'A', 4600), null);
+  assert.equal(bloqueioDoAlvo(bloqueios, 'B', 1000), null);
+  assert.equal(bloqueioDoAlvo(bloqueios, 'C', 0), null);
+  assert.equal(bloqueioDoAlvo(undefined, 'A', 0), null);
 });
 
 test('o alcance do Jack In com o deck externo: 6 m, 8 m com o Range Upgrade', () => {

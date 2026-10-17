@@ -72,7 +72,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
 
       {{#if (or net.rank neuroport.invasores.length)}}
       <section class="painel corte neuroports">
-        <div class="titulo">NEUROPORTS<span>{{#if net.rank}}JACK IN NO ALVO MARCADO · ATÉ {{neuroport.alcance}} M{{/if}}</span></div>
+        <div class="titulo">NEUROPORTS<span>{{#if net.rank}}JACK IN NO ALVO MARCADO · ATÉ {{neuroport.alcance}} M{{#if neuroport.acoes}} · AÇÕES NET {{neuroport.acoes.usadas}}/{{neuroport.acoes.max}}{{/if}}{{/if}}</span></div>
         {{#if net.rank}}
         <ol class="itens">
           {{#each neuroport.ligacoes}}<li data-alvo="{{alvo}}"><span class="nome">{{nome}}</span><span class="detalhe">{{#if percebido}}percebeu{{else}}não percebeu{{/if}}</span>{{#if quantos}}<span class="passwalls" data-tooltip="Os Passwalls do Self-ICE do alvo: o Breach passa um por vez, e o quickhack só depois de todos">PASSWALLS {{passados}}/{{quantos}} · DV {{dv}}</span>{{#if faltam}}<button type="button" class="acao" data-action="breach" data-alvo="{{alvo}}" data-tooltip="Breach: Interface + 1d10 contra a DV do Passwall (1 Ação NET)">Breach</button>{{/if}}{{/if}}{{#unless faltam}}<button type="button" class="acao" data-action="quickhack" data-alvo="{{alvo}}" data-tooltip="Um quickhack do seu Rank: Interface + 1d10 contra a DV dele (1 Ação NET; um por alvo por turno)">Quickhack</button>{{/unless}}<button type="button" class="acao" data-action="jackOut" data-alvo="{{alvo}}" data-tooltip="Sai do Neuroport com segurança">Jack Out</button></li>

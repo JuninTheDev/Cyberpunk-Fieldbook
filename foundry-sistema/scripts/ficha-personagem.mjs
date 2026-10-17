@@ -4,7 +4,7 @@
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
-import { breach, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
+import { acoesNetDe, breach, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
@@ -255,7 +255,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       const passados = Math.min(ligacao.passados ?? 0, quantos);
       return { ...ligacao, quantos, dv, passados, faltam: quantos - passados };
     });
-    const neuroport = { ligacoes: comPasswalls, invasores: game.user.isGM ? invasores : invasores.filter(item => item.percebido), alcance: alcanceDoJackIn({ rangeUpgrade: netrunnerDo(ator).rangeUpgrade }) };
+    // Em combate, as Ações NET da rodada fora da arquitetura (o Jack In, o Breach e o quickhack).
+    const neuroport = {
+      ligacoes: comPasswalls, invasores: game.user.isGM ? invasores : invasores.filter(item => item.percebido),
+      alcance: alcanceDoJackIn({ rangeUpgrade: netrunnerDo(ator).rangeUpgrade }), acoes: s.rankDeInterface ? acoesNetDe(ator) : null
+    };
     // A conexão na NET (os botões da aba, as maquetes do usuário): o token do ator nesta cena que está num ponto de acesso,
     // com o nome do ponto.
     const conectado = ator.getActiveTokens(false, true).map(token => ({ token, conexao: token.getFlag(SISTEMA, FLAG_CONEXAO) })).find(c => c.conexao);

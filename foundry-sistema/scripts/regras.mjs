@@ -510,6 +510,18 @@ export const EFEITOS_DE_QUICKHACK = {
 // Interface + 1d10"): o empate é do netrunner, que defende ("Teste contra outra pessoa: empate = o defensor vence").
 export const expulsou = (total, defesa) => Number(total) > Number(defesa);
 
+// As Ações NET fora da arquitetura (a wiki: "Cada Neuroport é uma Ação NET"; o Breach e o quickhack, 1 Ação NET cada): em
+// combate, as da rodada contam até as do Rank (acoesDeNet); fora de combate, não contam. registro: { combate, rodada,
+// usadas }; agora: { combate, rodada } ou null.
+export const acoesNetNaRodada = (registro, agora) => (agora?.combate && registro?.combate === agora.combate && registro.rodada === agora.rodada ? Number(registro.usadas) || 0 : 0);
+export const semAcaoNet = (registro, agora, max) => Boolean(agora?.combate) && acoesNetNaRodada(registro, agora) >= Number(max);
+
+// O Jack Out inseguro (a wiki: "Você fica ligado até ser expulso, sair do alcance, fazer o Jack Out ou o alvo morrer.
+// Desligado de qualquer jeito que não o Jack Out, é um Jack Out inseguro [...] e você só entra de novo nesse alvo em 60
+// minutos"): o bloqueio daquele alvo, pelo tempo do mundo (em segundos). bloqueios: [{ alvo, ate }].
+export const JACK_OUT_INSEGURO = { segundos: 3600 };
+export const bloqueioDoAlvo = (bloqueios, alvo, agora) => (bloqueios ?? []).find(bloqueio => bloqueio.alvo === alvo && Number(bloqueio.ate) > Number(agora)) ?? null;
+
 // Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria
 // abaixo de 0, fica com 1 HP e desmaia" (quem já está abaixo de 1 não sobe), e na terceira rodada seguida desmaia.
 // motivo: 'abaixoDeZero' ou 'tresRodadas' quando desmaia.

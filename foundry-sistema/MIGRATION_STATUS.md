@@ -529,6 +529,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   0 na ficha; o cartão do quickhack traz a regra, e o mestre narra. Se a mesa quiser o MOVE 0 pelo quickhack, muda o
   `moveFinal` (o mínimo só para o ferimento, as lesões e a armadura) e o teste de referência.
 
+- **As Ações NET no Neuroport e na arquitetura** (ciclo 100). A wiki dá as Ações NET por turno (as do Rank) sem separar
+  a arquitetura do Neuroport. O sistema conta as do Neuroport (o Jack In, o Breach e o quickhack, em combate) na ficha
+  do netrunner, e as da arquitetura na janela da NET, cada conta com o limite do Rank. Quem está numa arquitetura e num
+  Neuroport na mesma rodada pode gastar nas duas; o mestre confere. Juntar as duas contas é mexer no estado da NET
+  (`netrun/estado.mjs`) e na ficha.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -4894,6 +4900,66 @@ Commit anterior: `4b558c2f` (ciclo 98).
   - o deck na Neuroport Cyberdeck Port;
   - a ligação de quem saiu da cena (o token apagado).
 - **Próximo:** o C9, parte 5 (as Ações NET fora da arquitetura e o Jack Out inseguro).
+
+### Ciclo 100 (2026-10-17): o C9, parte 5: as Ações NET fora da arquitetura e o Jack Out inseguro (sessão KouArt)
+
+Commit anterior: `e5972312` (ciclo 99).
+
+- **A referência (a wiki, "Quickhacks no Neuroport"):**
+  - **as Ações NET:** "Cada Neuroport é uma Ação NET, e dá para ficar ligado em quantos quiser"; o Breach e o quickhack
+    custam 1 Ação NET (a tabela das habilidades); as Ações NET por turno são as do Rank ("Ações por turno");
+  - **o Jack Out inseguro:** "Você fica ligado até ser expulso, sair do alcance, fazer o Jack Out ou o alvo morrer.
+    Desligado de qualquer jeito que não o Jack Out, é um Jack Out inseguro, com as consequências de sempre, e você só
+    entra de novo nesse alvo em 60 minutos".
+- **Implementado:**
+  - **`regras.mjs`:**
+    - `acoesNetNaRodada` e `semAcaoNet`: em combate, as da rodada até as do Rank; fora de combate, não contam;
+    - `JACK_OUT_INSEGURO` (3600 segundos) e `bloqueioDoAlvo`: o alvo bloqueado até o tempo do mundo passar;
+  - **`neuroport.mjs`:**
+    - **as Ações NET:** o Jack In, o Breach e o quickhack conferem a conta no cliente (sem Ação, o aviso, sem rolar) e
+      no mestre, que a gasta (o mestre passa do limite, como na arquitetura); a conta fica no netrunner (a flag
+      `neuroport.acoes`);
+    - **o Jack Out inseguro:** expulso ou fora do alcance, a ligação some dos dois lados, e o netrunner fica bloqueado
+      naquele alvo por 60 minutos (a flag `neuroport.bloqueios`); o cartão diz;
+    - **o alcance:** o gancho do token que anda (o netrunner ou o alvo; no mestre ativo) confere cada ligação contra o
+      alcance do deck;
+    - **o bloqueio no Jack In:** o aviso com os minutos que faltam, sem rolar;
+  - **a ficha:** em combate, o título do painel Neuroports mostra as Ações NET da rodada ("AÇÕES NET 2/2").
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 120 de 132 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, 1 teste de referência novo: o texto da
+    wiki, a conta por rodada e o bloqueio;
+  - G4: 114 de 123 (as 9 conhecidas da integração). O passo novo, "As Ações NET fora da arquitetura e o Jack Out
+    inseguro", passou na segunda rodada (na primeira, a conta do alcance usava o `token.x`, que no gancho ainda é o de
+    antes: o Jack Out inseguro só caía quando o netrunner voltava; a lição no QUALITY_GATES):
+    - **em combate, o netrunner de Rank 1** (2 Ações NET): o Jack In no Capanga e o Sonic Shock; a ficha mostra "AÇÕES
+      NET 2/2", e o terceiro (o Jack In no Alvo) avisa "Sem Ações NET neste turno (2 de 2)." sem rolar;
+    - **na rodada seguinte:** 0 de 2;
+    - **o netrunner levado para longe:** o cartão do Jack Out inseguro (a distância e o alcance), a ligação some dos
+      dois lados, e o bloqueio do Capanga fica em 3600 segundos;
+    - **de volta ao lado:** o Jack In avisa os 60 minutos e não rola; com o bloqueio vencido, entra, e a rodada conta 1
+      de 2;
+    - **o alvo que anda:** o Capanga levado para longe também derruba o netrunner (e volta ao lugar no fim);
+    - **o passo do Jack In (ciclo 95):** o netrunner levado para longe cai do Neuroport do Alvo (o cartão a mais);
+    - **o passo da expulsão (ciclo 99):** o cartão traz o Jack Out inseguro, e o bloqueio do Alvo fica em 3600 segundos;
+  - **mutações:** as 9 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - uma Ação NET a mais que o Rank (A1);
+      - a conta sem a rodada (A2);
+      - o bloqueio que vale no segundo em que acaba (A3).
+    - **No G4:**
+      - a Ação NET que não se gasta (A4; o Jack In a mais abriu a janela do Alvo e derrubou também o passo seguinte);
+      - o Jack In sem a conta no cliente (A5: rola, e o mestre recusa);
+      - sem o gancho do alcance (A6: também o passo do Jack In);
+      - o Jack Out inseguro sem o bloqueio (A7: também o passo da expulsão);
+      - o Jack In sem a conferência do bloqueio no cliente (A8);
+      - o alvo que anda não conta (A9).
+    - **Fica sem mutação a conferência do mestre** (a conta e o bloqueio no `resolverJackIn`, no `resolverBreach` e no
+      `resolverQuickhack`): o cliente confere antes, e o passo não manda o pedido por fora dele.
+- **Dúvida nova** (nas dúvidas de regra): as Ações NET do Neuroport e as da arquitetura, em contas separadas.
+- **Itens novos no ROADMAP** (regras da wiki que o sistema ainda não tem): o firewall de fábrica, o Neuroport como
+  arquitetura NET, a conexão direta pelo Personal Link e o alvo que morre (com a ligação do token apagado).
+- **Próximo:** o C9, parte 6 (o deck na Neuroport Cyberdeck Port).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
