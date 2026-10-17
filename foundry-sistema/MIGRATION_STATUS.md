@@ -4531,7 +4531,8 @@ suplemento. O C9 (a NET de 2077) depende dessas regras. Commit anterior: `3608b8
     - **as suítes da wiki falham assim também num clone limpo do master** (conferido com a trava dos testes): o
       `criador` (2), o `cyberware` (6) e o `reversao` (o clone com o `campaign-map.js` antigo). São do master, e não da
       integração;
-    - **o "projeto real" do `reversao`** falhava só com a mescla ainda sem commit. Depois do commit: RESULTADO_REVERSAO;
+    - **o "projeto real" do `reversao`** falhava só com a mescla ainda sem commit. Depois do commit, o `reversao` dá 6
+      de 7, como no clone limpo do master;
     - **o `fluxo` e o `sistema`:** as falhas conhecidas de sempre.
 - **Pendências:**
   - o C29 (novo no ROADMAP): uma parte por grupo de falhas. A da NET é da sessão KouArt, e as outras ficam abertas;
