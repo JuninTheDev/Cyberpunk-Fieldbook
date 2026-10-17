@@ -149,7 +149,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - Na arma ruim, o `critFailEffect` do CORE: Emperra, Quebra, Quebra sem conserto e Cara ou coroa, pelo seletor da ficha.
   - O cartão informa a consequência da falha efetiva, inclusive acertando; o Solo pode suprimi-la.
   - A moeda e o estado da arma ficam com a mesa.
-- [ ] **C14. Munições especiais:**
+- [~] **C14. Munições especiais** em andamento (sessão Codex, 2026-10-17):
   - os testes de resistência (biotoxina, veneno, sonífera, flashbang e gás);
   - a incendiária, a expansiva e a inteligente;
   - o EMP nos itens eletrônicos (o `electronic` do CORE, com o "endurecido").
