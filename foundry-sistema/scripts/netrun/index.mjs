@@ -8,7 +8,7 @@ import { FLAG_INIMIGO, STATUS_EM_CHAMAS } from './constantes.mjs';
 import { alvosNaVez, conexaoDoToken, estadoDoTile, operacoes, pontoDoTile, removerCorredorApagado, soltarTokens } from './estado.mjs';
 import { andaresConhecidos, JanelaDaNet } from './janela.mjs';
 import { alcanceDo, distancia, netrunnerDo } from './regras-da-net.mjs';
-import { abrirPonto, apagarPontos, arquiteturasDisponiveis, botaoNoHud, configurar, conectar, conectarPelaFicha, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
+import { abrirPonto, apagarPontos, arquiteturasDisponiveis, botaoNoHud, botaoScannerNoHud, configurar, conectar, conectarPelaFicha, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
 import { iniciarSocketDaNet, pedir } from './socket.mjs';
 import { desenharAnel, pararPulso, registrarStatusDaNet } from './token.mjs';
 
@@ -60,6 +60,8 @@ export function registrarNet() {
         return conexao ? pedir('desconectar', { tile: conexao.tile, token: doc(token).id, inseguro }) : Promise.resolve(null);
       },
       janela: (tile, opcoes = {}) => JanelaDaNet.abrir(doc(tile), opcoes),
+      // O Scanner do token (o botão do HUD): { total, achados }.
+      scanner: token => pedir('scanner', { cena: doc(token).parent.id, token: doc(token).id }),
       estado: tile => estadoDoTile(doc(tile)),
       ponto: tile => pontoDoTile(doc(tile)),
       arquiteturasDisponiveis, pedir, pontosDesenhados
@@ -105,6 +107,7 @@ export function registrarNet() {
   });
 
   Hooks.on('renderTileHUD', botaoNoHud);
+  Hooks.on('renderTokenHUD', botaoScannerNoHud);
   Hooks.on('drawToken', desenharAnel);
   Hooks.on('refreshToken', desenharAnel);
 

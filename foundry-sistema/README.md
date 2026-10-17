@@ -48,10 +48,15 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   o DV, os requisitos (o cyberdeck equipado, a Interface mínima), se o ponto é oculto e se as defesas reiniciam sem
   ninguém conectado; o Tile sem imagem ganha a de terminal (o Foundry não mostra aos jogadores um Tile sem imagem). No
   mapa, o marcador "NET" fica sobre o Tile (o oculto, só para o mestre). O jogador seleciona o token e clica no
-  marcador: perto o bastante (o Range Upgrade no deck soma 2 m) e com os requisitos, conecta, e o mestre ativo confere
-  tudo de novo. O token conectado ganha o status "Conectado à NET" e um anel ciano. A **janela da NET** mostra quem está
-  na NET e onde, o mapa que os jogadores enxergam (o andar 1 como "?") e o registro, com o botão **Desconectar**. Sair
-  do alcance derruba da NET (a desconexão insegura); apagar o token ou o Tile também tira o netrunner.
+  marcador: perto o bastante (o Range Upgrade no deck soma 2 m), sem parede no meio (ciclo 91: a linha do centro do
+  token ao centro do Tile não cruza parede que barra o movimento; a porta aberta passa) e com os requisitos, conecta, e
+  o mestre ativo confere tudo de novo. O token conectado ganha o status "Conectado à NET" e um anel ciano. A **janela
+  da NET** mostra quem está na NET e onde, o mapa que os jogadores enxergam (o andar 1 como "?") e o registro, com o
+  botão **Desconectar**. Sair do alcance derruba da NET (a desconexão insegura); apagar o token ou o Tile também tira o
+  netrunner. Fora da NET, o
+  botão **Scanner** do HUD do token (ciclo 91, como o NET Architect da mesa) acha os pontos de acesso da cena até o
+  resultado × 10 m; o oculto, só com o resultado acima do DV do Scanner dele, e aí ele aparece para quem achou. O chat
+  conta só ao mestre e ao jogador.
 - **O visual da janela da NET** (ciclo 58, no jeito de um terminal de netrunner):
   - no topo, a conexão, a arquitetura e o netrunner: a Interface, a Sorte preparada, as Ações NET (um losango por ação,
     aceso enquanto sobra; fora de combate, só o contorno) e a desconexão insegura; os avisos (o fogo, o Kraken, o Skunk,
@@ -306,8 +311,7 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
-  (o Scanner) e o Painel Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na
@@ -417,6 +421,10 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - as Roles do RED: as rolagens de Role pela aba Role (o Impacto Carismático pela janela, a pechincha com Ctrl + clique, o Backup que vem e o que não vem, a Especialização de Campo com a perícia escolhida e a Cirurgia do Medtech pelas especialidades); o Moto do Nomad importado da wiki de teste; um personagem antigo com a Role Face entra como Rockerboy pela importação e pela migração, e a ficha com "Face" lê o Rockerboy; na aba Role, o Impacto Carismático sem bônus e o Moto do Nomad no total da ficha;
   - o extrato: somar, subtrair e definir com o motivo, a mudança direta, o saldo negativo com o aviso, o mestre tirando linhas (só a linha ou desfazendo a mudança) e as linhas da importação, da migração e da loja;
   - a migração dos dados: o mundo novo fica na versão atual sem pergunta; um mundo da versão 0 com o TeleOptics antigo (num ator, num token não ligado e num compêndio trancado) e um Cyberaudio que virou Fashionware: a pergunta, o "Depois" que não muda nada, o "Migrar agora" que muda só isso e tranca o compêndio de novo, o registro no chat, a segunda vez sem pergunta e o aviso dos dados de uma versão mais nova;
+  - os nós de controle ligados à cena (ciclo 85): a porta, a luz e a torreta ligadas pela configuração do ponto; quem toma o nó vê só as dele, abre a porta, apaga a luz e assume a torreta, que volta ao dono de sempre na desconexão;
+  - os arquivos do Eye-Dee (ciclo 89): o diário na pasta "Arquivos da NET", a permissão do dono, o aviso no chat, o "Abrir o arquivo" (no jogador e no mestre), o mesmo diário depois do "Reiniciar" e um novo no lugar do apagado;
+  - o editor visual da arquitetura (ciclo 90): o "+" que cria o andar, o andar arrastado que troca com outro e o que vai para a célula vazia, e a ficha do compêndio trancado sem nada disso;
+  - a parede e o Scanner (ciclo 91): a porta fechada no meio (o aviso do clique e a recusa da operação) e aberta (conecta); o Scanner do HUD do token com 9 (só o ponto a 3 m) e com 12 (também o oculto a 13 m, que passa a aparecer ao jogador), com o chat só ao mestre e a ele;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 
 Da pasta de dados do Foundry do PC só sai a licença. `FOUNDRY14_APP=...` e `FOUNDRY14_DADOS=...` trocam o programa e a pasta de onde vem a licença.

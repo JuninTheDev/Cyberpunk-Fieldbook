@@ -14,10 +14,10 @@ import { testar } from '../rolagens.mjs';
 import { entrarNoCombate, sincronizarInimigos, tirarInimigos } from './combate.mjs';
 import { FLAG_CONEXAO, FLAG_ESTADO, FLAG_PONTO, STATUS_CONECTADO, STATUS_EM_CHAMAS } from './constantes.mjs';
 import {
-  acharConteudo, alcanceDo, alvoDaHabilidade, alvoDoPrograma, alvosDoInimigo, comecoDoTurno, conteudosDoNo, demonioDe, distancia, efeitoDoIce, faltasPara, fraseDaChegada, gastarAcoes, iceDaQueda,
-  iceDe, inimigosAtivos, inimigosQueAtacam, motivoParaNaoAndar, motivoParaNaoDesconectar, motivoParaNaoMudarPrograma, motivoParaNaoSlide, mudarRez, netrunnerDo, nomeDoInimigo, penalidadeDoSkunk,
-  PRISAO_DO_KRAKEN, quemRolaNaNet, resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, respostaDoJogador, resumoDoAndar, rezDe, rezMaxDe,
-  vistaPublica
+  achadosDoScanner, acharConteudo, alcanceDo, alvoDaHabilidade, alvoDoPrograma, alvosDoInimigo, comecoDoTurno, conteudosDoNo, demonioDe, distancia, efeitoDoIce, faltasPara, fraseDaChegada, gastarAcoes,
+  iceDaQueda, iceDe, inimigosAtivos, inimigosQueAtacam, motivoParaNaoAndar, motivoParaNaoDesconectar, motivoParaNaoMudarPrograma, motivoParaNaoSlide, mudarRez, netrunnerDo, nomeDoInimigo, paredeEntre,
+  penalidadeDoSkunk, PRISAO_DO_KRAKEN, quemRolaNaNet, RAIO_DO_SCANNER, resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, respostaDoJogador,
+  resumoDoAndar, rezDe, rezMaxDe, vistaPublica
 } from './regras-da-net.mjs';
 import { copiarArquivo } from './arquivos.mjs';
 import { acionar as acionarLigacao, devolver, ligacoesDo } from './ligacoes.mjs';
@@ -363,8 +363,44 @@ async function zap(ctx, alvo, total) {
   return linha;
 }
 
+// A parede entre o token e o ponto de acesso (regras-da-net.paredeEntre): o mestre conecta assim mesmo, como no alcance.
+export const PAREDE_NO_MEIO = 'Tem parede entre o netrunner e o ponto de acesso (a wiki: "sem parede no meio").';
+
 // ---------------- Operações (o que o socket chama, no mestre ativo) ----------------
 export const operacoes = {
+  // O Scanner (1 Ação Carnal, fora da NET; o NET Architect da mesa): acha os pontos de acesso da cena até o resultado ×
+  // 10 m (regras-da-net.achadosDoScanner); o oculto, só com o resultado acima do DV do Scanner dele, e aí os donos do
+  // netrunner passam a vê-lo. O chat conta o que achou, só ao mestre e a eles.
+  async scanner(dados, usuario) {
+    const cena = game.scenes.get(dados.cena);
+    const token = cena?.tokens.get(dados.token);
+    if (!token?.actor) throw erro('Token não encontrado.');
+    if (!usuario.isGM && !token.actor.testUserPermission(usuario, 'OWNER')) throw erro('Você não controla este token.');
+    if (conexaoDoToken(token)) throw erro('O Scanner é usado fora da NET: desconecte antes.');
+    exigirNetrunner(token.actor);
+    const total = await rolarNoNetrunner({ ator: token.actor, usuario, corredor: null, est: null }, { rolagem: 'scanner' });
+    const pontos = cena.tiles.filter(tile => pontoDoTile(tile)?.ativo).map(tile => {
+      const ponto = pontoDoTile(tile);
+      return { tile, nome: ponto.nome || 'Ponto de acesso', longe: distancia(tile, token), oculto: Boolean(tile.hidden || ponto.oculto), dvScanner: ponto.dvScanner };
+    });
+    const achados = achadosDoScanner(pontos, total);
+    const donos = game.users.filter(user => !user.isGM && token.actor.testUserPermission(user, 'OWNER')).map(user => user.id);
+    for (const { tile } of achados.filter(achado => achado.oculto)) {
+      const ponto = pontoDoTile(tile);
+      await tile.setFlag(SISTEMA, FLAG_PONTO, { ...ponto, revelados: [...new Set([...(ponto.revelados ?? []), ...donos])] });
+    }
+    const unidade = cena.grid.units || 'm';
+    const linhas = achados.map(achado => `${achado.nome} (${achado.longe.toFixed(0)} ${unidade}${achado.oculto ? ', estava oculto' : ''})`);
+    const esc = valor => foundry.utils.escapeHTML(String(valor ?? ''));
+    await ChatMessage.implementation.create({
+      speaker: ChatMessage.implementation.getSpeaker({ actor: token.actor, token }),
+      whisper: [...new Set([...game.users.filter(user => user.isGM).map(user => user.id), ...donos])],
+      content: `<p><b>Scanner</b> (${total}, até ${total * RAIO_DO_SCANNER} ${esc(unidade)}): ${linhas.length ? `achou ${linhas.map(esc).join('; ')}` : 'nenhum ponto de acesso por perto'}.</p>`
+    });
+    return { total, achados: linhas };
+  },
+
+
   async conectar(dados, usuario) {
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
     const { tile, token, ponto, est, ator } = ctx;
@@ -378,6 +414,7 @@ export const operacoes = {
     const longe = distancia(tile, token);
     const alcance = alcanceDo(ponto, tile.parent, n);
     if (longe > alcance + 0.01 && !usuario.isGM) throw erro(`Longe demais do ponto de acesso: ${longe.toFixed(1)} ${tile.parent.grid.units || 'm'} (alcance ${alcance}).`);
+    if (paredeEntre(tile, token) && !usuario.isGM) throw erro(PAREDE_NO_MEIO);
     const dono = game.users.find(user => !user.isGM && user.active && ator.testUserPermission(user, 'OWNER'))
       ?? game.users.find(user => !user.isGM && ator.testUserPermission(user, 'OWNER')) ?? usuario;
     est.corredores = [...est.corredores, {

@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 91). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 92). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -94,7 +94,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     Netrunning, com o tipo, PER e SPD no programa: ciclo 45;
   - [x] o token "rezzado" pelo programa de Black ICE do netrunner, ao ativá-lo no deck, pelo mestre ativo, com a REZ do
     token voltando para o programa: ciclo 46.
-- [~] **C8. Arquiteturas e o NET Architect dentro do sistema:** Em andamento: sessão KouArt, 2026-10-13. Em partes:
+- [x] **C8. Arquiteturas e o NET Architect dentro do sistema:** Feito nos ciclos 47 a 56, 85 e 89 a 91 (sessão KouArt,
+  2026-10-13 a 2026-10-17). Em partes:
   - [x] o tipo de item arquitetura, com os andares (um conteúdo por linha: a senha, o arquivo e o nó de controle com o
     DV; o Black ICE, o demônio e o netrunner inimigo), os ramos, o DV e o mapa na ficha, como o `netarch` do CORE e o
     NET Architect: ciclo 47;
@@ -127,8 +128,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] os arquivos do Eye-Dee (o diário na pasta "Arquivos da NET", que o dono do netrunner abre pela janela, e o
     aviso no chat): ciclo 89;
   - [x] o editor visual (no mapa da ficha da arquitetura: arrastar move ou troca o andar, o "+" cria um): ciclo 90;
-  - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem
-    parede no meio"; ver as dúvidas).
+  - [x] o Scanner (achar o ponto oculto, com o DV da configuração, pelo HUD do token) e a parede entre o token e o
+    ponto (a wiki: "sem parede no meio"): ciclo 91.
 - [ ] **C9. A NET de 2077 (Mission Kit):**
   - os quickhacks pelo Neuroport, o Breach e a conexão direta;
   - a RAM e o Cooling dos decks.
@@ -486,7 +487,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 
 ## P3: Netrunning, cyberware, NPCs e ferramentas do mestre
 
-- [ ] **NET:** (→ C5 a C8) o NET Architect dentro do sistema (Interface, programas, Black ICE, dano no cérebro).
+- [x] **NET:** (→ C5 a C8, feitos nos ciclos 40 a 56, 85 e 89 a 91) o NET Architect dentro do sistema (Interface, programas, Black ICE, dano no cérebro).
 - [ ] **Cyberware:** (→ C21) base e slots ao instalar (com as opções na base, como a montagem da wiki: ciclos 82 a 84), terapia e ciberpsicose.
 - [ ] **NET de 2077:** (→ C9) a RAM e o Cooling do deck, os quickhacks e os daemons.
 - [x] **NPCs:** (→ C2 e C7, feitos nos ciclos 36 e 37 e 43 a 46) ficha de capanga (mook), Black ICE e demônios como atores.

@@ -4,10 +4,10 @@
 // mestre abre a janela dele (com Shift, a configuração).
 import { caminho, SISTEMA } from '../config.mjs';
 import { FLAG_ESTADO, FLAG_PONTO, IMAGEM_DO_TERMINAL, PONTO_PADRAO } from './constantes.mjs';
-import { arquiteturaDoPonto, conexaoDoToken, estadoDoTile, pontoDoTile } from './estado.mjs';
+import { arquiteturaDoPonto, conexaoDoToken, estadoDoTile, PAREDE_NO_MEIO, pontoDoTile } from './estado.mjs';
 import { documentoDe, nomeDe, objetosDaCena, TIPOS as TIPOS_DE_LIGACAO } from './ligacoes.mjs';
 import { JanelaDaNet } from './janela.mjs';
-import { alcanceDo, distancia, faltasPara, netrunnerDo } from './regras-da-net.mjs';
+import { alcanceDo, distancia, faltasPara, netrunnerDo, paredeEntre } from './regras-da-net.mjs';
 import { pedir } from './socket.mjs';
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -136,7 +136,8 @@ export async function conectarPelaFicha(ator) {
 }
 
 // As conferências para conectar um token (o clique do jogador no marcador e o "Conectar" da ficha): já conectado ali, só
-// abre a janela; em outro ponto, não; sem arquitetura, sem o que o ponto exige (o deck, o Rank) ou fora do alcance, avisa.
+// abre a janela; em outro ponto, não; sem arquitetura, sem o que o ponto exige (o deck, o Rank), fora do alcance ou com
+// parede no meio, avisa.
 async function conectarComAsRegras(tile, token) {
   const ponto = pontoDoTile(tile);
   const conexao = conexaoDoToken(token);
@@ -148,7 +149,33 @@ async function conectarComAsRegras(tile, token) {
   const longe = distancia(tile, token);
   const alcance = alcanceDo(ponto, tile.parent, netrunnerDo(token.actor));
   if (longe > alcance + 0.01) return ui.notifications.warn(`${token.name} está longe demais: ${longe.toFixed(1)} ${tile.parent.grid.units || 'm'} (alcance ${alcance}). Chegue mais perto.`);
+  if (paredeEntre(tile, token)) return ui.notifications.warn(PAREDE_NO_MEIO);
   return conectar(tile, token);
+}
+
+// O Scanner no HUD do token do netrunner (o NET Architect da mesa): fora da NET, procura os pontos de acesso da cena
+// (a operação "scanner", no mestre ativo). O resultado vai ao chat e ao aviso.
+export function botaoScannerNoHud(hud, html) {
+  const token = hud.object?.document;
+  if (!token?.isOwner || !token.actor || conexaoDoToken(token) || !netrunnerDo(token.actor).rank) return;
+  const raiz = html instanceof HTMLElement ? html : html?.[0];
+  const coluna = raiz?.querySelector('.col.left') ?? raiz?.querySelector('.left');
+  if (!coluna) return;
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = `control-icon ${SISTEMA}-scanner`;
+  botao.dataset.tooltip = 'Scanner: procurar pontos de acesso (Ação Carnal)';
+  botao.innerHTML = '<i class="fa-solid fa-satellite-dish"></i>';
+  botao.addEventListener('click', async evento => {
+    evento.preventDefault();
+    try {
+      const { total, achados } = await pedir('scanner', { cena: token.parent.id, token: token.id });
+      ui.notifications.info(`Scanner (${total}): ${achados.length ? achados.join('; ') : 'nenhum ponto de acesso por perto'}.`);
+    } catch (falha) {
+      ui.notifications.warn(falha.message);
+    }
+  });
+  coluna.append(botao);
 }
 
 export async function conectar(tile, token) {

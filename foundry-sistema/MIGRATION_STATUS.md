@@ -73,7 +73,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | os nós de controle ligados à cena (as portas, as luzes, os sons e os tokens: a configuração no ponto e os comandos na janela) | portados no ciclo 85 (o C8, parte 11) |
 | NET Architect | os arquivos copiados pelo Eye-Dee (o diário, a permissão do dono, o aviso no chat, o "Abrir o arquivo") | portados no ciclo 89 (o C8, parte 12) |
 | NET Architect | o editor visual (a grade, arrastar para mover e trocar, o "+" para criar) | portado no ciclo 90 (o C8, parte 13), no mapa da ficha da arquitetura: a tabela das linhas faz o papel do painel; sem o "Desfazer", porque cada mudança grava na hora, como o resto da ficha |
-| NET Architect | o Scanner | falta (o C8) |
+| NET Architect | o Scanner (o botão no HUD do token, o raio do resultado × 10 m, o oculto acima do DV do Scanner, quem achou passa a vê-lo) | portado no ciclo 91 (o C8, parte 14); a parede no meio, que o da mesa não conferia, barra a conexão pela wiki |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -328,7 +328,9 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   alcance da configuração do ponto (6 m de partida), sem o upgrade e sem a parede. Aqui o Range Upgrade instalado no
   deck equipado soma 2 ao alcance do ponto (os 6 viram os 8 da wiki; um ponto com outro alcance ganha os mesmos 2). A
   parede não se confere ainda: o mestre ativo, que resolve a conexão, pode estar vendo outra cena, sem as paredes dela
-  no canvas. Fica no ROADMAP (C8), com o Scanner.
+  no canvas. Fica no ROADMAP (C8), com o Scanner. Desde o ciclo 91, a parede barra: a linha do centro do token ao
+  centro do Tile contra as paredes do documento da cena (sem o canvas), e a porta aberta passa. O mestre conecta assim
+  mesmo, como no alcance.
 
 - **Sair do alcance: a queda sem o efeito do Black ICE, por enquanto.** A wiki: "Sair do alcance conectado = desconexão
   insegura: sofre o efeito de todo Black ICE encontrado e ainda ativo". O sistema derruba o netrunner e registra a
@@ -4373,6 +4375,79 @@ arquitetura. Commit anterior: `236a070e` (ciclo 89).
       - os andares sem o `draggable` (E9).
 - **Pendências:** o C8 segue com o Scanner (achar o ponto oculto) e a parede entre o token e o ponto (ver as dúvidas).
 - **Próximo:** o C8, parte 14 (o Scanner e a parede).
+
+### Ciclo 91 (2026-10-17): o C8, parte 14: a parede entre o token e o ponto e o Scanner; o C8 completo (sessão KouArt)
+
+O que faltava do NET Architect da mesa (o Scanner, `foundry-net-architect/scripts/estado.mjs` e `ponto-de-acesso.mjs`) e
+a parede que a wiki pede e o da mesa não conferia. Commit anterior: `fc0fccea` (ciclo 90).
+
+- **A referência:**
+  - **a wiki, "Netrunning" (o master, 2026-10-17):**
+    - o deck externo conecta "a até 6 m do ponto de acesso ou do alvo, sem parede no meio (8 m com o Range Upgrade)";
+    - no deck na Neuroport Cyberdeck Port (o Mission Kit), "paredes bloqueiam como sempre";
+    - o Scanner é "1 Ação Carnal, Interface + 1d10: acha no mundo físico os pontos de acesso da área; quanto maior, mais
+      longe";
+  - **o NET Architect da mesa:** o botão Scanner no HUD do token, fora da NET. Ele acha os pontos até o resultado
+    × 10 m, e o oculto só com o resultado acima do DV do Scanner do ponto (10 de partida). O oculto achado passa a
+    aparecer para os donos do netrunner, e o chat conta só ao mestre e a eles. O da mesa não conferia a parede.
+- **Implementado:**
+  - **`regras-da-net.mjs`** (sem Foundry):
+    - **a parede:** ela barra se barra o movimento, e a porta aberta não barra. A conferência traça a linha do centro do
+      token (o destino, no `_source`, como na distância) ao centro do Tile. Só o cruzamento de verdade conta: encostar
+      na ponta da parede ou correr junto dela passa. Usa as paredes do documento da cena, sem o canvas, e por isso vale
+      também com o mestre ativo vendo outra cena (o motivo de a parede ter ficado para depois no ciclo 50);
+    - **o que o Scanner acha:** os pontos até o resultado × 10, do mais perto ao mais longe, e o oculto só com o
+      resultado acima do DV dele;
+  - **o motor** (`estado.mjs`):
+    - **a conexão:** com parede no meio, recusa ("Tem parede entre o netrunner e o ponto de acesso (a wiki: "sem parede
+      no meio")."); o mestre conecta assim mesmo, como no alcance;
+    - **a operação "scanner":** só fora da NET e com o cyberdeck e a Interface. A rolagem vai pela NET: o mestre rola,
+      ou o jogador, pela configuração. O oculto achado ganha os donos do netrunner em "revelados", e o chat sussurra ao
+      mestre e a eles;
+  - **o cliente** (`ponto-de-acesso.mjs` e `index.mjs`):
+    - o clique no marcador e o "Conectar" da ficha avisam da parede antes de pedir;
+    - o botão **Scanner** no HUD do token: só do dono, de quem tem Interface e fora da NET. O resultado vai também ao
+      aviso;
+    - a API ganhou o `scanner(token)`.
+- **Testes:**
+  - G1: 65 arquivos (1 novo: o teste), 0 erros; G2: 0 erros;
+  - G3: 119 de 123. O arquivo novo, `tests/sistema/parede-scanner.test.mjs`, tem 4 testes de referência:
+    - **a parede que barra:** a comum e a porta fechada ou trancada; a porta aberta e a que não barra o movimento, não;
+    - **a parede no meio:** atravessa, em diagonal; não chega, atrás ou ao lado; encosta na ponta ou corre junto; a
+      porta aberta e a fechada; uma entre várias;
+    - **a parede entre o token e o ponto:** pelo centro dos dois, e pelo destino do token que anda;
+    - **o Scanner:** com 9, 10 e 11, contra o raio, o DV do oculto (tem de passar) e o DV que falta (o 10).
+
+    As 4 falhas são as das armas de 2077;
+  - G4: 112 de 117 (as 5 falhas são as das armas de 2077). Um passo novo, depois do dos arquivos do Eye-Dee, com 4
+    partes:
+    - **a porta fechada no meio:** fica entre o token e o Tile. O clique avisa, e a operação chamada direto recusa,
+      com o mesmo texto;
+    - **a porta aberta:** conecta;
+    - **o Scanner do HUD do token, com 9 (4 + 5):** acha só o ponto a 3 m. O oculto, a 13 m e com o DV 10, não
+      aparece;
+    - **o Scanner com 12:** acha também o oculto ("estava oculto"), que passa a aparecer no mapa do jogador. O aviso
+      no jogador e o chat (sussurrado ao mestre e ao jogador) dizem o mesmo, com o raio;
+
+    o passo passou na primeira rodada;
+  - **mutações:** as 10 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - a porta aberta que barra (P1);
+      - encostar que conta como atravessar (P2);
+      - o oculto com o resultado igual ao DV (P3);
+      - o raio sem o × 10 (P4);
+      - os achados fora da ordem (P5).
+    - **No G4:**
+      - a operação que conecta com a parede no meio (P6);
+      - o clique que não avisa (P7);
+      - o oculto achado que não aparece ao jogador (P8);
+      - o chat só para o mestre (P9);
+      - sem o botão no HUD (P10).
+- **O C8 está completo** (os ciclos 47 a 56, 85 e 89 a 91). Pendências fora dele:
+  - **o deck na Neuroport Cyberdeck Port** (o Mission Kit, na wiki do master: 20 m contra as arquiteturas e 50 m
+    contra as Neuroports) é do C9, a NET de 2077;
+  - **o "Tirar o ponto" da configuração** ainda apaga as flags com o "-=" (o Foundry 14 avisa que saiu).
+- **Próximo:** o C9 (a NET de 2077), na sessão KouArt, que é a das partes da NET.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

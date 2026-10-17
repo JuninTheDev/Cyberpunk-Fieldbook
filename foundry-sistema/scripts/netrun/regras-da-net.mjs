@@ -42,18 +42,41 @@ export function faltasPara(ponto, ator) {
 // A distância (nas unidades da cena) do centro do token ao ponto mais próximo do Tile. Do token do Foundry vale o
 // _source: no Foundry 14, enquanto o token anda (e no gancho do movimento), o token.x ainda é o de antes, e o _source já
 // é o destino.
-export function distancia(tile, token) {
-  const cena = tile.parent;
+function centroDoToken(token, cena) {
   const tamanho = cena.grid.size;
   const { x, y, width, height } = token._source ?? token;
-  const centro = { x: x + (width * tamanho) / 2, y: y + (height * tamanho) / 2 };
+  return { x: x + (width * tamanho) / 2, y: y + (height * tamanho) / 2 };
+}
+export function distancia(tile, token) {
+  const cena = tile.parent;
+  const centro = centroDoToken(token, cena);
   const perto = { x: Math.min(Math.max(centro.x, tile.x), tile.x + tile.width), y: Math.min(Math.max(centro.y, tile.y), tile.y + tile.height) };
-  return (Math.hypot(centro.x - perto.x, centro.y - perto.y) / tamanho) * cena.grid.distance;
+  return (Math.hypot(centro.x - perto.x, centro.y - perto.y) / cena.grid.size) * cena.grid.distance;
 }
 
 // O alcance do ponto (o da configuração; vazio ou 0, um quadrado da cena), com o Range Upgrade do deck do netrunner.
 export const alcanceDo = (ponto, cena, netrunner = null) =>
   (Number(ponto.alcance) > 0 ? Number(ponto.alcance) : cena.grid.distance) + (netrunner?.rangeUpgrade ? ALCANCE_DO_RANGE_UPGRADE : 0);
+
+// A parede no meio (a wiki: "a até 6 m de um ponto de acesso, sem parede no meio"): a linha do centro do token ao centro
+// do Tile cruza uma parede que barra o movimento (a porta aberta, não). Só o cruzamento de verdade conta: a linha que
+// encosta na ponta da parede, ou corre junto dela, passa. Vale pelas paredes do documento da cena, sem o canvas (o mestre
+// ativo, que resolve a conexão, pode estar vendo outra cena).
+const lado = (a, b, c) => Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+const cruza = (a, b, c, d) => lado(a, b, c) * lado(a, b, d) < 0 && lado(c, d, a) * lado(c, d, b) < 0;
+export const barra = parede => Number(parede.move) > 0 && !(Number(parede.door) > 0 && Number(parede.ds) === 1);
+export const paredeNoMeio = (paredes, de, para) =>
+  [...paredes].some(parede => barra(parede) && cruza(de, para, { x: parede.c[0], y: parede.c[1] }, { x: parede.c[2], y: parede.c[3] }));
+export const paredeEntre = (tile, token) =>
+  paredeNoMeio(tile.parent.walls, centroDoToken(token, tile.parent), { x: tile.x + tile.width / 2, y: tile.y + tile.height / 2 });
+
+// O Scanner (a wiki: "1 Ação Carnal, Interface + 1d10: acha no mundo físico os pontos de acesso da área; quanto maior,
+// mais longe"; o NET Architect da mesa): os pontos até o resultado × 10 (nas unidades da cena); o oculto, só com o
+// resultado acima do DV do Scanner dele. Do mais perto ao mais longe. pontos: [{ longe, oculto, dvScanner, ... }].
+export const RAIO_DO_SCANNER = 10;
+export const achadosDoScanner = (pontos, total) => pontos
+  .filter(ponto => ponto.longe <= total * RAIO_DO_SCANNER && (!ponto.oculto || total > (Number(ponto.dvScanner) || 10)))
+  .sort((a, b) => a.longe - b.longe);
 
 // ---------------- O mapa que os jogadores enxergam ----------------
 export const iceDe = id => BLACK_ICE.find(ice => ice.id === id) ?? null;

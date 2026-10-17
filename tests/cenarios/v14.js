@@ -5835,6 +5835,101 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('a parede entre o token e o ponto e o Scanner (wiki, "Netrunning": "a até 6 m do ponto de acesso, sem parede no meio"; o Scanner "acha no mundo físico os pontos de acesso da área"; o NET Architect da mesa): com uma porta fechada no meio, o clique avisa e a operação recusa; aberta, conecta. Fora da NET, o Scanner do HUD do token acha o ponto a 3 m e, só com o resultado acima do DV 10, o oculto a 13 m, que passa a aparecer para o jogador; o chat conta só ao mestre e a ele', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Scanner';
+      const ARQ = 'Teste Arquitetura do Scanner';
+      const PAREDE = 'Tem parede entre o netrunner e o ponto de acesso (a wiki: "sem parede no meio").';
+      let extra = null;
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [{ andar: 1, ramo: 'a', tipo: 'vazio' }] });
+        // 1. Desconecta; o mestre põe uma porta fechada entre o token (o centro em 1650, 950) e o Tile (o centro em
+        // 1900, 900) e um segundo ponto, oculto (o DV 10 do Scanner), a 13 m (650 px, com 2 m por quadrado de 100 px).
+        await jogador.evaluate(`(async () => { const net = window.__net; net.clicar('.corredores button[data-action=desconectar]'); await window.__esperar(() => !net.eu()); return true; })()`);
+        extra = await edge.evaluate(`(async () => {
+          const [porta] = await canvas.scene.createEmbeddedDocuments('Wall', [{ c: [1750, 700, 1750, 1100], door: 1, ds: 0 }]);
+          const ponto = { ...canvas.scene.tiles.get('${m.tile}').getFlag('${S}', 'pontoDeAcesso'), nome: 'Terminal escondido', oculto: true, dvScanner: 10, revelados: [] };
+          const [oculto] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 2300, y: 800, width: 200, height: 200, texture: { src: 'systems/${S}/icones/terminal.svg' }, flags: { '${S}': { pontoDeAcesso: ponto } } }]);
+          await window.__esperar(() => canvas.walls.get(porta.id) && canvas.tiles.get(oculto.id));
+          return { porta: porta.id, oculto: oculto.id };
+        })()`);
+        // 2. Com a porta fechada: o clique (as conferências do cliente) avisa; a operação, chamada direto, recusa.
+        const fechada = await jogador.evaluate(`(async () => {
+          await window.__esperar(() => canvas.scene.walls.get('${extra.porta}') && canvas.scene.tiles.get('${extra.oculto}'));
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const avisos = [];
+          let recusa = null;
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+            await game.system.api.netrun.abrir(tile);
+            await game.system.api.netrun.conectar(tile, canvas.scene.tokens.get('${m.token}')).catch(falha => { recusa = falha.message; });
+          } finally { delete ui.notifications.warn; }
+          return { avisos, recusa, conectado: Boolean(window.__net.eu()) };
+        })()`);
+        // 3. A porta aberta: conecta (e desconecta, para o Scanner, que é fora da NET).
+        await edge.evaluate(`canvas.scene.walls.get('${extra.porta}').update({ ds: 1 }).then(() => true)`);
+        const aberta = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await window.__esperar(() => canvas.scene.walls.get('${extra.porta}')?.ds === 1);
+          await game.system.api.netrun.abrir(canvas.scene.tiles.get('${m.tile}'));
+          await window.__esperar(() => net.eu() && net.pronta());
+          const conectado = Boolean(net.eu());
+          net.clicar('.corredores button[data-action=desconectar]');
+          await window.__esperar(() => !net.eu());
+          return { conectado, depois: Boolean(net.eu()) };
+        })()`);
+        // 4. O Scanner pelo botão do HUD do token (o mestre rola): o aviso, os marcadores que o jogador vê e, no mestre, o
+        // chat e os que acharam o oculto.
+        const scanner = async (d10, pontos) => {
+          await fixar(edge, [[d10, 10]]);
+          const noJogador = await jogador.evaluate(`(async () => {
+            const token = canvas.tokens.get('${m.token}');
+            token.control({ releaseOthers: true });
+            await canvas.hud.token.bind(token);
+            await window.__esperar(() => canvas.hud.token.element?.querySelector('.${S}-scanner'));
+            const botao = canvas.hud.token.element?.querySelector('.${S}-scanner');
+            const avisos = [];
+            ui.notifications.info = mensagem => { avisos.push(String(mensagem)); };
+            try {
+              botao?.click();
+              await window.__esperar(() => avisos.length);
+            } finally { delete ui.notifications.info; }
+            const vistos = () => game.system.api.netrun.pontosDesenhados().map(p => p.nome).sort().join();
+            await window.__esperar(() => vistos() === ${JSON.stringify(pontos)});
+            await canvas.hud.token.close();
+            return { botao: Boolean(botao), dica: botao?.dataset.tooltip ?? null, aviso: avisos[0] ?? null, pontos: vistos() };
+          })()`);
+          const noMestre = await edge.evaluate(`(() => {
+            const jogador = game.users.getName('Jogador');
+            const msg = game.messages.contents.findLast(msg => msg.content.includes('<b>Scanner</b>'));
+            return { conteudo: msg?.content.replace(/<[^>]+>/g, '') ?? '', sussurro: msg ? [msg.whisper.includes(game.user.id), msg.whisper.includes(jogador.id)].join() : '',
+              revelados: (canvas.scene.tiles.get('${extra.oculto}').getFlag('${S}', 'pontoDeAcesso').revelados ?? []).map(id => game.users.get(id)?.name).join() };
+          })()`);
+          return { ...noJogador, mestre: noMestre };
+        };
+        const r9 = await scanner(5, 'Terminal do andar');
+        const r12 = await scanner(8, 'Terminal do andar,Terminal escondido');
+        const info = { fechada, aberta, r9, r12 };
+        const ok = fechada.avisos.join() === PAREDE && fechada.recusa === PAREDE && !fechada.conectado && aberta.conectado && !aberta.depois
+          && r9.botao && r9.dica === 'Scanner: procurar pontos de acesso (Ação Carnal)' && r9.aviso === 'Scanner (9): Terminal do andar (3 m).' && r9.pontos === 'Terminal do andar'
+          && r9.mestre.conteudo === 'Scanner (9, até 90 m): achou Terminal do andar (3 m).' && r9.mestre.sussurro === 'true,true' && r9.mestre.revelados === ''
+          && r12.aviso === 'Scanner (12): Terminal do andar (3 m); Terminal escondido (13 m, estava oculto).' && r12.pontos === 'Terminal do andar,Terminal escondido'
+          && r12.mestre.conteudo === 'Scanner (12, até 120 m): achou Terminal do andar (3 m); Terminal escondido (13 m, estava oculto).' && r12.mestre.revelados === 'Jogador';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate('canvas.hud.token.close().then(() => true)').catch(() => null);
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+        if (extra) {
+          await edge.evaluate(`(async () => {
+            await canvas.scene.deleteEmbeddedDocuments('Wall', ['${extra.porta}'].filter(id => canvas.scene.walls.get(id)));
+            await canvas.scene.deleteEmbeddedDocuments('Tile', ['${extra.oculto}'].filter(id => canvas.scene.tiles.get(id)));
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('Ações NET em combate e a desconexão insegura (wiki: "Conectar / Desconectar (1 Ação NET...)" e as Ações NET pelo Rank): em combate, a janela conta as que sobram (o texto e os losangos acesos); no andar mais fundo, o Virus que o mestre põe em 2 Ações NET e um Cloak gastam as 3 do Rank 4, e o Cloak seguinte é recusado, como o desconectar seguro; na rodada seguinte, no turno do netrunner, elas voltam; a desconexão insegura sai na hora, sem Ação NET', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Combate NET';
