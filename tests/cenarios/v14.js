@@ -3570,8 +3570,9 @@ module.exports = async ({ edge, servidores, r }) => {
           try { await (${codigo}); } finally { delete ui.notifications.warn; }
           return { avisos, rolou: game.messages.size !== mensagens };
         })()`);
-        // 1. O Jack In no Capanga (1 + 8 = 9 contra a WILL 5 + 2) e o Sonic Shock (1 + 7 = 8 contra DV 6): as 2 Ações NET.
-        await fixar(jogador, [[8, 10]]);
+        // 1. O Jack In no Capanga (no Rank 1, antes o firewall de fábrica, ciclo 102: 1 + 7 = 8 contra DV 6; depois, 1 + 8 = 9
+        // contra a WILL 5 + 2) e o Sonic Shock (1 + 7 = 8 contra DV 6): as 2 Ações NET.
+        await fixar(jogador, [[7, 10], [8, 10]]);
         await fixar(edge, [[2, 10]]);
         const jackIn1 = await tentar('game.system.api.neuroport.jackIn(ator, { alvo: capanga })');
         await edge.evaluate(`__esperar(() => ${nCartoes} === ${n0 + 1})`);
@@ -3612,7 +3613,7 @@ module.exports = async ({ edge, servidores, r }) => {
           return true;
         })()`);
         await jogador.evaluate(`(async () => { const ator = game.actors.get('${montado.ator}'); for (let i = 0; i < 50 && (ator.getFlag('${S}', 'neuroport')?.bloqueios ?? []).some(b => b.ate >= game.time.worldTime); i++) await new Promise(r => setTimeout(r, 100)); return true; })()`);
-        await fixar(jogador, [[8, 10]]);
+        await fixar(jogador, [[7, 10], [8, 10]]);
         await fixar(edge, [[2, 10]]);
         const deNovo = await tentar('game.system.api.neuroport.jackIn(ator, { alvo: capanga })');
         const depois = await edge.evaluate(`(async () => { await __esperar(() => ${nCartoes} === ${n0 + 4}); return { cartao: ${ultimoCartao}, capanga: ${ligacoesDe}('Capanga') }; })()`);
@@ -3739,6 +3740,96 @@ module.exports = async ({ edge, servidores, r }) => {
           await edge.evaluate(`(async () => {
             const ator = game.actors.get('${montado.ator}');
             await ator?.sheet?.close();
+            const capanga = __token('Capanga').actor;
+            await capanga.items.get('${montado.item}')?.delete();
+            await capanga.unsetFlag('${S}', 'neuroport');
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
+    await r.passo('O firewall de fábrica (wiki: "Com Interface Rank 1 ou 2, o Jack In pede antes um teste de Interface contra DV6; falhar não alerta o alvo. Do Rank 3 em diante, o netrunner passa direto"): em combate, o netrunner de Rank 2 não passa (5 contra DV 6): o cartão só para ele e o mestre, sem ligação e sem a Vontade do Capanga, e a Ação NET vai; passa (8) e entra; no Rank 3, o Jack In rola sem o firewall', async () => {
+      const NOME = 'Teste Netrunner Firewall';
+      let montado = null;
+      try {
+        // O netrunner do jogador (Rank 2) ao lado do Capanga; o Neuroport no Capanga; o combate só com o netrunner.
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 2 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await ator.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const capanga = __token('Capanga');
+          const ocupado = (x, y) => canvas.scene.tokens.some(t => t.x === x && t.y === y);
+          const lugar = [[capanga.x + 100, capanga.y], [capanga.x, capanga.y + 100], [capanga.x, capanga.y - 100], [capanga.x - 100, capanga.y]].find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y));
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
+          const [item] = (await capanga.actor.createEmbeddedDocuments('Item', [foundry.utils.mergeObject(foundry.utils.deepClone(cat['cyberware-2077:neuroport']), { 'system.instalado': true })])).map(i => i.id);
+          await __esperar(() => canvas.tokens.get(token.id));
+          const c = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          window.__combateDoFirewall = c.id;
+          await c.createEmbeddedDocuments('Combatant', [{ tokenId: token.id, sceneId: canvas.scene.id, actorId: ator.id }]);
+          await c.startCombat();
+          return { ator: ator.id, token: token.id, item, combate: c.id };
+        })()`);
+        const nCartoes = `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).length`;
+        const ultimoCartao = `(() => { const m = game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).at(-1); return m && { ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, ''), para: m.whisper.map(id => game.users.get(id)?.name).sort().join() }; })()`;
+        const testes = `(rotulo => game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.rotulo === rotulo).length)`;
+        const contar = `({ firewall: ${testes}('Firewall de fábrica'), jackin: ${testes}('Jack In'), vontade: game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.defesa === 'vontade').length })`;
+        const n0 = await edge.evaluate(nCartoes);
+        await jogador.evaluate(`(async () => { for (let i = 0; i < 50 && game.combats.get('${montado.combate}')?.round !== 1; i++) await new Promise(r => setTimeout(r, 100)); return true; })()`);
+        const jackIn = () => jogador.evaluate(`game.system.api.neuroport.jackIn(game.actors.get('${montado.ator}'), { alvo: canvas.scene.tokens.find(t => t.name === 'Capanga') }).then(() => true)`);
+        const depois = n => edge.evaluate(`(async () => {
+          await __esperar(() => ${nCartoes} === ${n});
+          await new Promise(r => setTimeout(r, 300));
+          const ator = game.actors.get('${montado.ator}');
+          return { cartao: ${ultimoCartao}, contagem: ${contar}, ligacoes: (ator.getFlag('${S}', 'neuroport')?.ligacoes ?? []).map(l => l.nome).join(), invasores: (__token('Capanga').actor.getFlag('${S}', 'neuroport')?.invasores ?? []).length, acoes: game.system.api.neuroport.acoesNetDe(ator) };
+        })()`);
+        const antes = await edge.evaluate(contar);
+        // 1. O firewall com 2 + 3 = 5 contra DV 6: não passa.
+        await fixar(jogador, [[3, 10]]);
+        await jackIn();
+        const barrado = await depois(n0 + 1);
+        // 2. O firewall com 2 + 6 = 8 e o Jack In com 2 + 7 = 9 contra a WILL 5 + 2 do Capanga: entra.
+        await fixar(jogador, [[6, 10], [7, 10]]);
+        await fixar(edge, [[2, 10]]);
+        await jackIn();
+        const passou = await depois(n0 + 2);
+        // 3. Fora de combate, no Rank 3 (o Jack Out antes): o Jack In rola sem o firewall (3 + 7 = 10).
+        await edge.evaluate(`(async () => {
+          await game.combats.get('${montado.combate}').delete();
+          const ator = game.actors.get('${montado.ator}');
+          await ator.update({ 'system.role.rank': 3 });
+          return true;
+        })()`);
+        await jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          for (let i = 0; i < 50 && ator.system.rankDeInterface !== 3; i++) await new Promise(r => setTimeout(r, 100));
+          await game.system.api.neuroport.jackOut(ator, canvas.scene.tokens.find(t => t.name === 'Capanga').uuid);
+          return true;
+        })()`);
+        await edge.evaluate(`__esperar(() => ${nCartoes} === ${n0 + 3})`);
+        await jogador.evaluate(`(async () => { const ator = game.actors.get('${montado.ator}'); for (let i = 0; i < 50 && (ator.getFlag('${S}', 'neuroport')?.ligacoes ?? []).length; i++) await new Promise(r => setTimeout(r, 100)); return true; })()`);
+        await fixar(jogador, [[7, 10]]);
+        await fixar(edge, [[2, 10]]);
+        await jackIn();
+        const rank3 = await depois(n0 + 4);
+        const info = { montado, antes, barrado, passou, rank3 };
+        const ok = barrado.cartao?.resultado === 'firewall' && barrado.cartao.total === 5 && barrado.cartao.dv === 6 && barrado.cartao.para === 'Gamemaster,Jogador'
+          && barrado.cartao.texto === `${NOME} não passou o firewall de fábrica do Neuroport de Capanga (5 contra DV 6), e Capanga não percebe.`
+          && barrado.contagem.firewall === antes.firewall + 1 && barrado.contagem.jackin === antes.jackin && barrado.contagem.vontade === antes.vontade
+          && barrado.ligacoes === '' && barrado.invasores === 0 && JSON.stringify(barrado.acoes) === JSON.stringify({ usadas: 1, max: 2 })
+          && passou.cartao?.resultado === 'entrou' && passou.cartao.ataque === 9 && passou.contagem.firewall === antes.firewall + 2 && passou.contagem.jackin === antes.jackin + 1
+          && passou.ligacoes === 'Capanga' && JSON.stringify(passou.acoes) === JSON.stringify({ usadas: 2, max: 2 })
+          && rank3.cartao?.resultado === 'entrou' && rank3.cartao.ataque === 10 && rank3.contagem.firewall === antes.firewall + 2 && rank3.contagem.jackin === antes.jackin + 2;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            await game.combats.get(window.__combateDoFirewall)?.delete();
+            const ator = game.actors.get('${montado.ator}');
             const capanga = __token('Capanga').actor;
             await capanga.items.get('${montado.item}')?.delete();
             await capanga.unsetFlag('${S}', 'neuroport');

@@ -9,8 +9,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
-  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, DECK_NA_PORTA, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, JACK_IN, JACK_OUT_INSEGURO, jaFezOQuickhack, passouOPasswall,
-  passouOQuickhack, passwallsDoAlvo, percebeuOJackIn, sabeDoJackIn, semAcaoNet
+  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, DECK_NA_PORTA, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA, JACK_IN, JACK_OUT_INSEGURO,
+  jaFezOQuickhack, passouOFirewall, passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from '../../foundry-sistema/scripts/regras.mjs';
 import { alcanceDo, barra, netrunnerDo, paredeNoMeio, PORTA_DO_DECK, RANGE_UPGRADE, temPortaDoDeck } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 
@@ -56,6 +56,17 @@ test('as Ações NET fora da arquitetura (cada Neuroport é uma; em combate, as 
   assert.equal(bloqueioDoAlvo(bloqueios, 'B', 1000), null);
   assert.equal(bloqueioDoAlvo(bloqueios, 'C', 0), null);
   assert.equal(bloqueioDoAlvo(undefined, 'A', 0), null);
+});
+
+test('o firewall de fábrica pela wiki: com Interface Rank 1 ou 2, Interface contra DV6 antes do Jack In (passa quem tira mais); do Rank 3 em diante, sem teste', () => {
+  assert.ok(wiki.includes('Todo Neuroport tem um. Com Interface <b>Rank 1 ou 2</b>, o Jack In pede antes um teste de Interface contra <b>DV6</b>; falhar não alerta o alvo.'));
+  assert.ok(wiki.includes('Do <b>Rank 3</b> em diante, o netrunner passa direto, sem teste.'));
+  assert.deepEqual(FIREWALL_DE_FABRICA, { dv: 6, rankSemTeste: 3 });
+  assert.deepEqual([1, 2, 3, 4, '2'].map(pedeOFirewall), [true, true, false, false, true]);
+  assert.equal(passouOFirewall(6), false);
+  assert.equal(passouOFirewall(7), true);
+  assert.equal(passouOFirewall('8'), true);
+  assert.equal(passouOFirewall(null), false);
 });
 
 test('o alcance do Jack In com o deck externo: 6 m, 8 m com o Range Upgrade', () => {

@@ -78,8 +78,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   limite avisa sem rolar. Expulso ou fora do alcance (o netrunner ou o alvo andou), é o **Jack Out inseguro**: a ligação
   some, e o netrunner só entra de novo naquele alvo daqui a 60 minutos do tempo do mundo. Com a **Neuroport Cyberdeck
   Port** instalada (ciclo 101), o cyberdeck equipado tem o botão "Externo" / "Na porta": na porta, o alcance é 20 m
-  contra arquiteturas e 50 m contra Neuroports, e o hardware do deck não vale. As outras partes do C9 (o firewall de
-  fábrica, o Neuroport como arquitetura, a conexão direta e o alvo que morre) estão no ROADMAP.
+  contra arquiteturas e 50 m contra Neuroports, e o hardware do deck não vale. Com Interface Rank 1 ou 2, o Jack In
+  passa antes pelo **firewall de fábrica** (ciclo 102): Interface + 1d10 contra DV6; falhando, não entra, e o cartão vai
+  só ao mestre e ao netrunner. As outras partes do C9 (o Neuroport como arquitetura, a conexão direta e o alvo que
+  morre) estão no ROADMAP.
 - **O visual da janela da NET** (ciclo 58, no jeito de um terminal de netrunner):
   - no topo, a conexão, a arquitetura e o netrunner: a Interface, a Sorte preparada, as Ações NET (um losango por ação,
     aceso enquanto sobra; fora de combate, só o contorno) e a desconexão insegura; os avisos (o fogo, o Kraken, o Skunk,
@@ -447,6 +449,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - os nós de controle ligados à cena (ciclo 85): a porta, a luz e a torreta ligadas pela configuração do ponto; quem toma o nó vê só as dele, abre a porta, apaga a luz e assume a torreta, que volta ao dono de sempre na desconexão;
   - os arquivos do Eye-Dee (ciclo 89): o diário na pasta "Arquivos da NET", a permissão do dono, o aviso no chat, o "Abrir o arquivo" (no jogador e no mestre), o mesmo diário depois do "Reiniciar" e um novo no lugar do apagado;
   - o editor visual da arquitetura (ciclo 90): o "+" que cria o andar, o andar arrastado que troca com outro e o que vai para a célula vazia, e a ficha do compêndio trancado sem nada disso;
+  - o firewall de fábrica (ciclo 102): em combate, o netrunner de Rank 2 não passa (5 contra DV 6), sem ligação e sem a Vontade do alvo, e a Ação NET vai; passa (8) e entra; no Rank 3, o Jack In rola sem o firewall;
   - o deck na porta (ciclo 101): a 16 m, o deck externo não alcança; sem a porta, o deck não tem o botão; com ela, o deck encaixado pela ficha leva o alcance a 50 m, o Jack In entra, e andando a 16 m continua ligado;
   - as Ações NET e o Jack Out inseguro (ciclo 100): em combate, o netrunner de Rank 1 faz o Jack In e um quickhack, a ficha mostra 2/2, e o terceiro avisa sem rolar; na rodada seguinte, voltam; fora do alcance, ele cai do Neuroport e só entra de novo passados os 60 minutos; o alvo que anda para longe também o derruba;
   - a expulsão (ciclo 99): o Capanga netrunner sabe do Jack In sem rolar; o mestre tenta expulsar pela ficha dele, e o netrunner do jogador resiste com a Interface pela janela de reação, no empate; o jogador expulsa pela ficha do Alvo o netrunner do mestre, e a ligação some dos dois lados; quem não se percebeu não é expulso, e só o mestre vê quem o alvo não percebeu, sem o botão;

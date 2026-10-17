@@ -5022,6 +5022,50 @@ Commit anterior: `30bc9e22` (ciclo 100).
   Personal Link e o alvo que morre (com a ligação do token apagado).
 - **Próximo:** o C9, parte 7 (o firewall de fábrica).
 
+### Ciclo 102 (2026-10-17): o C9, parte 7: o firewall de fábrica (sessão KouArt)
+
+Commit anterior: `d23e318a` (ciclo 101).
+
+- **A referência (a wiki, "Firewall de fábrica", Kit p. 26):** "Todo Neuroport tem um. Com Interface Rank 1 ou 2, o
+  Jack In pede antes um teste de Interface contra DV6; falhar não alerta o alvo"; "Do Rank 3 em diante, o netrunner
+  passa direto, sem teste"; "O firewall de fábrica não é um Passwall e não ocupa andar".
+- **Implementado:**
+  - **`regras.mjs`:** `FIREWALL_DE_FABRICA` (DV 6; sem teste do Rank 3 em diante), `pedeOFirewall` e `passouOFirewall`
+    (com o total acima da DV);
+  - **`documentos.mjs`:** o `rolarJackIn` aceita o rótulo, e o teste do firewall é a mesma conta (Interface + 1d10, sem
+    o bônus de programa);
+  - **`neuroport.mjs`:**
+    - **o Jack In, no Rank 1 ou 2:** antes, o teste do firewall ("Firewall de fábrica"); falhando, não rola o Jack In;
+    - **o mestre, no firewall que barrou:** gasta a Ação NET (em combate) e manda o cartão só a ele e aos donos do
+      netrunner (o alvo não sabe);
+    - **o mestre, no Jack In:** confere de novo o firewall passado.
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 122 de 134 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, 1 teste de referência novo: o texto da
+    wiki, o Rank que pede o teste e a DV;
+  - G4: 116 de 125 (as 9 conhecidas da integração). O passo novo, "O firewall de fábrica", passou na primeira rodada:
+    - **em combate, o netrunner de Rank 2:**
+      - o firewall com 5 contra DV 6 não passa: o cartão só ao mestre e ao jogador, sem o Jack In, sem a Vontade do
+        Capanga e sem ligação, e a Ação NET vai (1 de 2);
+      - com 8, passa, e o Jack In (9 contra 7) entra (2 de 2);
+    - **fora de combate, no Rank 3:** o Jack In rola sem o firewall;
+    - **o passo das Ações NET (ciclo 100)**, com o netrunner de Rank 1: os dois Jack In passam antes pelo firewall (os
+      dados fixos dos dois testes);
+  - **mutações:** as 5 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o Rank 3 que também pede o firewall (F1);
+      - o empate com a DV que passa (F2).
+    - **No G4:**
+      - o cliente que não pede o firewall (F3: o mestre recusa o Jack In; também o passo das Ações NET);
+      - o firewall que falhou e segue para o Jack In (F4);
+      - o firewall que barrou sem gastar a Ação NET (F6).
+    - **Ficam sem mutação:**
+      - a conferência do mestre no Jack In (o cliente já confere);
+      - o cartão do firewall só ao netrunner: o Capanga não tem dono jogador, e o teste não distingue quem o vê.
+- **Pendências do C9** (no ROADMAP): o Neuroport como arquitetura NET, a conexão direta pelo Personal Link e o alvo que
+  morre (com a ligação do token apagado).
+- **Próximo:** o C9, parte 8 (o alvo que morre e o token apagado).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

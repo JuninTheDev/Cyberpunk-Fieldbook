@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 102). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 103). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -146,8 +146,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] as Ações NET fora da arquitetura (o Jack In e o quickhack em combate) e o Jack Out inseguro (sair do alcance,
     os 60 minutos): ciclo 100;
   - [x] o deck na Neuroport Cyberdeck Port (20 m contra arquiteturas, 50 m contra Neuroports): ciclo 101;
-  - [ ] o firewall de fábrica (a wiki: com Interface Rank 1 ou 2, o Jack In pede antes Interface contra DV6, e falhar
-    não alerta; do Rank 3 em diante, passa direto);
+  - [x] o firewall de fábrica (a wiki: com Interface Rank 1 ou 2, o Jack In pede antes Interface contra DV6, e falhar
+    não alerta; do Rank 3 em diante, passa direto): ciclo 102;
   - [ ] o Neuroport como arquitetura NET (o nó de controle do Holophone, DV10; o Black ICE do deck ligado a ele, que
     age no Jack Out inseguro; o vírus de quem chega ao fundo);
   - [ ] a conexão direta pelo Personal Link (uma Ação NET a mais, passa direto pelos Passwalls; a mais de 2 m, desliga

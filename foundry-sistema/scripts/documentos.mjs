@@ -200,11 +200,12 @@ export class AtorCPR extends Actor {
     }, { sabor: `${habilidade.custo}. ${habilidade.dica}`, ...opcoes });
   }
   // O Jack In (neuroport.mjs; a wiki, "Quickhacks no Neuroport"): Interface + 1d10 contra a WILL + 1d10 do alvo, sem o
-  // bônus de programa (não é uma das habilidades), com as penalidades e os situacionais de todas as ações.
-  rolarJackIn({ perguntar = false, ...opcoes } = {}) {
+  // bônus de programa (não é uma das habilidades), com as penalidades e os situacionais de todas as ações. O teste do
+  // firewall de fábrica, antes dele, é a mesma conta (rotulo: 'Firewall de fábrica').
+  rolarJackIn({ perguntar = false, rotulo = 'Jack In', ...opcoes } = {}) {
     if (!this.system.rankDeInterface) return null;
     return this.#testarComJanela({
-      rotulo: 'Jack In', perguntar, partes: situacionais => this.partesDaInterface('jackin', { situacionais }), situacionais: () => this.situacionaisDaInterface('jackin')
+      rotulo, perguntar, partes: situacionais => this.partesDaInterface('jackin', { situacionais }), situacionais: () => this.situacionaisDaInterface('jackin')
     }, opcoes);
   }
   // O ataque de um programa (regras.DANO_DE_PROGRAMA; o CPRInterfaceRoll "attack" do CORE): o Rank de Interface + o ATK

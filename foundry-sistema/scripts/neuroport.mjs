@@ -5,7 +5,8 @@
 // - Jack In: Interface + 1d10 contra a WILL + 1d10 do alvo. O alvo resiste pela janela de reação do dono, como no
 //   agarrão (a decisão do usuário de 2026-10-17: "rolagens e efeitos simples"); pelo NPC, o mestre rola. Falhando (o
 //   empate é do alvo), entra assim mesmo, mas o alvo percebe; o alvo netrunner sempre percebe, sem rolar. Cada Neuroport
-//   é uma Ação NET, e dá para ficar ligado em quantos quiser;
+//   é uma Ação NET, e dá para ficar ligado em quantos quiser. Com Interface Rank 1 ou 2, antes, o firewall de fábrica
+//   (Interface + 1d10 contra DV6): falhando, não entra, e o alvo não sabe;
 // - Jack Out: sai do Neuroport do alvo com segurança;
 // - Breach: passa um Passwall do alvo (um por Self-ICE, até 3; a DV de todos é 6, 8 ou 10, pelo número), Interface (a
 //   habilidade Breach) + 1d10 contra a DV. Passa um por vez; o quickhack só vem depois de todos (ligacao.passados);
@@ -25,8 +26,8 @@ import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { centroDe, combateDe, defesaContra, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
 import {
-  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, jaFezOQuickhack, JACK_OUT_INSEGURO, passouOPasswall, passouOQuickhack,
-  passwallsDoAlvo, percebeuOJackIn, sabeDoJackIn, semAcaoNet
+  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA, jaFezOQuickhack, JACK_OUT_INSEGURO, passouOFirewall,
+  passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from './regras.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
@@ -80,9 +81,18 @@ export async function jackIn(ator, { alvo = null, perguntar = false } = {}) {
   if (paredeNoMeio(token.parent.walls, centroDe(meu), centroDe(token), 'sight')) return avisar(`${token.name} não está à vista: o Jack In precisa ver o alvo.`);
   if (faltaAcaoNet(ator)) return avisar(faltaAcaoNet(ator));
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
-  const teste = await ator.rolarJackIn({ perguntar, sabor: `contra ${token.name}`, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { jackin: true }, categoria: 'net' });
+  const modo = config('escondeAtaque') ? 'gm' : 'public';
+  // O firewall de fábrica (Interface Rank 1 ou 2): antes, Interface contra DV6. Falhando, não entra, e o alvo não sabe.
+  let firewall = null;
+  if (pedeOFirewall(ator.system.rankDeInterface)) {
+    const passe = await ator.rolarJackIn({ perguntar, rotulo: 'Firewall de fábrica', sabor: `contra o firewall de fábrica de ${token.name} (DV ${FIREWALL_DE_FABRICA.dv})`, modo, dados: { firewall: true }, categoria: 'net' });
+    if (!passe) return null;
+    firewall = passe.total;
+    if (!passouOFirewall(firewall)) return pedirAoMestre('firewall', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: firewall });
+  }
+  const teste = await ator.rolarJackIn({ perguntar, sabor: `contra ${token.name}`, modo, dados: { jackin: true }, categoria: 'net' });
   if (!teste) return null;
-  return pedirAoMestre('jackin', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: teste.total, mensagem: teste.mensagem?.id ?? null });
+  return pedirAoMestre('jackin', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: teste.total, firewall, mensagem: teste.mensagem?.id ?? null });
 }
 
 // "Jack Out": sai do Neuroport de um alvo (o uuid do token) com segurança.
@@ -232,6 +242,7 @@ async function desligarInseguro(netrunner, alvo) {
 async function resolverJackIn(ator, pedido, usuario) {
   const [meu, alvo] = await Promise.all([pedido.token, pedido.alvo].map(uuid => (uuid ? fromUuid(uuid) : null)));
   if (!alvo?.actor || !temNeuroport(alvo.actor) || neuroportDe(ator).ligacoes.some(item => item.alvo === alvo.uuid)) return null;
+  if (pedeOFirewall(ator.system.rankDeInterface) && !passouOFirewall(pedido.firewall)) return null;
   if (bloqueioDoAlvo(neuroportDe(ator).bloqueios, alvo.uuid, game.time.worldTime) || !await gastarAcaoNet(ator, usuario)) return null;
   const nome = meu?.name ?? ator.name;
   // O alvo netrunner sempre sabe (a wiki): sem a resistência.
@@ -247,6 +258,20 @@ async function resolverJackIn(ator, pedido, usuario) {
   const frase = sabe ? `${a} entrou no Neuroport de ${b} (${conta}), mas ${b} é netrunner e sempre sabe.`
     : percebido ? `${a} entrou no Neuroport de ${b} (${conta}), mas ${b} percebeu.` : `${a} entrou no Neuroport de ${b} (${conta}) sem ser percebido.`;
   return cartao({ ator, alvo: alvo.actor, percebido, falante: nome, frase, notas, resumo: { resultado: percebido ? 'percebido' : 'entrou', ataque: pedido.total, defesa, netrunner: nome, alvo: alvo.name } });
+}
+
+// O firewall de fábrica que barrou o Jack In: a Ação NET gasta (em combate), e o cartão só ao mestre e aos donos do
+// netrunner (o alvo não sabe).
+async function resolverFirewall(ator, pedido, usuario) {
+  const [meu, alvo] = await Promise.all([pedido.token, pedido.alvo].map(uuid => (uuid ? fromUuid(uuid) : null)));
+  if (!alvo?.actor || !temNeuroport(alvo.actor) || !pedeOFirewall(ator.system.rankDeInterface) || passouOFirewall(pedido.total)) return null;
+  if (!await gastarAcaoNet(ator, usuario)) return null;
+  const nome = meu?.name ?? ator.name;
+  const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
+  return cartao({
+    ator, alvo: alvo.actor, percebido: false, falante: nome, frase: `${a} não passou o firewall de fábrica do Neuroport de ${b} (${pedido.total} contra DV ${FIREWALL_DE_FABRICA.dv}), e ${b} não percebe.`,
+    resumo: { resultado: 'firewall', total: pedido.total, dv: FIREWALL_DE_FABRICA.dv, netrunner: nome, alvo: alvo.name }
+  });
 }
 
 async function resolverJackOut(ator, pedido) {
@@ -402,7 +427,7 @@ async function resolverExpulsar(ator, pedido) {
   });
 }
 
-const RESOLVER = { jackin: resolverJackIn, jackout: resolverJackOut, breach: resolverBreach, quickhack: resolverQuickhack, expulsar: resolverExpulsar };
+const RESOLVER = { jackin: resolverJackIn, firewall: resolverFirewall, jackout: resolverJackOut, breach: resolverBreach, quickhack: resolverQuickhack, expulsar: resolverExpulsar };
 
 // Fora do alcance do deck (o netrunner ou o alvo andou): o Jack Out inseguro de cada ligação desse token, com o cartão.
 // A conta usa o destino (o _source): enquanto o token anda, o x e o y ainda são os de antes (a lição do ciclo 95).

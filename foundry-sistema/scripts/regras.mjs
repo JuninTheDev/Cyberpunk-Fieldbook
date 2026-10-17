@@ -477,6 +477,12 @@ export const JACK_IN = { alcance: 6, rangeUpgrade: 2 };
 export const DECK_NA_PORTA = { arquitetura: 20, neuroport: 50 };
 export const alcanceDoJackIn = ({ rangeUpgrade = false, naPorta = false } = {}) => (naPorta ? DECK_NA_PORTA.neuroport : JACK_IN.alcance + (rangeUpgrade ? JACK_IN.rangeUpgrade : 0));
 export const percebeuOJackIn = (ataque, defesa) => !(Number(ataque) > Number(defesa));
+// O firewall de fábrica (a wiki, "Firewall de fábrica", Kit p. 26: "Todo Neuroport tem um. Com Interface Rank 1 ou 2, o
+// Jack In pede antes um teste de Interface contra DV6; falhar não alerta o alvo. Do Rank 3 em diante, o netrunner passa
+// direto"): passa com o total acima da DV.
+export const FIREWALL_DE_FABRICA = { dv: 6, rankSemTeste: 3 };
+export const pedeOFirewall = rankDeInterface => Number(rankDeInterface) < FIREWALL_DE_FABRICA.rankSemTeste;
+export const passouOFirewall = total => Number(total) > FIREWALL_DE_FABRICA.dv;
 // "Outro netrunner sempre sabe quando entraram no Neuroport dele" (a wiki): o alvo com Interface percebe sem rolar.
 export const sabeDoJackIn = rankDeInterfaceDoAlvo => Number(rankDeInterfaceDoAlvo) > 0;
 
