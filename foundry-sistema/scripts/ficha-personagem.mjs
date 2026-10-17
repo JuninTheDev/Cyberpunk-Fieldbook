@@ -4,7 +4,7 @@
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
-import { jackIn, jackOut, neuroportDe } from './neuroport.mjs';
+import { breach, jackIn, jackOut, neuroportDe, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
@@ -13,7 +13,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo } from './netrun/regras-da-net.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -67,6 +67,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       escapar: FichaPersonagem.#escapar,
       jackIn: FichaPersonagem.#jackIn,
       jackOut: FichaPersonagem.#jackOut,
+      breach: FichaPersonagem.#breach,
       conectarNaNet: FichaPersonagem.#conectarNaNet,
       abrirNet: FichaPersonagem.#abrirNet,
       desconectarDaNet: FichaPersonagem.#desconectarDaNet,
@@ -246,7 +247,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     // O Neuroport (neuroport.mjs): as ligações do netrunner, o alcance do Jack In pelo deck e quem está no Neuroport deste
     // ator (o jogador vê só quem ele percebeu; o mestre, todos).
     const { ligacoes, invasores } = neuroportDe(ator);
-    const neuroport = { ligacoes, invasores: game.user.isGM ? invasores : invasores.filter(item => item.percebido), alcance: alcanceDoJackIn({ rangeUpgrade: netrunnerDo(ator).rangeUpgrade }) };
+    // Os Passwalls de cada ligação: os do Self-ICE do alvo, os passados e a DV (o Breach passa um por vez).
+    const comPasswalls = ligacoes.map(ligacao => {
+      const { quantos, dv } = passwallsDoAlvo(selfIcesDe(fromUuidSync(ligacao.alvo)?.actor));
+      const passados = Math.min(ligacao.passados ?? 0, quantos);
+      return { ...ligacao, quantos, dv, passados, faltam: quantos - passados };
+    });
+    const neuroport = { ligacoes: comPasswalls, invasores: game.user.isGM ? invasores : invasores.filter(item => item.percebido), alcance: alcanceDoJackIn({ rangeUpgrade: netrunnerDo(ator).rangeUpgrade }) };
     // A conexão na NET (os botões da aba, as maquetes do usuário): o token do ator nesta cena que está num ponto de acesso,
     // com o nome do ponto.
     const conectado = ator.getActiveTokens(false, true).map(token => ({ token, conexao: token.getFlag(SISTEMA, FLAG_CONEXAO) })).find(c => c.conexao);
@@ -382,6 +389,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // reação do dono) e "Jack Out" de cada ligação.
   static #jackIn(evento) { return jackIn(this.actor, { perguntar: comJanela(evento) }); }
   static #jackOut(evento, alvo) { return jackOut(this.actor, alvo.dataset.alvo); }
+  static #breach(evento, alvo) { return breach(this.actor, alvo.dataset.alvo, { perguntar: comJanela(evento) }); }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
   // "Conectar", "Abrir a NET" e "Desconectar" na aba NET (as maquetes do usuário), pelo motor da NET (netrun): as mesmas

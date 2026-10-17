@@ -4664,6 +4664,52 @@ A primeira parte da NET de 2077. Commit anterior: `52b1ef04` (a reserva do C9 e 
   - a ligação que sobra quando o token do netrunner ou do alvo é apagado.
 - **Próximo:** o C9, parte 2 (o Breach nos Passwalls).
 
+### Ciclo 96 (2026-10-17): o C9, parte 2: o Breach nos Passwalls (sessão KouArt)
+
+Commit anterior: `760cc297` (ciclo 95).
+
+- **A referência (a wiki):**
+  - **"Quickhacks no Neuroport":** "Breach: passa um Passwall (um por Self-ICE do alvo), Interface contra a DV dele: 6
+    com um Self-ICE, 8 com dois, 10 com três"; "Quickhack: depois de passar todos os Passwalls";
+  - **o Self-ICE** (`system-2077.js`): "Cada instalação (até 3) põe um Passwall no seu Neuroport: quem tenta hackear você
+    gasta uma Ação NET para passar por cada um (Breach). A DV de todos os Passwalls sobe com o número de Self-ICE".
+- **Implementado:**
+  - **`regras.mjs`:** os Passwalls pelo número de Self-ICE (até 3) e a DV de todos (6, 8 ou 10); passa quem tira mais que
+    a DV;
+  - **`neuroport.mjs`:**
+    - **os Self-ICE instalados no alvo:** os do catálogo, ou os feitos à mão com o nome;
+    - **o Breach:** a habilidade Breach + 1d10 (o bônus do Worm vale), na ligação com Passwall pela frente. O mestre
+      ativo confere a DV pelo Self-ICE de agora e, passando, a ligação conta mais um;
+    - **o cartão:** quantos faltam, ou "o Neuroport está aberto aos quickhacks". Ele vai ao mestre e aos donos do
+      netrunner (o Breach não alerta o alvo);
+  - **a ficha:** na ligação com Passwall, "PASSWALLS passados/quantos · DV" e o botão "Breach" enquanto falta algum. Sem
+    Self-ICE, a linha fica como no ciclo 95.
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 115 de 127 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, um teste de referência contra os dois
+    textos da wiki: a DV por número de Self-ICE (com o limite de 3) e o empate com a DV, que não passa;
+  - G4: 111 de 120 (as 9 conhecidas da integração). Um passo novo, depois do Jack In, que passou na primeira rodada:
+    - **a preparação:** o Capanga com o Neuroport e dois Self-ICE (DV 8). O netrunner do jogador faz o Jack In nele;
+    - **a ficha:** "PASSWALLS 0/2 · DV 8 Breach";
+    - **o Breach pela ficha:** com 7 não passa (a linha não muda), com 9 passa um ("falta 1") e com 10 passa o último ("o
+      Neuroport está aberto aos quickhacks"). A linha fica "PASSWALLS 2/2 · DV 8", sem o botão;
+    - **depois:** o Breach pela API avisa ("já passou os Passwalls");
+  - **mutações:** as 7 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - a DV de dois Self-ICE (R1);
+      - sem o limite de 3 (R2);
+      - o empate que passa (R3).
+    - **No G4:**
+      - o mestre que não guarda o Passwall passado (R4);
+      - o Self-ICE que não conta (R5);
+      - o botão que fica depois do último (R6);
+      - o Breach que não avisa (R7).
+- **Pendências** (as outras partes do C9, no ROADMAP):
+  - os quickhacks e a expulsão;
+  - as Ações NET fora da arquitetura (o Breach também não as conta ainda) e o Jack Out inseguro;
+  - o deck na Neuroport Cyberdeck Port.
+- **Próximo:** o C9, parte 3 (os quickhacks).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

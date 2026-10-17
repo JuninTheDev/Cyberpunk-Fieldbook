@@ -474,6 +474,16 @@ export const venceuOAgarrao = (ataque, defesa) => Number(ataque) > Number(defesa
 export const JACK_IN = { alcance: 6, rangeUpgrade: 2 };
 export const alcanceDoJackIn = ({ rangeUpgrade = false } = {}) => JACK_IN.alcance + (rangeUpgrade ? JACK_IN.rangeUpgrade : 0);
 export const percebeuOJackIn = (ataque, defesa) => !(Number(ataque) > Number(defesa));
+
+// O Breach nos Passwalls (a wiki: "passa um Passwall (um por Self-ICE do alvo), Interface contra a DV dele: 6 com um
+// Self-ICE, 8 com dois, 10 com três"; o Self-ICE vai até 3). O Breach passa um por vez, com o resultado acima da DV, e
+// o quickhack só vem depois de todos.
+export const DV_DO_PASSWALL = { 1: 6, 2: 8, 3: 10 };
+export function passwallsDoAlvo(selfIces) {
+  const quantos = Math.max(0, Math.min(3, Math.trunc(Number(selfIces)) || 0));
+  return { quantos, dv: DV_DO_PASSWALL[quantos] ?? null };
+}
+export const passouOPasswall = (total, dv) => Number(total) > Number(dv);
 // Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria
 // abaixo de 0, fica com 1 HP e desmaia" (quem já está abaixo de 1 não sobe), e na terceira rodada seguida desmaia.
 // motivo: 'abaixoDeZero' ou 'tresRodadas' quando desmaia.

@@ -1,18 +1,20 @@
 // O Neuroport (a NET de 2077, o C9 do ROADMAP; a wiki, "Quickhacks no Neuroport", Kit p. 16–17 e 26–27): o netrunner
 // entra no Neuroport de um alvo à vista, no alcance do deck, e de lá passa os Passwalls (o Breach) e faz os quickhacks (as
-// próximas partes do C9). Esta parte é o Jack In e o Jack Out:
+// próximas partes do C9). Por enquanto, o Jack In, o Jack Out e o Breach:
 // - Jack In: Interface + 1d10 contra a WILL + 1d10 do alvo. O alvo resiste pela janela de reação do dono, como no
 //   agarrão (a decisão do usuário de 2026-10-17: "rolagens e efeitos simples"); pelo NPC, o mestre rola. Falhando (o
 //   empate é do alvo), entra assim mesmo, mas o alvo percebe. Cada Neuroport é uma Ação NET, e dá para ficar ligado em
 //   quantos quiser (a conta das Ações NET fora da arquitetura é outra parte);
-// - Jack Out: sai do Neuroport do alvo com segurança.
+// - Jack Out: sai do Neuroport do alvo com segurança;
+// - Breach: passa um Passwall do alvo (um por Self-ICE, até 3; a DV de todos é 6, 8 ou 10, pelo número), Interface (a
+//   habilidade Breach) + 1d10 contra a DV. Passa um por vez; o quickhack só vem depois de todos (ligacao.passados).
 // A ligação fica nas flags dos dois atores, que o mestre ativo grava: no netrunner, neuroport.ligacoes ([{ alvo: o uuid do
 // token, nome, percebido }]); no alvo, neuroport.invasores ([{ netrunner: o uuid do ator, nome, percebido }]). A ficha do
 // netrunner mostra as dele; a do alvo, as que ele percebeu (o mestre vê todas).
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { centroDe, defesaContra, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
-import { alcanceDoJackIn, percebeuOJackIn } from './regras.mjs';
+import { alcanceDoJackIn, passouOPasswall, passwallsDoAlvo, percebeuOJackIn } from './regras.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
 
 const CANAL = `system.${SISTEMA}`;
@@ -24,6 +26,10 @@ const SEM_MESTRE = 'Sem mestre na mesa: o Jack In precisa do mestre para a resis
 // O Neuroport instalado: o cyberware de 2077 do catálogo, ou o feito à mão com o mesmo nome.
 export const temNeuroport = ator => Boolean(ator?.items.some(item => item.type === 'cyberware' && item.system.instalado
   && (item.getFlag(SISTEMA, 'catalogo') === 'cyberware-2077:neuroport' || item.name === 'Neuroport')));
+
+// Os Self-ICE instalados (cada um põe um Passwall no Neuroport).
+export const selfIcesDe = ator => (ator?.items ?? []).filter(item => item.type === 'cyberware' && item.system.instalado
+  && (item.getFlag(SISTEMA, 'catalogo') === 'cyberware-2077:self-ice' || item.name === 'Self-ICE')).length;
 
 // As ligações de um ator: as que ele fez (ligacoes) e as que fizeram nele (invasores).
 export const neuroportDe = ator => {
@@ -67,6 +73,18 @@ export function jackOut(ator, alvo) {
   if (!ligacao) return avisar(`${ator.name} não está nesse Neuroport.`);
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
   return pedirAoMestre('jackout', { ator: ator.uuid, alvo });
+}
+
+// "Breach": passa o próximo Passwall do alvo (o uuid do token), com a habilidade Breach (o bônus do Worm vale).
+export async function breach(ator, alvo, { perguntar = false } = {}) {
+  const ligacao = neuroportDe(ator).ligacoes.find(item => item.alvo === alvo);
+  if (!ligacao) return avisar(`${ator.name} não está nesse Neuroport.`);
+  const { quantos, dv } = passwallsDoAlvo(selfIcesDe(fromUuidSync(alvo)?.actor));
+  if ((ligacao.passados ?? 0) >= quantos) return avisar(quantos ? `${ator.name} já passou os Passwalls de ${ligacao.nome}.` : `${ligacao.nome} não tem Passwall (nenhum Self-ICE).`);
+  if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
+  const teste = await ator.rolarInterface('backdoor', { perguntar, sabor: `contra o Passwall de ${ligacao.nome} (DV ${dv})` });
+  if (!teste) return null;
+  return pedirAoMestre('breach', { ator: ator.uuid, alvo, total: teste.total });
 }
 
 // ---------------- No mestre ativo ----------------
@@ -133,7 +151,31 @@ async function resolverJackOut(ator, pedido) {
   });
 }
 
-const RESOLVER = { jackin: resolverJackIn, jackout: resolverJackOut };
+// O Breach: o próximo Passwall, contra a DV pelo Self-ICE do alvo de agora; passando, a ligação conta mais um.
+async function resolverBreach(ator, pedido) {
+  const ligacao = neuroportDe(ator).ligacoes.find(item => item.alvo === pedido.alvo);
+  const alvo = await fromUuid(pedido.alvo);
+  if (!ligacao || !alvo?.actor) return null;
+  const { quantos, dv } = passwallsDoAlvo(selfIcesDe(alvo.actor));
+  const antes = ligacao.passados ?? 0;
+  if (antes >= quantos) return null;
+  const passou = passouOPasswall(pedido.total, dv);
+  const passados = antes + (passou ? 1 : 0);
+  if (passou) {
+    const meu = neuroportDe(ator);
+    await ator.setFlag(SISTEMA, FLAG, { ...meu, ligacoes: meu.ligacoes.map(item => (item.alvo === pedido.alvo ? { ...item, passados } : item)) });
+  }
+  const nome = tokenNaCena(ator, alvo.parent)?.name ?? ator.name;
+  const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
+  const conta = `Breach ${pedido.total} contra DV ${dv}`;
+  const faltam = quantos - passados;
+  const frase = passou
+    ? `${a} passou um Passwall de ${b} (${conta}): ${faltam ? `falta${faltam > 1 ? 'm' : ''} ${faltam}` : 'o Neuroport está aberto aos quickhacks'}.`
+    : `${a} não passou o Passwall de ${b} (${conta}).`;
+  return cartao({ ator, alvo: alvo.actor, percebido: false, falante: nome, frase, resumo: { resultado: passou ? 'passou' : 'barrado', total: pedido.total, dv, passados, quantos, netrunner: nome, alvo: alvo.name } });
+}
+
+const RESOLVER = { jackin: resolverJackIn, jackout: resolverJackOut, breach: resolverBreach };
 
 export function registrarNeuroport() {
   game.socket.on(CANAL, mensagem => {

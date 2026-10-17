@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { alcanceDoJackIn, JACK_IN, percebeuOJackIn } from '../../foundry-sistema/scripts/regras.mjs';
+import { alcanceDoJackIn, DV_DO_PASSWALL, JACK_IN, passouOPasswall, passwallsDoAlvo, percebeuOJackIn } from '../../foundry-sistema/scripts/regras.mjs';
 import { barra, paredeNoMeio } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -40,4 +40,17 @@ test('"à vista": a parede que barra a visão para o Jack In; a janela (barra o 
   assert.equal(paredeNoMeio([muro], de, para, 'sight'), true);
   // A porta aberta deixa ver.
   assert.equal(paredeNoMeio([{ ...muro, door: 1, ds: 1 }], de, para, 'sight'), false);
+});
+
+test('os Passwalls do Self-ICE (wiki: o Breach e o Self-ICE): um por Self-ICE, até 3; a DV de todos é 6, 8 ou 10; passa quem tira mais que a DV', () => {
+  assert.ok(wiki.includes('<b>Breach:</b> passa um <b>Passwall</b> (um por Self-ICE do alvo), Interface contra a DV dele: 6 com um Self-ICE, 8 com dois, 10 com três.'));
+  const wiki2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.ok(wiki2077.includes('Cada instalação (até 3) põe um <b>Passwall</b> no seu Neuroport: quem tenta hackear você gasta uma Ação NET para passar por cada um (Breach). A DV de todos os Passwalls sobe com o número de Self-ICE: <b>DV6</b> com um, <b>DV8</b> com dois e <b>DV10</b> com três.'));
+  assert.deepEqual(DV_DO_PASSWALL, { 1: 6, 2: 8, 3: 10 });
+  assert.deepEqual([0, 1, 2, 3, 4, -1, '2'].map(passwallsDoAlvo), [
+    { quantos: 0, dv: null }, { quantos: 1, dv: 6 }, { quantos: 2, dv: 8 }, { quantos: 3, dv: 10 }, { quantos: 3, dv: 10 }, { quantos: 0, dv: null }, { quantos: 2, dv: 8 }
+  ]);
+  assert.equal(passouOPasswall(8, 8), false);
+  assert.equal(passouOPasswall(9, 8), true);
+  assert.equal(passouOPasswall('7', 6), true);
 });

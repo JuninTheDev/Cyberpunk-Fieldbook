@@ -3124,6 +3124,88 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('Breach nos Passwalls do Neuroport (wiki: "passa um Passwall (um por Self-ICE do alvo), Interface contra a DV dele: 6 com um Self-ICE, 8 com dois, 10 com três"): o Capanga com dois Self-ICE (DV 8); pela ficha, o Breach com 7 não passa, com 9 passa um (falta 1) e com 10 passa o último (o Neuroport aberto aos quickhacks); depois, o Breach sai da ficha e avisa', async () => {
+      const NOME = 'Teste Netrunner Breach';
+      let montado = null;
+      try {
+        // O netrunner do jogador ao lado do Capanga; no Capanga, o Neuroport e dois Self-ICE.
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await ator.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const capanga = __token('Capanga');
+          const ocupado = (x, y) => canvas.scene.tokens.some(t => t.x === x && t.y === y);
+          const lugar = [[capanga.x + 100, capanga.y], [capanga.x, capanga.y + 100], [capanga.x, capanga.y - 100], [capanga.x - 100, capanga.y]].find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y));
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
+          const instalado = id => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), { 'system.instalado': true });
+          const itens = (await capanga.actor.createEmbeddedDocuments('Item', [instalado('cyberware-2077:neuroport'), instalado('cyberware-2077:self-ice'), instalado('cyberware-2077:self-ice')])).map(i => i.id);
+          await __esperar(() => canvas.tokens.get(token.id));
+          return { ator: ator.id, token: token.id, itens };
+        })()`);
+        const cartoes = `game.messages.contents.filter(m => ['passou', 'barrado'].includes(m.getFlag('${S}', 'neuroport')?.resultado)).map(m => ({ ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, '') }))`;
+        // O Jack In pela API (o jogador: 4 + 9 = 13; o mestre rola a WILL do Capanga: 5 + 1 = 6).
+        await fixar(jogador, [[9, 10]]);
+        await fixar(edge, [[1, 10]]);
+        await jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          await game.system.api.neuroport.jackIn(ator, { alvo: canvas.scene.tokens.find(t => t.name === 'Capanga') });
+          for (let i = 0; i < 80 && !(ator.getFlag('${S}', 'neuroport')?.ligacoes ?? []).length; i++) await new Promise(r => setTimeout(r, 100));
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('net', 'primary');
+          return true;
+        })()`);
+        // Cada Breach pela ficha (o d10 fixo no jogador): a linha da ligação e o cartão.
+        const linha = `(() => { const li = game.actors.get('${montado.ator}').sheet.element?.querySelector('.neuroports ol.itens li[data-alvo]'); return li ? [...li.children].map(p => p.textContent.trim()).join(' ') : null; })()`;
+        const breach = async (d10, cartoesAntes) => {
+          await fixar(jogador, [[d10, 10]]);
+          await jogador.evaluate(`(async () => {
+            const ficha = game.actors.get('${montado.ator}').sheet;
+            for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports [data-action=breach]'); i++) await new Promise(r => setTimeout(r, 100));
+            ficha.element.querySelector('.neuroports [data-action=breach]').click();
+            return true;
+          })()`);
+          const cartao = await edge.evaluate(`(async () => { await __esperar(() => ${cartoes}.length === ${cartoesAntes + 1}); return ${cartoes}.at(-1) ?? null; })()`);
+          await jogador.sleep(400);
+          return { cartao, linha: await jogador.evaluate(linha) };
+        };
+        const antes = await edge.evaluate(`${cartoes}.length`);
+        const inicio = await jogador.evaluate(linha);
+        const b7 = await breach(3, antes);
+        const b9 = await breach(5, antes + 1);
+        const b10 = await breach(6, antes + 2);
+        const depois = await jogador.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try { await game.system.api.neuroport.breach(ator, canvas.scene.tokens.find(t => t.name === 'Capanga').uuid); } finally { delete ui.notifications.warn; }
+          return { avisos, botao: Boolean(ator.sheet.element?.querySelector('.neuroports [data-action=breach]')), passados: ator.getFlag('${S}', 'neuroport').ligacoes[0].passados };
+        })()`);
+        const info = { montado, inicio, b7, b9, b10, depois };
+        const ok = inicio === 'Capanga não percebeu PASSWALLS 0/2 · DV 8 Breach Jack Out'
+          && b7.cartao?.resultado === 'barrado' && b7.cartao.total === 7 && b7.cartao.texto === `${NOME} não passou o Passwall de Capanga (Breach 7 contra DV 8).` && b7.linha === inicio
+          && b9.cartao?.resultado === 'passou' && b9.cartao.total === 9 && b9.cartao.texto === `${NOME} passou um Passwall de Capanga (Breach 9 contra DV 8): falta 1.` && b9.linha === 'Capanga não percebeu PASSWALLS 1/2 · DV 8 Breach Jack Out'
+          && b10.cartao?.resultado === 'passou' && b10.cartao.passados === 2 && b10.cartao.texto === `${NOME} passou um Passwall de Capanga (Breach 10 contra DV 8): o Neuroport está aberto aos quickhacks.`
+          && b10.linha === 'Capanga não percebeu PASSWALLS 2/2 · DV 8 Jack Out'
+          && depois.avisos.join() === `${NOME} já passou os Passwalls de Capanga.` && !depois.botao && depois.passados === 2;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            const ator = game.actors.get('${montado.ator}');
+            await ator?.sheet?.close();
+            const capanga = __token('Capanga').actor;
+            await capanga.deleteEmbeddedDocuments('Item', ${JSON.stringify(montado.itens)}.filter(id => capanga.items.get(id)));
+            await capanga.unsetFlag('${S}', 'neuroport');
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {
       // Ataque: d10 8 → 8 + 4 + 8 = 20 contra DV 16. Dano 5d6: 2 × 5 = 10 contra o SP do Alvo.
       await fixar(edge, [[8, 10], [2, 6], [2, 6], [2, 6], [2, 6], [2, 6]]);
