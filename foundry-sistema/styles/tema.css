@@ -1048,6 +1048,9 @@ do capanga é um botão do mesmo jeito, que rola. */
   margin-left: auto; padding: 1px 5px; background: color-mix(in srgb, var(--cor) 18%, transparent); color: var(--cor); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
 }
 .cpr-fieldbook.janela-net .andar-escolhido li p { margin: 4px 0 0; color: var(--cp-texto); font-size: 11px; line-height: 1.45; }
+/* O diário do arquivo copiado pelo Eye-Dee. */
+.cpr-fieldbook.janela-net .andar-escolhido button.abrir-arquivo { justify-self: start; margin-top: 6px; padding: 3px 9px; border-color: var(--net-roxo); color: var(--net-roxo); font-size: 11px; }
+.cpr-fieldbook.janela-net .andar-escolhido button.abrir-arquivo:hover { background: var(--net-roxo); color: var(--cp-fundo); }
 .cpr-fieldbook.janela-net .andar-escolhido button.ir { width: 100%; padding: 7px; border-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 8%, transparent); color: var(--cp-ciano); letter-spacing: 0.15em; }
 .cpr-fieldbook.janela-net .andar-escolhido button.ir:hover:not(:disabled) { background: var(--cp-ciano); color: var(--cp-fundo); box-shadow: 0 0 12px var(--net-brilho); }
 

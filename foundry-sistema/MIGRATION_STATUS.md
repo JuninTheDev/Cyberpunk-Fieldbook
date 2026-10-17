@@ -71,7 +71,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | sistema | os cartões do chat no visual novo (a faixa e o tipo na linha de cima, os dados em caixas com o total grande, as etiquetas do resultado e a barra de HP) | refeitos no ciclo 59 (o pedido do usuário, pela maquete dele; os botões da maquete sem função no sistema ficaram de fora) |
 | sistema | a ficha nas abas das maquetes (Combate, Equipamento, Cyberware, Role e NET em duas colunas, com os números em grande; a Vida em painéis) e as fichas dos itens (o tipo na cor, as abas, as células) | refeitas nos ciclos 60 a 62 (as funções das maquetes que o sistema não tem ficaram de fora) |
 | NET Architect | os nós de controle ligados à cena (as portas, as luzes, os sons e os tokens: a configuração no ponto e os comandos na janela) | portados no ciclo 85 (o C8, parte 11) |
-| NET Architect | os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | os arquivos copiados pelo Eye-Dee (o diário, a permissão do dono, o aviso no chat, o "Abrir o arquivo") | portados no ciclo 89 (o C8, parte 12) |
+| NET Architect | o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -4232,6 +4233,81 @@ O C13 do ROADMAP, reservado e enviado antes de começar (`08dc188`). Commit ante
   conserto ou rolagem automática da moeda. Não entrou conteúdo dos DLCs nem do Black Chrome.
 - **Pendências:** nenhuma do C13.
 - **Próximo:** outro item fora da NET, conforme o ROADMAP.
+
+### Ciclo 89 (2026-10-17): o C8, parte 12: os arquivos do Eye-Dee (sessão KouArt)
+
+O que o NET Architect da mesa faz com o arquivo que o Eye-Dee identifica (`foundry-net-architect/scripts/arquivos.mjs`),
+portado para o sistema. O editor visual fica para o próximo ciclo. Commit anterior: `421ef6c4` (ciclo 88, da sessão
+Codex). Feito como o 87, virou o 89 ao integrar: a sessão Codex publicou antes os ciclos 87 e 88.
+
+- **A referência:**
+  - **o NET Architect da mesa:** o Eye-Dee que passa copia o arquivo para um diário na pasta "Arquivos da NET". Só o
+    mestre e os donos do netrunner o abrem, e o chat avisa os dois com o link. A janela mostra "Abrir o arquivo" no
+    andar. O mesmo arquivo identificado de novo (depois do "Reiniciar" do mestre) não faz outro diário: quem o
+    identificou agora passa a abrir o de antes;
+  - **a wiki, "Ações NET" (RED p. 198):** copiar arquivos para o deck não é Ação NET. A cópia vem junto com o Eye-Dee,
+    sem gastar nada a mais.
+- **Implementado:**
+  - **`scripts/netrun/arquivos.mjs`** (novo, o port do da mesa), com duas partes:
+    - **sem Foundry:** o lugar do arquivo (a arquitetura, o andar e o ramo), a página do diário (o nome do arquivo, o
+      que ele é e de onde veio, com o HTML escapado) e o diário de cada arquivo no estado;
+    - **no mestre ativo:** a cópia (a pasta, o diário com a permissão dos donos, o aviso no chat) e o diário que já
+      existe.
+  - **Diferente do da mesa:** se o mestre apaga o diário, o registro dele sai do estado, e o diário novo toma o lugar.
+    No da mesa, o registro antigo ficava na frente, e o botão do diário novo não aparecia.
+  - **o motor** (`estado.mjs`): os diários no estado do ponto; a cópia depois do Eye-Dee que passa, com a linha no
+    registro ("copiou o arquivo para o deck (diário “...”)"). O "Reiniciar" do mestre guarda os diários; o reinício
+    das defesas já guardava os arquivos identificados;
+  - **a vista pública** (`regras-da-net.mjs`): o diário do arquivo identificado;
+  - **a janela da NET:** "Abrir o arquivo" no andar escolhido, para quem pode abrir o diário. O mestre vê o mesmo na
+    janela dele.
+  - **o README:** o "Ainda não faz" ainda listava os nós de controle ligados à cena (feitos no ciclo 85). Agora lista
+    só o Scanner e o editor visual.
+- **Testes:**
+  - os números abaixo são os da integração com os ciclos 87 e 88 da sessão Codex (antes dela: G1 com 61 arquivos, G3 com
+    104 de 108 e G4 com 108 de 113, as mesmas falhas conhecidas);
+  - G1: 63 arquivos (2 novos deste ciclo: o módulo e o teste), 0 erros; G2: 0 erros;
+  - G3: 111 de 115. O arquivo novo, `tests/sistema/arquivos.test.mjs`, tem 3 testes de referência:
+    - o lugar, com o ramo só fora do A;
+    - a página, com o nome ou "Arquivo", o HTML escapado e o DV que falta como "—";
+    - o diário de cada arquivo, e a vista pública com ele só no arquivo identificado.
+
+    No `regras.test.mjs`, o arquivo identificado da vista pública ganha o `diario` (vazio: sem o motor, não há
+    nenhum). As 4 falhas são as das armas de 2077;
+  - G4: 110 de 115 (as 5 falhas são as das armas de 2077). Mudanças nos passos:
+    - **o passo antigo do Eye-Dee:** lia a última linha do registro, e a última agora é a da cópia. Ele lê as duas linhas
+      e confere o "Abrir o arquivo" no andar;
+    - **um passo novo, depois dos nós de controle, sobre um andar com o arquivo "Agenda" (DV 6):**
+      - o Eye-Dee (10 contra 6) dá as duas linhas no registro;
+      - o diário fica na pasta "Arquivos da NET", sem permissão para os outros, com o Jogador como observador e a
+        flag do conteúdo e da arquitetura;
+      - o chat sussurra para o mestre e para o Jogador, com o link do diário;
+      - o "Abrir o arquivo" do jogador abre o diário (o nome, a página "Agenda" e o texto de onde veio), e o mestre vê o
+        mesmo botão na janela dele;
+      - depois de desconectar (as defesas reiniciam) e do "Reiniciar" do mestre, o Eye-Dee de novo usa o mesmo diário,
+        sem outro aviso no chat;
+      - com o diário apagado pelo mestre, o próximo Eye-Dee faz outro, e o estado guarda só o novo;
+    - **o passo do Agarrar (ciclo 80) falhou uma vez,** numa rodada das mutações: leu o cartão do empate no lugar do
+      segundo. A sessão Codex achou e corrigiu a mesma corrida no ciclo 87 (a espera do segundo cartão), e a
+      integração ficou com a correção dela;
+  - **mutações:** as 10 caíram, e os arquivos voltaram (conferido pelo md5). Rodaram antes da integração; os arquivos
+    deste ciclo não mudaram nela (a sessão Codex não mexeu na NET).
+    - **No G3:**
+      - a vista pública sem o diário (A1);
+      - o nome de quem copiou sem escapar o HTML (A2);
+      - o ramo A também no lugar (A3).
+    - **No G4:**
+      - o Eye-Dee que não copia (A4, que derruba também o passo antigo);
+      - o dono sem permissão no diário (A5);
+      - o chat sem o dono (A6);
+      - o "Reiniciar" que perde os diários (A7);
+      - o arquivo identificado de novo com outro diário (A8);
+      - o registro do diário apagado que fica (A9);
+      - a janela do mestre sem o diário (A10).
+    - **Fica sem teste a conferência da permissão no botão** (só aparece a quem pode abrir o diário): o mundo de teste
+      tem um jogador só, e ele é o dono do netrunner.
+- **Pendências:** o C8 segue com o editor visual, e o Scanner e a parede.
+- **Próximo:** o C8, parte 13 (o editor visual).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -67,12 +67,14 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     numa coluna. Com "reduzir movimento" no sistema, nada se anima.
 - **Na NET** (o motor do NET Architect, no mestre ativo): o jogador anda pelo mapa da janela (clica no andar e em "Ir
   para cá"; andar não é Ação NET, e a senha trava a descida) e usa as habilidades de Interface contra os andares: o
-  Pathfinder revela o mapa até a obstrução com DV maior, o Backdoor quebra a senha, o Eye-Dee identifica o arquivo, o
-  Control toma o nó de controle (e manda os comandos, que o mestre narra; e, ciclo 85, comanda o que o mestre ligou a
-  ele na configuração do ponto: as portas, que abrem, fecham e trancam, as luzes e os sons, que ligam e desligam, e os
-  tokens, que o jogador assume até desconectar, 1 Ação NET por comando, como o NET Architect da mesa), o Cloak esconde
-  os rastros e o Virus, no andar mais fundo, tem a DV e as Ações NET que o mestre põe. Passa quem tira mais que a DV. Em combate, as Ações NET
-  contam (as do Rank por turno, de volta no turno do netrunner); a desconexão insegura sai sem gastar. Por enquanto
+  Pathfinder revela o mapa até a obstrução com DV maior, o Backdoor quebra a senha, o Eye-Dee identifica o arquivo (e,
+  ciclo 89, o copia para um diário na pasta "Arquivos da NET", que o dono do netrunner abre pela janela, com o aviso
+  no chat), o Control toma o nó de controle (e manda os comandos, que o mestre narra; e, ciclo 85, comanda o que o
+  mestre ligou a ele na configuração do ponto: as portas, que abrem, fecham e trancam, as luzes e os sons, que ligam e
+  desligam, e os tokens, que o jogador assume até desconectar, 1 Ação NET por comando, como o NET Architect da mesa),
+  o Cloak esconde os rastros e o Virus, no andar mais fundo, tem a DV e as Ações NET que o mestre põe. Passa quem tira
+  mais que a DV. Em combate, as Ações NET contam (as do Rank por turno, de volta no turno do netrunner); a desconexão
+  insegura sai sem gastar. Por enquanto
   quem rola é o mestre, com a Sorte preparada na ficha. O mestre vê a arquitetura inteira, age pelo netrunner
   escolhido, revela andares e zera as Ações NET. O Black ICE e o demônio do andar seguram a descida até caírem (o Black
   ICE também pelo Slide, uma vez por turno em combate, contra a PER + 1d10 dele); o Zap tira 1d6 da REZ deles (contra a
@@ -302,8 +304,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga), o resto do NET Architect
-  (os nós de controle
-  ligados à cena, os arquivos copiados, o Scanner e o editor visual) e o Painel Tático.
+  (o Scanner e o editor visual) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power, Smart e Tech ainda seguem o suplemento de fã; o
   Rebuild e a munição Smart melhorada ainda não têm regra. Os itens já existem, com a classe e as regras guardadas na

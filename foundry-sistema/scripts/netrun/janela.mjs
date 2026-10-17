@@ -8,6 +8,7 @@
 import { ENTRADA, RAMOS, TIPOS_DE_ANDAR } from '../arquitetura.mjs';
 import { caminho, CLASSES_PROGRAMA, SISTEMA } from '../config.mjs';
 import { HABILIDADES_DE_INTERFACE, programaDeAtaque } from '../regras.mjs';
+import { diarioDe } from './arquivos.mjs';
 import { STATUS_EM_CHAMAS } from './constantes.mjs';
 import { arquiteturaDoPonto, emCombate, estadoDoTile, pontoDoTile } from './estado.mjs';
 import { ligacoesDo, nomeDe, situacao, TIPOS as TIPOS_DE_LIGACAO } from './ligacoes.mjs';
@@ -40,6 +41,8 @@ function conteudoNaJanela(conteudo) {
     oQue: [conteudo.nome, conteudo.descricao].filter(Boolean).join(': ')
   };
 }
+// O diário do arquivo copiado (arquivos.mjs), se quem olha pode abri-lo.
+const abreODiario = uuid => (uuid && fromUuidSync(uuid)?.testUserPermission(game.user, 'OBSERVER') ? uuid : null);
 const textoCurto = conteudo => (conteudo.inimigo ? `${conteudo.nome} (${conteudo.situacao})` : `${conteudo.nome}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}${conteudo.feito ? ` (${conteudo.situacao})` : ''}`);
 
 // O visual: o ícone de cada conteúdo (Font Awesome; a senha quebrada abre o cadeado) e a cor do andar no mapa, pelo que
@@ -102,7 +105,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
       desconectar: JanelaDaNet.#desconectar, desconectarInseguro: JanelaDaNet.#desconectarInseguro, selecionar: JanelaDaNet.#selecionar, mover: JanelaDaNet.#mover,
       habilidade: JanelaDaNet.#habilidade, comandar: JanelaDaNet.#comandar, acionar: JanelaDaNet.#acionar, escolherCorredor: JanelaDaNet.#escolherCorredor, revelar: JanelaDaNet.#revelar,
       zerarAcoes: JanelaDaNet.#zerarAcoes, reiniciar: JanelaDaNet.#reiniciar, ajustarRez: JanelaDaNet.#ajustarRez, inimigoAtaca: JanelaDaNet.#inimigoAtaca,
-      apagarFogo: JanelaDaNet.#apagarFogo, programa: JanelaDaNet.#programa
+      apagarFogo: JanelaDaNet.#apagarFogo, programa: JanelaDaNet.#programa, abrirArquivo: JanelaDaNet.#abrirArquivo
     }
   };
 
@@ -134,7 +137,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
       id: no.id, andar: no.andar, ramo: no.ramo, pai: no.pai, visto: true, publico: publicos.has(no.id) || Boolean(est.mapa),
       conteudos: no.conteudos.map(conteudo => (ehInimigo(conteudo)
         ? { ...conteudo, inimigo: inimigoPublico(estado, conteudo), feito: !inimigoAtivo(estado, conteudo) }
-        : { ...conteudo, feito: feitos.has(conteudo.chave) }))
+        : { ...conteudo, feito: feitos.has(conteudo.chave), diario: diarioDe(est, conteudo.chave) }))
     }));
   }
 
@@ -189,7 +192,11 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     const andar = {
       id: selecionado, entrada: selecionado === ENTRADA, visto: selecionado === ENTRADA || Boolean(escolhido?.visto), escondido: Boolean(escolhido && !escolhido.publico),
       titulo: selecionado === ENTRADA ? 'Ponto de acesso' : `Andar ${escolhido.andar}${escolhido.ramo !== 'a' ? ` · ramo ${escolhido.ramo.toUpperCase()}` : ''}`,
-      conteudos: (escolhido?.conteudos ?? []).map(conteudoNaJanela).map(conteudo => ({ ...conteudo, icone: iconeDe(conteudo) })), ir: Boolean(meu) && vizinhos.has(selecionado)
+      conteudos: (escolhido?.conteudos ?? []).map(conteudo => {
+        const naJanela = conteudoNaJanela(conteudo);
+        return { ...naJanela, icone: iconeDe(naJanela), diario: abreODiario(conteudo.diario) };
+      }),
+      ir: Boolean(meu) && vizinhos.has(selecionado)
     };
 
     // O netrunner por quem esta janela age: a Interface, as Ações NET, a Sorte preparada na ficha e as habilidades que
@@ -354,6 +361,11 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #apagarFogo() {
     await this.#pedir('apagarFogo');
+  }
+
+  // O diário do arquivo copiado pelo Eye-Dee (arquivos.mjs), no navegador de quem clica.
+  static async #abrirArquivo(evento, alvo) {
+    (await fromUuid(alvo.dataset.uuid))?.sheet.render(true);
   }
 
   static async #zerarAcoes() {

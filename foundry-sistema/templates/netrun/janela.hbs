@@ -102,7 +102,7 @@ o texto de cada parte continuar o mesmo. --}}
         {{else if andar.visto}}
         <ul>
           {{#each andar.conteudos}}
-          <li class="{{tipoId}}{{#if inimigo}} inimigo{{/if}}{{#if feito}} feito{{/if}}"><i class="fa-solid {{icone}}"></i> <div class="linha"><b>{{nome}}</b>{{#if dv}} <small>DV {{dv}}</small>{{/if}}{{#if tipo}} <small>{{tipo}}</small>{{/if}}{{#if situacao}} <span class="situacao">{{situacao}}</span>{{/if}}</div>{{#if rez}}<span class="barra" style="--rez: {{rez}}%"></span>{{/if}}{{#if oQue}} <p>{{oQue}}</p>{{/if}}</li>
+          <li class="{{tipoId}}{{#if inimigo}} inimigo{{/if}}{{#if feito}} feito{{/if}}"><i class="fa-solid {{icone}}"></i> <div class="linha"><b>{{nome}}</b>{{#if dv}} <small>DV {{dv}}</small>{{/if}}{{#if tipo}} <small>{{tipo}}</small>{{/if}}{{#if situacao}} <span class="situacao">{{situacao}}</span>{{/if}}</div>{{#if rez}}<span class="barra" style="--rez: {{rez}}%"></span>{{/if}}{{#if oQue}} <p>{{oQue}}</p>{{/if}}{{#if diario}}<button type="button" class="abrir-arquivo" data-action="abrirArquivo" data-uuid="{{diario}}"><i class="fa-solid fa-book-open" inert></i> Abrir o arquivo</button>{{/if}}</li>
           {{else}}
           <li class="vazio">Andar vazio.</li>
           {{/each}}

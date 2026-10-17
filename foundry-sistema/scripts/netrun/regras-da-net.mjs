@@ -6,6 +6,7 @@ import { ehFundo, ENTRADA, filhosDe, revelarPathfinder, TIPOS_DE_ANDAR, vizinhos
 import { SISTEMA } from '../config.mjs';
 import { BLACK_ICE, DEMONIOS } from '../gerado.mjs';
 import { rezAtual } from '../regras.mjs';
+import { diarioDe } from './arquivos.mjs';
 
 // O Range Upgrade (o hardware de cyberdeck do CORE, "8m/yds ... instead of 6m/yds"): 2 a mais no alcance do ponto.
 export const RANGE_UPGRADE = 'core_upgrades:range-upgrade';
@@ -129,6 +130,8 @@ export function vistaPublica(arq, est) {
         if (ehInimigo(conteudo)) Object.assign(publico, { inimigo: inimigoPublico(est, conteudo), feito: !inimigoAtivo(est, conteudo) });
         // O que o arquivo é (o Eye-Dee) e o que o nó controla (o Control), só depois de feitos.
         if (publico.feito && (conteudo.tipo === 'arquivo' || conteudo.tipo === 'controle')) Object.assign(publico, { nome: conteudo.nome, descricao: conteudo.descricao });
+        // O diário do arquivo copiado (arquivos.mjs): a janela mostra "Abrir o arquivo" a quem pode abri-lo.
+        if (publico.feito && conteudo.tipo === 'arquivo') publico.diario = diarioDe(est, conteudo.chave);
         return publico;
       })
     };

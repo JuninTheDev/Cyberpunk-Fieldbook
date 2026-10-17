@@ -5356,6 +5356,9 @@ module.exports = async ({ edge, servidores, r }) => {
         await canvas.scene.deleteEmbeddedDocuments('Tile', canvas.scene.tiles.filter(t => t.x === 1800 && t.y === 800).map(t => t.id));
         for (const a of game.actors.filter(a => a.name === '${nome}')) { await a.sheet?.close(); await a.delete(); }
         for (const i of game.items.filter(i => i.name === '${arquitetura}')) await i.delete();
+        // Os diários dos arquivos copiados pelo Eye-Dee e a pasta deles.
+        for (const j of game.journal.filter(j => j.getFlag('${S}', 'arquivoDaNet'))) await j.delete();
+        for (const f of game.folders.filter(f => f.type === 'JournalEntry' && f.name === 'Arquivos da NET')) await f.delete();
         return true;
       })()`);
     };
@@ -5469,9 +5472,11 @@ module.exports = async ({ edge, servidores, r }) => {
         const eyedee = await jogador.evaluate(`(async () => {
           const net = window.__net;
           net.clicar('button[data-habilidade=eyedee]');
-          const linha = await net.esperarRegistro('Eye-Dee (');
-          await window.__esperar(() => net.el().querySelector('.andar-escolhido li p'));
-          return { linha, detalhe: net.texto('.andar-escolhido li') };
+          // A linha do Eye-Dee e, depois dela, a da cópia do arquivo (o diário; o passo dos arquivos confere o resto).
+          const copia = await net.esperarRegistro('copiou o arquivo para o deck');
+          const linha = net.registro().find(texto => texto.startsWith('Eye-Dee ('));
+          await window.__esperar(() => net.el().querySelector('.andar-escolhido li p') && net.el().querySelector('.andar-escolhido button.abrir-arquivo'));
+          return { linha, copia, detalhe: net.texto('.andar-escolhido li') };
         })()`);
         await fixar(edge, [[3, 10]]);
         const pathfinder = await jogador.evaluate(`(async () => {
@@ -5553,7 +5558,8 @@ module.exports = async ({ edge, servidores, r }) => {
           && backdoor1 === `Backdoor (6 contra DV 6): ${NOME} não passou a senha.` && backdoor2 === `Backdoor (9 contra DV 6): ${NOME} quebrou a senha.`
           && cartao.rotulo === 'Backdoor' && cartao.total === 9 && cartao.quem === NOME && cartao.autor
           && desceu === `${NOME} desceu para o andar 2: Arquivo DV 8.`
-          && eyedee.linha === `Eye-Dee (10 contra DV 8): ${NOME} identificou o arquivo (Folha de pagamento: Os salários da clínica).` && eyedee.detalhe === 'Arquivo DV 8 identificado Folha de pagamento: Os salários da clínica.'
+          && eyedee.linha === `Eye-Dee (10 contra DV 8): ${NOME} identificou o arquivo (Folha de pagamento: Os salários da clínica).` && eyedee.detalhe === 'Arquivo DV 8 identificado Folha de pagamento: Os salários da clínica. Abrir o arquivo'
+          && eyedee.copia === `${NOME} copiou o arquivo para o deck (diário “Arquivo: ${ARQ} · andar 2”).`
           && pathfinder.linha === `Pathfinder (7): ${NOME} revelou 2 andares.` && pathfinder.mapa === '1a,2a,3a,3b'
           && controle.vizinho === '4A ?' && controle.linha === `Control (11 contra DV 8): ${NOME} tomou o nó de controle (As câmeras do saguão).`
           && controle.habilidades === 'pathfinder+,backdoor-,eyedee-,control-,cloak+,virus-,zap-,slide-' && controle.comando === `${NOME} comanda o nó de controle: “Desligar as câmeras”.` && controle.detalhe === 'Nó de controle DV 8 tomado As câmeras do saguão'
@@ -5660,6 +5666,107 @@ module.exports = async ({ edge, servidores, r }) => {
             return true;
           })()`);
         }
+      }
+    });
+
+    await r.passo('os arquivos do Eye-Dee (o NET Architect da mesa; wiki, "Ações NET": copiar arquivos para o deck não é Ação NET): o Eye-Dee que passa copia o arquivo para um diário na pasta "Arquivos da NET", que o dono do netrunner abre, e o chat avisa o mestre e ele com o link; "Abrir o arquivo" na janela abre o diário; depois do reinício e do "Reiniciar" do mestre, o mesmo arquivo identificado de novo usa o mesmo diário; com o diário apagado pelo mestre, um novo toma o lugar', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Arquivos';
+      const ARQ = 'Teste Arquitetura dos Arquivos';
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [{ andar: 1, ramo: 'a', tipo: 'arquivo', dv: 6, nome: 'Agenda', descricao: 'Três clientes em Watson.' }] });
+        // No jogador: conecta de novo, se saiu; no 1A, o Eye-Dee (o mestre rola 4 + 6 = 10 contra a DV 6) até a cópia.
+        const identificar = async ({ abrir = false } = {}) => {
+          await fixar(edge, [[6, 10]]);
+          return jogador.evaluate(`(async () => {
+            const net = window.__net;
+            if (!net.eu()) {
+              canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+              await game.system.api.netrun.abrir(canvas.scene.tiles.get('${m.tile}'));
+              await window.__esperar(() => net.eu() && net.el()?.querySelector('.mapa-net .no') && net.pronta());
+            }
+            await net.ir('1a');
+            net.clicar('button[data-habilidade=eyedee]');
+            await net.esperarRegistro('copiou o arquivo para o deck');
+            await window.__esperar(() => net.el().querySelector('.andar-escolhido button.abrir-arquivo'));
+            const botao = net.el().querySelector('.andar-escolhido button.abrir-arquivo');
+            const r = { linhas: net.registro().slice(-2), uuid: botao?.dataset.uuid ?? null, detalhe: net.texto('.andar-escolhido li') };
+            if (${abrir} && botao) {
+              botao.click();
+              await window.__esperar(() => fromUuidSync(r.uuid)?.sheet?.rendered);
+              const diario = fromUuidSync(r.uuid);
+              Object.assign(r, { aberto: Boolean(diario?.sheet?.rendered), nome: diario?.name, pagina: diario?.pages.contents[0]?.name, texto: diario?.pages.contents[0]?.text.content ?? '' });
+              await diario?.sheet?.close();
+            }
+            return r;
+          })()`);
+        };
+        // Desconecta (sem ninguém, as defesas reiniciam; o arquivo continua identificado) e o mestre reinicia a
+        // arquitetura (o arquivo volta a ser identificável).
+        const reiniciar = async () => {
+          await jogador.evaluate(`(async () => {
+            const net = window.__net;
+            net.clicar('.corredores button[data-action=desconectar]');
+            await window.__esperar(() => !net.eu());
+            return true;
+          })()`);
+          const depoisDeSair = await edge.evaluate(`(game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}'))?.arquivos ?? []).map(a => a.uuid)`);
+          await edge.evaluate(`game.system.api.netrun.pedir('reiniciar', { tile: canvas.scene.tiles.get('${m.tile}').uuid }).then(() => true)`);
+          return depoisDeSair;
+        };
+        // No mestre: os diários desta arquitetura, as mensagens do chat deste netrunner e o estado do ponto.
+        const noMestre = () => edge.evaluate(`(() => {
+          const jogador = game.users.getName('Jogador');
+          const diarios = game.journal.filter(j => j.getFlag('${S}', 'arquivoDaNet') && j.name.includes('${ARQ}'));
+          const mensagens = game.messages.filter(msg => msg.content.includes('copiou um arquivo para o deck') && msg.content.includes('${NOME}'));
+          const msg = mensagens.at(-1);
+          return {
+            diarios: diarios.map(d => ({ uuid: d.uuid, nome: d.name, pasta: d.folder?.name ?? null, padrao: d.ownership.default, jogador: d.ownership[jogador.id] ?? null, flag: d.getFlag('${S}', 'arquivoDaNet') })),
+            mensagens: mensagens.length, sussurro: msg ? [msg.whisper.includes(game.user.id), msg.whisper.includes(jogador.id)] : null, conteudo: msg?.content ?? '',
+            arquivos: (game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}'))?.arquivos ?? []).map(a => a.uuid)
+          };
+        })()`);
+        // 1. A primeira cópia: o diário, o chat e o "Abrir o arquivo".
+        const primeira = await identificar({ abrir: true });
+        const mestre1 = await noMestre();
+        // O mestre vê o mesmo "Abrir o arquivo" na janela dele (a arquitetura inteira).
+        const naJanelaDoMestre = await edge.evaluate(`(async () => {
+          const janela = game.system.api.netrun.janela(canvas.scene.tiles.get('${m.tile}'), { gm: true });
+          await window.__esperar(() => janela.element?.querySelector('[data-action=selecionar][data-no="1a"]'));
+          janela.element.querySelector('[data-action=selecionar][data-no="1a"]').click();
+          await window.__esperar(() => janela.element.querySelector('.andar-escolhido button.abrir-arquivo'));
+          const uuid = janela.element.querySelector('.andar-escolhido button.abrir-arquivo')?.dataset.uuid ?? null;
+          await janela.close();
+          return uuid;
+        })()`);
+        // 2. Depois do reinício e do "Reiniciar": o mesmo diário, sem outro aviso no chat.
+        const saiu2 = await reiniciar();
+        const segunda = await identificar();
+        const mestre2 = await noMestre();
+        // 3. O mestre apaga o diário: o próximo Eye-Dee faz outro, e o estado guarda só o novo.
+        await edge.evaluate(`fromUuid('${primeira.uuid}').then(d => d?.delete()).then(() => true)`);
+        await reiniciar();
+        const terceira = await identificar();
+        const mestre3 = await noMestre();
+        const info = { primeira, mestre1, naJanelaDoMestre, saiu2, segunda, mestre2, terceira, mestre3 };
+        const lugar = `${ARQ} · andar 1`;
+        const copia = `${NOME} copiou o arquivo para o deck (diário “Arquivo: ${lugar}”).`;
+        const [d1] = mestre1.diarios;
+        const ok = primeira.linhas.join(' | ') === `Eye-Dee (10 contra DV 6): ${NOME} identificou o arquivo (Agenda: Três clientes em Watson). | ${copia}`
+          && primeira.detalhe === 'Arquivo DV 6 identificado Agenda: Três clientes em Watson. Abrir o arquivo'
+          && primeira.aberto && primeira.nome === `Arquivo: ${lugar}` && primeira.pagina === 'Agenda'
+          && primeira.texto.startsWith(`<p>Três clientes em Watson.</p><hr><p><i>Copiado por ${NOME} em ${lugar} (DV 6), pelo ponto de acesso Terminal do andar, em `)
+          && mestre1.diarios.length === 1 && d1.uuid === primeira.uuid && d1.pasta === 'Arquivos da NET' && d1.padrao === 0 && d1.jogador === 2
+          && d1.flag?.chave === '1a.0' && /^Item\./.test(d1.flag?.arquitetura ?? '')
+          && mestre1.mensagens === 1 && mestre1.sussurro?.join() === 'true,true' && mestre1.conteudo.includes(`@UUID[${primeira.uuid}]{Arquivo: ${lugar}}`)
+          && mestre1.arquivos.join() === primeira.uuid && naJanelaDoMestre === primeira.uuid
+          && saiu2.join() === primeira.uuid && segunda.linhas[1] === copia && segunda.uuid === primeira.uuid
+          && mestre2.diarios.length === 1 && mestre2.mensagens === 1 && mestre2.arquivos.join() === primeira.uuid
+          && terceira.linhas[1] === copia && terceira.uuid && terceira.uuid !== primeira.uuid
+          && mestre3.diarios.length === 1 && mestre3.diarios[0].uuid === terceira.uuid && mestre3.mensagens === 2 && mestre3.arquivos.join() === terceira.uuid;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
       }
     });
 

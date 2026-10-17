@@ -1082,7 +1082,8 @@ test('Andar e as habilidades contra os andares (wiki, "Ações NET" e "Habilidad
   const { alvo: arquivo } = netrun.alvoDaHabilidade(arq, est, eu, 'eyedee');
   assert.equal(netrun.vistaPublica(arq, { ...est, corredores: [eu] }).find(no => no.id === '2a').conteudos[0].descricao, undefined);
   assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'eyedee', alvo: arquivo, total: 10 }), { texto: 'Eye-Dee (10 contra DV 8): Deck identificou o arquivo (Folha de pagamento: Os salários da clínica).', tipo: 'ok' });
-  assert.deepEqual(netrun.vistaPublica(arq, { ...est, corredores: [eu] }).find(no => no.id === '2a').conteudos[0], { chave: '2a.0', tipo: 'arquivo', dv: 8, feito: true, nome: 'Folha de pagamento', descricao: 'Os salários da clínica.' });
+  // (o diário do arquivo copiado vem do motor, arquivos.mjs: aqui não há nenhum.)
+  assert.deepEqual(netrun.vistaPublica(arq, { ...est, corredores: [eu] }).find(no => no.id === '2a').conteudos[0], { chave: '2a.0', tipo: 'arquivo', dv: 8, feito: true, nome: 'Folha de pagamento', descricao: 'Os salários da clínica.', diario: '' });
   // Pathfinder do 2A com 7: o 3A (o nó DV 8, maior que 7) aparece e barra o 4A; o 3B aparece. De novo, nada novo.
   assert.deepEqual(netrun.resolverHabilidade(arq, est, eu, { chave: 'pathfinder', total: 7 }), { texto: 'Pathfinder (7): Deck revelou 2 andares.', tipo: 'ok' });
   assert.deepEqual(est.vistos, ['1a', '2a', '3a', '3b']);

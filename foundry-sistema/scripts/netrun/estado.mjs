@@ -19,6 +19,7 @@ import {
   PRISAO_DO_KRAKEN, quemRolaNaNet, resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, respostaDoJogador, resumoDoAndar, rezDe, rezMaxDe,
   vistaPublica
 } from './regras-da-net.mjs';
+import { copiarArquivo } from './arquivos.mjs';
 import { acionar as acionarLigacao, devolver, ligacoesDo } from './ligacoes.mjs';
 import { erro } from './socket.mjs';
 
@@ -40,8 +41,9 @@ export async function arquiteturaDoPonto(ponto) {
 export const emCombate = token => game.combats.some(combate => combate.started && combate.combatants.some(item => item.tokenId === token.id && item.sceneId === token.parent.id));
 
 // ---------------- Estado ----------------
-// assumidos: os tokens da cena que um netrunner assumiu por um nó de controle (ligacoes.mjs), com a permissão de antes.
-const estadoNovo = (ponto, arq) => ({ v: 1, arquitetura: ponto.arquitetura, nome: arq.nome, dv: arq.dv, mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [], assumidos: [], nos: [], log: [] });
+// assumidos: os tokens da cena que um netrunner assumiu por um nó de controle (ligacoes.mjs), com a permissão de antes;
+// arquivos: os diários dos arquivos que o Eye-Dee copiou (arquivos.mjs).
+const estadoNovo = (ponto, arq) => ({ v: 1, arquitetura: ponto.arquitetura, nome: arq.nome, dv: arq.dv, mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [], assumidos: [], arquivos: [], nos: [], log: [] });
 
 function registrar(est, texto, tipo = 'info') {
   est.log = [...est.log, { t: Date.now(), texto, tipo }].slice(-LOG_MAX);
@@ -67,6 +69,7 @@ async function contexto(dados, usuario, { precisaCorredor = true } = {}) {
   if (!est || est.arquitetura !== ponto.arquitetura) est = estadoNovo(ponto, arq);
   Object.assign(est, { dv: arq.dv, nome: arq.nome });
   est.assumidos ??= [];
+  est.arquivos ??= [];
   const corredor = token ? est.corredores.find(item => item.token === token.id) : null;
   if (precisaCorredor && !corredor) throw erro('Este netrunner não está conectado a este ponto de acesso.');
   return { tile, token, ponto, arq, est, corredor, ator: token?.actor ?? null, usuario, havia: est.corredores.length, desmarcar: [] };
@@ -451,6 +454,11 @@ export const operacoes = {
       linha = resolverSlide(corredor, alvo, { total: rolagem.total, per: await rolagemDoInimigo(alvo, 'per') });
     } else linha = resolverHabilidade(arq, est, corredor, { chave, alvo, total: rolagem.total, dvVirus: virus?.dv, texto });
     registrar(est, linha.texto, linha.tipo);
+    // O Eye-Dee que passa copia o arquivo para o deck (arquivos.mjs); copiar não é Ação NET.
+    if (chave === 'eyedee' && linha.tipo === 'ok') {
+      const registro = await copiarArquivo({ est, arq, ponto: ctx.ponto, conteudo: alvo, corredor, token });
+      registrar(est, `${corredor.nome} copiou o arquivo para o deck (diário “${registro.nome}”).`, 'ok');
+    }
     await concluir(ctx);
     return { total: rolagem.total };
   },
@@ -626,6 +634,8 @@ export const operacoes = {
     if (ctx.est.corredores.length) throw erro('Tem netrunner conectado: desconecte antes de reiniciar.');
     await devolver(ctx.tile.parent, ctx.est);
     const est = estadoNovo(ctx.ponto, ctx.arq);
+    // Os diários dos arquivos copiados continuam (são dos jogadores; o mesmo arquivo identificado de novo usa o seu).
+    est.arquivos = ctx.est.arquivos;
     registrar(est, 'O mestre reiniciou a arquitetura.', 'info');
     await gravar(ctx.tile, ctx.arq, est);
     await tirarInimigos(ctx.tile);
