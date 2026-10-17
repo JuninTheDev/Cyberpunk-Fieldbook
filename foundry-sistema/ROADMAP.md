@@ -21,7 +21,7 @@ de compêndio; entram só as partes do sistema.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 85). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 86). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -117,7 +117,9 @@ de compêndio; entram só as partes do sistema.
     netrunner inimigo entre quem segura a descida): ciclo 55;
   - [x] o jogador rolando as próprias rolagens, pela janela de rolagem dele (a configuração "O jogador rola as rolagens
     da NET"; o mestre rola sem resposta no prazo): ciclo 56;
-  - [ ] os nós de controle ligados à cena, os arquivos do Eye-Dee e o editor visual;
+  - [x] os nós de controle ligados à cena (as portas, as luzes, os sons e os tokens, pela configuração do ponto, e os
+    comandos na janela do netrunner que toma o nó): ciclo 85;
+  - [ ] os arquivos do Eye-Dee e o editor visual;
   - [ ] o Scanner (achar o ponto oculto, com o DV da configuração) e a parede entre o token e o ponto (a wiki: "sem
     parede no meio"; ver as dúvidas).
 - [ ] **C9. A NET de 2077 (Mission Kit):**

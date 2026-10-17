@@ -141,6 +141,9 @@ export function registrarNet() {
     else if (token?.getFlag(SISTEMA, FLAG_INIMIGO)) vezDoInimigo(combate.combatant, { alvos: alvosNaVez, pedir }).catch(falha => ui.notifications.warn(falha.message));
   });
   for (const gancho of ['deleteCombat', 'createCombatant', 'deleteCombatant']) Hooks.on(gancho, () => JanelaDaNet.redesenhar());
+  // As portas, as luzes e os sons ligados aos nós de controle (ligacoes.mjs): a janela mostra a situação nova, também
+  // quando o mestre os muda pela cena.
+  for (const gancho of ['updateWall', 'updateAmbientLight', 'updateAmbientSound']) Hooks.on(gancho, documento => JanelaDaNet.redesenhar(janela => janela.tile.parent?.id === documento.parent?.id));
 
   // A ficha do netrunner (a Sorte preparada, o cyberdeck, a Interface): a janela dele redesenha.
   const janelasDoAtor = ator => JanelaDaNet.redesenhar(janela => (estadoDoTile(janela.tile)?.corredores ?? []).some(corredor => corredor.ator === ator?.id));

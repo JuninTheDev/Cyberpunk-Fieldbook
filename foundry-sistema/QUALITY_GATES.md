@@ -100,6 +100,10 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   aviso sumiu, confira o fluxo (no ciclo 82, um G4 de diagnóstico mostrou que a rajada da Lexington voltava nula, com 5
   notificações na tela, como antes). E o recado que não é problema (a instalação deu certo) vai como `info`, que o
   console registra como `info`, fora da checagem.
+- **Um caminho de reserva esconde a mutação** (ciclo 85): quando o mesmo efeito vem por dois caminhos (o token
+  assumido volta na desconexão e também no reinício das defesas; a lista da janela some pelo filtro do código e pela
+  condição do modelo), o passo monta o caso em que só um deles vale: o ponto sem o reinício, dois nós de controle no
+  andar e só um tomado. No ciclo 85, com um nó só e o reinício ligado, as duas mutações sobreviveram.
 - **A ordem do que o `createEmbeddedDocuments` devolve:** criando vários documentos de uma vez (tokens, combatentes), a
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do

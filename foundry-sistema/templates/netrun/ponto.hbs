@@ -24,6 +24,18 @@ o alcance, o DV, os requisitos e se o ponto é oculto. --}}
     <label>DV do Scanner <input type="number" name="dvScanner" value="{{ponto.dvScanner}}" min="2" max="30"></label>
   </div>
   <label class="caixa"><input type="checkbox" name="reiniciar" {{checked ponto.reiniciar}}> Sem ninguém conectado, a arquitetura reinicia as defesas (RED p. 198)</label>
+  <fieldset class="ligacoes">
+    <legend>Nós de controle ligados à cena</legend>
+    <p class="dica">Quem toma o nó (o Control) comanda daqui, pela janela da NET: as portas (abrir, fechar, trancar), as luzes e os sons (ligar, desligar) e os tokens (assumir o controle até desconectar). Cada comando gasta 1 Ação NET.</p>
+    {{#if trocou}}<p class="dica">Salve para ligar os nós da arquitetura nova.</p>{{/if}}
+    {{#each controles}}
+    <div class="ligar" data-controle="{{chave}}">
+      <b>{{rotulo}}</b>{{#if descricao}}<p class="dica">{{descricao}}</p>{{/if}}
+      <ul class="chips">{{#each ligadas}}<li><i class="fa-solid {{icone}}" inert></i> {{nome}}<button type="button" data-action="mostrar" data-indice="{{indice}}" data-tooltip="Mostrar na cena"><i class="fa-solid fa-location-crosshairs" inert></i></button><button type="button" data-action="desligar" data-indice="{{indice}}" data-tooltip="Desligar"><i class="fa-solid fa-xmark" inert></i></button></li>{{else}}<li class="nada">Nada ligado: o nó só aceita comandos narrados.</li>{{/each}}</ul>
+      {{#if @root.escolhas.length}}<div class="linha"><select data-escolha="{{chave}}" aria-label="O que ligar">{{#each @root.escolhas}}<optgroup label="{{rotulo}}">{{#each opcoes}}<option value="{{valor}}">{{nome}}</option>{{/each}}</optgroup>{{/each}}</select><button type="button" data-action="ligar" data-controle="{{chave}}"><i class="fa-solid fa-link" inert></i> Ligar</button></div>{{else}}<p class="dica">A cena não tem portas, luzes, sons nem tokens para ligar.</p>{{/if}}
+    </div>
+    {{else}}<p class="dica">{{#if comArquitetura}}A arquitetura não tem nós de controle.{{else}}Escolha e salve uma arquitetura para ligar os nós de controle.{{/if}}</p>{{/each}}
+  </fieldset>
   <footer class="form-footer">
     <button type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
     {{#if ponto.arquitetura}}<button type="button" data-action="abrirArquitetura">Abrir a arquitetura</button><button type="button" data-action="reiniciar">Reiniciar</button>{{/if}}

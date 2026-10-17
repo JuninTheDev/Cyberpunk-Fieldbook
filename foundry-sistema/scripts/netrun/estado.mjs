@@ -19,6 +19,7 @@ import {
   PRISAO_DO_KRAKEN, quemRolaNaNet, resolverAtaque, resolverAtaqueDePrograma, resolverHabilidade, resolverSlide, resolverVelocidade, resolverZap, respostaDoJogador, resumoDoAndar, rezDe, rezMaxDe,
   vistaPublica
 } from './regras-da-net.mjs';
+import { acionar as acionarLigacao, devolver, ligacoesDo } from './ligacoes.mjs';
 import { erro } from './socket.mjs';
 
 const LOG_MAX = 60;
@@ -39,7 +40,8 @@ export async function arquiteturaDoPonto(ponto) {
 export const emCombate = token => game.combats.some(combate => combate.started && combate.combatants.some(item => item.tokenId === token.id && item.sceneId === token.parent.id));
 
 // ---------------- Estado ----------------
-const estadoNovo = (ponto, arq) => ({ v: 1, arquitetura: ponto.arquitetura, nome: arq.nome, dv: arq.dv, mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [], nos: [], log: [] });
+// assumidos: os tokens da cena que um netrunner assumiu por um nó de controle (ligacoes.mjs), com a permissão de antes.
+const estadoNovo = (ponto, arq) => ({ v: 1, arquitetura: ponto.arquitetura, nome: arq.nome, dv: arq.dv, mapa: false, vistos: [], feitos: [], ices: [], fora: [], corredores: [], assumidos: [], nos: [], log: [] });
 
 function registrar(est, texto, tipo = 'info') {
   est.log = [...est.log, { t: Date.now(), texto, tipo }].slice(-LOG_MAX);
@@ -64,6 +66,7 @@ async function contexto(dados, usuario, { precisaCorredor = true } = {}) {
   let est = foundry.utils.deepClone(estadoDoTile(tile));
   if (!est || est.arquitetura !== ponto.arquitetura) est = estadoNovo(ponto, arq);
   Object.assign(est, { dv: arq.dv, nome: arq.nome });
+  est.assumidos ??= [];
   const corredor = token ? est.corredores.find(item => item.token === token.id) : null;
   if (precisaCorredor && !corredor) throw erro('Este netrunner não está conectado a este ponto de acesso.');
   return { tile, token, ponto, arq, est, corredor, ator: token?.actor ?? null, usuario, havia: est.corredores.length, desmarcar: [] };
@@ -88,6 +91,8 @@ async function retirar(ctx, corredor, { inseguro = false, motivo = '', exceto = 
   registrar(ctx.est, `${corredor.nome} desconectou${inseguro ? ' de forma insegura' : ''}${motivo ? ` (${motivo})` : ''}.`, inseguro ? 'falha' : 'info');
   if (inseguro) for (const ice of iceDaQueda(ctx.arq, ctx.est, corredor, exceto)) await aplicarEfeito(ctx, corredor, ice);
   ctx.est.corredores = ctx.est.corredores.filter(item => item.token !== corredor.token);
+  // Os tokens que ele assumiu pelos nós de controle voltam ao dono de sempre.
+  await devolver(ctx.tile.parent, ctx.est, item => item.usuario === corredor.usuario);
   ctx.desmarcar.push(corredor.token);
 }
 
@@ -104,7 +109,10 @@ async function marcarToken(token, tile, ligado) {
 async function concluir(ctx) {
   const { est, tile, arq, ponto } = ctx;
   const reinicia = ctx.havia > 0 && !est.corredores.length && ponto.reiniciar !== false;
-  if (reinicia) reiniciarDefesas(ctx);
+  if (reinicia) {
+    reiniciarDefesas(ctx);
+    await devolver(tile.parent, est);
+  }
   await gravar(tile, arq, est);
   for (const id of ctx.desmarcar) {
     const token = tile.parent.tokens.get(id);
@@ -134,6 +142,9 @@ export async function soltarTokens(tile) {
     const token = tile.parent?.tokens.get(corredor.token);
     if (token) await marcarToken(token, tile, false);
   }
+  // Os tokens assumidos pelos nós de controle voltam ao dono de sempre.
+  const est = foundry.utils.deepClone(estadoDoTile(tile) ?? {});
+  if (tile.parent && est.assumidos?.length) await devolver(tile.parent, est);
   await tirarInimigos(tile);
 }
 
@@ -458,6 +469,29 @@ export const operacoes = {
     return { ok: true };
   },
 
+  // Um comando numa coisa da cena ligada ao nó de controle tomado neste andar (a porta, a luz, o som, o token: o NET
+  // Architect da mesa; a wiki: 1 Ação NET por comando). O texto vai ao registro.
+  async acionar(dados, usuario) {
+    const ctx = await contexto(dados, usuario);
+    const { arq, est, corredor, token, tile, ponto } = ctx;
+    const controle = conteudosDoNo(arq, corredor.no).find(conteudo => conteudo.tipo === 'controle' && conteudo.chave === dados.controle);
+    if (!controle) throw erro('Este nó de controle não está no seu andar.');
+    if (!est.feitos.includes(controle.chave)) throw erro('Tome o nó de controle (Control) antes de comandar.');
+    const ligacao = ligacoesDo(ponto, controle.chave)[Number(dados.indice)];
+    if (!ligacao) throw erro('Este nó de controle não comanda isso.');
+    const semAcao = gastarAcoes(corredor, { emCombate: emCombate(token), mestre: usuario.isGM });
+    if (semAcao) throw erro(semAcao);
+    let texto;
+    try {
+      texto = await acionarLigacao(tile.parent, ligacao, dados.acao, { est, usuarioId: corredor.usuario });
+    } catch (falha) {
+      throw erro(falha.message);
+    }
+    registrar(est, `${corredor.nome} pelo nó de controle: ${texto}.`, 'ok');
+    await concluir(ctx);
+    return { ok: true };
+  },
+
   // O mestre revela um andar ou o mapa inteiro.
   async revelar(dados, usuario) {
     if (!usuario.isGM) throw erro('Só o mestre revela andares.');
@@ -590,6 +624,7 @@ export const operacoes = {
     if (!usuario.isGM) throw erro('Só o mestre reinicia a arquitetura.');
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
     if (ctx.est.corredores.length) throw erro('Tem netrunner conectado: desconecte antes de reiniciar.');
+    await devolver(ctx.tile.parent, ctx.est);
     const est = estadoNovo(ctx.ponto, ctx.arq);
     registrar(est, 'O mestre reiniciou a arquitetura.', 'info');
     await gravar(ctx.tile, ctx.arq, est);

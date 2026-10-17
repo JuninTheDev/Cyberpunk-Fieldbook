@@ -5036,6 +5036,8 @@ module.exports = async ({ edge, servidores, r }) => {
             return net.eu()?.no;
           }
         };
+        // O token e o Tile chegam ao canvas do jogador depois do do mestre (sem esperar, o control às vezes não acha o token).
+        await window.__esperar(() => canvas.tokens.get('${m.token}') && canvas.tiles.get('${m.tile}'));
         canvas.tokens.get('${m.token}').control({ releaseOthers: true });
         await game.system.api.netrun.abrir(tile());
         await window.__esperar(() => net.el()?.querySelector('.mapa-net .no') && net.pronta());
@@ -5271,6 +5273,103 @@ module.exports = async ({ edge, servidores, r }) => {
         return [ok, JSON.stringify({ andou, backdoor1, backdoor2, cartao, desceu, eyedee, pathfinder, controle, mestre, revelado, fundo, pergunta, virus })];
       } finally {
         await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
+    await r.passo('os nós de controle ligados à cena (o NET Architect da mesa): na configuração do ponto, o mestre liga ao nó uma porta, uma luz e um token (e ao outro nó do andar, outra luz); quem toma o nó (Control) vê na janela só o que é dele, com a situação e os comandos: abre a porta, desliga a luz e assume a torreta (o jogador fica dono), cada comando no registro; ao desconectar (o ponto sem o reinício das defesas), a torreta volta ao dono de sempre', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner Ligado';
+      const ARQ = 'Teste Arquitetura Ligada';
+      let cenario = null;
+      try {
+        const m = await montarNet({ nome: NOME, arquitetura: ARQ, andares: [{ andar: 1, ramo: 'a', tipo: 'controle', dv: 6, descricao: 'A portaria' }, { andar: 1, ramo: 'a', tipo: 'controle', dv: 6, descricao: 'A garagem' }] });
+        // 1. O mestre põe na cena uma porta, duas luzes e a torreta e, na configuração do ponto, liga a porta, a primeira luz e
+        // a torreta à portaria (1a.0) e a segunda luz à garagem (1a.1). Sem o reinício das defesas: a torreta só volta pela
+        // desconexão.
+        cenario = await edge.evaluate(`(async () => {
+          const [porta] = await canvas.scene.createEmbeddedDocuments('Wall', [{ c: [1400, 1100, 1400, 1300], door: 1, ds: 0 }]);
+          const [luz] = await canvas.scene.createEmbeddedDocuments('AmbientLight', [{ x: 1500, y: 1200, config: { dim: 2, bright: 1 } }]);
+          const [luz2] = await canvas.scene.createEmbeddedDocuments('AmbientLight', [{ x: 1600, y: 1200, config: { dim: 2, bright: 1 } }]);
+          const torreta = await Actor.implementation.create({ name: 'Teste Torreta', type: 'personagem' });
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await torreta.getTokenDocument({ x: 1300, y: 1300 })).toObject()]);
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const janela = await game.system.api.netrun.configurar(tile);
+          const el = () => janela.element;
+          await window.__esperar(() => el()?.querySelector('[data-escolha="1a.0"]'));
+          const semNada = el().querySelector('.ligar .chips')?.textContent.replace(/\\s+/g, ' ').trim();
+          for (const [controle, valor] of [['1a.0', 'porta:' + porta.id], ['1a.0', 'luz:' + luz.id], ['1a.0', 'token:' + token.id], ['1a.1', 'luz:' + luz2.id]]) {
+            const antes = el().querySelectorAll('.ligar .chips li:not(.nada)').length;
+            el().querySelector('[data-escolha="' + controle + '"]').value = valor;
+            el().querySelector('button[data-action=ligar][data-controle="' + controle + '"]').click();
+            await window.__esperar(() => el()?.querySelectorAll('.ligar .chips li:not(.nada)').length === antes + 1);
+          }
+          const chips = [...el().querySelectorAll('.ligar .chips li')].map(li => li.textContent.replace(/\\s+/g, ' ').trim());
+          el().querySelector('input[name=reiniciar]').checked = false;
+          el().querySelector('button[type=submit]').click();
+          await window.__esperar(() => (tile.getFlag('${S}', 'pontoDeAcesso')?.ligacoes ?? []).length === 4 && !janela.rendered);
+          const salvo = tile.getFlag('${S}', 'pontoDeAcesso');
+          return { porta: porta.id, luz: luz.id, luz2: luz2.id, token: token.id, torreta: torreta.id, semNada, chips, reinicia: salvo.reiniciar, salvas: salvo.ligacoes.map(l => l.controle + ':' + l.tipo).join() };
+        })()`);
+        // 2. No jogador: o Control (4 + 7 = 11 contra a DV 6) toma a portaria; a janela mostra as três coisas dela (a luz da
+        // garagem, que ninguém tomou, não).
+        await fixar(edge, [[7, 10]]);
+        const tomou = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          await net.ir('1a');
+          const antes = net.el().querySelectorAll('.ligacoes li').length;
+          net.clicar('button[data-habilidade=control]');
+          const linha = await net.esperarRegistro('Control (');
+          await window.__esperar(() => net.el().querySelectorAll('.ligacoes li').length === 3);
+          return { antes, linha, itens: [...net.el().querySelectorAll('.ligacoes li')].map(li => [...li.children].map(parte => parte.textContent.trim()).filter(Boolean).join(' ')) };
+        })()`);
+        // 3. Os comandos: abrir a porta, desligar a luz, assumir a torreta.
+        const comandos = await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          const clicar = async (acao, texto) => {
+            net.clicar('.ligacoes button[data-action=acionar][data-acao=' + acao + ']');
+            return net.esperarRegistro(texto);
+          };
+          const r = {};
+          r.porta = await clicar('abrir', ': aberta');
+          await window.__esperar(() => canvas.scene.walls.get('${cenario.porta}')?.ds === 1);
+          r.luz = await clicar('desligar', ': desligada');
+          r.assumiu = await clicar('assumir', ': sob controle do netrunner');
+          await window.__esperar(() => game.actors.get('${cenario.torreta}')?.isOwner);
+          r.dono = game.actors.get('${cenario.torreta}')?.isOwner;
+          r.itens = [...net.el().querySelectorAll('.ligacoes li')].map(li => [...li.children].map(parte => parte.textContent.trim()).filter(Boolean).join(' '));
+          return r;
+        })()`);
+        const naCena = await edge.evaluate(`({ ds: canvas.scene.walls.get('${cenario.porta}').ds, apagada: canvas.scene.lights.get('${cenario.luz}').hidden, assumidos: game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}')).assumidos.length })`);
+        // 4. Desconectado, a torreta volta ao dono de sempre.
+        await jogador.evaluate(`(async () => {
+          const net = window.__net;
+          net.clicar('.corredores button[data-action=desconectar]');
+          await window.__esperar(() => !net.eu());
+          await window.__esperar(() => !game.actors.get('${cenario.torreta}')?.isOwner);
+          return true;
+        })()`);
+        const depois = await edge.evaluate(`(() => { const jogador = game.users.getName('Jogador'); return { permissao: game.actors.get('${cenario.torreta}').ownership[jogador.id] ?? null, assumidos: game.system.api.netrun.estado(canvas.scene.tiles.get('${m.tile}')).assumidos.length }; })()`);
+        const info = { cenario, tomou, comandos, naCena, depois };
+        const [porta, luz, torreta] = tomou.itens;
+        const ok = cenario.semNada === 'Nada ligado: o nó só aceita comandos narrados.' && cenario.chips.length === 4 && cenario.chips[0].includes('(1400, 1200)') && cenario.chips[2] === 'Teste Torreta' && cenario.chips[3].includes('(1600, 1200)')
+          && cenario.salvas === '1a.0:porta,1a.0:luz,1a.0:token,1a.1:luz' && cenario.reinicia === false
+          && tomou.antes === 0 && tomou.linha === `Control (11 contra DV 6): ${NOME} tomou o nó de controle (A portaria).` && tomou.itens.length === 3
+          && /\(1400, 1200\) fechada Abrir Trancar$/.test(porta) && /\(1500, 1200\) ligada Desligar$/.test(luz) && torreta === 'Teste Torreta com o dono de sempre Assumir'
+          && /^Teste Netrunner Ligado pelo nó de controle: Porta \d+ \(1400, 1200\): aberta\.$/.test(comandos.porta) && /: desligada\.$/.test(comandos.luz)
+          && comandos.assumiu === `${NOME} pelo nó de controle: Teste Torreta: sob controle do netrunner.` && comandos.dono && comandos.itens[2] === 'Teste Torreta sob controle do netrunner Devolver'
+          && naCena.ds === 1 && naCena.apagada && naCena.assumidos === 1 && depois.permissao === null && depois.assumidos === 0;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await desmontarNet({ nome: NOME, arquitetura: ARQ });
+        if (cenario) {
+          await edge.evaluate(`(async () => {
+            await canvas.scene.deleteEmbeddedDocuments('Wall', ['${cenario.porta}'].filter(id => canvas.scene.walls.get(id)));
+            await canvas.scene.deleteEmbeddedDocuments('AmbientLight', ['${cenario.luz}', '${cenario.luz2}'].filter(id => canvas.scene.lights.get(id)));
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${cenario.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await game.actors.get('${cenario.torreta}')?.delete();
+            return true;
+          })()`);
+        }
       }
     });
 

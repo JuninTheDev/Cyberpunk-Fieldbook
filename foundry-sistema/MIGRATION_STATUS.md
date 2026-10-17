@@ -68,7 +68,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | a janela da NET no visual novo (o topo com o netrunner e as Ações NET em losangos, o mapa com a cor de cada andar e os cabos, o painel ao lado, as habilidades com a base da rolagem, o registro com a hora) | refeita no ciclo 58 (o pedido do usuário, a partir da maquete dele, que não cobre tudo) |
 | sistema | os cartões do chat no visual novo (a faixa e o tipo na linha de cima, os dados em caixas com o total grande, as etiquetas do resultado e a barra de HP) | refeitos no ciclo 59 (o pedido do usuário, pela maquete dele; os botões da maquete sem função no sistema ficaram de fora) |
 | sistema | a ficha nas abas das maquetes (Combate, Equipamento, Cyberware, Role e NET em duas colunas, com os números em grande; a Vida em painéis) e as fichas dos itens (o tipo na cor, as abas, as células) | refeitas nos ciclos 60 a 62 (as funções das maquetes que o sistema não tem ficaram de fora) |
-| NET Architect | os nós de controle ligados à cena, os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
+| NET Architect | os nós de controle ligados à cena (as portas, as luzes, os sons e os tokens: a configuração no ponto e os comandos na janela) | portados no ciclo 85 (o C8, parte 11) |
+| NET Architect | os arquivos copiados, o Scanner, o editor visual | falta (o C8) |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -3990,6 +3991,66 @@ O "+ Foundation" e o "+ Option" da maquete "Cyberware Tab" e o "Install option" 
     (E4), o seletor na opção guardada (E5) e o seletor com todas as fundações (E6).
 - **Pendências:** nenhuma da fundação e das opções. Das maquetes, segue a lista do ROADMAP.
 - **Próximo:** o próximo item do ROADMAP.
+
+### Ciclo 85 (2026-10-17): o C8, parte 11: os nós de controle ligados à cena (sessão KouArt)
+
+O que o NET Architect da mesa faz com o nó de controle tomado (`foundry-net-architect/scripts/ligacoes.mjs`, com a
+configuração no ponto de acesso e os comandos na janela), portado para o sistema. Commit anterior: `2fed950` (ciclo 84).
+
+- **A referência (o NET Architect da mesa):** cada ponto de acesso diz, para cada nó de controle da arquitetura, que
+  portas, luzes, sons e tokens ele comanda (as ligações ficam no ponto: a mesma arquitetura serve para cenas
+  diferentes). Quem toma o nó (o Control) comanda pela janela, 1 Ação NET por comando: a porta abre, fecha e tranca; a
+  luz e o som ligam e desligam; o token, o jogador assume até desconectar (vira dono dele), e ele volta ao dono de sempre
+  quando o netrunner sai ou quando a arquitetura reinicia.
+- **Implementado:**
+  - **`scripts/netrun/ligacoes.mjs`** (novo, o port do da mesa): o que a cena tem para ligar, com um nome legível (a
+    porta e a luz pela posição; os tokens dos inimigos da NET ficam de fora), as ligações de cada nó, a situação de cada
+    coisa com os comandos, o comando (no mestre ativo) e a devolução dos tokens assumidos. A devolução troca a permissão
+    inteira (`ForcedReplacement`, como a janela de permissões do Foundry 14): o "ownership.<id>" com o `_del` não passa na
+    validação do Foundry 14 (foi o que o primeiro G4 mostrou);
+  - **o motor** (`estado.mjs`): os tokens assumidos no estado do ponto; a operação `acionar` (o nó tem de estar no andar
+    do netrunner e tomado; a ligação tem de ser daquele nó; a Ação NET em combate; o texto no registro); a devolução
+    quando o netrunner sai (com segurança, de forma insegura, ou com o token apagado), quando as defesas reiniciam, no
+    "Reiniciar" do mestre e com o Tile apagado;
+  - **a configuração do ponto** (`ponto-de-acesso.mjs` e `ponto.hbs`): o campo "Nós de controle ligados à cena", com
+    cada nó de controle da arquitetura salva (o andar, o ramo, o DV e a descrição), o que já está ligado (com "Mostrar
+    na cena" e "Desligar") e a lista do que a cena tem, com "Ligar". O que já foi digitado na janela fica ao ligar e
+    desligar (o rascunho, como no da mesa); trocar de arquitetura pede salvar antes de ligar;
+  - **a janela da NET:** com o nó tomado no andar do netrunner, cada coisa ligada com a situação e os comandos (abaixo
+    da caixa do comando narrado); a janela se redesenha também quando o mestre muda a porta, a luz ou o som pela cena.
+- **Testes:**
+  - G1: 57 arquivos (2 novos: o módulo e o teste), 0 erros; G2: 0 erros;
+  - G3: 96 de 100. Um arquivo novo, `tests/sistema/ligacoes.test.mjs`, com 3 testes de referência sobre uma cena de
+    mentira: o que a cena oferece e com que nome (só a parede com porta; sem os inimigos da NET), as ligações de cada nó
+    na ordem e a situação de cada coisa com os comandos (a porta fechada, aberta e trancada; a luz; o som; o token com o
+    dono e assumido; o objeto que saiu da cena). As 4 falhas são as das armas de 2077;
+  - G4: 107 de 112 (as 5 falhas são as das armas de 2077). Um passo novo, depois do andar e das habilidades na NET: o
+    andar 1 tem dois nós de controle (a portaria e a garagem). O mestre põe na cena uma porta, duas luzes e a torreta (um
+    ator sem dono) e, na configuração do ponto, liga a porta, a primeira luz e a torreta à portaria e a segunda luz à
+    garagem ("Nada ligado" antes; os chips "Porta 1 (1400, 1200)", "Luz 1 (1500, 1200)", "Teste Torreta" e a luz em
+    (1600, 1200); salvo, as quatro no ponto, cada uma com o seu nó), e desmarca o reinício das defesas. No jogador, antes
+    do Control, nenhuma ligação na janela; o Control (11 contra a DV 6) toma a portaria, e a janela mostra só as três
+    dela com a situação e os comandos ("fechada Abrir Trancar", "ligada Desligar", "com o dono de sempre Assumir"; a luz
+    da garagem, não). Abrir, Desligar e Assumir vão ao registro; a porta abre, a luz apaga e o jogador fica dono da
+    torreta. Desconectado, a torreta volta ao dono de sempre (sem a permissão do jogador) e o estado fica sem nenhum token
+    assumido: sem o reinício, quem devolve é a desconexão;
+    - rodou cinco vezes: na primeira, a devolução com o `_del` falhou na validação do Foundry 14 (o erro no console, e o
+      jogador continuou dono: um defeito de verdade, corrigido com o `ForcedReplacement`), e o teste lia a linha inteira
+      da janela, que não tem espaço entre as partes; na segunda, só o teste: as regex do lado do Node com as barras
+      dobradas, como se fossem para o navegador; a terceira passou, mas, com um nó só e o reinício ligado, duas mutações
+      sobreviveram (ver abaixo); na quarta, com a garagem e sem o reinício, o passo novo passou, e um passo antigo, o do
+      encontro com o Black ICE, falhou uma vez ("reading 'control'"): o `montarNet` do cenário dava o `control` no token
+      do jogador sem esperar o token chegar ao canvas dele (o do mestre já esperava). O mesmo passo passou nas outras
+      rodadas; agora o jogador espera o token e o Tile antes. A quinta passou;
+  - **mutações:** as 8 caíram, e os arquivos voltaram (conferido pelo md5). No G3: a porta que oferece o comando do estado
+    em que já está (F1) e os inimigos da NET na lista do que ligar (F2). No G4: a janela que mostra as ligações do nó que
+    ninguém tomou (F3) e quem desconecta sem devolver o token (F4), as duas só depois do reforço (com um nó por andar, a
+    janela já esconde tudo antes do Control; com o reinício, a arquitetura devolve o token pelo outro caminho), o "Ligar"
+    que não liga (F5), o salvar que perde as ligações novas (F6), o "Abrir" que tranca (F7) e o "Assumir" que não dá o
+    token (F8).
+- **Pendências:** o C8 segue com os arquivos do Eye-Dee e o editor visual, e o Scanner e a parede. O "Tirar o ponto" da
+  configuração ainda apaga as flags com o "-=" (o Foundry 14 avisa que saiu; ver no próximo ciclo da NET).
+- **Próximo:** o C8, parte 12.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

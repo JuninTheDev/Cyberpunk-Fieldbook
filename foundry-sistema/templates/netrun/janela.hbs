@@ -144,6 +144,11 @@ o texto de cada parte continuar o mesmo. --}}
       {{#if netrunner.fundo}}<input type="text" data-texto="virus" maxlength="200" value="{{netrunner.textos.virus}}" placeholder="O que o vírus faz (o mestre define a DV e as Ações NET)">{{/if}}
       {{#if netrunner.controle}}
       <div class="comando"><input type="text" data-texto="comando" maxlength="200" value="{{netrunner.textos.comando}}" placeholder="Comando para o nó de controle tomado (o mestre narra)"><button type="button" data-action="comandar" {{#if ocupado}}disabled{{/if}}>Comandar</button></div>
+      {{#if netrunner.ligacoes.length}}
+      <ul class="ligacoes" data-tooltip="O que o nó de controle comanda na cena: 1 Ação NET por comando">
+        {{#each netrunner.ligacoes}}<li><i class="fa-solid {{icone}}" inert></i><b>{{nome}}</b><small>{{texto}}</small>{{#each acoes}}<button type="button" data-action="acionar" data-controle="{{../controle}}" data-indice="{{../indice}}" data-acao="{{this.[0]}}" {{#if @root.ocupado}}disabled{{/if}}>{{this.[1]}}</button>{{/each}}</li>{{/each}}
+      </ul>
+      {{/if}}
       {{/if}}
     </section>
     {{/if}}

@@ -68,8 +68,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Na NET** (o motor do NET Architect, no mestre ativo): o jogador anda pelo mapa da janela (clica no andar e em "Ir
   para cá"; andar não é Ação NET, e a senha trava a descida) e usa as habilidades de Interface contra os andares: o
   Pathfinder revela o mapa até a obstrução com DV maior, o Backdoor quebra a senha, o Eye-Dee identifica o arquivo, o
-  Control toma o nó de controle (e manda os comandos, que o mestre narra), o Cloak esconde os rastros e o Virus, no
-  andar mais fundo, tem a DV e as Ações NET que o mestre põe. Passa quem tira mais que a DV. Em combate, as Ações NET
+  Control toma o nó de controle (e manda os comandos, que o mestre narra; e, ciclo 85, comanda o que o mestre ligou a
+  ele na configuração do ponto: as portas, que abrem, fecham e trancam, as luzes e os sons, que ligam e desligam, e os
+  tokens, que o jogador assume até desconectar, 1 Ação NET por comando, como o NET Architect da mesa), o Cloak esconde
+  os rastros e o Virus, no andar mais fundo, tem a DV e as Ações NET que o mestre põe. Passa quem tira mais que a DV. Em combate, as Ações NET
   contam (as do Rank por turno, de volta no turno do netrunner); a desconexão insegura sai sem gastar. Por enquanto
   quem rola é o mestre, com a Sorte preparada na ficha. O mestre vê a arquitetura inteira, age pelo netrunner
   escolhido, revela andares e zera as Ações NET. O Black ICE e o demônio do andar seguram a descida até caírem (o Black

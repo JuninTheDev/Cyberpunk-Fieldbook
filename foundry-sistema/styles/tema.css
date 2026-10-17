@@ -784,6 +784,15 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.net-config fieldset { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-amarelo); }
 .cpr-fieldbook.net-config legend { padding: 0 4px; color: var(--cp-amarelo); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
 .cpr-fieldbook.net-config .form-footer { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Os nós de controle ligados à cena: cada nó com o que já está ligado (os chips) e a lista do que a cena tem. */
+.cpr-fieldbook.net-config fieldset.ligacoes { flex-direction: column; flex-wrap: nowrap; }
+.cpr-fieldbook.net-config .ligar { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px dashed var(--cp-linha); }
+.cpr-fieldbook.net-config .ligar .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.net-config .ligar .chips li { display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border: 1px solid var(--cp-linha); color: var(--cp-texto); }
+.cpr-fieldbook.net-config .ligar .chips li.nada { border-style: dashed; color: var(--cp-fraco); }
+.cpr-fieldbook.net-config .ligar .chips button { flex: none; width: auto; min-height: 0; padding: 0 4px; border: none; background: none; }
+.cpr-fieldbook.net-config .ligar .linha { display: flex; gap: 6px; }
+.cpr-fieldbook.net-config .ligar .linha select { flex: 1; min-width: 0; }
 /* A janela da NET (templates/netrun/janela.hbs), no jeito de um terminal de netrunner: o topo com a conexão e o
    netrunner, o mapa num fundo quadriculado (cada andar ligado ao andar de onde se chega por um cabo com os dados
    correndo), o painel ao lado e, embaixo, as habilidades e o registro. A cor do andar diz o que manda nele: vermelho, o
@@ -1097,6 +1106,11 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.janela-net .habilidades input[data-texto="virus"] { width: 100%; margin-top: 8px; }
 .cpr-fieldbook.janela-net .habilidades .comando { display: flex; gap: 6px; margin-top: 8px; }
 .cpr-fieldbook.janela-net .habilidades .comando input { flex: 1; min-width: 0; }
+/* O que o nó de controle tomado comanda na cena: a coisa, a situação e os comandos. */
+.cpr-fieldbook.janela-net .habilidades .ligacoes { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-net .habilidades .ligacoes li { display: flex; align-items: center; gap: 6px; color: var(--net-verde); }
+.cpr-fieldbook.janela-net .habilidades .ligacoes small { flex: 1; min-width: 0; color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .habilidades .ligacoes button { flex: none; width: auto; }
 /* O registro, como um terminal: a hora antes de cada linha (o CSS a desenha) e o cursor na mais nova. */
 .cpr-fieldbook.janela-net .registro { display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; background: #030508; border-left: 1px solid color-mix(in srgb, var(--cp-ciano) 22%, transparent); }
 .cpr-fieldbook.janela-net .so-registro .registro { border-left: none; }

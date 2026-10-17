@@ -4,7 +4,8 @@
 // mestre abre a janela dele (com Shift, a configuração).
 import { caminho, SISTEMA } from '../config.mjs';
 import { FLAG_ESTADO, FLAG_PONTO, IMAGEM_DO_TERMINAL, PONTO_PADRAO } from './constantes.mjs';
-import { conexaoDoToken, estadoDoTile, pontoDoTile } from './estado.mjs';
+import { arquiteturaDoPonto, conexaoDoToken, estadoDoTile, pontoDoTile } from './estado.mjs';
+import { documentoDe, nomeDe, objetosDaCena, TIPOS as TIPOS_DE_LIGACAO } from './ligacoes.mjs';
 import { JanelaDaNet } from './janela.mjs';
 import { alcanceDo, distancia, faltasPara, netrunnerDo } from './regras-da-net.mjs';
 import { pedir } from './socket.mjs';
@@ -208,6 +209,10 @@ export class ConfigDoPonto extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(tile) {
     super({ id: `${SISTEMA}-ponto-${tile.id}` });
     this.tile = tile;
+    // As ligações dos nós de controle com a cena (ligacoes.mjs), editadas aqui até salvar; e o que já foi digitado, para
+    // ligar e desligar redesenharem a janela sem perder.
+    this.ligacoes = foundry.utils.deepClone(pontoDoTile(tile)?.ligacoes ?? []);
+    this.rascunho = null;
   }
 
   static DEFAULT_OPTIONS = {
@@ -216,20 +221,47 @@ export class ConfigDoPonto extends HandlebarsApplicationMixin(ApplicationV2) {
     window: { title: 'Ponto de acesso à NET', icon: 'fa-solid fa-network-wired', resizable: true },
     position: { width: 560, height: 'auto' },
     form: { handler: ConfigDoPonto.#salvar, closeOnSubmit: true },
-    actions: { abrirArquitetura: ConfigDoPonto.#abrirArquitetura, reiniciar: ConfigDoPonto.#reiniciar, remover: ConfigDoPonto.#remover }
+    actions: {
+      abrirArquitetura: ConfigDoPonto.#abrirArquitetura, reiniciar: ConfigDoPonto.#reiniciar, remover: ConfigDoPonto.#remover,
+      ligar: ConfigDoPonto.#ligar, desligar: ConfigDoPonto.#desligar, mostrar: ConfigDoPonto.#mostrar
+    }
   };
 
   static PARTS = { form: { template: caminho('templates/netrun/ponto.hbs') } };
 
   async _prepareContext() {
     const salvo = { ...PONTO_PADRAO, ...(pontoDoTile(this.tile) ?? {}) };
+    const ponto = { ...salvo, ...(this.rascunho ?? {}) };
     const grupos = [];
     for (const arquitetura of await arquiteturasDisponiveis()) {
       let grupo = grupos.find(g => g.fonte === arquitetura.fonte);
       if (!grupo) grupos.push(grupo = { fonte: arquitetura.fonte, lista: [] });
-      grupo.lista.push({ ...arquitetura, escolhida: arquitetura.uuid === salvo.arquitetura });
+      grupo.lista.push({ ...arquitetura, escolhida: arquitetura.uuid === ponto.arquitetura });
     }
-    return { ponto: salvo, grupos, unidade: this.tile.parent.grid.units || 'm', semImagem: semImagem(this.tile) };
+    // Os nós de controle da arquitetura salva, cada um com o que já está ligado; e o que a cena tem para ligar.
+    const cena = this.tile.parent;
+    const arq = salvo.arquitetura ? await arquiteturaDoPonto(salvo).catch(() => null) : null;
+    const controles = Object.values(arq?.nos ?? {}).flatMap(no => no.conteudos.filter(conteudo => conteudo.tipo === 'controle').map(conteudo => ({
+      chave: conteudo.chave, descricao: conteudo.descricao ?? '', rotulo: `Andar ${no.andar}${no.ramo !== 'a' ? ` · ramo ${no.ramo.toUpperCase()}` : ''} · nó de controle DV ${conteudo.dv ?? '—'}`,
+      ligadas: this.ligacoes.map((ligacao, indice) => ({ ligacao, indice })).filter(({ ligacao }) => ligacao.controle === conteudo.chave)
+        .map(({ ligacao, indice }) => ({ indice, nome: nomeDe(cena, ligacao), icone: TIPOS_DE_LIGACAO[ligacao.tipo]?.icone ?? 'fa-circle' }))
+    })));
+    const objetos = objetosDaCena(cena);
+    const escolhas = Object.entries(TIPOS_DE_LIGACAO).filter(([tipo]) => objetos[tipo].length)
+      .map(([tipo, info]) => ({ rotulo: `${info.nome}s`, opcoes: objetos[tipo].map(objeto => ({ valor: `${tipo}:${objeto.id}`, nome: objeto.nome })) }));
+    return {
+      ponto, grupos, unidade: cena.grid.units || 'm', semImagem: semImagem(this.tile), controles, escolhas, comArquitetura: Boolean(salvo.arquitetura),
+      trocou: ponto.arquitetura !== salvo.arquitetura
+    };
+  }
+
+  // Guarda o que já foi digitado antes de redesenhar.
+  #guardarRascunho() {
+    try {
+      this.rascunho = new foundry.applications.ux.FormDataExtended(this.element).object;
+    } catch {
+      this.rascunho = null;
+    }
   }
 
   static async #salvar(evento, form, formData) {
@@ -241,11 +273,39 @@ export class ConfigDoPonto extends HandlebarsApplicationMixin(ApplicationV2) {
       alcance: Math.max(0, Number(dados.alcance) || 0), dv: Number(dados.dv) || null, exigeDeck: Boolean(dados.exigeDeck),
       rankMinimo: Math.max(0, Math.min(10, Number(dados.rankMinimo) || 0)), oculto: Boolean(dados.oculto),
       dvScanner: Math.max(2, Math.min(30, Number(dados.dvScanner) || 10)), reiniciar: Boolean(dados.reiniciar),
-      ligacoes: dados.arquitetura === salvo.arquitetura ? salvo.ligacoes ?? [] : [], revelados: salvo.revelados ?? []
+      ligacoes: dados.arquitetura === salvo.arquitetura ? this.ligacoes : [], revelados: salvo.revelados ?? []
     };
     await this.tile.setFlag(SISTEMA, FLAG_PONTO, ponto);
     if (dados.imagemPadrao && semImagem(this.tile)) await this.tile.update({ 'texture.src': IMAGEM_DO_TERMINAL });
     ui.notifications.info(`${ponto.nome}: ponto de acesso salvo.${ponto.oculto || this.tile.hidden ? ' Os jogadores não veem o marcador (oculto).' : ''}`);
+  }
+
+  // Liga ao nó o objeto escolhido na lista dele (uma vez cada).
+  static #ligar(evento, alvo) {
+    const controle = alvo.dataset.controle;
+    const escolha = this.element.querySelector(`[data-escolha="${controle}"]`)?.value;
+    if (!escolha) return;
+    const [tipo, id] = escolha.split(':');
+    if (!this.ligacoes.some(item => item.controle === controle && item.tipo === tipo && item.id === id)) this.ligacoes.push({ controle, tipo, id });
+    this.#guardarRascunho();
+    this.render();
+  }
+
+  static #desligar(evento, alvo) {
+    this.ligacoes.splice(Number(alvo.dataset.indice), 1);
+    this.#guardarRascunho();
+    this.render();
+  }
+
+  // Mostra na cena (o ping) o objeto ligado, se a cena está aberta.
+  static #mostrar(evento, alvo) {
+    const ligacao = this.ligacoes[Number(alvo.dataset.indice)];
+    const doc = ligacao && documentoDe(this.tile.parent, ligacao);
+    if (!doc || canvas.scene?.id !== this.tile.parent.id) return;
+    const token = ligacao.tipo === 'token';
+    const x = (doc.x ?? (doc.c ? (doc.c[0] + doc.c[2]) / 2 : 0)) + (token ? (doc.width * canvas.grid.size) / 2 : 0);
+    const y = (doc.y ?? (doc.c ? (doc.c[1] + doc.c[3]) / 2 : 0)) + (token ? (doc.height * canvas.grid.size) / 2 : 0);
+    canvas.ping({ x, y });
   }
 
   static async #abrirArquitetura() {

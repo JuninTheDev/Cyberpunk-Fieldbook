@@ -10,6 +10,7 @@ import { caminho, CLASSES_PROGRAMA, SISTEMA } from '../config.mjs';
 import { HABILIDADES_DE_INTERFACE, programaDeAtaque } from '../regras.mjs';
 import { STATUS_EM_CHAMAS } from './constantes.mjs';
 import { arquiteturaDoPonto, emCombate, estadoDoTile, pontoDoTile } from './estado.mjs';
+import { ligacoesDo, nomeDe, situacao, TIPOS as TIPOS_DE_LIGACAO } from './ligacoes.mjs';
 import { ehInimigo, HABILIDADES_NA_NET, inimigoAtivo, inimigoPublico, netrunnerDo } from './regras-da-net.mjs';
 import { pedir } from './socket.mjs';
 
@@ -99,7 +100,7 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 1060, height: 780 },
     actions: {
       desconectar: JanelaDaNet.#desconectar, desconectarInseguro: JanelaDaNet.#desconectarInseguro, selecionar: JanelaDaNet.#selecionar, mover: JanelaDaNet.#mover,
-      habilidade: JanelaDaNet.#habilidade, comandar: JanelaDaNet.#comandar, escolherCorredor: JanelaDaNet.#escolherCorredor, revelar: JanelaDaNet.#revelar,
+      habilidade: JanelaDaNet.#habilidade, comandar: JanelaDaNet.#comandar, acionar: JanelaDaNet.#acionar, escolherCorredor: JanelaDaNet.#escolherCorredor, revelar: JanelaDaNet.#revelar,
       zerarAcoes: JanelaDaNet.#zerarAcoes, reiniciar: JanelaDaNet.#reiniciar, ajustarRez: JanelaDaNet.#ajustarRez, inimigoAtaca: JanelaDaNet.#inimigoAtaca,
       apagarFogo: JanelaDaNet.#apagarFogo, programa: JanelaDaNet.#programa
     }
@@ -217,6 +218,11 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
         pips: Array.from({ length: meu.max }, (_, i) => (!combate ? 'livre' : i < meu.max - meu.acoes ? 'cheio' : 'gasto')),
         sorte: ator?.sortePreparada ?? 0, fundo, textos: this.textos,
         controle: conteudosAqui.some(conteudo => conteudo.tipo === 'controle' && conteudo.feito),
+        // As coisas da cena ligadas aos nós de controle tomados aqui (ligacoes.mjs): a situação de cada uma e os comandos.
+        ligacoes: conteudosAqui.filter(conteudo => conteudo.tipo === 'controle' && conteudo.feito).flatMap(conteudo => ligacoesDo(ponto, conteudo.chave).map((ligacao, indice) => ({
+          controle: conteudo.chave, indice, icone: TIPOS_DE_LIGACAO[ligacao.tipo]?.icone ?? 'fa-circle', nome: nomeDe(this.tile.parent, ligacao),
+          ...situacao(this.tile.parent, ligacao, est)
+        }))),
         alvos: inimigos.length > 1 ? inimigos.map(conteudo => ({ chave: conteudo.chave, nome: textoCurto(conteudoNaJanela(conteudo)), escolhido: conteudo.chave === this.textos.alvo })) : [],
         // A situação: o fogo do Hellhound (com o botão de apagar), a prisão do Kraken, o −2 no Slide do Skunk ativo e a Ação
         // NET a menos do Wisp.
@@ -314,6 +320,10 @@ export class JanelaDaNet extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #habilidade(evento, alvo) {
     const habilidade = alvo.dataset.habilidade;
     if (await this.#pedir('habilidade', { habilidade, texto: habilidade === 'virus' ? this.textos.virus : '', alvo: this.textos.alvo }) && habilidade === 'virus') this.textos.virus = '';
+  }
+
+  static async #acionar(evento, alvo) {
+    await this.#pedir('acionar', { controle: alvo.dataset.controle, indice: Number(alvo.dataset.indice), acao: alvo.dataset.acao });
   }
 
   static async #comandar() {
