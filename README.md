@@ -124,13 +124,13 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `jogadores.html` | A visão dos jogadores: resumo, pessoas, mapa e notícias publicados pelo mestre na campanha do jogador, as Notícias de Night City e as regras. |
 | `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre (o Publicar de cada campanha e as Notícias de Night City). |
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
-| `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. A última camada do `wiki.css` ("Visual 2026") é o padrão da Loja: fundo quase preto, amarelo, ciano e vermelho, Oxanium no texto e Share Tech Mono nos rótulos (as duas do Google Fonts, licença OFL, em `cyberpunk-css-main/cyberpunk-css-main/fonts/`). |
+| `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. As últimas camadas do `wiki.css` são o visual de 2026. A parte 1 é o padrão da Loja: fundo quase preto, amarelo, ciano e vermelho, Oxanium no texto e Share Tech Mono nos rótulos (as duas do Google Fonts, licença OFL, em `cyberpunk-css-main/cyberpunk-css-main/fonts/`). A parte 2 segue os exemplos do Resumo, de Personagens, da Ficha e do Escudo: a barra de cima de ponta a ponta, a barra lateral em caixa normal (com as abas Campanhas e Sistema), os títulos em caixa normal e os botões vazados para o que só navega. |
 | `campaign-map.js` | Pinos do mapa de operações. Os lugares da base apontam para eles (`#campaignMap/<ponto>` abre o mapa já no ponto). |
 | `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
-| `system-rules.js` | Regras do RED para consulta na mesa: Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (com a tabela da ciberpsicose e a perda por trauma), terapia e drogas, economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido. |
-| `system-net.js` | Netrunning completo: arsenal do RED (programas, Black ICE, demônios, upgrades, defesas) e 2077 (regras, cyberdecks, ICE, neuralware, quickhacks, daemons, Berserk e Sandevistan), um cartão por item. |
-| `system-2077.js` | Os anos 2070: as regras de Power, Smart e Tech e os Rebuilds do Cyberpunk Edgerunners Mission Kit, as 46 armas (13 do Kit e as do suplemento de fã, adaptadas), os 48 cyberwares (o Neuroport e o cromo do Kit, mais os do suplemento), as Roles de 2077 e o resumo do suplemento de fã. |
+| `system-rules.js` | As regras da mesa para consulta: uma regra só, com o Mission Kit valendo sobre o RED quando os dois conflitam. Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (a tabela da ciberpsicose e as de perda e ganho do Kit), terapia e drogas, netrunning (o do RED com os quickhacks no Neuroport do Kit), economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido ou do Kit. |
+| `system-net.js` | O Arsenal da NET (programas, Black ICE, demônios, upgrades, defesas e os 21 cyberdecks com marca, que são cyberdecks do RED da qualidade de cada um) e os quickhacks: os 11 do Mission Kit e os 5 do suplemento de fã que a mesa aprovou, todos de graça pelo Rank de Interface. Um cartão por item. |
+| `system-2077.js` | Os anos 2070: as regras de Power, Smart e Tech e os Rebuilds do Cyberpunk Edgerunners Mission Kit; as 41 armas (13 do Kit e 28 do suplemento de fã aprovados); os 37 implantes (o Neuroport e o cromo do Kit, os do suplemento aprovados e os 8 Berserk e Sandevistan dos anos 2070, mais caros e mais fracos que no suplemento e à venda em todo Night Market de cyberware); e a página **Suplemento de fã: o que saiu**, com o motivo de cada item recusado na revisão de 2026-10-13. As listas cruas (`data`) vão para o módulo do Foundry e a loja. |
 | `system-catalog.js` | Catálogo do RED: Roles, cyberware, armas, armaduras, munição, acessórios, equipamento médico e a lista de equipamento. |
 | `system-glossario.js` | O glossário: definição curta de cada termo de regra e onde está a regra. Vai também para os jogadores. |
 | `mestre-npcs.js` | Fichas de NPC (as 10 fichas prontas do livro, a Trauma Team, variantes para as facções de 2077 e o elenco do Protocolo Morana) e os Encontros de 2077. Só a wiki do mestre carrega; os jogadores não recebem este arquivo. |
@@ -147,6 +147,8 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `conta.js` | O botão da conta no canto de cima (as duas wikis): entrar, o personagem em uso, novo personagem, trocar de campanha e sair; para o mestre, atalhos, versão, backup e sair. |
 | `popup.js` | Os pop-ups da wiki (confirmar, escrever um motivo, copiar um código) e os avisos rápidos no canto, no lugar das caixas do navegador. |
 | `system-criacao.js` | Regras de criação: as 10 Roles do RED com os ajustes do Mission Kit, tabelas de STAT, perícias, pacotes e Lifepath de cada Role e o Neuroport de graça. |
+| `personagem-roles.js` | As duas Roles pela regra da mesa: Ranks, habilidades, compatibilidade com personagens antigos e retorno da ficha do Foundry. Compartilhado pela wiki e pela API. |
+| `personagem-cyberware.js` | Locais de instalação de cyberbraços, cyberpernas e cyberolhos, com os lados separados e validação compartilhada entre a wiki e a API. |
 | `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
 | `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). Os do sistema do Foundry 14: `tests/sistema/` (`node --test`), `tests/cenarios/v14.js`. |
@@ -198,17 +200,20 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 2. **Criar:** o jogador abre a wiki dos jogadores, clica em **Entrar** (canto de cima), digita o código uma vez (o aparelho lembra) e, no mesmo menu, clica em **Novo personagem**.
    - **Os passos:** identidade e Role, STATs, perícias, Lifepath, equipamento, moradia e revisão.
    - **Métodos:** os três do livro (Rato de Rua, Edgerunner e Pacote Completo), com as 10 Roles do RED (os ajustes dos anos 2070 do Mission Kit) e o Neuroport de graça. Personagens antigos com as Roles do suplemento de fã viram Rockerboy (o Face) e Exec (o Corpo).
+   - **Duas Roles na criação (regra da mesa):** no passo 1, escolha a principal e, se quiser, uma segunda Role diferente. Defina o Rank de cada uma (1 a 10) com o mestre. Personagens antigos continuam com uma Role no Rank 4. Cada Role tem sua própria distribuição de habilidades e Lifepath; a principal continua definindo STATs, perícias e o único pacote/orçamento inicial. Esta escolha não cobra IP.
+     - A ficha, a lista de personagens e o menu da conta mostram as duas Roles e seus Ranks.
+     - Para importar as duas, use o módulo atualizado do **Foundry 12**. O sistema **v14 ainda aceita uma Role**; a wiki avisa e recusa a leitura de importadores antigos que não declaram suporte, antes de criarem um ator incompleto.
    - **Salvamento:** tudo é salvo sozinho. Os avisos mostram o que falta, mas não impedem de continuar.
    - **Ajuda:** cada passo tem um "Como funciona" com a página do livro, e um resumo fixo mostra pontos, HP, Humanidade, dinheiro e pendências. As perícias têm a descrição do livro, e os termos de regra levam ao glossário.
    - **Lifepath da Role:** no passo 4, as perguntas próprias da Role (livro p. 54–70), para rolar ou escolher. As respostas vão para o campo Role Lifepath da ficha do Foundry, junto com as notas.
    - **Retrato:** no passo 1, o jogador envia uma imagem (PNG, JPEG ou WebP, reduzida para 512 px antes de sair do aparelho) ou cola um link `https`. Se houver imagem enviada, ela vale no lugar do link. O retrato aparece na ficha, em miniatura na lista de Personagens (inclusive para os outros jogadores) e vai para a ficha e o token no Foundry.
    - **Perícias sugeridas:** no Edgerunner e no Pacote Completo, **Distribuir sugerido** põe os níveis do Rato de Rua da Role (86 pontos certinhos). No Pacote Completo, as 20 perícias da Role aparecem primeiro.
    - **O que a Role ganha além do Rank** (passo 1). Tudo vai para o item de Role e para a ficha no Foundry.
-     - **Solo:** os 4 pontos da Consciência de Combate (RED p. 146).
-     - **Tech:** os 8 pontos das especialidades de Artífice, até 4 em cada (p. 147–148).
-     - **Medtech:** os 4 pontos de Medicina (p. 149). As perícias Cirurgia (2 por ponto) e Tecnologia Médica são calculadas.
-     - **Nomad:** as 4 escolhas da Oficina da Família (p. 161–165), entre veículos e upgrades. No Foundry, os veículos chegam com os upgrades instalados.
-     - **Corpo:** no Pacote Completo, ganha o terno de negócios de graça (o bônus de assinatura do Teamwork). Nos outros métodos, o pacote já traz o terno.
+     - **Solo:** um ponto de Consciência de Combate por Rank (RED p. 146).
+     - **Tech:** dois pontos por Rank nas especialidades de Artífice, até o Rank em cada uma (p. 147–148).
+     - **Medtech:** um ponto de Medicina por Rank (p. 149). As perícias Cirurgia (2 por ponto, até 10) e Tecnologia Médica são calculadas.
+     - **Nomad:** uma escolha da Oficina da Família por Rank (p. 161–165), entre veículos e upgrades. O catálogo do criador oferece os veículos básicos e upgrades de Rank 1; combine opções avançadas com o mestre. No Foundry, os veículos escolhidos chegam com os upgrades instalados.
+     - **Exec:** recebe o terno de negócios sem duplicar peças do pacote principal. A moradia corporativa fica disponível a partir do Rank 2, também quando Exec é a segunda Role.
    - **Montagem** (passo 5, no fim): o equipamento como ele chega no Foundry, em abas (Armas, Armadura e roupa, Cyberware, Netrunning e Outros).
      - Já vem montado: arma carregada com a munição compatível, a armadura de maior SP vestida em cada local, as opções de cyberware nas bases e os programas no cyberdeck.
      - O jogador muda o que quiser: descarregar ou trocar a munição, encaixar um acessório (só nas armas em que ele serve), escolher em qual cyberbraço vai cada opção, tirar um programa do deck, deixar um item guardado.
@@ -223,7 +228,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 3. **Loja inicial:** o Pacote Completo compra tudo na loja (2.550eb, mais 800eb só para moda). Rato de Rua e Edgerunner recebem o pacote da Role e mais 500eb. Devolver um item reembolsa.
    - **Só itens de criação:** até 1.000eb, sem armas exóticas, qualidade excelente, borgware, munição rara (inteligente, biotoxina, EMP, sonífera), Linear Frame, Cryotank e Cryopump.
    - **O mestre ajusta** na página **Loja**, no botão **Regras da loja** (a engrenagem): muda o teto e as categorias escondidas. Item por item, libera ou esconde direto na lista.
-   - **Netrunner de 2077:** no Rato de Rua e no Edgerunner, o Netrunner escolhe entre o kit do RED (cyberdeck e programas) e o de 2077 (Militech Hunter MK.1 e 3 quickhacks de 100eb). O resto do pacote não muda.
+   - **Netrunner:** o pacote é o do RED (cyberdeck e programas). Os quickhacks do Mission Kit ele faz pelo Rank de Interface; o kit de 2077 do suplemento de fã saiu com as regras dele.
    - **Kit sugerido:** no Pacote Completo, um botão compra de uma vez o pacote de Rato de Rua da Role.
 4. **Enviar para o mestre:** quando o personagem estiver pronto, o jogador clica em **Enviar para o mestre**. O botão fica na revisão do criador e na ficha. O quadro **Levar para o Foundry** mostra em que pé está: não enviado, esperando o mestre, no Foundry, ou mudou depois de importar (aí aparece **Avisar o mestre de novo**). Na lista de Personagens, o mestre vê quem está esperando.
 5. **Importar no Foundry:** no Foundry aberto **neste computador**, o mestre recebe um aviso, até um minuto depois do envio, e a janela **Personagens da wiki** com **Importar**. Também dá para importar a qualquer hora: aba Atores, botão **Importar da wiki**. Escolha o personagem e o dono (vem marcado o jogador com o mesmo nome), e o módulo cria o ator com STATs, perícias, Role, equipamento, cyberware instalado, Humanidade, Lifepath, dinheiro e retrato.
@@ -231,6 +236,7 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
    - **Não aparece o botão nem o aviso?** O módulo instalado está velho: feche o Foundry e rode `atualizar-modulo.bat`.
    - O aviso pode ser desligado em Configurações do módulo → Avisos da wiki.
    - Depois disso, a loja inicial daquele personagem fecha, e a Loja vira a **loja da campanha** (veja abaixo).
+   - **No Foundry 12 e no 14:** cada Foundry tem o seu vínculo com o personagem. Importar no 14 não tira o do 12: a ficha da mesa e as entregas dos pedidos valem dos dois atores ligados (de um terceiro, não). Na janela **Personagens da wiki** do Foundry 14, cada personagem diz onde está (neste mundo, no Foundry 12, ou o ator do 14 apagado) e, sem o ator no mundo, oferece **Importar** (ou **Importar de novo**). Na wiki, o quadro **Levar para o Foundry** mostra ao mestre o ator de cada Foundry e avisa quando o do 14 foi apagado.
 6. **Depois de importado, o Foundry manda.**
    - **Na wiki:** o criador avisa e trava STATs, perícias, Role, equipamento e moradia; o servidor faz o mesmo.
    - **O que o jogador ainda muda:** o nome, o retrato, a aparência, as notas e o Lifepath.
@@ -256,7 +262,8 @@ Os jogadores criam os personagens pela wiki, sem abrir o Foundry. Os personagens
 9. **A ficha da wiki** tem o desenho da ficha do Foundry e o botão **Imprimir ou salvar em PDF** (só a ficha, em fundo branco).
    - **Vitais:** HP e Humanidade com barra, SP na cabeça e no corpo, dinheiro.
    - **Combate:** a base de ataque já somada (STAT + perícia), dano, CDT, pente e munição.
-   - **O resto:** perícias pelos grupos do Foundry, a árvore de cyberware, o cyberdeck e o equipamento.
+   - **Cyberware:** a aba no jeito da tela de cyberware do Cyberpunk 2077, com os grupos do RED. Mostra o corpo em holograma (desenho da wiki) e um quadrado por slot: a sigla do implante instalado, o + no slot livre. O + abre a loja do personagem só com o que serve ali. Detalhes abaixo, em Personagens e Ficha.
+   - **O resto:** perícias pelos grupos do Foundry, o cyberdeck e o equipamento.
 
 Notas:
 
@@ -272,8 +279,22 @@ Notas:
   - No servidor online, tudo isso fica em `/srv/fieldbook/dados`.
   - Apagar um personagem move o arquivo para `personagens/apagados/`.
   - Cada gravação relê o arquivo e grava na vez dela (uma fila por arquivo): a ficha do Foundry chegando enquanto o jogador salva não apaga uma à outra.
-- **Anotações:** a ficha tem um quadro **Anotações** (pistas, contatos, dívidas, o que o NPC prometeu), que salva sozinho. Só o dono e o mestre leem; na página Personagens, o mestre vê o quadro **Anotações dos jogadores**, com as de todos, as mais novas primeiro.
-- **Histórico de versões (mestre):** antes de cada rodada de edição, a wiki guarda como o personagem estava (no máximo uma a cada 10 minutos; ficam as últimas 30, em `personagens/historico/`). Na **Ficha**, o quadro **Histórico de versões** lista cada uma com o que ela tem de diferente da de agora, e **Restaurar** volta o que o jogador preenche (STATs, perícias, itens, Lifepath...). Foundry, ficha da mesa, pedidos, Pontos de Melhoria, retrato e anotações ficam como estão, e a versão de agora também vai para o histórico (dá para desfazer).
+- **Personagens e Ficha:**
+  - a lista mostra um cartão por personagem: o retrato (ou as iniciais), a Role e o Rank, o HP, o IP e os eurodólares (os da mesa, quando o Foundry já mandou a ficha, ou os da criação) e os botões; o último cartão, tracejado, cria um novo;
+  - a **Ficha** tem duas colunas: o retrato, os STATs e os vitais do lado; e as abas **Resumo**, **Perícias** (da maior base para a menor), **Equipamento**, **Cyberware**, **Compras** (os pedidos da loja, com a situação) e **Anotações**;
+  - a aba **Cyberware** é a tela de cyberware do Cyberpunk 2077 com os grupos do RED:
+    - **Os grupos:** Neuralware, Cyberolhos, Cyberaudio, Borgware e Cyberbraços à esquerda; Cyberware interno, Cyberware externo, Fashionware e Cyberpernas à direita.
+    - **Os slots:** cada base mostra os slots dela (o Neural Link e o Neuroport têm 5, o cyberolho 3, a Cyberaudio Suite 3, o cyberbraço 4, a cyberperna 3). O corpo tem 7 para o cyberware interno, 7 para o externo e 7 para o fashionware.
+    - **O corpo:** a parte com cromo acende em ciano no holograma, e uma linha liga cada grupo a ela.
+    - **Local de instalação:** cyberbraços, cyberpernas e cyberolhos distinguem os lados esquerdo e direito. Escolha o local ao comprar ou na **Montagem**, aba **Cyberware**. Cada opção fica ligada ao identificador da base escolhida e herda seu local. Implantes antigos aparecem como **Local não definido**, até a escolha ser feita; a wiki não adivinha o lado.
+    - **Tocar:** num slot ou num nome, abre a ficha do implante (Humanidade, instalação, slots, preço, descrição). Num +, abre a loja do personagem só com o que serve ali, levando o local e a base específicos: as opções daquele tipo, ou as bases quando o membro é natural. O chip **Para o slot** tira o filtro.
+    - **Compra durante a campanha:** o pedido registra o local desejado e a base. O cyberware entregue continua aguardando instalação na ficha do Foundry pelo mestre, que aplica a perda de Humanidade. O retorno da mesa distingue o local instalado do planejamento.
+    - **De onde vem:** antes do Foundry, a tela sai da montagem do criador, e embaixo aparece o que ficou sem base. Na mesa, sai da ficha que o Foundry manda (o tipo e os slots de cada peça), e embaixo aparece o que espera o mestre instalar.
+    - **Celular:** o corpo vai para cima, menor, e os grupos ficam um embaixo do outro, sem as linhas.
+    - **A revisão do criador** (passo 7) mostra a mesma tela;
+  - o título da página é o nome do personagem, e a aba escolhida fica lembrada no aparelho. **Imprimir** sai com tudo.
+- **Anotações:** a ficha tem a aba **Anotações** (pistas, contatos, dívidas, o que o NPC prometeu), que salva sozinho. Só o dono e o mestre leem; na página Personagens, o mestre vê o quadro **Anotações dos jogadores**, com as de todos, as mais novas primeiro.
+- **Histórico de versões (mestre):** antes de cada rodada de edição, a wiki guarda como o personagem estava (no máximo uma a cada 10 minutos; ficam as últimas 30, em `personagens/historico/`). Na **Ficha**, aba **Anotações**, o quadro **Histórico de versões** lista cada uma com o que ela tem de diferente da de agora, e **Restaurar** volta o que o jogador preenche (STATs, perícias, itens, Lifepath...). Foundry, ficha da mesa, pedidos, Pontos de Melhoria, retrato e anotações ficam como estão, e a versão de agora também vai para o histórico (dá para desfazer).
 - **Códigos:** a tabela mostra o **último acesso** e quantos aparelhos cada jogador tem. **Desconectar** tira o jogador de todos os aparelhos (ele volta com o mesmo código); **Novo código** troca o código (o antigo para de valer, e os personagens ficam).
 - **Sessões de login:** entrar com o código cria uma sessão; o cookie guarda só um identificador aleatório dela, não o código. No servidor online o cookie só vai por https. Uma sessão sem uso por seis meses acaba (o aparelho esquecido não fica entrando).
 - **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros jogadores da mesma campanha, só nome, apelido, Role e retrato. De outra campanha, nada. Sem código, nenhum personagem. O mestre vê e edita todos.
@@ -289,12 +310,14 @@ Notas:
   - **Sair de todos os aparelhos** (no menu do jogador): a conta sai do celular, do computador, de tudo. Para voltar, o código de novo. Bom para celular perdido ou computador emprestado.
 - **O que acompanha a conta:** as páginas fixadas, os grupos recolhidos, a barra compacta, as páginas recentes, o personagem em uso e o que já foi visto (selos de novidade e de pedidos) ficam no servidor, na conta do jogador (ou na do mestre). Entrar no celular mostra tudo como estava no computador. Sem código, fica só no aparelho, como antes.
 - **Páginas com abas (wiki do mestre):** cada assunto da campanha é uma entrada só na barra lateral, com abas no topo da página. **A campanha:** Dossiê, Fundação, Roteiro, Diário e Base. **Elenco:** Pessoas e facções, Personagens e Fichas. **Night City:** Mapa, Lugares e peças, Guia de 2077 e Arquiteturas NET. **Sessão zero:** a conversa e os ganchos. **Cada sessão:** Resumo ou Roteiro, Handouts (os da sessão, com os botões de entregar), NPCs (as fichas que você escolhe num seletor com todas as fichas da wiki) e Notas (o que aconteceu, com o modelo do diário). As fichas e as notas ficam na mesa do servidor, por campanha. Os endereços de antes (`#docSessao01/cena-3-o-mensageiro`) continuam valendo, e a busca acha o texto de todas as abas.
+- **Barra de cima:** de ponta a ponta, com a marca, a busca (tecla **/**), a campanha e o botão da conta.
 - **Barra lateral:**
+  - **Duas áreas:** as abas **Campanhas** e **Sistema** (na wiki dos jogadores, **Campanha** e **Regras**). Campanhas tem os grupos da campanha (o primeiro com o nome dela); Sistema, os das regras (Na mesa, Regras, Netrunning, Catálogos, Black Chrome e Fontes). Abrir uma página da outra área troca a aba.
   - **Fixadas:** o botão **☆ Fixar**, ao lado do título de qualquer página (Combate, Escudo do mestre, a Ficha…), põe a página no grupo **Fixadas**, no topo da barra lateral, nas duas abas. Até 8, lembradas no aparelho; **★ Fixada** tira.
-  - **Grupos que recolhem:** clique no nome do grupo. O aparelho lembra; abrir uma página de um grupo recolhido mostra o grupo.
+  - **Grupos que recolhem:** clique no nome do grupo. O grupo fechado vira uma linha com quantas páginas tem. Em Sistema, Netrunning, Catálogos, Black Chrome e Fontes começam fechados; o que cada um abre ou fecha a conta lembra. Abrir uma página de um grupo recolhido mostra o grupo.
   - **Barra compacta:** o botão ☰ (ou a tecla **[**) deixa só os ícones; parar o mouse num ícone mostra o nome. O aparelho lembra.
   - **No celular,** a barra lateral é uma gaveta: o ☰ abre, escolher uma página fecha. O conteúdo começa logo abaixo da barra de cima.
-  - **Mesa:** o quadro no topo diz se a mesa está aberta (e de qual campanha), com **Entrar na mesa**; para o mestre, também a saúde do servidor.
+  - **Mesa:** o quadro no pé da barra, sempre à vista, diz se a mesa está aberta (e de qual campanha) e quantos estão conectados, com **Entrar na mesa**; para o mestre, também a saúde do servidor.
 - **Novidades (visão dos jogadores):** sessões, pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. No mapa, os lugares novos aparecem em outra cor, com "(novo)" e a legenda explicando. Abrir a página tira o selo.
 - **Voltar ao topo:** nas páginas longas, um botão no canto de baixo.
 
@@ -312,20 +335,20 @@ Notas:
   - **Handouts** (Protocolo Morana → Sessões → Handouts e textos, ou a aba Handouts de cada sessão): embaixo de cada documento, **Entregar aos jogadores** publica na hora em Notícias e handouts, com o título que os jogadores devem ver; **Só preparar** deixa no Publicar sem publicar, para editar antes (os campos entre colchetes). O código H-xx fica na nota do mestre, e a página mostra o que já foi preparado ou entregue.
   - **Virar rascunho de sessão** cria, com o texto do bloco, uma sessão **não publicada** em Visão dos jogadores → Sessões. Revise (o bloco tem segredos) e marque Publicada.
 - **Início do mestre:** a faixa **Na mesa agora** tem atalhos (Escudo, Fichas de NPC, Encontros, Combate, Glossário, Índice, sessões), as últimas páginas abertas e o estado dos relógios de Sato e da cidade.
-- **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém.
+- **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém. As páginas que viraram parte de outra quando as regras foram unificadas continuam abrindo: `#net2077` vai para Netrunning, `#roles2077` para Roles e `#os2077` para Berserk e Sandevistan, em Cyberware de 2077.
 - **Busca:** **/** (ou Ctrl+K) coloca o cursor na busca.
   - Nos documentos .md, cada seção `###` (uma cena, um NPC, uma regra) também é um resultado, e tem endereço próprio (`#docSessao01/a-trava-e-a-maleta-regras`).
   - As palavras podem vir em qualquer ordem ("smg smart" acha a Yukimura). A busca ignora acentos e aceita termos em inglês e sinônimos (CDT/ROF, HP/PV, eb/eddies, Death Save...).
   - **↑ ↓** escolhem o resultado, **Enter** abre já na seção certa, com os termos destacados, e **Esc** volta para a página.
   - Os chips **Tudo / Regras / Campanha** filtram os resultados.
-- **Glossário** (aba Sistema → Na mesa): termos como DV, SP, Death Save e Smart Link viram links nas páginas de regras. Passe o mouse para ler a definição; clique para abrir o glossário, que tem o botão "Ver a regra".
+- **Glossário** (aba Sistema → Na mesa): termos como DV, SP, Death Save e Smartgun Link viram links nas páginas de regras. Passe o mouse para ler a definição; clique para abrir o glossário, que tem o botão "Ver a regra".
 - **Índice A–Z:** todos os cartões e fichas da wiki em ordem alfabética, com filtro.
-- **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por origem (Mission Kit ou suplemento de fã), classe, tipo ou instalação.
+- **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por origem (Mission Kit ou suplemento de fã), classe, tipo, categoria ou instalação.
 - Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.
 - O **Escudo do mestre** tem a calculadora de DV por alcance e o rolador de lesão crítica.
 - **Links nos documentos .md:** `[texto](#pagina/secao)` abre uma página da wiki; `[texto](arquivo.md)` e o nome de um documento entre crases abrem o documento; `[texto](https://...)` abre fora, em outra aba.
 - **Fichas de NPC** tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo, e o **elenco do Protocolo Morana** (Wakako, Mina, Endo, Sato, Iskra, Vega, Brakk, Tamsin e Tomas). Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
-- **Roladores:** o **Lifepath** rola cada tabela ou o passado inteiro de uma vez. A **Economia** gera um Night Market. Os **Encontros de 2077** (só na wiki do mestre) rolam dia, noite ou madrugada, e cada resultado leva à ficha do NPC.
+- **Roladores:** o **Lifepath** rola cada tabela ou o passado inteiro de uma vez. A **Economia** gera um Night Market (o de cyberware sempre traz um Berserk ou Sandevistan dos anos 2070). Os **Encontros de 2077** (só na wiki do mestre) rolam dia, noite ou madrugada, e cada resultado leva à ficha do NPC.
 - **Avanço e Pontos de Melhoria** traz os custos, a tabela de quanto dar no fim da sessão e o questionário de estilo de jogo.
 
 ## Alerta de arquivo revertido
@@ -338,6 +361,18 @@ O `publicar.bat` faz a mesma conferência e não publica enquanto houver arquivo
 
 ## Testes
 
+Para conferir o código, os documentos e a API enquanto outras sessões trabalham, rode:
+
+```
+node tests/validar.js
+```
+
+Esse comando não abre navegador, não reserva portas e não inicia o Foundry. Confere a sintaxe, os JSONs,
+os documentos e a base da campanha; também executa regressões da API em memória, com dados temporários
+próprios. Os cenários de documentos e base reutilizam essas mesmas verificações.
+Para escolher uma parte: `node tests/validar.js documentos base` ou `node tests/validar.js regressoes`.
+Os detalhes e os limites estão em [tests/README.md](tests/README.md).
+
 Para conferir se a wiki continua funcionando depois de uma mudança, rode:
 
 ```
@@ -345,6 +380,9 @@ node tests/rodar.js
 ```
 
 Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 8774), sem mexer no da porta 8000. Eles testam a busca, o endereço, o glossário, as tabelas, os roladores, a visão dos jogadores, as campanhas (cada jogador só lê a dele, nem pelo endereço direto; Notícias de Night City; crossover), a conta e a barra lateral (personagem em uso, pedidos resolvidos, sessões, páginas fixadas, barra compacta, gaveta do celular), o alerta de reversão, o modo hospedado (login do mestre, mesa, backup) e mais. No fim, aparece ✓ ou ✗ para cada coisa.
+
+Rode essa suíte uma sessão por vez: as portas de teste e depuração do Edge e a pasta do Foundry de teste
+são compartilhadas entre worktrees. O `tests/validar.js` pode rodar em paralelo.
 
 **Teste dos documentos** (`node tests/rodar.js documentos`): confere os `.md` da campanha. Acusa termos fora do padrão da wiki ("Seriamente Ferido", "Canal", "Cybertech", "Enganação"), palavras comuns sem acento, nomes de perícia que não existem, arquivos citados que não existem, documentos fora da wiki e links para fichas que não existem.
 

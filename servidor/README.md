@@ -237,8 +237,28 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 
 - **Atualizar o Foundry:** dentro da versão 12, pela própria tela de configuração dele (*Update Software*).
   - **Para o Foundry 14, não use essa tela.** O sistema Cyberpunk RED - CORE só funciona até o 12, e o 14 exige outro Node.
-  - A troca é uma instalação nova, ao lado da atual, depois do backup completo.
+  - A troca é uma instalação nova, ao lado da atual, depois do backup completo (veja abaixo).
 - **Atualizações de segurança do Ubuntu:** são automáticas.
+
+### Foundry 14, ao lado do 12
+
+O Foundry 14 fica em `/srv/foundry14`, com o Node 24 em `/opt/node24`, a mesma porta e o mesmo endereço (`mesa.SEUDOMINIO`). Ele não roda junto com o 12: ligar um desliga o outro, porque a licença vale para uma mesa por vez. O Foundry 12 continua inteiro, para abrir o mundo antigo quando precisar.
+
+**Trocar pela wiki:** entre como mestre; na barra lateral, embaixo do estado da mesa, os botões **Foundry 12 · 14** mostram qual está no ar (aceso). Clique no outro e confirme: a wiki liga esse e desliga o atual (a mesa fica fora do ar por alguns segundos), e ele continua sendo a mesa quando o servidor reinicia. Com alguém conectado, a wiki avisa quantos vão cair e pede uma segunda confirmação. Os botões aparecem com os dois Foundry instalados e a troca vale depois de rodar uma vez o `instalar-foundry14.sh` (ele libera no sudo só os comandos da troca, para o usuário `mesa`).
+
+| Para | Comando |
+|---|---|
+| Preparar ou atualizar o Foundry 14 (zip baixado em `/srv/foundry14`; sem zip, mantém o instalado; não liga) e liberar a troca pela wiki | `sudo bash /srv/fieldbook/wiki/servidor/instalar-foundry14.sh` |
+| Instalar o sistema da `sistema-v14` no Foundry 14 | `sudo bash /srv/fieldbook/wiki/servidor/instalar-sistema-v14.sh` |
+| Gerar também o "Arquivo da mesa" (as cenas do mundo do 12) | `sudo bash /srv/fieldbook/wiki/servidor/instalar-sistema-v14.sh --pacote edgerunners-storys` |
+| Trocar de mesa (o mesmo que o botão da wiki): o 14, ou de volta o 12 | `sudo systemctl enable --now foundry14 && sudo systemctl disable foundry` / `sudo systemctl enable --now foundry && sudo systemctl disable foundry14` |
+| Só ligar um por agora (ao reiniciar o servidor, volta o que estiver habilitado) | `sudo systemctl start foundry14` / `sudo systemctl start foundry` |
+| Ver erros do Foundry 14 | `journalctl -u foundry14 -n 50` |
+
+- O zip vem da sua conta (foundryvtt.com → Purchased Licenses → versão 14, Linux). O link vale poucos minutos: baixe direto no servidor, em `/srv/foundry14`.
+- Na primeira vez, o Foundry 14 recebe a licença e a senha de administrador do 12.
+- O backup diário já leva os mundos, a configuração e os arquivos soltos do Foundry 14.
+- A atualização automática pelo GitHub continua instalando os módulos só no Foundry 12. Com o 14 no ar, ela gera os módulos do 12 sem parar nada e não liga o 12 (o `receber.sh` e o `instalar.sh` também não). O sistema novo se instala à mão, pelo `instalar-sistema-v14.sh`, até a `sistema-v14` entrar no master.
 
 ### Como funciona por dentro
 
@@ -246,7 +266,8 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 |---|---|
 | `/srv/fieldbook/wiki` | A cópia do GitHub. Nunca edite aqui: a atualização apaga mudanças locais. |
 | `/srv/fieldbook/dados` | Personagens, retratos, códigos, campanhas (Publicar e regras da loja de cada uma) e Notícias de Night City. Ficam fora do git e entram no backup. |
-| `/srv/foundry/app` e `/srv/foundry/data` | O programa do Foundry e os dados dele. |
+| `/srv/foundry/app` e `/srv/foundry/data` | O programa do Foundry 12 e os dados dele. |
+| `/srv/foundry14/app` e `/srv/foundry14/data` | O Foundry 14 e os dados dele, ao lado do 12 (o Node 24 fica em `/opt/node24`). |
 | `/srv/backups` | Os backups diários (14 dias), os pacotes dos arquivos soltos (os 3 últimos) e os backups completos. |
 | `/etc/fieldbook.env` | A configuração da wiki: senha do mestre, endereço da mesa. |
 | `/etc/caddy/Caddyfile` | Os endereços e o HTTPS. |
@@ -259,6 +280,8 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 | `backup.sh` | Faz o backup diário e, quando algum mapa ou retrato muda, o pacote dos arquivos soltos. |
 | `backup-completo.sh` | Faz o backup completo do Foundry e da wiki (à mão, antes de uma mudança grande). |
 | `receber.sh` | Recebe o envio do PC. |
-| `iniciar-foundry.sh` | Liga o Foundry. |
+| `iniciar-foundry.sh` | Liga o Foundry (o 12 com o Node do sistema; o 14 com o Node 24). |
+| `instalar-foundry14.sh` | Prepara o Foundry 14 ao lado do 12: swap, Node 24, programa, dados, o serviço `foundry14` e o sudo da troca de mesa pela wiki. |
+| `instalar-sistema-v14.sh` | Instala no Foundry 14 o sistema da `sistema-v14` e, com `--pacote`, o "Arquivo da mesa". |
 | `enviar-para-servidor.ps1` | Faz o envio, do lado do PC. |
 | `baixar-backup.ps1` | Traz o backup e o pacote dos arquivos mais recentes para o PC (no PC; `-Agendar` para toda semana). |

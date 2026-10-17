@@ -12,7 +12,6 @@ import { buildNet } from './net.mjs';
 import { buildNpcs, checkNpcSkills } from './npcs.mjs';
 import { buildArchitectures } from './arquiteturas.mjs';
 import { buildCatalog } from './loja.mjs';
-import { buildRoles } from './roles.mjs';
 import { cacheDir, moduleDir, sourceDir, systemDir } from './paths.mjs';
 import { buildVehicles } from './veiculos.mjs';
 
@@ -37,7 +36,6 @@ const packs = {
   'netrunning-2077': [...withEffects(buildNet()), ...buildArchitectures()],
   'veiculos-2077': buildVehicles(),
   'npcs-2077': buildNpcs(weapons),
-  'roles-2077': buildRoles(),
   'regras-2077': buildJournals(),
   'macros-2077': macros
 };

@@ -34,6 +34,26 @@ pegaram isso. Eles ficam falhando até o Kit, e não se tiram nem se mudam para 
 
 As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED.
 
+## Falhas conhecidas desde a integração do master (ciclo 93)
+
+A wiki do master passou a ter "uma regra só na mesa" (o Mission Kit sobre o RED, sem as regras do suplemento de fã) e
+revisou os itens do suplemento. Os testes de referência pegaram cada diferença. Cada uma é uma parte do C29 do
+ROADMAP, e os testes não se tiram nem se mudam para passar:
+- **G3 (10):**
+  - as Roles do RED e os situacionais de Role;
+  - a Interface do Netrunner e o ponto de acesso à NET;
+  - o TeleOptics pela wiki e o passo 1 da migração;
+  - a fundação e as opções do cyberware;
+  - o teste Smart;
+  - o catálogo de 2077 e o efeito de falha das armas;
+- **G4 (4):**
+  - os compêndios (os tamanhos);
+  - a janela de rolagem (o TeleOptics de 2077);
+  - os dois canos de 2077;
+  - o "sem erros de JS na página" (o passo da arma Smart cria o Smart Link, que saiu da wiki);
+- **G5, da wiki do master:** também falham num clone limpo do master (ciclo 93): o `criador` (2), o `cyberware` (6) e
+  o `reversao` (o clone com o `campaign-map.js` antigo).
+
 ## Regras
 
 - **Mudança de regra** só com a fonte (a página da wiki ou o código do CORE) e um teste de referência com o valor

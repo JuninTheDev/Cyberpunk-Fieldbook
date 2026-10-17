@@ -1,4 +1,4 @@
-// Tabela comparável (Armas e Cyberware de 2077) e Índice A–Z.
+// Tabela comparável (Armas e Cyberware de 2077: os do Mission Kit e os do suplemento de fã aprovados) e Índice A–Z.
 const { abrir, buscar, tecla, ondeParou } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
@@ -9,24 +9,25 @@ module.exports = async ({ edge, servidores, r }) => {
   const filtrar = (rotulo, valor) => edge.evaluate(`(() => { const s = document.querySelector('[data-filter="${rotulo}"]'); s.value = ${JSON.stringify(valor)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
   const ordenar = coluna => edge.evaluate(`[...document.querySelectorAll('.compare-table [data-sort]')].find(b => b.textContent === ${JSON.stringify(coluna)}).click()`);
 
+  // Colunas das armas: Arma, Origem, Tipo, Classe, Qualidade, Perícia, Dano, CDT, Pente, Mãos, Oculta, Preço.
   await abrir(edge, 'weapons2077');
-  await r.passo('Armas de 2077: vista de tabela com as 46 armas', async () => {
+  await r.passo('Armas de 2077: vista de tabela com as 41 armas (13 do Kit e 28 do suplemento de fã)', async () => {
     await verComo('table');
     const l = await linhas();
     const cartoesVisiveis = await edge.evaluate(`[...document.querySelectorAll('#content .entry')].filter(e => e.offsetParent).length`);
-    return [l.length === 46 && cartoesVisiveis === 0, `${l.length} linhas, ${cartoesVisiveis} cartões visíveis`];
+    return [l.length === 41 && cartoesVisiveis === 0, `${l.length} linhas, ${cartoesVisiveis} cartões visíveis`];
   });
-  await r.passo('ordenar por dano põe a de 6d6 no topo, depois as de 5d6', async () => {
+  await r.passo('ordenar por dano põe as de 5d6 no topo', async () => {
     await ordenar('Dano');
     const l = await linhas();
-    return [l[0][6].startsWith('6d6') && l[1][6].startsWith('5d6'), l.slice(0, 3).map(x => `${x[0]} ${x[6]}`).join(' | ')];
+    return [l[0][6].startsWith('5d6') && l[1][6].startsWith('5d6') && !l[40][6].startsWith('5d6'), l.slice(0, 3).map(x => `${x[0]} ${x[6]}`).join(' | ')];
   });
   await r.passo('ordenar por preço (maior primeiro)', async () => {
     await ordenar('Preço');
     const l = await linhas();
-    return [/5\.000eb/.test(l[0][11]), l.slice(0, 2).map(x => `${x[0]} ${x[11]}`).join(' | ')];
+    return [/1\.000eb/.test(l[0][11]), l.slice(0, 2).map(x => `${x[0]} ${x[11]}`).join(' | ')];
   });
-  await r.passo('filtro Classe = Smart dá 9 armas', async () => {
+  await r.passo('filtro Classe = Smart dá 9 armas (3 do Kit e 6 do suplemento)', async () => {
     await filtrar('Classe', 'Smart');
     const l = await linhas();
     const contagem = await edge.evaluate(`document.querySelector('.compare-count').textContent`);
@@ -55,10 +56,10 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   await r.passo('com a tabela salva, a busca abre o cartão visível', async () => {
     await verComo('table');
-    await buscar(edge, 'Tsunami Kappa');
+    await buscar(edge, 'Militech M-76E Omaha');
     await tecla(edge, 'Enter');
     await edge.sleep(900);
-    const visivel = await edge.evaluate(`!![...document.querySelectorAll('#content .entry')].find(e => e.dataset.toc === 'Tsunami Kappa')?.offsetParent`);
+    const visivel = await edge.evaluate(`!![...document.querySelectorAll('#content .entry')].find(e => e.dataset.toc === 'Militech M-76E Omaha')?.offsetParent`);
     return [visivel, ''];
   });
   await r.passo('a tabela não vira seção da barra "Nesta página"', async () => {
@@ -67,12 +68,13 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   await verComo('cards');
 
+  // Colunas do cyberware: Implante, Origem, Categoria, Instalação, Humanidade, Preço.
   await abrir(edge, 'cyberware2077');
-  await r.passo('Cyberware de 2077: tabela com 48 implantes, Humanidade do maior para o menor', async () => {
+  await r.passo('Cyberware de 2077: tabela com os 37 implantes (os Berserk e Sandevistan incluídos), Humanidade do maior para o menor', async () => {
     await verComo('table');
     await ordenar('Humanidade');
     const l = await linhas();
-    return [l.length === 48 && l[0][4].startsWith('14'), `${l.length} | ${l[0][0]} ${l[0][4]}`];
+    return [l.length === 37 && l[0][4].startsWith('14') && l.some(x => x[0] === 'Militech Falcon Sandevistan'), `${l.length} | ${l[0][0]} ${l[0][4]}`];
   });
   await r.passo('filtro de instalação no hospital', async () => {
     await filtrar('Instalação', 'Hospital');

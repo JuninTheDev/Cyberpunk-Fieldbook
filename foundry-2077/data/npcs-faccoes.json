@@ -2,7 +2,7 @@
   "_comentario": "Variantes de facção montadas sobre as fichas do livro, como na página Fichas de NPC da wiki. base = nome da ficha na wiki. tirar = armas removidas (nome na ficha). armas = [nome, origem]: origem 'core:<arma do sistema>' ou '2077:<arma do compêndio de 2077>'. pericia (opcional) troca a perícia da arma.",
   "variantes": [
     { "nome": "Tyger Claw", "base": "Boosterganger", "fonte": "adaptação", "tirar": ["Rippers"], "armas": [["Katana", "core:Heavy Melee"]], "armadura": "Kevlar",
-      "texto": "Capanga dos Tyger Claws (Japantown e Kabuki): katana, Kevlar e Basic Kiroshi Optics. Muitos chegam de moto. Na campanha, a gangue de Wakako." },
+      "texto": "Capanga dos Tyger Claws (Japantown e Kabuki): katana, Kevlar e cyberolhos Kiroshi. Muitos chegam de moto. Na campanha, a gangue de Wakako." },
     { "nome": "Tenente dos Tyger Claws", "base": "Oficial de segurança", "fonte": "adaptação", "tirar": ["Rifle de assalto"], "armas": [["Katana", "core:Heavy Melee"], ["Arasaka Shigure", "2077:Arasaka Shigure"]],
       "texto": "Tenente dos Tyger Claws: katana e SMG. A elite troca o Kerenzikov por um Sandevistan (compêndio Cyberware de 2077). Para Mina Kuroda, a guarda-costas de Wakako, use esta ficha." },
     { "nome": "Maelstrom", "base": "Boosterganger", "fonte": "livro, p. 422", "armadura": "Light Armorjack",

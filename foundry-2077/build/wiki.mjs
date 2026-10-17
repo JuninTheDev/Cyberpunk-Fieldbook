@@ -19,5 +19,6 @@ export const wiki = {
   // A base da campanha (documentos/morana/base-da-campanha.md): quem é cada pessoa do elenco, para a ficha do ator.
   base: require(path.join(wikiDir, 'campanha-base.js')).ler(fs.readFileSync(path.join(wikiDir, 'documentos', 'morana', 'base-da-campanha.md'), 'utf8')),
   campanhaBase: require(path.join(wikiDir, 'campanha-base.js')),
-  pages: { ...window.systemRules.pages, ...window.systemNet.pages, ...window.system2077.pages, ...window.npcStatBlocks.pages }
+  // As páginas da wiki (a de Roles fica no system-catalog.js, junto do cyberware e do equipamento do RED).
+  pages: { ...window.systemCatalog, ...window.systemRules.pages, ...window.systemNet.pages, ...window.system2077.pages, ...window.npcStatBlocks.pages }
 };

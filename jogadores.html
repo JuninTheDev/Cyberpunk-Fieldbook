@@ -13,12 +13,20 @@
 </head>
 <body>
   <div class="shell">
-    <aside>
+    <!-- A barra de cima vai de ponta a ponta, com a marca à esquerda (como nos exemplos de 2026). -->
+    <header class="topbar">
       <div class="brand">
         <b class="brand-name">NIGHT CITY <em>FIELDBOOK</em></b>
         <div class="brand-mark">Visão dos jogadores</div>
         <p>O que o grupo sabe e as regras da mesa</p>
       </div>
+      <div class="search-wrap">
+        <span class="search-glyph" aria-hidden="true">⌕</span>
+        <input id="search" type="search" placeholder="Buscar   ( / )" autocomplete="off" aria-label="Buscar na wiki: regra, pessoa, lugar">
+      </div>
+      <div class="top-meta">NIGHT CITY 2077 / VISÃO DOS JOGADORES</div>
+    </header>
+    <aside>
       <div class="workspace-tabs" role="tablist" aria-label="Área da wiki">
         <button class="workspace-tab" id="tab-campaigns" type="button" role="tab" aria-selected="true" data-workspace="campaigns">Campanha</button>
         <button class="workspace-tab" id="tab-system" type="button" role="tab" aria-selected="false" data-workspace="system">Regras</button>
@@ -26,13 +34,6 @@
       <nav id="navigation" aria-label="Seções da wiki"></nav>
     </aside>
     <main>
-      <header class="topbar">
-        <div class="search-wrap">
-          <span class="search-glyph" aria-hidden="true">⌕</span>
-          <input id="search" type="search" placeholder="Buscar regra, pessoa, lugar…   ( / )" autocomplete="off" aria-label="Buscar na wiki">
-        </div>
-        <div class="top-meta">NIGHT CITY 2077 / VISÃO DOS JOGADORES</div>
-      </header>
       <article class="content" id="content" aria-live="polite"></article>
     </main>
   </div>
@@ -43,6 +44,8 @@
   <script src="system-blackchrome.js"></script>
   <script src="system-glossario.js"></script>
   <script src="system-criacao.js"></script>
+  <script src="personagem-roles.js"></script>
+  <script src="personagem-cyberware.js"></script>
   <script src="loja-catalogo.js"></script>
   <script src="popup.js"></script>
   <script src="criador.js"></script>
@@ -58,10 +61,11 @@
       eyebrow: 'Night City / para os jogadores', title: 'Como jogamos',
       lede: 'O sistema, o seu personagem na wiki, como se ganha experiência e os combinados da mesa. O mestre confirma tudo na sessão zero.',
       html: `<div class="section" data-toc="O sistema"><h3>O sistema</h3><ul>
-          <li><b>Cyberpunk RED</b>, com as regras dos anos 2070 do <b>Cyberpunk Edgerunners Mission Kit</b> (oficial) e, como opção, o suplemento comunitário <b>Cyberpunk 2077</b> (feito por fãs, não oficial). Na aba Regras, cada página diz o que é do RED, do Kit e do suplemento de fã.</li>
+          <li><b>Cyberpunk RED</b>, com as regras dos anos 2070 do <b>Cyberpunk Edgerunners Mission Kit</b> (oficial). A mesa tem uma regra só: quando os dois dizem coisas diferentes, vale o Kit. A aba Regras já traz os dois juntos.</li>
+          <li>O suplemento comunitário <b>Cyberpunk 2077</b> (feito por fãs, não oficial) não é mais usado nas regras. O mestre revisou os itens dele: os que entraram estão nos catálogos, com a etiqueta "suplemento de fã".</li>
           <li>O catálogo oficial do <b>Black Chrome</b> (de 2045) continua à venda: armas, cyberware, moda e armadura, equipamento e veículos, com a etiqueta Black Chrome.</li>
           <li>Os eventos do jogo Cyberpunk 2077 acontecem em paralelo à campanha, como pano de fundo. Não é preciso ter jogado; V não aparece.</li>
-        </ul><p>${button('supplement2077', 'Suplemento de fã')} ${button('roles2077', 'Roles nos anos 2070')} ${button('economy', 'Economia')}</p></div>
+        </ul><p>${button('roles', 'Roles')} ${button('economy', 'Economia')} ${button('supplement2077', 'O que saiu do suplemento de fã')}</p></div>
         <div class="section" data-toc="Seu personagem"><h3>Seu personagem</h3><ul>
           <li><b>Entre</b> com o código que o mestre passou (no botão do canto de cima). O aparelho lembra.</li>
           <li><b>Crie</b> pelo criador, em Personagens: três métodos (Rato de Rua, Edgerunner e Pacote Completo) e a loja inicial, com o teto e as regras que o mestre escolheu.</li>
@@ -175,8 +179,10 @@
         if (!account || account.papel() !== 'jogador') { holder.innerHTML = ''; return; }
         const doc = account.selectedDoc();
         const hp = doc && doc.mesa && doc.mesa.hp ? ` · HP ${doc.mesa.hp.atual}/${doc.mesa.hp.max} na mesa` : '';
+        // Sem retrato, as iniciais em amarelo, como nos cartões de Personagens.
+        const initials = name => (String(name || '').match(/\p{L}+/gu) || ['?']).slice(0, 2).map(word => word[0]).join('').toUpperCase();
         holder.innerHTML = doc
-          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.roleName(doc.role) || 'sem Role')}${escapeHtml(hp)}</p></div><div class="pv-me-actions"><button class="action" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action" type="button" data-pv-switch>Trocar</button></div></div>`
+          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : `<span class="cc-initials" aria-hidden="true">${escapeHtml(initials(doc.nome))}</span>`}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.rolesLabel(doc))}${escapeHtml(hp)}</p></div><div class="pv-me-actions"><button class="action solid" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action ghost" type="button" data-pv-switch>Trocar</button></div></div>`
           : '<div class="pv-me-card pv-me-empty"><div class="pv-me-text"><span class="tag">Seu personagem</span><h3>Nenhum ainda</h3><p>Crie o seu personagem para esta campanha. O mestre leva para o Foundry quando estiver pronto.</p></div><div class="pv-me-actions"><button class="action" type="button" data-pv-new>Criar personagem</button></div></div>';
       }
       document.addEventListener('wiki:personagem', () => renderMe());

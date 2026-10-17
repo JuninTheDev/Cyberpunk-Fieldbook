@@ -19,15 +19,30 @@ module.exports = async ({ edge, servidores, r }) => {
   fs.writeFileSync(path.join(dados, 'atualizacoes.log'), ['2026-10-05 07:42:14 no ar: abc1234 Primeira', '2026-10-05 07:50:00 no ar: def5678 Segunda', ''].join('\n'));
   fs.writeFileSync(path.join(dados, '.modulo-pendente'), '');
   let mesa = { active: true, world: 'protocolo-morana', users: 2, version: '12.343' };
+  // A troca de mesa (Foundry 12 ou 14): as unidades do systemd e um systemctl de mentira, que anota cada comando e "liga"
+  // a versão que o Foundry de mentira responde.
+  const systemd = path.join(dados, 'systemd');
+  fs.mkdirSync(systemd);
+  for (const unidade of ['foundry.service', 'foundry14.service']) fs.writeFileSync(path.join(systemd, unidade), '[Unit]\n');
+  const versaoNoAr = path.join(dados, 'versao-no-ar.txt');
+  const comandos = path.join(dados, 'systemctl.log');
+  const systemctlFalso = path.join(dados, 'systemctl-falso.js');
+  fs.writeFileSync(systemctlFalso, [
+    "const fs = require('fs');",
+    'const args = process.argv.slice(2);',
+    `fs.appendFileSync(${JSON.stringify(comandos)}, args.join(' ') + '\\n');`,
+    `if (args[0] === 'enable' && args[1] === '--now') fs.writeFileSync(${JSON.stringify(versaoNoAr)}, args[2] === 'foundry14.service' ? '14.369' : '12.343');`
+  ].join('\n'));
   const foundry = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'application/json' });
-    response.end(JSON.stringify(mesa));
+    const versao = fs.existsSync(versaoNoAr) ? fs.readFileSync(versaoNoAr, 'utf8') : null;
+    response.end(JSON.stringify({ ...mesa, ...(versao ? { version: versao } : {}) }));
   }).listen(8769, '127.0.0.1');
   const publicadoNoGit = fs.readFileSync(path.join(servidores.raiz, 'jogadores.json'), 'utf8');
   let servidor = null;
   const status = async (caminho, options = {}) => (await fetch(base + caminho, { redirect: 'manual', ...options })).status;
   try {
-    servidor = await subir(8768, { HOST: '127.0.0.1', MODO: 'hospedado', GM_KEY: SENHA, DADOS: dados, DADOS_PERSONAGENS: '', FOUNDRY_URL: 'https://mesa.exemplo.com', FOUNDRY_STATUS: 'http://127.0.0.1:8769/api/status', BACKUPS: backups });
+    servidor = await subir(8768, { HOST: '127.0.0.1', MODO: 'hospedado', GM_KEY: SENHA, DADOS: dados, DADOS_PERSONAGENS: '', FOUNDRY_URL: 'https://mesa.exemplo.com', FOUNDRY_STATUS: 'http://127.0.0.1:8769/api/status', BACKUPS: backups, SYSTEMD_DIR: systemd, MESA_SYSTEMCTL: JSON.stringify([process.execPath, systemctlFalso]) });
 
     await r.passo('este computador sem senha é jogador: raiz dos jogadores, index.html bloqueado', async () => {
       const raiz = await (await fetch(`${base}/`)).text();
@@ -70,6 +85,30 @@ module.exports = async ({ edge, servidores, r }) => {
     return [sv.backup?.nome === 'backup-2026-10-05.tar.gz' && sv.disco?.total > 0 && sv.moduloPendente === true && /def5678 Segunda/.test(sv.registro?.[0] || '') && jogador.servidor === null,
       JSON.stringify({ backup: sv.backup?.nome, disco: Boolean(sv.disco), modulo: sv.moduloPendente, registro: sv.registro?.[0], jogador: jogador.servidor })];
   });
+  await r.passo('troca de mesa (Foundry 12 ou 14): só o mestre; com 2 conectados pede confirmação; confirmada, liga o 14 (que fica habilitado) e desabilita o 12; o jogador não vê a versão', async () => {
+      const trocar = (corpo, headers = { cookie }) => fetch(`${base}/api/mestre/mesa`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(corpo) })
+        .then(async resposta => ({ status: resposta.status, dados: await resposta.json() }));
+      const anotados = () => (fs.existsSync(comandos) ? fs.readFileSync(comandos, 'utf8').trim().split('\n') : []);
+      const estado = async headers => (await fetch(`${base}/api/estado`, { headers })).json();
+      const antes = await estado({ cookie });
+      const jogador = await trocar({ foundry: 14 }, {});
+      const invalida = await trocar({ foundry: 13 });
+      const ocupada = await trocar({ foundry: 14 });
+      const semComando = anotados().length;
+      const forcada = await trocar({ foundry: 14, forcar: true });
+      const depois = await estado({ cookie });
+      const doJogador = (await estado({})).mesa;
+      const denovo = await trocar({ foundry: 14 });
+      const lista = anotados();
+      // Volta ao 12 (os passos de tela abaixo começam nele).
+      const volta = await trocar({ foundry: 12, forcar: true });
+      const ok = antes.servidor?.mesas?.join() === '12,14' && antes.mesa?.foundry === 12 && jogador.status === 403 && invalida.status === 400
+        && ocupada.status === 409 && ocupada.dados.confirmar === true && ocupada.dados.usuarios === 2 && /2 pessoas conectadas/.test(ocupada.dados.erro) && semComando === 0
+        && forcada.status === 200 && forcada.dados.foundry === 14 && depois.mesa?.foundry === 14 && !('foundry' in (doJogador || {}))
+        && denovo.status === 200 && denovo.dados.jaEstava === true && lista.join(' | ') === 'enable --now foundry14.service | disable foundry.service'
+        && volta.status === 200 && anotados().slice(2).join(' | ') === 'enable --now foundry.service | disable foundry14.service';
+      return [ok, JSON.stringify({ mesas: antes.servidor?.mesas, antes: antes.mesa?.foundry, jogador: jogador.status, invalida: invalida.status, ocupada: ocupada.dados, forcada: forcada.dados, depois: depois.mesa?.foundry, doJogador, denovo: denovo.dados, comandos: anotados() })];
+    });
   await r.passo('/api/estado: mesa aberta com 2 conectados, versão no ar', async () => {
       const estado = await (await fetch(`${base}/api/estado`)).json();
       return [estado.modo === 'hospedado' && !estado.mestre && estado.mesa?.aberta && estado.mesa.usuarios === 2 && estado.mesa.url === 'https://mesa.exemplo.com' && /^[0-9a-f]{7,}$/.test(estado.versao?.commit || '') && !('mundo' in estado.mesa), JSON.stringify(estado)];
@@ -117,7 +156,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const texto = await textoDe('#side-status');
       const link = await edge.evaluate(`document.querySelector('#side-status .table-link')?.href || ''`);
       const menu = await menuDaConta();
-      return [/Mesa aberta · 2 conectados/.test(texto) && link === 'https://mesa.exemplo.com/' && /Entrar como mestre/.test(menu), `${texto} · ${link} · menu: ${menu}`];
+      return [/Mesa aberta \/\/ 2 conectados/.test(texto) && link === 'https://mesa.exemplo.com/' && /Entrar como mestre/.test(menu), `${texto} · ${link} · menu: ${menu}`];
     });
     await edge.shot('barra-jogador');
     await r.passo('tela /mestre: com a senha, abre a wiki do mestre; o menu da conta tem "Sair" e a versão', async () => {
@@ -131,6 +170,26 @@ module.exports = async ({ edge, servidores, r }) => {
       return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(menu) && /No ar: [0-9a-f]{7,}/.test(menu) && /Baixar backup/.test(menu) && /Servidor: backup .*módulo esperando a mesa vazia/.test(texto), `${titulo} · ${texto} · menu: ${menu}`];
     });
     await edge.shot('barra-mestre');
+    await r.passo('barra lateral do mestre: "Foundry 12 · 14" com o 12 aceso; o clique no 14 confirma, avisa dos 2 conectados e confirma de novo; a barra acende o 14', async () => {
+      const botoes = () => edge.evaluate(`[...document.querySelectorAll('[data-table-switch]')].map(b => b.dataset.tableSwitch + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')).join()`);
+      const antes = await botoes();
+      const popup = async () => {
+        for (let i = 0; i < 25 && !(await edge.evaluate(`!!document.querySelector('dialog.popup[open] [data-popup-ok]')`)); i++) await edge.sleep(200);
+        const texto = await textoDe('dialog.popup[open]');
+        await edge.evaluate(`document.querySelector('dialog.popup[open] [data-popup-ok]')?.click()`);
+        await edge.sleep(400);
+        return texto;
+      };
+      await edge.evaluate(`document.querySelector('[data-table-switch="14"]').click()`);
+      const primeira = await popup();
+      const segunda = await popup();
+      for (let i = 0; i < 40 && !/14\*/.test(await botoes()); i++) await edge.sleep(500);
+      const depois = await botoes();
+      await edge.shot('barra-mestre-troca');
+      // Volta ao 12 pela API (os passos abaixo não olham a versão).
+      await fetch(`${base}/api/mestre/mesa`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ foundry: 12, forcar: true }) });
+      return [antes === '12*,14' && /Foundry 12 desliga e o Foundry 14 liga/.test(primeira) && /2 pessoas conectadas/.test(segunda) && depois === '12,14*', JSON.stringify({ antes, primeira, segunda, depois })];
+    });
     await r.passo('página Campanhas: oferece ligar o mundo aberto no Foundry à campanha, com um clique', async () => {
       await edge.evaluate(`wikiApp.openPage('campanhas')`);
       for (let i = 0; i < 25 && !(await edge.evaluate(`!!document.querySelector('[data-cp-world]')`)); i++) await edge.sleep(200);

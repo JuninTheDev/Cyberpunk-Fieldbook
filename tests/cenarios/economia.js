@@ -1,4 +1,4 @@
-// Economia dos anos 2070 (os preços do RED, que valem no Mission Kit) e o resumo do suplemento de fã.
+// Economia dos anos 2070 (os preços do RED, que valem no Mission Kit), sem as regras do suplemento de fã.
 const { abrir, buscar, tecla, ondeParou, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
@@ -12,10 +12,14 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   await edge.shot('economia');
 
-  // O Kibble também está na Humanidade: no Mission Kit, viver de Kibble custa Humanidade todo mês.
-  // Os documentos de Night City entram na busca (a missão The Jacket tem "Ping: o Megaprédio H4"): no filtro Sistema,
-  // o termo ainda cai na Economia.
-  for (const termo of ['kibble', 'megapredio', 'neokitsch', 'hustle']) {
+  // O Kibble também está na Humanidade: viver de Kibble custa Humanidade todo mês.
+  // Os documentos de Night City entram na busca: no filtro Sistema, o termo ainda cai na Economia.
+  await r.passo('sem as regras do suplemento de fã (megaprédio, hustle de 1,5×, zonas, os quatro estilos de moda)', async () => {
+    const texto = await edge.evaluate(`document.getElementById('content').textContent`);
+    const secoes = await edge.evaluate(`[...document.querySelectorAll('#content .section')].map(s => s.dataset.toc)`);
+    return [!/suplemento|megaprédio|1,5×|Neokitsch|Em 2077 não há a Role Fixer/.test(texto) && !secoes.some(s => /Zonas|Moda/.test(s)), secoes.join(', ')];
+  });
+  for (const termo of ['kibble', 'quitinete', 'hustle']) {
     await r.passo(`busca "${termo}" cai na Economia${termo === 'kibble' ? ' (ou na Humanidade)' : ''}, no filtro Sistema`, async () => {
       await buscar(edge, termo);
       await edge.evaluate(`document.querySelector('[data-search-filter="system"]')?.click()`);
@@ -30,11 +34,32 @@ module.exports = async ({ edge, servidores, r }) => {
       return [(parou.pagina === 'economy' || (termo === 'kibble' && parou.pagina === 'humanity')) && parou.marcas > 0, `${parou.pagina} | ${parou.marcas} marcas`];
     });
   }
-  await r.passo('suplemento 2077 tem botão para a Economia', async () => {
+  await r.passo('a página do suplemento de fã leva à Economia que vale', async () => {
     await abrir(edge, 'supplement2077');
     await edge.evaluate(`document.querySelector('#content [data-page=economy]').click()`);
     await edge.sleep(200);
     return [(await edge.evaluate('wikiApp.currentPage()')) === 'economy', ''];
+  });
+  // Nos anos 2070, todo Night Market de cyberware tem um Berserk ou um Sandevistan à venda, sorteado entre os de Cyberware de 2077.
+  await r.passo('Night Market de cyberware: também à venda um Berserk ou Sandevistan (até 40 rolagens)', async () => {
+    await abrir(edge, 'economy');
+    const achou = await edge.evaluate(`(() => {
+      const botao = document.querySelector('[data-night-market]');
+      for (let i = 0; i < 40; i += 1) {
+        botao.click();
+        const saida = botao.closest('.roll-buttons').nextElementSibling;
+        const categorias = [...saida.querySelectorAll('p b')].map(b => b.textContent);
+        const extra = saida.querySelector('.night-market-os');
+        if (categorias.includes('Cyberware')) return extra ? extra.textContent : 'mercado de cyberware sem o Berserk ou Sandevistan';
+        if (extra) return 'Berserk ou Sandevistan num mercado sem cyberware';
+      }
+      return 'nenhum mercado de cyberware em 40 rolagens';
+    })()`);
+    return [/Também à venda \(anos 2070\): .*(Berserk|Sandevistan), [\d.]+eb\./.test(achou), achou];
+  });
+  await r.passo('Night Market: a tabela tem o Kibble do RED (o "antigo Kibble" era do suplemento de fã)', async () => {
+    const tabela = await edge.evaluate(`document.querySelector('#content details.roll-table')?.textContent || ''`);
+    return [/Kibble \(10eb\)/.test(tabela) && !/antigo Kibble/.test(tabela), tabela.slice(0, 80)];
   });
   await r.passo('armas do RED: o preço do RED e a nota do Rebuild (sem a coluna "Preço 2077" do suplemento de fã)', async () => {
     await abrir(edge, 'gear');

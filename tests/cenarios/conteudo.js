@@ -1,4 +1,4 @@
-// Conteúdo novo: Avanço, Lifepath, Night Market, Roles nos anos 2070, equipamento e Encontros de 2077 (só do mestre).
+// Conteúdo novo: Avanço, Lifepath, Night Market, Roles (com os ajustes dos anos 2070), equipamento e Encontros de 2077 (só do mestre).
 const { abrir, buscarEAbrir, ondeParou, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
@@ -12,11 +12,12 @@ module.exports = async ({ edge, servidores, r }) => {
   })()`);
   const secoes = () => edge.evaluate(`[...document.querySelectorAll('#content .section')].map(s => s.dataset.toc)`);
 
-  await r.passo('menu tem Lifepath, Avanço, Roles nos anos 2070 e Encontros', async () => {
+  await r.passo('menu tem Lifepath, Avanço, Roles e Encontros (e não tem mais as páginas de 2077 que foram unificadas)', async () => {
     await edge.evaluate(`document.querySelector('#tab-system').click()`);
     const ids = await edge.evaluate(`[...document.querySelectorAll('.nav-item')].map(b => b.dataset.page)`);
-    const faltam = ['lifepath', 'advancement', 'roles2077', 'encounters'].filter(id => !ids.includes(id));
-    return [!faltam.length, faltam.join(', ') || 'todos'];
+    const faltam = ['lifepath', 'advancement', 'roles', 'encounters'].filter(id => !ids.includes(id));
+    const sobram = ['roles2077', 'net2077', 'os2077'].filter(id => ids.includes(id));
+    return [!faltam.length && !sobram.length, `faltam: ${faltam.join(', ') || 'nenhuma'} · sobram: ${sobram.join(', ') || 'nenhuma'}`];
   });
 
   await abrir(edge, 'advancement');
@@ -85,19 +86,25 @@ module.exports = async ({ edge, servidores, r }) => {
     return [!erros.length, erros.join(' ') || 'ok'];
   });
 
-  await abrir(edge, 'roles2077');
-  await r.passo('Roles nos anos 2070: as 10 Roles do RED no resumo, o Netrunner, a compra direta e o Lawman do suplemento de fã', async () => {
+  await abrir(edge, 'roles');
+  await r.passo('Roles: as dez do RED, os ajustes dos anos 2070 e o Netrunner numa página só, sem Face nem Investigator', async () => {
     const s = await secoes();
-    const linhas = await edge.evaluate(`[...[...document.querySelectorAll('#content .section')].find(x => x.dataset.toc === 'Resumo').querySelectorAll('tbody tr')].map(tr => tr.cells[0].textContent)`);
-    const ok = ['Resumo', 'Netrunner', 'Comprar direto do fabricante', 'Lawman com Investigator (suplemento de fã)'].every(x => s.includes(x)) && !s.includes('Face') && !s.includes('Corpo')
+    const linhas = await edge.evaluate(`[...[...document.querySelectorAll('#content .section')].find(x => x.dataset.toc === 'Nos anos 2070').querySelectorAll('tbody tr')].map(tr => tr.cells[0].textContent)`);
+    const texto = await edge.evaluate(`document.getElementById('content').textContent`);
+    const ok = ['As dez Roles', 'Nos anos 2070', 'Netrunner', 'Decisão rápida'].every(x => s.includes(x)) && !/\bFace\b|Investigator|nove Roles/.test(texto)
       && linhas.length === 10 && ['Rockerboy', 'Exec', 'Fixer'].every(role => linhas.includes(role));
     return [ok, `${s.join(', ')} | ${linhas.join(', ')}`];
   });
-  await r.passo('o resumo do suplemento leva às Roles nos anos 2070', async () => {
+  await r.passo('endereço antigo #roles2077 abre Roles em "Nos anos 2070"', async () => {
+    await edge.ir(`${servidores.local}/#roles2077`, 1500);
+    const parou = await ondeParou(edge);
+    return [parou.pagina === 'roles' && parou.foco === 'Nos anos 2070', `${parou.pagina} | foco "${parou.foco}"`];
+  });
+  await r.passo('a página do suplemento de fã leva às Roles', async () => {
     await abrir(edge, 'supplement2077');
-    await edge.evaluate(`document.querySelector('#content [data-page="roles2077"]').click()`);
+    await edge.evaluate(`document.querySelector('#content [data-page="roles"]').click()`);
     await edge.sleep(300);
-    return [(await edge.evaluate('wikiApp.currentPage()')) === 'roles2077', ''];
+    return [(await edge.evaluate('wikiApp.currentPage()')) === 'roles', ''];
   });
 
   await abrir(edge, 'gear');
@@ -168,12 +175,12 @@ module.exports = async ({ edge, servidores, r }) => {
   });
 
   if (!servidores.rede) return;
-  await r.passo('visão dos jogadores: Lifepath e Roles nos anos 2070 sim, Encontros não', async () => {
+  await r.passo('visão dos jogadores: Lifepath e Roles sim, Encontros não', async () => {
     await edge.ir(`${servidores.rede}/#encounters`, 2500);
     const pagina = await edge.evaluate('wikiApp.currentPage()');
     const ids = await edge.evaluate(`(() => { document.querySelector('#tab-system').click(); return [...document.querySelectorAll('.nav-item')].map(b => b.dataset.page); })()`);
     const arquivo = (await fetch(`${servidores.rede}/mestre-npcs.js`)).status;
-    const ok = pagina !== 'encounters' && !ids.includes('encounters') && ids.includes('lifepath') && ids.includes('roles2077') && ids.includes('advancement') && arquivo === 403;
+    const ok = pagina !== 'encounters' && !ids.includes('encounters') && ids.includes('lifepath') && ids.includes('roles') && ids.includes('advancement') && arquivo === 403;
     return [ok, `abriu ${pagina} | mestre-npcs.js HTTP ${arquivo}`];
   });
   await r.passo('visão dos jogadores: o rolador do Lifepath funciona', async () => {

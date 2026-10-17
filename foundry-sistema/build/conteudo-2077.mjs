@@ -1,6 +1,8 @@
 // O conteúdo de 2077 que a mesa usa: o do Cyberpunk Edgerunners Mission Kit (a base) e o do suplemento de fã adaptado
-// (o que o Kit não cobre). Armas, os Rebuilds e a munição Smart melhorada do Kit, cyberware (o Neuroport e as opções),
-// a droga Immunoblockers e netrunning (cyberdecks, quickhacks e daemons). Vem da própria wiki (system-2077.js e
+// (o que o Kit não cobre). Armas, os Rebuilds e a munição Smart melhorada do Kit, cyberware (o Neuroport e as opções, e
+// os Berserk e Sandevistan dos anos 2070), a droga Immunoblockers e netrunning (os cyberdecks com marca e os quickhacks:
+// os 11 do Kit e os 5 do suplemento que a mesa aprovou; desde a revisão da wiki de 2026-10-16, sem a neuralware de
+// netrunning, os daemons, o White ICE, os cyberópticos e as placas do suplemento). Vem da própria wiki (system-2077.js e
 // system-net.js), os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12 (foundry-2077/build): as
 // regras de conversão são as dele, e os ids são os da loja da wiki ("armas-2077:<nome>", "cyberware-2077:<nome>",
 // "netrunning-2077:<nome>").
@@ -196,23 +198,23 @@ function smartMelhorada(itensDoCore) {
   });
 }
 
-// ---------------- Cyberware (Kit p. 35–37; suplemento de fã p. 27–30, 13 e 24–26) ----------------
+// ---------------- Cyberware (Kit p. 35–37; suplemento de fã p. 23–30) ----------------
 const INSTALACOES = { Loja: 'mall', Clínica: 'clinic', Hospital: 'hospital' };
-// Categoria da wiki → [tipo de cyberware, é base (abre slots)?]. A ordem importa: "Cyberware externo (placa base)" é base.
+// Categoria da wiki → [tipo de cyberware, é base (abre slots)?]. Os Berserk e Sandevistan (o grupo osware) são
+// "Neuralware (opção do Neural Link; ...)".
 const CATEGORIAS = [
   [/^Neuroport \(base\)/, 'neuralWare', true],
-  [/^Fashionware/, 'fashionware', false], [/^Neuralware/, 'neuralWare', false], [/^Cyberóptico \(base\)/, 'cyberEye', true], [/^Cyberóptico \(opção\)/, 'cyberEye', false],
-  [/^Cyberware interno/, 'cyberwareInternal', false], [/placa base/, 'cyberwareExternal', true], [/^Opção de placa/, 'cyberwareExternal', false],
-  [/^Cyberware externo/, 'cyberwareExternal', false], [/^Opção de cyberbraço|^Cyberbraços/, 'cyberArm', false], [/^Opção de cyberperna/, 'cyberLeg', false]
+  [/^Fashionware/, 'fashionware', false], [/^Neuralware/, 'neuralWare', false],
+  [/^Cyberware interno/, 'cyberwareInternal', false], [/^Cyberware externo/, 'cyberwareExternal', false],
+  [/^Opção de cyberbraço|^Cyberbraços/, 'cyberArm', false], [/^Opção de cyberperna/, 'cyberLeg', false]
 ];
 // Grupo da wiki → página do suplemento de fã; as do Kit têm a página do Kit.
-const PAGINA_DO_CYBERWARE = { neuroport: 36, fashionware: 27, neural: 27, optics: 28, internal: 28, external: 29, limbs: 30 };
+const PAGINA_DO_CYBERWARE = { neuroport: 36, fashionware: 27, neural: 27, osware: 24, internal: 28, external: 29, limbs: 30 };
 const PAGINA_DO_KIT = { neuroport: 36, neural: 35, limbs: 36 };
 
 // Os slots de opção das fundações de 2077, pela wiki (system-2077.js): o Neuroport traz o Neural Link "com 5 slots de
-// opção"; as Basic Kiroshi Optics, "dois slots de opção para cyberolho" (o par); o Skin Weave, "dois slots de placa"; o
-// Subdermal Armour, "um slot de placa".
-const SLOTS_2077 = { Neuroport: 5, 'Basic Kiroshi Optics': 2, 'Skin Weave': 2, 'Subdermal Armour (2077)': 1 };
+// opção".
+const SLOTS_2077 = { Neuroport: 5 };
 function cyberware(raw, grupo) {
   const categoria = CATEGORIAS.find(([padrao]) => padrao.test(raw.category));
   if (!categoria) throw new Error(`Categoria de cyberware desconhecida em ${raw.name}: ${raw.category}`);
@@ -230,19 +232,8 @@ function cyberware(raw, grupo) {
   };
 }
 
-// Cartões (neuralware de netrunning, Berserk e Sandevistan): { name, tag, stats: [[rótulo, valor]], text, extra, tip }.
-const doCartao = (cartao, rotulo) => (cartao.stats.find(([nome]) => nome === rotulo) || [])[1];
+// Os cartões dos quickhacks: { name, tag, stats: [[rótulo, valor]], text, extra, tip }.
 const detalhes = cartao => cartao.stats.map(([rotulo, valor]) => `${rotulo}: ${valor}`).join(' · ');
-function cyberwareDoCartao(cartao, categoria, pagina) {
-  return {
-    name: cartao.name, type: 'cyberware', img: 'icons/svg/clockwork.svg',
-    system: {
-      descricao: `<p><b>${categoria}</b> · ${detalhes(cartao)}</p>${paragrafo(cartao.text)}${cartao.extra || ''}${paragrafo(cartao.tip, 'Na mesa')}${fonteNaWiki(SUPLEMENTO, pagina)}`,
-      tipo: 'neuralWare', fundacional: false, tamanho: 1, slots: 0, instaladoEm: '', perdaHumanidade: perdaDeHumanidade(doCartao(cartao, 'Perda de Humanidade')), local: 'clinic', instalado: false,
-      preco: precoEm(doCartao(cartao, 'Custo') ?? doCartao(cartao, 'Preço')) ?? 0, fonte: fonte(SUPLEMENTO, pagina)
-    }
-  };
-}
 
 // A droga do Mission Kit (Kit p. 31). Os efeitos são de Humanidade e o mestre os resolve: a droga não tem efeito na ficha.
 const IMMUNOBLOCKERS = '<p><b>Droga do Mission Kit</b> · 100eb (Premium) a dose · não vicia</p><p><b>Efeito primário:</b> recupera 2d6 de Humanidade, sem passar da Humanidade máxima que a terapia permite. Dura um mês, mas pode acabar antes, num momento estressante (o mestre decide).</p><p><b>Efeito secundário (DV21):</b> perde a Humanidade ganha com a droga, e alucinações dão −2 em todo teste por 60 segundos (20 rodadas). Se nesse tempo não injetar 2 doses de Immunoblockers (uma Ação), perde 4d6 de Humanidade no fim dos 60 segundos (sem mexer na máxima). Abaixo de 0: ciberpsicose extrema, e o mestre pode dar +2 em todo teste até a Humanidade voltar a ser positiva.</p>';
@@ -251,32 +242,33 @@ const immunoblockers = () => ({
   system: { descricao: IMMUNOBLOCKERS + fonteNaWiki(KIT, 31), quantidade: 1, uso: 'carregando', consumo: '', preco: 100, fonte: fonte(KIT, 31) }
 });
 
-// ---------------- Netrunning (Kit p. 16–17; suplemento de fã p. 13–23) ----------------
+// ---------------- Netrunning (Kit p. 16–17 e 37; suplemento de fã p. 14–20) ----------------
 const QUALIDADE_DO_DECK = { Excelente: 'excellent', Padrão: 'standard', Ruim: 'poor' };
-// Linha da tabela de cyberdecks: [fabricante, modelo, RAM, slots, cooling, qualidade e especialidade, custo, descrição].
-function deck([fabricante, modelo, ram, slots, resfriamento, especial, custo, sabor]) {
+// Os decks com marca (system-net.js): { maker, model, quality, slots, cost, text }. É um cyberdeck do RED da qualidade
+// dele (os slots e o preço do RED); o modelo, do suplemento de fã, é só a aparência. A RAM, o cooling e a especialidade
+// do suplemento não valem (a wiki, como o foundry-2077/build/net.mjs).
+function deck({ maker, model, quality, slots, cost, text }) {
   return {
-    name: `${fabricante} ${modelo}`, type: 'cyberdeck', img: 'icons/svg/net.svg',
+    name: `${maker} ${model}`, type: 'cyberdeck', img: 'icons/svg/net.svg',
     system: {
-      descricao: `<p><b>Cyberdeck de 2077</b> · RAM ${ram} · slots ${slots} · Cooling ${resfriamento} · ${custo}</p><p>${especial}</p><p><i>${sabor}</i></p>`
-        + '<p>Em 2077 o cyberdeck é um <b>sistema operacional instalado no Neural Link</b>, sem perda de Humanidade. A <b>RAM</b> paga os quickhacks; o <b>Cooling</b> é quanta RAM volta por rodada.</p>'
+      descricao: `<p><b>Cyberdeck com marca</b> · qualidade ${String(quality).toLowerCase()} · ${slots} slots · ${cost}</p><p><i>${text}</i></p>`
+        + '<p>É um cyberdeck do RED da qualidade dele: o modelo, do suplemento de fã, é só a aparência. A RAM, o cooling e a especialidade do suplemento não valem. Todo deck também vem na versão para a Neuroport Cyberdeck Port, pelo mesmo preço, que não aceita hardware (Kit p. 37).</p>'
         + fonteNaWiki(SUPLEMENTO, 14),
-      slots: Number(slots) || 0, ram: Number(ram) || 0, resfriamento: Number(resfriamento) || 0, qualidade: QUALIDADE_DO_DECK[especial.split('.')[0]] || 'standard',
-      uso: 'carregando', preco: precoEm(custo) ?? 500, fonte: fonte(SUPLEMENTO, 14)
+      slots: Number(slots) || 0, ram: 0, resfriamento: 0, qualidade: QUALIDADE_DO_DECK[quality] || 'standard',
+      uso: 'carregando', preco: precoEm(cost) ?? 500, fonte: fonte(SUPLEMENTO, 14)
     }
   };
 }
-// Quickhacks e daemons viram programas: o sistema não rola nada sozinho, a ficha mostra o cartão. Os quickhacks do Kit
-// não se compram (todo netrunner faz os do nível dele, pelo Rank de Interface); os do fã têm preço opcional.
-function programaDoCartao(cartao, { classe, pagina, rez = 0, ram = 0 }) {
+// Os quickhacks viram programas de preço 0: ninguém compra (todo netrunner faz os do nível dele, pelo Rank de
+// Interface), e a ficha mostra o cartão; o sistema não rola nada sozinho. Os do Kit, p. 16; os do suplemento, p. 17.
+function quickhack(cartao) {
   const kit = cartao.raw?.origem === 'kit';
-  const livro = kit ? KIT : SUPLEMENTO;
+  const [livro, pagina] = kit ? [KIT, 16] : [SUPLEMENTO, 17];
   return {
     name: cartao.name, type: 'programa', img: 'icons/svg/lightning.svg',
     system: {
-      descricao: `<p><b>${cartao.tag}</b> · ${detalhes(cartao)}</p>${paragrafo(cartao.text)}${cartao.extra || ''}${cartao.icon ? paragrafo(`<i>${cartao.icon}</i>`, 'Na NET') : ''}${paragrafo(cartao.tip, 'Na mesa')}${fonteNaWiki(livro, pagina)}`,
-      classe, atk: 0, def: 0, rez, ram, dano: { padrao: '0', blackIce: '0' }, tamanho: 1, instaladoEm: '',
-      preco: kit ? 0 : precoEm(doCartao(cartao, 'Preço (opcional)') ?? doCartao(cartao, 'Preço') ?? doCartao(cartao, 'Custo')) ?? 100, fonte: fonte(livro, pagina)
+      descricao: `<p><b>${cartao.tag}</b> · ${detalhes(cartao)}</p>${paragrafo(cartao.text)}${cartao.extra || ''}${paragrafo(cartao.tip, 'Na mesa')}${fonteNaWiki(livro, pagina)}`,
+      classe: 'quickhack', atk: 0, def: 0, rez: 0, ram: 0, dano: { padrao: '0', blackIce: '0' }, tamanho: 1, instaladoEm: '', preco: 0, fonte: fonte(livro, pagina)
     }
   };
 }
@@ -296,13 +288,8 @@ export function converter2077({ raizDaWiki, itensDoCore, slug }) {
   for (const item of rebuilds()) guardar('armas-2077', item);
   for (const item of smartMelhorada(itensDoCore)) guardar('armas-2077', item);
   for (const [grupo, lista] of Object.entries(grupos)) for (const entrada of lista) guardar('cyberware-2077', cyberware(entrada.raw, grupo));
-  for (const cartao of net.neuralware) guardar('cyberware-2077', cyberwareDoCartao(cartao, 'Neuralware de netrunning (opção do Neural Link)', 13));
-  for (const cartao of [...net.berserks, ...net.sandevistans]) guardar('cyberware-2077', cyberwareDoCartao(cartao, `${cartao.tag} (instalado no Neural Link)`, 24));
   guardar('cyberware-2077', immunoblockers());
   for (const linha of net.decks) guardar('netrunning-2077', deck(linha));
-  for (const cartao of Object.values(net.quickhacks).flat()) {
-    guardar('netrunning-2077', programaDoCartao(cartao, { classe: 'quickhack', pagina: 16, ram: Number(doCartao(cartao, 'RAM')) || 0 }));
-  }
-  for (const cartao of net.daemons) guardar('netrunning-2077', programaDoCartao(cartao, { classe: 'daemon', pagina: 21, rez: Number(doCartao(cartao, 'REZ')) || 0 }));
+  for (const cartao of Object.values(net.quickhacks).flat()) guardar('netrunning-2077', quickhack(cartao));
   return itens;
 }

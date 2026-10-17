@@ -99,8 +99,9 @@ module.exports = async ({ edge, r }) => {
       await edge.evaluate(`document.querySelector('[data-cc-restore]').click()`);
       await edge.sleep(400);
       await responder(true);
-      await esperar(`/Vera/.test(document.querySelector('.cc-identity h3')?.textContent || '') && !/estragada/.test(document.querySelector('.cc-identity h3')?.textContent || '')`);
-      const nome = await texto('.cc-identity h3');
+      // O nome do personagem é o título da página da ficha.
+      await esperar(`/Vera/.test(document.querySelector('#content .page-head h2')?.textContent || '') && !/estragada/.test(document.querySelector('#content .page-head h2')?.textContent || '')`);
+      const nome = await texto('#content .page-head h2');
       const doc = (await pedir(`/api/personagens/${criado.id}`)).dados.personagem;
       const depois = await texto('[data-cc-history]');
       return [/v1/.test(caixa) && /muda: nome/.test(caixa) && nome === 'Vera' && doc.notas === 'versão original' && doc.versao === salvo.versao + 1 && doc.anotacoes?.texto === 'Deve 200eb ao Brakk.' && /v2/.test(depois),
@@ -113,7 +114,7 @@ module.exports = async ({ edge, r }) => {
       const secoes = await edge.evaluate(`[...document.querySelectorAll('#content .section')].map(s => s.dataset.toc)`);
       const tabela = await edge.evaluate(`[...document.querySelectorAll('#content .section[data-toc="Ciberpsicose"] tbody tr')].map(tr => tr.cells[0].textContent)`);
       const tracos = await edge.evaluate(`document.querySelectorAll('#content .section[data-toc="Ciberpsicose"] ul')[0]?.children.length || 0`);
-      return [secoes.includes('Ciberpsicose') && secoes.includes('Perda de Humanidade por trauma') && tabela.join('|') === '3 ou mais|2|1|0|0, com Humanidade negativa' && tracos === 9, `${secoes.join(', ')} · ${tabela.join('|')} · ${tracos} traços`];
+      return [secoes.includes('Ciberpsicose') && secoes.includes('Perda e ganho de Humanidade') && !secoes.includes('Perda de Humanidade por trauma') && tabela.join('|') === '3 ou mais|2|1|0|0, com Humanidade negativa' && tracos === 9, `${secoes.join(', ')} · ${tabela.join('|')} · ${tracos} traços`];
     });
 
     // ---------------- Jogador: Próxima sessão no Resumo ----------------

@@ -16,7 +16,7 @@
   // wiki sem servidor: só no aparelho. O que o aparelho já tinha e a conta ainda não sobe na primeira vez.
   // O menu da conta e a visão dos jogadores guardam aqui as deles (wikiApp.prefs) e ouvem "wiki:preferencias",
   // quando o servidor responde.
-  const SYNCED = ['fixadas', 'grupos-fechados', 'barra-compacta', 'recentes'];
+  const SYNCED = ['fixadas', 'grupos-fechados', 'grupos-abertos', 'barra-compacta', 'recentes'];
   const prefs = (() => {
     let owner = localGet('night-city-dono') || 'aparelho'; // a conta do último que entrou neste aparelho
     let server = null; // null = sem conta (ou ainda não leu)
@@ -96,28 +96,25 @@
       { id: 'glossary', label: 'Glossário', icon: 'G' },
       { id: 'indice', label: 'Índice A–Z', icon: 'AZ' }
     ]},
-    { group: 'Regras do RED', pages: [
+    { group: 'Regras', pages: [
       { id: 'checks', label: 'Testes e dificuldades', icon: 'R' },
       { id: 'combat', label: 'Combate', icon: 'C' },
       { id: 'damage', label: 'Dano, ferimentos e cura', icon: 'D' },
       { id: 'humanity', label: 'Humanidade e drogas', icon: 'H' },
       { id: 'economy', label: 'Economia', icon: 'EB' },
+      { id: 'roles', label: 'Roles', icon: 'F' },
       { id: 'creation', label: 'Criação de personagens', icon: 'P' },
       { id: 'lifepath', label: 'Lifepath', icon: 'LP' },
       { id: 'advancement', label: 'Avanço e Pontos de Melhoria', icon: 'IP' }
     ]},
     { group: 'Netrunning', pages: [
-      { id: 'netrunning', label: 'Regras do RED', icon: 'N' },
-      { id: 'netArsenal', label: 'Arsenal: ICE, programas, upgrades', icon: 'ICE' },
-      { id: 'net2077', label: 'Netrunning de 2077', icon: '77' },
-      { id: 'quickhacks', label: 'Quickhacks e daemons', icon: 'QH' },
-      { id: 'os2077', label: 'Berserk e Sandevistan', icon: 'OS' }
+      { id: 'netrunning', label: 'Regras de netrunning', icon: 'N' },
+      { id: 'quickhacks', label: 'Quickhacks', icon: 'QH' },
+      { id: 'netArsenal', label: 'Arsenal: ICE, programas, upgrades', icon: 'ICE' }
     ]},
     { group: 'Catálogos', pages: [
       { id: 'weapons2077', label: 'Armas de 2077', icon: 'W' },
       { id: 'cyberware2077', label: 'Cyberware de 2077', icon: 'CW' },
-      { id: 'roles', label: 'Roles', icon: 'F' },
-      { id: 'roles2077', label: 'Roles nos anos 2070', icon: 'F77' },
       { id: 'cyberware', label: 'Cyberware do RED', icon: 'K' },
       { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' }
     ]},
@@ -131,12 +128,20 @@
       { id: 'bcVeiculos', label: 'Veículos', icon: 'BV' },
       { id: 'bcMercados', label: 'Mercados Noturnos', icon: 'NM' }
     ]},
-    { group: 'Suplemento de fã e fontes', pages: [
+    { group: 'Fontes', pages: [
       { id: 'supplement2077', label: 'Suplemento de fã', icon: '77' },
       { id: 'sources', label: 'Livros de referência', icon: 'L' }
     ]}
   ];
 
+  // Páginas de regra que viraram parte de outra quando as regras foram unificadas (Mission Kit sobre o RED; do suplemento
+  // de fã, só os itens aprovados): o endereço antigo continua abrindo. Cada wiki pode somar os dela (config.aliases).
+  const aliases = {
+    net2077: { id: 'netrunning', section: 'quickhacks-no-neuroport' },
+    roles2077: { id: 'roles', section: 'nos-anos-2070' },
+    os2077: { id: 'cyberware2077', section: 'berserk-e-sandevistan' },
+    ...(config.aliases || {})
+  };
   const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemBlackChrome || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
   Object.entries(markdownDocs).forEach(([id, doc]) => {
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
@@ -224,17 +229,23 @@
     }
 
     // ---------------- Barra lateral ----------------
-    // Grupos que recolhem (clique no nome do grupo; o aparelho lembra), selos de novidade nas páginas (setBadges) e
-    // o botão ☰ da barra de cima: no computador deixa a barra compacta (só os ícones); no celular abre a gaveta.
+    // Duas áreas, nas abas de cima da barra: Campanhas (os grupos da campanha, o primeiro com o nome dela) e Sistema (os
+    // das regras). As fixadas aparecem nas duas. Os grupos recolhem (clique no nome; a conta lembra) e, fechados, mostram
+    // quantas páginas têm. Também há os selos de novidade nas páginas (setBadges) e o botão ☰ da barra de cima: no
+    // computador deixa a barra compacta (só os ícones); no celular abre a gaveta.
     const narrow = window.matchMedia('(max-width: 820px)');
     const badges = {};
-    const closedGroups = () => { try { return new Set(JSON.parse(storage.get('grupos-fechados') || '[]')); } catch { return new Set(); } };
-    const saveClosedGroups = set => storage.set('grupos-fechados', JSON.stringify([...set]));
+    const readSet = key => { try { return new Set(JSON.parse(storage.get(key) || '[]')); } catch { return new Set(); } };
+    const closedGroups = () => readSet('grupos-fechados');
+    const openedGroups = () => readSet('grupos-abertos');
+    // Começam fechados os grupos das regras que não são de mesa. O que a pessoa abre ou fecha fica como ela deixou.
+    const CLOSED_BY_DEFAULT = new Set(['system:Netrunning', 'system:Catálogos', 'system:Black Chrome', 'system:Fontes']);
+    const isClosed = (key, closed, opened) => closed.has(key) || (CLOSED_BY_DEFAULT.has(key) && !opened.has(key));
     const compact = () => document.body.classList.contains('sidebar-compact') && !narrow.matches;
 
     // ---------------- Páginas fixadas ----------------
-    // O botão "Fixar" ao lado do título põe a página no grupo Fixadas, no topo da barra lateral (nas duas abas), neste
-    // aparelho. Até 8; a mais antiga sai quando passa disso.
+    // O botão "Fixar" ao lado do título põe a página no grupo Fixadas, no topo da barra lateral (nas duas abas). Até 8; a
+    // mais antiga sai quando passa disso.
     const PIN_LIMIT = 8;
     const pinned = () => { try { return JSON.parse(storage.get('fixadas') || '[]').filter(id => pageContent[id]); } catch { return []; } };
     const pinnable = id => Boolean(pageContent[id]) && id !== 'criador';
@@ -265,24 +276,27 @@
     function buildNavigation() {
       const campaign = activeCampaign();
       activeCampaignId = campaign.id;
-      // key: o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela). Fixadas: nas duas abas.
+      // key: a área e o nome original do grupo (o primeiro grupo da campanha aparece com o nome dela). Fixadas: nas duas
+      // abas.
       const pins = pinned().map(navEntry);
       const groups = [...(pins.length ? [{ key: 'fixadas', group: 'Fixadas', pages: pins, shared: true }] : []), ...(currentWorkspace === 'campaigns'
-        ? campaign.groups.map((group, index) => ({ ...group, key: group.group, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
-        : systemSections.map(group => ({ ...group, key: group.group })))];
+        ? campaign.groups.map((group, index) => ({ ...group, key: `campaigns:${group.group}`, group: index === 0 ? campaign.name : group.group, campaignLabel: index === 0 }))
+        : systemSections.map(group => ({ ...group, key: `system:${group.group}` })))];
       // Páginas que não existem nesta visão (ex.: só do mestre) somem do menu.
       const visibleGroups = groups.map(group => ({ ...group, pages: group.pages.filter(page => pageContent[page.id]) })).filter(group => group.pages.length);
       const campaignPicker = currentWorkspace === 'campaigns' && campaigns.length > 1
         ? `<label class="campaign-picker"><span class="nav-label">Campanha ativa</span><select id="campaign-picker">${campaigns.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === campaign.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>`
         : '';
       const closed = closedGroups();
+      const opened = openedGroups();
       const rail = compact();
       const item = page => `<button class="nav-item ${page.className || ''}" data-page="${page.id}" type="button"${rail ? ` title="${escapeHtml(String(page.label).replace(/<[^>]+>/g, ''))}"` : ''}><span class="nav-icon">${page.icon}</span><span class="nav-text">${page.label}</span>${badges[page.id] ? `<span class="nav-badge" aria-label="${badges[page.id]} novidade(s)">${badges[page.id]}</span>` : ''}</button>`;
       navigation.innerHTML = `${campaignPicker}${visibleGroups.map(group => {
-        const key = group.shared ? group.key : `${currentWorkspace}:${group.key}`;
-        const shut = closed.has(key) && !group.pages.some(page => page.id === navIdOf(currentPage));
+        const key = group.key;
+        const shut = isClosed(key, closed, opened) && !group.pages.some(page => page.id === navIdOf(currentPage));
         const news = group.pages.reduce((sum, page) => sum + (badges[page.id] || 0), 0);
-        return `<div class="nav-group${shut ? ' collapsed' : ''}${group.shared ? ' nav-pinned' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
+        // A contagem do grupo fechado vem do data-count, pelo CSS: o texto do botão fica só com o nome.
+        return `<div class="nav-group${shut ? ' collapsed' : ''}${group.shared ? ' nav-pinned' : ''}" data-group-key="${escapeHtml(key)}"><button type="button" class="nav-label nav-group-toggle${group.campaignLabel ? ' nav-campaign' : ''}" aria-expanded="${!shut}" data-count="${group.pages.length}">${escapeHtml(group.group)}${shut && news ? `<span class="nav-badge">${news}</span>` : ''}<span class="nav-chevron" aria-hidden="true"></span></button><div class="nav-items">${group.pages.map(item).join('')}</div></div>`;
       }).join('')}`;
       document.querySelectorAll('.workspace-tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.workspace === currentWorkspace)));
       document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
@@ -334,10 +348,14 @@
       const toggle = event.target.closest('.nav-group-toggle');
       if (!toggle) return;
       const group = toggle.closest('.nav-group');
-      const set = closedGroups();
-      if (group.classList.toggle('collapsed')) set.add(group.dataset.groupKey); else set.delete(group.dataset.groupKey);
-      toggle.setAttribute('aria-expanded', String(!group.classList.contains('collapsed')));
-      saveClosedGroups(set);
+      const key = group.dataset.groupKey;
+      const closed = closedGroups();
+      const opened = openedGroups();
+      const shut = group.classList.toggle('collapsed');
+      if (shut) { closed.add(key); opened.delete(key); } else { closed.delete(key); opened.add(key); }
+      toggle.setAttribute('aria-expanded', String(!shut));
+      storage.set('grupos-fechados', JSON.stringify([...closed]));
+      storage.set('grupos-abertos', JSON.stringify([...opened]));
     });
 
     function setWorkspace(workspace) {
@@ -369,8 +387,8 @@
       if (location.hash === routedHash) return;
       routedHash = location.hash;
       const { id, section } = readHash();
-      // Página que saiu e virou parte de outra (config.aliases: #docQuemEQuem → Pessoas e facções, na tabela).
-      const alias = !pageContent[id] && (config.aliases || {})[id];
+      // Página que saiu e virou parte de outra (aliases: #docQuemEQuem → Pessoas e facções, na tabela).
+      const alias = !pageContent[id] && aliases[id];
       if (alias) { openPage(alias.id, { section: section || alias.section }, 'replace'); return; }
       if (!pageContent[id]) { openPage(homePage(), undefined, 'replace'); return; }
       openPage(id, section ? { section } : undefined, 'none');
@@ -390,7 +408,7 @@
 
     // target (opcional): { unit, term } ou { section } abre a página já na seção indicada, com o termo destacado.
     function openPage(id, target, historyMode = 'push') {
-      const alias = !pageContent[id] && (config.aliases || {})[id];
+      const alias = !pageContent[id] && aliases[id];
       if (alias) return openPage(alias.id, target || (alias.section ? { section: alias.section } : undefined), historyMode);
       const page = pageContent[id];
       if (!page) return;
@@ -408,9 +426,9 @@
       // As abas da entrada do menu (Sessão 01: Resumo, Roteiro completo, Handouts...), no topo da página.
       const host = tabHost(id);
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
-      // O título e, logo abaixo, a linha em ciano (o eyebrow, com // no lugar de /), como no padrão visual da Loja.
-      const eyebrow = String(page.eyebrow || '').replace(/ \/ /g, ' // ');
-      content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><h2 class="cyber-h">${page.title}</h2><p class="eyebrow">${eyebrow}</p></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
+      // A linha em ciano (o eyebrow) em cima do título, como nos exemplos de 2026.
+      content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
+      tocClicked = -1;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
@@ -657,7 +675,7 @@
     // A primeira menção de cada termo em cada seção (ou cartão) vira um link para o glossário, com a definição no title.
     const glossary = window.systemGlossary;
     const glossarySkipPages = new Set(['glossary', 'playerView', 'notes', ...mapPages]);
-    const glossarySkip = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .eyebrow, .entry-tag, .npc-stats, .gloss, .home-desk, .view-switch, .compare-panel';
+    const glossarySkip = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .eyebrow, .entry-tag, .npc-stats, .gloss, .home-desk, .view-switch, .compare-panel, .cy-top';
     let glossaryMatchers = null;
     function buildGlossaryMatchers() {
       const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -747,6 +765,13 @@
     }
 
     let tocFrame = 0;
+    // O chip clicado. Numa página curta, a última seção não chega ao topo, e a rolagem acenderia o chip anterior: no fim
+    // da página, com a seção clicada na tela, ele continua aceso, até o leitor rolar por conta própria.
+    let tocClicked = -1;
+    const releaseToc = () => { tocClicked = -1; };
+    window.addEventListener('wheel', releaseToc, { passive: true });
+    window.addEventListener('touchstart', releaseToc, { passive: true });
+    window.addEventListener('keydown', releaseToc);
     window.addEventListener('scroll', () => {
       if (tocFrame) return;
       tocFrame = requestAnimationFrame(() => {
@@ -755,7 +780,10 @@
         if (!toc) return;
         const limit = toc.getBoundingClientRect().bottom + 24;
         let current = -1;
-        pageUnits(content).forEach((unit, index) => { if (unit.getBoundingClientRect().top <= limit) current = index; });
+        const units = pageUnits(content);
+        units.forEach((unit, index) => { if (unit.getBoundingClientRect().top <= limit) current = index; });
+        const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+        if (tocClicked > current && atBottom && units[tocClicked] && units[tocClicked].getBoundingClientRect().top < window.innerHeight) current = tocClicked;
         toc.querySelectorAll('[data-toc-index]').forEach(chip => {
           const active = Number(chip.dataset.tocIndex) === current;
           if (active && !chip.classList.contains('active')) toc.scrollTo({ left: chip.offsetLeft - toc.clientWidth / 3, behavior: 'smooth' });
@@ -768,6 +796,9 @@
       document.documentElement.style.setProperty('--topbar-h', `${document.querySelector('.topbar').offsetHeight}px`);
     }
     window.addEventListener('resize', updateStickyOffset);
+    // A barra de cima muda de altura sem a janela mudar (a conta entra depois, a busca quebra a linha): a barra lateral e
+    // a faixa "Nesta página" grudam logo abaixo dela.
+    if (window.ResizeObserver) new ResizeObserver(updateStickyOffset).observe(document.querySelector('.topbar'));
 
     function setupScreen() {
       const data = window.systemRules && window.systemRules.data;
@@ -784,10 +815,14 @@
         const band = data.rangeBandLimits.findIndex(limit => meters <= limit);
         const dv = band < 0 ? null : selected.dv[band];
         const autofire = selected.autofire ? (band < 0 ? null : selected.autofire[band] ?? null) : undefined;
+        // O DV grande ao lado dos campos (a faixa aparece em cima dele pelo CSS) e, embaixo, uma caixa por faixa, com a
+        // da distância acesa, como no exemplo do Escudo.
         document.getElementById('dv-result').innerHTML = dv === null
           ? '<span class="dv-big">Fora de alcance</span>'
-          : `<span class="dv-big">DV ${dv}</span><span>${data.rangeBands[band]}</span>${autofire !== undefined ? `<span>Autofogo: ${autofire === null ? 'fora de alcance' : `DV ${autofire}`}</span>` : ''}<span class="note-status">Alvo com REF 8+ pode trocar a DV por DEX + Evasão + 1d10.</span>`;
-        document.getElementById('dv-row').innerHTML = `<div class="table-wrap dense"><table><thead><tr>${data.rangeBands.map((label, index) => `<th class="${index === band ? 'current' : ''}">${label}</th>`).join('')}</tr></thead><tbody><tr>${selected.dv.map((value, index) => `<td class="num ${index === band ? 'current' : ''}">${value === null ? '—' : value}</td>`).join('')}</tr></tbody></table></div>`;
+          : `<span class="dv-big">DV ${dv}</span><small>Faixa ${data.rangeBands[band]}</small>`;
+        const note = document.getElementById('dv-note');
+        if (note) note.textContent = [autofire === undefined ? '' : `Autofogo: ${autofire === null ? 'fora de alcance' : `DV ${autofire}`}.`, 'Alvo com REF 8+ pode trocar a DV por DEX + Evasão + 1d10.'].filter(Boolean).join(' ');
+        document.getElementById('dv-row').innerHTML = data.rangeBands.map((label, index) => `<div class="${index === band ? 'on' : ''}">${label}<b>${selected.dv[index] === null ? '—' : selected.dv[index]}</b></div>`).join('');
         write('night-city-dv-weapon', weapon.value);
         write('night-city-dv-distance', distance.value);
       };
@@ -1289,7 +1324,8 @@
         // O glossário define o termo; quem busca o nome de um item quer o cartão do item primeiro.
         if (entry.id === 'glossary') score -= 60;
         // As páginas da base da campanha (Pessoas e facções, Lugares e peças) vêm antes da ficha de combate do mesmo nome.
-        score += (markdownDocs[entry.id] && markdownDocs[entry.id].prioridade) || 0;
+        // Uma página de regras com prioridade negativa (o que saiu do suplemento de fã) fica depois da regra que vale.
+        score += (markdownDocs[entry.id] && markdownDocs[entry.id].prioridade) || (pageContent[entry.id] && pageContent[entry.id].prioridade) || 0;
         const firstText = perTerm.map(found => found.text[0]).filter(Boolean).sort((a, b) => a[0] - b[0])[0];
         return [{ entry, score, at: firstText ? firstText[0] : 0 }];
       }).sort((first, second) => second.score - first.score);
@@ -1340,7 +1376,8 @@
       const tocChip = event.target.closest('[data-toc-index]');
       if (tocChip) {
         tocChip.parentElement.querySelectorAll('[data-toc-index]').forEach(chip => chip.classList.toggle('active', chip === tocChip));
-        focusUnit(pageUnits(content)[Number(tocChip.dataset.tocIndex)], undefined, true);
+        tocClicked = Number(tocChip.dataset.tocIndex);
+        focusUnit(pageUnits(content)[tocClicked], undefined, true);
         return;
       }
       const filterButton = event.target.closest('[data-search-filter]');
@@ -1410,7 +1447,7 @@
     buildNavigation();
     labelMenuButton();
     // Abre a página do endereço (link direto, recarregar) ou a inicial.
-    if (pageContent[readHash().id] || (config.aliases || {})[readHash().id]) routeFromHash();
+    if (pageContent[readHash().id] || aliases[readHash().id]) routeFromHash();
     else openPage(homePage(), undefined, 'replace');
     // A mesa do mestre e as preferências da conta chegam do servidor depois da primeira página.
     document.addEventListener('wiki:mesa', () => { if (currentPage === 'home' && !search.value.trim()) openPage('home', undefined, 'none'); });
@@ -1454,6 +1491,8 @@
     // e, para o mestre, a versão no ar. Tudo vem de config.statusUrl (api/estado).
     let installPrompt = null;
     let lastState = null;
+    // A troca de mesa pedida pelo mestre ({ foundry, at }), até a mesa nova responder (ou 3 minutos).
+    let tableSwitch = null;
     // O quadro da barra lateral é a mesa (e, para o mestre, a saúde do servidor). Quem está usando a wiki, a versão no
     // ar, o backup, "Instalar no celular" e entrar ou sair ficam no menu da conta (conta.js), que ouve "wiki:estado".
     function drawStatus(state) {
@@ -1465,17 +1504,22 @@
         box = document.createElement('div');
         box.id = 'side-status';
         box.className = 'side-status';
-        document.querySelector('aside .brand')?.after(box);
+        // No pé da barra lateral, como no exemplo ("Mesa aberta // 3 conectados"), sempre à vista (CSS: sticky).
+        document.querySelector('aside')?.append(box);
       }
       const mesa = state.mesa;
       let table = '';
       if (mesa && mesa.url) {
         // Com mais de uma campanha, a mesa aberta diz de qual é (o servidor só conta a quem joga nela).
         const [kind, text] = !mesa.online ? ['off', 'Mesa fora do ar']
-          : mesa.aberta ? ['on', `Mesa aberta${mesa.campanha && campaigns.length > 1 ? `: ${mesa.campanha.nome}` : ''}${mesa.usuarios ? ` · ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
+          : mesa.aberta ? ['on', `Mesa aberta${mesa.campanha && campaigns.length > 1 ? `: ${mesa.campanha.nome}` : ''}${mesa.usuarios ? ` // ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}`]
           : ['idle', 'Foundry ligado, sem mundo aberto'];
+        // O mestre, no servidor com o Foundry 12 e o 14: qual é a mesa, e o botão para trocar.
+        const mesas = state.servidor?.mesas || [];
+        if (tableSwitch && ((mesa.online && mesa.foundry === tableSwitch.foundry) || Date.now() - tableSwitch.at > 3 * 60 * 1000)) tableSwitch = null;
+        const switcher = mesas.length > 1 ? `<div class="table-switch" role="group" aria-label="Versão do Foundry na mesa"><span>Foundry</span>${mesas.map(foundry => `<button type="button" data-table-switch="${foundry}" aria-pressed="${mesa.online && mesa.foundry === foundry}"${tableSwitch ? ' disabled' : ''} title="${mesa.online && mesa.foundry === foundry ? `A mesa está no Foundry ${foundry}` : `Trocar a mesa para o Foundry ${foundry}`}">${foundry}</button>`).join('')}${tableSwitch ? `<span class="table-switching">ligando o ${tableSwitch.foundry}…</span>` : ''}</div>` : '';
         table = `<div class="table-status table-${kind}" title="${escapeHtml(text)}"><span class="table-dot" aria-hidden="true"></span><span class="table-text">${escapeHtml(text)}</span></div>
-          ${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
+          ${switcher}${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
       }
       // Saúde do servidor (só para o mestre, no servidor online): em vermelho com backup de mais de 2 dias ou disco quase cheio.
       const health = state.servidor;
@@ -1503,6 +1547,37 @@
     });
     checkStatus();
     setInterval(checkStatus, 60 * 1000);
+
+    // Trocar a mesa entre o Foundry 12 e o 14 (o mestre, no servidor): confirma, e com gente conectada confirma de novo; a
+    // barra confere a cada 5 s até a mesa nova responder.
+    async function switchTable(foundry) {
+      const mesa = (lastState && lastState.mesa) || {};
+      if (tableSwitch || (mesa.online && mesa.foundry === foundry)) return;
+      const atual = mesa.online && mesa.foundry ? `o Foundry ${mesa.foundry}` : 'o Foundry de agora';
+      const sure = await window.wikiPopup.confirm({ title: `Mesa no Foundry ${foundry}`, html: `<p>${atual[0].toUpperCase()}${atual.slice(1)} desliga e o Foundry ${foundry} liga: a mesa fica fora do ar por alguns segundos. Ele continua sendo a mesa mesmo quando o servidor reinicia.</p>`, ok: `Trocar para o ${foundry}` });
+      if (!sure) return;
+      const send = forcar => fetch('api/mestre/mesa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ foundry, forcar }) })
+        .then(async response => ({ status: response.status, data: await response.json().catch(() => ({})) }))
+        .catch(() => ({ status: 0, data: { erro: 'Sem resposta da wiki.' } }));
+      let result = await send(false);
+      if (result.status === 409 && result.data.confirmar) {
+        const force = await window.wikiPopup.confirm({ title: 'Tem gente na mesa', message: `${result.data.erro} Trocar mesmo assim?`, ok: 'Trocar mesmo assim', danger: true });
+        if (!force) return;
+        result = await send(true);
+      }
+      if (result.status !== 200) { window.wikiPopup.toast(result.data.erro || 'Não consegui trocar a mesa.', { tone: 'bad', ms: 8000 }); return; }
+      if (!result.data.jaEstava) {
+        tableSwitch = { foundry, at: Date.now() };
+        window.wikiPopup.toast(`Ligando o Foundry ${foundry}: a mesa volta em alguns segundos.`, { tone: 'ok' });
+        drawStatus(lastState);
+        const poll = setInterval(() => { if (tableSwitch) checkStatus(); else clearInterval(poll); }, 5000);
+      }
+      checkStatus();
+    }
+    document.addEventListener('click', event => {
+      const button = event.target.closest('[data-table-switch]');
+      if (button && !button.disabled) switchTable(Number(button.dataset.tableSwitch));
+    });
 
     // A wiki instalada (celular ou computador): o service worker guarda as regras e o que o mestre publicou para
     // abrir sem internet (sw.js). Quando o navegador deixa instalar, o menu da conta mostra "Instalar no celular".

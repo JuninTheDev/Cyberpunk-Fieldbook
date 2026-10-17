@@ -5,7 +5,7 @@
 //   cobertura ou fora da linha de visão (no tiro mirado, vale só a penalidade do mirado; o Ballistic Coprocessor deixa
 //   em −2).
 // - Smart: +1 nos ataques à distância, e só dispara conectada (o Personal Link do Neuroport, Interface Plugs, Subdermal
-//   Grip ou o Smart Link do suplemento de fã). Com a munição Smart melhorada, errou a DV por 5 ou menos: segunda
+//   Grip). Com a munição Smart melhorada, errou a DV por 5 ou menos: segunda
 //   chance com 14 + 1d10, que o Fluxo de Combate rola (sem ele, a nota do cartão diz a regra).
 // - Tech: Carregar (gasta a Ação de Movimento; dura até disparar ou 20 rodadas). Carregada, o próximo ataque é de
 //   CDT 1, atravessa cobertura fina e ignora metade do SP do alvo; a cobertura não perde HP.
@@ -41,7 +41,7 @@ const esc = texto => String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 export function registrarConfiguracoes() {
   game.settings.register(MODULE_ID, 'conexaoSmart', {
     name: 'Conexão das armas Smart',
-    hint: 'No Mission Kit, a arma Smart só dispara conectada pelo Personal Link (o Interface Plug que vem no Neuroport) ou pelo Subdermal Grip (p. 32). Exige a conexão: confere o cyberware instalado (Neuroport, Interface Plugs, Subdermal Grip ou o Smart Link do suplemento de fã). Todo mundo tem o Neuroport: não confere.',
+    hint: 'No Mission Kit, a arma Smart só dispara conectada pelo Personal Link (o Interface Plug que vem no Neuroport) ou pelo Subdermal Grip (p. 32). Exige a conexão: confere o cyberware instalado (Neuroport, Interface Plugs ou Subdermal Grip). Todo mundo tem o Neuroport: não confere.',
     scope: 'world', config: true, type: String, default: 'exige',
     choices: { exige: 'Exige a conexão instalada', todos: 'Todo mundo tem o Neuroport (não confere)' }
   });
@@ -131,7 +131,8 @@ export function perfil(item) {
 const temRegras = p => Boolean(p && (p.classe || p.balas || p.danoFixo || p.danoMirado || p.exigeBody || p.lesaoSemCromo || p.ferrolho || p.doisCanos || p.coronhaRetratil));
 
 const instalado = (actor, teste) => (actor?.itemTypes?.cyberware || []).some(item => item.system.isInstalled && teste(item));
-// A conexão da arma Smart: o Personal Link (Neuroport, Interface Plugs), o Subdermal Grip ou o Smart Link (suplemento de fã).
+// A conexão da arma Smart: o Personal Link (Neuroport, Interface Plugs) ou o Subdermal Grip. O Smart Link do suplemento de
+// fã saiu na revisão de 2026-10-13; um item antigo com o nome ou a marca dele continua contando.
 export const temConexao = actor => config('conexaoSmart') === 'todos'
   || instalado(actor, item => item.flags?.[MODULE_ID]?.conexaoSmart || /^(neuroport|interface plugs?|personal link|subdermal grip|smart ?link)\b/i.test(item.name.trim()));
 const temCoprocessador = actor => instalado(actor, item => item.flags?.[MODULE_ID]?.ballisticCoprocessor || /ballistic coprocessor/i.test(item.name));

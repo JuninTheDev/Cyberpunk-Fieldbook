@@ -60,8 +60,9 @@ module.exports = async ({ edge, r }) => {
     await r.passo('Ficha e Loja (no menu lateral) abrem no personagem em uso; o Resumo mostra "Seu personagem"', async () => {
       const resumo = await texto('#pv-me');
       await edge.evaluate(`document.querySelector('.nav-item[data-page="ficha"]').click()`);
-      await esperar(`/Rin/.test(document.getElementById('cc-root')?.textContent || '')`);
-      const ficha = await texto('#cc-root');
+      // O nome do personagem é o título da página da ficha.
+      await esperar(`/Rin/.test(document.querySelector('#content .page-head h2')?.textContent || '')`);
+      const ficha = await texto('#content');
       await edge.evaluate(`document.querySelector('.nav-item[data-page="loja"]').click()`);
       await esperar(`!!document.querySelector('[data-shop-pc]')`);
       const loja = await edge.evaluate(`document.querySelector('[data-shop-pc]')?.value`);

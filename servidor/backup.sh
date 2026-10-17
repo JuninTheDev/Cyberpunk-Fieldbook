@@ -5,11 +5,11 @@
 # Os arquivos do Foundry que ficam fora dos mundos (mapas, vídeos, músicas e retratos) vão num pacote à parte,
 # arquivos-<data>.tar, feito só quando algum deles muda. Guarda os 3 mais recentes. O servidor\baixar-backup.bat
 # traz os dois para o PC.
+# O Foundry 14 (/srv/foundry14), quando instalado ao lado do 12, entra igual: mundos, configuração e arquivos soltos.
 set -euo pipefail
 DEST=/srv/backups
-DATA=/srv/foundry/data/Data
 arquivo="$DEST/backup-$(date +%F).tar.gz"
-partes=(srv/fieldbook/dados srv/foundry/data/Data/worlds srv/foundry/data/Config)
+partes=(srv/fieldbook/dados srv/foundry/data/Data/worlds srv/foundry/data/Config srv/foundry14/data/Data/worlds srv/foundry14/data/Config)
 existentes=()
 for parte in "${partes[@]}"; do [ -e "/$parte" ] && existentes+=("$parte"); done
 # Código 1 do tar = algum arquivo mudou durante a cópia (o Foundry aberto): o backup vale mesmo assim.
@@ -24,12 +24,15 @@ echo "Backup: $arquivo ($(du -h "$arquivo" | cut -f1))"
 # - tudo da raiz da pasta Data, menos modules/, systems/ e worlds/;
 # - a pasta modules/Mapas, que não é módulo (são mapas guardados ali);
 # - as pastas do sistema CORE onde ficaram retratos, tokens e o fundo do mundo. Reinstalar o sistema apaga essas pastas.
-# Os módulos e sistemas de verdade se reinstalam. Vai sem compressão: imagem, vídeo e música já vêm comprimidos.
-[ -d "$DATA" ] || exit 0
+# Os módulos e sistemas de verdade se reinstalam (o "Arquivo da mesa" do Foundry 14 se gera de novo do 12). Vai sem
+# compressão: imagem, vídeo e música já vêm comprimidos.
 soltos=()
-while IFS= read -r -d '' item; do soltos+=("${item#/}"); done < <(find "$DATA" -mindepth 1 -maxdepth 1 ! -name modules ! -name systems ! -name worlds -print0)
-for pasta in modules/Mapas systems/cyberpunk-red-core/icons/compendium/default systems/cyberpunk-red-core/images; do
-  [ -d "$DATA/$pasta" ] && soltos+=("${DATA#/}/$pasta")
+for DATA in /srv/foundry/data/Data /srv/foundry14/data/Data; do
+  [ -d "$DATA" ] || continue
+  while IFS= read -r -d '' item; do soltos+=("${item#/}"); done < <(find "$DATA" -mindepth 1 -maxdepth 1 ! -name modules ! -name systems ! -name worlds -print0)
+  for pasta in modules/Mapas systems/cyberpunk-red-core/icons/compendium/default systems/cyberpunk-red-core/images; do
+    [ -d "$DATA/$pasta" ] && soltos+=("${DATA#/}/$pasta")
+  done
 done
 [ ${#soltos[@]} -gt 0 ] || exit 0
 # Mudou desde o último pacote? Compara a lista de tudo o que entraria (caminho, tamanho e data de cada arquivo).

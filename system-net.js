@@ -1,4 +1,5 @@
-// Netrunning completo: arsenal do RED (livro-base) e netrunning de 2077 (suplemento de fã).
+// Netrunning: o arsenal (programas, ICE e defesas do livro-base, mais os cyberdecks com marca) e os quickhacks do Mission
+// Kit e do suplemento de fã aprovados pela mesa. As regras ficam na página Netrunning (system-rules.js).
 // Cada item vira um cartão (.entry) que a busca consegue abrir direto.
 (() => {
   const table = (headers, rows, className = 'dense') => `<div class="table-wrap${className ? ` ${className}` : ''}"><table><thead><tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -97,8 +98,7 @@
     { name: 'Câmara de gás do sono', tag: 'Defesa ambiental', stats: defenseStats('DV17, 5 min', [['HP', 60], ['Detectar', 'Percepção DV17']]), text: 'Todas as saídas se fecham hermeticamente e a armadilha entra no topo da iniciativa. No turno dela, todos no espaço rolam <b>Resistir Tortura/Drogas DV13</b>; quem falhar desmaia até levar dano ou alguém gastar uma Ação para acordá-lo. Dá para parar reduzindo o HP dela a 0 antes que todos caiam.' }
   ];
 
-  // ---------------- 2077: quickhacks (sup. p. 16–20) ----------------
-  // ---------------- Quickhacks: Mission Kit (Kit p. 16–17 e 26) e suplemento de fã adaptado (sup. p. 16–20) ----------------
+  // ---------------- Quickhacks: Mission Kit (Kit p. 16–17 e 26) e suplemento de fã em revisão (sup. p. 16–20) ----------------
   // Nível de DV → [nome do nível, Rank de Interface que dá acesso a ele].
   const NIVEIS = { 6: ['Simples', 1], 8: ['Padrão', 2], 10: ['Difícil', 3], 12: ['Avançado', 4] };
   const kitHack = (name, dv, duration, text, tip) => ({
@@ -106,13 +106,13 @@
     stats: [['DV', dv], ['Interface', `Rank ${NIVEIS[dv][1]}+`], ['Duração', duration]], text, tip,
     raw: { name, dv, rank: NIVEIS[dv][1], origem: 'kit' }
   });
-  // Os do suplemento de fã: o nível de DV sai do custo de RAM que tinham (até 2: DV6; 3–4: DV8; 6–8: DV10; 12+: DV12).
-  // Preço e a versão excelente ficam para a mesa que preferir comprar quickhacks.
-  const excellent = text => `<p class="entry-excellent"><b>Qualidade excelente:</b> ${text}</p>`;
-  const fanHack = ({ name, dv, duration, target, price, alerta = true, text, excelente, tip }) => ({
+  // Os do suplemento de fã que a mesa aprovou (revisão de 2026-10-13). O nível de DV saiu do custo de RAM que tinham (até 2:
+  // DV6; 3–4: DV8; 6–8: DV10), e eles funcionam como os do Kit: todo netrunner faz os do nível dele, sem comprar. O preço e
+  // a versão excelente do suplemento não valem.
+  const fanHack = ({ name, dv, duration, target, alerta = true, text, tip }) => ({
     name, tag: `Quickhack ${NIVEIS[dv][0].toLowerCase()} · suplemento de fã`,
-    stats: [['DV', dv], ['Interface', `Rank ${NIVEIS[dv][1]}+`], ['Duração', duration], ['Alvo', target], ...(alerta ? [] : [['Alerta o alvo', 'não']]), ['Preço (opcional)', price]],
-    text, extra: excelente ? excellent(excelente) : '', tip,
+    stats: [['DV', dv], ['Interface', `Rank ${NIVEIS[dv][1]}+`], ['Duração', duration], ['Alvo', target], ...(alerta ? [] : [['Alerta o alvo', 'não']])],
+    text, tip,
     raw: { name, dv, rank: NIVEIS[dv][1], origem: 'fa' }
   });
   const kitHacks = [
@@ -129,197 +129,84 @@
     kitHack('System Reset', 12, '60 s (20 rodadas)', 'O alvo cai <b>inconsciente</b> por 60 segundos (20 rodadas), ou até sofrer dano, e fica caído (Prone).')
   ];
   const fanHacks = [
-    fanHack({ name: 'Bait', dv: 6, duration: 'instantânea', target: 'pessoa com Cyberaudio Suite', price: '100eb / 500eb', alerta: false, text: 'Uma rajada curta de som e estática no Cyberaudio do alvo, ajustada para parecer vir da sua direção: atrai o alvo até a sua posição. Se enviado de outro ponto de vista (os olhos de um aliado, uma câmera), o som leva até esse lugar.', excelente: 'também produz uma voz simulada convincente que dá uma ordem ao alvo.', tip: 'tirar um guarda do posto sem disparar alarme. Parecido com o Lure do Kit, só que mais fraco: o alvo vai até você, sem você controlar o movimento.' }),
-    fanHack({ name: 'Reboot Optics', dv: 6, duration: '3 / 4 rodadas', target: 'pessoa com cyberolhos', price: '100eb / 500eb', text: 'Embaralha a visão dos cyberópticos do alvo, ou até força uma imagem específica no lugar dela. Na prática, o alvo sofre a lesão <b>Olho Danificado</b> durante o efeito.', excelente: 'deixa uma imagem residual: metade das penalidades de Olho Danificado por mais uma rodada.' }),
-    fanHack({ name: 'Request Backup', dv: 8, duration: 'instantânea', target: 'pessoa', price: '100eb / 500eb', alerta: false, text: 'Simula, a partir do alvo hackeado, um pedido de reforço para os aliados mais próximos dele.', excelente: 'chama um grupo a mais de reforços.', tip: 'serve tanto para esvaziar uma sala quanto para atrair inimigos para uma emboscada.' }),
-    fanHack({ name: 'Cripple Legs / Arms', dv: 8, duration: '1 / 2 rodadas', target: 'pessoa', price: '1.000eb / 5.000eb', text: 'Corta a ligação entre o cérebro e um par de membros (definido quando o hack é codificado). <b>Pernas:</b> desativa as cyberpernas ou o sistema motor inferior; o alvo não pode se esquivar e fica com MOVE 0. <b>Braços:</b> desativa os cyberbraços ou o sistema motor dos braços, paralisando-os.', excelente: 'o efeito residual atrapalha o Sandevistan (pernas) ou o Berserk (braços) do alvo por mais uma rodada.' }),
-    fanHack({ name: 'Weapon Glitch', dv: 8, duration: '2 / 3 rodadas', target: 'arma Smart conectada', price: '100eb / 500eb', text: 'Ataca a arma Smart conectada ao alvo (ou o Ballistic Coprocessor dele) e a <b>trava</b>.', excelente: 'em vez de travar, pode fazer a arma e a munição explodirem: o portador sofre o dano da arma (a armadura vale).' }),
-    fanHack({ name: 'Contagion', dv: 8, duration: '2 / 3 rodadas', target: 'pessoa', price: '500eb / 1.000eb', text: 'Desliga a segurança do cyberware e faz substâncias tóxicas vazarem: <b>1d6 direto no HP</b> por rodada. Se espalha: infecta mais um alvo com Neuroport a até 6 m do primeiro.', excelente: 'o vazamento aumenta para 2d6 por rodada, e pode explodir se o alvo sofrer dano de fogo: ele sofre de uma vez o dano das rodadas restantes.' }),
-    fanHack({ name: 'Memory Wipe', dv: 10, duration: 'instantânea', target: 'pessoa', price: '1.000eb / 5.000eb', alerta: false, text: 'Um curto-circuito sutil na memória do alvo: ele esquece os <b>últimos três minutos</b> e não grava memórias novas pelos dois minutos seguintes.', excelente: 'implanta memórias falsas e passageiras: que você entrou no clube com permissão, que é amigo dele. Somem depois de uma noite de sono.' }),
-    fanHack({ name: 'Detonate Grenade', dv: 12, duration: 'instantânea', target: 'pessoa com granadas', price: '5.000eb / 10.000eb', text: 'Toma o controle do alvo por tempo suficiente para ele puxar e detonar uma granada aleatória que carrega. Só funciona em quem tem granadas.', excelente: 'detona uma granada específica, sem precisar da ação do alvo.' }),
-    fanHack({ name: 'Suicide', dv: 12, duration: 'instantânea', target: 'pessoa', price: '5.000eb / 10.000eb', text: 'Toma o controle do alvo e dispara uma sequência de comandos que termina na morte dele: o mais comum é um tiro na própria cabeça, mas pode ser pular de um prédio, entrar no fogo ou atirar nos aliados. Se o alvo não morrer em uma rodada, o hack acaba.', excelente: 'não para até o alvo estar morto de verdade.' }),
-    fanHack({ name: 'Cyberpsychosis', dv: 12, duration: 'instantânea', target: 'pessoa', price: '5.000eb / 10.000eb', text: 'Completa de uma vez uma cascata na personalidade do alvo pela neuralware e induz <b>ciberpsicose</b> artificial. O ciberpsicótico ataca o alvo mais próximo que conseguir ver, ou procura um por até 2 rodadas, antes de se matar.', excelente: 'a DV cai 2 para cada Cyberware Malfunction que o alvo já sofreu (4 com dois).' }),
-    fanHack({ name: 'System Collapse', dv: 12, duration: '24 horas', target: 'pessoa', price: '5.000eb / 10.000eb', alerta: false, text: 'Um surto no cérebro forte o bastante para derrubar e incapacitar o alvo. Não tem como reverter: ele fica sem reação por <b>24 horas</b>, mas sem sequelas.', excelente: 'DV 10 em vez de 12 contra um alvo que não sabe que você entrou no Neuroport dele.', tip: 'a opção não letal dos avançados: ótimo para capturar alguém vivo. O System Reset do Kit é a versão de 20 rodadas.' })
+    fanHack({ name: 'Reboot Optics', dv: 6, duration: '3 rodadas', target: 'pessoa com cyberolhos', text: 'Embaralha a visão dos cyberópticos do alvo, ou até força uma imagem específica no lugar dela. Na prática, o alvo sofre a lesão <b>Olho Danificado</b> durante o efeito.' }),
+    fanHack({ name: 'Request Backup', dv: 8, duration: 'instantânea', target: 'pessoa', alerta: false, text: 'Simula, a partir do alvo hackeado, um pedido de reforço para os aliados mais próximos dele.', tip: 'serve tanto para esvaziar uma sala quanto para atrair inimigos para uma emboscada.' }),
+    fanHack({ name: 'Weapon Glitch', dv: 8, duration: '2 rodadas', target: 'arma Smart conectada', text: 'Ataca a arma Smart conectada ao alvo (ou o Ballistic Coprocessor dele) e a <b>trava</b>.' }),
+    fanHack({ name: 'Contagion', dv: 8, duration: '2 rodadas', target: 'pessoa', text: 'Desliga a segurança do cyberware e faz substâncias tóxicas vazarem: <b>1d6 direto no HP</b> por rodada. Se espalha: infecta mais um alvo com Neuroport a até 6 m do primeiro.' }),
+    fanHack({ name: 'Memory Wipe', dv: 10, duration: 'instantânea', target: 'pessoa', alerta: false, text: 'Um curto-circuito sutil na memória do alvo: ele esquece os <b>últimos três minutos</b> e não grava memórias novas pelos dois minutos seguintes.' })
   ];
 
-  const daemons2077 = [
-    { name: 'Imp (2077)', tag: 'Daemon de combate · suplemento de fã', stats: [['REZ', 15], ['CMB', 14], ['NET', 2], ['Custo', '500eb']], text: 'Daemon de combate sem especialidade. Age como um Demônio do RED: o REZ, o valor de combate (CMB) e as Ações NET.', icon: 'pequena esfera de luz laranja com chifres vermelhos.' },
-    { name: 'Efreet (2077)', tag: 'Daemon de combate · suplemento de fã', stats: [['REZ', 25], ['CMB', 14], ['NET', 4], ['Custo', '1.000eb']], text: 'Daemon de combate sem especialidade. Age como um Demônio do RED.', icon: 'homem negro, alto e forte, em roupas noturnas elegantes, com fez e punhal.' },
-    { name: 'Balron (2077)', tag: 'Daemon de combate · suplemento de fã', stats: [['REZ', 35], ['CMB', 14], ['NET', 7], ['Custo', '5.000eb']], text: 'Daemon de combate sem especialidade, o mais forte da lista. Age como um Demônio do RED.', icon: 'monstro humanoide enorme em armadura preta futurista, ou coberto de tentáculos verdes brilhantes e sibilantes.' },
-    { name: 'ICEpick', tag: 'Daemon de suporte · suplemento de fã', stats: [['REZ', 10], ['CMB', 0], ['NET', 0], ['Custo', '1.000eb']], text: 'Facilita hackear tudo o que infecta. Num <b>Neuroport</b>, a DV dos Passwalls dele cai <b>2</b>. Num <b>ponto de acesso</b> ou numa <b>arquitetura</b>, a DV das senhas (Breach) cai <b>2</b>.', icon: 'um homem magro com um redemoinho no lugar das pernas, empunhando uma picareta coberta de gelo.', tip: 'adaptado: no suplemento de fã, ele reduzia o custo de RAM dos hacks. Plante antes de uma briga e todo Breach fica mais fácil.' },
-    { name: 'Datamine', tag: 'Daemon de suporte · suplemento de fã', stats: [['REZ', 10], ['CMB', 0], ['NET', 5], ['Custo', '500eb']], text: 'Minera dados de superfície de um ponto de acesso (plantas do prédio, registros de comunicação...) e tenta minerar qualquer arquivo de uma arquitetura.', icon: 'uma aranha magra feita de código, com uma broca exagerada no lugar do abdômen.', tip: 'reconhecimento antes do trabalho: planta, rota, quem entra e quem sai.' }
-  ];
-  const whiteIce = [
-    { name: 'DataClear', tag: 'White ICE · suplemento de fã', stats: [['Rating', 0], ['DV', 0], ['Custo', '500eb']], text: 'Chipware. Instalado num Shard Slot, <b>embaralha todos os dados colhidos pelo Scan Mode</b> (e pelo Scanner) sobre o usuário. Também pode ser instalado em aparelhos.', icon: 'um chip branco e transparente. "Mantenha seus dados seguros, mantenha seu DataClear."', tip: 'é o "data-obfuscation" que bloqueia o Scanner: quem usa não aparece no ping.' },
-    { name: 'Heaven Pup', tag: 'White ICE · suplemento de fã', stats: [['Rating', 1], ['DV', 11], ['Custo', '100eb']], text: 'Chipware. Instalado num Shard Slot, soma o Rating no teste de WILL contra o <b>Jack In</b> e na tentativa de expulsar o netrunner (WILL + Concentração). Pode ser instalado em aparelhos.', icon: 'chip rosa com olhos de cachorrinho. "Uma trava de bicicleta para o chrome do seu filho." Quase inútil contra ameaça de verdade.', tip: 'adaptado: no suplemento de fã, somava nos testes NET de defesa e no custo de RAM de quem contornava. Com as regras de rede do suplemento, vale a DV passiva.' },
-    { name: 'Heaven Dog', tag: 'White ICE · suplemento de fã', stats: [['Rating', 2], ['DV', 12], ['Custo', '500eb']], text: 'Como o Heaven Pup, com Rating 2.', icon: 'chip cinza com o emblema de um cão de guarda. Um protetor bem mais sério.' },
-    { name: 'Heaven Hound', tag: 'White ICE · suplemento de fã', stats: [['Rating', 3], ['DV', 14], ['Custo', '1.000eb']], text: 'Como o Heaven Pup, com Rating 3.', icon: 'chip branco perolado, decorado com olhos dourados de cachorro. "O céu cuida de você. Só não cobre isso deles."' },
-    { name: 'Kami Chip', tag: 'White ICE · suplemento de fã', stats: [['Rating', 4], ['DV', 15], ['Custo', '5.000eb']], text: 'Como o Heaven Pup, com Rating 4.', icon: 'chip de cristal branco com desenhos artísticos de nuvens. Se alguém passa por ele, é porque mexeu com a gente errada.' }
-  ];
-  const neuralware = [
-    { name: 'Bioconductor', tag: 'Neuralware · Clínica', stats: [['Perda de Humanidade', 7], ['Custo', '1.000eb']], text: 'Nós de alto desempenho implantados no cérebro, ligados ao cyberware do corpo. <b>Uma vez por hora</b>, ative para que seus quickhacks causem <b>dano crítico</b> por um minuto. Requer Neural Link.' },
-    { name: 'RAM Reallocator', tag: 'Neuralware · Clínica', stats: [['Perda de Humanidade', 7], ['Custo', '5.000eb']], text: 'Otimiza o uso de RAM entre cérebro e deck. <b>Uma vez por hora</b>, quando toda a RAM disponível foi usada, recupera RAM igual a <b>metade do Cooling</b> do cyberdeck. Requer Neural Link.' },
-    { name: 'Mechatronic Core', tag: 'Neuralware · Clínica', stats: [['Perda de Humanidade', 7], ['Custo', '1.000eb']], text: 'Módulo otimizado para protocolos de máquinas: <b>+1 no dano de quickhacks contra máquinas</b>. Requer Neural Link.' },
-    { name: 'Memory Boost', tag: 'Neuralware · Clínica', stats: [['Perda de Humanidade', 14], ['Custo', '5.000eb']], text: 'Otimiza a sincronia entre cérebro e cyberware. Em vez de ocupar um slot do Neural Link, <b>dá um slot a mais</b>. Requer Neural Link.' },
-    { name: 'RAM Upgrade', tag: 'Neuralware · Clínica', stats: [['Perda de Humanidade', 7], ['Custo', '1.000eb']], text: 'Mais memória de acesso rápido: <b>+1 de RAM</b> total. Requer Neural Link.' }
-  ];
-
-  // ---------------- 2077: Berserk e Sandevistan (sup. p. 24–26) ----------------
-  const osStats = (humanity, price, duration, uses) => [['Perda de Humanidade', humanity], ['Preço', price], ['Duração', duration], ['Usos', uses]];
-  // Nos sistemas operacionais, o texto em itálico é a propaganda do fabricante, não a aparência na NET.
-  const osMaker = items => items.map(item => ({ ...item, iconLabel: 'Do fabricante' }));
-  const berserks = osMaker([
-    { name: 'Biodyne Berserk', tag: 'Sistema operacional Berserk', stats: osStats(14, '5.000eb', '3 + BODY/2 rodadas', '3 por 24 h, 1 h entre usos'), text: '<b>Físico aumentado:</b> +3 em BODY e MOVE (o HP sobe junto; BODY não passa de 10). <b>Durabilidade:</b> seu SP vira 11, você ignora o estado Gravemente Ferido e cai 30 m sem se machucar. <b>Força brutal:</b> +1 de dano corpo a corpo e de arremesso <b>por dado</b> de dano.', icon: 'o modelo acessível e versátil da BioDyne: resultado rápido e fácil, "mas não espere milagres".' },
-    { name: 'Militech Berserk', tag: 'Sistema operacional Berserk', stats: osStats(14, '10.000eb', '2 + BODY/2 rodadas', '2 por 24 h, 30 min entre usos'), text: '<b>Físico aumentado:</b> +4 em BODY e MOVE (BODY até 10, ou 12 com Grafted Muscle and Bone Lace). <b>Durabilidade:</b> SP 11 que não cai abaixo de 7 por ablação; ignora os estados Gravemente <b>e</b> Mortalmente Ferido; cai 30 m sem se machucar. <b>Força brutal:</b> +2 de dano corpo a corpo e de arremesso por dado. <b>Regeneração por nanites:</b> no fim do seu turno, recupera metade do seu BODY natural em HP.', icon: 'o único Berserk oficial da Militech: nanotecnológico e feito para regenerar.' },
-    { name: 'Moore Tech Berserk', tag: 'Sistema operacional Berserk', stats: osStats(14, '1.000eb', '3 + BODY/2 rodadas', '3 por 24 h, 1 h entre usos'), text: '<b>Físico aumentado:</b> +2 em BODY e MOVE (BODY até 10). <b>Durabilidade:</b> SP 7, ignora o estado Gravemente Ferido, cai 30 m sem se machucar. <b>Força brutal:</b> +1 de dano corpo a corpo e de arremesso.', icon: 'o clássico: um dos "Berserks" mais populares, testado em combate de alto risco.' },
-    { name: 'Zetatech Berserk', tag: 'Sistema operacional Berserk', stats: osStats(14, '10.000eb', '2 + BODY/2 rodadas', '3 por 24 h, 1 h entre usos'), text: '<b>Físico aumentado:</b> +3 em BODY e MOVE (BODY até 10). <b>Durabilidade:</b> SP 12 que não sofre ablação, ignora o estado Gravemente Ferido, cai 30 m sem se machucar. <b>Força brutal:</b> +3 de dano corpo a corpo e de arremesso.', icon: 'uma máquina de matar magra e cruel, "difícil de matar graças à absorção de impacto nanodérmica".' }
-  ]);
-  const sandevistans = osMaker([
-    { name: 'Dynalar Sandevistan', tag: 'Sistema operacional Sandevistan', stats: osStats(14, '5.000eb', '2 + BODY/2 rodadas', '3 por 24 h, 1 h entre usos'), text: '<b>Reflexos aumentados:</b> +2 em DEX, REF e MOVE (DEX e REF não passam de 10). <b>Tempo lento:</b> uma Ação extra, só para se mover de novo. <b>Precisão mortal:</b> você causa lesão crítica com dois ou mais dados de dano em <b>5 ou 6</b>.', icon: 'o padrão de soldados e mercenários: velocidade e apoio de combate por um preço atraente.' },
-    { name: 'Militech Falcon Sandevistan', tag: 'Sistema operacional Sandevistan', stats: osStats(14, '10.000eb', '2 + BODY/2 rodadas', '2 por 24 h, 1 h entre usos'), text: '<b>Reflexos aumentados:</b> +3 em DEX, REF e MOVE (DEX e REF até 10). <b>Tempo lento:</b> uma Ação extra para se mover <b>ou atacar</b> de novo. <b>Precisão mortal:</b> lesão crítica com dois ou mais dados em 5 ou 6. <b>Adrenalina:</b> matar um alvo recupera metade do seu BODY em HP.', icon: 'o melhor e mais avançado Sandevistan do mercado, antes restrito à elite da Militech.' },
-    { name: 'QianT Warp Dancer Sandevistan', tag: 'Sistema operacional Sandevistan', stats: osStats(14, '5.000eb', '2 + BODY/2 rodadas', '3 por 24 h, 1 h entre usos'), text: '<b>Reflexos aumentados:</b> +2 em DEX, REF e MOVE (DEX e REF até 10). <b>Tempo lento:</b> uma Ação extra para se mover de novo, e você pode tentar <b>rebater de volta até dois ataques à distância</b> por rodada contra quem atirou, usando a perícia Armas Brancas.', icon: 'defesa acima de tudo: protocolos defensivos de ponta contra ataques contínuos.' },
-    { name: 'Zetatech Sandevistan', tag: 'Sistema operacional Sandevistan', stats: osStats(14, '1.000eb', '2 + BODY/2 rodadas', '3 por 24 h, 1 h entre usos'), text: '<b>Reflexos aumentados:</b> +2 em DEX, REF e MOVE (DEX e REF até 10). <b>Tempo lento:</b> uma Ação extra para se mover ou atacar de novo. <b>Pegar vento:</b> ignora quedas de até 20 m.', icon: 'o Sandevistan popular de massa: minimalista, fácil de usar e bom no ar.' }
-  ]);
-
+  // ---------------- Cyberdecks com marca (sup. p. 14–15) ----------------
+  // Os modelos do suplemento de fã, só como a marca de um cyberdeck do RED (revisão de 2026-10-13): a qualidade dá os slots
+  // e o preço do RED, e a RAM, o cooling e a especialidade do suplemento saíram. [fabricante, modelo, qualidade, como é]
+  const DECKS = { Ruim: { slots: 5, cost: '100eb' }, Padrão: { slots: 7, cost: '500eb' }, Excelente: { slots: 9, cost: '1.000eb' } };
   const deckRows = [
-    ['Arasaka', 'Shadow', 8, 9, 4, 'Excelente. −2 no custo de RAM de Breach e Cloak enquanto não detectado; −1 depois.', '1.000eb', 'Topo de linha, usado em infiltração e espionagem corporativa.'],
-    ['Arasaka', 'Samurai', 9, 9, 3, 'Excelente. +2 no dano de todos os ataques de Vírus; ignora ICE de Rating 2 ou menos.', '1.000eb', 'Perigoso e eficiente, para os praticantes do bushido.'],
-    ['Arasaka', 'Tranquility', 4, 9, 4, 'Excelente. +1 nos testes de interação NET.', '500eb', 'Para o dia a dia num futuro pacífico.'],
-    ['Militech', 'Paraline', 7, 7, 5, 'Padrão, sem especialidade.', '100eb', 'Não é o mais forte, mas faz de tudo, mesmo que devagar.'],
-    ['Militech', 'Fortress', 4, 9, 4, 'Excelente. +2 no Rating do White ICE e nos atributos do Black ICE instalados.', '1.000eb', 'Como um datafort antigo: ninguém hackeia sem suar.'],
-    ['Militech', 'Hunter MK.1', 7, 7, 4, 'Padrão. −1 no custo de RAM contra alvos marcados (Tagged).', '500eb', 'Presa marcada não sai do seu campo de visão.'],
-    ['Militech', 'Hunter MK.2', 8, 9, 5, 'Excelente. −2 no custo de RAM contra alvos marcados.', '1.000eb', 'O primo mais forte do MK.1.'],
-    ['Biodyne', 'MK.1', 5, 5, 3, 'Ruim, sem especialidade.', '50eb', 'O cyberdeck do pobre: prático e com espaço razoável.'],
-    ['Biodyne', 'MK.2', 10, 7, 6, 'Padrão, sem especialidade.', '1.000eb', 'A escolha de quem quer desempenho bruto.'],
-    ['Biotechnica', 'Σ MK.1', 6, 7, 6, 'Padrão, sem especialidade.', '100eb', 'Coprocessadores que esvaziam a RAM rápido; comum entre runners esquentados.'],
-    ['Biotechnica', 'Σ MK.2', 7, 7, 8, 'Padrão. +1 no dano de todos os ataques de Vírus.', '500eb', 'Roda frio e suave.'],
-    ['Biotechnica', 'Σ MK.3', 8, 9, 10, 'Excelente. +2 no dano de todos os ataques de Vírus.', '1.000eb', 'Processador de ponta, muito espaço e muito eficiente.'],
-    ['Fuyutsuki', 'MK.1', 5, 7, 4, 'Padrão, sem especialidade.', '500eb', '"Bom o bastante", como descreveu um usuário.'],
-    ['Fuyutsuki', 'Tinkerer', 8, 7, 5, 'Padrão. O quickhack se espalha para outro nó da LocalNet a cada 2 RAM extras.', '1.000eb', 'Modificado, único e fora do alcance do consumidor comum.'],
-    ['NetWatch', 'WatchDog', 10, 9, 5, 'Excelente, sem especialidade.', '1.000eb', 'Difícil de conseguir e mais difícil ainda de manter.'],
-    ['NetWatch', 'NetDriver', 12, 9, 7, 'Excelente. 25% de chance de escapar do Pathfinder; +2 em testes NET contra aparelhos.', '5.000eb', 'O sonho de todo netrunner. Cada um é uma relíquia.'],
-    ['Raven Microcyber', 'Mycrocyber', 8, 9, 4, 'Excelente. +1 em testes NET de segurança; +1 no Rating do White ICE e nos atributos do Black ICE.', '1.000eb', 'Segurança e antirroubo à prova de falhas.'],
-    ['Seocho', 'MK.1', 5, 7, 3, 'Padrão. +1 em Breach contra aparelhos.', '500eb', 'Barato e confiável; comum em arrombamentos.'],
-    ['Seocho', 'MK.2', 7, 7, 5, 'Padrão. +2 em Breach contra aparelhos.', '1.000eb', 'Para o ladrão profissional.'],
-    ['Stephenson Tech', 'Tech', 8, 9, 5, 'Excelente. +1 na duração dos quickhacks de Vírus e de Controle.', '100eb', 'Prolonga os quickhacks até a última gota.'],
-    ['Tetratronic', 'Rippler', 7, 7, 4, 'Padrão. O quickhack se espalha para outro nó da LocalNet a cada 1 RAM extra.', '1.000eb', 'Espalha o hack de um coitado para os amigos dele. Ótimo para controle de multidão.']
+    ['Arasaka', 'Shadow', 'Excelente', 'Topo de linha, usado em infiltração e espionagem corporativa.'],
+    ['Arasaka', 'Samurai', 'Excelente', 'Perigoso e eficiente, para os praticantes do bushido.'],
+    ['Arasaka', 'Tranquility', 'Excelente', 'Para o dia a dia num futuro pacífico.'],
+    ['Militech', 'Paraline', 'Padrão', 'Não é o mais forte, mas faz de tudo, mesmo que devagar.'],
+    ['Militech', 'Fortress', 'Excelente', 'Como um datafort antigo: ninguém hackeia sem suar.'],
+    ['Militech', 'Hunter MK.1', 'Padrão', 'Presa marcada não sai do seu campo de visão.'],
+    ['Militech', 'Hunter MK.2', 'Excelente', 'O primo mais forte do MK.1.'],
+    ['Biodyne', 'MK.1', 'Ruim', 'O cyberdeck do pobre: prático e com espaço razoável.'],
+    ['Biodyne', 'MK.2', 'Padrão', 'A escolha de quem quer desempenho bruto.'],
+    ['Biotechnica', 'Σ MK.1', 'Padrão', 'Coprocessadores rápidos; comum entre runners esquentados.'],
+    ['Biotechnica', 'Σ MK.2', 'Padrão', 'Roda frio e suave.'],
+    ['Biotechnica', 'Σ MK.3', 'Excelente', 'Processador de ponta, muito espaço e muito eficiente.'],
+    ['Fuyutsuki', 'MK.1', 'Padrão', '"Bom o bastante", como descreveu um usuário.'],
+    ['Fuyutsuki', 'Tinkerer', 'Padrão', 'Modificado, único e fora do alcance do consumidor comum.'],
+    ['NetWatch', 'WatchDog', 'Excelente', 'Difícil de conseguir e mais difícil ainda de manter.'],
+    ['NetWatch', 'NetDriver', 'Excelente', 'O sonho de todo netrunner. Cada um é uma relíquia.'],
+    ['Raven Microcyber', 'Mycrocyber', 'Excelente', 'Segurança e antirroubo à prova de falhas.'],
+    ['Seocho', 'MK.1', 'Padrão', 'Barato e confiável; comum em arrombamentos.'],
+    ['Seocho', 'MK.2', 'Padrão', 'Para o ladrão profissional.'],
+    ['Stephenson Tech', 'Tech', 'Excelente', 'Pensado para quem faz quickhack o dia inteiro.'],
+    ['Tetratronic', 'Rippler', 'Padrão', 'Popular entre quem trabalha no meio da multidão.']
   ];
+  const decks = deckRows.map(([maker, model, quality, text]) => ({ maker, model, quality, ...DECKS[quality], text }));
+  // A página de quickhacks junta os do Kit e os do suplemento de fã, por nível de DV.
+  const hacks = [...kitHacks, ...fanHacks];
 
   const pages = {
     netArsenal: {
-      eyebrow: 'Netrunning / livro-base RED', title: 'Arsenal do RED',
-      lede: 'Tudo o que um netrunner do RED pode carregar ou encontrar numa arquitetura: programas, Black ICE, demônios, upgrades do deck e as defesas que eles controlam. Cada item tem a aparência (o "ícone") para descrever na mesa.',
-      html: `${section('Como ler os cartões', '202–205', `${list(['<b>ATK:</b> soma no ataque do programa (Interface + ATK + 1d10). <b>DEF:</b> soma na defesa. <b>REZ:</b> os "pontos de vida" do programa; em 0 ele fica desativado.', '<b>PER:</b> quão difícil é driblar o Black ICE com Slide. <b>SPD:</b> velocidade; um ICE rápido acerta um ataque grátis quando a porta abre.', 'Anti-pessoal afeta netrunners; anti-programa afeta programas (e caça o netrunner se ele não tiver programas ativos).', 'Ativar ou desativar um programa é 1 Ação NET. Black ICE próprio ocupa 2 slots. Instalar ou remover leva 1 hora.'])}${button('netrunning', 'Regras de netrunning do RED')}`)}
+      eyebrow: 'Netrunning / arsenal', title: 'Arsenal da NET',
+      lede: 'Tudo o que um netrunner pode carregar ou encontrar numa arquitetura: programas, Black ICE, demônios, upgrades do deck e as defesas que eles controlam. Cada item tem a aparência (o "ícone") para descrever na mesa.',
+      html: `${section('Como ler os cartões', '202–205', `${list(['<b>ATK:</b> soma no ataque do programa (Interface + ATK + 1d10). <b>DEF:</b> soma na defesa. <b>REZ:</b> os "pontos de vida" do programa; em 0 ele fica desativado.', '<b>PER:</b> quão difícil é driblar o Black ICE com Slide. <b>SPD:</b> velocidade; um ICE rápido acerta um ataque grátis quando a porta abre.', 'Anti-pessoal afeta netrunners; anti-programa afeta programas (e caça o netrunner se ele não tiver programas ativos).', 'Ativar ou desativar um programa é 1 Ação NET. Black ICE próprio ocupa 2 slots. Instalar ou remover leva 1 hora.'])}${button('netrunning', 'Regras de netrunning')}`)}
         ${section('Programas: boosters', '203', `<p>Melhoram suas habilidades de Interface enquanto estão ativos.</p>${grid(boosters)}`)}
         ${section('Programas: defensores', '203', `<p>Param ou reduzem ataques de programas e de outros netrunners enquanto estão ativos.</p>${grid(defenders)}`)}
         ${section('Programas: ataque', '203–204', `<p>Feitos para danificar ou desativar netrunners e programas. Desativam sozinhos depois de usados.</p>${grid(attackers)}`)}
         ${section('Black ICE anti-pessoal', '206–207', `<p>Caçam o netrunner pela arquitetura até serem desativados ou driblados com Slide.</p>${grid(antiPersonnel)}`)}
         ${section('Black ICE anti-programa', '207', `<p>Caçam os programas ativos do netrunner, escolhendo um ao acaso a cada ataque.</p>${grid(antiProgram)}`)}
         ${section('Demônios', '212', `<p>Black ICE inteligente que opera nós de controle (torretas, drones) contra a equipe no mundo físico. Sabem tudo da própria arquitetura: senhas não os param, sempre vencem disputas de velocidade e não dá para usar Slide contra eles. Sem DEF: defendem com Interface + 1d10. Só usam Zap e Control. No máximo um demônio a cada seis andares. Custos da tabela de segurança residencial (p. 218).</p>${grid(demons)}`)}
-        ${section('Upgrades e hardware', '208', `<p>Hardware ocupa os mesmos slots que os programas (1 slot, salvo indicação). Instalar ou remover leva 1 hora.</p>${grid(hardware)}${table(['Cyberdeck (RED)', 'Slots', 'Custo'], [['Qualidade ruim', '5', '100eb'], ['Padrão', '7', '500eb'], ['Qualidade excelente', '9', '1.000eb']])}`)}
+        ${section('Upgrades e hardware', '208', `<p>Hardware ocupa os mesmos slots que os programas (1 slot, salvo indicação). Instalar ou remover leva 1 hora.</p>${grid(hardware)}${table(['Cyberdeck', 'Slots', 'Custo'], [['Qualidade ruim', '5', '100eb'], ['Padrão', '7', '500eb'], ['Qualidade excelente', '9', '1.000eb']])}<p class="note-status">Nos anos 2070, todo deck também vem na versão para a Neuroport Cyberdeck Port, pelo mesmo preço. Essa versão não aceita hardware (Kit p. 37).</p>`)}
+        ${section('Cyberdecks com marca', 'sup. p. 14–15', `<p>Nos anos 2070, os decks têm fabricante e modelo. Cada um é um cyberdeck do RED da qualidade dele, com os slots e o preço do RED: o nome é a aparência. Os modelos são do suplemento de fã; a RAM, o cooling e as especialidades de lá não valem.</p>${table(['Fabricante', 'Modelo', 'Qualidade', 'Slots', 'Custo', 'Como é'], decks.map(deck => [deck.maker, deck.model, deck.quality, deck.slots, deck.cost, deck.text]))}`)}
         ${section('Defesas ativas', '213', `<p>Pequenos robôs que agem sozinhos dentro de uma área e perseguem o alvo até o perímetro. Precisam de um demônio operando o nó de controle; sem ele, podem ser neutralizados com Eletrônica/Segurança e, depois, controlados com um Agent a até 6 m de um ponto de acesso. Gatilho padrão de todas: entrar na área sem passe ou crachá.</p>${grid(activeDefenses)}`)}
         ${section('Defesas posicionadas', '214', `<p>Sistemas fixos numa sala, cada um com seu nó de controle. Não precisam de demônio: agem sozinhos com o valor de combate + 1d10 e não se esquivam. Gatilho padrão: entrar na sala sem passe ou crachá.</p>${grid(positionedDefenses)}`)}
         ${section('Defesas ambientais', '214–216', `<p>Embutidas no piso, paredes ou teto de um espaço fechado. Mesmo controladas por demônio ou netrunner, só ligam e desligam, e sempre disparam no gatilho.</p>${grid(environmentalDefenses)}`)}
         ${section('Montando a própria segurança', '217–218', `<p>Arquiteturas, programas para arquitetura e defesas só se compram num Night Market de eletrônicos de um Fixer de Rank 4 ou mais.</p>${table(['Andares', 'Nós de controle máx.', 'Portátil?', 'Custo por andar'], [['3 a 6', '2', 'Sim (mochila grande)', '1.000eb'], ['7 a 12', '3', 'Não', '5.000eb'], ['13 a 18', '—', 'Não', '10.000eb']])}${table(['Senha, nó ou arquivo com DV', 'Custo'], [['DV6', '500eb'], ['DV8', '1.000eb'], ['DV10', '5.000eb'], ['DV12', '10.000eb']])}${table(['Defesa neutralizável com Eletrônica/Segurança', 'Custo'], [['DV9', '500eb'], ['DV13', '1.000eb'], ['DV17', '5.000eb'], ['DV21', '10.000eb']])}${list(['Black ICE custa o mesmo preço do cartão. Dois no mesmo andar custam o dobro cada; três, o triplo.', 'Demônios: Imp 1.000eb, Efreet 5.000eb, Balron 10.000eb; um a cada seis andares.', '<b>Exemplo do livro (armazém TLB, 13.500eb):</b> andar 1 Hellhound e Killer; andar 2 senha DV8; andar 3 Hellhound; andar 4 nó de controle DV8 com torreta.'])}`)}`
     },
 
-    net2077: {
-      eyebrow: 'Netrunning / Mission Kit', title: 'Netrunning de 2077',
-      lede: 'Nos anos 2070, o netrunner hackeia o Neuroport das pessoas no meio do tiroteio. Aqui estão as regras de quickhack do Cyberpunk Edgerunners Mission Kit (oficial) e, como opcional, a rede de três camadas, os cyberdecks, o ICE e a neuralware do suplemento de fã.',
-      html: `${section('Quickhacks no Neuroport', 'Kit p. 16–17 e 26–27', `${list([
-          'Só dá para hackear quem tem <b>Neuroport</b>: tudo o que se conecta pode ser conectado, inclusive por um netrunner hostil.',
-          'No turno, o netrunner faz <b>uma Ação Carnal</b> (no mundo físico, como atirar) <b>ou até 3 Ações NET</b>, além da Ação de Movimento. As Ações NET usam a <b>Interface</b>: Rank + 1d10, sem STAT. Sorte, perícia complementar e tempo extra valem, e as penalidades (agarrão, ferimentos) também.',
-          '<b>Jack In:</b> entra no Neuroport de um alvo à vista, no alcance: Interface + 1d10 contra WILL + 1d10 do alvo. Falhando, você entra assim mesmo, mas o alvo percebe. Cada Neuroport é uma Ação NET, e dá para ficar ligado em quantos quiser.',
-          '<b>Jack Out:</b> sai do Neuroport do alvo com segurança.',
-          '<b>Breach:</b> passa um <b>Passwall</b> (um por Self-ICE do alvo), Interface contra a DV dele: 6 com um Self-ICE, 8 com dois, 10 com três. É o novo nome do Backdoor do RED.',
-          '<b>Quickhack:</b> depois de passar todos os Passwalls, Interface contra a DV do quickhack. <b>Um quickhack por alvo por turno</b>: errou o Puppet, não dá para tentar o Overheat no mesmo alvo nesse turno.',
-          '<b>Expulsar:</b> o alvo que percebe (um quickhack que deu certo alerta, menos o Lure) tenta te expulsar com uma Ação: WILL + Concentração + 1d10 contra a sua Interface + 1d10. Outro netrunner sempre sabe quando entraram no Neuroport dele.',
-          'Você fica ligado até ser expulso, sair do alcance, fazer o Jack Out ou o alvo morrer. Desligado de qualquer jeito que não o Jack Out, é um <b>Jack Out inseguro</b>, com as consequências de sempre, e você só entra de novo nesse alvo em 60 minutos.'
-        ])}${button('quickhacks', 'Os quickhacks')}`)}
-        ${section('Alcance e segurança', 'Kit p. 26', list([
-          '<b>Alcance:</b> com um cyberdeck externo, 6 m (8 m com o hardware certo); com o deck na <b>Neuroport Cyberdeck Port</b>, <b>50 m</b>. Precisa de linha de visão.',
-          '<b>Firewall de fábrica:</b> todo Neuroport tem um. Com Interface Rank 1 ou 2, o Jack In pede antes um teste de Interface contra <b>DV6</b>; falhar não alerta o alvo. Do Rank 3 em diante, passa direto.',
-          'O firewall de fábrica não é um Passwall e não ocupa andar.'
-        ]))}
-        ${section('Interface nos anos 2070', 'Kit p. 26', list([
-          'O netrunner faz quickhacks como parte da Interface, sem comprar nada: os <b>Simples (DV6)</b> no Rank 1, os <b>Padrão (DV8)</b> no Rank 2, os <b>Difíceis (DV10)</b> no Rank 3 e os <b>Avançados (DV12)</b> no Rank 4.',
-          'O <b>Scanner</b> deixa de ser Ação Carnal e vira Ação NET.',
-          'No <b>Rank 3</b>, passa direto pelo firewall de fábrica do Neuroport, sem teste.',
-          'Com <b>dois ou mais Ex-Disks</b>, uma Ação NET a mais por turno quando ligado fisicamente a um ponto de acesso pelo Personal Link.'
-        ]))}
-        ${section('O Neuroport como arquitetura NET', 'Kit p. 26–27', `${list([
-          'O Neuroport funciona como uma <b>arquitetura NET</b>. Sem Self-ICE nem Black ICE, tem um andar só: o <b>nó de controle do Holophone (DV10)</b>.',
-          'Cada <b>Passwall</b> (Self-ICE) e cada <b>Black ICE</b> é um andar a mais. O dono escolhe a ordem dos andares.',
-          'O Neuroport não instala Black ICE: ele usa o Black ICE do cyberdeck ligado a ele, e a arquitetura cresce para caber.',
-          'Um netrunner está sempre ligado ao próprio Neuroport, pode enfrentar quem invadir e não pode ser expulso dele.',
-          'Quem chega ao fundo pode deixar um <b>vírus</b>, como numa arquitetura do RED.'
-        ])}${table(['Neuroport', 'Andares, de cima para baixo'], [
-          ['Sem Self-ICE', 'Nó de controle: Holophone (DV10)'],
-          ['1 Self-ICE', 'Passwall (DV6) · Nó de controle: Holophone (DV10)'],
-          ['2 Self-ICE', 'Passwall (DV8) · Passwall (DV8) · Nó de controle: Holophone (DV10)'],
-          ['1 Self-ICE e um deck com Hellhound', 'Black ICE: Hellhound (do deck) · Passwall (DV6) · Nó de controle: Holophone (DV10)']
-        ])}<p class="note-status">Exemplos montados pelas regras do Kit, que traz seis na p. 27. O dono pode trocar a ordem dos andares.</p>${button('netrunning', 'Arquiteturas NET do RED')} ${button('cyberware2077', 'Neuroport, Self-ICE e Ex-Disk')}`)}
-        ${section('Conexão direta', 'Kit p. 27', list([
-          'Dá para entrar no Neuroport de alguém <b>pelo Personal Link</b> (Interface Plug). Num alvo que não quer, só se ele estiver inconsciente ou contido sem poder resistir. Acordado, ele sabe e pode tentar te expulsar.',
-          'Ligado direto, você ganha <b>uma Ação NET a mais</b> por turno e passa direto por todos os <b>Passwalls</b> (o Black ICE, não).',
-          'Se você ou o alvo se afastar mais de <b>2 m</b> (1 quadrado), ou o cabo for arrancado ou cortado, você é desligado à força.'
-        ]))}
-        ${section('Do suplemento de fã (opcional)', 'sup. p. 5–23', '<div class="callout">As seções abaixo são do suplemento de fã de 2077: uma rede de três camadas (arquitetura, LocalNet e SubNet), com RAM e cooling no deck. Com as regras do Mission Kit, os quickhacks <b>não gastam RAM</b>: cada um é uma Ação NET contra a DV do nível. Use estas regras só se a mesa quiser a rede do suplemento. Os cyberdecks, o ICE e a neuralware valem nos dois jeitos; o que depende de RAM está avisado.</div>')}
-        ${section('As três camadas da rede', 'sup. p. 9–10', `${table(['Camada', 'O que é', 'Custo de RAM'], [['Arquitetura NET', 'Reservada a mainframes, corporações e servidores; ancora a SubNet. Um computador tem 4–5 andares; servidores, mais um ramo por disco (6–7 andares cada, até 9). Plantar um vírus no andar mais baixo dá controle de tudo ligado à SubNet. Quem monta a segurança da arquitetura soma +2 no Security Rating contra invasões vindas da SubNet.', 'Custo base'], ['LocalNet', 'Uma VPN entre pessoas: esquadrões, gangues, amigos. Liga câmeras, feeds e o cyberware de quem está conectado. Invadir exige conexão por Personal Link e passar pelo ICE dos participantes. É uma via de mão dupla.', '+1 RAM'], ['SubNet', 'Seções isoladas da CitiNet: de uma sala a uma torre inteira, com câmeras, torretas, portas e pessoas. Ações de SubNet exigem contato visual direto (câmeras e olhos de aliados valem). Invadir de fora: Eletrônica/Segurança contra o Security Rating.', '+2 RAM até invadir o ponto de acesso (ou contra alvos já invadidos)']])}${list(['<b>Scan Mode:</b> os Kiroshi com um sistema operacional mostram dados do alvo com contato visual (30 m × aumento do cyberolho em luz boa, IR ou visão noturna; metade no escuro). Chipware de ofuscação (DataClear) bloqueia.', '<b>Visão virtual:</b> com Cyberdeck OS e cyberolhos, dá para ver dentro da arquitetura, como os óculos de virtualidade faziam.', 'Sem cyberdeck, quem se conecta só consegue subir dados (como daemons) e vasculhar dados de superfície.'])}`)}
-        ${section('Interface no suplemento de fã', 'sup. p. 5', `${list(['<b>Bônus de netrunning:</b> o netrunner soma o Rank de Interface em todos os testes de TECH enquanto está hackeando.', '<b>RAM extra:</b> metade do Rank de Interface (arredondado para baixo, mínimo 1).', '<b>Slots extras:</b> +1 slot de programa ou daemon nos Ranks 3, 6 e 9 (máximo 3).', '<b>Ações NET:</b> como sempre, mas fora de uma arquitetura, mais de uma Ação NET no mesmo alvo entra numa <b>fila</b>: o custo de RAM já fica reservado e a ação acontece no início do seu próximo turno.', 'Qualquer pessoa com Cyberdeck OS pode hackear (uma Ação NET por turno), mas sem a Interface não tem os bônus do netrunner.'])}`)}
-        ${section('Resolução, RAM e cooling', 'sup. p. 10–11', `${formula('1d10 + TECH + Interface &gt; DV')}${list(['Quem é hackeado e percebe se defende com o mesmo teste. Quem não percebe não resiste.', '<b>RAM:</b> cada ação NET custa RAM; mais barato na arquitetura, mais caro na LocalNet (+1) e na SubNet (+2).', '<b>Slots:</b> programas ocupam 1, Black ICE 2 ou mais, daemons 2 ou mais, hardware varia.', '<b>Cooling:</b> uma Ação Carnal para deixar o deck esfriar: recupera RAM igual ao Cooling do deck. Com um minuto de folga, todo deck esfria por completo.', '<b>EMP:</b> desliga os implantes extras e zera a RAM do deck; eles voltam depois de um minuto.'])}`)}
-        ${section('Habilidades de Interface nas três camadas', 'sup. p. 11–14', table(['Habilidade', 'Na arquitetura', 'Na LocalNet', 'Na SubNet'], [
-          ['Scanner', '—', '—', 'Ação Carnal: faz "ping" em aparelhos e pessoas da SubNet. Dados ofuscados bloqueiam. Quem foi pingado e está à vista pode ser <b>marcado</b> (Tagged) na mesma ação, até o seu Rank de Interface.'],
-          ['Breach', 'Quebra uma senha (automático se você a conhece).', 'Conexão direta por Personal Link (Ação Carnal) com um nó; se houver ICE, é preciso vencer o White ICE no teste ou derrubar o Black ICE com programas.', 'Invade um aparelho ou pessoa e instala um backdoor para os próximos hacks (Interface Queue). ICE não letal pode ser vencido no teste ou contornado gastando mais RAM.'],
-          ['Cloak', 'Esconde presença e vírus do Pathfinder inimigo; a DV é o seu teste.', 'Esconde de qual nó vêm seus hacks; quem rastrear precisa vencer seu Cloak com Pathfinder.', 'Esconde sua presença. Se o Pathfinder inimigo vencer, você é pingado e marcado; um Cloak que empata a até 2 pontos atrasa o rastreio um turno, e um que passa o cancela.'],
-          ['Control', 'Como no RED: toma nós de controle.', 'Toma os sistemas de uma pessoa. Quickhacks fazem isso rápido; sem eles, é preciso vencer mais disputas seguidas do que a WILL dela.', 'Controla um aparelho invadido (sobrecarregar, agir estranho, usar qualquer função) ou os sistemas de uma pessoa (na prática, com quickhacks).'],
-          ['Eye-Dee', 'Como no RED.', 'Colhe dados de um nó (chrome e software), automático sem ICE e sem alerta.', 'Colhe dados de um aparelho ou pessoa protegidos por ofuscação, vencendo a DV do software.'],
-          ['Pathfinder', 'Como no RED.', 'Rastreia no mundo físico o nó de onde vem o hack, a menos que o Cloak impeça.', 'Varre a SubNet atrás de presenças escondidas: sucesso deixa o alvo pingado e marcado.'],
-          ['Slide', 'Como no RED.', '—', '—'],
-          ['Virus', 'Como no RED.', 'Cria um vírus do zero na LocalNet ou num nó; DV e tempo definidos pelo mestre.', 'Cria um vírus numa seção da SubNet, limitado ao que aquele nível de acesso permite.'],
-          ['Zap', 'Como no RED.', '—', '—']
-        ]))}
-        ${section('Cyberdecks de 2077', 'sup. p. 14–15', `<p>No suplemento de fã, o cyberdeck é um <b>sistema operacional</b> instalado no Neural Link, sem perda de Humanidade: troca-se num ripperdoc. Quickhacks, programas, daemons e ICE são baixados de uma máquina, de um chip ou num update no ripperdoc.</p><div class="callout">Com as regras do Mission Kit, estes decks encaixam na <b>Neuroport Cyberdeck Port</b> (sem hardware, com 50 m de alcance contra Neuroports) e contam só os slots: a RAM e o cooling são da rede do suplemento.</div>${table(['Fabricante', 'Modelo', 'RAM', 'Slots', 'Cooling', 'Qualidade e especialidade', 'Custo', 'Descrição'], deckRows)}<p class="note-status">RAM e slots somam com os bônus da Interface e da neuralware. O Σ MK.2 aparece no livro como "500eb (Costly)"; o valor em eb é o que vale.</p>`)}
-        ${section('ICE em 2077', 'sup. p. 22', `${list(['ICE ocupa <b>1 slot</b> no deck, ou o chip inteiro num Chipware Socket (sem perda de Humanidade).', 'Só age como defesa na LocalNet e na SubNet. Numa arquitetura, a conexão direta deixa o White ICE inútil: sobram programas defensores e Black ICE.', '<b>White ICE</b> tem um <b>Rating</b> (bônus nas disputas contra Breach, ou RAM extra para contornar quando o dono percebe) e uma <b>DV passiva</b> que o hacker precisa vencer para invadir quando o dono não percebe. Depois do Breach, o backdoor passa pelo ICE.', '<b>Black ICE</b> continua como no RED, mas agora anda em decks e em chips: quem tem um chip Black ICE plugado conta com ele até ser destruído ou arrancado.'])}${grid(whiteIce)}`)}
-        ${section('Hardware em 2077', 'sup. p. 16', `<p>Só quatro peças continuam no mercado, integradas ao deck: <b>Backup Drive</b>, <b>Hardened Circuitry</b>, <b>Insulated Wiring</b> e <b>KRASH Barrier</b>. Os efeitos são os do RED.</p>${button('netArsenal', 'Ver os upgrades no Arsenal do RED')}`)}
-        ${section('Neuralware de netrunning', 'sup. p. 23', `<p>Implantes que substituem ou turbinam partes do cérebro. Caros e difíceis de achar, mas às vezes são a diferença entre sair da banheira de gelo ou virar cadáver congelado.</p><p class="note-status">O que fala de RAM só vale com a rede do suplemento. O Ex-Disk e o Self-ICE do suplemento de fã deram lugar aos do Mission Kit, junto do Neuroport.</p><p><button class="action" data-page="cyberware2077" data-section="neuroport" type="button">Neuroport, Ex-Disk e Self-ICE</button></p>${grid(neuralware)}`)}
-        ${section('Mais de 2077', '', `<p>${button('quickhacks', 'Quickhacks e daemons')} ${button('os2077', 'Berserk e Sandevistan')} ${button('supplement2077', 'Resumo do suplemento')}</p>`)}`
-    },
-
     quickhacks: {
-      eyebrow: 'Netrunning / Mission Kit', title: 'Quickhacks e daemons',
-      lede: 'Os quickhacks que fizeram do netrunner dos anos 2070 algo mais perigoso que uma arma num tiroteio: os do Mission Kit, que todo netrunner faz pelo Rank de Interface, e os do suplemento de fã, adaptados a eles. E os daemons do suplemento.',
+      eyebrow: 'Netrunning / quickhacks', title: 'Quickhacks',
+      lede: 'Os quickhacks que fizeram do netrunner dos anos 2070 algo mais perigoso que uma arma num tiroteio: os 11 do Mission Kit e os 5 do suplemento de fã que a mesa aprovou. Todo netrunner faz os do nível dele pelo Rank de Interface, sem comprar nada.',
       html: `${section('Como funcionam os quickhacks', 'Kit p. 16–17 e 26', `${list([
           'Só dá para hackear quem tem <b>Neuroport</b>. Primeiro o <b>Jack In</b> (Interface + 1d10 contra WILL + 1d10), depois o <b>Breach</b> de cada Passwall, e então o quickhack: <b>Interface + 1d10 contra a DV</b> dele, numa Ação NET.',
           '<b>Um quickhack por alvo por turno</b>, mesmo sobrando Ações NET.',
-          'Um quickhack que deu certo <b>alerta o alvo</b> (menos o Lure e os marcados como "não alerta"), que pode tentar te expulsar.',
-          'Quais você faz depende do Rank de Interface: <b>Simples (DV6)</b> no Rank 1, <b>Padrão (DV8)</b> no 2, <b>Difíceis (DV10)</b> no 3 e <b>Avançados (DV12)</b> no 4. Os do Kit não se compram: todo netrunner faz os do nível dele.',
-          'Os do <b>suplemento de fã</b> (opcionais) ganharam um nível de DV pelo custo de RAM que tinham: até 2 RAM, Simples; 3 ou 4, Padrão; 6 a 8, Difícil; 12 ou mais, Avançado. O preço e a versão excelente ficam para a mesa que preferir comprar quickhacks; a duração aparece como "padrão / excelente".'
-        ])}${button('net2077', 'Jack In, Breach e o Neuroport')}`)}
-        ${section('Simples (DV6)', 'Kit p. 16', grid(kitHacks.filter(hack => hack.raw.dv === 6)))}
-        ${section('Padrão (DV8)', 'Kit p. 16', grid(kitHacks.filter(hack => hack.raw.dv === 8)))}
-        ${section('Difíceis (DV10)', 'Kit p. 16–17', grid(kitHacks.filter(hack => hack.raw.dv === 10)))}
-        ${section('Avançados (DV12)', 'Kit p. 17', grid(kitHacks.filter(hack => hack.raw.dv === 12)))}
-        ${section('Do suplemento de fã', 'sup. p. 16–20', `<p>Opcionais, com o nível de DV do Kit. Os que repetiam um quickhack do Kit (Sonic Shock, Overheat, Short Circuit, Cyberware Malfunction e Synapse Burnout) ficaram com a versão do Kit.</p>${grid(fanHacks)}`)}
-        ${section('Daemons', 'sup. p. 21', `<div class="callout">Do suplemento de fã. Com as regras do Kit, um daemon sobe por um Breach (uma Ação NET) num Neuroport, ponto de acesso ou nó, e dentro de uma arquitetura age como um Demônio do RED.</div>${list(['Os antigos demônios encolheram a ponto de caber num shard: hoje são agentes independentes, parentes dos quickhacks, só que mais fortes.', 'Ocupam <b>2 slots</b> no deck, ou o chip inteiro num Chipware Socket.', 'Normalmente sobem por Breach num ponto de acesso ou nó; plantados direto na arquitetura da SubNet, ficam bem mais fortes. Alguns são leves o bastante para subir sem fio.', 'Têm Interface (NET), REZ e valor de combate (CMB). Os especializados costumam ser fracos em combate, por isso quem invoca um daemon de suporte sobe um de combate junto. Nenhum se compara a um netrunner de verdade.', 'Só usam Ações NET dentro de uma arquitetura, quando necessário.'])}${grid(daemons2077)}`)}`
-    },
-
-    os2077: {
-      eyebrow: 'Netrunning / suplemento de fã', title: 'Berserk e Sandevistan',
-      lede: 'Os sistemas operacionais de combate do suplemento de fã. Nos anos 2070 do Mission Kit, eles viram opções do Neural Link do Neuroport, ao lado do Berserk Implant e da Sandevistan Experimental do David.',
-      html: `${section('Regras comuns', 'sup. p. 8 e 24–26', `${list(['No Mission Kit, cada um ocupa um slot do Neural Link do Neuroport (são 5), e só cabe <b>uma speedware</b> por pessoa: um Sandevistan por vez.', 'Berserk e Sandevistan são ativados (e o Sandevistan também desativado) com uma <b>Ação</b>.', 'Todos os modelos causam <b>14</b> de perda de Humanidade.', 'A duração usa o BODY: "2 + BODY/2 rodadas".', 'Usuários de Berserk costumam ser confundidos com ciberpsicóticos, e o esforço no corpo e na mente muitas vezes termina em ciberpsicose de verdade.'])}${button('cyberware2077', 'Berserk Implant e a Sandevistan do David (Mission Kit)')}`)}
-        ${section('Berserk', 'sup. p. 24–25', `<p>Injetores adrenais, revitalizadores musculares e amplificadores de agressão: transformam o usuário num tanque, sem sinal de parar.</p>${grid(berserks)}`)}
-        ${section('Sandevistan', 'sup. p. 25–26', `<p>Antes um módulo preso ao Neural Link; em 2077, uma peça integrada que vai do Neural Link até o fim da coluna. Rápido o bastante para desviar de uma chuva de balas e acertar pontos vitais.</p>${grid(sandevistans)}`)}
-        ${section('Veja também', '', `<p>${button('net2077', 'Netrunning de 2077')} ${button('cyberware', 'Cyberware do RED')}</p>`)}`
+          'Um quickhack que deu certo <b>alerta o alvo</b> (menos o Lure e os marcados com "Alerta o alvo: não"), que pode tentar te expulsar.',
+          'Quais você faz depende do Rank de Interface: <b>Simples (DV6)</b> no Rank 1, <b>Padrão (DV8)</b> no 2, <b>Difíceis (DV10)</b> no 3 e <b>Avançados (DV12)</b> no 4. Não se compram: todo netrunner faz os do nível dele.',
+          'Os do <b>suplemento de fã</b> seguem as mesmas regras. O nível de DV saiu do custo de RAM que eles tinham no suplemento; o preço e a versão excelente de lá não valem.'
+        ])}<p><button class="action" data-page="netrunning" data-section="quickhacks-no-neuroport" type="button">Jack In, Breach e o Neuroport</button></p>`)}
+        ${section('Simples (DV6)', 'Kit p. 16 · sup. p. 16–20', grid(hacks.filter(hack => hack.raw.dv === 6)))}
+        ${section('Padrão (DV8)', 'Kit p. 16 · sup. p. 16–20', grid(hacks.filter(hack => hack.raw.dv === 8)))}
+        ${section('Difíceis (DV10)', 'Kit p. 16–17 · sup. p. 16–20', grid(hacks.filter(hack => hack.raw.dv === 10)))}
+        ${section('Avançados (DV12)', 'Kit p. 17', grid(hacks.filter(hack => hack.raw.dv === 12)))}`
     }
   };
 
-  // data: as listas de 2077, lidas pelo build do módulo do Foundry (foundry-2077/build).
+  // data: as listas lidas pelo build do módulo do Foundry (foundry-2077/build): os quickhacks (os do Kit e os do suplemento
+  // de fã aprovados) e os cyberdecks com marca.
   window.systemNet = {
     pages,
-    data: {
-      quickhacks: { kit: kitHacks, fa: fanHacks },
-      daemons: daemons2077, whiteIce, neuralware, berserks, sandevistans, decks: deckRows
-    }
+    data: { quickhacks: { kit: kitHacks, fa: fanHacks }, decks }
   };
 })();

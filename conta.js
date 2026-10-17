@@ -41,6 +41,8 @@
   }
   let toasted = null; // os já avisados nesta visita (o primeiro carregamento não avisa)
   const ROLES = { rockerboy: 'Rockerboy', solo: 'Solo', netrunner: 'Netrunner', tech: 'Tech', medtech: 'Medtech', media: 'Media', exec: 'Exec', lawman: 'Lawman', fixer: 'Fixer', nomad: 'Nomad', face: 'Rockerboy', corpo: 'Exec' };
+  const rolesOf = doc => Array.isArray(doc.roles) ? doc.roles : doc.mesa && doc.foundry ? window.characterRoles.listaMesa(doc) : window.characterRoles.lista(doc);
+  const rolesLabel = doc => rolesOf(doc).map(role => `${window.characterRoles.nome(role.id) || role.nome || 'Role'} Rank ${role.rank}`).join(' / ') || 'sem Role';
 
   async function api(path, { method = 'GET', body } = {}) {
     try {
@@ -139,7 +141,7 @@
     }
     const doc = selectedDoc();
     const here = campaign();
-    const rows = characters.map(item => `<button type="button" class="account-item account-character" aria-current="${Boolean(doc && item.id === doc.id)}" data-account-pick="${esc(item.id)}">${avatar(item, item.nome || me.jogador.nome, ' account-avatar-sm')}<span><b>${esc(nameOf(item))}</b><small>${esc(ROLES[item.role] || 'sem Role')}${esc(hp(item))}</small>${unseenOrders(item).length ? `<small class="account-orders">${unseenOrders(item).map(order => `pedido ${ORDER_WORDS[order.status]}`).join(' · ')}: veja na Loja</small>` : ''}</span></button>`).join('');
+    const rows = characters.map(item => `<button type="button" class="account-item account-character" aria-current="${Boolean(doc && item.id === doc.id)}" data-account-pick="${esc(item.id)}">${avatar(item, item.nome || me.jogador.nome, ' account-avatar-sm')}<span><b>${esc(nameOf(item))}</b><small>${esc(rolesLabel(item))}${esc(hp(item))}</small>${unseenOrders(item).length ? `<small class="account-orders">${unseenOrders(item).map(order => `pedido ${ORDER_WORDS[order.status]}`).join(' · ')}: veja na Loja</small>` : ''}</span></button>`).join('');
     return `<p class="account-head">${esc(me.jogador.nome)}<small>${esc(here ? here.name : '')}</small></p>
       ${section('Personagem', `${rows || `<p class="account-note">Nenhum personagem${here ? ` em ${esc(here.name)}` : ''} ainda.</p>`}<button type="button" class="account-item account-new" data-account-new>+ Novo personagem</button>`)}
       ${doc ? `<div class="account-actions"><button type="button" class="action" data-account-open="ficha">Ficha</button><button type="button" class="action" data-account-open="criador">Editar</button><button type="button" class="action" data-account-open="loja">Loja</button></div>` : ''}
@@ -249,11 +251,13 @@
     update: doc => {
       if (!doc || !characters.some(item => item.id === doc.id)) return;
       const fields = Object.fromEntries(['nome', 'apelido', 'role', 'retrato'].filter(key => key in doc).map(key => [key, doc[key]]));
+      if ('role' in doc || Array.isArray(doc.roles) || doc.mesa) fields.roles = rolesOf(doc).map(role => ({ id: role.id, rank: role.rank }));
       characters = characters.map(item => (item.id === doc.id ? { ...item, ...fields } : item));
       render();
     },
     papel: () => (me ? me.papel : null),
     roleName: id => ROLES[id] || '',
+    rolesLabel,
     open: () => start() || openMenu(true)
   };
   if (window.wikiApp) start(); else document.addEventListener('wiki:pronta', start);

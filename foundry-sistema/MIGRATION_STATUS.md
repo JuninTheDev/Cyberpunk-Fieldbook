@@ -4475,6 +4475,72 @@ avisa que saiu. Commit anterior: `98056203` (ciclo 91).
   esperam o usuário.
 - **Próximo:** o C9 (a NET de 2077), depois da decisão do usuário sobre a integração da wiki do master.
 
+### Ciclo 93 (2026-10-17): a integração do master (o pedido do usuário; sessão KouArt)
+
+O pedido (2026-10-17, depois do C8): integrar o master na `sistema-v14`, como no ciclo 32. A wiki do master passou a ter
+"uma regra só na mesa" (o Mission Kit sobre o RED, sem as regras do suplemento de fã) e revisou os itens do
+suplemento. O C9 (a NET de 2077) depende dessas regras. Commit anterior: `3608b8f9` (ciclo 92).
+
+- **A mescla:** o master `5de1fbd0` (11 commits desde o `32f9c7b` do ciclo 32), com 85 arquivos:
+  - a wiki (as duas Roles, o cyberware por local, o visual novo);
+  - os arquivos de regra (`system-2077.js`, `system-net.js`, `system-rules.js` e os outros);
+  - os scripts do servidor;
+  - a suíte nova da wiki (`tests/isolados`, `tests/ui`, `tests/validar.js`).
+- **Os 6 conflitos:** 5 no `api-personagens.js` e 1 no `criador.js`. Em todos ficou o lado do master:
+  - nos 4 primeiros blocos do `api-personagens.js` e no do `criador.js`, a `sistema-v14` não tinha nada a mais (é o
+    `roles` das duas Roles e o aviso de que o Foundry 14 ainda importa uma Role só);
+  - no quinto, o do master é o mais novo e mais estrito: depois da importação, o campo travado que não existia não se
+    cria.
+- **O que não entrou:**
+  - **o `foundry-sistema/.cache` e o `foundry-sistema/packs` do master** (1.696 arquivos que o `0219b29` levou para o
+    master sem querer, ver a limpeza pendente do master). Na `sistema-v14`, os dois estão no `.gitignore`: são o build.
+    Saíram do índice na mescla, e os da worktree voltaram do backup (conferidos pelo md5);
+  - **`Oque falta/` e os 2 arquivos do `fvtt-cyberpunk-red-core-dev/`** entraram como estão no master, à espera da
+    limpeza que o usuário vai decidir.
+- **Os caminhos longos:** a primeira tentativa falhou ("Filename too long", pelos arquivos do `.cache` na pasta funda da
+  worktree). Ela deixou 15 arquivos novos do master na worktree e o `.cache` e o `packs` trocados. Os 15 saíram e os
+  dois voltaram do backup. A segunda tentativa usou o `git -c core.longpaths=true merge` (só naquele comando, sem mudar
+  a configuração do repositório).
+- **O build** (`build/conteudo-2077.mjs`), no jeito do `foundry-2077/build` do master:
+  - **o que saiu:** a neuralware de netrunning, os daemons, os cyberópticos e as placas do suplemento;
+  - **Berserk e Sandevistan:** vêm do grupo `osware` do cyberware (p. 24);
+  - **as fundações:** os slots ficam só com os do Neuroport;
+  - **os cyberdecks com marca:** são cyberdecks do RED da qualidade deles, sem a RAM e o Cooling;
+  - **os quickhacks:** os 11 do Kit (p. 16) e os 5 do suplemento que a mesa aprovou (p. 17), de preço 0;
+  - **o catálogo novo:** 53 armas de 2077, 38 cyberware de 2077 e 37 itens de netrunning de 2077 (21 decks e
+    16 quickhacks); o `gerado.mjs` não mudou.
+- **Testes:**
+  - G1: 65 arquivos, 0 erros; G2: 0 erros;
+  - **G3: 109 de 123.** As 4 falhas das armas de 2077 e 10 novas. Cada uma é um ponto em que a wiki mudou, e o sistema
+    ainda segue a de antes (QUALITY_GATES, "Falhas conhecidas desde a integração do master"; ROADMAP, C29):
+    - as Roles do RED e os situacionais de Role;
+    - a Interface do Netrunner (10 habilidades, com o Scanner como 1 Ação NET e o Breach);
+    - o ponto de acesso (o texto da wiki mudou);
+    - o TeleOptics e o passo 1 da migração (o TeleOptics de 2077 saiu);
+    - a fundação e as opções (saíram os cyberópticos e as placas de 2077);
+    - o teste Smart (o Smart Link saiu);
+    - o catálogo de 2077 (a loja da wiki);
+    - o efeito de falha das armas;
+  - **G5 (a suíte inteira, com o v14):**
+    - **o v14:** 109 de 118. Às 5 conhecidas somam-se 4:
+      - os tamanhos dos compêndios;
+      - a janela de rolagem (o TeleOptics de 2077);
+      - os dois canos de 2077;
+      - o "sem erros de JS na página": o passo da arma Smart cria o Smart Link, que saiu, e o Foundry recusa o item
+        vazio;
+    - **as suítes da wiki falham assim também num clone limpo do master** (conferido com a trava dos testes): o
+      `criador` (2), o `cyberware` (6) e o `reversao` (o clone com o `campaign-map.js` antigo). São do master, e não da
+      integração;
+    - **o "projeto real" do `reversao`** falhava só com a mescla ainda sem commit. Depois do commit: RESULTADO_REVERSAO;
+    - **o `fluxo` e o `sistema`:** as falhas conhecidas de sempre.
+- **Pendências:**
+  - o C29 (novo no ROADMAP): uma parte por grupo de falhas. A da NET é da sessão KouArt, e as outras ficam abertas;
+  - no C9, a RAM e o Cooling dos decks saíram da wiki;
+  - **as armas de 2077 pelo Mission Kit:** o adiamento do usuário (2026-10-12) é de antes da "regra só na mesa".
+    Perguntar ao usuário se ele ainda vale.
+- **Próximo:** o C29, a parte da NET (o Scanner como 1 Ação NET, o Breach e a 10ª habilidade de Interface), e depois o
+  C9.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -281,7 +281,8 @@ EOF
 systemctl daemon-reload
 systemctl enable --now fieldbook.service fieldbook-atualizar.timer fieldbook-backup.timer >/dev/null
 systemctl restart fieldbook.service
-if [ -f "$FOUNDRY_APP/.instalado" ]; then systemctl enable --now foundry.service >/dev/null; systemctl restart foundry.service; fi
+# Com o Foundry 14 escolhido como mesa (pela wiki ou na virada), o 12 fica parado: ligá-lo desligaria o 14.
+if [ -f "$FOUNDRY_APP/.instalado" ] && ! systemctl is-enabled --quiet foundry14.service 2>/dev/null; then systemctl enable --now foundry.service >/dev/null; systemctl restart foundry.service; fi
 systemctl enable caddy >/dev/null
 systemctl reload-or-restart caddy
 
