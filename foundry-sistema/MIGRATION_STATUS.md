@@ -4586,6 +4586,84 @@ Kit p. 26–27) segue o Mission Kit. Commit anterior: `6c987541` (ciclo 93).
   2077 e as armas de 2077) e o C9 (o Neuroport: o Jack In, o Breach nos Passwalls, os quickhacks e o deck na porta).
 - **Próximo:** o C9, a NET de 2077.
 
+### Ciclo 95 (2026-10-17): o C9, parte 1: o Jack In e o Jack Out no Neuroport (sessão KouArt)
+
+A primeira parte da NET de 2077. Commit anterior: `52b1ef04` (a reserva do C9 e as duas decisões do usuário de
+2026-10-17).
+
+- **A referência:**
+  - **a wiki, "Quickhacks no Neuroport"** (Kit p. 16–17 e 26–27): "Jack In: entra no Neuroport de um alvo à vista, no
+    alcance: Interface + 1d10 contra WILL + 1d10 do alvo. Falhando, você entra assim mesmo, mas o alvo percebe. Cada
+    Neuroport é uma Ação NET, e dá para ficar ligado em quantos quiser"; "Jack Out: sai do Neuroport do alvo com
+    segurança";
+  - **"Do que o netrunner precisa":** o deck externo, a até 6 m do alvo, 8 m com o Range Upgrade;
+  - **nenhum módulo da mesa faz isso** (o do 2077 só tem os cartões dos quickhacks). O jeito é a decisão do usuário:
+    "rolagens e efeitos simples", com o Jack In rolando como o Agarrar.
+- **Implementado:**
+  - **`regras.mjs`:** o alcance do Jack In (6 m, 8 m com o Range Upgrade) e quem percebe (o teste resistido: o empate é
+    do alvo);
+  - **`regras-da-net.mjs`:** a parede que barra a visão ("à vista"), além da do movimento (o ponto de acesso). A janela
+    deixa ver;
+  - **a defesa** (`combate.mjs` e `janela-defesa.mjs`): a escolha nova "Vontade" (WILL + 1d10, sem perícia), pela
+    mesma janela de reação do agarrão ("Estão entrando no seu Neuroport!", com a conta e o que acontece em cada caso);
+    pelo NPC, o mestre rola;
+  - **o ator** (`documentos.mjs`): a rolagem do Jack In (Interface + 1d10, sem bônus de programa, com as penalidades e
+    os situacionais);
+  - **`neuroport.mjs`** (novo):
+    - **o Jack In:** o alvo marcado, um só, com o Neuroport instalado, à vista e no alcance. O netrunner precisa ter
+      Interface e o deck equipado;
+    - **o Jack Out;**
+    - **a resolução no mestre ativo** (pelo socket, como o agarrão);
+    - **a ligação nas flags dos dois atores** (no netrunner, as ligações; no alvo, os invasores);
+    - **o cartão:** vai ao mestre e aos donos do netrunner, e aos do alvo quando ele percebe;
+  - **a ficha** (a aba NET): o painel "Neuroports", com o alcance, as ligações (quem percebeu), o "Jack Out" de cada
+    uma e o "Jack In". Também mostra quem está no Neuroport deste ator: o jogador vê só quem ele percebeu, e o mestre,
+    todos.
+- **Testes:**
+  - G1: 67 arquivos (2 novos: o módulo e o teste), 0 erros; G2: 0 erros;
+  - G3: 114 de 126 (as 12 conhecidas). O arquivo novo, `tests/sistema/neuroport.test.mjs`, tem 3 testes de referência
+    contra o texto da wiki:
+    - quem percebe, com o empate do alvo;
+    - o alcance com e sem o Range Upgrade;
+    - a parede que barra a visão, a janela e a porta aberta;
+  - G4: 110 de 119 (as 9 falhas são as conhecidas da integração). Um passo novo, na cena do combate, com o jogador na
+    mesa, em quatro partes:
+    - **o netrunner do mestre faz o Jack In no Alvo, o PC do jogador:** 4 + 2 = 6. O jogador recebe a janela "Estão
+      entrando no seu Neuroport!", só com a Vontade e a conta dela. Ele rola a WILL 7 + 5 = 12 e percebe;
+    - **o cartão e as fichas:** o cartão vai ao mestre e ao jogador, como dono do Alvo, que percebeu (o netrunner ainda
+      não era dele). A ficha do Alvo mostra "No seu Neuroport: ...", sem o invasor que ele não percebeu;
+    - **o netrunner passa a ser do jogador:** pela ficha, ele faz o Jack In no Capanga, 4 + 7 = 11 contra a WILL 5 + 2 =
+      7, que o mestre rola, e não é percebido. A aba lista as duas ligações. O Jack Out do Capanga, pela ficha, tira dos
+      dois lados;
+    - **as recusas, sem rolar:** a Atiradora não tem Neuroport; o Capanga fica longe (16 m); e uma parede entre os dois
+      barra a visão;
+    - **rodou três vezes,** e as duas primeiras mostraram defeitos do teste:
+      - na primeira, o netrunner caiu no mesmo quadrado do Capanga;
+      - na segunda, a parede foi posta pelo lugar de antes do token, que ainda andava (o `x` do token é o de antes até a
+        animação acabar);
+      - a terceira passou;
+  - **mutações:** as 10 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - o empate do netrunner (N1);
+      - o Range Upgrade que não soma (N2);
+      - a parede que só barra a visão se barra o movimento (N3).
+    - **No G4:**
+      - o Jack In sem conferir o Neuroport (N4);
+      - sem o alcance (N5);
+      - sem ver o alvo (N6);
+      - ninguém percebe (N7);
+      - a ligação só no netrunner (N8);
+      - o cartão sem o dono do alvo que percebeu (N9);
+      - o jogador que vê quem ele não percebeu (N10).
+- **Pendências** (as outras partes do C9, no ROADMAP):
+  - o Breach nos Passwalls do Self-ICE;
+  - os quickhacks e a expulsão;
+  - as Ações NET fora da arquitetura (hoje o Jack In não as conta) e o Jack Out inseguro (sair do alcance, os 60
+    minutos);
+  - o deck na Neuroport Cyberdeck Port;
+  - a ligação que sobra quando o token do netrunner ou do alvo é apagado.
+- **Próximo:** o C9, parte 2 (o Breach nos Passwalls).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

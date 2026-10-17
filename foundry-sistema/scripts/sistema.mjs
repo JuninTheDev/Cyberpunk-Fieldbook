@@ -2,6 +2,7 @@
 // as fichas, o crítico do d10, as configurações, o combate, os turnos, a NET na mesa, a importação da wiki e a migração
 // dos dados. A API fica em game.system.api (macros e testes).
 import * as agarrao from './agarrao.mjs';
+import * as neuroport from './neuroport.mjs';
 import * as combate from './combate.mjs';
 import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
@@ -66,7 +67,7 @@ Hooks.once('init', () => {
   wiki.registrarWiki();
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
   registrarIceRezzado();
-  game.system.api = { agarrao, combate, lesoes, migracao, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
+  game.system.api = { agarrao, neuroport, combate, lesoes, migracao, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });
@@ -74,6 +75,7 @@ Hooks.once('init', () => {
 Hooks.once('ready', () => {
   combate.registrarCombate();
   agarrao.registrarAgarrao();
+  neuroport.registrarNeuroport();
   // A migração dos dados do mundo: só o mestre ativo, e só com os dados de uma versão anterior.
   migracao.conferirMigracao().catch(erro => console.error(`${SISTEMA} | migração dos dados:`, erro));
 });

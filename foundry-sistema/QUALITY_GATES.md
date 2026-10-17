@@ -131,6 +131,13 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   aviso sumiu, confira o fluxo (no ciclo 82, um G4 de diagnóstico mostrou que a rajada da Lexington voltava nula, com 5
   notificações na tela, como antes). E o recado que não é problema (a instalação deu certo) vai como `info`, que o
   console registra como `info`, fora da checagem.
+- **O lugar livre na cena do combate e o token que acabou de andar** (ciclo 95):
+  - a cena "Teste de combate" já tem os tokens dos passos de antes (o Capanga a 2 m do Alvo). Um token novo "ao lado" de
+    um deles vai para um quadrado livre, conferido pelo passo: no ciclo 95, o netrunner caiu no mesmo quadrado do
+    Capanga, e a parede entre os dois não tinha linha para cortar;
+  - logo depois do `update` de x e y, o `token.x` ainda é o de antes, enquanto o token anda (o destino está no
+    `_source`). A conta que usa o lugar novo (onde pôr a parede) usa o lugar pedido, e o outro navegador espera o token
+    chegar antes de agir.
 - **Aviso novo com a checagem de avisos já falhando** (ciclo 92): a checagem "nenhum aviso" do fim do G4 falha pelo
   aviso conhecido da Lexington, e um aviso a mais (o de uma API que saiu, por exemplo) não muda o resultado dela. O
   passo que pode gerar um aviso lê o `window.__avisos` do navegador antes e depois da ação e confere os novos.

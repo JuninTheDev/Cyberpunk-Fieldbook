@@ -64,9 +64,11 @@ export const alcanceDo = (ponto, cena, netrunner = null) =>
 // ativo, que resolve a conexão, pode estar vendo outra cena).
 const lado = (a, b, c) => Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
 const cruza = (a, b, c, d) => lado(a, b, c) * lado(a, b, d) < 0 && lado(c, d, a) * lado(c, d, b) < 0;
-export const barra = parede => Number(parede.move) > 0 && !(Number(parede.door) > 0 && Number(parede.ds) === 1);
-export const paredeNoMeio = (paredes, de, para) =>
-  [...paredes].some(parede => barra(parede) && cruza(de, para, { x: parede.c[0], y: parede.c[1] }, { x: parede.c[2], y: parede.c[3] }));
+// tipo: o que a parede barra, o movimento ("move", o ponto de acesso) ou a visão ("sight", o Jack In no Neuroport, que
+// precisa do alvo à vista: a janela deixa ver).
+export const barra = (parede, tipo = 'move') => Number(parede[tipo]) > 0 && !(Number(parede.door) > 0 && Number(parede.ds) === 1);
+export const paredeNoMeio = (paredes, de, para, tipo = 'move') =>
+  [...paredes].some(parede => barra(parede, tipo) && cruza(de, para, { x: parede.c[0], y: parede.c[1] }, { x: parede.c[2], y: parede.c[3] }));
 export const paredeEntre = (tile, token) =>
   paredeNoMeio(tile.parent.walls, centroDoToken(token, tile.parent), { x: tile.x + tile.width / 2, y: tile.y + tile.height / 2 });
 

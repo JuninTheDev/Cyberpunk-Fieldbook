@@ -467,6 +467,13 @@ export function escolhaAutomatica({ opcoes, modo, dv = null, mediaEsquiva = 0 })
 // resistência (o teste resistido: empate é do defensor, p. 128). Agarrados, os dois têm −2 em todas as ações.
 export const AGARRAO = { penalidade: -2 };
 export const venceuOAgarrao = (ataque, defesa) => Number(ataque) > Number(defesa);
+
+// O Jack In (a wiki, "Quickhacks no Neuroport", Kit p. 16–17 e 26–27): entra no Neuroport de um alvo à vista, no alcance,
+// com Interface + 1d10 contra WILL + 1d10 do alvo. Falhando (o teste resistido: o empate é do alvo), entra assim mesmo,
+// mas o alvo percebe. O alcance do deck externo é 6 m, 8 m com o Range Upgrade ("Do que o netrunner precisa").
+export const JACK_IN = { alcance: 6, rangeUpgrade: 2 };
+export const alcanceDoJackIn = ({ rangeUpgrade = false } = {}) => JACK_IN.alcance + (rangeUpgrade ? JACK_IN.rangeUpgrade : 0);
+export const percebeuOJackIn = (ataque, defesa) => !(Number(ataque) > Number(defesa));
 // Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria
 // abaixo de 0, fica com 1 HP e desmaia" (quem já está abaixo de 1 não sobe), e na terceira rodada seguida desmaia.
 // motivo: 'abaixoDeZero' ou 'tresRodadas' quando desmaia.

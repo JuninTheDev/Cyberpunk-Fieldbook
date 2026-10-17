@@ -4,6 +4,7 @@
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
+import { jackIn, jackOut, neuroportDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
@@ -12,7 +13,8 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { netrunnerDo } from './netrun/regras-da-net.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -63,6 +65,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       estrangular: FichaPersonagem.#estrangular,
       derrubar: FichaPersonagem.#derrubar,
       escapar: FichaPersonagem.#escapar,
+      jackIn: FichaPersonagem.#jackIn,
+      jackOut: FichaPersonagem.#jackOut,
       conectarNaNet: FichaPersonagem.#conectarNaNet,
       abrirNet: FichaPersonagem.#abrirNet,
       desconectarDaNet: FichaPersonagem.#desconectarDaNet,
@@ -239,6 +243,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rank: s.rankDeInterface, acoes: s.acoesDeNet, deck: deckEquipado?.name ?? '', slots: deckEquipado ? { usados: deckEquipado.slotsUsados, total: deckEquipado.system.slots } : null,
       habilidades: HABILIDADES_DE_INTERFACE.map(h => ({ ...h, valor: ator.partesDaInterface(h.id, { situacionais: [] }).reduce((soma, p) => soma + p.valor, 0) }))
     };
+    // O Neuroport (neuroport.mjs): as ligações do netrunner, o alcance do Jack In pelo deck e quem está no Neuroport deste
+    // ator (o jogador vê só quem ele percebeu; o mestre, todos).
+    const { ligacoes, invasores } = neuroportDe(ator);
+    const neuroport = { ligacoes, invasores: game.user.isGM ? invasores : invasores.filter(item => item.percebido), alcance: alcanceDoJackIn({ rangeUpgrade: netrunnerDo(ator).rangeUpgrade }) };
     // A conexão na NET (os botões da aba, as maquetes do usuário): o token do ator nesta cena que está num ponto de acesso,
     // com o nome do ponto.
     const conectado = ator.getActiveTokens(false, true).map(token => ({ token, conexao: token.getFlag(SISTEMA, FLAG_CONEXAO) })).find(c => c.conexao);
@@ -298,7 +306,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         ativo: p.system.ativo, podeAtivar: Boolean(p.instaladoNo) && !programaDeAtaque(p.system.classe),
         dicaAtivo: p.system.classe === 'blackice' ? 'Ativo (rezzado): o mestre põe o token do Black ICE ao lado do seu na cena; desativado, ele sai' : 'Ativo (rezzado): os boosters somam na habilidade deles'
       })),
-      net,
+      net, neuroport,
       veiculos: itens('veiculo').map(v => ({
         id: v.id, nome: v.name, img: v.img,
         detalhe: [`SDP ${v.system.sdp.value}/${v.system.sdp.max}`, `${v.system.assentos} assentos`, `MOVE ${v.system.velocidade.combate}`, v.system.familia ? 'da família' : '', v.instalados.map(i => i.name).join(', ')].filter(Boolean).join(' · ')
@@ -370,6 +378,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #estrangular() { return estrangular(this.actor); }
   static #derrubar() { return derrubar(this.actor); }
   static #escapar(evento) { return escapar(this.actor, { perguntar: comJanela(evento) }); }
+  // O Neuroport (neuroport.mjs; a NET de 2077): "Jack In" no alvo marcado (T, que resiste com a WILL pela janela de
+  // reação do dono) e "Jack Out" de cada ligação.
+  static #jackIn(evento) { return jackIn(this.actor, { perguntar: comJanela(evento) }); }
+  static #jackOut(evento, alvo) { return jackOut(this.actor, alvo.dataset.alvo); }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
   // "Conectar", "Abrir a NET" e "Desconectar" na aba NET (as maquetes do usuário), pelo motor da NET (netrun): as mesmas

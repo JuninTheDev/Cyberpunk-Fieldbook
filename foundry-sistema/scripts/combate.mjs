@@ -27,10 +27,11 @@ const { DialogV2 } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(`systems/${SISTEMA}/templates/chat/${arquivo}`, dados);
 export const souOMestreAtivo = () => game.user.isGM && game.users.activeGM?.id === game.user.id;
-// "resistir": a resistência ao agarrão (agarrao.mjs), pela mesma janela de reação.
-const ROTULO = { esquivar: 'esquivou', aguentar: 'aguentou', escudo: 'usou o escudo', concentrar: 'rolou a Concentração', resistir: 'rolou a resistência' };
-const BOTAO = { ...DEFESAS, escudo: 'Escudo', concentrar: 'Rolar Concentração', resistir: 'Resistir' };
-const precisaRolar = escolha => ['esquivar', 'concentrar', 'resistir'].includes(escolha);
+// "resistir": a resistência ao agarrão (agarrao.mjs); "vontade": a WILL + 1d10 contra o Jack In (neuroport.mjs). As duas
+// pela mesma janela de reação.
+const ROTULO = { esquivar: 'esquivou', aguentar: 'aguentou', escudo: 'usou o escudo', concentrar: 'rolou a Concentração', resistir: 'rolou a resistência', vontade: 'rolou a Vontade' };
+const BOTAO = { ...DEFESAS, escudo: 'Escudo', concentrar: 'Rolar Concentração', resistir: 'Resistir', vontade: 'Rolar a Vontade' };
+const precisaRolar = escolha => ['esquivar', 'concentrar', 'resistir', 'vontade'].includes(escolha);
 
 // ---------------- Pedidos pelo socket (com resposta) ----------------
 // O mestre pede algo a um jogador (a defesa, o dano, o Death Save) e espera; passou o tempo, segue sem a resposta.
@@ -243,7 +244,8 @@ export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}
       ...pacote, mestre, arma: arma?.name ?? pacote.rotulo, tempo: mestre ? 0 : Number(config('tempo')) || 0,
       atacante: { nome: pacote.atacante, img: pacote.imgAtq || 'icons/svg/mystery-man.svg' }, alvo: { nome: alvo.name, img: alvo.texture?.src || ator.img },
       esquiva: R.contaDaDefesa(ator.partesDaPericia('evasion').partes), concentracao: R.contaDaDefesa(ator.partesDaPericia('concentration').partes),
-      briga: R.contaDaDefesa(ator.partesDaPericia('brawling').partes), escudo: escudo ? { nome: escudo.name, pv: escudo.system.pvEscudo.value } : null
+      briga: R.contaDaDefesa(ator.partesDaPericia('brawling').partes), vontade: R.contaDaDefesa(ator.partesDoAtributo('will')),
+      escudo: escudo ? { nome: escudo.name, pv: escudo.system.pvEscudo.value } : null
     }, registrarJanela(id));
     if (id) janelas.delete(id);
     if (!resposta) return null;
@@ -259,18 +261,21 @@ export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}
   return resultado && { ...resultado, ...comoFoi };
 }
 
-// Esquiva (DEX + Evasão + 1d10), Concentração (WILL + Concentração + 1d10) ou a resistência ao agarrão (DEX + Briga +
-// 1d10), com as penalidades do alvo. Com a janela de rolagem (perguntar), os situacionais, os modificadores comuns, o do
-// mestre e a Sorte; fechada, null.
+// Esquiva (DEX + Evasão + 1d10), Concentração (WILL + Concentração + 1d10), a resistência ao agarrão (DEX + Briga +
+// 1d10) ou a Vontade contra o Jack In (WILL + 1d10, sem perícia), com as penalidades do alvo. Com a janela de rolagem
+// (perguntar), os situacionais, os modificadores comuns, o do mestre e a Sorte; fechada, null.
 const PERICIA_DA_DEFESA = { concentrar: ['concentration', 'Concentração'], resistir: ['brawling', 'Resistência ao agarrão'] };
+const ATRIBUTO_DA_DEFESA = { vontade: ['will', 'Vontade contra o Jack In'] };
 async function rolarDefesa(ator, nome, escolha, { perguntar = false, aoAbrir = null } = {}) {
-  const [pericia, titulo] = PERICIA_DA_DEFESA[escolha] ?? ['evasion', 'Esquiva'];
+  const [pericia, titulo] = PERICIA_DA_DEFESA[escolha] ?? ATRIBUTO_DA_DEFESA[escolha] ?? ['evasion', 'Esquiva'];
+  const atributo = Boolean(ATRIBUTO_DA_DEFESA[escolha]);
+  const partesDe = situacionais => (atributo ? ator.partesDoAtributo(pericia, { situacionais }) : ator.partesDaPericia(pericia, { situacionais }).partes);
   const rotulo = `${titulo} de ${nome}`;
-  let { partes } = ator.partesDaPericia(pericia);
+  let partes = partesDe(null);
   let sorte;
   if (perguntar) {
-    const fixas = ator.partesDaPericia(pericia, { situacionais: [] }).partes;
-    const resposta = await perguntarTeste(ator, { rotulo, partes: fixas, situacionais: ator.situacionaisDoTeste(pericia), aoAbrir });
+    const fixas = partesDe([]);
+    const resposta = await perguntarTeste(ator, { rotulo, partes: fixas, situacionais: ator.situacionaisDoTeste(atributo ? null : pericia), aoAbrir });
     if (!resposta) return null;
     partes = [...fixas, ...resposta.partes];
     sorte = resposta.sorte;

@@ -10,8 +10,8 @@ import { caminho, SISTEMA } from './config.mjs';
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const numero = valor => String(Math.round(valor * 10) / 10).replace('.', ',');
-const ROTULO = { esquivar: 'esquiva', aguentar: 'aguenta', escudo: 'usa o escudo', concentrar: 'rola a Concentração', resistir: 'rola a resistência' };
-const ICONES = { esquivar: 'fa-person-running', aguentar: 'fa-user-shield', escudo: 'fa-shield-halved', concentrar: 'fa-brain', resistir: 'fa-hand-fist' };
+const ROTULO = { esquivar: 'esquiva', aguentar: 'aguenta', escudo: 'usa o escudo', concentrar: 'rola a Concentração', resistir: 'rola a resistência', vontade: 'rola a Vontade' };
+const ICONES = { esquivar: 'fa-person-running', aguentar: 'fa-user-shield', escudo: 'fa-shield-halved', concentrar: 'fa-brain', resistir: 'fa-hand-fist', vontade: 'fa-network-wired' };
 
 // O que cada escolha faz, com a conta (HTML: os nomes vêm escapados).
 function textoDaEscolha(escolha, d) {
@@ -30,6 +30,10 @@ function textoDaEscolha(escolha, d) {
     const briga = d.briga ? `${esc(d.briga.texto)} (média ${numero(d.briga.media)})` : 'DEX + Briga + 1d10';
     if (d.modo === 'escapar') return `${briga} contra a fuga. Empate é seu. Perdeu: o agarrão acaba.`;
     return `${briga} contra o agarrão. Empate é seu. Perdeu: os dois ficam agarrados (−2 em todas as ações), e você não usa a Ação de Movimento.`;
+  }
+  if (escolha === 'vontade') {
+    const vontade = d.vontade ? `${esc(d.vontade.texto)} (média ${numero(d.vontade.media)})` : 'WILL + 1d10';
+    return `${vontade} contra o Jack In no seu Neuroport. Empate é seu. Ganhou: ele entra assim mesmo, mas você percebe. Perdeu: ele entra sem você perceber.`;
   }
   return '';
 }
@@ -68,6 +72,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
   get title() {
     if (this.dados.modo === 'agarrar') return this.dados.mestre ? `Agarrão em ${this.dados.alvo.nome}` : 'Estão agarrando você!';
     if (this.dados.modo === 'escapar') return this.dados.mestre ? `Fuga do agarrão de ${this.dados.alvo.nome}` : 'Estão escapando do seu agarrão!';
+    if (this.dados.modo === 'jackin') return this.dados.mestre ? `Jack In em ${this.dados.alvo.nome}` : 'Estão entrando no seu Neuroport!';
     return this.dados.mestre ? `Ataque em ${this.dados.alvo.nome}` : 'Você está sendo atacado!';
   }
 
@@ -92,7 +97,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
       ...d, metrosTexto: d.metros ? numero(d.metros) : '', padraoTexto: ROTULO[d.padrao] ?? d.padrao, verTotal: d.mestre || Number.isFinite(d.total),
       opcoes: d.opcoes.map(escolha => ({
         escolha, icone: ICONES[escolha] ?? 'fa-circle',
-        titulo: { esquivar: d.modo === 'explosivo' ? 'Esquivar da explosão' : 'Esquivar', aguentar: d.modo === 'explosivo' ? 'Ficar' : 'Aguentar', escudo: 'Usar o escudo', concentrar: 'Rolar a Concentração', resistir: 'Resistir' }[escolha] ?? escolha,
+        titulo: { esquivar: d.modo === 'explosivo' ? 'Esquivar da explosão' : 'Esquivar', aguentar: d.modo === 'explosivo' ? 'Ficar' : 'Aguentar', escudo: 'Usar o escudo', concentrar: 'Rolar a Concentração', resistir: 'Resistir', vontade: 'Resistir com a Vontade' }[escolha] ?? escolha,
         texto: textoDaEscolha(escolha, d), padrao: escolha === d.padrao
       }))
     });
