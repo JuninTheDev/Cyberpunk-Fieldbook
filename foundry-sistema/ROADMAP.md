@@ -16,12 +16,17 @@ de compêndio; entram só as partes do sistema.
   - as armas de 2077 pelo Mission Kit, adiadas pelo usuário em 2026-10-12. Os testes delas seguem como falhas conhecidas
     no QUALITY_GATES.
 
-**Duas sessões no mesmo plano:**
+**As sessões no mesmo plano** (três desde 2026-10-17: KouArt e Codex neste PC, Junin em outro; as instruções para os
+agentes de IA ficam no `AGENTS.md` da raiz):
 - **Estados:** `[ ]` aberto; `[~] em andamento (sessão, data)`; `[x] feito (ciclo N)`.
 - **Antes de começar um item:**
   - rode `git pull`, marque `[~]` com o nome da sessão, commite e envie;
   - não pegue um `[~]` de outra sessão sem combinar com o usuário.
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 86). É um ciclo por item, ou por parte dele, com os
+- **A divisão:** por item, cada sessão com o ciclo inteiro do seu. A NET (C8 e C9) é da sessão KouArt; a sessão Codex
+  pega itens fora dela (decisão do usuário, 2026-10-17).
+- **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
+  `tests/rodar.js` (ciclo 86).
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 87). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o

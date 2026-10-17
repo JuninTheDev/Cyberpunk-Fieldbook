@@ -150,7 +150,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
 | `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). Os do sistema do Foundry 14: `tests/sistema/` (`node --test`), `tests/cenarios/v14.js`. |
-| `eslint.config.mjs` | Lint só do sistema do Foundry 14 e dos testes dele (`npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js`). |
+| `eslint.config.mjs` | Lint só do sistema do Foundry 14 e dos testes dele (`npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/cenarios/v14.js`). |
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 | `foundry-net-architect/` | Módulo do Foundry VTT "NET Architect": pontos de acesso à NET nos Tiles, com a janela do netrunner e o mapa da arquitetura. Veja o README da pasta. |
 | `foundry-fluxo-de-combate/` | Módulo do Foundry VTT "Fluxo de Combate": ataque, esquiva às cegas e dano na ficha, com área, cartucho, fogo supressivo, lesão crítica e Death Save. Substitui o Evasion Workflow. Veja o README da pasta. |

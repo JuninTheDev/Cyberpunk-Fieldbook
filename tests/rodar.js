@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { abrirEdge } = require('./lib/edge');
 const { subirServidores } = require('./lib/servidores');
+const { travar } = require('./lib/trava');
 
 const pastaCenarios = path.join(__dirname, 'cenarios');
 const saida = path.join(__dirname, '.saida');
@@ -31,6 +32,8 @@ class Relatorio {
   const escolhidos = pedidos.length ? todos.filter(file => pedidos.includes(path.basename(file, '.js'))) : todos;
   if (!escolhidos.length) { console.error(`Nenhum cenário com esse nome. Existem: ${todos.map(file => path.basename(file, '.js')).join(', ')}`); process.exit(1); }
 
+  // Um teste com navegador por vez neste PC (as sessões dividem o Foundry de teste e as portas).
+  await travar();
   const servidores = await subirServidores();
   if (!servidores.rede) console.log('Sem IP de rede: os testes que simulam um jogador em outro aparelho serão pulados.');
   let falhas = 0;

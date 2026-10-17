@@ -345,7 +345,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
 ## Teste
 
 - **Regras (rápido, sem Foundry):** `node --test "tests/sistema/*.test.mjs"`. Inclui o conteúdo gerado conferido contra as tabelas da própria wiki.
-- **Lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js`.
+- **Lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/cenarios/v14.js`.
 - **No Foundry 14:** `node tests/rodar.js v14`, na raiz da wiki. Sobe o Foundry 14 do PC sem janela, num mundo vazio e numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`), e confere estes pontos, com dados fixos onde a conta importa:
   - os compêndios, a ficha e o crítico do d10;
   - o catálogo, o cyberware e a recarga, e o inventário (o efeito do equipamento pelo uso, a droga ligada na ficha do item, a quantidade com − e + até o 0, o "Usar" do equipamento ligado à mão, os acessórios na arma e o hardware no deck);

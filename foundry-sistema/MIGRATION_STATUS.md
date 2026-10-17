@@ -4052,6 +4052,78 @@ configuração no ponto de acesso e os comandos na janela), portado para o siste
   configuração ainda apaga as flags com o "-=" (o Foundry 14 avisa que saiu; ver no próximo ciclo da NET).
 - **Próximo:** o C8, parte 12.
 
+### Ciclo 86 (2026-10-17): a sessão Codex, o AGENTS.md e a trava dos testes (sessão KouArt)
+
+O pedido do usuário: o Codex ajuda no projeto, como uma terceira sessão, no VS Code deste PC (decisão do usuário,
+2026-10-17). Commit anterior: `d462b348` (ciclo 85).
+
+- **O que foi combinado com o usuário:**
+  - a divisão é por item do ROADMAP, cada sessão com o ciclo inteiro do seu (código, testes, mutações, documentação e
+    push);
+  - a NET (C8 e C9) fica com a sessão KouArt, e a sessão Codex pega itens fora dela;
+  - o Codex trabalha num clone próprio (`Cyberpunk-Fieldbook-codex`, na branch `sistema-v14`);
+  - as regras dos agentes ficam num arquivo só.
+- **O que ficou de fora:**
+  - dividir por tipo de trabalho (uma IA na interface, outra nos testes e nos dados);
+  - os agentes mudarem os arquivos de regra da wiki (`system-*.js`), os módulos do Foundry 12 da mesa e os scripts de
+    publicar.
+- **Implementado:**
+  - **`AGENTS.md`** (novo, na raiz): as instruções para qualquer agente de IA, em seis partes:
+    - o repositório (o master da wiki e a `sistema-v14`);
+    - as sessões e a divisão;
+    - o ciclo;
+    - os portões;
+    - o G4 neste PC;
+    - o que nunca se toca;
+  - **`CLAUDE.md`** (novo, na raiz): só importa o `AGENTS.md`. É uma fonte só, para o Claude Code e o Codex não lerem
+    regras diferentes;
+  - **`tests/lib/trava.js`** (novo) e o **`tests/rodar.js`:** um teste com navegador por vez no PC. As sessões deste PC
+    dividem o Foundry 14 de teste, a pasta descartável e as portas (a 31014, a 8765 e as do Edge). O `rodar.js` pega a
+    trava antes de subir os servidores. A trava é o arquivo `%LOCALAPPDATA%\FieldbookTeste\testes.trava`, com o
+    processo, a pasta e a hora:
+    - quem chega avisa ("Outro teste está rodando", com a pasta do outro) e espera;
+    - a trava de um processo que já não existe (um teste interrompido) vale como solta;
+    - a ilegível vale como solta depois de um minuto;
+    - a trava sai na saída do processo, e só se ainda for dele;
+  - **o G2** passa a incluir o `tests/lib/trava.js` (na configuração do ESLint, no bloco CommonJS, e nos comandos do
+    README, do QUALITY_GATES e do `eslint.config.mjs`);
+  - **o ROADMAP:** "As sessões no mesmo plano" (eram duas), com a divisão, uma pasta por sessão e a trava;
+  - **o QUALITY_GATES:** a regra da trava, ao lado da da mesa do servidor em uso.
+- **Testes:**
+  - G1: 59 arquivos (2 novos: a trava e o teste dela), 0 erros; G2: 0 erros;
+  - G3: 101 de 105. Um arquivo novo, `tests/sistema/trava.test.mjs`, com 5 testes, cada um sobre um arquivo numa pasta
+    temporária (a trava de verdade não entra):
+    - sem ninguém, pega a trava na hora e soltar apaga;
+    - com a trava de um processo vivo, espera ela sair e avisa uma vez, com a pasta do outro;
+    - a de um processo morto vale como solta, sem aviso;
+    - a ilegível espera, e a de mais de um minuto vale como solta;
+    - soltar não apaga a trava que já é de outro.
+
+    As 4 falhas são as das armas de 2077;
+  - G4: 107 de 112 (as 5 falhas são as das armas de 2077), na mesma rodada da prova abaixo;
+  - **a prova da trava no `rodar.js`:**
+    - um processo à parte pegou a trava por 60 s, e o G4 começou 3 s depois;
+    - aos 30 s, a saída do G4 era só o aviso ("Outro teste está rodando", com a pasta e a hora do outro), e as portas
+      8765 (a wiki de teste) e 31014 (o Foundry de teste) estavam fechadas;
+    - com a trava solta, o G4 pegou a dele e rodou inteiro;
+    - no fim, a trava tinha saído;
+  - **mutações:** as 7 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - todo processo parece morto (T1);
+      - sem o `wx`, quem chega escreve por cima (T2);
+      - a trava ilegível vale como solta na hora (T3) ou nunca vale (T4: o teste estoura o prazo de 5 s e conta como
+        falha, "cancelled", com a saída 1);
+      - soltar apaga a trava de outro (T5);
+      - o aviso a cada volta da espera (T6).
+    - **À mão, a T7, o `rodar.js` sem a trava:** com a trava de outro processo vivo, a wiki de teste subiu na 8765 em
+      6 s. Depois, só a árvore de processos dele parou (pelo PID: o `node server.js` da wiki do usuário tem a mesma linha
+      de comando).
+  - **Um G4 interrompido:** neste ciclo, o primeiro G4 do reforço do ciclo 85 foi parado no meio. Ficaram rodando o
+    `rodar.js`, o Foundry de teste e os dois Edge, e foi preciso parar todos e apagar os perfis. A regra foi para o
+    QUALITY_GATES e para o `AGENTS.md`.
+- **Pendências:** nenhuma da trava.
+- **Próximo:** o C8, parte 12, na sessão KouArt. A sessão Codex começa pelos itens fora da NET.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

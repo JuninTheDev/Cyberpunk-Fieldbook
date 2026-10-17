@@ -7,7 +7,7 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 | Portão | Como roda | Passa quando | Estado |
 | --- | --- | --- | --- |
 | G1 Sintaxe | `node --check` em cada `.mjs` do sistema (com as subpastas, como `scripts/netrun/`) e nos testes | nenhum erro | ativo |
-| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
+| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
 | G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam: as regras puras com os valores de referência, e o conteúdo gerado contra a própria wiki (tabelas de DV faixa por faixa, lesões pelo 2d6, perícias, os itens da loja) | ativo |
 | G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam, inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
 | G5 Wiki | `node tests/rodar.js` (a suíte inteira) | nenhuma falha nova; as conhecidas estão listadas abaixo | ativo |
@@ -66,6 +66,13 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
   (a mesa ficou ocupada entre uma mutação e outra) e foi refeita. O executor das mutações espera a mesa antes de cada
   uma e marca como inválida a rodada que pulou o Foundry. E não mexa na worktree enquanto as mutações rodam: cada
   rodada copia o sistema no começo, e a mudança entraria nela.
+- **Um teste com navegador por vez** (ciclo 86): as sessões deste PC (a worktree e o clone de cada agente) dividem o
+  Foundry 14 de teste, a pasta descartável e as portas. O `tests/rodar.js` pega a trava
+  (`%LOCALAPPDATA%\FieldbookTeste\testes.trava`, pelo `tests/lib/trava.js`) antes de subir os servidores; se outro teste
+  a tem, avisa ("Outro teste está rodando", com a pasta do outro) e espera. A trava de um processo que já não existe
+  vale como solta, e a que ficou ilegível também, depois de um minuto. Não apague a trava de um teste vivo. Um G4
+  interrompido no meio deixa o Foundry de teste e os Edge rodando: pare-os (e apague o perfil `wiki-testes-edge-*`)
+  antes de começar outro.
 - **O mundo de teste que não fica pronto:** o Foundry 14 aceita a entrada antes de saber os próprios endereços (logo
   depois de "Server started"), e quem entra nesse intervalo derruba o envio do mundo: o `servidor.log` do Foundry de
   teste (`%LOCALAPPDATA%\FieldbookTeste\foundry14`) mostra "Cannot read properties of null (reading 'local')" em
@@ -221,6 +228,7 @@ Foundry é a mesma em todo sistema operacional), todo dentro da pasta descartáv
   - no Foundry 12 da mesa, nunca.
 - **Testes:** usam só a pasta descartável `%LOCALAPPDATA%\FieldbookTeste`. Da pasta do Foundry do PC sai só a licença.
 - **Git:**
-  - commits no branch `sistema-v14`, com push no fim de cada ciclo: duas sessões trabalham no mesmo plano (o de paridade,
-    no ROADMAP; decisão do usuário, 2026-10-12);
+  - commits no branch `sistema-v14`, com push no fim de cada ciclo: as sessões trabalham no mesmo plano (o de paridade,
+    no ROADMAP; decisão do usuário, 2026-10-12; três desde 2026-10-17, com a sessão Codex);
+  - os agentes de IA seguem o `AGENTS.md` da raiz (o `CLAUDE.md` só importa ele);
   - o master é da wiki e do servidor.
