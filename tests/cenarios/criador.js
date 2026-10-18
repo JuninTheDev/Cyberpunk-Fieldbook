@@ -169,7 +169,7 @@ module.exports = async ({ edge, servidores, r }) => {
   });
   // Retrato: uma imagem de 1024×768 feita na hora, posta no campo de arquivo como se o jogador escolhesse.
   const retratoNaTela = () => edge.evaluate(`(() => { const i = document.querySelector('#cc-step img.cc-portrait'); return i && i.complete ? [i.naturalWidth, i.naturalHeight] : null; })()`);
-  await r.passo('retrato: a imagem enviada chega reduzida a 512 px e aparece no passo 1', async () => {
+  await r.passo('retrato: confirma o recorte de 512×512 px e aparece no passo 1', async () => {
     await passo(1);
     await edge.evaluate(`(async () => {
       const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 768;
@@ -179,10 +179,12 @@ module.exports = async ({ edge, servidores, r }) => {
       const campo = document.querySelector('[data-portrait-file]'); campo.files = lista.files;
       campo.dispatchEvent(new Event('change', { bubbles: true }));
     })()`);
+    for (let i = 0; i < 25 && !await edge.evaluate(`!!document.querySelector('dialog.cc-crop[open]')`); i++) await edge.sleep(200);
+    await clicar('[data-crop-save]');
     let tamanho = null;
     for (let i = 0; i < 25 && !(tamanho && tamanho[0]); i++) { await edge.sleep(200); tamanho = await retratoNaTela(); }
     const arquivo = await fetch(`${gm}/api/personagens/${soloId}/retrato`);
-    return [tamanho?.join('x') === '512x384' && /^image\/(webp|jpeg)$/.test(arquivo.headers.get('content-type')), `na tela ${tamanho?.join('x')} · servido como ${arquivo.headers.get('content-type')}`];
+    return [tamanho?.join('x') === '512x512' && /^image\/(webp|jpeg)$/.test(arquivo.headers.get('content-type')), `na tela ${tamanho?.join('x')} · servido como ${arquivo.headers.get('content-type')}`];
   });
   await r.passo('retrato: aparece na ficha e em miniatura na lista', async () => {
     await salvo();

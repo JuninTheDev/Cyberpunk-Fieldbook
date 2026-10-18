@@ -238,7 +238,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota). Os três últimos
   // a API calcula na resposta e não vão para o arquivo.
   // A campanha (e o histórico de mudanças de campanha) só o mestre muda, pela rota /campanha.
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'foundry12', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico', 'roles'];
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'foundry12', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico', 'roles'];
   // O que o jogador não muda mais pela wiki depois que o personagem foi importado no Foundry.
   const LOCKED_AFTER_IMPORT = ['role', 'rankRole', 'roleSecundaria', 'especializacao', 'metodo', 'stats', 'sorteio', 'pericias', 'tipos', 'extras', 'lingua', 'casa', 'kitNet', 'quickhacks', 'escolhas', 'itens',
     'habilidades', 'oficina', 'montagem', 'moradia', 'estiloVida', 'traumaTeam', 'estiloModa'];
@@ -397,16 +397,53 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   });
 
   // ---------------- Retrato ----------------
-  // Imagem enviada em base64 (o navegador já reduz para 512 px). Confere os primeiros bytes, não o nome.
+  // O recorte (até 512 px) e a fonte opcional (até 1536 px) vêm reduzidos pelo navegador. Confere os bytes, não o nome.
   const portraitDir = () => path.join(charactersDir, 'retratos');
   const imageType = buffer => {
-    if (buffer.length > 8 && buffer[0] === 0x89 && buffer.toString('ascii', 1, 4) === 'PNG') return 'png';
+    if (buffer.length > 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
     if (buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
     if (buffer.length > 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return 'webp';
     return null;
   };
-  const portraitFiles = id => { try { return fs.readdirSync(portraitDir()).filter(file => file.startsWith(`${id}.`)); } catch { return []; } };
+  const portraitFiles = (id, original = false) => { try { return fs.readdirSync(portraitDir()).filter(file => file.startsWith(`${id}${original ? '-original' : ''}.`)); } catch { return []; } };
   const imageTypes = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
+  const portraitBuffer = value => Buffer.from(String(value || '').replace(/^data:image\/[a-z]+;base64,/, ''), 'base64');
+  function portraitCrop(value) {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== 'object' || Array.isArray(value)
+      || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Number.isFinite(value.zoom)
+      || value.x < 0 || value.x > 1 || value.y < 0 || value.y > 1 || value.zoom < 1 || value.zoom > 5) {
+      throw Object.assign(new Error('Recorte inválido: x e y entre 0 e 1, zoom entre 1 e 5.'), { status: 400 });
+    }
+    return { x: value.x, y: value.y, zoom: value.zoom };
+  }
+  // Prepara os dois arquivos antes de trocar qualquer um. Uma falha na troca devolve os arquivos anteriores.
+  function replacePortraitFiles(id, images) {
+    fs.mkdirSync(portraitDir(), { recursive: true });
+    const token = crypto.randomBytes(6).toString('hex');
+    const prepared = images.map(({ nome, buffer }) => ({ nome, buffer, temp: `.${nome}-${token}.tmp` }));
+    const backups = [], installed = [];
+    const local = nome => path.join(portraitDir(), nome);
+    try {
+      for (const image of prepared) fs.writeFileSync(local(image.temp), image.buffer);
+      for (const nome of [...portraitFiles(id), ...portraitFiles(id, true)]) {
+        const backup = `.${nome}-${token}.bak`;
+        fs.renameSync(local(nome), local(backup));
+        backups.push({ nome, backup });
+      }
+      for (const image of prepared) {
+        fs.renameSync(local(image.temp), local(image.nome));
+        installed.push(image.nome);
+      }
+    } catch (error) {
+      for (const nome of installed) fs.rmSync(local(nome), { force: true });
+      for (const { nome, backup } of backups) fs.renameSync(local(backup), local(nome));
+      throw error;
+    } finally {
+      for (const image of prepared) fs.rmSync(local(image.temp), { force: true });
+    }
+    for (const { backup } of backups) fs.rmSync(local(backup), { force: true });
+  }
 
   function cors(request, response) {
     const origin = request.headers.origin;
@@ -895,7 +932,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       // Retrato: quem joga na campanha do personagem vê (é o rosto dele); o dono ou o mestre trocam.
       if (extra === 'retrato') {
         if (method === 'GET') {
-          const [file] = portraitFiles(id);
+          const original = query.get('original') === '1';
+          if (original && !canEdit(identity, stored)) return reply(403, { erro: 'Só o dono ou o mestre vê a imagem original.' });
+          const [file] = portraitFiles(id, original);
           if (!file) return reply(404, { erro: 'Sem retrato.' });
           const data = fs.readFileSync(path.join(portraitDir(), file));
           response.writeHead(200, { ...headers, 'Content-Type': imageTypes[path.extname(file).slice(1)] || 'application/octet-stream', 'Content-Length': data.length, 'Cache-Control': 'private, max-age=60' });
@@ -903,28 +942,34 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         }
         if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
         if (method === 'POST') {
-          const { imagem } = await readJson(request, 3 * 1024 * 1024);
-          const base64 = String(imagem || '').replace(/^data:image\/[a-z]+;base64,/, '');
-          const buffer = Buffer.from(base64, 'base64');
-          if (buffer.length > 2 * 1024 * 1024) return reply(413, { erro: 'Imagem grande demais (até 2 MB).' });
+          const { imagem, original, recorte } = await readJson(request, 3 * 1024 * 1024);
+          const buffer = portraitBuffer(imagem);
+          const source = original === undefined || original === null ? null : portraitBuffer(original);
+          if (buffer.length + (source?.length || 0) > 2 * 1024 * 1024) return reply(413, { erro: 'Imagens grandes demais (até 2 MB no total).' });
           const type = imageType(buffer);
           if (!type) return reply(400, { erro: 'Envie uma imagem PNG, JPEG ou WebP.' });
+          const sourceType = source && imageType(source);
+          if (source && !sourceType) return reply(400, { erro: 'A imagem original precisa ser PNG, JPEG ou WebP.' });
+          const crop = portraitCrop(recorte);
           const done = await update(doc => {
-            fs.mkdirSync(portraitDir(), { recursive: true });
-            for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
-            fs.writeFileSync(path.join(portraitDir(), `${id}.${type}`), buffer);
+            replacePortraitFiles(id, [{ nome: `${id}.${type}`, buffer }, ...(source ? [{ nome: `${id}-original.${sourceType}`, buffer: source }] : [])]);
             doc.retrato = `api/personagens/${id}/retrato?v=${Date.now()}`;
+            doc.retratoOriginal = Boolean(source);
+            doc.retratoRecorte = crop;
             return null;
           });
-          return answer(done, doc => reply(200, { retrato: doc.retrato }));
+          return answer(done, doc => reply(200, { retrato: doc.retrato, retratoOriginal: doc.retratoOriginal, retratoRecorte: doc.retratoRecorte }));
         }
         if (method === 'DELETE') {
           const done = await update(doc => {
-            for (const old of portraitFiles(id)) fs.rmSync(path.join(portraitDir(), old), { force: true });
+            replacePortraitFiles(id, []);
             doc.retrato = null;
+            doc.retratoLink = '';
+            doc.retratoOriginal = false;
+            doc.retratoRecorte = null;
             return null;
           });
-          return answer(done, () => reply(200, { retrato: null }));
+          return answer(done, () => reply(200, { retrato: null, retratoOriginal: false, retratoRecorte: null }));
         }
         return reply(405, { erro: 'Método não permitido.' });
       }
@@ -963,7 +1008,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const old = readHistory(id, vid);
         if (!old) return reply(404, { erro: 'Versão não encontrada.' });
         const done = await update(doc => {
-          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, doc[field] || null]));
+          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, doc[field] ?? null]));
           const restored = { ...cleanCharacter(old), ...kept, id, dono: doc.dono, campanha: campaignOf(doc), versao: doc.versao + 1, criado: doc.criado, atualizado: new Date().toISOString() };
           if (ipSpent(restored) > ipGranted(restored)) return { status: 400, data: { erro: 'Essa versão gasta mais Pontos de Melhoria do que o personagem tem agora.' } };
           snapshot(doc, true);
@@ -992,7 +1037,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const done = await update(current => {
           // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
           if (Number(input.versao) !== current.versao) return { status: 409, data: { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, withLinks(current)) } };
-          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] || null]));
+          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] ?? null]));
           const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : current.dono, campanha: campaignOf(current), versao: current.versao + 1, criado: current.criado, atualizado: new Date().toISOString() };
           // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
           // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.

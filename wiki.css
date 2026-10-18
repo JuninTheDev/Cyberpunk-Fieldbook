@@ -618,6 +618,18 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-portrait-tools p { margin: 0 0 8px; }
 .cc-portrait-tools label:not(.cc-file) { display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
 .cc-portrait-tools input[data-campo] { width: 100%; padding: 7px 9px; border: 1px solid #3b4443; background: #0f1314; color: var(--text); }
+dialog.popup.cc-crop { width: min(520px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; overflow: hidden; }
+.cc-crop .cc-crop-box { max-height: calc(100dvh - 24px); padding: 16px; overflow-y: auto; }
+.cc-crop-box > p { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.cc-crop-preview { display: block; width: min(100%, 360px, max(100px, calc(100dvh - 260px))); height: auto; margin: 0 auto 12px; border: 1px solid var(--cyan); background: #0f1314; cursor: grab; touch-action: none; user-select: none; }
+.cc-crop-preview.cc-crop-dragging { cursor: grabbing; }
+.cc-crop-preview:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.cc-crop-zoom { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; color: var(--text); font-size: 13px; }
+.cc-crop-zoom output { color: var(--cyan); font-variant-numeric: tabular-nums; }
+.cc-crop-zoom input { grid-column: 1 / -1; width: 100%; min-height: 40px; margin: 0; accent-color: var(--cyan); }
+.cc-crop-box > .cc-crop-msg { margin: 4px 0; color: var(--coral); }
+.cc-crop .popup-buttons { margin-top: 8px; }
+.cc-crop [data-crop-reset] { margin-right: auto; }
 .cc-file { position: relative; cursor: pointer; }
 .cc-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .cc-file:focus-within { outline: 2px solid var(--cyan); outline-offset: 2px; }
@@ -1481,7 +1493,7 @@ h2, h2.cyber-h { margin: 0; color: var(--tx); font: 700 clamp(30px, 3.4vw, 44px)
 .cc-sheet .section, .cc-sheet-panel > .section { margin-top: 0; }
 .cc-sheet-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
 .cc-sheet-tab { min-height: 44px; padding: 0 12px; font-size: 12px; }
-.cc-sheet .cc-identity > .cc-portrait { float: none; width: 100%; height: 220px; margin: 0 0 12px; border: 0; object-fit: cover; }
+.cc-sheet .cc-identity > .cc-portrait { float: none; width: 100%; height: auto; aspect-ratio: 1; margin: 0 0 12px; border: 0; object-fit: cover; }
 .cc-portrait-slot { display: flex; align-items: flex-end; justify-content: center; height: 160px; margin-bottom: 12px; padding-bottom: 8px; background: repeating-linear-gradient(135deg, #1c2124 0 8px, #15191b 8px 16px); color: var(--c); font: 400 11px var(--lbl); letter-spacing: .15em; text-transform: uppercase; }
 .cc-sheet .cc-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .cc-sheet .cc-stat { display: block; padding: 6px 0; border: 0; border-bottom: 2px solid var(--y); background: var(--w); text-align: center; }
