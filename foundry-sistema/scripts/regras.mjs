@@ -767,6 +767,23 @@ export const BONUS_SMART = 1;
 // o Subdermal Grip.
 const LIGACOES_SMART = ['cyberware-2077:neuroport', 'core_cyberware:interface-plugs', 'core_cyberware:subdermal-grip', 'cyberware-2077:smart-link'];
 export const ehLigacaoSmart = (nome, catalogo = '') => LIGACOES_SMART.includes(catalogo) || /^(neuroport|interface plugs?|personal link|subdermal grip|smart ?link)\b/i.test(String(nome).trim());
+// A munição Smart melhorada (o Kit, p. 32; a flag arma2077 da munição): só vale na arma Smart (a do Smartgun Link não
+// conta). Ignora as penalidades que atrapalham a visão (dos modificadores comuns, a pouca luz e a tarefa encoberta por
+// fumaça, escuridão etc.). E o ataque à distância que errar a DV por 5 ou menos tem a segunda chance, na hora:
+// 14 + 1d10 (com a Sorte) no lugar de STAT + perícia + bônus, contra a mesma DV, com as penalidades do primeiro tiro.
+export const SEGUNDA_CHANCE = { base: 14, margem: 5 };
+export const PENALIDADES_DE_VISAO = ['pouca-luz', 'encoberta'];
+export const smartMelhoradaVale = ({ perfil, municao }) => Boolean(perfil?.smart && municao?.smartMelhorada);
+const ROTULOS_DE_VISAO = new Set(MODIFICADORES_COMUNS.filter(modificador => PENALIDADES_DE_VISAO.includes(modificador.id)).map(modificador => modificador.rotulo));
+export const ehPenalidadeDeVisao = parte => ROTULOS_DE_VISAO.has(parte.rotulo);
+// Errou por 5 ou menos? contra: a DV, ou a esquiva que faz as vezes dela (p. 172). Sem número (o mestre decide), não.
+export function cabeSegundaChance({ ataque, contra }) {
+  if (contra === null || contra === undefined) return false;
+  const faltou = contra - ataque;
+  return faltou >= 0 && faltou <= SEGUNDA_CHANCE.margem;
+}
+// As partes da segunda chance: a base no lugar de STAT + perícia + bônus, e as penalidades do primeiro tiro.
+export const partesDaSegundaChance = (partes = []) => [{ rotulo: 'Segunda chance', valor: SEGUNDA_CHANCE.base }, ...partes.filter(parte => parte.valor < 0)];
 export const ehCoprocessador = (nome, catalogo = '') => catalogo === 'cyberware-2077:ballistic-coprocessor' || /ballistic coprocessor/i.test(String(nome));
 // Reflex Tuner (wiki, system-2077.js): "depois de ser atingido, +1 para se esquivar pelo resto da rodada".
 export const REFLEX_TUNER = 1;

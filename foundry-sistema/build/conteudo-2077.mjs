@@ -73,7 +73,7 @@ const REGRA_DA_CLASSE = {
 const NESTE_SISTEMA = {
   power: 'o botão Ricochete ainda segue o suplemento de fã: DV da tabela de autofogo e um dado a menos de dano (+2 com o Ballistic Coprocessor); as que só disparam rajadas ou cartucho não ricocheteiam. O −4 do Kit e o +5 na lesão crítica, o mestre aplica.',
   tech: 'o botão Carga ainda segue o suplemento de fã: pergunta a cobertura do alvo, deixa nela o que não atravessa e abla 4 de SP (2 através de cobertura), e a arma esfria uma rodada. A carga do Kit (a Ação de Movimento, CDT 1, metade do SP), o mestre aplica.',
-  smart: 'o +1 nos ataques à distância e a ligação (o Personal Link do Neuroport ou o Subdermal Grip), o sistema aplica: sem ela, a arma não dispara. A munição Smart melhorada (a segunda chance com 14 + 1d10 e as penalidades de visão), o mestre aplica.'
+  smart: 'o +1 nos ataques à distância, a ligação (o Personal Link do Neuroport ou o Subdermal Grip) e a munição Smart melhorada (as penalidades de visão e a segunda chance com 14 + 1d10), o sistema aplica: sem a ligação, a arma não dispara.'
 };
 const SO_COM_O_MESTRE = 'O que mais o texto acima disser de próprio deste modelo, o mestre resolve.';
 // O que o sistema faz das regras próprias de cada modelo, pela flag arma2077.
@@ -85,8 +85,9 @@ function proprioNoSistema(flag) {
   if (flag.balasDoAutofogo) frases.push(`O autofogo gasta ${flag.balasDoAutofogo} balas.`);
   return frases.join(' ');
 }
-// Nos itens do Kit sem botão (os Rebuilds, a munição Smart melhorada).
-const KIT_SEM_AUTOMACAO = paragrafo('o Rebuild ainda não dá a classe à arma, e a munição Smart melhorada (a segunda chance) ainda não está automatizada aqui: veja a página de 2077 da wiki.', 'Neste sistema');
+// Nos Rebuilds do Kit (sem botão) e na munição Smart melhorada (ciclo 112).
+const KIT_SEM_AUTOMACAO = paragrafo('o Rebuild ainda não dá a classe à arma: veja a página de 2077 da wiki.', 'Neste sistema');
+const SMART_MELHORADA_NO_SISTEMA = paragrafo('numa arma Smart ligada, as penalidades de visão da janela de rolagem (a pouca luz e a tarefa encoberta por fumaça, escuridão etc.) não contam, e o ataque que errar por 5 ou menos rola a segunda chance na hora (quem atacou, pela janela de rolagem, com a Sorte).', 'Neste sistema');
 // As regras próprias de cada arma (system-2077.js, "regras"), guardadas na flag arma2077 como o cpr-2077 guarda as dele.
 const REGRAS = ['balas', 'danoComMenos', 'minimoDeBalas', 'danoFixo', 'danoMirado', 'exigeBody', 'lesao', 'lesaoSemCromo', 'cargaSemMovimento',
   'cargaAteFimDoTurno', 'balasNaCarga', 'cdtNaCarga', 'cargaGrossa', 'ferrolho', 'soCartucho', 'soSmartMelhorada', 'doisAlvos', 'doisCanos'];
@@ -187,7 +188,7 @@ function smartMelhorada(itensDoCore) {
       ...base, name: `Smart melhorada (${calibre})`,
       system: {
         ...base.system, efeito: 'smart', ablacao: 1, quantidade: explosivo ? 1 : 10, preco: explosivo ? 500 : 50, fonte: fonte(KIT, 32),
-        descricao: `<p><b>Munição Smart melhorada</b> de ${calibre} · ${explosivo ? '500eb (Caro) cada' : '50eb (Oneroso) por 10'}</p><p>${REGRA_SMART_MELHORADA}</p>${KIT_SEM_AUTOMACAO}${fonteNaWiki(KIT, 32)}`
+        descricao: `<p><b>Munição Smart melhorada</b> de ${calibre} · ${explosivo ? '500eb (Caro) cada' : '50eb (Oneroso) por 10'}</p><p>${REGRA_SMART_MELHORADA}</p>${SMART_MELHORADA_NO_SISTEMA}${fonteNaWiki(KIT, 32)}`
       },
       effects: [], flags: { [SISTEMA]: { arma2077: { smartMelhorada: true } } }
     };

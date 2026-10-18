@@ -75,6 +75,14 @@ const TRATADORES = {
   },
   defesa: (dados, id) => perguntarDefesa(dados, { id }),
   dano: (dados, id) => rolarDanoDoAtacante(dados, { id }),
+  // A segunda chance da munição Smart melhorada, pela janela de rolagem (com a Sorte), menos com "Rolar direto".
+  segundaChance: async ({ arma, rotulo, partes }, id) => {
+    const ator = (await fromUuid(arma))?.actor;
+    if (!ator) return null;
+    const resultado = await rolarSegundaChance(ator, { rotulo, partes, perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+    janelas.delete(id);
+    return resultado && { total: resultado.total };
+  },
   // A rolagem do netrunner na NET (o netrun/estado.mjs pede): a Interface ou o ataque do programa, pela janela de
   // rolagem. A janela cancelada volta como { cancelado }.
   net: async ({ ator, rolagem, programa, extras, aviso }, id) => {
@@ -209,7 +217,10 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
     const impedimento = R.impedimento2077({ ...de2077, ligadaSmart: atacante.temLigacaoSmart });
     if (impedimento) { ui.notifications.warn(`${arma.name}: ${impedimento}`); return null; }
   }
-  const extras = escolha?.partes ?? situacionais.filter(situacional => situacional.ligado).map(({ rotulo, valor }) => ({ rotulo, valor }));
+  const escolhidas = escolha?.partes ?? situacionais.filter(situacional => situacional.ligado).map(({ rotulo, valor }) => ({ rotulo, valor }));
+  // A munição Smart melhorada na arma Smart: as penalidades de visão não contam; as outras voltam na segunda chance.
+  const smartMelhorada = R.smartMelhoradaVale({ perfil, municao: municao?.getFlag(SISTEMA, 'arma2077') });
+  const extras = smartMelhorada ? escolhidas.filter(parte => !R.ehPenalidadeDeVisao(parte)) : escolhidas;
   if (balas) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
   // A carga marca a rodada na arma, para esfriar; o "Desfazer" do mestre tira a marca.
   const carga = tech ? await marcarCarga(arma) : null;
@@ -219,7 +230,8 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    cobertura, carga, doisCanos
+    cobertura, carga, doisCanos,
+    smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
   game.socket.emit(CANAL, { tipo: 'ataque', pedido: dados, de: game.user.id });
@@ -252,6 +264,18 @@ async function rolarDanoDoAtacante({ arma, multiplicador, formula }, { id = null
   const dano = await rolarDano(await fromUuid(arma), { falar: true, multiplicador, formula, perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
   if (id) janelas.delete(id);
   return dano && { total: dano.total, critico: dano.critico, bonus: dano.bonus, formula: dano.formula };
+}
+
+// A segunda chance (regras.partesDaSegundaChance): com a janela de rolagem (perguntar), os modificadores e a Sorte;
+// fechada, null. Sem a janela, a Sorte que vier (o mestre que rola por quem não respondeu passa 0) ou a preparada.
+async function rolarSegundaChance(ator, { rotulo, partes, perguntar = false, aoAbrir = null, sorte }) {
+  let extras = [];
+  if (perguntar) {
+    const escolha = await perguntarTeste(ator, { rotulo, partes, aoAbrir });
+    if (!escolha) return null;
+    ({ partes: extras, sorte } = escolha);
+  }
+  return testar(ator, { rotulo, partes: [...partes, ...extras], sorte, dados: { ataque: true, segundaChance: true }, categoria: 'ataque' });
 }
 
 // ---------------- No cliente de quem defende ----------------
@@ -338,6 +362,8 @@ async function contexto(pedido, usuario) {
 // A regra de 2077 deste ataque, para o cartão.
 function notasDe2077(pedido, arma) {
   const notas = [];
+  const ignoradas = pedido.smartMelhorada?.ignoradas ?? [];
+  if (ignoradas.length) notas.push(`Munição Smart melhorada: as penalidades de visão não contam (${ignoradas.join(', ')}).`);
   if (pedido.doisCanos) {
     const dano = arma.perfil2077?.doisCanos?.dano;
     notas.push(`Os dois canos de uma vez: gastou 2 cartuchos${dano ? `, e o dano é ${dano}` : ''}.`);
@@ -457,6 +483,24 @@ const linhaDe = (ctx, token) => {
   return linha;
 };
 
+// A segunda chance da munição Smart melhorada (regras.cabeSegundaChance): o ataque à distância que errou por 5 ou menos
+// tenta de novo, na hora. Quem atacou rola, se for um jogador conectado (a janela de rolagem, com a Sorte); senão, ou se
+// ele não responder, o mestre rola direto. Devolve o total novo, ou null (não cabe).
+const SEM_SEGUNDA_CHANCE_NO_ALVO = ['corpo', 'supressivo', 'cartucho', 'explosivo'];
+async function segundaChance(ctx, contra) {
+  const smart = ctx.pedido.smartMelhorada;
+  if (!smart || !R.cabeSegundaChance({ ataque: ctx.pedido.total, contra })) return null;
+  const rotulo = `${ctx.arma.name}: segunda chance (munição Smart melhorada)`;
+  const partes = R.partesDaSegundaChance(smart.penalidades);
+  const jogador = !ctx.usuario.isGM && ctx.usuario.active ? ctx.usuario : null;
+  if (jogador) {
+    const resposta = await pedir(jogador, 'segundaChance', { arma: ctx.arma.uuid, rotulo, partes });
+    if (Number.isFinite(Number(resposta?.total))) return Number(resposta.total);
+    ctx.notas.push(`${jogador.name} não rolou a segunda chance a tempo: o mestre rolou.`);
+  }
+  return (await rolarSegundaChance(ctx.atacante, { rotulo, partes, sorte: jogador ? 0 : undefined })).total;
+}
+
 // A defesa de um alvo já no alcance. Preenche a linha e devolve se pegou.
 async function defesaDoAlvo(ctx, linha, alvo, dv) {
   const esquiva = R.podeEsquivar({ modo: ctx.modo, ref: alvo.ref, exigeRef8: config('exigeRef8'), semPerna: alvo.semPerna });
@@ -464,7 +508,19 @@ async function defesaDoAlvo(ctx, linha, alvo, dv) {
   const resposta = await defender(ctx, alvo, { opcoes, dv });
   Object.assign(linha, { escolha: resposta.escolha, defesa: resposta.defesa ?? null, dv });
   if (alvo.semPerna && ctx.modo !== 'supressivo') linha.notas.push('Sem a perna, não esquiva.');
-  const pegou = R.acertou({ modo: ctx.modo, escolha: resposta.escolha, ataque: ctx.pedido.total, defesa: linha.defesa, dv });
+  const acertou = ataque => R.acertou({ modo: ctx.modo, escolha: resposta.escolha, ataque, defesa: linha.defesa, dv });
+  let pegou = acertou(ctx.pedido.total);
+  // A munição Smart melhorada, no ataque de cada alvo (no cartucho e no explosivo, a área já passou da DV): errou por 5
+  // ou menos, a segunda chance contra a mesma DV, ou contra a mesma esquiva.
+  if (pegou === false && !SEM_SEGUNDA_CHANCE_NO_ALVO.includes(ctx.modo)) {
+    const contra = resposta.escolha === 'esquivar' ? linha.defesa : dv;
+    const novo = await segundaChance(ctx, contra);
+    if (novo !== null) {
+      linha.segundaChance = novo;
+      linha.notas.push(`Munição Smart melhorada: errou por ${contra - ctx.pedido.total}; a segunda chance deu ${novo}${acertou(novo) ? ' e pegou' : ''}.`);
+      pegou = acertou(novo);
+    }
+  }
   linha.pegou = pegou;
   linha.resultado = pegou === null ? 'semDv' : pegou ? 'acertou' : resposta.escolha === 'esquivar' ? 'esquivou' : 'errou';
   return pegou;
@@ -639,7 +695,7 @@ async function individual(ctx) {
   const formula = rajada ? '2d6' : ctx.modo === 'ricochete' ? R.umDadoAMenos(ctx.arma.system.dano) : null;
   for (const linha of pegas) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
-    const multiplicador = rajada ? R.multiplicadorDeAutofogo(ctx.pedido.total, contra, maximo) : 1;
+    const multiplicador = rajada ? R.multiplicadorDeAutofogo(linha.segundaChance ?? ctx.pedido.total, contra, maximo) : 1;
     if (rajada) linha.multiplicador = multiplicador;
     const dano = atravessar(ctx, linha, await rolarDanoDoAtaque(ctx, { multiplicador, formula }));
     if (dano) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
@@ -663,9 +719,22 @@ async function danoNaArea(ctx, pegas, formula = null) {
   for (const linha of ctx.linhas.filter(l => pegas.includes(l))) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
 }
 
+// O ataque de área (o cartucho e o explosivo) passou da DV? Com a munição Smart melhorada, a segunda chance vale para a
+// área toda. Devolve o contexto que vale para a área (com a segunda chance, uma cópia com o total novo, como a segunda
+// tentativa da Inteligente: as esquivas dos alvos são contra ele), ou null se não passou.
+async function contraADvDaArea(ctx, dv) {
+  if (ctx.pedido.total > dv) return ctx;
+  const novo = await segundaChance(ctx, dv);
+  if (novo === null) return null;
+  ctx.notas.push(`Munição Smart melhorada: errou a DV ${dv} por ${dv - ctx.pedido.total}; a segunda chance deu ${novo}${novo > dv ? ' e passou' : ''}.`);
+  ctx.segundaChance = novo;
+  return novo > dv ? { ...ctx, pedido: { ...ctx.pedido, total: novo } } : null;
+}
+
 // Espingarda com cartucho: um ataque contra DV 13; se acertar, cada alvo à frente, até 6 m, leva 3d6 (rolado uma vez).
 async function cartucho(ctx) {
-  const passou = ctx.pedido.total > R.DV_CARTUCHO;
+  const area = await contraADvDaArea(ctx, R.DV_CARTUCHO);
+  const passou = Boolean(area);
   ctx.cabecalho = `contra DV ${R.DV_CARTUCHO} do cartucho: ${passou ? 'acertou' : 'errou'}`;
   const pegas = [];
   await Promise.all(ctx.alvos.map(async token => {
@@ -674,7 +743,7 @@ async function cartucho(ctx) {
     linha.metros = alvo.metros;
     if (!passou) { Object.assign(linha, { resultado: 'errou', dv: R.DV_CARTUCHO }); return; }
     if (alvo.metros !== null && alvo.metros > R.ALCANCE_CARTUCHO + 0.5) { linha.resultado = 'fora'; linha.notas.push(`Além dos ${R.ALCANCE_CARTUCHO} m do cartucho.`); return; }
-    if (await defesaDoAlvo(ctx, linha, alvo, R.DV_CARTUCHO)) pegas.push(linha);
+    if (await defesaDoAlvo(area, linha, alvo, R.DV_CARTUCHO)) pegas.push(linha);
   }));
   // Os dois cartuchos de uma vez (a Testera): o dano da arma para isso.
   await danoNaArea(ctx, pegas, (ctx.pedido.doisCanos && ctx.perfil?.doisCanos?.dano) || '3d6');
@@ -701,8 +770,8 @@ async function explosao(ctx) {
   }
   const dv = achada.dv ?? (achada.semTabela ? await dvDoMestre(ctx, info) : null);
   const segunda = dv !== null && ctx.pedido.total <= dv ? await repetirInteligente(ctx, dv) : null;
-  const tentativa = segunda ? { ...ctx, pedido: { ...ctx.pedido, total: segunda.total } } : ctx;
-  if (dv === null || tentativa.pedido.total <= dv) {
+  const tentativa = segunda ? { ...ctx, pedido: { ...ctx.pedido, total: segunda.total } } : dv === null ? ctx : await contraADvDaArea(ctx, dv);
+  if (dv === null || !tentativa || tentativa.pedido.total <= dv) {
     ctx.cabecalho = dv === null ? 'sem DV: o mestre decide' : `contra DV ${dv}${onde}: errou. O mestre decide onde caiu.`;
     const linha = linhaDe(ctx, principal);
     Object.assign(linha, { resultado: dv === null ? 'semDv' : 'errou', dv, metros: info.metros });
@@ -793,7 +862,11 @@ export function acoesDe2077(arma) {
   }
   if (perfil.classe === 'smart') {
     if (!ator.temLigacaoSmart) resultado.avisos.push({ texto: 'sem ligação', dica: 'As armas Smart só disparam ligadas pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.' });
-    else resultado.dicaAtaque = `Arma Smart: +${R.BONUS_SMART} nos ataques à distância.${doisAlvos}`;
+    else {
+      const melhorada = R.smartMelhoradaVale({ perfil, municao: arma.municaoCarregada?.getFlag(SISTEMA, 'arma2077') })
+        ? ` Munição Smart melhorada: as penalidades de visão não contam e, se errar por ${R.SEGUNDA_CHANCE.margem} ou menos, tenta de novo com ${R.SEGUNDA_CHANCE.base} + 1d10.` : '';
+      resultado.dicaAtaque = `Arma Smart: +${R.BONUS_SMART} nos ataques à distância.${melhorada}${doisAlvos}`;
+    }
   }
   return resultado;
 }
@@ -813,9 +886,13 @@ const barraDeHp = linha => {
 async function cartaoDoResultado(ctx) {
   const linhas = ctx.linhas.map(l => ({
     nome: l.nome, img: l.img, resultado: l.resultado, rotulo: RESULTADOS[l.resultado] ?? l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null,
-    dv: l.dv ?? null, metros: l.metros ?? null, segundaTentativa: l.segundaTentativa ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, municao: l.municao ?? null, suprimido: Boolean(l.suprimido), notas: l.notas
+    dv: l.dv ?? null, metros: l.metros ?? null, segundaTentativa: l.segundaTentativa ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, municao: l.municao ?? null, suprimido: Boolean(l.suprimido), notas: l.notas,
+    segundaChance: l.segundaChance ?? null
   }));
-  const resumo = { id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, atacante: ctx.nomeAtq, arma: ctx.arma.name, cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas };
+  const resumo = {
+    id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, segundaChance: ctx.segundaChance ?? null, atacante: ctx.nomeAtq, arma: ctx.arma.name,
+    cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas
+  };
   const desfazer = ctx.linhas.filter(l => l.dano || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
     ator: l.token.actor.uuid, suprimido: Boolean(l.suprimido), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null

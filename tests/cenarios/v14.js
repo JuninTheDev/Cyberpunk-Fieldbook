@@ -3771,6 +3771,111 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('munição Smart melhorada (2077): na arma Smart ligada, o tiro que errou a DV por 5 ou menos tenta de novo com 14 + 1d10 e as penalidades do primeiro (o mirado); por 6, não; as penalidades de visão da janela não contam; numa arma comum, nada; no cartucho, vale para a área', async () => {
+      // Yukimura (Smart, padrão), com o Subdermal Grip e a munição Smart melhorada. Contra o Longe (28 m, DV 20 da SMG):
+      // d10 3 → REF 8 + Pistola 4 + Smart 1 + 3 = 16, errou por 4; a segunda chance, d10 7 → 14 + 7 = 21, pega (3d6:
+      // 2 + 2 + 2). De novo: d10 2 → 15, errou por 5; d10 5 → 19, errou. Mirado na cabeça do Alvo (10 m, DV 13): d10 4 →
+      // 13 − 8 + 4 = 9, errou por 4; d10 6 → 14 − 8 + 6 = 12, errou. Mirado no Longe: d10 9 → 14, errou por 6: sem segunda
+      // chance. Pela janela, com a pouca luz (−1), Exausto (−4) e a tarefa encoberta (−4): d10 8 → 13 − 4 + 8 = 17 (só o
+      // Exausto conta), errou por 3; d10 9 → 14 − 4 + 9 = 19, errou. A pistola média do CORE com a mesma munição, no Longe
+      // (DV 25 da pistola): d10 9 → 8 + 4 + 9 = 21, errou por 4, e nada. Na área: a Palica (Smart) com o cartucho Smart
+      // melhorado, no Capanga a 4 m, pela janela com Exausto: d10 2 → 8 + 4 + 1 − 4 + 2 = 11, errou a DV 13 por 2; d10 5 →
+      // 14 − 4 + 5 = 15, passou; 3d6: 1 + 1 + 1.
+      await fixar(edge, [[3, 10], [7, 10], [2, 6], [2, 6], [2, 6], [2, 10], [5, 10], [4, 10], [6, 10], [9, 10], [8, 10], [9, 10], [9, 10], [2, 10], [5, 10], [1, 6], [1, 6], [1, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const [alvo, longe, capanga] = ['Alvo', 'Longe', 'Capanga'].map(__token);
+        const hpDoLonge = __ator('Longe').system.hp.value;
+        const hpDoCapanga = __ator('Capanga').system.hp.value;
+        const criados = [];
+        let link = null;
+        const janela = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+        const textoDe = el => el.textContent.replace(/\\s+/g, ' ').trim();
+        const testes = () => game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.ataque);
+        // Cada tiro: o resultado e os testes que ele rolou (o primeiro e, se teve, o da segunda chance).
+        const tiro = async atirar => {
+          const antes = testes().length;
+          const r = await atirar();
+          const rolados = testes().slice(antes).map(m => ({ formula: m.rolls[0].formula, total: m.rolls[0].total, segunda: Boolean(m.getFlag('${S}', 'teste').segundaChance),
+            partes: [...new DOMParser().parseFromString(m.content, 'text/html').querySelectorAll('.partes li')].map(textoDe) }));
+          return {
+            ataque: r.ataque, cabecalho: r.cabecalho, segunda: r.segundaChance, notas: r.notas, rolados,
+            linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, dv: l.dv, segunda: l.segundaChance, dano: l.dano?.dano ?? null, notas: l.notas }))
+          };
+        };
+        // Pela janela de rolagem, com os modificadores comuns marcados.
+        const comJanela = async (arma, contra, marcados) => {
+          const promessa = arma.atacar({ alvo: contra, perguntar: true });
+          await __esperar(() => janela()?.querySelector('button[data-action="rolar"]'));
+          const j = janela();
+          for (const texto of marcados) {
+            const caixa = [...j.querySelectorAll('[name="comum"]')].find(c => c.closest('label').textContent.includes(texto));
+            caixa.checked = true;
+            caixa.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          j.querySelector('button[data-action="rolar"]').click();
+          return promessa;
+        };
+        try {
+          link = await __cyber2077('core_cyberware:subdermal-grip');
+          const yuki = await __arma2077('armas-2077:arasaka-hjke-11-yukimura', 'armas-2077:smart-melhorada-pistola-media', 20);
+          const comum = await __arma2077('core_weapons:medium-pistol', 'armas-2077:smart-melhorada-pistola-media', 10);
+          criados.push(yuki.arma.id, yuki.municao.id, comum.arma.id, comum.municao.id);
+          await a.sheet.render({ force: true });
+          await __esperar(() => __linhaDaArma(yuki.arma));
+          const dica = __linhaDaArma(yuki.arma).querySelector('td.num')?.dataset.tooltip ?? '';
+          const pegou = await tiro(() => yuki.arma.atacar({ alvo: longe }));
+          const errou = await tiro(() => yuki.arma.atacar({ alvo: longe }));
+          const mirado = await tiro(() => yuki.arma.atacar({ alvo, local: 'cabeca' }));
+          const longeDemais = await tiro(() => yuki.arma.atacar({ alvo: longe, local: 'cabeca' }));
+          const pelaJanela = await tiro(() => comJanela(yuki.arma, longe, ['Iluminação noturna', 'Exausto', 'Tarefa encoberta']));
+          const naComum = await tiro(() => comum.arma.atacar({ alvo: longe }));
+          await capanga.update({ x: 500 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 500);
+          const palica = await __arma2077('armas-2077:rostovic-db-4-palica', 'armas-2077:smart-melhorada-cartucho', 2);
+          criados.push(palica.arma.id, palica.municao.id);
+          const naArea = await tiro(() => comJanela(palica.arma, capanga, ['Exausto']));
+          return {
+            dica, pegou, errou, mirado, longeDemais, pelaJanela, naComum, naArea, pente: [yuki.arma.system.pente.value, comum.arma.system.pente.value, palica.arma.system.pente.value],
+            perdeu: hpDoLonge - __ator('Longe').system.hp.value, capangaPerdeu: hpDoCapanga - __ator('Capanga').system.hp.value, fila: window.__fila.length
+          };
+        } finally {
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close();
+          await a.sheet.close();
+          if (link) await __tirarCyber(link);
+          await a.deleteEmbeddedDocuments('Item', criados);
+          await __ator('Longe').update({ 'system.hp.value': hpDoLonge });
+          await __ator('Capanga').update({ 'system.hp.value': hpDoCapanga });
+          await capanga.update({ x: 900 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 900);
+          window.__fila = [];
+        }
+      })()`);
+      const { pegou, errou, mirado, longeDemais, pelaJanela, naComum, naArea } = info;
+      const [lArea] = naArea.linhas;
+      const [l1] = pegou.linhas;
+      const [l2] = errou.linhas;
+      const [l3] = mirado.linhas;
+      const [l4] = longeDemais.linhas;
+      const [l5] = pelaJanela.linhas;
+      const [l6] = naComum.linhas;
+      const formulas = t => t.rolados.map(x => x.formula).join(' | ');
+      const visao = 'Munição Smart melhorada: as penalidades de visão não contam (Iluminação noturna ou fraca, Tarefa encoberta por fumaça, escuridão etc.).';
+      const ok = info.dica === 'Arma Smart: +1 nos ataques à distância. Munição Smart melhorada: as penalidades de visão não contam e, se errar por 5 ou menos, tenta de novo com 14 + 1d10.'
+        && pegou.ataque === 16 && l1.dv === 20 && l1.resultado === 'acertou' && l1.segunda === 21 && l1.dano === 6 && l1.notas.includes('Munição Smart melhorada: errou por 4; a segunda chance deu 21 e pegou.')
+        && formulas(pegou) === '1d10crit + 8 + 4 + 1 | 1d10crit + 14' && pegou.rolados[1].segunda && pegou.rolados[1].partes.includes('Segunda chance +14')
+        && errou.ataque === 15 && l2.resultado === 'errou' && l2.segunda === 19 && l2.notas.includes('Munição Smart melhorada: errou por 5; a segunda chance deu 19.')
+        && mirado.ataque === 9 && l3.dv === 13 && l3.resultado === 'errou' && l3.segunda === 12 && formulas(mirado) === '1d10crit + 8 + 4 + 1 - 8 | 1d10crit + 14 - 8'
+        && longeDemais.ataque === 14 && l4.resultado === 'errou' && l4.segunda === null && longeDemais.rolados.length === 1 && !l4.notas.some(n => /Smart melhorada/.test(n))
+        && pelaJanela.ataque === 17 && formulas(pelaJanela) === '1d10crit + 8 + 4 + 1 - 4 | 1d10crit + 14 - 4' && pelaJanela.rolados[0].partes.includes('Exausto -4')
+        && !pelaJanela.rolados[0].partes.some(p => /Iluminação|encoberta/.test(p)) && pelaJanela.notas.includes(visao) && l5.segunda === 19 && l5.resultado === 'errou'
+        && naComum.ataque === 21 && l6.dv === 25 && l6.resultado === 'errou' && l6.segunda === null && naComum.rolados.length === 1 && !naComum.notas.some(n => /Smart melhorada/.test(n))
+        && naArea.ataque === 11 && naArea.segunda === 15 && naArea.cabecalho === 'contra DV 13 do cartucho: acertou' && formulas(naArea) === '1d10crit + 8 + 4 + 1 - 4 | 1d10crit + 14 - 4'
+        && naArea.notas.includes('Munição Smart melhorada: errou a DV 13 por 2; a segunda chance deu 15 e passou.') && lArea?.nome === 'Capanga' && lArea.resultado === 'acertou' && lArea.dano === 3
+        && info.pente.join() === '15,9,1' && info.perdeu === 6 && info.capangaPerdeu === 3 && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('escudo e a janela do mestre: o Capanga (NPC) pode aguentar ou usar o escudo; o mestre vê o total, escolhe o escudo, que leva os 10 PV dele; o Desfazer devolve; fechada no X, o sistema escolhe (sem esquiva, o escudo)', async () => {
       // Ataque: d10 8 → REF 8 + Armas de Ombro 4 + 8 = 20 contra DV 16 (12 m). Dano 5d6: 3 × 5 = 15; o escudo (10 PV) leva
       // 10, e o resto de um tiro se perde (wiki: cobertura).
@@ -4101,6 +4206,63 @@ module.exports = async ({ edge, servidores, r }) => {
       const info = await jogador.evaluate(`({ nome: game.user.name, gm: game.user.isGM, dono: game.actors.getName('Alvo')?.isOwner })`);
       const ativo = await edge.evaluate(`game.users.getName('Jogador').active`);
       return [info.nome === 'Jogador' && !info.gm && info.dono && ativo, JSON.stringify({ ...info, ativo })];
+    });
+
+    await r.passo('jogador: a segunda chance da munição Smart melhorada rola no computador de quem atacou (o Alvo, do jogador), como o dano', async () => {
+      // O Alvo (REF 8, sem a perícia), com o Subdermal Grip e a Yukimura com a munição Smart melhorada, atira no Longe
+      // (18 m, DV 15 da SMG): d10 2 → 8 + 1 + 2 = 11, errou por 4; a segunda chance, no jogador, d10 5 → 14 + 5 = 19, pega;
+      // o dano, no jogador: 2 + 2 + 2 = 6.
+      await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const alvo = __ator('Alvo');
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const arma = pegar('armas-2077:arasaka-hjke-11-yukimura');
+        arma.system.equipada = true;
+        const municao = pegar('armas-2077:smart-melhorada-pistola-media');
+        municao.system.quantidade = 10;
+        window.__smartDoJogador = { humanidade: alvo.system.humanidade.value, hp: __ator('Longe').system.hp.value, itens: [] };
+        const criados = await alvo.createEmbeddedDocuments('Item', [pegar('core_cyberware:subdermal-grip'), arma, municao]);
+        window.__smartDoJogador.itens = criados.map(item => item.id);
+        await alvo.instalarCyberware(criados.find(item => item.type === 'cyberware'), { rolar: false });
+        await criados.find(item => item.type === 'arma').recarregar();
+        return true;
+      })()`);
+      try {
+        await fixar(jogador, [[2, 10], [5, 10], [2, 6], [2, 6], [2, 6]]);
+        const antes = await edge.evaluate(`game.messages.size`);
+        const pedido = await jogador.evaluate(`(async () => {
+          const longe = canvas.scene.tokens.find(t => t.name === 'Longe');
+          const p = await game.actors.getName('Alvo').items.getName('Arasaka HJKE-11 Yukimura').atacar({ alvo: longe });
+          return p && { total: p.total, smart: Boolean(p.smartMelhorada) };
+        })()`);
+        let resumo = null;
+        for (let i = 0; i < 60 && !resumo; i++) {
+          await edge.sleep(250);
+          resumo = await edge.evaluate(`game.messages.contents.slice(${antes}).findLast(m => m.getFlag('${S}', 'ataque'))?.getFlag('${S}', 'ataque') ?? null`);
+        }
+        const segunda = await edge.evaluate(`(() => {
+          const m = game.messages.contents.slice(${antes}).find(m => m.getFlag('${S}', 'teste')?.segundaChance);
+          return m ? { autor: m.author?.name ?? null, formula: m.rolls[0].formula, total: m.rolls[0].total } : null;
+        })()`);
+        const perdeu = await edge.evaluate(`window.__smartDoJogador.hp - __ator('Longe').system.hp.value`);
+        const sobrou = await jogador.evaluate(`window.__fila.length`);
+        const [l] = resumo?.linhas ?? [];
+        const linha = l ? { resultado: l.resultado, dv: l.dv, segundaChance: l.segundaChance, notas: l.notas, dano: l.dano?.dano ?? null } : null;
+        const ok = pedido?.total === 11 && pedido.smart && linha?.resultado === 'acertou' && linha.dv === 15 && linha.segundaChance === 19 && linha.dano === 6
+          && segunda?.autor === 'Jogador' && segunda.formula === '1d10crit + 14' && segunda.total === 19 && perdeu === 6 && sobrou === 0;
+        return [ok, JSON.stringify({ pedido, linha, segunda, perdeu, sobrou })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const { humanidade, hp, itens } = window.__smartDoJogador;
+          const alvo = __ator('Alvo');
+          const grip = itens.map(id => alvo.items.get(id)).find(item => item?.type === 'cyberware');
+          if (grip) await alvo.desinstalarCyberware(grip);
+          await alvo.deleteEmbeddedDocuments('Item', itens.filter(id => alvo.items.has(id)));
+          await alvo.update({ 'system.humanidade.value': humanidade });
+          await __ator('Longe').update({ 'system.hp.value': hp });
+          return true;
+        })()`);
+      }
     });
 
     await r.passo('jogador: recebe a pergunta sem ver o total do ataque, esquiva e vence (DEX 7 + Evasão 2 + 10 + 6); depois, o total aparece para ele', async () => {

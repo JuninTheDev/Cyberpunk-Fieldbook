@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 112). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 113). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -249,7 +249,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     canos. Os testes que falham desde o ciclo 32 voltam a passar. Por partes, um ciclo cada:
     - [x] Smart: a ligação (o Personal Link do Neuroport ou o Subdermal Grip), o +1 e o fim do teste Smart; os dois canos
       da Palica pelo dano; os dois alvos da Kappa no tiro comum: ciclo 110 (saíram as duas configurações do ataque Smart);
-    - [ ] a munição Smart melhorada (a segunda chance com 14 + 1d10; sem as penalidades de visão);
+    - [x] a munição Smart melhorada (a segunda chance com 14 + 1d10; sem as penalidades de visão): ciclo 112 (quem atacou
+      rola, no computador dele; na área, contra a DV dela);
     - [ ] as balas por tiro (as 3 balas e o dano com menos; a Zhuo);
     - [ ] Power: o ricochete com −4 (−2 com o Ballistic Coprocessor) e a lesão crítica com 10 de dano bônus;
     - [ ] Tech: carregar na Ação de Movimento, CDT 1, a cobertura fina e a metade do SP;

@@ -572,6 +572,42 @@ test('Smart (Mission Kit, a wiki de 2026-10-17): só dispara ligada pelo Persona
   }
 });
 
+test('Munição Smart melhorada (Mission Kit, p. 32): só na arma Smart; sem as penalidades de visão; errou a DV por 5 ou menos, a segunda chance com 14 + 1d10 no lugar de STAT + perícia + bônus, com as penalidades do primeiro tiro', () => {
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.ok(de2077.includes("'Só funciona em arma Smart; uma arma com Smartgun Link não conta.', 'Ignora as penalidades de escuridão, fumaça, neblina e de qualquer outra coisa que atrapalhe a visão.', '<b>Segunda chance:</b> se o ataque à distância errar a DV por <b>5 ou menos</b>, você tenta de novo na hora, com <b>14 + 1d10</b> (dá para somar Sorte) no lugar de STAT + perícia + bônus, contra a mesma DV. As penalidades do primeiro tiro continuam valendo.'"));
+  assert.ok(de2077.includes('Aceita a <b>munição Smart melhorada</b> dos tipos que dispara. Com outra munição, fica só o +1.'));
+  assert.deepEqual(regras.SEGUNDA_CHANCE, { base: 14, margem: 5 });
+  // Só na arma Smart, e só com a melhorada (a Smart do CORE não tem a flag).
+  const melhorada = catalogo['armas-2077:smart-melhorada-pistola-media'].flags['cpr-fieldbook'].arma2077;
+  const doCore = catalogo['core_ammo:medium-pistol-smart'].flags['cpr-fieldbook'].arma2077;
+  const yukimura = perfilDe('armas-2077:arasaka-hjke-11-yukimura');
+  assert.equal(regras.smartMelhoradaVale({ perfil: yukimura, municao: melhorada }), true);
+  assert.equal(regras.smartMelhoradaVale({ perfil: yukimura, municao: doCore }), false);
+  assert.equal(regras.smartMelhoradaVale({ perfil: perfilDe('armas-2077:constitutional-arms-liberty'), municao: melhorada }), false);
+  assert.equal(regras.smartMelhoradaVale({ perfil: null, municao: melhorada }), false, 'uma arma comum (a do Smartgun Link) não conta');
+  // As penalidades de visão: as dos modificadores comuns que falam de luz, fumaça e escuridão; as outras ficam.
+  assert.deepEqual(regras.MODIFICADORES_COMUNS.filter(regras.ehPenalidadeDeVisao).map(m => [m.id, m.valor]), [['pouca-luz', -1], ['encoberta', -4]]);
+  assert.equal(regras.ehPenalidadeDeVisao({ rotulo: 'Exausto', valor: -4 }), false);
+  // Errou por 5 ou menos (a DV, ou a esquiva que faz as vezes dela): 10 contra 15, sim; 9, não; o empate (15) também.
+  assert.equal(regras.cabeSegundaChance({ ataque: 10, contra: 15 }), true);
+  assert.equal(regras.cabeSegundaChance({ ataque: 15, contra: 15 }), true);
+  assert.equal(regras.cabeSegundaChance({ ataque: 9, contra: 15 }), false);
+  assert.equal(regras.cabeSegundaChance({ ataque: 16, contra: 15 }), false, 'acertou');
+  assert.equal(regras.cabeSegundaChance({ ataque: 10, contra: null }), false, 'sem DV, o mestre decide');
+  // A segunda chance: 14 no lugar de REF + perícia + os bônus (a arma, a Smart, a luneta), com as penalidades (o mirado,
+  // a coronha, as lesões, o modificador do mestre).
+  const primeiro = [{ rotulo: 'REF', valor: 8 }, { rotulo: 'Armas de uma Mão', valor: 4 }, { rotulo: 'Arma', valor: 1 }, { rotulo: 'Arma Smart', valor: 1 }, { rotulo: 'Mirado', valor: -8 }, { rotulo: 'Lesões', valor: -2 }];
+  assert.deepEqual(regras.partesDaSegundaChance(primeiro), [{ rotulo: 'Segunda chance', valor: 14 }, { rotulo: 'Mirado', valor: -8 }, { rotulo: 'Lesões', valor: -2 }]);
+  assert.deepEqual(regras.partesDaSegundaChance(), [{ rotulo: 'Segunda chance', valor: 14 }]);
+  // As 9 munições do Kit dizem o que o sistema faz, e a regra da wiki.
+  const doKit = Object.entries(catalogo).filter(([, item]) => item.flags['cpr-fieldbook']?.arma2077?.smartMelhorada);
+  assert.equal(doKit.length, 9);
+  for (const [id, item] of doKit) {
+    assert.match(item.system.descricao, /Neste sistema:<\/b> numa arma Smart ligada, as penalidades de visão da janela de rolagem/, id);
+    assert.ok(!item.system.descricao.includes('ainda não está automatizada'), id);
+  }
+});
+
 test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os dois canos da Palica e da Testera (4d6), os dois alvos da Kappa, a coronha da Dian e as 7 balas do autofogo da Lexington', () => {
   // "Disparar os dois canos de uma vez gasta os 2 cartuchos e o dano sobe para 4d6" (Palica, desde o Kit; antes, o teste
   // Smart subia para 12 + 1d10); "dá para disparar os dois de uma vez, e o dano sobe para 4d6" (Testera); "trava em dois

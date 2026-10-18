@@ -551,6 +551,26 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   para o segundo". O sistema muda as balas no tiro, não no mirado (que vai num ponto do primeiro alvo), como antes ficava
   fora do teste Smart. O mestre resolve o mirado que errar.
 
+- **A segunda chance da munição Smart melhorada** (ciclo 112). A wiki: "se o ataque à distância errar a DV por 5 ou
+  menos, você tenta de novo na hora, com 14 + 1d10 (dá para somar Sorte) no lugar de STAT + perícia + bônus, contra a
+  mesma DV. As penalidades do primeiro tiro continuam valendo". O que o sistema escolheu, e a wiki não detalha:
+  - "errar por 5 ou menos" é a DV menos o total, de 0 (o empate, que é da defesa) a 5;
+  - contra a esquiva (que faz as vezes da DV, p. 172) também, contra a mesma esquiva, sem rolar de novo;
+  - "bônus" são todos os positivos (o da arma, o +1 da Smart, a luneta, o TeleOptics, o Ataque de Precisão); ficam os
+    negativos (o mirado, a coronha, as lesões, os modificadores escolhidos na janela);
+  - no cartucho e no explosivo, a segunda chance é uma só, contra a DV da área; a esquiva de cada alvo, depois, não tem;
+  - com vários alvos marcados no tiro, cada um que o ataque errou por 5 ou menos tem a sua;
+  - quem rola é o jogador que atacou, no computador dele; sem resposta no tempo, o mestre rola, sem a Sorte; o ataque do
+    mestre rola direto, com a Sorte preparada;
+  - a falha crítica da arma (a ruim) vem do primeiro teste; a da segunda chance não muda nada;
+  - a munição Inteligente do CORE numa arma Smart de 2077: a wiki diz "com outra munição, fica só o +1", e o sistema
+    dá a segunda tentativa da Inteligente do ciclo 111 (com o Targeting Scope). O mestre decide.
+
+- **As penalidades de visão que a munição Smart melhorada ignora** (ciclo 112). A wiki: "escuridão, fumaça, neblina e
+  [...] qualquer outra coisa que atrapalhe a visão". O sistema tira as dos modificadores comuns da janela de rolagem que
+  falam disso: "Iluminação noturna ou fraca" (−1) e "Tarefa encoberta por fumaça, escuridão etc." (−4). Um efeito
+  situacional ou o modificador do mestre com uma penalidade de visão conta: o mestre tira.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -5466,6 +5486,65 @@ outras sessões foram integrados antes do fechamento, preservando os registros e
   ficha) e a recusa da Smart do Kit durante a janela. A trava compartilhada e a checagem de mesa vazia foram mantidas.
 - **Limites:** fumaça continua manual; o cybermembro parado é narrado como pendurado pelo cartão. A segunda chance
   da munição Smart melhorada do Kit (14 + 1d10) fica no C29. A campanha real e o servidor não foram alterados.
+
+### Ciclo 112 (2026-10-18): o C29, as armas de 2077 pelo Kit, parte 2: a munição Smart melhorada (sessão KouArt)
+
+Commit anterior: `20a21c33` (a reserva do C15 da sessão Codex). O ciclo 111 é o `011deca0` (o C14 da sessão Codex), e o
+ciclo 110, o `522fa62a`.
+
+- **A referência (a wiki de 2026-10-17, `system-2077.js`, "Munição Smart melhorada", Kit p. 32):** "Só funciona em arma
+  Smart; uma arma com Smartgun Link não conta."; "Ignora as penalidades de escuridão, fumaça, neblina e de qualquer outra
+  coisa que atrapalhe a visão."; "Segunda chance: se o ataque à distância errar a DV por 5 ou menos, você tenta de novo
+  na hora, com 14 + 1d10 (dá para somar Sorte) no lugar de STAT + perícia + bônus, contra a mesma DV. As penalidades do
+  primeiro tiro continuam valendo." E, na arma Smart: "Com outra munição, fica só o +1."
+- **O que muda:**
+  - **`regras.mjs`:** `SEGUNDA_CHANCE` (14, a margem 5), `smartMelhoradaVale` (a arma Smart com a munição de flag
+    `smartMelhorada`; a Smart do CORE não tem), `ehPenalidadeDeVisao` (dos modificadores comuns, a pouca luz e a tarefa
+    encoberta), `cabeSegundaChance` (a DV, ou a esquiva, menos o total, de 0 a 5) e `partesDaSegundaChance` (14 e as
+    penalidades do primeiro tiro);
+  - **`combate.mjs`:**
+    - **no ataque:** as penalidades de visão escolhidas na janela de rolagem saem do teste, e o cartão diz quais; as
+      outras penalidades vão no pedido, para a segunda chance;
+    - **no mestre:** o alvo que o ataque errou por 5 ou menos (o tiro, o mirado, o autofogo) ganha a segunda chance,
+      contra a mesma DV ou a mesma esquiva; no cartucho e no explosivo, a segunda chance é contra a DV da área, e as
+      esquivas dos alvos são contra o total novo. A linha e o cartão guardam o total (`segundaChance`) e dizem quanto
+      faltou;
+    - **quem rola:** o jogador que atacou, no computador dele (o pedido `segundaChance`, pela janela de rolagem, com a
+      Sorte, menos com "Rolar direto"); sem resposta, o mestre rola, sem a Sorte. O ataque do mestre rola direto;
+    - **na ficha:** a dica do "Atacar" da arma Smart com a munição melhorada carregada;
+  - **o build:** a munição Smart melhorada diz o que o sistema faz, e o Rebuild fica com o "ainda não"; o texto "Neste
+    sistema" das armas Smart.
+- **Testes:**
+  - **G3 (`tests/sistema/regras.test.mjs`):** o teste novo da munição (o texto da wiki, a base e a margem, só na arma
+    Smart, as penalidades de visão, a conta da margem, as partes da segunda chance e o texto das 9 munições do Kit);
+  - **G4 (`tests/cenarios/v14.js`):**
+    - **a munição Smart melhorada:** a Yukimura ligada pelo Subdermal Grip erra o Longe por 4 e pega na segunda chance
+      (21, com o dano); erra por 5 e de novo (19); o mirado erra por 4 e a segunda chance leva o −8; por 6, não tem; pela
+      janela, a pouca luz e a tarefa encoberta saem e o Exausto fica, nos dois testes; a pistola do CORE com a mesma
+      munição não tem; a Palica com o cartucho melhorado erra a DV 13 por 2 e passa na segunda chance (a área);
+    - **o jogador:** o Alvo (dele) atira com a munição melhorada, erra por 4, e a segunda chance rola no computador
+      dele (o autor da mensagem é o Jogador), como o dano.
+- **Resultados:**
+  - **antes da integração com o ciclo 111 da sessão Codex:** G1 67 arquivos e G2 sem erros; G3 133 de 137 (as 4
+    conhecidas, das partes seguintes); G4 127 de 130 (as 3 conhecidas, da Tech e da Lexington; os 2 passos novos
+    passaram);
+  - **a integração:** o ciclo 111 do Codex trouxe a munição Inteligente do RED (a do CORE, com o Targeting Scope: errou
+    por 4 ou menos, a segunda tentativa com 10 + 1d10), que deixa de fora a munição de 2077. As duas não se somam: a
+    Smart melhorada não é a Inteligente, e a Inteligente não é a melhorada. Os conflitos no `combate.mjs` (o ataque,
+    o explosivo e o cartão) ficaram com as duas; a segunda chance na área passou a devolver uma cópia do contexto com o
+    total novo, como a segunda tentativa do Codex (no lugar de um `ctx.ataque`, que a cópia dele não veria). O
+    catálogo saiu do build de novo (só mudam as 9 armas Smart, os 3 Rebuilds e as 9 munições do Kit);
+  - **depois dela:** G1 72 arquivos e G2 sem erros; G3 145 de 149 (as 4 conhecidas); G4 137 de 139 (a carga Tech e a
+    Dian e Lexington; a checagem de avisos passou nesta rodada, como no ciclo 111: ela vem e vai, pela fila das
+    notificações);
+  - **mutações:** as 10 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (132 de 137 cada): a base 12 (M1), a margem 4 (M2), a segunda chance com os bônus (M3), a pouca luz fora
+      das penalidades de visão (M4) e a munição em qualquer arma (M5);
+    - no G4: as penalidades de visão no ataque (M6) e sem a segunda chance no alvo (M7), no passo da munição; o mestre
+      que rola pelo jogador (M8), no passo do jogador; sem a segunda chance na área (M9) e a ficha sem a dica (M10), no
+      passo da munição;
+    - depois da integração, a M7 e a M9 de novo no G4: caíram as duas (a M7 no passo da munição e no do jogador; a M9 no da munição), e os arquivos voltaram.
+- **Próximo:** a parte 3 do C29, as balas por tiro (as 3 balas e o dano com menos; a Zhuo).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
