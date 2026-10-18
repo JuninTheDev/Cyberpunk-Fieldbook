@@ -6167,6 +6167,67 @@ Foundry 14: o Painel Tático da mesa no Foundry 14. Com este ciclo, o C25 termin
     hoje; o resultado vai num commit de registro.
 - **Próximo:** o C24, partes 2 e 3 (a loja que vende e a que compra), ou o que o usuário escolher.
 
+### Ciclo 126 (2026-10-18): o C30, parte 2: o membro natural (sessão Junin)
+
+Commit anterior: `b750fb6` (o ciclo 125). Antes, a integração do master `3ee9020` (`git merge -X no-renames`): a wiki
+com a peça única no membro natural (46eb94a), a base sem lado que ocupa a vaga de um membro natural na aba Cyberware
+da wiki e o cache do CORE fora do git (4c7362b). A integração não mudou nada no sistema; os portões passaram com ela.
+- **A referência:**
+  - a wiki, `personagem-cyberware.js` (`pecaUnica`, `baseNatural`) e o criador: a peça única com lado e sem base do
+    mesmo tipo naquele lado fica no membro natural (`natural: true` no resultado); uma por membro (a segunda é
+    pendência); a base escolhida nunca vira outra em silêncio;
+  - o cpr-2077 do Foundry 12: põe a peça na base Meat Arm ou Meat Leg do CORE (de graça, sem Humanidade, "a única
+    peça instalada"), com o uid `natural:<lado>`.
+- **O que muda:**
+  - **`regras.mjs`:** `PECAS_UNICAS` (a lista da wiki, pelo id do catálogo da loja), `ehPecaUnica`,
+    `ficaNoMembroNatural`, `fundacaoDoLado` (a opção com lado só aceita a fundação do mesmo lado, ou uma sem lado) e
+    `ehBaseNatural` (a Meat Arm e a Meat Leg do Foundry 12, pelo uid ou pelo nome);
+  - **`documentos.mjs`:**
+    - o `noMembroNatural` do item: a primeira peça única de cada membro, na ordem da ficha;
+    - o `semFundacao` não marca a peça no membro natural;
+    - o `fundacaoPara` respeita o lado;
+    - instalar avisa "ficou no membro natural (braço direito)";
+  - **`ficha-personagem.mjs`, `cyberware.hbs` e `ficha-item.mjs`:** "braço natural" ou "perna natural" na aba
+    Cyberware, no lugar do SEM FUNDAÇÃO; "no membro natural" no alto da ficha do item;
+  - **`wiki.mjs`:** o envio da ficha manda `natural: true`; a migração da mesa deixa a Meat Arm e a Meat Leg de fora.
+- **Testes:**
+  - **G3:** três testes novos em `tests/sistema/lados.test.mjs`:
+    - a lista das peças únicas é a da wiki (o catálogo da loja com o `pecaUnica` do `personagem-cyberware.js`);
+    - quando a peça fica no membro natural;
+    - a fundação do lado e a base natural do Foundry 12.
+  - **G4:** três passos novos:
+    - na wiki de teste, um Solo com o cyberbraço no braço esquerdo, os Wolvers e as Rippers no braço direito natural e
+      o Talon Foot na perna esquerda natural;
+    - no Foundry, a importação:
+      - os Wolvers e o Talon Foot ficam no natural; as Rippers, a segunda do braço, pedem fundação;
+      - o cyberbraço do outro lado não recebe a peça;
+      - a aba Cyberware, a ficha do item, o recado da instalação, o envio e a ficha da mesa na wiki;
+      - o cyberbraço levado para o braço direito tira os Wolvers do natural, e a fundação deles passa a ser a dele;
+    - a migração da mesa no formato do cpr-2077, com os Wolvers na Meat Arm (pelo uid) e o Talon Foot na Meat Leg
+      (só pelo nome).
+- **Resultados:**
+  - antes de integrar o ciclo 125 (o Painel Tático, que a KouArt mandou no meio deste): G1 80 arquivos, 0 erros; G2 0
+    erros; G3 181 de 181; G4 164 de 164;
+  - depois, com o ciclo 125: G1 88 arquivos, 0 erros; G2 0 erros; G3 184 de 184. O G4 pulou o Foundry (a mesa do
+    servidor em uso): roda quando ela esvaziar, e o resultado vai num commit de registro, como no ciclo 125;
+  - **mutações:** as 12 caíram, nenhuma rodada pulou o Foundry, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (180 de 181 cada): a lista sem a Lynx Paws, diferente da wiki (L1); a peça no natural com a fundação do
+      lado (L2); a fundação de qualquer lado (L3); a base natural só pelo uid (L4);
+    - no G4: a instalação que ignora o lado (L5), a peça no natural ainda sem fundação (L6, 162 de 164: também a
+      migração), duas peças no mesmo membro (L7), a instalação sem o recado (L8), o envio sem o `natural` (L9), a
+      migração com a Meat Arm e a Meat Leg (L10), a aba Cyberware (L11) e a ficha do item (L12) sem o membro natural;
+      163 de 164 cada, menos o L6 e o L7. No L7 caiu também o passo do Jack In no Neuroport, que não passa pelo membro
+      natural (instável, como os dois abaixo).
+- **O número:** o trabalho começou como o ciclo 125; a KouArt mandou o 125 antes, e este passou a 126 (a mescla do master
+  refeita sobre o 125, igual à anterior fora dos arquivos do 125).
+- **O que apareceu nas rodadas:**
+  - uma vez o Foundry de teste não abriu o mundo (`servidor.log` vazio); subiu à mão e nas rodadas seguintes;
+  - uma vez o passo "jogador ataca" (de outro ciclo) parou com `reading 'system'`: o jogador procurou a pistola recém
+    criada pelo mestre antes de ela chegar. Passou nas rodadas seguintes, sem mudança; fica anotado para quem cuida
+    do passo.
+- **Próximo:** o C30 terminou. Para valer na mesa, o sistema precisa ser instalado de novo no servidor (só quando o
+  usuário pedir).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

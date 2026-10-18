@@ -285,6 +285,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   duas Roles; `locais=1`, o lado do cyberware), para um importador antigo não criar um ator pela metade. O sistema só
   declara o suporte no mesmo ciclo em que passa a guardar o dado, e o passo do G4 importa um personagem com ele: sem a
   declaração, a importação cai no 409 e o passo falha.
+- **Integrar o master nesta branch** (ciclo 126): `git merge -X no-renames master`. Sem o `no-renames`, o git vê
+  renomeações entre o CORE de referência (`fvtt-cyberpunk-red-core-dev`) e os arquivos do sistema e abre centenas de
+  conflitos falsos de renomear e apagar. Depois, os portões inteiros: a wiki nova muda a referência dos testes.
 
 ## Build
 

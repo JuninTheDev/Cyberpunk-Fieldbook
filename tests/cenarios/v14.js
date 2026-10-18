@@ -70,6 +70,25 @@ module.exports = async ({ edge, servidores, r }) => {
       JSON.stringify(['loja:braco', 'loja:mao', 'loja:olho'].map(uid => [uid, linha(uid).local, linha(uid).em]))];
   });
 
+  // O C30, parte 2: o membro natural (a wiki do master 46eb94a). O Wolvers e o Rippers no braço direito natural (o segundo
+  // é pendência na wiki: uma peça por membro) e o Talon Foot na perna esquerda natural; o cyberbraço no braço esquerdo.
+  let natural;
+  await r.passo('wiki: Solo com peças únicas no membro natural: o Wolvers e o Rippers no braço direito, o Talon Foot na perna esquerda', async () => {
+    const itens = [['braco', 'core_cyberware:cyberarm'], ['wolvers', 'core_cyberware:wolvers'], ['rippers', 'core_cyberware:rippers'], ['garra', 'core_cyberware:talon-foot']]
+      .map(([uid, id]) => ({ uid: `loja:${uid}`, id, qtd: 1 }));
+    const { personagem } = await api('/api/personagens', 'POST', {
+      metodo: 'pacote', lingua: 'Portuguese', casa: 'Heywood', nome: 'Teste Natural', apelido: 'Natural', role: 'solo', lifepath, itens,
+      montagem: { 'loja:braco': { local: 'braco-esquerdo' }, 'loja:wolvers': { local: 'braco-direito' }, 'loja:rippers': { local: 'braco-direito', em: '-' }, 'loja:garra': { local: 'perna-esquerda' } }
+    });
+    await edge.ir(`${wiki}/#criador/${personagem.id}`, 1200);
+    await edge.evaluate(`document.querySelector('.cc-steps [data-step="7"]').click()`);
+    for (let i = 0; i < 30 && !/Salvo/.test(await texto('#cc-save')); i++) await edge.sleep(200);
+    natural = (await api(`/api/personagens/${personagem.id}`)).personagem;
+    const linha = uid => (natural.resultado?.itens || []).find(item => item.uid === uid) || {};
+    return [['loja:wolvers', 'loja:rippers', 'loja:garra'].every(uid => linha(uid).natural === true && !linha(uid).em) && linha('loja:garra').local === 'perna-esquerda',
+      JSON.stringify(['loja:wolvers', 'loja:rippers', 'loja:garra'].map(uid => [uid, linha(uid).natural, linha(uid).local, linha(uid).em]))];
+  });
+
   let nomad;
   await r.passo('wiki: Nomad (Rato de Rua) com dois veículos da família (o carro com Chassis pesado e Upgrade de assento) e uma arma de 2077 comprada na loja', async () => {
     const { personagem } = await api('/api/personagens', 'POST', {
@@ -6879,6 +6898,101 @@ module.exports = async ({ edge, servidores, r }) => {
       } finally {
         await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => a.name === 'Teste Lados')) await ator.delete(); return true; })()`);
       }
+    });
+
+    // O C30, parte 2: o membro natural. Antes a peça única ficava "sem fundação" e, ao instalar, ia para o cyberbraço do
+    // outro lado.
+    await r.passo('wiki: importa o personagem com peças únicas no membro natural: o Wolvers no braço direito e o Talon Foot na perna esquerda ficam no natural, sem pedir fundação, e o Rippers (o segundo no mesmo braço) pede uma; o cyberbraço do outro lado não as recebe; a aba Cyberware, a ficha do item, o recado da instalação e a ficha da mesa mostram, e o cyberbraço levado para o lado tira a peça do natural', async () => {
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const { ator } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(natural.id)}, '');
+          const porUid = uid => ator.items.find(item => item.getFlag('${S}', 'wikiUid') === uid);
+          const [braco, wolvers, rippers, garra] = ['loja:braco', 'loja:wolvers', 'loja:rippers', 'loja:garra'].map(porUid);
+          const estado = item => [item.ladoDoCyberware, item.noMembroNatural, item.semFundacao, item.instaladoNo?.name ?? ''].join('/');
+          const antes = { braco: estado(braco), wolvers: estado(wolvers), rippers: estado(rippers), garra: estado(garra), paraOWolvers: ator.fundacaoPara(wolvers)?.name ?? '' };
+          // A aba Cyberware: "braço natural" e "perna natural" no lugar do SEM FUNDAÇÃO.
+          await ator.sheet.render({ force: true });
+          await esperar(() => ator.sheet.element?.querySelector('.tab.cyberware li[data-item-id="' + wolvers.id + '"]'));
+          const naAba = Object.fromEntries([['wolvers', wolvers], ['rippers', rippers], ['garra', garra]].map(([chave, item]) => {
+            const li = ator.sheet.element.querySelector('.tab.cyberware li[data-item-id="' + item.id + '"]');
+            return [chave, (li?.querySelector('.membro-natural')?.textContent.trim() ?? '') + '/' + Boolean(li?.querySelector('.sem-fundacao'))];
+          }));
+          await ator.sheet.close({ animate: false });
+          await wolvers.sheet.render({ force: true });
+          await esperar(() => wolvers.sheet.element);
+          const fichaDoItem = wolvers.sheet.element.textContent.includes('no membro natural');
+          await wolvers.sheet.close({ animate: false });
+          const volta = game.system.api.wiki.fichaParaAWiki(ator);
+          const linha = item => { const l = volta.itens.find(i => i.id === item.id); return [l.local, l.natural ?? false].join('/'); };
+          const envio = { wolvers: linha(wolvers), rippers: linha(rippers), garra: linha(garra) };
+          await game.system.api.wiki.mandarFicha(ator);
+          // Instalar de novo o Talon Foot: o recado diz que ficou na perna natural.
+          const recados = [];
+          const original = ui.notifications.info;
+          ui.notifications.info = function (mensagem, ...resto) { recados.push(String(mensagem)); return original.call(this, mensagem, ...resto); };
+          try {
+            await garra.update({ 'system.instalado': false });
+            await ator.instalarCyberware(garra, { rolar: false });
+          } finally { ui.notifications.info = original; }
+          // O cyberbraço vai para o braço direito: o Wolvers sai do natural e pede a fundação, que agora é a do lado.
+          await braco.update({ 'system.lado': 'braco-direito' });
+          const depois = { wolvers: estado(wolvers), paraOWolvers: ator.fundacaoPara(wolvers)?.id === braco.id };
+          return { antes, naAba, fichaDoItem, envio, recados, garra: estado(garra), depois };
+        })()`);
+        const doc = (await api(`/api/personagens/${natural.id}`)).personagem;
+        const mesa = Object.fromEntries((doc.mesa?.itens || []).filter(item => ['loja:wolvers', 'loja:rippers', 'loja:garra'].includes(item.uid)).map(item => [item.uid, [item.local, item.natural ?? false].join('/')]));
+        const a = info.antes;
+        const ok = a.braco === 'braco-esquerdo/false/false/' && a.wolvers === 'braco-direito/true/false/' && a.rippers === 'braco-direito/false/true/' && a.garra === 'perna-esquerda/true/false/' && a.paraOWolvers === ''
+          && info.naAba.wolvers === 'braço natural/false' && info.naAba.rippers === '/true' && info.naAba.garra === 'perna natural/false' && info.fichaDoItem
+          && info.envio.wolvers === 'braco-direito/true' && info.envio.rippers === 'braco-direito/false' && info.envio.garra === 'perna-esquerda/true'
+          && mesa['loja:wolvers'] === 'braco-direito/true' && mesa['loja:rippers'] === 'braco-direito/false' && mesa['loja:garra'] === 'perna-esquerda/true'
+          && info.recados.includes('Talon Foot ficou no membro natural (perna esquerda).') && !info.recados.some(texto => /sem fundação/.test(texto)) && info.garra === 'perna-esquerda/true/false/'
+          && info.depois.wolvers === 'braco-direito/false/true/' && info.depois.paraOWolvers;
+        return [ok, JSON.stringify({ ...info, mesa })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => a.name === 'Teste Natural')) await ator.delete(); return true; })()`);
+      }
+    });
+
+    // A migração da mesa do Foundry 12, onde a peça única fica na base Meat Arm ou Meat Leg do CORE (o módulo cpr-2077 cria
+    // a do lado, com o uid "natural:<lado>"; a criada à mão vem só com o nome): a base não entra, a peça fica no natural.
+    await r.passo('migração: "Importar da mesa" com a peça única na base Meat Arm ou Meat Leg do Foundry 12 deixa a base de fora e a peça no membro natural do lado', async () => {
+      const { personagem } = await api('/api/personagens', 'POST', {
+        nome: 'Teste Natural da Mesa', apelido: 'Foundry 12', resultado: {
+          stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 5 }, derivados: { hp: 40 }, humanidade: { atual: 48 }, dinheiro: { saldo: 500 },
+          pericias: [], veiculos: [],
+          itens: [{ uid: 'loja:wolvers', id: 'core_cyberware:wolvers', nome: 'Wolvers', qtd: 1, local: 'braco-direito', natural: true },
+            { uid: 'loja:garra', id: 'core_cyberware:talon-foot', nome: 'Talon Foot', qtd: 1, local: 'perna-esquerda', natural: true }]
+        }
+      });
+      await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
+        ator: 'atorDoF12', nomeAtor: 'Teste Natural da Mesa', quando: '2026-10-18T22:00:00.000Z',
+        stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 4 },
+        hp: { atual: 40, max: 40 }, humanidade: { atual: 40, max: 40 }, sorte: { atual: 5, max: 5 }, sp: { cabeca: 0, corpo: 0 }, dinheiro: 100, ip: 0, reputacao: 0,
+        role: { nome: 'Solo', rank: 4, habilidades: [] }, pericias: [], lesoes: [],
+        itens: [
+          { id: 'f12meatarm', nome: 'Meat Arm — Braço direito', tipo: 'cyberware', qtd: 1, uso: '', uid: 'natural:braco-direito', instalado: true, base: true, local: 'braco-direito', localPlanejado: 'braco-direito',
+            cyber: { tipo: 'cyberArm', tamanho: 0, slots: 1 }, dentro: ['Wolvers'], dentroIds: ['f12wolvers'] },
+          { id: 'f12wolvers', nome: 'Wolvers', tipo: 'cyberware', qtd: 1, uso: '', uid: 'loja:wolvers', instalado: true, base: false, local: 'braco-direito', localPlanejado: 'braco-direito',
+            pai: { id: 'f12meatarm', uid: 'natural:braco-direito', nome: 'Meat Arm — Braço direito' }, cyber: { tipo: 'cyberArm', tamanho: 1, slots: 0 } },
+          { id: 'f12meatleg', nome: 'Meat Leg', tipo: 'cyberware', qtd: 1, uso: '', uid: '', instalado: true, base: true, local: 'perna-esquerda', localPlanejado: 'perna-esquerda',
+            cyber: { tipo: 'cyberLeg', tamanho: 0, slots: 1 }, dentro: ['Talon Foot'], dentroIds: ['f12talon'] },
+          { id: 'f12talon', nome: 'Talon Foot', tipo: 'cyberware', qtd: 1, uso: '', uid: 'loja:garra', instalado: true, base: false, local: 'perna-esquerda', localPlanejado: 'perna-esquerda',
+            pai: { id: 'f12meatleg', uid: '', nome: 'Meat Leg' }, cyber: { tipo: 'cyberLeg', tamanho: 1, slots: 0 } }
+        ]
+      });
+      const info = await edge.evaluate(`(async () => {
+        const { ator, notas } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)}, '');
+        const resultado = {
+          notas, nomes: ator.items.filter(i => i.type === 'cyberware' && /Meat|Wolvers|Talon/.test(i.name)).map(i => i.name).sort(),
+          pecas: ['Wolvers', 'Talon Foot'].map(nome => { const i = ator.items.getName(nome); return [i?.ladoDoCyberware, i?.noMembroNatural, i?.semFundacao].join('/'); })
+        };
+        await ator.delete();
+        return resultado;
+      })()`);
+      const ok = info.nomes.join() === 'Talon Foot,Wolvers' && info.pecas.join() === 'braco-direito/true/false,perna-esquerda/true/false' && !info.notas.some(nota => /Meat/.test(nota));
+      return [ok, JSON.stringify(info)];
     });
 
     await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha; as abas Combate, Equipamento, Cyberware, Role e Vida no jeito das maquetes (a iniciativa, o dinheiro, a Humanidade e a Role na coluna dos números, com 290 px; as armas, as lesões, a munição, o cyberware e as especialidades com as caixas dos pontos; o Lifepath em cinco painéis; as notas da Role e as de ciberpsicose, que gravam)', async () => {

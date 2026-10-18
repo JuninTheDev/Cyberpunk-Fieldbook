@@ -4,7 +4,7 @@ import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  AGARRAO, aplicarDano, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ladoEfetivo, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  AGARRAO, aplicarDano, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics, maosDaArma, maosLivres
 } from './regras.mjs';
@@ -518,7 +518,9 @@ export class AtorCPR extends Actor {
     }
     await item.update({ 'system.instalado': true, 'system.perdaHumanidade.sofrida': perda, 'system.instaladoEm': fundacao?.id ?? '' });
     await this.update({ 'system.humanidade.value': Math.max(0, this.system.humanidade.value - perda) });
-    if (!fundacao && !item.system.fundacional && pedeFundacao(encaixeDe(item))) ui.notifications.info(`${item.name} entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre.`);
+    // A peça única sem fundação do lado fica no membro natural (o C30): o recado diz onde.
+    if (!fundacao && item.noMembroNatural) ui.notifications.info(`${item.name} ficou no membro natural (${nomeDoLado(item.ladoDoCyberware).toLowerCase()}).`);
+    else if (!fundacao && !item.system.fundacional && pedeFundacao(encaixeDe(item))) ui.notifications.info(`${item.name} entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre.`);
     return perda;
   }
 
@@ -528,10 +530,13 @@ export class AtorCPR extends Actor {
     const cabe = fundacao => cabeNaFundacao({ fundacao: encaixeDe(fundacao), opcao: encaixeDe(item), usados: fundacao.instalados.filter(outro => outro.id !== item.id).reduce((soma, outro) => soma + outro.system.tamanho, 0) }).cabe;
     return this.items.filter(outro => outro.type === 'cyberware' && outro.system.fundacional && outro.system.instalado && outro.id !== item.id && cabe(outro));
   }
-  // A fundação onde a opção entra ao instalar: a que ela já aponta, se ainda cabe, ou a primeira.
+  // A fundação onde a opção entra ao instalar: a que ela já aponta, se ainda cabe; senão, a do lado dela (o C30: a opção com
+  // lado não vai para a fundação do outro lado; a sem lado, para qualquer uma).
   fundacaoPara(item) {
     const fundacoes = this.fundacoesPara(item);
-    return fundacoes.find(fundacao => fundacao.id === item.system.instaladoEm) ?? fundacoes[0] ?? null;
+    const opcao = { lado: item.system.lado, tipo: item.system.tipo };
+    const doLado = fundacoes.filter(fundacao => fundacaoDoLado(opcao, { lado: fundacao.ladoDoCyberware, tipo: fundacao.system.tipo }));
+    return fundacoes.find(fundacao => fundacao.id === item.system.instaladoEm) ?? doLado.find(fundacao => fundacao.ladoDoCyberware) ?? doLado[0] ?? null;
   }
   // As opções deste ator que cabem na fundação e ainda não estão nela (o "+ Opção" da aba Cyberware).
   opcoesPara(fundacao) {
@@ -709,7 +714,16 @@ export class ItemCPR extends Item {
   // O cyberware instalado que pede uma fundação (regras.pedeFundacao) e está sem nenhuma: a ficha marca.
   get semFundacao() {
     const s = this.system;
-    return this.type === 'cyberware' && s.instalado && !s.fundacional && !this.instaladoNo && pedeFundacao(encaixeDe(this));
+    return this.type === 'cyberware' && s.instalado && !s.fundacional && !this.instaladoNo && pedeFundacao(encaixeDe(this)) && !this.noMembroNatural;
+  }
+  // A peça única instalada, com lado e sem fundação do mesmo tipo naquele lado, fica no membro natural (o C30, parte 2;
+  // regras.ficaNoMembroNatural). Uma por membro: a primeira (na ordem dos itens) fica; as outras pedem uma fundação.
+  get noMembroNatural() {
+    const s = this.system;
+    if (this.type !== 'cyberware' || s.fundacional || !s.instalado || this.instaladoNo || !this.actor) return false;
+    const ladosComFundacao = this.actor.items.filter(outro => outro.type === 'cyberware' && outro.system.fundacional && outro.system.instalado && outro.system.tipo === s.tipo).map(outro => outro.ladoDoCyberware);
+    const fica = item => item.type === 'cyberware' && !item.system.fundacional && item.system.instalado && !item.instaladoNo && ficaNoMembroNatural({ ...encaixeDe(item), lado: item.system.lado }, ladosComFundacao);
+    return fica(this) && this.actor.items.find(outro => fica(outro) && outro.system.tipo === s.tipo && outro.system.lado === s.lado) === this;
   }
   // O lado do cyberware (o C30): o da fundação para a opção instalada nela; o próprio para a fundação e a peça solta.
   get ladoDoCyberware() {

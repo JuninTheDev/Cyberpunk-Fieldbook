@@ -29,7 +29,7 @@ function cabecalhoDoItem(item) {
     armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE')]],
     municao: () => [[s.tipo, `${s.quantidade} tiros`], []],
     // A fundação: os slots usados; a opção: em qual fundação está (no cyberware de um ator).
-    cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, nomeDoLado(item.ladoDoCyberware), s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`, s.fundacional ? `${item.slotsUsados} de ${s.slots} slots` : item.instaladoNo && `na ${item.instaladoNo.name}`],
+    cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, nomeDoLado(item.ladoDoCyberware), item.noMembroNatural && 'no membro natural', s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`, s.fundacional ? `${item.slotsUsados} de ${s.slots} slots` : item.instaladoNo && `na ${item.instaladoNo.name}`],
       [s.instalado && cheia('INSTALADO'), s.fundacional && vazada('FUNDACIONAL'), item.semFundacao && vazada('SEM FUNDAÇÃO')]],
     lesao: () => [['Lesão crítica', s.local === 'cabeca' ? 'cabeça' : 'corpo'], [cheia('ATIVA')]],
     programa: () => [[CLASSES_PROGRAMA[s.classe] ?? s.classe, item.instaladoNo ? `no ${item.instaladoNo.name}` : 'fora do deck'], [s.ativo && cheia('ATIVO')]],

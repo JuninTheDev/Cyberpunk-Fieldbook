@@ -716,6 +716,31 @@ export const nomeDoLado = lado => Object.values(LADOS_DO_CYBERWARE).flat().find(
 export const ladoValido = (lado, tipo) => (ladosDoTipo(tipo).some(([id]) => id === lado) ? lado : '');
 // O lado de uma peça: a opção numa fundação fica no lado da fundação; a fundação e a peça solta, no próprio.
 export const ladoEfetivo = ({ lado = '', tipo = '', fundacao = null }) => (fundacao ? ladoValido(fundacao.lado, fundacao.tipo) : ladoValido(lado, tipo));
+// A fundação que a opção com lado aceita ao instalar: a do mesmo lado ou uma sem lado, nunca a do outro lado (a wiki: a
+// base escolhida nunca vira outra em silêncio). Sem lado, qualquer uma.
+export const fundacaoDoLado = (opcao, fundacao) => {
+  const lado = ladoValido(opcao.lado, opcao.tipo);
+  const daFundacao = ladoValido(fundacao.lado, fundacao.tipo);
+  return !lado || !daFundacao || daFundacao === lado;
+};
+
+// O membro natural (o C30, parte 2): a peça única vai num braço ou numa perna sem cyberbraço ou cyberperna daquele lado,
+// como no RED ("peça única num braço orgânico"). A lista é a da wiki (personagem-cyberware.js), pelo id do catálogo da
+// loja. O CORE faz o mesmo com a base Meat Arm ou Meat Leg, de graça e sem Humanidade ("a única peça instalada").
+export const PECAS_UNICAS = {
+  cyberArm: ['core_cyberware:big-knucks', 'core_cyberware:tool-hand', 'core_cyberware:rippers', 'core_cyberware:scratchers', 'core_cyberware:slice-n-dice',
+    'core_cyberware:wolvers', 'black-chrome_cyberware:modular-finger-cyberhand', 'cyberware-2077:ballistic-coprocessor'],
+  cyberLeg: ['core_cyberware:talon-foot', 'cyberware-2077:lynx-paws']
+};
+export const ehPecaUnica = ({ catalogo = '', tipo = '' }) => (PECAS_UNICAS[tipo] ?? []).includes(catalogo);
+// A peça fica no membro natural? Peça única, com lado, e nenhuma fundação do mesmo tipo instalada naquele lado.
+export const ficaNoMembroNatural = ({ catalogo = '', tipo = '', lado = '' }, ladosComFundacao = []) => {
+  const ladoDaPeca = ladoValido(lado, tipo);
+  return ehPecaUnica({ catalogo, tipo }) && Boolean(ladoDaPeca) && !ladosComFundacao.includes(ladoDaPeca);
+};
+// A base do membro natural que o Foundry 12 faz (o uid "natural:<lado>" da wiki, ou o nome do CORE com o lado): na
+// migração da mesa ela não entra, e a peça fica no membro natural.
+export const ehBaseNatural = ({ uid = '', nome = '' }) => /^natural:/.test(uid) || /^Meat (Arm|Leg)( — .*)?$/.test(nome);
 // A opção cabe na fundação? O encaixe bate e sobram slots (usados: o tamanho das opções que já estão nela).
 export function cabeNaFundacao({ fundacao, opcao, usados = 0 }) {
   if (encaixeDaFundacao(fundacao) !== encaixeDaOpcao(opcao)) return { cabe: false, motivo: 'encaixe' };

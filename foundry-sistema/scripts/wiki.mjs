@@ -10,7 +10,7 @@ import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
-import { ladoValido, linhaDoExtrato, periciaPropria } from './regras.mjs';
+import { ehBaseNatural, ladoValido, linhaDoExtrato, periciaPropria } from './regras.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
 const GERACAO = 14;
@@ -269,6 +269,8 @@ export function fichaParaAWiki(ator) {
     if (item.type === 'cyberware') {
       Object.assign(linha, { instalado: x.instalado, base: x.fundacional, cyber: { tipo: x.tipo, tamanho: x.tamanho, slots: x.fundacional ? x.slots : 0 } });
       if (item.ladoDoCyberware) linha[x.instalado ? 'local' : 'localPlanejado'] = item.ladoDoCyberware;
+      // A peça única no membro natural (o C30, parte 2), como a wiki marca na montagem.
+      if (item.noMembroNatural) linha.natural = true;
     }
     if (item.type === 'veiculo') {
       const base = item._source.system;
@@ -460,6 +462,8 @@ export async function importarDaMesa(id, donoId = '') {
   const linhas = [];
   const dados = [];
   for (const item of m.itens) {
+    // A base do membro natural do Foundry 12 (Meat Arm, Meat Leg) não entra: a peça dela fica no membro natural, com o lado.
+    if (ehBaseNatural(item)) continue;
     const idDoItem = idNoCatalogo(catalogo, doc, item);
     if (!idDoItem) { notas.push(`${item.nome}: não achei no catálogo deste sistema; crie à mão.`); continue; }
     const data = foundry.utils.deepClone(catalogo[idDoItem]);

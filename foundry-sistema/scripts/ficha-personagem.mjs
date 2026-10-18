@@ -218,7 +218,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const arvore = doCyber.filter(item => !naFundacao(item)).flatMap(item => [{ item, opcao: false }, ...item.instalados.map(outro => ({ item: outro, opcao: true }))]);
     const cyberwares = arvore.map(({ item, opcao }) => ({
       id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', '),
-      opcao, slots: item.system.fundacional ? `${item.slotsUsados} / ${item.system.slots}` : '', semFundacao: item.semFundacao, lado: nomeDoLado(item.ladoDoCyberware)
+      opcao, slots: item.system.fundacional ? `${item.slotsUsados} / ${item.system.slots}` : '', semFundacao: item.semFundacao, lado: nomeDoLado(item.ladoDoCyberware),
+      membroNatural: item.noMembroNatural ? (item.system.tipo === 'cyberLeg' ? 'perna natural' : 'braço natural') : ''
     }));
     // As lesões, com o paliativo e o tratamento (as DVs de cada perícia).
     const dvs = pares => pares.filter(([, dv]) => dv).map(([pericia, dv]) => `${pericia} DV${dv}`).join(' ou ');
