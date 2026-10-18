@@ -443,9 +443,10 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   tiro mirado e +1 no tiro único, sempre. Agora vale a wiki: o do RED dá "+1 em tiros mirados contra alvos a 51 m ou
   mais"; o de 2077, "+1 em tiro único ou mirado" a 51 m ou mais ("instalar mais de um não soma, e não acumula com a
   Sniping Scope da arma"). Os dois entram como a luneta, pela distância do primeiro alvo.
-  - **Para a mesa saber:** a wiki de 2077 diz que, nos itens com o mesmo nome de um do RED (Kerenzikov, TeleOptics,
-    Biomonitor), "vale a versão de 2077". A loja da wiki vende as duas versões, e o sistema segue a regra de cada uma.
-    Se a mesa quiser só a de 2077, é tirar a do RED da loja.
+  - **Desde a wiki de 2026-10-17 (C29, ciclo 107):** a revisão do suplemento diz o contrário de antes: "Cyberware que
+    repete um do RED (vale o do RED): o Kerenzikov, o TeleOptics, [...]". O de 2077 saiu da loja e do catálogo, e o
+    sistema conta o que um ator ainda tenha (pelo id antigo ou pelo nome "TeleOptics (2077)") como o do RED: +1 só no
+    mirado. Antes, a wiki dizia "vale a versão de 2077", e a loja vendia as duas.
   - **Um ator que já tinha o TeleOptics do RED** (importado antes do ciclo 26) guarda o efeito antigo do CORE (+1 no
     mirado, sempre) até ser importado de novo; os novos vêm sem ele.
 
@@ -5249,6 +5250,40 @@ Commit anterior: `2e8c159f` (a reserva; o ciclo 105 é o `c7ee93d5`).
   94; agora tem 6 no G3 e 3 no G4.
 - **Próximo:** outra parte do C29 (as armas de 2077 pelo Mission Kit, o TeleOptics de 2077, a fundação e as opções, ou
   as Roles).
+
+### Ciclo 107 (2026-10-18): o C29, parte 3: o TeleOptics de 2077 vale o do RED (sessão KouArt)
+
+Commit anterior: `c00c3857` (a reserva; o ciclo 106 é o `87c44b4b`).
+
+- **A referência (a wiki de 2026-10-17):**
+  - **o catálogo (`system-catalog.js`):** o TeleOptics dá "+1 em tiros mirados contra alvos a 51 m ou mais";
+  - **a revisão do suplemento de fã (`system-2077.js`):** "Cyberware que repete um do RED (vale o do RED): o Kerenzikov,
+    o TeleOptics, o Pain Editor, o Subdermal Armour e o Biomonitor de 2077 [...]". O TeleOptics de 2077 saiu da wiki e
+    do catálogo (o ciclo 106). Antes, ele dava +1 também no tiro único.
+- **Implementado (`regras.mjs`):**
+  - **`TELEOPTICS`:** só o do RED;
+  - **`tipoDeTeleOptics`:** o TeleOptics de 2077 que um ator ainda tenha (de antes da wiki de 2026-10-17), pelo id antigo
+    do catálogo ou pelo nome "TeleOptics (2077)", é o do RED: +1 só no tiro mirado, e uma vez só com o outro.
+- **Testes (a wiki nova):**
+  - **`tests/sistema/regras.test.mjs`, o TeleOptics:** o texto da revisão ("vale o do RED") e a falta do de 2077 na wiki;
+    só o do RED nas regras; o de 2077, pelo id e pelo nome, é o do RED; uma vez só; nada no tiro único; o catálogo sem
+    o de 2077;
+  - **`tests/sistema/migracao.test.mjs`, o passo 1:** o exemplo de "outro cyberóptico" era o de 2077, que saiu do
+    catálogo; no lugar, o Targeting Scope (com o Anti-Dazzle, como antes);
+  - **`tests/cenarios/v14.js`, a janela de rolagem:** o de 2077 (feito à mão, com o nome e o id antigo do catálogo) no
+    tiro único só traz a luneta; no mirado, o TeleOptics marcado e a luneta desmarcada.
+- **Resultados:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 128 de 136 (2 das conhecidas passaram: o TeleOptics e o passo 1 da migração; ficam 8);
+  - G4: 121 de 128 (o passo da janela de rolagem passou; ficam 7 conhecidas);
+  - **mutações:** as 4 caíram no G3 (a regra é pura), e o arquivo voltou (conferido pelo md5):
+    - o de 2077 que não vale o do RED, nem pelo id nem pelo nome (T1);
+    - o do RED também no tiro único (T2);
+    - só pelo id antigo, sem o nome (T3);
+    - só pelo nome, sem o id antigo (T4).
+- **A dúvida do TeleOptics** (nas dúvidas de regra): a wiki de 2077 dizia "vale a versão de 2077" nos itens com o nome
+  de um do RED; agora diz "vale o do RED". A dúvida ganhou a mudança.
+- **Próximo:** outra parte do C29 (a fundação e as opções, as Roles ou as armas de 2077 pelo Mission Kit).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

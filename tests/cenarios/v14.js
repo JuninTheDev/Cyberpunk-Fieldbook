@@ -1128,7 +1128,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.tokens === 4 && info.alvo === 10 && info.capanga === 12 && info.longe === 28 && info.sp === 11, JSON.stringify(info)];
     });
 
-    await r.passo('janela de rolagem no ataque e na iniciativa: o Atacar da ficha abre a janela antes de gastar a bala (cancelar não gasta nem rola); a luneta de precisão vem marcada contra o alvo a 51 m ou mais e desmarcada perto; os TeleOptics pela wiki (o do RED só no mirado, o de 2077 também no tiro único; a luneta não acumula com eles); o que se marca entra no ataque; sem a janela, a luneta entra sozinha quando vale; a iniciativa de quem tem Sandevistan abre a janela com o +3 marcado, e "Rolar direto" rola com ele', async () => {
+    await r.passo('janela de rolagem no ataque e na iniciativa: o Atacar da ficha abre a janela antes de gastar a bala (cancelar não gasta nem rola); a luneta de precisão vem marcada contra o alvo a 51 m ou mais e desmarcada perto; os TeleOptics pela wiki (só no mirado; o de 2077, que saiu da wiki de 2026-10-17, vale o do RED; a luneta não acumula com eles); o que se marca entra no ataque; sem a janela, a luneta entra sozinha quando vale; a iniciativa de quem tem Sandevistan abre a janela com o +3 marcado, e "Rolar direto" rola com ele', async () => {
       // Atores e tokens só deste passo (apagados no fim): o Atirador de Elite (REF 8, Armas de Ombro 4, rifle com a luneta,
       // Sandevistan), o Perto (a 4 m) e o Telhado (10 m no chão e 52 m acima: mais de 51 m).
       const ATQ = `(() => { const a = game.actors.getName('Atirador de Elite'); const rifle = a.items.getName('Assault Rifle'); return { a, rifle }; })()`;
@@ -1181,7 +1181,7 @@ module.exports = async ({ edge, servidores, r }) => {
         })()`);
 
         // A2. Os TeleOptics pela wiki, contra o Telhado (cancelando): o do RED no mirado, marcado, e a luneta desmarcada (não
-        // acumula); no tiro único, só a luneta; o de 2077, no tiro único, marcado, e a luneta desmarcada.
+        // acumula); no tiro único, só a luneta; o de 2077 (o do RED): no tiro único, só a luneta, e no mirado, o TeleOptics.
         const teleoptics = await edge.evaluate(`(async () => {
           const { a, rifle } = ${ATQ};
           const cat = await game.system.api.wiki.carregarCatalogo();
@@ -1207,13 +1207,23 @@ module.exports = async ({ edge, servidores, r }) => {
           linha().querySelector('[data-action="atacar"]').click();
           const redTiro = await ler();
           await red.delete();
-          const novo = await instalar('cyberware-2077:teleoptics-2077');
+          // O de 2077, que saiu da wiki de 2026-10-17 (C29), como o de um ator de antes: o nome e o id antigo do catálogo. Vale
+          // o do RED: no tiro único, só a luneta; no mirado, o TeleOptics.
+          const dados2077 = foundry.utils.deepClone(cat['core_cyberware:teleoptics']);
+          dados2077.name = 'TeleOptics (2077)';
+          dados2077.system.instalado = true;
+          foundry.utils.setProperty(dados2077, 'flags.${S}.catalogo', 'cyberware-2077:teleoptics-2077');
+          const novo = (await a.createEmbeddedDocuments('Item', [dados2077]))[0];
           await __esperar(() => linha());
           linha().querySelector('[data-action="atacar"]').click();
           const tiro2077 = await ler();
+          linha().querySelector('[data-action="mirar"]').click();
+          await __esperar(() => document.querySelector('.application.dialog.mirar:not(.minimizing) button[data-action="cabeca"]'));
+          document.querySelector('.application.dialog.mirar:not(.minimizing) button[data-action="cabeca"]').click();
+          const mirado2077 = await ler();
           await novo.delete();
           await __esperar(() => linha());
-          return { redMirado, redTiro, tiro2077, pente: rifle.system.pente.value };
+          return { redMirado, redTiro, tiro2077, mirado2077, pente: rifle.system.pente.value };
         })()`);
 
         // B. Pela janela, contra o Perto: o modificador do mestre e a Sorte entram; a luneta, não. d10 5; o dano 5 × 1.
@@ -1279,7 +1289,8 @@ module.exports = async ({ edge, servidores, r }) => {
           && /Assault Rifle/.test(telhado.titulo) && telhado.partes.join() === 'REF +8,Armas de Ombro +4,1d10' && telhado.situacionais.join() === luneta + ' [x]' && telhado.total === '13'
           && !telhado.rolou && telhado.pente === 25 && perto.situacionais.join() === luneta + ' [ ]' && perto.total === '12' && !perto.rolou && perto.pente === 25
           && teleoptics.redMirado.join(' / ') === ['TeleOptics: tiro mirado a 51 m ou mais +1 [x]', luneta + ' [ ]'].join(' / ') && teleoptics.redTiro.join() === luneta + ' [x]'
-          && teleoptics.tiro2077.join(' / ') === ['TeleOptics (2077): tiro único a 51 m ou mais +1 [x]', luneta + ' [ ]'].join(' / ') && teleoptics.pente === 25
+          && teleoptics.tiro2077.join() === luneta + ' [x]' && teleoptics.mirado2077.join(' / ') === ['TeleOptics: tiro mirado a 51 m ou mais +1 [x]', luneta + ' [ ]'].join(' / ')
+          && teleoptics.pente === 25
           && pelaJanela.cartao && pelaJanela.partes.includes('Modificador do mestre +2') && pelaJanela.partes.includes('Sorte +1') && !pelaJanela.partes.some(parte => parte.startsWith('Sniping'))
           && pelaJanela.total === 8 + 4 + 2 + 1 + 5 && pelaJanela.pente === 24 && pelaJanela.sorte === 4
           && direto.partes.includes(luneta) && direto.total === 8 + 4 + 1 + 6 && direto.pente === 23

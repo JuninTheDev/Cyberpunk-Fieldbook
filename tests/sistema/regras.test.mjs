@@ -1506,24 +1506,26 @@ test('Luneta de precisão (wiki: "+1 em tiro único ou tiro mirado contra alvo a
   assert.match(loja, /\+1 em tiro único ou tiro mirado contra alvo a 51 m ou mais\. Não acumula com cyberware óptico\./);
 });
 
-test('TeleOptics pela wiki (decisão do usuário): o do RED, +1 no tiro mirado a 51 m ou mais; o de 2077, no tiro único ou no mirado; cada tipo uma vez; o catálogo sem o +1 de sempre do CORE', () => {
+test('TeleOptics pela wiki (decisão do usuário): +1 no tiro mirado a 51 m ou mais; o de 2077 saiu da wiki de 2026-10-17 e vale o do RED; uma vez só; o catálogo sem o +1 de sempre do CORE', () => {
   const catalogoDaWiki = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
   assert.match(catalogoDaWiki, /\['TeleOptics', 'Visão detalhada até 800 m; \+1 em tiros mirados contra alvos a 51 m ou mais\.'/);
   const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
-  assert.match(de2077, /ware\('TeleOptics \(2077\)'.*Contra alvos a 51 m ou mais, <b>\+1 em tiro único ou mirado<\/b>\. Instalar mais de um não soma, e não acumula com a Sniping Scope da arma\./);
-  assert.equal(regras.tipoDeTeleOptics('TeleOptics'), 'core_cyberware:teleoptics');
-  assert.equal(regras.tipoDeTeleOptics('Olhos', 'cyberware-2077:teleoptics-2077'), 'cyberware-2077:teleoptics-2077');
-  assert.equal(regras.tipoDeTeleOptics('Kiroshi Optics'), null);
+  assert.ok(de2077.includes('<b>Cyberware que repete um do RED</b> (vale o do RED): o <b>Kerenzikov</b>, o <b>TeleOptics</b>,'));
+  assert.doesNotMatch(de2077, /ware\('TeleOptics \(2077\)'/, 'o TeleOptics de 2077 saiu da wiki');
   const red = 'core_cyberware:teleoptics';
-  const v2077 = 'cyberware-2077:teleoptics-2077';
-  assert.deepEqual(regras.teleopticsNoTiro([red, v2077, null], { mirado: true }), [red, v2077]);
-  assert.deepEqual(regras.teleopticsNoTiro([red, v2077], { mirado: false }), [v2077]);
-  assert.deepEqual(regras.teleopticsNoTiro([v2077, v2077], { mirado: false }), [v2077]);
+  assert.deepEqual(Object.keys(regras.TELEOPTICS), [red]);
+  assert.equal(regras.tipoDeTeleOptics('TeleOptics'), red);
+  // O de 2077 que um ator ainda tenha (de antes da wiki de 2026-10-17): pelo id antigo do catálogo ou pelo nome, o do RED.
+  assert.equal(regras.tipoDeTeleOptics('Olhos', 'cyberware-2077:teleoptics-2077'), red);
+  assert.equal(regras.tipoDeTeleOptics('TeleOptics (2077)'), red);
+  assert.equal(regras.tipoDeTeleOptics('Kiroshi Optics'), null);
+  assert.deepEqual(regras.teleopticsNoTiro([red, red, null], { mirado: true }), [red]);
+  assert.deepEqual(regras.teleopticsNoTiro([red], { mirado: false }), []);
   assert.equal(regras.deLonge(51), true);
   assert.equal(regras.deLonge(50.9), false);
   assert.equal(regras.deLonge(undefined), false);
   assert.deepEqual(catalogo[red].effects, []);
-  assert.deepEqual(catalogo[v2077].effects, []);
+  assert.equal(catalogo['cyberware-2077:teleoptics-2077'], undefined, 'o catálogo sem o de 2077');
 });
 
 test('A conta da defesa na janela de reação (como a "Ataque!" do Fluxo): as partes do teste, a penalidade com o sinal, o 1d10 e a média', () => {

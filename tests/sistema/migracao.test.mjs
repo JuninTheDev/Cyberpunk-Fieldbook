@@ -48,8 +48,9 @@ test('Migração, passo 1 (TeleOptics pela wiki, ciclo 26): o +1 de sempre do CO
   const depois = migrarDados(antigo, { documento: 'Item', passos: [passo(1)], catalogo });
   assert.deepEqual(depois.effects.map(e => e._id), ['efeitodomestre01']);
   assert.equal(antigo.effects.length, 2, 'os dados de entrada ficam como estavam');
-  // O mesmo efeito num cyberware que não é o TeleOptics do RED (o de 2077, outro cyberóptico): fica.
-  for (const id of ['cyberware-2077:teleoptics-2077', 'core_cyberware:anti-dazzle']) {
+  // O mesmo efeito num cyberware que não é o TeleOptics do RED (outros cyberópticos): fica. O de 2077 saiu do catálogo
+  // com a wiki de 2026-10-17 (C29), e no lugar dele vai o Targeting Scope.
+  for (const id of ['core_cyberware:targeting-scope', 'core_cyberware:anti-dazzle']) {
     const outro = doCatalogo(id, dados => ({ ...dados, effects: [efeitoAntigoDoTeleOptics('efeitoantigo0002')] }));
     assert.equal(migrarDados(outro, { documento: 'Item', passos: [passo(1)], catalogo }).effects.length, 1, id);
   }

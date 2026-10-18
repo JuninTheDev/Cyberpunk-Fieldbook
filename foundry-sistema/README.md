@@ -196,7 +196,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Atacar:** tiro, ou corpo a corpo com arma branca.
   - **Mirar:** −8, na cabeça (o dano que passa dobra), na perna (se passar dano, Perna quebrada) ou no item na mão (o alvo larga).
   - **Luneta de precisão** na arma: +1 em tiro único ou mirado contra alvo a 51 m ou mais, se o cyberware óptico já não dá o bônus (wiki). Ela entra sozinha quando vale, e a janela de rolagem a traz marcada ou não.
-  - **TeleOptics** (pela wiki): o do RED, +1 no tiro mirado contra alvo a 51 m ou mais; o de 2077, +1 no tiro único ou no mirado, a 51 m ou mais (dois não somam). Como a luneta, entra sozinho quando vale, e a luneta não acumula com ele.
+  - **TeleOptics** (pela wiki): +1 no tiro mirado contra alvo a 51 m ou mais. O de 2077 saiu da wiki de 2026-10-17 ("vale o do RED"; ciclo 107): o que um ator ainda tenha conta como o do RED (dois não somam). Como a luneta, entra sozinho quando vale, e a luneta não acumula com ele.
   - **Autofogo:** a perícia Autofogo contra a tabela de autofogo. O dano é 2d6 × quanto passou, até o máximo da arma. Gasta 10 balas.
   - **Supressivo:** sem alvo marcado, pega todos a até 25 m e à vista. Cada um rola WILL + Concentração contra o ataque, e quem perde fica **Suprimido** até o fim do próximo turno dele. Gasta 10 balas.
   - **Espingarda com cartucho** (pela munição): um ataque contra DV 13. Se acertar, cada alvo a até 6 m leva 3d6, rolados uma vez.

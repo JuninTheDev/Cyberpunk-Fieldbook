@@ -378,16 +378,20 @@ export const LUNETA = { valor: 1, metros: LONGE };
 export const ehLuneta = (nome, catalogo = '') => catalogo === 'core_upgrades:sniping-scope' || /^sniping scope$/i.test(String(nome).trim());
 export const lunetaVale = ({ metros, bonusOptico = 0 }) => deLonge(metros) && !(Number(bonusOptico) > 0);
 // TeleOptics (cyberóptico), pela wiki (decisão do usuário, 2026-10-12; o CORE dava +1 no mirado e no tiro único, sempre):
-// o do RED dá "+1 em tiros mirados contra alvos a 51 m ou mais"; o de 2077, "+1 em tiro único ou mirado" contra alvos a
-// 51 m ou mais ("instalar mais de um não soma, e não acumula com a Sniping Scope da arma").
+// "+1 em tiros mirados contra alvos a 51 m ou mais". O de 2077 saiu da wiki de 2026-10-17 ("Cyberware que repete um do
+// RED (vale o do RED): o Kerenzikov, o TeleOptics, ..."; C29): o item de 2077 que um ator ainda tenha, pelo id antigo do
+// catálogo ou pelo nome, é o do RED.
 export const TELEOPTICS = {
-  'core_cyberware:teleoptics': { nome: 'TeleOptics', tiroUnico: false },
-  'cyberware-2077:teleoptics-2077': { nome: 'TeleOptics (2077)', tiroUnico: true }
+  'core_cyberware:teleoptics': { nome: 'TeleOptics', tiroUnico: false }
 };
+const TELEOPTICS_DO_RED = { 'cyberware-2077:teleoptics-2077': 'core_cyberware:teleoptics', 'teleoptics (2077)': 'core_cyberware:teleoptics' };
 // Qual TeleOptics é o item, pelo id do catálogo ou pelo nome; null se não é um.
-export const tipoDeTeleOptics = (nome, catalogo = '') => (TELEOPTICS[catalogo] ? catalogo : Object.keys(TELEOPTICS).find(id => TELEOPTICS[id].nome.toLowerCase() === String(nome).trim().toLowerCase()) ?? null);
-// Os TeleOptics (os tipos) que servem neste tiro: o do RED no mirado; o de 2077 no tiro único ou no mirado. Cada tipo,
-// uma vez.
+export const tipoDeTeleOptics = (nome, catalogo = '') => {
+  if (TELEOPTICS[catalogo]) return catalogo;
+  const chave = String(nome).trim().toLowerCase();
+  return TELEOPTICS_DO_RED[catalogo] ?? TELEOPTICS_DO_RED[chave] ?? Object.keys(TELEOPTICS).find(id => TELEOPTICS[id].nome.toLowerCase() === chave) ?? null;
+};
+// Os TeleOptics (os tipos) que servem neste tiro: o do RED, no mirado. Cada tipo, uma vez.
 export const teleopticsNoTiro = (tipos, { mirado }) => [...new Set(tipos.filter(Boolean))].filter(tipo => mirado || TELEOPTICS[tipo]?.tiroUnico);
 export const DV_CARTUCHO = 13;
 export const ALCANCE_CARTUCHO = 6;
