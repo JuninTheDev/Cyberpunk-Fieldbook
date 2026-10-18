@@ -275,6 +275,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   Na mesma rodada, Agarrar mostrou outra ordem assíncrona: as marcas chegam antes do cartão. O passo espera também
   a mensagem nova antes de ler o resultado, mantendo a conferência dos valores.
 
+- **O que a wiki ainda recusa** (ciclo 121): a API do master manda 409 ao Foundry que não declara um suporte (`roles=2`, as
+  duas Roles; `locais=1`, o lado do cyberware), para um importador antigo não criar um ator pela metade. O sistema só
+  declara o suporte no mesmo ciclo em que passa a guardar o dado, e o passo do G4 importa um personagem com ele: sem a
+  declaração, a importação cai no 409 e o passo falha.
+
 ## Build
 
 - **O que o build baixa é conferido.** A tag do CORE tem de ser do commit `75b8c9d…`, e o js-yaml (código que roda no

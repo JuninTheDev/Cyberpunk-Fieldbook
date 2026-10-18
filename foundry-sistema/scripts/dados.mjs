@@ -264,6 +264,9 @@ export class DadosCyberware extends foundry.abstract.TypeDataModel {
       // vazio, sem fundação (regras.pedeFundacao: a fashionware e o cyberware interno e externo usam os slots de categoria).
       slots: inteiro(0, { min: 0 }),
       instaladoEm: texto(),
+      // O lado do cyberbraço, da cyberperna e do cyberolho (regras.LADOS_DO_CYBERWARE, os ids da wiki); vazio, sem lado. A
+      // opção numa fundação fica no lado da fundação (o ladoDoCyberware do item).
+      lado: texto(),
       // Fórmula e média do livro; "sofrida" é o quanto custou na instalação (volta se tirar).
       perdaHumanidade: new fields.SchemaField({ formula: texto('0'), media: inteiro(0, { min: 0 }), sofrida: inteiro(0, { min: 0 }) }),
       local: texto('mall'),

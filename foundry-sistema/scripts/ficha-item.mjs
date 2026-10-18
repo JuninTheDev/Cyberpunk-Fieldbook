@@ -3,7 +3,7 @@
 import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { PERICIAS } from './gerado.mjs';
-import { FALHAS_DA_ARMA, programaDeAtaque } from './regras.mjs';
+import { FALHAS_DA_ARMA, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
@@ -29,7 +29,7 @@ function cabecalhoDoItem(item) {
     armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE')]],
     municao: () => [[s.tipo, `${s.quantidade} tiros`], []],
     // A fundação: os slots usados; a opção: em qual fundação está (no cyberware de um ator).
-    cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`, s.fundacional ? `${item.slotsUsados} de ${s.slots} slots` : item.instaladoNo && `na ${item.instaladoNo.name}`],
+    cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, nomeDoLado(item.ladoDoCyberware), s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`, s.fundacional ? `${item.slotsUsados} de ${s.slots} slots` : item.instaladoNo && `na ${item.instaladoNo.name}`],
       [s.instalado && cheia('INSTALADO'), s.fundacional && vazada('FUNDACIONAL'), item.semFundacao && vazada('SEM FUNDAÇÃO')]],
     lesao: () => [['Lesão crítica', s.local === 'cabeca' ? 'cabeça' : 'corpo'], [cheia('ATIVA')]],
     programa: () => [[CLASSES_PROGRAMA[s.classe] ?? s.classe, item.instaladoNo ? `no ${item.instaladoNo.name}` : 'fora do deck'], [s.ativo && cheia('ATIVO')]],
@@ -82,6 +82,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const fonte = item._source.system;
     const tipo = item.type;
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
+    // O lado (o C30): a fundação e a peça solta escolhem; a opção numa fundação fica no lado dela, que a ficha só mostra.
+    const naFundacao = tipo === 'cyberware' && !fonte.fundacional && item.instaladoNo?.type === 'cyberware' && item.instaladoNo.system.fundacional;
     const veiculosDaArma = { '': 'Sem montagem', ...Object.fromEntries((item.actor?.items.filter(i => i.type === 'veiculo') ?? []).map(i => [i.id, i.name])) };
     if (tipo === 'arma' && fonte.instaladoEm && !(fonte.instaladoEm in veiculosDaArma)) veiculosDaArma[fonte.instaladoEm] = 'Veículo ausente';
     return Object.assign(contexto, {
@@ -110,6 +112,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       qualidades: comAtual(QUALIDADES, (tipo === 'arma' || tipo === 'cyberdeck') && fonte.qualidade),
       falhasDaArma: comAtual(Object.fromEntries(Object.entries(FALHAS_DA_ARMA).map(([id, efeito]) => [id, efeito.rotulo])), tipo === 'arma' && fonte.falhaCritica),
       tiposCyberware: comAtual(TIPOS_CYBERWARE, tipo === 'cyberware' && fonte.tipo),
+      lados: tipo === 'cyberware' && !naFundacao && ladosDoTipo(fonte.tipo).length ? comAtual({ '': 'Sem lado', ...Object.fromEntries(ladosDoTipo(fonte.tipo)) }, fonte.lado) : null,
+      ladoDaFundacao: naFundacao && ladosDoTipo(item.instaladoNo.system.tipo).length ? nomeDoLado(item.ladoDoCyberware) || 'Sem lado' : '',
       usos: USOS,
       ativacoes: ATIVACOES,
       tiposRoupa: comAtual(TIPOS_ROUPA, tipo === 'roupa' && fonte.tipo),

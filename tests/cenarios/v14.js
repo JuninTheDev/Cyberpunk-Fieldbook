@@ -52,6 +52,24 @@ module.exports = async ({ edge, servidores, r }) => {
     return [roles.join() === 'solo 5,netrunner 3', `roles do resultado: ${roles.join(', ')}`];
   });
 
+  // O C30: o lado do cyberware (a wiki do master de 2026-10-17, personagem-cyberware.js). Com lado, a wiki só manda a
+  // ficha a um Foundry que pede o "locais=1".
+  let comLados;
+  await r.passo('wiki: Solo com lado no cyberware: o cyberbraço no braço esquerdo, com a Mão de ferramentas nele, e o cyberolho no olho direito', async () => {
+    const itens = [['braco', 'core_cyberware:cyberarm'], ['mao', 'core_cyberware:tool-hand'], ['olho', 'core_cyberware:cybereye']].map(([uid, id]) => ({ uid: `loja:${uid}`, id, qtd: 1 }));
+    const { personagem } = await api('/api/personagens', 'POST', {
+      metodo: 'pacote', lingua: 'Portuguese', casa: 'Heywood', nome: 'Teste Lados', apelido: 'Lados', role: 'solo', lifepath, itens,
+      montagem: { 'loja:braco': { local: 'braco-esquerdo' }, 'loja:mao': { em: 'loja:braco' }, 'loja:olho': { local: 'olho-direito' } }
+    });
+    await edge.ir(`${wiki}/#criador/${personagem.id}`, 1200);
+    await edge.evaluate(`document.querySelector('.cc-steps [data-step="7"]').click()`);
+    for (let i = 0; i < 30 && !/Salvo/.test(await texto('#cc-save')); i++) await edge.sleep(200);
+    comLados = (await api(`/api/personagens/${personagem.id}`)).personagem;
+    const linha = uid => (comLados.resultado?.itens || []).find(item => item.uid === uid) || {};
+    return [linha('loja:braco').local === 'braco-esquerdo' && linha('loja:mao').em === 'loja:braco' && linha('loja:mao').local === 'braco-esquerdo' && linha('loja:olho').local === 'olho-direito',
+      JSON.stringify(['loja:braco', 'loja:mao', 'loja:olho'].map(uid => [uid, linha(uid).local, linha(uid).em]))];
+  });
+
   let nomad;
   await r.passo('wiki: Nomad (Rato de Rua) com dois veículos da família (o carro com Chassis pesado e Upgrade de assento) e uma arma de 2077 comprada na loja', async () => {
     const { personagem } = await api('/api/personagens', 'POST', {
@@ -6608,6 +6626,58 @@ module.exports = async ({ edge, servidores, r }) => {
         return [ok, JSON.stringify({ info, mesa, daMesa })];
       } finally {
         await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => a.name === 'Teste Duas Roles')) await ator.delete(); return true; })()`);
+      }
+    });
+
+    // O C30, parte 1: o lado do cyberware. Antes a wiki recusava (409) mandar a ficha ao Foundry 14.
+    await r.passo('wiki: importa o personagem com lado no cyberware: o cyberbraço no braço esquerdo, a Mão de ferramentas no lado dele e o cyberolho no direito; a ficha do item escolhe o lado, a aba Cyberware mostra, e a ficha da mesa e a migração da mesa levam o lado', async () => {
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(comLados.id)}, '');
+          const porUid = uid => ator.items.find(item => item.getFlag('${S}', 'wikiUid') === uid);
+          const [braco, mao, olho] = ['loja:braco', 'loja:mao', 'loja:olho'].map(porUid);
+          const lados = [braco, mao, olho].map(item => [item?.system.lado, item?.ladoDoCyberware]);
+          // A ficha do item: a fundação escolhe o lado; a opção numa fundação mostra o lado dela.
+          await braco.sheet.render({ force: true });
+          await esperar(() => braco.sheet.element?.querySelector('select[name="system.lado"]'));
+          const seletor = braco.sheet.element.querySelector('select[name="system.lado"]');
+          const ficha = { opcoes: [...seletor.options].map(o => o.value), valor: seletor.value };
+          await braco.sheet.close({ animate: false });
+          await mao.sheet.render({ force: true });
+          await esperar(() => mao.sheet.element?.querySelector('.lado-da-fundacao'));
+          ficha.daOpcao = { seletor: Boolean(mao.sheet.element.querySelector('select[name="system.lado"]')), texto: mao.sheet.element.querySelector('.lado-da-fundacao')?.textContent.trim() };
+          await mao.sheet.close({ animate: false });
+          // A aba Cyberware do personagem mostra o lado de cada peça.
+          await ator.sheet.render({ force: true });
+          await esperar(() => ator.sheet.element?.querySelector('.tab.cyberware li[data-item-id="' + braco.id + '"]'));
+          const naAba = [braco, mao, olho].map(item => ator.sheet.element.querySelector('.tab.cyberware li[data-item-id="' + item.id + '"] .detalhe')?.textContent || '');
+          await ator.sheet.close({ animate: false });
+          const linha = (ficha, item) => { const l = ficha.itens.find(i => i.id === item.id); return { local: l.local, planejado: l.localPlanejado, cyber: l.cyber, dentroIds: l.dentroIds }; };
+          const volta = game.system.api.wiki.fichaParaAWiki(ator);
+          const envio = { braco: linha(volta, braco), mao: linha(volta, mao), olho: linha(volta, olho) };
+          await game.system.api.wiki.mandarFicha(ator);
+          // Trocar o lado da fundação leva a opção junto.
+          await braco.update({ 'system.lado': 'braco-direito' });
+          const trocado = [braco.ladoDoCyberware, mao.ladoDoCyberware, linha(game.system.api.wiki.fichaParaAWiki(ator), mao).local];
+          return { notas, lados, ficha, naAba, envio, trocado, mao: mao.system.instaladoEm === braco.id };
+        })()`);
+        const doc = (await api(`/api/personagens/${comLados.id}`)).personagem;
+        const mesa = Object.fromEntries((doc.mesa?.itens || []).map(item => [item.uid, item.local]));
+        const daMesa = await edge.evaluate(`(async () => {
+          const { ator } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(comLados.id)}, '');
+          return ['loja:braco', 'loja:mao', 'loja:olho'].map(uid => ator.items.find(item => item.getFlag('${S}', 'wikiUid') === uid)?.ladoDoCyberware);
+        })()`);
+        const e = info.envio;
+        const ok = info.lados.map(par => par.join('/')).join() === 'braco-esquerdo/braco-esquerdo,braco-esquerdo/braco-esquerdo,olho-direito/olho-direito' && info.mao
+          && info.ficha.opcoes.join() === ',braco-esquerdo,braco-direito' && info.ficha.valor === 'braco-esquerdo' && !info.ficha.daOpcao.seletor && /Braço esquerdo/.test(info.ficha.daOpcao.texto)
+          && /Braço esquerdo/.test(info.naAba[0]) && /Braço esquerdo/.test(info.naAba[1]) && /Olho direito/.test(info.naAba[2])
+          && e.braco.local === 'braco-esquerdo' && e.braco.cyber?.tipo === 'cyberArm' && e.braco.cyber.slots > 0 && (e.braco.dentroIds || []).length === 1 && e.mao.local === 'braco-esquerdo' && e.mao.cyber?.tamanho === 1 && e.olho.local === 'olho-direito'
+          && mesa['loja:braco'] === 'braco-esquerdo' && mesa['loja:mao'] === 'braco-esquerdo' && mesa['loja:olho'] === 'olho-direito'
+          && info.trocado.join() === 'braco-direito,braco-direito,braco-direito' && daMesa.join() === 'braco-esquerdo,braco-esquerdo,olho-direito';
+        return [ok, JSON.stringify({ ...info, mesa, daMesa })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => a.name === 'Teste Lados')) await ator.delete(); return true; })()`);
       }
     });
 

@@ -10,7 +10,7 @@ import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
-import { linhaDoExtrato, periciaPropria } from './regras.mjs';
+import { ladoValido, linhaDoExtrato, periciaPropria } from './regras.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
 const GERACAO = 14;
@@ -45,8 +45,9 @@ export function registrarWiki() {
 const wikiUrl = () => String(game.settings.get(SISTEMA, 'wikiUrl') || enderecoPadraoDaWiki(globalThis.location)).trim().replace(/\/+$/, '');
 // Com o cookie da wiki (o mestre entra na wiki neste navegador) e sem cache: a ficha muda o tempo todo.
 async function wikiFetch(rota, { method = 'GET', body } = {}) {
-  // A ficha de um personagem: com o "roles=2", a wiki manda também o de duas Roles (o C23; sem ele, recusa a um Foundry).
-  const lida = method === 'GET' && /^\/api\/personagens\/[^/?]+$/.test(rota) ? `${rota}?roles=2` : rota;
+  // A ficha de um personagem: com o "roles=2", a wiki manda também o de duas Roles (o C23), e com o "locais=1", o de lado
+  // no cyberware (o C30). Sem eles, recusa a um Foundry.
+  const lida = method === 'GET' && /^\/api\/personagens\/[^/?]+$/.test(rota) ? `${rota}?roles=2&locais=1` : rota;
   let resposta;
   try {
     resposta = await fetch(`${wikiUrl()}${lida}`, { method, credentials: 'include', cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -114,6 +115,8 @@ function itensDaWiki(catalogo, entradas, notas, { instalarCyberware = true } = {
       else if ('uso' in data.system && Object.hasOwn(USOS, entrada.uso ?? '')) data.system.uso = entrada.uso;
       // O criador da wiki já descontou a Humanidade do cyberware: entra instalado, sem rolar de novo.
       if (data.type === 'cyberware') data.system.instalado = instalarCyberware;
+      // O lado do cyberbraço, da cyberperna e do cyberolho (o C30): o da montagem da wiki, se vale para o tipo.
+      if (data.type === 'cyberware') data.system.lado = ladoValido(entrada.local, data.system.tipo);
       if (entrada.semHumanidade) data.system.perdaHumanidade = { formula: '0', media: 0, sofrida: 0 };
       itens.push(data);
     }
@@ -261,7 +264,12 @@ export function fichaParaAWiki(ator) {
       if (veicular) linha.armaVeicular = foundry.utils.deepClone(veicular);
     }
     if (item.type === 'armadura') Object.assign(linha, { cabeca: x.sp.cabeca.max ? x.sp.cabeca.value : 0, corpo: x.sp.corpo.max ? x.sp.corpo.value : 0 });
-    if (item.type === 'cyberware') Object.assign(linha, { instalado: x.instalado, base: x.fundacional });
+    // O lado (o C30): "local" no instalado, "localPlanejado" no que espera instalar, como o cpr-2077; e o tipo, o tamanho e
+    // os slots, que a aba Cyberware da wiki desenha.
+    if (item.type === 'cyberware') {
+      Object.assign(linha, { instalado: x.instalado, base: x.fundacional, cyber: { tipo: x.tipo, tamanho: x.tamanho, slots: x.fundacional ? x.slots : 0 } });
+      if (item.ladoDoCyberware) linha[x.instalado ? 'local' : 'localPlanejado'] = item.ladoDoCyberware;
+    }
     if (item.type === 'veiculo') {
       const base = item._source.system;
       linha.veiculo = {
@@ -269,7 +277,8 @@ export function fichaParaAWiki(ator) {
         janelas: foundry.utils.deepClone(base.janelas ?? {}), ativo: s.veiculo === item.id, dirigindo: s.veiculo === item.id && Boolean(s.dirigindo)
       };
     }
-    if (item.instalados.length) linha.dentro = item.instalados.map(dentro => dentro.name);
+    // Os ids distinguem as cópias de mesmo nome (duas Mãos de ferramentas, uma em cada cyberbraço).
+    if (item.instalados.length) Object.assign(linha, { dentro: item.instalados.map(dentro => dentro.name), dentroIds: item.instalados.map(dentro => dentro.id) });
     return linha;
   });
   return {
@@ -478,6 +487,8 @@ export async function importarDaMesa(id, donoId = '') {
     }
     // O Foundry 12 já descontou a Humanidade do cyberware: o valor vem da mesa, e o instalado fica como estava.
     if (data.type === 'cyberware') s.instalado = Boolean(item.instalado);
+    // O lado (o C30): o instalado na mesa ou, sem ele, o planejado na wiki.
+    if (data.type === 'cyberware') s.lado = ladoValido(item.local || item.localPlanejado, s.tipo);
     if (data.type === 'veiculo' && item.veiculo) {
       const v = item.veiculo;
       for (const chave of ['value', 'max']) if (Number.isFinite(v.sdp?.[chave])) s.sdp[chave] = Math.max(0, v.sdp[chave]);

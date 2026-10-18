@@ -5927,6 +5927,56 @@ Commit anterior: `3854dcb1` (o ciclo 119). Com este, o C23 termina.
 - **Próximo:** o C23 terminou (ciclos 118 a 120). No plano, o C24 (o contêiner) ou o que o usuário escolher; a sessão de
   teste com a mesa, quando ele marcar.
 
+### Ciclo 121 (2026-10-18): o C30, parte 1: o lado do cyberware (sessão Junin)
+
+Commit anterior: `85a95b38` (o ciclo 120). O C30 é um item novo, pedido do usuário em 2026-10-18: a wiki do master
+ganhou o lado de cyberbraço, cyberperna e cyberolho (5de1fbd, sessão KouArt) e a peça única no membro natural
+(46eb94a, sessão Junin), e a API recusa (409) mandar ao Foundry 14 o personagem com lado até o importador declarar o
+`locais=1`. Na mesa da campanha, já no Foundry 14, quatro personagens têm lado e ainda não foram importados.
+- **A referência:**
+  - a wiki, `personagem-cyberware.js`: os lados de cada tipo, com os ids e os nomes; a opção herda o lado da base;
+  - o cpr-2077 do Foundry 12: o lado na flag `wikiLocal`; na ficha da mesa, `local` (o instalado) e `localPlanejado`
+    (o que espera instalar), o `cyber` (tipo, tamanho e slots) e os ids de dentro.
+  - O CORE não tem lado.
+- **O que muda:**
+  - **`regras.mjs`:** `LADOS_DO_CYBERWARE` (os ids e os nomes da wiki), `ladosDoTipo`, `nomeDoLado`, `ladoValido` (o lado
+    que vale para o tipo) e `ladoEfetivo` (a opção numa fundação fica no lado dela);
+  - **`dados.mjs`:** o `lado` do cyberware;
+  - **`documentos.mjs`:** o `ladoDoCyberware` do item (o efetivo);
+  - **`ficha-item.mjs` e `item.hbs`:** o seletor "Lado" na fundação e na peça solta; na opção numa fundação, o lado dela
+    ("o da fundação"), sem seletor; o lado no alto da ficha;
+  - **`ficha-personagem.mjs` e `cyberware.hbs`:** o lado na linha de cada peça da aba Cyberware;
+  - **`wiki.mjs`:**
+    - a leitura pede `?roles=2&locais=1`;
+    - a importação e a entrega dos pedidos põem o lado da montagem da wiki;
+    - a migração da mesa põe o `local` ou, sem ele, o `localPlanejado`;
+    - o envio da ficha manda o `local` (ou o `localPlanejado`), o `cyber` e os `dentroIds`.
+- **Testes:**
+  - **G3:** o arquivo novo `tests/sistema/lados.test.mjs` (3 testes):
+    - os lados iguais aos do `personagem-cyberware.js` da wiki, carregado como na API;
+    - o lado que só vale para o tipo dele;
+    - a opção que fica no lado da fundação (e a fundação sem lados, o Sensor Array, que não dá lado).
+  - **G4:** dois passos novos:
+    - na wiki de teste, um Solo com o cyberbraço no braço esquerdo, a Mão de ferramentas nele e o cyberolho no direito;
+    - no Foundry: a importação, que antes caía no 409. Ele confere o lado de cada peça, o seletor e o "o da fundação"
+      na ficha do item, o lado na aba Cyberware, o envio (o `local`, o `cyber` e os `dentroIds`), a ficha da mesa na
+      wiki, a troca do lado da fundação levando a opção junto e a migração da mesa com os lados.
+- **Resultados:**
+  - G1: 76 arquivos, 0 erros; G2: 0 erros;
+  - G3: 173 de 173;
+  - G4: 153 de 153;
+  - **mutações:** as 13 caíram, nenhuma rodada pulou o Foundry, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (172 de 173 cada): o lado para qualquer tipo (K1), a opção no próprio lado (K2) e os nomes do braço
+      trocados (K3);
+    - no G4 (152 de 153 cada): a leitura sem o `locais=1` (K4), a importação sem o lado (K5), a migração da mesa sem o
+      lado (K6), o envio com o lado só como planejado (K7), sem os `dentroIds` (K8), sem o `cyber` (K9), a ficha do item
+      sem o seletor (K10), a opção sem o lado da fundação (K11), a aba Cyberware sem o lado (K12) e o lado que ignora a
+      fundação (K13).
+- **Próximo:** o C30, parte 2: o membro natural.
+  - **O que é:** a peça única num braço ou numa perna sem cyberbraço daquele lado. A wiki manda `natural: true`, e o
+    `pedeFundacao` passa a aceitar a peça única com lado.
+  - **Antes:** a wiki do master do 46eb94a precisa entrar nesta branch.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -662,6 +662,20 @@ export const encaixeDaFundacao = ({ tipo, catalogo = '' }) => ENCAIXE_DA_FUNDACA
 export const encaixeDaOpcao = ({ tipo }) => tipo;
 // A opção pede uma fundação? As de categoria, não.
 export const pedeFundacao = opcao => !TIPOS_DE_CATEGORIA.includes(opcao.tipo);
+
+// O lado do cyberware (o C30; a wiki: personagem-cyberware.js): o cyberbraço, a cyberperna e o cyberolho ficam no
+// esquerdo ou no direito. Os ids são os da wiki, para a importação e a volta da ficha não traduzirem nada.
+export const LADOS_DO_CYBERWARE = {
+  cyberArm: [['braco-esquerdo', 'Braço esquerdo'], ['braco-direito', 'Braço direito']],
+  cyberLeg: [['perna-esquerda', 'Perna esquerda'], ['perna-direita', 'Perna direita']],
+  cyberEye: [['olho-esquerdo', 'Olho esquerdo'], ['olho-direito', 'Olho direito']]
+};
+export const ladosDoTipo = tipo => LADOS_DO_CYBERWARE[tipo] ?? [];
+export const nomeDoLado = lado => Object.values(LADOS_DO_CYBERWARE).flat().find(([id]) => id === lado)?.[1] ?? '';
+// O lado que vale para o tipo; o de outro tipo, um desconhecido ou nenhum: ''.
+export const ladoValido = (lado, tipo) => (ladosDoTipo(tipo).some(([id]) => id === lado) ? lado : '');
+// O lado de uma peça: a opção numa fundação fica no lado da fundação; a fundação e a peça solta, no próprio.
+export const ladoEfetivo = ({ lado = '', tipo = '', fundacao = null }) => (fundacao ? ladoValido(fundacao.lado, fundacao.tipo) : ladoValido(lado, tipo));
 // A opção cabe na fundação? O encaixe bate e sobram slots (usados: o tamanho das opções que já estão nela).
 export function cabeNaFundacao({ fundacao, opcao, usados = 0 }) {
   if (encaixeDaFundacao(fundacao) !== encaixeDaOpcao(opcao)) return { cabe: false, motivo: 'encaixe' };

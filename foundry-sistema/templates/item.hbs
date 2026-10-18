@@ -61,6 +61,8 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{/if}}
       {{#if eh.cyberware}}
       <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposCyberware selected=fonte.tipo}}</select></label>
+      {{#if lados}}<label class="celula"><span>Lado</span><select name="system.lado">{{selectOptions lados selected=fonte.lado}}</select></label>{{/if}}
+      {{#if ladoDaFundacao}}<div class="celula lado-da-fundacao"><span>Lado</span><b>{{ladoDaFundacao}} (o da fundação)</b></div>{{/if}}
       <label class="celula"><span>Perda de Humanidade</span><span class="par"><input type="text" name="system.perdaHumanidade.formula" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" value="{{fonte.perdaHumanidade.media}}"></span></label>
       <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
       {{#if fonte.fundacional}}<label class="celula"><span>Slots de opção</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>

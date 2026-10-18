@@ -13,7 +13,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 
@@ -212,7 +212,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const arvore = doCyber.filter(item => !naFundacao(item)).flatMap(item => [{ item, opcao: false }, ...item.instalados.map(outro => ({ item: outro, opcao: true }))]);
     const cyberwares = arvore.map(({ item, opcao }) => ({
       id: item.id, nome: item.name, img: item.img, sistema: item.system, tipo: TIPOS_CYBERWARE[item.system.tipo] ?? item.system.tipo, efeitos: item.effects.map(e => e.name).join(', '),
-      opcao, slots: item.system.fundacional ? `${item.slotsUsados} / ${item.system.slots}` : '', semFundacao: item.semFundacao
+      opcao, slots: item.system.fundacional ? `${item.slotsUsados} / ${item.system.slots}` : '', semFundacao: item.semFundacao, lado: nomeDoLado(item.ladoDoCyberware)
     }));
     // As lesões, com o paliativo e o tratamento (as DVs de cada perícia).
     const dvs = pares => pares.filter(([, dv]) => dv).map(([pericia, dv]) => `${pericia} DV${dv}`).join(' ou ');

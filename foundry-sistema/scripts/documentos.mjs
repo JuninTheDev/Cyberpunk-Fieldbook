@@ -4,7 +4,7 @@ import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  AGARRAO, aplicarDano, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  AGARRAO, aplicarDano, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ladoEfetivo, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics, maosDaArma, maosLivres
 } from './regras.mjs';
@@ -687,6 +687,13 @@ export class ItemCPR extends Item {
   get semFundacao() {
     const s = this.system;
     return this.type === 'cyberware' && s.instalado && !s.fundacional && !this.instaladoNo && pedeFundacao(encaixeDe(this));
+  }
+  // O lado do cyberware (o C30): o da fundação para a opção instalada nela; o próprio para a fundação e a peça solta.
+  get ladoDoCyberware() {
+    if (this.type !== 'cyberware') return '';
+    const pai = this.instaladoNo;
+    const fundacao = !this.system.fundacional && pai?.type === 'cyberware' && pai.system.fundacional ? { lado: pai.system.lado, tipo: pai.system.tipo } : null;
+    return ladoEfetivo({ lado: this.system.lado, tipo: this.system.tipo, fundacao });
   }
 
   // A classe de 2077 da arma (Power, Tech, Smart) e o que ela pode fazer (regras.mjs, perfil2077), ou null.
