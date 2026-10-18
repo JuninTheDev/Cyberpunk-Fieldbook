@@ -13,7 +13,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { alcanceDoJackIn, bonusDeRole, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 
@@ -172,17 +172,18 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const linhaPericia = id => {
       const p = s.pericia(id);
       const total = s.atributos[p.atributo].valor + p.nivel + p.bonus + (p.role?.valor ?? 0) + s.penalidade;
-      return { ...p, familia: Boolean(s.pericias[id]?.familia), sigla: SIGLA[p.atributo], total,
+      return { ...p, familia: Boolean(s.pericias[id]?.familia) || p.propria, sigla: SIGLA[p.atributo], total,
         dica: `${SIGLA[p.atributo]} + ${p.nome} + 1d10${p.bonus ? ` (bônus +${p.bonus})` : ''}${p.role ? ` (${p.role.rotulo} +${p.role.valor})` : ''}`,
         dicaTotal: `Atributo + nível${p.bonus ? ' + bônus' : ''}${p.role ? ` + ${p.role.rotulo}` : ''}${s.penalidade ? ` ${s.penalidade} do ferimento` : ''}, sem o dado` };
     };
-    const todas = [...PERICIAS.map(p => linhaPericia(p.id)), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia).map(([id]) => linhaPericia(id))];
+    // As de família e as próprias (com o STAT delas, como no CORE).
+    const todas = [...PERICIAS.map(p => linhaPericia(p.id)), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia || propria.atributo).map(([id]) => linhaPericia(id))];
     const comNivel = todas.filter(p => p.nivel > 0).sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
     comNivel.slice(0, EM_DESTAQUE).forEach(p => { p.alta = true; });
     const mostrarTodas = this.#todasAsPericias ?? comNivel.length === 0;
     // Tirar uma perícia de família só na lista completa, onde a lista se edita.
     if (mostrarTodas) for (const p of todas) p.tirar = p.familia;
-    const grupoDe = p => PERICIAS.find(base => base.id === p.id)?.grupo ?? FAMILIAS[s.pericias[p.id]?.familia]?.grupo ?? 'Educação';
+    const grupoDe = p => PERICIAS.find(base => base.id === p.id)?.grupo ?? FAMILIAS[s.pericias[p.id]?.familia]?.grupo ?? (p.propria ? 'Próprias' : 'Educação');
     const grupos = Map.groupBy(todas, grupoDe);
     const linhasDePericia = mostrarTodas
       ? [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
@@ -478,7 +479,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // família que o personagem tem, da mais alta para a mais baixa. Fechada, null.
   #escolherPericia(rolagem) {
     const s = this.actor.system;
-    const ids = [...PERICIAS.map(p => p.id), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia).map(([id]) => id)];
+    const ids = [...PERICIAS.map(p => p.id), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia || propria.atributo).map(([id]) => id)];
     const pericias = ids.map(id => s.pericia(id)).filter(p => p.atributo === rolagem.atributo)
       .sort((a, b) => b.nivel - a.nivel || a.nome.localeCompare(b.nome, 'pt-BR'));
     const opcoes = pericias.map(p => `<option value="${p.id}">${foundry.utils.escapeHTML(p.nome)} (${p.nivel})</option>`).join('');
@@ -492,19 +493,23 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     this.#todasAsPericias = !(this.#todasAsPericias ?? !Object.values(this.actor.system.pericias).some(p => p.nivel > 0));
     return this.render();
   }
-  // Uma perícia de família nova (uma Linguagem, um Especialista Local...): a chave é a família e o nome, como na
-  // importação da wiki ("language-streetslang").
+  // Uma perícia nova: de família (uma Linguagem, um Especialista Local...; a chave é a família e o nome, como na importação
+  // da wiki: "language-streetslang") ou própria (o C23; o nome e o STAT, como o item de perícia do CORE).
   static async #novaPericia() {
-    const opcoes = Object.entries(FAMILIAS).map(([id, f]) => `<option value="${id}">${foundry.utils.escapeHTML(f.nome)}</option>`).join('');
+    const opcoes = [...Object.entries(FAMILIAS).map(([id, f]) => `<option value="${id}">${foundry.utils.escapeHTML(f.nome)}</option>`), '<option value="">Própria (o nome e o STAT, como no CORE)</option>'].join('');
+    const stats = ATRIBUTOS.map(chave => `<option value="${chave}">${SIGLA[chave]}</option>`).join('');
     const resposta = await DialogV2.prompt({
-      window: { title: 'Perícia de família' }, classes: [SISTEMA, 'nova-pericia'], rejectClose: false,
-      content: `<label>Família <select name="familia">${opcoes}</select></label><label>Qual (a língua, o lugar, a ciência...) <input type="text" name="nome" autofocus></label>`,
-      ok: { label: 'Acrescentar', callback: (evento, botao) => ({ familia: botao.form.elements.familia.value, nome: botao.form.elements.nome.value.trim() }) }
+      window: { title: 'Perícia nova' }, classes: [SISTEMA, 'nova-pericia'], rejectClose: false,
+      content: `<label>Família <select name="familia">${opcoes}</select></label><label>Qual (a língua, o lugar, a ciência...; na própria, o nome) <input type="text" name="nome" autofocus></label><label>STAT (da própria) <select name="atributo">${stats}</select></label>`,
+      ok: { label: 'Acrescentar', callback: (evento, botao) => ({ familia: botao.form.elements.familia.value, nome: botao.form.elements.nome.value.trim(), atributo: botao.form.elements.atributo.value }) }
     });
     if (!resposta?.nome) return null;
-    const chave = `${resposta.familia}-${slug(resposta.nome)}`;
-    if (this.actor.system.pericias[chave]) { ui.notifications.warn(`${this.actor.name} já tem essa perícia.`); return null; }
-    return this.actor.update({ [`system.pericias.${chave}`]: { familia: resposta.familia, nome: resposta.nome, nivel: 0 } });
+    const [chave, dados] = resposta.familia
+      ? [`${resposta.familia}-${slug(resposta.nome)}`, { familia: resposta.familia, nome: resposta.nome, nivel: 0 }]
+      : periciaPropria(resposta, ATRIBUTOS) ?? [];
+    if (!chave) return null;
+    if (this.actor.system.pericias[chave] || PERICIAS.some(p => p.id === chave)) { ui.notifications.warn(`${this.actor.name} já tem essa perícia.`); return null; }
+    return this.actor.update({ [`system.pericias.${chave}`]: dados });
   }
   static async #tirarPericia(evento, alvo) {
     const chave = alvo.dataset.pericia;

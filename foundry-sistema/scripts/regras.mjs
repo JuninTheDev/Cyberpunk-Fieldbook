@@ -100,6 +100,18 @@ export function bonusDeRole({ roleId, rank }) {
   return Object.fromEntries(PERICIAS_DO_MOTO.map(id => [id, { rotulo: 'Moto', valor }]));
 }
 
+// A perícia própria (o C23; como o item "skill" do CORE 0.92.4, com o nome, o "stat" e o "level"): a que não é do livro
+// nem de uma família. Fica em system.pericias com a chave "propria-<nome>" e o atributo dela. atributos: os STATs da ficha
+// (o ATRIBUTOS do config). Sem nome ou com um STAT que não existe: null.
+const slugDaPericia = texto => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+export const PREFIXO_DA_PERICIA_PROPRIA = 'propria-';
+export function periciaPropria({ nome, atributo, nivel = 0 }, atributos) {
+  const limpo = String(nome ?? '').trim();
+  const stat = String(atributo ?? '').trim().toLowerCase();
+  if (!slugDaPericia(limpo) || !atributos.includes(stat)) return null;
+  return [`${PREFIXO_DA_PERICIA_PROPRIA}${slugDaPericia(limpo)}`, { nivel: Math.max(0, Math.trunc(Number(nivel) || 0)), familia: '', nome: limpo, atributo: stat }];
+}
+
 // As Roles do personagem: a principal e, pela regra da mesa ("Duas Roles na criação", a wiki de 2026-10-17), a segunda,
 // cada uma com o Rank e as habilidades dela ([{ id, rank, habilidades }]; habilidadesDeRole: o HABILIDADES_DE_ROLE do
 // gerado). Os derivados de cada Role (a Consciência de Combate do Solo, o Moto do Nomad, as perícias do Medtech, a

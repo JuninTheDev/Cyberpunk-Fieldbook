@@ -10,7 +10,7 @@ import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
-import { linhaDoExtrato } from './regras.mjs';
+import { linhaDoExtrato, periciaPropria } from './regras.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
 const GERACAO = 14;
@@ -239,7 +239,7 @@ const TIPO_NA_WIKI = {
   programa: 'program', upgrade: 'itemUpgrade', veiculo: 'vehicle'
 };
 const USO_NA_WIKI = { equipado: 'equipped', carregando: 'carried', guardado: 'owned' };
-const nomeDaPericia = (id, propria) => PERICIAS.find(p => p.id === id)?.en ?? (FAMILIAS[propria.familia] ? `${FAMILIAS[propria.familia].en} (${propria.nome})` : id);
+const nomeDaPericia = (id, propria) => PERICIAS.find(p => p.id === id)?.en ?? (FAMILIAS[propria.familia] ? `${FAMILIAS[propria.familia].en} (${propria.nome})` : propria.atributo ? propria.nome : id);
 
 export function fichaParaAWiki(ator) {
   const s = ator.system;
@@ -442,7 +442,8 @@ export async function importarDaMesa(id, donoId = '') {
   const statBase = chave => Number(r.stats?.[chave.toUpperCase()]) || Number(m.stats?.[chave.toUpperCase()]) || 1;
   const pericias = {};
   for (const p of m.pericias || []) {
-    const par = periciaDaWiki({ nome: p.nome, nivel: Number(p.nivel) || 0 });
+    // A que não é do livro nem de família (a do item de perícia do CORE, com o STAT dela) entra como perícia própria.
+    const par = periciaDaWiki({ nome: p.nome, nivel: Number(p.nivel) || 0 }) ?? periciaPropria({ nome: p.nome, atributo: p.stat, nivel: p.nivel }, ATRIBUTOS);
     if (par) pericias[par[0]] = par[1]; else notas.push(`Perícia ${p.nome} não existe neste sistema.`);
   }
 

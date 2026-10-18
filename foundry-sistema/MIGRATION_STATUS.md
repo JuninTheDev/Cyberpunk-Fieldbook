@@ -598,6 +598,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     turno em que disparou, e o CDT 2 o mestre confere;
   - o ferrolho da Grad (uma Ação) é um botão: o sistema não conta as Ações do turno.
 
+- **O que a perícia própria guarda** (ciclo 120). O item de perícia do CORE tem também a categoria, a dificuldade e o
+  tipo. A própria daqui guarda o nome, o STAT e o nível, que é o que a rolagem usa (STAT + nível + 1d10); a dificuldade
+  (o ×2) só pesa no custo dos Pontos de Melhoria, que fica com a mesa, e ela entra no grupo Próprias, não numa categoria
+  do livro.
+
 ## Registro dos ciclos
 
 ### Ciclo 0 (2026-10-11): segurança e documentos
@@ -5885,6 +5890,42 @@ Commit anterior: `23bb94fc` (o ciclo 118).
     principal (F4), o "Tirar" que deixa as habilidades (F5), o cabeçalho sem a segunda (F6), sem o painel de acrescentar
     (F7) e as habilidades da segunda gravando na principal (F8).
 - **Próximo:** a parte 3 do C23, a Role ativa (como no CORE), ou a 4, as perícias novas.
+
+### Ciclo 120 (2026-10-18): o C23, parte 4: as perícias próprias, como no CORE (sessão KouArt)
+
+Commit anterior: `3854dcb1` (o ciclo 119). Com este, o C23 termina.
+
+- **A decisão do usuário (2026-10-18):** a parte 3, a Role ativa como no CORE, não precisa: a principal fica no
+  cabeçalho, as duas na aba Role, e a Interface vem do Netrunner, seja ele a principal ou a segunda (sem o seletor). A
+  parte 4, as perícias novas, "como no CORE".
+- **A referência (o CORE 0.92.4, `src/modules/datamodels/item/skill-datamodel.js`, pela tag no GitLab):** a perícia é um
+  item `skill` com o `level`, o `stat`, a `category`, a `difficulty` e o `skillType`. A ficha da mesa do Foundry 12
+  (o `foundry-2077`) manda cada perícia com o nome, o nível e o STAT; a que não era do livro nem de família virava só um
+  aviso na migração ("Perícia X não existe neste sistema").
+- **O que muda:**
+  - **`regras.mjs`:** `periciaPropria` (a chave `propria-<nome>`, o nome, o STAT e o nível; sem nome ou com um STAT que
+    não existe, null);
+  - **`dados.mjs`:** o `atributo` da perícia (o STAT da própria; nas outras, vazio); a perícia própria rola com o STAT e
+    o nome dela;
+  - **`ficha-personagem.mjs` e `bloco-geral.hbs`:** o "+ PERÍCIA" cria a de família ou a própria (o nome e o STAT); a
+    própria aparece no grupo Próprias, com o STAT, e sai pelo ✕, como a de família;
+  - **`wiki.mjs`:** a migração da mesa cria a perícia própria da que não é do livro nem de família (com o STAT que o
+    Foundry 12 mandou); o envio da ficha a manda pelo nome.
+- **Testes:**
+  - **G3:** o teste novo da perícia própria (a chave, o STAT, o nível, o nome vazio e o STAT que não existe; nenhuma do
+    livro ou de família com a mesma chave);
+  - **G4:** o passo novo da ficha (o "+ PERÍCIA" cria a própria com o STAT, no grupo Próprias; ela rola TECH + nível +
+    1d10 e sai pelo ✕); no passo da migração da mesa, a "Hacking de Drones" (TECH) do Foundry 12 entra como própria.
+- **Resultados:**
+  - G1: 75 arquivos, 0 erros; G2: 0 erros;
+  - G3: 170 de 170;
+  - G4: 151 de 151;
+  - **mutações:** as 9 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (169 de 170 cada): qualquer STAT (K1), o nível negativo (K2) e o STAT em maiúscula do Foundry 12 (K3);
+    - no G4: a própria com INT (K4), o nome dela como o de família (K5, também na migração), a lista sem as próprias
+      (K6), sem o grupo Próprias (K7), a migração da mesa sem elas (K8) e o diálogo sem a opção (K9).
+- **Próximo:** o C23 terminou (ciclos 118 a 120). No plano, o C24 (o contêiner) ou o que o usuário escolher; a sessão de
+  teste com a mesa, quando ele marcar.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

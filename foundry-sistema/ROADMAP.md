@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 120). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 121). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -205,15 +205,17 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - a ciberpsicose.
 - [ ] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE). A wiki guarda, e o cpr-2077 manda na
   ficha "Na mesa".
-- [~] **C23. Mais de uma Role, e perícias novas:** em andamento (sessão KouArt, 2026-10-18). Por partes, um ciclo cada:
+- [x] **C23. Mais de uma Role, e perícias novas:** feito (ciclos 118 a 120, sessão KouArt). Por partes:
   - [x] a segunda Role da criação (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o criador guarda a
     `roleSecundaria`, com o Rank, as habilidades, o Lifepath e a oficina) no modelo, nos derivados das duas (a Interface
     do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo, as perícias do Medtech), no import da wiki (o
     `?roles=2`), no envio da ficha e na migração da mesa (a lista `roles`): ciclo 118;
   - [x] a ficha: a aba Role com as duas (o Rank, as habilidades e as rolagens de cada uma) e o cabeçalho: ciclo 119 (o
     painel acrescenta a segunda, e o "Tirar" a tira);
-  - [ ] a Role ativa, como no CORE;
-  - [ ] as perícias novas (no CORE, a perícia é item; aqui só existem as do livro e as famílias).
+  - [x] a Role ativa, como no CORE: resolvida pelo desenho (decisão do usuário, 2026-10-18: a principal no cabeçalho, as
+    duas na aba Role, a Interface do Netrunner, seja ele a principal ou a segunda; sem o seletor);
+  - [x] as perícias novas, como no CORE (o nome e o STAT): ciclo 120 (o "+ PERÍCIA", o grupo Próprias e a migração da
+    mesa).
 
 ### Fase 5: mestre e mesa
 

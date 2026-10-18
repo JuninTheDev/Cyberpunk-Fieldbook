@@ -16,7 +16,7 @@ import * as netrun from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs'
 import { PONTO_PADRAO } from '../../foundry-sistema/scripts/netrun/constantes.mjs';
 import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from '../../foundry-sistema/build/arquiteturas.mjs';
 import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DA_NET, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { ATORES_DA_NET, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
+import { ATORES_DA_NET, ATRIBUTOS, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -772,6 +772,19 @@ test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os do
 });
 
 // ---------------- Ficha ----------------
+test('Perícia própria (o C23, como o item "skill" do CORE 0.92.4: o nome, o "stat" e o "level"): a que não é do livro nem de família fica com a chave "propria-<nome>" e o STAT dela; sem nome ou com um STAT que não existe, não entra', () => {
+  assert.deepEqual(regras.periciaPropria({ nome: 'Hacking de Drones', atributo: 'TECH', nivel: 3 }, ATRIBUTOS), ['propria-hacking-de-drones', { nivel: 3, familia: '', nome: 'Hacking de Drones', atributo: 'tech' }]);
+  assert.deepEqual(regras.periciaPropria({ nome: '  Navegação Orbital ', atributo: 'int' }, ATRIBUTOS), ['propria-navegacao-orbital', { nivel: 0, familia: '', nome: 'Navegação Orbital', atributo: 'int' }]);
+  assert.equal(regras.periciaPropria({ nome: 'Pilotar Mecha', atributo: 'ref', nivel: -2 }, ATRIBUTOS)[1].nivel, 0);
+  assert.equal(regras.periciaPropria({ nome: '   ', atributo: 'int' }, ATRIBUTOS), null);
+  assert.equal(regras.periciaPropria({ nome: '***', atributo: 'int' }, ATRIBUTOS), null);
+  assert.equal(regras.periciaPropria({ nome: 'Algo', atributo: 'xyz' }, ATRIBUTOS), null);
+  assert.equal(regras.periciaPropria({ nome: 'Algo' }, ATRIBUTOS), null);
+  // Não colide com as do livro nem com as de família.
+  assert.ok(PERICIAS.every(p => !p.id.startsWith(regras.PREFIXO_DA_PERICIA_PROPRIA)));
+  assert.ok(Object.keys(FAMILIAS).every(id => !`${id}-`.startsWith(regras.PREFIXO_DA_PERICIA_PROPRIA)));
+});
+
 test('Duas Roles (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o personagem-roles.js da wiki): a segunda Role tem o Rank e as habilidades dela, e os derivados das duas valem na ficha (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo, as perícias do Medtech)', () => {
   const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
   assert.ok(regrasDaWiki.includes("section('Duas Roles na criação', 'regra da mesa', '<p>No criador, escolha a Role principal e, se quiser, uma segunda Role diferente. Combine com o mestre os Ranks de cada uma, de 1 a 10. Cada Role tem suas habilidades e seu Lifepath; a principal define os STATs, as perícias e o único pacote de equipamento e orçamento inicial."));

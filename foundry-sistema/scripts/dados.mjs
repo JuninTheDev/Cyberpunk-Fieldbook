@@ -31,7 +31,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       pericias: new fields.TypedObjectField(new fields.SchemaField({
         nivel: inteiro(0, { min: 0 }),
         familia: texto(),
-        nome: texto()
+        nome: texto(),
+        // O STAT da perícia própria (regras.periciaPropria); nas do livro e nas de família, vazio.
+        atributo: texto()
       })),
       role: new fields.SchemaField({
         nome: texto(),
@@ -129,14 +131,16 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     const propria = this.pericias[id];
     const base = PERICIAS.find(p => p.id === id);
     const familia = FAMILIAS[propria?.familia || ''];
-    const atributo = base?.atributo || familia?.atributo || 'int';
-    const nome = base ? base.nome : `${familia?.nome || ''}${propria?.nome ? ` (${propria.nome})` : ''}`;
+    // A própria (sem livro nem família): o nome e o STAT dela.
+    const ehPropria = !base && !familia && Boolean(propria?.atributo);
+    const atributo = base?.atributo || familia?.atributo || (ATRIBUTOS.includes(propria?.atributo) ? propria.atributo : 'int');
+    const nome = base ? base.nome : ehPropria ? propria.nome : `${familia?.nome || ''}${propria?.nome ? ` (${propria.nome})` : ''}`;
     // Os efeitos somam na perícia e na família dela; a Detecção de Ameaça do Solo soma na Percepção.
     const bonus = (this.bonus.pericias[id] || 0) + (propria?.familia ? this.bonus.pericias[propria.familia] || 0 : 0)
       + (id === 'perception' ? this.consciencia?.percepcao || 0 : 0);
     // O bônus da Role ({ rotulo, valor }), na perícia ou na família dela.
     const role = this.bonusDeRole?.[id] ?? (propria?.familia ? this.bonusDeRole?.[propria.familia] : null) ?? null;
-    return { id, nome, atributo, nivel: propria?.nivel ?? 0, bonus, role, dificil: Boolean(base?.dificil ?? familia?.dificil) };
+    return { id, nome, atributo, nivel: propria?.nivel ?? 0, bonus, role, dificil: Boolean(base?.dificil ?? familia?.dificil), propria: ehPropria };
   }
 }
 

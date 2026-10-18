@@ -6797,7 +6797,7 @@ module.exports = async ({ edge, servidores, r }) => {
         stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 2, BODY: 6, EMP: 4 },
         hp: { atual: 20, max: 40 }, humanidade: { atual: 41, max: 46 }, sorte: { atual: 3, max: 5 }, sp: { cabeca: 0, corpo: 10 }, dinheiro: 1234, ip: 12, reputacao: 2,
         role: { nome: 'Solo', rank: 4, habilidades: [['Initiative Reaction', 2], ['Threat Detection', 2]] },
-        pericias: [{ nome: 'Handgun', nivel: 6, stat: 'REF' }, { nome: 'Language (Streetslang)', nivel: 4, stat: 'INT' }],
+        pericias: [{ nome: 'Handgun', nivel: 6, stat: 'REF' }, { nome: 'Language (Streetslang)', nivel: 4, stat: 'INT' }, { nome: 'Hacking de Drones', nivel: 3, stat: 'TECH' }],
         lesoes: ['Broken Leg'],
         itens: [
           { nome: 'Heavy Pistol', tipo: 'weapon', qtd: 1, uso: 'equipped', uid: 'pacote:armas:0', dano: '3d6', cdt: 2, pericia: 'Handgun', distancia: true, maos: 1, pente: { atual: 5, max: 8 }, municao: 'Heavy Pistol (Basic)', dentro: ['Heavy Pistol (Basic)'] },
@@ -6820,6 +6820,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const resultado = {
           hp: [s.hp.value, s.hp.max], hum: [s.humanidade.value, s.humanidade.max], sorte: s.sorte.value, dinheiro: s.dinheiro, ip: s.pontosDeMelhoria, rep: s.reputacao,
           move: s.atributos.move.valor, ref: s.atributos.ref.valor, pericias: [s.pericias.handgun?.nivel, s.pericias['language-streetslang']?.nivel], habilidades: s.role.habilidades,
+          propria: [s.pericias['propria-hacking-de-drones']?.nivel, s.pericias['propria-hacking-de-drones']?.atributo, s.pericia('propria-hacking-de-drones').nome],
           lesoes: ator.items.filter(i => i.type === 'lesao').map(i => i.name),
           pistola: [pistola.system.equipada, pistola.system.pente.value, pistola.municaoCarregada?.name, pistola.municaoCarregada?.system.quantidade],
           faca: item('Combat Knife')?.system.equipada, agent: item('Agent')?.system.uso, sp: s.armadura.corpo.sp,
@@ -6831,7 +6832,7 @@ module.exports = async ({ edge, servidores, r }) => {
         return resultado;
       })()`);
       const ok = info.hp.join() === '20,40' && info.hum.join() === '41,46' && info.sorte === 3 && info.dinheiro === 1234 && info.ip === 12 && info.rep === 2
-        && info.move === 2 && info.ref === 8 && info.pericias.join() === '6,4' && info.habilidades['Initiative Reaction'] === 2 && info.lesoes.join() === 'Perna quebrada'
+        && info.move === 2 && info.ref === 8 && info.pericias.join() === '6,4' && info.propria.join() === '3,tech,Hacking de Drones' && info.habilidades['Initiative Reaction'] === 2 && info.lesoes.join() === 'Perna quebrada'
         && info.pistola.join() === 'true,5,Heavy Pistol (Basic),17' && info.faca === false && info.agent === 'carregando' && info.sp === 10
         && info.deck.join() === 'Sword,Worm' && info.ker === true && info.link.join() === 'true,5,Kerenzikov' && info.notas.length === 1 && info.notas[0].startsWith('Coisa Desconhecida:')
         && info.extrato.join(' / ') === ['definir 1234', 'definir 12', 'definir 2'].map(t => t + ' Migrado da ficha da mesa do Foundry 12').join(' / ');
@@ -7077,6 +7078,57 @@ module.exports = async ({ edge, servidores, r }) => {
         return [ok, JSON.stringify(info)];
       } finally {
         await edge.evaluate(`(async () => { window.__fila = []; for (const a of game.actors.filter(a => a.name === 'Teste Roles')) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
+    await r.passo('perícia própria (o C23, como no CORE): o "+ PERÍCIA" cria a perícia com o nome e o STAT, no grupo Próprias; ela rola STAT + nível + 1d10 e sai pelo ✕', async () => {
+      // d10 5: TECH 7 + Hacking de Drones 3 + 5 = 15.
+      await fixar(edge, [[5, 10]]);
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const a = await Actor.implementation.create({ name: 'Teste Perícia Própria', type: 'personagem', system: { atributos: { tech: { valor: 7 } } } });
+          await a.sheet.render({ force: true });
+          const f = () => a.sheet.element;
+          const janela = classe => document.querySelector('.application.dialog.' + classe + ':not(.minimizing)');
+          const CHAVE = 'propria-hacking-de-drones';
+          await esperar(() => f()?.querySelector('[data-action="novaPericia"]'));
+          f().querySelector('[data-action="novaPericia"]').click();
+          await esperar(() => janela('nova-pericia')?.querySelector('select[name="atributo"]'));
+          const opcoes = [...janela('nova-pericia').querySelectorAll('select[name="familia"] option')].map(o => o.value);
+          janela('nova-pericia').querySelector('select[name="familia"]').value = '';
+          janela('nova-pericia').querySelector('input[name="nome"]').value = 'Hacking de Drones';
+          janela('nova-pericia').querySelector('select[name="atributo"]').value = 'tech';
+          janela('nova-pericia').querySelector('button[data-action="ok"]').click();
+          await esperar(() => a.system.pericias[CHAVE] && f()?.querySelector('.pericia[data-pericia="' + CHAVE + '"]'));
+          const linha = () => f().querySelector('.pericia[data-pericia="' + CHAVE + '"]');
+          const grupos = [...f().querySelectorAll('.lista-pericias .grupo-pericias')].map(li => li.textContent.trim());
+          const criada = { dados: { ...a.system.pericias[CHAVE] }, nome: linha().querySelector('a.nome').textContent.trim(), sigla: linha().querySelector('.sigla').textContent.trim(), grupos, opcao: opcoes.includes('') };
+          const nivel = linha().querySelector('input[name="system.pericias.' + CHAVE + '.nivel"]');
+          nivel.value = 3;
+          nivel.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => a.system.pericias[CHAVE]?.nivel === 3);
+          let antes = game.messages.size;
+          linha().querySelector('a.nome').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          await esperar(() => game.messages.size > antes);
+          const m = game.messages.contents.at(-1);
+          const rolada = { total: m.rolls[0].total, formula: m.rolls[0].formula, rotulo: m.getFlag('${S}', 'teste')?.rotulo };
+          // O ✕ só na lista completa.
+          if (!f().querySelector('.tirar[data-pericia="' + CHAVE + '"]')) f().querySelector('[data-action="alternarPericias"]').click();
+          await esperar(() => f()?.querySelector('.tirar[data-pericia="' + CHAVE + '"]'));
+          f().querySelector('.tirar[data-pericia="' + CHAVE + '"]').click();
+          await esperar(() => document.querySelector('.application.dialog:not(.minimizing) button[data-action="yes"]'));
+          document.querySelector('.application.dialog:not(.minimizing) button[data-action="yes"]').click();
+          await esperar(() => !a.system.pericias[CHAVE]);
+          return { criada, rolada, tirada: !a.system.pericias[CHAVE] && !f().querySelector('.pericia[data-pericia="' + CHAVE + '"]') };
+        })()`);
+        const { criada, rolada } = info;
+        const ok = criada.opcao && criada.dados.atributo === 'tech' && criada.dados.nome === 'Hacking de Drones' && criada.dados.familia === '' && criada.dados.nivel === 0
+          && criada.nome === 'Hacking de Drones' && criada.sigla === 'TECH' && criada.grupos.includes('Próprias')
+          && rolada.total === 15 && rolada.formula === '1d10crit + 7 + 3' && rolada.rotulo === 'Hacking de Drones' && info.tirada;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(x => x.name === 'Teste Perícia Própria')) { await ator.sheet?.close(); await ator.delete(); } window.__fila = []; return true; })()`);
       }
     });
 
