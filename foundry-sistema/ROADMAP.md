@@ -231,7 +231,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   Decisão do usuário (2026-10-17): depois do C9, o catálogo de 2077 pela loja vem primeiro:
   - [x] a NET (da sessão KouArt): o Scanner como 1 Ação NET, o Breach no lugar do Backdoor, a 10ª habilidade de
     Interface (o Quickhack) e o texto novo do ponto de acesso: ciclo 94;
-  - [ ] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role;
+  - [~] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role (sessão KouArt, 2026-10-18);
   - [x] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem): ciclo 107 (o de
     2077 vale o do RED, como diz a revisão da wiki);
   - [x] a fundação e as opções sem os cyberópticos e as placas de 2077: ciclo 108 (sem o encaixe das placas; o
