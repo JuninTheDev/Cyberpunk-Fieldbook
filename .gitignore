@@ -2,6 +2,7 @@
 *.pdf
 foundry-2077/.cache/
 foundry-2077/node_modules/
+# O CORE extraído e os compêndios gerados do sistema do Foundry 14 (como na sistema-v14).
 foundry-sistema/.cache/
 foundry-sistema/packs/
 tests/.saida/

@@ -388,27 +388,33 @@ module.exports = async ({ edge, servidores, r }) => {
     // A jaqueta Asia Pop custa 100eb: sai da moda, o dinheiro continua em 2.050eb.
     return [/2\.050eb de 2\.550eb/.test(c) && /Moda: 100eb de 800eb/.test(c), c];
   });
+  // Opção de cyberolho, cyberbraço e cyberperna pede o lado antes da compra (o campo Local do cartão). A Visão
+  // microscópica (cyberolho, 100eb) precisa de base; a Mão de ferramentas não serve mais aqui: vai no braço natural.
+  const escolherLado = (id, lado) => escolher(`[data-shop-local="${id}"]`, lado);
   await r.passo('opção sem base avisa; devolver reembolsa', async () => {
-    await buscarNaLoja('mão de ferramentas');
-    await clicar('[data-shop-buy="core_cyberware:tool-hand"]');
+    await buscarNaLoja('visão microscópica');
+    const semLado = await (async () => { await clicar('[data-shop-buy="core_cyberware:microoptics"]'); return texto('#cc-shop-msg'); })();
+    await escolherLado('core_cyberware:microoptics', 'olho-esquerdo');
+    await clicar('[data-shop-buy="core_cyberware:microoptics"]');
     const aviso = await texto('#cc-shop-msg');
     const antes = await carteira();
     const botao = (await texto('[data-shop-painel="comprado"]')).replace(/\s+/g, ' ');
     const fechado = await edge.evaluate(`document.querySelector('[data-painel="comprado"]').hidden`);
     const aberto = await abrirPainel('comprado');
     const lista = await texto('[data-cc-bought]');
-    await devolver('Mão de ferramentas');
+    await devolver('Visão microscópica');
     const depois = await carteira();
     await clicar('[data-shop-painel="comprado"]');
-    return [/precisa da base/.test(aviso) && /1\.950eb/.test(antes) && /2\.050eb/.test(depois) && /Comprados 3/i.test(botao) && fechado && aberto && /Mão de ferramentas/.test(lista),
-      `${aviso} · ${antes.match(/[\d.]+eb/)} → ${depois.match(/[\d.]+eb/)} · botão "${botao}", painel fechado ${fechado} → aberto ${aberto}`];
+    return [/Escolha esquerdo ou direito/.test(semLado) && /precisa da base/.test(aviso) && /1\.950eb/.test(antes) && /2\.050eb/.test(depois) && /Comprados 3/i.test(botao) && fechado && aberto && /Visão microscópica/.test(lista),
+      `sem lado: "${semLado}" · ${aviso} · ${antes.match(/[\d.]+eb/)} → ${depois.match(/[\d.]+eb/)} · botão "${botao}", painel fechado ${fechado} → aberto ${aberto}`];
   });
   await r.passo('passo 5 lista o cyberware sem base', async () => {
-    await clicar('[data-shop-buy="core_cyberware:tool-hand"]');
+    await escolherLado('core_cyberware:microoptics', 'olho-esquerdo');
+    await clicar('[data-shop-buy="core_cyberware:microoptics"]');
     await passo(5);
     const aviso = await texto('.cc-warn');
-    await devolver('Mão de ferramentas');
-    return [/Mão de ferramentas precisa da base/.test(aviso), aviso];
+    await devolver('Visão microscópica');
+    return [/Visão microscópica \(MicroOptics\) precisa da base/.test(aviso), aviso];
   });
   await r.passo('loja de criação esconde o avançado: Linear Frame, Malorian, versões excelentes', async () => {
     const achados = {};

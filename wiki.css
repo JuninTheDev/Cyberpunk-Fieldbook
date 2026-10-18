@@ -1560,6 +1560,8 @@ h2, h2.cyber-h { margin: 0; color: var(--tx); font: 700 clamp(30px, 3.4vw, 44px)
 .cy-screen .cy-parte-linha { fill: none; stroke: rgb(255 99 123 / 30%); stroke-width: 1.2; }
 .cy-screen .cy-parte-linha.cy-on { fill: none; stroke: var(--c); stroke-width: 1.6; }
 .cy-screen .cy-parte-linha.cy-on circle { fill: rgb(0 255 210 / 22%); }
+/* A base sem lado, desenhada na vaga que ocupa: amarela e tracejada, como o "Local não definido" da legenda. */
+.cy-screen .cy-parte.cy-on.cy-indef { stroke: var(--y); stroke-dasharray: 4 3; opacity: .75; filter: none; }
 .cy-screen .cy-ancora { fill: #0b1013; stroke: #ff637b; stroke-width: 1.2; }
 .cy-screen .cy-ancora.cy-foco { fill: var(--y); stroke: var(--y); }
 .cy-screen .cy-varredura { animation: cy-varre 7s linear infinite; }

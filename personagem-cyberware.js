@@ -35,5 +35,23 @@
     }
     return true;
   }
-  return { locais, nome, tipo, normalizar, duplicados };
+  // Peça única num membro natural (RED: a opção que vai "num braço orgânico como peça única"; o CORE do Foundry 12 faz
+  // isso com a base Meat Arm ou Meat Leg, de graça e sem Humanidade, que aceita "a única peça instalada"). Uma peça por
+  // membro, num lado sem cyberbraço ou cyberperna. Pelo nome do Foundry (o "en" do catálogo da loja).
+  const PECAS_UNICAS = {
+    cyberArm: ['Big Knucks', 'Tool Hand', 'Rippers', 'Scratchers', "Slice 'N Dice", 'Wolvers', 'Modular Finger Cyberhand', 'Ballistic Coprocessor'],
+    cyberLeg: ['Talon Foot', 'Lynx Paws']
+  };
+  const BASES_NATURAIS = { cyberArm: 'Meat Arm', cyberLeg: 'Meat Leg' };
+  const MEMBROS = { cyberArm: 'braço natural', cyberLeg: 'perna natural' };
+  function pecaUnica(nomeFoundry, familia) {
+    return Object.entries(PECAS_UNICAS).some(([tipoDaPeca, nomes]) => (familia === undefined || familia === tipoDaPeca) && nomes.includes(nomeFoundry));
+  }
+  // A base do membro natural no Foundry 12 (o CORE): "Meat Arm", ou "Meat Arm — Braço direito" depois que o importador
+  // põe o lado no nome. Devolve o tipo (cyberArm, cyberLeg) ou ''.
+  function baseNatural(nomeFoundry) {
+    return Object.entries(BASES_NATURAIS).find(([, base]) => String(nomeFoundry || '') === base || String(nomeFoundry || '').startsWith(`${base} — `))?.[0] || '';
+  }
+  const membro = familia => MEMBROS[familia] || 'membro natural';
+  return { locais, nome, tipo, normalizar, duplicados, pecaUnica, baseNatural, membro, BASES_NATURAIS };
 });
