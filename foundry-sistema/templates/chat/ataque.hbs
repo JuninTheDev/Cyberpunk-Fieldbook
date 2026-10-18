@@ -25,6 +25,16 @@
       {{#if hp}}<span class="barra-hp" style="--hp: {{hp}}%"></span>{{/if}}
       {{/if}}
       {{#each notas}}<p class="nota">{{this}}</p>{{/each}}
+      {{#if municao}}
+      {{#unless municao.resistencia.passou}}
+      <div class="botoes">
+        {{#if (eq municao.efeito "emp")}}<button type="button" data-cprf-acao="aplicarEmp" data-ator="{{municao.ator}}">Escolher itens EMP</button><button type="button" data-cprf-acao="encerrarMunicao" data-ator="{{municao.ator}}">Acabou o minuto</button>{{/if}}
+        {{#if (eq municao.efeito "sleep")}}<button type="button" data-cprf-acao="encerrarMunicao" data-ator="{{municao.ator}}">Acordar (uma Ação de outra pessoa)</button>{{/if}}
+        {{#if municao.itens.length}}<button type="button" data-cprf-acao="encerrarMunicao" data-ator="{{municao.ator}}">Acabou o minuto</button>{{/if}}
+        {{#if (eq municao.efeito "incendiary")}}<button type="button" data-cprf-acao="apagarFogo" data-ator="{{municao.ator}}">Apagar fogo (uma Ação)</button>{{/if}}
+      </div>
+      {{/unless}}
+      {{/if}}
     </li>
     {{/each}}
   </ol>

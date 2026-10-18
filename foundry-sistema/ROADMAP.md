@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 111). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 112). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -178,10 +178,12 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - Na arma ruim, o `critFailEffect` do CORE: Emperra, Quebra, Quebra sem conserto e Cara ou coroa, pelo seletor da ficha.
   - O cartão informa a consequência da falha efetiva, inclusive acertando; o Solo pode suprimi-la.
   - A moeda e o estado da arma ficam com a mesa.
-- [~] **C14. Munições especiais** em andamento (sessão Codex, 2026-10-17):
-  - os testes de resistência (biotoxina, veneno, sonífera, flashbang e gás);
-  - a incendiária, a expansiva e a inteligente;
-  - o EMP nos itens eletrônicos (o `electronic` do CORE, com o "endurecido").
+- [x] **C14. Munições especiais:** feito no ciclo 111 (sessão Codex, 2026-10-18).
+  - Resistências por alvo, no navegador do dono; toxinas, sono, flashbang e gás com dano, duração e proteções próprios.
+  - Incendiária sem acumular fogo; expansiva com outra lesão; Inteligente RED com segunda tentativa, nova esquiva e um
+    projétil só, incluindo mirado e míssil. A Smart melhorada do Kit fica no C29.
+  - EMP nos eletrônicos em uso: proteção do conjunto, escolha do mestre, estado inoperante, minuto e Desfazer, sem
+    mudar instalação ou Humanidade; deck, porta e Neuroport respeitam a parada e as janelas abertas a reconferem.
 - [ ] **C15. Veículos no combate:**
   - o dano no SDP e as armas instaladas;
   - o vidro blindado como cobertura;
@@ -534,7 +536,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   botão da ficha); as 7 balas do autofogo da Lexington. As que só disparam cartucho não mostram o Ricochete.
 - [ ] **Cyberware que é arma** (→ C11) (Wolvers, Mantis Blade, Gorilla Arm, o lança-granadas embutido): hoje é só cyberware e
   não ataca.
-- [ ] **Efeitos das munições especiais:** (→ C14) os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
+- [x] **Efeitos das munições especiais:** (C14, ciclo 111) os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
   do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente; o EMP, que desliga os itens
   eletrônicos (o CORE marca cada item e tem a macro "Get EMP'd").
 

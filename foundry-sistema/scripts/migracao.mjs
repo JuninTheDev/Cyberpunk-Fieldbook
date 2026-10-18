@@ -85,6 +85,18 @@ export const PASSOS = [
       const slots = Number(catalogo?.[doCatalogo(dados)]?.system?.slots) || 0;
       if (slots) dados.system.slots = slots;
     }
+  },
+  {
+    versao: 5,
+    nome: 'Eletrônico e proteção EMP dos itens antigos do catálogo (C14)',
+    item(dados, { catalogo }) {
+      const fonte = catalogo?.[doCatalogo(dados)]?.system;
+      if (!fonte || !('endurecido' in fonte) || dados.flags?.[SISTEMA]?.eletronicaMigrada) return;
+      // Equipamento já tinha Eletrônico antes do C14: preserva a edição do usuário nesse campo.
+      if (dados.type !== 'equipamento') dados.system.eletronico = fonte.eletronico;
+      dados.system.endurecido = fonte.endurecido;
+      dados.flags[SISTEMA].eletronicaMigrada = true;
+    }
   }
 ];
 export const VERSAO_DOS_DADOS = PASSOS.at(-1)?.versao ?? 0;

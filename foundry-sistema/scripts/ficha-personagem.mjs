@@ -13,7 +13,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -263,7 +263,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const comPasswalls = ligacoes.map(ligacao => {
       const alvo = fromUuidSync(ligacao.alvo)?.actor;
       const { quantos, dv } = passwallsDoAlvo(selfIcesDe(alvo));
-      const passados = Math.min(ligacao.passados ?? 0, quantos);
+      const passados = passwallsPassados(ligacao, quantos);
       return { ...ligacao, quantos, dv, passados, faltam: quantos - passados, andares: alvo ? andaresDe(alvo).join(' · ') : '' };
     });
     // Em combate, as Ações NET da rodada fora da arquitetura (o Jack In, o Breach e o quickhack).

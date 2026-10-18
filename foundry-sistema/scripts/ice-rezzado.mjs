@@ -63,7 +63,7 @@ async function acertar(uuid) {
   const programa = fromUuidSync(uuid);
   const token = programa ? tokenDoIce(programa) : null;
   const querToken = Boolean(ehBlackIce(programa) && programa.system.ativo && programa.instaladoNo);
-  if (querToken && !token) return rezzar(programa);
+  if (querToken && !token && !programa.inoperante) return rezzar(programa);
   if (!querToken && token) {
     await token.delete();
     await programa.unsetFlag(SISTEMA, FLAG);

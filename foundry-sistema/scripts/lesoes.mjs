@@ -9,7 +9,7 @@ import { lesaoNaTabela } from './regras.mjs';
 export const PERNA_QUEBRADA = 'core_critical-injuries-body:broken-leg';
 
 // id: uma lesão certa (a Perna quebrada do tiro na perna). naFicha: false só anuncia.
-export async function lesaoCritica(ator, { cabeca = false, id = null, naFicha = true, falar = true } = {}) {
+export async function lesaoCritica(ator, { cabeca = false, id = null, naFicha = true, falar = true, excluir = [] } = {}) {
   const tem = new Set(ator.items.filter(item => item.type === 'lesao').map(item => item.getFlag(SISTEMA, 'catalogo')));
   let escolhido = id;
   let roll = null;
@@ -18,10 +18,10 @@ export async function lesaoCritica(ator, { cabeca = false, id = null, naFicha = 
     for (let tentativa = 0; tentativa < 40; tentativa++) {
       roll = await new Roll('2d6').evaluate();
       escolhido = lesaoNaTabela(faixas, roll.total);
-      if (!tem.has(escolhido)) break;
+      if (!tem.has(escolhido) && !excluir.includes(escolhido)) break;
     }
   }
-  const dados = escolhido && await itemDoCatalogo(escolhido);
+  const dados = escolhido && !excluir.includes(escolhido) && await itemDoCatalogo(escolhido);
   if (!dados) return null;
   const repetida = tem.has(escolhido);
   const [item] = naFicha && !repetida ? await ator.createEmbeddedDocuments('Item', [dados]) : [null];

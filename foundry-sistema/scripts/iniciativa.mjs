@@ -5,7 +5,7 @@
 import { ATORES_DA_NET } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
-import { iniciativaNoTopo } from './regras.mjs';
+import { iniciativaNoTopo, tempoEntreRodadas } from './regras.mjs';
 
 // A escolha da janela de cada combatente, de rollInitiative até a rolagem dele.
 const escolhas = new WeakMap();
@@ -31,6 +31,11 @@ export class CombatenteCPR extends Combatant {
 }
 
 export class CombateCPR extends Combat {
+  // O relógio avança no combate; as durações em rodadas dos efeitos continuam em rodadas fora dele.
+  getTimeDelta(rodadaAnterior, turnoAnterior, rodadaSeguinte, turnoSeguinte) {
+    return tempoEntreRodadas(rodadaAnterior, rodadaSeguinte);
+  }
+
   async rollInitiative(ids, opcoes = {}) {
     const lista = [];
     for (const id of typeof ids === 'string' ? [ids] : ids) {

@@ -19,6 +19,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
 
   <section class="tab detalhes {{tabs.detalhes.cssClass}}" data-group="item" data-tab="detalhes">
     <div class="campos">
+      {{#if temEletronica}}<label class="caixa"><input type="checkbox" name="system.eletronico" {{checked fonte.eletronico}}> Eletrônico</label><label class="caixa"><input type="checkbox" name="system.endurecido" {{checked fonte.endurecido}}> Protege contra EMP</label>{{/if}}
       {{#if eh.arma}}
       <label class="celula"><span>Perícia</span><select name="system.pericia">{{selectOptions pericias selected=fonte.pericia}}</select></label>
       <label class="celula"><span>Dano</span><input type="text" name="system.dano" value="{{fonte.dano}}"></label>
@@ -111,7 +112,6 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{/if}}
       {{#if eh.equipamento}}
       <label class="celula"><span>Os efeitos valem</span><select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>
-      <label class="caixa"><input type="checkbox" name="system.eletronico" {{checked fonte.eletronico}}> Eletrônico</label>
       <label class="caixa"><input type="checkbox" name="system.ocultavel" {{checked fonte.ocultavel}}> Ocultável</label>
       {{#if usavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="usar" data-tooltip="Liga ou desliga os efeitos (ativação à mão)">{{#if emUso}}DESLIGAR{{else}}USAR{{/if}}</button></div>{{/if}}
       {{/if}}

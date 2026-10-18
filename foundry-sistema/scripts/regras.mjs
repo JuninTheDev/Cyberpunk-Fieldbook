@@ -15,6 +15,9 @@
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
 
+// Wiki, Combate (system-rules.js): cada rodada dura 3 segundos, também ao voltar pelo rastreador.
+export const tempoEntreRodadas = (antes, depois) => (Math.max(depois, 1) - Math.max(antes, 1)) * 3;
+
 // Wiki, Corpo a corpo (p. 175–176): BODY 8+ usa a arma branca de duas mãos com uma.
 export const maosDaArma = (arma, body = 0) => arma.maos === 2 && arma.aDistancia === false && body >= 8 ? 1 : arma.maos ?? 0;
 // CORE 0.92.4 (_getHands e _getFreeHands): duas mãos + os efeitos, menos as armas empunhadas.
@@ -419,7 +422,7 @@ export function balasDoModo(modo, { rajadaTech = BALAS_RAJADA, autofogo = BALAS_
 }
 
 // Munição que não causa dano (a tabela de munição da wiki, system-catalog.js, com o texto dela): quem é pego sofre só o
-// efeito, que o mestre resolve pelo cartão. As outras munições especiais causam o dano da arma.
+// efeito. Os testes e os estados são aplicados por municoes.mjs; a fumaça continua com a mesa.
 export const MUNICAO_SEM_DANO = {
   biotoxin: 'quem é atingido faz Resistir a Tortura/Drogas DV15 ou sofre 3d6 direto no HP.',
   emp: 'quem é atingido faz Cybertech DV15 ou o mestre escolhe 2 cyberwares ou eletrônicos que param por 1 minuto.',
@@ -429,6 +432,36 @@ export const MUNICAO_SEM_DANO = {
   smoke: 'Cobre de fumaça uma área de 10 × 10 m por 1 minuto. Agir dentro dela costuma ter −4.',
   teargas: 'quem tem olhos de carne faz Resistir a Tortura/Drogas DV13 ou sofre Olho danificado por 1 minuto, sem dano bônus.'
 };
+
+// Munição RED, p. 344–347 (system-catalog.js). O dano da toxina é próprio, sem crítico, armadura ou multiplicador.
+export const RESISTENCIAS_MUNICAO = {
+  biotoxin: { pericia: 'resist-torture-drugs', dv: 15, dano: '3d6' },
+  poison: { pericia: 'resist-torture-drugs', dv: 13, dano: '2d6' },
+  sleep: { pericia: 'resist-torture-drugs', dv: 13 },
+  flashbang: { pericia: 'resist-torture-drugs', dv: 15 },
+  teargas: { pericia: 'resist-torture-drugs', dv: 13 },
+  emp: { pericia: 'cybertech', dv: 15 }
+};
+export const municaoPoeFogo = (efeito, dano) => efeito === 'incendiary' && dano.passou && dano.bruto > 0;
+// Decisão do usuário, 17-10-2026: inclui mirado; a segunda tentativa mantém o local e só soma Sorte ao 10 + 1d10.
+export const podeRepetirComInteligente = ({ efeito, modo, ataque, contra, municao = '' }) => efeito === 'smart'
+  && (modo === 'tiro' || (modo === 'explosivo' && municao === 'rocket'))
+  && Number.isFinite(contra) && ataque <= contra && ataque >= contra - 4;
+
+// O electronic e o providesHardening do CORE. A blindagem protege a peça e as opções do mesmo conjunto, mesmo
+// quando ela própria não é eletrônica (Hardened Shielding). Não muda instalação, uso nem Humanidade ao desligar.
+export function vulneraveisAoEmp(itens) {
+  const upgradeEmUso = item => {
+    const pai = itens.find(outro => outro.id === item.system.instaladoEm);
+    return Boolean(pai) && pai.system.uso !== 'guardado';
+  };
+  const emUso = item => item.type === 'cyberware' ? item.system.instalado
+    : item.type === 'armadura' ? item.system.equipada
+      : item.type === 'upgrade' ? upgradeEmUso(item) : ['carregando', 'equipado'].includes(item.system.uso);
+  const ativos = itens.filter(emUso);
+  const conjunto = item => item.system.instaladoEm || item.id;
+  return ativos.filter(item => item.system.eletronico && !ativos.some(outro => outro.system.endurecido && conjunto(outro) === conjunto(item)));
+}
 
 // O local do corpo que a armadura protege: só cabeça e corpo têm SP; perna e item na mão contam como corpo.
 export const localDaArmadura = local => (local === 'cabeca' ? 'cabeca' : 'corpo');
@@ -499,6 +532,8 @@ export function passwallsDoAlvo(selfIces) {
   return { quantos, dv: DV_DO_PASSWALL[quantos] ?? null };
 }
 export const passouOPasswall = (total, dv) => Number(total) > Number(dv);
+// Pelo Personal Link, todos os Passwalls são ignorados, inclusive o Self-ICE que volta depois do EMP (Kit p. 27).
+export const passwallsPassados = (ligacao, quantos) => ligacao?.direta ? quantos : Math.min(ligacao?.passados ?? 0, quantos);
 
 // O quickhack (a wiki: "depois de passar todos os Passwalls, Interface contra a DV do quickhack. Um quickhack por alvo
 // por turno: errou o Puppet, não dá para tentar o Overheat no mesmo alvo nesse turno"; "O Rank dá os níveis: DV6 no Rank

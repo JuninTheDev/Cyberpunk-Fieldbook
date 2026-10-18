@@ -33,7 +33,7 @@ import { config } from './configuracoes.mjs';
 import { centroDe, combateDe, defesaContra, distancia, jogadorDe, naFila, pedir as pedirAoDono, souOMestreAtivo, tokenNaCena } from './combate.mjs';
 import {
   acoesNetComDireta, acoesNetNaRodada, alcanceDaLigacao, alcanceDoJackIn, andaresDoNeuroport, bloqueioDoAlvo, CONEXAO_DIRETA, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA,
-  jaFezOQuickhack, JACK_OUT_INSEGURO, passouOFirewall, passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
+  jaFezOQuickhack, JACK_OUT_INSEGURO, passouOFirewall, passouOPasswall, passouOQuickhack, passwallsDoAlvo, passwallsPassados, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from './regras.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
@@ -45,11 +45,11 @@ const avisar = texto => { ui.notifications.warn(texto); return null; };
 const SEM_MESTRE = 'Sem mestre na mesa: o Jack In precisa do mestre para a resistência do alvo.';
 
 // O Neuroport instalado: o cyberware de 2077 do catálogo, ou o feito à mão com o mesmo nome.
-export const temNeuroport = ator => Boolean(ator?.items.some(item => item.type === 'cyberware' && item.system.instalado
+export const temNeuroport = ator => Boolean(ator?.items.some(item => item.type === 'cyberware' && item.system.instalado && !item.inoperante
   && (item.getFlag(SISTEMA, 'catalogo') === 'cyberware-2077:neuroport' || item.name === 'Neuroport')));
 
 // Os Self-ICE instalados (cada um põe um Passwall no Neuroport).
-export const selfIcesDe = ator => (ator?.items ?? []).filter(item => item.type === 'cyberware' && item.system.instalado
+export const selfIcesDe = ator => (ator?.items ?? []).filter(item => item.type === 'cyberware' && item.system.instalado && !item.inoperante
   && (item.getFlag(SISTEMA, 'catalogo') === 'cyberware-2077:self-ice' || item.name === 'Self-ICE')).length;
 
 // O Black ICE do Neuroport: o do cyberdeck equipado do dono (a wiki: "O Neuroport não instala Black ICE: ele usa o Black
@@ -57,6 +57,13 @@ export const selfIcesDe = ator => (ator?.items ?? []).filter(item => item.type =
 export const blackIceDoNeuroport = ator => (ator ? netrunnerDo(ator).programas.filter(programa => programa.system.classe === 'blackice') : []);
 // Os andares do Neuroport, de cima para baixo (regras.andaresDoNeuroport): o Black ICE do deck, os Passwalls e o Holophone.
 export const andaresDe = ator => andaresDoNeuroport({ blackIce: blackIceDoNeuroport(ator).map(programa => programa.name), selfIce: selfIcesDe(ator) });
+
+// O EMP interrompe o equipamento sem apagar as ligações; o Jack Out continua livre.
+function equipamentoOperante(ator, alvo) {
+  if (!netrunnerDo(ator).deck) return avisar(`${ator.name} não tem cyberdeck operante equipado.`);
+  if (!temNeuroport(alvo)) return avisar(`${alvo?.name ?? 'O alvo'} não tem Neuroport operante.`);
+  return true;
+}
 
 // As ligações de um ator: as que ele fez (ligacoes) e as que fizeram nele (invasores); e, no netrunner, as Ações NET da
 // rodada (acoes: { combate, rodada, usadas }) e os alvos do Jack Out inseguro (bloqueios: [{ alvo, nome, ate }]).
@@ -118,6 +125,7 @@ export async function jackIn(ator, { alvo = null, perguntar = false } = {}) {
   const modo = config('escondeAtaque') ? 'gm' : 'public';
   const firewall = await firewallDe(ator, token, meu, { perguntar, modo });
   if (!firewall) return null;
+  if (!equipamentoOperante(ator, token.actor)) return null;
   const teste = await ator.rolarJackIn({ perguntar, sabor: `contra ${token.name}`, modo, dados: { jackin: true }, categoria: 'net' });
   if (!teste) return null;
   return pedirAoMestre('jackin', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: teste.total, firewall: firewall.total, mensagem: teste.mensagem?.id ?? null });
@@ -158,8 +166,9 @@ export function jackOut(ator, alvo) {
 export async function breach(ator, alvo, { perguntar = false } = {}) {
   const ligacao = neuroportDe(ator).ligacoes.find(item => item.alvo === alvo);
   if (!ligacao) return avisar(`${ator.name} não está nesse Neuroport.`);
+  if (!equipamentoOperante(ator, fromUuidSync(alvo)?.actor)) return null;
   const { quantos, dv } = passwallsDoAlvo(selfIcesDe(fromUuidSync(alvo)?.actor));
-  if ((ligacao.passados ?? 0) >= quantos) return avisar(quantos ? `${ator.name} já passou os Passwalls de ${ligacao.nome}.` : `${ligacao.nome} não tem Passwall (nenhum Self-ICE).`);
+  if (passwallsPassados(ligacao, quantos) >= quantos) return avisar(quantos ? `${ator.name} já passou os Passwalls de ${ligacao.nome}.` : `${ligacao.nome} não tem Passwall (nenhum Self-ICE).`);
   if (faltaAcaoNet(ator)) return avisar(faltaAcaoNet(ator));
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
   const teste = await ator.rolarInterface('backdoor', { perguntar, sabor: `contra o Passwall de ${ligacao.nome} (DV ${dv})` });
@@ -210,15 +219,16 @@ async function escolherQuickhack(ator, ligacao, lista) {
 export async function quickhack(ator, alvo, { perguntar = false, escolha = null } = {}) {
   const ligacao = neuroportDe(ator).ligacoes.find(item => item.alvo === alvo);
   if (!ligacao) return avisar(`${ator.name} não está nesse Neuroport.`);
+  if (!equipamentoOperante(ator, fromUuidSync(alvo)?.actor)) return null;
   const { quantos } = passwallsDoAlvo(selfIcesDe(fromUuidSync(alvo)?.actor));
-  if ((ligacao.passados ?? 0) < quantos) return avisar(`Passe antes os Passwalls de ${ligacao.nome} (o Breach).`);
+  if (passwallsPassados(ligacao, quantos) < quantos) return avisar(`Passe antes os Passwalls de ${ligacao.nome} (o Breach).`);
   if (jaFezOQuickhack(ligacao.ultimoQuickhack, agoraDe(ator))) return avisar(`Um quickhack por alvo por turno: ${ator.name} já tentou um em ${ligacao.nome} nesta rodada.`);
   if (faltaAcaoNet(ator)) return avisar(faltaAcaoNet(ator));
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
   const lista = await quickhacksDe(ator);
   const id = escolha ?? await escolherQuickhack(ator, ligacao, lista);
   const escolhido = lista.find(item => item.id === id);
-  if (!escolhido) return null;
+  if (!escolhido || !equipamentoOperante(ator, fromUuidSync(alvo)?.actor)) return null;
   const teste = await ator.rolarInterface('quickhack', { perguntar, sabor: `${escolhido.nome} contra ${ligacao.nome} (DV ${escolhido.dv})` });
   if (!teste) return null;
   return pedirAoMestre('quickhack', { ator: ator.uuid, alvo, id, total: teste.total });
@@ -241,6 +251,7 @@ async function resolver(acao, pedido, usuario) {
   const ator = await fromUuid(pedido.ator);
   if (!ator || !usuario || !RESOLVER[acao]) return null;
   if (!usuario.isGM && !ator.testUserPermission(usuario, 'OWNER')) return null;
+  if (['jackin', 'firewall', 'direta', 'breach', 'quickhack'].includes(acao) && !equipamentoOperante(ator, (await fromUuid(pedido.alvo))?.actor)) return null;
   return RESOLVER[acao](ator, pedido, usuario);
 }
 
@@ -309,6 +320,7 @@ async function resolverJackIn(ator, pedido, usuario) {
   const sabe = sabeDoJackIn(alvo.actor.system.rankDeInterface);
   const { resposta, notas } = sabe ? { resposta: null, notas: [] }
     : await defesaContra({ atacante: ator, tokenAtq: meu, alvo, total: pedido.total, modo: 'jackin', rotulo: 'Jack In', descricao: 'Interface + 1d10', opcoes: ['vontade'] });
+  if (!equipamentoOperante(ator, alvo.actor)) return null;
   const defesa = resposta?.defesa ?? null;
   const percebido = sabe || defesa === null || percebeuOJackIn(pedido.total, defesa);
   await mostrarTotal(pedido);
@@ -353,7 +365,7 @@ async function resolverBreach(ator, pedido, usuario) {
   const alvo = await fromUuid(pedido.alvo);
   if (!ligacao || !alvo?.actor) return null;
   const { quantos, dv } = passwallsDoAlvo(selfIcesDe(alvo.actor));
-  const antes = ligacao.passados ?? 0;
+  const antes = passwallsPassados(ligacao, quantos);
   if (antes >= quantos || !await gastarAcaoNet(ator, usuario)) return null;
   const passou = passouOPasswall(pedido.total, dv);
   const passados = antes + (passou ? 1 : 0);
@@ -436,10 +448,10 @@ async function resolverQuickhack(ator, pedido, usuario) {
   if (!ligacao || !alvo?.actor) return null;
   const { quantos } = passwallsDoAlvo(selfIcesDe(alvo.actor));
   const agora = agoraDe(ator);
-  if ((ligacao.passados ?? 0) < quantos || jaFezOQuickhack(ligacao.ultimoQuickhack, agora)) return null;
+  if (passwallsPassados(ligacao, quantos) < quantos || jaFezOQuickhack(ligacao.ultimoQuickhack, agora)) return null;
   const item = (await game.system.api.wiki.carregarCatalogo())[pedido.id];
   const nivel = item?.flags?.[SISTEMA]?.quickhack;
-  if (!nivel || !fazOQuickhack(ator.system.rankDeInterface, nivel.rank) || !await gastarAcaoNet(ator, usuario)) return null;
+  if (!nivel || !fazOQuickhack(ator.system.rankDeInterface, nivel.rank) || !equipamentoOperante(ator, alvo.actor) || !await gastarAcaoNet(ator, usuario)) return null;
   const passou = passouOQuickhack(pedido.total, nivel.dv);
   const alertou = passou && nivel.alerta;
   const percebido = ligacao.percebido || alertou;
@@ -518,6 +530,7 @@ async function resolverDireta(ator, pedido, usuario) {
     }
     como = 'aceitou';
   }
+  if (!equipamentoOperante(ator, alvo.actor)) return null;
   const percebido = !inconsciente;
   const { quantos } = passwallsDoAlvo(selfIcesDe(alvo.actor));
   await gravar(ator, alvo, { ligacao: { alvo: alvo.uuid, nome: alvo.name, percebido, direta: true, passados: quantos }, invasor: { netrunner: ator.uuid, nome: meu.name, percebido, direta: true } });

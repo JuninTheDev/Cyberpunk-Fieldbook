@@ -517,10 +517,15 @@ async function main() {
     for (const doc of lerPack(yaml, pack)) {
       const item = converter(doc, doc.system || {}, foraDoMapa);
       if (!item) { semTipo.push(`${doc.name} (${doc.type})`); continue; }
+      if (['cyberware', 'equipamento', 'cyberdeck', 'armadura', 'roupa', 'upgrade'].includes(item.type)) {
+        item.system.eletronico = Boolean(doc.system.isElectronic);
+        item.system.endurecido = Boolean(doc.system.providesHardening);
+      }
       const id = `${curto}:${slug(doc.name)}`;
       item.effects = REGRA_DA_WIKI[id] ? [] : converterEfeitos(doc, camel, foraDoMapa, nomesDasPericias);
       if (REGRA_DA_WIKI[id]) foraDoMapa.push(`${doc.name}: os efeitos do CORE (${REGRA_DA_WIKI[id]})`);
       item.flags = { 'cpr-fieldbook': { catalogo: id, origem: { sistema: 'cyberpunk-red-core', versao: VERSAO, id: doc._id } } };
+      if ('endurecido' in item.system) item.flags['cpr-fieldbook'].eletronicaMigrada = true;
       itens[id] = item;
       contagem[curto] = (contagem[curto] || 0) + 1;
     }

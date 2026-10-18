@@ -2030,10 +2030,10 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.hp === 1 && info.ablacao === 0 && info.spDepois === info.sp && info.sobrou === 0, JSON.stringify(info)];
     });
 
-    await r.passo('munição que não causa dano (granada venenosa): explode na área, mas ninguém perde HP; o cartão diz o efeito da wiki', async () => {
+    await r.passo('munição sem dano da arma (granada venenosa): explode na área; os dois alvos resistem e preservam HP e SP', async () => {
       // Lança-granadas com a granada venenosa, no Alvo a 10 m: d10 9 → REF 8 + Armas Pesadas 4 + 9 = 21 contra DV 15. O
-      // Capanga, a 2 m do Alvo, também é pego. Nenhum dado de dano é rolado.
-      await fixar(edge, [[9, 10]]);
+      // Capanga, a 2 m do Alvo, também é pego. Os dois passam na resistência; nenhum dado de dano é rolado.
+      await fixar(edge, [[9, 10], [9, 10], [9, 10]]);
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
         const a = __ator('Atiradora');
@@ -2051,15 +2051,1267 @@ module.exports = async ({ edge, servidores, r }) => {
         const r = await arma.atacar({ alvo: __token('Alvo') });
         const cartao = game.messages.contents.at(-1);
         const resultado = {
-          cabecalho: r.cabecalho, linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, dano: l.dano, notas: l.notas })), antes,
+          cabecalho: r.cabecalho, linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, dano: l.dano, notas: l.notas, resistencia: l.municao?.resistencia })), antes,
           depois: { alvo: __ator('Alvo').system.hp.value, capanga: __ator('Capanga').system.hp.value }, desfazer: cartao.getFlag('${S}', 'desfazer')?.length ?? null, sobrou: window.__fila.length
         };
         await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
         return resultado;
       })()`);
-      const nota = 'Grenade (Poison): não causa dano. Quem é atingido faz Resistir a Tortura/Drogas DV13 ou sofre 2d6 direto no HP. O mestre resolve.';
-      const ok = /explodiu/.test(info.cabecalho) && info.linhas.length === 2 && info.linhas.every(l => l.resultado === 'acertou' && !l.dano && l.notas.includes(nota))
+      const nota = 'Grenade (Poison): não causa dano da arma. Quem é atingido faz Resistir a Tortura/Drogas DV13 ou sofre 2d6 direto no HP.';
+      const ok = /explodiu/.test(info.cabecalho) && info.linhas.length === 2 && info.linhas.every(l => l.resultado === 'acertou' && !l.dano && l.notas.includes(nota) && l.resistencia?.passou && l.resistencia.dv === 13)
         && info.depois.alvo === info.antes.alvo && info.depois.capanga === info.antes.capanga && info.desfazer === 0 && info.sobrou === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    // O C14 usa documentos próprios em cada passo; uma falha não deixa estados nem dados para os seguintes.
+    const comMunicoes = async (teste, enquantoAberto = null) => {
+      const promessa = edge.evaluate(`(async () => {
+      const cat = await game.system.api.wiki.carregarCatalogo();
+      const api = game.system.api;
+      const esperar = async condicao => { for (let i = 0; i < 100 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+      const pegar = id => foundry.utils.deepClone(cat[id]);
+      const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, dados: CONFIG.Dice.randomUniform, tempo: game.time.worldTime, mensagens: game.messages.map(m => m.id), config: Object.fromEntries(['area', 'lesaoCritica', 'defesaDosNpcs', 'resultado', 'rolarDireto'].map(k => [k, game.settings.get('${S}', k)])) };
+      const atores = [], usuarios = [];
+      let cena;
+      try {
+        await game.settings.set('${S}', 'area', false);
+        await game.settings.set('${S}', 'lesaoCritica', 'ficha');
+        await game.settings.set('${S}', 'rolarDireto', true);
+        const criar = async dados => { const a = await Actor.implementation.create(dados); atores.push(a); return a; };
+        const criarUsuario = async dados => { const u = await User.implementation.create(dados); usuarios.push(u); return u; };
+        const a = await criar({ name: 'Munições: atirador', type: 'personagem', system: { hp: { value: 80 }, atributos: { ref: { valor: 8 } }, pericias: { handgun: { nivel: 10 }, archery: { nivel: 10 }, 'heavy-weapons': { nivel: 10 } } } });
+        const armadura = pegar('core_armor:light-armorjack-body'); armadura.system.equipada = true;
+        const alvo = await criar({ name: 'Munições: alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { will: { valor: 8 }, tech: { valor: 8 }, ref: { valor: 0 }, body: { valor: 8 } } }, items: [armadura] });
+        cena = await Scene.implementation.create({ name: 'Munições (C14)', active: false, width: 1600, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
+        await cena.activate();
+        await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        for (const [ator, x] of [[a, 100], [alvo, 500]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 400 })).toObject()]);
+        await esperar(() => canvas.tokens.placeables.length === 2);
+        const token = cena.tokens.find(t => t.actorId === alvo.id);
+        CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+        const dados = fila => { window.__fila = fila; };
+        const armar = async (id, idArma = 'core_weapons:bow') => {
+          const municao = pegar(id), arma = pegar(idArma);
+          arma.system.pente = { value: 8, max: 8 };
+          const criados = await a.createEmbeddedDocuments('Item', [municao, arma]);
+          const pronta = criados.find(i => i.type === 'arma');
+          await pronta.update({ 'system.carregada': criados.find(i => i.type === 'municao').id });
+          return pronta;
+        };
+        const atirar = async (arma, fila, opcoes = {}) => {
+          dados(fila);
+          const r = await arma.atacar({ alvo: token, ...opcoes });
+          const m = r && game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === r.id);
+          if (m) await esperar(() => document.querySelector('[data-message-id="' + m.id + '"]'));
+          return { r, m, fila: window.__fila.length };
+        };
+        const estado = () => ({ hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp, lesoes: alvo.items.filter(i => i.type === 'lesao').map(i => i.getFlag('${S}', 'catalogo')), sono: alvo.effects.filter(e => e.getFlag('${S}', 'municao')?.tipo === 'sono').length, fogo: alvo.effects.filter(e => e.getFlag('${S}', 'municao')?.tipo === 'fogo').length });
+        const resultado = await (${teste})({ api, a, alvo, cena, token, pegar, armar, atirar, estado, dados, esperar, criar, criarUsuario });
+        if (${Boolean(enquantoAberto)}) {
+          window.__c14Aguardando = resultado;
+          await new Promise(resolve => { window.__c14Liberar = resolve; });
+        }
+        return resultado;
+      } finally {
+        CONFIG.Dice.randomUniform = antes.dados; window.__fila = [];
+        for (const combate of game.combats.filter(c => c.scene?.id === cena?.id)) await combate.delete();
+        for (const app of [...foundry.applications.instances.values()]) if (app.options.window?.title?.startsWith('EMP:')) await app.close();
+        for (const ator of atores) { for (const item of ator.items) await item.sheet?.close(); await ator.sheet?.close(); }
+        // A varredura do Neuroport não deve produzir um Jack Out inseguro durante a limpeza do cenário.
+        for (const ator of atores) if (ator.getFlag('${S}', 'neuroport')) await ator.unsetFlag('${S}', 'neuroport');
+        await cena?.delete();
+        for (const usuario of usuarios) await usuario.delete();
+        for (const ator of atores) await ator.delete();
+        for (const m of game.messages.filter(m => !antes.mensagens.includes(m.id))) await m.delete();
+        for (const [k, v] of Object.entries(antes.config)) await game.settings.set('${S}', k, v);
+        if (game.time.worldTime !== antes.tempo) await game.time.advance(antes.tempo - game.time.worldTime);
+        if (game.scenes.has(antes.ativa)) await game.scenes.get(antes.ativa).activate();
+        if (game.scenes.has(antes.cena)) await game.scenes.get(antes.cena).view();
+        delete window.__c14Aguardando; delete window.__c14Liberar;
+      }
+    })()`);
+      let acabou = false, extra;
+      promessa.then(() => { acabou = true; }, () => { acabou = true; });
+      if (enquantoAberto) {
+        try {
+          for (let i = 0; i < 300 && !acabou && !(await edge.evaluate('Boolean(window.__c14Liberar)')); i++) await edge.sleep(100);
+          if (!acabou) extra = await enquantoAberto(await edge.evaluate('window.__c14Aguardando'));
+        } finally {
+          await edge.evaluate('window.__c14Liberar?.(); true');
+          await promessa.catch(() => {});
+        }
+      }
+      return { ...await promessa, ...extra };
+    };
+
+    await r.passo('munições especiais (C14): toxinas sem armadura ou crítico, empate falha; sono acorda com dano e expira; flashbang e gás preservam lesão permanente', async () => {
+      const info = await comMunicoes(`async ({ api, alvo, cena, token, pegar, armar, atirar, estado, esperar, criar }) => {
+        const veneno = await armar('core_ammo:arrow-poison');
+        const falha = await atirar(veneno, [[9,10],[5,10],[2,6],[3,6]]);
+        const primeiro = { ...estado(), total: falha.r.linhas[0].municao.resistencia.total, dano: falha.r.linhas[0].dano, fila: falha.fila, balas: veneno.system.pente.value };
+        await api.combate.desfazer(falha.m);
+        const desfeito = estado();
+        const sucesso = await atirar(veneno, [[9,10],[6,10]]);
+        const resistiu = { ...estado(), resistencia: sucesso.r.linhas[0].municao.resistencia, fila: sucesso.fila };
+        const bio = await armar('core_ammo:arrow-biotoxin');
+        const biologica = await atirar(bio, [[9,10],[7,10],[6,6],[6,6],[3,6]]);
+        const biotoxina = { ...estado(), dano: biologica.r.linhas[0].dano, resistencia: biologica.r.linhas[0].municao.resistencia, fila: biologica.fila };
+        await api.combate.desfazer(biologica.m);
+        const sono = await armar('core_ammo:arrow-sleep');
+        const dormiu = await atirar(sono, [[9,10],[5,10]]);
+        const adormeceu = { ...estado(), inconsciente: alvo.statuses.has('unconscious'), caido: alvo.statuses.has('prone'), fila: dormiu.fila };
+        await alvo.update({ 'system.hp.value': 79 });
+        await esperar(() => !alvo.effects.some(e => e.getFlag('${S}', 'municao')?.tipo === 'sono'));
+        const acordou = { ...estado(), caido: alvo.statuses.has('prone') };
+        await alvo.update({ 'system.hp.value': 80 });
+        await atirar(sono, [[9,10],[5,10]]);
+        await game.time.advance(59);
+        const antesDoMinuto = estado();
+        await game.time.advance(1);
+        await esperar(() => !alvo.effects.some(e => e.getFlag('${S}', 'municao')?.tipo === 'sono'));
+        const expirou = estado();
+        const outro = await criar({ name: 'Munições: segundo alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { will: { valor: 8 }, ref: { valor: 0 } } } });
+        const [outroToken] = await cena.createEmbeddedDocuments('Token', [(await outro.getTokenDocument({ x: 700, y: 400 })).toObject()]);
+        const granadaSono = await armar('core_ammo:grenade-sleep', 'core_weapons:grenade-launcher');
+        const dois = await atirar(granadaSono, [[9,10],[5,10],[5,10]], { alvos: [token, outroToken] });
+        const antesDeAcordar = [alvo.statuses.has('unconscious'), outro.statuses.has('unconscious')];
+        document.querySelector('[data-message-id="' + dois.m.id + '"] [data-cprf-acao="encerrarMunicao"][data-ator="' + alvo.uuid + '"]').click();
+        await esperar(() => !alvo.statuses.has('unconscious'));
+        const acordouUm = { antes: antesDeAcordar, depois: [alvo.statuses.has('unconscious'), outro.statuses.has('unconscious')], caido: alvo.statuses.has('prone'), fila: dois.fila };
+        const permanente = pegar('core_critical-injuries-head:damaged-eye');
+        const [olho] = await alvo.createEmbeddedDocuments('Item', [permanente]);
+        const flash = await armar('core_ammo:grenade-flashbang', 'core_weapons:grenade-launcher');
+        const estrondo = await atirar(flash, [[9,10],[7,10]]);
+        const flashbang = { ...estado(), itens: estrondo.r.linhas[0].municao.itens.length, fila: estrondo.fila };
+        await game.time.advance(60);
+        await esperar(() => !alvo.items.some(i => i.getFlag('${S}', 'municao')));
+        const permanenteFicou = alvo.items.has(olho.id) && !alvo.items.get(olho.id).getFlag('${S}', 'municao');
+        const gas = await armar('core_ammo:grenade-teargas', 'core_weapons:grenade-launcher');
+        await olho.delete();
+        const gases = await atirar(gas, [[9,10],[5,10]]);
+        const gasSemBonus = { hp: alvo.system.hp.value, fila: gases.fila, itens: gases.r.linhas[0].municao.itens.length, lesoes: estado().lesoes };
+        document.querySelector('[data-message-id="' + gases.m.id + '"] [data-cprf-acao="encerrarMunicao"][data-ator="' + alvo.uuid + '"]').click();
+        await esperar(() => !alvo.items.some(i => i.getFlag('${S}', 'municao')));
+        const gasEncerrado = estado().lesoes;
+        const nasais = pegar('core_cyberware:nasal-filters'); nasais.system.instalado = true;
+        await alvo.createEmbeddedDocuments('Item', [nasais]);
+        const protegido = await atirar(gas, [[9,10]]);
+        return { primeiro, desfeito, resistiu, biotoxina, adormeceu, acordou, antesDoMinuto, expirou, acordouUm, flashbang, permanenteFicou, gasSemBonus, gasEncerrado, protegido: { notas: protegido.r.linhas[0].notas, resistencia: protegido.r.linhas[0].municao, fila: protegido.fila } };
+      }`);
+      const ok = info.primeiro.hp === 75 && info.primeiro.sp === 11 && info.primeiro.total === 13 && info.primeiro.dano.bonus === 0 && !info.primeiro.dano.critico && !info.primeiro.dano.ablado && info.primeiro.fila === 0 && info.primeiro.balas === 7
+        && info.desfeito.hp === 80 && info.desfeito.sp === 11 && info.resistiu.hp === 80 && info.resistiu.resistencia.total === 14 && info.resistiu.resistencia.passou && info.resistiu.fila === 0
+        && info.biotoxina.hp === 65 && info.biotoxina.sp === 11 && info.biotoxina.resistencia.total === 15 && !info.biotoxina.resistencia.passou && !info.biotoxina.dano.critico && info.biotoxina.dano.bonus === 0 && !info.biotoxina.lesoes.length && info.biotoxina.fila === 0
+        && info.adormeceu.sono === 1 && info.adormeceu.inconsciente && info.adormeceu.caido && info.adormeceu.hp === 80 && info.adormeceu.fila === 0 && info.acordou.sono === 0 && info.acordou.hp === 79 && info.acordou.caido
+        && info.antesDoMinuto.sono === 1 && info.expirou.sono === 0 && info.expirou.hp === 80
+        && info.acordouUm.antes.join() === 'true,true' && info.acordouUm.depois.join() === 'false,true' && info.acordouUm.caido && info.acordouUm.fila === 0
+        && info.flashbang.hp === 80 && info.flashbang.itens === 1 && info.flashbang.lesoes.length === 2 && info.flashbang.fila === 0 && info.permanenteFicou
+        && info.gasSemBonus.hp === 80 && info.gasSemBonus.itens === 1 && info.gasSemBonus.fila === 0 && info.gasSemBonus.lesoes.join() === 'core_critical-injuries-head:damaged-eye' && info.gasEncerrado.length === 0
+        && !info.protegido.resistencia && info.protegido.fila === 0 && info.protegido.notas.includes('Protegido contra o efeito desta munição.');
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): incendiária só atravessando SP, fogo não acumula e cobra 2 HP no fim do turno; apagar e Desfazer; expansiva dá outra lesão sem segundo bônus', async () => {
+      const info = await comMunicoes(`async ({ api, a, alvo, cena, armar, atirar, estado, esperar }) => {
+        const arma = await armar('core_ammo:heavy-pistol-incendiary', 'core_weapons:heavy-pistol');
+        const bloqueado = await atirar(arma, [[9,10],[2,6],[2,6],[2,6]]);
+        const segurou = { ...estado(), dano: bloqueado.r.linhas[0].dano, fila: bloqueado.fila };
+        const tiro = await atirar(arma, [[9,10],[5,6],[5,6],[5,6]]);
+        const acendeu = { ...estado(), fila: tiro.fila };
+        const outro = await atirar(arma, [[9,10],[5,6],[5,6],[5,6]]);
+        const repetido = { ...estado(), fila: outro.fila };
+        // O Hellhound usa o mesmo status; recebê-lo depois não cria uma segunda fonte de cobrança.
+        await alvo.toggleStatusEffect('cprf-em-chamas', { active: true });
+        const fogoCompartilhado = alvo.effects.filter(e => e.statuses.has('cprf-em-chamas')).length;
+        const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+        for (const [ator, ini] of [[alvo, 20], [a, 10]]) await combate.createEmbeddedDocuments('Combatant', [{ actorId: ator.id, tokenId: cena.tokens.find(t => t.actorId === ator.id).id, sceneId: cena.id, initiative: ini }]);
+        await combate.startCombat();
+        await combate.nextTurn();
+        await esperar(() => alvo.system.hp.value === repetido.hp - 2);
+        const fim = estado();
+        await api.municoes.fogoNoFimDoTurno(combate);
+        const umaVez = estado();
+        document.querySelector('[data-message-id="' + tiro.m.id + '"] [data-cprf-acao="apagarFogo"]').click();
+        await esperar(() => !alvo.statuses.has(api.municoes.STATUS_FOGO));
+        const apagou = estado();
+        const sonifera = await armar('core_ammo:arrow-sleep');
+        await atirar(sonifera, [[9,10],[5,10]]);
+        const tempoAntes = game.time.worldTime;
+        await combate.nextRound();
+        await esperar(() => game.time.worldTime === tempoAntes + 3);
+        const tempoDeRodada = game.time.worldTime - tempoAntes;
+        for (let i = 0; i < 18; i++) await combate.nextRound();
+        const minutoNasRodadas = { quase: game.time.worldTime - tempoAntes, antes: estado().sono };
+        await combate.nextRound();
+        await esperar(() => estado().sono === 0);
+        Object.assign(minutoNasRodadas, { total: game.time.worldTime - tempoAntes, depois: estado().sono });
+        await alvo.toggleStatusEffect('prone', { active: false });
+        await combate.delete();
+        await alvo.update({ 'system.hp.value': 80 });
+        const armadura = alvo.items.find(i => i.type === 'armadura'); await armadura.update({ 'system.sp.corpo.value': 11 });
+        const novo = await atirar(arma, [[9,10],[5,6],[5,6],[5,6]]);
+        await api.combate.desfazer(novo.m);
+        const desfeito = estado();
+        await alvo.toggleStatusEffect('cprf-em-chamas', { active: true });
+        const jaQueimava = await atirar(arma, [[9,10],[5,6],[5,6],[5,6]]);
+        const netPrimeiro = { ...estado(), fontes: alvo.effects.filter(e => e.statuses.has('cprf-em-chamas')).length, fila: jaQueimava.fila };
+        await api.combate.desfazer(jaQueimava.m);
+        const fogoAnterior = { ...estado(), aceso: alvo.statuses.has('cprf-em-chamas') };
+        await api.municoes.apagarFogo(alvo);
+        const expansiva = await armar('core_ammo:heavy-pistol-expansive', 'core_weapons:heavy-pistol');
+        const expandiu = await atirar(expansiva, [[9,10],[6,6],[6,6],[3,6],[3,6],[4,6],[3,6],[4,6],[4,6],[4,6]]);
+        const lesoes = { ...estado(), dano: expandiu.r.linhas[0].dano, fila: expandiu.fila };
+        await api.combate.desfazer(expandiu.m);
+        const voltou = estado();
+        await game.settings.set('${S}', 'lesaoCritica', 'anunciar');
+        const anunciar = await atirar(expansiva, [[9,10],[6,6],[6,6],[3,6],[3,6],[4,6],[3,6],[4,6],[4,6],[4,6]]);
+        const soNoChat = { ...estado(), lesoesNoCartao: anunciar.r.linhas[0].dano.lesoes, fila: anunciar.fila };
+        await api.combate.desfazer(anunciar.m);
+        await game.settings.set('${S}', 'lesaoCritica', 'ficha');
+        const normal = await atirar(expansiva, [[9,10],[6,6],[6,6],[3,6],[4,6],[4,6]]);
+        const semObjeto = { ...estado(), quantidade: normal.r.linhas[0].dano.lesoes.length, fila: normal.fila };
+        return { segurou, acendeu, repetido, fogoCompartilhado, fim, umaVez, apagou, desfeito, netPrimeiro, fogoAnterior, lesoes, voltou, soNoChat, semObjeto, tempoDeRodada, minutoNasRodadas };
+      }`);
+      const ok = info.segurou.hp === 80 && info.segurou.fogo === 0 && !info.segurou.dano.passou && info.segurou.fila === 0
+        && info.acendeu.hp === 76 && info.acendeu.sp === 10 && info.acendeu.fogo === 1 && info.acendeu.fila === 0
+        && info.repetido.hp === 71 && info.repetido.sp === 9 && info.repetido.fogo === 1 && info.repetido.fila === 0
+        && info.fogoCompartilhado === 1 && info.fim.hp === 69 && info.fim.sp === 9 && info.umaVez.hp === 69 && info.apagou.fogo === 0
+        && info.desfeito.hp === 80 && info.desfeito.sp === 11 && info.desfeito.fogo === 0
+        && info.netPrimeiro.hp === 76 && info.netPrimeiro.fogo === 0 && info.netPrimeiro.fontes === 1 && info.netPrimeiro.fila === 0
+        && info.fogoAnterior.hp === 80 && info.fogoAnterior.sp === 11 && info.fogoAnterior.aceso
+        && info.lesoes.hp === 71 && info.lesoes.sp === 10 && info.lesoes.lesoes.length === 2 && info.lesoes.lesoes.includes('core_critical-injuries-body:foreign-object') && info.lesoes.lesoes.includes('core_critical-injuries-body:broken-leg')
+        && info.lesoes.dano.bonus === 5 && info.lesoes.dano.lesoes.length === 2 && info.lesoes.fila === 0 && info.voltou.hp === 80 && info.voltou.sp === 11 && !info.voltou.lesoes.length && info.tempoDeRodada === 3
+        && info.minutoNasRodadas.quase === 57 && info.minutoNasRodadas.antes === 1 && info.minutoNasRodadas.total === 60 && info.minutoNasRodadas.depois === 0
+        && info.soNoChat.hp === 71 && !info.soNoChat.lesoes.length && info.soNoChat.lesoesNoCartao.map(l => l.nome).join() === 'Objeto estranho alojado,Perna quebrada' && info.soNoChat.lesoesNoCartao.every(l => l.item === null) && info.soNoChat.fila === 0
+        && info.semObjeto.quantidade === 1 && info.semObjeto.lesoes.join() === 'core_critical-injuries-body:broken-leg' && info.semObjeto.hp === 71 && info.semObjeto.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): proteções contra flash e gás; proteção parcial só tira a lesão protegida, filtros não param flechas', async () => {
+      const info = await comMunicoes(`async ({ alvo, pegar, armar, atirar, estado, esperar }) => {
+        const instalar = async id => { const d = pegar(id); d.system.instalado = true; return (await alvo.createEmbeddedDocuments('Item', [d]))[0]; };
+        const flash = await armar('core_ammo:grenade-flashbang', 'core_weapons:grenade-launcher');
+        const parcial1 = await instalar('core_cyberware:anti-dazzle');
+        const ouvido = await instalar('core_cyberware:level-damper');
+        const parcial = await atirar(flash, [[9,10],[7,10]]);
+        const umaLesao = { ...estado(), fila: parcial.fila };
+        await game.time.advance(60); await esperar(() => !alvo.items.some(i => i.type === 'lesao'));
+        await instalar('core_cyberware:anti-dazzle');
+        const total = await atirar(flash, [[9,10]]);
+        const ambas = { ...estado(), municao: total.r.linhas[0].municao, fila: total.fila };
+        await ouvido.update({ 'system.instalado': false });
+        const soOlhos = await atirar(flash, [[9,10],[7,10]]);
+        const outraLesao = { ...estado(), fila: soOlhos.fila };
+        await game.time.advance(60); await esperar(() => !alvo.items.some(i => i.type === 'lesao'));
+        const olhos = [await instalar('core_cyberware:cybereye'), await instalar('core_cyberware:cybereye')];
+        const gas = await armar('core_ammo:grenade-teargas', 'core_weapons:grenade-launcher');
+        const carne = await atirar(gas, [[9,10]]);
+        await instalar('core_cyberware:nasal-filters');
+        const flecha = await armar('core_ammo:arrow-poison');
+        const injetada = await atirar(flecha, [[9,10],[5,10],[2,6],[3,6]]);
+        return { umaLesao, ambas, outraLesao, olhos: olhos.length, semCarne: { municao: carne.r.linhas[0].municao, fila: carne.fila }, injetada: { ...estado(), fila: injetada.fila }, parcialInstalada: parcial1.system.instalado };
+      }`);
+      const ok = info.umaLesao.hp === 80 && info.umaLesao.lesoes.join() === 'core_critical-injuries-head:damaged-eye' && info.umaLesao.fila === 0
+        && info.ambas.hp === 80 && info.ambas.lesoes.length === 0 && info.ambas.municao === null && info.ambas.fila === 0
+        && info.outraLesao.hp === 80 && info.outraLesao.lesoes.join() === 'core_critical-injuries-head:damaged-ear' && info.outraLesao.fila === 0
+        && info.olhos === 2 && info.semCarne.municao === null && info.semCarne.fila === 0 && info.injetada.hp === 75 && info.injetada.sp === 11 && info.injetada.fila === 0 && info.parcialInstalada;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): o jogador do alvo rola a resistência no próprio navegador; resultado, HP e Desfazer chegam aos dois clientes', async () => {
+      const info = await comMunicoes(`async ({ a, alvo, cena, armar, criarUsuario }) => {
+        const usuario = await criarUsuario({ name: 'Jogador Munições', role: CONST.USER_ROLES.PLAYER, character: alvo.id });
+        await alvo.update({ ownership: { [usuario.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+        await game.settings.set('${S}', 'resultado', 'publico');
+        const arma = await armar('core_ammo:arrow-poison');
+        return { ator: a.id, alvo: alvo.id, arma: arma.id, token: cena.tokens.find(t => t.actorId === alvo.id).id, cena: cena.id, usuario: usuario.id };
+      }`, async entrada => {
+        let jogadorMunicoes;
+        try {
+          jogadorMunicoes = await abrirEdge({ porta: 9462, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-c14-jogador-' });
+          await foundry14.capturarAvisos(jogadorMunicoes);
+          await foundry14.entrarComo(jogadorMunicoes, mesa.url, 'Jogador Munições');
+          await jogadorMunicoes.evaluate(`(async () => {
+            await game.settings.set('${S}', 'rolarDireto', true);
+            for (let i = 0; i < 100 && !(canvas.ready && canvas.scene?.id === '${entrada.cena}'); i++) await new Promise(r => setTimeout(r, 100));
+            window.__fila = [[5,10]];
+            CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+            return true;
+          })()`);
+          const ataque = await edge.evaluate(`(async () => {
+            // O login do outro cliente pode trocar a cena vista pelo mestre; o alvo pertence à cena deste passo.
+            const alvo = game.scenes.get('${entrada.cena}')?.tokens.get('${entrada.token}');
+            if (alvo?.actorId !== '${entrada.alvo}' || !alvo.actor) throw new Error('O alvo do C14 não está disponível na cena de teste.');
+            window.__fila = [[9,10],[2,6],[3,6]];
+            const r = await game.actors.get('${entrada.ator}').items.get('${entrada.arma}').atacar({ alvo });
+            if (!r) throw new Error('O ataque de veneno do C14 foi recusado.');
+            return { id: r.id, r };
+          })()`);
+          const ler = `(async () => {
+            const mensagem = () => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === '${ataque.id}');
+            for (let i = 0; i < 100 && !(mensagem() && game.actors.get('${entrada.alvo}').system.hp.value === 75 && document.querySelector('[data-message-id="' + mensagem().id + '"]')); i++) await new Promise(r => setTimeout(r, 100));
+            const m = mensagem(), a = game.actors.get('${entrada.alvo}');
+            const rolagem = game.messages.filter(m => m.author.id === '${entrada.usuario}' && m.getFlag('${S}', 'teste')).at(-1);
+            return { hp: a.system.hp.value, sp: a.system.armadura.corpo.sp, linha: m?.getFlag('${S}', 'ataque').linhas[0], autor: rolagem?.author.id, teste: rolagem?.getFlag('${S}', 'teste'), fila: window.__fila.length,
+              texto: document.querySelector('[data-message-id="' + m?.id + '"]')?.textContent };
+          })()`;
+          const mestre = await edge.evaluate(ler), jogador = await jogadorMunicoes.evaluate(ler);
+          await edge.shot('municoes-jogador');
+          await edge.evaluate(`game.system.api.combate.desfazer(game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === '${ataque.id}'))`);
+          const voltou = await jogadorMunicoes.evaluate(`(async () => { for (let i = 0; i < 100 && game.actors.get('${entrada.alvo}').system.hp.value !== 80; i++) await new Promise(r => setTimeout(r, 100)); return game.actors.get('${entrada.alvo}').system.hp.value; })()`);
+          const armaSmart = await edge.evaluate(`(async () => {
+            const a = game.actors.get('${entrada.ator}'), cat = await game.system.api.wiki.carregarCatalogo();
+            await a.update({ ownership: { ['${entrada.usuario}']: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, 'system.pericias.handgun.nivel': 0 });
+            const pegar = id => foundry.utils.deepClone(cat[id]);
+            const mira = pegar('core_cyberware:targeting-scope'); mira.system.instalado = true;
+            const arma = pegar('core_weapons:heavy-pistol'); arma.system.pente = { value: 8, max: 8 };
+            const itens = await a.createEmbeddedDocuments('Item', [mira, arma, pegar('core_ammo:heavy-pistol-smart')]);
+            const pronta = itens.find(i => i.type === 'arma');
+            await pronta.update({ 'system.carregada': itens.find(i => i.type === 'municao').id });
+            return pronta.id;
+          })()`);
+          const smart = await jogadorMunicoes.evaluate(`(async () => {
+            const a = game.actors.get('${entrada.ator}');
+            for (let i = 0; i < 100 && !(a.isOwner && a.items.has('${armaSmart}') && a.items.get('${armaSmart}').system.carregada); i++) await new Promise(r => setTimeout(r, 100));
+            const alvo = game.scenes.get('${entrada.cena}')?.tokens.get('${entrada.token}');
+            if (alvo?.actorId !== '${entrada.alvo}' || !alvo.actor) throw new Error('O alvo do C14 não chegou ao cliente do jogador.');
+            window.__fila = [[4,10],[9,10],[5,6],[5,6],[5,6]];
+            const r = await a.items.get('${armaSmart}').atacar({ alvo });
+            if (!r) throw new Error('O ataque inteligente do C14 foi recusado.');
+            return { id: r.id, fila: window.__fila.length };
+          })()`);
+          const lerSmart = `(async () => {
+            const mensagem = () => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === '${smart.id}');
+            for (let i = 0; i < 100 && !(mensagem() && game.actors.get('${entrada.alvo}').system.hp.value === 76); i++) await new Promise(r => setTimeout(r, 100));
+            const r = game.messages.find(m => m.getFlag('${S}', 'teste')?.inteligente);
+            return { hp: game.actors.get('${entrada.alvo}').system.hp.value, linha: mensagem()?.getFlag('${S}', 'ataque').linhas[0], autor: r?.author.id,
+              total: r?.getFlag('${S}', 'teste').total, balas: game.actors.get('${entrada.ator}').items.get('${armaSmart}').system.pente.value, fila: window.__fila.length };
+          })()`;
+          const mestreSmart = await edge.evaluate(lerSmart), jogadorSmart = await jogadorMunicoes.evaluate(lerSmart);
+          return { mestre, jogador, voltou, smart: { ...smart, fila: jogadorSmart.fila, mestre: mestreSmart, jogador: jogadorSmart }, avisos: await foundry14.avisosDoSistema(jogadorMunicoes) };
+        } finally {
+          if (jogadorMunicoes) {
+            await jogadorMunicoes.send('Page.navigate', { url: 'about:blank' }).catch(() => {});
+            edge.erros.push(...jogadorMunicoes.erros.filter(erro => /cpr-fieldbook/.test(erro)).map(erro => 'jogador C14: ' + erro));
+            await jogadorMunicoes.fechar();
+          }
+        }
+      });
+      const ok = [info.mestre, info.jogador].every(lado => lado.hp === 75 && lado.sp === 11 && lado.autor === info.usuario && lado.teste.total === 13 && /Tortura/.test(lado.teste.rotulo)
+        && lado.linha.municao.resistencia.total === 13 && lado.linha.municao.resistencia.dv === 13 && lado.linha.municao.resistencia.passou === false && lado.linha.dano.recebido === 5 && lado.linha.dano.ablado === 0
+        && lado.fila === 0 && lado.texto.includes('13 contra DV13: falhou')) && info.voltou === 80 && !info.avisos.length
+        && info.smart.fila === 0 && [info.smart.mestre, info.smart.jogador].every(lado => lado.hp === 76 && lado.balas === 7 && lado.autor === info.usuario && lado.total === 19
+          && lado.linha.segundaTentativa.primeiro === 12 && lado.linha.segundaTentativa.contra === 15 && lado.linha.segundaTentativa.total === 19);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): Inteligente RED exige a Luneta de Mira, repete sem gastar outra bala, só soma Sorte e permite outra esquiva', async () => {
+      const info = await comMunicoes(`async ({ api, a, alvo, token, pegar, armar, atirar, estado, dados, esperar }) => {
+        await a.update({ 'system.pericias.handgun.nivel': 0, 'system.role.habilidades.Precision Attack': 3 });
+        const arma = await armar('core_ammo:heavy-pistol-smart', 'core_weapons:heavy-pistol');
+        await arma.update({ 'system.qualidade': 'excellent', 'system.bonusAtaque': 1 });
+        const totalDeTestes = () => game.messages.filter(m => m.getFlag('${S}', 'teste')).length;
+        const inteligentes = () => game.messages.filter(m => m.getFlag('${S}', 'teste')?.inteligente);
+        const partes = mensagem => [...new DOMParser().parseFromString(mensagem.content, 'text/html').querySelectorAll('.partes li')].map(li => li.textContent.replace(/\\s+/g, ' ').trim());
+        const ler = tiro => {
+          const linha = tiro.r.linhas[0], flag = tiro.m.getFlag('${S}', 'ataque');
+          const caixa = document.querySelector('[data-message-id="' + tiro.m.id + '"]');
+          return { ...estado(), ataque: tiro.r.ataque, local: tiro.r.local, localFlag: flag.local, linha, flag: flag.linhas[0], balas: arma.system.pente.value, fila: tiro.fila,
+            texto: caixa?.textContent.replace(/\\s+/g, ' ').trim() ?? '' };
+        };
+        const avisos = [], avisar = ui.notifications.warn;
+        const antesSemMira = totalDeTestes();
+        let recusado;
+        try {
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          recusado = await atirar(arma, []);
+        } finally {
+          ui.notifications.warn = avisar;
+        }
+        const semMira = { recusou: recusado.r === null, balas: arma.system.pente.value, fila: recusado.fila, testes: totalDeTestes() - antesSemMira, avisos };
+        const mira = pegar('core_cyberware:targeting-scope'); mira.system.instalado = true;
+        await alvo.update({ 'system.atributos.ref.valor': 0 });
+        const [luneta] = await a.createEmbeddedDocuments('Item', [mira]);
+        const antesRepeticao = totalDeTestes();
+        const tiro = await atirar(arma, [[4,10],[9,10],[5,6],[5,6],[5,6]]);
+        const repetiu = { ...ler(tiro), testes: totalDeTestes() - antesRepeticao };
+        const segunda = inteligentes().at(-1);
+        repetiu.rolagem = { formula: segunda.rolls[0].formula, total: segunda.rolls[0].total, inteligente: segunda.getFlag('${S}', 'teste').inteligente, partes: partes(segunda) };
+        await api.combate.desfazer(tiro.m);
+        const voltou = estado();
+        await arma.update({ 'system.pente.value': 8 });
+        // Decisão do usuário, 17-10-2026: a Inteligente mantém o mirado; −8 (mais a mira) entra só no primeiro tiro.
+        const capacete = pegar('core_armor:light-armorjack-head'); capacete.system.equipada = true;
+        await alvo.createEmbeddedDocuments('Item', [capacete]);
+        const antesMirado = totalDeTestes();
+        const naCabeca = await atirar(arma, [[9,10],[9,10],[5,6],[5,6],[5,6]], { local: 'cabeca' });
+        const primeiraMirada = game.messages.filter(m => m.getFlag('${S}', 'teste')?.ataque && !m.getFlag('${S}', 'teste').inteligente).at(-1);
+        const segundaMirada = inteligentes().at(-1);
+        const mirado = { ...ler(naCabeca), testes: totalDeTestes() - antesMirado, bonusMira: a.system.bonus.tiroMirado,
+          spCabeca: alvo.system.armadura.cabeca.sp, primeiro: { formula: primeiraMirada.rolls[0].formula, total: primeiraMirada.rolls[0].total, partes: partes(primeiraMirada) },
+          segundo: { formula: segundaMirada.rolls[0].formula, total: segundaMirada.rolls[0].total, partes: partes(segundaMirada) } };
+        await api.combate.desfazer(naCabeca.m);
+        const miradoDesfeito = { ...estado(), spCabeca: alvo.system.armadura.cabeca.sp };
+        await arma.update({ 'system.pente.value': 8 });
+        await a.update({ 'system.atributos.ref.valor': 6 });
+        const antesMargem = inteligentes().length;
+        const longe = await atirar(arma, [[2,10]]);
+        const margemCinco = { ...ler(longe), novasTentativas: inteligentes().length - antesMargem };
+        await arma.update({ 'system.pente.value': 8 });
+        await a.update({ 'system.atributos.ref.valor': 8 });
+        await alvo.update({ 'system.atributos.ref.valor': 8, 'system.atributos.dex.valor': 8, 'system.pericias.evasion.nivel': 4 });
+        await game.settings.set('${S}', 'defesaDosNpcs', 'automatica');
+        const antesEsquiva = totalDeTestes();
+        const esquivou = await atirar(arma, [[4,10],[6,10],[9,10],[8,10]]);
+        const segundaEsquiva = { ...ler(esquivou), testes: totalDeTestes() - antesEsquiva };
+        segundaEsquiva.rolagem = { formula: inteligentes().at(-1).rolls[0].formula, total: inteligentes().at(-1).rolls[0].total };
+        await a.update({ 'system.sorte.value': 5 });
+        dados([[5,10]]);
+        let janela;
+        const promessa = api.municoes.rolarInteligente({ ator: a.uuid }, { perguntar: true, aoAbrir: aberta => { janela = aberta; } });
+        let sorte;
+        try {
+          await esperar(() => janela?.element?.querySelector('.dialog-content [name="sorte"]'));
+          const corpo = janela?.element?.querySelector('.dialog-content');
+          if (!corpo) throw new Error('A janela da munição Inteligente não abriu.');
+          const campos = [...corpo.querySelectorAll('input, select')].map(c => c.name);
+          const comuns = corpo.querySelectorAll('[name="comum"]').length;
+          const situacionais = corpo.querySelectorAll('[name="situacional"]').length;
+          const outro = corpo.querySelectorAll('[name="outro"]').length;
+          const valor = corpo.querySelector('[name="sorte"]'); valor.value = 2;
+          valor.dispatchEvent(new Event('input', { bubbles: true }));
+          janela.element.querySelector('[data-action="rolar"]').click();
+          const resultado = await promessa;
+          const mensagem = game.messages.get(resultado.mensagem);
+          await esperar(() => document.querySelector('[data-message-id="' + mensagem.id + '"] .partes'));
+          const cartao = document.querySelector('[data-message-id="' + mensagem.id + '"]');
+          sorte = { campos, comuns, situacionais, outro, total: resultado.total, formula: mensagem.rolls[0].formula,
+            inteligente: mensagem.getFlag('${S}', 'teste').inteligente, partes: partes(mensagem), restante: a.system.sorte.value,
+            texto: cartao?.textContent.replace(/\\s+/g, ' ').trim() ?? '', fila: window.__fila.length };
+        } finally {
+          if (janela?.rendered) await janela.close();
+          await promessa.catch(() => null);
+        }
+        await a.update({ 'system.role.habilidades.Fumble Recovery': 4 });
+        await a.prepararSorte(0);
+        dados([[1,10]]);
+        const recuperou = await api.municoes.rolarInteligente({ ator: a.uuid });
+        const mensagemSolo = game.messages.get(recuperou.mensagem);
+        const solo = { total: recuperou.total, critico: recuperou.critico, formula: mensagemSolo.rolls[0].formula,
+          flagCritico: mensagemSolo.getFlag('${S}', 'teste').critico, inteligente: mensagemSolo.getFlag('${S}', 'teste').inteligente,
+          sorte: a.system.sorte.value, preparada: a.sortePreparada, fila: window.__fila.length };
+        // O requisito volta a ser conferido se o EMP chegar com a janela do primeiro tiro aberta.
+        const antesJanela = { testes: totalDeTestes(), balas: arma.system.pente.value, hp: alvo.system.hp.value, sorte: a.system.sorte.value };
+        const avisosJanela = [], avisarJanela = ui.notifications.warn;
+        const janelaDoTiro = () => [...foundry.applications.instances.values()].find(app => app.rendered && !app.minimizing && app.options.classes?.includes('janela-rolagem'));
+        let promessaTiro, miraNaJanela;
+        try {
+          ui.notifications.warn = texto => { avisosJanela.push(String(texto)); return null; };
+          dados([[4,10]]);
+          promessaTiro = arma.atacar({ alvo: token, perguntar: true });
+          await esperar(() => janelaDoTiro()?.element?.querySelector('[name="sorte"]'));
+          if (!janelaDoTiro()) throw new Error('A janela do tiro Inteligente não abriu.');
+          await luneta.setFlag('${S}', 'emp', { fim: game.time.worldTime + 60, ataque: 'c14-janela' });
+          janelaDoTiro().element.querySelector('[data-action="rolar"]').click();
+          const resultado = await promessaTiro;
+          miraNaJanela = { recusou: resultado === null, parada: luneta.inoperante, testes: totalDeTestes() - antesJanela.testes,
+            balas: arma.system.pente.value - antesJanela.balas, hp: alvo.system.hp.value - antesJanela.hp,
+            sorte: a.system.sorte.value - antesJanela.sorte, fila: window.__fila.length, avisos: avisosJanela };
+        } finally {
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close();
+          await promessaTiro?.catch(() => null);
+          await luneta.unsetFlag('${S}', 'emp');
+          ui.notifications.warn = avisarJanela;
+        }
+        // A ligação da arma Smart do Kit também precisa continuar operante até confirmar o primeiro tiro.
+        const armaKit = await armar('core_ammo:medium-pistol-basic', 'armas-2077:arasaka-hjke-11-yukimura');
+        const plug = pegar('core_cyberware:interface-plugs'); plug.system.instalado = true;
+        const [ligacaoKit] = await a.createEmbeddedDocuments('Item', [plug]);
+        await alvo.update({ 'system.atributos.ref.valor': 0 });
+        await a.prepararSorte(2);
+        const antesKit = { ligada: a.temLigacaoSmart, testes: totalDeTestes(), balas: armaKit.system.pente.value, hp: alvo.system.hp.value,
+          sorte: a.system.sorte.value, preparada: a.sortePreparada };
+        const avisosKit = [];
+        let promessaKit, kitNaJanela;
+        try {
+          ui.notifications.warn = texto => { avisosKit.push(String(texto)); return null; };
+          dados([[4,10]]);
+          promessaKit = armaKit.atacar({ alvo: token, perguntar: true });
+          await esperar(() => janelaDoTiro()?.element?.querySelector('[name="sorte"]'));
+          if (!janelaDoTiro()) throw new Error('A janela da arma Smart do Kit não abriu.');
+          await ligacaoKit.setFlag('${S}', 'emp', { fim: game.time.worldTime + 60, ataque: 'c14-kit-janela' });
+          janelaDoTiro().element.querySelector('[data-action="rolar"]').click();
+          const resultado = await promessaKit;
+          kitNaJanela = { ligadaAntes: antesKit.ligada, ligadaDepois: a.temLigacaoSmart, recusou: resultado === null,
+            testes: totalDeTestes() - antesKit.testes, balas: armaKit.system.pente.value - antesKit.balas, hp: alvo.system.hp.value - antesKit.hp,
+            sorte: a.system.sorte.value - antesKit.sorte, preparada: a.sortePreparada === antesKit.preparada, fila: window.__fila.length, avisos: avisosKit };
+        } finally {
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close();
+          await promessaKit?.catch(() => null);
+          await ligacaoKit.unsetFlag('${S}', 'emp');
+          ui.notifications.warn = avisarJanela;
+        }
+        return { semMira, repetiu, voltou, mirado, miradoDesfeito, margemCinco, segundaEsquiva, sorte, solo, miraNaJanela, kitNaJanela };
+      }`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const comSegunda = (tiro, esperado) => igual(tiro.linha.segundaTentativa, esperado) && igual(tiro.flag.segundaTentativa, esperado);
+      const ok = info.semMira.recusou && info.semMira.balas === 8 && info.semMira.fila === 0 && info.semMira.testes === 0
+        && info.semMira.avisos.length === 1 && /Targeting Scope/.test(info.semMira.avisos[0])
+        && info.repetiu.ataque === 14 && comSegunda(info.repetiu, { primeiro: 14, contra: 15, total: 19 })
+        && info.repetiu.linha.resultado === 'acertou' && info.repetiu.linha.dv === 15 && info.repetiu.hp === 76 && info.repetiu.sp === 10
+        && info.repetiu.balas === 7 && info.repetiu.fila === 0 && info.repetiu.testes === 2
+        && info.repetiu.rolagem.formula === '1d10crit + 10' && info.repetiu.rolagem.total === 19 && info.repetiu.rolagem.inteligente
+        && igual(info.repetiu.rolagem.partes, ['1d10', 'Inteligente +10']) && /Inteligente: errou com 14 contra 15; segunda tentativa/.test(info.repetiu.texto)
+        && info.voltou.hp === 80 && info.voltou.sp === 11
+        && info.mirado.ataque === 12 && comSegunda(info.mirado, { primeiro: 12, contra: 15, total: 19 })
+        && info.mirado.local === 'cabeca' && info.mirado.localFlag === 'cabeca' && info.mirado.linha.resultado === 'acertou' && info.mirado.linha.dv === 15
+        && info.mirado.hp === 72 && info.mirado.spCabeca === 10 && info.mirado.sp === 11 && info.mirado.linha.dano.recebido === 8 && info.mirado.linha.dano.lugar === 'cabeca'
+        && info.mirado.balas === 7 && info.mirado.fila === 0 && info.mirado.testes === 2 && info.mirado.bonusMira === 1
+        && info.mirado.primeiro.formula === '1d10crit + 8 + 1 + 1 - 7' && info.mirado.primeiro.total === 12 && info.mirado.primeiro.partes.includes('Mirado -7')
+        && info.mirado.segundo.formula === '1d10crit + 10' && info.mirado.segundo.total === 19 && igual(info.mirado.segundo.partes, ['1d10', 'Inteligente +10'])
+        && /Tiro mirado na cabeça/.test(info.mirado.texto) && /Inteligente: errou com 12 contra 15; segunda tentativa/.test(info.mirado.texto)
+        && info.miradoDesfeito.hp === 80 && info.miradoDesfeito.spCabeca === 11 && info.miradoDesfeito.sp === 11
+        && info.margemCinco.ataque === 10 && info.margemCinco.linha.resultado === 'errou' && info.margemCinco.linha.segundaTentativa === null
+        && info.margemCinco.flag.segundaTentativa === null && info.margemCinco.novasTentativas === 0 && info.margemCinco.hp === 80 && info.margemCinco.sp === 11
+        && info.margemCinco.balas === 7 && info.margemCinco.fila === 0 && !/segunda tentativa/.test(info.margemCinco.texto)
+        && info.segundaEsquiva.ataque === 14 && comSegunda(info.segundaEsquiva, { primeiro: 14, contra: 18, total: 19 })
+        && info.segundaEsquiva.linha.resultado === 'esquivou' && info.segundaEsquiva.linha.escolha === 'esquivar' && info.segundaEsquiva.linha.defesa === 20
+        && info.segundaEsquiva.hp === 80 && info.segundaEsquiva.sp === 11 && info.segundaEsquiva.balas === 7 && info.segundaEsquiva.fila === 0
+        && info.segundaEsquiva.testes === 4 && info.segundaEsquiva.rolagem.formula === '1d10crit + 10' && info.segundaEsquiva.rolagem.total === 19
+        && /Inteligente: errou com 14 contra 18; segunda tentativa/.test(info.segundaEsquiva.texto) && /esquiva 20/.test(info.segundaEsquiva.texto)
+        && igual(info.sorte.campos, ['sorte']) && info.sorte.comuns === 0 && info.sorte.situacionais === 0 && info.sorte.outro === 0
+        && info.sorte.total === 17 && info.sorte.formula === '1d10crit + 10 + 2' && info.sorte.inteligente && info.sorte.restante === 3
+        && igual(info.sorte.partes, ['1d10', 'Inteligente +10', 'Sorte +2']) && /Sorte \+2/.test(info.sorte.texto) && info.sorte.fila === 0
+        && info.solo.total === 11 && info.solo.critico === null && info.solo.flagCritico === null && info.solo.inteligente
+        && info.solo.formula === '1d10xo + 10' && info.solo.sorte === 3 && info.solo.preparada === 0 && info.solo.fila === 0
+        && info.miraNaJanela.recusou && info.miraNaJanela.parada && info.miraNaJanela.testes === 0 && info.miraNaJanela.balas === 0
+        && info.miraNaJanela.hp === 0 && info.miraNaJanela.sorte === 0 && info.miraNaJanela.fila === 1
+        && info.miraNaJanela.avisos.length === 1 && /Targeting Scope/.test(info.miraNaJanela.avisos[0])
+        && info.kitNaJanela.ligadaAntes && !info.kitNaJanela.ligadaDepois && info.kitNaJanela.recusou && info.kitNaJanela.testes === 0
+        && info.kitNaJanela.balas === 0 && info.kitNaJanela.hp === 0 && info.kitNaJanela.sorte === 0 && info.kitNaJanela.preparada && info.kitNaJanela.fila === 1
+        && info.kitNaJanela.avisos.length === 1 && /só dispara ligada pelo Personal Link/.test(info.kitNaJanela.avisos[0]);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): EMP interrompe o deck e as ações da NET, inclusive do mestre; desconectar permanece possível; o minuto e Desfazer restauram deck e hardware', async () => {
+      const info = await comMunicoes(`async ({ api, alvo, cena, token, pegar, armar, atirar, esperar }) => {
+        const { netrunnerDo } = await import('/systems/${S}/scripts/netrun/regras-da-net.mjs');
+        const erro = promessa => promessa.then(() => null, e => e.message);
+        let arquitetura, tile;
+        try {
+          await alvo.update({ 'system.role.nome': 'Netrunner', 'system.role.rank': 4 });
+          const doDeck = pegar('core_gear:cyberdeck'); doDeck.system.uso = 'equipado';
+          const agente = pegar('core_gear:agent'); agente.system.uso = 'carregando';
+          const basicos = await alvo.createEmbeddedDocuments('Item', [doDeck, agente]);
+          const deck = basicos.find(i => i.type === 'cyberdeck'), agent = basicos.find(i => i.type === 'equipamento');
+          const doPrograma = pegar('core_programs:sword');
+          doPrograma.system.instaladoEm = deck.id; doPrograma.system.ativo = true;
+          const doAlcance = pegar('core_upgrades:range-upgrade');
+          doAlcance.system.instaladoEm = deck.id; doAlcance.system.eletronico = true;
+          const defensores = ['armor', 'shield'].map(id => {
+            const d = pegar('core_programs:' + id); d.system.instaladoEm = deck.id; d.system.ativo = true; return d;
+          });
+          const instalados = await alvo.createEmbeddedDocuments('Item', [doPrograma, doAlcance, ...defensores]);
+          const porCatalogo = id => instalados.find(i => i.getFlag('${S}', 'catalogo') === id);
+          const programa = porCatalogo('core_programs:sword'), alcance = porCatalogo('core_upgrades:range-upgrade');
+          const armor = porCatalogo('core_programs:armor'), shield = porCatalogo('core_programs:shield');
+          arquitetura = await Item.implementation.create({ name: 'EMP: arquitetura própria', type: 'arquitetura', system: { andares: [
+            { andar: 1, ramo: 'a', tipo: 'controle', dv: 6, descricao: 'Portaria' },
+            { andar: 1, ramo: 'a', tipo: 'arquivo', dv: 6, descricao: 'Registro' },
+            { andar: 2, ramo: 'a', tipo: 'vazio' }
+          ] } });
+          [tile] = await cena.createEmbeddedDocuments('Tile', [{ x: 500, y: 400, width: 200, height: 200,
+            texture: { src: 'systems/${S}/icones/terminal.svg' }, flags: { '${S}': { pontoDeAcesso: {
+              ativo: true, nome: 'Terminal EMP', arquitetura: arquitetura.uuid, alcance: 6, exigeDeck: true,
+              rankMinimo: 1, oculto: false, dvScanner: 10, reiniciar: true, ligacoes: [], revelados: []
+            } } } }]);
+          const pedido = { tile: tile.uuid, token: token.id };
+          const pedir = (operacao, dados = {}) => api.netrun.pedir(operacao, { ...pedido, ...dados });
+          const corredor = () => api.netrun.estado(tile)?.corredores.find(c => c.token === token.id);
+          const oferta = () => {
+            const n = netrunnerDo(alvo);
+            return { deck: Boolean(n.deck), programas: n.programas.map(p => p.id).sort(), alcance: n.rangeUpgrade };
+          };
+          const conectou = await pedir('conectar');
+          await pedir('mover', { destino: '1a' });
+          window.__fila = [[7, 10]];
+          await pedir('habilidade', { habilidade: 'control', alvo: '1a.0' });
+          const normal = { conectado: conectou.conectado, no: corredor()?.no, controle: api.netrun.estado(tile).feitos.includes('1a.0'), oferta: oferta() };
+          const arma = await armar('core_ammo:grenade-emp', 'core_weapons:grenade-launcher');
+          const selecionar = async (mensagem, primeiro, segundo) => {
+            const botao = document.querySelector('[data-message-id="' + mensagem.id + '"] [data-cprf-acao="aplicarEmp"]');
+            if (!botao) throw new Error('O cartão do EMP não ofereceu a escolha.');
+            botao.click();
+            const janela = () => [...foundry.applications.instances.values()].find(a => a.rendered && !a.minimizing && !a.element?.classList.contains('minimizing') && a.options.window?.title === 'EMP: ' + alvo.name);
+            await esperar(() => janela()?.element?.querySelector('[name="segundo"]'));
+            const escolhendo = janela();
+            escolhendo.element.querySelector('[name="primeiro"]').value = primeiro.id;
+            escolhendo.element.querySelector('[name="segundo"]').value = segundo.id;
+            escolhendo.element.querySelector('[data-action="ok"]').click();
+            await esperar(() => !escolhendo.rendered && !escolhendo.element?.isConnected);
+            await esperar(() => primeiro.inoperante && segundo.inoperante && mensagem.getFlag('${S}', 'ataque').linhas[0].municao.empResolvido);
+          };
+          const tiro = await atirar(arma, [[9, 10], [7, 10]]);
+          await selecionar(tiro.m, deck, agent);
+          const antes = JSON.stringify(api.netrun.estado(tile));
+          const bloqueios = {
+            mover: await erro(pedir('mover', { destino: '2a' })),
+            habilidade: await erro(pedir('habilidade', { habilidade: 'pathfinder' })),
+            programa: await erro(pedir('programa', { programa: programa.id, acao: 'ativar' })),
+            comandar: await erro(pedir('comandar', { texto: 'Abrir a porta' })),
+            acionar: await erro(pedir('acionar', { controle: '1a.0', indice: 99, acao: 'abrir' }))
+          };
+          const parado = { oferta: oferta(), programaDireto: alvo.rolarAtaqueDePrograma(programa) === null,
+            mesmoEstado: JSON.stringify(api.netrun.estado(tile)) === antes, conectado: Boolean(corredor()),
+            uso: deck.system.uso, ativo: programa.system.ativo, fila: tiro.fila };
+          parado.guardado = [];
+          for (const uso of ['carregando', 'guardado']) {
+            await deck.update({ 'system.uso': uso });
+            parado.guardado.push({ uso, mover: await erro(pedir('mover', { destino: '2a' })),
+              comandar: await erro(pedir('comandar', { texto: 'Abrir a porta' })),
+              acionar: await erro(pedir('acionar', { controle: '1a.0', indice: 99, acao: 'abrir' })),
+              mesmoEstado: JSON.stringify(api.netrun.estado(tile)) === antes });
+          }
+          await deck.update({ 'system.uso': 'equipado' });
+          const doIce = pegar('black-ice:wisp'); doIce.system.instaladoEm = deck.id;
+          const [ice] = await alvo.createEmbeddedDocuments('Item', [doIce]);
+          const tokensAntes = cena.tokens.size;
+          await ice.update({ 'system.ativo': true });
+          const { acertarIceRezzado } = await import('/systems/${S}/scripts/ice-rezzado.mjs');
+          await acertarIceRezzado(ice.uuid);
+          parado.ice = { ativo: ice.system.ativo, inoperante: ice.inoperante, token: Boolean(ice.getFlag('${S}', 'iceRezzado')), novos: cena.tokens.size - tokensAntes };
+          await ice.delete();
+          const hpAntes = alvo.system.hp.value;
+          const semDefesa = await alvo.receberDanoNoCerebro(7);
+          parado.defesa = { recebido: semDefesa.recebido, shield: semDefesa.shield, reduzido: semDefesa.reduzido, hp: hpAntes - alvo.system.hp.value, ativos: [armor.system.ativo, shield.system.ativo] };
+          await alvo.update({ 'system.hp.value': hpAntes });
+          const saiu = await pedir('desconectar');
+          const reconectar = await erro(pedir('conectar'));
+          const desligado = !corredor();
+          await game.time.advance(59);
+          const quase = deck.inoperante;
+          await game.time.advance(1);
+          await esperar(() => !deck.inoperante && !agent.inoperante);
+          const voltou = await pedir('conectar');
+          await pedir('mover', { destino: '1a' });
+          const aposMinuto = { conectou: voltou.conectado, no: corredor()?.no, oferta: oferta(), programa: programa.inoperante, ativos: [armor.system.ativo, shield.system.ativo] };
+          const protegido = await alvo.receberDanoNoCerebro(7);
+          aposMinuto.shield = [protegido.recebido, protegido.shield, protegido.reduzido, shield.system.ativo];
+          const reduzido = await alvo.receberDanoNoCerebro(7, { dePrograma: false });
+          aposMinuto.armor = [reduzido.recebido, reduzido.shield, reduzido.reduzido, armor.system.ativo];
+          await alvo.update({ 'system.hp.value': hpAntes });
+          await shield.update({ 'system.ativo': true });
+          // O hardware eletrônico pode parar sozinho, sem tirar a operação do deck ou dos programas.
+          const tiroHardware = await atirar(arma, [[9, 10], [7, 10]]);
+          await selecionar(tiroHardware.m, alcance, agent);
+          const hardwareParado = { oferta: oferta(), deck: deck.inoperante, alcance: alcance.inoperante, programa: programa.inoperante, fila: tiroHardware.fila };
+          await api.combate.desfazer(tiroHardware.m);
+          await esperar(() => !alcance.inoperante && !agent.inoperante);
+          await pedir('mover', { destino: '2a' });
+          const aposDesfazer = { no: corredor()?.no, oferta: oferta(), alcance: alcance.inoperante, agent: agent.inoperante };
+
+          // A porta EMP suspende a conexão física do deck e dos programas sem desencaixar nem guardar.
+          const daPorta = pegar('cyberware-2077:neuroport-cyberdeck-port'); daPorta.system.instalado = true;
+          const [porta] = await alvo.createEmbeddedDocuments('Item', [daPorta]);
+          await deck.setFlag('${S}', 'naPorta', true);
+          const portaOperante = { oferta: oferta(), naPorta: netrunnerDo(alvo).naPorta };
+          const tiroPorta = await atirar(arma, [[9, 10], [7, 10]]);
+          await selecionar(tiroPorta.m, porta, agent);
+          const portaParada = { porta: porta.inoperante, deck: deck.inoperante, programa: programa.inoperante, oferta: oferta(),
+            flag: deck.getFlag('${S}', 'naPorta'), uso: deck.system.uso, instalado: porta.system.instalado, fila: tiroPorta.fila,
+            mover: await erro(pedir('mover', { destino: '1a' })), direto: alvo.rolarAtaqueDePrograma(programa) === null };
+          // Tirar da porta continua permitido: o deck externo volta a operar enquanto a porta segue parada.
+          await deck.setFlag('${S}', 'naPorta', false);
+          const externo = { porta: porta.inoperante, deck: deck.inoperante, programa: programa.inoperante, oferta: oferta(), naPorta: netrunnerDo(alvo).naPorta };
+          await deck.setFlag('${S}', 'naPorta', true);
+          const reencaixado = deck.inoperante && programa.inoperante;
+          await api.combate.desfazer(tiroPorta.m);
+          await esperar(() => !porta.inoperante && !deck.inoperante && !programa.inoperante);
+          await pedir('mover', { destino: '1a' });
+          const portaRestaurada = { porta: porta.inoperante, deck: deck.inoperante, programa: programa.inoperante, oferta: oferta(),
+            naPorta: netrunnerDo(alvo).naPorta, flag: deck.getFlag('${S}', 'naPorta'), uso: deck.system.uso, no: corredor()?.no };
+          await pedir('mover', { destino: '2a' });
+          const estadoAtual = () => JSON.stringify(api.netrun.estado(tile));
+          // A aprovação do Virus não pode autorizar uma rolagem depois de o deck parar.
+          const tiroVirus = await atirar(arma, [[9,10],[7,10]]);
+          const antesVirus = estadoAtual(), interfaceAntes = alvo.rolarInterface;
+          let chamadasVirus = 0, promessaVirus, virusNaJanela;
+          try {
+            alvo.rolarInterface = function (...args) { chamadasVirus++; return interfaceAntes.apply(this, args); };
+            window.__fila = [[7,10]];
+            promessaVirus = erro(pedir('habilidade', { habilidade: 'virus', texto: 'Trancar o registro' }));
+            const janela = () => [...foundry.applications.instances.values()].find(app => app.rendered && !app.minimizing && app.options.classes?.includes('net-virus'));
+            await esperar(() => janela()?.element?.querySelector('[name="dv"]'));
+            if (!janela()) throw new Error('A aprovação do Virus não abriu.');
+            await selecionar(tiroVirus.m, deck, agent);
+            janela().element.querySelector('[data-action="ok"]').click();
+            const motivo = await promessaVirus;
+            virusNaJanela = { motivo, chamadas: chamadasVirus, fila: window.__fila.length, mesmoEstado: estadoAtual() === antesVirus };
+          } finally {
+            for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('net-virus')) await app.close();
+            await promessaVirus?.catch(() => null);
+            alvo.rolarInterface = interfaceAntes;
+            await api.combate.desfazer(tiroVirus.m);
+          }
+          // O resultado real da rolagem chega depois do EMP; não deve alterar o rastro.
+          const tiroCloak = await atirar(arma, [[9,10],[7,10]]);
+          const antesCloak = estadoAtual();
+          let cloakDepois;
+          try {
+            alvo.rolarInterface = async function (...args) {
+              const resultado = await interfaceAntes.apply(this, args);
+              await selecionar(tiroCloak.m, deck, agent);
+              return resultado;
+            };
+            window.__fila = [[7,10]];
+            const motivo = await erro(pedir('habilidade', { habilidade: 'cloak' }));
+            cloakDepois = { motivo, fila: window.__fila.length, mesmoEstado: estadoAtual() === antesCloak };
+          } finally {
+            alvo.rolarInterface = interfaceAntes;
+            await api.combate.desfazer(tiroCloak.m);
+          }
+          // Trocar por outro deck operante não torna operante o programa da referência antiga.
+          await arquitetura.update({ 'system.andares': [...arquitetura.system.andares.map(a => a.toObject?.() ?? { ...a }), { andar: 2, ramo: 'a', tipo: 'ice', ice: 'wisp' }] });
+          const outroDeck = pegar('core_gear:cyberdeck'); outroDeck.system.uso = 'carregando';
+          const [alternativo] = await alvo.createEmbeddedDocuments('Item', [outroDeck]);
+          const tiroPrograma = await atirar(arma, [[9,10],[7,10]]);
+          const antesPrograma = estadoAtual(), ataqueAntes = alvo.rolarAtaqueDePrograma;
+          let programaDepois;
+          try {
+            alvo.rolarAtaqueDePrograma = async function (...args) {
+              const resultado = await ataqueAntes.apply(this, args);
+              await selecionar(tiroPrograma.m, deck, agent);
+              await deck.update({ 'system.uso': 'guardado' });
+              await alternativo.update({ 'system.uso': 'equipado' });
+              return resultado;
+            };
+            window.__fila = [[7,10]];
+            const motivo = await erro(pedir('programa', { programa: programa.id, acao: 'atacar', alvo: '2a.1' }));
+            programaDepois = { motivo, mesmoEstado: estadoAtual() === antesPrograma, ativo: programa.system.ativo,
+              inoperante: programa.inoperante, alternativo: netrunnerDo(alvo).deck?.id === alternativo.id, fila: window.__fila.length };
+          } finally {
+            alvo.rolarAtaqueDePrograma = ataqueAntes;
+            await api.combate.desfazer(tiroPrograma.m);
+            await alternativo.delete();
+            await deck.update({ 'system.uso': 'equipado' });
+          }
+          return { normal, bloqueios, parado, saiu: saiu.desconectado, reconectar, desligado, quase, aposMinuto, hardwareParado, aposDesfazer, portaOperante, portaParada, externo, reencaixado, portaRestaurada, virusNaJanela, cloakDepois, programaDepois, programa: programa.id, armor: armor.id, shield: shield.id };
+        } finally {
+          if (tile) {
+            await api.netrun.pedir('desconectar', { tile: tile.uuid, token: token.id }).catch(() => null);
+            for (const app of [...foundry.applications.instances.values()]) if (app.tile?.id === tile.id || String(app.id).startsWith('${S}-net-' + tile.id)) await app.close();
+            if (cena.tiles.has(tile.id)) await cena.deleteEmbeddedDocuments('Tile', [tile.id]);
+          }
+          await arquitetura?.delete();
+        }
+      }`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const programas = [info.programa, info.armor, info.shield].sort();
+      const oferta = { deck: true, programas, alcance: true };
+      const mensagem = 'Cyberdeck inoperante por EMP: não dá para agir na NET.';
+      const ok = info.normal.conectado && info.normal.no === '1a' && info.normal.controle && igual(info.normal.oferta, oferta)
+        && Object.keys(info.bloqueios).length === 5 && Object.values(info.bloqueios).every(erro => erro === mensagem)
+        && igual(info.parado.oferta, { deck: false, programas: [], alcance: false }) && info.parado.programaDireto
+        && info.parado.mesmoEstado && info.parado.conectado && info.parado.uso === 'equipado' && info.parado.ativo && info.parado.fila === 0
+        && info.parado.guardado.length === 2 && info.parado.guardado.every(e => e.mover === mensagem && e.comandar === mensagem && e.acionar === mensagem && e.mesmoEstado)
+        && igual(info.parado.ice, { ativo: true, inoperante: true, token: false, novos: 0 })
+        && igual(info.parado.defesa, { recebido: 7, shield: false, reduzido: 0, hp: 7, ativos: [true, true] })
+        && info.saiu && info.reconectar === mensagem && info.desligado && info.quase
+        && info.aposMinuto.conectou && info.aposMinuto.no === '1a' && !info.aposMinuto.programa && igual(info.aposMinuto.oferta, oferta)
+        && igual(info.aposMinuto.ativos, [true, true]) && igual(info.aposMinuto.shield, [0, true, 0, false]) && igual(info.aposMinuto.armor, [3, false, 4, true])
+        && !info.hardwareParado.deck && info.hardwareParado.alcance && !info.hardwareParado.programa && info.hardwareParado.fila === 0
+        && igual(info.hardwareParado.oferta, { deck: true, programas, alcance: false })
+        && info.aposDesfazer.no === '2a' && !info.aposDesfazer.alcance && !info.aposDesfazer.agent && igual(info.aposDesfazer.oferta, oferta)
+        && info.portaOperante.naPorta && igual(info.portaOperante.oferta, { deck: true, programas, alcance: false })
+        && info.portaParada.porta && info.portaParada.deck && info.portaParada.programa && info.portaParada.flag && info.portaParada.instalado
+        && info.portaParada.uso === 'equipado' && info.portaParada.fila === 0 && info.portaParada.mover === mensagem && info.portaParada.direto
+        && igual(info.portaParada.oferta, { deck: false, programas: [], alcance: false })
+        && info.externo.porta && !info.externo.deck && !info.externo.programa && !info.externo.naPorta && igual(info.externo.oferta, oferta)
+        && info.reencaixado && !info.portaRestaurada.porta && !info.portaRestaurada.deck && !info.portaRestaurada.programa
+        && info.portaRestaurada.naPorta && info.portaRestaurada.flag && info.portaRestaurada.uso === 'equipado' && info.portaRestaurada.no === '1a'
+        && igual(info.portaRestaurada.oferta, { deck: true, programas, alcance: false })
+        && info.virusNaJanela.motivo === mensagem && info.virusNaJanela.chamadas === 0 && info.virusNaJanela.fila === 1 && info.virusNaJanela.mesmoEstado
+        && info.cloakDepois.motivo === mensagem && info.cloakDepois.fila === 0 && info.cloakDepois.mesmoEstado
+        && info.programaDepois.motivo === 'Este programa não está instalado no cyberdeck equipado.' && info.programaDepois.mesmoEstado
+        && info.programaDepois.ativo && info.programaDepois.inoperante && info.programaDepois.alternativo && info.programaDepois.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): míssil Inteligente repete contra a mesma DV, explode na área e permite esquiva sem gastar outro foguete', async () => {
+      const info = await comMunicoes(`async ({ api, a, alvo, cena, token, pegar, armar, atirar, dados, esperar, criar }) => {
+        await a.update({ 'system.pericias.heavy-weapons.nivel': 0 });
+        const mira = pegar('core_cyberware:targeting-scope'); mira.system.instalado = true;
+        await a.createEmbeddedDocuments('Item', [mira]);
+        const armadura = pegar('core_armor:light-armorjack-body'); armadura.system.equipada = true;
+        const outro = await criar({ name: 'Munições: alvo na área do míssil', type: 'personagem', system: {
+          hp: { value: 80 }, atributos: { ref: { valor: 0 }, will: { valor: 8 }, body: { valor: 8 } }
+        }, items: [armadura] });
+        await cena.createEmbeddedDocuments('Token', [(await outro.getTokenDocument({ x: 700, y: 400 })).toObject()]);
+        await esperar(() => canvas.tokens.placeables.some(t => t.actor.id === outro.id));
+        await game.settings.set('${S}', 'area', true);
+        const arma = await armar('core_ammo:rocket-smart', 'core_weapons:rocket-launcher');
+        await arma.update({ 'system.pente.max': 1, 'system.pente.value': 1 });
+        const filaDano = () => Array.from({ length: 8 }, () => [5,6]);
+        const testes = () => game.messages.filter(m => m.getFlag('${S}', 'teste'));
+        const inteligentes = () => testes().filter(m => m.getFlag('${S}', 'teste')?.inteligente);
+        const ler = tiro => ({ cabecalho: tiro.r.cabecalho, ataque: tiro.r.ataque, linhas: tiro.r.linhas,
+          flag: tiro.m.getFlag('${S}', 'ataque').linhas, balas: arma.system.pente.value, fila: tiro.fila,
+          hp: [alvo.system.hp.value, outro.system.hp.value], sp: [alvo.system.armadura.corpo.sp, outro.system.armadura.corpo.sp],
+          texto: document.querySelector('[data-message-id="' + tiro.m.id + '"]')?.textContent.replace(/\\s+/g, ' ').trim() ?? '' });
+        const antes = testes().length;
+        const tiro = await atirar(arma, [[4,10],[9,10], ...filaDano()]);
+        const repetiu = { ...ler(tiro), testes: testes().length - antes, formula: inteligentes().at(-1).rolls[0].formula };
+        await api.combate.desfazer(tiro.m);
+        const desfeito = { hp: [alvo.system.hp.value, outro.system.hp.value], sp: [alvo.system.armadura.corpo.sp, outro.system.armadura.corpo.sp] };
+        await arma.update({ 'system.pente.value': 1 });
+        const antesDaMargem = inteligentes().length;
+        const longe = await atirar(arma, [[3,10]]);
+        const margemCinco = { ...ler(longe), repeticoes: inteligentes().length - antesDaMargem };
+        await arma.update({ 'system.pente.value': 1 });
+        await alvo.update({ 'system.atributos.ref.valor': 8, 'system.atributos.dex.valor': 8, 'system.pericias.evasion.nivel': 4 });
+        await game.settings.set('${S}', 'defesaDosNpcs', 'automatica');
+        const antesDaEsquiva = testes().length;
+        const esquivou = await atirar(arma, [[4,10],[9,10],[8,10], ...filaDano()]);
+        const esquiva = { ...ler(esquivou), testes: testes().length - antesDaEsquiva };
+        return { repetiu, desfeito, margemCinco, esquiva, principal: token.name, outro: outro.name };
+      }`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const segunda = { primeiro: 12, contra: 16, total: 19 };
+      const ok = info.repetiu.ataque === 12 && info.repetiu.linhas.length === 2 && info.repetiu.flag.length === 2
+        && info.repetiu.linhas.every(l => l.resultado === 'acertou' && l.dv === 16 && igual(l.segundaTentativa, segunda) && l.dano.recebido === 29 && l.dano.formula === '8d6')
+        && info.repetiu.flag.every(l => igual(l.segundaTentativa, segunda)) && igual(info.repetiu.hp, [51,51]) && igual(info.repetiu.sp, [10,10])
+        && info.repetiu.balas === 0 && info.repetiu.fila === 0 && info.repetiu.testes === 2 && info.repetiu.formula === '1d10crit + 10'
+        && /contra DV 16.*explodiu na área/.test(info.repetiu.cabecalho) && /Inteligente: errou com 12 contra 16; segunda tentativa/.test(info.repetiu.texto)
+        && igual(info.desfeito.hp, [80,80]) && igual(info.desfeito.sp, [11,11])
+        && info.margemCinco.ataque === 11 && info.margemCinco.linhas.length === 1 && info.margemCinco.linhas[0].resultado === 'errou'
+        && info.margemCinco.linhas[0].segundaTentativa === null && info.margemCinco.repeticoes === 0 && info.margemCinco.balas === 0 && info.margemCinco.fila === 0
+        && igual(info.margemCinco.hp, [80,80]) && igual(info.margemCinco.sp, [11,11])
+        && info.esquiva.linhas.length === 2 && info.esquiva.flag.every(l => igual(l.segundaTentativa, segunda))
+        && info.esquiva.linhas.find(l => l.nome === info.principal).resultado === 'esquivou' && info.esquiva.linhas.find(l => l.nome === info.principal).defesa === 20
+        && info.esquiva.linhas.find(l => l.nome === info.outro).resultado === 'acertou' && igual(info.esquiva.hp, [80,51]) && igual(info.esquiva.sp, [11,10])
+        && info.esquiva.balas === 0 && info.esquiva.fila === 0 && info.esquiva.testes === 3 && /esquiva 20/.test(info.esquiva.texto);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): EMP no Neuroport e no Self-ICE impede Jack In; o deck interrompe Breach e Quickhack antes dos dados e da Sorte, o mestre revalida depois da rolagem, Jack Out continua livre e o minuto e Desfazer restauram', async () => {
+      const info = await comMunicoes(`async ({ api, a, alvo, cena, token, pegar, armar, atirar, dados, esperar }) => {
+        const np = api.neuroport;
+        const meu = cena.tokens.find(t => t.actorId === a.id);
+        await meu.update({ x: 300 }, { animate: false });
+        if (!await esperar(() => api.combate.distancia(meu, token) <= 6)) throw new Error('Os tokens do Neuroport não chegaram ao alcance do Jack In.');
+        for (const ator of [a, alvo]) await ator.update({ 'system.role.nome': 'Netrunner', 'system.role.rank': 4 });
+        const montar = async ator => {
+          const itens = ['core_gear:cyberdeck', 'core_gear:agent', 'cyberware-2077:neuroport', 'cyberware-2077:self-ice'].map(id => {
+            const d = pegar(id);
+            if (d.type === 'cyberware') d.system.instalado = true;
+            else d.system.uso = d.type === 'cyberdeck' ? 'equipado' : 'carregando';
+            return d;
+          });
+          const criados = await ator.createEmbeddedDocuments('Item', itens);
+          const achar = id => criados.find(i => i.getFlag('${S}', 'catalogo') === id);
+          return { deck: achar('core_gear:cyberdeck'), agent: achar('core_gear:agent'), neuroport: achar('cyberware-2077:neuroport'), selfIce: achar('cyberware-2077:self-ice') };
+        };
+        const origem = await montar(a), destino = await montar(alvo);
+        const cartoes = () => game.messages.filter(m => m.getFlag('${S}', 'neuroport'));
+        const ligacao = (ator, outro) => np.neuroportDe(ator).ligacoes.find(l => l.alvo === outro.uuid);
+        const entrar = async (ator, outro) => { dados([[6,10],[6,10]]); return np.jackIn(ator, { alvo: outro }); };
+        await entrar(a, token);
+        await entrar(alvo, meu);
+        const normal = { entrou: Boolean(ligacao(a, token)), inverso: Boolean(ligacao(alvo, meu)), neuroport: np.temNeuroport(alvo), selfIce: np.selfIcesDe(alvo) };
+        await np.jackOut(a, token.uuid);
+        const arma = await armar('core_ammo:grenade-emp', 'core_weapons:grenade-launcher');
+        const selecionar = async (mensagem, primeiro, segundo) => {
+          const promessa = api.municoes.escolherEmp(mensagem, alvo.uuid);
+          const janela = () => [...foundry.applications.instances.values()].find(a => a.rendered && !a.minimizing && !a.element?.classList.contains('minimizing') && a.options.window?.title === 'EMP: ' + alvo.name);
+          await esperar(() => janela()?.element?.querySelector('[name="segundo"]'));
+          const aberta = janela();
+          if (!aberta) throw new Error('O EMP do Neuroport não abriu a escolha.');
+          aberta.element.querySelector('[name="primeiro"]').value = primeiro.id;
+          aberta.element.querySelector('[name="segundo"]').value = segundo.id;
+          aberta.element.querySelector('[data-action="ok"]').click();
+          const aplicou = await promessa;
+          await esperar(() => !aberta.rendered && !aberta.element?.isConnected);
+          if (!aplicou || !primeiro.inoperante || !segundo.inoperante) throw new Error('O EMP do Neuroport não desligou os escolhidos.');
+        };
+        const comAvisos = async acao => {
+          const avisos = [], avisar = ui.notifications.warn;
+          ui.notifications.warn = texto => avisos.push(texto);
+          try { return { resultado: await acao(), avisos }; } finally { ui.notifications.warn = avisar; }
+        };
+        const recusar = async (ator, acao) => {
+          const avisos = [], avisar = ui.notifications.warn;
+          const antes = { mensagens: game.messages.size, sorte: ator.system.sorte.value, preparada: ator.sortePreparada };
+          let terminou = false, janelas = 0;
+          ui.notifications.warn = texto => avisos.push(texto);
+          dados([[6,10],[6,10]]);
+          try {
+            const promessa = acao().finally(() => { terminou = true; });
+            for (let i = 0; i < 100 && !terminou; i++) {
+              for (const janela of [...foundry.applications.instances.values()].filter(a => a.rendered && ['janela-rolagem', 'escolher-quickhack'].some(classe => a.options.classes?.includes(classe)))) {
+                janelas++; await janela.close();
+              }
+              await new Promise(r => setTimeout(r, 20));
+            }
+            if (!terminou) throw new Error('Uma ação no Neuroport ficou sem resposta.');
+            const resultado = await promessa;
+            return { nulo: resultado === null, avisos, janelas, fila: window.__fila.length, mensagens: game.messages.size - antes.mensagens,
+              sorte: ator.system.sorte.value - antes.sorte, preparada: ator.sortePreparada === antes.preparada };
+          } finally { ui.notifications.warn = avisar; }
+        };
+        // O cliente começa com equipamento operante; o EMP chega entre a rolagem real e o pedido ao mestre.
+        const tiroNeuroport = await atirar(arma, [[9,10],[7,10]]);
+        const jackInOriginal = a.rolarJackIn, antesDoJackIn = cartoes().length;
+        const defesas = () => game.messages.filter(m => m.getFlag('${S}', 'teste')?.defesa === 'vontade').length;
+        const antesDaDefesa = defesas();
+        a.rolarJackIn = async function (...args) {
+          const teste = await jackInOriginal.apply(this, args);
+          await selecionar(tiroNeuroport.m, destino.neuroport, destino.selfIce);
+          return teste;
+        };
+        let corridaNeuroport;
+        try {
+          dados([[6,10]]);
+          const r = await comAvisos(() => np.jackIn(a, { alvo: token }));
+          corridaNeuroport = { nulo: r.resultado === null, avisos: r.avisos, ligacao: Boolean(ligacao(a, token)), cartoes: cartoes().length - antesDoJackIn, defesas: defesas() - antesDaDefesa };
+        } finally { delete a.rolarJackIn; }
+        const desligado = { neuroport: np.temNeuroport(alvo), selfIce: np.selfIcesDe(alvo), instalados: [destino.neuroport.system.instalado, destino.selfIce.system.instalado] };
+        await a.prepararSorte(2);
+        const semJackIn = await recusar(a, () => np.jackIn(a, { alvo: token, perguntar: true }));
+        await a.prepararSorte(0);
+        await game.time.advance(59);
+        const quase = destino.neuroport.inoperante && destino.selfIce.inoperante;
+        await game.time.advance(1);
+        await esperar(() => !destino.neuroport.inoperante && !destino.selfIce.inoperante);
+        const minuto = { neuroport: np.temNeuroport(alvo), selfIce: np.selfIcesDe(alvo), entrou: Boolean(await entrar(a, token)) };
+        // A resistência também espera uma mensagem: o equipamento precisa continuar operante depois dela.
+        await np.jackOut(a, token.uuid);
+        const tiroDefesa = await atirar(arma, [[9,10],[7,10]]);
+        await alvo.update({ 'system.role.nome': 'Solo' });
+        const criarMensagem = ChatMessage.implementation.create, antesDaResistencia = cartoes().length;
+        ChatMessage.implementation.create = async function (...args) {
+          const mensagem = await criarMensagem.apply(this, args);
+          if (mensagem.getFlag('${S}', 'teste')?.defesa === 'vontade') await selecionar(tiroDefesa.m, destino.neuroport, destino.selfIce);
+          return mensagem;
+        };
+        let corridaResistencia;
+        try {
+          dados([[6,10],[6,10]]);
+          const r = await comAvisos(() => np.jackIn(a, { alvo: token }));
+          corridaResistencia = { nulo: r.resultado === null, avisos: r.avisos, ligacao: Boolean(ligacao(a, token)), cartoes: cartoes().length - antesDaResistencia,
+            fila: window.__fila.length, parado: destino.neuroport.inoperante && destino.selfIce.inoperante };
+        } finally { ChatMessage.implementation.create = criarMensagem; await alvo.update({ 'system.role.nome': 'Netrunner' }); }
+        await api.combate.desfazer(tiroDefesa.m);
+        await entrar(a, token);
+        // Uma ligação já aberta permanece: o EMP no deck bloqueia o pedido que chega depois do dado.
+        const antesDaCorrida = { estado: JSON.stringify(np.neuroportDe(alvo)), cartoes: cartoes().length };
+        const tiroDeck = await atirar(arma, [[9,10],[7,10]]);
+        const interfaceOriginal = alvo.rolarInterface;
+        alvo.rolarInterface = async function (...args) {
+          const teste = await interfaceOriginal.apply(this, args);
+          await selecionar(tiroDeck.m, destino.deck, destino.agent);
+          return teste;
+        };
+        let corridaDeck;
+        try {
+          dados([[7,10]]);
+          const r = await comAvisos(() => np.breach(alvo, meu.uuid));
+          corridaDeck = { nulo: r.resultado === null, avisos: r.avisos, mesmoEstado: JSON.stringify(np.neuroportDe(alvo)) === antesDaCorrida.estado, cartoes: cartoes().length - antesDaCorrida.cartoes };
+        } finally { delete alvo.rolarInterface; }
+        await alvo.prepararSorte(2);
+        const semBreach = await recusar(alvo, () => np.breach(alvo, meu.uuid, { perguntar: true }));
+        const semQuickhack = await recusar(alvo, () => np.quickhack(alvo, meu.uuid, { perguntar: true }));
+        const parado = { deck: destino.deck.inoperante, uso: destino.deck.system.uso, ligado: Boolean(ligacao(alvo, meu)) };
+        const saiu = await np.jackOut(alvo, meu.uuid);
+        const livre = { resultado: saiu?.resultado, ligacoes: np.neuroportDe(alvo).ligacoes.length, invasores: np.neuroportDe(a).invasores.length };
+        await alvo.prepararSorte(0);
+        await api.combate.desfazer(tiroDeck.m);
+        await esperar(() => !destino.deck.inoperante && !destino.agent.inoperante);
+        await entrar(alvo, meu);
+        dados([[7,10]]); const breach = await np.breach(alvo, meu.uuid);
+        dados([[7,10]]); const quickhack = await np.quickhack(alvo, meu.uuid, { escolha: 'netrunning-2077:lure' });
+        const desfeito = { deck: destino.deck.inoperante, agent: destino.agent.inoperante, breach: breach?.resultado, quickhack: quickhack?.resultado, passados: ligacao(alvo, meu)?.passados };
+        // O catálogo do mestre pode terminar de carregar depois de chegar o EMP; o tiro já existe fora da fila.
+        const tiroCatalogo = await atirar(arma, [[9,10],[7,10]]);
+        const antesDoCatalogo = { estado: JSON.stringify(np.neuroportDe(alvo)), hp: a.system.hp.value, efeitos: a.effects.size,
+          cartoes: cartoes().length, testes: game.messages.filter(m => m.getFlag('${S}', 'teste')?.rotulo === 'Quickhack').length };
+        const wikiOriginal = api.wiki;
+        let chamadasCatalogo = 0, corridaCatalogo;
+        api.wiki = { ...wikiOriginal, carregarCatalogo: async (...args) => {
+          const catalogo = await wikiOriginal.carregarCatalogo(...args);
+          if (++chamadasCatalogo === 2) await selecionar(tiroCatalogo.m, destino.deck, destino.agent);
+          return catalogo;
+        } };
+        try {
+          dados([[7,10],[2,6],[3,6],[4,6]]);
+          const r = await comAvisos(() => np.quickhack(alvo, meu.uuid, { escolha: 'netrunning-2077:synapse-burnout' }));
+          corridaCatalogo = { nulo: r.resultado === null, avisos: r.avisos, chamadas: chamadasCatalogo,
+            mesmoEstado: JSON.stringify(np.neuroportDe(alvo)) === antesDoCatalogo.estado, hp: a.system.hp.value === antesDoCatalogo.hp,
+            efeitos: a.effects.size === antesDoCatalogo.efeitos, cartoes: cartoes().length - antesDoCatalogo.cartoes, fila: window.__fila.length,
+            testes: game.messages.filter(m => m.getFlag('${S}', 'teste')?.rotulo === 'Quickhack').length - antesDoCatalogo.testes, empFila: tiroCatalogo.fila };
+        } finally { api.wiki = wikiOriginal; }
+        await api.combate.desfazer(tiroCatalogo.m);
+        await esperar(() => !destino.deck.inoperante && !destino.agent.inoperante);
+        // O EMP também pode chegar com a janela do quickhack aberta: fechar a escolha não deve gastar dados ou Sorte.
+        const tiroJanela = await atirar(arma, [[9,10],[7,10]]);
+        await alvo.prepararSorte(2);
+        const antesDaJanela = { sorte: alvo.system.sorte.value, preparada: alvo.sortePreparada, mensagens: game.messages.size, estado: JSON.stringify(np.neuroportDe(alvo)) };
+        let terminou = false;
+        const escolhendo = comAvisos(() => np.quickhack(alvo, meu.uuid)).finally(() => { terminou = true; });
+        const janelaQuickhack = () => [...foundry.applications.instances.values()].find(a => a.rendered && a.options.classes?.includes('escolher-quickhack'));
+        await esperar(() => janelaQuickhack()?.element?.querySelector('[name="quickhack"]'));
+        const aberta = janelaQuickhack();
+        if (!aberta) throw new Error('A janela do quickhack não abriu.');
+        await selecionar(tiroJanela.m, destino.deck, destino.agent);
+        dados([[7,10]]);
+        const antesDeConfirmar = game.messages.size;
+        aberta.element.querySelector('[name="quickhack"]').value = 'netrunning-2077:lure';
+        aberta.element.querySelector('[data-action="ok"]').click();
+        await esperar(() => terminou);
+        const resultadoJanela = await escolhendo;
+        const janelaInterrompida = { nulo: resultadoJanela.resultado === null, avisos: resultadoJanela.avisos, fila: window.__fila.length, sorte: alvo.system.sorte.value === antesDaJanela.sorte,
+          preparada: alvo.sortePreparada === antesDaJanela.preparada, mensagens: game.messages.size - antesDeConfirmar, mesmoEstado: JSON.stringify(np.neuroportDe(alvo)) === antesDaJanela.estado };
+        await api.combate.desfazer(tiroJanela.m);
+        await esperar(() => !destino.deck.inoperante && !destino.agent.inoperante);
+        // A conexão pelo Personal Link usa a mesma recusa EMP, antes e depois do consentimento.
+        await alvo.prepararSorte(0);
+        await np.jackOut(a, token.uuid);
+        await np.jackOut(alvo, meu.uuid);
+        await meu.update({ x: 400 }, { animate: false });
+        if (!await esperar(() => api.combate.distancia(meu, token) <= 2)) throw new Error('O cabo não chegou aos 2 m.');
+        const consentimento = () => [...foundry.applications.instances.values()].find(app => app.rendered && !app.minimizing && !app.element?.classList.contains('minimizing') && app.options.classes?.includes('consentir'));
+        const tiroDireta = await atirar(arma, [[9,10],[7,10]]);
+        await alvo.update({ 'system.role.rank': 1 });
+        const firewallOriginal = alvo.rolarJackIn;
+        alvo.rolarJackIn = async function (...args) {
+          const teste = await firewallOriginal.apply(this, args);
+          await selecionar(tiroDireta.m, destino.deck, destino.agent);
+          return teste;
+        };
+        const antesDaDireta = { estado: JSON.stringify(np.neuroportDe(alvo)), cartoes: cartoes().length };
+        let diretaNoFirewall, promessaDireta, acabouDireta = false, consentiuSemDeck = 0;
+        try {
+          dados([[7,10]]);
+          promessaDireta = comAvisos(() => np.conexaoDireta(alvo, { alvo: meu })).finally(() => { acabouDireta = true; });
+          for (let i = 0; i < 500 && !acabouDireta; i++) {
+            const indevida = consentimento();
+            if (indevida) { consentiuSemDeck++; await indevida.close(); }
+            await new Promise(r => setTimeout(r, 20));
+          }
+          if (!acabouDireta) throw new Error('A conexão direta ficou esperando uma resposta indevida.');
+          const r = await promessaDireta;
+          diretaNoFirewall = { nulo: r.resultado === null, avisos: r.avisos, janelas: consentiuSemDeck,
+            mesmoEstado: JSON.stringify(np.neuroportDe(alvo)) === antesDaDireta.estado, cartoes: cartoes().length - antesDaDireta.cartoes, fila: window.__fila.length };
+        } finally {
+          await consentimento()?.close();
+          await promessaDireta?.catch(() => null);
+          delete alvo.rolarJackIn;
+          await api.combate.desfazer(tiroDireta.m);
+          await alvo.update({ 'system.role.rank': 4 });
+        }
+        const tiroConsentimento = await atirar(arma, [[9,10],[7,10]]);
+        const antesDoSim = { estado: JSON.stringify(np.neuroportDe(alvo)), inverso: JSON.stringify(np.neuroportDe(a)), cartoes: cartoes().length };
+        let diretaNoSim, promessaSim;
+        try {
+          promessaSim = comAvisos(() => np.conexaoDireta(alvo, { alvo: meu }));
+          await esperar(() => consentimento()?.element?.querySelector('[data-action="yes"]'));
+          const janela = consentimento();
+          if (!janela) throw new Error('O consentimento da conexão direta não abriu.');
+          await selecionar(tiroConsentimento.m, destino.deck, destino.agent);
+          janela.element.querySelector('[data-action="yes"]').click();
+          const r = await promessaSim;
+          diretaNoSim = { nulo: r.resultado === null, avisos: r.avisos, mesmoEstado: JSON.stringify(np.neuroportDe(alvo)) === antesDoSim.estado,
+            inverso: JSON.stringify(np.neuroportDe(a)) === antesDoSim.inverso, cartoes: cartoes().length - antesDoSim.cartoes, ligada: Boolean(ligacao(alvo, meu)) };
+        } finally {
+          await consentimento()?.close();
+          await promessaSim?.catch(() => null);
+          await api.combate.desfazer(tiroConsentimento.m);
+        }
+        // O Self-ICE que volta do EMP não revoga os Passwalls ignorados pelo Personal Link (wiki, Kit p. 27).
+        const diretasRestauradas = [];
+        await arma.update({ 'system.pente.value': 8 });
+        for (const fim of ['desfazer', 'minuto']) {
+          const tiro = await atirar(arma, [[9,10],[7,10]]);
+          await selecionar(tiro.m, destino.selfIce, destino.agent);
+          const semSelfIce = { quantos: np.selfIcesDe(alvo), neuroport: np.temNeuroport(alvo), deck: !origem.deck.inoperante && !destino.deck.inoperante };
+          const conectando = np.conexaoDireta(a, { alvo: token });
+          await esperar(() => consentimento()?.element?.querySelector('[data-action="yes"]'));
+          if (!consentimento()) throw new Error('O Personal Link durante EMP não pediu consentimento.');
+          consentimento().element.querySelector('[data-action="yes"]').click();
+          const conectou = await conectando;
+          const passadosAntes = ligacao(a, token)?.passados;
+          if (fim === 'desfazer') await api.combate.desfazer(tiro.m);
+          else await game.time.advance(60);
+          await esperar(() => np.selfIcesDe(alvo) === 1 && !destino.agent.inoperante);
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('net', 'primary');
+          const linha = a.sheet.element?.querySelector('li[data-alvo="' + token.uuid + '"]');
+          const ficha = { passwalls: linha?.querySelector('.passwalls')?.textContent, quickhack: Boolean(linha?.querySelector('[data-action="quickhack"]')),
+            breach: Boolean(linha?.querySelector('[data-action="breach"]')) };
+          const antesDosCartoes = cartoes().length;
+          dados([[7,10]]);
+          const r = await comAvisos(() => np.quickhack(a, token.uuid, { escolha: 'netrunning-2077:cyberware-malfunction' }));
+          diretasRestauradas.push({ fim, semSelfIce, conectou: conectou?.resultado, passadosAntes, quantos: np.selfIcesDe(alvo), ficha,
+            direta: ligacao(a, token)?.direta, passadosDepois: ligacao(a, token)?.passados, resultado: r.resultado?.resultado,
+            total: r.resultado?.total, dv: r.resultado?.dv, avisos: r.avisos, cartoes: cartoes().length - antesDosCartoes, fila: window.__fila.length });
+          await np.jackOut(a, token.uuid);
+        }
+        await origem.deck.sheet?.close();
+        return { normal, corridaNeuroport, desligado, semJackIn, quase, minuto, corridaResistencia, corridaDeck, corridaCatalogo, semBreach, semQuickhack, parado, livre, desfeito, janelaInterrompida, diretaNoFirewall, diretaNoSim, diretasRestauradas };
+      }`);
+      const aviso = (r, mensagem) => r.avisos.length === 1 && r.avisos[0] === mensagem;
+      const deckParado = 'Munições: alvo não tem cyberdeck operante equipado.';
+      const recusa = (r, mensagem) => r.nulo && r.avisos.length === 1 && r.avisos[0] === mensagem && r.janelas === 0 && r.fila === 2 && r.mensagens === 0 && r.sorte === 0 && r.preparada;
+      const ok = info.normal.entrou && info.normal.inverso && info.normal.neuroport && info.normal.selfIce === 1
+        && info.corridaNeuroport.nulo && !info.corridaNeuroport.ligacao && info.corridaNeuroport.cartoes === 0 && info.corridaNeuroport.defesas === 0 && aviso(info.corridaNeuroport, 'Munições: alvo não tem Neuroport operante.')
+        && !info.desligado.neuroport && info.desligado.selfIce === 0 && info.desligado.instalados.every(Boolean)
+        && recusa(info.semJackIn, 'Munições: alvo não tem Neuroport: só dá para hackear quem tem.') && info.quase
+        && info.minuto.neuroport && info.minuto.selfIce === 1 && info.minuto.entrou
+        && info.corridaResistencia.nulo && !info.corridaResistencia.ligacao && info.corridaResistencia.cartoes === 0 && info.corridaResistencia.fila === 0 && info.corridaResistencia.parado
+        && aviso(info.corridaResistencia, 'Munições: alvo não tem Neuroport operante.')
+        && info.corridaDeck.nulo && info.corridaDeck.mesmoEstado && info.corridaDeck.cartoes === 0 && aviso(info.corridaDeck, deckParado)
+        && recusa(info.semBreach, 'Munições: alvo não tem cyberdeck operante equipado.')
+        && recusa(info.semQuickhack, 'Munições: alvo não tem cyberdeck operante equipado.')
+        && info.parado.deck && info.parado.uso === 'equipado' && info.parado.ligado
+        && info.livre.resultado === 'saiu' && info.livre.ligacoes === 0 && info.livre.invasores === 0
+        && !info.desfeito.deck && !info.desfeito.agent && info.desfeito.breach === 'passou' && info.desfeito.quickhack === 'quickhack' && info.desfeito.passados === 1
+        && info.corridaCatalogo.nulo && aviso(info.corridaCatalogo, deckParado) && info.corridaCatalogo.chamadas === 2
+        && info.corridaCatalogo.mesmoEstado && info.corridaCatalogo.hp && info.corridaCatalogo.efeitos && info.corridaCatalogo.cartoes === 0
+        && info.corridaCatalogo.fila === 3 && info.corridaCatalogo.testes === 1 && info.corridaCatalogo.empFila === 0
+        && aviso(info.janelaInterrompida, deckParado) && info.janelaInterrompida.nulo && info.janelaInterrompida.fila === 1 && info.janelaInterrompida.sorte && info.janelaInterrompida.preparada && info.janelaInterrompida.mensagens === 0 && info.janelaInterrompida.mesmoEstado
+        && info.diretaNoFirewall.nulo && aviso(info.diretaNoFirewall, deckParado) && info.diretaNoFirewall.janelas === 0 && info.diretaNoFirewall.mesmoEstado && info.diretaNoFirewall.cartoes === 0 && info.diretaNoFirewall.fila === 0
+        && info.diretaNoSim.nulo && aviso(info.diretaNoSim, deckParado) && info.diretaNoSim.mesmoEstado && info.diretaNoSim.inverso && info.diretaNoSim.cartoes === 0 && !info.diretaNoSim.ligada
+        && info.diretasRestauradas.length === 2 && info.diretasRestauradas.every(r => r.semSelfIce.quantos === 0 && r.semSelfIce.neuroport && r.semSelfIce.deck
+          && r.conectou === 'direta' && r.passadosAntes === 0 && r.quantos === 1 && r.direta && r.passadosDepois === 0
+          && r.ficha.passwalls === 'PASSWALLS 1/1 · DV 6' && r.ficha.quickhack && !r.ficha.breach
+          && r.resultado === 'quickhack' && r.total === 11 && r.dv === 10 && r.avisos.length === 0 && r.cartoes === 1 && r.fila === 0);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('munições especiais (C14): EMP pelo botão do mestre, proteção e eletrônicos guardados fora; para efeitos sem desinstalar, volta no minuto e no Desfazer', async () => {
+      const info = await comMunicoes(`async ({ api, alvo, pegar, armar, atirar, esperar }) => {
+        const neural = pegar('core_cyberware:neural-link'); neural.system.instalado = true;
+        const keren = pegar('core_cyberware:kerenzikov'); keren.system.instalado = true;
+        const agent = pegar('core_gear:agent'); agent.system.uso = 'carregando';
+        const guardado = pegar('core_gear:agent'); guardado.name = 'Agent guardado'; guardado.system.uso = 'guardado';
+        const braco = pegar('core_cyberware:cyberarm'); braco.system.instalado = true;
+        const blindagem = pegar('core_cyberware:hardened-shielding-cyber-arm'); blindagem.system.instalado = true;
+        const criados = await alvo.createEmbeddedDocuments('Item', [neural, keren, agent, guardado, braco, blindagem]);
+        const porCat = id => criados.find(i => i.getFlag('${S}', 'catalogo') === id);
+        const base = porCat('core_cyberware:neural-link'), opcao = porCat('core_cyberware:kerenzikov'), membro = porCat('core_cyberware:cyberarm'), escudo = porCat('core_cyberware:hardened-shielding-cyber-arm');
+        await opcao.update({ 'system.instaladoEm': base.id });
+        await escudo.update({ 'system.instaladoEm': membro.id });
+        // O item antigo não tinha os dois campos: a migração recupera os valores do CORE pelo catálogo.
+        await escudo.update({ 'system.endurecido': false, 'system.eletronico': true, 'flags.${S}.eletronicaMigrada': false });
+        const migracao = api.migracao.migrarMundo({ desde: 4 });
+        const janelaMigracao = () => document.querySelector('.application.dialog.migracao:not(.minimizing)');
+        await esperar(() => janelaMigracao());
+        janelaMigracao().querySelector('[data-action="migrar"]').click();
+        await migracao;
+        const migrado = { eletronico: escudo.system.eletronico, endurecido: escudo.system.endurecido, marca: escudo.getFlag('${S}', 'eletronicaMigrada') };
+        const eletronico = criados.find(i => i.type === 'equipamento' && i.name === 'Agent');
+        const arma = await armar('core_ammo:grenade-emp', 'core_weapons:grenade-launcher');
+        const resistiu = await atirar(arma, [[9,10],[8,10]]);
+        let terminouResistiu = false, abriuResistiu = false;
+        const aplicarResistiu = api.municoes.escolherEmp(resistiu.m, alvo.uuid).then(r => { terminouResistiu = true; return r; });
+        for (let i = 0; i < 100 && !terminouResistiu; i++) {
+          const aberta = [...foundry.applications.instances.values()].find(a => a.rendered && a.options.window?.title === 'EMP: ' + alvo.name);
+          if (aberta) { abriuResistiu = true; await aberta.close(); }
+          await new Promise(r => setTimeout(r, 20));
+        }
+        if (!terminouResistiu) throw new Error('Aplicar EMP após resistir ficou sem resposta.');
+        const resistencia = { passou: resistiu.r.linhas[0].municao.resistencia, aplicou: await aplicarResistiu, abriu: abriuResistiu,
+          botoes: document.querySelectorAll('[data-message-id="' + resistiu.m.id + '"] [data-cprf-acao="aplicarEmp"]').length,
+          desfazer: resistiu.m.getFlag('${S}', 'desfazer').length, parado: base.inoperante || eletronico.inoperante, fila: resistiu.fila };
+        const hum = alvo.system.humanidade.max;
+        const ini = alvo.system.bonus.iniciativa;
+        const concorrencias = [];
+        const janelasEmp = () => [...foundry.applications.instances.values()].filter(a => a.rendered && !a.element?.classList.contains('minimizing') && a.options.window?.title === 'EMP: ' + alvo.name);
+        const escolher = async (m, primeiro = base, segundo = eletronico) => {
+          document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarEmp"]').click();
+          const janela = () => janelasEmp()[0];
+          await esperar(() => janela()?.element?.querySelector('[name="segundo"]'));
+          const primeiraJanela = janela();
+          // Se uma mutação abrir outra janela, o passo a fecha e registra a falha sem ficar esperando uma resposta.
+          let terminouConcorrente = false, abriuOutra = false;
+          const concorrente = api.municoes.escolherEmp(m, alvo.uuid).then(resultado => {
+            terminouConcorrente = true; return { resultado };
+          }, erro => { terminouConcorrente = true; return { erro: String(erro) }; });
+          for (let i = 0; i < 100 && !terminouConcorrente; i++) {
+            for (const extra of janelasEmp().filter(a => a.id !== primeiraJanela.id)) { abriuOutra = true; await extra.close(); }
+            await new Promise(r => setTimeout(r, 20));
+          }
+          if (!terminouConcorrente) throw new Error('A seleção EMP concorrente ficou sem resposta.');
+          concorrencias.push({ ...await concorrente, abriuOutra, janelas: janelasEmp().length, parados: [primeiro.inoperante, segundo.inoperante] });
+          const opcoes = [...janela().element.querySelector('[name="primeiro"]').options].map(o => o.textContent);
+          janela().element.querySelector('[name="primeiro"]').value = primeiro.id;
+          janela().element.querySelector('[name="segundo"]').value = segundo.id;
+          janela().element.querySelector('[data-action="ok"]').click();
+          await esperar(() => primeiro.inoperante && segundo.inoperante && m.getFlag('${S}', 'desfazer')[0].municao.emp.length === 2);
+          await esperar(() => !janela());
+          return opcoes;
+        };
+        const tiro = await atirar(arma, [[9,10],[7,10]]);
+        const opcoes = await escolher(tiro.m);
+        const parado = { base: base.inoperante, opcao: opcao.inoperante, agent: eletronico.inoperante, instalado: opcao.system.instalado, uso: eletronico.system.uso, hum: alvo.system.humanidade.max, bonus: alvo.system.bonus.iniciativa, flags: tiro.m.getFlag('${S}', 'desfazer')[0].municao.emp.length };
+        await game.time.advance(59); const antes = base.inoperante;
+        await game.time.advance(1); await esperar(() => !base.inoperante && !eletronico.inoperante);
+        const voltou = { base: base.inoperante, opcao: opcao.inoperante, agent: eletronico.inoperante, bonus: alvo.system.bonus.iniciativa };
+        // Uma mutação que reabre o diálogo deve falhar, sem deixar o teste preso esperando o mestre.
+        let terminou = false, reabriu = false;
+        const tentativa = api.municoes.escolherEmp(tiro.m, alvo.uuid).then(r => { terminou = true; return r; });
+        for (let i = 0; i < 100 && !terminou; i++) {
+          const aberta = [...foundry.applications.instances.values()].find(a => a.rendered && a.options.window?.title === 'EMP: ' + alvo.name);
+          if (aberta) { reabriu = true; await aberta.close(); }
+          await new Promise(r => setTimeout(r, 20));
+        }
+        if (!terminou) throw new Error('A segunda aplicação do mesmo EMP ficou sem resposta.');
+        const deNovo = await tentativa;
+        const novo = await atirar(arma, [[9,10],[7,10]]);
+        await escolher(novo.m);
+        const antesDeDesfazer = [base.inoperante, opcao.inoperante, eletronico.inoperante];
+        await api.combate.desfazer(novo.m);
+        const desfeito = { parados: [base.inoperante, opcao.inoperante, eletronico.inoperante], bonus: alvo.system.bonus.iniciativa, marca: novo.m.getFlag('${S}', 'desfeito') };
+        const olhoDados = pegar('core_cyberware:cybereye'); olhoDados.system.instalado = true;
+        const [olho] = await alvo.createEmbeddedDocuments('Item', [olhoDados]);
+        const teleDados = pegar('core_cyberware:teleoptics'); Object.assign(teleDados.system, { instalado: true, instaladoEm: olho.id });
+        const [tele] = await alvo.createEmbeddedDocuments('Item', [teleDados]);
+        const [armaDoAlvo] = await alvo.createEmbeddedDocuments('Item', [pegar('core_weapons:heavy-pistol')]);
+        const lunetaDados = pegar('core_upgrades:sniping-scope'); Object.assign(lunetaDados.system, { eletronico: true, instaladoEm: armaDoAlvo.id });
+        const [luneta] = await alvo.createEmbeddedDocuments('Item', [lunetaDados]);
+        const situacionais = () => alvo.situacionaisDoAtaque(armaDoAlvo, { pericia: 'handgun', modo: 'tiro', local: 'cabeca', metros: 60 }).map(s => s.id);
+        const comBonus = situacionais();
+        const optico = await atirar(arma, [[9,10],[7,10]]);
+        await escolher(optico.m, olho, luneta);
+        const semBonus = { situacionais: situacionais(), tele: tele.inoperante, luneta: luneta.inoperante };
+        await api.combate.desfazer(optico.m);
+        const bonusVoltou = situacionais();
+        const interrompido = await atirar(arma, [[9,10],[7,10]]);
+        const selecionando = api.municoes.escolherEmp(interrompido.m, alvo.uuid);
+        await esperar(() => janelasEmp()[0]?.element?.querySelector('[name="segundo"]'));
+        const aberta = janelasEmp()[0];
+        aberta.element.querySelector('[name="primeiro"]').value = base.id;
+        aberta.element.querySelector('[name="segundo"]').value = eletronico.id;
+        await api.combate.desfazer(interrompido.m);
+        const antesDeConfirmar = [base.inoperante, opcao.inoperante, eletronico.inoperante];
+        aberta.element.querySelector('[data-action="ok"]').click();
+        const recusouDesfeito = await selecionando;
+        await esperar(() => !janelasEmp().length);
+        const desfeitoDuranteSelecao = { resultado: recusouDesfeito, antes: antesDeConfirmar,
+          depois: [base.inoperante, opcao.inoperante, eletronico.inoperante], marca: interrompido.m.getFlag('${S}', 'desfeito'), janelas: janelasEmp().length };
+        await base.sheet.render({ force: true });
+        await esperar(() => base.sheet.element?.querySelector('[name="system.endurecido"]'));
+        const campos = { eletronico: base.sheet.element.querySelectorAll('[name="system.eletronico"]').length, endurecido: base.sheet.element.querySelector('[name="system.endurecido"]').checked };
+        return { opcoes, resistencia, hum, ini, parado, antes, voltou, deNovo, reabriu, fila: tiro.fila, hp: alvo.system.hp.value, eletronico: base.system.eletronico, endurecido: escudo.system.endurecido, migrado, antesDeDesfazer, desfeito, comBonus, semBonus, bonusVoltou, campos, concorrencias, desfeitoDuranteSelecao };
+      }`, async () => { await edge.shot('municoes-emp'); });
+      const ok = info.opcoes.includes('Neural Link') && info.opcoes.includes('Kerenzikov') && info.opcoes.includes('Agent') && !info.opcoes.includes('Agent guardado') && !info.opcoes.includes('Cyberarm') && !info.opcoes.includes('Hardened Shielding (Cyber Arm)')
+        && info.resistencia.passou.total === 16 && info.resistencia.passou.dv === 15 && info.resistencia.passou.passou && !info.resistencia.aplicou && !info.resistencia.abriu
+        && info.resistencia.botoes === 0 && info.resistencia.desfazer === 0 && !info.resistencia.parado && info.resistencia.fila === 0
+        && info.eletronico && info.endurecido && info.ini === 2 && info.parado.base && info.parado.opcao && info.parado.agent && info.parado.instalado && info.parado.uso === 'carregando' && info.parado.hum === info.hum && info.parado.bonus === 0 && info.parado.flags === 2
+        && info.antes && !info.voltou.base && !info.voltou.opcao && !info.voltou.agent && info.voltou.bonus === 2 && info.deNovo === false && !info.reabriu && info.fila === 0 && info.hp === 80
+        && !info.migrado.eletronico && info.migrado.endurecido && info.migrado.marca && info.antesDeDesfazer.join() === 'true,true,true' && info.desfeito.parados.join() === 'false,false,false' && info.desfeito.bonus === 2 && info.desfeito.marca
+        && info.comBonus.length === 2 && info.semBonus.tele && info.semBonus.luneta && info.semBonus.situacionais.length === 0 && info.bonusVoltou.length === 2 && info.campos.eletronico === 1 && info.campos.endurecido === false
+        && info.concorrencias.length === 3 && info.concorrencias.every(c => c.resultado === false && !c.erro && !c.abriuOutra && c.janelas === 1 && c.parados.join() === 'false,false')
+        && info.desfeitoDuranteSelecao.resultado === false && info.desfeitoDuranteSelecao.antes.join() === 'false,false,false' && info.desfeitoDuranteSelecao.depois.join() === 'false,false,false'
+        && info.desfeitoDuranteSelecao.marca && info.desfeitoDuranteSelecao.janelas === 0;
       return [ok, JSON.stringify(info)];
     });
 

@@ -22,8 +22,8 @@ const temHardware = (instalados, [catalogo, nome]) => instalados.some(item => it
 // programas instalados nele e o hardware dele que a NET olha. O deck encaixado na Neuroport Cyberdeck Port (naPorta: a
 // flag do cyberdeck, com a porta instalada) não aceita hardware: o dele não vale.
 export function netrunnerDo(ator) {
-  const deck = ator?.items.find(item => item.type === 'cyberdeck' && item.system.uso === 'equipado') ?? null;
-  const instalados = deck ? ator.items.filter(item => item.system?.instaladoEm === deck.id) : [];
+  const deck = ator?.items.find(item => item.type === 'cyberdeck' && item.system.uso === 'equipado' && !item.inoperante) ?? null;
+  const instalados = deck ? ator.items.filter(item => item.system?.instaladoEm === deck.id && !item.inoperante) : [];
   const naPorta = Boolean(deck?.flags?.[SISTEMA]?.naPorta) && temPortaDoDeck(ator);
   return {
     deck, naPorta, programas: instalados.filter(item => item.type === 'programa'), rank: Number(ator?.system?.rankDeInterface) || 0,

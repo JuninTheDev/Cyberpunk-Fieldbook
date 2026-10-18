@@ -165,7 +165,14 @@ export async function alvosNaVez(tileUuid, chave) {
 
 // ---------------- Andar e as habilidades ----------------
 // Quem age na NET tem o cyberdeck equipado e a Interface (o Rank de Netrunner), como na aba NET da ficha.
+// O EMP não muda o corredor nem a equipagem: o deck parado impede agir, inclusive pelo mestre.
+function exigirDeckOperante(ator) {
+  if (!netrunnerDo(ator).deck && ator?.items.some(item => item.type === 'cyberdeck' && item.inoperante)) {
+    throw erro('Cyberdeck inoperante por EMP: não dá para agir na NET.');
+  }
+}
 function exigirNetrunner(ator) {
+  exigirDeckOperante(ator);
   if (!netrunnerDo(ator).deck) throw erro('Sem cyberdeck equipado: não dá para agir na NET.');
   if (!ator.system.rankDeInterface) throw erro('Sem Interface (o Rank de Netrunner): só o Netrunner usa as habilidades na NET.');
 }
@@ -405,6 +412,7 @@ export const operacoes = {
     const ctx = await contexto(dados, usuario, { precisaCorredor: false });
     const { tile, token, ponto, est, ator } = ctx;
     if (!token || !ator) throw erro('Escolha um token com ficha para conectar.');
+    exigirDeckOperante(ator);
     if (ctx.corredor) return { jaConectado: true };
     const outra = conexaoDoToken(token);
     if (outra && outra.tile !== tile.uuid) throw erro('Este netrunner já está conectado em outro ponto de acesso.');
@@ -444,6 +452,7 @@ export const operacoes = {
   // inimigos encontrados nele entram no combate da cena (o combate.mjs).
   async mover(dados, usuario) {
     const ctx = await contexto(dados, usuario);
+    exigirDeckOperante(ctx.ator);
     const { arq, est, corredor } = ctx;
     const motivo = motivoParaNaoAndar(arq, est, corredor, dados.destino);
     if (motivo) throw erro(motivo);
@@ -478,12 +487,15 @@ export const operacoes = {
     const agora = emCombate(token);
     const virus = chave === 'virus' ? await perguntarVirus(corredor, texto, agora) : null;
     if (chave === 'virus' && !virus) throw erro('O mestre não aceitou o vírus agora.');
+    // O EMP pode chegar enquanto o mestre decide o vírus ou o jogador responde à rolagem.
+    exigirDeckOperante(ator);
     const umSlide = chave === 'slide' ? motivoParaNaoSlide(corredor, agora) : null;
     if (umSlide && !usuario.isGM) throw erro(umSlide);
     const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM, quantas: virus?.acoes ?? 1 });
     if (semAcao) throw erro(semAcao);
     const skunk = chave === 'slide' ? penalidadeDoSkunk(arq, est, corredor) : 0;
     const rolagem = { total: await rolarNoNetrunner(ctx, { rolagem: chave, extras: skunk ? [{ rotulo: 'Skunk', valor: skunk }] : [] }) };
+    exigirDeckOperante(ator);
     let linha;
     if (chave === 'zap') linha = await zap(ctx, alvo, rolagem.total);
     else if (chave === 'slide') {
@@ -503,6 +515,7 @@ export const operacoes = {
   // Um comando no nó de controle tomado neste andar (a wiki: 1 Ação NET por comando); o mestre narra.
   async comandar(dados, usuario) {
     const ctx = await contexto(dados, usuario);
+    exigirDeckOperante(ctx.ator);
     const { arq, est, corredor, token } = ctx;
     if (!conteudosDoNo(arq, corredor.no).some(conteudo => conteudo.tipo === 'controle' && est.feitos.includes(conteudo.chave))) throw erro('Não há nó de controle tomado neste andar.');
     const texto = String(dados.texto ?? '').trim().slice(0, 200);
@@ -518,6 +531,7 @@ export const operacoes = {
   // Architect da mesa; a wiki: 1 Ação NET por comando). O texto vai ao registro.
   async acionar(dados, usuario) {
     const ctx = await contexto(dados, usuario);
+    exigirDeckOperante(ctx.ator);
     const { arq, est, corredor, token, tile, ponto } = ctx;
     const controle = conteudosDoNo(arq, corredor.no).find(conteudo => conteudo.tipo === 'controle' && conteudo.chave === dados.controle);
     if (!controle) throw erro('Este nó de controle não está no seu andar.');
@@ -622,6 +636,8 @@ export const operacoes = {
     const semAcao = gastarAcoes(corredor, { emCombate: agora, mestre: usuario.isGM });
     if (semAcao) throw erro(semAcao);
     const ataque = await rolarNoNetrunner(ctx, { programa });
+    exigirDeckOperante(ator);
+    if (!netrunnerDo(ator).programas.some(item => item.id === programa.id)) throw erro('Este programa não está instalado no cyberdeck equipado.');
     const defesa = await rolagemDoInimigo(alvo, 'def');
     let dano = 0;
     if (ataque > defesa) {

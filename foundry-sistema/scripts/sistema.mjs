@@ -22,6 +22,7 @@ import { CombateCPR, CombatenteCPR } from './iniciativa.mjs';
 import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
 import * as migracao from './migracao.mjs';
+import * as municoes from './municoes.mjs';
 import { registrarNet } from './netrun/index.mjs';
 import * as regras from './regras.mjs';
 import { registrarCritico, rolarDano, testar } from './rolagens.mjs';
@@ -53,6 +54,7 @@ Hooks.once('init', () => {
   CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrado, name: 'Agarrado', img: 'icons/svg/net.svg' });
   registrarCritico();
   registrarConfiguracoes();
+  municoes.registrarMunicoes();
 
   const { DocumentSheetConfig } = foundry.applications.apps;
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaPersonagem, { types: ['personagem'], makeDefault: true, label: 'Ficha do RED' });
@@ -67,7 +69,7 @@ Hooks.once('init', () => {
   wiki.registrarWiki();
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
   registrarIceRezzado();
-  game.system.api = { agarrao, neuroport, combate, lesoes, migracao, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
+  game.system.api = { agarrao, neuroport, combate, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });
@@ -76,6 +78,7 @@ Hooks.once('ready', () => {
   combate.registrarCombate();
   agarrao.registrarAgarrao();
   neuroport.registrarNeuroport();
+  municoes.expirarTemporarios().catch(erro => console.error(`${SISTEMA} | munições`, erro));
   // A migração dos dados do mundo: só o mestre ativo, e só com os dados de uma versão anterior.
   migracao.conferirMigracao().catch(erro => console.error(`${SISTEMA} | migração dos dados:`, erro));
 });

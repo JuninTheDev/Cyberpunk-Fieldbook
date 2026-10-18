@@ -5,6 +5,7 @@
 import { jogadorDe, pedir, souOMestreAtivo, STATUS_SUPRIMIDO } from './combate.mjs';
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
+import { fogoNoFimDoTurno } from './municoes.mjs';
 
 // O turno que acabou (combate.previous) veio depois do turno em que a supressão aconteceu?
 const depoisDe = (anterior, marca) => anterior.round > marca.rodada || (anterior.round === marca.rodada && anterior.turn > marca.turno);
@@ -43,6 +44,7 @@ export function aoMudarTurno(combate, mudancas) {
   if (!souOMestreAtivo() || !combate.started || !('turn' in mudancas || 'round' in mudancas)) return;
   (async () => {
     await tirarSupressao(combate);
+    await fogoNoFimDoTurno(combate);
     await deathSave(combate);
   })().catch(erro => console.warn(`${SISTEMA} | turno`, erro));
 }

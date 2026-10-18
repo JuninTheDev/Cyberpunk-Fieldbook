@@ -11,6 +11,7 @@ const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required:
 const texto = (initial = '') => new fields.StringField({ required: true, blank: true, initial });
 const recurso = (value, max) => new fields.SchemaField({ value: inteiro(value), max: inteiro(max) });
 const fonte = () => new fields.SchemaField({ livro: texto(), pagina: inteiro(0) });
+const eletronica = (eletronico = false) => ({ eletronico: new fields.BooleanField({ initial: eletronico }), endurecido: new fields.BooleanField({ initial: false }) });
 
 // Todas as chaves de perícia que um efeito pode somar: as comuns e as famílias (Linguagem etc.).
 export const CHAVES_PERICIAS = [...PERICIAS.map(p => p.id), ...Object.keys(FAMILIAS)];
@@ -207,6 +208,7 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
 export class DadosArmadura extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
+      ...eletronica(),
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       sp: new fields.SchemaField({ cabeca: recurso(0, 0), corpo: recurso(11, 11) }),
       penalidade: inteiro(0),
@@ -236,6 +238,7 @@ export class DadosMunicao extends foundry.abstract.TypeDataModel {
 export class DadosCyberware extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
+      ...eletronica(true),
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       tipo: texto(),
       fundacional: new fields.BooleanField({ initial: false }),
@@ -260,11 +263,11 @@ const usoDoItem = initial => new fields.StringField({ required: true, blank: fal
 export class DadosEquipamento extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
+      ...eletronica(),
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       quantidade: inteiro(1, { min: 0 }),
       uso: usoDoItem('carregando'),
       ativacao: new fields.StringField({ required: true, blank: false, initial: 'carregando', choices: Object.keys(ATIVACOES) }),
-      eletronico: new fields.BooleanField({ initial: false }),
       ocultavel: new fields.BooleanField({ initial: false }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
@@ -275,6 +278,7 @@ export class DadosEquipamento extends foundry.abstract.TypeDataModel {
 export class DadosRoupa extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
+      ...eletronica(),
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       quantidade: inteiro(1, { min: 0 }),
       uso: usoDoItem('equipado'),
@@ -306,6 +310,7 @@ export class DadosDroga extends foundry.abstract.TypeDataModel {
 export class DadosCyberdeck extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
+      ...eletronica(true),
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       slots: inteiro(7, { min: 0 }),
       // Os decks de 2077: a RAM que paga os quickhacks e o Cooling (quanta RAM volta por rodada).
@@ -380,6 +385,7 @@ export class DadosArquitetura extends foundry.abstract.TypeDataModel {
 export class DadosUpgrade extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
+      ...eletronica(),
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       alvo: new fields.StringField({ required: true, blank: false, initial: 'arma', choices: Object.keys(ALVOS_UPGRADE) }),
       tamanho: inteiro(1, { min: 0 }),
@@ -448,6 +454,7 @@ export class DadosEfeito extends foundry.data.ActiveEffectTypeDataModel {
   get foraDeUso() {
     const item = this.parent?.parent;
     if (!(item instanceof Item)) return null;
+    if (item.inoperante) return true;
     if (item.type === 'cyberware') return !item.system.instalado;
     if (item.type === 'arma' || item.type === 'armadura') return !item.system.equipada;
     if (item.type === 'programa') return !item.system.ativo || !item.instaladoNo;

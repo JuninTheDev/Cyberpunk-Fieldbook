@@ -11,6 +11,7 @@ import {
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
+import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -120,10 +121,10 @@ export class AtorCPR extends Actor {
     if (!arma.system.aDistancia || !ehTiroUnico(modo)) return lista;
     const mirado = Boolean(LOCAIS_MIRADOS[local]);
     const tiro = mirado ? 'tiro mirado' : 'tiro único';
-    const instalados = this.items.filter(item => item.type === 'cyberware' && item.system.instalado).map(item => tipoDeTeleOptics(item.name, item.getFlag(SISTEMA, 'catalogo')));
+    const instalados = this.items.filter(item => item.type === 'cyberware' && item.system.instalado && !item.inoperante).map(item => tipoDeTeleOptics(item.name, item.getFlag(SISTEMA, 'catalogo')));
     const teleoptics = teleopticsNoTiro(instalados, { mirado });
     for (const tipo of teleoptics) lista.push({ id: tipo, rotulo: `${TELEOPTICS[tipo].nome}: ${tiro} a ${LONGE} m ou mais`, valor: 1, ligado: deLonge(metros) });
-    const luneta = arma.instalados.find(item => item.type === 'upgrade' && ehLuneta(item.name, item.getFlag(SISTEMA, 'catalogo')));
+    const luneta = arma.instalados.find(item => item.type === 'upgrade' && !item.inoperante && ehLuneta(item.name, item.getFlag(SISTEMA, 'catalogo')));
     if (luneta) {
       const bonusOptico = (mirado ? this.system.bonus.tiroMirado : this.system.bonus.tiroUnico) + (teleoptics.length && deLonge(metros) ? 1 : 0);
       lista.push({ id: luneta.uuid, rotulo: `${luneta.name}: alvo a ${LUNETA.metros} m ou mais`, valor: LUNETA.valor, ligado: lunetaVale({ metros, bonusOptico }) });
@@ -216,7 +217,7 @@ export class AtorCPR extends Actor {
     return [{ rotulo: 'Interface', valor: this.system.rankDeInterface }, { rotulo: 'ATK', valor: programa.system.atk }, ...this.#penalidade(), ...escolhidos.map(({ rotulo, valor }) => ({ rotulo, valor }))];
   }
   rolarAtaqueDePrograma(programa, { perguntar = false, ...opcoes } = {}) {
-    if (!programa || programa.parent !== this || !programaDeAtaque(programa.system.classe) || !programa.instaladoNo || !this.system.rankDeInterface) return null;
+    if (!programa || programa.parent !== this || programa.inoperante || !programaDeAtaque(programa.system.classe) || !programa.instaladoNo || !this.system.rankDeInterface) return null;
     return this.#testarComJanela({
       rotulo: `${programa.name}: ataque`, perguntar, partes: situacionais => this.partesDoAtaqueDePrograma(programa, { situacionais }), situacionais: () => this.situacionaisDoTeste()
     }, { sabor: 'Contra a Interface + 1d10 do netrunner ou a DEF + 1d10 do programa. O programa de ataque desativa sozinho depois de usado.', ...opcoes });
@@ -237,7 +238,7 @@ export class AtorCPR extends Actor {
 
   // O programa deste ator ativo (num deck) pelo id do catálogo ou pelo nome (os defensores que mudam o dano no cérebro).
   programaAtivo(id) {
-    return this.items.find(item => item.type === 'programa' && item.system.ativo && item.instaladoNo
+    return this.items.find(item => item.type === 'programa' && item.system.ativo && item.instaladoNo && !item.inoperante
       && (item.getFlag(SISTEMA, 'catalogo') === `core_programs:${id}` || item.name.toLowerCase() === id)) ?? null;
   }
   // O dano no cérebro (regras.danoNoCerebro): direto no HP, sem a armadura nem crítico. O Shield ativo anula o primeiro
@@ -413,7 +414,7 @@ export class AtorCPR extends Actor {
   // Cyberware instalado que as armas de 2077 procuram: a ligação da arma Smart (o Personal Link, o Neuroport ou o
   // Subdermal Grip) e o Ballistic Coprocessor (ricochete).
   #instalado(teste) {
-    return this.items.some(item => item.type === 'cyberware' && item.system.instalado && teste(item.name, item.getFlag(SISTEMA, 'catalogo')));
+    return this.items.some(item => item.type === 'cyberware' && item.system.instalado && !item.inoperante && teste(item.name, item.getFlag(SISTEMA, 'catalogo')));
   }
   get temLigacaoSmart() { return this.#instalado(ehLigacaoSmart); }
   get temCoprocessador() { return this.#instalado(ehCoprocessador); }
@@ -530,6 +531,22 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
+  // O EMP não desinstala nem guarda o item. A fundação parada leva suas opções; os estados originais ficam intactos.
+  get inoperante() {
+    const pendentes = [this], vistos = new Set();
+    while (pendentes.length) {
+      const item = pendentes.pop();
+      if (!item || vistos.has(item.id)) continue;
+      vistos.add(item.id);
+      if (item.getFlag(SISTEMA, 'emp')) return true;
+      pendentes.push(item.actor?.items.get(item.system.instaladoEm));
+      if (item.type === 'cyberdeck' && item.getFlag(SISTEMA, 'naPorta')) {
+        pendentes.push(...(item.actor?.items.filter(porta => porta.type === 'cyberware' && porta.system.instalado
+          && (porta.getFlag(SISTEMA, 'catalogo') === PORTA_DO_DECK || porta.name === 'Neuroport Cyberdeck Port')) ?? []));
+      }
+    }
+    return false;
+  }
   // A nova equipagem passa pela mesma conferência na ficha do personagem, na do item e no drop do capanga.
   // Guardar e editar uma arma já equipada continuam possíveis, inclusive num estado antigo com excesso de armas.
   async _preUpdate(mudancas, opcoes, usuario) {
@@ -581,7 +598,7 @@ export class ItemCPR extends Item {
     return this.usavelAMao && this.effects.some(efeito => !efeito.disabled);
   }
   usar() {
-    if (!this.usavelAMao) return null;
+    if (!this.usavelAMao || this.inoperante) return null;
     const desligar = this.emUso;
     return this.updateEmbeddedDocuments('ActiveEffect', this.effects.map(efeito => ({ _id: efeito.id, disabled: desligar })));
   }
@@ -667,7 +684,7 @@ export class ItemCPR extends Item {
     // A coronha retrátil recolhida (a Dian, de 2077): dá para esconder a arma, mas o ataque leva −1 até estender.
     if (this.coronhaRecolhida) partes.push({ rotulo: 'Coronha recolhida', valor: PENALIDADE_CORONHA });
     // Acessórios com bônus de ataque (o Smartgun Link). O mesmo acessório duas vezes não faz nada (wiki).
-    const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && item.system.modificadores.ataque).map(item => [item.name, item.system.modificadores.ataque]));
+    const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && !item.inoperante && item.system.modificadores.ataque).map(item => [item.name, item.system.modificadores.ataque]));
     for (const [rotulo, valor] of comBonus) partes.push({ rotulo, valor });
     return { pericia: p, partes };
   }

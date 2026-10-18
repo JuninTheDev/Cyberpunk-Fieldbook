@@ -15,6 +15,7 @@ import { perguntarTeste } from './janela-rolagem.mjs';
 import { aplicarDanoDeNet } from './net.mjs';
 import { aplicarPerdaDeHumanidade } from './humanidade.mjs';
 import { lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
+import { aplicarMunicaoSemDano, incendiar, rolarResistencia, rolarInteligente, desfazerMunicao, escolherEmp, encerrarEfeitos, apagarFogo } from './municoes.mjs';
 import * as R from './regras.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
@@ -62,6 +63,16 @@ export function desistir(id, resposta) {
 // quando o prazo do pedido acaba (a janela entra em "janelas" pelo id do pedido).
 const registrarJanela = id => (id ? janela => janelas.set(id, janela) : null);
 const TRATADORES = {
+  inteligente: async (dados, id) => {
+    const resultado = await rolarInteligente(dados, { perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+    janelas.delete(id);
+    return resultado;
+  },
+  municao: async (dados, id) => {
+    const resultado = await rolarResistencia(dados, { perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+    janelas.delete(id);
+    return resultado;
+  },
   defesa: (dados, id) => perguntarDefesa(dados, { id }),
   dano: (dados, id) => rolarDanoDoAtacante(dados, { id }),
   // A rolagem do netrunner na NET (o netrun/estado.mjs pede): a Interface ou o ataque do programa, pela janela de
@@ -151,6 +162,12 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (lista.length < marcados.length) ui.notifications.warn('O Black ICE e o demônio estão na NET: a arma não os atinge.');
   if (marcados.length && !lista.length) return null;
   const municao = arma.municaoCarregada;
+  const conferirMira = () => {
+    if (municao?.system.efeito !== 'smart' || municao.getFlag(SISTEMA, 'catalogo')?.startsWith('armas-2077:') || atacante.items.some(i => i.type === 'cyberware' && i.system.instalado && !i.inoperante && i.getFlag(SISTEMA, 'catalogo') === 'core_cyberware:targeting-scope')) return true;
+    ui.notifications.warn(`${arma.name}: munição Inteligente exige o cyberware Targeting Scope (Luneta de Mira).`);
+    return false;
+  };
+  if (!conferirMira()) return null;
   const pelaArma = { aDistancia: arma.system.aDistancia, tipoDeArma: arma.system.tipo, municao: municao?.system.tipo };
   const modo = R.classificar({ pedido, ...pelaArma });
   const tokenAtq = tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
@@ -187,6 +204,11 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null });
   const escolha = perguntar ? await perguntarTeste(atacante, { rotulo: `${arma.name}: ${descricao}`, partes, situacionais }) : null;
   if (perguntar && !escolha) return null;
+  if (perguntar && !conferirMira()) return null;
+  if (perguntar && perfil?.classe === 'smart') {
+    const impedimento = R.impedimento2077({ ...de2077, ligadaSmart: atacante.temLigacaoSmart });
+    if (impedimento) { ui.notifications.warn(`${arma.name}: ${impedimento}`); return null; }
+  }
   const extras = escolha?.partes ?? situacionais.filter(situacional => situacional.ligado).map(({ rotulo, valor }) => ({ rotulo, valor }));
   if (balas) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
   // A carga marca a rodada na arma, para esfriar; o "Desfazer" do mestre tira a marca.
@@ -527,6 +549,11 @@ async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true }
     if (modo === 'nao') return;
     const feita = await lesaoCritica(ator, { naFicha: modo === 'ficha', ...opcoes });
     if (feita) linha.dano.lesoes.push({ nome: feita.nome, item: feita.item?.id ?? null });
+    if (municao?.system.efeito === 'expansive' && feita?.id.includes(':foreign-object')) {
+      const segunda = await lesaoCritica(ator, { naFicha: modo === 'ficha', cabeca: ctx.local === 'cabeca', excluir: [feita.id] });
+      if (segunda) linha.dano.lesoes.push({ nome: segunda.nome, item: segunda.item?.id ?? null });
+      linha.notas.push('Munição expansiva: outra lesão além do objeto estranho, sem segundo dano bônus.');
+    }
   };
   if (dano.critico && lesaoDoCritico) await lesao({ cabeca: ctx.local === 'cabeca' });
   if (ctx.local === 'perna' && efeito.passou) await lesao({ id: PERNA_QUEBRADA });
@@ -538,9 +565,31 @@ async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true }
   // Reflex Tuner (2077): atingido, +1 para se esquivar pelo resto da rodada. A marca vai para o cartão, e o "Desfazer"
   // a tira.
   if (ator.temReflexTuner) await marcarRodada(ctx, ator, 'atingido');
+  await incendiar(ctx, linha);
 }
 
 // ---------------- Modos ----------------
+// A segunda tentativa da munição Inteligente RED (inclui o míssil, pela wiki e pelo Rocket (Smart) do CORE).
+async function repetirInteligente(ctx, contra) {
+  const municao = ctx.arma.municaoCarregada;
+  const efeito = municao?.getFlag(SISTEMA, 'catalogo')?.startsWith('armas-2077:') ? null : municao?.system.efeito;
+  if (!R.podeRepetirComInteligente({ efeito, modo: ctx.modo, local: ctx.local, ataque: ctx.pedido.total, contra, municao: municao?.system.tipo })) return null;
+  const dados = { ator: ctx.atacante.uuid };
+  const segunda = (ctx.usuario.isGM ? null : await pedir(ctx.usuario, 'inteligente', dados)) ?? await rolarInteligente(dados, { perguntar: !config('rolarDireto') });
+  if (segunda) ctx.falhaDaArma ??= R.falhaDaArma({ qualidade: ctx.arma.system.qualidade, efeito: ctx.arma.system.falhaCritica, critico: segunda.critico });
+  return segunda;
+}
+
+function registrarSegundaTentativa(ctx, linha, contra, segunda) {
+  linha.segundaTentativa = { primeiro: ctx.pedido.total, contra, total: segunda.total };
+  linha.notas.push(`Inteligente: errou com ${ctx.pedido.total} contra ${contra}; segunda tentativa 10 + 1d10 (só a Sorte): ${segunda.total}.`);
+}
+
+async function revelarSegundaTentativa(segunda) {
+  const mensagem = segunda && game.messages.get(segunda.mensagem);
+  if (mensagem?.whisper.length) await mensagem.update({ whisper: [] });
+}
+
 // Um alvo de tiro, autofogo ou corpo a corpo: alcance, DV e defesa. Devolve a linha se o ataque pegou.
 async function resolverAlvo(ctx, token) {
   const linha = linhaDe(ctx, token);
@@ -552,17 +601,14 @@ async function resolverAlvo(ctx, token) {
     if (achada.fora) { linha.resultado = 'fora'; return null; }
     dv = achada.dv ?? (achada.semTabela ? await dvDoMestre(ctx, alvo) : null);
   }
-  return (await defesaDoAlvo(ctx, linha, alvo, dv)) ? linha : null;
-}
-
-// Munição que não causa dano (biotoxina, veneno, EMP...): quem foi pego não leva o dano da arma, e o cartão diz o efeito
-// dela, que o mestre resolve. Devolve se era o caso.
-function semDano(ctx, linhas) {
-  const municao = ctx.arma.municaoCarregada;
-  const efeito = R.MUNICAO_SEM_DANO[municao?.system.efeito];
-  if (!efeito) return false;
-  for (const linha of linhas) linha.notas.push(`${municao.name}: não causa dano. ${efeito[0].toUpperCase()}${efeito.slice(1)} O mestre resolve.`);
-  return true;
+  if (await defesaDoAlvo(ctx, linha, alvo, dv)) return linha;
+  const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
+  const segunda = await repetirInteligente(ctx, contra);
+  if (!segunda) return null;
+  registrarSegundaTentativa(ctx, linha, contra, segunda);
+  const pegou = await defesaDoAlvo({ ...ctx, pedido: { ...ctx.pedido, total: segunda.total } }, linha, alvo, dv);
+  await revelarSegundaTentativa(segunda);
+  return pegou ? linha : null;
 }
 
 // Arma Smart que trava dois alvos (a Tsunami Kappa), no tiro (não no mirado): vai no primeiro marcado; se não pegar, as
@@ -587,7 +633,7 @@ async function individual(ctx) {
   const doisAlvos = ctx.perfil?.doisAlvos && ctx.modo === 'tiro' && !R.LOCAIS_MIRADOS[ctx.local] && ctx.alvos.length >= 2;
   const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
   const pegas = ctx.linhas.filter(l => atingidas.has(l));
-  if (semDano(ctx, pegas)) return;
+  if (await aplicarMunicaoSemDano(ctx, pegas)) return;
   const rajada = ctx.modo === 'autofogo' || ctx.modo === 'rajadaTech';
   const maximo = ctx.modo === 'rajadaTech' ? ctx.perfil.rajadaTech : ctx.arma.system.autofogo;
   const formula = rajada ? '2d6' : ctx.modo === 'ricochete' ? R.umDadoAMenos(ctx.arma.system.dano) : null;
@@ -612,7 +658,7 @@ function atravessar(ctx, linha, dano) {
 
 // Área (explosivo e cartucho): o dano é rolado uma vez e vale para cada um que ficou.
 async function danoNaArea(ctx, pegas, formula = null) {
-  if (!pegas.length || semDano(ctx, pegas)) return;
+  if (!pegas.length || await aplicarMunicaoSemDano(ctx, pegas)) return;
   const dano = await rolarDanoDoAtaque(ctx, { formula });
   for (const linha of ctx.linhas.filter(l => pegas.includes(l))) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
 }
@@ -654,9 +700,14 @@ async function explosao(ctx) {
     return;
   }
   const dv = achada.dv ?? (achada.semTabela ? await dvDoMestre(ctx, info) : null);
-  if (dv === null || ctx.pedido.total <= dv) {
+  const segunda = dv !== null && ctx.pedido.total <= dv ? await repetirInteligente(ctx, dv) : null;
+  const tentativa = segunda ? { ...ctx, pedido: { ...ctx.pedido, total: segunda.total } } : ctx;
+  if (dv === null || tentativa.pedido.total <= dv) {
     ctx.cabecalho = dv === null ? 'sem DV: o mestre decide' : `contra DV ${dv}${onde}: errou. O mestre decide onde caiu.`;
-    Object.assign(linhaDe(ctx, principal), { resultado: dv === null ? 'semDv' : 'errou', dv, metros: info.metros });
+    const linha = linhaDe(ctx, principal);
+    Object.assign(linha, { resultado: dv === null ? 'semDv' : 'errou', dv, metros: info.metros });
+    if (segunda) registrarSegundaTentativa(ctx, linha, dv, segunda);
+    await revelarSegundaTentativa(segunda);
     return;
   }
   ctx.cabecalho = `contra DV ${dv}${onde}: explodiu na área de ${R.AREA_EXPLOSIVO} × ${R.AREA_EXPLOSIVO} m`;
@@ -666,8 +717,10 @@ async function explosao(ctx) {
     const linha = linhaDe(ctx, token);
     const alvo = infoDoAlvo(ctx, token);
     linha.metros = alvo.metros;
-    if (await defesaDoAlvo(ctx, linha, alvo, dv)) pegas.push(linha);
+    if (segunda) registrarSegundaTentativa(ctx, linha, dv, segunda);
+    if (await defesaDoAlvo(tentativa, linha, alvo, dv)) pegas.push(linha);
   }));
+  await revelarSegundaTentativa(segunda);
   await danoNaArea(ctx, pegas);
 }
 
@@ -760,11 +813,11 @@ const barraDeHp = linha => {
 async function cartaoDoResultado(ctx) {
   const linhas = ctx.linhas.map(l => ({
     nome: l.nome, img: l.img, resultado: l.resultado, rotulo: RESULTADOS[l.resultado] ?? l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null,
-    dv: l.dv ?? null, metros: l.metros ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, suprimido: Boolean(l.suprimido), notas: l.notas
+    dv: l.dv ?? null, metros: l.metros ?? null, segundaTentativa: l.segundaTentativa ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, municao: l.municao ?? null, suprimido: Boolean(l.suprimido), notas: l.notas
   }));
   const resumo = { id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, atacante: ctx.nomeAtq, arma: ctx.arma.name, cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas };
-  const desfazer = ctx.linhas.filter(l => l.dano || l.suprimido).map(l => ({
-    ator: l.token.actor.uuid, suprimido: Boolean(l.suprimido), lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
+  const desfazer = ctx.linhas.filter(l => l.dano || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
+    ator: l.token.actor.uuid, suprimido: Boolean(l.suprimido), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 });
@@ -813,6 +866,7 @@ export async function desfazer(mensagem) {
     const ator = await fromUuid(item.ator);
     if (!ator) continue;
     if (item.dano) await ator.desfazerDano(item.dano);
+    await desfazerMunicao(ator, item.municao);
     const lesoes = item.lesoes.filter(id => ator.items.has(id));
     if (lesoes.length) await ator.deleteEmbeddedDocuments('Item', lesoes);
     if (item.suprimido) {
@@ -894,6 +948,9 @@ export function ligarBotoes(mensagem, html) {
       else if (botao.dataset.cprfAcao === 'aplicarDano') aplicarDanoDoCartao(mensagem);
       else if (botao.dataset.cprfAcao === 'rolarLesao') rolarLesaoDoCartao(mensagem);
       else if (botao.dataset.cprfAcao === 'aplicarHumanidade') aplicarPerdaDeHumanidade(mensagem);
+      else if (botao.dataset.cprfAcao === 'aplicarEmp') escolherEmp(mensagem, botao.dataset.ator);
+      else if (botao.dataset.cprfAcao === 'encerrarMunicao') encerrarEfeitos(mensagem, botao.dataset.ator);
+      else if (botao.dataset.cprfAcao === 'apagarFogo') fromUuid(botao.dataset.ator).then(apagarFogo);
     });
   }
   if (mensagem.getFlag(SISTEMA, 'desfeito')) html.querySelector('.cartao.ataque')?.classList.add('desfeito');

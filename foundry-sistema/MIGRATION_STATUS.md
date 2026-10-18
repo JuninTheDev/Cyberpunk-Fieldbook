@@ -143,6 +143,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **Munição Inteligente RED (C14, 2026-10-17):** o usuário confirmou que a margem de erro de até 4 é contra a defesa
+  usada, inclusive a Evasão rolada; a segunda tentativa permite outra esquiva. A wiki (`system-catalog.js`, Munição)
+  e as descrições `ammo.*.smart` do CORE dizem "tiro único", sem excluir explicitamente o mirado. O usuário confirmou
+  incluir o mirado, conservando o local e usando só 10 + 1d10 + Sorte na nova conta, sem repetir a penalidade de −8.
+
 - **Mãos livres (C12, decidido em 2026-10-17):** a conta básica segue o CORE 0.92.4 (duas mãos mais os efeitos, menos
   as armas equipadas), com as duas regras da wiki confirmadas pelo usuário: BODY 8+ usa arma branca de duas mãos
   com uma; cada escudo equipado ocupa uma mão, inclusive sem HP. O CORE só avisa quando faltam mãos; o C12 impede
@@ -185,8 +190,8 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 - **Munição que não causa dano: muda o que a mesa vê.** A tabela de munição da wiki diz que biotoxina, veneno, EMP,
   flashbang, sonífera e gás lacrimogêneo "não causam dano", e que a fumaça só cobre a área. No Foundry 12, o Fluxo rola
   o dano pela arma (o `createRoll` do CORE) e o aplica na ficha, sem olhar o tipo da munição. Aqui, o ataque, a defesa
-  e a área continuam valendo, mas quem é pego não leva dano. O cartão traz o efeito com o texto da wiki, e o mestre o
-  resolve.
+  e a área continuam valendo, sem dano da arma. No C14, as resistências, o dano próprio das toxinas e os estados
+  temporários passam a ser aplicados pelo sistema; a fumaça continua sendo resolvida pela mesa.
 
 - **Rajada Tech: muda o que a mesa vê.** O sistema lê a "rajada de N" como o multiplicador máximo, como o cpr-2077, e
   as balas pelo texto de cada arma: a Kenshin gasta 2, a Omaha 3, a Quasar 10 e a Senkoh as 30 do pente. No Foundry 12,
@@ -5407,6 +5412,60 @@ Commit anterior: `abb5cb85` (a reserva, em partes; o ciclo 109 é o `f4ccaaec`).
       quatro), os dois alvos da Kappa só no modo Smart que saiu (S7: a Kappa) e a ficha sem o aviso "sem ligação" (S8: a
       Yukimura).
 - **Próximo:** a parte 2 do C29, a munição Smart melhorada (a segunda chance com 14 + 1d10, sem as penalidades de visão).
+
+### Ciclo 111 (2026-10-18): C14, munições especiais (sessão Codex)
+
+Commit anterior: `522fa62` (ciclo 110). Item reservado antes da implementação (`b4823bb`); os ciclos 89 a 110 das
+outras sessões foram integrados antes do fechamento, preservando os registros e as implementações delas.
+
+- **Fontes:** `system-catalog.js`, Munição (p. 344–347); os itens `core/ammo` e o cyberware do CORE 0.92.4; a API
+  `modules/api/actor/empable-items.js` e a macro Get EMP'd. O CORE sorteia nomes na macro; a escolha EMP pelo mestre
+  segue a wiki. Os arquivos de regra da wiki não mudaram.
+- **Decisões do usuário:** a margem da Inteligente RED é contra a defesa usada, inclusive a Evasão rolada; a segunda
+  tentativa permite outra esquiva. Inclui o tiro mirado, mantendo local e consequências: a repetição usa somente
+  10 + 1d10 + Sorte, sem repetir −8 nem bônus de mira.
+- **Implementado:**
+  - resistências por alvo, no navegador do dono; sem resposta, o mestre rola. Empate na DV falha;
+  - biotoxina (DV15, 3d6) e veneno (DV13, 2d6) com dano próprio direto no HP, sem SP, ablação ou crítico;
+  - sonífera (DV13): inconsciente e caído, acordar com dano ou Ação, sem levantar; flashbang (DV15) e gás (DV13) com
+    lesões temporárias, sem bônus de dano e preservando as anteriores. Proteções parciais, Anti-Dazzle em par,
+    proteção dos ouvidos, olhos de carne e filtros são conferidos separadamente;
+  - incendiária só quando o dano passa da SP, 2 HP no fim do turno, sem acumular com outro ataque nem com o fogo da
+    NET; apagar com uma Ação. Expansiva acrescenta outra lesão diferente ao Objeto estranho, sem segundo +5,
+    inclusive no modo Anunciar;
+  - Inteligente RED com Luneta de Mira instalada e operante, margem de até 4, nova conta e outra esquiva, sem gastar
+    outro projétil, incluindo míssil. A segunda tentativa é rolada pelo atacante no próprio navegador;
+  - EMP (Cybertech DV15): o mestre ativo escolhe até dois eletrônicos vulneráveis em uso. A proteção considera
+    fundação, opções e conjunto. Os itens ficam inoperantes, com efeitos, opções, programas e bônus manuais
+    interrompidos, sem mudar instalação, uso ou Humanidade. O cartão encerra por alvo e desfaz só o que criou;
+  - sono, lesões temporárias e EMP expiram após 60 segundos do mundo. O rastreador avança três segundos por rodada
+    por `Combat#getTimeDelta`, sem mudar a apresentação dos efeitos antigos em rodadas fora de combate.
+- **Integração com a NET e os ciclos 95 a 110:** deck, hardware, programas, porta implantada, Neuroport e Self-ICE
+  respeitam EMP. O deck parado bloqueia ações, inclusive do mestre e nas conexões já abertas; guardar o deck não
+  contorna a parada. Não rezza outro Black ICE. Jack Out continua livre. Cliente e mestre revalidam o equipamento
+  depois de rolagem, resistência, catálogo, escolha e consentimento. Quando o Self-ICE volta, o Personal Link
+  conserva o acesso aos quickhacks, com a mesma conta nos portões e na ficha; as flags da ligação permanecem.
+  A ligação da arma Smart do Kit também é reconferida se o EMP chegar com a janela do tiro aberta.
+- **Dados:** seis tipos de item recebem Eletrônico/Protege contra EMP. Os 320 itens CORE do catálogo mudam somente
+  nesses campos e no marcador da migração; o restante é idêntico ao ciclo 110. O passo 5 recupera os metadados antigos
+  e preserva a edição já migrada e o Eletrônico antigo do equipamento.
+- **Testes e resultados:**
+  - G1: 70 arquivos, nenhum erro; G2: nenhum erro;
+  - G3: 144 de 148, com as quatro falhas conhecidas das armas de 2077; os 12 testes novos passam;
+  - G4: 135 de 137, com as falhas conhecidas de Carga Tech e Dian/Lexington. A checagem de avisos passou nesta
+    rodada; a falha conhecida dos avisos da Lexington continua registrada no QUALITY_GATES. Nenhum erro de JS;
+  - os nove passos C14 passam: regras, estado posterior, cartões, botões, autoria das rolagens, dois navegadores,
+    minuto, avanço real das rodadas, Desfazer e esperas interrompidas por EMP. As capturas de EMP e do jogador foram
+    revisadas. O teste entre clientes usa o token da cena criada pelo passo, sem depender da cena vista no canvas;
+  - as duas regressões da integração foram reproduzidas antes das correções: o Self-ICE restaurado retirava o botão
+    Quickhack da ligação direta, e a arma Smart gastava bala e Sorte após perder a ligação durante a janela.
+- **Mutações:** 83 distintas, todas detectadas, uma por vez: 15 de regras, três de build e 65 com navegador. Os bytes
+  originais voltaram exatamente, conferidos por MD5, incluindo catálogo e arquivo gerado nas de build. Depois da
+  integração foram repetidas as 17 anteriores de regras/build e as de bônus manual, resistência do jogador e autoria
+  da segunda tentativa. As cinco novas provam o acesso direto após o retorno do Self-ICE (regra, cliente, mestre e
+  ficha) e a recusa da Smart do Kit durante a janela. A trava compartilhada e a checagem de mesa vazia foram mantidas.
+- **Limites:** fumaça continua manual; o cybermembro parado é narrado como pendurado pelo cartão. A segunda chance
+  da munição Smart melhorada do Kit (14 + 1d10) fica no C29. A campanha real e o servidor não foram alterados.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

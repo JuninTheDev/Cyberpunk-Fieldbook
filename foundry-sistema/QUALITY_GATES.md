@@ -151,6 +151,23 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   assumido volta na desconexão e também no reinício das defesas; a lista da janela some pelo filtro do código e pela
   condição do modelo), o passo monta o caso em que só um deles vale: o ponto sem o reinício, dois nós de controle no
   andar e só um tomado. No ciclo 85, com um nó só e o reinício ligado, as duas mutações sobreviveram.
+- **A segunda lesão sem criar a primeira na ficha** (ciclo 111): a expansiva precisa excluir Objeto estranho da nova
+  rolagem também no modo "Anunciar". No modo "Na ficha", a proteção geral contra repetir uma lesão já existente
+  pode esconder a falta dessa exclusão. O passo confere os dois modos, com a primeira repetição forçada nos dados.
+- **Uma pergunta aberta não reserva o estado** (ciclo 111): ao confirmar a escolha EMP, releia o cartão e os itens antes
+  de desligá-los. O ataque pode ter sido desfeito enquanto a janela estava aberta. O passo também tenta uma segunda
+  escolha simultânea e fecha janelas extras inesperadas, para falhar sem ficar esperando uma resposta humana.
+- **Equipamento depois de uma espera** (ciclo 111): o EMP pode chegar durante uma rolagem, consentimento, escolha ou
+  carregamento do catálogo. Reconferir antes do dado no cliente e antes de resolver no mestre. O cenário interrompe
+  cada espera separadamente, inclusive a ligação da arma Smart do Kit, e confere dados, Sorte e munição preservados.
+- **Os Passwalls de uma ligação direta** (ciclo 111): o Self-ICE que volta de um EMP não revoga o acesso do Personal
+  Link. A conta efetiva é a mesma nos portões e na ficha; o G4 confere o botão Quickhack e o resultado depois de
+  Desfazer e do minuto, sem alterar os Passwalls guardados na ligação.
+- **Relógio do combate e duração do efeito** (ciclo 111): o minuto precisa de 20 rodadas reais de 3 segundos. Alterar
+  `CONFIG.time.roundTime` também muda a apresentação dos efeitos antigos em rodadas fora de combate. O sistema usa
+  `Combat#getTimeDelta`; o G4 avança a fila e confere 3, 57 e 60 segundos, mantendo os testes dos quickhacks anteriores.
+- **A rolagem da segunda tentativa** (ciclo 111): tanto o primeiro tiro como a Inteligente têm `teste.ataque`. Para
+  distinguir as contas e os autores, filtre por `teste.inteligente`; o mirado conserva a penalidade só no primeiro tiro.
 - **A ordem do que o `createEmbeddedDocuments` devolve:** criando vários documentos de uma vez (tokens, combatentes), a
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do

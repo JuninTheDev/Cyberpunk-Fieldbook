@@ -39,6 +39,7 @@ function cabecalhoDoItem(item) {
     veiculo: () => [[`SDP ${s.sdp?.value}/${s.sdp?.max}`, `${s.assentos} assentos`], [s.familia && vazada('DA FAMÍLIA')]]
   };
   const [resumo, etiquetas] = porTipo[item.type]?.() ?? [[], []];
+  if (item.inoperante) etiquetas.push(vazada('INOPERANTE (EMP)'));
   if ('uso' in s && USOS[s.uso]) etiquetas.push(s.uso === 'equipado' ? cheia(USOS[s.uso].toUpperCase()) : vazada(USOS[s.uso].toUpperCase()));
   return { resumo: resumo.filter(Boolean).join(' // '), etiquetas: etiquetas.filter(Boolean) };
 }
@@ -81,6 +82,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
+      temEletronica: 'eletronico' in fonte,
       // A arma de um personagem ataca e recarrega pela ficha dela; a armadura mostra o SP de cada local em caixas.
       armaDeAtor: tipo === 'arma' && Boolean(item.actor),
       drogaDeAtor: tipo === 'droga' && Boolean(item.actor) ? { sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')) } : null,

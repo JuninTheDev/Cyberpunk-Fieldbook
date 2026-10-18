@@ -140,7 +140,7 @@ export function registrarNet() {
     if (!souOMestreAtivo() || !combate.started || !('turn' in mudancas || 'round' in mudancas)) return;
     // O fogo do Hellhound (a wiki: 2 no HP por turno): quem acabou o turno em chamas queima.
     const anterior = combate.combatants.get(combate.previous?.combatantId);
-    if (anterior?.actor?.statuses.has(STATUS_EM_CHAMAS)) queimar(anterior.actor, anterior.name).catch(falha => console.warn(`${SISTEMA} | NET: fogo`, falha));
+    if (anterior?.actor?.statuses.has(STATUS_EM_CHAMAS) && !anterior.actor.effects.some(e => e.getFlag(SISTEMA, 'municao')?.tipo === 'fogo')) queimar(anterior.actor, anterior.name).catch(falha => console.warn(`${SISTEMA} | NET: fogo`, falha));
     const token = combate.combatant?.token;
     const conexao = token && conexaoDoToken(token);
     if (conexao) pedir('zerarAcoes', { tile: conexao.tile, token: token.id }).catch(falha => console.warn(`${SISTEMA} | NET: Ações NET do turno`, falha));
