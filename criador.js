@@ -538,9 +538,9 @@
   }
 
   // ---------------- Servidor ----------------
-  async function api(path, { method = 'GET', body } = {}) {
+  async function api(path, { method = 'GET', body, signal } = {}) {
     try {
-      const response = await fetch(path, { method, headers: body !== undefined ? { 'Content-Type': 'application/json' } : {}, body: body !== undefined ? JSON.stringify(body) : undefined, cache: 'no-store' });
+      const response = await fetch(path, { method, headers: body !== undefined ? { 'Content-Type': 'application/json' } : {}, body: body !== undefined ? JSON.stringify(body) : undefined, cache: 'no-store', signal });
       let data = {};
       try { data = await response.json(); } catch { /* resposta sem JSON */ }
       return { status: response.status, data };
@@ -663,21 +663,126 @@
   // A imagem enviada (servida pela API da wiki) vale no lugar do link colado.
   const portraitUrl = doc => doc.retrato || (/^https:\/\//.test(doc.retratoLink || '') ? doc.retratoLink : '');
   const portraitImg = (url, cls, alt = '') => (url ? `<img class="${cls}" src="${esc(url)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer">` : '');
-  // Reduz para no máximo 512 px no maior lado, em WebP (ou JPEG, se o navegador não gerar WebP).
-  async function shrinkImage(file, max = 512) {
-    const url = URL.createObjectURL(file);
+  const portraitData = canvas => {
+    const webp = canvas.toDataURL('image/webp', 0.85);
+    return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.85);
+  };
+  // Conserva uma cópia inteira, reduzida, para poder abrir o enquadramento de novo depois de salvar.
+  function portraitOriginal(image) {
+    const scale = Math.min(1, 1536 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+    return portraitData(canvas);
+  }
+  async function loadPortrait(source, signal) {
+    const file = source instanceof Blob;
+    const url = file ? URL.createObjectURL(source) : new URL(source, location.href).href;
     try {
-      const image = await new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => reject(new Error('Não consegui ler esta imagem.')); img.src = url; });
-      const scale = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-      const webp = canvas.toDataURL('image/webp', 0.85);
-      return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.85);
-    } finally {
-      URL.revokeObjectURL(url);
-    }
+      return await new Promise((resolve, reject) => {
+        const image = new Image();
+        const abort = () => { image.src = ''; done(new DOMException('Cancelado.', 'AbortError')); };
+        const done = error => {
+          image.onload = image.onerror = null;
+          signal.removeEventListener('abort', abort);
+          if (error) reject(error); else resolve(image);
+        };
+        image.onload = () => done();
+        image.onerror = () => done(new Error(file ? 'Não consegui ler esta imagem. Envie um arquivo PNG, JPEG ou WebP.' : 'Não consegui abrir esta imagem para recortar. Use Enviar imagem para escolher o arquivo.'));
+        if (!file && new URL(url).origin !== location.origin) image.crossOrigin = 'anonymous';
+        image.referrerPolicy = 'no-referrer';
+        if (signal.aborted) { abort(); return; }
+        signal.addEventListener('abort', abort, { once: true });
+        image.src = url;
+      });
+    } finally { if (file) URL.revokeObjectURL(url); }
+  }
+  // Só envia ao confirmar. A prévia desenha o mesmo quadrado de 512 px que a API vai receber.
+  function cropPortrait(image, initial, signal, save, original = null) {
+    return new Promise(resolve => {
+      if (signal.aborted) { resolve(null); return; }
+      const dialog = document.createElement('dialog');
+      dialog.className = 'popup cc-crop';
+      dialog.setAttribute('aria-labelledby', 'cc-crop-title');
+      dialog.innerHTML = `<div class="popup-box cc-crop-box">
+        <h3 class="popup-title" id="cc-crop-title">Ajustar retrato</h3>
+        <p id="cc-crop-help">Arraste a imagem para posicionar o rosto e ajuste o zoom. Com o quadro selecionado, use as setas do teclado para mover.</p>
+        <canvas class="cc-crop-preview" width="512" height="512" tabindex="0" role="img" aria-label="Prévia do recorte do retrato" aria-describedby="cc-crop-help"></canvas>
+        <label class="cc-crop-zoom">Zoom <output data-crop-zoom-value>100%</output><input type="range" min="100" max="500" step="1" value="100" data-crop-zoom></label>
+        <p class="cc-msg cc-crop-msg" data-crop-msg role="status" aria-live="polite"></p>
+        <div class="popup-buttons"><button type="button" class="action popup-cancel" data-crop-reset>Recomeçar</button><button type="button" class="action popup-cancel" data-crop-cancel>Cancelar</button><button type="button" class="action" data-crop-save>Salvar recorte</button></div>
+      </div>`;
+      const canvas = dialog.querySelector('canvas'), g = canvas.getContext('2d');
+      const slider = dialog.querySelector('[data-crop-zoom]'), output = dialog.querySelector('output'), msg = dialog.querySelector('[data-crop-msg]');
+      const width = image.naturalWidth, height = image.naturalHeight, base = Math.min(width, height);
+      let zoom = Math.max(1, Math.min(5, Number(initial?.zoom) || 1));
+      let x = Number.isFinite(initial?.x) ? initial.x * width : width / 2;
+      let y = Number.isFinite(initial?.y) ? initial.y * height : height / 2;
+      let pointer = null, saving = false, settled = false;
+      const drawCrop = () => {
+        const side = base / zoom;
+        x = Math.max(side / 2, Math.min(width - side / 2, x));
+        y = Math.max(side / 2, Math.min(height - side / 2, y));
+        g.clearRect(0, 0, 512, 512);
+        g.drawImage(image, x - side / 2, y - side / 2, side, side, 0, 0, 512, 512);
+        slider.value = String(Math.round(zoom * 100));
+        output.value = `${Math.round(zoom * 100)}%`;
+      };
+      const finish = result => {
+        if (settled) return;
+        settled = true;
+        signal.removeEventListener('abort', cancel);
+        dialog.close(); dialog.remove(); resolve(result);
+      };
+      const cancel = () => finish(null);
+      signal.addEventListener('abort', cancel, { once: true });
+      dialog.addEventListener('close', cancel);
+      dialog.addEventListener('cancel', event => { event.preventDefault(); if (!saving) cancel(); });
+      dialog.addEventListener('click', event => {
+        if (event.target === dialog && !saving) {
+          const r = dialog.getBoundingClientRect();
+          if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) cancel();
+        }
+      });
+      dialog.querySelector('[data-crop-cancel]').addEventListener('click', cancel);
+      dialog.querySelector('[data-crop-reset]').addEventListener('click', () => { x = width / 2; y = height / 2; zoom = 1; drawCrop(); });
+      slider.addEventListener('input', () => { zoom = Number(slider.value) / 100; drawCrop(); });
+      canvas.addEventListener('pointerdown', event => {
+        if (saving || pointer || (event.pointerType === 'mouse' && event.button !== 0)) return;
+        pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        canvas.setPointerCapture(event.pointerId); canvas.classList.add('cc-crop-dragging'); canvas.focus(); event.preventDefault();
+      });
+      canvas.addEventListener('pointermove', event => {
+        if (!pointer || event.pointerId !== pointer.id || saving) return;
+        const scale = base / zoom / canvas.getBoundingClientRect().width;
+        x -= (event.clientX - pointer.x) * scale; y -= (event.clientY - pointer.y) * scale;
+        pointer.x = event.clientX; pointer.y = event.clientY; drawCrop();
+      });
+      const release = () => { pointer = null; canvas.classList.remove('cc-crop-dragging'); };
+      canvas.addEventListener('pointerup', release); canvas.addEventListener('pointercancel', release); canvas.addEventListener('lostpointercapture', release);
+      canvas.addEventListener('keydown', event => {
+        const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+        if (!direction || saving) return;
+        event.preventDefault(); const step = base / zoom / (event.shiftKey ? 100 : 20);
+        x -= direction[0] * step; y -= direction[1] * step; drawCrop();
+      });
+      dialog.querySelector('[data-crop-save]').addEventListener('click', async () => {
+        if (saving) return;
+        saving = true; msg.textContent = 'Salvando recorte…';
+        dialog.querySelectorAll('button, input').forEach(control => { control.disabled = true; });
+        try {
+          const answer = await save({ imagem: portraitData(canvas), original: original || portraitOriginal(image), recorte: { x: x / width, y: y / height, zoom } });
+          if (!signal.aborted) finish(answer);
+        } catch (error) {
+          if (!settled) {
+            msg.textContent = error.message; saving = false;
+            dialog.querySelectorAll('button, input').forEach(control => { control.disabled = false; });
+          }
+        }
+      });
+      document.body.append(dialog); drawCrop(); dialog.showModal(); canvas.focus();
+    });
   }
 
   // Cada abertura de página ganha uma ficha; resposta que chega atrasada de uma página antiga é ignorada.
@@ -2285,6 +2390,7 @@
     if (C.roleAliases[doc.role]) doc.role = C.roleAliases[doc.role];
     let step = Math.min(Math.max(Number(doc.passo) || 1, 1), steps.length);
     let mountTab = 'armas'; // aba aberta no quadro Montagem (passo 5)
+    let portraitJob = null, portraitSaving = false;
     // Guarda só o que o jogador mudou na montagem (o resto sai do padrão).
     const setMount = (uid, field, value) => { doc.montagem = doc.montagem || {}; doc.montagem[uid] = { ...(doc.montagem[uid] || {}), [field]: value }; };
     const papel = me.data.papel;
@@ -2360,10 +2466,10 @@
       const secondary = rolesOf(doc)[1];
       return `${box('Quem é', `<div class="cc-form"><label>Nome<input data-campo="nome" value="${esc(doc.nome)}" maxlength="80"></label><label>Apelido (handle)<input data-campo="apelido" value="${esc(doc.apelido)}" maxlength="80"></label><label class="cc-wide">Aparência e jeito<textarea data-campo="aparencia" rows="2" maxlength="2000">${esc(doc.aparencia)}</textarea></label></div>`)}
         ${box('Retrato', `<div class="cc-portrait-edit">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait cc-portrait-empty">sem retrato</div>'}
-          <div class="cc-portrait-tools"><p><label class="action cc-file">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" data-portrait-file></label>${portraitUrl(doc) ? ' <button type="button" class="action cc-danger" data-portrait-remove>Tirar retrato</button>' : ''}</p>
+          <div class="cc-portrait-tools"><p><label class="action cc-file">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" data-portrait-file></label>${portraitUrl(doc) ? ' <button type="button" class="action" data-portrait-adjust>Ajustar recorte</button> <button type="button" class="action cc-danger" data-portrait-remove>Tirar retrato</button>' : ''}</p>
           <label>Ou cole um link de imagem (https)<input data-campo="retratoLink" value="${esc(doc.retratoLink || '')}" maxlength="500" placeholder="https://…" inputmode="url"></label>
           <p class="cc-msg" data-portrait-msg role="status"></p>
-          <p class="note-status">A imagem é reduzida para 512 px antes de ir para a wiki. Se houver imagem enviada, ela vale no lugar do link. O retrato vai para a ficha e o token no Foundry.</p></div></div>`)}
+          <p class="note-status">Escolha o enquadramento antes de salvar. O retrato fica quadrado, com 512 px, e a imagem inteira fica guardada para ajustar depois. A imagem enviada vale no lugar do link e vai para a ficha e o token no Foundry.</p></div></div>`)}
         ${lockBox(`${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
           <p><label>Rank da Role principal <select data-role-rank="principal"${role ? '' : ' disabled'}>${rankOptions(rankOf(doc) || 4)}</select></label></p>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
@@ -2478,20 +2584,75 @@
         ${roleViews(doc).length ? roleViews(doc).map(drawRoleLifepath).join('') : box('Lifepath da Role', '<p>Escolha a Role no passo 1 para ver as perguntas dela.</p>')}
         ${box('Notas do Lifepath', `<label>O que mais quiser contar da história do personagem. Vai junto para o Foundry, depois do Lifepath da Role.<textarea data-lp-text="roleLifepath" rows="3" maxlength="3000">${esc(lp.roleLifepath || '')}</textarea></label>`)}`;
     }
-    async function uploadPortrait(file) {
+    async function uploadPortrait(source, initial = null, keepOriginal = false) {
       const msg = root.querySelector('[data-portrait-msg]');
-      if (!file) return;
-      if (msg) msg.textContent = 'Enviando…';
+      if (!source || portraitSaving) return;
+      portraitJob?.abort();
+      const job = new AbortController(); portraitJob = job;
+      const alive = () => !job.signal.aborted && token === renderToken && root.isConnected;
+      const cancelOnNavigation = () => job.abort();
+      document.addEventListener('wiki:pagina', cancelOnNavigation, { once: true });
+      if (msg) msg.textContent = 'Abrindo imagem…';
       try {
-        const imagem = await shrinkImage(file);
-        const answer = await api(`api/personagens/${doc.id}/retrato`, { method: 'POST', body: { imagem } });
-        if (answer.status !== 200) throw new Error(answer.data.erro || 'Não consegui enviar.');
-        doc.retrato = answer.data.retrato;
+        // Ao reajustar, reutiliza os bytes da fonte para não acumular perdas de compressão.
+        let original = null;
+        if (keepOriginal) {
+          const response = await fetch(source, { signal: job.signal, cache: 'no-store' });
+          if (!response.ok) throw new Error('Não consegui abrir a imagem original. Tente novamente ou envie o arquivo.');
+          source = await response.blob();
+          original = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Não consegui ler a imagem original.'));
+            reader.readAsDataURL(source);
+          });
+        }
+        const image = await loadPortrait(source, job.signal);
+        if (!alive()) return;
+        if (msg) msg.textContent = '';
+        const saved = await cropPortrait(image, initial, job.signal, async body => {
+          if (!alive()) throw new DOMException('Cancelado.', 'AbortError');
+          portraitSaving = true;
+          try {
+            const answer = await api(`api/personagens/${doc.id}/retrato`, { method: 'POST', body, signal: job.signal });
+            if (answer.status !== 200) throw new Error(answer.data.erro || 'Não consegui salvar o recorte.');
+            return answer.data;
+          } finally { if (portraitJob === job) portraitSaving = false; }
+        }, original);
+        if (!saved || !alive()) return;
+        doc.retrato = saved.retrato; doc.retratoOriginal = saved.retratoOriginal; doc.retratoRecorte = saved.retratoRecorte;
         if (window.playerAccount) window.playerAccount.update({ id: doc.id, retrato: doc.retrato });
-        draw(); changed();
+        draw(); root.querySelector('[data-portrait-adjust]')?.focus(); changed();
       } catch (error) {
         const current = root.querySelector('[data-portrait-msg]');
-        if (current) current.textContent = error.message;
+        if (alive() && current) current.textContent = error.message;
+      } finally {
+        document.removeEventListener('wiki:pagina', cancelOnNavigation);
+        if (portraitJob === job) { portraitJob = null; portraitSaving = false; }
+      }
+    }
+    async function removePortrait() {
+      if (portraitSaving) return;
+      portraitJob?.abort();
+      const job = new AbortController(); portraitJob = job; portraitSaving = true;
+      const alive = () => !job.signal.aborted && token === renderToken && root.isConnected;
+      const cancelOnNavigation = () => job.abort();
+      document.addEventListener('wiki:pagina', cancelOnNavigation, { once: true });
+      const controls = root.querySelectorAll('[data-portrait-file], [data-portrait-adjust], [data-portrait-remove]');
+      controls.forEach(control => { control.disabled = true; });
+      const msg = root.querySelector('[data-portrait-msg]');
+      if (msg) msg.textContent = 'Tirando retrato…';
+      try {
+        const answer = await api(`api/personagens/${doc.id}/retrato`, { method: 'DELETE', signal: job.signal });
+        if (!alive()) return;
+        if (answer.status !== 200) { if (msg) msg.textContent = answer.data.erro || 'Não consegui tirar.'; return; }
+        doc.retrato = null; doc.retratoLink = ''; doc.retratoOriginal = false; doc.retratoRecorte = null;
+        draw(); changed();
+        if (window.playerAccount) window.playerAccount.update({ id: doc.id, retrato: '' });
+      } finally {
+        document.removeEventListener('wiki:pagina', cancelOnNavigation);
+        controls.forEach(control => { control.disabled = false; });
+        if (portraitJob === job) { portraitJob = null; portraitSaving = false; }
       }
     }
     function drawRoleLifepath(view) {
@@ -2716,13 +2877,13 @@
         draw(); return changed();
       }
       // Perícias
+      if (target.closest('[data-portrait-adjust]')) {
+        const url = new URL(portraitUrl(doc), location.href);
+        if (doc.retrato && doc.retratoOriginal) url.searchParams.set('original', '1');
+        uploadPortrait(url.href, doc.retratoOriginal ? doc.retratoRecorte : null, Boolean(doc.retrato && doc.retratoOriginal)); return;
+      }
       if (target.closest('[data-portrait-remove]')) {
-        api(`api/personagens/${doc.id}/retrato`, { method: 'DELETE' }).then(answer => {
-          if (answer.status !== 200) { const msg = root.querySelector('[data-portrait-msg]'); if (msg) msg.textContent = answer.data.erro || 'Não consegui tirar.'; return; }
-          doc.retrato = null; doc.retratoLink = ''; draw(); changed();
-          if (window.playerAccount) window.playerAccount.update({ id: doc.id, retrato: '' });
-        });
-        return;
+        removePortrait(); return;
       }
       if (target.closest('[data-skill-suggest]')) {
         wikiPopup.confirm({ title: 'Distribuir o sugerido', html: `<p>Os níveis das perícias viram os sugeridos para <b>${esc(roleName(doc.role))}</b>.</p><p class="note-status">Os níveis que você pôs serão substituídos.</p>`, ok: 'Trocar pelos sugeridos' })
@@ -2843,7 +3004,7 @@
         list[Number(target.dataset.oficina)] = target.value; state.oficina = list;
       }
       else if (target.matches('[data-campo="retratoLink"]')) { doc.retratoLink = target.value.trim(); }
-      else if (target.matches('[data-portrait-file]')) { uploadPortrait(target.files && target.files[0]); return; }
+      else if (target.matches('[data-portrait-file]')) { const file = target.files && target.files[0]; target.value = ''; uploadPortrait(file); return; }
       else if (target.matches('[data-quickhack]')) {
         const id = target.dataset.quickhack;
         const list = (doc.quickhacks || []).filter(item => item !== id);
