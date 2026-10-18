@@ -230,7 +230,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     dois extratos;
   - [ ] a loja que compra: o jogador arrasta o item para a loja; a oferta pela porcentagem de cada tipo (o "Configurar a
     loja" do CORE), até o dinheiro da loja.
-- [ ] **C25. O Painel Tático dentro do sistema:** o HUD com o retrato por estado de ferimento.
+- [~] **C25. O Painel Tático dentro do sistema:** em andamento (sessão KouArt, 2026-10-18; o pedido do usuário para a primeira sessão
+  da Morana no Foundry 14): o HUD com o retrato por estado de ferimento.
 - [ ] **C26. Conveniências:**
   - o `/red` no chat (rolagem com o crítico do d10);
   - o DV no HUD do token e na régua;
