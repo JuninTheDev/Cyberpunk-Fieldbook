@@ -164,6 +164,26 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **o Black ICE próprio do netrunner:** ativar um programa de Black ICE (do compêndio de Netrunning) num deck faz o mestre
     ativo pôr o token dele ao lado do token do netrunner, solto, com os números e a REZ do programa (o ator fica na pasta
     "Black ICE rezzado"). A REZ que o token perde volta para o programa, e em 0 o programa desativa e o token sai.
+
+- **Ficha do contêiner** (o container do CORE; o C24, ciclo 122): a loja, o saque, o esconderijo ou um personalizado,
+  numa página, no visual da ficha do personagem:
+  - **o tipo** liga as permissões dos jogadores, como no CORE: a loja (eles vendem para ela; o estoque infinito fica com o
+    mestre), o saque (tudo de graça) e o esconderijo (de graça, e eles põem, criam, apagam e mudam os itens e movem o
+    contêiner); no personalizado, o mestre marca cada uma. Só o mestre vê as configurações e muda o nome e a imagem;
+  - **os itens** por categoria, com a pilha, o preço ("Unidade: 1 eb (Barato) | Tudo: 20 eb": a munição pelo lote da loja
+    da wiki, a categoria pelo glossário dela) e o que está instalado em cada um;
+  - **os Eurodólares** do contêiner, com o extrato do mestre (o saque não tem);
+  - **pôr:** arrastar um item para a ficha (o mestre, ou o jogador com "Criar e pôr itens"). O da ficha de um ator vai com
+    o que está instalado nele e sai de lá; o do compêndio entra em cópia; o mesmo item em pilha soma;
+  - **pegar:** nos de graça, o "Pegar" leva o item (ou uma parte da pilha) para o personagem do "Trocar com" (os do
+    jogador; o dele primeiro). Com o estoque infinito, o contêiner fica com o item. O jogador não tira arrastando; o
+    mestre, sim;
+  - **a trava:** o jogador que tenta mover o token do contêiner sem "Mover o contêiner" ganha o aviso, e o token fica;
+  - **o ator novo** nasce loja, com o token solto e neutro e todos os jogadores donos: como no CORE, a ficha só funciona
+    assim (quem pega muda o contêiner). O que o jogador não pode usar não aparece. A compra e a venda da loja são as
+    próximas partes do C24.
+- **Arrastar um item de uma ficha para outra** (da aba Equipamento) leva o item, com o que está instalado nele, e o tira
+  da origem, como no CORE (ciclo 122). O cyberware instalado não sai.
     Desativar, tirar do deck ou apagar o programa tira o token. Sem mestre na mesa, o token não entra.
 - **Cartões do chat** (testes, ataques, dano, Death Save, lesão, Backup, a NET) no visual da maquete do usuário (ciclo 59): a mensagem inteira é o cartão, com o canto cortado e a faixa de cima na cor do tipo (amarelo no teste; vermelho no ataque, no dano, na lesão e na morte; ciano na NET, no Backup e no Death Save que passa). Na linha de cima, o tipo e quem rolou ("TESTE // ATIRADORA"), com a hora. Embaixo, o título grande, o que soma ao d10 ("1D10 · REF +8 · ARMAS DE UMA MÃO +4"), os dados em caixas com o total grande (o 10 do crítico em amarelo; o 1 da falha e o d10 que ele tira, em vermelho; no dano crítico, os 6 em amarelo; o × do autofogo), o crítico numa etiqueta, a regra e os botões. No resultado do ataque, o total do ataque grande, cada alvo com a etiqueta do que aconteceu (acertou, esquivou, errou) e a barra de HP depois do dano; o ataque desfeito fica desbotado, com "DESFEITO". As mensagens que não são do sistema não mudam.
 - **Extrato de Eurodólares, IP e Reputação**, como o ledger do CORE no Foundry 12. O botão de cada um no cabeçalho da ficha abre a janela dele:
@@ -355,6 +375,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga) e o Painel Tático.
+- **A loja que vende e compra** (o C24, partes 2 e 3): por enquanto, o contêiner dá de graça (o saque, o esconderijo) e mostra o preço.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart
   melhorada desde o 112, as balas por tiro desde o 113, a Power desde o 114 e a Tech desde o 115). As regras próprias
@@ -459,6 +480,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o Black ICE rezzado: o Hellhound ativado no deck põe o token ao lado do netrunner (pelo mestre, também quando o jogador ativa no computador dele), a REZ que o token perde volta para o programa, e desativar ou zerar a REZ tira o token;
   - o dano do Black ICE e na REZ dele: o Hellhound pela ficha no cérebro (o Shield ativo não o para, o Armor reduz), o Killer num programa (o aviso de que o destrói), o Sword em Black ICE e o Zap na REZ do Black ICE e do demônio da cena, e o Zap do demônio só no intruso;
   - o Black ICE e o demônio: o token solto com a REZ na barra, o modelo da wiki (o Hellhound e o Efreet), as rolagens pela janela e com Ctrl + clique, a REZ e o nome na ficha do token, a iniciativa no topo da fila (sozinho e no "rolar todos") e a arma que não os atinge;
+  - o contêiner (ciclo 122): o ator novo (a loja, o token solto e neutro, os jogadores donos), as permissões de cada tipo, o dinheiro com o extrato, a ficha do mestre, o item do compêndio e o da ficha (com o carregador), a pilha, o preço, pegar uma parte e tudo, o estoque infinito, o mestre arrastando entre as fichas e, no navegador do jogador, a trava, a ficha sem as configurações, as recusas e o esconderijo (pôr, criar e apagar);
   - o capanga: o token solto, a ficha de uma página, os itens do compêndio arrastados para ela (equipados ou instalados, a Humanidade rolada e, com Shift, a média), o tiro que muda só o HP do capanga atingido, o outro capanga recarregando e atirando com a própria munição, o Death Save só de quem caiu, o nome novo na ficha do token e, no navegador do jogador, a ficha limitada (só a imagem, o nome e as notas; o Observador vê tudo, sem editar);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar); na ficha do Solo, as abas Combate, Equipamento, Cyberware e Role em duas colunas (a Iniciativa, o dinheiro, a Humanidade e a Role em grande; as armas, as lesões, a munição, o cyberware e as especialidades com as caixas dos pontos) e a Vida em cinco painéis;
   - a Sorte preparada na ficha (e a usada na sessão, no cabeçalho: antes, depois do teste e depois do ↺) e o visual dos cartões do chat (os dados em caixas com o total, o tipo na linha de cima e a cor da faixa);

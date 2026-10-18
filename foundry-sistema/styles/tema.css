@@ -455,6 +455,23 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-net .notas prose-mirror { min-height: 8rem; }
 .cpr-fieldbook.ficha-net .acoes-net { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
+/* ---------- Contêiner (o container do CORE): a loja, o saque, o esconderijo ---------- */
+.cpr-fieldbook.ficha-conteiner .ficha-conteiner-corpo { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.cpr-fieldbook.ficha-conteiner .conteiner-colunas { flex: 1; min-height: 0; }
+.cpr-fieldbook.ficha-conteiner .conteiner-colunas > .coluna-principal { max-height: 100%; overflow-y: auto; padding-right: 4px; }
+.cpr-fieldbook.ficha-conteiner .identidade-conteiner .retrato { display: block; width: 100%; height: 180px; object-fit: cover; }
+.cpr-fieldbook.ficha-conteiner .identidade-conteiner .nome { width: 100%; margin: 4px 0 0; font: 700 26px/1.1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-conteiner .linha-id { margin: 10px 0 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-conteiner .linha-id .tipo-conteiner { margin-left: 6px; color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-conteiner .trocar select, .cpr-fieldbook.ficha-conteiner .campo-conteiner select { width: 100%; margin-top: 6px; }
+.cpr-fieldbook.ficha-conteiner .campo-conteiner { display: block; margin: 8px 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); text-transform: uppercase; }
+.cpr-fieldbook.ficha-conteiner .permissao { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.cpr-fieldbook.ficha-conteiner .subtitulo { margin: 10px 0 2px; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); text-transform: uppercase; }
+.cpr-fieldbook.ficha-conteiner .categoria-conteiner .titulo { display: flex; align-items: center; gap: 8px; }
+.cpr-fieldbook.ficha-conteiner .categoria-conteiner .titulo .criar { flex: none; width: 26px; height: 26px; margin-left: auto; padding: 0; line-height: 1; }
+.cpr-fieldbook.ficha-conteiner ol.itens .detalhe .quantidade { display: inline; color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-conteiner .notas prose-mirror { min-height: 6rem; }
+
 /* ---------- Janela estreita ---------- */
 @container (max-width: 1020px) {
   .cpr-fieldbook.ficha-personagem .geral { grid-template-columns: 280px minmax(0, 1fr); }

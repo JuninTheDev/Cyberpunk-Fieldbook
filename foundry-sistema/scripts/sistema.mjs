@@ -4,15 +4,17 @@
 import * as agarrao from './agarrao.mjs';
 import * as neuroport from './neuroport.mjs';
 import * as combate from './combate.mjs';
+import { levarItem, pegarDoConteiner, registrarConteiner } from './conteiner.mjs';
 import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
-  DadosArma, DadosArmadura, DadosArquitetura, DadosBlackIce, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
+  DadosArma, DadosArmadura, DadosArquitetura, DadosBlackIce, DadosConteiner, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
   DadosRoupa, DadosUpgrade, DadosVeiculo
 } from './dados.mjs';
 import { AtorCPR, ItemCPR } from './documentos.mjs';
 import { FichaCapanga } from './ficha-capanga.mjs';
 import { FichaArquitetura } from './ficha-arquitetura.mjs';
+import { FichaConteiner } from './ficha-conteiner.mjs';
 import { FichaItem } from './ficha-item.mjs';
 import { FichaBlackIce, FichaDemonio } from './ficha-net.mjs';
 import { FichaPersonagem } from './ficha-personagem.mjs';
@@ -41,6 +43,8 @@ Hooks.once('init', () => {
   // O Black ICE e o demônio (o blackIce e o demon do CORE): os atores da NET, com a ficha curta e o token solto.
   CONFIG.Actor.dataModels.blackice = DadosBlackIce;
   CONFIG.Actor.dataModels.demonio = DadosDemonio;
+  // O contêiner (o container do CORE): a loja, o saque, o esconderijo ou um personalizado, com as permissões do tipo.
+  CONFIG.Actor.dataModels.conteiner = DadosConteiner;
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,
     cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo,
@@ -61,6 +65,7 @@ Hooks.once('init', () => {
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaCapanga, { types: ['capanga'], makeDefault: true, label: 'Ficha de capanga do RED' });
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaBlackIce, { types: ['blackice'], makeDefault: true, label: 'Ficha de Black ICE do RED' });
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaDemonio, { types: ['demonio'], makeDefault: true, label: 'Ficha de demônio do RED' });
+  DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaConteiner, { types: ['conteiner'], makeDefault: true, label: 'Ficha de contêiner do RED' });
   DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaItem, {
     types: ['arma', 'armadura', 'municao', 'cyberware', 'lesao', 'equipamento', 'roupa', 'droga', 'cyberdeck', 'programa', 'upgrade', 'veiculo'], makeDefault: true, label: 'Item do RED'
   });
@@ -69,7 +74,9 @@ Hooks.once('init', () => {
   wiki.registrarWiki();
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
   registrarIceRezzado();
-  game.system.api = { agarrao, neuroport, combate, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato };
+  // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
+  registrarConteiner();
+  game.system.api = { agarrao, neuroport, combate, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });

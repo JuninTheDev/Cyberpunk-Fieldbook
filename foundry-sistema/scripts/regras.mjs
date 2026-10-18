@@ -324,6 +324,46 @@ export function novoSaldo(saldo, acao, valor) {
 export const linhaDoExtrato = ({ acao, antes, saldo, motivo = '', usuario = '', quando = new Date().toISOString() }) =>
   ({ quando, acao, delta: Number(saldo) - Number(antes), saldo: Number(saldo), motivo: String(motivo ?? '').trim(), usuario: String(usuario ?? '') });
 
+// O contêiner (o container do CORE 0.92.4): o tipo liga e desliga as permissões dos jogadores, como o setContainerType
+// do CORE (cpr-container.js). A loja: os jogadores vendem para ela; o saque: tudo de graça; o esconderijo: de graça, e os
+// jogadores criam, apagam e mudam os itens e movem o contêiner. A loja deixa o estoque infinito como estava; o saque e o
+// esconderijo o desligam. O personalizado não muda nada: o mestre marca cada uma.
+const PERMISSOES_POR_TIPO = {
+  loja: { deGraca: false, criar: false, apagar: false, mudar: false, vender: true, mover: false },
+  saque: { estoqueInfinito: false, deGraca: true, criar: false, apagar: false, mudar: false, vender: false, mover: false },
+  esconderijo: { estoqueInfinito: false, deGraca: true, criar: true, apagar: true, mudar: true, vender: false, mover: true },
+  personalizado: {}
+};
+export const permissoesDoTipo = (tipo, atuais = {}) => ({ ...atuais, ...PERMISSOES_POR_TIPO[tipo] });
+// Os itens que vêm em pilha (a quantidade): no contêiner e em quem pega, o mesmo item (o tipo e o nome) soma na pilha,
+// como o automaticallyStackItems do CORE.
+export const EMPILHAVEIS = ['municao', 'equipamento', 'roupa', 'droga'];
+export const quantidadeDe = (tipo, sistema) => (EMPILHAVEIS.includes(tipo) ? Math.max(0, Math.trunc(Number(sistema?.quantidade) || 0)) : 1);
+// Pegar só uma parte da pilha (o "parte" do CORE): de 1 a uma a menos que a pilha (a pilha toda é o outro botão); a
+// janela começa na metade, arredondada para cima.
+export const parteValida = (quantidade, pilha) => Number.isInteger(quantidade) && quantidade >= 1 && quantidade < pilha;
+export const parteSugerida = pilha => Math.ceil(pilha / 2);
+// O preço de uma unidade no contêiner: a munição tem o preço por lote, como na loja da wiki ("Preço por 10"; a granada
+// e o foguete, "por unidade"; a bateria, "por 8"). O CORE divide por 10 toda munição que não é granada nem foguete (RED
+// p. 344); a bateria fica pela wiki. O resto, o preço do item.
+export const LOTE_DA_MUNICAO = { grenade: 1, rocket: 1, battery: 8 };
+export const precoDaUnidade = (tipo, { preco = 0, tipo: variedade = '' } = {}) => (tipo === 'municao' ? Number(preco) / (LOTE_DA_MUNICAO[variedade] ?? 10) : Number(preco));
+// O número em eb, como a wiki escreve (1.000; 6,25).
+const emEb = valor => (Math.round(valor * 100) / 100).toLocaleString('pt-BR');
+// A categoria do preço (RED p. 385, como a wiki resume no glossário): a maior faixa até o preço. Abaixo de 10eb não há
+// faixa (a "Dirt Cheap" do CORE não está na wiki); sem preço, nenhuma.
+export const CATEGORIAS_DE_PRECO = [[10000, 'Super Luxuoso'], [5000, 'Luxuoso'], [1000, 'Muito Caro'], [500, 'Caro'], [100, 'Premium'], [50, 'Oneroso'], [20, 'Cotidiano'], [10, 'Barato']];
+export const categoriaDoPreco = preco => CATEGORIAS_DE_PRECO.find(([minimo]) => Number(preco) >= minimo)?.[1] ?? '';
+// O preço na lista do contêiner, como o CORE: "Unidade: 20 eb (Cotidiano)" e, com mais de um, "| Tudo: 60 eb". A
+// categoria é a do preço do item (o da munição, o do lote).
+export function precoNaLista(tipo, sistema) {
+  const unidade = precoDaUnidade(tipo, sistema);
+  const quantidade = quantidadeDe(tipo, sistema);
+  const categoria = categoriaDoPreco(sistema?.preco);
+  const texto = `Unidade: ${emEb(unidade)} eb${categoria ? ` (${categoria})` : ''}`;
+  return quantidade > 1 ? `${texto} | Tudo: ${emEb(unidade * quantidade)} eb` : texto;
+}
+
 // O efeito de um equipamento vale com o uso de agora? Pela ativação do item: "equipado" só equipado; "carregando"
 // equipado ou carregando (guardado em casa, não); "manual" sempre, e quem decide é o efeito, ligado ou desligado.
 export function efeitoValeNoUso(ativacao, uso) {

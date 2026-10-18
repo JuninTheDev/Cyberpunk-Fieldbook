@@ -5,7 +5,7 @@ import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   AGARRAO, aplicarDano, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ladoEfetivo, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
-  NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
+  NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics, maosDaArma, maosLivres
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
@@ -40,20 +40,33 @@ export class AtorCPR extends Actor {
 
   // Personagem novo: o token fica ligado à ficha, com o HP na barra. Capanga novo (o mook do CORE): o token fica solto, e
   // cada um na cena tem o próprio HP; o que já vem com o token (uma cópia, o compêndio) fica como veio. Black ICE e demônio
-  // novos (o blackIce e o demon do CORE): o token solto, com a REZ na barra.
+  // novos (o blackIce e o demon do CORE): o token solto, com a REZ na barra. O contêiner novo (o container do CORE): o
+  // token solto e neutro, todos os jogadores donos (a ficha só funciona assim, como no CORE: quem pega ou compra muda o
+  // contêiner) e as permissões do tipo.
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
     const token = { bar1: { attribute: 'hp' }, sight: { enabled: true } };
     if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, ...token } });
     if (this.type === 'capanga' && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, ...token } });
     if (ATORES_DA_NET.includes(this.type) && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, bar1: { attribute: 'rez' } } });
+    if (this.type === 'conteiner') {
+      if (!dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL } });
+      if (dados.ownership?.default === undefined) this.updateSource({ ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+      this.updateSource({ 'system.permissoes': permissoesDoTipo(this._source.system.tipo, this._source.system.permissoes) });
+    }
   }
 
   // O extrato fica completo: uma mudança de Eurodólares, IP ou Reputação que não veio de mudarComExtrato (uma macro, o
-  // campo mudado por fora) entra como "definir", sem motivo.
+  // campo mudado por fora) entra como "definir", sem motivo. No contêiner, o tipo novo liga as permissões dele (o
+  // setContainerType do CORE), e o dinheiro também tem o extrato.
   async _preUpdate(mudancas, opcoes, usuario) {
     if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
-    if (this.type !== 'personagem' || opcoes.cprfExtrato) return;
+    const tipo = foundry.utils.getProperty(mudancas, 'system.tipo');
+    if (this.type === 'conteiner' && tipo !== undefined && tipo !== this._source.system.tipo) {
+      const pedidas = foundry.utils.getProperty(mudancas, 'system.permissoes') ?? {};
+      foundry.utils.setProperty(mudancas, 'system.permissoes', permissoesDoTipo(tipo, { ...this._source.system.permissoes, ...pedidas }));
+    }
+    if (!['personagem', 'conteiner'].includes(this.type) || opcoes.cprfExtrato) return;
     for (const campo of Object.keys(EXTRATOS)) {
       const novo = foundry.utils.getProperty(mudancas, `system.${campo}`);
       if (novo === undefined || Number(novo) === this._source.system[campo]) continue;

@@ -2,7 +2,7 @@
 // cyberware, e o efeito que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP,
 // bônus dos efeitos) é calculado na preparação, a cada vez.
 import { ANDAR_MAX, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
-import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, PERMISSOES_DO_CONTEINER, TIPOS_DE_CONTEINER, USOS } from './config.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 import { protecoesDoVeiculo } from './regras-veiculos.mjs';
@@ -13,6 +13,10 @@ const texto = (initial = '') => new fields.StringField({ required: true, blank: 
 const recurso = (value, max) => new fields.SchemaField({ value: inteiro(value), max: inteiro(max) });
 const fonte = () => new fields.SchemaField({ livro: texto(), pagina: inteiro(0) });
 const eletronica = (eletronico = false) => ({ eletronico: new fields.BooleanField({ initial: eletronico }), endurecido: new fields.BooleanField({ initial: false }) });
+// O extrato de um valor (o ledger do CORE): cada mudança com a data, a diferença, o saldo, o motivo e quem mudou.
+const extrato = () => new fields.ArrayField(new fields.SchemaField({
+  quando: texto(), acao: texto('definir'), delta: inteiro(0), saldo: inteiro(0), motivo: texto(), usuario: texto()
+}));
 
 // Todas as chaves de perícia que um efeito pode somar: as comuns e as famílias (Linguagem etc.).
 export const CHAVES_PERICIAS = [...PERICIAS.map(p => p.id), ...Object.keys(FAMILIAS)];
@@ -62,9 +66,7 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       lifepath: new fields.SchemaField(Object.fromEntries(LIFEPATH.map(({ chave }) => [chave, texto()]))),
       // O extrato de Eurodólares, IP e Reputação (o ledger do CORE): cada mudança com a data, a diferença, o saldo, o
       // motivo e quem mudou (AtorCPR.mudarComExtrato e o _preUpdate).
-      extratos: new fields.SchemaField(Object.fromEntries(Object.keys(EXTRATOS).map(campo => [campo, new fields.ArrayField(new fields.SchemaField({
-        quando: texto(), acao: texto('definir'), delta: inteiro(0), saldo: inteiro(0), motivo: texto(), usuario: texto()
-      }))]))),
+      extratos: new fields.SchemaField(Object.fromEntries(Object.keys(EXTRATOS).map(campo => [campo, extrato()]))),
       // As notas de ciberpsicose (as maquetes do usuário): os episódios, em texto livre, na aba Cyberware.
       notasCiberpsicose: texto(),
       notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
@@ -174,6 +176,22 @@ export class DadosDemonio extends foundry.abstract.TypeDataModel {
       interface: inteiro(0, { min: 0 }),
       acoes: inteiro(2, { min: 0 }),
       valorDeCombate: inteiro(14, { min: 0 }),
+      notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
+    };
+  }
+}
+
+// ---------------- O contêiner ----------------
+// O contêiner (o container do CORE 0.92.4): a loja, o saque, o esconderijo ou um personalizado. O tipo liga as permissões
+// dos jogadores (regras.permissoesDoTipo, no _preCreate e no _preUpdate do ator); no personalizado, o mestre marca cada
+// uma. O dinheiro, com o extrato, é o da loja (no saque, a ficha não mostra, como o "N/A" do CORE).
+export class DadosConteiner extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return {
+      tipo: new fields.StringField({ required: true, blank: false, initial: 'loja', choices: Object.keys(TIPOS_DE_CONTEINER) }),
+      permissoes: new fields.SchemaField(Object.fromEntries(Object.keys(PERMISSOES_DO_CONTEINER).map(chave => [chave, new fields.BooleanField({ initial: chave === 'vender' })]))),
+      dinheiro: inteiro(0),
+      extratos: new fields.SchemaField({ dinheiro: extrato() }),
       notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
     };
   }

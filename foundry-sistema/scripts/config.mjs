@@ -69,6 +69,16 @@ export const CLASSES_PROGRAMA = {
 
 // Os atores da NET (o blackIce e o demon do CORE): sem corpo, atributos, HP nem Sorte; rolam os números deles + 1d10.
 export const ATORES_DA_NET = ['blackice', 'demonio'];
+
+// O contêiner (o container do CORE): os tipos e as permissões dos jogadores (regras.permissoesDoTipo liga cada tipo).
+export const TIPOS_DE_CONTEINER = {
+  loja: 'Loja: os itens têm preço', saque: 'Saque: tudo de graça', esconderijo: 'Esconderijo: para guardar', personalizado: 'Personalizado: as permissões à mão'
+};
+export const PERMISSOES_DO_CONTEINER = {
+  deGraca: 'Tudo de graça', estoqueInfinito: 'Estoque infinito', criar: 'Criar e pôr itens', apagar: 'Apagar itens', mudar: 'Mudar os itens', vender: 'Vender itens', mover: 'Mover o contêiner'
+};
+// As categorias da lista do contêiner, na ordem do CORE (inventoryCategories): os itens físicos.
+export const CATEGORIAS_DO_CONTEINER = ['arma', 'municao', 'armadura', 'cyberware', 'droga', 'equipamento', 'roupa', 'veiculo', 'cyberdeck', 'programa', 'upgrade', 'arquitetura'];
 // A classe do Black ICE: a do CORE (blackIceType), com o nome da tabela da wiki.
 export const CLASSES_BLACK_ICE = { antipersonnel: 'Anti-pessoal', antiprogram: 'Anti-programa', other: 'Outro' };
 

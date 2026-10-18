@@ -46,6 +46,14 @@ function cabecalhoDoItem(item) {
 }
 
 export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
+  // No contêiner, o jogador só muda os itens com a permissão "Mudar os itens" (o players-modify do CORE); sem ela, a
+  // ficha do item abre só para ler.
+  get isEditable() {
+    const conteiner = this.item.parent?.type === 'conteiner' ? this.item.parent : null;
+    if (conteiner && !game.user.isGM && !conteiner.system.permissoes.mudar) return false;
+    return super.isEditable;
+  }
+
   // A equipagem recusada pode não gerar diff nem redesenho; a caixa volta ao estado gravado.
   async _processSubmitData(evento, form, dados, opcoes) {
     const resultado = await super._processSubmitData(evento, form, dados, opcoes);

@@ -21,7 +21,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
         <div class="titulo">MUNIÇÃO<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}</span></div>
         <ol class="itens">
           {{#each municoes}}
-          <li data-item-id="{{id}}">
+          <li class="draggable" data-item-id="{{id}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{name}}</a>
             <span class="detalhe">{{system.quantidade}} tiros</span>
@@ -37,7 +37,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
         <div class="titulo">ARMAS<span>EQUIPADA OU GUARDADA</span></div>
         <ol class="itens">
           {{#each armas}}
-          <li data-item-id="{{id}}" class="{{#unless sistema.equipada}}guardada{{/unless}}">
+          <li data-item-id="{{id}}" class="draggable {{#unless sistema.equipada}}guardada{{/unless}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{sistema.dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if classe2077}} · {{classe2077}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
@@ -65,7 +65,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
         <div class="titulo">ARMADURAS<span>VESTIDA OU GUARDADA</span></div>
         <ol class="itens">
           {{#each armaduras}}
-          <li data-item-id="{{id}}" class="{{#unless equipada}}guardada{{/unless}}">
+          <li data-item-id="{{id}}" class="draggable {{#unless equipada}}guardada{{/unless}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
@@ -81,7 +81,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
         <div class="titulo">{{titulo}}<span>EQUIPADO, CARREGANDO OU GUARDADO</span></div>
         <ol class="itens">
           {{#each itens}}
-          <li data-item-id="{{id}}" class="{{#if guardado}}guardada{{/if}}">
+          <li data-item-id="{{id}}" class="draggable {{#if guardado}}guardada{{/if}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
@@ -118,7 +118,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
         <div class="titulo">VEÍCULOS<span>UM EM USO POR VEZ</span></div>
         <ol class="itens">
           {{#each veiculos}}
-          <li data-item-id="{{id}}">
+          <li class="draggable" data-item-id="{{id}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>

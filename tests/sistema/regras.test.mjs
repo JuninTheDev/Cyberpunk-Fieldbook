@@ -16,7 +16,7 @@ import * as netrun from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs'
 import { PONTO_PADRAO } from '../../foundry-sistema/scripts/netrun/constantes.mjs';
 import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from '../../foundry-sistema/build/arquiteturas.mjs';
 import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DA_NET, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { ATORES_DA_NET, ATRIBUTOS, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
+import { ATORES_DA_NET, ATRIBUTOS, CATEGORIAS_DO_CONTEINER, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, PERMISSOES_DO_CONTEINER, TIPOS_CYBERWARE, TIPOS_DE_CONTEINER, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -785,6 +785,62 @@ test('Perícia própria (o C23, como o item "skill" do CORE 0.92.4: o nome, o "s
   assert.ok(Object.keys(FAMILIAS).every(id => !`${id}-`.startsWith(regras.PREFIXO_DA_PERICIA_PROPRIA)));
 });
 
+test('Contêiner (o C24; o container do CORE 0.92.4, cpr-container.js, setContainerType): cada tipo liga as permissões do CORE; o preço da unidade é o do lote da loja da wiki; a categoria do preço é a do glossário da wiki; a parte da pilha, como o "purchase part" do CORE', () => {
+  const todas = { deGraca: true, estoqueInfinito: true, criar: true, apagar: true, mudar: true, vender: true, mover: true };
+  const nenhuma = Object.fromEntries(Object.keys(todas).map(chave => [chave, false]));
+  // O setContainerType do CORE: "shop" tira items-free, players-create, -delete, -modify e -move e põe players-sell; o
+  // infinite-stock fica como estava.
+  assert.deepEqual(regras.permissoesDoTipo('loja', todas), { ...nenhuma, estoqueInfinito: true, vender: true });
+  assert.deepEqual(regras.permissoesDoTipo('loja', nenhuma), { ...nenhuma, vender: true });
+  // "loot": tira o infinite-stock, põe items-free e tira o resto.
+  assert.deepEqual(regras.permissoesDoTipo('saque', todas), { ...nenhuma, deGraca: true });
+  assert.deepEqual(regras.permissoesDoTipo('saque', nenhuma), { ...nenhuma, deGraca: true });
+  // "stash": tira o infinite-stock e o players-sell; põe items-free, players-create, -delete, -modify e -move.
+  assert.deepEqual(regras.permissoesDoTipo('esconderijo', nenhuma), { ...todas, estoqueInfinito: false, vender: false });
+  assert.deepEqual(regras.permissoesDoTipo('esconderijo', todas), { ...todas, estoqueInfinito: false, vender: false });
+  // "custom": nada muda.
+  assert.deepEqual(regras.permissoesDoTipo('personalizado', todas), todas);
+  assert.deepEqual(regras.permissoesDoTipo('personalizado', nenhuma), nenhuma);
+  // Os tipos do CORE (shop, loot, stash, custom), as permissões dele (os flags) e as categorias da lista (as
+  // inventoryCategories: os itens físicos, sem a lesão).
+  assert.deepEqual(Object.keys(TIPOS_DE_CONTEINER), ['loja', 'saque', 'esconderijo', 'personalizado']);
+  assert.deepEqual(Object.keys(PERMISSOES_DO_CONTEINER).sort(), Object.keys(todas).sort());
+  assert.equal(CATEGORIAS_DO_CONTEINER.length, 12);
+  assert.ok(!CATEGORIAS_DO_CONTEINER.includes('lesao'));
+  // A loja da wiki (loja-catalogo.js): a munição tem o preço por lote ("Preço por 10"; granada e foguete, "por unidade";
+  // a bateria, "por 8"). A unidade de cada munição do catálogo é o preço dividido pelo lote da loja.
+  const loja = daWiki('loja-catalogo.js', 'shopCatalog');
+  const municoes = loja.itens.filter(item => item.cat === 'municao' && catalogo[item.id]);
+  assert.ok(municoes.length >= 60, `munições da loja no catálogo: ${municoes.length}`);
+  for (const item of municoes) assert.equal(regras.precoDaUnidade('municao', catalogo[item.id].system), item.preco / item.lote, item.id);
+  assert.equal(loja.itens.find(item => item.id === 'core_ammo:battery-pack').resumo, 'Preço por 8');
+  assert.equal(regras.precoDaUnidade('arma', { preco: 500 }), 500);
+  assert.equal(regras.precoDaUnidade('equipamento', { preco: 20, tipo: '' }), 20);
+  // As categorias de preço do glossário da wiki (RED p. 385), na mesma ordem e com o mesmo piso.
+  const termo = daWiki('system-glossario.js', 'systemGlossary').terms.find(t => t.termo === 'Categoria de preço');
+  const faixas = [...termo.def.matchAll(/([A-ZÀ-Ú][\p{L} ]*?) ([\d.]+)eb/gu)].map(([, nome, valor]) => [Number(valor.replaceAll('.', '')), nome.trim()]);
+  assert.equal(faixas.length, 8);
+  assert.deepEqual([...regras.CATEGORIAS_DE_PRECO].reverse(), faixas);
+  for (const [piso, nome] of faixas) assert.equal(regras.categoriaDoPreco(piso), nome);
+  assert.deepEqual([19, 99, 999, 25000].map(regras.categoriaDoPreco), ['Barato', 'Oneroso', 'Caro', 'Super Luxuoso']);
+  assert.deepEqual([9, 0].map(regras.categoriaDoPreco), ['', '']);
+  // O texto do preço na lista (o "Single: {price} eb ({category}) | All: {priceAll} eb" do CORE).
+  assert.equal(regras.precoNaLista('arma', { preco: 100 }), 'Unidade: 100 eb (Premium)');
+  assert.equal(regras.precoNaLista('municao', { preco: 10, tipo: 'medPistol', quantidade: 30 }), 'Unidade: 1 eb (Barato) | Tudo: 30 eb');
+  assert.equal(regras.precoNaLista('municao', { preco: 100, tipo: 'grenade', quantidade: 2 }), 'Unidade: 100 eb (Premium) | Tudo: 200 eb');
+  assert.equal(regras.precoNaLista('municao', { preco: 50, tipo: 'battery', quantidade: 8 }), 'Unidade: 6,25 eb (Oneroso) | Tudo: 50 eb');
+  assert.equal(regras.precoNaLista('equipamento', { preco: 5000, quantidade: 1 }), 'Unidade: 5.000 eb (Luxuoso)');
+  assert.equal(regras.precoNaLista('equipamento', { preco: 5, quantidade: 1 }), 'Unidade: 5 eb');
+  // A pilha: munição, equipamento, roupa e droga; o resto conta um.
+  assert.deepEqual(regras.EMPILHAVEIS, ['municao', 'equipamento', 'roupa', 'droga']);
+  assert.equal(regras.quantidadeDe('municao', { quantidade: 30 }), 30);
+  assert.equal(regras.quantidadeDe('arma', { quantidade: 30 }), 1);
+  // Uma parte da pilha (o CORE): de 1 a uma a menos que a pilha; a janela começa na metade, para cima.
+  assert.deepEqual([7, 2, 30].map(regras.parteSugerida), [4, 1, 15]);
+  assert.ok(regras.parteValida(1, 2) && regras.parteValida(6, 7));
+  assert.ok(!regras.parteValida(0, 7) && !regras.parteValida(7, 7) && !regras.parteValida(2.5, 7) && !regras.parteValida(-1, 7));
+});
+
 test('Duas Roles (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o personagem-roles.js da wiki): a segunda Role tem o Rank e as habilidades dela, e os derivados das duas valem na ficha (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo, as perícias do Medtech)', () => {
   const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
   assert.ok(regrasDaWiki.includes("section('Duas Roles na criação', 'regra da mesa', '<p>No criador, escolha a Role principal e, se quiser, uma segunda Role diferente. Combine com o mestre os Ranks de cada uma, de 1 a 10. Cada Role tem suas habilidades e seu Lifepath; a principal define os STATs, as perícias e o único pacote de equipamento e orçamento inicial."));
@@ -851,13 +907,14 @@ test('Ficha: o Lifepath tem os campos e os rótulos do criador da wiki (criador.
 
 test('Capanga (o mook do CORE): um tipo de ator a mais, com o nome em português; ao receber um item, instala o cyberware e equipa o que o CORE equipa (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento)', () => {
   const sistema = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'system.json'), 'utf8'));
-  // O Black ICE e o demônio vieram no ciclo 43 (o C7).
-  assert.deepEqual(Object.keys(sistema.documentTypes.Actor), ['personagem', 'capanga', 'blackice', 'demonio']);
-  for (const tipo of ['capanga', 'blackice', 'demonio']) assert.deepEqual(sistema.documentTypes.Actor[tipo], { htmlFields: ['notas'] }, tipo);
+  // O Black ICE e o demônio vieram no ciclo 43 (o C7); o contêiner (o container do CORE), no 122 (o C24).
+  assert.deepEqual(Object.keys(sistema.documentTypes.Actor), ['personagem', 'capanga', 'blackice', 'demonio', 'conteiner']);
+  for (const tipo of ['capanga', 'blackice', 'demonio', 'conteiner']) assert.deepEqual(sistema.documentTypes.Actor[tipo], { htmlFields: ['notas'] }, tipo);
   const idioma = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'lang', 'pt-BR.json'), 'utf8'));
   assert.equal(idioma.TYPES.Actor.capanga, 'Capanga');
   assert.equal(idioma.TYPES.Actor.blackice, 'Black ICE');
   assert.equal(idioma.TYPES.Actor.demonio, 'Demônio');
+  assert.equal(idioma.TYPES.Actor.conteiner, 'Contêiner');
   // O que se equipa no CORE 0.92.4 (os modelos com EquippableSchema, em modules/datamodels/item), com os tipos daqui; o
   // cyberware instala (o handleMookDraggedItem do CORE, em modules/actor/cpr-actor.js).
   const EQUIPAVEIS_DO_CORE = { armor: 'armadura', clothing: 'roupa', cyberdeck: 'cyberdeck', drug: 'droga', gear: 'equipamento', weapon: 'arma' };

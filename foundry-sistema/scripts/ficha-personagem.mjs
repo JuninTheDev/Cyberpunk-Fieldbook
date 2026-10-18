@@ -7,6 +7,7 @@ import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './ag
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
+import { levarItem } from './conteiner.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
@@ -40,10 +41,15 @@ const GRUPOS_DO_LIFEPATH = [
 
 export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // A arma ou o escudo de outra ficha pode chegar equipado. Recebe guardado e tenta equipar pela mesma conferência.
+  // Da ficha de outro ator, o item vai (sai de lá, como no CORE; conteiner.levarItem); do contêiner, só o mestre arrasta:
+  // o jogador usa o "Pegar" da ficha do contêiner.
   async _onDropItem(evento, item) {
+    const origem = item.parent?.documentName === 'Actor' && item.parent.uuid !== this.actor.uuid ? item.parent : null;
+    if (origem && origem.type === 'conteiner' && !game.user.isGM) { ui.notifications.warn(`${item.name}: para tirar do contêiner, use o "Pegar" na ficha dele.`); return null; }
+    if (origem && !this.actor.isOwner) return null;
     const empunhado = this.actor.uuid !== item.parent?.uuid && item.system.equipada
       && (item.type === 'arma' || (item.type === 'armadura' && item.system.escudo));
-    const criado = await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
+    const criado = origem ? await levarItem(item, this.actor) : await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
     if (criado && empunhado) await criado.update({ 'system.equipada': true });
     return criado;
   }

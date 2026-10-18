@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 121). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 123). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -219,8 +219,14 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 5: mestre e mesa
 
-- [~] **C24. Contêiner** (o ator `container` do CORE; em andamento, sessão KouArt, 2026-10-18): loja que vende e compra, com o preço e o registro das trocas; saque;
-  esconderijo; trava.
+- [~] **C24. Contêiner** (o ator `container` do CORE; em andamento, sessão KouArt, 2026-10-18). Por partes, um ciclo cada:
+  - [x] o ator e a ficha: os tipos (loja, saque, esconderijo, personalizado) com as permissões do CORE, os itens por
+    categoria com o preço, o dinheiro com o extrato, as configurações do mestre, pôr e pegar de graça (inteiro ou uma
+    parte), o estoque infinito e a trava (o jogador não move o token sem a permissão): ciclo 122;
+  - [ ] a loja que vende: comprar (inteiro ou uma parte) pelo preço, o dinheiro de quem compra e o registro das trocas nos
+    dois extratos;
+  - [ ] a loja que compra: o jogador arrasta o item para a loja; a oferta pela porcentagem de cada tipo (o "Configurar a
+    loja" do CORE), até o dinheiro da loja.
 - [ ] **C25. O Painel Tático dentro do sistema:** o HUD com o retrato por estado de ferimento.
 - [ ] **C26. Conveniências:**
   - o `/red` no chat (rolagem com o crítico do d10);

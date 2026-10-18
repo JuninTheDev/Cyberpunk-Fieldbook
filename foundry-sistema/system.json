@@ -60,6 +60,11 @@
         "htmlFields": [
           "notas"
         ]
+      },
+      "conteiner": {
+        "htmlFields": [
+          "notas"
+        ]
       }
     },
     "Item": {

@@ -10629,6 +10629,240 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ antes: { f12: antes?.foundry12?.ator ?? null, f14: antes?.foundry14?.ator ?? null, removido: antes?.foundry14?.removido ?? null }, info, depois: { f12: doc.foundry12?.ator, f14: doc.foundry14?.ator, removido: doc.foundry14?.removido ?? null, mesa: doc.mesa?.geracao }, do12, deOutro })];
     });
 
+    await r.passo('contêiner (o C24, parte 1): o ator novo é uma loja de token solto e neutro, com os jogadores donos; o tipo liga as permissões do CORE (a loja mantém o estoque infinito); o dinheiro com o extrato; a ficha do mestre com as configurações de cada tipo; o item do compêndio entra em cópia e soma na pilha; o da ficha vai com o carregador instalado; o preço da lista; pegar uma parte, pegar tudo e o estoque infinito; o mestre arrasta do contêiner para a ficha e de uma ficha para outra, e o item vai', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const janela = classe => document.querySelector('.application.dialog.' + classe + ':not(.minimizing)');
+        let loja, fregues, outro;
+        try {
+          loja = await Actor.implementation.create({ name: 'Teste Contêiner', type: 'conteiner' });
+          const criado = { dono: loja.ownership.default, link: loja.prototypeToken.actorLink, disposicao: loja.prototypeToken.disposition, tipo: loja.system.tipo, permissoes: { ...loja.system.permissoes } };
+          // O tipo liga as permissões (o setContainerType do CORE); a loja deixa o estoque infinito como estava.
+          const porTipo = {};
+          for (const tipo of ['saque', 'esconderijo', 'personalizado', 'loja']) { await loja.update({ 'system.tipo': tipo }); porTipo[tipo] = { ...loja.system.permissoes }; }
+          await loja.update({ 'system.permissoes.estoqueInfinito': true });
+          await loja.update({ 'system.tipo': 'personalizado' });
+          await loja.update({ 'system.tipo': 'loja' });
+          const manteve = loja.system.permissoes.estoqueInfinito;
+          await loja.update({ 'system.permissoes.estoqueInfinito': false });
+          // O dinheiro da loja, com o extrato (a mudança direta e a do extrato).
+          await loja.update({ 'system.dinheiro': 500 });
+          await loja.mudarComExtrato('dinheiro', { acao: 'somar', valor: 100, motivo: 'Teste' });
+          const extrato = loja.system.extratos.dinheiro.map(linha => [linha.acao, linha.delta, linha.saldo, linha.motivo].join());
+          // A ficha do mestre: na loja, o nome, o tipo, o estoque infinito, o dinheiro com o extrato e o "+" de cada categoria.
+          await loja.sheet.render({ force: true });
+          const f = () => loja.sheet.element;
+          await esperar(() => f()?.querySelector('.ficha-conteiner-corpo'));
+          const marcaveis = () => [...f().querySelectorAll('.configuracoes-conteiner input[type="checkbox"]')].map(caixa => caixa.name.split('.').pop());
+          const fichaLoja = { tipo: f().querySelector('select[name="system.tipo"]')?.value, marcaveis: marcaveis(), dinheiro: f().querySelector('.dinheiro .numero-grande b')?.textContent.trim(), extrato: Boolean(f().querySelector('[data-action="abrirExtrato"]')), criar: f().querySelectorAll('[data-action="criarItem"]').length, nome: Boolean(f().querySelector('input[name="name"]')) };
+          // O tipo pela ficha: o personalizado mostra as sete; o saque, nenhuma, e o dinheiro fica N/A.
+          const mudarTipo = async tipo => {
+            const select = f().querySelector('select[name="system.tipo"]');
+            select.value = tipo;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            await esperar(() => loja.system.tipo === tipo && f()?.querySelector('select[name="system.tipo"]')?.value === tipo);
+          };
+          await mudarTipo('personalizado');
+          const personalizado = { marcaveis: marcaveis(), jogadores: f().querySelector('.configuracoes-conteiner .subtitulo')?.textContent.trim() };
+          await mudarTipo('saque');
+          const saque = { marcaveis: marcaveis(), dinheiro: f().querySelector('.dinheiro .numero-grande b')?.textContent.trim(), extrato: Boolean(f().querySelector('[data-action="abrirExtrato"]')), permissoes: { ...loja.system.permissoes } };
+          // O item do compêndio entra em cópia; o mesmo, de novo, soma na pilha.
+          const soltarDoPack = (pack, nome) => {
+            const p = game.packs.get('${S}.' + pack), e = p.index.find(x => x.name === nome);
+            const dados = new DataTransfer();
+            dados.setData('text/plain', JSON.stringify({ type: 'Item', uuid: e.uuid ?? ('Compendium.' + p.collection + '.Item.' + e._id) }));
+            f().querySelector('.ficha-conteiner-corpo').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+          };
+          soltarDoPack('municao', 'Heavy Pistol (Basic)');
+          await esperar(() => loja.items.getName('Heavy Pistol (Basic)'));
+          soltarDoPack('municao', 'Heavy Pistol (Basic)');
+          await esperar(() => loja.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 20);
+          const pilha = { itens: loja.items.filter(item => item.name === 'Heavy Pistol (Basic)').length, quantidade: loja.items.getName('Heavy Pistol (Basic)')?.system.quantidade };
+          // Da ficha de um personagem (o arrastar de verdade, da linha da aba Equipamento): a pistola equipada vai, guardada,
+          // com o carregador instalado.
+          const pistola = pegar('core_weapons:heavy-pistol');
+          pistola.system.equipada = true;
+          fregues = await Actor.implementation.create({ name: 'Teste Freguês', type: 'personagem', items: [pistola, pegar('core_upgrades:extended-magazine-heavy-pistol')] });
+          const daFicha = fregues.items.getName('Heavy Pistol');
+          await fregues.items.getName('Extended Magazine (Heavy Pistol)').update({ 'system.instaladoEm': daFicha.id });
+          await fregues.sheet.render({ force: true });
+          await esperar(() => fregues.sheet.element?.querySelector('.tab.equipamento li.draggable[data-item-id="' + daFicha.id + '"]'));
+          const naFicha = fregues.sheet.element.querySelector('.tab.equipamento li.draggable[data-item-id="' + daFicha.id + '"]');
+          const arrastavelNaFicha = naFicha.getAttribute('draggable');
+          const dados = new DataTransfer();
+          naFicha.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dados }));
+          f().querySelector('.ficha-conteiner-corpo').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+          await esperar(() => loja.items.getName('Heavy Pistol') && !fregues.items.size && f()?.querySelector('.categoria-conteiner[data-categoria="arma"] li[data-item-id]'));
+          const levada = loja.items.getName('Heavy Pistol'), carregador = loja.items.getName('Extended Magazine (Heavy Pistol)'), municao = loja.items.getName('Heavy Pistol (Basic)');
+          const linha = id => f().querySelector('li[data-item-id="' + id + '"]');
+          const lista = {
+            noFregues: fregues.items.size, equipada: levada?.system.equipada, instalado: carregador?.system.instaladoEm === levada?.id, pente: levada?.system.pente.max,
+            carregadorNaLista: Boolean(linha(carregador?.id)), detalhe: linha(levada?.id)?.querySelector('.detalhe')?.textContent.trim(), municao: linha(municao?.id)?.querySelector('.detalhe')?.textContent.trim(),
+            botoes: [...(linha(levada?.id)?.querySelectorAll('button') ?? [])].map(b => b.dataset.action), botoesDaMunicao: [...(linha(municao?.id)?.querySelectorAll('button') ?? [])].map(b => b.dataset.action),
+            arrastavel: linha(levada?.id)?.getAttribute('draggable'), arrastavelNaFicha
+          };
+          // Pegar (o saque, de graça), com o Freguês no "Trocar com": 5 balas pela janela da parte, e a pistola toda.
+          const parceiro = f().querySelector('select.parceiro');
+          parceiro.value = fregues.id;
+          parceiro.dispatchEvent(new Event('change', { bubbles: true }));
+          linha(municao.id).querySelector('[data-action="pegarParte"]').click();
+          await esperar(() => janela('pegar-parte')?.querySelector('input[name="quantidade"]'));
+          const sugerida = Number(janela('pegar-parte').querySelector('input[name="quantidade"]').value);
+          janela('pegar-parte').querySelector('input[name="quantidade"]').value = 5;
+          janela('pegar-parte').querySelector('button[data-action="ok"]').click();
+          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 5 && municao.system.quantidade === 15 && linha(levada.id));
+          linha(levada.id).querySelector('[data-action="pegarTudo"]').click();
+          await esperar(() => fregues.items.getName('Heavy Pistol') && !loja.items.getName('Heavy Pistol'));
+          const comFregues = fregues.items.getName('Heavy Pistol');
+          const pegou = {
+            sugerida, balas: [fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade, municao.system.quantidade], pistola: Boolean(comFregues),
+            carregador: fregues.items.getName('Extended Magazine (Heavy Pistol)')?.system.instaladoEm === comFregues?.id, naLoja: loja.items.size, pente: comFregues?.system.pente.max
+          };
+          // O estoque infinito (o personalizado de graça): pegar não tira do contêiner.
+          await loja.update({ 'system.tipo': 'personalizado', 'system.permissoes.estoqueInfinito': true });
+          await esperar(() => linha(municao.id)?.querySelector('[data-action="pegarTudo"]'));
+          linha(municao.id).querySelector('[data-action="pegarTudo"]').click();
+          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 20);
+          const infinito = [fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade, loja.items.getName('Heavy Pistol (Basic)')?.system.quantidade];
+          // O mestre arrasta do contêiner para a ficha (o item vai e soma na pilha) e de uma ficha para outra (com o carregador).
+          await loja.update({ 'system.permissoes.estoqueInfinito': false });
+          const doConteiner = await fregues.sheet._onDropItem({}, loja.items.getName('Heavy Pistol (Basic)'));
+          outro = await Actor.implementation.create({ name: 'Teste Outro Freguês', type: 'personagem' });
+          const entreFichas = await outro.sheet._onDropItem({}, fregues.items.getName('Heavy Pistol'));
+          const arrastou = {
+            doConteiner: [doConteiner?.system.quantidade, loja.items.size],
+            entreFichas: [Boolean(entreFichas), outro.items.getName('Extended Magazine (Heavy Pistol)')?.system.instaladoEm === entreFichas?.id, fregues.items.filter(item => item.type !== 'municao').length]
+          };
+          return { criado, porTipo, manteve, extrato, fichaLoja, personalizado, saque, pilha, lista, pegou, infinito, arrastou };
+        } finally {
+          for (const ator of [loja, fregues, outro].filter(Boolean)) { for (const item of ator.items) await item.sheet?.close(); await ator.sheet?.close(); await ator.delete(); }
+        }
+      })()`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const nenhuma = { deGraca: false, estoqueInfinito: false, criar: false, apagar: false, mudar: false, vender: false, mover: false };
+      const guardar = { ...nenhuma, deGraca: true, criar: true, apagar: true, mudar: true, mover: true };
+      const { criado, porTipo, fichaLoja, personalizado, saque, lista, pegou, arrastou } = info;
+      const ok = criado.dono === 3 && criado.link === false && criado.disposicao === 0 && criado.tipo === 'loja' && igual(criado.permissoes, { ...nenhuma, vender: true })
+        && igual(porTipo.saque, { ...nenhuma, deGraca: true }) && igual(porTipo.esconderijo, guardar) && igual(porTipo.personalizado, guardar) && igual(porTipo.loja, { ...nenhuma, vender: true }) && info.manteve === true
+        && info.extrato.join(' | ') === 'definir,500,500, | somar,100,600,Teste'
+        && fichaLoja.tipo === 'loja' && fichaLoja.marcaveis.join() === 'estoqueInfinito' && fichaLoja.dinheiro === '600' && fichaLoja.extrato && fichaLoja.criar === 12 && fichaLoja.nome
+        && personalizado.marcaveis.join() === 'deGraca,estoqueInfinito,criar,apagar,mudar,vender,mover' && personalizado.jogadores === 'Os jogadores podem:'
+        && !saque.marcaveis.length && saque.dinheiro === 'N/A' && !saque.extrato && igual(saque.permissoes, { ...nenhuma, deGraca: true })
+        && info.pilha.itens === 1 && info.pilha.quantidade === 20
+        && lista.noFregues === 0 && lista.equipada === false && lista.instalado && lista.pente === 14 && !lista.carregadorNaLista && lista.arrastavel === 'true' && lista.arrastavelNaFicha === 'true'
+        && lista.detalhe === 'Unidade: 100 eb (Premium) · com Extended Magazine (Heavy Pistol)' && lista.municao === '20 · Unidade: 1 eb (Barato) | Tudo: 20 eb'
+        && lista.botoes.join() === 'pegarTudo,apagarItem' && lista.botoesDaMunicao.join() === 'pegarParte,pegarTudo,apagarItem'
+        && pegou.sugerida === 10 && pegou.balas.join() === '5,15' && pegou.pistola && pegou.carregador && pegou.naLoja === 1 && pegou.pente === 14
+        && info.infinito.join() === '20,15'
+        && arrastou.doConteiner.join() === '35,0' && arrastou.entreFichas.join() === 'true,true,0';
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('contêiner (o C24, parte 1) no navegador do jogador: a trava (o token do saque não sai do lugar; o do esconderijo, sim); a ficha sem as configurações do mestre, com o "Pegar" para o personagem dele; tirar arrastando e pôr no saque são recusados; o item do saque abre só para ler; no esconderijo, ele põe (o item sai da ficha dele), cria e apaga', async () => {
+      const montado = await edge.evaluate(`(async () => {
+        const u = game.users.getName('Jogador');
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const cena = game.scenes.active;
+        if (!cena) throw new Error('Sem cena ativa para o token do contêiner.');
+        const conteiner = await Actor.implementation.create({ name: 'Teste Saque', type: 'conteiner', system: { tipo: 'saque' }, items: [foundry.utils.deepClone(cat['core_gear:airhypo'])] });
+        const fregues = await Actor.implementation.create({ name: 'Freguês do Jogador', type: 'personagem', ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, items: [foundry.utils.deepClone(cat['core_gear:agent'])] });
+        const [token] = await cena.createEmbeddedDocuments('Token', [(await conteiner.getTokenDocument({ x: 1000, y: 1000 })).toObject()]);
+        window.__c24 = { atores: [conteiner.id, fregues.id], token: token.id, cena: cena.id };
+        return { conteiner: conteiner.id, fregues: fregues.id, token: token.id, cena: cena.id, permissoes: { ...conteiner.system.permissoes } };
+      })()`);
+      try {
+        const doJogador = codigo => jogador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await esperar(() => game.actors.get('${montado.conteiner}')?.isOwner && game.actors.get('${montado.fregues}')?.isOwner && game.scenes.get('${montado.cena}')?.tokens.get('${montado.token}')?.actor);
+          const conteiner = game.actors.get('${montado.conteiner}'), fregues = game.actors.get('${montado.fregues}');
+          const token = game.scenes.get('${montado.cena}').tokens.get('${montado.token}');
+          const f = () => conteiner.sheet.element;
+          const avisos = [];
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          try { ${codigo} } finally { delete ui.notifications.warn; }
+        })()`);
+        const noSaque = await doJogador(`
+          // A trava: o token do saque não sai do lugar.
+          const x = token.x;
+          await token.update({ x: x + 200 });
+          await new Promise(r => setTimeout(r, 300));
+          const travado = { ficou: token.x === x, aviso: avisos.some(a => /travado/.test(a)) };
+          // A ficha do jogador: sem as configurações do mestre, sem o nome para mudar, sem o "+" e o ✕; o "Pegar" e o "Trocar com".
+          await conteiner.sheet.render({ force: true });
+          await esperar(() => f()?.querySelector('.ficha-conteiner-corpo'));
+          const parceiros = [...f().querySelectorAll('select.parceiro option')].map(o => o.textContent.trim());
+          const ficha = {
+            config: Boolean(f().querySelector('.configuracoes-conteiner')), nome: Boolean(f().querySelector('input[name="name"]')), criar: f().querySelectorAll('[data-action="criarItem"]').length,
+            apagar: f().querySelectorAll('[data-action="apagarItem"]').length, pegar: f().querySelectorAll('[data-action="pegarTudo"]').length, extrato: Boolean(f().querySelector('[data-action="abrirExtrato"]')),
+            parceiros: parceiros[0] === '--' && parceiros.includes('Freguês do Jogador') && parceiros.slice(1).every(nome => game.actors.getName(nome)?.isOwner)
+          };
+          // O item do saque abre só para ler (sem "Mudar os itens").
+          const airhypo = conteiner.items.getName('Airhypo');
+          const soLer = !airhypo.sheet.isEditable;
+          // Tirar arrastando para a ficha dele: recusado (é pelo "Pegar").
+          let n = avisos.length;
+          const arrastado = await fregues.sheet._onDropItem({}, airhypo);
+          const tirar = { recusado: arrastado === null && conteiner.items.has(airhypo.id) && !fregues.items.getName('Airhypo'), aviso: /Pegar/.test(avisos.slice(n).join(' ')) };
+          // Pôr no saque: recusado (sem "Criar e pôr itens").
+          n = avisos.length;
+          const posto = await conteiner.sheet._onDropItem({}, fregues.items.getName('Agent'));
+          const por = { recusado: posto === null && Boolean(fregues.items.getName('Agent')) && conteiner.items.size === 1, aviso: /sem permissão/.test(avisos.slice(n).join(' ')) };
+          // O "Pegar" para o Freguês dele.
+          const select = f().querySelector('select.parceiro');
+          select.value = fregues.id;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          f().querySelector('li[data-item-id="' + airhypo.id + '"] [data-action="pegarTudo"]').click();
+          await esperar(() => fregues.items.getName('Airhypo') && !conteiner.items.size);
+          return { travado, ficha, soLer, tirar, por, pegou: Boolean(fregues.items.getName('Airhypo')) && !conteiner.items.size, avisos };
+        `);
+        // O mestre muda o contêiner para esconderijo.
+        await edge.evaluate(`game.actors.get('${montado.conteiner}').update({ 'system.tipo': 'esconderijo' }).then(() => true)`);
+        const noEsconderijo = await doJogador(`
+          await esperar(() => conteiner.system.permissoes.mover && token.actor?.system.permissoes.mover && f()?.querySelector('[data-action="criarItem"]'));
+          // A trava solta: o token do esconderijo vai.
+          const x = token.x;
+          await token.update({ x: x + 200 });
+          await esperar(() => token.x === x + 200);
+          const moveu = token.x === x + 200;
+          // Pôr: o item vai para o esconderijo e sai da ficha dele.
+          await conteiner.sheet._onDropItem({}, fregues.items.getName('Agent'));
+          await esperar(() => conteiner.items.getName('Agent') && !fregues.items.getName('Agent'));
+          const por = { no: Boolean(conteiner.items.getName('Agent')), saiu: !fregues.items.getName('Agent') };
+          const editavel = conteiner.items.getName('Agent').sheet.isEditable;
+          await esperar(() => f()?.querySelector('li[data-item-id="' + conteiner.items.getName('Agent').id + '"] [data-action="apagarItem"]'));
+          const botoes = { criar: f().querySelectorAll('[data-action="criarItem"]').length, apagar: f().querySelectorAll('[data-action="apagarItem"]').length };
+          // Criar (o "+" do equipamento) e apagar (o ✕, com a confirmação).
+          f().querySelector('.categoria-conteiner[data-categoria="equipamento"] [data-action="criarItem"]').click();
+          await esperar(() => conteiner.items.getName('Equipamento') && f()?.querySelector('li[data-item-id="' + conteiner.items.getName('Equipamento').id + '"]'));
+          const criado = conteiner.items.getName('Equipamento');
+          await esperar(() => criado?.sheet.rendered);
+          await criado?.sheet.close();
+          f().querySelector('li[data-item-id="' + criado.id + '"] [data-action="apagarItem"]').click();
+          await esperar(() => document.querySelector('.application.dialog:not(.minimizing) button[data-action="yes"]'));
+          document.querySelector('.application.dialog:not(.minimizing) button[data-action="yes"]').click();
+          await esperar(() => !conteiner.items.getName('Equipamento'));
+          return { moveu, por, editavel, botoes, criou: Boolean(criado), apagou: !conteiner.items.getName('Equipamento'), avisos };
+        `);
+        const s = noSaque, e = noEsconderijo;
+        const ok = s.travado.ficou && s.travado.aviso && !s.ficha.config && !s.ficha.nome && s.ficha.criar === 0 && s.ficha.apagar === 0 && s.ficha.pegar === 1 && !s.ficha.extrato && s.ficha.parceiros
+          && s.soLer && s.tirar.recusado && s.tirar.aviso && s.por.recusado && s.por.aviso && s.pegou && s.avisos.length === 3
+          && e.moveu && e.por.no && e.por.saiu && e.editavel && e.botoes.criar === 12 && e.botoes.apagar === 1 && e.criou && e.apagou && !e.avisos.length;
+        return [ok, JSON.stringify({ montado, noSaque, noEsconderijo })];
+      } finally {
+        await jogador.evaluate(`(async () => { for (const id of ['${montado.conteiner}', '${montado.fregues}']) { const ator = game.actors.get(id); for (const item of ator?.items ?? []) await item.sheet?.close(); await ator?.sheet?.close(); } return true; })()`).catch(() => null);
+        await edge.evaluate(`(async () => {
+          const estado = window.__c24;
+          if (!estado) return true;
+          await game.scenes.get(estado.cena)?.tokens.get(estado.token)?.delete();
+          for (const id of estado.atores) await game.actors.get(id)?.delete();
+          delete window.__c24;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {
         // As voltas da ficha que estão esperando vão antes de a wiki "cair".

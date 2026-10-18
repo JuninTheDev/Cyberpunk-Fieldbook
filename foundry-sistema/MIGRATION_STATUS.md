@@ -74,6 +74,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | os arquivos copiados pelo Eye-Dee (o diário, a permissão do dono, o aviso no chat, o "Abrir o arquivo") | portados no ciclo 89 (o C8, parte 12) |
 | NET Architect | o editor visual (a grade, arrastar para mover e trocar, o "+" para criar) | portado no ciclo 90 (o C8, parte 13), no mapa da ficha da arquitetura: a tabela das linhas faz o papel do painel; sem o "Desfazer", porque cada mudança grava na hora, como o resto da ficha |
 | NET Architect | o Scanner (o botão no HUD do token, o raio do resultado × 10 m, o oculto acima do DV do Scanner, quem achou passa a vê-lo) | portado no ciclo 91 (o C8, parte 14); a parede no meio, que o da mesa não conferia, barra a conexão pela wiki |
+| CORE | o contêiner (a loja, o saque e o esconderijo: os tipos com as permissões, a ficha, pôr e pegar, a trava) | portado no ciclo 122 (o C24, parte 1); a compra e a venda da loja faltam |
 | Painel Tático | tudo | falta |
 
 ## Bloqueadores para migrar a campanha
@@ -130,7 +131,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
   | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores e o Black ICE próprio do netrunner nos ciclos 43 a 46; a arquitetura (o item e o mapa) no 47; falta o NET Architect (o C8) | P3 |
-  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o resto falta | P3 |
+  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o contêiner desde o 122 (o C24, por partes); o Painel Tático falta | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
 
@@ -602,6 +603,19 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   tipo. A própria daqui guarda o nome, o STAT e o nível, que é o que a rolagem usa (STAT + nível + 1d10); a dificuldade
   (o ×2) só pesa no custo dos Pontos de Melhoria, que fica com a mesa, e ela entra no grupo Próprias, não numa categoria
   do livro.
+
+- **O contêiner** (ciclo 122; o container do CORE 0.92.4):
+  - **as configurações:** no CORE, o tipo e as permissões só mudam pela ficha do token ("Container settings should be made
+    on the token"); aqui, nas duas: a do ator vale para os tokens que não mudaram, como no capanga;
+  - **o preço da bateria:** o CORE divide por 10 toda munição que não é granada nem foguete; a loja da wiki vende a bateria
+    "por 8" (50eb o pacote). Vale a da wiki: 6,25eb a unidade;
+  - **a categoria abaixo de 10eb:** o CORE tem a "Dirt Cheap" (5eb), que a wiki não tem; abaixo de 10eb, a ficha mostra só
+    o preço;
+  - **o SP, o HP e o DV** do contêiner do CORE (o modelo os guarda; a ficha do CORE não os mostra) ficaram fora; o contêiner
+    daqui tem as notas;
+  - **arrastar entre as fichas:** no CORE, o item sai da origem (um personagem dá o item ao outro); aqui também, desde este
+    ciclo (antes, a ficha não arrastava). Do contêiner, como no CORE, só o mestre arrasta, e o item sai mesmo com o estoque
+    infinito; o jogador usa o "Pegar".
 
 ## Registro dos ciclos
 
@@ -5976,6 +5990,56 @@ ganhou o lado de cyberbraço, cyberperna e cyberolho (5de1fbd, sessão KouArt) e
   - **O que é:** a peça única num braço ou numa perna sem cyberbraço daquele lado. A wiki manda `natural: true`, e o
     `pedeFundacao` passa a aceitar a peça única com lado.
   - **Antes:** a wiki do master do 46eb94a precisa entrar nesta branch.
+
+### Ciclo 122 (2026-10-18): o C24, parte 1: o contêiner (a loja, o saque e o esconderijo), a ficha e a trava (sessão KouArt)
+
+Commit anterior: `b726af20` (o ciclo 121, da sessão Junin; a reserva do C24 é o `8b64a496`). O C24 vai em três partes: esta (o ator, a ficha, pôr e pegar de graça e
+a trava), a loja que vende (comprar pelo preço, com o extrato dos dois) e a loja que compra (vender para ela).
+
+- **A referência (o CORE 0.92.4, pela tag no GitLab):** `modules/actor/cpr-container.js` (o `setContainerType`: o tipo
+  liga e desliga os flags; o `create`: o token neutro e todos os jogadores donos; o `automaticallyStackItems`),
+  `modules/actor/sheet/cpr-container-sheet.js` (o "Trade with", o `_purchaseItem` com o "items-free" e o
+  "infinite-stock", o `_onDrop` com o "players-create"), `templates/actor/cpr-container-sheet.hbs` e
+  `container/cpr-container-actions.hbs` (as configurações do mestre por tipo, a lista por categoria, o "Single | All" do
+  preço, os botões), `modules/datamodels/actor/container-datamodel.js` e
+  `modules/hooks/token/warn-on-moving-locked-container.js` (a trava: o "players-move"). A "trava" do ROADMAP é esta. O
+  preço: a loja da wiki (`loja-catalogo.js`, o lote de cada munição) e o glossário (as categorias de preço, RED p. 385).
+- **O que muda:**
+  - **`regras.mjs`:** `permissoesDoTipo` (o `setContainerType`), `EMPILHAVEIS` e `quantidadeDe`, `parteValida` e
+    `parteSugerida`, `precoDaUnidade` (o lote da munição: `LOTE_DA_MUNICAO`), `CATEGORIAS_DE_PRECO`, `categoriaDoPreco`
+    e `precoNaLista`;
+  - **`config.mjs`, `dados.mjs`, `system.json` e `pt-BR.json`:** o tipo de ator `conteiner` (`DadosConteiner`: o tipo, as
+    permissões, os Eurodólares com o extrato e as notas);
+  - **`documentos.mjs`:** o contêiner novo nasce com o token solto e neutro, os jogadores donos e as permissões do tipo;
+    o tipo novo liga as permissões dele; o dinheiro tem o extrato;
+  - **`conteiner.mjs` (novo):** `levarItem` (o item vai com o que está instalado nele, soma na pilha, guardado, e sai da
+    origem), `pegarDoConteiner` e a trava (o `preMoveToken`);
+  - **`ficha-conteiner.mjs` e `conteiner.hbs` (novos):** a ficha; **`ficha-item.mjs`:** o item do contêiner abre só para
+    ler sem "Mudar os itens"; **`ficha-personagem.mjs` e `equipamento.hbs`:** as linhas da aba Equipamento arrastam, e o
+    item que chega de outra ficha vai (sai de lá); do contêiner, só o mestre arrasta.
+- **Testes:**
+  - **G3:** o teste novo do contêiner (as permissões de cada tipo, o preço da unidade de cada munição do catálogo contra o
+    lote da loja da wiki, as categorias contra o glossário, o texto da lista, a pilha e a parte); o teste do capanga
+    passa a esperar o tipo de ator novo;
+  - **G4:** dois passos novos: o do mestre (o ator novo, os tipos, o extrato, a ficha de cada tipo, o compêndio e a ficha
+    do personagem arrastados para o contêiner, a pilha, o preço, pegar uma parte e tudo, o estoque infinito e o arrastar
+    entre as fichas) e o do jogador (a trava no saque e no esconderijo, a ficha sem as configurações, as recusas, o item
+    só para ler, o "Pegar", e no esconderijo pôr, criar e apagar).
+- **Resultados:**
+  - G1: 78 arquivos (os 2 novos: `conteiner.mjs` e `ficha-conteiner.mjs`), 0 erros; G2: 0 erros;
+  - G3: 171 de 171; depois de juntar o ciclo 121 da sessão Junin, 174 de 174;
+  - G4: 153 de 153 (e de novo com o arrastar de verdade da linha da ficha); depois da junção, 155 de 155;
+  - **mutações:** as 21 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (170 de 171 cada): a loja que desliga o estoque infinito (N1), o esconderijo sem mover (N2), a bateria por 10
+      (N3), a faixa de preço só acima do piso (N4) e a parte que pode ser a pilha toda (N5);
+    - no G4: o ator novo sem os jogadores donos (N6, nos dois passos), o tipo que não liga as permissões (N7), levar sem
+      tirar da origem (N8), sem a pilha (N9), o carregador que fica para trás (N10), o item que chega equipado (N11), o
+      estoque infinito que não segura (N12), sem a trava (N13), o jogador que tira arrastando (N14) e que põe sem a
+      permissão (N15), o item do saque que abre para mudar (N16), as configurações para o jogador (N17), a loja sem o
+      estoque infinito para marcar (N18), o "Trocar com" que não muda (N19), a parte que começa em 1 (N20) e a arma da
+      aba Equipamento que não arrasta (N21).
+- **Próximo:** o C24, parte 2 (a loja que vende: comprar pelo preço, com o dinheiro de quem compra e o registro nos dois
+  extratos).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
