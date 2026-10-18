@@ -29,6 +29,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | ficha, atributos, perícias, armas, armaduras, munição, cyberware com efeitos, lesões críticas, tabelas de DV, dano com armadura | portado (conteúdo do CORE 0.92.4 convertido) |
 | CORE e wiki | mãos livres (C12): impedir nova equipagem sem mãos, com os efeitos, BODY 8+ na arma branca e os escudos | portado no ciclo 87 (sessão Codex; a decisão nas dúvidas) |
 | CORE e wiki | falha crítica da arma (C13): os quatro efeitos configuráveis na arma ruim, informados no cartão do ataque | portado no ciclo 88 (sessão Codex) |
+| CORE e wiki | usar droga com prazo, secundário e vício; scanners que não acumulam; lanterna e sinalizador no token (C16) | portado no ciclo 124 (sessão Codex), com os 100 m confirmados pelo usuário |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad) | portado no ciclo 23. Com as Roles do RED (ciclo 33), saíram a especialização do Face e os situacionais de 2077 (o Investigator, o Netrunner) |
@@ -143,6 +144,10 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
+
+- **Alcance da luz (C16, 2026-10-18, resolvida pelo usuário):** os efeitos Flashlight e Road Flare do CORE 0.92.4
+  usam `ATL.light.bright = 50`. A wiki (`system-catalog.js`) diz facho de 100 m e iluminar 100 m, respectivamente.
+  O usuário confirmou usar alcance de 100 m no token para ambos.
 
 - **Dano no SDP dos veículos (C15, 2026-10-18, resolvida pelo usuário):** o CORE 0.92.4 guarda o SDP, mas não automatiza seu dano;
   a wiki define PDE, ausência de esquiva e vidro como cobertura, sem fórmula própria de SP e crítico contra SDP.
@@ -6070,6 +6075,46 @@ C24, partes 2 e 3, fica para depois.
 - **Resultados:** G1 e G2 sem mudança no que eles conferem (o ensaio passou no `node --check` e no ESLint); G3 174 de 174;
   o G4 não muda (o cenário v14 e o sistema são os do ciclo 122: 155 de 155); o ensaio, 16 de 16.
 - **Próximo:** a primeira sessão da Morana no Foundry 14; depois, o C24, parte 2 (a loja que vende).
+
+### Ciclo 124 (2026-10-18): C16, drogas com prazo, scanners e luz no token (sessão Codex)
+
+Commit anterior: `d4bbb69` (ciclo 123). Item reservado e enviado em `a913dee`, antes da implementação.
+Os ciclos 118 a 122 das outras sessões foram integrados, conservando as Roles, os lados do cyberware e o contêiner.
+O ensaio do ciclo 123 foi integrado ao fechar: só documentos e um cenário chamado pelo nome, sem mudar os fontes
+nem o cenário v14 que passaram nos portões. O número já publicado ficou com a sessão KouArt.
+
+- **Fontes:** CORE 0.92.4, `modules/item/types/cpr-drug.js`, `snort` (dose e ativação do primário); os packs de drogas,
+  scanners, Flashlight e Road Flare. Wiki: `system-rules.js`, Drogas de rua, p. 227–229; `system-catalog.js`, os dois
+  scanners, a lanterna e o sinalizador. O Stim dura uma hora pela descrição `drug.stim`, p. 150 do CORE.
+- **Decisão do usuário:** alcance de 100 m para lanterna e sinalizador. A divergência com os 50 m do efeito ATL do
+  CORE e a confirmação estão nas dúvidas acima. As fontes da wiki não foram alteradas.
+- **Implementado:**
+  - prazo persistido por tomada: Black Lace e Boost, 24 h; Blue Glass, Smash e Synthcoke, 4 h; Stim, 1 h. Cada dose
+    adicional estende o fim sem duplicar o bônus. A conta aceita relógio negativo e prazo anterior igual a zero;
+  - o efeito recebe a duração nativa do v14. O mestre ativo encerra automaticamente pelo relógio e ao voltar ao
+    mundo, incluindo os capangas soltos de todas as cenas. A nova dose resolve primeiro um prazo já vencido;
+  - uso e encerramento em fila por ator no mesmo cliente; secundário e vício conservados do ciclo 78. A Humanidade
+    devolvida pelo Black Lace limita-se à perda real, inclusive quando os dados excedem o saldo restante;
+  - Medscanner e Techscanner não acumulam com outro do mesmo tipo, inclusive o cyberware renomeado. Guardar,
+    desinstalar ou desligar a primeira origem deixa a outra valer, preservando os outros bônus;
+  - luz nativa no token, com alcance de 100 m, sem somar fontes ou reduzir uma luz original maior. Cor, ângulo e
+    dados salvos da cena são preservados. Lanternas anteriores ao C16 ganham seu efeito ao usar;
+  - sinalizador de uso único: gasta uma unidade, ilumina por uma hora e não pode ser reutilizado esgotado;
+  - `DadosEfeito.isSuppressed` devolve `null` quando não suprime, deixando o Foundry aplicar `duration.expired`.
+    O build conserva os dois efeitos de luz antes descartados. O estoque de um contêiner não toma drogas.
+- **Referências:** G3 com os valores da wiki, a duração e extensão, identificação e substituição dos scanners e os
+  efeitos nativos do catálogo; seis passos G4 independentes, incluindo retorno real à página do mundo, estado lido
+  depois do relógio, dois capangas e dois clientes para a luz. O teste lê o resultado automático antes da chamada
+  manual que poderia mascarar a ausência do gancho.
+- **Portões:** G1, 80 arquivos sem erro; G2, nenhum erro; G3, 178/178; G4 completo, 161/161, sem avisos de
+  compatibilidade ou erros de JS. A primeira rodada completa passou em 340 s; a final, após o ajuste da conta, em 346 s.
+- **Mutações:** 38 distintas detectadas, uma por vez: 12 de regras, 2 de build e 24 com navegador. Foram 39 execuções,
+  incluindo a repetição da extensão após ajustar o relógio negativo; nenhuma sobreviveu. Os sete arquivos envolvidos
+  foram restaurados byte a byte, com MD5 conferido em cada execução e nenhuma restauração incorreta.
+- **Limites:** a carga da bateria da lanterna, os efeitos narrativos das drogas, as curas e as restrições médicas
+  continuam com o mestre. Tomadas antigas sem prazo continuam usando Acabou. A fila é do cliente, como as outras
+  filas do sistema. O guia Morana e os demais arquivos locais ficaram fora do ciclo. Servidor e campanha real intactos.
+- **Próximo fora da NET:** C17, pilhas, pelo protocolo de reserva do ROADMAP.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

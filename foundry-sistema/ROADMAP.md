@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 124). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 125). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -192,9 +192,12 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 4: ficha e inventário
 
-- [~] **C16. Usar droga** (o `snort` do CORE): em andamento (sessão Codex, 2026-10-18).
+- [x] **C16. Usar droga** (o `snort` do CORE): feito no ciclo 124 (sessão Codex, 2026-10-18).
   - gasta a dose, liga o efeito pela duração, e vêm o efeito secundário e o vício;
   - também: o Medscanner e o Techscanner que não acumulam, e a luz da lanterna no token.
+  - os prazos persistem e expiram pelo relógio e ao voltar ao mundo; doses adicionais estendem sem duplicar o bônus;
+  - scanners não acumulam também com o implante. Lanterna e sinalizador têm alcance de 100 m (decisão do usuário);
+    o sinalizador gasta uma unidade e dura uma hora. A luz original do token é preservada.
 - [ ] **C17. Pilhas:** juntar os iguais ao soltar e dividir uma pilha (o `stackable` do CORE).
 - [ ] **C18. Armadura:** qual armadura conta em cada local, e ablar e consertar com um clique.
 - [ ] **C19. Lesão crítica fora do ataque:** rolar na tabela à mão, e o paliativo e o tratamento com a DV.
@@ -413,7 +416,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   - Converter dos compêndios do CORE (`black-chrome_*` e `dlc_black-chrome-plus`): armas com Combinação, cyberdedos, Linear Frames, moda, equipamento e veículos.
   - Mais as regras novas (dano direto no HP, Combinação).
   - Hoje o importador e os pedidos avisam e não entregam.
-- [ ] **Inventário:** (→ C16) usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
+- [x] **Inventário:** (C16, ciclo 124) usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da
   Sorte; o ↺ do começo da sessão.

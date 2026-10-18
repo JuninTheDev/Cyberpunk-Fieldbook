@@ -288,6 +288,11 @@ function converterEfeitos(doc, camel, foraDoMapa, nomes) {
     const changes = [];
     const situacionais = [];
     (efeito.changes || []).forEach((c, i) => {
+      // O ATL do Foundry 12 vira a alteração nativa de token do v14; duas luzes não somam o alcance.
+      if (c.key === 'ATL.light.bright' && ['Flashlight', 'Road Flare'].includes(doc.name)) {
+        changes.push({ key: 'token.light.bright', type: 'upgrade', value: '100', phase: 'initial', priority: null });
+        return;
+      }
       if (situacional[i]?.isSituational) {
         const alvo = chaveSituacional(c.key, camel, nomes);
         if (!alvo) { foraDoMapa.push(`${doc.name}: ${c.key} (situacional)`); return; }

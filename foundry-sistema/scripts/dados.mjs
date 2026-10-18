@@ -2,10 +2,11 @@
 // cyberware, e o efeito que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP,
 // bônus dos efeitos) é calculado na preparação, a cada vez.
 import { ANDAR_MAX, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
-import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, PERMISSOES_DO_CONTEINER, TIPOS_DE_CONTEINER, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, PERMISSOES_DO_CONTEINER, SISTEMA, TIPOS_DE_CONTEINER, USOS } from './config.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 import { protecoesDoVeiculo } from './regras-veiculos.mjs';
+import { scannerPreferido, tipoDeScanner } from './regras-inventario.mjs';
 
 const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
@@ -509,6 +510,17 @@ export class DadosEfeito extends foundry.data.ActiveEffectTypeDataModel {
   }
 
   get isSuppressed() {
-    return this.situacional.sim || this.foraDeUso;
+    if (this.situacional.sim || this.foraDeUso) return true;
+    const item = this.parent?.parent;
+    const tipo = item instanceof Item && tipoDeScanner({ name: item.name, type: item.type, catalogo: item.getFlag(SISTEMA, 'catalogo') });
+    if (tipo && item.actor) {
+      const candidatos = item.actor.items.contents.flatMap(outro => {
+        const grupo = tipoDeScanner({ name: outro.name, type: outro.type, catalogo: outro.getFlag(SISTEMA, 'catalogo') });
+        return grupo ? outro.effects.map(efeito => ({ id: efeito.uuid, tipo: grupo, ativo: !efeito.disabled && !efeito.system.foraDeUso && !efeito.duration.expired })) : [];
+      });
+      if (scannerPreferido(candidatos, tipo) !== this.parent.uuid) return true;
+    }
+    // null preserva a expiração nativa do Foundry; false substituiria duration.expired.
+    return null;
   }
 }

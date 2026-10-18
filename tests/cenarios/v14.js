@@ -111,6 +111,36 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    await r.passo('inventário (C16): ao voltar ao mundo, o mestre encerra o prazo vencido; drogas no estoque do contêiner não são consumidas nem testadas', async () => {
+      const preparo = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo(), dados = foundry.utils.deepClone(cat['core_drugs:stim']);
+        const a = await Actor.implementation.create({ name: 'C16 Retorno', type: 'personagem', system: { atributos: { will: { valor: 6 }, int: { valor: 6 } }, pericias: { 'resist-torture-drugs': { nivel: 4 } } }, items: [dados] });
+        const c = await Actor.implementation.create({ name: 'C16 Estoque', type: 'conteiner', items: [dados] });
+        const droga = a.items.getName('Stim'), estoque = c.items.getName('Stim');
+        await game.system.api.drogas.usarDroga(droga);
+        await droga.setFlag('${S}', 'sobEfeito', { humanidade: 0, fim: game.time.worldTime - 1 });
+        await estoque.setFlag('${S}', 'sobEfeito', { humanidade: 0, fim: game.time.worldTime - 1 });
+        return { ator: a.id, conteiner: c.id, antes: { sob: Boolean(droga.getFlag('${S}', 'sobEfeito')), dor: a.system.bonus.supressaoDeDor } };
+      })()`);
+      try {
+        await edge.send('Page.reload', {}); await foundry14.esperarJogo(edge);
+        const info = await edge.evaluate(`(async () => {
+          const a = game.actors.get('${preparo.ator}'), c = game.actors.get('${preparo.conteiner}'), droga = a.items.getName('Stim'), estoque = c.items.getName('Stim');
+          for (let i = 0; i < 60 && droga.getFlag('${S}', 'sobEfeito'); i++) await new Promise(r => setTimeout(r, 100));
+          const automatico = !droga.getFlag('${S}', 'sobEfeito');
+          await game.system.api.drogas.usarDroga(estoque); await game.system.api.drogas.expirarDrogas();
+          const cat = await game.system.api.wiki.carregarCatalogo(), dados = foundry.utils.deepClone(cat['core_drugs:boost']); dados.system.quantidade = 2;
+          const [boost] = await a.createEmbeddedDocuments('Item', [dados]);
+          await game.system.api.drogas.usarDroga(boost); await boost.setFlag('${S}', 'sobEfeito', { humanidade: 0, fim: game.time.worldTime - 1 });
+          const random = CONFIG.Dice.randomUniform; CONFIG.Dice.randomUniform = () => 1 - (7 - .5) / 10;
+          try { await game.system.api.drogas.usarDroga(boost); } finally { CONFIG.Dice.randomUniform = random; }
+          return { automatico, sob: Boolean(droga.getFlag('${S}', 'sobEfeito')), dor: a.system.bonus.supressaoDeDor, doses: droga.system.quantidade, estoque: { sob: Boolean(estoque.getFlag('${S}', 'sobEfeito')), doses: estoque.system.quantidade }, acabou: game.messages.filter(m => m.getFlag('${S}', 'droga')?.droga === 'Stim' && m.getFlag('${S}', 'droga')?.resultado === 'acabou').length, novaDose: { doses: boost.system.quantidade, int: a.system.atributos.int.valor, vicio: Boolean(boost.getFlag('${S}', 'viciado')), prazo: boost.getFlag('${S}', 'sobEfeito')?.fim - game.time.worldTime } };
+        })()`);
+        return [preparo.antes.sob && preparo.antes.dor && info.automatico && !info.sob && !info.dor && info.doses === 0 && info.estoque.sob && info.estoque.doses === 1 && info.acabou === 1
+          && info.novaDose.doses === 0 && info.novaDose.int === 6 && info.novaDose.vicio && info.novaDose.prazo === 86400, JSON.stringify({ antes: preparo.antes, ...info })];
+      } finally { await edge.evaluate(`Actor.implementation.deleteDocuments(${JSON.stringify([preparo.ator, preparo.conteiner])}).then(() => true)`); }
+    });
+
     await r.passo('compêndios: armas, armaduras, munição, cyberware, equipamento, roupas, drogas, netrunning, upgrades, veículos, o conteúdo de 2077, lesões e os personagens de exemplo; o Solo de exemplo entra pronto para o combate', async () => {
       const info = await edge.evaluate(`(async () => {
         const tamanhos = Object.fromEntries(game.packs.filter(p => p.metadata.packageName === '${S}').map(p => [p.metadata.name, p.index.size]));
@@ -1767,6 +1797,176 @@ module.exports = async ({ edge, servidores, r }) => {
         && acabou.resultado === 'passou' && acabou.total === 18 && acabou.dv === 17 && acabou.humanidade && !acabou.primario && !acabou.vicio
         && sobBoost === 8 && viciou.int === 4 && viciou.vicio && viciou.doses === 0 && viciou.texto === 'Teste Usuário ficou viciado em Boost (15 contra DV17): o efeito secundário fica, até a terapia.';
       return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C16): o relógio encerra a droga no prazo estendido; doses simultâneas não duplicam o bônus; o empate vicia uma vez só, e não acaba antes do prazo', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo(), api = game.system.api.drogas;
+        const dados = foundry.utils.deepClone(cat['core_drugs:boost']); dados.system.quantidade = 2;
+        const a = await Actor.implementation.create({ name: 'C16 Prazo', type: 'personagem', system: { atributos: { will: { valor: 6 }, int: { valor: 6 } }, pericias: { 'resist-torture-drugs': { nivel: 4 } } }, items: [dados] });
+        const droga = a.items.getName('Boost'), inicio = game.time.worldTime;
+        const random = CONFIG.Dice.randomUniform;
+        const estado = () => ({ doses: droga.system.quantidade, int: a.system.atributos.int.valor, sob: droga.getFlag('${S}', 'sobEfeito') ?? null, viciado: Boolean(droga.getFlag('${S}', 'viciado')) });
+        try {
+          await Promise.all([api.usarDroga(droga), api.usarDroga(droga)]);
+          const usou = estado(), primario = droga.effects.getName('Boost Primary');
+          const duracao = { valor: primario.duration.value, unidade: primario.duration.units, inicio: primario.start.time };
+          await game.time.advance(172799);
+          await api.expirarDrogas();
+          const antes = estado();
+          const testesAntes = game.messages.filter(m => m.getFlag('${S}', 'droga')?.resultado === 'viciou').length;
+          CONFIG.Dice.randomUniform = () => 1 - (7 - .5) / 10;
+          await game.time.advance(1);
+          await __esperar(() => !droga.getFlag('${S}', 'sobEfeito'));
+          const automatico = !droga.getFlag('${S}', 'sobEfeito');
+          await Promise.all([api.expirarDrogas(), api.expirarDrogas()]);
+          await __esperar(() => !droga.getFlag('${S}', 'sobEfeito'));
+          const depois = estado(), testes = game.messages.filter(m => m.getFlag('${S}', 'droga')?.resultado === 'viciou').length - testesAntes;
+          const resultado = game.messages.contents.filter(m => m.getFlag('${S}', 'droga')?.resultado === 'viciou').at(-1)?.getFlag('${S}', 'droga');
+          const avisos = [], warn = ui.notifications.warn; ui.notifications.warn = m => avisos.push(String(m));
+          try { await api.usarDroga(droga); } finally { ui.notifications.warn = warn; }
+          return { usou: { ...usou, fim: usou.sob?.fim - inicio }, duracao: { ...duracao, inicio: duracao.inicio - inicio }, antes: { ...antes, sob: Boolean(antes.sob) }, automatico, depois, testes, resultado, avisos };
+        } finally { CONFIG.Dice.randomUniform = random; await a.delete(); await game.time.advance(inicio - game.time.worldTime); }
+      })()`);
+      return [info.usou.doses === 0 && info.usou.int === 8 && info.usou.fim === 172800
+        && info.duracao.valor === 172800 && info.duracao.unidade === 'seconds' && info.duracao.inicio === 0
+        && info.antes.int === 8 && info.antes.sob && !info.antes.viciado
+        && info.automatico && info.depois.int === 4 && info.depois.sob === null && info.depois.viciado && info.testes === 1
+        && info.resultado?.total === 17 && info.resultado?.dv === 17 && info.avisos.length === 1 && /sem doses/.test(info.avisos[0]), JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C16): o vício do Synthcoke fica suspenso só durante o efeito; Blue Glass sem modificador também expira; o Stim acaba em uma hora sem teste secundário', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo(), api = game.system.api.drogas;
+        const ids = ['synthcoke', 'blue-glass', 'stim'];
+        const a = await Actor.implementation.create({ name: 'C16 Efeitos', type: 'personagem', system: { atributos: { ref: { valor: 6 }, will: { valor: 8 } }, pericias: { 'resist-torture-drugs': { nivel: 8 } } }, items: ids.map(id => foundry.utils.deepClone(cat['core_drugs:' + id])) });
+        const [coke, glass, stim] = ids.map(id => a.items.find(i => i.getFlag('${S}', 'catalogo') === 'core_drugs:' + id));
+        const inicio = game.time.worldTime, random = CONFIG.Dice.randomUniform;
+        try {
+          await coke.setFlag('${S}', 'viciado', true); await coke.effects.getName('Synthcoke Addiction').update({ disabled: false });
+          const fora = a.system.atributos.ref.valor;
+          await api.usarDroga(coke); await api.usarDroga(glass); await api.usarDroga(stim);
+          const durante = { ref: a.system.atributos.ref.valor, dor: a.system.bonus.supressaoDeDor, glass: glass.getFlag('${S}', 'sobEfeito')?.fim - inicio, coke: coke.getFlag('${S}', 'sobEfeito')?.fim - inicio };
+          CONFIG.Dice.randomUniform = () => 1 - (8 - .5) / 10;
+          await game.time.advance(3600); await api.expirarDrogas();
+          const umaHora = { dor: a.system.bonus.supressaoDeDor, stim: Boolean(stim.getFlag('${S}', 'sobEfeito')), coke: Boolean(coke.getFlag('${S}', 'sobEfeito')), glass: Boolean(glass.getFlag('${S}', 'sobEfeito')) };
+          await game.time.advance(10800); await api.expirarDrogas();
+          await __esperar(() => !coke.getFlag('${S}', 'sobEfeito') && !glass.getFlag('${S}', 'sobEfeito'));
+          return { fora, durante, umaHora, fim: { ref: a.system.atributos.ref.valor, vicio: coke.getFlag('${S}', 'viciado'), glass: Boolean(glass.getFlag('${S}', 'sobEfeito')), glassVicio: Boolean(glass.getFlag('${S}', 'viciado')) }, stimTestes: game.messages.filter(m => m.getFlag('${S}', 'droga')?.droga === 'Stim' && m.getFlag('${S}', 'droga')?.dv).length };
+        } finally { CONFIG.Dice.randomUniform = random; await a.delete(); await game.time.advance(inicio - game.time.worldTime); }
+      })()`);
+      return [info.fora === 4 && info.durante.ref === 7 && info.durante.dor && info.durante.glass === 14400 && info.durante.coke === 14400
+        && !info.umaHora.dor && !info.umaHora.stim && info.umaHora.coke && info.umaHora.glass
+        && info.fim.ref === 4 && info.fim.vicio && !info.fim.glass && !info.fim.glassVicio && info.stimTestes === 0, JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C16): a droga do capanga solto expira também fora da cena vista; Black Lace estende sem nova perda e devolve só a Humanidade realmente perdida, sem alterar o outro capanga', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo(), api = game.system.api.drogas;
+        const dados = foundry.utils.deepClone(cat['core_drugs:black-lace']); dados.system.quantidade = 2;
+        const a = await Actor.implementation.create({ name: 'C16 Capanga', type: 'capanga', system: { humanidade: { value: 2 }, atributos: { will: { valor: 6 } }, pericias: { 'resist-torture-drugs': { nivel: 4 } } }, items: [dados] });
+        const cena = await Scene.implementation.create({ name: 'C16 Fora da cena', active: false, width: 1200, height: 1000 });
+        const base = (await a.getTokenDocument({ x: 300, y: 300 })).toObject();
+        await cena.createEmbeddedDocuments('Token', [base, { ...base, _id: undefined, x: 600 }]);
+        const tokens = cena.tokens.contents.sort((a,b) => a.x-b.x), ator = tokens[0].actor, outro = tokens[1].actor, droga = ator.items.getName('Black Lace');
+        const inicio = game.time.worldTime, random = CONFIG.Dice.randomUniform;
+        window.__fila = [[3,6],[4,6],[8,10]];
+        CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - .5) / p[1] : foundry.dice.MersenneTwister.random(); };
+        try {
+          await api.usarDroga(droga); await game.time.advance(100); await api.usarDroga(droga);
+          const durante = { humanidade: ator.system.humanidade.value, perdeu: droga.getFlag('${S}', 'sobEfeito')?.humanidade, fim: droga.getFlag('${S}', 'sobEfeito')?.fim - inicio, doses: droga.system.quantidade, dados: window.__fila.length };
+          await game.time.advance(172700);
+          await __esperar(() => !droga.getFlag('${S}', 'sobEfeito'));
+          return { durante, fim: { humanidade: ator.system.humanidade.value, sob: Boolean(droga.getFlag('${S}', 'sobEfeito')), vicio: Boolean(droga.getFlag('${S}', 'viciado')), primario: droga.effects.getName('Black Lace Primary').active }, outro: { humanidade: outro.system.humanidade.value, doses: outro.items.getName('Black Lace').system.quantidade }, base: { humanidade: a.system.humanidade.value, doses: a.items.getName('Black Lace').system.quantidade }, sobrou: window.__fila.length };
+        } finally { CONFIG.Dice.randomUniform = random; window.__fila = []; await cena.delete(); await a.delete(); await game.time.advance(inicio - game.time.worldTime); }
+      })()`);
+      return [info.durante.humanidade === 0 && info.durante.perdeu === 2 && info.durante.fim === 172800 && info.durante.doses === 0 && info.durante.dados === 1
+        && info.fim.humanidade === 2 && !info.fim.sob && !info.fim.vicio && !info.fim.primario
+        && info.outro.humanidade === 2 && info.outro.doses === 2 && info.base.humanidade === 2 && info.base.doses === 2 && info.sobrou === 0, JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C16): Medscanner e Techscanner não acumulam, inclusive com o cyberware; guardar ou desligar o primeiro deixa a outra cópia valer, e os demais bônus continuam', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const ids = ['core_gear:medscanner', 'core_gear:medscanner', 'core_cyberware:medscanner', 'core_gear:techscanner', 'core_gear:techscanner', 'core_cyberware:techscanner'];
+        const dados = ids.map((id, i) => { const d = foundry.utils.deepClone(cat[id]); d._id = 'C16Scanner00000' + i; d.system.uso = 'equipado'; if (d.type === 'cyberware') { d.system.instalado = true; d.name = 'Scanner instalado ' + i; } return d; });
+        const a = await Actor.implementation.create({ name: 'C16 Scanners', type: 'personagem', items: dados }, { keepEmbeddedIds: true });
+        const lista = ids.map((_, i) => a.items.get('C16Scanner00000' + i));
+        const ler = () => ['first-aid', 'paramedic', 'basic-tech', 'cybertech', 'electronics-security-tech', 'air-vehicle-tech', 'land-vehicle-tech', 'sea-vehicle-tech', 'weaponstech'].map(id => [id, a.system.bonus.pericias[id] ?? 0]);
+        try {
+          const junto = ler();
+          await a.createEmbeddedDocuments('ActiveEffect', [{ name: 'Outra ferramenta', type: 'base', system: { changes: [{ key: 'system.bonus.pericias.first-aid', type: 'add', value: '1', phase: 'initial', priority: null }] } }]);
+          const outro = a.system.bonus.pericias['first-aid'];
+          for (const item of lista.filter(i => i.type === 'equipamento')) await item.update({ 'system.uso': 'guardado' });
+          const implantes = ler();
+          for (const item of lista.filter(i => i.type === 'cyberware')) await item.update({ 'system.instalado': false });
+          const guardados = ler();
+          await lista[0].update({ 'system.uso': 'equipado' }); await lista[1].update({ 'system.uso': 'equipado' });
+          const primeiro = lista.slice(0, 2).flatMap(i => i.effects.contents).find(e => !e.isSuppressed);
+          await primeiro.update({ disabled: true });
+          const substituto = a.system.bonus.pericias['first-aid'];
+          await lista[3].update({ 'system.uso': 'carregando' });
+          return { junto, outro, implantes, guardados, substituto, carregando: ler() };
+        } finally { await a.delete(); }
+      })()`);
+      const valores = linhas => linhas.map(l => l[1]);
+      return [valores(info.junto).every(v => v === 2) && info.outro === 3
+        && JSON.stringify(valores(info.implantes)) === JSON.stringify([3, 2, 2, 2, 2, 2, 2, 2, 2])
+        && JSON.stringify(valores(info.guardados)) === JSON.stringify([1, 0, 0, 0, 0, 0, 0, 0, 0])
+        && info.substituto === 3 && JSON.stringify(valores(info.carregando)) === JSON.stringify([3, 2, 2, 2, 2, 2, 2, 2, 2]), JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C16): a luz da lanterna chega ao token nos dois clientes, sem somar fontes nem apagar a luz original; o sinalizador gasta uma unidade e apaga após uma hora', async () => {
+      let cliente;
+      const preparo = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const itens = ['flashlight', 'flashlight', 'road-flare'].map((id, i) => { const d = foundry.utils.deepClone(cat['core_gear:' + id]); d.name = 'C16 Luz ' + i; if (i === 0) d.effects = []; return d; });
+        const a = await Actor.implementation.create({ name: 'C16 Iluminação', type: 'personagem', items: itens });
+        const [droga] = await a.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_drugs:boost'])]);
+        await droga.setFlag('${S}', 'sobEfeito', { humanidade: 0, fim: game.time.worldTime - 1 });
+        const u = await User.implementation.create({ name: 'C16 Jogador', role: CONST.USER_ROLES.PLAYER, character: a.id });
+        await a.update({ ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+        const cena = await Scene.implementation.create({ name: 'C16 Luz', active: false, width: 1200, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
+        const anterior = { ativa: game.scenes.active?.id, vista: game.scenes.viewed?.id };
+        const t = (await a.getTokenDocument({ x: 300, y: 300, light: { bright: 2, dim: 9, angle: 65, color: '#22aa44' } })).toObject();
+        await cena.createEmbeddedDocuments('Token', [t, { ...t, _id: undefined, x: 600, actorLink: false, light: { bright: 150, dim: 170, angle: 90, color: '#aa4422' } }]);
+        window.__c16luz = { ator: a.id, usuario: u.id, cena: cena.id, anterior, tempo: game.time.worldTime };
+        await cena.activate(); await cena.view();
+        return { ator: a.id };
+      })()`);
+      try {
+        cliente = await abrirEdge({ porta: 9462, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-c16-' });
+        await foundry14.capturarAvisos(cliente); await foundry14.entrarComo(cliente, mesa.url, 'C16 Jogador');
+        await cliente.evaluate(`window.__esperar = async condicao => { for (let i = 0; i < 60 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); }`);
+        const soMestre = await cliente.evaluate(`(async () => { await game.system.api.drogas.expirarDrogas(); return Boolean(game.actors.get('${preparo.ator}').items.getName('Boost').getFlag('${S}', 'sobEfeito')); })()`);
+        await edge.evaluate(`game.actors.get('${preparo.ator}').items.getName('Boost').unsetFlag('${S}', 'sobEfeito').then(() => true)`);
+        const ligar = await edge.evaluate(`(async () => { const a = game.actors.get('${preparo.ator}'), luz = a.items.getName('C16 Luz 0'); await luz.usar(); return { usavel: luz.usavelAMao, emUso: luz.emUso, efeitos: luz.effects.size }; })()`);
+        const ler = navegador => navegador.evaluate(`(() => { const c = game.scenes.get(window.__c16luz?.cena) ?? game.scenes.getName('C16 Luz'); return c.tokens.contents.sort((a,b) => a.x-b.x).map(t => ({ luz: t.light.bright, original: t._source.light.bright, dim: t.light.dim, angulo: t.light.angle, cor: String(t.light.color) })); })()`);
+        await cliente.evaluate(`__esperar(() => game.scenes.getName('C16 Luz')?.tokens.find(t => t.actorLink)?.light.bright === 100)`);
+        const primeira = { mestre: await ler(edge), jogador: await ler(cliente) };
+        await cliente.evaluate(`(async () => { const a = game.actors.get('${preparo.ator}'); await a.items.getName('C16 Luz 1').usar(); await a.items.getName('C16 Luz 0').usar(); return true; })()`);
+        const segunda = await ler(edge);
+        await cliente.evaluate(`(async () => { await game.actors.get('${preparo.ator}').items.getName('C16 Luz 1').usar(); return true; })()`);
+        const desligou = { mestre: await ler(edge), jogador: await ler(cliente) };
+        const flare = await edge.evaluate(`(async () => { const a = game.actors.get('${preparo.ator}'), flare = a.items.getName('C16 Luz 2'); await flare.usar(); return { qtd: flare.system.quantidade, ativo: flare.emUso, duracao: flare.effects.contents[0].duration.value }; })()`);
+        const sinalizador = await ler(edge);
+        await edge.evaluate(`game.time.advance(3600).then(() => true)`);
+        await cliente.evaluate(`__esperar(() => game.scenes.getName('C16 Luz')?.tokens.find(t => t.actorLink)?.light.bright === 2)`);
+        const expirou = { mestre: await ler(edge), jogador: await ler(cliente) };
+        const reutilizar = await edge.evaluate(`(async () => { const flare = game.actors.get('${preparo.ator}').items.getName('C16 Luz 2'), avisos = [], warn = ui.notifications.warn; ui.notifications.warn = m => avisos.push(String(m)); try { await flare.usar(); return { qtd: flare.system.quantidade, ativo: flare.emUso, avisos }; } finally { ui.notifications.warn = warn; } })()`);
+        const avisos = await foundry14.avisosDoSistema(cliente);
+        const valores = linhas => linhas.map(l => l.luz).join();
+        const originais = linhas => linhas[0].original === 2 && linhas[0].dim === 9 && linhas[0].angulo === 65 && linhas[0].cor === '#22aa44' && linhas[1].original === 150;
+        const info = { soMestre, ligar, primeira, segunda, desligou, flare, sinalizador, expirou, reutilizar, avisos };
+        return [soMestre && ligar.usavel && ligar.emUso && ligar.efeitos === 1 && valores(primeira.mestre) === '100,150' && valores(primeira.jogador) === '100,150'
+          && valores(segunda) === '100,150' && valores(desligou.mestre) === '2,150' && valores(desligou.jogador) === '2,150'
+          && flare.qtd === 0 && flare.ativo && flare.duracao === 3600 && valores(sinalizador) === '100,150'
+          && valores(expirou.mestre) === '2,150' && valores(expirou.jogador) === '2,150' && originais(expirou.mestre)
+          && reutilizar.qtd === 0 && !reutilizar.ativo && reutilizar.avisos.length === 1 && avisos.length === 0, JSON.stringify(info)];
+      } finally {
+        await cliente?.fechar();
+        await edge.evaluate(`(async () => { const e = window.__c16luz; if (!e) return; await game.scenes.get(e.cena)?.delete(); await game.actors.get(e.ator)?.delete(); await game.users.get(e.usuario)?.delete(); if (e.anterior.ativa) await game.scenes.get(e.anterior.ativa)?.activate(); if (e.anterior.vista) await game.scenes.get(e.anterior.vista)?.view(); await game.time.advance(e.tempo - game.time.worldTime); delete window.__c16luz; })()`);
+      }
     });
 
     await r.passo('fundação e opções do cyberware (wiki: "Um implante-base abre slots para opções compatíveis"): a opção entra na fundação instalada do mesmo tipo com slot livre; sem ela, entra "sem fundação", com o recado (a fashionware não pede); a aba Cyberware mostra a fundação com as opções logo abaixo e os slots; a fundação que sai deixa as opções sem fundação', async () => {

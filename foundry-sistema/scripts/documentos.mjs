@@ -13,6 +13,7 @@ import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
+import { efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -632,15 +633,24 @@ export class ItemCPR extends Item {
   // "Usar" o equipamento ligado à mão (as maquetes do usuário): liga os efeitos dele, ou desliga, se algum está ligado.
   // No equipamento de ativação à mão, o efeito vale pelo liga e desliga, e não pelo uso (dados.mjs). Os outros: null.
   get usavelAMao() {
-    return this.type === 'equipamento' && this.system.ativacao === 'manual' && this.effects.size > 0;
+    return this.type === 'equipamento' && this.system.ativacao === 'manual' && (this.effects.size > 0 || Boolean(this.luz));
   }
+  get luz() { return luzDoItem({ name: this.name, type: this.type, catalogo: this.getFlag(SISTEMA, 'catalogo') }); }
   get emUso() {
-    return this.usavelAMao && this.effects.some(efeito => !efeito.disabled);
+    return this.usavelAMao && this.effects.some(efeito => efeito.active);
   }
-  usar() {
+  async usar() {
     if (!this.usavelAMao || this.inoperante) return null;
     const desligar = this.emUso;
-    return this.updateEmbeddedDocuments('ActiveEffect', this.effects.map(efeito => ({ _id: efeito.id, disabled: desligar })));
+    const luz = this.luz;
+    if (!desligar && luz?.descartavel) {
+      if (this.system.quantidade < 1) { ui.notifications.warn(`${this.name}: sem unidades.`); return null; }
+      await this.update({ 'system.quantidade': this.system.quantidade - 1 });
+    }
+    // As lanternas anteriores ao C16 não tinham efeito: o build descartava a chave ATL do CORE.
+    if (luz && !this.effects.size) await this.createEmbeddedDocuments('ActiveEffect', [efeitoDaLuz(this.name, luz.alcance)]);
+    return this.updateEmbeddedDocuments('ActiveEffect', this.effects.map(efeito => ({ _id: efeito.id, disabled: desligar,
+      ...(!desligar && luz?.segundos ? { duration: { value: luz.segundos, units: 'seconds' }, start: { time: game.time.worldTime } } : {}) })));
   }
   // "Consertar" a armadura (as maquetes do usuário): o SP de cada local volta ao máximo, e o chat diz que o personagem a
   // consertou. A wiki só diz que a armadura perde o SP "até ser reparada" (p. 186), sem o teste, o custo ou o tempo: o

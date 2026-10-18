@@ -5,6 +5,7 @@ import * as agarrao from './agarrao.mjs';
 import * as neuroport from './neuroport.mjs';
 import * as combate from './combate.mjs';
 import { levarItem, pegarDoConteiner, registrarConteiner } from './conteiner.mjs';
+import * as drogas from './drogas.mjs';
 import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
@@ -59,6 +60,7 @@ Hooks.once('init', () => {
   registrarCritico();
   registrarConfiguracoes();
   municoes.registrarMunicoes();
+  drogas.registrarDrogas();
 
   const { DocumentSheetConfig } = foundry.applications.apps;
   DocumentSheetConfig.registerSheet(Actor, SISTEMA, FichaPersonagem, { types: ['personagem'], makeDefault: true, label: 'Ficha do RED' });
@@ -76,7 +78,7 @@ Hooks.once('init', () => {
   registrarIceRezzado();
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
   registrarConteiner();
-  game.system.api = { agarrao, neuroport, combate, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner } };
+  game.system.api = { agarrao, neuroport, combate, drogas, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });

@@ -46,6 +46,12 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Expiração nativa dos efeitos (C16):** `system.isSuppressed` devolve `true` quando suprime e `null` quando deixa o
+  Foundry decidir. Devolver `false` substitui `duration.expired` e conserva o efeito vencido. O sinalizador é conferido
+  nos dois clientes depois de avançar a hora, com a luz original do token preservada.
+- **O relógio precisa ser o gatilho (C16):** leia o resultado automático antes de chamar a API de expiração no teste.
+  Uma chamada manual logo depois de avançar o tempo esconderia a remoção do gancho `updateWorldTime` ou `ready`.
+
 - **Montagem na ida e volta da wiki (C15):** exporte o vínculo por ID e também o `instaladoEm` vazio das cópias soltas.
   O fallback legado por nome precisa respeitar esse vazio; caso contrário, um segundo vidro homônimo entra junto e
   altera a proteção. O Foundry 12 já exporta o ID do item, portanto sua presença sozinha não identifica o formato novo.
