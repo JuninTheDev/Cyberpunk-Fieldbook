@@ -530,6 +530,16 @@ export const semAcaoNet = (registro, agora, max) => Boolean(agora?.combate) && a
 // minutos"): o bloqueio daquele alvo, pelo tempo do mundo (em segundos). bloqueios: [{ alvo, ate }].
 export const JACK_OUT_INSEGURO = { segundos: 3600 };
 
+// O Neuroport como arquitetura NET (a wiki, Kit p. 26–27: "Sem Self-ICE nem Black ICE, tem um andar só: o nó de controle
+// do Holophone (DV10). Cada Passwall (Self-ICE) e cada Black ICE é um andar a mais"; o Black ICE é o do cyberdeck ligado
+// a ele). Os andares de cima para baixo, como nos exemplos da wiki: o Black ICE do deck, os Passwalls e o Holophone (o
+// dono pode trocar a ordem; o mestre narra). A decisão do usuário de 2026-10-17: sem descer os andares.
+export const HOLOPHONE = { dv: 10 };
+export function andaresDoNeuroport({ blackIce = [], selfIce = 0 } = {}) {
+  const { quantos, dv } = passwallsDoAlvo(selfIce);
+  return [...blackIce.map(nome => `Black ICE: ${nome} (do deck)`), ...Array.from({ length: quantos }, () => `Passwall (DV${dv})`), `Nó de controle: Holophone (DV${HOLOPHONE.dv})`];
+}
+
 // A conexão direta pelo Personal Link (a wiki, "Conexão direta", Kit p. 27): "Ligado direto, você ganha uma Ação NET a
 // mais por turno e passa direto por todos os Passwalls"; "Se você ou o alvo se afastar mais de 2 m (1 quadrado) [...] você
 // é desligado à força". Num alvo que não quer, "só se ele estiver inconsciente ou contido sem poder resistir"; a decisão do

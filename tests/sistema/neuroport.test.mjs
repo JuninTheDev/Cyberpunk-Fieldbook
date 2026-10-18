@@ -9,7 +9,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
-  acoesNetComDireta, acoesNetNaRodada, alcanceDaLigacao, alcanceDoJackIn, bloqueioDoAlvo, CONEXAO_DIRETA, DECK_NA_PORTA, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA, JACK_IN, JACK_OUT_INSEGURO,
+  acoesNetComDireta, acoesNetNaRodada, alcanceDaLigacao, alcanceDoJackIn, andaresDoNeuroport, bloqueioDoAlvo, HOLOPHONE, CONEXAO_DIRETA, DECK_NA_PORTA, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA, JACK_IN, JACK_OUT_INSEGURO,
   jaFezOQuickhack, passouOFirewall, passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from '../../foundry-sistema/scripts/regras.mjs';
 import { alcanceDo, barra, netrunnerDo, paredeNoMeio, PORTA_DO_DECK, RANGE_UPGRADE, temPortaDoDeck } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
@@ -79,6 +79,18 @@ test('a conexão direta pela wiki (Kit p. 27): uma Ação NET a mais por turno, 
   assert.equal(alcanceDaLigacao({ direta: false }, { rangeUpgrade: true }), 8);
   assert.equal(alcanceDaLigacao({}, { naPorta: true }), 50);
   assert.equal(alcanceDaLigacao(null), 6);
+});
+
+test('o Neuroport como arquitetura NET (Kit p. 26–27): os andares de cima para baixo, como na tabela de exemplos da wiki (o Black ICE do deck, os Passwalls e o Holophone)', () => {
+  assert.ok(wiki.includes('O Neuroport funciona como uma <b>arquitetura NET</b>. Sem Self-ICE nem Black ICE, tem um andar só: o <b>nó de controle do Holophone (DV10)</b>.'));
+  assert.ok(wiki.includes('O Neuroport não instala Black ICE: ele usa o Black ICE do cyberdeck ligado a ele, e a arquitetura cresce para caber.'));
+  // A tabela da wiki: [o Neuroport, os andares de cima para baixo], sem o cabeçalho.
+  const bloco = wiki.slice(wiki.indexOf("table(['Neuroport', 'Andares, de cima para baixo']"));
+  const linhas = [...bloco.slice(0, bloco.indexOf("'dense'")).matchAll(/\['([^']+)', '([^']+)'\]/g)].map(([, quem, andares]) => [quem, andares]).slice(1);
+  assert.deepEqual(linhas.map(([quem]) => quem), ['Sem Self-ICE', '1 Self-ICE', '2 Self-ICE', '1 Self-ICE e um deck com Hellhound']);
+  const nossos = [{}, { selfIce: 1 }, { selfIce: 2 }, { selfIce: 1, blackIce: ['Hellhound'] }].map(dados => andaresDoNeuroport(dados).join(' · '));
+  assert.deepEqual(nossos, linhas.map(([, andares]) => andares));
+  assert.deepEqual(HOLOPHONE, { dv: 10 });
 });
 
 test('o alcance do Jack In com o deck externo: 6 m, 8 m com o Range Upgrade', () => {

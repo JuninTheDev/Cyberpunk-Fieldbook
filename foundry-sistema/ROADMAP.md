@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 105). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 106). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -130,7 +130,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] o editor visual (no mapa da ficha da arquitetura: arrastar move ou troca o andar, o "+" cria um): ciclo 90;
   - [x] o Scanner (achar o ponto oculto, com o DV da configuração, pelo HUD do token) e a parede entre o token e o
     ponto (a wiki: "sem parede no meio"): ciclo 91.
-- [~] **C9. A NET de 2077 (Mission Kit):** em andamento (sessão KouArt, 2026-10-17). Decisão do usuário (2026-10-17):
+- [x] **C9. A NET de 2077 (Mission Kit):** feito (sessão KouArt, ciclos 95 a 105, 2026-10-17 e 18). Decisão do usuário (2026-10-17):
   "rolagens e efeitos simples". O Jack In, o Breach e o Quickhack rolam como o Agarrar (o alvo rola a defesa pela janela
   do dono), e a ligação aparece nas duas fichas. O sistema aplica o que é número: o dano direto do Synapse Burnout, o
   fogo do Overheat, o MOVE do Impair Movement e do Slow, o inconsciente e caído do System Reset. O resto (Puppet, Lure,
@@ -148,10 +148,10 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] o deck na Neuroport Cyberdeck Port (20 m contra arquiteturas, 50 m contra Neuroports): ciclo 101;
   - [x] o firewall de fábrica (a wiki: com Interface Rank 1 ou 2, o Jack In pede antes Interface contra DV6, e falhar
     não alerta; do Rank 3 em diante, passa direto): ciclo 102;
-  - [ ] o Neuroport como arquitetura NET (o nó de controle do Holophone, DV10; o Black ICE do deck ligado a ele, que
+  - [x] o Neuroport como arquitetura NET (o nó de controle do Holophone, DV10; o Black ICE do deck ligado a ele, que
     age no Jack Out inseguro; o vírus de quem chega ao fundo). Decisão do usuário (2026-10-17): simples, o painel com os
     andares e, no Jack Out inseguro, o cartão diz qual Black ICE do deck do alvo age; o mestre aplica, sem descer
-    andares;
+    andares: ciclo 105;
   - [x] a conexão direta pelo Personal Link (uma Ação NET a mais, passa direto pelos Passwalls; a mais de 2 m, desliga
     à força): ciclo 104. Decisão do usuário (2026-10-17): sem rolar, com o alvo inconsciente ou agarrado, ou quando o
     dono aceita (o mestre, pelo NPC); o firewall de fábrica vale (não é um Passwall);

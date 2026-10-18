@@ -211,6 +211,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .neuroports .jack-in { margin-top: 6px; }
 .cpr-fieldbook.ficha-personagem .neuroports .conexao-direta { margin-left: 6px; }
 .cpr-fieldbook.ficha-personagem .neuroports .direta { color: var(--cp-ciano); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
+.cpr-fieldbook.ficha-personagem .neuroports .andares-neuroport { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.04em; }
 .cpr-fieldbook.ficha-personagem .neuroports .passwalls { color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
 .cpr-fieldbook.ficha-personagem .neuroports .no-meu { margin: 6px 0 0; color: var(--cp-vermelho); font-family: var(--cp-dados); font-size: 12px; }
 .cpr-fieldbook.ficha-personagem .neuroports .no-meu small { color: var(--cp-fraco); }

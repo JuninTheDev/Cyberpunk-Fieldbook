@@ -21,8 +21,10 @@
 // - Expulsar: o alvo que percebeu, com uma Ação, WILL + Concentração + 1d10 contra a Interface + 1d10 do netrunner (o
 //   empate é do netrunner); expulso, a ligação some dos dois lados;
 // - Jack Out inseguro: expulso, fora do alcance (o netrunner ou o alvo andou) ou com o alvo morto, a ligação some, e o
-//   netrunner só entra de novo nesse alvo daqui a 60 minutos do tempo do mundo. O token que sai da cena leva junto as
-//   ligações dele (a varredura do deleteToken).
+//   netrunner só entra de novo nesse alvo daqui a 60 minutos do tempo do mundo; o cartão diz o Black ICE do deck do alvo
+//   que age (o mestre aplica). O token que sai da cena leva junto as ligações dele (a varredura do deleteToken);
+// - o Neuroport como arquitetura (a decisão do usuário de 2026-10-17: simples): a ficha mostra os andares de cada ligação
+//   (o Black ICE do deck do alvo, os Passwalls e o nó do Holophone), sem descer andares.
 // A ligação fica nas flags dos dois atores, que o mestre ativo grava: no netrunner, neuroport.ligacoes ([{ alvo: o uuid do
 // token, nome, percebido }]); no alvo, neuroport.invasores ([{ netrunner: o uuid do ator, nome, percebido }]). A ficha do
 // netrunner mostra as dele; a do alvo, as que ele percebeu (o mestre vê todas).
@@ -30,7 +32,7 @@ import { SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { centroDe, combateDe, defesaContra, distancia, jogadorDe, naFila, pedir as pedirAoDono, souOMestreAtivo, tokenNaCena } from './combate.mjs';
 import {
-  acoesNetComDireta, acoesNetNaRodada, alcanceDaLigacao, alcanceDoJackIn, bloqueioDoAlvo, CONEXAO_DIRETA, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA,
+  acoesNetComDireta, acoesNetNaRodada, alcanceDaLigacao, alcanceDoJackIn, andaresDoNeuroport, bloqueioDoAlvo, CONEXAO_DIRETA, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA,
   jaFezOQuickhack, JACK_OUT_INSEGURO, passouOFirewall, passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from './regras.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
@@ -49,6 +51,12 @@ export const temNeuroport = ator => Boolean(ator?.items.some(item => item.type =
 // Os Self-ICE instalados (cada um põe um Passwall no Neuroport).
 export const selfIcesDe = ator => (ator?.items ?? []).filter(item => item.type === 'cyberware' && item.system.instalado
   && (item.getFlag(SISTEMA, 'catalogo') === 'cyberware-2077:self-ice' || item.name === 'Self-ICE')).length;
+
+// O Black ICE do Neuroport: o do cyberdeck equipado do dono (a wiki: "O Neuroport não instala Black ICE: ele usa o Black
+// ICE do cyberdeck ligado a ele").
+export const blackIceDoNeuroport = ator => (ator ? netrunnerDo(ator).programas.filter(programa => programa.system.classe === 'blackice') : []);
+// Os andares do Neuroport, de cima para baixo (regras.andaresDoNeuroport): o Black ICE do deck, os Passwalls e o Holophone.
+export const andaresDe = ator => andaresDoNeuroport({ blackIce: blackIceDoNeuroport(ator).map(programa => programa.name), selfIce: selfIcesDe(ator) });
 
 // As ligações de um ator: as que ele fez (ligacoes) e as que fizeram nele (invasores); e, no netrunner, as Ações NET da
 // rodada (acoes: { combate, rodada, usadas }) e os alvos do Jack Out inseguro (bloqueios: [{ alvo, nome, ate }]).
@@ -275,12 +283,18 @@ async function gastarAcaoNet(ator, usuario) {
 // O Jack Out inseguro (expulso ou fora do alcance): a ligação some dos dois lados, e o netrunner só entra de novo nesse
 // alvo daqui a 60 minutos do tempo do mundo. O Black ICE do deck do alvo (o Neuroport como arquitetura) é outra parte.
 const NOTA_INSEGURO = 'Jack Out inseguro: só entra de novo nesse Neuroport daqui a 60 minutos.';
+// Devolve as notas do cartão: o Jack Out inseguro e o Black ICE do deck do alvo que age (o mestre aplica; a decisão do
+// usuário de 2026-10-17).
 async function desligarInseguro(netrunner, alvo) {
   await gravar(netrunner, alvo, {});
   const agora = game.time.worldTime;
   const dados = neuroportDe(netrunner);
   const bloqueios = [...dados.bloqueios.filter(item => Number(item.ate) > agora && item.alvo !== alvo.uuid), { alvo: alvo.uuid, nome: alvo.name, ate: agora + JACK_OUT_INSEGURO.segundos }];
   await netrunner.setFlag(SISTEMA, FLAG, { ...dados, bloqueios });
+  // "Sofre o efeito de todo Black ICE encontrado e ainda ativo" (a wiki): o do deck do alvo com REZ.
+  const ativos = blackIceDoNeuroport(alvo.actor).filter(programa => programa.rezAtual > 0);
+  const efeito = programa => String(programa.system.descricao ?? '').replace(/<[^>]+>/g, '').trim();
+  return [NOTA_INSEGURO, ...(ativos.length ? [`No Jack Out inseguro, age o Black ICE do deck de ${alvo.name} (o mestre aplica): ${ativos.map(programa => `${programa.name} (${efeito(programa)})`).join('; ')}`] : [])];
 }
 
 // A resistência do alvo (combate.defesaContra: a janela de reação do dono; pelo NPC, o mestre rola), a ligação e o
@@ -463,12 +477,12 @@ async function resolverExpulsar(ator, pedido) {
   const defesa = resposta?.defesa ?? null;
   const fora = defesa === null || expulsou(pedido.total, defesa);
   await mostrarTotal(pedido);
-  if (fora) await desligarInseguro(netrunner, alvo);
+  const quedas = fora ? await desligarInseguro(netrunner, alvo) : [];
   const [a, b] = [alvo.name, meu.name].map(texto => `<b>${esc(texto)}</b>`);
   const conta = `${pedido.total} contra ${defesa ?? '—'}`;
   const frase = fora ? `${a} expulsou ${b} do Neuroport dele (${conta}).` : `${a} não conseguiu expulsar ${b} do Neuroport dele (${conta}).`;
   return cartao({
-    ator: netrunner, alvo: ator, percebido: true, falante: alvo.name, frase, notas: [...notas, ...(fora ? [NOTA_INSEGURO] : [])],
+    ator: netrunner, alvo: ator, percebido: true, falante: alvo.name, frase, notas: [...notas, ...quedas],
     resumo: { resultado: fora ? 'expulso' : 'resistiu', ataque: pedido.total, defesa, netrunner: meu.name, alvo: alvo.name }
   });
 }
@@ -523,12 +537,12 @@ async function resolverCabo(ator, pedido) {
   const ligacao = neuroportDe(netrunner).ligacoes.find(item => item.direta && fromUuidSync(item.alvo)?.actor === ator);
   const alvo = ligacao ? await fromUuid(ligacao.alvo) : null;
   if (!alvo) return null;
-  await desligarInseguro(netrunner, alvo);
+  const quedas = await desligarInseguro(netrunner, alvo);
   const nome = tokenNaCena(netrunner, alvo.parent)?.name ?? netrunner.name;
   const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
   return cartao({
     ator: netrunner, alvo: ator, percebido: true, falante: alvo.name, frase: `${b} arrancou o cabo do Personal Link: ${a} caiu do Neuroport dele.`,
-    notas: [NOTA_INSEGURO], resumo: { resultado: 'inseguro', motivo: 'cabo', netrunner: nome, alvo: alvo.name }
+    notas: quedas, resumo: { resultado: 'inseguro', motivo: 'cabo', netrunner: nome, alvo: alvo.name }
   });
 }
 
@@ -559,11 +573,11 @@ async function conferirAlcance(token) {
     const alcance = alcanceDaLigacao(ligacao, netrunnerDo(netrunner));
     const longe = distancia(noDestino(meu), noDestino(alvo));
     if (longe === null || longe <= alcance + 0.01) continue;
-    await desligarInseguro(netrunner, alvo);
+    const quedas = await desligarInseguro(netrunner, alvo);
     const [a, b] = [meu.name, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
     await cartao({
       ator: netrunner, alvo: alvo.actor, percebido: ligacao.percebido, falante: meu.name, frase: `${a} saiu do alcance do Neuroport de ${b} (${longe} m; alcance ${alcance} m).`,
-      notas: [NOTA_INSEGURO], resumo: { resultado: 'inseguro', metros: longe, netrunner: meu.name, alvo: alvo.name }
+      notas: quedas, resumo: { resultado: 'inseguro', metros: longe, netrunner: meu.name, alvo: alvo.name }
     });
   }
 }
@@ -576,12 +590,12 @@ async function alvoMorreu(ator) {
     const ligacao = netrunner ? neuroportDe(netrunner).ligacoes.find(item => fromUuidSync(item.alvo)?.actor === ator) : null;
     const alvo = ligacao ? fromUuidSync(ligacao.alvo) : null;
     if (!alvo) continue;
-    await desligarInseguro(netrunner, alvo);
+    const quedas = await desligarInseguro(netrunner, alvo);
     const nome = tokenNaCena(netrunner, alvo.parent)?.name ?? netrunner.name;
     const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
     await cartao({
       ator: netrunner, alvo: ator, percebido: ligacao.percebido, falante: nome, frase: `${a} caiu do Neuroport de ${b}: ${b} morreu.`,
-      notas: [NOTA_INSEGURO], resumo: { resultado: 'inseguro', motivo: 'morreu', netrunner: nome, alvo: alvo.name }
+      notas: quedas, resumo: { resultado: 'inseguro', motivo: 'morreu', netrunner: nome, alvo: alvo.name }
     });
   }
 }

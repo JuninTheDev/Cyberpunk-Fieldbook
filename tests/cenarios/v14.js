@@ -4116,6 +4116,98 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('O Neuroport como arquitetura (wiki, Kit p. 26–27; a decisão do usuário: simples, sem descer andares): o Capanga com um Self-ICE e um deck com o Hellhound; a ficha do netrunner mostra os andares como no exemplo da wiki; no Jack Out inseguro, o cartão diz o Black ICE do deck que age; com o Hellhound sem REZ, não diz', async () => {
+      const NOME = 'Teste Netrunner Andares';
+      let montado = null;
+      try {
+        // O netrunner do jogador ao lado do Capanga; no Capanga, o Neuroport, o Self-ICE e o deck equipado com o Hellhound.
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const instalado = id => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), { 'system.instalado': true });
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await ator.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const capanga = __token('Capanga');
+          const ocupado = (x, y) => canvas.scene.tokens.some(t => t._source.x === x && t._source.y === y);
+          const c = capanga._source;
+          const lugar = [[c.x + 100, c.y], [c.x, c.y + 100], [c.x, c.y - 100], [c.x - 100, c.y]].find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y));
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
+          const [neuroport, selfIce, deck] = await capanga.actor.createEmbeddedDocuments('Item', [instalado('cyberware-2077:neuroport'), instalado('cyberware-2077:self-ice'),
+            foundry.utils.mergeObject(foundry.utils.deepClone(cat['core_gear:cyberdeck']), { 'system.uso': 'equipado' })]);
+          const [hellhound] = await capanga.actor.createEmbeddedDocuments('Item', [foundry.utils.mergeObject(foundry.utils.deepClone(cat['black-ice:hellhound']), { 'system.instaladoEm': deck.id })]);
+          await __esperar(() => canvas.tokens.get(token.id));
+          return { ator: ator.id, token: token.id, lugar, itens: [neuroport.id, selfIce.id, deck.id, hellhound.id], hellhound: hellhound.id };
+        })()`);
+        const nCartoes = `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).length`;
+        const ultimo = `(() => { const m = game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).at(-1); return m && { ...m.getFlag('${S}', 'neuroport'), notas: [...new DOMParser().parseFromString(m.content, 'text/html').querySelectorAll('p.nota')].map(p => p.textContent) }; })()`;
+        const n0 = await edge.evaluate(nCartoes);
+        // O Jack In do jogador (4 + 9 = 13 contra a WILL 5 + 2 do Capanga).
+        const jackIn = async n => {
+          await fixar(jogador, [[9, 10]]);
+          await fixar(edge, [[2, 10]]);
+          await jogador.evaluate(`game.system.api.neuroport.jackIn(game.actors.get('${montado.ator}'), { alvo: canvas.scene.tokens.find(t => t.name === 'Capanga') }).then(() => true)`);
+          return edge.evaluate(`(async () => { await __esperar(() => ${nCartoes} === ${n}); return ${ultimo}; })()`);
+        };
+        // Longe (o canto da cena): o Jack Out inseguro, e o cartão; depois, de volta, sem o bloqueio.
+        const longe = async n => {
+          const cartao = await edge.evaluate(`(async () => {
+            await canvas.scene.tokens.get('${montado.token}').update({ x: 100, y: 100 });
+            await __esperar(() => ${nCartoes} === ${n});
+            return ${ultimo};
+          })()`);
+          await edge.evaluate(`(async () => {
+            await canvas.scene.tokens.get('${montado.token}').update({ x: ${montado.lugar[0]}, y: ${montado.lugar[1]} });
+            const ator = game.actors.get('${montado.ator}');
+            await ator.setFlag('${S}', 'neuroport', { ...ator.getFlag('${S}', 'neuroport'), bloqueios: [] });
+            return true;
+          })()`);
+          await jogador.evaluate(`(async () => {
+            const t = canvas.scene.tokens.get('${montado.token}');
+            const ator = game.actors.get('${montado.ator}');
+            for (let i = 0; i < 50 && !(t.x === ${montado.lugar[0]} && t.y === ${montado.lugar[1]} && !(ator.getFlag('${S}', 'neuroport')?.bloqueios ?? []).length); i++) await new Promise(r => setTimeout(r, 100));
+            return true;
+          })()`);
+          return cartao;
+        };
+        const entrou = await jackIn(n0 + 1);
+        const andares = await jogador.evaluate(`(async () => {
+          const ficha = game.actors.get('${montado.ator}').sheet;
+          await ficha.render({ force: true });
+          ficha.changeTab('net', 'primary');
+          for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports .andares-neuroport'); i++) await new Promise(r => setTimeout(r, 100));
+          const texto = ficha.element?.querySelector('.neuroports .andares-neuroport')?.textContent.replace(/\\s+/g, ' ').trim() ?? null;
+          await ficha.close();
+          return texto;
+        })()`);
+        const comIce = await longe(n0 + 2);
+        // O Hellhound sem REZ (o mestre): o cartão do Jack Out inseguro não o menciona.
+        await edge.evaluate(`__token('Capanga').actor.items.get('${montado.hellhound}').update({ 'system.rezPerdida': 20 }).then(() => true)`);
+        const deNovo = await jackIn(n0 + 3);
+        const semIce = await longe(n0 + 4);
+        const info = { montado, entrou, andares, comIce, deNovo, semIce };
+        const inseguro = 'Jack Out inseguro: só entra de novo nesse Neuroport daqui a 60 minutos.';
+        const ok = entrou?.resultado === 'entrou' && andares === 'ANDARES: Black ICE: Hellhound (do deck) · Passwall (DV6) · Nó de controle: Holophone (DV10)'
+          && comIce?.resultado === 'inseguro' && JSON.stringify(comIce.notas) === JSON.stringify([inseguro, 'No Jack Out inseguro, age o Black ICE do deck de Capanga (o mestre aplica): Hellhound (2d6 no cérebro; deck e roupa pegam fogo (2 no HP por turno).)'])
+          && deNovo?.resultado === 'entrou' && semIce?.resultado === 'inseguro' && JSON.stringify(semIce.notas) === JSON.stringify([inseguro]);
+        return [ok, JSON.stringify(info)];
+      } finally {
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            const capanga = __token('Capanga').actor;
+            await capanga.deleteEmbeddedDocuments('Item', ${JSON.stringify(montado.itens)}.filter(id => capanga.items.get(id)));
+            await capanga.unsetFlag('${S}', 'neuroport');
+            const ator = game.actors.get('${montado.ator}');
+            await ator?.sheet?.close();
+            await ator?.unsetFlag('${S}', 'neuroport');
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {
       // Ataque: d10 8 → 8 + 4 + 8 = 20 contra DV 16. Dano 5d6: 2 × 5 = 10 contra o SP do Alvo.
       await fixar(edge, [[8, 10], [2, 6], [2, 6], [2, 6], [2, 6], [2, 6]]);

@@ -5168,6 +5168,53 @@ Commit anterior: `a770475c` (ciclo 103).
 - **Pendência do C9:** o Neuroport como arquitetura (a versão simples que o usuário escolheu).
 - **Próximo:** o C9, parte 10 (o Neuroport como arquitetura, a versão simples).
 
+### Ciclo 105 (2026-10-18): o C9, parte 10: o Neuroport como arquitetura; o C9 completo (sessão KouArt)
+
+Commit anterior: `3abe0c2e` (ciclo 104).
+
+- **A referência (a wiki, "O Neuroport como arquitetura NET", Kit p. 26–27):**
+  - "O Neuroport funciona como uma arquitetura NET. Sem Self-ICE nem Black ICE, tem um andar só: o nó de controle do
+    Holophone (DV10)"; "Cada Passwall (Self-ICE) e cada Black ICE é um andar a mais. O dono escolhe a ordem dos
+    andares"; "O Neuroport não instala Black ICE: ele usa o Black ICE do cyberdeck ligado a ele";
+  - **a tabela dos exemplos:** "1 Self-ICE e um deck com Hellhound: Black ICE: Hellhound (do deck) · Passwall (DV6) ·
+    Nó de controle: Holophone (DV10)";
+  - **o Jack Out inseguro:** "sofre o efeito de todo Black ICE encontrado e ainda ativo";
+  - **a decisão do usuário (2026-10-17):** simples. O painel com os andares e, no Jack Out inseguro, o cartão diz qual
+    Black ICE do deck do alvo age; o mestre aplica, sem descer andares.
+- **Implementado:**
+  - **`regras.mjs`:** `HOLOPHONE` (DV 10) e `andaresDoNeuroport`, os andares de cima para baixo, na ordem dos exemplos
+    da wiki (o Black ICE do deck, os Passwalls e o Holophone);
+  - **`neuroport.mjs`:**
+    - `blackIceDoNeuroport`: os programas de Black ICE instalados no cyberdeck equipado do alvo; `andaresDe`, os
+      andares dele;
+    - **o Jack Out inseguro:** devolve as notas do cartão, com o Black ICE do deck do alvo que ainda tem REZ (o nome e o
+      efeito, para o mestre aplicar); vale no alcance, na expulsão, no alvo que morre e no cabo arrancado;
+  - **a ficha:** abaixo de cada ligação, a linha "ANDARES: ..." do Neuroport do alvo.
+- **O C9 terminou** (ciclos 95 a 105): o Jack In e o Jack Out, o Breach, os quickhacks e os efeitos simples, a
+  expulsão, as Ações NET fora da arquitetura e o Jack Out inseguro, o deck na Neuroport Cyberdeck Port, o firewall de
+  fábrica, o alvo que morre e o token que sai, a conexão direta e o Neuroport como arquitetura.
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 124 de 136 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, 1 teste de referência novo: o texto da
+    wiki e os quatro exemplos da tabela, cada um igual ao que o sistema monta;
+  - G4: 119 de 128 (as 9 conhecidas da integração). O passo novo, "O Neuroport como arquitetura", passou na primeira
+    rodada:
+    - **o Capanga com um Self-ICE e um deck com o Hellhound:** depois do Jack In, a ficha do netrunner mostra "ANDARES:
+      Black ICE: Hellhound (do deck) · Passwall (DV6) · Nó de controle: Holophone (DV10)", como no exemplo da wiki;
+    - **o netrunner levado para longe:** o cartão do Jack Out inseguro traz a nota do Hellhound (o efeito, para o mestre
+      aplicar);
+    - **com o Hellhound sem REZ:** de novo no Neuroport e longe, o cartão traz só a nota do Jack Out inseguro;
+  - **mutações:** as 6 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - os Passwalls antes do Black ICE (N1);
+      - o Holophone com outra DV (N2).
+    - **No G4, todas no passo novo:**
+      - o Black ICE do deck por outra classe de programa (N3);
+      - o Black ICE sem REZ que age também (N4);
+      - o cartão do alcance sem as notas do Jack Out inseguro (N5);
+      - a ficha sem os andares (N6).
+- **Próximo:** o C29, parte 2: o catálogo de 2077 pela loja da wiki (a decisão do usuário de 2026-10-17).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

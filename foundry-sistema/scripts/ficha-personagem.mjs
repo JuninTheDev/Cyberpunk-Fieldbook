@@ -4,7 +4,7 @@
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
-import { acoesNetDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
+import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
@@ -259,10 +259,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     // ator (o jogador vê só quem ele percebeu; o mestre, todos).
     const { ligacoes, invasores } = neuroportDe(ator);
     // Os Passwalls de cada ligação: os do Self-ICE do alvo, os passados e a DV (o Breach passa um por vez).
+    // E os andares do Neuroport do alvo (o Black ICE do deck dele, os Passwalls e o Holophone).
     const comPasswalls = ligacoes.map(ligacao => {
-      const { quantos, dv } = passwallsDoAlvo(selfIcesDe(fromUuidSync(ligacao.alvo)?.actor));
+      const alvo = fromUuidSync(ligacao.alvo)?.actor;
+      const { quantos, dv } = passwallsDoAlvo(selfIcesDe(alvo));
       const passados = Math.min(ligacao.passados ?? 0, quantos);
-      return { ...ligacao, quantos, dv, passados, faltam: quantos - passados };
+      return { ...ligacao, quantos, dv, passados, faltam: quantos - passados, andares: alvo ? andaresDe(alvo).join(' · ') : '' };
     });
     // Em combate, as Ações NET da rodada fora da arquitetura (o Jack In, o Breach e o quickhack).
     const neuroport = {
