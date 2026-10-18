@@ -262,6 +262,15 @@ agentes de IA ficam no `AGENTS.md` da raiz):
       saíram a carga e a rajada do suplemento, a janela da cobertura e a configuração da arma que esfria);
     - [x] o resto das regras de cada modelo (o tiro mirado da Unity, o BODY e a lesão da Carnage, a Burya, o ferrolho da
       Grad, a Nekomata, a Omaha): ciclo 116 (a Lexington do Kit não tem regra própria nem autofogo).
+- [~] **C30. Os lados do cyberware e o membro natural (a wiki do master de 2026-10-17 e 18):** em andamento (sessão
+  Junin, 2026-10-18). A wiki recusa (409) importar no Foundry 14 o personagem com lado no cyberware até o importador
+  declarar o suporte (`?locais=1`); hoje são quatro personagens da campanha. Por partes, um ciclo cada:
+  - [ ] o lado de cyberbraço, cyberperna e cyberolho (esquerdo ou direito; `personagem-cyberware.js` da wiki) no
+    modelo, na ficha do item, no import da wiki (o `?locais=1`) e no envio da ficha (o `local`, e o `cyber` com o tipo,
+    o tamanho e os slots, como o cpr-2077);
+  - [ ] o membro natural: a peça única (Wolvers, Talon Foot e as outras da lista da wiki) num braço ou numa perna sem
+    cyberbraço ou cyberperna daquele lado, uma por membro, sem fundação (a wiki manda `natural: true`; o CORE usa a
+    base Meat Arm ou Meat Leg).
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
