@@ -25,12 +25,11 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 A wiki do master trocou as regras das armas de 2077 pelas do Mission Kit, e os modos dos ciclos 17 e 18 ainda seguem o
 suplemento de fã (o usuário adiou o Kit em 2026-10-12). Os testes de referência que conferem o sistema contra a wiki
 pegaram isso. Eles ficam falhando até o Kit, e não se tiram nem se mudam para passar:
-- **G3 (3):** contra o texto da wiki, o perfil de 2077 pela flag (a rajada e as balas das Tech), a Carga Tech e as
-  regras de cada modelo (o Ricochete saiu no ciclo 114, com o Power do Kit);
-- **G4 (3):** os passos da carga Tech (sem flechettes nem rajada) e da Dian e Lexington (a Lexington sem autofogo), e
-  a checagem de avisos (os avisos da Lexington, do passo dela: desde o ciclo 82, só o "sem munição compatível" chega ao
+- **G3 (1):** contra o texto da wiki, as regras de cada modelo (o Ricochete saiu no ciclo 114, com o Power do Kit; o
+  perfil das Tech e a Carga Tech, no 115, com o Tech do Kit);
+- **G4 (2):** o passo da Dian e Lexington (a Lexington sem autofogo) e a checagem de avisos (os avisos da Lexington, do passo dela: desde o ciclo 82, só o "sem munição compatível" chega ao
   console; o "não tem autofogo" sai do mesmo jeito, mas fica na fila das notificações, ver "A fila das notificações"
-  abaixo). Os da arma Smart e da Kappa saíram no ciclo 110.
+  abaixo). Os da arma Smart e da Kappa saíram no ciclo 110; o da carga Tech, no 115.
 
 As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED.
 

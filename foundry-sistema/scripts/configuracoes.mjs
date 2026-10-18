@@ -38,9 +38,8 @@ export function registrarConfiguracoes() {
     name: 'Efeitos na mesa', hint: 'Texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro.',
     type: String, default: 'auto', choices: { auto: 'Texto e animação', texto: 'Só o texto', nao: 'Nenhum' }
   });
-  // Armas de 2077 (as do cpr-2077 do Foundry 12, com os mesmos padrões). As do ataque Smart do suplemento (o teste Smart
-  // e a arma sem o Smart Link) saíram no ciclo 110: o Mission Kit diz "+1" e "sem conexão, não dispara".
-  registrar('cargaEsfria', { name: 'A carga Tech esfria uma rodada (2077)', hint: 'No combate, depois de uma carga (tiro ou rajada), a arma Tech só carrega de novo duas rodadas depois. Fora do combate, não conta.', type: Boolean, default: true });
+  // As das armas de 2077 do cpr-2077 do Foundry 12 saíram com o Mission Kit: as do ataque Smart (o teste Smart e a arma
+  // sem o Smart Link) no ciclo 110, e a da carga Tech que esfria uma rodada no ciclo 115.
   registrar('netJogadorRola', {
     name: 'O jogador rola as rolagens da NET', hint: 'As rolagens do netrunner na NET (as habilidades de Interface, o ataque dos programas, a velocidade contra o Black ICE e a defesa) abrem a janela de rolagem no computador do dono dele, com os modificadores e a Sorte. Sem resposta no tempo para o jogador responder, o mestre rola. Desligado, o mestre rola sempre, com a Sorte preparada na ficha.',
     type: Boolean, default: true

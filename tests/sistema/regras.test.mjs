@@ -437,15 +437,9 @@ const perfilDe = id => {
 };
 const linhaDaWiki = id => wiki.rangeDV.find(linha => linha.id === id);
 
-test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que cada Tech diz no texto; a classe Smart, no teste do Smart)', () => {
-  // "Na carga Tech (rajada), dispara 2 balas" (Kenshin), "3 balas" (Omaha), "exige 10 balas no pente e gasta essas 10"
-  // (Quasar), "dispara as 30 balas do pente" (Senkoh). Sem rajada: a Achilles, a Nekomata, a Burya e a Satara.
-  const tech = id => { const p = perfilDe(`armas-2077:${id}`); return [p.classe, p.rajadaTech, p.rajadaTech ? p.balasDaRajadaTech : 0]; };
-  assert.deepEqual(tech('arasaka-jke-x2-kenshin'), ['tech', 2, 2]);
-  assert.deepEqual(tech('militech-m-76e-omaha'), ['tech', 3, 3]);
-  assert.deepEqual(tech('darra-polytechnic-dr-12-quasar'), ['tech', 3, 10]);
-  assert.deepEqual(tech('arasaka-senkoh-lx'), ['tech', 3, 30]);
-  for (const id of ['militech-m-179-achilles', 'tsunami-nekomata', 'techtronika-rt-46-burya', 'rostovic-db-2-satara']) assert.deepEqual(tech(id), ['tech', 0, 0], id);
+test('Armas de 2077: o perfil pela flag do catálogo (a classe de cada uma; a Smart, a Power e a Tech nos testes delas)', () => {
+  // A classe das Tech (a rajada carregada do suplemento saiu com o Kit: o teste do Tech).
+  for (const id of ['arasaka-jke-x2-kenshin', 'militech-m-76e-omaha', 'arasaka-senkoh-lx', 'militech-m-179-achilles', 'tsunami-nekomata', 'techtronika-rt-46-burya', 'rostovic-db-2-satara']) assert.equal(perfilDe(`armas-2077:${id}`).classe, 'tech', id);
   // Power: ricocheteia (o Kit, ciclo 114: as de três balas também; a Mk.31 HMG saiu da wiki); a de Disparo Automático,
   // não (o teste do Power).
   assert.equal(perfilDe('armas-2077:constitutional-arms-liberty').ricocheteia, true);
@@ -454,11 +448,10 @@ test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que ca
   assert.equal(perfilDe('armas-2077:arasaka-hjsh-18-masamune').ricocheteia, true);
   // As armas do livro-base não são de 2077.
   assert.equal(perfilDe('core_weapons:heavy-pistol'), null);
-  // Toda arma do catálogo de 2077 tem classe; nenhuma Power ou Smart tem rajada Tech.
+  // Toda arma do catálogo de 2077 tem classe.
   for (const [id, item] of Object.entries(catalogo).filter(([id, item]) => id.startsWith('armas-2077:') && item.type === 'arma')) {
     const p = perfilDe(id);
     assert.ok(p, `${id}: sem perfil de 2077`);
-    if (p.classe !== 'tech') assert.equal(p.rajadaTech, 0, id);
     assert.equal(p.smart, p.classe === 'smart', id);
     assert.ok(item.system.descricao.includes('Neste sistema:'), `${id}: a descrição não diz o que o sistema faz`);
   }
@@ -512,46 +505,39 @@ test('Power (Mission Kit, p. 31–32, a wiki de 2026-10-17, como o foundry-2077)
   for (const [id, item] of armas) assert.equal('semRicochete' in item.flags['cpr-fieldbook'].arma2077, false, id);
 });
 
-test('Carga Tech (wiki): metade passa da cobertura fina e um quarto da grossa; a armadura perde 4 de SP (2 através de cobertura); a rajada usa a tabela de autofogo da SMG e passa só 25% da fina', () => {
-  const { nenhuma, fina, grossa } = regras.COBERTURAS;
-  assert.deepEqual([nenhuma.carga, fina.carga, grossa.carga], [1, 0.5, 0.25]);
-  assert.deepEqual([nenhuma.rajadaTech, fina.rajadaTech, grossa.rajadaTech], [1, 0.25, 0]);
-  assert.deepEqual([nenhuma.ablacao, fina.ablacao, grossa.ablacao], [4, 2, 2]);
-  // O que atravessa: a fração do rolado, para baixo.
-  assert.equal(regras.atravessarCobertura(13, 1), 13);
-  assert.equal(regras.atravessarCobertura(13, 0.5), 6);
-  assert.equal(regras.atravessarCobertura(13, 0.25), 3);
-  assert.equal(regras.atravessarCobertura(3, 0.25), 0);
-  // A carga é tiro único; a rajada, autofogo carregado (tabela da SMG, perícia Disparo Automático, até o ×N da arma).
-  assert.equal(regras.classificar({ pedido: 'carga' }), 'carga');
-  assert.equal(regras.balasDoModo('carga'), 1);
-  assert.equal(regras.balasDoModo('rajadaTech', { rajadaTech: 2 }), 2);
-  assert.equal(regras.balasDoModo('rajadaTech'), regras.BALAS_RAJADA);
-  assert.deepEqual(regras.tabelasCandidatas('DV Pistol', 'rajadaTech', 'medPistol'), ['DV SMG (Autofire)']);
-  assert.deepEqual(regras.tabelasCandidatas('DV Sniper Rifle', 'carga', 'sniperRifle'), ['DV Sniper Rifle']);
-  assert.equal(regras.multiplicadorDeAutofogo(25, 17, perfilDe('armas-2077:arasaka-jke-x2-kenshin').rajadaTech), 2);
-  assert.equal(regras.descreverAtaque({ modo: 'carga', cobertura: 'fina' }), 'Carga Tech através de cobertura fina');
-  assert.equal(regras.descreverAtaque({ modo: 'rajadaTech', cobertura: 'nenhuma' }), 'Rajada Tech');
-  // O que impede: arma que não é Tech, rajada numa arma de tiro único, rajada contra cobertura grossa, a carga com
-  // cartucho (a Satara, que ainda não está no sistema).
-  const kenshin = perfilDe('armas-2077:arasaka-jke-x2-kenshin');
-  const achilles = perfilDe('armas-2077:militech-m-179-achilles');
-  assert.equal(regras.impedimento2077({ modo: 'carga', perfil: kenshin, cobertura: 'grossa' }), null);
-  assert.equal(regras.impedimento2077({ modo: 'rajadaTech', perfil: kenshin, cobertura: 'fina' }), null);
-  assert.match(regras.impedimento2077({ modo: 'rajadaTech', perfil: kenshin, cobertura: 'grossa' }), /não atravessa cobertura grossa/);
-  assert.match(regras.impedimento2077({ modo: 'rajadaTech', perfil: achilles }), /só faz a carga em tiro único/);
-  assert.match(regras.impedimento2077({ modo: 'carga', perfil: perfilDe('armas-2077:constitutional-arms-liberty') }), /não é uma arma Tech/);
-  assert.match(regras.impedimento2077({ modo: 'carga', perfil: perfilDe('armas-2077:rostovic-db-2-satara'), pelaMunicao: 'cartucho' }), /Satara/);
-});
-
-test('Carga Tech: depois de uma carga a arma esfria uma rodada (carrega de novo na rodada R + 2), só no mesmo combate', () => {
-  const marca = { combate: 'c1', rodada: 3 };
-  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c1', rodada: 3 }), 5);
-  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c1', rodada: 4 }), 5);
-  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c1', rodada: 5 }), null);
-  assert.equal(regras.rodadaDaProximaCarga(marca, { id: 'c2', rodada: 3 }), null);
-  assert.equal(regras.rodadaDaProximaCarga(null, { id: 'c1', rodada: 3 }), null);
-  assert.equal(regras.rodadaDaProximaCarga(marca, null), null);
+test('Tech (Mission Kit, p. 32, a wiki de 2026-10-17, como o foundry-2077): carregar gasta a Ação de Movimento e dura até disparar ou 20 rodadas; carregada, o próximo ataque que não seja explosivo é de CDT 1, atravessa cobertura fina e ignora metade do SP (arredondada para cima); saíram a carga e a rajada do suplemento', () => {
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.ok(de2077.includes("section('Tech', 'Kit p. 32', list(['A mira vê o <b>contorno dos alvos</b> através de cobertura fina.', '<b>Carregar:</b> você gasta a <b>Ação de Movimento</b>, e a arma fica carregada até disparar ou por 60 segundos (20 rodadas).', 'Carregada, o <b>próximo ataque</b> que não seja explosivo é de <b>CDT 1</b>, atravessa <b>cobertura fina</b> e <b>ignora metade do SP</b> do alvo (arredondado para cima). A cobertura atravessada não perde HP"));
+  assert.deepEqual(regras.CARGA_TECH, { rodadas: 20, ignorarPct: 50 });
+  // A metade do SP, arredondada para cima (a conta do aplicarDano): SP 11 conta 6; 10, 5; 7, 4; 1, 1.
+  for (const [sp, conta] of [[11, 6], [10, 5], [7, 4], [1, 1]]) assert.equal(regras.aplicarDano({ dano: 20, sp, ignorarPct: regras.CARGA_TECH.ignorarPct }).spEfetivo, conta, String(sp));
+  // A carga vale no mesmo combate até 20 rodadas depois; fora dele, até disparar.
+  assert.equal(regras.cargaValida(null, null), false);
+  assert.equal(regras.cargaValida({ combate: null, rodada: null }, null), true);
+  assert.equal(regras.cargaValida({ combate: null, rodada: null }, { id: 'c1', rodada: 5 }), true);
+  assert.equal(regras.cargaValida({ combate: 'c1', rodada: 1 }, { id: 'c1', rodada: 20 }), true);
+  assert.equal(regras.cargaValida({ combate: 'c1', rodada: 1 }, { id: 'c1', rodada: 21 }), false);
+  assert.equal(regras.cargaValida({ combate: 'c1', rodada: 1 }, { id: 'c2', rodada: 30 }), true);
+  assert.equal(regras.cargaValida({ combate: 'c1', rodada: 1 }, null), true);
+  // O ataque que gasta a carga: o tiro (e o mirado), o autofogo, o cartucho; o explosivo e o fogo supressivo, não.
+  for (const modo of ['tiro', 'autofogo', 'cartucho']) assert.equal(regras.gastaACarga(modo), true, modo);
+  for (const modo of ['explosivo', 'supressivo']) assert.equal(regras.gastaACarga(modo), false, modo);
+  assert.equal(regras.descreverAtaque({ modo: 'tiro', carga: { combate: null, rodada: null } }), 'Tiro, carregado');
+  assert.equal(regras.descreverAtaque({ modo: 'tiro', local: 'cabeca', carga: { combate: null, rodada: null } }), 'Tiro mirado na cabeça, carregado');
+  // Saíram a carga e a rajada do suplemento: a cobertura que segurava parte do dano, a ablação de 4 e 2, o esfriar e a
+  // tabela da rajada; os modos "carga" e "rajadaTech" e as flags da rajada no catálogo.
+  for (const nome of ['COBERTURAS', 'atravessarCobertura', 'rodadaDaProximaCarga', 'TABELA_DA_RAJADA_TECH']) assert.equal(regras[nome], undefined, nome);
+  assert.equal(regras.MODOS.carga, undefined);
+  assert.equal(regras.MODOS.rajadaTech, undefined);
+  assert.equal(regras.classificar({ pedido: 'carga' }), 'tiro');
+  const armas = Object.entries(catalogo).filter(([id, item]) => id.startsWith('armas-2077:') && item.type === 'arma');
+  const tech = armas.filter(([id]) => perfilDe(id).classe === 'tech').map(([id]) => id.replace('armas-2077:', ''));
+  assert.deepEqual(tech.sort(), ['arasaka-jke-x2-kenshin', 'arasaka-senkoh-lx', 'militech-m-179-achilles', 'militech-m-76e-omaha', 'rostovic-db-2-satara', 'techtronika-rt-46-burya', 'tsunami-nekomata']);
+  for (const [id, item] of armas) {
+    assert.deepEqual(['techRajada', 'techBalas'].filter(chave => chave in item.flags['cpr-fieldbook'].arma2077), [], id);
+    assert.equal('rajadaTech' in perfilDe(id), false, id);
+  }
+  assert.match(catalogo['armas-2077:arasaka-jke-x2-kenshin'].system.descricao, /o botão Carregar \(a Ação de Movimento; a carga fica até disparar ou por 20 rodadas\)/);
 });
 
 test('Smart (Mission Kit, a wiki de 2026-10-17): só dispara ligada pelo Personal Link (o do Neuroport) ou pelo Subdermal Grip; +1 nos ataques à distância; sem o teste Smart do suplemento; o Smart Link antigo vale o Subdermal Grip', () => {

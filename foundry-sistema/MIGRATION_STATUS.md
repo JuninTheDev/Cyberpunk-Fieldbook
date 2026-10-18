@@ -47,7 +47,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | Reflex Tuner | portado no ciclo 30, pela wiki (ver as dúvidas) |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077), menos o Black Chrome, e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; no ciclo 31, com o Mission Kit (Neuroport, Rebuilds, munição Smart melhorada, Immunoblockers, quickhacks do Kit) |
-| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram; o Power, desde o 114 (o Ricochete do Kit e o crítico de 10) |
+| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram; o Power, desde o 114 (o Ricochete do Kit e o crítico de 10); a Tech, desde o 115 (a carga do Kit), e saiu a última configuração |
 | cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, pelo suplemento de fã (com os dois cartuchos da Testera, que o Kit manteve). Com o Kit, a wiki mudou várias (a Lexington, a Yukimura, a Burya, a Omaha): ROADMAP, P0 |
 | wiki | o Black Chrome (176 itens da loja) | falta |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
@@ -576,6 +576,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   trás da superfície)". O sistema não sabe da superfície: no cartucho que ricocheteia, ele não confere os 6 m de quem
   atira e pega os alvos marcados; o mestre confere quem está no leque e o caminho livre. A penalidade é a do ricochete
   (−4, −2 com o Ballistic Coprocessor), contra a DV 13 do cartucho.
+
+- **A carga Tech e a cobertura** (ciclo 115). A wiki: "atravessa cobertura fina [...] A cobertura atravessada não perde
+  HP". O sistema não sabe de que é a cobertura: o cartão do ataque carregado diz a regra, e o "Em cobertura" do alvo diz
+  que a carga atravessa a fina e que a grossa para o tiro; o mestre decide. Também ficam com ele o CDT 1 (o sistema não
+  conta os ataques da ação) e o contorno dos alvos que a mira vê através da cobertura fina.
 
 ## Registro dos ciclos
 
@@ -5640,6 +5645,52 @@ Commit anterior: `ed5aacc1` (o ciclo 113).
     - no G4, no passo do Power: o ataque sem a penalidade (P6), o crítico de 5 (P7), o cartucho com a conta dos 6 m
       (P8), o ricochete do cartucho como tiro (P9), a ficha sem o coprocessador (P10) e sem a dica do crítico (P11).
 - **Próximo:** a parte 5 do C29, Tech (carregar na Ação de Movimento, CDT 1, a cobertura fina e a metade do SP).
+
+### Ciclo 115 (2026-10-18): o C29, as armas de 2077 pelo Kit, parte 5: Tech (sessão KouArt)
+
+Commit anterior: `4b8b7080` (o ciclo 114).
+
+- **A referência:**
+  - **a wiki de 2026-10-17 (`system-2077.js`, "Tech", Kit p. 32):** "A mira vê o contorno dos alvos através de cobertura
+    fina."; "Carregar: você gasta a Ação de Movimento, e a arma fica carregada até disparar ou por 60 segundos (20
+    rodadas)."; "Carregada, o próximo ataque que não seja explosivo é de CDT 1, atravessa cobertura fina e ignora metade
+    do SP do alvo (arredondado para cima). A cobertura atravessada não perde HP". Nenhuma arma de 2077 faz mais a
+    rajada carregada (a Quasar saiu da wiki);
+  - **o `foundry-2077` do master:** a carga é um estado da arma (o botão Carregar/Carregada), que fica até disparar ou
+    20 rodadas no mesmo combate (fora dele, até disparar); o ataque carregado (menos o supressivo) ignora 50% do SP.
+- **O que muda:**
+  - **`regras.mjs`:** `CARGA_TECH` (20 rodadas, 50% do SP; o `aplicarDano` arredonda a metade para cima: SP 11 conta 6),
+    `cargaValida` e `gastaACarga` (todos os ataques menos o explosivo e o fogo supressivo); a descrição "…, carregado";
+    saíram os modos "carga" e "rajadaTech", as `COBERTURAS` (o que a cobertura segurava e a ablação de 4 e 2),
+    `atravessarCobertura`, `rodadaDaProximaCarga`, a tabela da rajada e a rajada do perfil;
+  - **`combate.mjs`:** `cargaDa` (a flag `cargaTech` da arma, se ainda vale) e `alternarCarga` (o botão da ficha: carrega,
+    com o aviso no chat de que gasta a Ação de Movimento, ou descarrega); o ataque carregado gasta a carga, ignora
+    metade do SP, e o cartão diz a regra (CDT 1, a cobertura fina); o "Em cobertura" do alvo diz que a carga atravessa a
+    fina; o "Desfazer" devolve a carga (a lista `devolver` do cartão). Saíram a janela da cobertura, a arma que esfria e
+    o dano que ficava na cobertura;
+  - **`configuracoes.mjs`:** saiu "A carga Tech esfria uma rodada";
+  - **`ficha-personagem.mjs`:** a ação `alternarCarga`;
+  - **o build:** o texto "Neste sistema" das Tech; saíram as flags `techRajada` e `techBalas`.
+- **Testes:**
+  - **G3:** os testes da carga e do esfriar do suplemento viraram o do Tech do Kit (o texto da wiki, a metade do SP, a
+    validade da carga, os ataques que a gastam, a descrição, o que saiu, as 7 Tech do catálogo, o texto do build); o do
+    perfil perdeu a rajada;
+  - **G4:** o passo da carga reescrito (a Kenshin: o botão Carregar e o aviso no chat; o tiro carregado no Alvo em
+    cobertura, 5 dos 11 passam pela metade do SP; a carga gasta; o Desfazer a devolve; aos 19 rodadas vale, aos 20 não, e
+    o tiro é o de sempre; fora do combate fica; o botão descarrega; o fuzil do CORE não carrega).
+- **Resultados:**
+  - G1: 70 arquivos, 0 erros; G2: 0 erros;
+  - G3: 148 de 149 (saíram as falhas conhecidas do perfil e da Carga Tech; fica a das regras de cada modelo, a última
+    parte);
+  - G4: 139 de 140 (saiu a da carga Tech; fica a da Dian e Lexington; a checagem de avisos passou nesta rodada);
+  - **mutações:** as 12 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (147 de 149 cada): a carga com 40% (T1), com 10 rodadas (T2), valendo na rodada 20 (T3), gasta no fogo
+      supressivo (T4) e sem valer fora do combate (T5);
+    - no G4, no passo do Tech: o ataque que não gasta a carga (T6), o dano sem a metade do SP (T7), o Desfazer que não a
+      devolve (T8), o "Em cobertura" sem a nota da carga (T9), o botão que não carrega (T10), a ficha sempre com o
+      "Carregar" (T11) e o cartão sem a regra (T12).
+- **Próximo:** a parte 6 do C29, o resto das regras de cada modelo (a Unity, a Carnage, a Burya, a Grad, a Nekomata, a
+  Omaha e a Lexington).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

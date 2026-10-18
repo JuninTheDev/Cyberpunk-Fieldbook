@@ -255,9 +255,9 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   Quebra, Quebra sem conserto ou Cara ou coroa. O resultado do ataque mostra a consequência numa falha crítica efetiva,
   mesmo quando acerta. A Recuperação de Falhas do Solo a suprime. O padrão é Emperra, inclusive nas armas antigas.
   O aviso informa a mesa; a moeda e o estado da arma são resolvidos à mão.
-- **Armas de 2077** (a página de 2077 da wiki: as armas Smart e Power pelo Mission Kit, desde os ciclos 110 e 114; a Carga ainda pelo suplemento de fã). A classe aparece ao lado do nome da arma, e os modos são botões na linha dela:
+- **Armas de 2077** (a página de 2077 da wiki: as três classes pelo Mission Kit, a Smart desde o ciclo 110, a Power desde o 114 e a Tech desde o 115). A classe aparece ao lado do nome da arma, e os modos são botões na linha dela:
   - **Power** (o Mission Kit, ciclo 114): a lesão crítica causa 10 de dano bônus (no lugar de 5). O botão **Ricochete** acerta um alvo atrás de cobertura ou fora da linha de visão: −4 no ataque (−2 com o Ballistic Coprocessor instalado); num tiro mirado, só a penalidade dele. O alcance, a DV e o dano são os da arma. Com cartucho, o leque de 6 m sai da superfície do ricochete: o sistema não confere os 6 m de quem atira, e o mestre confere quem está no leque e o caminho livre.
-  - **Tech, Carga e Rajada:** a janela pergunta a cobertura do alvo. A carga deixa passar tudo, metade da fina ou um quarto da grossa; a rajada (o autofogo carregado, com a tabela da SMG e o multiplicador até o da arma), tudo ou um quarto da fina. Se o dano passar da armadura, ela perde 4 de SP (2 através de cobertura). A rajada gasta as balas que a arma diz (a Kenshin 2, a Senkoh o pente todo). Depois de uma carga, a arma esfria uma rodada: a ficha mostra até quando.
+  - **Tech** (o Mission Kit, ciclo 115): o botão **Carregar** (gasta a Ação de Movimento) deixa a arma carregada até disparar ou por 20 rodadas (fora do combate, até disparar); o chat avisa, e o botão vira "Carregada" (clicado, descarrega). Carregada, o próximo ataque que não seja explosivo nem fogo supressivo é de CDT 1, ignora metade do SP do alvo (arredondada para cima) e atravessa cobertura fina, que não perde HP (a grossa, o mestre decide). O "Desfazer" do mestre devolve a carga.
   - **Smart** (o Mission Kit, ciclo 110): só dispara ligada pelo Personal Link (os Interface Plugs; o Neuroport já os traz) ou pelo Subdermal Grip instalados. Sem a ligação, a ficha avisa e o ataque não gasta bala. Com ela, +1 em todo ataque à distância da arma (o tiro, o mirado, o autofogo), somado a REF + perícia. O Smart Link de 2077 de um personagem antigo vale o Subdermal Grip.
   - **Munição Smart melhorada** (o Kit, ciclo 112): só na arma Smart ligada. As penalidades de visão da janela de rolagem (a pouca luz e a tarefa encoberta por fumaça, escuridão etc.) não contam, e o cartão diz quais saíram. O ataque à distância que erra a DV (ou a esquiva) por 5 ou menos tem a segunda chance na hora: 14 + 1d10 no lugar de REF + perícia + os bônus, com as penalidades do primeiro tiro. Quem atacou rola, no computador dele, pela janela de rolagem (com a Sorte); sem resposta, o mestre rola. No cartucho e no explosivo, a segunda chance é contra a DV da área.
   - **Balas por tiro** (a wiki, ciclo 113): o tiro único (o tiro, o mirado, o ricochete e o cartucho) gasta as balas do modelo: 3 na Yukimura, na Shingen, na Chao, na Kappa, na Masamune e na Nowaki. Com menos no pente, dispara o que tem e causa o dano menor (2d6; 4d6 na Masamune e na Nowaki). A Zhuo gasta 8 cartuchos Smart melhorados e causa 4d6; com menos de 8 não dispara, e só carrega a munição Smart melhorada. A dica do "Atacar" diz quantas balas, e o cartão, quantas saíram.
@@ -333,8 +333,7 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
 - **Quem vê o cartão do resultado:** todos, os envolvidos (o mestre, quem atacou e os donos dos alvos) ou só o mestre (padrão: todos). O texto em cima do token segue o cartão.
 - **Efeitos na mesa:** o texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro; só o texto; ou nada (padrão: texto e animação).
 
-A do módulo cpr-2077, para as armas de 2077, com o mesmo padrão (as duas do ataque Smart saíram no ciclo 110, com o Mission Kit):
-- **A carga Tech esfria uma rodada** (padrão: sim).
+As três do módulo cpr-2077 para as armas de 2077 saíram com o Mission Kit: as duas do ataque Smart no ciclo 110 e a da carga Tech que esfria uma rodada no 115.
 
 A do NET Architect:
 - **O jogador rola as rolagens da NET** (padrão: sim): as rolagens do netrunner abrem a janela de rolagem no computador do jogador; sem resposta no tempo para o jogador responder, o mestre rola. Desligado, o mestre rola sempre, com a Sorte preparada na ficha.
@@ -351,9 +350,10 @@ E a do navegador de cada um:
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
-- **As regras de 2077 do Mission Kit:** o botão Carga das armas Tech ainda segue o suplemento de fã (a arma Smart
-  segue o Kit desde o ciclo 110; a munição Smart melhorada, desde o 112; as balas por tiro, desde o 113; o Power,
-  desde o 114); o Rebuild ainda não tem regra. Os itens já existem, com a classe e as regras guardadas na
+- **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart
+  melhorada desde o 112, as balas por tiro desde o 113, a Power desde o 114 e a Tech desde o 115). Faltam as regras
+  próprias de alguns modelos (a Unity, a Carnage, a Burya, a Grad, a Nekomata, a Omaha e a Lexington), e o Rebuild
+  ainda não tem regra. Os itens já existem, com a classe e as regras guardadas na
   flag `arma2077`.
 - **O cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm).
 - **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.
@@ -386,7 +386,7 @@ E a do navegador de cada um:
   - São os 112 itens de 2077 da loja da wiki de 2026-10-17 (o Mission Kit e o que a revisão do suplemento de fã deixou;
     eram 157), e mais os quickhacks (ciclo 106).
 
-  A classe de cada arma (Power, Tech ou Smart), a origem (Kit ou fã) e as regras próprias dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`). A Carga ainda segue o suplemento de fã; o Power e a arma Smart, o Kit (ROADMAP).
+  A classe de cada arma (Power, Tech ou Smart), a origem (Kit ou fã) e as regras próprias dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`). As três classes seguem o Kit (ROADMAP).
 - **Os mesmos ids da loja da wiki** (`core_weapons:assault-rifle`, `armas-2077:arasaka-hjke-11-yukimura`): é por eles que o importador acha cada item.
 - **Efeitos situacionais** do CORE (Audição Amplificada, Image Enhance, as lesões de olho, ouvido, mão e mandíbula, o Agent, a iniciativa do Sandevistan) entram como efeitos à parte, que não somam sozinhos: a janela de rolagem os oferece, e o rolar direto usa os ligados por padrão. A luneta de precisão não vira efeito: a regra dela, pela distância do alvo, está nas regras do ataque. O build lista o que fica de fora.
 

@@ -49,7 +49,7 @@ export function aoMudarTurno(combate, mudancas) {
   })().catch(erro => console.warn(`${SISTEMA} | turno`, erro));
 }
 
-// A ficha mostra o que depende do combate (a arma Tech esfriando depois da carga). A cada mudança do combate o Foundry
+// A ficha mostra o que depende do combate (a carga Tech, que dura 20 rodadas). A cada mudança do combate o Foundry
 // já redesenha as fichas de quem está nele (Combat#updateCombatantActors); quando o combate acaba, não: aqui, as fichas
 // abertas neste cliente de quem estava nele com arma Tech se redesenham.
 export function redesenharFichas(combate) {

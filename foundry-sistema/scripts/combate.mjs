@@ -5,7 +5,7 @@
 //   jogador) e a ficha (armadura, cabeça, escudo, ablação, Lesão Crítica). No fim, o cartão do resultado, com
 //   "Desfazer" para o mestre.
 // - Modos: tiro, mirado (cabeça, perna, item na mão), corpo a corpo, autofogo, fogo supressivo, espingarda com
-//   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga e a rajada Tech e a ligação da arma Smart.
+//   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga Tech e a ligação da arma Smart.
 import { ATORES_DA_NET, DEFESAS, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { animar, textoFlutuante } from './efeitos.mjs';
@@ -157,11 +157,10 @@ export function jogadorDe(ator) {
 
 // ---------------- No cliente de quem ataca ----------------
 // alvos (ou alvo, um só): Tokens ou TokenDocuments; padrão, os marcados. local: "corpo" ou mirado ("cabeca", "perna",
-// "item"). modo: os botões da ficha ("autofogo", "supressivo" e os de 2077: "ricochete", "carga", "rajadaTech",
-// "doisCanos"); senão, a arma e a munição dizem (tiro, cartucho, explosivo). cobertura: a do alvo na carga
-// Tech ("nenhuma", "fina", "grossa"); sem ela, a janela pergunta a quem atira. perguntar: abre a janela de rolagem (a
-// ficha abre; Ctrl + clique, não).
-export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, cobertura = null, perguntar = false } = {}) {
+// "item"). modo: os botões da ficha ("autofogo", "supressivo" e os de 2077: "ricochete", "doisCanos"); senão, a arma e a
+// munição dizem (tiro, cartucho, explosivo). A arma Tech carregada (o botão Carregar) gasta a carga no ataque. perguntar:
+// abre a janela de rolagem (a ficha abre; Ctrl + clique, não).
+export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, perguntar = false } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
   const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
@@ -187,26 +186,19 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (modo === 'autofogo' && !arma.system.autofogo) { ui.notifications.warn(`${arma.name} não tem autofogo.`); return null; }
   // Sem mestre na mesa ninguém resolve o ataque de um jogador: avisa antes de gastar a bala e de rolar.
   if (!game.user.isGM && !game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque precisa do mestre para resolver a defesa e o dano.'); return null; }
-  // Armas de 2077: a ligação da arma Smart, os modos da classe, a carga que esfria e a cobertura do alvo (quem atira diz).
+  // Armas de 2077: a ligação da arma Smart, os modos da classe, a trava e a munição.
   const perfil = arma.perfil2077;
   const de2077 = {
     modo, perfil, pelaMunicao, pedido, ligadaSmart: atacante.temLigacaoSmart, pente: arma.system.pente.max ? arma.system.pente.value : null,
     municao: municao ? { smartMelhorada: Boolean(municao.getFlag(SISTEMA, 'arma2077')?.smartMelhorada) } : null
   };
-  const tech = modo === 'carga' || modo === 'rajadaTech';
-  const esfria = tech ? esfriaAte(arma) : null;
-  let impedido = R.impedimento2077(de2077) ?? (esfria ? `ainda está esfriando: carrega de novo na rodada ${esfria}.` : null);
-  if (!impedido && tech) {
-    cobertura ??= await perguntarCobertura(arma, modo);
-    if (!cobertura) return null;
-    impedido = R.impedimento2077({ ...de2077, cobertura });
-  }
+  const impedido = R.impedimento2077(de2077);
   if (impedido) { ui.notifications.warn(`${arma.name}: ${impedido}`); return null; }
   const doisCanos = pedido === 'doisCanos';
   // As balas por tiro de 2077 (a Yukimura gasta 3; com menos no pente, dispara o que tem e causa o dano menor).
   const comPente = arma.system.aDistancia && arma.system.pente.max;
   const porTiro = comPente ? R.balasPorTiro({ modo, perfil, pente: arma.system.pente.value, doisCanos }) : null;
-  const balas = comPente ? (porTiro?.balas ?? R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech, autofogo: perfil?.balasDoAutofogo, doisCanos })) : 0;
+  const balas = comPente ? (porTiro?.balas ?? R.balasDoModo(modo, { autofogo: perfil?.balasDoAutofogo, doisCanos })) : 0;
   if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
   const { pericia, partes } = arma.partesDoAtaque(modo);
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
@@ -214,8 +206,9 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // O ricochete (o Kit): −4, ou −2 com o Ballistic Coprocessor; num tiro mirado, só a penalidade do mirado.
   const ricochete = pedido === 'ricochete' ? { penalidade: R.penalidadeDoRicochete({ coprocessador: atacante.temCoprocessador, mirado: Boolean(R.LOCAIS_MIRADOS[local]) }), cartucho: modo === 'cartucho' } : null;
   if (ricochete?.penalidade) partes.push({ rotulo: atacante.temCoprocessador ? 'Ricochete (Ballistic Coprocessor)' : 'Ricochete', valor: ricochete.penalidade });
-  if (!tech) cobertura = null;
-  const descricao = R.descreverAtaque({ modo, local, cobertura, doisCanos, ricochete });
+  // A carga Tech (o Kit): carregada, este ataque (que não seja explosivo nem supressivo) gasta a carga.
+  const carga = perfil?.classe === 'tech' && R.gastaACarga(modo) ? cargaDa(arma) : null;
+  const descricao = R.descreverAtaque({ modo, local, doisCanos, ricochete, carga });
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
   // Os situacionais (a luneta, pela distância do primeiro alvo) e a janela de rolagem: fechada ou cancelada, não ataca nem
   // gasta bala. Sem a janela, entram os ligados por padrão.
@@ -232,15 +225,15 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const smartMelhorada = R.smartMelhoradaVale({ perfil, municao: municao?.getFlag(SISTEMA, 'arma2077') });
   const extras = smartMelhorada ? escolhidas.filter(parte => !R.ehPenalidadeDeVisao(parte)) : escolhidas;
   if (balas) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
-  // A carga marca a rodada na arma, para esfriar; o "Desfazer" do mestre tira a marca.
-  const carga = tech ? await marcarCarga(arma) : null;
+  // O ataque gasta a carga (o "Desfazer" do mestre a devolve).
+  if (carga) await arma.unsetFlag(SISTEMA, 'cargaTech');
   const { total, mensagem } = await testar(atacante, {
     rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    cobertura, carga, doisCanos, porTiro, ricochete,
+    carga, doisCanos, porTiro, ricochete,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
@@ -248,24 +241,24 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   return dados;
 }
 
-// A cobertura do alvo na carga Tech, que quem atira diz. A rajada não atravessa cobertura grossa: nem aparece.
-function perguntarCobertura(arma, modo) {
-  const opcoes = Object.entries(R.COBERTURAS).filter(([, cobertura]) => cobertura[modo] > 0);
-  const passa = opcoes.filter(([chave]) => chave !== 'nenhuma').map(([, cobertura]) => `${Math.round(cobertura[modo] * 100)}% da ${cobertura.rotulo}`).join(' e ');
-  return DialogV2.wait({
-    window: { title: `${arma.name}: ${R.MODOS[modo]}` }, classes: [SISTEMA, 'cobertura'],
-    content: `<p>O alvo está atrás de cobertura? A ${modo === 'carga' ? 'carga' : 'rajada'} atravessa ${passa}${modo === 'rajadaTech' ? '; a grossa, não' : ''}.</p>`,
-    buttons: opcoes.map(([chave, cobertura]) => ({ action: chave, label: chave === 'nenhuma' ? 'Sem cobertura' : `Atrás de ${cobertura.rotulo}`, default: chave === 'nenhuma' })),
-    rejectClose: false
-  }).catch(() => null);
+// A carga Tech da arma (a flag cargaTech: { combate, rodada } de quando carregou), se ainda vale; senão, null.
+export function cargaDa(arma) {
+  const marca = arma.getFlag(SISTEMA, 'cargaTech');
+  const combate = combateDe(arma.actor);
+  return R.cargaValida(marca, combate && { id: combate.id, rodada: combate.round }) ? marca : null;
 }
 
-async function marcarCarga(arma) {
+// Carregar a arma Tech (o botão da ficha): gasta a Ação de Movimento, e o chat diz o que vale. Carregada, o botão
+// descarrega.
+export async function alternarCarga(arma) {
+  if (arma.perfil2077?.classe !== 'tech') { ui.notifications.warn(`${arma.name} não é uma arma Tech.`); return null; }
+  if (cargaDa(arma)) return arma.unsetFlag(SISTEMA, 'cargaTech');
   const combate = combateDe(arma.actor);
-  if (!combate) return null;
-  const marca = { combate: combate.id, rodada: combate.round };
-  await arma.setFlag(SISTEMA, 'carga', marca);
-  return marca;
+  await arma.setFlag(SISTEMA, 'cargaTech', { combate: combate?.id ?? null, rodada: combate?.round ?? null });
+  return ChatMessage.implementation.create({
+    speaker: ChatMessage.implementation.getSpeaker({ actor: arma.actor }),
+    content: `<div class="${SISTEMA} cartao carga-tech"><p><b>${esc(arma.actor.name)}</b> carrega <b>${esc(arma.name)}</b> (gasta a Ação de Movimento). O próximo ataque é de CDT 1, atravessa cobertura fina e ignora metade do SP; a carga fica até disparar ou por ${R.CARGA_TECH.rodadas} rodadas.</p></div>`
+  });
 }
 
 // No cliente de quem atacou (jogador): rola o dano, com os dados aparecendo para ele, e devolve ao mestre. A janela de
@@ -363,8 +356,9 @@ async function contexto(pedido, usuario) {
   return {
     pedido, usuario, arma, atacante, tokenAtq, cena: tokenAtq?.parent ?? alvos[0]?.parent ?? canvas.scene, alvos,
     modo: pedido.modo, local: pedido.local, descricao: R.descreverAtaque(pedido), nomeAtq: tokenAtq?.name ?? atacante.name,
-    perfil: arma.perfil2077, cobertura: R.COBERTURAS[pedido.cobertura] ?? null,
-    linhas: [], notas: notasDe2077(pedido, arma), rolagens: [], marcas: pedido.carga ? [{ ator: arma.uuid, chave: 'carga', ...pedido.carga }] : [], cabecalho: '',
+    perfil: arma.perfil2077,
+    // devolver: o que o "Desfazer" põe de volta (a carga Tech que o ataque gastou).
+    linhas: [], notas: notasDe2077(pedido, arma), rolagens: [], marcas: [], devolver: pedido.carga ? [{ doc: arma.uuid, chave: 'cargaTech', valor: pedido.carga }] : [], cabecalho: '',
     falhaDaArma: R.falhaDaArma({ qualidade: arma.system.qualidade, efeito: arma.system.falhaCritica, critico: game.messages.get(pedido.mensagem)?.getFlag(SISTEMA, 'teste')?.critico })
   };
 }
@@ -390,12 +384,7 @@ function notasDe2077(pedido, arma) {
       ? `Ricochete do cartucho (${conta}): o leque de ${R.ALCANCE_CARTUCHO} m sai da superfície do ricochete, a até ${R.ALCANCE_CARTUCHO} m de quem atira, na direção escolhida (não para trás dela); o mestre confere quem está nele.`
       : `Ricochete (${conta}): o alcance é a distância até o alvo, e precisa de um caminho livre do ponto do ricochete até ele.`);
   }
-  const cobertura = R.COBERTURAS[pedido.cobertura];
-  if (cobertura) {
-    const onde = pedido.cobertura === 'nenhuma' ? 'sem cobertura' : `através de ${cobertura.rotulo}`;
-    const esfria = pedido.carga && config('cargaEsfria') ? ' A arma esfria uma rodada.' : '';
-    notas.push(`${R.MODOS[pedido.modo]} ${onde}: chega ${Math.round(cobertura[pedido.modo] * 100)}% do dano, e a armadura perde ${cobertura.ablacao} de SP se o dano passar dela.${esfria}`);
-  }
+  if (pedido.carga) notas.push('Carregada: CDT 1; atravessa cobertura fina (a cobertura não perde HP) e ignora metade do SP do alvo, arredondada para cima.');
   return notas;
 }
 
@@ -496,7 +485,9 @@ export async function defesaContra({ atacante, tokenAtq = null, alvo, total, mod
 const linhaDe = (ctx, token) => {
   const linha = { token, nome: token.name, img: token.texture?.src || token.actor.img, resultado: null, notas: [] };
   if (ctx.modo !== 'corpo' && token.actor?.statuses.has(STATUS_COBERTURA)) {
-    linha.notas.push(`${token.name} está em cobertura: se ela para a bala e o tira da linha de visão, o tiro para nela (o mestre decide; wiki, p. 182).`);
+    linha.notas.push(ctx.pedido?.carga
+      ? `${token.name} está em cobertura: a carga Tech atravessa cobertura fina (que não perde HP); a grossa para o tiro (o mestre decide; wiki, p. 182).`
+      : `${token.name} está em cobertura: se ela para a bala e o tira da linha de visão, o tiro para nela (o mestre decide; wiki, p. 182).`);
   }
   ctx.linhas.push(linha);
   return linha;
@@ -563,13 +554,6 @@ async function marcarRodada(ctx, ator, chave) {
   ctx.marcas.push({ ator: ator.uuid, chave, ...marca });
 }
 
-// A rodada em que a arma Tech carrega de novo, no combate do dono; null se já pode (ou a regra está desligada).
-export function esfriaAte(arma) {
-  if (!config('cargaEsfria')) return null;
-  const combate = combateDe(arma.actor);
-  return R.rodadaDaProximaCarga(arma.getFlag(SISTEMA, 'carga'), combate && { id: combate.id, rodada: combate.round });
-}
-
 // Quem atacou rola, se for um jogador conectado; senão (ou se ele não responder), o mestre. O Ponto Fraco do Solo soma
 // no dano (antes da armadura) do primeiro acerto dele na rodada.
 async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}) {
@@ -597,9 +581,8 @@ const SEM_LESAO_DE_BORRACHA = 'Munição de borracha: sem lesão crítica.';
 
 // Aplica o dano num alvo e cuida das lesões: dois 6 (a tabela da cabeça só no tiro mirado na cabeça), tiro na perna
 // que passou da armadura (Perna quebrada), mortalmente ferido atingido de novo. A Deflexão de Dano do Solo tira do
-// primeiro dano que ele sofre na rodada. A munição de borracha não mata nem causa lesão crítica (wiki, munições). Na
-// carga Tech, a ablação é a da carga (4 sem cobertura, 2 através dela), no lugar da munição. lesaoDoCritico: false no dano
-// aplicado pelo cartão, em que a lesão do crítico sai pelo botão "Rolar a lesão".
+// primeiro dano que ele sofre na rodada. A munição de borracha não mata nem causa lesão crítica (wiki, munições). A carga
+// Tech ignora metade do SP (regras.CARGA_TECH). lesaoDoCritico: false no dano aplicado pelo cartão, em que a lesão do crítico sai pelo botão "Rolar a lesão".
 async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true } = {}) {
   const ator = linha.token.actor;
   const jaMortal = ator.system.hp.value < 1;
@@ -607,8 +590,8 @@ async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true }
   const borracha = municao?.system.efeito === 'rubber';
   const deflexao = ator.system.consciencia.deflexao && primeiraNaRodada(ator, 'deflexao') ? ator.system.consciencia.deflexao : 0;
   const efeito = await ator.receberDano({
-    dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.arma.system.ignorarArmadura, ignorarAbaixo: ctx.arma.system.ignorarAbaixo,
-    ablacao: ctx.cobertura?.ablacao ?? municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
+    dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.pedido?.carga ? Math.max(Number(ctx.arma.system.ignorarArmadura) || 0, R.CARGA_TECH.ignorarPct) : ctx.arma.system.ignorarArmadura,
+    ignorarAbaixo: ctx.arma.system.ignorarAbaixo, ablacao: municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
   });
   // A deflexão só se gasta quando entra dano de verdade: o que a armadura ou o escudo seguraram inteiro não é "dano
   // sofrido".
@@ -703,32 +686,21 @@ async function redirecionado(ctx) {
 }
 
 // Tiro, autofogo, corpo a corpo e os modos de 2077: cada alvo se defende; o dano sai para cada um que foi atingido. O
-// autofogo e a rajada Tech rolam 2d6 × o multiplicador (até o da arma); o ricochete, um dado a menos.
+// autofogo rola 2d6 × o multiplicador (até o da arma).
 async function individual(ctx) {
   const doisAlvos = ctx.perfil?.doisAlvos && ctx.modo === 'tiro' && !R.LOCAIS_MIRADOS[ctx.local] && ctx.alvos.length >= 2;
   const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
   const pegas = ctx.linhas.filter(l => atingidas.has(l));
   if (await aplicarMunicaoSemDano(ctx, pegas)) return;
-  const rajada = ctx.modo === 'autofogo' || ctx.modo === 'rajadaTech';
-  const maximo = ctx.modo === 'rajadaTech' ? ctx.perfil.rajadaTech : ctx.arma.system.autofogo;
+  const rajada = ctx.modo === 'autofogo';
+  const maximo = ctx.arma.system.autofogo;
   const formula = rajada ? '2d6' : ctx.pedido.porTiro?.danoComMenos ?? ctx.perfil?.danoFixo ?? null;
   for (const linha of pegas) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
     const multiplicador = rajada ? R.multiplicadorDeAutofogo(linha.segundaChance ?? ctx.pedido.total, contra, maximo) : 1;
     if (rajada) linha.multiplicador = multiplicador;
-    const dano = atravessar(ctx, linha, await rolarDanoDoAtaque(ctx, { multiplicador, formula }));
-    if (dano) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
+    await ferir(ctx, linha, await rolarDanoDoAtaque(ctx, { multiplicador, formula }), { escudo: linha.escolha === 'escudo' });
   }
-}
-
-// A carga Tech através de cobertura: só a fração do dano chega ao alvo; o resto fica na cobertura. Nada passou: null.
-function atravessar(ctx, linha, dano) {
-  const fracao = ctx.cobertura?.[ctx.modo] ?? 1;
-  if (fracao >= 1) return dano;
-  const passou = R.atravessarCobertura(dano.total, fracao);
-  const rotulo = ctx.cobertura.rotulo;
-  linha.notas.push(passou > 0 ? `${passou} dos ${dano.total} de dano atravessaram a ${rotulo}; o resto ficou nela.` : `Nada dos ${dano.total} de dano atravessou a ${rotulo}.`);
-  return passou > 0 ? { ...dano, total: passou } : null;
 }
 
 // Área (explosivo e cartucho): o dano é rolado uma vez e vale para cada um que ficou.
@@ -850,8 +822,8 @@ export async function suprimir(ator) {
 }
 
 // ---------------- Na ficha: as armas de 2077 ----------------
-// Na linha da arma: os botões dos modos de 2077 (modos), os que trocam um estado da arma (alternar: a coronha), os
-// avisos (sem a ligação da arma Smart, esfriando, coronha recolhida), a dica do "Atacar" (o +1 da arma Smart) e as balas
+// Na linha da arma: os botões dos modos de 2077 (modos), os que trocam um estado da arma (alternar: a coronha, a carga
+// Tech), os avisos (sem a ligação da arma Smart, coronha recolhida), a dica do "Atacar" (o +1 da arma Smart) e as balas
 // do autofogo.
 export function acoesDe2077(arma) {
   const perfil = arma.perfil2077;
@@ -876,12 +848,10 @@ export function acoesDe2077(arma) {
     });
   }
   if (perfil.classe === 'tech') {
-    resultado.modos.push({ modo: 'carga', rotulo: 'Carga', dica: 'Carga Tech: tiro único que atravessa cobertura (metade da fina, um quarto da grossa); se o dano passar, a armadura perde 4 de SP (2 através de cobertura). A arma esfria uma rodada.' });
-    if (perfil.rajadaTech) {
-      resultado.modos.push({ modo: 'rajadaTech', rotulo: `Rajada ×${perfil.rajadaTech}`, dica: `Rajada Tech: autofogo carregado (tabela da SMG, até ×${perfil.rajadaTech}), ${perfil.balasDaRajadaTech} balas; atravessa um quarto da cobertura fina e nada da grossa. A arma esfria uma rodada.` });
-    }
-    const rodada = esfriaAte(arma);
-    if (rodada) resultado.avisos.push({ texto: `esfriando: carga na rodada ${rodada}`, dica: 'Depois de uma carga, a arma Tech esfria uma rodada.' });
+    const efeito = 'o próximo ataque (que não seja explosivo nem fogo supressivo) é de CDT 1, atravessa cobertura fina e ignora metade do SP do alvo';
+    resultado.alternar.push(cargaDa(arma)
+      ? { acao: 'alternarCarga', rotulo: 'Carregada', dica: `Carregada: ${efeito}. Clique para descarregar.` }
+      : { acao: 'alternarCarga', rotulo: 'Carregar', dica: `Carregar (gasta a Ação de Movimento): ${efeito}. Fica até disparar ou por ${R.CARGA_TECH.rodadas} rodadas.` });
   }
   if (perfil.classe === 'power') resultado.dicaAtaque = `Arma Power: a lesão crítica causa ${R.BONUS_CRITICO_POWER} de dano bônus (no lugar de ${R.BONUS_CRITICO}).`;
   if (perfil.classe === 'smart') {
@@ -929,9 +899,9 @@ async function cartaoDoResultado(ctx) {
     ator: l.token.actor.uuid, suprimido: Boolean(l.suprimido), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
-  const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 });
+  const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 || (ctx.devolver?.length ?? 0) > 0 });
   const para = destinatarios(ctx);
-  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, desfazer, marcas: ctx.marcas } } });
+  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [] } } });
   mostrarNaMesa(ctx, para);
   return resumo;
 }
@@ -965,13 +935,14 @@ function mostrarNaMesa(ctx, para) {
 }
 
 // Desfaz o resultado de um ataque: HP, armadura e escudo voltam, e as lesões e o Suprimido saem da ficha. O Ponto Fraco
-// e a Deflexão de Dano gastos nele (e a carga Tech da arma) voltam, se a marca ainda for a deste ataque (o mesmo
-// combate e a mesma rodada).
+// e a Deflexão de Dano gastos nele voltam, se a marca ainda for a deste ataque (o mesmo combate e a mesma rodada); a
+// carga Tech que ele gastou volta para a arma.
 export async function desfazer(mensagem) {
   if (!game.user.isGM) return false;
   const lista = mensagem.getFlag(SISTEMA, 'desfazer');
-  if (!lista?.length || mensagem.getFlag(SISTEMA, 'desfeito')) { ui.notifications.warn('Este ataque já foi desfeito (ou não há o que desfazer).'); return false; }
-  for (const item of lista) {
+  const devolver = mensagem.getFlag(SISTEMA, 'devolver') ?? [];
+  if ((!lista?.length && !devolver.length) || mensagem.getFlag(SISTEMA, 'desfeito')) { ui.notifications.warn('Este ataque já foi desfeito (ou não há o que desfazer).'); return false; }
+  for (const item of lista ?? []) {
     const ator = await fromUuid(item.ator);
     if (!ator) continue;
     if (item.dano) await ator.desfazerDano(item.dano);
@@ -983,11 +954,15 @@ export async function desfazer(mensagem) {
       await ator.unsetFlag(SISTEMA, 'suprimido');
     }
   }
-  // A marca fica no ator (Ponto Fraco, Deflexão) ou na arma (carga Tech): "ator" é o uuid de um ou de outro.
+  // A marca fica no ator (Ponto Fraco, Deflexão): "ator" é o uuid dele.
   for (const { ator: uuid, chave, combate, rodada } of mensagem.getFlag(SISTEMA, 'marcas') ?? []) {
     const doc = await fromUuid(uuid);
     const marca = doc?.getFlag(SISTEMA, chave);
     if (marca?.combate === combate && marca.rodada === rodada) await doc.unsetFlag(SISTEMA, chave);
+  }
+  for (const { doc: uuid, chave, valor } of devolver) {
+    const doc = await fromUuid(uuid);
+    if (doc && !doc.getFlag(SISTEMA, chave)) await doc.setFlag(SISTEMA, chave, valor);
   }
   await mensagem.update({ [`flags.${SISTEMA}.desfeito`]: true });
   return true;
@@ -1010,7 +985,7 @@ export async function aplicarDanoDoCartao(mensagem) {
   if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) do dano.'); return null; }
   const ctx = {
     pedido: { id: foundry.utils.randomID(), total: null }, usuario: game.user, arma, atacante: arma.actor, tokenAtq: null, cena: alvos[0].parent, alvos,
-    modo: 'tiro', local: 'corpo', descricao: 'dano rolado à parte', nomeAtq: arma.actor.name, perfil: null, cobertura: null, linhas: [], rolagens: [], marcas: [],
+    modo: 'tiro', local: 'corpo', descricao: 'dano rolado à parte', nomeAtq: arma.actor.name, perfil: null, linhas: [], rolagens: [], marcas: [],
     notas: dados.critico ? ['Crítico: a lesão sai pelo botão "Rolar a lesão" do cartão do dano.'] : [], cabecalho: `${dados.total} de dano${dados.critico ? ', crítico' : ''}, no corpo`
   };
   for (const token of alvos) {

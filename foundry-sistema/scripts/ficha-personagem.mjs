@@ -95,6 +95,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       abrirExtrato: FichaPersonagem.#abrirExtrato,
       recarregarSorte: FichaPersonagem.#recarregarSorte,
       alternarCoronha: FichaPersonagem.#alternarCoronha,
+      alternarCarga: FichaPersonagem.#alternarCarga,
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
       portaDoDeck: FichaPersonagem.#portaDoDeck,
@@ -511,6 +512,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #alternarCoronha(evento, alvo) {
     const item = this.#item(alvo);
     return item?.setFlag(SISTEMA, 'coronhaRecolhida', !item.coronhaRecolhida);
+  }
+  // A carga Tech (o Kit): carregar gasta a Ação de Movimento; carregada, o botão descarrega.
+  static #alternarCarga(evento, alvo) {
+    const item = this.#item(alvo);
+    return item && game.system.api.combate.alternarCarga(item);
   }
   static #equipar(evento, alvo) {
     const item = this.#item(alvo);

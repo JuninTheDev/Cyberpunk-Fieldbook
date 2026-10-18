@@ -3491,118 +3491,93 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('carga Tech (2077): a janela pergunta a cobertura; através da fina chega metade e a armadura perde 2; a arma esfria (bloqueada nas rodadas 1 e 2, carrega na 3); sem cobertura abla 4; o Desfazer tira a marca; a rajada (×2, 2 balas, tabela de autofogo da SMG) passa 25% da fina e nem oferece a grossa', async () => {
-      // Kenshin (Tech, 2d6, excelente) com flechettes, contra o Alvo a 10 m (DV 15). Rodada 1, carga através de cobertura
-      // fina: d10 6 → 8 + 4 + 1 + 6 = 19; dano 6 + 5 = 11, chegam 5 contra SP 4: passa 1; a armadura perde 2 (não o 2
-      // da flechette por acaso: a carga sem cobertura abla 4). Rodada 3, pela ficha, sem cobertura (SP 6): dano 4 + 3 = 7,
-      // passa 1, a armadura perde 4. Desfeita, a rajada através da fina (SP 2): d10 8 → 8 + 4 + 1 + 8 = 21 contra 17 (SMG
-      // Autofire): ×2 (o máximo da Kenshin); 2d6 5 + 4 = 9 × 2 = 18, chegam 4, passam 2; a armadura perde 2.
+    await r.passo('Tech (2077, o Kit): o botão Carregar (a Ação de Movimento) carrega a arma; o próximo ataque ignora metade do SP, diz que atravessa a cobertura fina e gasta a carga; o Desfazer a devolve; ela passa depois de 20 rodadas e fica fora do combate; arma que não é Tech não carrega', async () => {
+      // Kenshin (Tech, excelente, 2d6) contra o Alvo a 10 m (DV 15 da pistola; SP 11). Carregada: d10 6 → 8 + 4 + 1 + 6 =
+      // 19; 6 + 5 = 11 contra a metade do SP (6): passam 5, e a armadura vai a 10. Depois de 20 rodadas, o mesmo tiro sem
+      // carga: 11 contra 11, nada passa.
+      await fixar(edge, [[6, 10], [6, 6], [5, 6], [6, 10], [6, 6], [5, 6]]);
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
         const alvo = __token('Alvo');
-        await a.update({ 'system.pericias.autofire.nivel': 4 });
-        await __ator('Alvo').update({ 'system.hp.value': 45 });
-        await __armaduraDoAlvo(4);
-        const { arma, municao } = await __arma2077('armas-2077:arasaka-jke-x2-kenshin', 'armas-2077:flechettes-tech-pistola-media', 12);
+        const api = game.system.api.combate;
         const cena = canvas.scene;
+        await __ator('Alvo').update({ 'system.hp.value': 45 });
+        await __armaduraDoAlvo(11);
+        const { arma, municao } = await __arma2077('armas-2077:arasaka-jke-x2-kenshin', 'core_ammo:medium-pistol-basic', 12);
         const combate = await Combat.implementation.create({ scene: cena.id, active: true });
-        await combate.createEmbeddedDocuments('Combatant', ['Atiradora', 'Alvo'].map(n => ({ tokenId: __token(n).id, sceneId: cena.id, actorId: __ator(n).id })));
-        await combate.startCombat();
-        await a.sheet.render({ force: true });
-        await __esperar(() => __linhaDaArma(arma));
-        const linha = () => ({ avisos: [...(__linhaDaArma(arma)?.querySelectorAll('.aviso-2077') ?? [])].map(e => e.textContent.trim()), botoes: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-modo]') ?? [])].map(b => b.textContent.trim()) });
-        // A janela que fecha fica no DOM até a animação acabar (classe "minimizing"): só a aberta conta.
-        const janela = () => document.querySelector('.application.dialog.cobertura:not(.minimizing)');
-        // Responde a janela da cobertura e devolve as opções que ela tinha.
-        const responder = async escolha => {
-          await __esperar(() => janela()?.querySelector('button[data-action="' + escolha + '"]'));
-          const opcoes = [...janela().querySelectorAll('.form-footer button')].map(b => b.dataset.action);
-          janela().querySelector('button[data-action="' + escolha + '"]').click();
-          return opcoes;
-        };
         try {
+          await combate.createEmbeddedDocuments('Combatant', ['Atiradora', 'Alvo'].map(n => ({ tokenId: __token(n).id, sceneId: cena.id, actorId: __ator(n).id })));
+          await combate.startCombat();
+          await a.sheet.render({ force: true });
+          await __esperar(() => __linhaDaArma(arma));
+          const linha = () => ({ modos: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-modo]') ?? [])].map(b => b.dataset.modo),
+            carga: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-action="alternarCarga"]') ?? [])].map(b => b.textContent.trim()) });
           const fichaAntes = linha();
-          // Rodada 1: carga através de cobertura fina (pela janela).
-          window.__fila = [[6, 10], [6, 6], [5, 6]];
-          const promessa1 = arma.atacar({ alvo, modo: 'carga' });
-          const opcoesDaCarga = await responder('fina');
-          const r1 = await promessa1;
-          const marca1 = arma.getFlag('${S}', 'carga');
-          const fila1 = window.__fila.length;
-          const sp1 = __ator('Alvo').system.armadura.corpo.sp;
-          await __esperar(() => linha().avisos.length);
-          const fichaEsfriando = linha();
-          const bloqueio1 = await __comAvisos(() => arma.atacar({ alvo, modo: 'carga', cobertura: 'nenhuma' }));
-          await combate.nextRound();
-          const bloqueio2 = await __comAvisos(() => arma.atacar({ alvo, modo: 'rajadaTech', cobertura: 'nenhuma' }));
-          await combate.nextRound();
-          await __esperar(() => !linha().avisos.length);
-          const fichaRodada3 = linha();
-          // Rodada 3: carga sem cobertura, pelo botão da ficha, no alvo marcado.
-          await __armaduraDoAlvo(6);
-          canvas.tokens.setTargets([alvo.id]);
-          window.__fila = [[6, 10], [4, 6], [3, 6]];
-          const antes = game.messages.size;
-          // Ctrl + clique: direto, sem a janela de rolagem (o passo da janela confere o clique comum).
-          __linhaDaArma(arma).querySelector('button[data-modo="carga"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
-          const opcoesPelaFicha = await responder('nenhuma');
-          await __esperar(() => game.messages.contents.slice(antes).some(m => m.getFlag('${S}', 'ataque')));
-          const cartao3 = game.messages.contents.slice(antes).find(m => m.getFlag('${S}', 'ataque'));
-          const r3 = cartao3.getFlag('${S}', 'ataque');
-          const marca3 = arma.getFlag('${S}', 'carga');
-          const depois3 = { sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value, pente: arma.system.pente.value };
-          const desfeito = await game.system.api.combate.desfazer(cartao3);
-          const depoisDoDesfazer = { marca: arma.getFlag('${S}', 'carga') ?? null, esfria: game.system.api.combate.esfriaAte(arma), sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value };
-          // Ainda na rodada 3 (a marca saiu): a rajada através da fina; a janela não oferece a grossa.
-          await __armaduraDoAlvo(2);
-          window.__fila = [[8, 10], [5, 6], [4, 6]];
-          const promessa4 = arma.atacar({ alvo, modo: 'rajadaTech' });
-          const opcoesDaRajada = await responder('fina');
-          const r4 = await promessa4;
-          await __esperar(() => linha().avisos.length);
-          const fichaDepoisDaRajada = linha();
-          // O combate acaba: a ficha aberta deixa de mostrar a arma esfriando.
+          // Carregar pelo botão da ficha.
+          let antes = game.messages.size;
+          __linhaDaArma(arma).querySelector('button[data-action="alternarCarga"]').click();
+          await __esperar(() => linha().carga.join() === 'Carregada');
+          const fichaCarregada = linha();
+          const marca = arma.getFlag('${S}', 'cargaTech');
+          const aviso = game.messages.contents.slice(antes).map(m => new DOMParser().parseFromString(m.content, 'text/html').body.textContent.replace(/\\s+/g, ' ').trim()).join(' | ');
+          // O tiro carregado, com o Alvo em cobertura.
+          await __ator('Alvo').toggleStatusEffect(api.STATUS_COBERTURA, { active: true });
+          const r1 = await arma.atacar({ alvo });
+          await __ator('Alvo').toggleStatusEffect(api.STATUS_COBERTURA, { active: false });
+          const depois1 = { marca: arma.getFlag('${S}', 'cargaTech') ?? null, sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value };
+          await __esperar(() => linha().carga.join() === 'Carregar');
+          const fichaDepois = linha();
+          // O Desfazer devolve o HP, o SP e a carga.
+          const cartao1 = game.messages.contents.findLast(m => m.getFlag('${S}', 'ataque')?.id === r1.id);
+          const desfeito = await api.desfazer(cartao1);
+          const depoisDoDesfazer = { marca: arma.getFlag('${S}', 'cargaTech') ?? null, sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value };
+          await __esperar(() => linha().carga.join() === 'Carregada');
+          // 20 rodadas depois, a carga passou (19 depois, ainda vale): o tiro é o de sempre.
+          await arma.setFlag('${S}', 'cargaTech', { combate: combate.id, rodada: combate.round - 19 });
+          const aos19 = Boolean(api.cargaDa(arma));
+          await arma.setFlag('${S}', 'cargaTech', { combate: combate.id, rodada: combate.round - 20 });
+          const aos20 = Boolean(api.cargaDa(arma));
+          await __esperar(() => linha().carga.join() === 'Carregar');
+          const r2 = await arma.atacar({ alvo });
+          // Fora do combate, a carga fica até disparar; o botão descarrega.
+          await arma.setFlag('${S}', 'cargaTech', { combate: combate.id, rodada: combate.round });
           await combate.delete();
-          await __esperar(() => !linha().avisos.length);
-          const fichaSemCombate = linha();
-          const resultado = {
-            fichaAntes, fichaEsfriando, fichaRodada3, fichaDepoisDaRajada, fichaSemCombate, opcoesDaCarga, opcoesPelaFicha, opcoesDaRajada,
-            r1: { ataque: r1.ataque, descricao: r1.descricao, notas: r1.notas, linhas: __linhas(r1), notasDaLinha: r1.linhas[0].notas }, marca1: marca1 && { ok: marca1.combate === combate.id, rodada: marca1.rodada }, fila1, sp1,
-            bloqueio1: { r: bloqueio1.r, avisos: bloqueio1.avisos }, bloqueio2: { r: bloqueio2.r, avisos: bloqueio2.avisos },
-            r3: { descricao: r3.descricao, dano: r3.linhas[0].dano && { dano: r3.linhas[0].dano.dano, recebido: r3.linhas[0].dano.recebido, ablado: r3.linhas[0].dano.ablado } }, marca3: marca3?.rodada, depois3,
-            desfeito, depoisDoDesfazer,
-            r4: { ataque: r4.ataque, descricao: r4.descricao, linhas: __linhas(r4), notasDaLinha: r4.linhas[0].notas },
-            pente: arma.system.pente.value, sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value, fila: window.__fila.length
+          const foraDoCombate = Boolean(api.cargaDa(arma));
+          await __esperar(() => linha().carga.join() === 'Carregada');
+          __linhaDaArma(arma).querySelector('button[data-action="alternarCarga"]').click();
+          await __esperar(() => linha().carga.join() === 'Carregar');
+          const descarregou = arma.getFlag('${S}', 'cargaTech') ?? null;
+          const naoTech = await __comAvisos(() => api.alternarCarga(a.items.getName('Assault Rifle')));
+          const resumo = r => ({ ataque: r.ataque, descricao: r.descricao, notas: r.notas, linhas: __linhas(r), notasDaLinha: r.linhas[0]?.notas ?? [] });
+          return {
+            fichaAntes, fichaCarregada, marca: marca && { combate: marca.combate === combate.id, rodada: marca.rodada }, aviso, r1: resumo(r1), depois1, fichaDepois,
+            desfeito, depoisDoDesfazer: { ...depoisDoDesfazer, marca: depoisDoDesfazer.marca?.rodada ?? null }, aos19, aos20, r2: resumo(r2), foraDoCombate, descarregou,
+            naoTech: { r: naoTech.r ?? null, avisos: naoTech.avisos }, pente: arma.system.pente.value, fila: window.__fila.length
           };
-          return resultado;
         } finally {
-          // Mesmo se algo falhar no meio: nenhuma janela, alvo marcado, combate ou arma fica para os passos seguintes.
-          for (const app of [...foundry.applications.instances.values()].filter(app => app.options.classes?.includes('cobertura'))) await app.close();
-          canvas.tokens.setTargets([]);
+          await __ator('Alvo').toggleStatusEffect(api.STATUS_COBERTURA, { active: false });
           await a.sheet.close();
           if (game.combats.has(combate.id)) await combate.delete();
           await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
           await __armaduraDoAlvo(11);
           await __ator('Alvo').update({ 'system.hp.value': 45 });
+          window.__fila = [];
         }
       })()`);
-      const { r1, r3, r4, depois3, depoisDoDesfazer } = info;
+      const { r1, r2, depois1, depoisDoDesfazer } = info;
       const [l1] = r1.linhas;
-      const [l4] = r4.linhas;
-      const esfriando = 'Arasaka JKE-X2 Kenshin: ainda está esfriando: carrega de novo na rodada 3.';
-      const ok = info.fichaAntes.botoes.join() === 'Carga,Rajada ×2' && info.fichaAntes.avisos.length === 0 && info.fichaEsfriando.avisos.join() === 'esfriando: carga na rodada 3' && info.fichaRodada3.avisos.length === 0
-        && info.fichaDepoisDaRajada.avisos.join() === 'esfriando: carga na rodada 5' && info.fichaSemCombate.avisos.length === 0
-        && info.opcoesDaCarga.join() === 'nenhuma,fina,grossa' && info.opcoesPelaFicha.join() === 'nenhuma,fina,grossa' && info.opcoesDaRajada.join() === 'nenhuma,fina'
-        && r1.ataque === 19 && r1.descricao === 'Carga Tech através de cobertura fina' && l1.dv === 15 && l1.dano?.dano === 5 && l1.dano.recebido === 1 && l1.dano.ablado === 2
-        && r1.notasDaLinha.includes('5 dos 11 de dano atravessaram a cobertura fina; o resto ficou nela.')
-        && r1.notas.includes('Carga Tech através de cobertura fina: chega 50% do dano, e a armadura perde 2 de SP se o dano passar dela. A arma esfria uma rodada.')
-        && info.marca1?.ok && info.marca1.rodada === 1 && info.fila1 === 0 && info.sp1 === 2
-        && info.bloqueio1.r === null && info.bloqueio1.avisos.join() === esfriando && info.bloqueio2.r === null && info.bloqueio2.avisos.join() === esfriando
-        && r3.descricao === 'Carga Tech' && r3.dano?.dano === 7 && r3.dano.recebido === 1 && r3.dano.ablado === 4 && info.marca3 === 3 && depois3.sp === 2 && depois3.hp === 43 && depois3.pente === 10
-        && info.desfeito === true && depoisDoDesfazer.marca === null && depoisDoDesfazer.esfria === null && depoisDoDesfazer.sp === 6 && depoisDoDesfazer.hp === 44
-        && r4.ataque === 21 && r4.descricao === 'Rajada Tech através de cobertura fina' && l4.dv === 17 && l4.mult === 2 && l4.dano?.dano === 4 && l4.dano.recebido === 2 && l4.dano.ablado === 2
-        && r4.notasDaLinha.includes('4 dos 18 de dano atravessaram a cobertura fina; o resto ficou nela.')
-        && info.pente === 8 && info.sp === 0 && info.hp === 42 && info.fila === 0;
+      const [l2] = r2.linhas;
+      const ok = info.fichaAntes.modos.length === 0 && info.fichaAntes.carga.join() === 'Carregar' && info.fichaCarregada.carga.join() === 'Carregada'
+        && info.marca?.combate && info.marca.rodada === 1 && /Atiradora carrega Arasaka JKE-X2 Kenshin \(gasta a Ação de Movimento\)\. O próximo ataque é de CDT 1, atravessa cobertura fina e ignora metade do SP/.test(info.aviso)
+        && r1.ataque === 19 && r1.descricao === 'Tiro, carregado' && l1.dv === 15 && l1.resultado === 'acertou' && l1.dano?.dano === 11 && l1.dano.recebido === 5 && l1.dano.ablado === 1
+        && r1.notas.includes('Carregada: CDT 1; atravessa cobertura fina (a cobertura não perde HP) e ignora metade do SP do alvo, arredondada para cima.')
+        && r1.notasDaLinha.includes('Alvo está em cobertura: a carga Tech atravessa cobertura fina (que não perde HP); a grossa para o tiro (o mestre decide; wiki, p. 182).')
+        && depois1.marca === null && depois1.sp === 10 && depois1.hp === 40 && info.fichaDepois.carga.join() === 'Carregar'
+        && info.desfeito === true && depoisDoDesfazer.marca === 1 && depoisDoDesfazer.sp === 11 && depoisDoDesfazer.hp === 45
+        && info.aos19 && !info.aos20
+        && r2.descricao === 'Tiro' && l2.dano?.dano === 11 && l2.dano.recebido === 0 && !r2.notas.some(n => /Carregada/.test(n))
+        && info.foraDoCombate && info.descarregou === null
+        && info.naoTech.avisos.join() === 'Assault Rifle não é uma arma Tech.' && info.pente === 10 && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });
 

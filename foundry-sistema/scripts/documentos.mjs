@@ -673,7 +673,7 @@ export class ItemCPR extends Item {
   partesDoAtaque(modo = null) {
     const ator = this.actor;
     const atributo = this.system.aDistancia ? 'ref' : 'dex';
-    const pericia = ['autofogo', 'supressivo', 'rajadaTech'].includes(modo) ? 'autofire' : this.system.pericia;
+    const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : this.system.pericia;
     const { pericia: p, partes } = ator.partesDaPericia(pericia, { situacionais: [] });
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
     if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
