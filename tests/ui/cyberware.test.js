@@ -68,7 +68,7 @@ test('Cyberware mostra os lados, abre a loja no alvo correto e funciona no celul
     await avaliar(`wikiApp.openPage('ficha',{section:${JSON.stringify(nova.id)}})`);
     await ate('!!document.querySelector("[data-cc-tab=cyberware]")');
     await avaliar(`document.querySelector('[data-cc-tab=cyberware]').click()`);
-    await avaliar(`document.querySelector('.cy-unit[data-cy-local="braco-esquerdo"] [data-cy-loja]').click()`);
+    await avaliar(`document.querySelector('.cy-unit[data-cy-local="braco-esquerdo"] [data-cy-loja][data-cy-base="1"]').click()`);
     await ate('!!document.querySelector(\'[data-shop-local="core_cyberware:cyberarm"]\')');
     assert.equal(await avaliar(`document.querySelector('[data-shop-local="core_cyberware:cyberarm"]').value`), 'braco-esquerdo');
     await avaliar(`document.querySelector('[data-shop-buy="core_cyberware:cyberarm"]').click()`);
