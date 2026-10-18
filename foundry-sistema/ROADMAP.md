@@ -192,7 +192,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 4: ficha e inventário
 
-- [ ] **C16. Usar droga** (o `snort` do CORE):
+- [~] **C16. Usar droga** (o `snort` do CORE): em andamento (sessão Codex, 2026-10-18).
   - gasta a dose, liga o efeito pela duração, e vêm o efeito secundário e o vício;
   - também: o Medscanner e o Techscanner que não acumulam, e a luz da lanterna no token.
 - [ ] **C17. Pilhas:** juntar os iguais ao soltar e dividir uma pilha (o `stackable` do CORE).
