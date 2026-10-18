@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 125). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 126). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -230,8 +230,9 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     dois extratos;
   - [ ] a loja que compra: o jogador arrasta o item para a loja; a oferta pela porcentagem de cada tipo (o "Configurar a
     loja" do CORE), até o dinheiro da loja.
-- [~] **C25. O Painel Tático dentro do sistema:** em andamento (sessão KouArt, 2026-10-18; o pedido do usuário para a primeira sessão
-  da Morana no Foundry 14): o HUD com o retrato por estado de ferimento.
+- [x] **C25. O Painel Tático dentro do sistema:** feito (ciclo 125, sessão KouArt, 2026-10-18; o pedido do usuário para a primeira
+  sessão da Morana no Foundry 14): o HUD com o retrato por estado de ferimento, os vitais, os atributos, as armas, as
+  ações, os painéis e o estilo de cada jogador, como o módulo da mesa.
 - [ ] **C26. Conveniências:**
   - o `/red` no chat (rolagem com o crítico do d10);
   - o DV no HUD do token e na régua;
@@ -574,7 +575,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [ ] **Cyberware:** (→ C21) base e slots ao instalar (com as opções na base, como a montagem da wiki: ciclos 82 a 84), terapia e ciberpsicose.
 - [ ] **NET de 2077:** (→ C9) a RAM e o Cooling do deck, os quickhacks e os daemons.
 - [x] **NPCs:** (→ C2 e C7, feitos nos ciclos 36 e 37 e 43 a 46) ficha de capanga (mook), Black ICE e demônios como atores.
-- [ ] **Ferramentas do mestre:** (→ C24 e C25) o Painel Tático dentro do sistema; o contêiner do CORE (loja, saque e esconderijo, com
+- [ ] **Ferramentas do mestre:** (→ C24 e C25) o Painel Tático dentro do sistema (feito no ciclo 125); o contêiner do CORE (loja, saque e esconderijo, com
   o registro das trocas).
 - [ ] **Conteúdo fora do livro básico:** (conteúdo: fora do plano de paridade) o Black Chrome e os DLCs do CORE 0.92.4, as tabelas de arquitetura da NET e as
   macros e cenas do CORE. A loja da wiki não vende esses itens; se o mestre deu algum no Foundry 12, a migração avisa

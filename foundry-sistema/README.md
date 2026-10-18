@@ -182,6 +182,21 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **o ator novo** nasce loja, com o token solto e neutro e todos os jogadores donos: como no CORE, a ficha só funciona
     assim (quem pega muda o contêiner). O que o jogador não pode usar não aparece. A compra e a venda da loja são as
     próximas partes do C24.
+- **Painel Tático** (o módulo painel-tatico da mesa, dentro do sistema; o C25, ciclo 125): a barra na base da tela com o
+  token controlado (ou, sem nenhum, o personagem do jogador):
+  - **o retrato grande** do personagem, um PNG para cada estado de ferimento (Sem ferimentos, Levemente, Gravemente,
+    Mortalmente e Morto), com o efeito automático onde falta a imagem e o FLATLINE do morto; o dono escolhe pelo botão do
+    retrato (ou com o botão direito nele), com o tamanho, o deslocamento e o espelho;
+  - **os vitais:** o HP (os botões, o número, a roda do mouse), a armadura da cabeça e do corpo (− ablação, + conserto), o
+    escudo, a Humanidade, a Sorte e o Death Save (clique rola; botão direito zera a penalidade);
+  - **os atributos** (um clique rola), **as armas equipadas** (o dano, o CDT e o pente; o mirado com o local, o autofogo,
+    o supressivo e os modos de 2077; os botões de 2077 da ficha; recarregar e trocar a munição; ATK e DMG) e **as
+    ações** (a iniciativa, o fim do turno, o Facedown e os painéis de perícias, com a busca e as favoritas, de Role, da NET
+    e de equipamento);
+  - **o alvo:** o painel mostra o alvo marcado; sem alvo, o ATK vira mira no mapa (Esc cancela);
+  - **o estilo de cada jogador** (Configurações → Sistema → Estilo do Painel Tático): o tema, as cores, a fonte, o
+    tamanho, a posição (arrastar pela alça), as seções e os botões de HP; o código PT1 leva o visual de um para outro; o
+    mestre define o padrão da mesa. A tecla H recolhe e abre.
 - **Arrastar um item de uma ficha para outra** (da aba Equipamento) leva o item, com o que está instalado nele, e o tira
   da origem, como no CORE (ciclo 122). O cyberware instalado não sai.
     Desativar, tirar do deck ou apagar o programa tira o token. Sem mestre na mesa, o token não entra.
@@ -373,10 +388,11 @@ E as da wiki:
 
 E a do navegador de cada um:
 - **Rolar direto, sem a janela de rolagem** (padrão: não, como no CORE): ligado, o clique rola na hora e Ctrl + clique abre a janela.
+- **O Painel Tático** (ciclo 125): mostrar o painel (padrão: sim), sem token selecionado mostrar o meu personagem (padrão: sim), escolher o alvo antes do ataque (padrão: quando não houver alvo marcado) e o estilo do painel.
 
 ## Ainda não faz
 
-- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga) e o Painel Tático.
+- **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga).
 - **A loja que vende e compra** (o C24, partes 2 e 3): por enquanto, o contêiner dá de graça (o saque, o esconderijo) e mostra o preço.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart
@@ -483,6 +499,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o Black ICE rezzado: o Hellhound ativado no deck põe o token ao lado do netrunner (pelo mestre, também quando o jogador ativa no computador dele), a REZ que o token perde volta para o programa, e desativar ou zerar a REZ tira o token;
   - o dano do Black ICE e na REZ dele: o Hellhound pela ficha no cérebro (o Shield ativo não o para, o Armor reduz), o Killer num programa (o aviso de que o destrói), o Sword em Black ICE e o Zap na REZ do Black ICE e do demônio da cena, e o Zap do demônio só no intruso;
   - o Black ICE e o demônio: o token solto com a REZ na barra, o modelo da wiki (o Hellhound e o Efreet), as rolagens pela janela e com Ctrl + clique, a REZ e o nome na ficha do token, a iniciativa no topo da fila (sozinho e no "rolar todos") e a arma que não os atinge;
+  - o Painel Tático (ciclo 125): a barra do token controlado (vazia sem token), o retrato por estado de ferimento, os vitais pelos botões, as rolagens (o atributo, a busca das perícias, a favorita), o tiro mirado na perna, o "Trocar a munição", os painéis de Equipamento e de Role, o estilo (o tema e o código PT1), recolher e o painel do jogador;
   - o contêiner (ciclo 122): o ator novo (a loja, o token solto e neutro, os jogadores donos), as permissões de cada tipo, o dinheiro com o extrato, a ficha do mestre, o item do compêndio e o da ficha (com o carregador), a pilha, o preço, pegar uma parte e tudo, o estoque infinito, o mestre arrastando entre as fichas e, no navegador do jogador, a trava, a ficha sem as configurações, as recusas e o esconderijo (pôr, criar e apagar);
   - o capanga: o token solto, a ficha de uma página, os itens do compêndio arrastados para ela (equipados ou instalados, a Humanidade rolada e, com Shift, a média), o tiro que muda só o HP do capanga atingido, o outro capanga recarregando e atirando com a própria munição, o Death Save só de quem caiu, o nome novo na ficha do token e, no navegador do jogador, a ficha limitada (só a imagem, o nome e as notas; o Observador vê tudo, sem editar);
   - a importação de um Solo, de um Netrunner (com os programas no deck) e de um Nomad (com os veículos da família) feitos no criador da wiki de teste, e os erros dela (personagem que não existe, wiki fora do ar, jogador tentando importar); na ficha do Solo, as abas Combate, Equipamento, Cyberware e Role em duas colunas (a Iniciativa, o dinheiro, a Humanidade e a Role em grande; as armas, as lesões, a munição, o cyberware e as especialidades com as caixas dos pontos) e a Vida em cinco painéis;

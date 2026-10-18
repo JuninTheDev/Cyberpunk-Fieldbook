@@ -10829,6 +10829,252 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ antes: { f12: antes?.foundry12?.ator ?? null, f14: antes?.foundry14?.ator ?? null, removido: antes?.foundry14?.removido ?? null }, info, depois: { f12: doc.foundry12?.ator, f14: doc.foundry14?.ator, removido: doc.foundry14?.removido ?? null, mesa: doc.mesa?.geracao }, do12, deOutro })];
     });
 
+    // O Painel Tático (o C25): a barra do token controlado, no navegador do mestre (os elementos são os do módulo
+    // painel-tatico da mesa do Foundry 12, com os dados deste sistema).
+    const naBarra = `const el = () => document.getElementById('painel-tatico');
+      const texto = s => el()?.querySelector(s)?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+      const clicar = (s, ctrlKey = false) => el().querySelector(s).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey }));
+      const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };`;
+    await r.passo('Painel Tático (o C25): sem token, a barra do mestre fica vazia; controlando o token de um personagem, ela mostra o nome, o apelido e a Role, o estado, o HP, a armadura, os 10 atributos e as armas equipadas (os modos, a classe de 2077 e o pente)', async () => {
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const rifle = pegar('core_weapons:assault-rifle'); rifle.system.equipada = true;
+        const lexington = pegar('armas-2077:militech-m-10af-lexington'); lexington.system.equipada = true;
+        const colete = pegar('core_armor:light-armorjack-body'); colete.system.equipada = true;
+        const basica = pegar('core_ammo:rifle-basic'); basica.system.quantidade = 30;
+        const ap = pegar('core_ammo:rifle-armor-piercing'); ap.system.quantidade = 20;
+        const a = await Actor.implementation.create({ name: 'Teste Painel', type: 'personagem', system: { apelido: 'Barra', role: { nome: 'Solo', rank: 4 }, atributos: { ref: { valor: 8 } }, pericias: { evasion: { nivel: 3 } } }, items: [rifle, lexington, colete, basica, ap, pegar('core_weapons:heavy-melee')] });
+        await a.items.getName('Assault Rifle').recarregar();
+        const alvo = await Actor.implementation.create({ name: 'Alvo do Painel', type: 'capanga' });
+        // Pelo ator: o Foundry não devolve os tokens criados na ordem pedida.
+        const criados = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 300, y: 1700 })).toObject(), (await alvo.getTokenDocument({ x: 700, y: 1700 })).toObject()]);
+        const token = criados.find(t => t.actorId === a.id), tokenAlvo = criados.find(t => t.actorId === alvo.id);
+        window.__painel = { ator: a.id, alvo: alvo.id, token: token.id, tokenAlvo: tokenAlvo.id, cena: canvas.scene.id };
+        // O controle só vale na camada de tokens ativa (um passo da NET pode ter deixado outra).
+        canvas.tokens.activate();
+        canvas.tokens.releaseAll();
+        await new Promise(r => setTimeout(r, 400));
+        const vazio = { existe: Boolean(el()), barra: Boolean(el()?.querySelector('.pt-barra')) };
+        await esperar(() => canvas.tokens.get(token.id) && canvas.tokens.get(tokenAlvo.id));
+        canvas.tokens.get(token.id).control({ releaseOthers: true });
+        await esperar(() => texto('.pt-barra .pt-nome') === 'Teste Painel');
+        const controlados = canvas.tokens.controlled.map(t => t.name);
+        const doRifle = '.pt-arma[data-item="' + a.items.getName('Assault Rifle').id + '"]';
+        const daLexington = '.pt-arma[data-item="' + a.items.getName('Militech M-10AF Lexington').id + '"]';
+        return {
+          vazio, controlados, nome: texto('.pt-nome'), sub: texto('.pt-sub'), estado: texto('.pt-estado'), hp: [Number(el().querySelector('.pt-hp-campo')?.value), a.system.hp.value],
+          stats: el().querySelectorAll('.pt-stat').length, ref: texto('.pt-stat[data-stat="ref"] b'),
+          armas: [...el().querySelectorAll('.pt-arma .pt-arma-nome')].map(b => b.textContent.trim()), pente: texto(doRifle + ' .pt-arma-sub'),
+          modosDoRifle: [...el().querySelectorAll(doRifle + ' .pt-modo')].map(b => b.dataset.modo), modosDaLexington: [...el().querySelectorAll(daLexington + ' .pt-modo')].map(b => b.dataset.modo),
+          classe: texto(daLexington + ' .pt-pilula.pt-classe-power'), corpo: texto('.pt-ficha:has([data-local="corpo"]) .pt-ficha-valor'), cabeca: texto('.pt-ficha.pt-sem .pt-ficha-valor')
+        };
+      })()`);
+      await edge.shot('painel-tatico');
+      const ok = info.vazio.existe && !info.vazio.barra && info.nome === 'Teste Painel' && info.sub === '“Barra” · Solo 4' && info.estado === 'Sem ferimentos' && info.hp[0] === info.hp[1]
+        && info.stats === 10 && info.ref === '8' && info.armas.join() === 'Assault Rifle,Militech M-10AF Lexington' && /25\/25/.test(info.pente) && /CDT 1/.test(info.pente)
+        && info.modosDoRifle.join() === 'mirado,autofogo,supressivo' && info.modosDaLexington.join() === 'mirado,ricochete' && info.classe === 'Power' && info.corpo === '11/11' && info.cabeca === '–';
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Painel Tático: o retrato por estado de ferimento (um PNG livre para Sem ferimentos e Gravemente): Levemente usa a base com o efeito; Gravemente troca a imagem; Mortalmente usa a do Gravemente com o efeito; derrotado vira Morto, com o FLATLINE', async () => {
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const a = game.actors.get(window.__painel.ator);
+        await game.system.api.painel.retrato.definir(a, { imagens: { notWounded: 'icons/svg/mystery-man.svg', seriouslyWounded: 'icons/svg/skull.svg' } });
+        const ler = () => { const r = el()?.querySelector('.pt-retrato'); return { modo: r?.className.match(/pt-retrato-(livre|moldura)/)?.[1] ?? null, estado: r?.dataset.estado ?? null, src: r?.querySelector('img')?.getAttribute('src') ?? null, efeito: r?.className.match(/pt-efeito-(\\w+)/)?.[1] ?? '', flatline: Boolean(r?.querySelector('.pt-flatline')) }; };
+        await esperar(() => ler().modo === 'livre');
+        const estados = { sem: ler() };
+        const max = a.system.hp.max;
+        for (const [nome, hp, estado] of [['leve', max - 1, 'lightlyWounded'], ['grave', Math.ceil(max / 2) - 1, 'seriouslyWounded'], ['mortal', 0, 'mortallyWounded']]) {
+          await a.update({ 'system.hp.value': hp });
+          await esperar(() => ler().estado === estado);
+          estados[nome] = ler();
+        }
+        await a.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: true });
+        await esperar(() => ler().estado === 'dead');
+        estados.morto = ler();
+        await a.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: false });
+        await a.update({ 'system.hp.value': max });
+        await esperar(() => ler().estado === 'notWounded');
+        return estados;
+      })()`);
+      const base = 'icons/svg/mystery-man.svg', grave = 'icons/svg/skull.svg';
+      const e = info;
+      const ok = e.sem.modo === 'livre' && e.sem.src === base && !e.sem.efeito
+        && e.leve.estado === 'lightlyWounded' && e.leve.src === base && e.leve.efeito === 'lightlyWounded'
+        && e.grave.estado === 'seriouslyWounded' && e.grave.src === grave && !e.grave.efeito
+        && e.mortal.estado === 'mortallyWounded' && e.mortal.src === grave && e.mortal.efeito === 'mortallyWounded'
+        && e.morto.estado === 'dead' && e.morto.efeito === 'dead' && e.morto.flatline;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Painel Tático: os vitais pelos botões: −5 e +1 no HP, o número digitado, a ablação da armadura do corpo (−) e o conserto (+), e a Sorte', async () => {
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const a = game.actors.get(window.__painel.ator);
+        const colete = a.items.getName('Light Armorjack (Body)');
+        const hp = a.system.hp.value, sorte = a.system.sorte.value;
+        const r = {};
+        clicar('.pt-passo[data-valor="-5"]'); await esperar(() => a.system.hp.value === hp - 5); r.menos5 = a.system.hp.value;
+        clicar('.pt-passo[data-valor="1"]'); await esperar(() => a.system.hp.value === hp - 4); r.mais1 = a.system.hp.value;
+        await esperar(() => Number(el().querySelector('.pt-hp-campo')?.value) === hp - 4);
+        const campo = el().querySelector('.pt-hp-campo');
+        campo.value = 12;
+        campo.dispatchEvent(new Event('change', { bubbles: true }));
+        await esperar(() => a.system.hp.value === 12); r.digitado = a.system.hp.value;
+        clicar('.pt-mini-passo[data-acao="armadura"][data-local="corpo"][data-valor="-1"]'); await esperar(() => colete.system.sp.corpo.value === 10); r.ablacao = colete.system.sp.corpo.value;
+        await esperar(() => texto('.pt-ficha:has([data-local="corpo"]) .pt-ficha-valor') === '10/11'); r.naBarra = texto('.pt-ficha:has([data-local="corpo"]) .pt-ficha-valor');
+        clicar('.pt-mini-passo[data-acao="armadura"][data-local="corpo"][data-valor="1"]'); await esperar(() => colete.system.sp.corpo.value === 11); r.conserto = colete.system.sp.corpo.value;
+        clicar('.pt-mini-passo[data-acao="sorte"][data-valor="-1"]'); await esperar(() => a.system.sorte.value === sorte - 1); r.sorte = [sorte, a.system.sorte.value];
+        await a.update({ 'system.hp.value': hp, 'system.sorte.value': sorte });
+        return { ...r, hp };
+      })()`);
+      const ok = info.menos5 === info.hp - 5 && info.mais1 === info.hp - 4 && info.digitado === 12 && info.ablacao === 10 && info.naBarra === '10/11' && info.conserto === 11 && info.sorte[1] === info.sorte[0] - 1;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Painel Tático: as rolagens pela ficha (REF com Ctrl, sem a janela; a Evasão achada na busca do painel de perícias; a estrela põe a Evasão na barra, e ela rola); o tiro mirado na perna com o alvo marcado gasta 1 bala e sai pelo combate; "Trocar a munição" carrega a perfurante (o que sobrou no pente volta para a básica)', async () => {
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const S = '${S}';
+        const a = game.actors.get(window.__painel.ator);
+        const rifle = a.items.getName('Assault Rifle'), basica = a.items.getName('Rifle (Basic)'), ap = a.items.getName('Rifle (Armor-Piercing)');
+        const r = {};
+        let antes = game.messages.size;
+        clicar('.pt-stat[data-stat="ref"]', true);
+        await esperar(() => game.messages.size > antes);
+        r.ref = { rotulo: game.messages.contents.at(-1)?.getFlag(S, 'teste')?.rotulo ?? null, formula: game.messages.contents.at(-1)?.rolls[0]?.formula ?? null, janela: Boolean(document.querySelector('.application.janela-rolagem')) };
+        clicar('.pt-acao[data-painel="pericias"]');
+        await esperar(() => el().querySelector('.pt-painel-pericias .pt-busca'));
+        const busca = el().querySelector('.pt-busca');
+        busca.value = 'evas';
+        busca.dispatchEvent(new Event('input', { bubbles: true }));
+        r.achadas = [...el().querySelectorAll('.pt-painel-pericias .pt-linha:not([hidden])')].map(linha => linha.dataset.item);
+        clicar('.pt-estrela[data-item="evasion"]');
+        await esperar(() => (a.getFlag(S, 'periciasFavoritas') ?? []).includes('evasion') && el().querySelector('.pt-favorita[data-item="evasion"]'));
+        r.favorita = texto('.pt-favorita[data-item="evasion"]');
+        antes = game.messages.size;
+        clicar('.pt-favorita[data-item="evasion"]', true);
+        await esperar(() => game.messages.size > antes);
+        r.evasao = game.messages.contents.at(-1)?.getFlag(S, 'teste')?.rotulo ?? null;
+        clicar('[data-acao="fecharPainel"]');
+        // O mirado na perna, com o alvo marcado (Ctrl: sem a janela).
+        clicar('.pt-modo[data-item="' + rifle.id + '"][data-modo="mirado"]');
+        await esperar(() => el().querySelector('.pt-local[data-item="' + rifle.id + '"]'));
+        const local = el().querySelector('.pt-local[data-item="' + rifle.id + '"]');
+        local.value = 'perna';
+        local.dispatchEvent(new Event('change', { bubbles: true }));
+        canvas.tokens.get(window.__painel.tokenAlvo).setTarget(true, { releaseOthers: true });
+        await esperar(() => texto('.pt-alvo-nomes').includes('Alvo do Painel') && el().querySelector('.pt-alvo.pt-fluxo-pronto'));
+        r.alvo = texto('.pt-alvo-nomes');
+        const pente = rifle.system.pente.value;
+        antes = game.messages.size;
+        clicar('.pt-atk[data-item="' + rifle.id + '"]', true);
+        await esperar(() => rifle.system.pente.value === pente - 1 && game.messages.contents.slice(antes).some(m => m.getFlag(S, 'ataque')), 150);
+        const ataque = game.messages.contents.slice(antes).find(m => m.getFlag(S, 'ataque'));
+        r.tiro = { gastou: pente - rifle.system.pente.value, cartao: ataque?.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 200) ?? null };
+        canvas.tokens.get(window.__painel.tokenAlvo).setTarget(false, { releaseOthers: true });
+        // Trocar a munição: a janela lista as duas; a perfurante entra, e as 24 do pente voltam para a básica.
+        const noPente = rifle.system.pente.value, daBasica = basica.system.quantidade;
+        clicar('[data-acao="municao"][data-item="' + rifle.id + '"]');
+        const janela = () => document.querySelector('.application.dialog.painel-tatico-municao:not(.minimizing)');
+        await esperar(() => janela()?.querySelector('button[data-action="' + ap.id + '"]'));
+        r.opcoes = [...janela().querySelectorAll('footer button[data-action]')].map(b => b.textContent.trim());
+        janela().querySelector('button[data-action="' + ap.id + '"]').click();
+        await esperar(() => rifle.system.carregada === ap.id);
+        r.trocou = { carregada: rifle.municaoCarregada?.name, pente: rifle.system.pente.value, basica: basica.system.quantidade, ap: ap.system.quantidade, noPente, daBasica };
+        return r;
+      })()`);
+      const t = info.trocou;
+      const ok = info.ref.rotulo && /1d10/.test(info.ref.formula) && !info.ref.janela && info.achadas.join() === 'evasion' && /Evasão/.test(info.favorita) && /Evasão/.test(info.evasao)
+        && info.alvo === 'Alvo do Painel' && info.tiro.gastou === 1 && /perna/i.test(info.tiro.cartao)
+        && info.opcoes.length === 2 && t.carregada === 'Rifle (Armor-Piercing)' && t.pente === 20 && t.ap === 0 && t.basica === t.daBasica + t.noPente;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Painel Tático: o painel de Equipamento guarda a Lexington (ela sai das armas da barra; equipar de novo passa pela conferência das mãos, como na ficha); com a Role Rockerboy, o painel de Role rola o Impacto Carismático', async () => {
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const S = '${S}';
+        const a = game.actors.get(window.__painel.ator);
+        const faca = a.items.getName('Militech M-10AF Lexington');
+        const r = { roleAntes: Boolean(el().querySelector('.pt-acao[data-painel="roles"]')) };
+        clicar('.pt-armas-topo [data-acao="painel"][data-painel="equipamento"]');
+        await esperar(() => el().querySelector('.pt-painel-equipamento [data-acao="equipar"][data-item="' + faca.id + '"]'));
+        r.estado = texto('.pt-painel-equipamento [data-acao="equipar"][data-item="' + faca.id + '"]');
+        clicar('.pt-painel-equipamento [data-acao="equipar"][data-item="' + faca.id + '"]');
+        await esperar(() => !faca.system.equipada && !el().querySelector('.pt-arma[data-item="' + faca.id + '"]'));
+        r.equipada = { item: faca.system.equipada, naBarra: Boolean(el().querySelector('.pt-arma[data-item="' + faca.id + '"]')), estado: texto('.pt-painel-equipamento [data-acao="equipar"][data-item="' + faca.id + '"]') };
+        clicar('[data-acao="fecharPainel"]');
+        await a.update({ 'system.role.nome': 'Rockerboy' });
+        await esperar(() => el().querySelector('.pt-acao[data-painel="roles"]'));
+        clicar('.pt-acao[data-painel="roles"]');
+        await esperar(() => el().querySelector('.pt-painel-roles [data-rolagem="impacto-carismatico"]'));
+        const antes = game.messages.size;
+        clicar('.pt-painel-roles [data-rolagem="impacto-carismatico"]', true);
+        await esperar(() => game.messages.size > antes);
+        r.role = game.messages.contents.at(-1)?.getFlag(S, 'teste')?.rotulo ?? game.messages.contents.at(-1)?.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+        clicar('[data-acao="fecharPainel"]');
+        await a.update({ 'system.role.nome': 'Solo' });
+        return r;
+      })()`);
+      const ok = !info.roleAntes && info.estado === 'Equipado' && !info.equipada.item && !info.equipada.naBarra && info.equipada.estado === 'Guardado' && /Impacto Carismático/.test(info.role);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Painel Tático: o estilo de cada jogador (o tema Arasaka nas cores da barra; o código PT1 leva o tema e volta), recolher pelo botão (só a tira com o retrato e o HP) e abrir de novo', async () => {
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const api = game.system.api.painel;
+        const S = '${S}';
+        await api.estilo.salvar({ ...api.estilo.atual(), tema: 'arasaka', acento: '#ff1f3d' });
+        await esperar(() => el().style.getPropertyValue('--pt-acento') === '#ff1f3d');
+        const arasaka = el().style.getPropertyValue('--pt-acento');
+        const codigo = api.estilo.codigo();
+        await game.settings.set(S, 'painelEstilo', null);
+        await esperar(() => el().style.getPropertyValue('--pt-acento') !== '#ff1f3d');
+        const padrao = el().style.getPropertyValue('--pt-acento');
+        await api.estilo.aplicarCodigo(codigo);
+        await esperar(() => el().style.getPropertyValue('--pt-acento') === '#ff1f3d');
+        const doCodigo = el().style.getPropertyValue('--pt-acento');
+        clicar('.pt-ferramentas [data-acao="recolher"]');
+        await esperar(() => el().querySelector('.pt-mini'));
+        const recolhido = { mini: Boolean(el().querySelector('.pt-mini')), hp: texto('.pt-mini-hp'), barra: Boolean(el().querySelector('.pt-barra')) };
+        clicar('.pt-mini-botao');
+        await esperar(() => el().querySelector('.pt-barra'));
+        const aberto = Boolean(el().querySelector('.pt-barra'));
+        await game.settings.set(S, 'painelEstilo', null);
+        return { arasaka, padrao, codigo: codigo.slice(0, 4), doCodigo, recolhido, aberto };
+      })()`);
+      const ok = info.arasaka === '#ff1f3d' && info.padrao && info.padrao !== '#ff1f3d' && info.codigo === 'PT1:' && info.doCodigo === '#ff1f3d'
+        && info.recolhido.mini && !info.recolhido.barra && /\d+\/\d+/.test(info.recolhido.hp) && info.aberto;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('Painel Tático no navegador do jogador: sem selecionar nada, a barra mostra o personagem dele (o Alvo); a do mestre continua no token controlado', async () => {
+      try {
+        const doJogador = await jogador.evaluate(`(async () => {
+          ${naBarra}
+          await esperar(() => el()?.querySelector('.pt-barra .pt-nome'));
+          return { nome: texto('.pt-nome'), personagem: game.user.character?.name ?? null, controlados: canvas.tokens?.controlled.length ?? 0, stats: el()?.querySelectorAll('.pt-stat').length ?? 0, avisos: [] };
+        })()`);
+        const doMestre = await edge.evaluate(`(() => { const el = document.getElementById('painel-tatico'); return el?.querySelector('.pt-nome')?.textContent.trim() ?? null; })()`);
+        return [doJogador.nome === doJogador.personagem && doJogador.stats === 10 && doMestre === 'Teste Painel', JSON.stringify({ doJogador, doMestre })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const p = window.__painel;
+          if (!p) return true;
+          canvas.tokens.releaseAll();
+          await game.scenes.get(p.cena)?.deleteEmbeddedDocuments('Token', [p.token, p.tokenAlvo].filter(id => game.scenes.get(p.cena)?.tokens.has(id)));
+          for (const id of [p.ator, p.alvo]) { const ator = game.actors.get(id); for (const item of ator?.items ?? []) await item.sheet?.close(); await ator?.sheet?.close(); await ator?.delete(); }
+          delete window.__painel;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('contêiner (o C24, parte 1): o ator novo é uma loja de token solto e neutro, com os jogadores donos; o tipo liga as permissões do CORE (a loja mantém o estoque infinito); o dinheiro com o extrato; a ficha do mestre com as configurações de cada tipo; o item do compêndio entra em cópia e soma na pilha; o da ficha vai com o carregador instalado; o preço da lista; pegar uma parte, pegar tudo e o estoque infinito; o mestre arrasta do contêiner para a ficha e de uma ficha para outra, e o item vai', async () => {
       const info = await edge.evaluate(`(async () => {
         const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };

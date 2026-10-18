@@ -25,6 +25,10 @@
     {
       "src": "styles/tema.css",
       "layer": "system"
+    },
+    {
+      "src": "styles/painel-tatico.css",
+      "layer": "system"
     }
   ],
   "languages": [

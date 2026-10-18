@@ -76,7 +76,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | o editor visual (a grade, arrastar para mover e trocar, o "+" para criar) | portado no ciclo 90 (o C8, parte 13), no mapa da ficha da arquitetura: a tabela das linhas faz o papel do painel; sem o "Desfazer", porque cada mudança grava na hora, como o resto da ficha |
 | NET Architect | o Scanner (o botão no HUD do token, o raio do resultado × 10 m, o oculto acima do DV do Scanner, quem achou passa a vê-lo) | portado no ciclo 91 (o C8, parte 14); a parede no meio, que o da mesa não conferia, barra a conexão pela wiki |
 | CORE | o contêiner (a loja, o saque e o esconderijo: os tipos com as permissões, a ficha, pôr e pegar, a trava) | portado no ciclo 122 (o C24, parte 1); a compra e a venda da loja faltam |
-| Painel Tático | tudo | falta |
+| Painel Tático | tudo (o retrato por estado, os vitais, os atributos, as armas, as ações, os painéis, o estilo de cada jogador) | portado no ciclo 125 (o C25); o retrato do Foundry 12 não vem na migração (ver as dúvidas) |
 
 ## Bloqueadores para migrar a campanha
 
@@ -132,7 +132,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
   | Cyberware | a base com os slots das opções | falta | P3 |
   | NET | Interface, programas com REZ, Black ICE e demônios como atores, as arquiteturas (as tabelas e a cena do CORE, o NET Architect) | a Interface e os programas nos ciclos 40 a 42; o Black ICE e o demônio como atores e o Black ICE próprio do netrunner nos ciclos 43 a 46; a arquitetura (o item e o mapa) no 47; falta o NET Architect (o C8) | P3 |
-  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o contêiner desde o 122 (o C24, por partes); o Painel Tático falta | P3 |
+  | NPCs e mestre | a ficha de capanga; o contêiner (loja, saque, esconderijo); o Painel Tático | o capanga nos ciclos 36 e 37; o contêiner desde o 122 (o C24, por partes); o Painel Tático no 125 | P3 |
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
 
@@ -621,6 +621,18 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **arrastar entre as fichas:** no CORE, o item sai da origem (um personagem dá o item ao outro); aqui também, desde este
     ciclo (antes, a ficha não arrastava). Do contêiner, como no CORE, só o mestre arrasta, e o item sai mesmo com o estoque
     infinito; o jogador usa o "Pegar".
+
+- **O Painel Tático dentro do sistema** (ciclo 125; o módulo painel-tatico da mesa do Foundry 12):
+  - **o retrato de cada personagem** fica no ator (a flag do sistema). O do Foundry 12 não vem na migração (a ficha "Na
+    mesa" não manda a flag do módulo): cada jogador escolhe as imagens de novo, pelo botão do retrato;
+  - **o estilo** de cada jogador fica neste navegador, como no módulo; o código PT1 de lá vale aqui, e a fonte que não
+    existe aqui (a Tektur, a Jost, a Rubik e a Bruno Ace do CORE) volta para a Rajdhani do tema da ficha;
+  - **o modo de cada arma** (o tiro, o mirado com o local, o autofogo, o supressivo, o ricochete, os dois canos) fica no
+    painel deste navegador: a ficha tem um botão por modo, sem o modo guardado no ator, como o CORE guardava;
+  - **as perícias favoritas** ficam numa flag do ator (as perícias daqui não são itens, como no CORE);
+  - **"Trocar a munição"** escolhe a munição da recarga; a ficha recarrega com a que está no pente (é o botão do painel);
+  - **a ligação com o Combat HUD** saiu (ele não existe para este sistema); a do Fluxo, do cpr-2077 e do NET Architect é a
+    do próprio sistema.
 
 ## Registro dos ciclos
 
@@ -6115,6 +6127,45 @@ nem o cenário v14 que passaram nos portões. O número já publicado ficou com 
   continuam com o mestre. Tomadas antigas sem prazo continuam usando Acabou. A fila é do cliente, como as outras
   filas do sistema. O guia Morana e os demais arquivos locais ficaram fora do ciclo. Servidor e campanha real intactos.
 - **Próximo fora da NET:** C17, pilhas, pelo protocolo de reserva do ROADMAP.
+
+### Ciclo 125 (2026-10-18): o C25, o Painel Tático dentro do sistema (sessão KouArt)
+
+Commit anterior: `917f57c5` (a reserva do C25). O pedido do usuário (2026-10-18), para a primeira sessão da Morana no
+Foundry 14: o Painel Tático da mesa no Foundry 14. Com este ciclo, o C25 termina.
+
+- **A referência:** o módulo `foundry-painel-tatico/` (o painel-tatico 1.0.0 da mesa do Foundry 12) e o teste dele
+  (`tests/cenarios/painel.js`). A parte que não depende do CORE vem quase igual (as contas, o estilo, o retrato, a mira e
+  o CSS); as ações chamam o sistema, pelo mesmo caminho da ficha.
+- **O que muda:**
+  - **`scripts/painel/` (novo):** `logica.mjs` (as contas do módulo, com as fontes do tema da ficha e o estado de
+    ferimento do sistema nos estados do retrato), `estilo.mjs` e `retrato.mjs` (as configurações e a flag no espaço do
+    sistema), `alvo.mjs` (a mira), `acoes.mjs` (as rolagens, o ataque, o dano, a recarga, a munição, os botões de 2077, a
+    iniciativa, o fim do turno, os vitais e o equipamento, pelo sistema), `painel.mjs` (a barra, com os dados daqui) e
+    `index.mjs` (as configurações, a tecla H e os ganchos); **`styles/painel-tatico.css`** (o do módulo);
+  - **`documentos.mjs`:** `municaoCompativel` e `recarregar({ municao })`: o "Trocar a munição" do painel escolhe a
+    munição (a ficha só recarregava a que estava no pente);
+  - **`sistema.mjs` e `system.json`:** o registro do painel e o CSS.
+- **Testes:**
+  - **G3:** o `tests/sistema/painel.test.mjs` (novo): os casos do teste do módulo (as imagens de cada estado, o efeito, o
+    morto, o estilo, o código PT1, os botões de HP, a posição), com as fontes daqui, e o estado de ferimento do sistema
+    (regras.estadoDeFerimento) nos estados do retrato;
+  - **G4:** sete passos novos: a barra vazia sem token e a do token controlado (o nome, o apelido, a Role, o estado, o
+    HP, a armadura, os 10 atributos, as armas com os modos, a pílula Power e o pente); o retrato por estado (o Levemente
+    com o efeito, o Gravemente com a imagem dele, o Mortalmente com a do Gravemente e o efeito, o Morto com o FLATLINE);
+    os vitais (os botões do HP, o número digitado, a ablação e o conserto, a Sorte); as rolagens (REF com Ctrl, a busca
+    das perícias, a favorita na barra), o tiro mirado na perna com o alvo marcado e o "Trocar a munição"; o painel de
+    Equipamento e o de Role; o estilo (o tema, o código PT1, o padrão) e recolher; e o painel do jogador, com o personagem
+    dele.
+- **O que o teste mostrou:** o `createEmbeddedDocuments` do Foundry 14 não devolve os tokens na ordem pedida (o teste
+  pega cada um pelo ator); o `control()` só vale na camada de tokens ativa.
+- **Resultados:**
+  - G1: 88 arquivos, 0 erros; G2: 0 erros;
+  - G3: 181 de 181;
+  - G4: 168 de 168;
+  - **mutações:** as 3 do G3 caíram (180 de 181 cada): o Gravemente que vira Levemente no retrato (P1), a fonte do CORE que
+    fica (P2) e o código PT1 com a posição (P3). As 8 do G4 (P4 a P11) rodam depois do push, para o painel ir para a mesa
+    hoje; o resultado vai num commit de registro.
+- **Próximo:** o C24, partes 2 e 3 (a loja que vende e a que compra), ou o que o usuário escolher.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -766,8 +766,16 @@ export class ItemCPR extends Item {
     return rolarDano(this, { falar: true, paraAplicar: true, ...opcoes });
   }
 
-  // Enche o pente com a munição carregada ou, sem ela, com a primeira munição compatível do ator.
-  async recarregar() {
+  // A munição que entra nesta arma: o tipo dela e, na que só aceita a Smart melhorada (a Zhuo), só essa; com alguma no
+  // estoque.
+  municaoCompativel(municao) {
+    return municao?.type === 'municao' && municao.system.quantidade > 0 && (!this.system.municoes.length || this.system.municoes.includes(municao.system.tipo))
+      && (!this.perfil2077?.soSmartMelhorada || Boolean(municao.getFlag(SISTEMA, 'arma2077')?.smartMelhorada));
+  }
+
+  // Enche o pente com a munição escolhida (o "Trocar a munição" do Painel Tático) ou com a carregada ou, sem ela, com a
+  // primeira munição compatível do ator.
+  async recarregar({ municao: escolhida = null } = {}) {
     if (this.type !== 'arma' || !this.system.pente.max) return null;
     if (this.system.instaladoEm || this.getFlag(SISTEMA, 'armaVeicular')) {
       const regra = this.getFlag(SISTEMA, 'armaVeicular');
@@ -777,10 +785,7 @@ export class ItemCPR extends Item {
         return null;
       }
     }
-    const soMelhorada = this.perfil2077?.soSmartMelhorada;
-    const compativel = municao => municao.type === 'municao' && municao.system.quantidade > 0 && (!this.system.municoes.length || this.system.municoes.includes(municao.system.tipo))
-      && (!soMelhorada || Boolean(municao.getFlag(SISTEMA, 'arma2077')?.smartMelhorada));
-    const municao = [this.municaoCarregada, ...(this.actor?.items ?? [])].find(item => item && compativel(item));
+    const municao = [escolhida?.parent === this.actor ? escolhida : null, this.municaoCarregada, ...(this.actor?.items ?? [])].find(item => item && this.municaoCompativel(item));
     if (!municao) { ui.notifications.warn(`${this.name}: sem munição compatível.`); return null; }
     // O que sobrou no pente volta para a munição que estava nele.
     const anterior = this.municaoCarregada;

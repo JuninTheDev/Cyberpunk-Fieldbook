@@ -27,6 +27,7 @@ import * as lesoes from './lesoes.mjs';
 import * as migracao from './migracao.mjs';
 import * as municoes from './municoes.mjs';
 import { registrarNet } from './netrun/index.mjs';
+import { registrarPainel } from './painel/index.mjs';
 import * as regras from './regras.mjs';
 import { registrarCritico, rolarDano, testar } from './rolagens.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
@@ -59,6 +60,8 @@ Hooks.once('init', () => {
   CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrado, name: 'Agarrado', img: 'icons/svg/net.svg' });
   registrarCritico();
   registrarConfiguracoes();
+  // O Painel Tático (o C25): as configurações deste navegador e a tecla H; a barra monta no ready.
+  registrarPainel();
   municoes.registrarMunicoes();
   drogas.registrarDrogas();
 
