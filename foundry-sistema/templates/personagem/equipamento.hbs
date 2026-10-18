@@ -46,6 +46,19 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           </li>
           {{else}}<li class="vazio">Sem armas.</li>{{/each}}
         </ol>
+        {{#if armasSemVeiculo.length}}
+        <p class="nota">Veículo ausente: abra a arma para corrigir a montagem.</p>
+        <ol class="itens">
+          {{#each armasSemVeiculo}}
+          <li data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <span class="detalhe">Montada · veículo ausente</span>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+          </li>
+          {{/each}}
+        </ol>
+        {{/if}}
       </section>
 
       <section class="painel corte vermelho">
@@ -92,6 +105,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
+            {{#if prepararArma}}<button type="button" class="acao" data-action="prepararArmaVeicular" data-tooltip="Preparar a arma montada neste veículo">Preparar arma</button>{{/if}}
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>
           {{/each}}
@@ -101,15 +115,27 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
 
       {{#if veiculos.length}}
       <section class="painel corte">
-        <div class="titulo">VEÍCULOS<span>{{veiculos.length}}</span></div>
+        <div class="titulo">VEÍCULOS<span>UM EM USO POR VEZ</span></div>
         <ol class="itens">
           {{#each veiculos}}
           <li data-item-id="{{id}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
+            <button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="usarVeiculo" data-tooltip="Escolher o veículo em uso; o anterior fica na frota">{{#if ativo}}Em uso{{else}}Usar{{/if}}</button>
+            {{#if ativo}}<button type="button" class="alternar {{#if dirigindo}}ligado{{/if}}" data-action="dirigirVeiculo">{{#if dirigindo}}Parar de dirigir{{else}}Dirigir{{/if}}</button>{{/if}}
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>
+          {{#each armas}}
+          <li data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem">└ {{nome}}</a>
+            <span class="detalhe">Montada · {{resumo}}</span>
+            {{#unless soAutofogo}}<button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">Atacar</button>{{/unless}}
+            {{#if sistema.autofogo}}<button type="button" class="acao" data-action="atacar" data-modo="autofogo" data-tooltip="Autofogo (×{{sistema.autofogo}})">Autofogo</button>{{/if}}
+            {{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Recarregar a arma montada">Recarregar</button>{{/if}}
+          </li>
+          {{/each}}
           {{/each}}
         </ol>
       </section>

@@ -9688,6 +9688,606 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, `${JSON.stringify(info)} · entregues: ${entregues.length}`];
     });
 
+    await r.passo('veículos (C15): a ficha seleciona um veículo da família por vez e dirige; trocar reseta a direção, devolver desativa; armas instaladas são preparadas uma vez, sem ocupar mãos, e dirigir impede recarregar', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = await Actor.implementation.create({ name: 'C15 Motorista', type: 'personagem' });
+        const avisos = [], avisar = ui.notifications.warn;
+        const esperar = async condicao => { for (let i = 0; i < 100 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return condicao(); };
+        ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+        try {
+          const dados = (modelo, nome, sistema = {}) => ({ ...foundry.utils.deepClone(cat[modelo]), _id: foundry.utils.randomID(), name: nome, system: { ...foundry.utils.deepClone(cat[modelo].system), ...sistema } });
+          const carro1 = dados('core_vehicles:compact-groundcar', 'Carro da família 1', { familia: true });
+          const carro2 = dados('core_vehicles:compact-groundcar', 'Carro da família 2', { familia: true });
+          const particular = dados('core_vehicles:roadbike', 'Moto particular');
+          const metralhadora = dados('core_upgrades:onboard-machine-gun', 'Metralhadora do carro', { instaladoEm: carro1._id });
+          const chamas = dados('core_upgrades:onboard-flamethrower', 'Lança-chamas do carro', { instaladoEm: carro1._id });
+          const lamina = dados('core_upgrades:onboard-melee-weapon', 'Lâmina do carro', { instaladoEm: carro2._id });
+          const rifle = dados('core_ammo:rifle-basic', 'Balas do carro', { quantidade: 100 });
+          const cartuchos = dados('core_ammo:shotgun-shell-incendiary', 'Combustível do carro', { quantidade: 100 });
+          await a.createEmbeddedDocuments('Item', [carro1, carro2, particular, metralhadora, chamas, lamina, rifle, cartuchos], { keepId: true });
+          const primeiro = a.items.get(carro1._id), segundo = a.items.get(carro2._id), moto = a.items.get(particular._id);
+          const estado = () => ({ ativo: a.veiculoAtivo?.name ?? null, dirigindo: a.system.dirigindo });
+          const antes = estado();
+          await a.sheet.render({ force: true });
+          const botao = (item, acao) => a.sheet.element?.querySelector('.tab.equipamento [data-item-id="' + item.id + '"] [data-action="' + acao + '"]');
+          await esperar(() => botao(primeiro, 'usarVeiculo'));
+          botao(primeiro, 'usarVeiculo').click();
+          await esperar(() => a.system.veiculo === primeiro.id && botao(primeiro, 'dirigirVeiculo'));
+          const selecionado = estado();
+          botao(primeiro, 'dirigirVeiculo').click();
+          await esperar(() => a.system.dirigindo);
+          const dirigindo = estado();
+          await esperar(() => botao(segundo, 'usarVeiculo'));
+          botao(segundo, 'usarVeiculo').click();
+          await esperar(() => a.system.veiculo === segundo.id && !a.system.dirigindo);
+          const trocou = { ...estado(), primeiroAtivo: a.veiculoAtivo?.id === primeiro.id };
+          await a.usarVeiculo(moto.id);
+          await a.dirigirVeiculo(true);
+          const particularAtivo = estado();
+          await a.usarVeiculo('');
+          const devolvido = estado();
+          await a.usarVeiculo(primeiro.id);
+
+          const montar = async id => a.items.get(id).prepararArmaVeicular();
+          const [arma, repetida] = await Promise.all([montar(metralhadora._id), montar(metralhadora._id)]);
+          const fogo = await montar(chamas._id);
+          const branca = await montar(lamina._id);
+          const montagem = {
+            mesma: arma?.id === repetida?.id, quantidade: a.items.filter(i => i.type === 'arma').length,
+            metralhadora: arma && { pai: arma.system.instaladoEm === primeiro.id, max: arma.system.pente.max, maos: arma.system.maos, slots: arma.system.slots, equipada: arma.system.equipada, autofogo: arma.system.autofogo, supressivo: arma.system.supressivo, tipo: arma.getFlag('${S}', 'armaVeicular')?.tipo, upgrade: arma.getFlag('${S}', 'armaVeicular')?.upgrade === metralhadora._id },
+            fogo: fogo && { pai: fogo.system.instaladoEm === primeiro.id, pericia: fogo.system.pericia, tipo: fogo.getFlag('${S}', 'armaVeicular')?.tipo },
+            branca: branca && { pai: branca.system.instaladoEm === segundo.id, dano: branca.system.dano, ignorar: branca.system.ignorarArmadura, tipo: branca.getFlag('${S}', 'armaVeicular')?.tipo },
+            livres: a.maosLivres
+          };
+          await arma.recarregar();
+          await fogo.recarregar();
+          const carregado = { pente: arma.system.pente.value, reserva: a.items.get(rifle._id).system.quantidade, fogo: fogo.system.pente.value, combustivel: a.items.get(cartuchos._id).system.quantidade };
+          await arma.update({ 'system.pente.value': 20 });
+          await fogo.update({ 'system.pente.value': 1 });
+          await a.dirigirVeiculo(true);
+          const antesDeRecarregar = [arma.system.pente.value, a.items.get(rifle._id).system.quantidade, fogo.system.pente.value, a.items.get(cartuchos._id).system.quantidade];
+          await arma.recarregar();
+          await fogo.recarregar();
+          const recusado = { estado: [arma.system.pente.value, a.items.get(rifle._id).system.quantidade, fogo.system.pente.value, a.items.get(cartuchos._id).system.quantidade], avisos: avisos.splice(0) };
+          await a.dirigirVeiculo(false);
+          await arma.recarregar();
+          const parado = { pente: arma.system.pente.value, reserva: a.items.get(rifle._id).system.quantidade };
+          // Transferir a instalação leva a arma já preparada, com o mesmo pente e a mesma munição.
+          const antesDeMover = { id: arma.id, pente: arma.system.pente.value, carregada: arma.system.carregada };
+          await a.items.get(metralhadora._id).update({ 'system.instaladoEm': segundo.id });
+          const transferida = await montar(metralhadora._id);
+          const mudouDeCarro = { mesma: transferida?.id === antesDeMover.id, pai: transferida?.system.instaladoEm === segundo.id, pente: transferida?.system.pente.value, municao: transferida?.system.carregada === antesDeMover.carregada, quantidade: a.items.filter(i => i.type === 'arma').length };
+          await a.items.get(metralhadora._id).update({ 'system.instaladoEm': primeiro.id });
+          await montar(metralhadora._id);
+          // A arma que perdeu o pai continua editável: o inventário não pode escondê-la para sempre.
+          await primeiro.delete();
+          await esperar(() => a.sheet.element?.querySelector('.tab.equipamento [data-item-id="' + arma.id + '"] [data-action="editarItem"]'));
+          const orfa = { listada: Boolean(a.sheet.element.querySelector('.tab.equipamento [data-item-id="' + arma.id + '"] [data-action="editarItem"]')) };
+          await arma.sheet.render({ force: true });
+          await esperar(() => arma.sheet.element?.querySelector('[name="system.instaladoEm"]'));
+          const seletor = arma.sheet.element.querySelector('[name="system.instaladoEm"]');
+          orfa.ofereceSegundo = [...seletor.options].some(opcao => opcao.value === segundo.id);
+          seletor.value = segundo.id;
+          seletor.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => arma.system.instaladoEm === segundo.id);
+          orfa.reparada = arma.system.instaladoEm === segundo.id;
+          await arma.sheet.close();
+          return { antes, selecionado, dirigindo, trocou, particularAtivo, devolvido, montagem, carregado, antesDeRecarregar, recusado, parado, mudouDeCarro, orfa, avisos };
+        } finally {
+          ui.notifications.warn = avisar;
+          await a.sheet.close();
+          await a.delete();
+          window.__fila = [];
+        }
+      })()`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const ok = igual(info.antes, { ativo: null, dirigindo: false })
+        && igual(info.selecionado, { ativo: 'Carro da família 1', dirigindo: false })
+        && igual(info.dirigindo, { ativo: 'Carro da família 1', dirigindo: true })
+        && igual(info.trocou, { ativo: 'Carro da família 2', dirigindo: false, primeiroAtivo: false })
+        && igual(info.particularAtivo, { ativo: 'Moto particular', dirigindo: true }) && igual(info.devolvido, { ativo: null, dirigindo: false })
+        && info.montagem.mesma && info.montagem.quantidade === 3 && info.montagem.livres === 2
+        && igual(info.montagem.metralhadora, { pai: true, max: 30, maos: 0, slots: 0, equipada: false, autofogo: 4, supressivo: false, tipo: 'metralhadora', upgrade: true })
+        && igual(info.montagem.fogo, { pai: true, pericia: 'heavy-weapons', tipo: 'lanca-chamas' })
+        && igual(info.montagem.branca, { pai: true, dano: '4d6', ignorar: 50, tipo: 'arma-branca' })
+        && info.carregado.pente === 30 && info.carregado.reserva === 70 && info.carregado.fogo > 1
+        && igual(info.recusado.estado, info.antesDeRecarregar) && info.recusado.avisos.length === 2 && info.recusado.avisos.every(aviso => /dirig/i.test(aviso))
+        && igual(info.parado, { pente: 30, reserva: 60 }) && igual(info.mudouDeCarro, { mesma: true, pai: true, pente: 30, municao: true, quantidade: 3 })
+        && info.orfa.listada && info.orfa.ofereceSegundo && info.orfa.reparada && info.avisos.length === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C15): Chassis blindado dá SP 13 e ablação própria; vidro blindado tem 15 HP por janela, o segundo upgrade dá 30, ajustar conserva o dano e cada janela tem sua ficha', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = await Actor.implementation.create({ name: 'C15 Vidros', type: 'personagem' });
+        const esperar = async condicao => { for (let i = 0; i < 100 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return condicao(); };
+        let veiculo;
+        try {
+          const dados = (modelo, nome, sistema = {}) => ({ ...foundry.utils.deepClone(cat[modelo]), _id: foundry.utils.randomID(), name: nome, system: { ...foundry.utils.deepClone(cat[modelo].system), ...sistema } });
+          const carro = dados('core_vehicles:compact-groundcar', 'Carro com vidros', { sp: 4, ablacao: 0 });
+          const vidro1 = dados('core_upgrades:bulletproof-glass', 'Vidro 1', { instaladoEm: carro._id });
+          const vidro2 = dados('core_upgrades:bulletproof-glass', 'Vidro 2');
+          const blindagem = dados('core_upgrades:armored-chassis', 'Blindagem', { instaladoEm: carro._id });
+          await a.createEmbeddedDocuments('Item', [carro, vidro1, vidro2, blindagem], { keepId: true });
+          veiculo = a.items.get(carro._id);
+          const normal = { blindagem: { sp: veiculo.system.blindagem.sp, max: veiculo.system.blindagem.max }, vidro: veiculo.system.vidroMax };
+          await veiculo.update({ 'system.ablacao': 3 });
+          const ablado = { blindagem: { sp: veiculo.system.blindagem.sp, max: veiculo.system.blindagem.max }, base: veiculo._source.system.sp, hp: a.system.hp.value };
+          const frente = await veiculo.adicionarJanela('Para-brisa');
+          const lateral = await veiculo.adicionarJanela('Lateral');
+          const janelas = () => Object.fromEntries(Object.entries(veiculo.system.janelas).map(([id, janela]) => [id, { nome: janela.nome, hp: { value: janela.hp.value, max: janela.hp.max } }]));
+          const novas = { frente: janelas()[frente], lateral: janelas()[lateral] };
+          await veiculo.update({ ['system.janelas.' + frente + '.hp.value']: 5 });
+          await a.items.get(vidro2._id).update({ 'system.instaladoEm': veiculo.id });
+          const antesDeAjustar = { vidro: veiculo.system.vidroMax, frente: janelas()[frente], lateral: janelas()[lateral] };
+          await veiculo.ajustarVidros();
+          const ajustadas = { frente: janelas()[frente], lateral: janelas()[lateral] };
+          await veiculo.sheet.render({ force: true });
+          const campo = (id, final) => veiculo.sheet.element?.querySelector('[name="system.janelas.' + id + '.' + final + '"]');
+          await esperar(() => campo(frente, 'hp.value') && campo(lateral, 'hp.value'));
+          const ficha = {
+            quantidade: veiculo.sheet.element.querySelectorAll('[data-janela-id]').length,
+            frente: [campo(frente, 'nome').value, campo(frente, 'hp.value').value, campo(frente, 'hp.max').value],
+            lateral: [campo(lateral, 'nome').value, campo(lateral, 'hp.value').value, campo(lateral, 'hp.max').value],
+            adicionar: Boolean(veiculo.sheet.element.querySelector('[data-action="adicionarJanela"]')),
+            ajustar: Boolean(veiculo.sheet.element.querySelector('[data-action="ajustarVidros"]'))
+          };
+          return { normal, ablado, novas, antesDeAjustar, ajustadas, ficha };
+        } finally {
+          await veiculo?.sheet.close();
+          await a.delete();
+          window.__fila = [];
+        }
+      })()`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const ok = igual(info.normal, { blindagem: { sp: 13, max: 13 }, vidro: 15 })
+        && igual(info.ablado.blindagem, { sp: 10, max: 13 }) && info.ablado.base === 4
+        && igual(info.novas, { frente: { nome: 'Para-brisa', hp: { value: 15, max: 15 } }, lateral: { nome: 'Lateral', hp: { value: 15, max: 15 } } })
+        && info.antesDeAjustar.vidro === 30 && info.antesDeAjustar.frente.hp.value === 5 && info.antesDeAjustar.frente.hp.max === 15
+        && igual(info.ajustadas, { frente: { nome: 'Para-brisa', hp: { value: 20, max: 30 } }, lateral: { nome: 'Lateral', hp: { value: 30, max: 30 } } })
+        && igual(info.ficha.frente, ['Para-brisa', '20', '30']) && igual(info.ficha.lateral, ['Lateral', '30', '30']) && info.ficha.adicionar && info.ficha.ajustar;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C15), combate e Desfazer: escolher o SDP não esquiva com REF 8; crítico de 24 contra SP 13 tira 11 SDP sem +5 nem lesão, AP abla 2; o vidro segura a sobra do tiro, cada janela perde HP à parte e explosivo destruindo a cobertura alcança o ocupante', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const combate = game.system.api.combate;
+        const ajustes = ['area', 'defesaDosNpcs', 'lesaoCritica', 'animacoes'];
+        const configuracao = Object.fromEntries(ajustes.map(chave => [chave, game.settings.get('${S}', chave)]));
+        const antesDaCena = { ativa: game.scenes.find(cena => cena.active)?.id, vista: canvas.scene?.id, dados: CONFIG.Dice.randomUniform };
+        const avisos = [], avisar = ui.notifications.warn;
+        ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+        const atores = [], tokens = [];
+        const esperar = async condicao => { for (let i = 0; i < 150 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return condicao(); };
+        let cena;
+        try {
+          window.__fila = [];
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          await game.settings.set('${S}', 'area', false);
+          await game.settings.set('${S}', 'defesaDosNpcs', 'automatica');
+          await game.settings.set('${S}', 'lesaoCritica', 'ficha');
+          await game.settings.set('${S}', 'animacoes', 'nao');
+          cena = await Scene.implementation.create({ name: 'C15 Combate veicular isolado', width: 1600, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate();
+          await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const dados = (modelo, nome, sistema = {}) => ({ ...foundry.utils.deepClone(cat[modelo]), _id: foundry.utils.randomID(), name: nome, system: { ...foundry.utils.deepClone(cat[modelo].system), ...sistema } });
+          const a = await Actor.implementation.create({ name: 'C15 Atirador de teste', type: 'personagem', system: { atributos: { ref: { valor: 8 } }, pericias: { 'shoulder-arms': { nivel: 6 }, 'heavy-weapons': { nivel: 6 }, autofire: { nivel: 6 } } } });
+          atores.push(a);
+          const ocupante = await Actor.implementation.create({ name: 'C15 Ocupante de teste', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, hp: { value: 40 }, pericias: { evasion: { nivel: 10 } } } });
+          atores.push(ocupante);
+          const carro = dados('core_vehicles:compact-groundcar', 'C15 Alvo veicular', { familia: true, janelas: { frente: { nome: 'Para-brisa', hp: { value: 15, max: 15 } }, lateral: { nome: 'Lateral densa', hp: { value: 30, max: 30 } } } });
+          const blindagem = dados('core_upgrades:armored-chassis', 'Blindagem', { instaladoEm: carro._id });
+          await ocupante.createEmbeddedDocuments('Item', [carro, blindagem], { keepId: true });
+          const veiculo = ocupante.items.get(carro._id);
+          await ocupante.usarVeiculo(veiculo.id);
+          const rifle = dados('core_weapons:assault-rifle', 'C15 Rifle');
+          const ap = dados('core_ammo:rifle-armor-piercing', 'C15 AP', { quantidade: 100 });
+          const granada = dados('core_weapons:grenade-launcher', 'C15 Lança-granadas');
+          const explosivo = dados('core_ammo:grenade-armor-piercing', 'C15 Granada', { quantidade: 100 });
+          const daArma = dados('core_vehicles:compact-groundcar', 'C15 Carro armado');
+          const montagem = dados('core_upgrades:onboard-machine-gun', 'C15 Metralhadora', { instaladoEm: daArma._id });
+          const normal = dados('core_ammo:rifle-basic', 'C15 Básica', { quantidade: 100 });
+          await a.createEmbeddedDocuments('Item', [rifle, ap, granada, explosivo, daArma, montagem, normal], { keepId: true });
+          const arma = a.items.get(rifle._id), lancador = a.items.get(granada._id);
+          await arma.update({ 'system.carregada': ap._id });
+          await lancador.update({ 'system.carregada': explosivo._id });
+          await arma.recarregar();
+          await lancador.recarregar();
+          const tokenAtq = (await a.getTokenDocument({ x: 300, y: 100 })).toObject();
+          const tokenAlvo = (await ocupante.getTokenDocument({ x: 800, y: 100 })).toObject();
+          tokenAtq._id = foundry.utils.randomID(); tokenAlvo._id = foundry.utils.randomID();
+          await cena.createEmbeddedDocuments('Token', [tokenAtq, tokenAlvo], { keepId: true });
+          tokens.push(tokenAtq._id, tokenAlvo._id);
+          await esperar(() => tokens.every(id => canvas.tokens.get(id)?.visible));
+          await new Promise(r => setTimeout(r, 300));
+          const alvo = cena.tokens.get(tokenAlvo._id);
+          const destino = (tipo, janela = undefined, id = veiculo.id) => ({ [alvo.uuid]: { tipo, veiculo: id, ...(janela ? { janela } : {}) } });
+          const foto = () => ({ sdp: veiculo.system.sdp.value, sp: veiculo.system.blindagem.sp, ablacao: veiculo.system.ablacao, frente: veiculo.system.janelas.frente.hp.value, lateral: veiculo.system.janelas.lateral.hp.value, hp: ocupante.system.hp.value, lesoes: ocupante.items.filter(i => i.type === 'lesao').length });
+          const mensagem = resultado => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === resultado.id);
+          const linha = resultado => ({ veicular: resultado?.linhas[0]?.veicular, humano: Boolean(resultado?.linhas[0]?.dano), escolha: resultado?.linhas[0]?.escolha, fila: window.__fila.length });
+          const fixar = lados => { window.__fila = lados; };
+          const cinco = (dado = 4) => [[9, 10], [dado, 6], [dado, 6], [dado, 6], [dado, 6], [dado, 6]];
+
+          // A escolha real: o padrão é pessoa; escolher estrutura não usa a Evasão 10 + DEX 8 do ocupante.
+          fixar([[9, 10], [6, 6], [6, 6], [4, 6], [4, 6], [4, 6]]);
+          const ataque = arma.atacar({ alvo });
+          const janela = () => document.querySelector('.application.dialog.destino-veicular:not(.minimizing)');
+          await esperar(() => janela()?.querySelector('[name="destino"]'));
+          const escolha = janela().querySelector('[name="destino"]');
+          const padrao = escolha.value;
+          escolha.value = 'veiculo';
+          janela().querySelector('[data-action="confirmar"]').click();
+          const resultado = await ataque;
+          const estrutura = { ...linha(resultado), estado: foto(), padrao };
+          // Um dano independente depois do ataque deve permanecer quando o cartão original for desfeito.
+          await veiculo.update({ 'system.sdp.value': veiculo.system.sdp.value - 3, 'system.ablacao': veiculo.system.ablacao + 1 });
+          const cartao = mensagem(resultado);
+          await esperar(() => document.querySelector('[data-message-id="' + cartao.id + '"] [data-cprf-acao="desfazer"]'));
+          document.querySelector('[data-message-id="' + cartao.id + '"] [data-cprf-acao="desfazer"]').click();
+          await esperar(() => cartao.getFlag('${S}', 'desfeito'));
+          const desfeito = foto();
+          await combate.desfazer(cartao);
+          const segundaVez = { estado: foto(), avisos: avisos.splice(0) };
+          await veiculo.update({ 'system.sdp.value': 50, 'system.ablacao': 0 });
+
+          fixar(cinco(2));
+          const bloqueou = await arma.atacar({ alvo, destinos: destino('veiculo') });
+          const segurou = { ...linha(bloqueou), estado: foto() };
+          await ocupante.update({ 'system.atributos.ref.valor': 6 });
+          fixar(cinco());
+          const vidro = await arma.atacar({ alvo, destinos: destino('vidro', 'frente') });
+          const parouNoVidro = { ...linha(vidro), estado: foto() };
+          fixar(cinco());
+          const aberto = await arma.atacar({ alvo, destinos: destino('vidro', 'frente') });
+          const semVidro = { ...linha(aberto), estado: foto() };
+          await combate.desfazer(mensagem(aberto));
+          await combate.desfazer(mensagem(vidro));
+          const restaurado = foto();
+          fixar([[9, 10], [6, 6], [6, 6], [4, 6], [4, 6], [4, 6]]);
+          const denso = await arma.atacar({ alvo, destinos: destino('vidro', 'lateral') });
+          const lateral = { ...linha(denso), estado: foto() };
+          await combate.desfazer(mensagem(denso));
+          fixar([[9, 10], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6]]);
+          const explosao = await lancador.atacar({ alvo, destinos: destino('vidro', 'frente') });
+          const explodiu = { ...linha(explosao), estado: foto() };
+          await combate.desfazer(mensagem(explosao));
+
+          // A API não pode redirecionar um destino falso ou o veículo de outro dono para o corpo do alvo.
+          const invalidos = [];
+          for (const id of ['c15-inexistente', daArma._id]) {
+            const antes = foto();
+            fixar(cinco());
+            const invalido = await arma.atacar({ alvo, destinos: destino('veiculo', undefined, id) });
+            invalidos.push({ nulo: invalido === null, igual: JSON.stringify(foto()) === JSON.stringify(antes), avisos: avisos.splice(0) });
+          }
+          fixar([]);
+
+          // Uma metralhadora instalada usa o mesmo fluxo de combate, com dez projéteis e Autofogo apenas.
+          await a.usarVeiculo(daArma._id);
+          const montada = await a.items.get(montagem._id).prepararArmaVeicular();
+          await montada.update({ 'system.carregada': normal._id });
+          await montada.recarregar();
+          const carregada = montada.system.pente.value;
+          fixar([[9, 10], [4, 6], [4, 6]]);
+          const rafaga = await montada.atacar({ alvo, modo: 'autofogo', destinos: destino('veiculo') });
+          const montadaAtirou = { ...linha(rafaga), estado: foto(), multiplicador: rafaga.linhas[0].multiplicador, pente: montada.system.pente.value, antes: carregada };
+          await combate.desfazer(mensagem(rafaga));
+          // A seleção pode mudar enquanto o jogador escolhe modificadores; o disparo pendente precisa reconferir.
+          const antesDaJanela = { pente: montada.system.pente.value, mensagens: game.messages.size, estado: foto() };
+          fixar([]);
+          const pendente = montada.atacar({ alvo, modo: 'autofogo', destinos: destino('veiculo'), perguntar: true });
+          const rolagem = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          await esperar(() => rolagem()?.querySelector('[data-action="rolar"]'));
+          await a.usarVeiculo('');
+          rolagem().querySelector('[data-action="rolar"]').click();
+          const cancelado = await pendente;
+          const reconferiu = { nulo: cancelado === null, pente: montada.system.pente.value, mensagens: game.messages.size - antesDaJanela.mensagens, igual: JSON.stringify(foto()) === JSON.stringify(antesDaJanela.estado), antes: antesDaJanela.pente, avisos: avisos.splice(0) };
+
+          // Nem tiro único nem supressivo passam pela restrição da metralhadora. A recusa precede dados e projéteis.
+          await a.usarVeiculo(daArma._id);
+          const recusar = async modo => {
+            const antes = { pente: montada.system.pente.value, mensagens: game.messages.size, estado: foto() };
+            fixar(cinco());
+            const resultado = await montada.atacar({ alvo, modo, destinos: destino('veiculo') });
+            return {
+              nulo: resultado === null, pente: montada.system.pente.value, antes: antes.pente,
+              mensagens: game.messages.size - antes.mensagens, igual: JSON.stringify(foto()) === JSON.stringify(antes.estado),
+              fila: window.__fila.length, avisos: avisos.splice(0)
+            };
+          };
+          const modosRecusados = [await recusar('tiro'), await recusar('supressivo')];
+          const antesDoDanoSolto = { estado: foto(), mensagens: game.messages.size, pente: montada.system.pente.value };
+          const danoSolto = await combate.aplicarDanoDoCartao({ getFlag: (escopo, chave) => chave === 'danoDeArma' ? { arma: montada.uuid, total: 20, bonus: 0, critico: false, formula: '5d6' } : null });
+          const cartaoAvulso = { nulo: danoSolto === null, igual: JSON.stringify(foto()) === JSON.stringify(antesDoDanoSolto.estado), mensagens: game.messages.size - antesDoDanoSolto.mensagens, pente: montada.system.pente.value === antesDoDanoSolto.pente, avisos: avisos.splice(0) };
+          const upgrade = a.items.get(montagem._id);
+          await upgrade.update({ 'system.instaladoEm': '' });
+          const semUpgrade = await recusar('autofogo');
+          await upgrade.update({ 'system.instaladoEm': daArma._id });
+          await a.items.get(daArma._id).delete();
+          const semVeiculo = await recusar('autofogo');
+
+          // Apagar o destino durante a janela não pode converter a escolha de SDP em um tiro na pessoa.
+          const antesDoDestino = { pente: arma.system.pente.value, mensagens: game.messages.size, hp: ocupante.system.hp.value, lesoes: ocupante.items.filter(i => i.type === 'lesao').length };
+          fixar(cinco());
+          const comDestino = arma.atacar({ alvo, destinos: destino('veiculo'), perguntar: true });
+          await esperar(() => rolagem()?.querySelector('[data-action="rolar"]'));
+          await veiculo.delete();
+          rolagem().querySelector('[data-action="rolar"]').click();
+          const semDestino = await comDestino;
+          const destinoApagado = {
+            nulo: semDestino === null, pente: arma.system.pente.value, antes: antesDoDestino.pente,
+            mensagens: game.messages.size - antesDoDestino.mensagens, hp: ocupante.system.hp.value,
+            hpAntes: antesDoDestino.hp, lesoes: ocupante.items.filter(i => i.type === 'lesao').length,
+            lesoesAntes: antesDoDestino.lesoes, fila: window.__fila.length, avisos: avisos.splice(0)
+          };
+          return { estrutura, desfeito, segundaVez, segurou, parouNoVidro, semVidro, restaurado, lateral, explodiu, invalidos, montadaAtirou, reconferiu, modosRecusados, cartaoAvulso, semUpgrade, semVeiculo, destinoApagado, avisos };
+        } finally {
+          ui.notifications.warn = avisar;
+          window.__fila = [];
+          CONFIG.Dice.randomUniform = antesDaCena.dados;
+          const presentes = tokens.filter(id => cena?.tokens.has(id));
+          if (presentes.length) await cena.deleteEmbeddedDocuments('Token', presentes);
+          for (const ator of atores) await ator.delete();
+          if (antesDaCena.ativa && game.scenes.has(antesDaCena.ativa)) await game.scenes.get(antesDaCena.ativa).activate();
+          if (antesDaCena.vista && game.scenes.has(antesDaCena.vista) && canvas.scene?.id !== antesDaCena.vista) await game.scenes.get(antesDaCena.vista).view();
+          await cena?.delete();
+          for (const chave of ajustes) await game.settings.set('${S}', chave, configuracao[chave]);
+        }
+      })()`);
+      const { estrutura, desfeito, segundaVez, segurou, parouNoVidro, semVidro, restaurado, lateral, explodiu, invalidos, montadaAtirou } = info;
+      const inteiro = estado => estado.sdp === 50 && estado.sp === 13 && estado.ablacao === 0 && estado.frente === 15 && estado.lateral === 30 && estado.hp === 40 && estado.lesoes === 0;
+      const ok = estrutura.padrao === 'pessoa' && estrutura.veicular.tipo === 'veiculo' && estrutura.veicular.perdeu === 11 && estrutura.veicular.spEfetivo === 13 && estrutura.veicular.ablado === 2
+        && estrutura.estado.sdp === 39 && estrutura.estado.sp === 11 && estrutura.estado.ablacao === 2 && estrutura.estado.hp === 40 && estrutura.estado.lesoes === 0 && !estrutura.humano && estrutura.escolha !== 'esquivar' && estrutura.fila === 0
+        && desfeito.sdp === 47 && desfeito.sp === 12 && desfeito.ablacao === 1 && desfeito.hp === 40
+        && JSON.stringify(segundaVez.estado) === JSON.stringify(desfeito) && segundaVez.avisos.length === 1 && /desfeito/.test(segundaVez.avisos[0])
+        && inteiro(segurou.estado) && segurou.veicular.perdeu === 0 && segurou.veicular.ablado === 0 && segurou.fila === 0
+        && parouNoVidro.veicular.tipo === 'vidro' && parouNoVidro.veicular.perdeu === 15 && !parouNoVidro.veicular.passou && !parouNoVidro.humano && parouNoVidro.estado.hp === 40 && parouNoVidro.estado.frente === 0 && parouNoVidro.estado.lateral === 30
+        && semVidro.veicular.passou && semVidro.humano && semVidro.estado.hp === 20 && semVidro.estado.frente === 0 && inteiro(restaurado)
+        && lateral.veicular.perdeu === 24 && !lateral.veicular.passou && !lateral.humano && lateral.estado.lateral === 6 && lateral.estado.frente === 15 && lateral.estado.hp === 40 && lateral.estado.lesoes === 0
+        && explodiu.veicular.passou && explodiu.humano && explodiu.estado.frente === 0 && explodiu.estado.lateral === 30 && explodiu.estado.hp === 16 && explodiu.estado.sdp === 50
+        && invalidos.length === 2 && invalidos.every(t => t.nulo && t.igual && t.avisos.length > 0)
+        && montadaAtirou.antes === 30 && montadaAtirou.pente === 20 && montadaAtirou.multiplicador === 3 && montadaAtirou.estado.sdp === 39 && montadaAtirou.estado.hp === 40 && !montadaAtirou.humano && montadaAtirou.fila === 0
+        && info.reconferiu.nulo && info.reconferiu.pente === info.reconferiu.antes && info.reconferiu.mensagens === 0 && info.reconferiu.igual && info.reconferiu.avisos.length === 1 && /veículo/.test(info.reconferiu.avisos[0])
+        && [...info.modosRecusados, info.semUpgrade, info.semVeiculo].every(recusa => recusa.nulo && recusa.pente === recusa.antes && recusa.mensagens === 0 && recusa.igual && recusa.fila === 6 && recusa.avisos.length === 1)
+        && info.modosRecusados.every(recusa => /Autofogo/.test(recusa.avisos[0])) && /upgrade.*instalado/.test(info.semUpgrade.avisos[0]) && /sem veículo/.test(info.semVeiculo.avisos[0])
+        && info.cartaoAvulso.nulo && info.cartaoAvulso.igual && info.cartaoAvulso.mensagens === 0 && info.cartaoAvulso.pente && info.cartaoAvulso.avisos.length === 1 && /Autofogo/.test(info.cartaoAvulso.avisos[0])
+        && info.destinoApagado.nulo && info.destinoApagado.pente === info.destinoApagado.antes && info.destinoApagado.mensagens === 0
+        && info.destinoApagado.hp === info.destinoApagado.hpAntes && info.destinoApagado.lesoes === info.destinoApagado.lesoesAntes && info.destinoApagado.fila === 6 && info.destinoApagado.avisos.length === 1
+        && info.avisos.length === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C15), carga Tech e vidro: atravessa o fino sem tirar HP da cobertura, conserva armadura e esquiva da pessoa; vidro grosso com 5 de 30 HP ainda barra a Tech comum, e a Nekomata carregada o atravessa', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const api = game.system.api.combate;
+        const antes = { ativa: game.scenes.find(c => c.active)?.id, vista: canvas.scene?.id, dados: CONFIG.Dice.randomUniform, npc: game.settings.get('${S}', 'defesaDosNpcs'), animacoes: game.settings.get('${S}', 'animacoes') };
+        const atores = [];
+        let cena;
+        const esperar = async condicao => { for (let i = 0; i < 150 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return condicao(); };
+        try {
+          window.__fila = [];
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          await game.settings.set('${S}', 'defesaDosNpcs', 'automatica');
+          await game.settings.set('${S}', 'animacoes', 'nao');
+          cena = await Scene.implementation.create({ name: 'C15 Tech contra vidro', width: 1600, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate();
+          await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const pegar = modelo => foundry.utils.deepClone(cat[modelo]);
+          const a = await Actor.implementation.create({ name: 'C15 Atirador Tech', type: 'personagem', system: { atributos: { ref: { valor: 8 } }, pericias: { handgun: { nivel: 6 }, 'shoulder-arms': { nivel: 10 } } } });
+          atores.push(a);
+          const ocupante = await Actor.implementation.create({ name: 'C15 Ocupante Tech', type: 'personagem', system: { atributos: { body: { valor: 6 }, will: { valor: 6 }, ref: { valor: 6 }, dex: { valor: 8 } }, hp: { value: 40 }, pericias: { evasion: { nivel: 8 } } } });
+          atores.push(ocupante);
+          const armadura = pegar('core_armor:light-armorjack-body');
+          armadura.system.equipada = true;
+          const carro = pegar('core_vehicles:compact-groundcar');
+          Object.assign(carro.system, { familia: true, sp: 13, janelas: { fina: { nome: 'Vidro fino', hp: { value: 15, max: 15 } }, grossa: { nome: 'Vidro denso avariado', hp: { value: 5, max: 30 } } } });
+          await ocupante.createEmbeddedDocuments('Item', [armadura, carro]);
+          const veiculo = ocupante.items.find(i => i.type === 'veiculo');
+          const protecao = ocupante.items.find(i => i.type === 'armadura');
+          await ocupante.usarVeiculo(veiculo.id);
+          const pistola = pegar('armas-2077:arasaka-jke-x2-kenshin');
+          const rifle = pegar('armas-2077:tsunami-nekomata');
+          const balaPistola = pegar('core_ammo:medium-pistol-basic');
+          balaPistola.system.quantidade = 100;
+          const balaRifle = pegar('core_ammo:rifle-basic');
+          balaRifle.system.quantidade = 100;
+          await a.createEmbeddedDocuments('Item', [pistola, rifle, balaPistola, balaRifle]);
+          const kenshin = a.items.find(i => i.getFlag('${S}', 'catalogo') === 'armas-2077:arasaka-jke-x2-kenshin');
+          const nekomata = a.items.find(i => i.getFlag('${S}', 'catalogo') === 'armas-2077:tsunami-nekomata');
+          await kenshin.recarregar();
+          await nekomata.recarregar();
+          const atq = (await a.getTokenDocument({ x: 300, y: 200 })).toObject();
+          const alvo = (await ocupante.getTokenDocument({ x: 800, y: 200 })).toObject();
+          atq._id = foundry.utils.randomID(); alvo._id = foundry.utils.randomID();
+          await cena.createEmbeddedDocuments('Token', [atq, alvo], { keepId: true });
+          await esperar(() => canvas.tokens.get(atq._id) && canvas.tokens.get(alvo._id));
+          await new Promise(r => setTimeout(r, 300));
+          const destino = janela => ({ [cena.tokens.get(alvo._id).uuid]: { tipo: 'vidro', veiculo: veiculo.id, janela } });
+          const foto = () => ({ fina: veiculo.system.janelas.fina.hp.value, grossa: veiculo.system.janelas.grossa.hp.value, maxGrossa: veiculo.system.janelas.grossa.hp.max, hp: ocupante.system.hp.value, sp: protecao.system.sp.corpo.value, sdp: veiculo.system.sdp.value, lesoes: ocupante.items.filter(i => i.type === 'lesao').length });
+          const mensagem = r => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === r.id);
+          const resumir = (r, arma) => {
+            const l = r.linhas[0];
+            return { ataque: r.ataque, resultado: l.resultado, escolha: l.escolha, defesa: l.defesa, veicular: l.veicular, dano: l.dano && { bruto: l.dano.dano, sp: l.dano.spEfetivo, recebido: l.dano.recebido }, estado: foto(), fila: window.__fila.length, gasta: !api.cargaDa(arma) };
+          };
+          const carregar = async arma => { if (!api.cargaDa(arma)) await api.alternarCarga(arma); };
+          await carregar(kenshin);
+          window.__fila = [[9, 10], [6, 6], [5, 6]];
+          const r1 = await kenshin.atacar({ alvo: cena.tokens.get(alvo._id), destinos: destino('fina') });
+          const fino = resumir(r1, kenshin);
+          await api.desfazer(mensagem(r1));
+          const desfezFino = foto();
+
+          // A espessura não diminui porque o vidro perdeu HP. REF 8 não esquiva o tiro dirigido à cobertura grossa.
+          await ocupante.update({ 'system.atributos.ref.valor': 8 });
+          await carregar(kenshin);
+          window.__fila = [[9, 10], [6, 6], [5, 6]];
+          const r2 = await kenshin.atacar({ alvo: cena.tokens.get(alvo._id), destinos: destino('grossa') });
+          const grosso = resumir(r2, kenshin);
+          await api.desfazer(mensagem(r2));
+          await ocupante.update({ 'system.atributos.ref.valor': 6 });
+          await carregar(nekomata);
+          window.__fila = [[9, 10], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6]];
+          const r3 = await nekomata.atacar({ alvo: cena.tokens.get(alvo._id), destinos: destino('grossa') });
+          const nekomataGrossa = resumir(r3, nekomata);
+          await api.desfazer(mensagem(r3));
+
+          // Quando a cobertura é atravessada, a pessoa conserva o direito de esquivar do tiro.
+          await ocupante.update({ 'system.atributos.ref.valor': 8 });
+          await carregar(kenshin);
+          window.__fila = [[9, 10], [9, 10]];
+          const r4 = await kenshin.atacar({ alvo: cena.tokens.get(alvo._id), destinos: destino('fina') });
+          const esquiva = resumir(r4, kenshin);
+          return { fino, desfezFino, grosso, nekomataGrossa, esquiva, grossaNoCatalogo: Boolean(nekomata.getFlag('${S}', 'arma2077')?.cargaGrossa) };
+        } finally {
+          CONFIG.Dice.randomUniform = antes.dados;
+          window.__fila = [];
+          if (cena?.tokens.size) await cena.deleteEmbeddedDocuments('Token', cena.tokens.map(t => t.id));
+          for (const ator of atores) await ator.delete();
+          if (antes.ativa && game.scenes.has(antes.ativa)) await game.scenes.get(antes.ativa).activate();
+          if (antes.vista && game.scenes.has(antes.vista) && canvas.scene?.id !== antes.vista) await game.scenes.get(antes.vista).view();
+          await cena?.delete();
+          await game.settings.set('${S}', 'defesaDosNpcs', antes.npc);
+          await game.settings.set('${S}', 'animacoes', antes.animacoes);
+        }
+      })()`);
+      const { fino, desfezFino, grosso, nekomataGrossa, esquiva } = info;
+      const restaurado = e => e.fina === 15 && e.grossa === 5 && e.maxGrossa === 30 && e.hp === 40 && e.sp === 11 && e.sdp === 50 && e.lesoes === 0;
+      const ok = fino.veicular.atravessado && fino.veicular.perdeu === 0 && fino.veicular.antes === 15 && fino.veicular.depois === 15
+        && fino.estado.fina === 15 && fino.estado.grossa === 5 && fino.estado.hp === 35 && fino.estado.sp === 10 && fino.estado.sdp === 50 && fino.estado.lesoes === 0
+        && fino.dano.bruto === 11 && fino.dano.sp === 6 && fino.dano.recebido === 5 && fino.fila === 0 && fino.gasta && restaurado(desfezFino)
+        && !grosso.veicular.atravessado && grosso.veicular.perdeu === 5 && !grosso.veicular.passou && !grosso.dano
+        && grosso.estado.grossa === 0 && grosso.estado.maxGrossa === 30 && grosso.estado.hp === 40 && grosso.estado.sp === 11 && grosso.escolha !== 'esquivar' && grosso.fila === 0
+        && info.grossaNoCatalogo && nekomataGrossa.veicular.atravessado && nekomataGrossa.veicular.perdeu === 0 && nekomataGrossa.veicular.antes === 5 && nekomataGrossa.veicular.depois === 5
+        && nekomataGrossa.estado.grossa === 5 && nekomataGrossa.estado.hp === 26 && nekomataGrossa.estado.sp === 10 && nekomataGrossa.dano.bruto === 20 && nekomataGrossa.dano.sp === 6 && nekomataGrossa.dano.recebido === 14 && nekomataGrossa.fila === 0 && nekomataGrossa.gasta
+        && esquiva.resultado === 'esquivou' && esquiva.escolha === 'esquivar' && esquiva.defesa === 25 && esquiva.ataque === 24 && !esquiva.dano && esquiva.fila === 0 && esquiva.gasta && restaurado(esquiva.estado);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C15), ida e volta da wiki: dois carros, instalações, armas e munições homônimos e com uid repetido mantêm a montagem pelos ids; SDP, ablação, vidros, direção e pente da metralhadora voltam sem duplicar os upgrades', async () => {
+      const { personagem } = await api('/api/personagens', 'POST', { nome: 'C15 Oficina da wiki', resultado: { stats: { BODY: 5, WILL: 5 }, humanidade: { atual: 50 }, dinheiro: { saldo: 0 }, pericias: [], itens: [], veiculos: [] } });
+      let origem = null, importado = null;
+      const wikiAnterior = await edge.evaluate(`game.settings.get('${S}', 'wikiUrl')`);
+      try {
+        await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)}).then(() => true)`);
+        origem = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const a = await Actor.implementation.create({ name: 'C15 Origem homônima', type: 'personagem' });
+          try {
+            const dados = (modelo, nome, uid, sistema = {}) => {
+              const item = { ...foundry.utils.deepClone(cat[modelo]), _id: foundry.utils.randomID(), name: nome, system: { ...foundry.utils.deepClone(cat[modelo].system), ...sistema } };
+              foundry.utils.setProperty(item, 'flags.${S}.wikiUid', uid);
+              return item;
+            };
+            const primeiro = dados('core_vehicles:compact-groundcar', 'Carro igual', 'c15:carro-repetido', { familia: true, sp: 4, ablacao: 2, sdp: { value: 42, max: 50 }, janelas: { frente: { nome: 'Para-brisa', hp: { value: 4, max: 15 } } } });
+            const segundo = dados('core_vehicles:compact-groundcar', 'Carro igual', 'c15:carro-repetido', { familia: true, sp: 6, sdp: { value: 17, max: 50 }, janelas: { frente: { nome: 'Para-brisa', hp: { value: 9, max: 30 } } } });
+            const montagem1 = dados('core_upgrades:onboard-machine-gun', 'Instalação igual', 'c15:instalacao-repetida', { instaladoEm: primeiro._id });
+            const montagem2 = dados('core_upgrades:onboard-machine-gun', 'Instalação igual', 'c15:instalacao-repetida', { instaladoEm: segundo._id });
+            const bala1 = dados('core_ammo:rifle-basic', 'Munição igual', 'c15:municao-repetida', { quantidade: 81 });
+            const bala2 = dados('core_ammo:rifle-basic', 'Munição igual', 'c15:municao-repetida', { quantidade: 37 });
+            const pesado = dados('core_upgrades:heavy-chassis', 'Chassis pesado', 'c15:pesado', { instaladoEm: primeiro._id });
+            const blindado = dados('core_upgrades:armored-chassis', 'Chassis blindado', 'c15:blindado', { instaladoEm: primeiro._id });
+            const vidro1 = dados('core_upgrades:bulletproof-glass', 'Vidro igual', 'c15:vidro1', { instaladoEm: primeiro._id });
+            const vidro2 = dados('core_upgrades:bulletproof-glass', 'Vidro igual', 'c15:vidro2', { instaladoEm: segundo._id });
+            const vidro3 = dados('core_upgrades:bulletproof-glass', 'Vidro igual', 'c15:vidro3', { instaladoEm: segundo._id });
+            const vidroSolto = dados('core_upgrades:bulletproof-glass', 'Vidro igual', 'c15:vidro-solto');
+            await a.createEmbeddedDocuments('Item', [primeiro, segundo, montagem1, montagem2, bala1, bala2, pesado, blindado, vidroSolto, vidro1, vidro2, vidro3], { keepId: true });
+            const arma1 = await a.items.get(montagem1._id).prepararArmaVeicular();
+            const arma2 = await a.items.get(montagem2._id).prepararArmaVeicular();
+            await a.updateEmbeddedDocuments('Item', [
+              { _id: arma1.id, name: 'Arma igual', 'system.carregada': bala1._id, 'system.pente.value': 7, 'flags.${S}.wikiUid': 'c15:arma-repetida' },
+              { _id: arma2.id, name: 'Arma igual', 'system.carregada': bala2._id, 'system.pente.value': 19, 'flags.${S}.wikiUid': 'c15:arma-repetida' }
+            ]);
+            await a.usarVeiculo(segundo._id);
+            await a.dirigirVeiculo(true);
+            return { ator: a.id, ficha: game.system.api.wiki.fichaParaAWiki(a) };
+          } catch (erro) {
+            await a.delete();
+            throw erro;
+          }
+        })()`);
+        await api(`/api/personagens/${personagem.id}/foundry`, 'PUT', { ator: origem.ator, geracao: 14 });
+        // Pais em ordem oposta à dos filhos: só os ids, nunca a coincidência de nomes/ordem, reconstroem a montagem.
+        const posicoes = origem.ficha.itens.flatMap((item, indice) => item.tipo === 'vehicle' ? [indice] : []);
+        const [primeiroVeiculo, segundoVeiculo] = posicoes;
+        [origem.ficha.itens[primeiroVeiculo], origem.ficha.itens[segundoVeiculo]] = [origem.ficha.itens[segundoVeiculo], origem.ficha.itens[primeiroVeiculo]];
+        await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', origem.ficha);
+        const guardada = (await api(`/api/personagens/${personagem.id}`)).personagem.mesa;
+        importado = await edge.evaluate(`(async () => {
+          const { ator: a, notas } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)});
+          try {
+            const carros = a.items.filter(i => i.type === 'veiculo').sort((x, y) => y.system.sdp.value - x.system.sdp.value);
+            const resumo = carro => {
+              const armas = a.items.filter(i => i.type === 'arma' && i.system.instaladoEm === carro.id);
+              const arma = armas[0];
+              const montagem = a.items.get(arma?.getFlag('${S}', 'armaVeicular')?.upgrade);
+              return {
+                nome: carro.name, sdp: [carro.system.sdp.value, carro.system.sdp.max], base: carro._source.system.sdp.max,
+                familia: carro.system.familia, blindagem: { sp: carro.system.blindagem.sp, max: carro.system.blindagem.max }, ablacao: carro.system.ablacao, vidro: carro.system.vidroMax,
+                janela: { nome: carro.system.janelas.frente.nome, hp: { value: carro.system.janelas.frente.hp.value, max: carro.system.janelas.frente.hp.max } },
+                armas: armas.length, arma: arma && { nome: arma.name, pente: [arma.system.pente.value, arma.system.pente.max], maos: arma.system.maos, slots: arma.system.slots, equipada: arma.system.equipada, reserva: arma.municaoCarregada?.system.quantidade, municao: arma.municaoCarregada?.name, upgrade: montagem?.system.instaladoEm === carro.id, tipo: arma.getFlag('${S}', 'armaVeicular')?.tipo }
+              };
+            };
+            const vidrosSoltos = a.items.filter(i => i.getFlag('${S}', 'catalogo') === 'core_upgrades:bulletproof-glass' && !i.system.instaladoEm).map(i => i.name);
+            const solto = a.items.find(i => i.getFlag('${S}', 'wikiUid') === 'c15:vidro-solto');
+            const vidroSolto = solto && { nome: solto.name, instaladoEm: solto.system.instaladoEm };
+            return { ator: a.id, notas, carros: carros.map(resumo), ativo: a.veiculoAtivo === carros[1], dirigindo: a.system.dirigindo, total: a.items.size, vidrosSoltos, vidroSolto, ficha: game.system.api.wiki.fichaParaAWiki(a) };
+          } catch (erro) {
+            await a.delete();
+            throw erro;
+          }
+        })()`);
+        const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+        const [primeiro, segundo] = importado.carros;
+        const originais = new Set(origem.ficha.itens.map(i => i.id));
+        const mesaExata = igual(guardada.itens, origem.ficha.itens);
+        const ok = mesaExata && importado.notas.length === 0 && importado.ativo && importado.dirigindo && importado.total === 14 && importado.vidrosSoltos.join() === 'Vidro igual'
+          && importado.vidroSolto?.nome === 'Vidro igual' && importado.vidroSolto.instaladoEm === ''
+          && importado.ficha.itens.every(i => !originais.has(i.id))
+          && igual(primeiro, { nome: 'Carro igual', sdp: [42, 70], base: 50, familia: true, blindagem: { sp: 11, max: 13 }, ablacao: 2, vidro: 15, janela: { nome: 'Para-brisa', hp: { value: 4, max: 15 } }, armas: 1, arma: { nome: 'Arma igual', pente: [7, 30], maos: 0, slots: 0, equipada: false, reserva: 81, municao: 'Munição igual', upgrade: true, tipo: 'metralhadora' } })
+          && igual(segundo, { nome: 'Carro igual', sdp: [17, 50], base: 50, familia: true, blindagem: { sp: 6, max: 6 }, ablacao: 0, vidro: 30, janela: { nome: 'Para-brisa', hp: { value: 9, max: 30 } }, armas: 1, arma: { nome: 'Arma igual', pente: [19, 30], maos: 0, slots: 0, equipada: false, reserva: 37, municao: 'Munição igual', upgrade: true, tipo: 'metralhadora' } });
+        return [ok, JSON.stringify({ mesaExata, notas: importado.notas, carros: importado.carros, ativo: importado.ativo, dirigindo: importado.dirigindo, total: importado.total, vidrosSoltos: importado.vidrosSoltos, vidroSolto: importado.vidroSolto })];
+      } finally {
+        try {
+          await edge.evaluate(`(async () => { for (const id of ${JSON.stringify([origem?.ator, importado?.ator].filter(Boolean))}) await game.actors.get(id)?.delete(); return true; })()`);
+        } finally {
+          await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wikiAnterior)}).then(() => true)`);
+        }
+      }
+    });
+
+    await r.passo('veículos (C15), ficha antiga da mesa: sem os campos novos, o SDP não vira zero e os upgrades e a munição ainda se ligam pelos nomes do Foundry 12', async () => {
+      const { personagem } = await api('/api/personagens', 'POST', { nome: 'C15 Legado', resultado: { stats: { BODY: 5, WILL: 5 }, pericias: [], itens: [], veiculos: [] } });
+      await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
+        ator: 'c15-legado', hp: { atual: 35 }, humanidade: { atual: 50 }, pericias: [],
+        itens: [
+          { nome: 'Compact Groundcar', tipo: 'vehicle', dentro: ['Heavy Chassis'] },
+          { nome: 'Heavy Chassis', tipo: 'itemUpgrade' },
+          { nome: 'Assault Rifle', tipo: 'weapon', pente: { atual: 7 }, municao: 'Rifle (Basic)' },
+          { nome: 'Rifle (Basic)', tipo: 'ammo', qtd: 41 }
+        ]
+      });
+      const wikiAnterior = await edge.evaluate(`game.settings.get('${S}', 'wikiUrl')`);
+      try {
+        await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)}).then(() => true)`);
+        const info = await edge.evaluate(`(async () => {
+          const { ator: a, notas } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)});
+          try {
+            const carro = a.items.find(i => i.type === 'veiculo'), arma = a.items.find(i => i.type === 'arma');
+            return { notas, sdp: [carro.system.sdp.value, carro.system.sdp.max], instalado: carro.instalados.map(i => i.name), pente: arma.system.pente.value, municao: arma.municaoCarregada?.system.quantidade, ativo: a.veiculoAtivo?.id ?? null, dirigindo: a.system.dirigindo };
+          } finally { await a.delete(); }
+        })()`);
+        const ok = info.notas.length === 0 && info.sdp[0] === 50 && info.sdp[1] === 70 && info.instalado.join() === 'Heavy Chassis'
+          && info.pente === 7 && info.municao === 41 && info.ativo === null && info.dirigindo === false;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wikiAnterior)}).then(() => true)`);
+      }
+    });
+
     await r.passo('wiki: um item que o sistema não conhece vira aviso e não conta como entregue para a wiki', async () => {
       // Personagem sintético na wiki de teste: o resultado já pronto, com um Agent e um item com id que não existe.
       const { personagem } = await api('/api/personagens', 'POST', {

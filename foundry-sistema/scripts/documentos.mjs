@@ -12,6 +12,7 @@ import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
+import * as veiculos from './veiculos.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -23,8 +24,11 @@ const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[o
 export const encaixeDe = item => ({ tipo: item.system.tipo, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', slots: item.system.slots, tamanho: item.system.tamanho });
 
 export class AtorCPR extends Actor {
+  get veiculoAtivo() { return veiculos.veiculoAtivo(this); }
+  usarVeiculo(id = '') { return veiculos.usarVeiculo(this, id); }
+  dirigirVeiculo(dirigindo = true) { return veiculos.dirigirVeiculo(this, dirigindo); }
   get maosLivres() {
-    const armas = this.items.filter(item => item.type === 'arma').map(item => item.system);
+    const armas = this.items.filter(item => item.type === 'arma' && !item.system.instaladoEm).map(item => item.system);
     const escudos = this.items.filter(item => item.type === 'armadura' && item.system.escudo && item.system.equipada).length;
     return maosLivres({ armas, escudos, bonus: this.system.bonus.maos, body: this.system.atributos.body.valor });
   }
@@ -531,6 +535,10 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
+  async _preCreate(dados, opcoes, usuario) {
+    if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
+    if (this.type === 'arma' && this.system.instaladoEm) this.updateSource({ 'system.equipada': false });
+  }
   // O EMP não desinstala nem guarda o item. A fundação parada leva suas opções; os estados originais ficam intactos.
   get inoperante() {
     const pendentes = [this], vistos = new Set();
@@ -552,6 +560,15 @@ export class ItemCPR extends Item {
   async _preUpdate(mudancas, opcoes, usuario) {
     if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
     const sistema = { ...this.system, ...mudancas.system };
+    if (this.type === 'arma' && sistema.instaladoEm && this.actor) {
+      if (mudancas.system?.instaladoEm && this.actor.items.get(sistema.instaladoEm)?.type !== 'veiculo') {
+        ui.notifications.warn('Monte a arma num veículo deste personagem.');
+        return false;
+      }
+      // A arma montada não vai para as mãos, mesmo se uma macro tentar equipá-la.
+      if (sistema.equipada) foundry.utils.setProperty(mudancas, 'system.equipada', false);
+      return;
+    }
     if (!(this.type === 'arma' || (this.type === 'armadura' && sistema.escudo)) || !this.actor || this.system.equipada || mudancas.system?.equipada !== true) return;
     const arma = { type: this.type, system: sistema };
     if (!this.actor.podeEmpunhar(arma)) {
@@ -644,8 +661,18 @@ export class ItemCPR extends Item {
   // O item (do mesmo ator) onde este está instalado, ou null: o deck de um programa, a arma de um acessório.
   get instaladoNo() {
     const id = this.system.instaladoEm;
-    return (id && this.actor?.items.get(id)) || null;
+    const item = (id && this.actor?.items.get(id)) || null;
+    return this.type === 'arma' && item?.type !== 'veiculo' ? null : item;
   }
+  motivoVeicular(modo) { return veiculos.motivoVeicular(this, modo); }
+  prepararArmaVeicular() { return veiculos.prepararArma(this); }
+  adicionarJanela(nome) { return veiculos.adicionarJanela(this, nome); }
+  removerJanela(id) { return veiculos.removerJanela(this, id); }
+  ajustarVidros() { return veiculos.ajustarVidros(this); }
+  receberDanoNoVidro(dados) { return veiculos.receberDanoNoVidro(this, dados); }
+  desfazerDanoNoVidro(dados) { return veiculos.desfazerDanoNoVidro(this, dados); }
+  receberDanoVeicular(dados) { return veiculos.receberDanoVeicular(this, dados); }
+  desfazerDanoVeicular(dados) { return veiculos.desfazerDanoVeicular(this, dados); }
   // O cyberware instalado que pede uma fundação (regras.pedeFundacao) e está sem nenhuma: a ficha marca.
   get semFundacao() {
     const s = this.system;
@@ -702,6 +729,14 @@ export class ItemCPR extends Item {
   // Enche o pente com a munição carregada ou, sem ela, com a primeira munição compatível do ator.
   async recarregar() {
     if (this.type !== 'arma' || !this.system.pente.max) return null;
+    if (this.system.instaladoEm || this.getFlag(SISTEMA, 'armaVeicular')) {
+      const regra = this.getFlag(SISTEMA, 'armaVeicular');
+      const motivo = this.motivoVeicular(regra?.soAutofogo ? 'autofogo' : null);
+      if (motivo || (regra?.semRecargaDirigindo && this.actor?.system.dirigindo)) {
+        ui.notifications.warn(motivo || 'Não é possível recarregar esta arma enquanto dirige.');
+        return null;
+      }
+    }
     const soMelhorada = this.perfil2077?.soSmartMelhorada;
     const compativel = municao => municao.type === 'municao' && municao.system.quantidade > 0 && (!this.system.municoes.length || this.system.municoes.includes(municao.system.tipo))
       && (!soMelhorada || Boolean(municao.getFlag(SISTEMA, 'arma2077')?.smartMelhorada));

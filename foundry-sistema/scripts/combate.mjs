@@ -17,6 +17,7 @@ import { aplicarPerdaDeHumanidade } from './humanidade.mjs';
 import { lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
 import { aplicarMunicaoSemDano, incendiar, rolarResistencia, rolarInteligente, desfazerMunicao, escolherEmp, encerrarEfeitos, apagarFogo } from './municoes.mjs';
 import * as R from './regras.mjs';
+import { techAtravessaVidro } from './regras-veiculos.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 
 const CANAL = `system.${SISTEMA}`;
@@ -156,11 +157,69 @@ export function jogadorDe(ator) {
 }
 
 // ---------------- No cliente de quem ataca ----------------
+// A instalação pode mudar enquanto a janela de rolagem está aberta. A mesma conferência vale no cliente e no mestre.
+function conferirArmaVeicular(arma, modo) {
+  const motivo = arma.motivoVeicular(modo);
+  if (motivo) ui.notifications.warn(`${arma.name}: ${motivo}`);
+  return !motivo;
+}
+
+// O token continua dando a posição; só uma escolha explícita muda o destino da pessoa para o carro ou seu vidro.
+function conferirDestinos(alvos, destinos, { modo, local } = {}) {
+  if (!destinos || typeof destinos !== 'object' || Array.isArray(destinos)) { ui.notifications.warn('Escolha um destino válido para o ataque.'); return false; }
+  for (const [uuid, destino] of Object.entries(destinos)) {
+    const token = alvos.find(alvo => alvo.uuid === uuid);
+    const veiculo = token?.actor.items.get(destino?.veiculo);
+    if (!token || !['veiculo', 'vidro'].includes(destino?.tipo) || veiculo?.type !== 'veiculo'
+      || (destino.tipo === 'vidro' && !Object.hasOwn(veiculo.system.janelas, destino.janela))) {
+      ui.notifications.warn('O veículo ou vidro escolhido não está mais na ficha do alvo. Escolha o destino novamente.');
+      return false;
+    }
+    if (modo === 'supressivo') { ui.notifications.warn('Fogo supressivo afeta pessoas; escolha a pessoa como destino.'); return false; }
+    if (destino.tipo === 'veiculo' && R.LOCAIS_MIRADOS[local]) { ui.notifications.warn('Cabeça, perna e item na mão são locais da pessoa; escolha o corpo para atingir o veículo.'); return false; }
+  }
+  return true;
+}
+
+function destinoVeicular(ctx, token) {
+  const destino = ctx.pedido.destinos?.[token.uuid];
+  return destino ? { ...destino, item: token.actor.items.get(destino.veiculo) } : null;
+}
+
+// Vidro destruído ou atravessado pela carga Tech não substitui a defesa da pessoa. A espessura é a original (max).
+function destinoEstrutural(ctx, token) {
+  const destino = destinoVeicular(ctx, token);
+  if (destino?.tipo === 'veiculo') return destino;
+  const vidro = destino?.item?.system.janelas[destino.janela];
+  return vidro?.hp.value > 0 && !techAtravessaVidro({ carga: ctx.pedido.carga, grossa: ctx.arma.getFlag(SISTEMA, 'arma2077')?.cargaGrossa, max: vidro.hp.max }) ? destino : null;
+}
+
+async function perguntarDestinos(alvos, modo) {
+  const destinos = {};
+  if (modo === 'supressivo') return destinos;
+  for (const token of alvos) {
+    const veiculo = token.actor.veiculoAtivo;
+    if (!veiculo) continue;
+    const vidros = Object.entries(veiculo.system.janelas).map(([id, vidro]) => `<option value="vidro:${esc(id)}">Pessoa atrás de ${esc(vidro.nome)} (${vidro.hp.value} HP)</option>`).join('');
+    const escolha = await DialogV2.wait({
+      window: { title: `${token.name}: destino do ataque` }, classes: [SISTEMA, 'destino-veicular'],
+      content: `<p>Escolha o que o ataque atinge. O mestre confere a posição e se o vidro cobre a pessoa.</p><label>Destino <select name="destino"><option value="pessoa" selected>Pessoa: ${esc(token.name)}</option><option value="veiculo">Veículo: ${esc(veiculo.name)}</option>${vidros}</select></label>`,
+      buttons: [{ action: 'confirmar', label: 'Confirmar destino', default: true, callback: (evento, botao) => botao.form.elements.destino.value }], rejectClose: false
+    }).catch(() => null);
+    if (!escolha) return null;
+    if (escolha === 'veiculo') destinos[token.uuid] = { tipo: 'veiculo', veiculo: veiculo.id };
+    else if (escolha.startsWith('vidro:')) destinos[token.uuid] = { tipo: 'vidro', veiculo: veiculo.id, janela: escolha.slice(6) };
+    else if (escolha !== 'pessoa') return null;
+  }
+  return destinos;
+}
+
 // alvos (ou alvo, um só): Tokens ou TokenDocuments; padrão, os marcados. local: "corpo" ou mirado ("cabeca", "perna",
 // "item"). modo: os botões da ficha ("autofogo", "supressivo" e os de 2077: "ricochete", "doisCanos"); senão, a arma e a
 // munição dizem (tiro, cartucho, explosivo). A arma Tech carregada (o botão Carregar) gasta a carga no ataque. perguntar:
-// abre a janela de rolagem (a ficha abre; Ctrl + clique, não).
-export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, perguntar = false } = {}) {
+// abre a janela de rolagem (a ficha abre; Ctrl + clique, não). destinos: por UUID do token, { tipo: 'veiculo', veiculo:
+// id } ou { tipo: 'vidro', veiculo: id, janela: chave }; {} mantém as pessoas. Sem o mapa, pergunta pelo veículo ativo.
+export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, destinos = null, perguntar = false } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
   const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
@@ -179,6 +238,8 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // O ricochete de um cartucho (o Kit) continua cartucho: o leque sai da superfície do ricochete.
   const pelaMunicao = R.classificar(pelaArma);
   const modo = pedido === 'ricochete' && pelaMunicao === 'cartucho' ? 'cartucho' : R.classificar({ pedido, ...pelaArma });
+  if (!conferirArmaVeicular(arma, modo)) return null;
+  const montada = Boolean(arma.system.instaladoEm || arma.getFlag(SISTEMA, 'armaVeicular'));
   const tokenAtq = tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
   if (!lista.length && modo !== 'supressivo') { ui.notifications.warn('Marque um alvo (tecla T sobre o token) antes de atacar.'); return null; }
   if (modo === 'supressivo' && !tokenAtq) { ui.notifications.warn(`Ponha o token de ${atacante.name} na cena para o fogo supressivo.`); return null; }
@@ -186,6 +247,10 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (modo === 'autofogo' && !arma.system.autofogo) { ui.notifications.warn(`${arma.name} não tem autofogo.`); return null; }
   // Sem mestre na mesa ninguém resolve o ataque de um jogador: avisa antes de gastar a bala e de rolar.
   if (!game.user.isGM && !game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque precisa do mestre para resolver a defesa e o dano.'); return null; }
+  destinos ??= await perguntarDestinos(lista, modo);
+  if (destinos === null) return null;
+  if (!conferirDestinos(lista, destinos, { modo, local })) return null;
+  destinos = structuredClone(destinos);
   // Armas de 2077: a ligação da arma Smart, os modos da classe, a trava e a munição.
   const perfil = arma.perfil2077;
   const de2077 = {
@@ -227,27 +292,39 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // A munição Smart melhorada na arma Smart: as penalidades de visão não contam; as outras voltam na segunda chance.
   const smartMelhorada = R.smartMelhoradaVale({ perfil, municao: municao?.getFlag(SISTEMA, 'arma2077') });
   const extras = smartMelhorada ? escolhidas.filter(parte => !R.ehPenalidadeDeVisao(parte)) : escolhidas;
-  if (balas) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
+  if (!conferirArmaVeicular(arma, modo) || !conferirDestinos(lista, destinos, { modo, local })) return null;
+  if (balas && !montada) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
   // O ataque gasta a carga (a Omaha fica carregada até o fim do turno em que disparou); a Grad pede o ferrolho. O
-  // "Desfazer" do mestre devolve os dois.
-  if (carga && perfil.cargaAteFimDoTurno) {
-    const combate = combateDe(atacante);
-    if (!carga.disparou) await arma.update({ [`flags.${SISTEMA}.cargaTech.disparou`]: { rodada: combate?.round ?? null, turno: combate?.turn ?? null } });
-  } else if (carga) await arma.unsetFlag(SISTEMA, 'cargaTech');
+  // "Desfazer" do mestre devolve os dois. Na montada, as marcas esperam a conferência depois da rolagem.
   const ferrolho = Boolean(perfil?.ferrolho && arma.system.aDistancia);
-  if (ferrolho) await arma.setFlag(SISTEMA, 'ferrolhoPendente', true);
+  if (!montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const { total, mensagem } = await testar(atacante, {
     rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
+  if (!conferirArmaVeicular(arma, modo) || !conferirDestinos(lista, destinos, { modo, local })) return null;
+  // Na arma montada, só gasta o pente depois de conferir a instalação ao fim da rolagem.
+  if (balas && montada) {
+    if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: precisa de ${balas} balas no pente (tem ${arma.system.pente.value}). Recarregue.`); return null; }
+    await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
+  }
+  if (montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    carga, doisCanos, porTiro, ricochete, ferrolho,
+    carga, doisCanos, porTiro, ricochete, ferrolho, destinos,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
   game.socket.emit(CANAL, { tipo: 'ataque', pedido: dados, de: game.user.id });
   return dados;
+}
+
+async function marcarDisparo(arma, { carga, perfil, ferrolho }) {
+  if (carga && perfil.cargaAteFimDoTurno) {
+    const combate = combateDe(arma.actor);
+    if (!carga.disparou) await arma.update({ [`flags.${SISTEMA}.cargaTech.disparou`]: { rodada: combate?.round ?? null, turno: combate?.turn ?? null } });
+  } else if (carga) await arma.unsetFlag(SISTEMA, 'cargaTech');
+  if (ferrolho) await arma.setFlag(SISTEMA, 'ferrolhoPendente', true);
 }
 
 // A carga Tech da arma (a flag cargaTech: { combate, rodada } de quando carregou), se ainda vale; senão, null.
@@ -369,6 +446,7 @@ async function contexto(pedido, usuario) {
   if (!usuario.isGM && !atacante.testUserPermission(usuario, 'OWNER')) return null;
   const tokenAtq = pedido.token ? await fromUuid(pedido.token) : null;
   const alvos = (await Promise.all(pedido.alvos.map(uuid => fromUuid(uuid)))).filter(token => token?.actor);
+  if (!conferirDestinos(alvos, pedido.destinos ?? {}, pedido)) return null;
   return {
     pedido, usuario, arma, atacante, tokenAtq, cena: tokenAtq?.parent ?? alvos[0]?.parent ?? canvas.scene, alvos,
     modo: pedido.modo, local: pedido.local, descricao: R.descreverAtaque(pedido), nomeAtq: tokenAtq?.name ?? atacante.name,
@@ -383,6 +461,7 @@ async function contexto(pedido, usuario) {
 // A regra de 2077 deste ataque, para o cartão.
 function notasDe2077(pedido, arma) {
   const notas = [];
+  if (arma.getFlag(SISTEMA, 'armaVeicular')?.frontal) notas.push('Arma instalada voltada para a frente do veículo: confira a orientação antes de disparar.');
   if (pedido.porTiro) {
     const { balas, danoComMenos } = pedido.porTiro;
     const unidade = pedido.modo === 'cartucho' ? 'cartucho' : 'bala';
@@ -432,6 +511,7 @@ async function lesoesDoAtirador(ctx) {
 export async function resolver(pedido, usuario = game.user) {
   const ctx = await contexto(pedido, usuario);
   if (!ctx) return null;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
   if (ctx.modo === 'supressivo') await supressao(ctx);
   else if (ctx.modo === 'explosivo') await explosao(ctx);
   else if (ctx.modo === 'cartucho') await cartucho(ctx);
@@ -463,7 +543,7 @@ function dvDoAlvo(ctx, alvo) {
 async function dvDoMestre(ctx, alvo) {
   const valor = await DialogV2.prompt({
     window: { title: 'DV do ataque' },
-    content: `<p>${esc(ctx.arma.name)} não tem tabela de DV. Qual a DV de ${esc(ctx.nomeAtq)} contra ${esc(alvo.nome)} (${alvo.metros} m)?</p><input type="number" name="dv" value="15" autofocus>`,
+    content: `<p>Não há DV definida para este ataque contra ${esc(alvo.nome)}. ${ctx.modo === 'corpo' ? 'O veículo e o vidro não se esquivam; o mestre define a DV para atingir a estrutura.' : `${esc(ctx.arma.name)} não tem tabela de DV para esta distância.`} Qual DV usar${alvo.metros === null ? '' : ` (${alvo.metros} m)`}?</p><input type="number" name="dv" value="15" autofocus>`,
     ok: { label: 'Usar esta DV', callback: (evento, botao) => botao.form.elements.dv.valueAsNumber },
     rejectClose: false
   }).catch(() => null);
@@ -525,6 +605,8 @@ export async function defesaContra({ atacante, tokenAtq = null, alvo, total, mod
 
 const linhaDe = (ctx, token) => {
   const linha = { token, nome: token.name, img: token.texture?.src || token.actor.img, resultado: null, notas: [] };
+  const destino = destinoVeicular(ctx, token);
+  if (destino) linha.notas.push(destino.tipo === 'veiculo' ? `Destino: estrutura de ${destino.item?.name ?? 'veículo'}.` : `Destino: pessoa atrás de ${destino.item?.system.janelas[destino.janela]?.nome ?? 'vidro'} de ${destino.item?.name ?? 'veículo'}.`);
   if (ctx.modo !== 'corpo' && token.actor?.statuses.has(STATUS_COBERTURA)) {
     linha.notas.push(ctx.pedido?.carga
       ? `${token.name} está em cobertura: a carga Tech atravessa ${R.coberturaDaCarga(ctx.perfil)} (que não perde HP)${ctx.perfil?.cargaGrossa ? '' : '; a grossa para o tiro'} (o mestre decide; wiki, p. 182).`
@@ -554,12 +636,26 @@ async function segundaChance(ctx, contra) {
 
 // A defesa de um alvo já no alcance. Preenche a linha e devolve se pegou.
 async function defesaDoAlvo(ctx, linha, alvo, dv) {
-  const esquiva = R.podeEsquivar({ modo: ctx.modo, ref: alvo.ref, exigeRef8: config('exigeRef8'), semPerna: alvo.semPerna });
-  const opcoes = R.opcoesDeDefesa({ modo: ctx.modo, esquiva, escudo: Boolean(alvo.escudo) });
-  const resposta = await defender(ctx, alvo, { opcoes, dv });
+  if (!conferirDestinos([alvo.token], ctx.pedido.destinos?.[alvo.token.uuid] ? { [alvo.token.uuid]: ctx.pedido.destinos[alvo.token.uuid] } : {}, ctx)) {
+    linha.resultado = 'semDestino';
+    return false;
+  }
+  // Wiki, Veículos (p. 189–192): estruturas não esquivam. No corpo a corpo, a DV vem do mestre.
+  const estrutura = destinoEstrutural(ctx, alvo.token);
+  let resposta;
+  if (estrutura) {
+    resposta = { escolha: 'aguentar' };
+    linha.notas.push('A estrutura não se esquiva.');
+  } else {
+    const esquiva = R.podeEsquivar({ modo: ctx.modo, ref: alvo.ref, exigeRef8: config('exigeRef8'), semPerna: alvo.semPerna });
+    const opcoes = R.opcoesDeDefesa({ modo: ctx.modo, esquiva, escudo: Boolean(alvo.escudo) });
+    resposta = await defender(ctx, alvo, { opcoes, dv });
+  }
   Object.assign(linha, { escolha: resposta.escolha, defesa: resposta.defesa ?? null, dv });
-  if (alvo.semPerna && ctx.modo !== 'supressivo') linha.notas.push('Sem a perna, não esquiva.');
-  const acertou = ataque => R.acertou({ modo: ctx.modo, escolha: resposta.escolha, ataque, defesa: linha.defesa, dv });
+  if (!estrutura && alvo.semPerna && ctx.modo !== 'supressivo') linha.notas.push('Sem a perna, não esquiva.');
+  const acertou = ataque => estrutura
+    ? ['explosivo', 'cartucho'].includes(ctx.modo) ? true : dv === null ? null : ataque > dv
+    : R.acertou({ modo: ctx.modo, escolha: resposta.escolha, ataque, defesa: linha.defesa, dv });
   let pegou = acertou(ctx.pedido.total);
   // A munição Smart melhorada, no ataque de cada alvo (no cartucho e no explosivo, a área já passou da DV): errou por 5
   // ou menos, a segunda chance contra a mesma DV, ou contra a mesma esquiva.
@@ -598,6 +694,7 @@ async function marcarRodada(ctx, ator, chave) {
 // Quem atacou rola, se for um jogador conectado; senão (ou se ele não responder), o mestre. O Ponto Fraco do Solo soma
 // no dano (antes da armadura) do primeiro acerto dele na rodada.
 async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}) {
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
   let dano = null;
   const jogador = !ctx.usuario.isGM && ctx.usuario.active ? ctx.usuario : null;
   if (jogador && config('jogadorRolaDano')) {
@@ -610,6 +707,7 @@ async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}
     ctx.rolagens.push(rolado.roll);
     dano = { total: rolado.total, critico: rolado.critico, bonus: rolado.bonus, formula: rolado.formula };
   }
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
   const pontoFraco = ctx.atacante.system.consciencia.pontoFraco;
   if (pontoFraco && primeiraNaRodada(ctx.atacante, 'pontoFraco')) {
     await marcarRodada(ctx, ctx.atacante, 'pontoFraco');
@@ -625,9 +723,33 @@ const SEM_LESAO_DE_BORRACHA = 'Munição de borracha: sem lesão crítica.';
 // primeiro dano que ele sofre na rodada. A munição de borracha não mata nem causa lesão crítica (wiki, munições). A carga
 // Tech ignora metade do SP (regras.CARGA_TECH). lesaoDoCritico: false no dano aplicado pelo cartão, em que a lesão do crítico sai pelo botão "Rolar a lesão".
 async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true } = {}) {
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
+  if (!conferirDestinos([linha.token], ctx.pedido.destinos?.[linha.token.uuid] ? { [linha.token.uuid]: ctx.pedido.destinos[linha.token.uuid] } : {}, ctx)) return;
   const ator = linha.token.actor;
-  const jaMortal = ator.system.hp.value < 1;
   const municao = ctx.arma.municaoCarregada;
+  const destino = destinoVeicular(ctx, linha.token);
+  if (destino?.tipo === 'veiculo') {
+    const recebido = await destino.item.receberDanoVeicular({ dano: dano.total,
+      ignorarPct: ctx.pedido?.carga ? Math.max(Number(ctx.arma.system.ignorarArmadura) || 0, R.CARGA_TECH.ignorarPct) : ctx.arma.system.ignorarArmadura,
+      ignorarAbaixo: ctx.arma.system.ignorarAbaixo, ablacao: municao?.system.ablacao ?? 1 });
+    if (recebido) linha.veicular = { tipo: 'veiculo', ...recebido };
+    return;
+  }
+  if (destino?.tipo === 'vidro') {
+    const vidro = destino.item.system.janelas[destino.janela];
+    if (techAtravessaVidro({ carga: ctx.pedido.carga, grossa: ctx.arma.getFlag(SISTEMA, 'arma2077')?.cargaGrossa, max: vidro.hp.max })) {
+      linha.veicular = { tipo: 'vidro', veiculo: destino.item.uuid, janela: destino.janela, nome: `${destino.item.name}: ${vidro.nome}`,
+        antes: vidro.hp.value, depois: vidro.hp.value, perdeu: 0, passou: true, atravessado: true };
+      linha.notas.push('A carga Tech atravessou o vidro sem tirar HP da cobertura; a pessoa conserva a defesa e a armadura.');
+    } else {
+      const recebido = await destino.item.receberDanoNoVidro({ janela: destino.janela, dano: dano.total, explosivo: ctx.modo === 'explosivo' });
+      if (!recebido) return;
+      linha.veicular = { tipo: 'vidro', ...recebido };
+      if (!recebido.passou) return;
+      linha.notas.push(recebido.antes > 0 ? 'A explosão destruiu o vidro: o dano total alcança a pessoa.' : 'O vidro está sem HP: não protege a pessoa.');
+    }
+  }
+  const jaMortal = ator.system.hp.value < 1;
   const borracha = municao?.system.efeito === 'rubber';
   const deflexao = ator.system.consciencia.deflexao && primeiraNaRodada(ator, 'deflexao') ? ator.system.consciencia.deflexao : 0;
   const efeito = await ator.receberDano({
@@ -695,7 +817,8 @@ async function resolverAlvo(ctx, token) {
   const alvo = infoDoAlvo(ctx, token);
   linha.metros = alvo.metros;
   let dv = null;
-  if (ctx.modo !== 'corpo') {
+  if (ctx.modo === 'corpo' && destinoEstrutural(ctx, token)) dv = await dvDoMestre(ctx, alvo);
+  else if (ctx.modo !== 'corpo') {
     const achada = dvDoAlvo(ctx, alvo);
     if (achada.fora) { linha.resultado = 'fora'; return null; }
     dv = achada.dv ?? (achada.semTabela ? await dvDoMestre(ctx, alvo) : null);
@@ -732,7 +855,9 @@ async function individual(ctx) {
   const doisAlvos = ctx.perfil?.doisAlvos && ctx.modo === 'tiro' && !R.LOCAIS_MIRADOS[ctx.local] && ctx.alvos.length >= 2;
   const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
   const pegas = ctx.linhas.filter(l => atingidas.has(l));
-  if (await aplicarMunicaoSemDano(ctx, pegas)) return;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
+  if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
+  if (await aplicarMunicaoDoAtaque(ctx, pegas)) return;
   const rajada = ctx.modo === 'autofogo';
   const maximo = ctx.arma.system.autofogo;
   const doMirado = R.LOCAIS_MIRADOS[ctx.local] ? ctx.perfil?.danoMirado : null;
@@ -741,14 +866,19 @@ async function individual(ctx) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
     const multiplicador = rajada ? R.multiplicadorDeAutofogo(linha.segundaChance ?? ctx.pedido.total, contra, maximo) : 1;
     if (rajada) linha.multiplicador = multiplicador;
-    await ferir(ctx, linha, await rolarDanoDoAtaque(ctx, { multiplicador, formula }), { escudo: linha.escolha === 'escudo' });
+    const dano = await rolarDanoDoAtaque(ctx, { multiplicador, formula });
+    if (!dano) return;
+    await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
   }
 }
 
 // Área (explosivo e cartucho): o dano é rolado uma vez e vale para cada um que ficou.
 async function danoNaArea(ctx, pegas, formula = null) {
-  if (!pegas.length || await aplicarMunicaoSemDano(ctx, pegas)) return;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
+  if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
+  if (!pegas.length || await aplicarMunicaoDoAtaque(ctx, pegas)) return;
   const dano = await rolarDanoDoAtaque(ctx, { formula });
+  if (!dano) return;
   for (const linha of ctx.linhas.filter(l => pegas.includes(l))) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
 }
 
@@ -762,6 +892,14 @@ async function contraADvDaArea(ctx, dv) {
   ctx.notas.push(`Munição Smart melhorada: errou a DV ${dv} por ${dv - ctx.pedido.total}; a segunda chance deu ${novo}${novo > dv ? ' e passou' : ''}.`);
   ctx.segundaChance = novo;
   return novo > dv ? { ...ctx, pedido: { ...ctx.pedido, total: novo } } : null;
+}
+
+// Resistências e estados pertencem à pessoa. Vidro intacto protege; a munição sem dano não destrói a estrutura.
+async function aplicarMunicaoDoAtaque(ctx, pegas) {
+  const pessoas = pegas.filter(linha => !destinoEstrutural(ctx, linha.token));
+  const semDano = await aplicarMunicaoSemDano(ctx, pessoas);
+  if (semDano) for (const linha of pegas.filter(linha => !pessoas.includes(linha))) linha.notas.push('Esta munição não causa dano da arma à estrutura; a pessoa continua protegida.');
+  return semDano;
 }
 
 // Espingarda com cartucho: um ataque contra DV 13; se acertar, cada alvo à frente, até 6 m, leva 3d6 (rolado uma vez).
@@ -930,7 +1068,7 @@ export function acoesDe2077(arma) {
 // ---------------- Cartão do resultado e "Desfazer" ----------------
 const RESULTADOS = {
   acertou: 'acertou', errou: 'errou', esquivou: 'esquivou', fora: 'fora do alcance', semDv: 'sem DV: o mestre decide',
-  suprimido: 'suprimido: gasta o próximo movimento indo para a cobertura', firme: 'ficou firme'
+  semDestino: 'destino indisponível: escolha novamente', suprimido: 'suprimido: gasta o próximo movimento indo para a cobertura', firme: 'ficou firme'
 };
 
 // A barra de HP do alvo no cartão (só o desenho: o número está na linha do dano), em texto (o 0 também desenha).
@@ -942,15 +1080,15 @@ const barraDeHp = linha => {
 async function cartaoDoResultado(ctx) {
   const linhas = ctx.linhas.map(l => ({
     nome: l.nome, img: l.img, resultado: l.resultado, rotulo: RESULTADOS[l.resultado] ?? l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null,
-    dv: l.dv ?? null, metros: l.metros ?? null, segundaTentativa: l.segundaTentativa ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, municao: l.municao ?? null, suprimido: Boolean(l.suprimido), notas: l.notas,
+    dv: l.dv ?? null, metros: l.metros ?? null, segundaTentativa: l.segundaTentativa ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, veicular: l.veicular ?? null, municao: l.municao ?? null, suprimido: Boolean(l.suprimido), notas: l.notas,
     segundaChance: l.segundaChance ?? null
   }));
   const resumo = {
     id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, segundaChance: ctx.segundaChance ?? null, atacante: ctx.nomeAtq, arma: ctx.arma.name,
     cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas
   };
-  const desfazer = ctx.linhas.filter(l => l.dano || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
-    ator: l.token.actor.uuid, suprimido: Boolean(l.suprimido), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
+  const desfazer = ctx.linhas.filter(l => l.dano || l.veicular?.perdeu || l.veicular?.ablado || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
+    ator: l.token.actor.uuid, veicular: l.veicular ?? null, suprimido: Boolean(l.suprimido), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   if (ctx.lesoesDoAtirador?.length) desfazer.push({ ator: ctx.atacante.uuid, suprimido: false, municao: null, lesoes: ctx.lesoesDoAtirador, dano: null });
@@ -1000,6 +1138,13 @@ export async function desfazer(mensagem) {
   for (const item of lista ?? []) {
     const ator = await fromUuid(item.ator);
     if (!ator) continue;
+    if (item.veicular) {
+      const veiculo = await fromUuid(item.veicular.veiculo);
+      if (veiculo?.type === 'veiculo' && veiculo.actor?.uuid === ator.uuid) {
+        if (item.veicular.tipo === 'vidro') await veiculo.desfazerDanoNoVidro(item.veicular);
+        else if (item.veicular.tipo === 'veiculo') await veiculo.desfazerDanoVeicular(item.veicular);
+      }
+    }
     if (item.dano) await ator.desfazerDano(item.dano);
     await desfazerMunicao(ator, item.municao);
     const lesoes = item.lesoes.filter(id => ator.items.has(id));
@@ -1038,6 +1183,7 @@ export async function aplicarDanoDoCartao(mensagem) {
   if (!dados || !game.user.isGM) return null;
   const arma = await fromUuid(dados.arma);
   if (!arma?.actor) { ui.notifications.warn('A arma deste dano não está mais na ficha.'); return null; }
+  if (!conferirArmaVeicular(arma, 'tiro')) return null;
   const alvos = alvosComHp();
   if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) do dano.'); return null; }
   const ctx = {

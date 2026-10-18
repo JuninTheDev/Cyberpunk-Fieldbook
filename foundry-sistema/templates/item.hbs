@@ -33,8 +33,9 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
       <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
-      <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>
-      {{#if armaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T); Ctrl + clique, direto">ATACAR</button>{{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Encher o pente">RECARREGAR</button>{{/if}}</div>{{/if}}
+      {{#if armaDeAtor}}<label class="celula"><span>Montada no veículo</span><select name="system.instaladoEm">{{selectOptions veiculosDaArma selected=fonte.instaladoEm}}</select></label>{{/if}}
+      {{#unless armaMontada}}<label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>{{/unless}}
+      {{#if armaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T); Ctrl + clique, direto">{{#if soAutofogo}}AUTOFOGO{{else}}ATACAR{{/if}}</button>{{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Encher o pente">RECARREGAR</button>{{/if}}</div>{{/if}}
       {{/if}}
       {{#if eh.armadura}}
       <label class="celula"><span>SP cabeça</span><span class="par"><input type="number" name="system.sp.cabeca.value" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" value="{{fonte.sp.cabeca.max}}"></span></label>
@@ -96,10 +97,21 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if eh.veiculo}}
       <label class="celula"><span>SDP</span><span class="par"><input type="number" name="system.sdp.value" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" value="{{fonte.sdp.max}}" min="0"></span></label>
       <label class="celula"><span>Assentos</span><input type="number" name="system.assentos" value="{{fonte.assentos}}" min="0"></label>
+      <label class="celula"><span>SP base</span><input type="number" name="system.sp" value="{{fonte.sp}}" min="0"></label>
+      <label class="celula"><span>Ablação</span><input type="number" name="system.ablacao" value="{{fonte.ablacao}}" min="0"></label>
+      <p class="nota">Blindagem atual: SP {{sistema.blindagem.sp}}/{{sistema.blindagem.max}}. Vidro blindado: {{sistema.vidroMax}} HP por janela.</p>
       {{#if instalados}}<p class="nota">Com os upgrades ({{instalados}}): SDP máximo {{sistema.sdp.max}}, {{sistema.assentos}} assentos.</p>{{/if}}
       <label class="celula"><span>MOVE (combate)</span><input type="number" name="system.velocidade.combate" value="{{fonte.velocidade.combate}}" min="0"></label>
       <label class="celula"><span>Velocidade narrativa</span><input type="text" name="system.velocidade.narrativa" value="{{fonte.velocidade.narrativa}}"></label>
       <label class="caixa"><input type="checkbox" name="system.familia" {{checked fonte.familia}}> Da família (Nomad)</label>
+      <div class="acoes-do-item">{{#if editavel}}<button type="button" class="acao" data-action="adicionarJanela">ADICIONAR JANELA</button><button type="button" class="acao" data-action="ajustarVidros" data-tooltip="Atualizar a proteção dos vidros pelos upgrades instalados">AJUSTAR VIDROS</button>{{/if}}</div>
+      {{#each janelas}}
+      <div class="celula larga" data-janela-id="{{id}}">
+        <label><span>Janela</span><input type="text" name="system.janelas.{{id}}.nome" value="{{nome}}"></label>
+        <label><span>HP atual / máximo</span><span class="par"><input type="number" name="system.janelas.{{id}}.hp.value" value="{{hp.value}}" min="0"> / <input type="number" name="system.janelas.{{id}}.hp.max" value="{{hp.max}}" min="0"></span></label>
+        {{#if ../editavel}}<button type="button" class="apagar" data-action="removerJanela" data-janela-id="{{id}}" data-tooltip="Remover esta janela">✕</button>{{/if}}
+      </div>
+      {{else}}<p class="nota">Sem janelas registradas. Cada janela conserva seu próprio HP.</p>{{/each}}
       {{/if}}
       {{#if eh.upgrade}}
       <label class="celula"><span>Para</span><select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
@@ -109,6 +121,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>SDP do veículo</span><input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
       <label class="celula"><span>Assentos do veículo</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
       <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+      {{#if prepararArma}}{{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="prepararArmaVeicular">PREPARAR ARMA</button></div>{{/if}}{{/if}}
       {{/if}}
       {{#if eh.equipamento}}
       <label class="celula"><span>Os efeitos valem</span><select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>

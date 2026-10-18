@@ -46,6 +46,14 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Montagem na ida e volta da wiki (C15):** exporte o vínculo por ID e também o `instaladoEm` vazio das cópias soltas.
+  O fallback legado por nome precisa respeitar esse vazio; caso contrário, um segundo vidro homônimo entra junto e
+  altera a proteção. O Foundry 12 já exporta o ID do item, portanto sua presença sozinha não identifica o formato novo.
+  No teste de ida e volta, permute a ordem dos pais conservando a dos filhos e confira o UID da cópia solta. A ordem
+  coincidente deixou sobreviver a mutação que removia todos os vínculos; os mesmos valores esperados devem passar por ID.
+- **Cobertura e classes de arma (C15/C29):** o vidro que a carga Tech atravessa conserva HP e a defesa da pessoa.
+  A espessura vem do máximo original (15 fino, 30 grosso), inclusive depois de o vidro sofrer dano.
+
 - **Mudança de regra** só com a fonte (a página da wiki ou o código do CORE) e um teste de referência com o valor
   esperado.
 - **Dúvida de regra** vira pergunta registrada no MIGRATION_STATUS.md, não interpretação nova.

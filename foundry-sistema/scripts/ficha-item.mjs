@@ -6,8 +6,9 @@ import { PERICIAS } from './gerado.mjs';
 import { FALHAS_DA_ARMA, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
+import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 // As opções de um select com o valor atual garantido. Um valor fora da lista (de outro conteúdo, de uma versão antiga)
 // apareceria como a primeira opção, e a ficha a gravaria ao salvar qualquer outro campo.
@@ -24,7 +25,7 @@ function cabecalhoDoItem(item) {
   const vazada = texto => ({ texto, classe: '' });
   const sp = local => (s.sp?.[local]?.max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${s.sp[local].value}/${s.sp[local].max}` : '');
   const porTipo = {
-    arma: () => [[nomeDaPericia(s.pericia), s.aDistancia ? 'à distância' : 'corpo a corpo'], [QUALIDADES[s.qualidade] && vazada(QUALIDADES[s.qualidade]), s.equipada && cheia('EQUIPADA')]],
+    arma: () => [[nomeDaPericia(s.pericia), s.aDistancia ? 'à distância' : 'corpo a corpo', s.instaladoEm && (item.instaladoNo?.name ?? 'Veículo ausente')], [QUALIDADES[s.qualidade] && vazada(QUALIDADES[s.qualidade]), s.instaladoEm ? cheia('MONTADA') : s.equipada && cheia('EQUIPADA')]],
     armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE')]],
     municao: () => [[s.tipo, `${s.quantidade} tiros`], []],
     // A fundação: os slots usados; a opção: em qual fundação está (no cyberware de um ator).
@@ -36,7 +37,7 @@ function cabecalhoDoItem(item) {
     roupa: () => [[TIPOS_ROUPA[s.tipo] ?? s.tipo, ESTILOS_ROUPA[s.estilo] ?? s.estilo], []],
     equipamento: () => [[], [s.eletronico && vazada('ELETRÔNICO'), s.ocultavel && vazada('OCULTÁVEL')]],
     upgrade: () => [[`para ${(ALVOS_UPGRADE[s.alvo] ?? s.alvo).toLowerCase()}`, item.instaladoNo ? `em ${item.instaladoNo.name}` : 'não instalado'], []],
-    veiculo: () => [[`SDP ${s.sdp?.value}/${s.sdp?.max}`, `${s.assentos} assentos`], [s.familia && vazada('DA FAMÍLIA')]]
+    veiculo: () => [[`SDP ${s.sdp?.value}/${s.sdp?.max}`, `SP ${s.blindagem.sp}/${s.blindagem.max}`, `${s.assentos} assentos`], [s.familia && vazada('DA FAMÍLIA'), item.actor?.veiculoAtivo?.id === item.id && cheia(item.actor.system.dirigindo ? 'DIRIGINDO' : 'EM USO')]]
   };
   const [resumo, etiquetas] = porTipo[item.type]?.() ?? [[], []];
   if (item.inoperante) etiquetas.push(vazada('INOPERANTE (EMP)'));
@@ -61,6 +62,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     form: { submitOnChange: true },
     actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade,
       atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar, rodar: FichaItem.#rodar, restaurarRez: FichaItem.#restaurarRez,
+      adicionarJanela: FichaItem.#adicionarJanela, removerJanela: FichaItem.#removerJanela, ajustarVidros: FichaItem.#ajustarVidros, prepararArmaVeicular: FichaItem.#prepararArmaVeicular,
       corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga
     }
   };
@@ -80,11 +82,16 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const fonte = item._source.system;
     const tipo = item.type;
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
+    const veiculosDaArma = { '': 'Sem montagem', ...Object.fromEntries((item.actor?.items.filter(i => i.type === 'veiculo') ?? []).map(i => [i.id, i.name])) };
+    if (tipo === 'arma' && fonte.instaladoEm && !(fonte.instaladoEm in veiculosDaArma)) veiculosDaArma[fonte.instaladoEm] = 'Veículo ausente';
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
       temEletronica: 'eletronico' in fonte,
       // A arma de um personagem ataca e recarrega pela ficha dela; a armadura mostra o SP de cada local em caixas.
       armaDeAtor: tipo === 'arma' && Boolean(item.actor),
+      armaMontada: tipo === 'arma' && Boolean(fonte.instaladoEm), veiculosDaArma, soAutofogo: Boolean(item.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
+      prepararArma: tipo === 'upgrade' && item.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, item.getFlag(SISTEMA, 'catalogo')),
+      janelas: tipo === 'veiculo' ? Object.entries(fonte.janelas).map(([id, janela]) => ({ id, ...janela })) : [],
       drogaDeAtor: tipo === 'droga' && Boolean(item.actor) ? { sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')) } : null,
       // A lesão de um personagem: a correção rápida e o tratamento (o que ela permite) e se está corrigida.
       lesaoDeAtor: tipo === 'lesao' && Boolean(item.actor) ? { correcao: opcoesDaLesao(fonte, 'correcao').length > 0, tratamento: opcoesDaLesao(fonte, 'tratamento').length > 0, corrigida: Boolean(item.getFlag(SISTEMA, 'corrigida')) } : null,
@@ -132,11 +139,23 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   // "Atacar" e "Recarregar" na arma de um personagem (as maquetes do usuário): o fluxo da ficha dele (a janela de
   // rolagem no clique; Ctrl + clique, direto; "Rolar direto" inverte).
   static #atacar(evento) {
-    return this.item.atacar({ perguntar: Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto')) });
+    return this.item.atacar({ modo: this.item.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo ? 'autofogo' : 'tiro', perguntar: Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto')) });
   }
   static #recarregar() {
     return this.item.recarregar();
   }
+  // Cada janela tem seu próprio nome e HP; os upgrades definem a proteção disponível no veículo.
+  static async #adicionarJanela() {
+    const nome = await DialogV2.prompt({
+      window: { title: 'Adicionar janela' }, classes: [SISTEMA], rejectClose: false,
+      content: '<label>Nome <input type="text" name="nome" value="Para-brisa"></label>',
+      ok: { label: 'Adicionar', callback: (evento, botao) => botao.form.elements.nome.value.trim() }
+    });
+    return nome ? this.item.adicionarJanela(nome) : null;
+  }
+  static #removerJanela(evento, alvo) { return this.item.removerJanela(alvo.dataset.janelaId); }
+  static #ajustarVidros() { return this.item.ajustarVidros(); }
+  static #prepararArmaVeicular() { return this.item.prepararArmaVeicular(); }
   // "−1" no SP de um local da armadura (o "Ablate" das maquetes): sem passar de 0 (o modelo não tem o mínimo); o
   // "Consertar" devolve.
   static #ablar(evento, alvo) {

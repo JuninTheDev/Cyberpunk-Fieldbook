@@ -143,6 +143,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **Dano no SDP dos veículos (C15, 2026-10-18, resolvida pelo usuário):** o CORE 0.92.4 guarda o SDP, mas não automatiza seu dano;
+  a wiki define PDE, ausência de esquiva e vidro como cobertura, sem fórmula própria de SP e crítico contra SDP.
+  O usuário confirmou: dano menos SP, ablação de 1 quando atravessa (a munição conserva sua
+  ablação), Chassis blindado SP13 conforme a descrição do CORE, sem +5 ou lesão crítica no SDP. O vidro segue a
+  cobertura da wiki: perde HP e segura o tiro inteiro; o explosivo que a destrói passa inteiro.
+
 - **Munição Inteligente RED (C14, 2026-10-17):** o usuário confirmou que a margem de erro de até 4 é contra a defesa
   usada, inclusive a Evasão rolada; a segunda tentativa permite outra esquiva. A wiki (`system-catalog.js`, Munição)
   e as descrições `ammo.*.smart` do CORE dizem "tiro único", sem excluir explicitamente o mirado. O usuário confirmou
@@ -5756,6 +5762,46 @@ Commit anterior: `43bb94d0` (o ciclo 115). Com este, o C29 termina.
       e o Desfazer que não tira o ferrolho (M16).
 - **Próximo:** o C29 terminou (as armas de 2077 nos ciclos 110 a 116). A sessão de teste com a mesa, quando o usuário
   marcar; no plano, o C23 (a segunda Role) ou o que o usuário escolher.
+
+### Ciclo 117 (2026-10-18): C15, veículos no combate (sessão Codex)
+
+Commit anterior: `76833a8` (reserva do C23, após o ciclo 116). Item reservado em `20a21c3`, antes da implementação.
+Os ciclos 112 a 116 do C29 e a reserva do C23 da sessão KouArt foram integrados, preservando código e registros.
+
+- **Fontes:** CORE 0.92.4, `CPRVehicleItem`, modelo e ficha de veículo, contêiner e upgrades de veículo; os itens
+  Armored Chassis, Bulletproof Glass, Heavy Chassis e Onboard Weapon. Wiki: `system-criacao.js`, Nomad/Moto e upgrades
+  (p. 161–164); `system-rules.js`, cobertura, explosivos e veículos (p. 174, 182–183, 189–192); `system-2077.js`, Tech
+  e Nekomata. O CORE guarda o SDP e descreve as proteções, mas não automatiza seu dano. As regras da wiki não mudaram.
+- **Decisão do usuário:** dano menos SP, ablação normal da munição quando atravessa e Chassis blindado SP13. O SDP
+  não recebe bônus de crítico nem lesão crítica. A dúvida e a resposta estão registradas acima.
+- **Implementado:**
+  - veículo único em uso na ficha, com o ID do item; trocar ou devolver encerra a direção, preservando a frota;
+  - SP base, ablação própria e proteção do Chassis blindado; dano no SDP, limite zero e Desfazer pela diferença;
+  - janelas com identidade, nome e HP próprios. Uma instalação dá 15 HP e a segunda 30; Ajustar vidros conserva o
+    dano. Tiro que destrói a cobertura perde a sobra; explosivo que a destrói alcança o ocupante com o dano inteiro;
+  - escolha explícita de pessoa, veículo ou janela ao atacar o token. A estrutura não esquiva nem recebe efeitos
+    humanos; no corpo a corpo, o mestre define a DV. O destino é reconferido após as janelas e no mestre;
+  - Preparar arma no upgrade instalado cria uma única arma: metralhadora de 30 balas (só Autofogo e frontal),
+    lança-chamas ou arma branca muito pesada. A preparação simultânea usa fila; mover o upgrade reaproveita a arma
+    e conserva pente e munição. As montadas ficam sob o veículo e fora das mãos. Metralhadora e lança-chamas não
+    recarregam dirigindo. Perder o veículo ou a instalação, inclusive durante a rolagem, impede o disparo;
+  - cartão com SDP, SP e vidro, e Desfazer diferencial. Dano avulso não contorna a restrição de Autofogo;
+  - ida e volta da wiki com IDs exatos de montagem, munição e upgrade da arma; SDP atual e máximo base, proteção,
+    ablação, janelas e direção. O máximo base evita duplicar Chassis pesado. O vínculo vazio conserva a cópia solta;
+    snapshots do Foundry 12 continuam aceitando os nomes antigos.
+- **Integração com C29:** carga Tech atravessa vidro fino sem retirar HP da cobertura; a Nekomata também atravessa
+  o grosso, pela flag do catálogo. A espessura usa o máximo original, e a pessoa conserva sua defesa e armadura.
+  Smart melhorada, balas por tiro, ferrolho, marcas de carga, dano mirado e lesões de quem dispara foram preservados.
+- **Portões:** G1, 75 arquivos sem erro; G2, nenhum erro; G3, 168/168; G4 completo, 147/147, incluindo os seis passos
+  C15 e a checagem dos dois navegadores sem avisos ou erros de JS. As falhas conhecidas de 2077 saíram com o C29.
+- **Mutações:** 65 distintas detectadas (28 de regras e 37 com navegador), uma por vez, com os bytes restaurados por
+  MD5 nos sete arquivos. A remoção de todos os vínculos de instalação sobreviveu na primeira tentativa: a ordem dos
+  pais e filhos mascarava o erro. O teste foi reforçado permutando apenas os veículos e conferindo o UID da cópia
+  solta, mantendo todos os valores esperados. A repetição detectou a mutação. Foram 66 execuções, nenhuma restauração
+  incorreta; as mutações de combate e o G4 completo final rodaram após a integração do ciclo 116.
+- **Limites:** Dirigir controla a recarga; mãos no volante, iniciativa, MOVE, manobras, orientação e condições
+  descritivas de instalação continuam com o mestre. As janelas são registradas e ajustadas pela ficha. A campanha
+  real e o servidor não foram alterados.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

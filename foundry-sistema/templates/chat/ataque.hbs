@@ -12,6 +12,15 @@
         {{#if contra}}<span class="contra">contra {{contra}}</span>{{/if}}
         {{#if metros}}<span class="contra">{{metros}} m</span>{{/if}}
       </div>
+      {{#if veicular}}
+      <ul class="dano-veicular">
+        {{#if (eq veicular.tipo "vidro")}}
+        <li><b>{{veicular.nome}}</b>: {{#if veicular.atravessado}}a carga Tech atravessou sem tirar HP do vidro ({{veicular.antes}} → {{veicular.depois}}).{{else}}perdeu {{veicular.perdeu}} HP ({{veicular.antes}} → {{veicular.depois}}). {{#if veicular.passou}}O vidro não protegeu a pessoa.{{else}}O vidro segurou o ataque; a sobra se perde.{{/if}}{{/if}}</li>
+        {{else}}
+        <li><b>{{veicular.nome}}</b>: perdeu {{veicular.perdeu}} SDP ({{veicular.antes}} → {{veicular.depois}}), contra SP {{veicular.spEfetivo}}{{#if (ne veicular.spEfetivo veicular.sp)}} (de {{veicular.sp}}){{/if}}{{#if veicular.ablado}}; a blindagem perdeu {{veicular.ablado}} de SP{{/if}}.</li>
+        {{/if}}
+      </ul>
+      {{/if}}
       {{#if dano}}
       <ul class="dano">
         {{#if dano.escudo}}<li>O escudo ({{dano.escudo}}) levou {{dano.escudoAblado}}.</li>{{/if}}

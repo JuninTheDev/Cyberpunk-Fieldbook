@@ -15,6 +15,7 @@ import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
+import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -91,6 +92,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       zerarDeathSave: FichaPersonagem.#zerarDeathSave,
       rolarDano: FichaPersonagem.#rolarDano,
       recarregar: FichaPersonagem.#recarregar,
+      usarVeiculo: FichaPersonagem.#usarVeiculo,
+      dirigirVeiculo: FichaPersonagem.#dirigirVeiculo,
+      prepararArmaVeicular: FichaPersonagem.#prepararArmaVeicular,
       prepararSorte: FichaPersonagem.#prepararSorte,
       abrirExtrato: FichaPersonagem.#abrirExtrato,
       recarregarSorte: FichaPersonagem.#recarregarSorte,
@@ -154,10 +158,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       const { partes } = arma.partesDoAtaque(null);
       return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
         classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
-        dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo,
+        dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo, soAutofogo: Boolean(arma.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
         resumo: [arma.system.dano, `CDT ${arma.system.cdt}`, arma.system.pente.max ? `${arma.system.pente.value}/${arma.system.pente.max}` : ''].filter(Boolean).join(' // ') };
     };
-    const armas = itens('arma').map(linhaArma);
+    // A arma montada fica com o veículo, sem ocupar a lista das armas de mãos. A montagem órfã continua editável.
+    const todasAsArmas = itens('arma');
+    const armas = todasAsArmas.filter(arma => !arma.system.instaladoEm).map(linhaArma);
+    const armasSemVeiculo = todasAsArmas.filter(arma => arma.system.instaladoEm && arma.instaladoNo?.type !== 'veiculo').map(linhaArma);
 
     // Perícias: as comuns sempre (nível 0 também) e as de família que o personagem tem. No painel geral, só as que têm
     // nível (das mais altas para as mais baixas) ou todas, no grupo de cada uma.
@@ -300,7 +307,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       vitais: { hp: porcento(s.hp.value, s.hp.max), humanidade: porcento(s.humanidade.value, s.humanidade.max), grave: Math.ceil(s.hp.max / 2) },
       deathSavePenalidade: s.deathSave.base + s.deathSave.penalidade,
       todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length,
-      armas, armasEquipadas: armas.filter(arma => arma.sistema.equipada),
+      armas, armasSemVeiculo, armasEquipadas: armas.filter(arma => arma.sistema.equipada),
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
       lesoes,
@@ -335,10 +342,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       net, neuroport,
       veiculos: itens('veiculo').map(v => ({
         id: v.id, nome: v.name, img: v.img,
-        detalhe: [`SDP ${v.system.sdp.value}/${v.system.sdp.max}`, `${v.system.assentos} assentos`, `MOVE ${v.system.velocidade.combate}`, v.system.familia ? 'da família' : '', v.instalados.map(i => i.name).join(', ')].filter(Boolean).join(' · ')
+        ativo: ator.veiculoAtivo?.id === v.id, dirigindo: ator.veiculoAtivo?.id === v.id && s.dirigindo,
+        armas: todasAsArmas.filter(arma => arma.system.instaladoEm === v.id).map(linhaArma),
+        detalhe: [`SDP ${v.system.sdp.value}/${v.system.sdp.max}`, `SP ${v.system.blindagem.sp}/${v.system.blindagem.max}`, `${v.system.assentos} assentos`, `MOVE ${v.system.velocidade.combate}`, v.system.familia ? 'da família' : '', v.instalados.filter(i => i.type === 'upgrade').map(i => i.name).join(', ')].filter(Boolean).join(' · ')
       })),
       upgrades: itens('upgrade').map(u => ({
         id: u.id, nome: u.name, img: u.img,
+        prepararArma: u.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, u.getFlag(SISTEMA, 'catalogo')),
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
       roleDaWiki: role, bonusDaRole, rolagensDaRole: (role && ROLAGENS_DE_ROLE[role.id]) ?? [],
@@ -505,6 +515,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #zerarDeathSave() { return this.actor.zerarDeathSave(); }
   static #rolarDano(evento, alvo) { return this.#item(alvo)?.rolarDano({ perguntar: comJanela(evento) }); }
   static #recarregar(evento, alvo) { return this.#item(alvo)?.recarregar(); }
+  // Um veículo em uso por vez; o motorista pode começar ou parar de dirigir sem trocar a escolha.
+  static #usarVeiculo(evento, alvo) {
+    const item = this.#item(alvo);
+    return item && this.actor.usarVeiculo(this.actor.veiculoAtivo?.id === item.id ? '' : item.id);
+  }
+  static #dirigirVeiculo() { return this.actor.dirigirVeiculo(!this.actor.system.dirigindo); }
+  static #prepararArmaVeicular(evento, alvo) { return this.#item(alvo)?.prepararArmaVeicular(); }
   // Sorte: um ponto a mais ou a menos para o próximo teste; no começo da sessão, volta ao máximo.
   static #prepararSorte(evento, alvo) { return this.actor.prepararSorte(this.actor.sortePreparada + Number(alvo.dataset.delta)); }
   static #recarregarSorte() { return this.actor.recarregarSorte(); }

@@ -184,10 +184,11 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     projétil só, incluindo mirado e míssil. A Smart melhorada do Kit fica no C29.
   - EMP nos eletrônicos em uso: proteção do conjunto, escolha do mestre, estado inoperante, minuto e Desfazer, sem
     mudar instalação ou Humanidade; deck, porta e Neuroport respeitam a parada e as janelas abertas a reconferem.
-- [~] **C15. Veículos no combate:** em andamento (sessão Codex, 2026-10-18).
-  - o dano no SDP e as armas instaladas;
-  - o vidro blindado como cobertura;
-  - um veículo da família por vez.
+- [x] **C15. Veículos no combate:** feito (ciclo 117, sessão Codex).
+  - dano no SDP menos SP, com ablação da munição e sem bônus ou lesão crítica; Desfazer pela diferença;
+  - armas instaladas vinculadas ao upgrade e ao veículo, preparação única e recarga impedida enquanto dirige;
+  - vidro blindado por janela (15/30 HP), cobertura e explosivos; Tech conserva a cobertura que atravessa;
+  - um veículo em uso por vez, inclusive entre os da família; a ida e volta da wiki conserva os vínculos por ID.
 
 ### Fase 4: ficha e inventário
 
@@ -527,7 +528,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   defesa e o Death Save; o dano já tem "Quem atacou rola o dano") e "Dano: manual".
 - [ ] **Acessórios:** (→ C11) o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como
   segunda arma; o pente que fica acima do máximo quando o carregador sai.
-- [ ] **Veículos no combate:** (→ C15) o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
+- [x] **Veículos no combate:** (C15, ciclo 117) o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
   cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.
 - [x] **Armas de 2077, os modos de cada classe** (bloqueador da migração, Ciclo 17; pelo suplemento de fã, e o Kit
   está no P0): o Ricochete da Power (DV da tabela
@@ -573,6 +574,9 @@ causa lesão), a Sorte caseira do JonJon, os marcadores de turno e o tema estend
 pedir.
 
 ## Decisões tomadas
+
+- **2026-10-18, dano no SDP (C15):** o usuário confirmou dano menos SP, ablação normal da munição quando atravessa,
+  Chassis blindado SP13 e ausência de bônus ou lesão crítica no SDP. O vidro segue a cobertura da wiki.
 
 - **2026-10-17, mãos livres (C12):** o usuário confirmou seguir a wiki para BODY 8+ empunhar arma branca de duas
   mãos com uma e para o escudo ocupar uma mão; a conta básica segue o CORE 0.92.4.

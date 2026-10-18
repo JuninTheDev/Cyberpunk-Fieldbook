@@ -143,7 +143,8 @@ async function carregarArmas(ator, entradas) {
 // arma, ou o upgrade no veículo; e a opção de cyberware na fundação dela (ciclo 83), como a wiki montou.
 const recebe = item => ['cyberdeck', 'arma', 'veiculo'].includes(item.type) || (item.type === 'cyberware' && item.system.fundacional);
 // O que entra no pai: no cyberware, só a opção de cyberware; nos outros, o que não é cyberware.
-const entraEm = (pai, item) => 'instaladoEm' in item.system && item.id !== pai.id && (pai.type === 'cyberware') === (item.type === 'cyberware') && !item.system.fundacional;
+const entraEm = (pai, item) => 'instaladoEm' in item.system && item.id !== pai.id && (pai.type === 'cyberware') === (item.type === 'cyberware') && !item.system.fundacional
+  && (item.type !== 'arma' || pai.type === 'veiculo');
 async function instalarNoLugar(ator, entradas) {
   const mudancas = [];
   for (const entrada of entradas.filter(e => e.em)) {
@@ -223,15 +224,29 @@ export function fichaParaAWiki(ator) {
   const usoDe = item => (['arma', 'armadura'].includes(item.type) ? (item.system.equipada ? 'equipped' : 'carried') : USO_NA_WIKI[item.system.uso] || '');
   const itens = ator.items.filter(item => TIPO_NA_WIKI[item.type]).map(item => {
     const x = item.system;
-    const linha = { nome: item.name, tipo: TIPO_NA_WIKI[item.type], qtd: 'quantidade' in x ? x.quantidade : 1, uso: usoDe(item), uid: item.getFlag(SISTEMA, 'wikiUid') || '' };
+    // O id do Foundry distingue as cópias de mesmo nome e uid. A montagem volta por ele, não pela ordem da lista.
+    const linha = { id: item.id, nome: item.name, tipo: TIPO_NA_WIKI[item.type], qtd: 'quantidade' in x ? x.quantidade : 1, uso: usoDe(item), uid: item.getFlag(SISTEMA, 'wikiUid') || '' };
+    const catalogo = item.getFlag(SISTEMA, 'catalogo');
+    if (catalogo) linha.catalogo = catalogo;
+    // Vazio também é informação: uma cópia solta não deve ser instalada pelo fallback de nomes do Foundry 12.
+    if ('instaladoEm' in x) linha.instaladoEm = x.instaladoEm || '';
     if (item.type === 'arma') {
       Object.assign(linha, {
         dano: x.dano, cdt: x.cdt, pericia: PERICIAS.find(p => p.id === x.pericia)?.en ?? x.pericia, distancia: x.aDistancia, maos: x.maos,
-        pente: x.aDistancia ? { atual: x.pente.value, max: x.pente.max } : null, municao: item.municaoCarregada?.name ?? ''
+        pente: x.aDistancia ? { atual: x.pente.value, max: x.pente.max } : null, municao: item.municaoCarregada?.name ?? '', carregada: x.carregada || ''
       });
+      const veicular = item.getFlag(SISTEMA, 'armaVeicular');
+      if (veicular) linha.armaVeicular = foundry.utils.deepClone(veicular);
     }
     if (item.type === 'armadura') Object.assign(linha, { cabeca: x.sp.cabeca.max ? x.sp.cabeca.value : 0, corpo: x.sp.corpo.max ? x.sp.corpo.value : 0 });
     if (item.type === 'cyberware') Object.assign(linha, { instalado: x.instalado, base: x.fundacional });
+    if (item.type === 'veiculo') {
+      const base = item._source.system;
+      linha.veiculo = {
+        sdp: { value: x.sdp.value, max: base.sdp.max }, familia: x.familia, sp: base.sp ?? 0, ablacao: x.ablacao ?? 0,
+        janelas: foundry.utils.deepClone(base.janelas ?? {}), ativo: s.veiculo === item.id, dirigindo: s.veiculo === item.id && Boolean(s.dirigindo)
+      };
+    }
     if (item.instalados.length) linha.dentro = item.instalados.map(dentro => dentro.name);
     return linha;
   });
@@ -377,17 +392,18 @@ const TIPO_DA_WIKI = Object.fromEntries(Object.entries(TIPO_NA_WIKI).map(([nosso
 const USO_DA_WIKI = Object.fromEntries(Object.entries(USO_NA_WIKI).map(([nosso, doCore]) => [doCore, nosso]));
 
 function idNoCatalogo(catalogo, doc, item) {
+  const tipo = TIPO_DA_WIKI[item.tipo];
+  if (catalogo[item.catalogo] && (!tipo || catalogo[item.catalogo].type === tipo)) return item.catalogo;
   const r = doc.resultado || {};
   if (item.uid) {
-    const daCriacao = (r.itens || []).find(entrada => entrada.uid === item.uid);
-    if (catalogo[daCriacao?.id]) return daCriacao.id;
-    const doPedido = (doc.pedidos || []).flatMap(pedido => pedido.itens || []).find(linha => linha.uid === item.uid);
-    if (catalogo[doPedido?.id]) return doPedido.id;
-    const daFamilia = (r.veiculos || []).flatMap(v => [['core_vehicles', v], ...(v.upgrades || []).map(u => ['core_upgrades', u])]).find(([, entrada]) => entrada.uid === item.uid);
-    const idDaFamilia = daFamilia && `${daFamilia[0]}:${slug(daFamilia[1].foundry?.nome || daFamilia[1].nome)}`;
-    if (catalogo[idDaFamilia]) return idDaFamilia;
+    const comuns = [...(r.itens || []), ...(doc.pedidos || []).flatMap(pedido => pedido.itens || [])]
+      .filter(entrada => entrada.uid === item.uid).map(entrada => entrada.id);
+    const familia = (r.veiculos || []).flatMap(v => [['core_vehicles', v], ...(v.upgrades || []).map(u => ['core_upgrades', u])])
+      .filter(([, entrada]) => entrada.uid === item.uid).map(([prefixo, entrada]) => `${prefixo}:${slug(entrada.foundry?.nome || entrada.nome)}`);
+    const encontrados = [...new Set([...comuns, ...familia].filter(id => catalogo[id] && (!tipo || catalogo[id].type === tipo)))];
+    // Um uid repetido com modelos diferentes não pode escolher o primeiro por acaso.
+    if (encontrados.length) return encontrados.length === 1 ? encontrados[0] : null;
   }
-  const tipo = TIPO_DA_WIKI[item.tipo];
   return Object.entries(catalogo).find(([, base]) => base.name === item.nome && (!tipo || base.type === tipo))?.[0] ?? null;
 }
 
@@ -422,11 +438,29 @@ export async function importarDaMesa(id, donoId = '') {
     if (data.type === 'arma' || data.type === 'armadura') s.equipada = item.uso === 'equipped';
     else if ('uso' in s && USO_DA_WIKI[item.uso]) s.uso = USO_DA_WIKI[item.uso];
     if (data.type === 'arma' && item.pente) s.pente.value = Math.max(0, Number(item.pente.atual) || 0);
+    if (data.type === 'arma' && item.armaVeicular) {
+      foundry.utils.setProperty(data, `flags.${SISTEMA}.armaVeicular`, foundry.utils.deepClone(item.armaVeicular));
+      s.equipada = false;
+      s.maos = 0;
+      s.slots = 0;
+      // A metralhadora instalada tem o pente próprio da instalação, não o do rifle que serviu de modelo.
+      if (item.armaVeicular.soAutofogo) {
+        s.supressivo = false;
+        if (Number.isFinite(item.pente?.max)) s.pente.max = Math.max(0, item.pente.max);
+      }
+    }
     if (data.type === 'armadura') {
       for (const local of ['cabeca', 'corpo']) if (s.sp[local].max) s.sp[local].value = Math.min(s.sp[local].max, Math.max(0, Number(item[local]) || 0));
     }
     // O Foundry 12 já descontou a Humanidade do cyberware: o valor vem da mesa, e o instalado fica como estava.
     if (data.type === 'cyberware') s.instalado = Boolean(item.instalado);
+    if (data.type === 'veiculo' && item.veiculo) {
+      const v = item.veiculo;
+      for (const chave of ['value', 'max']) if (Number.isFinite(v.sdp?.[chave])) s.sdp[chave] = Math.max(0, v.sdp[chave]);
+      if (typeof v.familia === 'boolean') s.familia = v.familia;
+      for (const chave of ['sp', 'ablacao']) if (Number.isFinite(v[chave])) s[chave] = Math.max(0, v[chave]);
+      if (v.janelas && typeof v.janelas === 'object' && !Array.isArray(v.janelas)) s.janelas = foundry.utils.deepClone(v.janelas);
+    }
     linhas.push(item);
     dados.push(data);
   }
@@ -461,14 +495,45 @@ export async function importarDaMesa(id, donoId = '') {
   await ator.createEmbeddedDocuments('Item', dados, { keepId: true });
   const criados = dados.map(data => ator.items.get(data._id));
 
-  // O que está dentro de cada item (programa no deck, acessório na arma, upgrade no veículo, a opção na fundação do
-  // cyberware) e a munição no pente, pelos nomes que a mesa manda. Cada item de dentro vai para um pai só.
+  // Os ids originais voltam como ids novos; cópias de mesmo nome/uid continuam distintas. Dados do Foundry 12, que
+  // só mandavam os nomes de dentro, conservam a montagem antiga. Um id duplicado não resolve para uma cópia arbitrária.
   const mudancas = [];
   const usados = new Set();
-  const livrePorNome = (nome, aceita) => criados.find(item => !usados.has(item.id) && item.name === nome && aceita(item));
+  const porOrigem = new Map();
+  const linhaPorCriado = new Map();
+  linhas.forEach((linha, indice) => {
+    const item = criados[indice];
+    linhaPorCriado.set(item.id, linha);
+    if (linha.id) porOrigem.set(linha.id, porOrigem.has(linha.id) ? null : item);
+  });
+  const peloId = (id, aceita) => {
+    const item = porOrigem.get(id);
+    return item && aceita(item) ? item : null;
+  };
+  linhas.forEach((linha, indice) => {
+    const item = criados[indice];
+    if (linha.instaladoEm) {
+      const pai = peloId(linha.instaladoEm, pai => recebe(pai) && entraEm(pai, item));
+      if (pai) {
+        usados.add(item.id);
+        mudancas.push({ _id: item.id, 'system.instaladoEm': pai.id });
+      } else notas.push(`${item.name}: não achei o item de origem onde estava instalado.`);
+    }
+    if (item.type === 'arma' && Object.hasOwn(linha, 'carregada') && linha.carregada) {
+      const municao = peloId(linha.carregada, outro => outro.type === 'municao');
+      if (municao) mudancas.push({ _id: item.id, 'system.carregada': municao.id });
+      else notas.push(`${item.name}: não achei a munição de origem do pente.`);
+    }
+    if (item.type === 'arma' && linha.armaVeicular?.upgrade) {
+      const upgrade = peloId(linha.armaVeicular.upgrade, outro => outro.type === 'upgrade' && outro.system.alvo === 'veiculo');
+      mudancas.push({ _id: item.id, [`flags.${SISTEMA}.armaVeicular.upgrade`]: upgrade?.id ?? '' });
+      if (!upgrade) notas.push(`${item.name}: não achei o upgrade de origem da arma instalada.`);
+    }
+  });
+  const livrePorNome = (nome, aceita) => criados.find(item => !usados.has(item.id) && !Object.hasOwn(linhaPorCriado.get(item.id) ?? {}, 'instaladoEm') && item.name === nome && aceita(item));
   linhas.forEach((item, indice) => {
     const pai = criados[indice];
-    if (pai.type === 'arma' && item.municao) {
+    if (pai.type === 'arma' && !Object.hasOwn(item, 'carregada') && item.municao) {
       const municao = livrePorNome(item.municao, outro => outro.type === 'municao');
       if (municao) mudancas.push({ _id: pai.id, 'system.carregada': municao.id });
     }
@@ -480,7 +545,15 @@ export async function importarDaMesa(id, donoId = '') {
       mudancas.push({ _id: filho.id, 'system.instaladoEm': pai.id });
     }
   });
-  if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
+  if (mudancas.length) {
+    const porItem = new Map();
+    for (const mudanca of mudancas) porItem.set(mudanca._id, { ...porItem.get(mudanca._id), ...mudanca });
+    await ator.updateEmbeddedDocuments('Item', [...porItem.values()]);
+  }
+
+  const ativos = linhas.flatMap((linha, indice) => linha.veiculo?.ativo && criados[indice].type === 'veiculo' ? [{ item: criados[indice], dirigindo: Boolean(linha.veiculo.dirigindo) }] : []);
+  if (ativos.length === 1) await ator.update({ 'system.veiculo': ativos[0].item.id, 'system.dirigindo': ativos[0].dirigindo });
+  else if (ativos.length > 1) notas.push('Mais de um veículo veio como ativo: escolha na ficha qual está em uso.');
 
   const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO } })

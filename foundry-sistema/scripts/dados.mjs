@@ -5,6 +5,7 @@ import { ANDAR_MAX, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
 import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, USOS } from './config.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
+import { protecoesDoVeiculo } from './regras-veiculos.mjs';
 
 const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
@@ -44,6 +45,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       dinheiro: inteiro(0),
       pontosDeMelhoria: inteiro(0),
       reputacao: inteiro(0),
+      // Um veículo em uso por vez, inclusive entre os da família do Nomad (wiki, p. 161).
+      veiculo: texto(),
+      dirigindo: new fields.BooleanField({ initial: false }),
       // O apelido (o nome de rua) e o Lifepath, em texto (a wiki manda pronto do criador).
       apelido: texto(),
       lifepath: new fields.SchemaField(Object.fromEntries(LIFEPATH.map(({ chave }) => [chave, texto()]))),
@@ -176,6 +180,7 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
       municoes: new fields.ArrayField(new fields.StringField()),
       // Id (no ator) do item de munição que está no pente.
       carregada: texto(),
+      instaladoEm: texto(),
       aDistancia: new fields.BooleanField({ initial: true }),
       maos: inteiro(1, { min: 0 }),
       autofogo: inteiro(0, { min: 0 }),
@@ -408,6 +413,10 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
       assentos: inteiro(2, { min: 0 }),
       velocidade: new fields.SchemaField({ combate: inteiro(20, { min: 0 }), narrativa: texto() }),
       familia: new fields.BooleanField({ initial: false }),
+      sp: inteiro(0, { min: 0 }),
+      ablacao: inteiro(0, { min: 0 }),
+      // Cada janela perde HP separadamente (CORE, Bulletproof Glass). O máximo fica persistido para não curar o vidro.
+      janelas: new fields.TypedObjectField(new fields.SchemaField({ nome: texto('Janela'), hp: recurso(0, 0) })),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };
@@ -416,6 +425,10 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
   prepareDerivedData() {
     const item = this.parent;
     const upgrades = item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id) ?? [];
+    const protecoes = protecoesDoVeiculo(upgrades);
+    const max = Math.max(this.sp, protecoes.sp);
+    this.blindagem = { max, sp: Math.max(0, max - this.ablacao) };
+    this.vidroMax = protecoes.vidro;
     for (const upgrade of upgrades) {
       this.sdp.max += upgrade.system.modificadores.sdp;
       this.assentos += upgrade.system.modificadores.assentos;
