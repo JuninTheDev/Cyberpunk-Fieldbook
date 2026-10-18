@@ -2109,11 +2109,11 @@ module.exports = async ({ edge, servidores, r }) => {
       return true;
     })()`);
 
-    await r.passo('arma Smart (2077): sem o Smart Link não dispara nem gasta bala; com ele, o tiro é o teste Smart 12 + 1d10 (+1 da qualidade) no lugar de REF + perícia; o mirado continua REF + perícia; na configuração "alternativa", só pelo botão Smart', async () => {
-      // Yukimura (Smart de três balas, excelente) contra o Alvo a 10 m: DV 15 (Pistol). Com o Smart Link: d10 5 → 12 + 1 + 5
-      // = 18, acerta (2d6: 5 + 4 = 9, a armadura segura). Mirado na cabeça: d10 9 → 8 + 4 + 1 − 8 + 9 = 14, erra.
-      // Alternativa: o "Atacar" d10 2 → 8 + 4 + 1 + 2 = 15, erra; o botão Smart d10 4 → 12 + 1 + 4 = 17, acerta (1 + 1).
-      await fixar(edge, [[5, 10], [5, 6], [4, 6], [9, 10], [2, 10], [4, 10], [1, 6], [1, 6]]);
+    await r.passo('arma Smart (2077, o Kit): sem a ligação (o Personal Link ou o Subdermal Grip) não dispara nem gasta bala; com o Subdermal Grip, o ataque é REF + perícia + 1 da arma Smart, no tiro e no mirado, sem o teste Smart do suplemento', async () => {
+      // Yukimura (Smart, padrão) contra o Alvo a 10 m: DV 13 (SMG). Com o Subdermal Grip: d10 5 → REF 8 + Pistola 4 +
+      // Smart 1 + 5 = 18, acerta (3d6: 4 + 3 + 3 = 10, a armadura segura). Mirado na cabeça: d10 7 → 8 + 4 + 1 − 8 + 7 =
+      // 12, erra.
+      await fixar(edge, [[5, 10], [4, 6], [3, 6], [3, 6], [7, 10]]);
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
         const alvo = __token('Alvo');
@@ -2125,25 +2125,17 @@ module.exports = async ({ edge, servidores, r }) => {
         const linha = () => ({ avisos: [...(__linhaDaArma(arma)?.querySelectorAll('.aviso-2077') ?? [])].map(e => e.textContent.trim()), ataque: __linhaDaArma(arma)?.querySelector('td.num')?.textContent.trim(),
           dica: __linhaDaArma(arma)?.querySelector('td.num')?.dataset.tooltip ?? '', botoes: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-modo]') ?? [])].map(b => b.dataset.modo) });
         const semLink = { ...(await __comAvisos(() => arma.atacar({ alvo }))), pente: arma.system.pente.value, ficha: linha() };
-        const link = await __cyber2077('cyberware-2077:smart-link');
+        const link = await __cyber2077('core_cyberware:subdermal-grip');
         await __esperar(() => !linha().avisos.length);
         const ficha = linha();
         const tiro = await arma.atacar({ alvo });
         const teste = __ultimoTeste();
         const mirado = await arma.atacar({ alvo, local: 'cabeca' });
         const testeMirado = __ultimoTeste();
-        await game.settings.set('${S}', 'smartAtaque', 'alternativa');
-        await a.sheet.render();
-        await __esperar(() => linha().botoes.includes('smart'));
-        const fichaAlternativa = linha();
-        const comum = await arma.atacar({ alvo });
-        const peloBotao = await arma.atacar({ alvo, modo: 'smart' });
-        await game.settings.set('${S}', 'smartAtaque', 'substitui');
         const resultado = {
-          semLink: { r: semLink.r, avisos: semLink.avisos, pente: semLink.pente, ficha: semLink.ficha }, ficha, fichaAlternativa,
+          semLink: { r: semLink.r, avisos: semLink.avisos, pente: semLink.pente, ficha: semLink.ficha }, ficha,
           tiro: { ataque: tiro.ataque, descricao: tiro.descricao, notas: tiro.notas, linhas: __linhas(tiro), teste },
-          mirado: { ataque: mirado.ataque, descricao: mirado.descricao, formula: testeMirado.formula },
-          comum: { ataque: comum.ataque, descricao: comum.descricao }, peloBotao: { ataque: peloBotao.ataque, descricao: peloBotao.descricao },
+          mirado: { ataque: mirado.ataque, descricao: mirado.descricao, formula: testeMirado.formula, linhas: __linhas(mirado) },
           pente: arma.system.pente.value, sobrou: window.__fila.length
         };
         await a.sheet.close();
@@ -2151,17 +2143,16 @@ module.exports = async ({ edge, servidores, r }) => {
         await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
         return resultado;
       })()`);
-      const { semLink, ficha, fichaAlternativa, tiro, mirado, comum, peloBotao } = info;
+      const { semLink, ficha, tiro, mirado } = info;
       const [l] = tiro.linhas;
-      const ok = semLink.r === null && semLink.pente === 30 && semLink.avisos.join() === 'Arasaka HJKE-11 Yukimura: arma Smart, só dispara com o cyberware Smart Link instalado.'
-        && semLink.ficha.avisos.join() === 'sem Smart Link' && semLink.ficha.dica === ''
-        && ficha.avisos.length === 0 && ficha.ataque === '+13' && /Teste Smart: 12 \+ 1d10/.test(ficha.dica) && !ficha.botoes.includes('smart')
-        && tiro.ataque === 18 && tiro.descricao === 'Tiro Smart' && tiro.notas.includes('Teste Smart: 12 + 1d10 no lugar de REF + perícia.')
-        && tiro.teste.formula === '1d10crit + 12 + 1' && tiro.teste.partes.includes('Teste Smart +12') && !tiro.teste.partes.some(p => /^REF/.test(p))
-        && l.dv === 15 && l.resultado === 'acertou' && l.dano?.dano === 9 && l.dano.recebido === 0
-        && mirado.ataque === 14 && mirado.descricao === 'Tiro mirado na cabeça' && mirado.formula === '1d10crit + 8 + 4 + 1 - 8'
-        && fichaAlternativa.botoes.includes('smart') && comum.ataque === 15 && comum.descricao === 'Tiro' && peloBotao.ataque === 17 && peloBotao.descricao === 'Tiro Smart'
-        && info.pente === 26 && info.sobrou === 0;
+      const ok = semLink.r === null && semLink.pente === 30 && semLink.avisos.join() === 'Arasaka HJKE-11 Yukimura: arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.'
+        && semLink.ficha.avisos.join() === 'sem ligação' && semLink.ficha.dica === ''
+        && ficha.avisos.length === 0 && ficha.ataque === '+13' && ficha.dica === 'Arma Smart: +1 nos ataques à distância.' && !ficha.botoes.includes('smart')
+        && tiro.ataque === 18 && tiro.descricao === 'Tiro' && !tiro.notas.some(n => /Teste Smart/.test(n))
+        && tiro.teste.formula === '1d10crit + 8 + 4 + 1' && tiro.teste.partes.includes('Arma Smart +1') && tiro.teste.partes.includes('REF +8')
+        && l.dv === 13 && l.resultado === 'acertou' && l.dano?.dano === 10 && l.dano.recebido === 0
+        && mirado.ataque === 12 && mirado.descricao === 'Tiro mirado na cabeça' && mirado.formula === '1d10crit + 8 + 4 + 1 - 8' && mirado.linhas[0]?.resultado === 'errou'
+        && info.pente === 28 && info.sobrou === 0;
       return [ok, JSON.stringify(info)];
     });
 
@@ -2331,10 +2322,10 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('os dois canos (2077): a Palica dispara os dois com o teste Smart 12 + 1d10; a Testera, com 4d6; cada um gasta 2 cartuchos, e com 1 no pente não dá; nas que só disparam cartucho não há Ricochete', async () => {
-      // O Capanga vai para x 500 (4 m), dentro dos 6 m do cartucho. Palica, os dois canos: d10 3 → 12 + 3 = 15 > 13; dano
-      // 3d6: 2 + 2 + 2 = 6. Testera, os dois cartuchos: d10 5 → REF 8 + Armas Pesadas 4 + 5 = 17 > 13; dano 4d6:
-      // 1 + 2 + 3 + 4 = 10 (o quinto dado da fila sobra).
+    await r.passo('os dois canos (2077): a Palica (Smart) dispara os dois com 4d6, ligada pelo Neuroport (sem ele, não dispara); a Testera, com 4d6; cada um gasta 2 cartuchos, e com 1 no pente não dá; nas que só disparam cartucho não há Ricochete', async () => {
+      // O Capanga vai para x 500 (4 m), dentro dos 6 m do cartucho. Palica, os dois canos: d10 3 → REF 8 + Pistola 4 +
+      // Smart 1 + 3 = 16 > 13; dano 4d6: 2 + 2 + 1 + 1 = 6. Testera, os dois cartuchos: d10 5 → REF 8 + Armas Pesadas 4 +
+      // 5 = 17 > 13; dano 4d6: 1 + 2 + 3 + 4 = 10 (o quinto dado da fila sobra).
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
         const capanga = __token('Capanga');
@@ -2344,16 +2335,18 @@ module.exports = async ({ edge, servidores, r }) => {
         try {
           await capanga.update({ x: 500 }, { animate: false });
           await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 500);
-          link = await __cyber2077('cyberware-2077:smart-link');
           const palica = await __arma2077('armas-2077:rostovic-db-4-palica', 'core_ammo:shotgun-shell-basic', 4);
           const testera = await __arma2077('armas-2077:rostovic-db-2-testera', 'core_ammo:shotgun-shell-basic', 4);
           criados.push(palica.arma.id, palica.municao.id, testera.arma.id, testera.municao.id);
+          const semLigacao = await __comAvisos(() => palica.arma.atacar({ alvo: capanga, modo: 'doisCanos' }));
+          const semLigacaoPente = palica.arma.system.pente.value;
+          link = await __cyber2077('cyberware-2077:neuroport');
           await a.update({ 'system.pericias.heavy-weapons.nivel': 4 });
           await a.sheet.render({ force: true });
           await __esperar(() => __linhaDaArma(palica.arma) && __linhaDaArma(testera.arma));
           const botoes = arma => [...(__linhaDaArma(arma)?.querySelectorAll('button[data-modo]') ?? [])].map(b => b.dataset.modo);
           const ficha = { palica: botoes(palica.arma), testera: botoes(testera.arma) };
-          window.__fila = [[3, 10], [2, 6], [2, 6], [2, 6]];
+          window.__fila = [[3, 10], [2, 6], [2, 6], [1, 6], [1, 6]];
           const r1 = await palica.arma.atacar({ alvo: capanga, modo: 'doisCanos' });
           const teste1 = __ultimoTeste();
           window.__fila = [[5, 10], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6]];
@@ -2366,6 +2359,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const umSo = await __comAvisos(() => testera.arma.atacar({ alvo: capanga, modo: 'doisCanos' }));
           const resumo = r => ({ ataque: r.ataque, descricao: r.descricao, notas: r.notas, linhas: __linhas(r) });
           return {
+            semLigacao: { r: semLigacao.r, avisos: semLigacao.avisos, pente: semLigacaoPente },
             ficha, r1: { ...resumo(r1), formula: teste1.formula, pente: palica.arma.system.pente.value }, r2: { ...resumo(r2), formula: teste2.formula, pente: penteDaTestera }, sobrou,
             umSo: { r: umSo.r, avisos: umSo.avisos, pente: testera.arma.system.pente.value }, perdeu: hpDoCapanga - __ator('Capanga').system.hp.value
           };
@@ -2378,10 +2372,11 @@ module.exports = async ({ edge, servidores, r }) => {
           await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 900);
         }
       })()`);
-      const { r1, r2, umSo } = info;
-      const ok = info.ficha.palica.join() === 'doisCanos' && info.ficha.testera.join() === 'doisCanos'
-        && r1.ataque === 15 && r1.formula === '1d10crit + 12' && r1.descricao === 'Espingarda com cartucho (Smart), os dois canos' && r1.pente === 0
-        && r1.notas.includes('Teste Smart: 12 + 1d10 no lugar de REF + perícia.') && r1.notas.includes('Os dois canos de uma vez: gastou 2 cartuchos.')
+      const { semLigacao, r1, r2, umSo } = info;
+      const ok = semLigacao.r === null && semLigacao.pente === 2 && semLigacao.avisos.join() === 'Rostovic DB-4 Palica: arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.'
+        && info.ficha.palica.join() === 'doisCanos' && info.ficha.testera.join() === 'doisCanos'
+        && r1.ataque === 16 && r1.formula === '1d10crit + 8 + 4 + 1' && r1.descricao === 'Espingarda com cartucho, os dois canos' && r1.pente === 0
+        && !r1.notas.some(n => /Teste Smart/.test(n)) && r1.notas.includes('Os dois canos de uma vez: gastou 2 cartuchos, e o dano é 4d6.')
         && r1.linhas[0].resultado === 'acertou' && r1.linhas[0].dano?.dano === 6
         && r2.ataque === 17 && r2.formula === '1d10crit + 8 + 4' && r2.descricao === 'Espingarda com cartucho, os dois canos'
         && r2.notas.includes('Os dois canos de uma vez: gastou 2 cartuchos, e o dano é 4d6.') && r2.linhas[0].dano?.dano === 10 && r2.pente === 0 && info.sobrou === 1
@@ -2391,8 +2386,8 @@ module.exports = async ({ edge, servidores, r }) => {
     });
 
     await r.passo('Dian e Lexington (2077): a coronha recolhida pelo botão da ficha dá −1 no ataque (o aviso aparece, e o botão estende de volta); o autofogo da Lexington gasta 7 balas, e com menos não dá', async () => {
-      // Dian (Smart, excelente) contra o Alvo a 10 m (DV 13, SMG): com a coronha recolhida, d10 7 → 10 + 1 − 1 + 7 = 17;
-      // dano 2d6: 1 + 1. Lexington, autofogo no Alvo a 10 m: d10 9 → REF 8 + Autofogo 4 + 9 = 21 contra 17 (SMG Autofire):
+      // Dian (Smart, excelente) contra o Alvo a 10 m (DV 13, SMG): com a coronha recolhida, d10 7 → REF 8 + Pistola 4 + 1 +
+      // Smart 1 − 1 + 7 = 20; dano 2d6: 1 + 1. Lexington, autofogo no Alvo a 10 m: d10 9 → REF 8 + Autofogo 4 + 9 = 21 contra 17 (SMG Autofire):
       // ×2 (o máximo da arma), 2d6: 1 + 1 = 2 × 2 = 4, a armadura segura.
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
@@ -2401,7 +2396,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const criados = [];
         let link = null;
         try {
-          link = await __cyber2077('cyberware-2077:smart-link');
+          link = await __cyber2077('core_cyberware:subdermal-grip');
           const dian = await __arma2077('armas-2077:kang-tao-g-58-dian', 'core_ammo:medium-pistol-basic', 30);
           const lex = await __arma2077('armas-2077:militech-m-10af-lexington', 'core_ammo:medium-pistol-basic', 21);
           criados.push(dian.arma.id, dian.municao.id, lex.arma.id, lex.municao.id);
@@ -2428,7 +2423,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const poucas = await __comAvisos(() => lex.arma.atacar({ alvo, modo: 'autofogo' }));
           return {
             estendida, recolhida, deVolta, tiro: { ataque: tiro.ataque, formula: testeDian.formula, partes: testeDian.partes }, dicaDoAutofogo,
-            rajada: { ataque: rajada.ataque, linhas: __linhas(rajada) }, penteDepois, poucas: { r: poucas.r, avisos: poucas.avisos, pente: lex.arma.system.pente.value }, fila: window.__fila.length
+            rajada: rajada && { ataque: rajada.ataque, linhas: __linhas(rajada) }, penteDepois, poucas: { r: poucas.r, avisos: poucas.avisos, pente: lex.arma.system.pente.value }, fila: window.__fila.length
           };
         } finally {
           await a.sheet.close();
@@ -2438,21 +2433,23 @@ module.exports = async ({ edge, servidores, r }) => {
         }
       })()`);
       const { estendida, recolhida, deVolta, tiro, rajada, poucas } = info;
-      const [l] = rajada.linhas;
-      const ok = estendida.ataque === '+11' && estendida.avisos.length === 0 && estendida.alternar.join() === 'Recolher'
-        && recolhida.ataque === '+10' && recolhida.avisos.join() === 'coronha recolhida (−1)' && recolhida.alternar.join() === 'Estender'
-        && tiro.ataque === 17 && tiro.formula === '1d10crit + 10 + 1 - 1' && tiro.partes.includes('Coronha recolhida -1')
-        && deVolta.ataque === '+11' && deVolta.alternar.join() === 'Recolher' && deVolta.flag === false
+      // A rajada que não sai (null) falha a checagem em vez de quebrar o passo: a Dian fica no resultado.
+      const [l = {}] = rajada?.linhas ?? [];
+      const ok = estendida.ataque === '+14' && estendida.avisos.length === 0 && estendida.alternar.join() === 'Recolher'
+        && recolhida.ataque === '+13' && recolhida.avisos.join() === 'coronha recolhida (−1)' && recolhida.alternar.join() === 'Estender'
+        && tiro.ataque === 20 && tiro.formula === '1d10crit + 8 + 4 + 1 + 1 - 1' && tiro.partes.includes('Arma Smart +1') && tiro.partes.includes('Coronha recolhida -1')
+        && deVolta.ataque === '+14' && deVolta.alternar.join() === 'Recolher' && deVolta.flag === false
         && info.dicaDoAutofogo === 'Autofogo (×2): 7 balas'
-        && rajada.ataque === 21 && l.dv === 17 && l.mult === 2 && l.dano?.dano === 4 && info.penteDepois === 14
+        && rajada?.ataque === 21 && l.dv === 17 && l.mult === 2 && l.dano?.dano === 4 && info.penteDepois === 14
         && poucas.r === null && poucas.pente === 5 && poucas.avisos.join() === 'Militech M-10AF Lexington: precisa de 7 balas no pente (tem 5). Recarregue.' && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('Kappa (2077), dois alvos: o Alvo (REF 8) esquiva do tiro Smart e as balas vão para o Capanga, a 2 m dele; com o segundo a 18 m, não mudam; com três marcados, o terceiro fica de fora', async () => {
-      // Kappa (Smart de três balas, excelente): d10 6 → 12 + 1 + 6 = 19. O Alvo esquiva pela janela do mestre: DEX 7 +
-      // Evasão 2 + 10 + 1 = 20 (empate e acima são dele). O Capanga (REF 6) não esquiva: 19 contra DV 15 (12 m); dano 2d6:
-      // 3 + 4 = 7. Com o Longe (18 m do Alvo), as balas não mudam. Com o Capanga primeiro (pega), dano 1 + 1 = 2.
+    await r.passo('Kappa (2077), dois alvos: o Alvo (REF 8) esquiva do tiro (ligada pelo Interface Plug) e as balas vão para o Capanga, a 2 m dele; com o segundo a 18 m, não mudam; com três marcados, o terceiro fica de fora', async () => {
+      // Kappa (Smart, excelente): d10 6 → REF 8 + Pistola 4 + 1 + Smart 1 + 6 = 20. O Alvo esquiva pela janela do mestre:
+      // DEX 7 + Evasão 2 + 10 + 1 = 20 (empate e acima são dele). O Capanga (REF 6) não esquiva: 20 contra DV 15 (12 m);
+      // dano 3d6: 3 + 4 + 2 = 9. Com o Longe (18 m do Alvo), as balas não mudam. Com o Capanga primeiro (pega), dano
+      // 1 + 1 + 1 = 3.
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
         const [alvo, capanga, longe] = ['Alvo', 'Capanga', 'Longe'].map(__token);
@@ -2483,13 +2480,13 @@ module.exports = async ({ edge, servidores, r }) => {
         };
         try {
           await __ator('Alvo').update({ 'system.atributos.ref.valor': 8 });
-          link = await __cyber2077('cyberware-2077:smart-link');
+          link = await __cyber2077('core_cyberware:interface-plugs');
           const kappa = await __arma2077('armas-2077:tsunami-kappa', 'core_ammo:medium-pistol-basic', 30);
           criados.push(kappa.arma.id, kappa.municao.id);
           await a.sheet.render({ force: true });
           await __esperar(() => __linhaDaArma(kappa.arma));
           const dica = __linhaDaArma(kappa.arma).querySelector('td.num')?.dataset.tooltip ?? '';
-          window.__fila = [[6, 10], [10, 10], [1, 10], [3, 6], [4, 6]];
+          window.__fila = [[6, 10], [10, 10], [1, 10], [3, 6], [4, 6], [2, 6]];
           let promessa = kappa.arma.atacar({ alvos: [alvo, capanga] });
           await esquivar();
           const r1 = await vigiar(promessa);
@@ -2498,7 +2495,7 @@ module.exports = async ({ edge, servidores, r }) => {
           promessa = kappa.arma.atacar({ alvos: [alvo, longe] });
           await esquivar();
           const r2 = await vigiar(promessa);
-          window.__fila = [[6, 10], [1, 6], [1, 6]];
+          window.__fila = [[6, 10], [1, 6], [1, 6], [1, 6]];
           const r3 = await vigiar(kappa.arma.atacar({ alvos: [capanga, alvo, longe] }));
           const resumo = r => ({ ataque: r.ataque, notas: r.notas, linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, escolha: l.escolha, defesa: l.defesa, dano: l.dano?.dano ?? null, notas: l.notas })) });
           return { dica, r1: resumo(r1), sobrou1, r2: resumo(r2), r3: resumo(r3), inesperadas, perdeu: hpDoCapanga - __ator('Capanga').system.hp.value, fila: window.__fila.length };
@@ -2514,11 +2511,11 @@ module.exports = async ({ edge, servidores, r }) => {
       const { r1, r2, r3 } = info;
       const linha = (r, nome) => r.linhas.find(l => l.nome === nome);
       const ok = /Trava dois alvos/.test(info.dica) && info.inesperadas.length === 0
-        && r1.ataque === 19 && r1.linhas.length === 2 && linha(r1, 'Alvo')?.resultado === 'esquivou' && linha(r1, 'Alvo').defesa === 20
-        && linha(r1, 'Capanga')?.resultado === 'acertou' && linha(r1, 'Capanga').dano === 7 && linha(r1, 'Capanga').notas.includes('As balas Smart mudaram de alvo: Alvo não foi atingido.') && info.sobrou1 === 0
+        && r1.ataque === 20 && r1.linhas.length === 2 && linha(r1, 'Alvo')?.resultado === 'esquivou' && linha(r1, 'Alvo').defesa === 20
+        && linha(r1, 'Capanga')?.resultado === 'acertou' && linha(r1, 'Capanga').dano === 9 && linha(r1, 'Capanga').notas.includes('As balas Smart mudaram de alvo: Alvo não foi atingido.') && info.sobrou1 === 0
         && r2.linhas.length === 1 && linha(r2, 'Alvo')?.resultado === 'esquivou' && r2.notas.includes('Longe está a mais de 4 m de Alvo: as balas Smart não mudam de alvo.')
-        && r3.linhas.length === 1 && linha(r3, 'Capanga')?.resultado === 'acertou' && linha(r3, 'Capanga').dano === 2 && r3.notas.includes('Tsunami Kappa trava dois alvos: Longe ficou de fora.')
-        && info.perdeu === 9 && info.fila === 0;
+        && r3.linhas.length === 1 && linha(r3, 'Capanga')?.resultado === 'acertou' && linha(r3, 'Capanga').dano === 3 && r3.notas.includes('Tsunami Kappa trava dois alvos: Longe ficou de fora.')
+        && info.perdeu === 12 && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });
 

@@ -7,9 +7,9 @@
 // regras de conversão são as dele, e os ids são os da loja da wiki ("armas-2077:<nome>", "cyberware-2077:<nome>",
 // "netrunning-2077:<nome>").
 // A classe, a origem e as regras de cada arma (o "regras" da wiki) ficam na flag arma2077, como o cpr-2077 guarda as
-// dele. Os modos dos ciclos 17 e 18 (regras.mjs: o ricochete, a carga Tech, o teste Smart e as regras próprias da
-// Palica, da Testera, da Kappa e da Dian) leem dela as opções de cada arma. Esses modos ainda seguem o suplemento de fã:
-// as regras de Power, Smart e Tech do Kit ainda não estão no sistema (ROADMAP).
+// dele. Os modos dos ciclos 17 e 18 (regras.mjs: o ricochete, a carga Tech e as regras próprias da Palica, da Testera,
+// da Kappa e da Dian) e a arma Smart do Kit (ciclo 110) leem dela as opções de cada arma. O ricochete e a carga ainda
+// seguem o suplemento de fã: as regras de Power e Tech do Kit ainda não estão no sistema (ROADMAP).
 // Uso: chamado por build/conteudo.mjs.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -73,21 +73,20 @@ const REGRA_DA_CLASSE = {
 const NESTE_SISTEMA = {
   power: 'o botão Ricochete ainda segue o suplemento de fã: DV da tabela de autofogo e um dado a menos de dano (+2 com o Ballistic Coprocessor); as que só disparam rajadas ou cartucho não ricocheteiam. O −4 do Kit e o +5 na lesão crítica, o mestre aplica.',
   tech: 'o botão Carga ainda segue o suplemento de fã: pergunta a cobertura do alvo, deixa nela o que não atravessa e abla 4 de SP (2 através de cobertura), e a arma esfria uma rodada. A carga do Kit (a Ação de Movimento, CDT 1, metade do SP), o mestre aplica.',
-  smart: 'o tiro ainda segue o suplemento de fã: é o teste Smart (pela configuração do mundo, no lugar de REF + perícia ou num botão à parte), e sem o Smart Link instalado a arma não dispara (ou dispara como comum, pela configuração). O +1 do Kit e o Personal Link, o mestre aplica.'
+  smart: 'o +1 nos ataques à distância e a ligação (o Personal Link do Neuroport ou o Subdermal Grip), o sistema aplica: sem ela, a arma não dispara. A munição Smart melhorada (a segunda chance com 14 + 1d10 e as penalidades de visão), o mestre aplica.'
 };
 const SO_COM_O_MESTRE = 'O que mais o texto acima disser de próprio deste modelo, o mestre resolve.';
 // O que o sistema faz das regras próprias de cada modelo, pela flag arma2077.
 function proprioNoSistema(flag) {
   const frases = [];
-  if (flag.smartDoisCanos) frases.push('O botão "Dois canos" dispara os dois de uma vez: teste Smart 12 + 1d10, gastando os 2 cartuchos.');
   if (flag.doisCartuchosDano) frases.push(`O botão "Dois canos" dispara os dois cartuchos de uma vez: ${flag.doisCartuchosDano} de dano.`);
-  if (flag.smartDoisAlvos) frases.push('Com dois alvos marcados, se o tiro Smart não pegar o primeiro, as balas vão para o segundo, a até 4 m dele.');
+  if (flag.doisAlvos) frases.push('Com dois alvos marcados, se o tiro não pegar o primeiro, as balas Smart vão para o segundo, a até 4 m dele.');
   if (flag.coronhaRetratil) frases.push('O botão "Recolher" recolhe a coronha: dá para esconder a arma, e os ataques têm −1 até estender.');
   if (flag.balasDoAutofogo) frases.push(`O autofogo gasta ${flag.balasDoAutofogo} balas.`);
   return frases.join(' ');
 }
 // Nos itens do Kit sem botão (os Rebuilds, a munição Smart melhorada).
-const KIT_SEM_AUTOMACAO = paragrafo('as regras de Power, Smart e Tech do Kit ainda não estão automatizadas aqui: veja a página de 2077 da wiki.', 'Neste sistema');
+const KIT_SEM_AUTOMACAO = paragrafo('o Rebuild ainda não dá a classe à arma, e a munição Smart melhorada (a segunda chance) ainda não está automatizada aqui: veja a página de 2077 da wiki.', 'Neste sistema');
 // As regras próprias de cada arma (system-2077.js, "regras"), guardadas na flag arma2077 como o cpr-2077 guarda as dele.
 const REGRAS = ['balas', 'danoComMenos', 'minimoDeBalas', 'danoFixo', 'danoMirado', 'exigeBody', 'lesao', 'lesaoSemCromo', 'cargaSemMovimento',
   'cargaAteFimDoTurno', 'balasNaCarga', 'cdtNaCarga', 'cargaGrossa', 'ferrolho', 'soCartucho', 'soSmartMelhorada', 'doisAlvos', 'doisCanos'];
@@ -119,12 +118,9 @@ function arma(raw, grupo) {
   // As opções que os modos dos ciclos 17 e 18 leem: das regras da wiki (raw.regras) quando ela as tem; senão, do texto.
   const arma2077 = {
     classe, exotica, origem: kit ? 'kit' : 'fa', grupo,
-    // Smart: várias balas por tiro (o teste 12 + 1d10), a Kappa (dois alvos), a Palica (dois canos).
-    smartVariasBalas: classe === 'smart' && !regras.doisCanos && !/dois canos/i.test(textoCompleto) && (Number(regras.balas) > 1 || /12 \+ 1d10/.test(textoCompleto)),
-    smartDoisAlvos: classe === 'smart' && Boolean(regras.doisAlvos || /dois alvos/i.test(textoCompleto)),
-    smartDoisCanos: classe === 'smart' && Boolean(regras.doisCanos || /dois canos/i.test(textoCompleto)),
-    // A Testera: os dois cartuchos de uma vez, com o dano deles.
-    doisCartuchosDano: classe !== 'smart' ? (recursos.match(/os dois cartuchos juntos: (\d+d6)/i) || [])[1] || null : null,
+    // A Testera e a Palica: os dois cartuchos (ou canos) de uma vez, com o dano deles. Os dois alvos da Kappa vêm das
+    // regras da wiki (doisAlvos, abaixo).
+    doisCartuchosDano: (recursos.match(/os dois (?:cartuchos juntos|canos de uma vez): (\d+d6)/i) || [])[1] || null,
     // Tech: a rajada da carga (o multiplicador máximo; 0: só tiro único) e as balas que ela gasta, quando o texto diz.
     // Com o Kit, nenhuma arma faz rajada carregada.
     techRajada: classe === 'tech' ? Number((recursos.match(/carga Tech \(rajada de (\d)\)/i) || [])[1] || 0) : 0,

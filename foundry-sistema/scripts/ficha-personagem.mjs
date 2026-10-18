@@ -146,10 +146,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const s = ator.system;
     const fonte = ator._source.system;
     const itens = tipo => ator.items.filter(item => item.type === tipo).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'pt-BR'));
-    // Armas de 2077: os botões dos modos, os avisos e o teste Smart no lugar de REF + perícia (combate.mjs).
+    // Armas de 2077: os botões dos modos, os avisos e a dica do ataque (o +1 da arma Smart; combate.mjs).
     const linhaArma = arma => {
       const de2077 = acoesDe2077(arma);
-      const { partes } = arma.partesDoAtaque(null, { smart: de2077.smart });
+      const { partes } = arma.partesDoAtaque(null);
       return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
         classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
         dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo,

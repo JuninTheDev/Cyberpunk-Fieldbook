@@ -38,15 +38,8 @@ export function registrarConfiguracoes() {
     name: 'Efeitos na mesa', hint: 'Texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro.',
     type: String, default: 'auto', choices: { auto: 'Texto e animação', texto: 'Só o texto', nao: 'Nenhum' }
   });
-  // Armas de 2077 (as do cpr-2077 do Foundry 12, com os mesmos padrões).
-  registrar('smartAtaque', {
-    name: 'Ataque das armas Smart (2077)', hint: 'O suplemento diz que o ataque Smart é 10 + 1d10 (12 + 1d10 com várias balas), mas não diz se troca REF + perícia ou se é uma opção: a wiki manda combinar com a mesa. Substitui: o tiro da arma Smart é sempre o teste Smart (o autofogo e o mirado continuam REF + perícia). Alternativa: a arma ganha o botão "Smart", e o "Atacar" continua REF + perícia.',
-    type: String, default: 'substitui', choices: { substitui: 'Substitui REF + perícia', alternativa: 'É uma alternativa (botão "Smart")' }
-  });
-  registrar('smartSemLink', {
-    name: 'Arma Smart sem o Smart Link (2077)', hint: 'As armas Smart só funcionam com o cyberware Smart Link (suplemento p. 30). Sem ele: a arma não dispara, ou dispara como arma comum (REF + perícia, sem o teste Smart).',
-    type: String, default: 'naoDispara', choices: { naoDispara: 'Não dispara', comum: 'Dispara como arma comum' }
-  });
+  // Armas de 2077 (as do cpr-2077 do Foundry 12, com os mesmos padrões). As do ataque Smart do suplemento (o teste Smart
+  // e a arma sem o Smart Link) saíram no ciclo 110: o Mission Kit diz "+1" e "sem conexão, não dispara".
   registrar('cargaEsfria', { name: 'A carga Tech esfria uma rodada (2077)', hint: 'No combate, depois de uma carga (tiro ou rajada), a arma Tech só carrega de novo duas rodadas depois. Fora do combate, não conta.', type: Boolean, default: true });
   registrar('netJogadorRola', {
     name: 'O jogador rola as rolagens da NET', hint: 'As rolagens do netrunner na NET (as habilidades de Interface, o ataque dos programas, a velocidade contra o Black ICE e a defesa) abrem a janela de rolagem no computador do dono dele, com os modificadores e a Sorte. Sem resposta no tempo para o jogador responder, o mestre rola. Desligado, o mestre rola sempre, com a Sorte preparada na ficha.',

@@ -9,8 +9,8 @@
 // - Explosivo: dano em todos numa área de 10 × 10 m em volta do alvo.
 // - Fogo supressivo: quem está até 25 m rola WILL + Concentração + 1d10 contra o ataque; quem perder é suprimido.
 // - Escudo: recebe o ataque todo, mas quem usa não esquiva.
-// - Armas de 2077 (o suplemento de fã da mesa, como a wiki resume em system-2077.js): o Ricochete das Power, a Carga e
-//   a Rajada das Tech e o teste Smart (no fim deste arquivo).
+// - Armas de 2077 (a wiki, system-2077.js): o Ricochete das Power e a Carga e a Rajada das Tech (ainda do suplemento de
+//   fã) e a arma Smart do Mission Kit, a ligação e o +1 (no fim deste arquivo).
 
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
@@ -647,12 +647,12 @@ export function tabelasCandidatas(tabela, modo, tipoDeArma = '') {
 // Centro do token dentro do quadrado de lado 2 × metade (em pixels)?
 export const dentroDaArea = (centro, ponto, metade) => Math.abs(ponto.x - centro.x) <= metade + 0.5 && Math.abs(ponto.y - centro.y) <= metade + 0.5;
 
-// Descrição curta do ataque: "Tiro mirado na cabeça", "Autofogo", "Tiro Smart", "Carga Tech através de cobertura fina",
-// "Espingarda com cartucho (Smart), os dois canos"…
-export function descreverAtaque({ modo, local = 'corpo', smart = false, cobertura = null, doisCanos = false }) {
+// Descrição curta do ataque: "Tiro mirado na cabeça", "Autofogo", "Carga Tech através de cobertura fina", "Espingarda com
+// cartucho, os dois canos"…
+export function descreverAtaque({ modo, local = 'corpo', cobertura = null, doisCanos = false }) {
   const base = MODOS[modo] || 'Ataque';
   if (LOCAIS_MIRADOS[local]) return `${modo === 'corpo' ? 'Golpe' : 'Tiro'} mirado ${local === 'item' ? 'no item na mão' : `na ${LOCAIS_MIRADOS[local]}`}`;
-  const texto = `${smart ? (modo === 'tiro' ? 'Tiro Smart' : `${base} (Smart)`) : base}${doisCanos ? ', os dois canos' : ''}`;
+  const texto = `${base}${doisCanos ? ', os dois canos' : ''}`;
   return COBERTURAS[cobertura] && cobertura !== 'nenhuma' ? `${texto} através de ${COBERTURAS[cobertura].rotulo}` : texto;
 }
 
@@ -666,13 +666,15 @@ export function descreverAtaque({ modo, local = 'corpo', smart = false, cobertur
 //   causar dano, a armadura perde 4 de SP (2 através de cobertura). Rajada: o autofogo carregado, com a tabela de
 //   autofogo da SMG e o multiplicador até a "rajada de N" da arma, que atravessa um quarto da cobertura fina e nada da
 //   grossa. Depois de uma carga, a arma esfria uma rodada.
-// - Smart: só dispara com o cyberware Smart Link. O tiro é o teste Smart, 10 + 1d10 (12 + 1d10 nos modelos de várias
-//   balas Smart), no lugar de REF + perícia; a wiki manda combinar com a mesa se substitui ou é uma alternativa (uma
-//   configuração do mundo).
-// - As regras próprias de alguns modelos, pelo texto de cada arma: os dois canos de uma vez (a Palica sobe o teste
-//   Smart para 12 + 1d10; a Testera causa 4d6), gastando os dois cartuchos; os dois alvos da Kappa (se o tiro Smart não
-//   pega o primeiro, as balas vão para o segundo, a até 4 m dele); a coronha recolhida da Dian (−1 nos ataques); o
-//   autofogo da Lexington, com 7 balas.
+// - Smart, pelo Mission Kit (a wiki de 2026-10-17, "Smart", Kit p. 32; C29, ciclo 110): "A arma precisa estar conectada
+//   a você por um Personal Link (o Interface Plug que vem no Neuroport) ou por um Subdermal Grip. Sem conexão, não
+//   dispara"; "+1 nos ataques à distância com a arma". O Smart Link de 2077 saiu da wiki ("vale o do RED": o Subdermal
+//   Grip). Saiu o teste Smart do suplemento (10 ou 12 + 1d10 no lugar de REF + perícia).
+// - As regras próprias de alguns modelos, pelo texto de cada arma: os dois canos de uma vez (a Palica e a Testera: o
+//   dano sobe para 4d6), gastando os dois cartuchos; os dois alvos da Kappa (se o tiro não pega o primeiro, as balas
+//   Smart vão para o segundo, a até 4 m dele); a coronha recolhida da Dian (−1 nos ataques); o autofogo da Lexington,
+//   com 7 balas. O Power e o Tech, as balas por tiro e as outras regras de cada modelo ainda seguem o suplemento de fã
+//   (as próximas partes do C29).
 export const TABELA_DA_RAJADA_TECH = 'DV SMG (Autofire)';
 export const ALCANCE_DOS_DOIS_ALVOS = 4;
 export const PENALIDADE_CORONHA = -1;
@@ -703,7 +705,7 @@ export function rodadaDaProximaCarga(marca, combate) {
 }
 
 // O perfil de 2077 de uma arma, pela flag arma2077 do conteúdo (build/conteudo-2077.mjs); null nas outras armas.
-// doisCanos: o que muda ao disparar os dois de uma vez ({ teste } da Palica, { dano } da Testera), ou null. As que só
+// smart: é arma Smart; doisCanos: o dano dos dois de uma vez ({ dano } da Palica e da Testera), ou null. As que só
 // disparam cartucho não ricocheteiam (o ricochete é um tiro único).
 export function perfil2077(flag, { aDistancia = true, pericia = '', municoes = [] } = {}) {
   const classe = ['power', 'tech', 'smart'].includes(flag?.classe) ? flag.classe : null;
@@ -716,40 +718,30 @@ export function perfil2077(flag, { aDistancia = true, pericia = '', municoes = [
     rajadaTech: classe === 'tech' ? Math.max(0, Number(flag.techRajada) || 0) : 0,
     balasDaRajadaTech: Number(flag.techBalas) || BALAS_RAJADA,
     balasDoAutofogo: Number(flag.balasDoAutofogo) || BALAS_RAJADA,
-    smart: smart ? (flag.smartVariasBalas ? 12 : 10) : 0,
-    doisCanos: smart && flag.smartDoisCanos ? { teste: 12 } : flag.doisCartuchosDano ? { dano: String(flag.doisCartuchosDano) } : null,
-    doisAlvos: smart && Boolean(flag.smartDoisAlvos),
+    smart,
+    doisCanos: flag.doisCartuchosDano ? { dano: String(flag.doisCartuchosDano) } : null,
+    doisAlvos: smart && Boolean(flag.doisAlvos),
     coronhaRetratil: Boolean(flag.coronhaRetratil)
   };
 }
 
-// O cyberware que as regras de 2077 procuram: pelo id do catálogo (vale depois de renomear) ou pelo nome.
-export const ehSmartLink = (nome, catalogo = '') => catalogo === 'cyberware-2077:smart-link' || /^smart ?link\b/i.test(String(nome).trim());
+// A arma Smart (o Kit): +1 nos ataques à distância.
+export const BONUS_SMART = 1;
+// A ligação que a arma Smart pede: o Personal Link (o Interface Plug; o Neuroport já o traz) ou o Subdermal Grip, pelo
+// id do catálogo ou pelo nome. O Smart Link de 2077 de um ator de antes (a wiki: "o Smart Link (o Subdermal Grip)") vale
+// o Subdermal Grip.
+const LIGACOES_SMART = ['cyberware-2077:neuroport', 'core_cyberware:interface-plugs', 'core_cyberware:subdermal-grip', 'cyberware-2077:smart-link'];
+export const ehLigacaoSmart = (nome, catalogo = '') => LIGACOES_SMART.includes(catalogo) || /^(neuroport|interface plugs?|personal link|subdermal grip|smart ?link)\b/i.test(String(nome).trim());
 export const ehCoprocessador = (nome, catalogo = '') => catalogo === 'cyberware-2077:ballistic-coprocessor' || /ballistic coprocessor/i.test(String(nome));
 // Reflex Tuner (wiki, system-2077.js): "depois de ser atingido, +1 para se esquivar pelo resto da rodada".
 export const REFLEX_TUNER = 1;
 export const ehReflexTuner = (nome, catalogo = '') => catalogo === 'cyberware-2077:reflex-tuner' || /^reflex tuner\b/i.test(String(nome).trim());
 
-// O valor do teste Smart neste ataque (10 ou 12), ou 0. Pelo botão "Smart" (pedido "smart", na configuração
-// "alternativa") ou, na "substitui", em todo tiro e cartucho não mirado da arma Smart; o autofogo, o supressivo e o
-// mirado continuam REF + perícia, como no Foundry 12. Os dois canos da Palica (pedido "doisCanos") são sempre o teste
-// Smart, com o valor deles.
-export function testeSmart({ perfil, modo, local = 'corpo', pedido = null, smartLink = false, smartAtaque = 'substitui' }) {
-  if (perfil?.classe !== 'smart' || !smartLink) return 0;
-  if (pedido === 'doisCanos' && perfil.doisCanos?.teste) return perfil.doisCanos.teste;
-  if (pedido === 'smart') return perfil.smart;
-  return smartAtaque === 'substitui' && ['tiro', 'cartucho'].includes(modo) && !LOCAIS_MIRADOS[local] ? perfil.smart : 0;
-}
-
 // O que impede o ataque com uma arma de 2077 (o aviso, depois do nome da arma), ou null. pelaMunicao: o modo que a
-// arma e a munição dariam sozinhas ("tiro", "cartucho", "explosivo"); smartLink: o atacante tem o Smart Link
-// instalado; smartSemLink: a configuração ("naoDispara" ou "comum").
-export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', cobertura = 'nenhuma', pedido = null, smartLink = false, smartSemLink = 'naoDispara' }) {
-  if (perfil?.classe === 'smart' && !smartLink && smartSemLink === 'naoDispara') return 'arma Smart, só dispara com o cyberware Smart Link instalado.';
-  if (pedido === 'smart' || (pedido === 'doisCanos' && perfil?.doisCanos?.teste)) {
-    if (perfil?.classe !== 'smart') return 'não é uma arma Smart.';
-    if (!smartLink) return 'o teste Smart precisa do Smart Link instalado.';
-  }
+// arma e a munição dariam sozinhas ("tiro", "cartucho", "explosivo"); ligadaSmart: o atacante tem a ligação da arma
+// Smart (ehLigacaoSmart) instalada.
+export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', cobertura = 'nenhuma', pedido = null, ligadaSmart = false }) {
+  if (perfil?.classe === 'smart' && !ligadaSmart) return 'arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.';
   if (pedido === 'doisCanos' && !perfil?.doisCanos) return 'não dispara os dois canos de uma vez.';
   if (modo === 'ricochete') {
     if (!perfil?.ricocheteia) return 'só as armas Power de tiro único ricocheteiam (as que disparam três balas ou mais, não).';

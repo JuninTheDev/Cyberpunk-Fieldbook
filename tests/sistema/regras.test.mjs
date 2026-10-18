@@ -437,7 +437,7 @@ const perfilDe = id => {
 };
 const linhaDaWiki = id => wiki.rangeDV.find(linha => linha.id === id);
 
-test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que cada Tech diz no texto; o 12 + 1d10 das Smart de várias balas)', () => {
+test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que cada Tech diz no texto; a classe Smart, no teste do Smart)', () => {
   // "Na carga Tech (rajada), dispara 2 balas" (Kenshin), "3 balas" (Omaha), "exige 10 balas no pente e gasta essas 10"
   // (Quasar), "dispara as 30 balas do pente" (Senkoh). Sem rajada: a Achilles, a Nekomata, a Burya e a Satara.
   const tech = id => { const p = perfilDe(`armas-2077:${id}`); return [p.classe, p.rajadaTech, p.rajadaTech ? p.balasDaRajadaTech : 0]; };
@@ -446,12 +446,6 @@ test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que ca
   assert.deepEqual(tech('darra-polytechnic-dr-12-quasar'), ['tech', 3, 10]);
   assert.deepEqual(tech('arasaka-senkoh-lx'), ['tech', 3, 30]);
   for (const id of ['militech-m-179-achilles', 'tsunami-nekomata', 'techtronika-rt-46-burya', 'rostovic-db-2-satara']) assert.deepEqual(tech(id), ['tech', 0, 0], id);
-  // "Dispara três balas Smart: o teste Smart passa a 12 + 1d10" (Yukimura, Shingen, Zhuo...); as outras, 10 + 1d10.
-  assert.equal(perfilDe('armas-2077:arasaka-hjke-11-yukimura').smart, 12);
-  assert.equal(perfilDe('armas-2077:arasaka-tki-20-shingen').smart, 12);
-  assert.equal(perfilDe('armas-2077:kang-tao-l-69-zhuo').smart, 12);
-  assert.equal(perfilDe('armas-2077:tsunami-ashura').smart, 10);
-  assert.equal(perfilDe('armas-2077:rostovic-db-4-palica').smart, 10);
   // Power: ricocheteia, menos as que "não disparam menos de três balas" (Nowaki, Masamune) e as de Disparo Automático.
   assert.equal(perfilDe('armas-2077:constitutional-arms-liberty').ricocheteia, true);
   assert.equal(perfilDe('armas-2077:nokota-d5-copperhead').ricocheteia, true);
@@ -465,7 +459,7 @@ test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que ca
     const p = perfilDe(id);
     assert.ok(p, `${id}: sem perfil de 2077`);
     if (p.classe !== 'tech') assert.equal(p.rajadaTech, 0, id);
-    if (p.classe !== 'smart') assert.equal(p.smart, 0, id);
+    assert.equal(p.smart, p.classe === 'smart', id);
     assert.ok(item.system.descricao.includes('Neste sistema:'), `${id}: a descrição não diz o que o sistema faz`);
   }
 });
@@ -538,46 +532,54 @@ test('Carga Tech: depois de uma carga a arma esfria uma rodada (carrega de novo 
   assert.equal(regras.rodadaDaProximaCarga(marca, null), null);
 });
 
-test('Teste Smart (wiki): 10 + 1d10 (12 com várias balas) no tiro da arma Smart, só com o Smart Link; o autofogo e o mirado continuam REF + perícia', () => {
+test('Smart (Mission Kit, a wiki de 2026-10-17): só dispara ligada pelo Personal Link (o do Neuroport) ou pelo Subdermal Grip; +1 nos ataques à distância; sem o teste Smart do suplemento; o Smart Link antigo vale o Subdermal Grip', () => {
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.ok(de2077.includes("section('Smart', 'Kit p. 32', list(['A arma precisa estar <b>conectada</b> a você por um <b>Personal Link</b> (o Interface Plug que vem no Neuroport) ou por um <b>Subdermal Grip</b>. Sem conexão, não dispara.', '<b>+1</b> nos ataques à distância com a arma.'"));
+  assert.ok(de2077.includes('o <b>Smart Link</b> (o Subdermal Grip)'));
+  assert.ok(fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8').includes('que já traz o Neural Link, o Personal Link (os Plugs de Interface)'));
+  assert.equal(regras.BONUS_SMART, 1);
+  assert.equal(regras.testeSmart, undefined, 'saiu o teste Smart do suplemento');
   const yukimura = perfilDe('armas-2077:arasaka-hjke-11-yukimura');
-  const ashura = perfilDe('armas-2077:tsunami-ashura');
-  const comLink = { smartLink: true };
-  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', ...comLink }), 12);
-  assert.equal(regras.testeSmart({ perfil: ashura, modo: 'tiro', ...comLink }), 10);
-  assert.equal(regras.testeSmart({ perfil: perfilDe('armas-2077:kang-tao-l-69-zhuo'), modo: 'cartucho', ...comLink }), 12);
-  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro' }), 0);
-  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', local: 'cabeca', ...comLink }), 0);
-  assert.equal(regras.testeSmart({ perfil: perfilDe('armas-2077:arasaka-tki-20-shingen'), modo: 'autofogo', ...comLink }), 0);
-  assert.equal(regras.testeSmart({ perfil: perfilDe('armas-2077:arasaka-jke-x2-kenshin'), modo: 'tiro', ...comLink }), 0);
-  // Na configuração "alternativa", só pelo botão "Smart".
-  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', smartAtaque: 'alternativa', ...comLink }), 0);
-  assert.equal(regras.testeSmart({ perfil: yukimura, modo: 'tiro', pedido: 'smart', smartAtaque: 'alternativa', ...comLink }), 12);
-  assert.equal(regras.descreverAtaque({ modo: 'tiro', smart: 12 }), 'Tiro Smart');
-  // Sem o Smart Link: não dispara (o padrão) ou dispara como comum.
-  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: yukimura }), /só dispara com o cyberware Smart Link/);
-  assert.match(regras.impedimento2077({ modo: 'autofogo', perfil: perfilDe('armas-2077:arasaka-tki-20-shingen') }), /Smart Link/);
-  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, smartSemLink: 'comum' }), null);
-  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, smartLink: true }), null);
-  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, pedido: 'smart', smartSemLink: 'comum' }), /precisa do Smart Link/);
-  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: perfilDe('armas-2077:constitutional-arms-liberty'), pedido: 'smart' }), /não é uma arma Smart/);
-  // O Smart Link e o Ballistic Coprocessor do catálogo (pelo nome, ou pelo id do catálogo depois de renomeados); o
-  // Smartgun Link do livro-base é outro (um acessório de arma).
-  assert.equal(regras.ehSmartLink(catalogo['cyberware-2077:smart-link'].name), true);
-  assert.equal(regras.ehSmartLink('Smartlink'), true);
-  assert.equal(regras.ehSmartLink('Smartgun Link'), false);
-  assert.equal(regras.ehSmartLink('O link da Vee', 'cyberware-2077:smart-link'), true);
+  assert.equal(yukimura.smart, true);
+  assert.equal(perfilDe('armas-2077:constitutional-arms-liberty').smart, false);
+  // Sem a ligação, não dispara (em qualquer modo); com ela, sim. A arma que não é Smart não pede ligação.
+  assert.match(regras.impedimento2077({ modo: 'tiro', perfil: yukimura }), /só dispara ligada pelo Personal Link \(o Interface Plug do Neuroport\) ou pelo Subdermal Grip/);
+  assert.match(regras.impedimento2077({ modo: 'autofogo', perfil: perfilDe('armas-2077:arasaka-tki-20-shingen') }), /Personal Link/);
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, ligadaSmart: true }), null);
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: perfilDe('armas-2077:constitutional-arms-liberty') }), null);
+  assert.equal(regras.descreverAtaque({ modo: 'tiro' }), 'Tiro');
+  // A ligação: pelo id do catálogo ou pelo nome. O Smartgun Link do livro-base é um acessório de arma, não a ligação.
+  for (const id of ['cyberware-2077:neuroport', 'core_cyberware:interface-plugs', 'core_cyberware:subdermal-grip']) assert.equal(regras.ehLigacaoSmart(catalogo[id].name), true, id);
+  assert.equal(regras.ehLigacaoSmart('Os plugs da Vee', 'core_cyberware:interface-plugs'), true);
+  assert.equal(regras.ehLigacaoSmart('Smart Link'), true, 'o de antes vale o Subdermal Grip');
+  assert.equal(regras.ehLigacaoSmart('O link da Vee', 'cyberware-2077:smart-link'), true);
+  assert.equal(regras.ehLigacaoSmart('Smartgun Link'), false);
+  assert.equal(regras.ehLigacaoSmart('Kiroshi Optics'), false);
+  assert.equal(catalogo['cyberware-2077:smart-link'], undefined, 'o Smart Link saiu do catálogo');
   assert.equal(regras.ehCoprocessador(catalogo['cyberware-2077:ballistic-coprocessor'].name), true);
   assert.equal(regras.ehCoprocessador('Smart Link'), false);
+  // Os dois canos (a Palica, Smart, e a Testera, Power) sobem o dano para 4d6, e os dois alvos são da Kappa.
+  assert.ok(de2077.includes('Disparar os <b>dois canos</b> de uma vez gasta os 2 cartuchos e o dano sobe para <b>4d6</b>.'));
+  assert.ok(de2077.includes('Trava em <b>dois alvos</b> a até 4 m um do outro: se o ataque errar o primeiro, as balas Smart vão para o segundo.'));
+  assert.deepEqual(perfilDe('armas-2077:rostovic-db-4-palica').doisCanos, { dano: '4d6' });
+  assert.deepEqual(perfilDe('armas-2077:rostovic-db-2-testera').doisCanos, { dano: '4d6' });
+  assert.equal(perfilDe('armas-2077:tsunami-kappa').doisAlvos, true);
+  assert.equal(yukimura.doisAlvos, false);
+  // Nenhuma arma do catálogo de 2077 guarda as flags do teste Smart do suplemento.
+  for (const [id, item] of Object.entries(catalogo).filter(([id, item]) => id.startsWith('armas-2077:') && item.type === 'arma')) {
+    const flag = item.flags['cpr-fieldbook'].arma2077;
+    assert.deepEqual(['smartVariasBalas', 'smartDoisAlvos', 'smartDoisCanos'].filter(chave => chave in flag), [], id);
+  }
 });
 
-test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os dois canos da Palica (12 + 1d10) e da Testera (4d6), os dois alvos da Kappa, a coronha da Dian e as 7 balas do autofogo da Lexington', () => {
-  // "Disparar os dois canos sobe o teste Smart para 12 + 1d10" (Palica); "dá para disparar os dois de uma vez, e o dano
-  // sobe para 4d6" (Testera); "trava em dois alvos a até 4 m um do outro" (Kappa); "os ataques têm −1 até estendê-la"
-  // (Dian); "autofogo (2) gastando só 7 balas por ataque" (Lexington).
+test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os dois canos da Palica e da Testera (4d6), os dois alvos da Kappa, a coronha da Dian e as 7 balas do autofogo da Lexington', () => {
+  // "Disparar os dois canos de uma vez gasta os 2 cartuchos e o dano sobe para 4d6" (Palica, desde o Kit; antes, o teste
+  // Smart subia para 12 + 1d10); "dá para disparar os dois de uma vez, e o dano sobe para 4d6" (Testera); "trava em dois
+  // alvos a até 4 m um do outro" (Kappa); "os ataques têm −1 até estendê-la" (Dian); "autofogo (2) gastando só 7 balas
+  // por ataque" (Lexington).
   const palica = perfilDe('armas-2077:rostovic-db-4-palica');
   const testera = perfilDe('armas-2077:rostovic-db-2-testera');
-  assert.deepEqual(palica.doisCanos, { teste: 12 });
-  assert.equal(palica.smart, 10);
+  assert.deepEqual(palica.doisCanos, { dano: '4d6' });
   assert.deepEqual(testera.doisCanos, { dano: '4d6' });
   assert.equal(perfilDe('armas-2077:rostovic-db-4-igla').doisCanos, null);
   assert.equal(perfilDe('armas-2077:rostovic-db-2-satara').doisCanos, null);
@@ -594,20 +596,15 @@ test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os do
   assert.equal(testera.ricocheteia, false);
   assert.equal(perfilDe('armas-2077:rostovic-db-4-igla').ricocheteia, false);
   assert.equal(perfilDe('armas-2077:budget-arms-carnage').ricocheteia, true);
-  // Os dois canos: 2 cartuchos; o teste Smart da Palica sobe para 12 (só com o Smart Link); a Testera não é Smart.
+  // Os dois canos: 2 cartuchos; a Palica, como toda arma Smart, só dispara ligada.
   assert.equal(regras.balasDoModo('cartucho', { doisCanos: true }), 2);
   assert.equal(regras.balasDoModo('autofogo', { autofogo: 7 }), 7);
   assert.equal(regras.balasDoModo('autofogo'), regras.BALAS_RAJADA);
-  assert.equal(regras.testeSmart({ perfil: palica, modo: 'cartucho', smartLink: true }), 10);
-  assert.equal(regras.testeSmart({ perfil: palica, modo: 'cartucho', pedido: 'doisCanos', smartLink: true }), 12);
-  assert.equal(regras.testeSmart({ perfil: palica, modo: 'cartucho', pedido: 'doisCanos', smartLink: true, smartAtaque: 'alternativa' }), 12);
-  assert.equal(regras.testeSmart({ perfil: testera, modo: 'cartucho', pedido: 'doisCanos', smartLink: true }), 0);
   assert.equal(regras.impedimento2077({ modo: 'cartucho', perfil: testera, pedido: 'doisCanos', pelaMunicao: 'cartucho' }), null);
-  assert.equal(regras.impedimento2077({ modo: 'cartucho', perfil: palica, pedido: 'doisCanos', pelaMunicao: 'cartucho', smartLink: true }), null);
-  assert.match(regras.impedimento2077({ modo: 'cartucho', perfil: palica, pedido: 'doisCanos', pelaMunicao: 'cartucho', smartSemLink: 'comum' }), /precisa do Smart Link/);
+  assert.equal(regras.impedimento2077({ modo: 'cartucho', perfil: palica, pedido: 'doisCanos', pelaMunicao: 'cartucho', ligadaSmart: true }), null);
+  assert.match(regras.impedimento2077({ modo: 'cartucho', perfil: palica, pedido: 'doisCanos', pelaMunicao: 'cartucho' }), /só dispara ligada/);
   assert.match(regras.impedimento2077({ modo: 'cartucho', perfil: perfilDe('armas-2077:rostovic-db-4-igla'), pedido: 'doisCanos' }), /não dispara os dois canos/);
   assert.match(regras.impedimento2077({ modo: 'tiro', perfil: null, pedido: 'doisCanos' }), /não dispara os dois canos/);
-  assert.equal(regras.descreverAtaque({ modo: 'cartucho', smart: 12, doisCanos: true }), 'Espingarda com cartucho (Smart), os dois canos');
   assert.equal(regras.descreverAtaque({ modo: 'cartucho', doisCanos: true }), 'Espingarda com cartucho, os dois canos');
   // Os dois alvos: as balas mudam de alvo a até 4 m do primeiro (meio metro de folga para a grade).
   assert.equal(regras.ALCANCE_DOS_DOIS_ALVOS, 4);

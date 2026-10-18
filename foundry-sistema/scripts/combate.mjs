@@ -5,7 +5,7 @@
 //   jogador) e a ficha (armadura, cabeça, escudo, ablação, Lesão Crítica). No fim, o cartão do resultado, com
 //   "Desfazer" para o mestre.
 // - Modos: tiro, mirado (cabeça, perna, item na mão), corpo a corpo, autofogo, fogo supressivo, espingarda com
-//   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga e a rajada Tech e o teste Smart.
+//   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga e a rajada Tech e a ligação da arma Smart.
 import { ATORES_DA_NET, DEFESAS, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { animar, textoFlutuante } from './efeitos.mjs';
@@ -139,7 +139,7 @@ export function jogadorDe(ator) {
 // ---------------- No cliente de quem ataca ----------------
 // alvos (ou alvo, um só): Tokens ou TokenDocuments; padrão, os marcados. local: "corpo" ou mirado ("cabeca", "perna",
 // "item"). modo: os botões da ficha ("autofogo", "supressivo" e os de 2077: "ricochete", "carga", "rajadaTech",
-// "smart", "doisCanos"); senão, a arma e a munição dizem (tiro, cartucho, explosivo). cobertura: a do alvo na carga
+// "doisCanos"); senão, a arma e a munição dizem (tiro, cartucho, explosivo). cobertura: a do alvo na carga
 // Tech ("nenhuma", "fina", "grossa"); sem ela, a janela pergunta a quem atira. perguntar: abre a janela de rolagem (a
 // ficha abre; Ctrl + clique, não).
 export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, cobertura = null, perguntar = false } = {}) {
@@ -160,9 +160,9 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (modo === 'autofogo' && !arma.system.autofogo) { ui.notifications.warn(`${arma.name} não tem autofogo.`); return null; }
   // Sem mestre na mesa ninguém resolve o ataque de um jogador: avisa antes de gastar a bala e de rolar.
   if (!game.user.isGM && !game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque precisa do mestre para resolver a defesa e o dano.'); return null; }
-  // Armas de 2077: o Smart Link, os modos da classe, a carga que esfria e a cobertura do alvo (quem atira diz).
+  // Armas de 2077: a ligação da arma Smart, os modos da classe, a carga que esfria e a cobertura do alvo (quem atira diz).
   const perfil = arma.perfil2077;
-  const de2077 = { modo, perfil, pelaMunicao: R.classificar(pelaArma), pedido, smartLink: atacante.temSmartLink, smartSemLink: config('smartSemLink') };
+  const de2077 = { modo, perfil, pelaMunicao: R.classificar(pelaArma), pedido, ligadaSmart: atacante.temLigacaoSmart };
   const tech = modo === 'carga' || modo === 'rajadaTech';
   const esfria = tech ? esfriaAte(arma) : null;
   let impedido = R.impedimento2077(de2077) ?? (esfria ? `ainda está esfriando: carrega de novo na rodada ${esfria}.` : null);
@@ -175,13 +175,12 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const doisCanos = pedido === 'doisCanos';
   const balas = arma.system.aDistancia && arma.system.pente.max ? R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech, autofogo: perfil?.balasDoAutofogo, doisCanos }) : 0;
   if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
-  const smart = R.testeSmart({ perfil, modo, local, pedido, smartLink: de2077.smartLink, smartAtaque: config('smartAtaque') });
-  const { pericia, partes } = arma.partesDoAtaque(modo, { smart });
+  const { pericia, partes } = arma.partesDoAtaque(modo);
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
   if (modo === 'ricochete' && atacante.temCoprocessador) partes.push({ rotulo: 'Ballistic Coprocessor', valor: R.BONUS_COPROCESSADOR });
   if (!tech) cobertura = null;
-  const descricao = R.descreverAtaque({ modo, local, smart, cobertura, doisCanos });
+  const descricao = R.descreverAtaque({ modo, local, cobertura, doisCanos });
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
   // Os situacionais (a luneta, pela distância do primeiro alvo) e a janela de rolagem: fechada ou cancelada, não ataca nem
   // gasta bala. Sem a janela, entram os ligados por padrão.
@@ -198,7 +197,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    smart, cobertura, carga, doisCanos
+    cobertura, carga, doisCanos
   };
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
   game.socket.emit(CANAL, { tipo: 'ataque', pedido: dados, de: game.user.id });
@@ -317,7 +316,6 @@ async function contexto(pedido, usuario) {
 // A regra de 2077 deste ataque, para o cartão.
 function notasDe2077(pedido, arma) {
   const notas = [];
-  if (pedido.smart) notas.push(`Teste Smart: ${pedido.smart} + 1d10 no lugar de REF + perícia.`);
   if (pedido.doisCanos) {
     const dano = arma.perfil2077?.doisCanos?.dano;
     notas.push(`Os dois canos de uma vez: gastou 2 cartuchos${dano ? `, e o dano é ${dano}` : ''}.`);
@@ -567,7 +565,7 @@ function semDano(ctx, linhas) {
   return true;
 }
 
-// Arma Smart que trava dois alvos (a Tsunami Kappa), no teste Smart: o tiro vai no primeiro marcado; se não pegar, as
+// Arma Smart que trava dois alvos (a Tsunami Kappa), no tiro (não no mirado): vai no primeiro marcado; se não pegar, as
 // balas mudam para o segundo, se ele estiver a até 4 m do primeiro. Os outros marcados ficam de fora.
 async function redirecionado(ctx) {
   const [primeiro, segundo, ...resto] = ctx.alvos;
@@ -586,7 +584,7 @@ async function redirecionado(ctx) {
 // Tiro, autofogo, corpo a corpo e os modos de 2077: cada alvo se defende; o dano sai para cada um que foi atingido. O
 // autofogo e a rajada Tech rolam 2d6 × o multiplicador (até o da arma); o ricochete, um dado a menos.
 async function individual(ctx) {
-  const doisAlvos = ctx.pedido.smart && ctx.perfil?.doisAlvos && ctx.alvos.length >= 2;
+  const doisAlvos = ctx.perfil?.doisAlvos && ctx.modo === 'tiro' && !R.LOCAIS_MIRADOS[ctx.local] && ctx.alvos.length >= 2;
   const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
   const pegas = ctx.linhas.filter(l => atingidas.has(l));
   if (semDano(ctx, pegas)) return;
@@ -712,18 +710,15 @@ export async function suprimir(ator) {
 
 // ---------------- Na ficha: as armas de 2077 ----------------
 // Na linha da arma: os botões dos modos de 2077 (modos), os que trocam um estado da arma (alternar: a coronha), os
-// avisos (sem Smart Link, esfriando, coronha recolhida), o teste Smart que o "Atacar" usa, com a dica, e as balas do
-// autofogo.
+// avisos (sem a ligação da arma Smart, esfriando, coronha recolhida), a dica do "Atacar" (o +1 da arma Smart) e as balas
+// do autofogo.
 export function acoesDe2077(arma) {
   const perfil = arma.perfil2077;
   const ator = arma.actor;
-  const resultado = { modos: [], alternar: [], avisos: [], smart: 0, dicaAtaque: '', balasAutofogo: perfil?.balasDoAutofogo ?? R.BALAS_RAJADA };
+  const resultado = { modos: [], alternar: [], avisos: [], dicaAtaque: '', balasAutofogo: perfil?.balasDoAutofogo ?? R.BALAS_RAJADA };
   if (!perfil || !ator) return resultado;
   const doisAlvos = perfil.doisAlvos ? ` Trava dois alvos: marque os dois (o primeiro é o alvo); se o tiro não pegar, as balas vão para o segundo, a até ${R.ALCANCE_DOS_DOIS_ALVOS} m dele.` : '';
-  if (perfil.doisCanos && (perfil.doisCanos.dano || ator.temSmartLink)) {
-    const efeito = perfil.doisCanos.teste ? `teste Smart ${perfil.doisCanos.teste} + 1d10` : `${perfil.doisCanos.dano} de dano`;
-    resultado.modos.push({ modo: 'doisCanos', rotulo: 'Dois canos', dica: `Os dois canos de uma vez: ${efeito}, e gasta os 2 cartuchos.` });
-  }
+  if (perfil.doisCanos) resultado.modos.push({ modo: 'doisCanos', rotulo: 'Dois canos', dica: `Os dois canos de uma vez: ${perfil.doisCanos.dano} de dano, e gasta os 2 cartuchos.` });
   if (perfil.coronhaRetratil) {
     const recolhida = arma.coronhaRecolhida;
     resultado.alternar.push(recolhida
@@ -744,11 +739,8 @@ export function acoesDe2077(arma) {
     if (rodada) resultado.avisos.push({ texto: `esfriando: carga na rodada ${rodada}`, dica: 'Depois de uma carga, a arma Tech esfria uma rodada.' });
   }
   if (perfil.classe === 'smart') {
-    const smartLink = ator.temSmartLink;
-    if (!smartLink) resultado.avisos.push({ texto: 'sem Smart Link', dica: config('smartSemLink') === 'naoDispara' ? 'As armas Smart só disparam com o cyberware Smart Link instalado.' : 'Sem o Smart Link, dispara como arma comum (REF + perícia).' });
-    else if (config('smartAtaque') === 'alternativa') resultado.modos.push({ modo: 'smart', rotulo: 'Smart', dica: `Teste Smart: ${perfil.smart} + 1d10 no lugar de REF + perícia.${doisAlvos}` });
-    resultado.smart = R.testeSmart({ perfil, modo: 'tiro', smartLink, smartAtaque: config('smartAtaque') });
-    if (resultado.smart) resultado.dicaAtaque = `Teste Smart: ${resultado.smart} + 1d10 no lugar de REF + perícia.${doisAlvos}`;
+    if (!ator.temLigacaoSmart) resultado.avisos.push({ texto: 'sem ligação', dica: 'As armas Smart só disparam ligadas pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.' });
+    else resultado.dicaAtaque = `Arma Smart: +${R.BONUS_SMART} nos ataques à distância.${doisAlvos}`;
   }
   return resultado;
 }

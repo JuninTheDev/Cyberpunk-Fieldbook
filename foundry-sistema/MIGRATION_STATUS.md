@@ -47,7 +47,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | Reflex Tuner | portado no ciclo 30, pela wiki (ver as dúvidas) |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077), menos o Black Chrome, e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; no ciclo 31, com o Mission Kit (Neuroport, Rebuilds, munição Smart melhorada, Immunoblockers, quickhacks do Kit) |
-| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, P0) |
+| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram |
 | cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, pelo suplemento de fã (com os dois cartuchos da Testera, que o Kit manteve). Com o Kit, a wiki mudou várias (a Lexington, a Yukimura, a Burya, a Omaha): ROADMAP, P0 |
 | wiki | o Black Chrome (176 itens da loja) | falta |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
@@ -193,7 +193,8 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   toda rajada Tech gastava as 10 balas do autofogo do CORE. Com isso, a Senkoh precisa do pente cheio, e a Kenshin faz
   rajada com 2 balas no pente.
 
-- **Teste Smart: substitui REF + perícia ou é uma alternativa?** A wiki manda combinar com a mesa. Isso virou uma
+- **Teste Smart: substitui REF + perícia ou é uma alternativa?** (Saiu no ciclo 110: o Mission Kit não tem teste Smart, e
+  a arma Smart soma +1 a REF + perícia.) A wiki manda combinar com a mesa. Isso virou uma
   configuração, com o padrão do Foundry 12 (substitui). Três escolhas do cpr-2077 seguidas aqui, que a wiki não
   detalha:
   - o tiro mirado e o autofogo da arma Smart continuam REF + perícia (o mirado com −8);
@@ -540,6 +541,10 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   hardware e usa o da sua Bodyweight (ou parecido)". O sistema não conta o hardware do deck na porta (o Range Upgrade,
   o Insulated Wiring e a KRASH Barrier), e não tem o slot de hardware que a Bodyweight Suit do CORE dá ao deck ligado a
   ela. Quem usa a Bodyweight com o deck na porta tem o hardware dela pelo mestre.
+
+- **Os dois alvos da Kappa no tiro mirado** (ciclo 110). A wiki: "se o ataque errar o primeiro, as balas Smart vão
+  para o segundo". O sistema muda as balas no tiro, não no mirado (que vai num ponto do primeiro alvo), como antes ficava
+  fora do teste Smart. O mestre resolve o mirado que errar.
 
 ## Registro dos ciclos
 
@@ -5345,6 +5350,63 @@ Commit anterior: `2befb77a` (a reserva; o ciclo 108 é o `d8b7a4c5`).
   - **mutações:** as 2 caíram no G3, e os arquivos voltaram (conferido pelo md5): o Face que vira outra Role (R1) e os
     situacionais de Role de volta (R2).
 - **Próximo:** o que falta do C29, as armas de 2077 pelo Mission Kit (com o teste Smart); ou o C23, com a segunda Role.
+
+### Ciclo 110 (2026-10-18): o C29, as armas de 2077 pelo Kit, parte 1: a arma Smart (sessão KouArt)
+
+Commit anterior: `abb5cb85` (a reserva, em partes; o ciclo 109 é o `f4ccaaec`).
+
+- **A referência (a wiki de 2026-10-17):**
+  - **`system-2077.js`, "Smart" (Kit p. 32):** "A arma precisa estar conectada a você por um Personal Link (o Interface
+    Plug que vem no Neuroport) ou por um Subdermal Grip. Sem conexão, não dispara." e "+1 nos ataques à distância com a
+    arma." A munição Smart melhorada dá a segunda chance (fica para a parte 2);
+  - **a revisão do suplemento:** o Smart Link de 2077 saiu ("vale o do RED": o Smart Link (o Subdermal Grip)), e o teste
+    Smart (10 ou 12 + 1d10 no lugar de REF + perícia) não está mais na página;
+  - **`system-rules.js`:** o Neuroport "já traz o Neural Link, o Personal Link (os Plugs de Interface)";
+  - **as armas:** a Palica, "disparar os dois canos de uma vez gasta os 2 cartuchos e o dano sobe para 4d6" (antes, o
+    teste Smart subia para 12 + 1d10); a Kappa, "trava em dois alvos a até 4 m um do outro: se o ataque errar o primeiro,
+    as balas Smart vão para o segundo".
+- **O que muda (`regras.mjs`, `combate.mjs`, `documentos.mjs`, `ficha-personagem.mjs`, `configuracoes.mjs`,
+  `build/conteudo-2077.mjs`):**
+  - **a ligação:** `ehLigacaoSmart` (o Neuroport, os Interface Plugs, o Subdermal Grip e o Smart Link de um ator de
+    antes, pelo id do catálogo ou pelo nome; o Smartgun Link do CORE é acessório de arma, não conta) e o
+    `temLigacaoSmart` do ator, no lugar do `temSmartLink`. Sem ela, a arma Smart não dispara em modo nenhum nem gasta
+    bala ("arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip."), e
+    a ficha avisa "sem ligação";
+  - **o +1:** `BONUS_SMART`, a parte "Arma Smart +1" de todo ataque à distância da arma (o tiro, o mirado, o autofogo,
+    os dois canos), somada a REF + perícia; a dica do "Atacar" diz o +1;
+  - **o teste Smart saiu:** o `testeSmart`, o modo "smart" (o botão Smart), a nota do cartão, o "(Smart)" da descrição e
+    as duas configurações ("Ataque das armas Smart" e "Arma Smart sem o Smart Link"). Os valores que um mundo guardou
+    delas ficam sem uso;
+  - **os dois canos da Palica:** pelo dano, 4d6, como a Testera (o build lê "os dois canos de uma vez: 4d6"; saíram as
+    flags `smartVariasBalas`, `smartDoisAlvos` e `smartDoisCanos`, e a Kappa guarda `doisAlvos`);
+  - **os dois alvos da Kappa:** no tiro (não no mirado), com dois alvos marcados; antes, só no teste Smart;
+  - **o texto "Neste sistema" das armas Smart:** o sistema aplica a ligação e o +1; a munição Smart melhorada, o mestre.
+- **Testes:**
+  - **G3 (`tests/sistema/regras.test.mjs`):** o teste novo da arma Smart (o texto da wiki, o +1, sem o `testeSmart`, a
+    ligação pelo id e pelo nome, o Smart Link fora do catálogo, os dois canos 4d6 e os dois alvos pelo perfil, nenhuma
+    flag do teste Smart no catálogo), no lugar do "Teste Smart (wiki)"; o do perfil e o das regras de cada modelo sem as
+    linhas do teste Smart;
+  - **G4 (`tests/cenarios/v14.js`):**
+    - **a arma Smart:** a Yukimura (padrão, DV da SMG) sem ligação não dispara nem gasta bala e a ficha avisa; com o
+      Subdermal Grip, o tiro é REF + perícia + 1 (18, a fórmula e a parte "Arma Smart +1") e o mirado também (12, erra);
+    - **os dois canos:** a Palica sem ligação não dispara; com o Neuroport, os dois canos dão 16 e 4d6;
+    - **a Dian:** com o Subdermal Grip, +14 na ficha, e 20 com a coronha recolhida. O passo quebrava (`TypeError`) na
+      rajada da Lexington, que não sai (ela não tem mais autofogo): agora a checagem falha e o resultado mostra a Dian;
+    - **a Kappa:** ligada pelos Interface Plugs, os dois alvos no tiro, com o ataque 20 e o dano 3d6.
+- **Resultados:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 132 de 136 (saiu a falha conhecida do teste Smart; ficam as 4 das partes seguintes: o perfil das Tech, o
+    Ricochete, a Carga Tech e as regras de cada modelo);
+  - G4: 125 de 128 (saíram 4 das conhecidas: a arma Smart, a Kappa, os dois canos e o "sem erros de JS na
+    página"; ficam 3, da Tech e da Lexington: a carga Tech, a Dian e Lexington, que agora mostra a Dian certa, e a
+    checagem de avisos). A primeira rodada pegou um erro do passo novo (a parte é "REF +8", não "REF 8");
+  - **mutações:** as 8 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (131 de 136 cada): o +2 (S1), o Subdermal Grip fora da ligação (S2), a arma Smart que dispara sem ligação
+      (S3) e a Palica sem os dois canos pelo dano (S4);
+    - no G4: o ataque que não procura a ligação (S5: a Yukimura, a Palica, a Dian e a Kappa), sem o +1 (S6: as mesmas
+      quatro), os dois alvos da Kappa só no modo Smart que saiu (S7: a Kappa) e a ficha sem o aviso "sem ligação" (S8: a
+      Yukimura).
+- **Próximo:** a parte 2 do C29, a munição Smart melhorada (a segunda chance com 14 + 1d10, sem as penalidades de visão).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

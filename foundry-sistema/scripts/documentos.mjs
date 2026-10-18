@@ -4,7 +4,7 @@ import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  AGARRAO, aplicarDano, backup, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehSmartLink, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  AGARRAO, aplicarDano, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, linhaDoExtrato, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics, maosDaArma, maosLivres
 } from './regras.mjs';
@@ -410,11 +410,12 @@ export class AtorCPR extends Actor {
     return this.update({ 'system.sorte.value': this.system.sorte.max, [`flags.${SISTEMA}.sorte`]: 0 });
   }
 
-  // Cyberware instalado que as armas de 2077 procuram: o Smart Link (armas Smart) e o Ballistic Coprocessor (ricochete).
+  // Cyberware instalado que as armas de 2077 procuram: a ligação da arma Smart (o Personal Link, o Neuroport ou o
+  // Subdermal Grip) e o Ballistic Coprocessor (ricochete).
   #instalado(teste) {
     return this.items.some(item => item.type === 'cyberware' && item.system.instalado && teste(item.name, item.getFlag(SISTEMA, 'catalogo')));
   }
-  get temSmartLink() { return this.#instalado(ehSmartLink); }
+  get temLigacaoSmart() { return this.#instalado(ehLigacaoSmart); }
   get temCoprocessador() { return this.#instalado(ehCoprocessador); }
   get temReflexTuner() { return this.#instalado(ehReflexTuner); }
 
@@ -651,15 +652,15 @@ export class ItemCPR extends Item {
 
   // Atributo + perícia + bônus da arma + 1d10 (p. 172–176): REF para tiro, DEX para corpo a corpo. Autofogo, fogo
   // supressivo e a rajada Tech usam a perícia Autofogo. As lesões tiram dos tiros (olho) ou do corpo a corpo (músculo).
-  // smart: o teste Smart das armas de 2077 (10 ou 12) no lugar do atributo, da perícia e do bônus dela; o resto fica.
-  partesDoAtaque(modo = null, { smart = 0 } = {}) {
+  // A arma Smart de 2077 (o Kit) dá +1 nos ataques à distância.
+  partesDoAtaque(modo = null) {
     const ator = this.actor;
     const atributo = this.system.aDistancia ? 'ref' : 'dex';
     const pericia = ['autofogo', 'supressivo', 'rajadaTech'].includes(modo) ? 'autofire' : this.system.pericia;
     const { pericia: p, partes } = ator.partesDaPericia(pericia, { situacionais: [] });
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
-    if (smart) partes.splice(0, p.bonus ? 3 : 2, { rotulo: 'Teste Smart', valor: smart });
-    if (this.system.bonusAtaque) partes.splice(smart ? 1 : 2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
+    if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
+    if (this.system.aDistancia && this.perfil2077?.smart) partes.push({ rotulo: 'Arma Smart', valor: BONUS_SMART });
     const daLesao = this.system.aDistancia ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
     if (daLesao) partes.push({ rotulo: 'Lesões', valor: daLesao });
     if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });

@@ -27,10 +27,10 @@ suplemento de fã (o usuário adiou o Kit em 2026-10-12). Os testes de referênc
 pegaram isso. Eles ficam falhando até o Kit, e não se tiram nem se mudam para passar:
 - **G3 (4):** contra o texto da wiki, o perfil de 2077 pela flag (a rajada e as balas das Tech), o Ricochete, a Carga
   Tech e as regras de cada modelo;
-- **G4 (5):** os passos da arma Smart (a Yukimura agora é de qualidade padrão), da carga Tech (sem flechettes nem
-  rajada), da Dian e Lexington (a Lexington sem autofogo) e da Kappa (3d6), e a checagem de avisos (os avisos da
-  Lexington, do passo dela: desde o ciclo 82, só o "sem munição compatível" chega ao console; o "não tem autofogo" sai
-  do mesmo jeito, mas fica na fila das notificações, ver "A fila das notificações" abaixo).
+- **G4 (3):** os passos da carga Tech (sem flechettes nem rajada) e da Dian e Lexington (a Lexington sem autofogo), e
+  a checagem de avisos (os avisos da Lexington, do passo dela: desde o ciclo 82, só o "sem munição compatível" chega ao
+  console; o "não tem autofogo" sai do mesmo jeito, mas fica na fila das notificações, ver "A fila das notificações"
+  abaixo). Os da arma Smart e da Kappa saíram no ciclo 110.
 
 As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED.
 
@@ -39,15 +39,12 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 A wiki do master passou a ter "uma regra só na mesa" (o Mission Kit sobre o RED, sem as regras do suplemento de fã) e
 revisou os itens do suplemento. Os testes de referência pegaram cada diferença. Cada uma é uma parte do C29 do
 ROADMAP, e os testes não se tiram nem se mudam para passar:
-- **G3 (1):**
-  - o teste Smart;
-- **G4 (2):**
-  - os dois canos de 2077;
-  - o "sem erros de JS na página" (o passo da arma Smart cria o Smart Link, que saiu da wiki);
+- **G3 e G4:** nenhuma desde o ciclo 110;
 - **Já saíram:** a Interface do Netrunner e o ponto de acesso à NET (G3, ciclo 94); o catálogo de 2077, o efeito de
   falha das armas (G3) e os tamanhos dos compêndios (G4), no ciclo 106; o TeleOptics e o passo 1 da migração (G3) e a
   janela de rolagem (G4), no ciclo 107; a fundação e as opções do cyberware (G3), no ciclo 108; as Roles do RED e os
-  situacionais de Role (G3), no ciclo 109;
+  situacionais de Role (G3), no ciclo 109; o teste Smart (G3), os dois canos de 2077 e o "sem erros de JS na página"
+  (G4), no ciclo 110;
 - **G5, da wiki do master:** também falham num clone limpo do master (ciclo 93): o `criador` (2), o `cyberware` (6) e
   o `reversao` (o clone com o `campaign-map.js` antigo).
 
@@ -64,6 +61,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   `_replace(...)`; o `update` só mescla.
 - **Aviso esperado** (um `ui.notifications.warn` que o passo provoca de propósito) é capturado e conferido no próprio
   passo. Solto no console, o G4 o pegaria como problema.
+- **Passo que quebra esconde o resto** (ciclo 110): um erro no meio do passo (o `rajada.ataque` da Lexington, que
+  não faz mais autofogo e devolve `null`) tira do resultado o que já tinha dado certo (a Dian, no mesmo passo). Leia com
+  `?.` o que pode não vir e deixe a checagem falhar: o passo falha mostrando os valores.
 - **Teste de uma correção** é provado falhando sem ela. A mutação é desfeita antes do commit.
 - **Código para o navegador** (`edge.evaluate`) vai dentro de um template literal do Node: escreva `\\s` para chegar
   `\s` ao navegador. Um `\s` sozinho vira `s`. Ao editar o cenário por `node -e` ou por heredoc no Git Bash, as barras
