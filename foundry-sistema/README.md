@@ -507,6 +507,8 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - a parede e o Scanner (ciclo 91): a porta fechada no meio (o aviso do clique e a recusa da operação) e aberta (conecta); o Scanner do HUD do token com 9 (só o ponto a 3 m) e com 12 (também o oculto a 13 m, que passa a aparecer ao jogador), com o chat só ao mestre e a ele;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 
+- **O ensaio de uma sessão** (ciclo 123): `node tests/rodar.js ensaio` (só chamado pelo nome). O procedimento da migração da campanha e uma sessão, de ponta a ponta, num mundo só: o grupo da wiki com a ficha da mesa do Foundry 12, o "Importar da mesa" pela janela, a conferência das fichas, dois jogadores nos navegadores deles, a cena, o combate, a NET, o Death Save, o saque, o pagamento e a ficha de volta na wiki. As capturas ficam em `tests/.saida/ensaio-*`. Rode antes de uma sessão, depois de atualizar o sistema.
+
 Da pasta de dados do Foundry do PC só sai a licença. `FOUNDRY14_APP=...` e `FOUNDRY14_DADOS=...` trocam o programa e a pasta de onde vem a licença.
 
 ## Licença

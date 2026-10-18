@@ -6041,6 +6041,36 @@ a trava), a loja que vende (comprar pelo preço, com o extrato dos dois) e a loj
 - **Próximo:** o C24, parte 2 (a loja que vende: comprar pelo preço, com o dinheiro de quem compra e o registro nos dois
   extratos).
 
+### Ciclo 123 (2026-10-18): o ensaio de uma sessão da Morana no Foundry 14 (sessão KouArt)
+
+Commit anterior: `834b33a9` (o ciclo 122). O pedido do usuário (2026-10-18): a campanha passa hoje para o Foundry 14,
+com a Morana continuando (o estado do Foundry 12 pelo "Importar da mesa"), e o essencial é o ensaio de uma sessão. O
+C24, partes 2 e 3, fica para depois.
+
+- **O que muda:** só o teste. O `tests/cenarios/ensaio.js` (novo; só roda chamado pelo nome: `node tests/rodar.js
+  ensaio`) segue o "Procedimento da migração da campanha" e uma sessão, num mundo só, com o mestre e dois jogadores em
+  navegadores próprios:
+  - **a wiki:** o grupo (um Solo, uma Netrunner e um Medtech, pelo criador) e a ficha da mesa do Foundry 12 de cada um,
+    no meio da campanha (o HP, o dinheiro, a munição gasta, a lesão, o item que o mestre deu e uma perícia do CORE fora
+    do livro). A ficha sai do formato da ficha "Na mesa" deste sistema (o mesmo do `tableSnapshot` do cpr-2077), sem o
+    que só o Foundry 14 manda, ligada a um ator do Foundry 12;
+  - **o procedimento:** os usuários, o endereço da wiki, a janela "Personagens da wiki" com o dono e o "Importar da mesa"
+    de cada um, e a conferência de cada ficha contra a da mesa (o HP, a Humanidade, o dinheiro, o IP, os itens, a
+    munição, o pente, a lesão, o cyberware, os programas no deck e as perícias): nenhuma diferença;
+  - **a sessão:** os dois jogadores com as fichas (cada aba, com as capturas em `tests/.saida/ensaio-*`); a cena com os
+    três e dois seguranças (capangas); o combate (a iniciativa dos jogadores pela ficha, a dos seguranças e a do Medtech
+    pelo mestre); o tiro do Solo pela ficha (o mestre resolve, o jogador rola o dano, a SP do colete segura parte); o
+    tiro do segurança na Netrunner (a janela de reação no navegador dela, o dano nos dois navegadores, a ablação); o
+    Death Save do Medtech, cujo jogador faltou; a NET (o terminal com "A Coleira", do compêndio da campanha; conectar pela
+    ficha, a janela da NET, o andar 1, o Breach e desconectar); o saque (o jogador pega a pistola para o personagem
+    dele); o fim do combate, o pagamento pelo extrato e a ficha de cada um de volta na wiki, agora do Foundry 14.
+- **O que o ensaio mostrou:** nenhum erro nem aviso do sistema nos três navegadores. As duas falhas das primeiras rodadas
+  eram do roteiro (o segurança a 20 m, onde a DV da pistola é 20; a SP lida depois da ablação). Para a mesa: o Foundry abre
+  o mundo pausado, e os jogadores só movem os tokens depois que o mestre tira a pausa.
+- **Resultados:** G1 e G2 sem mudança no que eles conferem (o ensaio passou no `node --check` e no ESLint); G3 174 de 174;
+  o G4 não muda (o cenário v14 e o sistema são os do ciclo 122: 155 de 155); o ensaio, 16 de 16.
+- **Próximo:** a primeira sessão da Morana no Foundry 14; depois, o C24, parte 2 (a loja que vende).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
