@@ -242,9 +242,17 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     Neuroport é a única fundação de 2077);
   - [x] o catálogo de 2077: a loja da wiki, os tamanhos dos compêndios e o efeito de falha das armas: ciclo 106 (o
     catálogo já era o da loja nova desde o build do ciclo 94; os testes de referência ganharam os números da wiki nova);
-  - [ ] as armas de 2077 pelo Mission Kit (decisão do usuário, 2026-10-17: entram no plano): os modos Power, Smart e
-    Tech e as regras de cada modelo pela wiki, o teste Smart sem o Smart Link e os dois canos. Os testes que falham
-    desde o ciclo 32 voltam a passar.
+  - [~] as armas de 2077 pelo Mission Kit (decisão do usuário, 2026-10-17: entram no plano; 2026-10-18: agora, sessão
+    KouArt): os modos Power, Smart e Tech e as regras de cada modelo pela wiki, o teste Smart sem o Smart Link e os dois
+    canos. Os testes que falham desde o ciclo 32 voltam a passar. Por partes, um ciclo cada:
+    - [ ] Smart: a ligação (o Personal Link do Neuroport ou o Subdermal Grip), o +1 e o fim do teste Smart; os dois canos
+      da Palica pelo dano; os dois alvos da Kappa no tiro comum;
+    - [ ] a munição Smart melhorada (a segunda chance com 14 + 1d10; sem as penalidades de visão);
+    - [ ] as balas por tiro (as 3 balas e o dano com menos; a Zhuo);
+    - [ ] Power: o ricochete com −4 (−2 com o Ballistic Coprocessor) e a lesão crítica com 10 de dano bônus;
+    - [ ] Tech: carregar na Ação de Movimento, CDT 1, a cobertura fina e a metade do SP;
+    - [ ] o resto das regras de cada modelo (o tiro mirado da Unity, o BODY e a lesão da Carnage, a Burya, o ferrolho da
+      Grad, a Nekomata, a Omaha).
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
