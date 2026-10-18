@@ -184,7 +184,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     projétil só, incluindo mirado e míssil. A Smart melhorada do Kit fica no C29.
   - EMP nos eletrônicos em uso: proteção do conjunto, escolha do mestre, estado inoperante, minuto e Desfazer, sem
     mudar instalação ou Humanidade; deck, porta e Neuroport respeitam a parada e as janelas abertas a reconferem.
-- [ ] **C15. Veículos no combate:**
+- [~] **C15. Veículos no combate:** em andamento (sessão Codex, 2026-10-18).
   - o dano no SDP e as armas instaladas;
   - o vidro blindado como cobertura;
   - um veículo da família por vez.
