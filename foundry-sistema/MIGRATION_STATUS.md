@@ -6208,8 +6208,8 @@ da wiki e o cache do CORE fora do git (4c7362b). A integração não mudou nada 
 - **Resultados:**
   - antes de integrar o ciclo 125 (o Painel Tático, que a KouArt mandou no meio deste): G1 80 arquivos, 0 erros; G2 0
     erros; G3 181 de 181; G4 164 de 164;
-  - depois, com o ciclo 125: G1 88 arquivos, 0 erros; G2 0 erros; G3 184 de 184. O G4 pulou o Foundry (a mesa do
-    servidor em uso): roda quando ela esvaziar, e o resultado vai num commit de registro, como no ciclo 125;
+  - depois, com o ciclo 125: G1 88 arquivos, 0 erros; G2 0 erros; G3 184 de 184. O G4 pulou o Foundry no
+    commit (a mesa do servidor em uso) e rodou quando ela esvaziou: 171 de 171 (commit de registro);
   - **mutações:** as 12 caíram, nenhuma rodada pulou o Foundry, e os arquivos voltaram (conferido pelo md5):
     - no G3 (180 de 181 cada): a lista sem a Lynx Paws, diferente da wiki (L1); a peça no natural com a fundação do
       lado (L2); a fundação de qualquer lado (L3); a base natural só pelo uid (L4);
