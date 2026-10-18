@@ -6228,6 +6228,25 @@ da wiki e o cache do CORE fora do git (4c7362b). A integração não mudou nada 
 - **Próximo:** o C30 terminou. Para valer na mesa, o sistema precisa ser instalado de novo no servidor (só quando o
   usuário pedir).
 
+### Ciclo 127 (2026-10-18): o ponto de acesso sem a imagem de terminal (o pedido do usuário; sessão KouArt)
+
+Commit anterior: `44a8d777` (o ciclo 126, da sessão Junin; o nosso anterior é o `b750fb61`, o 125).
+
+- **O problema (o usuário, na primeira sessão da Morana no Foundry 14):** o ponto de acesso criado num Tile sem imagem
+  ganhava a de terminal do sistema (`icones/terminal.svg`) no tamanho do Tile: um quadrado grande no mapa, que todos
+  viam, mesmo com o ponto oculto (o oculto esconde o marcador NET, não o Tile).
+- **A causa:** a configuração do ponto (ciclo 50) punha a imagem, porque o Foundry não mostra aos jogadores um Tile sem
+  imagem. Mas o marcador NET e o clique nele vêm do documento do Tile, não da imagem: o ponto não precisa dela.
+- **O que muda:** a configuração não põe mais a imagem; no Tile com a de terminal do sistema, oferece tirar (marcado). O
+  que o usuário fez na hora, na mesa: tirar a imagem pela configuração do Tile.
+- **Testes:** no G4, o passo da configuração do ponto: o Tile sem imagem fica sem (e sem o aviso da imagem); o Tile com a
+  de terminal do sistema mostra o "tirar" marcado, e a imagem sai.
+- **Resultados:** G1 88/0, G2 0 e G3 181/181 (184/184 depois de juntar o ciclo 126 da sessão Junin). O G4 não rodou: a mesa do servidor estava em uso, e o usuário pediu para
+  instalar já (a mudança é só a configuração do ponto de acesso). Ele roda com a mesa vazia, junto com as mutações T1 a
+  T3 (a imagem que fica, sem o "tirar", a imagem de volta no Tile sem imagem).
+- **Próximo:** instalar no servidor quando a mesa estiver vazia (o instalador desliga o Foundry 14); as mutações P8 a
+  P11 do ciclo 125, que pararam na espera da mesa.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -8574,14 +8574,26 @@ module.exports = async ({ edge, servidores, r }) => {
           await esperar(() => config()?.element?.querySelector('select[name=arquitetura]'));
           const form = config().element;
           const grupos = [...form.querySelectorAll('select[name=arquitetura] optgroup')].map(g => g.label + ':' + g.querySelectorAll('option').length);
-          const avisoDaImagem = Boolean(form.querySelector('[name=imagemPadrao]')?.checked);
+          // O Tile sem imagem fica sem: o sistema não põe mais a de terminal (o quadrado que todos viam, mesmo oculto).
+          const semAviso = !form.querySelector('[name=imagemPadrao], [name=tirarTerminal]');
           form.querySelector('[name=nome]').value = 'Terminal da clínica';
           form.querySelector('[name=arquitetura]').value = arq.uuid;
           form.querySelector('button[type=submit]').click();
-          await esperar(() => tile.getFlag('${S}', 'pontoDeAcesso') && tile.texture.src && !config());
+          await esperar(() => tile.getFlag('${S}', 'pontoDeAcesso') && !config());
           await canvas.tiles.hud.close();
           canvas.tokens.activate();
           const ponto = tile.getFlag('${S}', 'pontoDeAcesso');
+          // O Tile com a imagem de terminal que o sistema punha: a configuração oferece tirar (marcado), e ela sai.
+          const [velho] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 2600, y: 300, width: 200, height: 200, texture: { src: 'systems/${S}/icones/terminal.svg' } }]);
+          await esperar(() => canvas.tiles.get(velho.id));
+          api.configurar(velho);
+          const configDoVelho = () => foundry.applications.instances.get('${S}-ponto-' + velho.id);
+          await esperar(() => configDoVelho()?.element?.querySelector('[name=tirarTerminal]'));
+          const tirar = { marcado: configDoVelho().element.querySelector('[name=tirarTerminal]').checked };
+          configDoVelho().element.querySelector('button[type=submit]').click();
+          await esperar(() => velho.getFlag('${S}', 'pontoDeAcesso') && !velho.texture.src && !configDoVelho());
+          tirar.imagem = velho.texture.src ?? null;
+          await velho.delete();
           await esperar(() => api.pontosDesenhados().length);
           const cat = await game.system.api.wiki.carregarCatalogo();
           const jogador = game.users.getName('Jogador');
@@ -8591,7 +8603,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1400, y: 900 })).toObject()]);
           await esperar(() => canvas.tokens.get(token.id));
           return {
-            botao: Boolean(botao), grupos, avisoDaImagem, imagem: tile.texture.src, tile: tile.id, token: token.id, marcadores: api.pontosDesenhados().map(p => p.nome),
+            botao: Boolean(botao), grupos, semAviso, imagem: tile.texture.src ?? null, tirar, tile: tile.id, token: token.id, marcadores: api.pontosDesenhados().map(p => p.nome),
             ponto: ponto && [ponto.ativo, ponto.nome, ponto.arquitetura === arq.uuid, ponto.alcance, ponto.dv, ponto.exigeDeck, ponto.rankMinimo, ponto.oculto, ponto.reiniciar].join()
           };
         })()`);
@@ -8741,7 +8753,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const marcadoresNoFim = await jogador.evaluate(`(async () => { await window.__esperar(() => !game.system.api.netrun.pontosDesenhados().length, 30); return game.system.api.netrun.pontosDesenhados().length; })()`);
         const tem = (lista, texto) => lista.some(linha => linha.includes(texto));
         const [c, n] = [conectou, noMestre];
-        const ok = m.botao && m.avisoDaImagem && m.imagem === `systems/${S}/icones/terminal.svg` && m.grupos.includes('Arquiteturas da NET:7') && m.grupos.includes('Itens do mundo:1')
+        const ok = m.botao && m.semAviso && !m.imagem && m.tirar.marcado && !m.tirar.imagem && m.grupos.includes('Arquiteturas da NET:7') && m.grupos.includes('Itens do mundo:1')
           && m.ponto === 'true,Terminal da clínica,true,6,,true,1,false,true' && m.marcadores.join() === 'Terminal da clínica'
           && longe.cena === 'Teste de combate' && longe.marcadores.join() === 'Terminal da clínica' && longe.conexao === null
           && tem(longe.avisos, 'está longe demais: 7.0 m (alcance 6)') && longe.direto === 'Longe demais do ponto de acesso: 7.0 m (alcance 6).'

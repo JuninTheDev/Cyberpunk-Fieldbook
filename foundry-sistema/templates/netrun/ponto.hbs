@@ -2,7 +2,7 @@
 o alcance, o DV, os requisitos e se o ponto é oculto. --}}
 <div class="net-config-corpo">
   <label class="caixa"><input type="checkbox" name="ativo" {{checked ponto.ativo}}> Ponto de acesso ativo</label>
-  {{#if semImagem}}<label class="caixa aviso"><input type="checkbox" name="imagemPadrao" checked> Este Tile não tem imagem, e o Foundry não mostra Tile sem imagem para os jogadores: pôr a imagem de terminal do sistema.</label>{{/if}}
+  {{#if comTerminal}}<label class="caixa aviso"><input type="checkbox" name="tirarTerminal" checked> Este Tile tem a imagem de terminal que o sistema punha: o quadrado no mapa, que todos veem, mesmo com o ponto oculto. Tirar a imagem (o marcador NET já mostra o ponto, e o oculto só para o mestre).</label>{{/if}}
   <label>Nome <input type="text" name="nome" value="{{ponto.nome}}" maxlength="60"></label>
   <label>Arquitetura
     <select name="arquitetura">

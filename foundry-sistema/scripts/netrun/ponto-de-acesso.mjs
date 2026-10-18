@@ -12,7 +12,9 @@ import { pedir } from './socket.mjs';
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
-const semImagem = tile => !tile.texture?.src;
+// A imagem de terminal que o sistema punha no Tile sem imagem (até 2026-10-18): o quadrado que todos viam, mesmo com o
+// ponto oculto. O marcador e o clique não dependem da imagem do Tile: a configuração oferece tirar.
+const comTerminal = tile => tile.texture?.src === IMAGEM_DO_TERMINAL;
 const visivelPara = (tile, ponto, usuario) => usuario.isGM || !(tile.hidden || ponto.oculto) || (ponto.revelados ?? []).includes(usuario.id);
 
 // ---------------- Os marcadores no mapa ----------------
@@ -277,7 +279,7 @@ export class ConfigDoPonto extends HandlebarsApplicationMixin(ApplicationV2) {
     const escolhas = Object.entries(TIPOS_DE_LIGACAO).filter(([tipo]) => objetos[tipo].length)
       .map(([tipo, info]) => ({ rotulo: `${info.nome}s`, opcoes: objetos[tipo].map(objeto => ({ valor: `${tipo}:${objeto.id}`, nome: objeto.nome })) }));
     return {
-      ponto, grupos, unidade: cena.grid.units || 'm', semImagem: semImagem(this.tile), controles, escolhas, comArquitetura: Boolean(salvo.arquitetura),
+      ponto, grupos, unidade: cena.grid.units || 'm', comTerminal: comTerminal(this.tile), controles, escolhas, comArquitetura: Boolean(salvo.arquitetura),
       trocou: ponto.arquitetura !== salvo.arquitetura
     };
   }
@@ -303,7 +305,7 @@ export class ConfigDoPonto extends HandlebarsApplicationMixin(ApplicationV2) {
       ligacoes: dados.arquitetura === salvo.arquitetura ? this.ligacoes : [], revelados: salvo.revelados ?? []
     };
     await this.tile.setFlag(SISTEMA, FLAG_PONTO, ponto);
-    if (dados.imagemPadrao && semImagem(this.tile)) await this.tile.update({ 'texture.src': IMAGEM_DO_TERMINAL });
+    if (dados.tirarTerminal && comTerminal(this.tile)) await this.tile.update({ 'texture.src': null });
     ui.notifications.info(`${ponto.nome}: ponto de acesso salvo.${ponto.oculto || this.tile.hidden ? ' Os jogadores não veem o marcador (oculto).' : ''}`);
   }
 
