@@ -9,8 +9,8 @@
 // - Explosivo: dano em todos numa área de 10 × 10 m em volta do alvo.
 // - Fogo supressivo: quem está até 25 m rola WILL + Concentração + 1d10 contra o ataque; quem perder é suprimido.
 // - Escudo: recebe o ataque todo, mas quem usa não esquiva.
-// - Armas de 2077 (a wiki, system-2077.js): o Ricochete das Power e a Carga e a Rajada das Tech (ainda do suplemento de
-//   fã) e a arma Smart do Mission Kit, a ligação e o +1 (no fim deste arquivo).
+// - Armas de 2077 (a wiki, system-2077.js): a Carga e a Rajada das Tech (ainda do suplemento de fã) e, pelo Mission Kit,
+//   o Ricochete e o crítico das Power e a arma Smart (no fim deste arquivo).
 
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
@@ -346,6 +346,9 @@ export function aplicarDano({ dano, bonus = 0, sp = 0, local = 'corpo', ignorarP
 
 // Crítico do dano (p. 187): dois ou mais 6 nos dados de dano. Soma 5 de bônus direto no HP e uma Lesão Crítica.
 export const BONUS_CRITICO = 5;
+// A arma Power (o Kit, p. 31): "o dano bônus da lesão sobe 5: 10 em vez de 5".
+export const BONUS_CRITICO_POWER = 10;
+export const bonusDoCritico = perfil => (perfil?.classe === 'power' ? BONUS_CRITICO_POWER : BONUS_CRITICO);
 export const danoCritico = resultados => resultados.filter(valor => valor === 6).length >= 2;
 // A fórmula do dano: a da arma (ou outra: 2d6 do autofogo, 3d6 do cartucho), vezes o multiplicador do autofogo, mais o
 // modificador do mestre da janela de rolagem, que entra depois da multiplicação (como o CORE soma os modificadores no
@@ -681,10 +684,10 @@ export function dvPelaDistancia(faixas, distancia) {
   return faixa ? { dv: faixa[2], fora: false } : { dv: null, fora: true };
 }
 
-// Tabelas candidatas: o autofogo usa a tabela "(Autofire)" da arma; sem ela, a da SMG. O ricochete e a rajada Tech têm
-// a tabela de autofogo deles (mais abaixo), qualquer que seja a da arma.
-export function tabelasCandidatas(tabela, modo, tipoDeArma = '') {
-  if (modo === 'ricochete') return [tabelaDoRicochete(tipoDeArma)];
+// Tabelas candidatas: o autofogo usa a tabela "(Autofire)" da arma; sem ela, a da SMG. A rajada Tech tem a tabela de
+// autofogo dela (mais abaixo), qualquer que seja a da arma. O ricochete usa a da arma (o Kit: "o alcance continua sendo
+// a distância entre você e o alvo").
+export function tabelasCandidatas(tabela, modo) {
   if (modo === 'rajadaTech') return [TABELA_DA_RAJADA_TECH];
   if (!tabela) return [];
   if (modo !== 'autofogo') return [tabela];
@@ -697,19 +700,23 @@ export const dentroDaArea = (centro, ponto, metade) => Math.abs(ponto.x - centro
 
 // Descrição curta do ataque: "Tiro mirado na cabeça", "Autofogo", "Carga Tech através de cobertura fina", "Espingarda com
 // cartucho, os dois canos"…
-export function descreverAtaque({ modo, local = 'corpo', cobertura = null, doisCanos = false }) {
+// ricochete: o do tiro mirado e o do cartucho (o tiro é o modo "ricochete").
+export function descreverAtaque({ modo, local = 'corpo', cobertura = null, doisCanos = false, ricochete = null }) {
   const base = MODOS[modo] || 'Ataque';
-  if (LOCAIS_MIRADOS[local]) return `${modo === 'corpo' ? 'Golpe' : 'Tiro'} mirado ${local === 'item' ? 'no item na mão' : `na ${LOCAIS_MIRADOS[local]}`}`;
-  const texto = `${base}${doisCanos ? ', os dois canos' : ''}`;
+  const ricocheteou = ricochete || modo === 'ricochete' ? ', ricochete' : '';
+  if (LOCAIS_MIRADOS[local]) return `${modo === 'corpo' ? 'Golpe' : 'Tiro'} mirado ${local === 'item' ? 'no item na mão' : `na ${LOCAIS_MIRADOS[local]}`}${ricocheteou}`;
+  const texto = `${base}${doisCanos ? ', os dois canos' : ''}${modo === 'ricochete' ? '' : ricocheteou}`;
   return COBERTURAS[cobertura] && cobertura !== 'nenhuma' ? `${texto} através de ${COBERTURAS[cobertura].rotulo}` : texto;
 }
 
 // ---------------- Armas de 2077 ----------------
-// As regras do suplemento de fã que a mesa usa (wiki, system-2077.js: "Os três tipos", "Ricochete (Power)", "Carga Tech"
-// e "Armas Smart", sup. p. 30–32), com as escolhas do cpr-2077 do Foundry 12 onde o texto não diz:
-// - Power, Ricochete: um tiro único que ricocheteia num alvo atrás de cobertura. Usa a perícia da arma, mas a DV vem da
-//   tabela de autofogo (pistolas e SMGs: a linha da SMG; as outras, a do rifle de assalto); REF 8+ esquiva; um dado a
-//   menos de dano; o Ballistic Coprocessor dá +2. As armas que não disparam menos de três balas não ricocheteiam.
+// As regras de 2077 da mesa (wiki, system-2077.js): as do Mission Kit, e a Carga Tech ainda pelo suplemento de fã (sup.
+// p. 30–32), com as escolhas do cpr-2077 do Foundry 12 onde o texto não diz:
+// - Power, pelo Mission Kit (a wiki de 2026-10-17, "Power", Kit p. 31–32; C29, ciclo 114): a lesão crítica causa 10 de
+//   dano bônus (no lugar de 5). O Ricochete acerta um alvo atrás de cobertura ou fora da linha de visão: −4 no ataque
+//   (−2 com o Ballistic Coprocessor); num tiro mirado, só a penalidade dele; o alcance e a DV são os da arma até o alvo,
+//   e o dano é o de sempre. Com cartucho, o leque de 6 m sai da superfície do ricochete, a até 6 m de quem atira. Saiu
+//   o ricochete do suplemento (a DV da tabela de autofogo e um dado a menos de dano).
 // - Tech, Carga: o tiro único carregado atravessa a cobertura (metade do dano passa da fina, um quarto da grossa) e, se
 //   causar dano, a armadura perde 4 de SP (2 através de cobertura). Rajada: o autofogo carregado, com a tabela de
 //   autofogo da SMG e o multiplicador até a "rajada de N" da arma, que atravessa um quarto da cobertura fina e nada da
@@ -721,20 +728,17 @@ export function descreverAtaque({ modo, local = 'corpo', cobertura = null, doisC
 // - As regras próprias de alguns modelos, pelo texto de cada arma: os dois canos de uma vez (a Palica e a Testera: o
 //   dano sobe para 4d6), gastando os dois cartuchos; os dois alvos da Kappa (se o tiro não pega o primeiro, as balas
 //   Smart vão para o segundo, a até 4 m dele); a coronha recolhida da Dian (−1 nos ataques); o autofogo da Lexington,
-//   com 7 balas. O Power e o Tech, as balas por tiro e as outras regras de cada modelo ainda seguem o suplemento de fã
-//   (as próximas partes do C29).
+//   com 7 balas. O Tech e as outras regras de cada modelo ainda seguem o suplemento de fã (as próximas partes do C29).
 export const TABELA_DA_RAJADA_TECH = 'DV SMG (Autofire)';
 export const ALCANCE_DOS_DOIS_ALVOS = 4;
 export const PENALIDADE_CORONHA = -1;
 // As balas Smart mudam para o segundo alvo? Só a até 4 m do primeiro (com meio metro de folga para a grade, como o
 // Fluxo de Combate do Foundry 12). Sem distância (outra cena), não.
 export const mudaDeAlvo = metros => metros !== null && metros !== undefined && Number(metros) <= ALCANCE_DOS_DOIS_ALVOS + 0.5;
-const PARECIDAS_COM_SMG = ['medPistol', 'heavyPistol', 'vHeavyPistol', 'smg', 'heavySmg'];
-export const tabelaDoRicochete = tipoDeArma => (PARECIDAS_COM_SMG.includes(tipoDeArma) ? 'DV SMG (Autofire)' : 'DV Assault Rifle (Autofire)');
-export const BONUS_COPROCESSADOR = 2;
-
-// O dano do ricochete: um dado a menos, no mínimo um ("3d6" → "2d6").
-export const umDadoAMenos = formula => String(formula).replace(/^(\d+)d6/, (todo, dados) => `${Math.max(1, Number(dados) - 1)}d6`);
+// A penalidade do ricochete: −4 (−2 com o Ballistic Coprocessor); num tiro mirado, só a do mirado (0 aqui).
+export const PENALIDADE_RICOCHETE = -4;
+export const PENALIDADE_RICOCHETE_COM_COPROCESSADOR = -2;
+export const penalidadeDoRicochete = ({ coprocessador = false, mirado = false } = {}) => (mirado ? 0 : coprocessador ? PENALIDADE_RICOCHETE_COM_COPROCESSADOR : PENALIDADE_RICOCHETE);
 
 // O que chega ao alvo em cada carga, pela cobertura, e o SP que a armadura perde se o dano passar dela.
 export const COBERTURAS = {
@@ -753,16 +757,15 @@ export function rodadaDaProximaCarga(marca, combate) {
 }
 
 // O perfil de 2077 de uma arma, pela flag arma2077 do conteúdo (build/conteudo-2077.mjs); null nas outras armas.
-// smart: é arma Smart; doisCanos: o dano dos dois de uma vez ({ dano } da Palica e da Testera), ou null. As que só
-// disparam cartucho não ricocheteiam (o ricochete é um tiro único).
+// smart: é arma Smart; doisCanos: o dano dos dois de uma vez ({ dano } da Palica e da Testera), ou null. Ricocheteia a
+// Power de longo alcance, menos a de Disparo Automático, como o foundry-2077 (o cartucho também, desde o Kit).
 export function perfil2077(flag, { aDistancia = true, pericia = '', municoes = [] } = {}) {
   const classe = ['power', 'tech', 'smart'].includes(flag?.classe) ? flag.classe : null;
   if (!classe) return null;
   const smart = classe === 'smart';
-  const soCartucho = municoes.length > 0 && municoes.every(tipo => tipo === 'shotgunShell');
   return {
     classe,
-    ricocheteia: classe === 'power' && Boolean(aDistancia) && pericia !== 'autofire' && !flag.semRicochete && !soCartucho,
+    ricocheteia: classe === 'power' && Boolean(aDistancia) && pericia !== 'autofire',
     rajadaTech: classe === 'tech' ? Math.max(0, Number(flag.techRajada) || 0) : 0,
     balasDaRajadaTech: Number(flag.techBalas) || BALAS_RAJADA,
     balasDoAutofogo: Number(flag.balasDoAutofogo) || BALAS_RAJADA,
@@ -818,9 +821,9 @@ export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', cobertura 
   if (perfil?.minimoDeBalas && pente !== null && pente < perfil.minimoDeBalas) return `só dispara com ${perfil.minimoDeBalas} no pente (tem ${pente}): é a trava de segurança.`;
   if (perfil?.soSmartMelhorada && municao && !municao.smartMelhorada) return 'só aceita munição Smart melhorada.';
   if (pedido === 'doisCanos' && !perfil?.doisCanos) return 'não dispara os dois canos de uma vez.';
-  if (modo === 'ricochete') {
-    if (!perfil?.ricocheteia) return 'só as armas Power de tiro único ricocheteiam (as que disparam três balas ou mais, não).';
-    if (pelaMunicao !== 'tiro') return 'o ricochete é um tiro único: com cartucho ou explosivo, não.';
+  if (modo === 'ricochete' || pedido === 'ricochete') {
+    if (!perfil?.ricocheteia) return 'só as armas Power de longo alcance ricocheteiam.';
+    if (pelaMunicao === 'explosivo') return 'o ricochete é de bala ou de cartucho: explosivo, não.';
   }
   if (modo === 'carga' || modo === 'rajadaTech') {
     if (perfil?.classe !== 'tech') return 'não é uma arma Tech.';

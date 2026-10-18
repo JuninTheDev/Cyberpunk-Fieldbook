@@ -446,12 +446,12 @@ test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que ca
   assert.deepEqual(tech('darra-polytechnic-dr-12-quasar'), ['tech', 3, 10]);
   assert.deepEqual(tech('arasaka-senkoh-lx'), ['tech', 3, 30]);
   for (const id of ['militech-m-179-achilles', 'tsunami-nekomata', 'techtronika-rt-46-burya', 'rostovic-db-2-satara']) assert.deepEqual(tech(id), ['tech', 0, 0], id);
-  // Power: ricocheteia, menos as que "não disparam menos de três balas" (Nowaki, Masamune) e as de Disparo Automático.
+  // Power: ricocheteia (o Kit, ciclo 114: as de três balas também; a Mk.31 HMG saiu da wiki); a de Disparo Automático,
+  // não (o teste do Power).
   assert.equal(perfilDe('armas-2077:constitutional-arms-liberty').ricocheteia, true);
   assert.equal(perfilDe('armas-2077:nokota-d5-copperhead').ricocheteia, true);
-  assert.equal(perfilDe('armas-2077:arasaka-nowaki').ricocheteia, false);
-  assert.equal(perfilDe('armas-2077:arasaka-hjsh-18-masamune').ricocheteia, false);
-  assert.equal(perfilDe('armas-2077:militech-mk-31-hmg').ricocheteia, false);
+  assert.equal(perfilDe('armas-2077:arasaka-nowaki').ricocheteia, true);
+  assert.equal(perfilDe('armas-2077:arasaka-hjsh-18-masamune').ricocheteia, true);
   // As armas do livro-base não são de 2077.
   assert.equal(perfilDe('core_weapons:heavy-pistol'), null);
   // Toda arma do catálogo de 2077 tem classe; nenhuma Power ou Smart tem rajada Tech.
@@ -464,30 +464,52 @@ test('Armas de 2077: o perfil pela flag do catálogo (a rajada e as balas que ca
   }
 });
 
-test('Ricochete (wiki): tiro único com a perícia da arma, DV da tabela de autofogo (pistolas na linha da SMG), um dado a menos; +2 do Ballistic Coprocessor', () => {
+test('Power (Mission Kit, p. 31–32, a wiki de 2026-10-17, como o foundry-2077): a lesão crítica causa 10 de dano bônus; o Ricochete dá −4 no ataque (−2 com o Ballistic Coprocessor; no tiro mirado, só a penalidade dele), com o alcance e a DV da arma e o dano de sempre; com cartucho, o leque sai da superfície', () => {
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.ok(de2077.includes("section('Power', 'Kit p. 31–32', list(['Quando a arma causa uma <b>lesão crítica</b>, o dano bônus da lesão sobe <b>5</b>: 10 em vez de 5.', '<b>Ricochete:</b> você acerta um alvo que sabe onde está, mas que fica atrás de cobertura ou fora da linha de visão, ricocheteando o tiro numa superfície. O ataque tem <b>−4</b>; num <b>tiro mirado</b>, vale só a penalidade do tiro mirado. Precisa de um caminho livre entre o ponto do ricochete e o alvo.', 'O alcance continua sendo a distância entre você e o alvo.', 'Para ricochetear um <b>cartucho</b>, escolha uma superfície a até 6 m de você"));
+  assert.ok(de2077.includes("'O Ballistic Coprocessor reduz a penalidade do ricochete para −2.'"));
+  // O crítico: 10 na Power, 5 nas outras (e nas do livro-base).
+  assert.equal(regras.BONUS_CRITICO_POWER, 10);
+  assert.equal(regras.bonusDoCritico(perfilDe('armas-2077:constitutional-arms-liberty')), 10);
+  assert.equal(regras.bonusDoCritico(perfilDe('armas-2077:arasaka-hjke-11-yukimura')), 5);
+  assert.equal(regras.bonusDoCritico(null), regras.BONUS_CRITICO);
+  // A penalidade: −4; −2 com o coprocessador; no mirado, só o −8 dele.
+  assert.deepEqual([regras.PENALIDADE_RICOCHETE, regras.PENALIDADE_RICOCHETE_COM_COPROCESSADOR], [-4, -2]);
+  assert.equal(regras.penalidadeDoRicochete(), -4);
+  assert.equal(regras.penalidadeDoRicochete({ coprocessador: true }), -2);
+  assert.equal(regras.penalidadeDoRicochete({ mirado: true }), 0);
+  assert.equal(regras.penalidadeDoRicochete({ mirado: true, coprocessador: true }), 0);
+  // O alcance e a DV: a tabela da arma, como o tiro (saíram a tabela de autofogo e o dado a menos do suplemento).
   assert.equal(regras.classificar({ pedido: 'ricochete' }), 'ricochete');
   assert.equal(regras.balasDoModo('ricochete'), 1);
-  assert.equal(regras.tabelaDoRicochete('heavyPistol'), 'DV SMG (Autofire)');
-  assert.equal(regras.tabelaDoRicochete('medPistol'), 'DV SMG (Autofire)');
-  assert.equal(regras.tabelaDoRicochete('heavySmg'), 'DV SMG (Autofire)');
-  assert.equal(regras.tabelaDoRicochete('assaultRifle'), 'DV Assault Rifle (Autofire)');
-  assert.deepEqual(regras.tabelasCandidatas('DV Pistol', 'ricochete', 'heavyPistol'), ['DV SMG (Autofire)']);
-  assert.deepEqual(regras.tabelasCandidatas('DV Assault Rifle', 'ricochete', 'assaultRifle'), ['DV Assault Rifle (Autofire)']);
-  // A 10 m: a coluna de 7–12 m da tabela de autofogo da wiki.
-  assert.equal(regras.dvPelaDistancia(TABELAS_DV[regras.tabelaDoRicochete('heavyPistol')], 10).dv, linhaDaWiki('smg').autofire[1]);
-  assert.equal(regras.dvPelaDistancia(TABELAS_DV[regras.tabelaDoRicochete('assaultRifle')], 10).dv, linhaDaWiki('assault').autofire[1]);
-  assert.equal(regras.umDadoAMenos('3d6'), '2d6');
-  assert.equal(regras.umDadoAMenos('5d6'), '4d6');
-  assert.equal(regras.umDadoAMenos('1d6'), '1d6');
-  assert.equal(regras.BONUS_COPROCESSADOR, 2);
+  assert.deepEqual(regras.tabelasCandidatas('DV Pistol', 'ricochete'), ['DV Pistol']);
+  assert.deepEqual(regras.tabelasCandidatas('DV Assault Rifle', 'ricochete'), regras.tabelasCandidatas('DV Assault Rifle', 'tiro'));
+  assert.equal(regras.dvPelaDistancia(TABELAS_DV['DV Pistol'], 10).dv, linhaDaWiki('pistol').dv[1]);
+  assert.equal(regras.tabelaDoRicochete, undefined);
+  assert.equal(regras.umDadoAMenos, undefined);
+  assert.equal(regras.BONUS_COPROCESSADOR, undefined);
+  // A descrição: o tiro é o modo Ricochete; o mirado e o cartucho dizem o ricochete.
   assert.equal(regras.descreverAtaque({ modo: 'ricochete' }), 'Ricochete');
-  // Quem não ricocheteia: o aviso, antes de gastar a bala.
+  assert.equal(regras.descreverAtaque({ modo: 'ricochete', local: 'cabeca', ricochete: { penalidade: 0 } }), 'Tiro mirado na cabeça, ricochete');
+  assert.equal(regras.descreverAtaque({ modo: 'cartucho', ricochete: { penalidade: -4, cartucho: true } }), 'Espingarda com cartucho, ricochete');
+  // Quem ricocheteia: toda Power de longo alcance do catálogo (as de três balas e as de cartucho também); a de Disparo
+  // Automático e a corpo a corpo, não; as Smart e as Tech, não.
+  const armas = Object.entries(catalogo).filter(([id, item]) => id.startsWith('armas-2077:') && item.type === 'arma');
+  for (const [id] of armas) assert.equal(perfilDe(id).ricocheteia, perfilDe(id).classe === 'power', id);
+  assert.equal(armas.filter(([id]) => perfilDe(id).classe === 'power').length, 25);
+  assert.equal(regras.perfil2077({ classe: 'power' }, { pericia: 'autofire' }).ricocheteia, false);
+  assert.equal(regras.perfil2077({ classe: 'power' }, { aDistancia: false }).ricocheteia, false);
+  // O aviso, antes de gastar a bala.
   const liberty = perfilDe('armas-2077:constitutional-arms-liberty');
   assert.equal(regras.impedimento2077({ modo: 'ricochete', perfil: liberty }), null);
-  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:arasaka-nowaki') }), /Power de tiro único/);
-  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:arasaka-jke-x2-kenshin') }), /Power de tiro único/);
-  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:budget-arms-carnage'), pelaMunicao: 'cartucho' }), /tiro único/);
-  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: null }), /Power de tiro único/);
+  assert.equal(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:arasaka-nowaki') }), null);
+  assert.equal(regras.impedimento2077({ modo: 'cartucho', pedido: 'ricochete', perfil: perfilDe('armas-2077:rostovic-db-4-igla'), pelaMunicao: 'cartucho' }), null);
+  assert.match(regras.impedimento2077({ modo: 'ricochete', perfil: liberty, pelaMunicao: 'explosivo' }), /explosivo, não/);
+  assert.equal(regras.impedimento2077({ modo: 'ricochete', perfil: perfilDe('armas-2077:arasaka-jke-x2-kenshin') }), 'só as armas Power de longo alcance ricocheteiam.');
+  assert.equal(regras.impedimento2077({ modo: 'ricochete', perfil: null }), 'só as armas Power de longo alcance ricocheteiam.');
+  // O texto "Neste sistema" das Power.
+  assert.match(catalogo['armas-2077:constitutional-arms-liberty'].system.descricao, /o botão Ricochete \(−4 no ataque, −2 com o Ballistic Coprocessor/);
+  for (const [id, item] of armas) assert.equal('semRicochete' in item.flags['cpr-fieldbook'].arma2077, false, id);
 });
 
 test('Carga Tech (wiki): metade passa da cobertura fina e um quarto da grossa; a armadura perde 4 de SP (2 através de cobertura); a rajada usa a tabela de autofogo da SMG e passa só 25% da fina', () => {
@@ -668,9 +690,9 @@ test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os do
   assert.equal(regras.PENALIDADE_CORONHA, -1);
   assert.equal(perfilDe('armas-2077:militech-m-10af-lexington').balasDoAutofogo, 7);
   assert.equal(perfilDe('armas-2077:nokota-d5-copperhead').balasDoAutofogo, regras.BALAS_RAJADA);
-  // As que só disparam cartucho não ricocheteiam (o ricochete é um tiro único); a de balote e cartucho, sim.
-  assert.equal(testera.ricocheteia, false);
-  assert.equal(perfilDe('armas-2077:rostovic-db-4-igla').ricocheteia, false);
+  // O cartucho também ricocheteia (o Kit: "para ricochetear um cartucho, escolha uma superfície a até 6 m de você").
+  assert.equal(testera.ricocheteia, true);
+  assert.equal(perfilDe('armas-2077:rostovic-db-4-igla').ricocheteia, true);
   assert.equal(perfilDe('armas-2077:budget-arms-carnage').ricocheteia, true);
   // Os dois canos: 2 cartuchos; a Palica, como toda arma Smart, só dispara ligada.
   assert.equal(regras.balasDoModo('cartucho', { doisCanos: true }), 2);

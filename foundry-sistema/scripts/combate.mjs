@@ -177,7 +177,9 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   };
   if (!conferirMira()) return null;
   const pelaArma = { aDistancia: arma.system.aDistancia, tipoDeArma: arma.system.tipo, municao: municao?.system.tipo };
-  const modo = R.classificar({ pedido, ...pelaArma });
+  // O ricochete de um cartucho (o Kit) continua cartucho: o leque sai da superfície do ricochete.
+  const pelaMunicao = R.classificar(pelaArma);
+  const modo = pedido === 'ricochete' && pelaMunicao === 'cartucho' ? 'cartucho' : R.classificar({ pedido, ...pelaArma });
   const tokenAtq = tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
   if (!lista.length && modo !== 'supressivo') { ui.notifications.warn('Marque um alvo (tecla T sobre o token) antes de atacar.'); return null; }
   if (modo === 'supressivo' && !tokenAtq) { ui.notifications.warn(`Ponha o token de ${atacante.name} na cena para o fogo supressivo.`); return null; }
@@ -188,7 +190,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // Armas de 2077: a ligação da arma Smart, os modos da classe, a carga que esfria e a cobertura do alvo (quem atira diz).
   const perfil = arma.perfil2077;
   const de2077 = {
-    modo, perfil, pelaMunicao: R.classificar(pelaArma), pedido, ligadaSmart: atacante.temLigacaoSmart, pente: arma.system.pente.max ? arma.system.pente.value : null,
+    modo, perfil, pelaMunicao, pedido, ligadaSmart: atacante.temLigacaoSmart, pente: arma.system.pente.max ? arma.system.pente.value : null,
     municao: municao ? { smartMelhorada: Boolean(municao.getFlag(SISTEMA, 'arma2077')?.smartMelhorada) } : null
   };
   const tech = modo === 'carga' || modo === 'rajadaTech';
@@ -209,9 +211,11 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const { pericia, partes } = arma.partesDoAtaque(modo);
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
-  if (modo === 'ricochete' && atacante.temCoprocessador) partes.push({ rotulo: 'Ballistic Coprocessor', valor: R.BONUS_COPROCESSADOR });
+  // O ricochete (o Kit): −4, ou −2 com o Ballistic Coprocessor; num tiro mirado, só a penalidade do mirado.
+  const ricochete = pedido === 'ricochete' ? { penalidade: R.penalidadeDoRicochete({ coprocessador: atacante.temCoprocessador, mirado: Boolean(R.LOCAIS_MIRADOS[local]) }), cartucho: modo === 'cartucho' } : null;
+  if (ricochete?.penalidade) partes.push({ rotulo: atacante.temCoprocessador ? 'Ricochete (Ballistic Coprocessor)' : 'Ricochete', valor: ricochete.penalidade });
   if (!tech) cobertura = null;
-  const descricao = R.descreverAtaque({ modo, local, cobertura, doisCanos });
+  const descricao = R.descreverAtaque({ modo, local, cobertura, doisCanos, ricochete });
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
   // Os situacionais (a luneta, pela distância do primeiro alvo) e a janela de rolagem: fechada ou cancelada, não ataca nem
   // gasta bala. Sem a janela, entram os ligados por padrão.
@@ -236,7 +240,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    cobertura, carga, doisCanos, porTiro,
+    cobertura, carga, doisCanos, porTiro, ricochete,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
@@ -379,8 +383,12 @@ function notasDe2077(pedido, arma) {
     const dano = arma.perfil2077?.doisCanos?.dano;
     notas.push(`Os dois canos de uma vez: gastou 2 cartuchos${dano ? `, e o dano é ${dano}` : ''}.`);
   }
-  if (pedido.modo === 'ricochete') {
-    notas.push(`Ricochete: DV da tabela ${R.tabelaDoRicochete(arma.system.tipo).replace('DV ', '')} e ${R.umDadoAMenos(arma.system.dano)} de dano (um dado a menos).`);
+  if (pedido.ricochete) {
+    const { penalidade, cartucho: doCartucho } = pedido.ricochete;
+    const conta = penalidade ? `${penalidade} no ataque` : 'no tiro mirado, só a penalidade dele';
+    notas.push(doCartucho
+      ? `Ricochete do cartucho (${conta}): o leque de ${R.ALCANCE_CARTUCHO} m sai da superfície do ricochete, a até ${R.ALCANCE_CARTUCHO} m de quem atira, na direção escolhida (não para trás dela); o mestre confere quem está nele.`
+      : `Ricochete (${conta}): o alcance é a distância até o alvo, e precisa de um caminho livre do ponto do ricochete até ele.`);
   }
   const cobertura = R.COBERTURAS[pedido.cobertura];
   if (cobertura) {
@@ -703,7 +711,7 @@ async function individual(ctx) {
   if (await aplicarMunicaoSemDano(ctx, pegas)) return;
   const rajada = ctx.modo === 'autofogo' || ctx.modo === 'rajadaTech';
   const maximo = ctx.modo === 'rajadaTech' ? ctx.perfil.rajadaTech : ctx.arma.system.autofogo;
-  const formula = rajada ? '2d6' : ctx.modo === 'ricochete' ? R.umDadoAMenos(ctx.arma.system.dano) : ctx.pedido.porTiro?.danoComMenos ?? ctx.perfil?.danoFixo ?? null;
+  const formula = rajada ? '2d6' : ctx.pedido.porTiro?.danoComMenos ?? ctx.perfil?.danoFixo ?? null;
   for (const linha of pegas) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
     const multiplicador = rajada ? R.multiplicadorDeAutofogo(linha.segundaChance ?? ctx.pedido.total, contra, maximo) : 1;
@@ -753,7 +761,7 @@ async function cartucho(ctx) {
     const alvo = infoDoAlvo(ctx, token);
     linha.metros = alvo.metros;
     if (!passou) { Object.assign(linha, { resultado: 'errou', dv: R.DV_CARTUCHO }); return; }
-    if (alvo.metros !== null && alvo.metros > R.ALCANCE_CARTUCHO + 0.5) { linha.resultado = 'fora'; linha.notas.push(`Além dos ${R.ALCANCE_CARTUCHO} m do cartucho.`); return; }
+    if (!ctx.pedido.ricochete && alvo.metros !== null && alvo.metros > R.ALCANCE_CARTUCHO + 0.5) { linha.resultado = 'fora'; linha.notas.push(`Além dos ${R.ALCANCE_CARTUCHO} m do cartucho.`); return; }
     if (await defesaDoAlvo(area, linha, alvo, R.DV_CARTUCHO)) pegas.push(linha);
   }));
   // Os dois cartuchos de uma vez (a Testera): o dano da arma para isso.
@@ -860,8 +868,12 @@ export function acoesDe2077(arma) {
     if (recolhida) resultado.avisos.push({ texto: 'coronha recolhida (−1)', dica: 'Dá para esconder a arma; os ataques têm −1 até estender a coronha (uma Ação).' });
   }
   if (perfil.ricocheteia) {
-    const coprocessador = ator.temCoprocessador ? ` Ballistic Coprocessor: +${R.BONUS_COPROCESSADOR}.` : '';
-    resultado.modos.push({ modo: 'ricochete', rotulo: 'Ricochete', dica: `Ricochete: tiro único num alvo atrás de cobertura. DV da tabela de autofogo, um dado a menos de dano; REF 8+ esquiva.${coprocessador}` });
+    const penalidade = R.penalidadeDoRicochete({ coprocessador: ator.temCoprocessador });
+    const cartucho = arma.system.municoes.includes('shotgunShell') ? ` Com cartucho, o leque de ${R.ALCANCE_CARTUCHO} m sai da superfície do ricochete.` : '';
+    resultado.modos.push({
+      modo: 'ricochete', rotulo: 'Ricochete',
+      dica: `Ricochete: ${penalidade} no ataque${ator.temCoprocessador ? ' (Ballistic Coprocessor)' : ''}, num alvo atrás de cobertura ou fora da linha de visão (no tiro mirado, só a penalidade dele); o alcance é a distância até o alvo.${cartucho}`
+    });
   }
   if (perfil.classe === 'tech') {
     resultado.modos.push({ modo: 'carga', rotulo: 'Carga', dica: 'Carga Tech: tiro único que atravessa cobertura (metade da fina, um quarto da grossa); se o dano passar, a armadura perde 4 de SP (2 através de cobertura). A arma esfria uma rodada.' });
@@ -871,6 +883,7 @@ export function acoesDe2077(arma) {
     const rodada = esfriaAte(arma);
     if (rodada) resultado.avisos.push({ texto: `esfriando: carga na rodada ${rodada}`, dica: 'Depois de uma carga, a arma Tech esfria uma rodada.' });
   }
+  if (perfil.classe === 'power') resultado.dicaAtaque = `Arma Power: a lesão crítica causa ${R.BONUS_CRITICO_POWER} de dano bônus (no lugar de ${R.BONUS_CRITICO}).`;
   if (perfil.classe === 'smart') {
     if (!ator.temLigacaoSmart) resultado.avisos.push({ texto: 'sem ligação', dica: 'As armas Smart só disparam ligadas pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.' });
     else {

@@ -8,8 +8,8 @@
 // "netrunning-2077:<nome>").
 // A classe, a origem e as regras de cada arma (o "regras" da wiki) ficam na flag arma2077, como o cpr-2077 guarda as
 // dele. Os modos dos ciclos 17 e 18 (regras.mjs: o ricochete, a carga Tech e as regras próprias da Palica, da Testera,
-// da Kappa e da Dian) e a arma Smart do Kit (ciclo 110) leem dela as opções de cada arma. O ricochete e a carga ainda
-// seguem o suplemento de fã: as regras de Power e Tech do Kit ainda não estão no sistema (ROADMAP).
+// da Kappa e da Dian), a arma Smart do Kit (ciclo 110) e o Power do Kit (ciclo 114) leem dela as opções de cada arma.
+// A carga ainda segue o suplemento de fã: as regras de Tech do Kit ainda não estão no sistema (ROADMAP).
 // Uso: chamado por build/conteudo.mjs.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -68,10 +68,10 @@ const REGRA_DA_CLASSE = {
   smart: 'Smart (Mission Kit): +1 nos ataques à distância, e só dispara conectada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip. Com a munição Smart melhorada, ignora escuridão, fumaça e neblina, e errar a DV por 5 ou menos dá uma segunda chance com 14 + 1d10.',
   tech: 'Tech (Mission Kit): a mira vê o contorno dos alvos através de cobertura fina. Carregar gasta a Ação de Movimento; carregada, o próximo ataque é de CDT 1, atravessa cobertura fina e ignora metade do SP do alvo.'
 };
-// O que os botões da arma fazem neste sistema: os modos dos ciclos 17 e 18, que ainda seguem o suplemento de fã. As
-// regras do Kit (o parágrafo "Classe") ainda não estão automatizadas, e o mestre as aplica.
+// O que os botões da arma fazem neste sistema: o Power e o Smart pelo Kit; a carga Tech ainda pelo suplemento de fã (as
+// regras de Tech do Kit, o mestre aplica).
 const NESTE_SISTEMA = {
-  power: 'o botão Ricochete ainda segue o suplemento de fã: DV da tabela de autofogo e um dado a menos de dano (+2 com o Ballistic Coprocessor); as que só disparam rajadas ou cartucho não ricocheteiam. O −4 do Kit e o +5 na lesão crítica, o mestre aplica.',
+  power: 'o botão Ricochete (−4 no ataque, −2 com o Ballistic Coprocessor; no tiro mirado, só a penalidade dele; com cartucho, o leque sai da superfície do ricochete) e os 10 de dano bônus da lesão crítica, o sistema aplica. O caminho livre do ricochete e a superfície, o mestre confere.',
   tech: 'o botão Carga ainda segue o suplemento de fã: pergunta a cobertura do alvo, deixa nela o que não atravessa e abla 4 de SP (2 através de cobertura), e a arma esfria uma rodada. A carga do Kit (a Ação de Movimento, CDT 1, metade do SP), o mestre aplica.',
   smart: 'o +1 nos ataques à distância, a ligação (o Personal Link do Neuroport ou o Subdermal Grip) e a munição Smart melhorada (as penalidades de visão e a segunda chance com 14 + 1d10), o sistema aplica: sem a ligação, a arma não dispara.'
 };
@@ -133,8 +133,6 @@ function arma(raw, grupo) {
     techBalas: classe === 'tech' ? Number((raw.text.match(/(?:dispara|exige) (?:as )?(\d+) balas/i) || [])[1] || 0) : 0,
     // O autofogo que gasta menos balas (0: as 10 do autofogo).
     balasDoAutofogo: Number((recursos.match(/usa só (\d+) balas por rajada/i) || [])[1] || 0),
-    // Power: as que só disparam rajadas de três não ricocheteiam.
-    semRicochete: classe === 'power' && (/só rajada de três balas/i.test(recursos) || pericia === 'autofire'),
     // A Dian: coronha retrátil, −1 recolhida.
     coronhaRetratil: /coronha recolhida/i.test(textoCompleto)
   };

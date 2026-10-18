@@ -47,7 +47,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | Reflex Tuner | portado no ciclo 30, pela wiki (ver as dúvidas) |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077), menos o Black Chrome, e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; no ciclo 31, com o Mission Kit (Neuroport, Rebuilds, munição Smart melhorada, Immunoblockers, quickhacks do Kit) |
-| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram |
+| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram; o Power, desde o 114 (o Ricochete do Kit e o crítico de 10) |
 | cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, pelo suplemento de fã (com os dois cartuchos da Testera, que o Kit manteve). Com o Kit, a wiki mudou várias (a Lexington, a Yukimura, a Burya, a Omaha): ROADMAP, P0 |
 | wiki | o Black Chrome (176 itens da loja) | falta |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
@@ -570,6 +570,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   [...] qualquer outra coisa que atrapalhe a visão". O sistema tira as dos modificadores comuns da janela de rolagem que
   falam disso: "Iluminação noturna ou fraca" (−1) e "Tarefa encoberta por fumaça, escuridão etc." (−4). Um efeito
   situacional ou o modificador do mestre com uma penalidade de visão conta: o mestre tira.
+
+- **O ricochete do cartucho** (ciclo 114). A wiki: "escolha uma superfície a até 6 m de você: ela vira a nova origem
+  do leque, que atinge todos numa área de 6 m na direção que você escolher (com bom senso: o tiro não ricocheteia para
+  trás da superfície)". O sistema não sabe da superfície: no cartucho que ricocheteia, ele não confere os 6 m de quem
+  atira e pega os alvos marcados; o mestre confere quem está no leque e o caminho livre. A penalidade é a do ricochete
+  (−4, −2 com o Ballistic Coprocessor), contra a DV 13 do cartucho.
 
 ## Registro dos ciclos
 
@@ -5591,6 +5597,49 @@ Commit anterior: `f547f6ff` (o ciclo 112).
       ficha sem o "só Smart melhorada" (B10), o impedimento sem a munição carregada (B11) e o cartão sem a nota (B12).
 - **Próximo:** a parte 4 do C29, Power (o ricochete com −4, −2 com o Ballistic Coprocessor, e a lesão crítica com 10 de
   dano bônus).
+
+### Ciclo 114 (2026-10-18): o C29, as armas de 2077 pelo Kit, parte 4: Power (sessão KouArt)
+
+Commit anterior: `ed5aacc1` (o ciclo 113).
+
+- **A referência:**
+  - **a wiki de 2026-10-17 (`system-2077.js`, "Power", Kit p. 31–32):** "Quando a arma causa uma lesão crítica, o dano
+    bônus da lesão sobe 5: 10 em vez de 5."; "Ricochete: você acerta um alvo que sabe onde está, mas que fica atrás de
+    cobertura ou fora da linha de visão, ricocheteando o tiro numa superfície. O ataque tem −4; num tiro mirado, vale só
+    a penalidade do tiro mirado. Precisa de um caminho livre entre o ponto do ricochete e o alvo."; "O alcance continua
+    sendo a distância entre você e o alvo."; "Para ricochetear um cartucho, escolha uma superfície a até 6 m de você:
+    ela vira a nova origem do leque, que atinge todos numa área de 6 m na direção que você escolher"; "O Ballistic
+    Coprocessor reduz a penalidade do ricochete para −2.";
+  - **o `foundry-2077` do master:** ricocheteia a Power de longo alcance, menos a de Disparo Automático (as de três
+    balas e as de cartucho também); −4 ou −2 no ataque; o dano bônus 10.
+- **O que muda:**
+  - **`regras.mjs`:** `BONUS_CRITICO_POWER` e `bonusDoCritico`; `PENALIDADE_RICOCHETE` (−4),
+    `PENALIDADE_RICOCHETE_COM_COPROCESSADOR` (−2) e `penalidadeDoRicochete` (0 no mirado); a DV do ricochete pela tabela
+    da arma; quem ricocheteia (saíram o `semRicochete` e a exclusão das que só disparam cartucho); a descrição do mirado
+    e do cartucho que ricocheteiam; o aviso ("só as armas Power de longo alcance ricocheteiam.", e o explosivo, não).
+    Saíram `tabelaDoRicochete`, `umDadoAMenos` e `BONUS_COPROCESSADOR` (o ricochete do suplemento);
+  - **`combate.mjs`:** a penalidade no ataque ("Ricochete −4" ou "Ricochete (Ballistic Coprocessor) −2"); o dano de
+    sempre; o cartucho que ricocheteia continua cartucho, sem a conta dos 6 m de quem atira (o leque sai da superfície),
+    e o cartão diz isso; na ficha, a dica do botão e a do "Atacar" (o crítico de 10);
+  - **`rolagens.mjs`:** o dano bônus do crítico pela arma (10 na Power), no ataque e no botão de dano da ficha;
+  - **o build:** o texto "Neste sistema" das Power; saiu o `semRicochete` da flag.
+- **Testes:**
+  - **G3:** o teste do Ricochete do suplemento virou o do Power do Kit (o texto da wiki, o crítico, a penalidade, a DV
+    da arma, a descrição, as 25 Power do catálogo que ricocheteiam, o aviso, o texto do build); no do perfil e no das
+    regras de cada modelo, a Nowaki, a Masamune, a Testera e a Igla ricocheteiam;
+  - **G4:** o passo do ricochete reescrito (a Liberty: −4, −2 com o coprocessador, o mirado só com o −8, a DV 15 da
+    pistola e o dano de sempre; o tiro com dois 6 soma 10; a Tactician ricocheteia o cartucho no Capanga a 12 m; o fuzil
+    do CORE não ricocheteia); no passo dos dois canos, a Testera também tem o Ricochete.
+- **Resultados:**
+  - G1: 70 arquivos, 0 erros; G2: 0 erros;
+  - G3: 147 de 150 (saiu a falha conhecida do Ricochete; ficam as 3 da Tech e da Lexington);
+  - G4: 137 de 140 (a carga Tech, a Dian e Lexington e, nesta rodada, a checagem de avisos da Lexington);
+  - **mutações:** as 11 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (146 de 150 cada): o crítico da Power de 5 (P1), o ricochete com −3 (P2), a DV da tabela de autofogo (P3),
+      as de cartucho sem ricochete (P4) e o explosivo que ricocheteia (P5);
+    - no G4, no passo do Power: o ataque sem a penalidade (P6), o crítico de 5 (P7), o cartucho com a conta dos 6 m
+      (P8), o ricochete do cartucho como tiro (P9), a ficha sem o coprocessador (P10) e sem a dica do crítico (P11).
+- **Próximo:** a parte 5 do C29, Tech (carregar na Ação de Movimento, CDT 1, a cobertura fina e a metade do SP).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

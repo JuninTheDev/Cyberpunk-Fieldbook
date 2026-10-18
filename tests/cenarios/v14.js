@@ -3408,54 +3408,86 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('ricochete (Power, 2077): DV da tabela de autofogo da SMG (17 a 10 m) e um dado a menos de dano; o Ballistic Coprocessor dá +2; arma que não é Power não ricocheteia', async () => {
-      // Liberty (pistola pesada Power, 3d6) contra o Alvo a 10 m (SP 5): d10 6 → 8 + 4 + 6 = 18 contra 17. Dano 2d6 (o
-      // terceiro dado da fila sobra): 5 + 4 = 9, passam 4. Com o coprocessador: d10 6 → 20 (dano 1 + 1, a armadura segura).
+    await r.passo('Power (2077, o Kit): o Ricochete dá −4 (−2 com o Ballistic Coprocessor; no mirado, só o −8), com a DV da arma e o dano de sempre; o cartucho ricocheteia da superfície; a lesão crítica da Power causa 10; arma que não é Power não ricocheteia', async () => {
+      // Liberty (pistola pesada Power, 3d6) contra o Alvo a 10 m (DV 15 da pistola; SP 5): d10 9 → 8 + 4 − 4 + 9 = 17;
+      // 3d6: 5 + 4 + 3 = 12, passam 7 (o SP vai a 4). Com o coprocessador: d10 6 → 8 + 4 − 2 + 6 = 16; 1 + 1 + 1, a armadura
+      // segura. Mirado na cabeça: d10 9 → 8 + 4 − 8 + 9 = 13, erra. O tiro comum com dois 6: d10 9 → 21; 6 + 6 + 1 = 13,
+      // passam 9 e o crítico da Power soma 10 (a lesão, desligada no passo). A Tactician (espingarda Power) ricocheteia o
+      // cartucho no Capanga a 12 m (o leque sai da superfície: sem a conta dos 6 m), ainda com o coprocessador: d10 6 → 8 +
+      // 4 − 2 + 6 = 16 contra a DV 13; 3d6: 1 + 1 + 1.
+      await fixar(edge, [[9, 10], [5, 6], [4, 6], [3, 6], [6, 10], [1, 6], [1, 6], [1, 6], [9, 10], [9, 10], [6, 6], [6, 6], [1, 6], [6, 10], [1, 6], [1, 6], [1, 6]]);
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
-        const alvo = __token('Alvo');
-        await __ator('Alvo').update({ 'system.hp.value': 45 });
-        await __armaduraDoAlvo(5);
-        const { arma, municao } = await __arma2077('armas-2077:constitutional-arms-liberty', 'core_ammo:heavy-pistol-basic', 12);
-        await a.sheet.render({ force: true });
-        await __esperar(() => __linhaDaArma(arma));
-        const botao = () => __linhaDaArma(arma)?.querySelector('button[data-modo="ricochete"]');
-        const ficha = { botao: Boolean(botao()), dica: botao()?.dataset.tooltip ?? '' };
-        window.__fila = [[6, 10], [5, 6], [4, 6], [3, 6]];
-        const r1 = await arma.atacar({ alvo, modo: 'ricochete' });
-        const sobrou = window.__fila.length;
-        const teste1 = __ultimoTeste();
-        const cop = await __cyber2077('cyberware-2077:ballistic-coprocessor');
-        await __esperar(() => /Coprocessor/.test(botao()?.dataset.tooltip ?? ''));
-        window.__fila = [[6, 10], [1, 6], [1, 6]];
-        const r2 = await arma.atacar({ alvo, modo: 'ricochete' });
-        const teste2 = __ultimoTeste();
-        const rifle = a.items.getName('Assault Rifle');
-        const penteDoRifle = rifle.system.pente.value;
-        const naoPower = await __comAvisos(() => rifle.atacar({ alvo, modo: 'ricochete' }));
-        const resultado = {
-          ficha, coprocessadorNaFicha: botao()?.dataset.tooltip ?? '',
-          r1: { ataque: r1.ataque, descricao: r1.descricao, notas: r1.notas, linhas: __linhas(r1), formula: teste1.formula }, sobrou,
-          r2: { ataque: r2.ataque, formula: teste2.formula, partes: teste2.partes, linhas: __linhas(r2) },
-          naoPower: { r: naoPower.r, avisos: naoPower.avisos, gastou: penteDoRifle - rifle.system.pente.value },
-          pente: arma.system.pente.value, sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value, fila: window.__fila.length
-        };
-        await a.sheet.close();
-        await __tirarCyber(cop);
-        await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
-        await __armaduraDoAlvo(11);
-        await __ator('Alvo').update({ 'system.hp.value': 45 });
-        return resultado;
+        const [alvo, capanga] = ['Alvo', 'Capanga'].map(__token);
+        const hpDoCapanga = __ator('Capanga').system.hp.value;
+        const lesao = game.settings.get('${S}', 'lesaoCritica');
+        const criados = [];
+        let cop = null;
+        try {
+          await __ator('Alvo').update({ 'system.hp.value': 45 });
+          await __armaduraDoAlvo(5);
+          const liberty = await __arma2077('armas-2077:constitutional-arms-liberty', 'core_ammo:heavy-pistol-basic', 12);
+          criados.push(liberty.arma.id, liberty.municao.id);
+          await a.sheet.render({ force: true });
+          await __esperar(() => __linhaDaArma(liberty.arma));
+          const botao = () => __linhaDaArma(liberty.arma)?.querySelector('button[data-modo="ricochete"]');
+          const ficha = { botao: Boolean(botao()), dica: botao()?.dataset.tooltip ?? '', atacar: __linhaDaArma(liberty.arma).querySelector('td.num')?.dataset.tooltip ?? '' };
+          const tiro = async opcoes => {
+            const r = await liberty.arma.atacar(opcoes);
+            const teste = __ultimoTeste();
+            return { ataque: r.ataque, descricao: r.descricao, notas: r.notas, linhas: __linhas(r), formula: teste.formula, partes: teste.partes };
+          };
+          const r1 = await tiro({ alvo, modo: 'ricochete' });
+          cop = await __cyber2077('cyberware-2077:ballistic-coprocessor');
+          await __esperar(() => /Coprocessor/.test(botao()?.dataset.tooltip ?? ''));
+          const dicaComCop = botao()?.dataset.tooltip ?? '';
+          const r2 = await tiro({ alvo, modo: 'ricochete' });
+          const r3 = await tiro({ alvo, modo: 'ricochete', local: 'cabeca' });
+          await game.settings.set('${S}', 'lesaoCritica', 'nao');
+          const r4 = await tiro({ alvo });
+          await game.settings.set('${S}', 'lesaoCritica', lesao);
+          const tactician = await __arma2077('armas-2077:constitutional-arms-m2038-tactician', 'core_ammo:shotgun-shell-basic', 4);
+          criados.push(tactician.arma.id, tactician.municao.id);
+          const r5raw = await tactician.arma.atacar({ alvo: capanga, modo: 'ricochete' });
+          const teste5 = __ultimoTeste();
+          const r5 = { ataque: r5raw.ataque, descricao: r5raw.descricao, notas: r5raw.notas, cabecalho: r5raw.cabecalho, linhas: __linhas(r5raw), formula: teste5.formula };
+          const rifle = a.items.getName('Assault Rifle');
+          const penteDoRifle = rifle.system.pente.value;
+          const naoPower = await __comAvisos(() => rifle.atacar({ alvo, modo: 'ricochete' }));
+          return {
+            ficha, dicaComCop, r1, r2, r3, r4, r5, naoPower: { r: naoPower.r, avisos: naoPower.avisos, gastou: penteDoRifle - rifle.system.pente.value },
+            pente: liberty.arma.system.pente.value, sp: __ator('Alvo').system.armadura.corpo.sp, hp: __ator('Alvo').system.hp.value,
+            capangaPerdeu: hpDoCapanga - __ator('Capanga').system.hp.value, fila: window.__fila.length
+          };
+        } finally {
+          await game.settings.set('${S}', 'lesaoCritica', lesao);
+          await a.sheet.close();
+          if (cop) await __tirarCyber(cop);
+          await a.deleteEmbeddedDocuments('Item', criados.filter(id => a.items.has(id)));
+          await __armaduraDoAlvo(11);
+          await __ator('Alvo').update({ 'system.hp.value': 45 });
+          await __ator('Capanga').update({ 'system.hp.value': hpDoCapanga });
+          window.__fila = [];
+        }
       })()`);
-      const { r1, r2, naoPower } = info;
+      const { r1, r2, r3, r4, r5, naoPower } = info;
       const [l1] = r1.linhas;
-      const ok = info.ficha.botao && !/Coprocessor/.test(info.ficha.dica) && /Ballistic Coprocessor: \+2/.test(info.coprocessadorNaFicha)
-        && r1.ataque === 18 && r1.descricao === 'Ricochete' && r1.formula === '1d10crit + 8 + 4' && l1.dv === 17 && l1.resultado === 'acertou'
-        && l1.dano?.dano === 9 && l1.dano.recebido === 4 && l1.dano.ablado === 1 && info.sobrou === 1
-        && r1.notas.includes('Ricochete: DV da tabela SMG (Autofire) e 2d6 de dano (um dado a menos).')
-        && r2.ataque === 20 && r2.formula === '1d10crit + 8 + 4 + 2' && r2.partes.includes('Ballistic Coprocessor +2') && r2.linhas[0].dano?.recebido === 0
-        && naoPower.r === null && naoPower.gastou === 0 && naoPower.avisos.join() === 'Assault Rifle: só as armas Power de tiro único ricocheteiam (as que disparam três balas ou mais, não).'
-        && info.pente === 10 && info.hp === 41 && info.sp === 4 && info.fila === 0;
+      const [l4] = r4.linhas;
+      const [l5] = r5.linhas;
+      const ok = info.ficha.botao && info.ficha.dica === 'Ricochete: -4 no ataque, num alvo atrás de cobertura ou fora da linha de visão (no tiro mirado, só a penalidade dele); o alcance é a distância até o alvo.'
+        && info.dicaComCop === 'Ricochete: -2 no ataque (Ballistic Coprocessor), num alvo atrás de cobertura ou fora da linha de visão (no tiro mirado, só a penalidade dele); o alcance é a distância até o alvo.'
+        && info.ficha.atacar === 'Arma Power: a lesão crítica causa 10 de dano bônus (no lugar de 5).'
+        && r1.ataque === 17 && r1.descricao === 'Ricochete' && r1.formula === '1d10crit + 8 + 4 - 4' && r1.partes.includes('Ricochete -4') && l1.dv === 15 && l1.resultado === 'acertou'
+        && l1.dano?.dano === 12 && l1.dano.recebido === 7 && l1.dano.ablado === 1
+        && r1.notas.includes('Ricochete (-4 no ataque): o alcance é a distância até o alvo, e precisa de um caminho livre do ponto do ricochete até ele.')
+        && r2.ataque === 16 && r2.formula === '1d10crit + 8 + 4 - 2' && r2.partes.includes('Ricochete (Ballistic Coprocessor) -2') && r2.linhas[0].dano?.recebido === 0
+        && r3.ataque === 13 && r3.descricao === 'Tiro mirado na cabeça, ricochete' && r3.formula === '1d10crit + 8 + 4 - 8' && r3.linhas[0].resultado === 'errou'
+        && r3.notas.includes('Ricochete (no tiro mirado, só a penalidade dele): o alcance é a distância até o alvo, e precisa de um caminho livre do ponto do ricochete até ele.')
+        && r4.ataque === 21 && r4.descricao === 'Tiro' && l4.dano?.critico && l4.dano.dano === 13 && l4.dano.recebido === 19
+        && r5.ataque === 16 && r5.descricao === 'Espingarda com cartucho, ricochete' && r5.formula === '1d10crit + 8 + 4 - 2' && r5.cabecalho === 'contra DV 13 do cartucho: acertou'
+        && l5?.nome === 'Capanga' && l5.metros === 12 && l5.resultado === 'acertou' && l5.dano?.dano === 3 && r5.notas.some(n => /^Ricochete do cartucho \(-2 no ataque\): o leque de 6 m sai da superfície/.test(n))
+        && naoPower.r === null && naoPower.gastou === 0 && naoPower.avisos.join() === 'Assault Rifle: só as armas Power de longo alcance ricocheteiam.'
+        && info.pente === 8 && info.hp === 45 - 7 - 19 && info.sp === 3 && info.capangaPerdeu === 3 && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });
 
@@ -3574,7 +3606,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('os dois canos (2077): a Palica (Smart) dispara os dois com 4d6, ligada pelo Neuroport (sem ele, não dispara); a Testera, com 4d6; cada um gasta 2 cartuchos, e com 1 no pente não dá; nas que só disparam cartucho não há Ricochete', async () => {
+    await r.passo('os dois canos (2077): a Palica (Smart) dispara os dois com 4d6, ligada pelo Neuroport (sem ele, não dispara); a Testera, com 4d6; cada um gasta 2 cartuchos, e com 1 no pente não dá; a Testera (Power) também ricocheteia, desde o Kit', async () => {
       // O Capanga vai para x 500 (4 m), dentro dos 6 m do cartucho. Palica, os dois canos: d10 3 → REF 8 + Pistola 4 +
       // Smart 1 + 3 = 16 > 13; dano 4d6: 2 + 2 + 1 + 1 = 6. Testera, os dois cartuchos: d10 5 → REF 8 + Armas Pesadas 4 +
       // 5 = 17 > 13; dano 4d6: 1 + 2 + 3 + 4 = 10 (o quinto dado da fila sobra).
@@ -3626,7 +3658,7 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       const { semLigacao, r1, r2, umSo } = info;
       const ok = semLigacao.r === null && semLigacao.pente === 2 && semLigacao.avisos.join() === 'Rostovic DB-4 Palica: arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.'
-        && info.ficha.palica.join() === 'doisCanos' && info.ficha.testera.join() === 'doisCanos'
+        && info.ficha.palica.join() === 'doisCanos' && info.ficha.testera.join() === 'doisCanos,ricochete'
         && r1.ataque === 16 && r1.formula === '1d10crit + 8 + 4 + 1' && r1.descricao === 'Espingarda com cartucho, os dois canos' && r1.pente === 0
         && !r1.notas.some(n => /Teste Smart/.test(n)) && r1.notas.includes('Os dois canos de uma vez: gastou 2 cartuchos, e o dano é 4d6.')
         && r1.linhas[0].resultado === 'acertou' && r1.linhas[0].dano?.dano === 6

@@ -2,7 +2,7 @@
 import { caminho, SISTEMA } from './config.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { perguntarModificador } from './janela-rolagem.mjs';
-import { BONUS_CRITICO, danoCritico, expressaoDoDano, sorteParaGastar } from './regras.mjs';
+import { bonusDoCritico, danoCritico, expressaoDoDano, sorteParaGastar } from './regras.mjs';
 
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(caminho(`templates/chat/${arquivo}`), dados);
 
@@ -60,7 +60,8 @@ export async function testar(ator, { rotulo, partes = [], modo, falar = true, sa
 }
 
 // O dano de uma arma (p. 187): a fórmula da arma (ou outra: 2d6 do autofogo, 3d6 do cartucho), vezes o multiplicador do
-// autofogo (regras.expressaoDoDano). Dois ou mais 6 nos dados é crítico (+5 direto no HP e Lesão Crítica). Com a janela
+// autofogo (regras.expressaoDoDano). Dois ou mais 6 nos dados é crítico (+5 direto no HP, 10 na arma Power de 2077, e
+// Lesão Crítica). Com a janela
 // (perguntar), o modificador do mestre; fechada, null. paraAplicar: o dano rolado à parte (o botão "Dano" da ficha), com
 // os botões do mestre no cartão (combate.aplicarDanoDoCartao e rolarLesaoDoCartao); o do fluxo do ataque, não.
 export async function rolarDano(arma, { falar = false, modo, formula = null, multiplicador = 1, perguntar = false, aoAbrir = null, paraAplicar = false } = {}) {
@@ -76,7 +77,7 @@ export async function rolarDano(arma, { falar = false, modo, formula = null, mul
   const roll = await new Roll(expressao).evaluate();
   const resultados = roll.dice.flatMap(dado => dado.results.filter(r => r.active).map(r => r.result));
   const critico = danoCritico(resultados);
-  const resultado = { roll, total: roll.total, critico, bonus: critico ? BONUS_CRITICO : 0, resultados, formula: expressao };
+  const resultado = { roll, total: roll.total, critico, bonus: critico ? bonusDoCritico(arma.perfil2077) : 0, resultados, formula: expressao };
   if (falar) {
     const botoes = paraAplicar ? [{ acao: 'aplicarDano', rotulo: 'Aplicar dano' }, ...(critico ? [{ acao: 'rolarLesao', rotulo: 'Rolar a lesão' }] : [])] : [];
     const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, botoes, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
