@@ -232,7 +232,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] a NET (da sessão KouArt): o Scanner como 1 Ação NET, o Breach no lugar do Backdoor, a 10ª habilidade de
     Interface (o Quickhack) e o texto novo do ponto de acesso: ciclo 94;
   - [ ] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role;
-  - [ ] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem);
+  - [~] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem) (sessão KouArt,
+    2026-10-18);
   - [ ] a fundação e as opções sem os cyberópticos e as placas de 2077;
   - [x] o catálogo de 2077: a loja da wiki, os tamanhos dos compêndios e o efeito de falha das armas: ciclo 106 (o
     catálogo já era o da loja nova desde o build do ciclo 94; os testes de referência ganharam os números da wiki nova);
