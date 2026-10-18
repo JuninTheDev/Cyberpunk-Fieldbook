@@ -1399,7 +1399,11 @@ test('As Roles do RED (wiki, desde o Mission Kit): as 10 do criador, sem especia
   assert.deepEqual(ROLES_ANTIGAS, { ...roleAliases });
   assert.deepEqual(ROLES_ANTIGAS, { face: 'rockerboy', corpo: 'exec' });
   assert.ok(Array.from(roles).every(role => !role.especializacoes) && ROLES.every(role => !role.especializacoes));
-  assert.match(fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8'), /Com o Mission Kit, valem as 10 do RED, e os personagens que eram Face ou Corpo viram Rockerboy e Exec\./);
+  // A wiki de 2026-10-17 (C29): o Face e o Corpo estão nas "Regras que saíram" do suplemento ("valem as dez Roles do
+  // RED"); antes, "Com o Mission Kit, valem as 10 do RED, e os personagens que eram Face ou Corpo viram Rockerboy e Exec".
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.ok(de2077.includes("section('Regras que saíram'"));
+  assert.ok(de2077.includes('<b>Roles:</b> o Face e o Corpo (valem as dez Roles do RED), o Lawman com Investigator e o desconto do clã do Nomad.'));
   // A Role pelo nome, pelo id ou pela antiga.
   const id = nome => regras.acharRole(nome, ROLES, ROLES_ANTIGAS)?.id ?? null;
   assert.deepEqual(['Nomad', 'nomad', ' Rockerboy ', 'Face', 'face', 'Corpo', 'Exec', 'Cowboy', '', null].map(id), ['nomad', 'nomad', 'rockerboy', 'rockerboy', 'rockerboy', 'exec', 'exec', null, null, null]);
@@ -1463,12 +1467,13 @@ test('Janela de rolagem: os modificadores comuns são os da tabela da wiki (RED 
   assert.equal(new Set(regras.MODIFICADORES_COMUNS.map(m => m.id)).size, 12);
 });
 
-test('Sem situacionais de Role no RED: o Investigator do Lawman e a Interface do Netrunner de 2077 saíram com o Mission Kit (o Investigator ficou como opcional da wiki, com o mestre)', () => {
+test('Sem situacionais de Role no RED: o Investigator do Lawman e a Interface do Netrunner de 2077 saíram com o Mission Kit (a wiki de 2026-10-17: o Investigator nas "Regras que saíram", sem a seção de opcional)', () => {
   assert.equal(regras.situacionaisDeRole, undefined);
   const texto2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
-  assert.match(texto2077, /Ficam, como opcionais, as duas regras abaixo\./);
-  assert.match(texto2077, /section\('Lawman com Investigator \(suplemento de fã\)'/);
-  assert.match(texto2077, /As mudanças do suplemento na Interface do Netrunner dependem da rede de três camadas e estão em Netrunning de 2077\./);
+  // Antes da wiki de 2026-10-17 (C29), o Investigator ficava "como opcional" numa seção própria; agora saiu.
+  assert.ok(texto2077.includes('o Lawman com Investigator e o desconto do clã do Nomad.'));
+  assert.doesNotMatch(texto2077, /section\('Lawman com Investigator \(suplemento de fã\)'/);
+  assert.doesNotMatch(texto2077, /Ficam, como opcionais, as duas regras abaixo\./);
 });
 
 test('Situacionais do CORE no catálogo: cada mudança situacional vira um efeito à parte, com o alvo e o "ligado por padrão" do CORE; o que vale sempre fica no efeito de sempre', () => {

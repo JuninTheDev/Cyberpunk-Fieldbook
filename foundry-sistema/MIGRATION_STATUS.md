@@ -5315,6 +5315,37 @@ Commit anterior: `6f512fa3` (a reserva; o ciclo 107 é o `be5b988a`).
     (F1), toda opção pedindo fundação (F2) e o Sensor Array sem as opções do Cyberaudio (F3).
 - **Próximo:** o C29 que falta: as Roles e as armas de 2077 pelo Mission Kit (com o teste Smart).
 
+### Ciclo 109 (2026-10-18): o C29, parte 5: as Roles pela wiki nova (sessão KouArt)
+
+Commit anterior: `2befb77a` (a reserva; o ciclo 108 é o `d8b7a4c5`).
+
+- **A referência (a wiki de 2026-10-17):**
+  - **o criador (`system-criacao.js`):** as 10 Roles do RED, e as antigas Face e Corpo viram Rockerboy e Exec (o
+    `roleAliases`), como antes;
+  - **a revisão do suplemento (`system-2077.js`, "Regras que saíram"):** "Roles: o Face e o Corpo (valem as dez Roles do
+    RED), o Lawman com Investigator e o desconto do clã do Nomad". Antes, a wiki dizia "Com o Mission Kit, valem as 10 do
+    RED, e os personagens que eram Face ou Corpo viram Rockerboy e Exec" e guardava o Investigator numa seção de
+    opcional, que saiu;
+  - **"Duas Roles na criação" (`system-rules.js`, regra da mesa):** "escolha a Role principal e, se quiser, uma segunda
+    Role diferente [...] Cada Role tem suas habilidades e seu Lifepath; a principal define os STATs, as perícias e o único
+    pacote de equipamento". O criador guarda a segunda em `roleSecundaria` (o id, o Rank, as habilidades, o Lifepath e a
+    oficina).
+- **O que se achou:** o sistema já seguia o criador (as 10 Roles, as antigas, sem situacionais de Role); os testes de
+  referência tinham as frases da wiki antiga. Não muda código.
+- **A segunda Role vai com o C23** ("Mais de uma Role"): é o modelo de dados da ficha (hoje, uma Role só), o import pelo
+  criador e os derivados de cada Role (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo).
+- **Testes (`tests/sistema/regras.test.mjs`):**
+  - **as Roles do RED:** a linha das "Regras que saíram", com o resto como antes (o criador, as antigas, o Moto);
+  - **os situacionais de Role:** o Investigator nas "Regras que saíram", sem a seção de opcional.
+- **Resultados:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 131 de 136 (2 das conhecidas passaram: as Roles e os situacionais; ficam as 5 das armas de 2077);
+  - G4: sem rodar de novo: o ciclo só muda `tests/sistema`, e o sistema e o cenário são os do G4 do ciclo 108 (121 de
+    128, as 7 conhecidas, todas das armas de 2077);
+  - **mutações:** as 2 caíram no G3, e os arquivos voltaram (conferido pelo md5): o Face que vira outra Role (R1) e os
+    situacionais de Role de volta (R2).
+- **Próximo:** o que falta do C29, as armas de 2077 pelo Mission Kit (com o teste Smart); ou o C23, com a segunda Role.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

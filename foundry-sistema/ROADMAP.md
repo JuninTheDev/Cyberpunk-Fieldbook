@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 109). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 110). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -203,6 +203,9 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 - [ ] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE). A wiki guarda, e o cpr-2077 manda na
   ficha "Na mesa".
 - [ ] **C23. Mais de uma Role, e perícias novas:**
+  - a segunda Role da criação (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o criador guarda a
+    `roleSecundaria`, com o Rank, as habilidades, o Lifepath e a oficina): o import, a ficha e os derivados de cada Role
+    (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo);
   - a Role ativa, como no CORE;
   - no CORE, a perícia é item; aqui só existem as do livro e as famílias.
 
@@ -231,7 +234,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   Decisão do usuário (2026-10-17): depois do C9, o catálogo de 2077 pela loja vem primeiro:
   - [x] a NET (da sessão KouArt): o Scanner como 1 Ação NET, o Breach no lugar do Backdoor, a 10ª habilidade de
     Interface (o Quickhack) e o texto novo do ponto de acesso: ciclo 94;
-  - [~] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role (sessão KouArt, 2026-10-18);
+  - [x] as Roles: as do RED pelo criador novo e os situacionais de Role: ciclo 109 (o sistema já seguia o criador; os
+    testes de referência ganharam o texto novo). A segunda Role da criação vai com o C23;
   - [x] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem): ciclo 107 (o de
     2077 vale o do RED, como diz a revisão da wiki);
   - [x] a fundação e as opções sem os cyberópticos e as placas de 2077: ciclo 108 (sem o encaixe das placas; o
