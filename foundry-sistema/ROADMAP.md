@@ -204,7 +204,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - a ciberpsicose.
 - [ ] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE). A wiki guarda, e o cpr-2077 manda na
   ficha "Na mesa".
-- [ ] **C23. Mais de uma Role, e perícias novas:**
+- [~] **C23. Mais de uma Role, e perícias novas:** em andamento (sessão KouArt, 2026-10-18).
   - a segunda Role da criação (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o criador guarda a
     `roleSecundaria`, com o Rank, as habilidades, o Lifepath e a oficina): o import, a ficha e os derivados de cada Role
     (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo);
