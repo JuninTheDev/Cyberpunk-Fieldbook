@@ -5803,6 +5803,56 @@ Os ciclos 112 a 116 do C29 e a reserva do C23 da sessão KouArt foram integrados
   descritivas de instalação continuam com o mestre. As janelas são registradas e ajustadas pela ficha. A campanha
   real e o servidor não foram alterados.
 
+### Ciclo 118 (2026-10-18): o C23, parte 1: a segunda Role no modelo, nos derivados e na wiki (sessão KouArt)
+
+Commit anterior: `a913dee3` (a reserva do C16 da sessão Codex). O ciclo 117 é o `dfaac5ce` (o C15 da sessão Codex), e a
+reserva do C23, o `76833a8d`.
+
+- **A referência:**
+  - **a wiki de 2026-10-17 (`system-rules.js`, "Duas Roles na criação", regra da mesa):** "No criador, escolha a Role
+    principal e, se quiser, uma segunda Role diferente. Combine com o mestre os Ranks de cada uma, de 1 a 10. Cada Role
+    tem suas habilidades e seu Lifepath; a principal define os STATs, as perícias e o único pacote de equipamento e
+    orçamento inicial." E "O padrão de um personagem antigo continua sendo uma Role no Rank 4.";
+  - **o `personagem-roles.js` e o `criador.js` da wiki:** a segunda fica na `roleSecundaria` (o id, o Rank, as
+    habilidades, o Lifepath e a oficina); o resultado manda a lista `roles` (a principal primeiro) e a `role`; a ficha da
+    mesa volta com a lista `roles`;
+  - **a API da wiki (`api-personagens.js`):** a um Foundry, a ficha de um personagem de duas Roles só sai com o
+    `?roles=2` ("a importação de duas Roles no Foundry 14 ainda não está disponível", sem ele);
+  - **o `foundry-2077` do master:** pede `?roles=2` em todo GET da ficha, importa as duas (uma por item de Role do CORE,
+    a principal como a ativa) e manda a lista `roles` na ficha da mesa.
+- **O que muda:**
+  - **`dados.mjs`:** a `roleSecundaria` (o nome, o Rank e as habilidades; o nome vazio é nenhuma); `system.roles` (as
+    que têm nome); os derivados pelas duas (a principal conta sempre, mesmo sem o nome, como antes);
+  - **`regras.mjs`:** `derivadosDasRoles` (a Consciência de Combate do Solo, o Moto do Nomad, as perícias do Medtech e a
+    Interface do Netrunner, de qualquer uma das duas);
+  - **`wiki.mjs`:** o `?roles=2` em todo GET da ficha (o import, a entrega dos pedidos, a migração da mesa); o import
+    com as duas Roles do resultado; o envio da ficha com a lista `roles` (e a `role`, para quem só lê uma); a migração
+    da mesa com a lista `roles` do Foundry 12.
+- **Fica para as partes seguintes:** a aba Role da ficha com as duas e as rolagens de habilidade da segunda (hoje, a
+  aba mostra a principal); a Role ativa, como no CORE; as perícias novas. Fica de fora do C23 o `?locais=1` (os locais de
+  instalação do cyberware): a wiki ainda recusa ao Foundry 14 o personagem que tem local escolhido.
+- **Testes:**
+  - **G3:** o teste novo das duas Roles (o texto da wiki; o `personagem-roles.js` da wiki: a lista das duas, a segunda
+    diferente da principal, a de antes no Rank 4; os derivados do Solo com o Netrunner, do Netrunner com o Solo, do
+    Medtech com o Nomad; uma Role só dá o de antes; sem Role, nada);
+  - **G4:** o personagem de duas Roles criado na wiki (Solo 5 e Netrunner 3) e o passo do import (a segunda Role, a
+    Interface 3 e as Ações NET dela, a Consciência de Combate do Solo; a ficha manda as duas para a wiki; a migração da
+    mesa as traz de volta). Na primeira rodada, 4 passos do Solo e das munições quebraram: eles põem as habilidades do
+    Solo na Atiradora sem o nome da Role, e os derivados só contavam as Roles com nome. A principal voltou a contar
+    sempre.
+- **Resultados:**
+  - antes da integração com o ciclo 117 da sessão Codex (o C15, veículos no combate): G1 70 arquivos e G2 sem erros;
+    G3 151 de 151; G4 143 de 143. Ele publicou o 117 enquanto este rodava, e este passou a 118; a mescla foi automática
+    no código (o `wiki.mjs` e o `dados.mjs` dos dois) e só o registro conflitou;
+  - depois dela: G1 75 arquivos e G2 sem erros; G3 169 de 169; G4 149 de 149;
+  - **mutações:** as 9 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (150 de 151 cada): a Interface só do Netrunner principal (R1), o Moto só do Nomad principal (R2) e a
+      Consciência de Combate só pela principal (R3);
+    - no G4, no passo do import: sem o `?roles=2` (R4: a wiki recusa), o import sem a segunda (R5), a ficha sem a lista
+      `roles` (R6), a migração da mesa só com a primeira (R7) e a ficha sem os derivados da segunda (R8); a principal só
+      com o nome (R9) caiu nos 4 passos que tinham quebrado na primeira rodada.
+- **Próximo:** a parte 2 do C23, a ficha (a aba Role com as duas, as rolagens de cada uma e o cabeçalho).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

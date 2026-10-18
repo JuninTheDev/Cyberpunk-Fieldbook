@@ -4,6 +4,7 @@
 // Uso: node --test "tests/sistema/*.test.mjs"   (o glob: com a pasta, o Node 24 tenta rodar a pasta como arquivo)
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -771,6 +772,37 @@ test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os do
 });
 
 // ---------------- Ficha ----------------
+test('Duas Roles (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o personagem-roles.js da wiki): a segunda Role tem o Rank e as habilidades dela, e os derivados das duas valem na ficha (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo, as perícias do Medtech)', () => {
+  const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
+  assert.ok(regrasDaWiki.includes("section('Duas Roles na criação', 'regra da mesa', '<p>No criador, escolha a Role principal e, se quiser, uma segunda Role diferente. Combine com o mestre os Ranks de cada uma, de 1 a 10. Cada Role tem suas habilidades e seu Lifepath; a principal define os STATs, as perícias e o único pacote de equipamento e orçamento inicial."));
+  // A wiki guarda a segunda na roleSecundaria e manda as duas na lista "roles" do resultado (a principal primeiro).
+  const papeis = createRequire(import.meta.url)(path.join(raiz, 'personagem-roles.js'));
+  const doc = papeis.normalizar({ role: 'solo', rankRole: 5, habilidades: { 'Initiative Reaction': 3 }, roleSecundaria: { id: 'netrunner', rank: 3 } });
+  assert.deepEqual(papeis.lista(doc).map(role => [role.id, role.rank]), [['solo', 5], ['netrunner', 3]]);
+  assert.throws(() => papeis.normalizar({ role: 'solo', roleSecundaria: { id: 'solo', rank: 2 } }), /diferente da principal/);
+  assert.deepEqual(papeis.lista({ role: 'nomad' }).map(role => [role.id, role.rank]), [['nomad', 4]], 'o personagem antigo: uma Role no Rank 4');
+  // Os derivados: o Solo principal e o Netrunner segundo.
+  const soloNetrunner = regras.derivadosDasRoles([{ id: 'solo', rank: 5, habilidades: { 'Initiative Reaction': 3, 'Damage Deflection': 2 } }, { id: 'netrunner', rank: 3, habilidades: {} }], HABILIDADES_DE_ROLE);
+  assert.equal(soloNetrunner.rankDeInterface, 3);
+  assert.deepEqual([soloNetrunner.consciencia.iniciativa, soloNetrunner.consciencia.deflexao], [3, 1]);
+  assert.deepEqual(soloNetrunner.bonusDeRole, {});
+  // O Netrunner principal e o Solo segundo: a Interface e a Consciência de Combate, ao contrário.
+  const netrunnerSolo = regras.derivadosDasRoles([{ id: 'netrunner', rank: 6, habilidades: {} }, { id: 'solo', rank: 2, habilidades: { 'Threat Detection': 2 } }], HABILIDADES_DE_ROLE);
+  assert.deepEqual([netrunnerSolo.rankDeInterface, netrunnerSolo.consciencia.percepcao], [6, 2]);
+  // O Nomad segundo: o Moto pelo Rank dele; o Medtech segundo: as perícias das especialidades dele.
+  const comNomad = regras.derivadosDasRoles([{ id: 'medtech', rank: 4, habilidades: { Surgery: 2, 'Medical Tech (Pharmaceuticals)': 1 } }, { id: 'nomad', rank: 2, habilidades: {} }], HABILIDADES_DE_ROLE);
+  assert.deepEqual(comNomad.bonusDeRole['drive-land-vehicle'], { rotulo: 'Moto', valor: 2 });
+  assert.deepEqual([comNomad.periciasDeRole['Surgery Skill'], comNomad.periciasDeRole['Medical Tech Skill']], [4, 1]);
+  assert.equal(comNomad.rankDeInterface, 0);
+  // Uma Role só dá o mesmo de antes (as contas de cada derivado); sem Role, nada.
+  const solo = { id: 'solo', rank: 4, habilidades: { 'Precision Attack': 3 } };
+  assert.deepEqual(regras.derivadosDasRoles([solo], HABILIDADES_DE_ROLE), {
+    consciencia: regras.consciencia(solo.habilidades), bonusDeRole: regras.bonusDeRole({ roleId: 'solo', rank: 4 }),
+    periciasDeRole: regras.periciasDerivadas(HABILIDADES_DE_ROLE.solo?.derivadas, solo.habilidades), rankDeInterface: 0
+  });
+  assert.deepEqual(regras.derivadosDasRoles([], HABILIDADES_DE_ROLE), { consciencia: regras.consciencia({}), bonusDeRole: {}, periciasDeRole: {}, rankDeInterface: 0 });
+});
+
 test('Ficha: as Roles e as habilidades de Role (Solo, Tech, Medtech) são as do criador da wiki; as da Consciência de Combate são as que as regras leem', () => {
   const contexto = { window: {} };
   for (const arquivo of ['system-catalog.js', 'system-rules.js', 'system-criacao.js']) vm.runInNewContext(fs.readFileSync(path.join(raiz, arquivo), 'utf8'), contexto);

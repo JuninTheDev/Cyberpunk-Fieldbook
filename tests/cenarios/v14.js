@@ -38,6 +38,20 @@ module.exports = async ({ edge, servidores, r }) => {
     return [Boolean(deck) && noDeck.length >= 4, `${itens.length} itens · deck ${deck?.id} · no deck: ${noDeck.map(i => `${i.id}×${i.qtd}`).join(', ')}`];
   });
 
+  let duasRoles;
+  await r.passo('wiki: Solo (Rank 5) com uma segunda Role, Netrunner (Rank 3), pela regra da mesa "Duas Roles na criação"', async () => {
+    const { personagem } = await api('/api/personagens', 'POST', {
+      metodo: 'ratoderua', sorteio: { linha: 6 }, lingua: 'Portuguese', casa: 'Heywood', nome: 'Teste Duas Roles', apelido: 'Dupla', role: 'solo', rankRole: 5,
+      habilidades: { 'Initiative Reaction': 3 }, roleSecundaria: { id: 'netrunner', rank: 3 }, lifepath
+    });
+    await edge.ir(`${wiki}/#criador/${personagem.id}`, 1200);
+    await edge.evaluate(`document.querySelector('.cc-steps [data-step="7"]').click()`);
+    for (let i = 0; i < 30 && !/Salvo/.test(await texto('#cc-save')); i++) await edge.sleep(200);
+    duasRoles = (await api(`/api/personagens/${personagem.id}`)).personagem;
+    const roles = (duasRoles.resultado?.roles || []).map(role => `${role.id} ${role.rank}`);
+    return [roles.join() === 'solo 5,netrunner 3', `roles do resultado: ${roles.join(', ')}`];
+  });
+
   let nomad;
   await r.passo('wiki: Nomad (Rato de Rua) com dois veículos da família (o carro com Chassis pesado e Upgrade de assento) e uma arma de 2077 comprada na loja', async () => {
     const { personagem } = await api('/api/personagens', 'POST', {
@@ -6568,6 +6582,34 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.evaluate(`game.actors.find(a => a.getFlag('${S}', 'wiki'))?.sheet.render({ force: true })`);
     await edge.sleep(1200);
     await edge.shot('importado');
+
+    await r.passo('wiki: importa o personagem de duas Roles (Solo 5 e Netrunner 3): a segunda Role na ficha, com a Interface e as Ações NET dela; a ficha manda as duas para a wiki, e a migração da mesa as traz de volta', async () => {
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const { ator } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(duasRoles.id)}, '');
+          const s = ator.system;
+          const importado = {
+            role: [s.role.nome, s.role.rank, s.role.habilidades['Initiative Reaction'] ?? 0], segunda: [s.roleSecundaria.nome, s.roleSecundaria.rank],
+            interface: s.rankDeInterface, acoes: s.acoesDeNet, acoesDoRank3: game.system.api.regras.acoesDeNet(3), iniciativa: s.consciencia.iniciativa, roles: s.roles.map(role => role.id)
+          };
+          await game.system.api.wiki.mandarFicha(ator);
+          return importado;
+        })()`);
+        const doc = (await api(`/api/personagens/${duasRoles.id}`)).personagem;
+        const mesa = (doc.mesa?.roles || []).map(role => `${role.id ?? role.nome} ${role.rank}`);
+        const daMesa = await edge.evaluate(`(async () => {
+          const { ator } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(duasRoles.id)}, '');
+          const s = ator.system;
+          return { role: [s.role.nome, s.role.rank], segunda: [s.roleSecundaria.nome, s.roleSecundaria.rank], interface: s.rankDeInterface };
+        })()`);
+        const ok = info.role.join() === 'Solo,5,3' && info.segunda.join() === 'Netrunner,3' && info.interface === 3 && info.acoes === info.acoesDoRank3 && info.iniciativa === 3
+          && info.roles.join() === 'solo,netrunner' && mesa.join() === 'solo 5,netrunner 3'
+          && daMesa.role.join() === 'Solo,5' && daMesa.segunda.join() === 'Netrunner,3' && daMesa.interface === 3;
+        return [ok, JSON.stringify({ info, mesa, daMesa })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => a.name === 'Teste Duas Roles')) await ator.delete(); return true; })()`);
+      }
+    });
 
     await r.passo('ficha nova: o cabeçalho (Role, Rank, nome e apelido da wiki), a aba Role com as habilidades do Solo em português e o efeito delas, a aba Vida com o Lifepath da wiki, o painel geral (armas equipadas, SP, vitais) e a perícia de família criada e tirada pela ficha; as abas Combate, Equipamento, Cyberware, Role e Vida no jeito das maquetes (a iniciativa, o dinheiro, a Humanidade e a Role na coluna dos números, com 290 px; as armas, as lesões, a munição, o cyberware e as especialidades com as caixas dos pontos; o Lifepath em cinco painéis; as notas da Role e as de ciberpsicose, que gravam)', async () => {
       const lp = solo.resultado.lifepath;

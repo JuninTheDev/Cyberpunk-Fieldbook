@@ -100,6 +100,21 @@ export function bonusDeRole({ roleId, rank }) {
   return Object.fromEntries(PERICIAS_DO_MOTO.map(id => [id, { rotulo: 'Moto', valor }]));
 }
 
+// As Roles do personagem: a principal e, pela regra da mesa ("Duas Roles na criação", a wiki de 2026-10-17), a segunda,
+// cada uma com o Rank e as habilidades dela ([{ id, rank, habilidades }]; habilidadesDeRole: o HABILIDADES_DE_ROLE do
+// gerado). Os derivados de cada Role (a Consciência de Combate do Solo, o Moto do Nomad, as perícias do Medtech, a
+// Interface do Netrunner) valem na ficha; como cada Role tem as habilidades dela, os das duas somam sem se repetir.
+export function derivadosDasRoles(roles = [], habilidadesDeRole = {}) {
+  const habilidades = Object.assign({}, ...roles.map(role => role.habilidades ?? {}));
+  const netrunner = roles.find(role => role.id === 'netrunner');
+  return {
+    consciencia: consciencia(habilidades),
+    bonusDeRole: Object.assign({}, ...roles.map(role => bonusDeRole({ roleId: role.id, rank: role.rank }))),
+    periciasDeRole: Object.assign({}, ...roles.map(role => periciasDerivadas(habilidadesDeRole[role.id]?.derivadas, role.habilidades))),
+    rankDeInterface: netrunner ? Math.max(0, Math.trunc(Number(netrunner.rank) || 0)) : 0
+  };
+}
+
 // Facedown (RED p. 194; a wiki, "Reputação e facedown" e o cartão rápido; o CPRFacedownRoll do CORE): COOL + Reputação +
 // 1d10, um teste enfrentado. A reputação de covarde conta negativa: a Reputação da ficha pode ser negativa. O que a wiki
 // diz do resultado vai no cartão.

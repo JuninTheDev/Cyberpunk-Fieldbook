@@ -40,6 +40,13 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
         // As notas da Role (as maquetes do usuário): texto livre, na aba Role.
         notas: texto()
       }),
+      // A segunda Role (a regra da mesa "Duas Roles na criação"; o C23): o nome vazio é nenhuma. A principal define os
+      // STATs, as perícias e o pacote; a segunda tem o Rank e as habilidades dela.
+      roleSecundaria: new fields.SchemaField({
+        nome: texto(),
+        rank: inteiro(0, { min: 0 }),
+        habilidades: new fields.TypedObjectField(inteiro(0))
+      }),
       // Sobe 1 a cada Death Save que passa; volta a zero quando o personagem estabiliza (botão na ficha).
       deathSave: new fields.SchemaField({ penalidade: inteiro(0, { min: 0 }) }),
       dinheiro: inteiro(0),
@@ -89,15 +96,16 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     this.ferimento = regras.estadoDeFerimento(this.hp.value, this.hp.max);
     // Mortalmente ferido: −6 MOVE. As lesões, a armadura e o ferimento tiram MOVE, mas o mínimo é 1 (wiki).
     a.move.valor = regras.moveFinal(a.move.valor, this.ferimento.chave === 'mortal');
-    // Consciência de Combate do Solo (pelos pontos de cada habilidade da Role).
-    this.consciencia = regras.consciencia(this.role.habilidades);
-    // Os bônus de Role nas perícias (o Moto do Nomad), como o item de Role do CORE, e as perícias que só o Medtech tem (a
-    // Cirurgia e a Tecnologia Médica), pelas especialidades de Medicina.
-    const roleId = roleDaWiki(this.role.nome)?.id;
-    this.bonusDeRole = regras.bonusDeRole({ roleId, rank: this.role.rank });
-    this.periciasDeRole = regras.periciasDerivadas(HABILIDADES_DE_ROLE[roleId]?.derivadas, this.role.habilidades);
-    // A Interface é o Rank do Netrunner (só ele tem), e ela dá as Ações NET por turno.
-    this.rankDeInterface = roleId === 'netrunner' ? Math.max(0, this.role.rank) : 0;
+    // As Roles (a principal e a segunda) e o que cada uma dá: a Consciência de Combate do Solo (pelos pontos de cada
+    // habilidade), os bônus nas perícias (o Moto do Nomad, como o item de Role do CORE), as perícias que só o Medtech tem
+    // (a Cirurgia e a Tecnologia Médica, pelas especialidades de Medicina) e a Interface, que é o Rank do Netrunner e dá as
+    // Ações NET por turno.
+    // A principal conta sempre (as habilidades valem mesmo sem o nome da Role, como antes); a segunda, se tiver nome.
+    // this.roles: as que têm nome (o que vai para a wiki).
+    const comoRole = role => ({ id: roleDaWiki(role.nome)?.id ?? null, nome: role.nome, rank: role.rank, habilidades: role.habilidades });
+    const roles = [comoRole(this.role), ...(this.roleSecundaria.nome ? [comoRole(this.roleSecundaria)] : [])];
+    this.roles = roles.filter(role => role.nome);
+    Object.assign(this, regras.derivadosDasRoles(roles, HABILIDADES_DE_ROLE));
     this.acoesDeNet = regras.acoesDeNet(this.rankDeInterface);
     // Editor de dor (supressão de dor): tira só a penalidade de gravemente ferido, não a de mortalmente ferido.
     this.penalidade = regras.penalidadeDoFerimento(this.ferimento, this.bonus.supressaoDeDor);

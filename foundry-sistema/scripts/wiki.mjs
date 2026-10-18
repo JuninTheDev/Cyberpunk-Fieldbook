@@ -45,9 +45,11 @@ export function registrarWiki() {
 const wikiUrl = () => String(game.settings.get(SISTEMA, 'wikiUrl') || enderecoPadraoDaWiki(globalThis.location)).trim().replace(/\/+$/, '');
 // Com o cookie da wiki (o mestre entra na wiki neste navegador) e sem cache: a ficha muda o tempo todo.
 async function wikiFetch(rota, { method = 'GET', body } = {}) {
+  // A ficha de um personagem: com o "roles=2", a wiki manda também o de duas Roles (o C23; sem ele, recusa a um Foundry).
+  const lida = method === 'GET' && /^\/api\/personagens\/[^/?]+$/.test(rota) ? `${rota}?roles=2` : rota;
   let resposta;
   try {
-    resposta = await fetch(`${wikiUrl()}${rota}`, { method, credentials: 'include', cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    resposta = await fetch(`${wikiUrl()}${lida}`, { method, credentials: 'include', cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
   } catch {
     throw new Error(`Não consegui falar com a wiki em ${wikiUrl()}. Confira o endereço nas configurações do sistema.`);
   }
@@ -68,6 +70,24 @@ function periciaDaWiki({ nome, nivel, base }) {
   const familia = FAMILIA_POR_NOME[familiaEn] || FAMILIA_POR_NOME[base];
   if (!familia) return null;
   return [`${familia}-${slug(especifico || nome)}`, { nivel, familia, nome: especifico || nome }];
+}
+
+// As Roles do resultado do criador (a lista "roles"; o de antes só tem a "role"): no máximo duas, a principal primeiro,
+// com o Rank (a de antes, 4) e as habilidades.
+function rolesDoResultado(r, notas) {
+  const lista = Array.isArray(r.roles) && r.roles.length ? r.roles : [r.role].filter(Boolean);
+  if (lista.length > 2) notas.push(`A wiki mandou ${lista.length} Roles: ficaram as duas primeiras.`);
+  return lista.slice(0, 2).map(role => ({
+    nome: nomeDaRole(role.nome || role.id), rank: Number(role.rank) || 4,
+    habilidades: Object.fromEntries((role.habilidades || []).map(h => (Array.isArray(h) ? [h[0], Number(h[1]) || 0] : [h.nome, Number(h.rank) || 0])))
+  }));
+}
+
+// As Roles da ficha da mesa: a lista "roles" do Foundry 12 (a principal primeiro) ou, na de antes, a "role".
+function rolesDaMesa(m, r, notas) {
+  const lista = Array.isArray(m.roles) && m.roles.length ? m.roles : [m.role ?? r.role].filter(Boolean);
+  const [principal, segunda] = rolesDoResultado({ roles: lista }, notas);
+  return { role: principal ?? { nome: '', rank: 4, habilidades: {} }, roleSecundaria: segunda ?? { nome: '', rank: 0, habilidades: {} } };
 }
 
 // Munição e inventário entram em pilha (um item com a quantidade); o resto, em cópias separadas.
@@ -169,7 +189,8 @@ export async function importarPersonagem(id, donoId = '') {
     const par = periciaDaWiki(p);
     if (par) pericias[par[0]] = par[1]; else notas.push(`Perícia ${p.nome} não existe neste sistema.`);
   }
-  const habilidades = Object.fromEntries((r.role?.habilidades || []).map(h => [h.nome, h.rank]));
+  // As Roles do resultado: a principal e, se tiver, a segunda (a regra da mesa).
+  const [principal, segunda] = rolesDoResultado(r, notas);
   const ownership = { default: 0, ...(donoId ? { [donoId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } : {}) };
   const notasHtml = [doc.aparencia && `<p>${foundry.utils.escapeHTML(doc.aparencia)}</p>`, doc.notas && `<p>${foundry.utils.escapeHTML(doc.notas)}</p>`,
     `<p><i>Criado na wiki${doc.apelido ? ` (${foundry.utils.escapeHTML(doc.apelido)})` : ''}. Importado em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`].filter(Boolean).join('');
@@ -183,7 +204,8 @@ export async function importarPersonagem(id, donoId = '') {
       humanidade: { value: Number(r.humanidade?.atual ?? r.humanidade?.max) || 0 },
       sorte: { value: stat('luck') },
       pericias,
-      role: { nome: nomeDaRole(r.role?.nome), rank: Number(r.role?.rank) || 4, habilidades },
+      role: principal ?? { nome: '', rank: 4, habilidades: {} },
+      roleSecundaria: segunda ?? { nome: '', rank: 0, habilidades: {} },
       dinheiro: Number(r.dinheiro?.saldo) || 0,
       extratos: extratosIniciais({ dinheiro: Number(r.dinheiro?.saldo) || 0 }, 'Dinheiro inicial (criador da wiki)'),
       apelido: doc.apelido || '',
@@ -256,6 +278,7 @@ export function fichaParaAWiki(ator) {
     hp: { atual: s.hp.value, max: s.hp.max }, humanidade: { atual: s.humanidade.value, max: s.humanidade.max }, sorte: { atual: s.sorte.value, max: s.sorte.max },
     sp: { cabeca: s.armadura.cabeca.sp, corpo: s.armadura.corpo.sp }, dinheiro: s.dinheiro, ip: s.pontosDeMelhoria, reputacao: s.reputacao,
     role: s.role.nome ? { nome: s.role.nome, rank: s.role.rank, habilidades: Object.entries(s.role.habilidades) } : null,
+    roles: s.roles.map(role => ({ ...(role.id ? { id: role.id } : {}), nome: role.nome, rank: role.rank, habilidades: Object.entries(role.habilidades) })),
     pericias: Object.entries(s.pericias).filter(([, propria]) => propria.nivel > 0)
       .map(([id, propria]) => ({ nome: nomeDaPericia(id, propria), nivel: propria.nivel, stat: s.pericia(id).atributo.toUpperCase() })),
     lesoes: ator.items.filter(item => item.type === 'lesao').map(item => item.name),
@@ -478,10 +501,7 @@ export async function importarDaMesa(id, donoId = '') {
       atributos: Object.fromEntries(ATRIBUTOS.map(chave => [chave, { valor: statBase(chave) }])),
       hp: { value: Number(m.hp?.atual) || 0 }, humanidade: { value: Number(m.humanidade?.atual) || 0 }, sorte: { value: Number(m.sorte?.atual) || 0 },
       pericias,
-      role: {
-        nome: nomeDaRole(m.role?.nome || r.role?.nome), rank: Number(m.role?.rank) || 4,
-        habilidades: Object.fromEntries((m.role?.habilidades || []).map(([nome, rank]) => [nome, Number(rank) || 0]))
-      },
+      ...rolesDaMesa(m, r, notas),
       dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0,
       extratos: extratosIniciais({ dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0 }, 'Migrado da ficha da mesa do Foundry 12'),
       apelido: doc.apelido || '', lifepath: lifepathDaWiki(r.lifepath),
