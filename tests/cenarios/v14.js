@@ -4146,11 +4146,14 @@ module.exports = async ({ edge, servidores, r }) => {
           const c = capanga._source;
           const lugar = [[c.x + 100, c.y], [c.x, c.y + 100], [c.x, c.y - 100], [c.x - 100, c.y]].find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y));
           const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
-          const [neuroport, selfIce, deck] = await capanga.actor.createEmbeddedDocuments('Item', [instalado('cyberware-2077:neuroport'), instalado('cyberware-2077:self-ice'),
+          // O deck pelo tipo: o createEmbeddedDocuments não garante a ordem do que devolve (QUALITY_GATES; no ciclo 108, o
+          // Hellhound foi parar no id do Self-ICE).
+          const criados = await capanga.actor.createEmbeddedDocuments('Item', [instalado('cyberware-2077:neuroport'), instalado('cyberware-2077:self-ice'),
             foundry.utils.mergeObject(foundry.utils.deepClone(cat['core_gear:cyberdeck']), { 'system.uso': 'equipado' })]);
+          const deck = criados.find(i => i.type === 'cyberdeck');
           const [hellhound] = await capanga.actor.createEmbeddedDocuments('Item', [foundry.utils.mergeObject(foundry.utils.deepClone(cat['black-ice:hellhound']), { 'system.instaladoEm': deck.id })]);
           await __esperar(() => canvas.tokens.get(token.id));
-          return { ator: ator.id, token: token.id, lugar, itens: [neuroport.id, selfIce.id, deck.id, hellhound.id], hellhound: hellhound.id };
+          return { ator: ator.id, token: token.id, lugar, itens: [...criados.map(i => i.id), hellhound.id], hellhound: hellhound.id };
         })()`);
         const nCartoes = `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).length`;
         const ultimo = `(() => { const m = game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).at(-1); return m && { ...m.getFlag('${S}', 'neuroport'), notas: [...new DOMParser().parseFromString(m.content, 'text/html').querySelectorAll('p.nota')].map(p => p.textContent) }; })()`;

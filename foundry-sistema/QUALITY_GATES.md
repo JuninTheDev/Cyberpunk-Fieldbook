@@ -39,16 +39,15 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 A wiki do master passou a ter "uma regra só na mesa" (o Mission Kit sobre o RED, sem as regras do suplemento de fã) e
 revisou os itens do suplemento. Os testes de referência pegaram cada diferença. Cada uma é uma parte do C29 do
 ROADMAP, e os testes não se tiram nem se mudam para passar:
-- **G3 (4):**
+- **G3 (3):**
   - as Roles do RED e os situacionais de Role;
-  - a fundação e as opções do cyberware;
   - o teste Smart;
 - **G4 (2):**
   - os dois canos de 2077;
   - o "sem erros de JS na página" (o passo da arma Smart cria o Smart Link, que saiu da wiki);
 - **Já saíram:** a Interface do Netrunner e o ponto de acesso à NET (G3, ciclo 94); o catálogo de 2077, o efeito de
   falha das armas (G3) e os tamanhos dos compêndios (G4), no ciclo 106; o TeleOptics e o passo 1 da migração (G3) e a
-  janela de rolagem (G4), no ciclo 107;
+  janela de rolagem (G4), no ciclo 107; a fundação e as opções do cyberware (G3), no ciclo 108;
 - **G5, da wiki do master:** também falham num clone limpo do master (ciclo 93): o `criador` (2), o `cyberware` (6) e
   o `reversao` (o clone com o `campaign-map.js` antigo).
 
@@ -156,7 +155,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   lista que volta nem sempre vem na ordem pedida. Pegar cada um pela posição dá falhas que vêm e vão: no ciclo 43, o passo
   da iniciativa trocou o ICE e o demônio (e pareceu, errado, que a fila de turnos saía na ordem antiga depois do
   `resetAll`; a lição registrada naquele ciclo foi corrigida no 45); no ciclo 45, o do dano do Black ICE marcou o Imp
-  no lugar do Hellhound. Crie um por vez, ou ache cada um pelo `actorId` (o token) e pelo `tokenId` (o combatente).
+  no lugar do Hellhound. Crie um por vez, ou ache cada um pelo `actorId` (o token) e pelo `tokenId` (o combatente). Vale
+  também para os itens: no ciclo 108, o passo do Neuroport como arquitetura (do ciclo 105) pegou o deck do Capanga pela
+  posição, e o Hellhound foi parar no id do Self-ICE; o passo acha o deck pelo tipo.
 - **A limpeza de um passo com os ganchos do sistema:** apagar um ator pode fazer o mestre apagar outras coisas (apagar
   o netrunner tira o token do Black ICE rezzado dele). Na limpeza, tire os tokens antes dos atores; senão, a limpeza e o
   gancho apagam o mesmo token, e o passo cai com "Token … does not exist" (ciclo 46).

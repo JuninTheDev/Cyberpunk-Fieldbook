@@ -5285,6 +5285,36 @@ Commit anterior: `c00c3857` (a reserva; o ciclo 106 é o `87c44b4b`).
   de um do RED; agora diz "vale o do RED". A dúvida ganhou a mudança.
 - **Próximo:** outra parte do C29 (a fundação e as opções, as Roles ou as armas de 2077 pelo Mission Kit).
 
+### Ciclo 108 (2026-10-18): o C29, parte 4: a fundação e as opções sem os cyberópticos e as placas de 2077 (sessão KouArt)
+
+Commit anterior: `6f512fa3` (a reserva; o ciclo 107 é o `be5b988a`).
+
+- **A referência (a revisão do suplemento na wiki de 2026-10-17, `system-2077.js`):**
+  - "o Basic Kiroshi Optics (o Cybereye, com opções de graça)", na lista do "Cyberware que repete um do RED (vale o do
+    RED)";
+  - "Skin Weave de 2077 e as placas Carapace, Countershell, Nano-plating, ProxiShield e RangeGuard: o sistema de placas
+    do suplemento, que o RED não tem", na lista do que sai;
+  - o Neuroport continua "com 5 slots de opção". Os oito saíram da loja e do catálogo (o ciclo 106), e o Neuroport é a
+    única fundação de 2077.
+- **Implementado (`regras.mjs`):** sem o encaixe das placas. O Skin Weave e o Subdermal Armour de 2077 recebiam só as
+  opções de placa, e as placas pediam fundação; agora a opção vai numa fundação do mesmo tipo (o Sensor Array recebe as
+  do Cyberaudio, como antes), e as de categoria não pedem fundação. A placa que um ator ainda tenha (o catálogo a tinha
+  como cyberware externo) fica sem pedir fundação, como o cyberware externo do RED.
+- **Testes (`tests/sistema/regras.test.mjs`, a fundação e as opções, pela wiki nova):** os trechos da revisão (o Kiroshi
+  e as placas); os oito fora do catálogo; os slots das fundações, com o Neuroport a única de 2077; o Neuroport recebe a
+  neuralware e não a do Cyberaudio; a placa antiga não pede fundação.
+- **Resultados:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 129 de 136 (1 das conhecidas passou: a fundação e as opções; ficam 7);
+  - G4: 121 de 128 (as 7 conhecidas, na segunda rodada). Na primeira rodada, o passo do Neuroport como arquitetura (do
+    ciclo 105) falhou sem relação com a mudança: ele pegava o deck do Capanga pela posição no que o
+    `createEmbeddedDocuments` devolve, e o Hellhound foi
+    instalado no id do Self-ICE. A lição já estava no QUALITY_GATES (ciclo 43), para tokens e combatentes; ela ganhou os
+    itens, e o passo acha o deck pelo tipo;
+  - **mutações:** as 3 caíram no G3 (a regra é pura), e o arquivo voltou (conferido pelo md5): a placa de antes de volta
+    (F1), toda opção pedindo fundação (F2) e o Sensor Array sem as opções do Cyberaudio (F3).
+- **Próximo:** o C29 que falta: as Roles e as armas de 2077 pelo Mission Kit (com o teste Smart).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

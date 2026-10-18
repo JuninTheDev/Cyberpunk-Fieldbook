@@ -575,17 +575,16 @@ export function vezesEstrangulando(anterior, { combate = null, rodada = null } =
 
 // ---------------- Fundação e opções do cyberware ----------------
 // A wiki (system-catalog.js): "Um implante-base abre slots para opções compatíveis; Fashionware, cyberware interno e
-// externo usam slots de categoria". A opção vai numa fundação do mesmo tipo, menos: o Sensor Array, que "acrescenta cinco
-// slots de opção ao Cyberaudio" (recebe as opções do Cyberaudio), e as placas base de 2077 (Skin Weave e Subdermal Armour),
-// que recebem só as opções de placa ("não ocupam os slots de cyberware externo"). Cada item: { tipo, catalogo, slots,
-// tamanho } (catalogo: o id do catálogo, quando há).
+// externo usam slots de categoria". A opção vai numa fundação do mesmo tipo, menos o Sensor Array, que "acrescenta cinco
+// slots de opção ao Cyberaudio" (recebe as opções do Cyberaudio). As placas de 2077 (o Skin Weave e as opções de placa)
+// saíram com a wiki de 2026-10-17 ("o sistema de placas do suplemento, que o RED não tem"; C29), e o Kiroshi de 2077
+// "vale o Cybereye". Cada item: { tipo, catalogo, slots, tamanho } (catalogo: o id do catálogo, quando há).
 export const TIPOS_DE_CATEGORIA = ['fashionware', 'cyberwareInternal', 'cyberwareExternal'];
-const ENCAIXE_DA_FUNDACAO = { 'core_cyberware:sensor-array': 'cyberAudioSuite', 'cyberware-2077:skin-weave': 'placa', 'cyberware-2077:subdermal-armour-2077': 'placa' };
-const OPCOES_DE_PLACA = ['cyberware-2077:carapace', 'cyberware-2077:countershell', 'cyberware-2077:nano-plating', 'cyberware-2077:proxishield', 'cyberware-2077:rangeguard'];
+const ENCAIXE_DA_FUNDACAO = { 'core_cyberware:sensor-array': 'cyberAudioSuite' };
 export const encaixeDaFundacao = ({ tipo, catalogo = '' }) => ENCAIXE_DA_FUNDACAO[catalogo] ?? tipo;
-export const encaixeDaOpcao = ({ tipo, catalogo = '' }) => (OPCOES_DE_PLACA.includes(catalogo) ? 'placa' : tipo);
-// A opção pede uma fundação? As de categoria, não; as de placa, sim.
-export const pedeFundacao = opcao => encaixeDaOpcao(opcao) === 'placa' || !TIPOS_DE_CATEGORIA.includes(opcao.tipo);
+export const encaixeDaOpcao = ({ tipo }) => tipo;
+// A opção pede uma fundação? As de categoria, não.
+export const pedeFundacao = opcao => !TIPOS_DE_CATEGORIA.includes(opcao.tipo);
 // A opção cabe na fundação? O encaixe bate e sobram slots (usados: o tamanho das opções que já estão nela).
 export function cabeNaFundacao({ fundacao, opcao, usados = 0 }) {
   if (encaixeDaFundacao(fundacao) !== encaixeDaOpcao(opcao)) return { cabe: false, motivo: 'encaixe' };
