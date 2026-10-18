@@ -234,7 +234,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [ ] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role;
   - [x] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem): ciclo 107 (o de
     2077 vale o do RED, como diz a revisão da wiki);
-  - [ ] a fundação e as opções sem os cyberópticos e as placas de 2077;
+  - [~] a fundação e as opções sem os cyberópticos e as placas de 2077 (sessão KouArt, 2026-10-18);
   - [x] o catálogo de 2077: a loja da wiki, os tamanhos dos compêndios e o efeito de falha das armas: ciclo 106 (o
     catálogo já era o da loja nova desde o build do ciclo 94; os testes de referência ganharam os números da wiki nova);
   - [ ] as armas de 2077 pelo Mission Kit (decisão do usuário, 2026-10-17: entram no plano): os modos Power, Smart e
