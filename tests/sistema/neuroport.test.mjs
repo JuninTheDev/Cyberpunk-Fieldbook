@@ -9,7 +9,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
-  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, DECK_NA_PORTA, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA, JACK_IN, JACK_OUT_INSEGURO,
+  acoesNetComDireta, acoesNetNaRodada, alcanceDaLigacao, alcanceDoJackIn, bloqueioDoAlvo, CONEXAO_DIRETA, DECK_NA_PORTA, DV_DO_PASSWALL, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA, JACK_IN, JACK_OUT_INSEGURO,
   jaFezOQuickhack, passouOFirewall, passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from '../../foundry-sistema/scripts/regras.mjs';
 import { alcanceDo, barra, netrunnerDo, paredeNoMeio, PORTA_DO_DECK, RANGE_UPGRADE, temPortaDoDeck } from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
@@ -67,6 +67,18 @@ test('o firewall de fábrica pela wiki: com Interface Rank 1 ou 2, Interface con
   assert.equal(passouOFirewall(7), true);
   assert.equal(passouOFirewall('8'), true);
   assert.equal(passouOFirewall(null), false);
+});
+
+test('a conexão direta pela wiki (Kit p. 27): uma Ação NET a mais por turno, os Passwalls passados e o cabo de 2 m', () => {
+  assert.ok(wiki.includes('Dá para entrar no Neuroport de alguém <b>pelo Personal Link</b> (Interface Plug). Num alvo que não quer, só se ele estiver inconsciente ou contido sem poder resistir. Acordado, ele sabe e pode tentar te expulsar.'));
+  assert.ok(wiki.includes('Ligado direto, você ganha <b>uma Ação NET a mais</b> por turno e passa direto por todos os <b>Passwalls</b> (o Black ICE, não).'));
+  assert.ok(wiki.includes('Se você ou o alvo se afastar mais de <b>2 m</b> (1 quadrado), ou o cabo for arrancado ou cortado, você é desligado à força.'));
+  assert.deepEqual(CONEXAO_DIRETA, { alcance: 2, acoesNet: 1 });
+  assert.deepEqual([[3, true], [3, false], [2, true], ['4', true]].map(([rank, direta]) => acoesNetComDireta(rank, direta)), [4, 3, 3, 5]);
+  assert.equal(alcanceDaLigacao({ direta: true }, { rangeUpgrade: true, naPorta: true }), 2);
+  assert.equal(alcanceDaLigacao({ direta: false }, { rangeUpgrade: true }), 8);
+  assert.equal(alcanceDaLigacao({}, { naPorta: true }), 50);
+  assert.equal(alcanceDaLigacao(null), 6);
 });
 
 test('o alcance do Jack In com o deck externo: 6 m, 8 m com o Range Upgrade', () => {

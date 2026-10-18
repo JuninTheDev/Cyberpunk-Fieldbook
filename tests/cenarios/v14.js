@@ -3958,6 +3958,164 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('A conexão direta pelo Personal Link (wiki, Kit p. 27; a decisão do usuário: sem rolar, com o alvo inconsciente ou agarrado, ou quando o dono aceita): em combate, o Capanga acordado e solto recusa (o mestre, na janela); inconsciente, liga sem ele perceber, com os Passwalls passados e uma Ação NET a mais; agarrado, liga e ele percebe; a mais de 2 m, cai à força; no Alvo, o jogador aceita e depois arranca o cabo', async () => {
+      const NOME = 'Teste Netrunner Cabo';
+      let montado = null;
+      try {
+        // O netrunner do jogador a 2 m do Capanga e do Alvo; o Neuroport e um Self-ICE no Capanga, o Neuroport no Alvo; o
+        // combate só com o netrunner.
+        montado = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const jogador = game.users.getName('Jogador');
+          const instalado = id => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), { 'system.instalado': true });
+          const ator = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
+            ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await ator.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
+          const capanga = __token('Capanga');
+          const alvo = __token('Alvo');
+          const ocupado = (x, y) => canvas.scene.tokens.some(t => t._source.x === x && t._source.y === y);
+          const metros = (x, y, t) => canvas.scene.grid.measurePath([{ x: x + 50, y: y + 50 }, { x: t._source.x + 50, y: t._source.y + 50 }]).distance;
+          const c = capanga._source;
+          const lugar = [[100, 0], [0, 100], [0, -100], [-100, 0], [100, 100], [-100, -100], [100, -100], [-100, 100]].map(([dx, dy]) => [c.x + dx, c.y + dy])
+            .find(([x, y]) => x >= 0 && y >= 0 && x < canvas.scene.width && y < canvas.scene.height && !ocupado(x, y) && metros(x, y, capanga) <= 2 && metros(x, y, alvo) <= 2);
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: lugar[0], y: lugar[1] })).toObject()]);
+          const itens = {
+            Capanga: (await capanga.actor.createEmbeddedDocuments('Item', [instalado('cyberware-2077:neuroport'), instalado('cyberware-2077:self-ice')])).map(i => i.id),
+            Alvo: (await alvo.actor.createEmbeddedDocuments('Item', [instalado('cyberware-2077:neuroport')])).map(i => i.id)
+          };
+          await __esperar(() => canvas.tokens.get(token.id));
+          const combate = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          window.__combateDoCabo = combate.id;
+          await combate.createEmbeddedDocuments('Combatant', [{ tokenId: token.id, sceneId: canvas.scene.id, actorId: ator.id }]);
+          await combate.startCombat();
+          // Dois quadrados para o lado oposto ao do Capanga (a mais de 2 m dele).
+          const longe = [lugar[0] + 2 * (lugar[0] - c.x), lugar[1] + 2 * (lugar[1] - c.y)];
+          return { ator: ator.id, token: token.id, lugar, longe, itens, combate: combate.id };
+        })()`);
+        const nCartoes = `game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).length`;
+        const ultimo = `(() => { const m = game.messages.contents.filter(m => m.getFlag('${S}', 'neuroport')).at(-1); return m && { ...m.getFlag('${S}', 'neuroport'), texto: m.content.replace(/<[^>]+>/g, '') }; })()`;
+        const n0 = await edge.evaluate(nCartoes);
+        await jogador.evaluate(`(async () => { for (let i = 0; i < 50 && game.combats.get('${montado.combate}')?.round !== 1; i++) await new Promise(r => setTimeout(r, 100)); return true; })()`);
+        const direta = nome => jogador.evaluate(`game.system.api.neuroport.conexaoDireta(game.actors.get('${montado.ator}'), { alvo: canvas.scene.tokens.find(t => t.name === '${nome}') }).then(() => true)`);
+        // O estado depois do cartão n: o cartão, as ligações (com a direta), os invasores do Capanga e do Alvo e as Ações NET.
+        const depois = n => edge.evaluate(`(async () => {
+          await __esperar(() => ${nCartoes} === ${n});
+          await new Promise(r => setTimeout(r, 300));
+          const ator = game.actors.get('${montado.ator}');
+          const invasores = a => (a.getFlag('${S}', 'neuroport')?.invasores ?? []).map(i => i.nome + ':' + i.percebido + (i.direta ? ':direta' : '')).join();
+          return { cartao: ${ultimo}, ligacoes: (ator.getFlag('${S}', 'neuroport')?.ligacoes ?? []).map(l => l.nome + ':' + l.percebido + ':' + (l.passados ?? 0) + (l.direta ? ':direta' : '')).join(),
+            capanga: invasores(__token('Capanga').actor), alvo: invasores(__token('Alvo').actor), acoes: game.system.api.neuroport.acoesNetDe(ator) };
+        })()`);
+        // A janela de aceitar (a de "consentir"), no navegador que for: o botão (yes ou no).
+        const responder = (navegador, botao) => navegador.evaluate(`(async () => {
+          const janela = () => [...foundry.applications.instances.values()].find(app => app.options.classes?.includes('consentir') && app.rendered);
+          for (let i = 0; i < 60 && !janela()?.element?.querySelector('button[data-action=${botao}]'); i++) await new Promise(r => setTimeout(r, 100));
+          const texto = janela()?.element?.querySelector('.window-content')?.textContent.replace(/\\s+/g, ' ').trim() ?? null;
+          janela()?.element?.querySelector('button[data-action=${botao}]')?.click();
+          return texto;
+        })()`);
+        const status = (id, ativo) => edge.evaluate(`__token('Capanga').actor.toggleStatusEffect('${id}', { active: ${ativo} }).then(() => true)`);
+        // 1. Acordado e solto: o mestre, pelo Capanga, recusa.
+        await direta('Capanga');
+        const janelaDoMestre = await responder(edge, 'no');
+        const recusou = await depois(n0 + 1);
+        // 2. Inconsciente: liga sem ele perceber, e os Passwalls ficam passados.
+        await status('unconscious', true);
+        await direta('Capanga');
+        const inconsciente = await depois(n0 + 2);
+        const linha = await jogador.evaluate(`(async () => {
+          const ficha = game.actors.get('${montado.ator}').sheet;
+          await ficha.render({ force: true });
+          ficha.changeTab('net', 'primary');
+          for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports ol.itens li[data-alvo]'); i++) await new Promise(r => setTimeout(r, 100));
+          const li = ficha.element.querySelector('.neuroports ol.itens li[data-alvo]');
+          const texto = li ? [...li.children].map(p => p.textContent.trim()).join(' ') : null;
+          await ficha.close();
+          return texto;
+        })()`);
+        await status('unconscious', false);
+        // 3. O Jack Out; 4. agarrado: liga, e ele percebe.
+        await jogador.evaluate(`Promise.resolve(game.system.api.neuroport.jackOut(game.actors.get('${montado.ator}'), canvas.scene.tokens.find(t => t.name === 'Capanga').uuid)).then(() => true)`);
+        const saiu = await depois(n0 + 3);
+        await status(`${S}-agarrado`, true);
+        await direta('Capanga');
+        const agarrado = await depois(n0 + 4);
+        await status(`${S}-agarrado`, false);
+        // 5. A mais de 2 m (o netrunner se afasta dois quadrados): cai à força. Depois, de volta.
+        await edge.evaluate(`canvas.scene.tokens.get('${montado.token}').update({ x: ${montado.longe[0]}, y: ${montado.longe[1]} }).then(() => true)`);
+        const longe = await depois(n0 + 5);
+        await edge.evaluate(`(async () => {
+          await canvas.scene.tokens.get('${montado.token}').update({ x: ${montado.lugar[0]}, y: ${montado.lugar[1]} });
+          await game.combats.get('${montado.combate}').nextRound();
+          return true;
+        })()`);
+        await jogador.evaluate(`(async () => {
+          const t = canvas.scene.tokens.get('${montado.token}');
+          for (let i = 0; i < 50 && !(t.x === ${montado.lugar[0]} && t.y === ${montado.lugar[1]} && game.combats.get('${montado.combate}')?.round === 2); i++) await new Promise(r => setTimeout(r, 100));
+          return true;
+        })()`);
+        // 6. No Alvo (do jogador): a janela de aceitar no navegador dele, e aceita; 7. pela ficha do Alvo, arranca o cabo.
+        await direta('Alvo');
+        const janelaDoJogador = await responder(jogador, 'yes');
+        const aceitou = await depois(n0 + 6);
+        const cabo = await jogador.evaluate(`(async () => {
+          const ficha = game.actors.getName('Alvo').sheet;
+          await ficha.render({ force: true });
+          ficha.changeTab('net', 'primary');
+          for (let i = 0; i < 40 && !ficha.element?.querySelector('.neuroports .no-meu [data-action=arrancarCabo]'); i++) await new Promise(r => setTimeout(r, 100));
+          const antes = ficha.element?.querySelector('.neuroports .no-meu')?.textContent.replace(/\\s+/g, ' ').trim() ?? null;
+          ficha.element.querySelector('.neuroports .no-meu [data-action=arrancarCabo]').click();
+          return antes;
+        })()`);
+        const arrancou = await depois(n0 + 7);
+        await jogador.evaluate(`game.actors.getName('Alvo').sheet.close().then(() => true)`);
+        const bloqueios = await edge.evaluate(`(game.actors.get('${montado.ator}').getFlag('${S}', 'neuroport')?.bloqueios ?? []).map(b => b.nome + ':' + (b.ate - game.time.worldTime)).sort().join()`);
+        // O fim primeiro (o relatório corta o texto longo).
+        const info = { aceitou, cabo, arrancou, bloqueios, janelaDoJogador, longe, agarrado, saiu, linha, inconsciente, recusou, janelaDoMestre, montado };
+        const nota = 'Conexão direta: uma Ação NET a mais por turno e os Passwalls passados; a mais de 2 m, ou com o cabo arrancado, cai à força.';
+        const inseguro = 'Jack Out inseguro: só entra de novo nesse Neuroport daqui a 60 minutos.';
+        const ok = janelaDoMestre === `${NOME} quer se ligar direto ao Neuroport de Capanga pelo Personal Link (o cabo). Aceita? AceitarRecusar`
+          && recusou.cartao?.resultado === 'recusou' && recusou.cartao.texto === `Capanga não aceitou a conexão direta de ${NOME}.` && recusou.ligacoes === ''
+          && JSON.stringify(recusou.acoes) === JSON.stringify({ usadas: 1, max: 3 })
+          && inconsciente.cartao?.resultado === 'direta' && inconsciente.cartao.como === 'inconsciente' && inconsciente.cartao.percebido === false
+          && inconsciente.cartao.texto === `${NOME} se ligou direto ao Neuroport de Capanga pelo Personal Link (Capanga está inconsciente e não percebe).${nota}`
+          && inconsciente.ligacoes === 'Capanga:false:1:direta' && inconsciente.capanga === `${NOME}:false:direta` && JSON.stringify(inconsciente.acoes) === JSON.stringify({ usadas: 2, max: 4 })
+          && linha === 'Capanga não percebeu DIRETA PASSWALLS 1/1 · DV 6 Quickhack Jack Out'
+          && saiu.cartao?.resultado === 'saiu' && JSON.stringify(saiu.acoes) === JSON.stringify({ usadas: 2, max: 3 })
+          && agarrado.cartao?.como === 'agarrado' && agarrado.cartao.texto === `${NOME} se ligou direto ao Neuroport de Capanga pelo Personal Link (Capanga está agarrado e percebe).${nota}`
+          && agarrado.ligacoes === 'Capanga:true:1:direta' && JSON.stringify(agarrado.acoes) === JSON.stringify({ usadas: 3, max: 4 })
+          && longe.cartao?.resultado === 'inseguro' && longe.cartao.metros > 2 && longe.cartao.texto === `${NOME} saiu do alcance do Neuroport de Capanga (${longe.cartao.metros} m; alcance 2 m).${inseguro}`
+          && longe.ligacoes === '' && longe.capanga === ''
+          && janelaDoJogador === `${NOME} quer se ligar direto ao Neuroport de Alvo pelo Personal Link (o cabo). Aceita? AceitarRecusar`
+          && aceitou.cartao?.como === 'aceitou' && aceitou.cartao.texto === `${NOME} se ligou direto ao Neuroport de Alvo pelo Personal Link (Alvo aceitou).${nota}`
+          && aceitou.ligacoes === 'Alvo:true:0:direta' && aceitou.alvo === `${NOME}:true:direta` && JSON.stringify(aceitou.acoes) === JSON.stringify({ usadas: 1, max: 4 })
+          && cabo === `No seu Neuroport: ${NOME} Expulsar Arrancar o cabo`
+          && arrancou.cartao?.motivo === 'cabo' && arrancou.cartao.texto === `Alvo arrancou o cabo do Personal Link: ${NOME} caiu do Neuroport dele.${inseguro}`
+          && arrancou.ligacoes === '' && arrancou.alvo === '' && /^Alvo:3600,Capanga:3[56]\d\d$/.test(bloqueios);
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('consentir')) await app.close(); return true; })()`).catch(() => null);
+        await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('consentir')) await app.close(); return true; })()`).catch(() => null);
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            await game.combats.get(window.__combateDoCabo)?.delete();
+            const capanga = __token('Capanga').actor;
+            for (const id of ['unconscious', '${S}-agarrado']) if (capanga.statuses.has(id)) await capanga.toggleStatusEffect(id, { active: false });
+            const ator = game.actors.get('${montado.ator}');
+            for (const [nome, ids] of Object.entries(${JSON.stringify(montado.itens)})) {
+              const a = __token(nome).actor;
+              await a.deleteEmbeddedDocuments('Item', ids.filter(id => a.items.get(id)));
+              await a.unsetFlag('${S}', 'neuroport');
+            }
+            await ator?.unsetFlag('${S}', 'neuroport');
+            await canvas.scene.deleteEmbeddedDocuments('Token', ['${montado.token}'].filter(id => canvas.scene.tokens.get(id)));
+            await ator?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('jogador demora: depois de 8 s o mestre ganha o cartão para responder por ele, escolhe Aguentar; a janela do jogador fecha e o cartão de espera some', async () => {
       // Ataque: d10 8 → 8 + 4 + 8 = 20 contra DV 16. Dano 5d6: 2 × 5 = 10 contra o SP do Alvo.
       await fixar(edge, [[8, 10], [2, 6], [2, 6], [2, 6], [2, 6], [2, 6]]);

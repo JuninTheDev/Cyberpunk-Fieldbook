@@ -209,6 +209,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface .dano-zap { position: absolute; top: 8px; right: 8px; padding: 1px 6px; font-size: 11px; }
 /* O Neuroport (neuroport.mjs): as ligações do netrunner, o Jack In e quem está no Neuroport deste ator. */
 .cpr-fieldbook.ficha-personagem .neuroports .jack-in { margin-top: 6px; }
+.cpr-fieldbook.ficha-personagem .neuroports .conexao-direta { margin-left: 6px; }
+.cpr-fieldbook.ficha-personagem .neuroports .direta { color: var(--cp-ciano); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
 .cpr-fieldbook.ficha-personagem .neuroports .passwalls { color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
 .cpr-fieldbook.ficha-personagem .neuroports .no-meu { margin: 6px 0 0; color: var(--cp-vermelho); font-family: var(--cp-dados); font-size: 12px; }
 .cpr-fieldbook.ficha-personagem .neuroports .no-meu small { color: var(--cp-fraco); }

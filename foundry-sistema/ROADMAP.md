@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 104). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 105). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -149,9 +149,12 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] o firewall de fábrica (a wiki: com Interface Rank 1 ou 2, o Jack In pede antes Interface contra DV6, e falhar
     não alerta; do Rank 3 em diante, passa direto): ciclo 102;
   - [ ] o Neuroport como arquitetura NET (o nó de controle do Holophone, DV10; o Black ICE do deck ligado a ele, que
-    age no Jack Out inseguro; o vírus de quem chega ao fundo);
-  - [ ] a conexão direta pelo Personal Link (uma Ação NET a mais, passa direto pelos Passwalls; a mais de 2 m, desliga
-    à força);
+    age no Jack Out inseguro; o vírus de quem chega ao fundo). Decisão do usuário (2026-10-17): simples, o painel com os
+    andares e, no Jack Out inseguro, o cartão diz qual Black ICE do deck do alvo age; o mestre aplica, sem descer
+    andares;
+  - [x] a conexão direta pelo Personal Link (uma Ação NET a mais, passa direto pelos Passwalls; a mais de 2 m, desliga
+    à força): ciclo 104. Decisão do usuário (2026-10-17): sem rolar, com o alvo inconsciente ou agarrado, ou quando o
+    dono aceita (o mestre, pelo NPC); o firewall de fábrica vale (não é um Passwall);
   - [x] o alvo que morre (o Jack Out inseguro de quem está nele) e a ligação de quem saiu da cena (o token apagado):
     ciclo 103;
   - (saiu) a RAM e o Cooling dos decks: desde a revisão da wiki de 2026-10-16, os decks com marca são cyberdecks do RED
@@ -224,7 +227,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 - [ ] **C28. A sistema-v14 no master**, com a instalação automática no Foundry 14 do servidor. Hoje é à mão, pelo
   `servidor/instalar-sistema-v14.sh`.
 - [ ] **C29. A wiki do master de 2026-10-17 ("uma regra só na mesa": o Mission Kit sobre o RED).** O que os testes de
-  referência acusaram na integração do ciclo 93 (QUALITY_GATES, "Falhas conhecidas desde a integração do master"):
+  referência acusaram na integração do ciclo 93 (QUALITY_GATES, "Falhas conhecidas desde a integração do master").
+  Decisão do usuário (2026-10-17): depois do C9, o catálogo de 2077 pela loja vem primeiro:
   - [x] a NET (da sessão KouArt): o Scanner como 1 Ação NET, o Breach no lugar do Backdoor, a 10ª habilidade de
     Interface (o Quickhack) e o texto novo do ponto de acesso: ciclo 94;
   - [ ] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role;

@@ -75,6 +75,11 @@ const TRATADORES = {
     janelas.delete(id);
     return resultado ? { total: resultado.total } : { cancelado: true };
   },
+  // Um sim ou não do dono (a conexão direta no Neuroport dele, neuroport.mjs): fechada, não.
+  consentir: async ({ titulo, texto }) => {
+    const resposta = await DialogV2.confirm({ window: { title: titulo }, classes: [SISTEMA, 'consentir'], content: `<p>${texto}</p>`, rejectClose: false, yes: { label: 'Aceitar' }, no: { label: 'Recusar' } }).catch(() => null);
+    return { aceitou: resposta === true };
+  },
   deathSave: async ({ ator }, id) => {
     const resultado = await (await fromUuid(ator)).rolarDeathSave({ perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
     janelas.delete(id);

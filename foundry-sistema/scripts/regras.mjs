@@ -529,6 +529,15 @@ export const semAcaoNet = (registro, agora, max) => Boolean(agora?.combate) && a
 // Desligado de qualquer jeito que não o Jack Out, é um Jack Out inseguro [...] e você só entra de novo nesse alvo em 60
 // minutos"): o bloqueio daquele alvo, pelo tempo do mundo (em segundos). bloqueios: [{ alvo, ate }].
 export const JACK_OUT_INSEGURO = { segundos: 3600 };
+
+// A conexão direta pelo Personal Link (a wiki, "Conexão direta", Kit p. 27): "Ligado direto, você ganha uma Ação NET a
+// mais por turno e passa direto por todos os Passwalls"; "Se você ou o alvo se afastar mais de 2 m (1 quadrado) [...] você
+// é desligado à força". Num alvo que não quer, "só se ele estiver inconsciente ou contido sem poder resistir"; a decisão do
+// usuário de 2026-10-17: sem rolar, com o alvo inconsciente ou agarrado, ou quando o dono aceita.
+export const CONEXAO_DIRETA = { alcance: 2, acoesNet: 1 };
+export const acoesNetComDireta = (acoesDoRank, direta) => Number(acoesDoRank) + (direta ? CONEXAO_DIRETA.acoesNet : 0);
+// O alcance de uma ligação: a direta, os 2 m do cabo; a outra, o do deck (netrunner: { rangeUpgrade, naPorta }).
+export const alcanceDaLigacao = (ligacao, netrunner = {}) => (ligacao?.direta ? CONEXAO_DIRETA.alcance : alcanceDoJackIn(netrunner));
 export const bloqueioDoAlvo = (bloqueios, alvo, agora) => (bloqueios ?? []).find(bloqueio => bloqueio.alvo === alvo && Number(bloqueio.ate) > Number(agora)) ?? null;
 
 // Estrangular e Derrubar (a mesma página): o BODY de quem agarra direto no HP, sem a armadura. Estrangulando, "se levaria

@@ -7,6 +7,9 @@
 //   empate é do alvo), entra assim mesmo, mas o alvo percebe; o alvo netrunner sempre percebe, sem rolar. Cada Neuroport
 //   é uma Ação NET, e dá para ficar ligado em quantos quiser. Com Interface Rank 1 ou 2, antes, o firewall de fábrica
 //   (Interface + 1d10 contra DV6): falhando, não entra, e o alvo não sabe;
+// - Conexão direta: pelo Personal Link, a até 2 m, sem rolar: com o alvo inconsciente ou agarrado, ou quando o dono aceita
+//   (a decisão do usuário de 2026-10-17). Ligado direto, uma Ação NET a mais por turno e os Passwalls passados; a mais de
+//   2 m, ou com o cabo arrancado, cai à força;
 // - Jack Out: sai do Neuroport do alvo com segurança;
 // - Breach: passa um Passwall do alvo (um por Self-ICE, até 3; a DV de todos é 6, 8 ou 10, pelo número), Interface (a
 //   habilidade Breach) + 1d10 contra a DV. Passa um por vez; o quickhack só vem depois de todos (ligacao.passados);
@@ -23,12 +26,12 @@
 // A ligação fica nas flags dos dois atores, que o mestre ativo grava: no netrunner, neuroport.ligacoes ([{ alvo: o uuid do
 // token, nome, percebido }]); no alvo, neuroport.invasores ([{ netrunner: o uuid do ator, nome, percebido }]). A ficha do
 // netrunner mostra as dele; a do alvo, as que ele percebeu (o mestre vê todas).
-import { SISTEMA } from './config.mjs';
+import { SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
-import { centroDe, combateDe, defesaContra, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
+import { centroDe, combateDe, defesaContra, distancia, jogadorDe, naFila, pedir as pedirAoDono, souOMestreAtivo, tokenNaCena } from './combate.mjs';
 import {
-  acoesNetNaRodada, alcanceDoJackIn, bloqueioDoAlvo, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA, jaFezOQuickhack, JACK_OUT_INSEGURO, passouOFirewall,
-  passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
+  acoesNetComDireta, acoesNetNaRodada, alcanceDaLigacao, alcanceDoJackIn, bloqueioDoAlvo, CONEXAO_DIRETA, EFEITOS_DE_QUICKHACK, expulsou, fazOQuickhack, FIREWALL_DE_FABRICA,
+  jaFezOQuickhack, JACK_OUT_INSEGURO, passouOFirewall, passouOPasswall, passouOQuickhack, passwallsDoAlvo, pedeOFirewall, percebeuOJackIn, sabeDoJackIn, semAcaoNet
 } from './regras.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
@@ -61,11 +64,12 @@ function pedirAoMestre(acao, pedido) {
   return pedido;
 }
 
-// "Jack In": o alvo marcado (T), um só, com Neuroport, à vista e no alcance do deck.
-export async function jackIn(ator, { alvo = null, perguntar = false } = {}) {
+// As conferências da entrada no Neuroport (o Jack In e a conexão direta): o alvo marcado (T), um só, com Neuroport; a
+// Interface e o deck; sem ligação nem bloqueio nesse alvo; o token do netrunner na cena. { token, meu, n } ou null.
+function entrada(ator, alvo, oQue) {
   const marcados = alvo ? [alvo] : [...game.user.targets];
   const token = marcados.length === 1 ? (marcados[0].document ?? marcados[0]) : null;
-  if (!['personagem', 'capanga'].includes(token?.actor?.type)) return avisar('Marque um alvo (tecla T sobre o token), um só, para o Jack In.');
+  if (!['personagem', 'capanga'].includes(token?.actor?.type)) return avisar(`Marque um alvo (tecla T sobre o token), um só, para ${oQue}.`);
   if (token.actor === ator) return avisar('O Jack In é no Neuroport de outra pessoa.');
   if (!ator.system.rankDeInterface) return avisar(`${ator.name} não tem Interface: só o Netrunner faz o Jack In.`);
   const n = netrunnerDo(ator);
@@ -76,6 +80,27 @@ export async function jackIn(ator, { alvo = null, perguntar = false } = {}) {
   if (bloqueio) return avisar(`${ator.name} só entra de novo no Neuroport de ${token.name} daqui a ${Math.ceil((bloqueio.ate - game.time.worldTime) / 60)} min (o Jack Out inseguro).`);
   const meu = tokenNaCena(ator, token.parent);
   if (!meu) return avisar(`Ponha o token de ${ator.name} na cena de ${token.name}.`);
+  return { token, meu, n };
+}
+
+// O firewall de fábrica (Interface Rank 1 ou 2): antes de entrar, Interface contra DV6. Falhando, o pedido do firewall ao
+// mestre (não entra, e o alvo não sabe) e null; passando, { total }; sem o teste (Rank 3 ou mais), { total: null }.
+async function firewallDe(ator, token, meu, { perguntar, modo }) {
+  if (!pedeOFirewall(ator.system.rankDeInterface)) return { total: null };
+  const passe = await ator.rolarJackIn({ perguntar, rotulo: 'Firewall de fábrica', sabor: `contra o firewall de fábrica de ${token.name} (DV ${FIREWALL_DE_FABRICA.dv})`, modo, dados: { firewall: true }, categoria: 'net' });
+  if (!passe) return null;
+  if (!passouOFirewall(passe.total)) {
+    await pedirAoMestre('firewall', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: passe.total });
+    return null;
+  }
+  return { total: passe.total };
+}
+
+// "Jack In": no alvo marcado, à vista e no alcance do deck.
+export async function jackIn(ator, { alvo = null, perguntar = false } = {}) {
+  const ok = entrada(ator, alvo, 'o Jack In');
+  if (!ok) return null;
+  const { token, meu, n } = ok;
   const longe = distancia(meu, token);
   const alcance = alcanceDoJackIn(n);
   if (longe > alcance + 0.01) return avisar(`${token.name} está longe demais para o Jack In: ${longe.toFixed(1)} m (alcance ${alcance} m).`);
@@ -83,17 +108,34 @@ export async function jackIn(ator, { alvo = null, perguntar = false } = {}) {
   if (faltaAcaoNet(ator)) return avisar(faltaAcaoNet(ator));
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
   const modo = config('escondeAtaque') ? 'gm' : 'public';
-  // O firewall de fábrica (Interface Rank 1 ou 2): antes, Interface contra DV6. Falhando, não entra, e o alvo não sabe.
-  let firewall = null;
-  if (pedeOFirewall(ator.system.rankDeInterface)) {
-    const passe = await ator.rolarJackIn({ perguntar, rotulo: 'Firewall de fábrica', sabor: `contra o firewall de fábrica de ${token.name} (DV ${FIREWALL_DE_FABRICA.dv})`, modo, dados: { firewall: true }, categoria: 'net' });
-    if (!passe) return null;
-    firewall = passe.total;
-    if (!passouOFirewall(firewall)) return pedirAoMestre('firewall', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: firewall });
-  }
+  const firewall = await firewallDe(ator, token, meu, { perguntar, modo });
+  if (!firewall) return null;
   const teste = await ator.rolarJackIn({ perguntar, sabor: `contra ${token.name}`, modo, dados: { jackin: true }, categoria: 'net' });
   if (!teste) return null;
-  return pedirAoMestre('jackin', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: teste.total, firewall, mensagem: teste.mensagem?.id ?? null });
+  return pedirAoMestre('jackin', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, total: teste.total, firewall: firewall.total, mensagem: teste.mensagem?.id ?? null });
+}
+
+// "Conexão direta": pelo Personal Link (o cabo), no alvo marcado a até 2 m, sem rolar (o mestre confere se o alvo está
+// inconsciente ou agarrado, ou pede ao dono que aceite). O firewall de fábrica vale (não é um Passwall).
+export async function conexaoDireta(ator, { alvo = null, perguntar = false } = {}) {
+  const ok = entrada(ator, alvo, 'a conexão direta');
+  if (!ok) return null;
+  const { token, meu } = ok;
+  const longe = distancia(meu, token);
+  if (longe > CONEXAO_DIRETA.alcance + 0.01) return avisar(`${token.name} está longe demais para a conexão direta: ${longe.toFixed(1)} m (o cabo vai até ${CONEXAO_DIRETA.alcance} m).`);
+  if (faltaAcaoNet(ator)) return avisar(faltaAcaoNet(ator));
+  if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
+  const firewall = await firewallDe(ator, token, meu, { perguntar, modo: config('escondeAtaque') ? 'gm' : 'public' });
+  if (!firewall) return null;
+  return pedirAoMestre('direta', { ator: ator.uuid, token: meu.uuid, alvo: token.uuid, firewall: firewall.total });
+}
+
+// "Arrancar o cabo": no Neuroport deste ator, o netrunner ligado direto (o uuid do ator) cai à força.
+export function arrancarCabo(ator, netrunner) {
+  const invasor = neuroportDe(ator).invasores.find(item => item.netrunner === netrunner);
+  if (!invasor?.direta) return avisar(`Nenhum cabo de ${invasor?.nome ?? 'netrunner'} no Neuroport de ${ator.name}.`);
+  if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
+  return pedirAoMestre('cabo', { ator: ator.uuid, netrunner });
 }
 
 // "Jack Out": sai do Neuroport de um alvo (o uuid do token) com segurança.
@@ -125,15 +167,18 @@ const agoraDe = ator => {
 
 // As Ações NET do netrunner na rodada, fora da arquitetura (o Jack In, o Breach e o quickhack): em combate, { usadas, max
 // }; fora, null. A conta da arquitetura (a janela da NET) é outra.
+// As do Rank, e uma a mais com uma conexão direta.
+const maxAcoesNet = ator => acoesNetComDireta(ator.system.acoesDeNet, neuroportDe(ator).ligacoes.some(item => item.direta));
 export const acoesNetDe = ator => {
   const agora = agoraDe(ator);
-  return agora ? { usadas: acoesNetNaRodada(neuroportDe(ator).acoes, agora), max: ator.system.acoesDeNet } : null;
+  return agora ? { usadas: acoesNetNaRodada(neuroportDe(ator).acoes, agora), max: maxAcoesNet(ator) } : null;
 };
 // Sem Ação NET na rodada: o aviso (o mestre passa do limite, como na arquitetura).
 const faltaAcaoNet = (ator, usuario = game.user) => {
   const agora = agoraDe(ator);
   const { acoes } = neuroportDe(ator);
-  return !usuario.isGM && semAcaoNet(acoes, agora, ator.system.acoesDeNet) ? `Sem Ações NET neste turno (${acoesNetNaRodada(acoes, agora)} de ${ator.system.acoesDeNet}).` : null;
+  const max = maxAcoesNet(ator);
+  return !usuario.isGM && semAcaoNet(acoes, agora, max) ? `Sem Ações NET neste turno (${acoesNetNaRodada(acoes, agora)} de ${max}).` : null;
 };
 
 // Os quickhacks que o netrunner faz: os do catálogo até o Rank de Interface dele ({ id, nome, dv, rank, alerta }).
@@ -222,7 +267,7 @@ async function gastarAcaoNet(ator, usuario) {
   const agora = agoraDe(ator);
   if (!agora) return true;
   const dados = neuroportDe(ator);
-  if (!usuario.isGM && semAcaoNet(dados.acoes, agora, ator.system.acoesDeNet)) return false;
+  if (!usuario.isGM && semAcaoNet(dados.acoes, agora, maxAcoesNet(ator))) return false;
   await ator.setFlag(SISTEMA, FLAG, { ...dados, acoes: { ...agora, usadas: acoesNetNaRodada(dados.acoes, agora) + 1 } });
   return true;
 }
@@ -428,7 +473,68 @@ async function resolverExpulsar(ator, pedido) {
   });
 }
 
-const RESOLVER = { jackin: resolverJackIn, firewall: resolverFirewall, jackout: resolverJackOut, breach: resolverBreach, quickhack: resolverQuickhack, expulsar: resolverExpulsar };
+// O sim do dono do alvo para a conexão direta: a janela pelo socket (combate.pedir), ou a do mestre, pelo NPC. Sem
+// resposta no tempo, não.
+async function aceitaADireta(alvo, nome) {
+  const texto = `<b>${esc(nome)}</b> quer se ligar direto ao Neuroport de <b>${esc(alvo.name)}</b> pelo Personal Link (o cabo). Aceita?`;
+  const dono = jogadorDe(alvo.actor);
+  if (dono) return Boolean((await pedirAoDono(dono, 'consentir', { titulo: 'Conexão direta no seu Neuroport', texto }))?.aceitou);
+  const resposta = await foundry.applications.api.DialogV2.confirm({
+    window: { title: `Conexão direta em ${alvo.name}` }, classes: [SISTEMA, 'consentir'], content: `<p>${texto}</p>`, rejectClose: false,
+    yes: { label: 'Aceitar' }, no: { label: 'Recusar' }
+  }).catch(() => null);
+  return resposta === true;
+}
+
+// A conexão direta: as conferências de novo (a 2 m pelo destino dos tokens); com o alvo inconsciente ou agarrado, liga;
+// senão, o dono aceita ou não. Ligada, os Passwalls ficam passados, e o alvo acordado sabe.
+async function resolverDireta(ator, pedido, usuario) {
+  const [meu, alvo] = await Promise.all([pedido.token, pedido.alvo].map(uuid => (uuid ? fromUuid(uuid) : null)));
+  if (!meu || !alvo?.actor || !temNeuroport(alvo.actor) || neuroportDe(ator).ligacoes.some(item => item.alvo === alvo.uuid)) return null;
+  if (pedeOFirewall(ator.system.rankDeInterface) && !passouOFirewall(pedido.firewall)) return null;
+  if (bloqueioDoAlvo(neuroportDe(ator).bloqueios, alvo.uuid, game.time.worldTime)) return null;
+  const longe = distancia(noDestino(meu), noDestino(alvo));
+  if (longe === null || longe > CONEXAO_DIRETA.alcance + 0.01 || !await gastarAcaoNet(ator, usuario)) return null;
+  const [a, b] = [meu.name, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
+  const inconsciente = alvo.actor.statuses.has('unconscious');
+  let como = inconsciente ? 'inconsciente' : alvo.actor.statuses.has(STATUS_AGARRAO.agarrado) ? 'agarrado' : null;
+  if (!como) {
+    if (!await aceitaADireta(alvo, meu.name)) {
+      return cartao({ ator, alvo: alvo.actor, percebido: true, falante: meu.name, frase: `${b} não aceitou a conexão direta de ${a}.`, resumo: { resultado: 'recusou', netrunner: meu.name, alvo: alvo.name } });
+    }
+    como = 'aceitou';
+  }
+  const percebido = !inconsciente;
+  const { quantos } = passwallsDoAlvo(selfIcesDe(alvo.actor));
+  await gravar(ator, alvo, { ligacao: { alvo: alvo.uuid, nome: alvo.name, percebido, direta: true, passados: quantos }, invasor: { netrunner: ator.uuid, nome: meu.name, percebido, direta: true } });
+  const porque = { inconsciente: `${b} está inconsciente e não percebe`, agarrado: `${b} está agarrado e percebe`, aceitou: `${b} aceitou` }[como];
+  return cartao({
+    ator, alvo: alvo.actor, percebido, falante: meu.name, frase: `${a} se ligou direto ao Neuroport de ${b} pelo Personal Link (${porque}).`,
+    notas: ['Conexão direta: uma Ação NET a mais por turno e os Passwalls passados; a mais de 2 m, ou com o cabo arrancado, cai à força.'],
+    resumo: { resultado: 'direta', como, percebido, netrunner: meu.name, alvo: alvo.name }
+  });
+}
+
+// O cabo arrancado (pelo alvo, ou pelo mestre): o netrunner ligado direto cai à força (o Jack Out inseguro).
+async function resolverCabo(ator, pedido) {
+  const invasor = neuroportDe(ator).invasores.find(item => item.netrunner === pedido.netrunner);
+  const netrunner = await fromUuid(pedido.netrunner);
+  if (!invasor?.direta || !netrunner) return null;
+  const ligacao = neuroportDe(netrunner).ligacoes.find(item => item.direta && fromUuidSync(item.alvo)?.actor === ator);
+  const alvo = ligacao ? await fromUuid(ligacao.alvo) : null;
+  if (!alvo) return null;
+  await desligarInseguro(netrunner, alvo);
+  const nome = tokenNaCena(netrunner, alvo.parent)?.name ?? netrunner.name;
+  const [a, b] = [nome, alvo.name].map(texto => `<b>${esc(texto)}</b>`);
+  return cartao({
+    ator: netrunner, alvo: ator, percebido: true, falante: alvo.name, frase: `${b} arrancou o cabo do Personal Link: ${a} caiu do Neuroport dele.`,
+    notas: [NOTA_INSEGURO], resumo: { resultado: 'inseguro', motivo: 'cabo', netrunner: nome, alvo: alvo.name }
+  });
+}
+
+const RESOLVER = {
+  jackin: resolverJackIn, firewall: resolverFirewall, direta: resolverDireta, cabo: resolverCabo, jackout: resolverJackOut, breach: resolverBreach, quickhack: resolverQuickhack, expulsar: resolverExpulsar
+};
 
 // Fora do alcance do deck (o netrunner ou o alvo andou): o Jack Out inseguro de cada ligação desse token, com o cartão.
 // A conta usa o destino (o _source): enquanto o token anda, o x e o y ainda são os de antes (a lição do ciclo 95).
@@ -450,7 +556,7 @@ async function conferirAlcance(token) {
     if (meu) pares.push([netrunner, meu, token, ligacao]);
   }
   for (const [netrunner, meu, alvo, ligacao] of pares) {
-    const alcance = alcanceDoJackIn(netrunnerDo(netrunner));
+    const alcance = alcanceDaLigacao(ligacao, netrunnerDo(netrunner));
     const longe = distancia(noDestino(meu), noDestino(alvo));
     if (longe === null || longe <= alcance + 0.01) continue;
     await desligarInseguro(netrunner, alvo);

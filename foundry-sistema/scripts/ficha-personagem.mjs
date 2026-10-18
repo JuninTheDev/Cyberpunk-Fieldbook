@@ -4,7 +4,7 @@
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
-import { acoesNetDe, breach, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
+import { acoesNetDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
@@ -66,6 +66,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       derrubar: FichaPersonagem.#derrubar,
       escapar: FichaPersonagem.#escapar,
       jackIn: FichaPersonagem.#jackIn,
+      conexaoDireta: FichaPersonagem.#conexaoDireta,
+      arrancarCabo: FichaPersonagem.#arrancarCabo,
       jackOut: FichaPersonagem.#jackOut,
       breach: FichaPersonagem.#breach,
       quickhack: FichaPersonagem.#quickhack,
@@ -406,6 +408,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #quickhack(evento, alvo) { return quickhack(this.actor, alvo.dataset.alvo, { perguntar: comJanela(evento) }); }
   // No Neuroport deste ator: "Expulsar" o netrunner que ele percebeu.
   static #expulsar(evento, alvo) { return expulsar(this.actor, alvo.dataset.netrunner, { perguntar: comJanela(evento) }); }
+  // A conexão direta pelo Personal Link, no alvo marcado; e, no Neuroport deste ator, o cabo arrancado.
+  static #conexaoDireta(evento) { return conexaoDireta(this.actor, { perguntar: comJanela(evento) }); }
+  static #arrancarCabo(evento, alvo) { return arrancarCabo(this.actor, alvo.dataset.netrunner); }
   static #rolarInterface(evento, alvo) { return this.actor.rolarInterface(alvo.dataset.habilidade, { perguntar: comJanela(evento) }); }
   static #rolarDanoDoZap() { return this.actor.rolarDanoDoZap(); }
   // "Conectar", "Abrir a NET" e "Desconectar" na aba NET (as maquetes do usuário), pelo motor da NET (netrun): as mesmas

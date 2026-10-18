@@ -5103,6 +5103,71 @@ Commit anterior: `69e8a88a` (ciclo 102).
 - **Pendências do C9** (no ROADMAP): o Neuroport como arquitetura NET e a conexão direta pelo Personal Link.
 - **Próximo:** o C9, parte 9 (a conexão direta pelo Personal Link).
 
+### Ciclo 104 (2026-10-17): o C9, parte 9: a conexão direta pelo Personal Link (sessão KouArt)
+
+Commit anterior: `a770475c` (ciclo 103).
+
+- **A referência (a wiki, "Conexão direta", Kit p. 27):**
+  - "Dá para entrar no Neuroport de alguém pelo Personal Link (Interface Plug). Num alvo que não quer, só se ele estiver
+    inconsciente ou contido sem poder resistir. Acordado, ele sabe e pode tentar te expulsar";
+  - "Ligado direto, você ganha uma Ação NET a mais por turno e passa direto por todos os Passwalls (o Black ICE, não)";
+  - "Se você ou o alvo se afastar mais de 2 m (1 quadrado), ou o cabo for arrancado ou cortado, você é desligado à
+    força".
+- **As decisões do usuário (2026-10-17, a pergunta antes do ciclo):**
+  - **a conexão direta:** sem rolar, com o alvo inconsciente ou agarrado, ou quando o dono aceita numa janela (o
+    mestre, pelo NPC); o firewall de fábrica vale (não é um Passwall);
+  - **o Neuroport como arquitetura** (a última parte do C9): simples. O painel com os andares e, no Jack Out inseguro, o
+    cartão diz qual Black ICE do deck do alvo age; o mestre aplica, sem descer andares;
+  - **o C29:** depois do C9, o catálogo de 2077 pela loja da wiki vem primeiro.
+- **Implementado:**
+  - **`regras.mjs`:** `CONEXAO_DIRETA` (o cabo de 2 m e a Ação NET a mais), `acoesNetComDireta` e `alcanceDaLigacao`
+    (a direta, 2 m; a outra, o do deck);
+  - **`neuroport.mjs`:**
+    - **as conferências da entrada** (o Jack In e a conexão direta) e o firewall de fábrica, numa função cada;
+    - **a "Conexão direta":** no alvo marcado a até 2 m (sem conferir a vista), com a Ação NET e o firewall;
+    - **o mestre, na conexão direta:** inconsciente, liga sem o alvo perceber; agarrado, liga e ele percebe; senão, o
+      dono aceita ou recusa (`combate.pedir`, o pedido "consentir"; pelo NPC, a janela do mestre). Ligada, os Passwalls
+      ficam passados;
+    - **as Ações NET:** uma a mais por turno com uma conexão direta;
+    - **o alcance:** a direta cai a mais de 2 m (o gancho do movimento), com o cartão do Jack Out inseguro;
+    - **"Arrancar o cabo":** na ficha do alvo, o netrunner ligado direto cai à força (o Jack Out inseguro);
+  - **`combate.mjs`:** o pedido "consentir" (a janela de sim ou não no cliente do dono);
+  - **a ficha:** o botão "Conexão direta" ao lado do Jack In; a marca "DIRETA" na ligação; o "Arrancar o cabo" em "No
+    seu Neuroport".
+- **Testes:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 123 de 135 (as 12 conhecidas). No `tests/sistema/neuroport.test.mjs`, 1 teste de referência novo: o texto da
+    wiki, a Ação NET a mais e o alcance de cada ligação;
+  - G4: 118 de 127 (as 9 conhecidas da integração). O passo novo, "A conexão direta pelo Personal Link", passou na
+    terceira rodada (na primeira, o teste chamava o `.then` do Jack Out, que no jogador não devolve uma promessa; na
+    segunda, a janela de aceitar junta os dois botões no texto: "AceitarRecusar"). Em combate, com o netrunner do jogador
+    a 2 m do Capanga (com um Self-ICE) e do Alvo:
+    - **o Capanga acordado e solto:** a janela do mestre ("quer se ligar direto [...] Aceita?"), que recusa; o cartão, sem
+      ligação, e a Ação NET vai (1 de 3);
+    - **inconsciente:** liga sem ele perceber, com o Passwall passado ("DIRETA PASSWALLS 1/1 · DV 6 Quickhack Jack Out")
+      e a Ação NET a mais (2 de 4);
+    - **depois do Jack Out:** 2 de 3; **agarrado:** liga, e ele percebe (3 de 4);
+    - **o netrunner a 6 m:** cai à força ("alcance 2 m"), com o Jack Out inseguro;
+    - **na rodada seguinte, o Alvo do jogador:** a janela de aceitar no navegador dele, que aceita (1 de 4); pela ficha
+      do Alvo ("Expulsar Arrancar o cabo"), o cabo arrancado derruba o netrunner, e os bloqueios do Alvo e do Capanga
+      ficam;
+  - **mutações:** as 10 caíram, e os arquivos voltaram (conferido pelo md5).
+    - **No G3:**
+      - sem a Ação NET a mais (D1);
+      - a ligação direta com o alcance do deck (D2).
+    - **No G4:**
+      - sem pedir ao dono (D3: o acordado e solto liga; rodou de novo depois de esperar a trava do G4 da sessão Codex);
+      - o inconsciente que percebe (D4);
+      - os Passwalls que não ficam passados (D5);
+      - sem a Ação NET a mais na conta do netrunner (D6);
+      - o gancho do alcance sem os 2 m do cabo (D7);
+      - o agarrado que não conta (D8: a janela do mestre fica esperando e derruba também o passo seguinte);
+      - o "Arrancar o cabo" na ligação que não é direta (D9: os passos do Jack In e da expulsão, pela lista "No seu
+        Neuroport");
+      - o cabo arrancado sem a queda (D10).
+- **Pendência do C9:** o Neuroport como arquitetura (a versão simples que o usuário escolheu).
+- **Próximo:** o C9, parte 10 (o Neuroport como arquitetura, a versão simples).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
