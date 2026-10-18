@@ -219,7 +219,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 5: mestre e mesa
 
-- [ ] **C24. Contêiner** (o ator `container` do CORE): loja que vende e compra, com o preço e o registro das trocas; saque;
+- [~] **C24. Contêiner** (o ator `container` do CORE; em andamento, sessão KouArt, 2026-10-18): loja que vende e compra, com o preço e o registro das trocas; saque;
   esconderijo; trava.
 - [ ] **C25. O Painel Tático dentro do sistema:** o HUD com o retrato por estado de ferimento.
 - [ ] **C26. Conveniências:**
