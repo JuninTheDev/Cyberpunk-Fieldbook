@@ -155,6 +155,11 @@ do capanga é um botão do mesmo jeito, que rola. */
 /* As abas no jeito das maquetes do usuário: à esquerda, a coluna dos números (os painéis de resumo); à direita, o
    conteúdo (as listas e as tabelas). */
 .cpr-fieldbook.ficha-personagem .aba-colunas { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 16px; align-items: start; }
+/* As duas Roles (o C23): o bloco da segunda abaixo do da principal, e o painel de acrescentar. */
+.cpr-fieldbook.ficha-personagem .role-bloco + .role-bloco, .cpr-fieldbook.ficha-personagem .tab.role > .segunda-role { margin-top: 16px; }
+.cpr-fieldbook.ficha-personagem .segunda-role-campos { display: flex; align-items: center; gap: 8px; }
+.cpr-fieldbook.ficha-personagem .segunda-role-campos input[type="text"] { flex: 1; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .segunda-role-campos input.rank { width: 4em; }
 .cpr-fieldbook.ficha-personagem :is(.coluna-resumo, .coluna-principal) { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .cpr-fieldbook.ficha-personagem .numero-grande { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 2px; }
 .cpr-fieldbook.ficha-personagem .numero-grande b { color: var(--cp-amarelo); font: 700 48px/1 var(--cp-titulo); }

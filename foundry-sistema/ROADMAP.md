@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 119). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 120). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -210,7 +210,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     `roleSecundaria`, com o Rank, as habilidades, o Lifepath e a oficina) no modelo, nos derivados das duas (a Interface
     do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo, as perícias do Medtech), no import da wiki (o
     `?roles=2`), no envio da ficha e na migração da mesa (a lista `roles`): ciclo 118;
-  - [ ] a ficha: a aba Role com as duas (o Rank, as habilidades e as rolagens de cada uma) e o cabeçalho;
+  - [x] a ficha: a aba Role com as duas (o Rank, as habilidades e as rolagens de cada uma) e o cabeçalho: ciclo 119 (o
+    painel acrescenta a segunda, e o "Tirar" a tira);
   - [ ] a Role ativa, como no CORE;
   - [ ] as perícias novas (no CORE, a perícia é item; aqui só existem as do livro e as famílias).
 

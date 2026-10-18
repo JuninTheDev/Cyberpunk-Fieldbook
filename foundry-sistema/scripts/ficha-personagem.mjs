@@ -13,7 +13,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { alcanceDoJackIn, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, bonusDeRole, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 
@@ -100,6 +100,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       recarregarSorte: FichaPersonagem.#recarregarSorte,
       alternarCoronha: FichaPersonagem.#alternarCoronha,
       alternarCarga: FichaPersonagem.#alternarCarga,
+      tirarSegundaRole: FichaPersonagem.#tirarSegundaRole,
       manejarFerrolho: FichaPersonagem.#manejarFerrolho,
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
@@ -231,9 +232,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const facedown = { valor: partesDoFacedown.reduce((soma, p) => soma + p.valor, 0), dica: `${partesDoFacedown.map(p => `${p.rotulo} ${p.valor}`).join(' + ')} + 1d10: teste enfrentado` };
     const bonusDeIniciativa = s.iniciativa - s.atributos.ref.valor;
 
-    // A Role: a do RED da wiki e as especialidades (Solo, Tech, Medtech) com os pontos; o efeito de cada uma do Solo.
-    const role = roleDaWiki(s.role.nome);
-    const especialidades = role && HABILIDADES_DE_ROLE[role.id];
+    // As Roles (a principal e a segunda, a regra da mesa "Duas Roles na criação"): a do RED da wiki e as especialidades
+    // (Solo, Tech, Medtech) com os pontos; o efeito de cada uma do Solo.
     const efeitoDoSolo = {
       'Initiative Reaction': s.consciencia.iniciativa && `+${s.consciencia.iniciativa} na Iniciativa`,
       'Precision Attack': s.consciencia.ataque && `+${s.consciencia.ataque} no ataque`,
@@ -242,12 +242,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       'Damage Deflection': s.consciencia.deflexao && `−${s.consciencia.deflexao} no dano sofrido`,
       'Fumble Recovery': s.consciencia.semFalhaCritica && 'sem falha crítica'
     };
-    // As especialidades e as perícias que vêm delas (as do Medtech: a ficha calcula, não ficam entre as outras).
-    const daEspecialidade = new Set([...(especialidades?.itens ?? []), ...(especialidades?.derivadas ?? [])].map(item => item.id));
-    // Os bônus da Role nas perícias (regras.bonusDeRole): o Moto do Nomad soma sempre.
-    const nomeDaPericia = id => PERICIAS.find(p => p.id === id)?.nome ?? FAMILIAS[id]?.nome ?? id;
-    const ativos = Object.entries(s.bonusDeRole);
-    const bonusDaRole = ativos.length ? { rotulo: ativos[0][1].rotulo, valor: ativos[0][1].valor, pericias: ativos.map(([id]) => nomeDaPericia(id)).join(', ') } : null;
+    const rolesDaFicha = ['role', ...(s.roleSecundaria.nome ? ['roleSecundaria'] : [])].map(chave => this.#contextoDaRole(chave, efeitoDoSolo));
 
     // NET: os cyberdecks (com o que está instalado) e os programas; a Interface é o Rank do Netrunner.
     // O deck equipado e os slots dele (as maquetes do usuário: as caixas dos slots no painel da Interface).
@@ -351,9 +346,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         prepararArma: u.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, u.getFlag(SISTEMA, 'catalogo')),
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
-      roleDaWiki: role, bonusDaRole, rolagensDaRole: (role && ROLAGENS_DE_ROLE[role.id]) ?? [],
-      especialidades: especialidades && this.#especialidades(especialidades, role, efeitoDoSolo),
-      outrasHabilidades: Object.entries(s.role.habilidades).filter(([nome]) => !daEspecialidade.has(nome)).map(([nome, pontos]) => ({ nome, pontos })),
+      rolesDaFicha, temSegundaRole: Boolean(s.roleSecundaria.nome),
       lifepathGrupos: GRUPOS_DO_LIFEPATH.map(grupo => ({
         ...grupo, campos: grupo.chaves.map(chave => ({ chave, rotulo: LIFEPATH.find(campo => campo.chave === chave).rotulo, valor: s.lifepath[chave], linhas: chave === 'role' ? 4 : 2 }))
       })),
@@ -361,10 +354,30 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     });
   }
 
+  // Uma Role da ficha (chave: "role", a principal, ou "roleSecundaria"): a do RED da wiki, as rolagens da habilidade, as
+  // especialidades, as outras habilidades (como vieram da importação) e o bônus nas perícias (o Moto do Nomad, que soma
+  // sempre). caminho: onde os campos dela gravam.
+  #contextoDaRole(chave, efeitoDoSolo) {
+    const dados = this.actor.system[chave];
+    const role = roleDaWiki(dados.nome);
+    const especialidades = role && HABILIDADES_DE_ROLE[role.id];
+    // As especialidades e as perícias que vêm delas (as do Medtech: a ficha calcula, não ficam entre as outras).
+    const daEspecialidade = new Set([...(especialidades?.itens ?? []), ...(especialidades?.derivadas ?? [])].map(item => item.id));
+    const nomeDaPericia = id => PERICIAS.find(p => p.id === id)?.nome ?? FAMILIAS[id]?.nome ?? id;
+    const ativos = Object.entries(bonusDeRole({ roleId: role?.id, rank: dados.rank }));
+    return {
+      chave, caminho: `system.${chave}`, principal: chave === 'role', nome: dados.nome, rank: dados.rank, roleDaWiki: role,
+      rolagens: (role && ROLAGENS_DE_ROLE[role.id]) ?? [],
+      especialidades: especialidades && this.#especialidades(especialidades, role, dados, efeitoDoSolo),
+      outrasHabilidades: Object.entries(dados.habilidades).filter(([nome]) => !daEspecialidade.has(nome)).map(([nome, pontos]) => ({ nome, pontos })),
+      bonus: ativos.length ? { rotulo: ativos[0][1].rotulo, valor: ativos[0][1].valor, pericias: ativos.map(([id]) => nomeDaPericia(id)).join(', ') } : null
+    };
+  }
+
   // As especialidades da Role com os pontos de cada uma e a conferência do Rank (regras.mjs, pontosDeRole): o total
   // distribuído contra o do Rank e cada uma contra o máximo. Só avisa: quem decide é a mesa.
-  #especialidades(especialidades, role, efeitoDoSolo) {
-    const { habilidades, rank } = this.actor.system.role;
+  #especialidades(especialidades, role, dados, efeitoDoSolo) {
+    const { habilidades, rank } = dados;
     const { total, max } = pontosDeRole(role.id, rank);
     const itens = especialidades.itens.map(item => {
       const pontos = Number(habilidades[item.id]) || 0;
@@ -530,6 +543,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #alternarCoronha(evento, alvo) {
     const item = this.#item(alvo);
     return item?.setFlag(SISTEMA, 'coronhaRecolhida', !item.coronhaRecolhida);
+  }
+  // A segunda Role sai da ficha (o nome, o Rank e as habilidades dela).
+  static #tirarSegundaRole() {
+    return this.actor.update({ 'system.roleSecundaria.nome': '', 'system.roleSecundaria.rank': 0, 'system.roleSecundaria.habilidades': foundry.data.operators.ForcedReplacement.create({}) });
   }
   // A carga Tech (o Kit): carregar gasta a Ação de Movimento; carregada, o botão descarrega.
   static #alternarCarga(evento, alvo) {

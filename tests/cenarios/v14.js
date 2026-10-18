@@ -7080,6 +7080,68 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('duas Roles na ficha (o C23): a aba Role mostra a principal (Rockerboy 4) e a segunda (Medtech 2), cada uma com o Rank, as habilidades e as rolagens dela; o cabeçalho diz a segunda; o "Tirar" a tira, e o painel acrescenta outra (Media 3, com a Credibilidade pelo Rank dela)', async () => {
+      // d10 5: o Impacto Carismático do Rockerboy, Rank 4 + 5 = 9. d10 4: a Cirurgia do Medtech segundo, TECH 6 + Cirurgia 4
+      // (2 pontos) + 4 = 14. d10 6: a Credibilidade da Media acrescentada, Rank 3 + 6 = 9 (não o 4 da principal).
+      await fixar(edge, [[5, 10], [4, 10], [6, 10]]);
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const a = await Actor.implementation.create({ name: 'Teste Duas Roles Ficha', type: 'personagem', system: {
+            atributos: { tech: { valor: 6 } }, role: { nome: 'Rockerboy', rank: 4, habilidades: {} }, roleSecundaria: { nome: 'Medtech', rank: 2, habilidades: { Surgery: 2 } }
+          } });
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('role', 'primary');
+          const f = () => a.sheet.element;
+          const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const blocos = () => [...(f()?.querySelectorAll('.tab.role .role-bloco') ?? [])].map(b => ({
+            chave: b.dataset.role, nome: textoDe(b.querySelector('.role-nome')).split(' //')[0], rolagens: [...b.querySelectorAll('[data-action="rolarRole"]')].map(x => x.dataset.rolagem),
+            cirurgia: [...b.querySelectorAll('input[name$=".habilidades.Surgery"]')].map(i => i.name)
+          }));
+          await esperar(() => blocos().length === 2);
+          const antes = { blocos: blocos(), topo: textoDe(f().querySelector('.topo .segunda-role-topo')), painel: Boolean(f().querySelector('.tab.role > .segunda-role')), cirurgia: a.system.periciasDeRole['Surgery Skill'] };
+          const ctrl = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          const rolar = async id => {
+            const n = game.messages.size;
+            ctrl(f().querySelector('.tab.role [data-rolagem="' + id + '"]'));
+            await esperar(() => game.messages.size > n);
+            const m = game.messages.contents.at(-1);
+            return { total: m.rolls[0].total, formula: m.rolls[0].formula };
+          };
+          const impacto = await rolar('impacto-carismatico');
+          const cirurgia = await rolar('cirurgia');
+          // Tirar: a segunda sai (com as habilidades), e o painel de acrescentar volta.
+          f().querySelector('.tab.role [data-action="tirarSegundaRole"]').click();
+          await esperar(() => blocos().length === 1 && f().querySelector('.tab.role > .segunda-role'));
+          const tirada = { nome: a.system.roleSecundaria.nome, habilidades: Object.keys(a.system.roleSecundaria.habilidades).length, blocos: blocos().length, topo: Boolean(f().querySelector('.topo .segunda-role-topo')) };
+          // O painel acrescenta outra: a Media, e o Rank 3 no bloco dela; a Credibilidade rola com ele.
+          const nome = f().querySelector('.tab.role > .segunda-role [name="system.roleSecundaria.nome"]');
+          nome.value = 'Media';
+          nome.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => a.system.roleSecundaria.nome === 'Media' && blocos().length === 2);
+          const rank = f().querySelector('.tab.role .role-bloco[data-role="roleSecundaria"] [name="system.roleSecundaria.rank"]');
+          rank.value = 3;
+          rank.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => a.system.roleSecundaria.rank === 3);
+          const credibilidade = await rolar('credibilidade');
+          const acrescentada = { nome: a.system.roleSecundaria.nome, rank: a.system.roleSecundaria.rank, credibilidade, blocos: blocos().map(b => b.chave + ':' + b.nome) };
+          return { antes, impacto, cirurgia, tirada, acrescentada };
+        })()`);
+        const { antes, impacto, cirurgia, tirada, acrescentada } = info;
+        const [principal, segunda] = antes.blocos;
+        const ok = principal?.chave === 'role' && principal.nome === 'Rockerboy' && principal.rolagens.join() === 'impacto-carismatico' && principal.cirurgia.length === 0
+          && segunda?.chave === 'roleSecundaria' && segunda.nome === 'Medtech' && segunda.rolagens.join() === 'cirurgia,tecnologia-medica' && segunda.cirurgia.join() === 'system.roleSecundaria.habilidades.Surgery'
+          && antes.topo === '// Medtech 2' && !antes.painel && antes.cirurgia === 4
+          && impacto.total === 9 && impacto.formula === '1d10crit + 4' && cirurgia.total === 14 && cirurgia.formula === '1d10crit + 6 + 4'
+          && tirada.nome === '' && tirada.habilidades === 0 && tirada.blocos === 1 && !tirada.topo
+          && acrescentada.nome === 'Media' && acrescentada.rank === 3 && acrescentada.credibilidade.total === 9 && acrescentada.credibilidade.formula === '1d10crit + 3'
+          && acrescentada.blocos.join() === 'role:Rockerboy,roleSecundaria:Media';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(x => x.name === 'Teste Duas Roles Ficha')) { await ator.sheet?.close(); await ator.delete(); } window.__fila = []; return true; })()`);
+      }
+    });
+
     await r.passo('Facedown (wiki, RED p. 194; o CORE): COOL + Reputação + 1d10 pela aba Combate do personagem, com a janela e a regra do empate no cartão; Ctrl + clique rola direto, e gravemente ferido entra o −2; no capanga, a Reputação no cabeçalho (a de covarde, negativa, tira) e o botão do Facedown', async () => {
       // d10 6: COOL 7 + Reputação 3 + 6 + 2 do mestre = 18. Gravemente ferido (HP 19 de 40), d10 5: 7 + 3 − 2 + 5 = 13.
       // Capanga: COOL 6, Reputação −2 (covarde), d10 4: 6 − 2 + 4 = 8.

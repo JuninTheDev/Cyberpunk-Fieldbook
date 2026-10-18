@@ -318,13 +318,22 @@ export class AtorCPR extends Actor {
   // habilidade (na pechincha do Fixer, com COOL e Negociação), os pontos da Expertise do Tech (com TECH e a perícia
   // escolhida) ou o nível da perícia do Medtech (com TECH), as penalidades e os situacionais de todas as ações (e os da
   // perícia), com a janela de rolagem. O Backup do Lawman é outra rolagem (rolarBackup). Sem a rolagem nesta Role: null.
+  // A rolagem é da Role que a tem (a principal ou a segunda, a regra da mesa): o Rank e as habilidades são os dela.
   rolagemDeRole(id) {
-    const role = roleDaWiki(this.system.role.nome);
-    return (role && ROLAGENS_DE_ROLE[role.id]?.find(rolagem => rolagem.id === id)) || null;
+    return this.#roleDaRolagem(id)?.rolagem ?? null;
+  }
+  #roleDaRolagem(id) {
+    for (const chave of ['role', 'roleSecundaria']) {
+      const dados = this.system[chave];
+      const role = dados.nome ? roleDaWiki(dados.nome) : null;
+      const rolagem = role && ROLAGENS_DE_ROLE[role.id]?.find(entrada => entrada.id === id);
+      if (rolagem) return { rolagem, role: dados };
+    }
+    return null;
   }
   partesDaRole(id, { situacionais = null, pericia = null } = {}) {
-    const rolagem = this.rolagemDeRole(id);
-    const { atributos, periciasDeRole, role } = this.system;
+    const { rolagem, role } = this.#roleDaRolagem(id);
+    const { atributos, periciasDeRole } = this.system;
     const valor = rolagem.especialidade ? Math.max(0, Number(role.habilidades[rolagem.especialidade]) || 0) : rolagem.derivada ? periciasDeRole[rolagem.derivada] ?? 0 : role.rank;
     const habilidade = { rotulo: rolagem.habilidade ?? rolagem.rotulo, valor };
     const periciaId = rolagem.pericia ?? (rolagem.escolherPericia ? pericia : null);
@@ -351,9 +360,10 @@ export class AtorCPR extends Actor {
     }, { sabor: rolagem.dica, ...opcoes });
   }
 
-  // O Backup do Lawman (regras.backup): 1d10 contra o Rank e, vindo, o d6 das rodadas.
+  // O Backup do Lawman (regras.backup): 1d10 contra o Rank (o do Lawman, principal ou segunda) e, vindo, o d6 das
+  // rodadas.
   async rolarBackup({ falar = true } = {}) {
-    const rank = this.system.role.rank;
+    const rank = this.system.roles.find(role => role.id === 'lawman')?.rank ?? this.system.role.rank;
     const d10 = await new Roll('1d10').evaluate();
     const d6 = d10.total <= rank ? await new Roll('1d6').evaluate() : null;
     const resultado = { ...backup({ d10: d10.total, rank, d6: d6?.total ?? null }), d10: d10.total, d6: d6?.total ?? null, rank };

@@ -7,6 +7,7 @@
       <datalist id="cprf-roles-{{ator.id}}">{{#each roles}}<option value="{{nome}}">{{habilidade}}</option>{{/each}}</datalist>
       <span>// RANK</span>
       <input class="rank" type="number" name="system.role.rank" value="{{fonte.role.rank}}" min="0" max="10" aria-label="Rank">
+      {{#if sistema.roleSecundaria.nome}}<span class="segunda-role-topo" data-tooltip="A segunda Role (a regra da mesa): na aba Role">// {{sistema.roleSecundaria.nome}} {{sistema.roleSecundaria.rank}}</span>{{/if}}
     </p>
     <div class="nome-linha">
       <input class="nome" type="text" name="name" value="{{ator.name}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>

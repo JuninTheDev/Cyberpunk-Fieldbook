@@ -5853,6 +5853,39 @@ reserva do C23, o `76833a8d`.
       com o nome (R9) caiu nos 4 passos que tinham quebrado na primeira rodada.
 - **Próximo:** a parte 2 do C23, a ficha (a aba Role com as duas, as rolagens de cada uma e o cabeçalho).
 
+### Ciclo 119 (2026-10-18): o C23, parte 2: a ficha com as duas Roles (sessão KouArt)
+
+Commit anterior: `23bb94fc` (o ciclo 118).
+
+- **A referência:** a regra da mesa "Duas Roles na criação" (a wiki de 2026-10-17): "Cada Role tem suas habilidades e seu
+  Lifepath". No Foundry 12, cada Role é um item na ficha do CORE, com o Rank e as habilidades dele, e as rolagens de
+  habilidade usam o item da Role.
+- **O que muda:**
+  - **`ficha-personagem.mjs`:** a aba Role monta um bloco por Role (`#contextoDaRole`: a Role do RED da wiki, as
+    rolagens, as especialidades com os pontos e a conferência do Rank, as outras habilidades e o bônus nas perícias, com
+    os campos gravando na Role certa); a ação "Tirar" (o nome, o Rank e as habilidades da segunda, com o
+    `ForcedReplacement`);
+  - **`role.hbs`:** o bloco da segunda abaixo do da principal, com o nome e o Rank no título; sem ela, o painel "Segunda
+    Role" para acrescentar (o nome, com a lista das Roles, e o Rank). As notas ficam só na principal;
+  - **`topo.hbs`:** o cabeçalho diz a segunda ("// Medtech 2");
+  - **`documentos.mjs`:** as rolagens de habilidade procuram nas duas Roles (cada rolagem é de uma Role) e usam o Rank e
+    as habilidades da Role que a tem; o Backup usa o Rank do Lawman, seja a principal ou a segunda;
+  - **`tema.css`:** o espaço entre os blocos e os campos do painel.
+- **Testes (G4):** o passo novo das duas Roles na ficha (a principal Rockerboy 4 e a segunda Medtech 2: os dois blocos,
+  as rolagens e os campos de cada um, o cabeçalho; o Impacto Carismático pelo Rank da principal e a Cirurgia pela perícia
+  do Medtech segundo; o "Tirar", que limpa as habilidades; o painel acrescenta a Media, e a Credibilidade rola com o Rank 3
+  dela, não o 4 da principal). A primeira versão do passo acrescentava um Netrunner, que não tem rolagem: a mutação da
+  rolagem com o Rank da principal teria sobrevivido (a Cirurgia sai da perícia derivada, que não depende disso).
+- **Resultados:**
+  - G1: 75 arquivos, 0 erros; G2: 0 erros;
+  - G3: 169 de 169 (o ciclo não muda as regras);
+  - G4: 150 de 150;
+  - **mutações:** as 8 caíram no passo novo, e os arquivos voltaram (conferido pelo md5): a aba só com a principal (F1), o
+    bloco da segunda com os dados da principal (F2), as rolagens só da principal (F3), a rolagem da segunda com o Rank da
+    principal (F4), o "Tirar" que deixa as habilidades (F5), o cabeçalho sem a segunda (F6), sem o painel de acrescentar
+    (F7) e as habilidades da segunda gravando na principal (F8).
+- **Próximo:** a parte 3 do C23, a Role ativa (como no CORE), ou a 4, as perícias novas.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
