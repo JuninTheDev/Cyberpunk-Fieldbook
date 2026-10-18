@@ -20,16 +20,13 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   PC com o Foundry 12 e o CORE instalados.
 - **`sistema`, "sem erros de JS na página":** dois 404 dos PDFs dos livros, que ficam fora do git (`*.pdf`).
 
-## Falhas conhecidas desde a integração da revisão (ciclo 32), até as armas de 2077 pelo Mission Kit
+## Falhas conhecidas desde a integração da revisão (ciclo 32): nenhuma desde o ciclo 116
 
-A wiki do master trocou as regras das armas de 2077 pelas do Mission Kit, e os modos dos ciclos 17 e 18 ainda seguem o
-suplemento de fã (o usuário adiou o Kit em 2026-10-12). Os testes de referência que conferem o sistema contra a wiki
-pegaram isso. Eles ficam falhando até o Kit, e não se tiram nem se mudam para passar:
-- **G3 (1):** contra o texto da wiki, as regras de cada modelo (o Ricochete saiu no ciclo 114, com o Power do Kit; o
-  perfil das Tech e a Carga Tech, no 115, com o Tech do Kit);
-- **G4 (2):** o passo da Dian e Lexington (a Lexington sem autofogo) e a checagem de avisos (os avisos da Lexington, do passo dela: desde o ciclo 82, só o "sem munição compatível" chega ao
-  console; o "não tem autofogo" sai do mesmo jeito, mas fica na fila das notificações, ver "A fila das notificações"
-  abaixo). Os da arma Smart e da Kappa saíram no ciclo 110; o da carga Tech, no 115.
+A wiki do master trocou as regras das armas de 2077 pelas do Mission Kit, e os modos dos ciclos 17 e 18 seguiam o
+suplemento de fã. Os testes de referência que pegaram isso voltaram a passar com as armas de 2077 pelo Kit (C29, ciclos
+110 a 116): a arma Smart e a Kappa no 110; o Ricochete no 114; o perfil das Tech e a carga Tech no 115; as regras de cada
+modelo, a Dian e Lexington e a checagem de avisos no 116 (a checagem que vinha e ia eram os avisos do passo da
+Lexington, que carregava munição de pistola média e tentava o autofogo que ela não tem mais).
 
 As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED.
 
@@ -38,7 +35,7 @@ As falhas das Roles (3 no G3 e 1 no G4) saíram no ciclo 33, com as Roles do RED
 A wiki do master passou a ter "uma regra só na mesa" (o Mission Kit sobre o RED, sem as regras do suplemento de fã) e
 revisou os itens do suplemento. Os testes de referência pegaram cada diferença. Cada uma é uma parte do C29 do
 ROADMAP, e os testes não se tiram nem se mudam para passar:
-- **G3 e G4:** nenhuma desde o ciclo 110;
+- **G3 e G4:** nenhuma desde o ciclo 110 (o C29 terminou no 116);
 - **Já saíram:** a Interface do Netrunner e o ponto de acesso à NET (G3, ciclo 94); o catálogo de 2077, o efeito de
   falha das armas (G3) e os tamanhos dos compêndios (G4), no ciclo 106; o TeleOptics e o passo 1 da migração (G3) e a
   janela de rolagem (G4), no ciclo 107; a fundação e as opções do cyberware (G3), no ciclo 108; as Roles do RED e os
@@ -63,6 +60,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **Passo que quebra esconde o resto** (ciclo 110): um erro no meio do passo (o `rajada.ataque` da Lexington, que
   não faz mais autofogo e devolve `null`) tira do resultado o que já tinha dado certo (a Dian, no mesmo passo). Leia com
   `?.` o que pode não vir e deixe a checagem falhar: o passo falha mostrando os valores.
+- **A munição do mesmo tipo na ficha** (ciclo 116): o `recarregar` pega a primeira munição compatível da ficha. Uma
+  arma que o passo cria com o calibre de uma arma da ficha (o rifle da Grad e o do fuzil da Atiradora) carrega da munição
+  dela, e um passo depois fica sem bala. Crie a munição junto, aponte o `system.carregada` da arma para ela e só então
+  recarregue.
 - **O G1 depois de um rebase** (ciclo 113): com um conflito aberto, o `git ls-files` lista o arquivo uma vez por estágio
   (no ciclo 112, o `combate.mjs` três vezes: 72 em vez de 70). Conte os arquivos depois de resolver.
 - **Teste de uma correção** é provado falhando sem ela. A mutação é desfeita antes do commit.

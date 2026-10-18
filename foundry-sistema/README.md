@@ -265,8 +265,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     - **Dois canos:** o botão dispara os dois de uma vez e gasta 2 cartuchos. Na Palica e na Testera, o dano sobe para 4d6.
     - **Kappa:** com dois alvos marcados, se o tiro (não o mirado) não pegar o primeiro, as balas vão para o segundo, a até 4 m dele.
     - **Dian:** o botão Recolher recolhe a coronha. Dá para esconder a arma, mas os ataques têm −1 até estender.
-    - **Lexington:** o autofogo gasta 7 balas.
-    - **O resto** (a carga da Satara, a Burya, o supressivo da Senkoh, o +1 entre 13 e 50 m), o mestre resolve: a descrição da arma diz.
+    - **Unity:** no tiro mirado, o dano é 4d6.
+    - **Carnage e Burya:** quem dispara a Carnage sem BODY 10, ou a Burya sem Grafted Muscle and Bone Lace nem cyberbraço, sofre a lesão crítica Músculo rompido ou Braço quebrado (se ainda não tiver), pela configuração "Lesão crítica"; o "Desfazer" a tira.
+    - **Grad:** depois de cada tiro, o botão "Manejar o ferrolho" (uma Ação) libera o próximo; antes, ela não dispara.
+    - **A carga de cada uma:** a Burya carrega sem gastar a Ação de Movimento; a Omaha fica carregada até o fim do turno em que disparou, com CDT 2 e até 3 balas por ataque; a Nekomata atravessa cobertura fina e grossa.
+    - **O resto** (o +1 entre 13 e 50 m da Nowaki, o supressivo da Senkoh), o mestre resolve: a descrição da arma diz.
 - **Inventário** (aba Equipamento): equipamento, roupas e drogas, com a quantidade (− e +, sem passar de 0; nas drogas, as doses; ciclo 67) e o uso (equipado, carregando ou guardado; o botão da linha passa de um para o outro). O equipamento de ativação à mão que tem efeito ganha o "Usar" (na linha e na ficha do item; ciclo 71), que liga e desliga os efeitos dele.
   - **Mãos livres** (C12, ciclo 87): equipar arma ou escudo confere se cabe nas duas mãos mais os bônus dos efeitos.
     Cada arma ocupa as mãos que pede; com BODY 8+, a arma branca de duas mãos ocupa uma. Cada escudo equipado ocupa
@@ -351,9 +354,8 @@ E a do navegador de cada um:
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart
-  melhorada desde o 112, as balas por tiro desde o 113, a Power desde o 114 e a Tech desde o 115). Faltam as regras
-  próprias de alguns modelos (a Unity, a Carnage, a Burya, a Grad, a Nekomata, a Omaha e a Lexington), e o Rebuild
-  ainda não tem regra. Os itens já existem, com a classe e as regras guardadas na
+  melhorada desde o 112, as balas por tiro desde o 113, a Power desde o 114 e a Tech desde o 115). As regras próprias
+  dos modelos também, desde o 116. O Rebuild ainda não tem regra. Os itens já existem, com a classe e as regras guardadas na
   flag `arma2077`.
 - **O cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm).
 - **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.

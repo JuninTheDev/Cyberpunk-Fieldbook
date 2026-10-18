@@ -96,6 +96,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       recarregarSorte: FichaPersonagem.#recarregarSorte,
       alternarCoronha: FichaPersonagem.#alternarCoronha,
       alternarCarga: FichaPersonagem.#alternarCarga,
+      manejarFerrolho: FichaPersonagem.#manejarFerrolho,
       equipar: FichaPersonagem.#equipar,
       mudarUso: FichaPersonagem.#mudarUso,
       portaDoDeck: FichaPersonagem.#portaDoDeck,
@@ -517,6 +518,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #alternarCarga(evento, alvo) {
     const item = this.#item(alvo);
     return item && game.system.api.combate.alternarCarga(item);
+  }
+  // O ferrolho da Grad (o Kit): depois do tiro, uma Ação para manejá-lo antes de atirar de novo.
+  static #manejarFerrolho(evento, alvo) {
+    return this.#item(alvo)?.unsetFlag(SISTEMA, 'ferrolhoPendente');
   }
   static #equipar(evento, alvo) {
     const item = this.#item(alvo);

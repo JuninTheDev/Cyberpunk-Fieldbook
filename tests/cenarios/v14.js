@@ -3644,10 +3644,10 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
-    await r.passo('Dian e Lexington (2077): a coronha recolhida pelo botão da ficha dá −1 no ataque (o aviso aparece, e o botão estende de volta); o autofogo da Lexington gasta 7 balas, e com menos não dá', async () => {
+    await r.passo('Dian e Lexington (2077): a coronha recolhida pelo botão da ficha dá −1 no ataque (o aviso aparece, e o botão estende de volta); a Lexington do Kit não tem autofogo (o aviso, sem gastar bala)', async () => {
       // Dian (Smart, excelente) contra o Alvo a 10 m (DV 13, SMG): com a coronha recolhida, d10 7 → REF 8 + Pistola 4 + 1 +
-      // Smart 1 − 1 + 7 = 20; dano 2d6: 1 + 1. Lexington, autofogo no Alvo a 10 m: d10 9 → REF 8 + Autofogo 4 + 9 = 21 contra 17 (SMG Autofire):
-      // ×2 (o máximo da arma), 2d6: 1 + 1 = 2 × 2 = 4, a armadura segura.
+      // Smart 1 − 1 + 7 = 20; dano 2d6: 1 + 1. A Lexington do Kit não tem autofogo (o do suplemento gastava 7 balas): a
+      // ficha não tem o botão, e o ataque avisa sem gastar bala.
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
         const alvo = __token('Alvo');
@@ -3657,7 +3657,7 @@ module.exports = async ({ edge, servidores, r }) => {
         try {
           link = await __cyber2077('core_cyberware:subdermal-grip');
           const dian = await __arma2077('armas-2077:kang-tao-g-58-dian', 'core_ammo:medium-pistol-basic', 30);
-          const lex = await __arma2077('armas-2077:militech-m-10af-lexington', 'core_ammo:medium-pistol-basic', 21);
+          const lex = await __arma2077('armas-2077:militech-m-10af-lexington', 'core_ammo:heavy-pistol-basic', 21);
           criados.push(dian.arma.id, dian.municao.id, lex.arma.id, lex.municao.id);
           await a.update({ 'system.pericias.autofire.nivel': 4 });
           await a.sheet.render({ force: true });
@@ -3674,15 +3674,12 @@ module.exports = async ({ edge, servidores, r }) => {
           __linhaDaArma(dian.arma).querySelector('button[data-action="alternarCoronha"]').click();
           await __esperar(() => !linha(dian.arma).avisos.length);
           const deVolta = { ...linha(dian.arma), flag: dian.arma.getFlag('${S}', 'coronhaRecolhida') };
-          const dicaDoAutofogo = __linhaDaArma(lex.arma)?.querySelector('button[data-modo="autofogo"]')?.dataset.tooltip ?? '';
-          window.__fila = [[9, 10], [1, 6], [1, 6]];
-          const rajada = await lex.arma.atacar({ alvo, modo: 'autofogo' });
-          const penteDepois = lex.arma.system.pente.value;
-          await lex.arma.update({ 'system.pente.value': 5 });
-          const poucas = await __comAvisos(() => lex.arma.atacar({ alvo, modo: 'autofogo' }));
+          const botaoDeAutofogo = Boolean(__linhaDaArma(lex.arma)?.querySelector('button[data-modo="autofogo"]'));
+          const penteDaLexington = lex.arma.system.pente.value;
+          const semAutofogo = await __comAvisos(() => lex.arma.atacar({ alvo, modo: 'autofogo' }));
           return {
-            estendida, recolhida, deVolta, tiro: { ataque: tiro.ataque, formula: testeDian.formula, partes: testeDian.partes }, dicaDoAutofogo,
-            rajada: rajada && { ataque: rajada.ataque, linhas: __linhas(rajada) }, penteDepois, poucas: { r: poucas.r, avisos: poucas.avisos, pente: lex.arma.system.pente.value }, fila: window.__fila.length
+            estendida, recolhida, deVolta, tiro: { ataque: tiro.ataque, formula: testeDian.formula, partes: testeDian.partes }, botaoDeAutofogo,
+            semAutofogo: { r: semAutofogo.r, avisos: semAutofogo.avisos, pente: penteDaLexington, gastou: penteDaLexington - lex.arma.system.pente.value }, fila: window.__fila.length
           };
         } finally {
           await a.sheet.close();
@@ -3691,16 +3688,13 @@ module.exports = async ({ edge, servidores, r }) => {
           await __ator('Alvo').update({ 'system.hp.value': hpDoAlvo });
         }
       })()`);
-      const { estendida, recolhida, deVolta, tiro, rajada, poucas } = info;
-      // A rajada que não sai (null) falha a checagem em vez de quebrar o passo: a Dian fica no resultado.
-      const [l = {}] = rajada?.linhas ?? [];
+      const { estendida, recolhida, deVolta, tiro, semAutofogo } = info;
       const ok = estendida.ataque === '+14' && estendida.avisos.length === 0 && estendida.alternar.join() === 'Recolher'
         && recolhida.ataque === '+13' && recolhida.avisos.join() === 'coronha recolhida (−1)' && recolhida.alternar.join() === 'Estender'
         && tiro.ataque === 20 && tiro.formula === '1d10crit + 8 + 4 + 1 + 1 - 1' && tiro.partes.includes('Arma Smart +1') && tiro.partes.includes('Coronha recolhida -1')
         && deVolta.ataque === '+14' && deVolta.alternar.join() === 'Recolher' && deVolta.flag === false
-        && info.dicaDoAutofogo === 'Autofogo (×2): 7 balas'
-        && rajada?.ataque === 21 && l.dv === 17 && l.mult === 2 && l.dano?.dano === 4 && info.penteDepois === 14
-        && poucas.r === null && poucas.pente === 5 && poucas.avisos.join() === 'Militech M-10AF Lexington: precisa de 7 balas no pente (tem 5). Recarregue.' && info.fila === 0;
+        && !info.botaoDeAutofogo && semAutofogo.r === null && semAutofogo.pente === 21 && semAutofogo.gastou === 0
+        && semAutofogo.avisos.join() === 'Militech M-10AF Lexington não tem autofogo.' && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });
 
@@ -3959,6 +3953,145 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.sete.r === null && info.sete.avisos.join() === 'Kang Tao L-69 Zhuo: só dispara com 8 no pente (tem 7): é a trava de segurança.'
         && info.fichaComum.avisos.join() === 'só Smart melhorada'
         && info.comComum.r === null && info.comComum.pente === 8 && info.comComum.avisos.join() === 'Kang Tao L-69 Zhuo: só aceita munição Smart melhorada.'
+        && info.capangaPerdeu === 4 && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('regras de cada modelo (2077, o Kit): o mirado da Unity causa 4d6; a Carnage com BODY 6 rompe o músculo de quem atira (uma vez só; o Desfazer tira a lesão); a Burya sem cromo no braço o quebra, e com o Grafted Muscle and Bone Lace não; a Grad pede o ferrolho; a Omaha carregada fica até o fim do turno, com 3 balas; a Nekomata atravessa a grossa', async () => {
+      // A Unity, mirada no item na mão do Capanga a 4 m (DV 13): d10 10 e 1 → 8 + 4 − 8 + 11 = 15; 4d6: 1 + 1 + 1 + 1. A
+      // Carnage (balote) no Alvo a 10 m (DV 15; SP 11): d10 5 → 17; 5d6 de 1, a armadura segura (duas vezes). A Burya no
+      // Alvo: d10 5 → 17; 4d6 de 1 (duas vezes). A Grad no Alvo (DV 25 do rifle de precisão a 10 m): d10 5 → 18, erra (duas
+      // vezes). A Omaha carregada no Alvo: d10 5 → 17; 3d6 de 1, a metade do SP (6) segura (duas vezes, no mesmo turno).
+      await fixar(edge, [[10, 10], [1, 10], [1, 6], [1, 6], [1, 6], [1, 6], [5, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6], [5, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6],
+        [5, 10], [1, 6], [1, 6], [1, 6], [1, 6], [5, 10], [1, 6], [1, 6], [1, 6], [1, 6], [5, 10], [5, 10], [5, 10], [1, 6], [1, 6], [1, 6], [5, 10], [1, 6], [1, 6], [1, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const [alvo, capanga] = ['Alvo', 'Capanga'].map(__token);
+        const api = game.system.api.combate;
+        const hpDoCapanga = __ator('Capanga').system.hp.value;
+        const lesoesAntes = a.items.filter(item => item.type === 'lesao').map(item => item.id);
+        const lesoes = () => a.items.filter(item => item.type === 'lesao' && !lesoesAntes.includes(item.id)).map(item => item.getFlag('${S}', 'catalogo'));
+        const criados = [];
+        let grip = null;
+        let combate = null;
+        const linha = arma => ({ avisos: [...(__linhaDaArma(arma)?.querySelectorAll('.aviso-2077') ?? [])].map(e => e.textContent.trim()), dica: __linhaDaArma(arma)?.querySelector('td.num')?.dataset.tooltip ?? '',
+          alternar: [...(__linhaDaArma(arma)?.querySelectorAll('button[data-action="manejarFerrolho"], button[data-action="alternarCarga"]') ?? [])].map(b => b.textContent.trim() + ':' + (b.dataset.tooltip ?? '')) });
+        const resumo = r => r && { ataque: r.ataque, descricao: r.descricao, notas: r.notas, linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, dano: l.dano?.dano ?? null, recebido: l.dano?.recebido ?? null, notas: l.notas })) };
+        const cartao = r => game.messages.contents.findLast(m => m.getFlag('${S}', 'ataque')?.id === r.id);
+        try {
+          await __armaduraDoAlvo(11);
+          await capanga.update({ x: 500 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 500);
+          // Cada arma carrega da própria munição: o recarregar pega a primeira compatível da ficha, e a do fuzil da Atiradora
+          // (rifle, como a da Grad e a da Nekomata) é a dos passos seguintes.
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const arma = async (id, municaoId, quantidade) => {
+            const dados = foundry.utils.deepClone(cat[id]);
+            dados.system.equipada = true;
+            const municao = foundry.utils.deepClone(cat[municaoId]);
+            municao.system.quantidade = quantidade;
+            const novos = await a.createEmbeddedDocuments('Item', [dados, municao]);
+            const pronta = novos.find(item => item.type === 'arma');
+            const propria = novos.find(item => item.type === 'municao');
+            criados.push(pronta.id, propria.id);
+            await pronta.update({ 'system.carregada': propria.id });
+            await pronta.recarregar();
+            return pronta;
+          };
+          const unity = await arma('armas-2077:constitutional-arms-unity', 'core_ammo:heavy-pistol-basic', 12);
+          const carnage = await arma('armas-2077:budget-arms-carnage', 'core_ammo:shotgun-slug-basic', 5);
+          const burya = await arma('armas-2077:techtronika-rt-46-burya', 'core_ammo:very-heavy-pistol-basic', 4);
+          const grad = await arma('armas-2077:techtronika-spt32-grad', 'core_ammo:rifle-basic', 4);
+          const omaha = await arma('armas-2077:militech-m-76e-omaha', 'core_ammo:heavy-pistol-basic', 9);
+          const nekomata = await arma('armas-2077:tsunami-nekomata', 'core_ammo:rifle-basic', 4);
+          await a.sheet.render({ force: true });
+          await __esperar(() => [unity, carnage, burya, grad, omaha, nekomata].every(x => __linhaDaArma(x)));
+          const fichas = { unity: linha(unity), carnage: linha(carnage), burya: linha(burya), nekomata: linha(nekomata), omaha: linha(omaha) };
+          // A Unity: o mirado com 4d6.
+          const mirado = resumo(await unity.atacar({ alvo: capanga, local: 'item' }));
+          // A Carnage: BODY 6, o músculo rompido uma vez só; o Desfazer do primeiro tiro o tira.
+          const carnage1 = await carnage.atacar({ alvo });
+          const depoisDaCarnage = lesoes();
+          const carnage2 = await carnage.atacar({ alvo });
+          const depoisDaSegunda = lesoes();
+          const desfezCarnage = await api.desfazer(cartao(carnage1));
+          const depoisDoDesfazer = lesoes();
+          // A Burya: com o Grafted Muscle and Bone Lace, nada; sem ele, o braço quebrado. Carrega sem a Ação de Movimento.
+          grip = await __cyber2077('core_cyberware:grafted-muscle-and-bone-lace');
+          let antes = game.messages.size;
+          await api.alternarCarga(burya);
+          const avisoDaBurya = game.messages.contents.slice(antes).map(m => new DOMParser().parseFromString(m.content, 'text/html').body.textContent.replace(/\\s+/g, ' ').trim()).join(' | ');
+          const comCromo = resumo(await burya.atacar({ alvo }));
+          const lesoesComCromo = lesoes();
+          await __tirarCyber(grip);
+          grip = null;
+          const semCromo = resumo(await burya.atacar({ alvo }));
+          const lesoesSemCromo = lesoes();
+          // A Grad: o ferrolho depois do tiro; bloqueada até manejar; o Desfazer o libera.
+          const grad1 = resumo(await grad.atacar({ alvo }));
+          await __esperar(() => linha(grad).alternar.length);
+          const fichaDaGrad = linha(grad);
+          const bloqueada = await __comAvisos(() => grad.atacar({ alvo }));
+          __linhaDaArma(grad).querySelector('button[data-action="manejarFerrolho"]').click();
+          await __esperar(() => !linha(grad).alternar.length);
+          const manejou = !grad.getFlag('${S}', 'ferrolhoPendente');
+          const grad2 = await grad.atacar({ alvo });
+          const pendente2 = Boolean(grad.getFlag('${S}', 'ferrolhoPendente'));
+          const desfezGrad = await api.desfazer(cartao(grad2));
+          const depoisDoDesfazerDaGrad = Boolean(grad.getFlag('${S}', 'ferrolhoPendente'));
+          // A Omaha: carregada, dois tiros no mesmo turno, 3 balas cada; no turno seguinte, a carga acabou.
+          const cena = canvas.scene;
+          combate = await Combat.implementation.create({ scene: cena.id, active: true });
+          await combate.createEmbeddedDocuments('Combatant', ['Atiradora', 'Alvo'].map(n => ({ tokenId: __token(n).id, sceneId: cena.id, actorId: __ator(n).id })));
+          await combate.startCombat();
+          await api.alternarCarga(omaha);
+          const omaha1 = resumo(await omaha.atacar({ alvo }));
+          const aindaCarregada = Boolean(api.cargaDa(omaha));
+          const omaha2 = resumo(await omaha.atacar({ alvo }));
+          const penteDaOmaha = omaha.system.pente.value;
+          await combate.nextTurn();
+          const noOutroTurno = Boolean(api.cargaDa(omaha));
+          return {
+            fichas, mirado, depoisDaCarnage, depoisDaSegunda, carnage1: resumo(carnage1), carnage2: resumo(carnage2), desfezCarnage, depoisDoDesfazer,
+            avisoDaBurya, comCromo, lesoesComCromo, semCromo, lesoesSemCromo,
+            grad1, fichaDaGrad, bloqueada: { r: bloqueada.r ?? null, avisos: bloqueada.avisos }, manejou, pendente2, desfezGrad, depoisDoDesfazerDaGrad,
+            omaha1, aindaCarregada, omaha2, penteDaOmaha, noOutroTurno,
+            capangaPerdeu: hpDoCapanga - __ator('Capanga').system.hp.value, fila: window.__fila.length
+          };
+        } finally {
+          await a.sheet.close();
+          if (grip) await __tirarCyber(grip);
+          if (combate && game.combats.has(combate.id)) await combate.delete();
+          const novas = a.items.filter(item => item.type === 'lesao' && !lesoesAntes.includes(item.id)).map(item => item.id);
+          await a.deleteEmbeddedDocuments('Item', [...criados, ...novas].filter(id => a.items.has(id)));
+          await __armaduraDoAlvo(11);
+          await __ator('Alvo').update({ 'system.hp.value': 45 });
+          await __ator('Capanga').update({ 'system.hp.value': hpDoCapanga });
+          await capanga.update({ x: 900 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 900);
+          window.__fila = [];
+        }
+      })()`);
+      const { fichas, mirado, carnage1, carnage2, comCromo, semCromo, grad1, omaha1, omaha2 } = info;
+      const MUSCULO = 'core_critical-injuries-body:torn-muscle';
+      const BRACO = 'core_critical-injuries-body:broken-arm';
+      const ok = fichas.unity.dica === 'Arma Power: a lesão crítica causa 10 de dano bônus (no lugar de 5). No tiro mirado, 4d6 de dano.'
+        && fichas.carnage.dica.endsWith('Quem dispara com BODY menor que 10 sofre a lesão crítica Músculo rompido.')
+        && fichas.burya.dica === 'Quem dispara sem Grafted Muscle and Bone Lace nem cyberbraço sofre a lesão crítica Braço quebrado.'
+        && fichas.burya.alternar.some(b => b.startsWith('Carregar:Carregar (sem gastar a Ação de Movimento)'))
+        && fichas.nekomata.alternar.some(b => /atravessa cobertura fina e grossa/.test(b)) && fichas.omaha.alternar.some(b => /CDT 2 e até 3 balas/.test(b) && /até o fim do turno em que disparar/.test(b))
+        && mirado.descricao === 'Tiro mirado no item na mão' && mirado.ataque === 15 && mirado.linhas[0]?.resultado === 'acertou' && mirado.linhas[0].dano === 4 && mirado.notas.includes('Tiro mirado: 4d6 de dano.')
+        && info.depoisDaCarnage.join() === MUSCULO && carnage1.notas.includes('Atiradora tem BODY 6 (a arma pede 10): sofre a lesão crítica Músculo rompido.')
+        && info.depoisDaSegunda.join() === MUSCULO && !carnage2.notas.some(n => /lesão crítica/.test(n)) && info.desfezCarnage === true && info.depoisDoDesfazer.length === 0
+        && /Atiradora carrega Techtronika RT-46 Burya \(sem gastar a Ação de Movimento\)/.test(info.avisoDaBurya)
+        && comCromo.descricao === 'Tiro, carregado' && info.lesoesComCromo.length === 0 && !comCromo.notas.some(n => /lesão crítica/.test(n))
+        && info.lesoesSemCromo.join() === BRACO && semCromo.notas.includes('Atiradora não tem Grafted Muscle and Bone Lace nem cyberbraço: sofre a lesão crítica Braço quebrado.')
+        && grad1.linhas[0]?.resultado === 'errou' && grad1.notas.includes('Depois do tiro, gaste uma Ação para manejar o ferrolho antes de atirar de novo.')
+        && info.fichaDaGrad.avisos.includes('ferrolho') && info.fichaDaGrad.alternar.some(b => b.startsWith('Manejar o ferrolho:'))
+        && info.bloqueada.r === null && info.bloqueada.avisos.join() === 'Techtronika SPT32 Grad: gaste uma Ação para manejar o ferrolho antes de atirar de novo (o botão "Manejar o ferrolho").'
+        && info.manejou && info.pendente2 && info.desfezGrad === true && !info.depoisDoDesfazerDaGrad
+        && omaha1.descricao === 'Tiro, carregado' && omaha1.notas.includes('Carregada: continua CDT 2 e gasta até 3 balas por ataque; fica carregada até o fim do turno; atravessa cobertura fina (a cobertura não perde HP) e ignora metade do SP do alvo, arredondada para cima.')
+        && info.aindaCarregada && omaha2.descricao === 'Tiro, carregado' && info.penteDaOmaha === 3 && !info.noOutroTurno
         && info.capangaPerdeu === 4 && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });

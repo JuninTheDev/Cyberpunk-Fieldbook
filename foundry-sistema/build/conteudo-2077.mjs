@@ -75,7 +75,9 @@ const NESTE_SISTEMA = {
   smart: 'o +1 nos ataques à distância, a ligação (o Personal Link do Neuroport ou o Subdermal Grip) e a munição Smart melhorada (as penalidades de visão e a segunda chance com 14 + 1d10), o sistema aplica: sem a ligação, a arma não dispara.'
 };
 const SO_COM_O_MESTRE = 'O que mais o texto acima disser de próprio deste modelo, o mestre resolve.';
-// O que o sistema faz das regras próprias de cada modelo, pela flag arma2077.
+// O que o sistema faz das regras próprias de cada modelo, pela flag arma2077. As lesões de quem dispara, pelo nome do
+// catálogo do CORE.
+const LESOES_DO_ATIRADOR = { 'Torn Muscle': 'Músculo rompido', 'Broken Arm': 'Braço quebrado' };
 function proprioNoSistema(flag) {
   const frases = [];
   if (flag.doisCartuchosDano) frases.push(`O botão "Dois canos" dispara os dois cartuchos de uma vez: ${flag.doisCartuchosDano} de dano.`);
@@ -87,6 +89,15 @@ function proprioNoSistema(flag) {
     frases.push(`O tiro único gasta ${flag.balas} ${flag.soCartucho ? 'cartuchos' : 'balas'} (${comMenos})${flag.danoFixo ? ` e causa ${flag.danoFixo}` : ''}.`);
   }
   if (flag.soSmartMelhorada) frases.push('Só carrega a munição Smart melhorada.');
+  // As regras de cada modelo do Kit (ciclo 116).
+  if (flag.danoMirado) frases.push(`No tiro mirado, o dano é ${flag.danoMirado}.`);
+  const lesao = nome => LESOES_DO_ATIRADOR[nome] ?? nome;
+  if (flag.exigeBody && flag.lesao) frases.push(`Quem dispara com BODY menor que ${flag.exigeBody} sofre a lesão crítica ${lesao(flag.lesao)} (se ainda não tiver), pela configuração "Lesão crítica".`);
+  if (flag.lesaoSemCromo) frases.push(`Quem dispara sem Grafted Muscle and Bone Lace nem cyberbraço sofre a lesão crítica ${lesao(flag.lesaoSemCromo)} (se ainda não tiver), pela configuração "Lesão crítica".`);
+  if (flag.cargaSemMovimento) frases.push('O botão Carregar não gasta a Ação de Movimento.');
+  if (flag.cargaAteFimDoTurno) frases.push(`Carregada, fica até o fim do turno em que disparou, com CDT ${flag.cdtNaCarga || 1} e até ${flag.balasNaCarga || 1} balas por ataque.`);
+  if (flag.cargaGrossa) frases.push('Carregada, atravessa cobertura fina e grossa.');
+  if (flag.ferrolho) frases.push('Depois de cada tiro, o botão "Manejar o ferrolho" (uma Ação) libera o próximo.');
   return frases.join(' ');
 }
 // Nos Rebuilds do Kit (sem botão) e na munição Smart melhorada (ciclo 112).

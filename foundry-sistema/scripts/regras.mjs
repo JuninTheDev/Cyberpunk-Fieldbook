@@ -725,7 +725,9 @@ export function descreverAtaque({ modo, local = 'corpo', doisCanos = false, rico
 // - As regras próprias de alguns modelos, pelo texto de cada arma: os dois canos de uma vez (a Palica e a Testera: o
 //   dano sobe para 4d6), gastando os dois cartuchos; os dois alvos da Kappa (se o tiro não pega o primeiro, as balas
 //   Smart vão para o segundo, a até 4 m dele); a coronha recolhida da Dian (−1 nos ataques); o autofogo da Lexington,
-//   com 7 balas. As outras regras de cada modelo ainda seguem o suplemento de fã (a próxima parte do C29).
+//   com 7 balas (a do suplemento: a do Kit não tem autofogo). E, pelo Kit (C29, ciclo 116), o dano do tiro mirado da
+//   Unity, as lesões de quem dispara a Carnage sem BODY 10 e a Burya sem cromo no braço, o ferrolho da Grad e a carga da
+//   Burya, da Omaha e da Nekomata.
 export const ALCANCE_DOS_DOIS_ALVOS = 4;
 export const PENALIDADE_CORONHA = -1;
 // As balas Smart mudam para o segundo alvo? Só a até 4 m do primeiro (com meio metro de folga para a grade, como o
@@ -739,12 +741,43 @@ export const penalidadeDoRicochete = ({ coprocessador = false, mirado = false } 
 // A carga Tech (o Kit): dura 20 rodadas (60 segundos) e ignora metade do SP (a porcentagem do aplicarDano, que arredonda
 // a metade para cima: SP 11 conta 6).
 export const CARGA_TECH = { rodadas: 20, ignorarPct: 50 };
-// A carga ainda vale? marca: { combate, rodada } de quando carregou (combate null fora dele); combate: o de agora
-// ({ id, rodada }), ou null. No mesmo combate, até 20 rodadas depois; fora dele, até disparar (como o foundry-2077).
+// A carga ainda vale? marca: { combate, rodada } de quando carregou (combate null fora dele), e o disparou ({ rodada,
+// turno }) da Omaha, que fica carregada até o fim do turno em que disparou; combate: o de agora ({ id, rodada, turno }),
+// ou null. No mesmo combate, até 20 rodadas depois; fora dele, até disparar (como o foundry-2077; a Omaha fora do combate
+// também acaba no tiro: não há turno).
 export function cargaValida(marca, combate) {
   if (!marca) return false;
-  if (marca.combate && combate && marca.combate === combate.id) return combate.rodada - Number(marca.rodada) < CARGA_TECH.rodadas;
+  const mesmo = Boolean(marca.combate && combate && marca.combate === combate.id);
+  if (marca.disparou) return mesmo && combate.rodada === marca.disparou.rodada && combate.turno === marca.disparou.turno;
+  if (mesmo) return combate.rodada - Number(marca.rodada) < CARGA_TECH.rodadas;
   return true;
+}
+// As balas do ataque carregado da Omaha: até 3 por ataque (com menos no pente, esvazia), no tiro único. null: as de
+// sempre.
+export function balasDaCarga({ modo, perfil, pente = 0 }) {
+  if (!(perfil?.balasNaCarga > 1) || !MODOS_DE_TIRO_UNICO.includes(modo)) return null;
+  return Math.max(1, Math.min(perfil.balasNaCarga, Number(pente) || 0));
+}
+// O que a carga atravessa: a fina; a da Nekomata, a fina e a grossa.
+export const coberturaDaCarga = perfil => (perfil?.cargaGrossa ? 'cobertura fina e grossa' : 'cobertura fina');
+
+// As regras de quem dispara (a wiki, o texto de cada arma): a Carnage, "quem dispara sem BODY 10 ou mais sofre a lesão
+// crítica Músculo Rompido (se ainda não tiver)"; a Burya, "quem dispara sem Grafted Muscle and Bone Lace ou um cyberbraço
+// sofre a lesão crítica Braço Quebrado (se ainda não tiver)". As lesões, pelo nome da wiki, no catálogo do CORE.
+const LESOES_2077 = { 'Torn Muscle': 'Músculo rompido', 'Broken Arm': 'Braço quebrado' };
+export const nomeDaLesao2077 = nome => LESOES_2077[nome] ?? nome;
+export const idDaLesao2077 = nome => `core_critical-injuries-body:${String(nome).trim().toLowerCase().replace(/\s+/g, '-')}`;
+// O cromo que aguenta a Burya, como o foundry-2077: o Grafted Muscle and Bone Lace (ou um esqueleto) ou um cyberbraço
+// (a fundação do braço).
+export const ehCromoNoBraco = ({ nome = '', catalogo = '', tipo = '', fundacional = false }) => catalogo === 'core_cyberware:grafted-muscle-and-bone-lace'
+  || (tipo === 'cyberArm' && Boolean(fundacional)) || /muscle (and|&) bone lace|epimorphic skeleton|titanium bones|^cyberarm\b/i.test(String(nome));
+// As lesões que quem dispara sofre: [{ id, nome, motivo }]. body: o BODY dele; cromo: tem o cromo no braço; tem: as lesões que
+// ele já tem (os ids do catálogo).
+export function lesoesDoAtirador({ perfil, body = 0, cromo = false, tem = [] }) {
+  const lesoes = [];
+  if (perfil?.exigeBody && perfil.lesao && Number(body) < perfil.exigeBody) lesoes.push({ id: idDaLesao2077(perfil.lesao), nome: nomeDaLesao2077(perfil.lesao), motivo: `tem BODY ${body} (a arma pede ${perfil.exigeBody})` });
+  if (perfil?.lesaoSemCromo && !cromo) lesoes.push({ id: idDaLesao2077(perfil.lesaoSemCromo), nome: nomeDaLesao2077(perfil.lesaoSemCromo), motivo: 'não tem Grafted Muscle and Bone Lace nem cyberbraço' });
+  return lesoes.filter(lesao => !tem.includes(lesao.id));
 }
 // Os ataques que gastam a carga: todos menos o explosivo e o fogo supressivo.
 export const gastaACarga = modo => !['explosivo', 'supressivo', 'corpo'].includes(modo);
@@ -770,7 +803,20 @@ export function perfil2077(flag, { aDistancia = true, pericia = '', municoes = [
     danoComMenos: flag.danoComMenos ? String(flag.danoComMenos) : null,
     minimoDeBalas: Number(flag.minimoDeBalas) || 0,
     danoFixo: flag.danoFixo ? String(flag.danoFixo) : null,
-    soSmartMelhorada: Boolean(flag.soSmartMelhorada)
+    soSmartMelhorada: Boolean(flag.soSmartMelhorada),
+    // As regras de cada modelo: o dano do tiro mirado (a Unity), o BODY e a lesão (a Carnage), a lesão sem cromo no braço
+    // (a Burya), o ferrolho (a Grad) e as da carga (a Burya carrega sem a Ação de Movimento; a Omaha, até o fim do turno,
+    // com CDT 2 e até 3 balas; a Nekomata atravessa a cobertura grossa também).
+    danoMirado: flag.danoMirado ? String(flag.danoMirado) : null,
+    exigeBody: Number(flag.exigeBody) || 0,
+    lesao: flag.lesao ? String(flag.lesao) : null,
+    lesaoSemCromo: flag.lesaoSemCromo ? String(flag.lesaoSemCromo) : null,
+    ferrolho: Boolean(flag.ferrolho),
+    cargaSemMovimento: Boolean(flag.cargaSemMovimento),
+    cargaAteFimDoTurno: Boolean(flag.cargaAteFimDoTurno),
+    balasNaCarga: Number(flag.balasNaCarga) || 0,
+    cdtNaCarga: Number(flag.cdtNaCarga) || 0,
+    cargaGrossa: Boolean(flag.cargaGrossa)
   };
 }
 
@@ -806,8 +852,10 @@ export const ehReflexTuner = (nome, catalogo = '') => catalogo === 'cyberware-20
 // O que impede o ataque com uma arma de 2077 (o aviso, depois do nome da arma), ou null. pelaMunicao: o modo que a
 // arma e a munição dariam sozinhas ("tiro", "cartucho", "explosivo"); ligadaSmart: o atacante tem a ligação da arma
 // Smart (ehLigacaoSmart) instalada.
-// pente: as balas no pente (a trava da Zhuo); municao: a carregada ({ smartMelhorada }), ou null.
-export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', pedido = null, ligadaSmart = false, pente = null, municao = null }) {
+// pente: as balas no pente (a trava da Zhuo); municao: a carregada ({ smartMelhorada }), ou null; ferrolhoPendente: a
+// Grad que ainda não manejou o ferrolho depois do tiro.
+export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', pedido = null, ligadaSmart = false, pente = null, municao = null, ferrolhoPendente = false }) {
+  if (perfil?.ferrolho && ferrolhoPendente) return 'gaste uma Ação para manejar o ferrolho antes de atirar de novo (o botão "Manejar o ferrolho").';
   if (perfil?.classe === 'smart' && !ligadaSmart) return 'arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.';
   if (perfil?.minimoDeBalas && pente !== null && pente < perfil.minimoDeBalas) return `só dispara com ${perfil.minimoDeBalas} no pente (tem ${pente}): é a trava de segurança.`;
   if (perfil?.soSmartMelhorada && municao && !municao.smartMelhorada) return 'só aceita munição Smart melhorada.';

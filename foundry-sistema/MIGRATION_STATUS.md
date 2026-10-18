@@ -47,7 +47,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | Fluxo de Combate | Reflex Tuner | portado no ciclo 30, pela wiki (ver as dúvidas) |
 | cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077), menos o Black Chrome, e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; no ciclo 31, com o Mission Kit (Neuroport, Rebuilds, munição Smart melhorada, Immunoblockers, quickhacks do Kit) |
-| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram; o Power, desde o 114 (o Ricochete do Kit e o crítico de 10); a Tech, desde o 115 (a carga do Kit), e saiu a última configuração |
+| cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram; o Power, desde o 114 (o Ricochete do Kit e o crítico de 10); a Tech, desde o 115 (a carga do Kit), e saiu a última configuração; as regras de cada modelo, desde o 116 |
 | cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, pelo suplemento de fã (com os dois cartuchos da Testera, que o Kit manteve). Com o Kit, a wiki mudou várias (a Lexington, a Yukimura, a Burya, a Omaha): ROADMAP, P0 |
 | wiki | o Black Chrome (176 itens da loja) | falta |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
@@ -581,6 +581,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   HP". O sistema não sabe de que é a cobertura: o cartão do ataque carregado diz a regra, e o "Em cobertura" do alvo diz
   que a carga atravessa a fina e que a grossa para o tiro; o mestre decide. Também ficam com ele o CDT 1 (o sistema não
   conta os ataques da ação) e o contorno dos alvos que a mira vê através da cobertura fina.
+
+- **As regras de cada modelo de 2077** (ciclo 116). O que o sistema escolheu, e a wiki não detalha:
+  - a lesão de quem dispara a Carnage sem BODY 10 e a Burya sem cromo no braço segue a configuração "Lesão crítica" (na
+    ficha, só anunciar; desligada, só a nota no cartão), e vale em todo disparo, mesmo o que erra; o "Desfazer" a tira.
+    O cromo é o Grafted Muscle and Bone Lace, um esqueleto (Epimorphic, Titanium Bones) ou a fundação de um cyberbraço,
+    como o `foundry-2077`;
+  - o mirado da Unity causa 4d6 em qualquer ponto mirado (a cabeça, a perna, o item na mão);
+  - a Omaha carregada, fora do combate, gasta a carga no primeiro tiro (não há turno); no combate, fica até o fim do
+    turno em que disparou, e o CDT 2 o mestre confere;
+  - o ferrolho da Grad (uma Ação) é um botão: o sistema não conta as Ações do turno.
 
 ## Registro dos ciclos
 
@@ -5691,6 +5701,61 @@ Commit anterior: `4b8b7080` (o ciclo 114).
       "Carregar" (T11) e o cartão sem a regra (T12).
 - **Próximo:** a parte 6 do C29, o resto das regras de cada modelo (a Unity, a Carnage, a Burya, a Grad, a Nekomata, a
   Omaha e a Lexington).
+
+### Ciclo 116 (2026-10-18): o C29, as armas de 2077 pelo Kit, parte 6: as regras de cada modelo (sessão KouArt)
+
+Commit anterior: `43bb94d0` (o ciclo 115). Com este, o C29 termina.
+
+- **A referência (a wiki de 2026-10-17, o texto de cada arma, e o `foundry-2077` do master):**
+  - **a Unity:** "No tiro mirado, o dano sobe para 4d6.";
+  - **a Carnage:** "Quem dispara sem BODY 10 ou mais sofre a lesão crítica Músculo Rompido (se ainda não tiver).";
+  - **a Burya:** "Carrega sem gastar a Ação de Movimento. Quem dispara sem Grafted Muscle and Bone Lace ou um cyberbraço
+    sofre a lesão crítica Braço Quebrado (se ainda não tiver).";
+  - **a Grad:** "Depois de cada disparo, é preciso uma Ação para manejar o ferrolho antes de atirar de novo.";
+  - **a Nekomata:** "Carregado, vê o contorno dos alvos e atira através de cobertura fina e grossa.";
+  - **a Omaha:** "Carregada, fica assim até o fim do turno em que disparou, continua com CDT 2 e gasta até 3 balas por
+    ataque (com menos de 3 no pente, esvazia).";
+  - **a Lexington:** no Kit, sem regra própria e sem autofogo (o suplemento dava "autofogo (2) gastando só 7 balas").
+    No Foundry 12, o `foundry-2077` faz o ferrolho, a carga da Omaha e da Burya e a fórmula do mirado; a lesão de quem
+    dispara, ele só anuncia.
+- **O que muda:**
+  - **`regras.mjs`:** o perfil com as regras de cada modelo (`danoMirado`, `exigeBody`, `lesao`, `lesaoSemCromo`,
+    `ferrolho`, `cargaSemMovimento`, `cargaAteFimDoTurno`, `balasNaCarga`, `cdtNaCarga`, `cargaGrossa`); a carga da Omaha
+    (`cargaValida` com o turno em que disparou; `balasDaCarga`); `coberturaDaCarga`; as lesões de quem dispara
+    (`lesoesDoAtirador`, `idDaLesao2077`, `nomeDaLesao2077`, `ehCromoNoBraco`: o Grafted Muscle and Bone Lace, um
+    esqueleto ou a fundação do cyberbraço); o ferrolho no impedimento;
+  - **`combate.mjs`:** o mirado da Unity com 4d6; a lesão de quem dispara, pela configuração "Lesão crítica" (na ficha,
+    só anunciar; desligada, a nota), que o "Desfazer" tira; o ferrolho depois do tiro, que bloqueia o próximo até o
+    botão "Manejar o ferrolho" (o "Desfazer" o libera); a carga da Omaha até o fim do turno, com até 3 balas por ataque;
+    a da Burya sem a Ação de Movimento; a da Nekomata pela cobertura grossa também. O "Desfazer" agora põe de volta o
+    que estava (a carga de antes do tiro da Omaha) e tira o que o ataque pôs (o ferrolho);
+  - **`ficha-personagem.mjs`:** a ação `manejarFerrolho`;
+  - **o build:** o texto "Neste sistema" de cada modelo.
+- **Testes:**
+  - **G3:** o teste novo das regras de cada modelo do Kit (o texto da wiki de cada uma, o perfil, as lesões e o cromo, o
+    ferrolho, a carga da Omaha e da Nekomata, o texto do build); no das regras de cada modelo, a Lexington do Kit, sem
+    autofogo. Uma mutação sobreviveu na primeira rodada (o cyberbraço, que o nome "Cyberarm" já reconhecia): o teste
+    ganhou um cyberbraço de outro nome e uma opção do braço;
+  - **G4:** o passo novo (a Unity no item na mão do Capanga; a Carnage rompe o músculo uma vez só, e o "Desfazer" do
+    primeiro tiro tira a lesão; a Burya carrega sem a Ação de Movimento e, sem o Grafted Muscle and Bone Lace, quebra o
+    braço; a Grad e o ferrolho, com o botão e o "Desfazer"; a Omaha carregada dá dois tiros de 3 balas no mesmo turno, e
+    no seguinte a carga acabou; as dicas da ficha); o passo da Dian e Lexington com a Lexington do Kit. Na primeira
+    rodada, o passo novo gastou a munição de rifle do fuzil da Atiradora (o recarregar pega a primeira compatível da
+    ficha) e quebrou o passo da linha de visão, depois: cada arma do passo carrega agora da própria munição.
+- **Resultados:**
+  - G1: 70 arquivos, 0 erros; G2: 0 erros;
+  - G3: 150 de 150 (saiu a última falha conhecida do C29);
+  - G4: 141 de 141 (saíram a da Dian e Lexington e a checagem de avisos, que eram os avisos da Lexington);
+  - **mutações:** as 16 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (149 de 150 cada): a carga da Omaha a rodada toda (M1), as 3 balas com menos no pente (M2), o músculo
+      rompido com BODY 10 (M3), o cyberbraço que não conta (M4, depois do teste novo), sem o ferrolho no impedimento (M5) e
+      a Nekomata só pela fina (M6);
+    - no G4, no passo novo: o mirado da Unity com o dano de sempre (M7), sem a lesão de quem dispara (M8), o Desfazer que
+      não a tira (M9), a Grad sem o ferrolho (M10), a Omaha que gasta a carga no primeiro tiro (M11) e 1 bala (M12), a
+      Burya que gasta a Ação de Movimento (M13), a ficha sem o botão do ferrolho (M14), o cromo que não é procurado (M15)
+      e o Desfazer que não tira o ferrolho (M16).
+- **Próximo:** o C29 terminou (as armas de 2077 nos ciclos 110 a 116). A sessão de teste com a mesa, quando o usuário
+  marcar; no plano, o C23 (a segunda Role) ou o que o usuário escolher.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

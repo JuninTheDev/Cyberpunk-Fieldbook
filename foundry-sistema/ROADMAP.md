@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 116). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 117). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -231,7 +231,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - o histórico do ledger na migração. Pede mudar o cpr-2077; é decisão do usuário.
 - [ ] **C28. A sistema-v14 no master**, com a instalação automática no Foundry 14 do servidor. Hoje é à mão, pelo
   `servidor/instalar-sistema-v14.sh`.
-- [ ] **C29. A wiki do master de 2026-10-17 ("uma regra só na mesa": o Mission Kit sobre o RED).** O que os testes de
+- [x] **C29. A wiki do master de 2026-10-17 ("uma regra só na mesa": o Mission Kit sobre o RED).** O que os testes de
   referência acusaram na integração do ciclo 93 (QUALITY_GATES, "Falhas conhecidas desde a integração do master").
   Decisão do usuário (2026-10-17): depois do C9, o catálogo de 2077 pela loja vem primeiro:
   - [x] a NET (da sessão KouArt): o Scanner como 1 Ação NET, o Breach no lugar do Backdoor, a 10ª habilidade de
@@ -244,8 +244,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     Neuroport é a única fundação de 2077);
   - [x] o catálogo de 2077: a loja da wiki, os tamanhos dos compêndios e o efeito de falha das armas: ciclo 106 (o
     catálogo já era o da loja nova desde o build do ciclo 94; os testes de referência ganharam os números da wiki nova);
-  - [~] as armas de 2077 pelo Mission Kit (decisão do usuário, 2026-10-17: entram no plano; 2026-10-18: agora, sessão
-    KouArt): os modos Power, Smart e Tech e as regras de cada modelo pela wiki, o teste Smart sem o Smart Link e os dois
+  - [x] as armas de 2077 pelo Mission Kit (decisão do usuário, 2026-10-17: entram no plano; 2026-10-18: agora, sessão
+    KouArt), nos ciclos 110 a 116: os modos Power, Smart e Tech e as regras de cada modelo pela wiki, o teste Smart sem o Smart Link e os dois
     canos. Os testes que falham desde o ciclo 32 voltam a passar. Por partes, um ciclo cada:
     - [x] Smart: a ligação (o Personal Link do Neuroport ou o Subdermal Grip), o +1 e o fim do teste Smart; os dois canos
       da Palica pelo dano; os dois alvos da Kappa no tiro comum: ciclo 110 (saíram as duas configurações do ataque Smart);
@@ -256,8 +256,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
       cartucho ricocheteia da superfície; saíram a tabela de autofogo e o dado a menos do suplemento);
     - [x] Tech: carregar na Ação de Movimento, CDT 1, a cobertura fina e a metade do SP: ciclo 115 (o botão Carregar;
       saíram a carga e a rajada do suplemento, a janela da cobertura e a configuração da arma que esfria);
-    - [ ] o resto das regras de cada modelo (o tiro mirado da Unity, o BODY e a lesão da Carnage, a Burya, o ferrolho da
-      Grad, a Nekomata, a Omaha).
+    - [x] o resto das regras de cada modelo (o tiro mirado da Unity, o BODY e a lesão da Carnage, a Burya, o ferrolho da
+      Grad, a Nekomata, a Omaha): ciclo 116 (a Lexington do Kit não tem regra própria nem autofogo).
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);

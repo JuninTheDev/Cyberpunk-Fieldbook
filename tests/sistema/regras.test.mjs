@@ -656,11 +656,81 @@ test('Balas por tiro (a wiki de 2026-10-17, como o foundry-2077): o tiro único 
   assert.match(catalogo['armas-2077:kang-tao-l-69-zhuo'].system.descricao, /O tiro único gasta 8 cartuchos \(com menos de 8 no pente, não dispara\) e causa 4d6\. Só carrega a munição Smart melhorada\./);
 });
 
-test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os dois canos da Palica e da Testera (4d6), os dois alvos da Kappa, a coronha da Dian e as 7 balas do autofogo da Lexington', () => {
+test('Regras de cada modelo do Kit (a wiki de 2026-10-17, como o foundry-2077): o tiro mirado da Unity (4d6), a lesão de quem dispara a Carnage sem BODY 10 e a Burya sem cromo no braço, o ferrolho da Grad e a carga da Burya, da Omaha e da Nekomata', () => {
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  for (const trecho of [
+    'No <b>tiro mirado</b>, o dano sobe para <b>4d6</b>.',
+    'Quem dispara sem <b>BODY 10</b> ou mais sofre a lesão crítica <b>Músculo Rompido</b> (se ainda não tiver).',
+    'Carrega <b>sem gastar a Ação de Movimento</b>. Quem dispara sem <b>Grafted Muscle and Bone Lace</b> ou um <b>cyberbraço</b> sofre a lesão crítica <b>Braço Quebrado</b> (se ainda não tiver).',
+    'Depois de cada disparo, é preciso <b>uma Ação para manejar o ferrolho</b> antes de atirar de novo.',
+    '<b>Carregado</b>, vê o contorno dos alvos e atira através de cobertura <b>fina e grossa</b>.',
+    '<b>Carregada</b>, fica assim até o fim do turno em que disparou, continua com <b>CDT 2</b> e gasta até <b>3 balas</b> por ataque (com menos de 3 no pente, esvazia).'
+  ]) assert.ok(de2077.includes(trecho), trecho);
+  // O perfil de cada uma.
+  const unity = perfilDe('armas-2077:constitutional-arms-unity');
+  const carnage = perfilDe('armas-2077:budget-arms-carnage');
+  const burya = perfilDe('armas-2077:techtronika-rt-46-burya');
+  const grad = perfilDe('armas-2077:techtronika-spt32-grad');
+  const nekomata = perfilDe('armas-2077:tsunami-nekomata');
+  const omaha = perfilDe('armas-2077:militech-m-76e-omaha');
+  assert.equal(unity.danoMirado, '4d6');
+  assert.deepEqual([carnage.exigeBody, carnage.lesao], [10, 'Torn Muscle']);
+  assert.deepEqual([burya.lesaoSemCromo, burya.cargaSemMovimento], ['Broken Arm', true]);
+  assert.equal(grad.ferrolho, true);
+  assert.equal(nekomata.cargaGrossa, true);
+  assert.deepEqual([omaha.cargaAteFimDoTurno, omaha.balasNaCarga, omaha.cdtNaCarga], [true, 3, 2]);
+  const kenshin = perfilDe('armas-2077:arasaka-jke-x2-kenshin');
+  assert.deepEqual([kenshin.danoMirado, kenshin.exigeBody, kenshin.ferrolho, kenshin.cargaGrossa, kenshin.cargaAteFimDoTurno, kenshin.balasNaCarga], [null, 0, false, false, false, 0]);
+  // A lesão de quem dispara: a do catálogo do CORE, se ainda não tem.
+  assert.equal(catalogo[regras.idDaLesao2077('Torn Muscle')].name, 'Músculo rompido');
+  assert.equal(catalogo[regras.idDaLesao2077('Broken Arm')].name, 'Braço quebrado');
+  assert.deepEqual(regras.lesoesDoAtirador({ perfil: carnage, body: 6 }), [{ id: 'core_critical-injuries-body:torn-muscle', nome: 'Músculo rompido', motivo: 'tem BODY 6 (a arma pede 10)' }]);
+  assert.deepEqual(regras.lesoesDoAtirador({ perfil: carnage, body: 10 }), []);
+  assert.deepEqual(regras.lesoesDoAtirador({ perfil: carnage, body: 6, tem: ['core_critical-injuries-body:torn-muscle'] }), []);
+  assert.deepEqual(regras.lesoesDoAtirador({ perfil: burya, body: 6 }), [{ id: 'core_critical-injuries-body:broken-arm', nome: 'Braço quebrado', motivo: 'não tem Grafted Muscle and Bone Lace nem cyberbraço' }]);
+  assert.deepEqual(regras.lesoesDoAtirador({ perfil: burya, body: 6, cromo: true }), []);
+  assert.deepEqual(regras.lesoesDoAtirador({ perfil: unity, body: 2 }), []);
+  // O cromo que aguenta a Burya: o Grafted Muscle and Bone Lace ou o cyberbraço (a fundação).
+  const cromo = id => regras.ehCromoNoBraco({ nome: catalogo[id].name, catalogo: id, tipo: catalogo[id].system.tipo, fundacional: catalogo[id].system.fundacional });
+  assert.equal(cromo('core_cyberware:grafted-muscle-and-bone-lace'), true);
+  assert.equal(cromo('core_cyberware:cyberarm'), true);
+  assert.equal(cromo('core_cyberware:subdermal-grip'), false);
+  // O cyberbraço de outro nome conta pela fundação; uma opção do braço, não.
+  assert.equal(regras.ehCromoNoBraco({ nome: 'Braço da Vee', tipo: 'cyberArm', fundacional: true }), true);
+  assert.equal(regras.ehCromoNoBraco({ nome: 'Popup Shield', tipo: 'cyberArm', fundacional: false }), false);
+  // O ferrolho: com ele pendente, a Grad não dispara.
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: grad, ferrolhoPendente: true }), 'gaste uma Ação para manejar o ferrolho antes de atirar de novo (o botão "Manejar o ferrolho").');
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: grad }), null);
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: unity, ferrolhoPendente: true }), null);
+  // A carga da Omaha: depois do tiro, vale até o fim daquele turno; fora do combate, acaba no tiro. Até 3 balas por ataque.
+  const carregou = { combate: 'c1', rodada: 1 };
+  const disparou = { ...carregou, disparou: { rodada: 2, turno: 1 } };
+  assert.equal(regras.cargaValida(disparou, { id: 'c1', rodada: 2, turno: 1 }), true);
+  assert.equal(regras.cargaValida(disparou, { id: 'c1', rodada: 2, turno: 2 }), false);
+  assert.equal(regras.cargaValida(disparou, { id: 'c1', rodada: 3, turno: 1 }), false);
+  assert.equal(regras.cargaValida({ combate: null, rodada: null, disparou: { rodada: null, turno: null } }, null), false);
+  assert.equal(regras.balasDaCarga({ modo: 'tiro', perfil: omaha, pente: 9 }), 3);
+  assert.equal(regras.balasDaCarga({ modo: 'tiro', perfil: omaha, pente: 2 }), 2);
+  assert.equal(regras.balasDaCarga({ modo: 'autofogo', perfil: omaha, pente: 9 }), null);
+  assert.equal(regras.balasDaCarga({ modo: 'tiro', perfil: kenshin, pente: 9 }), null);
+  // O que a carga atravessa: a Nekomata, a grossa também.
+  assert.equal(regras.coberturaDaCarga(kenshin), 'cobertura fina');
+  assert.equal(regras.coberturaDaCarga(nekomata), 'cobertura fina e grossa');
+  // O texto "Neste sistema" de cada uma.
+  const neste = id => catalogo[`armas-2077:${id}`].system.descricao;
+  assert.match(neste('constitutional-arms-unity'), /No tiro mirado, o dano é 4d6\./);
+  assert.match(neste('budget-arms-carnage'), /Quem dispara com BODY menor que 10 sofre a lesão crítica Músculo rompido/);
+  assert.match(neste('techtronika-rt-46-burya'), /O botão Carregar não gasta a Ação de Movimento\. .*Quem dispara sem Grafted Muscle and Bone Lace nem cyberbraço sofre a lesão crítica Braço quebrado|Quem dispara sem Grafted Muscle and Bone Lace nem cyberbraço sofre a lesão crítica Braço quebrado.*O botão Carregar não gasta a Ação de Movimento/);
+  assert.match(neste('techtronika-spt32-grad'), /o botão "Manejar o ferrolho" \(uma Ação\) libera o próximo/);
+  assert.match(neste('tsunami-nekomata'), /Carregada, atravessa cobertura fina e grossa\./);
+  assert.match(neste('militech-m-76e-omaha'), /Carregada, fica até o fim do turno em que disparou, com CDT 2 e até 3 balas por ataque\./);
+});
+
+test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os dois canos da Palica e da Testera (4d6), os dois alvos da Kappa, a coronha da Dian e a Lexington do Kit, sem autofogo', () => {
   // "Disparar os dois canos de uma vez gasta os 2 cartuchos e o dano sobe para 4d6" (Palica, desde o Kit; antes, o teste
   // Smart subia para 12 + 1d10); "dá para disparar os dois de uma vez, e o dano sobe para 4d6" (Testera); "trava em dois
-  // alvos a até 4 m um do outro" (Kappa); "os ataques têm −1 até estendê-la" (Dian); "autofogo (2) gastando só 7 balas
-  // por ataque" (Lexington).
+  // alvos a até 4 m um do outro" (Kappa); "os ataques têm −1 até estendê-la" (Dian). A Lexington do Kit não tem regra
+  // própria nem autofogo (o suplemento dava "autofogo (2) gastando só 7 balas por ataque").
   const palica = perfilDe('armas-2077:rostovic-db-4-palica');
   const testera = perfilDe('armas-2077:rostovic-db-2-testera');
   assert.deepEqual(palica.doisCanos, { dano: '4d6' });
@@ -674,7 +744,9 @@ test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os do
   assert.equal(perfilDe('armas-2077:militech-m251s-ajax').coronhaRetratil, false);
   assert.equal(perfilDe('armas-2077:nokota-d5-sidewinder').coronhaRetratil, false);
   assert.equal(regras.PENALIDADE_CORONHA, -1);
-  assert.equal(perfilDe('armas-2077:militech-m-10af-lexington').balasDoAutofogo, 7);
+  assert.ok(fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8').includes("weapon('Militech M-10AF Lexington', 'Pistola pesada Power, exótica', 'padrão', 'Armas de uma Mão', '3d6', '21 (pistola pesada)', 2, 1, 'Sim', '1.000eb', '—'"));
+  assert.equal(catalogo['armas-2077:militech-m-10af-lexington'].system.autofogo, 0);
+  assert.equal(perfilDe('armas-2077:militech-m-10af-lexington').balasDoAutofogo, regras.BALAS_RAJADA);
   assert.equal(perfilDe('armas-2077:nokota-d5-copperhead').balasDoAutofogo, regras.BALAS_RAJADA);
   // O cartucho também ricocheteia (o Kit: "para ricochetear um cartucho, escolha uma superfície a até 6 m de você").
   assert.equal(testera.ricocheteia, true);
