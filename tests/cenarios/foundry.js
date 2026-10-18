@@ -24,7 +24,7 @@ module.exports = async ({ edge, servidores, r }) => {
     for (let i = 0; i < 30 && !/Salvo/.test(await texto('#cc-save')); i++) await edge.sleep(200);
     return (await api(`/api/personagens/${personagem.id}`)).personagem;
   }
-  let solo, tech, medtech, nomad, netrunner, montado;
+  let solo, tech, medtech, nomad, netrunner, montado, natural;
   const base = { metodo: 'ratoderua', sorteio: { linha: 6 }, lingua: 'Portuguese', casa: 'Heywood' };
   await r.passo('wiki: Solo (Rato de Rua) com o resultado calculado pelo criador', async () => {
     solo = await criar({ ...base, nome: 'Teste Foundry', apelido: 'Lab', role: 'solo', habilidades: { 'Initiative Reaction': 2, 'Threat Detection': 2 }, moradia: 'quitinete', estiloVida: 'bom', traumaTeam: 'prata', estiloModa: 'kitsch' });
@@ -52,6 +52,16 @@ module.exports = async ({ edge, servidores, r }) => {
     const deck = (netrunner.resultado?.itens || []).filter(item => item.em && item.em === deckUid);
     return [linhas['loja:luneta']?.em === 'loja:rifle' && linhas['loja:rifle']?.municao === 'loja:municao' && linhas['loja:lanca']?.em === 'loja:braco2' && deck.length >= 4,
       `luneta em ${linhas['loja:luneta']?.em} · rifle com ${linhas['loja:rifle']?.municao} · lança-granadas em ${linhas['loja:lanca']?.em} · ${deck.length} programas no deck`];
+  });
+  // A peça única no membro natural: um cyberbraço no braço esquerdo, o Wolvers no braço direito (natural) e o Talon Foot
+  // na perna esquerda (natural). Na wiki, sem base ("natural"); no Foundry 12, dentro de uma base Meat Arm/Meat Leg do CORE.
+  await r.passo('wiki: Solo com o Wolvers no braço direito natural e o Talon Foot na perna esquerda natural', async () => {
+    const itens = [['braco', 'core_cyberware:cyberarm'], ['wolvers', 'core_cyberware:wolvers'], ['garra', 'core_cyberware:talon-foot']].map(([uid, id]) => ({ uid: `loja:${uid}`, id, qtd: 1 }));
+    natural = await criar({ nome: 'Teste Natural', role: 'solo', metodo: 'pacote', lingua: 'Portuguese', casa: 'Heywood', itens,
+      montagem: { 'loja:braco': { local: 'braco-esquerdo' }, 'loja:wolvers': { local: 'braco-direito' }, 'loja:garra': { local: 'perna-esquerda' } } });
+    const linhas = Object.fromEntries((natural.resultado?.itens || []).map(item => [item.uid, item]));
+    return [linhas['loja:wolvers']?.natural === true && linhas['loja:wolvers'].local === 'braco-direito' && !linhas['loja:wolvers'].em && linhas['loja:garra']?.natural === true && linhas['loja:garra'].local === 'perna-esquerda',
+      JSON.stringify({ wolvers: linhas['loja:wolvers'], garra: linhas['loja:garra'] })];
   });
 
   // ---------- Foundry ----------
@@ -212,6 +222,27 @@ module.exports = async ({ edge, servidores, r }) => {
       const braco2 = itens.find(item => item.uid === 'loja:braco2');
       return [rifle && rifle.dentro.includes('Sniping Scope') && rifle.pente === 25 && municao?.sobra === 25 && braco2?.dentro.includes('Popup Grenade Launcher') && !(braco1?.dentro || []).includes('Popup Grenade Launcher'),
         JSON.stringify(itens)];
+    });
+    await r.passo('membro natural: o Wolvers numa Meat Arm do braço direito e o Talon Foot numa Meat Leg da perna esquerda, instaladas, sem Humanidade', async () => {
+      const a = await importar(natural.id);
+      const itens = await instalados(natural.id);
+      const meat = await edge.evaluate(`(() => {
+        const actor = game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(natural.id)});
+        return actor.itemTypes.cyberware.filter(c => /^Meat /.test(c.name)).map(c => ({ nome: c.name, instalada: actor.system.installedItems.list.includes(c.id), perda: c.system.humanityLoss?.static, lado: c.getFlag('cpr-2077', 'wikiLocal') }));
+      })()`);
+      const braco = itens.find(item => item.uid === 'natural:braco-direito');
+      const perna = itens.find(item => item.uid === 'natural:perna-esquerda');
+      const arm = meat.find(item => item.nome === 'Meat Arm — Braço direito');
+      const leg = meat.find(item => item.nome === 'Meat Leg — Perna esquerda');
+      return [meat.length === 2 && arm?.instalada && leg?.instalada && arm.perda === 0 && leg.perda === 0 && arm.lado === 'braco-direito'
+        && braco?.dentro.join() === 'Wolvers' && perna?.dentro.join() === 'Talon Foot' && !a.notas.some(nota => /Wolvers|Talon Foot|Meat/.test(nota)),
+        `${JSON.stringify(meat)} · ${JSON.stringify([braco, perna])} · avisos: ${a.notas.join(' | ') || 'nenhum'}`];
+    });
+    await r.passo('membro natural na mesa: a ficha da wiki mostra o Wolvers no braço direito natural (a Meat Arm não aparece como cyberbraço)', async () => {
+      let m = {};
+      for (let i = 0; i < 20; i++) { m = (await api(`/api/personagens/${natural.id}`)).personagem.mesa || {}; if ((m.itens || []).some(item => /^Meat Arm/.test(item.nome))) break; await edge.sleep(500); }
+      const meatArm = (m.itens || []).find(item => /^Meat Arm/.test(item.nome));
+      return [meatArm && meatArm.base && meatArm.local === 'braco-direito' && (meatArm.dentro || []).includes('Wolvers') && meatArm.cyber?.tipo === 'cyberArm', JSON.stringify(meatArm)];
     });
     await r.passo('Black Chrome: o ChipVault comprado na loja vem do compêndio Black Chrome do sistema', async () => {
       const nomes = await edge.evaluate(`game.actors.find(a => a.getFlag('cpr-2077', 'wiki')?.id === ${JSON.stringify(montado.id)}).items.map(i => i.name)`);

@@ -128,6 +128,26 @@ function installedInActor(actor, item, seen = new Set()) {
 const referencedItems = (actor, reference) => String(reference || '').startsWith('foundry:')
   ? [actor.items.get(reference.slice('foundry:'.length))].filter(Boolean) : itemsByUid(actor, reference);
 
+// A peça única no braço ou na perna natural ("natural" na wiki: Wolvers, Talon Foot…). O CORE faz isso com a base Meat
+// Arm ou Meat Leg, de graça e sem Humanidade, que aceita "a única peça instalada". Antes de montar, cada lado com uma
+// peça dessas ganha uma base dessas (uid "natural:<lado>"), e a peça passa a apontar para ela.
+function naturalLimbs(doc) {
+  const items = doc?.resultado?.itens;
+  if (!Array.isArray(items)) return doc;
+  const bases = [];
+  for (const entry of items) {
+    if (!entry || !entry.natural || !entry.local || entry.em) continue;
+    const name = entry.local.startsWith('perna') ? 'Meat Leg' : 'Meat Arm';
+    const uid = `natural:${entry.local}`;
+    if (!bases.some(base => base.uid === uid) && !items.some(item => item?.uid === uid)) {
+      bases.push({ uid, id: '', nome: name, renomear: '', qtd: 1, origem: 'natural', foundry: { pack: 'cyberpunk-red-core.core_cyberware', nome: name }, cyber: true, semHumanidade: true, uso: '', municao: '', em: '', local: entry.local });
+    }
+    entry.em = uid;
+  }
+  doc.resultado.itens = [...bases, ...items];
+  return doc;
+}
+
 // Dados de um item da wiki prontos para entrar no ator.
 async function itemData(entry) {
   const data = await fromPack(entry.foundry.pack, entry.foundry.nome);
@@ -584,7 +604,7 @@ async function importTransferred(doc, transfer, ownerId, campaign) {
 // ---------------- Importar ----------------
 async function importCharacter(id, ownerId, campaign = undefined) {
   if (campaign === undefined) campaign = await tableCampaign();
-  const { personagem: doc } = await wikiFetch(`/api/personagens/${id}`);
+  const doc = naturalLimbs((await wikiFetch(`/api/personagens/${id}`)).personagem);
   if (campaign?.id && doc.campanha && doc.campanha !== campaign.id) throw new Error(`${doc.nome || 'Este personagem'} é de outra campanha da wiki: importe no mundo dela.`);
   // Veio de outra campanha: com a ficha que o mundo antigo mandou, o ator vem como estava lá.
   if (doc.estadoFoundry === 'outra-mesa') {
@@ -721,7 +741,7 @@ export async function atualizarDaWiki(actor) {
   const link = actor?.getFlag(MODULE_ID, 'wiki');
   if (!link) return ui.notifications.warn('Este ator não veio da wiki.');
   let doc;
-  try { doc = (await wikiFetch(`/api/personagens/${link.id}`)).personagem; } catch (error) { return ui.notifications.error(error.message); }
+  try { doc = naturalLimbs((await wikiFetch(`/api/personagens/${link.id}`)).personagem); } catch (error) { return ui.notifications.error(error.message); }
   // Depois de um crossover, a ficha é do mundo da campanha nova.
   const campaign = await tableCampaign();
   if (campaign?.id && doc.campanha && doc.campanha !== campaign.id) return ui.notifications.warn(`${actor.name} agora é de outra campanha na wiki: a ficha dele é do mundo dela.`);
@@ -1080,7 +1100,7 @@ export function registerWikiButtons() {
 async function wikiDocOf(actor) {
   const link = actor?.getFlag(MODULE_ID, 'wiki');
   if (!link) throw new Error('Este ator não veio da wiki.');
-  return { link, doc: (await wikiFetch(`/api/personagens/${link.id}`)).personagem };
+  return { link, doc: naturalLimbs((await wikiFetch(`/api/personagens/${link.id}`)).personagem) };
 }
 async function montagemPendente(actor) {
   const { link, doc } = await wikiDocOf(actor);

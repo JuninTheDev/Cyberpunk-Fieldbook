@@ -233,3 +233,46 @@ test('Montagem troca lado e base por UID, salva e preserva o bloqueio após impo
   await locked.root.onclick({ target: alvo('[data-mont-tab]', { montTab: 'cyberware' }) });
   assert.match(locked.nos['#cc-step'].innerHTML, /<fieldset disabled class="cc-locked">[\s\S]*data-mont-local="left"/);
 });
+
+// O membro natural (RED: a peça única num braço ou numa perna orgânica; o CORE: as bases Meat Arm e Meat Leg).
+test('peça única num lado sem cyberbraço fica no braço natural; a segunda no mesmo braço vira pendência', () => {
+  const mundo = ambiente();
+  const WOLVERS = 'core_cyberware:wolvers';
+  const RIPPERS = 'core_cyberware:rippers';
+  const doc = { ...mundo.doc(), itens: [item('left', ARM), item('wolvers', WOLVERS), item('rippers', RIPPERS)], montagem: { left: { local: esquerdo }, wolvers: { local: direito } } };
+  const rows = mundo.regras.result(doc).itens;
+  const wolvers = rows.find(row => row.uid === 'wolvers');
+  assert.equal(wolvers.natural, true);
+  assert.equal(wolvers.local, direito);
+  assert.equal(wolvers.em, '');
+  // Sem lado e com um cyberbraço só, a montagem põe a peça nele, como qualquer opção.
+  assert.equal(rows.find(row => row.uid === 'rippers').em, 'left');
+  assert.ok(!mundo.regras.pending(doc).some(issue => /Wolvers/.test(issue.text)));
+  assert.ok(mundo.regras.sheetHtml(doc).cyberware.includes('cy-unit cy-natural'));
+  doc.montagem.rippers = { local: direito, em: '-' };
+  assert.ok(mundo.regras.pending(doc).some(issue => /Só uma peça cabe no braço natural \(braço direito\)/.test(issue.text)));
+});
+
+test('a peça única e a base do membro natural pelo nome do Foundry', () => {
+  const CW = require('../../personagem-cyberware.js');
+  assert.equal(CW.pecaUnica('Wolvers', 'cyberArm'), true);
+  assert.equal(CW.pecaUnica('Wolvers', 'cyberLeg'), false);
+  assert.equal(CW.pecaUnica('Talon Foot', 'cyberLeg'), true);
+  assert.equal(CW.pecaUnica('Gorilla Arm'), false);
+  assert.equal(CW.baseNatural('Meat Arm — Braço direito'), 'cyberArm');
+  assert.equal(CW.baseNatural('Meat Leg'), 'cyberLeg');
+  assert.equal(CW.baseNatural('Cyberarm'), '');
+});
+
+test('na mesa, a Meat Arm do CORE é o braço natural, com a peça dentro, e não um cyberbraço', () => {
+  const mundo = ambiente();
+  const doc = { ...mundo.doc(), foundry: { importado: '2026-01-01' }, mesa: { itens: [
+    { uid: 'natural:braco-direito', tipo: 'cyberware', nome: 'Meat Arm — Braço direito', base: true, instalado: true, local: direito, dentro: ['Wolvers'], cyber: { tipo: 'cyberArm', slots: 3, tamanho: 0 } },
+    { uid: 'w', tipo: 'cyberware', nome: 'Wolvers', instalado: true, cyber: { tipo: 'cyberArm', tamanho: 1, slots: 0 } }
+  ] } };
+  const parts = mundo.regras.cyberParts(doc);
+  assert.equal(parts.bases.length, 0);
+  assert.equal(parts.naturais.length, 1);
+  assert.equal(parts.naturais[0].nome, 'Wolvers');
+  assert.equal(parts.naturais[0].local, direito);
+});
