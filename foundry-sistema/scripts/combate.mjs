@@ -187,7 +187,10 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (!game.user.isGM && !game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque precisa do mestre para resolver a defesa e o dano.'); return null; }
   // Armas de 2077: a ligação da arma Smart, os modos da classe, a carga que esfria e a cobertura do alvo (quem atira diz).
   const perfil = arma.perfil2077;
-  const de2077 = { modo, perfil, pelaMunicao: R.classificar(pelaArma), pedido, ligadaSmart: atacante.temLigacaoSmart };
+  const de2077 = {
+    modo, perfil, pelaMunicao: R.classificar(pelaArma), pedido, ligadaSmart: atacante.temLigacaoSmart, pente: arma.system.pente.max ? arma.system.pente.value : null,
+    municao: municao ? { smartMelhorada: Boolean(municao.getFlag(SISTEMA, 'arma2077')?.smartMelhorada) } : null
+  };
   const tech = modo === 'carga' || modo === 'rajadaTech';
   const esfria = tech ? esfriaAte(arma) : null;
   let impedido = R.impedimento2077(de2077) ?? (esfria ? `ainda está esfriando: carrega de novo na rodada ${esfria}.` : null);
@@ -198,7 +201,10 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   }
   if (impedido) { ui.notifications.warn(`${arma.name}: ${impedido}`); return null; }
   const doisCanos = pedido === 'doisCanos';
-  const balas = arma.system.aDistancia && arma.system.pente.max ? R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech, autofogo: perfil?.balasDoAutofogo, doisCanos }) : 0;
+  // As balas por tiro de 2077 (a Yukimura gasta 3; com menos no pente, dispara o que tem e causa o dano menor).
+  const comPente = arma.system.aDistancia && arma.system.pente.max;
+  const porTiro = comPente ? R.balasPorTiro({ modo, perfil, pente: arma.system.pente.value, doisCanos }) : null;
+  const balas = comPente ? (porTiro?.balas ?? R.balasDoModo(modo, { rajadaTech: perfil?.balasDaRajadaTech, autofogo: perfil?.balasDoAutofogo, doisCanos })) : 0;
   if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
   const { pericia, partes } = arma.partesDoAtaque(modo);
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
@@ -230,7 +236,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    cobertura, carga, doisCanos,
+    cobertura, carga, doisCanos, porTiro,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
@@ -362,6 +368,11 @@ async function contexto(pedido, usuario) {
 // A regra de 2077 deste ataque, para o cartão.
 function notasDe2077(pedido, arma) {
   const notas = [];
+  if (pedido.porTiro) {
+    const { balas, danoComMenos } = pedido.porTiro;
+    const unidade = pedido.modo === 'cartucho' ? 'cartucho' : 'bala';
+    notas.push(danoComMenos ? `Só ${balas} ${unidade}${balas === 1 ? '' : 's'} no pente: dispara o que tem e causa ${danoComMenos}.` : `Gasta ${balas} ${unidade}s no tiro.`);
+  }
   const ignoradas = pedido.smartMelhorada?.ignoradas ?? [];
   if (ignoradas.length) notas.push(`Munição Smart melhorada: as penalidades de visão não contam (${ignoradas.join(', ')}).`);
   if (pedido.doisCanos) {
@@ -692,7 +703,7 @@ async function individual(ctx) {
   if (await aplicarMunicaoSemDano(ctx, pegas)) return;
   const rajada = ctx.modo === 'autofogo' || ctx.modo === 'rajadaTech';
   const maximo = ctx.modo === 'rajadaTech' ? ctx.perfil.rajadaTech : ctx.arma.system.autofogo;
-  const formula = rajada ? '2d6' : ctx.modo === 'ricochete' ? R.umDadoAMenos(ctx.arma.system.dano) : null;
+  const formula = rajada ? '2d6' : ctx.modo === 'ricochete' ? R.umDadoAMenos(ctx.arma.system.dano) : ctx.pedido.porTiro?.danoComMenos ?? ctx.perfil?.danoFixo ?? null;
   for (const linha of pegas) {
     const contra = linha.escolha === 'esquivar' ? linha.defesa : linha.dv;
     const multiplicador = rajada ? R.multiplicadorDeAutofogo(linha.segundaChance ?? ctx.pedido.total, contra, maximo) : 1;
@@ -746,7 +757,7 @@ async function cartucho(ctx) {
     if (await defesaDoAlvo(area, linha, alvo, R.DV_CARTUCHO)) pegas.push(linha);
   }));
   // Os dois cartuchos de uma vez (a Testera): o dano da arma para isso.
-  await danoNaArea(ctx, pegas, (ctx.pedido.doisCanos && ctx.perfil?.doisCanos?.dano) || '3d6');
+  await danoNaArea(ctx, pegas, (ctx.pedido.doisCanos && ctx.perfil?.doisCanos?.dano) || ctx.pedido.porTiro?.danoComMenos || ctx.perfil?.danoFixo || '3d6');
 }
 
 // Tokens com o centro na área de 10 × 10 m em volta do alvo, menos os escondidos.
@@ -868,6 +879,14 @@ export function acoesDe2077(arma) {
       resultado.dicaAtaque = `Arma Smart: +${R.BONUS_SMART} nos ataques à distância.${melhorada}${doisAlvos}`;
     }
   }
+  // As balas por tiro (o tiro único) e a munição que a Zhuo aceita.
+  if (perfil.balasPorTiro > 1) {
+    const unidade = arma.system.municoes.length && arma.system.municoes.every(tipo => tipo === 'shotgunShell') ? 'cartuchos' : 'balas';
+    const comMenos = perfil.danoComMenos ? `com menos no pente, dispara o que tem e causa ${perfil.danoComMenos}` : `com menos de ${perfil.minimoDeBalas || perfil.balasPorTiro} no pente, não dispara`;
+    resultado.dicaAtaque = [resultado.dicaAtaque, `${perfil.balasPorTiro} ${unidade} por tiro (${comMenos}).`].filter(Boolean).join(' ');
+  }
+  const carregada = arma.municaoCarregada;
+  if (perfil.soSmartMelhorada && carregada && !carregada.getFlag(SISTEMA, 'arma2077')?.smartMelhorada) resultado.avisos.push({ texto: 'só Smart melhorada', dica: 'Esta arma só aceita munição Smart melhorada.' });
   return resultado;
 }
 

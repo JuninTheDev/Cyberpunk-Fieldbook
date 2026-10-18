@@ -421,6 +421,19 @@ export function balasDoModo(modo, { rajadaTech = BALAS_RAJADA, autofogo = BALAS_
   return modo === 'supressivo' ? BALAS_RAJADA : 1;
 }
 
+// As balas por tiro de 2077 (a wiki: a Yukimura, a Shingen, a Chao, a Kappa, a Masamune e a Nowaki gastam 3; a Zhuo, 8
+// cartuchos), como o foundry-2077 do Foundry 12: o tiro único (o tiro, o mirado, o ricochete e o cartucho) gasta as
+// balas do modelo. Com o dano com menos balas, "com menos de 3 no pente, dispara o que tem" (pelo menos 1) e causa o
+// dano menor; sem ele (a Zhuo), precisa de todas. null: o modo gasta o de sempre (balasDoModo).
+export const MODOS_DE_TIRO_UNICO = ['tiro', 'ricochete', 'cartucho'];
+export function balasPorTiro({ modo, perfil, pente = 0, doisCanos = false }) {
+  const porTiro = perfil?.balasPorTiro ?? 1;
+  if (porTiro <= 1 || doisCanos || !MODOS_DE_TIRO_UNICO.includes(modo)) return null;
+  if (!perfil.danoComMenos) return { balas: porTiro, danoComMenos: null };
+  const balas = Math.max(1, Math.min(porTiro, Number(pente) || 0));
+  return { balas, danoComMenos: balas < porTiro ? perfil.danoComMenos : null };
+}
+
 // Munição que não causa dano (a tabela de munição da wiki, system-catalog.js, com o texto dela): quem é pego sofre só o
 // efeito. Os testes e os estados são aplicados por municoes.mjs; a fumaça continua com a mesa.
 export const MUNICAO_SEM_DANO = {
@@ -756,7 +769,14 @@ export function perfil2077(flag, { aDistancia = true, pericia = '', municoes = [
     smart,
     doisCanos: flag.doisCartuchosDano ? { dano: String(flag.doisCartuchosDano) } : null,
     doisAlvos: smart && Boolean(flag.doisAlvos),
-    coronhaRetratil: Boolean(flag.coronhaRetratil)
+    coronhaRetratil: Boolean(flag.coronhaRetratil),
+    // As balas por tiro (balasPorTiro), o dano com menos no pente, o mínimo no pente (a trava da Zhuo), o dano fixo (os
+    // 4d6 do cartucho da Zhuo) e a munição que ela aceita.
+    balasPorTiro: Math.max(1, Number(flag.balas) || 1),
+    danoComMenos: flag.danoComMenos ? String(flag.danoComMenos) : null,
+    minimoDeBalas: Number(flag.minimoDeBalas) || 0,
+    danoFixo: flag.danoFixo ? String(flag.danoFixo) : null,
+    soSmartMelhorada: Boolean(flag.soSmartMelhorada)
   };
 }
 
@@ -792,8 +812,11 @@ export const ehReflexTuner = (nome, catalogo = '') => catalogo === 'cyberware-20
 // O que impede o ataque com uma arma de 2077 (o aviso, depois do nome da arma), ou null. pelaMunicao: o modo que a
 // arma e a munição dariam sozinhas ("tiro", "cartucho", "explosivo"); ligadaSmart: o atacante tem a ligação da arma
 // Smart (ehLigacaoSmart) instalada.
-export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', cobertura = 'nenhuma', pedido = null, ligadaSmart = false }) {
+// pente: as balas no pente (a trava da Zhuo); municao: a carregada ({ smartMelhorada }), ou null.
+export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', cobertura = 'nenhuma', pedido = null, ligadaSmart = false, pente = null, municao = null }) {
   if (perfil?.classe === 'smart' && !ligadaSmart) return 'arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.';
+  if (perfil?.minimoDeBalas && pente !== null && pente < perfil.minimoDeBalas) return `só dispara com ${perfil.minimoDeBalas} no pente (tem ${pente}): é a trava de segurança.`;
+  if (perfil?.soSmartMelhorada && municao && !municao.smartMelhorada) return 'só aceita munição Smart melhorada.';
   if (pedido === 'doisCanos' && !perfil?.doisCanos) return 'não dispara os dois canos de uma vez.';
   if (modo === 'ricochete') {
     if (!perfil?.ricocheteia) return 'só as armas Power de tiro único ricocheteiam (as que disparam três balas ou mais, não).';

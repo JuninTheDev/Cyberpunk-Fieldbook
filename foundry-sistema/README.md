@@ -258,8 +258,9 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Armas de 2077** (a página de 2077 da wiki: a arma Smart pelo Mission Kit, desde o ciclo 110; o Ricochete e a Carga ainda pelo suplemento de fã). A classe aparece ao lado do nome da arma, e os modos são botões na linha dela:
   - **Power, Ricochete:** tiro único num alvo atrás de cobertura, com a perícia da arma e a DV da tabela de autofogo (pistolas e SMGs: a da SMG; as outras, a do rifle de assalto). Rola um dado a menos de dano, e o Ballistic Coprocessor instalado dá +2. As que só disparam rajadas ou cartucho não ricocheteiam.
   - **Tech, Carga e Rajada:** a janela pergunta a cobertura do alvo. A carga deixa passar tudo, metade da fina ou um quarto da grossa; a rajada (o autofogo carregado, com a tabela da SMG e o multiplicador até o da arma), tudo ou um quarto da fina. Se o dano passar da armadura, ela perde 4 de SP (2 através de cobertura). A rajada gasta as balas que a arma diz (a Kenshin 2, a Senkoh o pente todo). Depois de uma carga, a arma esfria uma rodada: a ficha mostra até quando.
-  - **Smart** (o Mission Kit, ciclo 110): só dispara ligada pelo Personal Link (os Interface Plugs; o Neuroport já os traz) ou pelo Subdermal Grip instalados. Sem a ligação, a ficha avisa e o ataque não gasta bala. Com ela, +1 em todo ataque à distância da arma (o tiro, o mirado, o autofogo), somado a REF + perícia. O Smart Link de 2077 de um personagem antigo vale o Subdermal Grip. As balas por tiro, o mestre resolve.
+  - **Smart** (o Mission Kit, ciclo 110): só dispara ligada pelo Personal Link (os Interface Plugs; o Neuroport já os traz) ou pelo Subdermal Grip instalados. Sem a ligação, a ficha avisa e o ataque não gasta bala. Com ela, +1 em todo ataque à distância da arma (o tiro, o mirado, o autofogo), somado a REF + perícia. O Smart Link de 2077 de um personagem antigo vale o Subdermal Grip.
   - **Munição Smart melhorada** (o Kit, ciclo 112): só na arma Smart ligada. As penalidades de visão da janela de rolagem (a pouca luz e a tarefa encoberta por fumaça, escuridão etc.) não contam, e o cartão diz quais saíram. O ataque à distância que erra a DV (ou a esquiva) por 5 ou menos tem a segunda chance na hora: 14 + 1d10 no lugar de REF + perícia + os bônus, com as penalidades do primeiro tiro. Quem atacou rola, no computador dele, pela janela de rolagem (com a Sorte); sem resposta, o mestre rola. No cartucho e no explosivo, a segunda chance é contra a DV da área.
+  - **Balas por tiro** (a wiki, ciclo 113): o tiro único (o tiro, o mirado, o ricochete e o cartucho) gasta as balas do modelo: 3 na Yukimura, na Shingen, na Chao, na Kappa, na Masamune e na Nowaki. Com menos no pente, dispara o que tem e causa o dano menor (2d6; 4d6 na Masamune e na Nowaki). A Zhuo gasta 8 cartuchos Smart melhorados e causa 4d6; com menos de 8 não dispara, e só carrega a munição Smart melhorada. A dica do "Atacar" diz quantas balas, e o cartão, quantas saíram.
   - **Regras de cada modelo:**
     - **Dois canos:** o botão dispara os dois de uma vez e gasta 2 cartuchos. Na Palica e na Testera, o dano sobe para 4d6.
     - **Kappa:** com dois alvos marcados, se o tiro (não o mirado) não pegar o primeiro, as balas vão para o segundo, a até 4 m dele.
@@ -351,8 +352,8 @@ E a do navegador de cada um:
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga) e o Painel Tático.
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** os botões das armas Power e Tech ainda seguem o suplemento de fã (a arma Smart
-  segue o Kit desde o ciclo 110, menos as balas por tiro; a munição Smart melhorada, desde o 112); o Rebuild ainda não
-  tem regra. Os itens já existem, com a classe e as regras guardadas na
+  segue o Kit desde o ciclo 110; a munição Smart melhorada, desde o 112; as balas por tiro, desde o 113); o Rebuild
+  ainda não tem regra. Os itens já existem, com a classe e as regras guardadas na
   flag `arma2077`.
 - **O cyberware que é arma** (Wolvers, Mantis Blade, Gorilla Arm).
 - **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.

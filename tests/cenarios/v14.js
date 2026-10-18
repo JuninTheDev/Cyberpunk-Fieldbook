@@ -3364,7 +3364,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await r.passo('arma Smart (2077, o Kit): sem a ligação (o Personal Link ou o Subdermal Grip) não dispara nem gasta bala; com o Subdermal Grip, o ataque é REF + perícia + 1 da arma Smart, no tiro e no mirado, sem o teste Smart do suplemento', async () => {
       // Yukimura (Smart, padrão) contra o Alvo a 10 m: DV 13 (SMG). Com o Subdermal Grip: d10 5 → REF 8 + Pistola 4 +
       // Smart 1 + 5 = 18, acerta (3d6: 4 + 3 + 3 = 10, a armadura segura). Mirado na cabeça: d10 7 → 8 + 4 + 1 − 8 + 7 =
-      // 12, erra.
+      // 12, erra. Cada tiro gasta 3 balas (ciclo 113): sobram 24.
       await fixar(edge, [[5, 10], [4, 6], [3, 6], [3, 6], [7, 10]]);
       const info = await edge.evaluate(`(async () => {
         const a = __ator('Atiradora');
@@ -3398,13 +3398,13 @@ module.exports = async ({ edge, servidores, r }) => {
       const { semLink, ficha, tiro, mirado } = info;
       const [l] = tiro.linhas;
       const ok = semLink.r === null && semLink.pente === 30 && semLink.avisos.join() === 'Arasaka HJKE-11 Yukimura: arma Smart, só dispara ligada pelo Personal Link (o Interface Plug do Neuroport) ou pelo Subdermal Grip.'
-        && semLink.ficha.avisos.join() === 'sem ligação' && semLink.ficha.dica === ''
-        && ficha.avisos.length === 0 && ficha.ataque === '+13' && ficha.dica === 'Arma Smart: +1 nos ataques à distância.' && !ficha.botoes.includes('smart')
+        && semLink.ficha.avisos.join() === 'sem ligação' && semLink.ficha.dica === '3 balas por tiro (com menos no pente, dispara o que tem e causa 2d6).'
+        && ficha.avisos.length === 0 && ficha.ataque === '+13' && ficha.dica === 'Arma Smart: +1 nos ataques à distância. 3 balas por tiro (com menos no pente, dispara o que tem e causa 2d6).' && !ficha.botoes.includes('smart')
         && tiro.ataque === 18 && tiro.descricao === 'Tiro' && !tiro.notas.some(n => /Teste Smart/.test(n))
         && tiro.teste.formula === '1d10crit + 8 + 4 + 1' && tiro.teste.partes.includes('Arma Smart +1') && tiro.teste.partes.includes('REF +8')
         && l.dv === 13 && l.resultado === 'acertou' && l.dano?.dano === 10 && l.dano.recebido === 0
         && mirado.ataque === 12 && mirado.descricao === 'Tiro mirado na cabeça' && mirado.formula === '1d10crit + 8 + 4 + 1 - 8' && mirado.linhas[0]?.resultado === 'errou'
-        && info.pente === 28 && info.sobrou === 0;
+        && tiro.notas.includes('Gasta 3 balas no tiro.') && info.pente === 24 && info.sobrou === 0;
       return [ok, JSON.stringify(info)];
     });
 
@@ -3861,7 +3861,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const [l6] = naComum.linhas;
       const formulas = t => t.rolados.map(x => x.formula).join(' | ');
       const visao = 'Munição Smart melhorada: as penalidades de visão não contam (Iluminação noturna ou fraca, Tarefa encoberta por fumaça, escuridão etc.).';
-      const ok = info.dica === 'Arma Smart: +1 nos ataques à distância. Munição Smart melhorada: as penalidades de visão não contam e, se errar por 5 ou menos, tenta de novo com 14 + 1d10.'
+      const ok = info.dica === 'Arma Smart: +1 nos ataques à distância. Munição Smart melhorada: as penalidades de visão não contam e, se errar por 5 ou menos, tenta de novo com 14 + 1d10. 3 balas por tiro (com menos no pente, dispara o que tem e causa 2d6).'
         && pegou.ataque === 16 && l1.dv === 20 && l1.resultado === 'acertou' && l1.segunda === 21 && l1.dano === 6 && l1.notas.includes('Munição Smart melhorada: errou por 4; a segunda chance deu 21 e pegou.')
         && formulas(pegou) === '1d10crit + 8 + 4 + 1 | 1d10crit + 14' && pegou.rolados[1].segunda && pegou.rolados[1].partes.includes('Segunda chance +14')
         && errou.ataque === 15 && l2.resultado === 'errou' && l2.segunda === 19 && l2.notas.includes('Munição Smart melhorada: errou por 5; a segunda chance deu 19.')
@@ -3872,7 +3872,87 @@ module.exports = async ({ edge, servidores, r }) => {
         && naComum.ataque === 21 && l6.dv === 25 && l6.resultado === 'errou' && l6.segunda === null && naComum.rolados.length === 1 && !naComum.notas.some(n => /Smart melhorada/.test(n))
         && naArea.ataque === 11 && naArea.segunda === 15 && naArea.cabecalho === 'contra DV 13 do cartucho: acertou' && formulas(naArea) === '1d10crit + 8 + 4 + 1 - 4 | 1d10crit + 14 - 4'
         && naArea.notas.includes('Munição Smart melhorada: errou a DV 13 por 2; a segunda chance deu 15 e passou.') && lArea?.nome === 'Capanga' && lArea.resultado === 'acertou' && lArea.dano === 3
-        && info.pente.join() === '15,9,1' && info.perdeu === 6 && info.capangaPerdeu === 3 && info.fila === 0;
+        && info.pente.join() === '5,9,1' && info.perdeu === 6 && info.capangaPerdeu === 3 && info.fila === 0;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('balas por tiro (2077): a Yukimura gasta 3 no tiro; com 2 no pente, dispara as 2 e causa 2d6; a Zhuo não carrega o cartucho comum, gasta 8 cartuchos Smart melhorados (4d6), com 7 não dispara, e com o comum carregado avisa e não dispara', async () => {
+      // Com o Subdermal Grip. Yukimura no Alvo (10 m, DV 13; SP 11): d10 5 → 8 + 4 + 1 + 5 = 18; 3d6: 4 + 3 + 3 = 10, a
+      // armadura segura. Com 2 no pente: d10 5 → 18; 2d6: 5 + 5 = 10. Zhuo (Smart, Armas de Ombro) no Capanga a 4 m (DV 13
+      // do cartucho): d10 5 → 8 + 4 + 1 + 5 = 18; 4d6: 1 + 1 + 1 + 1 = 4.
+      await fixar(edge, [[5, 10], [4, 6], [3, 6], [3, 6], [5, 10], [5, 6], [5, 6], [5, 10], [1, 6], [1, 6], [1, 6], [1, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const a = __ator('Atiradora');
+        const [alvo, capanga] = ['Alvo', 'Capanga'].map(__token);
+        const spDoAlvo = __ator('Alvo').items.getName('Light Armorjack (Body)').system.sp.corpo.value;
+        const hpDoCapanga = __ator('Capanga').system.hp.value;
+        const criados = [];
+        let link = null;
+        const linha = arma => ({ avisos: [...(__linhaDaArma(arma)?.querySelectorAll('.aviso-2077') ?? [])].map(e => e.textContent.trim()), dica: __linhaDaArma(arma)?.querySelector('td.num')?.dataset.tooltip ?? '' });
+        const resumo = r => r && { ataque: r.ataque, notas: r.notas, linhas: r.linhas.map(l => ({ nome: l.nome, resultado: l.resultado, dano: l.dano?.dano ?? null, recebido: l.dano?.recebido ?? null })) };
+        try {
+          await __armaduraDoAlvo(11);
+          link = await __cyber2077('core_cyberware:subdermal-grip');
+          const yuki = await __arma2077('armas-2077:arasaka-hjke-11-yukimura', 'core_ammo:medium-pistol-basic', 30);
+          criados.push(yuki.arma.id, yuki.municao.id);
+          const tres = resumo(await yuki.arma.atacar({ alvo }));
+          const penteTres = yuki.arma.system.pente.value;
+          await yuki.arma.update({ 'system.pente.value': 2 });
+          const duas = resumo(await yuki.arma.atacar({ alvo }));
+          const penteDuas = yuki.arma.system.pente.value;
+          // A Zhuo: o cartucho comum não entra; o melhorado, sim.
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const pegar = (id, quantidade) => { const item = foundry.utils.deepClone(cat[id]); if (quantidade) item.system.quantidade = quantidade; return item; };
+          const zhuoDados = pegar('armas-2077:kang-tao-l-69-zhuo');
+          zhuoDados.system.equipada = true;
+          const novos = await a.createEmbeddedDocuments('Item', [zhuoDados, pegar('core_ammo:shotgun-shell-basic', 10)]);
+          const zhuo = novos.find(item => item.type === 'arma');
+          const comum = novos.find(item => item.type === 'municao');
+          criados.push(zhuo.id, comum.id);
+          const semMelhorada = await __comAvisos(() => zhuo.recarregar());
+          const [melhorada] = await a.createEmbeddedDocuments('Item', [pegar('armas-2077:smart-melhorada-cartucho', 15)]);
+          criados.push(melhorada.id);
+          const recarregou = await zhuo.recarregar();
+          await capanga.update({ x: 500 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 500);
+          await a.sheet.render({ force: true });
+          await __esperar(() => __linhaDaArma(yuki.arma) && __linhaDaArma(zhuo));
+          const fichas = { yuki: linha(yuki.arma), zhuo: linha(zhuo) };
+          const oito = resumo(await zhuo.atacar({ alvo: capanga }));
+          const penteOito = zhuo.system.pente.value;
+          const sete = await __comAvisos(() => zhuo.atacar({ alvo: capanga }));
+          // O cartucho comum carregado (de um ator de antes, ou à mão): a ficha avisa, e não dispara.
+          await zhuo.update({ 'system.carregada': comum.id, 'system.pente.value': 8 });
+          await __esperar(() => linha(zhuo).avisos.includes('só Smart melhorada'));
+          const fichaComum = linha(zhuo);
+          const comComum = await __comAvisos(() => zhuo.atacar({ alvo: capanga }));
+          return {
+            tres, penteTres, duas, penteDuas, semMelhorada: { r: semMelhorada.r, avisos: semMelhorada.avisos, pente: 0 }, recarregou, fichas, oito, penteOito,
+            sete: { r: sete.r, avisos: sete.avisos, pente: penteOito }, fichaComum, comComum: { r: comComum.r, avisos: comComum.avisos, pente: zhuo.system.pente.value },
+            capangaPerdeu: hpDoCapanga - __ator('Capanga').system.hp.value, fila: window.__fila.length
+          };
+        } finally {
+          await a.sheet.close();
+          if (link) await __tirarCyber(link);
+          await a.deleteEmbeddedDocuments('Item', criados.filter(id => a.items.has(id)));
+          await __armaduraDoAlvo(spDoAlvo);
+          await __ator('Capanga').update({ 'system.hp.value': hpDoCapanga });
+          await capanga.update({ x: 900 }, { animate: false });
+          await __esperar(() => canvas.tokens.get(capanga.id)?.document.x === 900);
+          window.__fila = [];
+        }
+      })()`);
+      const { tres, duas, oito } = info;
+      const ok = tres.ataque === 18 && tres.notas.includes('Gasta 3 balas no tiro.') && tres.linhas[0]?.dano === 10 && tres.linhas[0].recebido === 0 && info.penteTres === 27
+        && duas.ataque === 18 && duas.notas.includes('Só 2 balas no pente: dispara o que tem e causa 2d6.') && duas.linhas[0]?.dano === 10 && info.penteDuas === 0
+        && info.semMelhorada.r === null && info.semMelhorada.avisos.join() === 'Kang Tao L-69 Zhuo: sem munição compatível.' && info.recarregou?.pente === 15
+        && info.fichas.yuki.dica === 'Arma Smart: +1 nos ataques à distância. 3 balas por tiro (com menos no pente, dispara o que tem e causa 2d6).'
+        && info.fichas.zhuo.avisos.length === 0 && /8 cartuchos por tiro \(com menos de 8 no pente, não dispara\)\.$/.test(info.fichas.zhuo.dica)
+        && oito.ataque === 18 && oito.notas.includes('Gasta 8 cartuchos no tiro.') && oito.linhas[0]?.nome === 'Capanga' && oito.linhas[0].dano === 4 && info.penteOito === 7
+        && info.sete.r === null && info.sete.avisos.join() === 'Kang Tao L-69 Zhuo: só dispara com 8 no pente (tem 7): é a trava de segurança.'
+        && info.fichaComum.avisos.join() === 'só Smart melhorada'
+        && info.comComum.r === null && info.comComum.pente === 8 && info.comComum.avisos.join() === 'Kang Tao L-69 Zhuo: só aceita munição Smart melhorada.'
+        && info.capangaPerdeu === 4 && info.fila === 0;
       return [ok, JSON.stringify(info)];
     });
 

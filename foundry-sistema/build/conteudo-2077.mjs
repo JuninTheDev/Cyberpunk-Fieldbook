@@ -83,6 +83,11 @@ function proprioNoSistema(flag) {
   if (flag.doisAlvos) frases.push('Com dois alvos marcados, se o tiro não pegar o primeiro, as balas Smart vão para o segundo, a até 4 m dele.');
   if (flag.coronhaRetratil) frases.push('O botão "Recolher" recolhe a coronha: dá para esconder a arma, e os ataques têm −1 até estender.');
   if (flag.balasDoAutofogo) frases.push(`O autofogo gasta ${flag.balasDoAutofogo} balas.`);
+  if (Number(flag.balas) > 1) {
+    const comMenos = flag.danoComMenos ? `com menos no pente, dispara o que tem e causa ${flag.danoComMenos}` : `com menos de ${flag.minimoDeBalas || flag.balas} no pente, não dispara`;
+    frases.push(`O tiro único gasta ${flag.balas} ${flag.soCartucho ? 'cartuchos' : 'balas'} (${comMenos})${flag.danoFixo ? ` e causa ${flag.danoFixo}` : ''}.`);
+  }
+  if (flag.soSmartMelhorada) frases.push('Só carrega a munição Smart melhorada.');
   return frases.join(' ');
 }
 // Nos Rebuilds do Kit (sem botão) e na munição Smart melhorada (ciclo 112).

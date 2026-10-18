@@ -608,6 +608,46 @@ test('Munição Smart melhorada (Mission Kit, p. 32): só na arma Smart; sem as 
   }
 });
 
+test('Balas por tiro (a wiki de 2026-10-17, como o foundry-2077): o tiro único das Smart de três balas e da Masamune e da Nowaki gasta 3 (com menos, dispara o que tem e causa o dano menor); a Zhuo gasta 8 cartuchos Smart melhorados e não dispara com menos', () => {
+  const de2077 = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  assert.ok(de2077.includes('No <b>tiro único</b>, gasta <b>3 balas</b> e causa <b>3d6</b>; com menos de 3 no pente, dispara o que tem e causa 2d6. O autofogo (×3) gasta 10 balas.'), 'Yukimura');
+  assert.ok(de2077.includes('no tiro único gasta <b>3 balas</b> e causa 5d6 (com menos de 3, esvazia e causa 4d6)'), 'Nowaki');
+  assert.ok(de2077.includes('<b>Só aceita cartucho Smart melhorado</b> e gasta <b>8 cartuchos por ataque</b>; com menos de 8, a trava de segurança não deixa disparar. Pelo tanto de munição, causa <b>4d6</b> em vez dos 3d6 do cartucho.'), 'Zhuo');
+  const tres = { 'kang-tao-a-22b-chao': '2d6', 'tsunami-kappa': '2d6', 'arasaka-hjke-11-yukimura': '2d6', 'arasaka-tki-20-shingen': '2d6', 'arasaka-nowaki': '4d6', 'arasaka-hjsh-18-masamune': '4d6' };
+  for (const [id, menos] of Object.entries(tres)) {
+    const p = perfilDe(`armas-2077:${id}`);
+    assert.deepEqual([p.balasPorTiro, p.danoComMenos, p.minimoDeBalas, p.danoFixo, p.soSmartMelhorada], [3, menos, 0, null, false], id);
+  }
+  const zhuo = perfilDe('armas-2077:kang-tao-l-69-zhuo');
+  assert.deepEqual([zhuo.balasPorTiro, zhuo.danoComMenos, zhuo.minimoDeBalas, zhuo.danoFixo, zhuo.soSmartMelhorada], [8, null, 8, '4d6', true]);
+  // As outras de 2077 gastam o de sempre.
+  const liberty = perfilDe('armas-2077:constitutional-arms-liberty');
+  assert.equal(liberty.balasPorTiro, 1);
+  assert.equal(regras.balasPorTiro({ modo: 'tiro', perfil: liberty, pente: 12 }), null);
+  // O tiro único (o tiro e o mirado, o ricochete, o cartucho): 3 balas; com 2 ou 1 no pente, dispara o que tem e causa o
+  // dano menor; vazio, 1 (o "pente vazio" de sempre).
+  const yukimura = perfilDe('armas-2077:arasaka-hjke-11-yukimura');
+  assert.deepEqual(regras.balasPorTiro({ modo: 'tiro', perfil: yukimura, pente: 30 }), { balas: 3, danoComMenos: null });
+  assert.deepEqual(regras.balasPorTiro({ modo: 'tiro', perfil: yukimura, pente: 3 }), { balas: 3, danoComMenos: null });
+  assert.deepEqual(regras.balasPorTiro({ modo: 'tiro', perfil: yukimura, pente: 2 }), { balas: 2, danoComMenos: '2d6' });
+  assert.deepEqual(regras.balasPorTiro({ modo: 'tiro', perfil: yukimura, pente: 1 }), { balas: 1, danoComMenos: '2d6' });
+  assert.deepEqual(regras.balasPorTiro({ modo: 'tiro', perfil: yukimura, pente: 0 }), { balas: 1, danoComMenos: '2d6' });
+  assert.deepEqual(regras.MODOS_DE_TIRO_UNICO, ['tiro', 'ricochete', 'cartucho']);
+  // O autofogo e o fogo supressivo gastam os 10 de sempre, e os dois canos, os 2 cartuchos.
+  for (const modo of ['autofogo', 'supressivo', 'explosivo']) assert.equal(regras.balasPorTiro({ modo, perfil: yukimura, pente: 30 }), null, modo);
+  assert.equal(regras.balasPorTiro({ modo: 'cartucho', perfil: yukimura, pente: 30, doisCanos: true }), null);
+  // A Zhuo: 8 cartuchos; com menos de 8, a trava não deixa disparar; só a munição Smart melhorada.
+  assert.deepEqual(regras.balasPorTiro({ modo: 'cartucho', perfil: zhuo, pente: 32 }), { balas: 8, danoComMenos: null });
+  const ligada = { modo: 'cartucho', perfil: zhuo, ligadaSmart: true };
+  assert.equal(regras.impedimento2077({ ...ligada, pente: 7, municao: { smartMelhorada: true } }), 'só dispara com 8 no pente (tem 7): é a trava de segurança.');
+  assert.equal(regras.impedimento2077({ ...ligada, pente: 8, municao: { smartMelhorada: false } }), 'só aceita munição Smart melhorada.');
+  assert.equal(regras.impedimento2077({ ...ligada, pente: 8, municao: { smartMelhorada: true } }), null);
+  assert.equal(regras.impedimento2077({ modo: 'tiro', perfil: yukimura, ligadaSmart: true, pente: 1, municao: { smartMelhorada: false } }), null, 'a Yukimura não tem trava nem munição própria');
+  // O texto "Neste sistema" das nove.
+  for (const id of [...Object.keys(tres), 'kang-tao-l-69-zhuo']) assert.match(catalogo[`armas-2077:${id}`].system.descricao, /O tiro único gasta (3 balas|8 cartuchos)/, id);
+  assert.match(catalogo['armas-2077:kang-tao-l-69-zhuo'].system.descricao, /O tiro único gasta 8 cartuchos \(com menos de 8 no pente, não dispara\) e causa 4d6\. Só carrega a munição Smart melhorada\./);
+});
+
 test('Armas de 2077, regras de cada modelo (o texto de cada arma na wiki): os dois canos da Palica e da Testera (4d6), os dois alvos da Kappa, a coronha da Dian e as 7 balas do autofogo da Lexington', () => {
   // "Disparar os dois canos de uma vez gasta os 2 cartuchos e o dano sobe para 4d6" (Palica, desde o Kit; antes, o teste
   // Smart subia para 12 + 1d10); "dá para disparar os dois de uma vez, e o dano sobe para 4d6" (Testera); "trava em dois

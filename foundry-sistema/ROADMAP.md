@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 113). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 114). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -251,7 +251,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
       da Palica pelo dano; os dois alvos da Kappa no tiro comum: ciclo 110 (saíram as duas configurações do ataque Smart);
     - [x] a munição Smart melhorada (a segunda chance com 14 + 1d10; sem as penalidades de visão): ciclo 112 (quem atacou
       rola, no computador dele; na área, contra a DV dela);
-    - [ ] as balas por tiro (as 3 balas e o dano com menos; a Zhuo);
+    - [x] as balas por tiro (as 3 balas e o dano com menos; a Zhuo): ciclo 113;
     - [ ] Power: o ricochete com −4 (−2 com o Ballistic Coprocessor) e a lesão crítica com 10 de dano bônus;
     - [ ] Tech: carregar na Ação de Movimento, CDT 1, a cobertura fina e a metade do SP;
     - [ ] o resto das regras de cada modelo (o tiro mirado da Unity, o BODY e a lesão da Carnage, a Burya, o ferrolho da

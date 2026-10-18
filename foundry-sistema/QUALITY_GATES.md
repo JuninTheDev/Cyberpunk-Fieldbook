@@ -64,6 +64,8 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **Passo que quebra esconde o resto** (ciclo 110): um erro no meio do passo (o `rajada.ataque` da Lexington, que
   não faz mais autofogo e devolve `null`) tira do resultado o que já tinha dado certo (a Dian, no mesmo passo). Leia com
   `?.` o que pode não vir e deixe a checagem falhar: o passo falha mostrando os valores.
+- **O G1 depois de um rebase** (ciclo 113): com um conflito aberto, o `git ls-files` lista o arquivo uma vez por estágio
+  (no ciclo 112, o `combate.mjs` três vezes: 72 em vez de 70). Conte os arquivos depois de resolver.
 - **Teste de uma correção** é provado falhando sem ela. A mutação é desfeita antes do commit.
 - **Código para o navegador** (`edge.evaluate`) vai dentro de um template literal do Node: escreva `\\s` para chegar
   `\s` ao navegador. Um `\s` sozinho vira `s`. Ao editar o cenário por `node -e` ou por heredoc no Git Bash, as barras

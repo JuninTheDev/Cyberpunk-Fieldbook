@@ -702,7 +702,9 @@ export class ItemCPR extends Item {
   // Enche o pente com a munição carregada ou, sem ela, com a primeira munição compatível do ator.
   async recarregar() {
     if (this.type !== 'arma' || !this.system.pente.max) return null;
-    const compativel = municao => municao.type === 'municao' && municao.system.quantidade > 0 && (!this.system.municoes.length || this.system.municoes.includes(municao.system.tipo));
+    const soMelhorada = this.perfil2077?.soSmartMelhorada;
+    const compativel = municao => municao.type === 'municao' && municao.system.quantidade > 0 && (!this.system.municoes.length || this.system.municoes.includes(municao.system.tipo))
+      && (!soMelhorada || Boolean(municao.getFlag(SISTEMA, 'arma2077')?.smartMelhorada));
     const municao = [this.municaoCarregada, ...(this.actor?.items ?? [])].find(item => item && compativel(item));
     if (!municao) { ui.notifications.warn(`${this.name}: sem munição compatível.`); return null; }
     // O que sobrou no pente volta para a munição que estava nele.

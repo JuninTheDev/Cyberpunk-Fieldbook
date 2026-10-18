@@ -5534,7 +5534,7 @@ ciclo 110, o `522fa62a`.
     o explosivo e o cartão) ficaram com as duas; a segunda chance na área passou a devolver uma cópia do contexto com o
     total novo, como a segunda tentativa do Codex (no lugar de um `ctx.ataque`, que a cópia dele não veria). O
     catálogo saiu do build de novo (só mudam as 9 armas Smart, os 3 Rebuilds e as 9 munições do Kit);
-  - **depois dela:** G1 72 arquivos e G2 sem erros; G3 145 de 149 (as 4 conhecidas); G4 137 de 139 (a carga Tech e a
+  - **depois dela:** G1 70 arquivos (corrigido no ciclo 113) e G2 sem erros; G3 145 de 149 (as 4 conhecidas); G4 137 de 139 (a carga Tech e a
     Dian e Lexington; a checagem de avisos passou nesta rodada, como no ciclo 111: ela vem e vai, pela fila das
     notificações);
   - **mutações:** as 10 caíram, e os arquivos voltaram (conferido pelo md5):
@@ -5545,6 +5545,52 @@ ciclo 110, o `522fa62a`.
       passo da munição;
     - depois da integração, a M7 e a M9 de novo no G4: caíram as duas (a M7 no passo da munição e no do jogador; a M9 no da munição), e os arquivos voltaram.
 - **Próximo:** a parte 3 do C29, as balas por tiro (as 3 balas e o dano com menos; a Zhuo).
+
+### Ciclo 113 (2026-10-18): o C29, as armas de 2077 pelo Kit, parte 3: as balas por tiro (sessão KouArt)
+
+Commit anterior: `f547f6ff` (o ciclo 112).
+
+- **A referência:**
+  - **a wiki de 2026-10-17 (`system-2077.js`):** a Yukimura, "no tiro único, gasta 3 balas e causa 3d6; com menos de 3 no
+    pente, dispara o que tem e causa 2d6"; a Shingen, a Chao e a Kappa, o mesmo; a Masamune e a Nowaki, 5d6 (com menos,
+    "esvazia e causa 4d6"); a Zhuo, "só aceita cartucho Smart melhorado e gasta 8 cartuchos por ataque; com menos de 8,
+    a trava de segurança não deixa disparar. Pelo tanto de munição, causa 4d6 em vez dos 3d6 do cartucho". As regras
+    `balas`, `danoComMenos`, `minimoDeBalas`, `danoFixo` e `soSmartMelhorada` da flag `arma2077`;
+  - **o `foundry-2077` do master (o Foundry 12, `scripts/armas2077.mjs`):** o tiro único é o tiro, o mirado e o
+    ricochete; gasta `min(balas, pente)` com o dano com menos, ou as balas todas; a trava e o "só aceita munição Smart
+    melhorada" bloqueiam o ataque; o dano fixo vale fora do autofogo.
+- **O que muda:**
+  - **`regras.mjs`:** o perfil ganha `balasPorTiro`, `danoComMenos`, `minimoDeBalas`, `danoFixo` e `soSmartMelhorada`;
+    `balasPorTiro` (o tiro único: o tiro e o mirado, o ricochete e o cartucho, que é o tiro da Zhuo; os dois canos, o
+    autofogo e o supressivo gastam o de sempre); o `impedimento2077` com a trava ("só dispara com 8 no pente (tem 7): é a
+    trava de segurança.") e a munição ("só aceita munição Smart melhorada.");
+  - **`combate.mjs`:** o ataque gasta as balas do tiro e leva a conta ao mestre; o cartão diz "Gasta 3 balas no tiro." ou
+    "Só 2 balas no pente: dispara o que tem e causa 2d6."; o dano com menos balas e o dano fixo (os 4d6 do cartucho da
+    Zhuo); na ficha, a dica do "Atacar" diz as balas por tiro, e a Zhuo com outro cartucho carregado avisa "só Smart
+    melhorada";
+  - **`documentos.mjs`:** a Zhuo só recarrega com a munição Smart melhorada;
+  - **o build:** o texto "Neste sistema" das nove armas.
+- **Testes:**
+  - **G3 (`tests/sistema/regras.test.mjs`):** o teste novo das balas por tiro (o texto da wiki, o perfil das nove,
+    `balasPorTiro` com 30, 3, 2, 1 e 0 no pente e em cada modo, a trava e a munição da Zhuo, o texto do build);
+  - **G4 (`tests/cenarios/v14.js`):** o passo novo (a Yukimura gasta 3, e com 2 dispara as 2 e causa 2d6; a Zhuo não
+    carrega o cartucho comum, gasta 8 cartuchos melhorados e causa 4d6, com 7 não dispara, e com o comum carregado a ficha
+    avisa e o ataque não sai); nos passos da arma Smart e da munição Smart melhorada, a Yukimura gasta 3 por tiro e a
+    dica diz isso.
+- **Correção do ciclo 112:** o G1 de depois da integração contou 72 arquivos, mas o `git ls-files` do rebase em conflito
+  listava o `combate.mjs` uma vez por estágio. São 70 (o registro do 112 foi corrigido).
+- **Resultados:**
+  - G1: 70 arquivos, 0 erros; G2: 0 erros;
+  - G3: 146 de 150 (as 4 conhecidas, das partes seguintes);
+  - G4: 138 de 140 (a carga Tech e a Dian e Lexington; a checagem de avisos passou nesta rodada);
+  - **mutações:** as 12 caíram, e os arquivos voltaram (conferido pelo md5):
+    - no G3 (145 de 150 cada): com menos no pente gasta as 3 (B1), o cartucho fora do tiro único (B2), sem a trava
+      (B3), o perfil sem as balas da flag (B4) e a Zhuo com qualquer cartucho (B5);
+    - no G4, no passo novo (e nos da arma Smart e da munição, quando gastam balas): o ataque que gasta o de sempre (B6),
+      o dano cheio com menos balas (B7), os 3d6 no cartucho da Zhuo (B8), a Zhuo que recarrega o cartucho comum (B9), a
+      ficha sem o "só Smart melhorada" (B10), o impedimento sem a munição carregada (B11) e o cartão sem a nota (B12).
+- **Próximo:** a parte 4 do C29, Power (o ricochete com −4, −2 com o Ballistic Coprocessor, e a lesão crítica com 10 de
+  dano bônus).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
