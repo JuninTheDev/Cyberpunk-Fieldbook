@@ -92,8 +92,10 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       const t = info.tamanhos;
       const s = info.resumo;
-      // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo).
-      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 30 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 58 && t['cyberware-2077'] === 62 && t['netrunning-2077'] === 48 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
+      // Iniciativa 12: REF 8 + Kerenzikov 2 + Reação de Iniciativa 2 (os pontos do Solo de exemplo). Os de 2077 são os da
+      // loja da wiki de 2026-10-17 (C29; eram 58, 62 e 48 antes da revisão do suplemento de fã), e o de netrunning tem
+      // também os 16 quickhacks, que não se compram.
+      return [t.armas === 100 && t.armaduras === 18 && t.municao === 55 && t.cyberware === 107 && t.equipamento === 51 && t.roupas === 90 && t.drogas === 10 && t.netrunning === 30 && t.upgrades === 51 && t.veiculos === 14 && t['armas-2077'] === 53 && t['cyberware-2077'] === 38 && t['netrunning-2077'] === 37 && t.lesoes === 22 && t.exemplos === 2 && s.hp === 45 && s.ini === 12 && s.sp.join() === '11,11' && s.pente === 25 && s.municao === 'Rifle (Basic)' && s.hum === 36 && s.humMax === 48,
         JSON.stringify(info)];
     });
 

@@ -25,6 +25,7 @@ test('Catálogo: as armas preservam o efeito de falha; o CORE 0.92.4 traz jammed
   const { itens } = JSON.parse(fs.readFileSync(new URL('../../foundry-sistema/dados/catalogo.json', import.meta.url), 'utf8'));
   const armas = Object.entries(itens).filter(([, item]) => item.type === 'arma');
   assert.equal(armas.filter(([id]) => id.startsWith('core_weapons:')).length, 100);
-  assert.equal(armas.filter(([id]) => id.startsWith('armas-2077:')).length, 46);
+  // As de 2077 da loja da wiki de 2026-10-17 (C29: eram 46 antes da revisão do suplemento de fã).
+  assert.equal(armas.filter(([id]) => id.startsWith('armas-2077:')).length, 41);
   for (const [id, item] of armas) assert.equal(item.system.falhaCritica, 'jammed', id);
 });

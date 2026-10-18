@@ -364,7 +364,13 @@ test('Catálogo de 2077: todo item que a loja da wiki vende existe, com os núme
   // (build/conteudo-2077.mjs): os dois têm de dar o mesmo. O "exotica" da loja é outra coisa (a classe da arma fora das
   // do RED) e fica de fora.
   const loja = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => /^(armas|cyberware|netrunning)-2077:/.test(item.id));
-  assert.equal(loja.length, 157, 'o Mission Kit e o suplemento de fã');
+  // A wiki de 2026-10-17 (C29): o Mission Kit e o que a revisão do suplemento de fã deixou (eram 157 antes).
+  assert.equal(loja.length, 112, 'o Mission Kit e o suplemento de fã revisado');
+  // E o catálogo de 2077 é a loja e mais os quickhacks, que não se compram (o teste do Mission Kit, abaixo).
+  const naLoja = new Set(loja.map(item => item.id));
+  const sobra = Object.keys(catalogo).filter(chave => /^(armas|cyberware|netrunning)-2077:/.test(chave) && !naLoja.has(chave));
+  assert.deepEqual(sobra.filter(chave => catalogo[chave].system?.classe !== 'quickhack'), [], 'o catálogo de 2077 fora da loja');
+  assert.equal(sobra.length, 16, 'os 16 quickhacks');
   const id = nome => nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   for (const item of loja) {
     const nosso = catalogo[item.id];
@@ -383,7 +389,9 @@ test('Catálogo de 2077: todo item que a loja da wiki vende existe, com os núme
       const c = item.cyber;
       igual('cyberware', [s.tipo, s.fundacional, s.tamanho, s.perdaHumanidade.media, s.perdaHumanidade.formula, s.local], [c.tipo, c.base, c.tamanho, c.hl, c.rolagem, c.instalacao]);
     } else if (item.deck) {
-      igual('deck', [s.slots, s.ram], [item.deck.slots, item.deck.ram]);
+      // Os decks com marca não têm RAM desde a revisão da wiki de 2026-10-16 (a loja: null); o sistema guarda 0, que a
+      // ficha não mostra.
+      igual('deck', [s.slots, s.ram], [item.deck.slots, item.deck.ram ?? 0]);
     } else if (item.programa) {
       igual('tamanho', s.tamanho, item.programa.tamanho);
       if (s.classe === 'daemon') igual('REZ do daemon', s.rez, item.programa.rez);

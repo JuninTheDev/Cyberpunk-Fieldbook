@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 106). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 107). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -234,8 +234,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [ ] as Roles: as do RED pelo criador novo (as duas Roles) e os situacionais de Role;
   - [ ] o TeleOptics de 2077, que saiu da wiki (o passo 1 da migração e o passo da janela de rolagem);
   - [ ] a fundação e as opções sem os cyberópticos e as placas de 2077;
-  - [~] o catálogo de 2077: a loja da wiki, os tamanhos dos compêndios e o efeito de falha das armas (sessão KouArt,
-    2026-10-18);
+  - [x] o catálogo de 2077: a loja da wiki, os tamanhos dos compêndios e o efeito de falha das armas: ciclo 106 (o
+    catálogo já era o da loja nova desde o build do ciclo 94; os testes de referência ganharam os números da wiki nova);
   - [ ] as armas de 2077 pelo Mission Kit (decisão do usuário, 2026-10-17: entram no plano): os modos Power, Smart e
     Tech e as regras de cada modelo pela wiki, o teste Smart sem o Smart Link e os dois canos. Os testes que falham
     desde o ciclo 32 voltam a passar.

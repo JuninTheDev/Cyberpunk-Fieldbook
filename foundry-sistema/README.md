@@ -372,9 +372,11 @@ E a do navegador de cada um:
   - as 61 perícias, com os nomes em português da tabela da wiki;
   - as 13 tabelas de DV.
 - **2077:** `build/conteudo-2077.mjs` converte o 2077 da própria wiki (`system-2077.js` e `system-net.js`): o do **Mission Kit** (a base) e o do suplemento de fã adaptado. São os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele:
-  - 46 armas, os 3 Rebuilds e as 9 munições Smart melhorada do Kit;
-  - 61 cyberwares (com o Neuroport e as opções do Kit) e a droga Immunoblockers;
-  - 21 cyberdecks, 22 quickhacks (os 11 do Kit não se compram) e 5 daemons.
+  - 41 armas, os 3 Rebuilds e as 9 munições Smart melhorada do Kit;
+  - 37 cyberwares (com o Neuroport e as opções do Kit) e a droga Immunoblockers;
+  - 21 cyberdecks e 16 quickhacks (os 11 do Kit e os 5 do suplemento; não se compram).
+  - São os 112 itens de 2077 da loja da wiki de 2026-10-17 (o Mission Kit e o que a revisão do suplemento de fã deixou;
+    eram 157), e mais os quickhacks (ciclo 106).
 
   A classe de cada arma (Power, Tech ou Smart), a origem (Kit ou fã) e as regras próprias dela ficam na flag `arma2077`, que os modos de 2077 leem (`regras.mjs`, `perfil2077`). Os modos ainda seguem o suplemento de fã (ROADMAP).
 - **Os mesmos ids da loja da wiki** (`core_weapons:assault-rifle`, `armas-2077:arasaka-hjke-11-yukimura`): é por eles que o importador acha cada item.
@@ -455,6 +457,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - os nós de controle ligados à cena (ciclo 85): a porta, a luz e a torreta ligadas pela configuração do ponto; quem toma o nó vê só as dele, abre a porta, apaga a luz e assume a torreta, que volta ao dono de sempre na desconexão;
   - os arquivos do Eye-Dee (ciclo 89): o diário na pasta "Arquivos da NET", a permissão do dono, o aviso no chat, o "Abrir o arquivo" (no jogador e no mestre), o mesmo diário depois do "Reiniciar" e um novo no lugar do apagado;
   - o editor visual da arquitetura (ciclo 90): o "+" que cria o andar, o andar arrastado que troca com outro e o que vai para a célula vazia, e a ficha do compêndio trancado sem nada disso;
+  - os compêndios (ciclo 106): os de 2077 com os tamanhos da loja da wiki de 2026-10-17 (53, 38 e 37);
   - o Neuroport como arquitetura (ciclo 105): os andares do Capanga com um Self-ICE e um deck com o Hellhound, como no exemplo da wiki; o Jack Out inseguro com o Hellhound no cartão e, com ele sem REZ, sem;
   - a conexão direta (ciclo 104): em combate, o Capanga acordado e solto recusa pela janela do mestre; inconsciente, liga sem ele perceber, com os Passwalls passados e uma Ação NET a mais; agarrado, liga e ele percebe; a mais de 2 m, cai à força; no Alvo, o jogador aceita na janela dele e depois arranca o cabo pela ficha;
   - o alvo que morre e o token que sai da cena (ciclo 103): o token do netrunner apagado tira as duas ligações dele e os invasores dos dois alvos; o Capanga morto derruba o netrunner, com o bloqueio de 60 minutos; e o alvo que sai da cena também;

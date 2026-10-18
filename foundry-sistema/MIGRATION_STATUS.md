@@ -5215,6 +5215,41 @@ Commit anterior: `3abe0c2e` (ciclo 104).
       - a ficha sem os andares (N6).
 - **Próximo:** o C29, parte 2: o catálogo de 2077 pela loja da wiki (a decisão do usuário de 2026-10-17).
 
+### Ciclo 106 (2026-10-18): o C29, parte 2: o catálogo de 2077 pela loja da wiki (sessão KouArt)
+
+Commit anterior: `2e8c159f` (a reserva; o ciclo 105 é o `c7ee93d5`).
+
+- **A decisão do usuário (2026-10-17):** depois do C9, o C29 começa pelo catálogo de 2077 pela loja.
+- **A referência (a wiki de 2026-10-17):** a loja (`loja-catalogo.js`) vende 112 itens de 2077 (53 de armas e munição,
+  38 de cyberware e 21 de netrunning), o Mission Kit e o que a revisão do suplemento de fã deixou. Antes eram 157.
+- **O que se achou:** o catálogo já era o da loja nova desde o build do ciclo 94 (o `build/conteudo-2077.mjs` segue o
+  `foundry-2077/build` do master). A conferência item por item do teste (o preço, os números da arma e da munição, o
+  cyberware, o deck e o programa) passa, com uma diferença só: os decks com marca não têm RAM desde a revisão de
+  2026-10-16 (a loja: `null`), e o sistema guarda 0, que a ficha não mostra. Os testes de referência tinham os números
+  da wiki antiga.
+- **Testes (os números da wiki nova):**
+  - **`tests/sistema/regras.test.mjs`, "Catálogo de 2077":**
+    - a loja tem 112 itens de 2077 (eram 157);
+    - **conferência nova:** o catálogo de 2077 é a loja mais os 16 quickhacks, que não se compram (nada mais fora dela);
+    - a RAM do deck: a da loja, ou 0 quando ela não tem;
+  - **`tests/sistema/falha-da-arma.test.mjs`:** 41 armas de 2077 (eram 46), todas com o efeito de falha padrão;
+  - **`tests/cenarios/v14.js`, o passo dos compêndios:** os de 2077 com 53, 38 e 37 (eram 58, 62 e 48; o de netrunning
+    tem também os 16 quickhacks).
+- **Resultados:**
+  - G1: 67 arquivos, 0 erros; G2: 0 erros;
+  - G3: 126 de 136 (2 das conhecidas passaram: o catálogo de 2077 e o efeito de falha das armas; ficam 10);
+  - G4: 120 de 128 (o passo dos compêndios passou; ficam 8 conhecidas);
+  - **mutações, no catálogo gerado** (o `dados/catalogo.json`; o ciclo não muda código): as 3 caíram no G3, e o arquivo
+    voltou (conferido pelo md5):
+    - um item da loja com outro id (C1: falta na loja e sobra fora dela; também o teste do Mission Kit);
+    - um deck com marca com RAM (C2);
+    - um quickhack que vira outro programa (C3: sobra fora da loja um que não é quickhack; também o teste do Mission
+      Kit).
+- **O QUALITY_GATES:** a lista das falhas conhecidas desde a integração do master estava com a NET, que saiu no ciclo
+  94; agora tem 6 no G3 e 3 no G4.
+- **Próximo:** outra parte do C29 (as armas de 2077 pelo Mission Kit, o TeleOptics de 2077, a fundação e as opções, ou
+  as Roles).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
