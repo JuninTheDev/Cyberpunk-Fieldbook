@@ -2,6 +2,7 @@
 // as fichas, o crítico do d10, as configurações, o combate, os turnos, a NET na mesa, a importação da wiki e a migração
 // dos dados. A API fica em game.system.api (macros e testes).
 import * as agarrao from './agarrao.mjs';
+import { registrarArmasDoCyberware, sincronizarArmaDoCyberware } from './armas-cyberware.mjs';
 import * as neuroport from './neuroport.mjs';
 import * as combate from './combate.mjs';
 import { levarItem, pegarDoConteiner, registrarConteiner } from './conteiner.mjs';
@@ -81,7 +82,9 @@ Hooks.once('init', () => {
   registrarIceRezzado();
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
   registrarConteiner();
-  game.system.api = { agarrao, neuroport, combate, drogas, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner } };
+  // O cyberware que é arma (o C11): instalado, a arma ligada a ele; tirado ou apagado, ela sai.
+  registrarArmasDoCyberware();
+  game.system.api = { agarrao, neuroport, combate, drogas, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasDoCyberware: { sincronizarArmaDoCyberware } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });

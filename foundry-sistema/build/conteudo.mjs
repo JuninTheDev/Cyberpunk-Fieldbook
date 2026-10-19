@@ -346,6 +346,12 @@ function municao(doc, s) {
 // Os slots de opção das fundações pela wiki (system-catalog.js), onde ela diz; nas outras, os do CORE (installedItems).
 // O Sensor Array: 5 na wiki ("Acrescenta cinco slots de opção ao Cyberaudio"), 3 no CORE.
 const SLOTS_DA_WIKI = { 'Neural Link': 5, Cybereye: 3, 'Cyberaudio Suite': 3, Cyberarm: 4, Cyberleg: 3, 'Sensor Array': 5 };
+// O cyberware que é arma (o isWeapon do CORE; o C11): os campos de arma dele, como os da arma (o attackable e o loadable).
+function armaDoCyberware(doc, s) {
+  if (!s.isWeapon) return {};
+  const { tipo, pericia, dano, cdt, aDistancia, pente, municoes, autofogo, supressivo, bonusAtaque, qualidade, falhaCritica, ocultavel, tabelaDV, ignorarArmadura, ignorarAbaixo } = arma(doc, s).system;
+  return { arma: { ataca: true, tipo, pericia, dano, cdt, aDistancia, pente: pente.max, municoes, autofogo, supressivo, bonusAtaque, qualidade, falhaCritica, ocultavel, tabelaDV, ignorarArmadura, ignorarAbaixo } };
+}
 function cyberware(doc, s) {
   const fundacional = Boolean(s.isFoundational);
   return {
@@ -354,7 +360,7 @@ function cyberware(doc, s) {
       descricao: s.description?.value || '', tipo: s.type || '', fundacional, tamanho: Number(s.size) || 0,
       slots: fundacional ? (SLOTS_DA_WIKI[doc.name] ?? (Number(s.installedItems?.slots) || 0)) : 0, instaladoEm: '',
       perdaHumanidade: { formula: s.humanityLoss?.roll || '0', media: Number(s.humanityLoss?.static) || 0, sofrida: 0 },
-      local: s.installLocation || 'mall', instalado: false, preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
+      local: s.installLocation || 'mall', instalado: false, ...armaDoCyberware(doc, s), preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
     }
   };
 }

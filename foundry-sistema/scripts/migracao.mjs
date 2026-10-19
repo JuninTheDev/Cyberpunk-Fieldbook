@@ -97,6 +97,17 @@ export const PASSOS = [
       dados.system.endurecido = fonte.endurecido;
       dados.flags[SISTEMA].eletronicaMigrada = true;
     }
+  },
+  {
+    versao: 6,
+    nome: 'O cyberware que é arma (C11): o do catálogo que ataca (os Wolvers, a Popup Ranged Weapon…) ganha os dados da arma, que o catálogo passou a trazer no ciclo 133',
+    // A marca fica: o mestre que desligar o "É arma" depois não o vê voltar.
+    item(dados, { catalogo }) {
+      const arma = catalogo?.[doCatalogo(dados)]?.system?.arma;
+      if (dados.type !== 'cyberware' || !arma?.ataca || dados.flags?.[SISTEMA]?.armaMigrada) return;
+      dados.system.arma = structuredClone(arma);
+      dados.flags[SISTEMA].armaMigrada = true;
+    }
   }
 ];
 export const VERSAO_DOS_DADOS = PASSOS.at(-1)?.versao ?? 0;

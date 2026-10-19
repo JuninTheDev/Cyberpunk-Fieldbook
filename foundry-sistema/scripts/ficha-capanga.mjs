@@ -3,6 +3,7 @@
 // vitais, perícias, armadura vestida, cyberware instalado e lesões), a tabela de armas com os ataques, os itens e as notas.
 // As ações são as da ficha do personagem. Arrastar um item para a ficha já equipa ou instala (regras.AO_RECEBER_CAPANGA).
 // Quem só tem a permissão Limitada vê a imagem, o nome e as notas, como no CORE.
+import { ehArmaDoCyberware } from './armas-cyberware.mjs';
 import { caminho, USOS } from './config.mjs';
 import { bloco, FichaPersonagem } from './ficha-personagem.mjs';
 import { AO_RECEBER_CAPANGA } from './regras.mjs';
@@ -41,8 +42,9 @@ export class FichaCapanga extends FichaPersonagem {
   async _prepareContext(options) {
     const contexto = await super._prepareContext(options);
     const ordem = Object.keys(CONFIG.Item.dataModels);
-    // Todos os itens, menos as lesões (no painel geral), por tipo e nome, com o botão de cada tipo.
-    const itens = this.actor.items.filter(item => item.type !== 'lesao')
+    // Todos os itens, menos as lesões (no painel geral) e a arma do cyberware (na tabela de armas; ela sai com ele), por
+    // tipo e nome, com o botão de cada tipo.
+    const itens = this.actor.items.filter(item => item.type !== 'lesao' && !ehArmaDoCyberware(item))
       .sort((a, b) => ordem.indexOf(a.type) - ordem.indexOf(b.type) || a.name.localeCompare(b.name, 'pt-BR'))
       .map(item => ({ id: item.id, nome: item.name, img: item.img, divisivel: Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)), tipo: game.i18n.localize(CONFIG.Item.typeLabels[item.type]), detalhe: detalheDoItem(item), ...botaoDoItem(item) }));
     // Na ficha de um token, o nome é o do token (o que a cena mostra).

@@ -4972,6 +4972,115 @@ module.exports = async ({ edge, servidores, r }) => {
         && !p.notas.includes('em cobertura') && !s.notas.includes('em cobertura'), JSON.stringify(info)];
     });
 
+    await r.passo('cyberware que é arma (o C11, parte 1; o isWeapon do CORE): instalados, os Wolvers e a Popup Ranged Weapon ganham a arma deles na aba Combate, prontas, sem ocupar as mãos, fora do inventário e da ficha que volta para a wiki; os Wolvers atacam como arma branca pesada (DEX + Arma Branca, 3d6); com o EMP, não; a pistola recarrega; mudar a arma no cyberware muda a dela; tirado, desligado ou apagado o cyberware, a arma sai, e as balas do pente voltam', async () => {
+      // Atiradora: DEX 7 + Armas Brancas 3. O golpe: d10 8 → 18 contra a esquiva do Capanga, DEX 5 + d10 2 = 7: acertou.
+      // Dano 3d6: 4 + 3 + 2 = 9 (o Capanga não tem armadura).
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const humanidade = a.system.humanidade.value;
+        const hp = capanga.system.hp.value;
+        const balas = foundry.utils.deepClone(cat['core_ammo:medium-pistol-basic']);
+        balas.system.quantidade = 20;
+        const criados = await a.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_cyberware:wolvers']), foundry.utils.deepClone(cat['core_cyberware:popup-ranged-weapon']), balas]);
+        // O Foundry não garante a ordem do que cria: cada um pelo nome.
+        const wolvers = criados.find(i => i.name === 'Wolvers'), popup = criados.find(i => i.name === 'Popup Ranged Weapon'), municao = criados.find(i => i.type === 'municao');
+        const armaDe = cyber => a.items.find(i => i.type === 'arma' && i.getFlag('${S}', 'armaDoCyberware') === cyber.id);
+        const avisos = [];
+        ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+        try {
+          const antes = { semArma: !armaDe(wolvers) && !armaDe(popup), maos: a.maosLivres };
+          await a.update({ 'system.pericias.melee-weapon.nivel': 3 });
+          await a.instalarCyberware(wolvers, { rolar: false });
+          await a.instalarCyberware(popup, { rolar: false });
+          await esperar(() => armaDe(wolvers) && armaDe(popup));
+          const garra = armaDe(wolvers), pistola = armaDe(popup);
+          const armas = { garra: garra && [garra.name, garra.system.dano, garra.system.cdt, garra.system.maos, garra.system.aDistancia, garra.system.ignorarArmadura, garra.system.instaladoEm === wolvers.id].join('|'),
+            pistola: pistola && [pistola.system.dano, pistola.system.pente.max, pistola.system.aDistancia, pistola.system.municoes.join()].join('|'), maos: a.maosLivres };
+          // A ficha: a aba Combate tem a arma (pronta, com a marca), o inventário não.
+          await a.sheet.render({ force: true });
+          await esperar(() => a.sheet.element?.querySelector('table.lista.armas tr[data-item-id="' + garra.id + '"]'));
+          const linha = a.sheet.element.querySelector('table.lista.armas tr[data-item-id="' + garra.id + '"]');
+          const ficha = { combate: Boolean(linha), marca: linha?.querySelector('.do-cyberware')?.textContent ?? '', guardada: Boolean(linha?.classList.contains('guardada')),
+            noInventario: Boolean(a.sheet.element.querySelector('ol.itens li[data-item-id="' + garra.id + '"]')), pronta: [...a.sheet.element.querySelectorAll('.item-linha[data-item-id="' + garra.id + '"]')].length };
+          await a.sheet.close();
+          const naWiki = game.system.api.wiki.fichaParaAWiki(a).itens.filter(l => l.nome === 'Wolvers').map(l => l.tipo).join();
+          // O golpe.
+          window.__fila = [[8, 10], [2, 10], [4, 6], [3, 6], [2, 6]];
+          const r = await garra.atacar({ alvo: __token('Capanga') });
+          const [l] = r.linhas;
+          const golpe = { partes: garra.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor).slice(0, 2).join(), ataque: r.ataque, defesa: l.defesa, resultado: l.resultado, recebido: l.dano?.recebido ?? null, perdeu: hp - capanga.system.hp.value };
+          await capanga.update({ 'system.hp.value': hp });
+          // O EMP no cyberware: a arma dele não ataca.
+          await wolvers.setFlag('${S}', 'emp', { fim: game.time.worldTime + 60, ataque: 'c11-teste' });
+          const n = avisos.length;
+          const comEmp = { resultado: (await garra.atacar({ alvo: __token('Capanga') })) ?? null, aviso: avisos.slice(n).join(' ') };
+          await wolvers.unsetFlag('${S}', 'emp');
+          // A pistola recarrega da munição dela; o dano novo no cyberware vai para a arma.
+          await pistola.recarregar();
+          const recarga = [pistola.system.pente.value, municao.system.quantidade].join('/');
+          await wolvers.update({ 'system.arma.dano': '4d6' });
+          await esperar(() => garra.system.dano === '4d6');
+          const mudou = garra.system.dano;
+          // Tirada, a pistola sai, e as 12 balas voltam; desligado o "É arma", a garra sai; ligado, volta; apagado, sai.
+          await a.desinstalarCyberware(popup);
+          await esperar(() => !armaDe(popup) && municao.system.quantidade === 20);
+          const tirada = [Boolean(armaDe(popup)), municao.system.quantidade].join('/');
+          await wolvers.update({ 'system.arma.ataca': false });
+          await esperar(() => !armaDe(wolvers));
+          const desligada = Boolean(armaDe(wolvers));
+          await wolvers.update({ 'system.arma.ataca': true });
+          await esperar(() => armaDe(wolvers));
+          const religada = Boolean(armaDe(wolvers)) && armaDe(wolvers).id !== garra.id && armaDe(wolvers).system.dano === '4d6';
+          const idDoWolvers = wolvers.id;
+          await wolvers.delete();
+          await esperar(() => !a.items.some(i => i.getFlag('${S}', 'armaDoCyberware') === idDoWolvers));
+          const apagada = a.items.some(i => i.getFlag('${S}', 'armaDoCyberware') === idDoWolvers);
+          return { antes, armas, ficha, naWiki, golpe, comEmp, recarga, mudou, tirada, desligada, religada, apagada, avisos };
+        } finally {
+          delete ui.notifications.warn;
+          const sobras = a.items.filter(i => ['Wolvers', 'Popup Ranged Weapon', 'Medium Pistol (Basic)'].includes(i.name)).map(i => i.id);
+          if (sobras.length) await a.deleteEmbeddedDocuments('Item', sobras);
+          await a.update({ 'system.humanidade.value': humanidade });
+          await capanga.update({ 'system.hp.value': hp });
+        }
+      })()`);
+      const { armas, ficha, golpe } = info;
+      const ok = info.antes.semArma && armas.garra === 'Wolvers|3d6|2|0|false|50|true' && armas.pistola === '2d6|12|true|medPistol' && armas.maos === info.antes.maos
+        && ficha.combate && ficha.marca === 'Cyberware' && !ficha.guardada && !ficha.noInventario && ficha.pronta === 1 && info.naWiki === 'cyberware'
+        && golpe.partes === 'DEX 7,Armas Brancas 3' && golpe.ataque === 18 && golpe.defesa === 7 && golpe.resultado === 'acertou' && golpe.recebido === 9 && golpe.perdeu === 9
+        && info.comEmp.resultado === null && /Wolvers está inoperante \(EMP\)/.test(info.comEmp.aviso)
+        && info.recarga === '12/8' && info.mudou === '4d6' && info.tirada === 'false/20' && !info.desligada && info.religada && !info.apagada && info.avisos.length === 1;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('cyberware que é arma (o C11, parte 1) no capanga: as Scratchers instaladas vão para a tabela de armas dele, fora da lista de itens (o cyberware fica nela)', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const capanga = await Actor.implementation.create({ name: 'Capanga com Garras', type: 'capanga', items: [foundry.utils.deepClone(cat['core_cyberware:scratchers'])] });
+        try {
+          const unhas = capanga.items.getName('Scratchers');
+          await capanga.instalarCyberware(unhas, { rolar: false });
+          const armaDe = () => capanga.items.find(i => i.type === 'arma' && i.getFlag('${S}', 'armaDoCyberware') === unhas.id);
+          await esperar(() => armaDe());
+          const arma = armaDe();
+          await capanga.sheet.render({ force: true });
+          await esperar(() => capanga.sheet.element?.querySelector('table.lista.armas tr[data-item-id="' + arma?.id + '"]'));
+          const el = capanga.sheet.element;
+          const resultado = { arma: arma ? [arma.system.dano, arma.system.maos].join('|') : '', naTabela: Boolean(el?.querySelector('table.lista.armas tr[data-item-id="' + arma?.id + '"] .do-cyberware')),
+            naLista: Boolean(el?.querySelector('.itens-capanga li[data-item-id="' + arma?.id + '"]')), cyberwareNaLista: Boolean(el?.querySelector('.itens-capanga li[data-item-id="' + unhas.id + '"]')) };
+          await capanga.sheet.close();
+          return resultado;
+        } finally {
+          await capanga.delete();
+        }
+      })()`);
+      return [info.arma === '1d6|0' && info.naTabela && !info.naLista && info.cyberwareNaLista, JSON.stringify(info)];
+    });
+
     await r.passo('Agarrar (wiki, p. 177; as maquetes): DEX + Briga + 1d10 contra o do Capanga (NPC: o mestre rola, sem janela); empate é dele; pelo botão da aba Combate, vence: os dois agarrados, com −2 em todas as ações, e a ficha mostra; "Soltar" tira as duas marcas', async () => {
       // Atiradora: DEX 7 + Briga 3. 1º (pela API): d10 3 → 13 contra o Capanga, DEX 5 + Briga 2 + d10 6 = 13: empate,
       // resistiu. 2º (pelo botão, com o Capanga marcado): d10 8 → 18 contra 5 + 2 + 2 = 9: agarrou.
@@ -12285,6 +12394,48 @@ module.exports = async ({ edge, servidores, r }) => {
       } finally {
         await jogador.evaluate(`(async () => { for (const id of ['${montado.loja}', '${montado.pobre}']) await game.actors.get(id)?.sheet?.close(); return true; })()`).catch(() => null);
         await edge.evaluate(`(async () => { for (const id of window.__c24c ?? []) await game.actors.get(id)?.delete(); delete window.__c24c; return true; })()`);
+      }
+    });
+
+    await r.passo('cyberware que é arma (o C11, parte 1) no navegador do jogador: ele instala as Rippers no personagem dele, e a arma (uma só, a do computador dele) aparece na aba Combate dele; ele tira, e a arma sai, também no mestre', async () => {
+      const montado = await edge.evaluate(`(async () => {
+        const u = game.users.getName('Jogador');
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const ator = await Actor.implementation.create({ name: 'Garras do Jogador', type: 'personagem', ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, items: [foundry.utils.deepClone(cat['core_cyberware:rippers'])] });
+        window.__c11 = ator.id;
+        return { ator: ator.id };
+      })()`);
+      try {
+        const noJogador = await jogador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await esperar(() => game.actors.get('${montado.ator}')?.isOwner);
+          const ator = game.actors.get('${montado.ator}');
+          const rippers = ator.items.getName('Rippers');
+          const armas = () => ator.items.filter(i => i.type === 'arma' && i.getFlag('${S}', 'armaDoCyberware') === rippers.id);
+          await ator.instalarCyberware(rippers, { rolar: false });
+          await esperar(() => armas().length);
+          // Um segundo para uma arma a mais (a de outro computador) chegar, se fosse criada.
+          await new Promise(r => setTimeout(r, 1000));
+          const [arma] = armas();
+          const criada = arma ? [armas().length, arma.name, arma.system.dano, arma.system.maos].join('|') : '';
+          await ator.sheet.render({ force: true });
+          await esperar(() => ator.sheet.element?.querySelector('table.lista.armas tr[data-item-id="' + arma?.id + '"] .do-cyberware'));
+          const naAba = Boolean(ator.sheet.element?.querySelector('table.lista.armas tr[data-item-id="' + arma?.id + '"] .do-cyberware'));
+          await ator.sheet.close();
+          await ator.desinstalarCyberware(rippers);
+          await esperar(() => !armas().length);
+          return { criada, naAba, tirada: !armas().length };
+        })()`);
+        const noMestre = await edge.evaluate(`(async () => {
+          const ator = game.actors.get('${montado.ator}');
+          for (let i = 0; i < 50 && ator.items.some(item => item.type === 'arma'); i++) await new Promise(r => setTimeout(r, 100));
+          return ator.items.filter(item => item.type === 'arma').length;
+        })()`);
+        const ok = noJogador.criada === '1|Rippers|2d6|0' && noJogador.naAba && noJogador.tirada && noMestre === 0;
+        return [ok, JSON.stringify({ montado, noJogador, noMestre })];
+      } finally {
+        await jogador.evaluate(`(async () => { await game.actors.get('${montado.ator}')?.sheet?.close(); return true; })()`).catch(() => null);
+        await edge.evaluate(`(async () => { await game.actors.get(window.__c11)?.delete(); delete window.__c11; return true; })()`);
       }
     });
 

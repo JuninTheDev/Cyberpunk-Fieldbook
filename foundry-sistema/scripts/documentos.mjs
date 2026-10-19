@@ -13,6 +13,7 @@ import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
+import { ehArmaDoCyberware, FLAG_DA_ARMA, motivoDaArmaDoCyberware } from './armas-cyberware.mjs';
 import { efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 
@@ -699,13 +700,16 @@ export class ItemCPR extends Item {
     return resultado;
   }
 
-  // O item (do mesmo ator) onde este está instalado, ou null: o deck de um programa, a arma de um acessório.
+  // O item (do mesmo ator) onde este está instalado, ou null: o deck de um programa, a arma de um acessório, o veículo da
+  // arma montada, o cyberware da arma dele.
   get instaladoNo() {
     const id = this.system.instaladoEm;
     const item = (id && this.actor?.items.get(id)) || null;
-    return this.type === 'arma' && item?.type !== 'veiculo' ? null : item;
+    if (this.type !== 'arma') return item;
+    return item?.type === 'veiculo' || (item?.type === 'cyberware' && this.getFlag(SISTEMA, FLAG_DA_ARMA) === item.id) ? item : null;
   }
-  motivoVeicular(modo) { return veiculos.motivoVeicular(this, modo); }
+  // Por que a arma montada (no veículo ou no cyberware) não ataca nem recarrega agora ('' se pode).
+  motivoVeicular(modo) { return ehArmaDoCyberware(this) ? motivoDaArmaDoCyberware(this) : veiculos.motivoVeicular(this, modo); }
   prepararArmaVeicular() { return veiculos.prepararArma(this); }
   adicionarJanela(nome) { return veiculos.adicionarJanela(this, nome); }
   removerJanela(id) { return veiculos.removerJanela(this, id); }

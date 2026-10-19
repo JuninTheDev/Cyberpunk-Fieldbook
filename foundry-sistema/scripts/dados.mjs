@@ -296,6 +296,27 @@ export class DadosCyberware extends foundry.abstract.TypeDataModel {
       perdaHumanidade: new fields.SchemaField({ formula: texto('0'), media: inteiro(0, { min: 0 }), sofrida: inteiro(0, { min: 0 }) }),
       local: texto('mall'),
       instalado: new fields.BooleanField({ initial: false }),
+      // O cyberware que é arma (o C11; o isWeapon do CORE, com os campos do attackable e do loadable): instalado, ataca pela
+      // arma ligada a ele (armas-cyberware.mjs), com estes campos. pente: o tamanho do pente (0, sem munição).
+      arma: new fields.SchemaField({
+        ataca: new fields.BooleanField({ initial: false }),
+        tipo: texto(),
+        pericia: texto('melee-weapon'),
+        dano: texto('1d6'),
+        cdt: inteiro(1, { min: 0 }),
+        aDistancia: new fields.BooleanField({ initial: false }),
+        pente: inteiro(0, { min: 0 }),
+        municoes: new fields.ArrayField(new fields.StringField()),
+        autofogo: inteiro(0, { min: 0 }),
+        supressivo: new fields.BooleanField({ initial: false }),
+        bonusAtaque: inteiro(0),
+        qualidade: texto('standard'),
+        falhaCritica: texto('jammed'),
+        ocultavel: new fields.BooleanField({ initial: false }),
+        tabelaDV: texto(),
+        ignorarArmadura: inteiro(0, { min: 0, max: 100 }),
+        ignorarAbaixo: inteiro(0, { min: 0 })
+      }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };

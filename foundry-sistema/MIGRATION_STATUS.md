@@ -127,7 +127,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
-  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); faltam os movimentos especiais, o cyberware que é arma e o upgrade que ataca | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1); faltam os movimentos especiais, o cyberware que é arma do Kit e o upgrade que ataca | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
@@ -665,6 +665,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **o estoque infinito:** a loja que já tem o item (o tipo e o nome) não fica com outro, e o de quem vende sai mesmo assim
     (o CORE compara só o nome);
   - **a munição da arma vendida:** as balas do pente voltam para a munição que estava nele (o unload do CORE).
+
+- **O cyberware que é arma** (ciclo 133; o isWeapon do cyberware do CORE 0.92.4):
+  - **as mãos:** a arma do cyberware não ocupa as mãos, como no CORE (o _getFreeHands só conta as armas empunhadas). A wiki
+    diz das do Kit que "com a lâmina para fora, a mão desse braço não segura nada" (a Mantis Blade e o Projectile Launch
+    System): fica para a parte delas (o C11, parte 2);
+  - **os dados:** os do compêndio do CORE (o Big Knucks pela Briga, a arma branca com metade do SP). A Arma branca embutida
+    e a Arma de distância embutida da wiki instalam a arma que o jogador escolhe: o mestre muda o dano, o CDT e o pente na
+    ficha do cyberware (a Popup Melee Weapon vem como a leve do CORE, 1d6);
+  - **a wiki:** a arma do cyberware não vai na ficha que volta para a wiki; ela volta do cyberware instalado. O pente da
+    arma que vai e volta da wiki volta vazio.
 
 ## Registro dos ciclos
 
@@ -6479,6 +6489,53 @@ Commit anterior: `68e2915d` (o ciclo 131, da sessão Junin; o C24, parte 2, foi 
     e falha. A V5 rodou de novo assim, com o passo novo, e caiu sozinha.
 - **Próximo:** o C24 terminou. No plano, o que o usuário escolher (os itens livres do ROADMAP; o C10 está com a sessão
   Junin e o C18 com o Codex).
+
+### Ciclo 133 (2026-10-19): o C11, parte 1: o cyberware que é arma do CORE (sessão KouArt)
+
+Commit anterior: `e297c492` (a reserva do C11, depois do ciclo 132).
+
+- **A referência:** o CORE 0.92.4: o `cyberware-datamodel.js` (o `isWeapon`, com o `attackable-schema.js` e o
+  `loadable-schema.js`), o `cpr-cyberware.js` (as ações de arma do cyberware vão para as da arma) e os packs
+  `core/cyberware`: os doze com `isWeapon: true` (Big Knucks, Cybersnake, Dartgun, Popup Grenade Launcher, Popup Melee
+  Weapon, Popup Ranged Weapon, Rippers, Scratchers, Slice 'N Dice, Talon Foot, Vampyres e Wolvers). A wiki
+  (`system-catalog.js`, Cybermembros) dá os mesmos como arma branca leve, média ou pesada, e a Arma branca e a de
+  distância embutidas instalam a arma escolhida. O CORE mostra o cyberware que é arma instalado na aba de combate.
+- **O que muda:**
+  - **o catálogo** (`build/conteudo.mjs`, `dados/catalogo.json`): os doze trazem `system.arma` (o `ataca` e os campos de
+    arma, como os da arma do CORE); os outros 664 itens ficaram iguais;
+  - **`dados.mjs`:** `system.arma` no cyberware (o "É arma" e os campos);
+  - **`armas-cyberware.mjs`** (novo): a arma ligada ao cyberware (a flag `armaDoCyberware` e o `instaladoEm`, como a
+    arma montada num veículo do ciclo 117), criada, acertada ou tirada no cliente de quem instala, tira, muda ou apaga o
+    cyberware, numa fila por ator; as balas do pente voltam; o motivo do ataque recusado (fora da ficha, não instalado,
+    EMP);
+  - **`documentos.mjs`:** o `instaladoNo` da arma do cyberware e o `motivoVeicular` que vai para o motivo dela (o ataque
+    e a recarga já conferem a arma montada antes e depois da rolagem, e gastam o pente só no fim);
+  - **as fichas:** a aba Combate (o `armasDeCombate`: as de mão e as do cyberware, prontas, com a marca "Cyberware"), o
+    resumo de armas prontas, a lista de itens do capanga sem ela, a ficha do item (a arma diz de que cyberware é; o
+    cyberware tem o "É arma" e os campos) e o Painel Tático;
+  - **`wiki.mjs`:** a ficha que volta para a wiki sem a arma do cyberware;
+  - **`migracao.mjs`:** o passo 6 (o cyberware que veio do catálogo antes deste ciclo ganha a arma, uma vez).
+- **Testes:**
+  - **G3:** `armas-cyberware.test.mjs`, novo: o catálogo (os doze, e nenhum outro, com os números de quatro), a arma do
+    cyberware (sem mãos, montada nele, a cópia das munições), o que muda nela e o passo 6 da migração;
+  - **G4:** três passos novos: o do mestre (os Wolvers e a Popup Ranged Weapon na Atiradora: a aba Combate, as mãos, o
+    inventário, a wiki, o golpe de 3d6, o EMP, a recarga, o dano novo, tirar, desligar e apagar), o do capanga e o do
+    jogador (ele instala as Rippers no computador dele, e só uma arma aparece). A lista de armas do Painel Tático (as
+    equipadas e as do cyberware) não tem passo próprio.
+- **Portões:** G1, 93 arquivos sem erro; G2, nenhum erro; G3, 208/208; G4 completo, 189/189, com a checagem dos dois
+  navegadores sem avisos ou erros de JS. A primeira rodada do G4 falhou só no rótulo do teste (a perícia é "Armas
+  Brancas"); corrigido, o passo do capanga entrou, e o G4 rodou de novo inteiro.
+- **Mutações:** as 14 caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido):
+  - no G3: a arma que ocupa uma mão (A1), a migração sem a marca (A2) e o pente do cyberware que não chega à arma (A3);
+  - no Foundry: o cyberware que não ataca dando arma (A4, dez passos), a arma que não acompanha o cyberware (A5), o
+    cyberware apagado que deixa a arma (A6), as balas que não voltam (A7), a conferência do veículo na arma do cyberware
+    (A8), o EMP que não a para (A9), a aba Combate sem ela (A10), os dois computadores criando a arma (A11: o jogador
+    ficou com duas), a arma que vai para a wiki (A12), a arma guardada na aba Combate (A13) e a lista do capanga com
+    ela (A14).
+- **Limites:** os quatro do Kit (Gorilla Arm, Mantis Blade, Monowire e Projectile Launch System) ainda não atacam (o C11,
+  parte 2). A arma do cyberware não ocupa a mão do braço (o CORE também não). Acessórios na arma do cyberware: ela não
+  tem slots.
+- **Próximo:** o C11, parte 2: o cyberware que é arma do Kit.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -7,6 +7,7 @@ import { ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeD
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
+import { ehArmaDoCyberware } from './armas-cyberware.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -111,6 +112,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       // A arma de um personagem ataca e recarrega pela ficha dela; a armadura mostra o SP de cada local em caixas.
       armaDeAtor: tipo === 'arma' && Boolean(item.actor),
       armaMontada: tipo === 'arma' && Boolean(fonte.instaladoEm), veiculosDaArma, soAutofogo: Boolean(item.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
+      // O cyberware que é arma (o C11): a arma diz de que cyberware é; o cyberware, se a arma dele está na ficha.
+      armaDoCyberware: ehArmaDoCyberware(item) ? item.instaladoNo?.name ?? 'Cyberware ausente' : '',
+      periciasDaArma: tipo === 'cyberware' ? comAtual(Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), fonte.arma?.pericia) : null,
+      armaNaFicha: tipo === 'cyberware' && Boolean(item.actor?.items.some(outro => ehArmaDoCyberware(outro) && outro.system.instaladoEm === item.id)),
       prepararArma: tipo === 'upgrade' && item.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, item.getFlag(SISTEMA, 'catalogo')),
       janelas: tipo === 'veiculo' ? Object.entries(fonte.janelas).map(([id, janela]) => ({ id, ...janela })) : [],
       drogaDeAtor: tipo === 'droga' && Boolean(item.actor) ? { sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')) } : null,
