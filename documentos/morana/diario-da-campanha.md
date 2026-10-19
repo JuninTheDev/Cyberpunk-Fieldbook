@@ -87,10 +87,12 @@ Veja `ganchos-dos-personagens.md`. Um gancho forte e um ou dois leves por person
 
 ### Sessão 2: O Hospital Queimado (data: __/__/____)
 
-- **Ramo de abertura usado:**
+- **A maleta:** (entregue a Wakako / ficou com o grupo / foi para Iskra / está na caixa de contenção)
 - **O que aconteceu:**
+- **Hamada e o prédio:** (Ricky instalou / recusou; a criança; a MaxTac)
+- **Ricky e Morty:** (tratados / isolados / sem resposta)
 - **Decisão sobre o Gatilho:**
-- **Iskra:** (hesitou / lutou / fez acordo)
+- **Iskra:** (hesitou / lutou / fez acordo); a oferta pela cura de Morty: (aceita / recusada / em aberto)
 - **Relógio de Sato:**
 - **Estágio de Morana:**
 - **Handouts entregues:** (H-xx; a página de handouts marca os entregues)

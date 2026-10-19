@@ -467,8 +467,8 @@ Os valores partem da tabela de trabalhos do RED (Economia: trabalho típico, 1.0
 | Wakako, combinado | 1.500eb (um trabalho típico pago acima do normal): 750eb adiantados no salão e 750eb na entrega. |
 | Endo entregue vivo | +500eb ("pelo mensageiro"). Wakako não explica por quê. |
 | Maleta entregue aberta | Só o combinado, sem extra. Wakako fica fria e conta menos na Cena 6. |
-| Vega, para ficar com a maleta (e Endo) | 3.000eb na hora, o dobro de Wakako. A maleta vai para as Arasaka Industrial Docks (Ramo D da Sessão 2) e Wakako vira inimiga até a Sessão 3. |
-| Venderam a informação | 1.000eb, de um comprador que some (Ramo F da Sessão 2). |
+| Vega, para ficar com a maleta (e Endo) | 3.000eb na hora, o dobro de Wakako. A maleta vai para as Arasaka Industrial Docks e Wakako vira inimiga até a Sessão 3. |
+| Venderam a informação | 1.000eb, de um comprador que some. |
 
 Um Fixer pode subir o pagamento de Wakako em até 20% com a habilidade Operator. Pedir mais dinheiro a ela sem essa habilidade só rende a resposta da Cena 1.
 

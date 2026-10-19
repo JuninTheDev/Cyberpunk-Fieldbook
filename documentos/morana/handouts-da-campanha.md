@@ -198,15 +198,16 @@ Tudo aqui usa a lore da [fundação](fundacao-da-campanha.md). Nomes e ideias no
 
 - **Para os jogadores:** N54: a manhã seguinte
 - **Onde:** [Sessão 2](sessao-02-o-hospital-queimado.md#cena-1-as-noticias-da-manha), Cena 1. Acompanha o boletim do N54 que a sessão já traz.
-- **Revela:** o mundo reagiu, a falha de firmware em clínicas de Watson (que leva ao RT-07) e o cyberarm de Kobo à venda (gancho "Colheita" do guia).
-- **Para que serve:** atmosfera e três pistas laterais.
+- **Revela:** o mundo reagiu (os dois corpos do armazém, a testemunha), a falha de firmware em clínicas de Watson (que leva ao RT-07) e os implantes do armazém à venda: o cyberarm de Kobo e o implante do pescoço de Endo (gancho "Colheita" do guia).
+- **Para que serve:** atmosfera e três pistas laterais. O implante do pescoço é o que Hamada compra (Sessão 2, Cena 1).
 
 > **N54 NEWS · EDIÇÃO DA MANHÃ**
-> **KABUKI: "SURTO DE CYBERPSICOSE" DEIXA UM MORTO.** A NCPD classificou como surto o caso do depósito médico. O corpo desapareceu antes da perícia. A MaxTac "acompanha". Em outras notícias, a Arasaka reforça "operações preventivas" em Japantown e Watson, e as ações da empresa seguem em queda.
+> **KABUKI: DOIS MORTOS EM ARMAZÉM; NCPD FALA EM CYBERPSICOSE.** Um técnico do turno da noite, identificado como Hideo Mori, foi encontrado sem o braço esquerdo. Um segundo homem, com roupa de segurança sem insígnia, ainda não foi identificado. Um funcionário que sobreviveu à troca de tiros descreveu três suspeitos. A MaxTac "acompanha". Em outras notícias, a Arasaka reforça "operações preventivas" em Japantown e Watson, e as ações da empresa seguem em queda.
 > **FALHA EM CLÍNICAS DE WATSON.** Três clínicas relatam pacientes com tremores após atualização rotineira de firmware. A fabricante nega falha e atribui o problema a "implantes não registrados".
 >
 > **CLASSIFICADOS · MERCADO DE KABUKI**
 > VENDO cyberarm militar, lote 2069, quase novo. Só uma queda. 3.200 eb. Sem perguntas. Barraca 14, depois das duas.
+> VENDO implante muscular de pescoço, mesmo lote. Bom para as costas. 300 eb. Barraca 14.
 
 ### H-09 · Panfleto da Comunhão
 

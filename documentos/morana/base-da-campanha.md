@@ -163,7 +163,7 @@ Morreu por culpa do Ricky. Para se redimir, Ricky conseguiu um constructo que su
 - **Situação:** Ativas
 - **Mais:** [Personagens](personagens-da-campanha.md#atendentes-do-salao)
 
-Reconhecem rostos, ouvem conversas e passam pequenos rumores sobre os negócios de Wakako. Aya pode morrer na abertura da Sessão 2 (Ramo A).
+Reconhecem rostos, ouvem conversas e passam pequenos rumores sobre os negócios de Wakako. Se a Chave for parar no cofre de Wakako, Aya pode ser a primeira vítima de Iskra no pachinko (Sessão 2, Ganchos).
 
 ### Kobo
 - **Quem é:** Agente de Sato, da equipe de Iskra Voss
