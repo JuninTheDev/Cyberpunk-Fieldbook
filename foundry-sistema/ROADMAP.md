@@ -205,7 +205,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     como sugestão. O original conserva o ID e o UID; a cópia tem outro ID, sistema e efeitos, com o catálogo;
   - permissões, cancelamento, consumo durante a criação e recuperação de operações recusadas conferidos no Foundry.
     Ao juntar conteúdo instalado, ficam só os upgrades do destino, como no CORE (ver as dúvidas).
-- [ ] **C18. Armadura:** qual armadura conta em cada local, e ablar e consertar com um clique.
+- [~] **C18. Armadura:** em andamento (sessão Codex, 2026-10-19). Qual armadura conta em cada local, e ablar e consertar com um clique.
 - [ ] **C19. Lesão crítica fora do ataque:** rolar na tabela à mão, e o paliativo e o tratamento com a DV.
 - [ ] **C20. Macros e favoritos:** arrastar arma, perícia ou item para a barra, e os favoritos na aba Combate.
 - [ ] **C21. Cyberware:**
