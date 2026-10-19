@@ -162,7 +162,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 3: combate e itens que ainda não agem
 
-- [ ] **C10. Briga e Artes Marciais:** o dano pelo BODY e os golpes das Artes Marciais, com o Ataque de Precisão e a
+- [~] **C10. Briga e Artes Marciais:** em andamento (sessão Junin, 2026-10-19). O dano pelo BODY e os golpes das Artes Marciais, com o Ataque de Precisão e a
   Recuperação de Falhas.
 - [ ] **C11. Cyberware e upgrade que atacam:**
   - o cyberware que é arma (Wolvers, Mantis Blade, Gorilla Arm, o lança-granadas embutido). No CORE, o cyberware é
