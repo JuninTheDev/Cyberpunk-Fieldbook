@@ -198,7 +198,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - os prazos persistem e expiram pelo relógio e ao voltar ao mundo; doses adicionais estendem sem duplicar o bônus;
   - scanners não acumulam também com o implante. Lanterna e sinalizador têm alcance de 100 m (decisão do usuário);
     o sinalizador gasta uma unidade e dura uma hora. A luz original do token é preservada.
-- [ ] **C17. Pilhas:** juntar os iguais ao soltar e dividir uma pilha (o `stackable` do CORE).
+- [~] **C17. Pilhas:** em andamento (sessão Codex, 2026-10-19). Juntar os iguais ao soltar e dividir uma pilha (o `stackable` do CORE).
 - [ ] **C18. Armadura:** qual armadura conta em cada local, e ablar e consertar com um clique.
 - [ ] **C19. Lesão crítica fora do ataque:** rolar na tabela à mão, e o paliativo e o tratamento com a DV.
 - [ ] **C20. Macros e favoritos:** arrastar arma, perícia ou item para a barra, e os favoritos na aba Combate.
