@@ -6418,7 +6418,7 @@ usuário foi seguir o ROADMAP.
 - **Resultados:**
   - antes de integrar os ciclos 129 (Codex) e 130 (KouArt): G1 89 arquivos, 0 erros; G2 0 erros; G3 189 de 189; G4 173 de 173;
   - com o 129: G1 91 arquivos, 0 erros; G2 0 erros; G3 202 de 202; G4 182 de 182;
-  - com o 130: G1 91 arquivos, 0 erros; G2 0 erros; G3 203 de 203. O G4 roda depois do push, para o número não correr de novo, e vai num commit de registro;
+  - com o 130: G1 91 arquivos, 0 erros; G2 0 erros; G3 203 de 203. G4 184 de 184, depois do push (o número não correu de novo; commit de registro);
   - **mutações:** as 12 caíram, nenhuma rodada pulou o Foundry, e os arquivos voltaram (conferido pelo md5):
     - no G3: a tabela diferente da wiki (B1, 187 de 189), o cyberbraço nas Artes Marciais (B2), a forma de menos pontos
       (B3) e as Artes Marciais sem ponto (B4), 188 de 189 cada;
