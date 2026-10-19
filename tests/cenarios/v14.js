@@ -5081,6 +5081,49 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.arma === '1d6|0' && info.naTabela && !info.naLista && info.cyberwareNaLista, JSON.stringify(info)];
     });
 
+    await r.passo('cyberware que é arma do Kit (o C11, parte 2): instalada, a Mantis Blade dá a arma branca pesada excelente (3d6, +1 no ataque) e acerta o Capanga; o Projectile Launch System dá o lança-foguetes de um tiro, que carrega foguete ou granada', async () => {
+      // Atiradora: DEX 7 + Armas Brancas 3 + Arma 1. O golpe: d10 8 → 19 contra a esquiva do Capanga, DEX 5 + d10 2 = 7:
+      // acertou. Dano 3d6: 5 + 4 + 1 = 10 (o Capanga não tem armadura).
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const humanidade = a.system.humanidade.value;
+        const hp = capanga.system.hp.value;
+        const granada = foundry.utils.deepClone(cat['core_ammo:grenade-armor-piercing']);
+        granada.system.quantidade = 2;
+        const criados = await a.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['cyberware-2077:mantis-blade']), foundry.utils.deepClone(cat['cyberware-2077:projectile-launch-system']), granada]);
+        const mantis = criados.find(i => i.name === 'Mantis Blade'), pls = criados.find(i => i.name === 'Projectile Launch System'), municao = criados.find(i => i.type === 'municao');
+        const armaDe = cyber => a.items.find(i => i.type === 'arma' && i.getFlag('${S}', 'armaDoCyberware') === cyber.id);
+        try {
+          await a.instalarCyberware(mantis, { rolar: false });
+          await a.instalarCyberware(pls, { rolar: false });
+          await esperar(() => armaDe(mantis) && armaDe(pls));
+          const lamina = armaDe(mantis), lancador = armaDe(pls);
+          const armas = { lamina: lamina && [lamina.system.dano, lamina.system.cdt, lamina.system.bonusAtaque, lamina.system.qualidade, lamina.system.maos].join('|'),
+            lancador: lancador && [lancador.system.tipo, lancador.system.dano, lancador.system.pente.max, lancador.system.municoes.join('/'), lancador.system.tabelaDV].join('|') };
+          window.__fila = [[8, 10], [2, 10], [5, 6], [4, 6], [1, 6]];
+          const r = await lamina.atacar({ alvo: __token('Capanga') });
+          const [l] = r.linhas;
+          const golpe = { partes: lamina.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor).join(), ataque: r.ataque, resultado: l.resultado, recebido: l.dano?.recebido ?? null };
+          await lancador.recarregar();
+          const carga = [lancador.system.pente.value, lancador.municaoCarregada?.name ?? '', municao.system.quantidade].join('|');
+          return { armas, golpe, carga };
+        } finally {
+          const sobras = a.items.filter(i => ['Mantis Blade', 'Projectile Launch System', 'Grenade (Armor-Piercing)'].includes(i.name) || [mantis.id, pls.id].includes(i.getFlag('${S}', 'armaDoCyberware'))).map(i => i.id);
+          if (sobras.length) await a.deleteEmbeddedDocuments('Item', sobras);
+          await a.update({ 'system.humanidade.value': humanidade });
+          await capanga.update({ 'system.hp.value': hp });
+        }
+      })()`);
+      const { armas, golpe } = info;
+      const ok = armas.lamina === '3d6|2|1|excellent|0' && armas.lancador === 'rocketLauncher|8d6|1|rocket/grenade|DV Rocket Launcher'
+        && /^DEX 7,Armas Brancas 3,Arma 1/.test(golpe.partes) && golpe.ataque === 19 && golpe.resultado === 'acertou' && golpe.recebido === 10
+        && info.carga === '1|Grenade (Armor-Piercing)|1';
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('Agarrar (wiki, p. 177; as maquetes): DEX + Briga + 1d10 contra o do Capanga (NPC: o mestre rola, sem janela); empate é dele; pelo botão da aba Combate, vence: os dois agarrados, com −2 em todas as ações, e a ficha mostra; "Soltar" tira as duas marcas', async () => {
       // Atiradora: DEX 7 + Briga 3. 1º (pela API): d10 3 → 13 contra o Capanga, DEX 5 + Briga 2 + d10 6 = 13: empate,
       // resistiu. 2º (pelo botão, com o Capanga marcado): d10 8 → 18 contra 5 + 2 + 2 = 9: agarrou.

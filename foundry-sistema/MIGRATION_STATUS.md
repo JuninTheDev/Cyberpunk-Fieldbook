@@ -127,7 +127,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
-  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1); faltam os movimentos especiais, o cyberware que é arma do Kit e o upgrade que ataca | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); faltam os movimentos especiais e o upgrade que ataca | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
@@ -675,6 +675,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     ficha do cyberware (a Popup Melee Weapon vem como a leve do CORE, 1d6);
   - **a wiki:** a arma do cyberware não vai na ficha que volta para a wiki; ela volta do cyberware instalado. O pente da
     arma que vai e volta da wiki volta vazio.
+
+- **O cyberware que é arma do Kit** (ciclo 134; a wiki, `system-2077.js`, e o módulo cpr-2077 da mesa):
+  - **o que já ataca:** os números da arma de cada um, como a mesa do Foundry 12 os tem (o `foundry-2077/build/cyberware.mjs`
+    do master): a Gorilla Arm e a Mantis Blade, arma branca pesada excelente (3d6, CDT 2, +1); o Monowire, arma branca
+    pesada (3d6, CDT 2); o Projectile Launch System, lança-foguetes de um tiro (8d6, a DV do lança-foguetes) que carrega
+    foguete ou granada;
+  - **o que fica com o mestre (a parte 2b do C11):** a mão do braço que não segura nada com a Mantis Blade ou o Projectile
+    Launch System para fora (e o sacar sem Ação); o BODY 11 da Gorilla Arm para empunhar e, com duas, para o Choke e o Slam;
+    os 6 m e as duas rolagens de lesão crítica do Monowire; o Projectile Launch System com granada como lança-granadas (a
+    DV e o dano da granada). O módulo da mesa também não as automatiza.
 
 ## Registro dos ciclos
 
@@ -6536,6 +6546,32 @@ Commit anterior: `e297c492` (a reserva do C11, depois do ciclo 132).
   parte 2). A arma do cyberware não ocupa a mão do braço (o CORE também não). Acessórios na arma do cyberware: ela não
   tem slots.
 - **Próximo:** o C11, parte 2: o cyberware que é arma do Kit.
+
+### Ciclo 134 (2026-10-19): o C11, parte 2a: o cyberware que é arma do Kit (sessão KouArt)
+
+Commit anterior: `de78fdaf` (o ciclo 133).
+
+- **A referência:** a wiki (`system-2077.js`, os Cybermembros do Mission Kit: a Gorilla Arm, a Mantis Blade, o Monowire e o
+  Projectile Launch System, com os números da arma no texto) e o módulo cpr-2077 da mesa do Foundry 12
+  (`foundry-2077/build/cyberware.mjs` do master: os mesmos números, nos moldes Wolvers, Rippers, Big Knucks e Popup Grenade
+  Launcher do CORE, e o +1 da qualidade excelente na Gorilla Arm e na Mantis Blade). O módulo não automatiza as regras
+  próprias de cada um.
+- **O que muda:**
+  - **o catálogo** (`build/conteudo-2077.mjs`, `dados/catalogo.json`): os quatro trazem `system.arma` (a Gorilla Arm e a
+    Mantis Blade, arma branca pesada excelente, 3d6, CDT 2, +1; o Monowire, 3d6, CDT 2; o Projectile Launch System,
+    lança-foguetes de um tiro, 8d6, foguete ou granada, a DV do lança-foguetes); os outros 672 itens ficaram iguais;
+  - **`migracao.mjs`:** o passo 7 (a mesma conta do 6, `armaDoCatalogo`), para o mundo que já passou do 6.
+- **Testes:**
+  - **G3:** em `armas-cyberware.test.mjs`, o catálogo com os dezesseis (e nenhum outro), os números dos quatro do Kit e o
+    passo 7 (sozinho e com o 6, uma vez só);
+  - **G4:** um passo novo: a Mantis Blade instalada na Atiradora (a arma excelente, o golpe de 19 com o +1, 3d6 no
+    Capanga) e o Projectile Launch System (o lança-foguetes de um tiro, que carrega a granada).
+- **Portões:** G1, 93 arquivos sem erro; G2, nenhum erro; G3, 210/210; G4 completo, 190/190, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as três caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido): o passo 7 que não faz nada
+  (K1, no G3), a Mantis Blade sem o +1 (K2) e o Projectile Launch System só com foguete (K3), as duas no G3 e no Foundry.
+- **Limites:** as regras próprias do Kit ficam com o mestre (a parte 2b; ver as dúvidas).
+- **Próximo:** o C11, parte 2b (as regras próprias do Kit), ou a parte 3 (a arma sob o cano e a baioneta).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

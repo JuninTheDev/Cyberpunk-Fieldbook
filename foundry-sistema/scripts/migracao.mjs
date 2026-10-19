@@ -36,6 +36,15 @@ const encaixeNosDados = (dados, catalogo) => ({
   slots: Number(dados.system?.slots) || Number(catalogo?.[doCatalogo(dados)]?.system?.slots) || 0
 });
 
+// O cyberware do catálogo que é arma (os passos 6 e 7) ganha a arma do catálogo, uma vez: a marca fica, e o mestre que
+// desligar o "É arma" depois não o vê voltar.
+function armaDoCatalogo(dados, { catalogo }) {
+  const arma = catalogo?.[doCatalogo(dados)]?.system?.arma;
+  if (dados.type !== 'cyberware' || !arma?.ataca || dados.flags?.[SISTEMA]?.armaMigrada) return;
+  dados.system.arma = structuredClone(arma);
+  dados.flags[SISTEMA].armaMigrada = true;
+}
+
 export const PASSOS = [
   {
     versao: 1,
@@ -101,13 +110,12 @@ export const PASSOS = [
   {
     versao: 6,
     nome: 'O cyberware que é arma (C11): o do catálogo que ataca (os Wolvers, a Popup Ranged Weapon…) ganha os dados da arma, que o catálogo passou a trazer no ciclo 133',
-    // A marca fica: o mestre que desligar o "É arma" depois não o vê voltar.
-    item(dados, { catalogo }) {
-      const arma = catalogo?.[doCatalogo(dados)]?.system?.arma;
-      if (dados.type !== 'cyberware' || !arma?.ataca || dados.flags?.[SISTEMA]?.armaMigrada) return;
-      dados.system.arma = structuredClone(arma);
-      dados.flags[SISTEMA].armaMigrada = true;
-    }
+    item: armaDoCatalogo
+  },
+  {
+    versao: 7,
+    nome: 'O cyberware do Kit que é arma (C11, parte 2): a Gorilla Arm, a Mantis Blade, o Monowire e o Projectile Launch System ganham os dados da arma, que o catálogo passou a trazer no ciclo 134',
+    item: armaDoCatalogo
   }
 ];
 export const VERSAO_DOS_DADOS = PASSOS.at(-1)?.versao ?? 0;

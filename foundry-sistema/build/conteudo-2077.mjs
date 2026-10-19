@@ -221,6 +221,18 @@ const PAGINA_DO_KIT = { neuroport: 36, neural: 35, limbs: 36 };
 // Os slots de opção das fundações de 2077, pela wiki (system-2077.js): o Neuroport traz o Neural Link "com 5 slots de
 // opção".
 const SLOTS_2077 = { Neuroport: 5 };
+// O cyberware do Kit que é arma (o C11, parte 2): os números da wiki (system-2077.js) e do módulo cpr-2077 da mesa
+// (foundry-2077/build/cyberware.mjs, com os moldes Wolvers, Rippers, Big Knucks e Popup Grenade Launcher: a arma branca
+// ignora metade do SP). A Gorilla Arm e a Mantis Blade são de qualidade excelente (+1 no ataque). As regras próprias de
+// cada um (a mão do braço, o BODY 11, os 6 m e as duas lesões do Monowire, o foguete ou a granada) ficam com o mestre.
+const ARMA_DO_CYBERWARE = { ataca: true, tipo: '', pericia: 'melee-weapon', dano: '1d6', cdt: 1, aDistancia: false, pente: 0, municoes: [], autofogo: 0, supressivo: false, bonusAtaque: 0, qualidade: 'standard', falhaCritica: 'jammed', ocultavel: false, tabelaDV: '', ignorarArmadura: 0, ignorarAbaixo: 0 };
+const ARMAS_DO_KIT = {
+  'Mantis Blade': { tipo: 'heavyMelee', dano: '3d6', cdt: 2, bonusAtaque: 1, qualidade: 'excellent', ocultavel: true, ignorarArmadura: 50 },
+  Monowire: { tipo: 'heavyMelee', dano: '3d6', cdt: 2, ocultavel: true, ignorarArmadura: 50 },
+  'Gorilla Arm': { tipo: 'heavyMelee', dano: '3d6', cdt: 2, bonusAtaque: 1, qualidade: 'excellent', ignorarArmadura: 50 },
+  'Projectile Launch System': { tipo: 'rocketLauncher', pericia: 'heavy-weapons', dano: '8d6', cdt: 1, aDistancia: true, pente: 1, municoes: ['rocket', 'grenade'], tabelaDV: 'DV Rocket Launcher', ocultavel: true }
+};
+const armaDoKit = (raw, kit) => (kit && ARMAS_DO_KIT[raw.name] ? { arma: { ...ARMA_DO_CYBERWARE, ...ARMAS_DO_KIT[raw.name] } } : {});
 function cyberware(raw, grupo) {
   const categoria = CATEGORIAS.find(([padrao]) => padrao.test(raw.category));
   if (!categoria) throw new Error(`Categoria de cyberware desconhecida em ${raw.name}: ${raw.category}`);
@@ -233,7 +245,7 @@ function cyberware(raw, grupo) {
     system: {
       descricao: `<p><b>${raw.category}</b> · instalação: ${raw.install} · Humanidade ${raw.humanity} · ${raw.cost} · ${kit ? 'Mission Kit' : 'suplemento de fã'}</p>${paragrafo(raw.text)}${paragrafo(raw.tip, 'Na mesa')}${fonteNaWiki(livro, pagina)}`,
       tipo, fundacional, tamanho: fundacional ? 0 : /ocupa dois slots/i.test(texto) ? 2 : 1, slots: fundacional ? (SLOTS_2077[raw.name] ?? 0) : 0, instaladoEm: '', perdaHumanidade: perdaDeHumanidade(raw.humanity),
-      local: INSTALACOES[raw.install] || 'clinic', instalado: false, preco: precoEm(raw.cost) ?? 0, fonte: fonte(livro, pagina)
+      local: INSTALACOES[raw.install] || 'clinic', instalado: false, ...armaDoKit(raw, kit), preco: precoEm(raw.cost) ?? 0, fonte: fonte(livro, pagina)
     }
   };
 }

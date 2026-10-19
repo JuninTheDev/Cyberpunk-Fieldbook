@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 134). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 135). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -173,8 +173,11 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - [x] o cyberware que é arma do CORE (os doze com `isWeapon`: os Wolvers, as Rippers, a Popup Ranged Weapon, o lança-granadas
     embutido…; no CORE, o cyberware é `attackable` e `loadable`): a arma ligada ao cyberware instalado, na aba Combate,
     sem mãos, que sai com ele: ciclo 133;
-  - [ ] o cyberware que é arma do Kit (a wiki, `system-2077.js`): a Gorilla Arm, a Mantis Blade, o Monowire e o Projectile
-    Launch System, com as regras deles (a mão do braço, os 6 m e as duas lesões do Monowire, o foguete ou a granada);
+  - [x] o cyberware que é arma do Kit (a wiki, `system-2077.js`): a Gorilla Arm, a Mantis Blade, o Monowire e o Projectile
+    Launch System atacam com os números da arma, como no módulo da mesa: ciclo 134;
+  - [ ] as regras próprias deles (a wiki): a mão do braço com a Mantis Blade ou o Projectile Launch System para fora (e o
+    sacar sem Ação), o BODY 11 da Gorilla Arm (empunhar; com duas, o Choke e o Slam), os 6 m e as duas rolagens de lesão
+    do Monowire, e a granada no Projectile Launch System (lança-granadas);
   - [ ] a arma sob o cano e a baioneta (o upgrade que ataca);
   - [ ] nos acessórios: o limite de slots, os plugs do Smartgun Link e o pente que fica acima do máximo quando o carregador
     sai.
@@ -579,7 +582,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   Smart 12 + 1d10) e da Testera (4d6), com 2 cartuchos; os dois alvos da Kappa; a coronha recolhida da Dian (−1, pelo
   botão da ficha); as 7 balas do autofogo da Lexington. As que só disparam cartucho não mostram o Ricochete.
 - [ ] **Cyberware que é arma** (→ C11) (Wolvers, Mantis Blade, Gorilla Arm, o lança-granadas embutido): os do CORE atacam desde o
-  ciclo 133 (C11, parte 1); os do Kit, ainda não.
+  ciclo 133 (C11, parte 1), e os do Kit, com os números da arma, desde o 134; as regras próprias do Kit, ainda não.
 - [x] **Efeitos das munições especiais:** (C14, ciclo 111) os testes de resistência da biotoxina, do veneno, da sonífera, do flashbang e
   do gás; o fogo da incendiária; a segunda lesão da expansiva; a munição inteligente; o EMP, que desliga os itens
   eletrônicos (o CORE marca cada item e tem a macro "Get EMP'd").
