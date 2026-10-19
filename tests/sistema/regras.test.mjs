@@ -337,6 +337,29 @@ test('Upgrades: os slots da loja da wiki; o pente de cada carregador e o padrão
   }
 });
 
+// Wiki, Acessórios de arma (p. 342–344): os 3 slots, "só um carregador por vez", o Smartgun Link que "exige plugs de
+// interface ou plug subdérmico" e dá "+1 nos ataques à distância", e a Tabela de carregadores (o pente do carregador).
+test('Acessórios (o C11, parte 4): o que não cabe nos slots e o segundo carregador são recusados; o Smartgun Link vale à distância e com a ligação; o pente volta ao máximo quando o carregador sai', () => {
+  assert.deepEqual(regras.acessorioCabe({ slots: 3, usados: 1, tamanho: 2 }), { cabe: true, motivo: '' });
+  assert.deepEqual(regras.acessorioCabe({ slots: 3, usados: 2, tamanho: 2 }), { cabe: false, motivo: '2 de 3 slots em uso' });
+  assert.deepEqual(regras.acessorioCabe({ slots: 0, usados: 0, tamanho: 1 }), { cabe: false, motivo: '0 de 0 slots em uso' });
+  // O carregador: o segundo não entra, nem com slot livre; o primeiro entra.
+  assert.deepEqual(regras.acessorioCabe({ slots: 3, usados: 1, tamanho: 1, carregador: true, temCarregador: true }), { cabe: false, motivo: 'só cabe um carregador por vez' });
+  assert.equal(regras.acessorioCabe({ slots: 3, usados: 1, tamanho: 1, carregador: true, temCarregador: false }).cabe, true);
+  assert.equal(regras.acessorioCabe({ slots: 3, usados: 1, tamanho: 1, carregador: false, temCarregador: true }).cabe, true);
+  // O Smartgun Link: pelo id do catálogo ou pelo nome; o +1 só à distância e com a ligação.
+  assert.ok(regras.ehSmartgunLink('Smartgun Link') && regras.ehSmartgunLink('Qualquer', 'core_upgrades:smartgun-link'));
+  assert.equal(regras.ehSmartgunLink('Sniping Scope', 'core_upgrades:sniping-scope'), false);
+  assert.deepEqual([[true, true], [true, false], [false, true]].map(([aDistancia, ligado]) => regras.smartgunLinkVale({ aDistancia, ligado })), [true, false, false]);
+  // O pente: o do carregador (o maior, com mais de um); sem nenhum, o da arma. A sobra volta para a munição.
+  assert.equal(regras.penteComCarregador(25, [35]), 35);
+  assert.equal(regras.penteComCarregador(25, [35, 45]), 45);
+  assert.equal(regras.penteComCarregador(25, [0, 0]), 25);
+  assert.equal(regras.penteComCarregador(25), 25);
+  assert.equal(regras.sobraDoPente({ value: 35, max: 25 }), 10);
+  assert.equal(regras.sobraDoPente({ value: 20, max: 25 }), 0);
+});
+
 test('Veículos: os terrestres com o PDE, os assentos, o MOVE e o custo da tabela da wiki; a Oficina da Família do Nomad toda no catálogo', () => {
   // A tabela de veículos terrestres de system-rules.js: [nome, PDE, assentos, MOVE, custo].
   const texto = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');

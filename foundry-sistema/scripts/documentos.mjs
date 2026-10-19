@@ -4,9 +4,9 @@ import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
-  tipoDeTeleOptics, maosDaArma, maosLivres
+  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -593,6 +593,23 @@ export class ItemCPR extends Item {
   async _preUpdate(mudancas, opcoes, usuario) {
     if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
     const sistema = { ...this.system, ...mudancas.system };
+    // O acessório que entra numa arma (o C11, parte 4): os slots dela e um carregador por vez. A montagem que vem da wiki
+    // (a importação e a migração da mesa) preserva o estado recebido, como a equipagem (o C12).
+    const destino = foundry.utils.getProperty(mudancas, 'system.instaladoEm');
+    if (this.type === 'upgrade' && destino && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
+      const arma = this.actor.items.get(destino);
+      if (arma?.type === 'arma') {
+        const outros = arma.instalados.filter(item => item.id !== this.id);
+        const { cabe, motivo } = acessorioCabe({
+          slots: arma.system.slots, usados: outros.reduce((soma, item) => soma + (Number(item.system.tamanho) || 0), 0), tamanho: Number(sistema.tamanho) || 0,
+          carregador: Boolean(sistema.modificadores?.pente), temCarregador: outros.some(item => item.type === 'upgrade' && item.system.modificadores.pente)
+        });
+        if (!cabe) {
+          ui.notifications.warn(`${this.name} não cabe em ${arma.name}: ${motivo}.`);
+          return false;
+        }
+      }
+    }
     if (this.type === 'arma' && sistema.instaladoEm && this.actor) {
       if (mudancas.system?.instaladoEm && this.actor.items.get(sistema.instaladoEm)?.type !== 'veiculo') {
         ui.notifications.warn('Monte a arma num veículo deste personagem.');
@@ -791,8 +808,10 @@ export class ItemCPR extends Item {
     if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });
     // A coronha retrátil recolhida (a Dian, de 2077): dá para esconder a arma, mas o ataque leva −1 até estender.
     if (this.coronhaRecolhida) partes.push({ rotulo: 'Coronha recolhida', valor: PENALIDADE_CORONHA });
-    // Acessórios com bônus de ataque (o Smartgun Link). O mesmo acessório duas vezes não faz nada (wiki).
-    const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && !item.inoperante && item.system.modificadores.ataque).map(item => [item.name, item.system.modificadores.ataque]));
+    // Acessórios com bônus de ataque (o Smartgun Link: só à distância e com os plugs de interface ou o plug subdérmico, o C11,
+    // parte 4). O mesmo acessório duas vezes não faz nada (wiki).
+    const vale = item => !ehSmartgunLink(item.name, item.getFlag(SISTEMA, 'catalogo')) || smartgunLinkVale({ aDistancia: this.system.aDistancia, ligado: ator.temLigacaoSmart });
+    const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && !item.inoperante && item.system.modificadores.ataque && vale(item)).map(item => [item.name, item.system.modificadores.ataque]));
     for (const [rotulo, valor] of comBonus) partes.push({ rotulo, valor });
     return { pericia: p, partes };
   }

@@ -1632,22 +1632,27 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.usar.antes === '0,Usar' && info.usar.ligada === '1,Em uso' && info.usar.desligada === '0,DESLIGAR' && info.usar.semBotao, JSON.stringify(info)];
     });
 
-    await r.passo('acessórios: o carregador estendido põe o pente do rifle em 35 (a recarga enche 35); o Smartgun Link dá +1, e dois dão +1 só; tirados, volta a 25; o hardware ocupa slots do deck', async () => {
+    await r.passo('acessórios: o carregador estendido põe o pente do rifle em 35 (a recarga enche 35); o Smartgun Link dá +1 só com os plugs de interface (o C11, parte 4), e dois dão +1 só; tirados, volta a 25, e as 10 balas a mais voltam para a munição; o hardware ocupa slots do deck', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
         const pegar = id => foundry.utils.deepClone(cat[id]);
         const balas = pegar('core_ammo:rifle-basic');
         balas.system.quantidade = 100;
-        const ids = ['core_weapons:assault-rifle', 'core_upgrades:extended-magazine-assault-rifle', 'core_upgrades:smartgun-link', 'core_upgrades:smartgun-link', 'core_gear:cyberdeck', 'core_upgrades:backup-drive'];
+        const ids = ['core_weapons:assault-rifle', 'core_upgrades:extended-magazine-assault-rifle', 'core_upgrades:smartgun-link', 'core_upgrades:smartgun-link', 'core_gear:cyberdeck', 'core_upgrades:backup-drive', 'core_cyberware:interface-plugs'];
         const a = await Actor.implementation.create({ name: 'Armeiro', type: 'personagem', system: { pericias: { 'shoulder-arms': { nivel: 4 } } }, items: [...ids.map(pegar), balas] });
         const rifle = a.items.getName('Assault Rifle');
         const deck = a.items.getName('Cyberdeck');
         const acessorios = a.items.filter(i => i.type === 'upgrade' && i.system.alvo === 'arma');
         const partes = () => rifle.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor);
         const antes = { max: rifle.system.pente.max, partes: partes() };
+        // Os dois Smartgun Links (o mesmo acessório duas vezes não soma) pedem 5 slots: o mestre dá 5 ao rifle.
+        await rifle.update({ 'system.slots': 5 });
         await a.updateEmbeddedDocuments('Item', [...acessorios.map(i => ({ _id: i.id, 'system.instaladoEm': rifle.id })), { _id: a.items.getName('Backup Drive').id, 'system.instaladoEm': deck.id }]);
         await rifle.recarregar();
-        const com = { max: rifle.system.pente.max, pente: rifle.system.pente.value, slots: rifle.slotsUsados, partes: partes(), deck: deck.slotsUsados };
+        // Sem os plugs de interface, o Smartgun Link não dá o +1; com eles instalados, dá.
+        const semPlugs = partes();
+        await a.items.getName('Interface Plugs').update({ 'system.instalado': true });
+        const com = { max: rifle.system.pente.max, pente: rifle.system.pente.value, slots: rifle.slotsUsados, partes: partes(), semPlugs, deck: deck.slotsUsados };
         // As fichas: a linha do rifle com os acessórios e a lista de upgrades; o "Instalado em" na ficha do acessório.
         const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
         await a.sheet.render({ force: true });
@@ -1662,15 +1667,46 @@ module.exports = async ({ edge, servidores, r }) => {
         com.ficha.instaladoEm = acessorios[0].sheet.element.querySelector('select[name="system.instaladoEm"]').value === rifle.id;
         await acessorios[0].sheet.close();
         await a.updateEmbeddedDocuments('Item', acessorios.map(i => ({ _id: i.id, 'system.instaladoEm': '' })));
-        const sem = { max: rifle.system.pente.max, partes: partes() };
+        // O pente volta a 25, e as 10 balas a mais voltam para a munição.
+        await esperar(() => rifle.system.pente.value === 25);
+        const sem = { max: rifle.system.pente.max, pente: rifle.system.pente.value, balas: a.items.getName('Rifle (Basic)')?.system.quantidade, partes: partes() };
         await a.delete();
         return { antes, com, sem };
       })()`);
       const { antes, com, sem } = info;
       const links = lista => lista.filter(p => p.startsWith('Smartgun Link')).length;
-      return [antes.max === 25 && links(antes.partes) === 0 && com.max === 35 && com.pente === 35 && com.slots === 5 && links(com.partes) === 1 && com.partes.includes('Smartgun Link 1')
-        && com.deck === 2 && sem.max === 25 && links(sem.partes) === 0
+      return [antes.max === 25 && links(antes.partes) === 0 && com.max === 35 && com.pente === 35 && com.slots === 5 && links(com.semPlugs) === 0 && links(com.partes) === 1 && com.partes.includes('Smartgun Link 1')
+        && com.deck === 2 && sem.max === 25 && sem.pente === 25 && sem.balas === 75 && links(sem.partes) === 0
         && /pente 35\/35 · Extended Magazine \(Assault Rifle\), Smartgun Link, Smartgun Link$/.test(com.ficha.rifle) && com.ficha.upgrades === 4 && com.ficha.instaladoEm, JSON.stringify(info)];
+    });
+
+    await r.passo('acessórios (o C11, parte 4; a wiki, p. 342–344): no rifle de 3 slots, o carregador estendido entra; o tambor, não (só um carregador por vez); o Smartgun Link enche os 3; a baioneta já não cabe; a montagem da wiki entra como veio', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const ids = ['core_weapons:assault-rifle', 'core_upgrades:extended-magazine-assault-rifle', 'core_upgrades:drum-magazine-assault-rifle', 'core_upgrades:smartgun-link', 'core_upgrades:bayonet'];
+        const a = await Actor.implementation.create({ name: 'Armeiro dos Slots', type: 'personagem', items: ids.map(pegar) });
+        const avisos = [];
+        ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+        try {
+          const rifle = a.items.getName('Assault Rifle');
+          const instalar = async nome => { const n = avisos.length; await a.items.getName(nome).update({ 'system.instaladoEm': rifle.id }); return [a.items.getName(nome).system.instaladoEm === rifle.id, rifle.slotsUsados, avisos.slice(n).join(' ')]; };
+          const estendido = await instalar('Extended Magazine (Assault Rifle)');
+          const tambor = await instalar('Drum Magazine (Assault Rifle)');
+          const link = await instalar('Smartgun Link');
+          const baioneta = await instalar('Bayonet');
+          // A montagem da wiki (a importação e a migração da mesa) preserva o estado recebido: o tambor entra.
+          await a.updateEmbeddedDocuments('Item', [{ _id: a.items.getName('Drum Magazine (Assault Rifle)').id, 'system.instaladoEm': rifle.id }], { montagemDaWiki: true });
+          const daWiki = a.items.getName('Drum Magazine (Assault Rifle)').system.instaladoEm === rifle.id;
+          return { estendido, tambor, link, baioneta, daWiki, avisos };
+        } finally {
+          delete ui.notifications.warn;
+          await a.delete();
+        }
+      })()`);
+      const ok = info.estendido.join('|') === 'true|1|' && info.tambor.join('|') === 'false|1|Drum Magazine (Assault Rifle) não cabe em Assault Rifle: só cabe um carregador por vez.'
+        && info.link.join('|') === 'true|3|' && info.baioneta.join('|') === 'false|3|Bayonet não cabe em Assault Rifle: 3 de 3 slots em uso.' && info.daWiki && info.avisos.length === 2;
+      return [ok, JSON.stringify(info)];
     });
 
     // ---------- Combate ----------
@@ -11651,6 +11687,37 @@ module.exports = async ({ edge, servidores, r }) => {
         })()`);
         const ok = info.notas.length === 0 && info.sdp[0] === 50 && info.sdp[1] === 70 && info.instalado.join() === 'Heavy Chassis'
           && info.pente === 7 && info.municao === 41 && info.ativo === null && info.dirigindo === false;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wikiAnterior)}).then(() => true)`);
+      }
+    });
+
+    await r.passo('acessórios (o C11, parte 4), ficha antiga da mesa: o rifle do Foundry 12 com dois carregadores dentro volta com os dois (a montagem da wiki entra como veio, sem a conferência dos slots), sem aviso', async () => {
+      const { personagem } = await api('/api/personagens', 'POST', { nome: 'C11 Legado', resultado: { stats: { BODY: 5, WILL: 5 }, pericias: [], itens: [], veiculos: [] } });
+      await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
+        ator: 'c11-legado', hp: { atual: 35 }, humanidade: { atual: 50 }, pericias: [],
+        itens: [
+          { nome: 'Assault Rifle', tipo: 'weapon', dentro: ['Extended Magazine (Assault Rifle)', 'Drum Magazine (Assault Rifle)'] },
+          { nome: 'Extended Magazine (Assault Rifle)', tipo: 'itemUpgrade' },
+          { nome: 'Drum Magazine (Assault Rifle)', tipo: 'itemUpgrade' }
+        ]
+      });
+      const wikiAnterior = await edge.evaluate(`game.settings.get('${S}', 'wikiUrl')`);
+      try {
+        await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)}).then(() => true)`);
+        const info = await edge.evaluate(`(async () => {
+          const avisos = [];
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          try {
+            const { ator: a, notas } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)});
+            try {
+              const rifle = a.items.find(i => i.type === 'arma');
+              return { notas, instalados: rifle.instalados.map(i => i.name).sort(), max: rifle.system.pente.max, avisos };
+            } finally { await a.delete(); }
+          } finally { delete ui.notifications.warn; }
+        })()`);
+        const ok = info.notas.length === 0 && info.instalados.join() === 'Drum Magazine (Assault Rifle),Extended Magazine (Assault Rifle)' && info.max === 45 && info.avisos.length === 0;
         return [ok, JSON.stringify(info)];
       } finally {
         await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wikiAnterior)}).then(() => true)`);

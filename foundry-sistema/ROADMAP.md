@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 136). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 137). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -180,8 +180,8 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     do Monowire, e a granada no Projectile Launch System (lança-granadas);
   - [x] a arma sob o cano e a baioneta (o upgrade que ataca; o secondaryWeapon do CORE): a arma do acessório, pronta com a arma
     onde ele está equipada: ciclo 135;
-  - [ ] nos acessórios: o limite de slots, os plugs do Smartgun Link e o pente que fica acima do máximo quando o carregador
-    sai.
+  - [x] nos acessórios: o limite de slots (e um carregador por vez), os plugs do Smartgun Link e o pente que fica acima do
+    máximo quando o carregador sai: ciclo 136.
 - [x] **C12. Mãos livres:** feito no ciclo 87 (sessão Codex, 2026-10-17).
   - Duas mãos mais os bônus dos efeitos, menos as mãos das armas e dos escudos equipados.
   - BODY 8+ usa arma branca de duas mãos com uma.
@@ -570,7 +570,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [ ] **Do Fluxo de Combate, as chaves que faltam** (→ C26) (opções; o comportamento padrão delas já é o do sistema):
   "Resolver os ataques" (liga e desliga a automação), "O jogador rola os próprios dados" (desligada, o mestre rola a
   defesa e o Death Save; o dano já tem "Quem atacou rola o dano") e "Dano: manual".
-- [ ] **Acessórios:** (→ C11) o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como
+- [x] **Acessórios:** (→ C11, ciclos 135 e 136) o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como
   segunda arma (feita no ciclo 135, C11 parte 3); o pente que fica acima do máximo quando o carregador sai.
 - [x] **Veículos no combate:** (C15, ciclo 117) o dano no SDP, as armas instaladas (metralhadora, lança-chamas), o vidro blindado como
   cobertura, e a regra de que só um veículo da família fica com o Nomad por vez.

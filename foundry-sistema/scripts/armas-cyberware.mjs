@@ -8,6 +8,7 @@
 // acessório, com a arma onde ele está equipada. Tirado ou apagado o item (ou a arma do acessório), a arma sai, e as balas
 // do pente voltam para a munição delas. A arma se muda na ficha do item, e a dela acompanha.
 import { SISTEMA } from './config.mjs';
+import { penteComCarregador, sobraDoPente } from './regras.mjs';
 
 export const FLAG_DA_ARMA = 'armaDoCyberware';
 export const FLAG_DO_UPGRADE = 'armaDoUpgrade';
@@ -103,7 +104,24 @@ export function sincronizarArmaMontada(ator, id) {
   });
 }
 
-// No cliente de quem mudou o item: instalar, tirar, apagar, mudar a arma ou o nome; apagar a arma de um acessório.
+// Tirado o carregador (o C11, parte 4), o pente que passa do máximo volta ao máximo, e as balas que sobram voltam para a
+// munição delas. O máximo sai da fonte e dos carregadores instalados agora (o mesmo do prepareDerivedData da arma).
+export function acertarPentes(ator) {
+  if (!ator?.isOwner) return null;
+  return naFila(ator, async () => {
+    for (const arma of ator.items.filter(item => item.type === 'arma')) {
+      const max = penteComCarregador(arma._source.system.pente.max, ator.items.filter(item => item.type === 'upgrade' && item.system.instaladoEm === arma.id).map(item => item.system.modificadores.pente));
+      const sobra = sobraDoPente({ value: arma.system.pente.value, max });
+      if (!sobra) continue;
+      const municao = arma.municaoCarregada;
+      if (municao) await municao.update({ 'system.quantidade': municao.system.quantidade + sobra });
+      await arma.update({ 'system.pente.value': max });
+    }
+  });
+}
+
+// No cliente de quem mudou o item: instalar, tirar, apagar, mudar a arma ou o nome; apagar a arma de um acessório; tirar
+// ou apagar um acessório (o pente).
 export function registrarArmasDoCyberware() {
   const meu = (item, usuario) => Boolean(item.actor) && usuario === game.user.id;
   const daOrigem = (item, usuario) => Boolean(FLAG_DO_TIPO[item.type]) && meu(item, usuario);
@@ -112,9 +130,11 @@ export function registrarArmasDoCyberware() {
   Hooks.on('updateItem', (item, mudancas, _opcoes, usuario) => {
     const campos = item.type === 'upgrade' ? ['instaladoEm', 'arma'] : ['instalado', 'arma'];
     if (daOrigem(item, usuario) && ('name' in mudancas || campos.some(campo => campo in (mudancas.system ?? {})))) sincronizar(item);
+    if (item.type === 'upgrade' && meu(item, usuario) && 'instaladoEm' in (mudancas.system ?? {})) acertarPentes(item.actor);
   });
   Hooks.on('deleteItem', (item, _opcoes, usuario) => {
     if (daOrigem(item, usuario)) sincronizar(item);
+    if (item.type === 'upgrade' && meu(item, usuario)) acertarPentes(item.actor);
     // A arma que sai leva a arma dos acessórios dela (eles ficam sem lugar).
     if (item.type === 'arma' && meu(item, usuario)) for (const acessorio of item.actor.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id)) sincronizar(acessorio);
   });

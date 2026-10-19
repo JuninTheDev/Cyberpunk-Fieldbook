@@ -967,6 +967,24 @@ export const BONUS_SMART = 1;
 // o Subdermal Grip.
 const LIGACOES_SMART = ['cyberware-2077:neuroport', 'core_cyberware:interface-plugs', 'core_cyberware:subdermal-grip', 'cyberware-2077:smart-link'];
 export const ehLigacaoSmart = (nome, catalogo = '') => LIGACOES_SMART.includes(catalogo) || /^(neuroport|interface plugs?|personal link|subdermal grip|smart ?link)\b/i.test(String(nome).trim());
+// Os acessórios de arma (o C11, parte 4; a wiki, Acessórios de arma, p. 342–344): "toda arma de longo alcance não exótica
+// tem 3 slots"; "só um carregador por vez" (o carregador é o acessório que troca o pente). O que não cabe é recusado, com o
+// motivo.
+export function acessorioCabe({ slots = 0, usados = 0, tamanho = 0, carregador = false, temCarregador = false }) {
+  if (carregador && temCarregador) return { cabe: false, motivo: 'só cabe um carregador por vez' };
+  if (usados + tamanho > slots) return { cabe: false, motivo: `${usados} de ${slots} slots em uso` };
+  return { cabe: true, motivo: '' };
+}
+// O Smartgun Link (a wiki): "+1 nos ataques à distância", e "exige plugs de interface ou plug subdérmico" (a ligação da
+// arma Smart, ehLigacaoSmart).
+const SMARTGUN_LINK = 'core_upgrades:smartgun-link';
+export const ehSmartgunLink = (nome, catalogo = '') => catalogo === SMARTGUN_LINK || /^smartgun link\b/i.test(String(nome).trim());
+export const smartgunLinkVale = ({ aDistancia, ligado }) => Boolean(aDistancia && ligado);
+// O pente da arma com o carregador instalado (a Tabela de carregadores da wiki): o do carregador; com mais de um (de antes
+// do C11, parte 4), o maior; sem nenhum, o da arma. A sobra: as balas acima do máximo, que voltam para a munição quando o
+// carregador sai.
+export const penteComCarregador = (base, carregadores = []) => Math.max(0, ...carregadores.map(Number).filter(Boolean)) || base;
+export const sobraDoPente = ({ value, max }) => Math.max(0, (Number(value) || 0) - (Number(max) || 0));
 // A munição Smart melhorada (o Kit, p. 32; a flag arma2077 da munição): só vale na arma Smart (a do Smartgun Link não
 // conta). Ignora as penalidades que atrapalham a visão (dos modificadores comuns, a pouca luz e a tarefa encoberta por
 // fumaça, escuridão etc.). E o ataque à distância que errar a DV por 5 ou menos tem a segunda chance, na hora:

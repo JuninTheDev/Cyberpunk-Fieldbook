@@ -176,7 +176,8 @@ async function instalarNoLugar(ator, entradas) {
     if (!pai) continue;
     for (const item of porUid(ator, entrada.uid).filter(item => entraEm(pai, item))) mudancas.push({ _id: item.id, 'system.instaladoEm': pai.id });
   }
-  if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
+  // A montagem da wiki entra como veio (o C11, parte 4: sem a conferência dos slots do acessório).
+  if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas, { montagemDaWiki: true });
 }
 
 export async function importarPersonagem(id, donoId = '') {
@@ -589,7 +590,7 @@ export async function importarDaMesa(id, donoId = '') {
   if (mudancas.length) {
     const porItem = new Map();
     for (const mudanca of mudancas) porItem.set(mudanca._id, { ...porItem.get(mudanca._id), ...mudanca });
-    await ator.updateEmbeddedDocuments('Item', [...porItem.values()]);
+    await ator.updateEmbeddedDocuments('Item', [...porItem.values()], { montagemDaWiki: true });
   }
 
   const ativos = linhas.flatMap((linha, indice) => linha.veiculo?.ativo && criados[indice].type === 'veiculo' ? [{ item: criados[indice], dirigindo: Boolean(linha.veiculo.dirigindo) }] : []);

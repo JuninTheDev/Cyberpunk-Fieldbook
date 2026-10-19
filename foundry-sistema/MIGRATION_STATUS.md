@@ -127,7 +127,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
-  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); o acessório que é arma (a baioneta e as armas sob o cano) no 135; faltam os movimentos especiais | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); o acessório que é arma (a baioneta e as armas sob o cano) no 135; os slots, o carregador e o Smartgun Link no 136; faltam os movimentos especiais e as regras próprias do Kit | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
@@ -694,6 +694,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     números dele), e a wiki não fala disso. Aqui também não herda: o mestre soma, se quiser;
   - **ocultar:** com o acessório, a arma não se esconde sob a roupa (o CORE e a wiki dizem); a arma não guarda isso: fica
     com o mestre.
+
+- **Os acessórios de arma** (ciclo 136; a wiki, Acessórios de arma, p. 342–344):
+  - **o Smartgun Link pede a ligação** ("exige plugs de interface ou plug subdérmico, que exigem Neural Link"): sem ela, o +1
+    não entra. É uma mudança em relação à mesa do Foundry 12: o CORE dá o +1 sempre. A ligação é a da arma Smart do ciclo
+    110 (os Interface Plugs, o Neuroport, que já os traz, ou o Subdermal Grip). O +1 vale só nos ataques à distância;
+  - **os slots e o carregador:** o acessório que não cabe nos slots da arma e o segundo carregador são recusados, com o
+    aviso. A conferência é por item, como a das mãos (C12): uma mudança em lote (por macro) não soma os acessórios entre
+    si. A montagem que vem da wiki (a importação, os pedidos e a migração da mesa) entra como veio;
+  - **o pente:** tirado o carregador, o pente que passa do máximo volta a ele, e as balas a mais voltam para a munição
+    que estava nele.
 
 ## Registro dos ciclos
 
@@ -6624,6 +6634,44 @@ Commit anterior: `77976061` (o ciclo 134).
   com o acessório fica com o mestre.
 - **Próximo:** o C11, parte 2b (as regras próprias do Kit: pede a decisão do usuário, ver as dúvidas) ou a parte 4 (os
   acessórios: o limite de slots, os plugs do Smartgun Link e o pente acima do máximo).
+
+### Ciclo 136 (2026-10-19): o C11, parte 4: os acessórios de arma (sessão KouArt)
+
+Commit anterior: `f3387ed0` (o ciclo 135).
+
+- **A referência:** a wiki (`system-catalog.js`, Acessórios de arma, p. 342–344): "toda arma de longo alcance não exótica
+  tem 3 slots de acessório"; "só um carregador por vez"; o Smartgun Link, "+1 nos ataques à distância", que "exige plugs de
+  interface ou plug subdérmico, que exigem Neural Link"; a Tabela de carregadores. O CORE 0.92.4 dá o +1 do Smartgun Link
+  sem conferir a ligação (ver as dúvidas).
+- **O que muda:**
+  - **`regras.mjs`:** `acessorioCabe` (os slots e o carregador), `ehSmartgunLink` e `smartgunLinkVale`,
+    `penteComCarregador` (agora também o do `prepareDerivedData` da arma) e `sobraDoPente`;
+  - **`documentos.mjs`:** o acessório que entra numa arma passa pela conferência (recusado, com o aviso), menos a montagem
+    da wiki (a opção `montagemDaWiki`); o +1 do Smartgun Link só à distância e com a ligação (`temLigacaoSmart`);
+  - **`armas-cyberware.mjs`:** `acertarPentes` (tirado ou apagado um acessório, o pente que passa do máximo volta a ele,
+    e a sobra volta para a munição);
+  - **`wiki.mjs`:** as duas montagens da importação com a opção `montagemDaWiki`.
+- **Testes:**
+  - **G3:** em `regras.test.mjs`, o teste novo dos acessórios (os slots, o carregador, o Smartgun Link, o pente);
+  - **G4:** o passo dos acessórios do ciclo 26 com as regras da wiki: o rifle com 5 slots (o mestre os dá) para os dois
+    Smartgun Links ainda mostrarem que não somam; o +1 só com os plugs de interface; tirados, o pente volta a 25 e as 10
+    balas voltam (antes, o passo esperava o +1 sem a ligação e não olhava o pente). E um passo novo: no rifle de 3 slots,
+    o estendido entra, o tambor não, o Smartgun Link enche os 3, a baioneta não cabe, e a montagem da wiki entra como veio.
+    E outro, como o "C15 Legado": a ficha antiga da mesa com o rifle e dois carregadores dentro volta com os dois pelo
+    "Importar da mesa", sem aviso (entrou depois que a P10 sobreviveu: nenhum teste importava uma montagem acima das regras).
+- **Portões:** G1, 93 arquivos sem erro; G2, nenhum erro; G3, 213/213; G4 completo, 193/193, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** caíram 9 de 10, uma por vez, e os arquivos voltaram exatos (md5 conferido): no G3, o segundo carregador
+  que entra (P1), o último slot que não cabe (P2), o Smartgun Link sem a ligação (P3) e a sobra do pente que não conta
+  (P4); no Foundry, a conferência também na montagem da wiki (P5), o que não cabe entrando (P6), o Smartgun Link sem a
+  ligação na ficha (P7), o pente que não se acerta (P8) e as balas que não voltam (P9). A P10 (a importação da mesa sem
+  a opção `montagemDaWiki`) sobreviveu duas vezes, também com o passo novo: a importação monta tudo num lote só, e a
+  conferência é por item (cada acessório olha a arma como estava antes do lote), então ali a opção não muda o resultado
+  (a mutação é equivalente). A opção fica para o pedido da wiki que entra numa arma que já tem acessórios.
+- **Limites:** a conferência é por item (a mudança em lote não soma os acessórios entre si, como as mãos do C12); o tipo de
+  arma de cada acessório ("cada acessório é feito para certos tipos de arma") fica com o mestre.
+- **Próximo:** do C11, só a parte 2b (as regras próprias do Kit), que pede a decisão do usuário (ver as dúvidas do ciclo
+  134). Fora dela, o próximo item livre do ROADMAP.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

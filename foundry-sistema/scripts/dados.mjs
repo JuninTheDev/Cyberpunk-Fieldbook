@@ -264,8 +264,7 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
   // só cabe um carregador por vez; com mais de um, vale o maior.
   prepareDerivedData() {
     const item = this.parent;
-    const pente = Math.max(0, ...(item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id).map(a => a.system.modificadores.pente) ?? []));
-    if (pente) this.pente.max = pente;
+    this.pente.max = regras.penteComCarregador(this.pente.max, item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id).map(a => a.system.modificadores.pente));
   }
 }
 
