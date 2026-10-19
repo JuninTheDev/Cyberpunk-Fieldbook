@@ -393,6 +393,10 @@ export function precoNaLista(tipo, sistema) {
 // O custo de comprar do contêiner (o _purchaseItem do CORE): o preço da unidade vezes a quantidade (a pilha toda ou a
 // parte). O dinheiro daqui é em eb inteiros: o que dá fração (a bateria, 6,25eb a unidade) arredonda para cima.
 export const custoDaCompra = (tipo, sistema, quantidade = quantidadeDe(tipo, sistema)) => Math.ceil(Math.round(precoDaUnidade(tipo, sistema) * quantidade * 100) / 100);
+// A oferta da loja por um item (o _sellItemTo do CORE): o preço da unidade vezes a pilha, vezes a porcentagem do tipo,
+// para baixo; no máximo, o dinheiro da loja.
+export const ofertaDaLoja = (tipo, sistema, porcentagem, dinheiroDaLoja) =>
+  Math.max(0, Math.min(Math.floor(Math.round(precoDaUnidade(tipo, sistema) * quantidadeDe(tipo, sistema) * Number(porcentagem) * 100) / 10000), Math.trunc(Number(dinheiroDaLoja) || 0)));
 
 // O efeito de um equipamento vale com o uso de agora? Pela ativação do item: "equipado" só equipado; "carregando"
 // equipado ou carregando (guardado em casa, não); "manual" sempre, e quem decide é o efeito, ligado ou desligado.

@@ -76,7 +76,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | os arquivos copiados pelo Eye-Dee (o diário, a permissão do dono, o aviso no chat, o "Abrir o arquivo") | portados no ciclo 89 (o C8, parte 12) |
 | NET Architect | o editor visual (a grade, arrastar para mover e trocar, o "+" para criar) | portado no ciclo 90 (o C8, parte 13), no mapa da ficha da arquitetura: a tabela das linhas faz o papel do painel; sem o "Desfazer", porque cada mudança grava na hora, como o resto da ficha |
 | NET Architect | o Scanner (o botão no HUD do token, o raio do resultado × 10 m, o oculto acima do DV do Scanner, quem achou passa a vê-lo) | portado no ciclo 91 (o C8, parte 14); a parede no meio, que o da mesa não conferia, barra a conexão pela wiki |
-| CORE | o contêiner (a loja, o saque e o esconderijo: os tipos com as permissões, a ficha, pôr e pegar, a trava) | portado no ciclo 122 (o C24, parte 1); a loja que vende no 130 (parte 2); vender para a loja falta |
+| CORE | o contêiner (a loja, o saque e o esconderijo: os tipos com as permissões, a ficha, pôr e pegar, a trava) | portado no ciclo 122 (o C24, parte 1); a loja que vende no 130 (parte 2); a loja que compra no 132 (parte 3): o C24 terminou |
 | Painel Tático | tudo (o retrato por estado, os vitais, os atributos, as armas, as ações, os painéis, o estilo de cada jogador) | portado no ciclo 125 (o C25); o retrato do Foundry 12 não vem na migração (ver as dúvidas) |
 
 ## Bloqueadores para migrar a campanha
@@ -654,6 +654,17 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     para cima (3 baterias, 19eb). O CORE não arredonda;
   - **a ordem:** o item vai antes, e o dinheiro sai depois (no CORE, o dinheiro sai antes). Assim, um item que não pôde ir (o
     cyberware instalado, a ficha sem permissão) não cobra.
+
+- **A loja que compra** (ciclo 132; o _sellItemTo e o _onDrop do CORE 0.92.4):
+  - **a oferta para baixo:** o preço da pilha vezes a porcentagem dá fração (a bateria, 3 por 18,75eb): a loja paga para
+    baixo (18eb), como o CORE (o parseInt dele). Na compra, a fração arredonda para cima (ciclo 130): a loja não perde
+    nos dois sentidos;
+  - **a pilha toda:** como no CORE, vende-se a pilha inteira (a parte, divida antes, pelo "Dividir" das pilhas);
+  - **só pelo arrastar do jogador:** o mestre que arrasta põe o item na loja, sem venda (o CORE também); a venda é do
+    jogador sem "Criar e pôr itens" e com "Vender itens";
+  - **o estoque infinito:** a loja que já tem o item (o tipo e o nome) não fica com outro, e o de quem vende sai mesmo assim
+    (o CORE compara só o nome);
+  - **a munição da arma vendida:** as balas do pente voltam para a munição que estava nele (o unload do CORE).
 
 ## Registro dos ciclos
 
@@ -6430,6 +6441,44 @@ usuário foi seguir o ROADMAP.
   mensagem, e a lição foi para o QUALITY_GATES.
 - **Fica para a parte 2:** os movimentos especiais de cada forma (p. 178–180).
 - **Próximo:** o C10, parte 2.
+
+### Ciclo 132 (2026-10-19): o C24, parte 3: a loja que compra (sessão KouArt)
+
+Commit anterior: `68e2915d` (o ciclo 131, da sessão Junin; o C24, parte 2, foi o 130). Com este, o C24 termina.
+
+- **A referência:** o CORE 0.92.4: o `_onDrop` da ficha do contêiner (o jogador sem o "players-create" e com o
+  "players-sell" vende o que arrasta, se a loja compra o tipo), o `_sellItemTo` (o preço vezes a pilha vezes a
+  porcentagem do tipo, para baixo, até o dinheiro da loja; a janela "Ok, Choom, … is offering you … eddies (…%) for your …
+  Deal?"; a arma descarregada; o estoque infinito que não repete o item; o dinheiro e o ledger dos dois), o
+  `_configureSellTo` ("Configurar a loja": cada tipo, se compra e a porcentagem) e o `vendor.itemTypes` do
+  `container-datamodel.js` (os dez tipos, todos comprando a 100%).
+- **O que muda:**
+  - **`config.mjs` e `dados.mjs`:** `TIPOS_QUE_A_LOJA_COMPRA` (os dez do CORE, com os nomes daqui) e `system.compra` do
+    contêiner (cada tipo: se compra e a porcentagem; na loja nova, todos a 100%);
+  - **`regras.mjs`:** `ofertaDaLoja` (o preço da unidade vezes a pilha vezes a porcentagem, para baixo, até o dinheiro da
+    loja);
+  - **`conteiner.mjs`:** `venderParaALoja` (as conferências, a janela da oferta, a arma descarregada, o estoque infinito,
+    o item que vai, o dinheiro e o extrato dos dois);
+  - **`ficha-conteiner.mjs` e `conteiner.hbs`:** o arrastar do jogador que vende, o "Configurar a compra" do mestre e a
+    dica para o jogador.
+- **Testes:**
+  - **G3:** o teste novo da oferta (a porcentagem, para baixo, o limite do dinheiro, a pilha, a munição pelo lote, a
+    bateria, o ponto flutuante) e dos tipos (os dez do CORE);
+  - **G4:** dois passos novos: o do mestre (o "Configurar a compra": os dez tipos a 100%, o equipamento a 50% e a arma
+    fora; o botão some no personalizado sem "Vender itens") e o do jogador (ele vende o Agent a 50%, a pistola carregada,
+    que vai descarregada, o Techtool para a loja de 30eb, que paga o que tem, e a faca, que a loja que não compra arma
+    recusa sem abrir a janela).
+- **Portões** (com o ciclo 131 da sessão Junin integrado): G1, 91 arquivos sem erro; G2, nenhum erro; G3, 204/204; G4
+  completo, 186/186, com a checagem dos dois navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido):
+  - no G3: a oferta sem o limite do dinheiro da loja (V1) e a oferta arredondada para cima (V2);
+  - no Foundry: sem a porcentagem do tipo (V3), a arma que vai carregada (V4), a loja que compra qualquer tipo (V5), o
+    arrastar do jogador que não vende (V6), quem vende sem receber (V7) e o "Configurar a compra" que não grava (V8).
+  - A V5 parou o G4 na primeira rodada: a loja passou a comprar a faca, e a janela da venda ficou esperando o clique
+    (o passo só terminou com o "No" dado à mão). O passo agora espera a janela por 2 s e, se ela abrir, fecha pelo "No"
+    e falha. A V5 rodou de novo assim, com o passo novo, e caiu sozinha.
+- **Próximo:** o C24 terminou. No plano, o que o usuário escolher (os itens livres do ROADMAP; o C10 está com a sessão
+  Junin e o C18 com o Codex).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

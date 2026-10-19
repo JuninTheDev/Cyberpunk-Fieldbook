@@ -21,6 +21,7 @@ botões. --}}
         <option value="">--</option>
         {{#each parceiros}}<option value="{{id}}" {{#if escolhido}}selected{{/if}}>{{nome}}</option>{{/each}}
       </select>
+      {{#if compraDosJogadores}}<p class="dica vender">Para vender, arraste o item da sua ficha para cá: a loja oferece a porcentagem do preço de cada tipo.</p>{{/if}}
     </section>
 
     <section class="painel corte dinheiro">
@@ -42,6 +43,7 @@ botões. --}}
       {{#each gerais}}
       <label class="permissao"><input type="checkbox" name="system.permissoes.{{chave}}" {{checked ligada}}> {{rotulo}}</label>
       {{/each}}
+      {{#if configuraCompra}}<button type="button" class="acao configurar-compra" data-action="configurarCompra" data-tooltip="Que tipos a loja compra dos jogadores, e por quanto do preço">Configurar a compra</button>{{/if}}
       {{#if dosJogadores.length}}
       <p class="subtitulo">Os jogadores podem:</p>
       {{#each dosJogadores}}

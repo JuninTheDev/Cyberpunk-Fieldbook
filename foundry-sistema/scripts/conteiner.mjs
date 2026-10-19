@@ -1,7 +1,8 @@
 // O contêiner (o container do CORE 0.92.4): levar um item de um ator para outro (arrastar entre as fichas, pegar do
 // saque ou do esconderijo), pegar com quem a ficha troca e a trava (o jogador só move o token do contêiner com a
 // permissão "Mover o contêiner", o players-move do CORE).
-import { custoDaCompra, EMPILHAVEIS, quantidadeDe } from './regras.mjs';
+import { SISTEMA, TIPOS_QUE_A_LOJA_COMPRA } from './config.mjs';
+import { custoDaCompra, EMPILHAVEIS, ofertaDaLoja, quantidadeDe } from './regras.mjs';
 import { mesmaPilha } from './regras-inventario.mjs';
 import { naFilaDoInventario, upgradesDaPilha } from './pilhas.mjs';
 
@@ -123,6 +124,40 @@ export async function pegarDoConteiner(conteiner, item, { para = null, quantidad
   await para.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: custo, motivo: `Comprou ${nome} em ${conteiner.name}` });
   await conteiner.mudarComExtrato('dinheiro', { acao: 'somar', valor: custo, motivo: `Vendeu ${nome} para ${para.name}` });
   return criado;
+}
+
+// Vender para a loja (o _sellItemTo do CORE): o jogador arrasta o item da ficha dele para a loja, que oferece o preço da
+// pilha vezes a porcentagem do tipo, até o dinheiro dela (regras.ofertaDaLoja). Aceita, a arma vai descarregada (as balas
+// do pente voltam para a munição dela), o item vai com o que está instalado nele, e os eb saem da loja e entram na ficha,
+// com a linha no extrato dos dois. Com o estoque infinito, a loja que já tem o item (pelo nome) não fica com outro.
+export async function venderParaALoja(loja, item) {
+  const vendedor = item.parent?.documentName === 'Actor' ? item.parent : null;
+  if (!loja.isOwner || !vendedor?.isOwner) { ui.notifications.warn(`${item.name}: só se vende o que está na sua ficha.`); return null; }
+  if (!loja.system.permissoes.vender) { ui.notifications.warn(`${loja.name}: esta loja não compra dos jogadores.`); return null; }
+  const regra = TIPOS_QUE_A_LOJA_COMPRA.includes(item.type) ? loja.system.compra[item.type] : null;
+  if (!regra?.compra) { ui.notifications.warn(`${loja.name}: esta loja não compra ${game.i18n.localize(`TYPES.Item.${item.type}`).toLowerCase()}.`); return null; }
+  if (item.type === 'cyberware' && item.system.instalado) { ui.notifications.warn(`${item.name}: cyberware instalado não sai da ficha; desinstale antes.`); return null; }
+  const quantidade = quantidadeDe(item.type, item.system);
+  const nome = `${quantidade > 1 ? `${quantidade}× ` : ''}${item.name}`;
+  const oferta = ofertaDaLoja(item.type, item.system, regra.porcentagem, loja.system.dinheiro);
+  const esc = texto => foundry.utils.escapeHTML(String(texto));
+  const ok = await foundry.applications.api.DialogV2.confirm({
+    window: { title: `Vender para ${loja.name}` }, classes: [SISTEMA, 'vender-para-a-loja'], rejectClose: false,
+    content: `<p>${esc(loja.name)} oferece <b>${oferta}eb</b> (${regra.porcentagem}%) por ${esc(nome)}.${oferta < ofertaDaLoja(item.type, item.system, regra.porcentagem, Infinity) ? ' É todo o dinheiro da loja.' : ''} Fechado?</p>`
+  });
+  if (!ok || !vendedor.items.has(item.id)) return null;
+  if (item.type === 'arma' && item.system.pente.value && item.municaoCarregada) {
+    await item.municaoCarregada.update({ 'system.quantidade': item.municaoCarregada.system.quantidade + item.system.pente.value });
+    await item.update({ 'system.pente.value': 0, 'system.carregada': '' });
+  }
+  const repetido = loja.system.permissoes.estoqueInfinito && loja.items.some(outro => outro.type === item.type && outro.name === item.name);
+  if (repetido) await vendedor.deleteEmbeddedDocuments('Item', arvoreDe(item).map(parte => parte.id));
+  else if (!(await levarItem(item, loja))) return null;
+  if (oferta) {
+    await loja.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: oferta, motivo: `Comprou ${nome} de ${vendedor.name}` });
+    await vendedor.mudarComExtrato('dinheiro', { acao: 'somar', valor: oferta, motivo: `Vendeu ${nome} para ${loja.name}` });
+  }
+  return { oferta, nome };
 }
 
 // A trava: o jogador que tenta mover o token de um contêiner sem a permissão "Mover o contêiner" ganha o aviso, e o

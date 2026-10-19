@@ -16,7 +16,7 @@ import * as netrun from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs'
 import { PONTO_PADRAO } from '../../foundry-sistema/scripts/netrun/constantes.mjs';
 import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from '../../foundry-sistema/build/arquiteturas.mjs';
 import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DA_NET, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
-import { ATORES_DA_NET, ATRIBUTOS, CATEGORIAS_DO_CONTEINER, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, PERMISSOES_DO_CONTEINER, TIPOS_CYBERWARE, TIPOS_DE_CONTEINER, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
+import { ATORES_DA_NET, ATRIBUTOS, CATEGORIAS_DO_CONTEINER, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, PERMISSOES_DO_CONTEINER, TIPOS_CYBERWARE, TIPOS_DE_CONTEINER, TIPOS_QUE_A_LOJA_COMPRA, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Um arquivo da wiki que se pendura em window, rodado num contexto separado.
@@ -855,6 +855,21 @@ test('Contêiner, a loja que vende (o C24, parte 2; o _purchaseItem do CORE 0.92
   // A conta sem o erro do ponto flutuante (0,1 × 3).
   assert.equal(regras.custoDaCompra('municao', { preco: 1, tipo: 'rifle', quantidade: 30 }, 30), 3);
   assert.equal(regras.custoDaCompra('arma', { preco: 0 }), 0);
+});
+
+test('Contêiner, a loja que compra (o C24, parte 3; o _sellItemTo e o container-datamodel do CORE 0.92.4): a oferta é o preço da pilha vezes a porcentagem do tipo, para baixo, até o dinheiro da loja; os tipos que ela compra são os do vendor do CORE', () => {
+  assert.equal(regras.ofertaDaLoja('arma', { preco: 100 }, 100, 1000), 100);
+  assert.equal(regras.ofertaDaLoja('arma', { preco: 100 }, 50, 1000), 50);
+  assert.equal(regras.ofertaDaLoja('arma', { preco: 125 }, 50, 1000), 62, 'para baixo');
+  assert.equal(regras.ofertaDaLoja('arma', { preco: 100 }, 100, 30), 30, 'até o dinheiro da loja');
+  assert.equal(regras.ofertaDaLoja('arma', { preco: 100 }, 100, -5), 0);
+  assert.equal(regras.ofertaDaLoja('equipamento', { preco: 20, quantidade: 3 }, 100, 1000), 60, 'a pilha toda');
+  assert.equal(regras.ofertaDaLoja('municao', { preco: 10, tipo: 'heavyPistol', quantidade: 30 }, 50, 1000), 15, 'a munição pelo lote');
+  assert.equal(regras.ofertaDaLoja('municao', { preco: 50, tipo: 'battery', quantidade: 3 }, 100, 1000), 18, 'a bateria: 18,75 para baixo');
+  assert.equal(regras.ofertaDaLoja('municao', { preco: 1, tipo: 'rifle', quantidade: 30 }, 100, 1000), 3, 'sem o erro do ponto flutuante');
+  // Os tipos: os dez do vendor.itemTypes do CORE (weapon, ammo, armor, cyberware, drug, gear, clothing, vehicle, cyberdeck,
+  // itemUpgrade), com os nomes daqui; o programa e a arquitetura, não.
+  assert.deepEqual([...TIPOS_QUE_A_LOJA_COMPRA].sort(), ['arma', 'armadura', 'cyberdeck', 'cyberware', 'droga', 'equipamento', 'municao', 'roupa', 'upgrade', 'veiculo']);
 });
 
 test('Duas Roles (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o personagem-roles.js da wiki): a segunda Role tem o Rank e as habilidades dela, e os derivados das duas valem na ficha (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo, as perícias do Medtech)', () => {

@@ -79,6 +79,9 @@ export const PERMISSOES_DO_CONTEINER = {
 };
 // As categorias da lista do contêiner, na ordem do CORE (inventoryCategories): os itens físicos.
 export const CATEGORIAS_DO_CONTEINER = ['arma', 'municao', 'armadura', 'cyberware', 'droga', 'equipamento', 'roupa', 'veiculo', 'cyberdeck', 'programa', 'upgrade', 'arquitetura'];
+// Os tipos que a loja compra dos jogadores (o vendor.itemTypes do CORE: weapon, ammo, armor, cyberware, drug, gear,
+// clothing, vehicle, cyberdeck e itemUpgrade), cada um com a porcentagem do preço (o "Configurar a loja").
+export const TIPOS_QUE_A_LOJA_COMPRA = ['arma', 'municao', 'armadura', 'cyberware', 'droga', 'equipamento', 'roupa', 'veiculo', 'cyberdeck', 'upgrade'];
 // A classe do Black ICE: a do CORE (blackIceType), com o nome da tabela da wiki.
 export const CLASSES_BLACK_ICE = { antipersonnel: 'Anti-pessoal', antiprogram: 'Anti-programa', other: 'Outro' };
 

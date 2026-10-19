@@ -12045,6 +12045,38 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('contêiner (o C24, parte 3): o "Configurar a compra" do mestre (os dez tipos do CORE, todos comprando a 100% na loja nova) grava o equipamento a 50% e a arma fora; no personalizado sem "Vender itens", o botão some', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        let loja;
+        try {
+          loja = await Actor.implementation.create({ name: 'Teste Loja que Compra', type: 'conteiner' });
+          const padrao = Object.entries(loja.system.compra).map(([tipo, regra]) => tipo + ':' + regra.compra + ':' + regra.porcentagem);
+          await loja.sheet.render({ force: true });
+          const f = () => loja.sheet.element;
+          await esperar(() => f()?.querySelector('[data-action="configurarCompra"]'));
+          f().querySelector('[data-action="configurarCompra"]').click();
+          const janela = () => document.querySelector('.application.dialog.configurar-compra:not(.minimizing)');
+          await esperar(() => janela()?.querySelector('[name="porcentagem-equipamento"]'));
+          const linhas = janela().querySelectorAll('tbody tr').length;
+          janela().querySelector('[name="porcentagem-equipamento"]').value = 50;
+          janela().querySelector('[name="compra-arma"]').checked = false;
+          janela().querySelector('button[data-action="ok"]').click();
+          await esperar(() => loja.system.compra.equipamento.porcentagem === 50 && !loja.system.compra.arma.compra);
+          const gravado = Object.fromEntries(['equipamento', 'arma', 'municao'].map(tipo => [tipo, loja.system.compra[tipo].compra + ':' + loja.system.compra[tipo].porcentagem]));
+          await loja.update({ 'system.tipo': 'personalizado', 'system.permissoes.vender': false });
+          await esperar(() => f()?.querySelector('select[name="system.tipo"]')?.value === 'personalizado' && !f().querySelector('[data-action="configurarCompra"]'));
+          return { padrao, linhas, gravado, semVender: !f().querySelector('[data-action="configurarCompra"]') };
+        } finally {
+          await loja?.sheet?.close();
+          await loja?.delete();
+        }
+      })()`);
+      const ok = info.padrao.length === 10 && info.padrao.every(linha => linha.endsWith(':true:100')) && info.linhas === 10
+        && info.gravado.equipamento === 'true:50' && info.gravado.arma === 'false:100' && info.gravado.municao === 'true:100' && info.semVender;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('contêiner (o C24, parte 1) no navegador do jogador: a trava (o token do saque não sai do lugar; o do esconderijo, sim); a ficha sem as configurações do mestre, com o "Pegar" para o personagem dele; tirar arrastando e pôr no saque são recusados; o item do saque abre só para ler; no esconderijo, ele põe (o item sai da ficha dele), cria e apaga', async () => {
       const montado = await edge.evaluate(`(async () => {
         const u = game.users.getName('Jogador');
@@ -12185,6 +12217,74 @@ module.exports = async ({ edge, servidores, r }) => {
         return [ok, JSON.stringify({ montado, noJogador })];
       } finally {
         await edge.evaluate(`(async () => { for (const id of window.__c24b ?? []) await game.actors.get(id)?.delete(); delete window.__c24b; return true; })()`);
+      }
+    });
+
+    await r.passo('contêiner (o C24, parte 3) no navegador do jogador: ele arrasta o Agent da ficha dele para a loja, que oferece 50eb (o equipamento a 50%); fechado, o Agent vai, e os eb saem da loja e entram na ficha dele; a pistola carregada vai descarregada (as 8 balas do pente voltam para a munição dele); a loja de 30eb oferece só os 30 pelo Techtool (é todo o dinheiro dela); a que não compra arma recusa a faca', async () => {
+      const montado = await edge.evaluate(`(async () => {
+        const u = game.users.getName('Jogador');
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const balas = pegar('core_ammo:heavy-pistol-basic');
+        balas.system.quantidade = 20;
+        const loja = await Actor.implementation.create({ name: 'Teste Loja que Compra', type: 'conteiner', system: { dinheiro: 1000, compra: { equipamento: { compra: true, porcentagem: 50 } } } });
+        const pobre = await Actor.implementation.create({ name: 'Teste Loja Pobre', type: 'conteiner', system: { dinheiro: 30, compra: { arma: { compra: false, porcentagem: 100 } } } });
+        const vendedor = await Actor.implementation.create({ name: 'Vendedor do Jogador', type: 'personagem', system: { dinheiro: 0 }, ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
+          items: [pegar('core_gear:agent'), pegar('core_weapons:heavy-pistol'), balas, pegar('core_gear:techtool'), pegar('core_weapons:combat-knife')] });
+        await vendedor.items.getName('Heavy Pistol').recarregar();
+        window.__c24c = [loja.id, pobre.id, vendedor.id];
+        return { loja: loja.id, pobre: pobre.id, vendedor: vendedor.id };
+      })()`);
+      try {
+        const noJogador = await jogador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await esperar(() => ['${montado.loja}', '${montado.pobre}', '${montado.vendedor}'].every(id => game.actors.get(id)?.isOwner));
+          const loja = game.actors.get('${montado.loja}'), pobre = game.actors.get('${montado.pobre}'), vendedor = game.actors.get('${montado.vendedor}');
+          const janela = () => document.querySelector('.application.dialog.vender-para-a-loja:not(.minimizing)');
+          const avisos = [];
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          // O arrastar da ficha dele para a loja (o drop da ficha da loja), a oferta e o "Sim".
+          const vender = async (conteiner, nome) => {
+            const venda = conteiner.sheet._onDropItem({}, vendedor.items.getName(nome));
+            await esperar(() => janela()?.querySelector('button[data-action="yes"]'));
+            const oferta = janela()?.querySelector('.window-content p')?.textContent.trim() ?? null;
+            janela()?.querySelector('button[data-action="yes"]').click();
+            await venda;
+            return oferta;
+          };
+          try {
+            const dica = await (async () => { await loja.sheet.render({ force: true }); await esperar(() => loja.sheet.element?.querySelector('.dica.vender')); const t = loja.sheet.element.querySelector('.dica.vender')?.textContent.trim(); await loja.sheet.close(); return t; })();
+            const agent = { oferta: await vender(loja, 'Agent') };
+            await esperar(() => loja.items.getName('Agent') && vendedor.system.dinheiro === 50);
+            Object.assign(agent, { naLoja: Boolean(loja.items.getName('Agent')), naFicha: Boolean(vendedor.items.getName('Agent')), dinheiro: [vendedor.system.dinheiro, loja.system.dinheiro],
+              extratos: [vendedor, loja].map(a => { const l = a.system.extratos.dinheiro.at(-1); return l && [l.acao, l.delta, l.motivo].join('|'); }) });
+            const pistola = { oferta: await vender(loja, 'Heavy Pistol') };
+            await esperar(() => loja.items.getName('Heavy Pistol') && vendedor.system.dinheiro === 150);
+            Object.assign(pistola, { pente: loja.items.getName('Heavy Pistol')?.system.pente.value, balas: vendedor.items.getName('Heavy Pistol (Basic)')?.system.quantidade, dinheiro: [vendedor.system.dinheiro, loja.system.dinheiro] });
+            const techtool = { oferta: await vender(pobre, 'Techtool') };
+            await esperar(() => pobre.items.getName('Techtool') && vendedor.system.dinheiro === 180);
+            techtool.dinheiro = [vendedor.system.dinheiro, pobre.system.dinheiro];
+            const n = avisos.length;
+            // A loja que não compra arma não abre a janela. Se abrir, o "No" fecha: o passo falha sem ficar esperando.
+            const tentativa = pobre.sheet._onDropItem({}, vendedor.items.getName('Combat Knife'));
+            const abriu = await esperar(() => janela(), 20);
+            if (abriu) janela().querySelector('button[data-action="no"]')?.click();
+            const recusa = await tentativa;
+            const faca = { resultado: recusa ?? null, janela: abriu, aviso: avisos.slice(n).join(' '), naFicha: Boolean(vendedor.items.getName('Combat Knife')) };
+            return { dica, agent, pistola, techtool, faca, avisos };
+          } finally { delete ui.notifications.warn; }
+        })()`);
+        const { agent, pistola, techtool, faca } = noJogador;
+        const ok = /arraste o item da sua ficha/.test(noJogador.dica)
+          && /oferece 50eb \(50%\) por Agent\. Fechado\?/.test(agent.oferta) && agent.naLoja && !agent.naFicha && agent.dinheiro.join() === '50,950'
+          && agent.extratos[0] === 'somar|50|Vendeu Agent para Teste Loja que Compra' && agent.extratos[1] === 'subtrair|-50|Comprou Agent de Vendedor do Jogador'
+          && /oferece 100eb \(100%\) por Heavy Pistol/.test(pistola.oferta) && pistola.pente === 0 && pistola.balas === 20 && pistola.dinheiro.join() === '150,850'
+          && /oferece 30eb \(100%\) por Techtool\. É todo o dinheiro da loja\./.test(techtool.oferta) && techtool.dinheiro.join() === '180,0'
+          && faca.resultado === null && !faca.janela && /não compra arma/.test(faca.aviso) && faca.naFicha && noJogador.avisos.length === 1;
+        return [ok, JSON.stringify({ montado, noJogador })];
+      } finally {
+        await jogador.evaluate(`(async () => { for (const id of ['${montado.loja}', '${montado.pobre}']) await game.actors.get(id)?.sheet?.close(); return true; })()`).catch(() => null);
+        await edge.evaluate(`(async () => { for (const id of window.__c24c ?? []) await game.actors.get(id)?.delete(); delete window.__c24c; return true; })()`);
       }
     });
 

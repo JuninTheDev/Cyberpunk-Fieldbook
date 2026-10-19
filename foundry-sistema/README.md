@@ -193,10 +193,14 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **comprar** (o C24, parte 2, ciclo 130): na loja, o "Comprar" (ou "Comprar parte") leva o item pelo preço da unidade
     (a munição pelo lote da loja da wiki; a fração arredonda para cima): sem o dinheiro, avisa e não leva; com ele, os eb
     saem de quem compra e entram na loja, com a linha no extrato dos dois;
+  - **vender** (o C24, parte 3, ciclo 132): o jogador arrasta o item da ficha dele para a loja, que oferece o preço da
+    pilha vezes a porcentagem do tipo (para baixo), até o dinheiro dela; fechado, o item vai (a arma, descarregada: as
+    balas do pente voltam para a munição dele), e os eb saem da loja e entram na ficha, com a linha no extrato dos dois.
+    O mestre escolhe pelo "Configurar a compra" que tipos a loja compra e a porcentagem de cada um (os dez do CORE; na
+    loja nova, todos a 100%);
   - **a trava:** o jogador que tenta mover o token do contêiner sem "Mover o contêiner" ganha o aviso, e o token fica;
   - **o ator novo** nasce loja, com o token solto e neutro e todos os jogadores donos: como no CORE, a ficha só funciona
-    assim (quem pega muda o contêiner). O que o jogador não pode usar não aparece. Vender para a loja é a
-    próxima parte do C24.
+    assim (quem pega muda o contêiner). O que o jogador não pode usar não aparece.
 - **Painel Tático** (o módulo painel-tatico da mesa, dentro do sistema; o C25, ciclo 125): a barra na base da tela com o
   token controlado (ou, sem nenhum, o personagem do jogador):
   - **o retrato grande** do personagem, um PNG para cada estado de ferimento (Sem ferimentos, Levemente, Gravemente,
@@ -410,7 +414,6 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga).
-- **A loja que compra** (o C24, parte 3): o jogador ainda não vende para a loja (o mestre põe o item e paga pelo extrato).
 - **O Black Chrome** (176 itens da loja da wiki): o importador e os pedidos avisam e não entregam.
 - **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart
   melhorada desde o 112, as balas por tiro desde o 113, a Power desde o 114 e a Tech desde o 115). As regras próprias
@@ -517,6 +520,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o dano do Black ICE e na REZ dele: o Hellhound pela ficha no cérebro (o Shield ativo não o para, o Armor reduz), o Killer num programa (o aviso de que o destrói), o Sword em Black ICE e o Zap na REZ do Black ICE e do demônio da cena, e o Zap do demônio só no intruso;
   - o Black ICE e o demônio: o token solto com a REZ na barra, o modelo da wiki (o Hellhound e o Efreet), as rolagens pela janela e com Ctrl + clique, a REZ e o nome na ficha do token, a iniciativa no topo da fila (sozinho e no "rolar todos") e a arma que não os atinge;
   - o Painel Tático (ciclo 125): a barra do token controlado (vazia sem token), o retrato por estado de ferimento, os vitais pelos botões, as rolagens (o atributo, a busca das perícias, a favorita), o tiro mirado na perna, o "Trocar a munição", os painéis de Equipamento e de Role, o estilo (o tema e o código PT1), recolher e o painel do jogador;
+  - a loja que compra (ciclo 132): o "Configurar a compra" do mestre (os dez tipos, a porcentagem, a arma fora) e, no navegador do jogador, a venda do Agent a 50%, a da pistola carregada (descarregada), a da loja sem dinheiro bastante (todo o dela) e a recusa da faca;
   - a loja que vende (ciclo 130): comprar a pistola (o dinheiro e o extrato dos dois), sem o dinheiro (o aviso), uma parte das balas pelo preço da unidade, o estoque infinito e, no navegador do jogador, a compra para o personagem dele;
   - o contêiner (ciclo 122): o ator novo (a loja, o token solto e neutro, os jogadores donos), as permissões de cada tipo, o dinheiro com o extrato, a ficha do mestre, o item do compêndio e o da ficha (com o carregador), a pilha, o preço, pegar uma parte e tudo, o estoque infinito, o mestre arrastando entre as fichas e, no navegador do jogador, a trava, a ficha sem as configurações, as recusas e o esconderijo (pôr, criar e apagar);
   - o capanga: o token solto, a ficha de uma página, os itens do compêndio arrastados para ela (equipados ou instalados, a Humanidade rolada e, com Shift, a média), o tiro que muda só o HP do capanga atingido, o outro capanga recarregando e atirando com a própria munição, o Death Save só de quem caiu, o nome novo na ficha do token e, no navegador do jogador, a ficha limitada (só a imagem, o nome e as notas; o Observador vê tudo, sem editar);

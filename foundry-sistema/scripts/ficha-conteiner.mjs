@@ -2,8 +2,8 @@
 // nome, com quem trocar, os Eurodólares (o saque não tem) e as configurações do mestre (o tipo e as permissões); à
 // direita, os itens por categoria, com a quantidade, o preço e os botões de pegar e apagar. Arrastar um item para a
 // ficha o põe no contêiner (o mestre, ou o jogador com "Criar e pôr itens"); para tirar, o jogador usa o "Pegar".
-import { CATEGORIAS_DO_CONTEINER, caminho, PERMISSOES_DO_CONTEINER, SISTEMA, TIPOS_DE_CONTEINER } from './config.mjs';
-import { levarItem, parceirosDoUsuario, pegarDoConteiner } from './conteiner.mjs';
+import { CATEGORIAS_DO_CONTEINER, caminho, PERMISSOES_DO_CONTEINER, SISTEMA, TIPOS_DE_CONTEINER, TIPOS_QUE_A_LOJA_COMPRA } from './config.mjs';
+import { levarItem, parceirosDoUsuario, pegarDoConteiner, venderParaALoja } from './conteiner.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { custoDaCompra, EMPILHAVEIS, parteSugerida, parteValida, precoDaUnidade, precoNaLista, quantidadeDe } from './regras.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
@@ -30,6 +30,7 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       pegarTudo: FichaConteiner.#pegarTudo,
       pegarParte: FichaConteiner.#pegarParte,
       abrirExtrato: FichaConteiner.#abrirExtrato,
+      configurarCompra: FichaConteiner.#configurarCompra,
       dividirPilha: FichaConteiner.#dividirPilha
     }
   };
@@ -76,6 +77,9 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       dosJogadores: MARCAVEIS[s.tipo].filter(chave => DOS_JOGADORES.includes(chave)).map(marcavel),
       parceiros: parceirosDoUsuario().map(p => ({ id: p.id, nome: p.name, escolhido: p.id === parceiro?.id })),
       categorias, podeCriar, podeApagar: mestre || s.permissoes.apagar, deGraca: s.permissoes.deGraca,
+      // A loja que compra dos jogadores: a dica para o jogador e, para o mestre, o "Configurar a compra" (o "Configurar a
+      // loja" do CORE, na loja e no personalizado que compra).
+      compraDosJogadores: s.permissoes.vender, configuraCompra: mestre && s.permissoes.vender,
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
   }
@@ -91,10 +95,11 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   // Arrastar um item para o contêiner: o mestre, ou o jogador com "Criar e pôr itens" (o players-create do CORE). Da
   // ficha de outro ator, o item sai de lá (levarItem); do diretório ou de um compêndio, entra uma cópia. Reordenar na
-  // própria ficha não muda nada.
+  // própria ficha não muda nada. Sem "Criar e pôr itens" e com "Vender itens", o jogador vende (o _onDrop do CORE).
   async _onDropItem(evento, item) {
     if (!this.actor.isOwner) return null;
     if (this.actor.uuid === item.parent?.uuid) return super._onDropItem(evento, item);
+    if (!game.user.isGM && !this.actor.system.permissoes.criar && this.actor.system.permissoes.vender) return venderParaALoja(this.actor, item);
     if (!game.user.isGM && !this.actor.system.permissoes.criar) {
       ui.notifications.warn(`${this.actor.name}: sem permissão para pôr itens aqui (o mestre libera nas configurações do contêiner).`);
       return null;
@@ -150,6 +155,22 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (resposta === null || resposta === undefined) return;
     if (!parteValida(resposta, pilha)) { ui.notifications.warn(`Ponha um número de 1 a ${pilha - 1}; para a pilha toda, use o "${botao}".`); return; }
     return pegarDoConteiner(this.actor, item, { para: this.#parceiro, quantidade: resposta });
+  }
+
+  // "Configurar a compra" (o _configureSellTo do CORE): o mestre escolhe que tipos a loja compra dos jogadores e por
+  // quantos por cento do preço.
+  static async #configurarCompra() {
+    if (!game.user.isGM) return null;
+    const compra = this.actor.system.compra;
+    const linhas = TIPOS_QUE_A_LOJA_COMPRA.map(tipo => `<tr><td>${game.i18n.localize(`TYPES.Item.${tipo}`)}</td><td><input type="checkbox" name="compra-${tipo}" ${compra[tipo].compra ? 'checked' : ''}></td><td><input type="number" name="porcentagem-${tipo}" value="${compra[tipo].porcentagem}" min="0" step="1"> %</td></tr>`).join('');
+    const dados = await DialogV2.prompt({
+      window: { title: `Configurar a compra: ${this.actor.name}` }, classes: [SISTEMA, 'configurar-compra'], rejectClose: false,
+      content: `<p>O que a loja compra dos jogadores (eles arrastam o item da ficha para cá), e por quanto do preço.</p><table><thead><tr><th>Tipo</th><th>Compra</th><th>Paga</th></tr></thead><tbody>${linhas}</tbody></table>`,
+      ok: { label: 'Salvar', callback: (evento, botao) => Object.fromEntries(TIPOS_QUE_A_LOJA_COMPRA.map(tipo => [tipo, {
+        compra: botao.form.elements[`compra-${tipo}`].checked, porcentagem: Math.max(0, Math.trunc(Number(botao.form.elements[`porcentagem-${tipo}`].value) || 0))
+      }])) }
+    });
+    return dados ? this.actor.update({ 'system.compra': dados }) : null;
   }
 
   // O extrato dos Eurodólares da loja: só o mestre (no CORE, o livro-caixa do contêiner é do mestre).

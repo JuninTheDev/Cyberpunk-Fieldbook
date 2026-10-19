@@ -2,7 +2,7 @@
 // cyberware, e o efeito que só vale com o item em uso. Os campos persistidos ficam no schema; o resto (HP máximo, SP,
 // bônus dos efeitos) é calculado na preparação, a cada vez.
 import { ANDAR_MAX, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
-import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, PERMISSOES_DO_CONTEINER, SISTEMA, TIPOS_DE_CONTEINER, USOS } from './config.mjs';
+import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, PERMISSOES_DO_CONTEINER, SISTEMA, TIPOS_DE_CONTEINER, TIPOS_QUE_A_LOJA_COMPRA, USOS } from './config.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
 import { protecoesDoVeiculo } from './regras-veiculos.mjs';
@@ -193,6 +193,10 @@ export class DadosConteiner extends foundry.abstract.TypeDataModel {
       permissoes: new fields.SchemaField(Object.fromEntries(Object.keys(PERMISSOES_DO_CONTEINER).map(chave => [chave, new fields.BooleanField({ initial: chave === 'vender' })]))),
       dinheiro: inteiro(0),
       extratos: new fields.SchemaField({ dinheiro: extrato() }),
+      // O que a loja compra dos jogadores (o vendor do CORE): cada tipo, se compra e por quantos por cento do preço.
+      compra: new fields.SchemaField(Object.fromEntries(TIPOS_QUE_A_LOJA_COMPRA.map(tipo => [tipo, new fields.SchemaField({
+        compra: new fields.BooleanField({ initial: true }), porcentagem: inteiro(100, { min: 0 })
+      })]))),
       notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
     };
   }
