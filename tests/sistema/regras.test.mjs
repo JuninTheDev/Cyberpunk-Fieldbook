@@ -841,6 +841,22 @@ test('Contêiner (o C24; o container do CORE 0.92.4, cpr-container.js, setContai
   assert.ok(!regras.parteValida(0, 7) && !regras.parteValida(7, 7) && !regras.parteValida(2.5, 7) && !regras.parteValida(-1, 7));
 });
 
+test('Contêiner, a loja que vende (o C24, parte 2; o _purchaseItem do CORE 0.92.4): o custo é o preço da unidade vezes a quantidade, a pilha toda por padrão; a fração (a bateria) arredonda para cima, porque o dinheiro é em eb inteiros', () => {
+  assert.equal(regras.custoDaCompra('arma', { preco: 100 }), 100);
+  assert.equal(regras.custoDaCompra('equipamento', { preco: 20, quantidade: 3 }), 60);
+  assert.equal(regras.custoDaCompra('equipamento', { preco: 20, quantidade: 3 }, 1), 20);
+  // A munição pelo lote da loja da wiki: 10eb as 10 balas (1eb cada); a granada, por unidade.
+  assert.equal(regras.custoDaCompra('municao', { preco: 10, tipo: 'heavyPistol', quantidade: 30 }), 30);
+  assert.equal(regras.custoDaCompra('municao', { preco: 10, tipo: 'heavyPistol', quantidade: 30 }, 5), 5);
+  assert.equal(regras.custoDaCompra('municao', { preco: 100, tipo: 'grenade', quantidade: 2 }, 1), 100);
+  // A bateria (50eb as 8): 3 por 18,75eb, 19 em eb inteiros; as 8, 50.
+  assert.equal(regras.custoDaCompra('municao', { preco: 50, tipo: 'battery', quantidade: 8 }, 3), 19);
+  assert.equal(regras.custoDaCompra('municao', { preco: 50, tipo: 'battery', quantidade: 8 }), 50);
+  // A conta sem o erro do ponto flutuante (0,1 × 3).
+  assert.equal(regras.custoDaCompra('municao', { preco: 1, tipo: 'rifle', quantidade: 30 }, 30), 3);
+  assert.equal(regras.custoDaCompra('arma', { preco: 0 }), 0);
+});
+
 test('Duas Roles (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o personagem-roles.js da wiki): a segunda Role tem o Rank e as habilidades dela, e os derivados das duas valem na ficha (a Interface do Netrunner, o Moto do Nomad, a Consciência de Combate do Solo, as perícias do Medtech)', () => {
   const regrasDaWiki = fs.readFileSync(path.join(raiz, 'system-rules.js'), 'utf8');
   assert.ok(regrasDaWiki.includes("section('Duas Roles na criação', 'regra da mesa', '<p>No criador, escolha a Role principal e, se quiser, uma segunda Role diferente. Combine com o mestre os Ranks de cada uma, de 1 a 10. Cada Role tem suas habilidades e seu Lifepath; a principal define os STATs, as perícias e o único pacote de equipamento e orçamento inicial."));

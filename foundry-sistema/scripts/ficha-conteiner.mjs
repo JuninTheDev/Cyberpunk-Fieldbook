@@ -5,7 +5,7 @@
 import { CATEGORIAS_DO_CONTEINER, caminho, PERMISSOES_DO_CONTEINER, SISTEMA, TIPOS_DE_CONTEINER } from './config.mjs';
 import { levarItem, parceirosDoUsuario, pegarDoConteiner } from './conteiner.mjs';
 import { abrirExtrato } from './extrato.mjs';
-import { EMPILHAVEIS, parteSugerida, parteValida, precoNaLista, quantidadeDe } from './regras.mjs';
+import { custoDaCompra, EMPILHAVEIS, parteSugerida, parteValida, precoDaUnidade, precoNaLista, quantidadeDe } from './regras.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
 import { divisaoDaPilha } from './regras-inventario.mjs';
 
@@ -59,7 +59,7 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       return {
         id: item.id, nome: item.name, img: item.img, empilhavel: EMPILHAVEIS.includes(item.type), quantidade, emParte: quantidade > 1,
         divisivel: (mestre || s.permissoes.mudar) && Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)),
-        preco: precoNaLista(item.type, item.system), instalados: instalados.join(', ')
+        preco: precoNaLista(item.type, item.system), custo: custoDaCompra(item.type, item.system), instalados: instalados.join(', ')
       };
     };
     const categorias = CATEGORIAS_DO_CONTEINER.map(tipo => ({
@@ -134,18 +134,21 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
     return item && pegarDoConteiner(this.actor, item, { para: this.#parceiro });
   }
 
-  // Pegar uma parte da pilha (o purchaseFraction do CORE): a janela pergunta quantos, começando na metade.
+  // Pegar (ou comprar, na loja) uma parte da pilha (o purchaseFraction do CORE): a janela pergunta quantos, começando na
+  // metade; na loja, com o preço da unidade.
   static async #pegarParte(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return;
     const pilha = quantidadeDe(item.type, item.system);
+    const [verbo, botao] = this.actor.system.permissoes.deGraca ? ['Pegar', 'Pegar tudo'] : ['Comprar', 'Comprar tudo'];
+    const preco = this.actor.system.permissoes.deGraca ? '' : ` A unidade sai por ${precoDaUnidade(item.type, item.system).toLocaleString('pt-BR')}eb.`;
     const resposta = await DialogV2.prompt({
-      window: { title: 'Pegar uma parte' }, classes: [SISTEMA, 'pegar-parte'], rejectClose: false,
-      content: `<p>Pegar uma parte de <b>${foundry.utils.escapeHTML(item.name)}</b> (tem ${pilha}).</p><label>Quantos <input type="number" name="quantidade" value="${parteSugerida(pilha)}" min="1" max="${pilha - 1}" step="1" autofocus></label>`,
-      ok: { label: 'Pegar', callback: (ev, botao) => Number(botao.form.elements.quantidade.value) }
+      window: { title: `${verbo} uma parte` }, classes: [SISTEMA, 'pegar-parte'], rejectClose: false,
+      content: `<p>${verbo} uma parte de <b>${foundry.utils.escapeHTML(item.name)}</b> (tem ${pilha}).${preco}</p><label>Quantos <input type="number" name="quantidade" value="${parteSugerida(pilha)}" min="1" max="${pilha - 1}" step="1" autofocus></label>`,
+      ok: { label: verbo, callback: (ev, botaoOk) => Number(botaoOk.form.elements.quantidade.value) }
     });
     if (resposta === null || resposta === undefined) return;
-    if (!parteValida(resposta, pilha)) { ui.notifications.warn(`Ponha um número de 1 a ${pilha - 1}; para pegar a pilha toda, use o "Pegar tudo".`); return; }
+    if (!parteValida(resposta, pilha)) { ui.notifications.warn(`Ponha um número de 1 a ${pilha - 1}; para a pilha toda, use o "${botao}".`); return; }
     return pegarDoConteiner(this.actor, item, { para: this.#parceiro, quantidade: resposta });
   }
 

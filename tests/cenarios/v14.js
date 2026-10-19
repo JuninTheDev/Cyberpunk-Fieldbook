@@ -11489,8 +11489,26 @@ module.exports = async ({ edge, servidores, r }) => {
         })()`);
         const depois = (await api(`/api/personagens/${netrunner.id}`)).personagem;
         const status = depois.pedidos.find(p => p.id === pedido.id)?.status;
-        const ok = doc.foundry?.ator === 'ator-do-12' && doc.foundry14?.ator === ator && info.resultados.join() === 'true' && info.dinheiro === 400 && info.agents === 1 && status === 'entregue';
-        return [ok, JSON.stringify({ vinculos: { mostrado: doc.foundry?.ator, f12: doc.foundry12?.ator, f14: doc.foundry14?.ator }, ator, info, status })];
+        // A cópia: o ator do 14 apagado (a wiki marca) e uma cópia com a flag do personagem neste mundo; o vínculo que fica é
+        // o do 12, de um ator que não está aqui. O pedido novo não vai para a cópia (a wiki a recusaria como "ator antigo") e
+        // fica aprovado.
+        await edge.evaluate(`game.actors.get(${JSON.stringify(ator)})?.delete().then(() => true)`);
+        for (let i = 0; i < 30 && !(await api(`/api/personagens/${netrunner.id}`)).personagem?.foundry14?.removido; i++) await edge.sleep(200);
+        const copia = await edge.evaluate(`(async () => (await Actor.implementation.create({ name: 'Cópia do Netrunner', type: 'personagem', system: { dinheiro: 500 }, flags: { '${S}': { wiki: { id: ${JSON.stringify(netrunner.id)} } } } })).id)()`);
+        const { pedido: outro } = await api(`/api/personagens/${netrunner.id}/pedidos`, 'POST', { itens: [{ id: 'core_gear:agent', qtd: 1 }] });
+        await api(`/api/personagens/${netrunner.id}/pedidos/${outro.id}/aprovar`, 'POST', {});
+        const naCopia = await edge.evaluate(`(async () => {
+          const c = game.actors.get(${JSON.stringify(copia)});
+          const resultados = await game.system.api.wiki.entregarPedidos();
+          const r = { resultados: resultados.filter(x => x.pedido === ${JSON.stringify(outro.id)}).length, agent: Boolean(c.items.getName('Agent')), dinheiro: c.system.dinheiro };
+          await c.delete();
+          return r;
+        })()`);
+        const statusDoOutro = (await api(`/api/personagens/${netrunner.id}`)).personagem.pedidos.find(p => p.id === outro.id)?.status;
+        await api(`/api/personagens/${netrunner.id}/pedidos/${outro.id}/recusar`, 'POST', { motivo: 'Teste da cópia' });
+        const ok = doc.foundry?.ator === 'ator-do-12' && doc.foundry14?.ator === ator && info.resultados.join() === 'true' && info.dinheiro === 400 && info.agents === 1 && status === 'entregue'
+          && naCopia.resultados === 0 && !naCopia.agent && naCopia.dinheiro === 500 && statusDoOutro === 'aprovado';
+        return [ok, JSON.stringify({ vinculos: { mostrado: doc.foundry?.ator, f12: doc.foundry12?.ator, f14: doc.foundry14?.ator }, ator, info, status, naCopia, statusDoOutro })];
       } finally {
         await edge.evaluate(`(async () => { await game.actors.get(${JSON.stringify(ator)})?.delete(); return true; })()`);
       }
@@ -11724,11 +11742,17 @@ module.exports = async ({ edge, servidores, r }) => {
       try {
         const doJogador = await jogador.evaluate(`(async () => {
           ${naBarra}
-          await esperar(() => el()?.querySelector('.pt-barra .pt-nome'));
+          // Sem token controlado (o do jogador fica controlado ao entrar na cena): a barra vem do personagem dele.
+          canvas.tokens?.releaseAll();
+          // O redesenho de agora (a barra pode ser a de um desenho anterior, com o token de outra cena).
+          el().innerHTML = '';
+          game.system.api.painel.atualizar();
+          await new Promise(r => setTimeout(r, 300));
+          await esperar(() => !canvas.tokens?.controlled.length && texto('.pt-barra .pt-nome') === game.user.character?.name);
           return { nome: texto('.pt-nome'), personagem: game.user.character?.name ?? null, controlados: canvas.tokens?.controlled.length ?? 0, stats: el()?.querySelectorAll('.pt-stat').length ?? 0, avisos: [] };
         })()`);
         const doMestre = await edge.evaluate(`(() => { const el = document.getElementById('painel-tatico'); return el?.querySelector('.pt-nome')?.textContent.trim() ?? null; })()`);
-        return [doJogador.nome === doJogador.personagem && doJogador.stats === 10 && doMestre === 'Teste Painel', JSON.stringify({ doJogador, doMestre })];
+        return [doJogador.nome === doJogador.personagem && doJogador.controlados === 0 && doJogador.stats === 10 && doMestre === 'Teste Painel', JSON.stringify({ doJogador, doMestre })];
       } finally {
         await edge.evaluate(`(async () => {
           const p = window.__painel;
@@ -11873,6 +11897,75 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('contêiner (o C24, parte 2): a loja vende pelo preço: com o Freguês no "Trocar com", "Comprar" leva a pistola (os 100eb saem dele e entram na loja, com a linha no extrato dos dois); sem o dinheiro, avisa e nada muda; "Comprar parte" leva 5 balas por 5eb; com o estoque infinito, a loja fica com a pilha', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const janela = classe => document.querySelector('.application.dialog.' + classe + ':not(.minimizing)');
+        let loja, fregues;
+        try {
+          const balas = pegar('core_ammo:heavy-pistol-basic');
+          balas.system.quantidade = 30;
+          loja = await Actor.implementation.create({ name: 'Teste Loja', type: 'conteiner', items: [pegar('core_weapons:heavy-pistol'), balas, pegar('core_gear:agent')] });
+          fregues = await Actor.implementation.create({ name: 'Teste Comprador', type: 'personagem', system: { dinheiro: 150 } });
+          await loja.sheet.render({ force: true });
+          const f = () => loja.sheet.element;
+          await esperar(() => f()?.querySelector('[data-action="pegarTudo"]'));
+          const linha = id => f()?.querySelector('li[data-item-id="' + id + '"]');
+          const pistola = loja.items.getName('Heavy Pistol'), municao = loja.items.getName('Heavy Pistol (Basic)'), agent = loja.items.getName('Agent');
+          const botoes = id => [...(linha(id)?.querySelectorAll('button') ?? [])].map(b => b.textContent.trim());
+          const antes = { pistola: botoes(pistola.id), municao: botoes(municao.id), dica: linha(pistola.id).querySelector('[data-action="pegarTudo"]').dataset.tooltip };
+          const parceiro = f().querySelector('select.parceiro');
+          parceiro.value = fregues.id;
+          parceiro.dispatchEvent(new Event('change', { bubbles: true }));
+          // A pistola: 100eb.
+          linha(pistola.id).querySelector('[data-action="pegarTudo"]').click();
+          await esperar(() => fregues.items.getName('Heavy Pistol') && fregues.system.dinheiro === 50 && loja.system.dinheiro === 100);
+          const ultima = ator => { const l = ator.system.extratos.dinheiro.at(-1); return l ? [l.acao, l.delta, l.motivo].join('|') : null; };
+          const comprou = { dinheiro: [fregues.system.dinheiro, loja.system.dinheiro], naLoja: Boolean(loja.items.getName('Heavy Pistol')), extratos: [ultima(fregues), ultima(loja)] };
+          // O Agent (100eb) com 50eb: avisa, e nada muda.
+          const avisos = [];
+          ui.notifications.warn = m => { avisos.push(String(m)); };
+          try {
+            await esperar(() => linha(agent.id)?.querySelector('[data-action="pegarTudo"]'));
+            linha(agent.id).querySelector('[data-action="pegarTudo"]').click();
+            await esperar(() => avisos.length);
+          } finally { delete ui.notifications.warn; }
+          const semDinheiro = { avisos, agent: Boolean(fregues.items.getName('Agent')), dinheiro: [fregues.system.dinheiro, loja.system.dinheiro], naLoja: Boolean(loja.items.getName('Agent')) };
+          // 5 balas (10eb as 10: 1eb cada).
+          const comprarParte = async quantas => {
+            await esperar(() => linha(municao.id)?.querySelector('[data-action="pegarParte"]'));
+            linha(municao.id).querySelector('[data-action="pegarParte"]').click();
+            await esperar(() => janela('pegar-parte')?.querySelector('input[name="quantidade"]'));
+            const titulo = janela('pegar-parte').querySelector('.window-title')?.textContent.trim();
+            const texto = janela('pegar-parte').querySelector('.window-content p')?.textContent.trim();
+            janela('pegar-parte').querySelector('input[name="quantidade"]').value = quantas;
+            janela('pegar-parte').querySelector('button[data-action="ok"]').click();
+            return { titulo, texto };
+          };
+          const janelaDaParte = await comprarParte(5);
+          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 5 && municao.system.quantidade === 25 && fregues.system.dinheiro === 45);
+          const parte = { dinheiro: [fregues.system.dinheiro, loja.system.dinheiro], balas: [fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade, municao.system.quantidade], ...janelaDaParte, extrato: ultima(fregues) };
+          // O estoque infinito: mais 5, e a pilha da loja fica.
+          await loja.update({ 'system.permissoes.estoqueInfinito': true });
+          await comprarParte(5);
+          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 10 && fregues.system.dinheiro === 40);
+          const infinito = { balas: [fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade, municao.system.quantidade], dinheiro: [fregues.system.dinheiro, loja.system.dinheiro] };
+          return { antes, comprou, semDinheiro, parte, infinito };
+        } finally {
+          for (const ator of [loja, fregues].filter(Boolean)) { for (const item of ator.items) await item.sheet?.close(); await ator.sheet?.close(); await ator.delete(); }
+        }
+      })()`);
+      const { antes, comprou, semDinheiro, parte, infinito } = info;
+      const ok = antes.pistola.join() === 'Comprar,✕' && antes.municao.join() === 'Dividir,Comprar parte,Comprar tudo,✕' && /100 eb/.test(antes.dica)
+        && comprou.dinheiro.join() === '50,100' && !comprou.naLoja && comprou.extratos[0] === 'subtrair|-100|Comprou Heavy Pistol em Teste Loja' && comprou.extratos[1] === 'somar|100|Vendeu Heavy Pistol para Teste Comprador'
+        && semDinheiro.avisos.length === 1 && /50eb não pagam Agent \(100eb\)/.test(semDinheiro.avisos[0]) && !semDinheiro.agent && semDinheiro.dinheiro.join() === '50,100' && semDinheiro.naLoja
+        && parte.dinheiro.join() === '45,105' && parte.balas.join() === '5,25' && parte.titulo === 'Comprar uma parte' && /A unidade sai por 1eb/.test(parte.texto) && parte.extrato === 'subtrair|-5|Comprou 5× Heavy Pistol (Basic) em Teste Loja'
+        && infinito.balas.join() === '10,25' && infinito.dinheiro.join() === '40,110';
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('contêiner (o C24, parte 1) no navegador do jogador: a trava (o token do saque não sai do lugar; o do esconderijo, sim); a ficha sem as configurações do mestre, com o "Pegar" para o personagem dele; tirar arrastando e pôr no saque são recusados; o item do saque abre só para ler; no esconderijo, ele põe (o item sai da ficha dele), cria e apaga', async () => {
       const montado = await edge.evaluate(`(async () => {
         const u = game.users.getName('Jogador');
@@ -11973,6 +12066,46 @@ module.exports = async ({ edge, servidores, r }) => {
           delete window.__c24;
           return true;
         })()`);
+      }
+    });
+
+    await r.passo('contêiner (o C24, parte 2) no navegador do jogador: na loja, ele compra pelo "Comprar" para o personagem dele; o dinheiro sai da ficha dele e entra na loja, com o nome dele no extrato da loja', async () => {
+      const montado = await edge.evaluate(`(async () => {
+        const u = game.users.getName('Jogador');
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const loja = await Actor.implementation.create({ name: 'Teste Loja do Jogador', type: 'conteiner', items: [foundry.utils.deepClone(cat['core_gear:agent'])] });
+        const fregues = await Actor.implementation.create({ name: 'Comprador do Jogador', type: 'personagem', system: { dinheiro: 150 }, ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+        window.__c24b = [loja.id, fregues.id];
+        return { loja: loja.id, fregues: fregues.id };
+      })()`);
+      try {
+        const noJogador = await jogador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await esperar(() => game.actors.get('${montado.loja}')?.isOwner && game.actors.get('${montado.fregues}')?.isOwner);
+          const loja = game.actors.get('${montado.loja}'), fregues = game.actors.get('${montado.fregues}');
+          const avisos = [];
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          try {
+            await loja.sheet.render({ force: true });
+            const f = () => loja.sheet.element;
+            await esperar(() => f()?.querySelector('[data-action="pegarTudo"]'));
+            const select = f().querySelector('select.parceiro');
+            select.value = fregues.id;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            const agent = loja.items.getName('Agent');
+            const botoes = [...f().querySelector('li[data-item-id="' + agent.id + '"]').querySelectorAll('button')].map(b => b.textContent.trim());
+            f().querySelector('li[data-item-id="' + agent.id + '"] [data-action="pegarTudo"]').click();
+            await esperar(() => fregues.items.getName('Agent') && fregues.system.dinheiro === 50 && loja.system.dinheiro === 100);
+            const linha = loja.system.extratos.dinheiro.at(-1);
+            await loja.sheet.close();
+            return { botoes, dinheiro: [fregues.system.dinheiro, loja.system.dinheiro], agent: Boolean(fregues.items.getName('Agent')), naLoja: Boolean(loja.items.getName('Agent')), usuario: linha?.usuario ?? null, motivo: linha?.motivo ?? null, avisos };
+          } finally { delete ui.notifications.warn; }
+        })()`);
+        const n = noJogador;
+        const ok = n.botoes.join() === 'Comprar' && n.dinheiro.join() === '50,100' && n.agent && !n.naLoja && n.usuario === 'Jogador' && n.motivo === 'Vendeu Agent para Comprador do Jogador' && !n.avisos.length;
+        return [ok, JSON.stringify({ montado, noJogador })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const id of window.__c24b ?? []) await game.actors.get(id)?.delete(); delete window.__c24b; return true; })()`);
       }
     });
 

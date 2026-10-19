@@ -1,7 +1,7 @@
 // O contêiner (o container do CORE 0.92.4): levar um item de um ator para outro (arrastar entre as fichas, pegar do
 // saque ou do esconderijo), pegar com quem a ficha troca e a trava (o jogador só move o token do contêiner com a
 // permissão "Mover o contêiner", o players-move do CORE).
-import { EMPILHAVEIS, quantidadeDe } from './regras.mjs';
+import { custoDaCompra, EMPILHAVEIS, quantidadeDe } from './regras.mjs';
 import { mesmaPilha } from './regras-inventario.mjs';
 import { naFilaDoInventario, upgradesDaPilha } from './pilhas.mjs';
 
@@ -105,15 +105,24 @@ async function transferirItem(item, destino, { quantidade = null, manterNaOrigem
 // Os personagens com quem o usuário pode trocar (o "Trocar com" do CORE): os dele; o do usuário vem primeiro.
 export const parceirosDoUsuario = () => game.actors.filter(ator => ator.type === 'personagem' && ator.isOwner);
 
-// Pegar do contêiner (o "Pegar" do CORE, nos itens de graça: o saque e o esconderijo): o item vai para o personagem com
-// quem a ficha troca, inteiro ou só uma parte da pilha (quantidade); sai do contêiner, menos no estoque infinito. Como
-// no CORE, quem pega precisa ser dono do contêiner (todos os jogadores são, desde a criação).
+// Pegar ou comprar do contêiner (o "Pegar" e o "Comprar" do CORE, o _purchaseItem): o item vai para o personagem com
+// quem a ficha troca, inteiro ou só uma parte da pilha (quantidade), e sai do contêiner, menos no estoque infinito. De
+// graça (o saque, o esconderijo), só vai. Na loja, custa o preço (regras.custoDaCompra): sem o dinheiro, avisa e não vai;
+// com ele, sai de quem compra e entra na loja, com a linha no extrato dos dois. Como no CORE, quem pega precisa ser dono
+// do contêiner (todos os jogadores são, desde a criação).
 export async function pegarDoConteiner(conteiner, item, { para = null, quantidade = null } = {}) {
   if (!conteiner.isOwner) { ui.notifications.warn(`${conteiner.name}: sem permissão para mexer neste contêiner.`); return null; }
   if (!para) { ui.notifications.warn('Escolha com quem trocar: o personagem que recebe o item.'); return null; }
   if (!para.isOwner) { ui.notifications.warn(`${para.name}: sem permissão para pôr itens nesta ficha.`); return null; }
-  if (!conteiner.system.permissoes.deGraca) { ui.notifications.warn(`${conteiner.name}: os itens daqui têm preço.`); return null; }
-  return levarItem(item, para, { quantidade, manterNaOrigem: conteiner.system.permissoes.estoqueInfinito });
+  const levar = quantidade ?? quantidadeDe(item.type, item.system);
+  const custo = conteiner.system.permissoes.deGraca ? 0 : custoDaCompra(item.type, item.system, levar);
+  if (custo > para.system.dinheiro) { ui.notifications.warn(`${para.name}: ${para.system.dinheiro}eb não pagam ${item.name} (${custo}eb).`); return null; }
+  const nome = `${levar > 1 ? `${levar}× ` : ''}${item.name}`;
+  const criado = await levarItem(item, para, { quantidade, manterNaOrigem: conteiner.system.permissoes.estoqueInfinito });
+  if (!criado || !custo) return criado;
+  await para.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: custo, motivo: `Comprou ${nome} em ${conteiner.name}` });
+  await conteiner.mudarComExtrato('dinheiro', { acao: 'somar', valor: custo, motivo: `Vendeu ${nome} para ${para.name}` });
+  return criado;
 }
 
 // A trava: o jogador que tenta mover o token de um contêiner sem a permissão "Mover o contêiner" ganha o aviso, e o

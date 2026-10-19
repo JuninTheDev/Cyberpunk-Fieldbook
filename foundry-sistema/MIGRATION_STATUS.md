@@ -76,7 +76,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | NET Architect | os arquivos copiados pelo Eye-Dee (o diário, a permissão do dono, o aviso no chat, o "Abrir o arquivo") | portados no ciclo 89 (o C8, parte 12) |
 | NET Architect | o editor visual (a grade, arrastar para mover e trocar, o "+" para criar) | portado no ciclo 90 (o C8, parte 13), no mapa da ficha da arquitetura: a tabela das linhas faz o papel do painel; sem o "Desfazer", porque cada mudança grava na hora, como o resto da ficha |
 | NET Architect | o Scanner (o botão no HUD do token, o raio do resultado × 10 m, o oculto acima do DV do Scanner, quem achou passa a vê-lo) | portado no ciclo 91 (o C8, parte 14); a parede no meio, que o da mesa não conferia, barra a conexão pela wiki |
-| CORE | o contêiner (a loja, o saque e o esconderijo: os tipos com as permissões, a ficha, pôr e pegar, a trava) | portado no ciclo 122 (o C24, parte 1); a compra e a venda da loja faltam |
+| CORE | o contêiner (a loja, o saque e o esconderijo: os tipos com as permissões, a ficha, pôr e pegar, a trava) | portado no ciclo 122 (o C24, parte 1); a loja que vende no 130 (parte 2); vender para a loja falta |
 | Painel Tático | tudo (o retrato por estado, os vitais, os atributos, as armas, as ações, os painéis, o estilo de cada jogador) | portado no ciclo 125 (o C25); o retrato do Foundry 12 não vem na migração (ver as dúvidas) |
 
 ## Bloqueadores para migrar a campanha
@@ -648,6 +648,12 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **"Trocar a munição"** escolhe a munição da recarga; a ficha recarrega com a que está no pente (é o botão do painel);
   - **a ligação com o Combat HUD** saiu (ele não existe para este sistema); a do Fluxo, do cpr-2077 e do NET Architect é a
     do próprio sistema.
+
+- **A loja que vende** (ciclo 130; o _purchaseItem do CORE 0.92.4):
+  - **o preço da parte em eb inteiros:** o dinheiro daqui é inteiro; o que dá fração (a bateria, 6,25eb a unidade) arredonda
+    para cima (3 baterias, 19eb). O CORE não arredonda;
+  - **a ordem:** o item vai antes, e o dinheiro sai depois (no CORE, o dinheiro sai antes). Assim, um item que não pôde ir (o
+    cyberware instalado, a ficha sem permissão) não cobra.
 
 ## Registro dos ciclos
 
@@ -6178,8 +6184,11 @@ Foundry 14: o Painel Tático da mesa no Foundry 14. Com este ciclo, o C25 termin
   - G3: 181 de 181;
   - G4: 168 de 168;
   - **mutações:** as 3 do G3 caíram (180 de 181 cada): o Gravemente que vira Levemente no retrato (P1), a fonte do CORE que
-    fica (P2) e o código PT1 com a posição (P3). As 8 do G4 (P4 a P11) rodam depois do push, para o painel ir para a mesa
-    hoje; o resultado vai num commit de registro.
+    fica (P2) e o código PT1 com a posição (P3). As do G4 rodaram depois (2026-10-19, com a mesa vazia): caíram a P4 (o
+    retrato pelo rótulo do ferimento), a P5 (a armadura do outro local), a P6 (o mirado sem o local), a P7 (a recarga que
+    ignora a escolhida), a P8 (só o capanga tem o painel), a P9 (a favorita que não grava) e a P11 (o equipar que não
+    muda). A P10 (o jogador sem "mostrar o meu personagem") passava: a barra do jogador era a de um desenho anterior, e o
+    passo agora pede o redesenho (ciclo 130); com isso, ela caiu.
 - **Próximo:** o C24, partes 2 e 3 (a loja que vende e a que compra), ou o que o usuário escolher.
 
 ### Ciclo 126 (2026-10-18): o C30, parte 2: o membro natural (sessão Junin)
@@ -6256,11 +6265,9 @@ Commit anterior: `44a8d777` (o ciclo 126, da sessão Junin; o nosso anterior é 
   que o usuário fez na hora, na mesa: tirar a imagem pela configuração do Tile.
 - **Testes:** no G4, o passo da configuração do ponto: o Tile sem imagem fica sem (e sem o aviso da imagem); o Tile com a
   de terminal do sistema mostra o "tirar" marcado, e a imagem sai.
-- **Resultados:** G1 88/0, G2 0 e G3 181/181 (184/184 depois de juntar o ciclo 126 da sessão Junin). O G4 não rodou: a mesa do servidor estava em uso, e o usuário pediu para
-  instalar já (a mudança é só a configuração do ponto de acesso). Ele roda com a mesa vazia, junto com as mutações T1 a
-  T3 (a imagem que fica, sem o "tirar", a imagem de volta no Tile sem imagem).
-- **Próximo:** instalar no servidor quando a mesa estiver vazia (o instalador desliga o Foundry 14); as mutações P8 a
-  P11 do ciclo 125, que pararam na espera da mesa.
+- **Resultados:** G1 88/0, G2 0 e G3 181/181 (184/184 depois de juntar o ciclo 126 da sessão Junin). O G4 rodou depois, no ciclo 128 (172 de 172, com a mesa vazia), e as mutações T1 (a
+  imagem que fica), T2 (sem o "tirar") e T3 (a imagem de volta no Tile sem imagem) caíram (2026-10-19).
+- **Próximo:** a entrega dos pedidos da wiki no personagem que veio do Foundry 12 (o ciclo 128).
 
 ### Ciclo 128 (2026-10-19): a entrega dos pedidos da wiki no personagem que veio do Foundry 12 (o pedido do usuário; sessão KouArt)
 
@@ -6281,8 +6288,10 @@ Commit anterior: `2657f14b` (o recorte dos retratos, na wiki).
   (o Agent, 100eb a menos, o pedido entregue). O "Aprovar" da janela continua (o Solo religado pelo endpoint do 12).
 - **Resultados:** G1 88/0, G2 0, G3 184/184 e G4 172/172. Este G4 também é o do conjunto que estava pendente (o Painel
   Tático do 125, o ponto de acesso do 127 e o ciclo 126 da sessão Junin).
-- **Próximo:** instalar no servidor; as mutações que faltam (as deste ciclo, as T1 a T3 do 127 e as P8 a P11 do 125),
-  com a mesa vazia.
+- **Mutações** (2026-10-19, com a mesa vazia): a E1 (só o vínculo que a wiki mostra) e a E2 (sem o vínculo do 14)
+  caíram. A E3 (a cópia que recebe o pedido) passava, porque nenhum passo conferia a cópia; o passo agora confere (ciclo
+  130), e ela caiu.
+- **Próximo:** o C24, parte 2 (a loja que vende).
 
 ### Ciclo 129 (2026-10-19): o C17, pilhas no inventário (sessão Codex)
 
@@ -6323,6 +6332,41 @@ publicado antes de começar em `20f09cb`; a base de comportamento é o ciclo 128
 - **Limites:** a fila é do mesmo cliente; o Foundry não oferece uma transação atômica entre clientes nessa operação.
   Se também recusar a compensação, o sistema interrompe com erro explícito para conferir o estado real do estoque.
 - **Próximo:** C18, armadura. C10 segue reservado à sessão Junin e C24 à sessão KouArt.
+
+### Ciclo 130 (2026-10-19): o C24, parte 2: a loja que vende (sessão KouArt)
+
+Commit anterior: `c310e66e` (a reserva do C18, da sessão Codex; o 129 é o C17, as pilhas, do Codex). O usuário mandou seguir para o próximo depois das
+mutações pendentes (2026-10-19): o C24, que ficou para depois por causa da primeira sessão da Morana no Foundry 14.
+
+- **A referência:** o `_purchaseItem` do CORE 0.92.4 (`modules/actor/sheet/cpr-container-sheet.js`): o preço da
+  unidade (a munição que não é granada nem foguete por 10), vezes a pilha toda ou a parte; sem o "items-free", o
+  dinheiro de quem compra precisa cobrir ("tradePriceWarn"), sai dele e entra no contêiner, com a linha no ledger dos
+  dois ("Purchased…" e "Sold…"); o estoque infinito fica com o item.
+- **O que muda:**
+  - **`regras.mjs`:** `custoDaCompra` (o preço da unidade vezes a quantidade; a fração arredonda para cima, porque o
+    dinheiro daqui é em eb inteiros);
+  - **`conteiner.mjs`:** `pegarDoConteiner` compra na loja: sem o dinheiro, avisa e não leva; com ele, o item vai e os eb
+    saem de quem compra e entram na loja, com a linha no extrato dos dois ("Comprou … em …" e "Vendeu … para …");
+  - **`ficha-conteiner.mjs` e `conteiner.hbs`:** na loja, "Comprar" e "Comprar parte" (com o custo na dica e o preço da
+    unidade na janela da parte).
+- **Testes:**
+  - **G3:** o teste novo do custo (a pilha, a parte, a munição pelo lote, a granada, a bateria que arredonda, o ponto
+    flutuante, o grátis);
+  - **G4:** dois passos novos: o do mestre (comprar a pistola, sem o dinheiro, uma parte das balas, o estoque infinito) e
+    o do jogador (ele compra para o personagem dele, e o nome dele fica no extrato da loja).
+- **Reforço dos testes** (as mutações sobreviventes dos ciclos 125 e 128): o passo do painel do jogador solta o token e
+  pede o redesenho antes de ler a barra (o P10, sem a opção "mostrar o meu personagem", passava porque a barra era a de um
+  desenho anterior); o passo dos
+  pedidos do personagem dos dois Foundry confere a cópia (o ator do 14 apagado, uma cópia com a flag no mundo: o pedido
+  fica aprovado; o E3, a cópia que recebe, passava).
+- **Resultados:**
+  - G1: 88 arquivos, 0 erros; G2: 0 erros;
+  - G3: 185 de 185; depois de juntar o ciclo 129 do Codex (as pilhas), 198 de 198, e o G1, 90 arquivos;
+  - G4: 174 de 174; depois da junção, 183 de 183 (o passo da loja espera o "Dividir" das pilhas na lista do mestre);
+  - **mutações:** as 6 caíram, e os arquivos voltaram (conferido pelo md5): no G3 (184 de 185 cada), a fração que não
+    arredonda (C1) e a parte que custa a pilha toda (C2); no G4, a loja de graça (C3), sem a conferência do dinheiro (C4),
+    a loja que não recebe (C5) e sem os botões de comprar (C6). As duas dos reforços também caíram: a P10 e a E3.
+- **Próximo:** o C24, parte 3 (a loja que compra: vender para ela, pela porcentagem de cada tipo).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

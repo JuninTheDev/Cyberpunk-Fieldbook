@@ -68,6 +68,9 @@ botões. --}}
           {{#if @root.deGraca}}
           {{#if emParte}}<button type="button" class="acao" data-action="pegarParte" data-tooltip="Pegar só uma parte da pilha">Pegar parte</button>{{/if}}
           <button type="button" class="acao" data-action="pegarTudo" data-tooltip="Levar para quem está em Trocar com">Pegar{{#if emParte}} tudo{{/if}}</button>
+          {{else}}
+          {{#if emParte}}<button type="button" class="acao" data-action="pegarParte" data-tooltip="Comprar só uma parte da pilha, pelo preço da unidade">Comprar parte</button>{{/if}}
+          <button type="button" class="acao" data-action="pegarTudo" data-tooltip="Comprar para quem está em Trocar com: {{custo}} eb">Comprar{{#if emParte}} tudo{{/if}}</button>
           {{/if}}
           {{#if @root.podeApagar}}<button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>{{/if}}
         </li>

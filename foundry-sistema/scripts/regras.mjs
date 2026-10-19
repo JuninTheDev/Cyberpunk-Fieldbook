@@ -363,6 +363,9 @@ export function precoNaLista(tipo, sistema) {
   const texto = `Unidade: ${emEb(unidade)} eb${categoria ? ` (${categoria})` : ''}`;
   return quantidade > 1 ? `${texto} | Tudo: ${emEb(unidade * quantidade)} eb` : texto;
 }
+// O custo de comprar do contêiner (o _purchaseItem do CORE): o preço da unidade vezes a quantidade (a pilha toda ou a
+// parte). O dinheiro daqui é em eb inteiros: o que dá fração (a bateria, 6,25eb a unidade) arredonda para cima.
+export const custoDaCompra = (tipo, sistema, quantidade = quantidadeDe(tipo, sistema)) => Math.ceil(Math.round(precoDaUnidade(tipo, sistema) * quantidade * 100) / 100);
 
 // O efeito de um equipamento vale com o uso de agora? Pela ativação do item: "equipado" só equipado; "carregando"
 // equipado ou carregando (guardado em casa, não); "manual" sempre, e quem decide é o efeito, ligado ou desligado.
