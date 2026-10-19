@@ -20,6 +20,33 @@ export const tempoEntreRodadas = (antes, depois) => (Math.max(depois, 1) - Math.
 
 // Wiki, Corpo a corpo (p. 175–176): BODY 8+ usa a arma branca de duas mãos com uma.
 export const maosDaArma = (arma, body = 0) => arma.maos === 2 && arma.aDistancia === false && body >= 8 ? 1 : arma.maos ?? 0;
+// Briga e Artes Marciais (o C10; a wiki, p. 176–178, e o getWeaponDamage do CORE, com o unarmedAutomaticCalculation):
+// o dano é o da tabela do BODY de quem bate. Com um cyberbraço instalado, a Briga dá pelo menos 2d6; as Artes Marciais,
+// não ("Briga não ignora armadura. Com Cyberbraço, o dano mínimo é 2d6"; o CORE faz o mesmo). As duas são as armas
+// "Unarmed" e "Martial Arts" do catálogo, pelo tipo; a de Artes Marciais ignora metade do SP pela própria arma.
+export const TIPOS_DESARMADOS = ['unarmed', 'martialArts'];
+export const ehDesarmada = tipo => TIPOS_DESARMADOS.includes(tipo);
+// [BODY até, dano], na ordem da tabela da wiki.
+export const DANO_PELO_BODY = [[4, '1d6'], [6, '2d6'], [10, '3d6'], [Infinity, '4d6']];
+export function danoDesarmado({ body, tipo, cyberbraco = false }) {
+  const valor = Number(body) || 0;
+  const dano = DANO_PELO_BODY.find(([ate]) => valor <= ate)[1];
+  return tipo === 'unarmed' && cyberbraco && dano === '1d6' ? '2d6' : dano;
+}
+// A forma de Artes Marciais com que a arma ataca (Aikido, Judô, Karatê, Taekwondo: as perícias da família). A arma com a
+// família toda ("martial-arts", como a do CORE) usa a forma em que o personagem tem mais pontos; no empate, a primeira.
+// Outra perícia volta como está. pericias: a system.pericias do ator ({ id: { nivel, familia } }).
+export const FAMILIA_ARTES_MARCIAIS = 'martial-arts';
+export function formaDasArtesMarciais(pericia, pericias = {}) {
+  if (pericia !== FAMILIA_ARTES_MARCIAIS) return pericia;
+  const formas = Object.entries(pericias ?? {}).filter(([, p]) => p?.familia === FAMILIA_ARTES_MARCIAIS);
+  formas.sort(([, a], [, b]) => (Number(b.nivel) || 0) - (Number(a.nivel) || 0));
+  return formas[0]?.[0] ?? pericia;
+}
+// As Artes Marciais "exigem pelo menos 1 ponto na perícia" (a wiki): o nível, sem os bônus.
+export const PONTOS_MINIMOS_DAS_ARTES_MARCIAIS = 1;
+export const artesMarciaisLiberadas = nivel => (Number(nivel) || 0) >= PONTOS_MINIMOS_DAS_ARTES_MARCIAIS;
+
 // CORE 0.92.4 (_getHands e _getFreeHands): duas mãos + os efeitos, menos as armas empunhadas.
 // Wiki, Escudos (p. 183–184): cada escudo equipado ocupa uma mão, mesmo sem HP.
 export const maosLivres = ({ armas = [], bonus = 0, body = 0, escudos = 0 } = {}) =>

@@ -127,7 +127,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
-  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | falta | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); faltam os movimentos especiais, o cyberware que é arma e o upgrade que ataca | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
@@ -6367,6 +6367,69 @@ mutações pendentes (2026-10-19): o C24, que ficou para depois por causa da pri
     arredonda (C1) e a parte que custa a pilha toda (C2); no G4, a loja de graça (C3), sem a conferência do dinheiro (C4),
     a loja que não recebe (C5) e sem os botões de comprar (C6). As duas dos reforços também caíram: a P10 e a E3.
 - **Próximo:** o C24, parte 3 (a loja que compra: vender para ela, pela porcentagem de cada tipo).
+
+### Ciclo 131 (2026-10-19): o C10, parte 1: a Briga e as Artes Marciais com o dano pelo BODY (sessão Junin)
+
+Commit anterior: `a0abb71` (o ciclo 130, da sessão KouArt). O trabalho começou como o ciclo 129; a Codex publicou o 129 e a
+KouArt o 130 antes, e este passou a 131 (integrado com o código igual ao que passou nos portões). O C10 é o próximo item aberto do ROADMAP (a fase 3, combate); o pedido do
+usuário foi seguir o ROADMAP.
+- **A referência:**
+  - a wiki, `system-rules.js`, "Briga e artes marciais" (p. 176–178):
+    - a tabela do BODY: 1d6 até 4, 2d6 até 6 (ou até 4 com cyberbraço), 3d6 até 10 e 4d6 de 11 para cima;
+    - "Briga não ignora armadura. Com Cyberbraço, o dano mínimo é 2d6";
+    - "Artes marciais ignoram metade do SP, têm CDT 2 e exigem pelo menos 1 ponto na perícia";
+  - o CORE 0.92.4: o `getWeaponDamage` (com o `unarmedAutomaticCalculation`, ligado por padrão) calcula o dano das
+    armas `unarmed` e `martialArts` pelo BODY; o cyberbraço só conta no `unarmed`.
+- **Antes:** as armas "Unarmed" e "Martial Arts" do catálogo davam 1d6 fixo. A de Artes Marciais apontava para a família
+  toda (`martial-arts`), e o ataque saía com 0 na perícia.
+- **O que muda:**
+  - **`regras.mjs`:** `DANO_PELO_BODY`, `danoDesarmado` (o cyberbraço só na Briga), `ehDesarmada`,
+    `formaDasArtesMarciais` (a forma de mais pontos, quando a arma é da família toda) e `artesMarciaisLiberadas`;
+  - **`dados.mjs`:** o `danoPeloBody` da arma, ligado por padrão (o `unarmedAutomaticCalculation`);
+  - **`documentos.mjs`:**
+    - o `danoDaArma` do item: o dano da tabela, com a fundação de cyberbraço instalada;
+    - o `periciaDaArma`, que o ataque passa a usar;
+    - o `motivoSemAtaque`: as Artes Marciais sem ponto;
+  - **`combate.mjs`:** o ataque recusa as Artes Marciais sem ponto, com o aviso;
+  - **`rolagens.mjs`:** o dano rolado é o `danoDaArma`;
+  - **a tabela de armas da aba Combate e do capanga, o inventário, o Painel Tático e a ficha da mesa** mostram e mandam o
+    dano pelo BODY;
+  - **a ficha do item:**
+    - a caixa "Dano pelo BODY", com o dano de agora;
+    - no seletor da perícia, as Artes Marciais (a família e as formas do dono);
+    - no cabeçalho, a forma e o dano.
+  - O Ataque de Precisão e a Recuperação de Falhas já valiam em todo ataque de arma; com as duas armas, passam a valer
+    na Briga e nas Artes Marciais.
+- **Testes:**
+  - **G3:** o arquivo novo `tests/sistema/desarmado.test.mjs` (5 testes):
+    - a tabela igual à da wiki, lida do `system-rules.js`;
+    - as bordas da tabela e o cyberbraço só na Briga;
+    - a forma das Artes Marciais;
+    - o ponto mínimo;
+    - as duas armas do catálogo: a metade do SP e a CDT 2.
+  - **G4:** um passo novo, depois do agarrão:
+    - o dano com BODY 4, com e sem cyberbraço, e com BODY 8; a caixa desligada;
+    - a recusa das Artes Marciais sem ponto;
+    - as partes do ataque: a perícia (Briga, ou Artes Marciais com a forma Karatê) e o Ataque de Precisão;
+    - a tabela da aba Combate, o inventário, a ficha da mesa e a ficha do item;
+    - um soco com a Recuperação de Falhas (o 1 no d10 sem a falha crítica) contra o Capanga de Light Armorjack (15
+      contra SP 11: 4);
+    - um golpe de Artes Marciais pela metade do SP (15 contra 10, que conta 5: 10).
+- **Resultados:**
+  - antes de integrar os ciclos 129 (Codex) e 130 (KouArt): G1 89 arquivos, 0 erros; G2 0 erros; G3 189 de 189; G4 173 de 173;
+  - com o 129: G1 91 arquivos, 0 erros; G2 0 erros; G3 202 de 202; G4 182 de 182;
+  - com o 130: G1 91 arquivos, 0 erros; G2 0 erros; G3 203 de 203. O G4 roda depois do push, para o número não correr de novo, e vai num commit de registro;
+  - **mutações:** as 12 caíram, nenhuma rodada pulou o Foundry, e os arquivos voltaram (conferido pelo md5):
+    - no G3: a tabela diferente da wiki (B1, 187 de 189), o cyberbraço nas Artes Marciais (B2), a forma de menos pontos
+      (B3) e as Artes Marciais sem ponto (B4), 188 de 189 cada;
+    - no G4 (172 de 173 cada, sempre o passo novo): o dano sem o BODY (B5), a arma sem a forma do dono (B6), o ataque sem
+      a recusa (B7), o dano rolado do item (B8), a tabela da aba Combate (B9), a ficha do item (B10), a ficha da mesa (B11)
+      e o inventário (B12).
+- **O que apareceu na rodada:** a primeira rodada do G4 deu 172 de 173. O aviso da recusa, provocado de propósito, foi ao
+  console pelo `warn` original e derrubou a checagem global "nenhum aviso do sistema". O passo passou a só guardar a
+  mensagem, e a lição foi para o QUALITY_GATES.
+- **Fica para a parte 2:** os movimentos especiais de cada forma (p. 178–180).
+- **Próximo:** o C10, parte 2.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

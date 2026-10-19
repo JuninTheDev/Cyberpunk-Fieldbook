@@ -257,7 +257,7 @@ export function fichaParaAWiki(ator) {
     if ('instaladoEm' in x) linha.instaladoEm = x.instaladoEm || '';
     if (item.type === 'arma') {
       Object.assign(linha, {
-        dano: x.dano, cdt: x.cdt, pericia: PERICIAS.find(p => p.id === x.pericia)?.en ?? x.pericia, distancia: x.aDistancia, maos: x.maos,
+        dano: item.danoDaArma, cdt: x.cdt, pericia: PERICIAS.find(p => p.id === x.pericia)?.en ?? x.pericia, distancia: x.aDistancia, maos: x.maos,
         pente: x.aDistancia ? { atual: x.pente.value, max: x.pente.max } : null, municao: item.municaoCarregada?.name ?? '', carregada: x.carregada || ''
       });
       const veicular = item.getFlag(SISTEMA, 'armaVeicular');

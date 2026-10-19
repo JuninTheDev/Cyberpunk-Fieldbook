@@ -223,6 +223,8 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
       ocultavel: new fields.BooleanField({ initial: false }),
       tabelaDV: texto(),
       ignorarArmadura: inteiro(0, { min: 0, max: 100 }),
+      // Briga e Artes Marciais (o C10): o dano pela tabela do BODY do dono (o unarmedAutomaticCalculation do CORE).
+      danoPeloBody: new fields.BooleanField({ initial: true }),
       ignorarAbaixo: inteiro(0, { min: 0 }),
       // Slots de acessório (3 na arma de longo alcance que não é exótica).
       slots: inteiro(0, { min: 0 }),

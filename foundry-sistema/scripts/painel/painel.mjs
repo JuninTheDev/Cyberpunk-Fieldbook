@@ -423,7 +423,7 @@ export class PainelTatico {
       ${mostra('imagensDasArmas') ? `<img class="pt-arma-img" src="${esc(arma.img)}" alt="" data-acao="item" data-item="${arma.id}">` : ''}
       <div class="pt-arma-info">
         <button type="button" class="pt-arma-nome" data-acao="item" data-item="${arma.id}" data-tooltip="Abrir o item">${esc(arma.name)}</button>
-        <span class="pt-arma-sub">${esc(s.dano)}${s.cdt ? ` · CDT ${s.cdt}` : ''}${pente ? ` · <span class="${Number(pente.value) === 0 ? 'pt-sem-bala' : ''}" data-tooltip="${esc(municao || 'Sem munição carregada')}"><i class="fa-solid fa-box-archive"></i> ${pente.value}/${pente.max}</span>` : ''}${nomeDoModo ? ` · <b class="pt-modo-nome">${esc(nomeDoModo)}</b>` : ''}</span>
+        <span class="pt-arma-sub">${esc(arma.danoDaArma)}${s.cdt ? ` · CDT ${s.cdt}` : ''}${pente ? ` · <span class="${Number(pente.value) === 0 ? 'pt-sem-bala' : ''}" data-tooltip="${esc(municao || 'Sem munição carregada')}"><i class="fa-solid fa-box-archive"></i> ${pente.value}/${pente.max}</span>` : ''}${nomeDoModo ? ` · <b class="pt-modo-nome">${esc(nomeDoModo)}</b>` : ''}</span>
         ${pilulas.length ? `<span class="pt-pilulas">${pilulas.join('')}</span>` : ''}
       </div>
       <div class="pt-arma-botoes">

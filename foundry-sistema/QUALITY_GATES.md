@@ -297,6 +297,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **Integrar o master nesta branch** (ciclo 126): `git merge -X no-renames master`. Sem o `no-renames`, o git vê
   renomeações entre o CORE de referência (`fvtt-cyberpunk-red-core-dev`) e os arquivos do sistema e abre centenas de
   conflitos falsos de renomear e apagar. Depois, os portões inteiros: a wiki nova muda a referência dos testes.
+- **Um aviso esperado num passo do G4** (ciclo 131): o G4 confere que nenhum aviso do sistema chegou ao console. O passo
+  que provoca um aviso de propósito (uma recusa) troca o `ui.notifications.warn` por um que só guarda a mensagem, e o
+  devolve com `delete`, como o passo do ataque sem mestre. Chamar o original deixa o aviso no console, e a checagem
+  global falha.
 
 ## Build
 

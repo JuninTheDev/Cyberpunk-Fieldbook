@@ -65,7 +65,8 @@ export async function testar(ator, { rotulo, partes = [], modo, falar = true, sa
 // (perguntar), o modificador do mestre; fechada, null. paraAplicar: o dano rolado à parte (o botão "Dano" da ficha), com
 // os botões do mestre no cartão (combate.aplicarDanoDoCartao e rolarLesaoDoCartao); o do fluxo do ataque, não.
 export async function rolarDano(arma, { falar = false, modo, formula = null, multiplicador = 1, perguntar = false, aoAbrir = null, paraAplicar = false } = {}) {
-  const base = formula || arma.system.dano || '0';
+  // A Briga e as Artes Marciais rolam o dano pelo BODY do dono (o C10; ItemCPR.danoDaArma).
+  const base = formula || (arma.danoDaArma ?? arma.system.dano) || '0';
   let modificador = 0;
   if (perguntar) {
     const linhas = [`${arma.name}: ${base}${multiplicador > 1 ? ` × ${multiplicador} (autofogo)` : ''}`];

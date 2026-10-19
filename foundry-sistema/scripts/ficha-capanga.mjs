@@ -72,7 +72,7 @@ export class FichaCapanga extends FichaPersonagem {
 // O detalhe de cada item na lista: o dano e o pente da arma, a SP da armadura, os tiros da munição, a quantidade.
 function detalheDoItem(item) {
   const s = item.system;
-  if (item.type === 'arma') return [s.dano, s.pente.max ? `pente ${s.pente.value}/${s.pente.max}` : ''].filter(Boolean).join(' · ');
+  if (item.type === 'arma') return [item.danoDaArma, s.pente.max ? `pente ${s.pente.value}/${s.pente.max}` : ''].filter(Boolean).join(' · ');
   if (item.type === 'armadura') return ['cabeca', 'corpo'].filter(local => s.sp[local].max).map(local => `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${s.sp[local].value}/${s.sp[local].max}`).join(' · ');
   if (item.type === 'municao') return `${s.quantidade} tiros`;
   return s.quantidade > 1 ? `×${s.quantidade}` : '';

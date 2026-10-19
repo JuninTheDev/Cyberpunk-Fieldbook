@@ -5093,6 +5093,85 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // O C10, parte 1: a Briga e as Artes Marciais (as armas "Unarmed" e "Martial Arts" do catálogo) com o dano pelo BODY.
+    await r.passo('Briga e Artes Marciais (o C10; wiki, p. 176–178): o dano pela tabela do BODY (com cyberbraço, a Briga dá pelo menos 2d6; as Artes Marciais, não); as Artes Marciais atacam com a forma de mais pontos, são recusadas sem ponto e ignoram metade do SP; o Ataque de Precisão e a Recuperação de Falhas do Solo valem na Briga; a aba Combate e a ficha do item mostram o dano', async () => {
+      // Atiradora (BODY 8 depois do começo): DEX 7, Briga 3, Artes Marciais (Karatê) 3, Ataque de Precisão +1 e a
+      // Recuperação de Falhas. Capanga: DEX 5, sem Evasão, com a Light Armorjack (SP 11 no corpo).
+      // Briga: d10 1 (sem a falha crítica) → 7 + 3 + 1 + 1 = 12 contra 5 + d10 2 = 7. Dano 3d6 (6, 5, 4) = 15 contra SP 11: 4.
+      // Artes Marciais: d10 8 → 7 + 3 + 8 + 1 = 19 contra 7. Dano 15 contra a metade do SP (10 depois da ablação → 5): 10.
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const antes = { body: a.system.atributos.body.valor, hp: a.system.hp.value, briga: a.system.pericia('brawling').nivel, habilidades: { ...a.system.role.habilidades }, hpCapanga: capanga.system.hp.value };
+        // O aviso esperado (a recusa) fica só aqui: não vai para o console, como no passo do ataque sem mestre.
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        const criados = [];
+        const criar = async (ator, id, mudar = {}) => { const data = foundry.utils.deepClone(cat[id]); foundry.utils.mergeObject(data.system, mudar); const [item] = await ator.createEmbeddedDocuments('Item', [data]); criados.push(item); return item; };
+        try {
+          await a.update({ 'system.atributos.body.valor': 4, 'system.pericias.brawling.nivel': 3 });
+          const briga = await criar(a, 'core_weapons:unarmed');
+          const artes = await criar(a, 'core_weapons:martial-arts');
+          const tabela = { brigaBody4: briga.danoDaArma, artesBody4: artes.danoDaArma };
+          const braco = await criar(a, 'core_cyberware:cyberarm', { instalado: true, lado: 'braco-direito' });
+          Object.assign(tabela, { brigaComBraco: briga.danoDaArma, artesComBraco: artes.danoDaArma });
+          await a.deleteEmbeddedDocuments('Item', [braco.id]);
+          await a.update({ 'system.atributos.body.valor': 8 });
+          await a.update({ 'system.hp.value': a.system.hp.max });
+          Object.assign(tabela, { brigaBody8: briga.danoDaArma, artesBody8: artes.danoDaArma });
+          await briga.update({ 'system.danoPeloBody': false });
+          tabela.semOBody = briga.danoDaArma;
+          await briga.update({ 'system.danoPeloBody': true });
+          // Sem ponto em Artes Marciais, a arma não ataca.
+          const semPonto = await artes.atacar({ alvo: __token('Capanga') });
+          await a.update({ 'system.pericias.martial-arts-karate': { nivel: 3, familia: 'martial-arts', nome: 'Karatê' }, 'system.role.habilidades.Precision Attack': 3, 'system.role.habilidades.Fumble Recovery': 4 });
+          const partes = arma => arma.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor);
+          const soma = arma => arma.partesDoAtaque().partes.reduce((total, p) => total + p.valor, 0);
+          // A aba Combate e a ficha do item mostram o dano pelo BODY.
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('combate', 'primary');
+          await __esperar(() => a.sheet.element?.querySelector('.tab.combate tr[data-item-id="' + briga.id + '"]'));
+          const naTabela = [briga, artes].map(arma => a.sheet.element.querySelector('.tab.combate tr[data-item-id="' + arma.id + '"] td:nth-child(3)')?.textContent.trim());
+          a.sheet.changeTab('equipamento', 'primary');
+          const noInventario = a.sheet.element.querySelector('.tab.equipamento li[data-item-id="' + briga.id + '"] .detalhe')?.textContent.trim() ?? '';
+          const naFichaDaMesa = game.system.api.wiki.fichaParaAWiki(a).itens.filter(linha => [briga.id, artes.id].includes(linha.id)).map(linha => linha.dano);
+          await a.sheet.close({ animate: false });
+          await briga.sheet.render({ force: true });
+          await __esperar(() => briga.sheet.element?.querySelector('[name="system.danoPeloBody"]'));
+          const fichaDoItem = { caixa: briga.sheet.element.querySelector('[name="system.danoPeloBody"]').checked, nota: briga.sheet.element.querySelector('.dano-do-body')?.textContent.trim() };
+          await briga.sheet.close({ animate: false });
+          // Os golpes contra o Capanga de armadura.
+          const [colete] = await capanga.createEmbeddedDocuments('Item', [foundry.utils.mergeObject(foundry.utils.deepClone(cat['core_armor:light-armorjack-body']), { system: { equipada: true } })]);
+          criados.push(colete);
+          const golpe = async (arma, fila) => {
+            window.__fila = fila;
+            const r = await arma.atacar({ alvo: __token('Capanga') });
+            const [l] = r.linhas;
+            return { ataque: r.ataque, resultado: l.resultado, recebido: l.dano?.recebido ?? null, sp: colete.system.sp.corpo.value };
+          };
+          const soco = await golpe(briga, [[1, 10], [2, 10], [6, 6], [5, 6], [4, 6]]);
+          const chute = await golpe(artes, [[8, 10], [2, 10], [6, 6], [5, 6], [4, 6]]);
+          return { tabela, semPonto, avisos, partesBriga: partes(briga), partesArtes: partes(artes), somas: [soma(briga), soma(artes)], naTabela, noInventario, naFichaDaMesa, fichaDoItem, soco, chute };
+        } finally {
+          delete ui.notifications.warn;
+          for (const item of criados) if (item.parent?.items.get(item.id)) await item.delete();
+          await a.update({ 'system.atributos.body.valor': antes.body, 'system.pericias.brawling.nivel': antes.briga, 'system.pericias.martial-arts-karate': new foundry.data.operators.ForcedDeletion(), ...Object.fromEntries(['Precision Attack', 'Fumble Recovery'].map(chave => ['system.role.habilidades.' + chave, Object.hasOwn(antes.habilidades, chave) ? antes.habilidades[chave] : new foundry.data.operators.ForcedDeletion()])) });
+          await a.update({ 'system.hp.value': antes.hp });
+          await capanga.update({ 'system.hp.value': antes.hpCapanga });
+        }
+      })()`);
+      const t = info.tabela;
+      const ok = t.brigaBody4 === '1d6' && t.artesBody4 === '1d6' && t.brigaComBraco === '2d6' && t.artesComBraco === '1d6' && t.brigaBody8 === '3d6' && t.artesBody8 === '3d6' && t.semOBody === '1d6'
+        && info.semPonto === null && info.avisos.some(aviso => /Martial Arts: as Artes Marciais pedem pelo menos 1 ponto/.test(aviso))
+        && info.partesBriga.slice(0, 2).join() === 'DEX 7,Briga 3' && info.partesBriga.includes('Ataque de Precisão 1')
+        && info.partesArtes.slice(0, 2).join() === 'DEX 7,Artes Marciais (Karatê) 3' && info.partesArtes.includes('Ataque de Precisão 1')
+        && info.naTabela.join() === '3d6,3d6' && /^3d6/.test(info.noInventario) && info.naFichaDaMesa.join() === '3d6,3d6' && info.fichaDoItem.caixa && info.fichaDoItem.nota === 'Pelo BODY do dono: 3d6.'
+        && info.soco.ataque === info.somas[0] + 1 && info.soco.resultado === 'acertou' && info.soco.recebido === 4 && info.soco.sp === 10
+        && info.chute.ataque === info.somas[1] + 8 && info.chute.resultado === 'acertou' && info.chute.recebido === 10 && info.chute.sp === 9;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('Reflex Tuner (2077, wiki): no combate, o Capanga atingido ganha +1 para se esquivar pelo resto da rodada (nas partes da Evasão e na esquiva do golpe); o Desfazer do tiro tira o +1; na rodada seguinte, acaba', async () => {
       // O tiro da Atiradora no Capanga (REF 6: só aguenta): d10 9 → 8 + 4 + 9 = 21 contra a DV 16; dano 5d6 de 1 = 5
       // (o Capanga não tem armadura). O golpe de lâmina: DEX 7 + Arma Branca 3 + d10 2 = 12 contra a esquiva do Capanga,

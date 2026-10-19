@@ -9,7 +9,7 @@
       <tr data-item-id="{{id}}" class="{{#unless sistema.equipada}}guardada{{/unless}}">
         <td class="nome"><img src="{{img}}" alt=""> <a data-action="editarItem">{{nome}}</a>{{#if qualidade}} <small>{{qualidade}}</small>{{/if}}{{#if classe2077}} <small class="classe-2077">{{classe2077}}</small>{{/if}}{{#each avisos2077}} <small class="aviso-2077" data-tooltip="{{dica}}">{{texto}}</small>{{/each}}</td>
         <td class="num"{{#if dicaAtaque}} data-tooltip="{{dicaAtaque}}"{{/if}}>+{{ataque}}</td>
-        <td>{{sistema.dano}}</td>
+        <td>{{dano}}</td>
         <td class="num">{{sistema.cdt}}</td>
         <td>{{#if sistema.pente.max}}{{sistema.pente.value}}/{{sistema.pente.max}}{{#if municao}} <small>{{municao}}</small>{{/if}}{{else}}—{{/if}}</td>
         <td class="acoes"><div class="botoes">

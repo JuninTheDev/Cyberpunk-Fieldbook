@@ -41,7 +41,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           <li data-item-id="{{id}}" class="draggable {{#unless sistema.equipada}}guardada{{/unless}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{nome}}</a>
-            <span class="detalhe">{{sistema.dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if classe2077}} · {{classe2077}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
+            <span class="detalhe">{{dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if classe2077}} · {{classe2077}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
             <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>

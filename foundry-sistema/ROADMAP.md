@@ -163,7 +163,12 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 ### Fase 3: combate e itens que ainda não agem
 
 - [~] **C10. Briga e Artes Marciais:** em andamento (sessão Junin, 2026-10-19). O dano pelo BODY e os golpes das Artes Marciais, com o Ataque de Precisão e a
-  Recuperação de Falhas.
+  Recuperação de Falhas. Por partes, um ciclo cada:
+  - [x] a Briga e as Artes Marciais como ataques (as armas "Unarmed" e "Martial Arts" do CORE): o dano pela tabela do BODY,
+    o cyberbraço na Briga, a forma das Artes Marciais e o ponto mínimo, a metade do SP, o Ataque de Precisão e a
+    Recuperação de Falhas: ciclo 131;
+  - [ ] os movimentos especiais (a wiki, p. 178–180): a Recuperação, de todas as formas, e os dois de cada forma (Aikido,
+    Karatê, Judô e Taekwondo), com o requisito e o teste (DEX + Artes Marciais + 1d10 contra DEX + Evasão + 1d10 ou uma DV).
 - [ ] **C11. Cyberware e upgrade que atacam:**
   - o cyberware que é arma (Wolvers, Mantis Blade, Gorilla Arm, o lança-granadas embutido). No CORE, o cyberware é
     `attackable` e `loadable`;

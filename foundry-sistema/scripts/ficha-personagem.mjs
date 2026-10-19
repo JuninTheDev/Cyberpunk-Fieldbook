@@ -167,10 +167,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const linhaArma = arma => {
       const de2077 = acoesDe2077(arma);
       const { partes } = arma.partesDoAtaque(null);
-      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
+      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, dano: arma.danoDaArma, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
         classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
         dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo, soAutofogo: Boolean(arma.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
-        resumo: [arma.system.dano, `CDT ${arma.system.cdt}`, arma.system.pente.max ? `${arma.system.pente.value}/${arma.system.pente.max}` : ''].filter(Boolean).join(' // ') };
+        resumo: [arma.danoDaArma, `CDT ${arma.system.cdt}`, arma.system.pente.max ? `${arma.system.pente.value}/${arma.system.pente.max}` : ''].filter(Boolean).join(' // ') };
     };
     // A arma montada fica com o veículo, sem ocupar a lista das armas de mãos. A montagem órfã continua editável.
     const todasAsArmas = itens('arma');

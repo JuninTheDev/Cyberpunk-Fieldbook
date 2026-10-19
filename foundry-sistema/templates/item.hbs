@@ -23,6 +23,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if eh.arma}}
       <label class="celula"><span>Perícia</span><select name="system.pericia">{{selectOptions pericias selected=fonte.pericia}}</select></label>
       <label class="celula"><span>Dano</span><input type="text" name="system.dano" value="{{fonte.dano}}"></label>
+      {{#if desarmada}}<label class="caixa" data-tooltip="A tabela do BODY de quem bate (com cyberbraço, a Briga dá pelo menos 2d6)"><input type="checkbox" name="system.danoPeloBody" {{checked fonte.danoPeloBody}}> Dano pelo BODY</label>{{#if (and fonte.danoPeloBody danoDoBody)}}<p class="nota dano-do-body">Pelo BODY do dono: {{danoDoBody}}.</p>{{/if}}{{/if}}
       <label class="celula"><span>CDT</span><input type="number" name="system.cdt" value="{{fonte.cdt}}"></label>
       <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.bonusAtaque" value="{{fonte.bonusAtaque}}"></label>
       <label class="celula"><span>Pente</span><span class="par"><input type="number" name="system.pente.value" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" value="{{fonte.pente.max}}"></span></label>

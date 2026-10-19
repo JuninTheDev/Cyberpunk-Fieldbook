@@ -3,7 +3,7 @@
 import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { PERICIAS } from './gerado.mjs';
-import { FALHAS_DA_ARMA, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
+import { ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
@@ -15,17 +15,28 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const comAtual = (opcoes, atual) => (atual && !(atual in opcoes) ? { ...opcoes, [atual]: atual } : opcoes);
 // Os efeitos que se ligam à mão: os da droga e os do equipamento de ativação manual.
 const ligaAMao = item => item.type === 'droga' || (item.type === 'equipamento' && item.system.ativacao === 'manual');
+// As Artes Marciais no seletor da perícia da arma (o C10): a família toda (a forma com mais pontos, como a arma do CORE) e
+// as formas do dono.
+const opcoesDeArtesMarciais = ator => ({
+  [FAMILIA_ARTES_MARCIAIS]: 'Artes Marciais (a forma com mais pontos)',
+  ...Object.fromEntries(Object.entries(ator?.system.pericias ?? {}).filter(([, p]) => p.familia === FAMILIA_ARTES_MARCIAIS).map(([id, p]) => [id, `Artes Marciais (${p.nome})`]))
+});
 
 // O alto da ficha, como a maquete "Item Sheets" do usuário: o resumo (o que o item é) e as etiquetas (o estado dele; as
 // cheias são as que valem agora: equipado, vestido, instalado, ativo).
 function cabecalhoDoItem(item) {
   const s = item.system;
   const nomeDaPericia = id => PERICIAS.find(p => p.id === id)?.nome ?? id;
+  // A perícia com que a arma ataca: nas Artes Marciais, a forma do dono (o C10).
+  const periciaDaArma = () => {
+    const id = item.periciaDaArma;
+    return id === FAMILIA_ARTES_MARCIAIS ? 'Artes Marciais' : item.actor?.system.pericia?.(id)?.nome || nomeDaPericia(id);
+  };
   const cheia = texto => ({ texto, classe: 'cheia' });
   const vazada = texto => ({ texto, classe: '' });
   const sp = local => (s.sp?.[local]?.max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${s.sp[local].value}/${s.sp[local].max}` : '');
   const porTipo = {
-    arma: () => [[nomeDaPericia(s.pericia), s.aDistancia ? 'à distância' : 'corpo a corpo', s.instaladoEm && (item.instaladoNo?.name ?? 'Veículo ausente')], [QUALIDADES[s.qualidade] && vazada(QUALIDADES[s.qualidade]), s.instaladoEm ? cheia('MONTADA') : s.equipada && cheia('EQUIPADA')]],
+    arma: () => [[periciaDaArma(), ehDesarmada(s.tipo) && s.danoPeloBody && item.actor && `${item.danoDaArma} pelo BODY`, s.aDistancia ? 'à distância' : 'corpo a corpo', s.instaladoEm && (item.instaladoNo?.name ?? 'Veículo ausente')], [QUALIDADES[s.qualidade] && vazada(QUALIDADES[s.qualidade]), s.instaladoEm ? cheia('MONTADA') : s.equipada && cheia('EQUIPADA')]],
     armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE')]],
     municao: () => [[s.tipo, `${s.quantidade} tiros`], []],
     // A fundação: os slots usados; a opção: em qual fundação está (no cyberware de um ator).
@@ -116,7 +127,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       temQuantidade: tipo !== 'municao' && 'quantidade' in fonte,
       temUso: 'uso' in fonte,
       locaisLesao: comAtual({ corpo: 'Corpo', cabeca: 'Cabeça' }, tipo === 'lesao' && fonte.local),
-      pericias: comAtual(Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), tipo === 'arma' && fonte.pericia),
+      pericias: comAtual({ ...Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), ...(tipo === 'arma' ? opcoesDeArtesMarciais(item.actor) : {}) }, tipo === 'arma' && fonte.pericia),
+      // Briga e Artes Marciais (o C10): o "Dano pelo BODY" e o dano que ele dá agora.
+      desarmada: tipo === 'arma' && ehDesarmada(fonte.tipo), danoDoBody: tipo === 'arma' && item.actor ? item.danoDaArma : '',
       qualidades: comAtual(QUALIDADES, (tipo === 'arma' || tipo === 'cyberdeck') && fonte.qualidade),
       falhasDaArma: comAtual(Object.fromEntries(Object.entries(FALHAS_DA_ARMA).map(([id, efeito]) => [id, efeito.rotulo])), tipo === 'arma' && fonte.falhaCritica),
       tiposCyberware: comAtual(TIPOS_CYBERWARE, tipo === 'cyberware' && fonte.tipo),

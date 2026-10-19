@@ -222,6 +222,8 @@ async function perguntarDestinos(alvos, modo) {
 export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, destinos = null, perguntar = false } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
+  // As Artes Marciais pedem pelo menos 1 ponto numa forma (o C10).
+  if (arma.motivoSemAtaque) { ui.notifications.warn(`${arma.name}: ${arma.motivoSemAtaque}`); return null; }
   const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
   // O Black ICE e o demônio ficam na NET: a arma não os atinge (o dano neles vem dos programas e do Zap).
   const lista = marcados.filter(token => !ATORES_DA_NET.includes(token.actor.type));

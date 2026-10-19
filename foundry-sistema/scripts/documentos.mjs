@@ -4,7 +4,7 @@ import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from
 import { roleDaWiki } from './dados.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  AGARRAO, aplicarDano, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics, maosDaArma, maosLivres
 } from './regras.mjs';
@@ -751,13 +751,33 @@ export class ItemCPR extends Item {
     return this.type === 'arma' && this.system.carregada ? this.actor?.items.get(this.system.carregada) ?? null : null;
   }
 
+  // O dano da arma: o do item ou, na Briga e nas Artes Marciais com o "Dano pelo BODY" ligado (o padrão, como o CORE),
+  // o da tabela do BODY do dono (o C10; regras.danoDesarmado). O cyberbraço que conta é a fundação instalada.
+  get danoDaArma() {
+    const s = this.system;
+    const body = this.actor?.system.atributos?.body?.valor;
+    if (this.type !== 'arma' || !ehDesarmada(s.tipo) || !s.danoPeloBody || body === undefined) return s.dano;
+    const cyberbraco = this.actor.items.some(item => item.type === 'cyberware' && item.system.instalado && item.system.fundacional && item.system.tipo === 'cyberArm');
+    return danoDesarmado({ body, tipo: s.tipo, cyberbraco });
+  }
+  // A perícia com que a arma ataca: a dela ou, na arma de Artes Marciais da família toda, a forma do dono (o C10).
+  get periciaDaArma() {
+    return this.type === 'arma' ? formaDasArtesMarciais(this.system.pericia, this.actor?.system.pericias) : '';
+  }
+  // Por que a arma não ataca agora, ou '': as Artes Marciais pedem pelo menos 1 ponto numa forma (o C10).
+  get motivoSemAtaque() {
+    const ator = this.actor;
+    if (this.type !== 'arma' || this.system.tipo !== 'martialArts' || !ator?.system.pericia) return '';
+    return artesMarciaisLiberadas(ator.system.pericia(this.periciaDaArma).nivel) ? '' : 'as Artes Marciais pedem pelo menos 1 ponto numa forma (Aikido, Judô, Karatê ou Taekwondo).';
+  }
+
   // Atributo + perícia + bônus da arma + 1d10 (p. 172–176): REF para tiro, DEX para corpo a corpo. Autofogo, fogo
   // supressivo e a rajada Tech usam a perícia Autofogo. As lesões tiram dos tiros (olho) ou do corpo a corpo (músculo).
-  // A arma Smart de 2077 (o Kit) dá +1 nos ataques à distância.
+  // A arma Smart de 2077 (o Kit) dá +1 nos ataques à distância. As Artes Marciais usam a forma do dono (periciaDaArma).
   partesDoAtaque(modo = null) {
     const ator = this.actor;
     const atributo = this.system.aDistancia ? 'ref' : 'dex';
-    const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : this.system.pericia;
+    const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : this.periciaDaArma;
     const { pericia: p, partes } = ator.partesDaPericia(pericia, { situacionais: [] });
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
     if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
