@@ -26,3 +26,5 @@ servidor/servidor.local.json
 # Temporários das gravações (writeJsonAtomic) e cópias de conflito do OneDrive
 *.tmp
 * (2).*
+# Rascunhos do roteirista (as skills fechar-sessao e preparar-sessao): a trama futura não vai para o repositório público
+rascunhos-do-roteirista/

@@ -141,6 +141,17 @@ Arrancou o próprio conector neural com um alicate em 2070, quando Morana tomou 
 
 Investigava mortes ligadas a falhas de implante e encontrou referências a Morana. Deixou gravações dos sobreviventes e uma senha parcial de um dos servidores. Pode estar morto, preso pela Arasaka, escondido com os sobreviventes ou trabalhando sob coação; o relógio de Sato quer silenciá-lo.
 
+### Morty
+- **Quem é:** Parceiro do Ricky no consultório; o irmão dele, trazido de volta com um constructo
+- **Lado:** Ricky
+- **Onde:** Consultório do Ricky, Kabuki
+- **Aparece:** Sessão 1
+- **Situação:** Ativo
+- **Relações:** Irmão do Ricky (personagem jogador) e parceiro dele no consultório
+- **Para os jogadores:** O parceiro do Ricky no consultório de Kabuki.
+
+Morreu por culpa do Ricky. Para se redimir, Ricky conseguiu um constructo que substitui a mente de Morty e reviveu o corpo dele: o que move Morty é software, e Morana é um vírus de software. É ele quem depende de tecnologia para viver (a resposta do Ricky na sessão zero), e matá-lo é o limite do Ricky.
+
 ## Outros nomes
 
 ### Aya e Nami
@@ -228,6 +239,17 @@ Vende os horários do trem de carga da Arasaka do Ato 2, por comissão, para que
 - **Aparece:** Sessão 1, Cena 2
 
 Viu "o Mori" se arrastar para a sala refrigerada. Está na escala do depósito (H-03), com L. Rojas, do recebimento.
+
+### Dan
+- **Quem é:** Funcionário do armazém de Kabuki; o vigia da Arasaka no retransmissor RT-07 desde 2070
+- **Lado:** Arasaka
+- **Onde:** Armazém de Kabuki
+- **Aparece:** Sessão 1
+- **Situação:** Ativo
+- **Relações:** Avisou a Arasaka que a partição do RT-07 estava vazia
+- **Para os jogadores:** Funcionário do armazém de Kabuki que trocou tiros com o grupo e pagou 150eb para sair vivo.
+
+Criado na mesa, na Sessão 1. É o vigia que a Arasaka deixou no retransmissor em 2070 (a fundação, "A noite da Konpeki", item 7): atirou no grupo porque guardava o lugar até a equipe de Vega chegar. Odeia o grupo e tem medo de Morana. Conta o que sabe à Arasaka por obrigação, e a quem pagar.
 
 ### Ripperdoc da clínica clandestina
 - **Quem é:** O ripperdoc de Kabuki que atendeu Endo
@@ -336,14 +358,14 @@ Força opcional: não quer destruir nem vender o vírus, quer estudá-lo e cont�
 
 O salão de Wakako, protegido por gente que raramente precisa sacar uma arma. Aya e Nami atendem; Mina Kuroda observa.
 
-### Depósito médico de Kabuki
-- **Também:** Depósito de Kabuki
+### Armazém de Kabuki
+- **Também:** Depósito médico de Kabuki; Depósito de Kabuki
 - **Distrito:** Kabuki, Watson (território Tyger Claws)
 - **Aparece:** Sessão 1, Cenas 2 a 4
 - **Mapa:** kabuki-depot
 - **Mais:** [Sessão 1, Cena 2](sessao-01-a-maleta.md#cena-2-kabuki-e-o-deposito-medico)
 
-O depósito de mercadorias médicas onde a Arasaka escondeu a Chave, numa partição do retransmissor de firmware RT-07. Endo se escondeu na sala refrigerada, Kobo morreu entre as prateleiras e sete minutos das câmeras foram apagados.
+Um armazém comum de Kabuki, onde a Arasaka escondeu a Chave numa partição do retransmissor de firmware RT-07. O roteiro da Sessão 1 o descreve como um depósito de mercadorias médicas; a mesa o mudou. Dan, o vigia da Arasaka, trabalha aqui. Endo se escondeu na sala refrigerada, Kobo morreu entre as prateleiras e sete minutos das câmeras foram apagados.
 
 ### Clínica clandestina de Kabuki
 - **Distrito:** Kabuki, Watson
@@ -351,6 +373,13 @@ O depósito de mercadorias médicas onde a Arasaka escondeu a Chave, numa parti�
 - **Mapa:** kabuki-clinic
 
 O ripperdoc daqui viu Endo chegar com falhas no implante. O registro médico aponta sintomas idênticos aos de outro sobrevivente tratado anos antes.
+
+### Consultório do Ricky
+- **Distrito:** Kabuki, Watson
+- **Aparece:** Sessão 1 (o fim)
+- **Para os jogadores:** O consultório de ripperdoc do Ricky, num prédio de apartamentos caindo aos pedaços em Kabuki.
+
+O consultório do Ricky e de Morty, "não tão limpo quanto muitos pacientes esperariam" (o Lifepath do Ricky). Fixers locais mandam clientes para cá, e Wakako sabe o endereço. O prédio é cheio de vizinhos com implantes.
 
 ### Arasaka Industrial Docks
 - **Distrito:** Northside, Watson
