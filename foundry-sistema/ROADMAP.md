@@ -169,7 +169,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     Recuperação de Falhas: ciclo 131;
   - [ ] os movimentos especiais (a wiki, p. 178–180): a Recuperação, de todas as formas, e os dois de cada forma (Aikido,
     Karatê, Judô e Taekwondo), com o requisito e o teste (DEX + Artes Marciais + 1d10 contra DEX + Evasão + 1d10 ou uma DV).
-- [ ] **C11. Cyberware e upgrade que atacam:**
+- [~] **C11. Cyberware e upgrade que atacam:** em andamento (sessão KouArt, 2026-10-19).
   - o cyberware que é arma (Wolvers, Mantis Blade, Gorilla Arm, o lança-granadas embutido). No CORE, o cyberware é
     `attackable` e `loadable`;
   - a arma sob o cano e a baioneta (o upgrade que ataca);
