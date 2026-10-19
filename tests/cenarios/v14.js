@@ -5041,7 +5041,8 @@ module.exports = async ({ edge, servidores, r }) => {
           return { antes, armas, ficha, naWiki, golpe, comEmp, recarga, mudou, tirada, desligada, religada, apagada, avisos };
         } finally {
           delete ui.notifications.warn;
-          const sobras = a.items.filter(i => ['Wolvers', 'Popup Ranged Weapon', 'Medium Pistol (Basic)'].includes(i.name)).map(i => i.id);
+          // Só o que o passo criou (a Atiradora pode ter itens de mesmo nome de outros passos).
+          const sobras = a.items.filter(i => criados.some(c => c.id === i.id) || [wolvers.id, popup.id].includes(i.getFlag('${S}', 'armaDoCyberware'))).map(i => i.id);
           if (sobras.length) await a.deleteEmbeddedDocuments('Item', sobras);
           await a.update({ 'system.humanidade.value': humanidade });
           await capanga.update({ 'system.hp.value': hp });
@@ -5111,7 +5112,8 @@ module.exports = async ({ edge, servidores, r }) => {
           const carga = [lancador.system.pente.value, lancador.municaoCarregada?.name ?? '', municao.system.quantidade].join('|');
           return { armas, golpe, carga };
         } finally {
-          const sobras = a.items.filter(i => ['Mantis Blade', 'Projectile Launch System', 'Grenade (Armor-Piercing)'].includes(i.name) || [mantis.id, pls.id].includes(i.getFlag('${S}', 'armaDoCyberware'))).map(i => i.id);
+          // Só o que o passo criou (a Atiradora pode ter itens de mesmo nome de outros passos).
+          const sobras = a.items.filter(i => criados.some(c => c.id === i.id) || [mantis.id, pls.id].includes(i.getFlag('${S}', 'armaDoCyberware'))).map(i => i.id);
           if (sobras.length) await a.deleteEmbeddedDocuments('Item', sobras);
           await a.update({ 'system.humanidade.value': humanidade });
           await capanga.update({ 'system.hp.value': hp });
@@ -5121,6 +5123,75 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = armas.lamina === '3d6|2|1|excellent|0' && armas.lancador === 'rocketLauncher|8d6|1|rocket/grenade|DV Rocket Launcher'
         && /^DEX 7,Armas Brancas 3,Arma 1/.test(golpe.partes) && golpe.ataque === 19 && golpe.resultado === 'acertou' && golpe.recebido === 10
         && info.carga === '1|Grenade (Armor-Piercing)|1';
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('acessório que é arma (o C11, parte 3; o secondaryWeapon do CORE): a baioneta e o lança-granadas sob o cano instalados no fuzil equipado dão a arma deles na aba Combate ("Em Assault Rifle"), sem mãos a mais, fora do inventário e da wiki; a baioneta acerta o Capanga (DEX + Armas Brancas, 1d6); o lança-granadas recarrega; com o fuzil guardado, a baioneta não ataca; tirada, a arma dela sai; apagado o fuzil, a do lança-granadas sai, e a granada volta', async () => {
+      // Atiradora: DEX 7 + Armas Brancas 3. O golpe: d10 8 → 18 contra a esquiva do Capanga, DEX 5 + d10 2 = 7: acertou.
+      // Dano 1d6: 4 (o Capanga não tem armadura).
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const hp = capanga.system.hp.value;
+        const fuzil = foundry.utils.deepClone(cat['core_weapons:assault-rifle']);
+        fuzil.system.equipada = true;
+        const granadas = foundry.utils.deepClone(cat['core_ammo:grenade-armor-piercing']);
+        granadas.system.quantidade = 2;
+        const criados = await a.createEmbeddedDocuments('Item', [fuzil, foundry.utils.deepClone(cat['core_upgrades:bayonet']), foundry.utils.deepClone(cat['core_upgrades:grenade-launcher-underbarrel']), granadas]);
+        const rifle = criados.find(i => i.type === 'arma'), baioneta = criados.find(i => i.name === 'Bayonet'), lanca = criados.find(i => i.name === 'Grenade Launcher Underbarrel'), municao = criados.find(i => i.type === 'municao');
+        const armaDe = item => a.items.find(i => i.type === 'arma' && i.getFlag('${S}', 'armaDoUpgrade') === item.id);
+        const avisos = [];
+        ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+        try {
+          const maos = a.maosLivres;
+          const semArma = !armaDe(baioneta) && !armaDe(lanca);
+          await baioneta.update({ 'system.instaladoEm': rifle.id });
+          await lanca.update({ 'system.instaladoEm': rifle.id });
+          await esperar(() => armaDe(baioneta) && armaDe(lanca));
+          const lamina = armaDe(baioneta), tubo = armaDe(lanca);
+          const armas = { lamina: lamina && [lamina.name, lamina.system.dano, lamina.system.cdt, lamina.system.maos, lamina.system.instaladoEm === baioneta.id].join('|'),
+            tubo: tubo && [tubo.system.dano, tubo.system.pente.max, tubo.system.municoes.join()].join('|'), maos: a.maosLivres === maos, slots: rifle.slotsUsados };
+          await a.sheet.render({ force: true });
+          await esperar(() => a.sheet.element?.querySelector('table.lista.armas tr[data-item-id="' + lamina.id + '"]'));
+          const linha = a.sheet.element.querySelector('table.lista.armas tr[data-item-id="' + lamina.id + '"]');
+          const ficha = { marca: linha?.querySelector('.do-acessorio')?.textContent ?? '', guardada: Boolean(linha?.classList.contains('guardada')), noInventario: Boolean(a.sheet.element.querySelector('ol.itens li[data-item-id="' + lamina.id + '"]')) };
+          await a.sheet.close();
+          const naWiki = game.system.api.wiki.fichaParaAWiki(a).itens.filter(l => l.nome === 'Bayonet').map(l => l.tipo).join();
+          window.__fila = [[8, 10], [2, 10], [4, 6]];
+          const r = await lamina.atacar({ alvo: __token('Capanga') });
+          const [l] = r.linhas;
+          const golpe = { partes: lamina.partesDoAtaque().partes.map(p => p.rotulo + ' ' + p.valor).slice(0, 2).join(), ataque: r.ataque, resultado: l.resultado, recebido: l.dano?.recebido ?? null };
+          await capanga.update({ 'system.hp.value': hp });
+          await tubo.recarregar();
+          const carga = [tubo.system.pente.value, municao.system.quantidade].join('/');
+          // O fuzil guardado: a baioneta fica guardada e não ataca.
+          await rifle.update({ 'system.equipada': false });
+          const n = avisos.length;
+          const guardado = { resultado: (await lamina.atacar({ alvo: __token('Capanga') })) ?? null, aviso: avisos.slice(n).join(' ') };
+          await baioneta.update({ 'system.instaladoEm': '' });
+          await esperar(() => !armaDe(baioneta));
+          const tirada = Boolean(armaDe(baioneta));
+          const idDoTubo = tubo.id;
+          await rifle.delete();
+          await esperar(() => !a.items.get(idDoTubo) && municao.system.quantidade === 2);
+          const semFuzil = [Boolean(a.items.get(idDoTubo)), municao.system.quantidade].join('/');
+          return { semArma, armas, ficha, naWiki, golpe, carga, guardado, tirada, semFuzil, avisos };
+        } finally {
+          delete ui.notifications.warn;
+          // Só o que o passo criou: a Atiradora tem o Assault Rifle dos passos do tiro, que os de depois usam.
+          const sobras = a.items.filter(i => criados.some(c => c.id === i.id) || [baioneta.id, lanca.id].includes(i.getFlag('${S}', 'armaDoUpgrade'))).map(i => i.id);
+          if (sobras.length) await a.deleteEmbeddedDocuments('Item', sobras);
+          await capanga.update({ 'system.hp.value': hp });
+        }
+      })()`);
+      const { armas, ficha, golpe } = info;
+      const ok = info.semArma && armas.lamina === 'Bayonet|1d6|2|0|true' && armas.tubo === '6d6|1|grenade' && armas.maos && armas.slots === 3
+        && ficha.marca === 'Em Assault Rifle' && !ficha.guardada && !ficha.noInventario && info.naWiki === 'itemUpgrade'
+        && golpe.partes === 'DEX 7,Armas Brancas 3' && golpe.ataque === 18 && golpe.resultado === 'acertou' && golpe.recebido === 4
+        && info.carga === '1/1' && info.guardado.resultado === null && /Equipe Assault Rifle para usar Bayonet/.test(info.guardado.aviso)
+        && !info.tirada && info.semFuzil === 'false/2' && info.avisos.length === 1;
       return [ok, JSON.stringify(info)];
     });
 

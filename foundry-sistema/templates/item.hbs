@@ -34,7 +34,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
       <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
-      {{#if armaDoCyberware}}<div class="celula arma-do-cyberware"><span>Do cyberware</span><b>{{armaDoCyberware}}</b></div><p class="nota">Os dados desta arma vêm do cyberware: mude-os na ficha dele.</p>
+      {{#if armaDe}}<div class="celula arma-do-cyberware"><span>{{armaDe.rotulo}}</span><b>{{armaDe.nome}}</b></div><p class="nota">Os dados desta arma vêm de {{armaDe.nome}}: mude-os na ficha dele.</p>
       {{else if armaDeAtor}}<label class="celula"><span>Montada no veículo</span><select name="system.instaladoEm">{{selectOptions veiculosDaArma selected=fonte.instaladoEm}}</select></label>{{/if}}
       {{#unless armaMontada}}<label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>{{/unless}}
       {{#if armaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T); Ctrl + clique, direto">{{#if soAutofogo}}AUTOFOGO{{else}}ATACAR{{/if}}</button>{{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Encher o pente">RECARREGAR</button>{{/if}}</div>{{/if}}
@@ -71,18 +71,6 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{else}}<label class="celula"><span>Slots que ocupa</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>{{/if}}
       {{#if fundacoes}}<label class="celula"><span>Fundação</span><select name="system.instaladoEm">{{selectOptions fundacoes selected=fonte.instaladoEm}}</select></label>{{/if}}
       <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
-      {{!-- O cyberware que é arma (o C11): instalado, ataca pela aba Combate, com a arma ligada a ele. --}}
-      <label class="caixa"><input type="checkbox" name="system.arma.ataca" {{checked fonte.arma.ataca}}> É arma</label>
-      {{#if fonte.arma.ataca}}
-      <label class="celula"><span>Perícia da arma</span><select name="system.arma.pericia">{{selectOptions periciasDaArma selected=fonte.arma.pericia}}</select></label>
-      <label class="celula"><span>Dano</span><input type="text" name="system.arma.dano" value="{{fonte.arma.dano}}"></label>
-      <label class="celula"><span>CDT</span><input type="number" name="system.arma.cdt" value="{{fonte.arma.cdt}}" min="0"></label>
-      <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.arma.bonusAtaque" value="{{fonte.arma.bonusAtaque}}"></label>
-      <label class="celula"><span>Pente</span><input type="number" name="system.arma.pente" value="{{fonte.arma.pente}}" min="0"></label>
-      <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.arma.ignorarArmadura" value="{{fonte.arma.ignorarArmadura}}" min="0" max="100"></label>
-      <label class="caixa"><input type="checkbox" name="system.arma.aDistancia" {{checked fonte.arma.aDistancia}}> À distância</label>
-      {{#if armaNaFicha}}<p class="nota arma-na-ficha">Instalado: ataca pela aba Combate.</p>{{/if}}
-      {{/if}}
       {{#if rolaHumanidade}}<div class="acoes-do-item"><button type="button" class="acao" data-action="rolarHumanidade" data-tooltip="Rola a perda de Humanidade sem instalar; o mestre aplica pelo cartão">ROLAR HUMANIDADE</button></div>{{/if}}
       {{/if}}
       {{#if temQuantidade}}<label class="celula"><span>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}}</span><input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>{{/if}}
@@ -138,6 +126,20 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Assentos do veículo</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
       <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
       {{#if prepararArma}}{{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="prepararArmaVeicular">PREPARAR ARMA</button></div>{{/if}}{{/if}}
+      {{/if}}
+      {{!-- O cyberware e o acessório de arma que são arma (o C11): instalados, atacam pela aba Combate, com a arma ligada a eles. --}}
+      {{#if editaArma}}
+      <label class="caixa"><input type="checkbox" name="system.arma.ataca" {{checked fonte.arma.ataca}}> É arma</label>
+      {{#if fonte.arma.ataca}}
+      <label class="celula"><span>Perícia da arma</span><select name="system.arma.pericia">{{selectOptions periciasDaArma selected=fonte.arma.pericia}}</select></label>
+      <label class="celula"><span>Dano</span><input type="text" name="system.arma.dano" value="{{fonte.arma.dano}}"></label>
+      <label class="celula"><span>CDT</span><input type="number" name="system.arma.cdt" value="{{fonte.arma.cdt}}" min="0"></label>
+      <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.arma.bonusAtaque" value="{{fonte.arma.bonusAtaque}}"></label>
+      <label class="celula"><span>Pente</span><input type="number" name="system.arma.pente" value="{{fonte.arma.pente}}" min="0"></label>
+      <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.arma.ignorarArmadura" value="{{fonte.arma.ignorarArmadura}}" min="0" max="100"></label>
+      <label class="caixa"><input type="checkbox" name="system.arma.aDistancia" {{checked fonte.arma.aDistancia}}> À distância</label>
+      {{#if armaNaFicha}}<p class="nota arma-na-ficha">{{armaNaFicha}}</p>{{/if}}
+      {{/if}}
       {{/if}}
       {{#if eh.equipamento}}
       <label class="celula"><span>Os efeitos valem</span><select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>

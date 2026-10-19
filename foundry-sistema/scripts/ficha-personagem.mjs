@@ -19,7 +19,7 @@ import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
-import { ehArmaDoCyberware } from './armas-cyberware.mjs';
+import { armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -171,16 +171,17 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, dano: arma.danoDaArma, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
         classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
         dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo, soAutofogo: Boolean(arma.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
-        // A arma do cyberware instalado (o C11) está sempre pronta, sem ocupar as mãos.
-        doCyberware: ehArmaDoCyberware(arma), pronta: arma.system.equipada || ehArmaDoCyberware(arma),
+        // A arma do cyberware instalado (o C11) está sempre pronta, sem ocupar as mãos; a do acessório, com a arma onde ele
+        // está equipada.
+        doCyberware: ehArmaDoCyberware(arma), doAcessorio: armaDoAcessorio(arma)?.name ?? '', pronta: arma.system.equipada || armaMontadaPronta(arma),
         resumo: [arma.danoDaArma, `CDT ${arma.system.cdt}`, arma.system.pente.max ? `${arma.system.pente.value}/${arma.system.pente.max}` : ''].filter(Boolean).join(' // ') };
     };
     // A arma montada fica com o veículo, sem ocupar a lista das armas de mãos. A montagem órfã continua editável. A do
-    // cyberware fica na aba Combate, com as de mão, e fora do inventário (ela sai com o cyberware).
+    // cyberware e a do acessório ficam na aba Combate, com as de mão, e fora do inventário (elas saem com o item).
     const todasAsArmas = itens('arma');
     const armas = todasAsArmas.filter(arma => !arma.system.instaladoEm).map(linhaArma);
-    const armasDeCombate = [...armas, ...todasAsArmas.filter(ehArmaDoCyberware).map(linhaArma)];
-    const armasSemVeiculo = todasAsArmas.filter(arma => arma.system.instaladoEm && !ehArmaDoCyberware(arma) && arma.instaladoNo?.type !== 'veiculo').map(linhaArma);
+    const armasDeCombate = [...armas, ...todasAsArmas.filter(ehArmaMontadaEmItem).map(linhaArma)];
+    const armasSemVeiculo = todasAsArmas.filter(arma => arma.system.instaladoEm && !ehArmaMontadaEmItem(arma) && arma.instaladoNo?.type !== 'veiculo').map(linhaArma);
 
     // Perícias: as comuns sempre (nível 0 também) e as de família que o personagem tem. No painel geral, só as que têm
     // nível (das mais altas para as mais baixas) ou todas, no grupo de cada uma.

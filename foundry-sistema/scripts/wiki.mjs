@@ -6,7 +6,7 @@
 // - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra.
 // - O vínculo deste Foundry: a importação, a ficha da mesa e o ator apagado vão para a wiki com geracao: 14 (o vínculo do
 //   Foundry 14, ao lado do vínculo do 12, que o módulo cpr-2077 grava). Um não derruba o outro.
-import { ehArmaDoCyberware } from './armas-cyberware.mjs';
+import { ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
@@ -248,8 +248,9 @@ const nomeDaPericia = (id, propria) => PERICIAS.find(p => p.id === id)?.en ?? (F
 export function fichaParaAWiki(ator) {
   const s = ator.system;
   const usoDe = item => (['arma', 'armadura'].includes(item.type) ? (item.system.equipada ? 'equipped' : 'carried') : USO_NA_WIKI[item.system.uso] || '');
-  // A arma do cyberware (o C11) não vai: a wiki conhece o cyberware, e a arma volta dele quando ele está instalado.
-  const itens = ator.items.filter(item => TIPO_NA_WIKI[item.type] && !ehArmaDoCyberware(item)).map(item => {
+  // A arma do cyberware e a do acessório (o C11) não vão: a wiki conhece o item, e a arma volta dele quando ele está
+  // instalado.
+  const itens = ator.items.filter(item => TIPO_NA_WIKI[item.type] && !ehArmaMontadaEmItem(item)).map(item => {
     const x = item.system;
     // O id do Foundry distingue as cópias de mesmo nome e uid. A montagem volta por ele, não pela ordem da lista.
     const linha = { id: item.id, nome: item.name, tipo: TIPO_NA_WIKI[item.type], qtd: 'quantidade' in x ? x.quantidade : 1, uso: usoDe(item), uid: item.getFlag(SISTEMA, 'wikiUid') || '' };

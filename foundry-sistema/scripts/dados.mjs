@@ -12,6 +12,28 @@ const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
 const texto = (initial = '') => new fields.StringField({ required: true, blank: true, initial });
 const recurso = (value, max) => new fields.SchemaField({ value: inteiro(value), max: inteiro(max) });
+// A arma do cyberware e do acessório de arma (o C11; o isWeapon do cyberware e o secondaryWeapon do itemUpgrade do CORE,
+// com os campos do attackable e do loadable): montado, o item ataca pela arma ligada a ele (armas-cyberware.mjs), com
+// estes campos. pente: o tamanho do pente (0, sem munição).
+const armaMontada = () => new fields.SchemaField({
+  ataca: new fields.BooleanField({ initial: false }),
+  tipo: texto(),
+  pericia: texto('melee-weapon'),
+  dano: texto('1d6'),
+  cdt: inteiro(1, { min: 0 }),
+  aDistancia: new fields.BooleanField({ initial: false }),
+  pente: inteiro(0, { min: 0 }),
+  municoes: new fields.ArrayField(new fields.StringField()),
+  autofogo: inteiro(0, { min: 0 }),
+  supressivo: new fields.BooleanField({ initial: false }),
+  bonusAtaque: inteiro(0),
+  qualidade: texto('standard'),
+  falhaCritica: texto('jammed'),
+  ocultavel: new fields.BooleanField({ initial: false }),
+  tabelaDV: texto(),
+  ignorarArmadura: inteiro(0, { min: 0, max: 100 }),
+  ignorarAbaixo: inteiro(0, { min: 0 })
+});
 const fonte = () => new fields.SchemaField({ livro: texto(), pagina: inteiro(0) });
 const eletronica = (eletronico = false) => ({ eletronico: new fields.BooleanField({ initial: eletronico }), endurecido: new fields.BooleanField({ initial: false }) });
 // O extrato de um valor (o ledger do CORE): cada mudança com a data, a diferença, o saldo, o motivo e quem mudou.
@@ -296,27 +318,8 @@ export class DadosCyberware extends foundry.abstract.TypeDataModel {
       perdaHumanidade: new fields.SchemaField({ formula: texto('0'), media: inteiro(0, { min: 0 }), sofrida: inteiro(0, { min: 0 }) }),
       local: texto('mall'),
       instalado: new fields.BooleanField({ initial: false }),
-      // O cyberware que é arma (o C11; o isWeapon do CORE, com os campos do attackable e do loadable): instalado, ataca pela
-      // arma ligada a ele (armas-cyberware.mjs), com estes campos. pente: o tamanho do pente (0, sem munição).
-      arma: new fields.SchemaField({
-        ataca: new fields.BooleanField({ initial: false }),
-        tipo: texto(),
-        pericia: texto('melee-weapon'),
-        dano: texto('1d6'),
-        cdt: inteiro(1, { min: 0 }),
-        aDistancia: new fields.BooleanField({ initial: false }),
-        pente: inteiro(0, { min: 0 }),
-        municoes: new fields.ArrayField(new fields.StringField()),
-        autofogo: inteiro(0, { min: 0 }),
-        supressivo: new fields.BooleanField({ initial: false }),
-        bonusAtaque: inteiro(0),
-        qualidade: texto('standard'),
-        falhaCritica: texto('jammed'),
-        ocultavel: new fields.BooleanField({ initial: false }),
-        tabelaDV: texto(),
-        ignorarArmadura: inteiro(0, { min: 0, max: 100 }),
-        ignorarAbaixo: inteiro(0, { min: 0 })
-      }),
+      // O cyberware que é arma (o C11; o isWeapon do CORE): instalado, ataca pela arma ligada a ele.
+      arma: armaMontada(),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };
@@ -457,6 +460,9 @@ export class DadosUpgrade extends foundry.abstract.TypeDataModel {
       tamanho: inteiro(1, { min: 0 }),
       instaladoEm: texto(),
       modificadores: new fields.SchemaField({ pente: inteiro(0, { min: 0 }), ataque: inteiro(0), sdp: inteiro(0), assentos: inteiro(0) }),
+      // O acessório que é arma (o C11; o secondaryWeapon do CORE: a baioneta, a arma sob o cano): instalado numa arma, ataca
+      // pela arma ligada a ele, com a arma onde está equipada.
+      arma: armaMontada(),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };

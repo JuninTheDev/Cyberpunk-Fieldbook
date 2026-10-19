@@ -1,34 +1,43 @@
-// O cyberware que é arma (o C11; o isWeapon do cyberware do CORE 0.92.4, com os campos do attackable e do loadable): os
-// Wolvers, as Rippers, a Popup Ranged Weapon… O cyberware instalado num ator tem a sua arma, um item de arma do mesmo
-// ator ligado a ele (a flag armaDoCyberware e o instaladoEm, como a arma montada num veículo): ela ataca, recarrega e gasta
-// o pente como as outras (combate.mjs), não ocupa as mãos (o CORE só conta as armas empunhadas) e fica na aba Combate,
-// fora do inventário e da wiki (a wiki conhece o cyberware). Desinstalado ou apagado o cyberware, a arma sai, e as balas do
-// pente voltam para a munição delas. A arma do cyberware se muda na ficha do cyberware, e a dela acompanha.
+// O cyberware e o acessório que são arma (o C11; o CORE 0.92.4: o isWeapon do cyberware e o secondaryWeapon do
+// itemUpgrade, com os campos do attackable e do loadable; o getWeapons do ator diz quando cada um está pronto): os
+// Wolvers, a Popup Ranged Weapon, a baioneta, o lança-granadas sob o cano… O cyberware instalado e o acessório instalado
+// numa arma do ator têm a sua arma, um item de arma do mesmo ator ligado a ele (a flag armaDoCyberware ou armaDoUpgrade e
+// o instaladoEm, como a arma montada num veículo): ela ataca, recarrega e gasta o pente como as outras (combate.mjs), não
+// ocupa as mãos (o CORE só conta as armas empunhadas; a do acessório usa as da arma onde está) e fica na aba Combate, fora
+// do inventário e da wiki (a wiki conhece o cyberware e o acessório). A do cyberware está pronta com ele instalado; a do
+// acessório, com a arma onde ele está equipada. Tirado ou apagado o item (ou a arma do acessório), a arma sai, e as balas
+// do pente voltam para a munição delas. A arma se muda na ficha do item, e a dela acompanha.
 import { SISTEMA } from './config.mjs';
 
 export const FLAG_DA_ARMA = 'armaDoCyberware';
-// Os campos da arma que vêm do cyberware (o pente atual e a munição carregada são da arma).
+export const FLAG_DO_UPGRADE = 'armaDoUpgrade';
+const FLAG_DO_TIPO = { cyberware: FLAG_DA_ARMA, upgrade: FLAG_DO_UPGRADE };
+// Os campos da arma que vêm do item (o pente atual e a munição carregada são da arma).
 const CAMPOS = ['tipo', 'pericia', 'dano', 'cdt', 'aDistancia', 'municoes', 'autofogo', 'supressivo', 'bonusAtaque', 'qualidade', 'falhaCritica', 'ocultavel', 'tabelaDV', 'ignorarArmadura', 'ignorarAbaixo'];
 const iguais = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// A arma de um cyberware (nos documentos ou nos dados).
+// A arma de um cyberware, a de um acessório, e o id do item de onde ela vem (nos documentos ou nos dados).
 export const ehArmaDoCyberware = item => item?.type === 'arma' && Boolean(item.flags?.[SISTEMA]?.[FLAG_DA_ARMA]);
+export const ehArmaDoUpgrade = item => item?.type === 'arma' && Boolean(item.flags?.[SISTEMA]?.[FLAG_DO_UPGRADE]);
+export const ehArmaMontadaEmItem = item => ehArmaDoCyberware(item) || ehArmaDoUpgrade(item);
+export const idDaOrigem = arma => (arma?.type === 'arma' ? arma.flags?.[SISTEMA]?.[FLAG_DA_ARMA] || arma.flags?.[SISTEMA]?.[FLAG_DO_UPGRADE] || '' : '');
 
-// Só dados: a arma que o cyberware dá, ou null (o cyberware que não ataca).
-export function dadosDaArmaDoCyberware(cyberware) {
-  const arma = cyberware?.system?.arma;
-  if (cyberware?.type !== 'cyberware' || !arma?.ataca) return null;
-  const id = cyberware.id ?? cyberware._id ?? '';
+// Só dados: a arma que o cyberware ou o acessório dá, ou null (o que não ataca).
+export function dadosDaArmaMontada(item) {
+  const arma = item?.system?.arma;
+  const flag = FLAG_DO_TIPO[item?.type];
+  if (!flag || !arma?.ataca) return null;
+  const id = item.id ?? item._id ?? '';
   return {
-    name: cyberware.name, type: 'arma', img: arma.aDistancia ? 'icons/svg/target.svg' : 'icons/svg/sword.svg',
+    name: item.name, type: 'arma', img: arma.aDistancia ? 'icons/svg/target.svg' : 'icons/svg/sword.svg',
     system: { ...Object.fromEntries(CAMPOS.map(campo => [campo, structuredClone(arma[campo])])), pente: { value: 0, max: arma.pente }, maos: 0, slots: 0, equipada: false, instaladoEm: id },
-    flags: { [SISTEMA]: { [FLAG_DA_ARMA]: id } }
+    flags: { [SISTEMA]: { [flag]: id } }
   };
 }
 
-// O que muda na arma (o update) para ela ficar como a do cyberware. pente: o máximo da arma, sem o do carregador.
-export function mudancasDaArma({ name, system, pente = system.pente.max }, cyberware) {
-  const dados = dadosDaArmaDoCyberware(cyberware);
+// O que muda na arma (o update) para ela ficar como a do item. pente: o máximo da arma, sem o do carregador.
+export function mudancasDaArma({ name, system, pente = system.pente.max }, item) {
+  const dados = dadosDaArmaMontada(item);
   if (!dados) return {};
   const mudancas = {};
   if (name !== dados.name) mudancas.name = dados.name;
@@ -37,17 +46,29 @@ export function mudancasDaArma({ name, system, pente = system.pente.max }, cyber
   return mudancas;
 }
 
-// Por que a arma do cyberware não ataca nem recarrega agora ('' se pode): o ataque confere antes e depois da rolagem.
-export function motivoDaArmaDoCyberware(arma) {
-  const id = arma.getFlag(SISTEMA, FLAG_DA_ARMA);
-  const cyberware = arma.actor?.items.get(id);
-  if (cyberware?.type !== 'cyberware' || arma.system.instaladoEm !== id) return 'O cyberware desta arma não está na ficha.';
-  if (!cyberware.system.instalado) return `${cyberware.name} não está instalado.`;
-  if (cyberware.inoperante) return `${cyberware.name} está inoperante (EMP).`;
+// Onde o item dá a arma: o cyberware instalado; o acessório instalado numa arma do ator.
+const montado = item => (item?.type === 'cyberware' ? item.system.instalado : item?.type === 'upgrade' && item.actor?.items.get(item.system.instaladoEm)?.type === 'arma');
+// A arma onde está o acessório da arma (a arma do acessório), ou null.
+export const armaDoAcessorio = arma => (ehArmaDoUpgrade(arma) ? arma.instaladoNo?.instaladoNo ?? null : null);
+// A arma do cyberware está pronta sempre; a do acessório, com a arma onde ele está equipada (o equipped do CORE).
+export const armaMontadaPronta = arma => ehArmaDoCyberware(arma) || Boolean(armaDoAcessorio(arma)?.system.equipada);
+
+// Por que a arma do item não ataca nem recarrega agora ('' se pode): o ataque confere antes e depois da rolagem.
+export function motivoDaArmaMontada(arma) {
+  const id = idDaOrigem(arma);
+  const origem = arma.actor?.items.get(id);
+  if (!FLAG_DO_TIPO[origem?.type] || arma.system.instaladoEm !== id) return `O ${ehArmaDoUpgrade(arma) ? 'acessório' : 'cyberware'} desta arma não está na ficha.`;
+  if (origem.type === 'cyberware' && !origem.system.instalado) return `${origem.name} não está instalado.`;
+  if (origem.type === 'upgrade') {
+    const hospede = arma.actor.items.get(origem.system.instaladoEm);
+    if (hospede?.type !== 'arma') return `${origem.name} não está instalado numa arma.`;
+    if (!hospede.system.equipada) return `Equipe ${hospede.name} para usar ${origem.name}.`;
+  }
+  if (origem.inoperante) return `${origem.name} está inoperante (EMP).`;
   return '';
 }
 
-// Um de cada vez por ator: instalar e mudar o cyberware ao mesmo tempo não cria duas armas.
+// Um de cada vez por ator: instalar e mudar o item ao mesmo tempo não cria duas armas.
 const filas = new Map();
 function naFila(ator, tarefa) {
   const chave = ator.uuid;
@@ -65,29 +86,36 @@ async function tirarArma(arma) {
   await arma.delete();
 }
 
-// Deixa o ator com a arma do cyberware (pelo id) se ele está instalado e ataca, e sem ela se não: cria, acerta ou tira.
-export function sincronizarArmaDoCyberware(ator, id) {
+// Deixa o ator com a arma do item (pelo id) se ele está montado e ataca, e sem ela se não: cria, acerta ou tira.
+export function sincronizarArmaMontada(ator, id) {
   if (!ator?.isOwner) return null;
   return naFila(ator, async () => {
-    const cyberware = ator.items.get(id);
-    const dados = cyberware?.type === 'cyberware' && cyberware.system.instalado ? dadosDaArmaDoCyberware(cyberware) : null;
-    const armas = ator.items.filter(item => item.type === 'arma' && item.getFlag(SISTEMA, FLAG_DA_ARMA) === id);
+    const item = ator.items.get(id);
+    const dados = montado(item) ? dadosDaArmaMontada(item) : null;
+    const armas = ator.items.filter(arma => idDaOrigem(arma) === id);
     const fica = dados ? armas[0] ?? null : null;
     for (const arma of armas.filter(arma => arma !== fica)) await tirarArma(arma);
     if (!dados) return null;
     if (!fica) return (await ator.createEmbeddedDocuments('Item', [dados]))[0] ?? null;
-    const mudancas = mudancasDaArma({ name: fica.name, system: fica.system, pente: fica._source.system.pente.max }, cyberware);
+    const mudancas = mudancasDaArma({ name: fica.name, system: fica.system, pente: fica._source.system.pente.max }, item);
     if (Object.keys(mudancas).length) await fica.update(mudancas);
     return fica;
   });
 }
 
-// No cliente de quem mudou o cyberware: instalar, tirar, apagar, mudar a arma ou o nome.
+// No cliente de quem mudou o item: instalar, tirar, apagar, mudar a arma ou o nome; apagar a arma de um acessório.
 export function registrarArmasDoCyberware() {
-  const doCyberware = (item, usuario) => item.type === 'cyberware' && item.actor && usuario === game.user.id;
-  Hooks.on('createItem', (item, _opcoes, usuario) => { if (doCyberware(item, usuario)) sincronizarArmaDoCyberware(item.actor, item.id); });
+  const meu = (item, usuario) => Boolean(item.actor) && usuario === game.user.id;
+  const daOrigem = (item, usuario) => Boolean(FLAG_DO_TIPO[item.type]) && meu(item, usuario);
+  const sincronizar = item => sincronizarArmaMontada(item.actor, item.id);
+  Hooks.on('createItem', (item, _opcoes, usuario) => { if (daOrigem(item, usuario)) sincronizar(item); });
   Hooks.on('updateItem', (item, mudancas, _opcoes, usuario) => {
-    if (doCyberware(item, usuario) && ('name' in mudancas || ['instalado', 'arma'].some(campo => campo in (mudancas.system ?? {})))) sincronizarArmaDoCyberware(item.actor, item.id);
+    const campos = item.type === 'upgrade' ? ['instaladoEm', 'arma'] : ['instalado', 'arma'];
+    if (daOrigem(item, usuario) && ('name' in mudancas || campos.some(campo => campo in (mudancas.system ?? {})))) sincronizar(item);
   });
-  Hooks.on('deleteItem', (item, _opcoes, usuario) => { if (doCyberware(item, usuario)) sincronizarArmaDoCyberware(item.actor, item.id); });
+  Hooks.on('deleteItem', (item, _opcoes, usuario) => {
+    if (daOrigem(item, usuario)) sincronizar(item);
+    // A arma que sai leva a arma dos acessórios dela (eles ficam sem lugar).
+    if (item.type === 'arma' && meu(item, usuario)) for (const acessorio of item.actor.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id)) sincronizar(acessorio);
+  });
 }

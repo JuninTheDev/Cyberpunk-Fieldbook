@@ -5,7 +5,7 @@
 // (não uma janela): desenha de novo quando o ator, os itens, o combate, os alvos ou a conexão na NET mudam.
 import { ATRIBUTOS, CLASSES_2077, SIGLA, SISTEMA } from '../config.mjs';
 import { acoesDe2077 } from '../combate.mjs';
-import { ehArmaDoCyberware } from '../armas-cyberware.mjs';
+import { armaMontadaPronta } from '../armas-cyberware.mjs';
 import { FAMILIAS, PERICIAS } from '../gerado.mjs';
 import { FLAG_CONEXAO } from '../netrun/constantes.mjs';
 import { HABILIDADES_DE_INTERFACE, ROLAGENS_DE_ROLE } from '../regras.mjs';
@@ -373,9 +373,10 @@ export class PainelTatico {
   }
 
   // ---------------- Armas ----------------
-  // As de mão equipadas e as do cyberware instalado (o C11; a montada num veículo fica com ele, na ficha).
+  // As de mão equipadas, as do cyberware instalado e as dos acessórios da arma equipada (o C11; a montada num veículo fica
+  // com ele, na ficha).
   #armasEquipadas() {
-    return this.actor.items.filter(item => item.type === 'arma' && ((item.system.equipada && !item.system.instaladoEm) || ehArmaDoCyberware(item)));
+    return this.actor.items.filter(item => item.type === 'arma' && ((item.system.equipada && !item.system.instaladoEm) || armaMontadaPronta(item)));
   }
 
   #armas(mostra) {

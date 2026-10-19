@@ -127,7 +127,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
-  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); faltam os movimentos especiais e o upgrade que ataca | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); o acessório que é arma (a baioneta e as armas sob o cano) no 135; faltam os movimentos especiais | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
@@ -685,6 +685,15 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     Launch System para fora (e o sacar sem Ação); o BODY 11 da Gorilla Arm para empunhar e, com duas, para o Choke e o Slam;
     os 6 m e as duas rolagens de lesão crítica do Monowire; o Projectile Launch System com granada como lança-granadas (a
     DV e o dano da granada). O módulo da mesa também não as automatiza.
+
+- **O acessório que é arma** (ciclo 135; o secondaryWeapon do itemUpgrade e o getWeapons do ator do CORE 0.92.4):
+  - **pronta com a arma equipada:** a arma do acessório só ataca com a arma onde ele está equipada (o "equipped" do CORE; a
+    wiki: "com as duas mãos, a arma também dispara como lança-granadas"). Não ocupa mãos a mais;
+  - **o que a arma de baixo herda:** a descrição do CORE diz que a arma sob o cano "herda os modificadores da arma onde
+    está, como os outros acessórios e a qualidade", mas o código do CORE não faz isso (o ataque do acessório usa só os
+    números dele), e a wiki não fala disso. Aqui também não herda: o mestre soma, se quiser;
+  - **ocultar:** com o acessório, a arma não se esconde sob a roupa (o CORE e a wiki dizem); a arma não guarda isso: fica
+    com o mestre.
 
 ## Registro dos ciclos
 
@@ -6572,6 +6581,49 @@ Commit anterior: `de78fdaf` (o ciclo 133).
   (K1, no G3), a Mantis Blade sem o +1 (K2) e o Projectile Launch System só com foguete (K3), as duas no G3 e no Foundry.
 - **Limites:** as regras próprias do Kit ficam com o mestre (a parte 2b; ver as dúvidas).
 - **Próximo:** o C11, parte 2b (as regras próprias do Kit), ou a parte 3 (a arma sob o cano e a baioneta).
+
+### Ciclo 135 (2026-10-19): o C11, parte 3: o acessório que é arma (sessão KouArt)
+
+Commit anterior: `77976061` (o ciclo 134).
+
+- **A referência:** o CORE 0.92.4: o `itemUpgrade-datamodel.js` (o `modifiers.secondaryWeapon.configured`, com o
+  `attackable-schema.js` e o `loadable-schema.js`), o `weapons-schema.js` do ator (o `getWeapons`: a arma secundária do
+  acessório conta como equipada quando a arma onde ele está instalado está equipada) e os três acessórios dos packs
+  `core/upgrades` com a arma secundária: a Bayonet (arma branca leve, 1d6, ROF 2), o Grenade Launcher Underbarrel (6d6,
+  uma granada) e o Shotgun Underbarrel (5d6, dois cartuchos). A wiki (`system-catalog.js`, Acessórios de arma): "a arma
+  também serve de arma branca leve"; "com as duas mãos, a arma também dispara como lança-granadas, com 1 granada"; "como
+  espingarda, com 2 cartuchos".
+- **O que muda:**
+  - **o catálogo** (`build/conteudo.mjs`: o `armaMontada`, agora do cyberware e do acessório): os três trazem
+    `system.arma`; os outros 673 itens ficaram iguais;
+  - **`dados.mjs`:** o `armaMontada()`, o mesmo campo `arma` no cyberware e no upgrade;
+  - **`armas-cyberware.mjs`:** o acessório instalado numa arma do ator também tem a sua arma (a flag `armaDoUpgrade`),
+    pronta com a arma onde ele está equipada (`armaMontadaPronta`); o motivo do ataque recusado ("Equipe … para usar …");
+    a arma que sai leva a arma dos acessórios dela; os nomes ficaram gerais (`dadosDaArmaMontada`,
+    `sincronizarArmaMontada`, `idDaOrigem`);
+  - **`documentos.mjs`:** o `instaladoNo` da arma do acessório e o motivo dela;
+  - **as fichas:** a aba Combate com a arma do acessório ("Em <a arma>", guardada com a arma guardada), a lista do capanga,
+    a ficha do item (o "É arma" do acessório de arma; a arma diz de onde vem), o Painel Tático;
+  - **`wiki.mjs`:** a ficha que volta para a wiki sem ela;
+  - **`migracao.mjs`:** o passo 8 (a mesma conta, agora também do acessório).
+- **Testes:**
+  - **G3:** em `armas-cyberware.test.mjs`, os três acessórios do catálogo (e nenhum outro), a arma da baioneta (a flag do
+    acessório) e o passo 8;
+  - **G4:** um passo novo: a baioneta e o lança-granadas sob o cano no fuzil equipado da Atiradora (a aba Combate, as mãos,
+    os slots, o inventário, a wiki, o golpe de 1d6, a recarga, o fuzil guardado, a baioneta tirada e o fuzil apagado).
+    Na primeira rodada, o passo passou, mas oito dos seguintes caíram: a limpeza apagava pelo nome, e a Atiradora já tinha
+    um Assault Rifle dos passos do tiro. A limpeza agora apaga só o que o passo criou (e a arma ligada a ele), também nos
+    passos dos ciclos 133 e 134.
+- **Portões:** G1, 93 arquivos sem erro; G2, nenhum erro; G3, 212/212; G4 completo, 191/191, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido): no G3, o acessório que não dá
+  arma (U1) e a migração só do cyberware (U2); no Foundry, o acessório instalado que não conta como montado (U3), a arma
+  de baixo que ataca com a arma guardada (U4), a arma apagada que deixa a dos acessórios (U5), a arma do acessório sempre
+  guardada (U6), instalar o acessório sem chegar à arma dele (U7) e o `instaladoNo` que não acha o acessório (U8).
+- **Limites:** a arma de baixo não herda a qualidade nem os acessórios da arma onde está (ver as dúvidas); ocultar a arma
+  com o acessório fica com o mestre.
+- **Próximo:** o C11, parte 2b (as regras próprias do Kit: pede a decisão do usuário, ver as dúvidas) ou a parte 4 (os
+  acessórios: o limite de slots, os plugs do Smartgun Link e o pente acima do máximo).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

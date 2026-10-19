@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
-import { dadosDaArmaDoCyberware, ehArmaDoCyberware, FLAG_DA_ARMA, mudancasDaArma } from '../../foundry-sistema/scripts/armas-cyberware.mjs';
+import { dadosDaArmaMontada, ehArmaDoCyberware, ehArmaDoUpgrade, ehArmaMontadaEmItem, FLAG_DA_ARMA, FLAG_DO_UPGRADE, idDaOrigem, mudancasDaArma } from '../../foundry-sistema/scripts/armas-cyberware.mjs';
 import { migrarDados, PASSOS } from '../../foundry-sistema/scripts/migracao.mjs';
 
 const SISTEMA = 'cpr-fieldbook';
@@ -52,7 +52,7 @@ test('Catálogo: os quatro do Kit que são arma (a Gorilla Arm e a Mantis Blade 
 
 test('A arma do cyberware: os dados de arma dele, sem mãos, montada nele (o instaladoEm e a flag); o que não ataca não tem', () => {
   const wolvers = doCatalogo('core_cyberware:wolvers');
-  const arma = dadosDaArmaDoCyberware(wolvers);
+  const arma = dadosDaArmaMontada(wolvers);
   assert.equal(arma.name, 'Wolvers');
   assert.equal(arma.type, 'arma');
   assert.equal(arma.img, 'icons/svg/sword.svg');
@@ -62,19 +62,40 @@ test('A arma do cyberware: os dados de arma dele, sem mãos, montada nele (o ins
   assert.equal(arma.flags[SISTEMA][FLAG_DA_ARMA], 'cyber1');
   assert.ok(ehArmaDoCyberware(arma));
   assert.equal(ehArmaDoCyberware(doCatalogo('core_weapons:heavy-pistol')), false);
-  const pistola = dadosDaArmaDoCyberware(doCatalogo('core_cyberware:popup-ranged-weapon', 'cyber2'));
+  const pistola = dadosDaArmaMontada(doCatalogo('core_cyberware:popup-ranged-weapon', 'cyber2'));
   assert.equal(pistola.img, 'icons/svg/target.svg');
   assert.deepEqual(pistola.system.pente, { value: 0, max: 12 });
   // A lista de munições é uma cópia: mudar a da arma não muda a do cyberware.
   pistola.system.municoes.push('heavyPistol');
   assert.deepEqual(catalogo['core_cyberware:popup-ranged-weapon'].system.arma.municoes, ['medPistol']);
-  assert.equal(dadosDaArmaDoCyberware(doCatalogo('core_cyberware:cyberarm')), null);
-  assert.equal(dadosDaArmaDoCyberware(doCatalogo('core_weapons:heavy-pistol')), null);
+  assert.equal(dadosDaArmaMontada(doCatalogo('core_cyberware:cyberarm')), null);
+  assert.equal(dadosDaArmaMontada(doCatalogo('core_weapons:heavy-pistol')), null);
+});
+
+// CORE 0.92.4, core/upgrades: os três com modifiers.secondaryWeapon.configured; a wiki (system-catalog.js, Acessórios de
+// arma): "a arma também serve de arma branca leve"; "também dispara como lança-granadas, com 1 granada"; "como espingarda,
+// com 2 cartuchos".
+test('O acessório que é arma: a baioneta, o lança-granadas e a espingarda sob o cano trazem a arma; montado na arma, dá a arma dele, com a flag do acessório', () => {
+  const comArma = Object.entries(catalogo).filter(([, item]) => item.type === 'upgrade' && item.system.arma?.ataca).map(([id]) => id).sort();
+  assert.deepEqual(comArma, ['core_upgrades:bayonet', 'core_upgrades:grenade-launcher-underbarrel', 'core_upgrades:shotgun-underbarrel']);
+  assert.equal(resumo('core_upgrades:bayonet'), 'lightMelee melee-weapon 1d6 2 false 0 50 false');
+  assert.equal(resumo('core_upgrades:grenade-launcher-underbarrel'), 'grenadeLauncher heavy-weapons 6d6 1 true 1 0 false');
+  assert.deepEqual(catalogo['core_upgrades:grenade-launcher-underbarrel'].system.arma.municoes, ['grenade']);
+  assert.equal(resumo('core_upgrades:shotgun-underbarrel'), 'shotgun shoulder-arms 5d6 1 true 2 0 false');
+  assert.deepEqual(catalogo['core_upgrades:shotgun-underbarrel'].system.arma.municoes, ['shotgunShell', 'shotgunSlug']);
+  assert.equal(catalogo['core_upgrades:smartgun-link']?.system.arma, undefined);
+  const baioneta = dadosDaArmaMontada(doCatalogo('core_upgrades:bayonet', 'acessorio1'));
+  assert.equal(baioneta.name, 'Bayonet');
+  assert.deepEqual([baioneta.system.dano, baioneta.system.maos, baioneta.system.instaladoEm], ['1d6', 0, 'acessorio1']);
+  assert.deepEqual(baioneta.flags[SISTEMA], { [FLAG_DO_UPGRADE]: 'acessorio1' });
+  assert.ok(ehArmaDoUpgrade(baioneta) && ehArmaMontadaEmItem(baioneta) && !ehArmaDoCyberware(baioneta));
+  assert.equal(idDaOrigem(baioneta), 'acessorio1');
+  assert.equal(idDaOrigem(dadosDaArmaMontada(doCatalogo('core_cyberware:wolvers', 'cyber1'))), 'cyber1');
 });
 
 test('A arma acompanha o cyberware: o nome, o dano e o pente mudam nela; o pente atual e a munição carregada ficam', () => {
   const wolvers = doCatalogo('core_cyberware:wolvers');
-  const arma = dadosDaArmaDoCyberware(wolvers);
+  const arma = dadosDaArmaMontada(wolvers);
   assert.deepEqual(mudancasDaArma(arma, wolvers), {});
   wolvers.name = 'Wolvers do Lado Esquerdo';
   wolvers.system.arma.dano = '4d6';
@@ -112,4 +133,15 @@ test('Migração (passo 7): no mundo que já passou do 6, o cyberware do Kit gan
   assert.equal(novo.items[0].flags[SISTEMA].armaMigrada, true);
   assert.deepEqual(novo.items[1].system.arma, { ataca: false, dano: '1d6' });
   assert.deepEqual(migrarDados(dados, { documento: 'Actor', passos: [seis, sete], catalogo }), novo);
+});
+
+test('Migração (passo 8): no mundo que já passou do 7, o acessório que é arma ganha a arma; o outro acessório fica', () => {
+  const oito = PASSOS.find(p => p.versao === 8);
+  const semArma = id => { const item = doCatalogo(id); item.system.arma = { ataca: false, dano: '1d6' }; return item; };
+  const dados = { items: [semArma('core_upgrades:shotgun-underbarrel'), semArma('core_upgrades:smartgun-link')] };
+  const novo = migrarDados(dados, { documento: 'Actor', passos: [oito], catalogo });
+  assert.deepEqual(novo.items[0].system.arma, catalogo['core_upgrades:shotgun-underbarrel'].system.arma);
+  assert.equal(novo.items[0].flags[SISTEMA].armaMigrada, true);
+  assert.deepEqual(novo.items[1].system.arma, { ataca: false, dano: '1d6' });
+  assert.deepEqual(migrarDados(novo, { documento: 'Actor', passos: [oito], catalogo }), novo);
 });

@@ -7,7 +7,7 @@ import { ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeD
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
-import { ehArmaDoCyberware } from './armas-cyberware.mjs';
+import { ehArmaDoUpgrade, ehArmaMontadaEmItem, idDaOrigem } from './armas-cyberware.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -112,10 +112,12 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       // A arma de um personagem ataca e recarrega pela ficha dela; a armadura mostra o SP de cada local em caixas.
       armaDeAtor: tipo === 'arma' && Boolean(item.actor),
       armaMontada: tipo === 'arma' && Boolean(fonte.instaladoEm), veiculosDaArma, soAutofogo: Boolean(item.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
-      // O cyberware que é arma (o C11): a arma diz de que cyberware é; o cyberware, se a arma dele está na ficha.
-      armaDoCyberware: ehArmaDoCyberware(item) ? item.instaladoNo?.name ?? 'Cyberware ausente' : '',
-      periciasDaArma: tipo === 'cyberware' ? comAtual(Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), fonte.arma?.pericia) : null,
-      armaNaFicha: tipo === 'cyberware' && Boolean(item.actor?.items.some(outro => ehArmaDoCyberware(outro) && outro.system.instaladoEm === item.id)),
+      // O cyberware e o acessório de arma que são arma (o C11): a arma diz de onde vem; o item, se a arma dele está na ficha.
+      armaDe: ehArmaMontadaEmItem(item) ? { rotulo: ehArmaDoUpgrade(item) ? 'Do acessório' : 'Do cyberware', nome: item.instaladoNo?.name ?? 'Item ausente' } : null,
+      editaArma: tipo === 'cyberware' || (tipo === 'upgrade' && fonte.alvo === 'arma'),
+      periciasDaArma: ['cyberware', 'upgrade'].includes(tipo) ? comAtual(Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), fonte.arma?.pericia) : null,
+      armaNaFicha: ['cyberware', 'upgrade'].includes(tipo) && item.actor?.items.some(outro => idDaOrigem(outro) === item.id)
+        ? (tipo === 'upgrade' ? 'Na arma: ataca pela aba Combate, com ela equipada.' : 'Instalado: ataca pela aba Combate.') : '',
       prepararArma: tipo === 'upgrade' && item.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, item.getFlag(SISTEMA, 'catalogo')),
       janelas: tipo === 'veiculo' ? Object.entries(fonte.janelas).map(([id, janela]) => ({ id, ...janela })) : [],
       drogaDeAtor: tipo === 'droga' && Boolean(item.actor) ? { sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')) } : null,
