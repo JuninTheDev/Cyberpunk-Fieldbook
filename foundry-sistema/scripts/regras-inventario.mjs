@@ -1,5 +1,21 @@
 // Wiki, Equipamento: Medscanner e Techscanner dão +2 e não acumulam com outro do mesmo tipo.
 // O catálogo identifica também o scanner instalado num cyberbraço, mesmo que alguém o renomeie.
+import { EMPILHAVEIS, parteValida } from './regras.mjs';
+
+// CORE 0.92.4, CPRActorSheet._splitItem: duas pilhas, com uma parte entre 1 e total - 1.
+// A quantidade é de unidades (balas ou doses), mesmo quando o preço é por lote.
+export function divisaoDaPilha(tipo, total, parte) {
+  if (!EMPILHAVEIS.includes(tipo) || !Number.isSafeInteger(total) || !Number.isSafeInteger(parte) || !parteValida(parte, total)) return null;
+  return { restante: total - parte, nova: parte };
+}
+
+// CORE, CPRActor.automaticallyStackItems. Decisão do usuário no C17: reproduzir literalmente, inclusive a condição
+// invertida dos upgrades: equipamento/roupa só juntam se a pilha encontrada já tem upgrades. Outros dados não entram.
+export function mesmaPilha(origem, destino) {
+  return EMPILHAVEIS.includes(origem.type) && origem.type === destino.type && origem.name === destino.name
+    && (!['equipamento', 'roupa'].includes(origem.type) || destino.upgrades > 0);
+}
+
 export function tipoDeScanner({ name = '', catalogo = '', type }) {
   if (!['equipamento', 'cyberware'].includes(type)) return null;
   const id = catalogo ? catalogo.match(/^core_(?:gear|cyberware):(medscanner|techscanner)$/)?.[1] : name.toLowerCase();

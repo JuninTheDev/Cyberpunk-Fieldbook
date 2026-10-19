@@ -8,13 +8,15 @@ import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, j
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { levarItem } from './conteiner.mjs';
+import { perguntarDivisao } from './pilhas.mjs';
+import { divisaoDaPilha } from './regras-inventario.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 
@@ -49,7 +51,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (origem && !this.actor.isOwner) return null;
     const empunhado = this.actor.uuid !== item.parent?.uuid && item.system.equipada
       && (item.type === 'arma' || (item.type === 'armadura' && item.system.escudo));
-    const criado = origem ? await levarItem(item, this.actor) : await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
+    const copiarPilha = !item.parent && EMPILHAVEIS.includes(item.type);
+    const criado = origem || copiarPilha ? await levarItem(item, this.actor, { manterNaOrigem: copiarPilha }) : await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
     if (criado && empunhado) await criado.update({ 'system.equipada': true });
     return criado;
   }
@@ -112,6 +115,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       mudarUso: FichaPersonagem.#mudarUso,
       portaDoDeck: FichaPersonagem.#portaDoDeck,
       mudarQuantidade: FichaPersonagem.#mudarQuantidade,
+      dividirPilha: FichaPersonagem.#dividirPilha,
       usarItem: FichaPersonagem.#usarItem,
       usarDroga: FichaPersonagem.#usarDroga,
       acabouDroga: FichaPersonagem.#acabouDroga,
@@ -199,6 +203,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Inventário: um detalhe de cada tipo e o uso (o botão passa por equipado, carregando e guardado).
     // A quantidade fica no controle com − e + (as maquetes do usuário), e não mais no detalhe; na droga, as doses.
     const linhaDoInventario = (item, ...detalhes) => ({
+      divisivel: Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)),
       quantidade: 'quantidade' in item.system ? item.system.quantidade : null, unidade: item.type === 'droga' ? 'Doses' : 'Quantidade',
       id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', guardado: item.system.uso === 'guardado',
       usoNome: USOS[item.system.uso] ?? item.system.uso,
@@ -601,6 +606,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!item) return null;
     return item.update({ 'system.quantidade': item.system.quantidade + Number(alvo.dataset.delta) });
   }
+  static #dividirPilha(evento, alvo) { return perguntarDivisao(this.#item(alvo)); }
   static #instalar(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return null;

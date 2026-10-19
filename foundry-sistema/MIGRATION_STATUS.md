@@ -30,13 +30,14 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE e wiki | mãos livres (C12): impedir nova equipagem sem mãos, com os efeitos, BODY 8+ na arma branca e os escudos | portado no ciclo 87 (sessão Codex; a decisão nas dúvidas) |
 | CORE e wiki | falha crítica da arma (C13): os quatro efeitos configuráveis na arma ruim, informados no cartão do ataque | portado no ciclo 88 (sessão Codex) |
 | CORE e wiki | usar droga com prazo, secundário e vício; scanners que não acumulam; lanterna e sinalizador no token (C16) | portado no ciclo 124 (sessão Codex), com os 100 m confirmados pelo usuário |
+| CORE | juntar itens ao soltar e dividir pilhas de munição, equipamento, roupa e droga (C17) | portado no ciclo 129 (sessão Codex), com o critério literal do CORE confirmado pelo usuário |
 | CORE | Humanidade máxima pelo cyberware | portado no ciclo 1 (10 × EMP, −2 por peça com perda, −4 por borgware) |
 | CORE | Consciência de Combate do Solo | portada no ciclo 3, como a wiki descreve (o Ponto Fraco e a Deflexão uma vez por rodada; ver as dúvidas) |
 | CORE | os bônus de Role nas perícias (o Moto do Nomad) | portado no ciclo 23. Com as Roles do RED (ciclo 33), saíram a especialização do Face e os situacionais de 2077 (o Investigator, o Netrunner) |
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | portadas nos ciclos 34 e 35, com as Roles do RED: pelo item de Role do CORE e pelo texto da wiki (a Barganha é a pechincha do Fixer; o Backup do Lawman, pela wiki). A Interface do Netrunner é o C5 |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
-| CORE | consertar a armadura; rolar lesão à mão; macros na barra; juntar itens iguais | falta |
+| CORE | consertar a armadura; rolar lesão à mão; macros na barra | falta |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
 | CORE | contêiner (loja, saque, esconderijo) | falta |
@@ -144,6 +145,20 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
+
+- **C17, pilhas (2026-10-19, sessão Codex; respondida):** o CORE 0.92.4 junta pelo tipo e nome
+  (`modules/actor/cpr-actor.js`, `automaticallyStackItems`, e a versão de `cpr-container.js`), sem comparar a variedade
+  da munição, efeitos ou configurações. A condição de upgrades parece invertida; `_splitItem` avisa sobre upgrades,
+  mas continua dividindo. A wiki não define esse algoritmo. Pergunta enviada: preservar variantes distintas e impedir
+  juntar ou dividir itens com conteúdo instalado ou efeito temporário em andamento, seguindo o CORE na soma e divisão?
+  **Decisão do usuário:** "Reproduzir literalmente o comportamento do CORE." Assim, tipo e nome são os critérios;
+  equipamento e roupa só juntam se o destino tem upgrades (inclusive a condição invertida do CORE). A divisão copia
+  sistema e efeitos, inclusive ligados, não os estados em flags; o catálogo do sistema é preservado para identificar
+  as regras da cópia. Conteúdo instalado não é duplicado na divisão. Ao juntar a raiz com upgrades, ficam os upgrades
+  do destino, e a árvore da origem é removida, como no CORE (`cpr-actor-sheet.js:1535–1564`). As quantidades continuam
+  inteiras, como no modelo do CORE.
+  O aviso de tirar upgrades também é preservado e não impede a divisão, inclusive em munição e droga, que no CORE
+  não têm `installedUpgrades` (`undefined !== 0`).
 
 - **Alcance da luz (C16, 2026-10-18, resolvida pelo usuário):** os efeitos Flashlight e Road Flare do CORE 0.92.4
   usam `ATL.light.bright = 50`. A wiki (`system-catalog.js`) diz facho de 100 m e iluminar 100 m, respectivamente.
@@ -6268,6 +6283,46 @@ Commit anterior: `2657f14b` (o recorte dos retratos, na wiki).
   Tático do 125, o ponto de acesso do 127 e o ciclo 126 da sessão Junin).
 - **Próximo:** instalar no servidor; as mutações que faltam (as deste ciclo, as T1 a T3 do 127 e as P8 a P11 do 125),
   com a mesa vazia.
+
+### Ciclo 129 (2026-10-19): o C17, pilhas no inventário (sessão Codex)
+
+Commit anterior: `953a1c5` (a reserva do C10 da sessão Junin, incorporada sem mudar o código). O C17 foi reservado e
+publicado antes de começar em `20f09cb`; a base de comportamento é o ciclo 128, `d4325e5`.
+
+- **Referência e decisão:** CORE 0.92.4, `modules/actor/cpr-actor.js:1252–1279` e `cpr-container.js:154–181`
+  (`automaticallyStackItems`), `modules/actor/sheet/cpr-actor-sheet.js:1535–1638` (transferência e divisão), os quatro
+  datamodels `ammo`, `gear`, `clothing`, `drug` e o `mixins/stackable-schema.js`. A wiki (`system-catalog.js` e
+  `system-rules.js`) define unidades e preço por lote ou dose, sem algoritmo de pilhas. O usuário decidiu
+  **"Reproduzir literalmente o comportamento do CORE."** As peculiaridades e a resposta estão nas dúvidas acima.
+- **O que muda:**
+  - `regras-inventario.mjs`: divisão inteira entre 1 e total menos 1; comparação só por tipo e nome, com a condição
+    invertida dos upgrades do destino para equipamento e roupa;
+  - `pilhas.mjs` e `ItemCPR.dividirPilha`: fila por inventário no mesmo cliente, permissão, criação com outro ID,
+    cópia de nome, imagem, sistema e efeitos, preservando só o catálogo nas flags da cópia; o UID fica no original;
+  - fichas de personagem, capanga e contêiner: **Dividir**, quantidade sugerida pela metade para cima e cancelamento.
+    O jogador precisa ser dono; no contêiner, precisa também de "Mudar os itens". O aviso de upgrades não interrompe;
+  - drops explícitos do diretório e compêndio passam pela mesma junção das transferências. Reordenar a própria ficha
+    não junta. Criação direta e importação conservam documentos separados, necessários aos UIDs e à divisão;
+  - `conteiner.mjs`: o primeiro homônimo mantém seus dados e soma só quantidade. Com conteúdo instalado, o CORE
+    conserva apenas os upgrades do destino e remove os da origem. Sem junção, a transferência conserva a árvore;
+  - quantidades e IDs são conferidos após cada gravação. Cancelamento, criação parcial, débito recusado ou remoção
+    parcial tentam restaurar o estoque. Consumo durante a criação é relido, sem recriar unidades.
+- **Testes de referência:** 13 novos no G3 (`pilhas.test.mjs`), com contas de unidades e doses, limites, tipos,
+  nomes exatos e critérios literais. Nove passos independentes no G4: drops reais e reordenação, janela e cancelamento,
+  falhas, quatro tipos e concorrência local, capanga/contêiner, metadados e efeitos, permissões no cliente do jogador,
+  consumo real de droga durante a criação e compensações de transferência (inclusive árvore e upgrades).
+  A lista exata de botões do C24 passou a exigir também o novo **Dividir**; as demais exigências foram mantidas.
+- **Resultados:** G1 90 arquivos/0 erros; G2 0 erros; G3 **197/197**; G4 completo **181/181**, no Foundry 14.369,
+  sem pular a parte do Foundry. A captura da aba Equipamento também foi conferida.
+- **Mutações:** **31/31 caíram**, uma por vez: M01–M05 no G3, M06–M31 no G4 focado. Cobrem contas, nomes e upgrades,
+  drops, fila, IDs/flags, sugestão e cancelamento, permissões, efeitos, botões das três fichas, consumo durante a
+  criação, operações canceladas, compensações e o tratamento literal da árvore instalada. Cada rodada restaurou os
+  bytes por MD5; os sete arquivos mutados também terminaram com os mesmos MD5 da base aprovada.
+  Uma tentativa M24 foi interrompida ainda na espera da trava, sem aplicar mutação; a tentativa válida posterior caiu.
+  Os registros locais estão em `tests/.saida/c17-mutacoes.json`, com logs e controles de restauração por rodada.
+- **Limites:** a fila é do mesmo cliente; o Foundry não oferece uma transação atômica entre clientes nessa operação.
+  Se também recusar a compensação, o sistema interrompe com erro explícito para conferir o estado real do estoque.
+- **Próximo:** C18, armadura. C10 segue reservado à sessão Junin e C24 à sessão KouArt.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

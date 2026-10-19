@@ -14,6 +14,7 @@
           <img src="{{img}}" alt="">
           <a class="nome" data-action="editarItem">{{nome}}</a>
           <span class="detalhe">{{tipo}}{{#if detalhe}} · {{detalhe}}{{/if}}</span>
+          {{#if divisivel}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
           {{#if acao}}<button type="button" class="alternar {{#if ligado}}ligado{{/if}}" data-action="{{acao}}"{{#if dica}} data-tooltip="{{dica}}"{{/if}}>{{rotulo}}</button>{{/if}}
           <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
         </li>

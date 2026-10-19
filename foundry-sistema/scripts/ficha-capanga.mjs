@@ -6,6 +6,7 @@
 import { caminho, USOS } from './config.mjs';
 import { bloco, FichaPersonagem } from './ficha-personagem.mjs';
 import { AO_RECEBER_CAPANGA } from './regras.mjs';
+import { divisaoDaPilha } from './regras-inventario.mjs';
 
 const modelo = arquivo => caminho(`templates/capanga/${arquivo}.hbs`);
 
@@ -43,7 +44,7 @@ export class FichaCapanga extends FichaPersonagem {
     // Todos os itens, menos as lesões (no painel geral), por tipo e nome, com o botão de cada tipo.
     const itens = this.actor.items.filter(item => item.type !== 'lesao')
       .sort((a, b) => ordem.indexOf(a.type) - ordem.indexOf(b.type) || a.name.localeCompare(b.name, 'pt-BR'))
-      .map(item => ({ id: item.id, nome: item.name, img: item.img, tipo: game.i18n.localize(CONFIG.Item.typeLabels[item.type]), detalhe: detalheDoItem(item), ...botaoDoItem(item) }));
+      .map(item => ({ id: item.id, nome: item.name, img: item.img, divisivel: Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)), tipo: game.i18n.localize(CONFIG.Item.typeLabels[item.type]), detalhe: detalheDoItem(item), ...botaoDoItem(item) }));
     // Na ficha de um token, o nome é o do token (o que a cena mostra).
     return Object.assign(contexto, { capanga: true, naCena: this.actor.isToken, nomeNaFicha: this.token?.name ?? this.actor.name, itensDoCapanga: itens });
   }

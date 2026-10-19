@@ -46,6 +46,15 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Estoque depois do `await` (C17):** criar uma pilha pode aguardar enquanto uma dose é consumida. Releia a quantidade
+  antes de debitar; restaurar o valor de antes da criação recria a dose. O G4 consome uma droga pela API durante a
+  criação e confere quantidade, efeito e flags. A fila serializa operações do mesmo cliente, sem prometer uma transação
+  entre clientes.
+- **Operação recusada e compensação (C17):** o Foundry pode devolver `[]` sem lançar erro, ou gravar só parte do pedido.
+  Confira os IDs e as quantidades depois da criação, atualização e remoção; restaure a origem antes de apagar a cópia,
+  e confira também a compensação. O G4 provoca cancelamentos, gravação parcial e remoção parcial da árvore.
+  Um botão novo entra na lista exata de botões esperados do teste antigo, preservando a exigência dos demais.
+
 - **Expiração nativa dos efeitos (C16):** `system.isSuppressed` devolve `true` quando suprime e `null` quando deixa o
   Foundry decidir. Devolver `false` substitui `duration.expired` e conserva o efeito vencido. O sinalizador é conferido
   nos dois clientes depois de avançar a hora, com a luz original do token preservada.

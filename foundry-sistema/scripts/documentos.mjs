@@ -14,6 +14,7 @@ import { rolarDano, testar } from './rolagens.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
 import { efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
+import { dividirPilha } from './pilhas.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -564,6 +565,8 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
+  dividirPilha(quantidade) { return dividirPilha(this, quantidade); }
+
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
     if (this.type === 'arma' && this.system.instaladoEm) this.updateSource({ 'system.equipada': false });

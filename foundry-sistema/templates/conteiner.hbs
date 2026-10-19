@@ -64,6 +64,7 @@ botões. --}}
           <img src="{{img}}" alt="">
           <a class="nome" data-action="editarItem">{{nome}}</a>
           <span class="detalhe">{{#if empilhavel}}<b class="quantidade">{{quantidade}}</b> · {{/if}}{{preco}}{{#if instalados}} · com {{instalados}}{{/if}}</span>
+          {{#if divisivel}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
           {{#if @root.deGraca}}
           {{#if emParte}}<button type="button" class="acao" data-action="pegarParte" data-tooltip="Pegar só uma parte da pilha">Pegar parte</button>{{/if}}
           <button type="button" class="acao" data-action="pegarTudo" data-tooltip="Levar para quem está em Trocar com">Pegar{{#if emParte}} tudo{{/if}}</button>

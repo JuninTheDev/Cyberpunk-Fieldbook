@@ -25,6 +25,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem">{{name}}</a>
             <span class="detalhe">{{system.quantidade}} tiros</span>
+            {{#if (gt system.quantidade 1)}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>
           {{else}}<li class="vazio">Sem munição.</li>{{/each}}
@@ -86,6 +87,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
             {{#if (ne quantidade null)}}<span class="quantidade" data-tooltip="{{unidade}}"><button type="button" data-action="mudarQuantidade" data-delta="-1" aria-label="Um a menos">−</button><b>{{quantidade}}</b><button type="button" data-action="mudarQuantidade" data-delta="1" aria-label="Um a mais">+</button></span>{{/if}}
+            {{#if divisivel}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
             {{#if ehDroga}}{{#if viciado}}<span class="viciado" data-tooltip="O efeito secundário fica até a terapia">VICIADO</span>{{/if}}<button type="button" class="alternar {{#if sobEfeito}}ligado{{/if}}" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação): o efeito primário vale; sob efeito, estende">Usar</button>{{#if sobEfeito}}<button type="button" class="acao" data-action="acabouDroga" data-tooltip="O efeito acabou: o teste do efeito secundário">ACABOU</button>{{/if}}{{/if}}
             {{#if usavel}}<button type="button" class="alternar {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)">{{#if emUso}}Em uso{{else}}Usar{{/if}}</button>{{/if}}
             <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado">{{usoNome}}</button>

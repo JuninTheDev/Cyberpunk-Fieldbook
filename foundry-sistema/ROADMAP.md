@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 129). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 130). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **O mesmo número de ciclo nas duas sessões:** antes do commit, `git fetch`. Se a outra sessão já publicou um ciclo com o
@@ -198,7 +198,13 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - os prazos persistem e expiram pelo relógio e ao voltar ao mundo; doses adicionais estendem sem duplicar o bônus;
   - scanners não acumulam também com o implante. Lanterna e sinalizador têm alcance de 100 m (decisão do usuário);
     o sinalizador gasta uma unidade e dura uma hora. A luz original do token é preservada.
-- [~] **C17. Pilhas:** em andamento (sessão Codex, 2026-10-19). Juntar os iguais ao soltar e dividir uma pilha (o `stackable` do CORE).
+- [x] **C17. Pilhas:** feito no ciclo 129 (sessão Codex, 2026-10-19), pelo `stackable` do CORE 0.92.4.
+  - juntar ao soltar, inclusive do diretório e compêndio: o primeiro item de mesmo tipo e nome, com a condição literal
+    de upgrades do CORE (decisão do usuário; equipamento e roupa só juntam se o destino tem upgrades);
+  - dividir munição, equipamento, roupa e droga nas fichas de personagem, capanga e contêiner, com a metade para cima
+    como sugestão. O original conserva o ID e o UID; a cópia tem outro ID, sistema e efeitos, com o catálogo;
+  - permissões, cancelamento, consumo durante a criação e recuperação de operações recusadas conferidos no Foundry.
+    Ao juntar conteúdo instalado, ficam só os upgrades do destino, como no CORE (ver as dúvidas).
 - [ ] **C18. Armadura:** qual armadura conta em cada local, e ablar e consertar com um clique.
 - [ ] **C19. Lesão crítica fora do ataque:** rolar na tabela à mão, e o paliativo e o tratamento com a DV.
 - [ ] **C20. Macros e favoritos:** arrastar arma, perícia ou item para a barra, e os favoritos na aba Combate.
@@ -434,8 +440,8 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [ ] **Na ficha, o que o CORE e o Painel Tático têm:** (→ C18, C19 e C20) consertar a armadura com um clique (hoje, só editando o SP na
   ficha do item); rolar uma lesão crítica à mão (uma queda, uma explosão fora do ataque); macros na barra (arrastar
   uma arma ou uma perícia).
-- [ ] **Inventário, o resto do CORE:** (→ C17) juntar itens iguais ao soltar na ficha (munição, equipamento) e dividir uma
-  pilha. As mãos livres foram feitas no ciclo 87 (C12).
+- [x] **Inventário, o resto do CORE:** (→ C17, ciclo 129) juntar itens iguais ao soltar na ficha e dividir uma pilha,
+  conforme a decisão de reproduzir literalmente o CORE. As mãos livres foram feitas no ciclo 87 (C12).
 - [x] **A ficha nova** (Ciclo 19), no visual do modelo de ficha da mesa: o painel geral em três colunas, as abas
   Combate, Equipamento, Cyberware, Role, NET e Vida, o apelido e o Lifepath (com a importação da wiki), as perícias de
   família pela ficha e o tema escuro com as fontes embutidas, também na ficha do item. A aba Role mostra as

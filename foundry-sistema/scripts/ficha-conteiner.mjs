@@ -6,6 +6,8 @@ import { CATEGORIAS_DO_CONTEINER, caminho, PERMISSOES_DO_CONTEINER, SISTEMA, TIP
 import { levarItem, parceirosDoUsuario, pegarDoConteiner } from './conteiner.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { EMPILHAVEIS, parteSugerida, parteValida, precoNaLista, quantidadeDe } from './regras.mjs';
+import { perguntarDivisao } from './pilhas.mjs';
+import { divisaoDaPilha } from './regras-inventario.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -27,7 +29,8 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       apagarItem: FichaConteiner.#apagarItem,
       pegarTudo: FichaConteiner.#pegarTudo,
       pegarParte: FichaConteiner.#pegarParte,
-      abrirExtrato: FichaConteiner.#abrirExtrato
+      abrirExtrato: FichaConteiner.#abrirExtrato,
+      dividirPilha: FichaConteiner.#dividirPilha
     }
   };
 
@@ -55,6 +58,7 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       const instalados = ator.items.filter(outro => outro.system.instaladoEm === item.id).map(outro => outro.name);
       return {
         id: item.id, nome: item.name, img: item.img, empilhavel: EMPILHAVEIS.includes(item.type), quantidade, emParte: quantidade > 1,
+        divisivel: (mestre || s.permissoes.mudar) && Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)),
         preco: precoNaLista(item.type, item.system), instalados: instalados.join(', ')
       };
     };
@@ -103,6 +107,7 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   // O item abre na ficha dele; o jogador só muda com "Mudar os itens" (FichaItem.isEditable).
   static #editarItem(evento, alvo) { return this.#item(alvo)?.sheet.render(true); }
+  static #dividirPilha(evento, alvo) { return perguntarDivisao(this.#item(alvo)); }
 
   // O "+" da categoria (o item-create do CORE): o mestre, ou o jogador com "Criar e pôr itens". O item novo tem o nome
   // do tipo e abre para ser preenchido.

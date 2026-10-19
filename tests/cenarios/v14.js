@@ -130,6 +130,521 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    await r.passo('inventário (C17): o drop real do compêndio e do diretório soma a quantidade sem tirar da origem; reordenar na própria ficha conserva as pilhas, e armas continuam separadas', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+        let ator, avulsa, arma;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const pack = game.packs.get('${S}.municao');
+          await pack.getIndex();
+          const entrada = pack.index.find(i => i.name === 'Heavy Pistol (Basic)');
+          const noPack = await pack.getDocument(entrada._id), inicial = noPack.system.quantidade;
+          ator = await Actor.implementation.create({ name: 'C17 Soltar', type: 'personagem' });
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('equipamento', 'primary');
+          await esperar(() => ator.sheet.element?.querySelector('.tab.equipamento'));
+          const soltar = uuid => {
+            const dados = new DataTransfer();
+            dados.setData('text/plain', JSON.stringify({ type: 'Item', uuid }));
+            ator.sheet.element.querySelector('.tab.equipamento').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+          };
+          soltar(noPack.uuid);
+          await esperar(() => ator.items.getName(noPack.name));
+          soltar(noPack.uuid);
+          const esperouPack = await esperar(() => ator.items.getName(noPack.name)?.system.quantidade === inicial * 2);
+          const doPack = { esperou: esperouPack, itens: ator.items.filter(i => i.name === noPack.name).length, quantidade: ator.items.getName(noPack.name)?.system.quantidade, origem: (await pack.getDocument(entrada._id)).system.quantidade, inicial };
+          const dados = foundry.utils.deepClone(cat['core_ammo:rifle-basic']);
+          dados.name = 'C17 Balas do diretório'; dados.system.quantidade = 3;
+          avulsa = await Item.implementation.create(dados);
+          soltar(avulsa.uuid);
+          await esperar(() => ator.items.getName(avulsa.name));
+          soltar(avulsa.uuid);
+          const esperouDiretorio = await esperar(() => ator.items.getName(avulsa.name)?.system.quantidade === 6);
+          const doDiretorio = { esperou: esperouDiretorio, itens: ator.items.filter(i => i.name === avulsa.name).length, quantidade: ator.items.getName(avulsa.name)?.system.quantidade, origem: game.items.get(avulsa.id)?.system.quantidade };
+          const antes = ator.items.map(i => [i.id, i.system.quantidade]).sort();
+          const propria = ator.items.getName(noPack.name), outra = ator.items.getName(avulsa.name);
+          await esperar(() => ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="' + propria.id + '"]') && ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="' + outra.id + '"]'));
+          const arrasto = new DataTransfer();
+          ator.sheet.element.querySelector('.tab.equipamento li[data-item-id="' + propria.id + '"]').dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: arrasto }));
+          ator.sheet.element.querySelector('.tab.equipamento li[data-item-id="' + outra.id + '"]').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: arrasto }));
+          await new Promise(r => setTimeout(r, 400));
+          const reordenou = { antes, depois: ator.items.map(i => [i.id, i.system.quantidade]).sort(), uuid: JSON.parse(arrasto.getData('text/plain')).uuid === propria.uuid };
+          const daArma = foundry.utils.deepClone(cat['core_weapons:heavy-pistol']); daArma.name = 'C17 Arma avulsa';
+          arma = await Item.implementation.create(daArma);
+          soltar(arma.uuid);
+          await esperar(() => ator.items.filter(i => i.type === 'arma').length === 1);
+          soltar(arma.uuid);
+          const esperouArmas = await esperar(() => ator.items.filter(i => i.type === 'arma').length === 2);
+          return { doPack, doDiretorio, reordenou, armas: { esperou: esperouArmas, itens: ator.items.filter(i => i.type === 'arma').length, origem: game.items.has(arma.id) } };
+        } finally {
+          for (const item of ator?.items ?? []) await item.sheet?.close();
+          await ator?.sheet?.close(); await ator?.delete(); await avulsa?.delete(); await arma?.delete();
+        }
+      })()`);
+      const { doPack, doDiretorio, reordenou, armas } = info;
+      return [doPack.esperou && doPack.itens === 1 && doPack.quantidade === doPack.inicial * 2 && doPack.origem === doPack.inicial
+        && doDiretorio.esperou && doDiretorio.itens === 1 && doDiretorio.quantidade === 6 && doDiretorio.origem === 3
+        && reordenou.uuid && JSON.stringify(reordenou.antes) === JSON.stringify(reordenou.depois) && armas.esperou && armas.itens === 2 && armas.origem, JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C17): Dividir pela ficha sugere metade para cima, conserva o item original e seus dados, cria outro id sem repetir o wikiUid; fechar a pergunta não muda o estoque', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+        const janela = () => document.querySelector('.application.dialog.dividir-pilha:not(.minimizing)');
+        const avisos = [], warn = ui.notifications.warn;
+        let ator;
+        try {
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          const cat = await game.system.api.wiki.carregarCatalogo(), dados = foundry.utils.deepClone(cat['core_ammo:rifle-basic']);
+          dados.name = 'C17 Pilha ímpar'; dados.system.quantidade = 7; dados.system.preco = 137;
+          dados.flags['${S}'].wikiUid = 'c17:pilha-impar'; dados.flags['${S}'].c17 = 'conservar';
+          ator = await Actor.implementation.create({ name: 'C17 Dividir', type: 'personagem', items: [dados] });
+          const original = ator.items.contents[0], id = original.id, fonte = original.toObject();
+          await ator.sheet.render({ force: true }); ator.sheet.changeTab('equipamento', 'primary');
+          const botao = () => ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="' + id + '"] [data-action="dividirPilha"]');
+          await esperar(() => botao()); botao().click();
+          await esperar(() => janela()?.querySelector('input[name="quantidade"]'));
+          const campo = janela().querySelector('input[name="quantidade"]');
+          const pergunta = { sugerida: Number(campo.value), minimo: Number(campo.min), maximo: Number(campo.max) };
+          campo.value = 4; janela().querySelector('button[data-action="ok"]').click();
+          const esperou = await esperar(() => !janela() && ator.items.size === 2 && ator.items.get(id)?.system.quantidade === 3);
+          const nova = ator.items.find(i => i.id !== id), sistemaEsperado = { ...fonte.system, quantidade: 4 };
+          const dividiu = { esperou, mesmo: ator.items.get(id)?.id === id, quantidades: [ator.items.get(id)?.system.quantidade, nova?.system.quantidade],
+            idNovo: Boolean(nova && nova.id !== id), nome: nova?.name, imagem: nova?.img, preco: nova?.system.preco,
+            configuracao: JSON.stringify(nova?.toObject().system) === JSON.stringify(sistemaEsperado), catalogo: nova?.getFlag('${S}', 'catalogo'), catalogoOriginal: fonte.flags['${S}'].catalogo,
+            uidOriginal: ator.items.get(id)?.getFlag('${S}', 'wikiUid'), uidNovo: nova?.getFlag('${S}', 'wikiUid') ?? null,
+            flagOriginal: ator.items.get(id)?.getFlag('${S}', 'c17'), flagNova: nova?.getFlag('${S}', 'c17') ?? null };
+          await esperar(() => botao()); botao().click();
+          await esperar(() => janela()?.querySelector('input[name="quantidade"]'));
+          const antes = ator.items.map(i => [i.id, i.system.quantidade]).sort();
+          janela().querySelector('.window-header [data-action="close"]').click();
+          const fechou = await esperar(() => !janela());
+          await new Promise(r => setTimeout(r, 200));
+          return { pergunta, dividiu, cancelou: { fechou, antes, depois: ator.items.map(i => [i.id, i.system.quantidade]).sort() }, fonte: { nome: fonte.name, imagem: fonte.img }, avisos };
+        } finally {
+          ui.notifications.warn = warn;
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('dividir-pilha')) await app.close();
+          await ator?.sheet?.close(); await ator?.delete();
+        }
+      })()`);
+      const { pergunta, dividiu, cancelou, fonte } = info;
+      return [pergunta.sugerida === 4 && pergunta.minimo === 1 && pergunta.maximo === 6 && dividiu.esperou && dividiu.mesmo && dividiu.idNovo && dividiu.quantidades.join() === '3,4'
+        && dividiu.nome === fonte.nome && dividiu.imagem === fonte.imagem && dividiu.preco === 137 && dividiu.configuracao && dividiu.catalogo === dividiu.catalogoOriginal
+        && dividiu.uidOriginal === 'c17:pilha-impar' && dividiu.uidNovo === null && dividiu.flagOriginal === 'conservar' && dividiu.flagNova === null
+        && cancelou.fechou && JSON.stringify(cancelou.antes) === JSON.stringify(cancelou.depois)
+        && info.avisos.length === 2 && info.avisos.every(a => a === 'Retire os upgrades antes de dividir a pilha.'), JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C17): a divisão recusa quantidades inválidas, confere o estoque que mudou enquanto a pergunta estava aberta e conserva as unidades se a criação ou a atualização falhar', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+        const janela = () => document.querySelector('.application.dialog.dividir-pilha:not(.minimizing)');
+        const avisos = [], warn = ui.notifications.warn;
+        let ator, item;
+        try {
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          const cat = await game.system.api.wiki.carregarCatalogo(), dados = foundry.utils.deepClone(cat['core_ammo:rifle-basic']); dados.system.quantidade = 7;
+          ator = await Actor.implementation.create({ name: 'C17 Validação', type: 'personagem', items: [dados] }); item = ator.items.contents[0];
+          const estado = () => ator.items.map(i => [i.id, i.system.quantidade]).sort();
+          const antes = estado(), invalidos = [];
+          for (const quantidade of [0, -1, 7, 8, 2.5, NaN, Infinity]) {
+            const resultado = await item.dividirPilha(quantidade);
+            invalidos.push({ quantidade: String(quantidade), recusou: resultado === null, estado: estado() });
+          }
+          await ator.sheet.render({ force: true }); ator.sheet.changeTab('equipamento', 'primary');
+          const botao = () => ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="' + item.id + '"] [data-action="dividirPilha"]');
+          await esperar(() => botao()); botao().click(); await esperar(() => janela()?.querySelector('input[name="quantidade"]'));
+          const campo = janela().querySelector('input[name="quantidade"]'); campo.value = 4;
+          await item.update({ 'system.quantidade': 3 });
+          const n = avisos.length; janela().querySelector('button[data-action="ok"]').click();
+          const esperou = await esperar(() => !janela() && avisos.length > n);
+          const mudou = { esperou, quantidade: item.system.quantidade, itens: ator.items.size, avisou: avisos.length > n };
+          let falhaCriacao = false, falhaAtualizacao = false, chamouCriacao = false, chamouAtualizacao = false;
+          const antesDaFalha = estado();
+          ator.createEmbeddedDocuments = async () => [];
+          const criacaoCancelada = { recusou: await item.dividirPilha(1) === null, antes: antesDaFalha, depois: estado() };
+          delete ator.createEmbeddedDocuments;
+          ator.createEmbeddedDocuments = async () => { chamouCriacao = true; throw new Error('C17: criação recusada para o teste'); };
+          try { await item.dividirPilha(1); } catch (erro) { falhaCriacao = /C17: criação recusada/.test(erro.message); }
+          finally { delete ator.createEmbeddedDocuments; }
+          const criacao = { chamou: chamouCriacao, erro: falhaCriacao, antes: antesDaFalha, depois: estado() };
+          item.update = async () => { chamouAtualizacao = true; throw new Error('C17: atualização recusada para o teste'); };
+          try { await item.dividirPilha(1); } catch (erro) { falhaAtualizacao = /C17: atualização recusada/.test(erro.message); }
+          finally { delete item.update; }
+          const atualizacao = { chamou: chamouAtualizacao, erro: falhaAtualizacao, antes: antesDaFalha, depois: estado() };
+          const atualizar = item.update.bind(item); let erroParcial = false;
+          item.update = () => atualizar({ 'system.quantidade': 1 });
+          try { await item.dividirPilha(1); } catch (erro) { erroParcial = /atualizar a pilha/.test(erro.message); }
+          finally { delete item.update; }
+          const parcial = { erro: erroParcial, antes: antesDaFalha, depois: estado() };
+          ator.deleteEmbeddedDocuments = async () => [];
+          item.update = async () => { throw new Error('C17: atualização recusada antes da compensação cancelada'); };
+          let compensacaoCancelada = false;
+          try { await item.dividirPilha(1); } catch (erro) { compensacaoCancelada = /apagar a nova pilha/.test(erro.message); }
+          finally { delete item.update; delete ator.deleteEmbeddedDocuments; }
+          const compensacao = { erro: compensacaoCancelada, original: item.system.quantidade, quantidades: ator.items.map(i => i.system.quantidade).sort((a, b) => a - b) };
+          return { antes, invalidos, mudou, criacaoCancelada, criacao, atualizacao, parcial, compensacao, avisos };
+        } finally {
+          if (ator) { delete ator.createEmbeddedDocuments; delete ator.deleteEmbeddedDocuments; } if (item) delete item.update;
+          ui.notifications.warn = warn;
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('dividir-pilha')) await app.close();
+          await ator?.sheet?.close(); await ator?.delete();
+        }
+      })()`);
+      const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      return [info.invalidos.length === 7 && info.invalidos.every(i => i.recusou && igual(i.estado, info.antes))
+        && info.mudou.esperou && info.mudou.quantidade === 3 && info.mudou.itens === 1 && info.mudou.avisou
+        && info.criacaoCancelada.recusou && igual(info.criacaoCancelada.antes, info.criacaoCancelada.depois)
+        && info.criacao.chamou && igual(info.criacao.antes, info.criacao.depois) && info.atualizacao.chamou && igual(info.atualizacao.antes, info.atualizacao.depois)
+        && info.parcial.erro && igual(info.parcial.antes, info.parcial.depois)
+        && info.compensacao.erro && info.compensacao.original === 3 && info.compensacao.quantidades.join() === '1,3'
+        && info.avisos.filter(a => a === 'Retire os upgrades antes de dividir a pilha.').length === 1, JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C17): munição, equipamento, roupa e droga dividem; zero e uma unidade não oferecem o botão; duas divisões e dois drops concorrentes conservam a quantidade total', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+        const avisos = [], warn = ui.notifications.warn;
+        let ator, avulsa;
+        try {
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const tipos = ['municao', 'equipamento', 'roupa', 'droga'];
+          const dados = tipos.map(tipo => { const d = foundry.utils.deepClone(Object.values(cat).find(i => i.type === tipo)); d.name = 'C17 Tipo ' + tipo; d.system.quantidade = 7; return d; });
+          const zero = foundry.utils.deepClone(cat['core_ammo:rifle-basic']); zero.name = 'C17 Zero'; zero.system.quantidade = 0;
+          const um = foundry.utils.deepClone(cat['core_gear:agent']); um.name = 'C17 Um'; um.system.quantidade = 1;
+          const arma = foundry.utils.deepClone(cat['core_weapons:heavy-pistol']); arma.name = 'C17 Sem pilha';
+          ator = await Actor.implementation.create({ name: 'C17 Tipos e fila', type: 'personagem', items: [...dados, zero, um, arma] });
+          const divididos = [];
+          for (const tipo of tipos) {
+            const original = ator.items.getName('C17 Tipo ' + tipo), nova = await original.dividirPilha(2);
+            divididos.push({ tipo, origem: original.system.quantidade, nova: nova?.system.quantidade, ids: Boolean(nova && nova.id !== original.id), itens: ator.items.filter(i => i.name === original.name).length });
+          }
+          const inaptos = [ator.items.getName('C17 Zero'), ator.items.getName('C17 Um'), ator.items.getName('C17 Sem pilha')];
+          const recusados = [];
+          for (const item of inaptos) recusados.push(await item.dividirPilha(1) === null);
+          await ator.sheet.render({ force: true }); ator.sheet.changeTab('equipamento', 'primary');
+          const linha = item => ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="' + item.id + '"]');
+          const divisiveis = tipos.map(tipo => ator.items.getName('C17 Tipo ' + tipo));
+          await esperar(() => [...inaptos, ...divisiveis].every(item => linha(item)));
+          const botoes = inaptos.map(item => Boolean(linha(item)?.querySelector('[data-action="dividirPilha"]')));
+          const botoesDivisiveis = divisiveis.map(item => Boolean(linha(item)?.querySelector('[data-action="dividirPilha"]')));
+          const pilha = ator.items.getName('C17 Tipo municao'); await pilha.update({ name: 'C17 Concorrente', 'system.quantidade': 9 });
+          const resultados = await Promise.all([pilha.dividirPilha(3), pilha.dividirPilha(4)]);
+          const concorrente = { criadas: resultados.filter(Boolean).length, origem: pilha.system.quantidade, quantidades: ator.items.filter(i => i.name === 'C17 Concorrente').map(i => i.system.quantidade).sort((a, b) => a - b) };
+          const solta = foundry.utils.deepClone(cat['core_ammo:rifle-basic']); solta.name = 'C17 Drops juntos'; solta.system.quantidade = 2;
+          avulsa = await Item.implementation.create(solta);
+          await Promise.all([ator.sheet._onDropItem({}, avulsa), ator.sheet._onDropItem({}, avulsa)]);
+          const drops = { origem: game.items.get(avulsa.id)?.system.quantidade, quantidades: ator.items.filter(i => i.name === avulsa.name).map(i => i.system.quantidade) };
+          return { divididos, recusados, botoes, botoesDivisiveis, concorrente, drops, avisos };
+        } finally {
+          ui.notifications.warn = warn;
+          await ator?.sheet?.close(); await ator?.delete(); await avulsa?.delete();
+        }
+      })()`);
+      return [info.divididos.length === 4 && info.divididos.every(i => i.origem === 5 && i.nova === 2 && i.ids && i.itens === 2)
+        && info.recusados.length === 3 && info.recusados.every(Boolean) && info.botoes.length === 3 && info.botoes.every(b => !b)
+        && info.botoesDivisiveis.length === 4 && info.botoesDivisiveis.every(Boolean)
+        && info.concorrente.criadas === 2 && info.concorrente.origem === 2 && info.concorrente.quantidades.join() === '2,3,4'
+        && info.drops.origem === 2 && info.drops.quantidades.join() === '4', JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C17): as fichas de capanga e contêiner dividem pelo botão sem parceiro de troca, mantendo as duas pilhas no próprio ator', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+        const janela = () => document.querySelector('.application.dialog.dividir-pilha:not(.minimizing)');
+        const avisos = [], warn = ui.notifications.warn;
+        const atores = [];
+        try {
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          const cat = await game.system.api.wiki.carregarCatalogo(), resultados = [];
+          for (const tipo of ['capanga', 'conteiner']) {
+            const dados = foundry.utils.deepClone(cat['core_ammo:rifle-basic']); dados.name = 'C17 Dividir no ' + tipo; dados.system.quantidade = 9;
+            const ator = await Actor.implementation.create({ name: 'C17 Ficha ' + tipo, type: tipo, ...(tipo === 'conteiner' ? { system: { tipo: 'esconderijo' } } : {}), items: [dados] }); atores.push(ator);
+            const id = ator.items.contents[0].id;
+            await ator.sheet.render({ force: true });
+            const botao = () => ator.sheet.element?.querySelector('li[data-item-id="' + id + '"] [data-action="dividirPilha"]');
+            await esperar(() => botao()); botao().click(); await esperar(() => janela()?.querySelector('input[name="quantidade"]'));
+            const sugerida = Number(janela().querySelector('input[name="quantidade"]').value);
+            janela().querySelector('input[name="quantidade"]').value = 4; janela().querySelector('button[data-action="ok"]').click();
+            const esperou = await esperar(() => !janela() && ator.items.size === 2 && ator.items.get(id)?.system.quantidade === 5);
+            const nova = ator.items.find(i => i.id !== id);
+            resultados.push({ tipo, sugerida, esperou, original: ator.items.get(id)?.system.quantidade, nova: nova?.system.quantidade, nome: nova?.name === dados.name, pai: nova?.parent?.uuid === ator.uuid, parceiro: ator.sheet.parceiro ?? null });
+            await ator.sheet.close();
+          }
+          return { resultados, avisos };
+        } finally {
+          ui.notifications.warn = warn;
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('dividir-pilha')) await app.close();
+          for (const ator of atores) { await ator.sheet?.close(); await ator.delete(); }
+        }
+      })()`);
+      return [info.resultados.length === 2 && info.resultados.every(i => i.sugerida === 5 && i.esperou && i.original === 5 && i.nova === 4 && i.nome && i.pai && i.parceiro === null)
+        && info.avisos.length === 2 && info.avisos.every(a => a === 'Retire os upgrades antes de dividir a pilha.'), JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C17): o critério literal do CORE conserva os dados da primeira munição; equipamento e roupa só juntam com upgrade no primeiro homônimo; dividir copia efeito ligado, mas não flags de uso', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const avulsas = [];
+        let ator;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const efeito = nome => ({ name: nome, type: 'base', transfer: true, disabled: false, system: { changes: [] } });
+          const primeira = foundry.utils.deepClone(cat['core_ammo:rifle-basic']);
+          primeira.name = 'C17 Munição literal'; primeira.system.quantidade = 4; primeira.system.preco = 11; primeira.effects = [efeito('C17 Efeito da primeira')];
+          primeira.flags['${S}'].c17 = 'primeira';
+          ator = await Actor.implementation.create({ name: 'C17 CORE literal', type: 'personagem', items: [primeira] });
+          const original = ator.items.contents[0];
+          const diferente = foundry.utils.deepClone(primeira); diferente.system.quantidade = 6; diferente.system.preco = 99; diferente.effects = [efeito('C17 Efeito da segunda')]; diferente.flags['${S}'].c17 = 'segunda';
+          const avulsa = await Item.implementation.create(diferente); avulsas.push(avulsa);
+          const juntada = await ator.sheet._onDropItem({}, avulsa);
+          const municao = { mesmo: juntada?.id === original.id, quantidade: original.system.quantidade, preco: original.system.preco, itens: ator.items.filter(i => i.name === original.name).length,
+            efeitos: original.effects.map(e => [e.name, e.disabled]), flag: original.getFlag('${S}', 'c17'), origem: game.items.get(avulsa.id)?.system.quantidade };
+          const comUpgrades = [];
+          for (const tipo of ['equipamento', 'roupa']) {
+            const dados = foundry.utils.deepClone(tipo === 'equipamento' ? cat['core_gear:agent'] : Object.values(cat).find(i => i.type === 'roupa'));
+            dados.name = 'C17 Literal ' + tipo; dados.system.quantidade = 2;
+            const doDiretorio = await Item.implementation.create(dados); avulsas.push(doDiretorio);
+            const alvo = await ator.sheet._onDropItem({}, doDiretorio);
+            const separado = await ator.sheet._onDropItem({}, doDiretorio);
+            const semUpgrade = { ids: Boolean(alvo && separado && alvo.id !== separado.id), quantidades: ator.items.filter(i => i.name === dados.name).map(i => i.system.quantidade) };
+            // O modelo atual só tem alvos arma/deck/veículo; o ponteiro representa o upgrade da pilha antiga do CORE.
+            const [upgrade] = await ator.createEmbeddedDocuments('Item', [{ name: 'C17 Upgrade de ' + tipo, type: 'upgrade', system: { alvo: 'arma', instaladoEm: alvo.id } }]);
+            const junto = await ator.sheet._onDropItem({}, doDiretorio);
+            comUpgrades.push({ tipo, semUpgrade, juntou: junto?.id === alvo.id, quantidade: alvo.system.quantidade, separada: separado.system.quantidade,
+              pilhas: ator.items.filter(i => i.name === dados.name).length, upgrades: ator.items.filter(i => i.type === 'upgrade' && i.system.instaladoEm === alvo.id).length,
+              upgrade: ator.items.get(upgrade.id)?.system.instaladoEm === alvo.id, origem: game.items.get(doDiretorio.id)?.system.quantidade });
+          }
+          const daDroga = foundry.utils.deepClone(cat['core_drugs:boost']); daDroga.name = 'C17 Droga sob efeito'; daDroga.system.quantidade = 7;
+          daDroga.effects = [efeito('C17 Efeito ligado')];
+          daDroga.flags['${S}'].sobEfeito = { fim: game.time.worldTime + 3600, humanidade: 0 }; daDroga.flags['${S}'].wikiUid = 'c17:droga';
+          const [droga] = await ator.createEmbeddedDocuments('Item', [daDroga]);
+          const nova = await droga.dividirPilha(2);
+          const dividida = { original: droga.system.quantidade, nova: nova?.system.quantidade,
+            efeitos: nova?.effects.map(e => [e.name, e.disabled, e.transfer]), catalogo: nova?.getFlag('${S}', 'catalogo'), catalogoOriginal: droga.getFlag('${S}', 'catalogo'),
+            sobOriginal: Boolean(droga.getFlag('${S}', 'sobEfeito')), sobNova: nova?.getFlag('${S}', 'sobEfeito') ?? null, uidOriginal: droga.getFlag('${S}', 'wikiUid'), uidNova: nova?.getFlag('${S}', 'wikiUid') ?? null };
+          return { municao, comUpgrades, dividida };
+        } finally {
+          await ator?.sheet?.close(); await ator?.delete(); for (const item of avulsas) await item.delete();
+        }
+      })()`);
+      const { municao, comUpgrades, dividida } = info;
+      return [municao.mesmo && municao.quantidade === 10 && municao.preco === 11 && municao.itens === 1 && JSON.stringify(municao.efeitos) === JSON.stringify([['C17 Efeito da primeira', false]]) && municao.flag === 'primeira' && municao.origem === 6
+        && comUpgrades.length === 2 && comUpgrades.every(i => i.semUpgrade.ids && i.semUpgrade.quantidades.join() === '2,2' && i.juntou && i.quantidade === 4 && i.separada === 2 && i.pilhas === 2 && i.upgrades === 1 && i.upgrade && i.origem === 2)
+        && dividida.original === 5 && dividida.nova === 2 && JSON.stringify(dividida.efeitos) === JSON.stringify([['C17 Efeito ligado', false, true]])
+        && dividida.catalogo === dividida.catalogoOriginal && dividida.sobOriginal && dividida.sobNova === null && dividida.uidOriginal === 'c17:droga' && dividida.uidNova === null, JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C17): as permissões são conferidas no cliente do jogador; o dono divide, o observador não, e o contêiner só permite dividir quando o mestre libera mudar os itens', async () => {
+      let cliente;
+      const preparo = await edge.evaluate(`(async () => {
+        const atores = [];
+        let usuario;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const balas = () => { const d = foundry.utils.deepClone(cat['core_ammo:rifle-basic']); d.name = 'C17 Permissão'; d.system.quantidade = 7; return d; };
+          usuario = await User.implementation.create({ name: 'Jogador C17', role: CONST.USER_ROLES.PLAYER });
+          const dono = await Actor.implementation.create({ name: 'C17 Do jogador', type: 'personagem', ownership: { [usuario.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, items: [balas()] }); atores.push(dono);
+          const observador = await Actor.implementation.create({ name: 'C17 Só observado', type: 'personagem', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER }, items: [balas()] }); atores.push(observador);
+          const conteiner = await Actor.implementation.create({ name: 'C17 Contêiner protegido', type: 'conteiner', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, system: { tipo: 'personalizado', permissoes: { mudar: false } }, items: [balas()] }); atores.push(conteiner);
+          return { usuario: usuario.id, dono: dono.id, observador: observador.id, conteiner: conteiner.id, pilhaDono: dono.items.contents[0].id, pilhaConteiner: conteiner.items.contents[0].id };
+        } catch (erro) {
+          for (const ator of atores) await ator.delete(); await usuario?.delete(); throw erro;
+        }
+      })()`);
+      try {
+        cliente = await abrirEdge({ porta: 9477, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-c17-' });
+        await foundry14.capturarAvisos(cliente); await foundry14.entrarComo(cliente, mesa.url, 'Jogador C17');
+        const recusas = await cliente.evaluate(`(async () => {
+          const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+          await esperar(() => game.actors.get('${preparo.dono}')?.isOwner && game.actors.get('${preparo.conteiner}')?.isOwner && game.actors.get('${preparo.observador}'));
+          const dono = game.actors.get('${preparo.dono}'), observador = game.actors.get('${preparo.observador}'), conteiner = game.actors.get('${preparo.conteiner}');
+          const original = dono.items.get('${preparo.pilhaDono}'), nova = await original.dividirPilha(2);
+          const recusouObservador = await observador.items.contents[0].dividirPilha(2) === null;
+          const recusouConteiner = await conteiner.items.get('${preparo.pilhaConteiner}').dividirPilha(2) === null;
+          await conteiner.sheet.render({ force: true });
+          await esperar(() => conteiner.sheet.element?.querySelector('li[data-item-id="${preparo.pilhaConteiner}"]'));
+          return { gm: game.user.isGM, dono: dono.isOwner, observador: observador.isOwner, donoDoConteiner: conteiner.isOwner, podeMudar: conteiner.system.permissoes.mudar,
+            propria: { nova: nova?.system.quantidade, original: original.system.quantidade, ids: Boolean(nova && nova.id !== original.id), itens: dono.items.size },
+            recusouObservador, recusouConteiner, observado: observador.items.map(i => i.system.quantidade), estoque: conteiner.items.map(i => i.system.quantidade),
+            botao: Boolean(conteiner.sheet.element.querySelector('[data-action="dividirPilha"]')), janela: Boolean(document.querySelector('.application.dialog.dividir-pilha:not(.minimizing)')) };
+        })()`);
+        await edge.evaluate(`game.actors.get('${preparo.conteiner}').update({ 'system.permissoes.mudar': true }).then(() => true)`);
+        const liberou = await cliente.evaluate(`(async () => {
+          const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+          const conteiner = game.actors.get('${preparo.conteiner}'), avisos = [], warn = ui.notifications.warn;
+          const botao = () => conteiner.sheet.element?.querySelector('li[data-item-id="${preparo.pilhaConteiner}"] [data-action="dividirPilha"]');
+          const janela = () => document.querySelector('.application.dialog.dividir-pilha:not(.minimizing)');
+          try {
+            ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+            const sincronizou = await esperar(() => conteiner.system.permissoes.mudar && botao());
+            botao().click(); await esperar(() => janela()?.querySelector('input[name="quantidade"]'));
+            const sugerida = Number(janela().querySelector('input[name="quantidade"]').value);
+            janela().querySelector('input[name="quantidade"]').value = 2; janela().querySelector('button[data-action="ok"]').click();
+            const esperou = await esperar(() => !janela() && conteiner.items.size === 2 && conteiner.items.get('${preparo.pilhaConteiner}')?.system.quantidade === 5);
+            const nova = conteiner.items.find(i => i.id !== '${preparo.pilhaConteiner}');
+            return { sincronizou, sugerida, esperou, original: conteiner.items.get('${preparo.pilhaConteiner}')?.system.quantidade, nova: nova?.system.quantidade, ids: Boolean(nova && nova.id !== '${preparo.pilhaConteiner}'), avisos };
+          } finally {
+            ui.notifications.warn = warn;
+            for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('dividir-pilha')) await app.close();
+            await conteiner.sheet.close();
+          }
+        })()`);
+        const noMestre = await edge.evaluate(`(async () => {
+          const ler = () => ['${preparo.dono}', '${preparo.observador}', '${preparo.conteiner}'].map(id => game.actors.get(id).items.map(i => i.system.quantidade).sort((a, b) => a - b));
+          const pronto = () => JSON.stringify(ler()) === JSON.stringify([[2, 5], [7], [2, 5]]);
+          for (let i = 0; i < 80 && !pronto(); i++) await new Promise(r => setTimeout(r, 100));
+          return { esperou: pronto(), quantidades: ler() };
+        })()`);
+        const avisos = await foundry14.avisosDoSistema(cliente), erros = cliente.erros.slice();
+        const ok = !recusas.gm && recusas.dono && !recusas.observador && recusas.donoDoConteiner && !recusas.podeMudar
+          && recusas.propria.nova === 2 && recusas.propria.original === 5 && recusas.propria.ids && recusas.propria.itens === 2
+          && recusas.recusouObservador && recusas.recusouConteiner && recusas.observado.join() === '7' && recusas.estoque.join() === '7' && !recusas.botao && !recusas.janela
+          && liberou.sincronizou && liberou.sugerida === 4 && liberou.esperou && liberou.original === 5 && liberou.nova === 2 && liberou.ids
+          && liberou.avisos.length === 1 && liberou.avisos[0] === 'Retire os upgrades antes de dividir a pilha.'
+          && noMestre.esperou && JSON.stringify(noMestre.quantidades) === JSON.stringify([[2, 5], [7], [2, 5]]) && avisos.length === 0 && erros.length === 0;
+        return [ok, JSON.stringify({ recusas, liberou, noMestre, avisos, erros })];
+      } finally {
+        await cliente?.fechar();
+        await edge.evaluate(`(async () => { for (const id of ['${preparo.dono}', '${preparo.observador}', '${preparo.conteiner}']) { const ator = game.actors.get(id); await ator?.sheet?.close(); await ator?.delete(); } await game.users.get('${preparo.usuario}')?.delete(); return true; })()`);
+      }
+    });
+
+    await r.passo('inventário (C17): consumir uma dose durante a criação da nova pilha não recria unidades; se o estoque cair abaixo da parte pedida, desfaz a nova pilha e conserva a mudança externa', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const atores = [], avisos = [], warn = ui.notifications.warn;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const boost = foundry.utils.deepClone(cat['core_drugs:boost']); boost.name = 'C17 Boost durante a divisão'; boost.system.quantidade = 7;
+          const ator = await Actor.implementation.create({ name: 'C17 Consumo concorrente', type: 'personagem', system: { atributos: { int: { valor: 6 } } }, items: [boost] }); atores.push(ator);
+          const original = ator.items.contents[0], criar = ator.createEmbeddedDocuments;
+          let consumiu = false;
+          // A criação chega ao servidor antes de a dose ser tomada: a divisão precisa reler o estoque após esse await.
+          ator.createEmbeddedDocuments = async function (...args) {
+            const novas = await criar.apply(this, args);
+            const cartao = await game.system.api.drogas.usarDroga(original);
+            consumiu = Boolean(cartao?.id && game.messages.get(cartao.id)?.getFlag('${S}', 'droga'));
+            return novas;
+          };
+          let nova;
+          try { nova = await original.dividirPilha(2); } finally { delete ator.createEmbeddedDocuments; }
+          const primario = original.effects.find(e => e.name === original.system.consumo) ?? original.effects.find(e => !/Addict/.test(e.name));
+          const consumo = { consumiu, original: original.system.quantidade, nova: nova?.system.quantidade, itens: ator.items.size,
+            total: ator.items.contents.reduce((soma, item) => soma + item.system.quantidade, 0), sobOriginal: Boolean(original.getFlag('${S}', 'sobEfeito')),
+            sobNova: nova?.getFlag('${S}', 'sobEfeito') ?? null, primario: primario?.disabled === false, int: ator.system.atributos.int.valor };
+          const balas = foundry.utils.deepClone(cat['core_ammo:rifle-basic']); balas.system.quantidade = 7;
+          const outro = await Actor.implementation.create({ name: 'C17 Estoque alterado na criação', type: 'personagem', items: [balas] }); atores.push(outro);
+          const pilha = outro.items.contents[0], criarOutra = outro.createEmbeddedDocuments;
+          let alterou = false;
+          outro.createEmbeddedDocuments = async function (...args) {
+            const novas = await criarOutra.apply(this, args);
+            await pilha.update({ 'system.quantidade': 1 }); alterou = true;
+            return novas;
+          };
+          let recusada;
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          try { recusada = await pilha.dividirPilha(2); } finally { delete outro.createEmbeddedDocuments; ui.notifications.warn = warn; }
+          const insuficiente = { alterou, recusou: recusada === null, original: outro.items.get(pilha.id)?.system.quantidade, itens: outro.items.size,
+            ids: outro.items.map(i => i.id), idOriginal: pilha.id, total: outro.items.contents.reduce((soma, item) => soma + item.system.quantidade, 0), avisos };
+          return { consumo, insuficiente };
+        } finally {
+          ui.notifications.warn = warn;
+          for (const ator of atores) delete ator.createEmbeddedDocuments;
+          for (const mensagem of game.messages.filter(m => atores.some(ator => m.speaker.actor === ator.id))) await mensagem.delete();
+          for (const ator of atores) { await ator.sheet?.close(); await ator.delete(); }
+        }
+      })()`);
+      const { consumo, insuficiente } = info;
+      return [consumo.consumiu && consumo.original === 4 && consumo.nova === 2 && consumo.itens === 2 && consumo.total === 6
+        && consumo.sobOriginal && consumo.sobNova === null && consumo.primario && consumo.int === 8
+        && insuficiente.alterou && insuficiente.recusou && insuficiente.original === 1 && insuficiente.itens === 1 && insuficiente.total === 1
+        && insuficiente.ids.join() === insuficiente.idOriginal && insuficiente.avisos.length === 1 && /quantidade|pilha/.test(insuficiente.avisos[0]), JSON.stringify(info)];
+    });
+
+    await r.passo('inventário (C17): as transferências conservam os dois estoques quando criar, remover ou descontar é recusado; quantidades inválidas não mudam nada, e manter na origem só soma no destino', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const avisos = [], warn = ui.notifications.warn;
+        let origem, destino, item;
+        try {
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const dados = quantidade => { const d = foundry.utils.deepClone(cat['core_ammo:rifle-basic']); d.name = 'C17 Transferência'; d.system.quantidade = quantidade; return d; };
+          origem = await Actor.implementation.create({ name: 'C17 Origem da transferência', type: 'personagem', items: [dados(7)] });
+          destino = await Actor.implementation.create({ name: 'C17 Destino da transferência', type: 'personagem', items: [dados(2)] });
+          item = origem.items.contents[0];
+          const estado = () => ({ origem: origem.items.map(i => [i.id, i.system.quantidade]).sort(), destino: destino.items.map(i => [i.id, i.system.quantidade]).sort() });
+          const levar = async opcoes => {
+            try { const resultado = await game.system.api.conteiner.levarItem(item, destino, opcoes); return { resultado: Boolean(resultado), erro: null }; }
+            catch (erro) { return { resultado: false, erro: erro.message }; }
+          };
+          await destino.deleteEmbeddedDocuments('Item', destino.items.map(i => i.id));
+          const antesDeCriar = estado();
+          destino.createEmbeddedDocuments = async () => [];
+          let cancelada;
+          try { cancelada = { chamada: await levar(), antes: antesDeCriar, depois: estado() }; } finally { delete destino.createEmbeddedDocuments; }
+          await destino.createEmbeddedDocuments('Item', [dados(2)]);
+          const antesDeRemover = estado();
+          origem.deleteEmbeddedDocuments = async () => { throw new Error('C17: remoção recusada para o teste'); };
+          let agregada;
+          try { agregada = { chamada: await levar(), antes: antesDeRemover, depois: estado() }; } finally { delete origem.deleteEmbeddedDocuments; }
+          origem.deleteEmbeddedDocuments = async () => [];
+          let semRemover;
+          try { semRemover = { chamada: await levar(), antes: antesDeRemover, depois: estado() }; } finally { delete origem.deleteEmbeddedDocuments; }
+          await destino.deleteEmbeddedDocuments('Item', destino.items.map(i => i.id));
+          const antesDaCopia = estado();
+          origem.deleteEmbeddedDocuments = async () => { throw new Error('C17: remoção da origem recusada depois da cópia'); };
+          let copiada;
+          try { copiada = { chamada: await levar(), antes: antesDaCopia, depois: estado() }; } finally { delete origem.deleteEmbeddedDocuments; }
+          await destino.createEmbeddedDocuments('Item', [dados(2)]);
+          const antesDaParte = estado();
+          item.update = async () => { throw new Error('C17: desconto da parte recusado para o teste'); };
+          let parte;
+          try { parte = { chamada: await levar({ quantidade: 3 }), antes: antesDaParte, depois: estado() }; } finally { delete item.update; }
+          const n = avisos.length, invalidas = [];
+          for (const quantidade of [0, -1, 1.5, 8]) invalidas.push({ quantidade, chamada: await levar({ quantidade }), antes: antesDaParte, depois: estado() });
+          const avisosInvalidos = avisos.slice(n);
+          const copia = await levar({ manterNaOrigem: true });
+          const resultadoCopia = { chamada: copia, estado: estado(), original: origem.items.get(item.id)?.system.quantidade, nova: destino.items.contents[0]?.system.quantidade, itens: destino.items.size };
+          const alvo = destino.items.contents[0], atualizar = alvo.update.bind(alvo);
+          alvo.update = async (...args) => { const resultado = await atualizar(...args); await item.update({ 'system.quantidade': 6 }); return resultado; };
+          let consumo;
+          try { consumo = { chamada: await levar(), original: origem.items.get(item.id)?.system.quantidade, nova: destino.items.get(alvo.id)?.system.quantidade, ids: estado() }; } finally { delete alvo.update; }
+          await destino.deleteEmbeddedDocuments('Item', destino.items.map(i => i.id));
+          await origem.deleteEmbeddedDocuments('Item', origem.items.map(i => i.id));
+          const equipamento = foundry.utils.deepClone(cat['core_gear:agent']); equipamento.name = 'C17 Equipamento com upgrades'; equipamento.system.quantidade = 3;
+          [item] = await origem.createEmbeddedDocuments('Item', [equipamento]);
+          await origem.createEmbeddedDocuments('Item', [{ name: 'C17 Conteúdo instalado', type: 'upgrade', system: { alvo: 'arma', instaladoEm: item.id } }]);
+          const antesDaArvore = estado(), criar = destino.createEmbeddedDocuments.bind(destino);
+          destino.createEmbeddedDocuments = (tipo, dados, opcoes) => criar(tipo, dados.slice(0, 1), opcoes);
+          let criacaoParcial;
+          try { criacaoParcial = { chamada: await levar(), antes: antesDaArvore, depois: estado() }; } finally { delete destino.createEmbeddedDocuments; }
+          const remover = origem.deleteEmbeddedDocuments.bind(origem);
+          origem.deleteEmbeddedDocuments = (tipo, ids, opcoes) => remover(tipo, ids.slice(0, 1), opcoes);
+          let remocaoParcial;
+          try { remocaoParcial = { chamada: await levar(), antes: antesDaArvore, depois: estado(), vinculo: origem.items.find(i => i.type === 'upgrade')?.system.instaladoEm === item.id }; } finally { delete origem.deleteEmbeddedDocuments; }
+          equipamento.system.quantidade = 2;
+          const [raiz] = await destino.createEmbeddedDocuments('Item', [equipamento]);
+          const [upgrade] = await destino.createEmbeddedDocuments('Item', [{ name: 'C17 Upgrade do destino', type: 'upgrade', system: { alvo: 'arma', instaladoEm: raiz.id } }]);
+          const juntou = await levar();
+          const instalada = { chamada: juntou, origem: origem.items.size, quantidade: destino.items.get(raiz.id)?.system.quantidade, itens: destino.items.size,
+            upgrades: destino.items.filter(i => i.type === 'upgrade').map(i => i.id), upgrade: upgrade.id, vinculo: destino.items.get(upgrade.id)?.system.instaladoEm === raiz.id };
+          return { cancelada, agregada, semRemover, copiada, parte, invalidas, avisosInvalidos, copia: resultadoCopia, consumo, criacaoParcial, remocaoParcial, instalada, avisos };
+        } finally {
+          ui.notifications.warn = warn;
+          if (origem) delete origem.deleteEmbeddedDocuments; if (destino) delete destino.createEmbeddedDocuments; if (item) delete item.update;
+          await origem?.sheet?.close(); await destino?.sheet?.close(); await origem?.delete(); await destino?.delete();
+        }
+      })()`);
+      const conservou = caso => !caso.chamada.resultado && JSON.stringify(caso.antes) === JSON.stringify(caso.depois);
+      return [[info.cancelada, info.agregada, info.semRemover, info.copiada, info.parte, info.criacaoParcial, info.remocaoParcial].every(conservou)
+        && info.invalidas.length === 4 && info.invalidas.every(conservou) && info.avisosInvalidos.length === 4 && info.avisosInvalidos.every(a => /quantidade/.test(a))
+        && info.copia.chamada.resultado && info.copia.original === 7 && info.copia.nova === 9 && info.copia.itens === 1
+        && !info.consumo.chamada.resultado && info.consumo.original === 6 && info.consumo.nova === 9 && info.remocaoParcial.vinculo
+        && info.instalada.chamada.resultado && info.instalada.origem === 0 && info.instalada.quantidade === 5 && info.instalada.itens === 2
+        && info.instalada.upgrades.join() === info.instalada.upgrade && info.instalada.vinculo, JSON.stringify(info)];
+    });
+
     await r.passo('inventário (C16): ao voltar ao mundo, o mestre encerra o prazo vencido; drogas no estoque do contêiner não são consumidas nem testadas', async () => {
       const preparo = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo(), dados = foundry.utils.deepClone(cat['core_drugs:stim']);
@@ -11351,7 +11866,7 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.pilha.itens === 1 && info.pilha.quantidade === 20
         && lista.noFregues === 0 && lista.equipada === false && lista.instalado && lista.pente === 14 && !lista.carregadorNaLista && lista.arrastavel === 'true' && lista.arrastavelNaFicha === 'true'
         && lista.detalhe === 'Unidade: 100 eb (Premium) · com Extended Magazine (Heavy Pistol)' && lista.municao === '20 · Unidade: 1 eb (Barato) | Tudo: 20 eb'
-        && lista.botoes.join() === 'pegarTudo,apagarItem' && lista.botoesDaMunicao.join() === 'pegarParte,pegarTudo,apagarItem'
+        && lista.botoes.join() === 'pegarTudo,apagarItem' && lista.botoesDaMunicao.join() === 'dividirPilha,pegarParte,pegarTudo,apagarItem'
         && pegou.sugerida === 10 && pegou.balas.join() === '5,15' && pegou.pistola && pegou.carregador && pegou.naLoja === 1 && pegou.pente === 14
         && info.infinito.join() === '20,15'
         && arrastou.doConteiner.join() === '35,0' && arrastou.entreFichas.join() === 'true,true,0';
