@@ -6247,6 +6247,28 @@ Commit anterior: `44a8d777` (o ciclo 126, da sessão Junin; o nosso anterior é 
 - **Próximo:** instalar no servidor quando a mesa estiver vazia (o instalador desliga o Foundry 14); as mutações P8 a
   P11 do ciclo 125, que pararam na espera da mesa.
 
+### Ciclo 128 (2026-10-19): a entrega dos pedidos da wiki no personagem que veio do Foundry 12 (o pedido do usuário; sessão KouArt)
+
+Commit anterior: `2657f14b` (o recorte dos retratos, na wiki).
+
+- **O problema (o usuário, jogando a Morana no Foundry 14):** a entrega dos itens da wiki para o Foundry 14 não
+  funcionava. Os pedidos aprovados na wiki não chegavam à ficha.
+- **A causa:** a entrega (a de cada minuto e o "Aprovar" da janela) só vai ao "ator ligado", e o sistema o procurava no
+  `foundry` da wiki. Desde que a wiki guarda o vínculo de cada Foundry à parte (o `foundry12` e o `foundry14`), o
+  `foundry` que ela mostra é o do 12 quando o personagem está nos dois, como os da Morana, que vieram pelo "Importar da
+  mesa". O sistema achava o ator do 14, via que não era o do 12 e pulava a entrega, sem aviso. O G4 não pegava: o pedido
+  dele era de um personagem só do Foundry 14.
+- **O que muda (`wiki.mjs`, `atorLigado`):** como a wiki na entrega, vale o ator deste mundo que é um dos ligados (o
+  vínculo do 14, o do 12 ou o que ela mostra); com vínculo e sem nenhum deles aqui, é uma cópia, e não entrega; sem
+  vínculo nenhum, o que tiver a flag do personagem.
+- **Testes:** no G4, o passo novo do personagem ligado aos dois Foundry (o Netrunner, com o ator do 12 e o do 14): o
+  "foundry" que a wiki mostra é o do 12, e o pedido aprovado na wiki chega na ficha do 14 pela entrega de cada minuto
+  (o Agent, 100eb a menos, o pedido entregue). O "Aprovar" da janela continua (o Solo religado pelo endpoint do 12).
+- **Resultados:** G1 88/0, G2 0, G3 184/184 e G4 172/172. Este G4 também é o do conjunto que estava pendente (o Painel
+  Tático do 125, o ponto de acesso do 127 e o ciclo 126 da sessão Junin).
+- **Próximo:** instalar no servidor; as mutações que faltam (as deste ciclo, as T1 a T3 do 127 e as P8 a P11 do 125),
+  com a mesa vazia.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

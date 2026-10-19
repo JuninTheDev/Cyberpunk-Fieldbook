@@ -385,14 +385,16 @@ export async function entregarPedido(ator, wikiId, pedido) {
   return { ok: true, notas };
 }
 
-// O ator ligado ao personagem na wiki (o da última importação: foundry.ator), mesmo com uma cópia antiga neste mundo. Sem
-// a ligação na wiki, o que tiver a flag do personagem. A cópia que não é a ligada não entrega: a wiki a recusa como "ator
-// antigo" (409).
+// O ator ligado ao personagem na wiki (o da última importação), mesmo com uma cópia antiga neste mundo. A wiki guarda o
+// vínculo de cada Foundry à parte (o foundry14 e o foundry12), e o "foundry" que ela mostra é o do 12 quando o personagem
+// está nos dois, como os que vieram da mesa pelo "Importar da mesa". Como a wiki na entrega, vale o ator deste mundo que é
+// um dos ligados; com vínculo e sem nenhum deles aqui, é uma cópia, e não entrega (a wiki a recusaria como "ator antigo",
+// 409). Sem vínculo nenhum, o que tiver a flag do personagem.
 function atorLigado(personagem, wikiId) {
-  const ligadoId = personagem?.foundry?.ator || null;
-  const ligado = ligadoId ? game.actors.get(ligadoId) : null;
-  const ator = ligado?.getFlag(SISTEMA, 'wiki')?.id === wikiId ? ligado : game.actors.find(a => a.getFlag(SISTEMA, 'wiki')?.id === wikiId);
-  return ator && (!ligadoId || ligadoId === ator.id) ? ator : null;
+  const vinculos = [personagem?.foundry14, personagem?.foundry12, personagem?.foundry].filter(vinculo => vinculo?.ator && !vinculo.removido);
+  const ligado = vinculos.map(vinculo => game.actors.get(vinculo.ator)).find(ator => ator?.getFlag(SISTEMA, 'wiki')?.id === wikiId);
+  if (ligado || vinculos.length) return ligado ?? null;
+  return game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId) ?? null;
 }
 
 // Os pedidos aprovados dos personagens que estão neste mundo (pelo id da wiki na flag do ator).

@@ -10955,6 +10955,32 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ antes: { f12: antes?.foundry12?.ator ?? null, f14: antes?.foundry14?.ator ?? null, removido: antes?.foundry14?.removido ?? null }, info, depois: { f12: doc.foundry12?.ator, f14: doc.foundry14?.ator, removido: doc.foundry14?.removido ?? null, mesa: doc.mesa?.geracao }, do12, deOutro })];
     });
 
+    await r.passo('pedidos da loja no personagem ligado aos dois Foundry (o caso da Morana, que veio do Foundry 12 pelo "Importar da mesa"): o "foundry" que a wiki mostra é o do 12; o pedido aprovado na wiki chega na ficha do Foundry 14 pela entrega de cada minuto, desconta e fica entregue', async () => {
+      // O Netrunner importado de novo neste mundo: a wiki fica com o vínculo do 12 (o que ela mostra) e o do 14 (foundry14).
+      const ator = await edge.evaluate(`(async () => { const { ator } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(netrunner.id)}, ''); await ator.update({ 'system.dinheiro': 500 }); return ator.id; })()`);
+      try {
+        const doc = (await api(`/api/personagens/${netrunner.id}`)).personagem;
+        const { pedido } = await api(`/api/personagens/${netrunner.id}/pedidos`, 'POST', { itens: [{ id: 'core_gear:agent', qtd: 1 }] });
+        await api(`/api/personagens/${netrunner.id}/pedidos/${pedido.id}/aprovar`, 'POST', {});
+        const info = await edge.evaluate(`(async () => {
+          const a = game.actors.get(${JSON.stringify(ator)});
+          const agents = a.items.filter(i => i.name === 'Agent').length;
+          const mensagens = [];
+          ui.notifications.info = m => { mensagens.push(String(m)); };
+          ui.notifications.warn = m => { mensagens.push(String(m)); };
+          let resultados;
+          try { resultados = await game.system.api.wiki.entregarPedidos(); } finally { delete ui.notifications.info; delete ui.notifications.warn; }
+          return { resultados: resultados.filter(r => r.pedido === ${JSON.stringify(pedido.id)}).map(r => r.ok), mensagens, dinheiro: a.system.dinheiro, agents: a.items.filter(i => i.name === 'Agent').length - agents };
+        })()`);
+        const depois = (await api(`/api/personagens/${netrunner.id}`)).personagem;
+        const status = depois.pedidos.find(p => p.id === pedido.id)?.status;
+        const ok = doc.foundry?.ator === 'ator-do-12' && doc.foundry14?.ator === ator && info.resultados.join() === 'true' && info.dinheiro === 400 && info.agents === 1 && status === 'entregue';
+        return [ok, JSON.stringify({ vinculos: { mostrado: doc.foundry?.ator, f12: doc.foundry12?.ator, f14: doc.foundry14?.ator }, ator, info, status })];
+      } finally {
+        await edge.evaluate(`(async () => { await game.actors.get(${JSON.stringify(ator)})?.delete(); return true; })()`);
+      }
+    });
+
     // O Painel Tático (o C25): a barra do token controlado, no navegador do mestre (os elementos são os do módulo
     // painel-tatico da mesa do Foundry 12, com os dados deste sistema).
     const naBarra = `const el = () => document.getElementById('painel-tatico');
