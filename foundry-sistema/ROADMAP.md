@@ -219,7 +219,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     Ao juntar conteúdo instalado, ficam só os upgrades do destino, como no CORE (ver as dúvidas).
 - [x] **C18. Armadura:** feito no ciclo 137 (sessão Codex, 2026-10-20). Maior SP atual por local, com a fonte identificada;
   ablação de todas as camadas, Desfazer por item e botões de ablar e consertar nas fichas de personagem e capanga.
-- [ ] **C19. Lesão crítica fora do ataque:** rolar na tabela à mão, e o paliativo e o tratamento com a DV.
+- [~] **C19. Lesão crítica fora do ataque:** em andamento (sessão Codex, 2026-10-20). Rolar na tabela à mão, e o paliativo e o tratamento com a DV.
 - [ ] **C20. Macros e favoritos:** arrastar arma, perícia ou item para a barra, e os favoritos na aba Combate.
 - [ ] **C21. Cyberware:**
   - a base com os slots das opções (instalar dentro da base, como a montagem da wiki): ciclos 82 a 84;
