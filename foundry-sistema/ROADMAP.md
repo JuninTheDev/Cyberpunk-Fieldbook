@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 140). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 141). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -232,7 +232,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   - a base com os slots das opções (instalar dentro da base, como a montagem da wiki): ciclos 82 a 84;
   - a terapia, que devolve Humanidade até o máximo;
   - a ciberpsicose.
-- [~] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE): em andamento (sessão KouArt, com o Antigravity, 2026-10-20). A wiki guarda, e o cpr-2077 manda na
+- [x] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE): feito no ciclo 140 (sessão KouArt, com o Antigravity, 2026-10-20). A wiki guarda, e o cpr-2077 manda na
   ficha "Na mesa".
 - [x] **C23. Mais de uma Role, e perícias novas:** feito (ciclos 118 a 120, sessão KouArt). Por partes:
   - [x] a segunda Role da criação (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o criador guarda a

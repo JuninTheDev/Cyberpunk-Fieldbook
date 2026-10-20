@@ -13,6 +13,7 @@ const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
 const texto = (initial = '') => new fields.StringField({ required: true, blank: true, initial });
 const recurso = (value, max) => new fields.SchemaField({ value: inteiro(value), max: inteiro(max) });
+const custoMensal = () => new fields.SchemaField({ custo: inteiro(0, { min: 0 }), descricao: texto() });
 // A arma do cyberware e do acessório de arma (o C11; o isWeapon do cyberware e o secondaryWeapon do itemUpgrade do CORE,
 // com os campos do attackable e do loadable): montado, o item ataca pela arma ligada a ele (armas-cyberware.mjs), com
 // estes campos. pente: o tamanho do pente (0, sem munição).
@@ -88,6 +89,12 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       // O apelido (o nome de rua) e o Lifepath, em texto (a wiki manda pronto do criador).
       apelido: texto(),
       lifepath: new fields.SchemaField(Object.fromEntries(LIFEPATH.map(({ chave }) => [chave, texto()]))),
+      // Moradia, estilo de vida, Trauma Team e moda (o lifestyle do CORE; o C22): os três primeiros com o custo mensal
+      // (pago no dia 1º) e a descrição; a moda, só a descrição.
+      moradia: custoMensal(),
+      estiloDeVida: custoMensal(),
+      traumaTeam: custoMensal(),
+      moda: texto(),
       // O extrato de Eurodólares, IP e Reputação (o ledger do CORE): cada mudança com a data, a diferença, o saldo, o
       // motivo e quem mudou (AtorCPR.mudarComExtrato e o _preUpdate).
       extratos: new fields.SchemaField(Object.fromEntries(Object.keys(EXTRATOS).map(campo => [campo, extrato()]))),

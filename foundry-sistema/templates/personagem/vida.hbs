@@ -15,6 +15,36 @@ as metas e as pessoas), o Lifepath da Role e as notas. --}}
     {{/each}}
   </div>
 
+  <section class="painel corte moradia">
+    <div class="titulo">
+      MORADIA E ESTILO DE VIDA
+      <span>
+        <b class="custo-mensal">POR MÊS: {{custoMensal}} eb, no dia 1º</b>
+        {{#if (and editavel custoMensal)}}
+        <button type="button" class="acao" data-action="pagarMes" data-tooltip="Descontar {{custoMensal}} eb dos Eurodólares pelo extrato">PAGAR O MÊS</button>
+        {{/if}}
+      </span>
+    </div>
+    <div class="duas-colunas campos-moradia">
+      {{#each camposDeMoradia}}
+      <div class="campo-lifepath linha-moradia">
+        <span>{{rotulo}}</span>
+        <div class="entradas-moradia">
+          <input type="text" name="system.{{chave}}.descricao" value="{{descricao}}" placeholder="—" aria-label="{{rotulo}}">
+          <label class="custo-moradia">
+            <input type="number" name="system.{{chave}}.custo" value="{{custo}}" min="0" step="1" aria-label="Custo mensal de {{rotulo}}">
+            <small>eb/mês</small>
+          </label>
+        </div>
+      </div>
+      {{/each}}
+      <label class="campo-lifepath linha-moradia">
+        <span>Moda</span>
+        <input type="text" name="system.moda" value="{{sistema.moda}}" placeholder="—" aria-label="Moda">
+      </label>
+    </div>
+  </section>
+
   <section class="painel corte notas">
     <div class="titulo">NOTAS<span>APARÊNCIA, HISTÓRIA, O QUE QUISER</span></div>
     {{#if editavel}}

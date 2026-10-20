@@ -13018,6 +13018,117 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.personagem === 'Alvo' && info.nome === 'Jogador - Evasão' && info.dono && info.autor && info.rolou.rotulo === 'Evasão' && info.rolou.ator, JSON.stringify(info)];
     });
 
+    await r.passo('moradia e estilo de vida (o C22; a wiki e o lifestyle do CORE): a importação da wiki traz a moradia, o estilo de vida, o Trauma Team e a moda; a aba Vida mostra o total por mês e os campos editáveis; mudado o custo do Trauma Team pela ficha, "Pagar o mês" pergunta antes e desconta pelo extrato; o fichaParaAWiki manda a moradia no formato do cpr-2077, e o importarDaMesa a traz de volta', async () => {
+      // As expectativas pela moradia que o criador da wiki montou para o Nomad (o resultado.moradia): a ficha troca o Trauma
+      // Team pelo Prata (500 eb) e paga o mês.
+      const m = nomad.resultado.moradia;
+      const trauma = 500;
+      const mensal = m.aluguel + m.custoEstilo + (m.traumaTeam?.custo ?? 0);
+      const total = m.aluguel + m.custoEstilo + trauma;
+      const modaEsperada = m.moda ? `${m.moda.nome}: ${m.moda.desc}` : '';
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const { ator } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '');
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('vida', 'primary');
+          const f = () => ator.sheet.element;
+          const valor = nome => f()?.querySelector('[name="' + nome + '"]')?.value;
+          const texto = seletor => f()?.querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          await esperar(() => f()?.querySelector('.tab.vida .moradia [name="system.moradia.custo"]'));
+          const antes = {
+            moradia: [valor('system.moradia.descricao'), valor('system.moradia.custo')],
+            estilo: [valor('system.estiloDeVida.descricao'), valor('system.estiloDeVida.custo')],
+            trauma: [valor('system.traumaTeam.descricao'), valor('system.traumaTeam.custo')],
+            moda: valor('system.moda'),
+            custoMensal: texto('.tab.vida .moradia .custo-mensal'),
+            botao: Boolean(f().querySelector('.tab.vida .moradia [data-action="pagarMes"]'))
+          };
+          const mudar = async (nome, novo) => {
+            const campo = f().querySelector('[name="' + nome + '"]');
+            campo.value = novo;
+            campo.dispatchEvent(new Event('change', { bubbles: true }));
+          };
+          await mudar('system.traumaTeam.descricao', 'Trauma Team Prata');
+          await esperar(() => ator.system.traumaTeam.descricao === 'Trauma Team Prata');
+          await mudar('system.traumaTeam.custo', '${trauma}');
+          await esperar(() => ator.system.traumaTeam.custo === ${trauma} && texto('.tab.vida .moradia .custo-mensal') === 'POR MÊS: ${total} eb, no dia 1º');
+          const mudado = { trauma: [ator.system.traumaTeam.descricao, ator.system.traumaTeam.custo], custoMensal: texto('.tab.vida .moradia .custo-mensal') };
+          // Pagar o mês: confirma no DialogV2 e tira o total pelo extrato do dinheiro (com dinheiro bastante: ficar negativo
+          // avisaria).
+          await ator.update({ 'system.dinheiro': ${total} + 1000 });
+          await esperar(() => ator.system.dinheiro === ${total} + 1000);
+          const dinheiroAntes = ator.system.dinheiro;
+          const janela = () => document.querySelector('.application.dialog.pagar-mes:not(.minimizing)');
+          f().querySelector('.tab.vida .moradia [data-action="pagarMes"]').click();
+          await esperar(() => janela()?.querySelector('button[data-action="yes"]'));
+          const confirmacao = janela().textContent.replace(/\\s+/g, ' ').trim();
+          janela().querySelector('button[data-action="yes"]').click();
+          await esperar(() => ator.system.dinheiro === dinheiroAntes - ${total} && !janela());
+          const pago = {
+            dinheiroAntes,
+            dinheiroDepois: ator.system.dinheiro,
+            extrato: ator.system.extratos.dinheiro.at(-1),
+            confirmacao
+          };
+          const naMesa = game.system.api.wiki.fichaParaAWiki(ator).moradia;
+          await game.system.api.wiki.mandarFicha(ator);
+          await ator.sheet.close();
+          await ator.delete();
+          // A migração da mesa traz os custos e descrições da ficha "Na mesa" e a moda da criação da wiki; sem total, o botão some.
+          const { ator: daMesa } = await game.system.api.wiki.importarDaMesa(${JSON.stringify(nomad.id)}, '');
+          const voltado = {
+            moradia: daMesa.system.moradia,
+            estiloDeVida: daMesa.system.estiloDeVida,
+            traumaTeam: daMesa.system.traumaTeam,
+            moda: daMesa.system.moda
+          };
+          await daMesa.update({ 'system.moradia.custo': 0, 'system.estiloDeVida.custo': 0, 'system.traumaTeam.custo': 0 });
+          await daMesa.sheet.render({ force: true });
+          daMesa.sheet.changeTab('vida', 'primary');
+          await esperar(() => daMesa.sheet.element?.querySelector('.tab.vida .moradia'));
+          const zerado = {
+            custoMensal: daMesa.sheet.element.querySelector('.tab.vida .moradia .custo-mensal')?.textContent.replace(/\\s+/g, ' ').trim() ?? '',
+            botao: Boolean(daMesa.sheet.element.querySelector('.tab.vida .moradia [data-action="pagarMes"]'))
+          };
+          await daMesa.sheet.close();
+          await daMesa.delete();
+          return { antes, mudado, pago, naMesa, voltado, zerado };
+        })()`);
+        const doc = (await api(`/api/personagens/${nomad.id}`)).personagem;
+        const naMesaEsperada = {
+          housing: { custo: m.aluguel, descricao: m.moradia },
+          lifeStyle: { custo: m.custoEstilo, descricao: m.estilo },
+          traumaTeam: { custo: trauma, descricao: 'Trauma Team Prata' }
+        };
+        const { antes, mudado, pago, naMesa, voltado, zerado } = info;
+        const ok = antes.moradia.join('|') === `${m.moradia}|${m.aluguel}`
+          && antes.estilo.join('|') === `${m.estilo}|${m.custoEstilo}`
+          && antes.trauma.join('|') === `${m.traumaTeam?.nome ?? ''}|${m.traumaTeam?.custo ?? 0}`
+          && antes.moda === modaEsperada
+          && antes.custoMensal === `POR MÊS: ${mensal} eb, no dia 1º`
+          && antes.botao === mensal > 0
+          && mudado.trauma.join('|') === `Trauma Team Prata|${trauma}`
+          && mudado.custoMensal === `POR MÊS: ${total} eb, no dia 1º`
+          && pago.confirmacao.includes(`${total} eb`)
+          && pago.dinheiroDepois === pago.dinheiroAntes - total
+          && pago.extrato?.acao === 'subtrair' && pago.extrato.delta === -total && pago.extrato.saldo === pago.dinheiroDepois
+          && pago.extrato.motivo === 'Moradia e estilo de vida do mês'
+          && JSON.stringify(naMesa) === JSON.stringify(naMesaEsperada)
+          && JSON.stringify(doc.mesa?.moradia) === JSON.stringify(naMesaEsperada)
+          && JSON.stringify(voltado) === JSON.stringify({
+            moradia: naMesaEsperada.housing,
+            estiloDeVida: naMesaEsperada.lifeStyle,
+            traumaTeam: naMesaEsperada.traumaTeam,
+            moda: modaEsperada
+          })
+          && zerado.custoMensal === 'POR MÊS: 0 eb, no dia 1º' && !zerado.botao;
+        return [ok, JSON.stringify({ info, mesaDaWiki: doc.mesa?.moradia })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const a of game.actors.filter(a => a.name === 'Teste Nomad')) { await a.sheet?.close(); await a.delete(); } return true; })()`);
+      }
+    });
+
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {
         // As voltas da ficha que estão esperando vão antes de a wiki "cair".

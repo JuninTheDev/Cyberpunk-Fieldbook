@@ -317,6 +317,14 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **Uma rodada interrompida no meio** (ciclo 139): o executor das mutações volta o arquivo no `finally`, que não roda
   quando o processo é morto (o PC sem memória matou a rodada da M5). Depois de uma interrupção, confira o md5 dos
   arquivos mutados antes de qualquer outra coisa e volte o que ficou mutado.
+- **O trabalho de um worker do Antigravity** (ciclo 140): o worker (o `agy`, numa worktree própria, sem comandos de
+  terminal) escreve código no estilo do sistema, mas inventa referências: no C22, uma função e um modelo do CORE que não
+  existem, as chaves da tabela de moradia da wiki e os nomes esperados nos testes; no C26, a DV de uma faixa e o `fixar`
+  do cenário. Antes dos portões, confira cada citação no arquivo (a cópia do CORE, os `system-*.js`) e cada valor
+  esperado na fonte (a tabela da wiki, o `resultado` do personagem). Um teste que lê a fonte é melhor que um número escrito.
+- **As mutações com o PC sem memória** (ciclos 139 e 140): o Claude Code mata o processo de fundo quando a memória fica
+  crítica, e o `finally` do executor não roda. Com pouca memória, rode uma mutação por vez em primeiro plano (cada G4
+  cabe nos 10 minutos do comando), e confira o md5 depois de cada uma.
 
 ## Build
 

@@ -401,10 +401,14 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .bonus-role .soma { margin: 0; font-size: 16px; line-height: 1.4; }
 .cpr-fieldbook.ficha-personagem .bonus-role .soma b { color: var(--cp-ciano); font-family: var(--cp-dados); font-weight: 400; }
 
-/* ---------- Vida: o Lifepath e as notas ---------- */
+/* ---------- Vida: o Lifepath, a moradia e as notas ---------- */
 .cpr-fieldbook.ficha-personagem .campo-lifepath { display: flex; flex-direction: column; gap: 3px; }
 .cpr-fieldbook.ficha-personagem .campo-lifepath span { font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-amarelo); text-transform: uppercase; }
 .cpr-fieldbook.ficha-personagem .campo-lifepath textarea { min-height: 2.8em; resize: vertical; font-family: var(--cp-titulo); font-size: 15px; line-height: 1.35; }
+.cpr-fieldbook.ficha-personagem .moradia .entradas-moradia { display: flex; align-items: center; gap: 8px; }
+.cpr-fieldbook.ficha-personagem .moradia .entradas-moradia > input[type="text"], .cpr-fieldbook.ficha-personagem .moradia .linha-moradia > input[type="text"] { flex: 1; min-width: 0; font-family: var(--cp-titulo); font-size: 16px; }
+.cpr-fieldbook.ficha-personagem .moradia .custo-moradia { display: flex; align-items: center; gap: 4px; flex: none; font-family: var(--cp-dados); font-size: 12px; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .moradia .custo-moradia input { width: 7ch; text-align: right; color: var(--cp-amarelo); font-size: 15px; }
 .cpr-fieldbook.ficha-personagem .notas prose-mirror { min-height: 18rem; background: var(--cp-poco); }
 
 /* ---------- Rodapé ---------- */

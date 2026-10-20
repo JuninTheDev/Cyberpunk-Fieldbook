@@ -16,7 +16,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
-import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
+import { alcanceDoJackIn, bonusDeRole, custoMensalDeMoradia, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
@@ -117,6 +117,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       prepararArmaVeicular: FichaPersonagem.#prepararArmaVeicular,
       prepararSorte: FichaPersonagem.#prepararSorte,
       abrirExtrato: FichaPersonagem.#abrirExtrato,
+      pagarMes: FichaPersonagem.#pagarMes,
       recarregarSorte: FichaPersonagem.#recarregarSorte,
       alternarCoronha: FichaPersonagem.#alternarCoronha,
       alternarCarga: FichaPersonagem.#alternarCarga,
@@ -395,6 +396,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       lifepathGrupos: GRUPOS_DO_LIFEPATH.map(grupo => ({
         ...grupo, campos: grupo.chaves.map(chave => ({ chave, rotulo: LIFEPATH.find(campo => campo.chave === chave).rotulo, valor: s.lifepath[chave], linhas: chave === 'role' ? 4 : 2 }))
       })),
+      custoMensal: custoMensalDeMoradia(s),
+      camposDeMoradia: [
+        { chave: 'moradia', rotulo: 'Moradia', descricao: s.moradia.descricao, custo: s.moradia.custo },
+        { chave: 'estiloDeVida', rotulo: 'Estilo de vida', descricao: s.estiloDeVida.descricao, custo: s.estiloDeVida.custo },
+        { chave: 'traumaTeam', rotulo: 'Trauma Team', descricao: s.traumaTeam.descricao, custo: s.traumaTeam.custo }
+      ],
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
   }
@@ -587,6 +594,20 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #prepararSorte(evento, alvo) { return this.actor.prepararSorte(this.actor.sortePreparada + Number(alvo.dataset.delta)); }
   static #recarregarSorte() { return this.actor.recarregarSorte(); }
   static #abrirExtrato(evento, alvo) { return abrirExtrato(this.actor, alvo.dataset.campo); }
+  // "Pagar o mês" na aba Vida (o C22; a regra do criador da wiki, passo 6; o CORE só guarda os campos): no dia 1º de cada
+  // mês, o aluguel, o estilo de vida e o Trauma Team saem dos Eurodólares, pelo extrato, depois da confirmação.
+  static async #pagarMes() {
+    if (!this.isEditable) return null;
+    const valor = custoMensalDeMoradia(this.actor.system);
+    if (!valor) return null;
+    const ok = await DialogV2.confirm({
+      window: { title: 'Pagar o mês' }, classes: [SISTEMA, 'pagar-mes'], rejectClose: false,
+      content: `<p>Descontar <b>${valor} eb</b> de <b>${foundry.utils.escapeHTML(this.actor.name)}</b> pela moradia e estilo de vida do mês (no dia 1º)?</p>`
+    });
+    if (!ok) return null;
+    const agora = custoMensalDeMoradia(this.actor.system);
+    return agora ? this.actor.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: agora, motivo: 'Moradia e estilo de vida do mês' }) : null;
+  }
   // A coronha retrátil (a Dian, de 2077): recolhida, dá para esconder a arma, e os ataques têm −1.
   static #alternarCoronha(evento, alvo) {
     const item = this.#item(alvo);

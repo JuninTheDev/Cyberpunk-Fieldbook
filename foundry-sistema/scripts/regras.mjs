@@ -1035,3 +1035,57 @@ export function impedimento2077({ modo, perfil, pelaMunicao = 'tiro', pedido = n
   }
   return null;
 }
+
+// ---------------- Moradia, estilo de vida, moda e Trauma Team (o C22) ----------------
+// O lifestyle do CORE 0.92.4 (character-datamodel.js e lifestyle-schema.js) e o módulo cpr-2077 da mesa
+// (foundry-2077/scripts/wiki.mjs, lifestyleUpdate e tableSnapshot), pelas regras da wiki (system-rules.js, "Estilo de vida e
+// moradia", RED p. 377–381, e criador.js, housing e passo 6: "No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma
+// Team saem dos seus eb").
+const custoDeMoradia = valor => Math.max(0, Math.trunc(Number(valor) || 0));
+const entradaDeMoradia = (custo, descricao) => ({ custo: custoDeMoradia(custo), descricao: String(descricao ?? '').trim() });
+const modaDaWiki = moda => {
+  if (!moda) return '';
+  if (typeof moda === 'string') return moda.trim();
+  const nome = String(moda.nome ?? '').trim();
+  const desc = String(moda.desc ?? '').trim();
+  return nome && desc ? `${nome}: ${desc}` : nome || desc;
+};
+
+// Do resultado.moradia do criador da wiki (criador.js, housing) para os quatro campos do ator, em texto simples (como o
+// lifepath).
+export function moradiaDaWiki(home = {}) {
+  const h = home || {};
+  return {
+    moradia: entradaDeMoradia(h.aluguel, h.moradia),
+    estiloDeVida: entradaDeMoradia(h.custoEstilo, h.estilo),
+    traumaTeam: entradaDeMoradia(h.traumaTeam?.custo, h.traumaTeam?.nome),
+    moda: modaDaWiki(h.moda)
+  };
+}
+
+// Da ficha "Na mesa" (doc.mesa.moradia, com housing, lifeStyle e traumaTeam do cpr-2077) para os campos do ator; sem ela
+// (ou para a moda, que a ficha "Na mesa" não leva), usa o resultado.moradia da criação.
+export function moradiaDaMesa(daMesa, daWiki) {
+  const base = moradiaDaWiki(daWiki);
+  if (!daMesa || typeof daMesa !== 'object') return base;
+  return {
+    moradia: daMesa.housing ? entradaDeMoradia(daMesa.housing.custo, daMesa.housing.descricao) : base.moradia,
+    estiloDeVida: daMesa.lifeStyle ? entradaDeMoradia(daMesa.lifeStyle.custo, daMesa.lifeStyle.descricao) : base.estiloDeVida,
+    traumaTeam: daMesa.traumaTeam ? entradaDeMoradia(daMesa.traumaTeam.custo, daMesa.traumaTeam.descricao) : base.traumaTeam,
+    moda: daMesa.moda !== undefined ? modaDaWiki(daMesa.moda) : base.moda
+  };
+}
+
+// Dos campos do ator para o doc.mesa.moradia que volta para a wiki, exatamente no formato do cpr-2077 (criador.js,
+// doc.mesa.moradia).
+export function moradiaParaAWiki(sistema = {}) {
+  return {
+    housing: entradaDeMoradia(sistema?.moradia?.custo, sistema?.moradia?.descricao),
+    lifeStyle: entradaDeMoradia(sistema?.estiloDeVida?.custo, sistema?.estiloDeVida?.descricao),
+    traumaTeam: entradaDeMoradia(sistema?.traumaTeam?.custo, sistema?.traumaTeam?.descricao)
+  };
+}
+
+// O total mensal pago no dia 1º (o aluguel, o estilo de vida e o Trauma Team; a moda não tem custo mensal).
+export const custoMensalDeMoradia = (sistema = {}) =>
+  custoDeMoradia(sistema?.moradia?.custo) + custoDeMoradia(sistema?.estiloDeVida?.custo) + custoDeMoradia(sistema?.traumaTeam?.custo);

@@ -11,7 +11,7 @@ import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
-import { ehBaseNatural, ladoValido, linhaDoExtrato, periciaPropria } from './regras.mjs';
+import { ehBaseNatural, ladoValido, linhaDoExtrato, moradiaDaMesa, moradiaDaWiki, moradiaParaAWiki, periciaPropria } from './regras.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
 const GERACAO = 14;
@@ -215,6 +215,7 @@ export async function importarPersonagem(id, donoId = '') {
       extratos: extratosIniciais({ dinheiro: Number(r.dinheiro?.saldo) || 0 }, 'Dinheiro inicial (criador da wiki)'),
       apelido: doc.apelido || '',
       lifepath: lifepathDaWiki(r.lifepath),
+      ...moradiaDaWiki(r.moradia),
       notas: notasHtml
     },
     items: [...itensDaWiki(catalogo, r.itens || [], notas), ...veiculos.itens],
@@ -297,6 +298,7 @@ export function fichaParaAWiki(ator) {
     pericias: Object.entries(s.pericias).filter(([, propria]) => propria.nivel > 0)
       .map(([id, propria]) => ({ nome: nomeDaPericia(id, propria), nivel: propria.nivel, stat: s.pericia(id).atributo.toUpperCase() })),
     lesoes: ator.items.filter(item => item.type === 'lesao').map(item => item.name),
+    moradia: moradiaParaAWiki(s),
     itens
   };
 }
@@ -527,6 +529,7 @@ export async function importarDaMesa(id, donoId = '') {
       dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0,
       extratos: extratosIniciais({ dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0 }, 'Migrado da ficha da mesa do Foundry 12'),
       apelido: doc.apelido || '', lifepath: lifepathDaWiki(r.lifepath),
+      ...moradiaDaMesa(m.moradia, r.moradia),
       notas: `<p><i>Migrado da ficha da mesa do Foundry 12 (${origem}) em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`
     },
     flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), origem: 'mesa' } } }

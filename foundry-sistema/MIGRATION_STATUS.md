@@ -39,6 +39,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
 | CORE | rolar lesão à mão | falta (C19) |
+| CORE e wiki | moradia, estilo de vida, moda e Trauma Team (o `lifestyle`; C22) | portados no ciclo 140: os campos, a importação da wiki e da mesa, a ficha "Na mesa" e o "Pagar o mês" (a regra do criador da wiki) |
 | CORE | macros na barra (a arma, a perícia e o item arrastados da ficha) e os favoritos (o alfinete do item e da perícia) | portados no ciclo 139 (C20): o favorito vai para o painel da aba Combate (ver as dúvidas) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
@@ -728,6 +729,11 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     itens;
   - **o capanga:** a ficha dele tem a ★ das perícias (a do Painel Tático) e arrasta as perícias e as armas para a barra,
     mas não tem o painel Favoritos (é uma página só, sem a aba Combate).
+
+- **Moradia, estilo de vida, moda e Trauma Team** (C22; o `lifestyle` do CORE 0.92.4, `foundry-2077/scripts/wiki.mjs`, `criador.js` e `system-rules.js`, "Estilo de vida e moradia"):
+  - **o pagamento do mês:** o CORE só guarda e mostra os campos (`housing`, `lifeStyle`, `traumaTeam` com `cost` e `description`, e `fashion` só com `description`), sem somar nem cobrar. Aqui a aba Vida soma os três custos mensais ("POR MÊS: N eb, no dia 1º") e oferece **Pagar o mês**, que confirma antes e desconta do dinheiro pelo extrato (`Moradia e estilo de vida do mês`), como diz o passo 6 do criador da wiki; sem total (> 0), o botão não aparece;
+  - **a moda na ficha "Na mesa":** o `fichaParaAWiki` manda `moradia: { housing, lifeStyle, traumaTeam }` com `{ custo, descricao }`, exatamente como o `cpr-2077` e o `criador.js` (`doc.mesa.moradia`). Como o `cpr-2077` não mandava a moda na ficha da mesa, o `importarDaMesa` aproveita a moda da criação da wiki (`resultado.moradia`) quando `mesa.moradia` não traz `moda`;
+  - **com o mestre:** quando vira o mês (o sistema não cobra sozinho pelo relógio), os benefícios de Role (moradia e Trauma Team da Exec), a penalidade de dormir na rua ou no carro e o atendimento do Trauma Team.
 
 ## Registro dos ciclos
 
@@ -6820,6 +6826,45 @@ Commit anterior: `f6e40ffc` (a reserva do C20). O C20 inteiro neste ciclo.
   efeito (M11, M12) e o mirado sem a pergunta (M13). A primeira rodada parou na M5, porque o PC ficou sem memória: o
   arquivo dela foi restaurado à mão (md5 conferido), e a rodada inteira foi de novo.
 - **Próximo:** o C21 (a terapia e a ciberpsicose).
+
+### Ciclo 140 (2026-10-20): o C22, moradia, estilo de vida, moda e Trauma Team (sessão KouArt, com o Antigravity)
+
+Commit anterior: `464d7bab` (o ciclo 139, o C20). O C22 inteiro neste ciclo. O código e os testes saíram de um worker do
+Antigravity (o `agy`, numa worktree própria, sem commit); a sessão KouArt revisou, corrigiu, rodou os portões e as
+mutações (ver a lição no QUALITY_GATES).
+
+- **A referência:** o CORE 0.92.4 (`modules/datamodels/actor/character-datamodel.js` e `components/lifestyle-schema.js`:
+  o `lifestyle`, com `housing`, `lifeStyle` e `traumaTeam`, cada um com o custo e a descrição, e `fashion`, só a descrição;
+  o CORE só guarda os campos); a mesa antiga (`foundry-2077/scripts/wiki.mjs`: o `lifestyleUpdate` da importação e a
+  `moradia` da ficha "Na mesa", `{ housing, lifeStyle, traumaTeam }` com `{ custo, descricao }`); a wiki (`criador.js`,
+  `housing`, o `resultado.moradia`, e o passo 6: "No dia 1º de cada mês, o aluguel, o estilo de vida e o Trauma Team").
+- **O que muda:**
+  - **`dados.mjs`:** os campos `moradia`, `estiloDeVida` e `traumaTeam` (o custo mensal e a descrição) e `moda`;
+  - **`regras.mjs`:** `moradiaDaWiki`, `moradiaDaMesa`, `moradiaParaAWiki` e `custoMensalDeMoradia`;
+  - **`wiki.mjs`:** a moradia na importação da wiki e na da mesa, e na ficha "Na mesa" que volta (o formato do cpr-2077,
+    que a wiki já mostra);
+  - **a aba Vida:** o painel "MORADIA E ESTILO DE VIDA" (os campos, o total por mês) e o "PAGAR O MÊS", que pergunta e
+    desconta pelo extrato.
+- **A revisão do trabalho do worker:** duas citações do CORE inventadas (um `_payForLifestyle` e um modelo
+  `cpr-lifestyle.hbs`, que não existem) saíram; o teste do G3 lia a tabela da wiki por chaves que não existem (`HOUSING`,
+  `homes`, `lifestyles`) e esperava nomes inventados ("Ração (Kibble)", "Bag Lady Chic"): agora lê o `housing` real
+  (`moradias`, `estilos`, `traumaTeam`, `modas`); o passo do G4 esperava os mesmos nomes, procurava um `.custo-mensal` que o
+  modelo não tinha e quebrava sem moda: agora as expectativas vêm do `resultado.moradia` do Nomad, o modelo tem o elemento
+  e o dinheiro é posto antes do pagamento (ficar negativo avisaria).
+- **Testes:**
+  - **G3:** `moradia.test.mjs` (novo): a moradia da wiki (pela tabela real do criador), a ida e a volta da ficha "Na mesa" e
+    o total do mês;
+  - **G4:** um passo novo: o Nomad importado da wiki com a moradia na aba Vida; o Trauma Team mudado pela ficha; "Pagar o
+    mês" (a confirmação, o dinheiro e a linha no extrato); a `moradia` na ficha "Na mesa" e na wiki; a importação da mesa
+    que a traz de volta; o botão que some com o total 0.
+- **Portões:** G1, 98 arquivos sem erro; G2, nenhum erro; G3, 229/229; G4 completo, 201/201, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as nove caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: o aluguel da wiki
+  fora (M1), o Trauma Team fora do total (M2), a chave do estilo de vida trocada (M3) e a migração sem o Trauma Team da
+  mesa (M4). No G4: a importação sem a moradia (M5), a ficha da mesa sem ela (M6), o "Pagar o mês" que soma (M7), o botão
+  com o total 0 (M8) e a migração sem a ficha da mesa (M9). A rodada de fundo parou na M8 (o PC sem memória: o arquivo
+  dela foi restaurado e conferido); a M8 e a M9 rodaram de novo em primeiro plano.
+- **Próximo:** o C26, partes 1 a 3 (ciclo 141), e o C21 (ciclo 142).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
