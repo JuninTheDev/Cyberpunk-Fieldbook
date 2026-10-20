@@ -7032,7 +7032,8 @@ servidor quebraria no build dos compêndios.
 - **Resultados:**
   - G1: 104 arquivos sem erro; G2: 0 erros; G3: 248/248 (235/235 antes da integração);
   - G4: 203/203 (451 s) na árvore sobre o 141. O ciclo 142 (Codex) entrou depois; integrado (o conflito foi só neste
-    registro), com G1–G3 de novo. O G4 da árvore final vai num commit de registro;
+    registro), com G1–G3 de novo. O G4 da árvore final (o fb9cd3e, sobre o 142): 210 de 210, depois do push (commit de
+    registro);
   - **mutações:** as 4 caíram. No G3: o build sem conferir o documento (A1), o `precisaGerar` sem a fonte que falta (A2) e o build
     que ignora o documento que existe (A3). No G4: o compêndio sem as do documento (A4), pego no passo do compêndio e no do
     ponto de acesso.
