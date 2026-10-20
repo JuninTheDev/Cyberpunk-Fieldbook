@@ -261,7 +261,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 - [x] **C25. O Painel Tático dentro do sistema:** feito (ciclo 125, sessão KouArt, 2026-10-18; o pedido do usuário para a primeira
   sessão da Morana no Foundry 14): o HUD com o retrato por estado de ferimento, os vitais, os atributos, as armas, as
   ações, os painéis e o estilo de cada jogador, como o módulo da mesa.
-- [~] **C26. Conveniências:** em andamento (sessão KouArt, com o Antigravity, 2026-10-20): o `/red`, a DV no HUD e na régua e a iniciativa crítica primeiro.
+- [~] **C26. Conveniências:** em andamento (sessão KouArt, 2026-10-20): o `/red`, a DV no HUD e na régua e a iniciativa crítica com o Antigravity; os estados do CORE e as chaves do Fluxo com o Codex.
   - o `/red` no chat (rolagem com o crítico do d10);
   - o DV no HUD do token e na régua;
   - a iniciativa crítica como configuração;
@@ -270,7 +270,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 6: plataforma e wiki
 
-- [ ] **C27. O resto do cpr-2077:**
+- [~] **C27. O resto do cpr-2077:** em andamento (sessão KouArt, com o Codex, 2026-10-20): a parte do Foundry 14 (o histórico do ledger pede mudar o cpr-2077, que não recebe mais mudanças).
   - "Atualizar da wiki", o retrato e os avisos de envio;
   - a campanha da wiki de cada mundo, e o crossover;
   - o histórico do ledger na migração. Pede mudar o cpr-2077; é decisão do usuário.
