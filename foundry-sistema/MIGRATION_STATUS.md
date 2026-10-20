@@ -130,7 +130,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
-  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); o acessório que é arma (a baioneta e as armas sob o cano) no 135; os slots, o carregador e o Smartgun Link no 136; as regras do Kit que são conta no 138 (o C11 terminou); faltam os movimentos especiais | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | a Briga e as Artes Marciais nos ciclos 131 (o dano pelo BODY) e 141 (os movimentos especiais; C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); o acessório que é arma (a baioneta e as armas sob o cano) no 135; os slots, o carregador e o Smartgun Link no 136; as regras do Kit que são conta no 138 (o C11 terminou); faltam os movimentos especiais | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
@@ -6865,6 +6865,81 @@ mutações (ver a lição no QUALITY_GATES).
   com o total 0 (M8) e a migração sem a ficha da mesa (M9). A rodada de fundo parou na M8 (o PC sem memória: o arquivo
   dela foi restaurado e conferido); a M8 e a M9 rodaram de novo em primeiro plano.
 - **Próximo:** o C26, partes 1 a 3 (ciclo 141), e o C21 (ciclo 142).
+
+### Ciclo 141 (2026-10-20): o C10, parte 2: os movimentos especiais das Artes Marciais (sessão Junin)
+
+Commit anterior: `4d87b30` (o ciclo 140, da sessão KouArt). A decisão do usuário (2026-10-19): a rolagem e o efeito automáticos. O sistema confere os
+requisitos simples (WILL 8+, MOVE 8+, o agarrão, o "caído"); o "neste turno" o jogador confirma na janela. Nesta mesma
+conversa, o usuário pediu a instalação no servidor, feita do `5c95079` (o ciclo 136), com o backup do mundo antes.
+- **A referência:** a wiki, `system-rules.js`, "Movimentos de artes marciais" (p. 178–180):
+  - **o teste:** "DEX + Artes Marciais + 1d10 contra DEX + Evasão + 1d10 ou contra uma DV", e "precisa superar a DV";
+  - **a Recuperação** (todas as formas), mais dois movimentos de cada forma:
+    - Aikido: o Desarme combinado e o Aperto de ferro;
+    - Karatê: a Combinação quebra-armadura e o Golpe quebra-ossos;
+    - Judô: a Contra-queda e o Escape de agarrão;
+    - Taekwondo: o Ponto de pressão e a Voadora.
+  - O CORE não tem os movimentos.
+- **O que muda:**
+  - **`regras.mjs`:**
+    - `MOVIMENTOS`, com a forma, a DV ou o golpe, os requisitos e as lesões dos golpes;
+    - `formaDaPericia`: a forma pelo nome da perícia ("Karate", "Karatê", "Caratê");
+    - `movimentosDisponiveis` (o bloqueio do WILL e do MOVE) e `passouNoMovimento` (superar a DV);
+  - **`artes-marciais.mjs`** (novo): os testes contra a DV vão como o agarrão (quem age rola; o mestre ativo aplica o
+    efeito e manda o cartão). Os golpes vão pelo `atacar`, com a arma de Artes Marciais e a perícia da forma do
+    movimento;
+  - **`combate.mjs`:**
+    - o `atacar` com o movimento e a perícia, e o nome do golpe no rótulo;
+    - o Aperto de ferro proíbe o ataque à distância;
+    - no acerto, a lesão do golpe (a da cabeça, no mirado) e a queda da Voadora, que o "Desfazer" levanta;
+  - **`agarrao.mjs`:** a fuga no Aperto de ferro leva −2 a mais (o `rolarPericia` aceita `extras`);
+  - **a ficha:** o bloco "Artes Marciais" na aba Combate e no capanga, um botão por movimento, travado com o motivo
+    quando falta WILL ou MOVE;
+  - **o `game.system.api.artesMarciais`** (`usarMovimento`, `movimentosDe`).
+- **Testes:**
+  - **G3:** o arquivo novo `tests/sistema/artes-marciais.test.mjs` (5 testes):
+    - a lista igual à tabela da wiki, lida do `system-rules.js`;
+    - as formas pelo nome;
+    - os movimentos de quem tem a forma, com o bloqueio;
+    - o empate, que não passa;
+    - as lesões dos golpes no catálogo, na tabela certa.
+  - **G4:** dois passos novos.
+    - Os testes contra a DV:
+      - os botões da aba Combate;
+      - a Recuperação, recusada sem estar caído e passando caído;
+      - a Combinação quebra-armadura (11 → 9);
+      - a Contra-queda, falhando e depois derrubando;
+      - o Desarme combinado, que leva a pistola;
+      - o Aperto de ferro: a marca, recusado de novo, o tiro recusado e a fuga com −2. A segunda tentativa e o tiro vão
+        num `semTravar`: se a recusa falhar, a janela de defesa (que não tem prazo) fecha sozinha e o passo falha em vez
+        de travar;
+      - o Escape de agarrão: livres, e o Braço quebrado.
+    - Os golpes:
+      - o WILL, a arma e o MOVE que faltam;
+      - as Costelas quebradas;
+      - o Ponto de pressão na cabeça, com a Lesão cerebral e o Taekwondo (1) no lugar do Karatê (3);
+      - a Voadora fora do alcance e, ao lado, derrubando; o "Desfazer" levanta.
+- **Resultados:**
+  - G1: 100 arquivos sem erro; G2: 0 erros;
+  - G3: 234/234;
+  - G4: 202/202 (437 s) na árvore sobre o ciclo 139. O ciclo 140 entrou enquanto o G4 rodava; integrado sem conflito,
+    com G1–G3 de novo. O G4 da árvore final vai num commit de registro;
+  - **mutações:** as 20 caíram. D1–D6 no G3. D7–D20 no G4, no passo certo (as Artes Marciais): a D11 e a D12 na árvore
+    integrada; as outras antes da integração (os ciclos 137–140 não tocam no que elas mudam).
+- **O que apareceu nas rodadas:** a primeira rodada do G4 deu 193 de 195, com dois erros do próprio teste:
+  - as regex com a barra dobrada fora do template;
+  - o token movido sem o `animate: false`: a Voadora viu o alvo ainda a 12 m e recusou, o que confirmou o alcance.
+  - Os dois foram corrigidos no teste.
+- **A integração sobre os ciclos 137–139:** quatro conflitos, todos de acréscimo dos dois lados na mesma linha. Ficou a soma:
+  - o `game.system.api` com as `macros` (C20) e as `artesMarciais`;
+  - a ficha e o capanga com o bloco da armadura (C18) e o das Artes Marciais;
+  - o "Desfazer" do ataque com as `armaduras` (C18) e o `derrubado` (a Voadora).
+- **As mutações que travavam (a D11 e a D12):** sem a marca do Aperto de ferro, ou sem o bloqueio do tiro, o ataque à
+  distância saía e abria a janela de defesa da Atiradora, que não tem prazo. O G4 só parava no limite de 30 minutos do
+  executor, sem resultado. Com o `semTravar`, as duas caem no passo certo (201/202 e 200/202).
+- **Instável, visto uma vez:** na primeira rodada do G4 da árvore sobre o 139, o passo "pedidos da loja" deu 201/202, com
+  o carregador estendido entregue em dobro. Ele não passa pelo código deste ciclo e passou na rodada seguinte (202/202).
+  A D12 e a D15 também derrubaram, junto, o passo do Jack In no Neuroport, que este ciclo não toca.
+- **O C10 terminou.**
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

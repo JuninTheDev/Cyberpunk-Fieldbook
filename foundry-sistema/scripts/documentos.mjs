@@ -325,9 +325,10 @@ export class AtorCPR extends Actor {
     if (id === 'evasion' && this.reflexTunerAtivo) partes.push({ rotulo: 'Reflex Tuner', valor: REFLEX_TUNER });
     return { pericia: p, partes: [...partes, ...this.#penalidade(), ...this.#situacionais(situacionais, id)] };
   }
-  rolarPericia(id, { perguntar = false, ...opcoes } = {}) {
+  // extras: partes a mais, fixas (o −2 do Aperto de ferro na fuga do agarrão; artes-marciais.mjs).
+  rolarPericia(id, { perguntar = false, extras = [], ...opcoes } = {}) {
     return this.#testarComJanela({
-      rotulo: this.system.pericia(id).nome, perguntar, partes: situacionais => this.partesDaPericia(id, { situacionais }).partes, situacionais: () => this.situacionaisDoTeste(id)
+      rotulo: this.system.pericia(id).nome, perguntar, partes: situacionais => [...this.partesDaPericia(id, { situacionais }).partes, ...extras], situacionais: () => this.situacionaisDoTeste(id)
     }, opcoes);
   }
 
@@ -825,10 +826,11 @@ export class ItemCPR extends Item {
   // Atributo + perícia + bônus da arma + 1d10 (p. 172–176): REF para tiro, DEX para corpo a corpo. Autofogo, fogo
   // supressivo e a rajada Tech usam a perícia Autofogo. As lesões tiram dos tiros (olho) ou do corpo a corpo (músculo).
   // A arma Smart de 2077 (o Kit) dá +1 nos ataques à distância. As Artes Marciais usam a forma do dono (periciaDaArma).
-  partesDoAtaque(modo = null) {
+  // pericia: a de um golpe das Artes Marciais (a forma do movimento; artes-marciais.mjs), no lugar da da arma.
+  partesDoAtaque(modo = null, { pericia: periciaDoGolpe = null } = {}) {
     const ator = this.actor;
     const atributo = this.system.aDistancia ? 'ref' : 'dex';
-    const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : this.periciaDaArma;
+    const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : periciaDoGolpe ?? this.periciaDaArma;
     const { pericia: p, partes } = ator.partesDaPericia(pericia, { situacionais: [] });
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
     if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });

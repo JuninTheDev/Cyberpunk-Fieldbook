@@ -12,7 +12,7 @@
 import { SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { combateDe, defesaContra, destinatarios, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
-import { danoDoAgarrao, venceuOAgarrao, vezesEstrangulando } from './regras.mjs';
+import { APERTO_DE_FERRO, danoDoAgarrao, venceuOAgarrao, vezesEstrangulando } from './regras.mjs';
 
 const CANAL = `system.${SISTEMA}`;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
@@ -39,8 +39,8 @@ function pedirAoMestre(acao, pedido) {
 }
 
 // DEX + Briga + 1d10 (com a janela de rolagem, pela ficha), com o total escondido até a resistência, como o do ataque.
-const rolarBriga = (ator, { rotulo, contra, acao, perguntar }) => ator.rolarPericia('brawling', {
-  perguntar, rotulo, sabor: `contra ${contra}`, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { [acao]: true }, categoria: 'ataque'
+const rolarBriga = (ator, { rotulo, contra, acao, perguntar, extras = [] }) => ator.rolarPericia('brawling', {
+  perguntar, rotulo, extras, sabor: `contra ${contra}`, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { [acao]: true }, categoria: 'ataque'
 });
 
 // "Agarrar": o alvo marcado (T), um só.
@@ -65,7 +65,9 @@ export async function escapar(ator, { perguntar = false } = {}) {
   const meu = tokenNaCena(ator);
   if (!tokenNaCena(quemSegura, meu?.parent ?? canvas.scene)) return avisar(`Ponha o token de ${quemSegura.name} na cena, para ele resistir.`);
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
-  const teste = await rolarBriga(ator, { rotulo: 'Escapar do agarrão', contra: dados.nome, acao: 'escapar', perguntar });
+  // O Aperto de ferro (Aikido, o C10; artes-marciais.mjs): −2 a mais para escapar.
+  const extras = dados.apertoDeFerro ? [{ rotulo: 'Aperto de ferro', valor: APERTO_DE_FERRO }] : [];
+  const teste = await rolarBriga(ator, { rotulo: 'Escapar do agarrão', contra: dados.nome, acao: 'escapar', perguntar, extras });
   if (!teste) return null;
   return pedirAoMestre('escapar', { ator: ator.uuid, token: meu?.uuid ?? null, total: teste.total, mensagem: teste.mensagem?.id ?? null });
 }

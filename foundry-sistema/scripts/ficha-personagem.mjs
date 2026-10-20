@@ -4,6 +4,7 @@
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
+import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
@@ -79,7 +80,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarFacedown: FichaPersonagem.#rolarFacedown,
       rolarIniciativa: FichaPersonagem.#rolarIniciativa,
       protegerSe: FichaPersonagem.#protegerSe,
-      agarrar: FichaPersonagem.#agarrar,
+      agarrar: FichaPersonagem.#agarrar, movimento: FichaPersonagem.#movimento,
       soltar: FichaPersonagem.#soltar,
       estrangular: FichaPersonagem.#estrangular,
       derrubar: FichaPersonagem.#derrubar,
@@ -147,7 +148,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     topo: parte('topo'),
     tabs: { template: 'templates/generic/tab-navigation.hbs' },
     pericias: { ...aba('pericias'), templates: [bloco('geral')] },
-    combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao'), bloco('armadura')] },
+    combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao'), bloco('artes-marciais'), bloco('armadura')] },
     equipamento: aba('equipamento'),
     cyberware: aba('cyberware'),
     role: aba('role'),
@@ -353,7 +354,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
       lesoes, favoritos,
       iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
-      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown, emCobertura: ator.statuses.has(STATUS_COBERTURA), agarrao: agarraoDe(ator),
+      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown, emCobertura: ator.statuses.has(STATUS_COBERTURA), agarrao: agarraoDe(ator), movimentos: movimentosDe(ator),
       municoes: itens('municao'),
       inventario: [
         { titulo: 'EQUIPAMENTO', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
@@ -479,6 +480,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #estrangular() { return estrangular(this.actor); }
   static #derrubar() { return derrubar(this.actor); }
   static #escapar(evento) { return escapar(this.actor, { perguntar: comJanela(evento) }); }
+  // Os movimentos especiais das Artes Marciais (artes-marciais.mjs; o C10): o requisito "neste turno" o jogador confirma.
+  static #movimento(evento, alvo) { return usarMovimento(this.actor, alvo.dataset.movimento, { perguntar: comJanela(evento) }); }
   // O Neuroport (neuroport.mjs; a NET de 2077): "Jack In" no alvo marcado (T, que resiste com a WILL pela janela de
   // reação do dono) e "Jack Out" de cada ligação.
   static #jackIn(evento) { return jackIn(this.actor, { perguntar: comJanela(evento) }); }

@@ -266,7 +266,18 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - a **Sorte** preparada na ficha (RED p. 130: antes de rolar, +1 por ponto). Os botões − e + no indicador da Sorte escolhem quantos pontos vão no próximo teste (atributo, perícia, ataque ou defesa), e eles saem da Sorte quando ele rola. O ↺ é o começo da sessão: a Sorte volta ao máximo (a LUCK).
 - **Ataque, defesa e dano** (o Fluxo de Combate dentro do sistema). Marque os alvos (T) e use os botões da arma:
   - **Atacar:** tiro, ou corpo a corpo com arma branca, Briga ou Artes Marciais.
-  - **Briga e Artes Marciais** (ciclo 131; a wiki, p. 176–178): as armas "Unarmed" e "Martial Arts" do compêndio. O dano é o da tabela do BODY de quem bate (1d6 até 4, 2d6 até 6, 3d6 até 10, 4d6 de 11 para cima); com um cyberbraço instalado, a Briga dá pelo menos 2d6. As Artes Marciais atacam com a forma em que o personagem tem mais pontos (ou a escolhida na ficha da arma), pedem pelo menos 1 ponto nela e ignoram metade do SP; a Briga não ignora armadura. A caixa "Dano pelo BODY" da ficha da arma desliga a conta, e o dano volta a ser o do item. O Ataque de Precisão e a Recuperação de Falhas do Solo valem nas duas. Os movimentos especiais de cada forma ainda faltam (o C10, parte 2).
+  - **Briga e Artes Marciais** (ciclo 131; a wiki, p. 176–178): as armas "Unarmed" e "Martial Arts" do compêndio. O dano é o da tabela do BODY de quem bate (1d6 até 4, 2d6 até 6, 3d6 até 10, 4d6 de 11 para cima); com um cyberbraço instalado, a Briga dá pelo menos 2d6. As Artes Marciais atacam com a forma em que o personagem tem mais pontos (ou a escolhida na ficha da arma), pedem pelo menos 1 ponto nela e ignoram metade do SP; a Briga não ignora armadura. A caixa "Dano pelo BODY" da ficha da arma desliga a conta, e o dano volta a ser o do item. O Ataque de Precisão e a Recuperação de Falhas do Solo valem nas duas.
+  - **Os movimentos especiais das Artes Marciais** (ciclo 141; a wiki, p. 178–180). Na aba Combate (e na ficha do capanga), o bloco "Artes Marciais" tem um botão para cada movimento das formas em que o personagem tem pelo menos 1 ponto, e a Recuperação. O sistema confere o WILL 8+, o MOVE 8+, o agarrão e o "caído". O requisito "neste turno" (acertou o mesmo alvo com Briga e Artes Marciais, por exemplo) o jogador confirma na janela (decisão do usuário, 2026-10-19).
+    - **Os testes contra a DV:** DEX + a forma + 1d10 precisa superar a DV (15; a Recuperação, 13), e o mestre aplica o efeito:
+      - a Recuperação levanta (passando, sem gastar a Ação);
+      - a Combinação quebra-armadura tira 2 SP da armadura do corpo;
+      - a Contra-queda derruba;
+      - o Desarme combinado leva ou derruba a arma na mão do alvo;
+      - o Aperto de ferro, agarrando, dá −2 a mais na fuga e proíbe o ataque à distância enquanto agarrado;
+      - o Escape de agarrão solta e dá Braço quebrado em quem agarrava.
+    - **Os golpes:** o Golpe quebra-ossos, o Ponto de pressão e a Voadora vão pela arma de Artes Marciais (o fluxo do ataque, com a forma do movimento). Acertando:
+      - o Golpe quebra-ossos dá Costelas quebradas, e o Ponto de pressão, Lesão na coluna; mirados na cabeça, Crânio rachado e Lesão cerebral;
+      - a Voadora (até 4 m) derruba, e o "Desfazer" do cartão levanta.
   - **Mirar:** −8, na cabeça (o dano que passa dobra), na perna (se passar dano, Perna quebrada) ou no item na mão (o alvo larga).
   - **Luneta de precisão** na arma: +1 em tiro único ou mirado contra alvo a 51 m ou mais, se o cyberware óptico já não dá o bônus (wiki). Ela entra sozinha quando vale, e a janela de rolagem a traz marcada ou não.
   - **TeleOptics** (pela wiki): +1 no tiro mirado contra alvo a 51 m ou mais. O de 2077 saiu da wiki de 2026-10-17 ("vale o do RED"; ciclo 107): o que um ator ainda tenha conta como o do RED (dois não somam). Como a luneta, entra sozinho quando vale, e a luneta não acumula com ele.

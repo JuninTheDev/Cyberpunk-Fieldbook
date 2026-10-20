@@ -166,13 +166,14 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 3: combate e itens que ainda não agem
 
-- [~] **C10. Briga e Artes Marciais:** em andamento (sessão Junin, 2026-10-19). O dano pelo BODY e os golpes das Artes Marciais, com o Ataque de Precisão e a
-  Recuperação de Falhas. Por partes, um ciclo cada:
+- [x] **C10. Briga e Artes Marciais:** feito (ciclos 131 e 141, sessão Junin, 2026-10-19 e 20). O dano pelo BODY e os golpes das Artes Marciais, com o Ataque de Precisão e a
+  Recuperação de Falhas. Por partes:
   - [x] a Briga e as Artes Marciais como ataques (as armas "Unarmed" e "Martial Arts" do CORE): o dano pela tabela do BODY,
     o cyberbraço na Briga, a forma das Artes Marciais e o ponto mínimo, a metade do SP, o Ataque de Precisão e a
     Recuperação de Falhas: ciclo 131;
-  - [ ] os movimentos especiais (a wiki, p. 178–180): a Recuperação, de todas as formas, e os dois de cada forma (Aikido,
-    Karatê, Judô e Taekwondo), com o requisito e o teste (DEX + Artes Marciais + 1d10 contra DEX + Evasão + 1d10 ou uma DV).
+  - [x] os movimentos especiais (a wiki, p. 178–180): a Recuperação, de todas as formas, e os dois de cada forma (Aikido,
+    Karatê, Judô e Taekwondo), com o requisito e o teste (DEX + Artes Marciais + 1d10 contra DEX + Evasão + 1d10 ou uma DV): ciclo 141
+    (a rolagem e o efeito automáticos; o requisito "neste turno", o jogador confirma: decisão do usuário, 2026-10-19).
 - [x] **C11. Cyberware e upgrade que atacam:** feito (ciclos 133 a 136 e 138, sessão KouArt, 2026-10-19). Por partes:
   - [x] o cyberware que é arma do CORE (os doze com `isWeapon`: os Wolvers, as Rippers, a Popup Ranged Weapon, o lança-granadas
     embutido…; no CORE, o cyberware é `attackable` e `loadable`): a arma ligada ao cyberware instalado, na aba Combate,

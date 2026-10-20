@@ -5686,6 +5686,176 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // O C10, parte 2: os movimentos especiais contra a DV (DEX + a forma + 1d10; o mestre aplica o efeito).
+    await r.passo('Artes Marciais, os movimentos contra a DV (o C10, parte 2; wiki, p. 178–180): a aba Combate mostra os das formas (o Golpe quebra-ossos travado sem WILL 8); a Recuperação levanta; a Combinação quebra-armadura tira 2 SP; a Contra-queda falha e depois derruba; o Desarme combinado leva a pistola; o Aperto de ferro dá −2 na fuga e proíbe o tiro; o Escape de agarrão solta e quebra o braço de quem agarrava', async () => {
+      // Atiradora: DEX 7, Karatê, Aikido e Judô 3, Briga 3. Cada movimento: 7 + 3 + d10 contra a DV (15; a Recuperação, 13).
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const am = game.system.api.artesMarciais;
+        const ag = game.system.api.agarrao;
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const antes = { briga: a.system.pericia('brawling').nivel, hp: a.system.hp.value, hpCapanga: capanga.system.hp.value };
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        const criados = [];
+        const criar = async (ator, id, mudar = {}) => { const data = foundry.utils.deepClone(cat[id]); foundry.utils.mergeObject(data.system, mudar); const [item] = await ator.createEmbeddedDocuments('Item', [data]); criados.push(item); return item; };
+        const forma = nome => ({ nivel: 3, familia: 'martial-arts', nome });
+        const usar = (id, fila, opcoes = {}) => { window.__fila = fila; return am.usarMovimento(a, id, { alvo: __token('Capanga'), confirmado: true, ...opcoes }); };
+        try {
+          await a.update({ 'system.pericias.brawling.nivel': 3, 'system.pericias.martial-arts-karate': forma('Karatê'), 'system.pericias.martial-arts-aikido': forma('Aikido'), 'system.pericias.martial-arts-judo': forma('Judô') });
+          await a.update({ 'system.hp.value': a.system.hp.max });
+          // A soma das partes da forma (DEX 7 + 3 e o que as lesões de passos anteriores tiram), sem o agarrão.
+          const base = a.partesDaPericia('martial-arts-karate').partes.reduce((total, p) => total + p.valor, 0);
+          // A aba Combate: os botões dos movimentos.
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('combate', 'primary');
+          await __esperar(() => a.sheet.element?.querySelector('.tab.combate .artes-marciais [data-movimento]'));
+          const botoes = [...a.sheet.element.querySelectorAll('.tab.combate .artes-marciais [data-movimento]')].map(b => b.textContent.trim() + (b.disabled ? ' (travado)' : ''));
+          await a.sheet.close({ animate: false });
+          // A Recuperação: sem estar caído, recusa; caído, levanta.
+          const semCair = await usar('recuperacao', []);
+          await a.toggleStatusEffect('prone', { active: true });
+          const recuperacao = await usar('recuperacao', [[9, 10]]);
+          const levantou = !a.statuses.has('prone');
+          // A Combinação quebra-armadura na Light Armorjack do Capanga.
+          const colete = await criar(capanga, 'core_armor:light-armorjack-body', { equipada: true });
+          const quebra = await usar('quebraArmadura', [[9, 10]]);
+          const sp = colete.system.sp.corpo.value;
+          // A Contra-queda: 7 + 3 + 2 = 12 não passa de 15; com 9, derruba.
+          const queda1 = await usar('contraQueda', [[2, 10]]);
+          const caiuNaFalha = capanga.statuses.has('prone');
+          const queda2 = await usar('contraQueda', [[9, 10]]);
+          const caiu = capanga.statuses.has('prone');
+          await capanga.toggleStatusEffect('prone', { active: false });
+          // O Desarme combinado: a pistola do Capanga fica com a Atiradora.
+          const pistola = await criar(capanga, 'core_weapons:heavy-pistol', { equipada: true });
+          const pistolasAntes = a.items.filter(i => i.getFlag('${S}', 'catalogo') === 'core_weapons:heavy-pistol').length;
+          const desarme = await usar('desarmeCombinado', [[9, 10]], { ficar: true });
+          const levou = { comACapanga: Boolean(capanga.items.get(pistola.id)), comAAtiradora: a.items.filter(i => i.getFlag('${S}', 'catalogo') === 'core_weapons:heavy-pistol').length - pistolasAntes };
+          for (const item of a.items.filter(i => i.getFlag('${S}', 'catalogo') === 'core_weapons:heavy-pistol').slice(pistolasAntes)) criados.push(item);
+          // O Aperto de ferro: a Atiradora agarra (19 contra 5 + 2), aperta (7 + 3 + 9 − 2 do agarrão = 17); o Capanga não
+          // atira e foge com −2 a mais.
+          window.__fila = [[9, 10], [2, 10]];
+          const agarrou = await ag.agarrar(a, { alvo: __token('Capanga') });
+          const aperto = await usar('apertoDeFerro', [[9, 10]]);
+          const marca = capanga.effects.find(e => e.statuses.has('${S}-agarrado'))?.getFlag('${S}', 'agarrao')?.apertoDeFerro === true;
+          // Recusados, os dois voltam na hora. Sem a recusa, o tiro abre a janela de defesa da Atiradora, que não tem
+          // prazo: a janela fecha sozinha, e o passo falha em vez de travar.
+          const janelasDeDefesa = () => [...foundry.applications.instances.values()].filter(app => app.rendered && app.options.classes?.includes('janela-defesa'));
+          const semTravar = async promessa => {
+            let acabou = false;
+            promessa.then(() => { acabou = true; }, () => { acabou = true; });
+            await __esperar(() => acabou || janelasDeDefesa().length, 50);
+            if (acabou) return promessa;
+            for (const janela of janelasDeDefesa()) await janela.close();
+            return 'não terminou';
+          };
+          const deNovo = await semTravar(usar('apertoDeFerro', []));
+          const outraPistola = await criar(capanga, 'core_weapons:heavy-pistol', { equipada: true, 'pente': { value: 8, max: 8 } });
+          const tiro = await semTravar(outraPistola.atacar({ alvo: __token('Atiradora') }));
+          const somaDaFuga = capanga.partesDaPericia('brawling').partes.reduce((total, p) => total + p.valor, 0);
+          window.__fila = [[5, 10], [5, 10]];
+          const fuga = await ag.escapar(capanga);
+          const mensagemDaFuga = game.messages.contents.filter(m => m.speaker?.actor === capanga.id).at(-1)?.content ?? '';
+          await ag.soltar(a);
+          // A marca do outro lado sai pelo gancho do mestre, logo depois.
+          await __esperar(() => !capanga.effects.some(e => e.statuses.has('${S}-agarrado')));
+          // O Escape de agarrão: o Capanga agarra a Atiradora (14 contra 12), e ela escapa (7 + 3 + 9 − 2 = 17).
+          window.__fila = [[9, 10], [2, 10]];
+          const agarrada = await ag.agarrar(capanga, { alvo: __token('Atiradora') });
+          const escape = await usar('escapeDeAgarrao', [[9, 10]], { alvo: null });
+          const livres = !a.effects.some(e => e.statuses.has('${S}-agarrado')) && !capanga.effects.some(e => e.statuses.has('${S}-agarrando'));
+          const braco = capanga.items.find(i => i.type === 'lesao' && i.getFlag('${S}', 'catalogo') === 'core_critical-injuries-body:broken-arm');
+          if (braco) criados.push(braco);
+          return {
+            base, botoes, avisos, levantou, sp, caiuNaFalha, caiu, levou, marca, tiro, somaDaFuga, apertoNaFuga: mensagemDaFuga.includes('Aperto de ferro'), livres, braco: braco?.name ?? null,
+            resumos: { semCair, recuperacao, quebra, queda1, queda2, desarme, agarrou: agarrou?.resultado, aperto, deNovo, fuga, agarrada: agarrada?.resultado, escape }
+          };
+        } finally {
+          delete ui.notifications.warn;
+          for (const ator of [a, capanga]) {
+            for (const efeito of ator.effects.filter(e => ['${S}-agarrado', '${S}-agarrando'].some(s => e.statuses.has(s)))) await efeito.delete().catch(() => {});
+            if (ator.statuses.has('prone')) await ator.toggleStatusEffect('prone', { active: false });
+          }
+          for (const item of criados) if (item.parent?.items.get(item.id)) await item.delete();
+          const apagar = new foundry.data.operators.ForcedDeletion();
+          await a.update({ 'system.pericias.brawling.nivel': antes.briga, 'system.pericias.martial-arts-karate': apagar, 'system.pericias.martial-arts-aikido': new foundry.data.operators.ForcedDeletion(), 'system.pericias.martial-arts-judo': new foundry.data.operators.ForcedDeletion() });
+          await a.update({ 'system.hp.value': antes.hp });
+          await capanga.update({ 'system.hp.value': antes.hpCapanga });
+        }
+      })()`);
+      const r = info.resumos;
+      const ok = info.botoes.join() === 'Recuperação,Desarme combinado,Aperto de ferro,Combinação quebra-armadura,Golpe quebra-ossos (travado),Contra-queda,Escape de agarrão'
+        && r.semCair === null && info.avisos.some(aviso => /não está caído/.test(aviso))
+        && r.recuperacao?.resultado === 'passou' && r.recuperacao.total === info.base + 9 && info.levantou && /se levantou sem gastar a Ação/.test(r.recuperacao.frase)
+        && r.quebra?.resultado === 'passou' && info.sp === 9 && r.quebra.frase.includes('(11 → 9)')
+        && r.queda1?.resultado === 'falhou' && r.queda1.total === info.base + 2 && !info.caiuNaFalha && r.queda2?.resultado === 'passou' && info.caiu
+        && r.desarme?.resultado === 'passou' && !info.levou.comACapanga && info.levou.comAAtiradora === 1
+        && r.agarrou === 'agarrou' && r.aperto?.resultado === 'passou' && r.aperto.total === info.base + 9 - 2 && info.marca && r.deNovo === null && info.avisos.some(aviso => /já está no Aperto de ferro/.test(aviso))
+        && info.tiro === null && info.avisos.some(aviso => /está no Aperto de ferro: nada de ataques à distância/.test(aviso))
+        && r.fuga?.resultado === 'segurou' && r.fuga.ataque === info.somaDaFuga + 5 - 2 && info.apertoNaFuga
+        && r.agarrada === 'agarrou' && r.escape?.resultado === 'passou' && r.escape.total === info.base + 9 - 2 && info.livres && info.braco === 'Braço quebrado';
+      return [ok, JSON.stringify(info)];
+    });
+
+    // O C10, parte 2: os golpes, pelo fluxo do ataque, com a arma de Artes Marciais.
+    await r.passo('Artes Marciais, os golpes (o C10, parte 2): o Golpe quebra-ossos pede WILL 8 e a arma de Artes Marciais e, acertando, dá Costelas quebradas; o Ponto de pressão mirado na cabeça dá Lesão cerebral; a Voadora pede MOVE 8 e derruba, e o "Desfazer" a levanta', async () => {
+      // Atiradora (BODY 6: 2d6): 7 + 3 + d10 contra a esquiva do Capanga (5 + d10 2). Dano 3 + 2 = 5 (na cabeça, 10).
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const am = game.system.api.artesMarciais;
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const tokenA = __token('Atiradora');
+        const antes = { will: a.system.atributos.will.valor, move: a._source.system.atributos.move.valor, hp: a.system.hp.value, hpCapanga: capanga.system.hp.value, x: tokenA.x, y: tokenA.y };
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        const criados = [];
+        const golpe = (id, fila, opcoes = {}) => { window.__fila = fila; return am.usarMovimento(a, id, { alvo: __token('Capanga'), confirmado: true, ...opcoes }); };
+        const lesoes = r => (r?.linhas?.[0]?.dano?.lesoes ?? []).map(l => l.nome);
+        try {
+          await a.update({ 'system.pericias.martial-arts-karate': { nivel: 3, familia: 'martial-arts', nome: 'Karatê' }, 'system.pericias.martial-arts-taekwondo': { nivel: 1, familia: 'martial-arts', nome: 'Taekwondo' } });
+          const semWill = await golpe('quebraOssos', []);
+          await a.update({ 'system.atributos.will.valor': 8 });
+          await a.update({ 'system.hp.value': a.system.hp.max });
+          const semArma = await golpe('quebraOssos', []);
+          const [arma] = await a.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:martial-arts'])]);
+          criados.push(arma);
+          const ossos = await golpe('quebraOssos', [[8, 10], [2, 10], [3, 6], [2, 6]]);
+          // O Ponto de pressão rola com o Taekwondo (1), não com a forma de mais pontos (o Karatê, 3).
+          const somaTkd = a.partesDaPericia('martial-arts-taekwondo').partes.reduce((total, p) => total + p.valor, 0) + (a.system.bonus.corpoACorpo || 0);
+          const pressao = await golpe('pontoDePressao', [[9, 10], [2, 10], [3, 6], [2, 6]], { local: 'cabeca' });
+          const semMove = await golpe('voadora', []);
+          await a.update({ 'system.atributos.move.valor': 8 });
+          // A Voadora alcança 4 m: a Atiradora vai para o lado do Capanga.
+          const tc = __token('Capanga');
+          await tokenA.update({ x: tc.x + tc.parent.grid.size, y: tc.y }, { animate: false });
+          const voadora = await golpe('voadora', [[8, 10], [2, 10], [3, 6], [2, 6]]);
+          const caiu = capanga.statuses.has('prone');
+          const mensagem = game.messages.contents.find(m => m.getFlag('${S}', 'ataque')?.id === voadora?.id);
+          await game.system.api.combate.desfazer(mensagem);
+          const levantouNoDesfazer = !capanga.statuses.has('prone');
+          for (const item of capanga.items.filter(i => i.type === 'lesao' && ['core_critical-injuries-body:broken-ribs', 'core_critical-injuries-head:brain-injury'].includes(i.getFlag('${S}', 'catalogo')))) criados.push(item);
+          return { avisos, semWill, semArma, semMove, ossos: [ossos?.linhas?.[0]?.resultado, ...lesoes(ossos)], pressao: [pressao?.linhas?.[0]?.resultado, pressao?.local, ...lesoes(pressao)], ataquePressao: [pressao?.ataque, somaTkd + 9 - 8], voadora: [voadora?.linhas?.[0]?.resultado, (voadora?.linhas?.[0]?.notas ?? []).join(' ')], caiu, levantouNoDesfazer };
+        } finally {
+          delete ui.notifications.warn;
+          if (capanga.statuses.has('prone')) await capanga.toggleStatusEffect('prone', { active: false });
+          for (const item of criados) if (item.parent?.items.get(item.id)) await item.delete();
+          await tokenA.update({ x: antes.x, y: antes.y }, { animate: false });
+          await a.update({ 'system.atributos.will.valor': antes.will, 'system.atributos.move.valor': antes.move, 'system.pericias.martial-arts-karate': new foundry.data.operators.ForcedDeletion(), 'system.pericias.martial-arts-taekwondo': new foundry.data.operators.ForcedDeletion() });
+          await a.update({ 'system.hp.value': antes.hp });
+          await capanga.update({ 'system.hp.value': antes.hpCapanga });
+        }
+      })()`);
+      const ok = info.semWill === null && info.avisos.some(aviso => aviso.includes('Golpe quebra-ossos. Pede WILL 8+.'))
+        && info.semArma === null && info.avisos.some(aviso => aviso.includes('Ponha na ficha a arma "Martial Arts"'))
+        && info.ossos.join() === 'acertou,Costelas quebradas' && info.pressao.join() === 'acertou,cabeca,Lesão cerebral' && info.ataquePressao[0] === info.ataquePressao[1]
+        && info.semMove === null && info.avisos.some(aviso => aviso.includes('Voadora. Pede MOVE 8+.'))
+        && info.voadora[0] === 'acertou' && /Voadora: Capanga caiu/.test(info.voadora[1]) && info.caiu && info.levantouNoDesfazer;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('Reflex Tuner (2077, wiki): no combate, o Capanga atingido ganha +1 para se esquivar pelo resto da rodada (nas partes da Evasão e na esquiva do golpe); o Desfazer do tiro tira o +1; na rodada seguinte, acaba', async () => {
       // O tiro da Atiradora no Capanga (REF 6: só aguenta): d10 9 → 8 + 4 + 9 = 21 contra a DV 16; dano 5d6 de 1 = 5
       // (o Capanga não tem armadura). O golpe de lâmina: DEX 7 + Arma Branca 3 + d10 2 = 12 contra a esquiva do Capanga,

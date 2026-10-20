@@ -6,7 +6,7 @@
 //   "Desfazer" para o mestre.
 // - Modos: tiro, mirado (cabeça, perna, item na mão), corpo a corpo, autofogo, fogo supressivo, espingarda com
 //   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga Tech e a ligação da arma Smart.
-import { ATORES_DA_NET, DEFESAS, SISTEMA } from './config.mjs';
+import { ATORES_DA_NET, DEFESAS, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { animar, textoFlutuante } from './efeitos.mjs';
 import { TABELAS_DV } from './gerado.mjs';
@@ -219,11 +219,17 @@ async function perguntarDestinos(alvos, modo) {
 // munição dizem (tiro, cartucho, explosivo). A arma Tech carregada (o botão Carregar) gasta a carga no ataque. perguntar:
 // abre a janela de rolagem (a ficha abre; Ctrl + clique, não). destinos: por UUID do token, { tipo: 'veiculo', veiculo:
 // id } ou { tipo: 'vidro', veiculo: id, janela: chave }; {} mantém as pessoas. Sem o mapa, pergunta pelo veículo ativo.
-export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, destinos = null, perguntar = false } = {}) {
+// movimento e pericia: o golpe das Artes Marciais (artes-marciais.mjs; regras.MOVIMENTOS) e a perícia da forma dele.
+export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, destinos = null, perguntar = false, movimento = null, pericia: periciaDoGolpe = null } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
   // As Artes Marciais pedem pelo menos 1 ponto numa forma (o C10).
   if (arma.motivoSemAtaque) { ui.notifications.warn(`${arma.name}: ${arma.motivoSemAtaque}`); return null; }
+  // O Aperto de ferro (Aikido, o C10): agarrado nele, nada de ataques à distância.
+  if (arma.system.aDistancia && atacante.effects.find(e => e.statuses.has(STATUS_AGARRAO.agarrado))?.getFlag(SISTEMA, 'agarrao')?.apertoDeFerro) {
+    ui.notifications.warn(`${atacante.name} está no Aperto de ferro: nada de ataques à distância enquanto agarrado.`);
+    return null;
+  }
   const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
   // O Black ICE e o demônio ficam na NET: a arma não os atinge (o dano neles vem dos programas e do Zap).
   const lista = marcados.filter(token => !ATORES_DA_NET.includes(token.actor.type));
@@ -272,13 +278,14 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const balasDaCarga = comPente && carga ? R.balasDaCarga({ modo, perfil, pente: arma.system.pente.value }) : null;
   const balas = comPente ? (balasDaCarga ?? porTiro?.balas ?? R.balasDoModo(modo, { autofogo: perfil?.balasDoAutofogo, doisCanos })) : 0;
   if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
-  const { pericia, partes } = arma.partesDoAtaque(modo);
+  const { pericia, partes } = arma.partesDoAtaque(modo, { pericia: periciaDoGolpe });
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
   // O ricochete (o Kit): −4, ou −2 com o Ballistic Coprocessor; num tiro mirado, só a penalidade do mirado.
   const ricochete = pedido === 'ricochete' ? { penalidade: R.penalidadeDoRicochete({ coprocessador: atacante.temCoprocessador, mirado: Boolean(R.LOCAIS_MIRADOS[local]) }), cartucho: modo === 'cartucho' } : null;
   if (ricochete?.penalidade) partes.push({ rotulo: atacante.temCoprocessador ? 'Ricochete (Ballistic Coprocessor)' : 'Ricochete', valor: ricochete.penalidade });
-  const descricao = R.descreverAtaque({ modo, local, doisCanos, ricochete, carga });
+  const golpe = R.MOVIMENTOS[movimento]?.teste === 'ataque' ? R.MOVIMENTOS[movimento] : null;
+  const descricao = `${golpe ? `${golpe.nome}, ` : ''}${R.descreverAtaque({ modo, local, doisCanos, ricochete, carga })}`;
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
   // Os situacionais (a luneta, pela distância do primeiro alvo) e a janela de rolagem: fechada ou cancelada, não ataca nem
   // gasta bala. Sem a janela, entram os ligados por padrão.
@@ -313,7 +320,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const dados = {
     id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
-    carga, doisCanos, porTiro, ricochete, ferrolho, destinos,
+    carga, doisCanos, porTiro, ricochete, ferrolho, destinos, movimento: golpe ? movimento : null,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
@@ -790,6 +797,15 @@ async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true }
   if (dano.critico && lesaoDoCritico) await lesao({ cabeca: ctx.local === 'cabeca' });
   if (ctx.local === 'perna' && efeito.passou) await lesao({ id: PERNA_QUEBRADA });
   if (ctx.local === 'item' && efeito.passou) linha.notas.push(`${linha.nome} larga o item na mão que ${ctx.nomeAtq} escolher.`);
+  // Os golpes das Artes Marciais (o C10): a lesão certa do Golpe quebra-ossos e do Ponto de pressão (a da cabeça no
+  // mirado), e a queda da Voadora, que o "Desfazer" tira.
+  const golpe = R.MOVIMENTOS[ctx.pedido?.movimento];
+  if (golpe?.lesoes) await lesao({ id: golpe.lesoes[ctx.local === 'cabeca' ? 'cabeca' : 'corpo'] });
+  if (golpe?.derruba && !ator.statuses.has('prone')) {
+    await ator.toggleStatusEffect('prone', { active: true });
+    linha.derrubado = true;
+    linha.notas.push(`${golpe.nome}: ${linha.nome} caiu e, numa moto ou num veículo aberto, foi derrubado dele.`);
+  }
   if (jaMortal && !borracha && config('mortalmenteFerido')) {
     linha.notas.push('Já estava mortalmente ferido: uma lesão crítica a mais.');
     await lesao({});
@@ -1101,7 +1117,7 @@ async function cartaoDoResultado(ctx) {
     cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas
   };
   const desfazer = ctx.linhas.filter(l => l.dano || l.veicular?.perdeu || l.veicular?.ablado || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
-    ator: l.token.actor.uuid, veicular: l.veicular ?? null, suprimido: Boolean(l.suprimido), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
+    ator: l.token.actor.uuid, veicular: l.veicular ?? null, suprimido: Boolean(l.suprimido), derrubado: Boolean(l.derrubado), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, armaduras: l.dano.armaduras, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   if (ctx.lesoesDoAtirador?.length) desfazer.push({ ator: ctx.atacante.uuid, suprimido: false, municao: null, lesoes: ctx.lesoesDoAtirador, dano: null });
@@ -1162,6 +1178,7 @@ export async function desfazer(mensagem) {
     await desfazerMunicao(ator, item.municao);
     const lesoes = item.lesoes.filter(id => ator.items.has(id));
     if (lesoes.length) await ator.deleteEmbeddedDocuments('Item', lesoes);
+    if (item.derrubado) await ator.toggleStatusEffect('prone', { active: false });
     if (item.suprimido) {
       await ator.toggleStatusEffect(STATUS_SUPRIMIDO, { active: false });
       await ator.unsetFlag(SISTEMA, 'suprimido');

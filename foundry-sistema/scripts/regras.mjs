@@ -47,6 +47,51 @@ export function formaDasArtesMarciais(pericia, pericias = {}) {
 export const PONTOS_MINIMOS_DAS_ARTES_MARCIAIS = 1;
 export const artesMarciaisLiberadas = nivel => (Number(nivel) || 0) >= PONTOS_MINIMOS_DAS_ARTES_MARCIAIS;
 
+// Os movimentos especiais (o C10, parte 2; a wiki, "Movimentos de artes marciais", p. 178–180; a decisão do usuário de
+// 2026-10-19: a rolagem e o efeito automáticos, o requisito de WILL, de MOVE e do agarrão conferido pelo sistema, e o
+// "neste turno" confirmado pelo jogador). O teste é DEX + a forma + 1d10: contra a DV (dv), que precisa superar, ou,
+// nos golpes (ataque), pelo fluxo do ataque, contra a esquiva. As formas pelo nome da perícia (a wiki do criador grava o
+// nome do Foundry, "Karate"; à mão, "Karatê" ou "Caratê").
+export const FORMAS_DAS_ARTES_MARCIAIS = { aikido: 'Aikido', karate: 'Karatê', judo: 'Judô', taekwondo: 'Taekwondo' };
+const NOMES_DAS_FORMAS = { aikido: 'aikido', karate: 'karate', carate: 'karate', judo: 'judo', taekwondo: 'taekwondo', 'tae-kwon-do': 'taekwondo' };
+export const formaDaPericia = ({ id = '', nome = '' } = {}) => NOMES_DAS_FORMAS[slugDaPericia(nome)] ?? NOMES_DAS_FORMAS[String(id).replace(/^martial-arts-/, '')] ?? null;
+export const LESOES_DOS_GOLPES = {
+  costelas: 'core_critical-injuries-body:broken-ribs', cranio: 'core_critical-injuries-head:cracked-skull',
+  coluna: 'core_critical-injuries-body:spinal-injury', cerebro: 'core_critical-injuries-head:brain-injury',
+  braco: 'core_critical-injuries-body:broken-arm'
+};
+export const APERTO_DE_FERRO = -2;
+export const ALCANCE_DA_VOADORA = 4;
+// forma: null é de todas. alvo: o alvo marcado (T). confirmar: o requisito que o jogador confirma. will, move: o mínimo.
+// agarrao: 'agarrando' ou 'agarrado', o papel que o requisito pede. lesoes: a do golpe no corpo e na cabeça (mirado).
+export const MOVIMENTOS = {
+  recuperacao: { forma: null, nome: 'Recuperação', teste: { dv: 13 }, caido: true, efeito: 'Ao se levantar, passando na DV 13, não gasta a Ação.' },
+  desarmeCombinado: { forma: 'aikido', nome: 'Desarme combinado', teste: { dv: 15 }, alvo: true, confirmar: 'Acertou o mesmo alvo com Briga e com Artes Marciais neste turno.', efeito: 'O objeto na mão do alvo fica com você ou cai.' },
+  apertoDeFerro: { forma: 'aikido', nome: 'Aperto de ferro', teste: { dv: 15 }, agarrao: 'agarrando', efeito: 'Uma Ação: −2 a mais para o agarrado escapar, e nada de ataques à distância enquanto agarrado.' },
+  quebraArmadura: { forma: 'karate', nome: 'Combinação quebra-armadura', teste: { dv: 15 }, alvo: true, confirmar: 'Acertou o mesmo alvo com Arma Branca e com Artes Marciais neste turno.', efeito: 'A armadura do alvo perde 2 SP a mais.' },
+  quebraOssos: { forma: 'karate', nome: 'Golpe quebra-ossos', teste: 'ataque', will: 8, lesoes: { corpo: LESOES_DOS_GOLPES.costelas, cabeca: LESOES_DOS_GOLPES.cranio }, efeito: 'No lugar dos 2 ataques, 1 golpe: acertando, Costelas quebradas; mirado na cabeça (−8), Crânio rachado.' },
+  contraQueda: { forma: 'judo', nome: 'Contra-queda', teste: { dv: 15 }, alvo: true, confirmar: 'Desviou de todos os ataques corpo a corpo desde o seu último turno.', efeito: 'Uma Ação: derruba quem o atacou, sem precisar agarrar. Não pode ser evitado.' },
+  escapeDeAgarrao: { forma: 'judo', nome: 'Escape de agarrão', teste: { dv: 15 }, agarrao: 'agarrado', confirmar: 'Acertou 2 ataques corpo a corpo em quem o agarra neste turno.', efeito: 'Fica livre, e quem o agarrava sofre Braço quebrado.' },
+  pontoDePressao: { forma: 'taekwondo', nome: 'Ponto de pressão', teste: 'ataque', will: 8, lesoes: { corpo: LESOES_DOS_GOLPES.coluna, cabeca: LESOES_DOS_GOLPES.cerebro }, efeito: 'No lugar dos 2 ataques, 1 golpe: acertando, Lesão na coluna; mirado na cabeça (−8), Lesão cerebral.' },
+  voadora: { forma: 'taekwondo', nome: 'Voadora', teste: 'ataque', move: 8, alcance: ALCANCE_DA_VOADORA, derruba: true, confirmar: 'Já andou 4 m neste turno.', efeito: 'Usa a Ação e o resto do movimento contra alvo a até 4 m: dano de artes marciais; o alvo cai e é derrubado de moto ou de veículo aberto.' }
+};
+// Os movimentos que o personagem pode usar: os da forma em que tem pelo menos 1 ponto (com a perícia dela, a de mais
+// pontos se houver duas iguais) e a Recuperação, com qualquer forma. bloqueio: o requisito de WILL ou MOVE que falta.
+// formas: [{ forma, pericia, nivel }] (as perícias da família); atributos: { will, move }.
+export function movimentosDisponiveis(formas = [], { will = 0, move = 0 } = {}) {
+  const porForma = new Map();
+  for (const f of formas) if (f.forma && artesMarciaisLiberadas(f.nivel) && (!porForma.has(f.forma) || f.nivel > porForma.get(f.forma).nivel)) porForma.set(f.forma, f);
+  const melhor = [...porForma.values()].sort((a, b) => b.nivel - a.nivel)[0];
+  return Object.entries(MOVIMENTOS).flatMap(([id, m]) => {
+    const f = m.forma ? porForma.get(m.forma) : melhor;
+    if (!f) return [];
+    const falta = [m.will && will < m.will && `WILL ${m.will}+`, m.move && move < m.move && `MOVE ${m.move}+`].filter(Boolean).join(' e ');
+    return [{ id, ...m, pericia: f.pericia, forma: f.forma, nomeDaForma: FORMAS_DAS_ARTES_MARCIAIS[f.forma], bloqueio: falta ? `Pede ${falta}.` : '' }];
+  });
+}
+// Superar a DV (a wiki, "Teste básico": "Precisa superar a DV").
+export const passouNoMovimento = (total, dv) => Number(total) > Number(dv);
+
 // CORE 0.92.4 (_getHands e _getFreeHands): duas mãos + os efeitos, menos as armas empunhadas.
 // Wiki, Escudos (p. 183–184): cada escudo equipado ocupa uma mão, mesmo sem HP.
 export const maosLivres = ({ armas = [], bonus = 0, body = 0, escudos = 0 } = {}) =>
