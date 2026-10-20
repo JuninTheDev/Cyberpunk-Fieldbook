@@ -15,6 +15,7 @@ import * as arquitetura from '../../foundry-sistema/scripts/arquitetura.mjs';
 import * as netrun from '../../foundry-sistema/scripts/netrun/regras-da-net.mjs';
 import { PONTO_PADRAO } from '../../foundry-sistema/scripts/netrun/constantes.mjs';
 import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from '../../foundry-sistema/build/arquiteturas.mjs';
+import { precisaGerar } from '../../foundry-sistema/build/fontes.mjs';
 import { BLACK_ICE, DEMONIOS, FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS, TABELAS_DA_NET, TABELAS_DV, TABELAS_LESAO } from '../../foundry-sistema/scripts/gerado.mjs';
 import { ATORES_DA_NET, ATRIBUTOS, CATEGORIAS_DO_CONTEINER, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, enderecoPadraoDaWiki, ESTILOS_ROUPA, LIFEPATH, PERMISSOES_DO_CONTEINER, TIPOS_CYBERWARE, TIPOS_DE_CONTEINER, TIPOS_QUE_A_LOJA_COMPRA, TIPOS_ROUPA, USOS } from '../../foundry-sistema/scripts/config.mjs';
 
@@ -1209,36 +1210,38 @@ test('Arquitetura da NET (wiki, "Montando uma arquitetura", RED p. 209–211; o 
   assert.equal(arquitetura.novaLinha().andar, 1);
 });
 
-test('Arquiteturas da NET do compêndio (o documento da campanha na wiki, lido como o build do cpr-2077 o lê; os exemplos do NET Architect): as 4 da campanha com os andares, os ramos e o que tem em cada andar; a seção sem tabela fica de fora; um andar errado para o build', () => {
-  const campanha = arquiteturasDaCampanha(raiz);
-  assert.deepEqual(campanha.map(a => a.name), [
-    'O retransmissor RT-07 (depósito de Kabuki)', 'O Gatilho (hospital queimado, Northside)', 'A Coleira (datafort da Militech, Arroyo)', 'O Núcleo (rede de emergência, sob o City Center)'
-  ]);
-  for (const a of campanha) assert.deepEqual([a.type, a.img, a.flags['cpr-fieldbook'].campanha], ['arquitetura', 'icons/svg/tower.svg', 'morana'], a.name);
-  const ler = prefixo => arquitetura.lerArquitetura(campanha.find(a => a.name.startsWith(prefixo)).system);
-  // O Gatilho: os 6 andares da sessão 2 (o Raven no 2, o Hellhound no 5, o arquivo DV 12 no 6) e a senha do handout.
-  const gatilho = ler('O Gatilho');
-  assert.equal(Object.keys(gatilho.nos).length, 6);
-  assert.deepEqual([gatilho.nos['2a'].conteudos[0].ice, gatilho.nos['5a'].conteudos[0].ice, gatilho.nos['6a'].conteudos[0].tipo, gatilho.nos['6a'].conteudos[0].dv, gatilho.dv], ['raven', 'hellhound', 'arquivo', 12, 12]);
-  assert.match(gatilho.nos['1a'].conteudos[0].descricao, /ALA-B-14-2070/);
-  // A Coleira: o ramo B sai do andar 3 (o 4B sai do 3A); os fundos 8A e 5B. O Núcleo: o 6B sai do 5A; o nó de controle do 9.
-  const coleira = ler('A Coleira');
-  assert.equal(coleira.nos['4b'].pai, '3a');
-  assert.ok(arquitetura.ehFundo(coleira, '8a') && arquitetura.ehFundo(coleira, '5b'));
-  const nucleo = ler('O Núcleo');
-  assert.deepEqual([nucleo.nos['6b'].pai, nucleo.nos['9a'].conteudos[0].tipo, Object.keys(nucleo.nos).length], ['5a', 'controle', 11]);
-  // A descrição: o cabeçalho e os parágrafos da seção, com o negrito; a seção sem tabela ("Morana na NET") fica de fora.
-  assert.ok(campanha[0].system.descricao.startsWith('<p><b>Protocolo Morana</b> · 5 andares · do documento Arquiteturas da campanha</p><p>Sessão 1.'));
-  assert.ok(campanha.find(a => a.name.startsWith('O Núcleo')).system.descricao.includes('<p><b>Morana como Entidade:</b>'));
-  assert.ok(!campanha.some(a => a.name === 'Morana na NET'));
-  // Os 3 exemplos do NET Architect (o armazém do livro com dois Black ICE no andar 1).
-  assert.deepEqual(ARQUITETURAS_DE_EXEMPLO.map(a => a.name), ['Armazém da TLB (exemplo do livro)', 'Apartamento de um fixer', 'Clínica de ripperdoc (ramificada)']);
-  assert.deepEqual(arquitetura.lerArquitetura(ARQUITETURAS_DE_EXEMPLO[0].system).nos['1a'].conteudos.map(c => c.ice), ['hellhound', 'killer']);
-  // Um andar errado para o build, com o nome da arquitetura e o andar.
+test('Arquiteturas da NET do compêndio (o documento da campanha na wiki, lido como o build do cpr-2077 o lê; os exemplos do NET Architect): cada tabela vira uma arquitetura, com os andares, os ramos e o que tem em cada andar; a seção sem tabela fica de fora; sem o documento, nenhuma; um andar errado para o build', () => {
+  // As da trama antiga saíram do master em 2026-10-20 (a cópia desta branch ainda as tem, até a próxima mescla): o teste
+  // usa um documento de exemplo, e sem o documento não há nenhuma.
   const temporaria = fs.mkdtempSync(path.join(os.tmpdir(), 'cprf-arquiteturas-'));
   try {
     fs.mkdirSync(path.join(temporaria, 'documentos', 'morana'), { recursive: true });
-    const com = linha => fs.writeFileSync(path.join(temporaria, 'documentos', 'morana', 'arquiteturas-da-campanha.md'), `# X\n\n## Teste\n\n| Andar | Ramo | Conteúdo | DV | O que tem |\n|---|---|---|---|---|\n${linha}\n`);
+    assert.deepEqual(arquiteturasDaCampanha(temporaria), []);
+    const documento = path.join(temporaria, 'documentos', 'morana', 'arquiteturas-da-campanha.md');
+    const tabela = '| Andar | Ramo | Conteúdo | DV | O que tem |\n|---|---|---|---|---|\n';
+    fs.writeFileSync(documento, [
+      '# Arquiteturas de exemplo', '', '## Regras gerais', '', 'Uma seção sem tabela fica de fora.', '',
+      '## Em linha', '', 'A primeira, com **negrito**.', '', tabela + '| 1 | A | Senha | 8 | A senha é XYZ-6. |\n| 2 | A | Black ICE: Raven | — | |\n| 3 | A | Arquivo | 10 | |\n| 4 | A | Nó de controle | 10 | |\n| 5 | A | Black ICE: Hellhound | — | |\n| 6 | A | Arquivo | 12 | |', '',
+      '## Com ramo', '', tabela + '| 1 | A | Senha | 10 | |\n| 2 | A | Black ICE: Killer | — | |\n| 3 | A | Nó de controle | 10 | |\n| 4 | A | Black ICE: Hellhound | — | |\n| 5 | A | Arquivo | 10 | |\n| 6 | A | Senha | 12 | |\n| 7 | A | Black ICE: Sabertooth | — | |\n| 8 | A | Arquivo | 12 | |\n| 4 | B | Black ICE: Asp | — | |\n| 5 | B | Nó de controle | 12 | |', ''
+    ].join('\n'));
+    const campanha = arquiteturasDaCampanha(temporaria);
+    assert.deepEqual(campanha.map(a => a.name), ['Em linha', 'Com ramo']);
+    for (const a of campanha) assert.deepEqual([a.type, a.img, a.flags['cpr-fieldbook'].campanha], ['arquitetura', 'icons/svg/tower.svg', 'morana'], a.name);
+    const ler = nome => arquitetura.lerArquitetura(campanha.find(a => a.name === nome).system);
+    // Em linha: os 6 andares (o Raven no 2, o Hellhound no 5, o arquivo DV 12 no 6) e o que tem no 1.
+    const linha = ler('Em linha');
+    assert.equal(Object.keys(linha.nos).length, 6);
+    assert.deepEqual([linha.nos['2a'].conteudos[0].ice, linha.nos['5a'].conteudos[0].ice, linha.nos['6a'].conteudos[0].tipo, linha.nos['6a'].conteudos[0].dv, linha.dv], ['raven', 'hellhound', 'arquivo', 12, 12]);
+    assert.match(linha.nos['1a'].conteudos[0].descricao, /XYZ-6/);
+    // Com ramo: o ramo B sai do andar 3 (o 4B sai do 3A); os fundos 8A e 5B.
+    const ramo = ler('Com ramo');
+    assert.equal(ramo.nos['4b'].pai, '3a');
+    assert.ok(arquitetura.ehFundo(ramo, '8a') && arquitetura.ehFundo(ramo, '5b'));
+    // A descrição: o cabeçalho e os parágrafos da seção, com o negrito; a seção sem tabela fica de fora.
+    assert.equal(campanha[0].system.descricao, '<p><b>Protocolo Morana</b> · 6 andares · do documento Arquiteturas da campanha</p><p>A primeira, com <b>negrito</b>.</p>');
+    assert.ok(!campanha.some(a => a.name === 'Regras gerais'));
+    // Um andar errado para o build, com o nome da arquitetura e o andar.
+    const com = linhaErrada => fs.writeFileSync(documento, `# X\n\n## Teste\n\n${tabela}${linhaErrada}\n`);
     com('| 1 | A | Black ICE: Dragao | — | |');
     assert.throws(() => arquiteturasDaCampanha(temporaria), /"Teste": Black ICE desconhecido: Black ICE: Dragao/);
     com('| 19 | A | Senha | 8 | |');
@@ -1249,6 +1252,30 @@ test('Arquiteturas da NET do compêndio (o documento da campanha na wiki, lido c
     assert.throws(() => arquiteturasDaCampanha(temporaria), /conteúdo desconhecido no andar 2: Torreta/);
   } finally {
     fs.rmSync(temporaria, { recursive: true, force: true });
+  }
+  // Os 3 exemplos do NET Architect (o armazém do livro com dois Black ICE no andar 1).
+  assert.deepEqual(ARQUITETURAS_DE_EXEMPLO.map(a => a.name), ['Armazém da TLB (exemplo do livro)', 'Apartamento de um fixer', 'Clínica de ripperdoc (ramificada)']);
+  assert.deepEqual(arquitetura.lerArquitetura(ARQUITETURAS_DE_EXEMPLO[0].system).nos['1a'].conteudos.map(c => c.ice), ['hellhound', 'killer']);
+});
+
+test('o instalar gera os compêndios de novo sem a marca, com uma fonte mais nova que ela e com uma fonte que falta (o documento das arquiteturas, quando a campanha não tem nenhuma); senão, não', () => {
+  const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'cprf-fontes-'));
+  try {
+    const marca = path.join(pasta, '.gerado');
+    const fonte = path.join(pasta, 'fonte.json');
+    const quando = segundos => new Date(Date.UTC(2026, 9, 20, 12, 0, segundos));
+    fs.writeFileSync(fonte, '{}');
+    fs.utimesSync(fonte, quando(0), quando(0));
+    assert.equal(precisaGerar(pasta, marca, ['fonte.json']), true, 'sem a marca');
+    fs.writeFileSync(marca, '');
+    fs.utimesSync(marca, quando(10), quando(10));
+    assert.equal(precisaGerar(pasta, marca, ['fonte.json']), false, 'a marca mais nova');
+    fs.utimesSync(fonte, quando(20), quando(20));
+    assert.equal(precisaGerar(pasta, marca, ['fonte.json']), true, 'a fonte mais nova');
+    fs.utimesSync(fonte, quando(0), quando(0));
+    assert.equal(precisaGerar(pasta, marca, ['fonte.json', 'falta.md']), true, 'a fonte que falta');
+  } finally {
+    fs.rmSync(pasta, { recursive: true, force: true });
   }
 });
 

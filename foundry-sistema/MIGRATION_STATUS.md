@@ -7003,6 +7003,40 @@ Commit anterior: `19503fd` (registro do ciclo 141; código em `b5a27a3`). O C19 
 - **Coordenação:** C20 e C22 da sessão KouArt e C10 da sessão Junin foram incorporados; as demais reservas do ROADMAP
   foram preservadas. Os conflitos nas fichas somaram os partials de Artes Marciais e de lesões.
 
+### Ciclo 143 (2026-10-20): as arquiteturas da campanha ficam opcionais (sessão Junin)
+
+Commit anterior: `0d61dcd` (o ciclo 142, da sessão Codex). A decisão do usuário (2026-10-20): as arquiteturas NET da
+trama antiga do Protocolo Morana (o retransmissor RT-07, O Gatilho, A Coleira e O Núcleo) saem, e "entrarão novas no
+futuro". O master já tirou o documento (`documentos/morana/arquiteturas-da-campanha.md`, no 03d94e5), e o
+`servidor/instalar-sistema-v14.sh` só copia o documento quando ele existe. Sem este ciclo, a próxima instalação no
+servidor quebraria no build dos compêndios.
+- **O que muda:**
+  - **`build/arquiteturas.mjs`:** sem o documento, `arquiteturasDaCampanha` não devolve nenhuma, e o compêndio
+    "Arquiteturas da NET" fica com os 3 exemplos do NET Architect;
+  - **`build/fontes.mjs`** (novo): o `precisaGerar` que o `instalar.mjs` usa. Os compêndios são gerados de novo sem a
+    marca, com uma fonte mais nova que ela ou com uma fonte que falta (não dá para saber se ela saiu depois da última
+    geração). Antes, o `statSync` parava a instalação;
+  - **a cópia do documento nesta branch fica**, com as 4 antigas: a wiki da branch ainda o pede (a aba "Arquiteturas
+    NET"). Ela sai na próxima mescla do master. Recriar o arquivo no mesmo formato traz as novas.
+- **Testes:**
+  - **G3:**
+    - o teste das arquiteturas lê um documento de exemplo (uma em linha, com 6 andares; uma com o ramo B saindo do
+      andar 3; uma seção sem tabela) e confere que sem o documento não há nenhuma. Continuam cobertos os andares, os
+      ramos, os fundos, a descrição com o negrito, a seção sem tabela fora e os andares errados;
+    - um teste novo do `precisaGerar`: sem a marca, a fonte mais nova, a fonte que falta e a marca mais nova.
+  - **G4:** o compêndio e a configuração do ponto de acesso esperam as arquiteturas do documento, se ele existir, mais
+    os 3 exemplos (hoje, 7; depois da mescla do master, 3); o mapa conferido passa a ser o do Apartamento de um fixer;
+  - **o ensaio:** o terminal do pachinko usa o Apartamento de um fixer pelo nome (antes, a primeira do compêndio).
+- **O que apareceu:** na primeira forma, a cópia do documento saía também da branch. O G4 deu 201 de 203: a wiki da
+  branch pedia o arquivo (o 404 nos "erros de JS"), e o ponto de acesso contava 3 arquiteturas no lugar de 7.
+- **Resultados:**
+  - G1: 104 arquivos sem erro; G2: 0 erros; G3: 248/248 (235/235 antes da integração);
+  - G4: 203/203 (451 s) na árvore sobre o 141. O ciclo 142 (Codex) entrou depois; integrado (o conflito foi só neste
+    registro), com G1–G3 de novo. O G4 da árvore final vai num commit de registro;
+  - **mutações:** as 4 caíram. No G3: o build sem conferir o documento (A1), o `precisaGerar` sem a fonte que falta (A2) e o build
+    que ignora o documento que existe (A3). No G4: o compêndio sem as do documento (A4), pego no passo do compêndio e no do
+    ponto de acesso.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

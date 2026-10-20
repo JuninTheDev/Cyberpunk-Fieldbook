@@ -363,11 +363,11 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.total === 3 && /Death Save/i.test(info.texto), JSON.stringify(info)];
     });
 
-    await r.passo('NET: o mestre põe o terminal do pachinko com uma arquitetura da campanha (do compêndio); a Netrunner conecta pela ficha, abre a janela da NET, desce ao primeiro andar e usa o Breach, que o mestre rola; depois desconecta', async () => {
+    await r.passo('NET: o mestre põe o terminal do pachinko com uma arquitetura do compêndio (o Apartamento de um fixer); a Netrunner conecta pela ficha, abre a janela da NET, desce ao primeiro andar e usa o Breach, que o mestre rola; depois desconecta', async () => {
       const ponto = await edge.evaluate(`(async () => {
         const { PONTO_PADRAO } = await import('/systems/${S}/scripts/netrun/constantes.mjs');
         const pack = game.packs.get('${S}.arquiteturas');
-        const entrada = pack.index.contents[0];
+        const entrada = (await pack.getIndex()).contents.find(e => e.name === 'Apartamento de um fixer');
         const arq = await game.items.importFromCompendium(pack, entrada._id);
         const [tile] = await canvas.scene.createEmbeddedDocuments('Tile', [{ x: 600, y: 800, width: 100, height: 100, texture: { src: 'systems/${S}/icones/terminal.svg' }, flags: { '${S}': { pontoDeAcesso: { ...PONTO_PADRAO, nome: 'Terminal do pachinko', arquitetura: arq.uuid } } } }]);
         return { tile: tile.uuid, arquitetura: arq.name, andares: arq.system.andares.length, primeiro: arq.system.andares.find(a => a.andar === 1)?.tipo };

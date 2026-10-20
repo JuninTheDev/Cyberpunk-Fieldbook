@@ -62,8 +62,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   andares pelo lobby e
   os outros pela tabela da dificuldade escolhida (básica, padrão, incomum, avançada), sem repetir um resultado (menos
   arquivo e nó de controle); cada Black ICE de um resultado vira uma linha. O compêndio **Arquiteturas da NET** (escondido
-  dos jogadores) traz as 4 da campanha, do documento da wiki (`documentos/morana/arquiteturas-da-campanha.md`: mudar um
-  andar lá muda o compêndio no próximo build), e os 3 exemplos do NET Architect.
+  dos jogadores) traz os 3 exemplos do NET Architect e as da campanha, quando a wiki tiver o documento
+  (`documentos/morana/arquiteturas-da-campanha.md`: mudar um andar lá muda o compêndio no próximo build). As da trama
+  antiga saíram do master em 2026-10-20 (decisão do usuário); sem o documento, o compêndio fica só com os exemplos. A
+  cópia desta branch ainda tem as 4 antigas, até a próxima mescla do master.
 - **Ponto de acesso à NET** (o NET Architect da mesa, dentro do sistema): qualquer Tile vira um, pelo botão no HUD do
   Tile (só o mestre). A configuração escolhe a arquitetura (as do mundo e as dos compêndios), o alcance (6 m, o do RED),
   o DV, os requisitos (o cyberdeck equipado, a Interface mínima), se o ponto é oculto e se as defesas reiniciam sem
@@ -565,7 +567,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - os inimigos no andar: o Hellhound, com os números da wiki, segura a descida; o Zap (a DEF do Hellhound rolada no nome dele) tira da REZ; o Slide passa, e de volta ao andar o Hellhound segura de novo; o Imp segura e não se dribla; o mestre derruba a REZ dele pelo painel;
   - as Ações NET em combate (o texto e os losangos acesos na janela): o Virus de 2 Ações e o Cloak gastam as 3 do Rank 4, o Cloak seguinte e o desconectar seguro são recusados, a rodada seguinte as devolve e a desconexão insegura sai sem gastar;
   - a arquitetura pelas tabelas: a padrão com os dados fixos (o resultado que não repete, o ramo B do andar 3 e os dois Hellhound no mesmo andar);
-  - o compêndio das arquiteturas: as 7 (as 4 da campanha e os 3 exemplos), escondidas do jogador, e O Gatilho no mapa;
+  - o compêndio das arquiteturas: os 3 exemplos e as do documento da campanha, se houver, escondidas do jogador, e o Apartamento de um fixer no mapa;
   - a arquitetura da NET: a ficha com os andares da clínica de ripperdoc e o mapa (o ramo B sai do andar 2), o andar novo, a linha que vira Black ICE e a linha tirada;
   - o programa de Black ICE do netrunner: o Hellhound do compêndio de Netrunning instalado no deck (2 slots), com o tipo e os números na aba NET e na ficha do item;
   - o Black ICE rezzado: o Hellhound ativado no deck põe o token ao lado do netrunner (pelo mestre, também quando o jogador ativa no computador dele), a REZ que o token perde volta para o programa, e desativar ou zerar a REZ tira o token;

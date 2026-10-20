@@ -1,7 +1,8 @@
 // As arquiteturas da NET do compêndio do sistema ("Arquiteturas da NET", escondido dos jogadores): as da campanha, do
 // documento da wiki (documentos/morana/arquiteturas-da-campanha.md: cada "## Nome" com a tabela de andares, como o build
 // do cpr-2077 as lê), e os três exemplos do NET Architect da mesa (o armazém da TLB do livro, o apartamento de um fixer e
-// a clínica de ripperdoc). O documento é a fonte: o mestre lê a mesma arquitetura na wiki e no Foundry. Sem Foundry: os
+// a clínica de ripperdoc). O documento é a fonte: o mestre lê a mesma arquitetura na wiki e no Foundry. Sem o documento
+// (a campanha ainda não tem arquitetura; as da trama antiga saíram em 2026-10-20), só os exemplos. Sem Foundry: os
 // testes rodam este arquivo no Node.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,7 +25,9 @@ export const documentoDaCampanha = raizDaWiki => path.join(raizDaWiki, 'document
 // Cada seção com a tabela (Andar | Ramo | Conteúdo | DV | O que tem) vira uma arquitetura; as seções sem tabela (as
 // regras gerais) ficam de fora. Um andar que não vale para o RED para o build, com o nome da arquitetura e o andar.
 export function arquiteturasDaCampanha(raizDaWiki) {
-  const texto = fs.readFileSync(documentoDaCampanha(raizDaWiki), 'utf8').replace(/\r/g, '');
+  const documento = documentoDaCampanha(raizDaWiki);
+  if (!fs.existsSync(documento)) return [];
+  const texto = fs.readFileSync(documento, 'utf8').replace(/\r/g, '');
   const itens = [];
   for (const secao of texto.split(/^## /m).slice(1)) {
     const [titulo, ...linhas] = secao.split('\n');

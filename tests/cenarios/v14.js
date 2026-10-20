@@ -5,11 +5,17 @@
 // Os dados ficam fixos onde a conta importa: CONFIG.Dice.randomUniform devolve os lados pedidos, em ordem.
 // Só roda com a mesa do servidor vazia: a licença do Foundry vale para uma mesa por vez.
 const path = require('path');
+const { pathToFileURL } = require('url');
 const foundry14 = require('../lib/foundry14');
 const { mesaOcupada } = require('../lib/foundry');
 const { abrirEdge } = require('../lib/edge');
 
 module.exports = async ({ edge, servidores, r }) => {
+  // O compêndio "Arquiteturas da NET": as do documento da campanha, se a wiki o tiver (as da trama antiga saíram do master
+  // em 2026-10-20), e os 3 exemplos do NET Architect.
+  const { arquiteturasDaCampanha, EXEMPLOS: ARQUITETURAS_DE_EXEMPLO } = await import(pathToFileURL(path.join(servidores.raiz, 'foundry-sistema', 'build', 'arquiteturas.mjs')).href);
+  const arquiteturasDoCompendio = [...arquiteturasDaCampanha(servidores.raiz), ...ARQUITETURAS_DE_EXEMPLO].map(a => a.name).sort();
+
   // ---------- Personagem na wiki de teste (antes do Foundry: o criador roda neste navegador) ----------
   const wiki = servidores.local;
   const api = async (caminho, method = 'GET', body) => (await fetch(`${wiki}${caminho}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })).json();
@@ -10095,22 +10101,22 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    await r.passo('compêndio "Arquiteturas da NET" (as da campanha, do documento da wiki; os exemplos do NET Architect): 7 arquiteturas, na pasta do sistema e escondidas dos jogadores; O Gatilho mostra os 6 andares no mapa', async () => {
+    await r.passo('compêndio "Arquiteturas da NET" (os 3 exemplos do NET Architect e as do documento da campanha, se a wiki o tiver): na pasta do sistema e escondidas dos jogadores; o Apartamento de um fixer mostra os 3 andares no mapa', async () => {
       const info = await edge.evaluate(`(async () => {
         const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
         const pack = game.packs.get('${S}.arquiteturas');
         const indice = await pack.getIndex();
-        const gatilho = await pack.getDocument(indice.find(e => e.name.startsWith('O Gatilho'))._id);
-        await gatilho.sheet.render({ force: true });
-        await window.__esperar(() => gatilho.sheet.element?.querySelector('.mapa-net .no'));
-        const mapa = [...gatilho.sheet.element.querySelectorAll('.mapa-net .no')].map(textoDe);
-        await gatilho.sheet.close();
+        const apartamento = await pack.getDocument(indice.find(e => e.name === 'Apartamento de um fixer')._id);
+        await apartamento.sheet.render({ force: true });
+        await window.__esperar(() => apartamento.sheet.element?.querySelector('.mapa-net .no'));
+        const mapa = [...apartamento.sheet.element.querySelectorAll('.mapa-net .no')].map(textoDe);
+        await apartamento.sheet.close();
         return { tamanho: indice.size, nomes: [...indice].map(e => e.name).sort(), tipos: [...new Set([...indice].map(e => e.type))], pasta: pack.folder?.name, mapa };
       })()`);
       const doJogador = jogador ? await jogador.evaluate(`({ visivel: game.packs.get('${S}.arquiteturas')?.visible })`) : { visivel: 'sem o navegador do jogador' };
-      const ok = info.tamanho === 7 && info.tipos.join() === 'arquitetura' && info.pasta === 'Cyberpunk RED — Fieldbook'
-        && ['Apartamento de um fixer', 'Armazém da TLB (exemplo do livro)', 'A Coleira (datafort da Militech, Arroyo)', 'Clínica de ripperdoc (ramificada)', 'O Gatilho (hospital queimado, Northside)', 'O Núcleo (rede de emergência, sob o City Center)', 'O retransmissor RT-07 (depósito de Kabuki)'].every(nome => info.nomes.includes(nome))
-        && info.mapa.join(' | ') === '1A Senha DV 8 | 2A Raven | 3A Arquivo DV 10 | 4A Nó de controle DV 10 | 5A Hellhound | 6A Arquivo DV 12'
+      const ok = info.tamanho === arquiteturasDoCompendio.length && info.tipos.join() === 'arquitetura' && info.pasta === 'Cyberpunk RED — Fieldbook'
+        && info.nomes.join() === arquiteturasDoCompendio.join()
+        && info.mapa.join(' | ') === '1A Senha DV 6 | 2A Arquivo DV 6 | 3A Nó de controle DV 6'
         && (!jogador || doJogador.visivel === false);
       return [ok, JSON.stringify({ ...info, doJogador })];
     });
@@ -10362,7 +10368,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const marcadoresNoFim = await jogador.evaluate(`(async () => { await window.__esperar(() => !game.system.api.netrun.pontosDesenhados().length, 30); return game.system.api.netrun.pontosDesenhados().length; })()`);
         const tem = (lista, texto) => lista.some(linha => linha.includes(texto));
         const [c, n] = [conectou, noMestre];
-        const ok = m.botao && m.semAviso && !m.imagem && m.tirar.marcado && !m.tirar.imagem && m.grupos.includes('Arquiteturas da NET:7') && m.grupos.includes('Itens do mundo:1')
+        const ok = m.botao && m.semAviso && !m.imagem && m.tirar.marcado && !m.tirar.imagem && m.grupos.includes(`Arquiteturas da NET:${arquiteturasDoCompendio.length}`) && m.grupos.includes('Itens do mundo:1')
           && m.ponto === 'true,Terminal da clínica,true,6,,true,1,false,true' && m.marcadores.join() === 'Terminal da clínica'
           && longe.cena === 'Teste de combate' && longe.marcadores.join() === 'Terminal da clínica' && longe.conexao === null
           && tem(longe.avisos, 'está longe demais: 7.0 m (alcance 6)') && longe.direto === 'Longe demais do ponto de acesso: 7.0 m (alcance 6).'
