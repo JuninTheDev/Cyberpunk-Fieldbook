@@ -1134,3 +1134,44 @@ export function moradiaParaAWiki(sistema = {}) {
 // O total mensal pago no dia 1º (o aluguel, o estilo de vida e o Trauma Team; a moda não tem custo mensal).
 export const custoMensalDeMoradia = (sistema = {}) =>
   custoDeMoradia(sistema?.moradia?.custo) + custoDeMoradia(sistema?.estiloDeVida?.custo) + custoDeMoradia(sistema?.traumaTeam?.custo);
+
+// ---------------- Conveniências (o C26: /red no chat, DV na régua e iniciativa crítica) ----------------
+// O comando /red no chat (CORE parse-red-command.js, CPRChat.HandleCPRCommand e CPRRoll._processFormula): aceita o dado
+// opcional (XdY; sem ele, 1d10), os modificadores (+N e -N; o CORE só lê o primeiro, aqui somam todos) e # descrição no
+// fim. O tipo vem do dado, como no CORE: o d10 é um teste (com o crítico); o d6, um dano (o CPRDamageRoll, com a ablação
+// "aN", 1 sem ela); outro dado rola sem crítico.
+export function lerComandoRed(texto) {
+  const inicio = typeof texto === 'string' && texto.match(/^\s*\/red(?=$|[\s+#+-])/i);
+  if (!inicio) return null;
+  const resto = texto.slice(inicio[0].length);
+  const hash = resto.indexOf('#');
+  const antes = hash >= 0 ? resto.slice(0, hash) : resto;
+  const descricao = hash >= 0 ? resto.slice(hash + 1).trim() : '';
+  const matchDados = antes.match(/([1-9]\d*)d([1-9]\d*)/i);
+  const dados = matchDados ? matchDados[0].toLowerCase() : '1d10';
+  const semDados = matchDados ? antes.replace(matchDados[0], ' ') : antes;
+  const modificadores = (semDados.match(/[+-]\s*\d+/g) ?? []).map(m => Number(m.replace(/\s+/g, ''))).filter(Boolean);
+  const soma = modificadores.reduce((acc, n) => acc + n, 0);
+  const partes = modificadores.map(valor => ({ rotulo: 'Modificador', valor }));
+  const faces = Number(dados.split('d')[1]);
+  const tipo = faces === 10 ? 'teste' : faces === 6 ? 'dano' : 'generico';
+  const ablacao = tipo === 'dano' ? Number(semDados.match(/a(\d+)/i)?.[1] ?? 1) : 0;
+  return { dados, modificadores, soma, descricao, partes, tipo, ablacao };
+}
+
+// As tabelas de DV do seletor no HUD do token (CORE HudInterface.SetDvTable: todas menos a "DV Generic") e o rótulo da
+// régua pela distância (CORE overrides.js, getSegmentLabel: "DV: 15 Pistol", ou null fora do alcance).
+export const opcoesDeTabelaDv = (tabelas = {}) => Object.keys(tabelas).filter(nome => nome && nome !== 'DV Generic');
+export const nomeCurtoDaTabelaDv = tabela => String(tabela ?? '').replace(/^DV\s+/i, '').replace(/\((.*)\)/, '$1').trim();
+
+export function rotuloDvDaRegua(tabela, distancia, tabelas = {}) {
+  const nome = typeof tabela === 'string' ? tabela : tabela?.name ?? '';
+  const faixas = nome && tabelas?.[nome];
+  if (!faixas || !(Number(distancia) > 0)) return null;
+  const { dv } = dvPelaDistancia(faixas, distancia);
+  return dv !== null ? `DV: ${dv} ${nomeCurtoDaTabelaDv(nome)}` : null;
+}
+
+// A fórmula da iniciativa (CORE settings.js, criticalInitiative, e CPRInitiative): sem crítico por padrão na mesa, ou
+// 1d10crit com a configuração ligada.
+export const formulaDaIniciativa = (base = '1d10 + @iniciativa', critica = false) => (critica ? String(base).replace(/\b1d10(?!crit)/i, '1d10crit') : String(base));

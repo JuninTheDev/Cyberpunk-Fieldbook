@@ -40,6 +40,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | CORE e wiki | moradia, estilo de vida, moda e Trauma Team (o `lifestyle`; C22) | portados no ciclo 140: os campos, a importação da wiki e da mesa, a ficha "Na mesa" e o "Pagar o mês" (a regra do criador da wiki) |
+| CORE | o `/red` no chat, a DV no HUD do token e na régua, a iniciativa crítica (C26, partes 1 a 3) | portados no ciclo 144 (o `/red` soma todos os modificadores; ver as dúvidas) |
 | CORE | macros na barra (a arma, a perícia e o item arrastados da ficha) e os favoritos (o alfinete do item e da perícia) | portados no ciclo 139 (C20): o favorito vai para o painel da aba Combate (ver as dúvidas) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
@@ -741,6 +742,22 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **o pagamento do mês:** o CORE só guarda e mostra os campos (`housing`, `lifeStyle`, `traumaTeam` com `cost` e `description`, e `fashion` só com `description`), sem somar nem cobrar. Aqui a aba Vida soma os três custos mensais ("POR MÊS: N eb, no dia 1º") e oferece **Pagar o mês**, que confirma antes e desconta do dinheiro pelo extrato (`Moradia e estilo de vida do mês`), como diz o passo 6 do criador da wiki; sem total (> 0), o botão não aparece;
   - **a moda na ficha "Na mesa":** o `fichaParaAWiki` manda `moradia: { housing, lifeStyle, traumaTeam }` com `{ custo, descricao }`, exatamente como o `cpr-2077` e o `criador.js` (`doc.mesa.moradia`). Como o `cpr-2077` não mandava a moda na ficha da mesa, o `importarDaMesa` aproveita a moda da criação da wiki (`resultado.moradia`) quando `mesa.moradia` não traz `moda`;
   - **com o mestre:** quando vira o mês (o sistema não cobra sozinho pelo relógio), os benefícios de Role (moradia e Trauma Team da Exec), a penalidade de dormir na rua ou no carro e o atendimento do Trauma Team.
+
+- **As conveniências (o C26, partes 1 a 3; o CORE 0.92.4):**
+  - **o `/red` no chat:** como o CORE (`parse-red-command.js`, `CPRChat.HandleCPRCommand` e `CPRRoll._processFormula`): o
+    dado `XdY` opcional (`1d10` sem ele) e `# descrição` no fim; o d10 é um teste, no cartão de teste do sistema, com o
+    crítico; o d6, um dano (o `CPRDamageRoll` do CORE: o crítico dos dois 6 e a ablação `aN`, 1 sem ela), no cartão de dano;
+    outro dado rola sem crítico (o "generic" do CORE). **A diferença:** o CORE só lê o primeiro modificador (`/red +5 -2`
+    rola +5); aqui todos somam (+3);
+  - **a DV no HUD do token e na régua:** o botão do HUD escolhe a tabela entre as `TABELAS_DV` do catálogo (menos a `"DV Generic"`,
+    como o `HudInterface.SetDvTable` do CORE) e grava o nome na flag `cprDvTable` do `TokenDocument` (também lê o objeto
+    `{ name }` ou a flag `cyberpunk-red-core.cprDvTable` de um token antigo). No Foundry 14, o rótulo da régua vem de
+    `TokenRuler.prototype._getWaypointLabelContext` (e `Ruler.prototype._getWaypointLabelContext`), mostrando `DV: <dv> <arma>`
+    ao lado da unidade de distância quando a distância medida cai numa faixa da tabela;
+  - **a iniciativa crítica (`iniciativaCritica`):** no CORE (`settings.js`, `criticalInitiative`), o padrão é `true` (a mesa
+    do Foundry 12 explodia a iniciativa, se não mudou a configuração). Aqui o padrão é `false`, para manter o que o sistema
+    fazia desde a virada para o Foundry 14 (`1d10 + @iniciativa`, sem explosão no 10 nem no 1); ligada, usa
+    `1d10crit + @iniciativa`. **Pergunta ao usuário:** qual padrão a mesa quer.
 
 ## Registro dos ciclos
 
@@ -7037,6 +7054,51 @@ servidor quebraria no build dos compêndios.
   - **mutações:** as 4 caíram. No G3: o build sem conferir o documento (A1), o `precisaGerar` sem a fonte que falta (A2) e o build
     que ignora o documento que existe (A3). No G4: o compêndio sem as do documento (A4), pego no passo do compêndio e no do
     ponto de acesso.
+
+### Ciclo 144 (2026-10-20): o C26, partes 1 a 3: o `/red`, a DV no HUD e na régua e a iniciativa crítica (sessão KouArt, com o Antigravity)
+
+Commit anterior: `f87fd22d` (a reserva do C27). Renumerado: as sessões Junin (141 e 143) e Codex (142) publicaram antes.
+O código e os testes saíram de um worker do Antigravity, revisado aqui (ver abaixo).
+
+- **A referência:** o CORE 0.92.4:
+  - o `/red`: `modules/hooks/chat/parse-red-command.js` e `CPRChat.HandleCPRCommand` (`modules/chat/cpr-chat.js`): o dado
+    `XdY` (sem ele, `1d10`), o primeiro modificador, a descrição depois do `#`; o d6 vira um `CPRDamageRoll` (a ablação
+    `aN`), e outro dado que não seja d6 nem d10 rola sem crítico;
+  - a DV: `modules/hooks/token/add-dv-token-hud.js` e `HudInterface.SetDvTable` (`modules/hud/interface.js`: o botão no HUD
+    do token, as tabelas menos a "DV Generic", a flag `cprDvTable`) e `modules/system/overrides.js` (o rótulo da régua com
+    a DV da distância);
+  - a iniciativa: `modules/system/settings.js` (`criticalInitiative`, padrão `true`).
+- **O que muda:**
+  - **`regras.mjs`:** `lerComandoRed` (o tipo pelo dado e a ablação), `opcoesDeTabelaDv`, `nomeCurtoDaTabelaDv`,
+    `rotuloDvDaRegua` (pelo `dvPelaDistancia` e as `TABELAS_DV` que já existiam) e `formulaDaIniciativa`;
+  - **`rolagens.mjs`:** o gancho `chatMessage` do `/red` e o `executarComandoRed` (o teste, o dano ou a soma); o `testar`
+    aceita o dado (`dado`), e o cartão de teste mostra o dado que não é o `1d10`;
+  - **`regua-dv.mjs` (novo):** o botão "Medir DV" no HUD do token (a janela das tabelas) e o rótulo da `TokenRuler` (e da
+    `Ruler`) do Foundry 14 com a DV ao lado da unidade;
+  - **`configuracoes.mjs` e `iniciativa.mjs`:** "Iniciativa explode no 10 e no 1?" (padrão: não), no combatente.
+- **A revisão do trabalho do worker:** o `/red` dele fazia todo dado explodir no valor máximo (e mexia no `criticoDo`):
+  agora segue o CORE (o d6 é dano, outro dado não tem crítico) e o `criticoDo` voltou; uma DV esperada no teste (a da SMG
+  no autofogo a 10 m) era um palpite: agora é a da tabela (17); o passo do G4 fixava os dados com o `fixar` errado e
+  dependia do token e da cena de passos anteriores: agora fixa pelo `window.__fila`, cria a cena da régua (2 m por 100 px),
+  o ator e o token, e apaga no fim. Na primeira rodada, o HUD usava o `clear()`, obsoleto no Foundry 14 (o aviso de
+  compatibilidade): virou `close()`; e a régua montada à mão sai com o custo "∞" (sem o movimento do token): o passo confere
+  a DV ao lado da unidade.
+- **Testes:**
+  - **G3:** em `regras.test.mjs`, o `/red` (os tipos, os modificadores, a ablação, a descrição e o que não é `/red`), as
+    tabelas do HUD, o rótulo da régua por distância e a fórmula da iniciativa;
+  - **G4:** um passo novo: os quatro `/red` pelo `ui.chat.processMessage` (17 com o crítico; −8 com a falha; o dano 2d6 com
+    os dois 6 e a ablação 2; o d20 sem crítico); a DV Pistol escolhida no HUD (sem a "DV Generic") e o rótulo a 4 m (DV 13) e
+    a 10 m (DV 15); a iniciativa desligada (10 + 7), e ligada (10 + 4 + 7; 1 − 6 + 7).
+- **Portões** (antes da integração dos ciclos 141 a 143): G1, 99 arquivos sem erro; G2, nenhum erro; G3, 230/230; G4,
+  202/202. Depois da integração: G1, 104 arquivos sem erro; G2, nenhum
+  erro; G3, 249/249; G4, 211/211, com a checagem dos dois navegadores sem avisos ou erros de JS.
+- **Mutações** (antes da integração; o código delas não mudou com ela): as dez caíram, uma por vez, e os arquivos voltaram
+  exatos (md5 conferido). No G3: os modificadores sem o sinal (M1), o d6 como teste (M2), a "DV Generic" no seletor (M3), a
+  DV com 1 a mais (M4) e a iniciativa crítica que nunca liga (M5). No G4: o `/red` que não é interceptado (M6), o dano sem
+  o crítico dos dois 6 (M7), a tabela que não grava no token (M8), a régua sem a DV (M9) e o combatente sem a configuração
+  (M10).
+- **Pergunta ao usuário:** a iniciativa crítica ligada ou desligada por padrão (o CORE liga).
+- **Próximo:** o C21 (a terapia e a ciberpsicose), e o resto do C26 e o C27 com os workers do Codex.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -1977,3 +1977,47 @@ test('Dano com o modificador do mestre (a janela de rolagem): entra depois do mu
   assert.equal(regras.expressaoDoDano('2d6', { multiplicador: 3, modificador: 2 }), '2d6 * 3 + 2');
   assert.equal(regras.expressaoDoDano('3d6 + 2', { multiplicador: 2, modificador: 1 }), '(3d6 + 2) * 2 + 1');
 });
+
+test('Conveniências (o C26; o CORE 0.92.4): o /red no chat (parse-red-command.js, CPRChat.HandleCPRCommand e CPRRoll._processFormula), a DV na régua (add-dv-token-hud.js, HudInterface.SetDvTable e overrides.js) e a fórmula da iniciativa crítica (settings.js, criticalInitiative)', () => {
+  // 1. O comando /red no chat: sem dado usa 1d10; aceita XdY, um ou mais +N/-N e # descrição no fim. O tipo vem do dado,
+  // como no CORE: d10 é teste; d6, dano (a ablação "aN", 1 sem ela); outro, sem crítico.
+  assert.equal(regras.lerComandoRed('olá /red +5'), null);
+  assert.equal(regras.lerComandoRed('/roll 1d10 + 5'), null);
+  assert.equal(regras.lerComandoRed('/rede +5'), null);
+  assert.deepEqual(regras.lerComandoRed('/red'), { dados: '1d10', modificadores: [], soma: 0, descricao: '', partes: [], tipo: 'teste', ablacao: 0 });
+  assert.deepEqual(regras.lerComandoRed('  /RED +5 - 2 + 4 # Percepção na esquina  '), {
+    dados: '1d10', modificadores: [5, -2, 4], soma: 7, descricao: 'Percepção na esquina',
+    partes: [{ rotulo: 'Modificador', valor: 5 }, { rotulo: 'Modificador', valor: -2 }, { rotulo: 'Modificador', valor: 4 }], tipo: 'teste', ablacao: 0
+  });
+  assert.deepEqual(regras.lerComandoRed('/red 1d6 + 3 # Faca do drone'), {
+    dados: '1d6', modificadores: [3], soma: 3, descricao: 'Faca do drone',
+    partes: [{ rotulo: 'Modificador', valor: 3 }], tipo: 'dano', ablacao: 1
+  });
+  assert.deepEqual(regras.lerComandoRed('/red 3d6 a2 # Perfurante'), {
+    dados: '3d6', modificadores: [], soma: 0, descricao: 'Perfurante', partes: [], tipo: 'dano', ablacao: 2
+  });
+  assert.equal(regras.lerComandoRed('/red 1d20 + 1').tipo, 'generico');
+  assert.deepEqual(regras.lerComandoRed('/red-3#No escuro'), {
+    dados: '1d10', modificadores: [-3], soma: -3, descricao: 'No escuro',
+    partes: [{ rotulo: 'Modificador', valor: -3 }], tipo: 'teste', ablacao: 0
+  });
+
+  // 2. A DV no HUD do token e na régua: todas as tabelas de DV menos a "DV Generic", e o rótulo "DV: <dv> <arma>" pela distância.
+  const opcoes = regras.opcoesDeTabelaDv(TABELAS_DV);
+  assert.ok(opcoes.includes('DV Pistol') && opcoes.includes('DV Assault Rifle') && opcoes.includes('DV SMG (Autofire)'));
+  assert.ok(!opcoes.includes('DV Generic'));
+  assert.equal(regras.nomeCurtoDaTabelaDv('DV Pistol'), 'Pistol');
+  assert.equal(regras.nomeCurtoDaTabelaDv('DV SMG (Autofire)'), 'SMG Autofire');
+  assert.equal(regras.rotuloDvDaRegua('DV Pistol', 4, TABELAS_DV), 'DV: 13 Pistol');
+  assert.equal(regras.rotuloDvDaRegua('DV Pistol', 10, TABELAS_DV), 'DV: 15 Pistol');
+  assert.equal(regras.rotuloDvDaRegua({ name: 'DV SMG (Autofire)' }, 10, TABELAS_DV), 'DV: 17 SMG Autofire');
+  assert.equal(regras.rotuloDvDaRegua('DV Assault Rifle', 20, TABELAS_DV), 'DV: 15 Assault Rifle');
+  assert.equal(regras.rotuloDvDaRegua('DV Pistol', 0, TABELAS_DV), null, 'sem distância (0 m), não mostra DV');
+  assert.equal(regras.rotuloDvDaRegua('DV Pistol', 500, TABELAS_DV), null, 'fora do alcance, não mostra DV');
+  assert.equal(regras.rotuloDvDaRegua('', 10, TABELAS_DV), null);
+
+  // 3. A iniciativa crítica: desligada por padrão (1d10 + @iniciativa) e ligada com 1d10crit.
+  assert.equal(regras.formulaDaIniciativa('1d10 + @iniciativa', false), '1d10 + @iniciativa');
+  assert.equal(regras.formulaDaIniciativa('1d10 + @iniciativa', true), '1d10crit + @iniciativa');
+  assert.equal(regras.formulaDaIniciativa('1d10crit + @iniciativa', true), '1d10crit + @iniciativa');
+});

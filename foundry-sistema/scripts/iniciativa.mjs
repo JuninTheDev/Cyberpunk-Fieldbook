@@ -5,7 +5,7 @@
 import { ATORES_DA_NET } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
-import { iniciativaNoTopo, tempoEntreRodadas } from './regras.mjs';
+import { formulaDaIniciativa, iniciativaNoTopo, tempoEntreRodadas } from './regras.mjs';
 
 // A escolha da janela de cada combatente, de rollInitiative até a rolagem dele.
 const escolhas = new WeakMap();
@@ -14,9 +14,10 @@ const termo = valor => `${valor < 0 ? '-' : '+'} ${Math.abs(valor)}`;
 const daNet = combatente => ATORES_DA_NET.includes(combatente?.actor?.type);
 
 export class CombatenteCPR extends Combatant {
-  // O Black ICE e o demônio: 1 a mais que a maior iniciativa dos outros (ou 30, sem ninguém na fila).
+  // O Black ICE e o demônio: 1 a mais que a maior iniciativa dos outros (ou 30, sem ninguém na fila). Os outros usam
+  // 1d10 + @iniciativa (ou 1d10crit + @iniciativa, com "Iniciativa explode no 10 e no 1?" ligada).
   _getInitiativeFormula() {
-    if (!daNet(this)) return super._getInitiativeFormula();
+    if (!daNet(this)) return formulaDaIniciativa(super._getInitiativeFormula(), config('iniciativaCritica'));
     return String(iniciativaNoTopo(this.parent.combatants.filter(outro => outro.id !== this.id).map(outro => outro.initiative)));
   }
 
@@ -26,7 +27,8 @@ export class CombatenteCPR extends Combatant {
     escolhas.delete(this);
     const extras = escolha?.partes ?? ator?.situacionaisDaIniciativa?.().filter(situacional => situacional.ligado) ?? [];
     const valores = [...extras.map(parte => parte.valor), escolha?.sorte ?? 0].filter(Boolean);
-    return foundry.dice.Roll.create([formula || this._getInitiativeFormula(), ...valores.map(termo)].join(' '), ator?.getRollData() || {});
+    const base = formula ? formulaDaIniciativa(formula, !daNet(this) && config('iniciativaCritica')) : this._getInitiativeFormula();
+    return foundry.dice.Roll.create([base, ...valores.map(termo)].join(' '), ator?.getRollData() || {});
   }
 }
 

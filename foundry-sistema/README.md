@@ -253,6 +253,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - uma vez só.
 
   Funcionam no chat, em macros e no Dice So Nice.
+- **O `/red` no chat** (o C26, como no CORE): `/red` rola `1d10` com o crítico do sistema, no cartão de teste; com outro dado, `/red 2d6 a2` é um dano (o crítico dos dois 6 e a ablação 2, como o CORE), e `/red 1d20` rola sem crítico. Os modificadores (`+N` e `-N`) somam todos (o CORE só lê o primeiro), e o texto depois de `#` é a descrição.
+- **Medir DV na régua pelo HUD do token** (o C26, como no CORE): o botão de alvo na coluna esquerda do HUD do token escolhe a tabela de DV (todas as tabelas de alcance do catálogo, menos a genérica) e grava na flag `cprDvTable` do token; com ela ativa, o rótulo da régua (`TokenRuler`) mostra a DV da distância medida ao lado dos metros (`10 m · DV: 15 Pistol`).
 - **Janela de rolagem** (como a do CORE): o clique no atributo ou na perícia abre a janela antes do teste. Ela mostra as partes fixas e o total sem o dado, que acompanha o que se marca, e oferece:
   - os **situacionais**, que não somam sozinhos: os do cyberware, do equipamento e das lesões (Amplified Hearing e Image Enhance na Percepção pela audição ou pela visão, o Olho danificado, os Dedos esmagados em todas as ações com as mãos, o Agent em Guarda-roupa e Estilo...), ligados ou não como no CORE;
   - os **modificadores comuns** do livro (RED p. 130, a tabela da wiki: pouca luz −1, tarefa complexa −2, exausto −4, tempo extra +1...);
@@ -451,6 +453,7 @@ As três do módulo cpr-2077 para as armas de 2077 saíram com o Mission Kit: as
 A do NET Architect:
 - **O jogador rola as rolagens da NET** (padrão: sim): as rolagens do netrunner abrem a janela de rolagem no computador do jogador; sem resposta no tempo para o jogador responder, o mestre rola. Desligado, o mestre rola sempre, com a Sorte preparada na ficha.
 - **Inimigos da NET no combate** (padrão: sim): o Black ICE, os demônios e os netrunners inimigos (com ficha) encontrados entram na iniciativa, com um token escondido no ponto de acesso; na vez deles, o mestre escolhe quem atacar.
+- **Iniciativa explode no 10 e no 1?** (padrão: não): desligado, mantém o `1d10` sem crítico que a mesa já usava; ligado (como o padrão do `criticalInitiative` do CORE), a iniciativa rola `1d10crit` (o 10 soma mais um d10 e o 1 tira um d10).
 
 E as da wiki:
 - **Endereço da wiki** (padrão: vazio). Vazio, o sistema deduz como o cpr-2077: `wiki.<domínio>` quando a mesa abre em `mesa.<domínio>` (o servidor), ou `http://localhost:8000` com tudo no mesmo computador.
@@ -606,6 +609,7 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o Breach nos Passwalls (ciclo 96): o Capanga com dois Self-ICE (DV 8); o Breach pela ficha com 7 não passa, com 9 passa um e com 10 passa o último; depois, o botão sai e o Breach avisa;
   - o Jack In no Neuroport (ciclo 95): o Alvo do jogador resiste com a Vontade pela janela dele e percebe; o Capanga (o mestre rola) não percebe; as ligações nas duas fichas (o jogador não vê quem ele não percebeu), o Jack Out pela ficha, o cartão para o dono do alvo que percebeu e as recusas sem rolar (sem Neuroport, longe, sem ver o alvo);
   - a parede e o Scanner (ciclo 91): a porta fechada no meio (o aviso do clique e a recusa da operação) e aberta (conecta); o Scanner do HUD do token com 9 (só o ponto a 3 m) e com 12 (também o oculto a 13 m, que passa a aparecer ao jogador), com o chat só ao mestre e a ele;
+  - as conveniências do C26: o `/red` no chat pelo `ui.chat.processMessage` (o total com o crítico e a descrição), a tabela de DV escolhida no HUD do token (`cprDvTable`) e mostrada no rótulo da régua pela distância, e a iniciativa com a configuração "Iniciativa explode no 10 e no 1?" desligada e ligada;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 
 - **O ensaio de uma sessão** (ciclo 123): `node tests/rodar.js ensaio` (só chamado pelo nome). O procedimento da migração da campanha e uma sessão, de ponta a ponta, num mundo só: o grupo da wiki com a ficha da mesa do Foundry 12, o "Importar da mesa" pela janela, a conferência das fichas, dois jogadores nos navegadores deles, a cena, o combate, a NET, o Death Save, o saque, o pagamento e a ficha de volta na wiki. As capturas ficam em `tests/.saida/ensaio-*`. Rode antes de uma sessão, depois de atualizar o sistema.

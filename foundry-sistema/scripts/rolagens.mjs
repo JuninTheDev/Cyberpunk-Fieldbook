@@ -1,8 +1,8 @@
-// Rolagens: o crítico do d10, os testes (atributo + perícia + 1d10) e o dano, com os cartões do chat.
+// Rolagens: o crítico do d10, os testes (atributo + perícia + 1d10), o /red no chat e o dano, com os cartões do chat.
 import { caminho, SISTEMA } from './config.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { perguntarModificador } from './janela-rolagem.mjs';
-import { bonusDoCritico, danoCritico, expressaoDoDano, sorteParaGastar } from './regras.mjs';
+import { bonusDoCritico, danoCritico, expressaoDoDano, lerComandoRed, sorteParaGastar } from './regras.mjs';
 
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(caminho(`templates/chat/${arquivo}`), dados);
 
@@ -24,6 +24,11 @@ export function registrarCritico() {
       extra.failure = true;
     }
   };
+  Hooks.on('chatMessage', (_, mensagem) => {
+    if (!lerComandoRed(mensagem)) return true;
+    executarComandoRed(mensagem);
+    return false;
+  });
 }
 
 // Sucesso crítico, falha crítica ou nada, pelo primeiro d10 da rolagem.
@@ -41,22 +46,41 @@ export function criticoDo(roll) {
 // sem a janela, a que ele preparou na ficha. falante: o nome no cartão de quem não é ator (o Black ICE e o demônio de uma
 // arquitetura da NET); sem ele, fala o ator. categoria: o tipo no cartão (ataque, defesa, net); sem ela, é da NET o teste
 // de quem não é ator e o da Interface.
-export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, semFalhaCritica = false, sorte: escolhida, falante = '', categoria = '' }) {
+export async function testar(ator, { rotulo, partes = [], modo, falar = true, sabor = '', dados = {}, dado = '1d10', semFalhaCritica = false, sorte: escolhida, falante = '', categoria = '' }) {
   const sorte = escolhida === undefined ? (ator?.sortePreparada ?? 0) : sorteParaGastar(escolhida, ator?.system.sorte.value);
   const usadas = [...partes, ...(sorte ? [{ rotulo: 'Sorte', valor: sorte }] : [])].filter(parte => Number(parte.valor));
-  const formula = [semFalhaCritica ? '1d10xo' : '1d10crit', ...usadas.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ');
+  const formula = [`${dado}${semFalhaCritica ? 'xo' : 'crit'}`, ...usadas.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ');
   const roll = await new Roll(formula).evaluate();
   const critico = semFalhaCritica && criticoDo(roll) === 'falha' ? null : criticoDo(roll);
   const resultado = { roll, total: roll.total, critico, natural: roll.dice[0].results[0].result, sorte };
   if (ator && (sorte || escolhida !== undefined)) await ator.gastarSorte(sorte);
   if (!falar) return resultado;
   const tipo = categoria || (falante || usadas.some(parte => parte.rotulo === 'Interface') ? 'net' : '');
-  const content = await renderizar('teste.hbs', { rotulo, sabor, partes: usadas, total: roll.total, critico, categoria: tipo, dados: dadosDoCartao(roll, { critico: !semFalhaCritica || critico === 'sucesso' }) });
+  const content = await renderizar('teste.hbs', { rotulo, sabor, dado: dado !== '1d10' ? dado : null, partes: usadas, total: roll.total, critico, categoria: tipo, dados: dadosDoCartao(roll, { critico: !semFalhaCritica || critico === 'sucesso' }) });
   resultado.mensagem = await ChatMessage.implementation.create({
     speaker: falante ? { alias: falante } : ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: [roll],
     flags: { [SISTEMA]: { teste: { rotulo, total: roll.total, critico, ...dados } } }
   }, { messageMode: modo });
   return resultado;
+}
+
+// O comando /red no chat (CORE parse-red-command.js e CPRChat.HandleCPRCommand), pelo tipo do dado: o d10 é um teste do RED
+// (o cartão de teste, com o crítico); o d6, um dano (o cartão de dano, com os dois 6 do crítico e a ablação); outro dado
+// rola a soma, sem crítico (o "generic" do CORE).
+export async function executarComandoRed(mensagem, ator = null) {
+  const comando = lerComandoRed(mensagem);
+  if (!comando) return null;
+  if (comando.tipo === 'teste') return testar(ator, { rotulo: 'Rolagem', partes: comando.partes, sabor: comando.descricao, sorte: 0, dado: comando.dados });
+  const roll = await new Roll([comando.dados, ...comando.partes.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ')).evaluate();
+  const critico = comando.tipo === 'dano' && danoCritico(roll.dice.flatMap(dado => dado.results.filter(r => r.active).map(r => r.result)));
+  const titulo = [comando.tipo === 'dano' ? 'Dano' : 'Rolagem', comando.descricao].filter(Boolean).join(': ');
+  const content = comando.tipo === 'dano'
+    ? await renderizar('dano.hbs', { rotulo: `${titulo} (ablação ${comando.ablacao})`, total: roll.total, critico, botoes: [], dados: dadosDoCartao(roll, { seis: critico }) })
+    : await renderizar('teste.hbs', { rotulo: 'Rolagem', sabor: comando.descricao, dado: comando.dados, partes: comando.partes, total: roll.total, critico: null, dados: dadosDoCartao(roll, { critico: false }) });
+  return ChatMessage.implementation.create({
+    speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: [roll],
+    flags: { [SISTEMA]: { red: { tipo: comando.tipo, dados: comando.dados, total: roll.total, critico, ablacao: comando.ablacao, descricao: comando.descricao } } }
+  });
 }
 
 // O dano de uma arma (p. 187): a fórmula da arma (ou outra: 2d6 do autofogo, 3d6 do cartucho), vezes o multiplicador do

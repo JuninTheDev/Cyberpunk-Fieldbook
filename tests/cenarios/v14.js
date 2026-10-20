@@ -13654,6 +13654,104 @@ module.exports = async ({ edge, servidores, r }) => {
         JSON.stringify({ ...info, doJogador })];
     });
 
+    // ---------- C26: conveniências (/red no chat, DV no HUD do token e na régua, iniciativa crítica) ----------
+    await r.passo('conveniências (o C26, partes 1 a 3): o /red no chat (pelo ui.chat.processMessage) rola como o CORE: o d10 é teste, com o crítico (10 + 4 + 5 − 2 = 17; 1 − 6 − 3 = −8); o d6, dano (dois 6: crítico, com a ablação 2); o d20, sem crítico; a tabela de DV escolhida no HUD do token (sem a "DV Generic") fica na flag cprDvTable e aparece no rótulo da régua pela distância (4 m: DV 13; 10 m: DV 15); a iniciativa sem crítico por padrão e com "Iniciativa explode no 10 e no 1?" ligada', async () => {
+      await fixar(edge, []);
+      const d = await edge.evaluate(`(async () => {
+        const S = '${S}';
+        const textoDe = m => m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();
+        const red = async (texto, fila) => {
+          window.__fila = fila;
+          const antes = game.messages.size;
+          await ui.chat.processMessage(texto);
+          await __esperar(() => game.messages.size > antes);
+          const m = game.messages.contents.at(-1);
+          return { teste: m.getFlag(S, 'teste') ?? null, red: m.getFlag(S, 'red') ?? null, texto: textoDe(m) };
+        };
+        // 1. O /red.
+        const red1 = await red('/red +5 - 2 # Percepção rápida', [[10, 10], [4, 10]]);
+        const red2 = await red('/red 1d10 - 3 # No escuro', [[1, 10], [6, 10]]);
+        const red3 = await red('/red 2d6 a2 # Faca', [[6, 6], [6, 6]]);
+        const red4 = await red('/red 1d20 + 1', [[20, 20]]);
+        // 2. A DV no HUD do token e na régua, numa cena com a grade de 2 m por 100 px.
+        const anterior = canvas.scene;
+        const cena = await Scene.implementation.create({ name: 'Régua da DV', width: 1600, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
+        await cena.activate();
+        await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        const ator = await Actor.implementation.create({ name: 'Medidor', type: 'personagem', system: { atributos: { ref: { valor: 7 } }, hp: { value: 30 } } });
+        const [tokDoc] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 200, y: 300 })).toObject()]);
+        await __esperar(() => tokDoc.object);
+        await new Promise(res => setTimeout(res, 300));
+        const tokObj = tokDoc.object;
+        await canvas.hud.token.bind(tokObj);
+        await __esperar(() => canvas.hud.token.element?.querySelector('.dv-table-selector'));
+        canvas.hud.token.element.querySelector('.dv-table-selector').click();
+        await __esperar(() => document.querySelector('.cpr-fieldbook.escolher-tabela-dv select[name="dvTable"]'));
+        const select = document.querySelector('.cpr-fieldbook.escolher-tabela-dv select[name="dvTable"]');
+        const semGenerica = ![...select.options].some(o => o.value === 'DV Generic');
+        select.value = 'DV Pistol';
+        document.querySelector('.cpr-fieldbook.escolher-tabela-dv button[data-action="salvar"]').click();
+        await __esperar(() => tokDoc.getFlag(S, 'cprDvTable') === 'DV Pistol');
+        const flagToken = tokDoc.getFlag(S, 'cprDvTable');
+        await canvas.hud.token.bind(tokObj);
+        await __esperar(() => canvas.hud.token.element?.querySelector('.dv-table-selector'));
+        const botaoAtivo = Boolean(canvas.hud.token.element?.querySelector('.dv-table-selector.active'));
+        await canvas.hud.token.close();
+        const ruler = new CONFIG.Token.rulerClass(tokObj);
+        await ruler.draw();
+        const medir = async (dx, esperado) => {
+          ruler.refresh({
+            passedWaypoints: [],
+            pendingWaypoints: [
+              { x: tokDoc.x, y: tokDoc.y, elevation: 0, width: 1, height: 1, action: 'walk', explicit: true },
+              { x: tokDoc.x + dx, y: tokDoc.y, elevation: 0, width: 1, height: 1, action: 'walk', explicit: true }
+            ],
+            plannedMovement: {}
+          });
+          const seletor = '#token-ruler-' + tokDoc.id + ' .total-measurement';
+          await __esperar(() => (document.querySelector(seletor)?.textContent ?? '').includes(esperado));
+          return document.querySelector(seletor)?.textContent?.replace(/\\s+/g, ' ').trim() ?? '';
+        };
+        const rotulo4m = await medir(200, 'DV: 13 Pistol');
+        const rotulo10m = await medir(500, 'DV: 15 Pistol');
+        ruler.destroy();
+        // 3. A iniciativa: desligada (o padrão), o 10 não explode; ligada, o 10 soma um d10 e o 1 tira um.
+        const iniciativa = ator.system.iniciativa;
+        const padrao = game.settings.get(S, 'iniciativaCritica');
+        const comb = await Combat.implementation.create({ scene: cena.id });
+        const [c] = await comb.createEmbeddedDocuments('Combatant', [{ tokenId: tokDoc.id, sceneId: cena.id, actorId: ator.id }]);
+        const rolar = async fila => { window.__fila = fila; await comb.rollInitiative([c.id]); return c.initiative; };
+        const formulaDesligada = c._getInitiativeFormula();
+        const iniDesligada = await rolar([[10, 10]]);
+        await game.settings.set(S, 'iniciativaCritica', true);
+        const formulaLigada = c._getInitiativeFormula();
+        const iniCritSucesso = await rolar([[10, 10], [4, 10]]);
+        const iniCritFalha = await rolar([[1, 10], [6, 10]]);
+        await game.settings.set(S, 'iniciativaCritica', false);
+        await comb.delete();
+        await anterior?.activate();
+        await __esperar(() => canvas.ready && canvas.scene?.id === anterior?.id);
+        await cena.delete();
+        await ator.delete();
+        return {
+          red1: { total: red1.teste?.total, critico: red1.teste?.critico, rotulo: red1.teste?.rotulo, texto: red1.texto },
+          red2: { total: red2.teste?.total, critico: red2.teste?.critico, texto: red2.texto },
+          red3: { ...red3.red, texto: red3.texto }, red4: { ...red4.red, texto: red4.texto },
+          dv: { semGenerica, flagToken, botaoAtivo, rotulo4m, rotulo10m },
+          ini: { iniciativa, padrao, formulaDesligada, iniDesligada, formulaLigada, iniCritSucesso, iniCritFalha }
+        };
+      })()`);
+      const ok = d.red1.total === 17 && d.red1.critico === 'sucesso' && d.red1.rotulo === 'Rolagem' && /Percepção rápida/.test(d.red1.texto)
+        && d.red2.total === -8 && d.red2.critico === 'falha' && /No escuro/.test(d.red2.texto)
+        && d.red3.tipo === 'dano' && d.red3.total === 12 && d.red3.critico === true && d.red3.ablacao === 2 && /Crítico/.test(d.red3.texto) && /ablação 2/.test(d.red3.texto)
+        && d.red4.tipo === 'generico' && d.red4.total === 21 && d.red4.critico === false
+        && d.dv.semGenerica && d.dv.flagToken === 'DV Pistol' && d.dv.botaoAtivo
+        && / m · DV: 13 Pistol$/.test(d.dv.rotulo4m) && / m · DV: 15 Pistol$/.test(d.dv.rotulo10m)
+        && d.ini.padrao === false && d.ini.formulaDesligada === '1d10 + @iniciativa' && d.ini.iniDesligada === d.ini.iniciativa + 10
+        && d.ini.formulaLigada === '1d10crit + @iniciativa' && d.ini.iniCritSucesso === d.ini.iniciativa + 14 && d.ini.iniCritFalha === d.ini.iniciativa - 5;
+      return [ok, JSON.stringify(d)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

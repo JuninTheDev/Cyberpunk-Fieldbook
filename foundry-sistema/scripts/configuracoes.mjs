@@ -48,6 +48,12 @@ export function registrarConfiguracoes() {
     name: 'Inimigos da NET no combate', hint: 'O Black ICE, os demônios e os netrunners inimigos (com ficha) encontrados na NET entram na iniciativa da cena, com um token escondido no ponto de acesso (o Black ICE e o demônio no topo). A REZ do token e a da NET andam juntas. Na vez deles, o mestre escolhe quem atacar.',
     type: Boolean, default: true
   });
+  // A iniciativa crítica do CORE ("criticalInitiative", settings.js): desligada por padrão para manter o 1d10 sem explosão
+  // que a mesa já usava; ligada, a iniciativa usa 1d10crit (o 10 soma um d10 e o 1 tira um d10).
+  registrar('iniciativaCritica', {
+    name: 'Iniciativa explode no 10 e no 1?', hint: 'Desligado (o padrão da mesa): a iniciativa rola 1d10 sem crítico. Ligado (como o padrão do CORE): um 10 natural soma mais um d10 e um 1 natural tira um d10.',
+    type: Boolean, default: false
+  });
   // A versão dos dados do mundo (migracao.mjs), escondida, como o "dataModelVersion" do CORE. 0: de antes da migração.
   game.settings.register(SISTEMA, 'versaoDosDados', { scope: 'world', config: false, type: Number, default: 0 });
   // Deste navegador, como o "invertRollCtrlFunction" do CORE.

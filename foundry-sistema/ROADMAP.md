@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 143). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 145). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -262,11 +262,11 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   sessão da Morana no Foundry 14): o HUD com o retrato por estado de ferimento, os vitais, os atributos, as armas, as
   ações, os painéis e o estilo de cada jogador, como o módulo da mesa.
 - [~] **C26. Conveniências:** em andamento (sessão KouArt, 2026-10-20): o `/red`, a DV no HUD e na régua e a iniciativa crítica com o Antigravity; os estados do CORE e as chaves do Fluxo com o Codex.
-  - o `/red` no chat (rolagem com o crítico do d10);
-  - o DV no HUD do token e na régua;
-  - a iniciativa crítica como configuração;
-  - os estados do CORE (caído, agarrado…);
-  - as chaves do Fluxo que faltam: "Resolver os ataques", "O jogador rola os próprios dados" e "Dano: manual".
+  - [x] o `/red` no chat (rolagem com o crítico do d10): ciclo 144;
+  - [x] o DV no HUD do token e na régua: ciclo 144;
+  - [x] a iniciativa crítica como configuração: ciclo 144 (o padrão desligado; pergunta ao usuário);
+  - [ ] os estados do CORE (caído, agarrado…);
+  - [ ] as chaves do Fluxo que faltam: "Resolver os ataques", "O jogador rola os próprios dados" e "Dano: manual".
 
 ### Fase 6: plataforma e wiki
 

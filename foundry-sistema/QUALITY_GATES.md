@@ -337,6 +337,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **As mutações com o PC sem memória** (ciclos 139 e 140): o Claude Code mata o processo de fundo quando a memória fica
   crítica, e o `finally` do executor não roda. Com pouca memória, rode uma mutação por vez em primeiro plano (cada G4
   cabe nos 10 minutos do comando), e confira o md5 depois de cada uma.
+- **A régua montada à mão no G4** (ciclo 144): a `TokenRuler` criada pelo passo (`new CONFIG.Token.rulerClass(token)` e o
+  `refresh` com os waypoints) mede a distância, mas o custo do movimento sai "∞" (sem o movimento planejado do token):
+  confira o que o sistema põe no rótulo (a DV), não o número de metros do custo.
 
 ## Build
 
