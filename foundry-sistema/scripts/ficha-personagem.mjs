@@ -20,6 +20,7 @@ import { alcanceDoJackIn, bonusDeRole, periciaPropria, DANO_DE_PROGRAMA, EMPILHA
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
+import { alternarItemFavorito, alternarPericiaFavorita, arrastoDaPericia, FLAG_FAVORITAS, FLAG_FAVORITO, listaCurta, perguntarLocalMirado } from './macros.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -56,6 +57,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const criado = origem || copiarPilha ? await levarItem(item, this.actor, { manterNaOrigem: copiarPilha }) : await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
     if (criado && empunhado) await criado.update({ 'system.equipada': true });
     return criado;
+  }
+
+  // A perícia arrastada vai para a barra de macros (macros.mjs): as daqui não são itens, como no CORE.
+  async _onDragStart(evento) {
+    const { pericia } = evento.currentTarget.dataset;
+    if (pericia) return evento.dataTransfer.setData('text/plain', JSON.stringify(arrastoDaPericia(this.actor, pericia)));
+    return super._onDragStart(evento);
   }
 
   static DEFAULT_OPTIONS = {
@@ -96,6 +104,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       alternarPericias: FichaPersonagem.#alternarPericias,
       novaPericia: FichaPersonagem.#novaPericia,
       tirarPericia: FichaPersonagem.#tirarPericia,
+      favoritarPericia: FichaPersonagem.#favoritarPericia,
+      favoritarItem: FichaPersonagem.#favoritarItem,
       atacar: FichaPersonagem.#atacar,
       mirar: FichaPersonagem.#mirar,
       deathSave: FichaPersonagem.#deathSave,
@@ -167,10 +177,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const fonte = ator._source.system;
     const itens = tipo => ator.items.filter(item => item.type === tipo).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'pt-BR'));
     // Armas de 2077: os botões dos modos, os avisos e a dica do ataque (o +1 da arma Smart; combate.mjs).
+    const favorito = item => Boolean(item.getFlag(SISTEMA, FLAG_FAVORITO));
     const linhaArma = arma => {
       const de2077 = acoesDe2077(arma);
       const { partes } = arma.partesDoAtaque(null);
-      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, dano: arma.danoDaArma, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '),
+      return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, dano: arma.danoDaArma, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '), favorito: favorito(arma),
         classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
         dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo, soAutofogo: Boolean(arma.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
         // A arma do cyberware instalado (o C11) está sempre pronta, sem ocupar as mãos; a do acessório, com a arma onde ele
@@ -187,10 +198,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     // Perícias: as comuns sempre (nível 0 também) e as de família que o personagem tem. No painel geral, só as que têm
     // nível (das mais altas para as mais baixas) ou todas, no grupo de cada uma.
+    const favoritas = new Set(ator.getFlag(SISTEMA, FLAG_FAVORITAS) ?? []);
     const linhaPericia = id => {
       const p = s.pericia(id);
       const total = s.atributos[p.atributo].valor + p.nivel + p.bonus + (p.role?.valor ?? 0) + s.penalidade;
-      return { ...p, familia: Boolean(s.pericias[id]?.familia) || p.propria, sigla: SIGLA[p.atributo], total,
+      return { ...p, familia: Boolean(s.pericias[id]?.familia) || p.propria, sigla: SIGLA[p.atributo], total, favorita: favoritas.has(id),
         dica: `${SIGLA[p.atributo]} + ${p.nome} + 1d10${p.bonus ? ` (bônus +${p.bonus})` : ''}${p.role ? ` (${p.role.rotulo} +${p.role.valor})` : ''}`,
         dicaTotal: `Atributo + nível${p.bonus ? ' + bônus' : ''}${p.role ? ` + ${p.role.rotulo}` : ''}${s.penalidade ? ` ${s.penalidade} do ferimento` : ''}, sem o dado` };
     };
@@ -206,21 +218,21 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const linhasDePericia = mostrarTodas
       ? [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
         .flatMap(([grupo, lista]) => [{ grupo }, ...lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))])
-      : comNivel;
+      : listaCurta(comNivel, todas);
 
     // Inventário: um detalhe de cada tipo e o uso (o botão passa por equipado, carregando e guardado).
     // A quantidade fica no controle com − e + (as maquetes do usuário), e não mais no detalhe; na droga, as doses.
     const linhaDoInventario = (item, ...detalhes) => ({
       divisivel: Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)),
       quantidade: 'quantidade' in item.system ? item.system.quantidade : null, unidade: item.type === 'droga' ? 'Doses' : 'Quantidade',
-      id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', guardado: item.system.uso === 'guardado',
+      id: item.id, nome: item.name, img: item.img, detalhe: detalhes.filter(Boolean).join(' · '), equipado: item.system.uso === 'equipado', guardado: item.system.uso === 'guardado', favorito: favorito(item),
       usoNome: USOS[item.system.uso] ?? item.system.uso,
       // A droga (drogas.mjs): sob o efeito agora e viciada.
       ehDroga: item.type === 'droga', sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')), usavel: item.usavelAMao, emUso: item.emUso
     });
     const sp = (armadura, local) => (armadura.system.sp[local].max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${armadura.system.sp[local].value}/${armadura.system.sp[local].max}` : '');
     const armaduras = itens('armadura').map(armadura => ({
-      id: armadura.id, nome: armadura.name, img: armadura.img, equipada: armadura.system.equipada,
+      id: armadura.id, nome: armadura.name, img: armadura.img, equipada: armadura.system.equipada, favorito: favorito(armadura),
       consertavel: !armadura.system.escudo && ['cabeca', 'corpo'].some(local => armadura.system.sp[local].max > 0),
       detalhe: [sp(armadura, 'cabeca'), sp(armadura, 'corpo'), armadura.system.escudo ? `escudo ${armadura.system.pvEscudo.value}/${armadura.system.pvEscudo.max} PV` : '',
         armadura.system.penalidade ? `penalidade ${armadura.system.penalidade}` : ''].filter(Boolean).join(' · ')
@@ -246,6 +258,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         temCorrecao: opcoesDaLesao(item.system, 'correcao').length > 0, temTratamento: opcoesDaLesao(item.system, 'tratamento').length > 0, corrigida: Boolean(item.getFlag(SISTEMA, 'corrigida')),
         resumo: item.system.descricao.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(' Paliativo:')[0] };
     });
+
+    // Os favoritos da aba Combate (macros.mjs): as perícias com a estrela, com o total, e os itens com a estrela, com o botão
+    // de cada um (a arma ataca; a droga e o equipamento ligado à mão, "Usar").
+    const favoritos = {
+      pericias: todas.filter(p => p.favorita).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      itens: ator.items.filter(favorito).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(item => ({
+        id: item.id, nome: item.name, img: item.img, arma: item.type === 'arma', droga: item.type === 'droga', usavel: item.usavelAMao, emUso: item.emUso
+      }))
+    };
 
     // Iniciativa e esquiva (a esquiva média, sem o dado).
     const esquiva = ator.partesDaPericia('evasion').partes.reduce((soma, p) => soma + p.valor, 0);
@@ -329,7 +350,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       locaisArmadura: ['cabeca', 'corpo'].map(local => ({ local, rotulo: local === 'cabeca' ? 'CABEÇA' : 'CORPO',
         ...s.armadura[local], nome: ator.items.get(s.armadura[local].item)?.name ?? 'Sem armadura' })),
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
-      lesoes,
+      lesoes, favoritos,
       iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
       esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown, emCobertura: ator.statuses.has(STATUS_COBERTURA), agarrao: agarraoDe(ator),
       municoes: itens('municao'),
@@ -534,6 +555,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (this.actor.system.pericias[chave] || PERICIAS.some(p => p.id === chave)) { ui.notifications.warn(`${this.actor.name} já tem essa perícia.`); return null; }
     return this.actor.update({ [`system.pericias.${chave}`]: dados });
   }
+  // As estrelas (macros.mjs): a perícia favorita e o item favorito.
+  static #favoritarPericia(evento, alvo) { return alternarPericiaFavorita(this.actor, alvo.dataset.pericia); }
+  static #favoritarItem(evento, alvo) { const item = this.#item(alvo); return item && alternarItemFavorito(item); }
   static async #tirarPericia(evento, alvo) {
     const chave = alvo.dataset.pericia;
     const nome = this.actor.system.pericia(chave).nome;
@@ -545,11 +569,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static async #mirar(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return null;
-    const local = await DialogV2.wait({
-      window: { title: `Mirar com ${item.name}` }, classes: [SISTEMA, 'mirar'], rejectClose: false,
-      content: '<p>Onde mirar? O ataque leva −8.</p><ul><li><b>Cabeça:</b> o dano que passa da armadura dobra.</li><li><b>Perna:</b> se passar dano, Perna quebrada.</li><li><b>Item na mão:</b> se passar dano, o alvo larga o item.</li></ul>',
-      buttons: [{ action: 'cabeca', label: 'Cabeça', default: true }, { action: 'perna', label: 'Perna' }, { action: 'item', label: 'Item na mão' }]
-    });
+    const local = await perguntarLocalMirado(item);
     return local ? item.atacar({ local, perguntar: comJanela(evento) }) : null;
   }
   static #deathSave(evento) { return this.actor.rolarDeathSave({ perguntar: comJanela(evento) }); }

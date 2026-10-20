@@ -1,5 +1,6 @@
 {{!-- A tabela de armas, com os ataques: na aba Combate do personagem e na ficha do capanga. As de mão, as do cyberware
-instalado (o C11), que estão sempre prontas, e as dos acessórios, prontas com a arma onde estão equipada. --}}
+instalado (o C11), que estão sempre prontas, e as dos acessórios, prontas com a arma onde estão equipada. A linha arrastada
+para a barra vira a macro do ataque (o C20). --}}
 <section class="painel corte">
   <div class="titulo">ARMAS<span>MARQUE O ALVO (T) E ATAQUE</span></div>
   {{#if armasDeCombate.length}}
@@ -7,7 +8,7 @@ instalado (o C11), que estão sempre prontas, e as dos acessórios, prontas com 
     <thead><tr><th>Arma</th><th>Ataque</th><th>Dano</th><th>CDT</th><th>Pente</th><th></th></tr></thead>
     <tbody>
       {{#each armasDeCombate}}
-      <tr data-item-id="{{id}}" class="{{#unless pronta}}guardada{{/unless}}">
+      <tr data-item-id="{{id}}" class="draggable {{#unless pronta}}guardada{{/unless}}">
         <td class="nome"><img src="{{img}}" alt=""> <a data-action="editarItem">{{nome}}</a>{{#if doCyberware}} <small class="do-cyberware" data-tooltip="A arma do cyberware instalado: não ocupa as mãos">Cyberware</small>{{/if}}{{#if doAcessorio}} <small class="do-acessorio" data-tooltip="A arma do acessório: pronta com {{doAcessorio}} equipada">Em {{doAcessorio}}</small>{{/if}}{{#if qualidade}} <small>{{qualidade}}</small>{{/if}}{{#if classe2077}} <small class="classe-2077">{{classe2077}}</small>{{/if}}{{#each avisos2077}} <small class="aviso-2077" data-tooltip="{{dica}}">{{texto}}</small>{{/each}}</td>
         <td class="num"{{#if dicaAtaque}} data-tooltip="{{dicaAtaque}}"{{/if}}>+{{ataque}}</td>
         <td>{{dano}}</td>

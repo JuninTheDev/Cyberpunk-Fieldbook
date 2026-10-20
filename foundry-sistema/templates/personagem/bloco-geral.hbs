@@ -49,7 +49,8 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
       {{else}}
       <li class="pericia linha-pericia {{#if nivel}}tem{{/if}} {{#if alta}}alta{{/if}}" data-pericia="{{id}}">
         <span class="celula-nome">
-          <a class="nome" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>
+          <a class="estrela {{#if favorita}}ligada{{/if}}" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Favorita: fica no painel Favoritos da aba Combate e na barra do Painel Tático"><i class="fa-solid fa-star"></i></a>
+          <a class="nome draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>
           {{#if tirar}}<a class="tirar" data-action="tirarPericia" data-pericia="{{id}}" data-tooltip="Tirar esta perícia da ficha">✕</a>{{/if}}
         </span>
         <span class="sigla">{{sigla}}</span>

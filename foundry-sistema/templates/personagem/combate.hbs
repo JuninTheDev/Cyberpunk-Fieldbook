@@ -1,5 +1,5 @@
 {{!-- A aba Combate, no jeito da maquete "Fight Tab" do usuário: à esquerda, os números (a iniciativa, os vitais e a
-defesa); à direita, as armas, a armadura, as lesões críticas e a munição. --}}
+defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões críticas e a munição. --}}
 <section class="tab combate {{tab.cssClass}}" data-group="primary" data-tab="combate">
   <div class="aba-colunas">
     <aside class="coluna-resumo">
@@ -36,6 +36,24 @@ defesa); à direita, as armas, a armadura, as lesões críticas e a munição. -
     </aside>
 
     <div class="coluna-principal">
+      {{!-- Os favoritos (o C20): as perícias e os itens com a estrela, para rolar e usar daqui; arraste para a barra de macros. --}}
+      <section class="painel corte favoritos">
+        <div class="titulo">FAVORITOS<span>★ NA FICHA</span></div>
+        {{#each favoritos.pericias}}
+        <div class="medida rolavel"><span><a class="estrela ligada" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Tirar dos favoritos"><i class="fa-solid fa-star"></i></a> {{nome}}</span><b><a class="draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros">{{total}} + 1d10</a></b></div>
+        {{/each}}
+        {{#each favoritos.itens}}
+        <div class="item-linha draggable" data-item-id="{{id}}">
+          <a class="estrela ligada" data-action="favoritarItem" data-tooltip="Tirar dos favoritos"><i class="fa-solid fa-star"></i></a>
+          <a class="nome" data-action="editarItem">{{nome}}</a>
+          {{#if arma}}<button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">ATACAR</button>{{/if}}
+          {{#if droga}}<button type="button" class="acao" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação)">USAR</button>{{/if}}
+          {{#if usavel}}<button type="button" class="acao {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)">{{#if emUso}}EM USO{{else}}USAR{{/if}}</button>{{/if}}
+        </div>
+        {{/each}}
+        {{#unless (or favoritos.pericias.length favoritos.itens.length)}}<div class="caixa-vazia">MARQUE A ★ NAS PERÍCIAS E NO EQUIPAMENTO</div>{{/unless}}
+      </section>
+
       {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
 
       {{> "systems/cpr-fieldbook/templates/personagem/bloco-armadura.hbs"}}

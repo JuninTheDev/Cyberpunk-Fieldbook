@@ -307,6 +307,16 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   que provoca um aviso de propósito (uma recusa) troca o `ui.notifications.warn` por um que só guarda a mensagem, e o
   devolve com `delete`, como o passo do ataque sem mestre. Chamar o original deixa o aviso no console, e a checagem
   global falha.
+- **A barra de macros no G4** (ciclo 139): o Foundry 14 não tem o `User#getHotbarMacro`; a macro da vaga se lê por
+  `game.macros.get(game.user.hotbar[n])`. O arrastar de verdade, sem mouse: um `new DataTransfer()` no `DragEvent`
+  "dragstart" da linha da ficha e no "drop" da vaga (`#hotbar .slot[data-slot]`): passa pelo DragDrop da ficha, pelo da
+  barra e pelo gancho `hotbarDrop`, como o mouse.
+- **Um painel novo numa aba das maquetes** (ciclo 139): o passo da "ficha nova" conta os painéis da coluna dos números
+  (3 na aba Combate: a iniciativa, os vitais e a defesa), a forma da maquete "Fight Tab". Uma lista nova (o painel
+  Favoritos) vai para a coluna da direita, com as outras listas, e a conta fica.
+- **Uma rodada interrompida no meio** (ciclo 139): o executor das mutações volta o arquivo no `finally`, que não roda
+  quando o processo é morto (o PC sem memória matou a rodada da M5). Depois de uma interrupção, confira o md5 dos
+  arquivos mutados antes de qualquer outra coisa e volte o que ficou mutado.
 
 ## Build
 

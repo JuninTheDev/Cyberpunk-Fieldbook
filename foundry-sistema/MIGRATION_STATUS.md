@@ -38,7 +38,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
-| CORE | rolar lesão à mão; macros na barra | falta (C19 e C20) |
+| CORE | rolar lesão à mão | falta (C19) |
+| CORE | macros na barra (a arma, a perícia e o item arrastados da ficha) e os favoritos (o alfinete do item e da perícia) | portados no ciclo 139 (C20): o favorito vai para o painel da aba Combate (ver as dúvidas) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
 | CORE | contêiner (loja, saque, esconderijo) | falta |
@@ -715,6 +716,18 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   - **com o mestre:** a mão do braço que não segura nada com a Mantis Blade ou o Projectile Launch System para fora, o sacar
     sem Ação e o BODY 11 da Gorilla Arm (para empunhar e, com duas, para o Choke e o Slam);
   - **o Desfazer:** a lesão do Monowire, escolhida depois, fica fora do Desfazer do ataque (o mestre a tira na ficha).
+
+- **As macros e os favoritos** (ciclo 139; o generate-item-macro, o CPRMacro e o `favorite` do CORE 0.92.4):
+  - **o favorito na aba Combate:** no CORE, o alfinete deixa o item ou a perícia visível com a categoria fechada. A ficha
+    daqui não fecha categorias: o favorito junta as perícias e os itens no painel Favoritos da aba Combate (o que o plano
+    pedia), e a perícia favorita sem nível fica na lista curta do painel geral;
+  - **o modo da arma:** fica só no texto da macro. O CORE guardava o último modo de tiro (o mirado, o autofogo, o
+    supressivo) numa flag do ator, para a macro de dano rolar o dano daquele modo; aqui, o dano da macro é o do botão
+    "Dano" da ficha, e o do autofogo sai do próprio ataque;
+  - **a perícia pelo id:** a macro da perícia rola pelo id (`perception`), não pelo nome, porque as perícias daqui não são
+    itens;
+  - **o capanga:** a ficha dele tem a ★ das perícias (a do Painel Tático) e arrasta as perícias e as armas para a barra,
+    mas não tem o painel Favoritos (é uma página só, sem a aba Combate).
 
 ## Registro dos ciclos
 
@@ -6761,6 +6774,52 @@ Commit anterior: `87cf787d` (a reserva do C19 da sessão Codex, depois do ciclo 
 - **Limites:** a mão do braço com a Mantis Blade ou o Projectile Launch System para fora e o BODY 11 da Gorilla Arm ficam
   com o mestre; a lesão do Monowire, escolhida depois, fica fora do Desfazer do ataque.
 - **Próximo:** o C11 terminou. O próximo item livre do ROADMAP (a sessão Junin está no C10 e a Codex no C18).
+
+### Ciclo 139 (2026-10-20): o C20, as macros na barra e os favoritos (sessão KouArt)
+
+Commit anterior: `f6e40ffc` (a reserva do C20). O C20 inteiro neste ciclo.
+
+- **A referência:** o CORE 0.92.4 (`modules/hooks/hotbar/generate-item-macro.js`, `modules/utils/cpr-macros.js` e o
+  `favorite` do `common-schema.js`, com o alfinete das listas da ficha). No CORE, arrastar para a barra a arma (e o
+  cyberware ou o acessório que são arma) cria a macro do ataque, com o `rollType` escolhido no texto dela (o ataque, o
+  dano, o mirado, o autofogo e o supressivo) e o `skipPrompt`; a perícia (um item, lá), a macro do teste; o outro item,
+  a que abre e fecha a ficha. A macro acha o item pelo nome no ator do token controlado (ou no personagem do jogador), e o
+  nome dela leva o do usuário. O alfinete (`favorite`) deixa o item ou a perícia visível com a categoria fechada.
+- **O que muda:**
+  - **`scripts/macros.mjs` (novo):** o gancho `hotbarDrop` (`aoSoltarNaBarra`): a arma vira a macro do ataque (o texto
+    lista os modos dela: o ataque, o mirado, o autofogo e o supressivo que ela tem, os modos de 2077 de
+    `combate.acoesDe2077` e o dano), a perícia arrastada (o tipo `PericiaCPR`), a do teste, e o outro item, a que abre a
+    ficha, com a imagem do item, como no CORE; a mesma macro do usuário vai de novo para a barra, sem outra. A API das
+    macros: `usarArma(nome, { pularJanela, modo })` e `rolarPericia(id, { pularJanela })`, com a janela de rolagem do
+    clique (o "Rolar direto" deste navegador inverte; `pularJanela`, o `skipPrompt` do CORE, rola direto). As estrelas
+    (`alternarPericiaFavorita`, `alternarItemFavorito`) e a pergunta do local do mirado (`perguntarLocalMirado`), que a
+    ficha também usa;
+  - **a ficha do personagem:** a ★ em cada perícia (a mesma flag `periciasFavoritas` do Painel Tático) e nas armas,
+    armaduras e itens do inventário (a flag `favorito`); o painel **Favoritos** na aba Combate, na coluna das listas, com
+    as perícias (o total; o clique rola) e os itens (a arma com "Atacar", a droga e o equipamento ligado à mão com
+    "Usar"); a perícia favorita sem nível fica também na lista curta do painel geral; o nome da perícia, a linha da arma
+    na aba Combate e os itens favoritos se arrastam para a barra (`_onDragStart`);
+  - **o Painel Tático:** a estrela dele passa pela mesma função da ficha.
+- **Testes:**
+  - **G3:** `macros.test.mjs` (novo): os modos de cada arma, o texto da macro (rodado num contexto com a API falsa: o nome
+    com aspas e barra invertida chega inteiro, e trocar as escolhas no alto muda a chamada), a janela e a lista curta;
+  - **G4:** dois passos novos. No mestre: a ★ da Percepção (sem nível) na lista curta e no painel Favoritos, que rola; a ★
+    do rifle e da droga, com Atacar e Usar no painel; o arrastar de verdade (o `dragstart` na ficha e o `drop` na vaga da
+    barra) da perícia, da linha da arma (de novo: a mesma macro) e da droga (a que abre a ficha); a macro da perícia e a do
+    dano rodando com o token controlado; o mirado pergunta o local; sem token nem personagem, com o modo que a arma não tem
+    e com a arma que não existe, só o aviso. No jogador: ele arrasta a Evasão da ficha do personagem dele, a macro é dele
+    e, sem token, rola com o personagem dele. Na primeira rodada, o painel Favoritos estava na coluna dos números, e o
+    passo da "ficha nova" (que conta os 3 painéis dela, a forma da maquete) falhou: o painel é uma lista e foi para a
+    coluna da direita; e o `User#getHotbarMacro`, que o Foundry 14 não tem, virou o `game.user.hotbar`.
+- **Portões:** G1, 97 arquivos sem erro; G2, nenhum erro; G3, 226/226; G4 completo, 200/200, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as treze caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: a macro sem o
+  autofogo (M1), o nome sem escapar (M2), a janela sem o "Rolar direto" (M3) e a favorita fora da lista curta (M4). No G4:
+  o gancho não registrado (M5) e a perícia que não se arrasta (M6), nos dois passos; o "dano" que ataca (M7) e o ator sem
+  o token (M8), também na checagem de avisos; a macro repetida (M9), o painel sem os itens (M10), as duas estrelas sem
+  efeito (M11, M12) e o mirado sem a pergunta (M13). A primeira rodada parou na M5, porque o PC ficou sem memória: o
+  arquivo dela foi restaurado à mão (md5 conferido), e a rodada inteira foi de novo.
+- **Próximo:** o C21 (a terapia e a ciberpsicose).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

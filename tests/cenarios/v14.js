@@ -12875,6 +12875,149 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('macros e favoritos (C20): a ★ da Percepção (sem nível) a põe na lista curta e no painel Favoritos da aba Combate, que rola; a ★ do rifle e da droga põe os dois lá, com Atacar e Usar; arrastar a perícia, a linha da arma e a droga para a barra cria as macros do sistema (a da arma lista o autofogo e o supressivo; a mesma arma de novo reusa a macro; a droga abre a ficha); a macro roda com o token controlado (a perícia, e o dano da arma); o mirado pergunta o local; sem token nem personagem, com um modo que a arma não tem ou com a arma que não existe, só avisa', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const S = '${S}';
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const a = await Actor.implementation.create({ name: 'Macreiro', type: 'personagem', system: { atributos: { body: { valor: 6 }, will: { valor: 6 }, ref: { valor: 8 }, dex: { valor: 7 }, int: { valor: 6 } }, hp: { value: 40 }, pericias: { handgun: { nivel: 4 }, evasion: { nivel: 2 } } } });
+        await a.createEmbeddedDocuments('Item', [pegar('core_weapons:assault-rifle'), pegar('core_drugs:boost')]);
+        const rifle = a.items.getName('Assault Rifle'), droga = a.items.find(i => i.type === 'droga');
+        await rifle.update({ 'system.equipada': true });
+        const [doc] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 100, y: 100 })).toObject()]);
+        await __esperar(() => canvas.tokens.get(doc.id));
+        const r = {};
+        a.sheet.render({ force: true });
+        const f = () => a.sheet.element;
+        await __esperar(() => f()?.querySelector('.tab.pericias .pericia'));
+        const clicar = (seletor, ctrl = false) => f().querySelector(seletor).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: ctrl }));
+        r.curtaAntes = [...f().querySelectorAll('.tab.pericias .pericia')].map(li => li.dataset.pericia);
+        // A estrela na lista completa; de volta à curta, a Percepção fica (sem nível).
+        clicar('[data-action="alternarPericias"]');
+        await __esperar(() => f().querySelector('.tab.pericias .pericia[data-pericia="perception"] .estrela'));
+        clicar('.tab.pericias .pericia[data-pericia="perception"] .estrela');
+        await __esperar(() => (a.getFlag(S, 'periciasFavoritas') ?? []).includes('perception') && f().querySelector('.tab.pericias .pericia[data-pericia="perception"] .estrela.ligada'));
+        clicar('[data-action="alternarPericias"]');
+        await __esperar(() => f().querySelectorAll('.tab.pericias .pericia').length === r.curtaAntes.length + 1);
+        r.curta = [...f().querySelectorAll('.tab.pericias .pericia')].map(li => li.dataset.pericia);
+        r.flag = a.getFlag(S, 'periciasFavoritas');
+        // As estrelas do rifle e da droga, na aba Equipamento.
+        for (const item of [rifle, droga]) {
+          clicar('.tab.equipamento li[data-item-id="' + item.id + '"] .estrela');
+          await __esperar(() => item.getFlag(S, 'favorito') === true);
+        }
+        await __esperar(() => f().querySelectorAll('.tab.combate .favoritos .item-linha').length === 2);
+        const fav = f().querySelector('.tab.combate .favoritos');
+        r.painel = { pericias: [...fav.querySelectorAll('[data-action="rolarPericia"]')].map(el => el.dataset.pericia + ' ' + el.textContent.trim()),
+          itens: [...fav.querySelectorAll('.item-linha')].map(l => l.querySelector('.nome').textContent.trim() + ': ' + [...l.querySelectorAll('button')].map(b => b.dataset.action).join(',')) };
+        let antes = game.messages.size;
+        clicar('.tab.combate .favoritos [data-action="rolarPericia"][data-pericia="perception"]', true);
+        await __esperar(() => game.messages.size > antes);
+        r.rolou = game.messages.contents.at(-1).getFlag(S, 'teste')?.rotulo;
+        // A barra: o arrastar de verdade (dragstart na ficha, drop na vaga), com um DataTransfer.
+        const arrastar = async (el, vaga) => {
+          const dt = new DataTransfer();
+          el.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+          const dados = dt.getData('text/plain');
+          document.querySelector('#hotbar .slot[data-slot="' + vaga + '"]').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+          const naVaga = () => game.macros.get(game.user.hotbar[vaga]) ?? null;
+          await __esperar(() => naVaga());
+          return { dados: JSON.parse(dados || 'null'), macro: naVaga() };
+        };
+        const macrosAntes = game.macros.size;
+        const daPericia = await arrastar(f().querySelector('.tab.pericias .pericia[data-pericia="perception"] .nome'), 7);
+        const daArma = await arrastar(f().querySelector('.tab.combate table.armas tr[data-item-id="' + rifle.id + '"]'), 8);
+        const deNovo = await arrastar(f().querySelector('.tab.combate table.armas tr[data-item-id="' + rifle.id + '"]'), 9);
+        const daDroga = await arrastar(f().querySelector('.tab.equipamento li[data-item-id="' + droga.id + '"]'), 6);
+        const resumo = ({ dados, macro }) => ({ tipo: dados?.type, nome: macro?.name, img: macro?.img, comando: macro?.command });
+        r.barra = { pericia: resumo(daPericia), arma: resumo(daArma), reusou: deNovo.macro?.id === daArma.macro?.id, droga: resumo(daDroga), novas: game.macros.size - macrosAntes, usuario: game.user.name, imgRifle: rifle.img, uuidDroga: droga.uuid };
+        // A macro roda com o token controlado, pulando a janela.
+        canvas.tokens.get(doc.id).control({ releaseOthers: true });
+        const pular = m => m.update({ command: m.command.replace('const pularJanela = false;', 'const pularJanela = true;') });
+        await pular(daPericia.macro);
+        antes = game.messages.size;
+        await daPericia.macro.execute();
+        await __esperar(() => game.messages.size > antes);
+        const mPericia = game.messages.contents.at(-1);
+        r.executou = { rotulo: mPericia.getFlag(S, 'teste')?.rotulo, ator: mPericia.speaker.actor === a.id || mPericia.speaker.token === doc.id };
+        await daArma.macro.update({ command: daArma.macro.command.replace('const pularJanela = false;', 'const pularJanela = true;').replace('const modo = "ataque";', 'const modo = "dano";') });
+        antes = game.messages.size;
+        await daArma.macro.execute();
+        await __esperar(() => game.messages.size > antes);
+        const mDano = game.messages.contents.at(-1);
+        r.dano = { arma: mDano.getFlag(S, 'danoDeArma')?.arma === rifle.uuid, formula: mDano.rolls[0]?.formula };
+        // Sem token (o mestre não tem personagem) e com um modo que a arma não tem: só avisa.
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try {
+          canvas.tokens.releaseAll();
+          antes = game.messages.size;
+          await daPericia.macro.execute();
+          canvas.tokens.get(doc.id).control({ releaseOthers: true });
+          await game.system.api.macros.usarArma('Assault Rifle', { pularJanela: true, modo: 'ricochete' });
+          await game.system.api.macros.usarArma('Arma Que Não Existe', { pularJanela: true });
+          // O mirado pergunta o local (a janela da ficha); fechada, não ataca.
+          const mirado = game.system.api.macros.usarArma('Assault Rifle', { pularJanela: true, modo: 'mirado' });
+          await __esperar(() => document.querySelector('.application.dialog.mirar'));
+          const janela = document.querySelector('.application.dialog.mirar');
+          r.mirado = { titulo: janela?.querySelector('.window-title')?.textContent.trim(), botoes: [...(janela?.querySelectorAll('footer button[data-action]') ?? [])].map(b => b.dataset.action) };
+          janela?.querySelector('[data-action="close"]')?.click();
+          r.mirado.resultado = await mirado;
+          await new Promise(res => setTimeout(res, 300));
+          r.avisos = { avisos, novas: game.messages.size - antes };
+        } finally { ui.notifications.warn = avisar; }
+        // Limpa: a barra, as macros, o token e o ator.
+        for (const vaga of [6, 7, 8, 9]) await game.user.assignHotbarMacro(null, vaga);
+        await Macro.implementation.deleteDocuments([daPericia.macro.id, daArma.macro.id, daDroga.macro.id]);
+        await a.sheet.close();
+        canvas.tokens.releaseAll();
+        await canvas.scene.deleteEmbeddedDocuments('Token', [doc.id]);
+        await a.delete();
+        return r;
+      })()`);
+      const b = info.barra || {};
+      const ok = info.curtaAntes.join() === 'handgun,evasion' && info.curta.join() === 'handgun,evasion,perception' && info.flag?.join() === 'perception'
+        && info.painel.pericias.length === 1 && /^perception 6 \+ 1d10$/.test(info.painel.pericias[0])
+        && info.painel.itens.length === 2 && info.painel.itens.some(t => /^Assault Rifle: atacar$/.test(t)) && info.painel.itens.some(t => /: usarDroga$/.test(t))
+        && info.rolou === 'Percepção'
+        && b.pericia.tipo === 'PericiaCPR' && b.pericia.nome === b.usuario + ' - Percepção' && /rolarPericia\("perception", \{ pularJanela \}\)/.test(b.pericia.comando) && b.pericia.img === 'icons/svg/d10-grey.svg'
+        && b.arma.tipo === 'Item' && b.arma.nome === b.usuario + ' - Assault Rifle' && b.arma.img === b.imgRifle && /usarArma\("Assault Rifle", \{ pularJanela, modo \}\)/.test(b.arma.comando)
+        && /"autofogo": /.test(b.arma.comando) && /"supressivo": /.test(b.arma.comando) && /"mirado": /.test(b.arma.comando) && b.reusou
+        && b.droga.tipo === 'Item' && b.droga.comando === 'await foundry.applications.ui.Hotbar.toggleDocumentSheet("' + b.uuidDroga + '");' && b.novas === 3
+        && info.executou.rotulo === 'Percepção' && info.executou.ator && info.dano.arma && /^5d6/.test(info.dano.formula)
+        && info.mirado?.titulo === 'Mirar com Assault Rifle' && info.mirado.botoes.join() === 'cabeca,perna,item' && info.mirado.resultado === null
+        && info.avisos.novas === 0 && info.avisos.avisos.length === 3 && /selecione o token/.test(info.avisos.avisos[0]) && /"ricochete" não existe/.test(info.avisos.avisos[1]) && /Não tem a arma: Arma Que Não Existe/.test(info.avisos.avisos[2]);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('macros (C20) no navegador do jogador: ele arrasta a Evasão da ficha do personagem dele para a barra; a macro é dele e, sem token selecionado, rola com o personagem dele (o Alvo)', async () => {
+      const info = await jogador.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 60) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const a = game.user.character;
+        canvas.tokens?.releaseAll();
+        await a.sheet.render({ force: true });
+        await esperar(() => a.sheet.element?.querySelector('.tab.pericias .pericia[data-pericia="evasion"] .nome'));
+        const dt = new DataTransfer();
+        a.sheet.element.querySelector('.tab.pericias .pericia[data-pericia="evasion"] .nome').dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        document.querySelector('#hotbar .slot[data-slot="5"]').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        await esperar(() => game.macros.get(game.user.hotbar[5]));
+        const macro = game.macros.get(game.user.hotbar[5]);
+        const r = { personagem: a.name, nome: macro?.name, dono: Boolean(macro?.isOwner), autor: macro?.author?.id === game.user.id };
+        await macro.update({ command: macro.command.replace('const pularJanela = false;', 'const pularJanela = true;') });
+        const antes = game.messages.size;
+        await macro.execute();
+        await esperar(() => game.messages.size > antes);
+        const m = game.messages.contents.at(-1);
+        r.rolou = { rotulo: m.getFlag('${S}', 'teste')?.rotulo, ator: m.speaker.actor === a.id };
+        await game.user.assignHotbarMacro(null, 5);
+        await macro.delete();
+        await a.sheet.close();
+        return r;
+      })()`);
+      return [info.personagem === 'Alvo' && info.nome === 'Jogador - Evasão' && info.dono && info.autor && info.rolou.rotulo === 'Evasão' && info.rolou.ator, JSON.stringify(info)];
+    });
+
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {
         // As voltas da ficha que estão esperando vão antes de a wiki "cair".

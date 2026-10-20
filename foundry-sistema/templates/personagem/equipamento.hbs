@@ -43,6 +43,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if classe2077}} · {{classe2077}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
             <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate"><i class="fa-solid fa-star"></i></button>
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>
           {{else}}<li class="vazio">Sem armas.</li>{{/each}}
@@ -71,6 +72,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
             <a class="nome" data-action="editarItem">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
             <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate"><i class="fa-solid fa-star"></i></button>
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>
           {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
@@ -91,6 +93,7 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
             {{#if ehDroga}}{{#if viciado}}<span class="viciado" data-tooltip="O efeito secundário fica até a terapia">VICIADO</span>{{/if}}<button type="button" class="alternar {{#if sobEfeito}}ligado{{/if}}" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação): o efeito primário vale; sob efeito, estende">Usar</button>{{#if sobEfeito}}<button type="button" class="acao" data-action="acabouDroga" data-tooltip="O efeito acabou: o teste do efeito secundário">ACABOU</button>{{/if}}{{/if}}
             {{#if usavel}}<button type="button" class="alternar {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)">{{#if emUso}}Em uso{{else}}Usar{{/if}}</button>{{/if}}
             <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado">{{usoNome}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate"><i class="fa-solid fa-star"></i></button>
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
           </li>
           {{else}}<li class="vazio">{{vazio}}</li>{{/each}}

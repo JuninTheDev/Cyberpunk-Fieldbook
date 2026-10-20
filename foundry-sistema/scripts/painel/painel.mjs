@@ -6,6 +6,8 @@
 import { ATRIBUTOS, CLASSES_2077, SIGLA, SISTEMA } from '../config.mjs';
 import { acoesDe2077 } from '../combate.mjs';
 import { armaMontadaPronta } from '../armas-cyberware.mjs';
+// A estrela das perícias é a mesma da ficha (o C20): a flag do ator.
+import { alternarPericiaFavorita, FLAG_FAVORITAS } from '../macros.mjs';
 import { FAMILIAS, PERICIAS } from '../gerado.mjs';
 import { FLAG_CONEXAO } from '../netrun/constantes.mjs';
 import { HABILIDADES_DE_INTERFACE, ROLAGENS_DE_ROLE } from '../regras.mjs';
@@ -25,7 +27,6 @@ const MODOS = {
 const ICONES_2077 = { ricochete: 'fa-arrows-turn-right', doisCanos: 'fa-grip-lines-vertical' };
 const LOCAIS_MIRADOS = { cabeca: 'Cabeça', perna: 'Perna', item: 'Item na mão' };
 const NOMES_DE_EQUIPAR = { guardado: 'Guardado', carregando: 'Carregando', equipado: 'Equipado' };
-const FLAG_FAVORITAS = 'periciasFavoritas';
 
 const esc = texto => String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const config = chave => game.settings.get(SISTEMA, chave);
@@ -591,11 +592,7 @@ export class PainelTatico {
         case 'deathSave': return A.rolarDeathSave(evento, a);
         case 'atributo': return A.rolarAtributo(evento, a, el.dataset.stat);
         case 'pericia': return A.rolarPericia(evento, a, id);
-        case 'favorita': {
-          const favoritas = new Set(a.getFlag(SISTEMA, FLAG_FAVORITAS) ?? []);
-          if (favoritas.has(id)) favoritas.delete(id); else favoritas.add(id);
-          return a.setFlag(SISTEMA, FLAG_FAVORITAS, [...favoritas]);
-        }
+        case 'favorita': return alternarPericiaFavorita(a, id);
         case 'modo':
           A.alternarModo(a, id, el.dataset.modo);
           return this.desenhar();

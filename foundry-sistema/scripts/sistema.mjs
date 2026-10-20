@@ -25,6 +25,7 @@ import { registrarIceRezzado } from './ice-rezzado.mjs';
 import { CombateCPR, CombatenteCPR } from './iniciativa.mjs';
 import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
+import * as macros from './macros.mjs';
 import * as migracao from './migracao.mjs';
 import * as municoes from './municoes.mjs';
 import { registrarNet } from './netrun/index.mjs';
@@ -84,7 +85,7 @@ Hooks.once('init', () => {
   registrarConteiner();
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
-  game.system.api = { agarrao, neuroport, combate, drogas, lesoes, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
+  game.system.api = { agarrao, neuroport, combate, drogas, lesoes, macros, migracao, municoes, regras, testar, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });
@@ -102,3 +103,5 @@ Hooks.on('updateCombat', aoMudarTurno);
 Hooks.on('deleteCombat', redesenharFichas);
 Hooks.on('renderChatMessageHTML', combate.ligarBotoes);
 Hooks.on('renderActorDirectory', botaoNaAbaDeAtores);
+// A barra de macros (o C20): a arma, a perícia e o item arrastados da ficha viram a macro do sistema.
+Hooks.on('hotbarDrop', macros.aoSoltarNaBarra);

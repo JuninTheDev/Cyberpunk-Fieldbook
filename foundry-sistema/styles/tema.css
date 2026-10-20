@@ -319,6 +319,13 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem ol.itens button.alternar.ligado { border-color: var(--cp-ciano); color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem ol.itens button.apagar { border-color: transparent; }
 .cpr-fieldbook.ficha-personagem ol.itens button.apagar:hover { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
+/* A estrela dos favoritos (o C20): apagada até marcar; marcada, em amarelo. */
+.cpr-fieldbook.ficha-personagem .estrela { flex: none; color: var(--cp-fraco); opacity: 0.45; font-size: 11px; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem ol.itens button.estrela { border-color: transparent; }
+.cpr-fieldbook.ficha-personagem .estrela:hover, .cpr-fieldbook.ficha-personagem ol.itens button.estrela:hover { color: var(--cp-amarelo); opacity: 1; text-shadow: none; }
+.cpr-fieldbook.ficha-personagem .estrela.ligada, .cpr-fieldbook.ficha-personagem ol.itens button.estrela.ligada { color: var(--cp-amarelo); opacity: 1; }
+.cpr-fieldbook.ficha-personagem .favoritos .medida span { display: flex; align-items: center; gap: 6px; }
+.cpr-fieldbook.ficha-personagem .favoritos .item-linha .nome { flex: 1; }
 /* O painel de Eurodólares (aba Equipamento): o saldo, o botão do extrato e as últimas mudanças. */
 .cpr-fieldbook.ficha-personagem .dinheiro .titulo span { color: var(--cp-fraco); font-size: 12px; letter-spacing: 0.15em; }
 .cpr-fieldbook.ficha-personagem .botoes-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }

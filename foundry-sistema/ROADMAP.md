@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 139). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 140). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -225,7 +225,9 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 - [x] **C18. Armadura:** feito no ciclo 137 (sessão Codex, 2026-10-20). Maior SP atual por local, com a fonte identificada;
   ablação de todas as camadas, Desfazer por item e botões de ablar e consertar nas fichas de personagem e capanga.
 - [~] **C19. Lesão crítica fora do ataque:** em andamento (sessão Codex, 2026-10-20). Rolar na tabela à mão, e o paliativo e o tratamento com a DV.
-- [~] **C20. Macros e favoritos:** em andamento (sessão KouArt, 2026-10-20). Arrastar arma, perícia ou item para a barra, e os favoritos na aba Combate.
+- [x] **C20. Macros e favoritos:** feito no ciclo 139 (sessão KouArt, 2026-10-20). Arrastar arma, perícia ou item para a
+  barra (a macro do ataque, com o modo no texto dela; a do teste; a que abre a ficha), e os favoritos (a ★ das perícias e
+  dos itens) no painel da aba Combate.
 - [~] **C21. Cyberware:** em andamento (sessão KouArt, 2026-10-20): a terapia e a ciberpsicose.
   - a base com os slots das opções (instalar dentro da base, como a montagem da wiki): ciclos 82 a 84;
   - a terapia, que devolve Humanidade até o máximo;
@@ -456,8 +458,8 @@ No fim de tudo, uma sessão de teste com a mesa.
   - Cirurgia e Tecnologia Médica do Medtech: só ele tem as duas perícias, que hoje não existem para rolar (TECH + 2 por
     ponto de Cirurgia; TECH + os pontos de Farmacêutica e de Criossistemas, como a wiki e o CORE 0.92.3).
 - [ ] **Na ficha, o que o CORE e o Painel Tático têm:** (→ C19 e C20) rolar uma lesão crítica à mão (uma queda, uma
-  explosão fora do ataque); macros na barra (arrastar uma arma ou uma perícia). O conserto da armadura com um clique
-  já está na ficha do item (ciclo 70) e nas de personagem e capanga (C18, ciclo 137).
+  explosão fora do ataque); macros na barra (arrastar uma arma ou uma perícia; feito no ciclo 139, C20). O conserto da
+  armadura com um clique já está na ficha do item (ciclo 70) e nas de personagem e capanga (C18, ciclo 137).
 - [x] **Inventário, o resto do CORE:** (→ C17, ciclo 129) juntar itens iguais ao soltar na ficha e dividir uma pilha,
   conforme a decisão de reproduzir literalmente o CORE. As mãos livres foram feitas no ciclo 87 (C12).
 - [x] **A ficha nova** (Ciclo 19), no visual do modelo de ficha da mesa: o painel geral em três colunas, as abas
