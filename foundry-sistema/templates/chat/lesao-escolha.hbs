@@ -1,0 +1,8 @@
+<div class="cpr-fieldbook cartao lesao escolha-de-lesao">
+  <header><h3>Lesão crítica: duas para escolher</h3><span class="sabor">{{nomeDoAlvo}}{{#if cabeca}}, na cabeça{{/if}}</span></header>
+  <p>{{#if arma}}{{arma}}: {{/if}}{{#if atacante}}{{atacante}}{{else}}quem atacou{{/if}} rolou duas vezes na tabela e escolhe a que {{nomeDoAlvo}} sofre.</p>
+  <ul class="opcoes-de-lesao">
+    {{#each opcoes}}<li data-lesao="{{id}}"><b>{{nome}}</b>{{#unless ../escolhida}} <button type="button" data-cprf-acao="escolherLesao" data-lesao="{{id}}" data-tooltip="Aplicar esta lesão">Esta</button>{{/unless}}</li>{{/each}}
+  </ul>
+  {{#if escolhida}}<p class="nota escolhida">Escolhida: {{escolhida}}.</p>{{else}}<p class="nota">O mestre aplica a que for escolhida.</p>{{/if}}
+</div>

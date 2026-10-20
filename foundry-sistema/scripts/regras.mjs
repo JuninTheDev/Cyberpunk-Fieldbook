@@ -985,6 +985,17 @@ export const smartgunLinkVale = ({ aDistancia, ligado }) => Boolean(aDistancia &
 // carregador sai.
 export const penteComCarregador = (base, carregadores = []) => Math.max(0, ...carregadores.map(Number).filter(Boolean)) || base;
 export const sobraDoPente = ({ value, max }) => Math.max(0, (Number(value) || 0) - (Number(max) || 0));
+// O cyberware do Kit que é arma, nas regras que são conta (o C11, parte 2b; a wiki, system-2077.js; decisão do usuário,
+// 2026-10-19). O Monowire "ataca a até 6 m" (o corpo a corpo não confere o alcance: vai como nota) e, "quando causa uma
+// lesão crítica, quem atacou rola duas vezes na tabela e escolhe a que a vítima sofre". O Projectile Launch System, "com
+// foguete, é lança-foguetes; com granada, lança-granadas": a granada no pente troca a DV e o dano pelos do lança-granadas
+// do RED (o core_weapons:grenade-launcher). A mão ocupada da Mantis Blade e o BODY 11 da Gorilla Arm ficam com o mestre.
+export const MONOWIRE = 'cyberware-2077:monowire';
+export const ALCANCE_DO_MONOWIRE = 6;
+export const notaDoMonowire = (alvo, metros) => `Monowire: alcança até ${ALCANCE_DO_MONOWIRE} m${Number(metros) > ALCANCE_DO_MONOWIRE ? ` (${alvo} está a ${metros} m)` : ''}.`;
+export const PROJECTILE_LAUNCH_SYSTEM = 'cyberware-2077:projectile-launch-system';
+const PELA_MUNICAO = { [PROJECTILE_LAUNCH_SYSTEM]: { grenade: { tipo: 'grenadeLauncher', dano: '6d6', tabelaDV: 'DV Grenade Launcher' } } };
+export const perfilPelaMunicao = (origem, municao) => PELA_MUNICAO[origem]?.[municao] ?? null;
 // A munição Smart melhorada (o Kit, p. 32; a flag arma2077 da munição): só vale na arma Smart (a do Smartgun Link não
 // conta). Ignora as penalidades que atrapalham a visão (dos modificadores comuns, a pouca luz e a tarefa encoberta por
 // fumaça, escuridão etc.). E o ataque à distância que errar a DV por 5 ou menos tem a segunda chance, na hora:

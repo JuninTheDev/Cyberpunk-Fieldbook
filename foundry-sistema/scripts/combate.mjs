@@ -14,7 +14,7 @@ import { JanelaDeDefesa } from './janela-defesa.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
 import { aplicarDanoDeNet } from './net.mjs';
 import { aplicarPerdaDeHumanidade } from './humanidade.mjs';
-import { lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
+import { escolhaDeLesao, escolherLesao, lesaoCritica, PERNA_QUEBRADA } from './lesoes.mjs';
 import { aplicarMunicaoSemDano, incendiar, rolarResistencia, rolarInteligente, desfazerMunicao, escolherEmp, encerrarEfeitos, apagarFogo } from './municoes.mjs';
 import * as R from './regras.mjs';
 import { techAtravessaVidro } from './regras-veiculos.mjs';
@@ -236,7 +236,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
     return false;
   };
   if (!conferirMira()) return null;
-  const pelaArma = { aDistancia: arma.system.aDistancia, tipoDeArma: arma.system.tipo, municao: municao?.system.tipo };
+  const pelaArma = { aDistancia: arma.system.aDistancia, tipoDeArma: arma.perfilPelaMunicao?.tipo ?? arma.system.tipo, municao: municao?.system.tipo };
   // O ricochete de um cartucho (o Kit) continua cartucho: o leque sai da superfície do ricochete.
   const pelaMunicao = R.classificar(pelaArma);
   const modo = pedido === 'ricochete' && pelaMunicao === 'cartucho' ? 'cartucho' : R.classificar({ pedido, ...pelaArma });
@@ -535,7 +535,7 @@ function infoDoAlvo(ctx, token) {
 // deles). Sem distância: null.
 function dvDoAlvo(ctx, alvo) {
   if (alvo.metros === null) return { dv: null, fora: false };
-  for (const nome of R.tabelasCandidatas(ctx.arma.system.tabelaDV, ctx.modo, ctx.arma.system.tipo)) {
+  for (const nome of R.tabelasCandidatas(ctx.arma.tabelaDaArma, ctx.modo, ctx.arma.system.tipo)) {
     if (TABELAS_DV[nome]) return R.dvPelaDistancia(TABELAS_DV[nome], alvo.metros);
   }
   return { dv: null, fora: false, semTabela: true };
@@ -770,6 +770,15 @@ async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true }
       return;
     }
     if (modo === 'nao') return;
+    // O Monowire (o Kit; o C11, parte 2b): a lesão da tabela sai duas vezes, num cartão em que o mestre aplica a que quem
+    // atacou escolher. A lesão certa (a Perna quebrada do tiro na perna) entra direto.
+    if (!opcoes.id && ctx.arma?.origemDaArma === R.MONOWIRE) {
+      const roladas = await escolhaDeLesao(ator, { cabeca: Boolean(opcoes.cabeca), naFicha: modo === 'ficha', atacante: ctx.nomeAtq, arma: ctx.arma.name });
+      if (!roladas.length) return;
+      linha.dano.lesoes.push({ nome: roladas.map(lesao => lesao.nome).join(' ou '), item: null });
+      linha.notas.push(`${ctx.arma.name}: ${ctx.nomeAtq} rolou duas lesões e escolhe a que ${linha.nome} sofre; o mestre aplica pelo cartão delas.`);
+      return;
+    }
     const feita = await lesaoCritica(ator, { naFicha: modo === 'ficha', ...opcoes });
     if (feita) linha.dano.lesoes.push({ nome: feita.nome, item: feita.item?.id ?? null });
     if (municao?.system.efeito === 'expansive' && feita?.id.includes(':foreign-object')) {
@@ -818,6 +827,8 @@ async function resolverAlvo(ctx, token) {
   const linha = linhaDe(ctx, token);
   const alvo = infoDoAlvo(ctx, token);
   linha.metros = alvo.metros;
+  // O Monowire (o Kit) alcança até 6 m; o corpo a corpo não confere o alcance, e a nota fica com o mestre (o C11, parte 2b).
+  if (ctx.arma?.origemDaArma === R.MONOWIRE) linha.notas.push(R.notaDoMonowire(linha.nome, alvo.metros));
   let dv = null;
   if (ctx.modo === 'corpo' && destinoEstrutural(ctx, token)) dv = await dvDoMestre(ctx, alvo);
   else if (ctx.modo !== 'corpo') {
@@ -1236,6 +1247,7 @@ export function ligarBotoes(mensagem, html) {
       else if (botao.dataset.cprfAcao === 'aplicarNet') aplicarDanoDeNet(mensagem, botao.dataset.onde);
       else if (botao.dataset.cprfAcao === 'aplicarDano') aplicarDanoDoCartao(mensagem);
       else if (botao.dataset.cprfAcao === 'rolarLesao') rolarLesaoDoCartao(mensagem);
+      else if (botao.dataset.cprfAcao === 'escolherLesao') escolherLesao(mensagem, botao.dataset.lesao);
       else if (botao.dataset.cprfAcao === 'aplicarHumanidade') aplicarPerdaDeHumanidade(mensagem);
       else if (botao.dataset.cprfAcao === 'aplicarEmp') escolherEmp(mensagem, botao.dataset.ator);
       else if (botao.dataset.cprfAcao === 'encerrarMunicao') encerrarEfeitos(mensagem, botao.dataset.ator);

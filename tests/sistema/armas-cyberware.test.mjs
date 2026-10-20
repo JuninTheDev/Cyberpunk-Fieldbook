@@ -3,6 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs';
 import { dadosDaArmaMontada, ehArmaDoCyberware, ehArmaDoUpgrade, ehArmaMontadaEmItem, FLAG_DA_ARMA, FLAG_DO_UPGRADE, idDaOrigem, mudancasDaArma } from '../../foundry-sistema/scripts/armas-cyberware.mjs';
 import { migrarDados, PASSOS } from '../../foundry-sistema/scripts/migracao.mjs';
+import * as regras from '../../foundry-sistema/scripts/regras.mjs';
 
 const SISTEMA = 'cpr-fieldbook';
 const catalogo = JSON.parse(fs.readFileSync(new URL('../../foundry-sistema/dados/catalogo.json', import.meta.url), 'utf8')).itens;
@@ -48,6 +49,23 @@ test('Catálogo: os quatro do Kit que são arma (a Gorilla Arm e a Mantis Blade 
   assert.equal(catalogo['cyberware-2077:projectile-launch-system'].system.arma.tabelaDV, 'DV Rocket Launcher');
   // O resto do cyberware de 2077 não ataca.
   assert.equal(catalogo['cyberware-2077:ballistic-coprocessor'].system.arma, undefined);
+});
+
+// A wiki (system-2077.js): o Projectile Launch System, "com foguete, é lança-foguetes; com granada, lança-granadas"; o
+// Monowire "ataca a até 6 m". Decisão do usuário (2026-10-19): só o que é conta.
+test('As regras do Kit que são conta (o C11, parte 2b): o Projectile Launch System com granada é o lança-granadas do RED; com foguete, fica o lança-foguetes; a nota dos 6 m do Monowire', () => {
+  const lancaGranadas = catalogo['core_weapons:grenade-launcher'].system;
+  assert.deepEqual(regras.perfilPelaMunicao(regras.PROJECTILE_LAUNCH_SYSTEM, 'grenade'), { tipo: lancaGranadas.tipo, dano: lancaGranadas.dano, tabelaDV: lancaGranadas.tabelaDV });
+  assert.equal(regras.perfilPelaMunicao(regras.PROJECTILE_LAUNCH_SYSTEM, 'rocket'), null);
+  assert.equal(regras.perfilPelaMunicao(regras.PROJECTILE_LAUNCH_SYSTEM, undefined), null);
+  // Só o do Kit: o lança-granadas embutido do CORE e as outras armas ficam como são.
+  assert.equal(regras.perfilPelaMunicao('core_cyberware:popup-grenade-launcher', 'grenade'), null);
+  assert.equal(regras.perfilPelaMunicao('', 'grenade'), null);
+  assert.equal(catalogo[regras.MONOWIRE].system.arma.ataca, true);
+  assert.equal(regras.notaDoMonowire('Capanga', 2), 'Monowire: alcança até 6 m.');
+  assert.equal(regras.notaDoMonowire('Capanga', 6), 'Monowire: alcança até 6 m.');
+  assert.equal(regras.notaDoMonowire('Capanga', 9.5), 'Monowire: alcança até 6 m (Capanga está a 9.5 m).');
+  assert.equal(regras.notaDoMonowire('Capanga', null), 'Monowire: alcança até 6 m.');
 });
 
 test('A arma do cyberware: os dados de arma dele, sem mãos, montada nele (o instaladoEm e a flag); o que não ataca não tem', () => {

@@ -5347,6 +5347,76 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('regras do Kit que são conta (o C11, parte 2b; decisão do usuário): o Projectile Launch System com granada é lança-granadas (6d6, a DV do lança-granadas) e, com foguete, lança-foguetes (8d6, a DV dele); o Monowire dá a nota dos 6 m e, no crítico, rola duas lesões num cartão, e o mestre aplica a escolhida', async () => {
+      // Os ataques do lançador erram de propósito (d10 1): o cabeçalho diz a DV pela tabela da arma. O Monowire: d10 8 →
+      // 18 contra a esquiva do Capanga, DEX 5 + d10 2 = 7; o dano 3d6 com dois 6 é crítico.
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const a = __ator('Atiradora');
+        const capanga = __ator('Capanga');
+        const humanidade = a.system.humanidade.value;
+        const hp = capanga.system.hp.value;
+        const granada = pegar('core_ammo:grenade-armor-piercing');
+        granada.system.quantidade = 2;
+        const foguete = pegar('core_ammo:rocket-armor-piercing');
+        foguete.system.quantidade = 1;
+        const criados = await a.createEmbeddedDocuments('Item', [pegar('cyberware-2077:projectile-launch-system'), pegar('cyberware-2077:monowire'), granada, foguete]);
+        const pls = criados.find(i => i.name === 'Projectile Launch System'), mono = criados.find(i => i.name === 'Monowire');
+        const gr = criados.find(i => i.type === 'municao' && i.system.tipo === 'grenade'), fo = criados.find(i => i.type === 'municao' && i.system.tipo === 'rocket');
+        const armaDe = cyber => a.items.find(i => i.type === 'arma' && i.getFlag('${S}', 'armaDoCyberware') === cyber.id);
+        const lesoesAntes = capanga.items.filter(i => i.type === 'lesao').map(i => i.id);
+        try {
+          await a.instalarCyberware(pls, { rolar: false });
+          await a.instalarCyberware(mono, { rolar: false });
+          await __esperar(() => armaDe(pls) && armaDe(mono));
+          const lancador = armaDe(pls), fio = armaDe(mono);
+          await lancador.recarregar({ municao: gr });
+          const comGranada = [lancador.danoDaArma, lancador.tabelaDaArma].join('|');
+          window.__fila = [[1, 10]];
+          const erroGranada = (await lancador.atacar({ alvo: __token('Alvo') }))?.cabecalho ?? '';
+          await lancador.recarregar({ municao: fo });
+          const comFoguete = [lancador.danoDaArma, lancador.tabelaDaArma].join('|');
+          window.__fila = [[1, 10]];
+          const erroFoguete = (await lancador.atacar({ alvo: __token('Alvo') }))?.cabecalho ?? '';
+          const metros = game.system.api.combate.distancia(__token('Atiradora'), __token('Alvo'));
+          // O Monowire: o crítico rola as duas lesões num cartão; o botão do mestre aplica a primeira.
+          window.__fila = [[8, 10], [2, 10], [6, 6], [6, 6], [2, 6]];
+          const r = await fio.atacar({ alvo: __token('Capanga') });
+          const [l] = r.linhas;
+          const escolha = game.messages.contents.slice(-6).reverse().find(m => m.getFlag('${S}', 'escolhaDeLesao'));
+          const opcoes = escolha?.getFlag('${S}', 'escolhaDeLesao')?.opcoes.map(o => o.nome) ?? [];
+          await __esperar(() => document.querySelector('[data-message-id="' + escolha?.id + '"] [data-cprf-acao="escolherLesao"]'));
+          // A mensagem aparece no histórico e no aviso do chat: os botões de uma delas.
+          const botoes = document.querySelector('[data-message-id="' + escolha?.id + '"]')?.querySelectorAll('[data-cprf-acao="escolherLesao"]').length ?? 0;
+          document.querySelector('[data-message-id="' + escolha?.id + '"] [data-cprf-acao="escolherLesao"]')?.click();
+          await __esperar(() => game.messages.get(escolha?.id)?.getFlag('${S}', 'escolhaDeLesao')?.escolhida);
+          const escolhida = game.messages.get(escolha?.id)?.getFlag('${S}', 'escolhaDeLesao')?.escolhida ?? '';
+          await __esperar(() => capanga.items.some(i => i.type === 'lesao' && !lesoesAntes.includes(i.id)));
+          const novas = capanga.items.filter(i => i.type === 'lesao' && !lesoesAntes.includes(i.id)).map(i => i.name);
+          const monowire = { notas: l.notas, critico: l.dano?.critico, lesoes: l.dano?.lesoes.map(x => x.nome) ?? [], opcoes, botoes, escolhida, novas };
+          return { comGranada, erroGranada, comFoguete, erroFoguete, metros, monowire };
+        } finally {
+          const sobras = a.items.filter(i => criados.some(c => c.id === i.id) || [pls.id, mono.id].includes(i.getFlag('${S}', 'armaDoCyberware'))).map(i => i.id);
+          if (sobras.length) await a.deleteEmbeddedDocuments('Item', sobras);
+          const lesoesNovas = capanga.items.filter(i => i.type === 'lesao' && !lesoesAntes.includes(i.id)).map(i => i.id);
+          if (lesoesNovas.length) await capanga.deleteEmbeddedDocuments('Item', lesoesNovas);
+          await a.update({ 'system.humanidade.value': humanidade });
+          await capanga.update({ 'system.hp.value': hp });
+        }
+      })()`);
+      // A DV a essa distância nas duas tabelas (gerado.mjs): até 6 m, 16 e 17; de 7 a 12 m, 15 e 16.
+      const dv = (faixas, metros) => faixas.find(([min, max]) => Math.round(metros) >= min && Math.round(metros) <= max)?.[2];
+      const granadas = dv([[0, 6, 16], [7, 12, 15]], info.metros), foguetes = dv([[0, 6, 17], [7, 12, 16]], info.metros);
+      const { monowire: m } = info;
+      const ok = info.comGranada === '6d6|DV Grenade Launcher' && info.comFoguete === '8d6|DV Rocket Launcher' && granadas !== undefined
+        && info.erroGranada.startsWith(`contra DV ${granadas} `) && info.erroFoguete.startsWith(`contra DV ${foguetes} `)
+        && m.notas.some(nota => nota.startsWith('Monowire: alcança até 6 m')) && m.critico === true
+        && m.opcoes.length >= 1 && m.botoes === m.opcoes.length && m.lesoes.join() === m.opcoes.join(' ou ')
+        && m.escolhida === m.opcoes[0] && m.novas.join() === m.opcoes[0];
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('acessório que é arma (o C11, parte 3; o secondaryWeapon do CORE): a baioneta e o lança-granadas sob o cano instalados no fuzil equipado dão a arma deles na aba Combate ("Em Assault Rifle"), sem mãos a mais, fora do inventário e da wiki; a baioneta acerta o Capanga (DEX + Armas Brancas, 1d6); o lança-granadas recarrega; com o fuzil guardado, a baioneta não ataca; tirada, a arma dela sai; apagado o fuzil, a do lança-granadas sai, e a granada volta', async () => {
       // Atiradora: DEX 7 + Armas Brancas 3. O golpe: d10 8 → 18 contra a esquiva do Capanga, DEX 5 + d10 2 = 7: acertou.
       // Dano 1d6: 4 (o Capanga não tem armadura).

@@ -128,7 +128,7 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Rolagens | Facedown (COOL + Reputação + 1d10) | no ciclo 39 | P2 |
   | Roles | os bônus nas perícias | os que valem sempre no ciclo 23; os situacionais, com a janela | P1 |
   | Roles | as rolagens (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | nos ciclos 34 e 35 | P2 |
-  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); o acessório que é arma (a baioneta e as armas sob o cano) no 135; os slots, o carregador e o Smartgun Link no 136; faltam os movimentos especiais e as regras próprias do Kit | P2 |
+  | Combate | Briga e Artes Marciais (dano pelo BODY); o cyberware que é arma; a arma sob o cano e a baioneta | o dano pelo BODY da Briga e das Artes Marciais no ciclo 131 (C10); o cyberware que é arma do CORE no ciclo 133 (C11, parte 1) e o do Kit no 134 (os números; as regras próprias faltam); o acessório que é arma (a baioneta e as armas sob o cano) no 135; os slots, o carregador e o Smartgun Link no 136; as regras do Kit que são conta no 138 (o C11 terminou); faltam os movimentos especiais | P2 |
   | Ficha | consertar a armadura com um clique; rolar lesão crítica à mão; macros na barra | falta | P2 |
   | Inventário | usar droga; juntar itens iguais e dividir pilhas; mãos livres ao equipar | falta | P2 |
   | Munição | o EMP nos itens eletrônicos (a macro "Get EMP'd") | falta | P2 |
@@ -705,6 +705,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     si. A montagem que vem da wiki (a importação, os pedidos e a migração da mesa) entra como veio;
   - **o pente:** tirado o carregador, o pente que passa do máximo volta a ele, e as balas a mais voltam para a munição
     que estava nele.
+
+- **As regras próprias do cyberware que é arma do Kit** (ciclo 138; a wiki, `system-2077.js`). Decisão do usuário
+  (2026-10-19): só o que é conta.
+  - **automatizado:** o Projectile Launch System com granada no pente é lança-granadas (a DV e o dano do lança-granadas do
+    RED, 6d6); com foguete, lança-foguetes. O Monowire, na lesão crítica da tabela, rola duas vezes: as duas vão num
+    cartão, e o mestre aplica a que quem atacou escolher (como o "Rolar a lesão"); os 6 m do Monowire vão como nota no
+    ataque (o corpo a corpo não confere o alcance);
+  - **com o mestre:** a mão do braço que não segura nada com a Mantis Blade ou o Projectile Launch System para fora, o sacar
+    sem Ação e o BODY 11 da Gorilla Arm (para empunhar e, com duas, para o Choke e o Slam);
+  - **o Desfazer:** a lesão do Monowire, escolhida depois, fica fora do Desfazer do ataque (o mestre a tira na ficha).
 
 ## Registro dos ciclos
 
@@ -6712,6 +6722,45 @@ sessões foram incorporados antes do fechamento, preservando o trabalho das trê
 - **Limites:** Skin Weave e Subdermal Armor continuam usando os itens de armadura separados do CORE; não houve
   mudança de schema, build ou recuperação diária automática. O conserto não calcula teste, custo ou tempo.
 - **Próximo:** C19, lesão crítica fora do ataque. C10 segue reservado à sessão Junin e C11 à sessão KouArt.
+
+### Ciclo 138 (2026-10-20): o C11, parte 2b: as regras do Kit que são conta (sessão KouArt)
+
+Commit anterior: `87cf787d` (a reserva do C19 da sessão Codex, depois do ciclo 137 dela, o C18). O C11 ficou com os ciclos 133 a 136 e 138. Com este, o C11 termina.
+
+- **Decisões do usuário (2026-10-19):** "vamos focar todas as atualizações do sistema e etc apenas para o foundry 14" (o
+  ROADMAP, nas sessões do plano: o Foundry 12 não recebe mais mudanças); e, das regras próprias dos quatro do Kit, "só o
+  que é conta" (ver as dúvidas).
+- **A referência:** a wiki (`system-2077.js`): o Projectile Launch System, "lança-foguetes ou lança-granadas de uma mão com
+  um tiro no pente: com foguete, é lança-foguetes; com granada, lança-granadas"; o Monowire, que "ataca a até 6 m" e,
+  "quando causa uma lesão crítica, quem atacou rola duas vezes na tabela e escolhe a que a vítima sofre". Os números do
+  lança-granadas são os do RED no catálogo (`core_weapons:grenade-launcher`: 6d6, a DV do lança-granadas).
+- **O que muda:**
+  - **`regras.mjs`:** `perfilPelaMunicao` (a granada no Projectile Launch System), `MONOWIRE` e `notaDoMonowire`;
+  - **`documentos.mjs`:** na arma, `origemDaArma` (o catálogo do cyberware ou do acessório de onde ela vem),
+    `perfilPelaMunicao` e `tabelaDaArma`; o `danoDaArma` com a munição que muda a arma;
+  - **`combate.mjs`:** a DV pela `tabelaDaArma` e o tipo pela munição; a nota dos 6 m do Monowire em cada alvo; no
+    crítico do Monowire, as duas lesões no cartão delas (a lesão certa, como a Perna quebrada, entra direto); o botão
+    "Esta" (do mestre);
+  - **`lesoes.mjs` e `templates/chat/lesao-escolha.hbs`:** `escolhaDeLesao` (as duas rolagens, sem aplicar, num cartão) e
+    `escolherLesao` (o mestre aplica a escolhida, pela configuração "Lesão crítica", e o cartão diz qual).
+- **Testes:**
+  - **G3:** em `armas-cyberware.test.mjs`, o perfil pela munição (o do lança-granadas do catálogo; com foguete e nas outras
+    armas, nada) e a nota do Monowire;
+  - **G4:** um passo novo: o Projectile Launch System com granada (6d6, a DV do lança-granadas no cabeçalho do ataque que
+    erra) e com foguete (8d6, a DV do lança-foguetes); o Monowire, com a nota dos 6 m e, no crítico, o cartão das duas
+    lesões, o botão do mestre e a lesão escolhida na ficha do Capanga. Na primeira rodada, tudo deu certo menos a conta dos
+    botões (4 para 2 lesões): a mensagem aparece duas vezes na página, no histórico e no aviso do chat; o passo agora conta
+    numa delas.
+- **Portões** (com o ciclo 137 da sessão Codex, o C18, integrado: o meu era o 137 e virou o 138, pela regra do plano):
+  G1, 95 arquivos sem erro; G2, nenhum erro; G3, 221/221; G4 completo, 198/198, com a checagem dos dois navegadores sem
+  avisos ou erros de JS. Antes da integração: G3 214/214 e G4 194/194.
+- **Mutações** (rodadas antes da integração; o código delas não mudou com ela): as oito caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido): no G3, a granada que não muda
+  o lançador (M1) e a nota sem a distância (M2); no Foundry, o dano sem a munição (M3), a tabela de DV sem ela (M4), o
+  Monowire com uma lesão só (M5), o botão "Esta" sem efeito (M6), a escolhida fora da ficha (M7) e o ataque sem a nota
+  dos 6 m (M8).
+- **Limites:** a mão do braço com a Mantis Blade ou o Projectile Launch System para fora e o BODY 11 da Gorilla Arm ficam
+  com o mestre; a lesão do Monowire, escolhida depois, fica fora do Desfazer do ataque.
+- **Próximo:** o C11 terminou. O próximo item livre do ROADMAP (a sessão Junin está no C10 e a Codex no C18).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

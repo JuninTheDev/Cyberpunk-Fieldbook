@@ -6,7 +6,7 @@ import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
-  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale
+  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -788,9 +788,12 @@ export class ItemCPR extends Item {
   }
 
   // O dano da arma: o do item ou, na Briga e nas Artes Marciais com o "Dano pelo BODY" ligado (o padrão, como o CORE),
-  // o da tabela do BODY do dono (o C10; regras.danoDesarmado). O cyberbraço que conta é a fundação instalada.
+  // o da tabela do BODY do dono (o C10; regras.danoDesarmado). O cyberbraço que conta é a fundação instalada. Com a munição
+  // que muda a arma (perfilPelaMunicao: o C11, parte 2b), o dela.
   get danoDaArma() {
     const s = this.system;
+    const pelaMunicao = this.perfilPelaMunicao;
+    if (pelaMunicao) return pelaMunicao.dano;
     const body = this.actor?.system.atributos?.body?.valor;
     if (this.type !== 'arma' || !ehDesarmada(s.tipo) || !s.danoPeloBody || body === undefined) return s.dano;
     const cyberbraco = this.actor.items.some(item => item.type === 'cyberware' && item.system.instalado && item.system.fundacional && item.system.tipo === 'cyberArm');
@@ -805,6 +808,18 @@ export class ItemCPR extends Item {
     const ator = this.actor;
     if (this.type !== 'arma' || this.system.tipo !== 'martialArts' || !ator?.system.pericia) return '';
     return artesMarciaisLiberadas(ator.system.pericia(this.periciaDaArma).nivel) ? '' : 'as Artes Marciais pedem pelo menos 1 ponto numa forma (Aikido, Judô, Karatê ou Taekwondo).';
+  }
+  // O catálogo do cyberware ou do acessório de onde vem a arma (o C11), ou ''.
+  get origemDaArma() {
+    return ehArmaMontadaEmItem(this) ? this.instaladoNo?.getFlag(SISTEMA, 'catalogo') ?? '' : '';
+  }
+  // A arma pela munição no pente (o C11, parte 2b: o Projectile Launch System com granada é lança-granadas), ou null.
+  get perfilPelaMunicao() {
+    return this.type === 'arma' ? perfilPelaMunicao(this.origemDaArma, this.municaoCarregada?.system.tipo) : null;
+  }
+  // A tabela de DV da arma: a dela ou a da munição no pente (perfilPelaMunicao).
+  get tabelaDaArma() {
+    return this.perfilPelaMunicao?.tabelaDV ?? this.system.tabelaDV;
   }
 
   // Atributo + perícia + bônus da arma + 1d10 (p. 172–176): REF para tiro, DEX para corpo a corpo. Autofogo, fogo
