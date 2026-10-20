@@ -38,7 +38,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
-| CORE | rolar lesão à mão | falta (C19) |
+| CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | CORE e wiki | moradia, estilo de vida, moda e Trauma Team (o `lifestyle`; C22) | portados no ciclo 140: os campos, a importação da wiki e da mesa, a ficha "Na mesa" e o "Pagar o mês" (a regra do criador da wiki) |
 | CORE | macros na barra (a arma, a perícia e o item arrastados da ficha) e os favoritos (o alfinete do item e da perícia) | portados no ciclo 139 (C20): o favorito vai para o painel da aba Combate (ver as dúvidas) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
@@ -148,6 +148,13 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
+
+- **C19, paliativo e Death Save (2026-10-20, sessão Codex; respondida):** a wiki (`system-rules.js:215`) chama o +1
+  no Death Save de permanente até tratamento, mas a correção rápida tira o efeito pelo resto do dia (`:554`). O CORE
+  0.92.4 (`modules/actor/cpr-actor.js:356–365`) conta esse +1 enquanto o item existe. Pergunta enviada: a correção do
+  Traumatismo cervical deve suspender temporariamente o +1 e o botão "Voltou" deve devolvê-lo?
+  **Decisão do usuário:** "Sim, suspender até ‘Voltou’". A marca de paliativo suspende a contribuição sem apagar
+  `aumentaDeathSave` do item; tratamento definitivo continua removendo a lesão.
 
 - **C17, pilhas (2026-10-19, sessão Codex; respondida):** o CORE 0.92.4 junta pelo tipo e nome
   (`modules/actor/cpr-actor.js`, `automaticallyStackItems`, e a versão de `cpr-container.js`), sem comparar a variedade
@@ -6942,6 +6949,59 @@ conversa, o usuário pediu a instalação no servidor, feita do `5c95079` (o cic
   o carregador estendido entregue em dobro. Ele não passa pelo código deste ciclo e passou na rodada seguinte (202/202).
   A D12 e a D15 também derrubaram, junto, o passo do Jack In no Neuroport, que este ciclo não toca.
 - **O C10 terminou.**
+
+### Ciclo 142 (2026-10-20): o C19, lesão crítica fora do ataque e tratamento nas duas fichas (sessão Codex)
+
+Commit anterior: `19503fd` (registro do ciclo 141; código em `b5a27a3`). O C19 foi reservado em `87cf787`, antes de implementar; a base de comportamento
+é `1c73bd7`, ciclo 137. Os ciclos 138 a 141 das outras sessões foram incorporados antes do fechamento.
+
+- **Referência:** CORE 0.92.4, `modules/actor/sheet/cpr-actor-sheet.js:1133–1305`: escolha da tabela, criação do item
+  e cartão sem descontar HP, conferência de esgotamento e limite de novas tentativas. Wiki: `system-rules.js:28–54`
+  e `:549–554`, tabelas do corpo e da cabeça, repetição, paliativo, tratamento e Cybertecnologia na mesma DV em parte
+  cibernética. A suspensão do aumento do Death Save durante o paliativo foi confirmada pelo usuário em 2026-10-20,
+  com o retorno no "Voltou"; a discrepância e a resposta estão nas dúvidas.
+- **O que muda:**
+  - **Rolar lesão** nas abas Perícias e Combate e no capanga: corpo ou cabeça, 2d6, item com efeitos e cartão; sem
+    perda de HP e com cancelamento sem efeitos;
+  - `regras-lesoes.mjs`: lesões disponíveis, sem existentes ou excluídas, tabela esgotada antes da rolagem e até mil
+    tentativas. Não anuncia uma lesão repetida se nenhuma nova saiu;
+  - `lesoes.mjs`: fila por documento de ator no mesmo cliente, releitura antes de criar e recusa de colisão externa,
+    proprietário, tipos personagem/capanga e catálogo de lesão. O ID forçado, `naFicha` e `falar` continuam aceitos;
+    uma criação recusada não anuncia aplicação. A revisão encontrou o ID de arma aceito como lesão e a guarda entrou
+    com teste e mutação. Na escolha do Monowire, criação recusada conserva o cartão disponível para nova tentativa;
+  - painel compartilhado de lesões nas duas fichas, com correção, tratamento, "Voltou" e ações só para quem edita;
+  - **Parte cibernética** na janela: Cybertecnologia substitui a perícia escolhida, conservando a DV, sem deduzir
+    anatomia. Inclusive a opção de Cirurgia pode ser feita com Cybertecnologia na DV dela;
+  - paliativo suspende o +1 dessa lesão no Death Save e só os efeitos ativos, guardando seus IDs. "Voltou" restaura apenas esses IDs
+    existentes, preservando efeitos desligados antes ou adicionados depois, e aceita a marca legada sem lista;
+  - correção já ativa não se repete; tratamento definitivo continua permitido. Permissão, documento e DV são
+    revalidados após a janela e após a rolagem. Uma operação em andamento bloqueia outro tratamento da mesma lesão
+    no cliente, para não sobrescrever os IDs antes de gravar a marca; sucesso, cancelamento e erro liberam a guarda.
+    O tratamento do ciclo 77 permanece com suas referências e testes.
+- **Testes:** treze novos no G3: nove de sorteio/API e quatro de Cybertecnologia, suspensão do aumento do Death Save e guardas.
+  Sete passos independentes no G4: cliques nas duas fichas e cancelamento; repetição além de 40 tentativas e tabela
+  esgotada; capanga de token solto com paliativo, efeitos e tratamento; fila, colisão, criação recusada e DV alterada
+  durante awaits; escolha do Monowire recusada e repetida; navegador do jogador proprietário/observador, APIs e contêiner
+  recusado; correções simultâneas com a gravação da marca suspensa, retorno e nova tentativa após cancelar.
+- **Resultados:** antes da integração: G1 **97/0**, G2 **0**, G3 **233/233**, foco **8/8** e G4 completo **202/202**.
+  Com os ciclos 138 a 140: G1 **100 arquivos/0 erros**, G2 **0**, G3 **242/242** e G4 completo **208/208**.
+  No conjunto final com o ciclo 141: G1 **102 arquivos/0 erros**, G2 **0**, G3 **247/247** e G4 completo **210/210**,
+  no Foundry 14.369, sem pular a parte do Foundry e sem avisos ou erros do sistema nos dois navegadores.
+- **Mutações:** **41/41 caíram**, uma por vez: sete no G3 e trinta e quatro no G4 focado. Cobrem tabelas, dados, limites,
+  cancelamento, HP intacto, fichas, permissões, IDs e tipos, fila e colisão externa, criação recusada, opções da API,
+  Death Save, Cybertecnologia, efeitos anteriores, marca legada, repetição de correção e validação antes/depois de
+  rolar. Cada rodada restaurou os bytes por MD5. Após a integração, as 38 mutações anteriores foram repetidas e também
+  caíram. A M39 confere que criação recusada não consome a escolha do Monowire; M40 e M41 conferem a guarda de tratamento
+  simultâneo e sua liberação após concluir ou cancelar. Os nove arquivos de código e templates terminaram
+  com os MD5 da base integrada. Evidência local em `tests/.saida/c19-mutacoes.json`, com logs e controles por rodada.
+  Após incorporar o C10, M13 e M15 foram repetidas por atingirem a ficha alterada, e caíram com MD5 restaurado;
+  os outros arquivos mutados permaneceram com os mesmos bytes. O G4 final conferiu também os partials das duas fichas.
+- **Limites:** a fila serializa o mesmo cliente; não há transação atômica entre clientes. Parte cibernética e fim do
+  dia são decisões da mesa. Sem relógio novo, schema, build ou recuperação automática de lesão.
+- **Pendência do C11 integrado:** cliques simultâneos em opções diferentes do cartão do Monowire podem aplicar ambas;
+  a fila por ator não serializa a escolha por mensagem. Esse comportamento anterior ficou fora do C19.
+- **Coordenação:** C20 e C22 da sessão KouArt e C10 da sessão Junin foram incorporados; as demais reservas do ROADMAP
+  foram preservadas. Os conflitos nas fichas somaram os partials de Artes Marciais e de lesões.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

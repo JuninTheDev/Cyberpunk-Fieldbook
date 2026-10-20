@@ -46,6 +46,18 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Paliativo e efeitos anteriores (C19):** guarde os IDs dos efeitos ativos que a correção desliga. O "Voltou" só
+  restaura esses IDs ainda existentes; religar todos altera efeitos desligados antes e os acrescentados depois. A
+  marca antiga sem lista continua aceita. O G4 também confere o Death Save sem apagar a regra do item.
+- **Janela e rolagem em andamento (C19):** releia permissão, documento e DV antes de rolar e depois de aguardar a
+  rolagem. O G4 muda a DV nos dois momentos e confere que não se aplica o tratamento antigo. Criar item também pode
+  devolver uma lista vazia: não anuncie lesão aplicada sem item. A fila no mesmo cliente e a releitura após o sorteio
+  evitam duplicatas locais e recusam uma lesão que chegou por outra operação durante o await.
+  Os chamadores também respeitam a recusa: o cartão de escolha do Monowire só registra a escolhida após a aplicação.
+  Bloqueie outro tratamento da mesma lesão enquanto o primeiro aguarda: entre desligar os efeitos e gravar a marca,
+  uma segunda correção poderia sobrescrever os IDs com lista vazia. O G4 segura essa gravação e confere a recusa;
+  o `finally` precisa liberar a guarda também após cancelamento.
+
 - **Ablação de camadas e Desfazer (C18):** escolher o maior SP não escolhe as únicas peças que perdem SP. Enumere todas
   as armaduras vestidas do local e guarde cada ID com a perda efetiva: uma camada com 1 SP atingida por perfurante perde
   só 1. Desfazer pela seleção atual ou pelo valor nominal restaura a peça errada ou SP demais. O G4 confere também

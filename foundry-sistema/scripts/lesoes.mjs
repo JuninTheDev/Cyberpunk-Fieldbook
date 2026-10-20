@@ -1,30 +1,64 @@
-// Lesão Crítica (p. 187): 2d6 na tabela do corpo (ou da cabeça, no tiro mirado na cabeça), sem repetir uma lesão que
-// o alvo já tem; o item entra na ficha com os efeitos (Perna quebrada: −4 MOVE) e o cartão sai no chat.
+// Lesão Crítica (p. 187): 2d6 na tabela escolhida, sem repetir uma lesão que o alvo já tem; o item entra na ficha com
+// os efeitos (Perna quebrada: −4 MOVE) e o cartão sai no chat. No ataque, cabeça só no tiro mirado na cabeça.
+// A tabela não altera HP: como o _rollCriticalInjury do CORE, só acrescenta a lesão. O ataque já aplica o dano bônus.
 import { itemDoCatalogo } from './catalogo.mjs';
 import { caminho, SISTEMA } from './config.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { TABELAS_LESAO } from './gerado.mjs';
-import { lesaoNaTabela } from './regras.mjs';
+import { MAXIMO_ROLAGENS_LESAO, sortearLesao } from './regras-lesoes.mjs';
 
 export const PERNA_QUEBRADA = 'core_critical-injuries-body:broken-leg';
 
+const filasDasLesoes = new WeakMap();
+const podeReceberLesao = ator => ator?.isOwner && ['personagem', 'capanga'].includes(ator.type);
+const lesoesDoAtor = ator => new Set(ator.items.filter(item => item.type === 'lesao').map(item => item.getFlag(SISTEMA, 'catalogo')));
+
 // id: uma lesão certa (a Perna quebrada do tiro na perna). naFicha: false só anuncia.
-export async function lesaoCritica(ator, { cabeca = false, id = null, naFicha = true, falar = true, excluir = [] } = {}) {
-  const tem = new Set(ator.items.filter(item => item.type === 'lesao').map(item => item.getFlag(SISTEMA, 'catalogo')));
+// No mesmo cliente, dois cliques esperam a criação anterior; o próximo lê as lesões que realmente ficaram na ficha.
+export async function lesaoCritica(ator, opcoes = {}) {
+  if (!podeReceberLesao(ator)) return null;
+  const anterior = filasDasLesoes.get(ator) ?? Promise.resolve();
+  let liberar;
+  const atual = new Promise(resolve => { liberar = resolve; });
+  filasDasLesoes.set(ator, atual);
+  await anterior;
+  try {
+    return await criarLesao(ator, opcoes);
+  } finally {
+    liberar();
+    if (filasDasLesoes.get(ator) === atual) filasDasLesoes.delete(ator);
+  }
+}
+
+async function criarLesao(ator, { cabeca = false, id = null, naFicha = true, falar = true, excluir = [] } = {}) {
+  if (!podeReceberLesao(ator)) return null;
+  const tem = lesoesDoAtor(ator);
   let escolhido = id;
   let roll = null;
   if (!escolhido) {
     const faixas = TABELAS_LESAO[cabeca ? 'cabeca' : 'corpo'];
-    for (let tentativa = 0; tentativa < 40; tentativa++) {
-      roll = await new Roll('2d6').evaluate();
-      escolhido = lesaoNaTabela(faixas, roll.total);
-      if (!tem.has(escolhido) && !excluir.includes(escolhido)) break;
+    const sorteio = await sortearLesao({ faixas, tem, excluir, rolar: () => new Roll('2d6').evaluate() });
+    if (sorteio.motivo) {
+      ui.notifications.warn(sorteio.motivo === 'esgotada'
+        ? `${ator.name}: não há lesão disponível na tabela ${cabeca ? 'da cabeça' : 'do corpo'}.`
+        : `${ator.name}: nenhuma lesão disponível saiu em ${MAXIMO_ROLAGENS_LESAO} tentativas. Role novamente.`);
+      return null;
     }
+    escolhido = sorteio.id;
+    roll = sorteio.roll;
   }
   const dados = escolhido && !excluir.includes(escolhido) && await itemDoCatalogo(escolhido);
-  if (!dados) return null;
-  const repetida = tem.has(escolhido);
+  if (!dados || dados.type !== 'lesao' || !podeReceberLesao(ator)) return null;
+  const repetida = lesoesDoAtor(ator).has(escolhido);
+  if (!id && repetida) {
+    ui.notifications.warn(`${ator.name} passou a ter ${dados.name} durante a rolagem. Role novamente.`);
+    return null;
+  }
   const [item] = naFicha && !repetida ? await ator.createEmbeddedDocuments('Item', [dados]) : [null];
+  if (naFicha && !repetida && !item) {
+    ui.notifications.warn(`Não consegui acrescentar ${dados.name} à ficha de ${ator.name}.`);
+    return null;
+  }
   if (falar) {
     const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/lesao.hbs'), {
       alvo: ator.name, nome: dados.name, descricao: dados.system.descricao, cabeca, repetida, naFicha, dados: roll ? dadosDoCartao(roll, { critico: false }) : ''
@@ -61,6 +95,7 @@ export async function escolherLesao(mensagem, id) {
   const alvo = await fromUuid(dados.alvo);
   if (!alvo) return null;
   const feita = await lesaoCritica(alvo, { id, cabeca: dados.cabeca, naFicha: dados.naFicha });
+  if (!feita) return null;
   const escolhida = feita?.nome ?? dados.opcoes.find(opcao => opcao.id === id).nome;
   await mensagem.update({ content: await cartaoDaEscolha({ ...dados, escolhida }), [`flags.${SISTEMA}.escolhaDeLesao.escolhida`]: escolhida });
   return feita;

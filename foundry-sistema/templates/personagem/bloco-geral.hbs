@@ -96,14 +96,6 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
       {{else}}<div class="caixa-vazia">NENHUM CYBERWARE INSTALADO</div>{{/each}}
     </section>
 
-    <section class="painel corte perigo crescer lesoes">
-      <div class="titulo">LESÕES CRÍTICAS<span>{{lesoes.length}} ATIVA{{#unless (eq lesoes.length 1)}}S{{/unless}}</span></div>
-      {{#each lesoes}}
-      <div class="item-linha" data-item-id="{{id}}">
-        <a class="nome" data-action="editarItem" data-tooltip="{{resumo}}">{{nome}}<small>{{tratar}}</small></a>
-        <button type="button" class="acao" data-action="apagarItem" data-tooltip="Tratada: tirar da ficha">TRATADA</button>
-      </div>
-      {{else}}<div class="caixa-vazia">SEM LESÕES</div>{{/each}}
-    </section>
+    {{> "systems/cpr-fieldbook/templates/personagem/bloco-lesoes.hbs" crescer=true}}
   </div>
 </div>

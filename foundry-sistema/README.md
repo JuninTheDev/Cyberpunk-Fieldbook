@@ -313,8 +313,18 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **EMP e conexões:** o deck parado bloqueia ações da NET, inclusive as do mestre, e não permite rezzar outro Black ICE; desconectar continua possível. O deck encaixado herda a parada da porta implantada. Neuroport e Self-ICE parados deixam de oferecer conexão e Passwalls; o Personal Link conserva seu acesso quando o Self-ICE volta, também no botão Quickhack da ficha. As janelas abertas reconferem o equipamento antes de resolver, inclusive a Luneta de Mira RED e a ligação da arma Smart do Kit antes de gastar bala, dados ou Sorte.
   - **Fumaça:** o cartão informa a área e a duração da wiki; a mesa continua resolvendo a área de fumaça e suas penalidades.
   - **O dano rolado à parte** (o botão "Dano" da ficha, ciclo 64): o cartão tem os botões do mestre. "Aplicar dano" aplica nos alvos marcados (T), no corpo (a cabeça só pelo tiro mirado), com as mesmas regras do ataque (a armadura, o +5 do crítico, a ablação, a Deflexão, a borracha), e o resultado sai no cartão do ataque, com o "Desfazer". No dano crítico, "Rolar a lesão" rola a tabela do corpo em cada alvo marcado, uma vez por alvo naquele cartão. O dano rolado dentro do ataque não tem esses botões (o ataque já aplica).
-- **Lesão Crítica** (dois 6 no dano):
+- **Lesão Crítica** (dois 6 no dano; também rolada à mão):
   - **Tabelas:** 2d6 na tabela do corpo, ou na da cabeça no tiro mirado na cabeça, sem repetir uma que o alvo já tem.
+  - **Rolar lesão (C19):** nas abas Perícias e Combate e na ficha de capanga, escolhe corpo ou cabeça, rola 2d6 e
+    acrescenta a lesão com efeitos e cartão. Essa rolagem não altera HP; o dano é resolvido à parte. Fechar a escolha
+    não rola nem cria. A tabela esgotada ou uma sequência sem lesão nova avisa e para. Correção, tratamento e "Voltou"
+    também estão disponíveis no painel geral e no capanga.
+  - **Parte cibernética (C19):** na janela de correção ou tratamento, marque a opção para usar Cybertecnologia na DV
+    escolhida. O teste usa TECH + Cybertecnologia + 1d10, inclusive no lugar da Cirurgia, conservando a DV da tabela.
+  - **Paliativo (C19):** suspende também o aumento do Death Save até o "Voltou", conforme a decisão do usuário.
+    Desliga só os efeitos que estavam ativos; o retorno preserva efeitos antes desligados e os acrescentados depois.
+    A lesão já corrigida recusa outra correção, mas ainda aceita tratamento definitivo. Marcas antigas continuam
+    aceitas. O dono pode operar; o observador só lê, e as permissões são conferidas também nas APIs.
   - **Na ficha:** a lesão entra com os efeitos (Perna quebrada: −4 MOVE, mínimo 1) e o texto da wiki, com o paliativo e o tratamento.
   - **Mortalmente ferido:** quem já está com HP abaixo de 1 ganha uma lesão a cada acerto.
   - **Correção rápida e tratamento** (ciclo 77; a wiki, p. 128 e 223), na aba Combate e na ficha da lesão: quem trata (o token selecionado de quem clica, o personagem dele ou, na correção, o próprio ferido) escolhe a perícia e rola TECH + a perícia + 1d10, que precisa superar a DV da lesão (Primeiros Socorros ou Paramédico; no tratamento, Paramédico ou a Cirurgia do Medtech). A correção rápida tira o efeito até o fim do dia (a lesão fica "CORRIGIDA", e o "Voltou" liga o efeito de novo; o sistema não tem relógio) e, na lesão sem tratamento, resolve de vez; o tratamento tira a lesão e não pode ser em si mesmo. O cartão "TRATAMENTO" diz quem tratou, o total e a DV.
@@ -324,7 +334,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   se edita. Entram as penalidades de todas as ações (o ferimento e as lesões), e a Reputação de covarde conta negativa. O
   cartão lembra a regra da wiki: no empate, nada acontece; quem perde recua ou fica com −2 nas ações contra o outro.
 - **Death Save:** 1d10 + penalidades contra BODY.
-  - **Penalidades:** a de base vem das lesões; a outra sobe 1 a cada sucesso e se zera na ficha quando o personagem estabiliza.
+  - **Penalidades:** a de base vem das lesões que não estão corrigidas; a outra sobe 1 a cada sucesso e se zera na ficha quando o personagem estabiliza.
   - **Quando:** no combate, no começo do turno de quem está mortalmente ferido. O jogador rola no computador dele.
   - **Falhou:** morto, com o status e o combatente derrotado.
 - **Consciência de Combate do Solo**, pelos pontos de cada habilidade da Role, como a wiki descreve:
@@ -525,6 +535,9 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - "Usar" a droga: o Black Lace (a dose, o primário, os 7 de Humanidade, o teste de 18 contra DV17 que os devolve) e o Boost (+2 INT; o teste de 15 contra DV17 vicia: −2 INT e a marca);
   - a correção rápida e o tratamento da Perna quebrada por um Medtech de teste: a correção (14 contra DV13) tira o −4 de MOVE até o "Voltou"; o tratamento empatado (15 contra DV15) falha, e o de 16 tira a lesão;
   - o tiro com crítico, ablação e Lesão Crítica, e o Desfazer;
+  - lesões fora do ataque (C19): rolagem nas duas fichas sem alterar HP, cancelamento, repetição e tabela esgotada,
+    paliativo cervical, Cybertecnologia, efeitos anteriores, token solto, permissões, concorrência, criação recusada e
+    DV alterada durante a janela ou a rolagem; escolha do Monowire preservada quando a criação é recusada, permitindo tentar novamente;
   - o dano rolado à parte pelos botões do cartão: "Aplicar dano" no alvo marcado (com a armadura, e o Desfazer) e, no crítico, os +5 sem a lesão e "Rolar a lesão" uma vez por alvo;
   - "Rolar iniciativa" na aba Combate: sem combate, o do mestre cria um, põe o token na fila e rola; de novo no mesmo combate, o aviso;
   - "Agarrar" no Capanga (o empate é dele; vencendo, os dois com −2 e a ficha mostra; "Soltar" tira as duas marcas) e no Alvo do jogador, pela janela de reação dele (só "Resistir", com a conta da Briga e sem o total, que aparece depois);

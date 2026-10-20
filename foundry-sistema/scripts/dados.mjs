@@ -8,6 +8,7 @@ import * as regras from './regras.mjs';
 import { protecoesDoVeiculo } from './regras-veiculos.mjs';
 import { scannerPreferido, tipoDeScanner } from './regras-inventario.mjs';
 import { armaduraDoLocal } from './regras-armadura.mjs';
+import { penalidadeDeDeathSave } from './tratamento.mjs';
 
 const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
@@ -146,7 +147,7 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     this.penalidade = regras.penalidadeDoFerimento(this.ferimento, this.bonus.supressaoDeDor);
     // Death Save: a penalidade de base vem das lesões que a aumentam; a outra sobe a cada sucesso.
     const lesoes = this.parent.items.filter(item => item.type === 'lesao');
-    this.deathSave.base = lesoes.filter(item => item.system.aumentaDeathSave).length;
+    this.deathSave.base = penalidadeDeDeathSave(lesoes);
     this.deathSave.body = a.body.valor;
     // Sem a perna, não esquiva (Perna Desmembrada).
     this.semPerna = lesoes.some(item => item.getFlag('cpr-fieldbook', 'catalogo') === 'core_critical-injuries-body:dismembered-leg' || item.name === 'Dismembered Leg');

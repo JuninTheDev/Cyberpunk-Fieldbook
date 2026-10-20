@@ -130,6 +130,337 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    // CORE 0.92.4, CPRActorSheet._rollCriticalInjury: rolar a tabela à mão não altera HP.
+    // Wiki, p. 187–188 e 223: corpo/cabeça, repetir lesão já existente, paliativo e tratamento pela DV.
+    await r.passo('lesões (C19): personagem e capanga rolam corpo e cabeça pela ficha, criam os efeitos e o cartão sem perder HP; fechar a escolha não rola nem cria', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async f => { for (let i=0;i<80&&!f();i++) await new Promise(r=>setTimeout(r,100)); return Boolean(f()); };
+        const random = CONFIG.Dice.randomUniform, mensagens = game.messages.map(m=>m.id), atores = [], resultados = [];
+        let fila = [], dados = 0;
+        CONFIG.Dice.randomUniform = () => { dados++; const p=fila.shift()??[3,6]; return 1-(p[0]-.5)/p[1]; };
+        const dialogo = () => document.querySelector('.application.dialog.rolar-lesao');
+        try {
+          for (const tipo of ['personagem','capanga']) {
+            const ator = await Actor.implementation.create({ name: 'C19 Manual '+tipo, type: tipo, system: { atributos: { move: { valor: 5 }, body: { valor: 5 }, will: { valor: 5 } }, hp: { value: 35 } } }); atores.push(ator);
+            await ator.sheet.render({ force: true }); if(tipo==='personagem') ator.sheet.changeTab('combate','primary');
+            const painel = () => ator.sheet.element?.querySelector(tipo==='personagem'?'.tab.combate .lesoes':'.lesoes');
+            const botao = () => painel()?.querySelector('[data-action="rolarLesao"]');
+            await esperar(botao);
+            botao().click(); await esperar(dialogo);
+            const locais = [...dialogo().querySelectorAll('select[name="local"] option')].map(o=>o.value);
+            dialogo().querySelector('.window-header [data-action="close"]').click(); await esperar(()=>!dialogo());
+            const cancelou = ator.items.size===0 && dados===resultados.length*4 && game.messages.filter(m=>!mensagens.includes(m.id)&&m.getFlag('${S}','lesao')).length===resultados.length*2;
+            const rolar = async (local, lados, id) => {
+              fila=lados.map(n=>[n,6]); botao().click(); await esperar(dialogo);
+              dialogo().querySelector('select[name="local"]').value=local; dialogo().querySelector('button[data-action="ok"]').click();
+              await esperar(()=>!dialogo() && ator.items.some(i=>i.getFlag('${S}','catalogo')===id) && game.messages.some(m=>m.speaker.actor===ator.id&&m.getFlag('${S}','lesao')?.id===id));
+              const item=ator.items.find(i=>i.getFlag('${S}','catalogo')===id), m=game.messages.find(m=>m.speaker.actor===ator.id&&m.getFlag('${S}','lesao')?.id===id);
+              return { id:item?.getFlag('${S}','catalogo'), local:item?.system.local, efeitos:item?.effects.size, formula:m?.rolls[0]?.formula, total:m?.rolls[0]?.total, cartao:m?.content.includes(item?.name), hp:ator.system.hp.value };
+            };
+            const corpo=await rolar('corpo',[4,4],'core_critical-injuries-body:broken-leg');
+            const move=ator.system.atributos.move.valor;
+            const cabeca=await rolar('cabeca',[2,2],'core_critical-injuries-head:damaged-eye');
+            resultados.push({tipo,locais,cancelou,corpo,cabeca,move,distancia:ator.system.bonus.distancia, controles:Boolean(painel()?.querySelector('[data-action="corrigirLesao"]')&&painel()?.querySelector('[data-action="tratarLesao"]'))});
+            await ator.sheet.close();
+          }
+          return {resultados,dados};
+        } finally {
+          CONFIG.Dice.randomUniform=random; dialogo()?.querySelector('.window-header [data-action="close"]')?.click();
+          for(const ator of atores){await ator.sheet.close();await ator.delete();}
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.includes(m.id)).map(m=>m.id));
+        }
+      })()`);
+      return [info.resultados.length===2 && info.dados===8 && info.resultados.every(v=>v.cancelou&&v.locais.join()==='corpo,cabeca'&&v.move===1&&v.distancia===-2&&v.controles
+        &&v.corpo.id==='core_critical-injuries-body:broken-leg'&&v.corpo.local==='corpo'&&v.corpo.efeitos===1&&v.corpo.total===8&&v.corpo.formula==='2d6'&&v.corpo.cartao&&v.corpo.hp===35
+        &&v.cabeca.id==='core_critical-injuries-head:damaged-eye'&&v.cabeca.local==='cabeca'&&v.cabeca.efeitos===2&&v.cabeca.total===4&&v.cabeca.formula==='2d6'&&v.cabeca.cartao&&v.cabeca.hp===35), JSON.stringify(info)];
+    });
+
+    await r.passo('lesões (C19): a repetida é rolada de novo mesmo após 40 tentativas; a exclusão e o ID forçado são preservados; a tabela esgotada avisa sem rolar, criar ou anunciar outra lesão', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat=await game.system.api.wiki.carregarCatalogo(), api=game.system.api.lesoes;
+        const {TABELAS_LESAO}=await import('/systems/${S}/scripts/gerado.mjs');
+        const ator=await Actor.implementation.create({name:'C19 Tabela',type:'personagem',system:{hp:{value:35}},items:[foundry.utils.deepClone(cat['core_critical-injuries-body:broken-leg'])]});
+        const random=CONFIG.Dice.randomUniform, mensagens=game.messages.map(m=>m.id), avisos=[]; let fila=[],dados=0;
+        CONFIG.Dice.randomUniform=()=>{dados++;const n=fila.shift()??4;return 1-(n-.5)/6;};
+        ui.notifications.warn=m=>avisos.push(String(m));
+        try {
+          fila=[...Array(82).fill(4),3,3]; const nova=await api.lesaoCritica(ator);
+          const repetiu={id:nova?.id,total:nova?.roll?.total,dados,itens:ator.items.size,cartoes:game.messages.size-mensagens.length};
+          const antes=dados; fila=[4,4,2,2]; const excluida=await api.lesaoCritica(ator,{cabeca:true,excluir:['core_critical-injuries-head:whiplash']});
+          const exclusao={id:excluida?.id,dados:dados-antes};
+          const forcada=await api.lesaoCritica(ator,{id:'core_critical-injuries-body:broken-leg',falar:false});
+          const semFicha=await api.lesaoCritica(ator,{id:'core_critical-injuries-body:dismembered-leg',naFicha:false,falar:false});
+          const ids=[...new Set(TABELAS_LESAO.corpo.map(f=>f[2]))];
+          for(const id of ids)if(!ator.items.some(i=>i.getFlag('${S}','catalogo')===id))await ator.createEmbeddedDocuments('Item',[foundry.utils.deepClone(cat[id])]);
+          const antesFim={dados,itens:ator.items.size,mensagens:game.messages.size};
+          const fim=await api.lesaoCritica(ator);
+          return {repetiu,exclusao,forcada:forcada?.id==='core_critical-injuries-body:broken-leg'&&!forcada.item,semFicha:semFicha?.id==='core_critical-injuries-body:dismembered-leg'&&!semFicha.item,
+            esgotada:fim===null&&dados===antesFim.dados&&ator.items.size===antesFim.itens&&game.messages.size===antesFim.mensagens,avisos,hp:ator.system.hp.value};
+        } finally {delete ui.notifications.warn;CONFIG.Dice.randomUniform=random;await ator.delete();await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.includes(m.id)).map(m=>m.id));}
+      })()`);
+      return [info.repetiu.id==='core_critical-injuries-body:broken-arm'&&info.repetiu.total===6&&info.repetiu.dados===84&&info.repetiu.itens===2&&info.repetiu.cartoes===1
+        &&info.exclusao.id==='core_critical-injuries-head:damaged-eye'&&info.exclusao.dados===4&&info.forcada&&info.semFicha&&info.esgotada&&info.avisos.length===1&&/não há lesão disponível/.test(info.avisos[0])&&info.hp===35,JSON.stringify(info)];
+    });
+
+    await r.passo('lesões (C19): no capanga de token solto, a correção suspende o Death Save e só os efeitos ativos; Voltou preserva efeitos desligados; Cybertecnologia usa a DV escolhida, empate falha e tratamento de corrigida cura', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar=async f=>{for(let i=0;i<100&&!f();i++)await new Promise(r=>setTimeout(r,100));return Boolean(f());};
+        const cat=await game.system.api.wiki.carregarCatalogo(), mensagens=game.messages.map(m=>m.id), anterior=canvas.scene;
+        const random=CONFIG.Dice.randomUniform; CONFIG.Dice.randomUniform=()=>1-(2-.5)/10;
+        let base,medico,cena,ferido;
+        const dialogo=()=>document.querySelector('.application.dialog.tratar-lesao');
+        try {
+          const perna=foundry.utils.deepClone(cat['core_critical-injuries-body:broken-leg']);
+          perna.effects.push({name:'C19 Desligado',type:'base',disabled:true,system:{changes:[]}}, {name:'C19 Ativo extra',type:'base',disabled:false,system:{changes:[]}});
+          base=await Actor.implementation.create({name:'C19 Modelo',type:'capanga',system:{atributos:{tech:{valor:8},move:{valor:5}},pericias:{paramedic:{nivel:4}}},items:[perna,foundry.utils.deepClone(cat['core_critical-injuries-head:whiplash'])]});
+          medico=await Actor.implementation.create({name:'C19 Cybertech',type:'personagem',system:{atributos:{tech:{valor:8}},pericias:{cybertech:{nivel:5},paramedic:{nivel:0}}}});
+          cena=await Scene.implementation.create({name:'C19 Tratamento',active:false,width:1600,height:1200}); await cena.activate();
+          await esperar(()=>canvas.ready&&canvas.scene?.id===cena.id);
+          const tokens=await cena.createEmbeddedDocuments('Token',[(await base.getTokenDocument({x:300,y:300})).toObject(),(await medico.getTokenDocument({x:600,y:300})).toObject()]);
+          await esperar(()=>tokens.every(t=>canvas.tokens.get(t.id)));
+          ferido=tokens[0].actor; canvas.tokens.get(tokens[0].id).control({releaseOthers:true});canvas.tokens.get(tokens[1].id).control({releaseOthers:false});
+          await ferido.sheet.render({force:true});
+          const painel=()=>ferido.sheet.element?.querySelector('.lesoes'), lesao=id=>ferido.items.find(i=>i.getFlag('${S}','catalogo')===id);
+          const cervical=lesao('core_critical-injuries-head:whiplash'), quebrada=lesao('core_critical-injuries-body:broken-leg');
+          const botao=(id,acao)=>painel()?.querySelector('[data-item-id="'+id+'"] [data-action="'+acao+'"]');
+          const fazer=async(item,acao,opcao=0,cibernetica=false)=>{
+            await esperar(()=>botao(item.id,acao)); const antes=game.messages.map(m=>m.id);
+            botao(item.id,acao).click(); await esperar(dialogo);
+            const opcoes=[...dialogo().querySelectorAll('[name="opcao"] option')].map(o=>o.textContent), quem=[...dialogo().querySelectorAll('[name="quem"] option')].map(o=>o.value);
+            dialogo().querySelector('[name="quem"]').value=acao==='corrigirLesao'?ferido.uuid:medico.uuid;
+            dialogo().querySelector('[name="opcao"]').value=String(opcao); dialogo().querySelector('[name="cibernetica"]').checked=cibernetica;
+            dialogo().querySelector('button[data-action="ok"]').click();
+            await esperar(()=>!dialogo()&&game.messages.some(m=>!antes.includes(m.id)&&m.getFlag('${S}','tratamento')));
+            const m=game.messages.find(m=>!antes.includes(m.id)&&m.getFlag('${S}','tratamento'));
+            return {...m?.getFlag('${S}','tratamento'),opcoes,quem,texto:m?.content};
+          };
+          const antes={base:ferido.system.deathSave.base,move:ferido.system.atributos.move.valor};
+          const correcao=await fazer(cervical,'corrigirLesao');
+          const suspensa={base:ferido.system.deathSave.base,regra:cervical.system.aumentaDeathSave,marca:Boolean(cervical.getFlag('${S}','corrigida'))};
+          const {tratarLesao}=await import('/systems/${S}/scripts/tratamento.mjs'), mensagensAntes=game.messages.size;
+          const repetir=tratarLesao(cervical,'correcao');await new Promise(r=>setTimeout(r,200));const abriu=Boolean(dialogo());if(abriu)dialogo().querySelector('.window-header [data-action="close"]').click();
+          const recusaCorrecao=await repetir===null&&!abriu&&game.messages.size===mensagensAntes;await esperar(()=>!dialogo());
+          await esperar(()=>botao(cervical.id,'voltouLesao'));botao(cervical.id,'voltouLesao').click();await esperar(()=>!cervical.getFlag('${S}','corrigida'));
+          const voltou=ferido.system.deathSave.base;
+          await fazer(cervical,'corrigirLesao'); const definitiva=await fazer(cervical,'tratarLesao',1,true);
+          const cervicalCurada=!ferido.items.has(cervical.id)&&ferido.system.deathSave.base===0;
+          const efeitosAntes=quebrada.effects.filter(e=>e.active).map(e=>e.id), desligado=quebrada.effects.getName('C19 Desligado').id;
+          await fazer(quebrada,'corrigirLesao');
+          const paliativo={move:ferido.system.atributos.move.valor,ids:quebrada.getFlag('${S}','corrigida')?.efeitos,desligados:quebrada.effects.every(e=>e.disabled)};
+          await quebrada.deleteEmbeddedDocuments('ActiveEffect',[quebrada.effects.getName('C19 Ativo extra').id]);
+          const [novo]=await quebrada.createEmbeddedDocuments('ActiveEffect',[{name:'C19 Novo desligado',type:'base',disabled:true,system:{changes:[]}}]);
+          await esperar(()=>botao(quebrada.id,'voltouLesao'));botao(quebrada.id,'voltouLesao').click();await esperar(()=>!quebrada.getFlag('${S}','corrigida'));
+          const retorno={move:ferido.system.atributos.move.valor,principal:quebrada.effects.get(efeitosAntes[0])?.disabled,desligado:quebrada.effects.get(desligado).disabled,novo:quebrada.effects.get(novo.id).disabled};
+          const empate=await fazer(quebrada,'tratarLesao',0,true), permaneceu=ferido.items.has(quebrada.id);
+          const tratou=await fazer(quebrada,'tratarLesao',1,true);
+          return {antes,correcao,suspensa,recusaCorrecao,voltou,definitiva,cervicalCurada,paliativo,efeitosAntes,retorno,empate,permaneceu,tratou,curada:!ferido.items.has(quebrada.id)&&ferido.system.atributos.move.valor===5,
+            modelo:{move:base.system.atributos.move.valor,death:base.system.deathSave.base,lesoes:base.items.filter(i=>i.type==='lesao').length,corrigida:base.items.some(i=>i.getFlag('${S}','corrigida'))},solto:!tokens[0].actorLink};
+        } finally {
+          CONFIG.Dice.randomUniform=random;dialogo()?.querySelector('.window-header [data-action="close"]')?.click();await ferido?.sheet.close();
+          if(anterior&&game.scenes.has(anterior.id))await anterior.activate();await cena?.delete();await base?.delete();await medico?.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.includes(m.id)).map(m=>m.id));
+        }
+      })()`);
+      return [info.antes.base===1&&info.antes.move===1&&info.correcao.total===14&&info.correcao.dv===13&&info.correcao.resultado==='corrigida'
+        &&info.suspensa.base===0&&info.suspensa.regra&&info.suspensa.marca&&info.recusaCorrecao&&info.voltou===1&&info.cervicalCurada
+        &&info.definitiva.pericia==='cybertecnologia'&&info.definitiva.total===15&&info.definitiva.dv===13&&info.definitiva.resultado==='curada'
+        &&info.paliativo.move===5&&info.paliativo.desligados&&JSON.stringify(info.paliativo.ids)===JSON.stringify(info.efeitosAntes)
+        &&info.retorno.move===1&&!info.retorno.principal&&info.retorno.desligado&&info.retorno.novo
+        &&info.empate.total===15&&info.empate.dv===15&&info.empate.resultado==='falhou'&&info.permaneceu
+        &&info.tratou.pericia==='cybertecnologia'&&info.tratou.total===15&&info.tratou.dv===13&&info.tratou.resultado==='curada'&&/Cybertecnologia/.test(info.tratou.texto)
+        &&info.tratou.opcoes.join()==='Paramédico DV15,Cirurgia DV13'&&info.tratou.quem.length===1&&info.curada&&info.solto
+        &&info.modelo.move===1&&info.modelo.death===1&&info.modelo.lesoes===2&&!info.modelo.corrigida,JSON.stringify(info)];
+    });
+
+    await r.passo('lesões (C19): duas chamadas no mesmo ator criam uma só lesão; colisão externa e criação recusada não anunciam aplicação e liberam a fila; cancelar ou mudar a DV durante a janela não trata', async () => {
+      const info=await edge.evaluate(`(async()=>{
+        const esperar=async f=>{for(let i=0;i<80&&!f();i++)await new Promise(r=>setTimeout(r,100));return Boolean(f());};
+        const api=game.system.api.lesoes, cat=await game.system.api.wiki.carregarCatalogo(), {tratarLesao,voltouALesao}=await import('/systems/${S}/scripts/tratamento.mjs');
+        const ator=await Actor.implementation.create({name:'C19 Concorrente',type:'personagem',system:{hp:{value:35},atributos:{tech:{valor:8}},pericias:{paramedic:{nivel:4}}}}), mensagens=game.messages.map(m=>m.id),avisos=[];
+        const avaliar=Roll.prototype.evaluate,random=CONFIG.Dice.randomUniform;let gancho;
+        const dialogo=()=>document.querySelector('.application.dialog.tratar-lesao');ui.notifications.warn=m=>avisos.push(String(m));
+        try {
+          const id='core_critical-injuries-body:broken-leg';
+          const duas=await Promise.all([api.lesaoCritica(ator,{id,falar:false}),api.lesaoCritica(ator,{id,falar:false})]);
+          const fila={itens:ator.items.size,criados:duas.filter(r=>r.item).length,segunda:duas[1]?.item===null};
+          // Uma criação real ocorre enquanto o primeiro sorteio ainda aguarda a avaliação dos dados.
+          let entrou=false;CONFIG.Dice.randomUniform=()=>1-(3-.5)/6;
+          Roll.prototype.evaluate=async function(...args){const roll=await avaliar.apply(this,args);if(!entrou&&this.formula==='2d6'){entrou=true;await ator.createEmbeddedDocuments('Item',[foundry.utils.deepClone(cat['core_critical-injuries-body:broken-arm'])]);}return roll;};
+          const colisao=await api.lesaoCritica(ator,{falar:false});Roll.prototype.evaluate=avaliar;
+          const externos=ator.items.filter(i=>i.getFlag('${S}','catalogo')==='core_critical-injuries-body:broken-arm').length;
+          gancho=Hooks.on('preCreateItem',item=>item.parent?.id===ator.id&&item.getFlag('${S}','catalogo')==='core_critical-injuries-head:whiplash'?false:undefined);
+          const recusada=await api.lesaoCritica(ator,{id:'core_critical-injuries-head:whiplash'});Hooks.off('preCreateItem',gancho);gancho=null;
+          const recuperou=await api.lesaoCritica(ator,{id:'core_critical-injuries-head:whiplash',falar:false});
+          const tipoErrado=await api.lesaoCritica(ator,{id:'core_weapons:heavy-pistol',falar:false})===null;
+          const lesao=ator.items.find(i=>i.getFlag('${S}','catalogo')===id), antes=game.messages.size;
+          const pendente=tratarLesao(lesao,'correcao');await esperar(dialogo);
+          await lesao.update({'system.paliativo.paramedico':15});dialogo().querySelector('button[data-action="ok"]').click();const mudouDV=await pendente;await esperar(()=>!dialogo());
+          await lesao.update({'system.paliativo.paramedico':13});const cancelar=tratarLesao(lesao,'correcao');await esperar(dialogo);dialogo().querySelector('.window-header [data-action="close"]').click();const cancelou=await cancelar;await esperar(()=>!dialogo());
+          const invalida=await tratarLesao(lesao,'outro');
+          const semTratamento=!lesao.getFlag('${S}','corrigida')&&game.messages.size===antes;
+          let mudou=false;CONFIG.Dice.randomUniform=()=>1-(2-.5)/10;
+          Roll.prototype.evaluate=async function(...args){const roll=await avaliar.apply(this,args);if(!mudou){mudou=true;await lesao.update({'system.paliativo.paramedico':15});}return roll;};
+          const durante=tratarLesao(lesao,'correcao');await esperar(dialogo);dialogo().querySelector('button[data-action="ok"]').click();const duranteRolagem=await durante;await esperar(()=>!dialogo());Roll.prototype.evaluate=avaliar;
+          const revalidou=duranteRolagem===null&&!lesao.getFlag('${S}','corrigida')&&game.messages.size===antes+1;
+          const antiga=recuperou.item;await antiga.createEmbeddedDocuments('ActiveEffect',[{name:'C19 Legado',type:'base',disabled:true,system:{changes:[]}}]);await antiga.setFlag('${S}','corrigida',{por:'Legado'});await voltouALesao(antiga);
+          const legado=!antiga.getFlag('${S}','corrigida')&&antiga.effects.every(e=>!e.disabled)&&ator.system.deathSave.base===1;
+          return {fila,colisao:colisao===null,externos,recusada:recusada===null,recuperou:recuperou?.item?.type==='lesao',tipoErrado,mudouDV:mudouDV===null,cancelou:cancelou===null,invalida:invalida===null,
+            semTratamento,revalidou,legado,mensagens:game.messages.size-mensagens.length,avisos,hp:ator.system.hp.value};
+        } finally {if(gancho)Hooks.off('preCreateItem',gancho);Roll.prototype.evaluate=avaliar;CONFIG.Dice.randomUniform=random;delete ui.notifications.warn;dialogo()?.querySelector('.window-header [data-action="close"]')?.click();await ator.delete();await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.includes(m.id)).map(m=>m.id));}
+      })()`);
+      return [info.fila.itens===1&&info.fila.criados===1&&info.fila.segunda&&info.colisao&&info.externos===1&&info.recusada&&info.recuperou&&info.tipoErrado&&info.mudouDV&&info.cancelou&&info.invalida
+        &&info.semTratamento&&info.revalidou&&info.legado&&info.mensagens===1&&info.avisos.length===2&&/durante a rolagem/.test(info.avisos[0])&&/Não consegui acrescentar/.test(info.avisos[1])&&info.hp===35,JSON.stringify(info)];
+    });
+
+    await r.passo('lesões (C19): a escolha do Monowire fica disponível quando a criação é recusada; tentar novamente aplica uma lesão sem alterar HP', async () => {
+      const info=await edge.evaluate(`(async()=>{
+        const api=game.system.api.lesoes, mensagens=game.messages.map(m=>m.id), avisos=[];
+        const ator=await Actor.implementation.create({name:'C19 Escolha',type:'personagem',system:{hp:{value:35}}});
+        const random=CONFIG.Dice.randomUniform;let fila=[4,4,2,2],gancho;
+        CONFIG.Dice.randomUniform=()=>1-((fila.shift()??2)-.5)/6;ui.notifications.warn=m=>avisos.push(String(m));
+        try {
+          const opcoes=await api.escolhaDeLesao(ator,{atacante:'C19',arma:'Monowire'});
+          const cartao=game.messages.find(m=>m.getFlag('${S}','escolhaDeLesao')?.alvo===ator.uuid),id='core_critical-injuries-body:broken-leg';
+          const antes=opcoes.length===2&&opcoes.some(o=>o.id===id)&&ator.items.size===0&&game.messages.size===mensagens.length+1;
+          gancho=Hooks.on('preCreateItem',item=>item.parent?.id===ator.id?false:undefined);
+          const recusada=await api.escolherLesao(cartao,id);
+          const disponivel=recusada===null&&ator.items.size===0&&cartao.getFlag('${S}','escolhaDeLesao').escolhida===''&&game.messages.size===mensagens.length+1;
+          Hooks.off('preCreateItem',gancho);gancho=null;
+          const feita=await api.escolherLesao(cartao,id),escolhida=cartao.getFlag('${S}','escolhaDeLesao').escolhida;
+          const aplicada=feita?.item?.getFlag('${S}','catalogo')===id&&escolhida===feita.nome&&ator.items.size===1&&ator.system.atributos.move.valor===1;
+          const repetida=await api.escolherLesao(cartao,id);
+          return {antes,disponivel,aplicada,repetida:repetida===null&&ator.items.size===1,mensagens:game.messages.size-mensagens.length,avisos,hp:ator.system.hp.value,fila:fila.length};
+        }finally{if(gancho)Hooks.off('preCreateItem',gancho);CONFIG.Dice.randomUniform=random;delete ui.notifications.warn;await ator.delete();await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.includes(m.id)).map(m=>m.id));}
+      })()`);
+      return [info.antes&&info.disponivel&&info.aplicada&&info.repetida&&info.mensagens===2&&info.avisos.length===1&&/Não consegui acrescentar/.test(info.avisos[0])&&info.hp===35&&info.fila===0,JSON.stringify(info)];
+    });
+
+    await r.passo('lesões (C19): no navegador do jogador, o dono rola, corrige e usa Voltou; observador só lê e as APIs recusam lesão, paliativo, retorno e contêiner', async () => {
+      let cliente;
+      const preparo=await edge.evaluate(`(async()=>{
+        const cat=await game.system.api.wiki.carregarCatalogo(),atores=[];let usuario;
+        try {
+          usuario=await User.implementation.create({name:'Jogador C19',role:CONST.USER_ROLES.PLAYER});
+          const dono=await Actor.implementation.create({name:'C19 Dono',type:'personagem',ownership:{[usuario.id]:CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER},system:{hp:{value:35},atributos:{tech:{valor:8}},pericias:{paramedic:{nivel:4}}}});atores.push(dono);
+          const cervical=foundry.utils.deepClone(cat['core_critical-injuries-head:whiplash']);cervical.flags['${S}'].corrigida={por:'Teste',efeitos:[]};
+          const observado=await Actor.implementation.create({name:'C19 Observado',type:'personagem',ownership:{default:CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER},items:[cervical,foundry.utils.deepClone(cat['core_critical-injuries-body:broken-leg'])]});atores.push(observado);
+          const estoque=await Actor.implementation.create({name:'C19 Estoque',type:'conteiner',ownership:{default:CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER},system:{tipo:'personalizado',permissoes:{mudar:false}}});atores.push(estoque);
+          return {dono:dono.id,observado:observado.id,estoque:estoque.id,usuario:usuario.id,mensagens:game.messages.map(m=>m.id)};
+        }catch(erro){for(const ator of atores)await ator.delete();await usuario?.delete();throw erro;}
+      })()`);
+      try {
+        cliente=await abrirEdge({porta:9479,saida:path.join(servidores.raiz,'tests','.saida'),prefixo:'v14-c19-'});
+        await foundry14.capturarAvisos(cliente);await foundry14.entrarComo(cliente,mesa.url,'Jogador C19');
+        const info=await cliente.evaluate(`(async()=>{
+          const esperar=async f=>{for(let i=0;i<80&&!f();i++)await new Promise(r=>setTimeout(r,100));return Boolean(f());};
+          await esperar(()=>game.actors.get('${preparo.dono}')?.isOwner&&game.actors.get('${preparo.observado}'));
+          const dono=game.actors.get('${preparo.dono}'),observado=game.actors.get('${preparo.observado}'),estoque=game.actors.get('${preparo.estoque}');
+          const {tratarLesao,voltouALesao}=await import('/systems/${S}/scripts/tratamento.mjs');
+          const random=CONFIG.Dice.randomUniform;let fila=[[4,6],[4,6],[2,10]];
+          CONFIG.Dice.randomUniform=()=>{const p=fila.shift()??[2,10];return 1-(p[0]-.5)/p[1];};
+          try {
+            await dono.sheet.render({force:true});dono.sheet.changeTab('combate','primary');const painel=()=>dono.sheet.element?.querySelector('.tab.combate .lesoes');
+            await esperar(()=>painel()?.querySelector('[data-action="rolarLesao"]'));painel().querySelector('[data-action="rolarLesao"]').click();
+            const manual=()=>document.querySelector('.application.dialog.rolar-lesao');await esperar(manual);manual().querySelector('[name="local"]').value='cabeca';manual().querySelector('button[data-action="ok"]').click();
+            await esperar(()=>!manual()&&dono.items.some(i=>i.getFlag('${S}','catalogo')==='core_critical-injuries-head:whiplash')&&painel()?.querySelector('[data-action="corrigirLesao"]'));
+            const lesao=dono.items.find(i=>i.type==='lesao'),rolou={base:dono.system.deathSave.base,hp:dono.system.hp.value,id:lesao?.getFlag('${S}','catalogo')};
+            painel().querySelector('[data-action="corrigirLesao"]').click();const dialogo=()=>document.querySelector('.application.dialog.tratar-lesao');await esperar(dialogo);dialogo().querySelector('button[data-action="ok"]').click();
+            await esperar(()=>!dialogo()&&lesao.getFlag('${S}','corrigida')&&painel()?.querySelector('[data-action="voltouLesao"]'));
+            const corrigiu=dono.system.deathSave.base===0;painel().querySelector('[data-action="voltouLesao"]').click();await esperar(()=>!lesao.getFlag('${S}','corrigida'));const voltou=dono.system.deathSave.base;
+            const recusa=await game.system.api.lesoes.lesaoCritica(observado,{id:'core_critical-injuries-body:broken-leg',falar:false})===null;
+            const protegida=await game.system.api.lesoes.lesaoCritica(estoque,{id:'core_critical-injuries-body:broken-leg',falar:false})===null;
+            const perna=observado.items.find(i=>i.system.local==='corpo'),cervical=observado.items.find(i=>i.system.local==='cabeca');
+            const pedido=tratarLesao(perna,'correcao');await new Promise(r=>setTimeout(r,150));const abriu=Boolean(dialogo());if(abriu)dialogo().querySelector('.window-header [data-action="close"]').click();const semTratar=await pedido===null&&!abriu;
+            const semVoltou=await voltouALesao(cervical)===null;
+            await observado.sheet.render({force:true});observado.sheet.changeTab('combate','primary');await esperar(()=>observado.sheet.element?.querySelector('.tab.combate .lesoes'));
+            const botoes=observado.sheet.element.querySelector('.tab.combate .lesoes').querySelectorAll('[data-action="rolarLesao"],[data-action="corrigirLesao"],[data-action="tratarLesao"],[data-action="voltouLesao"],[data-action="apagarItem"]').length;
+            return {gm:game.user.isGM,rolou,corrigiu,voltou,recusa,protegida,semTratar,semVoltou,botoes,observado:observado.items.size,marca:Boolean(cervical.getFlag('${S}','corrigida')),estoque:estoque.items.size,fila:fila.length};
+          }finally{CONFIG.Dice.randomUniform=random;}
+        })()`);
+        const avisos=await foundry14.avisosDoSistema(cliente),erros=cliente.erros.slice();
+        return [!info.gm&&info.rolou.base===1&&info.rolou.hp===35&&info.rolou.id==='core_critical-injuries-head:whiplash'&&info.corrigiu&&info.voltou===1&&info.recusa&&info.protegida&&info.semTratar&&info.semVoltou&&info.botoes===0&&info.observado===2&&info.marca&&info.estoque===0&&info.fila===0&&!avisos.length&&!erros.length,JSON.stringify({...info,avisos,erros})];
+      }finally{
+        await cliente?.fechar();await edge.evaluate(`(async()=>{for(const id of ['${preparo.dono}','${preparo.observado}','${preparo.estoque}'])await game.actors.get(id)?.delete();await game.users.get('${preparo.usuario}')?.delete();await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!${JSON.stringify(preparo.mensagens)}.includes(m.id)).map(m=>m.id));return true;})()`);
+      }
+    });
+
+    await r.passo('lesões (C19): correções simultâneas não apagam a lista de efeitos enquanto a marca aguarda gravação; Voltou restaura os efeitos originais e cancelar libera uma nova tentativa', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async f => { for (let i = 0; i < 80 && !f(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(f()); };
+        const { tratarLesao, voltouALesao } = await import('/systems/${S}/scripts/tratamento.mjs');
+        const { DialogV2 } = foundry.applications.api, prompt = DialogV2.prompt;
+        const random = CONFIG.Dice.randomUniform, mensagens = game.messages.map(m => m.id);
+        let ator, lesao, primeira, segunda, cancelamento, posterior, liberar;
+        let aguardandoMarca = false, dados = 0, janelas = 0;
+        const aguardarMarca = new Promise(resolve => { liberar = resolve; });
+        const dialogo = () => document.querySelector('.application.dialog.tratar-lesao');
+        DialogV2.prompt = function(opcoes) {
+          if (opcoes.classes?.includes('tratar-lesao')) janelas++;
+          return prompt.call(this, opcoes);
+        };
+        CONFIG.Dice.randomUniform = () => { dados++; return 1 - (2 - .5) / 10; };
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const perna = foundry.utils.deepClone(cat['core_critical-injuries-body:broken-leg']);
+          perna.effects.push({ name: 'C19 Preservar desligado', type: 'base', disabled: true, system: { changes: [] } });
+          ator = await Actor.implementation.create({ name: 'C19 Paliativos simultâneos', type: 'personagem', system: { atributos: { tech: { valor: 8 }, move: { valor: 5 } }, pericias: { paramedic: { nivel: 4 } } }, items: [perna] });
+          lesao = ator.items.find(i => i.type === 'lesao');
+          const ativos = lesao.effects.filter(e => e.active).map(e => e.id), desligado = lesao.effects.getName('C19 Preservar desligado').id;
+          const gravarMarca = lesao.setFlag;
+          lesao.setFlag = async function(escopo, chave, valor) {
+            if (escopo === '${S}' && chave === 'corrigida' && !aguardandoMarca) { aguardandoMarca = true; await aguardarMarca; }
+            return gravarMarca.call(this, escopo, chave, valor);
+          };
+          const confirmar = async () => {
+            if (!await esperar(dialogo)) throw new Error('A janela de correção não abriu.');
+            dialogo().querySelector('[name="quem"]').value = ator.uuid;
+            dialogo().querySelector('button[data-action="ok"]').click();
+          };
+          primeira = tratarLesao(lesao, 'correcao'); await confirmar();
+          const segurou = await esperar(() => aguardandoMarca && !dialogo());
+          const intervalo = { segurou, semMarca: !lesao.getFlag('${S}', 'corrigida'), desligados: lesao.effects.every(e => e.disabled), move: ator.system.atributos.move.valor };
+          const antesSegunda = { dados, janelas }; let terminouSegunda = false;
+          segunda = tratarLesao(lesao, 'correcao').then(resultado => { terminouSegunda = true; return resultado; });
+          await esperar(() => terminouSegunda || dialogo());
+          const reabriu = Boolean(dialogo());
+          // Sem a guarda, a segunda janela abre: feche-a para a mutação falhar sem deixar promessa pendente.
+          if (reabriu) dialogo().querySelector('.window-header [data-action="close"]').click();
+          const recusou = await segunda === null;
+          await esperar(() => !dialogo());
+          const simultanea = { recusou, reabriu, mesmasJanelas: janelas === antesSegunda.janelas, mesmosDados: dados === antesSegunda.dados };
+          liberar(); const resultado = await primeira;
+          const ids = lesao.getFlag('${S}', 'corrigida')?.efeitos;
+          await voltouALesao(lesao);
+          const voltou = { move: ator.system.atributos.move.valor, semMarca: !lesao.getFlag('${S}', 'corrigida'), ativos: ativos.every(id => !lesao.effects.get(id)?.disabled), desligado: lesao.effects.get(desligado).disabled };
+          cancelamento = tratarLesao(lesao, 'correcao');
+          if (!await esperar(dialogo)) throw new Error('A janela depois do retorno não abriu.');
+          const antesCancelar = dados;
+          dialogo().querySelector('.window-header [data-action="close"]').click();
+          const cancelou = await cancelamento === null;
+          await esperar(() => !dialogo());
+          const cancelarNaoRolou = dados === antesCancelar;
+          posterior = tratarLesao(lesao, 'correcao'); await confirmar();
+          const repetiu = await posterior;
+          return { intervalo, simultanea, resultado, ids, ativos, voltou, cancelou, cancelarNaoRolou, repetiu,
+            depois: lesao.getFlag('${S}', 'corrigida')?.efeitos, cartoes: game.messages.filter(m => !mensagens.includes(m.id) && m.getFlag('${S}', 'tratamento')).length };
+        } finally {
+          liberar();
+          for (const el of document.querySelectorAll('.application.dialog.tratar-lesao')) el.querySelector('.window-header [data-action="close"]')?.click();
+          await Promise.allSettled([primeira, segunda, cancelamento, posterior].filter(Boolean));
+          if (lesao) delete lesao.setFlag;
+          DialogV2.prompt = prompt; CONFIG.Dice.randomUniform = random;
+          await ator?.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.includes(m.id)).map(m => m.id));
+        }
+      })()`);
+      return [info.intervalo.segurou && info.intervalo.semMarca && info.intervalo.desligados && info.intervalo.move === 5
+        && info.simultanea.recusou && !info.simultanea.reabriu && info.simultanea.mesmasJanelas && info.simultanea.mesmosDados
+        && info.resultado === 'corrigida' && info.ativos.length === 1 && JSON.stringify(info.ids) === JSON.stringify(info.ativos)
+        && info.voltou.move === 1 && info.voltou.semMarca && info.voltou.ativos && info.voltou.desligado
+        && info.cancelou && info.cancelarNaoRolou && info.repetiu === 'corrigida' && JSON.stringify(info.depois) === JSON.stringify(info.ativos)
+        && info.cartoes === 2, JSON.stringify(info)];
+    });
+
     await r.passo('armadura (C18): o maior SP atual do local vale sem soma; o dano abla todas as camadas e o Desfazer restaura cada diferença, inclusive uma camada quase gasta e um cartão antigo', async () => {
       const info = await edge.evaluate(`(async () => {
         let ator;

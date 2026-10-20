@@ -16,6 +16,7 @@ import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
+import { lesaoCritica } from './lesoes.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { alcanceDoJackIn, bonusDeRole, custoMensalDeMoradia, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
@@ -138,6 +139,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       instalarOpcao: FichaPersonagem.#instalarOpcao,
       editarItem: FichaPersonagem.#editarItem,
       apagarItem: FichaPersonagem.#apagarItem,
+      rolarLesao: FichaPersonagem.#rolarLesao,
       corrigirLesao: FichaPersonagem.#corrigirLesao,
       tratarLesao: FichaPersonagem.#tratarLesao,
       voltouLesao: FichaPersonagem.#voltouLesao
@@ -147,8 +149,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static PARTS = {
     topo: parte('topo'),
     tabs: { template: 'templates/generic/tab-navigation.hbs' },
-    pericias: { ...aba('pericias'), templates: [bloco('geral')] },
-    combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao'), bloco('artes-marciais'), bloco('armadura')] },
+    pericias: { ...aba('pericias'), templates: [bloco('geral'), bloco('lesoes')] },
+    combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao'), bloco('artes-marciais'), bloco('armadura'), bloco('lesoes')] },
     equipamento: aba('equipamento'),
     cyberware: aba('cyberware'),
     role: aba('role'),
@@ -687,9 +689,20 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #editarItem(evento, alvo) { return this.#item(alvo)?.sheet.render(true); }
   // A correção rápida, o tratamento e o "Voltou" da lesão (tratamento.mjs, pela wiki).
-  static #corrigirLesao(evento, alvo) { const item = this.#item(alvo); return item && tratarLesao(item, 'correcao'); }
-  static #tratarLesao(evento, alvo) { const item = this.#item(alvo); return item && tratarLesao(item, 'tratamento'); }
-  static #voltouLesao(evento, alvo) { const item = this.#item(alvo); return item && voltouALesao(item); }
+  // CORE: escolher a tabela e rolar a lesão à mão cria o item e o cartão, sem alterar o HP.
+  static async #rolarLesao() {
+    if (!this.isEditable) return null;
+    const local = await DialogV2.prompt({
+      window: { title: `Lesão crítica: ${this.actor.name}` }, classes: [SISTEMA, 'rolar-lesao'], rejectClose: false,
+      content: '<label>Local da lesão <select name="local"><option value="corpo">Corpo</option><option value="cabeca">Cabeça</option></select></label>',
+      ok: { label: 'Rolar 2d6', callback: (evento, botao) => botao.form.elements.local.value }
+    });
+    if (!this.isEditable || !['corpo', 'cabeca'].includes(local)) return null;
+    return lesaoCritica(this.actor, { cabeca: local === 'cabeca' });
+  }
+  static #corrigirLesao(evento, alvo) { const item = this.#item(alvo); return this.isEditable && item ? tratarLesao(item, 'correcao') : null; }
+  static #tratarLesao(evento, alvo) { const item = this.#item(alvo); return this.isEditable && item ? tratarLesao(item, 'tratamento') : null; }
+  static #voltouLesao(evento, alvo) { const item = this.#item(alvo); return this.isEditable && item ? voltouALesao(item) : null; }
   static async #apagarItem(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return;
