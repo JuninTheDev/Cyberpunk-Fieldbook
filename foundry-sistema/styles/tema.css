@@ -55,6 +55,9 @@
 }
 .cpr-fieldbook.ficha-personagem .estado-caixa.estado-leve { color: var(--cp-amarelo); }
 .cpr-fieldbook.ficha-personagem .estado-caixa:is(.estado-grave, .estado-mortal) { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
+/* O estado mental (o C21): amarelo no limítrofe e no dissociativo, vermelho na ciberpsicose. */
+.cpr-fieldbook.ficha-personagem .estado-mental:is(.estado-mental-limitrofe, .estado-mental-dissociativo) { color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .estado-mental:is(.estado-mental-ciberpsicose, .estado-mental-extrema) { color: var(--cp-vermelho); }
 .cpr-fieldbook.ficha-personagem .dica { margin: 10px 0 0; font-family: var(--cp-dados); font-size: 12px; line-height: 1.5; color: var(--cp-fraco); }
 .cpr-fieldbook.ficha-personagem .vazio { color: var(--cp-fraco); font-style: italic; }
 /* O botão do modelo: contorno amarelo, cheio ao passar o mouse. */

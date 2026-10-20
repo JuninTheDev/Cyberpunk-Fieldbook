@@ -23,6 +23,7 @@ import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 import { alternarItemFavorito, alternarPericiaFavorita, arrastoDaPericia, FLAG_FAVORITAS, FLAG_FAVORITO, listaCurta, perguntarLocalMirado } from './macros.mjs';
+import { ESTADOS_MENTAIS, estadoMental, fazerTerapia, TRACOS_DE_HARE } from './terapia.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -108,6 +109,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       tirarPericia: FichaPersonagem.#tirarPericia,
       favoritarPericia: FichaPersonagem.#favoritarPericia,
       favoritarItem: FichaPersonagem.#favoritarItem,
+      terapia: FichaPersonagem.#terapia,
       atacar: FichaPersonagem.#atacar,
       mirar: FichaPersonagem.#mirar,
       deathSave: FichaPersonagem.#deathSave,
@@ -353,6 +355,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
       locaisArmadura: ['cabeca', 'corpo'].map(local => ({ local, rotulo: local === 'cabeca' ? 'CABEÇA' : 'CORPO',
         ...s.armadura[local], nome: ator.items.get(s.armadura[local].item)?.name ?? 'Sem armadura' })),
+      // O estado mental pela EMP de agora (a ciberpsicose da wiki; terapia.mjs), com os traços de Hare na dica.
+      estadoMental: (chave => ({ chave, ...ESTADOS_MENTAIS[chave], tracos: ['dissociativo', 'ciberpsicose'].includes(chave) ? TRACOS_DE_HARE.join('; ') : '' }))(estadoMental(s.humanidade.value, s.atributos.emp.valor)),
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
       lesoes, favoritos,
       iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
@@ -569,6 +573,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   // As estrelas (macros.mjs): a perícia favorita e o item favorito.
   static #favoritarPericia(evento, alvo) { return alternarPericiaFavorita(this.actor, alvo.dataset.pericia); }
+  // A terapia (terapia.mjs, pela wiki): quem trata é o Medtech selecionado.
+  static #terapia() { return fazerTerapia(this.actor); }
   static #favoritarItem(evento, alvo) { const item = this.#item(alvo); return item && alternarItemFavorito(item); }
   static async #tirarPericia(evento, alvo) {
     const chave = alvo.dataset.pericia;

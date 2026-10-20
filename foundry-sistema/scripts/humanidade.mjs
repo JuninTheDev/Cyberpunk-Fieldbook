@@ -26,15 +26,15 @@ export async function rolarPerdaDeHumanidade(item) {
   });
 }
 
-// O "Aplicar" do cartão (só o mestre): a Humanidade atual do dono cai o total (não passa de 0), uma vez; o cartão diz o que
-// mudou e perde o botão.
+// O "Aplicar" do cartão (só o mestre): a Humanidade atual do dono cai o total, uma vez (abaixo de 0, a ciberpsicose extrema
+// da wiki; o C21); o cartão diz o que mudou e perde o botão.
 export async function aplicarPerdaDeHumanidade(mensagem) {
   const dados = mensagem.getFlag(SISTEMA, 'perdaDeHumanidade');
   if (!dados || dados.aplicado || !game.user.isGM) return null;
   const ator = await fromUuid(dados.atorUuid);
   if (!ator) { ui.notifications.warn(`${dados.ator} não existe mais.`); return null; }
   const antes = ator.system.humanidade.value;
-  const depois = Math.max(0, antes - dados.total);
+  const depois = antes - dados.total;
   await ator.update({ 'system.humanidade.value': depois });
   const aplicado = { ...dados, aplicado: { antes, depois } };
   return mensagem.update({ content: conteudo(aplicado, mensagem.rolls[0]), [`flags.${SISTEMA}.perdaDeHumanidade`]: aplicado });

@@ -13636,6 +13636,97 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('terapia e ciberpsicose (C21; a wiki, p. 229–232): a aba Cyberware mostra o estado mental pela EMP de agora; a Doutora (Medtech, Tecnologia Médica 4) faz a terapia padrão no Paciente pelo botão (TECH 6 + 4 + 8 = 18 contra DV15: 2d6 = 7, Humanidade 15 → 22) e falha a extrema (12 contra DV17: nada muda); a Humanidade que cai a 3 (EMP 0) avisa a ciberpsicose, e o cyberware instalado a leva abaixo de 0 (a extrema, com o aviso); a terapia de dependência tira o vício do Boost, e por um ano o teste contra ele falha sozinho; o Medtech não faz terapia em si mesmo', async () => {
+      await fixar(edge, []);
+      const info = await edge.evaluate(`(async () => {
+        const S = '${S}';
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const doutora = await Actor.implementation.create({ name: 'Doutora', type: 'personagem', system: { atributos: { tech: { valor: 6 }, body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 }, role: { nome: 'Medtech', rank: 4, habilidades: { 'Medical Tech (Pharmaceuticals)': 2, 'Medical Tech (Cryosystem Operation)': 2 } } } });
+        const paciente = await Actor.implementation.create({ name: 'Paciente', type: 'personagem', system: { atributos: { emp: { valor: 4 }, body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 }, humanidade: { value: 15 } } });
+        await paciente.createEmbeddedDocuments('Item', [pegar('core_drugs:boost'), pegar('core_cyberware:kerenzikov')]);
+        const [doc] = await canvas.scene.createEmbeddedDocuments('Token', [(await doutora.getTokenDocument({ x: 100, y: 300 })).toObject()]);
+        await __esperar(() => canvas.tokens.get(doc.id));
+        canvas.tokens.get(doc.id).control({ releaseOthers: true });
+        const r = {};
+        const estado = () => paciente.sheet.element?.querySelector('.tab.cyberware .estado-mental')?.textContent.trim();
+        paciente.sheet.render({ force: true });
+        await __esperar(() => estado());
+        r.estadoAntes = estado();
+        const janela = () => document.querySelector('.application.dialog.terapia:not(.minimizing)');
+        const ultima = chave => game.messages.contents.filter(m => m.getFlag(S, chave)).at(-1) ?? null;
+        const terapia = async (tipo, fila) => {
+          window.__fila = fila;
+          const antes = game.messages.size;
+          paciente.sheet.element.querySelector('.tab.cyberware [data-action="terapia"]').click();
+          await __esperar(() => janela()?.querySelector('[name="tipo"]'));
+          const j = janela();
+          const opcoes = { quem: [...j.querySelectorAll('[name="quem"] option')].map(o => o.textContent.trim()), tipos: [...j.querySelectorAll('[name="tipo"] option')].map(o => o.value) };
+          j.querySelector('[name="tipo"]').value = tipo;
+          j.querySelector('footer button[data-action="ok"]').click();
+          await __esperar(() => game.messages.contents.slice(antes).some(m => m.getFlag(S, 'terapia')));
+          const m = ultima('terapia');
+          return { ...opcoes, ...m.getFlag(S, 'terapia'), texto: m.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim(), humanidade: paciente.system.humanidade.value };
+        };
+        r.padrao = await terapia('padrao', [[8, 10], [3, 6], [4, 6]]);
+        r.estadoDepois = await __esperar(() => estado() === 'Transtorno dissociativo limítrofe') && estado();
+        r.extrema = await terapia('extrema', [[2, 10]]);
+        // A ciberpsicose: a Humanidade a 3 (EMP 0) e o Kerenzikov pela média: abaixo de 0, a extrema.
+        let antes = game.messages.size;
+        await paciente.update({ 'system.humanidade.value': 3 });
+        await __esperar(() => game.messages.contents.slice(antes).some(m => m.getFlag(S, 'ciberpsicose')));
+        r.ciberpsicose = ultima('ciberpsicose')?.getFlag(S, 'ciberpsicose');
+        r.sussurro = ultima('ciberpsicose')?.whisper.length > 0;
+        antes = game.messages.size;
+        await paciente.instalarCyberware(paciente.items.getName('Kerenzikov'), { rolar: false });
+        await __esperar(() => game.messages.contents.slice(antes).some(m => m.getFlag(S, 'ciberpsicose')));
+        r.extremaHum = { media: paciente.items.getName('Kerenzikov').system.perdaHumanidade.media, humanidade: paciente.system.humanidade.value, aviso: ultima('ciberpsicose')?.getFlag(S, 'ciberpsicose') };
+        r.estadoExtremo = await __esperar(() => estado() === 'Ciberpsicose extrema') && estado();
+        // A dependência: o Boost viciado; a terapia tira o vício, e o teste seguinte falha sozinho.
+        const boost = paciente.items.find(i => i.type === 'droga');
+        await boost.setFlag(S, 'viciado', true);
+        const vicio = () => boost.effects.find(e => / Addiction$/.test(e.name));
+        if (vicio()) await vicio().update({ disabled: false });
+        r.dependencia = await terapia('dependencia', [[9, 10]]);
+        r.livre = { viciado: Boolean(boost.getFlag(S, 'viciado')), efeito: vicio() ? vicio().disabled : null, tratada: paciente.getFlag(S, 'terapiasDeDependencia'), agora: game.time.worldTime };
+        await game.system.api.drogas.usarDroga(boost);
+        antes = game.messages.size;
+        await game.system.api.drogas.acabouOEfeito(boost);
+        const novas = game.messages.contents.slice(antes);
+        r.depoisDaTerapia = { testes: novas.filter(m => m.getFlag(S, 'teste')).length, droga: novas.find(m => m.getFlag(S, 'droga'))?.getFlag(S, 'droga')?.resultado, texto: novas.find(m => m.getFlag(S, 'droga'))?.content.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim(), viciado: Boolean(boost.getFlag(S, 'viciado')) };
+        // O Medtech em si mesmo: só o aviso.
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try {
+          doutora.sheet.render({ force: true });
+          await __esperar(() => doutora.sheet.element?.querySelector('.tab.cyberware [data-action="terapia"]'));
+          doutora.sheet.element.querySelector('.tab.cyberware [data-action="terapia"]').click();
+          await new Promise(res => setTimeout(res, 300));
+          r.emSiMesmo = { avisos, janela: Boolean(janela()) };
+        } finally { ui.notifications.warn = avisar; }
+        await doutora.sheet.close();
+        await paciente.sheet.close();
+        canvas.tokens.releaseAll();
+        await canvas.scene.deleteEmbeddedDocuments('Token', [doc.id]);
+        await doutora.delete();
+        await paciente.delete();
+        return r;
+      })()`);
+      const p = info.padrao, e = info.extrema, d = info.dependencia, l = info.livre || {};
+      const ok = info.estadoAntes === 'Ciberpsicose limítrofe'
+        && p.quem.join() === 'Doutora' && p.tipos.join() === 'padrao,extrema' && p.passou === true && p.total === 18 && p.ganho === 7 && p.humanidade === 22 && /15 → 22/.test(p.texto) && /Custo: 500eb/.test(p.texto)
+        && info.estadoDepois === 'Transtorno dissociativo limítrofe'
+        && e.passou === false && e.total === 12 && e.humanidade === 22 && /não conseguiu/.test(e.texto)
+        && info.ciberpsicose?.depois === 'ciberpsicose' && info.ciberpsicose.antes === 'limitrofe' && info.sussurro
+        && info.extremaHum.humanidade === 3 - info.extremaHum.media && info.extremaHum.humanidade < 0 && info.extremaHum.aviso?.depois === 'extrema' && info.estadoExtremo === 'Ciberpsicose extrema'
+        && d.tipos.includes('dependencia') && d.passou === true && d.total === 19 && d.droga === 'Boost'
+        && l.viciado === false && l.efeito !== false && l.tratada?.[0]?.droga === 'core_drugs:boost' && l.tratada[0].ate === l.agora + 31536000
+        && info.depoisDaTerapia.testes === 0 && info.depoisDaTerapia.droga === 'viciou' && /falha sozinho/.test(info.depoisDaTerapia.texto) && info.depoisDaTerapia.viciado
+        && info.emSiMesmo.avisos.length === 1 && /não em si mesmo/.test(info.emSiMesmo.avisos[0]) && !info.emSiMesmo.janela;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {
         // As voltas da ficha que estão esperando vão antes de a wiki "cair".

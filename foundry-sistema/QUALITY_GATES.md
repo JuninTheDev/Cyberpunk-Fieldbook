@@ -340,6 +340,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **A régua montada à mão no G4** (ciclo 144): a `TokenRuler` criada pelo passo (`new CONFIG.Token.rulerClass(token)` e o
   `refresh` com os waypoints) mede a distância, mas o custo do movimento sai "∞" (sem o movimento planejado do token):
   confira o que o sistema põe no rótulo (a DV), não o número de metros do custo.
+- **O aviso intermitente dos pedidos da loja** (ciclo 145): a entrega dos pedidos da wiki roda sozinha a cada minuto, e
+  pode cair junto com a do passo "pedidos da loja" (o pedido caro demais, sem dinheiro): o aviso dela sai depois que o
+  passo devolveu o `warn`, e a checagem final falha. Numa rodada, rode de novo antes de procurar a causa no ciclo.
 
 ## Build
 

@@ -8,6 +8,8 @@ EMP); à direita, o cyberware. --}}
         <p class="numero-grande"><b>{{sistema.humanidade.value}}</b><small>/ {{sistema.humanidade.max}}</small></p>
         <div class="barra"><div class="hum" style="width: {{vitais.humanidade}}%"></div></div>
         <div class="medida"><span>EMP (ATUAL / BASE)</span><b class="destaque">{{sistema.empAtual}} / {{sistema.atributos.emp.valor}}</b></div>
+        <div class="medida"><span>ESTADO MENTAL</span><b class="estado-mental estado-mental-{{estadoMental.chave}}" data-tooltip="{{estadoMental.efeito}}{{#if estadoMental.tracos}} Traços de Hare: {{estadoMental.tracos}}.{{/if}}">{{estadoMental.rotulo}}</b></div>
+        {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="terapia" data-tooltip="Terapia (wiki, p. 229–230): um Medtech selecionado, não você, rola Tecnologia Médica contra a DV; uma semana">TERAPIA</button></div>{{/if}}
         <p class="dica">Instalar desconta a Humanidade pela perda rolada (Shift: pela média); tirar devolve. Cada peça instalada com perda tira 2 do máximo (borgware, 4). O efeito do cyberware só vale instalado.</p>
       </section>
 

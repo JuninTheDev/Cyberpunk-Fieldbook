@@ -6,6 +6,7 @@
 // dura, o vício fica suspenso (o "Addicted Primary" do CORE, que faz a mesma conta no Synthcoke, não é usado). As outras
 // drogas (Speedheal, Stim...) não têm efeito secundário: "Usar" gasta a dose e liga o efeito, se houver.
 import { SISTEMA } from './config.mjs';
+import { chaveDaDroga, dependenciaTratada, FLAG_DEPENDENCIAS } from './terapia.mjs';
 
 // As drogas de rua da wiki: a DV do efeito secundário, se o vício só vale fora do efeito, e a Humanidade que custam.
 export const DROGAS_DE_RUA = {
@@ -92,20 +93,22 @@ async function encerrar(droga) {
     await droga.unsetFlag(SISTEMA, 'sobEfeito');
     return ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), ...cartao('acabou', `O efeito de ${esc(droga.name)} em <b>${esc(ator.name)}</b> acabou.`, { droga: droga.name, resultado: 'acabou' }) });
   }
-  const teste = await ator.rolarPericia('resist-torture-drugs', { sabor: `Contra a DV${rua.dv} do efeito secundário de ${droga.name}` });
-  if (!teste) return null;
-  const resultado = resultadoDoSecundario(teste.total, rua.dv);
+  // A terapia de dependência (o C21; terapia.mjs): por um ano, quem se tratou falha sozinho no teste contra aquela droga.
+  const tratada = dependenciaTratada(ator.getFlag(SISTEMA, FLAG_DEPENDENCIAS), chaveDaDroga({ catalogo: droga.getFlag(SISTEMA, 'catalogo'), nome: droga.name }), game.time.worldTime);
+  const teste = tratada ? null : await ator.rolarPericia('resist-torture-drugs', { sabor: `Contra a DV${rua.dv} do efeito secundário de ${droga.name}` });
+  if (!tratada && !teste) return null;
+  const resultado = tratada ? 'viciou' : resultadoDoSecundario(teste.total, rua.dv);
   if (resultado === 'passou' && sob.humanidade) {
     await ator.update({ 'system.humanidade.value': Math.min(ator.system.humanidade.max, ator.system.humanidade.value + sob.humanidade) });
   }
   if (resultado === 'viciou') await droga.setFlag(SISTEMA, 'viciado', true);
   if ((resultado === 'viciou' || viciado) && vicio?.disabled) await vicio.update({ disabled: false });
   await droga.unsetFlag(SISTEMA, 'sobEfeito');
-  const contra = `${teste.total} contra DV${rua.dv}`;
+  const contra = tratada ? 'falha sozinho: a terapia de dependência, por um ano' : `${teste.total} contra DV${rua.dv}`;
   const texto = resultado === 'viciou'
     ? `<b>${esc(ator.name)}</b> ${viciado ? 'segue viciado' : 'ficou viciado'} em ${esc(droga.name)} (${contra}): o efeito secundário fica, até a terapia.`
     : `<b>${esc(ator.name)}</b> resistiu ao efeito secundário de ${esc(droga.name)} (${contra})${sob.humanidade ? `, e a Humanidade volta (+${sob.humanidade})` : ''}${viciado ? ', mas segue viciado até a terapia' : ''}.`;
-  return ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), ...cartao(resultado, texto, { droga: droga.name, total: teste.total, dv: rua.dv, resultado }) });
+  return ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), ...cartao(resultado, texto, { droga: droga.name, total: teste?.total ?? null, dv: rua.dv, resultado, tratada }) });
 }
 
 // Só o mestre ativo resolve os prazos; também confere os capangas soltos de todas as cenas e a volta ao mundo.

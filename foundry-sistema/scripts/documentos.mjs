@@ -10,6 +10,7 @@ import {
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
+import { avisarCiberpsicose, estadoMental } from './terapia.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
@@ -65,6 +66,10 @@ export class AtorCPR extends Actor {
   // setContainerType do CORE), e o dinheiro também tem o extrato.
   async _preUpdate(mudancas, opcoes, usuario) {
     if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
+    // A ciberpsicose (o C21; terapia.mjs): o estado mental de antes, para o aviso quando a Humanidade ou a EMP o pioram.
+    if (['personagem', 'capanga'].includes(this.type) && ['system.humanidade.value', 'system.atributos.emp.valor'].some(campo => foundry.utils.hasProperty(mudancas, campo))) {
+      opcoes.cprfEstadoMental = estadoMental(this.system.humanidade.value, this.system.atributos.emp.valor);
+    }
     const tipo = foundry.utils.getProperty(mudancas, 'system.tipo');
     if (this.type === 'conteiner' && tipo !== undefined && tipo !== this._source.system.tipo) {
       const pedidas = foundry.utils.getProperty(mudancas, 'system.permissoes') ?? {};
@@ -76,6 +81,14 @@ export class AtorCPR extends Actor {
       if (novo === undefined || Number(novo) === this._source.system[campo]) continue;
       const linha = linhaDoExtrato({ acao: 'definir', antes: this._source.system[campo], saldo: Number(novo), usuario: usuario?.name ?? game.users.get(usuario)?.name ?? '' });
       foundry.utils.setProperty(mudancas, `system.extratos.${campo}`, [...this._source.system.extratos[campo], linha]);
+    }
+  }
+
+  // O aviso da ciberpsicose (terapia.mjs), no cliente de quem mudou a Humanidade ou a EMP.
+  _onUpdate(mudancas, opcoes, usuarioId) {
+    super._onUpdate(mudancas, opcoes, usuarioId);
+    if (opcoes.cprfEstadoMental && usuarioId === game.user.id) {
+      Promise.resolve(avisarCiberpsicose(this, opcoes.cprfEstadoMental)).catch(erro => console.error(`${SISTEMA} | ciberpsicose`, erro));
     }
   }
 
@@ -521,7 +534,8 @@ export class AtorCPR extends Actor {
     return fontes;
   }
 
-  // Instala um cyberware: a Humanidade cai pela perda rolada (ou pela média, para quem prefere) e o efeito passa a valer.
+  // Instala um cyberware: a Humanidade cai pela perda rolada (ou pela média, para quem prefere) e o efeito passa a valer. A
+  // Humanidade pode ficar negativa, como no CORE (loseHumanityValue): é a ciberpsicose extrema da wiki (o C21).
   // A opção entra na fundação escolhida (instaladoEm), se ainda cabe, ou na primeira instalada em que cabe; sem nenhuma,
   // entra sem fundação, com o recado (a ficha marca; a fashionware e o cyberware interno e externo não pedem uma).
   async instalarCyberware(item, { rolar = true } = {}) {
@@ -535,7 +549,7 @@ export class AtorCPR extends Actor {
       await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), flavor: `Perda de Humanidade: ${item.name}` });
     }
     await item.update({ 'system.instalado': true, 'system.perdaHumanidade.sofrida': perda, 'system.instaladoEm': fundacao?.id ?? '' });
-    await this.update({ 'system.humanidade.value': Math.max(0, this.system.humanidade.value - perda) });
+    await this.update({ 'system.humanidade.value': this.system.humanidade.value - perda });
     // A peça única sem fundação do lado fica no membro natural (o C30): o recado diz onde.
     if (!fundacao && item.noMembroNatural) ui.notifications.info(`${item.name} ficou no membro natural (${nomeDoLado(item.ladoDoCyberware).toLowerCase()}).`);
     else if (!fundacao && !item.system.fundacional && pedeFundacao(encaixeDe(item))) ui.notifications.info(`${item.name} entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre.`);

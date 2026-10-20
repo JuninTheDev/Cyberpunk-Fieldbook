@@ -34,6 +34,7 @@ import { registrarPainel } from './painel/index.mjs';
 import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
 import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolagens.mjs';
+import * as terapia from './terapia.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 
@@ -88,7 +89,7 @@ Hooks.once('init', () => {
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
   reguaDv.registrarReguaDv();
-  game.system.api = { agarrao, artesMarciais, neuroport, combate, drogas, lesoes, macros, migracao, municoes, regras, reguaDv, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
+  game.system.api = { agarrao, artesMarciais, neuroport, combate, drogas, lesoes, macros, migracao, municoes, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });

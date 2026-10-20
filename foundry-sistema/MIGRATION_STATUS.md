@@ -41,6 +41,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | CORE e wiki | moradia, estilo de vida, moda e Trauma Team (o `lifestyle`; C22) | portados no ciclo 140: os campos, a importação da wiki e da mesa, a ficha "Na mesa" e o "Pagar o mês" (a regra do criador da wiki) |
 | CORE | o `/red` no chat, a DV no HUD do token e na régua, a iniciativa crítica (C26, partes 1 a 3) | portados no ciclo 144 (o `/red` soma todos os modificadores; ver as dúvidas) |
+| wiki e CORE | a terapia e a ciberpsicose (C21) | portadas no ciclo 145: a terapia pelo Medtech, o vício tirado por um ano, o estado mental e o aviso, a Humanidade negativa (ver as dúvidas) |
 | CORE | macros na barra (a arma, a perícia e o item arrastados da ficha) e os favoritos (o alfinete do item e da perícia) | portados no ciclo 139 (C20): o favorito vai para o painel da aba Combate (ver as dúvidas) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
@@ -758,6 +759,17 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     do Foundry 12 explodia a iniciativa, se não mudou a configuração). Aqui o padrão é `false`, para manter o que o sistema
     fazia desde a virada para o Foundry 14 (`1d10 + @iniciativa`, sem explosão no 10 nem no 1); ligada, usa
     `1d10crit + @iniciativa`. **Pergunta ao usuário:** qual padrão a mesa quer.
+
+- **A terapia e a ciberpsicose** (ciclo 145; a wiki, p. 229–232, e o `loseHumanityValue` do CORE 0.92.4):
+  - **o custo e os materiais** (500eb e 100eb na padrão; 1.000eb e 500eb na extrema e na de dependência) vão no cartão: quem
+    paga, e se paga (o Medtech da equipe), é a mesa. A semana também fica com a mesa;
+  - **a Humanidade negativa:** a instalação do cyberware e o "Aplicar" do cartão deixam a Humanidade ficar abaixo de 0, como
+    o CORE (antes, o sistema parava no 0); a ciberpsicose extrema da wiki precisa dela. O Black Lace continua tirando só o
+    que há (o ciclo 124 guarda a Humanidade realmente perdida, para devolver);
+  - **a extrema:** o cartão avisa que o personagem passa para o mestre; o sistema não troca o dono do ator nem dá o +2 dos
+    Immunoblockers (a wiki diz que o mestre "pode dar"). Os Immunoblockers em si (a droga do Kit) ficam para depois;
+  - **o aviso:** sai quando o estado piora (pela Humanidade ou pela EMP), num cartão só para o mestre e os donos; melhorar
+    não avisa.
 
 ## Registro dos ciclos
 
@@ -7099,6 +7111,43 @@ O código e os testes saíram de um worker do Antigravity, revisado aqui (ver ab
   (M10).
 - **Pergunta ao usuário:** a iniciativa crítica ligada ou desligada por padrão (o CORE liga).
 - **Próximo:** o C21 (a terapia e a ciberpsicose), e o resto do C26 e o C27 com os workers do Codex.
+
+### Ciclo 145 (2026-10-20): o C21, a terapia e a ciberpsicose (sessão KouArt)
+
+Commit anterior: `08b46e6a` (o ciclo 144, o C26, partes 1 a 3). Com este, o C21 termina (a base com os slots das opções é
+dos ciclos 82 a 84).
+
+- **A referência:** a wiki ("Humanidade, terapia e drogas", `system-rules.js`): a Terapia (p. 229–230: a de dependência,
+  DV15, livra de um vício e, por um ano, quem se tratou falha sozinho no teste contra o efeito secundário daquela droga; a
+  de perda de Humanidade padrão, DV15, recupera 2d6; a extrema, DV17, 4d6; o teste é a Tecnologia Médica do Medtech, que
+  não faz em si mesmo; uma semana; falhou, a semana e os materiais se perdem; o máximo da Humanidade cai 2 por peça) e a
+  Ciberpsicose (p. 230–232: o estado pela EMP de agora, 3 ou mais nenhum, 2 limítrofe, 1 ciberpsicose limítrofe com 3
+  traços, 0 ciberpsicose com 5 traços, e a Humanidade negativa, a extrema, em que o personagem passa para o mestre). O CORE
+  0.92.4 só avisa ao instalar ("Cyberpsychosis has set in", o `loseHumanityValue`), e a Humanidade dele fica negativa.
+- **O que muda:**
+  - **`scripts/terapia.mjs` (novo):** as contas (a tabela das terapias, o teste que supera a DV, o ganho até a máxima, a
+    dependência tratada por um ano, o estado mental e o "piorou") e, no Foundry, a terapia (quem trata: o token selecionado
+    ou o personagem de quem clica, com a Tecnologia Médica, e não o paciente), o vício tirado e o aviso da ciberpsicose;
+  - **`documentos.mjs`:** o estado mental de antes no `_preUpdate` e o aviso no `_onUpdate`, no cliente de quem mudou (um
+    cartão para o mestre e os donos, quando o estado piora); a instalação do cyberware deixa a Humanidade ficar negativa;
+  - **`humanidade.mjs`:** o "Aplicar" do cartão também deixa;
+  - **`drogas.mjs`:** com a dependência tratada, o teste do efeito secundário falha sozinho (o cartão diz por quê);
+  - **a aba Cyberware:** o estado mental (com os traços de Hare na dica) e o botão "Terapia".
+- **Testes:**
+  - **G3:** `terapia.test.mjs` (novo): a tabela, o empate que falha, o ganho até a máxima, a dependência de um ano e os
+    estados pela EMP de agora;
+  - **G4:** um passo novo: a Doutora (Medtech, Tecnologia Médica 4) trata o Paciente pelo botão (padrão: 18 contra DV15,
+    2d6 = 7, de 15 para 22; extrema: 12 contra DV17, nada muda); a Humanidade a 3 avisa a ciberpsicose; o Kerenzikov pela
+    média a leva a −11 (a extrema, com o aviso e o estado na aba); a dependência tira o vício do Boost, e o teste seguinte
+    falha sozinho, sem rolar; o Medtech em si mesmo, só o aviso.
+- **Portões:** G1, 106 arquivos sem erro; G2, nenhum erro; G3, 254/254; G4 completo, 212/212, com a checagem dos dois
+  navegadores sem avisos ou erros de JS. Na primeira rodada, 211/212: um aviso de "dinheiro insuficiente" da entrega dos
+  pedidos da wiki, do passo dos pedidos da loja (ver a lição no QUALITY_GATES); a segunda rodada passou inteira.
+- **Mutações:** as onze caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: o empate que passa (M1),
+  o ganho acima da máxima (M2), a Humanidade negativa sem a extrema (M3), a dependência sem o prazo (M4) e a extrema com
+  2d6 (M5). No G4: o Medtech em si mesmo (M6), a dependência que não tira o vício (M7), o teste que ignora a terapia (M8), o
+  aviso que não sai (M9), a instalação que para no 0 (M10) e o ganho que não grava (M11).
+- **Próximo:** o resto do C26 (os estados e as chaves do Fluxo) e o C27.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

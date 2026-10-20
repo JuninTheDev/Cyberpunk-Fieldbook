@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 145). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 146). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -230,10 +230,10 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 - [x] **C20. Macros e favoritos:** feito no ciclo 139 (sessão KouArt, 2026-10-20). Arrastar arma, perícia ou item para a
   barra (a macro do ataque, com o modo no texto dela; a do teste; a que abre a ficha), e os favoritos (a ★ das perícias e
   dos itens) no painel da aba Combate.
-- [~] **C21. Cyberware:** em andamento (sessão KouArt, 2026-10-20): a terapia e a ciberpsicose.
-  - a base com os slots das opções (instalar dentro da base, como a montagem da wiki): ciclos 82 a 84;
-  - a terapia, que devolve Humanidade até o máximo;
-  - a ciberpsicose.
+- [x] **C21. Cyberware:** feito (ciclos 82 a 84 e 145, sessão KouArt, 2026-10-20).
+  - [x] a base com os slots das opções (instalar dentro da base, como a montagem da wiki): ciclos 82 a 84;
+  - [x] a terapia, que devolve Humanidade até o máximo (e a de dependência, que tira o vício por um ano): ciclo 145;
+  - [x] a ciberpsicose (o estado pela EMP de agora, o aviso quando piora e a Humanidade negativa, a extrema): ciclo 145.
 - [x] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE): feito no ciclo 140 (sessão KouArt, com o Antigravity, 2026-10-20). A wiki guarda, e o cpr-2077 manda na
   ficha "Na mesa".
 - [x] **C23. Mais de uma Role, e perícias novas:** feito (ciclos 118 a 120, sessão KouArt). Por partes:
