@@ -316,7 +316,7 @@
       const tabela = `<div class="table-wrap"><table class="bs-tabela">${cabeca}<tbody>${base.pessoas.filter(item => item.grupo === grupo).map(linhaPessoa).join('')}</tbody></table></div>`;
       return i === 0 ? tabela : `<details class="bs-mais"><summary>${esc(grupo)} (${base.pessoas.filter(item => item.grupo === grupo).length})</summary>${tabela}</details>`;
     }).join('')}</div>`;
-    const reveladas = `<div class="section" data-toc="Segredos revelados"><h3>Segredos revelados</h3><p>Marque quando o grupo descobrir. Fica no Dossiê e serve de lembrete do que ainda pode surpreender.</p><ul class="bs-segredos">${base.segredos.map(item => `<li><label><input type="checkbox" data-bs-segredo="${item.id}"> <b>${esc(item.nome)}</b>${item.campos.revela ? ` <small>(${esc(item.campos.revela)})</small>` : ''}</label>${item.texto ? `<br><small>${inline(item.texto.replace(/\s+/g, ' '), href)}</small>` : ''}</li>`).join('')}</ul></div>`;
+    const reveladas = `<div class="section" data-toc="Segredos revelados"><h3>Segredos revelados</h3><p>Marque quando o grupo descobrir. Fica no Diário e serve de lembrete do que ainda pode surpreender.</p><ul class="bs-segredos">${base.segredos.map(item => `<li><label><input type="checkbox" data-bs-segredo="${item.id}"> <b>${esc(item.nome)}</b>${item.campos.revela ? ` <small>(${esc(item.campos.revela)})</small>` : ''}</label>${item.texto ? `<br><small>${inline(item.texto.replace(/\s+/g, ' '), href)}</small>` : ''}</li>`).join('')}</ul></div>`;
     return `${relogios}${pecas}${pessoas}${reveladas}<p class="note-status" data-bs-status></p>`;
   }
   // Links dos textos da base nas páginas HTML: #pagina/secao e arquivo.md (a página daquele documento).

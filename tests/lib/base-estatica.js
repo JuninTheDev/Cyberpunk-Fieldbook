@@ -26,7 +26,7 @@ async function validarBase({ raiz, r }) {
       elenco: npcs.campaignCast.map(card => card.name)
     });
     const contagem = `${base.pessoas.length} pessoas, ${base.faccoes.length} facções, ${base.lugares.length} lugares, ${base.pecas.length} peças, ${base.relogios.map(item => `${item.chave} ${item.segmentos.length}`).join('/')}, ${base.segredos.length} segredos`;
-    const ok = !problemas.length && base.pecas.length === 3 && base.relogios.map(item => item.segmentos.length).join() === '6,8,6' && base.pessoas.length >= 20;
+    const ok = !problemas.length && base.pecas.length >= 1 && base.lugares.length >= 4 && base.pessoas.length >= 5 && base.relogios.every(item => item.segmentos.length > 0);
     return [ok, problemas.slice(0, 5).join(' · ') || contagem];
   });
 
@@ -42,20 +42,19 @@ async function validarBase({ raiz, r }) {
       }
     }
     const citacoes = fs.readdirSync(pasta).filter(arquivo => arquivo.endsWith('.md')).reduce((total, nome) => total + (fs.readFileSync(path.join(pasta, nome), 'utf8').match(/^\{\{(base|doc):/gm) || []).length, 0);
-    return [!quebradas.length && citacoes >= 15, quebradas.slice(0, 5).join(' · ') || `${citacoes} citações conferidas`];
+    return [!quebradas.length && citacoes >= 3, quebradas.slice(0, 5).join(' · ') || `${citacoes} citações conferidas`];
   });
 
-  await r.passo('as cópias saíram: Quem é quem, as tabelas da fundação, do diário e de Personagens, e as páginas escritas no index.html', async () => {
+  await r.passo('as cópias e a trama antiga saíram: Quem é quem, a tabela do diário, o elenco escrito à mão e os documentos da história de antes', async () => {
     const ler = nome => fs.readFileSync(path.join(pasta, nome), 'utf8');
     const index = fs.readFileSync(path.join(raiz, 'index.html'), 'utf8');
+    // A história recomeçou depois da Sessão 1; a trama nova fica fora do repositório público.
+    const antigos = ['quem-e-quem', 'dossie-da-campanha', 'fundacao-da-campanha', 'personagens-da-campanha', 'ganchos-dos-personagens', 'roteiro-da-campanha', 'sessao-01-a-maleta', 'sessao-02-o-hospital-queimado', 'sessao-03-a-coleira'];
     const casos = {
-      'quem-e-quem.md não existe': !fs.existsSync(path.join(pasta, 'quem-e-quem.md')),
-      'fundação sem a tabela das partes': !/\| A Chave \| Fragmento/.test(ler('fundacao-da-campanha.md')),
-      'fundação sem a lista do relógio de Sato': !/^1\. \*\*Recuperar a Chave\*\*/m.test(ler('fundacao-da-campanha.md')),
+      'os documentos antigos não existem': antigos.every(nome => !fs.existsSync(path.join(pasta, `${nome}.md`))),
+      'nada aponta para eles': antigos.every(nome => !index.includes(`${nome}.md`) && fs.readdirSync(pasta).every(arquivo => !arquivo.endsWith('.md') || !ler(arquivo).includes(`${nome}.md`))),
       'diário sem a tabela dos NPCs': !/\| Wakako Okada \| Ativa \|/.test(ler('diario-da-campanha.md')),
-      'Personagens sem o guia rápido': !/\| Wakako Okada \| Contratante e aliada ambígua \|/.test(ler('personagens-da-campanha.md')),
-      'index.html sem o elenco escrito à mão': !/Contratante \/ aliada ambígua/.test(index) && !/const campaignClocks/.test(index),
-      'Kobo: o guia diz o mesmo que a Sessão 2 (os Scavs só se o corpo ficou)': /Se o grupo deixou o corpo de Kobo/.test(ler('guia-night-city-2077.md')) && /Se o grupo deixou o corpo de Kobo para trás/.test(ler('sessao-02-o-hospital-queimado.md'))
+      'index.html sem o elenco escrito à mão': !/Contratante \/ aliada ambígua/.test(index) && !/const campaignClocks/.test(index)
     };
     const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome);
     return [!errados.length, errados.join(' · ') || `${Object.keys(casos).length} conferências`];

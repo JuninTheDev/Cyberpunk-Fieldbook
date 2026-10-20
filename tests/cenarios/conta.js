@@ -242,9 +242,15 @@ module.exports = async ({ edge, r }) => {
     await r.passo('mestre: relógios e bloco no servidor (iguais em outro aparelho); o relógio marcado aparece aos jogadores; o bloco vira rascunho de sessão', async () => {
       const mesa = async () => (await fetch(`${base}/api/campanhas/morana/mesa`)).json();
       await edge.ir(`${base}/#notes`, 1500);
-      await esperar(`!!document.querySelector('#clock-city [data-clock-index]') && !document.getElementById('session-note').disabled`);
-      await edge.evaluate(`document.querySelector('#clock-city [data-clock-index="2"]').click()`);
-      await edge.evaluate(`(() => { const c = document.querySelector('[data-clock-public="city"]'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+      // Os relógios saem da base da campanha; depois do recomeço da história (2026-10-20), ela pode não ter nenhum: aí o
+      // passo confere só o bloco.
+      await esperar(`!!window.campaignBase.base && !document.getElementById('session-note').disabled`);
+      const chave = await edge.evaluate(`(window.campaignBase.base.relogios[0] || {}).chave || ''`);
+      if (chave) {
+        await esperar(`!!document.querySelector('#clock-${chave} [data-clock-index]')`);
+        await edge.evaluate(`document.querySelector('#clock-${chave} [data-clock-index="2"]').click()`);
+        await edge.evaluate(`(() => { const c = document.querySelector('[data-clock-public="${chave}"]'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+      }
       await edge.evaluate(`(() => { const t = document.getElementById('session-note'); t.value = 'Jay deve 500eb ao Brakk. O grupo achou a maleta.'; t.dispatchEvent(new Event('input', { bubbles: true })); })()`);
       await esperar(`/Salvo no servidor/.test(document.getElementById('note-status').textContent)`);
       const gravada = await mesa();
@@ -257,9 +263,10 @@ module.exports = async ({ edge, r }) => {
       await edge.evaluate('localStorage.clear()');
       await edge.ir(`${base}/#notes`, 1500);
       await esperar(`document.getElementById('session-note').value.length > 0`);
-      const outro = await edge.evaluate(`({ marcados: document.querySelectorAll('#clock-city [aria-pressed="true"]').length, bloco: document.getElementById('session-note').value, publico: document.querySelector('[data-clock-public="city"]').checked })`);
-      return [gravada.relogios.city === 3 && /maleta/.test(gravada.notas) && visao.length === 1 && visao[0].valor === 3 && rascunho.publicada === false && /maleta/.test(rascunho.texto) && outro.marcados === 3 && /maleta/.test(outro.bloco) && outro.publico,
-        `servidor: cidade ${gravada.relogios.city}, bloco "${gravada.notas.slice(0, 20)}…" · jogadores veem ${JSON.stringify(visao.map(c => `${c.nome} ${c.valor}`))} · rascunho "${rascunho.titulo}" publicada ${rascunho.publicada} · outro aparelho ${JSON.stringify(outro).slice(0, 80)}`];
+      const outro = await edge.evaluate(`({ marcados: document.querySelectorAll('#clock-${chave || 'nenhum'} [aria-pressed="true"]').length, bloco: document.getElementById('session-note').value, publico: !!document.querySelector('[data-clock-public="${chave}"]')?.checked })`);
+      const relogio = !chave ? !visao.length : gravada.relogios[chave] === 3 && visao.length === 1 && visao[0].valor === 3 && outro.marcados === 3 && outro.publico;
+      return [relogio && /maleta/.test(gravada.notas) && rascunho.publicada === false && /maleta/.test(rascunho.texto) && /maleta/.test(outro.bloco),
+        `servidor: ${chave ? `${chave} ${gravada.relogios[chave]}` : 'sem relógio na base'}, bloco "${gravada.notas.slice(0, 20)}…" · jogadores veem ${JSON.stringify(visao.map(c => `${c.nome} ${c.valor}`))} · rascunho "${rascunho.titulo}" publicada ${rascunho.publicada} · outro aparelho ${JSON.stringify(outro).slice(0, 80)}`];
     });
     await r.passo('mestre: o menu da conta troca de campanha e leva aos atalhos do mestre', async () => {
       await edge.ir(`${base}/`, 1500);

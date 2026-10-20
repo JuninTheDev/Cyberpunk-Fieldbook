@@ -17,11 +17,8 @@ Os temas que esta campanha tem com certeza (diga isso antes de perguntar):
 
 | Tema | Onde aparece | Sugestão se for véu |
 |---|---|---|
-| Perder o controle do próprio corpo | A Fúria de Morana, em toda a campanha | O efeito fica no implante (trava, falha), não no corpo inteiro |
-| Suicídio forçado | Kobo, Sessão 1: o cyberarm leva a pistola ao queixo dele | O grupo encontra o corpo; ninguém descreve como foi |
-| Pacientes em suporte de vida desligados | O primeiro teste, em 2070; os registros da Sessão 2 | Os registros dizem "óbitos"; sem detalhe |
-| Experimentos em pessoas | O projeto Morana, as cobaias de Sato (as onze) | As cobaias aparecem depois, já soltas |
-| Ciberpsicose e doença mental | A MaxTac trata as vítimas de Morana como ciberpsicos | A cena mostra a consequência, não o surto |
+| Perder o controle do próprio corpo | O que a maleta faz com o cromo, em toda a campanha | O efeito fica no implante (trava, falha), não no corpo inteiro |
+| Ciberpsicose e doença mental | A MaxTac trata quem surta como ciberpsico | A cena mostra a consequência, não o surto |
 | Violência policial | A MaxTac atira primeiro | Corta para depois |
 | Tortura e interrogatório | Se o grupo capturar alguém (ou for capturado) | Corta para a informação conseguida |
 
@@ -39,11 +36,9 @@ Os efeitos de Morana pedem consentimento: a regra da campanha é **nunca tirar o
 
 | Resposta | O que Morana pode fazer com o personagem |
 |---|---|
-| **Pode** | Tudo o que a regra do estágio diz: no Enxame, o personagem ataca o alvo marcado mais próximo por 1d6 rodadas (o jogador ainda rola para se libertar no fim de cada turno). |
-| **Com aviso** | O mestre avisa antes ("Morana vai tentar seu braço"); o jogador escolhe entre o efeito completo ou o efeito do estágio anterior. |
-| **Não** | Morana nunca move o personagem. Na falha do teste de resistência, o implante trava (estágio Programa) e o personagem perde a Ação do turno, em qualquer estágio. |
-
-Os ganchos que dependem disso (o HUD que marca "ALVO-70", a arma inteligente que troca de alvo) estão em [Ganchos dos personagens](ganchos-dos-personagens.md): confira o "segredo fechado" de cada um antes de usar.
+| **Pode** | Tudo o que a regra disser: o implante pode mover o personagem por algumas rodadas (o jogador ainda rola para se libertar no fim de cada turno). |
+| **Com aviso** | O mestre avisa antes ("a coisa vai tentar seu braço"); o jogador escolhe entre o efeito completo ou um menor. |
+| **Não** | Morana nunca move o personagem. Na falha do teste de resistência, o implante trava e o personagem perde a Ação do turno. |
 
 ## Regras da casa
 
@@ -64,6 +59,6 @@ Decida e anote. Os padrões abaixo são os que a wiki já usa.
 ## Os personagens
 
 - Cada jogador entra na wiki com o código que você criou (Personagens e códigos) e faz o personagem no criador. Quando estiver pronto, envia ao mestre, e você importa no Foundry.
-- **As cinco perguntas** da [fundação](fundacao-da-campanha.md#perguntas-para-conectar-os-personagens): qual implante não perderia, quem depende de um sistema médico conectado, qual corporação usaria o corpo como arma, se confiaria em Wakako, se sacrificaria um implante.
-- **Os ganchos:** transforme cada resposta num gancho forte e um ou dois leves, com [Ganchos dos personagens](ganchos-dos-personagens.md). Anote no [diário](diario-da-campanha.md), nas tabelas "Respostas dos jogadores" e "Ganchos escolhidos".
-- **A relação com Wakako:** cada personagem precisa de um motivo para atender o chamado dela (Sessão 1, "Antes da sessão").
+- **As cinco perguntas:** qual implante não perderia, quem depende de um sistema médico conectado, qual corporação usaria o corpo como arma, se confiaria em Wakako, se sacrificaria um implante.
+- **Os ganchos:** transforme cada resposta num gancho forte e um ou dois leves. Anote no [diário](diario-da-campanha.md), na tabela "Respostas dos jogadores".
+- **A relação com Wakako:** cada personagem precisa de um motivo para atender o chamado dela.

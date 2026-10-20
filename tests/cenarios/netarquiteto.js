@@ -166,7 +166,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const fixer = npcs.find(actor => actor.name === 'Wakako Okada')?.items.find(item => item.type === 'role');
         return { arquiteturas: net.filter(item => item.type === 'netarch').map(item => [item.name.split(' (')[0], item.system.floors.length]), elenco, fixer: fixer ? [fixer.name, fixer.system.rank] : null };
       })()`);
-      const ok = info.arquiteturas.length === 4 && info.arquiteturas.some(([nome, andares]) => nome === 'O Gatilho' && andares === 6) && info.elenco.length === 9 && info.elenco.includes('Iskra Voss') && info.fixer?.[0] === 'Fixer' && info.fixer[1] === 8;
+      const ok = info.arquiteturas.length === 4 && info.arquiteturas.some(([nome, andares]) => nome === 'O Gatilho' && andares === 6) && info.elenco.length === 3 && info.elenco.includes('Vega') && info.fixer?.[0] === 'Fixer' && info.fixer[1] === 8;
       return [ok, JSON.stringify(info)];
     });
 

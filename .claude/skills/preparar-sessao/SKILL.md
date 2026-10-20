@@ -18,7 +18,7 @@ Sou o roteirista da campanha. **O mestre decide; eu proponho.** As regras do rot
   anteriores.
 - **A sessão seguinte:**
   - se ela já está escrita (`sessao-NN-*.md`), o trabalho é ajustá-la ao que aconteceu;
-  - se não está, ela é só a linha em `roteiro-da-campanha.md`, e o trabalho é escrevê-la.
+  - se não está, o trabalho é escrevê-la, a partir da sala do roteirista (o documento do mestre com a trama).
 
 ## 2. Propor (o rascunho)
 
@@ -27,7 +27,7 @@ Escreva em `rascunhos-do-roteirista/sessao-NN-preparo.md`, fora do git. O rascun
 1. **A abertura:** o ramo que o diário pede, e por quê.
 2. **As cenas,** cada uma com a função, o lugar, a primeira fala de cada NPC e o que ele esconde. Ponha também as
    pistas que não podem travar a mesa: cada uma em pelo menos dois lugares.
-3. **Os NPCs com STAT,** no formato das sessões 01 a 03. Os do elenco viram atores no Foundry pelo `campaignCast` do
+3. **Os NPCs com STAT,** no formato das fichas de NPC da wiki (`mestre-npcs.js`). Os do elenco viram atores no Foundry pelo `campaignCast` do
    `mestre-npcs.js`.
 4. **A dificuldade:** confira o combate contra as fichas "Na mesa". Quem está Gravemente Ferido ou sem munição muda a
    conta.

@@ -934,7 +934,7 @@
     }
 
     // Links nos textos em Markdown: [texto](#pagina/secao) abre uma página da wiki; [texto](https://...) abre fora, em
-    // outra aba; [texto](arquivo.md) e o nome de um documento entre crases (`ganchos-dos-personagens.md`) abrem a página
+    // outra aba; [texto](arquivo.md) e o nome de um documento entre crases (`diario-da-campanha.md`) abrem a página
     // daquele documento. Outro destino (javascript:, data:...) fica só como texto.
     // O documento inteiro, não uma página que mostra só um pedaço dele ou uma visão dele (vista: os handouts de uma
     // sessão, o resumo, as páginas montadas da base da campanha).

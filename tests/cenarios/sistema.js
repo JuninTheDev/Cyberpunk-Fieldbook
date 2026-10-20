@@ -63,7 +63,7 @@ module.exports = async ({ edge, servidores, r }) => {
   await buscaCai('death save', ['screen', 'damage']);
   await buscaCai('supressivo', ['combat', 'screen']);
   await buscaCai('hellhound', ['netArsenal'], 'Hellhound');
-  await buscaCai('Tamsin', ['docPersonagens', 'people']);
+  await buscaCai('Morty', ['people', 'docDiario']);
   // O Kerenzikov que vale é o do RED (o do suplemento de fã está em revisão): a busca abre o glossário ou o catálogo do RED.
   await buscaCai('Kerenzikov', ['glossary', 'cyberware']);
   await r.passo('busca aceita nome de perícia em inglês ("Wardrobe")', async () => { const resultados = await buscar(edge, 'Wardrobe'); return [resultados.length > 0, `${resultados.length} resultados`]; });
@@ -82,16 +82,16 @@ module.exports = async ({ edge, servidores, r }) => {
     return [estado.pagina === 'checks' && estado.busca === '' && estado.resultados === 0, JSON.stringify(estado)];
   });
 
-  await r.passo('Pessoas e facções (da base da campanha) tem o cartão de Iskra Voss e as seções no índice', async () => {
+  await r.passo('Pessoas e facções (da base da campanha) tem o cartão de Wakako Okada e as seções no índice', async () => {
     await abrir(edge, 'people', 1200);
     const chips = await edge.evaluate(`[...document.querySelectorAll('.page-toc [data-toc-index]')].map(b => b.textContent)`);
-    const cartao = await edge.evaluate(`[...document.querySelectorAll('#md-doc h4')].some(h => h.textContent.trim() === 'Iskra Voss')`);
+    const cartao = await edge.evaluate(`[...document.querySelectorAll('#md-doc h4')].some(h => h.textContent.trim() === 'Wakako Okada')`);
     return [cartao && chips.join() === 'Quem é quem,Elenco principal,Outros nomes,Forças', chips.join(', ')];
   });
   await r.passo('mapa de Night City com os pinos', async () => {
     await abrir(edge, 'campaignMap', 900);
-    const pinos = await edge.evaluate(`document.querySelectorAll('.map-pin').length`);
-    return [pinos >= 13, `${pinos} pinos`];
+    const info = await edge.evaluate(`({ pinos: document.querySelectorAll('.map-pin').length, pontos: window.campaignMapData.markers.length })`);
+    return [info.pontos >= 3 && info.pinos >= info.pontos, `${info.pinos} pinos, ${info.pontos} pontos da campanha`];
   });
 
   await edge.celular(true);

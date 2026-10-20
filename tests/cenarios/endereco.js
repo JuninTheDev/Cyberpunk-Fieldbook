@@ -53,10 +53,10 @@ module.exports = async ({ edge, servidores, r }) => {
     const e = await estado();
     return [e.hash === '#netArsenal/hellhound', JSON.stringify(e)];
   });
-  await r.passo('documento .md: #docPersonagens/iskra-voss abre no título', async () => {
-    await edge.ir(`${servidores.local}/#docPersonagens/iskra-voss`, 2000);
+  await r.passo('documento .md: #docHandouts/h-04-comunicador-de-kobo abre no título', async () => {
+    await edge.ir(`${servidores.local}/#docHandouts/h-04-comunicador-de-kobo`, 2000);
     const parou = await ondeParou(edge);
-    return [parou.pagina === 'docPersonagens' && parou.foco === 'Iskra Voss', `${parou.pagina} | foco "${parou.foco}"`];
+    return [parou.pagina === 'docHandouts' && parou.foco === 'H-04 · Comunicador de Kobo', `${parou.pagina} | foco "${parou.foco}"`];
   });
   await r.passo('endereço inválido abre a página inicial', async () => {
     await edge.ir(`${servidores.local}/#pagina-que-nao-existe`, 800);

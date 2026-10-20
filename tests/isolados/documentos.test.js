@@ -55,8 +55,9 @@ test('documentos atuais passam nas 7 verificações sem alterar globals nem requ
   const { passos, dados } = await conferir(projeto);
   assert.equal(passos.length, 7);
   assert.deepEqual(passos.filter(item => !item.ok), []);
-  assert.equal(dados.handouts.length, 30);
-  assert.ok(dados.citacoes >= 30);
+  // Depois do recomeço da história (2026-10-20), ficaram os handouts da Sessão 1 (H-04 e H-05).
+  assert.ok(dados.handouts.length >= 2);
+  assert.ok(dados.citacoes >= dados.handouts.length);
   assert.equal(dados.handoutsDoc.arquivo, 'documentos/morana/handouts-da-campanha.md');
   assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, 'window'), janelaAntes);
   assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, 'document'), documentoAntes);

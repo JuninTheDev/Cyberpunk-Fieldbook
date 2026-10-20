@@ -104,20 +104,12 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 
 | Arquivo | Para que serve |
 |---|---|
-| `documentos/morana/base-da-campanha.md` | **A base da campanha: a fonte única.** Um registro para cada pessoa, facção, lugar, peça de Morana, relógio e segredo. Pessoas e facções, Lugares e peças, o Estado da campanha, o Dossiê, as tabelas citadas nos documentos (`{{base:pecas}}`), os cartões dos nomes e o texto dos atores do elenco no Foundry saem daqui. |
-| `documentos/morana/dossie-da-campanha.md` | O Dossiê: só citações (`{{doc:fundacao-da-campanha.md#premissa}}`, `{{base:faccoes}}`). Mude a ordem aqui; o texto, na fonte. |
-| `documentos/morana/fundacao-da-campanha.md` | Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais. **Fonte principal da lore.** |
-| `documentos/morana/personagens-da-campanha.md` | NPCs: objetivos, segredos, falas e interpretação. |
-| `documentos/morana/ganchos-dos-personagens.md` | Sessão zero: transforma as respostas dos jogadores em ganchos pessoais ligados a Morana. |
-| `documentos/morana/sessao-01-a-maleta.md` | Roteiro da Sessão 1 e fichas de combate RED da equipe de Vega. |
-| `documentos/morana/sessao-02-o-hospital-queimado.md` | Sessão 2, com aberturas para cada desfecho da Sessão 1. |
-| `documentos/morana/sessao-03-a-coleira.md` | Sessão 3: o datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto. |
-| `documentos/morana/handouts-da-campanha.md` | Os 30 handouts (H-01 a H-30), os textos para ler em voz alta e como criar um handout na hora. Na wiki, cada citação tem os botões **Entregar aos jogadores** e **Só preparar**. |
+| `documentos/morana/base-da-campanha.md` | **A base da campanha: a fonte única.** Um registro para cada pessoa, facção, lugar, peça de Morana, relógio e segredo. Pessoas e facções, Lugares e peças, o Estado da campanha, as tabelas citadas nos documentos (`{{base:pecas}}`), os cartões dos nomes e o texto dos atores do elenco no Foundry saem daqui. |
+| `documentos/morana/handouts-da-campanha.md` | Os handouts que os jogadores receberam (H-04 e H-05) e como criar um handout na hora. Na wiki, cada citação tem os botões **Entregar aos jogadores** e **Só preparar**. |
 | `documentos/morana/sessao-zero.md` | Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas. |
-| `documentos/morana/roteiro-da-campanha.md` | A campanha numa tabela: ato, sessão, fase da cidade, relógio de Sato, estágio de Morana, revelações e recompensas. |
-| `documentos/morana/arquiteturas-da-campanha.md` | As arquiteturas NET da campanha. As tabelas são a fonte dos itens do Foundry (o build do cpr-2077 lê este arquivo). |
-| `documentos/morana/guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo, ganchos e tabelas (com os ganchos de Morana). |
-| `documentos/morana/diario-da-campanha.md` | O registro das sessões, as respostas da sessão zero e os ganchos escolhidos. A foto do estado de agora (peças, pessoas, segredos) vem do Estado da campanha. |
+| `documentos/morana/arquiteturas-da-campanha.md` | As arquiteturas NET da trama antiga. As tabelas são a fonte dos itens do Foundry (o build do cpr-2077 e o do sistema do Foundry 14 leem este arquivo); saem quando a nova trama tiver as dela. |
+| `documentos/morana/guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo e sessões avulsas, sem a trama da campanha. |
+| `documentos/morana/diario-da-campanha.md` | O registro das sessões e as respostas da sessão zero. A foto do estado de agora (peças, pessoas, segredos) vem do Estado da campanha. |
 | `documentos/<campanha>/`, `documentos/night-city/` | Os documentos de cada campanha nova, e os de todas. Veja **Campanhas**. |
 | `index.html` | A wiki do mestre. As páginas de resumo do Protocolo Morana e as notas de campanha nas regras (`gmNotes`) estão escritas aqui; os documentos completos são lidos dos `.md`. |
 | `campanhas-painel.js` | A página Campanhas e as páginas das campanhas novas (visão geral, notas, documentos) na wiki do mestre. |

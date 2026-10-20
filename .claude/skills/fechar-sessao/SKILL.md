@@ -36,11 +36,11 @@ ao mestre um resumo e o caminho do arquivo. O rascunho tem:
    - O estado vivo fica no servidor: diga ao mestre o que marcar na página "Estado da campanha" da wiki.
 3. **O mundo responde:** para cada pessoa ou facção atingida, o que ela faz agora fora de cena, e por quê.
 4. **Consequências agendadas:** "se X não acontecer até a sessão N, então Y". Inclua as pontas soltas.
-5. **Ganchos pessoais:** ligue o que aconteceu ao Lifepath de cada personagem e aos ganchos dele. As fontes são as
-   tabelas do diário (as respostas da sessão zero e os ganchos escolhidos) e `ganchos-dos-personagens.md`.
+5. **Ganchos pessoais:** ligue o que aconteceu ao Lifepath de cada personagem e aos ganchos dele. As fontes são a
+   tabela do diário (as respostas da sessão zero) e a sala do roteirista.
 6. **A próxima sessão:**
-   - o ramo de abertura que o relato pede (as sessões 2 e 3 já têm ramos);
-   - dois ou três caminhos se o grupo sair do roteiro (`roteiro-da-campanha.md`, "Se o grupo sair do roteiro").
+   - o ramo de abertura que o relato pede;
+   - dois ou três caminhos se o grupo sair do plano (a sala do roteirista).
 7. **Para os jogadores (opcional):** uma notícia para o mural "Notícias de Night City" e um recap curto, contado de
    dentro do mundo. Nenhum dos dois pode ter segredo.
 
@@ -70,8 +70,9 @@ ao mestre um resumo e o caminho do arquivo. O rascunho tem:
   mude o roteiro.
 - **Coerência:** a base é a fonte única. Procure nela antes de inventar. O que a contradiz vira pergunta ao mestre.
 - **Tom e limites:**
-  - em `fundacao-da-campanha.md`: a Premissa e "A pergunta central";
+  - na sala do roteirista: "O tom da campanha";
   - em `sessao-zero.md`: as Linhas e véus e as Regras da casa;
-  - as "Anotações para o mestre" de cada sessão. Por exemplo: Morana não deve parecer mágica, e Wakako não é uma aliada
-    simples.
-- **Termos:** a Fúria de Morana não é ciberpsicose (`fundacao-da-campanha.md`, "Terminologia").
+  - as "Anotações para o mestre" de cada sessão escrita.
+- **A trama:** desde 2026-10-20, a história é a da sala do roteirista, o documento do mestre no claude.ai ("Sala do
+  roteirista: a campanha depois da Sessão 1"). Leia-a antes de propor, e registre ali as decisões. Se não tiver o link,
+  peça ao mestre.

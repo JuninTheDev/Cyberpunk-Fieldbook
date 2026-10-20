@@ -112,9 +112,12 @@ async function validarDocumentos({ raiz, r }) {
   const handoutsDoc = porArquivo.get('documentos/morana/handouts-da-campanha.md');
   const handouts = JSON.parse(JSON.stringify(janelaDoScript(raiz, 'jogadores-painel.js').playerManager.parseHandouts(handoutsDoc.texto)));
   const citacoes = handouts.reduce((soma, item) => soma + item.parts.length, 0);
-  await r.passo('handouts: H-01 a H-30, cada um com título para os jogadores e citação; todo H-xx citado existe', async () => {
+  // A história recomeçou depois da Sessão 1 (2026-10-20): ficaram os handouts entregues (H-04 e H-05), e os novos
+  // entram em ordem, sem repetir o código.
+  await r.passo('handouts: os da Sessão 1 e os novos em ordem, cada um com título para os jogadores e citação; todo H-xx citado existe', async () => {
     const codigos = handouts.map(item => item.code);
-    const esperados = Array.from({ length: 30 }, (_, i) => `H-${String(i + 1).padStart(2, '0')}`);
+    const esperados = [...new Set(codigos)].sort();
+    if (!codigos.includes('H-04') || !codigos.includes('H-05')) esperados.push('os da Sessão 1');
     const semTitulo = handouts.filter(item => !new RegExp(`^- \\*\\*Para os jogadores:\\*\\*`, 'm').test(handoutsDoc.texto.split(`### ${item.code} `)[1].split('\n### ')[0])).map(item => item.code);
     const citados = new Set(docs.flatMap(doc => [...doc.texto.matchAll(/\bH-(\d{2})\b/g)].map(m => `H-${m[1]}`)));
     const inexistentes = [...citados].filter(code => !codigos.includes(code));

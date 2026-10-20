@@ -65,27 +65,25 @@
     // As campanhas vêm do servidor (api/campanhas). O Protocolo Morana tem as páginas daqui; as outras, as páginas
     // comuns (campanhas-painel.js) e os documentos da pasta documentos/<id>/.
     // O menu do Protocolo Morana: cada entrada reúne em abas tudo o que é do mesmo assunto (tabs). As páginas das abas
-    // continuam com o próprio endereço (#docSessao01, #docFundacao...) e na busca; só saem da barra lateral.
+    // continuam com o próprio endereço (#docBase, #docGuia...) e na busca; só saem da barra lateral.
     // As abas Handouts, NPCs e Notas das sessões e as Fichas do elenco são montadas por campanhas-painel.js (moranaExtras).
-    const sessionTabs = (n, first) => [...first, { id: `sessao${n}Handouts`, label: 'Handouts' }, { id: `sessao${n}Npcs`, label: 'NPCs' }, { id: `sessao${n}Notas`, label: 'Notas' }];
     const morana = { id: 'morana', name: 'Protocolo Morana', color: '#00ffd2', groups: [
         { group: 'Campanha ativa', pages: [
           { id: 'home', label: 'Resumo', icon: '00' },
-          { id: 'campaign', label: 'A campanha', icon: '01', tabs: [
-            { id: 'campaign', label: 'Dossiê' }, { id: 'docFundacao', label: 'Fundação' }, { id: 'docRoteiro', label: 'Roteiro' }, { id: 'docDiario', label: 'Diário' }, { id: 'docBase', label: 'Base' }
+          { id: 'docDiario', label: 'A campanha', icon: '01', tabs: [
+            { id: 'docDiario', label: 'Diário' }, { id: 'docBase', label: 'Base' }
           ] },
           { id: 'people', label: 'Elenco', icon: '02', tabs: [
-            { id: 'people', label: 'Pessoas e facções' }, { id: 'docPersonagens', label: 'Personagens' }, { id: 'elencoFichas', label: 'Fichas' }
+            { id: 'people', label: 'Pessoas e facções' }, { id: 'elencoFichas', label: 'Fichas' }
           ] },
           { id: 'campaignMap', label: 'Night City', icon: 'MAP', tabs: [
             { id: 'campaignMap', label: 'Mapa' }, { id: 'lugares', label: 'Lugares e peças' }, { id: 'docGuia', label: 'Guia de 2077' }, { id: 'docArquiteturas', label: 'Arquiteturas NET' }
           ] }
         ]},
         { group: 'Sessões', pages: [
-          { id: 'docSessaoZero', label: 'Sessão zero', icon: 'S0', className: 'session-item', tabs: [{ id: 'docSessaoZero', label: 'A conversa' }, { id: 'docGanchos', label: 'Ganchos dos personagens' }] },
-          { id: 'session1', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item', tabs: sessionTabs('01', [{ id: 'session1', label: 'Resumo' }, { id: 'docSessao01', label: 'Roteiro completo' }]) },
-          { id: 'docSessao02', label: 'Sessão 02: O Hospital Queimado', icon: 'S2', className: 'session-item', tabs: sessionTabs('02', [{ id: 'docSessao02', label: 'Roteiro' }]) },
-          { id: 'docSessao03', label: 'Sessão 03: A Coleira', icon: 'S3', className: 'session-item', tabs: sessionTabs('03', [{ id: 'docSessao03', label: 'Roteiro' }]) },
+          { id: 'docSessaoZero', label: 'Sessão zero', icon: 'S0', className: 'session-item' },
+          // A Sessão 01 já foi jogada: o que aconteceu (as notas e o registro do diário), os handouts entregues e as fichas.
+          { id: 'sessao01Notas', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item', tabs: [{ id: 'sessao01Notas', label: 'O que aconteceu' }, { id: 'sessao01Handouts', label: 'Handouts' }, { id: 'sessao01Npcs', label: 'NPCs' }] },
           { id: 'docHandouts', label: 'Handouts e textos', icon: 'H', className: 'session-item' }
         ]},
         { group: 'Mesa', pages: [
@@ -107,12 +105,8 @@
     // A base da campanha: um registro para cada pessoa, facção, lugar, peça, relógio e segredo (campanha-base.js).
     const baseFile = 'documentos/morana/base-da-campanha.md';
     const moranaSessions = [
-      { n: '01', title: 'Sessão 01: A Maleta', diario: 'Sessão 1:', handouts: ['H-01', 'H-02', 'H-03', 'H-04', 'H-05', 'H-06', 'H-07'],
-        npcs: ['Wakako Okada', 'Mina Kuroda', 'Dr. Kenzo Endo', 'Vega', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner', 'Guarda-costas', 'Tyger Claws'] },
-      { n: '02', title: 'Sessão 02: O Hospital Queimado', diario: 'Sessão 2:', handouts: ['H-07', 'H-08', 'H-09', 'H-10', 'H-11', 'H-12', 'H-13', 'H-25', 'H-26', 'H-30'],
-        npcs: ['Wakako Okada', 'Mina Kuroda', 'Brakk', 'Maelstrom', 'Iskra Voss', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner'] },
-      { n: '03', title: 'Sessão 03: A Coleira', diario: 'Sessão 3:', handouts: ['H-14', 'H-15', 'H-16', 'H-17', 'H-18', 'H-19'],
-        npcs: ['Segurança corporativa', 'Segurança corporativa', 'Oficial de segurança', 'Netrunner', 'Iskra Voss', 'Operativo de segurança', 'Dra. Reina Sato', 'Tamsin “Fuse” Ilyin'] }
+      { n: '01', title: 'Sessão 01: A Maleta', diario: 'Sessão 1:', handouts: ['H-04', 'H-05'],
+        npcs: ['Wakako Okada', 'Mina Kuroda', 'Vega', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner', 'Guarda-costas', 'Tyger Claws'] }
     ];
     // cast: as fichas do elenco (as pessoas da base com ficha da campanha).
     const moranaExtras = cast => [
@@ -129,22 +123,13 @@
     const markdownDocs = {
       // As visões da base (vista: a página mostra parte do arquivo ou uma montagem dele; o link para o arquivo abre a Base).
       people: { file: baseFile, vista: true, prioridade: 3, eyebrow: 'Arquivo da campanha / elenco', title: 'Pessoas e facções', lede: 'Quem é quem, de que lado está, onde fica e o que muda na mesa. Passe o mouse num nome em qualquer documento para ver o cartão.', transform: text => window.campaignBase.pessoas(text) },
-      lugares: { file: baseFile, vista: true, prioridade: 3, eyebrow: 'Night City / campanha', title: 'Lugares e peças', lede: 'As três partes de Morana (com quem estão agora) e os lugares da campanha, com o ponto no mapa.', transform: text => window.campaignBase.lugares(text) },
-      docBase: { file: baseFile, semBusca: true, eyebrow: 'Fonte única / edite aqui', title: 'Base da campanha', lede: 'O arquivo de onde saem Pessoas e facções, Lugares e peças, o Estado da campanha, o Dossiê e as tabelas citadas nos documentos. Edite o .md: tudo muda junto.' },
-      campaign: { file: 'documentos/morana/dossie-da-campanha.md', vista: true, semBusca: true, eyebrow: 'Arquivo da campanha / segredo do mestre', title: 'Protocolo Morana', lede: 'Wakako contrata o grupo para recuperar uma maleta. Dentro dela está uma ameaça que pode transformar implantes conectados em armas contra seus donos.', transform: text => window.campaignBase.expandirComDocs(text) },
-      session1: { file: 'documentos/morana/sessao-01-a-maleta.md', vista: true, semBusca: true, eyebrow: 'Arquivo da campanha / preparação', title: 'Sessão 01: A Maleta', lede: 'Uma recuperação aparentemente simples em Kabuki termina com um vírus procurando uma rede e Wakako reconhecendo um nome que esperava nunca mais ouvir.', transform: text => window.campaignBase.citar(window.campaignBase.trechos(text, ['resumo-para-o-mestre', 'objetivos-da-sessao', 'encerramento-da-sessao'])) },
-      docFundacao: { file: 'documentos/morana/fundacao-da-campanha.md', eyebrow: 'Documento completo / segredo do mestre', title: 'Fundação da campanha', lede: 'Premissa, backstory, as três partes de Morana, atos, reviravoltas, relógio de Sato e finais.' },
-      docPersonagens: { file: 'documentos/morana/personagens-da-campanha.md', eyebrow: 'Documento completo / elenco', title: 'Personagens', lede: 'Objetivos, segredos, falas e interpretação de cada NPC.' },
-      docHandouts: { entregar: 'morana', file: 'documentos/morana/handouts-da-campanha.md', eyebrow: 'Documento completo / para entregar', title: 'Handouts e textos da campanha', lede: 'Os 30 documentos (H-01 a H-30) para entregar aos jogadores, os textos para ler em voz alta e como criar um handout na hora. Embaixo de cada citação, os botões entregam pela wiki.' },
-      docSessao03: { file: 'documentos/morana/sessao-03-a-coleira.md', eyebrow: 'Documento completo / Sessão 03', title: 'Sessão 03: A Coleira', lede: 'O datafort da Militech em Arroyo, Meredith Stout, a oferta de Sato e o preço do antídoto.' },
+      lugares: { file: baseFile, vista: true, prioridade: 3, eyebrow: 'Night City / campanha', title: 'Lugares e peças', lede: 'As peças da campanha (com quem estão agora) e os lugares, com o ponto no mapa.', transform: text => window.campaignBase.lugares(text) },
+      docBase: { file: baseFile, semBusca: true, eyebrow: 'Fonte única / edite aqui', title: 'Base da campanha', lede: 'O arquivo de onde saem Pessoas e facções, Lugares e peças, o Estado da campanha e as tabelas citadas nos documentos. Edite o .md: tudo muda junto.' },
+      docHandouts: { entregar: 'morana', file: 'documentos/morana/handouts-da-campanha.md', eyebrow: 'Documento completo / para entregar', title: 'Handouts e textos da campanha', lede: 'Os documentos que os jogadores receberam e como criar um handout na hora. Embaixo de cada citação, os botões entregam pela wiki.' },
       docSessaoZero: { file: 'documentos/morana/sessao-zero.md', eyebrow: 'Documento completo / sessão zero', title: 'Sessão zero', lede: 'Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas.' },
-      docRoteiro: { file: 'documentos/morana/roteiro-da-campanha.md', eyebrow: 'Documento completo / roteiro', title: 'Roteiro da campanha', lede: 'Ato, sessão, fase da cidade, relógio de Sato, estágio de Morana, revelações e recompensas numa tabela.' },
-      docArquiteturas: { file: 'documentos/morana/arquiteturas-da-campanha.md', eyebrow: 'Documento completo / NET', title: 'Arquiteturas da campanha', lede: 'As arquiteturas NET do retransmissor, do Gatilho, da Coleira e do Núcleo. São as mesmas do compêndio do Foundry.' },
-      docGanchos: { file: 'documentos/morana/ganchos-dos-personagens.md', eyebrow: 'Documento completo / sessão zero', title: 'Ganchos dos personagens', lede: 'Como transformar as respostas da sessão zero em ganchos pessoais ligados a Morana, com o momento em que cada um volta à mesa.' },
-      docSessao01: { file: 'documentos/morana/sessao-01-a-maleta.md', eyebrow: 'Documento completo / Sessão 01', title: 'Sessão 01: A Maleta (completa)', lede: 'Roteiro completo, diálogos e fichas de combate RED da equipe de Vega.' },
-      docSessao02: { file: 'documentos/morana/sessao-02-o-hospital-queimado.md', eyebrow: 'Documento completo / Sessão 02', title: 'Sessão 02: O Hospital Queimado', lede: 'A manhã depois da Sessão 01 no consultório do Ricky, o subsolo do Gatilho e a oferta de Iskra pela cura de Morty.' },
-      docGuia: { file: 'documentos/morana/guia-night-city-2077.md', eyebrow: 'Documento completo / world building', title: 'Guia de Night City 2077', lede: 'Linha do tempo, relógio de 2077, distritos, poderes, gangues, NPCs do jogo, ganchos e tabelas.' },
-      docDiario: { file: 'documentos/morana/diario-da-campanha.md', eyebrow: 'Documento completo / registro', title: 'Diário da campanha', lede: 'Estado dos relógios, onde está cada parte de Morana, NPCs e registro das sessões. Edite o arquivo .md depois de cada sessão.' }
+      docArquiteturas: { file: 'documentos/morana/arquiteturas-da-campanha.md', eyebrow: 'Documento completo / NET', title: 'Arquiteturas da campanha', lede: 'As arquiteturas NET da trama antiga (o retransmissor, o Gatilho, a Coleira e o Núcleo), que ainda alimentam o compêndio do Foundry. Saem quando a nova trama tiver as dela.' },
+      docGuia: { file: 'documentos/morana/guia-night-city-2077.md', eyebrow: 'Documento completo / world building', title: 'Guia de Night City 2077', lede: 'Linha do tempo, relógio de 2077, distritos, poderes, gangues, NPCs do jogo e sessões avulsas.' },
+      docDiario: { file: 'documentos/morana/diario-da-campanha.md', eyebrow: 'Documento completo / registro', title: 'Diário da campanha', lede: 'O estado de agora, as pessoas e o registro das sessões. Edite o arquivo .md depois de cada sessão.' }
     };
 
 
@@ -153,19 +138,19 @@
         eyebrow: 'Resumo', title: 'Night City Fieldbook',
         lede: 'Um ponto de consulta rápido para Cyberpunk RED, o Mission Kit dos anos 2070 e a campanha Protocolo Morana. Pesquise qualquer termo ou navegue pelos arquivos.',
         html: `<div class="grid">
-          <section class="tile wide"><span class="tag">Arquivo ativo / campanha</span><h3>Protocolo Morana</h3><p>Uma maleta desaparecida, uma cidade cheia de implantes conectados e escolhas que não têm saída limpa.</p><button data-page="campaign">Abrir dossiê</button></section>
+          <section class="tile wide"><span class="tag">Arquivo ativo / campanha</span><h3>Protocolo Morana</h3><p>Uma maleta presa ao braço de um morto, uma cidade cheia de implantes conectados e escolhas que não têm saída limpa.</p><button data-page="docDiario">Abrir o diário</button></section>
           <section class="tile"><span class="tag">Consulta rápida</span><h3>Resolução básica</h3><p>STAT + perícia + 1d10 contra uma Dificuldade (DV), ou contra o teste de outro personagem.</p><button data-page="checks">Ver mecânicas</button></section>
           <section class="tile"><span class="tag">Consulta do sistema</span><h3>Escudo do mestre</h3><p>DV por alcance, ferimentos, Death Save, lesões críticas, cobertura e autofogo numa tela só.</p><button data-page="screen">Abrir escudo</button></section>
           <section class="tile"><span class="tag">Na mesa</span><h3>Estado da campanha</h3><p>Relógios, onde estão as peças de Morana, a situação de cada pessoa, os segredos revelados e o bloco de mesa, salvos no servidor.</p><button data-page="notes">Abrir</button></section>
         </div>
-        <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o dossiê reúne a premissa, as peças, as forças, os relógios e os finais sem precisar folhear os documentos de preparação. Cada pessoa, facção, lugar e peça tem um registro só, na base da campanha: os nomes viram links nos documentos, com um cartão ao passar o mouse.</p><p><b>Documentos completos:</b> fundação, personagens, sessões, guia de Night City e diário são lidos direto dos arquivos .md. Edite o arquivo e recarregue a página: a wiki acompanha.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante, NPC ou conceito, com ou sem acento; os resultados incluem os documentos completos.</p></div>`
+        <div class="section"><h3>Comece por aqui</h3><p><b>Regras:</b> os resumos e índices desta wiki foram preparados para consulta rápida durante a sessão.</p><p><b>Campanha:</b> o diário registra cada sessão. Cada pessoa, facção, lugar e peça tem um registro só, na base da campanha: os nomes viram links nos documentos, com um cartão ao passar o mouse.</p><p><b>Documentos completos:</b> diário, base, sessão zero, handouts e guia de Night City são lidos direto dos arquivos .md. Edite o arquivo e recarregue a página: a wiki acompanha.</p><p><b>Busca:</b> digite o nome de uma perícia, arma, implante, NPC ou conceito, com ou sem acento; os resultados incluem os documentos completos.</p></div>`
       },
       campaignMap: {
         eyebrow: 'Protocolo Morana / mapa do mestre', title: 'Night City: quadro de operações',
         lede: 'Mapa de planejamento com locais da campanha, ganchos, encontros e atividades secundárias. Selecione um marcador para ver como usá-lo; os prédios exatos ficam em aberto para adaptação à mesa.',
         html: `<div class="map-toolbar">
           <label class="map-control">Versão do mapa<select id="map-source"><option value="base">Mapa base</option><option value="reference">Mapa com referências originais</option></select></label>
-          <label class="map-control">Ato / sessão<select id="map-act-filter"><option value="all">Toda a campanha</option><option value="Sessão 01">Sessão 01</option><option value="Sessão 02">Sessão 02</option><option value="Ato 01 ou 02">Ato 01 ou 02</option><option value="Ato 02">Ato 02</option><option value="Ato 03">Ato 03</option><option value="Ato 04 / final">Ato 04 / final</option><option value="intervalo">Intervalos / side jobs</option></select></label>
+          <label class="map-control">Ato / sessão<select id="map-act-filter"><option value="all">Toda a campanha</option><option value="Sessão 01">Sessão 01</option></select></label>
           <div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div>
         </div>
         <div class="map-filter-list" id="map-filters" aria-label="Filtrar marcadores"></div>
@@ -188,7 +173,7 @@
     // Página inicial: "Na mesa agora", com atalhos, as últimas páginas abertas e os relógios.
     // Montado na hora (não entra na busca); some se o navegador não guardar nada.
     function setupHomeDesk(content, { recentPages, clockState, escapeHtml }) {
-      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['session1', 'Sessão 01'], ['docSessao02', 'Sessão 02'], ['docSessao03', 'Sessão 03'], ['docHandouts', 'Handouts']];
+      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['sessao01Notas', 'Sessão 01'], ['docDiario', 'Diário'], ['docHandouts', 'Handouts']];
       const clockNames = Object.fromEntries(((window.campaignBase.base || {}).relogios || []).map(item => [item.chave, item.nome]));
       const recent = recentPages();
       // Cada relógio com a barra de segmentos (os marcados em amarelo), o último marcado e o próximo.
@@ -201,7 +186,7 @@
       block.innerHTML = `<h3>Na mesa agora</h3><div class="desk-grid">
           <div><span class="tag">Atalhos</span><div class="desk-buttons">${shortcuts.map(([id, label]) => `<button class="action ghost" type="button" data-page="${id}">${label}</button>`).join('')}</div></div>
           <div><span class="tag">Continuar de onde parou</span>${recent.length ? `<ul class="desk-recent">${recent.map(item => `<li><a href="${escapeHtml(item.hash)}">${escapeHtml(item.title)}</a>${item.section ? `<small> › ${escapeHtml(item.section)}</small>` : ''}</li>`).join('')}</ul>` : '<p class="note-status">As páginas que você abrir aparecem aqui.</p>'}</div>
-          <div><span class="tag">Relógios</span><ul class="desk-clocks">${clocks}</ul><button class="action ghost" type="button" data-page="notes">Estado da campanha</button></div>
+          <div><span class="tag">Relógios</span>${clocks ? `<ul class="desk-clocks">${clocks}</ul>` : '<p class="note-status">Nenhum relógio na base da campanha.</p>'}<button class="action ghost" type="button" data-page="notes">Estado da campanha</button></div>
         </div>`;
       (content.querySelector('.rule') || content.querySelector('.lede')).after(block);
       // A próxima sessão do Protocolo Morana (da Agenda das mesas, no servidor), numa faixa entre o título e "Na mesa agora".
@@ -274,7 +259,7 @@
         pageContent: { ...pageContent, notes: notesPage(), ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
         clocks: base.relogiosDaWiki(),
         // Páginas que viraram parte de outra: o endereço antigo continua abrindo.
-        aliases: { docQuemEQuem: { id: 'people', section: 'quem-e-quem' } },
+        aliases: { docQuemEQuem: { id: 'people', section: 'quem-e-quem' }, campaign: { id: 'docDiario' }, session1: { id: 'sessao01Notas' }, docSessao01: { id: 'sessao01Notas' } },
         gmNotes,
         pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, sources: setupSources, ...built.pageSetup, ...extras.pageSetup },
         homePage: 'home',

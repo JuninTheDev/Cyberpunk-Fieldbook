@@ -27,13 +27,27 @@ module.exports = async ({ edge, servidores, r }) => {
     const parou = await ondeParou(edge);
     return [parou.pagina === 'combat' && parou.foco === 'Cobertura', `${parou.pagina} | foco "${parou.foco}"`];
   });
-  await r.passo('relógios mostram o segmento marcado e o próximo', async () => {
+  await r.passo('relógios mostram o segmento marcado e o próximo (sem relógio na base, o aviso)', async () => {
+    // Os relógios saem da base da campanha; depois do recomeço da história (2026-10-20), ela pode não ter nenhum.
+    const relogios = await edge.evaluate(`((window.campaignBase.base || {}).relogios || []).map(item => ({ chave: item.chave, nome: item.nome, segmentos: item.segmentos }))`);
+    if (!relogios.length) {
+      await edge.ir(`${servidores.local}/?recarregar#home`, 800);
+      const texto = await bloco();
+      return [/Nenhum relógio na base da campanha/.test(texto), texto.slice(texto.indexOf('Relógios'), texto.indexOf('Relógios') + 120)];
+    }
+    const [primeiro] = relogios;
+    const mesa = valor => fetch(`${servidores.local}/api/campanhas/morana/mesa`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ relogios: { [primeiro.chave]: valor } }) });
     // Os relógios ficam no servidor (a mesa do mestre): marca lá e abre de novo.
-    await fetch(`${servidores.local}/api/campanhas/morana/mesa`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ relogios: { sato: 2, city: 0 } }) });
-    // ?recarregar: só trocar o # não recarrega a página (a mesa lida antes continuaria).
-    await edge.ir(`${servidores.local}/?recarregar#home`, 800);
-    const texto = await bloco();
-    return [/Relógio de Sato: 2\/6/.test(texto) && /Último marcado: Garantir o Gatilho/.test(texto) && /próximo: Garantir a Coleira/.test(texto) && /Relógio da cidade: 0\/8/.test(texto), texto.slice(texto.indexOf('Relógios'), texto.indexOf('Relógios') + 200)];
+    await mesa(1);
+    try {
+      // ?recarregar: só trocar o # não recarrega a página (a mesa lida antes continuaria).
+      await edge.ir(`${servidores.local}/?recarregar#home`, 800);
+      const texto = await bloco();
+      const proximo = primeiro.segmentos.length > 1 ? texto.includes(`próximo: ${primeiro.segmentos[1]}`) : true;
+      return [texto.includes(`${primeiro.nome}: 1/${primeiro.segmentos.length}`) && texto.includes(`Último marcado: ${primeiro.segmentos[0]}`) && proximo, texto.slice(texto.indexOf('Relógios'), texto.indexOf('Relógios') + 200)];
+    } finally {
+      await mesa(0);
+    }
   });
   await edge.shot('inicio');
   await r.passo('atalho abre a página', async () => {
