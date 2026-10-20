@@ -6922,7 +6922,9 @@ conversa, o usuário pediu a instalação no servidor, feita do `5c95079` (o cic
   - G1: 100 arquivos sem erro; G2: 0 erros;
   - G3: 234/234;
   - G4: 202/202 (437 s) na árvore sobre o ciclo 139. O ciclo 140 entrou enquanto o G4 rodava; integrado sem conflito,
-    com G1–G3 de novo. O G4 da árvore final vai num commit de registro;
+    com G1–G3 de novo. O G4 da árvore final (o b5a27a3, sobre o 140): 203 de 203, depois do push (commit de registro).
+    Na primeira rodada deu 202 de 203: o passo "jogador ataca" com o `reading 'system'`, a instabilidade já vista, que
+    passou na rodada seguinte;
   - **mutações:** as 20 caíram. D1–D6 no G3. D7–D20 no G4, no passo certo (as Artes Marciais): a D11 e a D12 na árvore
     integrada; as outras antes da integração (os ciclos 137–140 não tocam no que elas mudam).
 - **O que apareceu nas rodadas:** a primeira rodada do G4 deu 193 de 195, com dois erros do próprio teste:
