@@ -37,7 +37,8 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | as rolagens das Roles (Impacto Carismático, Credibilidade, Barganha, as do Tech, Cirurgia e Tecnologia Médica) | portadas nos ciclos 34 e 35, com as Roles do RED: pelo item de Role do CORE e pelo texto da wiki (a Barganha é a pechincha do Fixer; o Backup do Lawman, pela wiki). A Interface do Netrunner é o C5 |
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
-| CORE | consertar a armadura; rolar lesão à mão; macros na barra | falta |
+| CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
+| CORE | rolar lesão à mão; macros na barra | falta (C19 e C20) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
 | CORE | contêiner (loja, saque, esconderijo) | falta |
@@ -6672,6 +6673,45 @@ Commit anterior: `f3387ed0` (o ciclo 135).
   arma de cada acessório ("cada acessório é feito para certos tipos de arma") fica com o mestre.
 - **Próximo:** do C11, só a parte 2b (as regras próprias do Kit), que pede a decisão do usuário (ver as dúvidas do ciclo
   134). Fora dela, o próximo item livre do ROADMAP.
+
+### Ciclo 137 (2026-10-20): o C18, armadura por local e todas as camadas (sessão Codex)
+
+Commit anterior: `5c95079` (ciclo 136). O C18 foi reservado e publicado em `c310e66`. Os ciclos 130 a 136 das outras
+sessões foram incorporados antes do fechamento, preservando o trabalho das três sessões.
+
+- **Referência:** CORE 0.92.4, `modules/actor/cpr-actor.js:943–961` (armaduras vestidas), `:1377–1388` (maior SP atual)
+  e `:1564–1627` (`_ablateArmor`, todas as camadas do local). Wiki: `system-rules.js`, Armadura, p. 186, e
+  `system-catalog.js:88–89`, Skin Weave e Subdermal Armor, sem soma e com ablação de todas as fontes. Para consertar,
+  permanece a decisão do usuário de 2026-10-16, registrada no ciclo 70: voltar ao máximo e anunciar quem consertou;
+  o mestre narra tempo e condições.
+- **O que muda:**
+  - `regras-armadura.mjs`: seleção do maior SP atual, enumeração das armaduras vestidas que cobrem o local e limites
+    de zero ao máximo; escudos e armaduras guardadas ficam fora;
+  - o dano e a ablação pelo local atingem todas as camadas vestidas, inclusive os itens de armadura dos implantes;
+    o Painel Tático usa a mesma operação para ablar;
+  - o cartão guarda os IDs e a perda efetiva de cada camada. Desfazer restaura cada diferença sem ultrapassar o
+    máximo, conserva dano posterior, aceita a peça retirada depois e ignora IDs removidos. Cartões antigos conservam
+    o formato de uma só armadura;
+  - as fichas de personagem e capanga mostram a fonte do SP e os botões **−1 SP** por local e **Consertar** por item.
+    O conserto restaura ambos os locais daquela peça; inteira, só informa, sem novo cartão;
+  - APIs de ablação e conserto conferem propriedade e a permissão de mudar o estoque do contêiner. A revisão pegou a
+    guarda que faltava para ablar o estoque protegido; o teste do jogador e a mutação M23 a conferem.
+- **Testes de referência:** sete novos no G3 (`armadura.test.mjs`): SP atual, locais, empate, fontes, todas as camadas,
+  limites e os dois implantes do catálogo como itens de armadura separados do cyberware. Quatro passos independentes
+  no G4: contas e Desfazer, cliques nas duas fichas, ataque perfurante em capanga de token solto e permissões no
+  navegador do jogador. A lista exata de painéis do capanga passou a exigir também o novo painel ARMADURA,
+  preservando os anteriores. As capturas das fichas foram conferidas.
+- **Resultados:** antes da integração, G1 92 arquivos/0 erros, G2 0, G3 **204/204** e G4 completo **185/185**. Depois
+  de incorporar os ciclos 130 a 136: G1 95 arquivos/0 erros, G2 0, G3 **220/220** e G4 completo **197/197**, no
+  Foundry 14.369, sem pular a parte do Foundry e sem avisos ou erros do sistema nos dois navegadores.
+- **Mutações:** **23/23 caíram**, uma por vez: seis no G3 e dezessete no G4 focado, conferindo seleção, limites,
+  persistência, todas as camadas, perdas efetivas, cartões antigos e novos, cabeça e corpo, botões nas duas fichas,
+  Painel Tático e permissões. As 23 rodadas restauraram os bytes por MD5. Depois da integração, a bateria foi repetida
+  no conjunto final, também com 23/23 e restauração por MD5. Registros locais em `tests/.saida/c18-mutacoes.json`,
+  com log e controle de restauração por rodada.
+- **Limites:** Skin Weave e Subdermal Armor continuam usando os itens de armadura separados do CORE; não houve
+  mudança de schema, build ou recuperação diária automática. O conserto não calcula teste, custo ou tempo.
+- **Próximo:** C19, lesão crítica fora do ataque. C10 segue reservado à sessão Junin e C11 à sessão KouArt.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -117,6 +117,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       portaDoDeck: FichaPersonagem.#portaDoDeck,
       mudarQuantidade: FichaPersonagem.#mudarQuantidade,
       dividirPilha: FichaPersonagem.#dividirPilha,
+      ablarArmadura: FichaPersonagem.#ablarArmadura,
+      consertarArmadura: FichaPersonagem.#consertarArmadura,
       usarItem: FichaPersonagem.#usarItem,
       usarDroga: FichaPersonagem.#usarDroga,
       acabouDroga: FichaPersonagem.#acabouDroga,
@@ -134,7 +136,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     topo: parte('topo'),
     tabs: { template: 'templates/generic/tab-navigation.hbs' },
     pericias: { ...aba('pericias'), templates: [bloco('geral')] },
-    combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao')] },
+    combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao'), bloco('armadura')] },
     equipamento: aba('equipamento'),
     cyberware: aba('cyberware'),
     role: aba('role'),
@@ -219,6 +221,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const sp = (armadura, local) => (armadura.system.sp[local].max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${armadura.system.sp[local].value}/${armadura.system.sp[local].max}` : '');
     const armaduras = itens('armadura').map(armadura => ({
       id: armadura.id, nome: armadura.name, img: armadura.img, equipada: armadura.system.equipada,
+      consertavel: !armadura.system.escudo && ['cabeca', 'corpo'].some(local => armadura.system.sp[local].max > 0),
       detalhe: [sp(armadura, 'cabeca'), sp(armadura, 'corpo'), armadura.system.escudo ? `escudo ${armadura.system.pvEscudo.value}/${armadura.system.pvEscudo.max} PV` : '',
         armadura.system.penalidade ? `penalidade ${armadura.system.penalidade}` : ''].filter(Boolean).join(' · ')
     }));
@@ -323,6 +326,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length,
       armas, armasDeCombate, armasSemVeiculo, armasEquipadas: armasDeCombate.filter(arma => arma.pronta),
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
+      locaisArmadura: ['cabeca', 'corpo'].map(local => ({ local, rotulo: local === 'cabeca' ? 'CABEÇA' : 'CORPO',
+        ...s.armadura[local], nome: ator.items.get(s.armadura[local].item)?.name ?? 'Sem armadura' })),
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
       lesoes,
       iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
@@ -613,6 +618,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return item.update({ 'system.quantidade': item.system.quantidade + Number(alvo.dataset.delta) });
   }
   static #dividirPilha(evento, alvo) { return perguntarDivisao(this.#item(alvo)); }
+  static #ablarArmadura(evento, alvo) { return this.isEditable ? this.actor.ablarArmaduras(alvo.dataset.local) : null; }
+  static #consertarArmadura(evento, alvo) { return this.isEditable ? this.#item(alvo)?.consertar() : null; }
   static #instalar(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return null;

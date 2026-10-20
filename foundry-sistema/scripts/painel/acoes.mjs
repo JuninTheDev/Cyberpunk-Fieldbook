@@ -122,6 +122,7 @@ export function armaduraDo(actor, local) {
 }
 // − é a ablação (o tiro gastou SP), + é o conserto, até o máximo. O escudo perde e ganha pontos de vida.
 export async function mudarArmadura(actor, local, delta) {
+  if (local !== 'escudo' && delta < 0) return actor.ablarArmaduras(local, -delta);
   const armadura = armaduraDo(actor, local);
   if (!armadura) return null;
   const campo = local === 'escudo' ? 'system.pvEscudo' : `system.sp.${local}`;

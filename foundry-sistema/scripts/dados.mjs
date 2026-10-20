@@ -7,6 +7,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from '.
 import * as regras from './regras.mjs';
 import { protecoesDoVeiculo } from './regras-veiculos.mjs';
 import { scannerPreferido, tipoDeScanner } from './regras-inventario.mjs';
+import { armaduraDoLocal } from './regras-armadura.mjs';
 
 const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
@@ -143,9 +144,8 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     // Sem a perna, não esquiva (Perna Desmembrada).
     this.semPerna = lesoes.some(item => item.getFlag('cpr-fieldbook', 'catalogo') === 'core_critical-injuries-body:dismembered-leg' || item.name === 'Dismembered Leg');
     // SP de cada local: a maior das armaduras equipadas que cobrem o local.
-    const maior = local => armaduras.reduce((melhor, item) => (item.system.sp[local].max > 0 && item.system.sp[local].value > (melhor?.system.sp[local].value ?? -1) ? item : melhor), null);
     this.armadura = Object.fromEntries(['cabeca', 'corpo'].map(local => {
-      const item = maior(local);
+      const item = armaduraDoLocal(this.parent.items, local);
       return [local, { sp: item ? item.system.sp[local].value : 0, max: item ? item.system.sp[local].max : 0, item: item?.id ?? null }];
     }));
     this.iniciativa = a.ref.valor + this.bonus.iniciativa + this.consciencia.iniciativa;

@@ -16,6 +16,7 @@ import * as veiculos from './veiculos.mjs';
 import { ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
 import { efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
+import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -470,7 +471,7 @@ export class AtorCPR extends Actor {
   // reducao: o que sai do dano que entra (a Deflexão de Dano do Solo).
   async receberDano({ dano, bonus = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, ablacao = 1, letal = true, escudo = false, explosivo = false, reducao = 0 }) {
     const hpAntes = this.system.hp.value;
-    const resumo = { local, dano, bonus, hpAntes, ablado: 0, escudoAblado: 0, armadura: null, armaduraId: null };
+    const resumo = { local, dano, bonus, hpAntes, ablado: 0, armaduras: [], escudoAblado: 0, armadura: null, armaduraId: null };
     const protecao = escudo ? this.escudo : null;
     if (protecao) {
       resumo.escudoAblado = Math.min(dano + bonus, protecao.system.pvEscudo.value);
@@ -483,13 +484,12 @@ export class AtorCPR extends Actor {
     const armadura = this.system.armadura[lugar] || { sp: 0, item: null };
     const conta = aplicarDano({ dano, bonus, sp: armadura.sp, local, ignorarPct, ignorarAbaixo, reducao, letal, hpAtual: hpAntes });
     await this.update({ 'system.hp.value': hpAntes - conta.recebido });
-    const item = conta.ablar && armadura.item ? this.items.get(armadura.item) : null;
-    if (item && ablacao) {
-      const atual = item.system.sp[lugar].value;
-      resumo.ablado = Math.min(ablacao, atual);
-      await item.update({ [`system.sp.${lugar}.value`]: atual - resumo.ablado });
-      resumo.armadura = item.name;
-      resumo.armaduraId = item.id;
+    if (conta.ablar && ablacao) {
+      resumo.armaduras = await this.ablarArmaduras(lugar, ablacao);
+      const principal = resumo.armaduras.find(fonte => fonte.item === armadura.item);
+      resumo.ablado = principal?.ablado ?? 0;
+      resumo.armaduraId = principal?.item ?? null;
+      resumo.armadura = principal ? this.items.get(principal.item)?.name : null;
     }
     // entrou: o dano que chegou ao corpo antes das reduções (o que passou da armadura e o bônus do crítico).
     return { ...resumo, ...conta, entrou: conta.bruto + bonus, sp: armadura.sp, lugar, hpDepois: this.system.hp.value };
@@ -497,12 +497,27 @@ export class AtorCPR extends Actor {
 
   // Desfaz um dano aplicado: o HP perdido, o SP da armadura e os pontos do escudo voltam. Pela diferença, e não pelo
   // valor de antes: o que aconteceu com o ator depois (outro ataque, uma cura) continua valendo.
-  async desfazerDano({ perdeu = 0, armaduraId, lugar, ablado = 0, escudoId, escudoAblado = 0 }) {
+  async desfazerDano({ perdeu = 0, armaduraId, lugar, ablado = 0, armaduras = null, escudoId, escudoAblado = 0 }) {
     if (perdeu) await this.update({ 'system.hp.value': this.system.hp.value + perdeu });
-    const armadura = armaduraId && this.items.get(armaduraId);
-    if (armadura && ablado) await armadura.update({ [`system.sp.${lugar}.value`]: armadura.system.sp[lugar].value + ablado });
+    // O cartão antigo tem uma só fonte. O novo guarda cada ID e quanto de SP realmente perdeu, inclusive no zero.
+    const fontes = armaduras ?? (armaduraId && ablado ? [{ item: armaduraId, ablado }] : []);
+    const mudancas = fontes.flatMap(fonte => {
+      const item = this.items.get(fonte.item), sp = item?.system.sp?.[lugar];
+      return sp ? [{ _id: item.id, [`system.sp.${lugar}.value`]: spComVariacao(sp, fonte.ablado) }] : [];
+    });
+    if (mudancas.length) await this.updateEmbeddedDocuments('Item', mudancas);
     const escudo = escudoId && this.items.get(escudoId);
     if (escudo && escudoAblado) await escudo.update({ 'system.pvEscudo.value': escudo.system.pvEscudo.value + escudoAblado });
+  }
+
+  // CORE _ablateArmor: todas as armaduras vestidas do local, não só a de maior SP. O escudo tem sua própria trilha.
+  async ablarArmaduras(local, quantidade = 1) {
+    if (!this.isOwner || !Number.isSafeInteger(quantidade) || quantidade < 1 || (this.type === 'conteiner' && !game.user.isGM && !this.system.permissoes.mudar)) return [];
+    const fontes = armadurasDoLocal(this.items, local).map(item => ({ item: item.id,
+      ablado: item.system.sp[local].value - spComVariacao(item.system.sp[local], -quantidade) })).filter(fonte => fonte.ablado > 0);
+    if (fontes.length) await this.updateEmbeddedDocuments('Item', fontes.map(fonte => ({ _id: fonte.item,
+      [`system.sp.${local}.value`]: this.items.get(fonte.item).system.sp[local].value - fonte.ablado })));
+    return fontes;
   }
 
   // Instala um cyberware: a Humanidade cai pela perda rolada (ou pela média, para quem prefere) e o efeito passa a valer.
@@ -682,7 +697,7 @@ export class ItemCPR extends Item {
   // consertou. A wiki só diz que a armadura perde o SP "até ser reparada" (p. 186), sem o teste, o custo ou o tempo: o
   // mestre narra o conserto (a decisão do usuário de 2026-10-16). Inteira, só avisa.
   async consertar() {
-    if (this.type !== 'armadura') return null;
+    if (this.type !== 'armadura' || !this.isOwner || (this.actor?.type === 'conteiner' && !game.user.isGM && !this.actor.system.permissoes.mudar)) return null;
     const locais = ['cabeca', 'corpo'].filter(local => this.system.sp[local].max && this.system.sp[local].value < this.system.sp[local].max);
     if (!locais.length) {
       ui.notifications.info(`${this.name} já está inteira.`);

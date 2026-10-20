@@ -130,6 +130,191 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    await r.passo('armadura (C18): o maior SP atual do local vale sem soma; o dano abla todas as camadas e o Desfazer restaura cada diferença, inclusive uma camada quase gasta e um cartão antigo', async () => {
+      const info = await edge.evaluate(`(async () => {
+        let ator;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const roupa = (id, nome, valor, vestida = true) => { const d = foundry.utils.deepClone(cat[id]); d.name = nome; d.system.equipada = vestida; d.system.sp.corpo.value = valor; return d; };
+          const metal = roupa('core_armor:metalgear-body', 'C18 Metalgear ablada', 5), kevlar = roupa('core_armor:kevlar-body', 'C18 Kevlar', 7);
+          const pele = roupa('core_armor:skin-weave', 'C18 Skin Weave', 1), cabeca = roupa('core_armor:light-armorjack-head', 'C18 Cabeça', 0); cabeca.system.sp.cabeca.value = 9;
+          const guardada = roupa('core_armor:metalgear-body', 'C18 Guardada', 18, false), escudo = roupa('core_armor:bullet-proof-shield', 'C18 Escudo', 30); escudo.system.sp.corpo.max = 30;
+          ator = await Actor.implementation.create({ name: 'C18 Camadas', type: 'personagem', system: { hp: { value: 40 } }, items: [metal, kevlar, pele, cabeca, guardada, escudo] });
+          const item = nome => ator.items.getName('C18 ' + nome), valores = () => ['Metalgear ablada', 'Kevlar', 'Skin Weave', 'Cabeça', 'Guardada', 'Escudo'].map(n => [n, item(n).system.sp.corpo.value, item(n).system.sp.cabeca.value]);
+          const antes = { corpo: ator.system.armadura.corpo.sp, cabeca: ator.system.armadura.cabeca.sp, fonte: ator.system.armadura.corpo.item === item('Kevlar').id, penalidade: ator.system.penalidadeArmadura };
+          const recebido = await ator.receberDano({ dano: 11, ablacao: 2 });
+          const atingiu = { hp: ator.system.hp.value, valores: valores(), fontes: recebido.armaduras.map(f => [ator.items.get(f.item).name, f.ablado]).sort(), principal: recebido.armadura === 'C18 Kevlar' && recebido.ablado === 2, sp: recebido.sp };
+          await item('Metalgear ablada').update({ 'system.equipada': false });
+          await item('Kevlar').update({ 'system.sp.corpo.value': 3 });
+          await ator.desfazerDano({ perdeu: recebido.hpAntes - recebido.hpDepois, lugar: recebido.lugar, armaduras: recebido.armaduras });
+          const desfez = { hp: ator.system.hp.value, valores: valores(), metalGuardada: !item('Metalgear ablada').system.equipada };
+          await ator.desfazerDano({ armaduraId: item('Kevlar').id, lugar: 'corpo', ablado: 1 });
+          const legado = item('Kevlar').system.sp.corpo.value;
+          const painel = await import('/systems/${S}/scripts/painel/acoes.mjs');
+          await painel.mudarArmadura(ator, 'corpo', -1);
+          const ablouPainel = valores();
+          const antesInvalidos = JSON.stringify(valores());
+          for (const quantidade of [0, -1, 1.5, NaN]) await ator.ablarArmaduras('corpo', quantidade);
+          await ator.ablarArmaduras('escudo');
+          const invalidos = antesInvalidos === JSON.stringify(valores());
+          const danoCabeca = await ator.receberDano({ dano: 10, local: 'cabeca' });
+          const estadoCabeca = { hp: ator.system.hp.value, sp: ator.system.armadura.cabeca.sp,
+            fontes: danoCabeca.armaduras.map(f => [ator.items.get(f.item).name, f.ablado]).sort(), corpo: item('Kevlar').system.sp.corpo.value };
+          await item('Kevlar').update({ 'system.sp.corpo.value': 7 });
+          await ator.desfazerDano({ lugar: 'corpo', armaduras: [{ item: item('Kevlar').id, ablado: 2 }] });
+          const teto = item('Kevlar').system.sp.corpo.value;
+          const removida = item('Skin Weave').id; await item('Skin Weave').delete();
+          await ator.desfazerDano({ lugar: 'corpo', armaduras: [{ item: removida, ablado: 1 }] });
+          return { antes, atingiu, desfez, legado, ablouPainel, invalidos, cabeca: estadoCabeca, teto, removida: !ator.items.has(removida) };
+        } finally { await ator?.sheet?.close(); await ator?.delete(); }
+      })()`);
+      const { antes, atingiu, desfez, cabeca } = info;
+      return [antes.corpo === 7 && antes.cabeca === 9 && antes.fonte && antes.penalidade === 4
+        && atingiu.hp === 36 && atingiu.sp === 7 && atingiu.principal && JSON.stringify(atingiu.fontes) === JSON.stringify([['C18 Kevlar', 2], ['C18 Metalgear ablada', 2], ['C18 Skin Weave', 1]])
+        && JSON.stringify(atingiu.valores.map(v => v.slice(1))) === JSON.stringify([[3, 0], [5, 0], [0, 7], [0, 9], [18, 0], [30, 0]])
+        && desfez.hp === 40 && desfez.metalGuardada && JSON.stringify(desfez.valores.map(v => v.slice(1))) === JSON.stringify([[5, 0], [5, 0], [1, 7], [0, 9], [18, 0], [30, 0]])
+        && info.legado === 6 && info.ablouPainel[0][1] === 5 && info.ablouPainel[1][1] === 5 && info.ablouPainel[2][1] === 0 && info.invalidos
+        && cabeca.hp === 38 && cabeca.sp === 8 && cabeca.corpo === 5 && JSON.stringify(cabeca.fontes) === JSON.stringify([['C18 Cabeça', 1], ['C18 Skin Weave', 1]])
+        && info.teto === 7 && info.removida, JSON.stringify(info)];
+    });
+
+    await r.passo('armadura (C18): personagem e capanga mostram a fonte do SP, ablam pelo local e consertam pelo botão da armadura; inteira só informa, sem novo cartão; no zero não cai mais', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+        const atores = [], mensagens = new Set(game.messages.map(m => m.id)), avisos = [], informar = ui.notifications.info;
+        try {
+          ui.notifications.info = texto => { avisos.push(String(texto)); return null; };
+          const cat = await game.system.api.wiki.carregarCatalogo(), resultados = [];
+          for (const tipo of ['personagem', 'capanga']) {
+            const traje = foundry.utils.deepClone(cat['core_armor:bodyweight-suit']); traje.name = 'C18 Traje'; traje.system.equipada = true; traje.system.sp.corpo.value = 10; traje.system.sp.cabeca.value = 9;
+            const pele = foundry.utils.deepClone(cat['core_armor:skin-weave']); pele.name = 'C18 Pele'; pele.system.equipada = true;
+            const guardada = foundry.utils.deepClone(cat['core_armor:metalgear-body']); guardada.name = 'C18 Reserva';
+            const ator = await Actor.implementation.create({ name: 'C18 Ficha ' + tipo, type: tipo, items: [traje, pele, guardada] }); atores.push(ator);
+            await ator.sheet.render({ force: true }); if (tipo === 'personagem') ator.sheet.changeTab('combate', 'primary');
+            const painel = () => ator.sheet.element?.querySelector('.protecao-armadura');
+            const fonte = local => painel()?.querySelector('.sp-caixas > [data-local="' + local + '"] .fonte-sp')?.textContent.trim();
+            const botao = () => painel()?.querySelector('[data-action="ablarArmadura"][data-local="corpo"]');
+            const original = ator.items.getName('C18 Traje'), interna = ator.items.getName('C18 Pele');
+            const reparar = () => painel()?.querySelector('li[data-item-id="' + original.id + '"] [data-action="consertarArmadura"]');
+            const pronto = await esperar(() => botao() && reparar() && fonte('corpo') === 'C18 Traje' && fonte('cabeca') === 'C18 Traje');
+            botao().click();
+            const ablou = await esperar(() => original.system.sp.corpo.value === 9 && interna.system.sp.corpo.value === 6 && reparar());
+            const local = { corpo: original.system.sp.corpo.value, cabeca: original.system.sp.cabeca.value, peleCorpo: interna.system.sp.corpo.value, peleCabeca: interna.system.sp.cabeca.value };
+            reparar().click();
+            const consertou = await esperar(() => original.system.sp.corpo.value === 11 && original.system.sp.cabeca.value === 11 && game.messages.some(m => m.getFlag('${S}', 'conserto')?.item === original.uuid) && reparar());
+            const recado = game.messages.find(m => m.getFlag('${S}', 'conserto')?.item === original.uuid);
+            const conserto = { esperou: consertou, corpo: original.system.sp.corpo.value, cabeca: original.system.sp.cabeca.value, pele: interna.system.sp.corpo.value,
+              mudou: recado?.getFlag('${S}', 'conserto').mudancas.map(m => [m.local, m.antes, m.depois]).sort(), texto: recado?.content.includes('C18 Ficha ' + tipo) };
+            await esperar(() => reparar()); reparar().click(); await esperar(() => avisos.length === resultados.length + 1);
+            const inteira = game.messages.filter(m => m.getFlag('${S}', 'conserto')?.item === original.uuid).length;
+            const reserva = ator.items.getName('C18 Reserva'); await reserva.update({ 'system.equipada': true });
+            const trocouFonte = await esperar(() => fonte('corpo') === 'C18 Reserva');
+            await ator.updateEmbeddedDocuments('Item', ator.items.map(i => ({ _id: i.id, 'system.sp.corpo.value': 0 })));
+            await esperar(() => botao()); botao().click(); await new Promise(r => setTimeout(r, 200));
+            resultados.push({ tipo, pronto, ablou, local, conserto, inteira, trocouFonte, zero: ator.items.every(i => i.system.sp.corpo.value === 0) });
+          }
+          return { resultados, avisos };
+        } finally {
+          ui.notifications.info = informar;
+          for (const ator of atores) { await ator.sheet?.close(); await ator.delete(); }
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      return [info.resultados.length === 2 && info.resultados.every(v => v.pronto && v.ablou && JSON.stringify(v.local) === JSON.stringify({ corpo: 9, cabeca: 9, peleCorpo: 6, peleCabeca: 7 })
+        && v.conserto.esperou && v.conserto.corpo === 11 && v.conserto.cabeca === 11 && v.conserto.pele === 6 && v.conserto.texto
+        && JSON.stringify(v.conserto.mudou) === JSON.stringify([['cabeca', 9, 11], ['corpo', 9, 11]]) && v.inteira === 1 && v.trocouFonte && v.zero)
+        && info.avisos.length === 2 && info.avisos.every(a => a === 'C18 Traje já está inteira.'), JSON.stringify(info)];
+    });
+
+    await r.passo('armadura (C18): um ataque perfurante no capanga de token solto registra a ablação de cada camada; Desfazer pelo cartão conserva dano posterior e não altera o ator modelo', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const atores = [], mensagens = new Set(game.messages.map(m => m.id)), anterior = game.scenes.active, random = CONFIG.Dice.randomUniform;
+        const defesa = game.settings.get('${S}', 'defesaDosNpcs'); let cena;
+        try {
+          await game.settings.set('${S}', 'defesaDosNpcs', 'automatica');
+          const cat = await game.system.api.wiki.carregarCatalogo(), pegar = id => foundry.utils.deepClone(cat[id]);
+          const arma = pegar('core_weapons:heavy-pistol'); arma.system.equipada = true; arma.system.pente.value = 8;
+          const municao = foundry.utils.deepClone(Object.values(cat).find(i => i.type === 'municao' && i.name.includes('Heavy Pistol') && i.system.ablacao === 2));
+          const atirador = await Actor.implementation.create({ name: 'C18 Atirador', type: 'personagem', system: { atributos: { ref: { valor: 8 } }, pericias: { handgun: { nivel: 10 } } }, items: [arma, municao] }); atores.push(atirador);
+          const pistola = atirador.items.find(i => i.type === 'arma'); await pistola.update({ 'system.carregada': atirador.items.find(i => i.type === 'municao').id });
+          const externa = pegar('core_armor:light-armorjack-body'); externa.system.equipada = true;
+          const interna = pegar('core_armor:skin-weave'); interna.system.equipada = true; interna.system.sp.corpo.value = 1;
+          const modelo = await Actor.implementation.create({ name: 'C18 Modelo', type: 'capanga', system: { hp: { value: 40 }, atributos: { ref: { valor: 6 } } }, items: [externa, interna] }); atores.push(modelo);
+          cena = await Scene.implementation.create({ name: 'C18 Desfazer', active: false, width: 1000, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate(); for (let i = 0; i < 80 && !(canvas.ready && canvas.scene?.id === cena.id); i++) await new Promise(r => setTimeout(r, 100));
+          const tokens = await cena.createEmbeddedDocuments('Token', [(await atirador.getTokenDocument({ x: 100, y: 100 })).toObject(), (await modelo.getTokenDocument({ x: 200, y: 100, actorLink: false })).toObject()]);
+          const alvo = tokens.find(t => t.actorId === modelo.id), ator = alvo.actor;
+          const fila = [[5, 10], [5, 6], [5, 6], [5, 6]]; CONFIG.Dice.randomUniform = () => { const p = fila.shift() ?? [5, 6]; return 1 - (p[0] - .5) / p[1]; };
+          const resultado = await game.system.api.combate.atacar(pistola, { alvos: [alvo], destinos: {} });
+          const cartao = game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === resultado.id);
+          const dano = cartao?.getFlag('${S}', 'desfazer')?.find(l => l.ator === ator.uuid)?.dano;
+          const ler = a => a.items.filter(i => i.type === 'armadura').map(i => [i.name, i.system.sp.corpo.value]).sort();
+          const atingiu = { hp: ator.system.hp.value, fontes: dano?.armaduras?.map(f => [ator.items.get(f.item)?.name, f.ablado]).sort(), armaduras: ler(ator), modelo: ler(modelo) };
+          const leve = ator.items.find(i => i.name === externa.name); await leve.update({ 'system.sp.corpo.value': 7 });
+          await game.system.api.combate.desfazer(cartao);
+          return { atingiu, desfez: { hp: ator.system.hp.value, armaduras: ler(ator), modelo: ler(modelo), marcou: Boolean(cartao.getFlag('${S}', 'desfeito')), solto: !alvo.actorLink } };
+        } finally {
+          CONFIG.Dice.randomUniform = random; await game.settings.set('${S}', 'defesaDosNpcs', defesa);
+          if (anterior && game.scenes.has(anterior.id)) await anterior.activate();
+          await cena?.delete(); for (const ator of atores) await ator.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      const modelo = [['Light Armorjack (Body)', 11], ['Skin Weave', 1]];
+      return [info.atingiu.hp === 36 && JSON.stringify(info.atingiu.fontes) === JSON.stringify([['Light Armorjack (Body)', 2], ['Skin Weave', 1]])
+        && JSON.stringify(info.atingiu.armaduras) === JSON.stringify([['Light Armorjack (Body)', 9], ['Skin Weave', 0]]) && JSON.stringify(info.atingiu.modelo) === JSON.stringify(modelo)
+        && info.desfez.hp === 40 && info.desfez.marcou && info.desfez.solto && JSON.stringify(info.desfez.armaduras) === JSON.stringify([['Light Armorjack (Body)', 9], ['Skin Weave', 1]])
+        && JSON.stringify(info.desfez.modelo) === JSON.stringify(modelo), JSON.stringify(info)];
+    });
+
+    await r.passo('armadura (C18): no navegador do jogador, o dono abla e conserta; o observador só lê e a API também recusa alterar o ator observado ou o estoque protegido do contêiner', async () => {
+      let cliente;
+      const preparo = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo(), dados = foundry.utils.deepClone(cat['core_armor:light-armorjack-body']); dados.system.equipada = true; dados.system.sp.corpo.value = 10;
+        const atores = []; let usuario;
+        try {
+          usuario = await User.implementation.create({ name: 'Jogador C18', role: CONST.USER_ROLES.PLAYER });
+          const dono = await Actor.implementation.create({ name: 'C18 Dono', type: 'personagem', ownership: { [usuario.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, items: [dados] }); atores.push(dono);
+          const observado = await Actor.implementation.create({ name: 'C18 Observado', type: 'personagem', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER }, items: [dados] }); atores.push(observado);
+          const estoque = await Actor.implementation.create({ name: 'C18 Estoque', type: 'conteiner', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, system: { tipo: 'personalizado', permissoes: { mudar: false } }, items: [dados] }); atores.push(estoque);
+          return { dono: dono.id, observado: observado.id, estoque: estoque.id, usuario: usuario.id, mensagens: game.messages.map(m => m.id) };
+        } catch (erro) { for (const ator of atores) await ator.delete(); await usuario?.delete(); throw erro; }
+      })()`);
+      try {
+        cliente = await abrirEdge({ porta: 9478, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-c18-' });
+        await foundry14.capturarAvisos(cliente); await foundry14.entrarComo(cliente, mesa.url, 'Jogador C18');
+        const info = await cliente.evaluate(`(async () => {
+          const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+          await esperar(() => game.actors.get('${preparo.dono}')?.isOwner && game.actors.get('${preparo.observado}') && game.actors.get('${preparo.estoque}')?.isOwner);
+          const dono = game.actors.get('${preparo.dono}'), observado = game.actors.get('${preparo.observado}'), estoque = game.actors.get('${preparo.estoque}');
+          await dono.sheet.render({ force: true }); dono.sheet.changeTab('combate', 'primary');
+          const painel = () => dono.sheet.element?.querySelector('.protecao-armadura');
+          await esperar(() => painel()?.querySelector('[data-action="ablarArmadura"][data-local="corpo"]'));
+          painel().querySelector('[data-action="ablarArmadura"][data-local="corpo"]').click();
+          const ablou = await esperar(() => dono.items.contents[0].system.sp.corpo.value === 9 && painel()?.querySelector('[data-action="consertarArmadura"]'));
+          painel().querySelector('[data-action="consertarArmadura"]').click();
+          const consertou = await esperar(() => dono.items.contents[0].system.sp.corpo.value === 11 && game.messages.some(m => m.getFlag('${S}', 'conserto')?.item === dono.items.contents[0].uuid));
+          const semAblacao = await observado.ablarArmaduras('corpo');
+          const semConserto = await observado.items.contents[0].consertar() === null;
+          const estoqueSemAblacao = (await estoque.ablarArmaduras('corpo')).length === 0;
+          const estoqueProtegido = await estoque.items.contents[0].consertar() === null;
+          await observado.sheet.render({ force: true }); observado.sheet.changeTab('combate', 'primary'); await esperar(() => observado.sheet.element?.querySelector('.protecao-armadura'));
+          return { gm: game.user.isGM, ablou, consertou, semAblacao: semAblacao.length === 0, semConserto, estoqueSemAblacao, estoqueProtegido,
+            observado: observado.items.contents[0].system.sp.corpo.value, estoque: estoque.items.contents[0].system.sp.corpo.value,
+            botoes: observado.sheet.element.querySelectorAll('[data-action="ablarArmadura"], [data-action="consertarArmadura"]').length };
+        })()`);
+        const avisos = await foundry14.avisosDoSistema(cliente), erros = cliente.erros.slice();
+        return [!info.gm && info.ablou && info.consertou && info.semAblacao && info.semConserto && info.estoqueSemAblacao && info.estoqueProtegido && info.observado === 10 && info.estoque === 10 && info.botoes === 0 && !avisos.length && !erros.length, JSON.stringify({ ...info, avisos, erros })];
+      } finally {
+        await cliente?.fechar();
+        await edge.evaluate(`(async () => {
+          for (const id of ['${preparo.dono}', '${preparo.observado}', '${preparo.estoque}']) { const ator = game.actors.get(id); await ator?.sheet?.close(); await ator?.delete(); }
+          await game.users.get('${preparo.usuario}')?.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !${JSON.stringify(preparo.mensagens)}.includes(m.id)).map(m => m.id)); return true;
+        })()`);
+      }
+    });
+
     await r.passo('inventário (C17): o drop real do compêndio e do diretório soma a quantidade sem tirar da origem; reordenar na própria ficha conserva as pilhas, e armas continuam separadas', async () => {
       const info = await edge.evaluate(`(async () => {
         const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
@@ -7565,7 +7750,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const { token, ficha, recebidos: c, soltos, tiro1, tiro2, morte, fichaDoToken } = info;
         const ok = !token.ligado && token.barra === 'hp' && token.visao
           && ficha.classes && ficha.abas === 0 && ficha.modelo === 'MODELO DOS TOKENS'
-          && ficha.titulos.join() === 'ATRIBUTOS,VITAIS,PERÍCIAS,ARMADURA,CYBERWARE,LESÕES CRÍTICAS,ARMAS,AGARRÃO,ITENS,NOTAS' && ficha.agarrar
+          && ficha.titulos.join() === 'ATRIBUTOS,VITAIS,PERÍCIAS,ARMADURA,CYBERWARE,LESÕES CRÍTICAS,ARMAS,ARMADURA,AGARRÃO,ITENS,NOTAS' && ficha.agarrar
           && c.pistola && c.armadura && c.instalados && c.kerenzikov === 12 && c.grip === 3 && c.medscanner === 'equipado' && c.bala === 10
           && c.hum === 35 && c.humMax === 46 && c.ini === 8 && c.sp === 11
           && JSON.stringify(c.itens) === JSON.stringify([['Heavy Pistol', 'Equipada'], ['Light Armorjack (Body)', 'Vestida'], ['Heavy Pistol (Basic)', ''], ['Grip Foot', 'Instalado'], ['Kerenzikov', 'Instalado'], ['Medscanner', 'Equipado']])

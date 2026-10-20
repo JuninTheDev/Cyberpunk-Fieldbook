@@ -46,6 +46,12 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Ablação de camadas e Desfazer (C18):** escolher o maior SP não escolhe as únicas peças que perdem SP. Enumere todas
+  as armaduras vestidas do local e guarde cada ID com a perda efetiva: uma camada com 1 SP atingida por perfurante perde
+  só 1. Desfazer pela seleção atual ou pelo valor nominal restaura a peça errada ou SP demais. O G4 confere também
+  peça retirada após o ataque, dano posterior, reparo antes de desfazer, token solto e estoque protegido no cliente do
+  jogador. A permissão precisa estar na API, além de esconder os botões de quem só observa.
+
 - **Estoque depois do `await` (C17):** criar uma pilha pode aguardar enquanto uma dose é consumida. Releia a quantidade
   antes de debitar; restaurar o valor de antes da criação recria a dose. O G4 consome uma droga pela API durante a
   criação e confere quantidade, efeito e flags. A fila serializa operações do mesmo cliente, sem prometer uma transação

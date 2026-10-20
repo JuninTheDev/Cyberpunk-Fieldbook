@@ -1091,7 +1091,7 @@ async function cartaoDoResultado(ctx) {
   };
   const desfazer = ctx.linhas.filter(l => l.dano || l.veicular?.perdeu || l.veicular?.ablado || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
     ator: l.token.actor.uuid, veicular: l.veicular ?? null, suprimido: Boolean(l.suprimido), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
-    dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
+    dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, armaduras: l.dano.armaduras, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   if (ctx.lesoesDoAtirador?.length) desfazer.push({ ator: ctx.atacante.uuid, suprimido: false, municao: null, lesoes: ctx.lesoesDoAtirador, dano: null });
   const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 || (ctx.devolver?.length ?? 0) > 0 });

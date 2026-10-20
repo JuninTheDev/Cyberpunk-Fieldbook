@@ -15,6 +15,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **As abas no jeito das maquetes do usuário** (ciclo 60, Combate, Equipamento e Cyberware; ciclo 61, Role, NET e Vida): à esquerda, a coluna dos números (os painéis de resumo, com o número principal em grande); à direita, as listas e as tabelas. Estreita (menos de 700 px), tudo numa coluna. A Role mostra a Role em grande à esquerda (o Rank, os pontos distribuídos, o resumo e os botões da habilidade, e as notas da Role em texto livre, ciclo 68) e, à direita, as especialidades com os pontos também em caixas; a NET, a Interface em grande (com a conexão: "Conectar" leva o token do ator ao ponto de acesso mais perto da cena, com as conferências do clique no marcador; conectado, o nome do ponto, "Abrir a NET" e "Desconectar", a desconexão segura; ciclo 69; e, conectado, a arquitetura ao vivo, com os andares como o netrunner os conhece, "?" nos que ainda não viu, e o estado de cada um, hostil, trancado, liberado ou livre, que a ficha acompanha sem reabrir; ciclo 76; e os slots do deck equipado em caixas, ciclo 72) e os cyberdecks à esquerda e, à direita, as habilidades em cartões e os programas (cada um com o estado: guardado, fora do deck; carregado, no deck; ativo, rezzado; ciclo 72); a Vida, o Lifepath em cinco painéis (as origens, os valores, a família, as metas e as pessoas, e o Lifepath da Role) e as notas.
   - **Combate:** à esquerda, a Iniciativa em grande (com "Rolar iniciativa", ciclo 65: entra no combate, que o mestre cria se não houver, e rola na fila pela iniciativa do sistema; quem já rolou naquele combate não rola de novo), os vitais (o HP com a barra, o limite de gravemente ferido, a penalidade, o Death Save, o MOVE e o estado) e a defesa (a esquiva, o Facedown e "Proteger-se", ciclo 79: marca o token "Em cobertura", e o cartão do tiro contra ele avisa o mestre, que decide se a cobertura para a bala; de novo, tira a marca; e "Agarrar" e "Soltar", ciclo 80: o agarrão, abaixo); à direita, as armas com todos os modos de ataque, a armadura vestida, as lesões críticas (com o paliativo, o tratamento e "Tratada") e a munição.
   - **Equipamento:** à esquerda, os Eurodólares em grande, com o extrato e as últimas mudanças, e a munição; à direita, armas, armaduras, equipamento, roupas, drogas, upgrades e veículos.
+  - **Armadura (C18):** personagem e capanga mostram qual armadura fornece o SP de cada local. **−1 SP** abla todas
+    as camadas vestidas daquele local; **Consertar** restaura o SP dos locais da armadura escolhida e informa quem
+    consertou no chat. Inteira, só avisa. O mestre narra tempo e condições do conserto, conforme a decisão do ciclo 70.
+    Skin Weave e Subdermal Armor usam seus itens de armadura separados do compêndio, como no CORE; o item de cyberware
+    sozinho não fornece SP. O jogador precisa ser dono; no contêiner, precisa também de "Mudar os itens".
   - **Pilhas (C17):** munição e drogas de mesmo tipo e nome juntam ao soltar na ficha, inclusive do diretório ou
     compêndio. Reordenar na própria ficha não junta. **Dividir** escolhe quantas unidades vão para outra pilha, com a
     metade arredondada para cima como sugestão; vale também para equipamento, roupa, capanga e contêiner. O original
@@ -148,7 +153,8 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   (as regras e o combate são os mesmos), numa página só:
   - **Cabeçalho:** o retrato, o nome, o HP, a SP, a iniciativa e a esquiva, e se a ficha é a do ator (o modelo dos
     tokens) ou a de um token na cena;
-  - **Corpo:** o painel geral da ficha do personagem (sem as armas), a tabela de armas com os ataques, o agarrão (os botões do
+  - **Corpo:** o painel geral da ficha do personagem (sem as armas), a tabela de armas com os ataques, o painel de armadura
+    com ablação e conserto, o agarrão (os botões do
     ciclo 81), os itens (equipar, vestir, instalar e o uso de cada um) e as notas;
   - **O token** nasce solto, com o HP na barra: cada capanga na cena tem o próprio HP, a própria munição e o próprio Death
     Save. O nome mudado na ficha de um token vai para o token na cena;
@@ -266,11 +272,14 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - passados 8 s sem resposta, o mestre ganha um cartão para responder pelo jogador. A barra da janela mostra o tempo que resta; quando ele acaba, ou quando o jogador fecha a janela no X, vale a escolha padrão (aguentar; a Concentração no fogo supressivo; no corpo a corpo, a esquiva), rolada direto, e o cartão do resultado anota.
 - **Dano na ficha**, com as regras do CORE:
   - **Quem rola:** quem atacou rola o dano no computador dele; se ele não responder, o mestre rola.
-  - **SP:** vale a maior armadura equipada no local; arma branca ignora metade.
+  - **SP:** vale o maior SP atual das armaduras vestidas que cobrem o local, sem somar; arma branca ignora metade.
   - **Armadura segura:** se o dano não passa do SP, entra só o bônus do crítico.
   - **Cabeça:** o dano que passa conta ×2.
   - **Escudo:** recebe o ataque todo; só um explosivo passa de um escudo destruído.
-  - **Ablação:** a armadura perde 1 de SP, ou a ablação da munição (a perfurante tira 2; a borracha, a biotoxina e a venenosa não tiram nada).
+  - **Ablação:** quando o dano atravessa, todas as armaduras vestidas do local perdem 1 de SP, ou a ablação da munição
+    (a perfurante tira 2; a borracha, a biotoxina e a venenosa não tiram nada), sem cair abaixo de zero. O Desfazer
+    restaura em cada item apenas o SP perdido naquele ataque, até o máximo, preservando dano posterior e os IDs de
+    peças retiradas depois. Cartões antigos, com uma só armadura, continuam funcionando. Escudos têm sua própria trilha.
   - **Munição de borracha:** não mata (deixa o alvo com 1 HP), não tira SP e não causa lesão crítica.
   - **Munições especiais RED:** o ataque e a área continuam valendo. Biotoxina (DV15, 3d6) e veneno (DV13, 2d6) pedem Resistir a Tortura/Drogas e dão só seu dano direto no HP, sem armadura, ablação ou crítico. O dono do alvo rola no próprio navegador; sem resposta, o mestre rola. Empate na DV falha.
   - **Sonífera, flashbang e gás:** sonífera (DV13) deixa inconsciente e caído; dano ou uma Ação de outra pessoa acorda, sem levantar. Flashbang (DV15) dá Olho e Ouvido danificados; gás (DV13), só Olho danificado em quem tem olhos de carne. As lesões são temporárias, sem dano bônus, e preservam lesões anteriores. Anti-Dazzle em par, proteção dos ouvidos e Nasal Filters protegem contra os efeitos correspondentes; os filtros não imunizam contra flechas venenosas.
@@ -485,6 +494,8 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
     na arma padrão/excelente, na rolagem comum e com a Recuperação de Falhas do Solo; o ataque do jogador, com o total
     escondido, conferido nos dois clientes;
   - "Consertar" na ficha da armadura: o SP gasto volta ao máximo e o cartão "CONSERTO" diz quem consertou; inteira, o aviso, sem outra mensagem;
+  - armadura (C18): maior SP atual por local, todas as camadas abladas, Desfazer por diferença, fichas de personagem e
+    capanga, ataque perfurante em token solto e permissões no navegador do jogador, inclusive estoque protegido;
   - "Rolar Humanidade" na ficha do cyberware e "Aplicar" no cartão: a perda rolada sem instalar, tirada uma vez da Humanidade do dono pelo botão do mestre;
   - "Atacar" e "Recarregar" na ficha da arma (a janela no clique, direto com Ctrl; o pente cheio da munição carregada) e o SP da armadura em caixas, com o "−1" até o 0;
   - "Rodar" e "Restaurar REZ" na ficha do programa: sem o "Rodar" fora do deck; no deck, liga e desliga; a REZ perdida volta;

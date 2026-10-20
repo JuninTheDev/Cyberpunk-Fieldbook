@@ -38,22 +38,7 @@ defesa); à direita, as armas, a armadura, as lesões críticas e a munição. -
     <div class="coluna-principal">
       {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
 
-      <section class="painel corte vermelho">
-        <div class="titulo">ARMADURA<span>{{#if sistema.penalidadeArmadura}}−{{sistema.penalidadeArmadura}} EM REF, DEX E MOVE{{else}}SEM PENALIDADE{{/if}}</span></div>
-        <div class="sp-caixas">
-          <div><b>{{sistema.armadura.cabeca.sp}}</b>CABEÇA{{#if sistema.armadura.cabeca.max}}<small>de {{sistema.armadura.cabeca.max}}</small>{{/if}}</div>
-          <div><b>{{sistema.armadura.corpo.sp}}</b>CORPO{{#if sistema.armadura.corpo.max}}<small>de {{sistema.armadura.corpo.max}}</small>{{/if}}</div>
-        </div>
-        <ol class="itens">
-          {{#each armaduras}}
-          <li data-item-id="{{id}}" class="{{#unless equipada}}guardada{{/unless}}">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
-            <span class="detalhe">{{detalhe}}</span>
-            <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
-          </li>
-          {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
-        </ol>
-      </section>
+      {{> "systems/cpr-fieldbook/templates/personagem/bloco-armadura.hbs"}}
 
       <section class="painel corte perigo lesoes">
         <div class="titulo">LESÕES CRÍTICAS<span>{{lesoes.length}} ATIVA{{#unless (eq lesoes.length 1)}}S{{/unless}}</span></div>

@@ -1,0 +1,23 @@
+{{!-- A proteção efetiva e suas fontes: o maior SP atual vale, e a ablação atinge todas as camadas do local. --}}
+<section class="painel corte vermelho protecao-armadura">
+  <div class="titulo">ARMADURA<span>{{#if sistema.penalidadeArmadura}}−{{sistema.penalidadeArmadura}} EM REF, DEX E MOVE{{else}}SEM PENALIDADE{{/if}}</span></div>
+  <div class="sp-caixas">
+    {{#each locaisArmadura}}
+    <div data-local="{{local}}">
+      <b>{{sp}}</b>{{rotulo}}{{#if max}}<small>de {{max}}</small>{{/if}}
+      <small class="fonte-sp">{{nome}}</small>
+      {{#if @root.editavel}}{{#if item}}<button type="button" class="acao" data-action="ablarArmadura" data-local="{{local}}" data-tooltip="Abla 1 SP de todas as armaduras vestidas deste local" aria-label="Ablar armadura: {{rotulo}}">−1 SP</button>{{/if}}{{/if}}
+    </div>
+    {{/each}}
+  </div>
+  <ol class="itens">
+    {{#each armaduras}}
+    <li data-item-id="{{id}}" class="{{#unless equipada}}guardada{{/unless}}">
+      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <span class="detalhe">{{detalhe}}</span>
+      {{#if @root.editavel}}{{#if consertavel}}<button type="button" class="acao" data-action="consertarArmadura" data-tooltip="Restaura o SP desta armadura e informa o conserto no chat">Consertar</button>{{/if}}{{/if}}
+      <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
+    </li>
+    {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
+  </ol>
+</section>
