@@ -1012,7 +1012,7 @@
     // O primeiro título do arquivo repete o título da página.
     const stripDocTitle = text => text.replace(/^﻿?#\s+.*\r?\n/, '');
 
-    // transform pode devolver o texto ou uma Promise (o Dossiê junta trechos de outros documentos).
+    // transform pode devolver o texto ou uma Promise (uma página que junta trechos de outros documentos).
     function showMarkdownDoc(id, target) {
       loadMarkdownDoc(id).then(raw => (markdownDocs[id].transform ? markdownDocs[id].transform(raw) : raw)).then(text => {
         const container = document.getElementById('md-doc');

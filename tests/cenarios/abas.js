@@ -16,7 +16,7 @@ module.exports = async ({ edge, servidores, r }) => {
       // Os documentos de documentos/night-city/ (de todas as campanhas, como a missão The Jacket) ficam num grupo próprio.
       const itens = (await edge.evaluate(`[...document.querySelectorAll('#navigation .nav-item')].map(b => b.dataset.page)`)).filter(id => !id.startsWith('doc-night-city-'));
       const esperados = ['home', 'docDiario', 'people', 'campaignMap', 'docSessaoZero', 'sessao01Notas', 'docHandouts', 'notes', 'playerView', 'agenda', 'campanhas', 'personagens', 'loja'];
-      const viraramAba = ['docBase', 'elencoFichas', 'lugares', 'docGuia', 'docArquiteturas', 'sessao01Handouts', 'sessao01Npcs'];
+      const viraramAba = ['docBase', 'elencoFichas', 'lugares', 'docGuia', 'sessao01Handouts', 'sessao01Npcs'];
       const faltam = esperados.filter(id => !itens.includes(id));
       const sobram = viraramAba.filter(id => itens.includes(id));
       return [!faltam.length && !sobram.length && itens.length === esperados.length, `${itens.length} entradas · faltam ${faltam.join(', ') || 'nenhuma'} · ainda no menu ${sobram.join(', ') || 'nenhuma'}`];
@@ -91,7 +91,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const night = await edge.evaluate(`[...document.querySelectorAll('#content .page-tab')].map(b => b.textContent).join()`);
       await edge.ir(`${base}/?recarregar#docBase`, 1500);
       const campanha = await edge.evaluate(`[...document.querySelectorAll('#content .page-tab')].map(b => b.textContent).join()`);
-      return [fichas === 3 && menuElenco === 'people' && night === 'Mapa,Lugares e peças,Guia de 2077,Arquiteturas NET' && campanha === 'Diário,Base', `fichas ${fichas} · menu ${menuElenco} · Night City: ${night} · A campanha: ${campanha}`];
+      return [fichas === 3 && menuElenco === 'people' && night === 'Mapa,Lugares e peças,Guia de 2077' && campanha === 'Diário,Base', `fichas ${fichas} · menu ${menuElenco} · Night City: ${night} · A campanha: ${campanha}`];
     });
 
     await r.passo('fixar uma aba: entra nas Fixadas com o nome da entrada e da aba', async () => {

@@ -14,7 +14,9 @@ module.exports = async ({ edge, servidores, r }) => {
   const publicar = mestre => fetch(`${servidores.local}/api/campanhas/morana/publicar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestre }) });
   try {
     await edge.ir(`${servidores.local}/`);
-    for (const pagina of ['humanity', 'netrunning', 'creation', 'cyberware', 'netArsenal', 'quickhacks']) {
+    // As páginas com nota de campanha saem da configuração da wiki (as de Morana voltam com a trama nova).
+    const comNota = await edge.evaluate(`[...new Set(window.wikiConfig.gmNotes.map(nota => nota.page))]`);
+    for (const pagina of comNota) {
       await r.passo(`mestre: notas de campanha em ${pagina}`, async () => {
         await abrir(edge, pagina, 150);
         const n = await edge.evaluate(`document.querySelectorAll('#content .gm-note').length`);

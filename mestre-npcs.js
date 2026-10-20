@@ -133,7 +133,7 @@
       weapons: [['Espingarda', '5d6', 1, 'Shoulder Arms', 'balote'], ['Pistola pesada', '3d6', 2, 'Handgun'], ['Arma branca leve', '1d6', 2, 'Melee Weapon'], ['Arma branca pesada', '3d6', 2, 'Melee Weapon']],
       skills: 'Athletics 12, Basic Tech 9, Brawling 8, Concentration 7, Conversation 6, Deduction 7, Drive Land Vehicle 10, Education 5, Electronics/Security Tech 9, Endurance 11, Evasion 8, First Aid 7, Handgun 10, Human Perception 6, Land Vehicle Tech 7, Language (Native) 5, Language (Streetslang) 5, Local Expert (Your Home) 5, Melee Weapon 10, Paramedic 7, Perception 8, Persuasion 6, Pick Lock 7, Resist Torture/Drugs 10, Shoulder Arms 10, Stealth 10, Weaponstech 9, Wilderness Survival 7',
       gear: 'balotes de espingarda ×25, munição de pistola pesada ×25, Agent, arpéu (Grapple Gun), rádio comunicador, barraca e equipamento de acampamento, filtros nasais, Neural Link (Chipware Socket, Tactile Boost)',
-      tip: 'Líder durão de sucateiros, reconstrutores e gente que vive nas ruínas. Na Sessão 02 é a base de Brakk, trocando o equipamento de acampamento por Wolvers.'
+      tip: 'Líder durão de sucateiros, reconstrutores e gente que vive nas ruínas. Para um chefe mais perigoso, troque o equipamento de acampamento por Wolvers.'
     },
     {
       name: 'Oficial de segurança', book: 'Security Officer', tier: 'lieutenant', page: 415,
@@ -143,7 +143,7 @@
       weapons: [['Rifle de assalto', '5d6', 1, 'Shoulder Arms', 'autofogo (4), supressão'], ['Pistola muito pesada', '4d6', 1, 'Handgun'], ['Arma branca média', '2d6', 2, 'Melee Weapon', 'cassetete']],
       skills: 'Athletics 10 (8), Autofire 12 (10), Brawling 10 (8), Concentration 7, Conversation 6, Deduction 6, Drive Land Vehicle 12 (10), Education 6, Evasion 10 (8), First Aid 6, Handgun 10 (8), Human Perception 6, Interrogation 8, Language (Native) 6, Language (Streetslang) 6, Local Expert (Your Home) 6, Melee Weapon 10 (8), Perception 6, Persuasion 8, Resist Torture/Drugs 10, Shoulder Arms 10 (8), Stealth 6 (4), Tactics',
       gear: 'munição de rifle ×50, munição de pistola muito pesada ×30, escudo à prova de balas (10 PV), binóculos, celular descartável, lanterna, algemas ×2, rádio comunicador, scanner de rádio/tocador de música, Neural Link (Kerenzikov)',
-      tip: 'Os números entre parênteses já descontam a armadura: use-os enquanto ele estiver de Medium Armorjack. A iniciativa soma REF 6 e +2 do Kerenzikov. O livro dá SP 13 à Medium Armorjack, que na tabela de armaduras tem SP 12. Táticas aparece sem número. É a base de Vega (Sessão 01) e de Iskra Voss.'
+      tip: 'Os números entre parênteses já descontam a armadura: use-os enquanto ele estiver de Medium Armorjack. A iniciativa soma REF 6 e +2 do Kerenzikov. O livro dá SP 13 à Medium Armorjack, que na tabela de armaduras tem SP 12. Táticas aparece sem número. É a base de Vega (Sessão 01).'
     }
   ];
 
@@ -177,7 +177,7 @@
       weapons: [['Lança-granadas pop-up', '6d6', 1, 'Heavy Weapons', 'granadas perfurantes ×2'], ['SMG pesada pop-up', '3d6', 1, 'Handgun', 'autofogo (3)'], ['Cybersnake', '4d6', 1, 'Melee Weapon'], ['Wolvers', '3d6', 2, 'Melee Weapon']],
       skills: 'Athletics 16, Autofire 14, Basic Tech 11, Brawling 15, Concentration 6, Conversation 2, Drive Land Vehicle 10, Education 7, Endurance 10, Evasion 13, First Aid 6, Handgun 12, Heavy Weapons 14, Human Perception 2, Interrogation 13, Language (Native) 7, Language (Streetslang) 7, Local Expert (Your Home) 7, Melee Weapon 17, Perception 9, Persuasion 6, Resist Torture/Drugs 15, Stealth 10, Tracking 10',
       gear: 'granadas perfurantes ×2, munição de pistola pesada ×100, Cyberarm ×2 (lança-granadas pop-up ×2, SMG pesada pop-up, Wolvers), Cyberleg ×2 (Jump Booster ×2), Cybersnake, Grafted Muscle and Bone Lace, Neural Link (Chipware Socket, Pain Editor), Subdermal Armor',
-      tip: 'O livro avisa: é uma luta de chefe, só ponha na mesa se o grupo aguentar. O Pain Editor ignora as penalidades de Gravemente Ferido, e a SMG pesada faz autofogo a 14. Para uma vítima da Fúria de Morana que ainda pode ser salva, use uma ficha mais fraca (Guarda-costas ou Boosterganger) com o implante tomado. Guarde esta para quem já passou do limite.'
+      tip: 'O livro avisa: é uma luta de chefe, só ponha na mesa se o grupo aguentar. O Pain Editor ignora as penalidades de Gravemente Ferido, e a SMG pesada faz autofogo a 14. Para alguém com o implante tomado que ainda pode ser salvo, use uma ficha mais fraca (Guarda-costas ou Boosterganger). Guarde esta para quem já passou do limite.'
     }
   ];
 
@@ -329,7 +329,7 @@
       weapons: [['Rifle de assalto', '5d6', 1, 'Shoulder Arms', 'inteligente: +1 no ataque · autofogo (4), supressão'], ['Pistola muito pesada', '4d6', 1, 'Handgun']],
       skills: 'Athletics 10, Autofire 12, Brawling 10, Concentration 7, Conversation 6, Education 6, Evasion 10, First Aid 6, Handgun 10, Human Perception 8, Interrogation 8, Language (Native) 6, Language (Streetslang) 6, Local Expert (Your Home) 6, Perception 8, Persuasion 8, Resist Torture/Drugs 7, Shoulder Arms 11, Stealth 6, Tactics 8',
       gear: 'munição de rifle ×50, munição de pistola muito pesada ×30, rádio comunicador, visor com leitura tática, Neural Link (Kerenzikov, Interface Plugs)',
-      tip: 'Sessão 01, Cena 4. Começa oferecendo rendição, mira nas pernas quando pode incapacitar e recua Gravemente Ferida ou quando dois da equipe caem. Pode oferecer o dobro de Wakako. A equipe: dois Operativos de segurança, um Netrunner e um técnico de contenção (Guarda-costas com Tecnologia Básica 11 e a caixa de Faraday).'
+      tip: 'Começa oferecendo rendição, mira nas pernas quando pode incapacitar e recua Gravemente Ferida ou quando dois da equipe caem. Na Sessão 01, recuou quando a maleta deu sinais. A equipe: dois Operativos de segurança, um Netrunner e um técnico de contenção (Guarda-costas com Tecnologia Básica 11 e a caixa de Faraday).'
     }
   ];
 
@@ -362,7 +362,7 @@
       'A gangue de Wakako. Para Mina Kuroda, a guarda-costas dela, use o tenente com a katana.', 'adaptação'),
     faction('Maelstrom', 'Northside, Watson', ['Boosterganger', 'troque o couro por Light Armorjack (SP 11); mantenha os Rippers ou troque por outra arma cibernética. Óticas vermelhas por toda parte.'],
       ['Oficial de segurança', 'adicione uma arma cibernética à escolha.'],
-      'O culto do hospital queimado (Sessão 02): cultistas como capangas e Brakk como Chefe reclaimer com Wolvers.', 'livro, p. 422'),
+      'Cromo por cima de cromo, e orgulho disso. Mudam de líder a cada poucos meses: um acordo de hoje pode não valer amanhã.', 'livro, p. 422'),
     faction('Valentinos', 'Heywood', ['Guarda-costas', 'troque a espingarda ruim por uma pistola pesada banhada a ouro (Constitutional Arms Liberty, 3d6, CDT 2).'],
       ['Oficial de segurança', 'troque o rifle por uma espingarda (Constitutional Arms M2038 Tactician, 5d6).'],
       'Honra e família: não atacam quem está sob a palavra de um Valentino, e nunca esquecem uma dívida.', 'adaptação'),
@@ -374,10 +374,10 @@
       'Preferem os punhos às armas. Tiro de longe irrita, mas não os faz recuar.', 'adaptação'),
     faction('Voodoo Boys', 'Pacifica', ['Boosterganger', 'guardas do prédio, como no livro.'],
       ['Netrunner', 'como no livro; eles lutam na NET: encha a arquitetura com Black ICE e demônios do Arsenal.'],
-      'Querem o netrunner do grupo, não o vírus (veja os ganchos dos personagens).', 'adaptação'),
+      'Querem netrunners e informação: tudo o que vem da rede tem preço para eles.', 'adaptação'),
     faction('Scavengers', 'Watson', ['Boosterganger', 'troque os Rippers por uma arma branca leve (1d6), como os catadores do livro.'],
       ['Chefe reclaimer', 'troque a espingarda por uma serra cirúrgica (arma branca pesada, 3d6); Paramédico 10 para arrancar implantes.'],
-      'Colecionam cromo de vivos e de mortos: um personagem inconsciente é um alvo. Se o grupo deixou o corpo de Kobo no depósito, foram eles que o levaram (Sessão 02).', 'livro, p. 419 + adaptação'),
+      'Colecionam cromo de vivos e de mortos: um personagem inconsciente é um alvo.', 'livro, p. 419 + adaptação'),
     faction('Mox', 'Kabuki (Lizzie\'s Bar)', ['Guarda-costas', 'como no livro.'],
       ['Oficial de segurança', 'sem o rifle de assalto.'],
       'Protegem quem trabalha na Jig-Jig Street. Quase nunca atacam primeiro: são aliados fáceis, se o grupo respeitar as regras da casa.', 'adaptação'),
@@ -389,10 +389,10 @@
       'Atiram primeiro e preenchem o relatório depois, se alguém sacar uma arma.', 'livro, p. 417–422'),
     faction('MaxTac', 'toda Night City', ['—', 'a MaxTac não tem capangas.'],
       ['Outrider como mini-chefe', 'tire Moto e Afinidade com Animais; troque a Light Armorjack por Heavy Armorjack (SP 13, −2 em REF, DEX e MOVE e nas perícias deles, como o Oficial de segurança); rifle Militech M251s Ajax; adicione Mantis Blades (3d6) ou um Militech Falcon Sandevistan. Cada agente conta como 3 personagens.'],
-      'Chega 10 minutos depois de um surto ser reportado (ganchos dos personagens). É o relógio da cena, não uma luta para vencer.', 'adaptação'),
+      'Chega 10 minutos depois de um surto ser reportado. É o relógio da cena, não uma luta para vencer.', 'adaptação'),
     faction('Segurança corporativa', 'Arasaka, Militech, Kang Tao', ['Operativo de segurança', 'de dia: Light Armorjack e SMG ruim no lugar do rifle. À noite: Heavy Armorjack e SMG pesada ruim.'],
       ['Oficial de segurança', 'depois da meia-noite: SMG pesada, Interface Plugs e Smartgun Link. Em 2077, uma SMG Smart (Arasaka TKI-20 Shingen ou Kang Tao G-58 Dian).'],
-      'A equipe de Iskra (Sessões 01 e 02) e a segurança do datafort da Militech em Arroyo, onde está a Coleira.', 'livro, p. 417–421 + adaptação')
+      'A equipe de Vega (Sessão 01) usa estas fichas.', 'livro, p. 417–421 + adaptação')
   ];
 
   // ---------------- Encontros de 2077 ----------------

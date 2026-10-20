@@ -5,7 +5,7 @@ Módulo para o Foundry VTT 12 e o sistema **Cyberpunk RED - CORE** (v0.92.4). Tr
 - **Compêndios:**
   - armas Power, Tech e Smart (as 13 do Kit e 28 do suplemento), os Rebuilds e a munição Smart melhorada;
   - cyberware (o Neuroport e o cromo do Kit, o do suplemento e os Berserk e Sandevistan dos anos 2070, mais caros e mais fracos que no suplemento);
-  - netrunning de 2077 (os quickhacks do Kit e do suplemento, de graça pelo Rank, e os cyberdecks com marca) e as arquiteturas NET do Protocolo Morana (lidas de `documentos/morana/arquiteturas-da-campanha.md`; o NET Architect as oferece nos pontos de acesso);
+  - netrunning de 2077 (os quickhacks do Kit e do suplemento, de graça pelo Rank, e os cyberdecks com marca) e as arquiteturas NET do Protocolo Morana, quando a campanha tiver (lidas de `documentos/morana/arquiteturas-da-campanha.md`; o NET Architect as oferece nos pontos de acesso);
   - veículos adaptados do jogo;
   - NPCs prontos (só o mestre vê), com o elenco do Protocolo Morana na pasta própria;
   - regras em diários.

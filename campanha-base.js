@@ -1,7 +1,7 @@
 // A base da campanha: um registro para cada pessoa, facção, lugar, peça da trama, relógio e segredo, num arquivo só
-// (documentos/<campanha>/base-da-campanha.md). Pessoas e facções, Lugares e peças, o Estado da campanha e o Dossiê
-// são visões desse arquivo, e os documentos citam a base em vez de copiar (uma linha {{base:pecas}} vira a tabela).
-// O que muda na mesa (quem está com o Gatilho, o Endo capturado, o segredo revelado) fica no servidor, com os relógios
+// (documentos/<campanha>/base-da-campanha.md). Pessoas e facções, Lugares e peças, o Estado da campanha e as tabelas
+// do Diário são visões desse arquivo, e os documentos citam a base em vez de copiar (uma linha {{base:pecas}} vira a
+// tabela). O que muda na mesa (com quem está a maleta, quem morreu, o segredo revelado) fica no servidor, com os relógios
 // (mesa.json: estado e segredos), e aparece em todas as visões.
 //
 // O arquivo: "## Pessoas", "## Outros nomes", "## Facções", "## Lugares", "## Peças de Morana", "## Relógios" e
@@ -453,7 +453,7 @@
   // Os relógios de agora: os da wiki (o mestre pode ter acabado de marcar um); antes de ela montar, os da mesa lida.
   const valoresDosRelogios = () => (raiz.wikiApp && raiz.wikiApp.clockState ? Object.fromEntries(raiz.wikiApp.clockState().map(item => [item.name, item.value])) : navegador.relogios);
 
-  // {{doc:arquivo.md#secao}}: um trecho de outro documento da mesma pasta (o Dossiê é feito disso). Assíncrono.
+  // {{doc:arquivo.md#secao}}: um trecho de outro documento da mesma pasta. Assíncrono.
   async function expandirComDocs(texto) {
     const pedidos = [...String(texto).matchAll(/^\{\{doc:([\w.-]+\.md)#([\w-]+)\}\}\s*$/gm)];
     for (const [, arquivo] of pedidos) {

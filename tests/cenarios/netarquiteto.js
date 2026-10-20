@@ -4,10 +4,22 @@
 // o mestre resolve as rolagens pelo socket. Os dados ficam fixos (todo d10 = 6, todo d6 = 4) no cliente do mestre.
 // A parte do Foundry só roda com a mesa do servidor vazia (a licença vale para uma mesa por vez).
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const foundry = require('../lib/foundry');
 const { abrirEdge, sleep } = require('../lib/edge');
+
+// Um documento de arquiteturas no formato da wiki, sem trama: uma em linha e uma com o ramo B saindo do andar 3.
+const EXEMPLO_DE_ARQUITETURAS = ['# Arquiteturas de exemplo', '',
+  '## Em linha', '', '| Andar | Ramo | Conteúdo | DV | O que tem |', '|---|---|---|---|---|',
+  '| 1 | A | Senha | 8 | |', '| 2 | A | Black ICE: Raven | — | |', '| 3 | A | Arquivo | 10 | |',
+  '| 4 | A | Nó de controle | 10 | |', '| 5 | A | Black ICE: Hellhound | — | |', '| 6 | A | Arquivo | 12 | |', '',
+  '## Com ramo', '', '| Andar | Ramo | Conteúdo | DV | O que tem |', '|---|---|---|---|---|',
+  '| 1 | A | Senha | 10 | |', '| 2 | A | Black ICE: Killer | — | |', '| 3 | A | Nó de controle | 10 | |',
+  '| 4 | A | Black ICE: Hellhound | — | |', '| 5 | A | Arquivo | 10 | |', '| 6 | A | Senha | 12 | |',
+  '| 7 | A | Black ICE: Sabertooth | — | |', '| 8 | A | Arquivo | 12 | |', '| 4 | B | Black ICE: Asp | — | |',
+  '| 5 | B | Nó de controle | 12 | |', ''].join('\n');
 
 module.exports = async ({ edge, servidores, r }) => {
   const raiz = servidores.raiz;
@@ -29,18 +41,25 @@ module.exports = async ({ edge, servidores, r }) => {
     const primeiro = armazem.nos['1a'];
     return [primeiro.conteudos.map(c => c.ice).join() === 'hellhound,killer' && armazem.nos['4a'].conteudos[0].tipo === 'controle' && armazem.dv === 8, JSON.stringify(primeiro.conteudos)];
   });
-  await r.passo('arquiteturas da campanha: o documento vira 4 itens; o Gatilho tem os 6 andares da Sessão 02; os ramos B saem do andar certo', async () => {
+  await r.passo('arquiteturas da campanha: cada tabela do documento vira um item; os ramos B saem do andar certo; sem o documento, nenhuma', async () => {
     // O build do cpr-2077 lê as tabelas de documentos/morana/arquiteturas-da-campanha.md (precisa do sistema extraído).
+    // A campanha recomeçou sem arquiteturas (2026-10-20): o teste usa um documento de exemplo.
     if (!fs.existsSync(path.join(raiz, 'foundry-2077', '.cache', 'core', 'versao.json'))) return [true, 'sem o sistema extraído (foundry-2077/.cache): pulado'];
     const { buildArchitectures } = await import(pathToFileURL(path.join(raiz, 'foundry-2077', 'build', 'arquiteturas.mjs')).href);
-    const itens = buildArchitectures().filter(doc => doc.type === 'netarch');
-    const ler = nome => lerArquitetura(itens.find(item => item.name.startsWith(nome)));
-    const gatilho = ler('O Gatilho');
-    const coleira = ler('A Coleira');
-    const nucleo = ler('O Núcleo');
-    const ok = itens.length === 4 && Object.keys(gatilho.nos).length === 6 && gatilho.nos['2a'].conteudos[0].ice === 'raven' && gatilho.nos['5a'].conteudos[0].ice === 'hellhound' && gatilho.nos['6a'].conteudos[0].tipo === 'arquivo'
-      && coleira.nos['4b'].pai === '3a' && ehFundo(coleira, '8a') && ehFundo(coleira, '5b') && nucleo.nos['6b'].pai === '5a' && nucleo.nos['9a'].conteudos[0].tipo === 'controle';
-    return [ok, `${itens.map(item => `${item.name.split(' (')[0]}: ${item.system.floors.length}`).join(' · ')} · Coleira 4b←${coleira.nos['4b']?.pai} · Núcleo 6b←${nucleo.nos['6b']?.pai}`];
+    const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'fieldbook-arquiteturas-'));
+    try {
+      const documento = path.join(pasta, 'arquiteturas-da-campanha.md');
+      fs.writeFileSync(documento, EXEMPLO_DE_ARQUITETURAS);
+      const itens = buildArchitectures(documento).filter(doc => doc.type === 'netarch');
+      const linha = lerArquitetura(itens.find(item => item.name === 'Em linha'));
+      const ramo = lerArquitetura(itens.find(item => item.name === 'Com ramo'));
+      const sem = buildArchitectures(path.join(pasta, 'nao-existe.md'));
+      const ok = itens.length === 2 && Object.keys(linha.nos).length === 6 && linha.nos['2a'].conteudos[0].ice === 'raven' && linha.nos['5a'].conteudos[0].ice === 'hellhound' && linha.nos['6a'].conteudos[0].tipo === 'arquivo'
+        && ramo.nos['4b'].pai === '3a' && ehFundo(ramo, '8a') && ehFundo(ramo, '5b') && !sem.length;
+      return [ok, `${itens.map(item => `${item.name}: ${item.system.floors.length}`).join(' · ')} · ramo 4b←${ramo.nos['4b']?.pai} · sem o documento: ${sem.length} itens`];
+    } finally {
+      fs.rmSync(pasta, { recursive: true, force: true });
+    }
   });
   await r.passo('Pathfinder: revela tantos andares quanto o resultado e não passa de senha com DV maior', async () => {
     const tudo = revelarPathfinder(clinica, ENTRADA, 20);
@@ -158,7 +177,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.ativo && info.api === 'function' && exemplos >= 3, `${exemplos} arquiteturas · ${JSON.stringify(info)}`];
     });
 
-    await passo('cpr-2077 no Foundry: as 4 arquiteturas da campanha carregam e o elenco do Protocolo Morana vira atores (Wakako com Fixer 8)', async () => {
+    await passo('cpr-2077 no Foundry: sem o documento, nenhuma arquitetura da campanha; o elenco do Protocolo Morana vira atores (Wakako com Fixer 8)', async () => {
       const info = await edge.evaluate(`(async () => {
         const net = await game.packs.get('cpr-2077.netrunning-2077').getDocuments();
         const npcs = await game.packs.get('cpr-2077.npcs-2077').getDocuments();
@@ -166,7 +185,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const fixer = npcs.find(actor => actor.name === 'Wakako Okada')?.items.find(item => item.type === 'role');
         return { arquiteturas: net.filter(item => item.type === 'netarch').map(item => [item.name.split(' (')[0], item.system.floors.length]), elenco, fixer: fixer ? [fixer.name, fixer.system.rank] : null };
       })()`);
-      const ok = info.arquiteturas.length === 4 && info.arquiteturas.some(([nome, andares]) => nome === 'O Gatilho' && andares === 6) && info.elenco.length === 3 && info.elenco.includes('Vega') && info.fixer?.[0] === 'Fixer' && info.fixer[1] === 8;
+      const ok = !info.arquiteturas.length && info.elenco.length === 3 && info.elenco.includes('Vega') && info.fixer?.[0] === 'Fixer' && info.fixer[1] === 8;
       return [ok, JSON.stringify(info)];
     });
 

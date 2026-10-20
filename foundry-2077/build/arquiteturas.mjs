@@ -1,6 +1,7 @@
 // Arquiteturas NET da campanha (documentos/morana/arquiteturas-da-campanha.md, na wiki): cada "## Nome" com uma tabela
 // de andares vira um item netarch do sistema, que o NET Architect lista para os pontos de acesso. O documento é a fonte:
-// o mestre lê a mesma arquitetura na wiki e no Foundry.
+// o mestre lê a mesma arquitetura na wiki e no Foundry. Sem o documento (a campanha ainda não tem arquitetura), nada
+// entra. file: outro documento no mesmo formato (o teste usa um de exemplo).
 import fs from 'node:fs';
 import path from 'node:path';
 import { folderDoc, itemFrom, para } from './lib.mjs';
@@ -17,8 +18,9 @@ const ICE = ['asp', 'giant', 'hellhound', 'kraken', 'liche', 'raven', 'scorpion'
 const escape = text => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const inline = text => escape(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 
-export function buildArchitectures() {
-  const text = fs.readFileSync(architecturesFile, 'utf8').replace(/\r/g, '');
+export function buildArchitectures(file = architecturesFile) {
+  if (!fs.existsSync(file)) return [];
+  const text = fs.readFileSync(file, 'utf8').replace(/\r/g, '');
   const folder = folderDoc('Item', 'Protocolo Morana: arquiteturas', 10);
   const items = [];
   for (const section of text.split(/^## /m).slice(1)) {
