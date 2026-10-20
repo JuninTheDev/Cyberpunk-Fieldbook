@@ -226,11 +226,11 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   ablação de todas as camadas, Desfazer por item e botões de ablar e consertar nas fichas de personagem e capanga.
 - [~] **C19. Lesão crítica fora do ataque:** em andamento (sessão Codex, 2026-10-20). Rolar na tabela à mão, e o paliativo e o tratamento com a DV.
 - [~] **C20. Macros e favoritos:** em andamento (sessão KouArt, 2026-10-20). Arrastar arma, perícia ou item para a barra, e os favoritos na aba Combate.
-- [ ] **C21. Cyberware:**
+- [~] **C21. Cyberware:** em andamento (sessão KouArt, 2026-10-20): a terapia e a ciberpsicose.
   - a base com os slots das opções (instalar dentro da base, como a montagem da wiki): ciclos 82 a 84;
   - a terapia, que devolve Humanidade até o máximo;
   - a ciberpsicose.
-- [ ] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE). A wiki guarda, e o cpr-2077 manda na
+- [~] **C22. Moradia, estilo de vida, moda e Trauma Team** (o `lifestyle` do CORE): em andamento (sessão KouArt, com o Antigravity, 2026-10-20). A wiki guarda, e o cpr-2077 manda na
   ficha "Na mesa".
 - [x] **C23. Mais de uma Role, e perícias novas:** feito (ciclos 118 a 120, sessão KouArt). Por partes:
   - [x] a segunda Role da criação (a wiki de 2026-10-17, "Duas Roles na criação", regra da mesa; o criador guarda a
@@ -257,7 +257,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 - [x] **C25. O Painel Tático dentro do sistema:** feito (ciclo 125, sessão KouArt, 2026-10-18; o pedido do usuário para a primeira
   sessão da Morana no Foundry 14): o HUD com o retrato por estado de ferimento, os vitais, os atributos, as armas, as
   ações, os painéis e o estilo de cada jogador, como o módulo da mesa.
-- [ ] **C26. Conveniências:**
+- [~] **C26. Conveniências:** em andamento (sessão KouArt, com o Antigravity, 2026-10-20): o `/red`, a DV no HUD e na régua e a iniciativa crítica primeiro.
   - o `/red` no chat (rolagem com o crítico do d10);
   - o DV no HUD do token e na régua;
   - a iniciativa crítica como configuração;
