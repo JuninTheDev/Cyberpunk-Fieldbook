@@ -1033,6 +1033,22 @@
       other.qtd = item.qtd;
       if (other.uso) other.uso = item.uso;
     }
+    // O que a loja entregou na mesa da wiki (doc.jogo.compras): as armas com o ataque (STAT + o nível da perícia), as
+    // armaduras e o resto no equipamento.
+    const known = new Set([...model.armas, ...model.armaduras, ...model.outros].map(item => item.id));
+    for (const item of game.itens.filter(entry => entry.compra && !known.has(entry.id))) {
+      const cat = catalog.get(item.catalogo) || {};
+      if (item.tipo === 'arma' && cat.arma) {
+        const stat = attackStat(cat.arma.distancia);
+        const nivel = (model.pericias.find(skill => skill.label === skillPt(cat.arma.pericia)) || {}).nivel || 0;
+        model.armas.push({ id: item.id, nome: item.nome, qtd: item.qtd, pericia: skillPt(cat.arma.pericia), base: (game.stats[stat] || 0) + nivel, stat, dano: cat.arma.dano, cdt: cat.arma.cdt, maos: cat.arma.maos,
+          pente: item.pente ? `${item.pente.atual}/${item.pente.max}` : '', municao: item.municao || '', dentro: [], uso: item.uso });
+      } else if (item.tipo === 'armadura' && cat.armadura) {
+        model.armaduras.push({ id: item.id, nome: item.nome, cabeca: cat.armadura.cabeca, corpo: cat.armadura.corpo, escudo: cat.armadura.escudo, uso: item.uso });
+      } else if (['municao', 'item', 'roupa', 'deck'].includes(item.tipo)) {
+        model.outros.push({ id: item.id, nome: item.nome, qtd: item.qtd, uso: item.tipo === 'municao' ? '' : item.uso, roupa: item.tipo === 'roupa' });
+      }
+    }
   }
   function sheetModelBase(doc) {
     if (doc.mesa && doc.foundry) return tableModel(doc);
@@ -2116,23 +2132,40 @@
     const cart = carts.get(doc.id) || [];
     carts.set(doc.id, cart);
     const openRows = new Set();
-    const mesa = doc.mesa || null;
-    // Itens da ficha (com uid da wiki) como "linhas" da montagem, para conferir onde cada coisa encaixa.
-    // A base do membro natural (Meat Arm, Meat Leg) já tem a peça única dela: não recebe pedido.
-    const tableRows = ((mesa && mesa.itens) || []).filter(item => parentRef(item) && !CW.baseNatural(item.nome)).map(item => ({ uid: parentRef(item), nome: item.nome, item: catalogItemOf(item) || (item.cyber ? { nome: item.nome, cyber: { ...item.cyber, base: item.base } } : null), local: item.local || '', qtd: 1, dentro: item.dentro || [] })).filter(row => row.item);
-    const freeIn = row => capacityOf(row) - row.dentro.reduce((sum, name) => sum + (catalogEntryOf(name) ? sizeOf({ item: catalogEntryOf(name), qtd: 1 }) : 0), 0);
-    // Quantos de cada item a ficha da mesa já tem (pelo nome do Foundry).
+    // Quem entrega: o Foundry (o personagem está nele) ou a wiki (só na mesa da wiki: o dinheiro e os itens são os da
+    // ficha de jogo, doc.jogo).
+    const naWiki = !doc.mesa && Boolean(doc.jogo);
+    const quemEntrega = naWiki ? 'a wiki' : 'o Foundry';
+    let tableRows = [];
     const onSheet = new Map();
-    for (const entry of (mesa && mesa.itens) || []) {
-      const item = catalogItemOf(entry);
-      if (item) onSheet.set(item.id, (onSheet.get(item.id) || 0) + (Number(entry.qtd) || 1));
-    }
+    // Itens da ficha (com uid da wiki) como "linhas" da montagem, para conferir onde cada coisa encaixa, e quantos de
+    // cada item ela já tem. Na mesa da wiki: o que veio da criação e o que a loja já entregou.
+    const recalcular = () => {
+      const mesa = doc.mesa || null;
+      onSheet.clear();
+      if (naWiki) {
+        const linhas = [...((doc.resultado && doc.resultado.itens) || []), ...((doc.jogo && doc.jogo.compras) || [])];
+        tableRows = linhas.filter(line => line && line.uid && catalog.get(line.id)).map(line => ({ uid: line.uid, nome: line.renomear || line.nome || catalog.get(line.id).nome, item: catalog.get(line.id), local: line.local || '', qtd: Number(line.qtd) || 1,
+          dentro: linhas.filter(other => other && other.em === line.uid).map(other => other.nome || (catalog.get(other.id) || {}).nome || '') }));
+        for (const line of linhas) if (line && catalog.get(line.id)) onSheet.set(line.id, (onSheet.get(line.id) || 0) + (Number(line.qtd) || 1));
+        return;
+      }
+      // A base do membro natural (Meat Arm, Meat Leg) já tem a peça única dela: não recebe pedido.
+      tableRows = ((mesa && mesa.itens) || []).filter(item => parentRef(item) && !CW.baseNatural(item.nome)).map(item => ({ uid: parentRef(item), nome: item.nome, item: catalogItemOf(item) || (item.cyber ? { nome: item.nome, cyber: { ...item.cyber, base: item.base } } : null), local: item.local || '', qtd: 1, dentro: item.dentro || [] })).filter(row => row.item);
+      // Pelo nome do Foundry.
+      for (const entry of (mesa && mesa.itens) || []) {
+        const item = catalogItemOf(entry);
+        if (item) onSheet.set(item.id, (onSheet.get(item.id) || 0) + (Number(entry.qtd) || 1));
+      }
+    };
+    recalcular();
+    const freeIn = row => capacityOf(row) - row.dentro.reduce((sum, name) => sum + (catalogEntryOf(name) ? sizeOf({ item: catalogEntryOf(name), qtd: 1 }) : 0), 0);
     // O mestre que abre a loja com pedido esperando já cai na lista de pedidos.
     if (gm && !shopState.painel && (doc.pedidos || []).some(pedido => pedido.status === 'pendente')) shopState.painel = 'pedidos';
     const paint = () => {
       const { visible, shown, filters } = shopFilter(shop.itens);
       const total = cart.reduce((sum, line) => sum + cartCost(line), 0);
-      const money = mesa ? Number(mesa.dinheiro) || 0 : null;
+      const money = doc.mesa ? Number(doc.mesa.dinheiro) || 0 : naWiki && window.characterGame ? window.characterGame.valores(doc).dinheiro : null;
       const left = money === null ? null : money - total;
       const inCart = new Map();
       for (const line of cart) inCart.set(line.id, (inCart.get(line.id) || 0) + line.qtd);
@@ -2193,7 +2226,7 @@
         <div class="shop-drawer cc-shop-bar">
           <section class="shop-box shop-wallet-box"><div class="cc-wallet shop-wallet"><span class="wl-main"><small>Dinheiro na mesa: </small><b>${money === null ? '—' : eb(money)}</b></span>${money === null ? '<span class="wl-sub">Chega quando o mestre abrir o mundo no Foundry.</span>' : ''}</div></section>
           <p class="cc-shop-msg" data-pedido-msg role="status"></p>
-          ${drawerBox(target, 'pedido', `Seu pedido <b class="cc-count">${cart.length}</b>${total ? ` · <span class="${money !== null && total > money ? 'cc-bad' : ''}">${eb(total)}</span>` : ''}`, `<p class="note-status shop-howto">Cada pedido passa pelo mestre. Aprovado, o Foundry entrega: os itens entram na ficha, o dinheiro sai, a arma vem carregada e o acessório ou o programa vai onde você escolher. Cyberware chega sem instalar.</p>${cartBox}`, ' data-cc-cart')}
+          ${drawerBox(target, 'pedido', `Seu pedido <b class="cc-count">${cart.length}</b>${total ? ` · <span class="${money !== null && total > money ? 'cc-bad' : ''}">${eb(total)}</span>` : ''}`, `<p class="note-status shop-howto">Cada pedido passa pelo mestre. Aprovado, ${quemEntrega} entrega: os itens entram na ficha, o dinheiro sai, a arma vem carregada e o acessório ou o programa vai onde você escolher. Cyberware chega sem instalar.</p>${cartBox}`, ' data-cc-cart')}
           ${drawerBox(target, 'pedidos', `Pedidos <b class="cc-count">${orders.length}</b>${alert}`, orders.length ? `<ul class="cc-items cc-orders">${orders.map(orderLine).join('')}</ul>` : '<p class="note-status">Nenhum pedido enviado ainda.</p>', ' data-cc-orders')}
         </div>
       </div>`;
@@ -2204,7 +2237,8 @@
       const answer = await api(`api/personagens/${doc.id}/pedidos/${path}`, { method: 'POST', body });
       if (answer.status !== 200) return message(answer.data.erro || 'Não consegui.', true);
       const fresh = await api(`api/personagens/${doc.id}`);
-      if (fresh.status === 200) doc.pedidos = fresh.data.personagem.pedidos;
+      // Na mesa da wiki, aprovar já entrega: o dinheiro e os itens mudam junto.
+      if (fresh.status === 200) { doc.pedidos = fresh.data.personagem.pedidos; doc.jogo = fresh.data.personagem.jogo ?? doc.jogo; recalcular(); }
       draw();
     }
     target.onclick = async event => {
@@ -2262,7 +2296,7 @@
         doc.pedidos = [...(doc.pedidos || []), answer.data.pedido];
         shopState.painel = 'pedidos';
         draw();
-        return message('Pedido enviado. O mestre aprova, e o Foundry entrega na ficha.');
+        return message(`Pedido enviado. O mestre aprova, e ${quemEntrega} entrega na ficha.`);
       }
       const approve = event.target.closest('[data-pedido-aprovar]');
       if (approve) return act(`${approve.dataset.pedidoAprovar}/aprovar`);
@@ -2448,14 +2482,15 @@
     // Guarda só o que o jogador mudou na montagem (o resto sai do padrão).
     const setMount = (uid, field, value) => { doc.montagem = doc.montagem || {}; doc.montagem[uid] = { ...(doc.montagem[uid] || {}), [field]: value }; };
     const papel = me.data.papel;
-    // Depois de importado no Foundry, o Foundry manda: o que é regra fica só para ver. Continuam abertos nome, apelido,
-    // retrato, aparência, notas e Lifepath (o servidor garante o mesmo).
-    const locked = Boolean(doc.foundry && doc.foundry.importado);
+    // Em jogo (importado no Foundry ou já na mesa da wiki), a mesa manda: o que é regra fica só para ver. Continuam
+    // abertos nome, apelido, retrato, aparência, notas e Lifepath (o servidor garante o mesmo; só o mestre muda o resto).
+    const noFoundry = Boolean(doc.foundry && doc.foundry.importado);
+    const locked = noFoundry || Boolean(doc.jogo);
     const lockBox = html => (locked ? `<fieldset disabled class="cc-locked">${html}</fieldset>` : html);
 
     root.innerHTML = `<div class="cc-steps" role="tablist">${steps.map((name, index) => `<button type="button" class="map-filter" data-step="${index + 1}">${index + 1}. ${name}</button>`).join('')}</div>
       <p class="cc-save" id="cc-save" role="status"></p><div id="cc-recover"></div>
-      ${locked ? '<div class="callout cc-locked-note"><b>Este personagem já está no Foundry.</b> STATs, perícias, Role, equipamento e moradia agora mudam lá, pelo mestre; a ficha mostra a mesa. Aqui você ainda muda o nome, o retrato, a aparência, as notas e o Lifepath.</div>' : ''}
+      ${locked ? `<div class="callout cc-locked-note"><b>Este personagem já está ${noFoundry ? 'no Foundry' : 'em jogo, na mesa da wiki'}.</b> STATs, perícias, Role, equipamento e moradia agora mudam ${noFoundry ? 'lá' : 'na mesa'}, pelo mestre; a ficha mostra a mesa, e as compras são pela loja da campanha. Aqui você ainda muda o nome, o retrato, a aparência, as notas e o Lifepath.</div>` : ''}
       <div class="cc-layout"><div class="cc-main"><div id="cc-help"></div><div id="cc-step"></div>
       <p class="cc-toolbar"><button class="action" type="button" data-nav="-1">Voltar</button><button class="action" type="button" data-nav="1">Próximo</button><button class="action" type="button" data-cc-sheet>Ver a ficha</button></p></div>
       <div class="cc-summary" role="complementary" aria-label="Resumo do personagem"><details id="cc-summary"></details></div></div>`;
@@ -3131,8 +3166,8 @@
       shopEl.innerHTML = '<div class="callout">Escolha o método de criação no criador antes de comprar: ele define quanto dinheiro você tem.</div>';
       return;
     }
-    // Depois do Foundry: a loja da campanha (pedidos que o mestre aprova).
-    if (doc.foundry && doc.foundry.importado) {
+    // Em jogo (no Foundry ou na mesa da wiki): a loja da campanha (pedidos que o mestre aprova).
+    if ((doc.foundry && doc.foundry.importado) || doc.jogo) {
       setHead('Loja', `Loja da campanha // pedidos para o mestre${doc.nome ? ` // ${doc.nome}` : ''}`);
       renderCampaignShop(shopEl, doc, { gm });
       return;
@@ -3215,7 +3250,7 @@
       personagens: { eyebrow: 'Campanha / jogadores', title: 'Personagens', lede: 'Os personagens dos jogadores, salvos na wiki. Crie, edite e consulte; o mestre leva para o Foundry quando estiver pronto.', html: holder, setup: setupList },
       ficha: { eyebrow: 'Personagens / ficha', title: 'Ficha', lede: 'A ficha para consulta durante o jogo.', html: holder, setup: setupSheet, manterAlvo: true },
       criador: { eyebrow: 'Personagens / criador', title: 'Criador de personagem', lede: 'Passo a passo do Cyberpunk RED nos anos 2070 (Mission Kit). Tudo é salvo sozinho; os avisos mostram o que falta, mas não impedem de continuar.', html: holder, setup: setupCreator, manterAlvo: true },
-      loja: { eyebrow: 'Personagens / loja', title: 'Loja', lede: 'Antes do Foundry, monta o equipamento da criação. Depois, vira pedidos que o mestre aprova e o Foundry entrega na ficha.', html: holder, setup: setupShopPage, manterAlvo: true }
+      loja: { eyebrow: 'Personagens / loja', title: 'Loja', lede: 'Antes de entrar em jogo, monta o equipamento da criação. Depois, vira pedidos que o mestre aprova e a mesa (a da wiki ou o Foundry) entrega na ficha.', html: holder, setup: setupShopPage, manterAlvo: true }
     },
     // Para os testes e o importador: as mesmas contas que a tela usa.
     regras: { computeStats, skillPointsUsed, finalSkills, inventory, money, humanity, missingFoundations, pending, result, blank, applySuggested, rollRoleLp, roleLpText, housing, motorpool, abilitySpec, roleAbilityRanks, sheetHtml, rolesLabel, quickhacksAt, foundryBox, assembly, cyberParts, cyberClick, cyberPlacement, cyberPurchaseProblem, addItem, renderShop, renderCampaignShop }

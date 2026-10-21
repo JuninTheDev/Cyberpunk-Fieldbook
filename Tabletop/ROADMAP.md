@@ -140,7 +140,17 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - o Black ICE no combate e as ações de Interface;
   - as cenas de arquitetura (já importadas, com os nós em vídeo).
 - [ ] **M14 · Painel Tático:** o HUD com o retrato por estado de ferimento, o ATK pela ficha e o estilo de cada jogador.
-- [ ] **M15 · Loja entrega na wiki:** o pedido aprovado entra direto na ficha de jogo. Hoje é o Foundry que entrega.
+- [x] **M15 · Loja entrega na wiki** (`personagem-jogo.js` `entrega`, `api-personagens.js`, `criador.js`):
+  - **Em jogo:** o personagem entra em jogo quando o mestre põe o token dele numa cena. A mesa grava um `doc.jogo` sem número nenhum. Daí em diante:
+    - a criação trava para o jogador (como depois da importação no Foundry; o mestre muda tudo);
+    - as compras são pela loja da campanha.
+  - **Quem entrega:**
+    - o personagem ligado ao Foundry: o Foundry, como antes;
+    - o que está só na mesa da wiki: a própria wiki, na hora de aprovar.
+  - **A entrega na wiki:** confere o dinheiro (sem dinheiro, fica aprovado com o motivo, e o mestre tenta de novo). Os itens entram em `doc.jogo.compras`, com o encaixe e a munição escolhidos: a arma pedida vem carregada, e o pente sai da caixa. O dinheiro sai, com a linha no extrato.
+  - **Onde aparece:** no inventário e no token da mesa (o token pega em até 4 s), na ficha da wiki (armas, armaduras, equipamento) e na loja (o dinheiro da mesa, "a wiki entrega").
+  - **Cyberware comprado:** chega sem instalar; o M16 instala.
+  - **Testado:** 2 testes, 15 mutações que caem, os cenários economia, contas, criador e Foundry, e a conferência no Edge (a loja, a ficha e o criador).
 - [ ] **M16 · Instalar cyberware na wiki:** cobra a instalação e rola a perda de Humanidade (hoje é pela ficha do Foundry).
 - [ ] **M17 · Veículos:** SDP, assentos e o veículo como token.
 - [ ] **M18 · NPCs do mestre:**

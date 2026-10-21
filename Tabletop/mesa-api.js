@@ -1047,12 +1047,16 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       return {};
     } },
 
-    'token.criar': { mestre: true, run({ state, body, campaignId }) {
+    'token.criar': { mestre: true, async run({ state, body, campaignId }) {
       const scene = sceneArg(state, body.cena);
       if (scene.tokens.length >= MAX_TOKENS) throw fail(400, `Até ${MAX_TOKENS} tokens por cena.`);
       const token = buildToken(scene, campaignId, { ...body, livre: body.livre && typeof body.livre === 'object' ? body.livre : {} });
       scene.tokens.push(token);
-      return { tokens: true, cenas: true, resultado: { token: token.id } };
+      // O personagem entrou na mesa da wiki: está em jogo (a criação trava para o jogador, e as compras viram pedidos
+      // que a wiki entrega). A marca é um doc.jogo sem nada dentro: nenhum número muda.
+      const doc = token.tipo === 'pj' ? readCharacter(campaignId, token.personagem) : null;
+      if (doc && !doc.jogo) await writeSheet(campaignId, token, {});
+      return { tokens: true, cenas: true, fichas: Boolean(doc), resultado: { token: token.id } };
     } },
     'token.mover': { run({ state, viewer, body }) {
       const { scene, token } = tokenArg(state, viewer, body.token);

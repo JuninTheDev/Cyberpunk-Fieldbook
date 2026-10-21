@@ -324,6 +324,11 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} está ligado a outro ator do Foundry (${links.map(link => link.nomeAtor || link.ator).join(' e ')}): este é um ator antigo.`, ator: links[0].ator } };
   }
   const importedSomewhere = doc => linksOf(doc).length > 0;
+  // Em jogo: importado no Foundry ou já na mesa da wiki (doc.jogo: o token entrou numa cena). Daí em diante a criação
+  // trava para o jogador, e as compras são por pedido. Quem entrega o pedido: o Foundry, se o personagem está nele;
+  // senão, a própria wiki, ao aprovar.
+  const inPlay = doc => importedSomewhere(doc) || Boolean(doc.jogo);
+  const deliversInWiki = doc => !importedSomewhere(doc) && Boolean(doc.jogo);
   // A ficha inteira como sai: o vínculo que a wiki mostra (foundry), os dois à parte (foundry12 e foundry14) e o estado.
   const withLinks = doc => ({ ...doc,
     // Expõe o contrato novo também para arquivos antigos, sem regravar a ficha ou mudar seu hash de importação.
@@ -770,16 +775,17 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         fs.rmSync(transferFile(id), { force: true });
         return reply(200, { personagem: summary(done.doc, readAccounts()), donoEntrou: joined.nome || null });
       }
-      // Pedidos da campanha (depois da importação): o jogador pede itens do catálogo, o mestre aprova ou recusa, e o
-      // Foundry do mestre entrega (cria os itens, desconta o dinheiro) e marca como entregue. O servidor confere cada
-      // item no catálogo e calcula o total; ninguém escolhe o preço. Não muda a versão do personagem.
+      // Pedidos da campanha (com o personagem em jogo): o jogador pede itens do catálogo e o mestre aprova ou recusa.
+      // Quem entrega: o Foundry do mestre (cria os itens, desconta o dinheiro e marca como entregue), se o personagem
+      // está nele; senão, a wiki entrega na hora de aprovar (personagem-jogo.js). O servidor confere cada item no catálogo
+      // e calcula o total; ninguém escolhe o preço. Não muda a versão do personagem.
       if (extra === 'pedidos') {
         const [, , pid, action] = pathname.slice('/api/personagens/'.length).split('/');
         if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
         const ordersOf = doc => (Array.isArray(doc.pedidos) ? doc.pedidos : []);
         // Os erros de sempre já com o que estava no arquivo; dentro de update() confere de novo, com o arquivo relido.
         const orderBlock = doc => {
-          if (!importedSomewhere(doc)) return { status: 400, data: { erro: 'Antes do Foundry, as compras são na loja inicial.' } };
+          if (!inPlay(doc)) return { status: 400, data: { erro: 'Antes de entrar em jogo, as compras são na loja inicial.' } };
           if (ordersOf(doc).filter(item => item.status === 'pendente').length >= 5) return { status: 400, data: { erro: 'Já há 5 pedidos esperando o mestre.' } };
           return null;
         };
@@ -855,6 +861,16 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
             // Aprovar de novo um aprovado que deu erro (faltou dinheiro na mesa) limpa o erro: o Foundry tenta outra vez.
             if (!(pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))) return { status: 400, data: { erro: 'Este pedido não está esperando.' } };
             Object.assign(pedido, { status: 'aprovado', decidido: now, erro: '' });
+            // Na mesa da wiki, a entrega é agora: sem dinheiro, fica aprovado com o motivo (como quando o Foundry não
+            // consegue), e o mestre tenta de novo depois.
+            if (deliversInWiki(doc)) {
+              const feito = characterGame.entrega(doc, pedido, now);
+              if (feito.erro) pedido.erro = feito.erro;
+              else {
+                doc.jogo = characterGame.comJogo(doc, feito.mudancas, now);
+                Object.assign(pedido, { status: 'entregue', entregue: now, avisos: feito.avisos, erro: '' });
+              }
+            }
           } else if (action === 'recusar') {
             if (!['pendente', 'aprovado'].includes(pedido.status)) return { status: 400, data: { erro: 'Este pedido já foi resolvido.' } };
             Object.assign(pedido, { status: 'recusado', decidido: now, motivo: String(input.motivo || '').trim().slice(0, 300) });
@@ -1044,9 +1060,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           if (Number(input.versao) !== current.versao) return { status: 409, data: { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, withLinks(current)) } };
           const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'jogo', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] ?? null]));
           const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : current.dono, campanha: campaignOf(current), versao: current.versao + 1, criado: current.criado, atualizado: new Date().toISOString() };
-          // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
-          // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.
-          if (importedSomewhere(current) && identity.papel !== 'mestre') {
+          // Em jogo (no Foundry ou na mesa da wiki), a mesa manda: o jogador só muda nome, apelido, aparência, notas,
+          // retrato e Lifepath. O resto (e o resultado, menos o Lifepath) fica como estava.
+          if (inPlay(current) && identity.papel !== 'mestre') {
             for (const field of LOCKED_AFTER_IMPORT) {
               if (current[field] === undefined) delete doc[field];
               else doc[field] = current[field];

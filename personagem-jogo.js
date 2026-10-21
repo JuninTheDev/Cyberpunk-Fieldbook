@@ -61,6 +61,8 @@
   const USO_DO_FOUNDRY = { equipped: 'equipado', carried: 'carregando', owned: 'guardado' };
   const COM_USO = new Set(['arma', 'armadura', 'item', 'roupa', 'deck']);
   const TIPO_DO_FOUNDRY = { weapon: 'arma', armor: 'armadura', ammo: 'municao', gear: 'item', drug: 'item', clothing: 'roupa', cyberdeck: 'deck' };
+  // As compras que a loja entregou na mesa da wiki (o personagem sem o Foundry): linhas como as da criação.
+  const comprasDe = jogo => (Array.isArray(jogo && jogo.compras) ? jogo.compras.filter(linha => linha && linha.uid && linha.id) : []);
   // Na ordem do kindOf do criador.
   const tipoDoCatalogo = cat => (cat.arma ? 'arma' : cat.municao ? 'municao' : cat.armadura ? 'armadura' : cat.acessorio ? '' : cat.deck ? 'deck'
     : cat.programa || cat.hardware || cat.cyber ? '' : cat.roupa ? 'roupa' : 'item');
@@ -100,12 +102,14 @@
         itens.push(linha);
       }
     } else {
-      const linhas = Array.isArray(criado.itens) ? criado.itens : [];
+      // O que veio da criação e o que a loja entregou na mesa da wiki (doc.jogo.compras, no mesmo formato).
+      const compras = new Set(comprasDe(jogo).map(linha => linha.uid));
+      const linhas = [...(Array.isArray(criado.itens) ? criado.itens : []), ...comprasDe(jogo)];
       for (const linha of linhas) {
         const cat = linha && item(linha.id);
         const tipo = cat ? tipoDoCatalogo(cat) : '';
         if (!tipo) continue;
-        const entrada = { id: linha.uid || linha.id, nome: linha.renomear || linha.nome || cat.nome, tipo, qtd: Math.max(0, numero(linha.qtd ?? 1)), uso: tipo === 'municao' ? '' : USOS.includes(linha.uso) ? linha.uso : 'carregando', catalogo: cat.id };
+        const entrada = { id: linha.uid || linha.id, nome: linha.renomear || linha.nome || cat.nome, tipo, qtd: Math.max(0, numero(linha.qtd ?? 1)), uso: tipo === 'municao' ? '' : USOS.includes(linha.uso) ? linha.uso : 'carregando', catalogo: cat.id, ...(compras.has(linha.uid) ? { compra: true } : {}) };
         if (tipo === 'municao') entrada.variedade = cat.municao.variedade || '';
         // O escudo é à parte (como no criador): não entra no SP.
         if (tipo === 'armadura') entrada.sp = cat.armadura.escudo ? { cabeca: 0, corpo: 0 } : { cabeca: numero(cat.armadura.cabeca), corpo: numero(cat.armadura.corpo) };
@@ -287,5 +291,28 @@
     return { mudancas: { [campo]: depois, extrato }, antes, depois };
   }
 
-  return { hp, ficha, valores, comJogo, comHp, comUso, recarga, ajuste, jogoValido, USOS };
+  // A entrega de um pedido da loja aprovado na mesa da wiki (o personagem sem o Foundry; com ele, quem entrega é o
+  // Foundry): os itens entram como compras, com o lugar e a munição que o jogador escolheu (a arma pedida com munição
+  // vem carregada, e o pente sai da caixa), e o dinheiro sai, com a linha no extrato. pedido: o do api-personagens.js
+  // (id, total e itens com uid, id, nome, qtd, em, municao, local, cyber). Devolve { mudancas, avisos } ou { erro }.
+  function entrega(doc, pedido, quando = new Date().toISOString()) {
+    const itens = Array.isArray(pedido && pedido.itens) ? pedido.itens : [];
+    if (!itens.length) return { erro: 'O pedido está vazio.' };
+    const total = Math.max(0, Math.round(Number(pedido.total) || 0));
+    const dinheiro = valores(doc).dinheiro;
+    if (dinheiro === null) return { erro: 'A ficha não diz quanto dinheiro o personagem tem.' };
+    if (total > dinheiro) return { erro: `Dinheiro insuficiente: tem ${dinheiro}eb, e o pedido custa ${total}eb.` };
+    const jogo = jogoValido(doc) || {};
+    const novas = itens.map(linha => ({
+      uid: String(linha.uid), id: String(linha.id), nome: String(linha.nome || ''), qtd: Math.max(1, Math.round(Number(linha.qtd) || 1)), uso: '',
+      ...(linha.municao ? { municao: String(linha.municao) } : {}), ...(linha.em ? { em: String(linha.em) } : {}), ...(linha.local ? { local: String(linha.local) } : {}),
+      ...(linha.cyber ? { cyber: true } : {}), pedido: String(pedido.id || '')
+    }));
+    const motivo = `Compra na loja: ${itens.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}`.slice(0, 200);
+    const linha = { quando, campo: 'dinheiro', antes: dinheiro, depois: dinheiro - total, motivo };
+    const avisos = itens.some(item => item.cyber) ? ['Cyberware: o mestre instala pela mesa (a instalação cobra a Humanidade).'] : [];
+    return { mudancas: { compras: [...comprasDe(jogo), ...novas], dinheiro: dinheiro - total, extrato: [...(jogo.extrato || []), linha].slice(-30) }, avisos };
+  }
+
+  return { hp, ficha, valores, comJogo, comHp, comUso, recarga, ajuste, entrega, jogoValido, USOS };
 });

@@ -273,3 +273,86 @@ test('mesa: recarregar com o balote tira o cartucho da espingarda', async t => {
   // O NPC recarrega de graça (não conta bala).
   assert.equal((await a.m.op('arma.recarregar', { token: a.capanga, arma: 'npc:0' })).status, 400, 'a arma do NPC do livro não tem pente');
 });
+
+// ---------------- A loja na mesa da wiki (M15) ----------------
+const precoDe = (id, qtd = 1) => { const item = catalogo.item(id); return item.preco * (item.lote > 1 ? qtd / item.lote : qtd); };
+
+test('entrega do pedido: as compras entram no inventário (a arma pedida vem carregada) e o dinheiro sai, com o extrato', () => {
+  const doc = docDe();
+  const pedido = { id: 'p1', total: precoDe('core_weapons:smg') + precoDe('core_ammo:medium-pistol-basic', 50), itens: [
+    { uid: 'pedido:p1:0', id: 'core_weapons:smg', nome: 'SMG', qtd: 1, municao: 'pedido:p1:1' },
+    { uid: 'pedido:p1:1', id: 'core_ammo:medium-pistol-basic', nome: 'Munição de pistola média', qtd: 50 },
+    { uid: 'pedido:p1:2', id: 'cyberware-2077:neuroport', nome: 'Neuroport', qtd: 1, cyber: true }
+  ] };
+  const feito = G.entrega(doc, pedido, '2026-10-21T12:00:00.000Z');
+  assert.ok(!feito.erro, feito.erro);
+  assert.deepEqual(feito.avisos, ['Cyberware: o mestre instala pela mesa (a instalação cobra a Humanidade).']);
+  gravar(doc, feito, '2026-10-21T12:00:00.000Z');
+  const ficha = G.ficha(doc, catalogo);
+  assert.equal(ficha.dinheiro, 1250 - pedido.total);
+  const smg = ficha.armas.find(arma => arma.id === 'pedido:p1:0');
+  assert.ok(smg, 'a SMG comprada vai para a mesa');
+  assert.deepEqual([smg.pente, smg.municaoId], [{ atual: 30, max: 30 }, 'pedido:p1:1'], 'vem carregada com a munição do pedido');
+  assert.equal(ficha.itens.find(item => item.id === 'pedido:p1:1').qtd, 20, 'o pente saiu da caixa');
+  assert.ok(ficha.itens.find(item => item.id === 'pedido:p1:0').compra, 'marcada como compra');
+  assert.ok(!ficha.itens.some(item => item.id === 'pedido:p1:2'), 'o cyberware fica para instalar (não é item da mesa)');
+  assert.deepEqual(ficha.extrato.at(-1), { quando: '2026-10-21T12:00:00.000Z', campo: 'dinheiro', antes: 1250, depois: 1250 - pedido.total, motivo: 'Compra na loja: SMG, Munição de pistola média ×50, Neuroport' });
+  // O segundo pedido soma às compras de antes; sem dinheiro, não entrega.
+  gravar(doc, G.entrega(doc, { id: 'p2', total: 10, itens: [{ uid: 'pedido:p2:0', id: 'core_gear:binoculars', nome: 'Binóculos', qtd: 1 }] }), '2026-10-21T12:01:00.000Z');
+  assert.equal(G.ficha(doc, catalogo).itens.filter(item => item.compra).length, 3);
+  assert.match(G.entrega(doc, { id: 'p3', total: 999999, itens: [{ uid: 'pedido:p3:0', id: 'core_gear:binoculars', nome: 'Binóculos', qtd: 1 }] }).erro, /Dinheiro insuficiente/);
+  assert.match(G.entrega({ id: 'x', resultado: { itens: [] } }, { id: 'p4', total: 1, itens: [{ uid: 'a', id: 'core_gear:binoculars', qtd: 1 }] }).erro, /não diz quanto dinheiro/);
+  assert.match(G.entrega(doc, { id: 'p5', total: 0, itens: [] }).erro, /vazio/);
+});
+
+test('loja na mesa da wiki: em jogo, a criação trava, o pedido aprovado entra na ficha e no token; no Foundry, quem entrega é ele', async t => {
+  const m = await montar(t);
+  const ana = await m.jogador('Ana', fichaJax);
+  const id = ana.personagem.id;
+  const pedir = (cookie = ana.cookie, itens = [{ id: 'core_weapons:smg', qtd: 1, municao: '@1' }, { id: 'core_ammo:medium-pistol-basic', qtd: 50 }]) => m.pedir(`/api/personagens/${id}/pedidos`, { method: 'POST', cookie, body: { itens } });
+  const antes = await pedir();
+  assert.equal(antes.status, 400);
+  assert.match(antes.json.erro, /Antes de entrar em jogo/);
+  // O token entra na cena: o personagem está em jogo (sem mudar número nenhum).
+  const cena = (await m.op('cena.criar', { nome: 'Beco', largura: 2000, altura: 1500, grade: { tamanho: 100 } })).json.resultado.cena;
+  const jax = (await m.op('token.criar', { cena, personagem: id, x: 150, y: 150 })).json.resultado.token;
+  const emJogo = (await m.pedir(`/api/personagens/${id}`, { cookie: ana.cookie })).json.personagem;
+  assert.ok(emJogo.jogo && emJogo.jogo.quando, 'doc.jogo marca a entrada em jogo');
+  assert.deepEqual(Object.keys(emJogo.jogo), ['quando'], 'sem número nenhum');
+  // A criação trava para a jogadora (o nome continua aberto).
+  const salvo = await m.pedir(`/api/personagens/${id}`, { method: 'PUT', cookie: ana.cookie, body: { ...emJogo, nome: 'Jax de novo', stats: { ...emJogo.stats, REF: 10 } } });
+  assert.equal(salvo.status, 200, salvo.text);
+  assert.deepEqual([salvo.json.personagem.nome, salvo.json.personagem.stats.REF], ['Jax de novo', 8], 'em jogo, os STATs não mudam pela criação');
+
+  const pedido = await pedir();
+  assert.equal(pedido.status, 201, pedido.text);
+  const total = precoDe('core_weapons:smg') + precoDe('core_ammo:medium-pistol-basic', 50);
+  assert.equal(pedido.json.pedido.total, total);
+  assert.equal((await m.pedir(`/api/personagens/${id}/pedidos/${pedido.json.pedido.id}/aprovar`, { method: 'POST', cookie: ana.cookie, body: {} })).status, 403, 'só o mestre aprova');
+  const aprovado = await m.pedir(`/api/personagens/${id}/pedidos/${pedido.json.pedido.id}/aprovar`, { method: 'POST', body: {} });
+  assert.equal(aprovado.status, 200, aprovado.text);
+  assert.equal(aprovado.json.pedido.status, 'entregue', 'na mesa da wiki, aprovar já entrega');
+  const lista = (await m.pedir('/api/personagens', { cookie: ana.cookie })).json.personagens;
+  assert.equal(lista.find(item => item.id === id).numeros.eb, 1250 - total, 'o dinheiro saiu');
+  // A mesa confere as fichas de quem está nela (a cada 4 segundos): a compra chega ao token e à ficha ao vivo.
+  const visao = await m.ouvir(ana.cookie);
+  m.mesa.tableApi.syncCharacters();
+  const chegou = await visao.esperar(item => item.evento === 'token' && item.data.id === jax && (item.data.armas || []).some(arma => arma.id.startsWith('pedido:')));
+  assert.ok(chegou, 'a SMG comprada chega ao token');
+  const smg = chegou.data.armas.find(arma => arma.id.startsWith('pedido:'));
+  assert.equal(smg.nome, 'SMG');
+  assert.deepEqual(smg.pente, { atual: 30, max: 30 });
+
+  // Sem dinheiro: fica aprovado, com o motivo, e nada muda.
+  const caro = await pedir(ana.cookie, [{ id: 'core_ammo:shotgun-slug-expansive', qtd: 1000 }]);
+  assert.equal(caro.json.pedido.total, precoDe('core_ammo:shotgun-slug-expansive', 1000));
+  const recusado = await m.pedir(`/api/personagens/${id}/pedidos/${caro.json.pedido.id}/aprovar`, { method: 'POST', body: {} });
+  assert.deepEqual([recusado.json.pedido.status, /Dinheiro insuficiente/.test(recusado.json.pedido.erro)], ['aprovado', true]);
+  assert.equal((await m.pedir('/api/personagens', { cookie: ana.cookie })).json.personagens.find(item => item.id === id).numeros.eb, 1250 - total);
+
+  // Ligado ao Foundry: quem entrega é ele (a wiki só aprova).
+  assert.equal((await m.pedir(`/api/personagens/${id}/foundry`, { method: 'PUT', body: { ator: 'abc', nomeAtor: 'Jax' } })).status, 200);
+  const noFoundry = await pedir(ana.cookie, [{ id: 'core_gear:binoculars', qtd: 1 }]);
+  const aprovadoNoFoundry = await m.pedir(`/api/personagens/${id}/pedidos/${noFoundry.json.pedido.id}/aprovar`, { method: 'POST', body: {} });
+  assert.equal(aprovadoNoFoundry.json.pedido.status, 'aprovado', 'espera o Foundry entregar');
+});

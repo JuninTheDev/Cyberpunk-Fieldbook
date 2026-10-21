@@ -86,12 +86,14 @@ function daFicha(doc, catalogo = {}) {
     }
     return { armas, cromo: cromoDe(pecas) };
   }
-  const linhas = Array.isArray(doc && doc.resultado && doc.resultado.itens) ? doc.resultado.itens : null;
-  if (!linhas) return { armas, cromo: null };
+  const criadas = Array.isArray(doc && doc.resultado && doc.resultado.itens) ? doc.resultado.itens : null;
+  if (!criadas) return { armas, cromo: null };
+  // Mais o que a loja entregou na mesa da wiki (doc.jogo.compras). O cyberware comprado só conta depois de instalado.
+  const linhas = [...criadas, ...(doc.jogo && Array.isArray(doc.jogo.compras) ? doc.jogo.compras : [])];
   for (const linha of linhas) {
     const cat = linha && item(linha.id);
     if (!cat) continue;
-    if (cat.cyber) pecas.push({ nome: cat.en || cat.nome, tipo: cat.cyber.tipo, base: false });
+    if (cat.cyber && (!linha.pedido || linha.instalado)) pecas.push({ nome: cat.en || cat.nome, tipo: cat.cyber.tipo, base: false });
     if (!cat.arma) continue;
     const dentro = linhas.filter(outra => outra.em && outra.em === linha.uid).map(outra => { const peca = item(outra.id); return (peca && peca.en) || outra.nome; });
     const carregada = linha.municao ? linhas.find(outra => outra.uid === linha.municao) : null;
