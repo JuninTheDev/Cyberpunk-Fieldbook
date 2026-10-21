@@ -11,6 +11,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 1. Dê dois cliques em **`testar-mesa.bat`**, ou rode `node Tabletop/testar.js`.
    - Na primeira vez, ele cria os dados de teste em `%LOCALAPPDATA%\FieldbookTeste\mesa-wiki`, fora do OneDrive. Quando o formato dos dados de teste muda, ele apaga os antigos e cria de novo.
    - São dois jogadores de mentira (Ana e Bruno), cada um com um personagem (Jax "Ferrugem", Solo; Iris "Nyx", Netrunner), com as armas e a armadura do catálogo da loja.
+   - Para as armas de 2077: o Jax tem a Lexington (Power, com o Ricochete) e uma espingarda com cartucho; a Nyx tem a Chao (Smart, com a munição melhorada e o Neuroport) e a Kenshin (Tech, para carregar).
    - São duas cenas: o beco e o diner do Frag Maps, que já estão no Foundry deste computador. O diner tem névoa.
    - No beco ficam dois Guarda-costas e um Netrunner escondido.
    - Com o backup do Foundry neste computador, as 13 cenas dele entram sozinhas (as com paredes já vêm com a visão ligada).
@@ -27,7 +28,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (34 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (45 testes).
 
 ## O que dá para fazer
 
@@ -62,7 +63,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (34 testes).
 - **Ataque do NPC:** pelo cartão do token, como o jogador. Quando o NPC é atacado, a pergunta da defesa abre para você.
   - A defesa que um jogador ainda não decidiu aparece na aba Rolagens, com o total, e você pode decidir por ele.
   - **Dano à mão**, **Estabilizar**, **Marcar morto** e **Tirar Suprimido** ficam no cartão.
-  - **Desfazer** no cartão do ataque volta o HP, o SP, as lesões e a bala.
+  - **Desfazer** no cartão do ataque volta o HP, o SP, as lesões, a bala, a carga Tech e o ferrolho.
 - **Ping com Shift:** traz a tela de todos para o ponto.
 - **Seu cursor e sua régua** podem ficar só com você (aba Cena → Você).
 
@@ -74,7 +75,14 @@ Teste automático (não abre navegador): `node --test Tabletop/` (34 testes).
 - **Aba Personagem:** os STATs e as perícias da ficha. Tocar numa perícia rola STAT + perícia + 1d10.
 - **Só para o mestre:** a rolagem fica só entre o jogador e o mestre.
 - **Visão:** com a visão ligada, vê o que o token dele vê; o que já viu fica na penumbra. No escuro, vê o alcance do token e o que está iluminado; **Acender a lanterna** (cartão do token) ilumina em volta dele, para todos. Clique na porta abre e fecha. Parede e porta fechada param o token (a linha do arrasto fica vermelha).
-- **Atacar** (cartão do token): a arma da ficha, o modo (tiro, mirado, autofogo, supressivo, corpo a corpo, explosivo), o alvo (na lista ou no mapa), o local e a Sorte. A prévia mostra a DV pelo alcance.
+- **Atacar** (cartão do token): a arma da ficha, o modo (tiro, mirado, ricochete, autofogo, supressivo, cartucho, corpo a corpo, explosivo), o alvo (na lista ou no mapa), o local e a Sorte. A prévia mostra a DV pelo alcance e os ajustes da arma.
+- **Armas de 2077** (Mission Kit, como o módulo do Foundry aplica): a arma mostra a classe embaixo do nome (**Power**, **Smart** ou **Tech**, ou "Rebuild" quando é um Rebuild instalado).
+  - **Power:** o modo **Ricochete** (−4; −2 com o Ballistic Coprocessor), e a lesão crítica causa 10 de dano bônus em vez de 5.
+  - **Smart:** +1 no ataque à distância, e só dispara com o Neuroport, Interface Plugs ou Subdermal Grip instalado (o cartão avisa "sem conexão Smart"). Com a munição **Smart melhorada**, errou a DV (ou a esquiva) por 5 ou menos: o servidor rola a segunda chance, 14 + 1d10 com as penalidades do tiro.
+  - **Tech:** **carregar** no cartão (gasta a Ação de Movimento; a Burya, não). Carregada, o próximo ataque ignora metade do SP; a carga sai no tiro ou em 20 rodadas (a Omaha fica até o fim do turno).
+  - **As regras de cada arma:** balas por tiro (e o dano com menos balas), a trava de balas mínimas, o dano fixo, o dano do tiro mirado (a Unity), os dois canos (a Palica), o segundo alvo a até 4 m (a Kappa), o ferrolho (a Grad: **manejar o ferrolho** antes do próximo tiro), a coronha recolhida (a Dian, −1), só Smart melhorada (a Zhuo) e a lesão de quem não aguenta o coice (a Carnage sem BODY 10, a Burya sem braço reforçado).
+  - **Qualidade excelente:** +1 no ataque, em qualquer arma.
+- **Espingarda com cartucho:** um ataque contra DV 13; se acertar, 3d6 (rolado uma vez) em todos à frente, até 6 m e à vista (a parede tapa). "À frente" é até 45° para cada lado da linha até o alvo escolhido. REF 8+ esquiva. Com cartucho no pente, a espingarda só faz cartucho; com balote, só tiro; sem saber a munição (NPC), os dois.
 - **Defender:** quando alguém ataca o token dele, a pergunta aparece na tela, sem o total do ataque: esquivar (REF 8+ contra tiro; corpo a corpo, sempre) ou aguentar. Sem resposta em 60 segundos, aguenta.
 - **Chat** (embaixo do registro): para todos, só para o mestre ou sussurro a um jogador. `/r 2d6` rola.
 
@@ -156,6 +164,8 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
 - **Áudio**, **notas no mapa**, **NET** (o NET Architect) e o resto da ficha de jogo (Humanidade, dinheiro, itens).
+- **Artes Marciais:** os movimentos especiais esperam o agarrar e a conta de quem acertou o quê no turno. O golpe de artes marciais já ignora metade do SP.
+- **Cobertura:** a mesa não conta o HP da cobertura. O que atravessa cobertura (a carga Tech, o ricochete) aparece como nota no cartão, e o mestre decide.
 - **Luz em cone e modos de visão:** a luz em cone vira círculo, e não há visão no escuro do cyberware (o mestre aumenta o alcance no cartão).
 - **Imagem do mapa:** o mapa inteiro vai para os jogadores, e a névoa e a sombra da visão só cobrem na tela, como no Foundry.
 
@@ -163,7 +173,7 @@ Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
 Não muda nada para quem não usa a mesa: sem `doc.jogo`, tudo funciona como antes. A suíte do projeto passa (`node tests/validar.js`: 171 verificações e as regressões; `node tests/rodar.js criador cyberware`: 65/65 e 16/16).
 
-- **`personagem-jogo.js` (novo):** a regra do HP, compartilhada pela wiki, pela API e pela mesa.
+- **`personagem-jogo.js` (novo):** a regra do HP, compartilhada pela wiki, pela API e pela mesa. Guarda também, por arma, a carga Tech, o ferrolho e a coronha; gravar um deles não apaga o pente.
 - **`api-personagens.js`:**
   - `jogo` entra nos campos do servidor (o jogador não grava, e salvar a ficha não apaga);
   - o HP da lista sai do `personagem-jogo.js`;
@@ -195,10 +205,11 @@ O M4 do roadmap. Quando você aprovar o teste:
 | Arquivo | Para que serve |
 |---|---|
 | `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e o HP dos personagens. |
-| `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha) e as regras puras do RED (DV, armadura, autofogo, Death Save). |
+| `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha) e as regras puras do RED e do Mission Kit (DV, armadura, autofogo, cartucho, Death Save, Power, Smart, Tech). |
+| `mesa-2077.js` | O perfil de 2077 de cada arma (do `system-2077.js`, como o build do Foundry) e o que a ficha diz dela e do cromo: o Rebuild, a munição carregada, a qualidade, a conexão Smart. |
 | `mesa-visao.js` | A conta da visão e da luz (quem vê o quê, a porta, o passo, o que a luz alcança, o polígono da sombra), com o índice das paredes. Vai para o servidor e para o navegador. |
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 34 testes, com dados rolados de propósito. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 45 testes, com dados rolados de propósito. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

@@ -20,7 +20,7 @@ const vm = require('vm');
 const here = __dirname;
 const root = path.resolve(here, '..');
 const createTableApi = require('./mesa-api');
-const SEMENTE = 5; // muda quando os dados de teste mudam de formato: os antigos são refeitos
+const SEMENTE = 6; // muda quando os dados de teste mudam de formato: os antigos são refeitos
 // As cenas do Foundry entram sozinhas nos dados de teste quando o backup completo está neste computador.
 const BACKUP_FOUNDRY = path.join(process.env.USERPROFILE || '', 'Backups', 'Night City Fieldbook', 'foundry12-completo-2026-10-12.tar');
 
@@ -165,6 +165,8 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
   const op = (tipo, dadosOp) => call('/api/mesa/op', { method: 'POST', body: { tipo, ...dadosOp } });
 
   // As armas e as armaduras são do catálogo da loja, montadas como o criador monta (arma carregada, armadura vestida).
+  // As de 2077 (Mission Kit) são para testar o M9: a Lexington (Power, ricochete), a espingarda com cartucho, a Chao
+  // (Smart, com a munição melhorada e o Neuroport) e a Kenshin (Tech, carregar).
   const item = (uid, id, nome, uso, municao = '') => ({ uid, id, nome, qtd: 1, uso, ...(municao ? { municao } : {}) });
   const people = [
     { conta: 'Ana (teste)', personagem: {
@@ -174,14 +176,19 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
       hp: 45,
       itens: [item('j1', 'core_weapons:heavy-pistol', 'Pistola pesada', 'equipado', 'j8'), item('j2', 'core_weapons:smg', 'SMG', 'carregando', 'j9'), item('j3', 'core_weapons:light-melee', 'Faca de combate', 'carregando'),
         item('j4', 'core_armor:light-armorjack-body', 'Armorjack leve (corpo)', 'equipado'), item('j5', 'core_armor:light-armorjack-head', 'Armorjack leve (cabeça)', 'equipado'),
-        item('j8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando'), item('j9', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 'carregando')]
+        item('j8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando'), item('j9', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 'carregando'),
+        item('j6', 'armas-2077:militech-m-10af-lexington', 'Militech M-10AF Lexington', 'carregando', 'j10'), item('j10', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando'),
+        item('j7', 'core_weapons:shotgun', 'Espingarda', 'carregando', 'j11'), item('j11', 'core_ammo:shotgun-shell-basic', 'Cartuchos de espingarda', 'carregando')]
     } },
     { conta: 'Bruno (teste)', personagem: {
       nome: 'Iris "Nyx" Tanaka', apelido: 'Nyx', role: 'netrunner', metodo: 'pacote',
       stats: { INT: 8, REF: 6, DEX: 6, TECH: 7, COOL: 5, WILL: 7, LUCK: 6, MOVE: 5, BODY: 5, EMP: 5 },
       pericias: [['Interface', 'INT', 6], ['Electronics/Security Tech', 'TECH', 6], ['Cryptography', 'INT', 6], ['Basic Tech', 'TECH', 4], ['Handgun', 'REF', 4], ['Evasion', 'DEX', 4], ['Perception', 'INT', 4], ['Library Search', 'INT', 4], ['Stealth', 'DEX', 4], ['Concentration', 'WILL', 4], ['Conceal/Reveal Object', 'INT', 4]],
       hp: 40,
-      itens: [item('n1', 'core_weapons:heavy-pistol', 'Pistola pesada', 'equipado', 'n8'), item('n4', 'core_armor:light-armorjack-body', 'Armorjack leve (corpo)', 'equipado'), item('n8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando')]
+      itens: [item('n1', 'core_weapons:heavy-pistol', 'Pistola pesada', 'equipado', 'n8'), item('n4', 'core_armor:light-armorjack-body', 'Armorjack leve (corpo)', 'equipado'), item('n8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando'),
+        item('n2', 'armas-2077:kang-tao-a-22b-chao', 'Kang Tao A-22B Chao', 'carregando', 'n9'), item('n9', 'armas-2077:smart-melhorada-pistola-media', 'Smart melhorada (pistola média)', 'carregando'),
+        item('n3', 'armas-2077:arasaka-jke-x2-kenshin', 'Arasaka JKE-X2 Kenshin', 'carregando', 'n10'), item('n10', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 'carregando'),
+        { uid: 'gratis:cyberware-2077:neuroport', id: 'cyberware-2077:neuroport', nome: 'Neuroport', qtd: 1, origem: 'gratis2077' }]
     } }
   ];
   const contas = [];

@@ -21,6 +21,7 @@ const path = require('path');
 const vm = require('vm');
 const characterGame = require('../personagem-jogo');
 const R = require('./mesa-regras');
+const K = require('./mesa-2077');
 const createCombat = require('./mesa-combate');
 const V = require('./mesa-visao');
 
@@ -126,12 +127,13 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   const colorOf = viewer => (isGm(viewer) ? GM_COLOR : colorOfAccount(viewer.conta));
 
   // ---------------- Dados da wiki ----------------
-  // As perícias e as tabelas de lesão crítica (system-rules.js) e as fichas de NPC (mestre-npcs.js), lidas dos mesmos
-  // arquivos que a wiki carrega, como faz o build do módulo do Foundry. Só o servidor lê as fichas de NPC.
-  const emptyWiki = { skills: new Map(), critBody: [], critHead: [], npcs: [], regras: { rangeDV: [], rangeBandLimits: [] } };
+  // As perícias e as tabelas de lesão crítica (system-rules.js), as fichas de NPC (mestre-npcs.js) e as armas de 2077
+  // (system-2077.js), lidas dos mesmos arquivos que a wiki carrega, como faz o build do módulo do Foundry. Só o servidor
+  // lê as fichas de NPC.
+  const emptyWiki = { skills: new Map(), critBody: [], critHead: [], npcs: [], armas2077: new Map(), regras: { rangeDV: [], rangeBandLimits: [] } };
   let wikiCache = { key: '', data: emptyWiki };
   function wikiData() {
-    const files = ['system-rules.js', 'mestre-npcs.js'].map(file => path.join(wikiDir, file));
+    const files = ['system-rules.js', 'mestre-npcs.js', 'system-2077.js'].map(file => path.join(wikiDir, file));
     let key;
     try { key = files.map(file => fs.statSync(file).mtimeMs).join(':'); } catch { return wikiCache.data; }
     if (key === wikiCache.key) return wikiCache.data;
@@ -147,6 +149,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     // Pelo JSON: os objetos saem do contexto do vm e viram objetos comuns (as funções ficam para trás).
     const rules = JSON.parse(JSON.stringify((sandbox.systemRules && sandbox.systemRules.data) || {}));
     const npcData = JSON.parse(JSON.stringify((sandbox.npcStatBlocks && sandbox.npcStatBlocks.data) || {}));
+    const armas2077 = K.tabela(JSON.parse(JSON.stringify((sandbox.system2077 && sandbox.system2077.data && sandbox.system2077.data.weapons) || {})));
     const names = npcData.skillNames || {};
     const skills = new Map((rules.skills || []).map(([pt, en, stat]) => [en, { pt, stat }]));
     skills.set('Language (Streetslang)', { pt: 'Linguagem (Streetslang)', stat: 'INT' });
@@ -168,7 +171,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       });
     }
     const table = rows => (Array.isArray(rows) ? rows : []).map(row => row.map((cell, i) => (i ? stripTags(cell) : Number(cell))));
-    wikiCache = { key, data: { skills, ptOf, critBody: table(rules.critBody), critHead: table(rules.critHead), npcs, regras: { rangeDV: rules.rangeDV || [], rangeBandLimits: rules.rangeBandLimits || [] } } };
+    wikiCache = { key, data: { skills, ptOf, critBody: table(rules.critBody), critHead: table(rules.critHead), npcs, armas2077, regras: { rangeDV: rules.rangeDV || [], rangeBandLimits: rules.rangeBandLimits || [] } } };
     return wikiCache.data;
   }
 
@@ -231,12 +234,16 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     } catch { /* sem catálogo: as armas vêm sem classe e sem pente */ }
     return { item: id => catalogCache.porId.get(id) || null, porNome: nome => catalogCache.porNome.get(plain(nome)) || null };
   }
-  // O que a mesa guarda no token do personagem (cópia da ficha de jogo, conferida a cada poucos segundos).
+  // O que a mesa guarda no token do personagem (cópia da ficha de jogo, conferida a cada poucos segundos). As armas levam
+  // o perfil de 2077 e a munição carregada; o cromo diz se a arma Smart dispara (mesa-2077.js).
   function combatFields(doc) {
-    const ficha = characterGame.ficha(doc, catalog());
+    const catalogo = catalog();
+    const ficha = characterGame.ficha(doc, catalogo);
+    const fatos = K.daFicha(doc, catalogo);
+    const armas2077 = wikiData().armas2077;
     return {
-      hp: ficha.hp, sp: ficha.sp, sorte: ficha.sorte, humanidade: ficha.humanidade, lesoes: ficha.lesoes, deathSave: ficha.deathSave, morto: ficha.morto,
-      armas: ficha.armas.map(arma => ({ ...arma, classe: R.classeDaArma(arma) }))
+      hp: ficha.hp, sp: ficha.sp, sorte: ficha.sorte, humanidade: ficha.humanidade, lesoes: ficha.lesoes, deathSave: ficha.deathSave, morto: ficha.morto, cromo: fatos.cromo,
+      armas: ficha.armas.map(arma => K.comPerfil({ ...arma, classe: R.classeDaArma(arma) }, armas2077, fatos.armas[arma.id] || null))
     };
   }
   const characterCard = doc => {
@@ -307,6 +314,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   }
   // O que a visão precisa saber da luz para quem olha: a luz global e as luzes (com o raio maior de cada uma).
   const ambienteDe = (viewer, scene) => ({ global: luzDaCena(scene).global, luzes: lightsFor(viewer, scene).map(luz => ({ x: luz.x, y: luz.y, raio: Math.max(luz.claro, luz.penumbra) })) });
+  // A arma como o dono e o mestre veem: com os modos que ela faz e se a carga Tech ainda vale (mesa-regras.js).
+  const armaParaVer = (arma, campaignId) => ({ ...arma, modos: R.modosDaArma(arma), carregada: R.cargaValida(arma.carga, tableOf(campaignId).state.combate) });
   function tokenFor(viewer, scene, token, campaignId) {
     const gm = isGm(viewer);
     const mine = Boolean(token.dono) && token.dono === viewer.conta;
@@ -322,8 +331,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       Object.assign(view, {
         move: token.move ?? null, personagem: token.personagem || null, escondido: Boolean(token.escondido),
         alcance: token.alcance ?? ALCANCE_PADRAO, luz: token.luz || { claro: 0, penumbra: 0 },
-        sp: token.sp || null, armas: token.armas || [], lesoes: token.lesoes || [], deathSave: token.deathSave || 0,
-        ...(token.sorte ? { sorte: token.sorte } : {}), ...(token.humanidade ? { humanidade: token.humanidade } : {})
+        sp: token.sp || null, armas: (token.armas || []).map(arma => armaParaVer(arma, campaignId)), lesoes: token.lesoes || [], deathSave: token.deathSave || 0,
+        ...(token.sorte ? { sorte: token.sorte } : {}), ...(token.humanidade ? { humanidade: token.humanidade } : {}), ...(token.cromo ? { cromo: token.cromo } : {})
       });
     }
     if (gm) {
@@ -629,8 +638,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const nome = input.nome ? line(input.nome, 40) : count ? `${preset.nome} ${count + 1}` : preset.nome;
       // A armadura da ficha do livro ("SP 7 na cabeça e no corpo") e as armas com a classe (a linha da DV por alcance).
       // NPC do livro não conta bala.
-      const armas = preset.armas.map((arma, index) => ({ id: `npc:${index}`, nome: arma.nome, dano: arma.dano, cdt: arma.cdt, pericia: arma.pericia, nota: arma.nota,
-        distancia: !/Melee|Brawling|Martial/i.test(arma.pericia), classe: R.classeDaArma({ nome: arma.nome, pericia: arma.pericia, distancia: !/Melee|Brawling|Martial/i.test(arma.pericia) }), pente: null }));
+      const armas = preset.armas.map((arma, index) => K.comPerfil({ id: `npc:${index}`, nome: arma.nome, dano: arma.dano, cdt: arma.cdt, pericia: arma.pericia, nota: arma.nota,
+        distancia: !/Melee|Brawling|Martial/i.test(arma.pericia), classe: R.classeDaArma({ nome: arma.nome, pericia: arma.pericia, distancia: !/Melee|Brawling|Martial/i.test(arma.pericia) }), pente: null }, wikiData().armas2077));
       return { ...base, tipo: 'npc', nome, npc: preset.id, dono: null, imagem: '', cor: '#ff3158', hp: { atual: preset.hp, max: preset.hp }, ref: preset.stats.REF, move: preset.stats.MOVE, stats: preset.stats, pericias: preset.pericias,
         armas, sp: R.spDaFicha(preset.armadura), lesoes: [], deathSave: 0, morto: false };
     }
@@ -1076,7 +1085,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const ordem = chosen.map(token => rollInitiative(campaignId, token));
       sortInitiative(ordem);
       // turnos: conta as vezes que passaram (o Suprimido sai no fim da vez seguinte de quem foi suprimido).
-      state.combate = { cena: scene.id, rodada: 1, vez: 0, ordem, turnos: 0, inicioDaVez: 0, deathSave: null };
+      state.combate = { id: newId(), cena: scene.id, rodada: 1, vez: 0, ordem, turnos: 0, inicioDaVez: 0, deathSave: null };
       combatFlow.aoPassarAVez(state, null);
       return { combate: true, registro: systemEntry(state, 'Começou o combate. Rodada 1.') };
     } },

@@ -1,5 +1,5 @@
 // O estado de jogo do personagem que a mesa da wiki guarda (doc.jogo): HP, SP (com a ablação), Sorte, Humanidade, a
-// munição no pente, as lesões críticas e o Death Save. Compartilhado pela wiki (a ficha), pela API (os números da lista
+// munição no pente (e a carga, o ferrolho e a coronha das armas de 2077), as lesões críticas e o Death Save. Compartilhado pela wiki (a ficha), pela API (os números da lista
 // de Personagens) e pela mesa da wiki (Tabletop/mesa-api.js).
 //
 // Até a mesa da wiki substituir o Foundry, ele também manda a ficha (doc.mesa, a cada mudança no ator): vale o mais
@@ -63,8 +63,17 @@
           municao: linha.municao ? ((criado.itens || []).find(outra => outra.uid === linha.municao) || {}).nome || '' : ''
         }));
     }
-    const pentes = (jogo.armas && typeof jogo.armas === 'object') ? jogo.armas : {};
-    for (const arma of armas) if (arma.pente && pentes[arma.id] && Number.isFinite(Number(pentes[arma.id].pente))) arma.pente.atual = Math.max(0, Math.min(arma.pente.max, Number(pentes[arma.id].pente)));
+    // O que a mesa guarda de cada arma: a munição no pente, a carga da arma Tech, o ferrolho por manejar e a coronha
+    // recolhida.
+    const salvas = (jogo.armas && typeof jogo.armas === 'object') ? jogo.armas : {};
+    for (const arma of armas) {
+      const salva = salvas[arma.id];
+      if (!salva || typeof salva !== 'object') continue;
+      if (arma.pente && Number.isFinite(Number(salva.pente))) arma.pente.atual = Math.max(0, Math.min(arma.pente.max, Number(salva.pente)));
+      if (salva.carga && typeof salva.carga === 'object') arma.carga = salva.carga;
+      if (salva.ferrolho) arma.ferrolho = true;
+      if (salva.coronha) arma.coronha = true;
+    }
 
     // Armadura: o SP de cada local. Do Foundry vem o SP de agora (o máximo não vem: fica o mesmo).
     let base = { cabeca: 0, corpo: 0 };
@@ -99,7 +108,11 @@
     const base = { ...(jogoValido(doc) || {}) };
     const novo = { ...base, ...mudancas, quando };
     if (mudancas.hp !== undefined && typeof mudancas.hp !== 'object') novo.hp = { atual: Math.round(Number(mudancas.hp) || 0) };
-    if (mudancas.armas) novo.armas = { ...(base.armas || {}), ...mudancas.armas };
+    // Cada arma mistura com o que já tinha: gravar a carga não apaga o pente.
+    if (mudancas.armas) {
+      novo.armas = { ...(base.armas || {}) };
+      for (const [id, arma] of Object.entries(mudancas.armas)) novo.armas[id] = { ...(novo.armas[id] || {}), ...arma };
+    }
     return novo;
   }
   // O HP mudou na mesa (o atalho de antes).

@@ -1646,9 +1646,29 @@
     const armas = token.armas || [];
     if (armas.length) {
       linhas.push(`<ul class="armas">${armas.map(arma => `<li><b>${esc(arma.nome)}</b><span>${esc(arma.dano)}${arma.pente ? ` · <span class="${arma.pente.atual ? '' : 'erro'}">${arma.pente.atual}/${arma.pente.max}</span>` : ''}</span>
-        ${arma.pente && arma.pente.atual < arma.pente.max ? `<button class="link" type="button" data-recarregar="${esc(arma.id)}">recarregar</button>` : ''}</li>`).join('')}</ul>`);
+        ${arma.pente && arma.pente.atual < arma.pente.max ? `<button class="link" type="button" data-recarregar="${esc(arma.id)}">recarregar</button>` : ''}${htmlDe2077(token, arma)}</li>`).join('')}</ul>`);
     }
     return linhas.length ? `<div class="ficha-combate">${linhas.join('')}</div>` : '';
+  }
+  // A classe de 2077 da arma (Mission Kit), os avisos e os botões de estado: carregar a Tech, manejar o ferrolho, a
+  // coronha. O servidor confere tudo de novo no ataque.
+  const CLASSE_2077 = { power: 'Power', smart: 'Smart', tech: 'Tech' };
+  const DICA_2077 = {
+    power: 'Power: a lesão crítica causa 10 de dano bônus em vez de 5. Tem o modo Ricochete.',
+    smart: 'Smart: +1 nos ataques à distância; só dispara conectada (Neuroport, Interface Plugs ou Subdermal Grip).',
+    tech: 'Tech: carregar gasta a Ação de Movimento; carregada, o próximo ataque ignora metade do SP e atravessa cobertura fina.'
+  };
+  function htmlDe2077(token, arma) {
+    const kit = arma.kit;
+    if (!kit) return '';
+    const partes = [`<span class="tag kit kit-${esc(kit.classe)}" title="${esc(DICA_2077[kit.classe] || '')}">${esc(CLASSE_2077[kit.classe] || kit.classe)}${kit.rebuild ? ' (Rebuild)' : ''}</span>`];
+    if (kit.classe === 'smart' && arma.smartMelhorada) partes.push('<span class="tag kit" title="Ignora escuridão, fumaça e neblina; errou por 5 ou menos, tenta de novo com 14 + 1d10.">Smart melhorada</span>');
+    if (kit.classe === 'smart' && arma.distancia && token.cromo && !token.cromo.conexaoSmart) partes.push('<span class="tag falha" title="A arma Smart só dispara conectada: o Personal Link do Neuroport, Interface Plugs ou Subdermal Grip.">sem conexão Smart</span>');
+    const botao = (acao, texto, dica, ativo = false) => `<button class="link${ativo ? ' ativo' : ''}" type="button" data-arma-acao="${acao}" data-arma="${esc(arma.id)}" title="${esc(dica)}">${texto}</button>`;
+    if (kit.classe === 'tech') partes.push(botao('carregar', arma.carregada ? 'carregada' : 'carregar', arma.carregada ? 'Carregada: o próximo ataque ignora metade do SP. Clique para descarregar.' : `Carregar (${kit.cargaSemMovimento ? 'sem gastar a Ação de Movimento' : 'gasta a Ação de Movimento'}).`, arma.carregada));
+    if (arma.ferrolho) partes.push(botao('ferrolho', 'manejar o ferrolho', 'Uma Ação para manejar o ferrolho antes de atirar de novo. Clique quando gastar a Ação.', true));
+    if (kit.coronhaRetratil) partes.push(botao('coronha', arma.coronha ? 'coronha recolhida (−1)' : 'coronha estendida', arma.coronha ? 'Clique para estender (uma Ação).' : 'Clique para recolher (dá para esconder; −1 nos ataques).', arma.coronha));
+    return `<div class="arma-2077">${partes.join('')}</div>`;
   }
 
   // ---------------- Ataque ----------------
@@ -1657,9 +1677,11 @@
   const CORPO = new Set(['lightMelee', 'medMelee', 'heavyMelee', 'vHeavyMelee', 'briga', 'artesMarciais']);
   const EXPLOSIVO = new Set(['grenadeLauncher', 'rocketLauncher', 'thrownWeapon']);
   const LINHA_DV = { medPistol: 'pistol', heavyPistol: 'pistol', vHeavyPistol: 'pistol', smg: 'smg', heavySmg: 'smg', assaultRifle: 'assault', shotgun: 'shotgun', sniperRifle: 'sniper', bow: 'bow', grenadeLauncher: 'grenade', thrownWeapon: 'grenade', rocketLauncher: 'rocket' };
-  const NOME_MODO = { tiro: 'Tiro', mirado: 'Mirado', autofogo: 'Autofogo', supressivo: 'Supressivo', corpo: 'Corpo a corpo', explosivo: 'Explosivo' };
+  const NOME_MODO = { tiro: 'Tiro', mirado: 'Mirado', ricochete: 'Ricochete', autofogo: 'Autofogo', supressivo: 'Supressivo', cartucho: 'Cartucho', corpo: 'Corpo a corpo', explosivo: 'Explosivo' };
   const armasDe = token => [...(token.armas || []), { id: 'briga', nome: 'Desarmado (briga)', classe: 'briga', dano: 'pelo BODY', pente: null }];
-  const modosDe = arma => (CORPO.has(arma.classe) ? ['corpo'] : EXPLOSIVO.has(arma.classe) ? ['explosivo'] : AUTOFOGO.has(arma.classe) ? ['tiro', 'mirado', 'autofogo', 'supressivo'] : ['tiro', 'mirado']);
+  // Os modos vêm do servidor com a arma (as de 2077 têm os delas); sem eles, pela classe.
+  const modosDe = arma => (Array.isArray(arma.modos) && arma.modos.length ? arma.modos
+    : CORPO.has(arma.classe) ? ['corpo'] : EXPLOSIVO.has(arma.classe) ? ['explosivo'] : AUTOFOGO.has(arma.classe) ? ['tiro', 'mirado', 'autofogo', 'supressivo'] : ['tiro', 'mirado']);
   function dvPrevia(classe, metros, autofogo) {
     const linha = (rules.rangeDV || []).find(item => item.id === LINHA_DV[classe]);
     const tabela = linha && (autofogo ? linha.autofire : linha.dv);
@@ -1677,22 +1699,41 @@
       .map(item => ({ item, metros: medir(token, item).metros })).sort((a, b) => a.metros - b.metros);
     if (!alvos.some(({ item }) => item.id === at.alvo)) at.alvo = alvos.length ? alvos[0].item.id : '';
     const alvo = S.tokens.get(at.alvo);
+    const kit = arma.kit || null;
     let previa = '';
     if (at.modo === 'supressivo') previa = 'Todos a até 25 m rolam WILL + Concentração contra o seu ataque. 10 balas.';
     else if (alvo) {
       const metros = medir(token, alvo).metros;
       if (at.modo === 'corpo') previa = metros > Math.max(2, grade().metros) ? `${metros} m: longe demais (corpo a corpo é até 2 m)` : `${metros} m · o alvo esquiva (DEX + Evasão)`;
+      else if (at.modo === 'cartucho') previa = `DV 13 · se acertar, 3d6 em todos à sua frente até 6 m e à vista, na direção de ${alvo.nome}`;
       else {
         const dv = dvPrevia(arma.classe, metros, at.modo === 'autofogo');
-        previa = `${metros} m · ${dv === null ? 'fora do alcance' : `DV ${dv}`}${at.modo === 'mirado' ? ' · −8 no ataque' : ''}${at.modo === 'autofogo' ? ' · 10 balas' : ''}${at.modo === 'explosivo' ? ' · área de 10 × 10 m' : ''}`;
+        const ricochete = token.cromo && token.cromo.coprocessador ? ' · −2 (ricochete com o Ballistic Coprocessor)' : ' · −4 (ricochete: alvo atrás de cobertura ou fora da vista)';
+        previa = `${metros} m · ${dv === null ? 'fora do alcance' : `DV ${dv}`}${at.modo === 'mirado' ? ' · −8 no ataque' : ''}${at.modo === 'ricochete' ? ricochete : ''}${at.modo === 'autofogo' ? ' · 10 balas' : ''}${at.modo === 'explosivo' ? ' · área de 10 × 10 m' : ''}`;
       }
     }
+    // Os ajustes da arma (o servidor faz a mesma conta).
+    const ajustes = [];
+    if (kit && kit.classe === 'smart' && arma.distancia) ajustes.push('Smart +1');
+    if (arma.excelente) ajustes.push('excelente +1');
+    if (kit && kit.coronhaRetratil && arma.coronha) ajustes.push('coronha −1');
+    if (kit && kit.classe === 'tech' && arma.carregada && at.modo !== 'supressivo') ajustes.push('carregada: ignora metade do SP');
+    if (kit && kit.balas > 1 && ['tiro', 'mirado', 'ricochete', 'cartucho'].includes(at.modo)) ajustes.push(`${kit.balas} balas no tiro`);
+    if (ajustes.length) previa += `${previa ? ' · ' : ''}${ajustes.join(' · ')}`;
+    // A Kappa trava um segundo alvo a até 4 m do primeiro; a Palica dispara os dois canos.
+    const segundos = kit && kit.doisAlvos && alvo && ['tiro', 'mirado', 'ricochete'].includes(at.modo)
+      ? alvos.filter(({ item }) => item.id !== alvo.id && medir(alvo, item).metros <= 4) : null;
+    if (!segundos || !segundos.some(({ item }) => item.id === at.alvo2)) at.alvo2 = '';
+    const doisCanos = kit && kit.doisCanos && arma.pente && arma.pente.atual >= 2 && ['tiro', 'mirado', 'ricochete', 'cartucho'].includes(at.modo);
+    if (!doisCanos) at.doisCanos = false;
     return `<div class="atacar">
       <label class="campo">Arma <select data-at="arma">${armas.map(item => `<option value="${esc(item.id)}"${item.id === arma.id ? ' selected' : ''}>${esc(item.nome)}${item.pente ? ` (${item.pente.atual}/${item.pente.max})` : ''}</option>`).join('')}</select></label>
       <div class="segmentado" role="radiogroup" aria-label="Modo">${modos.map(modo => `<button type="button" data-at-modo="${modo}" class="${modo === at.modo ? 'ativo' : ''}">${NOME_MODO[modo]}</button>`).join('')}</div>
       ${at.modo === 'mirado' ? `<div class="segmentado" role="radiogroup" aria-label="Onde">${[['cabeca', 'Cabeça'], ['perna', 'Perna'], ['item', 'Item na mão']].map(([valor, nome]) => `<button type="button" data-at-local="${valor}" class="${(at.local || 'cabeca') === valor ? 'ativo' : ''}">${nome}</button>`).join('')}</div>` : ''}
       ${at.modo === 'supressivo' ? '' : `<div class="campo-linha"><label class="campo cresce">Alvo <select data-at="alvo">${alvos.map(({ item, metros }) => `<option value="${esc(item.id)}"${item.id === at.alvo ? ' selected' : ''}>${esc(item.nome)} · ${metros} m</option>`).join('') || '<option value="">Ninguém na cena</option>'}</select></label>
         <button class="botao vazado pequeno" type="button" data-at="mapa">${S.escolhendoAlvo ? 'Clique no alvo…' : 'No mapa'}</button></div>`}
+      ${segundos ? `<label class="campo">Segundo alvo (a até 4 m) <select data-at="alvo2"><option value="">Nenhum</option>${segundos.map(({ item }) => `<option value="${esc(item.id)}"${item.id === at.alvo2 ? ' selected' : ''}>${esc(item.nome)}</option>`).join('')}</select></label>` : ''}
+      ${doisCanos ? `<label class="marcar"><input data-at-marcar="doisCanos" type="checkbox"${at.doisCanos ? ' checked' : ''}> Os dois canos (2 cartuchos, 4d6)</label>` : ''}
       <p class="previa">${esc(previa)}</p>
       <div class="campo-linha"><label class="campo mod">Mod <input data-at="mod" type="number" min="-30" max="30" value="${at.mod || 0}"></label>
         ${token.sorte ? `<label class="campo mod">Sorte <input data-at="sorte" type="number" min="0" max="${token.sorte.atual}" value="${at.sorte || 0}"></label>` : ''}
@@ -1700,7 +1741,7 @@
   }
   async function dispararAtaque(token) {
     const at = S.ataque;
-    const resposta = await op('ataque', { atacante: token.id, arma: at.arma, modo: at.modo, local: at.local || 'cabeca', alvo: at.alvo, mod: Number(at.mod) || 0, sorte: Number(at.sorte) || 0 }).catch(() => null);
+    const resposta = await op('ataque', { atacante: token.id, arma: at.arma, modo: at.modo, local: at.local || 'cabeca', alvo: at.alvo, alvo2: at.alvo2 || undefined, doisCanos: Boolean(at.doisCanos), mod: Number(at.mod) || 0, sorte: Number(at.sorte) || 0 }).catch(() => null);
     if (!resposta) return;
     at.sorte = 0;
     if (resposta.resultado && !resposta.resultado.concluido) aviso('Esperando a defesa do alvo…');
@@ -1723,6 +1764,8 @@
     }
     const recarregar = event.target.closest('[data-recarregar]');
     if (recarregar) { op('arma.recarregar', { token: token.id, arma: recarregar.dataset.recarregar }).catch(() => {}); return; }
+    const acaoDaArma = event.target.closest('[data-arma-acao]');
+    if (acaoDaArma) { op(`arma.${acaoDaArma.dataset.armaAcao}`, { token: token.id, arma: acaoDaArma.dataset.arma }).catch(() => {}); return; }
     const modo = event.target.closest('[data-at-modo]');
     if (modo) { S.ataque.modo = modo.dataset.atModo; renderCartao(); return; }
     const local = event.target.closest('[data-at-local]');
@@ -1777,6 +1820,7 @@
       S.ataque[campo] = event.target.value;
       if (campo === 'arma' || campo === 'alvo') { event.target.blur(); renderCartao(); }
     }
+    if (event.target.dataset.atMarcar && S.ataque) S.ataque[event.target.dataset.atMarcar] = event.target.checked;
   });
 
   // ---------------- Painel ----------------
@@ -1971,12 +2015,16 @@
     if (entrada.pendente) linhas.push('<div class="reg-alvo">Esperando a defesa…</div>');
     else if (entrada.cancelado) linhas.push('<div class="reg-alvo">Cancelado: o servidor reiniciou no meio.</div>');
     else {
-      if (a.errou) linhas.push(`<div class="reg-alvo">Errou${a.dv === null ? ' (fora do alcance)' : ` (DV ${a.dv})`}: o mestre decide onde caiu.</div>`);
+      for (const nota of a.notas || []) linhas.push(`<div class="reg-nota">${esc(nota)}</div>`);
+      if (a.segunda) linhas.push(`<div class="reg-alvo">Segunda chance da munição Smart melhorada: <b>${a.segunda.total}</b> contra DV ${a.dv}.</div>`);
+      if (a.errou) linhas.push(a.modo === 'cartucho' ? `<div class="reg-alvo">Errou o cartucho (DV ${a.dv}).</div>` : `<div class="reg-alvo">Errou${a.dv === null ? ' (fora do alcance)' : ` (DV ${a.dv})`}: o mestre decide onde caiu.</div>`);
       for (const alvo of a.alvos || []) {
         let defesa;
         if (alvo.escolha === 'esquivar') defesa = `esquivou com ${alvo.defesa ? alvo.defesa.total : '?'}`;
         else if (alvo.escolha === 'concentrar') defesa = `${alvo.defesa ? alvo.defesa.total : '?'} na Concentração`;
-        else defesa = alvo.dv === null || alvo.dv === undefined ? (['tiro', 'mirado', 'autofogo'].includes(a.modo) ? 'fora do alcance' : 'aguentou') : `aguentou (DV ${alvo.dv})`;
+        else defesa = alvo.dv === null || alvo.dv === undefined ? (['tiro', 'mirado', 'ricochete', 'autofogo'].includes(a.modo) ? 'fora do alcance' : 'aguentou') : `aguentou (DV ${alvo.dv})`;
+        if (alvo.segundaChance) defesa += `; segunda chance (Smart melhorada) ${alvo.segundaChance.total}`;
+        if (alvo.redirecionado) defesa = `as balas Smart mudaram de alvo; ${defesa}`;
         if (a.modo === 'supressivo') linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: ${defesa} → ${alvo.acertou ? '<span class="tag lesao">Suprimido</span>' : 'resistiu'}</div>`);
         else if (!alvo.acertou) linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: ${defesa} → errou</div>`);
         else linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: ${defesa} → pegou. ${contaDoDano(alvo.dano, alvo.multiplicador)}</div>${lesoesHtml(alvo.dano && alvo.dano.lesoes)}`);

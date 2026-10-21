@@ -9,6 +9,16 @@
 - A ordem é a recomendada: a Fase 1 é o mínimo para jogar uma sessão sem o Foundry.
 - Cada item fecha com teste em `mesa.test.js` (ou na suíte do projeto) e mutações que caem.
 
+**A ordem combinada (2026-10-21):**
+1. M9;
+2. M7;
+3. M12;
+4. M11;
+5. um ensaio no teste, num PC e num celular;
+6. o M4, quando o usuário aprovar.
+
+Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (e o M13, se o grupo tiver netrunner).
+
 ## Fase 0: feito
 
 - [x] **M1 · Mesa básica:** cenas com mapa e grade, tokens, névoa pintada pelo mestre, régua com DV por alcance, ping, cursores, rolagens do RED pelo servidor, iniciativa. O servidor filtra o que cada um recebe.
@@ -55,10 +65,21 @@
   - **Mortalmente Ferido:** lesão a cada acerto, Death Save no começo da vez, a morte e a vez pulada.
   - **Desfazer** (o mestre): volta o HP, o SP, as lesões e a bala.
   - **Falta:** a espingarda com cartucho (passou para o M9).
-- [ ] **M9 · Modos de 2077 e Artes Marciais:**
-  - Smart, Tech, Power e ricochete (as macros de hoje);
-  - a espingarda com cartucho (a área do chumbo);
-  - os movimentos das Artes Marciais (o C10 da `sistema-v14`).
+- [x] **M9 · Armas de 2077 e a espingarda com cartucho** (`mesa-2077.js`, `mesa-regras.js`, `mesa-combate.js`), como o `armas2077.mjs` e o Fluxo de Combate do Foundry:
+  - **O perfil:** a classe e as regras de cada arma vêm do `system-2077.js` (a mesma lista do build do Foundry). Da ficha vêm o Rebuild instalado, a munição carregada, a qualidade e o cromo.
+  - **Power:** o modo Ricochete (−4; −2 com o Ballistic Coprocessor) e a lesão crítica com 10 de dano bônus.
+  - **Smart:** +1, a trava sem a conexão, e a segunda chance da munição Smart melhorada (14 + 1d10, com as penalidades do tiro).
+  - **Tech:** carregar (no cartão), a metade do SP no tiro carregado e a carga que sai no tiro ou em 20 rodadas (a Omaha fica até o fim do turno).
+  - **Cada arma:** balas por tiro e o dano com menos balas, a trava de balas mínimas, o dano fixo e o do tiro mirado, os dois canos, os dois alvos, o ferrolho, a coronha, só Smart melhorada e a lesão de quem não aguenta o coice.
+  - **Qualidade excelente:** +1 em qualquer arma.
+  - **Cartucho:** DV 13 e 3d6 (rolado uma vez) em todos à frente até 6 m e à vista. "À frente": 45° para cada lado do alvo escolhido.
+  - **Desfazer:** volta também a carga e o ferrolho.
+  - **Testado:** 11 testes e 75 mutações que caem, mais a conferência no Edge (o cartão e o ataque do Jax e da Nyx de teste, que agora têm armas de 2077).
+  - **Falta:** o autofogo com −2 da Pozhar (a regra está só no texto) e a cobertura com HP (hoje é nota no cartão).
+- [ ] **M9b · Artes Marciais:**
+  - os movimentos especiais (o C10 da `sistema-v14`);
+  - **antes:** agarrar e arremessar na mesa;
+  - **antes:** quem acertou o quê no turno, para os requisitos.
 - [x] **M10 · Chat:** texto para todos, só para o mestre ou sussurro a um jogador (os outros nem recebem), `/r 2d6` rola, e os cartões de rolagem e de ataque no mesmo fio.
 - [ ] **M11 · Áudio:** as playlists e a música da cena (o mundo tem 3 playlists, 4 faixas, e as músicas soltas em `Data/`). O mestre toca para todos, com o volume de cada um.
 - [ ] **M12 · Notas no mapa:** um ponto no mapa que abre um handout ou um documento da wiki (os diários do Foundry viram documentos da campanha).
