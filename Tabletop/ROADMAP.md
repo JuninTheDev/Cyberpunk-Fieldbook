@@ -13,7 +13,7 @@
 1. M9 (feito);
 2. M7 (feito);
 3. M11 (feito em paralelo, pela sessão tabletop-a9);
-4. M23, a mesa limpa (pedido do usuário em 2026-10-21: "antes do M12");
+4. M23, a mesa limpa (feito; pedido do usuário em 2026-10-21: "antes do M12");
 5. M12;
 6. um ensaio no teste, num PC e num celular;
 7. o M4, quando o usuário aprovar.
@@ -103,7 +103,7 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **Importação:** as 3 playlists do Foundry (o volume convertido como o Foundry 12), os 2 grupos do yt-jukebox (51 vídeos) e a música da cena Intro.
   - **Testado:** 5 testes (e 1 no importador), 48 mutações que caem, e no Edge sem janela: o mestre e o jogador no mesmo ponto (2,5 s e 2,5 s), o fim passando para a próxima, o ambiente junto, o YouTube tocando e o celular.
   - **Falta:** os sons de efeito (a granada do mmutons, a porta, o dado), a música avançar sem a página do mestre aberta e o "tocar todas juntas" do Foundry (vira em ordem).
-- [~] (Desenvolvimento do tabletop, desde 2026-10-21) **M23 · A mesa limpa, como o Foundry 14:**
+- [x] **M23 · A mesa limpa, como o Foundry 14:**
   - **Por quê:** o mapa ocupava 67% da tela num notebook (1366 × 768).
   - **As escolhas do usuário:**
     - o mapa na tela toda;
@@ -115,8 +115,12 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
     2. chat (feito): o registro na altura toda, a bandeja de rolagem no botão Rolar, as mensagens no canto do mapa com a barra recolhida;
     3. HUD do token (feito): o HP, Atacar, Rolar, Lanterna e o cartão na aba Token (o duplo clique também abre);
     4. ferramentas (feito): só com ícone, em grupos, e o nome, o atalho e como usar no tooltip; a dica longa saiu do canto;
-    5. celular.
+    5. celular (feito): a folha de baixo abre pela metade, e a alça troca para a tela cheia ou fecha; o HUD fica acima da folha.
   - **Meta:** o mapa com 95% ou mais da tela com a barra recolhida, em 1366 × 768.
+    - **Contando só a barra:** passou (96,7% em 1366 e 97,7% em 1920).
+    - **Contando tudo que flutua** (a pastilha, as ferramentas e o rodapé): 93,4% em 1366 e 96,1% em 1920.
+  - **Testado:** a suíte da mesa e a da wiki passam. Conferido no Edge em 1920, 1366 e no celular (mestre e jogadora), com os scripts `ver-moldura`, `ver-chat`, `ver-hud`, `ver-ferramentas` e `ver-celular`.
+  - **Falta (opcional):** a interface esmaecida quando o mouse sai dela, como o `--ui-fade-opacity` do Foundry.
 - [ ] **M12 · Notas no mapa:** um ponto no mapa que abre um handout ou um documento da wiki (os diários do Foundry viram documentos da campanha).
 
 ## Fase 2: o que os módulos fazem hoje

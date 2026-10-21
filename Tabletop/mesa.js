@@ -773,7 +773,9 @@
     const x0 = ferramentas ? ferramentas.right - tela.left : 0;
     const y0 = pastilha ? pastilha.bottom - tela.top : 0;
     const x1 = painel ? painel.left - tela.left : largura;
-    const y1 = rodape && rodape.height ? rodape.top - tela.top : altura;
+    let y1 = rodape && rodape.height ? rodape.top - tela.top : altura;
+    // No celular, a folha aberta cobre a parte de baixo: conta o mapa que sobra acima dela.
+    if (celular() && $('#painel').classList.contains('aberto')) y1 = Math.min(y1, $('#painel').getBoundingClientRect().top - tela.top);
     return { x0, y0, x1: Math.max(x0 + 100, x1), y1: Math.max(y0 + 100, y1) };
   }
   // O ponto do mapa no meio da área livre (onde entra o token ou o tile novo).
@@ -2065,9 +2067,33 @@
   function abrirPainel(aberto) {
     $('#painel').classList.toggle('aberto', aberto);
     $('#painel-abrir').setAttribute('aria-expanded', String(aberto));
+    if (!aberto) folhaCheia(false);
     limparSelos();
+    redesenhar(); // o HUD do token sobe para cima da folha
   }
   $('#painel-abrir').addEventListener('click', () => abrirPainel(!$('#painel').classList.contains('aberto')));
+  // No celular, a folha tem duas alturas: metade (o mapa em cima) e a tela cheia. Tocar na alça troca; arrastar a alça
+  // para cima enche, e para baixo baixa (da metade, fecha).
+  function folhaCheia(cheia) {
+    $('#painel').classList.toggle('cheia', cheia);
+    $('#painel-alca').setAttribute('aria-expanded', String(cheia));
+  }
+  {
+    const alca = $('#painel-alca');
+    let inicio = null;
+    let arrastou = false;
+    alca.addEventListener('pointerdown', event => { inicio = event.clientY; arrastou = false; alca.setPointerCapture(event.pointerId); });
+    alca.addEventListener('pointermove', event => { if (inicio !== null && Math.abs(event.clientY - inicio) > 12) arrastou = true; });
+    alca.addEventListener('pointerup', event => {
+      if (inicio === null) return;
+      const desceu = event.clientY - inicio;
+      inicio = null;
+      if (!arrastou) return;
+      if (desceu < -30) folhaCheia(true);
+      else if (desceu > 30) { if ($('#painel').classList.contains('cheia')) folhaCheia(false); else abrirPainel(false); }
+    });
+    alca.addEventListener('click', () => { if (!arrastou) folhaCheia(!$('#painel').classList.contains('cheia')); });
+  }
 
   // ---------------- Chat ----------------
   // A bandeja de rolagem (o teste de perícia, os dados e a lesão crítica) abre pelo dado da caixa do chat.

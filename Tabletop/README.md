@@ -71,7 +71,9 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
   - **O HP:** − e +, ou escreva o número; "−5" e "+5" somam.
   - **Os botões:** Atacar, Rolar e Lanterna. O mestre também tem Esconder e Pôr no combate.
   - **O cartão** abre na aba **Token** da barra: as armas e a munição, o ataque e, para o mestre, o dano à mão, a aparência e a nota. Abre pelo botão do HUD ou por um duplo clique no token.
-- **Celular:** a barra é a folha que sobe de baixo, pelo botão **Painel**.
+- **Celular:** a barra é a folha que sobe de baixo, pelo botão **Painel**. Ela abre pela metade, com o mapa em cima.
+  - **A alça** no alto da folha: tocar troca metade e tela cheia; arrastar para cima enche, e para baixo baixa (da metade, fecha).
+  - Com a folha aberta, o HUD do token fica acima dela.
 - **A cena inteira** (0 ou a ferramenta Cena) enquadra no que sobra livre: sem a barra aberta, a pastilha e as ferramentas.
 
 **Mestre**

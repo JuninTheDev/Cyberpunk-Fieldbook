@@ -375,8 +375,11 @@ body.barra-recolhida .abas-recolher svg { transform: rotate(180deg); }
   .menu { left: 8px; top: 58px; }
   .rodape { left: 8px; bottom: 8px; max-width: calc(100% - 16px); }
   .rodape .presenca { display: none; }
-  .painel { position: fixed; top: auto; left: 0; right: 0; bottom: 0; height: min(62dvh, 560px); z-index: 10; flex-direction: column-reverse; border-top: 2px solid var(--y); transform: translateY(102%); transition: transform .2s ease; box-shadow: 0 -10px 30px rgba(0, 0, 0, .6); }
+  .painel { position: fixed; top: auto; left: 0; right: 0; bottom: 0; height: min(50dvh, 520px); z-index: 10; flex-direction: column-reverse; border-top: 2px solid var(--y); transform: translateY(102%); transition: transform .2s ease, height .2s ease; box-shadow: 0 -10px 30px rgba(0, 0, 0, .6); }
   .painel.aberto { transform: none; }
+  .painel.cheia { height: calc(100dvh - 62px); }
+  .painel-alca { flex: none; width: 100%; height: 22px; justify-content: center; align-items: center; padding: 0; background: var(--p); border: 0; cursor: grab; touch-action: none; }
+  .painel-alca::before { content: ''; width: 44px; height: 4px; border-radius: 2px; background: var(--mu); }
   .painel-conteudo, body.barra-recolhida .painel-conteudo { display: flex; flex: 1; width: auto; border-left: 0; background: var(--p); animation: none; }
   .painel-titulo { display: none; }
   .abas { width: auto; flex-direction: row; padding: 0; border-left: 0; border-bottom: 1px solid var(--l); }
