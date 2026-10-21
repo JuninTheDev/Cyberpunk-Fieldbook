@@ -63,6 +63,10 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
   - Com o chat fora de vista, o ícone dele ganha uma bolinha quando chega mensagem.
 - **Canto de cima:** o menu ≡ (voltar para a wiki, a campanha, a conta e os atalhos) e a cena. O mestre troca a cena por ali, e **Levar todos** leva os jogadores para ela.
 - **Canto de baixo:** a conexão, quem está na mesa e o som.
+- **Ferramentas** (a coluna da esquerda):
+  - só com ícone, em grupos: as de todos, as do mestre e as da vista;
+  - ao passar o mouse, aparecem o nome, o atalho e como usar;
+  - as opções da ferramenta escolhida abrem ao lado, como antes.
 - **O token escolhido** (clique nele) ganha um HUD junto dele no mapa, como o Token HUD do Foundry. O HUD some enquanto o token é arrastado.
   - **O HP:** − e +, ou escreva o número; "−5" e "+5" somam.
   - **Os botões:** Atacar, Rolar e Lanterna. O mestre também tem Esconder e Pôr no combate.

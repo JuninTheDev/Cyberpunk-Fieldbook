@@ -1527,6 +1527,25 @@
   }
 
   // ---------------- Ferramentas ----------------
+  // O que aparece ao passar o mouse em cada ferramenta (o nome, o atalho e como usar). A dica de baixo fica só para o que
+  // pede atenção na hora (escolher o alvo no mapa).
+  function renderDicas() {
+    const dicas = {
+      mover: ['Mover · V', gm() ? 'Arraste tokens e o mapa. A roda aproxima. Segure o clique para ping (Shift traz todos). Shift solta fora da grade. Clique na porta abre e fecha; Shift tranca.' : 'Arraste o seu token e o mapa. A roda ou a pinça aproxima. Segure o clique para ping. As setas movem um quadrado. Clique na porta abre e fecha.'],
+      regua: ['Régua · R', 'Arraste para medir: quadrados, metros e a DV por alcance. Shift mede fora da grade.'],
+      ping: ['Ping · P', `Clique para chamar atenção para um ponto.${gm() ? ' Shift traz todos para ele.' : ''}`],
+      nevoa: ['Névoa · N', 'Pinte para revelar; Alt cobre. Revelar tudo e Cobrir tudo ficam na aba Cena.'],
+      paredes: ['Paredes e portas · W', 'Arraste para desenhar; a ponta gruda na grade e nas outras paredes (Shift solta). Clique numa parede para escolher; Delete apaga.'],
+      tiles: ['Tiles · T', 'Clique num tile para escolher e arraste para mover (encaixa na grade; Shift solta). O quadrado amarelo muda o tamanho; Delete apaga.'],
+      luzes: ['Luzes · L', 'Clique no mapa para pôr uma luz; clique numa luz para escolher e arraste para mover. Delete apaga.'],
+      centralizar: ['A cena inteira · 0', 'Enquadra o mapa e os tokens na tela.'],
+      'meu-token': ['O seu token · C', 'Leva a tela até o seu token e escolhe ele.']
+    };
+    for (const botao of $$('#ferramentas button')) {
+      const [titulo, texto] = dicas[botao.dataset.ferramenta || botao.dataset.acao] || [];
+      if (titulo) botao.dataset.dica = `${titulo.toUpperCase()}\n${texto}`;
+    }
+  }
   function escolherFerramenta(nome) {
     if ((nome === 'nevoa' || nome === 'paredes' || nome === 'tiles' || nome === 'luzes') && !gm()) return;
     S.ferramenta = nome;
@@ -1539,16 +1558,6 @@
     if (nome !== 'luzes' && S.luzSel) { S.luzSel = null; renderLuzOpcoes(); }
     if (nome !== 'paredes' && S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); }
     if (nome !== 'tiles' && S.tileSel) { S.tileSel = null; renderTileOpcoes(); }
-    const dicas = {
-      mover: gm() ? 'Arraste tokens e o mapa · roda aproxima · segure para ping (Shift: traz todos) · Shift solta fora da grade · clique na porta abre e fecha, Shift tranca' : 'Arraste o seu token e o mapa · roda ou pinça aproxima · segure para ping · setas movem um quadrado · clique na porta abre e fecha',
-      regua: 'Arraste para medir: quadrados, metros e DV por alcance · Shift mede fora da grade',
-      ping: 'Clique para chamar atenção a um ponto' + (gm() ? ' · Shift: traz todos para ele' : ''),
-      nevoa: 'Pinte para revelar · Alt inverte (cobre) · Revelar tudo e Cobrir tudo ficam na aba Cena',
-      paredes: 'Arraste para desenhar · a ponta gruda na grade e nas outras paredes (Shift solta) · clique numa parede para escolher · Delete apaga',
-      tiles: 'Clique num tile para escolher · arraste para mover (encaixa na grade; Shift solta) · o quadrado amarelo muda o tamanho · Delete apaga',
-      luzes: 'Clique no mapa para pôr uma luz · clique numa luz para escolher e arraste para mover · Delete apaga'
-    };
-    $('#dica').textContent = dicas[nome] || '';
     redesenhar();
   }
   for (const botao of $$('[data-ferramenta]')) botao.addEventListener('click', () => escolherFerramenta(botao.dataset.ferramenta));
@@ -2119,6 +2128,7 @@
   function renderTudo() {
     for (const chave of Object.keys(assinaturas)) delete assinaturas[chave];
     renderTopo();
+    renderDicas();
     renderPresenca();
     renderRolarQuem();
     renderCombate();

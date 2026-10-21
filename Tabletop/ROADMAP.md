@@ -114,7 +114,7 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
     1. moldura (feita: o mapa livre foi de 67% para 93% da tela em 1366, e de 76% para 96% em 1920);
     2. chat (feito): o registro na altura toda, a bandeja de rolagem no botão Rolar, as mensagens no canto do mapa com a barra recolhida;
     3. HUD do token (feito): o HP, Atacar, Rolar, Lanterna e o cartão na aba Token (o duplo clique também abre);
-    4. ferramentas só com ícone e tooltip;
+    4. ferramentas (feito): só com ícone, em grupos, e o nome, o atalho e como usar no tooltip; a dica longa saiu do canto;
     5. celular.
   - **Meta:** o mapa com 95% ou mais da tela com a barra recolhida, em 1366 × 768.
 - [ ] **M12 · Notas no mapa:** um ponto no mapa que abre um handout ou um documento da wiki (os diários do Foundry viram documentos da campanha).

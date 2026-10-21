@@ -36,16 +36,19 @@
         <div id="presenca" class="presenca" aria-label="Quem está na mesa"></div>
         <button id="som" class="som" type="button" hidden></button>
       </div>
+      <!-- As ferramentas, só com ícone: o nome, o atalho e como usar aparecem ao passar o mouse (data-dica, no mesa.js). -->
       <nav class="ferramentas" id="ferramentas" aria-label="Ferramentas">
-        <button type="button" data-ferramenta="mover" class="ativa" title="Selecionar e mover (V)"><span aria-hidden="true">✥</span><em>Mover</em></button>
-        <button type="button" data-ferramenta="regua" title="Régua: distância e DV por alcance (R)"><span aria-hidden="true">⟷</span><em>Régua</em></button>
-        <button type="button" data-ferramenta="ping" title="Ping: chama atenção para um ponto (P). Segurar o clique também faz ping."><span aria-hidden="true">◎</span><em>Ping</em></button>
-        <button type="button" data-ferramenta="nevoa" class="so-mestre" title="Névoa: pinte para revelar; com Alt, cobre (N)"><span aria-hidden="true">▒</span><em>Névoa</em></button>
-        <button type="button" data-ferramenta="paredes" class="so-mestre" title="Paredes e portas: arraste para desenhar (W)"><span aria-hidden="true">▥</span><em>Paredes</em></button>
-        <button type="button" data-ferramenta="tiles" class="so-mestre" title="Tiles: pôr, mover, mudar o tamanho, girar e esconder (T)"><span aria-hidden="true">▣</span><em>Tiles</em></button>
-        <button type="button" data-ferramenta="luzes" class="so-mestre" title="Luzes: pôr, mover e mudar (L)"><span aria-hidden="true">☀</span><em>Luzes</em></button>
-        <button type="button" data-acao="centralizar" title="Mostrar a cena inteira (0)"><span aria-hidden="true">⤢</span><em>Cena</em></button>
-        <button type="button" data-acao="meu-token" class="so-jogador" title="Ir até o seu token (C)"><span aria-hidden="true">⌖</span><em>Eu</em></button>
+        <button type="button" data-ferramenta="mover" class="ativa" aria-label="Mover (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg></button>
+        <button type="button" data-ferramenta="regua" aria-label="Régua (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17L17 4l3 3L7 20z"/><path d="M8 13l2 2M11 10l2 2M14 7l2 2"/></svg></button>
+        <button type="button" data-ferramenta="ping" aria-label="Ping (P)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6"/><path d="M12 2a10 10 0 0 1 10 10M2 12A10 10 0 0 1 12 2" opacity=".6"/></svg></button>
+        <span class="ferramentas-sep so-mestre" aria-hidden="true"></span>
+        <button type="button" data-ferramenta="nevoa" class="so-mestre" aria-label="Névoa (N)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 9.4 4.3 4.3 0 0 0 7 18z"/></svg></button>
+        <button type="button" data-ferramenta="paredes" class="so-mestre" aria-label="Paredes e portas (W)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14"/><path d="M3 9.7h18M3 14.3h18M9 5v4.7M15 9.7v4.6M9 14.3V19"/></svg></button>
+        <button type="button" data-ferramenta="tiles" class="so-mestre" aria-label="Tiles (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></button>
+        <button type="button" data-ferramenta="luzes" class="so-mestre" aria-label="Luzes (L)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
+        <span class="ferramentas-sep" aria-hidden="true"></span>
+        <button type="button" data-acao="centralizar" aria-label="A cena inteira (0)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <button type="button" data-acao="meu-token" class="so-jogador" aria-label="O seu token (C)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg></button>
       </nav>
       <div id="nevoa-opcoes" class="nevoa-opcoes" hidden>
         <div class="segmentado" role="radiogroup" aria-label="Pincel da névoa">
