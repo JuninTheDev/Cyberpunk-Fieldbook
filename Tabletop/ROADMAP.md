@@ -139,7 +139,11 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - o ponto de acesso num tile e a janela da NET para o netrunner;
   - o Black ICE no combate e as ações de Interface;
   - as cenas de arquitetura (já importadas, com os nós em vídeo).
-- [ ] **M14 · Painel Tático:** o HUD com o retrato por estado de ferimento, o ATK pela ficha e o estilo de cada jogador.
+- [~] (Desenvolvimento do tabletop) **M14 · Painel Tático** (`mesa-painel.js`, a regra do módulo do Foundry; o painel em `mesa.js`), em três fases:
+  - [x] **Fase 1, o retrato:** uma imagem por estado de ferimento, com o modo, o tamanho, o deslocamento e o espelho (`retrato.salvar`: o dono ou o mestre; fica em `state.retratos` e vai com a ficha, `painel`). O jogador envia só a imagem do retrato (PNG, JPEG ou WebP, até 8 MB). A importação traz o retrato do Painel Tático dos personagens da wiki (o Qyan tem três estados no backup).
+  - [x] **Fase 2, o painel:** na base do mapa, como o do Foundry (o retrato em pé, o HP com a roda, a armadura, a Humanidade, a Sorte, o Death Save, os atributos, as armas com ATK e DMG, a iniciativa, o Fim do turno, o Facedown, as perícias com ★). H recolhe; o jogador começa aberto, o mestre recolhido; aberto, o HUD do token some. O jogador passa a própria vez (`combate.proximo` com `vez`). Fica de fora: a ablação à mão no painel (o dano ainda é pelo cartão), a NET (M13) e as Habilidades de Role.
+  - [ ] **Fase 3, o estilo de cada jogador:** o tema, as cores, a fonte, os cantos, o brilho, o tamanho, a posição (arrastar), as seções e as peças, os botões de HP, o código PT1 e o padrão da mesa.
+  - **Testado (fases 1 e 2):** 4 testes, 25 mutações que caem, e a conferência no Edge com os PNG do Corvo (os estados, o efeito, as perícias, a janela do retrato, H, o mestre com o NPC).
 - [x] **M15 · Loja entrega na wiki** (`personagem-jogo.js` `entrega`, `api-personagens.js`, `criador.js`):
   - **Em jogo:** o personagem entra em jogo quando o mestre põe o token dele numa cena. A mesa grava um `doc.jogo` sem número nenhum. Daí em diante:
     - a criação trava para o jogador (como depois da importação no Foundry; o mestre muda tudo);

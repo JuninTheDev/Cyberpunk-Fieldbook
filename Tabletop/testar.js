@@ -32,6 +32,7 @@ const files = {
   '/mesa.js': path.join(here, 'mesa.js'),
   '/mesa-visao.js': path.join(here, 'mesa-visao.js'),
   '/mesa-tocador.js': path.join(here, 'mesa-tocador.js'),
+  '/mesa-painel.js': path.join(here, 'mesa-painel.js'),
   '/mesa.css': path.join(here, 'mesa.css')
 };
 

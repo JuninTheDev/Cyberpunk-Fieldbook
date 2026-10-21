@@ -259,6 +259,7 @@ function converterPlaylists(playlists, configuracoes, mundo) {
 // livro), o Black ICE com números e o veículo. Ficam de fora: o personagem (é a ficha da wiki), o mook igual ao do
 // livro (o token vira a ficha da wiki pelo nome) e o que a mesa não tem (o contêiner, os modelos vazios do sistema).
 // pastas: as pastas do Foundry (o grupo da ficha). midia: o caminho da imagem do token na pasta Data.
+// retratos: o retrato do Painel Tático (um PNG por estado de ferimento) dos personagens da wiki, para a mesa.
 const textoDe = html => String(html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|li|h\d)>/gi, '\n').replace(/<[^>]+>/g, '')
   .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
   .split('\n').map(linha => linha.trim()).filter(Boolean).join('\n');
@@ -267,6 +268,7 @@ const STATS_DO_FOUNDRY = { int: 'INT', ref: 'REF', dex: 'DEX', tech: 'TECH', coo
 const SLOTS_DO_CORE = /^(Internal|External|Fashionware|Neural Link|Cyberaudio Suite|Cybereye|Cyberarm|Cyberleg) \(\d+ Option Slots\)$/i;
 function converterAtores(atores, pastas, mundo) {
   const npcs = [];
+  const retratos = [];
   const fora = [];
   const midias = new Set();
   const itensDe = id => [...atores.entries()].filter(([chave]) => chave.startsWith(`!actors.items!${id}.`)).map(([, valor]) => valor);
@@ -283,6 +285,14 @@ function converterAtores(atores, pastas, mundo) {
     const notasDoAtor = [textoDe(s.information && s.information.description), textoDe(s.information && s.information.notes), textoDe(typeof s.notes === 'string' ? s.notes : '')];
     const juntar = partes => [...new Set(partes.filter(Boolean))].join('\n\n');
     let npc = null;
+    const retrato = ator.flags && ator.flags['painel-tatico'] && ator.flags['painel-tatico'].retrato;
+    if (ator.type === 'character' && flags.wiki && flags.wiki.id && retrato && retrato.imagens) {
+      const imagens = Object.fromEntries(Object.entries(retrato.imagens).map(([estado, src]) => [estado, caminhoDe(src)]).filter(([, caminho]) => caminho));
+      if (Object.keys(imagens).length) {
+        for (const caminho of Object.values(imagens)) midias.add(caminho);
+        retratos.push({ nome: String(ator.name || ''), personagem: String(flags.wiki.id), retrato: { ...retrato, imagens } });
+      }
+    }
     if (ator.type === 'character') fora.push(`${ator.name}: personagem (entra pela ficha da wiki)`);
     else if (ator.type === 'mook' && flags.base && !flags.variante && !(flags.diferencasDoLivro || []).length) fora.push(`${ator.name}: é a ficha da wiki "${flags.base}"`);
     else if (ator.type === 'mook') {
@@ -321,7 +331,7 @@ function converterAtores(atores, pastas, mundo) {
     if (midia) midias.add(midia);
     npcs.push({ npc, origem: { mundo, id: ator._id } });
   }
-  return { npcs, fora, midias };
+  return { npcs, retratos, fora, midias };
 }
 
 // ---------------- A mesa ----------------
@@ -353,7 +363,7 @@ async function importar(opcoes) {
     const lerSeHouver = async nome => (fs.existsSync(fonte.banco(nome)) ? lerBanco(ClassicLevel, fonte.banco(nome)) : new Map());
     const banco = await lerBanco(ClassicLevel, fonte.banco('scenes'));
     const atores = await lerSeHouver('actors');
-    const elenco = opcoes['sem-npcs'] ? { npcs: [], fora: [], midias: new Set() } : converterAtores(atores, await lerSeHouver('folders'), mundo);
+    const elenco = opcoes['sem-npcs'] ? { npcs: [], retratos: [], fora: [], midias: new Set() } : converterAtores(atores, await lerSeHouver('folders'), mundo);
     const audio = opcoes['sem-audio'] ? { playlists: [], midias: new Set(), avisos: [] } : converterPlaylists(await lerSeHouver('playlists'), await lerSeHouver('settings'), mundo);
     const de = (colecao, cenaId) => [...banco.entries()].filter(([chave]) => chave.startsWith(`!scenes.${colecao}!${cenaId}.`)).map(([, valor]) => valor);
     let cenas = [...banco.entries()].filter(([chave]) => chave.startsWith('!scenes!')).map(([, valor]) => valor)
@@ -373,6 +383,7 @@ async function importar(opcoes) {
       for (const playlist of audio.playlists) log(`♪ ${playlist.nome.padEnd(32)} ${playlist.canal === 'ambiente' ? 'ambiente' : 'música'}, ${playlist.faixas.length} ${playlist.faixas.length === 1 ? 'faixa' : 'faixas'}${playlist.faixas[0] && playlist.faixas[0].youtube ? ' do YouTube' : ''}`);
       for (const aviso of audio.avisos) log(`  (${aviso})`);
       for (const { npc } of elenco.npcs) log(`☺ ${npc.nome.padEnd(32)} ${npc.grupo}, ${npc.tipo === 'ice' ? 'Black ICE' : npc.tipo === 'veiculo' ? 'veículo' : `HP ${npc.hp}`}`);
+      for (const { nome, retrato } of elenco.retratos) log(`▣ retrato de ${nome}: ${Object.keys(retrato.imagens).length} estado(s)`);
       for (const motivo of elenco.fora) log(`  (fora: ${motivo})`);
       return { cenas: convertidas.map(item => item.cena), playlists: audio.playlists, npcs: elenco.npcs };
     }
@@ -414,6 +425,17 @@ async function importar(opcoes) {
       npcs.push({ nome: npc.nome, status: 'ok', id: resposta.dados.resultado.id });
     }
     for (const motivo of elenco.fora) log(`  (fora: ${motivo})`);
+    // O retrato do Painel Tático de cada personagem da wiki (o que não é desta campanha fica de fora).
+    const retratos = [];
+    for (const { nome, personagem, retrato } of elenco.retratos) {
+      const imagens = Object.fromEntries(Object.entries(retrato.imagens).map(([estado, caminho]) => [estado, trocar(caminho)]).filter(([, midia]) => midia));
+      if (!Object.keys(imagens).length) { log(`  ▣ ${nome}: as imagens do retrato não estão no backup.`); continue; }
+      const resposta = await pedir('/api/mesa/op', { method: 'POST', body: { tipo: 'retrato.salvar', personagem, retrato: { ...retrato, imagens } } });
+      if (resposta.status === 404) { log(`  ▣ ${nome}: o personagem não está nesta campanha (o retrato fica de fora).`); continue; }
+      if (resposta.status !== 200) throw new Error(`retrato de ${nome}: ${(resposta.dados && resposta.dados.erro) || resposta.texto}`);
+      log(`  ▣ retrato de ${nome}: ${Object.keys(imagens).length} estado(s)`);
+      retratos.push({ nome, status: 'ok' });
+    }
 
     // As playlists antes das cenas: a música da cena aponta para elas. ids: do Foundry (ou do YouTube) para os da mesa.
     const ids = { playlists: new Map(), faixas: new Map() };
@@ -459,7 +481,7 @@ async function importar(opcoes) {
       resultado.push({ nome: cena.nome, status: 'ok', ...r });
     }
     for (const aviso of audio.avisos) log(`  (${aviso})`);
-    return { cenas: resultado, playlists, npcs };
+    return { cenas: resultado, playlists, npcs, retratos };
   } finally {
     fs.rmSync(trabalho, { recursive: true, force: true });
   }

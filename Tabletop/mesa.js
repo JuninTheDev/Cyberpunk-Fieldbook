@@ -25,7 +25,9 @@
   const ctx = canvas.getContext('2d');
   const S = {
     eu: null, campanha: null, campanhas: [], conexao: null, fonte: null,
-    cena: null, tokens: new Map(), cenas: [], cenaAtiva: null, combate: null, registro: [], presenca: [], personagens: [], npcs: [], meusNpcs: [], npcEditando: null, npcMidia: undefined, meus: [],
+    cena: null, tokens: new Map(), cenas: [], cenaAtiva: null, combate: null, registro: [], presenca: [], personagens: [], npcs: [], meusNpcs: [], npcEditando: null, npcMidia: undefined, retrato: null, meus: [],
+    // O Painel Tático: o token fixado, o painel de baixo aberto (perícias, equipamento), a busca, o HP sendo digitado.
+    painel: { fixo: null, aberto: null, busca: '', segurando: false, pendente: false, roda: 0, rodaTimer: null, ultimoRetrato: '', mostra: null },
     vista: { x: 0, y: 0, escala: 1 }, alvoVista: null, cenaVista: null,
     selecionado: null, ferramenta: 'mover', nevoaModo: 'revelar', nevoaRaio: 3,
     fundo: null, imagens: new Map(), nevoaCanvas: null, nevoaEscala: 1, nevoaLocal: [],
@@ -117,7 +119,7 @@
     on('notas', data => { if (S.cena && data.cena === S.cena.id) { S.cena.notas = data.notas; atualizarNotaAberta(); redesenhar(); } });
     on('nota.aberta', data => abrirNota(data));
     on('visao.esquecer', data => { if (S.cena && data.cena === S.cena.id) esquecerExplorado(); });
-    on('combate', data => { S.combate = data; renderCombate(); renderVez(); redesenhar(); });
+    on('combate', data => { S.combate = data; renderCombate(); renderVez(); renderPainelTatico(); redesenhar(); });
     on('registro', data => { S.registro.push(data); if (S.registro.length > 200) S.registro.shift(); adicionarRegistro(data); });
     on('registro.troca', trocarRegistro);
     on('defesa', data => { if (!S.defesas.some(item => item.ataque === data.ataque && item.alvo === data.alvo)) S.defesas.push(data); renderDefesas(); });
@@ -133,6 +135,7 @@
       renderFichas();
       renderPericias();
       renderCartao();
+      if (S.retrato) renderRetratoJanela();
     });
     on('atividade', receberAtividade);
     fonte.onerror = () => {
@@ -164,6 +167,7 @@
     S.npcs = data.npcs || [];
     S.meusNpcs = data.meusNpcs || [];
     S.meus = data.meus || [];
+    if (S.retrato && !fichaDoPersonagem(S.retrato.id)) fecharRetrato();
     S.audio = data.audio || null;
     if (tocador) tocador.aplicar(S.audio);
     carregarCena(data.cena);
@@ -891,6 +895,9 @@
     let y1 = rodape && rodape.height ? rodape.top - tela.top : altura;
     // No celular, a folha aberta cobre a parte de baixo: conta o mapa que sobra acima dela.
     if (celular() && $('#painel').classList.contains('aberto')) y1 = Math.min(y1, $('#painel').getBoundingClientRect().top - tela.top);
+    // O Painel Tático aberto cobre a base do mapa.
+    const tatico = S.painel && S.painel.mostra && !painelRecolhido() ? borda('#painel-tatico .pt-barra') : null;
+    if (tatico) y1 = Math.min(y1, tatico.top - tela.top);
     return { x0, y0, x1: Math.max(x0 + 100, x1), y1: Math.max(y0 + 100, y1) };
   }
   // O ponto do mapa no meio da área livre (onde entra o token ou o tile novo).
@@ -1638,6 +1645,7 @@
     if ((tecla === 'j' || tecla === 'J') && gm()) return escolherFerramenta('notas');
     if (tecla === '0') return enquadrar();
     if (tecla === 'c' || tecla === 'C') return irAoMeuToken();
+    if ((tecla === 'h' || tecla === 'H') && S.painel.mostra) return painelAberto(painelRecolhido());
     if (tecla === 'b' || tecla === 'B') return celular() ? abrirPainel(!$('#painel').classList.contains('aberto')) : barraAberta(!S.barraAberta);
     if (tecla === 'Escape') {
       if (!$('#menu').hidden) return menuAberto(false);
@@ -1786,6 +1794,7 @@
   function renderCartao() {
     const caixa = $('#cartao');
     const token = S.selecionado && S.tokens.get(S.selecionado);
+    renderPainelTatico();
     renderHud();
     $('#cartao-vazio').hidden = Boolean(token);
     if (!token) { caixa.hidden = true; caixa.dataset.token = ''; return; }
@@ -1857,12 +1866,18 @@
     olho: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg>',
     olhoFechado: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3 3.6M6.5 7.6C3.8 9.3 2 12 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4.4-1"/></svg>',
     espadas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M13 17l4-4M15 15l4 4M20 4L9 15M7 13l4 4M9 15l-4 4"/></svg>',
-    cartao: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.5 1.7-2 3-2s2.4.5 3 2M14 10h4M14 13h3"/></svg>'
+    cartao: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.5 1.7-2 3-2s2.4.5 3 2M14 10h4M14 13h3"/></svg>',
+    // As do Painel Tático.
+    coracao: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M5 12h4l1.5-3 2 6 1.5-3H19"/></svg>',
+    alfinete: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l-1 6 3 3H7l3-3zM12 12v9"/></svg>',
+    retrato: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><circle cx="12" cy="10" r="3"/><path d="M7 19c1-3 2.8-4 5-4s4 1 5 4"/></svg>',
+    chave: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0 5 5l-9 9a2.1 2.1 0 0 1-3-3l9-9a4 4 0 0 0-2-2z"/></svg>'
   };
   function renderHud() {
     const hud = $('#hud');
     const token = S.selecionado && S.tokens.get(S.selecionado);
-    if (!token) { hud.hidden = true; hud.dataset.token = ''; return; }
+    // Sem token, ou o Painel Tático aberto mostrando ele: o HUD não aparece.
+    if (!token || painelMostra(token.id)) { hud.hidden = true; hud.dataset.token = ''; return; }
     // Digitando o HP no HUD: não troca o campo debaixo de quem digita.
     if (hud.dataset.token === token.id && hud.contains(document.activeElement) && document.activeElement.matches('input')) return;
     const meu = gm() || token.meu;
@@ -2192,6 +2207,7 @@
     seta.querySelector('.sr').textContent = aberta ? 'Recolher a barra' : 'Abrir a barra';
     posicionarChat();
     limparSelos();
+    posicionarPainelTatico();
     redesenhar(); // o HUD do token volta para dentro da área livre
     if (lembrar) store.set('barra', aberta ? 'aberta' : 'recolhida');
   }
@@ -2337,6 +2353,7 @@
   }
   function renderDepoisDeToken(id) {
     if (id === S.selecionado) renderCartao();
+    else if (id === S.painel.mostra || (!S.painel.mostra && !gm())) renderPainelTatico();
     const tokens = [...S.tokens.values()];
     if (mudou('quem', JSON.stringify(fontesDeRolagem()))) renderRolarQuem();
     if (mudou('fichas', JSON.stringify(gm() ? [S.cena && S.cena.id, tokens.map(token => token.personagem).filter(Boolean).sort()] : tokens.filter(token => token.meu).map(token => [token.personagem, token.hp])))) renderFichas();
@@ -2828,7 +2845,7 @@
             return `<li><span class="avatar" ${foto}>${ficha.retrato ? '' : esc(initials(ficha.nome))}</span><span class="info"><b>${esc(ficha.nome)}</b><small>${hp} · REF ${ficha.stats.REF ?? '—'} · MOVE ${ficha.stats.MOVE ?? '—'}${naCena.has(ficha.id) ? ' · na cena' : ''}${ficha.fonte === 'mesa' && !(ficha.jogo && ficha.jogo.mesa) ? ' · ficha do Foundry' : ''}</small></span>
               <button class="botao vazado pequeno${aberta ? ' ativo' : ''}" type="button" data-abrir-ficha="${esc(ficha.id)}" aria-expanded="${aberta}">Ficha</button>
               ${naCena.has(ficha.id) ? '' : `<button class="botao pequeno" type="button" data-por-personagem="${esc(ficha.id)}"${S.cena ? '' : ' disabled'}>Pôr</button>`}</li>
-              ${aberta ? `<li class="ficha-aberta">${htmlDosNumeros(ficha)}${htmlDoAjuste(ficha)}${htmlDoInventario(ficha)}${htmlDoCyber(ficha)}${htmlDoExtrato(ficha)}</li>` : ''}`;
+              ${aberta ? `<li class="ficha-aberta"><div><button class="botao vazado pequeno" type="button" data-retrato="${esc(ficha.id)}">Retrato do painel</button></div>${htmlDosNumeros(ficha)}${htmlDoAjuste(ficha)}${htmlDoInventario(ficha)}${htmlDoCyber(ficha)}${htmlDoExtrato(ficha)}</li>` : ''}`;
           }).join('')}</ul>` : '<p class="nota">Nenhum personagem nesta campanha ainda.</p>'}</div>
         <div class="bloco"><div class="bloco-topo"><h3>Fichas de NPC</h3><button class="botao pequeno" type="button" data-npc-novo>Novo NPC</button></div>
           <input id="npc-busca" class="busca" type="search" placeholder="Buscar (Tyger, netrunner, Kit…)" value="${esc(filtro)}">
@@ -2848,7 +2865,7 @@
       const token = [...S.tokens.values()].find(item => item.personagem === ficha.id);
       const hp = token && token.hp ? token.hp : ficha.hp;
       const foto = ficha.retrato ? `style="background-image:url('${esc(ficha.retrato)}')"` : '';
-      return `<div class="bloco"><div class="cartao-topo"><span class="avatar" ${foto} style="width:52px;height:52px">${ficha.retrato ? '' : esc(initials(ficha.nome))}</span><div><h3>${esc(ficha.nome)}</h3><small>${hp ? `HP ${hp.atual}/${hp.max}` : ''}${token ? ' · na cena' : ' · fora da cena'}</small></div></div>
+      return `<div class="bloco"><div class="cartao-topo"><span class="avatar" ${foto} style="width:52px;height:52px">${ficha.retrato ? '' : esc(initials(ficha.nome))}</span><div><h3>${esc(ficha.nome)}</h3><small>${hp ? `HP ${hp.atual}/${hp.max}` : ''}${token ? ' · na cena' : ' · fora da cena'}</small></div><button class="botao vazado pequeno" type="button" data-retrato="${esc(ficha.id)}">Retrato do painel</button></div>
         <div class="ficha-stats">${['INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'LUCK', 'MOVE', 'BODY', 'EMP'].map(stat => `<div><b>${ficha.stats[stat] ?? '—'}</b><small>${stat}</small></div>`).join('')}</div>
         ${htmlDosNumeros(ficha)}
         <p class="nota">Toque numa perícia para rolar (STAT + perícia + 1d10).</p>
@@ -2866,6 +2883,7 @@
       return;
     }
     if (botao.dataset.porPersonagem) op('token.criar', { cena: S.cena.id, personagem: botao.dataset.porPersonagem, ...centroDaVista() }).catch(() => {});
+    if (botao.dataset.retrato) abrirRetrato(botao.dataset.retrato);
     if (botao.hasAttribute('data-npc-novo')) abrirNpc(null);
     if (botao.dataset.npcEditar) abrirNpc(botao.dataset.npcEditar);
     if (botao.dataset.npcCopiar) op('npc.copiar', { de: botao.dataset.npcCopiar }).then(data => { S.npcEditando = data.resultado.id; S.npcMidia = undefined; renderNpcJanela(); }).catch(() => {});
@@ -2909,6 +2927,505 @@
   });
   // Saiu do campo que segurava a ficha: redesenha com o que chegou enquanto digitava.
   $('#fichas').addEventListener('focusout', () => { if (S.fichasPendentes) setTimeout(() => { if (S.fichasPendentes) renderFichas(); }, 0); });
+
+  // ---------------- Painel Tático: o retrato de cada estado (M14) ----------------
+  // O retrato do personagem no painel: uma imagem para cada estado de ferimento (arquivos da mesa), com o tamanho, o
+  // deslocamento e o espelho. O dono configura (o mestre também); fica na mesa da campanha e vem com a ficha (painel).
+  // As contas são as do mesa-painel.js, as mesmas do módulo do Foundry.
+  const MP = window.MesaPainel;
+  const fichaDoPersonagem = id => [...S.personagens, ...S.meus].find(ficha => ficha.id === id) || null;
+  // Tudo o que é preciso para desenhar o retrato agora. reserva: o retrato da ficha da wiki (sem imagem do painel).
+  function vistaDoRetrato(retrato, estado, reserva = '', efeitos = 'semImagem') {
+    const r = MP.normalizarRetrato(retrato);
+    const imagem = MP.imagemDoEstado(r.imagens, estado, reserva);
+    return { ...r, estado, nomeDoEstado: MP.NOMES_DOS_ESTADOS[estado], src: imagem.midia ? urlDaMidia(imagem.midia) : imagem.reserva, propria: imagem.propria, modo: MP.modoDoRetrato(r),
+      efeito: MP.efeitoDoRetrato({ estado, propria: imagem.propria, modo: efeitos }) };
+  }
+  // Livre: a imagem em pé sobre a barra, com o tamanho e o deslocamento do dono. Moldura: a imagem preenche o quadro.
+  // trocou: a imagem ou o estado mudaram desde o último desenho (só então a troca anima). Sem imagem: as iniciais.
+  function htmlDoRetrato(vista, { trocou = false, nome = '' } = {}) {
+    const livre = vista.modo === 'livre';
+    const estilo = livre
+      ? `height: ${vista.escala}%; transform: translate(calc(-50% + ${vista.x}px), ${-vista.y}px)${vista.espelhar ? ' scaleX(-1)' : ''};`
+      : (vista.espelhar ? 'transform: scaleX(-1);' : '');
+    return `<div class="pt-retrato pt-retrato-${vista.modo}${vista.efeito ? ` pt-efeito-${vista.efeito}` : ''}${trocou ? ' pt-trocou' : ''}" data-estado="${vista.estado}">
+      ${vista.src ? `<img class="pt-retrato-img" src="${esc(vista.src)}" alt="" draggable="false" style="${estilo}">` : `<span class="pt-retrato-iniciais">${esc(initials(nome || '?'))}</span>`}
+      ${vista.estado === 'dead' ? '<span class="pt-flatline">FLATLINE</span>' : ''}
+    </div>`;
+  }
+  // O estado de agora do personagem: o do token dele na cena (o HP e o Death Save), ou o da ficha.
+  function estadoDoPersonagem(ficha) {
+    const token = [...S.tokens.values()].find(item => item.personagem === ficha.id);
+    if (token) return MP.estadoDoRetrato({ estado: token.estado, morto: token.morto });
+    const hp = ficha.hp;
+    if (!hp || !hp.max) return 'notWounded';
+    return MP.estadoDoRetrato({ estado: hp.atual < 1 ? 'mortallyWounded' : hp.atual < Math.ceil(hp.max / 2) ? 'seriouslyWounded' : hp.atual < hp.max ? 'lightlyWounded' : 'notWounded' });
+  }
+
+  // A janela do retrato (o botão Retrato do painel na ficha, ou no painel): a prévia com a barra embaixo, os cinco
+  // estados com a imagem de cada um e os ajustes. Nada grava até Salvar.
+  function abrirRetrato(id) {
+    const ficha = fichaDoPersonagem(id);
+    if (!ficha) return;
+    S.retrato = { id, rascunho: MP.normalizarRetrato(ficha.painel), estado: estadoDoPersonagem(ficha) };
+    renderRetratoJanela();
+  }
+  function fecharRetrato() {
+    S.retrato = null;
+    const janela = $('#retrato-janela');
+    janela.hidden = true;
+    janela.innerHTML = '';
+  }
+  const previaDoRetrato = (ficha, r, estado) => `${htmlDoRetrato(vistaDoRetrato(r, estado, ficha.retrato, estiloDoPainel().efeitos), { nome: ficha.nome })}
+    <div class="pt-rc-barra"><b>${esc(ficha.apelido || ficha.nome)}</b><span>${MP.NOMES_DOS_ESTADOS[estado]}</span></div>`;
+  function renderRetratoJanela() {
+    const janela = $('#retrato-janela');
+    const ficha = S.retrato && fichaDoPersonagem(S.retrato.id);
+    if (!ficha) { fecharRetrato(); return; }
+    const { rascunho: r, estado } = S.retrato;
+    const linhas = MP.ESTADOS.map(cada => {
+      const efetiva = MP.imagemDoEstado(r.imagens, cada, ficha.retrato);
+      const usa = cada === 'notWounded' ? (r.imagens[cada] ? '' : 'sem imagem: o retrato da ficha') : r.imagens[cada] ? '' : `usa ${efetiva.de ? MP.NOMES_DOS_ESTADOS[efetiva.de] : 'o retrato da ficha'}, com o efeito`;
+      const src = efetiva.midia ? urlDaMidia(efetiva.midia) : efetiva.reserva;
+      return `<li class="rc-linha${estado === cada ? ' ativa' : ''}">
+        <button type="button" class="rc-miniatura" data-rc-ver="${cada}" aria-label="Ver ${MP.NOMES_DOS_ESTADOS[cada]} na prévia">${src ? `<img src="${esc(src)}" alt="">` : ''}</button>
+        <span class="rc-nome"><b>${MP.NOMES_DOS_ESTADOS[cada]}</b>${usa ? `<small>${esc(usa)}</small>` : ''}</span>
+        <label class="botao vazado pequeno">Imagem<input type="file" accept="image/png,image/jpeg,image/webp" data-rc-imagem="${cada}" hidden></label>
+        ${r.imagens[cada] ? `<button type="button" class="link" data-rc-tirar="${cada}" aria-label="Tirar a imagem de ${MP.NOMES_DOS_ESTADOS[cada]}">×</button>` : '<span></span>'}
+      </li>`;
+    }).join('');
+    const faixa = (nome, rotulo, min, max, passo, unidade) => `<label class="campo">${rotulo}<span class="rc-faixa"><input type="range" name="${nome}" min="${min}" max="${max}" step="${passo}" value="${r[nome]}"><output>${r[nome]}${unidade}</output></span></label>`;
+    janela.innerHTML = `<form class="rc-form" novalidate>
+      <div class="nota-janela-topo"><h2 id="retrato-janela-titulo">Retrato de ${esc(ficha.apelido || ficha.nome)}</h2><button class="nota-janela-fechar" type="button" data-rc-fechar aria-label="Fechar">×</button></div>
+      <div class="rc">
+        <div class="rc-previa">
+          <div class="pt-rc-palco" style="--pt-retrato-altura: 260px">${previaDoRetrato(ficha, r, estado)}</div>
+          <div class="rc-estados">${MP.ESTADOS.map(cada => `<button type="button" class="botao vazado pequeno${estado === cada ? ' ativo' : ''}" data-rc-ver="${cada}">${MP.NOMES_DOS_ESTADOS[cada]}</button>`).join('')}</div>
+        </div>
+        <div class="rc-campos">
+          <p class="nota">Uma imagem para cada estado de ferimento: PNG com fundo transparente, de corpo inteiro ou da cintura para cima (umas 600 px de altura bastam). Cada estado é opcional: sem imagem, vale a do estado mais leve, com o efeito automático (tinta, falha de sinal, o cinza do morto).</p>
+          <ul class="rc-linhas">${linhas}</ul>
+          <div class="rc-ajustes">
+            <label class="campo">Modo <select name="modo">
+              <option value="auto"${r.modo === 'auto' ? ' selected' : ''}>Automático</option>
+              <option value="livre"${r.modo === 'livre' ? ' selected' : ''}>Livre (em pé sobre o painel)</option>
+              <option value="moldura"${r.modo === 'moldura' ? ' selected' : ''}>Moldura (dentro do painel)</option>
+            </select></label>
+            ${faixa('escala', 'Tamanho', 40, 250, 5, '%')}
+            ${faixa('x', 'Para os lados', -300, 300, 2, ' px')}
+            ${faixa('y', 'Para cima', -300, 300, 2, ' px')}
+            <label class="marcar"><input type="checkbox" name="espelhar"${r.espelhar ? ' checked' : ''}> Espelhar</label>
+          </div>
+        </div>
+      </div>
+      <div class="nota-janela-acoes"><button class="botao" type="submit">Salvar</button><button class="botao vazado" type="button" data-rc-fechar>Cancelar</button><button class="botao vazado perigo" type="button" data-rc-limpar>Tirar tudo</button></div>
+    </form>`;
+    janela.hidden = false;
+  }
+  // Os ajustes do formulário para o rascunho; arrastando um controle, só a prévia muda.
+  function lerAjustesDoRetrato(soPrevia) {
+    const form = $('#retrato-janela form');
+    if (!form || !S.retrato) return;
+    const dados = new FormData(form);
+    S.retrato.rascunho = MP.normalizarRetrato({ ...S.retrato.rascunho, modo: dados.get('modo'), escala: dados.get('escala'), x: dados.get('x'), y: dados.get('y'), espelhar: dados.get('espelhar') === 'on' });
+    for (const campo of form.querySelectorAll('input[type="range"]')) campo.nextElementSibling.textContent = `${campo.value}${campo.name === 'escala' ? '%' : ' px'}`;
+    const ficha = fichaDoPersonagem(S.retrato.id);
+    if (soPrevia && ficha) form.querySelector('.pt-rc-palco').innerHTML = previaDoRetrato(ficha, S.retrato.rascunho, S.retrato.estado);
+    else renderRetratoJanela();
+  }
+  const retratoJanela = $('#retrato-janela');
+  retratoJanela.addEventListener('input', event => { if (event.target.matches('input[type="range"]')) lerAjustesDoRetrato(true); });
+  retratoJanela.addEventListener('change', event => {
+    const campo = event.target;
+    if (campo.dataset.rcImagem) {
+      if (!campo.files[0] || !S.retrato) return;
+      const estado = campo.dataset.rcImagem;
+      enviarMidia(campo.files[0]).then(({ midia }) => {
+        if (!S.retrato) return;
+        S.retrato.rascunho = MP.normalizarRetrato({ ...S.retrato.rascunho, imagens: { ...S.retrato.rascunho.imagens, [estado]: midia } });
+        S.retrato.estado = estado;
+        renderRetratoJanela();
+      }).catch(error => aviso(error.message, 'erro'));
+      return;
+    }
+    if (campo.matches('[name="modo"], [name="espelhar"], input[type="range"]')) lerAjustesDoRetrato(false);
+  });
+  retratoJanela.addEventListener('click', event => {
+    const botao = event.target.closest('button');
+    if (!botao || !S.retrato) return;
+    if (botao.hasAttribute('data-rc-fechar')) fecharRetrato();
+    else if (botao.dataset.rcVer) { S.retrato.estado = botao.dataset.rcVer; renderRetratoJanela(); }
+    else if (botao.dataset.rcTirar) {
+      const imagens = { ...S.retrato.rascunho.imagens };
+      delete imagens[botao.dataset.rcTirar];
+      S.retrato.rascunho = MP.normalizarRetrato({ ...S.retrato.rascunho, imagens });
+      renderRetratoJanela();
+    } else if (botao.hasAttribute('data-rc-limpar')) { S.retrato.rascunho = MP.normalizarRetrato({}); renderRetratoJanela(); }
+  });
+  retratoJanela.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!S.retrato) return;
+    const { id, rascunho } = S.retrato;
+    const ficha = fichaDoPersonagem(id);
+    op('retrato.salvar', { personagem: id, retrato: rascunho }).then(() => { fecharRetrato(); aviso(`Retrato de ${ficha ? ficha.apelido || ficha.nome : 'personagem'} salvo.`); }).catch(() => {});
+  });
+  retratoJanela.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); fecharRetrato(); } });
+  // O estilo do painel deste navegador (a fase 3 deixa cada jogador mudar; por enquanto, o padrão).
+  const estiloDoPainel = () => MP.normalizarEstilo(null);
+
+  // ---------------- Painel Tático: o painel na base da tela (M14) ----------------
+  // Como o módulo do Foundry: o retrato em pé sobre a barra (um por estado de ferimento), o HP, a armadura, a
+  // Humanidade, a Sorte, o Death Save, os atributos (um clique rola), as armas (ATK abre o ataque na barra, DMG rola o
+  // dano), a iniciativa, o fim do turno, as perícias (★ favoritas na barra) e o equipamento. Mostra o token fixado, o
+  // escolhido (o seu; o mestre, qualquer um) ou, sem nenhum, o personagem do jogador. H recolhe e abre; no celular,
+  // fica recolhido (um toque abre a ficha na folha de baixo). Aberto, o HUD junto do token some (o painel faz o mesmo).
+  const ESTADO_CSS = { notWounded: 'ok', lightlyWounded: 'leve', seriouslyWounded: 'grave', mortallyWounded: 'mortal', dead: 'morto' };
+  const STATS_DO_PAINEL = ['INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'LUCK', 'MOVE', 'BODY', 'EMP'];
+  const NOME_DO_USO_CURTO = { equipado: 'Equipado', carregando: 'Carregado', guardado: 'Guardado' };
+  const sinalDe = n => (n > 0 ? `+${n}` : String(n).replace('-', '−'));
+  const painelRecolhido = () => celular() || (store.get('painel:recolhido') ?? (gm() ? '1' : '0')) === '1';
+  const favoritasDe = id => { try { return JSON.parse(store.get(`painel:favoritas:${id}`) || '[]'); } catch { return []; } };
+  // Quem aparece: o fixado, o token escolhido (o seu; o mestre, qualquer personagem ou NPC) ou o personagem do jogador.
+  function quemNoPainel() {
+    const podeVer = token => Boolean(token) && token.tipo !== 'livre' && (gm() || token.meu);
+    const comFicha = token => ({ token, ficha: token.personagem ? cartaoDe(token) : null });
+    if (S.painel.fixo) {
+      const fixo = S.tokens.get(S.painel.fixo);
+      if (podeVer(fixo)) return comFicha(fixo);
+      S.painel.fixo = null;
+    }
+    const escolhido = S.selecionado && S.tokens.get(S.selecionado);
+    if (podeVer(escolhido)) return comFicha(escolhido);
+    if (gm()) return null;
+    const meu = [...S.tokens.values()].find(token => token.meu && token.tipo === 'pj');
+    if (meu) return comFicha(meu);
+    return S.meus[0] ? { token: null, ficha: S.meus[0] } : null;
+  }
+  // O que o painel desenha, do token (o que a mesa sabe agora) e da ficha (os números da ficha de jogo).
+  function dadosDoPainel({ token, ficha }) {
+    const jogo = (ficha && ficha.jogo) || {};
+    const estado = token ? MP.estadoDoRetrato({ estado: token.estado, morto: token.morto }) : estadoDoPersonagem(ficha);
+    return {
+      id: token ? token.id : `personagem:${ficha.id}`, token, ficha, estado,
+      nome: token ? token.nome : ficha.nome, sub: ficha && ficha.apelido && ficha.apelido !== (token ? token.nome : ficha.nome) ? `“${ficha.apelido}”` : token && token.tipo === 'npc' ? 'NPC' : '',
+      hp: token ? token.hp : ficha.hp, mexeHp: Boolean(token) && (gm() || token.meu),
+      sp: (token && token.sp) || jogo.sp || null, humanidade: jogo.humanidade || null, sorte: (token && token.sorte) || jogo.sorte || null,
+      deathSave: token ? Number(token.deathSave) || 0 : 0,
+      stats: ficha ? ficha.stats || {} : (token && token.stats) || {},
+      armas: (token && token.armas) || [], pericias: ficha ? ficha.pericias || [] : (token && token.pericias) || [],
+      itens: (jogo.itens || []).filter(item => item.tipo !== 'municao'), reputacao: Number(jogo.reputacao) || 0,
+      retrato: ficha ? ficha.painel : null, reserva: token ? token.imagem : ficha.retrato,
+      origem: token ? { token: token.id } : { personagem: ficha.id }
+    };
+  }
+  const meuTurno = token => Boolean(token && S.combate && S.combate.ordem && S.combate.ordem[S.combate.vez] && S.combate.ordem[S.combate.vez].token === token.id);
+  // O painel mostra este token, aberto? (o HUD junto do token some.)
+  const painelMostra = id => Boolean(S.painel.mostra) && S.painel.mostra === id && !painelRecolhido();
+
+  function renderPainelTatico() {
+    const el = $('#painel-tatico');
+    if (S.painel.segurando) { S.painel.pendente = true; return; }
+    S.painel.pendente = false;
+    const estilo = estiloDoPainel();
+    const quem = S.eu ? quemNoPainel() : null;
+    const d = quem ? dadosDoPainel(quem) : null;
+    const antes = S.painel.mostra;
+    S.painel.mostra = d ? d.id : null;
+    if (!d) {
+      el.innerHTML = '';
+      el.className = 'pt-vazio';
+      document.body.style.setProperty('--painel-alto', '0px');
+      if (antes) renderHud();
+      return;
+    }
+    const recolhido = painelRecolhido();
+    const vista = vistaDoRetrato(d.retrato, d.estado, d.reserva, estilo.efeitos);
+    const marca = `${d.id}|${vista.src}|${vista.estado}`;
+    const trocou = Boolean(S.painel.ultimoRetrato) && S.painel.ultimoRetrato !== marca;
+    S.painel.ultimoRetrato = marca;
+    const foco = document.activeElement && el.contains(document.activeElement) && document.activeElement.dataset.foco ? document.activeElement.dataset.foco : null;
+    el.innerHTML = recolhido ? htmlDoPainelRecolhido(d, vista) : htmlDoPainel(d, vista, estilo, trocou);
+    for (const [chave, valor] of Object.entries(MP.variaveisDoEstilo(estilo))) el.style.setProperty(chave, valor);
+    el.className = [...MP.classesDoEstilo(estilo), `pt-ferimento-${ESTADO_CSS[d.estado]}`, ...(recolhido ? ['pt-recolhido'] : []), ...(meuTurno(d.token) ? ['pt-meu-turno'] : [])].join(' ');
+    if (foco) { const campo = el.querySelector(`[data-foco="${foco}"]`); if (campo) { campo.focus(); if (campo.type === 'search') campo.setSelectionRange(campo.value.length, campo.value.length); } }
+    if (S.painel.busca) filtrarPericiasDoPainel();
+    posicionarPainelTatico();
+    if (antes !== S.painel.mostra) renderHud();
+  }
+  // No meio da área livre do mapa (entre as ferramentas e a barra), na base. O chat do canto e os avisos sobem.
+  function posicionarPainelTatico() {
+    const el = $('#painel-tatico');
+    if (!S.painel.mostra) return;
+    const tela = canvas.getBoundingClientRect();
+    const ferramentas = $('#ferramentas').offsetParent ? $('#ferramentas').getBoundingClientRect().right - tela.left : 0;
+    const barra = !celular() && $('#painel').offsetParent ? $('#painel').getBoundingClientRect().left - tela.left : canvas.clientWidth;
+    el.style.left = `${Math.round((ferramentas + barra) / 2)}px`;
+    el.style.setProperty('--pt-largura-max', `${Math.max(360, Math.floor((barra - ferramentas - 24) / (estiloDoPainel().escala / 100)))}px`);
+    // Largo a ponto de cobrir quem está na mesa (embaixo, à esquerda): sobe acima dele.
+    el.style.bottom = '';
+    const rodape = $('#rodape').getBoundingClientRect();
+    if (rodape.height && el.getBoundingClientRect().left < rodape.right + 8) el.style.bottom = `${estiloDoPainel().base + Math.round(rodape.height) + 8}px`;
+    const alto = painelRecolhido() ? 0 : Math.round(el.getBoundingClientRect().height) + estiloDoPainel().base + 8;
+    document.body.style.setProperty('--painel-alto', `${alto}px`);
+  }
+  window.addEventListener('resize', () => posicionarPainelTatico());
+
+  function htmlDoPainelRecolhido(d, vista) {
+    const hp = d.hp ? `${d.hp.atual}/${d.hp.max}` : '';
+    return `<div class="pt-casca pt-mini"><button type="button" class="pt-mini-botao" data-pt="recolher" title="${celular() ? 'Abrir a ficha' : 'Abrir o painel (H)'}">
+      <span class="pt-mini-retrato">${vista.src ? `<img src="${esc(vista.src)}" alt="">` : esc(initials(d.nome))}</span>
+      <span class="pt-mini-nome">${esc(d.nome)}</span>${hp ? `<span class="pt-mini-hp pt-estado-${ESTADO_CSS[d.estado]}">${ICONE.coracao} ${hp}</span>` : ''}<span class="pt-seta">▲</span></button></div>`;
+  }
+  function htmlDoPainel(d, vista, estilo, trocou) {
+    const mostra = chave => !estilo.ocultos.includes(chave);
+    const desenhos = { vitais: () => vitaisDoPainel(d, estilo, mostra), atributos: () => atributosDoPainel(d), armas: () => armasDoPainel(d), acoes: () => acoesDoPainel(d) };
+    const secoes = estilo.secoes.filter(mostra).map(chave => desenhos[chave]()).filter(Boolean).join('');
+    const livre = vista.modo === 'livre';
+    const retrato = htmlDoRetrato(vista, { trocou, nome: d.nome });
+    return `<div class="pt-casca${livre ? ' pt-casca-livre' : ''}">
+      ${livre ? `${retrato}<button type="button" class="pt-retrato-alvo" data-pt="ficha" title="${esc(vista.nomeDoEstado)} · clique: a ficha · botão direito: o retrato"></button>` : ''}
+      <div class="pt-barra">
+        ${topoDoPainel(d, vista, mostra)}
+        <div class="pt-corpo">
+          ${livre ? '' : `<button type="button" class="pt-moldura-caixa" data-pt="ficha" title="Clique: a ficha · botão direito: o retrato">${retrato}</button>`}
+          ${secoes}
+        </div>
+        ${mostra('favoritos') ? favoritasDoPainel(d) : ''}
+      </div>
+      ${S.painel.aberto ? subpainelDoPainel(d, S.painel.aberto) : ''}
+    </div>`;
+  }
+  function topoDoPainel(d, vista, mostra) {
+    const selos = [];
+    if (meuTurno(d.token)) selos.push('<span class="pt-selo pt-selo-turno">▶ Seu turno</span>');
+    if (d.token && d.token.suprimido) selos.push('<span class="pt-selo pt-selo-alerta" title="Suprimido: sai no fim do seu próximo turno.">Suprimido</span>');
+    const ferramenta = (acao, titulo, icone, ativa = false) => `<button type="button" class="${ativa ? 'pt-ativa' : ''}" data-pt="${acao}" title="${esc(titulo)}" aria-label="${esc(titulo)}">${icone}</button>`;
+    return `<header class="pt-topo">
+      ${mostra('identidade') ? `<button type="button" class="pt-nome" data-pt="ficha" title="Abrir a ficha">${esc(d.nome)}</button>${d.sub ? `<span class="pt-sub">${esc(d.sub)}</span>` : ''}` : ''}
+      <span class="pt-estado pt-estado-${ESTADO_CSS[d.estado]}">${esc(vista.nomeDoEstado)}</span>
+      ${selos.join('')}
+      <span class="pt-ferramentas">
+        ${d.token ? ferramenta('fixar', S.painel.fixo ? 'Soltar: o painel volta a seguir o token escolhido' : 'Fixar este personagem no painel', ICONE.alfinete, Boolean(S.painel.fixo)) : ''}
+        ${d.ficha ? ferramenta('retrato', 'Retrato de cada estado', ICONE.retrato) : ''}
+        ${ferramenta('recolher', 'Recolher (H)', '▼')}
+      </span>
+    </header>`;
+  }
+  function vitaisDoPainel(d, estilo, mostra) {
+    const fichas = [];
+    const ficha = ({ rotulo, dica, valor, max, classe = '', acao = '' }) => `<${acao ? 'button type="button"' : 'div'} class="pt-ficha ${classe}"${acao ? ` data-pt="${acao}"` : ''} title="${esc(dica)}"><small>${rotulo}</small><span class="pt-ficha-valor">${valor}${max !== undefined ? `<em>/${max}</em>` : ''}</span></${acao ? 'button' : 'div'}>`;
+    if (mostra('armadura') && d.sp) {
+      for (const [local, rotulo, nome] of [['cabeca', 'SP cab.', 'na cabeça'], ['corpo', 'SP corpo', 'no corpo']]) {
+        const sp = d.sp[local];
+        fichas.push(sp && sp.max ? ficha({ rotulo, dica: `SP da armadura ${nome}`, valor: sp.atual, max: sp.max, classe: sp.atual < sp.max ? 'pt-gasta' : '' }) : ficha({ rotulo, dica: `Sem armadura ${nome}`, valor: '–', classe: 'pt-sem' }));
+      }
+    }
+    if (mostra('humanidade') && d.humanidade) {
+      const baixa = d.humanidade.atual <= Math.max(1, Math.floor(d.humanidade.max / 4));
+      fichas.push(ficha({ rotulo: 'HUM', dica: baixa ? 'Humanidade baixa: risco de ciberpsicose' : 'Humanidade', valor: d.humanidade.atual, max: d.humanidade.max, classe: baixa ? 'pt-alerta' : '' }));
+    }
+    if (mostra('sorte') && d.sorte && d.sorte.max) fichas.push(ficha({ rotulo: 'Sorte', dica: 'Sorte: gaste na rolagem (o teste pela bandeja de dados)', valor: d.sorte.atual, max: d.sorte.max }));
+    const mortal = d.hp && d.hp.atual < 1 && d.estado !== 'dead';
+    if (mostra('deathSave') && d.token && d.hp) fichas.push(ficha({ rotulo: 'Death Save', dica: mortal ? `Death Save: role menos que o BODY com a penalidade ${d.deathSave}. Clique: rolar` : `Penalidade do Death Save: ${d.deathSave}`, valor: d.deathSave, classe: `pt-death${mortal ? ' pt-pulsa' : ''}`, acao: mortal && d.mexeHp ? 'deathsave' : '' }));
+    let hp = '';
+    if (d.hp && d.hp.max) {
+      const pct = Math.round((Math.max(0, d.hp.atual) / Math.max(1, d.hp.max)) * 100);
+      const grave = Math.round((Math.ceil(d.hp.max / 2) / Math.max(1, d.hp.max)) * 100);
+      const passos = d.mexeHp ? MP.passosDeHp(estilo.passosHp) : [];
+      const botao = n => `<button type="button" class="pt-passo ${n < 0 ? 'pt-menos' : 'pt-mais'}" data-pt="hp" data-valor="${n}">${sinalDe(n)}</button>`;
+      hp = `<div class="pt-hp">${passos.filter(n => n < 0).map(botao).join('')}
+        <div class="pt-hp-barra" title="${d.mexeHp ? 'HP · a roda do mouse soma ±1 (Shift: ±5)' : 'HP'}">
+          <div class="pt-hp-cheio" style="width: ${pct}%"></div><div class="pt-hp-marca" style="left: ${grave}%"></div>
+          <span class="pt-hp-texto">${ICONE.coracao}${d.mexeHp ? `<input class="pt-hp-campo" data-foco="hp" type="text" inputmode="numeric" value="${d.hp.atual}" aria-label="HP">` : `<b>${d.hp.atual}</b>`}<em>/ ${d.hp.max}</em></span>
+        </div>${passos.filter(n => n > 0).map(botao).join('')}</div>`;
+    }
+    if (!hp && !fichas.length) return '';
+    return `<section class="pt-secao pt-vitais">${hp}${fichas.length ? `<div class="pt-fichas">${fichas.join('')}</div>` : ''}</section>`;
+  }
+  function atributosDoPainel(d) {
+    const stats = STATS_DO_PAINEL.filter(stat => d.stats[stat] !== undefined && d.stats[stat] !== null);
+    if (!stats.length) return '';
+    return `<section class="pt-secao pt-atributos"><div class="pt-grade-stats">${stats.map(stat => `<button type="button" class="pt-stat" data-pt="atributo" data-stat="${stat}" title="Rolar ${stat} + 1d10"><small>${stat}</small><b>${d.stats[stat]}</b></button>`).join('')}</div></section>`;
+  }
+  function armasDoPainel(d) {
+    if (!d.token) return '';
+    const linhas = d.armas.map(arma => {
+      const pente = arma.pente && arma.pente.max ? arma.pente : null;
+      const pilulas = arma.kit ? [`<span class="pt-pilula pt-classe-${esc(arma.kit.classe)}" title="${esc(DICA_2077[arma.kit.classe] || '')}">${esc(CLASSE_2077[arma.kit.classe] || arma.kit.classe)}</span>`] : [];
+      return `<div class="pt-arma" data-arma="${esc(arma.id)}">
+        <div class="pt-arma-info">
+          <span class="pt-arma-nome">${esc(arma.nome)}</span>
+          <span class="pt-arma-sub">${esc(arma.dano || '')}${arma.cdt ? ` · CdT ${arma.cdt}` : ''}${pente ? ` · <span class="${pente.atual === 0 ? 'pt-sem-bala' : ''}" title="${esc(arma.municao || 'Sem munição carregada')}">${pente.atual}/${pente.max}</span>` : ''}</span>
+          ${pilulas.length ? `<span class="pt-pilulas">${pilulas.join('')}</span>` : ''}
+        </div>
+        <div class="pt-arma-botoes">
+          ${pente && d.mexeHp ? `<button type="button" class="pt-icone" data-pt="recarregar" data-arma="${esc(arma.id)}" title="Recarregar" aria-label="Recarregar ${esc(arma.nome)}">↻</button>` : ''}
+          ${d.mexeHp && !d.token.morto ? `<button type="button" class="pt-atk" data-pt="atacar" data-arma="${esc(arma.id)}" title="Atacar: o ataque abre na barra">ATK</button>` : ''}
+          ${arma.dano ? `<button type="button" class="pt-dmg" data-pt="dano" data-arma="${esc(arma.id)}" title="Rolar o dano (${esc(arma.dano)})">DMG</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<section class="pt-secao pt-armas">
+      <header class="pt-armas-topo"><span class="pt-titulo">Armas</span>${d.ficha && d.itens.length && d.mexeHp ? `<button type="button" class="pt-icone" data-pt="painel" data-painel="equipamento" title="Equipar e guardar" aria-label="Equipar e guardar">${ICONE.chave}</button>` : ''}</header>
+      <div class="pt-lista-armas">${linhas || '<p class="pt-vazio-texto">Nenhuma arma à mão.</p>'}</div>
+    </section>`;
+  }
+  function acoesDoPainel(d) {
+    const botao = (acao, rotulo, titulo, { painel = '', classe = '' } = {}) => `<button type="button" class="pt-acao ${classe}${painel && painel === S.painel.aberto ? ' pt-ativa' : ''}" data-pt="${acao}"${painel ? ` data-painel="${painel}"` : ''} title="${esc(titulo)}"><span>${rotulo}</span></button>`;
+    const entrada = d.token && S.combate && S.combate.ordem ? S.combate.ordem.find(item => item.token === d.token.id) : null;
+    const partes = [];
+    if (entrada) partes.push(`<span class="pt-acao pt-iniciativa" title="A iniciativa no combate">Inic. ${entrada.iniciativa ?? '—'}</span>`);
+    else if (gm() && d.token && S.combate) partes.push(botao('combate', 'Pôr no combate', 'Entra no combate com REF + 1d10'));
+    if (meuTurno(d.token) && (gm() || d.token.meu)) partes.push(botao('fimDoTurno', 'Fim do turno', 'Passar a vez', { classe: 'pt-turno' }));
+    if (d.stats.COOL !== undefined) partes.push(botao('facedown', 'Facedown', `Encarada: COOL + Reputação (${d.reputacao}) + 1d10`));
+    if (d.pericias.length) partes.push(botao('painel', 'Perícias', 'Todas as perícias (★ favorita fica no painel)', { painel: 'pericias' }));
+    if (d.token && d.mexeHp) partes.push(botao('rolar', 'Rolar', 'A bandeja de dados, com este token'));
+    return partes.length ? `<section class="pt-secao pt-acoes">${partes.join('')}</section>` : '';
+  }
+  // As perícias: a do personagem tem STAT + nível; a do NPC, a base.
+  const totalDaPericia = p => (p.base !== undefined ? p.base : 0);
+  const contaDaPericia = (d, p) => (p.stat ? `${p.stat} ${d.stats[p.stat] ?? 0} + ${p.nivel}` : 'base');
+  function favoritasDoPainel(d) {
+    const chave = d.ficha ? d.ficha.id : d.token && d.token.npc ? d.token.npc : '';
+    const favoritas = favoritasDe(chave);
+    const lista = d.pericias.filter(p => favoritas.includes(p.nome));
+    if (!lista.length) return '';
+    return `<div class="pt-favoritas">${lista.map(p => `<button type="button" class="pt-favorita" data-pt="pericia" data-pericia="${esc(p.nome)}" title="${esc(contaDaPericia(d, p))}">★ ${esc(p.pt || p.nome)}<b>${totalDaPericia(p)}</b></button>`).join('')}</div>`;
+  }
+  function subpainelDoPainel(d, qual) {
+    const titulos = { pericias: 'Perícias', equipamento: 'Equipamento' };
+    let corpo = '';
+    if (qual === 'pericias') {
+      const chave = d.ficha ? d.ficha.id : d.token && d.token.npc ? d.token.npc : '';
+      const favoritas = favoritasDe(chave);
+      corpo = [...d.pericias].sort((a, b) => (a.pt || a.nome).localeCompare(b.pt || b.nome, 'pt')).map(p => `<div class="pt-linha" data-pt="pericia" data-pericia="${esc(p.nome)}" data-busca="${esc(plain(`${p.pt || ''} ${p.nome}`))}">
+          <button type="button" class="pt-estrela${favoritas.includes(p.nome) ? ' pt-ativa' : ''}" data-pt="favorita" data-pericia="${esc(p.nome)}" title="Favorita (fica no painel)" aria-label="Favorita: ${esc(p.pt || p.nome)}">★</button>
+          <span class="pt-linha-nome">${esc(p.pt || p.nome)}</span><small>${esc(contaDaPericia(d, p))}</small><b>${totalDaPericia(p)}</b></div>`).join('') || '<p class="pt-vazio-texto">Sem perícias.</p>';
+    } else if (qual === 'equipamento') {
+      corpo = d.itens.map(item => `<div class="pt-linha pt-linha-equip"><span class="pt-linha-nome">${esc(item.nome)}</span>
+          <select data-pt-uso="${esc(item.id)}" aria-label="Uso: ${esc(item.nome)}">${Object.entries(NOME_DO_USO_CURTO).map(([valor, nome]) => `<option value="${valor}"${item.uso === valor ? ' selected' : ''}>${nome}</option>`).join('')}</select></div>`).join('') || '<p class="pt-vazio-texto">Nada para equipar.</p>';
+    }
+    return `<div class="pt-painel pt-painel-${qual}">
+      <header><span>${titulos[qual]}</span>${qual === 'pericias' ? `<input type="search" class="pt-busca" data-foco="busca" placeholder="Buscar…" value="${esc(S.painel.busca)}">` : ''}<button type="button" class="pt-icone" data-pt="fecharPainel" title="Fechar" aria-label="Fechar">×</button></header>
+      <div class="pt-painel-corpo">${corpo}</div>
+    </div>`;
+  }
+  const plain = texto => String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  function filtrarPericiasDoPainel() {
+    const filtro = plain(S.painel.busca.trim());
+    for (const linha of $$('#painel-tatico .pt-painel-pericias .pt-linha')) linha.hidden = Boolean(filtro) && !linha.dataset.busca.includes(filtro);
+  }
+
+  // ---------------- Os cliques do painel ----------------
+  function painelAberto(aberto) {
+    if (celular()) return;
+    store.set('painel:recolhido', aberto ? '0' : '1');
+    renderPainelTatico();
+    renderHud();
+  }
+  function rolarPeloPainel(d, corpo) { op('rolar', { ...d.origem, secreta: secreta(), ...corpo }).catch(() => {}); }
+  $('#painel-tatico').addEventListener('click', event => {
+    const alvo = event.target.closest('[data-pt]');
+    if (!alvo || alvo.matches('input, select')) return;
+    const quem = quemNoPainel();
+    if (!quem) return;
+    const d = dadosDoPainel(quem);
+    const acao = alvo.dataset.pt;
+    if (acao === 'recolher') {
+      if (celular()) { if (d.token) selecionar(d.token.id); abrirCartaoNaBarra(); return; }
+      painelAberto(painelRecolhido());
+      return;
+    }
+    if (acao === 'ficha') { if (d.token) { selecionar(d.token.id); abrirCartaoNaBarra(); } else abrirAba('fichas'); return; }
+    if (acao === 'retrato' && d.ficha) { abrirRetrato(d.ficha.id); return; }
+    if (acao === 'fixar') { S.painel.fixo = S.painel.fixo ? null : d.token.id; renderPainelTatico(); return; }
+    if (acao === 'painel') { S.painel.aberto = S.painel.aberto === alvo.dataset.painel ? null : alvo.dataset.painel; renderPainelTatico(); return; }
+    if (acao === 'fecharPainel') { S.painel.aberto = null; renderPainelTatico(); return; }
+    if (acao === 'hp' && d.token && d.hp) { op('token.editar', { token: d.token.id, hp: { atual: d.hp.atual + Number(alvo.dataset.valor), max: d.hp.max } }).catch(() => {}); return; }
+    if (acao === 'deathsave') { op('deathsave', { token: d.token.id }).catch(() => {}); return; }
+    if (acao === 'atributo') { rolarPeloPainel(d, { modo: 'teste', stat: alvo.dataset.stat }); return; }
+    if (acao === 'pericia') { rolarPeloPainel(d, { modo: 'teste', pericia: alvo.dataset.pericia }); return; }
+    if (acao === 'facedown') { rolarPeloPainel(d, { modo: 'teste', stat: 'COOL', mod: d.reputacao }); return; }
+    if (acao === 'favorita') {
+      const chave = d.ficha ? d.ficha.id : d.token.npc;
+      const lista = favoritasDe(chave);
+      const nome = alvo.dataset.pericia;
+      store.set(`painel:favoritas:${chave}`, JSON.stringify(lista.includes(nome) ? lista.filter(item => item !== nome) : [...lista, nome]));
+      renderPainelTatico();
+      return;
+    }
+    const arma = d.armas.find(item => item.id === alvo.dataset.arma);
+    if (acao === 'dano' && arma) { rolarPeloPainel(d, { modo: 'dados', expressao: arma.dano }); return; }
+    if (acao === 'recarregar' && arma) {
+      op('arma.recarregar', { token: d.token.id, arma: arma.id }).then(resposta => { const feito = resposta.resultado; if (feito && feito.municao) aviso(`${feito.arma}: ${feito.entrou} de ${feito.municao} no pente (sobram ${feito.sobra}).`); }).catch(() => {});
+      return;
+    }
+    // Atacar: o formulário do ataque na barra, com esta arma (como o HUD).
+    if (acao === 'atacar' && arma) {
+      selecionar(d.token.id);
+      S.ataque = { token: d.token.id, arma: arma.id, modo: '', local: 'cabeca', alvo: '', mod: 0, sorte: 0 };
+      escolherAlvoNoMapa(false);
+      abrirCartaoNaBarra();
+      renderCartao();
+      return;
+    }
+    if (acao === 'rolar') {
+      if (!chatFlutua()) { abrirAba('rolagens'); abrirPainel(true); }
+      $('#rolar-quem').value = `token:${d.token.id}`;
+      renderPericias();
+      bandejaAberta(true);
+      return;
+    }
+    if (acao === 'combate') { op('combate.adicionar', { token: d.token.id }).catch(() => {}); return; }
+    if (acao === 'fimDoTurno') op('combate.proximo', { vez: d.token.id }).catch(() => {});
+  });
+  $('#painel-tatico').addEventListener('contextmenu', event => {
+    if (!event.target.closest('.pt-retrato-alvo, .pt-moldura-caixa, .pt-mini-retrato')) return;
+    const quem = quemNoPainel();
+    if (!quem || !quem.ficha) return;
+    event.preventDefault();
+    abrirRetrato(quem.ficha.id);
+  });
+  // O HP: o número troca; "−5" e "+5" somam (como no HUD). A roda do mouse na barra soma os passos e grava uma vez só.
+  $('#painel-tatico').addEventListener('focusin', event => { if (event.target.matches('.pt-hp-campo')) S.painel.segurando = true; });
+  $('#painel-tatico').addEventListener('focusout', event => {
+    if (!event.target.matches('.pt-hp-campo')) return;
+    S.painel.segurando = false;
+    if (S.painel.pendente) setTimeout(renderPainelTatico, 0);
+  });
+  $('#painel-tatico').addEventListener('change', event => {
+    const campo = event.target;
+    const quem = quemNoPainel();
+    if (!quem) return;
+    const d = dadosDoPainel(quem);
+    if (campo.matches('.pt-hp-campo') && d.token && d.hp) {
+      const texto = campo.value.trim().replace(/[−–]/g, '-');
+      const atual = /^[+-]\d+$/.test(texto) ? d.hp.atual + Number(texto) : Number(texto);
+      S.painel.segurando = false;
+      if (Number.isFinite(atual)) op('token.editar', { token: d.token.id, hp: { atual, max: d.hp.max } }).catch(() => renderPainelTatico());
+      else renderPainelTatico();
+      return;
+    }
+    if (campo.dataset.ptUso && d.ficha) op('item.uso', { personagem: d.ficha.id, item: campo.dataset.ptUso, uso: campo.value }).catch(() => renderPainelTatico());
+  });
+  $('#painel-tatico').addEventListener('keydown', event => { if (event.key === 'Enter' && event.target.matches('.pt-hp-campo')) event.target.blur(); });
+  $('#painel-tatico').addEventListener('input', event => { if (event.target.matches('.pt-busca')) { S.painel.busca = event.target.value; filtrarPericiasDoPainel(); } });
+  $('#painel-tatico').addEventListener('wheel', event => {
+    if (!event.target.closest('.pt-hp-barra')) return;
+    const quem = quemNoPainel();
+    const d = quem && dadosDoPainel(quem);
+    if (!d || !d.mexeHp || !d.hp) return;
+    event.preventDefault();
+    S.painel.roda += (event.deltaY < 0 ? 1 : -1) * (event.shiftKey ? 5 : 1);
+    const campo = $('#painel-tatico .pt-hp-campo');
+    if (campo) campo.value = Math.min(d.hp.max, d.hp.atual + S.painel.roda);
+    clearTimeout(S.painel.rodaTimer);
+    S.painel.rodaTimer = setTimeout(() => {
+      const delta = S.painel.roda;
+      S.painel.roda = 0;
+      if (delta) op('token.editar', { token: d.token.id, hp: { atual: d.hp.atual + delta, max: d.hp.max } }).catch(() => {});
+    }, 300);
+  }, { passive: false });
 
   // ---------------- NPCs do mestre ----------------
   // A ficha de NPC do mestre (nova, copiada de uma da wiki, ou dele): a janela sobre o mapa. O servidor confere e grava;

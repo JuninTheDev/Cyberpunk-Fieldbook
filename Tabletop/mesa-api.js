@@ -25,6 +25,7 @@ const K = require('./mesa-2077');
 const createCombat = require('./mesa-combate');
 const createAudio = require('./mesa-audio');
 const V = require('./mesa-visao');
+const P = require('./mesa-painel');
 
 const ROUTES = /^\/api\/mesa(\/|$)/;
 // Uma cena importada do Foundry (paredes, tiles, tokens) passa de 64 KB; o resto é bem menor.
@@ -53,6 +54,8 @@ const MEDIA_TYPES = {
   'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/vnd.wave': 'wav', 'audio/flac': 'flac', 'audio/x-flac': 'flac', 'audio/webm': 'webm'
 };
 const MEDIA_CONTENT = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', webm: 'video/webm', mp4: 'video/mp4', mp3: 'audio/mpeg', ogg: 'audio/ogg', m4a: 'audio/mp4', wav: 'audio/wav', flac: 'audio/flac' };
+// O jogador envia só a imagem do retrato do painel (M14): PNG, JPEG ou WebP, até 8 MB.
+const MEDIA_DO_JOGADOR = { png: 8, jpg: 8, webp: 8 };
 const MEDIA_LIMIT_MB = { png: 80, jpg: 80, webp: 80, svg: 2, webm: 150, mp4: 150, mp3: 60, ogg: 60, m4a: 60, wav: 150, flac: 150 };
 const MEDIA_FILE = /^[a-f0-9]{40}\.(png|jpg|webp|svg|webm|mp4|mp3|ogg|m4a|wav|flac)$/;
 const VIDEO_FILE = /\.(webm|mp4)$/;
@@ -281,10 +284,11 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   }
   // O cartão do personagem (vai só para o dono e para o mestre): a ficha de rolar e a ficha de jogo, com o que o mestre
   // muda à mão, o inventário com o uso de cada item e as últimas mudanças.
-  const characterCard = doc => {
+  const characterCard = (doc, retratos = {}) => {
     const ficha = characterGame.ficha(doc, catalog());
     const sheet = sheetOf(doc, ficha);
-    return { id: doc.id, nome: line(doc.nome, 80) || 'Sem nome', apelido: line(doc.apelido, 80), retrato: portraitOf(doc), hp: sheet.hp, stats: sheet.stats, pericias: sheet.pericias, fonte: sheet.fonte,
+    // painel: o retrato do Painel Tático (uma imagem por estado de ferimento), que fica na mesa da campanha.
+    return { id: doc.id, nome: line(doc.nome, 80) || 'Sem nome', apelido: line(doc.apelido, 80), retrato: portraitOf(doc), painel: retratos[doc.id] || null, hp: sheet.hp, stats: sheet.stats, pericias: sheet.pericias, fonte: sheet.fonte,
       jogo: { humanidade: ficha.humanidade, dinheiro: ficha.dinheiro, ip: ficha.ip, reputacao: ficha.reputacao, sorte: ficha.sorte, sp: ficha.sp, penalidade: ficha.penalidade,
         itens: ficha.itens.map(({ catalogo, variedade, ...item }) => item), extrato: ficha.extrato.slice(-10), mesa: Boolean(characterGame.jogoValido(doc)),
         // O cyberware da loja, com os lugares em que pode ser instalado (do mínimo da peça ao hospital; nenhum: chipware).
@@ -304,6 +308,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (!Array.isArray(state.cenas)) state.cenas = [];
     if (!Array.isArray(state.registro)) state.registro = [];
     if (!Array.isArray(state.npcs)) state.npcs = [];
+    if (!state.retratos || typeof state.retratos !== 'object' || Array.isArray(state.retratos)) state.retratos = {};
     // Paredes de antes da visão vêm sem id: ganham um (a porta é aberta pelo id).
     for (const scene of state.cenas) for (const item of [...(scene.paredes || []), ...(scene.luzes || [])]) if (!item.id) item.id = newId();
     combatFlow.cancelarPendentes(state);
@@ -479,7 +484,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const scene = sceneById(state, sceneIdOf(connection, state));
     const campaign = campaigns.get(connection.campanha) || { nome: connection.campanha, cor: COLORS[0] };
     const gm = isGm(viewer);
-    const fichas = cardsFor(viewer, readCharacters(connection.campanha));
+    const fichas = cardsFor(viewer, readCharacters(connection.campanha), null, state.retratos);
     connection.fichasVistas = JSON.stringify(fichas);
     return {
       conexao: connection.id || null, versao,
@@ -500,14 +505,14 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     };
   }
   // As fichas que cada um recebe: o mestre, todas as da campanha; o jogador, as dele.
-  const cardsFor = (viewer, docs, cards = null) => docs.filter(doc => isGm(viewer) || (doc.dono && doc.dono === viewer.conta)).map(doc => (cards ? cards.get(doc.id) : characterCard(doc)));
+  const cardsFor = (viewer, docs, cards = null, retratos = {}) => docs.filter(doc => isGm(viewer) || (doc.dono && doc.dono === viewer.conta)).map(doc => (cards ? cards.get(doc.id) : characterCard(doc, retratos)));
   // Uma ficha mudou (pela mesa, pela wiki ou pelo Foundry): quem vê manda de novo só para quem recebe aquela ficha.
   function sendCards(campaignId) {
     const docs = readCharacters(campaignId);
     let cards = null;
     for (const connection of connections.values()) {
       if (connection.campanha !== campaignId) continue;
-      cards = cards || new Map(docs.map(doc => [doc.id, characterCard(doc)]));
+      cards = cards || new Map(docs.map(doc => [doc.id, characterCard(doc, tableOf(campaignId).state.retratos)]));
       const lista = cardsFor(connection.viewer, docs, cards);
       const texto = JSON.stringify(lista);
       if (connection.fichasVistas === texto) continue;
@@ -1366,10 +1371,17 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       combatFlow.aoPassarAVez(state, null);
       return { combate: true, registro: systemEntry(state, 'Começou o combate. Rodada 1.') };
     } },
-    'combate.proximo': { mestre: true, run({ state }) {
+    // Passar a vez: o mestre, sempre; o jogador, só na vez do token dele (o Fim do turno do Painel Tático). Quem passa
+    // diz de quem é a vez (o clique que chega depois da vez já passada não pula ninguém).
+    'combate.proximo': { run({ state, viewer, body }) {
       const combat = state.combate;
       if (!combat) throw fail(400, 'Não há combate.');
       const anterior = combat.ordem[combat.vez] && combat.ordem[combat.vez].token;
+      if (!isGm(viewer)) {
+        const { token } = anterior ? findToken(state, anterior) : { token: null };
+        if (!token || !canControl(viewer, token)) throw fail(403, 'Só na sua vez.');
+        if (body.vez !== undefined && String(body.vez) !== anterior) throw fail(409, 'A vez já passou.');
+      }
       const scene = sceneById(state, combat.cena);
       const morto = entry => { const token = scene && scene.tokens.find(item => item.id === entry.token); return Boolean(token && token.morto); };
       let entry = null;
@@ -1508,6 +1520,18 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const entry = addEntry(state, { tipo: 'rolagem', autor: authorOf(viewer, color), quem: nome, rolagem, para: doc.dono ? [doc.dono] : [] });
       return { tokens: true, fichas: true, registro: entry, resultado: { perda: feito.perda, humanidade: feito.depois, custo: feito.custo } };
     } },
+    // O retrato do Painel Tático (M14): { personagem, retrato: { imagens: { notWounded, lightlyWounded, seriouslyWounded,
+    // mortallyWounded, dead }, escala, x, y, espelhar, modo } }. As imagens são arquivos da mesa. O dono ou o mestre.
+    'retrato.salvar': { run({ state, viewer, body, campaignId }) {
+      const doc = characterArg(campaignId, viewer, body.personagem);
+      const pedido = body.retrato && typeof body.retrato === 'object' ? body.retrato : {};
+      for (const nome of Object.values(pedido.imagens && typeof pedido.imagens === 'object' ? pedido.imagens : {})) {
+        if (nome && !IMAGE_FILE.test(String(nome))) throw fail(400, 'O retrato é uma imagem: PNG, JPEG, WebP ou SVG.');
+        if (nome) mediaArg(campaignId, nome);
+      }
+      state.retratos[doc.id] = P.normalizarRetrato(pedido);
+      return { fichas: true };
+    } },
     // As fichas de NPC do mestre. { npc } cria; { id, npc } muda. A importação manda { npc, origem } (o ator do Foundry):
     // o que já veio não entra de novo (409), a não ser com substituir.
     'npc.salvar': { mestre: true, run({ state, body, campaignId }) {
@@ -1620,12 +1644,14 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
 
   // Mapas, vídeos, tiles e imagens de token, guardados pelo hash do conteúdo (o mesmo arquivo duas vezes ocupa um só).
   // Vai direto para o disco enquanto chega: o servidor tem 1 GB de memória e um mapa do Foundry passa de 60 MB.
-  function receiveMedia(request, response, campaignId) {
+  // limites: o tamanho de cada tipo (o mestre, todos; o jogador, só a imagem do retrato).
+  function receiveMedia(request, response, campaignId, limites = MEDIA_LIMIT_MB) {
     return new Promise(resolve => {
       const type = String(request.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
       const extension = MEDIA_TYPES[type];
+      if (extension && !limites[extension]) { json(response, 415, { erro: 'Você envia só a imagem do retrato: PNG, JPEG ou WebP.' }); return resolve(); }
       if (!extension) { json(response, 415, { erro: 'Envie PNG, JPEG, WebP, SVG, WebM ou MP4 (imagem e vídeo), ou MP3, OGG, M4A, WAV ou FLAC (música).' }); return resolve(); }
-      const limit = MEDIA_LIMIT_MB[extension] * 1024 * 1024;
+      const limit = limites[extension] * 1024 * 1024;
       const folder = path.join(tableDir(campaignId), 'midia');
       fs.mkdirSync(folder, { recursive: true });
       const temporary = path.join(folder, `.envio-${newId()}.tmp`);
@@ -1648,7 +1674,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       request.on('data', chunk => {
         if (done) return;
         size += chunk.length;
-        if (size > limit) { finish(413, { erro: `Arquivo grande demais (até ${MEDIA_LIMIT_MB[extension]} MB).` }); request.resume(); return; }
+        if (size > limit) { finish(413, { erro: `Arquivo grande demais (até ${limites[extension]} MB).` }); request.resume(); return; }
         if (head.length < 2048) head = Buffer.concat([head, chunk]).subarray(0, 2048);
         hash.update(chunk);
         if (!out.write(chunk)) { request.pause(); out.once('drain', () => request.resume()); }
@@ -1716,10 +1742,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (pathname === '/api/mesa/eventos' && method === 'GET') return openStream(request, response, identity, campaignId);
     if (pathname === '/api/mesa/op' && method === 'POST') return runOperation(request, response, identity, campaignId);
     if (pathname === '/api/mesa/atividade' && method === 'POST') return relayActivity(request, response, identity, campaignId);
-    if (pathname === '/api/mesa/midia' && method === 'POST') {
-      if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre.' });
-      return receiveMedia(request, response, campaignId);
-    }
+    if (pathname === '/api/mesa/midia' && method === 'POST') return receiveMedia(request, response, campaignId, identity.papel === 'mestre' ? MEDIA_LIMIT_MB : MEDIA_DO_JOGADOR);
     const media = pathname.match(/^\/api\/mesa\/midia\/([^/]+)$/);
     if (media && (method === 'GET' || method === 'HEAD')) return serveMedia(request, response, campaignId, media[1]);
     return json(response, 404, { erro: 'Rota da mesa não encontrada.' });

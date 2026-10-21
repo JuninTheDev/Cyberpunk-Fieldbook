@@ -40,7 +40,7 @@ test('áudio: o mestre monta a playlist com música e YouTube; o jogador só rec
   assert.match(mp3.json.midia, /^[a-f0-9]{40}\.mp3$/);
   assert.equal((await m.pedir('/api/mesa/midia', { method: 'POST', body: OGG, type: 'audio/ogg' })).status, 200);
   assert.equal((await m.pedir('/api/mesa/midia', { method: 'POST', body: OGG, type: 'audio/mpeg' })).status, 415, 'um OGG dizendo que é MP3 não entra');
-  assert.equal((await m.pedir('/api/mesa/midia', { method: 'POST', body: MP3, type: 'audio/mpeg', cookie: ana.cookie })).status, 403, 'só o mestre envia');
+  assert.equal((await m.pedir('/api/mesa/midia', { method: 'POST', body: MP3, type: 'audio/mpeg', cookie: ana.cookie })).status, 415, 'só o mestre envia música (o jogador, só a imagem do retrato)');
   const png = (await m.pedir('/api/mesa/midia', { method: 'POST', body: PNG, type: 'image/png' })).json.midia;
 
   assert.equal((await m.op('audio.playlist.criar', { nome: 'Minha' }, ana.cookie)).status, 403, 'a playlist é do mestre');

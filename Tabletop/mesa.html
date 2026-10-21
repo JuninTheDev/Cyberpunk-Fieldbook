@@ -99,6 +99,8 @@
       <section id="nota-janela" class="nota-janela" role="dialog" aria-labelledby="nota-janela-titulo" hidden></section>
       <!-- A ficha de NPC do mestre (Fichas → Novo NPC, Editar ou Copiar). -->
       <section id="npc-janela" class="nota-janela npc-janela" role="dialog" aria-labelledby="npc-janela-titulo" hidden></section>
+      <!-- O retrato do Painel Tático: uma imagem por estado de ferimento (Fichas → Retrato do painel). -->
+      <section id="retrato-janela" class="nota-janela retrato-janela" role="dialog" aria-labelledby="retrato-janela-titulo" hidden></section>
       <div id="tiles-opcoes" class="nevoa-opcoes tiles-opcoes" hidden>
         <label class="botao vazado pequeno arquivo">Pôr um tile (imagem ou vídeo) <input id="tile-novo" type="file" accept="image/png,image/jpeg,image/webp,video/webm,video/mp4"></label>
         <div id="tile-escolhido" class="tile-escolhido" hidden></div>
@@ -106,6 +108,8 @@
       <div id="vez" class="vez" hidden></div>
       <!-- O HUD do token escolhido, junto dele (como o Token HUD do Foundry): o HP e as ações. O cartão fica na aba Token. -->
       <div id="hud" class="hud" role="toolbar" aria-label="Token escolhido" hidden></div>
+      <!-- O Painel Tático (M14): o retrato e a ficha de combate na base da tela (H recolhe e abre). -->
+      <div id="painel-tatico" class="pt-vazio" aria-label="Painel Tático"></div>
       <div id="vazio" class="vazio" hidden></div>
       <div id="dica" class="dica"></div>
       <!-- A barra recolhida: o chat no canto do mapa (as mensagens novas somem sozinhas; a caixa fica). -->
@@ -252,6 +256,7 @@
   <script src="/mesa-config.js"></script>
   <script src="/mesa-visao.js"></script>
   <script src="/mesa-tocador.js"></script>
+  <script src="/mesa-painel.js"></script>
   <script src="/mesa.js"></script>
 </body>
 </html>

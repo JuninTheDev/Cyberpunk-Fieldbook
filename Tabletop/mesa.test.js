@@ -332,7 +332,13 @@ test('iniciativa: REF + 1d10, empate rola de novo, e a vez passa', async t => {
   assert.equal(corrigido.vez, ids.capanga, 'corrigir a iniciativa não troca de quem é a vez');
   await m.op('token.apagar', { token: ids.capanga });
   assert.equal((await m.pedir('/api/mesa/estado')).json.combate.ordem.length, 2, 'token apagado sai do combate');
-  assert.equal((await m.op('combate.proximo', {}, ana.cookie)).status, 403);
+  // O jogador passa só a própria vez (o Fim do turno do Painel Tático): apagado o capanga, a vez é do Jax.
+  assert.equal((await m.pedir('/api/mesa/estado')).json.combate.vez, ids.jax);
+  assert.equal((await m.op('combate.proximo', {}, bruno.cookie)).status, 403, 'na vez de outro, não');
+  assert.equal((await m.op('combate.proximo', { vez: ids.nyx }, ana.cookie)).status, 409, 'o clique atrasado não pula ninguém');
+  assert.equal((await m.op('combate.proximo', { vez: ids.jax }, ana.cookie)).status, 200);
+  assert.equal((await m.pedir('/api/mesa/estado')).json.combate.vez, ids.nyx);
+  assert.equal((await m.op('combate.proximo', {}, ana.cookie)).status, 403, 'passada a vez, não passa a do outro');
 });
 
 test('chat: para todos, só para o mestre ou sussurro a um jogador (os outros nem recebem)', async t => {
@@ -388,7 +394,7 @@ test('outra campanha não existe para quem não joga nela, e o mapa é só da ca
   const id = nova.json.campanha.id;
   assert.equal((await m.pedir(`/api/mesa/estado?campanha=${id}`, { cookie: ana.cookie })).status, 404);
   assert.equal((await m.pedir(`/api/mesa/estado?campanha=${id}`)).status, 200, 'o mestre vê todas');
-  assert.equal((await m.pedir('/api/mesa/midia', { method: 'POST', body: PNG, type: 'image/png', cookie: ana.cookie })).status, 403, 'só o mestre manda mapa');
+  assert.equal((await m.pedir('/api/mesa/midia', { method: 'POST', body: PNG, type: 'image/svg+xml', cookie: ana.cookie })).status, 415, 'o jogador manda só a imagem do retrato (sem SVG, vídeo ou música)');
   assert.equal((await m.pedir('/api/mesa/midia', { method: 'POST', body: Buffer.from('não é png'), type: 'image/png' })).status, 415);
   const enviado = await m.pedir(`/api/mesa/midia?campanha=${id}`, { method: 'POST', body: PNG, type: 'image/png' });
   assert.equal(enviado.status, 200, enviado.text);
