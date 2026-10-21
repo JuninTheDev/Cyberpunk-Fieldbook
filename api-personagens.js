@@ -16,6 +16,7 @@ const { createCampaigns } = require('./api-campanhas');
 const { createAccountStores } = require('./api-contas');
 const characterRoles = require('./personagem-roles');
 const characterCyberware = require('./personagem-cyberware');
+const characterGame = require('./personagem-jogo');
 const creationRules = require('./system-criacao');
 
 const MAX_BODY = 300 * 1024;
@@ -238,7 +239,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // o retrato enviado e os Pontos de Melhoria dados pelo mestre (cada um tem a sua rota). Os três últimos
   // a API calcula na resposta e não vão para o arquivo.
   // A campanha (e o histórico de mudanças de campanha) só o mestre muda, pela rota /campanha.
-  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'foundry12', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico', 'roles'];
+  // jogo: o estado de jogo que a mesa da wiki grava (personagem-jogo.js); só ela muda, pela fila (updateCharacter).
+  const SERVER_FIELDS = ['id', 'dono', 'versao', 'criado', 'atualizado', 'foundry', 'foundry12', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'jogo', 'pedidos', 'campanha', 'transferencias', 'anotacoes', 'estadoFoundry', 'donoNome', 'publico', 'roles'];
   // O que o jogador não muda mais pela wiki depois que o personagem foi importado no Foundry.
   const LOCKED_AFTER_IMPORT = ['role', 'rankRole', 'roleSecundaria', 'especializacao', 'metodo', 'stats', 'sorteio', 'pericias', 'tipos', 'extras', 'lingua', 'casa', 'kitNet', 'quickhacks', 'escolhas', 'itens',
     'habilidades', 'oficina', 'montagem', 'moradia', 'estiloVida', 'traumaTeam', 'estiloModa'];
@@ -335,13 +337,13 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const numbersOf = doc => {
     const mesa = doc.mesa || null;
     const created = doc.resultado || {};
-    const hp = created.derivados && created.derivados.hp;
     return {
-      hp: mesa && mesa.hp ? { atual: Number(mesa.hp.atual) || 0, max: Number(mesa.hp.max) || 0 } : (hp ? { atual: hp, max: hp } : null),
+      // O HP: o máximo da ficha e o atual mais recente entre o Foundry e a mesa da wiki (personagem-jogo.js).
+      hp: characterGame.hp(doc),
       ip: mesa && Number.isFinite(mesa.ip) ? mesa.ip : ipGranted(doc) - ipSpent(doc),
       eb: mesa && Number.isFinite(mesa.dinheiro) ? mesa.dinheiro : (created.dinheiro && Number.isFinite(created.dinheiro.saldo) ? created.dinheiro.saldo : null),
       rank: (roleSummary(doc).find(role => role.id === doc.role) || {}).rank || (created.role && created.role.rank) || null,
-      naMesa: Boolean(mesa && mesa.hp)
+      naMesa: Boolean((mesa && mesa.hp) || (doc.jogo && doc.jogo.hp))
     };
   };
 
@@ -1008,7 +1010,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const old = readHistory(id, vid);
         if (!old) return reply(404, { erro: 'Versão não encontrada.' });
         const done = await update(doc => {
-          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, doc[field] ?? null]));
+          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'jogo', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, doc[field] ?? null]));
           const restored = { ...cleanCharacter(old), ...kept, id, dono: doc.dono, campanha: campaignOf(doc), versao: doc.versao + 1, criado: doc.criado, atualizado: new Date().toISOString() };
           if (ipSpent(restored) > ipGranted(restored)) return { status: 400, data: { erro: 'Essa versão gasta mais Pontos de Melhoria do que o personagem tem agora.' } };
           snapshot(doc, true);
@@ -1037,7 +1039,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         const done = await update(current => {
           // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
           if (Number(input.versao) !== current.versao) return { status: 409, data: { erro: 'O personagem mudou em outro lugar. Recarregue para ver a versão mais nova.', personagem: forViewer(identity, withLinks(current)) } };
-          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] ?? null]));
+          const kept = Object.fromEntries(['foundry', 'foundry14', 'envio', 'retrato', 'retratoOriginal', 'retratoRecorte', 'ip', 'mesa', 'jogo', 'pedidos', 'transferencias', 'anotacoes'].map(field => [field, current[field] ?? null]));
           const doc = { ...cleanCharacter(input), ...kept, id, dono: identity.papel === 'mestre' && input.dono !== undefined ? String(input.dono) : current.dono, campanha: campaignOf(current), versao: current.versao + 1, criado: current.criado, atualizado: new Date().toISOString() };
           // Depois de ir para o Foundry, o Foundry manda: o jogador só muda nome, apelido, aparência, notas, retrato e
           // Lifepath. O resto (e o resultado que o Foundry importa, menos o Lifepath) fica como estava.
@@ -1083,6 +1085,19 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   handle.who = who;
   handle.campaigns = campaigns;
   handle.campaignCard = campaignCard;
+  // A mesa da wiki (Tabletop/mesa-api.js) grava no personagem pela mesma fila por arquivo (o HP da mesa, em doc.jogo):
+  // change(doc) muda o documento; { status, data } desiste.
+  handle.updateCharacter = (id, change) => {
+    if (!validId(String(id))) return Promise.resolve({ status: 404, data: { erro: 'Personagem não encontrado.' } });
+    return lockOn(fileOf(id), async () => {
+      const doc = readCharacter(id);
+      if (!doc) return { status: 404, data: { erro: 'Personagem não encontrado.' } };
+      const result = change(doc);
+      if (result && result.status) return result;
+      await writeJsonAtomic(fileOf(id), doc);
+      return { doc };
+    });
+  };
   return handle;
 };
 const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city|agenda)(\/|$)/;

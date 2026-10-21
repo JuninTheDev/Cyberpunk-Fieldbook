@@ -1,0 +1,199 @@
+# Mesa da wiki (versão de teste)
+
+Um tabuleiro ao vivo dentro da wiki, por campanha. Tem cenas com mapa (imagem ou vídeo) e grade, tiles, tokens dos personagens e das fichas de NPC, névoa, visão pelas paredes com portas, régua com a DV por alcance, ping, rolagens do RED, iniciativa, combate (o Fluxo de Combate) e chat. O desenho segue o da mesa do Foundry, com as regras e os dados da wiki. A diferença principal: **o servidor decide o que cada pessoa recebe**.
+
+**A meta é substituir o Foundry completamente** (decisão de 2026-10-20). O que falta, em ordem, está no [ROADMAP.md](ROADMAP.md).
+
+Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, com dados de teste, sem mexer nos dados da wiki. O que muda para entrar no projeto está em **Para pôr na wiki**, no fim.
+
+## Como testar
+
+1. Dê dois cliques em **`testar-mesa.bat`**, ou rode `node Tabletop/testar.js`.
+   - Na primeira vez, ele cria os dados de teste em `%LOCALAPPDATA%\FieldbookTeste\mesa-wiki`, fora do OneDrive. Quando o formato dos dados de teste muda, ele apaga os antigos e cria de novo.
+   - São dois jogadores de mentira (Ana e Bruno), cada um com um personagem (Jax "Ferrugem", Solo; Iris "Nyx", Netrunner), com as armas e a armadura do catálogo da loja.
+   - São duas cenas: o beco e o diner do Frag Maps, que já estão no Foundry deste computador. O diner tem névoa.
+   - No beco ficam dois Guarda-costas e um Netrunner escondido.
+   - Com o backup do Foundry neste computador, as 13 cenas dele entram sozinhas (as com paredes já vêm com a visão ligada).
+2. **As cenas do Foundry à mão** (outro backup, ou de novo): com o teste ligado, rode noutra janela:
+   ```
+   node Tabletop/importar-foundry.js --tar "C:\Users\kouar\Backups\Night City Fieldbook\foundry12-completo-2026-10-12.tar" --mundo edgerunners-storys
+   ```
+   - São as 13 cenas, com mapas, vídeos, tiles e tokens: 35 arquivos, 215 MB.
+   - `--listar` só mostra as cenas; `--cenas "A; B"` escolhe algumas; `--substituir` troca as já importadas.
+3. **Mestre:** neste computador, a wiki fica em `http://localhost:8010` e a mesa em `http://localhost:8010/mesa`.
+4. **Jogador:** abra `http://localhost:8010/mesa` numa **janela anônima** (Ctrl+Shift+N) e clique num dos jogadores de teste. Só no teste, o botão **Testar como jogador** faz o mesmo.
+5. **O HP na ficha:** mexa no HP do Jax na mesa e abra a ficha dele na wiki (Personagens). Ela mostra o mesmo número, e o caminho contrário também vale.
+6. **Celular na rede de casa:** `$env:HOST='0.0.0.0'; node Tabletop/testar.js`. O terminal mostra o endereço.
+7. **Começar de novo:** `testar-mesa.bat --limpar`.
+
+Teste automático (não abre navegador): `node --test Tabletop/` (29 testes).
+
+## O que dá para fazer
+
+**Mestre**
+
+- **Cenas** (aba Cena): crie a cena com um mapa (imagem PNG, JPEG ou WebP, ou vídeo WebM ou MP4) ou só com a grade.
+  - **Grade:** quadrada ou sem grade (sem grade, a régua mede em linha reta e o token não encaixa).
+  - **Unidade:** "m" nas cenas da mesa, "bit" nas arquiteturas da NET.
+  - **Ajuste:** olhando o mapa; a grade fica amarela até você salvar.
+  - **Ver** olha uma cena sem levar os jogadores. **Abrir** leva todos para ela.
+  - **Cena importada do Foundry:** vem com os tiles (o tile escondido só o mestre vê, pela metade) e com as paredes e as portas. As luzes ficam guardadas.
+- **Paredes** (ferramenta W): arraste para desenhar parede, porta, porta secreta ou janela (vê, não passa). A ponta gruda na grade e nas outras paredes; Shift solta.
+  - Clique numa parede para trocar o tipo ou apagar (Delete).
+  - **Visão pelas paredes** (aba Cena): cada jogador vê só o que os tokens dele veem. **Esquecer o explorado** apaga a penumbra de todos.
+- **Portas:** clique no ícone abre e fecha; com Shift, tranca. A porta secreta só você vê.
+- **Tiles** (ferramenta T): **Pôr um tile** envia a imagem ou o vídeo para o meio da tela.
+  - Clique para escolher e arraste para mover; o quadrado amarelo no canto muda o tamanho. A grade encaixa; Shift solta.
+  - Na barra: transparência, girar, esconder dos jogadores, para a frente ou para trás, e apagar (Delete).
+- **Margem** (aba Cena, em quadrados): a faixa em volta do mapa onde o token pode esperar, fora dele. A das cenas do Foundry vem junto.
+- **Tokens** (aba Fichas): ponha os personagens da campanha e as fichas de NPC da wiki (o livro, o Mission Kit, o Black Chrome e o elenco do Protocolo Morana).
+  - O NPC entra escondido, se você quiser.
+  - Também há o token livre: um drone, um carro, uma porta.
+- **Cartão do token:** clique num token para mexer no HP (−5, −1, +1, +5 ou o número), esconder ou mostrar, ver as armas do NPC, escrever uma nota (só sua), **Atualizar da ficha** e tirar da cena.
+  - **Aparência:** nome, tamanho (1 × 1 a 4 × 4), cor e imagem. O personagem usa o retrato da ficha.
+- **Névoa** (ferramenta N): pinte para revelar; com Alt, cobre. Revelar tudo e Cobrir tudo ficam na aba Cena.
+- **Combate:** a iniciativa (REF + 1d10) sai para todos os tokens não escondidos.
+  - Empates rolam de novo.
+  - **Próximo** passa a vez e conta as rodadas. Quem morreu perde a vez; o Mortalmente Ferido faz o Death Save no começo da vez.
+  - Para corrigir uma iniciativa, mude o número.
+- **Ataque do NPC:** pelo cartão do token, como o jogador. Quando o NPC é atacado, a pergunta da defesa abre para você.
+  - A defesa que um jogador ainda não decidiu aparece na aba Rolagens, com o total, e você pode decidir por ele.
+  - **Dano à mão**, **Estabilizar**, **Marcar morto** e **Tirar Suprimido** ficam no cartão.
+  - **Desfazer** no cartão do ataque volta o HP, o SP, as lesões e a bala.
+- **Ping com Shift:** traz a tela de todos para o ponto.
+- **Seu cursor e sua régua** podem ficar só com você (aba Cena → Você).
+
+**Jogador**
+
+- Vê só a cena aberta e arrasta o próprio token (as setas movem um quadrado).
+- **Ao arrastar:** a distância aparece contra o MOVE (anda MOVE × 2 m, corre o dobro), em verde, amarelo ou vermelho.
+- **Régua** (R): quadrados, metros e a DV por alcance de pistola, SMG, espingarda, rifle de assalto e sniper (a tabela da wiki).
+- **Aba Personagem:** os STATs e as perícias da ficha. Tocar numa perícia rola STAT + perícia + 1d10.
+- **Só para o mestre:** a rolagem fica só entre o jogador e o mestre.
+- **Visão:** com a visão ligada, vê o que o token dele vê; o que já viu fica na penumbra. Clique na porta abre e fecha. Parede e porta fechada param o token (a linha do arrasto fica vermelha).
+- **Atacar** (cartão do token): a arma da ficha, o modo (tiro, mirado, autofogo, supressivo, corpo a corpo, explosivo), o alvo (na lista ou no mapa), o local e a Sorte. A prévia mostra a DV pelo alcance.
+- **Defender:** quando alguém ataca o token dele, a pergunta aparece na tela, sem o total do ataque: esquivar (REF 8+ contra tiro; corpo a corpo, sempre) ou aguentar. Sem resposta em 60 segundos, aguenta.
+- **Chat** (embaixo do registro): para todos, só para o mestre ou sussurro a um jogador. `/r 2d6` rola.
+
+**Rolagens**
+
+- **Quem rola:** o servidor rola, pela ficha que está no servidor.
+  - A ficha é a que o Foundry mandou para a wiki ("Na mesa"); sem ela, a da criação.
+  - Ninguém escolhe o próprio número.
+- **Regras do RED:**
+  - 10 natural rola mais 1d10 e soma, e 1 natural rola e subtrai, uma vez só (p. 130);
+  - Gravemente Ferido tira 2 de tudo, e Mortalmente Ferido, 4;
+  - dois 6 nos dados de dano avisam a lesão crítica (+5 direto no HP);
+  - **Lesão crítica** rola 2d6 na tabela do corpo ou da cabeça.
+- **NPC:** a ficha do livro já traz a base (STAT + perícia), e a rolagem usa a base.
+
+## Como a mesa do Foundry funciona
+
+Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\FieldbookTeste\foundry14-app`, com o REA (análise estática dos arquivos instalados, sem rodar o Foundry).
+
+- **Evidências:**
+  - o cliente, com 17 arquivos (socket, documentos, canvas, tokens, névoa, ping, chat, dados, combate): `ev_44c81248a312fcb5…`;
+  - o servidor, com 6 arquivos: `ev_485bc8df9fb5168e…`.
+- **Pastas e versão:** os caminhos abaixo são relativos à pasta do Foundry. O servidor (`dist/`) vem minificado, então cito o trecho em vez da linha.
+
+| O que o Foundry faz | Onde está | O que a mesa da wiki faz |
+|---|---|---|
+| Toda mudança é um pedido `modifyDocument` pelo socket, com `{type, action, operation}`, que espera a resposta. | `client/data/client-backend.mjs:704-728`, `client/helpers/socket-interface.mjs:15-25` | `POST /api/mesa/op` com `{tipo, ...}`, que espera a resposta. |
+| O servidor aplica. Erro vira `broadcast = false`. Quem pediu recebe a resposta, e os outros recebem o mesmo pacote. | `dist/database/backend/server-backend.mjs`: `s.result?.length&&s.broadcast&&e.broadcast.emit("modifyDocument",s)` | O mesmo fluxo: recusado não chega a ninguém. Mas cada um recebe **o que pode ver**, não o mesmo pacote. |
+| Os outros clientes ouvem `modifyDocument` e `modifyDocumentBatch` e aplicam a mudança. | `client/data/client-backend.mjs:595-639` | Eventos `token`, `token.sumir`, `cena`, `nevoa`, `combate`, `registro`, por Server-Sent Events. |
+| Arrastar um token vira um `update` com os pontos do caminho. O token anima ao receber. | `client/canvas/placeables/token.mjs:5102-5134` e `4003-4040`, `placeable-object.mjs:1482` | `token.mover` ao soltar. O token desliza na tela de todos. |
+| Shift solta fora da grade. | `token.mjs:5142` (`snap: !event.shiftKey`) | Igual. |
+| Cursor, régua, alvos e ping são "atividade": `userActivity`, volátil (descartada se a conexão engasgar), guardada só na memória do servidor e repassada. Quem chega pede `getUserActivity`. | `client/documents/user.mjs:207-226`, `dist/components/activity.mjs`, `client/canvas/board.mjs:1514-1520` | `POST /api/mesa/atividade`, nunca gravada, só para quem está na mesma cena. O teste confere que não vai para o arquivo. |
+| Ping: Shift traz todos ("pull"); Alt é alerta. | `client/canvas/board.mjs:1868-1889` | Shift do mestre traz todos. Segurar o clique faz ping. |
+| Névoa: exploração por usuário, com `shareFog`, `syncFog` e `resetFog`. | `client/canvas/perception/fog.mjs:329-330, 798, 886` | O mestre pinta a névoa (traços em ordem). O servidor usa os mesmos traços para decidir quais tokens cada jogador recebe. |
+| Pausa só do mestre: o servidor confere `isGM`. | `client/game.mjs:1747`, `dist/components/activity.mjs` | Cada operação diz se é só do mestre, e o servidor confere de novo a cada pedido. |
+| Grade: 2 m por quadrado (o sistema da mesa) e diagonal valendo 1 quadrado (padrão "equidistante"; o sistema não troca). | `client/game.mjs:1621-1640`, `system.json` do `cpr-fieldbook` e do CORE | Régua e movimento contam assim. |
+| Socket só por websocket (socket.io). | `client/game.mjs:479` | Server-Sent Events e `fetch`, sem pacote novo, como o resto da wiki. |
+
+**O que é observação, o que é inferência e o que fica de fora:**
+
+- **Observado no código:**
+  - o fluxo pedido → servidor → resposta a quem pediu → o mesmo pacote aos outros;
+  - a atividade volátil e fora do banco;
+  - os eventos de névoa e de pausa;
+  - o padrão da diagonal.
+- **Inferido:** que o jogador recebe os dados dos tokens escondidos e o navegador só não desenha. O servidor repassa o mesmo pacote a todos, e nos testes do Painel Tático o token escondido aparecia com `visible === true` no jogador até o primeiro redesenho. Não rodei o Foundry para capturar o tráfego.
+- **Fora da análise:**
+  - a checagem de permissão dentro do `modifyDocument` do servidor (`server-document.mjs`) não foi seguida passo a passo;
+  - o código da visão, das paredes e da luz não foi analisado. A visão da mesa usa os números que o Foundry 12 grava em cada parede (`door`, `ds`, `sight`, `move`, conferidos nas 13 cenas do backup) e o comportamento que conheço do Foundry (a parede "limitada" só bloqueia a segunda): é inferência, não evidência do REA.
+- **Nada foi copiado do Foundry:** a mesa da wiki é código novo, escrito para a wiki. A análise serviu para entender o desenho.
+
+## O que é diferente de propósito
+
+- **O servidor filtra para cada pessoa.**
+  - O jogador nem recebe estas coisas: token escondido, token debaixo da névoa ou atrás da parede (o dele, sim), HP de NPC (só o estado de ferimento), nota do mestre, perícias e armas do NPC, a lista de cenas, as fichas de NPC, a porta secreta (para ele, é parede), o total do ataque antes de defender, o sussurro para outro e a rolagem "só para o mestre" de outro jogador.
+  - É o mesmo princípio do Publicar.
+  - Se o mestre esconde um token ou cobre a névoa, o jogador recebe `token.sumir`.
+  - Se um jogador é desconectado pela wiki ou sai da campanha, a mesa dele fecha em até 20 segundos.
+- **O servidor rola.** A conta usa a ficha do servidor.
+- **As regras do RED e os dados da wiki:**
+  - as perícias e a DV por alcance vêm do `system-rules.js`;
+  - as fichas de NPC vêm do `mestre-npcs.js`, que só o servidor lê;
+  - os personagens são os da campanha, com o retrato, o HP e a ficha do Foundry quando ela existe.
+- **Sem pacote novo:** Server-Sent Events em vez de socket.io, como o resto da wiki (Node puro).
+
+## O HP do personagem e a ficha
+
+- **Onde fica:** o HP que muda na mesa vai para a ficha do personagem (`doc.jogo`), pela mesma fila de gravação da wiki.
+- **Quem mostra:** a ficha, a lista de Personagens e a mesa mostram o mesmo número.
+- **A regra** fica num arquivo só, `personagem-jogo.js`, usado pelos três:
+  - o máximo é o da ficha (a do Foundry, se ele já mandou; senão, a da criação);
+  - o atual é o mais recente entre a mesa da wiki e o Foundry.
+- **Até a virada:** o Foundry continua mandando a ficha. Se o HP mudar lá, a mesa pega em até 4 segundos. O HP mexido na mesa não volta para o Foundry: ele vai ser desligado.
+- **Máximo:** o do personagem não muda pela mesa. Ele é o da ficha (BODY e WILL).
+
+## O que esta versão ainda não tem
+
+Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
+
+- **Áudio**, **notas no mapa**, **NET** (o NET Architect) e o resto da ficha de jogo (Humanidade, dinheiro, itens).
+- **Luz e escuridão:** a visão para nas paredes, mas a cena fica toda iluminada (sem alcance de visão nem luzes).
+- **Imagem do mapa:** o mapa inteiro vai para os jogadores, e a névoa e a sombra da visão só cobrem na tela, como no Foundry.
+
+## Arquivos fora desta pasta (mudados para o HP na ficha)
+
+Não muda nada para quem não usa a mesa: sem `doc.jogo`, tudo funciona como antes. A suíte do projeto passa (`node tests/validar.js`: 171 verificações e as regressões; `node tests/rodar.js criador cyberware`: 65/65 e 16/16).
+
+- **`personagem-jogo.js` (novo):** a regra do HP, compartilhada pela wiki, pela API e pela mesa.
+- **`api-personagens.js`:**
+  - `jogo` entra nos campos do servidor (o jogador não grava, e salvar a ficha não apaga);
+  - o HP da lista sai do `personagem-jogo.js`;
+  - `updateCharacter` exportado, para a mesa gravar pela fila.
+- **`criador.js`:** a ficha mostra o HP atual (`sheetModel`) e "atual/máximo" quando a mesa mudou.
+- **`index.html`, `jogadores.html`, `server.js` (`playerFiles`), `sw.js` (o cache passou para `v14`):** carregam o `personagem-jogo.js`.
+
+## Para pôr na wiki
+
+O M4 do roadmap. Quando você aprovar o teste:
+
+1. **`server.js`:**
+   - criar a mesa com `require('./Tabletop/mesa-api')({ dataDir, charactersDir: path.join(charactersDataDir, 'personagens'), wikiDir: root, who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter, send, writeJsonAtomic })`;
+   - ligar a rota `ROUTES` antes da `characterApiRoutes`;
+   - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
+   - não carregar o `mesa-config.js`: ele só existe no teste.
+2. **Barra lateral:** o quadro **Mesa** ganha **Mesa da wiki**, com quantos estão nela (`mesa.connected(campanha)`).
+3. **`sw.js`:** já não guarda nada de `/api/mesa/`. O `/api/mesa/eventos` é uma conexão aberta e passa direto.
+4. **`api-personagens.js`:** exportar `idFor` e `realId`. A mesa usa a mesma conta do id público, que hoje está repetida em `mesa-api.js`.
+5. **Testes:** levar o `mesa.test.js` para `tests/isolados/` e ligar no `tests/validar.js`.
+6. **Servidor:**
+   - os dados ficam em `/srv/fieldbook/dados/mesa/` (215 MB só com as 13 cenas). Confira se o `backup.sh` leva essa pasta e se cabe no disco;
+   - o Caddy repassa Server-Sent Events sem configuração nova;
+   - as cenas entram com o `importar-foundry.js --dados /srv/foundry14/data/Data --mundo protocolo --mesa https://wiki.SEUDOMINIO --senha …`, rodado no servidor (ele usa o classic-level do Foundry de lá).
+
+## Arquivos
+
+| Arquivo | Para que serve |
+|---|---|
+| `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e o HP dos personagens. |
+| `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha) e as regras puras do RED (DV, armadura, autofogo, Death Save). |
+| `mesa-visao.js` | A conta da visão (quem vê o quê, a porta, o passo, o polígono da sombra). Vai para o servidor e para o navegador. |
+| `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
+| `importar-foundry.js` | Traz as cenas de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
+| `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 29 testes, com dados rolados de propósito. |
+| `ROADMAP.md` | O caminho até substituir o Foundry. |

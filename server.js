@@ -51,7 +51,7 @@ const contentTypes = {
 const playerFiles = new Set([
   '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
-  '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
+  '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
   '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   // A wiki instalada no celular: o manifesto, o service worker (sw.js) e os ícones.
   '/manifest.webmanifest', '/sw.js', '/icones/icone.svg', '/icones/icone-192.png', '/icones/icone-512.png'

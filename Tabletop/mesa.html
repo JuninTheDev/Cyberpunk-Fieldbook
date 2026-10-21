@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Mesa · Night City Fieldbook</title>
+  <link rel="icon" href="/icones/icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/mesa.css">
+</head>
+<body>
+  <header class="topo">
+    <a class="marca" href="/" title="Voltar para a wiki"><span>NIGHT CITY</span> <b>FIELDBOOK</b></a>
+    <span class="topo-sep" aria-hidden="true">//</span>
+    <span class="topo-titulo">Mesa</span>
+    <select id="campanha" class="topo-campo" aria-label="Campanha" hidden></select>
+    <span id="campanha-nome" class="campanha-chip"></span>
+    <div class="topo-cena">
+      <select id="cena-ver" class="topo-campo" aria-label="Cena que você está vendo" hidden></select>
+      <button id="cena-ativar" class="botao vazado pequeno" type="button" hidden>Levar todos para esta cena</button>
+      <span id="cena-nome" class="cena-nome"></span>
+    </div>
+    <div class="topo-direita">
+      <div id="presenca" class="presenca" aria-label="Quem está na mesa"></div>
+      <span id="ligacao" class="ligacao" title="Conexão com a mesa">conectando…</span>
+      <button id="conta" class="botao vazado pequeno" type="button" hidden></button>
+      <button id="painel-abrir" class="botao vazado pequeno so-celular" type="button" aria-controls="painel" aria-expanded="false">Painel</button>
+    </div>
+  </header>
+
+  <main class="mesa">
+    <div class="palco" id="palco">
+      <canvas id="tela" aria-label="Mapa da cena"></canvas>
+      <nav class="ferramentas" id="ferramentas" aria-label="Ferramentas">
+        <button type="button" data-ferramenta="mover" class="ativa" title="Selecionar e mover (V)"><span aria-hidden="true">✥</span><em>Mover</em></button>
+        <button type="button" data-ferramenta="regua" title="Régua: distância e DV por alcance (R)"><span aria-hidden="true">⟷</span><em>Régua</em></button>
+        <button type="button" data-ferramenta="ping" title="Ping: chama atenção para um ponto (P). Segurar o clique também faz ping."><span aria-hidden="true">◎</span><em>Ping</em></button>
+        <button type="button" data-ferramenta="nevoa" class="so-mestre" title="Névoa: pinte para revelar; com Alt, cobre (N)"><span aria-hidden="true">▒</span><em>Névoa</em></button>
+        <button type="button" data-ferramenta="paredes" class="so-mestre" title="Paredes e portas: arraste para desenhar (W)"><span aria-hidden="true">▥</span><em>Paredes</em></button>
+        <button type="button" data-ferramenta="tiles" class="so-mestre" title="Tiles: pôr, mover, mudar o tamanho, girar e esconder (T)"><span aria-hidden="true">▣</span><em>Tiles</em></button>
+        <button type="button" data-acao="centralizar" title="Mostrar a cena inteira (0)"><span aria-hidden="true">⤢</span><em>Cena</em></button>
+        <button type="button" data-acao="meu-token" class="so-jogador" title="Ir até o seu token (C)"><span aria-hidden="true">⌖</span><em>Eu</em></button>
+      </nav>
+      <div id="nevoa-opcoes" class="nevoa-opcoes" hidden>
+        <div class="segmentado" role="radiogroup" aria-label="Pincel da névoa">
+          <button type="button" data-modo="revelar" class="ativo">Revelar</button>
+          <button type="button" data-modo="cobrir">Cobrir</button>
+        </div>
+        <label>Pincel <input id="nevoa-raio" type="range" min="1" max="8" value="3"> <output id="nevoa-raio-valor">3 quadrados</output></label>
+      </div>
+      <div id="paredes-opcoes" class="nevoa-opcoes paredes-opcoes" hidden>
+        <div class="segmentado" role="radiogroup" aria-label="O que desenhar">
+          <button type="button" data-tipo="parede" class="ativo" title="Bloqueia a vista e o passo">Parede</button>
+          <button type="button" data-tipo="porta" title="Os jogadores abrem e fecham">Porta</button>
+          <button type="button" data-tipo="secreta" title="Para os jogadores, é parede: só o mestre abre">Secreta</button>
+          <button type="button" data-tipo="janela" title="Deixa ver, não deixa passar">Janela</button>
+        </div>
+        <div id="paredes-escolhida" class="paredes-escolhida" hidden></div>
+      </div>
+      <div id="tiles-opcoes" class="nevoa-opcoes tiles-opcoes" hidden>
+        <label class="botao vazado pequeno arquivo">Pôr um tile (imagem ou vídeo) <input id="tile-novo" type="file" accept="image/png,image/jpeg,image/webp,video/webm,video/mp4"></label>
+        <div id="tile-escolhido" class="tile-escolhido" hidden></div>
+      </div>
+      <div id="vez" class="vez" hidden></div>
+      <section id="cartao" class="cartao" hidden aria-live="polite"></section>
+      <div id="vazio" class="vazio" hidden></div>
+      <div id="dica" class="dica"></div>
+    </div>
+
+    <aside class="painel" id="painel">
+      <div class="abas" role="tablist">
+        <button type="button" role="tab" data-aba="rolagens" class="ativa">Rolagens</button>
+        <button type="button" role="tab" data-aba="combate">Combate <span id="combate-selo" class="selo" hidden></span></button>
+        <button type="button" role="tab" data-aba="fichas"><span class="so-mestre">Fichas</span><span class="so-jogador">Personagem</span></button>
+        <button type="button" role="tab" data-aba="cena" class="so-mestre">Cena</button>
+      </div>
+
+      <section class="aba ativa" data-aba="rolagens">
+        <form id="rolar" class="rolar" autocomplete="off">
+          <div class="campo-linha">
+            <label class="campo">Quem rola <select id="rolar-quem"></select></label>
+          </div>
+          <div class="campo-linha">
+            <label class="campo cresce">Perícia <select id="rolar-pericia"></select></label>
+            <label class="campo">STAT <select id="rolar-stat"></select></label>
+            <label class="campo mod">Mod <input id="rolar-mod" type="number" min="-30" max="30" step="1" value="0" inputmode="numeric"></label>
+          </div>
+          <div class="campo-linha acoes">
+            <button class="botao" type="submit">Rolar teste</button>
+            <label class="marcar"><input id="rolar-secreta" type="checkbox"> <span class="so-mestre">Secreta</span><span class="so-jogador">Só para o mestre</span></label>
+          </div>
+          <div class="dados-rapidos" role="group" aria-label="Dados">
+            <button type="button" data-dados="1d10">1d10</button>
+            <button type="button" data-dados="2d6">2d6</button>
+            <button type="button" data-dados="3d6">3d6</button>
+            <button type="button" data-dados="4d6">4d6</button>
+            <button type="button" data-dados="5d6">5d6</button>
+            <button type="button" data-dados="6d6">6d6</button>
+            <input id="dados-livre" type="text" placeholder="2d10+3" aria-label="Outros dados" maxlength="12">
+            <button type="button" id="dados-livre-rolar">Rolar</button>
+          </div>
+          <div class="campo-linha lesao">
+            <span>Lesão crítica</span>
+            <button type="button" class="botao vazado pequeno" data-lesao="corpo">Corpo</button>
+            <button type="button" class="botao vazado pequeno" data-lesao="cabeca">Cabeça</button>
+          </div>
+        </form>
+        <div id="defesas-mestre" class="defesas-mestre so-mestre" hidden></div>
+        <div class="registro-topo"><span>Registro</span><button id="registro-limpar" class="link so-mestre" type="button">Limpar</button></div>
+        <ol id="registro" class="registro" aria-live="polite"></ol>
+        <form id="chat" class="chat" autocomplete="off">
+          <select id="chat-para" aria-label="Para quem"></select>
+          <input id="chat-texto" type="text" maxlength="1000" placeholder="Mensagem (ou /r 2d6)" aria-label="Mensagem">
+          <button class="botao pequeno" type="submit">Enviar</button>
+        </form>
+      </section>
+
+      <section class="aba" data-aba="combate">
+        <div id="combate"></div>
+      </section>
+
+      <section class="aba" data-aba="fichas">
+        <div id="fichas"></div>
+      </section>
+
+      <section class="aba so-mestre" data-aba="cena">
+        <div id="cena-painel"></div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="entrar" class="sobreposto" hidden>
+    <form class="caixa" id="entrar-form">
+      <h2>Entrar na mesa</h2>
+      <p>Use o código que o mestre passou.</p>
+      <input id="entrar-codigo" type="text" placeholder="NC-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+      <button class="botao" type="submit">Entrar</button>
+      <p id="entrar-erro" class="erro" hidden></p>
+      <div id="entrar-teste" class="entrar-teste" hidden></div>
+    </form>
+  </div>
+
+  <div id="defesa" class="sobreposto defesa-fundo" hidden>
+    <div class="caixa defesa" id="defesa-caixa" role="alertdialog" aria-live="assertive"></div>
+  </div>
+
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+
+  <script src="/system-rules.js"></script>
+  <script src="/mesa-config.js"></script>
+  <script src="/mesa-visao.js"></script>
+  <script src="/mesa.js"></script>
+</body>
+</html>

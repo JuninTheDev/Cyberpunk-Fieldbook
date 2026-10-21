@@ -991,7 +991,14 @@
   // Ataque: arma de distância com REF, corpo a corpo com DEX (+ o nível da perícia da arma).
   const attackStat = ranged => ranged ? 'REF' : 'DEX';
 
+  // O HP de agora, nas duas fichas: o atual mais recente entre o Foundry e a mesa da wiki (personagem-jogo.js).
   function sheetModel(doc) {
+    const model = sheetModelBase(doc);
+    const hp = window.characterGame ? window.characterGame.hp(doc) : null;
+    if (hp) Object.assign(model, { hp, gravemente: Math.ceil(hp.max / 2) });
+    return model;
+  }
+  function sheetModelBase(doc) {
     if (doc.mesa && doc.foundry) return tableModel(doc);
     const stats = computeStats(doc);
     const derived = C.derived(stats);
@@ -1418,7 +1425,7 @@
     // Vitais, na coluna do lado, como no exemplo da Ficha: a barra do HP (vermelha) e um valor por linha.
     const hpPct = model.hp.max ? Math.max(0, Math.min(100, Math.round(model.hp.atual / model.hp.max * 100))) : 0;
     const vitals = `<div class="section cc-box cc-vitals-box" data-toc="Vitais"><h3>Vitais</h3><div class="cc-hpbar" aria-hidden="true"><span style="width:${hpPct}%"></span></div><div class="cc-vitals">
-        ${vital('HP', mesa ? `${model.hp.atual}/${model.hp.max}` : model.hp.max, '', hurt)}
+        ${vital('HP', mesa || (doc.jogo && doc.jogo.hp) ? `${model.hp.atual}/${model.hp.max}` : model.hp.max, '', hurt)}
         ${vital('Humanidade', `${model.humanidade.atual}/${model.humanidade.max}`)}
         ${vital('SP cabeça', model.sp.cabeca)}${vital('SP corpo', model.sp.corpo)}
         ${vital('Sorte', mesa ? `${model.sorte.atual}/${model.sorte.max}` : model.sorte.max)}
