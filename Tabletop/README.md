@@ -12,6 +12,12 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
    - Na primeira vez, ele cria os dados de teste em `%LOCALAPPDATA%\FieldbookTeste\mesa-wiki`, fora do OneDrive. Quando o formato dos dados de teste muda, ele apaga os antigos e cria de novo.
    - São dois jogadores de mentira (Ana e Bruno), cada um com um personagem (Jax "Ferrugem", Solo; Iris "Nyx", Netrunner), com as armas e a armadura do catálogo da loja.
    - Para as armas de 2077: o Jax tem a Lexington (Power, com o Ricochete) e uma espingarda com cartucho; a Nyx tem a Chao (Smart, com a munição melhorada e o Neuroport) e a Kenshin (Tech, para carregar).
+   - Para a ficha de jogo, o Jax tem:
+     - 1.250eb e Humanidade 36/40 (EMP 3);
+     - um armorjack médio guardado, para trocar;
+     - balote para a espingarda;
+     - caixas de munição com bala de verdade.
+   - A ficha da wiki mostra os mesmos itens que a mesa.
    - São duas cenas: o beco e o diner do Frag Maps, que já estão no Foundry deste computador. O diner tem névoa.
    - No beco ficam dois Guarda-costas e um Netrunner escondido.
    - Com o backup do Foundry neste computador, as 13 cenas dele entram sozinhas (as com paredes já vêm com a visão ligada).
@@ -23,12 +29,18 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
    - `--listar` só mostra as cenas; `--cenas "A; B"` escolhe algumas; `--substituir` troca as já importadas.
 3. **Mestre:** neste computador, a wiki fica em `http://localhost:8010` e a mesa em `http://localhost:8010/mesa`.
 4. **Jogador:** abra `http://localhost:8010/mesa` numa **janela anônima** (Ctrl+Shift+N) e clique num dos jogadores de teste. Só no teste, o botão **Testar como jogador** faz o mesmo.
-5. **O HP na ficha:** mexa no HP do Jax na mesa e abra a ficha dele na wiki (Personagens). Ela mostra o mesmo número, e o caminho contrário também vale.
+5. **A ficha da wiki:** mexa no Jax na mesa e abra a ficha dele na wiki (Personagens). Ela mostra o mesmo de lá, em até 30 segundos:
+   - o HP;
+   - o dinheiro que você deu;
+   - a armadura que ele vestiu;
+   - a munição no pente.
+
+   O HP mexido na ficha também volta para a mesa.
 6. **Celular na rede de casa:** `$env:HOST='0.0.0.0'; node Tabletop/testar.js`. O terminal mostra o endereço.
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (45 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (53 testes).
 
 ## O que dá para fazer
 
@@ -50,6 +62,11 @@ Teste automático (não abre navegador): `node --test Tabletop/` (45 testes).
   - Clique para escolher e arraste para mover; o quadrado amarelo no canto muda o tamanho. A grade encaixa; Shift solta.
   - Na barra: transparência, girar, esconder dos jogadores, para a frente ou para trás, e apagar (Delete).
 - **Margem** (aba Cena, em quadrados): a faixa em volta do mapa onde o token pode esperar, fora dele. A das cenas do Foundry vem junto.
+- **Ficha de jogo** (aba Fichas → **Ficha**, em cada personagem):
+  - **Os números:** a Humanidade (com o EMP), o dinheiro, os Pontos de Melhoria e a reputação.
+  - **Mudar:** escolha o número, ponha quanto soma ou tira e o motivo ("pagamento do fixer", "terapia"). Vai para o extrato da ficha e para o registro, que só você e o dono do personagem veem.
+  - **Limites:** o dinheiro não fica negativo; a reputação vai de 0 a 10; a Humanidade não passa da máxima.
+  - **O inventário:** o uso de cada item (equipado, carregando, guardado) e a quantidade da munição e do equipamento (a granada que foi, a caixa que o grupo achou).
 - **Tokens** (aba Fichas): ponha os personagens da campanha e as fichas de NPC da wiki (o livro, o Mission Kit, o Black Chrome e o elenco do Protocolo Morana).
   - O NPC entra escondido, se você quiser.
   - Também há o token livre: um drone, um carro, uma porta.
@@ -73,6 +90,12 @@ Teste automático (não abre navegador): `node --test Tabletop/` (45 testes).
 - **Ao arrastar:** a distância aparece contra o MOVE (anda MOVE × 2 m, corre o dobro), em verde, amarelo ou vermelho.
 - **Régua** (R): quadrados, metros e a DV por alcance de pistola, SMG, espingarda, rifle de assalto e sniper (a tabela da wiki).
 - **Aba Personagem:** os STATs e as perícias da ficha. Tocar numa perícia rola STAT + perícia + 1d10.
+  - **Os números:** a Humanidade (com o EMP), o dinheiro, o IP e a reputação; só o mestre muda.
+  - **O inventário:** cada item equipado, carregando ou guardado.
+    - A armadura vestida dá o SP, e a pesada tira de REF, DEX e MOVE (já nos números).
+    - Vestir outra no mesmo local tira a que estava, e cada uma guarda a própria ablação.
+    - A arma guardada (em casa, no carro) não aparece no ataque.
+- **Recarregar** (cartão do token): a munição sai da caixa da ficha. Com mais de uma que serve, escolha qual: o balote tira o cartucho da espingarda, e o que estava no pente volta para a caixa. Sem munição, não recarrega.
 - **Só para o mestre:** a rolagem fica só entre o jogador e o mestre.
 - **Visão:** com a visão ligada, vê o que o token dele vê; o que já viu fica na penumbra. No escuro, vê o alcance do token e o que está iluminado; **Acender a lanterna** (cartão do token) ilumina em volta dele, para todos. Clique na porta abre e fecha. Parede e porta fechada param o token (a linha do arrasto fica vermelha).
 - **Atacar** (cartão do token): a arma da ficha, o modo (tiro, mirado, ricochete, autofogo, supressivo, cartucho, corpo a corpo, explosivo), o alvo (na lista ou no mapa), o local e a Sorte. A prévia mostra a DV pelo alcance e os ajustes da arma.
@@ -149,36 +172,52 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
   - os personagens são os da campanha, com o retrato, o HP e a ficha do Foundry quando ela existe.
 - **Sem pacote novo:** Server-Sent Events em vez de socket.io, como o resto da wiki (Node puro).
 
-## O HP do personagem e a ficha
+## A ficha de jogo e a ficha da wiki
 
-- **Onde fica:** o HP que muda na mesa vai para a ficha do personagem (`doc.jogo`), pela mesma fila de gravação da wiki.
-- **Quem mostra:** a ficha, a lista de Personagens e a mesa mostram o mesmo número.
+- **Onde fica:** o que muda na mesa vai para a ficha do personagem (`doc.jogo`), pela mesma fila de gravação da wiki:
+  - o HP, o SP com a ablação, a Sorte, as lesões, o Death Save;
+  - a Humanidade, o dinheiro, o IP e a reputação, com o extrato do mestre;
+  - o pente e a munição de cada arma, e o uso e a quantidade de cada item.
+- **Quem mostra:** a mesa, a ficha da wiki (com "Na mesa da wiki" em cima) e a lista de Personagens mostram o mesmo número.
+  - A mesa muda na hora para o dono e para o mestre.
+  - A ficha da wiki aberta confere a cada 30 segundos.
 - **A regra** fica num arquivo só, `personagem-jogo.js`, usado pelos três:
-  - o máximo é o da ficha (a do Foundry, se ele já mandou; senão, a da criação);
-  - o atual é o mais recente entre a mesa da wiki e o Foundry.
-- **Até a virada:** o Foundry continua mandando a ficha. Se o HP mudar lá, a mesa pega em até 4 segundos. O HP mexido na mesa não volta para o Foundry: ele vai ser desligado.
-- **Máximo:** o do personagem não muda pela mesa. Ele é o da ficha (BODY e WILL).
+  - os máximos são os da ficha (a do Foundry, se ele já mandou; senão, a da criação);
+  - o que vale é o mais recente entre a mesa da wiki e o Foundry.
+  - **Atenção:** quando o Foundry manda a ficha depois, vale a dele inteira, e o que a mesa mudou antes deixa de valer.
+- **O EMP de agora** é a Humanidade ÷ 10, para baixo (como o CORE do Foundry). O teste de EMP cai junto.
+- **A penalidade da armadura pesada** sai dos STATs da ficha da criação, na mesa e na wiki. A ficha do Foundry já vem com os STATs dele.
+- **Até a virada:** o Foundry continua mandando a ficha. Se mudar lá, a mesa pega em até 4 segundos. O que mudou na mesa não volta para o Foundry: ele vai ser desligado.
+- **Máximo:** o HP máximo do personagem não muda pela mesa. Ele é o da ficha (BODY e WILL).
 
 ## O que esta versão ainda não tem
 
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
-- **Áudio**, **notas no mapa**, **NET** (o NET Architect) e o resto da ficha de jogo (Humanidade, dinheiro, itens).
+- **Áudio**, **notas no mapa** e **NET** (o NET Architect).
+- **Loja e cyberware:** a compra aprovada (M15) e a instalação de cyberware com a perda de Humanidade (M16) ainda passam pelo Foundry. Na mesa, o mestre ajusta a Humanidade e as quantidades à mão.
 - **Artes Marciais:** os movimentos especiais esperam o agarrar e a conta de quem acertou o quê no turno. O golpe de artes marciais já ignora metade do SP.
 - **Cobertura:** a mesa não conta o HP da cobertura. O que atravessa cobertura (a carga Tech, o ricochete) aparece como nota no cartão, e o mestre decide.
 - **Luz em cone e modos de visão:** a luz em cone vira círculo, e não há visão no escuro do cyberware (o mestre aumenta o alcance no cartão).
 - **Imagem do mapa:** o mapa inteiro vai para os jogadores, e a névoa e a sombra da visão só cobrem na tela, como no Foundry.
 
-## Arquivos fora desta pasta (mudados para o HP na ficha)
+## Arquivos fora desta pasta (mudados para a ficha de jogo)
 
-Não muda nada para quem não usa a mesa: sem `doc.jogo`, tudo funciona como antes. A suíte do projeto passa (`node tests/validar.js`: 171 verificações e as regressões; `node tests/rodar.js criador cyberware`: 65/65 e 16/16).
+Não muda nada para quem não usa a mesa: sem `doc.jogo`, tudo funciona como antes. A suíte do projeto passa:
+- `node tests/validar.js`: 181 verificações e as regressões;
+- `node tests/rodar.js criador cyberware foundry contas`: 65/65, 16/16, 29/29 e 36/36.
 
-- **`personagem-jogo.js` (novo):** a regra do HP, compartilhada pela wiki, pela API e pela mesa. Guarda também, por arma, a carga Tech, o ferrolho e a coronha; gravar um deles não apaga o pente.
+- **`personagem-jogo.js` (novo):** a regra da ficha de jogo, compartilhada pela wiki, pela API e pela mesa:
+  - o HP, o SP, a Sorte, a Humanidade (e o EMP), o dinheiro, o IP e a reputação;
+  - o inventário com o uso e a quantidade, e a armadura vestida com a penalidade;
+  - por arma: o pente, a munição carregada, a carga Tech, o ferrolho e a coronha. Gravar um deles não apaga os outros;
+  - as contas da mesa: vestir ou guardar (`comUso`), recarregar com a munição da caixa (`recarga`) e o ajuste do mestre com o extrato (`ajuste`).
 - **`api-personagens.js`:**
   - `jogo` entra nos campos do servidor (o jogador não grava, e salvar a ficha não apaga);
-  - o HP da lista sai do `personagem-jogo.js`;
+  - o HP, o IP e o dinheiro da lista saem do `personagem-jogo.js`;
+  - o IP dado pela wiki soma no da mesa, quando ela já conta;
   - `updateCharacter` exportado, para a mesa gravar pela fila.
-- **`criador.js`:** a ficha mostra o HP atual (`sheetModel`) e "atual/máximo" quando a mesa mudou.
+- **`criador.js`:** a ficha mostra o que a mesa da wiki mudou (`sheetModel`, com a linha "Na mesa da wiki" e as mudanças do mestre) e confere a cada 30 segundos, com ou sem Foundry.
 - **`index.html`, `jogadores.html`, `server.js` (`playerFiles`), `sw.js` (o cache passou para `v14`):** carregam o `personagem-jogo.js`.
 
 ## Para pôr na wiki
@@ -204,12 +243,12 @@ O M4 do roadmap. Quando você aprovar o teste:
 
 | Arquivo | Para que serve |
 |---|---|
-| `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e o HP dos personagens. |
+| `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e a ficha de jogo dos personagens (o HP, o ajuste do mestre, o uso dos itens, as fichas ao vivo). |
 | `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha) e as regras puras do RED e do Mission Kit (DV, armadura, autofogo, cartucho, Death Save, Power, Smart, Tech). |
 | `mesa-2077.js` | O perfil de 2077 de cada arma (do `system-2077.js`, como o build do Foundry) e o que a ficha diz dela e do cromo: o Rebuild, a munição carregada, a qualidade, a conexão Smart. |
 | `mesa-visao.js` | A conta da visão e da luz (quem vê o quê, a porta, o passo, o que a luz alcança, o polígono da sombra), com o índice das paredes. Vai para o servidor e para o navegador. |
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 45 testes, com dados rolados de propósito. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 53 testes, com dados rolados de propósito. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

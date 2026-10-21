@@ -174,8 +174,14 @@ test('autofogo: 10 balas, dano 2d6 × quanto passou (até ×3), e recarregar', a
   const sem = await a.m.op('ataque', { atacante: a.jax, arma: 'u2', modo: 'autofogo', alvo: a.capanga }, a.ana.cookie);
   assert.equal(sem.status, 400, 'sem 10 balas no pente, não dá');
   assert.equal((await a.m.op('ataque', { atacante: a.jax, arma: 'u1', modo: 'autofogo', alvo: a.capanga }, a.ana.cookie)).status, 200, 'a pistola não faz autofogo: vira tiro');
-  assert.equal((await a.m.op('arma.recarregar', { token: a.jax, arma: 'u2' }, a.ana.cookie)).status, 200);
-  assert.equal((await a.token(a.jax, a.ana.cookie)).armas.find(arma => arma.id === 'u2').pente.atual, 30);
+  // A caixa tinha 50: 30 foram para o pente na montagem, e a recarga põe as 20 que sobraram.
+  const recarga = await a.m.op('arma.recarregar', { token: a.jax, arma: 'u2' }, a.ana.cookie);
+  assert.equal(recarga.status, 200, recarga.text);
+  assert.deepEqual(recarga.json.resultado, { arma: 'SMG', municao: 'Munição de pistola média', entrou: 20, sobra: 0 });
+  assert.equal((await a.token(a.jax, a.ana.cookie)).armas.find(arma => arma.id === 'u2').pente.atual, 20);
+  const vazia = await a.m.op('arma.recarregar', { token: a.jax, arma: 'u2' }, a.ana.cookie);
+  assert.equal(vazia.status, 400);
+  assert.match(vazia.json.erro, /Sem munição para SMG/);
   assert.equal((await a.m.op('arma.recarregar', { token: a.nyx, arma: 'u2' }, a.ana.cookie)).status, 403, 'só o dono recarrega');
 });
 

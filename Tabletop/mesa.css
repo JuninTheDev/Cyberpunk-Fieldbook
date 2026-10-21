@@ -235,7 +235,7 @@ label { font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; lett
 .bloco { display: grid; gap: 8px; }
 .bloco + .bloco { padding-top: 12px; border-top: 1px solid var(--l); }
 .busca { width: 100%; }
-.lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
 .lista li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; background: var(--w); }
 .lista .avatar { width: 34px; height: 34px; font-size: 12px; flex: none; }
 .lista .info { flex: 1; min-width: 0; }
@@ -257,6 +257,29 @@ label { font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; lett
 .pericias button:hover { border-color: var(--c); }
 .pericias button b { color: var(--c); font: 700 14px var(--ui); }
 .pericias button small { color: var(--mu); font: 11px var(--lbl); margin-left: 6px; }
+/* A ficha de jogo: os números do mestre, o ajuste, o inventário com o uso de cada item e o extrato. */
+.ficha-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 4px; }
+.ficha-numeros div { background: var(--w); padding: 5px 8px; display: grid; }
+.ficha-numeros b { font: 700 16px var(--ui); }
+.ficha-numeros small { font: 10px var(--lbl); color: var(--mu); text-transform: uppercase; letter-spacing: .06em; }
+.nota.alerta { color: #ff8a3d; }
+.lista li.ficha-aberta { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px; background: var(--p); box-shadow: inset 3px 0 0 var(--y); }
+.ajuste { display: grid; gap: 6px; padding: 8px; border: 1px dashed var(--l); min-width: 0; }
+.ajuste .campo.mod { width: 72px; }
+.inventario { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; }
+.inventario li { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: var(--w); }
+.inventario li.uso-guardado { opacity: .55; }
+.inventario li.uso-equipado { box-shadow: inset 3px 0 0 var(--g); }
+.inventario .info { flex: 1; min-width: 0; }
+.inventario .info b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inventario .info small { display: block; font: 11px var(--lbl); color: var(--mu); }
+.inventario select { flex: none; width: 108px; padding: 4px; }
+.inventario .qtd { flex: none; font: 12px var(--lbl); color: var(--mu); }
+.inventario input.qtd { width: 64px; padding: 4px; text-align: center; color: var(--tx); }
+.extrato summary { cursor: pointer; font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; letter-spacing: .06em; }
+.extrato ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; font-size: 12px; }
+.extrato small { color: var(--mu); font: 10px var(--lbl); }
+.cartao .armas select.municao { padding: 2px 4px; font-size: 12px; max-width: 100%; }
 
 /* Entrar e avisos */
 .sobreposto { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(5, 7, 8, .88); padding: 16px; }

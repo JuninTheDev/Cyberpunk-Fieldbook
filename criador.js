@@ -994,9 +994,45 @@
   // O HP de agora, nas duas fichas: o atual mais recente entre o Foundry e a mesa da wiki (personagem-jogo.js).
   function sheetModel(doc) {
     const model = sheetModelBase(doc);
-    const hp = window.characterGame ? window.characterGame.hp(doc) : null;
+    const game = window.characterGame;
+    const hp = game ? game.hp(doc) : null;
     if (hp) Object.assign(model, { hp, gravemente: Math.ceil(hp.max / 2) });
+    const jogo = game && game.jogoValido(doc);
+    if (jogo) withTableGame(doc, model, jogo);
     return model;
+  }
+  // O que a mesa da wiki mudou depois da última ficha do Foundry (doc.jogo): a Humanidade e o EMP, o SP, a Sorte, o
+  // dinheiro, o IP, a reputação, as lesões, o pente de cada arma e o uso e a quantidade de cada item.
+  function withTableGame(doc, model, jogo) {
+    const game = window.characterGame.ficha(doc, { item: id => catalog.get(id) || null, porNome: catalogEntryOf });
+    const byId = new Map(game.itens.map(item => [item.id, item]));
+    // Os testes (STAT + nível) com os STATs de agora: o EMP pela Humanidade e a penalidade da armadura vestida.
+    const created = model.fonte === 'criacao';
+    const before = stat => (Number(model.stats[stat]) || 0) - (created && ['REF', 'DEX'].includes(stat) ? model.penalidade : 0);
+    const delta = stat => (game.stats[stat] ?? before(stat)) - before(stat);
+    for (const skill of model.pericias) skill.base += delta(skill.stat);
+    for (const arma of model.armas) arma.base += delta(arma.stat);
+    if (created) Object.assign(model, { penalidade: game.penalidade, empMostrada: game.stats.EMP ?? model.empMostrada });
+    else model.stats = { ...model.stats, EMP: game.stats.EMP ?? model.stats.EMP };
+    if (game.humanidade) model.humanidade = game.humanidade;
+    Object.assign(model, {
+      sp: { cabeca: game.sp.cabeca.atual, corpo: game.sp.corpo.atual }, spMax: { cabeca: game.sp.cabeca.max, corpo: game.sp.corpo.max },
+      sorte: game.sorte, lesoes: game.lesoes, deathSaveMais: game.deathSave, morto: game.morto, jogo: { quando: jogo.quando, extrato: game.extrato }
+    });
+    for (const field of ['dinheiro', 'ip', 'reputacao']) if (game[field] !== null && game[field] !== undefined) model[field] = game[field];
+    for (const arma of model.armas) {
+      const item = byId.get(arma.id);
+      if (!item) continue;
+      arma.uso = item.uso;
+      if (item.pente) Object.assign(arma, { pente: `${item.pente.atual}/${item.pente.max}`, municao: item.municao || '' });
+    }
+    for (const armadura of model.armaduras) { const item = byId.get(armadura.id); if (item) armadura.uso = item.uso; }
+    for (const other of model.outros) {
+      const item = byId.get(other.id);
+      if (!item) continue;
+      other.qtd = item.qtd;
+      if (other.uso) other.uso = item.uso;
+    }
   }
   function sheetModelBase(doc) {
     if (doc.mesa && doc.foundry) return tableModel(doc);
@@ -1021,14 +1057,14 @@
         const a = row.item.arma;
         const stat = attackStat(a.distancia);
         const loaded = row.municao && row.municao !== '-';
-        return { nome: nameOf(row), qtd: row.qtd, pericia: skillPt(a.pericia), base: (stats[stat] || 0) - penalty(stat) + levelOf(a.pericia), stat, dano: a.dano, cdt: a.cdt, maos: a.maos,
+        return { id: row.uid, nome: nameOf(row), qtd: row.qtd, pericia: skillPt(a.pericia), base: (stats[stat] || 0) - penalty(stat) + levelOf(a.pericia), stat, dano: a.dano, cdt: a.cdt, maos: a.maos,
           pente: a.distancia && a.pente ? `${loaded ? a.pente : 0}/${a.pente}` : '', municao: loaded ? ammoName(row.municao) : '', dentro: inside(row), uso: row.uso };
       }),
-      armaduras: rows.filter(row => row.tipo === 'armadura').map(row => ({ nome: nameOf(row), cabeca: row.item.armadura.cabeca, corpo: row.item.armadura.corpo, escudo: row.item.armadura.escudo, uso: row.uso })),
+      armaduras: rows.filter(row => row.tipo === 'armadura').map(row => ({ id: row.uid, nome: nameOf(row), cabeca: row.item.armadura.cabeca, corpo: row.item.armadura.corpo, escudo: row.item.armadura.escudo, uso: row.uso })),
       pericias: skills.map(skill => ({ label: skill.base ? specialName(skill.base, skill.tipo) : skillLabelOf(doc, skill.nome), grupo: skill.base ? SPECIAL_GROUP[skill.base] : groupOfSkill(skill.nome), stat: skill.stat, nivel: skill.nivel, base: skill.nivel + (stats[skill.stat] || 0) - penalty(skill.stat), origem: skill.gratis })),
       decks: rows.filter(row => row.tipo === 'deck').map(row => ({ nome: nameOf(row), ativo: row.uso === 'equipado', dentro: inside(row) })),
       outros: rows.filter(row => ['item', 'municao', 'roupa'].includes(row.tipo) || (['acessorio', 'deckItem'].includes(row.tipo) && loose(row)))
-        .map(row => ({ nome: nameOf(row), qtd: row.qtd, uso: row.tipo === 'municao' ? '' : row.uso, roupa: row.tipo === 'roupa', origem: row.origem })),
+        .map(row => ({ id: row.uid, nome: nameOf(row), qtd: row.qtd, uso: row.tipo === 'municao' ? '' : row.uso, roupa: row.tipo === 'roupa', origem: row.origem })),
       veiculos: roleView(doc, 'nomad') ? motorpool(roleView(doc, 'nomad')).veiculos.map(entry => ({ nome: entry.veiculo.nome, dentro: entry.upgrades.map(item => item.upgrade.nome) })) : []
     };
   }
@@ -1052,14 +1088,14 @@
       andar: (Number(stats.MOVE) || 0) * 2, correr: (Number(stats.MOVE) || 0) * 4, dinheiro: m.dinheiro || 0, ip: m.ip ?? null, reputacao: m.reputacao ?? null, lesoes: m.lesoes || [], vontade: will,
       armas: items.filter(item => item.tipo === 'weapon').map(item => {
         const stat = attackStat(item.distancia);
-        return { nome: item.nome, qtd: 1, pericia: skillPt(item.pericia), base: (Number(stats[stat]) || 0) + level(item.pericia), stat, dano: item.dano, cdt: item.cdt, maos: item.maos,
+        return { id: `foundry:${item.id}`, nome: item.nome, qtd: 1, pericia: skillPt(item.pericia), base: (Number(stats[stat]) || 0) + level(item.pericia), stat, dano: item.dano, cdt: item.cdt, maos: item.maos,
           pente: item.pente && item.pente.max ? `${item.pente.atual}/${item.pente.max}` : '', municao: item.municao || '', dentro: (item.dentro || []).filter(name => name !== item.municao), uso: uso(item) };
       }),
-      armaduras: items.filter(item => item.tipo === 'armor').map(item => ({ nome: item.nome, cabeca: item.cabeca, corpo: item.corpo, escudo: 0, uso: uso(item) })),
+      armaduras: items.filter(item => item.tipo === 'armor').map(item => ({ id: `foundry:${item.id}`, nome: item.nome, cabeca: item.cabeca, corpo: item.corpo, escudo: 0, uso: uso(item) })),
       pericias: (m.pericias || []).map(skill => ({ label: skillLabelOf(doc, skill.nome), grupo: groupOfSkill(skill.nome), stat: skill.stat, nivel: skill.nivel, base: skill.nivel + (Number(stats[skill.stat]) || 0) })),
       decks: items.filter(item => item.tipo === 'cyberdeck').map(item => ({ nome: item.nome, ativo: item.uso === 'equipped', dentro: item.dentro || [] })),
       outros: items.filter(item => ['gear', 'ammo', 'clothing', 'drug'].includes(item.tipo) || (['program', 'itemUpgrade'].includes(item.tipo) && !deckNames.has(item.nome) && !weaponInside.has(item.nome) && !vehicleInside.has(item.nome)))
-        .map(item => ({ nome: item.nome, qtd: item.qtd, uso: item.tipo === 'ammo' ? '' : uso(item), roupa: item.tipo === 'clothing' })),
+        .map(item => ({ id: `foundry:${item.id}`, nome: item.nome, qtd: item.qtd, uso: item.tipo === 'ammo' ? '' : uso(item), roupa: item.tipo === 'clothing' })),
       veiculos: items.filter(item => item.tipo === 'vehicle').map(item => ({ nome: item.nome, dentro: item.dentro || [] }))
     };
   }
@@ -1418,21 +1454,30 @@
     const statCell = stat => `<div class="cc-stat"><span>${stat}</span><b>${stat === 'EMP' && !mesa && model.empMostrada !== model.stats.EMP ? `${model.empMostrada}<small>/${model.stats.EMP}</small>` : model.stats[stat] || '—'}</b></div>`;
     const hurt = model.hp.atual < model.hp.max;
     const roleEntries = mesa ? R.listaMesa(doc) : R.resultados(doc, C).map(entry => ({ ...entry, habilidades: entry.habilidades.map(item => [item.nome, item.rank]) }));
-    const source = mesa
-      ? `<p class="cc-source cc-ok">Na mesa: a ficha do Foundry${model.quando ? `, atualizada em ${when(model.quando)}` : ''}. Os números agora mudam lá.</p>`
-      : `<p class="cc-source">Ficha da criação.${doc.foundry ? ' O Foundry ainda não mandou a ficha da mesa.' : ' Depois que o mestre importar no Foundry, esta ficha passa a mostrar a mesa.'}</p>`;
+    const source = model.jogo
+      ? `<p class="cc-source cc-ok">Na mesa da wiki${mesa ? ', por cima da ficha do Foundry' : ''}: atualizada em ${when(model.jogo.quando)}. Os números agora mudam lá.</p>`
+      : mesa
+        ? `<p class="cc-source cc-ok">Na mesa: a ficha do Foundry${model.quando ? `, atualizada em ${when(model.quando)}` : ''}. Os números agora mudam lá.</p>`
+        : `<p class="cc-source">Ficha da criação.${doc.foundry ? ' O Foundry ainda não mandou a ficha da mesa.' : ' Quando o personagem entrar na mesa da wiki, esta ficha mostra os números de lá.'}</p>`;
 
+    // O SP com a ablação da mesa da wiki ("7/11"), e as últimas mudanças que o mestre fez lá (dinheiro, IP, Humanidade).
+    const spText = location => (model.spMax && model.sp[location] < model.spMax[location] ? `${model.sp[location]}/${model.spMax[location]}` : model.sp[location]);
+    const FIELD_NAMES = { dinheiro: 'Dinheiro', ip: 'Pontos de Melhoria', reputacao: 'Reputação', humanidade: 'Humanidade' };
+    const logValue = (field, value) => (field === 'dinheiro' ? eb(value) : value);
+    const tableLog = model.jogo && model.jogo.extrato.length
+      ? `<details class="cc-table-log"><summary>Mudanças do mestre na mesa</summary><ul class="cc-items">${model.jogo.extrato.slice().reverse().map(entry => `<li><b>${esc(FIELD_NAMES[entry.campo] || entry.campo)}</b> ${esc(logValue(entry.campo, entry.antes))} → ${esc(logValue(entry.campo, entry.depois))}${entry.motivo ? ` · ${esc(entry.motivo)}` : ''} <small>${esc(when(entry.quando))}</small></li>`).join('')}</ul></details>` : '';
     // Vitais, na coluna do lado, como no exemplo da Ficha: a barra do HP (vermelha) e um valor por linha.
-    const hpPct = model.hp.max ? Math.max(0, Math.min(100, Math.round(model.hp.atual / model.hp.max * 100))) : 0;
+    const hpPct =model.hp.max ? Math.max(0, Math.min(100, Math.round(model.hp.atual / model.hp.max * 100))) : 0;
     const vitals = `<div class="section cc-box cc-vitals-box" data-toc="Vitais"><h3>Vitais</h3><div class="cc-hpbar" aria-hidden="true"><span style="width:${hpPct}%"></span></div><div class="cc-vitals">
-        ${vital('HP', mesa || (doc.jogo && doc.jogo.hp) ? `${model.hp.atual}/${model.hp.max}` : model.hp.max, '', hurt)}
+        ${vital('HP', mesa || model.jogo || (doc.jogo && doc.jogo.hp) ? `${model.hp.atual}/${model.hp.max}` : model.hp.max, '', hurt)}
         ${vital('Humanidade', `${model.humanidade.atual}/${model.humanidade.max}`)}
-        ${vital('SP cabeça', model.sp.cabeca)}${vital('SP corpo', model.sp.corpo)}
-        ${vital('Sorte', mesa ? `${model.sorte.atual}/${model.sorte.max}` : model.sorte.max)}
-        ${vital('Gravemente Ferido', model.gravemente)}${vital('Death Save', model.deathSave)}
+        ${vital('SP cabeça', spText('cabeca'))}${vital('SP corpo', spText('corpo'))}
+        ${vital('Sorte', mesa || model.jogo ? `${model.sorte.atual}/${model.sorte.max}` : model.sorte.max)}
+        ${vital('Gravemente Ferido', model.gravemente)}${vital('Death Save', model.deathSave, model.deathSaveMais ? ` <small>· penalidade +${model.deathSaveMais}</small>` : '')}
         ${vital('Andar', `${model.andar} m`)}${vital('Correr', `${model.correr} m`)}
         ${vital('Dinheiro', eb(model.dinheiro))}${model.ip !== null ? vital('Pontos de Melhoria', model.ip) : ''}${model.reputacao !== null ? vital('Reputação', model.reputacao) : ''}</div>
-        ${model.lesoes.length ? `<p class="cc-warn">Lesões críticas: ${names(model.lesoes)}.</p>` : ''}</div>`;
+        ${model.morto ? '<p class="cc-warn">Morto na mesa.</p>' : ''}
+        ${model.lesoes.length ? `<p class="cc-warn">Lesões críticas: ${names(model.lesoes)}.</p>` : ''}${tableLog}</div>`;
 
     const worn = model.armaduras.filter(item => item.uso === 'equipado');
     const armorText = item => [item.cabeca ? `SP ${item.cabeca} na cabeça` : '', item.corpo ? `SP ${item.corpo} no corpo` : '', item.escudo ? `escudo ${item.escudo} HP` : ''].filter(Boolean).join(', ');
@@ -1606,15 +1651,17 @@
         }, 900);
       };
     }
-    // Personagem no Foundry: a ficha da mesa muda durante a sessão; confere a cada 30 segundos enquanto a página estiver aberta.
-    if (doc.foundry) {
-      let seen = (doc.mesa || {}).recebido || '';
+    // A ficha muda durante a sessão (a mesa da wiki grava doc.jogo; o Foundry, doc.mesa): confere a cada 30 segundos
+    // enquanto a página estiver aberta.
+    {
+      const stamp = item => `${(item.mesa || {}).recebido || ''}|${(item.jogo || {}).quando || ''}`;
+      let seen = stamp(doc);
       const refresh = setInterval(async () => {
         if (token !== renderToken || !document.body.contains(root)) return clearInterval(refresh);
         const fresh = await api(`api/personagens/${id}`);
         const next = fresh.status === 200 && fresh.data.personagem;
-        if (!next || ((next.mesa || {}).recebido || '') === seen) return;
-        seen = (next.mesa || {}).recebido || '';
+        if (!next || stamp(next) === seen) return;
+        seen = stamp(next);
         Object.assign(doc, next);
         // Só as partes que a mesa muda: as anotações (que alguém pode estar escrevendo) e a aba aberta ficam.
         const redrawn = sheetHtml(doc);

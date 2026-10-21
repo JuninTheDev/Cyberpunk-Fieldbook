@@ -20,7 +20,7 @@ const vm = require('vm');
 const here = __dirname;
 const root = path.resolve(here, '..');
 const createTableApi = require('./mesa-api');
-const SEMENTE = 6; // muda quando os dados de teste mudam de formato: os antigos são refeitos
+const SEMENTE = 7; // muda quando os dados de teste mudam de formato: os antigos são refeitos
 // As cenas do Foundry entram sozinhas nos dados de teste quando o backup completo está neste computador.
 const BACKUP_FOUNDRY = path.join(process.env.USERPROFILE || '', 'Backups', 'Night City Fieldbook', 'foundry12-completo-2026-10-12.tar');
 
@@ -167,27 +167,33 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
   // As armas e as armaduras são do catálogo da loja, montadas como o criador monta (arma carregada, armadura vestida).
   // As de 2077 (Mission Kit) são para testar o M9: a Lexington (Power, ricochete), a espingarda com cartucho, a Chao
   // (Smart, com a munição melhorada e o Neuroport) e a Kenshin (Tech, carregar).
-  const item = (uid, id, nome, uso, municao = '') => ({ uid, id, nome, qtd: 1, uso, ...(municao ? { municao } : {}) });
+  // Para a ficha de jogo (M7): as caixas de munição com bala de verdade (a do pente sai da caixa), o balote para trocar
+  // com o cartucho na espingarda, uma armadura média guardada (troca e penalidade −2), o dinheiro e a Humanidade.
+  const item = (uid, id, nome, uso, municao = '', qtd = 1) => ({ uid, id, nome, qtd, uso, ...(municao ? { municao } : {}) });
+  const caixa = (uid, id, nome, qtd) => item(uid, id, nome, '', '', qtd);
   const people = [
     { conta: 'Ana (teste)', personagem: {
       nome: 'Jax "Ferrugem" Moreno', apelido: 'Ferrugem', role: 'solo', metodo: 'pacote',
       stats: { INT: 5, REF: 8, DEX: 7, TECH: 4, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 7, EMP: 4 },
-      pericias: [['Handgun', 'REF', 6], ['Shoulder Arms', 'REF', 6], ['Autofire', 'REF', 4], ['Evasion', 'DEX', 6], ['Brawling', 'DEX', 4], ['Melee Weapon', 'DEX', 4], ['Athletics', 'DEX', 4], ['Perception', 'INT', 4], ['Stealth', 'DEX', 4], ['Tactics', 'INT', 4], ['Concentration', 'WILL', 3], ['Interrogation', 'COOL', 4]],
-      hp: 45,
+      pericias: [['Handgun', 'REF', 6], ['Shoulder Arms', 'REF', 6], ['Autofire', 'REF', 4], ['Evasion', 'DEX', 6], ['Brawling', 'DEX', 4], ['Melee Weapon', 'DEX', 4], ['Athletics', 'DEX', 4], ['Perception', 'INT', 4], ['Stealth', 'DEX', 4], ['Tactics', 'INT', 4], ['Concentration', 'WILL', 3], ['Interrogation', 'COOL', 4], ['Human Perception', 'EMP', 2]],
+      hp: 45, dinheiro: 1250, humanidade: { max: 40, perda: 4, atual: 36, emp: 3 },
       itens: [item('j1', 'core_weapons:heavy-pistol', 'Pistola pesada', 'equipado', 'j8'), item('j2', 'core_weapons:smg', 'SMG', 'carregando', 'j9'), item('j3', 'core_weapons:light-melee', 'Faca de combate', 'carregando'),
         item('j4', 'core_armor:light-armorjack-body', 'Armorjack leve (corpo)', 'equipado'), item('j5', 'core_armor:light-armorjack-head', 'Armorjack leve (cabeça)', 'equipado'),
-        item('j8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando'), item('j9', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 'carregando'),
-        item('j6', 'armas-2077:militech-m-10af-lexington', 'Militech M-10AF Lexington', 'carregando', 'j10'), item('j10', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando'),
-        item('j7', 'core_weapons:shotgun', 'Espingarda', 'carregando', 'j11'), item('j11', 'core_ammo:shotgun-shell-basic', 'Cartuchos de espingarda', 'carregando')]
+        item('j12', 'core_armor:medium-armorjack-body', 'Armorjack médio (corpo)', 'guardado'),
+        caixa('j8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 60), caixa('j9', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 60),
+        item('j6', 'armas-2077:militech-m-10af-lexington', 'Militech M-10AF Lexington', 'carregando', 'j8'),
+        item('j7', 'core_weapons:shotgun', 'Espingarda', 'carregando', 'j11'), caixa('j11', 'core_ammo:shotgun-shell-basic', 'Cartuchos de espingarda', 12),
+        caixa('j13', 'core_ammo:shotgun-slug-basic', 'Balote de espingarda', 8), item('j14', 'core_gear:binoculars', 'Binóculos', 'carregando')]
     } },
     { conta: 'Bruno (teste)', personagem: {
       nome: 'Iris "Nyx" Tanaka', apelido: 'Nyx', role: 'netrunner', metodo: 'pacote',
       stats: { INT: 8, REF: 6, DEX: 6, TECH: 7, COOL: 5, WILL: 7, LUCK: 6, MOVE: 5, BODY: 5, EMP: 5 },
       pericias: [['Interface', 'INT', 6], ['Electronics/Security Tech', 'TECH', 6], ['Cryptography', 'INT', 6], ['Basic Tech', 'TECH', 4], ['Handgun', 'REF', 4], ['Evasion', 'DEX', 4], ['Perception', 'INT', 4], ['Library Search', 'INT', 4], ['Stealth', 'DEX', 4], ['Concentration', 'WILL', 4], ['Conceal/Reveal Object', 'INT', 4]],
-      hp: 40,
-      itens: [item('n1', 'core_weapons:heavy-pistol', 'Pistola pesada', 'equipado', 'n8'), item('n4', 'core_armor:light-armorjack-body', 'Armorjack leve (corpo)', 'equipado'), item('n8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 'carregando'),
-        item('n2', 'armas-2077:kang-tao-a-22b-chao', 'Kang Tao A-22B Chao', 'carregando', 'n9'), item('n9', 'armas-2077:smart-melhorada-pistola-media', 'Smart melhorada (pistola média)', 'carregando'),
-        item('n3', 'armas-2077:arasaka-jke-x2-kenshin', 'Arasaka JKE-X2 Kenshin', 'carregando', 'n10'), item('n10', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 'carregando'),
+      hp: 40, dinheiro: 800, humanidade: { max: 50, perda: 0, atual: 50, emp: 5 },
+      itens: [item('n1', 'core_weapons:heavy-pistol', 'Pistola pesada', 'equipado', 'n8'), item('n4', 'core_armor:light-armorjack-body', 'Armorjack leve (corpo)', 'equipado'), caixa('n8', 'core_ammo:heavy-pistol-basic', 'Munição de pistola pesada', 24),
+        item('n2', 'armas-2077:kang-tao-a-22b-chao', 'Kang Tao A-22B Chao', 'carregando', 'n9'), caixa('n9', 'armas-2077:smart-melhorada-pistola-media', 'Smart melhorada (pistola média)', 50),
+        item('n3', 'armas-2077:arasaka-jke-x2-kenshin', 'Arasaka JKE-X2 Kenshin', 'carregando', 'n10'), caixa('n10', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 40),
+        item('n11', 'core_gear:agent', 'Agent', 'carregando'),
         { uid: 'gratis:cyberware-2077:neuroport', id: 'cyberware-2077:neuroport', nome: 'Neuroport', qtd: 1, origem: 'gratis2077' }]
     } }
   ];
@@ -196,9 +202,14 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
     const { data: created } = await call('/api/contas', { method: 'POST', body: { nome: person.conta } });
     const { cookie } = await call('/api/entrar', { method: 'POST', body: { codigo: created.conta.codigo } });
     const p = person.personagem;
+    // Os itens também como o criador guarda (comprados na loja, com a montagem: o uso e a munição de cada um), para a
+    // ficha da wiki mostrar as mesmas armas e armaduras que a mesa.
+    const comprados = p.itens.filter(linha => !linha.origem);
     const { data: character } = await call('/api/personagens', { method: 'POST', cookie, body: {
       nome: p.nome, apelido: p.apelido, role: p.role, metodo: p.metodo, stats: p.stats,
-      resultado: { stats: p.stats, derivados: { hp: p.hp }, pericias: p.pericias.map(([nome, stat, nivel]) => ({ nome, stat, nivel })), itens: p.itens }
+      itens: comprados.map(({ uid, id, qtd }) => ({ uid, id, qtd })),
+      montagem: Object.fromEntries(comprados.filter(linha => linha.uso || linha.municao).map(linha => [linha.uid, { ...(linha.uso ? { uso: linha.uso } : {}), ...(linha.municao ? { municao: linha.municao } : {}) }])),
+      resultado: { stats: p.stats, derivados: { hp: p.hp }, humanidade: p.humanidade, dinheiro: { saldo: p.dinheiro, inicial: 2550 }, pericias: p.pericias.map(([nome, stat, nivel]) => ({ nome, stat, nivel })), itens: p.itens }
     } });
     contas.push({ nome: person.conta, codigo: created.conta.codigo, personagem: p.nome, id: character.personagem.id });
   }

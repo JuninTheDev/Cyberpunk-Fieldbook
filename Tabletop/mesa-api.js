@@ -201,16 +201,15 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (doc.retrato) return `/${String(doc.retrato).replace(/^\/+/, '')}`;
     return /^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '';
   };
-  // A ficha que a mesa usa: a que o Foundry mandou (doc.mesa), se já mandou; senão, a da criação (doc.resultado).
-  function sheetOf(doc) {
+  // A ficha que a mesa usa: a que o Foundry mandou (doc.mesa), se já mandou; senão, a da criação (doc.resultado). Os
+  // STATs são os de agora (personagem-jogo.js): o EMP pela Humanidade e a penalidade da armadura vestida.
+  function sheetOf(doc, ficha = characterGame.ficha(doc, catalog())) {
     const wiki = wikiData();
     const fromTable = doc.mesa && typeof doc.mesa === 'object' ? doc.mesa : null;
     const created = doc.resultado && typeof doc.resultado === 'object' ? doc.resultado : {};
     const stats = {};
-    for (const [key, value] of Object.entries((fromTable && fromTable.stats) || created.stats || doc.stats || {})) {
-      if (STATS.has(key.toUpperCase())) stats[key.toUpperCase()] = leadingNumber(value && typeof value === 'object' ? value.value : value);
-    }
-    const hp = characterGame.hp(doc);
+    for (const [key, value] of Object.entries(ficha.stats)) if (STATS.has(key)) stats[key] = value;
+    const hp = ficha.hp;
     const list = Array.isArray(fromTable && fromTable.pericias) ? fromTable.pericias : Array.isArray(created.pericias) ? created.pericias : [];
     const pericias = list.filter(item => item && item.nome && Number(item.nivel) > 0).map(item => {
       const stat = String(item.stat || (wiki.skills.get(item.nome) || {}).stat || '').toUpperCase();
@@ -241,14 +240,27 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const ficha = characterGame.ficha(doc, catalogo);
     const fatos = K.daFicha(doc, catalogo);
     const armas2077 = wikiData().armas2077;
+    // A munição carregada é a de agora (a recarga pode ter trocado o cartucho pelo balote, ou posto a Smart melhorada).
+    const caixas = new Map(ficha.itens.filter(item => item.tipo === 'municao').map(item => [item.id, item]));
+    const fatoDe = arma => {
+      const fato = fatos.armas[arma.id] || null;
+      if (!fato || !arma.pente) return fato;
+      const caixa = caixas.get(arma.municaoId);
+      return { ...fato, municao: caixa ? K.municaoDe(catalogo.item(caixa.catalogo), caixa.nome) : arma.municao ? K.municaoDe(catalogo.porNome(arma.municao), arma.municao) : null };
+    };
     return {
       hp: ficha.hp, sp: ficha.sp, sorte: ficha.sorte, humanidade: ficha.humanidade, lesoes: ficha.lesoes, deathSave: ficha.deathSave, morto: ficha.morto, cromo: fatos.cromo,
-      armas: ficha.armas.map(arma => K.comPerfil({ ...arma, classe: R.classeDaArma(arma) }, armas2077, fatos.armas[arma.id] || null))
+      armas: ficha.armas.map(arma => K.comPerfil({ ...arma, classe: R.classeDaArma(arma) }, armas2077, fatoDe(arma)))
     };
   }
+  // O cartão do personagem (vai só para o dono e para o mestre): a ficha de rolar e a ficha de jogo, com o que o mestre
+  // muda à mão, o inventário com o uso de cada item e as últimas mudanças.
   const characterCard = doc => {
-    const sheet = sheetOf(doc);
-    return { id: doc.id, nome: line(doc.nome, 80) || 'Sem nome', apelido: line(doc.apelido, 80), retrato: portraitOf(doc), hp: sheet.hp, stats: sheet.stats, pericias: sheet.pericias, fonte: sheet.fonte };
+    const ficha = characterGame.ficha(doc, catalog());
+    const sheet = sheetOf(doc, ficha);
+    return { id: doc.id, nome: line(doc.nome, 80) || 'Sem nome', apelido: line(doc.apelido, 80), retrato: portraitOf(doc), hp: sheet.hp, stats: sheet.stats, pericias: sheet.pericias, fonte: sheet.fonte,
+      jogo: { humanidade: ficha.humanidade, dinheiro: ficha.dinheiro, ip: ficha.ip, reputacao: ficha.reputacao, sorte: ficha.sorte, sp: ficha.sp, penalidade: ficha.penalidade,
+        itens: ficha.itens.map(({ catalogo, variedade, ...item }) => item), extrato: ficha.extrato.slice(-10), mesa: Boolean(characterGame.jogoValido(doc)) } };
   };
 
   // ---------------- Estado de cada mesa ----------------
@@ -416,6 +428,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const scene = sceneById(state, sceneIdOf(connection, state));
     const campaign = campaigns.get(connection.campanha) || { nome: connection.campanha, cor: COLORS[0] };
     const gm = isGm(viewer);
+    const fichas = cardsFor(viewer, readCharacters(connection.campanha));
+    connection.fichasVistas = JSON.stringify(fichas);
     return {
       conexao: connection.id || null, versao,
       eu: { papel: viewer.papel, nome: viewer.nome, cor: connection.cor, conta: viewer.conta },
@@ -428,10 +442,26 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       presenca: presenceOf(connection.campanha),
       ...(gm ? {
         cenas: scenesList(state), cenaAtiva: state.cenaAtiva,
-        personagens: readCharacters(connection.campanha).map(characterCard),
+        personagens: fichas,
         npcs: wikiData().npcs.map(({ id, nome, grupo, livro, pagina, hp, stats }) => ({ id, nome, grupo, livro, pagina, hp, ref: stats.REF, move: stats.MOVE }))
-      } : { meus: readCharacters(connection.campanha).filter(doc => doc.dono && doc.dono === viewer.conta).map(characterCard) })
+      } : { meus: fichas })
     };
+  }
+  // As fichas que cada um recebe: o mestre, todas as da campanha; o jogador, as dele.
+  const cardsFor = (viewer, docs, cards = null) => docs.filter(doc => isGm(viewer) || (doc.dono && doc.dono === viewer.conta)).map(doc => (cards ? cards.get(doc.id) : characterCard(doc)));
+  // Uma ficha mudou (pela mesa, pela wiki ou pelo Foundry): quem vê manda de novo só para quem recebe aquela ficha.
+  function sendCards(campaignId) {
+    const docs = readCharacters(campaignId);
+    let cards = null;
+    for (const connection of connections.values()) {
+      if (connection.campanha !== campaignId) continue;
+      cards = cards || new Map(docs.map(doc => [doc.id, characterCard(doc)]));
+      const lista = cardsFor(connection.viewer, docs, cards);
+      const texto = JSON.stringify(lista);
+      if (connection.fichasVistas === texto) continue;
+      connection.fichasVistas = texto;
+      sendEvent(connection, 'fichas', isGm(connection.viewer) ? { personagens: lista } : { meus: lista });
+    }
   }
 
   // ---------------- Conexões ao vivo ----------------
@@ -523,6 +553,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (effects.registroLimpo) sendEvent(connection, 'registro.limpo', {});
       if (effects.esquecer) sendEvent(connection, 'visao.esquecer', { cena: effects.esquecer });
     }
+    if (effects.fichas) sendCards(campaignId);
   }
 
   // ---------------- Operações ----------------
@@ -652,20 +683,61 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   // livres guardam no próprio token (quem chama já mudou o token).
   // writing: a conferência das fichas pula quem está sendo gravado (senão leria a ficha de antes e voltaria o token).
   const writing = new Map();
+  async function gravando(personagem, fn) {
+    writing.set(personagem, (writing.get(personagem) || 0) + 1);
+    try { return await fn(); } finally {
+      const left = writing.get(personagem) - 1;
+      if (left > 0) writing.set(personagem, left); else writing.delete(personagem);
+    }
+  }
   async function writeSheet(campaignId, token, mudancas) {
     if (token.tipo !== 'pj' || !updateCharacter) return;
-    writing.set(token.personagem, (writing.get(token.personagem) || 0) + 1);
-    try {
+    await gravando(token.personagem, async () => {
       const done = await updateCharacter(token.personagem, doc => {
         if ((doc.campanha || campaigns.first) !== campaignId) return { status: 404, data: { erro: 'Personagem de outra campanha.' } };
         doc.jogo = characterGame.comJogo(doc, mudancas);
         return null;
       });
       if (done && done.status) console.error(`Mesa: a ficha de ${token.nome} não foi gravada (${done.data && done.data.erro}).`);
-    } finally {
-      const left = writing.get(token.personagem) - 1;
-      if (left > 0) writing.set(token.personagem, left); else writing.delete(token.personagem);
+    });
+  }
+  // Uma mudança que parte da ficha gravada (não da cópia no token): o ajuste do mestre, o uso de um item, a recarga.
+  // conta(doc) devolve { mudancas, ... } ou { erro }; o erro volta para quem pediu. Depois, os tokens do personagem
+  // pegam a ficha nova.
+  async function writeCharacter(campaignId, personagem, conta) {
+    if (!updateCharacter) throw fail(409, 'A ficha dos personagens não está ligada a esta mesa.');
+    const feito = await gravando(personagem, async () => {
+      let resultado = null;
+      const done = await updateCharacter(personagem, doc => {
+        if ((doc.campanha || campaigns.first) !== campaignId) return { status: 404, data: { erro: 'Personagem não encontrado nesta campanha.' } };
+        resultado = conta(doc);
+        if (resultado.erro) return { status: resultado.status || 400, data: { erro: resultado.erro } };
+        doc.jogo = characterGame.comJogo(doc, resultado.mudancas);
+        return null;
+      });
+      if (done && done.status) throw fail(done.status, (done.data && done.data.erro) || 'A ficha não foi gravada.');
+      return { ...resultado, doc: done.doc };
+    });
+    refreshTokensOf(campaignId, feito.doc);
+    return feito;
+  }
+  function refreshTokensOf(campaignId, doc) {
+    let changed = false;
+    for (const scene of tableOf(campaignId).state.cenas) {
+      for (const token of scene.tokens) {
+        if (token.tipo !== 'pj' || token.personagem !== doc.id) continue;
+        Object.assign(token, combatFields(doc), { imagem: portraitOf(doc), dono: doc.dono || null });
+        changed = true;
+      }
     }
+    return changed;
+  }
+  // O personagem pelo id, só se for da campanha (e, para o jogador, só se for dele).
+  function characterArg(campaignId, viewer, id) {
+    const doc = readCharacter(campaignId, String(id || ''));
+    if (!doc) throw fail(404, 'Personagem não encontrado nesta campanha.');
+    if (!isGm(viewer) && !(doc.dono && doc.dono === viewer.conta)) throw fail(403, 'Esse personagem é de outro jogador.');
+    return doc;
   }
   function addEntry(state, entry) {
     const full = { id: newId(), quando: new Date().toISOString(), secreta: false, ...entry };
@@ -797,8 +869,24 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     return { tipo: 'lesao', rotulo: `Lesão crítica (${head ? 'cabeça' : 'corpo'})`, dados, total, lesao: row ? { nome: row[1], efeito: row[2], correcao: row[3], tratamento: row[4] } : null };
   }
 
+  // A recarga do personagem: a munição sai da caixa da ficha (personagem-jogo.js).
+  async function recarregar(campaignId, personagem, arma, municao) {
+    const feito = await writeCharacter(campaignId, personagem, doc => characterGame.recarga(doc, catalog(), arma, municao));
+    return { arma: feito.arma, municao: feito.municao, entrou: feito.entrou, sobra: feito.sobra };
+  }
+  // O texto do registro quando o mestre muda um número da ficha.
+  const NOME_DO_CAMPO = { dinheiro: 'Dinheiro', ip: 'Pontos de Melhoria', reputacao: 'Reputação', humanidade: 'Humanidade' };
+  const comSinal = n => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
+  function textoDoAjuste(nome, campo, feito) {
+    const motivo = (feito.mudancas.extrato[feito.mudancas.extrato.length - 1] || {}).motivo;
+    const diferenca = feito.depois - feito.antes;
+    const humanidade = campo === 'humanidade' ? characterGame.ficha(feito.doc).humanidade : null;
+    const agora = campo === 'dinheiro' ? `${feito.depois.toLocaleString('pt-BR')}eb` : humanidade ? `${humanidade.atual}/${humanidade.max} (EMP ${Math.max(0, Math.floor(humanidade.atual / 10))})` : String(feito.depois);
+    return `${nome}: ${NOME_DO_CAMPO[campo]} ${comSinal(diferenca)}${campo === 'dinheiro' ? 'eb' : ''}${motivo ? ` (${motivo})` : ''}. Agora: ${agora}.`;
+  }
+
   const combatFlow = createCombat({
-    prazo: prazoDefesa, die, pool, newId, fail, int, line, isGm, canControl, tokenArg, sceneById, tokenFor, readCharacter, sheetOf, writeSheet,
+    prazo: prazoDefesa, die, pool, newId, fail, int, line, isGm, canControl, tokenArg, sceneById, tokenFor, readCharacter, sheetOf, writeSheet, recarregar,
     addEntry, systemEntry, authorOf, entryFor, canSeeEntry, connections, sendEvent, broadcast, save, tableOf,
     regras: () => wikiData().regras, ptOf: en => (wikiData().ptOf ? wikiData().ptOf(en) : en),
     critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
@@ -1187,6 +1275,33 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       state.registro = [];
       return { registroLimpo: true };
     } },
+
+    // A ficha de jogo. O mestre muda o dinheiro, os Pontos de Melhoria, a reputação ou a Humanidade: { personagem,
+    // campo, delta (soma) ou valor (troca), motivo }. Vai para o extrato da ficha e para o registro, que só o mestre e
+    // o dono veem.
+    'personagem.ajustar': { mestre: true, async run({ state, viewer, body, campaignId }) {
+      const doc = characterArg(campaignId, viewer, body.personagem);
+      const campo = String(body.campo || '');
+      const feito = await writeCharacter(campaignId, doc.id, atual => characterGame.ajuste(atual, campo, { delta: body.delta, valor: body.valor, motivo: line(body.motivo, 200) }));
+      const entry = addEntry(state, { tipo: 'sistema', autor: { nome: 'Mesa', papel: 'sistema', conta: null, cor: '#a9aeaa' }, texto: textoDoAjuste(line(doc.apelido, 40) || line(doc.nome, 40) || 'Personagem', campo, feito), para: doc.dono ? [doc.dono] : [] });
+      return { tokens: true, fichas: true, registro: entry, resultado: { antes: feito.antes, depois: feito.depois } };
+    } },
+    // Equipar, carregar ou guardar um item: { personagem, item, uso }. O jogador, no personagem dele; o mestre, em
+    // todos. A armadura muda o SP e a penalidade; a arma guardada sai da mesa.
+    'item.uso': { async run({ viewer, body, campaignId }) {
+      const doc = characterArg(campaignId, viewer, body.personagem);
+      await writeCharacter(campaignId, doc.id, atual => characterGame.comUso(atual, catalog(), String(body.item || ''), String(body.uso || '')));
+      return { tokens: true, fichas: true };
+    } },
+    // O mestre acerta a quantidade de um item (a granada que foi, a munição que o grupo achou): { personagem, item, qtd }.
+    'item.qtd': { mestre: true, async run({ viewer, body, campaignId }) {
+      const doc = characterArg(campaignId, viewer, body.personagem);
+      const id = String(body.item || '');
+      const qtd = Number(body.qtd);
+      if (!Number.isInteger(qtd) || qtd < 0 || qtd > 99999) throw fail(400, 'Quantidade de 0 a 99999.');
+      await writeCharacter(campaignId, doc.id, atual => (characterGame.ficha(atual, catalog()).itens.some(item => item.id === id) ? { mudancas: { itens: { [id]: { qtd } } } } : { erro: 'Esse item não está na ficha.' }));
+      return { tokens: true, fichas: true };
+    } },
     // Ataque, defesa, dano, Death Save, estabilizar, recarregar: mesa-combate.js.
     ...combatFlow.operations
   };
@@ -1379,6 +1494,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
         }
       }
       if (changed) { save(table); broadcast(campaignId, { tokens: true }); }
+      // As fichas de jogo (o dinheiro, a Humanidade, o inventário) também mudam fora da mesa.
+      sendCards(campaignId);
     }
   }
   const syncTimer = setInterval(syncCharacters, SYNC);

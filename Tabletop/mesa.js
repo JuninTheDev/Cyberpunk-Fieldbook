@@ -32,7 +32,10 @@
     atividade: new Map(), pings: [], arrasto: null, minhaRegua: null, mouse: null,
     mostrarCursor: store.get('cursor') !== 'nao', sujo: true, dpr: 1, ultimoQuadro: 0, vezAnterior: null,
     previaGrade: null, ataque: null, escolhendoAlvo: false, defesas: [],
-    visao: null, paredeTipo: 'parede', paredeSel: null, tileSel: null, tilePrevia: null, aparenciaAberta: false, luzSel: null, luzPrevia: null
+    visao: null, paredeTipo: 'parede', paredeSel: null, tileSel: null, tilePrevia: null, aparenciaAberta: false, luzSel: null, luzPrevia: null,
+    // A ficha de jogo: as fichas que o mestre abriu na aba Fichas, a munição escolhida para recarregar cada arma e a
+    // ficha que mudou enquanto alguém digitava nela (redesenha quando o campo perde o foco).
+    fichasAbertas: new Set(), municaoEscolhida: new Map(), fichasPendentes: false
   };
   const gm = () => S.eu && S.eu.papel === 'mestre';
   const grade = () => S.previaGrade || (S.cena && S.cena.grade) || { tamanho: 100, metros: 2, x: 0, y: 0, visivel: true };
@@ -111,6 +114,14 @@
     on('defesa.fim', data => { S.defesas = S.defesas.filter(item => item.ataque !== data.ataque || (data.alvo && item.alvo !== data.alvo)); renderDefesas(); });
     on('registro.limpo', () => { S.registro = []; renderRegistro(); });
     on('presenca', data => { S.presenca = data; renderPresenca(); });
+    // A ficha de um personagem mudou (pela mesa, pela wiki ou pelo Foundry): o mestre recebe todas; o jogador, as dele.
+    on('fichas', data => {
+      if (data.personagens) S.personagens = data.personagens;
+      if (data.meus) S.meus = data.meus;
+      renderFichas();
+      renderPericias();
+      renderCartao();
+    });
     on('atividade', receberAtividade);
     fonte.onerror = () => {
       ligacao.className = 'ligacao caiu';
@@ -1645,10 +1656,27 @@
     if ((token.lesoes || []).length) linhas.push(`<div class="lesoes"><small>Lesões</small>${token.lesoes.map(nome => `<span class="tag lesao">${esc(nome)}</span>`).join('')}</div>`);
     const armas = token.armas || [];
     if (armas.length) {
-      linhas.push(`<ul class="armas">${armas.map(arma => `<li><b>${esc(arma.nome)}</b><span>${esc(arma.dano)}${arma.pente ? ` · <span class="${arma.pente.atual ? '' : 'erro'}">${arma.pente.atual}/${arma.pente.max}</span>` : ''}</span>
-        ${arma.pente && arma.pente.atual < arma.pente.max ? `<button class="link" type="button" data-recarregar="${esc(arma.id)}">recarregar</button>` : ''}${htmlDe2077(token, arma)}</li>`).join('')}</ul>`);
+      linhas.push(`<ul class="armas">${armas.map(arma => `<li><b>${esc(arma.nome)}</b><span>${esc(arma.dano)}${arma.pente ? ` · <span class="${arma.pente.atual ? '' : 'erro'}">${arma.pente.atual}/${arma.pente.max}</span>` : ''}${arma.pente && arma.municao ? ` · ${esc(arma.municao)}` : ''}</span>
+        ${htmlDaRecarga(token, arma)}${htmlDe2077(token, arma)}</li>`).join('')}</ul>`);
     }
     return linhas.length ? `<div class="ficha-combate">${linhas.join('')}</div>` : '';
+  }
+  // Recarregar. O personagem recarrega com a munição da ficha (a caixa diminui) e escolhe qual, quando tem mais de uma
+  // que serve; trocar devolve o que estava no pente. O NPC (arma.municoes não vem) recarrega de graça.
+  function htmlDaRecarga(token, arma) {
+    if (!arma.pente) return '';
+    const caixas = arma.municoes;
+    const cheia = arma.pente.atual >= arma.pente.max;
+    if (!Array.isArray(caixas)) return cheia ? '' : `<button class="link" type="button" data-recarregar="${esc(arma.id)}">recarregar</button>`;
+    if (!caixas.length) return cheia ? '' : '<small class="erro">sem munição na ficha</small>';
+    const escolhida = S.municaoEscolhida.get(`${token.id}:${arma.id}`);
+    const caixa = caixas.find(item => item.id === escolhida) || caixas.find(item => item.id === arma.municaoId) || caixas[0];
+    const troca = caixa.id !== arma.municaoId;
+    const escolha = caixas.length > 1
+      ? `<select class="municao" data-municao-de="${esc(arma.id)}" aria-label="Munição para ${esc(arma.nome)}">${caixas.map(item => `<option value="${esc(item.id)}"${item.id === caixa.id ? ' selected' : ''}>${esc(item.nome)} (${item.qtd})</option>`).join('')}</select>`
+      : `<small class="${caixa.qtd ? '' : 'erro'}">${caixa.qtd} na caixa</small>`;
+    const pode = caixa.qtd > 0 && (troca || !cheia);
+    return `${escolha}${pode ? `<button class="link" type="button" data-recarregar="${esc(arma.id)}" data-municao="${esc(caixa.id)}">${troca ? 'trocar a munição' : 'recarregar'}</button>` : ''}`;
   }
   // A classe de 2077 da arma (Mission Kit), os avisos e os botões de estado: carregar a Tech, manejar o ferrolho, a
   // coronha. O servidor confere tudo de novo no ataque.
@@ -1763,7 +1791,15 @@
       return;
     }
     const recarregar = event.target.closest('[data-recarregar]');
-    if (recarregar) { op('arma.recarregar', { token: token.id, arma: recarregar.dataset.recarregar }).catch(() => {}); return; }
+    if (recarregar) {
+      op('arma.recarregar', { token: token.id, arma: recarregar.dataset.recarregar, ...(recarregar.dataset.municao ? { municao: recarregar.dataset.municao } : {}) })
+        .then(resposta => {
+          S.municaoEscolhida.delete(`${token.id}:${recarregar.dataset.recarregar}`);
+          const feito = resposta.resultado;
+          if (feito && feito.municao) aviso(`${feito.arma}: ${feito.entrou} de ${feito.municao} no pente (sobram ${feito.sobra}).`);
+        }).catch(() => {});
+      return;
+    }
     const acaoDaArma = event.target.closest('[data-arma-acao]');
     if (acaoDaArma) { op(`arma.${acaoDaArma.dataset.armaAcao}`, { token: token.id, arma: acaoDaArma.dataset.arma }).catch(() => {}); return; }
     const modo = event.target.closest('[data-at-modo]');
@@ -1821,6 +1857,11 @@
       if (campo === 'arma' || campo === 'alvo') { event.target.blur(); renderCartao(); }
     }
     if (event.target.dataset.atMarcar && S.ataque) S.ataque[event.target.dataset.atMarcar] = event.target.checked;
+    if (event.target.dataset.municaoDe) {
+      S.municaoEscolhida.set(`${token.id}:${event.target.dataset.municaoDe}`, event.target.value);
+      event.target.blur();
+      renderCartao();
+    }
   });
 
   // ---------------- Painel ----------------
@@ -2245,9 +2286,64 @@
   function centroDaVista() {
     return encaixar(telaParaMundo(canvas.clientWidth / 2, canvas.clientHeight / 2));
   }
+  // ---------------- Ficha de jogo ----------------
+  // O que muda na mesa e volta para a ficha da wiki: a Humanidade (e o EMP), o dinheiro, os Pontos de Melhoria, a
+  // reputação e o inventário com o uso de cada item. O jogador troca o uso do que é dele; o mestre também muda os
+  // números (com o motivo, que vai para o extrato) e a quantidade dos itens.
+  const NOME_DO_USO = { equipado: 'Equipado', carregando: 'Carregando', guardado: 'Guardado' };
+  const GRUPOS_DO_INVENTARIO = [['arma', 'Armas'], ['armadura', 'Armaduras'], ['item', 'Equipamento'], ['deck', 'Cyberdeck'], ['roupa', 'Roupa'], ['municao', 'Munição']];
+  const NOME_DO_CAMPO = { dinheiro: 'Dinheiro', ip: 'Pontos de Melhoria', reputacao: 'Reputação', humanidade: 'Humanidade' };
+  const eb = valor => `${Math.round(Number(valor) || 0).toLocaleString('pt-BR')}eb`;
+  function htmlDosNumeros(ficha) {
+    const jogo = ficha.jogo || {};
+    const caixas = [
+      jogo.humanidade ? ['Humanidade', `${jogo.humanidade.atual}/${jogo.humanidade.max}`, `EMP ${ficha.stats.EMP ?? '—'}`] : null,
+      ['Dinheiro', eb(jogo.dinheiro), ''], ['IP', String(jogo.ip ?? 0), 'Pontos de Melhoria'], ['Reputação', String(jogo.reputacao ?? 0), '']
+    ].filter(Boolean);
+    return `<div class="ficha-numeros">${caixas.map(([rotulo, valor, extra]) => `<div><small>${rotulo}</small><b>${esc(valor)}</b>${extra ? `<small>${esc(extra)}</small>` : ''}</div>`).join('')}</div>
+      ${jogo.penalidade ? `<p class="nota alerta">Armadura pesada vestida: −${jogo.penalidade} em REF, DEX e MOVE (já nos números).</p>` : ''}`;
+  }
+  function htmlDoAjuste(ficha) {
+    const jogo = ficha.jogo || {};
+    const campos = Object.entries(NOME_DO_CAMPO).filter(([campo]) => campo !== 'humanidade' || jogo.humanidade);
+    return `<form class="ajuste" data-ajuste="${esc(ficha.id)}"><div class="campo-linha">
+        <label class="campo cresce">Mudar <select name="campo">${campos.map(([campo, nome]) => `<option value="${campo}">${nome}</option>`).join('')}</select></label>
+        <label class="campo mod">+ ou − <input name="delta" type="number" step="1" placeholder="0" required></label></div>
+      <div class="campo-linha"><label class="campo cresce">Motivo <input name="motivo" type="text" maxlength="200" placeholder="Pagamento do fixer, terapia…"></label>
+        <button class="botao pequeno" type="submit">Aplicar</button></div></form>`;
+  }
+  function htmlDoInventario(ficha) {
+    const mestre = gm();
+    const itens = (ficha.jogo && ficha.jogo.itens) || [];
+    if (!itens.length) return '<p class="nota">Nenhum item na ficha.</p>';
+    const linha = item => {
+      const detalhe = item.tipo === 'arma' && item.pente ? `pente ${item.pente.atual}/${item.pente.max}${item.municao ? ` · ${item.municao}` : ''}`
+        : item.tipo === 'armadura' && item.sp ? [item.sp.cabeca ? `SP ${item.sp.cabeca} na cabeça` : '', item.sp.corpo ? `SP ${item.sp.corpo} no corpo` : ''].filter(Boolean).join(' · ') : '';
+      // A quantidade que muda no jogo (a munição gasta, a granada, o kit): o mestre acerta; o resto só mostra.
+      const qtd = mestre && ['municao', 'item'].includes(item.tipo) ? `<input class="qtd" type="number" min="0" max="99999" value="${item.qtd}" data-qtd="${esc(item.id)}" data-ficha="${esc(ficha.id)}" aria-label="Quantidade: ${esc(item.nome)}">`
+        : item.tipo === 'municao' || item.qtd !== 1 ? `<span class="qtd">×${item.qtd}</span>` : '';
+      const uso = item.tipo === 'municao' ? '' : `<select data-uso="${esc(item.id)}" data-ficha="${esc(ficha.id)}" aria-label="Uso: ${esc(item.nome)}">${Object.entries(NOME_DO_USO).map(([valor, nome]) => `<option value="${valor}"${item.uso === valor ? ' selected' : ''}>${nome}</option>`).join('')}</select>`;
+      return `<li class="uso-${esc(item.uso || 'municao')}"><span class="info"><b>${esc(item.nome)}</b>${detalhe ? `<small>${esc(detalhe)}</small>` : ''}</span>${qtd}${uso}</li>`;
+    };
+    return `${GRUPOS_DO_INVENTARIO.map(([tipo, titulo]) => {
+      const lista = itens.filter(item => item.tipo === tipo);
+      return lista.length ? `<div class="grupo-npc">${titulo}</div><ul class="inventario">${lista.map(linha).join('')}</ul>` : '';
+    }).join('')}<p class="nota">A armadura vestida dá o SP. Guardado fica fora da mesa (em casa, no carro): a arma guardada não aparece no ataque.</p>`;
+  }
+  function htmlDoExtrato(ficha) {
+    const extrato = (ficha.jogo && ficha.jogo.extrato) || [];
+    if (!extrato.length) return '';
+    const valor = (campo, numero) => (campo === 'dinheiro' ? eb(numero) : String(numero));
+    const hora = quando => { const data = new Date(quando); return Number.isNaN(data.getTime()) ? '' : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+    return `<details class="extrato"><summary>Últimas mudanças do mestre</summary><ul>${extrato.slice().reverse().map(linha => `<li><b>${esc(NOME_DO_CAMPO[linha.campo] || linha.campo)}</b> ${esc(valor(linha.campo, linha.antes))} → ${esc(valor(linha.campo, linha.depois))}${linha.motivo ? ` · ${esc(linha.motivo)}` : ''} <small>${esc(hora(linha.quando))}</small></li>`).join('')}</ul></details>`;
+  }
+
   function renderFichas() {
     const caixa = $('#fichas');
     if (!S.eu) return;
+    // Digitando um ajuste ou uma quantidade: não troca a ficha debaixo de quem digita (redesenha ao sair do campo).
+    if (caixa.contains(document.activeElement) && document.activeElement.matches('.ajuste input, .ajuste select, input.qtd')) { S.fichasPendentes = true; return; }
+    S.fichasPendentes = false;
     const foco = document.activeElement && caixa.contains(document.activeElement) ? document.activeElement.id : null;
     if (gm()) {
       const naCena = new Set([...S.tokens.values()].map(token => token.personagem).filter(Boolean));
@@ -2260,8 +2356,11 @@
           ${S.personagens.length ? `<ul class="lista">${S.personagens.map(ficha => {
             const foto = ficha.retrato ? `style="background-image:url('${esc(ficha.retrato)}')"` : '';
             const hp = ficha.hp ? `HP ${ficha.hp.atual}/${ficha.hp.max}` : 'sem HP';
-            return `<li><span class="avatar" ${foto}>${ficha.retrato ? '' : esc(initials(ficha.nome))}</span><span class="info"><b>${esc(ficha.nome)}</b><small>${hp} · REF ${ficha.stats.REF ?? '—'} · MOVE ${ficha.stats.MOVE ?? '—'}${ficha.fonte === 'mesa' ? ' · ficha do Foundry' : ''}</small></span>
-              ${naCena.has(ficha.id) ? '<button class="botao vazado pequeno" type="button" disabled>Na cena</button>' : `<button class="botao pequeno" type="button" data-por-personagem="${esc(ficha.id)}"${S.cena ? '' : ' disabled'}>Pôr</button>`}</li>`;
+            const aberta = S.fichasAbertas.has(ficha.id);
+            return `<li><span class="avatar" ${foto}>${ficha.retrato ? '' : esc(initials(ficha.nome))}</span><span class="info"><b>${esc(ficha.nome)}</b><small>${hp} · REF ${ficha.stats.REF ?? '—'} · MOVE ${ficha.stats.MOVE ?? '—'}${naCena.has(ficha.id) ? ' · na cena' : ''}${ficha.fonte === 'mesa' && !(ficha.jogo && ficha.jogo.mesa) ? ' · ficha do Foundry' : ''}</small></span>
+              <button class="botao vazado pequeno${aberta ? ' ativo' : ''}" type="button" data-abrir-ficha="${esc(ficha.id)}" aria-expanded="${aberta}">Ficha</button>
+              ${naCena.has(ficha.id) ? '' : `<button class="botao pequeno" type="button" data-por-personagem="${esc(ficha.id)}"${S.cena ? '' : ' disabled'}>Pôr</button>`}</li>
+              ${aberta ? `<li class="ficha-aberta">${htmlDosNumeros(ficha)}${htmlDoAjuste(ficha)}${htmlDoInventario(ficha)}${htmlDoExtrato(ficha)}</li>` : ''}`;
           }).join('')}</ul>` : '<p class="nota">Nenhum personagem nesta campanha ainda.</p>'}</div>
         <div class="bloco"><h3>Fichas de NPC</h3>
           <input id="npc-busca" class="busca" type="search" placeholder="Buscar (Tyger, netrunner, Kit…)" value="${esc(filtro)}">
@@ -2281,13 +2380,21 @@
       const foto = ficha.retrato ? `style="background-image:url('${esc(ficha.retrato)}')"` : '';
       return `<div class="bloco"><div class="cartao-topo"><span class="avatar" ${foto} style="width:52px;height:52px">${ficha.retrato ? '' : esc(initials(ficha.nome))}</span><div><h3>${esc(ficha.nome)}</h3><small>${hp ? `HP ${hp.atual}/${hp.max}` : ''}${token ? ' · na cena' : ' · fora da cena'}</small></div></div>
         <div class="ficha-stats">${['INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'LUCK', 'MOVE', 'BODY', 'EMP'].map(stat => `<div><b>${ficha.stats[stat] ?? '—'}</b><small>${stat}</small></div>`).join('')}</div>
+        ${htmlDosNumeros(ficha)}
         <p class="nota">Toque numa perícia para rolar (STAT + perícia + 1d10).</p>
-        <ul class="pericias">${(ficha.pericias || []).map(item => `<li><button type="button" data-pericia="${esc(item.nome)}" data-ficha="${esc(ficha.id)}"><span>${esc(item.pt)}<small>${esc(item.stat)} ${ficha.stats[item.stat] ?? 0} + ${item.nivel}</small></span><b>${item.base}</b></button></li>`).join('')}</ul></div>`;
+        <ul class="pericias">${(ficha.pericias || []).map(item => `<li><button type="button" data-pericia="${esc(item.nome)}" data-ficha="${esc(ficha.id)}"><span>${esc(item.pt)}<small>${esc(item.stat)} ${ficha.stats[item.stat] ?? 0} + ${item.nivel}</small></span><b>${item.base}</b></button></li>`).join('')}</ul>
+        <h3>Inventário</h3>${htmlDoInventario(ficha)}${htmlDoExtrato(ficha)}</div>`;
     }).join('');
   }
   $('#fichas').addEventListener('click', event => {
     const botao = event.target.closest('button');
     if (!botao) return;
+    if (botao.dataset.abrirFicha) {
+      const id = botao.dataset.abrirFicha;
+      if (S.fichasAbertas.has(id)) S.fichasAbertas.delete(id); else S.fichasAbertas.add(id);
+      renderFichas();
+      return;
+    }
     if (botao.dataset.porPersonagem) op('token.criar', { cena: S.cena.id, personagem: botao.dataset.porPersonagem, ...centroDaVista() }).catch(() => {});
     if (botao.dataset.porNpc) op('token.criar', { cena: S.cena.id, npc: botao.dataset.porNpc, escondido: $('#npc-escondido').checked, ...centroDaVista() }).catch(() => {});
     if (botao.hasAttribute('data-por-livre')) op('token.criar', { cena: S.cena.id, livre: { nome: $('#livre-nome').value, hp: Number($('#livre-hp').value) || 0, cor: $('#livre-cor').value }, ...centroDaVista() }).catch(() => {});
@@ -2297,6 +2404,24 @@
     }
   });
   $('#fichas').addEventListener('input', event => { if (event.target.id === 'npc-busca') renderFichas(); });
+  $('#fichas').addEventListener('change', event => {
+    const campo = event.target;
+    if (campo.dataset.uso) op('item.uso', { personagem: campo.dataset.ficha, item: campo.dataset.uso, uso: campo.value }).catch(() => renderFichas());
+    if (campo.dataset.qtd) {
+      campo.blur();
+      op('item.qtd', { personagem: campo.dataset.ficha, item: campo.dataset.qtd, qtd: Number(campo.value) }).catch(() => renderFichas());
+    }
+  });
+  $('#fichas').addEventListener('submit', event => {
+    const form = event.target.closest('form.ajuste');
+    if (!form) return;
+    event.preventDefault();
+    const dados = new FormData(form);
+    op('personagem.ajustar', { personagem: form.dataset.ajuste, campo: dados.get('campo'), delta: Number(dados.get('delta')) || 0, motivo: String(dados.get('motivo') || '') })
+      .then(() => { if (form.contains(document.activeElement)) document.activeElement.blur(); renderFichas(); }).catch(() => {});
+  });
+  // Saiu do campo que segurava a ficha: redesenha com o que chegou enquanto digitava.
+  $('#fichas').addEventListener('focusout', () => { if (S.fichasPendentes) setTimeout(() => { if (S.fichasPendentes) renderFichas(); }, 0); });
 
   // ---------------- Cena (mestre) ----------------
   function renderCenaPainel() {

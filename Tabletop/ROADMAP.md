@@ -10,8 +10,8 @@
 - Cada item fecha com teste em `mesa.test.js` (ou na suíte do projeto) e mutações que caem.
 
 **A ordem combinada (2026-10-21):**
-1. M9;
-2. M7;
+1. M9 (feito);
+2. M7 (feito);
 3. M12;
 4. M11;
 5. um ensaio no teste, num PC e num celular;
@@ -53,11 +53,22 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **Passo:** parede e porta fechada param o token do jogador (com a visão ligada ou não).
   - **Testado:** 4 testes, 22 mutações que caem, e as 3 cenas com paredes do backup (até 3 ms por cálculo).
   - **Rápido com muitas paredes:** um índice das paredes por célula do mapa; cada raio só olha as paredes perto dele. Com 4000 paredes, o cálculo caiu de 1,1 s para 14 ms; conferido contra a conta antiga em cenas aleatórias.
-- [ ] **M7 · Ficha de jogo na wiki** (tudo que muda na mesa, em `doc.jogo`):
-  - **Já vai para a ficha:** HP, SP (com a ablação), Sorte, a munição no pente, as lesões críticas e o Death Save.
-  - **Falta:** Humanidade, dinheiro, IP e reputação.
-  - **O equipamento:** equipado, carregado e guardado.
-  - **Personagem sem Foundry:** o que nunca foi para o Foundry entra na mesa direto da criação.
+- [x] **M7 · Ficha de jogo na wiki** (tudo que muda na mesa, em `doc.jogo`, pela regra do `personagem-jogo.js`):
+  - **Vai para a ficha:** HP, SP (com a ablação), Sorte, a munição no pente (e qual), as lesões críticas, o Death Save, e agora a Humanidade (o EMP cai junto), o dinheiro, o IP e a reputação.
+  - **O mestre muda os números** (aba Fichas → **Ficha**): soma ou tira, com o motivo. Vai para o extrato da ficha (as últimas 30) e para o registro, que só o mestre e o dono veem. O IP dado pela wiki soma no da mesa.
+  - **O equipamento:** cada item equipado, carregando ou guardado (o dono e o mestre mudam).
+    - A armadura vestida dá o SP e a penalidade (−REF, DEX e MOVE).
+    - Uma armadura por local, e quem sai guarda a própria ablação.
+    - A arma guardada sai da mesa.
+  - **A munição da ficha:**
+    - a do pente da montagem sai da caixa (como o Foundry na importação);
+    - recarregar gasta a caixa;
+    - dá para escolher a munição: o balote tira o cartucho da espingarda, e o que estava no pente volta para a caixa.
+    - O mestre acerta a quantidade da munição e do equipamento.
+  - **Ao vivo:** a ficha muda na tela do dono e do mestre (evento `fichas`); a ficha da wiki confere a cada 30 segundos e mostra "Na mesa da wiki".
+  - **Personagem sem Foundry:** entra na mesa direto da criação (os de teste são assim).
+  - **Testado:** 8 testes e 39 mutações que caem, mais a conferência no Edge (mestre, jogadora, cartão, celular e a ficha da wiki).
+  - **Falta:** a compra pela loja (M15) e a instalação de cyberware (M16) ainda mexem só no Foundry.
 - [x] **M8 · Combate** (o Fluxo de Combate, em `mesa-combate.js` e `mesa-regras.js`):
   - **Ataque:** com a arma da ficha (STAT + perícia + 1d10, e a Sorte), contra a DV pelo alcance medido ou contra a esquiva às cegas do alvo. Tiro, só com REF 8+; corpo a corpo, sempre.
   - **Dano:** com a armadura (SP, ablação; faca e artes marciais com metade do SP), cabeça ×2 e a lesão crítica com dois 6.

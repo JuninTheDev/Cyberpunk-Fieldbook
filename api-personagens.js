@@ -332,18 +332,18 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // Avanço: o total gasto não pode passar do total de Pontos de Melhoria que o mestre deu.
   const ipGranted = doc => ((doc.ip && doc.ip.ganhos) || []).reduce((sum, entry) => sum + (Number(entry.qtd) || 0), 0);
   const ipSpent = doc => (Array.isArray(doc.avanco) ? doc.avanco : []).reduce((sum, entry) => sum + Math.max(0, Number(entry.custo) || 0), 0);
-  // Os números do cartão da lista (HP, IP, eurodólares e o Rank): os da mesa, quando o Foundry já mandou a ficha; senão,
-  // os da criação (o IP é o que o mestre deu menos o que o avanço gastou).
+  // Os números do cartão da lista (HP, IP, eurodólares e o Rank): o mais recente entre a mesa da wiki e o Foundry; sem
+  // os dois, os da criação (o IP é o que o mestre deu menos o que o avanço gastou). A regra é a do personagem-jogo.js.
   const numbersOf = doc => {
     const mesa = doc.mesa || null;
     const created = doc.resultado || {};
+    const game = characterGame.valores(doc);
     return {
-      // O HP: o máximo da ficha e o atual mais recente entre o Foundry e a mesa da wiki (personagem-jogo.js).
       hp: characterGame.hp(doc),
-      ip: mesa && Number.isFinite(mesa.ip) ? mesa.ip : ipGranted(doc) - ipSpent(doc),
-      eb: mesa && Number.isFinite(mesa.dinheiro) ? mesa.dinheiro : (created.dinheiro && Number.isFinite(created.dinheiro.saldo) ? created.dinheiro.saldo : null),
+      ip: game.ip,
+      eb: game.dinheiro,
       rank: (roleSummary(doc).find(role => role.id === doc.role) || {}).rank || (created.role && created.role.rank) || null,
-      naMesa: Boolean((mesa && mesa.hp) || (doc.jogo && doc.jogo.hp))
+      naMesa: Boolean((mesa && mesa.hp) || doc.jogo)
     };
   };
 
@@ -993,6 +993,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           const granted = [...((doc.ip && doc.ip.ganhos) || []), { qtd: amount, motivo: String(input.motivo || '').trim().slice(0, 200), quando: new Date().toISOString() }];
           if (granted.reduce((sum, entry) => sum + entry.qtd, 0) < ipSpent(doc)) return { status: 400, data: { erro: 'Não dá para tirar mais do que sobra: o jogador já gastou esses pontos.' } };
           doc.ip = { ganhos: granted };
+          // A mesa da wiki já conta o IP (doc.jogo): soma lá também.
+          const game = characterGame.jogoValido(doc);
+          if (game && game.ip !== undefined && game.ip !== null) doc.jogo = characterGame.comJogo(doc, { ip: Math.max(0, (Number(game.ip) || 0) + amount) });
           doc.versao += 1; // o avanço muda o que o jogador pode fazer: quem estiver com a ficha aberta recarrega
           doc.atualizado = new Date().toISOString();
           return null;

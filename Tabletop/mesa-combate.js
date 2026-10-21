@@ -593,11 +593,17 @@ module.exports = function createCombat(ctx) {
       await writeSheet(campaignId, token, mudancasDoRetrato(token));
       return { tokens: true, combate: Boolean(state.combate) };
     } },
+    // Recarregar. O personagem usa a munição da ficha: a caixa diminui, e ele escolhe qual (municao: o id da caixa; trocar
+    // devolve o que estava no pente). O NPC e o token livre não contam bala.
     'arma.recarregar': { async run({ state, viewer, body, campaignId }) {
       const { token } = tokenArg(state, viewer, body.token);
       if (!canControl(viewer, token)) throw fail(403, 'Esse token não é seu.');
       const arma = (token.armas || []).find(item => item.id === String(body.arma || ''));
       if (!arma || !arma.pente) throw fail(400, 'Essa arma não tem pente.');
+      if (token.tipo === 'pj' && ctx.recarregar) {
+        const feito = await ctx.recarregar(campaignId, token.personagem, arma.id, String(body.municao || ''));
+        return { tokens: true, fichas: true, resultado: feito };
+      }
       arma.pente = { ...arma.pente, atual: arma.pente.max };
       await writeSheet(campaignId, token, { armas: { [arma.id]: { pente: arma.pente.atual } } });
       return { tokens: true };
