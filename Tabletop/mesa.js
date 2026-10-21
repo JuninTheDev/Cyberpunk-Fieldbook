@@ -38,6 +38,8 @@
     fichasAbertas: new Set(), municaoEscolhida: new Map(), fichasPendentes: false,
     // A barra lateral aberta (no PC; no celular é a folha de baixo).
     barraAberta: true,
+    // As notas no mapa: a escolhida na ferramenta Notas, o arrasto que ainda não voltou do servidor e a nota aberta.
+    notaSel: null, notaPrevia: null, notaAberta: null,
     // O áudio: o que o servidor mandou (o que toca e, para o mestre, as playlists), as playlists abertas na aba Áudio e a
     // faixa com as opções abertas.
     audio: null, playlistsAbertas: new Set(), faixaAberta: null
@@ -111,6 +113,9 @@
       redesenhar();
     });
     on('luzes', data => { if (S.cena && data.cena === S.cena.id) { S.cena.luzes = data.luzes; renderCenaPainel(); redesenhar(); } });
+    // As notas que um token do jogador vê aparecem e somem enquanto ele anda; o mestre pode abrir uma na tela de todos.
+    on('notas', data => { if (S.cena && data.cena === S.cena.id) { S.cena.notas = data.notas; atualizarNotaAberta(); redesenhar(); } });
+    on('nota.aberta', data => abrirNota(data));
     on('visao.esquecer', data => { if (S.cena && data.cena === S.cena.id) esquecerExplorado(); });
     on('combate', data => { S.combate = data; renderCombate(); renderVez(); redesenhar(); });
     on('registro', data => { S.registro.push(data); if (S.registro.length > 200) S.registro.shift(); adicionarRegistro(data); });
@@ -194,9 +199,12 @@
     }
     construirNevoa();
     prepararVisao();
-    if (!mesma) { S.paredeSel = null; S.tileSel = null; S.luzSel = null; }
+    if (!mesma) { S.paredeSel = null; S.tileSel = null; S.luzSel = null; S.notaSel = null; }
     S.tilePrevia = null;
     S.luzPrevia = null;
+    S.notaPrevia = null;
+    renderNotaOpcoes();
+    atualizarNotaAberta();
     renderLuzOpcoes();
     renderParedeOpcoes();
     renderTileOpcoes();
@@ -642,6 +650,111 @@
     op('luz.apagar', { luz: luz.id }).catch(() => {});
   }
 
+  // ---------------- Notas no mapa ----------------
+  // Um alfinete no mapa que abre um handout (o título, a imagem, o texto) e, se tiver, uma página da wiki. O mestre põe e
+  // muda pela ferramenta Notas (J); o jogador só recebe as que pode ver (o servidor decide) e abre com um clique.
+  const notasDaCena = () => (S.cena && S.cena.notas) || [];
+  const notaNaTela = nota => (S.notaPrevia && S.notaPrevia.id === nota.id ? { ...nota, ...S.notaPrevia } : nota);
+  const raioDaNota = () => 13 / S.vista.escala;
+  const notaEm = ponto => [...notasDaCena()].reverse().find(nota => { const n = notaNaTela(nota); return Math.hypot(ponto.x - n.x, ponto.y - n.y) <= raioDaNota() * 1.3; }) || null;
+  const notaEscolhida = () => notasDaCena().find(nota => nota.id === S.notaSel) || null;
+  function desenharNotas(px) {
+    const r = raioDaNota();
+    for (const original of notasDaCena()) {
+      const nota = notaNaTela(original);
+      const soMestre = nota.mostrar === 'mestre';
+      const escolhida = gm() && S.ferramenta === 'notas' && S.notaSel === nota.id;
+      ctx.globalAlpha = soMestre ? 0.65 : 1;
+      ctx.beginPath();
+      ctx.arc(nota.x, nota.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(11, 13, 15, .9)';
+      ctx.fill();
+      ctx.lineWidth = (escolhida ? 3 : 2) * px;
+      ctx.strokeStyle = escolhida ? '#00ffd2' : nota.cor;
+      if (soMestre) ctx.setLineDash([4 * px, 3 * px]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // A folha, com três linhas.
+      const w = r * 0.8;
+      const h = r * 1.05;
+      ctx.beginPath();
+      ctx.rect(nota.x - w / 2, nota.y - h / 2, w, h);
+      for (const linha of [-0.18, 0.06, 0.3]) { ctx.moveTo(nota.x - w * 0.28, nota.y + h * linha); ctx.lineTo(nota.x + w * 0.28, nota.y + h * linha); }
+      ctx.lineWidth = 1.5 * px;
+      ctx.strokeStyle = nota.cor;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      rotulo(nota.titulo, nota.x, nota.y + r + 4 * px, px, { tamanho: 11, borda: nota.cor });
+    }
+  }
+  // O editor do mestre: os campos da nota escolhida (quem está digitando não perde o que escreve).
+  function renderNotaOpcoes() {
+    const nota = notaEscolhida();
+    if (!nota) S.notaSel = null;
+    $('#nota-aviso').textContent = nota ? 'Nota escolhida (arraste para mover)' : 'Clique no mapa para pôr uma nota';
+    $('#nota-escolhida').hidden = !nota;
+    if (!nota) return;
+    $('#nota-sem-imagem').hidden = !nota.midia;
+    if ($('#notas-opcoes').contains(document.activeElement)) return;
+    $('#nota-titulo').value = nota.titulo;
+    $('#nota-texto').value = nota.texto;
+    $('#nota-link').value = nota.link;
+    $('#nota-mostrar').value = nota.mostrar;
+    $('#nota-cor').value = nota.cor;
+  }
+  function apagarNotaEscolhida() {
+    const nota = notaEscolhida();
+    if (!nota || !confirm(`Apagar a nota "${nota.titulo}"?`)) return;
+    S.notaSel = null;
+    renderNotaOpcoes();
+    op('nota.apagar', { nota: nota.id }).catch(() => {});
+  }
+  const editarNota = mudancas => { const nota = notaEscolhida(); if (nota) op('nota.editar', { nota: nota.id, ...mudancas }).catch(() => renderNotaOpcoes()); };
+  $('#nota-titulo').addEventListener('change', event => editarNota({ titulo: event.target.value }));
+  $('#nota-texto').addEventListener('change', event => editarNota({ texto: event.target.value }));
+  $('#nota-link').addEventListener('change', event => editarNota({ link: event.target.value.trim() }));
+  $('#nota-mostrar').addEventListener('change', event => editarNota({ mostrar: event.target.value }));
+  $('#nota-cor').addEventListener('change', event => editarNota({ cor: event.target.value }));
+  $('#nota-imagem').addEventListener('change', event => {
+    const arquivo = event.target.files[0];
+    event.target.value = '';
+    if (arquivo) enviarMidia(arquivo).then(({ midia }) => editarNota({ midia })).catch(error => { if (error.message && !/^\d+$/.test(error.message)) aviso(error.message, 'erro'); });
+  });
+  $('#nota-sem-imagem').addEventListener('click', () => editarNota({ midia: '' }));
+  $('#nota-apagar').addEventListener('click', apagarNotaEscolhida);
+  $('#nota-abrir').addEventListener('click', () => { const nota = notaEscolhida(); if (nota) abrirNota(nota); });
+  $('#nota-mostrar-todos').addEventListener('click', () => {
+    const nota = notaEscolhida();
+    if (nota) op('nota.mostrar', { nota: nota.id }).then(() => aviso(`"${nota.titulo}" abriu na tela dos jogadores.`)).catch(() => {});
+  });
+  // A nota aberta: o título, a imagem, o texto e o link para a página da wiki (abre noutra aba). O mestre também
+  // mostra a todos daqui.
+  function abrirNota(nota) {
+    S.notaAberta = nota.id;
+    const janela = $('#nota-janela');
+    janela.style.setProperty('--cor', nota.cor || '');
+    janela.innerHTML = `<div class="nota-janela-topo"><h2 id="nota-janela-titulo">${esc(nota.titulo)}</h2><button class="nota-janela-fechar" type="button" data-nota-fechar aria-label="Fechar">×</button></div>
+      ${nota.imagem ? `<img src="${esc(nota.imagem)}" alt="${esc(nota.titulo)}">` : ''}
+      ${nota.texto ? `<p class="nota-janela-texto">${esc(nota.texto)}</p>` : ''}
+      ${nota.link || gm() ? `<div class="nota-janela-acoes">${nota.link ? `<a class="botao vazado pequeno" href="/${esc(nota.link)}" target="_blank" rel="noopener">Abrir na wiki ↗</a>` : ''}${gm() ? `<button class="botao pequeno" type="button" data-nota-mostrar="${esc(nota.id)}">Mostrar a todos</button>` : ''}</div>` : ''}`;
+    janela.hidden = false;
+  }
+  function fecharNota() {
+    S.notaAberta = null;
+    $('#nota-janela').hidden = true;
+  }
+  $('#nota-janela').addEventListener('click', event => {
+    if (event.target.closest('[data-nota-fechar]')) return fecharNota();
+    const mostrar = event.target.closest('[data-nota-mostrar]');
+    if (mostrar) op('nota.mostrar', { nota: mostrar.dataset.notaMostrar }).then(() => aviso('A nota abriu na tela dos jogadores.')).catch(() => {});
+  });
+  // A nota aberta mudou (o mestre editou) ou sumiu do mapa: a janela acompanha (a que o mestre mostrou fica).
+  function atualizarNotaAberta() {
+    if (!S.notaAberta) return;
+    const nota = notasDaCena().find(item => item.id === S.notaAberta);
+    if (nota) abrirNota(nota);
+  }
+
   // ---------------- Tiles (mestre) ----------------
   // O tile como está na tela: o do servidor ou o arrasto que ainda não voltou dele.
   const tileVisto = tile => (S.tilePrevia && S.tilePrevia.id === tile.id ? { ...tile, ...S.tilePrevia } : tile);
@@ -928,6 +1041,7 @@
     ctx.lineWidth = 2 * px;
     ctx.strokeRect(0, 0, cena.largura, cena.altura);
     if (gm() && S.ferramenta === 'paredes') desenharParedes(px);
+    desenharNotas(px);
     for (const token of S.tokens.values()) {
       if (S.arrasto && S.arrasto.token === token.id) continue;
       desenharToken(token, token.vx, token.vy, agora, px);
@@ -1291,6 +1405,23 @@
       redesenhar();
       return;
     }
+    // Notas: clique numa escolhe (e arrastar move); com uma escolhida, o clique fora solta; senão, põe uma nota ali.
+    if (S.ferramenta === 'notas' && gm()) {
+      const nota = notaEm(mundo);
+      if (nota) {
+        S.notaSel = nota.id;
+        renderNotaOpcoes();
+        gesto = { tipo: 'nota-mover', inicio: tela, nota: nota.id, desloc: { x: mundo.x - nota.x, y: mundo.y - nota.y } };
+      } else if (S.notaSel) {
+        S.notaSel = null;
+        renderNotaOpcoes();
+        gesto = { tipo: 'pan-talvez', inicio: tela, vista: { ...S.vista } };
+      } else {
+        gesto = { tipo: 'nota-nova', inicio: tela, vista: { ...S.vista }, ponto: dentro(mundo) };
+      }
+      redesenhar();
+      return;
+    }
     if (S.ferramenta === 'tiles' && gm()) {
       const atual = tileEscolhido();
       if (atual && naAlca(tileVisto(atual), mundo)) { gesto = { tipo: 'tile-tamanho', inicio: tela, tile: atual.id }; return; }
@@ -1325,7 +1456,9 @@
       selecionar(token.id);
       gesto = { tipo: 'token-talvez', token: token.id, inicio: tela, pode: podeMover(token), desloc: { x: mundo.x - token.vx, y: mundo.y - token.vy }, origem: { x: token.x, y: token.y } };
     } else {
-      gesto = { tipo: 'pan-talvez', inicio: tela, vista: { ...S.vista } };
+      // Sem token: o clique (sem arrastar) num alfinete abre a nota.
+      const nota = notaEm(mundo);
+      gesto = { tipo: 'pan-talvez', inicio: tela, vista: { ...S.vista }, nota: nota ? nota.id : null };
     }
     // Segurar parado faz um ping (com Shift, o mestre traz todos).
     const shift = event.shiftKey;
@@ -1352,7 +1485,8 @@
     }
     if (!gesto) {
       const sobre = S.ferramenta === 'mover' && S.cena && tokenEm(mundo);
-      canvas.style.cursor = S.ferramenta === 'mover' && S.cena && portaEm(mundo) ? 'pointer' : sobre && podeMover(sobre) ? 'grab' : '';
+      const clicavel = S.cena && ((S.ferramenta === 'mover' && (portaEm(mundo) || (!sobre && notaEm(mundo)))) || (S.ferramenta === 'notas' && notaEm(mundo)));
+      canvas.style.cursor = clicavel ? 'pointer' : sobre && podeMover(sobre) ? 'grab' : '';
       return;
     }
     if (!gesto.moveu && Math.hypot(tela.x - gesto.inicio.x, tela.y - gesto.inicio.y) > 5) { gesto.moveu = true; clearTimeout(seguraTimer); }
@@ -1367,6 +1501,12 @@
     }
     if (gesto.tipo === 'pan-talvez' && gesto.moveu) gesto.tipo = 'pan';
     if (gesto.tipo === 'luz-nova' && gesto.moveu) gesto = { tipo: 'pan', inicio: gesto.inicio, vista: gesto.vista, moveu: true };
+    if (gesto.tipo === 'nota-nova' && gesto.moveu) gesto = { tipo: 'pan', inicio: gesto.inicio, vista: gesto.vista, moveu: true };
+    if (gesto.tipo === 'nota-mover' && gesto.moveu) {
+      S.notaPrevia = { id: gesto.nota, ...dentro({ x: mundo.x - gesto.desloc.x, y: mundo.y - gesto.desloc.y }) };
+      redesenhar();
+      return;
+    }
     if (gesto.tipo === 'pan') {
       S.enquadrada = false;
       S.vista.x = gesto.vista.x - (tela.x - gesto.inicio.x) / S.vista.escala;
@@ -1421,7 +1561,18 @@
       if (!cancelar) moverToken(atual.token, alvo);
       redesenhar();
     } else if (atual.tipo === 'pan-talvez' && !atual.moveu) {
-      selecionar(null);
+      const nota = atual.nota && notasDaCena().find(item => item.id === atual.nota);
+      if (nota && !cancelar) abrirNota(nota); else selecionar(null);
+    } else if (atual.tipo === 'nota-nova' && !atual.moveu && !cancelar) {
+      op('nota.criar', { cena: S.cena.id, x: atual.ponto.x, y: atual.ponto.y }).then(({ resultado }) => {
+        S.notaSel = resultado.nota;
+        renderNotaOpcoes();
+        redesenhar();
+        $('#nota-titulo').select();
+      }).catch(() => {});
+    } else if (atual.tipo === 'nota-mover' && S.notaPrevia && S.notaPrevia.id === atual.nota) {
+      const { id, x, y } = S.notaPrevia;
+      if (cancelar) { S.notaPrevia = null; redesenhar(); } else op('nota.editar', { nota: id, x, y }).catch(() => { S.notaPrevia = null; redesenhar(); });
     } else if (atual.tipo === 'regua') {
       // A régua fica um instante na tela e some para todos.
       S.reguaTimer = setTimeout(() => { S.minhaRegua = null; if (compartilho()) atividade({ regua: null }); redesenhar(); }, cancelar ? 0 : 1500);
@@ -1482,12 +1633,15 @@
     if ((tecla === 'w' || tecla === 'W') && gm()) return escolherFerramenta('paredes');
     if ((tecla === 't' || tecla === 'T') && gm()) return escolherFerramenta('tiles');
     if ((tecla === 'l' || tecla === 'L') && gm()) return escolherFerramenta('luzes');
+    if ((tecla === 'j' || tecla === 'J') && gm()) return escolherFerramenta('notas');
     if (tecla === '0') return enquadrar();
     if (tecla === 'c' || tecla === 'C') return irAoMeuToken();
     if (tecla === 'b' || tecla === 'B') return celular() ? abrirPainel(!$('#painel').classList.contains('aberto')) : barraAberta(!S.barraAberta);
     if (tecla === 'Escape') {
       if (!$('#menu').hidden) return menuAberto(false);
+      if (S.notaAberta || !$('#nota-janela').hidden) return fecharNota();
       if (S.escolhendoAlvo) return escolherAlvoNoMapa(false);
+      if (S.notaSel) { S.notaSel = null; renderNotaOpcoes(); redesenhar(); return; }
       if (S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); redesenhar(); return; }
       if (S.tileSel) { S.tileSel = null; renderTileOpcoes(); redesenhar(); return; }
       if (S.luzSel) { S.luzSel = null; renderLuzOpcoes(); redesenhar(); return; }
@@ -1496,6 +1650,7 @@
     if (S.ferramenta === 'paredes' && S.paredeSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarParedeEscolhida(); return; }
     if (S.ferramenta === 'tiles' && S.tileSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarTileEscolhido(); return; }
     if (S.ferramenta === 'luzes' && S.luzSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarLuzEscolhida(); return; }
+    if (S.ferramenta === 'notas' && S.notaSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarNotaEscolhida(); return; }
     if (!token) return;
     const passos = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[tecla];
     if (passos && podeMover(token)) {
@@ -1533,13 +1688,14 @@
   // pede atenção na hora (escolher o alvo no mapa).
   function renderDicas() {
     const dicas = {
-      mover: ['Mover · V', gm() ? 'Arraste tokens e o mapa. A roda aproxima. Segure o clique para ping (Shift traz todos). Shift solta fora da grade. Clique na porta abre e fecha; Shift tranca.' : 'Arraste o seu token e o mapa. A roda ou a pinça aproxima. Segure o clique para ping. As setas movem um quadrado. Clique na porta abre e fecha.'],
+      mover: ['Mover · V', gm() ? 'Arraste tokens e o mapa. A roda aproxima. Segure o clique para ping (Shift traz todos). Shift solta fora da grade. Clique na porta abre e fecha; Shift tranca. Clique num alfinete abre a nota.' : 'Arraste o seu token e o mapa. A roda ou a pinça aproxima. Segure o clique para ping. As setas movem um quadrado. Clique na porta abre e fecha. Clique num alfinete abre a nota.'],
       regua: ['Régua · R', 'Arraste para medir: quadrados, metros e a DV por alcance. Shift mede fora da grade.'],
       ping: ['Ping · P', `Clique para chamar atenção para um ponto.${gm() ? ' Shift traz todos para ele.' : ''}`],
       nevoa: ['Névoa · N', 'Pinte para revelar; Alt cobre. Revelar tudo e Cobrir tudo ficam na aba Cena.'],
       paredes: ['Paredes e portas · W', 'Arraste para desenhar; a ponta gruda na grade e nas outras paredes (Shift solta). Clique numa parede para escolher; Delete apaga.'],
       tiles: ['Tiles · T', 'Clique num tile para escolher e arraste para mover (encaixa na grade; Shift solta). O quadrado amarelo muda o tamanho; Delete apaga.'],
       luzes: ['Luzes · L', 'Clique no mapa para pôr uma luz; clique numa luz para escolher e arraste para mover. Delete apaga.'],
+      notas: ['Notas · J', 'Clique no mapa para pôr uma nota (um handout ou uma página da wiki); clique numa para editar e arraste para mover. Delete apaga. "Quem vê" decide se os jogadores veem o alfinete.'],
       centralizar: ['A cena inteira · 0', 'Enquadra o mapa e os tokens na tela.'],
       'meu-token': ['O seu token · C', 'Leva a tela até o seu token e escolhe ele.']
     };
@@ -1549,7 +1705,7 @@
     }
   }
   function escolherFerramenta(nome) {
-    if ((nome === 'nevoa' || nome === 'paredes' || nome === 'tiles' || nome === 'luzes') && !gm()) return;
+    if (['nevoa', 'paredes', 'tiles', 'luzes', 'notas'].includes(nome) && !gm()) return;
     S.ferramenta = nome;
     for (const botao of $$('[data-ferramenta]')) botao.classList.toggle('ativa', botao.dataset.ferramenta === nome);
     canvas.className = nome === 'mover' ? '' : nome;
@@ -1557,7 +1713,9 @@
     $('#paredes-opcoes').hidden = nome !== 'paredes';
     $('#tiles-opcoes').hidden = nome !== 'tiles';
     $('#luzes-opcoes').hidden = nome !== 'luzes';
+    $('#notas-opcoes').hidden = nome !== 'notas';
     if (nome !== 'luzes' && S.luzSel) { S.luzSel = null; renderLuzOpcoes(); }
+    if (nome !== 'notas' && S.notaSel) { S.notaSel = null; renderNotaOpcoes(); }
     if (nome !== 'paredes' && S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); }
     if (nome !== 'tiles' && S.tileSel) { S.tileSel = null; renderTileOpcoes(); }
     redesenhar();

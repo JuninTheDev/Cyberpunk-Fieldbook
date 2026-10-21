@@ -99,6 +99,21 @@ label { font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; lett
 .paredes-escolhida[hidden] { display: none; }
 .paredes-escolhida select { min-width: 0; flex: 1; }
 .tiles-opcoes { width: 300px; }
+/* Notas no mapa: o editor do mestre (ao lado das ferramentas) e a nota aberta (no meio da área livre, em cima). */
+.notas-opcoes { width: 320px; max-height: calc(100% - 140px); overflow-y: auto; }
+.nota-form { display: grid; gap: 8px; }
+.notas-opcoes label.campo { display: grid; gap: 4px; align-items: stretch; }
+.nota-form textarea { width: 100%; resize: vertical; font-size: 13px; }
+.nota-form input[type="color"] { width: 44px; height: 30px; padding: 2px; }
+.nota-imagem-linha { align-items: center; }
+.nota-janela { position: absolute; top: 64px; left: calc((100% - var(--barra)) / 2); transform: translateX(-50%); z-index: 7; width: min(520px, calc(100% - var(--barra) - 140px)); max-height: calc(100% - 140px); overflow-y: auto; display: grid; gap: 10px; padding: 14px; background: var(--p); border: 1px solid var(--l); border-top: 3px solid var(--cor, var(--y)); box-shadow: 0 10px 30px rgba(0, 0, 0, .55); }
+.nota-janela-topo { display: flex; align-items: flex-start; gap: 10px; }
+.nota-janela h2 { margin: 0; flex: 1; font: 700 17px var(--ui); text-transform: uppercase; letter-spacing: .04em; }
+.nota-janela-fechar { background: none; border: 0; color: var(--mu); font-size: 22px; line-height: 1; cursor: pointer; }
+.nota-janela img { display: block; max-width: 100%; max-height: 55vh; margin: 0 auto; object-fit: contain; }
+.nota-janela-texto { margin: 0; white-space: pre-line; line-height: 1.55; }
+.nota-janela-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nota-janela-acoes a { text-decoration: none; }
 .luzes-opcoes { width: 300px; }
 .luz-titulo { margin: 0; font: 11px var(--lbl); text-transform: uppercase; letter-spacing: .06em; color: var(--y); }
 .luzes-opcoes input[type="number"] { width: 80px; }
@@ -389,6 +404,7 @@ body.barra-recolhida .abas-recolher svg { transform: rotate(180deg); }
   .abas-recolher { display: none !important; }
   .aba-nome { position: static; width: auto; height: auto; clip: auto; font: 10px var(--lbl); text-transform: uppercase; letter-spacing: .04em; }
   .abas svg { width: 18px; height: 18px; }
+  .nota-janela { left: 8px; right: 8px; top: 60px; width: auto; transform: none; max-height: calc(100% - 120px); }
   .hud-acoes button { width: 40px; height: 40px; }
   .hud-hp button { width: 32px; height: 32px; }
   .ferramentas { left: 8px; top: 60px; }

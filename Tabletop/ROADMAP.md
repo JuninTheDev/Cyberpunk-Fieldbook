@@ -14,7 +14,7 @@
 2. M7 (feito);
 3. M11 (feito em paralelo, pela sessão tabletop-a9);
 4. M23, a mesa limpa (feito; pedido do usuário em 2026-10-21: "antes do M12");
-5. M12;
+5. M12 (feito);
 6. um ensaio no teste, num PC e num celular;
 7. o M4, quando o usuário aprovar.
 
@@ -121,7 +121,17 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
     - **Contando tudo que flutua** (a pastilha, as ferramentas e o rodapé): 93,4% em 1366 e 96,1% em 1920.
   - **Testado:** a suíte da mesa e a da wiki passam. Conferido no Edge em 1920, 1366 e no celular (mestre e jogadora), com os scripts `ver-moldura`, `ver-chat`, `ver-hud`, `ver-ferramentas` e `ver-celular`.
   - **Falta (opcional):** a interface esmaecida quando o mouse sai dela, como o `--ui-fade-opacity` do Foundry.
-- [ ] **M12 · Notas no mapa:** um ponto no mapa que abre um handout ou um documento da wiki (os diários do Foundry viram documentos da campanha).
+- [x] **M12 · Notas no mapa** (como as notas do diário do Foundry), em `mesa-api.js` e `mesa.js`:
+  - **O alfinete:** um ponto no mapa que abre um handout (o título, a imagem, o texto) e, se tiver, uma página da wiki (abre noutra aba).
+  - **O mestre:** põe, edita, arrasta e apaga pela ferramenta Notas (J).
+  - **Quem vê:**
+    - só o mestre;
+    - os jogadores, quando um token deles vê o ponto (a névoa e as paredes contam, como no Foundry; o servidor nem manda a que o jogador não vê);
+    - os jogadores, sempre.
+  - **Mostrar a todos** (o Show Players do Foundry): abre a nota na tela de todos os jogadores, mesmo a que só o mestre vê no mapa.
+  - **O link:** só de página da wiki (do endereço colado, fica o #). A imagem: PNG, JPEG, WebP ou SVG.
+  - **Importação:** as 13 cenas do backup do Foundry não têm nenhuma nota, e o diário tinha 3 entradas, da trama antiga (saíram com ela). O importador não traz notas.
+  - **Testado:** 3 testes e 18 mutações que caem, mais a conferência no Edge (o mestre põe e abre; a jogadora recebe o Mostrar a todos).
 
 ## Fase 2: o que os módulos fazem hoje
 

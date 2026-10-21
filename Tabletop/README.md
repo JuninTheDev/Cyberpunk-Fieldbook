@@ -47,7 +47,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (62 testes).
 
 ## O que dá para fazer
 
@@ -90,6 +90,11 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
 - **Portas:** clique no ícone abre e fecha; com Shift, tranca. A porta secreta só você vê.
 - **Luz** (aba Cena): **Luz global** deixa a cena toda clara. Sem ela, cada token vê o alcance da visão dele (30 m, se você não mudar) e o que as luzes iluminam. **Escuridão** escurece a tela de todos; as luzes abrem clareiras.
   - **Luzes** (ferramenta L): clique no mapa para pôr uma, com a luz clara, a penumbra (em metros) e a cor; clique numa para escolher, arraste para mover, Delete apaga. A escondida só você vê.
+- **Notas** (ferramenta J): clique no mapa para pôr um alfinete.
+  - **O que ele abre:** um handout (título, texto e imagem) e, se quiser, uma página da wiki. Cole o endereço da página: fica o que vem do # em diante.
+  - **Quem vê:** só você; os jogadores, quando um token deles vê o ponto (a névoa e as paredes contam); ou os jogadores, sempre.
+  - Clique numa nota para editar, arraste para mover, Delete apaga.
+  - **Mostrar a todos** abre a nota na tela de todos os jogadores, mesmo a que só você vê no mapa.
 - **Tiles** (ferramenta T): **Pôr um tile** envia a imagem ou o vídeo para o meio da tela.
   - Clique para escolher e arraste para mover; o quadrado amarelo no canto muda o tamanho. A grade encaixa; Shift solta.
   - Na barra: transparência, girar, esconder dos jogadores, para a frente ou para trás, e apagar (Delete).
@@ -155,6 +160,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
 - **Espingarda com cartucho:** um ataque contra DV 13; se acertar, 3d6 (rolado uma vez) em todos à frente, até 6 m e à vista (a parede tapa). "À frente" é até 45° para cada lado da linha até o alvo escolhido. REF 8+ esquiva. Com cartucho no pente, a espingarda só faz cartucho; com balote, só tiro; sem saber a munição (NPC), os dois.
 - **Defender:** quando alguém ataca o token dele, a pergunta aparece na tela, sem o total do ataque: esquivar (REF 8+ contra tiro; corpo a corpo, sempre) ou aguentar. Sem resposta em 60 segundos, aguenta.
 - **Chat** (embaixo do registro): para todos, só para o mestre ou sussurro a um jogador. `/r 2d6` rola.
+- **Notas:** um clique no alfinete (com a ferramenta Mover) abre a nota: o handout e, se tiver, a página da wiki. Esc fecha. O jogador só vê o alfinete que o mestre deixou ver; o "quando um token vê" aparece quando o token chega perto, como no Foundry.
 - **Som:** ouve o que o mestre toca.
   - **Ligar:** o navegador só toca som depois de um clique na página. Até lá, o canto de baixo mostra **♪ Ligar o som**, e o primeiro clique liga. No celular também.
   - **Topo:** o botão mostra a música que toca e abre a aba Áudio.
@@ -247,7 +253,7 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
 
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
-- **Áudio**, **notas no mapa** e **NET** (o NET Architect).
+- **NET** (o NET Architect), os **veículos** e os **NPCs próprios** do mestre (Fase 2).
 - **Loja e cyberware:** a compra aprovada (M15) e a instalação de cyberware com a perda de Humanidade (M16) ainda passam pelo Foundry. Na mesa, o mestre ajusta a Humanidade e as quantidades à mão.
 - **Artes Marciais:** os movimentos especiais esperam o agarrar e a conta de quem acertou o quê no turno. O golpe de artes marciais já ignora metade do SP.
 - **Cobertura:** a mesa não conta o HP da cobertura. O que atravessa cobertura (a carga Tech, o ricochete) aparece como nota no cartão, e o mestre decide.
@@ -306,5 +312,5 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists e a biblioteca do yt-jukebox de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 59 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 62 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

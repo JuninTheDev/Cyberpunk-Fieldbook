@@ -36,6 +36,11 @@ const MAX_SCENES = 80;
 const MAX_TILES = 300;
 const MAX_WALLS = 4000;
 const MAX_LIGHTS = 300;
+const MAX_NOTES = 200;
+// A imagem de uma nota (o handout) e o link dela: uma página da wiki. Do endereço colado (https://wiki…/#sessao-01 ou
+// #sessao-01) só fica o que vem do # em diante: a nota abre a página na wiki de quem clica.
+const IMAGE_FILE = /\.(png|jpg|webp|svg)$/;
+const WIKI_LINK = /^(?:https?:\/\/[^/\s#]+)?\/?(#[A-Za-z0-9\-_/.%~]{1,200})$/;
 const PULSE = 20_000;
 const SYNC = 4_000;
 // Mapas e tiles: imagem ou vídeo (as cenas animadas do Foundry). SVG só para imagem de token, entregue em caixa de areia.
@@ -364,9 +369,31 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     }
     return view;
   }
+  // As notas no mapa que cada um recebe: o mestre, todas (com "quem vê" e a imagem); o jogador, as que pode ver agora.
+  // mostrar: 'mestre' (só ele), 'vista' (como no Foundry: quando a névoa não cobre o ponto e, com a visão ligada, um
+  // token dele vê o ponto) ou 'sempre'.
+  function notasFor(viewer, scene, campaignId) {
+    const gm = isGm(viewer);
+    let olhos = null;
+    let ambiente = null;
+    const vista = nota => {
+      if (nota.mostrar === 'sempre') return true;
+      if (nota.mostrar !== 'vista' || !fogShows(scene, nota.x, nota.y)) return false;
+      if (!scene.visao) return true;
+      if (!olhos) { olhos = olhosDe(viewer, scene); ambiente = ambienteDe(viewer, scene); }
+      return pontoVisto(olhos, nota, scene.paredes || [], ambiente);
+    };
+    return (scene.notas || []).filter(nota => gm || vista(nota)).map(nota => notaVista(viewer, nota, campaignId));
+  }
+  const notaVista = (viewer, nota, campaignId) => ({
+    id: nota.id, x: nota.x, y: nota.y, titulo: nota.titulo, texto: nota.texto, imagem: mediaUrl(viewer, campaignId, nota.midia), link: nota.link, cor: nota.cor,
+    ...(isGm(viewer) ? { mostrar: nota.mostrar, midia: nota.midia } : {})
+  });
   function sceneFor(viewer, scene, campaignId, connection) {
     const luzes = lightsFor(viewer, scene);
     if (connection) connection.luzesVistas = JSON.stringify(luzes);
+    const notas = notasFor(viewer, scene, campaignId);
+    if (connection) connection.notasVistas = JSON.stringify(notas);
     const tokens = [];
     const seen = new Map();
     for (const token of scene.tokens) {
@@ -384,7 +411,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       // Tile escondido (no Foundry, o que o mestre ainda não revelou) só vai para o mestre.
       tiles: (scene.tiles || []).filter(tile => gm || !tile.escondido).map(({ midia, ...tile }) => ({ ...tile, imagem: mediaUrl(viewer, campaignId, midia), video: VIDEO_FILE.test(midia || '') })),
       tokens, visao: Boolean(scene.visao), paredes: wallsFor(viewer, scene),
-      luz: luzDaCena(scene), luzes,
+      luz: luzDaCena(scene), luzes, notas,
       ...(gm ? { origem: scene.origem || null, musica: scene.musica || null } : {})
     };
   }
@@ -537,6 +564,10 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const luzes = scene ? JSON.stringify(lightsFor(connection.viewer, scene)) : '[]';
     if (scene && connection.luzesVistas !== luzes) sendEvent(connection, 'luzes', { cena: scene.id, luzes: JSON.parse(luzes) });
     connection.luzesVistas = luzes;
+    // As notas que um token vê aparecem quando ele chega perto (e somem atrás da parede).
+    const notas = scene ? JSON.stringify(notasFor(connection.viewer, scene, connection.campanha)) : '[]';
+    if (scene && connection.notasVistas !== notas) sendEvent(connection, 'notas', { cena: scene.id, notas: JSON.parse(notas) });
+    connection.notasVistas = notas;
   }
   // Depois de cada operação: para cada conexão da campanha, só o que mudou para ela.
   function broadcast(campaignId, effects) {
@@ -575,6 +606,13 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const scene = sceneById(state, id ? String(id) : state.cenaAtiva);
     if (!scene) throw fail(404, id ? 'Cena não encontrada.' : 'Abra uma cena antes.');
     return scene;
+  }
+  function notaArg(state, id) {
+    for (const scene of state.cenas) {
+      const nota = (scene.notas || []).find(item => item.id === String(id || ''));
+      if (nota) return { scene, nota };
+    }
+    throw fail(404, 'Nota não encontrada.');
   }
   function lightArg(state, id) {
     for (const scene of state.cenas) {
@@ -656,6 +694,28 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     claro: real(input.claro, 0, 1000, 0), penumbra: real(input.penumbra, 0, 1000, 0), angulo: real(input.angulo, 0, 360, 360),
     cor: COLOR_RE.test(input.cor || '') ? input.cor : null, alpha: Math.round(real(input.alpha, 0, 1, 0.5) * 100) / 100, escondido: Boolean(input.escondido)
   });
+  // Uma nota no mapa (no Foundry, a nota do diário na cena): o ponto, o título, o texto, a imagem (o handout), o link
+  // para uma página da wiki, quem vê e a cor do alfinete. atual: a nota de antes (editar troca só o que veio).
+  const MOSTRAR_NOTA = ['mestre', 'vista', 'sempre'];
+  function cleanNota(campaignId, input, atual = {}) {
+    const midia = input.midia === undefined ? atual.midia || '' : mediaArg(campaignId, input.midia);
+    if (midia && !IMAGE_FILE.test(midia)) throw fail(400, 'A imagem da nota é PNG, JPEG, WebP ou SVG.');
+    let link = input.link === undefined ? atual.link || '' : line(input.link, 300);
+    if (link) {
+      const achado = link.match(WIKI_LINK);
+      if (!achado) throw fail(400, 'O link é de uma página da wiki: copie o endereço dela (com o #).');
+      link = achado[1];
+    }
+    return {
+      id: atual.id || newId(),
+      x: Math.round(real(input.x ?? atual.x, -50000, 50000, 0)), y: Math.round(real(input.y ?? atual.y, -50000, 50000, 0)),
+      titulo: line(input.titulo ?? atual.titulo, 80) || 'Nota',
+      texto: block(input.texto ?? atual.texto ?? '', 4000).trim(),
+      midia, link,
+      mostrar: MOSTRAR_NOTA.includes(input.mostrar) ? input.mostrar : MOSTRAR_NOTA.includes(atual.mostrar) ? atual.mostrar : 'mestre',
+      cor: COLOR_RE.test(input.cor || '') ? input.cor : atual.cor || '#f8ef02'
+    };
+  }
   // Ficha de NPC da wiki pelo nome (o "base" que o cpr-2077 grava no ator do Foundry, ou o nome do token).
   const presetByName = name => { const wanted = plain(name); return wanted ? wikiData().npcs.find(npc => plain(npc.nome) === wanted) || null : null; };
   // Um token novo: de um personagem da campanha, de uma ficha de NPC da wiki ou livre (com imagem e HP, se vierem).
@@ -1081,6 +1141,34 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const { scene, luz } = lightArg(state, body.luz);
       scene.luzes = scene.luzes.filter(item => item !== luz);
       return { cena: scene.id };
+    } },
+    // Notas no mapa: o mestre põe, muda, move e tira. A cena vai de novo a todos (cada um recebe só as que vê).
+    'nota.criar': { mestre: true, run({ state, body, campaignId }) {
+      const scene = sceneArg(state, body.cena);
+      if ((scene.notas || []).length >= MAX_NOTES) throw fail(400, `Até ${MAX_NOTES} notas por cena.`);
+      const nota = cleanNota(campaignId, { ...body, ...naCena(scene, numero(body.x, scene.largura / 2), numero(body.y, scene.altura / 2)) });
+      scene.notas = [...(scene.notas || []), nota];
+      return { cena: scene.id, resultado: { nota: nota.id } };
+    } },
+    'nota.editar': { mestre: true, run({ state, body, campaignId }) {
+      const { scene, nota } = notaArg(state, body.nota);
+      const lugar = body.x !== undefined || body.y !== undefined ? naCena(scene, numero(body.x, nota.x), numero(body.y, nota.y)) : {};
+      Object.assign(nota, cleanNota(campaignId, { ...body, ...lugar }, nota));
+      return { cena: scene.id };
+    } },
+    'nota.apagar': { mestre: true, run({ state, body }) {
+      const { scene, nota } = notaArg(state, body.nota);
+      scene.notas = scene.notas.filter(item => item !== nota);
+      return { cena: scene.id };
+    } },
+    // Mostrar a todos (no Foundry, "Show Players"): a nota abre na tela de quem está na mesa, mesmo a que só o mestre vê
+    // no mapa. Não muda nada guardado.
+    'nota.mostrar': { mestre: true, run({ state, body, campaignId }) {
+      const { nota } = notaArg(state, body.nota);
+      for (const connection of connections.values()) {
+        if (connection.campanha === campaignId && !isGm(connection.viewer)) sendEvent(connection, 'nota.aberta', notaVista(connection.viewer, nota, campaignId));
+      }
+      return {};
     } },
     'tile.criar': { mestre: true, run({ state, body, campaignId }) {
       const scene = sceneArg(state, body.cena);

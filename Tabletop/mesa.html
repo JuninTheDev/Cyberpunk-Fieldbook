@@ -46,6 +46,7 @@
         <button type="button" data-ferramenta="paredes" class="so-mestre" aria-label="Paredes e portas (W)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14"/><path d="M3 9.7h18M3 14.3h18M9 5v4.7M15 9.7v4.6M9 14.3V19"/></svg></button>
         <button type="button" data-ferramenta="tiles" class="so-mestre" aria-label="Tiles (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></button>
         <button type="button" data-ferramenta="luzes" class="so-mestre" aria-label="Luzes (L)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
+        <button type="button" data-ferramenta="notas" class="so-mestre" aria-label="Notas (J)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 11h6M9 14h6M9 17h4"/></svg></button>
         <span class="ferramentas-sep" aria-hidden="true"></span>
         <button type="button" data-acao="centralizar" aria-label="A cena inteira (0)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
         <button type="button" data-acao="meu-token" class="so-jogador" aria-label="O seu token (C)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg></button>
@@ -72,6 +73,30 @@
         <div class="campo-linha"><label class="campo">Cor <input id="luz-cor" type="color" value="#ffb35c"></label><label class="marcar"><input id="luz-sem-cor" type="checkbox"> Sem cor (só ilumina)</label></div>
         <div id="luz-escolhida" class="combate-acoes" hidden><label class="marcar"><input id="luz-escondida" type="checkbox"> Escondida dos jogadores</label><button id="luz-apagar" class="botao vazado pequeno perigo" type="button">Apagar</button></div>
       </div>
+      <!-- A ferramenta Notas (mestre): a nota escolhida, com o que ela mostra e quem vê. -->
+      <div id="notas-opcoes" class="nevoa-opcoes notas-opcoes" hidden>
+        <p id="nota-aviso" class="luz-titulo">Clique no mapa para pôr uma nota</p>
+        <div id="nota-escolhida" class="nota-form" hidden>
+          <label class="campo">Título <input id="nota-titulo" type="text" maxlength="80"></label>
+          <label class="campo">Texto <textarea id="nota-texto" maxlength="4000" rows="4" placeholder="O que está escrito, o que eles descobrem…"></textarea></label>
+          <label class="campo">Página da wiki <input id="nota-link" type="text" maxlength="300" placeholder="Cole o endereço da página (com o #)"></label>
+          <div class="campo-linha">
+            <label class="campo cresce">Quem vê <select id="nota-mostrar"><option value="mestre">Só eu</option><option value="vista">Os jogadores, quando um token vê</option><option value="sempre">Os jogadores, sempre</option></select></label>
+            <label class="campo">Cor <input id="nota-cor" type="color" value="#f8ef02"></label>
+          </div>
+          <div class="campo-linha nota-imagem-linha">
+            <label class="botao vazado pequeno arquivo">Imagem <input id="nota-imagem" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
+            <button id="nota-sem-imagem" class="link" type="button" hidden>tirar a imagem</button>
+          </div>
+          <div class="combate-acoes">
+            <button id="nota-abrir" class="botao vazado pequeno" type="button">Abrir</button>
+            <button id="nota-mostrar-todos" class="botao pequeno" type="button" title="Abre a nota na tela de todos os jogadores (como o Show Players do Foundry)">Mostrar a todos</button>
+            <button id="nota-apagar" class="botao vazado pequeno perigo" type="button">Apagar</button>
+          </div>
+        </div>
+      </div>
+      <!-- A nota aberta (clique no alfinete, ou o mestre mostrou a todos): o título, a imagem, o texto e a página da wiki. -->
+      <section id="nota-janela" class="nota-janela" role="dialog" aria-labelledby="nota-janela-titulo" hidden></section>
       <div id="tiles-opcoes" class="nevoa-opcoes tiles-opcoes" hidden>
         <label class="botao vazado pequeno arquivo">Pôr um tile (imagem ou vídeo) <input id="tile-novo" type="file" accept="image/png,image/jpeg,image/webp,video/webm,video/mp4"></label>
         <div id="tile-escolhido" class="tile-escolhido" hidden></div>
