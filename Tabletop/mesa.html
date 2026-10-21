@@ -74,7 +74,8 @@
         <div id="tile-escolhido" class="tile-escolhido" hidden></div>
       </div>
       <div id="vez" class="vez" hidden></div>
-      <section id="cartao" class="cartao" hidden aria-live="polite"></section>
+      <!-- O HUD do token escolhido, junto dele (como o Token HUD do Foundry): o HP e as ações. O cartão fica na aba Token. -->
+      <div id="hud" class="hud" role="toolbar" aria-label="Token escolhido" hidden></div>
       <div id="vazio" class="vazio" hidden></div>
       <div id="dica" class="dica"></div>
       <!-- A barra recolhida: o chat no canto do mapa (as mensagens novas somem sozinhas; a caixa fica). -->
@@ -145,6 +146,13 @@
         <div id="combate"></div>
       </section>
 
+      <!-- O cartão do token escolhido: o HP, as armas e a munição, o ataque e, para o mestre, o dano à mão, a aparência
+           e a nota. -->
+      <section class="aba" data-aba="token">
+        <p id="cartao-vazio" class="nota"><span class="so-mestre">Clique num token no mapa para ver o cartão dele.</span><span class="so-jogador">Clique no seu token no mapa (ou aperte C) para ver o cartão dele.</span></p>
+        <section id="cartao" class="cartao" hidden aria-live="polite"></section>
+      </section>
+
       <section class="aba" data-aba="fichas">
         <div id="fichas"></div>
       </section>
@@ -165,6 +173,9 @@
           </button>
           <button type="button" role="tab" data-aba="combate" aria-selected="false" title="Combate">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M13 17l4-4M15 15l4 4M20 4L9 15M7 13l4 4M9 15l-4 4"/></svg><span class="aba-nome">Combate</span><span id="combate-selo" class="selo" hidden></span>
+          </button>
+          <button type="button" role="tab" data-aba="token" aria-selected="false" title="Token: o cartão do token escolhido">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span class="aba-nome">Token</span>
           </button>
           <button type="button" role="tab" data-aba="fichas" aria-selected="false" title="Fichas">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg><span class="aba-nome"><span class="so-mestre">Fichas</span><span class="so-jogador">Personagem</span></span>

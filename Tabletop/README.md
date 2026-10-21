@@ -63,6 +63,10 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
   - Com o chat fora de vista, o ícone dele ganha uma bolinha quando chega mensagem.
 - **Canto de cima:** o menu ≡ (voltar para a wiki, a campanha, a conta e os atalhos) e a cena. O mestre troca a cena por ali, e **Levar todos** leva os jogadores para ela.
 - **Canto de baixo:** a conexão, quem está na mesa e o som.
+- **O token escolhido** (clique nele) ganha um HUD junto dele no mapa, como o Token HUD do Foundry. O HUD some enquanto o token é arrastado.
+  - **O HP:** − e +, ou escreva o número; "−5" e "+5" somam.
+  - **Os botões:** Atacar, Rolar e Lanterna. O mestre também tem Esconder e Pôr no combate.
+  - **O cartão** abre na aba **Token** da barra: as armas e a munição, o ataque e, para o mestre, o dano à mão, a aparência e a nota. Abre pelo botão do HUD ou por um duplo clique no token.
 - **Celular:** a barra é a folha que sobe de baixo, pelo botão **Painel**.
 - **A cena inteira** (0 ou a ferramenta Cena) enquadra no que sobra livre: sem a barra aberta, a pastilha e as ferramentas.
 
@@ -92,7 +96,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
 - **Tokens** (aba Fichas): ponha os personagens da campanha e as fichas de NPC da wiki (o livro, o Mission Kit, o Black Chrome e o elenco do Protocolo Morana).
   - O NPC entra escondido, se você quiser.
   - Também há o token livre: um drone, um carro, uma porta.
-- **Cartão do token:** clique num token para mexer no HP (−5, −1, +1, +5 ou o número), esconder ou mostrar, ver as armas do NPC, escrever uma nota (só sua), **Atualizar da ficha** e tirar da cena.
+- **Cartão do token** (aba Token): mexa no HP (−5, −1, +1, +5 ou o número), esconda ou mostre, veja as armas do NPC, escreva uma nota (só sua), **Atualizar da ficha** e tire da cena.
   - **Aparência:** nome, tamanho (1 × 1 a 4 × 4), cor, imagem, alcance da visão e a luz que o token leva. O personagem usa o retrato da ficha.
 - **Névoa** (ferramenta N): pinte para revelar; com Alt, cobre. Revelar tudo e Cobrir tudo ficam na aba Cena.
 - **Combate:** a iniciativa (REF + 1d10) sai para todos os tokens não escondidos.

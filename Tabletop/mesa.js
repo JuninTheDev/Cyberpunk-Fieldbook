@@ -1197,7 +1197,7 @@
     if (S.pings.length || S.atividade.size || temVideo()) anima = true;
     if (S.combate && S.combate.vez && S.tokens.has(S.combate.vez)) anima = true;
     if ([...S.tokens.values()].some(token => token.estado === 'Mortalmente Ferido' && !token.morto)) anima = true;
-    if (S.sujo || anima) { S.sujo = false; desenhar(agora); }
+    if (S.sujo || anima) { S.sujo = false; desenhar(agora); posicionarHud(); }
   }
 
   // ---------------- Mouse, toque e teclado ----------------
@@ -1615,6 +1615,8 @@
   function renderCartao() {
     const caixa = $('#cartao');
     const token = S.selecionado && S.tokens.get(S.selecionado);
+    renderHud();
+    $('#cartao-vazio').hidden = Boolean(token);
     if (!token) { caixa.hidden = true; caixa.dataset.token = ''; return; }
     // Escrevendo a nota, o HP ou o ataque deste token: não troca o cartão debaixo de quem digita.
     if (caixa.dataset.token === token.id && !caixa.hidden && caixa.contains(document.activeElement) && document.activeElement.matches('textarea, input, select')) return;
@@ -1673,6 +1675,78 @@
     caixa.innerHTML = partes.join('');
     caixa.hidden = false;
   }
+  // ---------------- O HUD do token ----------------
+  // Junto do token escolhido no mapa, como o Token HUD do Foundry: o nome, o HP (−, o número ou "−5"/"+5", +) e as ações
+  // do momento. O resto (armas, munição, o ataque, a aparência, a nota) fica no cartão, na aba Token da barra.
+  const ICONE = {
+    mira: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>',
+    dado: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h.01M15 15h.01M15 9h.01M9 15h.01M12 12h.01" stroke-width="3"/></svg>',
+    lanterna: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v4l-2 3v11H9V10L7 7z"/><path d="M12 13v2"/></svg>',
+    caveira: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3z"/><path d="M9.5 11h.01M14.5 11h.01M10 19v2M14 19v2" stroke-width="2.5"/></svg>',
+    olho: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg>',
+    olhoFechado: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3 3.6M6.5 7.6C3.8 9.3 2 12 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4.4-1"/></svg>',
+    espadas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M13 17l4-4M15 15l4 4M20 4L9 15M7 13l4 4M9 15l-4 4"/></svg>',
+    cartao: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.5 1.7-2 3-2s2.4.5 3 2M14 10h4M14 13h3"/></svg>'
+  };
+  function renderHud() {
+    const hud = $('#hud');
+    const token = S.selecionado && S.tokens.get(S.selecionado);
+    if (!token) { hud.hidden = true; hud.dataset.token = ''; return; }
+    // Digitando o HP no HUD: não troca o campo debaixo de quem digita.
+    if (hud.dataset.token === token.id && hud.contains(document.activeElement) && document.activeElement.matches('input')) return;
+    const meu = gm() || token.meu;
+    const botao = (tipo, titulo, icone, classe = '') => `<button type="button" data-cartao="${tipo}" class="${classe}" title="${esc(titulo)}" aria-label="${esc(titulo)}">${ICONE[icone]}</button>`;
+    const hp = !token.hp ? '' : meu
+      ? `<span class="hud-hp"><button type="button" data-hp="-1" aria-label="Tirar 1 de HP">−</button><input data-hud-hp type="text" inputmode="numeric" value="${token.hp.atual}" aria-label="HP: o número, ou −5 e +5 para somar" title="Escreva o HP, ou −5 e +5 para somar"><span>/${token.hp.max}</span><button type="button" data-hp="1" aria-label="Dar 1 de HP">+</button></span>`
+      : `<span class="hud-hp">${token.hp.atual}/${token.hp.max}</span>`;
+    const acesa = Boolean(token.luz && (token.luz.claro || token.luz.penumbra));
+    const acoes = [];
+    if (meu && !token.morto) acoes.push(botao('atacar', 'Atacar', 'mira'));
+    if (meu) acoes.push(botao('rolar', 'Rolar um teste', 'dado'));
+    if (meu) acoes.push(botao('lanterna', acesa ? 'Apagar a luz' : 'Acender a lanterna', 'lanterna', acesa ? 'ativo' : ''));
+    if (meu && token.hp && token.hp.atual < 1 && !token.morto) acoes.push(botao('deathsave', 'Death Save', 'caveira', 'perigo'));
+    if (gm()) {
+      acoes.push(botao('esconder', token.escondido ? 'Mostrar aos jogadores' : 'Esconder dos jogadores', token.escondido ? 'olhoFechado' : 'olho', token.escondido ? 'ativo' : ''));
+      if (S.combate && !S.combate.ordem.some(item => item.token === token.id)) acoes.push(botao('combate', 'Pôr no combate', 'espadas'));
+    }
+    acoes.push(botao('abrir', 'Abrir o cartão: armas, munição, ataque e aparência', 'cartao'));
+    hud.innerHTML = `<div class="hud-topo"><b>${esc(token.nome)}</b>${token.estado && token.estado !== 'Sem ferimentos' ? `<small class="estado ${woundClass(token.estado)}">${esc(token.estado)}</small>` : ''}${hp}</div><div class="hud-acoes">${acoes.join('')}</div>`;
+    hud.style.setProperty('--cor', token.cor);
+    hud.dataset.token = token.id;
+    hud.hidden = false;
+    S.hudPos = null;
+    posicionarHud();
+  }
+  // Embaixo do token (em cima, se não couber), sempre dentro da área livre do mapa. Chamado a cada quadro desenhado.
+  function posicionarHud() {
+    const hud = $('#hud');
+    if (hud.hidden) return;
+    const token = S.tokens.get(hud.dataset.token);
+    if (!token) return;
+    hud.classList.toggle('arrastando', Boolean(S.arrasto && S.arrasto.token === token.id));
+    const escala = S.vista.escala;
+    const raio = raioDe(token) * escala;
+    const x = (token.vx - S.vista.x) * escala;
+    const y = (token.vy - S.vista.y) * escala;
+    const livre = areaLivre();
+    const largura = hud.offsetWidth;
+    const altura = hud.offsetHeight;
+    // Abaixo do nome do token (o rótulo que o mapa desenha embaixo dele).
+    let topo = y + raio + 30;
+    if (topo + altura > livre.y1 - 4) topo = y - raio - 8 - altura;
+    const esquerda = Math.round(Math.min(Math.max(x - largura / 2, livre.x0 + 4), livre.x1 - largura - 4));
+    topo = Math.round(Math.min(Math.max(topo, livre.y0 + 4), livre.y1 - altura - 4));
+    const posicao = `${esquerda},${topo}`;
+    if (posicao === S.hudPos) return;
+    S.hudPos = posicao;
+    hud.style.transform = `translate(${esquerda}px, ${topo}px)`;
+  }
+  // O cartão do token na barra (no celular, a folha de baixo).
+  function abrirCartaoNaBarra() {
+    abrirAba('token');
+    if (celular()) abrirPainel(true);
+  }
+
   // SP, Sorte, armas com o pente, lesões e o Death Save: o dono e o mestre recebem do servidor.
   function htmlDaFichaDeCombate(token) {
     const linhas = [];
@@ -1812,9 +1886,11 @@
     renderCartao();
   }
 
-  $('#cartao').addEventListener('click', event => {
+  // Os cliques do cartão (na aba Token) e do HUD (no mapa) fazem o mesmo.
+  function cliqueNoToken(event) {
     const token = S.selecionado && S.tokens.get(S.selecionado);
     if (!token) return;
+    const doHud = event.currentTarget.id === 'hud';
     const hp = event.target.closest('[data-hp]');
     if (hp && token.hp) {
       op('token.editar', { token: token.id, hp: { atual: token.hp.atual + Number(hp.dataset.hp), max: token.hp.max } }).catch(() => {});
@@ -1843,7 +1919,14 @@
     if (!acao) return;
     const tipo = acao.dataset.cartao;
     if (tipo === 'fechar') { S.ataque = null; selecionar(null); }
-    if (tipo === 'atacar') { S.ataque = S.ataque && S.ataque.token === token.id ? null : { token: token.id, arma: '', modo: '', local: 'cabeca', alvo: '', mod: 0, sorte: 0 }; escolherAlvoNoMapa(false); }
+    if (tipo === 'abrir') abrirCartaoNaBarra();
+    // Atacar: o formulário do ataque, no cartão (pelo HUD, abre o cartão com ele).
+    if (tipo === 'atacar') {
+      const aberto = S.ataque && S.ataque.token === token.id;
+      if (!doHud || !aberto) S.ataque = aberto ? null : { token: token.id, arma: '', modo: '', local: 'cabeca', alvo: '', mod: 0, sorte: 0 };
+      escolherAlvoNoMapa(false);
+      if (doHud) abrirCartaoNaBarra();
+    }
     // Rolar pelo token: a bandeja de rolagem, com ele em "Quem rola" (no chat do canto, se a barra estiver recolhida).
     if (tipo === 'rolar') {
       if (!chatFlutua()) { abrirAba('rolagens'); abrirPainel(true); }
@@ -1870,6 +1953,25 @@
       const acesa = Boolean(token.luz && (token.luz.claro || token.luz.penumbra));
       op('token.editar', { token: token.id, luz: acesa ? { claro: 0, penumbra: 0 } : { claro: 6, penumbra: 12 } }).catch(() => {});
     }
+  }
+  $('#cartao').addEventListener('click', cliqueNoToken);
+  $('#hud').addEventListener('click', cliqueNoToken);
+  // O HP no HUD: o número troca; "−5" e "+5" somam (como as barras do Token HUD do Foundry).
+  $('#hud').addEventListener('change', event => {
+    const token = S.selecionado && S.tokens.get(S.selecionado);
+    if (!event.target.matches('[data-hud-hp]') || !token || !token.hp) return;
+    const texto = event.target.value.trim().replace(/[−–]/g, '-');
+    const numero = Number(texto);
+    event.target.blur();
+    if (!texto || !Number.isFinite(numero)) { renderHud(); return; }
+    const atual = /^[+-]/.test(texto) ? token.hp.atual + numero : numero;
+    op('token.editar', { token: token.id, hp: { atual: Math.round(atual), max: token.hp.max } }).catch(() => renderHud());
+  });
+  // Duplo clique no token escolhido abre o cartão dele (como a ficha no Foundry).
+  canvas.addEventListener('dblclick', event => {
+    const caixa = canvas.getBoundingClientRect();
+    const token = tokenEm(telaParaMundo(event.clientX - caixa.left, event.clientY - caixa.top));
+    if (token && token.id === S.selecionado) abrirCartaoNaBarra();
   });
   // O <details> da aparência fica aberto quando o cartão é refeito (o toggle não sobe: pega na captura).
   $('#cartao').addEventListener('toggle', event => { if (event.target.matches('.aparencia')) S.aparenciaAberta = event.target.open; }, true);
@@ -1919,10 +2021,11 @@
     seta.querySelector('.sr').textContent = aberta ? 'Recolher a barra' : 'Abrir a barra';
     posicionarChat();
     limparSelos();
+    redesenhar(); // o HUD do token volta para dentro da área livre
     if (lembrar) store.set('barra', aberta ? 'aberta' : 'recolhida');
   }
   window.matchMedia('(max-width: 820px)').addEventListener('change', () => barraAberta(S.barraAberta, { lembrar: false }));
-  const nomeDaAba = nome => (nome === 'fichas' ? (gm() ? 'Fichas' : 'Personagem') : { rolagens: 'Chat', combate: 'Combate', audio: 'Áudio', cena: 'Cena' }[nome] || '');
+  const nomeDaAba = nome => (nome === 'fichas' ? (gm() ? 'Fichas' : 'Personagem') : { rolagens: 'Chat', combate: 'Combate', token: 'Token', audio: 'Áudio', cena: 'Cena' }[nome] || '');
   const abaVisivel = nome => barraVisivel() && $(`.abas [data-aba="${nome}"]`).classList.contains('ativa');
   // A bolinha da aba some quando a aba fica à vista.
   function limparSelos() {

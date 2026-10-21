@@ -122,8 +122,24 @@ label { font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; lett
 .dica { position: absolute; right: calc(var(--barra) + 12px); bottom: 12px; z-index: 1; font: 11px var(--lbl); color: var(--mu); background: rgba(11, 13, 15, .8); padding: 4px 8px; pointer-events: none; max-width: calc(100% - var(--barra) - 380px); }
 .dica:empty { display: none; }
 
-/* Cartão do token escolhido */
-.cartao { position: absolute; left: 70px; bottom: 56px; z-index: 3; width: min(330px, calc(100% - var(--barra) - 84px)); background: rgba(21, 25, 27, .97); border: 1px solid var(--l); border-top: 3px solid var(--cor, var(--c)); padding: 12px; display: grid; gap: 10px; max-height: calc(100% - 120px); overflow: auto; }
+/* O cartão do token escolhido, na aba Token da barra. */
+.cartao { display: grid; gap: 10px; padding-top: 10px; border-top: 3px solid var(--cor, var(--c)); }
+/* O HUD do token escolhido, junto dele no mapa (como o Token HUD do Foundry): o nome, o HP e as ações. Some no arrasto. */
+.hud { position: absolute; left: 0; top: 0; z-index: 3; display: grid; gap: 6px; padding: 6px; background: rgba(15, 19, 20, .94); border: 1px solid var(--l); border-top: 2px solid var(--cor, var(--c)); box-shadow: 0 6px 20px rgba(0, 0, 0, .45); }
+.hud.arrastando { visibility: hidden; }
+.hud-topo { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.hud-topo b { font: 700 12px var(--ui); text-transform: uppercase; letter-spacing: .04em; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.hud-topo .estado { font-size: 11px; }
+.hud-hp { display: flex; align-items: center; gap: 2px; margin-left: auto; font: 12px var(--lbl); color: var(--mu); }
+.hud-hp button { width: 26px; height: 26px; padding: 0; background: var(--w); border: 1px solid var(--l); color: var(--tx); cursor: pointer; }
+.hud-hp button:hover { border-color: var(--c); color: var(--c); }
+.hud-hp input { width: 44px; padding: 3px 2px; text-align: center; font: 13px var(--lbl); }
+.hud-acoes { display: flex; gap: 4px; }
+.hud-acoes button { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; background: var(--w); border: 1px solid var(--l); color: var(--tx); cursor: pointer; }
+.hud-acoes button:hover { border-color: var(--c); color: var(--c); }
+.hud-acoes button.ativo { border-color: var(--y); color: var(--y); }
+.hud-acoes button.perigo { border-color: var(--r); color: var(--r); }
+.hud svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 .cartao-topo { display: flex; gap: 10px; align-items: center; }
 .cartao-topo .avatar { width: 44px; height: 44px; flex: none; }
 .cartao-topo h3 { margin: 0; font: 700 16px var(--ui); text-transform: uppercase; letter-spacing: .03em; line-height: 1.15; }
@@ -366,7 +382,8 @@ body.barra-recolhida .abas-recolher svg { transform: rotate(180deg); }
   .abas-recolher { display: none !important; }
   .aba-nome { position: static; width: auto; height: auto; clip: auto; font: 10px var(--lbl); text-transform: uppercase; letter-spacing: .04em; }
   .abas svg { width: 18px; height: 18px; }
-  .cartao { left: 8px; right: 8px; width: auto; bottom: 8px; max-height: 50%; }
+  .hud-acoes button { width: 40px; height: 40px; }
+  .hud-hp button { width: 32px; height: 32px; }
   .ferramentas { left: 8px; top: 60px; }
   .ferramentas button { width: 44px; min-height: 44px; }
   .nevoa-opcoes { left: 60px; top: 60px; right: 8px; }
