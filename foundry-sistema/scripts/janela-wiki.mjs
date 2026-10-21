@@ -4,9 +4,10 @@
 // loja que esperam o mestre (aprovar, que entrega na hora, ou recusar). Os avisos da última importação ficam no alto.
 import { caminho, SISTEMA } from './config.mjs';
 import * as wiki from './wiki.mjs';
+import { mudouDeCampanha } from './wiki-campanha.mjs';
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
-const atorDa = wikiId => game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId) ?? null;
+const atorDa = wikiId => game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu')) ?? null;
 const quando = data => (data ? new Date(data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
 export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -34,10 +35,10 @@ export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {
     const contexto = await super._prepareContext(options);
     const jogadores = { '': 'Sem dono', ...Object.fromEntries(game.users.filter(u => !u.isGM).map(u => [u.id, u.name])) };
     try {
-      const { personagens, pedidos } = await wiki.personagensDaWiki();
+      const { personagens, pedidos, campanha, avisos, ajuda } = await wiki.personagensDaWiki();
       const dono = nome => game.users.find(u => !u.isGM && u.name.toLowerCase() === String(nome || '').toLowerCase())?.id ?? '';
       return Object.assign(contexto, {
-        ultimo: this.#ultimo, jogadores,
+        ultimo: this.#ultimo, jogadores, campanha, avisos, ajuda,
         personagens: personagens.map(p => {
           const ator = atorDa(p.id);
           // Onde ele está: neste mundo; senão, o vínculo deste Foundry (o ator apagado, ou em outro mundo), o do Foundry 12 e
@@ -49,14 +50,16 @@ export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {
             p.foundry12 ? `No Foundry 12: ${nomeDe(p.foundry12)}.` : '',
             p.mesa ? `Ficha da mesa do Foundry ${p.mesa.geracao ?? 12}${p.mesa.hp ? ` (HP ${p.mesa.hp.atual}/${p.mesa.hp.max})` : ''}, de ${quando(p.mesa.recebido)}.` : ''
           ].filter(Boolean);
-          const situacao = frases.join(' ') || (p.foundry?.importado ? 'Importado em outro mundo.' : 'Ainda não foi para o Foundry.');
+          const crossover = mudouDeCampanha(p);
+          const situacao = crossover ? `Veio de outra campanha. Ao importar, traz a ficha completa se o mundo antigo já a mandou; sem ela, vem a criação da wiki. ${frases.join(' ')}`
+            : frases.join(' ') || (p.foundry?.importado ? 'Importado em outro mundo.' : 'Ainda não foi para o Foundry.');
           return {
-            id: p.id, nome: p.nome || 'Sem nome', apelido: p.apelido, role: p.role ? p.role[0].toUpperCase() + p.role.slice(1) : '', donoNome: p.donoNome || 'sem dono', ator: Boolean(ator),
+            id: p.id, nome: p.nome || 'Sem nome', campanhaNome: campanha?.erro ? campanha.lista.find(c => c.id === p.campanha)?.nome || p.campanha : '', apelido: p.apelido, role: p.role ? p.role[0].toUpperCase() + p.role.slice(1) : '', donoNome: p.donoNome || 'sem dono', ator: Boolean(ator),
             mesa: Boolean(p.mesa), mesaDoFoundry: p.mesa?.geracao ?? 12, reimportar: Boolean(no14), situacao, donoSugerido: dono(p.donoNome)
           };
         }),
         pedidos: pedidos.map(({ wikiId, nome, pedido }) => ({
-          wikiId, nome, id: pedido.id, total: pedido.total, erro: pedido.erro || '', nota: pedido.nota || '', temAtor: Boolean(atorDa(wikiId)),
+          wikiId, nome, id: pedido.id, total: pedido.total, erro: pedido.erro || '', nota: pedido.nota || '', temAtor: !campanha?.erro && Boolean(atorDa(wikiId)), podeRecusar: !campanha?.erro,
           itens: (pedido.itens || []).map(linha => `${linha.nome}${linha.qtd > 1 ? ` ×${linha.qtd}` : ''}`).join(', ')
         }))
       });

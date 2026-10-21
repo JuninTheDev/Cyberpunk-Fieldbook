@@ -12,6 +12,7 @@ import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './conf
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { ehBaseNatural, ladoValido, linhaDoExtrato, moradiaDaMesa, moradiaDaWiki, moradiaParaAWiki, periciaPropria } from './regras.mjs';
+import { mudouDeCampanha, pertenceACampanha, prepararAtorTransferido, resolverCampanha, vinculoDaGeracao14 } from './wiki-campanha.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
 const GERACAO = 14;
@@ -33,7 +34,12 @@ export function registrarWiki() {
   game.settings.register(SISTEMA, 'wikiUrl', {
     name: 'Endereço da wiki',
     hint: 'De onde o mestre importa os personagens (o servidor da wiki da mesa). Vazio: wiki.seudominio quando a mesa abre em mesa.seudominio, ou http://localhost:8000 com tudo no mesmo computador.',
-    scope: 'world', config: true, type: String, default: ''
+    scope: 'world', config: true, type: String, default: '', onChange: () => { cacheDaCampanha = null; }
+  });
+  game.settings.register(SISTEMA, 'wikiCampanha', {
+    name: 'Campanha da wiki',
+    hint: 'O id da campanha deste mundo (na página Campanhas da wiki). Vazio: a que tem este Mundo do Foundry; com uma campanha só, ela. O importador, a ficha e os pedidos ficam com os personagens dela.',
+    scope: 'world', config: true, type: String, default: '', onChange: () => { cacheDaCampanha = null; }
   });
   game.settings.register(SISTEMA, 'wikiMesa', {
     name: 'Mandar a ficha para a wiki',
@@ -56,8 +62,86 @@ async function wikiFetch(rota, { method = 'GET', body } = {}) {
     throw new Error(`Não consegui falar com a wiki em ${wikiUrl()}. Confira o endereço nas configurações do sistema.`);
   }
   const dados = await resposta.json().catch(() => ({}));
-  if (!resposta.ok) throw new Error(dados.erro || `a wiki respondeu ${resposta.status}`);
+  if (!resposta.ok) throw Object.assign(new Error(dados.erro || `a wiki respondeu ${resposta.status}`), { status: resposta.status });
   return dados;
+}
+
+// Campanha deste mundo, como o tableCampaign do cpr-2077. Sem a API das campanhas, a wiki continua sem filtro.
+let cacheDaCampanha = null;
+const chaveDaCampanha = () => `${wikiUrl()}:${game.world.id}:${String(game.settings.get(SISTEMA, 'wikiCampanha') || '').trim()}`;
+export async function campanhaDoMundo() {
+  const configurada = String(game.settings.get(SISTEMA, 'wikiCampanha') || '').trim();
+  const prefixo = `${wikiUrl()}:${game.world.id}:`;
+  const chave = chaveDaCampanha();
+  let chaveResolvida = chave;
+  if (cacheDaCampanha?.chave === chave && Date.now() - cacheDaCampanha.quando < 60000) return cacheDaCampanha.valor;
+  let valor = null;
+  try {
+    const { campanhas = [] } = await wikiFetch('/api/campanhas');
+    if (chave !== chaveDaCampanha()) return campanhaDoMundo();
+    valor = resolverCampanha(campanhas, configurada, game.world.id);
+    if (valor?.id && !configurada && campanhas.length === 1 && souOMestreAtivo()) {
+      await game.settings.set(SISTEMA, 'wikiCampanha', valor.id).then(() => { chaveResolvida = `${prefixo}${valor.id}`; }).catch(() => null);
+    }
+  } catch { valor = null; }
+  if (chaveResolvida !== chaveDaCampanha()) return campanhaDoMundo();
+  cacheDaCampanha = { chave: chaveResolvida, quando: Date.now(), valor };
+  return valor;
+}
+
+const ajudaDaCampanha = campanha => `${campanha.erro} Escolha a Campanha da wiki nas configurações do sistema, ou cadastre o Mundo do Foundry (${game.world.id}) na página Campanhas da wiki.`;
+function conferirCampanha(doc, campanha, pedido = false) {
+  if (pedido && campanha?.erro) throw new Error(ajudaDaCampanha(campanha));
+  if (campanha?.id && doc.campanha && !pertenceACampanha(doc, campanha)) throw new Error(`${doc.nome || 'Este personagem'} é de outra campanha da wiki: importe no mundo dela.`);
+}
+
+// A API antiga só aceita type character. A casca identifica o transporte; o ator do sistema vai inteiro dentro dela.
+const transferenciasEmCurso = new Set();
+async function mandarTransferidos(personagens, campanha) {
+  const notas = [];
+  if (!campanha?.id || !souOMestreAtivo()) return notas;
+  for (const doc of personagens.filter(p => !p.publico && mudouDeCampanha(p) && vinculoDaGeracao14(p)?.campanha === campanha.id)) {
+    const ator = game.actors.get(vinculoDaGeracao14(doc).ator);
+    if (!ator || ator.getFlag(SISTEMA, 'wiki')?.id !== doc.id || ator.getFlag(SISTEMA, 'saiu') || transferenciasEmCurso.has(doc.id)) continue;
+    transferenciasEmCurso.add(doc.id);
+    try {
+      const anterior = await wikiFetch(`/api/personagens/${doc.id}/ator`).catch(erro => { if (erro.status === 404) return null; throw erro; });
+      if (anterior) {
+        prepararAtorTransferido(anterior, doc, '', { id: doc.campanha }, new Date().toISOString());
+      } else {
+        const transporte = { name: ator.name, type: 'character', flags: { [SISTEMA]: { crossover: { geracao: GERACAO, ator: ator.toObject() } } } };
+        await wikiFetch(`/api/personagens/${doc.id}/ator`, { method: 'PUT', body: { campanha: campanha.id, ator: transporte } });
+      }
+      await ator.setFlag(SISTEMA, 'saiu', { para: doc.campanha, quando: new Date().toISOString() });
+      ui.notifications.info(`Wiki: ${ator.name} foi para outra campanha. A ficha foi para a wiki; o ator deste mundo fica parado.`);
+    } catch (erro) { notas.push(`Crossover de ${ator.name}: ${erro.message}`); }
+    finally { transferenciasEmCurso.delete(doc.id); }
+  }
+  return notas;
+}
+
+async function importarTransferido(doc, transferencia, donoId, campanha) {
+  const dados = prepararAtorTransferido(transferencia, doc, donoId, campanha, new Date().toISOString());
+  const ator = await Actor.implementation.create(dados, { keepEmbeddedIds: true });
+  if (!ator || !game.actors.has(ator.id)) throw new Error('O Foundry não criou o ator da transferência.');
+  const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
+  // A transferência só sai da wiki depois de o vínculo novo ser confirmado. Uma falha não deixa uma cópia sem vínculo.
+  try {
+    // O _preCreate do personagem põe visão e barra de HP: no crossover vale o protótipo que veio do mundo antigo.
+    if (dados.prototypeToken) await ator.update({ prototypeToken: dados.prototypeToken });
+    await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO, campanha: doc.campanha } });
+  } catch (erro) {
+    await ator.delete().catch(() => null);
+    if (game.actors.has(ator.id)) {
+      await ator.setFlag(SISTEMA, 'saiu', { para: doc.campanha, incompleto: true }).catch(() => null);
+      throw new Error(`${erro.message} O Foundry não apagou o ator incompleto (${ator.name}, ${ator.id}): confira e remova essa cópia antes de tentar de novo. A transferência continua na wiki.`);
+    }
+    throw erro;
+  }
+  const notas = ['Veio do mundo da campanha antiga com a ficha completa, incluindo os itens, efeitos e extratos.'];
+  await wikiFetch(`/api/personagens/${doc.id}/ator`, { method: 'DELETE' }).catch(erro => notas.push(`A wiki não apagou a transferência (${erro.message}).`));
+  await mandarFicha(ator).catch(erro => notas.push(`A ficha da mesa não voltou à wiki (${erro.message}).`));
+  return { ator, notas };
 }
 
 
@@ -182,11 +266,19 @@ async function instalarNoLugar(ator, entradas) {
 
 export async function importarPersonagem(id, donoId = '') {
   if (!game.user.isGM) throw new Error('Só o mestre importa personagens da wiki.');
-  const catalogo = await carregarCatalogo();
   const { personagem: doc } = await wikiFetch(`/api/personagens/${id}`);
+  const campanha = await campanhaDoMundo();
+  conferirCampanha(doc, campanha);
+  const crossover = mudouDeCampanha(doc) || (!vinculoDaGeracao14(doc) && doc.estadoFoundry === 'outra-mesa');
+  if (crossover) {
+    const transferencia = await wikiFetch(`/api/personagens/${id}/ator`).catch(erro => { if (erro.status === 404) return null; throw erro; });
+    if (transferencia) return importarTransferido(doc, transferencia, donoId, campanha);
+  }
+  const catalogo = await carregarCatalogo();
   const r = doc.resultado;
   if (!r) throw new Error('Este personagem ainda não tem ficha pronta: abra no criador da wiki e deixe salvar.');
   const notas = [];
+  if (crossover) notas.push('Veio de outra campanha, mas a ficha da mesa antiga ainda não chegou: o ator foi criado pela ficha da criação da wiki.');
 
   const stat = chave => Number(r.stats?.[chave.toUpperCase()]) || 1;
   const pericias = {};
@@ -231,7 +323,7 @@ export async function importarPersonagem(id, donoId = '') {
   // A wiki passa a mostrar o personagem como "no Foundry".
   // Entregues: só o que entrou na ficha. O que virou aviso fica de fora, para uma atualização futura poder trazê-lo.
   const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
-  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO } })
+  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO, ...(campanha?.id ? { campanha: campanha.id } : {}) } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
 }
@@ -306,8 +398,10 @@ export function fichaParaAWiki(ator) {
 // Manda a ficha de um ator importado da wiki (o "wiki" na flag do sistema).
 export async function mandarFicha(ator) {
   const vinculo = ator?.getFlag(SISTEMA, 'wiki');
-  if (!vinculo?.id) return null;
-  return wikiFetch(`/api/personagens/${vinculo.id}/mesa`, { method: 'PUT', body: fichaParaAWiki(ator) });
+  if (!vinculo?.id || ator.getFlag(SISTEMA, 'saiu')) return null;
+  const campanha = await campanhaDoMundo();
+  if (campanha?.erro) return null;
+  return wikiFetch(`/api/personagens/${vinculo.id}/mesa`, { method: 'PUT', body: { ...fichaParaAWiki(ator), ...(campanha?.id ? { campanha: campanha.id } : {}) } });
 }
 
 // Quem manda: o mestre ativo, com a configuração ligada. Espera 4 s depois da última mudança (um ataque muda HP, SP e
@@ -323,7 +417,7 @@ async function mandarAgora(id) {
   const ator = game.actors.get(id);
   if (!ator || atoresAntigos.has(id)) return;
   await mandarFicha(ator).then(() => { avisouFalha = false; }).catch(erro => {
-    if (/ator antigo/.test(erro.message)) { atoresAntigos.add(id); return; }
+    if (/ator antigo|outra campanha/.test(erro.message)) { atoresAntigos.add(id); return; }
     if (!avisouFalha) { avisouFalha = true; console.warn(`${SISTEMA} | Na mesa (wiki):`, erro.message); }
   });
 }
@@ -370,6 +464,11 @@ function registrarVoltaParaWiki() {
 const souOMestreAtivo = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id);
 
 export async function entregarPedido(ator, wikiId, pedido) {
+  if (!game.user.isGM) throw new Error('Só o mestre entrega os pedidos da wiki.');
+  const campanha = await campanhaDoMundo();
+  const { personagem } = await wikiFetch(`/api/personagens/${wikiId}`);
+  conferirCampanha(personagem, campanha, true);
+  if (ator.getFlag(SISTEMA, 'saiu') || atorLigado(personagem, wikiId)?.id !== ator.id) throw new Error('O pedido precisa do ator ligado à campanha deste mundo.');
   const prefixo = `pedido:${pedido.id}:`;
   const notas = [];
   const jaEntregue = ator.items.some(item => String(item.getFlag(SISTEMA, 'wikiUid') || '').startsWith(prefixo));
@@ -398,17 +497,21 @@ export async function entregarPedido(ator, wikiId, pedido) {
 // 409). Sem vínculo nenhum, o que tiver a flag do personagem.
 function atorLigado(personagem, wikiId) {
   const vinculos = [personagem?.foundry14, personagem?.foundry12, personagem?.foundry].filter(vinculo => vinculo?.ator && !vinculo.removido);
-  const ligado = vinculos.map(vinculo => game.actors.get(vinculo.ator)).find(ator => ator?.getFlag(SISTEMA, 'wiki')?.id === wikiId);
+  const ligado = vinculos.map(vinculo => game.actors.get(vinculo.ator)).find(ator => ator?.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu'));
   if (ligado || vinculos.length) return ligado ?? null;
-  return game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId) ?? null;
+  return game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu')) ?? null;
 }
 
 // Os pedidos aprovados dos personagens que estão neste mundo (pelo id da wiki na flag do ator).
 export async function entregarPedidos() {
   if (!souOMestreAtivo()) return [];
   const { personagens = [] } = await wikiFetch('/api/personagens');
+  const campanha = await campanhaDoMundo();
+  const avisos = await mandarTransferidos(personagens, campanha);
+  for (const aviso of avisos) console.debug(`${SISTEMA} | ${aviso}`);
+  if (campanha?.erro) return [];
   const resultados = [];
-  for (const resumo of personagens.filter(p => !p.publico && p.pedidos?.aprovados)) {
+  for (const resumo of personagens.filter(p => !p.publico && pertenceACampanha(p, campanha) && p.pedidos?.aprovados)) {
     // Só o ator ligado ao personagem na wiki (o da última importação) entrega, mesmo que haja uma cópia antiga neste mundo.
     const ator = atorLigado(resumo, resumo.id);
     if (!ator) continue;
@@ -453,6 +556,8 @@ export async function importarDaMesa(id, donoId = '') {
   if (!game.user.isGM) throw new Error('Só o mestre importa personagens da wiki.');
   const catalogo = await carregarCatalogo();
   const { personagem: doc } = await wikiFetch(`/api/personagens/${id}`);
+  const campanha = await campanhaDoMundo();
+  conferirCampanha(doc, campanha);
   const m = doc.mesa;
   if (!Array.isArray(m?.itens)) throw new Error('Este personagem ainda não tem a ficha da mesa na wiki: o Foundry 12 manda quando o ator muda.');
   const r = doc.resultado || {};
@@ -601,7 +706,7 @@ export async function importarDaMesa(id, donoId = '') {
   else if (ativos.length > 1) notas.push('Mais de um veículo veio como ativo: escolha na ficha qual está em uso.');
 
   const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
-  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO } })
+  await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO, ...(campanha?.id ? { campanha: campanha.id } : {}) } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
 }
@@ -611,19 +716,23 @@ export async function importarDaMesa(id, donoId = '') {
 // erro (o "Tentar de novo").
 export async function personagensDaWiki() {
   const { personagens = [] } = await wikiFetch('/api/personagens');
-  const lista = personagens.filter(p => !p.publico);
+  const campanha = await campanhaDoMundo();
+  const avisos = await mandarTransferidos(personagens, campanha);
+  const lista = personagens.filter(p => !p.publico && pertenceACampanha(p, campanha));
   const comPedidos = lista.filter(p => p.pedidos?.pendentes || p.pedidos?.aprovados);
   const docs = await Promise.all(comPedidos.map(p => wikiFetch(`/api/personagens/${p.id}`).then(r => r.personagem).catch(() => null)));
   const pedidos = docs.filter(Boolean).flatMap(doc => (doc.pedidos || [])
     .filter(pedido => pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))
     .map(pedido => ({ wikiId: doc.id, nome: doc.nome || 'Sem nome', pedido })));
-  return { personagens: lista, pedidos };
+  return { personagens: lista, pedidos, campanha, avisos, ajuda: campanha?.erro ? ajudaDaCampanha(campanha) : '' };
 }
 
 // Aprovar na wiki e entregar já, no ator deste mundo. Um aprovado que deu erro é aprovado de novo (a wiki limpa o erro).
 export async function aprovarPedido(wikiId, pedidoId) {
+  if (!game.user.isGM) throw new Error('Só o mestre aprova os pedidos da wiki.');
   // Como na entrega de cada minuto: só o ator ligado ao personagem entrega. Confere antes de aprovar.
   const { personagem: antes } = await wikiFetch(`/api/personagens/${wikiId}`);
+  conferirCampanha(antes, await campanhaDoMundo(), true);
   const ator = atorLigado(antes, wikiId);
   if (!ator) {
     throw new Error(game.actors.some(a => a.getFlag(SISTEMA, 'wiki')?.id === wikiId)
@@ -638,5 +747,8 @@ export async function aprovarPedido(wikiId, pedidoId) {
 }
 
 export async function recusarPedido(wikiId, pedidoId, motivo = '') {
+  if (!game.user.isGM) throw new Error('Só o mestre recusa os pedidos da wiki.');
+  const { personagem } = await wikiFetch(`/api/personagens/${wikiId}`);
+  conferirCampanha(personagem, await campanhaDoMundo(), true);
   return wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedidoId}/recusar`, { method: 'POST', body: { motivo } });
 }

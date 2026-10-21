@@ -402,6 +402,20 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Tirar** não devolve a Humanidade perdida: o máximo volta a subir (a peça deixa de contar), e a Humanidade perdida só volta com terapia, como na wiki e no CORE.
   - **Editor de Dor:** tira só a penalidade de gravemente ferido (−2); a de mortalmente ferido (−4) continua.
 - **Janela "Personagens da wiki"** (só o mestre; botão no alto da aba de Atores): cada personagem da wiki com o que dá para fazer neste mundo, que é importar (como foi criado; "Importar de novo" quando o ator do Foundry 14 sumiu), importar da mesa (como está na ficha da mesa) ou abrir a ficha, com o dono no Foundry escolhido na linha. Cada personagem diz onde está: neste mundo; o ator do Foundry 14 apagado ou em outro mundo; no Foundry 12; e de qual Foundry é a ficha da mesa. Cada Foundry tem o seu vínculo na wiki (este manda `geracao: 14`): importar aqui não tira o do 12, e o ator importado que é apagado avisa a wiki. Também mostra os pedidos da loja que esperam o mestre, com Aprovar (entrega na hora) e Recusar (com o motivo, que o jogador vê). Os avisos da última importação ficam no alto. Pela macro: `game.system.api.abrirJanelaDaWiki()`.
+- **Campanha da wiki de cada mundo** (C27): a janela, as importações, a ficha que volta à wiki e os pedidos usam a
+  campanha configurada no sistema; sem configuração, a que tem este "Mundo do Foundry" na wiki ou, havendo uma só, ela
+  (o mestre ativo grava essa escolha). A janela mostra o nome da campanha. Com várias e sem correspondência, mostra
+  todas com o nome de cada campanha e a orientação para escolher; os pedidos ficam bloqueados, inclusive pelas macros.
+  Uma wiki sem a API de campanhas continua funcionando sem filtro. Pela macro: `game.system.api.wiki.campanhaDoMundo()`.
+- **Crossover entre mundos do sistema** (C27): ao mover um personagem de campanha na wiki, o mestre ativo do mundo
+  antigo manda o ator completo quando consulta a lista ou entrega pedidos (também na verificação de cada minuto).
+  O ator fica no mundo antigo, marcado como saiu, sem mandar a ficha nem receber pedidos. Na campanha nova,
+  **Importar** traz HP, dinheiro, extratos, itens e efeitos como estavam, preservando os IDs dos itens e os vínculos
+  entre eles, e escolhe o dono deste mundo. Só depois de vincular o novo ator na wiki a transferência é apagada.
+  Sem a ficha antiga, a importação usa a criação da wiki e informa isso nos avisos.
+  O transporte usa a rota existente da wiki, com um envelope identificado do Fieldbook. Ele é exclusivo entre mundos
+  deste sistema: não deve ser consumido pelo importador do Foundry 12. A ficha bruta do CORE é recusada aqui; para
+  migrar do 12, use **Importar da mesa**. Uma transferência existente de outro formato é preservada e vira aviso.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
   - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades (Face e Corpo, que saíram, entram como Rockerboy e Exec) e a segunda Role, se tiver (o sistema pede as duas à wiki), e dinheiro (no extrato, a linha "Dinheiro inicial (criador da wiki)");
   - o apelido, o Lifepath (em texto, como o criador da wiki monta) e a moradia, o estilo de vida, o Trauma Team e a moda (C22);
@@ -457,6 +471,8 @@ A do NET Architect:
 
 E as da wiki:
 - **Endereço da wiki** (padrão: vazio). Vazio, o sistema deduz como o cpr-2077: `wiki.<domínio>` quando a mesa abre em `mesa.<domínio>` (o servidor), ou `http://localhost:8000` com tudo no mesmo computador.
+- **Campanha da wiki** (padrão: vazio): o id na página Campanhas. Vazio, resolve pelo Mundo do Foundry cadastrado na
+  wiki ou pela campanha única; a escolha é consultada de novo a cada minuto e ao mudar a configuração ou o endereço.
 - **Mandar a ficha para a wiki** (de cada navegador; padrão: sim): veja "Na mesa".
 
 E a do navegador de cada um:
@@ -473,7 +489,7 @@ E a do navegador de cada um:
   flag `arma2077`.
 - **A mão e o BODY do cyberware que é arma do Kit** (decisão do usuário, 2026-10-19): a mão do braço que não segura nada com a Mantis Blade ou o Projectile Launch System para fora e o BODY 11 da Gorilla Arm ficam com o mestre.
 - **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.
-- **Da wiki:** o retrato, o "Atualizar da wiki" (importar de novo hoje cria outro ator) e a campanha de cada mundo (a janela mostra os personagens de todas as campanhas).
+- **Da wiki:** o retrato e o "Atualizar da wiki" (importar de novo hoje cria outro ator).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
 

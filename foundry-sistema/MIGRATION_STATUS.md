@@ -42,6 +42,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE e wiki | moradia, estilo de vida, moda e Trauma Team (o `lifestyle`; C22) | portados no ciclo 140: os campos, a importação da wiki e da mesa, a ficha "Na mesa" e o "Pagar o mês" (a regra do criador da wiki) |
 | CORE | o `/red` no chat, a DV no HUD do token e na régua, a iniciativa crítica (C26, partes 1 a 3) | portados no ciclo 144 (o `/red` soma todos os modificadores; ver as dúvidas) |
 | wiki e CORE | a terapia e a ciberpsicose (C21) | portadas no ciclo 145: a terapia pelo Medtech, o vício tirado por um ano, o estado mental e o aviso, a Humanidade negativa (ver as dúvidas) |
+| cpr-2077 | a campanha da wiki de cada mundo e o crossover entre mundos do Foundry 14 (C27, parte 2) | portados no ciclo 146 (o crossover usa a rota da wiki com um envelope; ver as dúvidas) |
 | CORE | macros na barra (a arma, a perícia e o item arrastados da ficha) e os favoritos (o alfinete do item e da perícia) | portados no ciclo 139 (C20): o favorito vai para o painel da aba Combate (ver as dúvidas) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
@@ -150,6 +151,22 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
+
+- **C27, campanha por mundo e crossover (2026-10-20, worker da sessão KouArt):** a resolução segue
+  `foundry-2077/scripts/wiki.mjs`, `tableCampaign` e `ofTable`: configuração, mundo cadastrado, campanha única;
+  sem correspondência com várias campanhas, lista completa e pedidos bloqueados. `sendMovedAway` e
+  `importTransferred` são a referência do ator antigo parado e do ator novo com IDs incorporados e dono novo.
+  A wiki (`api-personagens.js`, ramo `extra === 'ator'` de `route`) só aceita `type: 'character'`, e usa um único
+  arquivo de transferência por personagem, sem geração. O sistema envia uma casca `character` identificada por
+  `flags.cpr-fieldbook.crossover.geracao = 14`, com o ator nativo completo dentro de `crossover.ator`; a importação
+  valida origem, destino e formato antes de criar. Um snapshot bruto do CORE 12 é recusado, com orientação para
+  **Importar da mesa**; uma transferência já existente de outro formato não é sobrescrita. O importador do 12 não
+  conhece esse envelope: não deve consumir esse crossover. Separar os transportes por geração exige mudar a API da
+  wiki, fora deste trabalho. **Dúvida aberta:** a API deve ganhar armazenamento separado para crossover 12 e 14?
+  Diferente da mesa antiga, o filtro considera `foundry14.campanha` mesmo quando o vínculo do 12 domina o
+  `estadoFoundry` da wiki. A confirmação do vínculo novo é obrigatória antes de apagar a transferência; falhando,
+  o ator incompleto é removido e o snapshot permanece para tentar de novo. O retrato conserva o caminho do ator
+  antigo; copiar o arquivo para o mundo novo depende da parte do retrato do C27.
 
 - **C19, paliativo e Death Save (2026-10-20, sessão Codex; respondida):** a wiki (`system-rules.js:215`) chama o +1
   no Death Save de permanente até tratamento, mas a correção rápida tira o efeito pelo resto do dia (`:554`). O CORE
@@ -7148,6 +7165,44 @@ dos ciclos 82 a 84).
   2d6 (M5). No G4: o Medtech em si mesmo (M6), a dependência que não tira o vício (M7), o teste que ignora a terapia (M8), o
   aviso que não sai (M9), a instalação que para no 0 (M10) e o ganho que não grava (M11).
 - **Próximo:** o resto do C26 (os estados e as chaves do Fluxo) e o C27.
+
+### Ciclo 146 (2026-10-21): o C27, parte 2: a campanha da wiki de cada mundo e o crossover (sessão KouArt, com o Codex)
+
+Commit anterior: `35bd9eab` (o ciclo 145, o C21). O código e os testes saíram de um worker do Codex (pelo Alethe), revisado
+aqui.
+
+- **A referência:** o cpr-2077 da mesa (`foundry-2077/scripts/wiki.mjs`): a configuração `wikiCampanha`, o
+  `tableCampaign` (a escolhida, a do Mundo do Foundry cadastrado na wiki, a única; o cache) e o `ofTable` (a lista e os
+  pedidos da campanha), o `sendMovedAway` e o `importTransferred` (o crossover); a API da wiki (`api-personagens.js` e
+  `api-campanhas.js`, só lidas).
+- **O que muda:**
+  - **`scripts/wiki-campanha.mjs` (novo):** as contas: a resolução da campanha, o filtro, o vínculo do Foundry 14, o
+    "mudou de campanha" e a preparação do ator que chega (o envelope `character` da rota `/ator` com o ator nativo dentro,
+    as conferências de origem e destino, o dono novo, os IDs dos itens preservados);
+  - **`wiki.mjs`:** a configuração "Campanha da wiki"; o filtro na importação, na da mesa, na entrega dos pedidos e na
+    ficha que volta (com a `campanha`); o ator que foi para outra campanha manda a ficha completa uma vez e fica parado (a
+    flag `saiu`: sem mandar a ficha nem receber pedidos); na campanha nova, "Importar" traz o ator inteiro e só apaga a
+    transferência depois do vínculo novo;
+  - **a janela "Personagens da wiki":** o nome da campanha, a ajuda quando o mundo não está ligado e a situação do
+    personagem que veio de outra campanha.
+- **A revisão:** o passo do G4 do worker esperava que o mestre não ficasse dono do ator que chega (o Foundry dá dono a
+  quem cria: agora o passo confere que nenhum jogador do mundo antigo ficou dono) e um texto da nota que não é o do código.
+- **Atenção ao instalar no servidor:** com mais de uma campanha na wiki e nenhuma ligada a este mundo, o sistema não manda
+  a ficha para a wiki nem entrega pedidos (como o cpr-2077): escolha a "Campanha da wiki" nas configurações do mundo do
+  Foundry 14, ou cadastre o Mundo do Foundry na página da campanha, antes de jogar.
+- **Testes:**
+  - **G3:** `wiki-campanha.test.mjs` (novo): a resolução, o filtro, o "mudou de campanha" e a preparação do ator;
+  - **G4:** um passo novo: a campanha explícita e pelo mundo; o personagem de outra campanha recusado; a lista e os
+    pedidos filtrados; a ambiguidade (a ajuda, os pedidos bloqueados, a campanha que não existe); a saída (uma vez, o ator
+    parado, a ficha na wiki); a falha do vínculo (sem cópia, a transferência fica); a entrada (o estado inteiro, os IDs,
+    o dono novo); sem a ficha antiga, a criação da wiki; a ficha do CORE recusada.
+- **Portões:** G1, 108 arquivos sem erro; G2, nenhum erro; G3, 266/266; G4 completo, 213/213, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as dez caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: a campanha sem o mundo
+  (M1), todo personagem desta campanha (M2), ninguém muda de campanha (M3), o ator que chega com a marca de saída (M4) e
+  com os donos antigos (M5). No G4: os pedidos sem o filtro (M6), o ator que não fica parado (M7), a ficha do ator parado
+  que continua indo (M8), a cópia que fica na falha do vínculo (M9) e o personagem de outra campanha que entra (M10).
+- **Próximo:** o C27, parte 1 (o "Atualizar da wiki", o retrato e os avisos), e o C26, partes 4 e 5.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

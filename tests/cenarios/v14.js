@@ -13843,6 +13843,244 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(d)];
     });
 
+    await r.passo('wiki (C27): a campanha do mundo filtra a lista e os pedidos; o crossover manda uma vez, deixa o ator antigo parado e traz ficha, itens, efeitos e extratos ao novo dono, sem apagar a transferência antes do vínculo', async () => {
+      const campanhas = [], personagens = [];
+      let configuracao;
+      try {
+        configuracao = await edge.evaluate(`(async () => {
+          await game.system.api.wiki.mandarPendentes();
+          const antes = { campanha: game.settings.get('${S}', 'wikiCampanha'), mesa: game.settings.get('${S}', 'wikiMesa'), mundo: game.world.id };
+          await game.settings.set('${S}', 'wikiMesa', false);
+          return antes;
+        })()`);
+        const criarCampanha = async (nome, mundo = '') => {
+          const { campanha } = await api('/api/campanhas', 'POST', { nome, mundo });
+          campanhas.push(campanha.id);
+          return campanha;
+        };
+        const origem = await criarCampanha('C27 Origem', configuracao.mundo);
+        const destino = await criarCampanha('C27 Destino');
+        const criarPersonagem = async (nome, campanha, itens = []) => {
+          const { personagem } = await api('/api/personagens', 'POST', {
+            nome, campanha, role: 'solo', resultado: {
+              stats: { INT: 6, REF: 6, DEX: 6, TECH: 6, COOL: 6, WILL: 6, LUCK: 6, MOVE: 6, BODY: 6, EMP: 6 },
+              derivados: { hp: 40 }, humanidade: { atual: 60, max: 60 }, dinheiro: { saldo: 1000 },
+              role: { nome: 'Solo', rank: 4, habilidades: [] }, pericias: [], lifepath: {}, veiculos: [], itens
+            }
+          });
+          personagens.push(personagem.id);
+          return personagem;
+        };
+        const viajante = await criarPersonagem('C27 Viajante', origem.id, [
+          { uid: 'c27:arma', id: 'core_weapons:heavy-pistol', qtd: 1, municao: 'c27:balas' },
+          { uid: 'c27:balas', id: 'core_ammo:heavy-pistol-basic', qtd: 30 },
+          { uid: 'c27:deck', id: 'core_gear:cyberdeck', qtd: 1 },
+          { uid: 'c27:programa', id: 'core_programs:sword', qtd: 1, em: 'c27:deck' }
+        ]);
+        const fora = await criarPersonagem('C27 Outra campanha', destino.id);
+        const semFicha = await criarPersonagem('C27 Sem transferência', origem.id);
+        const legado = await criarPersonagem('C27 Transferência do CORE', origem.id);
+        const ids = { viajante: viajante.id, fora: fora.id, semFicha: semFicha.id, legado: legado.id, origem: origem.id, destino: destino.id };
+        const inicio = await edge.evaluate(`(async () => {
+          const w = game.system.api.wiki, ids = ${JSON.stringify(ids)};
+          const estado = ator => ({
+            hp: ator.system.hp.value, dinheiro: ator.system.dinheiro, extratos: ator.toObject().system.extratos,
+            token: { visao: ator.prototypeToken.sight.enabled, barra: ator.prototypeToken.bar1.attribute },
+            itens: ator.items.map(i => ({ id: i.id, tipo: i.type, pai: i.system.instaladoEm || '', carregada: i.system.carregada || '',
+              pente: i.system.pente?.value ?? null, quantidade: i.system.quantidade ?? null,
+              efeitos: i.effects.map(e => ({ id: e.id, nome: e.name, desligado: e.disabled })).sort((a, b) => a.id.localeCompare(b.id)) })).sort((a, b) => a.id.localeCompare(b.id)),
+            efeitos: ator.effects.map(e => ({ id: e.id, nome: e.name, desligado: e.disabled })).sort((a, b) => a.id.localeCompare(b.id))
+          });
+          const memoria = window.__c27 = { ids, estado, chamadas: [], avisos: [], buscar: window.fetch, avisar: ui.notifications.warn };
+          ui.notifications.warn = texto => { memoria.avisos.push(String(texto)); return null; };
+          window.fetch = async (url, opcoes = {}) => {
+            const rota = new URL(typeof url === 'string' ? url : url.url, location.href).pathname;
+            const chamada = { rota, metodo: opcoes.method || 'GET', corpo: opcoes.body ? JSON.parse(opcoes.body) : null };
+            memoria.chamadas.push(chamada);
+            if (memoria.bloquearVinculo && rota === '/api/personagens/' + ids.viajante + '/foundry' && chamada.metodo === 'PUT' && !chamada.corpo?.removido) {
+              memoria.bloquearVinculo = false;
+              chamada.recusada = true;
+              return new Response(JSON.stringify({ erro: 'C27: vínculo recusado de propósito.' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+            }
+            return memoria.buscar.call(window, url, opcoes);
+          };
+          await game.settings.set('${S}', 'wikiCampanha', '  ' + ids.destino + '  ');
+          const explicita = (await w.campanhaDoMundo())?.id;
+          await game.settings.set('${S}', 'wikiCampanha', '');
+          const peloMundo = (await w.campanhaDoMundo())?.id;
+          await game.settings.set('${S}', 'wikiCampanha', ids.destino);
+          memoria.fora = (await w.importarPersonagem(ids.fora, '')).ator.id;
+          await game.settings.set('${S}', 'wikiCampanha', ids.origem);
+          const ator = (await w.importarPersonagem(ids.viajante, game.user.id)).ator;
+          memoria.antigo = ator.id;
+          const porUid = uid => ator.items.find(i => i.getFlag('${S}', 'wikiUid') === uid);
+          await ator.update({ 'system.hp.value': 23, 'prototypeToken.sight.enabled': false, 'prototypeToken.bar1.attribute': 'humanidade' });
+          await ator.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: 13, motivo: 'C27 antes da viagem' });
+          await porUid('c27:arma').update({ 'system.pente.value': 3 });
+          await porUid('c27:balas').update({ 'system.quantidade': 17 });
+          await ator.createEmbeddedDocuments('ActiveEffect', [{ name: 'C27 Efeito do ator', type: 'base', disabled: true, system: { changes: [] } }]);
+          await porUid('c27:arma').createEmbeddedDocuments('ActiveEffect', [{ name: 'C27 Efeito do item', type: 'base', system: { changes: [] } }]);
+          await w.mandarFicha(ator);
+          const total = game.actors.size;
+          const erro = promessa => promessa.then(() => null, e => e.message);
+          const errada = { criacao: await erro(w.importarPersonagem(ids.fora, '')), mesa: await erro(w.importarDaMesa(ids.fora, '')), novos: game.actors.size - total };
+          return { explicita, peloMundo, errada, ator: ator.id };
+        })()`);
+        const pedir = async id => {
+          const { pedido } = await api(`/api/personagens/${id}/pedidos`, 'POST', { itens: [{ id: 'core_ammo:heavy-pistol-basic', qtd: 10 }] });
+          return pedido;
+        };
+        const pendente = await pedir(viajante.id), aprovado = await pedir(viajante.id);
+        const pendenteDeFora = await pedir(fora.id), aprovadoDeFora = await pedir(fora.id);
+        await api(`/api/personagens/${viajante.id}/pedidos/${aprovado.id}/aprovar`, 'POST', {});
+        await api(`/api/personagens/${fora.id}/pedidos/${aprovadoDeFora.id}/aprovar`, 'POST', {});
+        const filtrado = await edge.evaluate(`(async () => {
+          const w = game.system.api.wiki, m = window.__c27, { JanelaDaWiki } = await import('/systems/${S}/scripts/janela-wiki.mjs');
+          const lista = await w.personagensDaWiki(), contexto = await new JanelaDaWiki()._prepareContext({});
+          const erro = promessa => promessa.then(() => null, e => e.message);
+          const pedidosErrados = {
+            aprovar: await erro(w.aprovarPedido(m.ids.fora, ${JSON.stringify(pendenteDeFora.id)})),
+            recusar: await erro(w.recusarPedido(m.ids.fora, ${JSON.stringify(pendenteDeFora.id)}, 'C27')),
+            entregar: await erro(w.entregarPedido(game.actors.get(m.fora), m.ids.fora, ${JSON.stringify(aprovadoDeFora)}))
+          };
+          const entregas = await w.entregarPedidos();
+          m.antesDaViagem = m.estado(game.actors.get(m.antigo));
+          return { campanha: lista.campanha?.id, personagens: lista.personagens.map(p => [p.id, p.campanha]), pedidos: lista.pedidos.map(p => p.wikiId),
+            contexto: { campanha: contexto.campanha?.id, nome: contexto.campanha?.nome }, pedidosErrados,
+            entregas: entregas.map(e => [e.pedido, e.ok]), estado: m.antesDaViagem };
+        })()`);
+        const depoisDaEntrega = (await api(`/api/personagens/${viajante.id}`)).personagem;
+        const foraDepoisDaEntrega = (await api(`/api/personagens/${fora.id}`)).personagem;
+        await api(`/api/campanhas/${origem.id}`, 'PUT', { mundo: '' });
+        const ambigua = await edge.evaluate(`(async () => {
+          const w = game.system.api.wiki, m = window.__c27, { JanelaDaWiki } = await import('/systems/${S}/scripts/janela-wiki.mjs');
+          await game.settings.set('${S}', 'wikiCampanha', m.ids.destino);
+          await game.settings.set('${S}', 'wikiCampanha', '');
+          const campanha = await w.campanhaDoMundo(), lista = await w.personagensDaWiki(), contexto = await new JanelaDaWiki()._prepareContext({});
+          const entregas = await w.entregarPedidos();
+          await game.settings.set('${S}', 'wikiCampanha', 'c27-nao-existe');
+          const invalida = await w.campanhaDoMundo();
+          await game.settings.set('${S}', 'wikiCampanha', m.ids.origem);
+          return { erro: campanha?.erro, campanhas: campanha?.lista?.map(c => c.id), personagens: lista.personagens.map(p => p.id),
+            pedidos: lista.pedidos.filter(p => Object.values(m.ids).includes(p.wikiId)).map(p => p.pedido.id),
+            pedidosBloqueados: contexto.pedidos.every(p => !p.temAtor && !p.podeRecusar),
+            ajuda: contexto.ajuda, nomes: contexto.personagens.filter(p => Object.values(m.ids).includes(p.id)).map(p => p.campanhaNome), entregas: entregas.length, invalida: invalida?.erro };
+        })()`);
+        await api(`/api/campanhas/${origem.id}`, 'PUT', { mundo: configuracao.mundo });
+        await api(`/api/personagens/${semFicha.id}/foundry`, 'PUT', { geracao: 14, ator: 'c27AtorAusente', nomeAtor: semFicha.nome, campanha: origem.id });
+        await api(`/api/personagens/${legado.id}/foundry`, 'PUT', { ator: 'c27AtorDoCORE', nomeAtor: legado.nome, campanha: origem.id });
+        for (const id of [viajante.id, semFicha.id, legado.id]) await api(`/api/personagens/${id}/campanha`, 'POST', { campanha: destino.id });
+        await api(`/api/personagens/${legado.id}/ator`, 'PUT', { campanha: origem.id, ator: { name: legado.nome, type: 'character', system: { derivedStats: { hp: { value: 19 } } }, items: [] } });
+        const saida = await edge.evaluate(`(async () => {
+          const w = game.system.api.wiki, m = window.__c27;
+          await w.personagensDaWiki();
+          await w.personagensDaWiki();
+          await w.entregarPedidos();
+          const ator = game.actors.get(m.antigo), saiu = ator.getFlag('${S}', 'saiu');
+          const antes = m.chamadas.filter(c => c.rota === '/api/personagens/' + m.ids.viajante + '/mesa' && c.metodo === 'PUT').length;
+          await game.settings.set('${S}', 'wikiMesa', true);
+          await ator.update({ 'system.hp.value': 22 });
+          const mandar = await w.mandarFicha(ator);
+          await w.mandarPendentes();
+          await game.settings.set('${S}', 'wikiMesa', false);
+          const depois = m.chamadas.filter(c => c.rota === '/api/personagens/' + m.ids.viajante + '/mesa' && c.metodo === 'PUT').length;
+          const enviadas = m.chamadas.filter(c => c.rota === '/api/personagens/' + m.ids.viajante + '/ator' && c.metodo === 'PUT');
+          return { saiu, mandar, antes, depois, envios: enviadas.length, estado: m.estado(ator), chamadas: m.chamadas.filter(c => c.rota.endsWith('/mesa') || c.rota.endsWith('/foundry')).map(c => ({ ...c, corpo: c.corpo && { campanha: c.corpo.campanha, geracao: c.corpo.geracao, ator: c.corpo.ator, removido: c.corpo.removido } })) };
+        })()`);
+        const transferencia = await api(`/api/personagens/${viajante.id}/ator`);
+        const nativo = transferencia.ator?.flags?.[S]?.crossover?.ator;
+        if (nativo) {
+          nativo.flags[S].saiu = { para: destino.id, quando: '2026-10-01T00:00:00.000Z' };
+          await api(`/api/personagens/${viajante.id}/ator`, 'PUT', { campanha: origem.id, ator: transferencia.ator });
+        }
+        await api(`/api/personagens/${viajante.id}/pedidos/${pendente.id}/aprovar`, 'POST', {});
+        const parado = await edge.evaluate(`(async () => {
+          const w = game.system.api.wiki, m = window.__c27, a = game.actors.get(m.antigo), antes = m.estado(a);
+          const entregas = await w.entregarPedidos();
+          const direta = await w.entregarPedido(a, m.ids.viajante, ${JSON.stringify(pendente)}).then(() => null, e => e.message);
+          return { entregas: entregas.length, direta, igual: JSON.stringify(m.estado(a)) === JSON.stringify(antes) };
+        })()`);
+        const falhaDoVinculo = await edge.evaluate(`(async () => {
+          const w = game.system.api.wiki, m = window.__c27, { JanelaDaWiki } = await import('/systems/${S}/scripts/janela-wiki.mjs');
+          await game.settings.set('${S}', 'wikiCampanha', m.ids.destino);
+          const contexto = await new JanelaDaWiki()._prepareContext({});
+          const antes = game.actors.size;
+          m.bloquearVinculo = true;
+          const erro = await w.importarPersonagem(m.ids.viajante, game.users.find(u => !u.isGM).id).then(() => null, e => e.message);
+          const apagou = m.chamadas.some(c => c.rota === '/api/personagens/' + m.ids.viajante + '/ator' && c.metodo === 'DELETE');
+          return { erro, apagou, novos: game.actors.size - antes, antesDaEntrada: contexto.personagens.find(p => p.id === m.ids.viajante) };
+        })()`);
+        const preservada = await api(`/api/personagens/${viajante.id}/ator`);
+        const entrada = await edge.evaluate(`(async () => {
+          const w = game.system.api.wiki, m = window.__c27, dono = game.users.find(u => !u.isGM).id, { JanelaDaWiki } = await import('/systems/${S}/scripts/janela-wiki.mjs');
+          const { ator, notas } = await w.importarPersonagem(m.ids.viajante, dono);
+          const novo = { id: ator.id, estado: m.estado(ator), dono: ator.ownership[dono], outrosDonos: Object.entries(ator.ownership).filter(([id, nivel]) => id !== 'default' && id !== dono && !game.users.get(id)?.isGM && nivel > 0).map(([id]) => id),
+            padrao: ator.ownership.default, saiu: ator.getFlag('${S}', 'saiu') ?? null, wiki: ator.getFlag('${S}', 'wiki'), notas };
+          const indice = m.chamadas.findIndex(c => c.rota === '/api/personagens/' + m.ids.viajante + '/foundry' && c.metodo === 'PUT' && c.corpo?.ator === ator.id && !c.corpo?.removido);
+          const apagouDepois = m.chamadas.findIndex(c => c.rota === '/api/personagens/' + m.ids.viajante + '/ator' && c.metodo === 'DELETE') > indice && indice >= 0;
+          const fallback = await w.importarPersonagem(m.ids.semFicha, '');
+          const antesDoLegado = game.actors.size;
+          const erroLegado = await w.importarPersonagem(m.ids.legado, '').then(() => null, e => e.message);
+          const contexto = await new JanelaDaWiki()._prepareContext({});
+          return { novo, mesmoEstado: JSON.stringify(novo.estado) === JSON.stringify(m.antesDaViagem), apagouDepois, depoisDaEntrada: contexto.personagens.find(p => p.id === m.ids.viajante),
+            fallback: { hp: fallback.ator.system.hp.value, notas: fallback.notas }, erroLegado, novosLegado: game.actors.size - antesDoLegado,
+            avisos: m.avisos, vinculo: m.chamadas[indice]?.corpo };
+        })()`);
+        const final = (await api(`/api/personagens/${viajante.id}`)).personagem;
+        const consumida = await api(`/api/personagens/${viajante.id}/ator`);
+        const legadoPreservado = await api(`/api/personagens/${legado.id}/ator`);
+        const outraCampanha = mensagem => /outra campanha|campanha deste mundo/.test(mensagem || '');
+        const ok = inicio.explicita === destino.id && inicio.peloMundo === origem.id && inicio.errada.novos === 0
+          && outraCampanha(inicio.errada.criacao) && outraCampanha(inicio.errada.mesa)
+          && filtrado.campanha === origem.id && filtrado.personagens.length === 3 && filtrado.personagens.every(([, campanha]) => campanha === origem.id)
+          && filtrado.pedidos.join() === viajante.id && filtrado.contexto.campanha === origem.id && filtrado.contexto.nome === origem.nome
+          && Object.values(filtrado.pedidosErrados).every(outraCampanha) && JSON.stringify(filtrado.entregas) === JSON.stringify([[aprovado.id, true]])
+          && depoisDaEntrega.pedidos.find(p => p.id === aprovado.id)?.status === 'entregue' && foraDepoisDaEntrega.pedidos.every(p => p.status === (p.id === pendenteDeFora.id ? 'pendente' : 'aprovado'))
+          && filtrado.estado.hp === 23 && filtrado.estado.dinheiro === 987 - aprovado.total && filtrado.estado.extratos.dinheiro.length === 3
+          && filtrado.estado.token.visao === false && filtrado.estado.token.barra === 'humanidade'
+          && Boolean(ambigua.erro) && [origem.id, destino.id].every(id => ambigua.campanhas.includes(id) && ambigua.personagens.includes(id === origem.id ? viajante.id : fora.id))
+          && ambigua.pedidos.slice().sort().join() === [pendente.id, pendenteDeFora.id].sort().join() && ambigua.pedidosBloqueados
+          && ambigua.entregas === 0 && ambigua.ajuda?.includes(configuracao.mundo) && ambigua.nomes.every(Boolean) && Boolean(ambigua.invalida)
+          && saida.saiu?.para === destino.id && Boolean(saida.saiu.quando) && saida.envios === 1 && saida.mandar === null && saida.antes === saida.depois
+          && saida.chamadas.some(c => c.rota === `/api/personagens/${viajante.id}/foundry` && c.corpo?.campanha === origem.id && c.corpo?.geracao === 14)
+          && saida.chamadas.some(c => c.rota === `/api/personagens/${viajante.id}/mesa` && c.corpo?.campanha === origem.id && c.corpo?.geracao === 14)
+          && transferencia.de === origem.id && transferencia.para === destino.id && transferencia.ator?.type === 'character' && transferencia.ator?.flags?.[S]?.crossover?.geracao === 14
+          && nativo?.type === 'personagem' && nativo._id === inicio.ator && parado.entregas === 0 && outraCampanha(parado.direta) && parado.igual
+          && /C27: vínculo recusado/.test(falhaDoVinculo.erro || '') && !falhaDoVinculo.apagou && falhaDoVinculo.novos === 0
+          && falhaDoVinculo.antesDaEntrada?.ator === false && /Veio de outra campanha/.test(falhaDoVinculo.antesDaEntrada?.situacao || '') && entrada.depoisDaEntrada?.ator === true
+          && preservada.ator?.flags?.[S]?.crossover?.ator?._id === inicio.ator
+          && entrada.novo.id !== inicio.ator && entrada.mesmoEstado && entrada.novo.dono === 3 && entrada.novo.outrosDonos.length === 0 && entrada.novo.padrao === 0
+          && entrada.novo.saiu === null && entrada.novo.wiki.id === viajante.id && entrada.novo.wiki.veioDe === origem.id && entrada.apagouDepois
+          && entrada.vinculo?.geracao === 14 && entrada.vinculo?.campanha === destino.id && final.foundry14?.ator === entrada.novo.id && final.foundry14?.campanha === destino.id
+          && Boolean(consumida.erro) && entrada.avisos.length === 0 && entrada.fallback.hp === 40 && entrada.fallback.notas.some(n => /outra campanha/i.test(n))
+          && /Foundry 12|CORE/.test(entrada.erroLegado || '') && entrada.novosLegado === 0 && legadoPreservado.ator?.type === 'character';
+        return [ok, JSON.stringify({ inicio, filtrado, ambigua, saida, parado, transferencia: { de: transferencia.de, para: transferencia.para, tipo: nativo?.type }, falhaDoVinculo, entrada, final: final.foundry14, consumida: consumida.erro })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const m = window.__c27;
+          if (m) {
+            window.fetch = m.buscar;
+            ui.notifications.warn = m.avisar;
+          }
+          await game.settings.set('${S}', 'wikiMesa', false);
+          for (const a of game.actors.filter(a => ${JSON.stringify(personagens)}.includes(a.getFlag('${S}', 'wiki')?.id))) {
+            await a.sheet?.close();
+            await a.unsetFlag('${S}', 'wiki');
+            await a.delete();
+          }
+          await game.system.api.wiki.mandarPendentes();
+          ${configuracao ? `await game.settings.set('${S}', 'wikiCampanha', ${JSON.stringify(configuracao.campanha)}); await game.settings.set('${S}', 'wikiMesa', ${JSON.stringify(configuracao.mesa)});` : ''}
+          delete window.__c27;
+          return true;
+        })()`);
+        for (const id of personagens) {
+          await api(`/api/personagens/${id}/ator`, 'DELETE');
+          await api(`/api/personagens/${id}`, 'DELETE');
+        }
+        for (const id of campanhas.reverse()) await api(`/api/campanhas/${id}`, 'DELETE');
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

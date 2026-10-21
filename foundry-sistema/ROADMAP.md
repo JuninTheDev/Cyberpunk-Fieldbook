@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 146). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 147). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -272,7 +272,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 - [~] **C27. O resto do cpr-2077:** em andamento (sessão KouArt, com o Codex, 2026-10-20): a parte do Foundry 14 (o histórico do ledger pede mudar o cpr-2077, que não recebe mais mudanças).
   - "Atualizar da wiki", o retrato e os avisos de envio;
-  - a campanha da wiki de cada mundo, e o crossover;
+  - [x] a campanha da wiki de cada mundo, e o crossover: ciclo 146 (com o Codex);
   - o histórico do ledger na migração. Pede mudar o cpr-2077; é decisão do usuário.
 - [ ] **C28. A sistema-v14 no master**, com a instalação automática no Foundry 14 do servidor. Hoje é à mão, pelo
   `servidor/instalar-sistema-v14.sh`.
