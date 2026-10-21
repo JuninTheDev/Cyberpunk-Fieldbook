@@ -9,29 +9,33 @@
   <link rel="stylesheet" href="/mesa.css">
 </head>
 <body>
-  <header class="topo">
-    <a class="marca" href="/" title="Voltar para a wiki"><span>NIGHT CITY</span> <b>FIELDBOOK</b></a>
-    <span class="topo-sep" aria-hidden="true">//</span>
-    <span class="topo-titulo">Mesa</span>
-    <select id="campanha" class="topo-campo" aria-label="Campanha" hidden></select>
-    <span id="campanha-nome" class="campanha-chip"></span>
-    <div class="topo-cena">
-      <select id="cena-ver" class="topo-campo" aria-label="Cena que você está vendo" hidden></select>
-      <button id="cena-ativar" class="botao vazado pequeno" type="button" hidden>Levar todos para esta cena</button>
-      <span id="cena-nome" class="cena-nome"></span>
-    </div>
-    <div class="topo-direita">
-      <div id="presenca" class="presenca" aria-label="Quem está na mesa"></div>
-      <button id="som" class="som" type="button" hidden></button>
-      <span id="ligacao" class="ligacao" title="Conexão com a mesa">conectando…</span>
-      <button id="conta" class="botao vazado pequeno" type="button" hidden></button>
-      <button id="painel-abrir" class="botao vazado pequeno so-celular" type="button" aria-controls="painel" aria-expanded="false">Painel</button>
-    </div>
-  </header>
-
   <main class="mesa">
     <div class="palco" id="palco">
       <canvas id="tela" aria-label="Mapa da cena"></canvas>
+      <!-- A mesa limpa (M23): o mapa ocupa a tela toda, e o resto flutua por cima. No canto, o menu e a cena. -->
+      <div class="pastilha" id="pastilha">
+        <button id="menu-abrir" class="pastilha-menu" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu" title="Menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="sr">Menu</span>
+        </button>
+        <div class="topo-cena">
+          <select id="cena-ver" class="topo-campo" aria-label="Cena que você está vendo" hidden></select>
+          <button id="cena-ativar" class="botao vazado pequeno" type="button" title="Levar todos os jogadores para esta cena" hidden>Levar todos</button>
+          <span id="cena-nome" class="cena-nome"></span>
+        </div>
+        <button id="painel-abrir" class="botao vazado pequeno so-celular" type="button" aria-controls="painel" aria-expanded="false">Painel</button>
+      </div>
+      <div id="menu" class="menu" role="dialog" aria-label="Menu da mesa" hidden>
+        <a class="marca" href="/" title="Voltar para a wiki"><span>NIGHT CITY</span> <b>FIELDBOOK</b></a>
+        <label class="campo">Campanha <select id="campanha" class="topo-campo" hidden></select><span id="campanha-nome" class="campanha-chip"></span></label>
+        <button id="conta" class="botao vazado pequeno" type="button" hidden></button>
+        <p class="nota atalhos"><b>B</b> barra lateral · <b>0</b> a cena inteira · <b>C</b> o seu token · <b>Esc</b> solta</p>
+      </div>
+      <!-- Embaixo, à esquerda (como a lista de jogadores do Foundry): a conexão, quem está na mesa e o som. -->
+      <div class="rodape" id="rodape">
+        <span id="ligacao" class="ligacao" title="Conexão com a mesa">conectando…</span>
+        <div id="presenca" class="presenca" aria-label="Quem está na mesa"></div>
+        <button id="som" class="som" type="button" hidden></button>
+      </div>
       <nav class="ferramentas" id="ferramentas" aria-label="Ferramentas">
         <button type="button" data-ferramenta="mover" class="ativa" title="Selecionar e mover (V)"><span aria-hidden="true">✥</span><em>Mover</em></button>
         <button type="button" data-ferramenta="regua" title="Régua: distância e DV por alcance (R)"><span aria-hidden="true">⟷</span><em>Régua</em></button>
@@ -79,14 +83,10 @@
       </div>
     </div>
 
+    <!-- A barra da direita passa por cima do mapa: o conteúdo e a faixa de ícones, que recolhe (B), como no Foundry 14. -->
     <aside class="painel" id="painel">
-      <div class="abas" role="tablist">
-        <button type="button" role="tab" data-aba="rolagens" class="ativa">Rolagens</button>
-        <button type="button" role="tab" data-aba="combate">Combate <span id="combate-selo" class="selo" hidden></span></button>
-        <button type="button" role="tab" data-aba="fichas"><span class="so-mestre">Fichas</span><span class="so-jogador">Personagem</span></button>
-        <button type="button" role="tab" data-aba="audio">Áudio</button>
-        <button type="button" role="tab" data-aba="cena" class="so-mestre">Cena</button>
-      </div>
+      <div class="painel-conteudo" id="painel-conteudo">
+      <h2 class="painel-titulo" id="painel-titulo">Rolagens</h2>
 
       <section class="aba ativa" data-aba="rolagens">
         <form id="rolar" class="rolar" autocomplete="off">
@@ -143,6 +143,30 @@
       <section class="aba so-mestre" data-aba="cena">
         <div id="cena-painel"></div>
       </section>
+      </div>
+
+      <nav class="abas" aria-label="Barra lateral">
+        <div class="abas-lista" role="tablist" aria-orientation="vertical">
+          <button type="button" role="tab" data-aba="rolagens" class="ativa" aria-selected="true" title="Rolagens e chat">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="aba-nome">Rolagens</span>
+          </button>
+          <button type="button" role="tab" data-aba="combate" aria-selected="false" title="Combate">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M13 17l4-4M15 15l4 4M20 4L9 15M7 13l4 4M9 15l-4 4"/></svg><span class="aba-nome">Combate</span><span id="combate-selo" class="selo" hidden></span>
+          </button>
+          <button type="button" role="tab" data-aba="fichas" aria-selected="false" title="Fichas">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg><span class="aba-nome"><span class="so-mestre">Fichas</span><span class="so-jogador">Personagem</span></span>
+          </button>
+          <button type="button" role="tab" data-aba="audio" aria-selected="false" title="Áudio">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l10-2v12"/><circle cx="6.5" cy="17" r="2.5"/><circle cx="16.5" cy="15" r="2.5"/></svg><span class="aba-nome">Áudio</span>
+          </button>
+          <button type="button" role="tab" data-aba="cena" class="so-mestre" aria-selected="false" title="Cena">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2.5 6 2.5 6-2.5v14l-6 2.5-6-2.5-6 2.5z"/><path d="M9 3.5v14M15 6v14"/></svg><span class="aba-nome">Cena</span>
+          </button>
+        </div>
+        <button id="barra-recolher" class="abas-recolher" type="button" aria-controls="painel-conteudo" aria-expanded="true" title="Recolher a barra (B)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6l6 6-6 6"/></svg><span class="sr">Recolher a barra</span>
+        </button>
+      </nav>
     </aside>
   </main>
 

@@ -12,10 +12,11 @@
 **A ordem combinada (2026-10-21):**
 1. M9 (feito);
 2. M7 (feito);
-3. M12;
-4. M11 (feito em paralelo, pela sessão tabletop-a9);
-5. um ensaio no teste, num PC e num celular;
-6. o M4, quando o usuário aprovar.
+3. M11 (feito em paralelo, pela sessão tabletop-a9);
+4. M23, a mesa limpa (pedido do usuário em 2026-10-21: "antes do M12");
+5. M12;
+6. um ensaio no teste, num PC e num celular;
+7. o M4, quando o usuário aprovar.
 
 Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (e o M13, se o grupo tiver netrunner).
 
@@ -102,6 +103,20 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **Importação:** as 3 playlists do Foundry (o volume convertido como o Foundry 12), os 2 grupos do yt-jukebox (51 vídeos) e a música da cena Intro.
   - **Testado:** 5 testes (e 1 no importador), 48 mutações que caem, e no Edge sem janela: o mestre e o jogador no mesmo ponto (2,5 s e 2,5 s), o fim passando para a próxima, o ambiente junto, o YouTube tocando e o celular.
   - **Falta:** os sons de efeito (a granada do mmutons, a porta, o dado), a música avançar sem a página do mestre aberta e o "tocar todas juntas" do Foundry (vira em ordem).
+- [~] (Desenvolvimento do tabletop, desde 2026-10-21) **M23 · A mesa limpa, como o Foundry 14:**
+  - **Por quê:** o mapa ocupava 67% da tela num notebook (1366 × 768).
+  - **As escolhas do usuário:**
+    - o mapa na tela toda;
+    - o topo vira uma pastilha no canto;
+    - a barra da direita é uma faixa de ícones que recolhe e passa por cima do mapa;
+    - o cartão do token vira HUD junto do token, com a ficha na barra.
+  - **Fases:**
+    1. moldura;
+    2. chat (o registro na altura toda, os dados num botão, as mensagens por cima do mapa com a barra recolhida);
+    3. HUD do token;
+    4. ferramentas só com ícone e tooltip;
+    5. celular.
+  - **Meta:** o mapa com 95% ou mais da tela com a barra recolhida, em 1366 × 768.
 - [ ] **M12 · Notas no mapa:** um ponto no mapa que abre um handout ou um documento da wiki (os diários do Foundry viram documentos da campanha).
 
 ## Fase 2: o que os módulos fazem hoje

@@ -51,6 +51,17 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
 
 ## O que dá para fazer
 
+**A tela** (a mesa limpa, como o Foundry 14):
+
+- **O mapa ocupa a tela toda.** O resto flutua por cima dele.
+- **Barra da direita:** a faixa de ícones (Rolagens, Combate, Fichas ou Personagem, Áudio e Cena) abre a aba por cima do mapa, e o mapa não encolhe.
+  - **Recolher:** clique no ícone da aba aberta, na seta de baixo ou aperte **B**. O navegador lembra.
+  - Recolhida, o ícone do Combate ganha uma bolinha quando a iniciativa muda.
+- **Canto de cima:** o menu ≡ (voltar para a wiki, a campanha, a conta e os atalhos) e a cena. O mestre troca a cena por ali, e **Levar todos** leva os jogadores para ela.
+- **Canto de baixo:** a conexão, quem está na mesa e o som.
+- **Celular:** a barra é a folha que sobe de baixo, pelo botão **Painel**.
+- **A cena inteira** (0 ou a ferramenta Cena) enquadra no que sobra livre: sem a barra aberta, a pastilha e as ferramentas.
+
 **Mestre**
 
 - **Cenas** (aba Cena): crie a cena com um mapa (imagem PNG, JPEG ou WebP, ou vídeo WebM ou MP4) ou só com a grade.
@@ -131,7 +142,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
 - **Defender:** quando alguém ataca o token dele, a pergunta aparece na tela, sem o total do ataque: esquivar (REF 8+ contra tiro; corpo a corpo, sempre) ou aguentar. Sem resposta em 60 segundos, aguenta.
 - **Chat** (embaixo do registro): para todos, só para o mestre ou sussurro a um jogador. `/r 2d6` rola.
 - **Som:** ouve o que o mestre toca.
-  - **Ligar:** o navegador só toca som depois de um clique na página. Até lá, o topo mostra **♪ Ligar o som**, e o primeiro clique liga. No celular também.
+  - **Ligar:** o navegador só toca som depois de um clique na página. Até lá, o canto de baixo mostra **♪ Ligar o som**, e o primeiro clique liga. No celular também.
   - **Topo:** o botão mostra a música que toca e abre a aba Áudio.
   - **Volume:** a aba Áudio tem o volume da música e o do ambiente, que ficam só no aparelho dele.
   - **Vídeo:** o do YouTube aparece num quadro no canto da tela. O **–** esconde o quadro, e a música continua.

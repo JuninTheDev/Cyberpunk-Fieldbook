@@ -36,6 +36,8 @@
     // A ficha de jogo: as fichas que o mestre abriu na aba Fichas, a munição escolhida para recarregar cada arma e a
     // ficha que mudou enquanto alguém digitava nela (redesenha quando o campo perde o foco).
     fichasAbertas: new Set(), municaoEscolhida: new Map(), fichasPendentes: false,
+    // A barra lateral aberta (no PC; no celular é a folha de baixo).
+    barraAberta: true,
     // O áudio: o que o servidor mandou (o que toca e, para o mestre, as playlists), as playlists abertas na aba Áudio e a
     // faixa com as opções abertas.
     audio: null, playlistsAbertas: new Set(), faixaAberta: null
@@ -439,7 +441,7 @@
     const cena = S.cena;
     ctx.drawImage(S.visao.canvas, 0, 0, cena.largura, cena.altura);
     if (!S.visao.olhos.length) {
-      const meio = telaParaMundo(canvas.clientWidth / 2, canvas.clientHeight / 2);
+      const meio = meioLivre();
       rotulo('Nenhum token seu nesta cena: você vê só o que já explorou.', meio.x, meio.y, px, { tamanho: 13 });
     }
   }
@@ -728,7 +730,7 @@
       const encolhe = Math.min(1, (S.cena.largura / 2) / (largura || 1), (S.cena.altura / 2) / (altura || 1));
       const w = Math.max(10, Math.round((largura || 200) * encolhe));
       const h = Math.max(10, Math.round((altura || 200) * encolhe));
-      const meio = telaParaMundo(canvas.clientWidth / 2, canvas.clientHeight / 2);
+      const meio = meioLivre();
       const { resultado } = await op('tile.criar', { cena: S.cena.id, midia, x: Math.round(meio.x - w / 2), y: Math.round(meio.y - h / 2), largura: w, altura: h });
       S.tileSel = resultado.tile;
       renderTileOpcoes();
@@ -756,31 +758,50 @@
     redesenhar();
   }
   const telaParaMundo = (sx, sy) => ({ x: sx / S.vista.escala + S.vista.x, y: sy / S.vista.escala + S.vista.y });
-  // A cena inteira na tela: o mapa e os tokens que esperam na margem, fora dele.
-  function enquadrar() {
-    if (!S.cena) return;
+  // O pedaço do mapa que fica livre na tela (em px do canvas): sem a pastilha em cima, a coluna das ferramentas à
+  // esquerda, o rodapé embaixo e a barra da direita (a faixa, mais o conteúdo quando aberta). No celular, a folha de
+  // baixo some sozinha: não conta.
+  function areaLivre() {
     const largura = canvas.clientWidth || 800;
     const altura = canvas.clientHeight || 600;
+    const tela = canvas.getBoundingClientRect();
+    const borda = seletor => { const elemento = $(seletor); return elemento && elemento.offsetParent ? elemento.getBoundingClientRect() : null; };
+    const ferramentas = borda('#ferramentas');
+    const pastilha = borda('#pastilha');
+    const rodape = borda('#rodape');
+    const painel = celular() ? null : borda('#painel');
+    const x0 = ferramentas ? ferramentas.right - tela.left : 0;
+    const y0 = pastilha ? pastilha.bottom - tela.top : 0;
+    const x1 = painel ? painel.left - tela.left : largura;
+    const y1 = rodape && rodape.height ? rodape.top - tela.top : altura;
+    return { x0, y0, x1: Math.max(x0 + 100, x1), y1: Math.max(y0 + 100, y1) };
+  }
+  // O ponto do mapa no meio da área livre (onde entra o token ou o tile novo).
+  function meioLivre() {
+    const livre = areaLivre();
+    return telaParaMundo((livre.x0 + livre.x1) / 2, (livre.y0 + livre.y1) / 2);
+  }
+  // A cena inteira na área livre: o mapa e os tokens que esperam na margem, fora dele.
+  function enquadrar() {
+    if (!S.cena) return;
     const caixa = { x0: 0, y0: 0, x1: S.cena.largura, y1: S.cena.altura };
     for (const token of S.tokens.values()) {
       const r = raioDe(token) * 1.6;
       caixa.x0 = Math.min(caixa.x0, token.x - r); caixa.y0 = Math.min(caixa.y0, token.y - r);
       caixa.x1 = Math.max(caixa.x1, token.x + r); caixa.y1 = Math.max(caixa.y1, token.y + r);
     }
-    // A coluna das ferramentas cobre a esquerda da tela: a cena fica no resto.
-    const ferramentas = $('#ferramentas');
-    const esquerda = ferramentas ? ferramentas.offsetLeft + ferramentas.offsetWidth : 0;
-    const util = Math.max(100, largura - esquerda);
-    const escala = Math.min(util / (caixa.x1 - caixa.x0), altura / (caixa.y1 - caixa.y0)) * 0.94;
-    S.vista = { escala, x: (caixa.x0 + caixa.x1) / 2 - (esquerda + util / 2) / escala, y: (caixa.y0 + caixa.y1) / 2 - altura / 2 / escala };
+    const livre = areaLivre();
+    const largura = livre.x1 - livre.x0;
+    const altura = livre.y1 - livre.y0;
+    const escala = Math.min(largura / (caixa.x1 - caixa.x0), altura / (caixa.y1 - caixa.y0)) * 0.94;
+    S.vista = { escala, x: (caixa.x0 + caixa.x1) / 2 - (livre.x0 + largura / 2) / escala, y: (caixa.y0 + caixa.y1) / 2 - (livre.y0 + altura / 2) / escala };
     S.alvoVista = null;
     S.enquadrada = true;
     redesenhar();
   }
   function centrarEm(ponto, suave = true) {
-    const largura = canvas.clientWidth;
-    const altura = canvas.clientHeight;
-    const alvo = { x: ponto.x - largura / 2 / S.vista.escala, y: ponto.y - altura / 2 / S.vista.escala };
+    const livre = areaLivre();
+    const alvo = { x: ponto.x - (livre.x0 + livre.x1) / 2 / S.vista.escala, y: ponto.y - (livre.y0 + livre.y1) / 2 / S.vista.escala };
     if (suave) S.alvoVista = alvo; else Object.assign(S.vista, alvo);
     S.enquadrada = false;
     redesenhar();
@@ -1461,7 +1482,9 @@
     if ((tecla === 'l' || tecla === 'L') && gm()) return escolherFerramenta('luzes');
     if (tecla === '0') return enquadrar();
     if (tecla === 'c' || tecla === 'C') return irAoMeuToken();
+    if (tecla === 'b' || tecla === 'B') return celular() ? abrirPainel(!$('#painel').classList.contains('aberto')) : barraAberta(!S.barraAberta);
     if (tecla === 'Escape') {
+      if (!$('#menu').hidden) return menuAberto(false);
       if (S.escolhendoAlvo) return escolherAlvoNoMapa(false);
       if (S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); redesenhar(); return; }
       if (S.tileSel) { S.tileSel = null; renderTileOpcoes(); redesenhar(); return; }
@@ -1870,19 +1893,62 @@
     }
   });
 
-  // ---------------- Painel ----------------
-  function abrirAba(nome) {
-    for (const botao of $$('.abas [data-aba]')) botao.classList.toggle('ativa', botao.dataset.aba === nome);
-    for (const aba of $$('.aba')) aba.classList.toggle('ativa', aba.dataset.aba === nome);
-    if (nome === 'combate') $('#combate-selo').hidden = true;
-    store.set('aba', nome);
+  // ---------------- Barra lateral ----------------
+  // Como a do Foundry 14: a faixa de ícones fica sempre; o conteúdo abre por cima do mapa (o mapa não encolhe nem pula)
+  // e recolhe pelo ícone da aba aberta, pela seta ou pela tecla B. Cada navegador lembra. No celular a barra é a folha de
+  // baixo (o botão Painel), e recolher não vale.
+  const celular = () => window.matchMedia('(max-width: 820px)').matches;
+  // A aba aberta está à vista? (no PC, a barra aberta; no celular, a folha de baixo levantada)
+  const barraVisivel = () => (celular() ? $('#painel').classList.contains('aberto') : S.barraAberta);
+  function barraAberta(aberta, { lembrar = true } = {}) {
+    S.barraAberta = aberta;
+    document.body.classList.toggle('barra-recolhida', !aberta);
+    // Recolhida, o conteúdo sai do Tab e do leitor de tela.
+    $('#painel-conteudo').inert = !aberta && !celular();
+    const seta = $('#barra-recolher');
+    seta.setAttribute('aria-expanded', String(aberta));
+    seta.title = aberta ? 'Recolher a barra (B)' : 'Abrir a barra (B)';
+    seta.querySelector('.sr').textContent = aberta ? 'Recolher a barra' : 'Abrir a barra';
+    if (aberta && $('.abas [data-aba="combate"]').classList.contains('ativa')) $('#combate-selo').hidden = true;
+    if (lembrar) store.set('barra', aberta ? 'aberta' : 'recolhida');
   }
-  for (const botao of $$('.abas [data-aba]')) botao.addEventListener('click', () => abrirAba(botao.dataset.aba));
+  window.matchMedia('(max-width: 820px)').addEventListener('change', () => barraAberta(S.barraAberta, { lembrar: false }));
+  const nomeDaAba = nome => (nome === 'fichas' ? (gm() ? 'Fichas' : 'Personagem') : { rolagens: 'Rolagens', combate: 'Combate', audio: 'Áudio', cena: 'Cena' }[nome] || '');
+  // expandir: abrir a aba também abre a barra recolhida (o clique da pessoa); o que a página faz sozinha não abre.
+  function abrirAba(nome, { expandir = true } = {}) {
+    for (const botao of $$('.abas [data-aba]')) {
+      const ativa = botao.dataset.aba === nome;
+      botao.classList.toggle('ativa', ativa);
+      botao.setAttribute('aria-selected', String(ativa));
+    }
+    for (const aba of $$('.aba')) aba.classList.toggle('ativa', aba.dataset.aba === nome);
+    $('#painel-titulo').textContent = nomeDaAba(nome);
+    store.set('aba', nome);
+    if (expandir && !S.barraAberta) barraAberta(true);
+    if (nome === 'combate' && barraVisivel()) $('#combate-selo').hidden = true;
+  }
+  for (const botao of $$('.abas [data-aba]')) {
+    botao.addEventListener('click', () => {
+      // O ícone da aba aberta recolhe a barra (como no Foundry); os outros abrem a aba deles.
+      if (!celular() && S.barraAberta && botao.classList.contains('ativa')) barraAberta(false);
+      else abrirAba(botao.dataset.aba);
+    });
+  }
+  $('#barra-recolher').addEventListener('click', () => barraAberta(!S.barraAberta));
   function abrirPainel(aberto) {
     $('#painel').classList.toggle('aberto', aberto);
     $('#painel-abrir').setAttribute('aria-expanded', String(aberto));
+    if (aberto && $('.abas [data-aba="combate"]').classList.contains('ativa')) $('#combate-selo').hidden = true;
   }
   $('#painel-abrir').addEventListener('click', () => abrirPainel(!$('#painel').classList.contains('aberto')));
+
+  // O menu (≡ na pastilha): voltar para a wiki, a campanha, a conta e os atalhos. Fecha ao clicar fora ou com Esc.
+  function menuAberto(aberto) {
+    $('#menu').hidden = !aberto;
+    $('#menu-abrir').setAttribute('aria-expanded', String(aberto));
+  }
+  $('#menu-abrir').addEventListener('click', () => menuAberto($('#menu').hidden));
+  document.addEventListener('pointerdown', event => { if (!$('#menu').hidden && !event.target.closest('#menu, #menu-abrir')) menuAberto(false); });
 
   function renderTudo() {
     for (const chave of Object.keys(assinaturas)) delete assinaturas[chave];
@@ -1897,7 +1963,7 @@
     renderSom();
     renderCartao();
     escolherFerramenta(S.ferramenta === 'nevoa' && !gm() ? 'mover' : S.ferramenta);
-    if (!gm() && $('.abas [data-aba="cena"]').classList.contains('ativa')) abrirAba('rolagens');
+    if (!gm() && $('.abas [data-aba="cena"]').classList.contains('ativa')) abrirAba('rolagens', { expandir: false });
   }
   // Um token que só andou não muda as listas: elas só são refeitas quando muda o que mostram (refazer a lista a cada
   // passo fecharia o seletor aberto e perderia a rolagem do painel).
@@ -1931,8 +1997,12 @@
       ver.innerHTML = S.cenas.map(cena => `<option value="${esc(cena.id)}"${S.cena && cena.id === S.cena.id ? ' selected' : ''}>${cena.ativa ? '▶ ' : ''}${esc(cena.nome)}</option>`).join('');
     }
     $('#cena-ativar').hidden = !gm() || !S.cena || S.cena.id === S.cenaAtiva;
-    $('#cena-nome').textContent = !gm() && S.cena ? S.cena.nome : gm() && S.cena && S.cena.id !== S.cenaAtiva ? 'Só você está vendo esta cena' : '';
+    $('#cena-nome').textContent = !gm() && S.cena ? S.cena.nome : gm() && S.cena && S.cena.id !== S.cenaAtiva ? 'Só você vê' : '';
     document.title = `${S.cena ? `${S.cena.nome} · ` : ''}Mesa · Night City Fieldbook`;
+    // A aba Fichas é "Personagem" para o jogador.
+    $('.abas [data-aba="fichas"]').title = nomeDaAba('fichas');
+    const ativa = $('.abas [data-aba].ativa');
+    if (ativa) $('#painel-titulo').textContent = nomeDaAba(ativa.dataset.aba);
     const conta = $('#conta');
     if (config.teste) {
       conta.hidden = false;
@@ -2281,7 +2351,7 @@
     const chave = `${c.rodada}:${c.vez}`;
     if (S.vezAnterior !== chave) {
       if (atual.meu && S.vezAnterior !== null) aviso(c.deathSave === atual.token ? `${atual.nome}: Death Save antes de agir!` : `Sua vez, ${atual.nome}!`, 'destaque');
-      if (!$('.abas [data-aba="combate"]').classList.contains('ativa')) $('#combate-selo').hidden = false;
+      if (!$('.abas [data-aba="combate"]').classList.contains('ativa') || !barraVisivel()) $('#combate-selo').hidden = false;
       S.vezAnterior = chave;
     }
   }
@@ -2292,7 +2362,7 @@
 
   // ---------------- Fichas (mestre) e Personagem (jogador) ----------------
   function centroDaVista() {
-    return encaixar(telaParaMundo(canvas.clientWidth / 2, canvas.clientHeight / 2));
+    return encaixar(meioLivre());
   }
   // ---------------- Ficha de jogo ----------------
   // O que muda na mesa e volta para a ficha da wiki: a Humanidade (e o EMP), o dinheiro, os Pontos de Melhoria, a
@@ -2867,7 +2937,8 @@
 
   new ResizeObserver(medirTela).observe(canvas);
   medirTela();
-  abrirAba(store.get('aba') && document.querySelector(`.abas [data-aba="${store.get('aba')}"]`) ? store.get('aba') : 'rolagens');
+  barraAberta(store.get('barra') !== 'recolhida', { lembrar: false });
+  abrirAba(store.get('aba') && document.querySelector(`.abas [data-aba="${store.get('aba')}"]`) ? store.get('aba') : 'rolagens', { expandir: false });
   if (document.fonts) document.fonts.load('600 12px Oxanium').then(redesenhar).catch(() => {});
   requestAnimationFrame(quadro);
   iniciar();
