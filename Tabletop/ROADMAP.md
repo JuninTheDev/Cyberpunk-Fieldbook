@@ -164,7 +164,12 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **Depois:** a peça conta no cromo de 2077 (a conexão Smart, o braço da Burya). O registro mostra os dados, o preço e a Humanidade de agora ao mestre e ao dono. A aba Cyberware da wiki mostra o que espera e o que foi instalado (onde e quanto custou), com a Humanidade da mesa.
   - **Fica de fora:** retirar cyberware (mesma DV, 4 horas; falhar destrói a peça) e escolher o lado da base na hora: o lado é o do pedido.
   - **Testado:** 3 testes, 23 de 24 mutações que caem (a viva é equivalente: o chipware já não tem lugar), os cenários criador, cyberware, Foundry, contas e economia, e a conferência no Edge (o painel do mestre, o registro, a jogadora e a aba Cyberware da wiki).
-- [ ] **M17 · Veículos:** SDP, assentos e o veículo como token.
+- [x] **M17 · Veículos** (`veiculo.embarcar`, `veiculo.descer`, `veiculo.motorista`; o veículo leva os ocupantes no `token.mover`):
+  - **O veículo:** a ficha de NPC do tipo Veículo ganha os assentos (a moto do Foundry traz os dela); o token tem o SDP no lugar do HP, `veiculo: { assentos, ocupantes }` e 2 quadrados. Não entra na iniciativa.
+  - **Ocupantes:** `token.dentro`, no lugar do veículo (o alcance, a visão e o combate contam dali); a página desenha menor, numa roda em volta do centro, por cima. O primeiro dirige (move o veículo); "Dirigir" troca.
+  - **Embarcar e descer:** arrastar o token para cima do veículo, ou o cartão; o jogador perto (até 2 quadrados da borda), o mestre de qualquer lugar; descer perto e sem atravessar parede, ou num lugar livre ao lado. Tirar o veículo da cena deixa todos ao lado.
+  - **Fica de fora:** as regras de perseguição e de atropelamento, e o tiro no ocupante através do veículo (o mestre resolve).
+  - **Testado:** 1 teste, 18 mutações que caem, e a conferência no Edge (arrastar o Jax para a moto, o cartão com os assentos, ela dirigindo, descer pelo cartão).
 - [x] **M18 · NPCs do mestre** (`mesa-api.js` `npc.salvar`, `npc.copiar`, `npc.apagar`; `importar-foundry.js` `converterAtores`):
   - **As fichas do mestre:** na aba Fichas, Novo NPC, Editar, ou Copiar uma da wiki para mudar. Nome, grupo, tipo (pessoa, Black ICE, veículo), HP, SP, os STATs, as perícias com a base (em português ou em inglês; grava o inglês), as armas, as notas e a imagem. Ficam no `mesa.json` da campanha (`state.npcs`, até 300), e só o mestre recebe (evento `npcs`).
   - **O token:** copia a ficha ao entrar na cena (as notas viram a nota do mestre; a classe da arma que veio do Foundry vale mais que o nome). Mudar ou apagar a ficha não mexe no token.

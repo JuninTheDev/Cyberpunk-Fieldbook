@@ -376,6 +376,12 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (gm || mine || token.tipo === 'pj') view.hp = token.hp;
     if (token.morto) view.morto = true;
     if (token.suprimido) view.suprimido = true;
+    if (token.dentro) view.dentro = token.dentro;
+    if (token.veiculo) {
+      const ocupantes = token.veiculo.ocupantes.map(id => scene.tokens.find(item => item.id === id)).filter(item => item && (gm || !item.escondido));
+      const motorista = scene.tokens.find(item => item.id === token.veiculo.ocupantes[0]);
+      view.veiculo = { assentos: token.veiculo.assentos, ocupantes: ocupantes.map(item => item.id), dirijo: Boolean(motorista) && canControl(viewer, motorista) };
+    }
     // A ficha de combate (SP, armas com o pente, Sorte, lesões, Death Save): o dono e o mestre.
     if (gm || mine) {
       Object.assign(view, {
@@ -632,6 +638,22 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
 
   // ---------------- Operações ----------------
   const canControl = (viewer, token) => isGm(viewer) || (Boolean(token.dono) && token.dono === viewer.conta);
+  // Veículos (M17): quem está dentro (na ordem), o motorista (o primeiro) e o lugar livre ao lado para descer.
+  const ocupantesDe = (scene, veiculo) => (veiculo.veiculo ? veiculo.veiculo.ocupantes.map(id => scene.tokens.find(item => item.id === id)).filter(Boolean) : []);
+  const dirige = (viewer, scene, veiculo) => { const motorista = ocupantesDe(scene, veiculo)[0]; return Boolean(motorista) && canControl(viewer, motorista); };
+  function tirarDoVeiculo(scene, token) {
+    const veiculo = scene.tokens.find(item => item.id === token.dentro);
+    if (veiculo && veiculo.veiculo) veiculo.veiculo.ocupantes = veiculo.veiculo.ocupantes.filter(id => id !== token.id);
+    delete token.dentro;
+  }
+  function ladoDoVeiculo(scene, veiculo) {
+    const g = scene.grade.tamanho;
+    const longe = (veiculo.tamanho || 1) * g * 0.5 + g * 0.5;
+    const livres = [0, 90, 180, 270, 45, 135, 225, 315].map(graus => naCena(scene, veiculo.x + Math.cos((graus * Math.PI) / 180) * longe, veiculo.y + Math.sin((graus * Math.PI) / 180) * longe))
+      .filter(ponto => !atravessa(scene.paredes || [], veiculo, ponto));
+    const ocupado = ponto => scene.tokens.some(item => !item.dentro && item !== veiculo && Math.hypot(item.x - ponto.x, item.y - ponto.y) < g * 0.6);
+    return livres.find(ponto => !ocupado(ponto)) || livres[0] || { x: veiculo.x, y: veiculo.y };
+  }
   function sceneArg(state, id) {
     const scene = sceneById(state, id ? String(id) : state.cenaAtiva);
     if (!scene) throw fail(404, id ? 'Cena não encontrada.' : 'Abra uma cena antes.');
@@ -828,7 +850,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       hp: int(input.hp ?? atual.hp, 0, 999, 0), stats: Object.fromEntries(STAT_ORDER.map(stat => [stat, int(statsIn[stat], 0, 99, 0)])),
       pericias: [...pericias].map(([nomeDela, base]) => ({ nome: nomeDela, base })), armas, sp: { cabeca: int(spIn.cabeca, 0, 99, 0), corpo: int(spIn.corpo, 0, 99, 0) },
       notas: block(input.notas ?? atual.notas ?? '', 4000).trim(),
-      midia: input.midia !== undefined ? mediaArg(campaignId, input.midia) : atual.midia || ''
+      midia: input.midia !== undefined ? mediaArg(campaignId, input.midia) : atual.midia || '',
+      // O veículo (M17): quantos cabem dentro.
+      ...((TIPOS_DE_NPC.includes(input.tipo) ? input.tipo : atual.tipo) === 'veiculo' ? { assentos: int(input.assentos ?? atual.assentos, 1, 30, 2) } : {})
     };
   }
   // Um token novo: de um personagem da campanha, de uma ficha de NPC da wiki ou livre (com imagem e HP, se vierem).
@@ -864,7 +888,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       });
       const sp = preset.proprio ? { cabeca: { atual: preset.sp.cabeca, max: preset.sp.cabeca }, corpo: { atual: preset.sp.corpo, max: preset.sp.corpo } } : R.spDaFicha(preset.armadura);
       const midia = base.midia || (preset.midia && fs.existsSync(path.join(tableDir(campaignId), 'midia', preset.midia)) ? preset.midia : '');
-      return { ...base, midia, notas: preset.proprio ? preset.notas : '', tipo: 'npc', nome, npc: preset.id, dono: null, imagem: '', cor: '#ff3158', hp: { atual: preset.hp, max: preset.hp }, ref: preset.stats.REF, move: preset.stats.MOVE, stats: preset.stats, pericias: preset.pericias,
+      const veiculo = preset.tipo === 'veiculo' ? { veiculo: { assentos: preset.assentos || 2, ocupantes: [] }, tamanho: input.tamanho ? base.tamanho : 2 } : {};
+      return { ...base, ...veiculo, midia, notas: preset.proprio ? preset.notas : '', tipo: 'npc', nome, npc: preset.id, dono: null, imagem: '', cor: '#ff3158', hp: { atual: preset.hp, max: preset.hp }, ref: preset.stats.REF, move: preset.stats.MOVE, stats: preset.stats, pericias: preset.pericias,
         armas, sp, lesoes: [], deathSave: 0, morto: false };
     }
     const livre = input.livre && typeof input.livre === 'object' ? input.livre : input;
@@ -1180,7 +1205,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     } },
     'token.mover': { run({ state, viewer, body }) {
       const { scene, token } = tokenArg(state, viewer, body.token);
-      if (!canControl(viewer, token)) throw fail(403, 'Esse token não é seu.');
+      if (!canControl(viewer, token) && !dirige(viewer, scene, token)) throw fail(403, 'Esse token não é seu.');
+      if (token.dentro) throw fail(409, 'Desça do veículo antes.');
       const x = Number(body.x);
       const y = Number(body.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) throw fail(400, 'Posição inválida.');
@@ -1189,6 +1215,50 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (!isGm(viewer) && atravessa(scene.paredes || [], token, destino)) throw fail(409, 'Uma parede bloqueia o caminho.');
       token.x = destino.x;
       token.y = destino.y;
+      for (const ocupante of ocupantesDe(scene, token)) Object.assign(ocupante, destino);
+      return { tokens: true };
+    } },
+    // Veículos (M17). Embarcar: { token, veiculo }. O jogador, com o token dele perto (até 2 quadrados da borda); o mestre,
+    // de qualquer lugar. Quem está dentro fica no lugar do veículo (o alcance e a visão contam dali) e anda com ele.
+    'veiculo.embarcar': { run({ state, viewer, body }) {
+      const { scene, token } = tokenArg(state, viewer, body.token);
+      if (!canControl(viewer, token)) throw fail(403, 'Esse token não é seu.');
+      const veiculo = scene.tokens.find(item => item.id === String(body.veiculo || '') && item.veiculo);
+      if (!veiculo || veiculo === token) throw fail(404, 'Veículo não encontrado nesta cena.');
+      if (token.veiculo) throw fail(400, 'Um veículo não entra em outro.');
+      if (token.dentro) throw fail(409, 'Desça do outro veículo antes.');
+      if (veiculo.veiculo.ocupantes.length >= veiculo.veiculo.assentos) throw fail(409, `${veiculo.nome} está cheio (${veiculo.veiculo.assentos} assentos).`);
+      const g = scene.grade.tamanho;
+      if (!isGm(viewer) && Math.hypot(token.x - veiculo.x, token.y - veiculo.y) > (veiculo.tamanho || 1) * g * 0.5 + 2 * g) throw fail(409, 'Chegue mais perto do veículo.');
+      veiculo.veiculo.ocupantes.push(token.id);
+      Object.assign(token, { dentro: veiculo.id, x: veiculo.x, y: veiculo.y });
+      return { tokens: true };
+    } },
+    // Descer: { token, x, y } (sem x e y, ao lado do veículo, num lugar livre). O jogador desce perto; ninguém sai pela parede.
+    'veiculo.descer': { run({ state, viewer, body }) {
+      const { scene, token } = tokenArg(state, viewer, body.token);
+      const veiculo = token.dentro && scene.tokens.find(item => item.id === token.dentro);
+      if (!canControl(viewer, token) && !(veiculo && dirige(viewer, scene, veiculo))) throw fail(403, 'Esse token não é seu.');
+      if (!veiculo) throw fail(400, 'Esse token não está num veículo.');
+      const g = scene.grade.tamanho;
+      const perto = (veiculo.tamanho || 1) * g * 0.5 + 2 * g;
+      let destino = null;
+      if (body.x !== undefined && body.y !== undefined) {
+        destino = naCena(scene, numero(body.x, veiculo.x), numero(body.y, veiculo.y));
+        if (!isGm(viewer) && Math.hypot(destino.x - veiculo.x, destino.y - veiculo.y) > perto) throw fail(409, 'Desça perto do veículo.');
+        if (!isGm(viewer) && atravessa(scene.paredes || [], veiculo, destino)) throw fail(409, 'Uma parede bloqueia o caminho.');
+      } else destino = ladoDoVeiculo(scene, veiculo);
+      tirarDoVeiculo(scene, token);
+      Object.assign(token, destino);
+      return { tokens: true };
+    } },
+    // Assumir a direção: quem está dentro passa a ser o primeiro (o motorista move o veículo).
+    'veiculo.motorista': { run({ state, viewer, body }) {
+      const { scene, token } = tokenArg(state, viewer, body.token);
+      if (!canControl(viewer, token)) throw fail(403, 'Esse token não é seu.');
+      const veiculo = token.dentro && scene.tokens.find(item => item.id === token.dentro);
+      if (!veiculo) throw fail(400, 'Esse token não está num veículo.');
+      veiculo.veiculo.ocupantes = [token.id, ...veiculo.veiculo.ocupantes.filter(id => id !== token.id)];
       return { tokens: true };
     } },
     'token.editar': { async run({ state, viewer, body, campaignId }) {
@@ -1241,6 +1311,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     } },
     'token.apagar': { mestre: true, run({ state, viewer, body }) {
       const { scene, token } = tokenArg(state, viewer, body.token);
+      for (const ocupante of ocupantesDe(scene, token)) { tirarDoVeiculo(scene, ocupante); Object.assign(ocupante, ladoDoVeiculo(scene, token)); }
+      if (token.dentro) tirarDoVeiculo(scene, token);
       scene.tokens = scene.tokens.filter(item => item !== token);
       return { tokens: true, cenas: true, combate: dropFromCombat(state, token.id) };
     } },
@@ -1432,7 +1504,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     'combate.iniciar': { mestre: true, run({ state, body, campaignId }) {
       const scene = sceneArg(state, body.cena);
       const wanted = Array.isArray(body.tokens) && body.tokens.length ? new Set(body.tokens.map(String)) : null;
-      const chosen = scene.tokens.filter(token => (wanted ? wanted.has(token.id) : body.escondidos || !token.escondido));
+      // O veículo não age (quem age é o motorista): fica de fora, a não ser que o mestre peça.
+      const chosen = scene.tokens.filter(token => (wanted ? wanted.has(token.id) : (body.escondidos || !token.escondido) && !token.veiculo));
       if (!chosen.length) throw fail(400, 'Não há tokens para o combate nesta cena.');
       const ordem = chosen.map(token => rollInitiative(campaignId, token));
       sortInitiative(ordem);

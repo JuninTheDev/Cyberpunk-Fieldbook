@@ -323,7 +323,7 @@ function converterAtores(atores, pastas, mundo) {
     } else if (/vehicle/i.test(ator.type)) {
       const sdp = Number(s.sdp && (s.sdp.max ?? s.sdp.value)) || 0;
       const sp = Number(s.sp && (s.sp.max ?? s.sp.value)) || 0;
-      npc = { ...ficha, tipo: 'veiculo', hp: sdp, stats: { MOVE: Number(s.speedCombat) || 0 }, pericias: [], armas: [], sp: { cabeca: sp, corpo: sp },
+      npc = { ...ficha, tipo: 'veiculo', hp: sdp, assentos: Number(s.seats) || 2, stats: { MOVE: Number(s.speedCombat) || 0 }, pericias: [], armas: [], sp: { cabeca: sp, corpo: sp },
         notas: juntar([`Veículo${s.vehicleType ? ` (${s.vehicleType === 'land' ? 'terrestre' : s.vehicleType === 'air' ? 'aéreo' : s.vehicleType === 'sea' ? 'aquático' : s.vehicleType})` : ''}: SDP ${sdp} · SP ${sp} · ${Number(s.seats) || 0} assentos · MOVE ${Number(s.speedCombat) || 0}${s.speedNarrative ? ` (${s.speedNarrative})` : ''}.`, ...notasDoAtor]) };
     } else if (ator.type === 'container') fora.push(`${ator.name}: contêiner (a mesa não tem${itens.length ? `; os itens: ${itens.map(item => item.name).join(', ')}` : ', e ele está vazio'})`);
     else fora.push(`${ator.name}: tipo ${ator.type} (a mesa não tem)`);

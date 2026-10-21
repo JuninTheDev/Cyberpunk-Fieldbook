@@ -805,3 +805,7 @@ input.cresce { flex: 1; }
 .areas-opcoes .nota { margin: 0; }
 .area-escolhida { display: grid; gap: 6px; padding: 8px; border: 1px dashed var(--l); background: var(--w); }
 .area-escolhida small { color: var(--mu); font: 11px var(--lbl); }
+
+/* Veículos (M17): os assentos e quem está dentro, no cartão. */
+.veiculo-cartao { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid var(--l); }
+.veiculo-cartao .nota { margin: 0; }

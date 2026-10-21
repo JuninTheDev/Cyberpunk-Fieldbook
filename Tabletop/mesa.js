@@ -1177,12 +1177,24 @@
     return pronta(item) ? item : null;
   }
   const temVideo = () => Boolean(S.cena) && (Boolean(S.cena.video) || (S.cena.tiles || []).some(tile => tile.video));
-  const raioDe = token => (token.tamanho || 1) * grade().tamanho * 0.44;
+  const raioDe = token => (token.tamanho || 1) * grade().tamanho * 0.44 * (token.dentro && S.tokens.has(token.dentro) ? 0.5 : 1);
+  // Veículos (M17): quem está dentro fica no lugar do veículo (o servidor conta dali), mas aparece numa roda em volta do
+  // centro dele, menor, por cima (para escolher, atacar, ver o HP). Os de fora primeiro, os de dentro por cima.
+  function posicaoDoToken(token) {
+    const veiculo = token.dentro && S.tokens.get(token.dentro);
+    if (!veiculo || !veiculo.veiculo) return { x: token.x, y: token.y };
+    const ocupantes = veiculo.veiculo.ocupantes.filter(id => S.tokens.has(id));
+    const i = Math.max(0, ocupantes.indexOf(token.id));
+    const angulo = -Math.PI / 2 + (i * Math.PI * 2) / Math.max(1, ocupantes.length);
+    const longe = ocupantes.length > 1 ? raioDe(veiculo) * 0.55 : 0;
+    return { x: veiculo.vx + Math.cos(angulo) * longe, y: veiculo.vy + Math.sin(angulo) * longe };
+  }
+  const tokensNaOrdem = () => { const todos = [...S.tokens.values()]; return [...todos.filter(token => !token.dentro), ...todos.filter(token => token.dentro)]; };
   function tokenEm(ponto) {
-    const lista = [...S.tokens.values()].reverse();
+    const lista = tokensNaOrdem().reverse();
     return lista.find(token => (ponto.x - token.vx) ** 2 + (ponto.y - token.vy) ** 2 <= raioDe(token) ** 2) || null;
   }
-  const podeMover = token => gm() || token.meu;
+  const podeMover = token => gm() || token.meu || Boolean(token.veiculo && token.veiculo.dirijo);
 
   function desenhar(agora) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1220,7 +1232,7 @@
     desenharAreas(px);
     if (gm() && S.ferramenta === 'paredes') desenharParedes(px);
     desenharNotas(px);
-    for (const token of S.tokens.values()) {
+    for (const token of tokensNaOrdem()) {
       if (S.arrasto && S.arrasto.token === token.id) continue;
       desenharToken(token, token.vx, token.vy, agora, px);
     }
@@ -1473,10 +1485,11 @@
     const dt = Math.min(0.05, (agora - (S.ultimoQuadro || agora)) / 1000);
     S.ultimoQuadro = agora;
     let anima = false;
-    for (const token of S.tokens.values()) {
-      const dx = token.x - token.vx;
-      const dy = token.y - token.vy;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) { token.vx = token.x; token.vy = token.y; continue; }
+    for (const token of tokensNaOrdem()) {
+      const alvo = posicaoDoToken(token);
+      const dx = alvo.x - token.vx;
+      const dy = alvo.y - token.vy;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) { token.vx = alvo.x; token.vy = alvo.y; continue; }
       const passo = Math.min(1, dt * 10);
       token.vx += dx * passo;
       token.vy += dy * passo;
@@ -1772,8 +1785,14 @@
     gesto = null;
     if (atual.tipo === 'token' && S.arrasto) {
       const alvo = S.arrasto.alvo;
+      const solto = S.arrasto.pos;
       S.arrasto = null;
-      if (!cancelar) moverToken(atual.token, alvo);
+      const token = S.tokens.get(atual.token);
+      const veiculo = token && !token.veiculo && [...S.tokens.values()].find(item => item.veiculo && item.id !== token.id && item.id !== token.dentro && Math.hypot(solto.x - item.vx, solto.y - item.vy) <= raioDe(item));
+      if (cancelar || !token) { /* nada */ }
+      else if (veiculo && (gm() || token.meu)) op('veiculo.embarcar', { token: token.id, veiculo: veiculo.id }).catch(() => {});
+      else if (token.dentro) op('veiculo.descer', { token: token.id, x: alvo.x, y: alvo.y }).catch(() => {});
+      else moverToken(atual.token, alvo);
       redesenhar();
     } else if (atual.tipo === 'pan-talvez' && !atual.moveu) {
       const nota = atual.nota && notasDaCena().find(item => item.id === atual.nota);
@@ -1844,6 +1863,7 @@
     const antes = { x: token.x, y: token.y };
     // Já mostra no lugar novo; se o servidor recusar, volta.
     Object.assign(token, { x: alvo.x, y: alvo.y, vx: alvo.x, vy: alvo.y });
+    if (token.veiculo) for (const ocupante of token.veiculo.ocupantes) { const dentro = S.tokens.get(ocupante); if (dentro) Object.assign(dentro, { x: alvo.x, y: alvo.y }); }
     redesenhar();
     op('token.mover', { token: id, x: alvo.x, y: alvo.y }).catch(() => {
       const ainda = S.tokens.get(id);
@@ -2019,6 +2039,30 @@
     if (token.personagem) return [...S.personagens, ...S.meus].find(item => item.id === token.personagem) || null;
     return null;
   }
+  // Veículos (M17) no cartão. O veículo: os assentos e quem está dentro (o primeiro dirige), com Descer e Assumir a
+  // direção para quem pode. Quem está dentro: Descer. O seu token perto de um veículo com lugar: Entrar.
+  function htmlDoVeiculo(token) {
+    if (token.veiculo) {
+      const ocupantes = token.veiculo.ocupantes.map(id => S.tokens.get(id)).filter(Boolean);
+      const linha = (ocupante, i) => {
+        const pode = gm() || ocupante.meu;
+        return `<li><span class="info"><b>${esc(ocupante.nome)}</b><small>${i === 0 ? 'dirige' : 'passageiro'}</small></span>
+          ${pode && i > 0 ? `<button class="botao vazado pequeno" type="button" data-cartao="motorista" data-ocupante="${esc(ocupante.id)}">Dirigir</button>` : ''}
+          ${pode || token.veiculo.dirijo ? `<button class="botao vazado pequeno" type="button" data-cartao="descer" data-ocupante="${esc(ocupante.id)}">Descer</button>` : ''}</li>`;
+      };
+      return `<div class="veiculo-cartao"><div class="grupo-npc">Veículo · ${ocupantes.length}/${token.veiculo.assentos} assentos</div>
+        ${ocupantes.length ? `<ul class="lista">${ocupantes.map(linha).join('')}</ul>` : '<p class="nota">Vazio. Arraste um token para cima dele para embarcar.</p>'}
+        ${token.veiculo.dirijo ? '<p class="nota">Você dirige: arraste o veículo para mover todos dentro.</p>' : ''}</div>`;
+    }
+    if (!(gm() || token.meu)) return '';
+    if (token.dentro) {
+      const veiculo = S.tokens.get(token.dentro);
+      return `<div class="veiculo-cartao"><p class="nota">Dentro de ${esc(veiculo ? veiculo.nome : 'um veículo')}.</p><div class="cartao-acoes"><button class="botao vazado pequeno" type="button" data-cartao="descer">Descer</button></div></div>`;
+    }
+    const g = grade().tamanho;
+    const perto = [...S.tokens.values()].filter(item => item.veiculo && item.veiculo.ocupantes.length < item.veiculo.assentos && (gm() || Math.hypot(item.x - token.x, item.y - token.y) <= (item.tamanho || 1) * g * 0.5 + 2 * g));
+    return perto.length ? `<div class="cartao-acoes">${perto.map(veiculo => `<button class="botao vazado pequeno" type="button" data-cartao="embarcar" data-veiculo="${esc(veiculo.id)}">Entrar: ${esc(veiculo.nome)}</button>`).join('')}</div>` : '';
+  }
   function renderCartao() {
     const caixa = $('#cartao');
     const token = S.selecionado && S.tokens.get(S.selecionado);
@@ -2038,7 +2082,7 @@
     if (token.hp) {
       const fracao = token.hp.max ? Math.max(0, Math.min(1, token.hp.atual / token.hp.max)) : 0;
       partes.push(`<div class="hp"><div class="hp-linha">${editaHp ? '<button class="botao vazado pequeno" data-hp="-5" type="button">−5</button><button class="botao vazado pequeno" data-hp="-1" type="button">−1</button>' : ''}
-        ${editaHp ? `<input type="number" data-hp-atual value="${token.hp.atual}" aria-label="HP atual">` : `<b>${token.hp.atual}</b>`}<span>/ ${token.hp.max} HP</span>
+        ${editaHp ? `<input type="number" data-hp-atual value="${token.hp.atual}" aria-label="${token.veiculo ? 'SDP' : 'HP'} atual">` : `<b>${token.hp.atual}</b>`}<span>/ ${token.hp.max} ${token.veiculo ? 'SDP' : 'HP'}</span>
         ${editaHp ? '<button class="botao vazado pequeno" data-hp="1" type="button">+1</button><button class="botao vazado pequeno" data-hp="5" type="button">+5</button>' : ''}</div>
         <div class="hp-barra"><i style="width:${fracao * 100}%;background:${fracao > 0.5 ? 'var(--g)' : fracao > 0 ? '#ff8a3d' : 'var(--r)'}"></i></div></div>`);
     }
@@ -2062,6 +2106,8 @@
       acoes.push('<button class="botao vazado pequeno perigo" type="button" data-cartao="apagar">Tirar da cena</button>');
     }
     if (acoes.length) partes.push(`<div class="cartao-acoes">${acoes.join('')}</div>`);
+    const doVeiculo = htmlDoVeiculo(token);
+    if (doVeiculo) partes.push(doVeiculo);
     if (S.ataque && S.ataque.token === token.id) partes.push(htmlDoAtaque(token));
     if (gm()) {
       partes.push(`<details class="dano-mestre"><summary>Dano à mão</summary><div class="campo-linha">
@@ -2354,6 +2400,9 @@
     if (tipo === 'esconder') op('token.editar', { token: token.id, escondido: !token.escondido }).catch(() => {});
     if (tipo === 'ficha') op('token.ficha', { token: token.id }).then(() => aviso('Token atualizado com a ficha de agora.')).catch(() => {});
     if (tipo === 'combate') op('combate.adicionar', { token: token.id }).catch(() => {});
+    if (tipo === 'embarcar') op('veiculo.embarcar', { token: token.id, veiculo: acao.dataset.veiculo }).catch(() => {});
+    if (tipo === 'descer') op('veiculo.descer', { token: acao.dataset.ocupante || token.id }).catch(() => {});
+    if (tipo === 'motorista') op('veiculo.motorista', { token: acao.dataset.ocupante || token.id }).catch(() => {});
     if (tipo === 'estabilizar') op('estabilizar', { token: token.id }).catch(() => {});
     if (tipo === 'suprimido') op('token.estado', { token: token.id, suprimido: false }).catch(() => {});
     if (tipo === 'morto') op('token.estado', { token: token.id, morto: !token.morto }).catch(() => {});
@@ -3898,6 +3947,7 @@
         <label>HP <input name="hp" type="number" min="0" max="999" value="${npc.hp}"></label>
         <label>SP cabeça <input name="sp-cabeca" type="number" min="0" max="99" value="${npc.sp.cabeca}"></label>
         <label>SP corpo <input name="sp-corpo" type="number" min="0" max="99" value="${npc.sp.corpo}"></label>
+        <label>Assentos <small>(veículo)</small> <input name="assentos" type="number" min="1" max="30" value="${npc.assentos || 2}"></label>
       </div>
       <datalist id="npc-grupos">${grupos.map(grupo => `<option value="${esc(grupo)}">`).join('')}</datalist>
       <div class="npc-stats">${STATS_DE_NPC.map(stat => `<label>${stat}<input name="stat-${stat}" type="number" min="0" max="99" value="${Number(npc.stats[stat]) || 0}"></label>`).join('')}</div>
@@ -3930,7 +3980,7 @@
       nome: String(dados.get('nome') || '').trim(), grupo: String(dados.get('grupo') || '').trim(), tipo: dados.get('tipo'), hp: Number(dados.get('hp')) || 0,
       stats: Object.fromEntries(STATS_DE_NPC.map(stat => [stat, Number(dados.get(`stat-${stat}`)) || 0])),
       pericias: pedacos.map(texto => texto.match(/^(.*\S)\s+(\d{1,2})$/)).map(([, nome, base]) => ({ nome, base: Number(base) })),
-      armas, sp: { cabeca: Number(dados.get('sp-cabeca')) || 0, corpo: Number(dados.get('sp-corpo')) || 0 }, notas: String(dados.get('notas') || ''),
+      armas, sp: { cabeca: Number(dados.get('sp-cabeca')) || 0, corpo: Number(dados.get('sp-corpo')) || 0 }, notas: String(dados.get('notas') || ''), assentos: Number(dados.get('assentos')) || 2,
       ...(S.npcMidia !== undefined ? { midia: S.npcMidia } : {})
     };
   }

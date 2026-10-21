@@ -49,7 +49,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (78 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (79 testes).
 
 ## O que dá para fazer
 
@@ -101,6 +101,12 @@ Teste automático (não abre navegador): `node --test Tabletop/` (78 testes).
 - **Portas:** clique no ícone abre e fecha; com Shift, tranca. A porta secreta só você vê.
 - **Luz** (aba Cena): **Luz global** deixa a cena toda clara. Sem ela, cada token vê o alcance da visão dele (30 m, se você não mudar) e o que as luzes iluminam. **Escuridão** escurece a tela de todos; as luzes abrem clareiras.
   - **Luzes** (ferramenta L): clique no mapa para pôr uma, com a luz clara, a penumbra (em metros) e a cor; clique numa para escolher, arraste para mover, Delete apaga. A escondida só você vê.
+- **Veículos:** a ficha de NPC do tipo Veículo (a moto do Foundry já vem assim) entra na cena com o SDP no lugar do HP, os assentos e 2 quadrados.
+  - **Embarcar:** arraste o seu token para cima do veículo (ou **Entrar** no cartão, a até 2 quadrados). Cabe o número de assentos; o mestre embarca de qualquer lugar.
+  - **Dentro:** o token fica no lugar do veículo (o alcance, a visão e o combate contam dali), aparece menor por cima dele e anda junto. O primeiro a entrar dirige; **Dirigir** no cartão troca.
+  - **Mover:** quem dirige arrasta o veículo, e todos vão juntos (a parede segura o veículo).
+  - **Descer:** arraste o token para fora (perto do veículo) ou **Descer** no cartão (um lugar livre ao lado). Tirar o veículo da cena deixa todos ao lado.
+  - O veículo não entra na iniciativa (quem age é o motorista).
 - **Áreas e desenhos** (ferramenta A, para todos), como os Measured Templates e os Drawings do Foundry:
   - **As formas:** o círculo (arraste do centro: a explosão), o cone (da ponta para onde abre; 90°, 45° para cada lado, como o cartucho), a linha (do começo ao fim, com a largura), o retângulo (de canto a canto) e o traço livre.
   - A ponta encaixa a cada meio quadrado; Shift solta. A medida aparece em metros.
@@ -287,7 +293,8 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
 
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
-- **NET** (o NET Architect) e os **veículos** (Fase 2). O Black ICE e a moto já entram como fichas do mestre, sem as regras da NET e do veículo.
+- **NET** (o NET Architect, Fase 2): o grupo de agora não tem netrunner. O Black ICE já entra como ficha do mestre, sem as regras da NET.
+- **Veículos:** a perseguição, o atropelamento e o tiro no ocupante através do veículo (cobertura) ainda são do mestre, à mão.
 - **Cyberware:** retirar ainda é à mão (a Humanidade e o dinheiro pelo ajuste da ficha). O lado da base é o que o jogador escolheu no pedido.
 - **Artes Marciais:** os movimentos especiais esperam o agarrar e a conta de quem acertou o quê no turno. O golpe de artes marciais já ignora metade do SP.
 - **Cobertura:** a mesa não conta o HP da cobertura. O que atravessa cobertura (a carga Tech, o ricochete) aparece como nota no cartão, e o mestre decide.
@@ -348,5 +355,5 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists, a biblioteca do yt-jukebox e os atores (as fichas de NPC do mestre) de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 78 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-veiculos.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 79 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |
