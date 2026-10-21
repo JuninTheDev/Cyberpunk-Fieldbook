@@ -28,12 +28,14 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
    ```
    node Tabletop/importar-foundry.js --tar "C:\Users\kouar\Backups\Night City Fieldbook\foundry12-completo-2026-10-12.tar" --mundo edgerunners-storys
    ```
-   - **O que vem:** as 13 cenas, com mapas, vídeos, tiles e tokens (35 arquivos, 215 MB), e as playlists, com as 3 músicas.
+   - **O que vem:** as 13 cenas, com mapas, vídeos, tiles e tokens (35 arquivos, 215 MB), as playlists, com as 3 músicas, e 16 fichas de NPC (os atores que não são a ficha da wiki sem mudança).
+   - **No teste que já existe:** as cenas e as playlists que já vieram ficam (sem `--substituir`); as fichas de NPC entram. Os tokens que já estão nas cenas não mudam.
    - **Opções:**
      - `--listar` só mostra as cenas e as playlists;
      - `--cenas "A; B"` escolhe algumas cenas;
      - `--sem-audio` deixa as playlists de fora;
-     - `--substituir` troca as cenas e as playlists já importadas.
+     - `--sem-npcs` deixa as fichas de NPC de fora;
+     - `--substituir` troca as cenas, as playlists e as fichas de NPC já importadas.
 3. **Mestre:** neste computador, a wiki fica em `http://localhost:8010` e a mesa em `http://localhost:8010/mesa`.
 4. **Jogador:** abra `http://localhost:8010/mesa` numa **janela anônima** (Ctrl+Shift+N) e clique num dos jogadores de teste. Só no teste, o botão **Testar como jogador** faz o mesmo.
 5. **A ficha da wiki:** mexa no Jax na mesa e abra a ficha dele na wiki (Personagens). Ela mostra o mesmo de lá, em até 30 segundos:
@@ -47,7 +49,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (67 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (71 testes).
 
 ## O que dá para fazer
 
@@ -114,8 +116,14 @@ Teste automático (não abre navegador): `node --test Tabletop/` (67 testes).
   - **Mudar:** escolha o número, ponha quanto soma ou tira e o motivo ("pagamento do fixer", "terapia"). Vai para o extrato da ficha e para o registro, que só você e o dono do personagem veem.
   - **Limites:** o dinheiro não fica negativo; a reputação vai de 0 a 10; a Humanidade não passa da máxima.
   - **O inventário:** o uso de cada item (equipado, carregando, guardado) e a quantidade da munição e do equipamento (a granada que foi, a caixa que o grupo achou).
-- **Tokens** (aba Fichas): ponha os personagens da campanha e as fichas de NPC da wiki (o livro, o Mission Kit, o Black Chrome e o elenco do Protocolo Morana).
+- **Tokens** (aba Fichas): ponha os personagens da campanha e as fichas de NPC (as suas e as da wiki: o livro, o Mission Kit, o Black Chrome e o elenco do Protocolo Morana).
   - O NPC entra escondido, se você quiser.
+- **Suas fichas de NPC** (aba Fichas, "seu" na lista): **Novo NPC**, **Editar**, ou **Copiar** uma da wiki para mudar.
+  - A ficha: nome, grupo, tipo, HP, SP, os STATs, as perícias com a base (STAT + nível; o nome em português ou em inglês), as armas, as notas e a imagem do token.
+  - **Black ICE:** o SPD no REF, o REZ no HP, e ATK, DEF e PER nas perícias. **Veículo:** o SDP no HP e a velocidade de combate no MOVE.
+  - O token copia a ficha quando entra na cena, com as notas na nota do mestre. Mudar ou apagar a ficha depois não mexe no token, como no Foundry.
+  - Os jogadores não recebem nada das suas fichas.
+  - **Do Foundry:** a importação traz os atores que não são a ficha da wiki sem mudança: as variantes (a MaxTac, os Tyger Claws), os feitos à mão (Dan, Elias Varga), o Cyberpsycho, o Black ICE Wisp e a moto. Ficam de fora os personagens (Qyan entra pela ficha da wiki), os mooks iguais aos do livro, o contêiner vazio e o modelo de Black ICE do sistema.
   - Também há o token livre: um drone, um carro, uma porta.
 - **Cartão do token** (aba Token): mexa no HP (−5, −1, +1, +5 ou o número), esconda ou mostre, veja as armas do NPC, escreva uma nota (só sua), **Atualizar da ficha** e tire da cena.
   - **Aparência:** nome, tamanho (1 × 1 a 4 × 4), cor, imagem, alcance da visão e a luz que o token leva. O personagem usa o retrato da ficha.
@@ -263,7 +271,7 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
 
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
-- **NET** (o NET Architect), os **veículos** e os **NPCs próprios** do mestre (Fase 2).
+- **NET** (o NET Architect) e os **veículos** (Fase 2). O Black ICE e a moto já entram como fichas do mestre, sem as regras da NET e do veículo.
 - **Cyberware:** retirar ainda é à mão (a Humanidade e o dinheiro pelo ajuste da ficha). O lado da base é o que o jogador escolheu no pedido.
 - **Artes Marciais:** os movimentos especiais esperam o agarrar e a conta de quem acertou o quê no turno. O golpe de artes marciais já ignora metade do SP.
 - **Cobertura:** a mesa não conta o HP da cobertura. O que atravessa cobertura (a carga Tech, o ricochete) aparece como nota no cartão, e o mestre decide.
@@ -320,7 +328,7 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa-tocador.js` | O tocador no navegador: toca o arquivo num `<audio>` e o YouTube no player dele, acerta a posição pelo relógio do servidor e avisa quando o navegador segura o som. |
 | `mesa-visao.js` | A conta da visão e da luz (quem vê o quê, a porta, o passo, o que a luz alcança, o polígono da sombra), com o índice das paredes. Vai para o servidor e para o navegador. |
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
-| `importar-foundry.js` | Traz as cenas, as playlists e a biblioteca do yt-jukebox de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
+| `importar-foundry.js` | Traz as cenas, as playlists, a biblioteca do yt-jukebox e os atores (as fichas de NPC do mestre) de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 67 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 71 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

@@ -481,3 +481,28 @@ input.cresce { flex: 1; }
   .tocador { right: 8px; top: 60px; width: 170px; }
 }
 @media (prefers-reduced-motion: reduce) { .som.bloqueado { animation: none; } }
+/* As fichas de NPC do mestre: o botão Novo NPC no topo do bloco e a janela de editar (como a da nota, mais larga). */
+.bloco-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.npc-janela { width: min(600px, calc(100% - var(--barra) - 140px)); z-index: 8; }
+.npc-form { display: grid; gap: 10px; }
+.npc-grade { grid-template-columns: 1fr 1fr 1fr; }
+.npc-grade .inteiro { grid-column: 1 / -1; }
+.npc-stats { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+.npc-stats label { display: grid; gap: 2px; font: 11px var(--lbl); color: var(--mu); text-align: center; }
+.npc-stats input { width: 100%; padding: 4px 2px; text-align: center; }
+.npc-form textarea { width: 100%; resize: vertical; }
+.npc-form .campo { display: grid; gap: 4px; }
+.npc-form .nota { margin: 0; }
+.npc-armas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.npc-arma { display: grid; grid-template-columns: minmax(0, 2fr) 64px 48px minmax(0, 1.5fr) minmax(0, 1.5fr) auto; gap: 4px; align-items: center; }
+.npc-arma input, .npc-arma select { width: 100%; min-width: 0; padding: 4px; font: 12px var(--lbl); }
+.npc-arma .link { font-size: 18px; text-decoration: none; color: var(--mu); padding: 0 4px; }
+.npc-imagem { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.npc-imagem img { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--l); }
+.lista li .botao.pequeno + .botao.pequeno { margin-left: -4px; }
+@media (max-width: 820px) {
+  .npc-janela { width: auto; }
+  .npc-grade { grid-template-columns: 1fr 1fr; }
+  .npc-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .npc-arma { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
+}

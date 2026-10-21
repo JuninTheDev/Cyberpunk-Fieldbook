@@ -33,6 +33,8 @@ const MAX_LOG = 200;
 const MAX_FOG = 4000;
 const MAX_TOKENS = 200;
 const MAX_SCENES = 80;
+const MAX_NPCS = 300;
+const TIPOS_DE_NPC = ['pessoa', 'ice', 'veiculo'];
 const MAX_TILES = 300;
 const MAX_WALLS = 4000;
 const MAX_LIGHTS = 300;
@@ -171,6 +173,14 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     skills.set('Language (Streetslang)', { pt: 'Linguagem (Streetslang)', stat: 'INT' });
     skills.set('Local Expert (Your Home)', { pt: 'Especialista Local (sua casa)', stat: 'INT' });
     const ptOf = en => (skills.get(en) || {}).pt || names[en] || en;
+    // A perícia pelo nome em inglês ou em português (a ficha do mestre aceita os dois; grava o inglês, como as do livro).
+    const chave = texto => String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const porNome = new Map();
+    for (const [en, pt] of [...[...skills].map(([en, info]) => [en, info.pt]), ...Object.entries(names)]) {
+      if (!porNome.has(chave(en))) porNome.set(chave(en), en);
+      if (pt && !porNome.has(chave(pt))) porNome.set(chave(pt), en);
+    }
+    const enOf = nome => porNome.get(chave(nome)) || '';
     const npcs = [];
     for (const [group, label] of NPC_GROUPS) {
       (Array.isArray(npcData[group]) ? npcData[group] : []).forEach((card, index) => {
@@ -187,7 +197,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       });
     }
     const table = rows => (Array.isArray(rows) ? rows : []).map(row => row.map((cell, i) => (i ? stripTags(cell) : Number(cell))));
-    wikiCache = { key, data: { skills, ptOf, critBody: table(rules.critBody), critHead: table(rules.critHead), npcs, armas2077, regras: { rangeDV: rules.rangeDV || [], rangeBandLimits: rules.rangeBandLimits || [] } } };
+    wikiCache = { key, data: { skills, ptOf, enOf, critBody: table(rules.critBody), critHead: table(rules.critHead), npcs, armas2077, regras: { rangeDV: rules.rangeDV || [], rangeBandLimits: rules.rangeBandLimits || [] } } };
     return wikiCache.data;
   }
 
@@ -293,6 +303,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const state = { ...emptyState(), ...(stored && typeof stored === 'object' ? stored : {}) };
     if (!Array.isArray(state.cenas)) state.cenas = [];
     if (!Array.isArray(state.registro)) state.registro = [];
+    if (!Array.isArray(state.npcs)) state.npcs = [];
     // Paredes de antes da visão vêm sem id: ganham um (a porta é aberta pelo id).
     for (const scene of state.cenas) for (const item of [...(scene.paredes || []), ...(scene.luzes || [])]) if (!item.id) item.id = newId();
     combatFlow.cancelarPendentes(state);
@@ -484,7 +495,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       ...(gm ? {
         cenas: scenesList(state), cenaAtiva: state.cenaAtiva,
         personagens: fichas,
-        npcs: wikiData().npcs.map(({ id, nome, grupo, livro, pagina, hp, stats }) => ({ id, nome, grupo, livro, pagina, hp, ref: stats.REF, move: stats.MOVE }))
+        ...npcsFor(state)
       } : { meus: fichas })
     };
   }
@@ -598,6 +609,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (effects.registroLimpo) sendEvent(connection, 'registro.limpo', {});
       if (effects.esquecer) sendEvent(connection, 'visao.esquecer', { cena: effects.esquecer });
       if (effects.audio) sendEvent(connection, 'audio', audioFlow.audioFor(viewer, state, campaignId));
+      if (effects.npcs && isGm(viewer)) sendEvent(connection, 'npcs', npcsFor(state));
     }
     if (effects.fichas) sendCards(campaignId);
   }
@@ -720,6 +732,60 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   }
   // Ficha de NPC da wiki pelo nome (o "base" que o cpr-2077 grava no ator do Foundry, ou o nome do token).
   const presetByName = name => { const wanted = plain(name); return wanted ? wikiData().npcs.find(npc => plain(npc.nome) === wanted) || null : null; };
+
+  // ---------------- NPCs do mestre ----------------
+  // Além das fichas da wiki (mestre-npcs.js), o mestre faz as dele, ou copia uma da wiki para mudar; a importação traz
+  // os atores do Foundry que não são a ficha da wiki sem mudança. Ficam na mesa da campanha (mesa.json), e só o mestre
+  // recebe. O token copia a ficha quando entra na cena: mudar a ficha depois não muda o token (como no Foundry).
+  // tipo: pessoa, ice (o Black ICE: REZ no HP, SPD no REF, ATK, DEF e PER como perícias) ou veiculo (SDP no HP).
+  const npcsOf = state => (Array.isArray(state.npcs) ? state.npcs : (state.npcs = []));
+  // A ficha do mestre no formato das da wiki (as perícias com o nome em português e a base).
+  function presetDoMestre(npc) {
+    const wiki = wikiData();
+    return { ...npc, livro: '', pagina: null, proprio: true,
+      pericias: npc.pericias.map(item => ({ nome: item.nome, pt: wiki.ptOf ? wiki.ptOf(item.nome) : item.nome, base: item.base })).sort((a, b) => b.base - a.base || a.pt.localeCompare(b.pt, 'pt')) };
+  }
+  const npcPorId = (state, id) => { const meu = npcsOf(state).find(npc => npc.id === id); return meu ? presetDoMestre(meu) : wikiData().npcs.find(npc => npc.id === id) || null; };
+  const npcPorOrigem = (state, origem) => {
+    const meu = origem && origem.id ? npcsOf(state).find(npc => npc.origem && npc.origem.id === String(origem.id) && npc.origem.mundo === String(origem.mundo || '')) : null;
+    return meu ? presetDoMestre(meu) : null;
+  };
+  // O que o mestre recebe: a lista (as dele primeiro) e as fichas dele inteiras, para editar.
+  const npcsFor = state => ({
+    npcs: [...npcsOf(state).map(presetDoMestre), ...wikiData().npcs].map(({ id, nome, grupo, livro, pagina, hp, stats, proprio, tipo }) => ({ id, nome, grupo, livro, pagina, hp, ref: stats.REF, move: stats.MOVE, ...(proprio ? { proprio: true, tipo } : {}) })),
+    meusNpcs: npcsOf(state).map(presetDoMestre)
+  });
+  const cleanOrigem = input => (input && typeof input === 'object' && input.id ? { sistema: 'foundry', mundo: line(input.mundo, 80), id: line(input.id, 40) } : null);
+  function cleanNpc(campaignId, input = {}, atual = {}) {
+    const wiki = wikiData();
+    const nome = line(input.nome ?? atual.nome, 40);
+    if (!nome) throw fail(400, 'Dê um nome ao NPC.');
+    const lista = (valor, antes) => (Array.isArray(valor) ? valor : Array.isArray(antes) ? antes : []);
+    const emIngles = nome => (wiki.enOf && wiki.enOf(nome)) || nome;
+    const statsIn = input.stats && typeof input.stats === 'object' ? input.stats : atual.stats || {};
+    const pericias = new Map();
+    for (const item of lista(input.pericias, atual.pericias).slice(0, 80)) {
+      const nomeDela = emIngles(line(item && item.nome, 60));
+      const base = int(item && item.base, 0, 99, 0);
+      if (nomeDela && base) pericias.set(nomeDela, base);
+    }
+    const armas = lista(input.armas, atual.armas).filter(arma => arma && line(arma.nome, 80)).slice(0, 12).map(arma => {
+      const dano = line(arma.dano, 20);
+      if (dano && !DICE_RE.test(dano)) throw fail(400, `O dano de ${line(arma.nome, 80)}: use NdM, como 3d6.`);
+      const pericia = emIngles(line(arma.pericia, 60));
+      return { nome: line(arma.nome, 80), dano, cdt: int(arma.cdt, 1, 10, 1), pericia, nota: line(arma.nota, 120),
+        distancia: arma.distancia === undefined || arma.distancia === null ? !/Melee|Brawling|Martial/i.test(pericia) : Boolean(arma.distancia),
+        ...(/^[A-Za-z]{2,30}$/.test(String(arma.classe || '')) ? { classe: String(arma.classe) } : {}) };
+    });
+    const spIn = input.sp && typeof input.sp === 'object' ? input.sp : atual.sp || {};
+    return {
+      nome, grupo: line(input.grupo ?? atual.grupo, 40) || 'Meus NPCs', tipo: TIPOS_DE_NPC.includes(input.tipo) ? input.tipo : atual.tipo || 'pessoa',
+      hp: int(input.hp ?? atual.hp, 0, 999, 0), stats: Object.fromEntries(STAT_ORDER.map(stat => [stat, int(statsIn[stat], 0, 99, 0)])),
+      pericias: [...pericias].map(([nomeDela, base]) => ({ nome: nomeDela, base })), armas, sp: { cabeca: int(spIn.cabeca, 0, 99, 0), corpo: int(spIn.corpo, 0, 99, 0) },
+      notas: block(input.notas ?? atual.notas ?? '', 4000).trim(),
+      midia: input.midia !== undefined ? mediaArg(campaignId, input.midia) : atual.midia || ''
+    };
+  }
   // Um token novo: de um personagem da campanha, de uma ficha de NPC da wiki ou livre (com imagem e HP, se vierem).
   // fallback: na importação, personagem ou ficha que não existe vira token livre em vez de erro.
   function buildToken(scene, campaignId, input, { fallback = false } = {}) {
@@ -737,17 +803,24 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       }
       if (!fallback) throw fail(404, 'Personagem não encontrado nesta campanha.');
     }
-    const preset = input.npc ? wikiData().npcs.find(item => item.id === String(input.npc)) : input.npcNome ? presetByName(input.npcNome) : null;
+    // A ficha: do mestre ou da wiki pelo id; na importação, a do ator que veio do Foundry, ou a da wiki pelo nome.
+    const { state } = tableOf(campaignId);
+    const preset = input.npc ? npcPorId(state, String(input.npc)) : (input.npcOrigem && npcPorOrigem(state, input.npcOrigem)) || (input.npcNome ? presetByName(input.npcNome) : null);
     if (input.npc && !preset && !fallback) throw fail(404, 'Ficha de NPC não encontrada.');
     if (preset) {
       const count = scene.tokens.filter(item => item.npc === preset.id).length;
       const nome = input.nome ? line(input.nome, 40) : count ? `${preset.nome} ${count + 1}` : preset.nome;
-      // A armadura da ficha do livro ("SP 7 na cabeça e no corpo") e as armas com a classe (a linha da DV por alcance).
-      // NPC do livro não conta bala.
-      const armas = preset.armas.map((arma, index) => K.comPerfil({ id: `npc:${index}`, nome: arma.nome, dano: arma.dano, cdt: arma.cdt, pericia: arma.pericia, nota: arma.nota,
-        distancia: !/Melee|Brawling|Martial/i.test(arma.pericia), classe: R.classeDaArma({ nome: arma.nome, pericia: arma.pericia, distancia: !/Melee|Brawling|Martial/i.test(arma.pericia) }), pente: null }, wikiData().armas2077));
-      return { ...base, tipo: 'npc', nome, npc: preset.id, dono: null, imagem: '', cor: '#ff3158', hp: { atual: preset.hp, max: preset.hp }, ref: preset.stats.REF, move: preset.stats.MOVE, stats: preset.stats, pericias: preset.pericias,
-        armas, sp: R.spDaFicha(preset.armadura), lesoes: [], deathSave: 0, morto: false };
+      // A armadura da ficha do livro ("SP 7 na cabeça e no corpo"; a do mestre já vem em números) e as armas com a
+      // classe (a linha da DV por alcance). NPC não conta bala.
+      const armas = preset.armas.map((arma, index) => {
+        const distancia = typeof arma.distancia === 'boolean' ? arma.distancia : !/Melee|Brawling|Martial/i.test(arma.pericia);
+        return K.comPerfil({ id: `npc:${index}`, nome: arma.nome, dano: arma.dano, cdt: arma.cdt, pericia: arma.pericia, nota: arma.nota,
+          distancia, classe: R.classeDaArma({ classe: arma.classe, nome: arma.nome, pericia: arma.pericia, distancia }), pente: null }, wikiData().armas2077);
+      });
+      const sp = preset.proprio ? { cabeca: { atual: preset.sp.cabeca, max: preset.sp.cabeca }, corpo: { atual: preset.sp.corpo, max: preset.sp.corpo } } : R.spDaFicha(preset.armadura);
+      const midia = base.midia || (preset.midia && fs.existsSync(path.join(tableDir(campaignId), 'midia', preset.midia)) ? preset.midia : '');
+      return { ...base, midia, notas: preset.proprio ? preset.notas : '', tipo: 'npc', nome, npc: preset.id, dono: null, imagem: '', cor: '#ff3158', hp: { atual: preset.hp, max: preset.hp }, ref: preset.stats.REF, move: preset.stats.MOVE, stats: preset.stats, pericias: preset.pericias,
+        armas, sp, lesoes: [], deathSave: 0, morto: false };
     }
     const livre = input.livre && typeof input.livre === 'object' ? input.livre : input;
     const hp = int(livre.hp, 0, 999, 0);
@@ -1434,6 +1507,49 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const rolagem = { tipo: 'instalacao', rotulo: `Instalou ${feito.nome} ${feito.onde}${feito.dv ? ` (DV${feito.dv})` : ''}`, dados: feito.dados, total: feito.perda, conta, avisos: feito.avisos };
       const entry = addEntry(state, { tipo: 'rolagem', autor: authorOf(viewer, color), quem: nome, rolagem, para: doc.dono ? [doc.dono] : [] });
       return { tokens: true, fichas: true, registro: entry, resultado: { perda: feito.perda, humanidade: feito.depois, custo: feito.custo } };
+    } },
+    // As fichas de NPC do mestre. { npc } cria; { id, npc } muda. A importação manda { npc, origem } (o ator do Foundry):
+    // o que já veio não entra de novo (409), a não ser com substituir.
+    'npc.salvar': { mestre: true, run({ state, body, campaignId }) {
+      const lista = npcsOf(state);
+      const input = body.npc && typeof body.npc === 'object' ? body.npc : {};
+      const origem = cleanOrigem(body.origem);
+      const atual = body.id ? lista.find(npc => npc.id === String(body.id))
+        : origem ? lista.find(npc => npc.origem && npc.origem.id === origem.id && npc.origem.mundo === origem.mundo) : null;
+      if (body.id && !atual) throw fail(404, 'NPC não encontrado.');
+      if (atual && !body.id && !body.substituir) throw fail(409, `${atual.nome} já foi importado.`);
+      if (atual) {
+        Object.assign(atual, body.id ? cleanNpc(campaignId, input, atual) : cleanNpc(campaignId, input));
+        return { npcs: true, resultado: { id: atual.id } };
+      }
+      if (lista.length >= MAX_NPCS) throw fail(400, `Até ${MAX_NPCS} NPCs: apague um antes.`);
+      const npc = { id: `meu:${newId()}`, ...cleanNpc(campaignId, input), ...(origem ? { origem } : {}) };
+      lista.push(npc);
+      return { npcs: true, resultado: { id: npc.id } };
+    } },
+    // Copiar uma ficha (da wiki ou do mestre) para uma do mestre, para mudar: { de }.
+    'npc.copiar': { mestre: true, run({ state, body, campaignId }) {
+      const de = npcPorId(state, String(body.de || ''));
+      if (!de) throw fail(404, 'Ficha de NPC não encontrada.');
+      const lista = npcsOf(state);
+      if (lista.length >= MAX_NPCS) throw fail(400, `Até ${MAX_NPCS} NPCs: apague um antes.`);
+      const doLivro = R.spDaFicha(de.armadura);
+      const sp = de.proprio ? de.sp : { cabeca: doLivro.cabeca.max, corpo: doLivro.corpo.max };
+      const notas = de.proprio ? de.notas : [de.livro ? `Do livro: ${de.livro}${de.pagina ? `, p. ${de.pagina}` : ''}.` : '', de.armadura ? `Armadura: ${de.armadura}.` : ''].filter(Boolean).join('\n');
+      const npc = { id: `meu:${newId()}`, ...cleanNpc(campaignId, {
+        nome: `${de.nome} (cópia)`.slice(0, 40), grupo: de.proprio ? de.grupo : 'Meus NPCs', tipo: de.tipo || 'pessoa', hp: de.hp, stats: de.stats,
+        pericias: de.pericias.map(({ nome, base }) => ({ nome, base })), armas: de.armas, sp, notas, midia: de.midia || ''
+      }) };
+      lista.push(npc);
+      return { npcs: true, resultado: { id: npc.id } };
+    } },
+    // Apagar uma ficha do mestre: { id }. Os tokens que já estão nas cenas ficam (têm a cópia deles).
+    'npc.apagar': { mestre: true, run({ state, body }) {
+      const lista = npcsOf(state);
+      const index = lista.findIndex(npc => npc.id === String(body.id || ''));
+      if (index < 0) throw fail(404, 'NPC não encontrado.');
+      lista.splice(index, 1);
+      return { npcs: true };
     } },
     // Ataque, defesa, dano, Death Save, estabilizar, recarregar: mesa-combate.js.
     ...combatFlow.operations,

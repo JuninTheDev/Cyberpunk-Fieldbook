@@ -238,8 +238,9 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
   if (cenasDoFoundry && fs.existsSync(BACKUP_FOUNDRY)) {
     try {
       const { importar } = require('./importar-foundry');
-      const { cenas, playlists } = await importar({ tar: BACKUP_FOUNDRY, mundo: 'edgerunners-storys', mesa: url, silencioso: true });
-      console.log(`Do Foundry: ${cenas.filter(cena => cena.status === 'ok').length} cenas e ${playlists.filter(item => item.status === 'ok').length} playlists.`);
+      const { cenas, playlists, npcs } = await importar({ tar: BACKUP_FOUNDRY, mundo: 'edgerunners-storys', mesa: url, silencioso: true });
+      const ok = lista => lista.filter(item => item.status === 'ok').length;
+      console.log(`Do Foundry: ${ok(cenas)} cenas, ${ok(playlists)} playlists e ${ok(npcs)} fichas de NPC.`);
     } catch (error) {
       console.log(`As cenas do Foundry não entraram (${error.message}). Rode o importar-foundry.js à mão.`);
     }

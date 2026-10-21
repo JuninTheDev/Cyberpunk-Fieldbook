@@ -25,7 +25,7 @@
   const ctx = canvas.getContext('2d');
   const S = {
     eu: null, campanha: null, campanhas: [], conexao: null, fonte: null,
-    cena: null, tokens: new Map(), cenas: [], cenaAtiva: null, combate: null, registro: [], presenca: [], personagens: [], npcs: [], meus: [],
+    cena: null, tokens: new Map(), cenas: [], cenaAtiva: null, combate: null, registro: [], presenca: [], personagens: [], npcs: [], meusNpcs: [], npcEditando: null, npcMidia: undefined, meus: [],
     vista: { x: 0, y: 0, escala: 1 }, alvoVista: null, cenaVista: null,
     selecionado: null, ferramenta: 'mover', nevoaModo: 'revelar', nevoaRaio: 3,
     fundo: null, imagens: new Map(), nevoaCanvas: null, nevoaEscala: 1, nevoaLocal: [],
@@ -125,6 +125,7 @@
     on('registro.limpo', () => { S.registro = []; renderRegistro(); });
     on('presenca', data => { S.presenca = data; renderPresenca(); });
     on('audio', receberAudio);
+    on('npcs', data => receberNpcs(data));
     // A ficha de um personagem mudou (pela mesa, pela wiki ou pelo Foundry): o mestre recebe todas; o jogador, as dele.
     on('fichas', data => {
       if (data.personagens) S.personagens = data.personagens;
@@ -161,6 +162,7 @@
     S.cenaAtiva = data.cenaAtiva || null;
     S.personagens = data.personagens || [];
     S.npcs = data.npcs || [];
+    S.meusNpcs = data.meusNpcs || [];
     S.meus = data.meus || [];
     S.audio = data.audio || null;
     if (tocador) tocador.aplicar(S.audio);
@@ -2828,10 +2830,12 @@
               ${naCena.has(ficha.id) ? '' : `<button class="botao pequeno" type="button" data-por-personagem="${esc(ficha.id)}"${S.cena ? '' : ' disabled'}>Pôr</button>`}</li>
               ${aberta ? `<li class="ficha-aberta">${htmlDosNumeros(ficha)}${htmlDoAjuste(ficha)}${htmlDoInventario(ficha)}${htmlDoCyber(ficha)}${htmlDoExtrato(ficha)}</li>` : ''}`;
           }).join('')}</ul>` : '<p class="nota">Nenhum personagem nesta campanha ainda.</p>'}</div>
-        <div class="bloco"><h3>Fichas de NPC</h3>
+        <div class="bloco"><div class="bloco-topo"><h3>Fichas de NPC</h3><button class="botao pequeno" type="button" data-npc-novo>Novo NPC</button></div>
           <input id="npc-busca" class="busca" type="search" placeholder="Buscar (Tyger, netrunner, Kit…)" value="${esc(filtro)}">
           <label class="marcar"><input id="npc-escondido" type="checkbox"${escondidos ? ' checked' : ''}> Entram escondidos (você revela na hora)</label>
-          ${grupos.map(grupo => `<div class="grupo-npc">${esc(grupo)}</div><ul class="lista">${npcs.filter(npc => npc.grupo === grupo).map(npc => `<li><span class="info"><b>${esc(npc.nome)}</b><small>HP ${npc.hp} · REF ${npc.ref} · MOVE ${npc.move}${npc.pagina ? ` · p. ${npc.pagina}` : ''}</small></span><button class="botao pequeno" type="button" data-por-npc="${esc(npc.id)}"${S.cena ? '' : ' disabled'}>Pôr</button></li>`).join('')}</ul>`).join('') || '<p class="nota">Nenhuma ficha encontrada.</p>'}</div>
+          ${grupos.map(grupo => `<div class="grupo-npc">${esc(grupo)}</div><ul class="lista">${npcs.filter(npc => npc.grupo === grupo).map(npc => `<li><span class="info"><b>${esc(npc.nome)}</b><small>${npc.proprio ? `${npc.tipo && npc.tipo !== 'pessoa' ? `${TIPOS_DE_NPC[npc.tipo]} · ` : ''}seu · ` : ''}${npc.tipo === 'veiculo' ? 'SDP' : npc.tipo === 'ice' ? 'REZ' : 'HP'} ${npc.hp} · ${npc.tipo === 'ice' ? 'SPD' : 'REF'} ${npc.ref} · MOVE ${npc.move}${npc.pagina ? ` · p. ${npc.pagina}` : ''}</small></span>
+            ${npc.proprio ? `<button class="botao vazado pequeno" type="button" data-npc-editar="${esc(npc.id)}">Editar</button>` : `<button class="botao vazado pequeno" type="button" data-npc-copiar="${esc(npc.id)}" title="Uma cópia sua desta ficha, para mudar">Copiar</button>`}
+            <button class="botao pequeno" type="button" data-por-npc="${esc(npc.id)}"${S.cena ? '' : ' disabled'}>Pôr</button></li>`).join('')}</ul>`).join('') || '<p class="nota">Nenhuma ficha encontrada.</p>'}</div>
         <div class="bloco"><h3>Token livre</h3>
           <div class="form-grade"><label class="inteiro">Nome <input id="livre-nome" type="text" maxlength="40" placeholder="Drone, carro, porta…"></label>
           <label>HP <input id="livre-hp" type="number" min="0" max="999" value="0"></label><label>Cor <input id="livre-cor" type="color" value="#a9aeaa"></label></div>
@@ -2862,6 +2866,9 @@
       return;
     }
     if (botao.dataset.porPersonagem) op('token.criar', { cena: S.cena.id, personagem: botao.dataset.porPersonagem, ...centroDaVista() }).catch(() => {});
+    if (botao.hasAttribute('data-npc-novo')) abrirNpc(null);
+    if (botao.dataset.npcEditar) abrirNpc(botao.dataset.npcEditar);
+    if (botao.dataset.npcCopiar) op('npc.copiar', { de: botao.dataset.npcCopiar }).then(data => { S.npcEditando = data.resultado.id; S.npcMidia = undefined; renderNpcJanela(); }).catch(() => {});
     if (botao.dataset.porNpc) op('token.criar', { cena: S.cena.id, npc: botao.dataset.porNpc, escondido: $('#npc-escondido').checked, ...centroDaVista() }).catch(() => {});
     if (botao.hasAttribute('data-por-livre')) op('token.criar', { cena: S.cena.id, livre: { nome: $('#livre-nome').value, hp: Number($('#livre-hp').value) || 0, cor: $('#livre-cor').value }, ...centroDaVista() }).catch(() => {});
     if (botao.dataset.pericia) {
@@ -2902,6 +2909,130 @@
   });
   // Saiu do campo que segurava a ficha: redesenha com o que chegou enquanto digitava.
   $('#fichas').addEventListener('focusout', () => { if (S.fichasPendentes) setTimeout(() => { if (S.fichasPendentes) renderFichas(); }, 0); });
+
+  // ---------------- NPCs do mestre ----------------
+  // A ficha de NPC do mestre (nova, copiada de uma da wiki, ou dele): a janela sobre o mapa. O servidor confere e grava;
+  // a lista volta pelo evento npcs. A janela não se redesenha enquanto está aberta (não apaga o que se digita).
+  const PERICIAS_DE_ATAQUE = [['Handgun', 'Armas de uma Mão'], ['Shoulder Arms', 'Armas de Ombro'], ['Heavy Weapons', 'Armas Pesadas'], ['Autofire', 'Disparo Automático'],
+    ['Archery', 'Arquearia'], ['Melee Weapon', 'Armas Brancas'], ['Brawling', 'Briga'], ['Martial Arts', 'Artes Marciais']];
+  const STATS_DE_NPC = ['INT', 'REF', 'DEX', 'TECH', 'COOL', 'WILL', 'MOVE', 'BODY', 'EMP'];
+  const TIPOS_DE_NPC = { pessoa: 'Pessoa', ice: 'Black ICE', veiculo: 'Veículo' };
+  const NPC_NOVO = { nome: '', grupo: 'Meus NPCs', tipo: 'pessoa', hp: 30, stats: Object.fromEntries(STATS_DE_NPC.map(stat => [stat, 5])), pericias: [], armas: [], sp: { cabeca: 0, corpo: 0 }, notas: '', midia: '' };
+  const urlDaMidia = midia => comCampanha(`/api/mesa/midia/${encodeURIComponent(midia)}`);
+  function linhaDeArma(arma = {}) {
+    const conhecida = PERICIAS_DE_ATAQUE.some(([en]) => en === arma.pericia);
+    return `<li class="npc-arma" data-classe="${esc(arma.classe || '')}" data-pericia="${esc(arma.pericia || '')}">
+      <input name="arma-nome" type="text" maxlength="80" placeholder="Arma" value="${esc(arma.nome || '')}" aria-label="Arma">
+      <input name="arma-dano" type="text" maxlength="20" placeholder="3d6" value="${esc(arma.dano || '')}" aria-label="Dano">
+      <input name="arma-cdt" type="number" min="1" max="10" value="${Number(arma.cdt) || 1}" aria-label="CdT" title="Cadência de tiro (ataques por ação)">
+      <select name="arma-pericia" aria-label="Perícia">${PERICIAS_DE_ATAQUE.map(([en, pt]) => `<option value="${en}"${arma.pericia === en ? ' selected' : ''}>${pt}</option>`).join('')}${arma.pericia && !conhecida ? `<option value="${esc(arma.pericia)}" selected>${esc(arma.pericia)}</option>` : ''}</select>
+      <input name="arma-nota" type="text" maxlength="120" placeholder="Nota" value="${esc(arma.nota || '')}" aria-label="Nota da arma">
+      <button type="button" class="link" data-npc-tirar-arma aria-label="Tirar a arma">×</button></li>`;
+  }
+  function imagemDoNpc(midia) {
+    return `${midia ? `<img src="${esc(urlDaMidia(midia))}" alt="">` : '<span class="nota">Sem imagem: o token mostra as iniciais.</span>'}
+      <label class="botao vazado pequeno">Imagem<input type="file" accept="image/*" data-npc-imagem hidden></label>${midia ? '<button type="button" class="link" data-npc-sem-imagem>tirar</button>' : ''}`;
+  }
+  function abrirNpc(id) {
+    S.npcEditando = id || 'novo';
+    S.npcMidia = undefined;
+    renderNpcJanela();
+  }
+  function fecharNpc() {
+    S.npcEditando = null;
+    const janela = $('#npc-janela');
+    janela.hidden = true;
+    janela.innerHTML = '';
+  }
+  function renderNpcJanela() {
+    const janela = $('#npc-janela');
+    const novo = S.npcEditando === 'novo';
+    // A cópia recém-feita chega pelo evento npcs: a janela abre quando ela chegar.
+    const npc = novo ? NPC_NOVO : S.meusNpcs.find(item => item.id === S.npcEditando);
+    if (!gm() || !npc) { janela.hidden = true; return; }
+    const grupos = [...new Set(S.npcs.map(item => item.grupo))];
+    janela.innerHTML = `<form class="npc-form" novalidate>
+      <div class="nota-janela-topo"><h2 id="npc-janela-titulo">${novo ? 'Novo NPC' : esc(npc.nome)}</h2><button class="nota-janela-fechar" type="button" data-npc-fechar aria-label="Fechar">×</button></div>
+      <div class="form-grade npc-grade">
+        <label class="inteiro">Nome <input name="nome" type="text" maxlength="40" required value="${esc(npc.nome)}" placeholder="Capanga da Maelstrom"></label>
+        <label>Grupo <input name="grupo" type="text" maxlength="40" list="npc-grupos" value="${esc(npc.grupo)}"></label>
+        <label>Tipo <select name="tipo">${Object.entries(TIPOS_DE_NPC).map(([valor, nome]) => `<option value="${valor}"${npc.tipo === valor ? ' selected' : ''}>${nome}</option>`).join('')}</select></label>
+        <label>HP <input name="hp" type="number" min="0" max="999" value="${npc.hp}"></label>
+        <label>SP cabeça <input name="sp-cabeca" type="number" min="0" max="99" value="${npc.sp.cabeca}"></label>
+        <label>SP corpo <input name="sp-corpo" type="number" min="0" max="99" value="${npc.sp.corpo}"></label>
+      </div>
+      <datalist id="npc-grupos">${grupos.map(grupo => `<option value="${esc(grupo)}">`).join('')}</datalist>
+      <div class="npc-stats">${STATS_DE_NPC.map(stat => `<label>${stat}<input name="stat-${stat}" type="number" min="0" max="99" value="${Number(npc.stats[stat]) || 0}"></label>`).join('')}</div>
+      <p class="nota">Black ICE: o SPD no REF, o REZ no HP, e ATK, DEF e PER nas perícias. Veículo: o SDP no HP e a velocidade de combate no MOVE.</p>
+      <label class="campo">Perícias, com a base (STAT + nível) <textarea name="pericias" rows="3" placeholder="Armas de uma Mão 14, Evasão 12, Percepção 10">${esc(npc.pericias.map(item => `${item.pt || item.nome} ${item.base}`).join(', '))}</textarea></label>
+      <div class="grupo-npc">Armas</div>
+      <ul class="npc-armas">${npc.armas.map(linhaDeArma).join('')}</ul>
+      <div><button type="button" class="botao vazado pequeno" data-npc-arma>+ Arma</button></div>
+      <label class="campo">Notas (só você vê; vão para o token) <textarea name="notas" rows="4" maxlength="4000">${esc(npc.notas || '')}</textarea></label>
+      <div class="npc-imagem">${imagemDoNpc(npc.midia)}</div>
+      <div class="nota-janela-acoes"><button class="botao" type="submit">Salvar</button><button class="botao vazado" type="button" data-npc-fechar>Cancelar</button>${novo ? '' : '<button class="botao vazado perigo" type="button" data-npc-apagar>Apagar</button>'}</div>
+    </form>`;
+    janela.hidden = false;
+    janela.querySelector('[name="nome"]').focus();
+  }
+  // A ficha como o servidor recebe. A perícia é "nome base" (o nome em português ou em inglês).
+  function npcDoFormulario(form) {
+    const dados = new FormData(form);
+    const pedacos = String(dados.get('pericias') || '').split(/[,;\n]+/).map(texto => texto.trim()).filter(Boolean);
+    const semBase = pedacos.find(texto => !/^.*\S\s+\d{1,2}$/.test(texto));
+    if (semBase) throw new Error(`Perícia sem a base: "${semBase}". Use o nome e o número, como Evasão 12.`);
+    const armas = [...form.querySelectorAll('.npc-arma')].map(linha => {
+      const valor = nome => linha.querySelector(`[name="${nome}"]`).value;
+      const pericia = valor('arma-pericia');
+      // A classe que veio do Foundry vale enquanto a perícia for a mesma.
+      return { nome: valor('arma-nome').trim(), dano: valor('arma-dano').trim(), cdt: Number(valor('arma-cdt')) || 1, pericia, nota: valor('arma-nota').trim(),
+        ...(linha.dataset.classe && linha.dataset.pericia === pericia ? { classe: linha.dataset.classe } : {}) };
+    }).filter(arma => arma.nome);
+    return {
+      nome: String(dados.get('nome') || '').trim(), grupo: String(dados.get('grupo') || '').trim(), tipo: dados.get('tipo'), hp: Number(dados.get('hp')) || 0,
+      stats: Object.fromEntries(STATS_DE_NPC.map(stat => [stat, Number(dados.get(`stat-${stat}`)) || 0])),
+      pericias: pedacos.map(texto => texto.match(/^(.*\S)\s+(\d{1,2})$/)).map(([, nome, base]) => ({ nome, base: Number(base) })),
+      armas, sp: { cabeca: Number(dados.get('sp-cabeca')) || 0, corpo: Number(dados.get('sp-corpo')) || 0 }, notas: String(dados.get('notas') || ''),
+      ...(S.npcMidia !== undefined ? { midia: S.npcMidia } : {})
+    };
+  }
+  const npcJanela = $('#npc-janela');
+  npcJanela.addEventListener('submit', event => {
+    event.preventDefault();
+    let npc;
+    try { npc = npcDoFormulario(event.target); } catch (error) { aviso(error.message, 'erro'); return; }
+    if (!npc.nome) { aviso('Dê um nome ao NPC.', 'erro'); return; }
+    const id = S.npcEditando;
+    op('npc.salvar', id === 'novo' ? { npc } : { id, npc }).then(() => { fecharNpc(); aviso(`${npc.nome}: ficha salva.`); }).catch(() => {});
+  });
+  npcJanela.addEventListener('click', event => {
+    const botao = event.target.closest('button');
+    if (!botao) return;
+    if (botao.hasAttribute('data-npc-fechar')) fecharNpc();
+    else if (botao.hasAttribute('data-npc-arma')) { npcJanela.querySelector('.npc-armas').insertAdjacentHTML('beforeend', linhaDeArma({ pericia: 'Handgun' })); npcJanela.querySelector('.npc-arma:last-child input').focus(); }
+    else if (botao.hasAttribute('data-npc-tirar-arma')) botao.closest('.npc-arma').remove();
+    else if (botao.hasAttribute('data-npc-sem-imagem')) { S.npcMidia = ''; npcJanela.querySelector('.npc-imagem').innerHTML = imagemDoNpc(''); }
+    else if (botao.hasAttribute('data-npc-apagar')) {
+      const npc = S.meusNpcs.find(item => item.id === S.npcEditando);
+      if (npc && confirm(`Apagar a ficha de ${npc.nome}? Os tokens que já estão nas cenas ficam.`)) op('npc.apagar', { id: npc.id }).then(fecharNpc).catch(() => {});
+    }
+  });
+  npcJanela.addEventListener('change', event => {
+    if (!event.target.matches('[data-npc-imagem]') || !event.target.files[0]) return;
+    enviarMidia(event.target.files[0]).then(({ midia }) => { S.npcMidia = midia; npcJanela.querySelector('.npc-imagem').innerHTML = imagemDoNpc(midia); }).catch(error => aviso(error.message, 'erro'));
+  });
+  npcJanela.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); fecharNpc(); } });
+  function receberNpcs(data) {
+    S.npcs = data.npcs || [];
+    S.meusNpcs = data.meusNpcs || [];
+    renderFichas();
+    // A cópia recém-feita chegou: abre. A ficha aberta foi apagada (em outra aba): fecha.
+    if (S.npcEditando && S.npcEditando !== 'novo') {
+      const existe = S.meusNpcs.some(item => item.id === S.npcEditando);
+      if (!existe && !npcJanela.hidden) fecharNpc();
+      else if (existe && npcJanela.hidden) renderNpcJanela();
+    }
+  }
 
   // ---------------- Áudio ----------------
   // O tocador (mesa-tocador.js) toca o que o servidor manda; aqui ficam o que cada um vê na aba Áudio e o botão de som

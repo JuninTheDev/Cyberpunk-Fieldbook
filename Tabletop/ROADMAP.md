@@ -15,10 +15,10 @@
 3. M11 (feito em paralelo, pela sessão tabletop-a9);
 4. M23, a mesa limpa (feito; pedido do usuário em 2026-10-21: "antes do M12");
 5. M12 (feito);
-6. um ensaio no teste, num PC e num celular;
+6. um ensaio no teste, num PC e num celular (o usuário, enquanto a Fase 2 anda: "Fase 2 enquanto você ensaia");
 7. o M4, quando o usuário aprovar.
 
-Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (e o M13, se o grupo tiver netrunner).
+Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (e o M13, se o grupo tiver netrunner). Os três estão feitos.
 
 ## Fase 0: feito
 
@@ -161,9 +161,13 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **Fica de fora:** retirar cyberware (mesma DV, 4 horas; falhar destrói a peça) e escolher o lado da base na hora: o lado é o do pedido.
   - **Testado:** 3 testes, 23 de 24 mutações que caem (a viva é equivalente: o chipware já não tem lugar), os cenários criador, cyberware, Foundry, contas e economia, e a conferência no Edge (o painel do mestre, o registro, a jogadora e a aba Cyberware da wiki).
 - [ ] **M17 · Veículos:** SDP, assentos e o veículo como token.
-- [ ] **M18 · NPCs do mestre:**
-  - criar e editar NPC próprio, além das fichas da wiki;
-  - migrar os atores do mundo: 26 mooks, Qyan, Black ICE, veículo e contêiner.
+- [x] **M18 · NPCs do mestre** (`mesa-api.js` `npc.salvar`, `npc.copiar`, `npc.apagar`; `importar-foundry.js` `converterAtores`):
+  - **As fichas do mestre:** na aba Fichas, Novo NPC, Editar, ou Copiar uma da wiki para mudar. Nome, grupo, tipo (pessoa, Black ICE, veículo), HP, SP, os STATs, as perícias com a base (em português ou em inglês; grava o inglês), as armas, as notas e a imagem. Ficam no `mesa.json` da campanha (`state.npcs`, até 300), e só o mestre recebe (evento `npcs`).
+  - **O token:** copia a ficha ao entrar na cena (as notas viram a nota do mestre; a classe da arma que veio do Foundry vale mais que o nome). Mudar ou apagar a ficha não mexe no token.
+  - **A migração dos atores:** 26 mooks: os 12 iguais ao livro já são as fichas da wiki; os 14 outros (as variantes, os feitos à mão e o Cyberpsycho, que mudou do livro) viram fichas do mestre, com as perícias (STAT + nível), as armas (a classe do Foundry), a armadura vestida, o cyberware e o equipamento nas notas. O Black ICE Wisp e a moto também. Qyan e dwa são personagens: entram pela ficha da wiki. Ficam de fora o contêiner (vazio) e o modelo de Black ICE do sistema.
+  - **A importação:** as fichas antes das cenas, e o token do ator vira a ficha que veio dele (`npcOrigem`); o mesmo ator não entra duas vezes (`--substituir` troca e mantém o id). `--sem-npcs` deixa de fora.
+  - **Fica para o M13 e o M17:** as regras da NET (o Black ICE contra o netrunner) e as do veículo (assentos, perseguição). Até lá, as fichas guardam os números e as notas.
+  - **Testado:** 4 testes, 30 mutações que caem, e a conferência no Edge (a lista com as 16 que vieram, editar a da MaxTac, Novo NPC, Copiar, Apagar, Pôr na cena e o editor no celular).
 - [ ] **M19 · Áreas e desenhos:** cone, círculo e linha (área de efeito), e desenho livre no mapa.
 - [x] **M6b · Luz e escuridão** (como no Foundry 12):
   - **Luz global** (aba Cena): a cena toda clara. Sem ela, cada token vê o alcance da visão dele (30 m, como os tokens do Foundry deste mundo) e o que uma luz ilumina. **O servidor nem manda o token no escuro.**
