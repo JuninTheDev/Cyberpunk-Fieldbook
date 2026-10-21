@@ -54,9 +54,13 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
 **A tela** (a mesa limpa, como o Foundry 14):
 
 - **O mapa ocupa a tela toda.** O resto flutua por cima dele.
-- **Barra da direita:** a faixa de ícones (Rolagens, Combate, Fichas ou Personagem, Áudio e Cena) abre a aba por cima do mapa, e o mapa não encolhe.
+- **Barra da direita:** a faixa de ícones (Chat, Combate, Fichas ou Personagem, Áudio e Cena) abre a aba por cima do mapa, e o mapa não encolhe.
   - **Recolher:** clique no ícone da aba aberta, na seta de baixo ou aperte **B**. O navegador lembra.
   - Recolhida, o ícone do Combate ganha uma bolinha quando a iniciativa muda.
+- **Chat:** o registro ocupa a aba toda, com a caixa de mensagem embaixo.
+  - O botão **Rolar** abre a bandeja: o teste de perícia, os dados e a lesão crítica. **Rolar**, no cartão do token, abre a bandeja com ele.
+  - Com a barra recolhida, a caixa fica no canto do mapa, e as mensagens novas aparecem por cima dela e somem em uns 9 segundos. O mouse em cima segura, e o ataque esperando a defesa fica até resolver.
+  - Com o chat fora de vista, o ícone dele ganha uma bolinha quando chega mensagem.
 - **Canto de cima:** o menu ≡ (voltar para a wiki, a campanha, a conta e os atalhos) e a cena. O mestre troca a cena por ali, e **Levar todos** leva os jogadores para ela.
 - **Canto de baixo:** a conexão, quem está na mesa e o som.
 - **Celular:** a barra é a folha que sobe de baixo, pelo botão **Painel**.
@@ -96,7 +100,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
   - **Próximo** passa a vez e conta as rodadas. Quem morreu perde a vez; o Mortalmente Ferido faz o Death Save no começo da vez.
   - Para corrigir uma iniciativa, mude o número.
 - **Ataque do NPC:** pelo cartão do token, como o jogador. Quando o NPC é atacado, a pergunta da defesa abre para você.
-  - A defesa que um jogador ainda não decidiu aparece na aba Rolagens, com o total, e você pode decidir por ele.
+  - A defesa que um jogador ainda não decidiu aparece na aba Chat, com o total, e você pode decidir por ele.
   - **Dano à mão**, **Estabilizar**, **Marcar morto** e **Tirar Suprimido** ficam no cartão.
   - **Desfazer** no cartão do ataque volta o HP, o SP, as lesões, a bala, a carga Tech e o ferrolho.
 - **Áudio** (aba Áudio), como as playlists do Foundry e o yt-jukebox:

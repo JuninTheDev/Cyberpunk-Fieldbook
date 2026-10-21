@@ -111,8 +111,8 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
     - a barra da direita é uma faixa de ícones que recolhe e passa por cima do mapa;
     - o cartão do token vira HUD junto do token, com a ficha na barra.
   - **Fases:**
-    1. moldura;
-    2. chat (o registro na altura toda, os dados num botão, as mensagens por cima do mapa com a barra recolhida);
+    1. moldura (feita: o mapa livre foi de 67% para 93% da tela em 1366, e de 76% para 96% em 1920);
+    2. chat (feito): o registro na altura toda, a bandeja de rolagem no botão Rolar, as mensagens no canto do mapa com a barra recolhida;
     3. HUD do token;
     4. ferramentas só com ícone e tooltip;
     5. celular.

@@ -1802,7 +1802,8 @@
     if (!resposta) return;
     at.sorte = 0;
     if (resposta.resultado && !resposta.resultado.concluido) aviso('Esperando a defesa do alvo…');
-    abrirAba('rolagens');
+    // O cartão do ataque aparece no chat: com a barra aberta, a aba vira a do chat; recolhida, ele aparece no canto.
+    if (!chatFlutua()) abrirAba('rolagens', { expandir: false });
   }
   function escolherAlvoNoMapa(ligado) {
     S.escolhendoAlvo = ligado;
@@ -1843,7 +1844,14 @@
     const tipo = acao.dataset.cartao;
     if (tipo === 'fechar') { S.ataque = null; selecionar(null); }
     if (tipo === 'atacar') { S.ataque = S.ataque && S.ataque.token === token.id ? null : { token: token.id, arma: '', modo: '', local: 'cabeca', alvo: '', mod: 0, sorte: 0 }; escolherAlvoNoMapa(false); }
-    if (tipo === 'rolar') { abrirAba('rolagens'); $('#rolar-quem').value = `token:${token.id}`; renderPericias(); abrirPainel(true); $('#rolar-pericia').focus(); }
+    // Rolar pelo token: a bandeja de rolagem, com ele em "Quem rola" (no chat do canto, se a barra estiver recolhida).
+    if (tipo === 'rolar') {
+      if (!chatFlutua()) { abrirAba('rolagens'); abrirPainel(true); }
+      $('#rolar-quem').value = `token:${token.id}`;
+      renderPericias();
+      bandejaAberta(true);
+      $('#rolar-pericia').focus();
+    }
     if (tipo === 'deathsave') op('deathsave', { token: token.id }).catch(() => {});
     if (tipo === 'esconder') op('token.editar', { token: token.id, escondido: !token.escondido }).catch(() => {});
     if (tipo === 'ficha') op('token.ficha', { token: token.id }).then(() => aviso('Token atualizado com a ficha de agora.')).catch(() => {});
@@ -1909,11 +1917,18 @@
     seta.setAttribute('aria-expanded', String(aberta));
     seta.title = aberta ? 'Recolher a barra (B)' : 'Abrir a barra (B)';
     seta.querySelector('.sr').textContent = aberta ? 'Recolher a barra' : 'Abrir a barra';
-    if (aberta && $('.abas [data-aba="combate"]').classList.contains('ativa')) $('#combate-selo').hidden = true;
+    posicionarChat();
+    limparSelos();
     if (lembrar) store.set('barra', aberta ? 'aberta' : 'recolhida');
   }
   window.matchMedia('(max-width: 820px)').addEventListener('change', () => barraAberta(S.barraAberta, { lembrar: false }));
-  const nomeDaAba = nome => (nome === 'fichas' ? (gm() ? 'Fichas' : 'Personagem') : { rolagens: 'Rolagens', combate: 'Combate', audio: 'Áudio', cena: 'Cena' }[nome] || '');
+  const nomeDaAba = nome => (nome === 'fichas' ? (gm() ? 'Fichas' : 'Personagem') : { rolagens: 'Chat', combate: 'Combate', audio: 'Áudio', cena: 'Cena' }[nome] || '');
+  const abaVisivel = nome => barraVisivel() && $(`.abas [data-aba="${nome}"]`).classList.contains('ativa');
+  // A bolinha da aba some quando a aba fica à vista.
+  function limparSelos() {
+    if (abaVisivel('combate')) $('#combate-selo').hidden = true;
+    if (abaVisivel('rolagens')) $('#chat-selo').hidden = true;
+  }
   // expandir: abrir a aba também abre a barra recolhida (o clique da pessoa); o que a página faz sozinha não abre.
   function abrirAba(nome, { expandir = true } = {}) {
     for (const botao of $$('.abas [data-aba]')) {
@@ -1925,7 +1940,7 @@
     $('#painel-titulo').textContent = nomeDaAba(nome);
     store.set('aba', nome);
     if (expandir && !S.barraAberta) barraAberta(true);
-    if (nome === 'combate' && barraVisivel()) $('#combate-selo').hidden = true;
+    limparSelos();
   }
   for (const botao of $$('.abas [data-aba]')) {
     botao.addEventListener('click', () => {
@@ -1938,9 +1953,57 @@
   function abrirPainel(aberto) {
     $('#painel').classList.toggle('aberto', aberto);
     $('#painel-abrir').setAttribute('aria-expanded', String(aberto));
-    if (aberto && $('.abas [data-aba="combate"]').classList.contains('ativa')) $('#combate-selo').hidden = true;
+    limparSelos();
   }
   $('#painel-abrir').addEventListener('click', () => abrirPainel(!$('#painel').classList.contains('aberto')));
+
+  // ---------------- Chat ----------------
+  // A bandeja de rolagem (o teste de perícia, os dados e a lesão crítica) abre pelo dado da caixa do chat.
+  function bandejaAberta(aberta) {
+    $('#rolar').hidden = !aberta;
+    $('#bandeja-abrir').setAttribute('aria-expanded', String(aberta));
+  }
+  $('#bandeja-abrir').addEventListener('click', () => bandejaAberta($('#rolar').hidden));
+  // Com a barra recolhida (no PC), o chat fica no canto do mapa, como as notificações do chat do Foundry 14: a caixa vai
+  // para lá, e as mensagens novas aparecem por cima dela e somem sozinhas (o mouse em cima segura; o ataque esperando a
+  // defesa fica até resolver). No celular, a barra é a folha de baixo: o chat fica nela.
+  const chatFlutua = () => !celular() && !S.barraAberta;
+  function posicionarChat() {
+    const flutua = chatFlutua();
+    const caixa = $('#chat-caixa');
+    const destino = flutua ? $('#chat-flutuante') : $('.aba[data-aba="rolagens"]');
+    if (caixa.parentElement !== destino) destino.append(caixa);
+    $('#chat-flutuante').hidden = !flutua;
+    if (!flutua) $('#chat-novas').innerHTML = '';
+  }
+  const DURA_NO_CHAT = 9000;
+  function mostrarNoChat(entrada) {
+    const lista = $('#chat-novas');
+    const seletor = `li[data-id="${CSS.escape(entrada.id)}"]`;
+    const antes = lista.querySelector(seletor);
+    if (antes) antes.outerHTML = htmlEntrada(entrada); else lista.insertAdjacentHTML('beforeend', htmlEntrada(entrada));
+    lista.querySelector(seletor).dataset.ate = entrada.pendente ? '' : String(Date.now() + DURA_NO_CHAT);
+    while (lista.children.length > 4) lista.firstElementChild.remove();
+  }
+  setInterval(() => {
+    const lista = $('#chat-novas');
+    if (!lista.children.length || $('#chat-flutuante').matches(':hover')) return;
+    for (const li of [...lista.children]) {
+      if (!li.dataset.ate || Number(li.dataset.ate) > Date.now() || li.classList.contains('saindo')) continue;
+      li.classList.add('saindo');
+      setTimeout(() => li.remove(), 500);
+    }
+  }, 1000);
+  // Uma entrada nova no registro: no canto do mapa (a barra recolhida) ou a bolinha na aba (o chat fora de vista).
+  function avisarDoChat(entrada) {
+    if (chatFlutua()) mostrarNoChat(entrada);
+    else if (!abaVisivel('rolagens') && !entrada.autor.meu) $('#chat-selo').hidden = false;
+  }
+  // Os avisos (as rolagens, os erros) sobem para não cobrir o chat do canto.
+  new ResizeObserver(() => {
+    const caixa = $('#chat-flutuante');
+    document.body.style.setProperty('--avisos-baixo', caixa.hidden ? '16px' : `${Math.round(caixa.getBoundingClientRect().height) + 24}px`);
+  }).observe($('#chat-flutuante'));
 
   // O menu (≡ na pastilha): voltar para a wiki, a campanha, a conta e os atalhos. Fecha ao clicar fora ou com Esc.
   function menuAberto(aberto) {
@@ -2206,7 +2269,9 @@
     lista.insertAdjacentHTML('beforeend', htmlEntrada(entrada));
     while (lista.children.length > 200) lista.firstElementChild.remove();
     if (noFim || entrada.autor.meu) lista.scrollTop = lista.scrollHeight;
-    if (entrada.tipo === 'rolagem' && entrada.autor.meu) {
+    avisarDoChat(entrada);
+    // A sua rolagem vira aviso só com o chat fora de vista (no registro ou no chat do canto, ela já aparece).
+    if (entrada.tipo === 'rolagem' && entrada.autor.meu && !chatFlutua() && !abaVisivel('rolagens')) {
       const r = entrada.rolagem;
       aviso(`${r.rotulo}: ${r.total}${r.critico === 'sucesso' ? ' · sucesso crítico' : r.critico === 'falha' ? ' · falha crítica' : ''}`, r.critico === 'falha' ? 'erro' : 'destaque');
     }
@@ -2216,10 +2281,10 @@
     const indice = S.registro.findIndex(item => item.id === entrada.id);
     if (indice >= 0) S.registro[indice] = entrada; else S.registro.push(entrada);
     const li = $(`#registro li[data-id="${CSS.escape(entrada.id)}"]`);
-    if (li) li.outerHTML = htmlEntrada(entrada); else adicionarRegistro(entrada);
-    // Quem atacou ou quem foi atacado fica sabendo na hora.
+    if (li) { li.outerHTML = htmlEntrada(entrada); if (chatFlutua()) mostrarNoChat(entrada); } else adicionarRegistro(entrada);
+    // Quem atacou ou quem foi atacado fica sabendo na hora (com o chat à vista, o cartão do ataque já mostra).
     const a = entrada.ataque;
-    if (entrada.tipo === 'ataque' && !entrada.pendente && !entrada.desfeito && a) {
+    if (entrada.tipo === 'ataque' && !entrada.pendente && !entrada.desfeito && a && !chatFlutua() && !abaVisivel('rolagens')) {
       const meus = new Set([...S.tokens.values()].filter(token => token.meu).map(token => token.id));
       const envolvido = entrada.autor.meu || (a.alvos || []).some(alvo => meus.has(alvo.token));
       if (envolvido) {
@@ -2228,14 +2293,16 @@
       }
     }
   }
-  $('#registro').addEventListener('click', event => {
-    const botao = event.target.closest('[data-desfazer]');
-    if (botao && confirm('Desfazer? O HP, o SP, as lesões e a munição voltam como estavam.')) op('ataque.desfazer', { entrada: botao.dataset.desfazer }).catch(() => {});
-  });
+  for (const lista of [$('#registro'), $('#chat-novas')]) {
+    lista.addEventListener('click', event => {
+      const botao = event.target.closest('[data-desfazer]');
+      if (botao && confirm('Desfazer? O HP, o SP, as lesões e a munição voltam como estavam.')) op('ataque.desfazer', { entrada: botao.dataset.desfazer }).catch(() => {});
+    });
+  }
 
   // ---------------- Defesa ----------------
   // A pergunta "Ataque!": para o jogador, a do personagem dele; para o mestre, a dos NPCs (a dos jogadores fica no
-  // quadro da aba Rolagens, para responder por eles se demorarem).
+  // quadro da aba Chat, para responder por eles se demorarem).
   const doJogador = defesa => { const token = S.tokens.get(defesa.alvo); return Boolean(token && token.dono); };
   const numeroBr = valor => String(Math.round(valor * 10) / 10).replace('.', ',');
   function renderDefesas() {

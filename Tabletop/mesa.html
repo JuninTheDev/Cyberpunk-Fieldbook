@@ -77,6 +77,10 @@
       <section id="cartao" class="cartao" hidden aria-live="polite"></section>
       <div id="vazio" class="vazio" hidden></div>
       <div id="dica" class="dica"></div>
+      <!-- A barra recolhida: o chat no canto do mapa (as mensagens novas somem sozinhas; a caixa fica). -->
+      <div id="chat-flutuante" class="chat-flutuante" hidden>
+        <ol id="chat-novas" class="registro chat-novas" aria-live="polite"></ol>
+      </div>
       <div id="tocador" class="tocador" hidden>
         <div class="tocador-topo"><span>♪ YouTube</span><button id="tocador-min" type="button" title="Esconder o vídeo (a música continua)" aria-label="Esconder o vídeo">–</button></div>
         <div class="tocador-videos"><div data-canal="musica" hidden></div><div data-canal="ambiente" hidden></div></div>
@@ -86,10 +90,16 @@
     <!-- A barra da direita passa por cima do mapa: o conteúdo e a faixa de ícones, que recolhe (B), como no Foundry 14. -->
     <aside class="painel" id="painel">
       <div class="painel-conteudo" id="painel-conteudo">
-      <h2 class="painel-titulo" id="painel-titulo">Rolagens</h2>
+      <h2 class="painel-titulo" id="painel-titulo">Chat</h2>
 
+      <!-- O chat: o registro na altura toda e, embaixo, a caixa (a mensagem e o dado, que abre a bandeja de rolagem). Com a
+           barra recolhida, a caixa vai para o canto do mapa, com as mensagens novas por cima dela. -->
       <section class="aba ativa" data-aba="rolagens">
-        <form id="rolar" class="rolar" autocomplete="off">
+        <div id="defesas-mestre" class="defesas-mestre so-mestre" hidden></div>
+        <div class="registro-topo"><span>Registro</span><button id="registro-limpar" class="link so-mestre" type="button">Limpar</button></div>
+        <ol id="registro" class="registro" aria-live="polite"></ol>
+        <div class="chat-caixa" id="chat-caixa">
+        <form id="rolar" class="rolar bandeja" autocomplete="off" aria-label="Rolar" hidden>
           <div class="campo-linha">
             <label class="campo">Quem rola <select id="rolar-quem"></select></label>
           </div>
@@ -118,14 +128,17 @@
             <button type="button" class="botao vazado pequeno" data-lesao="cabeca">Cabeça</button>
           </div>
         </form>
-        <div id="defesas-mestre" class="defesas-mestre so-mestre" hidden></div>
-        <div class="registro-topo"><span>Registro</span><button id="registro-limpar" class="link so-mestre" type="button">Limpar</button></div>
-        <ol id="registro" class="registro" aria-live="polite"></ol>
         <form id="chat" class="chat" autocomplete="off">
-          <select id="chat-para" aria-label="Para quem"></select>
           <input id="chat-texto" type="text" maxlength="1000" placeholder="Mensagem (ou /r 2d6)" aria-label="Mensagem">
-          <button class="botao pequeno" type="submit">Enviar</button>
+          <div class="chat-linha">
+            <button id="bandeja-abrir" class="chat-dado" type="button" aria-expanded="false" aria-controls="rolar" title="Rolar: teste de perícia, dados e lesão crítica">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2"/><circle cx="15" cy="15" r="1.2"/><circle cx="15" cy="9" r="1.2"/><circle cx="9" cy="15" r="1.2"/><circle cx="12" cy="12" r="1.2"/></svg><span>Rolar</span>
+            </button>
+            <select id="chat-para" aria-label="Para quem"></select>
+            <button class="botao pequeno" type="submit">Enviar</button>
+          </div>
         </form>
+        </div>
       </section>
 
       <section class="aba" data-aba="combate">
@@ -147,8 +160,8 @@
 
       <nav class="abas" aria-label="Barra lateral">
         <div class="abas-lista" role="tablist" aria-orientation="vertical">
-          <button type="button" role="tab" data-aba="rolagens" class="ativa" aria-selected="true" title="Rolagens e chat">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="aba-nome">Rolagens</span>
+          <button type="button" role="tab" data-aba="rolagens" class="ativa" aria-selected="true" title="Chat e rolagens">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="aba-nome">Chat</span><span id="chat-selo" class="selo" hidden></span>
           </button>
           <button type="button" role="tab" data-aba="combate" aria-selected="false" title="Combate">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M13 17l4-4M15 15l4 4M20 4L9 15M7 13l4 4M9 15l-4 4"/></svg><span class="aba-nome">Combate</span><span id="combate-selo" class="selo" hidden></span>
