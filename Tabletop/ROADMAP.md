@@ -172,7 +172,12 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **A importação:** as fichas antes das cenas, e o token do ator vira a ficha que veio dele (`npcOrigem`); o mesmo ator não entra duas vezes (`--substituir` troca e mantém o id). `--sem-npcs` deixa de fora.
   - **Fica para o M13 e o M17:** as regras da NET (o Black ICE contra o netrunner) e as do veículo (assentos, perseguição). Até lá, as fichas guardam os números e as notas.
   - **Testado:** 4 testes, 30 mutações que caem, e a conferência no Edge (a lista com as 16 que vieram, editar a da MaxTac, Novo NPC, Copiar, Apagar, Pôr na cena e o editor no celular).
-- [ ] **M19 · Áreas e desenhos:** cone, círculo e linha (área de efeito), e desenho livre no mapa.
+- [x] **M19 · Áreas e desenhos** (`mesa-areas.js`; `desenho.criar`, `desenho.editar`, `desenho.apagar`, `desenho.limpar`; evento `desenhos`):
+  - **As formas:** círculo, cone (90° por padrão, como o cartucho), linha (com largura), retângulo e traço livre. Ficam em `scene.desenhos` (até 300 por cena), em px da cena; a ponta encaixa a cada meio quadrado (Shift solta).
+  - **Quem:** todos na cena põem e veem; o jogador só na cena aberta, e mexe só nos dele; o mestre mexe em todos e esconde os dele.
+  - **A escolhida:** mostra a medida em metros e quem está dentro (o centro do token), com um anel em cada um; arrastar move (o traço livre anda inteiro); Delete apaga.
+  - **Fica de fora:** o texto no mapa e as formas do Foundry que não são área (polígono, elipse). A área não aplica dano sozinha: o ataque de área do combate continua pelo cartão.
+  - **Testado:** 2 testes, 22 de 24 mutações que caem (as duas vivas são equivalentes: o escondido é sempre do mestre, e o mestre não tem conta), e a conferência no Edge (a explosão em volta do token com quem está dentro, o cone, a linha, o traço livre, mover e apagar).
 - [x] **M6b · Luz e escuridão** (como no Foundry 12):
   - **Luz global** (aba Cena): a cena toda clara. Sem ela, cada token vê o alcance da visão dele (30 m, como os tokens do Foundry deste mundo) e o que uma luz ilumina. **O servidor nem manda o token no escuro.**
   - **Luzes:** o mestre põe, move e muda (ferramenta L), com cor e escondida; as do Foundry vêm com a cor. A parede de luz segura a luz.

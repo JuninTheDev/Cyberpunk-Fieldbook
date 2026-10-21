@@ -40,6 +40,7 @@
       <nav class="ferramentas" id="ferramentas" aria-label="Ferramentas">
         <button type="button" data-ferramenta="mover" class="ativa" aria-label="Mover (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg></button>
         <button type="button" data-ferramenta="regua" aria-label="Régua (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17L17 4l3 3L7 20z"/><path d="M8 13l2 2M11 10l2 2M14 7l2 2"/></svg></button>
+        <button type="button" data-ferramenta="areas" aria-label="Áreas e desenhos (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L12 4l8 16z"/><circle cx="12" cy="14" r="3"/></svg></button>
         <button type="button" data-ferramenta="ping" aria-label="Ping (P)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6"/><path d="M12 2a10 10 0 0 1 10 10M2 12A10 10 0 0 1 12 2" opacity=".6"/></svg></button>
         <span class="ferramentas-sep so-mestre" aria-hidden="true"></span>
         <button type="button" data-ferramenta="nevoa" class="so-mestre" aria-label="Névoa (N)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 9.4 4.3 4.3 0 0 0 7 18z"/></svg></button>
@@ -74,6 +75,29 @@
         <div id="luz-escolhida" class="combate-acoes" hidden><label class="marcar"><input id="luz-escondida" type="checkbox"> Escondida dos jogadores</label><button id="luz-apagar" class="botao vazado pequeno perigo" type="button">Apagar</button></div>
       </div>
       <!-- A ferramenta Notas (mestre): a nota escolhida, com o que ela mostra e quem vê. -->
+      <!-- Áreas e desenhos (M19): a forma, a cor e o que muda em cada uma; a escolhida mostra quem está dentro. -->
+      <div id="areas-opcoes" class="nevoa-opcoes areas-opcoes" hidden>
+        <div class="segmentado areas-formas" role="radiogroup" aria-label="Forma">
+          <button type="button" data-area-forma="circulo" title="Círculo: arraste do centro (a explosão)">Círculo</button>
+          <button type="button" data-area-forma="cone" title="Cone: arraste da ponta para onde ele abre">Cone</button>
+          <button type="button" data-area-forma="linha" title="Linha: arraste do começo ao fim">Linha</button>
+          <button type="button" data-area-forma="retangulo" title="Retângulo: arraste de um canto ao outro">Retâng.</button>
+          <button type="button" data-area-forma="livre" title="Traço livre: desenhe à mão">Livre</button>
+        </div>
+        <div class="campo-linha">
+          <label class="campo">Cor <input id="area-cor" type="color" value="#ff3158"></label>
+          <label class="campo" id="area-abertura-campo">Abertura <span class="campo-linha"><input id="area-abertura" type="number" min="5" max="180" step="5" value="90"> °</span></label>
+          <label class="campo" id="area-largura-campo">Largura <span class="campo-linha"><input id="area-largura" type="number" min="0.5" max="40" step="0.5" value="2"> m</span></label>
+          <label class="campo" id="area-espessura-campo">Espessura <input id="area-espessura" type="range" min="1" max="20" value="4"></label>
+        </div>
+        <label class="marcar so-mestre"><input id="area-escondida" type="checkbox"> As novas só para mim</label>
+        <p class="nota" id="area-dica">Arraste no mapa. A ponta encaixa a cada meio quadrado; Shift solta.</p>
+        <div id="area-escolhida" class="area-escolhida" hidden></div>
+        <div class="combate-acoes">
+          <button id="area-limpar" class="botao vazado pequeno" type="button">Apagar as minhas</button>
+          <button id="area-limpar-todas" class="botao vazado pequeno perigo so-mestre" type="button">Apagar todas</button>
+        </div>
+      </div>
       <div id="notas-opcoes" class="nevoa-opcoes notas-opcoes" hidden>
         <p id="nota-aviso" class="luz-titulo">Clique no mapa para pôr uma nota</p>
         <div id="nota-escolhida" class="nota-form" hidden>
@@ -259,6 +283,7 @@
   <script src="/mesa-visao.js"></script>
   <script src="/mesa-tocador.js"></script>
   <script src="/mesa-painel.js"></script>
+  <script src="/mesa-areas.js"></script>
   <script src="/mesa.js"></script>
 </body>
 </html>

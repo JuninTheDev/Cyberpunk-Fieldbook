@@ -792,3 +792,16 @@ input.cresce { flex: 1; }
 .es-form textarea { width: 100%; font: 11px var(--lbl); resize: vertical; }
 .es-form .campo input[type="text"] { width: 100%; }
 @media (max-width: 820px) { .estilo-janela { left: 8px; width: auto; } .es-temas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Áreas e desenhos (M19): as opções da ferramenta ---------- */
+.areas-opcoes { width: 340px; max-height: calc(100% - 140px); overflow-y: auto; }
+.areas-formas { display: flex; flex-wrap: wrap; }
+.areas-formas button { flex: 1 1 auto; font-size: 11px; padding-left: 6px; padding-right: 6px; }
+.areas-opcoes .campo-linha { flex-wrap: wrap; align-items: flex-end; }
+.areas-opcoes label.campo { display: grid; gap: 4px; }
+.areas-opcoes .campo-linha .campo-linha { gap: 4px; align-items: center; }
+#area-abertura, #area-largura { width: 64px; }
+#area-cor { width: 44px; height: 30px; padding: 2px; }
+.areas-opcoes .nota { margin: 0; }
+.area-escolhida { display: grid; gap: 6px; padding: 8px; border: 1px dashed var(--l); background: var(--w); }
+.area-escolhida small { color: var(--mu); font: 11px var(--lbl); }

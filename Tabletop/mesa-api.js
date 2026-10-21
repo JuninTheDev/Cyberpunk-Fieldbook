@@ -40,6 +40,10 @@ const MAX_TILES = 300;
 const MAX_WALLS = 4000;
 const MAX_LIGHTS = 300;
 const MAX_NOTES = 200;
+// As áreas e os desenhos no mapa (M19): por cena, e os pontos de um traço livre.
+const MAX_DESENHOS = 300;
+const MAX_PONTOS = 1000;
+const TIPOS_DE_DESENHO = ['circulo', 'cone', 'linha', 'retangulo', 'livre'];
 // A imagem de uma nota (o handout) e o link dela: uma página da wiki. Do endereço colado (https://wiki…/#sessao-01 ou
 // #sessao-01) só fica o que vem do # em diante: a nota abre a página na wiki de quem clica.
 const IMAGE_FILE = /\.(png|jpg|webp|svg)$/;
@@ -403,6 +407,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     };
     return (scene.notas || []).filter(nota => gm || vista(nota)).map(nota => notaVista(viewer, nota, campaignId));
   }
+  // As áreas e os desenhos: todos na cena veem (o escondido, só o mestre). meu: quem pode mexer (o autor e o mestre).
+  const desenhosFor = (viewer, scene) => (scene.desenhos || []).filter(desenho => isGm(viewer) || !desenho.escondido)
+    .map(({ autor, ...desenho }) => ({ ...desenho, meu: isGm(viewer) || (Boolean(autor) && autor === viewer.conta) }));
   const notaVista = (viewer, nota, campaignId) => ({
     id: nota.id, x: nota.x, y: nota.y, titulo: nota.titulo, texto: nota.texto, imagem: mediaUrl(viewer, campaignId, nota.midia), link: nota.link, cor: nota.cor,
     ...(isGm(viewer) ? { mostrar: nota.mostrar, midia: nota.midia } : {})
@@ -429,7 +436,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       // Tile escondido (no Foundry, o que o mestre ainda não revelou) só vai para o mestre.
       tiles: (scene.tiles || []).filter(tile => gm || !tile.escondido).map(({ midia, ...tile }) => ({ ...tile, imagem: mediaUrl(viewer, campaignId, midia), video: VIDEO_FILE.test(midia || '') })),
       tokens, visao: Boolean(scene.visao), paredes: wallsFor(viewer, scene),
-      luz: luzDaCena(scene), luzes, notas,
+      luz: luzDaCena(scene), luzes, notas, desenhos: desenhosFor(viewer, scene),
       ...(gm ? { origem: scene.origem || null, musica: scene.musica || null } : {})
     };
   }
@@ -606,6 +613,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       } else {
         if (effects.nevoa && effects.nevoa.cena === sceneId) sendEvent(connection, 'nevoa', effects.nevoa);
         if (effects.paredes && effects.paredes === sceneId) sendEvent(connection, 'paredes', { cena: sceneId, paredes: wallsFor(viewer, sceneById(state, sceneId)) });
+        if (effects.desenhos && effects.desenhos === sceneId) sendEvent(connection, 'desenhos', { cena: sceneId, desenhos: desenhosFor(viewer, sceneById(state, sceneId)) });
         if (effects.tokens || effects.nevoa || effects.paredes) diffTokens(connection, state);
       }
       if (effects.cenas && isGm(viewer)) sendEvent(connection, 'cenas', { cenas: scenesList(state), cenaAtiva: state.cenaAtiva });
@@ -628,6 +636,35 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const scene = sceneById(state, id ? String(id) : state.cenaAtiva);
     if (!scene) throw fail(404, id ? 'Cena não encontrada.' : 'Abra uma cena antes.');
     return scene;
+  }
+  function desenhoArg(state, viewer, id) {
+    for (const scene of state.cenas) {
+      const desenho = (scene.desenhos || []).find(item => item.id === String(id || ''));
+      if (!desenho) continue;
+      if (!isGm(viewer) && (desenho.escondido || desenho.autor !== viewer.conta)) throw fail(403, 'Esse desenho é de outra pessoa.');
+      return { scene, desenho };
+    }
+    throw fail(404, 'Desenho não encontrado.');
+  }
+  // Um desenho conferido: a forma, o lugar (dentro do mapa e da margem) e as medidas em px da cena. atual: o que já era.
+  function cleanDesenho(viewer, scene, input = {}, atual = {}) {
+    const tipo = TIPOS_DE_DESENHO.includes(input.tipo) ? input.tipo : atual.tipo;
+    if (!tipo) throw fail(400, 'Escolha a forma: círculo, cone, linha, retângulo ou traço livre.');
+    const lugar = naCena(scene, numero(input.x, atual.x ?? scene.largura / 2), numero(input.y, atual.y ?? scene.altura / 2));
+    const quadrado = (scene.grade && scene.grade.tamanho) || 100;
+    const desenho = { tipo, ...lugar, cor: COLOR_RE.test(input.cor || '') ? input.cor : atual.cor || '#ff3158', escondido: isGm(viewer) ? Boolean(input.escondido ?? atual.escondido) : false };
+    if (tipo === 'livre') {
+      const pontos = (Array.isArray(input.pontos) ? input.pontos : atual.pontos || []).slice(0, MAX_PONTOS)
+        .filter(ponto => Array.isArray(ponto) && Number.isFinite(Number(ponto[0])) && Number.isFinite(Number(ponto[1])))
+        .map(([x, y]) => [Math.round(real(x, -20000, 40000, 0)), Math.round(real(y, -20000, 40000, 0))]);
+      if (pontos.length < 2) throw fail(400, 'O traço precisa de pelo menos dois pontos.');
+      return { ...desenho, pontos, espessura: int(input.espessura ?? atual.espessura, 1, 40, 4) };
+    }
+    if (tipo === 'retangulo') return { ...desenho, w: Math.round(real(input.w ?? atual.w, 1, 20000, quadrado)), h: Math.round(real(input.h ?? atual.h, 1, 20000, quadrado)) };
+    const medidas = { dist: Math.round(real(input.dist ?? atual.dist, 1, 20000, quadrado)), angulo: Math.round(real(input.angulo ?? atual.angulo, -720, 720, 0) * 10) / 10 };
+    if (tipo === 'cone') medidas.abertura = Math.round(real(input.abertura ?? atual.abertura, 5, 180, 90));
+    if (tipo === 'linha') medidas.largura = Math.round(real(input.largura ?? atual.largura, 1, 2000, quadrado));
+    return { ...desenho, ...medidas };
   }
   function notaArg(state, id) {
     for (const scene of state.cenas) {
@@ -1228,6 +1265,36 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const { scene, luz } = lightArg(state, body.luz);
       scene.luzes = scene.luzes.filter(item => item !== luz);
       return { cena: scene.id };
+    } },
+    // Áreas e desenhos (M19): quem está na cena põe; o autor (e o mestre) muda, move e tira. O mestre esconde os dele.
+    // O jogador desenha só na cena aberta (a que ele vê).
+    'desenho.criar': { run({ state, viewer, body }) {
+      const scene = sceneArg(state, body.cena);
+      if (!isGm(viewer) && scene.id !== state.cenaAtiva) throw fail(403, 'Só na cena aberta.');
+      if ((scene.desenhos || []).length >= MAX_DESENHOS) throw fail(400, `Até ${MAX_DESENHOS} áreas e desenhos por cena: apague alguns.`);
+      const desenho = { id: newId(), ...cleanDesenho(viewer, scene, body.desenho && typeof body.desenho === 'object' ? body.desenho : {}), autor: isGm(viewer) ? null : viewer.conta };
+      scene.desenhos = [...(scene.desenhos || []), desenho];
+      return { desenhos: scene.id, resultado: { desenho: desenho.id } };
+    } },
+    'desenho.editar': { run({ state, viewer, body }) {
+      const { scene, desenho } = desenhoArg(state, viewer, body.desenho);
+      const mudancas = body.mudancas && typeof body.mudancas === 'object' ? body.mudancas : {};
+      // O traço livre anda inteiro: dx e dy levam os pontos junto.
+      const passo = desenho.tipo === 'livre' && (mudancas.dx || mudancas.dy) ? { pontos: desenho.pontos.map(([x, y]) => [x + (Number(mudancas.dx) || 0), y + (Number(mudancas.dy) || 0)]), x: desenho.x + (Number(mudancas.dx) || 0), y: desenho.y + (Number(mudancas.dy) || 0) } : {};
+      Object.assign(desenho, cleanDesenho(viewer, scene, { ...mudancas, ...passo, tipo: desenho.tipo }, desenho));
+      return { desenhos: scene.id };
+    } },
+    'desenho.apagar': { run({ state, viewer, body }) {
+      const { scene, desenho } = desenhoArg(state, viewer, body.desenho);
+      scene.desenhos = scene.desenhos.filter(item => item !== desenho);
+      return { desenhos: scene.id };
+    } },
+    // Apagar de uma vez: o jogador, os dele; o mestre, os dele ou (todos: true) todos da cena.
+    'desenho.limpar': { run({ state, viewer, body }) {
+      const scene = sceneArg(state, body.cena);
+      const meu = desenho => (isGm(viewer) ? !desenho.autor : desenho.autor === viewer.conta);
+      scene.desenhos = (scene.desenhos || []).filter(desenho => !(isGm(viewer) && body.todos ? true : meu(desenho)));
+      return { desenhos: scene.id };
     } },
     // Notas no mapa: o mestre põe, muda, move e tira. A cena vai de novo a todos (cada um recebe só as que vê).
     'nota.criar': { mestre: true, run({ state, body, campaignId }) {

@@ -30,6 +30,9 @@
     painel: { fixo: null, aberto: null, busca: '', segurando: false, pendente: false, roda: 0, rodaTimer: null, ultimoRetrato: '', mostra: null },
     // O estilo do painel: o padrão da mesa (do mestre), o rascunho da janela de estilo e a prévia que o painel mostra.
     estiloDaMesa: null, estiloRascunho: null, estiloPrevia: null, estiloMensagem: '',
+    // Áreas e desenhos: a escolhida, a que está sendo desenhada, a que está sendo arrastada e as opções (o navegador lembra).
+    areaSel: null, areaPrevia: null, areaMovida: null, areaArrastando: false,
+    area: { forma: 'circulo', cor: '#ff3158', abertura: 90, largura: 2, espessura: 4, escondida: false },
     vista: { x: 0, y: 0, escala: 1 }, alvoVista: null, cenaVista: null,
     selecionado: null, ferramenta: 'mover', nevoaModo: 'revelar', nevoaRaio: 3,
     fundo: null, imagens: new Map(), nevoaCanvas: null, nevoaEscala: 1, nevoaLocal: [],
@@ -119,6 +122,15 @@
     on('luzes', data => { if (S.cena && data.cena === S.cena.id) { S.cena.luzes = data.luzes; renderCenaPainel(); redesenhar(); } });
     // As notas que um token do jogador vê aparecem e somem enquanto ele anda; o mestre pode abrir uma na tela de todos.
     on('notas', data => { if (S.cena && data.cena === S.cena.id) { S.cena.notas = data.notas; atualizarNotaAberta(); redesenhar(); } });
+    on('desenhos', data => {
+      if (!S.cena || data.cena !== S.cena.id) return;
+      S.cena.desenhos = data.desenhos;
+      // A prévia e o arrasto ficam até a lista nova chegar (sem pulo).
+      if (!S.areaArrastando) { S.areaPrevia = null; S.areaMovida = null; }
+      if (S.areaSel && !areaEscolhida()) S.areaSel = null;
+      renderAreasOpcoes();
+      redesenhar();
+    });
     on('nota.aberta', data => abrirNota(data));
     on('visao.esquecer', data => { if (S.cena && data.cena === S.cena.id) esquecerExplorado(); });
     on('combate', data => { S.combate = data; renderCombate(); renderVez(); renderPainelTatico(); redesenhar(); });
@@ -668,6 +680,91 @@
   const raioDaNota = () => 13 / S.vista.escala;
   const notaEm = ponto => [...notasDaCena()].reverse().find(nota => { const n = notaNaTela(nota); return Math.hypot(ponto.x - n.x, ponto.y - n.y) <= raioDaNota() * 1.3; }) || null;
   const notaEscolhida = () => notasDaCena().find(nota => nota.id === S.notaSel) || null;
+  // ---------------- Áreas e desenhos (M19) ----------------
+  // Como os Measured Templates e os Drawings do Foundry: o círculo (a explosão), o cone, a linha, o retângulo e o traço
+  // livre. Todos na cena veem (o escondido do mestre, só ele); quem fez muda e apaga. A área escolhida mostra quem está
+  // dentro (o centro do token). As contas são as do mesa-areas.js.
+  const MA = window.MesaAreas;
+  const desenhosDaCena = () => (S.cena && S.cena.desenhos) || [];
+  const areaEscolhida = () => desenhosDaCena().find(desenho => desenho.id === S.areaSel) || null;
+  const corComAlfa = (hex, alfa) => { const n = parseInt(String(hex).slice(1), 16) || 0; return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alfa})`; };
+  // O desenho como aparece agora: com o arrasto de quem está movendo.
+  function areaVista(desenho) {
+    const movida = S.areaMovida && S.areaMovida.id === desenho.id ? S.areaMovida : null;
+    if (!movida) return desenho;
+    return { ...desenho, x: desenho.x + movida.dx, y: desenho.y + movida.dy, ...(desenho.pontos ? { pontos: desenho.pontos.map(([x, y]) => [x + movida.dx, y + movida.dy]) } : {}) };
+  }
+  // De meio em meio quadrado (como a ponta do template do Foundry); sem grade, solto. preso: dentro do mapa (a origem
+  // fica; a outra ponta, que só dá a direção e o tamanho, pode passar da borda).
+  function encaixarMeio(ponto, preso = true) {
+    const g = grade();
+    const limite = preso ? dentro : p => p;
+    if (g.tipo === 'nenhuma') return limite(ponto);
+    const passo = g.tamanho / 2;
+    return limite({ x: (g.x || 0) + Math.round((ponto.x - (g.x || 0)) / passo) * passo, y: (g.y || 0) + Math.round((ponto.y - (g.y || 0)) / passo) * passo });
+  }
+  // A área que está sendo arrastada, de a até b, com a forma e as opções escolhidas.
+  function novaArea(forma, a, b) {
+    const base = { tipo: forma, x: a.x, y: a.y, cor: S.area.cor, escondido: gm() && S.area.escondida, meu: true };
+    const g = grade();
+    if (forma === 'livre') return { ...base, pontos: [[Math.round(a.x), Math.round(a.y)]], espessura: S.area.espessura };
+    if (forma === 'retangulo') return { ...base, x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) };
+    const medida = { dist: Math.hypot(b.x - a.x, b.y - a.y), angulo: Math.round((Math.atan2(b.y - a.y, b.x - a.x) * 1800) / Math.PI) / 10 };
+    if (forma === 'cone') medida.abertura = S.area.abertura;
+    if (forma === 'linha') medida.largura = (S.area.largura / (g.metros || 2)) * g.tamanho;
+    return { ...base, ...medida };
+  }
+  const tokensNaArea = area => [...S.tokens.values()].filter(token => MA.contem(area, { x: token.vx, y: token.vy }));
+  function desenharUmaArea(d, px, destaque) {
+    const pontos = MA.contorno(d);
+    if (!pontos.length) return;
+    ctx.save();
+    ctx.beginPath();
+    if (d.tipo === 'circulo') ctx.arc(d.x, d.y, d.dist, 0, Math.PI * 2);
+    else {
+      ctx.moveTo(pontos[0].x, pontos[0].y);
+      for (const ponto of pontos.slice(1)) ctx.lineTo(ponto.x, ponto.y);
+      if (d.tipo !== 'livre') ctx.closePath();
+    }
+    if (d.escondido) ctx.setLineDash([8 * px, 6 * px]);
+    if (d.tipo === 'livre') {
+      Object.assign(ctx, { lineCap: 'round', lineJoin: 'round', strokeStyle: d.cor, lineWidth: d.espessura, globalAlpha: d.escondido ? 0.6 : 0.95 });
+      ctx.stroke();
+      if (destaque) { ctx.globalAlpha = 0.35; ctx.lineWidth = d.espessura + 6 * px; ctx.stroke(); }
+    } else {
+      ctx.fillStyle = corComAlfa(d.cor, destaque ? 0.26 : 0.15);
+      ctx.fill();
+      ctx.strokeStyle = d.cor;
+      ctx.lineWidth = (destaque ? 3 : 2) * px;
+      ctx.stroke();
+      if (d.tipo !== 'retangulo') {
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 4 * px, 0, Math.PI * 2);
+        ctx.fillStyle = d.cor;
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    if (destaque && d.tipo !== 'livre') rotulo(MA.descrever(d, grade()), d.x, d.y - 34 * px, px, { borda: d.cor, tamanho: 12 });
+  }
+  function desenharAreas(px) {
+    for (const desenho of desenhosDaCena()) desenharUmaArea(areaVista(desenho), px, desenho.id === S.areaSel);
+    if (S.areaPrevia) desenharUmaArea(S.areaPrevia, px, true);
+  }
+  // Depois dos tokens: o anel em quem está na área escolhida (ou na que está sendo desenhada).
+  function desenharTokensNaArea(px) {
+    const area = S.areaPrevia || (areaEscolhida() && areaVista(areaEscolhida()));
+    if (!area || area.tipo === 'livre') return;
+    for (const token of tokensNaArea(area)) {
+      ctx.beginPath();
+      ctx.arc(token.vx, token.vy, raioDe(token) + 5 * px, 0, Math.PI * 2);
+      ctx.strokeStyle = area.cor;
+      ctx.lineWidth = 3 * px;
+      ctx.stroke();
+    }
+  }
+
   function desenharNotas(px) {
     const r = raioDaNota();
     for (const original of notasDaCena()) {
@@ -698,6 +795,73 @@
     }
   }
   // O editor do mestre: os campos da nota escolhida (quem está digitando não perde o que escreve).
+  // As opções das áreas: a forma e o que muda em cada uma (o navegador lembra). Com uma escolhida, a cor e a medida
+  // mudam ela; e aparece quem está dentro.
+  try { Object.assign(S.area, JSON.parse(store.get('area') || '{}')); } catch { /* sem nada guardado */ }
+  if (!MA.TIPOS.includes(S.area.forma)) S.area.forma = 'circulo';
+  function renderAreasOpcoes() {
+    const caixa = $('#areas-opcoes');
+    if (caixa.hidden && S.ferramenta !== 'areas') return;
+    const escolhida = areaEscolhida();
+    const forma = escolhida ? escolhida.tipo : S.area.forma;
+    for (const botao of $$('[data-area-forma]')) botao.classList.toggle('ativo', botao.dataset.areaForma === S.area.forma);
+    $('#area-abertura-campo').hidden = forma !== 'cone';
+    $('#area-largura-campo').hidden = forma !== 'linha';
+    $('#area-espessura-campo').hidden = forma !== 'livre';
+    const g = grade();
+    const campo = (id, valor) => { const el = $(id); if (document.activeElement !== el) el.value = valor; };
+    campo('#area-cor', escolhida ? escolhida.cor : S.area.cor);
+    campo('#area-abertura', escolhida && escolhida.tipo === 'cone' ? escolhida.abertura : S.area.abertura);
+    campo('#area-largura', escolhida && escolhida.tipo === 'linha' ? MA.metros(escolhida.largura, g) : S.area.largura);
+    campo('#area-espessura', escolhida && escolhida.tipo === 'livre' ? escolhida.espessura : S.area.espessura);
+    $('#area-escondida').checked = escolhida ? Boolean(escolhida.escondido) : S.area.escondida;
+    $('#area-dica').hidden = Boolean(escolhida);
+    const caixaEscolhida = $('#area-escolhida');
+    caixaEscolhida.hidden = !escolhida;
+    if (escolhida) {
+      const vista = areaVista(escolhida);
+      const dentroDela = vista.tipo === 'livre' ? null : tokensNaArea(vista).map(token => token.nome);
+      caixaEscolhida.innerHTML = `<b>${esc(MA.descrever(vista, g))}</b>${escolhida.escondido ? ' <small>(só você vê)</small>' : ''}
+        ${dentroDela ? `<p class="nota">${dentroDela.length ? `Na área: ${esc(dentroDela.join(', '))}.` : 'Ninguém na área.'}</p>` : ''}
+        ${escolhida.meu ? '<div class="combate-acoes"><button class="botao vazado pequeno perigo" type="button" data-area-apagar>Apagar</button></div>' : '<p class="nota">De outra pessoa: só quem fez muda.</p>'}`;
+    }
+    $('#area-escondida').closest('label').hidden = !gm();
+  }
+  function salvarOpcoesDaArea() { store.set('area', JSON.stringify(S.area)); }
+  function apagarAreaEscolhida() {
+    const escolhida = areaEscolhida();
+    if (!escolhida || !escolhida.meu) return;
+    S.areaSel = null;
+    op('desenho.apagar', { desenho: escolhida.id }).catch(() => {});
+    renderAreasOpcoes();
+  }
+  for (const botao of $$('[data-area-forma]')) botao.addEventListener('click', () => {
+    S.area.forma = botao.dataset.areaForma;
+    S.areaSel = null;
+    salvarOpcoesDaArea();
+    renderAreasOpcoes();
+    redesenhar();
+  });
+  // Uma opção mudou: vale para as próximas e, com uma escolhida (sua), muda ela.
+  $('#areas-opcoes').addEventListener('change', event => {
+    const campo = event.target;
+    const escolhida = areaEscolhida();
+    const g = grade();
+    const mudancas = {};
+    if (campo.id === 'area-cor') { S.area.cor = campo.value; mudancas.cor = campo.value; }
+    if (campo.id === 'area-abertura') { S.area.abertura = Math.min(180, Math.max(5, Number(campo.value) || 90)); if (escolhida && escolhida.tipo === 'cone') mudancas.abertura = S.area.abertura; }
+    if (campo.id === 'area-largura') { S.area.largura = Math.min(40, Math.max(0.5, Number(campo.value) || 2)); if (escolhida && escolhida.tipo === 'linha') mudancas.largura = (S.area.largura / (g.metros || 2)) * g.tamanho; }
+    if (campo.id === 'area-espessura') { S.area.espessura = Number(campo.value) || 4; if (escolhida && escolhida.tipo === 'livre') mudancas.espessura = S.area.espessura; }
+    if (campo.id === 'area-escondida') { S.area.escondida = campo.checked; if (escolhida) mudancas.escondido = campo.checked; }
+    salvarOpcoesDaArea();
+    if (escolhida && escolhida.meu && Object.keys(mudancas).length) op('desenho.editar', { desenho: escolhida.id, mudancas }).catch(() => {});
+  });
+  $('#areas-opcoes').addEventListener('click', event => {
+    if (event.target.closest('[data-area-apagar]')) apagarAreaEscolhida();
+  });
+  $('#area-limpar').addEventListener('click', () => { if (S.cena && confirm('Apagar as áreas e os desenhos que você fez nesta cena?')) op('desenho.limpar', { cena: S.cena.id }).catch(() => {}); });
+  $('#area-limpar-todas').addEventListener('click', () => { if (S.cena && confirm('Apagar todas as áreas e os desenhos desta cena (os dos jogadores também)?')) op('desenho.limpar', { cena: S.cena.id, todos: true }).catch(() => {}); });
+
   function renderNotaOpcoes() {
     const nota = notaEscolhida();
     if (!nota) S.notaSel = null;
@@ -1053,12 +1217,14 @@
     ctx.strokeStyle = 'rgba(0, 255, 210, .35)';
     ctx.lineWidth = 2 * px;
     ctx.strokeRect(0, 0, cena.largura, cena.altura);
+    desenharAreas(px);
     if (gm() && S.ferramenta === 'paredes') desenharParedes(px);
     desenharNotas(px);
     for (const token of S.tokens.values()) {
       if (S.arrasto && S.arrasto.token === token.id) continue;
       desenharToken(token, token.vx, token.vy, agora, px);
     }
+    desenharTokensNaArea(px);
     if (gm() && S.ferramenta === 'tiles') desenharTileEscolhido(px);
     if (gm() && S.ferramenta === 'luzes') desenharLuzes(px);
     desenharPortas(px);
@@ -1451,6 +1617,27 @@
       redesenhar();
       return;
     }
+    // Áreas: clique numa escolhe (a sua, arrastar move); arrastar no vazio põe uma nova.
+    if (S.ferramenta === 'areas') {
+      const tolerancia = 6 / S.vista.escala;
+      const acertada = [...desenhosDaCena()].reverse().find(desenho => MA.acerta(desenho, mundo, tolerancia));
+      if (acertada) {
+        S.areaSel = acertada.id;
+        renderAreasOpcoes();
+        gesto = { tipo: 'area-mover', inicio: tela, area: acertada.id, de: mundo, pode: acertada.meu };
+        S.areaArrastando = true;
+      } else {
+        // No vazio: solta a escolhida e começa uma nova (o clique sem arrastar não põe nada).
+        if (S.areaSel) { S.areaSel = null; renderAreasOpcoes(); }
+        const forma = S.area.forma;
+        const a = forma === 'livre' || event.shiftKey ? dentro(mundo) : encaixarMeio(mundo);
+        gesto = { tipo: 'area-nova', inicio: tela, a, forma };
+        S.areaPrevia = novaArea(forma, a, a);
+        S.areaArrastando = true;
+      }
+      redesenhar();
+      return;
+    }
     if (S.ferramenta === 'paredes' && gm()) {
       const a = encaixarParede(mundo, event.shiftKey);
       gesto = { tipo: 'parede', inicio: tela, a, b: a, perto: paredeEm(mundo) };
@@ -1538,6 +1725,21 @@
       S.minhaRegua.b = event.shiftKey ? dentro(mundo) : encaixar(mundo);
       if (compartilho()) atividade({ regua: [S.minhaRegua.a, S.minhaRegua.b] });
       redesenhar();
+    } else if (gesto.tipo === 'area-nova' && S.areaPrevia) {
+      if (gesto.forma === 'livre') {
+        const ultimo = S.areaPrevia.pontos[S.areaPrevia.pontos.length - 1];
+        if (Math.hypot(mundo.x - ultimo[0], mundo.y - ultimo[1]) * S.vista.escala >= 4 && S.areaPrevia.pontos.length < 1000) S.areaPrevia.pontos.push([Math.round(mundo.x), Math.round(mundo.y)]);
+      } else S.areaPrevia = novaArea(gesto.forma, gesto.a, event.shiftKey ? mundo : encaixarMeio(mundo, false));
+      redesenhar();
+    } else if (gesto.tipo === 'area-mover' && gesto.moveu && gesto.pode) {
+      const desenho = desenhosDaCena().find(item => item.id === gesto.area);
+      if (desenho) {
+        const solto = { x: desenho.x + mundo.x - gesto.de.x, y: desenho.y + mundo.y - gesto.de.y };
+        const novo = desenho.tipo === 'livre' || event.shiftKey ? solto : encaixarMeio(solto);
+        S.areaMovida = { id: desenho.id, dx: Math.round(novo.x - desenho.x), dy: Math.round(novo.y - desenho.y) };
+        renderAreasOpcoes();
+      }
+      redesenhar();
     } else if (gesto.tipo === 'nevoa') {
       pintar(mundo);
     } else if (gesto.tipo === 'parede' && gesto.moveu) {
@@ -1586,6 +1788,21 @@
     } else if (atual.tipo === 'nota-mover' && S.notaPrevia && S.notaPrevia.id === atual.nota) {
       const { id, x, y } = S.notaPrevia;
       if (cancelar) { S.notaPrevia = null; redesenhar(); } else op('nota.editar', { nota: id, x, y }).catch(() => { S.notaPrevia = null; redesenhar(); });
+    } else if (atual.tipo === 'area-nova') {
+      S.areaArrastando = false;
+      const previa = S.areaPrevia;
+      const minimo = 4 / S.vista.escala;
+      const pronta = previa && !cancelar && (previa.tipo === 'livre' ? previa.pontos.length >= 2 : previa.tipo === 'retangulo' ? previa.w >= minimo && previa.h >= minimo : previa.dist >= minimo);
+      if (!pronta) { S.areaPrevia = null; redesenhar(); return; }
+      const { meu, ...desenho } = previa;
+      op('desenho.criar', { cena: S.cena.id, desenho }).then(({ resultado }) => { S.areaSel = resultado.desenho; renderAreasOpcoes(); redesenhar(); }).catch(() => { S.areaPrevia = null; redesenhar(); });
+    } else if (atual.tipo === 'area-mover') {
+      S.areaArrastando = false;
+      const movida = S.areaMovida;
+      if (!movida || cancelar || (!movida.dx && !movida.dy)) { S.areaMovida = null; redesenhar(); return; }
+      const desenho = desenhosDaCena().find(item => item.id === movida.id);
+      const mudancas = desenho && desenho.tipo === 'livre' ? { dx: movida.dx, dy: movida.dy } : { x: desenho.x + movida.dx, y: desenho.y + movida.dy };
+      op('desenho.editar', { desenho: movida.id, mudancas }).catch(() => { S.areaMovida = null; redesenhar(); });
     } else if (atual.tipo === 'regua') {
       // A régua fica um instante na tela e some para todos.
       S.reguaTimer = setTimeout(() => { S.minhaRegua = null; if (compartilho()) atividade({ regua: null }); redesenhar(); }, cancelar ? 0 : 1500);
@@ -1647,6 +1864,7 @@
     if ((tecla === 't' || tecla === 'T') && gm()) return escolherFerramenta('tiles');
     if ((tecla === 'l' || tecla === 'L') && gm()) return escolherFerramenta('luzes');
     if ((tecla === 'j' || tecla === 'J') && gm()) return escolherFerramenta('notas');
+    if (tecla === 'a' || tecla === 'A') return escolherFerramenta('areas');
     if (tecla === '0') return enquadrar();
     if (tecla === 'c' || tecla === 'C') return irAoMeuToken();
     if ((tecla === 'h' || tecla === 'H') && S.painel.mostra) return painelAberto(painelRecolhido());
@@ -1656,6 +1874,7 @@
       if (S.notaAberta || !$('#nota-janela').hidden) return fecharNota();
       if (S.escolhendoAlvo) return escolherAlvoNoMapa(false);
       if (S.notaSel) { S.notaSel = null; renderNotaOpcoes(); redesenhar(); return; }
+      if (S.areaSel) { S.areaSel = null; renderAreasOpcoes(); redesenhar(); return; }
       if (S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); redesenhar(); return; }
       if (S.tileSel) { S.tileSel = null; renderTileOpcoes(); redesenhar(); return; }
       if (S.luzSel) { S.luzSel = null; renderLuzOpcoes(); redesenhar(); return; }
@@ -1665,6 +1884,7 @@
     if (S.ferramenta === 'tiles' && S.tileSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarTileEscolhido(); return; }
     if (S.ferramenta === 'luzes' && S.luzSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarLuzEscolhida(); return; }
     if (S.ferramenta === 'notas' && S.notaSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarNotaEscolhida(); return; }
+    if (S.ferramenta === 'areas' && S.areaSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarAreaEscolhida(); return; }
     if (!token) return;
     const passos = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[tecla];
     if (passos && podeMover(token)) {
@@ -1709,6 +1929,7 @@
       paredes: ['Paredes e portas · W', 'Arraste para desenhar; a ponta gruda na grade e nas outras paredes (Shift solta). Clique numa parede para escolher; Delete apaga.'],
       tiles: ['Tiles · T', 'Clique num tile para escolher e arraste para mover (encaixa na grade; Shift solta). O quadrado amarelo muda o tamanho; Delete apaga.'],
       luzes: ['Luzes · L', 'Clique no mapa para pôr uma luz; clique numa luz para escolher e arraste para mover. Delete apaga.'],
+      areas: ['Áreas e desenhos · A', 'Arraste no mapa: o círculo (a explosão), o cone, a linha, o retângulo ou o traço livre. Clique num para escolher (mostra quem está dentro) e arraste para mover. Delete apaga. Todos na cena veem.'],
       notas: ['Notas · J', 'Clique no mapa para pôr uma nota (um handout ou uma página da wiki); clique numa para editar e arraste para mover. Delete apaga. "Quem vê" decide se os jogadores veem o alfinete.'],
       centralizar: ['A cena inteira · 0', 'Enquadra o mapa e os tokens na tela.'],
       'meu-token': ['O seu token · C', 'Leva a tela até o seu token e escolhe ele.']
@@ -1728,6 +1949,9 @@
     $('#tiles-opcoes').hidden = nome !== 'tiles';
     $('#luzes-opcoes').hidden = nome !== 'luzes';
     $('#notas-opcoes').hidden = nome !== 'notas';
+    $('#areas-opcoes').hidden = nome !== 'areas';
+    if (nome !== 'areas' && S.areaSel) S.areaSel = null;
+    if (nome === 'areas') renderAreasOpcoes();
     if (nome !== 'luzes' && S.luzSel) { S.luzSel = null; renderLuzOpcoes(); }
     if (nome !== 'notas' && S.notaSel) { S.notaSel = null; renderNotaOpcoes(); }
     if (nome !== 'paredes' && S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); }

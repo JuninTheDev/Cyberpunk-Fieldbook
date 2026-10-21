@@ -49,7 +49,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (76 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (78 testes).
 
 ## O que dá para fazer
 
@@ -101,6 +101,12 @@ Teste automático (não abre navegador): `node --test Tabletop/` (76 testes).
 - **Portas:** clique no ícone abre e fecha; com Shift, tranca. A porta secreta só você vê.
 - **Luz** (aba Cena): **Luz global** deixa a cena toda clara. Sem ela, cada token vê o alcance da visão dele (30 m, se você não mudar) e o que as luzes iluminam. **Escuridão** escurece a tela de todos; as luzes abrem clareiras.
   - **Luzes** (ferramenta L): clique no mapa para pôr uma, com a luz clara, a penumbra (em metros) e a cor; clique numa para escolher, arraste para mover, Delete apaga. A escondida só você vê.
+- **Áreas e desenhos** (ferramenta A, para todos), como os Measured Templates e os Drawings do Foundry:
+  - **As formas:** o círculo (arraste do centro: a explosão), o cone (da ponta para onde abre; 90°, 45° para cada lado, como o cartucho), a linha (do começo ao fim, com a largura), o retângulo (de canto a canto) e o traço livre.
+  - A ponta encaixa a cada meio quadrado; Shift solta. A medida aparece em metros.
+  - **Escolher:** clique numa área. Ela mostra quem está dentro (o centro do token), com um anel em cada um. A sua arrasta e apaga (Delete); a cor e a medida mudam pelas opções.
+  - **Quem vê:** todos na cena. O mestre pode fazer as dele só para ele ("As novas só para mim"). O jogador desenha só na cena aberta e mexe só nas dele; o mestre mexe em todas.
+  - **Apagar as minhas**, e o mestre **Apagar todas**.
 - **Notas** (ferramenta J): clique no mapa para pôr um alfinete.
   - **O que ele abre:** um handout (título, texto e imagem) e, se quiser, uma página da wiki. Cole o endereço da página: fica o que vem do # em diante.
   - **Quem vê:** só você; os jogadores, quando um token deles vê o ponto (a névoa e as paredes contam); ou os jogadores, sempre.
@@ -168,6 +174,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (76 testes).
 - Vê só a cena aberta e arrasta o próprio token (as setas movem um quadrado).
 - **Ao arrastar:** a distância aparece contra o MOVE (anda MOVE × 2 m, corre o dobro), em verde, amarelo ou vermelho.
 - **Régua** (R): quadrados, metros e a DV por alcance de pistola, SMG, espingarda, rifle de assalto e sniper (a tabela da wiki).
+- **Áreas e desenhos** (A): o círculo da granada, o cone, a linha, o retângulo e o traço livre; clicar numa mostra quem está dentro. Você mexe só nas suas.
 - **Aba Personagem:** os STATs e as perícias da ficha. Tocar numa perícia rola STAT + perícia + 1d10.
   - **Os números:** a Humanidade (com o EMP), o dinheiro, o IP e a reputação; só o mestre muda.
   - **O inventário:** cada item equipado, carregando ou guardado.
@@ -313,7 +320,7 @@ O M4 do roadmap. Quando você aprovar o teste:
 1. **`server.js`:**
    - criar a mesa com `require('./Tabletop/mesa-api')({ dataDir, charactersDir: path.join(charactersDataDir, 'personagens'), wikiDir: root, who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter, send, writeJsonAtomic })`;
    - ligar a rota `ROUTES` antes da `characterApiRoutes`;
-   - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js`, `mesa-tocador.js`, `mesa-painel.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
+   - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js`, `mesa-tocador.js`, `mesa-painel.js`, `mesa-areas.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
    - o YouTube: a página carrega `https://www.youtube.com/iframe_api` e o player de `youtube-nocookie.com`. Se a wiki ganhar uma Content-Security-Policy, ela precisa deixar esses dois (hoje não há nenhuma);
    - não carregar o `mesa-config.js`: ele só existe no teste;
    - entregar a página da mesa carregada na memória quando o servidor liga, e passar a `versao` (como o `testar.js`): página nova com servidor velho dá "Operação desconhecida".
@@ -336,9 +343,10 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa-audio.js` | O áudio no servidor: as playlists, o que toca em cada canal e desde quando, a fila, a música da cena, o título do YouTube e a importação das playlists. |
 | `mesa-tocador.js` | O tocador no navegador: toca o arquivo num `<audio>` e o YouTube no player dele, acerta a posição pelo relógio do servidor e avisa quando o navegador segura o som. |
 | `mesa-painel.js` | O Painel Tático: o estado do retrato, a imagem de cada estado, o efeito de ferimento, os temas e o estilo, e o código de estilo (o mesmo PT1: do módulo do Foundry). Vai para o servidor e para o navegador. |
+| `mesa-areas.js` | As áreas e os desenhos: quem está dentro do círculo, do cone, da linha e do retângulo, o contorno, o clique no traço livre e a medida em metros. Vai para o navegador e para os testes. |
 | `mesa-visao.js` | A conta da visão e da luz (quem vê o quê, a porta, o passo, o que a luz alcança, o polígono da sombra), com o índice das paredes. Vai para o servidor e para o navegador. |
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists, a biblioteca do yt-jukebox e os atores (as fichas de NPC do mestre) de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 76 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 78 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |
