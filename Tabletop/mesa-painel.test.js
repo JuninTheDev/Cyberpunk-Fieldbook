@@ -93,3 +93,19 @@ test('importação: o retrato do Painel Tático dos personagens da wiki vem do F
   assert.deepEqual(retratos, [{ nome: 'Qyan', personagem: 'ppt24g8ww5', retrato: { imagens: { notWounded: 'corvo2 sem fundo.png', lightlyWounded: 'corvo2 (ferido) sem fundo.png' }, escala: 85, x: 0, y: 4, espelhar: false, modo: 'auto' } }]);
   assert.deepEqual([...midias], ['corvo2 sem fundo.png', 'corvo2 (ferido) sem fundo.png'], 'as imagens sobem para a mesa');
 });
+
+test('o estilo padrão da mesa: o mestre escolhe (sem a posição), todos recebem; null volta ao da wiki', async t => {
+  const m = await montar(t);
+  const ana = await m.jogador('Ana', fichaJax);
+  const ouvido = await m.ouvir(ana.cookie);
+  await sleep(20);
+  assert.equal((await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.estiloDaMesa, null);
+  assert.equal((await m.op('painel.estiloDaMesa', { estilo: { tema: 'arasaka' } }, ana.cookie)).status, 403, 'só o mestre');
+  const feito = await m.op('painel.estiloDaMesa', { estilo: { ...P.aplicarTema({}, 'netrunner'), escala: 120, posicao: 'livre', x: 300, y: 40, fonte: 'tektur' } });
+  assert.equal(feito.status, 200, feito.text);
+  const evento = await ouvido.esperar(item => item.evento === 'estiloDaMesa');
+  assert.deepEqual([evento.data.estilo.tema, evento.data.estilo.escala, evento.data.estilo.posicao, evento.data.estilo.x, evento.data.estilo.fonte], ['netrunner', 120, 'base', null, 'oxanium']);
+  assert.deepEqual((await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.estiloDaMesa, evento.data.estilo);
+  assert.equal((await m.op('painel.estiloDaMesa', { estilo: null })).status, 200);
+  assert.equal((await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.estiloDaMesa, null);
+});

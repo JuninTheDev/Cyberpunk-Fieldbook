@@ -497,6 +497,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       defesas: combatFlow.perguntasPara(viewer, connection.campanha),
       presenca: presenceOf(connection.campanha),
       audio: audioFlow.audioFor(viewer, state, connection.campanha),
+      // O estilo do Painel Tático que o mestre escolheu para a mesa (quem não mudou o próprio vê este).
+      estiloDaMesa: state.estiloDaMesa || null,
       ...(gm ? {
         cenas: scenesList(state), cenaAtiva: state.cenaAtiva,
         personagens: fichas,
@@ -615,6 +617,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (effects.esquecer) sendEvent(connection, 'visao.esquecer', { cena: effects.esquecer });
       if (effects.audio) sendEvent(connection, 'audio', audioFlow.audioFor(viewer, state, campaignId));
       if (effects.npcs && isGm(viewer)) sendEvent(connection, 'npcs', npcsFor(state));
+      if (effects.estiloDaMesa) sendEvent(connection, 'estiloDaMesa', { estilo: state.estiloDaMesa || null });
     }
     if (effects.fichas) sendCards(campaignId);
   }
@@ -1531,6 +1534,14 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       }
       state.retratos[doc.id] = P.normalizarRetrato(pedido);
       return { fichas: true };
+    } },
+    // O estilo do Painel Tático padrão da mesa: { estilo } (null volta ao da wiki). Sem a posição: cada tela é uma.
+    'painel.estiloDaMesa': { mestre: true, run({ state, body }) {
+      if (body.estilo && typeof body.estilo === 'object') {
+        const { x, y, ...visual } = P.normalizarEstilo(body.estilo);
+        state.estiloDaMesa = { ...visual, posicao: 'base', x: null, y: null };
+      } else delete state.estiloDaMesa;
+      return { estiloDaMesa: true };
     } },
     // As fichas de NPC do mestre. { npc } cria; { id, npc } muda. A importação manda { npc, origem } (o ator do Foundry):
     // o que já veio não entra de novo (409), a não ser com substituir.

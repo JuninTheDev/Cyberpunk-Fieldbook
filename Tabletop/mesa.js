@@ -28,6 +28,8 @@
     cena: null, tokens: new Map(), cenas: [], cenaAtiva: null, combate: null, registro: [], presenca: [], personagens: [], npcs: [], meusNpcs: [], npcEditando: null, npcMidia: undefined, retrato: null, meus: [],
     // O Painel Tático: o token fixado, o painel de baixo aberto (perícias, equipamento), a busca, o HP sendo digitado.
     painel: { fixo: null, aberto: null, busca: '', segurando: false, pendente: false, roda: 0, rodaTimer: null, ultimoRetrato: '', mostra: null },
+    // O estilo do painel: o padrão da mesa (do mestre), o rascunho da janela de estilo e a prévia que o painel mostra.
+    estiloDaMesa: null, estiloRascunho: null, estiloPrevia: null, estiloMensagem: '',
     vista: { x: 0, y: 0, escala: 1 }, alvoVista: null, cenaVista: null,
     selecionado: null, ferramenta: 'mover', nevoaModo: 'revelar', nevoaRaio: 3,
     fundo: null, imagens: new Map(), nevoaCanvas: null, nevoaEscala: 1, nevoaLocal: [],
@@ -128,6 +130,7 @@
     on('presenca', data => { S.presenca = data; renderPresenca(); });
     on('audio', receberAudio);
     on('npcs', data => receberNpcs(data));
+    on('estiloDaMesa', data => receberEstiloDaMesa(data));
     // A ficha de um personagem mudou (pela mesa, pela wiki ou pelo Foundry): o mestre recebe todas; o jogador, as dele.
     on('fichas', data => {
       if (data.personagens) S.personagens = data.personagens;
@@ -167,6 +170,7 @@
     S.npcs = data.npcs || [];
     S.meusNpcs = data.meusNpcs || [];
     S.meus = data.meus || [];
+    S.estiloDaMesa = data.estiloDaMesa || null;
     if (S.retrato && !fichaDoPersonagem(S.retrato.id)) fecharRetrato();
     S.audio = data.audio || null;
     if (tocador) tocador.aplicar(S.audio);
@@ -1871,7 +1875,8 @@
     coracao: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M5 12h4l1.5-3 2 6 1.5-3H19"/></svg>',
     alfinete: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l-1 6 3 3H7l3-3zM12 12v9"/></svg>',
     retrato: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><circle cx="12" cy="10" r="3"/><path d="M7 19c1-3 2.8-4 5-4s4 1 5 4"/></svg>',
-    chave: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0 5 5l-9 9a2.1 2.1 0 0 1-3-3l9-9a4 4 0 0 0-2-2z"/></svg>'
+    chave: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0 5 5l-9 9a2.1 2.1 0 0 1-3-3l9-9a4 4 0 0 0-2-2z"/></svg>',
+    paleta: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.2-2.2 1.3-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/></svg>'
   };
   function renderHud() {
     const hud = $('#hud');
@@ -3070,8 +3075,190 @@
     op('retrato.salvar', { personagem: id, retrato: rascunho }).then(() => { fecharRetrato(); aviso(`Retrato de ${ficha ? ficha.apelido || ficha.nome : 'personagem'} salvo.`); }).catch(() => {});
   });
   retratoJanela.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); fecharRetrato(); } });
-  // O estilo do painel deste navegador (a fase 3 deixa cada jogador mudar; por enquanto, o padrão).
-  const estiloDoPainel = () => MP.normalizarEstilo(null);
+  // ---------------- Painel Tático: o estilo de cada um (M14) ----------------
+  // O estilo fica neste navegador (cada jogador tem o seu), por cima do padrão da mesa (o mestre escolhe, o servidor
+  // guarda). Com a janela aberta, o painel mostra o rascunho na hora; soltar o controle salva.
+  const estiloProprio = () => { try { return JSON.parse(store.get('painel:estilo') || 'null'); } catch { return null; } };
+  const estiloDoPainel = () => S.estiloPrevia || MP.normalizarEstilo(estiloProprio(), S.estiloDaMesa);
+  function salvarEstilo(estilo) {
+    store.set('painel:estilo', JSON.stringify(MP.normalizarEstilo(estilo, S.estiloDaMesa)));
+    S.estiloPrevia = null;
+    renderPainelTatico();
+  }
+  function abrirEstilo() {
+    S.estiloRascunho = estiloDoPainel();
+    S.estiloMensagem = '';
+    renderEstiloJanela();
+  }
+  function fecharEstilo() {
+    S.estiloRascunho = null;
+    S.estiloPrevia = null;
+    const janela = $('#estilo-janela');
+    janela.hidden = true;
+    janela.innerHTML = '';
+    renderPainelTatico();
+  }
+  function renderEstiloJanela() {
+    const janela = $('#estilo-janela');
+    const e = S.estiloRascunho;
+    if (!e) { janela.hidden = true; return; }
+    const rolagem = janela.scrollTop;
+    const visivel = chave => !e.ocultos.includes(chave);
+    const opcoes = (lista, atual) => Object.entries(lista).map(([valor, rotulo]) => `<option value="${valor}"${valor === atual ? ' selected' : ''}>${esc(typeof rotulo === 'string' ? rotulo : rotulo.nome)}</option>`).join('');
+    const faixa = (nome, rotulo, min, max, passo, unidade) => `<label class="campo">${rotulo}<span class="rc-faixa"><input type="range" name="${nome}" min="${min}" max="${max}" step="${passo}" value="${e[nome]}" data-unidade="${unidade}"><output>${e[nome]}${unidade}</output></span></label>`;
+    const caixa = (nome, rotulo, marcado) => `<label class="marcar"><input type="checkbox" name="${nome}"${marcado ? ' checked' : ''}> ${rotulo}</label>`;
+    const temas = Object.entries(MP.TEMAS).map(([chave, t]) => `<button type="button" class="es-tema${e.tema === chave ? ' ativo' : ''}" data-es-tema="${chave}" style="--a: ${t.acento}; --b: ${t.acento2}; --c2: ${t.destaque}; --f: ${t.fundo};"><span class="es-tema-cores"><i></i><i></i><i></i></span>${esc(t.nome)}</button>`).join('');
+    const cor = (nome, rotulo) => `<label class="es-cor">${rotulo}<input type="color" name="${nome}" value="${e[nome]}"></label>`;
+    const secoes = e.secoes.map((chave, i) => `<li>${caixa(`mostrar-${chave}`, MP.SECOES[chave], visivel(chave))}
+        <span><button type="button" class="link" data-es-subir="${chave}"${i === 0 ? ' disabled' : ''} aria-label="Mais para o começo">▲</button><button type="button" class="link" data-es-descer="${chave}"${i === e.secoes.length - 1 ? ' disabled' : ''} aria-label="Mais para o fim">▼</button></span></li>`).join('');
+    const proprio = Boolean(estiloProprio());
+    janela.innerHTML = `<form class="es-form" novalidate>
+      <div class="nota-janela-topo"><h2 id="estilo-janela-titulo">Estilo do painel</h2><button class="nota-janela-fechar" type="button" data-es-fechar aria-label="Fechar">×</button></div>
+      <p class="nota">Vale para este navegador. O painel muda na hora.</p>
+      <section><h3>Tema</h3><div class="es-temas">${temas}</div>
+        <div class="es-cores">${cor('acento', 'Destaque')}${cor('acento2', 'Alerta')}${cor('destaque', 'Realce')}${cor('fundo', 'Fundo')}${cor('texto', 'Texto')}</div>
+        ${e.tema === 'personalizado' ? '<p class="nota">Cores suas (escolher um tema troca as cinco).</p>' : ''}</section>
+      <section><h3>Aparência</h3>
+        <div class="es-grade"><label class="campo">Fonte <select name="fonte">${opcoes(MP.FONTES, e.fonte)}</select></label><label class="campo">Cantos <select name="cantos">${opcoes(MP.CANTOS, e.cantos)}</select></label>
+          ${faixa('opacidade', 'Opacidade do fundo', 30, 100, 1, '%')}${faixa('desfoque', 'Desfoque atrás', 0, 20, 1, ' px')}</div>
+        <div class="es-linha">${caixa('brilho', 'Brilho neon', e.brilho)}${caixa('scanlines', 'Linhas de varredura', e.scanlines)}${caixa('animacoes', 'Animações', e.animacoes)}${caixa('compacto', 'Compacto', e.compacto)}</div></section>
+      <section><h3>Retrato</h3>
+        <div class="es-grade">${faixa('retratoAltura', 'Altura do retrato', 120, 560, 10, ' px')}<label class="campo">Lado <select name="retratoLado">${opcoes(MP.LADOS, e.retratoLado)}</select></label>
+          <label class="campo es-largo">Efeitos de ferimento <select name="efeitos">${opcoes(MP.EFEITOS, e.efeitos)}</select></label></div>
+        <p class="nota">A imagem de cada estado é do personagem: o dono troca pelo botão de retrato do painel.</p></section>
+      <section><h3>Tamanho e posição</h3>
+        <div class="es-grade">${faixa('escala', 'Tamanho do painel', 50, 160, 5, '%')}
+          <label class="campo">Posição <select name="posicao"><option value="base"${e.posicao === 'base' ? ' selected' : ''}>Na base do mapa</option><option value="livre"${e.posicao === 'livre' ? ' selected' : ''}>Onde eu arrastar</option></select></label>
+          ${e.posicao === 'base' ? faixa('base', 'Distância da base', 0, 400, 2, ' px') : '<button type="button" class="botao vazado pequeno" data-es-base>Voltar para a base</button>'}</div>
+        <p class="nota">Arraste o painel pela alça ⋮⋮; dois cliques nela voltam para a base.</p></section>
+      <section><h3>Seções e peças</h3>
+        <ol class="es-secoes">${secoes}</ol>
+        <div class="es-pecas">${Object.entries(MP.PECAS).map(([chave, rotulo]) => caixa(`mostrar-${chave}`, rotulo, visivel(chave))).join('')}</div>
+        <label class="campo">Botões de HP <input type="text" name="passosHp" value="${esc(e.passosHp)}" placeholder="-5 -1 +1 +5"></label></section>
+      <section><h3>Compartilhar</h3>
+        <p class="nota">Copie o código e mande para outro jogador; ele cola aqui. Leva o visual, não a posição. O código do Painel Tático do Foundry também serve.</p>
+        <textarea class="es-codigo" readonly rows="2">${esc(MP.codigoDoEstilo(e))}</textarea>
+        <div class="es-linha"><button type="button" class="botao vazado pequeno" data-es-copiar>Copiar código</button></div>
+        <textarea name="colado" rows="2" placeholder="Cole aqui um código PT1:…"></textarea>
+        <div class="es-linha"><button type="button" class="botao vazado pequeno" data-es-colar>Aplicar o código colado</button>${S.estiloMensagem ? `<span class="nota alerta">${esc(S.estiloMensagem)}</span>` : ''}</div></section>
+      <div class="nota-janela-acoes"><button class="botao vazado" type="button" data-es-mesa${proprio ? '' : ' disabled'} title="Esquece o seu estilo e usa o do mestre">Voltar ao padrão da mesa</button>
+        ${gm() ? '<button class="botao vazado" type="button" data-es-definir title="Quem não mudou o próprio estilo passa a ver este">Usar como padrão da mesa</button>' : ''}<button class="botao" type="button" data-es-fechar>Fechar</button></div>
+    </form>`;
+    janela.hidden = false;
+    janela.scrollTop = rolagem;
+  }
+  // Os campos para o rascunho: arrastando, só a prévia (o painel muda na hora); soltando, salva.
+  function lerEstilo(salvar) {
+    const form = $('#estilo-janela form');
+    if (!form || !S.estiloRascunho) return;
+    const dados = new FormData(form);
+    const ocultos = [...Object.keys(MP.SECOES), ...Object.keys(MP.PECAS)].filter(chave => form.querySelector(`[name="mostrar-${chave}"]`) && !dados.get(`mostrar-${chave}`));
+    const cores = ['acento', 'acento2', 'destaque', 'fundo', 'texto'];
+    const mudouCor = cores.some(chave => dados.get(chave) && dados.get(chave) !== S.estiloRascunho[chave]);
+    const campos = Object.fromEntries([...dados.entries()].filter(([chave]) => !chave.startsWith('mostrar-') && chave !== 'colado'));
+    for (const chave of ['brilho', 'scanlines', 'animacoes', 'compacto']) campos[chave] = dados.get(chave) === 'on';
+    const novo = MP.normalizarEstilo({ ...S.estiloRascunho, ...campos, ocultos, tema: mudouCor ? 'personalizado' : S.estiloRascunho.tema });
+    for (const campo of form.querySelectorAll('input[type="range"]')) campo.nextElementSibling.textContent = `${campo.value}${campo.dataset.unidade}`;
+    const redesenhar = novo.posicao !== S.estiloRascunho.posicao || novo.tema !== S.estiloRascunho.tema;
+    S.estiloRascunho = novo;
+    S.estiloPrevia = novo;
+    renderPainelTatico();
+    if (!salvar) return;
+    salvarEstilo(novo);
+    S.estiloPrevia = novo;
+    if (redesenhar) renderEstiloJanela();
+  }
+  function trocarEstilo(mudanca) {
+    S.estiloRascunho = MP.normalizarEstilo({ ...S.estiloRascunho, ...mudanca });
+    salvarEstilo(S.estiloRascunho);
+    S.estiloPrevia = S.estiloRascunho;
+    renderEstiloJanela();
+  }
+  const estiloJanela = $('#estilo-janela');
+  estiloJanela.addEventListener('input', event => { if (event.target.name !== 'colado' && event.target.name !== 'passosHp') lerEstilo(false); });
+  estiloJanela.addEventListener('change', event => { if (event.target.name !== 'colado') lerEstilo(true); });
+  estiloJanela.addEventListener('submit', event => event.preventDefault());
+  estiloJanela.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); fecharEstilo(); } });
+  estiloJanela.addEventListener('click', event => {
+    const botao = event.target.closest('button');
+    if (!botao || !S.estiloRascunho) return;
+    if (botao.hasAttribute('data-es-fechar')) { fecharEstilo(); return; }
+    if (botao.dataset.esTema) { S.estiloRascunho = MP.aplicarTema(S.estiloRascunho, botao.dataset.esTema); trocarEstilo({}); return; }
+    const mover = (secao, passo) => {
+      const lista = [...S.estiloRascunho.secoes];
+      const i = lista.indexOf(secao);
+      const j = i + passo;
+      if (i < 0 || j < 0 || j >= lista.length) return;
+      [lista[i], lista[j]] = [lista[j], lista[i]];
+      trocarEstilo({ secoes: lista });
+    };
+    if (botao.dataset.esSubir) { mover(botao.dataset.esSubir, -1); return; }
+    if (botao.dataset.esDescer) { mover(botao.dataset.esDescer, 1); return; }
+    if (botao.hasAttribute('data-es-base')) { trocarEstilo({ posicao: 'base', x: null, y: null }); return; }
+    if (botao.hasAttribute('data-es-copiar')) {
+      const codigo = MP.codigoDoEstilo(S.estiloRascunho);
+      const campo = estiloJanela.querySelector('.es-codigo');
+      (navigator.clipboard ? navigator.clipboard.writeText(codigo) : Promise.reject()).then(() => aviso('Código do estilo copiado.')).catch(() => { campo.select(); aviso('Selecionei o código: copie com Ctrl+C.'); });
+      return;
+    }
+    if (botao.hasAttribute('data-es-colar')) {
+      try {
+        S.estiloRascunho = MP.lerCodigo(estiloJanela.querySelector('[name="colado"]').value, S.estiloRascunho);
+        S.estiloMensagem = '';
+        trocarEstilo({});
+        aviso('Estilo aplicado.');
+      } catch (error) { S.estiloMensagem = error.message; renderEstiloJanela(); }
+      return;
+    }
+    if (botao.hasAttribute('data-es-mesa')) {
+      store.set('painel:estilo', '');
+      S.estiloRascunho = MP.normalizarEstilo(null, S.estiloDaMesa);
+      S.estiloPrevia = null;
+      renderPainelTatico();
+      renderEstiloJanela();
+      return;
+    }
+    if (botao.hasAttribute('data-es-definir') && gm()) op('painel.estiloDaMesa', { estilo: S.estiloRascunho }).then(() => aviso('Este é o estilo padrão da mesa agora (para quem não mudou o próprio).')).catch(() => {});
+  });
+  function receberEstiloDaMesa(data) {
+    S.estiloDaMesa = data && data.estilo ? data.estilo : null;
+    renderPainelTatico();
+  }
+
+  // Arrastar o painel pela alça: ele passa para a posição livre e grava onde ficou. Dois cliques voltam para a base.
+  $('#painel-tatico').addEventListener('pointerdown', event => {
+    const alca = event.target.closest('.pt-alca');
+    if (!alca || event.button !== 0) return;
+    event.preventDefault();
+    const el = $('#painel-tatico');
+    const palco = el.offsetParent.getBoundingClientRect();
+    const caixa = el.getBoundingClientRect();
+    const inicio = { x: event.clientX, y: event.clientY, esquerda: caixa.left - palco.left, topo: caixa.top - palco.top };
+    el.classList.add('pt-arrastando');
+    const mover = ev => {
+      el.classList.remove('pt-posicao-base');
+      el.classList.add('pt-posicao-livre');
+      el.style.left = `${inicio.esquerda + ev.clientX - inicio.x}px`;
+      el.style.top = `${inicio.topo + ev.clientY - inicio.y}px`;
+      el.style.bottom = 'auto';
+    };
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover);
+      el.classList.remove('pt-arrastando');
+      const agora = el.getBoundingClientRect();
+      if (Math.abs(agora.left - caixa.left) < 3 && Math.abs(agora.top - caixa.top) < 3) { posicionarPainelTatico(); return; }
+      const pos = MP.dentroDaTela({ x: agora.left - palco.left, y: agora.top - palco.top, largura: agora.width, altura: agora.height, telaL: palco.width, telaA: palco.height });
+      salvarEstilo({ ...estiloDoPainel(), posicao: 'livre', x: pos.x, y: pos.y });
+      if (S.estiloRascunho) { S.estiloRascunho = estiloDoPainel(); S.estiloPrevia = S.estiloRascunho; renderEstiloJanela(); }
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar, { once: true });
+  });
+  $('#painel-tatico').addEventListener('dblclick', event => {
+    if (!event.target.closest('.pt-alca')) return;
+    salvarEstilo({ ...estiloDoPainel(), posicao: 'base', x: null, y: null });
+    if (S.estiloRascunho) { S.estiloRascunho = estiloDoPainel(); S.estiloPrevia = S.estiloRascunho; renderEstiloJanela(); }
+  });
 
   // ---------------- Painel Tático: o painel na base da tela (M14) ----------------
   // Como o módulo do Foundry: o retrato em pé sobre a barra (um por estado de ferimento), o HP, a armadura, a
@@ -3159,13 +3346,20 @@
     const tela = canvas.getBoundingClientRect();
     const ferramentas = $('#ferramentas').offsetParent ? $('#ferramentas').getBoundingClientRect().right - tela.left : 0;
     const barra = !celular() && $('#painel').offsetParent ? $('#painel').getBoundingClientRect().left - tela.left : canvas.clientWidth;
-    el.style.left = `${Math.round((ferramentas + barra) / 2)}px`;
-    el.style.setProperty('--pt-largura-max', `${Math.max(360, Math.floor((barra - ferramentas - 24) / (estiloDoPainel().escala / 100)))}px`);
-    // Largo a ponto de cobrir quem está na mesa (embaixo, à esquerda): sobe acima dele.
-    el.style.bottom = '';
-    const rodape = $('#rodape').getBoundingClientRect();
-    if (rodape.height && el.getBoundingClientRect().left < rodape.right + 8) el.style.bottom = `${estiloDoPainel().base + Math.round(rodape.height) + 8}px`;
-    const alto = painelRecolhido() ? 0 : Math.round(el.getBoundingClientRect().height) + estiloDoPainel().base + 8;
+    const estilo = estiloDoPainel();
+    el.style.setProperty('--pt-largura-max', `${Math.max(360, Math.floor((barra - ferramentas - 24) / (estilo.escala / 100)))}px`);
+    // Onde o jogador arrastou (dentro do mapa), ou na base, no meio da área livre.
+    if (estilo.posicao === 'livre' && estilo.x !== null && estilo.y !== null) {
+      const caixa = el.getBoundingClientRect();
+      const pos = MP.dentroDaTela({ x: estilo.x, y: estilo.y, largura: caixa.width || 400, altura: caixa.height || 120, telaL: canvas.clientWidth, telaA: canvas.clientHeight });
+      Object.assign(el.style, { left: `${pos.x}px`, top: `${pos.y}px`, bottom: 'auto' });
+    } else {
+      Object.assign(el.style, { left: `${Math.round((ferramentas + barra) / 2)}px`, top: '', bottom: '' });
+      // Largo a ponto de cobrir quem está na mesa (embaixo, à esquerda): sobe acima dele.
+      const rodape = $('#rodape').getBoundingClientRect();
+      if (rodape.height && el.getBoundingClientRect().left < rodape.right + 8) el.style.bottom = `${estilo.base + Math.round(rodape.height) + 8}px`;
+    }
+    const alto = painelRecolhido() || estilo.posicao === 'livre' ? 0 : Math.round(el.getBoundingClientRect().height) + estilo.base + 8;
     document.body.style.setProperty('--painel-alto', `${alto}px`);
   }
   window.addEventListener('resize', () => posicionarPainelTatico());
@@ -3201,12 +3395,14 @@
     if (d.token && d.token.suprimido) selos.push('<span class="pt-selo pt-selo-alerta" title="Suprimido: sai no fim do seu próximo turno.">Suprimido</span>');
     const ferramenta = (acao, titulo, icone, ativa = false) => `<button type="button" class="${ativa ? 'pt-ativa' : ''}" data-pt="${acao}" title="${esc(titulo)}" aria-label="${esc(titulo)}">${icone}</button>`;
     return `<header class="pt-topo">
+      <span class="pt-alca" title="Arraste para mover · dois cliques: de volta à base" aria-hidden="true">⋮⋮</span>
       ${mostra('identidade') ? `<button type="button" class="pt-nome" data-pt="ficha" title="Abrir a ficha">${esc(d.nome)}</button>${d.sub ? `<span class="pt-sub">${esc(d.sub)}</span>` : ''}` : ''}
       <span class="pt-estado pt-estado-${ESTADO_CSS[d.estado]}">${esc(vista.nomeDoEstado)}</span>
       ${selos.join('')}
       <span class="pt-ferramentas">
         ${d.token ? ferramenta('fixar', S.painel.fixo ? 'Soltar: o painel volta a seguir o token escolhido' : 'Fixar este personagem no painel', ICONE.alfinete, Boolean(S.painel.fixo)) : ''}
         ${d.ficha ? ferramenta('retrato', 'Retrato de cada estado', ICONE.retrato) : ''}
+        ${ferramenta('estilo', 'Estilo do painel', ICONE.paleta, Boolean(S.estiloRascunho))}
         ${ferramenta('recolher', 'Recolher (H)', '▼')}
       </span>
     </header>`;
@@ -3338,6 +3534,7 @@
     }
     if (acao === 'ficha') { if (d.token) { selecionar(d.token.id); abrirCartaoNaBarra(); } else abrirAba('fichas'); return; }
     if (acao === 'retrato' && d.ficha) { abrirRetrato(d.ficha.id); return; }
+    if (acao === 'estilo') { if (S.estiloRascunho) fecharEstilo(); else abrirEstilo(); return; }
     if (acao === 'fixar') { S.painel.fixo = S.painel.fixo ? null : d.token.id; renderPainelTatico(); return; }
     if (acao === 'painel') { S.painel.aberto = S.painel.aberto === alvo.dataset.painel ? null : alvo.dataset.painel; renderPainelTatico(); return; }
     if (acao === 'fecharPainel') { S.painel.aberto = null; renderPainelTatico(); return; }

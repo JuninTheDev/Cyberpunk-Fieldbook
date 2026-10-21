@@ -49,7 +49,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (75 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (76 testes).
 
 ## O que dá para fazer
 
@@ -78,6 +78,9 @@ Teste automático (não abre navegador): `node --test Tabletop/` (75 testes).
   - **H** recolhe e abre (o navegador lembra). O jogador começa com ele aberto; o mestre, recolhido. Aberto, o HUD junto do token some, e o chat do canto e os avisos sobem.
   - **O retrato** (o botão do painel, o botão direito no retrato, ou Fichas → **Retrato do painel**): uma imagem para cada estado (Sem ferimentos, Levemente, Gravemente e Mortalmente Ferido, Morto). O estado sem imagem usa a do estado mais leve, com o efeito automático (tinta, falha de sinal, o cinza do FLATLINE). O dono escolhe (o mestre também), e ajusta o modo (em pé ou moldura), o tamanho, o deslocamento e o espelho. O jogador envia só a imagem do retrato (PNG, JPEG ou WebP, até 8 MB).
   - **Fim do turno:** o jogador passa a vez do token dele (só na vez dele).
+  - **O estilo** (a paleta no painel): o tema (Morana, Arasaka, Militech, Netrunner, Kang Tao, Nômade, Clássico, Monocromático) ou as cores à mão, a fonte, os cantos, a opacidade, o brilho, as linhas de varredura, as animações, o compacto, o retrato (altura, lado, efeitos), o tamanho, a posição (arraste pela alça ⋮⋮; dois cliques voltam para a base), as seções e as peças, e os botões de HP. Vale para este navegador.
+    - **Compartilhar:** Copiar código gera um texto PT1:… que outro jogador cola. O código do Painel Tático do Foundry também serve.
+    - **Mestre:** Usar como padrão da mesa: quem não mudou o próprio estilo passa a ver o seu. Voltar ao padrão da mesa esquece o estilo do navegador.
   - No celular, o painel fica de fora (o HUD junto do token faz o trabalho).
 - **Celular:** a barra é a folha que sobe de baixo, pelo botão **Painel**. Ela abre pela metade, com o mapa em cima.
   - **A alça** no alto da folha: tocar troca metade e tela cheia; arrastar para cima enche, e para baixo baixa (da metade, fecha).
@@ -337,5 +340,5 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists, a biblioteca do yt-jukebox e os atores (as fichas de NPC do mestre) de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 75 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 76 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |
