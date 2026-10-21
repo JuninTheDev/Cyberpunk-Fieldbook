@@ -69,7 +69,7 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **Ao vivo:** a ficha muda na tela do dono e do mestre (evento `fichas`); a ficha da wiki confere a cada 30 segundos e mostra "Na mesa da wiki".
   - **Personagem sem Foundry:** entra na mesa direto da criação (os de teste são assim).
   - **Testado:** 8 testes e 39 mutações que caem, mais a conferência no Edge (mestre, jogadora, cartão, celular e a ficha da wiki).
-  - **Falta:** a compra pela loja (M15) e a instalação de cyberware (M16) ainda mexem só no Foundry.
+  - **Depois:** a compra pela loja (M15) e a instalação de cyberware (M16) também mexem na ficha da mesa.
 - [x] **M8 · Combate** (o Fluxo de Combate, em `mesa-combate.js` e `mesa-regras.js`):
   - **Ataque:** com a arma da ficha (STAT + perícia + 1d10, e a Sorte), contra a DV pelo alcance medido ou contra a esquiva às cegas do alvo. Tiro, só com REF 8+; corpo a corpo, sempre.
   - **Dano:** com a armadura (SP, ablação; faca e artes marciais com metade do SP), cabeça ×2 e a lesão crítica com dois 6.
@@ -149,9 +149,17 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
     - o que está só na mesa da wiki: a própria wiki, na hora de aprovar.
   - **A entrega na wiki:** confere o dinheiro (sem dinheiro, fica aprovado com o motivo, e o mestre tenta de novo). Os itens entram em `doc.jogo.compras`, com o encaixe e a munição escolhidos: a arma pedida vem carregada, e o pente sai da caixa. O dinheiro sai, com a linha no extrato.
   - **Onde aparece:** no inventário e no token da mesa (o token pega em até 4 s), na ficha da wiki (armas, armaduras, equipamento) e na loja (o dinheiro da mesa, "a wiki entrega").
-  - **Cyberware comprado:** chega sem instalar; o M16 instala.
+  - **Cyberware comprado:** chega sem instalar; o mestre instala pela mesa (M16).
   - **Testado:** 2 testes, 15 mutações que caem, os cenários economia, contas, criador e Foundry, e a conferência no Edge (a loja, a ficha e o criador).
-- [ ] **M16 · Instalar cyberware na wiki:** cobra a instalação e rola a perda de Humanidade (hoje é pela ficha do Foundry).
+- [x] **M16 · Instalar cyberware na wiki** (`personagem-jogo.js` `instalacao`, a operação `cyber.instalar`, `criador.js`):
+  - **Onde:** no painel Fichas, a ficha aberta mostra o cyberware que a loja entregou, cada um com o lugar, a perda e Instalar (com confirmação: não se desfaz).
+  - **O lugar:** o shopping (DV13, 100eb), a clínica (DV15, 500eb) ou o hospital (DV17, 1.000eb), as regras da wiki. Só a partir do mínimo que a peça pede, pelo catálogo. O chipware encaixa no soquete: sem lugar e sem preço.
+  - **Cobrar:** marcado, o preço sai do dinheiro, com a linha no extrato; sem dinheiro, a mesa recusa. Desmarcado: o Medtech do grupo instala (rola Cirurgia contra a DV na mesa) ou já foi pago.
+  - **A Humanidade:** como no Foundry, rolar (o servidor rola a rolagem do catálogo), fixa ou nenhuma. A máxima cai 2 (4 o borgware; nada a peça que não perde Humanidade), e a de agora não passa dela. EMP pela Humanidade, e o aviso de ciberpsicose em 0 ou menos.
+  - **A opção espera a base:** o Big Knucks só entra depois do cyberbraço instalado.
+  - **Depois:** a peça conta no cromo de 2077 (a conexão Smart, o braço da Burya). O registro mostra os dados, o preço e a Humanidade de agora ao mestre e ao dono. A aba Cyberware da wiki mostra o que espera e o que foi instalado (onde e quanto custou), com a Humanidade da mesa.
+  - **Fica de fora:** retirar cyberware (mesma DV, 4 horas; falhar destrói a peça) e escolher o lado da base na hora: o lado é o do pedido.
+  - **Testado:** 3 testes, 23 de 24 mutações que caem (a viva é equivalente: o chipware já não tem lugar), os cenários criador, cyberware, Foundry, contas e economia, e a conferência no Edge (o painel do mestre, o registro, a jogadora e a aba Cyberware da wiki).
 - [ ] **M17 · Veículos:** SDP, assentos e o veículo como token.
 - [ ] **M18 · NPCs do mestre:**
   - criar e editar NPC próprio, além das fichas da wiki;

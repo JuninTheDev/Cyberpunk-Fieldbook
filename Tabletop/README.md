@@ -47,7 +47,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (64 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (67 testes).
 
 ## O que dá para fazer
 
@@ -104,6 +104,11 @@ Teste automático (não abre navegador): `node --test Tabletop/` (64 testes).
   - As compras viram pedidos na Loja da wiki. Você aprova lá (Personagens → Loja), e a wiki entrega na hora: confere o dinheiro, desconta, registra no extrato e põe os itens na ficha e no token (em até 4 segundos), com a arma carregada.
   - Sem dinheiro, o pedido fica aprovado com o motivo, e você tenta de novo depois.
   - O personagem ligado ao Foundry continua recebendo pelo Foundry.
+- **Instalar cyberware** (aba Fichas → **Ficha**, em "Cyberware da loja"): o que a loja entregou chega sem instalar.
+  - Escolha onde: shopping, clínica ou hospital (a DV da cirurgia e o preço, a partir do mínimo da peça). O chipware encaixa no soquete, sem lugar.
+  - **Cobrar** tira o preço do dinheiro. Desmarque quando o Medtech do grupo instala (ele rola Cirurgia contra a DV) ou já foi pago.
+  - A perda de Humanidade: rolar (o servidor rola), fixa ou nenhuma. A máxima cai 2 (4 o borgware). A opção espera a base instalada.
+  - Instalar pede confirmação, porque não se desfaz. O registro mostra os dados a você e ao dono.
 - **Ficha de jogo** (aba Fichas → **Ficha**, em cada personagem):
   - **Os números:** a Humanidade (com o EMP), o dinheiro, os Pontos de Melhoria e a reputação.
   - **Mudar:** escolha o número, ponha quanto soma ou tira e o motivo ("pagamento do fixer", "terapia"). Vai para o extrato da ficha e para o registro, que só você e o dono do personagem veem.
@@ -259,7 +264,7 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
 - **NET** (o NET Architect), os **veículos** e os **NPCs próprios** do mestre (Fase 2).
-- **Cyberware:** a instalação, com a perda de Humanidade (M16), ainda passa pelo Foundry. O cyberware comprado na loja da campanha chega à ficha sem instalar, e na mesa o mestre ajusta a Humanidade à mão.
+- **Cyberware:** retirar ainda é à mão (a Humanidade e o dinheiro pelo ajuste da ficha). O lado da base é o que o jogador escolheu no pedido.
 - **Artes Marciais:** os movimentos especiais esperam o agarrar e a conta de quem acertou o quê no turno. O golpe de artes marciais já ignora metade do SP.
 - **Cobertura:** a mesa não conta o HP da cobertura. O que atravessa cobertura (a carga Tech, o ricochete) aparece como nota no cartão, e o mestre decide.
 - **Luz em cone e modos de visão:** a luz em cone vira círculo, e não há visão no escuro do cyberware (o mestre aumenta o alcance no cartão).
@@ -317,5 +322,5 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists e a biblioteca do yt-jukebox de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 64 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 67 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

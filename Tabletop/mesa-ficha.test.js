@@ -7,6 +7,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 const G = require('../personagem-jogo');
+const K = require('./mesa-2077');
 const { sleep, montar } = require('./teste-ajuda');
 
 const wiki = path.join(__dirname, '..');
@@ -355,4 +356,127 @@ test('loja na mesa da wiki: em jogo, a criação trava, o pedido aprovado entra 
   const noFoundry = await pedir(ana.cookie, [{ id: 'core_gear:binoculars', qtd: 1 }]);
   const aprovadoNoFoundry = await m.pedir(`/api/personagens/${id}/pedidos/${noFoundry.json.pedido.id}/aprovar`, { method: 'POST', body: {} });
   assert.equal(aprovadoNoFoundry.json.pedido.status, 'aprovado', 'espera o Foundry entregar');
+});
+
+// M16: o mestre instala pela mesa o cyberware que a loja entregou.
+const pedidoDeCyber = () => ({ id: 'c', total: 0, itens: [
+  { uid: 'pedido:c:0', id: 'core_cyberware:cyberarm', nome: 'Cyberbraço', qtd: 1, cyber: true, local: 'braco-direito' },
+  { uid: 'pedido:c:1', id: 'core_cyberware:big-knucks', nome: 'Big Knucks', qtd: 1, cyber: true, em: 'pedido:c:0', local: 'braco-direito' },
+  { uid: 'pedido:c:2', id: 'core_cyberware:plastic-covering-cyber-arm', nome: 'Cobertura plástica (cyberbraço)', qtd: 1, cyber: true, em: 'pedido:c:0', local: 'braco-direito' },
+  { uid: 'pedido:c:3', id: 'core_cyberware:artificial-shoulder-mount', nome: 'Artificial Shoulder Mount', qtd: 1, cyber: true },
+  { uid: 'pedido:c:4', id: 'core_cyberware:skill-chip', nome: 'Chip de perícia', qtd: 1, cyber: true, em: 'cw' }
+] });
+// Os dados que o servidor rolaria, na ordem; pedidos guarda o que foi pedido ("2d6").
+const dadosFixos = (...valores) => { const pedidos = []; const rolar = (quantos, faces) => { pedidos.push(`${quantos}d${faces}`); return valores.splice(0, quantos); }; return { rolar, pedidos }; };
+
+test('instalar cyberware: o lugar mínimo, a base antes da opção, o preço, a perda rolada e a Humanidade máxima', () => {
+  const doc = gravar(docDe(), G.entrega(docDe(), pedidoDeCyber(), '2026-10-21T12:00:00.000Z'), '2026-10-21T12:00:00.000Z');
+  const antes = G.ficha(doc, catalogo);
+  assert.deepEqual(antes.cyber.map(peca => [peca.id, peca.instalacao, peca.instalado]), [['pedido:c:0', 'hospital', false], ['pedido:c:1', 'clinic', false], ['pedido:c:2', 'mall', false], ['pedido:c:3', 'hospital', false], ['pedido:c:4', '', false]]);
+  assert.deepEqual(antes.humanidade, { atual: 36, max: 40 });
+  const instalar = (id, opcoes, quando = '2026-10-21T13:00:00.000Z') => G.instalacao(doc, catalogo, id, { quando, ...opcoes });
+  assert.match(instalar('pedido:c:1', { lugar: 'clinic' }).erro, /Instale antes Cyberbraço/);
+  assert.match(instalar('pedido:c:0', { lugar: 'clinic' }).erro, /só se instala no hospital \(DV17\)/);
+  assert.match(instalar('pedido:c:0', { lugar: 'casa' }).erro, /Escolha onde instalar/);
+  assert.match(instalar('pedido:c:0', { lugar: 'hospital', perda: 'metade' }).erro, /rolar, fixa ou nenhuma/);
+  assert.match(instalar('zz', { lugar: 'hospital' }).erro, /não está entre as compras/);
+
+  // O cyberbraço no hospital, cobrando: rola 2d6 (3 + 4), a máxima cai 2 e o dinheiro sai, com o extrato.
+  const dados = dadosFixos(3, 4);
+  const braco = instalar('pedido:c:0', { lugar: 'hospital', rolar: dados.rolar });
+  assert.ok(!braco.erro, braco.erro);
+  assert.deepEqual(dados.pedidos, ['2d6']);
+  assert.deepEqual([braco.perda, braco.dados, braco.custo, braco.dv, braco.onde, braco.depois], [7, [3, 4], 1000, 17, 'no hospital', { atual: 29, max: 38 }]);
+  gravar(doc, braco, '2026-10-21T13:00:00.000Z');
+  let ficha = G.ficha(doc, catalogo);
+  assert.deepEqual([ficha.humanidade, ficha.stats.EMP, ficha.dinheiro], [{ atual: 29, max: 38 }, 2, 250]);
+  assert.deepEqual(ficha.extrato.slice(-2), [
+    { quando: '2026-10-21T13:00:00.000Z', campo: 'dinheiro', antes: 1250, depois: 250, motivo: 'Instalação de Cyberbraço no hospital' },
+    { quando: '2026-10-21T13:00:00.000Z', campo: 'humanidade', antes: 36, depois: 29, motivo: 'Cyberbraço: 2d6' }
+  ]);
+  assert.deepEqual(ficha.cyber.find(peca => peca.id === 'pedido:c:0'), { ...antes.cyber[0], instalado: true, lugar: 'hospital', perda: 7 });
+  assert.match(instalar('pedido:c:0', { lugar: 'hospital' }).erro, /já está instalado/);
+  assert.ok(K.daFicha(doc, catalogo).cromo.bracoForte, 'o braço instalado conta no cromo de 2077');
+
+  // A opção, já com a base: no hospital (melhor que a clínica que ela pede), sem cobrar e com a perda fixa.
+  gravar(doc, instalar('pedido:c:1', { lugar: 'hospital', cobrar: false, perda: 'fixa' }), '2026-10-21T13:01:00.000Z');
+  ficha = G.ficha(doc, catalogo);
+  assert.deepEqual([ficha.humanidade, ficha.dinheiro], [{ atual: 26, max: 36 }, 250]);
+  // A cobertura não perde Humanidade (rolagem 0) nem baixa a máxima; o shopping cobra 100eb.
+  const cobertura = instalar('pedido:c:2', { lugar: 'mall', rolar: () => assert.fail('não rola nada') });
+  assert.deepEqual([cobertura.perda, cobertura.custo, cobertura.depois], [0, 100, { atual: 26, max: 36 }]);
+  gravar(doc, cobertura, '2026-10-21T13:02:00.000Z');
+  // O borgware: sem dinheiro para o hospital; sem cobrar e sem perder, a máxima cai 4.
+  assert.equal(instalar('pedido:c:3', { lugar: 'hospital' }).erro, 'Dinheiro insuficiente: tem 150eb, e a instalação no hospital custa 1000eb.');
+  const borg = instalar('pedido:c:3', { lugar: 'hospital', cobrar: false, perda: 'nenhuma', rolar: () => assert.fail('não rola nada') });
+  assert.deepEqual([borg.perda, borg.depois], [0, { atual: 26, max: 32 }]);
+  gravar(doc, borg, '2026-10-21T13:03:00.000Z');
+  // O chip encaixa no soquete: sem lugar, sem preço, mas perde a Humanidade.
+  const chip = instalar('pedido:c:4', { lugar: 'hospital', rolar: dadosFixos(6, 6).rolar });
+  assert.deepEqual([chip.onde, chip.dv, chip.custo, chip.perda, chip.depois], ['sem cirurgia', null, 0, 12, { atual: 14, max: 30 }]);
+  gravar(doc, chip, '2026-10-21T13:04:00.000Z');
+  ficha = G.ficha(doc, catalogo);
+  assert.deepEqual([ficha.humanidade, ficha.stats.EMP, ficha.dinheiro, ficha.cyber.every(peca => peca.instalado)], [{ atual: 14, max: 30 }, 1, 150, true]);
+  assert.equal(ficha.cyber.find(peca => peca.id === 'pedido:c:4').lugar, '');
+  // A terapia (o ajuste do mestre) não passa da máxima nova.
+  assert.equal(G.ajuste(doc, 'humanidade', { delta: 40 }).depois, 30);
+});
+
+test('instalar cyberware: a Humanidade cheia acompanha a máxima, e a ciberpsicose avisa', () => {
+  const doc = docDe();
+  doc.resultado.humanidade = { max: 40, perda: 0, atual: 40, emp: 4 };
+  gravar(doc, G.entrega(doc, pedidoDeCyber(), '2026-10-21T12:00:00.000Z'), '2026-10-21T12:00:00.000Z');
+  gravar(doc, G.instalacao(doc, catalogo, 'pedido:c:3', { lugar: 'hospital', cobrar: false, perda: 'nenhuma' }), '2026-10-21T12:01:00.000Z');
+  assert.deepEqual(G.ficha(doc, catalogo).humanidade, { atual: 36, max: 36 }, 'cheia e sem perda: a de agora cai com a máxima');
+  gravar(doc, G.ajuste(doc, 'humanidade', { valor: 3 }), '2026-10-21T12:02:00.000Z');
+  const chip = G.instalacao(doc, catalogo, 'pedido:c:4', { perda: 'fixa' });
+  assert.deepEqual([chip.depois, chip.avisos], [{ atual: -4, max: 34 }, ['Humanidade 0 ou menos: ciberpsicose. O personagem passa para o mestre.']]);
+  // Com a ficha do Foundry, quem instala é ele: a mesa não lista o cyberware.
+  doc.mesa = { recebido: '2026-10-20T00:00:00.000Z', hp: { atual: 45, max: 45 }, itens: [] };
+  assert.deepEqual(G.ficha(doc, catalogo).cyber, []);
+});
+
+test('mesa: o mestre instala o cyberware da loja pelo painel; o dono vê os dados no registro, o outro jogador não', async t => {
+  const a = await mesaComDois(t);
+  const id = a.ana.personagem.id;
+  const pedido = await a.m.pedir(`/api/personagens/${id}/pedidos`, { method: 'POST', cookie: a.ana.cookie, body: { itens: [{ id: 'core_cyberware:cyberarm', qtd: 1, local: 'braco-direito' }, { id: 'core_cyberware:big-knucks', qtd: 1, em: '@0' }] } });
+  assert.equal(pedido.status, 201, pedido.text);
+  const entregue = await a.m.pedir(`/api/personagens/${id}/pedidos/${pedido.json.pedido.id}/aprovar`, { method: 'POST', body: {} });
+  assert.equal(entregue.json.pedido.status, 'entregue', entregue.text);
+  const [braco, knucks] = entregue.json.pedido.itens.map(item => item.uid);
+  const cartao = (await a.minha(a.ana.cookie)).jogo.cyber;
+  assert.deepEqual(cartao.map(peca => [peca.nome, peca.instalado, peca.lugares.map(lugar => lugar.id)]), [['Cyberbraço', false, ['hospital']], ['Big Knucks', false, ['clinic', 'hospital']]]);
+  assert.deepEqual(cartao[1].lugares[0], { id: 'clinic', nome: 'clínica', onde: 'na clínica', dv: 15, custo: 500 });
+
+  const ouvidoAna = await a.m.ouvir(a.ana.cookie);
+  const ouvidoBruno = await a.m.ouvir(a.bruno.cookie);
+  await sleep(20);
+  assert.equal((await a.m.op('cyber.instalar', { personagem: id, item: braco, lugar: 'hospital' }, a.ana.cookie)).status, 403, 'só o mestre instala');
+  const cedo = await a.m.op('cyber.instalar', { personagem: id, item: knucks, lugar: 'clinic' });
+  assert.equal(cedo.status, 400);
+  assert.match(cedo.json.erro, /Instale antes Cyberbraço/);
+  // Depois das compras (600eb), sobram 650eb: o fixer paga o hospital.
+  assert.match((await a.m.op('cyber.instalar', { personagem: id, item: braco, lugar: 'hospital' })).json.erro, /tem 650eb, e a instalação no hospital custa 1000eb/);
+  assert.equal((await a.m.op('personagem.ajustar', { personagem: id, campo: 'dinheiro', delta: 1000, motivo: 'o fixer paga a cirurgia' })).status, 200);
+  const feito = await a.m.op('cyber.instalar', { personagem: id, item: braco, lugar: 'hospital', cobrar: true, perda: 'rolar' });
+  assert.equal(feito.status, 200, feito.text);
+  const { perda, humanidade, custo } = feito.json.resultado;
+  assert.ok(perda >= 2 && perda <= 12, `2d6: ${perda}`);
+  assert.deepEqual([humanidade, custo], [{ atual: 36 - perda, max: 38 }, 1000]);
+  const registro = await ouvidoAna.esperar(item => item.evento === 'registro' && item.data.rolagem && item.data.rolagem.tipo === 'instalacao');
+  const r = registro.data.rolagem;
+  assert.equal(r.rotulo, 'Instalou Cyberbraço no hospital (DV17)');
+  assert.equal(r.dados.length, 2);
+  assert.equal(r.total, perda);
+  assert.equal(r.conta, `Humanidade −${perda} (2d6: ${r.dados.join(' + ')}) · −1.000eb · agora ${36 - perda}/38 (EMP ${Math.floor((36 - perda) / 10)})`);
+  assert.equal(registro.data.quem, 'Ferrugem');
+  const fichas = await ouvidoAna.esperar(item => item.evento === 'fichas' && item.data.meus[0].jogo.cyber.some(peca => peca.instalado));
+  assert.deepEqual([fichas.data.meus[0].jogo.dinheiro, fichas.data.meus[0].jogo.humanidade], [650, { atual: 36 - perda, max: 38 }]);
+  await sleep(100);
+  assert.ok(!ouvidoBruno.eventos.some(item => item.evento === 'registro' && item.data.rolagem && item.data.rolagem.tipo === 'instalacao'), 'o outro jogador não vê');
+  // Na wiki: a peça instalada e a Humanidade ficam gravadas na ficha.
+  const naWiki = (await a.m.pedir(`/api/personagens/${id}`, { cookie: a.ana.cookie })).json.personagem;
+  assert.deepEqual([naWiki.jogo.humanidade, naWiki.jogo.humanidadeMax, naWiki.jogo.compras.find(linha => linha.uid === braco).instalado], [36 - perda, 38, true]);
+  assert.equal((await a.m.op('cyber.instalar', { personagem: id, item: knucks, lugar: 'clinic', cobrar: false, perda: 'fixa' })).status, 200);
+  assert.equal((await a.minha(a.ana.cookie)).jogo.humanidade.max, 36);
 });

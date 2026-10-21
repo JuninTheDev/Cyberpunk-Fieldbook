@@ -61,6 +61,11 @@
   const USO_DO_FOUNDRY = { equipped: 'equipado', carried: 'carregando', owned: 'guardado' };
   const COM_USO = new Set(['arma', 'armadura', 'item', 'roupa', 'deck']);
   const TIPO_DO_FOUNDRY = { weapon: 'arma', armor: 'armadura', ammo: 'municao', gear: 'item', drug: 'item', clothing: 'roupa', cyberdeck: 'deck' };
+  // Onde instalar cyberware (a wiki, Dano, ferimentos e cura): o shopping (mall), a clínica e o hospital, do mais
+  // simples ao mais completo. A peça pede um mínimo (o catálogo diz), e cada lugar tem a DV da cirurgia e o preço. O
+  // chipware (notApplicable) encaixa no soquete, sem cirurgia.
+  const LUGARES = ['mall', 'clinic', 'hospital'];
+  const LUGAR = { mall: { nome: 'shopping', onde: 'no shopping', dv: 13, custo: 100 }, clinic: { nome: 'clínica', onde: 'na clínica', dv: 15, custo: 500 }, hospital: { nome: 'hospital', onde: 'no hospital', dv: 17, custo: 1000 } };
   // As compras que a loja entregou na mesa da wiki (o personagem sem o Foundry): linhas como as da criação.
   const comprasDe = jogo => (Array.isArray(jogo && jogo.compras) ? jogo.compras.filter(linha => linha && linha.uid && linha.id) : []);
   // Na ordem do kindOf do criador.
@@ -181,13 +186,19 @@
     const sorteMax = (mesa && mesa.sorte && numero(mesa.sorte.max)) || stats.LUCK || 0;
     const sorteBase = mesa && mesa.sorte ? numero(mesa.sorte.atual) : sorteMax;
     // A Humanidade (sem ela na ficha, EMP × 10) e o EMP de agora, a Humanidade ÷ 10 para baixo (como o CORE do Foundry).
+    // A máxima cai com o cyberware instalado na mesa (jogo.humanidadeMax).
     const fonte = (mesa && mesa.humanidade) || criado.humanidade || (stats.EMP ? { atual: stats.EMP * 10, max: stats.EMP * 10 } : null);
-    const humanidade = fonte ? { atual: definido(jogo.humanidade) ? Number(jogo.humanidade) : numero(fonte.atual), max: numero(fonte.max) } : null;
+    const humanidade = fonte ? { atual: definido(jogo.humanidade) ? Number(jogo.humanidade) : numero(fonte.atual), max: definido(jogo.humanidadeMax) ? Number(jogo.humanidadeMax) : numero(fonte.max) } : null;
+    // O cyberware que a loja entregou na mesa da wiki: para instalar ou instalado (onde, e a perda de Humanidade).
+    const cyber = mesa ? [] : comprasDe(jogo).map(linha => ({ linha, cat: item(linha.id) })).filter(({ cat }) => cat && cat.cyber).map(({ linha, cat }) => ({
+      id: linha.uid, nome: linha.nome || cat.nome, tipo: cat.cyber.tipo || '', local: linha.local || '', instalacao: LUGARES.includes(cat.cyber.instalacao) ? cat.cyber.instalacao : ['notApplicable', 'none'].includes(cat.cyber.instalacao) ? '' : 'mall',
+      hl: numero(cat.cyber.hl), rolagem: String(cat.cyber.rolagem || '0'), borg: cat.cyber.tipo === 'borgware', instalado: Boolean(linha.instalado), lugar: linha.lugar || '', perda: numero(linha.perda)
+    }));
     if (humanidade && (!mesa || definido(jogo.humanidade))) stats.EMP = Math.max(0, Math.floor(humanidade.atual / 10));
     return {
       stats, hp: hp(doc), sp, armas, penalidade,
       sorte: { atual: definido(jogo.sorte) ? Math.max(0, Math.min(sorteMax, Number(jogo.sorte))) : sorteBase, max: sorteMax },
-      humanidade, ...valores(doc),
+      humanidade, cyber, ...valores(doc),
       // O inventário como a mesa mostra: a arma leva o pente e a munição carregada.
       itens: itens.map(({ arma, ...resto }) => (arma ? { ...resto, pente: arma.pente, municao: arma.municao } : resto)),
       extrato: Array.isArray(jogo.extrato) ? jogo.extrato.slice(-30) : [],
@@ -314,5 +325,59 @@
     return { mudancas: { compras: [...comprasDe(jogo), ...novas], dinheiro: dinheiro - total, extrato: [...(jogo.extrato || []), linha].slice(-30) }, avisos };
   }
 
-  return { hp, ficha, valores, comJogo, comHp, comUso, recarga, ajuste, entrega, jogoValido, USOS };
+  // A instalação de um cyberware que a loja entregou (o mestre, pela mesa). lugar: mall, clinic ou hospital, no mínimo
+  // o que a peça pede (o chipware não tem lugar); cobrar: o preço do lugar sai do dinheiro (sem cobrar: o Medtech do
+  // grupo, ou já pago). perda:
+  // rolar (a rolagem do catálogo), fixa (o número do catálogo) ou nenhuma, como no Foundry. A Humanidade máxima cai 2
+  // (4 o borgware; nada a peça que não perde Humanidade), e a de agora não passa dela. A opção espera a base instalada.
+  // rolar(quantos, faces): os dados (o servidor rola). Devolve { mudancas, nome, onde, custo, perda, dados, ... } ou { erro }.
+  const PERDAS = ['rolar', 'fixa', 'nenhuma'];
+  function instalacao(doc, catalogo, id, { lugar = '', cobrar = true, perda = 'rolar', rolar, quando = new Date().toISOString() } = {}) {
+    const atual = ficha(doc, catalogo);
+    const peca = atual.cyber.find(entrada => entrada.id === id);
+    if (!peca) return { erro: 'Esse cyberware não está entre as compras da ficha.' };
+    if (peca.instalado) return { erro: `${peca.nome} já está instalado.` };
+    const cirurgia = Boolean(peca.instalacao);
+    if (!cirurgia) lugar = '';
+    else if (!LUGARES.includes(lugar)) return { erro: 'Escolha onde instalar: shopping, clínica ou hospital.' };
+    const minimo = LUGAR[peca.instalacao];
+    if (cirurgia && LUGARES.indexOf(lugar) < LUGARES.indexOf(peca.instalacao)) return { erro: `${peca.nome} só se instala ${minimo.onde}${peca.instalacao === 'hospital' ? '' : ' ou melhor'} (DV${minimo.dv}).` };
+    if (!PERDAS.includes(perda)) return { erro: 'Perda de Humanidade: rolar, fixa ou nenhuma.' };
+    if (!atual.humanidade) return { erro: 'Esta ficha não tem Humanidade nem EMP.' };
+    const jogo = jogoValido(doc) || {};
+    const linhas = comprasDe(jogo);
+    const linha = linhas.find(entrada => entrada.uid === id);
+    const base = linha.em && atual.cyber.find(entrada => entrada.id === linha.em);
+    if (base && !base.instalado) return { erro: `Instale antes ${base.nome}: ${peca.nome} vai dentro dela.` };
+    const custo = cobrar && cirurgia ? LUGAR[lugar].custo : 0;
+    const dinheiro = valores(doc).dinheiro;
+    if (custo && dinheiro === null) return { erro: 'A ficha não diz quanto dinheiro o personagem tem.' };
+    if (custo > dinheiro) return { erro: `Dinheiro insuficiente: tem ${dinheiro}eb, e a instalação ${LUGAR[lugar].onde} custa ${custo}eb.` };
+    // A perda: os dados da rolagem do catálogo (1d6, 2d6, 4d6...), o número fixo ou nada.
+    const formula = String(peca.rolagem).match(/^\s*(\d{1,2})\s*d\s*(\d{1,3})\s*$/i);
+    let dados = [];
+    let total = 0;
+    if (perda === 'fixa') total = peca.hl;
+    else if (perda === 'rolar' && formula) {
+      const sorteio = rolar || ((quantos, faces) => Array.from({ length: quantos }, () => 1 + Math.floor(Math.random() * faces)));
+      dados = sorteio(Number(formula[1]), Number(formula[2])).map(Number);
+      total = dados.reduce((soma, valor) => soma + valor, 0);
+    } else if (perda === 'rolar') total = numero(peca.rolagem);
+    const antes = { ...atual.humanidade };
+    const max = antes.max - (peca.borg ? 4 : peca.hl > 0 ? 2 : 0);
+    // A de agora não passa da máxima: cheia e sem perda, acompanha a máxima (como no Foundry).
+    const depois = { atual: Math.min(max, antes.atual - total), max };
+    const onde = cirurgia ? LUGAR[lugar].onde : 'sem cirurgia';
+    const extrato = [...(jogo.extrato || [])];
+    if (custo) extrato.push({ quando, campo: 'dinheiro', antes: dinheiro, depois: dinheiro - custo, motivo: `Instalação de ${peca.nome} ${onde}`.slice(0, 200) });
+    if (depois.atual !== antes.atual) extrato.push({ quando, campo: 'humanidade', antes: antes.atual, depois: depois.atual, motivo: `${peca.nome}: ${perda === 'fixa' ? 'perda fixa' : peca.rolagem}`.slice(0, 200) });
+    const compras = linhas.map(entrada => (entrada.uid === id ? { ...entrada, instalado: true, lugar, perda: total, instaladoEm: quando } : entrada));
+    return {
+      mudancas: { compras, humanidade: depois.atual, humanidadeMax: depois.max, ...(custo ? { dinheiro: dinheiro - custo } : {}), extrato: extrato.slice(-30) },
+      nome: peca.nome, onde, dv: cirurgia ? LUGAR[lugar].dv : null, custo, modo: perda, formula: peca.rolagem, dados, perda: total, antes, depois,
+      avisos: depois.atual <= 0 ? ['Humanidade 0 ou menos: ciberpsicose. O personagem passa para o mestre.'] : []
+    };
+  }
+
+  return { hp, ficha, valores, comJogo, comHp, comUso, recarga, ajuste, entrega, instalacao, jogoValido, USOS, LUGARES, LUGAR, PERDAS };
 });

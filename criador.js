@@ -1182,6 +1182,22 @@
       else if (row.natural) out.naturais.push(piece(row));
       else if (!row.em || row.em === '-') out.soltos.push({ ...piece(row), local: '', localPlanejado: row.local });
     }
+    // O que a loja entregou na mesa da wiki (doc.jogo.compras): o que espera o mestre instalar e o que ele já instalou
+    // (na base da criação, na base comprada ou no corpo), com onde foi e quanto de Humanidade custou.
+    const game = window.characterGame;
+    const bought = (((game && game.jogoValido(doc)) || {}).compras || []).map(line => ({ ...line, item: line && catalog.get(line.id) })).filter(line => line.uid && line.item && line.item.cyber)
+      .map(line => ({ ...line, local: localSeguro(line.local, line.item.cyber.tipo) }));
+    const boughtPiece = line => ({ ...piece(line), ...(line.instalado ? { instaladoNa: (game.LUGAR[line.lugar] || {}).onde || '', perdeu: Number(line.perda) || 0 } : {}) });
+    for (const line of bought.filter(item => !item.instalado)) out.esperando.push({ ...boughtPiece(line), local: '', localPlanejado: line.local });
+    const installed = bought.filter(item => item.instalado);
+    for (const line of installed.filter(item => item.item.cyber.base)) out.bases.push({ ...boughtPiece(line), itens: [] });
+    for (const line of installed.filter(item => !item.item.cyber.base)) {
+      const base = line.em && out.bases.find(item => item.uid === line.em);
+      if (base) base.itens.push({ ...boughtPiece(line), local: base.local });
+      else if (!NEEDS_BASE.includes(line.item.cyber.tipo)) out.corpo.push(boughtPiece(line));
+      else if (line.local && isSinglePiece(line.item)) out.naturais.push(boughtPiece(line));
+      else out.outros.push(boughtPiece(line));
+    }
     return out;
   }
 
@@ -1199,7 +1215,8 @@
     const cells = [];
     if (piece.gratis) cells.push(['Humanidade', 'nenhuma (de graça)']);
     else if (c.hl !== undefined) cells.push(['Humanidade', `${c.hl}${c.rolagem && c.rolagem !== '0' ? ` (${c.rolagem})` : ''}`]);
-    if (c.instalacao) cells.push(['Instala', INSTALL_PT[c.instalacao] || c.instalacao]);
+    if (piece.perdeu !== undefined) cells.push(['Instalado', `${piece.instaladoNa ? `${piece.instaladoNa} · ` : ''}Humanidade −${piece.perdeu}`]);
+    else if (c.instalacao) cells.push(['Instala', INSTALL_PT[c.instalacao] || c.instalacao]);
     cells.push(piece.slots ? ['Slots', piece.slots] : ['Ocupa', piece.tamanho ? `${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}` : 'nenhum slot']);
     if (item && item.preco && !piece.gratis) cells.push(['Preço', eb(item.preco)]);
     return `<p class="cy-ficha-nome"><b>${esc(piece.nome)}</b>${item && item.nome !== piece.nome ? ` <small>${esc(item.nome)}</small>` : ''}</p>
@@ -1260,6 +1277,8 @@
   // o que está sem lugar. Cada peça tem um número; o slot e o nome abrem a mesma ficha (num <template>).
   function cyberScreen(doc, model) {
     const mesa = model.fonte === 'mesa';
+    // Em jogo na mesa da wiki (sem o Foundry): a Humanidade e o cyberware são os da mesa.
+    const wikiTable = !mesa && Boolean(model.jogo);
     const parts = cyberParts(doc);
     // Uma base de tipo que nenhum grupo tem (um item feito à mão no Foundry) vai, com o que tem dentro, para "Outro cyberware".
     const baseTypes = new Set(CYBER_GROUPS.filter(group => !group.corpo).map(group => group.tipo));
@@ -1353,15 +1372,17 @@
       ? `<div class="cy-holder" data-cy-holder><p class="cy-extra-titulo${warn ? ' cy-alerta' : ''}">${title}</p><ul class="cy-nomes">${pieces.map(piece => nameButton(piece, card(piece, where))).join('')}</ul>${note ? `<p class="note-status">${note}</p>` : ''}${panel}</div>` : '';
     const extras = [
       extraLine('Sem base, fora do corpo', parts.soltos, 'Sem base: fora do corpo', 'Compre a base do mesmo tipo (o + do grupo) ou tire a opção na Montagem, no passo 5 do criador.', true),
-      extraLine('Esperando o mestre instalar', parts.esperando, 'Esperando o mestre instalar', 'Chegou pela loja sem instalar: o mestre instala pela ficha do Foundry, que cobra e rola a Humanidade.'),
+      extraLine('Esperando o mestre instalar', parts.esperando, 'Esperando o mestre instalar', `Chegou pela loja sem instalar: o mestre instala pela ${wikiTable ? 'mesa da wiki (a ficha, no painel Fichas)' : 'ficha do Foundry'}, que cobra e rola a Humanidade.`),
       extraLine('Outro cyberware na ficha', parts.outros, 'Cyberware fora dos grupos')
     ].join('');
 
-    const hum = mesa ? model.humanidade : humanity(doc, model.stats);
+    const fromTable = mesa || (wikiTable && model.humanidade);
+    const hum = fromTable ? model.humanidade : humanity(doc, model.stats);
     const pct = hum.max ? Math.max(0, Math.min(100, Math.round(hum.atual / hum.max * 100))) : 0;
-    const psychosis = cyberpsychosis(mesa ? { max: hum.max, perda: hum.max - hum.atual, atual: hum.atual, emp: Math.floor(hum.atual / 10) } : hum);
+    const psychosis = cyberpsychosis(fromTable ? { max: hum.max, perda: hum.max - hum.atual, atual: hum.atual, emp: Math.floor(hum.atual / 10) } : hum);
     const source = mesa
       ? `Na mesa: o que o Foundry mandou${model.quando ? ` em ${when(model.quando)}` : ''}. O mestre instala e tira pela ficha do Foundry.`
+      : wikiTable ? `Na mesa da wiki${model.jogo.quando ? ` (mudou em ${when(model.jogo.quando)})` : ''}: a criação e o que a loja entregou. O mestre instala pela mesa, que cobra e rola a Humanidade.`
       : 'Da criação: é assim que vai para o Foundry. A base de cada opção muda na Montagem, no passo 5 do criador.';
     return `<div class="section cc-box cy-screen" data-toc="Cyberware">
       <div class="cy-top"><h3>Cyberware</h3>
@@ -1880,7 +1901,7 @@
   const moreButton = (visible, shown) => (visible.length > shown.length ? `<p class="shop-more"><button type="button" class="action cc-ghost" data-shop-mais>Mostrar mais (${shown.length} de ${visible.length})</button></p>` : '');
 
   // ---------------- O cartão do item ----------------
-  const INSTALL_PT = { mall: 'Shopping', clinic: 'Clínica', hospital: 'Hospital', none: '—' };
+  const INSTALL_PT = { mall: 'Shopping', clinic: 'Clínica', hospital: 'Hospital', notApplicable: 'Sem cirurgia', none: '—' };
   const shopTag = (text, color) => `<span class="shop-tag" style="--k2:${color}">${esc(text)}</span>`;
   function itemTags(item) {
     const tags = (item.tags || []);

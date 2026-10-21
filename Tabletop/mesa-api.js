@@ -276,7 +276,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const sheet = sheetOf(doc, ficha);
     return { id: doc.id, nome: line(doc.nome, 80) || 'Sem nome', apelido: line(doc.apelido, 80), retrato: portraitOf(doc), hp: sheet.hp, stats: sheet.stats, pericias: sheet.pericias, fonte: sheet.fonte,
       jogo: { humanidade: ficha.humanidade, dinheiro: ficha.dinheiro, ip: ficha.ip, reputacao: ficha.reputacao, sorte: ficha.sorte, sp: ficha.sp, penalidade: ficha.penalidade,
-        itens: ficha.itens.map(({ catalogo, variedade, ...item }) => item), extrato: ficha.extrato.slice(-10), mesa: Boolean(characterGame.jogoValido(doc)) } };
+        itens: ficha.itens.map(({ catalogo, variedade, ...item }) => item), extrato: ficha.extrato.slice(-10), mesa: Boolean(characterGame.jogoValido(doc)),
+        // O cyberware da loja, com os lugares em que pode ser instalado (do mínimo da peça ao hospital; nenhum: chipware).
+        cyber: ficha.cyber.map(peca => ({ ...peca, lugares: !peca.instalacao ? [] : characterGame.LUGARES.slice(characterGame.LUGARES.indexOf(peca.instalacao)).map(id => ({ id, ...characterGame.LUGAR[id] })) })) } };
   };
 
   // ---------------- Estado de cada mesa ----------------
@@ -1415,6 +1417,23 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (!Number.isInteger(qtd) || qtd < 0 || qtd > 99999) throw fail(400, 'Quantidade de 0 a 99999.');
       await writeCharacter(campaignId, doc.id, atual => (characterGame.ficha(atual, catalog()).itens.some(item => item.id === id) ? { mudancas: { itens: { [id]: { qtd } } } } : { erro: 'Esse item não está na ficha.' }));
       return { tokens: true, fichas: true };
+    } },
+    // O mestre instala o cyberware que a loja entregou: { personagem, item, lugar (mall, clinic, hospital), cobrar,
+    // perda (rolar, fixa, nenhuma) }. O servidor rola a perda de Humanidade; o registro mostra os dados ao mestre e ao dono.
+    'cyber.instalar': { mestre: true, async run({ state, viewer, body, campaignId, color }) {
+      const doc = characterArg(campaignId, viewer, body.personagem);
+      const feito = await writeCharacter(campaignId, doc.id, atual => characterGame.instalacao(atual, catalog(), String(body.item || ''), {
+        lugar: String(body.lugar || ''), cobrar: body.cobrar !== false, perda: String(body.perda || 'rolar'), rolar: pool
+      }));
+      const nome = line(doc.apelido, 40) || line(doc.nome, 40) || 'Personagem';
+      const conta = [
+        feito.modo === 'nenhuma' ? 'sem perda' : `Humanidade −${feito.perda}${feito.dados.length ? ` (${feito.formula}: ${feito.dados.join(' + ')})` : feito.modo === 'fixa' ? ' (fixa)' : ''}`,
+        feito.custo ? `−${feito.custo.toLocaleString('pt-BR')}eb` : feito.dv ? 'sem cobrar' : '',
+        `agora ${feito.depois.atual}/${feito.depois.max} (EMP ${Math.max(0, Math.floor(feito.depois.atual / 10))})`
+      ].filter(Boolean).join(' · ');
+      const rolagem = { tipo: 'instalacao', rotulo: `Instalou ${feito.nome} ${feito.onde}${feito.dv ? ` (DV${feito.dv})` : ''}`, dados: feito.dados, total: feito.perda, conta, avisos: feito.avisos };
+      const entry = addEntry(state, { tipo: 'rolagem', autor: authorOf(viewer, color), quem: nome, rolagem, para: doc.dono ? [doc.dono] : [] });
+      return { tokens: true, fichas: true, registro: entry, resultado: { perda: feito.perda, humanidade: feito.depois, custo: feito.custo } };
     } },
     // Ataque, defesa, dano, Death Save, estabilizar, recarregar: mesa-combate.js.
     ...combatFlow.operations,

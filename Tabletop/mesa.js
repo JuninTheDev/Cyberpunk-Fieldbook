@@ -2547,6 +2547,10 @@
     } else if (r.tipo === 'dados') {
       conta = `[${(r.dados || []).join(', ')}]${r.bonus ? ` ${sinal(r.bonus)}` : ''}`;
       if (r.lesao) tags.push('<span class="tag lesao">Dois 6: se for dano, lesão crítica (+5 direto no HP)</span>');
+    } else if (r.tipo === 'instalacao') {
+      // A instalação de cyberware: o total é a Humanidade perdida.
+      conta = esc(r.conta || '');
+      for (const texto of r.avisos || []) tags.push(`<span class="tag falha">${esc(texto)}</span>`);
     } else if (r.tipo === 'lesao') {
       conta = `2d6: ${(r.dados || []).join(' + ')}`;
       if (r.lesao) extra = `<div class="reg-lesao"><b>${esc(r.lesao.nome)}</b>: ${esc(r.lesao.efeito)}${r.lesao.correcao && r.lesao.correcao !== '—' ? ` Correção rápida: ${esc(r.lesao.correcao)}.` : ''} Tratamento: ${esc(r.lesao.tratamento)}.</div>`;
@@ -2772,6 +2776,26 @@
       return lista.length ? `<div class="grupo-npc">${titulo}</div><ul class="inventario">${lista.map(linha).join('')}</ul>` : '';
     }).join('')}<p class="nota">A armadura vestida dá o SP. Guardado fica fora da mesa (em casa, no carro): a arma guardada não aparece no ataque.</p>`;
   }
+  // O cyberware que a loja entregou na mesa da wiki: o mestre escolhe onde instalar (do mínimo da peça ao hospital), se
+  // cobra o lugar e como perde a Humanidade; o jogador vê o que espera e o que já está instalado.
+  const NOME_DA_PERDA = { rolar: 'Rolar', fixa: 'Fixa', nenhuma: 'Nenhuma' };
+  function htmlDoCyber(ficha) {
+    const pecas = (ficha.jogo && ficha.jogo.cyber) || [];
+    if (!pecas.length) return '';
+    const mestre = gm();
+    const linha = peca => {
+      if (peca.instalado) return `<li class="uso-equipado"><span class="info"><b>${esc(peca.nome)}</b><small>instalado${peca.lugar ? ` · ${esc((peca.lugares.find(lugar => lugar.id === peca.lugar) || {}).onde || '')}` : ''} · Humanidade −${peca.perda}</small></span></li>`;
+      const perda = peca.rolagem === '0' ? 'não perde Humanidade' : `perde ${peca.rolagem} de Humanidade (fixa ${peca.hl})`;
+      if (!mestre) return `<li><span class="info"><b>${esc(peca.nome)}</b><small>esperando o mestre instalar · ${esc(perda)}</small></span></li>`;
+      return `<li class="instalar-linha"><form class="instalar" data-instalar="${esc(peca.id)}" data-ficha="${esc(ficha.id)}" data-nome="${esc(peca.nome)}" data-rolagem="${esc(peca.rolagem)}">
+          <span class="info"><b>${esc(peca.nome)}</b><small>${esc(perda)}${peca.borg ? ' · borgware: máxima −4' : peca.hl > 0 ? ' · máxima −2' : ''}</small></span>
+          ${peca.lugares.length ? `<label class="campo">Onde <select name="lugar">${peca.lugares.map(lugar => `<option value="${esc(lugar.id)}" data-onde="${esc(lugar.onde)}" data-custo="${lugar.custo}">${esc(lugar.nome[0].toUpperCase() + lugar.nome.slice(1))} · DV${lugar.dv} · ${eb(lugar.custo)}</option>`).join('')}</select></label>` : '<p class="nota">Sem cirurgia: encaixa no soquete de chipware.</p>'}
+          <div class="campo-linha"><label class="campo">Perda <select name="perda">${Object.entries(NOME_DA_PERDA).map(([valor, nome]) => `<option value="${valor}">${nome}${valor === 'rolar' ? ` ${esc(peca.rolagem)}` : valor === 'fixa' ? ` ${peca.hl}` : ''}</option>`).join('')}</select></label>
+            ${peca.lugares.length ? '<label class="marcar" title="Cobrar do personagem o preço do lugar"><input name="cobrar" type="checkbox" checked> Cobrar</label>' : ''}<button class="botao pequeno" type="submit">Instalar</button></div></form></li>`;
+    };
+    return `<div class="grupo-npc">Cyberware da loja</div><ul class="inventario">${pecas.map(linha).join('')}</ul>
+      ${mestre && pecas.some(peca => !peca.instalado) ? '<p class="nota">Sem cobrar: quando o Medtech do grupo instala (ele rola Cirurgia contra a DV) ou já foi pago.</p>' : ''}`;
+  }
   function htmlDoExtrato(ficha) {
     const extrato = (ficha.jogo && ficha.jogo.extrato) || [];
     if (!extrato.length) return '';
@@ -2784,7 +2808,7 @@
     const caixa = $('#fichas');
     if (!S.eu) return;
     // Digitando um ajuste ou uma quantidade: não troca a ficha debaixo de quem digita (redesenha ao sair do campo).
-    if (caixa.contains(document.activeElement) && document.activeElement.matches('.ajuste input, .ajuste select, input.qtd')) { S.fichasPendentes = true; return; }
+    if (caixa.contains(document.activeElement) && document.activeElement.matches('.ajuste input, .ajuste select, input.qtd, .instalar select')) { S.fichasPendentes = true; return; }
     S.fichasPendentes = false;
     const foco = document.activeElement && caixa.contains(document.activeElement) ? document.activeElement.id : null;
     if (gm()) {
@@ -2802,7 +2826,7 @@
             return `<li><span class="avatar" ${foto}>${ficha.retrato ? '' : esc(initials(ficha.nome))}</span><span class="info"><b>${esc(ficha.nome)}</b><small>${hp} · REF ${ficha.stats.REF ?? '—'} · MOVE ${ficha.stats.MOVE ?? '—'}${naCena.has(ficha.id) ? ' · na cena' : ''}${ficha.fonte === 'mesa' && !(ficha.jogo && ficha.jogo.mesa) ? ' · ficha do Foundry' : ''}</small></span>
               <button class="botao vazado pequeno${aberta ? ' ativo' : ''}" type="button" data-abrir-ficha="${esc(ficha.id)}" aria-expanded="${aberta}">Ficha</button>
               ${naCena.has(ficha.id) ? '' : `<button class="botao pequeno" type="button" data-por-personagem="${esc(ficha.id)}"${S.cena ? '' : ' disabled'}>Pôr</button>`}</li>
-              ${aberta ? `<li class="ficha-aberta">${htmlDosNumeros(ficha)}${htmlDoAjuste(ficha)}${htmlDoInventario(ficha)}${htmlDoExtrato(ficha)}</li>` : ''}`;
+              ${aberta ? `<li class="ficha-aberta">${htmlDosNumeros(ficha)}${htmlDoAjuste(ficha)}${htmlDoInventario(ficha)}${htmlDoCyber(ficha)}${htmlDoExtrato(ficha)}</li>` : ''}`;
           }).join('')}</ul>` : '<p class="nota">Nenhum personagem nesta campanha ainda.</p>'}</div>
         <div class="bloco"><h3>Fichas de NPC</h3>
           <input id="npc-busca" class="busca" type="search" placeholder="Buscar (Tyger, netrunner, Kit…)" value="${esc(filtro)}">
@@ -2825,7 +2849,7 @@
         ${htmlDosNumeros(ficha)}
         <p class="nota">Toque numa perícia para rolar (STAT + perícia + 1d10).</p>
         <ul class="pericias">${(ficha.pericias || []).map(item => `<li><button type="button" data-pericia="${esc(item.nome)}" data-ficha="${esc(ficha.id)}"><span>${esc(item.pt)}<small>${esc(item.stat)} ${ficha.stats[item.stat] ?? 0} + ${item.nivel}</small></span><b>${item.base}</b></button></li>`).join('')}</ul>
-        <h3>Inventário</h3>${htmlDoInventario(ficha)}${htmlDoExtrato(ficha)}</div>`;
+        <h3>Inventário</h3>${htmlDoInventario(ficha)}${htmlDoCyber(ficha)}${htmlDoExtrato(ficha)}</div>`;
     }).join('');
   }
   $('#fichas').addEventListener('click', event => {
@@ -2855,6 +2879,20 @@
     }
   });
   $('#fichas').addEventListener('submit', event => {
+    const instalar = event.target.closest('form.instalar');
+    if (instalar) {
+      event.preventDefault();
+      const dados = new FormData(instalar);
+      const escolha = instalar.querySelector('[name="lugar"]');
+      const lugar = escolha ? escolha.selectedOptions[0].dataset : { onde: 'sem cirurgia', custo: 0 };
+      const perda = dados.get('perda');
+      const cobrar = dados.get('cobrar') === 'on';
+      const texto = `Instalar ${instalar.dataset.nome} ${lugar.onde}${!escolha ? '' : cobrar ? `, cobrando ${eb(lugar.custo)}` : ', sem cobrar'}, ${perda === 'nenhuma' || instalar.dataset.rolagem === '0' ? 'sem perder Humanidade' : perda === 'rolar' ? `rolando ${instalar.dataset.rolagem} de Humanidade` : 'com a perda fixa de Humanidade'}? Não dá para desfazer.`;
+      if (!confirm(texto)) return;
+      op('cyber.instalar', { personagem: instalar.dataset.ficha, item: instalar.dataset.instalar, lugar: dados.get('lugar') || '', perda, cobrar })
+        .then(() => { if (instalar.contains(document.activeElement)) document.activeElement.blur(); renderFichas(); }).catch(() => {});
+      return;
+    }
     const form = event.target.closest('form.ajuste');
     if (!form) return;
     event.preventDefault();
