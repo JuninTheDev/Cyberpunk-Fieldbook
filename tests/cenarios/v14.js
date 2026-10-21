@@ -14408,6 +14408,271 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('estados (C26; wiki, p. 168–177): caído não usa Movimento, Levantar-se custa 1 Ação nas duas fichas e conserva o MOVE; agarrado continua sem Movimento e o −2 do agarrão entra uma vez', async () => {
+      await fixar(edge, []);
+      for (const navegador of [edge, jogador]) await navegador.evaluate(`window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); }`);
+      const vistaJogador = await jogador.evaluate('canvas.scene?.id ?? null');
+      try {
+        const info = await edge.evaluate(`(async () => {
+        const S = '${S}';
+        const api = game.system.api.estados;
+        const salvo = { atores: [], vista: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, mensagens: game.messages.map(m => m.id) };
+        window.__c26Estados = salvo;
+        const atores = salvo.atores;
+        let cena;
+        try {
+          cena = await Scene.implementation.create({ name: 'C26 estados', width: 1200, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
+          salvo.cena = cena.id;
+          await cena.activate();
+          await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const linhas = [];
+          for (const tipo of ['personagem', 'capanga']) {
+            const base = await Actor.implementation.create({ name: 'C26 ' + tipo, type: tipo, ownership: { [game.users.getName('Jogador').id]: 3 }, system: { atributos: { dex: { valor: 6 }, move: { valor: 5 } } } });
+            atores.push(base.id);
+            const [token] = await cena.createEmbeddedDocuments('Token', [(await base.getTokenDocument({ actorLink: tipo === 'personagem', x: 100, y: tipo === 'personagem' ? 100 : 300 })).toObject()]);
+            const a = token.actor;
+            const move = () => a.system.atributos.move.valor;
+            const dex = () => a.partesDoAtributo('dex').reduce((soma, p) => soma + p.valor, 0);
+            const antes = { move: move(), dex: dex(), movimento: api.movimentoDe(a) };
+            await a.toggleStatusEffect('prone', { active: true });
+            await a.sheet.render({ force: true });
+            if (tipo === 'personagem') a.sheet.changeTab('combate', 'primary');
+            const raiz = () => a.sheet.element?.querySelector(tipo === 'personagem' ? '.tab.combate' : '.corpo-capanga');
+            await __esperar(() => raiz()?.querySelector('[data-action="levantar"]'));
+            const caido = { move: move(), dex: dex(), movimento: api.movimentoDe(a), texto: raiz()?.querySelector('.movimento')?.textContent.replace(/\\s+/g, ' ').trim(), botao: Boolean(raiz()?.querySelector('[data-action="levantar"]')) };
+            const mensagens = game.messages.size;
+            raiz()?.querySelector('[data-action="levantar"]')?.click();
+            await __esperar(() => !a.statuses.has('prone') && game.messages.size > mensagens);
+            await __esperar(() => raiz() && !raiz().querySelector('[data-action="levantar"]'));
+            const cartao = game.messages.contents.filter(m => m.getFlag(S, 'estado')?.acao === 'levantar').at(-1);
+            const levantado = { move: move(), caido: a.statuses.has('prone'), movimento: api.movimentoDe(a), custo: cartao?.getFlag(S, 'estado')?.acoes, texto: cartao?.content, botao: Boolean(raiz()?.querySelector('[data-action="levantar"]')) };
+            const deNovo = await api.levantar(a);
+            await a.toggleStatusEffect('cpr-fieldbook-agarrado', { active: true });
+            await a.toggleStatusEffect('prone', { active: true });
+            const antesDeLevantar = dex();
+            const aindaAgarrado = await api.levantar(a);
+            const agarrado = { antes: antesDeLevantar, depois: dex(), movimento: api.movimentoDe(a), caido: a.statuses.has('prone'), marca: a.statuses.has('cpr-fieldbook-agarrado'), custo: aindaAgarrado?.acoes };
+            await a.toggleStatusEffect('cpr-fieldbook-agarrando', { active: true });
+            const duasMarcas = dex();
+            await a.toggleStatusEffect('cpr-fieldbook-agarrado', { active: false });
+            const agarrando = { dex: dex(), movimento: api.movimentoDe(a) };
+            await a.toggleStatusEffect('prone', { active: true });
+            const x = token.x;
+            await token.update({ x: x + 100 }, { animate: false });
+            const mestreMoveu = { antes: x, depois: token.x, caido: a.statuses.has('prone') };
+            linhas.push({ tipo, antes, caido, levantado, deNovo, agarrado, duasMarcas, agarrando, mestreMoveu });
+            await a.sheet.close();
+          }
+          return { linhas, cena: cena.id };
+        } finally {
+          window.__fila = [];
+          for (const token of cena?.tokens ?? []) await token.actor?.sheet?.close();
+        }
+      })()`);
+        const doJogador = await jogador.evaluate(`(async () => {
+          await __esperar(() => game.scenes.has('${info.cena}'));
+          const cena = game.scenes.get('${info.cena}');
+          await cena.view();
+          const avisoAnterior = Object.getOwnPropertyDescriptor(ui.notifications, 'info');
+          const avisos = [];
+          ui.notifications.info = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            const linhas = [];
+            for (const token of cena.tokens) {
+              await __esperar(() => token.actor?.isOwner && token.actor.statuses.has('prone') && token.x === 200);
+              const a = token.actor, x = token.x, n = avisos.length;
+              await token.update({ x: x + 100 }, { animate: false });
+              const travado = token.x === x;
+              const levantou = await game.system.api.estados.levantar(a);
+              await token.update({ x: x + 100 }, { animate: false });
+              linhas.push({ tipo: a.type, dono: a.isOwner, travado, moveu: token.x === x + 100, caido: a.statuses.has('prone'), custo: levantou?.acoes, avisos: avisos.slice(n) });
+            }
+            return linhas;
+          } finally {
+            if (avisoAnterior) Object.defineProperty(ui.notifications, 'info', avisoAnterior); else delete ui.notifications.info;
+          }
+        })()`);
+        const ok = info.linhas.length === 2 && info.linhas.every(l => l.antes.move === 5 && l.antes.dex === 6 && l.antes.movimento.metros === 10
+        && l.caido.move === 5 && l.caido.dex === 6 && l.caido.movimento.metros === 0 && l.caido.movimento.acoesParaLevantar === 1
+        && l.caido.botao && l.caido.texto === 'AÇÃO DE MOVIMENTO 0 m'
+        && l.levantado.move === 5 && !l.levantado.caido && l.levantado.movimento.metros === 10 && l.levantado.custo === 1
+        && l.levantado.texto?.includes('levantou-se: gastou 1 Ação.') && !l.levantado.botao && l.deNovo === null
+        && l.agarrado.antes === 4 && l.agarrado.depois === 4 && l.agarrado.movimento.metros === 0 && !l.agarrado.caido && l.agarrado.marca && l.agarrado.custo === 1
+        && l.duasMarcas === 4 && l.agarrando.dex === 4 && l.agarrando.movimento.metros === 10
+        && l.mestreMoveu.antes === 100 && l.mestreMoveu.depois === 200 && l.mestreMoveu.caido)
+        && doJogador.length === 2 && doJogador.every(l => l.dono && l.travado && l.moveu && !l.caido && l.custo === 1
+          && l.avisos.length === 1 && l.avisos[0] === 'C26 ' + l.tipo + ': está caído; use Levantar-se (1 Ação) antes de mover.');
+        return [ok, JSON.stringify({ info, doJogador })];
+      } finally {
+        await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.actor?.name.startsWith('C26 ')) await app.close(); const id = ${JSON.stringify(vistaJogador)}; if (id && game.scenes.has(id)) await game.scenes.get(id).view(); return true; })()`);
+        await edge.evaluate(`(async () => {
+          const s = window.__c26Estados;
+          window.__fila = [];
+          if (!s) return true;
+          if (s.ativa && game.scenes.has(s.ativa)) await game.scenes.get(s.ativa).activate();
+          if (s.vista && game.scenes.has(s.vista)) await game.scenes.get(s.vista).view();
+          for (const token of game.scenes.get(s.cena)?.tokens ?? []) await token.actor?.sheet?.close();
+          await game.scenes.get(s.cena)?.delete();
+          for (const id of s.atores) await game.actors.get(id)?.delete();
+          const mensagens = game.messages.filter(m => !s.mensagens.includes(m.id)).map(m => m.id);
+          if (mensagens.length) await ChatMessage.implementation.deleteDocuments(mensagens);
+          delete window.__c26Estados;
+          return true;
+        })()`);
+      }
+    });
+
+    await r.passo('C26: chaves do Fluxo — resolução desligada, dano manual individual e em área, e os dados do jogador sem janela', async () => {
+      await fixar(edge, []);
+      await fixar(jogador, []);
+      for (const navegador of [edge, jogador]) await navegador.evaluate(`window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); }`);
+      const configDoJogador = await jogador.evaluate(`game.settings.get('${S}', 'rolarDireto')`);
+      const vistaJogador = await jogador.evaluate('canvas.scene?.id ?? null');
+      try {
+        const preparo = await edge.evaluate(`(async () => {
+        const chaves = ['ativo', 'rolagemManual', 'dano', 'jogadorRolaDano', 'defesaDosNpcs', 'escondeAtaque', 'resultado', 'animacoes', 'area'];
+        const salvo = { config: Object.fromEntries(chaves.map(k => [k, game.settings.get('${S}', k)])), cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, mensagens: game.messages.map(m => m.id), atores: [] };
+        window.__c26Fluxo = salvo;
+        for (const [k, v] of Object.entries({ ativo: true, rolagemManual: false, dano: 'manual', jogadorRolaDano: true, defesaDosNpcs: 'automatica', escondeAtaque: true, resultado: 'publico', animacoes: 'nao', area: false })) await game.settings.set('${S}', k, v);
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const armadura = pegar('core_armor:light-armorjack-body'); armadura.system.equipada = true;
+        const dono = game.users.getName('Jogador');
+        const p = await Actor.implementation.create({ name: 'C26 Fluxo: jogador', type: 'personagem', ownership: { [dono.id]: 3 }, system: { hp: { value: 80 }, atributos: { ref: { valor: 8 }, dex: { valor: 8 }, will: { valor: 8 }, body: { valor: 8 } }, pericias: { handgun: { nivel: 8 }, 'shoulder-arms': { nivel: 8 }, evasion: { nivel: 2 }, concentration: { nivel: 2 } } } });
+        salvo.atores.push(p.id);
+        const alvo = await Actor.implementation.create({ name: 'C26 Fluxo: alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { ref: { valor: 0 } } }, items: [armadura] });
+        salvo.atores.push(alvo.id);
+        const armar = async (id, bala) => {
+          const a = pegar(id), m = pegar(bala); a.system.pente.value = a.system.pente.max; a.system.equipada = true;
+          const itens = await p.createEmbeddedDocuments('Item', [a, m]);
+          const arma = itens.find(i => i.type === 'arma');
+          await arma.update({ 'system.carregada': itens.find(i => i.type === 'municao').id });
+          return arma.id;
+        };
+        salvo.pistola = await armar('core_weapons:heavy-pistol', 'core_ammo:heavy-pistol-basic');
+        salvo.espingarda = await armar('core_weapons:shotgun', 'core_ammo:shotgun-shell-basic');
+        const cena = await Scene.implementation.create({ name: 'C26 Fluxo', width: 1200, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
+        salvo.criada = cena.id;
+        await cena.activate();
+        await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        for (const [a, x] of [[p, 100], [alvo, 300]]) await cena.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x, y: 100, actorLink: true })).toObject()]);
+        await window.__esperar(() => canvas.tokens.placeables.length === 2);
+        salvo.jogador = p.id; salvo.alvo = alvo.id;
+        return { jogador: p.id, alvo: alvo.id, cena: cena.id, pistola: salvo.pistola };
+      })()`);
+        await jogador.evaluate(`(async () => { await window.__esperar(() => game.actors.has('${preparo.jogador}') && game.scenes.has('${preparo.cena}')); await game.scenes.get('${preparo.cena}').view(); await game.settings.set('${S}', 'rolarDireto', false); return true; })()`);
+        const manual = await edge.evaluate(`(async () => {
+          const s = window.__c26Fluxo, p = game.actors.get(s.jogador), alvo = game.actors.get(s.alvo);
+          const token = game.scenes.get(s.criada).tokens.find(t => t.actorId === alvo.id);
+          const estado = () => ({ hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp, lesoes: alvo.items.filter(i => i.type === 'lesao').length, efeitos: alvo.effects.size });
+          const antes = estado();
+          window.__fila = [[9, 10], [6, 6], [6, 6], [6, 6]];
+          const tiro = await p.items.get(s.pistola).atacar({ alvo: token });
+          const depoisDoTiro = estado(), filaTiro = window.__fila.length;
+          window.__fila = [[9, 10], [6, 6], [6, 6], [6, 6]];
+          const area = await p.items.get(s.espingarda).atacar({ alvo: token });
+          const depoisDaArea = estado(), filaArea = window.__fila.length;
+          window.__fila = [[4, 6], [4, 6], [4, 6]];
+          const danoAvulso = await p.items.get(s.pistola).rolarDano();
+          const avulso = { total: danoAvulso.total, aplicar: danoAvulso.mensagem.content.includes('data-cprf-acao="aplicarDano"'), hp: alvo.system.hp.value };
+          await game.settings.set('${S}', 'dano', 'automatico');
+          window.__fila = [[9, 10], [4, 6], [4, 6], [4, 6]];
+          const automatico = await p.items.get(s.pistola).atacar({ alvo: token });
+          return { antes, depoisDoTiro, depoisDaArea, filaTiro, filaArea, tiro: tiro.linhas[0], area: area.linhas[0], notasArea: area.notas, avulso, automatico: automatico.linhas[0], depoisDoAutomatico: estado() };
+        })()`);
+        await edge.evaluate(`game.settings.set('${S}', 'ativo', false).then(() => true)`);
+        await jogador.evaluate(`window.__esperar(() => game.settings.get('${S}', 'ativo') === false).then(() => true)`);
+        const desligado = await jogador.evaluate(`(async () => {
+          const p = game.actors.get('${preparo.jogador}'), arma = p.items.get('${preparo.pistola}');
+          const antes = { pente: arma.system.pente.value, mensagens: game.messages.size };
+          const original = Object.getOwnPropertyDescriptor(game.users, 'activeGM'), warn = ui.notifications.warn, avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          Object.defineProperty(game.users, 'activeGM', { value: null, configurable: true });
+          try {
+            window.__fila = [[9, 10]];
+            const pedido = await arma.atacar({ alvos: [] });
+            const mensagem = pedido && game.messages.get(pedido.mensagem);
+            return { total: pedido?.total, gastou: antes.pente - arma.system.pente.value, novas: game.messages.size - antes.mensagens, sussurro: mensagem?.whisper.length, avisos, pedido };
+          } finally { ui.notifications.warn = warn; if (original) Object.defineProperty(game.users, 'activeGM', original); else delete game.users.activeGM; }
+        })()`);
+        const semResolver = await edge.evaluate(`game.system.api.combate.resolver(${JSON.stringify(desligado.pedido)}).then(r => r === null)`);
+        await edge.evaluate(`game.settings.set('${S}', 'ativo', true).then(() => true)`);
+        await jogador.evaluate(`window.__esperar(() => game.settings.get('${S}', 'ativo') === true && game.settings.get('${S}', 'rolagemManual') === false).then(() => true)`);
+        // Sem a janela dos dados, a reação continua no jogador, como defesa.mjs:rolarEscolha na mesa antiga.
+        const reacoes = [];
+        for (const escolha of ['esquivar', 'concentrar']) {
+          await fixar(jogador, [[4, 10]]);
+          await edge.evaluate(`(() => {
+            const s = window.__c26Fluxo, token = game.scenes.get(s.criada).tokens.find(t => t.actorId === s.jogador);
+            window.__c26Resposta = null;
+            game.system.api.combate.pedir(game.users.getName('Jogador'), 'defesa', { alvo: token.uuid, rotulo: 'C26 Fluxo', atacante: 'C26', modo: '${escolha === 'concentrar' ? 'supressivo' : 'tiro'}', descricao: 'teste', opcoes: ['${escolha}'], padrao: '${escolha}' }).then(r => { window.__c26Resposta = r; });
+            return true;
+          })()`);
+          const clicou = await responder(jogador, escolha);
+          // Se uma mutação abrir a janela, cancele-a: o passo falha com os valores, sem esperar o prazo do socket.
+          const janela = await jogador.evaluate(`(async () => { await new Promise(r => setTimeout(r, 350)); const j = document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)'); const abriu = Boolean(j); if (j) { for (const app of foundry.applications.instances.values()) if (app.element === j) await app.close(); } return abriu; })()`);
+          const resposta = await edge.evaluate(`(async () => { await window.__esperar(() => window.__c26Resposta); return window.__c26Resposta; })()`);
+          reacoes.push({ clicou, janela, resposta });
+        }
+        await fixar(jogador, [[3, 10]]);
+        await edge.evaluate(`(() => { window.__c26Ds = null; game.system.api.combate.pedir(game.users.getName('Jogador'), 'deathSave', { ator: game.actors.get(window.__c26Fluxo.jogador).uuid }).then(r => { window.__c26Ds = r ?? { cancelado: true }; }); return true; })()`);
+        const janelaDs = await jogador.evaluate(`(async () => { await new Promise(r => setTimeout(r, 350)); const j = document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)'); const abriu = Boolean(j); if (j) { for (const app of foundry.applications.instances.values()) if (app.element === j) await app.close(); } return abriu; })()`);
+        const ds = await edge.evaluate(`(async () => { await window.__esperar(() => window.__c26Ds); return { resultado: window.__c26Ds, penalidade: game.actors.get(window.__c26Fluxo.jogador).system.deathSave.penalidade }; })()`);
+        await edge.evaluate(`game.settings.set('${S}', 'rolagemManual', true).then(() => true)`);
+        await jogador.evaluate(`window.__esperar(() => game.settings.get('${S}', 'rolagemManual') === true).then(() => true)`);
+        await fixar(jogador, [[3, 10]]);
+        await edge.evaluate(`(() => { window.__c26Ds = null; game.system.api.combate.pedir(game.users.getName('Jogador'), 'deathSave', { ator: game.actors.get(window.__c26Fluxo.jogador).uuid }).then(r => { window.__c26Ds = r ?? { cancelado: true }; }); return true; })()`);
+        const comJanelaDs = await jogador.evaluate(`(async () => {
+          const seletor = '.application.dialog.janela-rolagem:not(.minimizing)';
+          await window.__esperar(() => document.querySelector(seletor));
+          const j = document.querySelector(seletor);
+          const titulo = j?.querySelector('.window-title')?.textContent ?? '';
+          j?.querySelector('button[data-action="rolar"]')?.click();
+          return { abriu: Boolean(j), titulo };
+        })()`);
+        const dsComJanela = await edge.evaluate(`(async () => { await window.__esperar(() => window.__c26Ds); return { resultado: window.__c26Ds, penalidade: game.actors.get(window.__c26Fluxo.jogador).system.deathSave.penalidade }; })()`);
+        // Os dois filtros do dano são independentes: rolagemManual=false ou jogadorRolaDano=false deixam com o mestre.
+        const danos = [];
+        for (const [manual, danoJogador] of [[false, true], [true, false], [true, true]]) {
+          const antes = await edge.evaluate(`(async () => { await game.settings.set('${S}', 'rolagemManual', ${manual}); await game.settings.set('${S}', 'jogadorRolaDano', ${danoJogador}); const s = window.__c26Fluxo; return { hp: game.actors.get(s.alvo).system.hp.value, mensagens: game.messages.map(m => m.id) }; })()`);
+          await jogador.evaluate(`window.__esperar(() => game.settings.get('${S}', 'rolagemManual') === ${manual} && game.settings.get('${S}', 'jogadorRolaDano') === ${danoJogador}).then(() => true)`);
+          await fixar(edge, [[4, 6], [4, 6], [4, 6]]);
+          await fixar(jogador, [[9, 10], [4, 6], [4, 6], [4, 6]]);
+          const pedido = await jogador.evaluate(`(async () => { const p = game.actors.get('${preparo.jogador}'), token = game.scenes.get('${preparo.cena}').tokens.find(t => t.actorId === '${preparo.alvo}'); const r = await p.items.get('${preparo.pistola}').atacar({ alvo: token }); return { id: r?.id, total: r?.total }; })()`);
+          const janelaDano = await jogador.evaluate(`(async () => { ${manual && danoJogador ? "await window.__esperar(() => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)'));" : 'await new Promise(r => setTimeout(r, 350));'} const j = document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)'); const abriu = Boolean(j); if (j) { ${manual && danoJogador ? "j.querySelector('button[data-action=\"rolar\"]')?.click();" : 'for (const app of foundry.applications.instances.values()) if (app.element === j) await app.close();'} } return abriu; })()`);
+          const depois = await edge.evaluate(`(async () => { await window.__esperar(() => game.messages.some(m => m.getFlag('${S}', 'ataque')?.id === '${pedido.id}')); const m = game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === '${pedido.id}'); return { hp: game.actors.get(window.__c26Fluxo.alvo).system.hp.value, dano: m?.getFlag('${S}', 'ataque')?.linhas[0]?.dano, rolouNoMestre: m?.rolls.length, novosDanosDoJogador: game.messages.filter(m => !${JSON.stringify(antes.mensagens)}.includes(m.id) && m.author?.name === 'Jogador' && m.content.includes('Dano:')).length }; })()`);
+          danos.push({ manual, danoJogador, antes: antes.hp, pedido, janelaDano, depois });
+        }
+        const ok = JSON.stringify(manual.antes) === JSON.stringify(manual.depoisDoTiro) && JSON.stringify(manual.antes) === JSON.stringify(manual.depoisDaArea)
+          && manual.filaTiro === 3 && manual.filaArea === 3 && manual.tiro.resultado === 'acertou' && !manual.tiro.dano && manual.tiro.notas.includes('Role o dano pelo botão Dano da ficha.')
+          && manual.area.resultado === 'acertou' && !manual.area.dano && manual.notasArea.includes('Role o dano pelo botão Dano da ficha e aplique em quem ficou na área.')
+          && manual.avulso.total === 12 && manual.avulso.aplicar && manual.avulso.hp === manual.antes.hp
+          && manual.automatico.dano?.dano === 12 && manual.depoisDoAutomatico.hp === manual.antes.hp - 1 && manual.depoisDoAutomatico.sp === manual.antes.sp - 1
+          && desligado.total === 25 && desligado.gastou === 1 && desligado.novas === 1 && desligado.sussurro === 0 && desligado.avisos.length === 0 && semResolver
+          && reacoes.every(r => r.clicou && !r.janela && r.resposta?.defesa === 14) && !janelaDs && ds.resultado?.total === 3 && ds.resultado.passou && ds.penalidade === 1
+          && comJanelaDs.abriu && comJanelaDs.titulo.includes('Death Save') && dsComJanela.resultado?.total === 4 && dsComJanela.resultado.passou && dsComJanela.penalidade === 2
+          && danos.every(d => d.pedido.total === 25 && d.janelaDano === (d.manual && d.danoJogador) && d.depois.dano?.dano === 12 && d.depois.rolouNoMestre === (d.manual && d.danoJogador ? 0 : 1) && d.depois.novosDanosDoJogador === (d.manual && d.danoJogador ? 1 : 0) && d.depois.hp < d.antes);
+        return [ok, JSON.stringify({ manual, desligado: { ...desligado, pedido: undefined }, semResolver, reacoes, janelaDs, ds, comJanelaDs, dsComJanela, danos })];
+      } finally {
+        await jogador.evaluate(`(async () => { window.__fila = []; await game.settings.set('${S}', 'rolarDireto', ${JSON.stringify(configDoJogador)}); for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem') || app.options.classes?.includes('defesa')) await app.close(); const vista = ${JSON.stringify(vistaJogador)}; if (vista && game.scenes.has(vista)) await game.scenes.get(vista).view(); return true; })()`);
+        await edge.evaluate(`(async () => {
+          window.__fila = [];
+          const s = window.__c26Fluxo;
+          if (!s) return true;
+          for (const [k, v] of Object.entries(s.config)) await game.settings.set('${S}', k, v);
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem') || app.options.classes?.includes('defesa')) await app.close();
+          if (s.ativa && game.scenes.has(s.ativa)) await game.scenes.get(s.ativa).activate();
+          if (s.cena && game.scenes.has(s.cena)) await game.scenes.get(s.cena).view();
+          if (game.scenes.has(s.criada)) await game.scenes.get(s.criada).delete();
+          for (const id of s.atores) if (game.actors.has(id)) await game.actors.get(id).delete();
+          const mensagens = game.messages.filter(m => !s.mensagens.includes(m.id)).map(m => m.id);
+          if (mensagens.length) await ChatMessage.implementation.deleteDocuments(mensagens);
+          delete window.__c26Fluxo; delete window.__c26Resposta; delete window.__c26Ds;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

@@ -180,6 +180,24 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   Os vistos ficam separados por mundo e navegador. Campanha e crossover ficam para a próxima parte do C27; nenhuma
   regra nova de RPG foi introduzida. A guarda de atualização cobre o mesmo cliente; a API existente não oferece uma
   transação entre a ficha, os itens e o vínculo da wiki. O G4 foi acrescentado ao cenário para a sessão KouArt executar.
+- **C26, estados padrão e Ações (2026-10-20, worker da sessão KouArt):** o CORE 0.92.4 não registra
+  `statusEffects` em `modules/`; a mesa usava os símbolos padrão do Foundry. A wiki (`system-rules.js`,
+  `combat.html`, "Ações" e "Movimento", p. 168–169) define que Caído (`prone`) não usa Movimento até gastar a
+  Ação Levantar-se. O sistema informa 0 m disponíveis, conserva o atributo MOVE e anuncia 1 Ação ao levantar.
+  Pela orientação do usuário, o gancho `preMoveToken` recusa o movimento do jogador dono caído, com um recado de
+  informação para usar Levantar-se; o mestre move sempre, inclusive nos deslocamentos forçados. Não há contador novo de Ações.
+  O −2 dos dois lados do agarrão já existia; a restrição de Movimento do defensor agora também aparece na ficha.
+  A Recuperação das Artes Marciais permanece no fluxo próprio. **Dúvidas deixadas ao mestre:** a wiki não define
+  penalidade genérica de Cego, Surdo, Inconsciente, Atordoado, Paralisado ou dos outros símbolos. Não equiparamos
+  Cego a escuridão (−4) nem às lesões de olho, Medo ao Facedown contra um oponente, ou Veneno/Fogo a uma intensidade
+  fixa. As causas e durações específicas já implementadas continuam próprias de cada regra.
+- **C26, dica e comportamento de "O jogador rola os próprios dados" (2026-10-20, worker da sessão KouArt):**
+  `foundry-fluxo-de-combate/scripts/fluxo-de-combate.mjs`, no registro `rolagemManual`, diz que desligada o mestre
+  rola por eles. Porém `mestre.mjs`, `pacoteDaPergunta`/`defender`, e `turnos.mjs`, `deathSave`, continuam enviando
+  ao jogador com `janela: false`; `defesa.mjs`, `rolarEscolha`/`responderDeathSave`, rola direto nesse cliente.
+  O porte conserva os textos e esse comportamento real: mantém a reação do dono, omite a janela pessoal de dados
+  e deixa o dano com o mestre. `jogadorRolaDano` já existia e continua como filtro adicional para o dano;
+  `netJogadorRola` continua exclusiva da NET, portanto nenhuma das duas substitui a chave geral do combate.
 
 - **C19, paliativo e Death Save (2026-10-20, sessão Codex; respondida):** a wiki (`system-rules.js:215`) chama o +1
   no Death Save de permanente até tratamento, mas a correção rápida tira o efeito pelo resto do dia (`:554`). O CORE
@@ -7262,6 +7280,47 @@ revisado e integrado aqui. Com este, o C27 termina na parte do Foundry 14 (o his
   respeita os vistos (M7), os grupos desmarcados aplicados (M8), o retrato fora do token ligado (M9), sem o link direto
   (M10), o ator parado que atualiza (M11) e a importação sem o retrato (M12).
 - **Próximo:** o C26, partes 4 e 5 (os estados e as chaves do Fluxo, já feitas pelo Codex numa worktree).
+
+### Ciclo 148 (2026-10-21): o C26, partes 4 e 5: os estados e as chaves do Fluxo (sessão KouArt, com o Codex)
+
+Commit anterior: `60874315` (o ciclo 147, o C27, parte 1). O código e os testes saíram de um worker do Codex (pelo
+Alethe), revisado e integrado aqui. Com este, o C26 termina (as partes 1 a 3 são do ciclo 144).
+
+- **A referência:** os estados: o CORE 0.92.4 não registra `statusEffects` (a mesa usava os do Foundry); a wiki
+  (`system-rules.js`, "Ações" e "Movimento", p. 168–169, e "Agarrar e arremessar", p. 177): Caído não usa o Movimento até
+  gastar a Ação Levantar-se, e o agarrado não usa o Movimento. As chaves: o Fluxo de Combate da mesa
+  (`foundry-fluxo-de-combate/scripts/fluxo-de-combate.mjs`, o registro no `init`; `captura.mjs`, `lerAtaque`; `mestre.mjs`,
+  `pacoteDaPergunta`, `rolarDanoDoAtaque`, `individual` e `danoNaArea`; `turnos.mjs`, `deathSave`; `defesa.mjs`).
+- **O que muda:**
+  - **`scripts/regras-estados.mjs` (novo):** a conta da Ação de Movimento (Caído e agarrado com 0 m, sem mudar o MOVE;
+    levantar custa 1 Ação);
+  - **`scripts/estados.mjs` (novo):** o `preMoveToken` que não deixa o jogador mover o token caído (um recado; o mestre
+    move sempre) e o "Levantar-se", que tira o Caído e anuncia a Ação no chat (`game.system.api.estados`);
+  - **as fichas:** a Ação de Movimento nos vitais e o botão "Levantar-se (1 Ação)" no painel Defesa (no capanga, nos
+    vitais);
+  - **`configuracoes.mjs`:** "Resolver os ataques" (`ativo`), "O jogador rola os próprios dados" (`rolagemManual`) e
+    "Dano" (`dano`: automático ou manual), com os nomes, as dicas e os padrões do Fluxo da mesa;
+  - **`combate.mjs`:** desligada a resolução, o ataque só rola (e gasta a bala), sem pedir alvo, mestre, defesa nem dano;
+    sem a janela dos dados, a reação continua com o dono, sem a janela pessoal, e o dano fica com o mestre (o
+    `jogadorRolaDano` continua como o segundo filtro); no dano manual, só a defesa, e o dano fica com o botão da ficha.
+- **A revisão:** as dicas são as da mesa (inclusive o "o módulo" da dica do Dano); a dica de "O jogador rola os próprios
+  dados" não descreve o que o código da mesa fazia, e o sistema segue o código (a dúvida no MIGRATION_STATUS).
+- **Testes:**
+  - **G3:** `estados.test.mjs` (novo): o Movimento por estado, o custo de levantar, a composição com o agarrão, a recusa
+    sem permissão e o gancho que trava o jogador e libera o mestre; `configuracoes-fluxo.test.mjs` (novo): o registro das
+    três chaves igual ao do Fluxo da mesa (lido do arquivo dele) e as chaves que já existiam;
+  - **G4:** dois passos novos: os estados (o personagem e o capanga caídos: 0 m, o MOVE e a DEX iguais, o botão, o cartão
+    de 1 Ação; agarrado sem Movimento e o −2 uma vez; o mestre move o caído; o jogador dono não move, recebe o recado e
+    move depois de levantar) e as chaves (desligada, o ataque sem alvo nem mestre rola e gasta uma bala; o dano manual no
+    tiro e no cartucho; a esquiva, a Concentração e o Death Save sem a janela; os dois filtros do dano).
+- **Portões:** G1, 118 arquivos sem erro; G2, nenhum erro; G3, 296/296; G4 completo, 218/218, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as onze caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: ninguém caído (M1),
+  levantar por 2 Ações (M2), o gancho que não trava (M3) e o dano manual como padrão (M4). No G4: o "Levantar-se" que não
+  tira o Caído (M5), a resolução sempre ligada (M6), o dano manual trocado pelo automático no tiro (M7) e na área (M8; as
+  duas derrubam também o resto do combate), o jogador que rola o dano sem a chave (M9) e a janela sem a chave no Death
+  Save (M10) e na esquiva e na Concentração (M11).
+- **Próximo:** o C28 (a sistema-v14 no master: decisão do usuário) e a P4 (a acessibilidade das fichas, com o Codex).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

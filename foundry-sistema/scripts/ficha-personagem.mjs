@@ -8,6 +8,7 @@ import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { abrirExtrato } from './extrato.mjs';
+import { levantar, movimentoDe } from './estados.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
 import { divisaoDaPilha } from './regras-inventario.mjs';
@@ -83,6 +84,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarFacedown: FichaPersonagem.#rolarFacedown,
       rolarIniciativa: FichaPersonagem.#rolarIniciativa,
       protegerSe: FichaPersonagem.#protegerSe,
+      levantar: FichaPersonagem.#levantar,
       agarrar: FichaPersonagem.#agarrar, movimento: FichaPersonagem.#movimento,
       soltar: FichaPersonagem.#soltar,
       estrangular: FichaPersonagem.#estrangular,
@@ -352,6 +354,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       atributos: ATRIBUTOS.map(chave => ({ chave, sigla: SIGLA[chave], valor: s.atributos[chave].valor, base: fonte.atributos[chave].valor })),
       vitais: { hp: porcento(s.hp.value, s.hp.max), humanidade: porcento(s.humanidade.value, s.humanidade.max), grave: Math.ceil(s.hp.max / 2) },
       deathSavePenalidade: s.deathSave.base + s.deathSave.penalidade,
+      movimento: movimentoDe(ator),
       todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length,
       armas, armasDeCombate, armasSemVeiculo, armasEquipadas: armasDeCombate.filter(arma => arma.pronta),
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
@@ -486,6 +489,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     await this.actor.toggleStatusEffect(STATUS_COBERTURA);
     return this.render();
   }
+  static #levantar() { return levantar(this.actor); }
   // O agarrão (as maquetes do usuário; a wiki, p. 177; agarrao.mjs): "Agarrar" (o alvo marcado, T, resiste pela janela
   // de reação do dono); agarrando, "Estrangular", "Derrubar" e "Soltar"; agarrado, "Escapar" (quem agarra resiste).
   static #agarrar(evento) { return agarrar(this.actor, { perguntar: comJanela(evento) }); }

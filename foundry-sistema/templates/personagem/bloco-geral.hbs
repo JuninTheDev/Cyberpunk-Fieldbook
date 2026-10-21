@@ -31,6 +31,8 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
         </b>
       </div>
       <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}</div>
+      <div class="medida movimento"><span>AÇÃO DE MOVIMENTO</span> <b>{{movimento.metros}} m</b></div>
+      {{#if capanga}}{{#if movimento.caido}}<div class="botoes-resumo"><button type="button" class="acao" data-action="levantar" data-tooltip="Caído: não usa Movimento até levantar-se (1 Ação)">LEVANTAR-SE (1 AÇÃO)</button></div>{{/if}}{{/if}}
     </section>
   </div>
 

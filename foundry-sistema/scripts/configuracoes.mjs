@@ -5,6 +5,20 @@ export const config = chave => game.settings.get(SISTEMA, chave);
 
 export function registrarConfiguracoes() {
   const registrar = (chave, dados) => game.settings.register(SISTEMA, chave, { config: true, scope: 'world', ...dados });
+  // As chaves e os textos são os de foundry-fluxo-de-combate/scripts/fluxo-de-combate.mjs, no init.
+  registrar('ativo', {
+    name: 'Resolver os ataques', hint: 'Todo ataque com alvo marcado (pela ficha, pelo Token Action HUD ou pelo Combat HUD) pergunta a defesa ao alvo e aplica o dano. Desligado, o sistema funciona como sempre.',
+    type: Boolean, default: true
+  });
+  registrar('rolagemManual', {
+    name: 'O jogador rola os próprios dados',
+    hint: 'A esquiva, a Concentração, o dano (de quem atacou) e o Death Save abrem a janela de rolagem do sistema no computador do jogador, com modificadores e Sorte. Desligado, o mestre rola por eles sem janela.',
+    type: Boolean, default: true
+  });
+  registrar('dano', {
+    name: 'Dano', hint: 'Automático: rolado (por quem atacou, se for jogador) e aplicado na ficha do alvo, com a armadura do local, a cabeça ×2, o escudo e a ablação. Manual: o módulo só resolve a defesa; o dano fica com o botão do sistema.',
+    type: String, default: 'automatico', choices: { automatico: 'Automático', manual: 'Manual (botão do sistema)' }
+  });
   registrar('exigeRef8', { name: 'Esquivar de tiros exige REF 8+', hint: 'Regra do livro (p. 172). Desligado, todo mundo pode trocar a DV pela Evasão. No corpo a corpo, qualquer um esquiva.', type: Boolean, default: true });
   registrar('jogadorRolaDano', { name: 'Quem atacou rola o dano', hint: 'O jogador que atacou rola o dano no computador dele (os dados aparecem para ele). Desligado, ou sem resposta, o mestre rola.', type: Boolean, default: true });
   registrar('tempo', {

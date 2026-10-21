@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 148). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 149). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -261,12 +261,12 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 - [x] **C25. O Painel Tático dentro do sistema:** feito (ciclo 125, sessão KouArt, 2026-10-18; o pedido do usuário para a primeira
   sessão da Morana no Foundry 14): o HUD com o retrato por estado de ferimento, os vitais, os atributos, as armas, as
   ações, os painéis e o estilo de cada jogador, como o módulo da mesa.
-- [~] **C26. Conveniências:** em andamento (sessão KouArt, 2026-10-20): o `/red`, a DV no HUD e na régua e a iniciativa crítica com o Antigravity; os estados do CORE e as chaves do Fluxo com o Codex.
+- [x] **C26. Conveniências:** feito (sessão KouArt, ciclos 144 e 148, 2026-10-20 e 21): o `/red`, a DV no HUD e na régua e a iniciativa crítica com o Antigravity; os estados do CORE e as chaves do Fluxo com o Codex.
   - [x] o `/red` no chat (rolagem com o crítico do d10): ciclo 144;
   - [x] o DV no HUD do token e na régua: ciclo 144;
   - [x] a iniciativa crítica como configuração: ciclo 144 (o padrão desligado; pergunta ao usuário);
-  - [ ] os estados do CORE (caído, agarrado…);
-  - [ ] as chaves do Fluxo que faltam: "Resolver os ataques", "O jogador rola os próprios dados" e "Dano: manual".
+  - [x] os estados do CORE (caído, agarrado…): ciclo 148 (com o Codex; os estados sem conta na wiki ficam com o mestre);
+  - [x] as chaves do Fluxo que faltam: "Resolver os ataques", "O jogador rola os próprios dados" e "Dano: manual": ciclo 148 (com o Codex).
 
 ### Fase 6: plataforma e wiki
 
@@ -577,7 +577,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   - [x] texto e animação no token: o texto para quem vê o cartão; a animação com o Sequencer e o JB2A, e o som do
     Diwako, quando estão ativos (Ciclo 29);
   - [x] o Reflex Tuner (wiki: depois de ser atingido, +1 para se esquivar pelo resto da rodada) (Ciclo 30).
-- [ ] **Do Fluxo de Combate, as chaves que faltam** (→ C26) (opções; o comportamento padrão delas já é o do sistema):
+- [x] **Do Fluxo de Combate, as chaves que faltam** (→ C26, ciclo 148) (opções; o comportamento padrão delas já é o do sistema):
   "Resolver os ataques" (liga e desliga a automação), "O jogador rola os próprios dados" (desligada, o mestre rola a
   defesa e o Death Save; o dano já tem "Quem atacou rola o dano") e "Dano: manual".
 - [x] **Acessórios:** (→ C11, ciclos 135 e 136) o limite de slots (hoje a ficha só mostra "5 de 3"); os plugs que o Smartgun Link exige; a arma sob o cano (lança-granadas e espingarda) como

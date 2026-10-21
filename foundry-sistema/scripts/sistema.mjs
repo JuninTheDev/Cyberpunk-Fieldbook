@@ -8,6 +8,7 @@ import * as neuroport from './neuroport.mjs';
 import * as combate from './combate.mjs';
 import { levarItem, pegarDoConteiner, registrarConteiner } from './conteiner.mjs';
 import * as drogas from './drogas.mjs';
+import * as estados from './estados.mjs';
 import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
@@ -88,10 +89,11 @@ Hooks.once('init', () => {
   registrarIceRezzado();
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
   registrarConteiner();
+  estados.registrarEstados();
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
   reguaDv.registrarReguaDv();
-  game.system.api = { agarrao, artesMarciais, neuroport, combate, drogas, lesoes, macros, migracao, municoes, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
+  game.system.api = { agarrao, artesMarciais, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });

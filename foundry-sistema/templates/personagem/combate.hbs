@@ -23,6 +23,7 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
           </b>
         </div>
         <div class="medida"><span>MOVE</span><b>{{sistema.atributos.move.valor}}</b></div>
+        <div class="medida movimento"><span>AÇÃO DE MOVIMENTO</span> <b>{{movimento.metros}} m</b></div>
         <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.semPerna}} · SEM A PERNA: NÃO ESQUIVA{{/if}}</div>
       </section>
 
@@ -31,6 +32,7 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
         <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
         <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">{{facedown.valor}} + 1d10</a></b></div>
         <div class="botoes-resumo"><button type="button" class="acao {{#if emCobertura}}ligado{{/if}}" data-action="protegerSe" data-tooltip="Atrás de algo que para a bala e fora da linha de visão (a Ação de Movimento até lá; wiki, p. 182): o cartão do tiro avisa o mestre">{{#if emCobertura}}EM COBERTURA{{else}}PROTEGER-SE{{/if}}</button></div>
+        {{#if movimento.caido}}<div class="botoes-resumo"><button type="button" class="acao" data-action="levantar" data-tooltip="Caído: não usa Movimento até levantar-se (1 Ação)">LEVANTAR-SE (1 AÇÃO)</button></div>{{/if}}
         {{> "systems/cpr-fieldbook/templates/personagem/bloco-agarrao.hbs"}}
       </section>
     </aside>

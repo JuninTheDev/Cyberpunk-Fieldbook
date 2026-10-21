@@ -101,7 +101,7 @@ const TRATADORES = {
     return { aceitou: resposta === true };
   },
   deathSave: async ({ ator }, id) => {
-    const resultado = await (await fromUuid(ator)).rolarDeathSave({ perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+    const resultado = await (await fromUuid(ator)).rolarDeathSave({ perguntar: config('rolagemManual') && !config('rolarDireto'), aoAbrir: registrarJanela(id) });
     janelas.delete(id);
     return resultado && { total: resultado.total, passou: resultado.passou };
   }
@@ -230,6 +230,8 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
     ui.notifications.warn(`${atacante.name} está no Aperto de ferro: nada de ataques à distância enquanto agarrado.`);
     return null;
   }
+  // captura.mjs:lerAtaque, no Fluxo: desligado, só a rolagem da arma, sem pedir defesa nem dano.
+  const resolverAtaques = config('ativo');
   const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
   // O Black ICE e o demônio ficam na NET: a arma não os atinge (o dano neles vem dos programas e do Zap).
   const lista = marcados.filter(token => !ATORES_DA_NET.includes(token.actor.type));
@@ -249,13 +251,13 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   if (!conferirArmaVeicular(arma, modo)) return null;
   const montada = Boolean(arma.system.instaladoEm || arma.getFlag(SISTEMA, 'armaVeicular'));
   const tokenAtq = tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
-  if (!lista.length && modo !== 'supressivo') { ui.notifications.warn('Marque um alvo (tecla T sobre o token) antes de atacar.'); return null; }
-  if (modo === 'supressivo' && !tokenAtq) { ui.notifications.warn(`Ponha o token de ${atacante.name} na cena para o fogo supressivo.`); return null; }
+  if (resolverAtaques && !lista.length && modo !== 'supressivo') { ui.notifications.warn('Marque um alvo (tecla T sobre o token) antes de atacar.'); return null; }
+  if (resolverAtaques && modo === 'supressivo' && !tokenAtq) { ui.notifications.warn(`Ponha o token de ${atacante.name} na cena para o fogo supressivo.`); return null; }
   if (modo === 'supressivo' && !arma.system.supressivo) { ui.notifications.warn(`${arma.name} não faz fogo supressivo.`); return null; }
   if (modo === 'autofogo' && !arma.system.autofogo) { ui.notifications.warn(`${arma.name} não tem autofogo.`); return null; }
   // Sem mestre na mesa ninguém resolve o ataque de um jogador: avisa antes de gastar a bala e de rolar.
-  if (!game.user.isGM && !game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque precisa do mestre para resolver a defesa e o dano.'); return null; }
-  destinos ??= await perguntarDestinos(lista, modo);
+  if (resolverAtaques && !game.user.isGM && !game.users.activeGM) { ui.notifications.warn('Sem mestre na mesa: o ataque precisa do mestre para resolver a defesa e o dano.'); return null; }
+  destinos ??= resolverAtaques ? await perguntarDestinos(lista, modo) : {};
   if (destinos === null) return null;
   if (!conferirDestinos(lista, destinos, { modo, local })) return null;
   destinos = structuredClone(destinos);
@@ -308,7 +310,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const ferrolho = Boolean(perfil?.ferrolho && arma.system.aDistancia);
   if (!montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const { total, mensagem } = await testar(atacante, {
-    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
+    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: resolverAtaques && config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   if (!conferirArmaVeicular(arma, modo) || !conferirDestinos(lista, destinos, { modo, local })) return null;
@@ -323,6 +325,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
     carga, doisCanos, porTiro, ricochete, ferrolho, destinos, movimento: golpe ? movimento : null,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };
+  if (!resolverAtaques) return dados;
   if (game.user.isGM) return naFila(() => resolver(dados, game.user));
   game.socket.emit(CANAL, { tipo: 'ataque', pedido: dados, de: game.user.id });
   return dados;
@@ -366,7 +369,7 @@ function efeitoDaCarga(perfil) {
 // No cliente de quem atacou (jogador): rola o dano, com os dados aparecendo para ele, e devolve ao mestre. A janela de
 // rolagem (o modificador do mestre) abre, menos com "Rolar direto"; fechada, o mestre rola.
 async function rolarDanoDoAtacante({ arma, multiplicador, formula }, { id = null } = {}) {
-  const dano = await rolarDano(await fromUuid(arma), { falar: true, multiplicador, formula, perguntar: !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+  const dano = await rolarDano(await fromUuid(arma), { falar: true, multiplicador, formula, perguntar: config('rolagemManual') && !config('rolarDireto'), aoAbrir: registrarJanela(id) });
   if (id) janelas.delete(id);
   return dano && { total: dano.total, critico: dano.critico, bonus: dano.bonus, formula: dano.formula };
 }
@@ -411,7 +414,8 @@ export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}
   if (!precisaRolar(escolha)) return { escolha, ...comoFoi };
   // O jogador rola na janela de rolagem (menos com "Rolar direto", ou quando valeu a escolha padrão: aí rola direto),
   // ainda dentro do prazo do pedido; pelos NPCs, o mestre rola direto.
-  const perguntar = !mestre && !config('rolarDireto') && !comoFoi.fechou && !comoFoi.semResposta;
+  // mestre.mjs:pacoteDaPergunta e defesa.mjs:rolarEscolha, no Fluxo: a reação continua, sem janela de dados.
+  const perguntar = !mestre && config('rolagemManual') && !config('rolarDireto') && !comoFoi.fechou && !comoFoi.semResposta;
   const resultado = await rolarDefesa(ator, alvo.name, escolha, { perguntar, aoAbrir: registrarJanela(id) });
   if (id) janelas.delete(id);
   return resultado && { ...resultado, ...comoFoi };
@@ -518,6 +522,7 @@ async function lesoesDoAtirador(ctx) {
 
 // Defesa, acerto, dano e o cartão do resultado. Devolve o resumo (macros e o teste leem).
 export async function resolver(pedido, usuario = game.user) {
+  if (!config('ativo')) return null;
   const ctx = await contexto(pedido, usuario);
   if (!ctx) return null;
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
@@ -706,7 +711,7 @@ async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
   let dano = null;
   const jogador = !ctx.usuario.isGM && ctx.usuario.active ? ctx.usuario : null;
-  if (jogador && config('jogadorRolaDano')) {
+  if (jogador && config('rolagemManual') && config('jogadorRolaDano')) {
     const resposta = await pedir(jogador, 'dano', { arma: ctx.arma.uuid, multiplicador, formula });
     if (Number.isFinite(Number(resposta?.total))) dano = resposta;
     else ctx.notas.push(`${jogador.name} não rolou o dano a tempo: o mestre rolou.`);
@@ -884,6 +889,8 @@ async function individual(ctx) {
   const doisAlvos = ctx.perfil?.doisAlvos && ctx.modo === 'tiro' && !R.LOCAIS_MIRADOS[ctx.local] && ctx.alvos.length >= 2;
   const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
   const pegas = ctx.linhas.filter(l => atingidas.has(l));
+  // mestre.mjs:individual, no Fluxo: só a defesa; o dano fica com o botão Dano da ficha.
+  if (config('dano') === 'manual') { for (const linha of pegas) linha.notas.push('Role o dano pelo botão Dano da ficha.'); return; }
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
   if (await aplicarMunicaoDoAtaque(ctx, pegas)) return;
@@ -903,6 +910,8 @@ async function individual(ctx) {
 
 // Área (explosivo e cartucho): o dano é rolado uma vez e vale para cada um que ficou.
 async function danoNaArea(ctx, pegas, formula = null) {
+  // mestre.mjs:danoNaArea, no Fluxo: nenhum dano automático nos alvos da área.
+  if (config('dano') === 'manual') { if (pegas.length) ctx.notas.push('Role o dano pelo botão Dano da ficha e aplique em quem ficou na área.'); return; }
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
   if (!pegas.length || await aplicarMunicaoDoAtaque(ctx, pegas)) return;
