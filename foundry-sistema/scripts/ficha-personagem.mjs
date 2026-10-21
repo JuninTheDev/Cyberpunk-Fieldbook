@@ -76,6 +76,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: {
+      atualizarWiki: FichaPersonagem.#atualizarWiki,
       rolarAtributo: FichaPersonagem.#rolarAtributo,
       rolarPericia: FichaPersonagem.#rolarPericia,
       rolarRole: FichaPersonagem.#rolarRole,
@@ -334,6 +335,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     } : null;
 
     return Object.assign(contexto, {
+      podeAtualizarWiki: game.user.isGM && Boolean(ator.getFlag(SISTEMA, 'wiki')) && !ator.isToken,
       ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
       // A Sorte usada na sessão (as maquetes do usuário, "Luck used"): o máximo menos a que resta.
       sorteUsada: Math.max(0, s.sorte.max - s.sorte.value),
@@ -411,6 +413,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       ],
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
+  }
+
+  static async #atualizarWiki() {
+    try { return await game.system.api.wiki.atualizarDaWiki(this.actor); }
+    catch (erro) { ui.notifications.warn(erro.message); return null; }
   }
 
   // Uma Role da ficha (chave: "role", a principal, ou "roleSecundaria"): a do RED da wiki, as rolagens da habilidade, as

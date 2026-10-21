@@ -167,6 +167,19 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   `estadoFoundry` da wiki. A confirmação do vínculo novo é obrigatória antes de apagar a transferência; falhando,
   o ator incompleto é removido e o snapshot permanece para tentar de novo. O retrato conserva o caminho do ator
   antigo; copiar o arquivo para o mundo novo depende da parte do retrato do C27.
+- **C27, atualização, retrato e avisos (2026-10-20, worker da sessão KouArt):** referências: `foundry-2077/scripts/wiki.mjs`,
+  `atualizarDaWiki`, `applySkills`, `planRoles`, `pendingAssembly`, `copyPortrait`, `applyPortrait` e `avisosDaWiki`;
+  `api-personagens.js`, `summary`, `foundryState` e as rotas `foundry`, `enviar` e `retrato`.
+  A atualização do 14 mantém qualquer grupo desmarcado pendente; no módulo antigo, só as Roles e a montagem do cyberware
+  tinham essa guarda explícita. Os STATs são comparados com a fonte do ator, sem os efeitos temporários preparados.
+  Como as Roles são campos, só as marcadas pelo importador podem ser retiradas; uma Role manual que excederia os dois
+  espaços bloqueia o grupo e pede ajuste pela ficha. A montagem encaixa itens soltos e carrega armas sem munição escolhida;
+  não move peças já encaixadas nem reinstala cyberware retirado durante o jogo (a instalação fica com a ficha).
+  Retrato retirado na wiki conserva a imagem da mesa, como no módulo antigo. Os avisos usam os hashes de envio e do
+  vínculo `foundry14`: o `estadoFoundry` da API pode descrever o vínculo do 12; sem hash legado, vale a versão do envio.
+  Os vistos ficam separados por mundo e navegador. Campanha e crossover ficam para a próxima parte do C27; nenhuma
+  regra nova de RPG foi introduzida. A guarda de atualização cobre o mesmo cliente; a API existente não oferece uma
+  transação entre a ficha, os itens e o vínculo da wiki. O G4 foi acrescentado ao cenário para a sessão KouArt executar.
 
 - **C19, paliativo e Death Save (2026-10-20, sessão Codex; respondida):** a wiki (`system-rules.js:215`) chama o +1
   no Death Save de permanente até tratamento, mas a correção rápida tira o efeito pelo resto do dia (`:554`). O CORE
@@ -7203,6 +7216,52 @@ aqui.
   com os donos antigos (M5). No G4: os pedidos sem o filtro (M6), o ator que não fica parado (M7), a ficha do ator parado
   que continua indo (M8), a cópia que fica na falha do vínculo (M9) e o personagem de outra campanha que entra (M10).
 - **Próximo:** o C27, parte 1 (o "Atualizar da wiki", o retrato e os avisos), e o C26, partes 4 e 5.
+
+### Ciclo 147 (2026-10-21): o C27, parte 1: o "Atualizar da wiki", o retrato e os avisos de envio (sessão KouArt, com o Codex)
+
+Commit anterior: `df7088dc` (o ciclo 146, o C27, parte 2). O código e os testes saíram de um worker do Codex (pelo Alethe),
+revisado e integrado aqui. Com este, o C27 termina na parte do Foundry 14 (o histórico do ledger pede mudar o cpr-2077).
+
+- **A referência:** o cpr-2077 da mesa (`foundry-2077/scripts/wiki.mjs`): o `atualizarDaWiki` (com o `applySkills`, o
+  `planRoles` e o `pendingAssembly`), o retrato (`portraitOf`, `copyPortrait` e `applyPortrait`) e os avisos (`wikiAvisos`,
+  `sendKey` e `avisosDaWiki`); a API da wiki (`api-personagens.js`: o `summary`, o `foundryState` e as rotas `foundry`,
+  `enviar` e `retrato`, só lidas).
+- **O que muda:**
+  - **`scripts/wiki-atualizacao.mjs` (novo):** o plano da revisão por grupos (os STATs pela fonte do ator, as perícias, as
+    Roles, os itens novos, o Lifepath, a moradia), sem os recursos de jogo (HP, Humanidade, dinheiro, Sorte) e sem repor
+    o que foi gasto (o histórico dos UIDs entregues);
+  - **`scripts/wiki-retrato.mjs` (novo):** a imagem da wiki copiada para a pasta do mundo, na ficha, no protótipo e nos
+    tokens ligados; o link HTTPS de imagem como reserva; tirar o retrato na wiki conserva a imagem da mesa;
+  - **`scripts/wiki-avisos.mjs` (novo):** o aviso do envio e dos pedidos, uma vez por envio em cada mundo e navegador, pelo
+    vínculo do Foundry 14; a consulta manual;
+  - **`wiki.mjs`:** o `atualizarDaWiki` (a revisão, os grupos marcados, a guarda contra a ficha que mudou no meio); o
+    retrato e o histórico dos entregues na importação e na da mesa;
+  - **a janela "Personagens da wiki" e o topo da ficha:** o botão "Atualizar da wiki", o "Avisos de envio" e a situação do
+    personagem enviado.
+- **A integração com o ciclo 146:** o cherry-pick juntou a campanha (no corpo do vínculo, na lista e no retorno da janela)
+  com o retrato e os entregues. O "Atualizar da wiki" ganhou as guardas da campanha: o ator parado (o que foi para outra
+  campanha) e o personagem de outra campanha recusam a atualização; e o vínculo que ela grava leva a campanha do mundo,
+  como a importação (sem ela, a wiki gravaria o vínculo na campanha nova e apagaria o estado do crossover).
+- **A revisão:** o passo do G4 do retrato chamava o `fetch` guardado sem a `window` (o Edge recusa: "Illegal invocation");
+  e o passo antigo da janela "Personagens da wiki" passou a esperar os dois pedidos que ele cria, porque os avisos novos
+  podem ter aberto a janela antes, com a lista antiga (o passo registra isso no `jaAberta`; nesta rodada, aberta).
+- **Testes:**
+  - **G3:** `wiki-atualizacao.test.mjs`, `wiki-avisos.test.mjs` e `wiki-retrato.test.mjs` (novos): o plano de cada
+    grupo, as Roles manuais, os itens gastos, o estado do envio pelo vínculo do 14, os vistos e o retrato (a fonte, a
+    troca, o cookie só na wiki, os tipos de imagem, o link direto);
+  - **G4:** três passos novos: o "Atualizar da wiki" (cancelar, aplicar só os STATs, concluir; os recursos e o item gasto
+    ficam); o retrato (a cópia, a troca no token ligado, a retirada, a reserva, o HTML recusado); os avisos (desligados,
+    manual, uma vez por envio, o vínculo do 12); e o passo do crossover do ciclo 146 confere a recusa do ator parado, sem
+    gravar o vínculo.
+- **Portões:** G1, 114 arquivos sem erro; G2, nenhum erro; G3, 287/287; G4 completo, 216/216, com a checagem dos dois
+  navegadores sem avisos ou erros de JS. A primeira rodada (de fundo) o Claude Code parou por falta de memória; a segunda
+  deu 214/216 (os dois passos da revisão, acima); a terceira passou inteira.
+- **Mutações:** as doze caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: os STATs preparados no
+  lugar da fonte (M1), a Role manual tratada como importada (M2), sem o histórico dos entregues (M3), o aviso pelo vínculo
+  do 12 (M4), os vistos que não contam (M5) e o retrato tirado na wiki como troca (M6). No G4: a consulta manual que
+  respeita os vistos (M7), os grupos desmarcados aplicados (M8), o retrato fora do token ligado (M9), sem o link direto
+  (M10), o ator parado que atualiza (M11) e a importação sem o retrato (M12).
+- **Próximo:** o C26, partes 4 e 5 (os estados e as chaves do Fluxo, já feitas pelo Codex numa worktree).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

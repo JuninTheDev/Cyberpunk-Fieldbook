@@ -343,6 +343,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O aviso intermitente dos pedidos da loja** (ciclo 145): a entrega dos pedidos da wiki roda sozinha a cada minuto, e
   pode cair junto com a do passo "pedidos da loja" (o pedido caro demais, sem dinheiro): o aviso dela sai depois que o
   passo devolveu o `warn`, e a checagem final falha. Numa rodada, rode de novo antes de procurar a causa no ciclo.
+- **A janela aberta pelos avisos** (ciclo 147): os avisos de envio (`wikiAvisos`, ligados por padrão) abrem sozinhos a
+  janela "Personagens da wiki", a cada minuto, quando há envio ou pedido novo. Um passo que abre a janela pode achá-la já
+  aberta, com a lista de antes: espere o elemento que vai clicar (o pedido criado no passo), não uma linha que já existia.
+  E o `window.fetch` guardado para devolver no fim se chama com `.call(window, ...)`: solto, o Edge recusa ("Illegal
+  invocation").
 
 ## Build
 

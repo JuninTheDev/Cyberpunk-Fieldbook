@@ -7,6 +7,9 @@
 // - O vínculo deste Foundry: a importação, a ficha da mesa e o ator apagado vão para a wiki com geracao: 14 (o vínculo do
 //   Foundry 14, ao lado do vínculo do 12, que o módulo cpr-2077 grava). Um não derruba o outro.
 import { ehArmaMontadaEmItem } from './armas-cyberware.mjs';
+import { planejarAtualizacao } from './wiki-atualizacao.mjs';
+import { aplicarRetrato, retratoMudou } from './wiki-retrato.mjs';
+export { avisosDaWiki } from './wiki-avisos.mjs';
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
@@ -311,7 +314,7 @@ export async function importarPersonagem(id, donoId = '') {
       notas: notasHtml
     },
     items: [...itensDaWiki(catalogo, r.itens || [], notas), ...veiculos.itens],
-    flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString() } } }
+    flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), roles: [principal, segunda].filter(Boolean).map(role => role.nome) } } }
   });
   // Primeiro os acessórios (um carregador muda o tamanho do pente), depois a munição.
   await instalarNoLugar(ator, [...(r.itens || []), ...veiculos.lugares]);
@@ -321,12 +324,164 @@ export async function importarPersonagem(id, donoId = '') {
   if (deVeiculo.length) await ator.updateEmbeddedDocuments('Item', deVeiculo.map(item => ({ _id: item.id, 'system.sdp.value': item.system.sdp.max })));
 
   // A wiki passa a mostrar o personagem como "no Foundry".
-  // Entregues: só o que entrou na ficha. O que virou aviso fica de fora, para uma atualização futura poder trazê-lo.
-  const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
+  // Entregues: o histórico e o que entrou na ficha. O que virou aviso fica de fora, para uma atualização futura trazê-lo.
+  const retrato = await aplicarRetrato(ator, doc, wikiUrl());
+  notas.push(...retrato.notas);
+  const anteriores = doc.foundry14?.entregues ?? doc.foundry12?.entregues ?? doc.foundry?.entregues ?? [];
+  const entregues = [...new Set([...anteriores, ...ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean)])];
+  await ator.setFlag(SISTEMA, 'wiki', { ...ator.getFlag(SISTEMA, 'wiki'), entregues, ...(retrato.aplicado ? { retrato: retrato.aplicado } : {}) });
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO, ...(campanha?.id ? { campanha: campanha.id } : {}) } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
 }
+
+// ---------------- Atualizar da wiki ----------------
+// foundry-2077/scripts/wiki.mjs, atualizarDaWiki e pendingAssembly: revisão por grupo, sem repor itens gastos,
+// dinheiro ou recursos de jogo. A montagem só encaixa o que está solto e carrega uma arma ainda sem munição escolhida.
+const atualizando = new Set();
+const uidsDoAtor = ator => ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean);
+
+function planoDaWiki(ator, doc) {
+  const notas = [];
+  const pericias = Object.fromEntries((doc.resultado.pericias || []).flatMap(p => {
+    const par = periciaDaWiki(p);
+    if (!par) notas.push(`Perícia ${p.nome} não existe neste sistema.`);
+    return par ? [par] : [];
+  }));
+  const plano = planejarAtualizacao({ sistema: ator.toObject().system, atributosBase: ator._source.system.atributos, vinculo: ator.getFlag(SISTEMA, 'wiki'), itens: ator.items.map(item => ({ uid: item.getFlag(SISTEMA, 'wikiUid') })) }, doc, {
+    pericias, roles: rolesDoResultado(doc.resultado, notas), lifepath: lifepathDaWiki(doc.resultado.lifepath), moradia: moradiaDaWiki(doc.resultado.moradia)
+  });
+  plano.notas.push(...notas);
+  if (retratoMudou(doc, ator.getFlag(SISTEMA, 'wiki')?.retrato)) plano.grupos.push({ chave: 'retrato', titulo: 'Retrato', linhas: ['Imagem da ficha e do token'] });
+  const montagem = montagemDaAtualizacao(ator, doc.resultado.itens || []);
+  if (montagem.linhas.length) plano.grupos.push({ chave: 'montagem', titulo: 'Montagem (encaixar e carregar)', linhas: montagem.linhas });
+  return plano;
+}
+
+function montagemDaAtualizacao(ator, entradas) {
+  const mudancas = [], carregar = [], linhas = [];
+  for (const entrada of entradas) {
+    const pais = entrada.em ? porUid(ator, entrada.em).filter(recebe) : [];
+    for (const item of porUid(ator, entrada.uid)) {
+      if (pais.length === 1 && entraEm(pais[0], item) && !item.system.instaladoEm) {
+        mudancas.push({ _id: item.id, 'system.instaladoEm': pais[0].id });
+        linhas.push(`${item.name} → ${pais[0].name}`);
+      }
+      const balas = entrada.municao ? porUid(ator, entrada.municao).filter(i => i.type === 'municao' && i.system.quantidade > 0) : [];
+      if (item.type === 'arma' && item.system.pente.max && !item.system.carregada && balas.length === 1) {
+        carregar.push({ item, municao: balas[0] });
+        linhas.push(`${item.name}: carregar com ${balas[0].name}`);
+      }
+    }
+  }
+  return { mudancas, carregar, linhas };
+}
+
+export async function atualizarDaWiki(ator) {
+  if (!game.user.isGM) throw new Error('Só o mestre atualiza personagens da wiki.');
+  const vinculo = ator?.getFlag(SISTEMA, 'wiki');
+  if (!vinculo?.id || ator.isToken || ator.type !== 'personagem' || game.actors.get(ator.id) !== ator) throw new Error('Este ator não veio da wiki neste mundo.');
+  // O ator que foi para outra campanha (o C27, parte 2) fica parado: a ficha agora é do mundo da campanha nova.
+  if (ator.getFlag(SISTEMA, 'saiu')) throw new Error('Este ator foi para outra campanha da wiki: atualize no mundo dela.');
+  if (atualizando.has(ator.id)) throw new Error('Já há uma atualização da wiki em andamento neste personagem.');
+  atualizando.add(ator.id);
+  try {
+    const { personagem: doc } = await wikiFetch(`/api/personagens/${vinculo.id}`);
+    if (!doc.resultado) throw new Error('Este personagem ainda não tem ficha pronta na wiki.');
+    const campanha = await campanhaDoMundo();
+    conferirCampanha(doc, campanha);
+    if (doc.foundry14?.ator && doc.foundry14.ator !== ator.id) throw new Error('Este é um ator antigo: atualize o ator ligado à wiki.');
+    // O histórico da wiki cobre também atores importados antes da marca local de entregues.
+    const entregues = [...new Set([...(vinculo.entregues || []), ...(doc.foundry14?.entregues || []), ...uidsDoAtor(ator)])];
+    const recibos = () => [...new Set([...entregues, ...(ator.getFlag(SISTEMA, 'wiki')?.entregues || []), ...uidsDoAtor(ator)])];
+    const comHistorico = { ...doc };
+    const planejar = () => {
+      const plano = planoDaWiki(ator, comHistorico);
+      plano.novosItens = plano.novosItens.filter(item => !recibos().includes(item.uid));
+      const grupo = plano.grupos.find(g => g.chave === 'itens');
+      if (grupo) {
+        grupo.linhas = plano.novosItens.map(item => `${item.nome || item.id}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`);
+        if (!grupo.linhas.length) plano.grupos = plano.grupos.filter(g => g !== grupo);
+      }
+      return plano;
+    };
+    const plano = planejar();
+    let escolhidos = [];
+    if (plano.grupos.length) {
+      const esc = foundry.utils.escapeHTML;
+      const conteudo = plano.grupos.map(g => `<fieldset><label><input type="checkbox" name="${g.chave}" ${g.bloqueado ? 'disabled' : 'checked'}> ${esc(g.titulo)}</label><ul>${g.linhas.map(l => `<li>${esc(l)}</li>`).join('')}</ul></fieldset>`).join('');
+      escolhidos = await foundry.applications.api.DialogV2.prompt({
+        window: { title: `Atualizar ${ator.name} da wiki` }, classes: [SISTEMA, 'atualizar-wiki'], rejectClose: false,
+        content: `${conteudo}<p>Itens gastos ou perdidos e os recursos da mesa continuam como estão. Grupos desmarcados continuam pendentes.</p>`,
+        ok: { label: 'Aplicar', callback: (evento, botao) => [...botao.form.querySelectorAll('input:checked:not(:disabled)')].map(input => input.name) }
+      });
+      if (!Array.isArray(escolhidos)) return null;
+    }
+    const { personagem: agora } = await wikiFetch(`/api/personagens/${vinculo.id}`);
+    if (!game.user.isGM || game.actors.get(ator.id) !== ator || ator.getFlag(SISTEMA, 'wiki')?.id !== vinculo.id) throw new Error('O ator ou a permissão mudou: abra a atualização de novo.');
+    if (agora.versao !== doc.versao || JSON.stringify(agora.resultado) !== JSON.stringify(doc.resultado) || agora.retrato !== doc.retrato || agora.retratoLink !== doc.retratoLink || agora.foundry14?.ator !== doc.foundry14?.ator) throw new Error('O personagem mudou na wiki: abra a atualização de novo.');
+    if (JSON.stringify(planejar()) !== JSON.stringify(plano)) throw new Error('A ficha mudou durante a revisão: abra a atualização de novo.');
+    const notas = [...plano.notas];
+    for (const grupo of plano.grupos.filter(g => escolhidos.includes(g.chave) && Object.keys(g.atualizacao || {}).length && !g.bloqueado)) {
+      const mudancas = { ...grupo.atualizacao };
+      // As habilidades da Role são um TypedObjectField: substituir também retira as que saíram na wiki.
+      for (const chave of ['system.role', 'system.roleSecundaria']) if (mudancas[chave]) {
+        for (const [campo, valor] of Object.entries(mudancas[chave])) mudancas[`${chave}.${campo}`] = valor;
+        delete mudancas[chave];
+      }
+      for (const chave of Object.keys(mudancas).filter(c => c.endsWith('.habilidades'))) mudancas[chave] = foundry.data.operators.ForcedReplacement.create(mudancas[chave]);
+      await ator.update(mudancas);
+    }
+    if (escolhidos.includes('roles') && !planoDaWiki(ator, doc).grupos.some(g => g.chave === 'roles')) {
+      await ator.setFlag(SISTEMA, 'wiki', { ...ator.getFlag(SISTEMA, 'wiki'), roles: plano.rolesVinculadas });
+    }
+    if (escolhidos.includes('itens')) {
+      const catalogo = await carregarCatalogo();
+      const entradas = plano.novosItens.filter(item => !uidsDoAtor(ator).includes(item.uid));
+      const dados = itensDaWiki(catalogo, entradas, notas);
+      for (const data of dados) data._id = foundry.utils.randomID();
+      if (dados.length) await ator.createEmbeddedDocuments('Item', dados, { keepId: true });
+      if (dados.some(data => !ator.items.get(data._id))) notas.push('O Foundry não confirmou todos os itens novos: confira a ficha antes de concluir a atualização.');
+      // Grave só os UIDs que realmente ficaram no ator; criação recusada não consome a entrega.
+      entregues.push(...uidsDoAtor(ator));
+      await ator.setFlag(SISTEMA, 'wiki', { ...ator.getFlag(SISTEMA, 'wiki'), entregues: recibos() });
+      await instalarNoLugar(ator, entradas);
+      await carregarArmas(ator, entradas);
+    }
+    if (escolhidos.includes('montagem')) {
+      const montagem = montagemDaAtualizacao(ator, doc.resultado.itens || []);
+      if (montagem.mudancas.length) await ator.updateEmbeddedDocuments('Item', montagem.mudancas, { montagemDaWiki: true });
+      for (const { item, municao } of montagem.carregar) {
+        await item.update({ 'system.carregada': municao.id });
+        await item.recarregar();
+      }
+    }
+    if (escolhidos.includes('retrato')) {
+      const retrato = await aplicarRetrato(ator, doc, wikiUrl());
+      notas.push(...retrato.notas);
+      if (retrato.aplicado) await ator.setFlag(SISTEMA, 'wiki', { ...ator.getFlag(SISTEMA, 'wiki'), retrato: retrato.aplicado });
+    }
+    await ator.setFlag(SISTEMA, 'wiki', { ...ator.getFlag(SISTEMA, 'wiki'), entregues: recibos() });
+    let pendente = planejar().grupos.length > 0 || notas.length > 0;
+    if (!pendente) {
+      const { personagem: depois } = await wikiFetch(`/api/personagens/${doc.id}`);
+      if (depois.versao !== doc.versao || depois.retrato !== doc.retrato || depois.retratoLink !== doc.retratoLink || depois.foundry14?.ator !== doc.foundry14?.ator) {
+        pendente = true;
+        notas.push('A wiki mudou durante a aplicação: revise de novo antes de marcar a sincronização.');
+      }
+    }
+    if (!pendente) {
+      await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues: recibos(), geracao: GERACAO, ...(campanha?.id ? { campanha: campanha.id } : {}) } });
+      await ator.setFlag(SISTEMA, 'wiki', { ...ator.getFlag(SISTEMA, 'wiki'), versao: doc.versao });
+    }
+    if (pendente) notas.push('Há grupos ou avisos pendentes: a wiki continua esperando a atualização.');
+    ui.notifications.info(`${ator.name}: ${pendente ? 'atualização parcial da wiki' : 'atualizado da wiki'}.`);
+    return { ator, notas, pendente };
+  } finally {
+    atualizando.delete(ator.id);
+  }
+}
+
 
 // ---------------- Na mesa: a ficha volta para a wiki ----------------
 // O formato é o do módulo cpr-2077 no Foundry 12 (os tipos e os usos do CORE, as perícias pelo nome em inglês), para a
@@ -624,20 +779,21 @@ export async function importarDaMesa(id, donoId = '') {
 
   const ownership = { default: 0, ...(donoId ? { [donoId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } : {}) };
   const origem = `ator ${foundry.utils.escapeHTML(String(m.ator || '?'))}, ${m.quando ? new Date(m.quando).toLocaleString('pt-BR') : 'sem data'}`;
+  const rolesImportadas = rolesDaMesa(m, r, notas);
   const ator = await Actor.implementation.create({
     name: doc.nome || m.nomeAtor || 'Sem nome', type: 'personagem', ownership,
     system: {
       atributos: Object.fromEntries(ATRIBUTOS.map(chave => [chave, { valor: statBase(chave) }])),
       hp: { value: Number(m.hp?.atual) || 0 }, humanidade: { value: Number(m.humanidade?.atual) || 0 }, sorte: { value: Number(m.sorte?.atual) || 0 },
       pericias,
-      ...rolesDaMesa(m, r, notas),
+      ...rolesImportadas,
       dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0,
       extratos: extratosIniciais({ dinheiro: Number(m.dinheiro) || 0, pontosDeMelhoria: Number(m.ip) || 0, reputacao: Number(m.reputacao) || 0 }, 'Migrado da ficha da mesa do Foundry 12'),
       apelido: doc.apelido || '', lifepath: lifepathDaWiki(r.lifepath),
       ...moradiaDaMesa(m.moradia, r.moradia),
       notas: `<p><i>Migrado da ficha da mesa do Foundry 12 (${origem}) em ${new Date().toLocaleDateString('pt-BR')}.</i></p>`
     },
-    flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), origem: 'mesa' } } }
+    flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), origem: 'mesa', roles: [rolesImportadas.role, rolesImportadas.roleSecundaria].filter(role => rolesDoResultado(r, []).some(recebida => recebida.nome === role.nome)).map(role => role.nome) } } }
   });
   // Cada item com o id escolhido aqui: o Foundry não garante a ordem do que cria, e cada linha da mesa precisa achar o
   // item dela.
@@ -705,7 +861,11 @@ export async function importarDaMesa(id, donoId = '') {
   if (ativos.length === 1) await ator.update({ 'system.veiculo': ativos[0].item.id, 'system.dirigindo': ativos[0].dirigindo });
   else if (ativos.length > 1) notas.push('Mais de um veículo veio como ativo: escolha na ficha qual está em uso.');
 
-  const entregues = [...new Set(ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean))];
+  const retrato = await aplicarRetrato(ator, doc, wikiUrl());
+  notas.push(...retrato.notas);
+  const anteriores = doc.foundry14?.entregues ?? doc.foundry12?.entregues ?? doc.foundry?.entregues ?? [];
+  const entregues = [...new Set([...anteriores, ...ator.items.map(item => item.getFlag(SISTEMA, 'wikiUid')).filter(Boolean)])];
+  await ator.setFlag(SISTEMA, 'wiki', { ...ator.getFlag(SISTEMA, 'wiki'), entregues, ...(retrato.aplicado ? { retrato: retrato.aplicado } : {}) });
   await wikiFetch(`/api/personagens/${doc.id}/foundry`, { method: 'PUT', body: { ator: ator.id, nomeAtor: ator.name, versao: doc.versao, entregues, geracao: GERACAO, ...(campanha?.id ? { campanha: campanha.id } : {}) } })
     .catch(error => notas.push(`A wiki não marcou a importação (${error.message}).`));
   return { ator, notas };
@@ -715,7 +875,7 @@ export async function importarDaMesa(id, donoId = '') {
 // Os personagens da wiki (o mestre vê todos) e os pedidos que esperam o mestre: os pendentes e os aprovados que deram
 // erro (o "Tentar de novo").
 export async function personagensDaWiki() {
-  const { personagens = [] } = await wikiFetch('/api/personagens');
+  const { personagens = [], papel } = await wikiFetch('/api/personagens');
   const campanha = await campanhaDoMundo();
   const avisos = await mandarTransferidos(personagens, campanha);
   const lista = personagens.filter(p => !p.publico && pertenceACampanha(p, campanha));
@@ -724,7 +884,7 @@ export async function personagensDaWiki() {
   const pedidos = docs.filter(Boolean).flatMap(doc => (doc.pedidos || [])
     .filter(pedido => pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))
     .map(pedido => ({ wikiId: doc.id, nome: doc.nome || 'Sem nome', pedido })));
-  return { personagens: lista, pedidos, campanha, avisos, ajuda: campanha?.erro ? ajudaDaCampanha(campanha) : '' };
+  return { personagens: lista, pedidos, papel, campanha, avisos, ajuda: campanha?.erro ? ajudaDaCampanha(campanha) : '' };
 }
 
 // Aprovar na wiki e entregar já, no ator deste mundo. Um aprovado que deu erro é aprovado de novo (a wiki limpa o erro).

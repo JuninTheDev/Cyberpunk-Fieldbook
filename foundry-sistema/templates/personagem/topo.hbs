@@ -9,6 +9,7 @@
       <input class="rank" type="number" name="system.role.rank" value="{{fonte.role.rank}}" min="0" max="10" aria-label="Rank">
       {{#if sistema.roleSecundaria.nome}}<span class="segunda-role-topo" data-tooltip="A segunda Role (a regra da mesa): na aba Role">// {{sistema.roleSecundaria.nome}} {{sistema.roleSecundaria.rank}}</span>{{/if}}
     </p>
+    {{#if podeAtualizarWiki}}<button type="button" data-action="atualizarWiki"><i class="fa-solid fa-rotate" inert></i> Atualizar da wiki</button>{{/if}}
     <div class="nome-linha">
       <input class="nome" type="text" name="name" value="{{ator.name}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>
       <span class="apelido">“<input type="text" name="system.apelido" value="{{fonte.apelido}}" placeholder="apelido" aria-label="Apelido">”</span>

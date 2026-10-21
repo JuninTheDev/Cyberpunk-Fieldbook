@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 147). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 148). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -270,10 +270,10 @@ agentes de IA ficam no `AGENTS.md` da raiz):
 
 ### Fase 6: plataforma e wiki
 
-- [~] **C27. O resto do cpr-2077:** em andamento (sessão KouArt, com o Codex, 2026-10-20): a parte do Foundry 14 (o histórico do ledger pede mudar o cpr-2077, que não recebe mais mudanças).
-  - "Atualizar da wiki", o retrato e os avisos de envio;
+- [x] **C27. O resto do cpr-2077:** feito na parte do Foundry 14 (sessão KouArt, com o Codex, ciclos 146 e 147, 2026-10-21); o histórico do ledger pede mudar o cpr-2077, que não recebe mais mudanças.
+  - [x] "Atualizar da wiki", o retrato e os avisos de envio: ciclo 147 (com o Codex);
   - [x] a campanha da wiki de cada mundo, e o crossover: ciclo 146 (com o Codex);
-  - o histórico do ledger na migração. Pede mudar o cpr-2077; é decisão do usuário.
+  - [ ] o histórico do ledger na migração: fica fora (pede mudar o cpr-2077; é decisão do usuário).
 - [ ] **C28. A sistema-v14 no master**, com a instalação automática no Foundry 14 do servidor. Hoje é à mão, pelo
   `servidor/instalar-sistema-v14.sh`.
 - [x] **C29. A wiki do master de 2026-10-17 ("uma regra só na mesa": o Mission Kit sobre o RED).** O que os testes de
@@ -437,8 +437,8 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [x] **Da wiki, o Foundry 12 e o 14 juntos** (o pedido do usuário de 2026-10-15): cada Foundry com o seu vínculo na
   wiki (o 14 manda `geracao: 14`); a janela diz onde o personagem está e importa de novo quando o ator do 14 sumiu; o
   ator apagado avisa a wiki (Ciclo 57; a parte da wiki também no master, para o usuário publicar).
-- [ ] **Da wiki, o resto:** (→ C27) "Atualizar da wiki" (hoje, importar de novo cria outro ator), os avisos de envio, o retrato e
-  a campanha da wiki de cada mundo (a janela lista os personagens de todas as campanhas).
+- [x] **Da wiki, o resto:** (→ C27, ciclos 146 e 147) "Atualizar da wiki", os avisos de envio, o retrato e a campanha da wiki
+  de cada mundo, com o crossover.
 - [x] **A mesa no servidor e a migração** (Ciclo 31):
   - o endereço da wiki deduzido de `mesa.<domínio>`, como o cpr-2077;
   - só o ator ligado ao personagem entrega pedidos e manda a ficha (a wiki recusa o "ator antigo");

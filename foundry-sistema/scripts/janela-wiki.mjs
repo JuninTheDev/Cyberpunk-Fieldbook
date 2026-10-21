@@ -5,6 +5,7 @@
 import { caminho, SISTEMA } from './config.mjs';
 import * as wiki from './wiki.mjs';
 import { mudouDeCampanha } from './wiki-campanha.mjs';
+import { estadoDeEnvioDaWiki } from './wiki-avisos.mjs';
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const atorDa = wikiId => game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu')) ?? null;
@@ -20,6 +21,8 @@ export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {
       importar: JanelaDaWiki.#importar,
       importarDaMesa: JanelaDaWiki.#importarDaMesa,
       abrir: JanelaDaWiki.#abrir,
+      atualizar: JanelaDaWiki.#atualizar,
+      avisos: JanelaDaWiki.#avisos,
       aprovar: JanelaDaWiki.#aprovar,
       recusar: JanelaDaWiki.#recusar,
       recarregar: JanelaDaWiki.#recarregar
@@ -50,6 +53,7 @@ export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {
             p.foundry12 ? `No Foundry 12: ${nomeDe(p.foundry12)}.` : '',
             p.mesa ? `Ficha da mesa do Foundry ${p.mesa.geracao ?? 12}${p.mesa.hp ? ` (HP ${p.mesa.hp.atual}/${p.mesa.hp.max})` : ''}, de ${quando(p.mesa.recebido)}.` : ''
           ].filter(Boolean);
+          if (estadoDeEnvioDaWiki(p)) frases.push(`Enviado pelo jogador em ${quando(p.envio.quando)}: ${ator ? 'aguarda atualização' : 'aguarda importação'}.`);
           const crossover = mudouDeCampanha(p);
           const situacao = crossover ? `Veio de outra campanha. Ao importar, traz a ficha completa se o mundo antigo já a mandou; sem ela, vem a criação da wiki. ${frases.join(' ')}`
             : frases.join(' ') || (p.foundry?.importado ? 'Importado em outro mundo.' : 'Ainda não foi para o Foundry.');
@@ -84,6 +88,21 @@ export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #importar(evento, alvo) { return this.#importarCom(alvo, wiki.importarPersonagem); }
   static #importarDaMesa(evento, alvo) { return this.#importarCom(alvo, wiki.importarDaMesa); }
+
+  static async #atualizar(evento, alvo) {
+    const ator = atorDa(alvo.closest('[data-wiki-id]')?.dataset.wikiId);
+    if (!ator) return;
+    alvo.disabled = true;
+    try {
+      const resultado = await wiki.atualizarDaWiki(ator);
+      if (resultado) this.#ultimo = { titulo: ator.name + ': ' + (resultado.pendente ? 'atualização parcial' : 'atualizado') + '.', notas: resultado.notas };
+    } catch (erro) {
+      this.#ultimo = { titulo: 'A atualização não deu certo.', notas: [erro.message], erro: true };
+    }
+    return this.render();
+  }
+
+  static #avisos() { return wiki.avisosDaWiki({ manual: true }); }
 
   static #abrir(evento, alvo) {
     return atorDa(alvo.closest('[data-wiki-id]')?.dataset.wikiId)?.sheet.render(true);

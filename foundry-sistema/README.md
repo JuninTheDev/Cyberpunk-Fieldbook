@@ -416,6 +416,9 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   O transporte usa a rota existente da wiki, com um envelope identificado do Fieldbook. Ele é exclusivo entre mundos
   deste sistema: não deve ser consumido pelo importador do Foundry 12. A ficha bruta do CORE é recusada aqui; para
   migrar do 12, use **Importar da mesa**. Uma transferência existente de outro formato é preservada e vira aviso.
+- **Atualizar da wiki:** na linha do personagem que já está neste mundo e no topo da ficha, o mestre abre a revisão por grupos: STATs, perícias, Roles e sub-habilidades, itens novos, Lifepath, moradia e estilo de vida, retrato e montagem de itens soltos. Só aplica o que estiver marcado; cancelar conserva a ficha. HP, Humanidade, dinheiro e Sorte atuais ficam como estão, e o histórico dos UIDs impede repor equipamento gasto ou perdido. Roles manuais são preservadas; se não houver espaço para as da wiki, o grupo explica o conflito. Grupos desmarcados ou com falha continuam pendentes. O ator que foi para outra campanha (o crossover) não atualiza. Pela macro: `game.system.api.wiki.atualizarDaWiki(ator)`.
+- **Retrato da wiki:** a importação da criação e a migração da mesa copiam a imagem para a pasta do mundo e a aplicam à ficha e ao protótipo do token. Uma atualização também muda os tokens ligados. Se o download de um link HTTPS com extensão de imagem falhar, usa o link; uma imagem privada da wiki que não puder copiar vira aviso. Tirar o retrato na wiki preserva a imagem escolhida na mesa.
+- **Avisos de envio:** ao entrar e a cada minuto, o mestre ativo consulta os personagens enviados e os pedidos que esperam revisão, avisa uma vez por envio neste navegador e mundo e abre a janela. O botão "Avisos de envio" consulta mesmo com os avisos automáticos desligados; pela macro, `game.system.api.wiki.avisosDaWiki({ manual: true })`. Usa o vínculo do Foundry 14 mesmo quando o personagem também tem o do 12. Os pedidos aprovados continuam sendo entregues com os avisos desligados.
 - **Importar da wiki:** `game.system.api.wiki.importarPersonagem(id)` cria o ator a partir do personagem feito no criador da wiki:
   - STATs, HP, Humanidade, perícias (com Linguagem e Especialista Local), Role com as sub-habilidades (Face e Corpo, que saíram, entram como Rockerboy e Exec) e a segunda Role, se tiver (o sistema pede as duas à wiki), e dinheiro (no extrato, a linha "Dinheiro inicial (criador da wiki)");
   - o apelido, o Lifepath (em texto, como o criador da wiki monta) e a moradia, o estilo de vida, o Trauma Team e a moda (C22);
@@ -474,6 +477,7 @@ E as da wiki:
 - **Campanha da wiki** (padrão: vazio): o id na página Campanhas. Vazio, resolve pelo Mundo do Foundry cadastrado na
   wiki ou pela campanha única; a escolha é consultada de novo a cada minuto e ao mudar a configuração ou o endereço.
 - **Mandar a ficha para a wiki** (de cada navegador; padrão: sim): veja "Na mesa".
+- **Avisos da wiki** (de cada navegador; padrão: sim): avisa o mestre sobre novos envios e pedidos pendentes. Desligar não suspende a entrega dos pedidos aprovados.
 
 E a do navegador de cada um:
 - **Rolar direto, sem a janela de rolagem** (padrão: não, como no CORE): ligado, o clique rola na hora e Ctrl + clique abre a janela.
@@ -489,7 +493,6 @@ E a do navegador de cada um:
   flag `arma2077`.
 - **A mão e o BODY do cyberware que é arma do Kit** (decisão do usuário, 2026-10-19): a mão do braço que não segura nada com a Mantis Blade ou o Projectile Launch System para fora e o BODY 11 da Gorilla Arm ficam com o mestre.
 - **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.
-- **Da wiki:** o retrato e o "Atualizar da wiki" (importar de novo hoje cria outro ator).
 - **Interface:** ícones próprios (hoje, os genéricos do Foundry).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
 

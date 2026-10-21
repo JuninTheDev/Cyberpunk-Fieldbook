@@ -37,6 +37,7 @@ import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolag
 import * as terapia from './terapia.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
+import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
 
 Hooks.once('init', () => {
   CONFIG.Actor.documentClass = AtorCPR;
@@ -82,6 +83,7 @@ Hooks.once('init', () => {
   DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaArquitetura, { types: ['arquitetura'], makeDefault: true, label: 'Arquitetura da NET do RED' });
 
   wiki.registrarWiki();
+  registrarAvisosDaWiki({ listar: wiki.personagensDaWiki, abrir: abrirJanelaDaWiki });
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
   registrarIceRezzado();
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".

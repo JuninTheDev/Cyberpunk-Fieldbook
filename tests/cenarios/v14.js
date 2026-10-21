@@ -12518,11 +12518,13 @@ module.exports = async ({ edge, servidores, r }) => {
         await ui.actors.render({ force: true });
         await esperar(() => ui.actors.element?.querySelector('[data-cprf-wiki]'));
         const temBotao = Boolean(ui.actors.element.querySelector('[data-cprf-wiki]'));
+        // Os avisos de envio (o C27) podem ter aberto a janela antes, com a lista de antes dos pedidos: espera os pedidos.
+        const jaAberta = Boolean(foundry.applications.instances.get('${S}-wiki')?.rendered);
         ui.actors.element.querySelector('[data-cprf-wiki]').click();
         const janela = () => foundry.applications.instances.get('${S}-wiki')?.element;
         // A linha do personagem (os pedidos também levam o id da wiki do personagem).
         const linha = (id, seletor = '') => janela()?.querySelector('ol.personagens li[data-wiki-id="' + id + '"]' + seletor);
-        await esperar(() => linha(${JSON.stringify(netrunner.id)}));
+        await esperar(() => linha(${JSON.stringify(netrunner.id)}) && janela()?.querySelector('li[data-pedido="${aprovar.id}"]') && janela()?.querySelector('li[data-pedido="${recusar.id}"]'));
         const botoes = id => [...(linha(id)?.querySelectorAll(':scope > button') ?? [])].map(b => b.dataset.action);
         const lista = { solo: botoes(${JSON.stringify(solo.id)}), netrunner: botoes(${JSON.stringify(netrunner.id)}) };
         const ultimo = () => janela()?.querySelector('.ultimo')?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
@@ -12548,14 +12550,14 @@ module.exports = async ({ edge, servidores, r }) => {
         const depois = { aviso: ultimo(), dono: importado?.testUserPermission(jogador, 'OWNER'), botoes: botoes(${JSON.stringify(netrunner.id)}) };
         await foundry.applications.instances.get('${S}-wiki').close();
         await importado?.delete();
-        return { temBotao, lista, aprovado, recusado, depois };
+        return { temBotao, jaAberta, lista, aprovado, recusado, depois };
       })()`);
       const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
       const status = id => doc.pedidos.find(p => p.id === id);
-      const ok = info.temBotao && info.lista.solo.join() === 'abrir' && info.lista.netrunner.includes('importar')
+      const ok = info.temBotao && info.lista.solo.join() === 'abrir,atualizar' && info.lista.netrunner.includes('importar')
         && info.aprovado.dinheiro === -100 && info.aprovado.agents === 1 && status(aprovar.id).status === 'entregue'
         && /Pedido recusado/.test(info.recusado) && status(recusar.id).status === 'recusado' && status(recusar.id).motivo === 'Já tem um Agent'
-        && info.depois.dono === true && info.depois.botoes.join() === 'abrir';
+        && info.depois.dono === true && info.depois.botoes.join() === 'abrir,atualizar';
       return [ok, JSON.stringify({ ...info, wiki: [status(aprovar.id).status, status(recusar.id).status, status(recusar.id).motivo] })];
     });
 
@@ -13727,6 +13729,326 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('wiki (C27): Atualizar da wiki pela linha do personagem revisa STATs e perícias, aplica só os grupos marcados, conserva recursos e itens gastos; cancelar não aplica e nova revisão conclui sem criar outro ator', async () => {
+      const resultado = structuredClone(solo.resultado);
+      resultado.itens = [{ uid: 'c27:gasto', id: 'core_gear:agent', nome: 'Agent', qtd: 1 }];
+      resultado.veiculos = [];
+      const { personagem } = await api('/api/personagens', 'POST', { nome: 'C27 Atualizar', resultado });
+      let modificado;
+      try {
+        await edge.evaluate(`(async () => {
+          await game.system.api.wiki.mandarPendentes();
+          window.__c27Atualizar = { mesa: game.settings.get('${S}', 'wikiMesa'), avisos: game.settings.get('${S}', 'wikiAvisos'), ator: null };
+          await game.settings.set('${S}', 'wikiMesa', false);
+          await game.settings.set('${S}', 'wikiAvisos', false);
+          const { ator } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(personagem.id)}, '');
+          window.__c27Atualizar.ator = ator.id;
+          await ator.deleteEmbeddedDocuments('Item', ator.items.filter(i => i.getFlag('${S}', 'wikiUid') === 'c27:gasto').map(i => i.id));
+          await ator.update({ 'system.hp.value': 9, 'system.humanidade.value': 7, 'system.sorte.value': 1, 'system.dinheiro': 42,
+            'system.pericias.language-c27': { nivel: 3, familia: 'language', nome: 'C27', atributo: '' } });
+          window.__c27Atualizar.antes = ator.toObject().system;
+          return true;
+        })()`);
+        const antes = (await api(`/api/personagens/${personagem.id}`)).personagem;
+        modificado = structuredClone(antes.resultado);
+        modificado.stats.REF += 1;
+        const evasao = modificado.pericias.find(p => p.nome === 'Evasion');
+        evasao.nivel += 1;
+        modificado.itens.push({ uid: 'c27:novo', id: 'core_gear:agent', nome: 'Agent', qtd: 1 });
+        modificado.role.rank = (modificado.role.rank || 4) + 1;
+        modificado.roles = (modificado.roles || [modificado.role]).map(role => ({ ...role, rank: modificado.role.rank }));
+        modificado.lifepath = { ...modificado.lifepath, culturalOrigin: 'C27 origem revisada' };
+        modificado.moradia = { ...modificado.moradia, aluguel: Number(modificado.moradia?.aluguel || 0) + 100 };
+        await api(`/api/personagens/${personagem.id}`, 'PUT', { ...antes, resultado: modificado });
+        const doc = (await api(`/api/personagens/${personagem.id}`)).personagem;
+        const info = await edge.evaluate(`(async () => {
+          const estado = window.__c27Atualizar, ator = game.actors.get(estado.ator), wiki = game.system.api.wiki;
+          const esperar = async f => { for (let i = 0; i < 80 && !f(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(f()); };
+          const dialogo = () => document.querySelector('.application.dialog.atualizar-wiki');
+          const atores = game.actors.size;
+          const versao = ator.getFlag('${S}', 'wiki').versao;
+          const cancelamento = wiki.atualizarDaWiki(ator);
+          await esperar(dialogo);
+          const grupos = [...(dialogo()?.querySelectorAll('input[type="checkbox"]') || [])].map(i => i.name);
+          dialogo()?.querySelector('.window-header [data-action="close"]')?.click();
+          const cancelou = await cancelamento === null && ator._source.system.atributos.ref.valor === estado.antes.atributos.ref.valor && ator.getFlag('${S}', 'wiki').versao === versao;
+          await esperar(() => !dialogo());
+          await game.system.api.abrirJanelaDaWiki();
+          const janela = foundry.applications.instances.get('${S}-wiki');
+          const linha = () => janela.element?.querySelector('li[data-wiki-id="${personagem.id}"]');
+          await esperar(linha);
+          const botao = linha()?.querySelector('[data-action="atualizar"]');
+          const botaoPresente = Boolean(botao);
+          botao?.click(); await esperar(dialogo);
+          for (const input of dialogo()?.querySelectorAll('input[type="checkbox"]') || []) input.checked = input.name === 'stats';
+          dialogo()?.querySelector('button[data-action="ok"]')?.click();
+          await esperar(() => !dialogo() && janela.element?.querySelector('.ultimo')?.textContent.includes('parcial'));
+          const parcial = { ref: ator._source.system.atributos.ref.valor, evasao: ator.system.pericias.evasion.nivel, role: ator.system.role.rank,
+            aluguel: ator.system.moradia.custo, itens: ator.items.size, versao: ator.getFlag('${S}', 'wiki').versao,
+            recursos: [ator.system.hp.value, ator.system.humanidade.value, ator.system.sorte.value, ator.system.dinheiro] };
+          await janela.close();
+          const concluir = wiki.atualizarDaWiki(ator);
+          await esperar(dialogo); dialogo()?.querySelector('button[data-action="ok"]')?.click();
+          const concluido = await concluir;
+          await esperar(() => !dialogo());
+          const final = { ref: ator._source.system.atributos.ref.valor, evasao: ator.system.pericias.evasion.nivel, role: ator.system.role.rank,
+            aluguel: ator.system.moradia.custo, origem: ator.system.lifepath.origem, propria: ator.system.pericias['language-c27']?.nivel,
+            itens: ator.items.map(i => i.getFlag('${S}', 'wikiUid')), entregues: ator.getFlag('${S}', 'wiki').entregues, versao: ator.getFlag('${S}', 'wiki').versao,
+            recursos: [ator.system.hp.value, ator.system.humanidade.value, ator.system.sorte.value, ator.system.dinheiro], pendente: concluido?.pendente, notas: concluido?.notas };
+          const igual = await wiki.atualizarDaWiki(ator);
+          return { cancelou, grupos, botaoPresente, parcial, final, igual: igual?.pendente === false, atores: game.actors.size - atores, antes: estado.antes };
+        })()`);
+        const doJogador = await jogador.evaluate(`game.system.api.wiki.atualizarDaWiki(null).then(() => '', erro => erro.message)`);
+        const naWiki = (await api(`/api/personagens/${personagem.id}`)).personagem;
+        const f = info.final, p = info.parcial;
+        const ok = info.cancelou && info.botaoPresente && ['stats', 'pericias', 'roles', 'itens', 'lifepath', 'moradia'].every(g => info.grupos.includes(g))
+          && p.ref === doc.resultado.stats.REF && p.evasao === info.antes.pericias.evasion.nivel && p.role === info.antes.role.rank && p.aluguel === info.antes.moradia.custo
+          && p.itens === 0 && p.versao === antes.versao && p.recursos.join() === '9,7,1,42'
+          && f.ref === doc.resultado.stats.REF && f.evasao === doc.resultado.pericias.find(p => p.nome === 'Evasion').nivel && f.role === doc.resultado.role.rank
+          && f.aluguel === doc.resultado.moradia.aluguel && f.origem === doc.resultado.lifepath.culturalOrigin && f.propria === 3
+          && f.itens.join() === 'c27:novo' && f.entregues.includes('c27:gasto') && f.entregues.includes('c27:novo') && f.recursos.join() === '9,7,1,42'
+          && f.versao === doc.versao && !f.pendente && f.notas.length === 0 && info.igual && info.atores === 0
+          && naWiki.foundry14.versao === doc.versao && /^Só o mestre atualiza/.test(doJogador);
+        return [ok, JSON.stringify({ ...info, doJogador, versaoDaWiki: naWiki.foundry14?.versao })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const estado = window.__c27Atualizar;
+          for (const app of foundry.applications.instances.values()) if (app.options?.classes?.includes('atualizar-wiki') || app.id === '${S}-wiki') await app.close();
+          if (!estado) return;
+          try { const ator = game.actors.get(estado.ator); if (ator) { await ator.unsetFlag('${S}', 'wiki'); await ator.sheet?.close(); await ator.delete(); } }
+          finally { await game.settings.set('${S}', 'wikiMesa', estado.mesa); await game.settings.set('${S}', 'wikiAvisos', estado.avisos); delete window.__c27Atualizar; }
+        })()`);
+        await api(`/api/personagens/${personagem.id}`, 'DELETE');
+      }
+    });
+
+
+    await r.passo('wiki: o retrato enviado é copiado na importação e na migração da mesa, atualiza ficha, protótipo e token ligado; tirar na wiki preserva a imagem, link HTTPS tem reserva e erro de imagem não impede importar', async () => {
+      const resultado = {
+        stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 6 },
+        derivados: { hp: 40 }, humanidade: { atual: 60 }, dinheiro: { saldo: 500 }, pericias: [], itens: [], veiculos: []
+      };
+      const { personagem } = await api('/api/personagens', 'POST', { nome: 'C27 Retrato', resultado });
+      try {
+        const imagem = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=';
+        await api(`/api/personagens/${personagem.id}/retrato`, 'POST', { imagem });
+        await api(`/api/personagens/${personagem.id}/mesa`, 'PUT', {
+          ator: 'c27RetratoAntigo', nomeAtor: 'C27 Retrato', geracao: 12, stats: resultado.stats,
+          hp: { atual: 40, max: 40 }, humanidade: { atual: 60, max: 60 }, sorte: { atual: 5, max: 5 },
+          dinheiro: 500, ip: 0, reputacao: 0, pericias: [], itens: [], lesoes: []
+        });
+        const doc = (await api(`/api/personagens/${personagem.id}`)).personagem;
+        const info = await edge.evaluate(`(async () => {
+          const doc = ${JSON.stringify(doc)}, endereco = ${JSON.stringify(wiki)};
+          const { aplicarRetrato } = await import('/systems/${S}/scripts/wiki-retrato.mjs');
+          const seletor = foundry.applications.apps.FilePicker.implementation;
+          const original = { fetch: window.fetch, browse: seletor.browse, createDirectory: seletor.createDirectory, upload: seletor.upload };
+          const mesaAntes = game.settings.get('${S}', 'wikiMesa'), atores = [], uploads = [], pedidos = [];
+          let cena, modo = 'normal', copia = 'icons/svg/mystery-man.svg';
+          const fonteNova = 'https://retratos.invalid/c27-novo.png';
+          const dadosDo = ator => ({ img: ator.img, prototipo: ator.prototypeToken.texture.src, marca: ator.getFlag('${S}', 'wiki')?.retrato || '' });
+          try {
+            await game.settings.set('${S}', 'wikiMesa', false);
+            const imagem = await (await original.fetch.call(window, endereco + '/' + doc.retrato, { credentials: 'include', cache: 'no-store' })).blob();
+            window.fetch = async (url, opcoes) => {
+              const retrato = String(url).includes('/' + doc.id + '/retrato') || String(url).startsWith('https://retratos.invalid/');
+              if (retrato) {
+                pedidos.push({ url: String(url), credenciais: opcoes?.credentials, cache: opcoes?.cache });
+                if (modo === 'downloadFalhou') throw new Error('C27 sem CORS');
+                if (modo === 'html') return new Response('<html>Sem imagem</html>', { headers: { 'Content-Type': 'text/html' } });
+                if (String(url).startsWith('https://retratos.invalid/')) return new Response(imagem, { headers: { 'Content-Type': 'image/png' } });
+              }
+              return original.fetch.call(window, url, opcoes);
+            };
+            seletor.browse = async () => ({ files: [], dirs: [] });
+            seletor.createDirectory = async () => ({});
+            seletor.upload = async (origem, pasta, arquivo, opcoes, avisos) => {
+              uploads.push({ origem, pasta, nome: arquivo.name, tipo: arquivo.type, tamanho: arquivo.size, avisar: avisos?.notify });
+              return { path: copia };
+            };
+            const importacao = await game.system.api.wiki.importarPersonagem(doc.id, ''); atores.push(importacao.ator);
+            const importado = { ...dadosDo(importacao.ator), notas: importacao.notas };
+            const migracao = await game.system.api.wiki.importarDaMesa(doc.id, ''); atores.push(migracao.ator);
+            const migrado = { ...dadosDo(migracao.ator), notas: migracao.notas };
+            cena = await Scene.implementation.create({ name: 'C27 Retrato', active: false, width: 1200, height: 1000 });
+            const [token] = await cena.createEmbeddedDocuments('Token', [(await importacao.ator.getTokenDocument({ x: 100, y: 100, actorLink: true })).toObject()]);
+            copia = 'icons/svg/skull.svg';
+            const troca = await aplicarRetrato(importacao.ator, { id: doc.id, retratoLink: fonteNova }, endereco);
+            const trocado = { ...dadosDo(importacao.ator), token: token.texture.src, ligado: token.actorLink, resultado: troca };
+            const pedidosAntes = pedidos.length;
+            const retirada = await aplicarRetrato(importacao.ator, { id: doc.id }, endereco);
+            const preservado = { ...dadosDo(importacao.ator), token: token.texture.src, resultado: retirada, pedidos: pedidos.length - pedidosAntes };
+            // O ator simulado evita que o diretório do Foundry tente baixar o <img> externo usado na reserva.
+            modo = 'downloadFalhou';
+            const gravados = [], simulado = { update: async dados => gravados.push(dados), getDependentTokens: () => [{ update: async dados => gravados.push(dados) }] };
+            const reserva = await aplicarRetrato(simulado, { id: doc.id, retratoLink: fonteNova }, endereco);
+            const semExtensao = await aplicarRetrato(simulado, { id: doc.id, retratoLink: 'https://retratos.invalid/sem-extensao' }, endereco);
+            modo = 'html';
+            const recusada = await game.system.api.wiki.importarPersonagem(doc.id, ''); atores.push(recusada.ator);
+            return { fonte: doc.retrato, fonteNova, importado, migrado, trocado, preservado, reserva, semExtensao, gravados, uploads, pedidos,
+              recusada: { criada: game.actors.has(recusada.ator.id), marca: recusada.ator.getFlag('${S}', 'wiki')?.retrato || '', notas: recusada.notas } };
+          } finally {
+            window.fetch = original.fetch; seletor.browse = original.browse; seletor.createDirectory = original.createDirectory; seletor.upload = original.upload;
+            await cena?.delete();
+            for (const ator of atores) { await ator.unsetFlag('${S}', 'wiki'); await ator.delete(); }
+            await game.settings.set('${S}', 'wikiMesa', mesaAntes);
+          }
+        })()`);
+        const copiada = dados => dados.img === 'icons/svg/mystery-man.svg' && dados.prototipo === dados.img && dados.marca === info.fonte && dados.notas.length === 0;
+        const ok = /^api\/personagens\//.test(info.fonte) && copiada(info.importado) && copiada(info.migrado)
+          && info.trocado.ligado && info.trocado.img === 'icons/svg/skull.svg' && info.trocado.prototipo === info.trocado.img && info.trocado.token === info.trocado.img
+          && info.trocado.resultado.aplicado === info.fonteNova && info.trocado.resultado.notas.length === 0
+          && info.preservado.img === info.trocado.img && info.preservado.prototipo === info.trocado.img && info.preservado.token === info.trocado.img && info.preservado.pedidos === 0 && info.preservado.resultado.aplicado === ''
+          && info.reserva.aplicado === info.fonteNova && info.reserva.notas.length === 0 && info.gravados.length === 2 && info.gravados[0].img === info.fonteNova && info.gravados[0]['prototypeToken.texture.src'] === info.fonteNova && info.gravados[1]['texture.src'] === info.fonteNova
+          && info.semExtensao.aplicado === '' && info.semExtensao.notas.length === 1 && /não consegui trazer a imagem/.test(info.semExtensao.notas[0])
+          && info.recusada.criada && info.recusada.marca === '' && info.recusada.notas.some(nota => /não é uma imagem \(text\/html\)/.test(nota))
+          && info.uploads.length === 3 && info.uploads.every(envio => envio.origem === 'data' && envio.pasta.endsWith('/retratos-wiki') && envio.nome.startsWith(personagem.id + '-') && envio.nome.endsWith('.png') && envio.tipo === 'image/png' && envio.tamanho > 0 && envio.avisar === false)
+          && info.pedidos.filter(pedido => pedido.url.includes('/' + personagem.id + '/retrato')).every(pedido => pedido.credenciais === 'include' && pedido.cache === 'no-store')
+          && info.pedidos.filter(pedido => pedido.url.startsWith('https://retratos.invalid/')).every(pedido => pedido.credenciais === 'omit' && pedido.cache === 'no-store');
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await api(`/api/personagens/${personagem.id}/retrato`, 'DELETE');
+        await api(`/api/personagens/${personagem.id}`, 'DELETE');
+      }
+    });
+
+    await r.passo('wiki (C27): avisos só para o mestre, com configuração, consulta manual, uma vez por envio neste mundo e atualização pelo vínculo do 14 mesmo havendo vínculo do 12', async () => {
+      let personagem;
+      try {
+        await edge.evaluate(`(async () => {
+          await game.system.api.wiki.mandarPendentes();
+          const modulo = await import('/systems/${S}/scripts/wiki-avisos.mjs');
+          const chave = modulo.chaveDosAvisosDaWiki(game.world.id);
+          window.__c27Avisos = {
+            url: game.settings.get('${S}', 'wikiUrl'), ativo: game.settings.get('${S}', 'wikiAvisos'),
+            chave, vistos: localStorage.getItem(chave), informar: ui.notifications.info, avisar: ui.notifications.warn,
+            recados: [], avisos: [], ator: null
+          };
+          await game.settings.set('${S}', 'wikiAvisos', false);
+          await game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)});
+          ui.notifications.info = mensagem => { window.__c27Avisos.recados.push(String(mensagem)); };
+          ui.notifications.warn = mensagem => { window.__c27Avisos.avisos.push(String(mensagem)); };
+          // Os outros personagens da wiki de teste não são novos neste passo. Os vistos anteriores voltam no finally.
+          const anteriores = modulo.selecionarAvisosDaWiki(await game.system.api.wiki.personagensDaWiki());
+          localStorage.setItem(chave, JSON.stringify(anteriores.chaves));
+          await foundry.applications.instances.get('${S}-wiki')?.close();
+          return true;
+        })()`);
+        ({ personagem } = await api('/api/personagens', 'POST', {
+          nome: 'C27 Avisos', resultado: {
+            stats: { BODY: 5, WILL: 5, EMP: 5 }, derivados: { hp: 35 }, humanidade: { atual: 50 },
+            dinheiro: { saldo: 0 }, pericias: [], itens: [], veiculos: []
+          }
+        }));
+        await api(`/api/personagens/${personagem.id}/enviar`, 'POST', {});
+        // O vínculo do 12 tem o mesmo resultado: estadoFoundry diz importado, mas o 14 ainda deve avisar do envio.
+        await api(`/api/personagens/${personagem.id}/foundry`, 'PUT', { ator: 'c27AvisosAtor12', nomeAtor: 'C27 Ator do 12', versao: personagem.versao });
+        const legado = (await api(`/api/personagens/${personagem.id}`)).personagem;
+        const primeira = await edge.evaluate(`(async () => {
+          const modulo = await import('/systems/${S}/scripts/wiki-avisos.mjs');
+          const estado = window.__c27Avisos, id = ${JSON.stringify(personagem.id)};
+          const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+          const janela = () => foundry.applications.instances.get('${S}-wiki');
+          const linha = () => janela()?.element?.querySelector('ol.personagens li[data-wiki-id="' + id + '"]');
+          const desligado = await modulo.avisosDaWiki();
+          const semAviso = desligado === null && estado.recados.length === 0 && !janela()?.rendered;
+          const manual = await modulo.avisosDaWiki({ manual: true });
+          await esperar(linha);
+          const abriuManual = Boolean(manual?.waiting.some(p => p.id === id) && linha());
+          await janela()?.close();
+          // O manual marcou o envio. A consulta automática respeita os vistos mesmo depois de religar a configuração.
+          await game.settings.set('${S}', 'wikiAvisos', true);
+          const vistosAntes = await modulo.avisosDaWiki();
+          const respeitouManual = vistosAntes === null && !janela()?.rendered;
+          localStorage.setItem(estado.chave, JSON.stringify(JSON.parse(localStorage.getItem(estado.chave)).filter(k => !k.startsWith(id + ':'))));
+          const antes = estado.recados.length;
+          const automatico = await modulo.avisosDaWiki();
+          await esperar(linha);
+          const abriuAutomatico = Boolean(automatico?.waiting.some(p => p.id === id) && linha());
+          const resumo = automatico?.waiting.find(p => p.id === id);
+          const publicoFora = modulo.selecionarAvisosDaWiki({ personagens: resumo ? [{ ...resumo, publico: true }] : [] }).waiting.length === 0;
+          const gravou = resumo ? JSON.parse(localStorage.getItem(estado.chave)).includes(modulo.chaveDeEnvioDaWiki(resumo)) : false;
+          await janela()?.close();
+          const repetido = await modulo.avisosDaWiki();
+          const umaVez = repetido === null && !janela()?.rendered && estado.recados.length === antes + 1;
+          const { ator } = await game.system.api.wiki.importarPersonagem(id, '');
+          estado.ator = ator.id;
+          await ator.sheet?.close();
+          return { semAviso, abriuManual, respeitouManual, abriuAutomatico, publicoFora, gravou, umaVez, recados: [...estado.recados] };
+        })()`);
+        await api(`/api/personagens/${personagem.id}/enviar`, 'POST', {});
+        const semMudanca = await edge.evaluate(`(async () => {
+          const { avisosDaWiki } = await import('/systems/${S}/scripts/wiki-avisos.mjs');
+          const antes = window.__c27Avisos.recados.length, resposta = await avisosDaWiki();
+          return { ignorou: resposta === null && window.__c27Avisos.recados.length === antes, janela: Boolean(foundry.applications.instances.get('${S}-wiki')?.rendered) };
+        })()`);
+        const atual = (await api(`/api/personagens/${personagem.id}`)).personagem;
+        await api(`/api/personagens/${personagem.id}`, 'PUT', { ...atual, resultado: { ...atual.resultado, stats: { ...atual.resultado.stats, BODY: 6 } } });
+        const semEnvio = await edge.evaluate(`(async () => {
+          const { avisosDaWiki } = await import('/systems/${S}/scripts/wiki-avisos.mjs');
+          return await avisosDaWiki() === null;
+        })()`);
+        await edge.evaluate(`game.settings.set('${S}', 'wikiAvisos', false).then(() => true)`);
+        await api(`/api/personagens/${personagem.id}/enviar`, 'POST', {});
+        const reenviado = await edge.evaluate(`(async () => {
+          const { avisosDaWiki, chaveDeEnvioDaWiki } = await import('/systems/${S}/scripts/wiki-avisos.mjs');
+          const estado = window.__c27Avisos, id = ${JSON.stringify(personagem.id)};
+          const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+          const janela = () => foundry.applications.instances.get('${S}-wiki');
+          const linha = () => janela()?.element?.querySelector('ol.personagens li[data-wiki-id="' + id + '"]');
+          await game.settings.set('${S}', 'wikiAvisos', true);
+          const antes = estado.recados.length, resposta = await avisosDaWiki();
+          await esperar(linha);
+          const resumo = resposta?.waiting.find(p => p.id === id);
+          const resultado = { abriu: Boolean(resumo && linha()), gravou: resumo ? JSON.parse(localStorage.getItem(estado.chave)).includes(chaveDeEnvioDaWiki(resumo)) : false, novos: estado.recados.length - antes };
+          await janela()?.close();
+          resultado.repetido = await avisosDaWiki() === null;
+          resultado.manual = Boolean((await avisosDaWiki({ manual: true }))?.waiting.some(p => p.id === id));
+          await esperar(linha);
+          resultado.janelaManual = Boolean(linha());
+          await janela()?.close();
+          resultado.avisos = [...estado.avisos];
+          return resultado;
+        })()`);
+        const doJogador = await jogador.evaluate(`(async () => {
+          const { avisosDaWiki } = await import('/systems/${S}/scripts/wiki-avisos.mjs');
+          const antes = foundry.applications.instances.get('${S}-wiki')?.rendered ?? false;
+          const resposta = await avisosDaWiki({ manual: true });
+          return { recusou: resposta === null, antes, depois: foundry.applications.instances.get('${S}-wiki')?.rendered ?? false };
+        })()`);
+        const ok = legado.estadoFoundry === 'importado' && Boolean(legado.foundry12) && !legado.foundry14
+          && primeira.semAviso && primeira.abriuManual && primeira.respeitouManual && primeira.abriuAutomatico
+          && primeira.publicoFora && primeira.gravou && primeira.umaVez && semMudanca.ignorou && !semMudanca.janela && semEnvio
+          && reenviado.abriu && reenviado.gravou && reenviado.novos === 1 && reenviado.repetido && reenviado.manual && reenviado.janelaManual && reenviado.avisos.length === 0
+          && doJogador.recusou && !doJogador.antes && !doJogador.depois;
+        return [ok, JSON.stringify({ legado: legado.estadoFoundry, primeira, semMudanca, semEnvio, reenviado, doJogador })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const estado = window.__c27Avisos;
+          if (!estado) return true;
+          try {
+            await foundry.applications.instances.get('${S}-wiki')?.close();
+            const ator = game.actors.get(estado.ator);
+            if (ator) {
+              await game.system.api.wiki.mandarPendentes();
+              await ator.unsetFlag('${S}', 'wiki');
+              await ator.sheet?.close();
+              await ator.delete();
+            }
+          } finally {
+            ui.notifications.info = estado.informar;
+            ui.notifications.warn = estado.avisar;
+            if (estado.vistos === null) localStorage.removeItem(estado.chave); else localStorage.setItem(estado.chave, estado.vistos);
+            await game.settings.set('${S}', 'wikiAvisos', estado.ativo);
+            await game.settings.set('${S}', 'wikiUrl', estado.url);
+            delete window.__c27Avisos;
+          }
+          return true;
+        })()`);
+        if (personagem) await api(`/api/personagens/${personagem.id}`, 'DELETE');
+      }
+    });
+
     await r.passo('wiki: erros da importação (personagem que não existe, wiki fora do ar, jogador tentando importar) viram mensagem, sem criar ator', async () => {
       const info = await edge.evaluate(`(async () => {
         // As voltas da ficha que estão esperando vão antes de a wiki "cair".
@@ -13998,7 +14320,11 @@ module.exports = async ({ edge, servidores, r }) => {
           const w = game.system.api.wiki, m = window.__c27, a = game.actors.get(m.antigo), antes = m.estado(a);
           const entregas = await w.entregarPedidos();
           const direta = await w.entregarPedido(a, m.ids.viajante, ${JSON.stringify(pendente)}).then(() => null, e => e.message);
-          return { entregas: entregas.length, direta, igual: JSON.stringify(m.estado(a)) === JSON.stringify(antes) };
+          // O "Atualizar da wiki" (o C27, parte 1) também recusa o ator parado, sem gravar o vínculo da campanha antiga.
+          const foundryAntes = m.chamadas.filter(c => c.rota === '/api/personagens/' + m.ids.viajante + '/foundry').length;
+          const atualizar = await w.atualizarDaWiki(a).then(() => null, e => e.message);
+          const foundryDepois = m.chamadas.filter(c => c.rota === '/api/personagens/' + m.ids.viajante + '/foundry').length;
+          return { entregas: entregas.length, direta, atualizar, vinculoGravado: foundryDepois - foundryAntes, igual: JSON.stringify(m.estado(a)) === JSON.stringify(antes) };
         })()`);
         const falhaDoVinculo = await edge.evaluate(`(async () => {
           const w = game.system.api.wiki, m = window.__c27, { JanelaDaWiki } = await import('/systems/${S}/scripts/janela-wiki.mjs');
@@ -14046,6 +14372,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && saida.chamadas.some(c => c.rota === `/api/personagens/${viajante.id}/mesa` && c.corpo?.campanha === origem.id && c.corpo?.geracao === 14)
           && transferencia.de === origem.id && transferencia.para === destino.id && transferencia.ator?.type === 'character' && transferencia.ator?.flags?.[S]?.crossover?.geracao === 14
           && nativo?.type === 'personagem' && nativo._id === inicio.ator && parado.entregas === 0 && outraCampanha(parado.direta) && parado.igual
+          && /foi para outra campanha/.test(parado.atualizar || '') && parado.vinculoGravado === 0
           && /C27: vínculo recusado/.test(falhaDoVinculo.erro || '') && !falhaDoVinculo.apagou && falhaDoVinculo.novos === 0
           && falhaDoVinculo.antesDaEntrada?.ator === false && /Veio de outra campanha/.test(falhaDoVinculo.antesDaEntrada?.situacao || '') && entrada.depoisDaEntrada?.ator === true
           && preservada.ator?.flags?.[S]?.crossover?.ator?._id === inicio.ator

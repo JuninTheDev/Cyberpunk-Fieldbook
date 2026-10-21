@@ -18,8 +18,9 @@ lerem regras diferentes. Mudou uma regra aqui, mudou para todas.
 
 - **Quem trabalha:**
   - **KouArt:** o Claude Code, numa worktree própria neste PC;
-    - com workers do Antigravity (o `agy`), cada um numa worktree própria e sem commit: o KouArt confere o que eles
-      fazem, roda os portões e as mutações e faz o commit no ciclo dele (desde o ciclo 140);
+    - com workers do Antigravity (o `agy`, desde o ciclo 140) e do Codex (pelo Alethe, desde o 146), cada um numa
+      worktree própria e sem commit: o KouArt confere o que eles fazem, roda os portões e as mutações e faz o commit no
+      ciclo dele;
   - **Junin:** em outro PC;
   - **Codex:** um clone próprio neste PC (`C:\Users\gu774\Documents\GitHub\Cyberpunk-Fieldbook-codex`).
 - **Uma pasta por sessão.** Nunca duas sessões na mesma pasta, e nenhuma na pasta do usuário (a do master).

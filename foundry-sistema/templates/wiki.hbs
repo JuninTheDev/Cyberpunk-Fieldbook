@@ -1,6 +1,7 @@
 <div class="janela-wiki-conteudo">
   <div class="barra">
     <button type="button" data-action="recarregar"><i class="fa-solid fa-rotate" inert></i> Atualizar a lista</button>
+    <button type="button" data-action="avisos">Avisos de envio</button>
   </div>
   {{#if erro}}<p class="aviso erro">{{erro}}</p>{{/if}}
   {{#if campanha.id}}<p class="campanha">Campanha da wiki deste mundo: <b>{{campanha.nome}}</b>.</p>{{/if}}
@@ -33,6 +34,7 @@
       <span class="detalhe">{{#if campanhaNome}}[{{campanhaNome}}] {{/if}}<b>{{nome}}</b>{{#if apelido}} “{{apelido}}”{{/if}}{{#if role}} · {{role}}{{/if}} · {{donoNome}}<br><small>{{situacao}}</small></span>
       {{#if ator}}
       <button type="button" data-action="abrir">Abrir ficha</button>
+      <button type="button" data-action="atualizar">Atualizar da wiki</button>
       {{else}}
       <select name="dono-{{id}}" aria-label="Dono no Foundry">{{selectOptions ../jogadores selected=donoSugerido}}</select>
       <button type="button" data-action="importar" data-tooltip="O personagem como foi criado na wiki">{{#if reimportar}}Importar de novo{{else}}Importar{{/if}}</button>
