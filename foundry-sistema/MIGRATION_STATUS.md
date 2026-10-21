@@ -7322,6 +7322,40 @@ Alethe), revisado e integrado aqui. Com este, o C26 termina (as partes 1 a 3 sã
   Save (M10) e na esquiva e na Concentração (M11).
 - **Próximo:** o C28 (a sistema-v14 no master: decisão do usuário) e a P4 (a acessibilidade das fichas, com o Codex).
 
+### Ciclo 149 (2026-10-21): a P4, o `combate.mjs` dividido (sessão KouArt, com o Codex)
+
+Commit anterior: `65f6c82f` (o ciclo 148, o C26, partes 4 e 5). O código e o teste saíram de um worker do Codex (pelo
+Alethe), revisado e integrado aqui. Uma refatoração pura: nenhum comportamento, texto, flag, configuração ou mensagem de
+socket muda.
+
+- **O que muda:** o `scripts/combate.mjs` (de 1.275 para 262 linhas) fica com o `atacar`, a carga e as ações de 2077, e
+  é a porta: reexporta os mesmos 24 nomes de antes, e os outros módulos continuam importando dele. O resto vai para
+  `scripts/combate/`:
+  - **`apoio.mjs`:** o canal, os estados, a distância, o token na cena, o dono, as conferências da arma veicular e dos
+    destinos;
+  - **`socket.mjs`:** os pedidos pelo socket (`pedir`, `desistir`, os tratadores, as janelas registradas), a fila do
+    mestre (`naFila`), o `registrarCombate`, a defesa (`perguntarDefesa`, `rolarDefesa`) e a segunda chance;
+  - **`modos.mjs`:** o `resolver` e a resolução de cada modo (o individual, a área, o autofogo, o supressivo, os dois
+    alvos, a munição do ataque, o `ferir`);
+  - **`cartao.mjs`:** o cartão do resultado e os botões dele (os destinatários, o Desfazer, o aplicar dano, a lesão).
+  Os ciclos de import (`modos` ↔ `cartao` ↔ `socket`) só se usam dentro de funções; o estado (os `Map`, a fila) fica num
+  módulo só.
+- **Notado e não mudado** (o worker só relatou; sem reprodução): o `linha.pegou` é gravado e ninguém lê; o "Rolar a lesão"
+  do cartão marca o alvo mesmo quando a lesão não foi criada; o Desfazer confere o `desfeito` no começo e grava no fim.
+  Os dois últimos ficam no P1 do ROADMAP, para conferir.
+- **Testes:**
+  - **G3:** `combate-modulos.test.mjs` (novo): a porta exporta exatamente os 24 nomes de antes, os módulos novos existem
+    e nenhum usa o `game`, o `canvas`, o `ui` ou o `foundry` no topo;
+  - **G4:** nenhum passo novo: o cenário inteiro, sem mudança, é o teste de referência.
+- **Portões:** G1, 123 arquivos sem erro; G2, nenhum erro; G3, 302/302; G4 completo, 218/218, com a checagem dos dois
+  navegadores sem avisos ou erros de JS (a primeira rodada parou com a sessão; a segunda passou inteira).
+- **Mutações:** as nove caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: a porta sem o
+  `suprimir` (M1). No G4, uma ou mais em cada módulo novo: a fila do mestre que não espera (M2) e a janela do jogador que
+  não fecha (M3), no `socket.mjs`; o autofogo com um a mais (M4), a munição sem dano que não chega à área (M5) e o
+  supressivo trocado (M6), no `modos.mjs`; o Desfazer sem o HP (M7) e a lesão do cartão que não marca (M8), no
+  `cartao.mjs`; a distância dobrada (M9), no `apoio.mjs`.
+- **Próximo:** a acessibilidade das fichas (a P4, com o Codex).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

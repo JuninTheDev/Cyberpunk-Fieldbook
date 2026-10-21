@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 149). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 150). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -417,6 +417,9 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [x] **A janela de rolagem no resto** (Ciclo 27): no computador do jogador, a esquiva e a Concentração que o mestre
   pede (dentro do prazo: a janela fecha quando ele desiste ou responde por ele), o dano que ele rola e o Death Save do
   começo do turno; na ficha, o botão do dano e o do Death Save. Com isso, o P1 fecha.
+- [ ] **Notado na divisão do combate** (ciclo 149, sem reprodução; conferir antes de mudar): o "Rolar a lesão" do cartão
+  marca o alvo mesmo quando a lesão não foi criada (uma criação recusada impede tentar de novo naquele cartão); o
+  Desfazer confere o `desfeito` no começo e grava no fim (dois cliques ao mesmo tempo podem passar os dois).
 
 ## P2: fichas, inventário, equipamento, armas e combate
 
@@ -612,7 +615,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 
 ## P4: refatoração, desempenho, acessibilidade e documentação
 
-- [ ] Dividir o `combate.mjs` (pedidos pelo socket, modos, cartão).
+- [x] Dividir o `combate.mjs` (pedidos pelo socket, modos, cartão): ciclo 149 (com o Codex), em `scripts/combate/`.
 - [ ] Tradução para inglês (hoje, o arquivo `en` aponta para o português).
 - [ ] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura).
 - [ ] Ícones próprios no lugar dos genéricos do Foundry.
