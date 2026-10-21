@@ -2,6 +2,7 @@
 // à mão (droga, equipamento como a lanterna), um botão liga e desliga.
 import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
+import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { PERICIAS } from './gerado.mjs';
 import { ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
@@ -95,6 +96,19 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static TABS = {
     item: { tabs: [{ id: 'detalhes', label: 'Detalhes' }, { id: 'descricao', label: 'Descrição' }, { id: 'efeitos', label: 'Efeitos' }], initial: 'detalhes' }
   };
+
+  async _onRender(contexto, opcoes) {
+    await super._onRender(contexto, opcoes);
+    prepararAcessibilidade(this.element);
+  }
+
+  // O Foundry troca a classe active; as abas desenhadas aqui também expõem a seleção ao leitor de tela.
+  changeTab(aba, grupo, opcoes = {}) {
+    super.changeTab(aba, grupo, opcoes);
+    for (const controle of this.element.querySelectorAll('.abas-do-item [role="tab"]')) {
+      controle.setAttribute('aria-selected', String(controle.classList.contains('active')));
+    }
+  }
 
   async _prepareContext(options) {
     const contexto = await super._prepareContext(options);

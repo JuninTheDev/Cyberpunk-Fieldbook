@@ -4,17 +4,17 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
   <header class="cabecalho">
     <p class="linha-tipo"><span class="tipo">{{tipoRotulo}}</span><span>FICHA DO ITEM</span></p>
     <div class="identidade">
-      <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img">
+      <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img" role="button" tabindex="0" aria-label="Trocar a imagem do item">
       <div class="nome-e-resumo">
-        <input class="nome" type="text" name="name" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
+        <input class="nome" type="text" name="name" aria-label="Nome do item" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
         {{#if resumo}}<p class="resumo">{{resumo}}</p>{{/if}}
         {{#if etiquetas.length}}<p class="etiquetas">{{#each etiquetas}}<span class="etiqueta {{classe}}">{{texto}}</span>{{/each}}</p>{{/if}}
       </div>
     </div>
   </header>
 
-  <nav class="tabs abas-do-item" data-group="item">
-    {{#each tabs}}<a class="{{cssClass}}" data-action="tab" data-group="item" data-tab="{{id}}">{{label}}</a>{{/each}}
+  <nav class="tabs abas-do-item" data-group="item" role="tablist" aria-label="Ficha do item">
+    {{#each tabs}}<a class="{{cssClass}}" data-action="tab" data-group="item" data-tab="{{id}}" role="tab" tabindex="0" aria-selected="{{#if active}}true{{else}}false{{/if}}">{{label}}</a>{{/each}}
   </nav>
 
   <section class="tab detalhes {{tabs.detalhes.cssClass}}" data-group="item" data-tab="detalhes">
@@ -26,7 +26,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if desarmada}}<label class="caixa" data-tooltip="A tabela do BODY de quem bate (com cyberbraço, a Briga dá pelo menos 2d6)"><input type="checkbox" name="system.danoPeloBody" {{checked fonte.danoPeloBody}}> Dano pelo BODY</label>{{#if (and fonte.danoPeloBody danoDoBody)}}<p class="nota dano-do-body">Pelo BODY do dono: {{danoDoBody}}.</p>{{/if}}{{/if}}
       <label class="celula"><span>CDT</span><input type="number" name="system.cdt" value="{{fonte.cdt}}"></label>
       <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.bonusAtaque" value="{{fonte.bonusAtaque}}"></label>
-      <label class="celula"><span>Pente</span><span class="par"><input type="number" name="system.pente.value" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" value="{{fonte.pente.max}}"></span></label>
+      <label class="celula"><span>Pente</span><span class="par"><input type="number" name="system.pente.value" aria-label="Munição atual no pente" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" aria-label="Capacidade do pente" value="{{fonte.pente.max}}"></span></label>
       <label class="celula"><span>Tabela de DV</span><input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
       <label class="celula"><span>Qualidade</span><select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
       {{#if (eq fonte.qualidade "poor")}}<label class="celula"><span>Na falha crítica</span><select name="system.falhaCritica">{{selectOptions falhasDaArma selected=fonte.falhaCritica}}</select></label>{{/if}}
@@ -40,11 +40,11 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if armaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T); Ctrl + clique, direto">{{#if soAutofogo}}AUTOFOGO{{else}}ATACAR{{/if}}</button>{{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Encher o pente">RECARREGAR</button>{{/if}}</div>{{/if}}
       {{/if}}
       {{#if eh.armadura}}
-      <label class="celula"><span>SP cabeça</span><span class="par"><input type="number" name="system.sp.cabeca.value" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" value="{{fonte.sp.cabeca.max}}"></span></label>
-      <label class="celula"><span>SP corpo</span><span class="par"><input type="number" name="system.sp.corpo.value" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" value="{{fonte.sp.corpo.max}}"></span></label>
+      <label class="celula"><span>SP cabeça</span><span class="par"><input type="number" name="system.sp.cabeca.value" aria-label="SP atual da cabeça" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" aria-label="SP máximo da cabeça" value="{{fonte.sp.cabeca.max}}"></span></label>
+      <label class="celula"><span>SP corpo</span><span class="par"><input type="number" name="system.sp.corpo.value" aria-label="SP atual do corpo" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" aria-label="SP máximo do corpo" value="{{fonte.sp.corpo.max}}"></span></label>
       <label class="celula"><span>Penalidade</span><input type="number" name="system.penalidade" value="{{fonte.penalidade}}"></label>
       <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Vestida</label>
-      {{#each trilhas}}<div class="trilha-sp" data-local="{{local}}"><span>SP {{rotulo}}</span><span class="pontos-visuais" style="--pontos: {{valor}}; --max: {{max}}" aria-hidden="true"></span><b>{{valor}}/{{max}}</b>{{#if ../editavel}}<button type="button" data-action="ablar" data-local="{{local}}" data-tooltip="Um ponto de SP a menos ({{rotulo}})">−1</button>{{/if}}</div>{{/each}}
+      {{#each trilhas}}<div class="trilha-sp" data-local="{{local}}"><span>SP {{rotulo}}</span><span class="pontos-visuais" style="--pontos: {{valor}}; --max: {{max}}" aria-hidden="true"></span><b>{{valor}}/{{max}}</b>{{#if ../editavel}}<button type="button" data-action="ablar" data-local="{{local}}" data-tooltip="Um ponto de SP a menos ({{rotulo}})" aria-label="Um ponto de SP a menos ({{rotulo}})">−1</button>{{/if}}</div>{{/each}}
       {{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="consertar" data-tooltip="O SP volta ao máximo; o mestre narra o conserto">CONSERTAR</button></div>{{/if}}
       {{/if}}
       {{#if eh.municao}}
@@ -65,7 +65,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposCyberware selected=fonte.tipo}}</select></label>
       {{#if lados}}<label class="celula"><span>Lado</span><select name="system.lado">{{selectOptions lados selected=fonte.lado}}</select></label>{{/if}}
       {{#if ladoDaFundacao}}<div class="celula lado-da-fundacao"><span>Lado</span><b>{{ladoDaFundacao}} (o da fundação)</b></div>{{/if}}
-      <label class="celula"><span>Perda de Humanidade</span><span class="par"><input type="text" name="system.perdaHumanidade.formula" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" value="{{fonte.perdaHumanidade.media}}"></span></label>
+      <label class="celula"><span>Perda de Humanidade</span><span class="par"><input type="text" name="system.perdaHumanidade.formula" aria-label="Fórmula da perda de Humanidade" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" aria-label="Média da perda de Humanidade" value="{{fonte.perdaHumanidade.media}}"></span></label>
       <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
       {{#if fonte.fundacional}}<label class="celula"><span>Slots de opção</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{else}}<label class="celula"><span>Slots que ocupa</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>{{/if}}
@@ -92,14 +92,14 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>DEF</span><input type="number" name="system.def" value="{{fonte.def}}"></label>
       <label class="celula"><span>REZ</span><input type="number" name="system.rez" value="{{fonte.rez}}" min="0"></label>
       <label class="celula"><span>RAM (quickhack)</span><input type="number" name="system.ram" value="{{fonte.ram}}" min="0"></label>
-      <label class="celula larga"><span>Dano · contra Black ICE</span><span class="par"><input type="text" name="system.dano.padrao" value="{{fonte.dano.padrao}}"> · <input type="text" name="system.dano.blackIce" value="{{fonte.dano.blackIce}}"></span></label>
+      <label class="celula larga"><span>Dano · contra Black ICE</span><span class="par"><input type="text" name="system.dano.padrao" aria-label="Dano padrão" value="{{fonte.dano.padrao}}"> · <input type="text" name="system.dano.blackIce" aria-label="Dano contra Black ICE" value="{{fonte.dano.blackIce}}"></span></label>
       <label class="celula"><span>Slots no deck</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
       <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
       {{#if rezDoPrograma}}<p class="nota rez-do-programa">REZ {{rezDoPrograma.atual}}/{{rezDoPrograma.max}}</p>{{/if}}
-      {{#if editavel}}{{#if (or rodavel rezDoPrograma)}}<div class="acoes-do-item">{{#if rodavel}}<button type="button" class="acao" data-action="rodar" data-tooltip="Liga ou desliga o programa no deck">{{#if sistema.ativo}}DESLIGAR{{else}}RODAR{{/if}}</button>{{/if}}{{#if rezDoPrograma}}<button type="button" class="acao" data-action="restaurarRez" data-tooltip="A REZ volta ao máximo">RESTAURAR REZ</button>{{/if}}</div>{{/if}}{{/if}}
+      {{#if editavel}}{{#if (or rodavel rezDoPrograma)}}<div class="acoes-do-item">{{#if rodavel}}<button type="button" class="acao" data-action="rodar" aria-pressed="{{#if sistema.ativo}}true{{else}}false{{/if}}" data-tooltip="Liga ou desliga o programa no deck">{{#if sistema.ativo}}DESLIGAR{{else}}RODAR{{/if}}</button>{{/if}}{{#if rezDoPrograma}}<button type="button" class="acao" data-action="restaurarRez" data-tooltip="A REZ volta ao máximo">RESTAURAR REZ</button>{{/if}}</div>{{/if}}{{/if}}
       {{/if}}
       {{#if eh.veiculo}}
-      <label class="celula"><span>SDP</span><span class="par"><input type="number" name="system.sdp.value" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" value="{{fonte.sdp.max}}" min="0"></span></label>
+      <label class="celula"><span>SDP</span><span class="par"><input type="number" name="system.sdp.value" aria-label="SDP atual" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" aria-label="SDP máximo" value="{{fonte.sdp.max}}" min="0"></span></label>
       <label class="celula"><span>Assentos</span><input type="number" name="system.assentos" value="{{fonte.assentos}}" min="0"></label>
       <label class="celula"><span>SP base</span><input type="number" name="system.sp" value="{{fonte.sp}}" min="0"></label>
       <label class="celula"><span>Ablação</span><input type="number" name="system.ablacao" value="{{fonte.ablacao}}" min="0"></label>
@@ -112,8 +112,8 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#each janelas}}
       <div class="celula larga" data-janela-id="{{id}}">
         <label><span>Janela</span><input type="text" name="system.janelas.{{id}}.nome" value="{{nome}}"></label>
-        <label><span>HP atual / máximo</span><span class="par"><input type="number" name="system.janelas.{{id}}.hp.value" value="{{hp.value}}" min="0"> / <input type="number" name="system.janelas.{{id}}.hp.max" value="{{hp.max}}" min="0"></span></label>
-        {{#if ../editavel}}<button type="button" class="apagar" data-action="removerJanela" data-janela-id="{{id}}" data-tooltip="Remover esta janela">✕</button>{{/if}}
+        <label><span>HP atual / máximo</span><span class="par"><input type="number" name="system.janelas.{{id}}.hp.value" aria-label="HP atual da janela {{nome}}" value="{{hp.value}}" min="0"> / <input type="number" name="system.janelas.{{id}}.hp.max" aria-label="HP máximo da janela {{nome}}" value="{{hp.max}}" min="0"></span></label>
+        {{#if ../editavel}}<button type="button" class="apagar" data-action="removerJanela" data-janela-id="{{id}}" data-tooltip="Remover esta janela" aria-label="Remover a janela {{nome}}">✕</button>{{/if}}
       </div>
       {{else}}<p class="nota">Sem janelas registradas. Cada janela conserva seu próprio HP.</p>{{/each}}
       {{/if}}
@@ -144,7 +144,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if eh.equipamento}}
       <label class="celula"><span>Os efeitos valem</span><select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>
       <label class="caixa"><input type="checkbox" name="system.ocultavel" {{checked fonte.ocultavel}}> Ocultável</label>
-      {{#if usavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="usar" data-tooltip="Liga ou desliga os efeitos (ativação à mão)">{{#if emUso}}DESLIGAR{{else}}USAR{{/if}}</button></div>{{/if}}
+      {{#if usavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="usar" aria-pressed="{{#if emUso}}true{{else}}false{{/if}}" data-tooltip="Liga ou desliga os efeitos (ativação à mão)">{{#if emUso}}DESLIGAR{{else}}USAR{{/if}}</button></div>{{/if}}
       {{/if}}
       {{#if eh.roupa}}
       <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposRoupa selected=fonte.tipo}}</select></label>
@@ -162,7 +162,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
 
   <section class="tab descricao {{tabs.descricao.cssClass}}" data-group="item" data-tab="descricao">
     {{#if editavel}}
-    <prose-mirror name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
+    <prose-mirror aria-label="Descrição" name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
     {{else}}<div class="texto">{{{descricaoRica}}}</div>{{/if}}
     {{#if sistema.fonte.livro}}<p class="fonte">{{sistema.fonte.livro}}, p. {{sistema.fonte.pagina}}</p>{{/if}}
   </section>
@@ -172,7 +172,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#each efeitos}}
       <li class="{{#unless ativo}}inativo{{/unless}}">
         <b>{{nome}}</b> {{mudancas}}{{#unless ativo}} <small>(sem efeito agora)</small>{{/unless}}
-        {{#if ligavel}}<button type="button" class="alternar {{#unless desligado}}ligado{{/unless}}" data-action="alternarEfeito" data-efeito="{{id}}">{{#if desligado}}Ligar{{else}}Desligar{{/if}}</button>{{/if}}
+        {{#if ligavel}}<button type="button" class="alternar {{#unless desligado}}ligado{{/unless}}" data-action="alternarEfeito" data-efeito="{{id}}" aria-pressed="{{#unless desligado}}true{{else}}false{{/unless}}">{{#if desligado}}Ligar{{else}}Desligar{{/if}}</button>{{/if}}
       </li>
       {{else}}<li class="vazio">Sem efeitos.</li>{{/each}}
     </ol>

@@ -26,11 +26,11 @@ EMP); à direita, o cyberware. --}}
           {{#each cyberwares}}
           <li data-item-id="{{id}}" class="{{#unless sistema.instalado}}guardada{{/unless}}{{#if opcao}} opcao{{/if}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{#if opcao}}└ {{/if}}{{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{#if opcao}}└ {{/if}}{{nome}}</a>
             <span class="detalhe">{{tipo}}{{#if lado}} · {{lado}}{{/if}}{{#if membroNatural}} · <b class="membro-natural" data-tooltip="Peça única no membro natural, sem fundação">{{membroNatural}}</b>{{/if}}{{#if sistema.fundacional}} · base · <b class="slots" data-tooltip="Slots de opção usados / os da fundação">{{slots}} slots</b>{{/if}} · {{sistema.perdaHumanidade.formula}} ({{sistema.perdaHumanidade.media}}){{#if sistema.perdaHumanidade.sofrida}} · custou {{sistema.perdaHumanidade.sofrida}}{{/if}}{{#if efeitos}} · {{efeitos}}{{/if}}{{#if semFundacao}} · <b class="sem-fundacao" data-tooltip="Esta opção pede uma fundação instalada do mesmo tipo, com o slot livre">SEM FUNDAÇÃO</b>{{/if}}</span>
             {{#if (and sistema.fundacional sistema.instalado)}}<button type="button" class="alternar" data-action="instalarOpcao" data-tooltip="Instalar nesta fundação uma opção deste personagem que cabe nela (do mesmo tipo, com o slot livre); Shift: a perda de Humanidade pela média">+ OPÇÃO</button>{{/if}}
-            <button type="button" class="alternar {{#if sistema.instalado}}ligado{{/if}}" data-action="instalar">{{#if sistema.instalado}}Instalado{{else}}Instalar{{/if}}</button>
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            <button type="button" class="alternar {{#if sistema.instalado}}ligado{{/if}}" data-action="instalar" aria-pressed="{{#if sistema.instalado}}true{{else}}false{{/if}}">{{#if sistema.instalado}}Instalado{{else}}Instalar{{/if}}</button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{else}}<li class="vazio">Sem cyberware.</li>{{/each}}
         </ol>

@@ -18,8 +18,8 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
         <div class="medida death-save">
           <span>DEATH SAVE</span>
           <b>
-            <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
-            {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves">zerar</a>{{/if}}
+            <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY" role="button" tabindex="0" aria-label="Rolar o Death Save">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
+            {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves" role="button" tabindex="0">zerar</a>{{/if}}
           </b>
         </div>
         <div class="medida"><span>MOVE</span><b>{{sistema.atributos.move.valor}}</b></div>
@@ -30,8 +30,8 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
       <section class="painel corte">
         <div class="titulo">DEFESA<span>DEX {{sistema.atributos.dex.valor}}</span></div>
         <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
-        <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">{{facedown.valor}} + 1d10</a></b></div>
-        <div class="botoes-resumo"><button type="button" class="acao {{#if emCobertura}}ligado{{/if}}" data-action="protegerSe" data-tooltip="Atrás de algo que para a bala e fora da linha de visão (a Ação de Movimento até lá; wiki, p. 182): o cartão do tiro avisa o mestre">{{#if emCobertura}}EM COBERTURA{{else}}PROTEGER-SE{{/if}}</button></div>
+        <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}" role="button" tabindex="0" aria-label="Rolar Facedown">{{facedown.valor}} + 1d10</a></b></div>
+        <div class="botoes-resumo"><button type="button" class="acao {{#if emCobertura}}ligado{{/if}}" data-action="protegerSe" data-tooltip="Atrás de algo que para a bala e fora da linha de visão (a Ação de Movimento até lá; wiki, p. 182): o cartão do tiro avisa o mestre" aria-pressed="{{#if emCobertura}}true{{else}}false{{/if}}">{{#if emCobertura}}EM COBERTURA{{else}}PROTEGER-SE{{/if}}</button></div>
         {{#if movimento.caido}}<div class="botoes-resumo"><button type="button" class="acao" data-action="levantar" data-tooltip="Caído: não usa Movimento até levantar-se (1 Ação)">LEVANTAR-SE (1 AÇÃO)</button></div>{{/if}}
         {{> "systems/cpr-fieldbook/templates/personagem/bloco-agarrao.hbs"}}
       </section>
@@ -42,15 +42,15 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
       <section class="painel corte favoritos">
         <div class="titulo">FAVORITOS<span>★ NA FICHA</span></div>
         {{#each favoritos.pericias}}
-        <div class="medida rolavel"><span><a class="estrela ligada" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Tirar dos favoritos"><i class="fa-solid fa-star"></i></a> {{nome}}</span><b><a class="draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros">{{total}} + 1d10</a></b></div>
+        <div class="medida rolavel"><span><a class="estrela ligada" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Tirar dos favoritos" role="button" tabindex="0" aria-label="Perícia favorita: {{nome}}" aria-pressed="true"><i class="fa-solid fa-star"></i></a> {{nome}}</span><b><a class="draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros" role="button" tabindex="0" aria-label="Rolar {{nome}}">{{total}} + 1d10</a></b></div>
         {{/each}}
         {{#each favoritos.itens}}
         <div class="item-linha draggable" data-item-id="{{id}}">
-          <a class="estrela ligada" data-action="favoritarItem" data-tooltip="Tirar dos favoritos"><i class="fa-solid fa-star"></i></a>
-          <a class="nome" data-action="editarItem">{{nome}}</a>
+          <a class="estrela ligada" data-action="favoritarItem" data-tooltip="Tirar dos favoritos" role="button" tabindex="0" aria-label="Item favorito: {{nome}}" aria-pressed="true"><i class="fa-solid fa-star"></i></a>
+          <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
           {{#if arma}}<button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">ATACAR</button>{{/if}}
           {{#if droga}}<button type="button" class="acao" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação)">USAR</button>{{/if}}
-          {{#if usavel}}<button type="button" class="acao {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)">{{#if emUso}}EM USO{{else}}USAR{{/if}}</button>{{/if}}
+          {{#if usavel}}<button type="button" class="acao {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)" aria-pressed="{{#if emUso}}true{{else}}false{{/if}}">{{#if emUso}}EM USO{{else}}USAR{{/if}}</button>{{/if}}
         </div>
         {{/each}}
         {{#unless (or favoritos.pericias.length favoritos.itens.length)}}<div class="caixa-vazia">MARQUE A ★ NAS PERÍCIAS E NO EQUIPAMENTO</div>{{/unless}}
@@ -68,7 +68,7 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
         <ol class="itens">
           {{#each municoes}}
           <li data-item-id="{{id}}">
-            <a class="nome" data-action="editarItem">{{name}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{name}}</a>
             <span class="detalhe">{{system.quantidade}} tiros{{#if system.ablacao}}{{#unless (eq system.ablacao 1)}} · ablação {{system.ablacao}}{{/unless}}{{else}} · não abla{{/if}}</span>
           </li>
           {{else}}<li class="vazio">Sem munição.</li>{{/each}}

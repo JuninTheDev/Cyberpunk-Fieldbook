@@ -7356,6 +7356,41 @@ socket muda.
   `cartao.mjs`; a distância dobrada (M9), no `apoio.mjs`.
 - **Próximo:** a acessibilidade das fichas (a P4, com o Codex).
 
+### Ciclo 150 (2026-10-21): a P4, a acessibilidade das fichas (sessão KouArt, com o Codex)
+
+Commit anterior: `11d46c42` (o ciclo 149, o `combate.mjs` dividido). O código e os testes saíram de um worker do Codex
+(pelo Alethe), revisado e integrado aqui (o worker partiu do ciclo 146; o cherry-pick juntou o Facedown e o Proteger-se
+com o "Levantar-se" do ciclo 148).
+
+- **O que muda:**
+  - **`scripts/acessibilidade.mjs` (novo):** um ouvinte de teclado por ficha: Enter e espaço num controle com `role` e
+    `tabindex="0"` disparam o mesmo clique do `data-action` (com o Ctrl, o Shift e os outros modificadores), sem
+    capturar os botões, os campos e a edição, e sem repetir ao segurar a tecla; e o nome das notas chega ao botão de
+    editar e ao campo do editor de texto;
+  - **as fichas do personagem, do capanga e do item:** os controles que só respondiam ao clique (os nomes que rolam, as
+    estrelas dos favoritos, os retratos, os atalhos de edição) entram no Tab; os ícones ganham nome para o leitor de
+    tela; os favoritos, a arma equipada e o cyberware instalado dizem o estado (`aria-pressed`); as abas próprias do item
+    dizem a selecionada; os campos sem rótulo visível têm nome;
+  - **`tema.css`:** o contorno ciano do foco de teclado nessas fichas e nas janelas de rolagem e de defesa (sem mudar
+    nada para o mouse).
+- **Fica de fora:** as outras janelas (a NET, a wiki, o extrato, o contêiner, a arquitetura) ficam como estavam; a
+  janela de rolagem e a de defesa já usavam controles nativos com texto; o tema escuro e o contraste não mudam.
+- **Testes:**
+  - **G3:** `acessibilidade.test.mjs` (novo): os templates das fichas sem nenhum `data-action` fora do teclado e sem
+    botão de ícone sem nome; o ouvinte (Enter e espaço com o mesmo alvo e os modificadores, nada nos controles nativos e
+    na edição, sem repetir, sem duplicar ao redesenhar); o nome das notas no editor; os estados expostos;
+  - **G4:** um passo novo: na ficha, a estrela da Percepção por Enter, espaço e clique (a flag e o `aria-pressed`), com o
+    contorno do foco (um Tab de verdade pelo protocolo do Edge: o evento sintético não liga o `:focus-visible`); a
+    Percepção abre a mesma janela de rolagem pelos três caminhos; os nomes do retrato, da Sorte e do HP; na ficha do
+    item, as abas por teclado e clique, com a seleção, e o nome do editor da descrição.
+- **Portões:** G1, 125 arquivos sem erro; G2, nenhum erro; G3, 328/328; G4 completo, 219/219, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as nove caíram, uma por vez, e os arquivos voltaram exatos (md5 conferido). No G3: o Facedown fora do
+  teclado (M1), o ✕ do capanga sem nome (M2), a barra de espaço que não aciona (M3), a tecla segurada que repete (M4), o
+  Enter que segue o padrão do navegador (M5) e o editor sem o nome no botão (M9). No G4: o contorno mais fino (M6), as
+  abas do item sem a seleção (M7) e a ficha do personagem sem o ouvinte (M8).
+- **Próximo:** o C28 (a sistema-v14 no master: decisão do usuário).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

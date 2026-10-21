@@ -14673,6 +14673,118 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('acessibilidade das fichas: a estrela da perícia fica no teclado; Enter e espaço alternam o favorito como o clique, com o nome e o estado acessíveis e o foco visível; a perícia abre a mesma janela de rolagem pelo teclado e pelo clique', async () => {
+      try {
+        await edge.evaluate(`(async () => {
+          window.__acessibilidadeP4 = { rolarDireto: game.settings.get('${S}', 'rolarDireto'), janelas: [...foundry.applications.instances.values()], ator: null };
+          await game.settings.set('${S}', 'rolarDireto', false);
+          const a = await Actor.implementation.create({ name: 'Teste Acessibilidade', type: 'personagem', system: { atributos: { int: { valor: 6 } }, pericias: { perception: { nivel: 4 } } } });
+          window.__acessibilidadeP4.ator = a.id;
+          await a.sheet.render({ force: true });
+          a.sheet.element.querySelector('[data-action="alternarPericias"]').focus();
+          return true;
+        })()`);
+        // O Tab real põe o Chromium no modo de teclado; KeyboardEvent sintético não ativa o :focus-visible sozinho.
+        await edge.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+        await edge.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+        const info = await edge.evaluate(`(async () => {
+          const m = window.__acessibilidadeP4, a = game.actors.get(m.ator);
+          const esperar = async condicao => { for (let i = 0; i < 60 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const f = () => a.sheet.element;
+          const estrela = () => f()?.querySelector('.tab.pericias .pericia[data-pericia="perception"] [data-action="favoritarPericia"]');
+          const pericia = () => f()?.querySelector('.tab.pericias .pericia[data-pericia="perception"] [data-action="rolarPericia"]');
+          const janelas = () => [...foundry.applications.instances.values()].filter(app => !m.janelas.includes(app) && app.options.classes?.includes('janela-rolagem') && app.rendered && !app.element?.classList.contains('minimizing'));
+          const janela = () => janelas()[0]?.element;
+          const teclado = (el, key) => {
+            el.focus();
+            const evento = new KeyboardEvent('keydown', { key, code: key === ' ' ? 'Space' : 'Enter', bubbles: true, cancelable: true });
+            const focado = document.activeElement === el;
+            el.dispatchEvent(evento);
+            return { focado, preveniuPadrao: evento.defaultPrevented };
+          };
+          await esperar(() => estrela());
+          estrela().focus();
+          const estilo = getComputedStyle(estrela());
+          const foco = { focado: document.activeElement === estrela(), visivel: estrela().matches(':focus-visible'), largura: estilo.outlineWidth, tipo: estilo.outlineStyle, cor: estilo.outlineColor, afastamento: estilo.outlineOffset };
+          const controles = {
+            estrela: { papel: estrela().getAttribute('role'), tab: estrela().getAttribute('tabindex'), nome: estrela().getAttribute('aria-label'), estado: estrela().getAttribute('aria-pressed') },
+            retrato: f().querySelector('[data-action="editImage"]')?.getAttribute('aria-label'),
+            sorte: f().querySelector('[data-action="recarregarSorte"]')?.getAttribute('aria-label'),
+            hp: f().querySelector('input[name="system.hp.value"]')?.getAttribute('aria-label')
+          };
+          const favoritas = [];
+          for (const [key, ligada] of [['Enter', true], [' ', false], [null, true]]) {
+            const acionamento = key ? teclado(estrela(), key) : { clique: true };
+            if (!key) estrela().querySelector('i').click();
+            await esperar(() => (a.getFlag('${S}', 'periciasFavoritas') ?? []).includes('perception') === ligada && estrela()?.getAttribute('aria-pressed') === String(ligada));
+            favoritas.push({ key, ...acionamento, flag: (a.getFlag('${S}', 'periciasFavoritas') ?? []).includes('perception'), estado: estrela()?.getAttribute('aria-pressed'), ligada: estrela()?.classList.contains('ligada') });
+          }
+          const mensagensAntes = game.messages.size;
+          const rolagens = [];
+          for (const key of [null, 'Enter', ' ']) {
+            const acionamento = key ? teclado(pericia(), key) : { clique: true };
+            if (!key) pericia().click();
+            await esperar(() => janela()?.querySelector('.total-sem-dado'));
+            const j = janela();
+            rolagens.push({ key, ...acionamento, titulo: j?.querySelector('.window-title')?.textContent.trim(), partes: [...(j?.querySelectorAll('.partes li') ?? [])].map(el => el.textContent.trim()), total: j?.querySelector('.total-sem-dado')?.textContent.trim(), quantidade: janelas().length });
+            j?.querySelector('button[data-action="cancelar"]')?.click();
+            await esperar(() => !janela());
+          }
+          const [item] = await a.createEmbeddedDocuments('Item', [{ name: 'Equipamento Acessível', type: 'equipamento', system: { descricao: '<p>Descrição acessível de teste.</p>' } }]);
+          m.item = item.id;
+          await item.sheet.render({ force: true });
+          const fi = () => item.sheet.element;
+          const aba = id => fi()?.querySelector('.abas-do-item [data-tab="' + id + '"]');
+          const lerAbas = () => [...(fi()?.querySelectorAll('.abas-do-item [role="tab"]') ?? [])].map(el => ({ id: el.dataset.tab, papel: el.getAttribute('role'), tab: el.getAttribute('tabindex'), selecionada: el.getAttribute('aria-selected'), ativa: el.classList.contains('active') }));
+          await esperar(() => aba('detalhes'));
+          const fichaItem = { papel: fi()?.querySelector('.abas-do-item')?.getAttribute('role'), inicial: lerAbas(), trocas: [] };
+          for (const [id, key] of [['descricao', 'Enter'], ['efeitos', ' '], ['detalhes', null]]) {
+            const acionamento = key ? teclado(aba(id), key) : { clique: true };
+            if (!key) aba(id).click();
+            await esperar(() => aba(id)?.getAttribute('aria-selected') === 'true' && lerAbas().filter(a => a.selecionada === 'true').length === 1);
+            fichaItem.trocas.push({ id, key, ...acionamento, abas: lerAbas() });
+            if (id === 'descricao') {
+              const editor = fi().querySelector('prose-mirror[name="system.descricao"]');
+              const botao = editor?.querySelector('button.toggle');
+              fichaItem.editor = { nome: editor?.getAttribute('aria-label'), botao: botao?.getAttribute('aria-label') };
+              botao?.click();
+              await esperar(() => editor?.querySelector('[contenteditable="true"]')?.getAttribute('aria-label') === 'Descrição');
+              const campo = editor?.querySelector('[contenteditable="true"]');
+              fichaItem.editor.campo = { nome: campo?.getAttribute('aria-label'), papel: campo?.getAttribute('role'), multilinha: campo?.getAttribute('aria-multiline') };
+            }
+          }
+          return { foco, controles, favoritas, rolagens, fichaItem, semRolagem: game.messages.size === mensagensAntes, fechou: !janela() };
+        })()`);
+        const { foco, controles, favoritas, rolagens, fichaItem } = info;
+        const selecaoDaAba = (abas, id) => abas.length === 3 && abas.every(a => a.papel === 'tab' && a.tab === '0' && a.selecionada === String(a.id === id) && a.ativa === (a.id === id));
+        const ok = foco.focado && foco.visivel && foco.largura === '2px' && foco.tipo === 'solid' && foco.cor === 'rgb(2, 215, 242)' && foco.afastamento === '2px'
+          && controles.estrela.papel === 'button' && controles.estrela.tab === '0' && /favorit/i.test(controles.estrela.nome || '') && controles.estrela.estado === 'false'
+          && /retrato/i.test(controles.retrato || '') && /Sorte/.test(controles.sorte || '') && /HP/.test(controles.hp || '')
+          && favoritas.map(f => f.flag).join() === 'true,false,true' && favoritas.map(f => f.estado).join() === 'true,false,true' && favoritas.map(f => f.ligada).join() === 'true,false,true'
+          && favoritas.filter(f => f.key).every(f => f.focado && f.preveniuPadrao)
+          && rolagens.length === 3 && rolagens.every(r => r.titulo === 'Teste: Percepção' && r.partes.join() === 'INT +6,Percepção +4,1d10' && r.total === '10' && r.quantidade === 1)
+          && rolagens.filter(r => r.key).every(r => r.focado && r.preveniuPadrao) && info.semRolagem && info.fechou
+          && fichaItem.papel === 'tablist' && selecaoDaAba(fichaItem.inicial, 'detalhes')
+          && fichaItem.trocas.length === 3 && fichaItem.trocas.every(t => selecaoDaAba(t.abas, t.id) && (!t.key || (t.focado && t.preveniuPadrao)))
+          && fichaItem.editor?.nome === 'Descrição' && fichaItem.editor?.botao === 'Editar Descrição'
+          && fichaItem.editor?.campo.nome === 'Descrição' && fichaItem.editor?.campo.papel === 'textbox' && fichaItem.editor?.campo.multilinha === 'true';
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const m = window.__acessibilidadeP4;
+          if (!m) return true;
+          for (const app of [...foundry.applications.instances.values()]) if (!m.janelas.includes(app) && app.options.classes?.includes('janela-rolagem')) await app.close();
+          const a = game.actors.get(m.ator);
+          await a?.items.get(m.item)?.sheet?.close();
+          await a?.sheet?.close();
+          await a?.delete();
+          await game.settings.set('${S}', 'rolarDireto', m.rolarDireto);
+          delete window.__acessibilidadeP4;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

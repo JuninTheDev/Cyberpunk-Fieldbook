@@ -13,10 +13,10 @@
   <ol class="itens">
     {{#each armaduras}}
     <li data-item-id="{{id}}" class="{{#unless equipada}}guardada{{/unless}}">
-      <a class="nome" data-action="editarItem">{{nome}}</a>
+      <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
       <span class="detalhe">{{detalhe}}</span>
       {{#if @root.editavel}}{{#if consertavel}}<button type="button" class="acao" data-action="consertarArmadura" data-tooltip="Restaura o SP desta armadura e informa o conserto no chat">Consertar</button>{{/if}}{{/if}}
-      <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
+      <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar" aria-pressed="{{#if equipada}}true{{else}}false{{/if}}">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
     </li>
     {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
   </ol>

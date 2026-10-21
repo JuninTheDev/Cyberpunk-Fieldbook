@@ -169,6 +169,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     instala o cyberware rolando a perda de Humanidade (com Shift, a média), como o CORE;
   - **A ficha limitada:** o jogador só com a permissão Limitada vê a imagem, o nome e as notas, como no CORE. Com a de
     Observador, vê a ficha inteira, sem editar.
+- **Acessibilidade das fichas:** os controles próprios do personagem, do capanga e do item entram no Tab, inclusive
+  os favoritos, os nomes que rolam, os retratos e os atalhos de edição. Enter e espaço acionam o mesmo clique, com
+  Ctrl, Shift e os demais modificadores preservados. O foco de teclado tem contorno ciano nessas fichas e nas janelas
+  de rolagem e de defesa. Os ícones têm nome para o leitor de tela; favoritos, equipagem e instalação informam seu
+  estado, e as abas próprias do item informam a seleção. Os campos sem rótulo visível têm nome acessível.
 - **Ficha do Black ICE e do demônio** (o blackIce e o demon do CORE), os atores da NET, numa página só, no visual da ficha
   do personagem:
   - **Black ICE:** a REZ, PER, SPD, ATK e DEF (clique para rolar o número + 1d10, pela janela do modificador do mestre;
@@ -634,6 +639,9 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o Jack In no Neuroport (ciclo 95): o Alvo do jogador resiste com a Vontade pela janela dele e percebe; o Capanga (o mestre rola) não percebe; as ligações nas duas fichas (o jogador não vê quem ele não percebeu), o Jack Out pela ficha, o cartão para o dono do alvo que percebeu e as recusas sem rolar (sem Neuroport, longe, sem ver o alvo);
   - a parede e o Scanner (ciclo 91): a porta fechada no meio (o aviso do clique e a recusa da operação) e aberta (conecta); o Scanner do HUD do token com 9 (só o ponto a 3 m) e com 12 (também o oculto a 13 m, que passa a aparecer ao jogador), com o chat só ao mestre e a ele;
   - as conveniências do C26: o `/red` no chat pelo `ui.chat.processMessage` (o total com o crítico e a descrição), a tabela de DV escolhida no HUD do token (`cprDvTable`) e mostrada no rótulo da régua pela distância, e a iniciativa com a configuração "Iniciativa explode no 10 e no 1?" desligada e ligada;
+  - a acessibilidade das fichas: a favorita por Enter, espaço e clique no ícone, com a flag e o estado anunciado; a
+    Percepção abre a mesma janela pelos três caminhos, sem rolar ao cancelar; nomes acessíveis e o contorno ciano do
+    foco de teclado; as abas do item por teclado e clique, com a seleção anunciada, e o nome do campo interno das notas;
   - nenhum aviso de compatibilidade do Foundry 14 nem erro vindo do sistema, nos dois navegadores.
 
 - **O ensaio de uma sessão** (ciclo 123): `node tests/rodar.js ensaio` (só chamado pelo nome). O procedimento da migração da campanha e uma sessão, de ponta a ponta, num mundo só: o grupo da wiki com a ficha da mesa do Foundry 12, o "Importar da mesa" pela janela, a conferência das fichas, dois jogadores nos navegadores deles, a cena, o combate, a NET, o Death Save, o saque, o pagamento e a ficha de volta na wiki. As capturas ficam em `tests/.saida/ensaio-*`. Rode antes de uma sessão, depois de atualizar o sistema.

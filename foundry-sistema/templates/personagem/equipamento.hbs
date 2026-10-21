@@ -23,10 +23,10 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           {{#each municoes}}
           <li class="draggable" data-item-id="{{id}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{name}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{name}}</a>
             <span class="detalhe">{{system.quantidade}} tiros</span>
             {{#if (gt system.quantidade 1)}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{else}}<li class="vazio">Sem munição.</li>{{/each}}
         </ol>
@@ -40,11 +40,11 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           {{#each armas}}
           <li data-item-id="{{id}}" class="draggable {{#unless sistema.equipada}}guardada{{/unless}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if classe2077}} · {{classe2077}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
-            <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
-            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate"><i class="fa-solid fa-star"></i></button>
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar" aria-pressed="{{#if sistema.equipada}}true{{else}}false{{/if}}">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate" aria-pressed="{{#if favorito}}true{{else}}false{{/if}}" aria-label="Item favorito: {{nome}}"><i class="fa-solid fa-star"></i></button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{else}}<li class="vazio">Sem armas.</li>{{/each}}
         </ol>
@@ -54,9 +54,9 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           {{#each armasSemVeiculo}}
           <li data-item-id="{{id}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">Montada · veículo ausente</span>
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{/each}}
         </ol>
@@ -69,11 +69,11 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           {{#each armaduras}}
           <li data-item-id="{{id}}" class="draggable {{#unless equipada}}guardada{{/unless}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
-            <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
-            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate"><i class="fa-solid fa-star"></i></button>
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar" aria-pressed="{{#if equipada}}true{{else}}false{{/if}}">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate" aria-pressed="{{#if favorito}}true{{else}}false{{/if}}" aria-label="Item favorito: {{nome}}"><i class="fa-solid fa-star"></i></button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
         </ol>
@@ -86,15 +86,15 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           {{#each itens}}
           <li data-item-id="{{id}}" class="draggable {{#if guardado}}guardada{{/if}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
             {{#if (ne quantidade null)}}<span class="quantidade" data-tooltip="{{unidade}}"><button type="button" data-action="mudarQuantidade" data-delta="-1" aria-label="Um a menos">−</button><b>{{quantidade}}</b><button type="button" data-action="mudarQuantidade" data-delta="1" aria-label="Um a mais">+</button></span>{{/if}}
             {{#if divisivel}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
-            {{#if ehDroga}}{{#if viciado}}<span class="viciado" data-tooltip="O efeito secundário fica até a terapia">VICIADO</span>{{/if}}<button type="button" class="alternar {{#if sobEfeito}}ligado{{/if}}" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação): o efeito primário vale; sob efeito, estende">Usar</button>{{#if sobEfeito}}<button type="button" class="acao" data-action="acabouDroga" data-tooltip="O efeito acabou: o teste do efeito secundário">ACABOU</button>{{/if}}{{/if}}
-            {{#if usavel}}<button type="button" class="alternar {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)">{{#if emUso}}Em uso{{else}}Usar{{/if}}</button>{{/if}}
-            <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado">{{usoNome}}</button>
-            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate"><i class="fa-solid fa-star"></i></button>
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            {{#if ehDroga}}{{#if viciado}}<span class="viciado" data-tooltip="O efeito secundário fica até a terapia">VICIADO</span>{{/if}}<button type="button" class="alternar {{#if sobEfeito}}ligado{{/if}}" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação): o efeito primário vale; sob efeito, estende" aria-label="Usar {{nome}}{{#if sobEfeito}}; sob efeito{{/if}}">Usar</button>{{#if sobEfeito}}<button type="button" class="acao" data-action="acabouDroga" data-tooltip="O efeito acabou: o teste do efeito secundário">ACABOU</button>{{/if}}{{/if}}
+            {{#if usavel}}<button type="button" class="alternar {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)" aria-pressed="{{#if emUso}}true{{else}}false{{/if}}">{{#if emUso}}Em uso{{else}}Usar{{/if}}</button>{{/if}}
+            <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado" aria-pressed="{{#if equipado}}true{{else}}false{{/if}}">{{usoNome}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate" aria-pressed="{{#if favorito}}true{{else}}false{{/if}}" aria-label="Item favorito: {{nome}}"><i class="fa-solid fa-star"></i></button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{else}}<li class="vazio">{{vazio}}</li>{{/each}}
         </ol>
@@ -108,10 +108,10 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           {{#each upgrades}}
           <li data-item-id="{{id}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
             {{#if prepararArma}}<button type="button" class="acao" data-action="prepararArmaVeicular" data-tooltip="Preparar a arma montada neste veículo">Preparar arma</button>{{/if}}
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{/each}}
         </ol>
@@ -125,16 +125,16 @@ munição; à direita, as armas, as armaduras, o inventário, os upgrades e os v
           {{#each veiculos}}
           <li class="draggable" data-item-id="{{id}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">{{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
-            <button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="usarVeiculo" data-tooltip="Escolher o veículo em uso; o anterior fica na frota">{{#if ativo}}Em uso{{else}}Usar{{/if}}</button>
-            {{#if ativo}}<button type="button" class="alternar {{#if dirigindo}}ligado{{/if}}" data-action="dirigirVeiculo">{{#if dirigindo}}Parar de dirigir{{else}}Dirigir{{/if}}</button>{{/if}}
-            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>
+            <button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="usarVeiculo" data-tooltip="Escolher o veículo em uso; o anterior fica na frota" aria-pressed="{{#if ativo}}true{{else}}false{{/if}}">{{#if ativo}}Em uso{{else}}Usar{{/if}}</button>
+            {{#if ativo}}<button type="button" class="alternar {{#if dirigindo}}ligado{{/if}}" data-action="dirigirVeiculo" aria-pressed="{{#if dirigindo}}true{{else}}false{{/if}}">{{#if dirigindo}}Parar de dirigir{{else}}Dirigir{{/if}}</button>{{/if}}
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{#each armas}}
           <li data-item-id="{{id}}">
             <img src="{{img}}" alt="">
-            <a class="nome" data-action="editarItem">└ {{nome}}</a>
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">└ {{nome}}</a>
             <span class="detalhe">Montada · {{resumo}}</span>
             {{#unless soAutofogo}}<button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">Atacar</button>{{/unless}}
             {{#if sistema.autofogo}}<button type="button" class="acao" data-action="atacar" data-modo="autofogo" data-tooltip="Autofogo (×{{sistema.autofogo}})">Autofogo</button>{{/if}}

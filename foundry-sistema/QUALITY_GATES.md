@@ -348,6 +348,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   aberta, com a lista de antes: espere o elemento que vai clicar (o pedido criado no passo), não uma linha que já existia.
   E o `window.fetch` guardado para devolver no fim se chama com `.call(window, ...)`: solto, o Edge recusa ("Illegal
   invocation").
+- **O foco visível no G4** (ciclo 150): um `KeyboardEvent` sintético não põe o navegador no modo de teclado, e o
+  `:focus-visible` não liga. Para conferir o contorno do foco, mande um Tab de verdade pelo protocolo do Edge
+  (`edge.send('Input.dispatchKeyEvent', ...)`) antes de focar o controle.
 
 ## Build
 

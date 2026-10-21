@@ -26,8 +26,8 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
       <div class="medida death-save">
         <span>DEATH SAVE</span>
         <b>
-          <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
-          {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves">zerar</a>{{/if}}
+          <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY" role="button" tabindex="0" aria-label="Rolar o Death Save">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
+          {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves" role="button" tabindex="0">zerar</a>{{/if}}
         </b>
       </div>
       <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}</div>
@@ -51,9 +51,9 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
       {{else}}
       <li class="pericia linha-pericia {{#if nivel}}tem{{/if}} {{#if alta}}alta{{/if}}" data-pericia="{{id}}">
         <span class="celula-nome">
-          <a class="estrela {{#if favorita}}ligada{{/if}}" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Favorita: fica no painel Favoritos da aba Combate e na barra do Painel Tático"><i class="fa-solid fa-star"></i></a>
-          <a class="nome draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>
-          {{#if tirar}}<a class="tirar" data-action="tirarPericia" data-pericia="{{id}}" data-tooltip="Tirar esta perícia da ficha">✕</a>{{/if}}
+          <a class="estrela {{#if favorita}}ligada{{/if}}" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Favorita: fica no painel Favoritos da aba Combate e na barra do Painel Tático" role="button" tabindex="0" aria-label="Perícia favorita: {{nome}}" aria-pressed="{{#if favorita}}true{{else}}false{{/if}}"><i class="fa-solid fa-star"></i></a>
+          <a class="nome draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros" role="button" tabindex="0" aria-label="Rolar {{nome}}">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>
+          {{#if tirar}}<a class="tirar" data-action="tirarPericia" data-pericia="{{id}}" data-tooltip="Tirar esta perícia da ficha" role="button" tabindex="0" aria-label="Tirar {{nome}} da ficha">✕</a>{{/if}}
         </span>
         <span class="sigla">{{sigla}}</span>
         <input type="number" name="system.pericias.{{id}}.nivel" value="{{nivel}}" min="0" max="10" aria-label="Nível de {{nome}}">
@@ -75,7 +75,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
         <div><b>{{sistema.armadura.corpo.sp}}</b>CORPO</div>
       </div>
       {{#each armadurasVestidas}}
-      <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem">{{nome}}<small>{{detalhe}}</small></a></div>
+      <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}<small>{{detalhe}}</small></a></div>
       {{else}}<div class="caixa-vazia">NENHUMA ARMADURA VESTIDA</div>{{/each}}
     </section>
 
@@ -84,7 +84,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
       <div class="titulo">ARMAS<span>{{armasEquipadas.length}} EQUIPADA{{#unless (eq armasEquipadas.length 1)}}S{{/unless}}</span></div>
       {{#each armasEquipadas}}
       <div class="item-linha" data-item-id="{{id}}">
-        <a class="nome" data-action="editarItem">{{nome}}<small>{{resumo}}</small></a>
+        <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}<small>{{resumo}}</small></a>
         <button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T): +{{ataque}}{{#if dicaAtaque}}. {{dicaAtaque}}{{/if}}">ATACAR</button>
       </div>
       {{else}}<div class="caixa-vazia">NENHUMA ARMA EQUIPADA</div>{{/each}}
@@ -94,7 +94,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
     <section class="painel corte">
       <div class="titulo">CYBERWARE<span>{{cyberInstalado.length}} INSTALADO{{#unless (eq cyberInstalado.length 1)}}S{{/unless}}</span></div>
       {{#each cyberInstalado}}
-      <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem">{{nome}}<small>{{detalhe}}</small></a></div>
+      <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}<small>{{detalhe}}</small></a></div>
       {{else}}<div class="caixa-vazia">NENHUM CYBERWARE INSTALADO</div>{{/each}}
     </section>
 

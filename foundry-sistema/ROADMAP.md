@@ -26,7 +26,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 150). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 151). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -617,7 +617,8 @@ No fim de tudo, uma sessão de teste com a mesa.
 
 - [x] Dividir o `combate.mjs` (pedidos pelo socket, modos, cartão): ciclo 149 (com o Codex), em `scripts/combate/`.
 - [ ] Tradução para inglês (hoje, o arquivo `en` aponta para o português).
-- [ ] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura).
+- [x] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura): ciclo 150 (com o Codex), nas fichas do
+  personagem, do capanga e do item; as outras janelas ficam como estavam.
 - [ ] Ícones próprios no lugar dos genéricos do Foundry.
 - [ ] Conveniências do CORE: (→ C26) a régua que mostra o DV da arma pela distância e o DV no HUD do token (o ataque já calcula
   o DV sozinho); "Hardened" (Danger Gal Dossier p. 150, fora da wiki: só se a mesa quiser).

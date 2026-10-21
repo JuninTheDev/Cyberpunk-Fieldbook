@@ -4,12 +4,12 @@
   {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="rolarLesao" data-tooltip="Rolar 2d6 na tabela do corpo ou da cabeça e acrescentar a lesão à ficha">ROLAR LESÃO</button></div>{{/if}}
   {{#each lesoes}}
   <div class="item-linha" data-item-id="{{id}}">
-    <a class="nome" data-action="editarItem" data-tooltip="{{resumo}}">{{nome}}<small>{{tratar}}</small></a>
+    <a class="nome" data-action="editarItem" data-tooltip="{{resumo}}" role="button" tabindex="0">{{nome}}<small>{{tratar}}</small></a>
     {{#if corrigida}}<span class="corrigida" data-tooltip="Sem o efeito até o fim do dia (a correção rápida)">CORRIGIDA</span>{{/if}}
     {{#if @root.editavel}}
     {{#if corrigida}}<button type="button" class="acao" data-action="voltouLesao" data-tooltip="O dia acabou: o efeito volta">VOLTOU</button>{{else}}{{#if temCorrecao}}<button type="button" class="acao" data-action="corrigirLesao" data-tooltip="Correção rápida: tira o efeito até o fim do dia (pode ser em si mesmo)">CORREÇÃO</button>{{/if}}{{/if}}
     {{#if temTratamento}}<button type="button" class="acao" data-action="tratarLesao" data-tooltip="Tratamento: tira de vez (não em si mesmo)">TRATAR</button>{{/if}}
-    <button type="button" class="acao" data-action="apagarItem" data-tooltip="Tratada: tirar da ficha">TRATADA</button>
+    <button type="button" class="acao" data-action="apagarItem" data-tooltip="Tratada: tirar da ficha" aria-label="Apagar item">TRATADA</button>
     {{/if}}
   </div>
   {{else}}<div class="caixa-vazia">SEM LESÕES</div>{{/each}}

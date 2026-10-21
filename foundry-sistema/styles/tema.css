@@ -36,7 +36,8 @@
 /* A altura de linha do Foundry deixa os campos altos demais: aqui cada campo tem a dele. */
 .cpr-fieldbook.ficha-personagem :is(input[type="text"], input[type="number"]) { line-height: 1.2; min-height: 0; }
 .cpr-fieldbook.ficha-personagem input[type="number"]::-webkit-inner-spin-button, .cpr-fieldbook.ficha-personagem input[type="number"]::-webkit-outer-spin-button { appearance: none; margin: 0; }
-.cpr-fieldbook.ficha-personagem :is(button, a, input, textarea):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 2px; }
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .janela-rolagem, .janela-defesa) .window-content :is([data-action], button, a, input, select, textarea, [contenteditable="true"]):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 2px; }
+.cpr-fieldbook.ficha-personagem .window-content .corte[data-action]:focus-visible { outline-offset: -4px; }
 .cpr-fieldbook.ficha-personagem small { color: var(--cp-fraco); }
 
 /* ---------- Peças do modelo ---------- */

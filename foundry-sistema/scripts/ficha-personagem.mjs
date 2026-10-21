@@ -7,6 +7,7 @@ import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './ag
 import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
+import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { levantar, movimentoDe } from './estados.mjs';
 import { levarItem } from './conteiner.mjs';
@@ -178,6 +179,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   // Todas as perícias ou só as que têm nível (o painel geral). Sem escolha, todas quando nenhuma tem nível.
   #todasAsPericias = null;
+
+  async _onRender(contexto, opcoes) {
+    await super._onRender(contexto, opcoes);
+    prepararAcessibilidade(this.element);
+  }
 
   async _prepareContext(options) {
     const contexto = await super._prepareContext(options);

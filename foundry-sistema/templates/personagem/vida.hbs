@@ -48,7 +48,7 @@ as metas e as pessoas), o Lifepath da Role e as notas. --}}
   <section class="painel corte notas">
     <div class="titulo">NOTAS<span>APARÊNCIA, HISTÓRIA, O QUE QUISER</span></div>
     {{#if editavel}}
-    <prose-mirror name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+    <prose-mirror aria-label="Notas do personagem" name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
     {{else}}
     <div class="texto">{{{notasRicas}}}</div>
     {{/if}}
