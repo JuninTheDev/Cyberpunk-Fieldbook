@@ -318,3 +318,59 @@ label { font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; lett
 .atualizada { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 10px 14px; background: var(--y); color: #090b0c; font: 600 13px var(--ui); clip-path: var(--cut-s); }
 .atualizada[hidden] { display: none; }
 .atualizada .botao { background: #090b0c; color: var(--y); }
+
+/* ---------------- Áudio ---------------- */
+/* O botão do topo: o que toca (abre a aba Áudio) ou "Ligar o som", quando o navegador segurou. */
+.som { max-width: 240px; padding: 4px 9px; background: var(--p); border: 1px solid var(--l); color: var(--c); font: 12px var(--lbl); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.som:hover { border-color: var(--c); }
+.som.bloqueado { background: var(--y); border-color: var(--y); color: #090b0c; font-weight: 700; animation: chama 1.6s ease-in-out infinite; }
+@keyframes chama { 50% { box-shadow: 0 0 0 4px rgba(248, 239, 2, .25); } }
+/* O quadro do YouTube, no canto de cima do palco. Minimizado, o vídeo some da tela e a música continua. */
+.tocador { position: absolute; right: 12px; top: 12px; z-index: 2; width: 220px; background: rgba(15, 19, 20, .95); border: 1px solid var(--l); }
+.tocador-topo { display: flex; align-items: center; justify-content: space-between; padding: 3px 4px 3px 8px; font: 11px var(--lbl); color: var(--mu); }
+.tocador-topo button { background: none; border: 0; color: var(--tx); font-size: 15px; line-height: 1; padding: 2px 6px; cursor: pointer; }
+.tocador-videos > div { aspect-ratio: 16 / 9; }
+.tocador-videos iframe { display: block; width: 100%; height: 100%; border: 0; }
+.tocador.minimizado { width: auto; }
+.tocador.minimizado .tocador-videos { position: absolute; width: 200px; height: 113px; left: -10000px; top: 0; }
+/* A aba Áudio. */
+.canal { display: grid; gap: 6px; padding: 8px; background: var(--w); border-left: 3px solid var(--l); }
+.canal:has(.canal-barra) { border-left-color: var(--c); }
+.canal-topo { display: grid; gap: 1px; min-width: 0; }
+.canal-topo b { font: 11px var(--lbl); text-transform: uppercase; letter-spacing: .06em; color: var(--mu); }
+.canal-faixa { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.canal-topo small { font: 11px var(--lbl); color: var(--mu); }
+.canal-barra { display: flex; align-items: center; gap: 8px; }
+.canal-barra input { flex: 1; min-width: 0; }
+.canal-barra output { font: 11px var(--lbl); color: var(--mu); white-space: nowrap; }
+.playlist { background: var(--w); border: 1px solid var(--l); }
+.playlist > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; list-style: none; }
+.playlist > summary::-webkit-details-marker { display: none; }
+.playlist > summary::before { content: '▸'; color: var(--mu); }
+.playlist[open] > summary::before { content: '▾'; }
+.playlist > summary .info { flex: 1; min-width: 0; }
+.playlist > summary b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playlist > summary small { display: block; font: 11px var(--lbl); color: var(--mu); }
+.playlist[open] { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding-bottom: 8px; }
+/* Sem o minmax, o campo do link e os seletores esticam a coluna e a playlist passa da borda do painel. */
+#audio-painel .bloco { grid-template-columns: minmax(0, 1fr); }
+.form-grade .marcar input { width: auto; }
+.playlist[open] > :not(summary) { margin: 0 8px; }
+.musicas { list-style: none; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; max-height: 340px; overflow-y: auto; overflow-x: hidden; }
+.musicas li { background: var(--p); }
+.musicas li.tocando { box-shadow: inset 3px 0 0 var(--c); }
+.musicas li.tocando .musica-nome { color: var(--c); }
+.musica-linha { display: flex; align-items: center; gap: 6px; padding: 3px 6px 3px 3px; }
+.musica-tocar, .musica-mais { flex: none; width: 28px; height: 28px; background: none; border: 1px solid transparent; color: var(--tx); cursor: pointer; }
+.musica-tocar:hover, .musica-mais:hover { border-color: var(--c); color: var(--c); }
+.musica-nome { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.musica-linha small { flex: none; font: 10px var(--lbl); color: var(--mu); }
+.musica-opcoes { display: grid; gap: 8px; padding: 6px 8px 8px; border-top: 1px dashed var(--l); }
+.musica-opcoes select { max-width: 150px; padding: 4px; font-size: 12px; }
+.link.perigo { color: var(--r); }
+input.cresce { flex: 1; }
+@media (max-width: 820px) {
+  .som { max-width: 38vw; }
+  .tocador { right: 8px; top: 8px; width: 170px; }
+}
+@media (prefers-reduced-motion: reduce) { .som.bloqueado { animation: none; } }

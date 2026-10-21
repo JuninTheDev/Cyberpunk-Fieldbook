@@ -13,7 +13,7 @@
 1. M9 (feito);
 2. M7 (feito);
 3. M12;
-4. M11;
+4. M11 (feito em paralelo, pela sessão tabletop-a9);
 5. um ensaio no teste, num PC e num celular;
 6. o M4, quando o usuário aprovar.
 
@@ -92,7 +92,16 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **antes:** agarrar e arremessar na mesa;
   - **antes:** quem acertou o quê no turno, para os requisitos.
 - [x] **M10 · Chat:** texto para todos, só para o mestre ou sussurro a um jogador (os outros nem recebem), `/r 2d6` rola, e os cartões de rolagem e de ataque no mesmo fio.
-- [ ] **M11 · Áudio:** as playlists e a música da cena (o mundo tem 3 playlists, 4 faixas, e as músicas soltas em `Data/`). O mestre toca para todos, com o volume de cada um.
+- [x] **M11 · Áudio** (`mesa-audio.js` no servidor, `mesa-tocador.js` no navegador), como as playlists do Foundry e o yt-jukebox que o mundo usa:
+  - **Playlists do mestre:** música enviada (MP3, OGG, M4A, WAV, FLAC) e vídeo do YouTube (o link; a playlist ou o mix do YouTube traz todas; o título vem pelo oEmbed, sem chave).
+  - **Dois canais juntos:** Música e Ambiente. Em ordem ou aleatória, repetir a playlist, repetir a música, o volume da música, pausar, ir para um ponto, próxima.
+  - **Sincronia:** o servidor guarda só o que toca e desde quando; cada navegador acerta a posição pelo relógio do servidor (quem chega no meio ouve do mesmo ponto).
+  - **Fim da música:** a página do mestre avisa (`audio.fim`, com a faixa e o início), e o servidor passa para a próxima; o aviso repetido não pula duas.
+  - **Cada um:** o volume de cada canal fica no aparelho. **♪ Ligar o som** quando o navegador segura o som até o primeiro clique. O jogador só recebe o que toca.
+  - **Música da cena:** abrir a cena toca (a que já toca continua).
+  - **Importação:** as 3 playlists do Foundry (o volume convertido como o Foundry 12), os 2 grupos do yt-jukebox (51 vídeos) e a música da cena Intro.
+  - **Testado:** 5 testes (e 1 no importador), 48 mutações que caem, e no Edge sem janela: o mestre e o jogador no mesmo ponto (2,5 s e 2,5 s), o fim passando para a próxima, o ambiente junto, o YouTube tocando e o celular.
+  - **Falta:** os sons de efeito (a granada do mmutons, a porta, o dado), a música avançar sem a página do mestre aberta e o "tocar todas juntas" do Foundry (vira em ordem).
 - [ ] **M12 · Notas no mapa:** um ponto no mapa que abre um handout ou um documento da wiki (os diários do Foundry viram documentos da campanha).
 
 ## Fase 2: o que os módulos fazem hoje

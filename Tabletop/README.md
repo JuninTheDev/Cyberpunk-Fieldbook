@@ -1,6 +1,6 @@
 # Mesa da wiki (versão de teste)
 
-Um tabuleiro ao vivo dentro da wiki, por campanha. Tem cenas com mapa (imagem ou vídeo) e grade, tiles, tokens dos personagens e das fichas de NPC, névoa, visão pelas paredes com portas, luz e escuridão, régua com a DV por alcance, ping, rolagens do RED, iniciativa, combate (o Fluxo de Combate) e chat. O desenho segue o da mesa do Foundry, com as regras e os dados da wiki. A diferença principal: **o servidor decide o que cada pessoa recebe**.
+Um tabuleiro ao vivo dentro da wiki, por campanha. Tem cenas com mapa (imagem ou vídeo) e grade, tiles, tokens dos personagens e das fichas de NPC, névoa, visão pelas paredes com portas, luz e escuridão, régua com a DV por alcance, ping, rolagens do RED, iniciativa, combate (o Fluxo de Combate), chat e áudio (playlists com música e YouTube). O desenho segue o da mesa do Foundry, com as regras e os dados da wiki. A diferença principal: **o servidor decide o que cada pessoa recebe**.
 
 **A meta é substituir o Foundry completamente** (decisão de 2026-10-20). O que falta, em ordem, está no [ROADMAP.md](ROADMAP.md).
 
@@ -20,13 +20,20 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
    - A ficha da wiki mostra os mesmos itens que a mesa.
    - São duas cenas: o beco e o diner do Frag Maps, que já estão no Foundry deste computador. O diner tem névoa.
    - No beco ficam dois Guarda-costas e um Netrunner escondido.
-   - Com o backup do Foundry neste computador, as 13 cenas dele entram sozinhas (as com paredes já vêm com a visão ligada).
+   - Com o backup do Foundry neste computador, entram sozinhos:
+     - as 13 cenas dele (as com paredes já vêm com a visão ligada);
+     - as 5 playlists: Intro, Combate e Fundo, com as músicas, e os dois grupos do yt-jukebox, com 51 vídeos do YouTube;
+     - a cena Intro, que toca a música dela.
 2. **As cenas do Foundry à mão** (outro backup, ou de novo): com o teste ligado, rode noutra janela:
    ```
    node Tabletop/importar-foundry.js --tar "C:\Users\kouar\Backups\Night City Fieldbook\foundry12-completo-2026-10-12.tar" --mundo edgerunners-storys
    ```
-   - São as 13 cenas, com mapas, vídeos, tiles e tokens: 35 arquivos, 215 MB.
-   - `--listar` só mostra as cenas; `--cenas "A; B"` escolhe algumas; `--substituir` troca as já importadas.
+   - **O que vem:** as 13 cenas, com mapas, vídeos, tiles e tokens (35 arquivos, 215 MB), e as playlists, com as 3 músicas.
+   - **Opções:**
+     - `--listar` só mostra as cenas e as playlists;
+     - `--cenas "A; B"` escolhe algumas cenas;
+     - `--sem-audio` deixa as playlists de fora;
+     - `--substituir` troca as cenas e as playlists já importadas.
 3. **Mestre:** neste computador, a wiki fica em `http://localhost:8010` e a mesa em `http://localhost:8010/mesa`.
 4. **Jogador:** abra `http://localhost:8010/mesa` numa **janela anônima** (Ctrl+Shift+N) e clique num dos jogadores de teste. Só no teste, o botão **Testar como jogador** faz o mesmo.
 5. **A ficha da wiki:** mexa no Jax na mesa e abra a ficha dele na wiki (Personagens). Ela mostra o mesmo de lá, em até 30 segundos:
@@ -40,7 +47,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (53 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (59 testes).
 
 ## O que dá para fazer
 
@@ -81,6 +88,21 @@ Teste automático (não abre navegador): `node --test Tabletop/` (53 testes).
   - A defesa que um jogador ainda não decidiu aparece na aba Rolagens, com o total, e você pode decidir por ele.
   - **Dano à mão**, **Estabilizar**, **Marcar morto** e **Tirar Suprimido** ficam no cartão.
   - **Desfazer** no cartão do ataque volta o HP, o SP, as lesões, a bala, a carga Tech e o ferrolho.
+- **Áudio** (aba Áudio), como as playlists do Foundry e o yt-jukebox:
+  - **Playlists:** crie a playlist e ponha as músicas.
+    - **Enviar música:** MP3, OGG, M4A, WAV ou FLAC.
+    - **Link do YouTube:** o link de um vídeo vira uma música (o título chega sozinho, um pouco depois). O link de uma playlist do YouTube, ou de um mix, traz todas as músicas dela.
+  - **Canais:** cada playlist toca no canal dela, **Música** ou **Ambiente**, e os dois tocam juntos (a trilha e a chuva).
+  - **Tocar:** **▶** na música toca para todos; **▶** na playlist toca a playlist inteira.
+    - **Ordem:** em ordem ou aleatória, e **No fim, começar de novo**.
+    - **Controle:** em **Tocando agora**, pausar, continuar, ir para um ponto (arrastando a barra), próxima e parar.
+  - **Cada música (⋯):**
+    - o volume dela, para todos;
+    - **Repetir esta música** (o ambiente, um tema);
+    - subir, descer, mover para outra playlist, renomear e apagar.
+  - **Música da cena** (aba Cena): a música, ou a playlist inteira, que toca quando a cena abre. Se ela já está tocando, continua de onde está.
+  - **Quem avança:** a sua página. Quando a música acaba, ela pede a próxima; deixe a mesa aberta enquanto toca.
+  - **Quem chega no meio** ouve do mesmo ponto que os outros.
 - **Ping com Shift:** traz a tela de todos para o ponto.
 - **Seu cursor e sua régua** podem ficar só com você (aba Cena → Você).
 
@@ -108,6 +130,12 @@ Teste automático (não abre navegador): `node --test Tabletop/` (53 testes).
 - **Espingarda com cartucho:** um ataque contra DV 13; se acertar, 3d6 (rolado uma vez) em todos à frente, até 6 m e à vista (a parede tapa). "À frente" é até 45° para cada lado da linha até o alvo escolhido. REF 8+ esquiva. Com cartucho no pente, a espingarda só faz cartucho; com balote, só tiro; sem saber a munição (NPC), os dois.
 - **Defender:** quando alguém ataca o token dele, a pergunta aparece na tela, sem o total do ataque: esquivar (REF 8+ contra tiro; corpo a corpo, sempre) ou aguentar. Sem resposta em 60 segundos, aguenta.
 - **Chat** (embaixo do registro): para todos, só para o mestre ou sussurro a um jogador. `/r 2d6` rola.
+- **Som:** ouve o que o mestre toca.
+  - **Ligar:** o navegador só toca som depois de um clique na página. Até lá, o topo mostra **♪ Ligar o som**, e o primeiro clique liga. No celular também.
+  - **Topo:** o botão mostra a música que toca e abre a aba Áudio.
+  - **Volume:** a aba Áudio tem o volume da música e o do ambiente, que ficam só no aparelho dele.
+  - **Vídeo:** o do YouTube aparece num quadro no canto da tela. O **–** esconde o quadro, e a música continua.
+  - **O que ele não vê:** as playlists do mestre; recebe só o que está tocando.
 
 **Rolagens**
 
@@ -227,7 +255,8 @@ O M4 do roadmap. Quando você aprovar o teste:
 1. **`server.js`:**
    - criar a mesa com `require('./Tabletop/mesa-api')({ dataDir, charactersDir: path.join(charactersDataDir, 'personagens'), wikiDir: root, who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter, send, writeJsonAtomic })`;
    - ligar a rota `ROUTES` antes da `characterApiRoutes`;
-   - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
+   - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js`, `mesa-tocador.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
+   - o YouTube: a página carrega `https://www.youtube.com/iframe_api` e o player de `youtube-nocookie.com`. Se a wiki ganhar uma Content-Security-Policy, ela precisa deixar esses dois (hoje não há nenhuma);
    - não carregar o `mesa-config.js`: ele só existe no teste;
    - entregar a página da mesa carregada na memória quando o servidor liga, e passar a `versao` (como o `testar.js`): página nova com servidor velho dá "Operação desconhecida".
 2. **Barra lateral:** o quadro **Mesa** ganha **Mesa da wiki**, com quantos estão nela (`mesa.connected(campanha)`).
@@ -246,9 +275,11 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e a ficha de jogo dos personagens (o HP, o ajuste do mestre, o uso dos itens, as fichas ao vivo). |
 | `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha) e as regras puras do RED e do Mission Kit (DV, armadura, autofogo, cartucho, Death Save, Power, Smart, Tech). |
 | `mesa-2077.js` | O perfil de 2077 de cada arma (do `system-2077.js`, como o build do Foundry) e o que a ficha diz dela e do cromo: o Rebuild, a munição carregada, a qualidade, a conexão Smart. |
+| `mesa-audio.js` | O áudio no servidor: as playlists, o que toca em cada canal e desde quando, a fila, a música da cena, o título do YouTube e a importação das playlists. |
+| `mesa-tocador.js` | O tocador no navegador: toca o arquivo num `<audio>` e o YouTube no player dele, acerta a posição pelo relógio do servidor e avisa quando o navegador segura o som. |
 | `mesa-visao.js` | A conta da visão e da luz (quem vê o quê, a porta, o passo, o que a luz alcança, o polígono da sombra), com o índice das paredes. Vai para o servidor e para o navegador. |
-| `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
-| `importar-foundry.js` | Traz as cenas de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
+| `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
+| `importar-foundry.js` | Traz as cenas, as playlists e a biblioteca do yt-jukebox de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 53 testes, com dados rolados de propósito. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 59 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

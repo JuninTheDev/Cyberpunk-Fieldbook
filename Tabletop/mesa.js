@@ -35,7 +35,10 @@
     visao: null, paredeTipo: 'parede', paredeSel: null, tileSel: null, tilePrevia: null, aparenciaAberta: false, luzSel: null, luzPrevia: null,
     // A ficha de jogo: as fichas que o mestre abriu na aba Fichas, a munição escolhida para recarregar cada arma e a
     // ficha que mudou enquanto alguém digitava nela (redesenha quando o campo perde o foco).
-    fichasAbertas: new Set(), municaoEscolhida: new Map(), fichasPendentes: false
+    fichasAbertas: new Set(), municaoEscolhida: new Map(), fichasPendentes: false,
+    // O áudio: o que o servidor mandou (o que toca e, para o mestre, as playlists), as playlists abertas na aba Áudio e a
+    // faixa com as opções abertas.
+    audio: null, playlistsAbertas: new Set(), faixaAberta: null
   };
   const gm = () => S.eu && S.eu.papel === 'mestre';
   const grade = () => S.previaGrade || (S.cena && S.cena.grade) || { tamanho: 100, metros: 2, x: 0, y: 0, visivel: true };
@@ -114,6 +117,7 @@
     on('defesa.fim', data => { S.defesas = S.defesas.filter(item => item.ataque !== data.ataque || (data.alvo && item.alvo !== data.alvo)); renderDefesas(); });
     on('registro.limpo', () => { S.registro = []; renderRegistro(); });
     on('presenca', data => { S.presenca = data; renderPresenca(); });
+    on('audio', receberAudio);
     // A ficha de um personagem mudou (pela mesa, pela wiki ou pelo Foundry): o mestre recebe todas; o jogador, as dele.
     on('fichas', data => {
       if (data.personagens) S.personagens = data.personagens;
@@ -151,6 +155,8 @@
     S.personagens = data.personagens || [];
     S.npcs = data.npcs || [];
     S.meus = data.meus || [];
+    S.audio = data.audio || null;
+    if (tocador) tocador.aplicar(S.audio);
     carregarCena(data.cena);
     renderTudo();
     renderRegistro();
@@ -1887,6 +1893,8 @@
     renderVez();
     renderFichas();
     renderCenaPainel();
+    renderAudio();
+    renderSom();
     renderCartao();
     escolherFerramenta(S.ferramenta === 'nevoa' && !gm() ? 'mover' : S.ferramenta);
     if (!gm() && $('.abas [data-aba="cena"]').classList.contains('ativa')) abrirAba('rolagens');
@@ -2423,7 +2431,270 @@
   // Saiu do campo que segurava a ficha: redesenha com o que chegou enquanto digitava.
   $('#fichas').addEventListener('focusout', () => { if (S.fichasPendentes) setTimeout(() => { if (S.fichasPendentes) renderFichas(); }, 0); });
 
+  // ---------------- Áudio ----------------
+  // O tocador (mesa-tocador.js) toca o que o servidor manda; aqui ficam o que cada um vê na aba Áudio e o botão de som
+  // do topo. O mestre monta as playlists e toca; o navegador do mestre avisa quando a música acaba (audio.fim).
+  const CANAIS = ['musica', 'ambiente'];
+  const NOME_DO_CANAL = { musica: 'Música', ambiente: 'Ambiente' };
+  const tempo = segundos => { const s = Math.max(0, Math.floor(segundos || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const avisosDeSom = new Set();
+  const tocador = window.MesaTocador ? window.MesaTocador.criar({
+    caixa: $('#tocador'),
+    aoTerminar: (canal, alvo) => { if (gm()) op('audio.fim', { canal, faixa: alvo.faixa.id, inicio: alvo.inicio }).catch(() => {}); },
+    // Um aviso por música (o erro se repete a cada conferência).
+    aoErro: (canal, alvo, texto) => { const marca = `${alvo.faixa.id}@${alvo.inicio}`; if (!avisosDeSom.has(marca)) { avisosDeSom.add(marca); aviso(texto, 'erro'); } },
+    aoMudar: () => { renderSom(); atualizarProgresso(); }
+  }) : null;
+  // O volume de cada canal fica neste aparelho.
+  const nivelGuardado = canal => { const valor = Number(store.get(`som:${canal}`)); return store.get(`som:${canal}`) !== null && Number.isFinite(valor) ? Math.min(1, Math.max(0, valor)) : 0.8; };
+  if (tocador) for (const canal of CANAIS) tocador.volume(canal, nivelGuardado(canal));
+  // O navegador só deixa tocar depois de um clique na página: o primeiro clique (ou tecla) liga o som.
+  const liberarSom = () => { if (tocador && tocador.bloqueado) tocador.liberar(); };
+  document.addEventListener('pointerdown', liberarSom, true);
+  document.addEventListener('keydown', liberarSom, true);
+
+  function receberAudio(data) {
+    S.audio = data;
+    if (tocador) tocador.aplicar(data);
+    renderAudio();
+    renderSom();
+    if (gm()) renderCenaPainel();
+  }
+  // O botão do topo: "Ligar o som" quando o navegador segurou; senão, o que toca (abre a aba Áudio).
+  function renderSom() {
+    const botao = $('#som');
+    if (!tocador) { botao.hidden = true; return; }
+    const tocando = CANAIS.map(canal => tocador.estado(canal)).filter(estado => estado.alvo);
+    const segurado = tocador.bloqueado && tocando.some(estado => !estado.pausado);
+    botao.hidden = !tocando.length;
+    botao.classList.toggle('bloqueado', segurado);
+    const principal = tocando.find(estado => !estado.pausado) || tocando[0];
+    botao.textContent = segurado ? '♪ Ligar o som' : principal ? `♪ ${principal.alvo.faixa.nome}${principal.pausado ? ' (pausada)' : ''}` : '';
+    botao.title = segurado ? 'O navegador só toca som depois de um clique na página' : 'Áudio: o que toca e o seu volume';
+  }
+  $('#som').addEventListener('click', () => {
+    if (tocador && tocador.bloqueado) { tocador.liberar(); return; }
+    abrirAba('audio');
+    abrirPainel(true);
+  });
+  $('#tocador-min').addEventListener('click', () => {
+    const minimizado = !$('#tocador').classList.contains('minimizado');
+    $('#tocador').classList.toggle('minimizado', minimizado);
+    $('#tocador-min').textContent = minimizado ? '▢' : '–';
+    $('#tocador-min').title = minimizado ? 'Mostrar o vídeo' : 'Esconder o vídeo (a música continua)';
+    store.set('tocador', minimizado ? 'min' : '');
+  });
+  if (store.get('tocador') === 'min') $('#tocador-min').click();
+
+  // A posição de cada canal anda a cada segundo, sem refazer a aba (o controle que a pessoa arrasta fica onde está).
+  let segurando = false;
+  let audioPendente = false;
+  function atualizarProgresso() {
+    if (!tocador) return;
+    for (const canal of CANAIS) {
+      const barra = $(`#audio-painel [data-ir="${canal}"]`);
+      if (!barra) continue;
+      const estado = tocador.estado(canal);
+      barra.max = String(Math.max(1, Math.round(estado.duracao * 10) / 10));
+      if (!(segurando && document.activeElement === barra)) barra.value = String(Math.floor(estado.posicao * 10) / 10);
+      const saida = $(`#audio-painel [data-tempo="${canal}"]`);
+      if (saida) saida.textContent = `${tempo(estado.posicao)} / ${estado.duracao ? tempo(estado.duracao) : '–:––'}`;
+    }
+  }
+  setInterval(atualizarProgresso, 1000);
+
+  function htmlDoCanal(canal) {
+    const alvo = S.audio && S.audio.canais ? S.audio.canais[canal] : null;
+    const nivel = tocador ? tocador.estado(canal).nivel : 0.8;
+    const pausada = Boolean(alvo && alvo.pausa !== null);
+    return `<div class="canal" data-canal="${canal}">
+        <div class="canal-topo"><b>${NOME_DO_CANAL[canal]}</b>${alvo ? `<span class="canal-faixa" title="${esc(alvo.faixa.nome)}">${esc(alvo.faixa.nome)}</span><small>${esc(alvo.playlist)}${alvo.faixa.youtube ? ' · YouTube' : ''}${alvo.faixa.repetir ? ' · repete' : ''}${pausada ? ' · pausada' : ''}</small>` : '<small>Nada tocando</small>'}</div>
+        ${alvo ? `<div class="canal-barra"><input type="range" min="0" max="1" step="0.1" value="0" data-ir="${canal}" aria-label="Posição da música"${gm() ? '' : ' disabled'}><output data-tempo="${canal}">0:00</output></div>` : ''}
+        ${gm() && alvo ? `<div class="combate-acoes"><button class="botao vazado pequeno" type="button" data-audio="${pausada ? 'continuar' : 'pausar'}" data-canal="${canal}">${pausada ? '▶ Continuar' : '❚❚ Pausar'}</button><button class="botao vazado pequeno" type="button" data-audio="proxima" data-canal="${canal}"${alvo.fila ? '' : ' title="É a última da fila: para depois dela"'}>⏭ Próxima</button><button class="botao vazado pequeno perigo" type="button" data-audio="parar" data-canal="${canal}">■ Parar</button></div>` : ''}
+        <label class="campo">Seu volume <span class="faixa"><input type="range" min="0" max="1" step="0.01" value="${nivel}" data-volume="${canal}"><output>${Math.round(nivel * 100)}%</output></span></label>
+      </div>`;
+  }
+  function htmlDaFaixa(playlist, faixa, tocando) {
+    const aberta = S.faixaAberta === faixa.id;
+    const outras = ((S.audio && S.audio.playlists) || []).filter(item => item.id !== playlist.id);
+    return `<li class="${tocando.has(faixa.id) ? 'tocando' : ''}${aberta ? ' aberta' : ''}">
+        <div class="musica-linha"><button class="musica-tocar" type="button" data-tocar-faixa="${esc(faixa.id)}" title="Tocar para todos" aria-label="Tocar ${esc(faixa.nome)}">▶</button>
+        <span class="musica-nome" title="${esc(faixa.nome)}">${esc(faixa.nome)}</span><small>${faixa.youtube ? 'YouTube' : 'arquivo'}${faixa.repetir ? ' · ⟲' : ''}</small>
+        <button class="musica-mais" type="button" data-faixa-abrir="${esc(faixa.id)}" aria-expanded="${aberta}" title="Volume, repetir, mover e apagar">⋯</button></div>
+        ${aberta ? `<div class="musica-opcoes">
+          <label class="campo">Volume da música (para todos) <span class="faixa"><input type="range" min="0" max="1" step="0.01" value="${faixa.volume}" data-faixa-volume="${esc(faixa.id)}"><output>${Math.round(faixa.volume * 100)}%</output></span></label>
+          <label class="marcar"><input type="checkbox" data-faixa-repetir="${esc(faixa.id)}"${faixa.repetir ? ' checked' : ''}> Repetir esta música (ambiente, tema)</label>
+          <div class="combate-acoes"><button class="botao vazado pequeno" type="button" data-faixa-mover="cima" data-faixa="${esc(faixa.id)}" title="Para cima">↑</button><button class="botao vazado pequeno" type="button" data-faixa-mover="baixo" data-faixa="${esc(faixa.id)}" title="Para baixo">↓</button>
+          ${outras.length ? `<select data-faixa-playlist="${esc(faixa.id)}" aria-label="Mover para outra playlist"><option value="">Mover para…</option>${outras.map(item => `<option value="${esc(item.id)}">${esc(item.nome)}</option>`).join('')}</select>` : ''}
+          <button class="link" type="button" data-faixa-renomear="${esc(faixa.id)}">renomear</button><button class="link perigo" type="button" data-faixa-apagar="${esc(faixa.id)}">apagar</button></div>
+        </div>` : ''}
+      </li>`;
+  }
+  function htmlDasPlaylists() {
+    const playlists = (S.audio && S.audio.playlists) || [];
+    const tocando = new Set(CANAIS.map(canal => S.audio && S.audio.canais && S.audio.canais[canal] && S.audio.canais[canal].faixa.id).filter(Boolean));
+    const opcao = (valor, atual, texto) => `<option value="${valor}"${valor === atual ? ' selected' : ''}>${texto}</option>`;
+    return `<div class="bloco"><h3>Playlists</h3>
+      ${playlists.length ? playlists.map(playlist => `<details class="playlist" data-playlist="${esc(playlist.id)}"${S.playlistsAbertas.has(playlist.id) ? ' open' : ''}>
+        <summary><span class="info"><b>${esc(playlist.nome)}</b><small>${NOME_DO_CANAL[playlist.canal]} · ${playlist.modo === 'aleatorio' ? 'aleatória' : 'em ordem'}${playlist.repetir ? ' · repete' : ''} · ${playlist.faixas.length} ${playlist.faixas.length === 1 ? 'música' : 'músicas'}</small></span>
+          <button class="botao pequeno" type="button" data-tocar-playlist="${esc(playlist.id)}" title="Tocar a playlist para todos"${playlist.faixas.length ? '' : ' disabled'}>▶</button></summary>
+        <ol class="musicas">${playlist.faixas.map(faixa => htmlDaFaixa(playlist, faixa, tocando)).join('')}</ol>
+        <div class="campo-linha"><input type="text" class="cresce" data-yt-link="${esc(playlist.id)}" placeholder="Link do YouTube (vídeo ou playlist)" aria-label="Link do YouTube"><button class="botao vazado pequeno" type="button" data-yt-adicionar="${esc(playlist.id)}">Adicionar</button></div>
+        <label class="botao vazado pequeno arquivo">Enviar música (MP3, OGG, M4A, WAV ou FLAC) <input type="file" accept="audio/*,.mp3,.ogg,.opus,.m4a,.wav,.flac" multiple data-enviar-audio="${esc(playlist.id)}"></label>
+        <div class="form-grade">
+          <label>Canal <select data-playlist-canal="${esc(playlist.id)}">${opcao('musica', playlist.canal, 'Música')}${opcao('ambiente', playlist.canal, 'Ambiente')}</select></label>
+          <label>Ordem <select data-playlist-modo="${esc(playlist.id)}">${opcao('sequencia', playlist.modo, 'Em ordem')}${opcao('aleatorio', playlist.modo, 'Aleatória')}</select></label>
+          <label class="marcar inteiro"><input type="checkbox" data-playlist-repetir="${esc(playlist.id)}"${playlist.repetir ? ' checked' : ''}> No fim, começar de novo</label>
+        </div>
+        <div class="combate-acoes"><button class="link" type="button" data-playlist-renomear="${esc(playlist.id)}">renomear</button><button class="link perigo" type="button" data-playlist-apagar="${esc(playlist.id)}">apagar a playlist</button></div>
+      </details>`).join('') : '<p class="nota">Nenhuma playlist ainda. As do Foundry e a biblioteca do yt-jukebox vêm pelo importador.</p>'}
+      <div class="campo-linha"><input id="nova-playlist" class="cresce" type="text" maxlength="60" placeholder="Nova playlist" aria-label="Nome da playlist nova"><select id="nova-playlist-canal" aria-label="Canal"><option value="musica">Música</option><option value="ambiente">Ambiente</option></select><button class="botao pequeno" type="button" data-nova-playlist>Criar</button></div>
+      <p class="nota">Cada playlist toca no canal dela: a música e o ambiente tocam juntos. Tocar outra música no mesmo canal troca a que tocava.</p>
+    </div>`;
+  }
+  function renderAudio() {
+    const caixa = $('#audio-painel');
+    // Arrastando um controle: refaz quando soltar.
+    if (segurando) { audioPendente = true; return; }
+    audioPendente = false;
+    // O que o mestre está digitando (o link, o nome da playlist nova) continua lá depois de refazer.
+    const digitado = $$('input[type=text]', caixa).map(campo => [campo.dataset.ytLink ? `[data-yt-link="${campo.dataset.ytLink}"]` : `#${campo.id}`, campo.value, campo === document.activeElement]);
+    const segurado = tocador && tocador.bloqueado && CANAIS.some(canal => { const estado = tocador.estado(canal); return estado.alvo && !estado.pausado; });
+    caixa.innerHTML = `<div class="bloco"><h3>Tocando agora</h3>
+        ${segurado ? '<button class="botao pequeno" type="button" data-ligar-som>♪ Ligar o som</button><p class="nota">O navegador só toca som depois de um clique na página.</p>' : ''}
+        ${CANAIS.map(htmlDoCanal).join('')}
+        <p class="nota">O seu volume fica só neste aparelho.${gm() ? ' A música avança sozinha pela sua página: deixe a mesa aberta enquanto toca.' : ''}</p></div>
+      ${gm() ? htmlDasPlaylists() : ''}`;
+    for (const [seletor, valor, focado] of digitado) {
+      const campo = caixa.querySelector(seletor);
+      if (!campo) continue;
+      campo.value = valor;
+      if (focado) campo.focus();
+    }
+    atualizarProgresso();
+  }
+  const soltar = () => { if (!segurando) return; segurando = false; if (audioPendente) renderAudio(); };
+  $('#audio-painel').addEventListener('pointerdown', event => { if (event.target.matches('input[type=range]')) segurando = true; });
+  window.addEventListener('pointerup', () => setTimeout(soltar, 0));
+  window.addEventListener('pointercancel', soltar);
+  $('#audio-painel').addEventListener('toggle', event => {
+    const detalhe = event.target.closest('details[data-playlist]');
+    if (!detalhe) return;
+    if (detalhe.open) S.playlistsAbertas.add(detalhe.dataset.playlist); else S.playlistsAbertas.delete(detalhe.dataset.playlist);
+  }, true);
+  $('#audio-painel').addEventListener('input', event => {
+    const alvo = event.target;
+    if (alvo.dataset.volume && tocador) {
+      tocador.volume(alvo.dataset.volume, Number(alvo.value));
+      store.set(`som:${alvo.dataset.volume}`, alvo.value);
+    }
+    if (alvo.matches('.faixa input[type=range]')) alvo.nextElementSibling.textContent = `${Math.round(Number(alvo.value) * 100)}%`;
+    if (alvo.dataset.ir) { const saida = $(`#audio-painel [data-tempo="${alvo.dataset.ir}"]`); if (saida) saida.textContent = `${tempo(Number(alvo.value))} / ${tempo(Number(alvo.max))}`; }
+  });
+  $('#audio-painel').addEventListener('change', event => {
+    const alvo = event.target;
+    if (alvo.dataset.ir) op('audio.ir', { canal: alvo.dataset.ir, posicao: Number(alvo.value) }).catch(() => {});
+    if (alvo.dataset.faixaVolume) op('audio.faixa.editar', { faixa: alvo.dataset.faixaVolume, volume: Number(alvo.value) }).catch(() => {});
+    if (alvo.dataset.faixaRepetir) op('audio.faixa.editar', { faixa: alvo.dataset.faixaRepetir, repetir: alvo.checked }).catch(() => {});
+    if (alvo.dataset.faixaPlaylist && alvo.value) op('audio.faixa.editar', { faixa: alvo.dataset.faixaPlaylist, playlist: alvo.value }).then(() => { S.playlistsAbertas.add(alvo.value); }).catch(() => {});
+    if (alvo.dataset.playlistCanal) op('audio.playlist.editar', { playlist: alvo.dataset.playlistCanal, canal: alvo.value }).catch(() => {});
+    if (alvo.dataset.playlistModo) op('audio.playlist.editar', { playlist: alvo.dataset.playlistModo, modo: alvo.value }).catch(() => {});
+    if (alvo.dataset.playlistRepetir) op('audio.playlist.editar', { playlist: alvo.dataset.playlistRepetir, repetir: alvo.checked }).catch(() => {});
+    if (alvo.dataset.enviarAudio && alvo.files.length) enviarMusicas(alvo.dataset.enviarAudio, [...alvo.files]);
+  });
+  $('#audio-painel').addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    if (event.target.dataset.ytLink) { event.preventDefault(); adicionarYoutube(event.target.dataset.ytLink, event.target); }
+    if (event.target.id === 'nova-playlist') { event.preventDefault(); criarPlaylist(); }
+  });
+  $('#audio-painel').addEventListener('click', event => {
+    const botao = event.target.closest('button');
+    if (!botao) return;
+    // O botão de tocar fica dentro do summary: tocar não abre nem fecha a playlist.
+    if (botao.closest('summary')) event.preventDefault();
+    const d = botao.dataset;
+    if (botao.hasAttribute('data-ligar-som') && tocador) tocador.liberar();
+    if (d.audio) op(`audio.${d.audio}`, { canal: d.canal }).catch(() => {});
+    if (d.tocarFaixa) op('audio.tocar', { faixa: d.tocarFaixa }).catch(() => {});
+    if (d.tocarPlaylist) op('audio.tocar', { playlist: d.tocarPlaylist }).catch(() => {});
+    if (d.faixaAbrir) { S.faixaAberta = S.faixaAberta === d.faixaAbrir ? null : d.faixaAbrir; renderAudio(); }
+    if (d.faixaMover) op('audio.faixa.editar', { faixa: d.faixa, mover: d.faixaMover }).catch(() => {});
+    if (d.faixaRenomear) {
+      const faixa = ((S.audio && S.audio.playlists) || []).flatMap(item => item.faixas).find(item => item.id === d.faixaRenomear);
+      const nome = faixa && prompt('Nome da música:', faixa.nome);
+      if (nome && nome.trim()) op('audio.faixa.editar', { faixa: faixa.id, nome: nome.trim() }).catch(() => {});
+    }
+    if (d.faixaApagar) {
+      const faixa = ((S.audio && S.audio.playlists) || []).flatMap(item => item.faixas).find(item => item.id === d.faixaApagar);
+      if (faixa && confirm(`Tirar "${faixa.nome}" da playlist?`)) op('audio.faixa.apagar', { faixa: faixa.id }).catch(() => {});
+    }
+    if (d.playlistRenomear) {
+      const playlist = S.audio.playlists.find(item => item.id === d.playlistRenomear);
+      const nome = playlist && prompt('Nome da playlist:', playlist.nome);
+      if (nome && nome.trim()) op('audio.playlist.editar', { playlist: playlist.id, nome: nome.trim() }).catch(() => {});
+    }
+    if (d.playlistApagar) {
+      const playlist = S.audio.playlists.find(item => item.id === d.playlistApagar);
+      if (playlist && confirm(`Apagar a playlist "${playlist.nome}" e as ${playlist.faixas.length} músicas dela?`)) op('audio.playlist.apagar', { playlist: playlist.id }).catch(() => {});
+    }
+    if (d.ytAdicionar) adicionarYoutube(d.ytAdicionar, $(`#audio-painel [data-yt-link="${d.ytAdicionar}"]`));
+    if (botao.hasAttribute('data-nova-playlist')) criarPlaylist();
+  });
+  async function criarPlaylist() {
+    const campo = $('#nova-playlist');
+    const nome = campo.value.trim();
+    if (!nome) { campo.focus(); return; }
+    try {
+      const { resultado } = await op('audio.playlist.criar', { nome, canal: $('#nova-playlist-canal').value });
+      campo.value = '';
+      S.playlistsAbertas.add(resultado.playlist);
+      renderAudio();
+    } catch { /* o aviso já saiu */ }
+  }
+  // O link de um vídeo vira uma música; o de uma playlist (list=), todas as músicas dela (o navegador abre a playlist
+  // num player escondido). O título vem do servidor, um pouco depois.
+  async function adicionarYoutube(playlistId, campo) {
+    const texto = (campo && campo.value.trim()) || '';
+    if (!texto) { if (campo) campo.focus(); return; }
+    const lista = (texto.match(/[?&]list=([A-Za-z0-9_-]+)/) || [])[1];
+    const video = (texto.match(/[?&]v=([A-Za-z0-9_-]{11})/) || [])[1] || '';
+    try {
+      if (lista && (!video || confirm('Esse link é de um vídeo dentro de uma playlist. Adicionar a playlist inteira? (Cancelar adiciona só o vídeo.)'))) {
+        aviso('Abrindo a playlist no YouTube…');
+        const ids = await window.MesaTocador.videosDaPlaylist(lista, video).catch(error => { aviso(error.message, 'erro'); throw error; });
+        await op('audio.faixa.criar', { playlist: playlistId, faixas: ids.map(id => ({ youtube: id })) });
+        aviso(`${ids.length} ${ids.length === 1 ? 'música adicionada' : 'músicas adicionadas'}. Os títulos chegam aos poucos.`);
+      } else {
+        await op('audio.faixa.criar', { playlist: playlistId, youtube: texto });
+      }
+      if (campo) campo.value = '';
+      S.playlistsAbertas.add(playlistId);
+    } catch { /* o aviso já saiu */ }
+  }
+  // O tipo pela extensão (o navegador diz "video/ogg" para .ogg, ou nada para .opus e .flac); o servidor confere o
+  // começo do arquivo.
+  const TIPO_DO_AUDIO = { mp3: 'audio/mpeg', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', m4a: 'audio/mp4', wav: 'audio/wav', flac: 'audio/flac', webm: 'audio/webm' };
+  async function enviarMusicas(playlistId, arquivos) {
+    for (const arquivo of arquivos) {
+      const tipo = TIPO_DO_AUDIO[arquivo.name.split('.').pop().toLowerCase()] || arquivo.type;
+      aviso(`Enviando ${arquivo.name}…`);
+      try {
+        const response = await fetch(comCampanha('/api/mesa/midia'), { method: 'POST', headers: { 'Content-Type': tipo }, body: arquivo });
+        const resposta = await response.json().catch(() => ({}));
+        if (!response.ok) { aviso(`${arquivo.name}: ${resposta.erro || 'não subiu.'}`, 'erro'); continue; }
+        await op('audio.faixa.criar', { playlist: playlistId, midia: resposta.midia, nome: arquivo.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim() });
+        S.playlistsAbertas.add(playlistId);
+      } catch { /* o aviso já saiu */ }
+    }
+  }
+
   // ---------------- Cena (mestre) ----------------
+  // A música da cena: nenhuma, uma playlist inteira ou uma música dela ("playlist|faixa").
+  function htmlDaMusicaDaCena(musica) {
+    const atual = musica ? `${musica.playlist}|${musica.faixa || ''}` : '';
+    const opcao = (valor, texto) => `<option value="${esc(valor)}"${valor === atual ? ' selected' : ''}>${esc(texto)}</option>`;
+    return opcao('', 'Nenhuma') + ((S.audio && S.audio.playlists) || []).map(playlist => `<optgroup label="${esc(playlist.nome)}">${opcao(`${playlist.id}|`, `${playlist.nome}: a playlist inteira`)}${playlist.faixas.map(faixa => opcao(`${playlist.id}|${faixa.id}`, faixa.nome)).join('')}</optgroup>`).join('');
+  }
   function renderCenaPainel() {
     const caixa = $('#cena-painel');
     if (!gm()) { caixa.innerHTML = ''; return; }
@@ -2443,7 +2714,7 @@
         <p class="nota">Com mapa, a cena fica do tamanho da imagem; ajuste a grade depois, olhando o mapa. Sem mapa, a largura e a altura são em quadrados.</p>
         <button class="botao pequeno" type="button" data-nova-cena>Criar cena</button></div>
       ${cena ? `<div class="bloco"><h3>Esta cena</h3>
-        ${cena.origem ? `<p class="nota">Importada do Foundry (mundo ${esc(cena.origem.mundo)}).${cena.luzes ? ` ${cena.luzes} ${cena.luzes === 1 ? 'luz guardada' : 'luzes guardadas'} (a mesa ainda não usa luz).` : ''}</p>` : ''}
+        ${cena.origem ? `<p class="nota">Importada do Foundry (mundo ${esc(cena.origem.mundo)}).</p>` : ''}
         <div class="form-grade"><label class="inteiro">Nome <input id="cena-nome-campo" type="text" maxlength="60" value="${esc(cena.nome)}"></label>
         <label>Grade <select id="grade-tipo"><option value="quadrada"${g.tipo !== 'nenhuma' ? ' selected' : ''}>Quadrada</option><option value="nenhuma"${g.tipo === 'nenhuma' ? ' selected' : ''}>Sem grade</option></select></label>
         <label>Unidade <input id="grade-unidade" type="text" maxlength="8" value="${esc(g.unidade || 'm')}"></label>
@@ -2457,6 +2728,9 @@
         <label class="marcar"><input id="nevoa-ligada" type="checkbox"${cena.nevoa.ativa ? ' checked' : ''}> Névoa ligada nesta cena</label>
         <p class="nota">Com névoa, o jogador só recebe os tokens das áreas reveladas (o servidor nem manda os outros). Pinte com a ferramenta Névoa (N).</p>
         <div class="combate-acoes"><button class="botao vazado pequeno" type="button" data-nevoa="tudo"${cena.nevoa.ativa ? '' : ' disabled'}>Revelar tudo</button><button class="botao vazado pequeno" type="button" data-nevoa="limpar"${cena.nevoa.ativa ? '' : ' disabled'}>Cobrir tudo</button></div></div>
+      <div class="bloco"><h3>Música da cena</h3>
+        <label class="campo">Toca quando a cena abre <select id="cena-musica">${htmlDaMusicaDaCena(cena.musica)}</select></label>
+        <p class="nota">Como a playlist da cena no Foundry. Se ela já está tocando, continua de onde está.</p></div>
       <div class="bloco"><h3>Luz</h3>
         <label class="marcar"><input id="luz-global" type="checkbox"${luzDaCena().global ? ' checked' : ''}> Luz global: a cena toda clara</label>
         <label class="campo">Escuridão <span class="faixa"><input id="luz-escuridao" type="range" min="0" max="1" step="0.05" value="${luzDaCena().escuridao || 0}"><output id="luz-escuridao-valor">${Math.round((luzDaCena().escuridao || 0) * 100)}%</output></span></label>
@@ -2493,6 +2767,11 @@
     if (id === 'nevoa-ligada' && S.cena) op('nevoa.ligar', { cena: S.cena.id, ativa: event.target.checked }).catch(() => {});
     if (id === 'visao-ligada' && S.cena) op('cena.editar', { cena: S.cena.id, visao: event.target.checked }).catch(() => {});
     if (id === 'luz-global' && S.cena) op('cena.editar', { cena: S.cena.id, luz: { global: event.target.checked } }).catch(() => {});
+    if (id === 'cena-musica' && S.cena) {
+      const [playlist, faixa] = event.target.value.split('|');
+      op('cena.editar', { cena: S.cena.id, musica: playlist ? { playlist, faixa: faixa || null } : null }).catch(() => {});
+      event.target.blur();
+    }
     if (id === 'luz-escuridao' && S.cena) { op('cena.editar', { cena: S.cena.id, luz: { escuridao: Number(event.target.value) } }).catch(() => {}); event.target.blur(); }
     if (id === 'mostrar-cursor') {
       S.mostrarCursor = event.target.checked;

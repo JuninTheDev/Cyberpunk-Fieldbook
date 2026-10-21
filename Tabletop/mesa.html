@@ -22,6 +22,7 @@
     </div>
     <div class="topo-direita">
       <div id="presenca" class="presenca" aria-label="Quem está na mesa"></div>
+      <button id="som" class="som" type="button" hidden></button>
       <span id="ligacao" class="ligacao" title="Conexão com a mesa">conectando…</span>
       <button id="conta" class="botao vazado pequeno" type="button" hidden></button>
       <button id="painel-abrir" class="botao vazado pequeno so-celular" type="button" aria-controls="painel" aria-expanded="false">Painel</button>
@@ -72,6 +73,10 @@
       <section id="cartao" class="cartao" hidden aria-live="polite"></section>
       <div id="vazio" class="vazio" hidden></div>
       <div id="dica" class="dica"></div>
+      <div id="tocador" class="tocador" hidden>
+        <div class="tocador-topo"><span>♪ YouTube</span><button id="tocador-min" type="button" title="Esconder o vídeo (a música continua)" aria-label="Esconder o vídeo">–</button></div>
+        <div class="tocador-videos"><div data-canal="musica" hidden></div><div data-canal="ambiente" hidden></div></div>
+      </div>
     </div>
 
     <aside class="painel" id="painel">
@@ -79,6 +84,7 @@
         <button type="button" role="tab" data-aba="rolagens" class="ativa">Rolagens</button>
         <button type="button" role="tab" data-aba="combate">Combate <span id="combate-selo" class="selo" hidden></span></button>
         <button type="button" role="tab" data-aba="fichas"><span class="so-mestre">Fichas</span><span class="so-jogador">Personagem</span></button>
+        <button type="button" role="tab" data-aba="audio">Áudio</button>
         <button type="button" role="tab" data-aba="cena" class="so-mestre">Cena</button>
       </div>
 
@@ -130,6 +136,10 @@
         <div id="fichas"></div>
       </section>
 
+      <section class="aba" data-aba="audio">
+        <div id="audio-painel"></div>
+      </section>
+
       <section class="aba so-mestre" data-aba="cena">
         <div id="cena-painel"></div>
       </section>
@@ -161,6 +171,7 @@
   <script src="/system-rules.js"></script>
   <script src="/mesa-config.js"></script>
   <script src="/mesa-visao.js"></script>
+  <script src="/mesa-tocador.js"></script>
   <script src="/mesa.js"></script>
 </body>
 </html>

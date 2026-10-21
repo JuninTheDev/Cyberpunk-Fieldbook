@@ -20,7 +20,7 @@ const vm = require('vm');
 const here = __dirname;
 const root = path.resolve(here, '..');
 const createTableApi = require('./mesa-api');
-const SEMENTE = 7; // muda quando os dados de teste mudam de formato: os antigos são refeitos
+const SEMENTE = 8; // muda quando os dados de teste mudam de formato: os antigos são refeitos
 // As cenas do Foundry entram sozinhas nos dados de teste quando o backup completo está neste computador.
 const BACKUP_FOUNDRY = path.join(process.env.USERPROFILE || '', 'Backups', 'Night City Fieldbook', 'foundry12-completo-2026-10-12.tar');
 
@@ -31,6 +31,7 @@ const files = {
   '/mesa.html': path.join(here, 'mesa.html'),
   '/mesa.js': path.join(here, 'mesa.js'),
   '/mesa-visao.js': path.join(here, 'mesa-visao.js'),
+  '/mesa-tocador.js': path.join(here, 'mesa-tocador.js'),
   '/mesa.css': path.join(here, 'mesa.css')
 };
 
@@ -41,7 +42,7 @@ function carregarPagina() {
   const pagina = new Map();
   for (const [rota, arquivo] of Object.entries(files)) pagina.set(rota, { conteudo: fs.readFileSync(arquivo), tipo: contentTypes[path.extname(arquivo)] });
   const hash = crypto.createHash('sha1');
-  const codigo = [...new Set(Object.values(files)), ...['mesa-api.js', 'mesa-combate.js', 'mesa-regras.js'].map(nome => path.join(here, nome)), path.join(root, 'personagem-jogo.js')];
+  const codigo = [...new Set(Object.values(files)), ...['mesa-api.js', 'mesa-combate.js', 'mesa-regras.js', 'mesa-2077.js', 'mesa-audio.js'].map(nome => path.join(here, nome)), path.join(root, 'personagem-jogo.js')];
   for (const arquivo of codigo) hash.update(fs.readFileSync(arquivo));
   return { pagina, versao: hash.digest('hex').slice(0, 12) };
 }
@@ -91,7 +92,7 @@ function carregarWiki(dados) {
   return { atender, characterApi };
 }
 
-async function iniciar({ porta = Number(process.env.PORTA || 8010), host = process.env.HOST || '127.0.0.1', dados = process.env.DADOS_MESA || defaultData(), limpar = false, semente = true, cenasDoFoundry = true, random, prazoDefesa, silencioso = false, versao: outraVersao } = {}) {
+async function iniciar({ porta = Number(process.env.PORTA || 8010), host = process.env.HOST || '127.0.0.1', dados = process.env.DADOS_MESA || defaultData(), limpar = false, semente = true, cenasDoFoundry = true, random, prazoDefesa, tituloDoYoutube, silencioso = false, versao: outraVersao } = {}) {
   const infoFile = path.join(dados, 'teste.json');
   const readInfo = () => { try { return JSON.parse(fs.readFileSync(infoFile, 'utf8')); } catch { return null; } };
   const velho = readInfo();
@@ -106,7 +107,7 @@ async function iniciar({ porta = Number(process.env.PORTA || 8010), host = proce
   const tableApi = createTableApi({
     dataDir: dados, charactersDir: path.join(dados, 'personagens'), wikiDir: root,
     who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter,
-    send, writeJsonAtomic, versao, ...(random ? { random } : {}), ...(prazoDefesa ? { prazoDefesa } : {})
+    send, writeJsonAtomic, versao, ...(random ? { random } : {}), ...(prazoDefesa ? { prazoDefesa } : {}), ...(tituloDoYoutube ? { tituloDoYoutube } : {})
   });
 
   const server = http.createServer((request, response) => {
@@ -237,8 +238,8 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
   if (cenasDoFoundry && fs.existsSync(BACKUP_FOUNDRY)) {
     try {
       const { importar } = require('./importar-foundry');
-      const { cenas } = await importar({ tar: BACKUP_FOUNDRY, mundo: 'edgerunners-storys', mesa: url, silencioso: true });
-      console.log(`Cenas do Foundry importadas: ${cenas.filter(cena => cena.status === 'ok').length}.`);
+      const { cenas, playlists } = await importar({ tar: BACKUP_FOUNDRY, mundo: 'edgerunners-storys', mesa: url, silencioso: true });
+      console.log(`Do Foundry: ${cenas.filter(cena => cena.status === 'ok').length} cenas e ${playlists.filter(item => item.status === 'ok').length} playlists.`);
     } catch (error) {
       console.log(`As cenas do Foundry não entraram (${error.message}). Rode o importar-foundry.js à mão.`);
     }

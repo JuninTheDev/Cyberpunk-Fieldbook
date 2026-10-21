@@ -8,13 +8,15 @@ const { iniciar } = require('./testar');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function montar(t, { prazoDefesa } = {}) {
+async function montar(t, { prazoDefesa, tituloDoYoutube } = {}) {
   const dados = fs.mkdtempSync(path.join(os.tmpdir(), 'mesa-teste-'));
   const fila = [];
   // random(faces) devolve de 0 a faces-1; a fila guarda a face que deve sair (1 a faces). Sem fila, sai a face do meio,
   // para nenhum teste cair num crítico sem querer.
   const random = faces => (fila.length ? fila.shift() - 1 : Math.floor(faces / 2) - 1);
-  const mesa = await iniciar({ porta: 0, dados, semente: false, silencioso: true, random, prazoDefesa });
+  // O título do vídeo do YouTube, sem ir à internet.
+  const titulo = tituloDoYoutube || (async id => `Vídeo ${id}`);
+  const mesa = await iniciar({ porta: 0, dados, semente: false, silencioso: true, random, prazoDefesa, tituloDoYoutube: titulo });
   const base = mesa.url.replace('localhost', '127.0.0.1');
   t.after(async () => { await mesa.fechar(); fs.rmSync(dados, { recursive: true, force: true }); });
 

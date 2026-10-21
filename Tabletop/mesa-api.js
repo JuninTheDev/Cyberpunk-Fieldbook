@@ -14,7 +14,7 @@
 // api-personagens.js. Assim a ficha, a lista de Personagens e a mesa mostram o mesmo número.
 //
 // Na pasta de dados: mesa/<campanha>/mesa.json (cenas, tokens, névoa, combate e registro) e mesa/<campanha>/midia/
-// (mapas, vídeos, tiles e imagens de token, pelo hash do conteúdo).
+// (mapas, vídeos, tiles, imagens de token e músicas, pelo hash do conteúdo).
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -23,6 +23,7 @@ const characterGame = require('../personagem-jogo');
 const R = require('./mesa-regras');
 const K = require('./mesa-2077');
 const createCombat = require('./mesa-combate');
+const createAudio = require('./mesa-audio');
 const V = require('./mesa-visao');
 
 const ROUTES = /^\/api\/mesa(\/|$)/;
@@ -38,10 +39,15 @@ const MAX_LIGHTS = 300;
 const PULSE = 20_000;
 const SYNC = 4_000;
 // Mapas e tiles: imagem ou vídeo (as cenas animadas do Foundry). SVG só para imagem de token, entregue em caixa de areia.
-const MEDIA_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'video/webm': 'webm', 'video/mp4': 'mp4' };
-const MEDIA_CONTENT = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', webm: 'video/webm', mp4: 'video/mp4' };
-const MEDIA_LIMIT_MB = { png: 80, jpg: 80, webp: 80, svg: 2, webm: 150, mp4: 150 };
-const MEDIA_FILE = /^[a-f0-9]{40}\.(png|jpg|webp|svg|webm|mp4)$/;
+// Música (mesa-audio.js): MP3, OGG (e Opus), M4A, WAV e FLAC; o WebM só de áudio fica como .webm.
+const MEDIA_TYPES = {
+  'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'video/webm': 'webm', 'video/mp4': 'mp4',
+  'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/ogg': 'ogg', 'audio/opus': 'ogg', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'm4a',
+  'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/vnd.wave': 'wav', 'audio/flac': 'flac', 'audio/x-flac': 'flac', 'audio/webm': 'webm'
+};
+const MEDIA_CONTENT = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', webm: 'video/webm', mp4: 'video/mp4', mp3: 'audio/mpeg', ogg: 'audio/ogg', m4a: 'audio/mp4', wav: 'audio/wav', flac: 'audio/flac' };
+const MEDIA_LIMIT_MB = { png: 80, jpg: 80, webp: 80, svg: 2, webm: 150, mp4: 150, mp3: 60, ogg: 60, m4a: 60, wav: 150, flac: 150 };
+const MEDIA_FILE = /^[a-f0-9]{40}\.(png|jpg|webp|svg|webm|mp4|mp3|ogg|m4a|wav|flac)$/;
 const VIDEO_FILE = /\.(webm|mp4)$/;
 const CHARACTER_ID = /^[a-z0-9]{6,16}$/;
 const DICE_RE = /^\s*(\d{1,2})\s*d\s*(\d{1,3})\s*(?:([+-])\s*(\d{1,3}))?\s*$/i;
@@ -98,13 +104,18 @@ function looksLike(head, extension) {
   if (extension === 'jpg') return head.length > 3 && head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
   if (extension === 'webp') return head.length > 12 && head.toString('latin1', 0, 4) === 'RIFF' && head.toString('latin1', 8, 12) === 'WEBP';
   if (extension === 'webm') return head.length > 4 && head.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
-  if (extension === 'mp4') return head.length > 12 && head.toString('latin1', 4, 8) === 'ftyp';
+  if (extension === 'mp4' || extension === 'm4a') return head.length > 12 && head.toString('latin1', 4, 8) === 'ftyp';
+  // MP3: a etiqueta ID3 ou o primeiro quadro (11 bits ligados).
+  if (extension === 'mp3') return head.length > 3 && (head.toString('latin1', 0, 3) === 'ID3' || (head[0] === 0xff && (head[1] & 0xe0) === 0xe0));
+  if (extension === 'ogg') return head.length > 4 && head.toString('latin1', 0, 4) === 'OggS';
+  if (extension === 'wav') return head.length > 12 && head.toString('latin1', 0, 4) === 'RIFF' && head.toString('latin1', 8, 12) === 'WAVE';
+  if (extension === 'flac') return head.length > 4 && head.toString('latin1', 0, 4) === 'fLaC';
   return /^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*(<!DOCTYPE[^>]*>\s*)?<svg[\s>]/i.test(head.toString('utf8'));
 }
 
 // versao: a da página e do servidor juntos (quem carrega a mesa calcula). A página aberta compara a cada conexão e, se
 // mudou (o servidor reiniciou com código novo), pede para recarregar.
-module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who, campaigns, updateCharacter = null, send, writeJsonAtomic, random = faces => crypto.randomInt(faces), prazoDefesa = 60_000, versao = '' }) {
+module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who, campaigns, updateCharacter = null, send, writeJsonAtomic, random = faces => crypto.randomInt(faces), prazoDefesa = 60_000, versao = '', tituloDoYoutube = null }) {
   const json = (response, status, data) => send(response, status, JSON.stringify(data), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' });
   const tableDir = id => path.join(dataDir, 'mesa', id);
   const die = faces => random(faces) + 1;
@@ -374,7 +385,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       tiles: (scene.tiles || []).filter(tile => gm || !tile.escondido).map(({ midia, ...tile }) => ({ ...tile, imagem: mediaUrl(viewer, campaignId, midia), video: VIDEO_FILE.test(midia || '') })),
       tokens, visao: Boolean(scene.visao), paredes: wallsFor(viewer, scene),
       luz: luzDaCena(scene), luzes,
-      ...(gm ? { origem: scene.origem || null } : {})
+      ...(gm ? { origem: scene.origem || null, musica: scene.musica || null } : {})
     };
   }
   // As paredes: o mestre recebe todas (para ver e editar). O jogador recebe as portas (para abrir e fechar) e, com a
@@ -440,6 +451,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       // As defesas que esperam esta pessoa (quem reconecta no meio de um ataque ainda responde).
       defesas: combatFlow.perguntasPara(viewer, connection.campanha),
       presenca: presenceOf(connection.campanha),
+      audio: audioFlow.audioFor(viewer, state, connection.campanha),
       ...(gm ? {
         cenas: scenesList(state), cenaAtiva: state.cenaAtiva,
         personagens: fichas,
@@ -552,6 +564,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (effects.registroTroca && canSeeEntry(viewer, effects.registroTroca)) sendEvent(connection, 'registro.troca', entryFor(viewer, effects.registroTroca));
       if (effects.registroLimpo) sendEvent(connection, 'registro.limpo', {});
       if (effects.esquecer) sendEvent(connection, 'visao.esquecer', { cena: effects.esquecer });
+      if (effects.audio) sendEvent(connection, 'audio', audioFlow.audioFor(viewer, state, campaignId));
     }
     if (effects.fichas) sendCards(campaignId);
   }
@@ -891,6 +904,10 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     regras: () => wikiData().regras, ptOf: en => (wikiData().ptOf ? wikiData().ptOf(en) : en),
     critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
   });
+  const audioFlow = createAudio({
+    newId, fail, int, line, real, isGm, random, tableOf, save, broadcast, buscarTitulo: tituloDoYoutube,
+    mediaUrl, mediaExists: (campaignId, name) => fs.existsSync(path.join(tableDir(campaignId), 'midia', name))
+  });
 
   // mestre: só o mestre. local: só mexe na conexão de quem pediu (não grava nem avisa ninguém).
   const OPERATIONS = {
@@ -913,7 +930,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const scene = {
         id: anterior ? anterior.id : newId(), nome: line(input.nome, 60) || 'Cena importada', imagem: mediaArg(campaignId, input.imagem),
         largura: int(input.largura, 200, 16000, 3000), altura: int(input.altura, 200, 16000, 2000), grade: cleanGrid(input.grade), margem: cleanMargem(input.margem),
-        nevoa: { ativa: Boolean(input.nevoa), tracos: [] }, visao: Boolean(input.visao), luz: cleanLuzDaCena(input.luz), tokens: [], tiles: [], paredes: [], luzes: [], origem
+        nevoa: { ativa: Boolean(input.nevoa), tracos: [] }, visao: Boolean(input.visao), luz: cleanLuzDaCena(input.luz), tokens: [], tiles: [], paredes: [], luzes: [], origem,
+        // A música da cena (a playlist do Foundry, importada antes): a que não existe fica de fora.
+        musica: (() => { try { return audioFlow.musicaArg(state, input.musica); } catch (error) { if (error.status) return null; throw error; } })()
       };
       scene.tiles = (Array.isArray(input.tiles) ? input.tiles : []).slice(0, MAX_TILES).map(tile => cleanTile(campaignId, scene, tile));
       scene.paredes = (Array.isArray(input.paredes) ? input.paredes : []).slice(0, MAX_WALLS).map(cleanWall).filter(wall => wall.c.length === 4);
@@ -939,6 +958,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (body.visao !== undefined) scene.visao = Boolean(body.visao);
       if (body.luz && typeof body.luz === 'object') scene.luz = cleanLuzDaCena(body.luz, luzDaCena(scene));
       if (body.margem !== undefined) scene.margem = cleanMargem(body.margem);
+      // A música que toca quando a cena abre: { playlist, faixa } (sem faixa, a playlist inteira); null tira.
+      if (body.musica !== undefined) scene.musica = audioFlow.musicaArg(state, body.musica);
       for (const token of scene.tokens) Object.assign(token, naCena(scene, token.x, token.y));
       return { cena: scene.id, cenas: true };
     } },
@@ -952,8 +973,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       return { cenas: true, ativa: wasActive, combate: hadCombat };
     } },
     'cena.ativar': { mestre: true, run({ state, body }) {
-      state.cenaAtiva = sceneArg(state, body.cena).id;
-      return { cenas: true, ativa: true, combate: true };
+      const scene = sceneArg(state, body.cena);
+      state.cenaAtiva = scene.id;
+      return { cenas: true, ativa: true, combate: true, audio: audioFlow.aoAbrirCena(state, scene) };
     } },
     // O mestre olha uma cena sem levar os jogadores (no Foundry, ver a cena sem ativar).
     'cena.ver': { mestre: true, local: true, run({ state, body, connection, campaignId }) {
@@ -1303,7 +1325,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       return { tokens: true, fichas: true };
     } },
     // Ataque, defesa, dano, Death Save, estabilizar, recarregar: mesa-combate.js.
-    ...combatFlow.operations
+    ...combatFlow.operations,
+    // Playlists, o que toca e a importação das playlists do Foundry: mesa-audio.js.
+    ...audioFlow.operations
   };
 
   // ---------------- Rotas ----------------
@@ -1373,7 +1397,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     return new Promise(resolve => {
       const type = String(request.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
       const extension = MEDIA_TYPES[type];
-      if (!extension) { json(response, 415, { erro: 'Envie PNG, JPEG, WebP, SVG, WebM ou MP4.' }); return resolve(); }
+      if (!extension) { json(response, 415, { erro: 'Envie PNG, JPEG, WebP, SVG, WebM ou MP4 (imagem e vídeo), ou MP3, OGG, M4A, WAV ou FLAC (música).' }); return resolve(); }
       const limit = MEDIA_LIMIT_MB[extension] * 1024 * 1024;
       const folder = path.join(tableDir(campaignId), 'midia');
       fs.mkdirSync(folder, { recursive: true });

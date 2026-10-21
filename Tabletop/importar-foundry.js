@@ -1,6 +1,8 @@
 // Traz as cenas de um mundo do Foundry para a mesa da wiki: o mapa (imagem ou vídeo), a grade, os tiles, os tokens (com
 // a visão e a luz), as paredes, as luzes e a luz da cena. Cada token vira o personagem da wiki (ator que veio da wiki), a ficha
 // de NPC da wiki (o "base" que o cpr-2077 grava no ator) ou um token livre com a imagem e o HP do ator.
+// Traz também o áudio: as playlists do Foundry (com as músicas), a biblioteca do yt-jukebox (os vídeos do YouTube) e a
+// música de cada cena.
 //
 // Lê o banco do Foundry com o classic-level do próprio Foundry instalado (nada novo para instalar), numa cópia (o Foundry
 // pode estar aberto), e manda tudo pela API da mesa, como o mestre faria. Não muda nada no Foundry.
@@ -11,16 +13,20 @@
 // Opções:
 //   --mesa URL        a wiki com a mesa (padrão: http://127.0.0.1:8010, a de teste)
 //   --campanha ID     a campanha (padrão: a primeira)
-//   --listar          só mostra as cenas do mundo
+//   --listar          só mostra as cenas e as playlists do mundo
 //   --cenas "A; B"    só estas cenas (pelo nome)
-//   --substituir      troca as cenas já importadas deste mundo
+//   --sem-audio       sem as playlists (e sem a música das cenas)
+//   --substituir      troca as cenas e as playlists já importadas deste mundo
 //   --foundry-app DIR a pasta do Foundry instalado (de onde vem o classic-level)
 const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const TIPOS = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', webm: 'video/webm', mp4: 'video/mp4', m4v: 'video/mp4' };
+const TIPOS = {
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', webm: 'video/webm', mp4: 'video/mp4', m4v: 'video/mp4',
+  mp3: 'audio/mpeg', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', m4a: 'audio/mp4', wav: 'audio/wav', flac: 'audio/flac'
+};
 // O tipo pelo começo do arquivo: no Foundry há WebP salvo como .jpeg e .png (o Foundry e o navegador não ligam; a
 // mesa confere). Sem reconhecer, vale a extensão.
 function tipoDe(arquivo, caminho) {
@@ -30,8 +36,13 @@ function tipoDe(arquivo, caminho) {
   if (cabeca.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
   if (cabeca[0] === 0xff && cabeca[1] === 0xd8 && cabeca[2] === 0xff) return 'image/jpeg';
   if (cabeca.toString('latin1', 0, 4) === 'RIFF' && cabeca.toString('latin1', 8, 12) === 'WEBP') return 'image/webp';
+  if (cabeca.toString('latin1', 0, 4) === 'RIFF' && cabeca.toString('latin1', 8, 12) === 'WAVE') return 'audio/wav';
   if (cabeca.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]))) return 'video/webm';
-  if (cabeca.toString('latin1', 4, 8) === 'ftyp') return 'video/mp4';
+  // O MP4 só de som (M4A) vira música; o resto, vídeo.
+  if (cabeca.toString('latin1', 4, 8) === 'ftyp') return cabeca.toString('latin1', 8, 11) === 'M4A' || /\.m4a$/i.test(caminho) ? 'audio/mp4' : 'video/mp4';
+  if (cabeca.toString('latin1', 0, 3) === 'ID3' || (cabeca[0] === 0xff && (cabeca[1] & 0xe0) === 0xe0)) return 'audio/mpeg';
+  if (cabeca.toString('latin1', 0, 4) === 'OggS') return 'audio/ogg';
+  if (cabeca.toString('latin1', 0, 4) === 'fLaC') return 'audio/flac';
   return TIPOS[path.extname(caminho).slice(1).toLowerCase()];
 }
 
@@ -67,6 +78,8 @@ async function lerBanco(ClassicLevel, pasta) {
 }
 
 // ---------------- De onde vêm os arquivos: o .tar do backup ou a pasta Data do Foundry ----------------
+// Os bancos do mundo que a importação lê (o yt-jukebox guarda a biblioteca nas configurações do mundo).
+const BANCOS = ['scenes', 'actors', 'playlists', 'settings'];
 // No Windows, o tar do sistema: o do Git Bash (GNU) lê "C:" como outro computador.
 const TAR = process.platform === 'win32' && fs.existsSync(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe'))
   ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
@@ -85,7 +98,7 @@ function origemTar(tar, mundo, trabalho) {
     spawnSync(TAR, ['-xf', tar, '-C', path.join(trabalho, 'arquivos'), '-T', arquivoLista], { stdio: 'ignore' });
   };
   fs.mkdirSync(path.join(trabalho, 'arquivos'), { recursive: true });
-  extrair([`${prefixo}worlds/${mundo}/data/scenes`, `${prefixo}worlds/${mundo}/data/actors`]);
+  extrair(BANCOS.map(nome => `${prefixo}worlds/${mundo}/data/${nome}`).filter(membro => existe.has(membro)));
   const base = path.join(trabalho, 'arquivos', prefixo);
   return {
     banco: nome => path.join(base, 'worlds', mundo, 'data', nome),
@@ -96,7 +109,7 @@ function origemTar(tar, mundo, trabalho) {
 function origemDados(dados, mundo, trabalho) {
   if (!fs.existsSync(path.join(dados, 'worlds', mundo, 'world.json'))) throw new Error(`O mundo "${mundo}" não está em ${dados}.`);
   // O banco é copiado: com o Foundry aberto, ele fica trancado.
-  for (const nome of ['scenes', 'actors']) {
+  for (const nome of BANCOS) {
     const de = path.join(dados, 'worlds', mundo, 'data', nome);
     if (fs.existsSync(de)) fs.cpSync(de, path.join(trabalho, nome), { recursive: true, filter: origem => path.basename(origem) !== 'LOCK' });
   }
@@ -184,9 +197,56 @@ function converter(cena, embutidos, atores, mundo) {
       grade: { tamanho, tipo: tipo === 0 ? 'nenhuma' : 'quadrada', metros: Number(grid.distance) || 2, unidade: grid.units || 'm', visivel: tipo !== 0, x: resto(deslocX, tamanho), y: resto(deslocY, tamanho) },
       // A visão liga como no Foundry (tokenVision) se ela muda alguma coisa: a cena tem paredes ou está no escuro. Com
       // luz global e sem paredes, ela só deixaria sem ver nada quem não tem token na cena.
-      nevoa: false, visao: Boolean(cena.tokenVision) && (paredes.length > 0 || !luz.global), luz, tokens, tiles, paredes, luzes, origem: { mundo, id: cena._id }
+      nevoa: false, visao: Boolean(cena.tokenVision) && (paredes.length > 0 || !luz.global), luz, tokens, tiles, paredes, luzes, origem: { mundo, id: cena._id },
+      // A música da cena, com os ids do Foundry: a importação troca pelos da mesa depois de importar as playlists.
+      musica: cena.playlist ? { playlist: cena.playlist, faixa: cena.playlistSound || null } : null
     }
   };
+}
+
+// ---------------- As playlists ----------------
+// O volume do Foundry é o ganho (0 a 1); a mesa guarda a posição do controle, como o volumeToInput do Foundry 12
+// (o ganho elevado a 1/1,5).
+const nivelDoFoundry = volume => Math.round(Math.min(1, Math.max(0, Number(volume) || 0)) ** (1 / 1.5) * 100) / 100;
+// As playlists do Foundry (a ordem das músicas: alfabética, ou a manual com sorting "m") e a biblioteca do yt-jukebox
+// (cada grupo vira uma playlist de vídeos do YouTube). midia: o caminho do arquivo na pasta Data.
+function converterPlaylists(playlists, configuracoes, mundo) {
+  const avisos = [];
+  const midias = new Set();
+  const sons = [...playlists.entries()].filter(([chave]) => chave.startsWith('!playlists.sounds!'));
+  const lista = [...playlists.entries()].filter(([chave]) => chave.startsWith('!playlists!')).map(([, valor]) => valor)
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || String(a.name).localeCompare(String(b.name), 'pt'));
+  const resultado = lista.map(playlist => {
+    const faixas = sons.filter(([chave]) => chave.startsWith(`!playlists.sounds!${playlist._id}.`)).map(([, som]) => som)
+      .sort(playlist.sorting === 'm' ? (a, b) => (a.sort ?? 0) - (b.sort ?? 0) : (a, b) => String(a.name).localeCompare(String(b.name), 'pt'))
+      .map(som => {
+        const caminho = caminhoDe(som.path);
+        if (caminho) midias.add(caminho);
+        return { nome: som.name || path.basename(caminho), midia: caminho, volume: nivelDoFoundry(som.volume ?? 0.5), repetir: Boolean(som.repeat), origem: som._id };
+      })
+      .filter(faixa => faixa.midia);
+    // Os modos do Foundry: 0 em ordem, 1 aleatória, 2 todas juntas (vira em ordem), −1 só à mão.
+    if (playlist.mode === 2) avisos.push(`${playlist.name}: "todas juntas" virou em ordem`);
+    return {
+      nome: playlist.name || 'Playlist', canal: playlist.channel === 'music' || !playlist.channel ? 'musica' : 'ambiente',
+      modo: playlist.mode === 1 ? 'aleatorio' : 'sequencia', repetir: false, faixas, origem: { mundo, id: playlist._id }
+    };
+  });
+  const biblioteca = [...configuracoes.values()].find(item => item && item.key === 'yt-jukebox.library');
+  if (biblioteca) {
+    let valor = biblioteca.value;
+    try { if (typeof valor === 'string') valor = JSON.parse(valor); } catch { valor = null; }
+    for (const grupo of (valor && Array.isArray(valor.groups) ? valor.groups : [])) {
+      const faixas = (Array.isArray(grupo.items) ? grupo.items : []).filter(item => item && item.id)
+        .map(item => ({ nome: item.title && item.title !== item.id ? item.title : '', youtube: item.id, volume: 0.5, repetir: false, origem: item.id }));
+      if (!faixas.length) continue;
+      resultado.push({
+        nome: grupo.id === 'unsorted' ? 'YouTube (sem grupo)' : `YouTube: ${grupo.name || 'grupo'}`, canal: 'musica', modo: 'sequencia', repetir: false,
+        faixas, origem: { mundo, id: `yt-jukebox:${grupo.id}` }
+      });
+    }
+  }
+  return { playlists: resultado, midias, avisos };
 }
 
 // ---------------- A mesa ----------------
@@ -215,8 +275,10 @@ async function importar(opcoes) {
     const ClassicLevel = classicLevel(opcoes['foundry-app']);
     log(`Lendo o mundo "${mundo}"…`);
     const fonte = opcoes.tar ? origemTar(opcoes.tar, mundo, trabalho) : origemDados(opcoes.dados, mundo, trabalho);
+    const lerSeHouver = async nome => (fs.existsSync(fonte.banco(nome)) ? lerBanco(ClassicLevel, fonte.banco(nome)) : new Map());
     const banco = await lerBanco(ClassicLevel, fonte.banco('scenes'));
-    const atores = fs.existsSync(fonte.banco('actors')) ? await lerBanco(ClassicLevel, fonte.banco('actors')) : new Map();
+    const atores = await lerSeHouver('actors');
+    const audio = opcoes['sem-audio'] ? { playlists: [], midias: new Set(), avisos: [] } : converterPlaylists(await lerSeHouver('playlists'), await lerSeHouver('settings'), mundo);
     const de = (colecao, cenaId) => [...banco.entries()].filter(([chave]) => chave.startsWith(`!scenes.${colecao}!${cenaId}.`)).map(([, valor]) => valor);
     let cenas = [...banco.entries()].filter(([chave]) => chave.startsWith('!scenes!')).map(([, valor]) => valor)
       .sort((a, b) => (a.navOrder ?? a.sort ?? 0) - (b.navOrder ?? b.sort ?? 0) || String(a.name).localeCompare(String(b.name), 'pt'));
@@ -230,9 +292,11 @@ async function importar(opcoes) {
     }, atores, mundo));
     if (opcoes.listar) {
       for (const { cena, avisos } of convertidas) {
-        log(`${cena.nome.padEnd(34)} ${cena.largura}×${cena.altura}  grade ${cena.grade.tipo === 'nenhuma' ? 'nenhuma' : `${cena.grade.tamanho}px = ${cena.grade.metros} ${cena.grade.unidade}`}  ${cena.tokens.length} tokens, ${cena.tiles.length} tiles, ${cena.paredes.length} paredes, ${cena.luzes.length} luzes${avisos.length ? `  (${avisos.join('; ')})` : ''}`);
+        log(`${cena.nome.padEnd(34)} ${cena.largura}×${cena.altura}  grade ${cena.grade.tipo === 'nenhuma' ? 'nenhuma' : `${cena.grade.tamanho}px = ${cena.grade.metros} ${cena.grade.unidade}`}  ${cena.tokens.length} tokens, ${cena.tiles.length} tiles, ${cena.paredes.length} paredes, ${cena.luzes.length} luzes${cena.musica ? ', com música' : ''}${avisos.length ? `  (${avisos.join('; ')})` : ''}`);
       }
-      return { cenas: convertidas.map(item => item.cena) };
+      for (const playlist of audio.playlists) log(`♪ ${playlist.nome.padEnd(32)} ${playlist.canal === 'ambiente' ? 'ambiente' : 'música'}, ${playlist.faixas.length} ${playlist.faixas.length === 1 ? 'faixa' : 'faixas'}${playlist.faixas[0] && playlist.faixas[0].youtube ? ' do YouTube' : ''}`);
+      for (const aviso of audio.avisos) log(`  (${aviso})`);
+      return { cenas: convertidas.map(item => item.cena), playlists: audio.playlists };
     }
 
     // Quem manda é o mestre: em casa, este computador; no servidor, com a senha.
@@ -247,8 +311,8 @@ async function importar(opcoes) {
     if (estado.status !== 200 || !estado.dados || estado.dados.eu.papel !== 'mestre') throw new Error(`A mesa em ${mesa} não respondeu como mestre (${estado.status}). No servidor, use --senha.`);
 
     // Os arquivos: todos de uma vez do .tar; depois, um envio por arquivo (o mesmo arquivo em duas cenas sobe uma vez).
-    const todas = [...new Set(convertidas.flatMap(item => [...item.midias]))];
-    log(`${convertidas.length} cenas, ${todas.length} arquivos.`);
+    const todas = [...new Set([...convertidas.flatMap(item => [...item.midias]), ...audio.midias])];
+    log(`${convertidas.length} cenas, ${audio.playlists.length} playlists, ${todas.length} arquivos.`);
     fonte.buscar(todas);
     const enviados = new Map();
     for (const caminho of todas) {
@@ -261,10 +325,39 @@ async function importar(opcoes) {
       enviados.set(caminho, envio.dados.midia);
     }
     const trocar = caminho => (caminho && enviados.get(caminho)) || '';
+
+    // As playlists antes das cenas: a música da cena aponta para elas. ids: do Foundry (ou do YouTube) para os da mesa.
+    const ids = { playlists: new Map(), faixas: new Map() };
+    const playlists = [];
+    for (const playlist of audio.playlists) {
+      const pronta = { ...playlist, faixas: playlist.faixas.map(faixa => (faixa.youtube ? faixa : { ...faixa, midia: trocar(faixa.midia) })).filter(faixa => faixa.youtube || faixa.midia) };
+      const resposta = await pedir('/api/mesa/op', { method: 'POST', body: { tipo: 'audio.importar', playlist: pronta, substituir: Boolean(opcoes.substituir) } });
+      if (resposta.status === 409) {
+        // Já importada: valem os ids que a mesa deu da outra vez.
+        const antiga = ((estado.dados.audio && estado.dados.audio.playlists) || []).find(item => item.origem && item.origem.mundo === mundo && item.origem.id === playlist.origem.id);
+        if (antiga) {
+          ids.playlists.set(playlist.origem.id, antiga.id);
+          for (const faixa of antiga.faixas) if (faixa.origem) ids.faixas.set(faixa.origem, faixa.id);
+        }
+        log(`  ♪ ${playlist.nome}: já importada (use --substituir para trocar).`);
+        playlists.push({ nome: playlist.nome, status: 'ja' });
+        continue;
+      }
+      if (resposta.status !== 200) throw new Error(`${playlist.nome}: ${(resposta.dados && resposta.dados.erro) || resposta.texto}`);
+      const r = resposta.dados.resultado;
+      ids.playlists.set(playlist.origem.id, r.playlist);
+      for (const [de, para] of Object.entries(r.faixas)) ids.faixas.set(de, para);
+      const faltam = playlist.faixas.length - r.total;
+      log(`  ♪ ${playlist.nome}: ${r.total} ${r.total === 1 ? 'faixa' : 'faixas'}${faltam ? ` (${faltam} sem o arquivo)` : ''}`);
+      playlists.push({ nome: playlist.nome, status: 'ok', faixas: r.total });
+    }
+
     const resultado = [];
     for (const { cena, avisos } of convertidas) {
+      const musica = cena.musica && ids.playlists.has(cena.musica.playlist)
+        ? { playlist: ids.playlists.get(cena.musica.playlist), faixa: (cena.musica.faixa && ids.faixas.get(cena.musica.faixa)) || null } : null;
       const pronta = {
-        ...cena, imagem: trocar(cena.imagem),
+        ...cena, imagem: trocar(cena.imagem), musica,
         tiles: cena.tiles.map(tile => ({ ...tile, midia: trocar(tile.midia) })).filter(tile => tile.midia),
         tokens: cena.tokens.map(token => ({ ...token, midia: trocar(token.midia) }))
       };
@@ -273,10 +366,11 @@ async function importar(opcoes) {
       if (resposta.status !== 200) throw new Error(`${cena.nome}: ${(resposta.dados && resposta.dados.erro) || resposta.texto}`);
       const r = resposta.dados.resultado;
       const semMapa = cena.imagem && !pronta.imagem ? ' · SEM O MAPA' : '';
-      log(`  ${cena.nome}: ${r.tokens} tokens, ${r.tiles} tiles, ${r.paredes} paredes, ${r.luzes} luzes${semMapa}${avisos.length ? ` (${avisos.join('; ')})` : ''}`);
+      log(`  ${cena.nome}: ${r.tokens} tokens, ${r.tiles} tiles, ${r.paredes} paredes, ${r.luzes} luzes${musica ? ', com música' : ''}${semMapa}${avisos.length ? ` (${avisos.join('; ')})` : ''}`);
       resultado.push({ nome: cena.nome, status: 'ok', ...r });
     }
-    return { cenas: resultado };
+    for (const aviso of audio.avisos) log(`  (${aviso})`);
+    return { cenas: resultado, playlists };
   } finally {
     fs.rmSync(trabalho, { recursive: true, force: true });
   }
@@ -291,4 +385,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { importar, converter, caminhoDe };
+module.exports = { importar, converter, converterPlaylists, caminhoDe };
