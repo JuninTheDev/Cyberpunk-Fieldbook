@@ -75,7 +75,11 @@ const woundPenalty = state => (state === 'Mortalmente Ferido' ? -4 : state === '
 
 // A visão pelas paredes (quem vê qual token, quem abre a porta, por onde o token passa): mesa-visao.js, a mesma conta
 // que o navegador usa para a sombra.
-const { bloqueiaVista, enxerga, algumVe, atravessa } = V;
+const { bloqueiaVista, bloqueiaLuz, algumVe, pontoVisto, atravessa } = V;
+// A lanterna do token (no Foundry, a tocha: 20 e 40 pés): o jogador acende e apaga a do próprio token.
+const LANTERNA = { claro: 6, penumbra: 12 };
+// O alcance da visão que o token tem sem o mestre mudar (o dos tokens do Foundry deste mundo).
+const ALCANCE_PADRAO = 30;
 
 // A névoa é uma lista de traços (revelar ou cobrir) aplicados em ordem: vale o último traço que cobre o ponto.
 function fogShows(scene, x, y) {
@@ -97,7 +101,9 @@ function looksLike(head, extension) {
   return /^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*(<!DOCTYPE[^>]*>\s*)?<svg[\s>]/i.test(head.toString('utf8'));
 }
 
-module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who, campaigns, updateCharacter = null, send, writeJsonAtomic, random = faces => crypto.randomInt(faces), prazoDefesa = 60_000 }) {
+// versao: a da página e do servidor juntos (quem carrega a mesa calcula). A página aberta compara a cada conexão e, se
+// mudou (o servidor reiniciou com código novo), pede para recarregar.
+module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who, campaigns, updateCharacter = null, send, writeJsonAtomic, random = faces => crypto.randomInt(faces), prazoDefesa = 60_000, versao = '' }) {
   const json = (response, status, data) => send(response, status, JSON.stringify(data), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' });
   const tableDir = id => path.join(dataDir, 'mesa', id);
   const die = faces => random(faces) + 1;
@@ -251,7 +257,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (!Array.isArray(state.cenas)) state.cenas = [];
     if (!Array.isArray(state.registro)) state.registro = [];
     // Paredes de antes da visão vêm sem id: ganham um (a porta é aberta pelo id).
-    for (const scene of state.cenas) for (const parede of scene.paredes || []) if (!parede.id) parede.id = newId();
+    for (const scene of state.cenas) for (const item of [...(scene.paredes || []), ...(scene.luzes || [])]) if (!item.id) item.id = newId();
     combatFlow.cancelarPendentes(state);
     // pendentes: os ataques esperando a defesa (só na memória: o servidor que reinicia cancela).
     table = { id, file, state, seq: 0, timer: null, writing: Promise.resolve(), pendentes: new Map() };
@@ -281,13 +287,31 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
 
   // ---------------- O que cada um vê ----------------
   const mediaUrl = (viewer, campaignId, name) => (name ? `/api/mesa/midia/${name}?campanha=${encodeURIComponent(idFor(viewer, campaignId))}` : '');
-  // Os olhos de quem olha na cena: os tokens dele, mesmo caído (sem token, com a visão ligada, não vê ninguém).
-  const olhosDe = (viewer, scene) => scene.tokens.filter(item => item.dono && item.dono === viewer.conta);
+  // Metros para pixels da cena (a grade diz quanto vale um quadrado).
+  const emPx = (scene, metros) => (Number(metros) || 0) / (scene.grade.metros || 2) * scene.grade.tamanho;
+  // Os olhos de quem olha na cena: os tokens dele, mesmo caído (sem token, com a visão ligada, não vê ninguém), com o
+  // alcance da visão em px.
+  const olhosDe = (viewer, scene) => scene.tokens.filter(item => item.dono && item.dono === viewer.conta)
+    .map(item => ({ x: item.x, y: item.y, alcance: emPx(scene, item.alcance ?? ALCANCE_PADRAO) }));
+  const luzDaCena = scene => ({ global: !scene.luz || scene.luz.global !== false, escuridao: (scene.luz && scene.luz.escuridao) || 0 });
+  // As luzes que cada um recebe, em px: as do cenário (a escondida, só o mestre) e as dos tokens que ele pode saber que
+  // estão ali (não escondidos e fora da névoa; os dele, sempre). Uma luz no escuro se vê de longe, como no Foundry.
+  function lightsFor(viewer, scene) {
+    const gm = isGm(viewer);
+    const doCenario = (scene.luzes || []).filter(luz => gm || !luz.escondido)
+      .map(luz => ({ x: luz.x, y: luz.y, claro: emPx(scene, luz.claro), penumbra: emPx(scene, luz.penumbra), cor: luz.cor, alpha: luz.alpha ?? 0.5, ...(gm ? { id: luz.id, metros: { claro: luz.claro, penumbra: luz.penumbra }, ...(luz.escondido ? { escondido: true } : {}) } : {}) }));
+    const dosTokens = scene.tokens.filter(token => token.luz && (token.luz.claro || token.luz.penumbra)
+      && (gm || (token.dono && token.dono === viewer.conta) || (!token.escondido && fogShows(scene, token.x, token.y))))
+      .map(token => ({ x: token.x, y: token.y, claro: emPx(scene, token.luz.claro), penumbra: emPx(scene, token.luz.penumbra), token: true }));
+    return [...doCenario, ...dosTokens];
+  }
+  // O que a visão precisa saber da luz para quem olha: a luz global e as luzes (com o raio maior de cada uma).
+  const ambienteDe = (viewer, scene) => ({ global: luzDaCena(scene).global, luzes: lightsFor(viewer, scene).map(luz => ({ x: luz.x, y: luz.y, raio: Math.max(luz.claro, luz.penumbra) })) });
   function tokenFor(viewer, scene, token, campaignId) {
     const gm = isGm(viewer);
     const mine = Boolean(token.dono) && token.dono === viewer.conta;
     if (!gm && !mine && (token.escondido || !fogShows(scene, token.x, token.y))) return null;
-    if (!gm && !mine && scene.visao && !algumVe(olhosDe(viewer, scene), token, scene.paredes || [], (token.tamanho || 1) * scene.grade.tamanho * 0.4)) return null;
+    if (!gm && !mine && scene.visao && !algumVe(olhosDe(viewer, scene), token, scene.paredes || [], (token.tamanho || 1) * scene.grade.tamanho * 0.4, ambienteDe(viewer, scene))) return null;
     const view = { id: token.id, nome: token.nome, x: token.x, y: token.y, tamanho: token.tamanho, cor: token.cor, imagem: token.imagem || mediaUrl(viewer, campaignId, token.midia), tipo: token.tipo, meu: mine, estado: woundState(token.hp) };
     // O grupo vê o HP dos personagens; de NPC e de token livre, só o estado de ferimento. Morto e Suprimido, todos veem.
     if (gm || mine || token.tipo === 'pj') view.hp = token.hp;
@@ -297,6 +321,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (gm || mine) {
       Object.assign(view, {
         move: token.move ?? null, personagem: token.personagem || null, escondido: Boolean(token.escondido),
+        alcance: token.alcance ?? ALCANCE_PADRAO, luz: token.luz || { claro: 0, penumbra: 0 },
         sp: token.sp || null, armas: token.armas || [], lesoes: token.lesoes || [], deathSave: token.deathSave || 0,
         ...(token.sorte ? { sorte: token.sorte } : {}), ...(token.humanidade ? { humanidade: token.humanidade } : {})
       });
@@ -308,6 +333,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     return view;
   }
   function sceneFor(viewer, scene, campaignId, connection) {
+    const luzes = lightsFor(viewer, scene);
+    if (connection) connection.luzesVistas = JSON.stringify(luzes);
     const tokens = [];
     const seen = new Map();
     for (const token of scene.tokens) {
@@ -325,7 +352,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       // Tile escondido (no Foundry, o que o mestre ainda não revelou) só vai para o mestre.
       tiles: (scene.tiles || []).filter(tile => gm || !tile.escondido).map(({ midia, ...tile }) => ({ ...tile, imagem: mediaUrl(viewer, campaignId, midia), video: VIDEO_FILE.test(midia || '') })),
       tokens, visao: Boolean(scene.visao), paredes: wallsFor(viewer, scene),
-      ...(gm ? { origem: scene.origem || null, luzes: (scene.luzes || []).length } : {})
+      luz: luzDaCena(scene), luzes,
+      ...(gm ? { origem: scene.origem || null } : {})
     };
   }
   // As paredes: o mestre recebe todas (para ver e editar). O jogador recebe as portas (para abrir e fechar) e, com a
@@ -333,9 +361,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   // porta) e, aberta, não chega.
   function wallsFor(viewer, scene) {
     const paredes = scene.paredes || [];
-    if (isGm(viewer)) return paredes.map(({ id, c, porta, estado, visao, movimento }) => ({ id, c, porta, estado, visao, movimento }));
-    return paredes.filter(parede => parede.porta === 1 || (scene.visao && bloqueiaVista(parede)))
-      .map(({ id, c, porta, estado, visao, movimento }) => ({ id, c, porta: porta === 1 ? 1 : 0, estado: porta === 1 ? estado : 0, visao, movimento }));
+    if (isGm(viewer)) return paredes.map(({ id, c, porta, estado, visao, luz, movimento }) => ({ id, c, porta, estado, visao, luz, movimento }));
+    return paredes.filter(parede => parede.porta === 1 || (scene.visao && (bloqueiaVista(parede) || bloqueiaLuz(parede))))
+      .map(({ id, c, porta, estado, visao, luz, movimento }) => ({ id, c, porta: porta === 1 ? 1 : 0, estado: porta === 1 ? estado : 0, visao, luz, movimento }));
   }
   const scenesList = state => state.cenas.map(scene => ({ id: scene.id, nome: scene.nome, tokens: scene.tokens.length, ativa: scene.id === state.cenaAtiva }));
   function combatFor(viewer, state, campaignId) {
@@ -380,7 +408,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const campaign = campaigns.get(connection.campanha) || { nome: connection.campanha, cor: COLORS[0] };
     const gm = isGm(viewer);
     return {
-      conexao: connection.id || null,
+      conexao: connection.id || null, versao,
       eu: { papel: viewer.papel, nome: viewer.nome, cor: connection.cor, conta: viewer.conta },
       campanha: { id: idFor(viewer, connection.campanha), nome: gm ? campaign.nome : campaign.nomeJogadores || campaign.nome, cor: campaign.cor },
       cena: scene ? sceneFor(viewer, scene, connection.campanha, connection) : null,
@@ -454,6 +482,10 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     }
     for (const id of connection.vistos.keys()) if (!seen.has(id)) sendEvent(connection, 'token.sumir', { id });
     connection.vistos = seen;
+    // As luzes dos tokens andam com eles.
+    const luzes = scene ? JSON.stringify(lightsFor(connection.viewer, scene)) : '[]';
+    if (scene && connection.luzesVistas !== luzes) sendEvent(connection, 'luzes', { cena: scene.id, luzes: JSON.parse(luzes) });
+    connection.luzesVistas = luzes;
   }
   // Depois de cada operação: para cada conexão da campanha, só o que mudou para ela.
   function broadcast(campaignId, effects) {
@@ -490,6 +522,13 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const scene = sceneById(state, id ? String(id) : state.cenaAtiva);
     if (!scene) throw fail(404, id ? 'Cena não encontrada.' : 'Abra uma cena antes.');
     return scene;
+  }
+  function lightArg(state, id) {
+    for (const scene of state.cenas) {
+      const luz = (scene.luzes || []).find(item => item.id === String(id || ''));
+      if (luz) return { scene, luz };
+    }
+    throw fail(404, 'Luz não encontrada.');
   }
   function tileArg(state, id) {
     for (const scene of state.cenas) {
@@ -555,10 +594,14 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     porta: int(input.porta, 0, 2, 0), estado: int(input.estado, 0, 2, 0),
     movimento: int(input.movimento, 0, 30, 20), visao: int(input.visao, 0, 30, 20), luz: int(input.luz, 0, 30, 20)
   });
+  // A luz da cena: global (a cena toda clara) e a escuridão (de 0, dia, a 1, noite fechada).
+  const cleanLuzDaCena = (input = {}, atual = {}) => ({ global: input.global === undefined ? atual.global !== false : Boolean(input.global), escuridao: Math.round(real(input.escuridao ?? atual.escuridao, 0, 1, 0) * 100) / 100 });
+  // A luz que o token leva, em metros.
+  const cleanLuzDoToken = (input = {}) => ({ claro: Math.round(real(input.claro, 0, 60, 0) * 10) / 10, penumbra: Math.round(real(input.penumbra, 0, 60, 0) * 10) / 10 });
   const cleanLight = input => ({
-    x: Math.round(real(input.x, -50000, 50000, 0)), y: Math.round(real(input.y, -50000, 50000, 0)),
+    id: newId(), x: Math.round(real(input.x, -50000, 50000, 0)), y: Math.round(real(input.y, -50000, 50000, 0)),
     claro: real(input.claro, 0, 1000, 0), penumbra: real(input.penumbra, 0, 1000, 0), angulo: real(input.angulo, 0, 360, 360),
-    cor: COLOR_RE.test(input.cor || '') ? input.cor : null, escondido: Boolean(input.escondido)
+    cor: COLOR_RE.test(input.cor || '') ? input.cor : null, alpha: Math.round(real(input.alpha, 0, 1, 0.5) * 100) / 100, escondido: Boolean(input.escondido)
   });
   // Ficha de NPC da wiki pelo nome (o "base" que o cpr-2077 grava no ator do Foundry, ou o nome do token).
   const presetByName = name => { const wanted = plain(name); return wanted ? wikiData().npcs.find(npc => plain(npc.nome) === wanted) || null : null; };
@@ -567,7 +610,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   function buildToken(scene, campaignId, input, { fallback = false } = {}) {
     const base = {
       id: newId(), ...naCena(scene, numero(input.x, scene.largura / 2), numero(input.y, scene.altura / 2)),
-      tamanho: int(input.tamanho, 1, 4, 1), escondido: Boolean(input.escondido), notas: '', midia: input.midia ? mediaArg(campaignId, input.midia) : ''
+      tamanho: int(input.tamanho, 1, 4, 1), escondido: Boolean(input.escondido), notas: '', midia: input.midia ? mediaArg(campaignId, input.midia) : '',
+      alcance: Math.round(real(numero(input.alcance, ALCANCE_PADRAO), 0, 1000, ALCANCE_PADRAO)), luz: cleanLuzDoToken(input.luz)
     };
     if (input.personagem) {
       const doc = readCharacter(campaignId, String(input.personagem));
@@ -755,7 +799,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   const OPERATIONS = {
     'cena.criar': { mestre: true, run({ state, body, campaignId }) {
       if (state.cenas.length >= MAX_SCENES) throw fail(400, `Até ${MAX_SCENES} cenas: apague uma antes.`);
-      const scene = { id: newId(), nome: line(body.nome, 60) || 'Cena sem nome', imagem: mediaArg(campaignId, body.imagem), largura: int(body.largura, 200, 16000, 3000), altura: int(body.altura, 200, 16000, 2000), grade: cleanGrid(body.grade), margem: cleanMargem(body.margem), nevoa: { ativa: Boolean(body.nevoa), tracos: [] }, tokens: [], tiles: [], paredes: [], luzes: [] };
+      const scene = { id: newId(), nome: line(body.nome, 60) || 'Cena sem nome', imagem: mediaArg(campaignId, body.imagem), largura: int(body.largura, 200, 16000, 3000), altura: int(body.altura, 200, 16000, 2000), grade: cleanGrid(body.grade), margem: cleanMargem(body.margem), luz: cleanLuzDaCena(body.luz), nevoa: { ativa: Boolean(body.nevoa), tracos: [] }, tokens: [], tiles: [], paredes: [], luzes: [] };
       state.cenas.push(scene);
       const first = !state.cenaAtiva;
       if (first) state.cenaAtiva = scene.id;
@@ -772,7 +816,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const scene = {
         id: anterior ? anterior.id : newId(), nome: line(input.nome, 60) || 'Cena importada', imagem: mediaArg(campaignId, input.imagem),
         largura: int(input.largura, 200, 16000, 3000), altura: int(input.altura, 200, 16000, 2000), grade: cleanGrid(input.grade), margem: cleanMargem(input.margem),
-        nevoa: { ativa: Boolean(input.nevoa), tracos: [] }, visao: Boolean(input.visao), tokens: [], tiles: [], paredes: [], luzes: [], origem
+        nevoa: { ativa: Boolean(input.nevoa), tracos: [] }, visao: Boolean(input.visao), luz: cleanLuzDaCena(input.luz), tokens: [], tiles: [], paredes: [], luzes: [], origem
       };
       scene.tiles = (Array.isArray(input.tiles) ? input.tiles : []).slice(0, MAX_TILES).map(tile => cleanTile(campaignId, scene, tile));
       scene.paredes = (Array.isArray(input.paredes) ? input.paredes : []).slice(0, MAX_WALLS).map(cleanWall).filter(wall => wall.c.length === 4);
@@ -796,6 +840,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (body.altura !== undefined) scene.altura = int(body.altura, 200, 16000, scene.altura);
       if (body.grade) scene.grade = cleanGrid(body.grade, scene.grade);
       if (body.visao !== undefined) scene.visao = Boolean(body.visao);
+      if (body.luz && typeof body.luz === 'object') scene.luz = cleanLuzDaCena(body.luz, luzDaCena(scene));
       if (body.margem !== undefined) scene.margem = cleanMargem(body.margem);
       for (const token of scene.tokens) Object.assign(token, naCena(scene, token.x, token.y));
       return { cena: scene.id, cenas: true };
@@ -846,8 +891,14 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     'token.editar': { async run({ state, viewer, body, campaignId }) {
       const { token } = tokenArg(state, viewer, body.token);
       if (!canControl(viewer, token)) throw fail(403, 'Esse token não é seu.');
-      // O jogador muda só o HP atual do próprio token, como na ficha. O resto é do mestre.
-      if (!isGm(viewer) && Object.keys(body).some(key => !['tipo', 'token', 'hp', 'conexao'].includes(key))) throw fail(403, 'No seu token, você muda só o HP.');
+      // O jogador muda só o HP atual do próprio token, como na ficha, e acende ou apaga a lanterna. O resto é do mestre.
+      if (!isGm(viewer) && Object.keys(body).some(key => !['tipo', 'token', 'hp', 'luz', 'conexao'].includes(key))) throw fail(403, 'No seu token, você muda só o HP e a lanterna.');
+      if (body.luz !== undefined) {
+        const luz = cleanLuzDoToken(body.luz);
+        const apagada = !luz.claro && !luz.penumbra;
+        if (!isGm(viewer) && !apagada && (luz.claro !== LANTERNA.claro || luz.penumbra !== LANTERNA.penumbra)) throw fail(403, 'No seu token, só a lanterna.');
+        token.luz = luz;
+      }
       if (body.hp && typeof body.hp === 'object') {
         const current = token.hp || { atual: 0, max: 0 };
         // O máximo do personagem é o da ficha; o de NPC e de token livre, o mestre muda aqui.
@@ -872,6 +923,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
         // A imagem: o personagem usa o retrato da ficha; o NPC e o token livre, a que o mestre mandar ('' tira).
         if (body.midia !== undefined && token.tipo !== 'pj') token.midia = mediaArg(campaignId, body.midia);
         if (body.notas !== undefined) token.notas = block(body.notas, 2000);
+        if (body.alcance !== undefined) token.alcance = Math.round(real(body.alcance, 0, 1000, token.alcance ?? ALCANCE_PADRAO));
       }
       return { tokens: true };
     } },
@@ -892,6 +944,25 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
 
     // Tiles (no Foundry, os objetos do cenário): o mestre põe, mexe, gira, esconde e tira. A cena inteira vai de novo a
     // todos (tile muda pouco, e o escondido só o mestre recebe).
+    // Luzes do cenário (no Foundry, as luzes ambiente): o mestre põe, muda e tira. Em metros, como as do Foundry.
+    'luz.criar': { mestre: true, run({ state, body }) {
+      const scene = sceneArg(state, body.cena);
+      if ((scene.luzes || []).length >= MAX_LIGHTS) throw fail(400, `Até ${MAX_LIGHTS} luzes por cena.`);
+      const luz = cleanLight(body);
+      scene.luzes = [...(scene.luzes || []), luz];
+      return { cena: scene.id, resultado: { luz: luz.id } };
+    } },
+    'luz.editar': { mestre: true, run({ state, body }) {
+      const { scene, luz } = lightArg(state, body.luz);
+      const nova = cleanLight({ ...luz, ...body });
+      Object.assign(luz, { x: nova.x, y: nova.y, claro: nova.claro, penumbra: nova.penumbra, cor: body.cor === null ? null : nova.cor, alpha: nova.alpha, escondido: nova.escondido });
+      return { cena: scene.id };
+    } },
+    'luz.apagar': { mestre: true, run({ state, body }) {
+      const { scene, luz } = lightArg(state, body.luz);
+      scene.luzes = scene.luzes.filter(item => item !== luz);
+      return { cena: scene.id };
+    } },
     'tile.criar': { mestre: true, run({ state, body, campaignId }) {
       const scene = sceneArg(state, body.cena);
       if ((scene.tiles || []).length >= MAX_TILES) throw fail(400, `Até ${MAX_TILES} tiles por cena.`);
@@ -990,9 +1061,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       }
       if (scene.id !== state.cenaAtiva || parede.porta !== 1) throw fail(404, 'Porta não encontrada.');
       if (parede.estado === 2) throw fail(409, 'A porta está trancada.');
-      const outras = scene.paredes.filter(wall => wall !== parede);
+      // O meio da porta fica na própria porta: ela não tapa a si mesma (encostar não conta).
       const meio = { x: (parede.c[0] + parede.c[2]) / 2, y: (parede.c[1] + parede.c[3]) / 2 };
-      if (!fogShows(scene, meio.x, meio.y) || (scene.visao && !olhosDe(viewer, scene).some(olho => enxerga(outras, olho, meio)))) throw fail(403, 'Nenhum token seu vê essa porta.');
+      if (!fogShows(scene, meio.x, meio.y) || (scene.visao && !pontoVisto(olhosDe(viewer, scene), meio, scene.paredes, ambienteDe(viewer, scene)))) throw fail(403, 'Nenhum token seu vê essa porta.');
       parede.estado = parede.estado === 1 ? 0 : 1;
       return { paredes: scene.id };
     } },

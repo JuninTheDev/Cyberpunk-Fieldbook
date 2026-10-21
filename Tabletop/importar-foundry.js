@@ -1,5 +1,5 @@
-// Traz as cenas de um mundo do Foundry para a mesa da wiki: o mapa (imagem ou vídeo), a grade, os tiles, os tokens, as
-// paredes e as luzes (estas guardadas para a visão). Cada token vira o personagem da wiki (ator que veio da wiki), a ficha
+// Traz as cenas de um mundo do Foundry para a mesa da wiki: o mapa (imagem ou vídeo), a grade, os tiles, os tokens (com
+// a visão e a luz), as paredes, as luzes e a luz da cena. Cada token vira o personagem da wiki (ator que veio da wiki), a ficha
 // de NPC da wiki (o "base" que o cpr-2077 grava no ator) ou um token livre com a imagem e o HP do ator.
 //
 // Lê o banco do Foundry com o classic-level do próprio Foundry instalado (nada novo para instalar), numa cópia (o Foundry
@@ -148,7 +148,10 @@ function converter(cena, embutidos, atores, mundo) {
       midia: usar(token.texture && token.texture.src),
       personagem: token.actorLink && flags.wiki && flags.wiki.id ? flags.wiki.id : undefined,
       npcNome: flags.base || undefined,
-      hp: Number((hpDelta && hpDelta.max) || (hpAtor && hpAtor.max)) || undefined
+      hp: Number((hpDelta && hpDelta.max) || (hpAtor && hpAtor.max)) || undefined,
+      // A visão e a luz do token (em metros, como no Foundry). Token sem visão ligada não enxerga no escuro.
+      alcance: token.sight ? (token.sight.enabled ? Number(token.sight.range) || 0 : 0) : undefined,
+      luz: token.light ? { claro: Number(token.light.bright) || 0, penumbra: Number(token.light.dim) || 0 } : undefined
     };
   });
   const tiles = embutidos.tiles.filter(tile => tile.texture && tile.texture.src).map(tile => ({
@@ -161,8 +164,16 @@ function converter(cena, embutidos, atores, mundo) {
   }));
   const luzes = embutidos.luzes.map(luz => ({
     x: luz.x - origemX, y: luz.y - origemY, claro: (luz.config && luz.config.bright) || 0, penumbra: (luz.config && luz.config.dim) || 0,
-    angulo: (luz.config && luz.config.angle) || 360, cor: (luz.config && luz.config.color) || null, escondido: Boolean(luz.hidden)
+    angulo: (luz.config && luz.config.angle) || 360, cor: (luz.config && luz.config.color) || null, alpha: luz.config && luz.config.alpha, escondido: Boolean(luz.hidden)
   }));
+  // A luz da cena: no Foundry 12, environment.globalLight e o darknessLevel (antes do 12, globalLight e darkness). A luz
+  // global só vale até a escuridão máxima dela.
+  const ambiente = cena.environment || {};
+  const escuridao = Number(ambiente.darknessLevel ?? cena.darkness) || 0;
+  const globalLight = ambiente.globalLight || {};
+  const limite = Number(globalLight.darkness ? globalLight.darkness.max : cena.globalLightThreshold ?? 1);
+  const luz = { global: Boolean(ambiente.globalLight ? globalLight.enabled : cena.globalLight) && escuridao <= (Number.isFinite(limite) ? limite : 1), escuridao };
+  if (luzes.some(item => item.angulo < 360)) avisos.push('luz em cone virou círculo');
   return {
     avisos, midias,
     cena: {
@@ -171,9 +182,9 @@ function converter(cena, embutidos, atores, mundo) {
       // fora do mapa continua lá.
       margem: { x: origemX + deslocX + Math.abs(deslocX), y: origemY + deslocY + Math.abs(deslocY) },
       grade: { tamanho, tipo: tipo === 0 ? 'nenhuma' : 'quadrada', metros: Number(grid.distance) || 2, unidade: grid.units || 'm', visivel: tipo !== 0, x: resto(deslocX, tamanho), y: resto(deslocY, tamanho) },
-      // A visão pelas paredes liga como no Foundry (tokenVision), se a cena tem paredes: sem elas, quem não tem token
-      // na cena não veria nada.
-      nevoa: false, visao: Boolean(cena.tokenVision) && paredes.length > 0, tokens, tiles, paredes, luzes, origem: { mundo, id: cena._id }
+      // A visão liga como no Foundry (tokenVision) se ela muda alguma coisa: a cena tem paredes ou está no escuro. Com
+      // luz global e sem paredes, ela só deixaria sem ver nada quem não tem token na cena.
+      nevoa: false, visao: Boolean(cena.tokenVision) && (paredes.length > 0 || !luz.global), luz, tokens, tiles, paredes, luzes, origem: { mundo, id: cena._id }
     }
   };
 }

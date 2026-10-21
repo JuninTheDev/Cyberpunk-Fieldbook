@@ -42,7 +42,7 @@
   - **Explorado:** o que o jogador já viu fica na penumbra, guardado no navegador dele; o mestre manda esquecer.
   - **Passo:** parede e porta fechada param o token do jogador (com a visão ligada ou não).
   - **Testado:** 4 testes, 22 mutações que caem, e as 3 cenas com paredes do backup (até 3 ms por cálculo).
-  - **Limite:** cena com milhares de paredes fica lenta (4000 paredes: 1,7 s por cálculo). As do Foundry deste mundo têm no máximo 201.
+  - **Rápido com muitas paredes:** um índice das paredes por célula do mapa; cada raio só olha as paredes perto dele. Com 4000 paredes, o cálculo caiu de 1,1 s para 14 ms; conferido contra a conta antiga em cenas aleatórias.
 - [ ] **M7 · Ficha de jogo na wiki** (tudo que muda na mesa, em `doc.jogo`):
   - **Já vai para a ficha:** HP, SP (com a ablação), Sorte, a munição no pente, as lesões críticas e o Death Save.
   - **Falta:** Humanidade, dinheiro, IP e reputação.
@@ -77,7 +77,14 @@
   - criar e editar NPC próprio, além das fichas da wiki;
   - migrar os atores do mundo: 26 mooks, Qyan, Black ICE, veículo e contêiner.
 - [ ] **M19 · Áreas e desenhos:** cone, círculo e linha (área de efeito), e desenho livre no mapa.
-- [ ] **M6b · Luz e escuridão:** o alcance da visão, as luzes do Foundry (já guardadas) e a escuridão da cena. Sem isso, a cena fica toda iluminada: a visão só para nas paredes.
+- [x] **M6b · Luz e escuridão** (como no Foundry 12):
+  - **Luz global** (aba Cena): a cena toda clara. Sem ela, cada token vê o alcance da visão dele (30 m, como os tokens do Foundry deste mundo) e o que uma luz ilumina. **O servidor nem manda o token no escuro.**
+  - **Luzes:** o mestre põe, move e muda (ferramenta L), com cor e escondida; as do Foundry vêm com a cor. A parede de luz segura a luz.
+  - **Tokens:** o alcance e a luz pelo cartão; o jogador acende e apaga a lanterna do próprio token (6 m clara, 12 m de penumbra).
+  - **Escuridão:** escurece a tela de todos (o mestre vê mais claro), e as luzes abrem clareiras.
+  - **Importação:** a luz global, a escuridão, a visão e a luz dos tokens. As cenas escuras do Foundry (Clínica, Japantown, Casa, as arquiteturas da NET) ficam com a visão ligada.
+  - **Falta:** a luz em cone (vira círculo; não há nenhuma neste mundo), os modos de visão (infravermelho, visão no escuro do cyberware) e a animação das luzes.
+  - **Testado:** 3 testes, 21 mutações que caem.
 
 ## Fase 3: a virada
 

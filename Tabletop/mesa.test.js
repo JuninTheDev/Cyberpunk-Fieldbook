@@ -164,7 +164,7 @@ test('visão pelas paredes: cada um vê o que os tokens dele veem, abre a porta 
   // Porta secreta: para o jogador, é parede (fechada) ou nada (aberta), e ele não abre.
   await m.op('parede.editar', { parede: porta, porta: 2 });
   const comSecreta = (await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.cena.paredes;
-  assert.deepEqual(comSecreta.find(parede => parede.id === porta), { id: porta, c: [600, 700, 600, 800], porta: 0, estado: 0, visao: 20, movimento: 20 });
+  assert.deepEqual(comSecreta.find(parede => parede.id === porta), { id: porta, c: [600, 700, 600, 800], porta: 0, estado: 0, visao: 20, luz: 20, movimento: 20 });
   assert.equal((await m.op('porta', { parede: porta }, ana.cookie)).status, 404);
   await m.op('porta', { parede: porta, estado: 1 });
   assert.ok(!(await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.cena.paredes.some(parede => parede.id === porta), 'a secreta aberta não chega');
@@ -179,6 +179,92 @@ test('visão pelas paredes: cada um vê o que os tokens dele veem, abre a porta 
   assert.ok(await visaoAna.esperar(item => item.evento === 'visao.esquecer' && item.data.cena === ids.cena));
   assert.equal((await m.op('parede.apagar', { cena: ids.cena, paredes: doMestre.map(parede => parede.id) })).status, 200);
   assert.deepEqual(idsDe((await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.cena), [ids.jax, ids.nyx, ids.capanga].sort(), 'sem paredes, vê tudo (menos o escondido)');
+});
+
+test('luz e escuridão: sem a luz global, o token vê o alcance dele e o que uma luz ilumina', async t => {
+  const m = await montar(t);
+  const ana = await m.jogador('Ana', fichaJax);
+  const bruno = await m.jogador('Bruno', fichaNyx);
+  // Grade de 100 px = 2 m: 50 px por metro. O Jax em (150, 150), o capanga a 1000 px (20 m), a Nyx a 100 px.
+  const ids = await cenaComTokens(m, ana, bruno);
+  await m.op('cena.editar', { cena: ids.cena, visao: true, luz: { global: false, escuridao: 0.6 } });
+  const idsDe = cena => cena.tokens.map(token => token.id).sort();
+  const estado = cookie => m.pedir('/api/mesa/estado', { cookie }).then(r => r.json.cena);
+  let cena = await estado(ana.cookie);
+  assert.deepEqual(cena.luz, { global: false, escuridao: 0.6 });
+  assert.deepEqual(idsDe(cena), [ids.jax, ids.nyx, ids.capanga].sort(), 'o alcance padrão (30 m) chega no capanga a 20 m');
+  assert.equal(cena.tokens.find(token => token.id === ids.jax).alcance, 30);
+  await m.op('token.mover', { token: ids.capanga, x: 1900, y: 1400 });
+  assert.ok(!idsDe(await estado(ana.cookie)).includes(ids.capanga), 'a 43 m, no escuro, não vê');
+  await m.op('token.mover', { token: ids.capanga, x: 950, y: 750 });
+  assert.equal((await m.op('token.editar', { token: ids.jax, alcance: 10 }, ana.cookie)).status, 403, 'o alcance é do mestre');
+  await m.op('token.editar', { token: ids.jax, alcance: 10 });
+  assert.ok(!idsDe(await estado(ana.cookie)).includes(ids.capanga), 'com 10 m de alcance, o capanga a 20 m some');
+
+  // Um poste perto do capanga: iluminado, ele aparece (de longe, como no Foundry).
+  const visaoAna = await m.ouvir(ana.cookie);
+  const poste = (await m.op('luz.criar', { cena: ids.cena, x: 1000, y: 800, claro: 2, penumbra: 5, cor: '#ff7300' })).json.resultado.luz;
+  assert.equal((await m.op('luz.criar', { cena: ids.cena, x: 1, y: 1, claro: 2 }, ana.cookie)).status, 403);
+  cena = await estado(ana.cookie);
+  assert.ok(idsDe(cena).includes(ids.capanga), 'o poste ilumina o capanga');
+  assert.deepEqual(cena.luzes.map(({ x, y, claro, penumbra, cor }) => ({ x, y, claro, penumbra, cor })), [{ x: 1000, y: 800, claro: 100, penumbra: 250, cor: '#ff7300' }]);
+  assert.equal(cena.luzes[0].id, undefined, 'o jogador não recebe o id (não mexe na luz)');
+  await m.op('luz.editar', { luz: poste, escondido: true });
+  cena = await estado(ana.cookie);
+  assert.deepEqual([cena.luzes.length, idsDe(cena).includes(ids.capanga)], [0, false], 'luz escondida não ilumina nem chega');
+  await m.op('luz.editar', { luz: poste, escondido: false, penumbra: 0.5, claro: 0.5 });
+  assert.ok(!idsDe(await estado(ana.cookie)).includes(ids.capanga), 'luz pequena não alcança o capanga');
+
+  // A lanterna: o jogador acende a do próprio token (só a lanterna); a luz anda com o token e chega a todos.
+  visaoAna.limpar();
+  assert.equal((await m.op('token.editar', { token: ids.jax, luz: { claro: 50, penumbra: 60 } }, ana.cookie)).status, 403, 'só a lanterna');
+  assert.equal((await m.op('token.editar', { token: ids.nyx, luz: { claro: 6, penumbra: 12 } }, ana.cookie)).status, 403, 'a do outro, não');
+  assert.equal((await m.op('token.editar', { token: ids.jax, luz: { claro: 6, penumbra: 12 } }, ana.cookie)).status, 200);
+  const comLanterna = await visaoAna.esperar(item => item.evento === 'luzes' && item.data.luzes.some(luz => luz.token));
+  assert.ok(comLanterna, 'a luz da lanterna chega');
+  const visaoBruno = await m.ouvir(bruno.cookie);
+  assert.ok(visaoBruno.estado.cena.luzes.some(luz => luz.token && luz.x === 150), 'o Bruno vê a lanterna do Jax');
+  visaoBruno.limpar();
+  await m.op('token.mover', { token: ids.jax, x: 350, y: 150 }, ana.cookie);
+  assert.ok(await visaoBruno.esperar(item => item.evento === 'luzes' && item.data.luzes.some(luz => luz.token && luz.x === 350)), 'a luz anda com o token');
+  // A Nyx, com 0 m de alcance, vê o capanga quando a lanterna do Jax o ilumina (e não vê quando apaga).
+  await m.op('token.editar', { token: ids.nyx, alcance: 0 });
+  await m.op('token.mover', { token: ids.capanga, x: 650, y: 150 });
+  assert.ok(idsDe(await estado(bruno.cookie)).includes(ids.capanga), 'na luz da lanterna do outro, aparece');
+  await m.op('token.editar', { token: ids.jax, luz: { claro: 0, penumbra: 0 } }, ana.cookie);
+  assert.ok(!idsDe(await estado(bruno.cookie)).includes(ids.capanga), 'apagou: some');
+
+  // A luz do token escondido não chega ao jogador; a parede que só segura a luz chega (ele desenha a luz com ela).
+  await m.op('token.editar', { token: ids.emboscada, luz: { claro: 4, penumbra: 8 } });
+  assert.ok(!(await estado(ana.cookie)).luzes.some(luz => luz.x === 1450), 'a luz do escondido não chega');
+  assert.ok((await m.pedir('/api/mesa/estado')).json.cena.luzes.some(luz => luz.x === 1450), 'o mestre vê');
+  await m.op('parede.criar', { cena: ids.cena, paredes: [{ c: [1700, 0, 1700, 300], visao: 0, luz: 20 }] });
+  assert.ok((await estado(ana.cookie)).paredes.some(parede => parede.visao === 0 && parede.luz === 20), 'a parede só de luz chega ao jogador');
+
+  // A luz global de volta: vê até onde a parede deixa.
+  await m.op('cena.editar', { cena: ids.cena, luz: { global: true } });
+  cena = await estado(bruno.cookie);
+  assert.deepEqual(cena.luz, { global: true, escuridao: 0.6 }, 'a escuridão fica como estava');
+  assert.ok(idsDe(cena).includes(ids.capanga));
+  assert.equal((await m.op('luz.apagar', { luz: poste })).status, 200);
+  assert.equal((await m.op('luz.apagar', { luz: poste })).status, 404);
+});
+
+test('a página é a do servidor que está no ar, com a versão, e todos os arquivos dela chegam', async t => {
+  const m = await montar(t);
+  const ana = await m.jogador('Ana', fichaJax);
+  const versao = (await m.pedir('/api/mesa/estado')).json.versao;
+  assert.match(versao, /^[a-f0-9]{12}$/);
+  assert.equal((await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.versao, versao, 'o jogador recebe a mesma versão');
+  const html = await m.pedir('/mesa');
+  assert.equal(html.status, 200);
+  // Cada script e folha de estilo que a página pede chega (o mesa-visao.js faltava no servidor antigo).
+  const pedidos = [...html.text.matchAll(/(?:src|href)="(\/[^"]+\.(?:js|css))"/g)].map(achado => achado[1]);
+  assert.ok(pedidos.includes('/mesa-visao.js'));
+  for (const caminho of pedidos) assert.equal((await m.pedir(caminho)).status, 200, caminho);
+  const js = await m.pedir('/mesa.js');
+  assert.equal(js.text, fs.readFileSync(path.join(__dirname, 'mesa.js'), 'utf8'));
+  assert.equal((await m.pedir('/mesa.js', { headers: { 'If-None-Match': `"${versao}"` } })).status, 304, 'o navegador reaproveita a página da mesma versão');
 });
 
 test('rolagens: o servidor rola, com o crítico do RED, o ferimento e a lesão crítica', async t => {
@@ -446,7 +532,9 @@ test('importar uma cena: tiles escondidos só para o mestre, tokens viram person
   assert.equal(doMestre.cenas.length, 1, 'substituir não duplica');
   assert.equal(doMestre.cena.tiles.length, 2);
   assert.deepEqual(doMestre.cena.paredes.map(({ c, porta, estado, visao, movimento }) => ({ c, porta, estado, visao, movimento })), [{ c: [0, 0, 100, 0], porta: 1, estado: 0, visao: 20, movimento: 20 }], 'o mestre recebe as paredes');
-  assert.equal(doMestre.cena.luzes, 1, 'e quantas luzes estão guardadas');
+  // A luz de 3 m clara e 7 m de penumbra, na grade de 80 px = 2 m: 120 e 280 px.
+  assert.deepEqual(doMestre.cena.luzes.map(({ x, y, claro, penumbra, cor, alpha, metros }) => ({ x, y, claro, penumbra, cor, alpha, metros })), [{ x: 50, y: 50, claro: 120, penumbra: 280, cor: null, alpha: 0.5, metros: { claro: 3, penumbra: 7 } }], 'as luzes, em px (e em metros, para o mestre mudar)');
+  assert.deepEqual(doMestre.cena.luz, { global: true, escuridao: 0 }, 'sem a luz do Foundry, a cena toda clara');
   assert.equal(doMestre.cena.visao, false, 'a visão só liga se a cena do Foundry tinha (visao)');
   assert.deepEqual(doMestre.cena.tokens.map(token => [token.nome, token.tipo]), [[fichaJax.nome, 'pj'], ['Guarda-costas (Bodyguard)', 'npc'], ['Dr. Kenzo Endo', 'livre'], ['Qyan', 'livre']]);
   assert.match(doMestre.cena.tokens[2].imagem, /^\/api\/mesa\/midia\/[a-f0-9]{40}\.png\?campanha=morana$/);
@@ -454,7 +542,7 @@ test('importar uma cena: tiles escondidos só para o mestre, tokens viram person
   const daAna = (await m.pedir('/api/mesa/estado', { cookie: ana.cookie })).json.cena;
   assert.equal(daAna.tiles.length, 1, 'o tile escondido não vai para o jogador');
   assert.deepEqual(daAna.paredes.map(parede => parede.porta), [1], 'o jogador recebe a porta, para abrir');
-  assert.equal(daAna.luzes, undefined);
+  assert.equal(daAna.luzes.length, 1, 'a luz do cenário chega ao jogador (ele vê o brilho)');
   assert.equal(daAna.grade.tipo, 'quadrada');
   assert.equal((await m.op('cena.importar', { cena }, ana.cookie)).status, 403);
 });

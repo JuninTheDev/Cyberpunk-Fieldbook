@@ -28,6 +28,67 @@ test('o polígono: a cena inteira sem paredes, cortado pela parede, atravessando
   assert.ok(area(V.poligono(fresta, olho, 1000, 800)) > 200 * 200 + 1000);
 });
 
+// A conta sem índice (olha todas as paredes), para conferir a do índice em cenas aleatórias.
+function enxergaSimples(paredes, de, ate) {
+  let limitadas = 0;
+  for (const p of paredes) {
+    if (!V.bloqueiaVista(p) || !V.cruza(de, ate, { x: p.c[0], y: p.c[1] }, { x: p.c[2], y: p.c[3] })) continue;
+    if (p.visao >= 20 || (limitadas += 1) >= 2) return false;
+  }
+  return true;
+}
+function cenaAleatoria(semente, n, largura, altura) {
+  let s = semente;
+  const r = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+  const paredes = [];
+  for (let i = 0; i < n; i += 1) {
+    const x = Math.round(r() * largura); const y = Math.round(r() * altura); const c = 20 + r() * 300; const a = r() < 0.5 ? r() * Math.PI * 2 : Math.round(r() * 4) * Math.PI / 2;
+    paredes.push(parede([x, y, Math.round(x + Math.cos(a) * c), Math.round(y + Math.sin(a) * c)], { visao: r() < 0.15 ? 10 : r() < 0.1 ? 0 : 20, porta: r() < 0.1 ? 1 : 0, estado: r() < 0.5 ? 1 : 0 }));
+  }
+  return { paredes, r };
+}
+
+test('com o índice, a mesma resposta que olhando todas as paredes; o polígono bate com os pontos contados', () => {
+  for (const [semente, n] of [[3, 8], [5, 120], [9, 600]]) {
+    const { paredes, r } = cenaAleatoria(semente, n, 2000, 1200);
+    for (let k = 0; k < 400; k += 1) {
+      const de = { x: Math.round(r() * 2000), y: Math.round(r() * 1200) };
+      const ate = { x: Math.round(r() * 2000), y: Math.round(r() * 1200) };
+      assert.equal(V.enxerga(paredes, de, ate), enxergaSimples(paredes, de, ate), `semente ${semente}, de ${JSON.stringify(de)} até ${JSON.stringify(ate)}`);
+    }
+  }
+  // A área do polígono contra os pontos de uma grade que o olho vê (a diferença é só a borda dos pixels).
+  const { paredes } = cenaAleatoria(21, 40, 800, 500);
+  const olho = { x: 400, y: 250 };
+  let vistos = 0;
+  for (let x = 1; x < 800; x += 2) for (let y = 1; y < 500; y += 2) if (V.enxerga(paredes, olho, { x, y })) vistos += 1;
+  perto(area(V.poligono(paredes, olho, 800, 500)), vistos * 4, vistos * 4 * 0.02);
+  // A parede que sai da cena: o canto onde ela sai entra no polígono (senão a sombra come um pedaço do que se vê).
+  const saindo = [parede([800, 200, 1400, 800])];
+  let vistosAqui = 0;
+  for (let x = 1; x < 1000; x += 2) for (let y = 1; y < 1000; y += 2) if (V.enxerga(saindo, { x: 500, y: 500 }, { x, y })) vistosAqui += 1;
+  perto(area(V.poligono(saindo, { x: 500, y: 500 }, 1000, 1000)), vistosAqui * 4, vistosAqui * 4 * 0.005);
+});
+
+test('a luz: global, alcance do olho, a luz que ilumina e a parede de luz', () => {
+  const olho = { x: 100, y: 100, alcance: 200 };
+  const longe = { x: 700, y: 100 };
+  assert.equal(V.pontoVisto([olho], longe, []), true, 'com a luz global, vê até onde a parede deixa');
+  assert.equal(V.pontoVisto([olho], longe, [], { global: false }), false, 'no escuro, só o alcance');
+  assert.equal(V.pontoVisto([olho], { x: 250, y: 100 }, [], { global: false }), true, 'dentro do alcance');
+  const poste = { x: 700, y: 300, raio: 250 };
+  assert.equal(V.pontoVisto([olho], longe, [], { global: false, luzes: [poste] }), true, 'longe, mas iluminado');
+  const muroDaLuz = parede([500, 200, 900, 200], { visao: 0, luz: 20 });
+  assert.equal(V.pontoVisto([olho], longe, [muroDaLuz], { global: false, luzes: [poste] }), false, 'a parede de luz segura a luz');
+  assert.equal(V.enxerga([muroDaLuz, parede([500, 250, 900, 250], { visao: 0, luz: 20 })], { x: 700, y: 100 }, { x: 700, y: 300 }), true, 'e deixa ver através dela (mesmo de duas)');
+  assert.equal(V.enxerga([muroDaLuz], { x: 700, y: 100 }, { x: 700, y: 300 }, V.LUZ), false);
+  assert.equal(V.pontoVisto([olho], longe, [parede([400, 0, 400, 400])], { global: false, luzes: [poste] }), false, 'iluminado, mas atrás da parede');
+  // O polígono da luz fica no quadrado do raio (450 a 950, 50 a 550) e para na parede de luz: embaixo dela, 500 × 350;
+  // acima, só as duas frestas nas pontas do muro (triângulos de 50 × 25).
+  const pontos = V.poligono([muroDaLuz], poste, 2000, 2000, undefined, { tipo: V.LUZ, raio: 250 });
+  perto(area(pontos), 500 * 350 + 2 * (50 * 25 / 2), 1);
+});
+
 test('enxergar, ver o token pela quina e atravessar', () => {
   const muro = parede([600, 0, 600, 700]);
   assert.equal(V.enxerga([muro], { x: 100, y: 100 }, { x: 900, y: 100 }), false);

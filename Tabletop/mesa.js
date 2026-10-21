@@ -32,7 +32,7 @@
     atividade: new Map(), pings: [], arrasto: null, minhaRegua: null, mouse: null,
     mostrarCursor: store.get('cursor') !== 'nao', sujo: true, dpr: 1, ultimoQuadro: 0, vezAnterior: null,
     previaGrade: null, ataque: null, escolhendoAlvo: false, defesas: [],
-    visao: null, paredeTipo: 'parede', paredeSel: null, tileSel: null, tilePrevia: null, aparenciaAberta: false
+    visao: null, paredeTipo: 'parede', paredeSel: null, tileSel: null, tilePrevia: null, aparenciaAberta: false, luzSel: null, luzPrevia: null
   };
   const gm = () => S.eu && S.eu.papel === 'mestre';
   const grade = () => S.previaGrade || (S.cena && S.cena.grade) || { tamanho: 100, metros: 2, x: 0, y: 0, visivel: true };
@@ -102,6 +102,7 @@
       renderCenaPainel();
       redesenhar();
     });
+    on('luzes', data => { if (S.cena && data.cena === S.cena.id) { S.cena.luzes = data.luzes; renderCenaPainel(); redesenhar(); } });
     on('visao.esquecer', data => { if (S.cena && data.cena === S.cena.id) esquecerExplorado(); });
     on('combate', data => { S.combate = data; renderCombate(); renderVez(); redesenhar(); });
     on('registro', data => { S.registro.push(data); if (S.registro.length > 200) S.registro.shift(); adicionarRegistro(data); });
@@ -122,6 +123,9 @@
 
   // ---------------- Estado ----------------
   function aplicarEstado(data) {
+    // O servidor reiniciou com outra versão: esta página é a velha (a operação nova volta recusada). Pede para recarregar.
+    if (S.versao && data.versao && data.versao !== S.versao) $('#atualizada').hidden = false;
+    if (!S.versao) S.versao = data.versao;
     S.conexao = data.conexao;
     S.eu = data.eu;
     document.body.classList.toggle('mestre', gm());
@@ -171,8 +175,10 @@
     }
     construirNevoa();
     prepararVisao();
-    if (!mesma) { S.paredeSel = null; S.tileSel = null; }
+    if (!mesma) { S.paredeSel = null; S.tileSel = null; S.luzSel = null; }
     S.tilePrevia = null;
+    S.luzPrevia = null;
+    renderLuzOpcoes();
     renderParedeOpcoes();
     renderTileOpcoes();
     if (cena && (!mesma || S.cenaVista !== cena.id)) { S.cenaVista = cena.id; enquadrar(); }
@@ -231,20 +237,26 @@
     return mostra;
   }
 
-  // ---------------- Visão pelas paredes ----------------
+  // ---------------- Luz e visão ----------------
   // Com a visão ligada, o jogador vê o que os tokens dele veem (mesa-visao.js, a mesma conta do servidor, que nem manda
-  // os tokens fora da vista). O que ele já viu fica na penumbra, guardado neste navegador (como a exploração da névoa
-  // do Foundry); o mestre manda esquecer.
+  // os tokens fora da vista). Sem a luz global, cada token vê o alcance dele e o que uma luz ilumina. O que ele já viu
+  // fica na penumbra, guardado neste navegador (como a exploração da névoa do Foundry); o mestre manda esquecer.
+  // Para todos: o brilho colorido das luzes e a escuridão da cena, com as luzes abrindo clareiras.
   const VIS = window.mesaVisao;
   const chaveExplorado = () => `explorado:${S.campanha || ''}:${S.cena ? S.cena.id : ''}:${(S.eu && S.eu.conta) || ''}`;
+  const luzDaCena = () => (S.cena && S.cena.luz) || { global: true, escuridao: 0 };
+  const metrosEmPx = metros => (Number(metros) || 0) / (grade().metros || 2) * grade().tamanho;
   function prepararVisao() {
-    const v = { chave: '', poligonos: [], canvas: null, explorado: null, escala: 1, timer: null };
+    const v = { chave: '', chaveLuzes: '', olhos: [], luzes: [], canvas: null, explorado: null, brilho: null, escuro: null, escala: 1, timer: null };
     clearTimeout(S.visao && S.visao.timer);
     S.visao = v;
     const cena = S.cena;
-    if (!cena || !cena.visao || gm()) return;
+    if (!cena) return;
     v.escala = Math.min(0.5, 1024 / Math.max(cena.largura, cena.altura));
     const tela = () => { const item = document.createElement('canvas'); item.width = Math.max(1, Math.round(cena.largura * v.escala)); item.height = Math.max(1, Math.round(cena.altura * v.escala)); return item; };
+    v.brilho = tela();
+    v.escuro = tela();
+    if (!cena.visao || gm()) return;
     v.canvas = tela();
     v.explorado = tela();
     const salvo = store.get(chaveExplorado());
@@ -254,30 +266,120 @@
       imagemSalva.src = salvo;
     }
   }
-  const olhos = () => [...S.tokens.values()].filter(token => token.meu).map(token => ({ x: token.sx ?? token.x, y: token.sy ?? token.y }));
+  // Os olhos: os tokens do jogador, onde o servidor diz que estão, com o alcance da visão em px.
+  const olhos = () => [...S.tokens.values()].filter(token => token.meu).map(token => ({ x: token.sx ?? token.x, y: token.sy ?? token.y, alcance: metrosEmPx(token.alcance ?? 30) }));
+  const ambiente = () => ({ global: luzDaCena().global, luzes: ((S.cena && S.cena.luzes) || []).map(luz => ({ x: luz.x, y: luz.y, raio: Math.max(luz.claro, luz.penumbra) })) });
+  const caminho = (c, pontos) => { c.beginPath(); pontos.forEach((ponto, i) => (i ? c.lineTo(ponto.x, ponto.y) : c.moveTo(ponto.x, ponto.y))); c.closePath(); };
+  // As luzes com o polígono de cada uma (até onde a parede de luz deixa), refeitas quando elas ou as paredes mudam.
+  function atualizarLuzes() {
+    const v = S.visao;
+    const cena = S.cena;
+    const chave = JSON.stringify([cena.luzes || [], luzDaCena(), v.versao || 0]);
+    if (chave === v.chaveLuzes) return false;
+    v.chaveLuzes = chave;
+    v.luzes = (cena.luzes || []).map(luz => {
+      const raio = Math.max(luz.claro, luz.penumbra);
+      return { ...luz, raio, poligono: raio > 0 ? VIS.poligono(cena.paredes || [], luz, cena.largura, cena.altura, margem(), { tipo: VIS.LUZ, raio }) : [] };
+    });
+    // O brilho: a cor de cada luz, forte no claro e sumindo na penumbra (só as que têm cor, como no Foundry).
+    const b = v.brilho.getContext('2d');
+    b.setTransform(1, 0, 0, 1, 0, 0);
+    b.clearRect(0, 0, v.brilho.width, v.brilho.height);
+    b.setTransform(v.escala, 0, 0, v.escala, 0, 0);
+    v.temBrilho = false;
+    for (const luz of v.luzes) {
+      if (!luz.cor || luz.poligono.length < 3) continue;
+      v.temBrilho = true;
+      b.save();
+      caminho(b, luz.poligono);
+      b.clip();
+      const gradiente = b.createRadialGradient(luz.x, luz.y, 0, luz.x, luz.y, luz.raio);
+      gradiente.addColorStop(0, luz.cor);
+      gradiente.addColorStop(Math.min(0.99, luz.claro / luz.raio || 0), luz.cor);
+      gradiente.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      b.globalAlpha = Math.max(0.1, Math.min(1, luz.alpha ?? 0.5));
+      b.fillStyle = gradiente;
+      b.beginPath();
+      b.arc(luz.x, luz.y, luz.raio, 0, Math.PI * 2);
+      b.fill();
+      b.restore();
+    }
+    // A escuridão: a cena toda escura (o mestre vê mais claro), e as luzes abrem a clareira (cheia no claro, metade na
+    // penumbra).
+    const escuridao = luzDaCena().escuridao || 0;
+    const e = v.escuro.getContext('2d');
+    e.setTransform(1, 0, 0, 1, 0, 0);
+    e.clearRect(0, 0, v.escuro.width, v.escuro.height);
+    v.temEscuro = escuridao > 0;
+    if (v.temEscuro) {
+      e.fillStyle = `rgba(4, 6, 7, ${escuridao * (gm() ? 0.55 : 0.85)})`;
+      e.fillRect(0, 0, v.escuro.width, v.escuro.height);
+      e.setTransform(v.escala, 0, 0, v.escala, 0, 0);
+      e.globalCompositeOperation = 'destination-out';
+      for (const luz of v.luzes) {
+        if (luz.poligono.length < 3) continue;
+        e.save();
+        caminho(e, luz.poligono);
+        e.clip();
+        const gradiente = e.createRadialGradient(luz.x, luz.y, 0, luz.x, luz.y, luz.raio);
+        gradiente.addColorStop(0, 'rgba(0, 0, 0, 1)');
+        gradiente.addColorStop(Math.min(0.99, luz.claro / luz.raio || 0), 'rgba(0, 0, 0, 1)');
+        gradiente.addColorStop(1, 'rgba(0, 0, 0, .5)');
+        e.fillStyle = gradiente;
+        e.beginPath();
+        e.arc(luz.x, luz.y, luz.raio, 0, Math.PI * 2);
+        e.fill();
+        e.restore();
+      }
+      e.globalCompositeOperation = 'source-over';
+    }
+    return true;
+  }
+  // O que os olhos veem agora: dentro do polígono de cada olho, tudo (luz global) ou o alcance e as clareiras das luzes.
+  function pintarVisivel(c, cor) {
+    const v = S.visao;
+    const global = luzDaCena().global;
+    c.setTransform(v.escala, 0, 0, v.escala, 0, 0);
+    c.fillStyle = cor;
+    for (const olho of v.olhos) {
+      if (olho.poligono.length < 3) continue;
+      c.save();
+      caminho(c, olho.poligono);
+      c.clip();
+      if (global) {
+        c.fillRect(-margem().x, -margem().y, S.cena.largura + margem().x * 2, S.cena.altura + margem().y * 2);
+      } else {
+        c.beginPath();
+        c.arc(olho.x, olho.y, olho.alcance, 0, Math.PI * 2);
+        c.fill();
+        for (const luz of v.luzes) {
+          if (luz.poligono.length < 3) continue;
+          c.save();
+          caminho(c, luz.poligono);
+          c.clip();
+          c.beginPath();
+          c.arc(luz.x, luz.y, luz.raio, 0, Math.PI * 2);
+          c.fill();
+          c.restore();
+        }
+      }
+      c.restore();
+    }
+    c.setTransform(1, 0, 0, 1, 0, 0);
+  }
   function atualizarVisao() {
     const v = S.visao;
     const cena = S.cena;
-    if (!v || !v.canvas) return;
+    if (!v || !v.brilho) return;
+    const luzesMudaram = atualizarLuzes();
+    if (!v.canvas) return;
     const meus = olhos();
-    const chave = JSON.stringify([meus, v.versao || 0]);
-    if (chave === v.chave) return;
+    const chave = JSON.stringify([meus, v.versao || 0, v.chaveLuzes]);
+    if (chave === v.chave && !luzesMudaram) return;
     v.chave = chave;
-    v.poligonos = meus.map(olho => VIS.poligono(cena.paredes || [], olho, cena.largura, cena.altura, margem()));
-    const desenharPoligonos = (c, cor) => {
-      c.setTransform(v.escala, 0, 0, v.escala, 0, 0);
-      c.fillStyle = cor;
-      for (const pontos of v.poligonos) {
-        if (pontos.length < 3) continue;
-        c.beginPath();
-        pontos.forEach((ponto, i) => (i ? c.lineTo(ponto.x, ponto.y) : c.moveTo(ponto.x, ponto.y)));
-        c.closePath();
-        c.fill();
-      }
-      c.setTransform(1, 0, 0, 1, 0, 0);
-    };
-    if (v.poligonos.length) {
-      desenharPoligonos(v.explorado.getContext('2d'), '#fff');
+    v.olhos = meus.map(olho => ({ ...olho, poligono: VIS.poligono(cena.paredes || [], olho, cena.largura, cena.altura, margem()) }));
+    if (v.olhos.length) {
+      pintarVisivel(v.explorado.getContext('2d'), '#fff');
       clearTimeout(v.timer);
       v.timer = setTimeout(() => store.set(chaveExplorado(), v.explorado.toDataURL('image/png')), 1500);
     }
@@ -290,7 +392,7 @@
     c.globalAlpha = 0.45;
     c.drawImage(v.explorado, 0, 0);
     c.globalAlpha = 1;
-    desenharPoligonos(c, '#000');
+    pintarVisivel(c, '#000');
     c.globalCompositeOperation = 'source-over';
   }
   function esquecerExplorado() {
@@ -301,11 +403,25 @@
     v.chave = '';
     redesenhar();
   }
+  // O brilho e a escuridão (todos), por cima do mapa e dos tiles.
+  function desenharLuz() {
+    const v = S.visao;
+    if (!v || !v.brilho) return;
+    atualizarVisao();
+    const cena = S.cena;
+    if (v.temBrilho) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.drawImage(v.brilho, 0, 0, cena.largura, cena.altura);
+      ctx.restore();
+    }
+    if (v.temEscuro) ctx.drawImage(v.escuro, 0, 0, cena.largura, cena.altura);
+  }
   function desenharVisao(px) {
     atualizarVisao();
     const cena = S.cena;
     ctx.drawImage(S.visao.canvas, 0, 0, cena.largura, cena.altura);
-    if (!S.visao.poligonos.length) {
+    if (!S.visao.olhos.length) {
       const meio = telaParaMundo(canvas.clientWidth / 2, canvas.clientHeight / 2);
       rotulo('Nenhum token seu nesta cena: você vê só o que já explorou.', meio.x, meio.y, px, { tamanho: 13 });
     }
@@ -321,12 +437,12 @@
     const portas = (cena.paredes || []).filter(parede => parede.porta);
     if (gm()) return portas;
     const meus = olhos();
+    const luz = ambiente();
+    // O meio da porta fica na própria porta: ela não tapa a si mesma (encostar não conta).
     return portas.filter(porta => {
       const meio = meioDe(porta);
       if (!nevoaMostra(meio.x, meio.y)) return false;
-      if (!cena.visao) return true;
-      const outras = cena.paredes.filter(parede => parede !== porta);
-      return meus.some(olho => VIS.enxerga(outras, olho, meio));
+      return !cena.visao || VIS.pontoVisto(meus, meio, cena.paredes, luz);
     });
   }
   function portaEm(ponto) {
@@ -447,6 +563,66 @@
     caixa.hidden = false;
     caixa.innerHTML = `<span>Escolhida</span><select id="parede-tipo" aria-label="Tipo da parede">${Object.keys(TIPOS_DE_PAREDE).map(nome => `<option value="${nome}"${nome === tipo ? ' selected' : ''}>${{ parede: 'Parede', porta: 'Porta', secreta: 'Porta secreta', janela: 'Janela (vê, não passa)', limitada: 'Limitada (vê através de uma)' }[nome]}</option>`).join('')}</select><button class="botao vazado pequeno" type="button" data-parede-apagar>Apagar</button>`;
   }
+  // ---------------- Luzes (mestre) ----------------
+  // As luzes do cenário (as dos tokens andam com eles e mudam no cartão). O mestre recebe a luz com o id e os metros.
+  const luzesDoCenario = () => ((S.cena && S.cena.luzes) || []).filter(luz => luz.id);
+  const luzVista = luz => (S.luzPrevia && S.luzPrevia.id === luz.id ? { ...luz, ...S.luzPrevia } : luz);
+  const luzEscolhida = () => luzesDoCenario().find(luz => luz.id === S.luzSel) || null;
+  const raioDoIcone = () => 11 / S.vista.escala;
+  const luzEm = ponto => [...luzesDoCenario()].reverse().find(luz => { const l = luzVista(luz); return Math.hypot(ponto.x - l.x, ponto.y - l.y) <= raioDoIcone() * 1.4; }) || null;
+  function desenharLuzes(px) {
+    for (const original of luzesDoCenario()) {
+      const luz = luzVista(original);
+      const escolhida = S.luzSel === luz.id;
+      const r = raioDoIcone();
+      if (escolhida) {
+        ctx.setLineDash([6 * px, 5 * px]);
+        ctx.lineWidth = 1.5 * px;
+        ctx.strokeStyle = 'rgba(248, 239, 2, .8)';
+        for (const raio of [luz.claro, luz.penumbra]) if (raio > 0) { ctx.beginPath(); ctx.arc(luz.x, luz.y, raio, 0, Math.PI * 2); ctx.stroke(); }
+        ctx.setLineDash([]);
+      }
+      ctx.beginPath();
+      ctx.arc(luz.x, luz.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(11, 13, 15, .88)';
+      ctx.fill();
+      ctx.lineWidth = 2 * px;
+      ctx.strokeStyle = escolhida ? '#f8ef02' : (luz.cor || '#f1f0df');
+      if (luz.escondido) ctx.setLineDash([4 * px, 3 * px]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      for (let i = 0; i < 8; i += 1) {
+        const a = i * Math.PI / 4;
+        ctx.moveTo(luz.x + Math.cos(a) * r * 0.3, luz.y + Math.sin(a) * r * 0.3);
+        ctx.lineTo(luz.x + Math.cos(a) * r * 0.68, luz.y + Math.sin(a) * r * 0.68);
+      }
+      ctx.lineWidth = 1.5 * px;
+      ctx.stroke();
+    }
+  }
+  // A barra: os números da luz escolhida, ou os da próxima luz que o clique põe.
+  function renderLuzOpcoes() {
+    const luz = luzEscolhida();
+    if (!luz) S.luzSel = null;
+    $('#luz-titulo').textContent = luz ? 'Luz escolhida' : 'Clique no mapa para pôr uma luz';
+    $('#luz-escolhida').hidden = !luz;
+    if (!luz || $('#luzes-opcoes').contains(document.activeElement)) return;
+    $('#luz-claro').value = luz.metros.claro;
+    $('#luz-penumbra').value = luz.metros.penumbra;
+    $('#luz-sem-cor').checked = !luz.cor;
+    if (luz.cor) $('#luz-cor').value = luz.cor;
+    $('#luz-escondida').checked = Boolean(luz.escondido);
+  }
+  const luzDoFormulario = () => ({ claro: Number($('#luz-claro').value) || 0, penumbra: Number($('#luz-penumbra').value) || 0, cor: $('#luz-sem-cor').checked ? null : $('#luz-cor').value });
+  function apagarLuzEscolhida() {
+    const luz = luzEscolhida();
+    if (!luz || !confirm('Apagar esta luz?')) return;
+    S.luzSel = null;
+    renderLuzOpcoes();
+    op('luz.apagar', { luz: luz.id }).catch(() => {});
+  }
+
   // ---------------- Tiles (mestre) ----------------
   // O tile como está na tela: o do servidor ou o arrasto que ainda não voltou dele.
   const tileVisto = tile => (S.tilePrevia && S.tilePrevia.id === tile.id ? { ...tile, ...S.tilePrevia } : tile);
@@ -700,6 +876,7 @@
     ctx.fillRect(0, 0, cena.largura, cena.altura);
     if (pronta(S.fundo)) ctx.drawImage(S.fundo, 0, 0, cena.largura, cena.altura);
     desenharTiles(px);
+    desenharLuz();
     desenharGrade(px);
     if (S.nevoaCanvas) {
       ctx.globalAlpha = gm() ? 0.55 : 1;
@@ -716,6 +893,7 @@
       desenharToken(token, token.vx, token.vy, agora, px);
     }
     if (gm() && S.ferramenta === 'tiles') desenharTileEscolhido(px);
+    if (gm() && S.ferramenta === 'luzes') desenharLuzes(px);
     desenharPortas(px);
     if (S.arrasto) desenharArrasto(agora, px);
     if (S.minhaRegua) desenharRegua(S.minhaRegua.a, S.minhaRegua.b, S.eu.cor, px);
@@ -1056,6 +1234,23 @@
       pintar(mundo);
       return;
     }
+    if (S.ferramenta === 'luzes' && gm()) {
+      const luz = luzEm(mundo);
+      if (luz) {
+        S.luzSel = luz.id;
+        renderLuzOpcoes();
+        gesto = { tipo: 'luz-mover', inicio: tela, luz: luz.id, desloc: { x: mundo.x - luz.x, y: mundo.y - luz.y } };
+      } else if (S.luzSel) {
+        // Com uma escolhida, o clique fora só solta a escolha (o próximo põe uma luz).
+        S.luzSel = null;
+        renderLuzOpcoes();
+        gesto = { tipo: 'pan-talvez', inicio: tela, vista: { ...S.vista } };
+      } else {
+        gesto = { tipo: 'luz-nova', inicio: tela, vista: { ...S.vista }, ponto: dentro(mundo) };
+      }
+      redesenhar();
+      return;
+    }
     if (S.ferramenta === 'tiles' && gm()) {
       const atual = tileEscolhido();
       if (atual && naAlca(tileVisto(atual), mundo)) { gesto = { tipo: 'tile-tamanho', inicio: tela, tile: atual.id }; return; }
@@ -1131,6 +1326,7 @@
       }
     }
     if (gesto.tipo === 'pan-talvez' && gesto.moveu) gesto.tipo = 'pan';
+    if (gesto.tipo === 'luz-nova' && gesto.moveu) gesto = { tipo: 'pan', inicio: gesto.inicio, vista: gesto.vista, moveu: true };
     if (gesto.tipo === 'pan') {
       S.enquadrada = false;
       S.vista.x = gesto.vista.x - (tela.x - gesto.inicio.x) / S.vista.escala;
@@ -1153,6 +1349,9 @@
       pintar(mundo);
     } else if (gesto.tipo === 'parede' && gesto.moveu) {
       gesto.b = encaixarParede(mundo, event.shiftKey);
+      redesenhar();
+    } else if (gesto.tipo === 'luz-mover' && gesto.moveu) {
+      S.luzPrevia = { id: gesto.luz, ...dentro({ x: mundo.x - gesto.desloc.x, y: mundo.y - gesto.desloc.y }) };
       redesenhar();
     } else if ((gesto.tipo === 'tile-mover' || gesto.tipo === 'tile-tamanho') && gesto.moveu) {
       const tile = (S.cena.tiles || []).find(item => item.id === gesto.tile);
@@ -1188,6 +1387,11 @@
       S.reguaTimer = setTimeout(() => { S.minhaRegua = null; if (compartilho()) atividade({ regua: null }); redesenhar(); }, cancelar ? 0 : 1500);
     } else if (atual.tipo === 'nevoa') {
       enviarNevoa(atual);
+    } else if (atual.tipo === 'luz-nova' && !atual.moveu && !cancelar) {
+      op('luz.criar', { cena: S.cena.id, x: atual.ponto.x, y: atual.ponto.y, ...luzDoFormulario() }).then(({ resultado }) => { S.luzSel = resultado.luz; renderLuzOpcoes(); redesenhar(); }).catch(() => {});
+    } else if (atual.tipo === 'luz-mover' && S.luzPrevia && S.luzPrevia.id === atual.luz) {
+      const { id, x, y } = S.luzPrevia;
+      if (cancelar) { S.luzPrevia = null; redesenhar(); } else op('luz.editar', { luz: id, x, y }).catch(() => { S.luzPrevia = null; redesenhar(); });
     } else if ((atual.tipo === 'tile-mover' || atual.tipo === 'tile-tamanho') && S.tilePrevia && S.tilePrevia.id === atual.tile) {
       // A prévia fica até a cena voltar do servidor (sem pulo); recusado, volta.
       const { id, ...mudancas } = S.tilePrevia;
@@ -1237,16 +1441,19 @@
     if ((tecla === 'n' || tecla === 'N') && gm()) return escolherFerramenta('nevoa');
     if ((tecla === 'w' || tecla === 'W') && gm()) return escolherFerramenta('paredes');
     if ((tecla === 't' || tecla === 'T') && gm()) return escolherFerramenta('tiles');
+    if ((tecla === 'l' || tecla === 'L') && gm()) return escolherFerramenta('luzes');
     if (tecla === '0') return enquadrar();
     if (tecla === 'c' || tecla === 'C') return irAoMeuToken();
     if (tecla === 'Escape') {
       if (S.escolhendoAlvo) return escolherAlvoNoMapa(false);
       if (S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); redesenhar(); return; }
       if (S.tileSel) { S.tileSel = null; renderTileOpcoes(); redesenhar(); return; }
+      if (S.luzSel) { S.luzSel = null; renderLuzOpcoes(); redesenhar(); return; }
       selecionar(null); escolherFerramenta('mover'); return;
     }
     if (S.ferramenta === 'paredes' && S.paredeSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarParedeEscolhida(); return; }
     if (S.ferramenta === 'tiles' && S.tileSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarTileEscolhido(); return; }
+    if (S.ferramenta === 'luzes' && S.luzSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarLuzEscolhida(); return; }
     if (!token) return;
     const passos = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[tecla];
     if (passos && podeMover(token)) {
@@ -1281,13 +1488,15 @@
 
   // ---------------- Ferramentas ----------------
   function escolherFerramenta(nome) {
-    if ((nome === 'nevoa' || nome === 'paredes' || nome === 'tiles') && !gm()) return;
+    if ((nome === 'nevoa' || nome === 'paredes' || nome === 'tiles' || nome === 'luzes') && !gm()) return;
     S.ferramenta = nome;
     for (const botao of $$('[data-ferramenta]')) botao.classList.toggle('ativa', botao.dataset.ferramenta === nome);
     canvas.className = nome === 'mover' ? '' : nome;
     $('#nevoa-opcoes').hidden = nome !== 'nevoa';
     $('#paredes-opcoes').hidden = nome !== 'paredes';
     $('#tiles-opcoes').hidden = nome !== 'tiles';
+    $('#luzes-opcoes').hidden = nome !== 'luzes';
+    if (nome !== 'luzes' && S.luzSel) { S.luzSel = null; renderLuzOpcoes(); }
     if (nome !== 'paredes' && S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); }
     if (nome !== 'tiles' && S.tileSel) { S.tileSel = null; renderTileOpcoes(); }
     const dicas = {
@@ -1296,7 +1505,8 @@
       ping: 'Clique para chamar atenção a um ponto' + (gm() ? ' · Shift: traz todos para ele' : ''),
       nevoa: 'Pinte para revelar · Alt inverte (cobre) · Revelar tudo e Cobrir tudo ficam na aba Cena',
       paredes: 'Arraste para desenhar · a ponta gruda na grade e nas outras paredes (Shift solta) · clique numa parede para escolher · Delete apaga',
-      tiles: 'Clique num tile para escolher · arraste para mover (encaixa na grade; Shift solta) · o quadrado amarelo muda o tamanho · Delete apaga'
+      tiles: 'Clique num tile para escolher · arraste para mover (encaixa na grade; Shift solta) · o quadrado amarelo muda o tamanho · Delete apaga',
+      luzes: 'Clique no mapa para pôr uma luz · clique numa luz para escolher e arraste para mover · Delete apaga'
     };
     $('#dica').textContent = dicas[nome] || '';
     redesenhar();
@@ -1308,6 +1518,14 @@
       for (const outro of $$('#paredes-opcoes [data-tipo]')) outro.classList.toggle('ativo', outro === botao);
     });
   }
+  $('#luzes-opcoes').addEventListener('change', event => {
+    const luz = luzEscolhida();
+    if (!luz) return;
+    if (event.target.id === 'luz-escondida') op('luz.editar', { luz: luz.id, escondido: event.target.checked }).catch(() => {});
+    else if (['luz-claro', 'luz-penumbra', 'luz-cor', 'luz-sem-cor'].includes(event.target.id)) op('luz.editar', { luz: luz.id, ...luzDoFormulario() }).catch(() => {});
+    event.target.blur();
+  });
+  $('#luz-apagar').addEventListener('click', apagarLuzEscolhida);
   $('#tile-novo').addEventListener('change', event => { const escolhido = event.target.files[0]; event.target.value = ''; if (escolhido) novoTile(escolhido); });
   $('#tile-escolhido').addEventListener('change', event => {
     const campo = event.target.dataset.tile;
@@ -1381,6 +1599,8 @@
     const acoes = [];
     if ((gm() || token.meu) && !token.morto) acoes.push(`<button class="botao pequeno" type="button" data-cartao="atacar">${S.ataque && S.ataque.token === token.id ? 'Fechar o ataque' : 'Atacar'}</button>`);
     if (gm() || token.meu) acoes.push('<button class="botao vazado pequeno" type="button" data-cartao="rolar">Rolar</button>');
+    const acesa = Boolean(token.luz && (token.luz.claro || token.luz.penumbra));
+    if (gm() || token.meu) acoes.push(`<button class="botao vazado pequeno" type="button" data-cartao="lanterna">${acesa ? 'Apagar a luz' : 'Acender a lanterna'}</button>`);
     if ((gm() || token.meu) && token.hp && token.hp.atual < 1 && !token.morto) acoes.push('<button class="botao pequeno perigo" type="button" data-cartao="deathsave">Death Save</button>');
     if (gm()) {
       acoes.push(`<button class="botao vazado pequeno" type="button" data-cartao="esconder">${token.escondido ? 'Mostrar' : 'Esconder'}</button>`);
@@ -1403,6 +1623,9 @@
         <label class="campo cresce">Nome <input data-ap="nome" type="text" maxlength="40" value="${esc(token.nome)}"></label>
         <label class="campo">Tamanho <select data-ap="tamanho">${[1, 2, 3, 4].map(n => `<option value="${n}"${(token.tamanho || 1) === n ? ' selected' : ''}>${n} × ${n}</option>`).join('')}</select></label>
         <label class="campo">Cor <input data-ap="cor" type="color" value="${esc(token.cor)}"></label></div>
+        <div class="campo-linha"><label class="campo">Visão (m) <input data-ap="alcance" type="number" min="0" max="1000" step="1" value="${token.alcance ?? 30}" title="Até onde vê no escuro (sem a luz global)"></label>
+        <label class="campo">Luz clara (m) <input data-ap="luz-claro" type="number" min="0" max="60" step="0.5" value="${(token.luz && token.luz.claro) || 0}"></label>
+        <label class="campo">Penumbra (m) <input data-ap="luz-penumbra" type="number" min="0" max="60" step="0.5" value="${(token.luz && token.luz.penumbra) || 0}"></label></div>
         ${token.tipo === 'pj' ? '<p class="nota">A imagem do personagem é o retrato da ficha.</p>' : `<div class="campo-linha"><label class="campo cresce">Imagem <input data-ap="imagem" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>${token.imagem ? '<button class="link" type="button" data-cartao="sem-imagem">tirar a imagem</button>' : ''}</div>`}</details>`);
       partes.push(`<label>Nota do mestre<textarea data-cartao-notas placeholder="Só você vê.">${esc(token.notas || '')}</textarea></label>`);
     }
@@ -1527,6 +1750,10 @@
     }
     if (tipo === 'apagar' && confirm(`Tirar ${token.nome} da cena?`)) op('token.apagar', { token: token.id }).catch(() => {});
     if (tipo === 'sem-imagem') op('token.editar', { token: token.id, midia: '' }).catch(() => {});
+    if (tipo === 'lanterna') {
+      const acesa = Boolean(token.luz && (token.luz.claro || token.luz.penumbra));
+      op('token.editar', { token: token.id, luz: acesa ? { claro: 0, penumbra: 0 } : { claro: 6, penumbra: 12 } }).catch(() => {});
+    }
   });
   // O <details> da aparência fica aberto quando o cartão é refeito (o toggle não sobe: pega na captura).
   $('#cartao').addEventListener('toggle', event => { if (event.target.matches('.aparencia')) S.aparenciaAberta = event.target.open; }, true);
@@ -1536,6 +1763,11 @@
     if (event.target.matches('[data-hp-atual]') && token.hp) op('token.editar', { token: token.id, hp: { atual: Number(event.target.value), max: token.hp.max } }).catch(() => {});
     if (event.target.matches('[data-cartao-notas]')) op('token.editar', { token: token.id, notas: event.target.value }).catch(() => {});
     const aparencia = event.target.dataset.ap;
+    if (aparencia === 'alcance') { op('token.editar', { token: token.id, alcance: Number(event.target.value) || 0 }).catch(() => {}); event.target.blur(); }
+    if (aparencia === 'luz-claro' || aparencia === 'luz-penumbra') {
+      op('token.editar', { token: token.id, luz: { claro: Number($('#cartao [data-ap="luz-claro"]').value) || 0, penumbra: Number($('#cartao [data-ap="luz-penumbra"]').value) || 0 } }).catch(() => {});
+      event.target.blur();
+    }
     if (aparencia === 'nome' || aparencia === 'cor' || aparencia === 'tamanho') { op('token.editar', { token: token.id, [aparencia]: aparencia === 'tamanho' ? Number(event.target.value) : event.target.value }).catch(() => {}); event.target.blur(); }
     if (aparencia === 'imagem' && event.target.files[0]) {
       enviarMidia(event.target.files[0]).then(({ midia }) => op('token.editar', { token: token.id, midia })).catch(error => { if (error.message && !/^\d+$/.test(error.message)) aviso(error.message, 'erro'); });
@@ -2052,11 +2284,22 @@
         <label class="marcar"><input id="nevoa-ligada" type="checkbox"${cena.nevoa.ativa ? ' checked' : ''}> Névoa ligada nesta cena</label>
         <p class="nota">Com névoa, o jogador só recebe os tokens das áreas reveladas (o servidor nem manda os outros). Pinte com a ferramenta Névoa (N).</p>
         <div class="combate-acoes"><button class="botao vazado pequeno" type="button" data-nevoa="tudo"${cena.nevoa.ativa ? '' : ' disabled'}>Revelar tudo</button><button class="botao vazado pequeno" type="button" data-nevoa="limpar"${cena.nevoa.ativa ? '' : ' disabled'}>Cobrir tudo</button></div></div>
+      <div class="bloco"><h3>Luz</h3>
+        <label class="marcar"><input id="luz-global" type="checkbox"${luzDaCena().global ? ' checked' : ''}> Luz global: a cena toda clara</label>
+        <label class="campo">Escuridão <span class="faixa"><input id="luz-escuridao" type="range" min="0" max="1" step="0.05" value="${luzDaCena().escuridao || 0}"><output id="luz-escuridao-valor">${Math.round((luzDaCena().escuridao || 0) * 100)}%</output></span></label>
+        <p class="nota">Sem a luz global, cada token vê o alcance dele (30 m, se você não mudar no cartão) e o que as luzes iluminam. ${contarLuzes(cena.luzes || [])}. A escuridão escurece a tela de todos, e as luzes abrem clareiras.</p>
+        <div class="combate-acoes"><button class="botao vazado pequeno" type="button" data-ferramenta-luzes>Pôr luzes (L)</button></div></div>
       <div class="bloco"><h3>Visão e paredes</h3>
         <label class="marcar"><input id="visao-ligada" type="checkbox"${cena.visao ? ' checked' : ''}> Visão pelas paredes</label>
         <p class="nota">${contarParedes(cena.paredes || [])}. Com a visão ligada, cada jogador vê só o que os tokens dele veem, e o servidor nem manda os outros tokens. O que ele já viu fica na penumbra. Parede e porta fechada param o token do jogador, com a visão ligada ou não.</p>
         <div class="combate-acoes"><button class="botao vazado pequeno" type="button" data-ferramenta-paredes>Desenhar paredes (W)</button><button class="botao vazado pequeno" type="button" data-visao-esquecer${cena.visao ? '' : ' disabled'}>Esquecer o explorado</button></div></div>` : ''}
       <div class="bloco"><h3>Você</h3><label class="marcar"><input id="mostrar-cursor" type="checkbox"${S.mostrarCursor ? ' checked' : ''}> Mostrar meu cursor e minha régua aos jogadores</label></div>`;
+  }
+  function contarLuzes(luzes) {
+    const doCenario = luzes.filter(luz => luz.id).length;
+    const dosTokens = luzes.length - doCenario;
+    if (!luzes.length) return 'Nenhuma luz ainda';
+    return [doCenario ? `${doCenario} ${doCenario === 1 ? 'luz' : 'luzes'} no cenário` : '', dosTokens ? `${dosTokens} ${dosTokens === 1 ? 'token com luz' : 'tokens com luz'}` : ''].filter(Boolean).join(' e ');
   }
   function contarParedes(paredes) {
     if (!paredes.length) return 'Nenhuma parede ainda';
@@ -2070,11 +2313,14 @@
   }
   $('#cena-painel').addEventListener('input', event => {
     if (event.target.id && event.target.id.startsWith('grade-') && S.cena) { S.previaGrade = gradeDoFormulario(); redesenhar(); }
+    if (event.target.id === 'luz-escuridao') $('#luz-escuridao-valor').textContent = `${Math.round(Number(event.target.value) * 100)}%`;
   });
   $('#cena-painel').addEventListener('change', event => {
     const id = event.target.id;
     if (id === 'nevoa-ligada' && S.cena) op('nevoa.ligar', { cena: S.cena.id, ativa: event.target.checked }).catch(() => {});
     if (id === 'visao-ligada' && S.cena) op('cena.editar', { cena: S.cena.id, visao: event.target.checked }).catch(() => {});
+    if (id === 'luz-global' && S.cena) op('cena.editar', { cena: S.cena.id, luz: { global: event.target.checked } }).catch(() => {});
+    if (id === 'luz-escuridao' && S.cena) { op('cena.editar', { cena: S.cena.id, luz: { escuridao: Number(event.target.value) } }).catch(() => {}); event.target.blur(); }
     if (id === 'mostrar-cursor') {
       S.mostrarCursor = event.target.checked;
       store.set('cursor', S.mostrarCursor ? 'sim' : 'nao');
@@ -2089,6 +2335,7 @@
     if (botao.dataset.cenaApagar) { const item = S.cenas.find(cena => cena.id === botao.dataset.cenaApagar); if (item && confirm(`Apagar a cena "${item.nome}" e os tokens dela?`)) op('cena.apagar', { cena: item.id }).catch(() => {}); }
     if (botao.dataset.nevoa && S.cena && confirm(botao.dataset.nevoa === 'tudo' ? 'Revelar a cena inteira?' : 'Cobrir a cena inteira de névoa?')) op(`nevoa.${botao.dataset.nevoa}`, { cena: S.cena.id }).catch(() => {});
     if (botao.hasAttribute('data-ferramenta-paredes')) escolherFerramenta('paredes');
+    if (botao.hasAttribute('data-ferramenta-luzes')) escolherFerramenta('luzes');
     if (botao.hasAttribute('data-visao-esquecer') && S.cena && confirm('Todos os jogadores esquecem o que já viram nesta cena?')) op('visao.esquecer', { cena: S.cena.id }).catch(() => {});
     if (botao.hasAttribute('data-desfazer-grade')) { S.previaGrade = null; document.activeElement.blur(); renderCenaPainel(); redesenhar(); }
     if (botao.hasAttribute('data-salvar-cena') && S.cena) {
@@ -2145,6 +2392,7 @@
     if (!response.ok) { const erro = $('#entrar-erro'); erro.hidden = false; erro.textContent = data.erro || 'Não deu para entrar.'; return; }
     location.reload();
   }
+  $('#atualizada-recarregar').addEventListener('click', () => location.reload());
   $('#entrar-form').addEventListener('submit', event => { event.preventDefault(); entrar($('#entrar-codigo').value.trim()); });
   $('#entrar-teste').addEventListener('click', event => {
     const botao = event.target.closest('button');

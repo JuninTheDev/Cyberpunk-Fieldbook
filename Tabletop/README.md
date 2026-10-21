@@ -1,6 +1,6 @@
 # Mesa da wiki (versão de teste)
 
-Um tabuleiro ao vivo dentro da wiki, por campanha. Tem cenas com mapa (imagem ou vídeo) e grade, tiles, tokens dos personagens e das fichas de NPC, névoa, visão pelas paredes com portas, régua com a DV por alcance, ping, rolagens do RED, iniciativa, combate (o Fluxo de Combate) e chat. O desenho segue o da mesa do Foundry, com as regras e os dados da wiki. A diferença principal: **o servidor decide o que cada pessoa recebe**.
+Um tabuleiro ao vivo dentro da wiki, por campanha. Tem cenas com mapa (imagem ou vídeo) e grade, tiles, tokens dos personagens e das fichas de NPC, névoa, visão pelas paredes com portas, luz e escuridão, régua com a DV por alcance, ping, rolagens do RED, iniciativa, combate (o Fluxo de Combate) e chat. O desenho segue o da mesa do Foundry, com as regras e os dados da wiki. A diferença principal: **o servidor decide o que cada pessoa recebe**.
 
 **A meta é substituir o Foundry completamente** (decisão de 2026-10-20). O que falta, em ordem, está no [ROADMAP.md](ROADMAP.md).
 
@@ -25,8 +25,9 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 5. **O HP na ficha:** mexa no HP do Jax na mesa e abra a ficha dele na wiki (Personagens). Ela mostra o mesmo número, e o caminho contrário também vale.
 6. **Celular na rede de casa:** `$env:HOST='0.0.0.0'; node Tabletop/testar.js`. O terminal mostra o endereço.
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
+8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (29 testes).
+Teste automático (não abre navegador): `node --test Tabletop/` (34 testes).
 
 ## O que dá para fazer
 
@@ -37,11 +38,13 @@ Teste automático (não abre navegador): `node --test Tabletop/` (29 testes).
   - **Unidade:** "m" nas cenas da mesa, "bit" nas arquiteturas da NET.
   - **Ajuste:** olhando o mapa; a grade fica amarela até você salvar.
   - **Ver** olha uma cena sem levar os jogadores. **Abrir** leva todos para ela.
-  - **Cena importada do Foundry:** vem com os tiles (o tile escondido só o mestre vê, pela metade) e com as paredes e as portas. As luzes ficam guardadas.
+  - **Cena importada do Foundry:** vem com os tiles (o tile escondido só o mestre vê, pela metade) e com as paredes, as portas, as luzes e a luz da cena.
 - **Paredes** (ferramenta W): arraste para desenhar parede, porta, porta secreta ou janela (vê, não passa). A ponta gruda na grade e nas outras paredes; Shift solta.
   - Clique numa parede para trocar o tipo ou apagar (Delete).
   - **Visão pelas paredes** (aba Cena): cada jogador vê só o que os tokens dele veem. **Esquecer o explorado** apaga a penumbra de todos.
 - **Portas:** clique no ícone abre e fecha; com Shift, tranca. A porta secreta só você vê.
+- **Luz** (aba Cena): **Luz global** deixa a cena toda clara. Sem ela, cada token vê o alcance da visão dele (30 m, se você não mudar) e o que as luzes iluminam. **Escuridão** escurece a tela de todos; as luzes abrem clareiras.
+  - **Luzes** (ferramenta L): clique no mapa para pôr uma, com a luz clara, a penumbra (em metros) e a cor; clique numa para escolher, arraste para mover, Delete apaga. A escondida só você vê.
 - **Tiles** (ferramenta T): **Pôr um tile** envia a imagem ou o vídeo para o meio da tela.
   - Clique para escolher e arraste para mover; o quadrado amarelo no canto muda o tamanho. A grade encaixa; Shift solta.
   - Na barra: transparência, girar, esconder dos jogadores, para a frente ou para trás, e apagar (Delete).
@@ -50,7 +53,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (29 testes).
   - O NPC entra escondido, se você quiser.
   - Também há o token livre: um drone, um carro, uma porta.
 - **Cartão do token:** clique num token para mexer no HP (−5, −1, +1, +5 ou o número), esconder ou mostrar, ver as armas do NPC, escrever uma nota (só sua), **Atualizar da ficha** e tirar da cena.
-  - **Aparência:** nome, tamanho (1 × 1 a 4 × 4), cor e imagem. O personagem usa o retrato da ficha.
+  - **Aparência:** nome, tamanho (1 × 1 a 4 × 4), cor, imagem, alcance da visão e a luz que o token leva. O personagem usa o retrato da ficha.
 - **Névoa** (ferramenta N): pinte para revelar; com Alt, cobre. Revelar tudo e Cobrir tudo ficam na aba Cena.
 - **Combate:** a iniciativa (REF + 1d10) sai para todos os tokens não escondidos.
   - Empates rolam de novo.
@@ -70,7 +73,7 @@ Teste automático (não abre navegador): `node --test Tabletop/` (29 testes).
 - **Régua** (R): quadrados, metros e a DV por alcance de pistola, SMG, espingarda, rifle de assalto e sniper (a tabela da wiki).
 - **Aba Personagem:** os STATs e as perícias da ficha. Tocar numa perícia rola STAT + perícia + 1d10.
 - **Só para o mestre:** a rolagem fica só entre o jogador e o mestre.
-- **Visão:** com a visão ligada, vê o que o token dele vê; o que já viu fica na penumbra. Clique na porta abre e fecha. Parede e porta fechada param o token (a linha do arrasto fica vermelha).
+- **Visão:** com a visão ligada, vê o que o token dele vê; o que já viu fica na penumbra. No escuro, vê o alcance do token e o que está iluminado; **Acender a lanterna** (cartão do token) ilumina em volta dele, para todos. Clique na porta abre e fecha. Parede e porta fechada param o token (a linha do arrasto fica vermelha).
 - **Atacar** (cartão do token): a arma da ficha, o modo (tiro, mirado, autofogo, supressivo, corpo a corpo, explosivo), o alvo (na lista ou no mapa), o local e a Sorte. A prévia mostra a DV pelo alcance.
 - **Defender:** quando alguém ataca o token dele, a pergunta aparece na tela, sem o total do ataque: esquivar (REF 8+ contra tiro; corpo a corpo, sempre) ou aguentar. Sem resposta em 60 segundos, aguenta.
 - **Chat** (embaixo do registro): para todos, só para o mestre ou sussurro a um jogador. `/r 2d6` rola.
@@ -129,6 +132,7 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
   - O jogador nem recebe estas coisas: token escondido, token debaixo da névoa ou atrás da parede (o dele, sim), HP de NPC (só o estado de ferimento), nota do mestre, perícias e armas do NPC, a lista de cenas, as fichas de NPC, a porta secreta (para ele, é parede), o total do ataque antes de defender, o sussurro para outro e a rolagem "só para o mestre" de outro jogador.
   - É o mesmo princípio do Publicar.
   - Se o mestre esconde um token ou cobre a névoa, o jogador recebe `token.sumir`.
+  - **A exceção, de propósito:** a luz de um token não escondido chega ao jogador mesmo com o token fora da vista dele. Uma lanterna no escuro se vê de longe, como no Foundry. O token em si não chega.
   - Se um jogador é desconectado pela wiki ou sai da campanha, a mesa dele fecha em até 20 segundos.
 - **O servidor rola.** A conta usa a ficha do servidor.
 - **As regras do RED e os dados da wiki:**
@@ -152,7 +156,7 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
 - **Áudio**, **notas no mapa**, **NET** (o NET Architect) e o resto da ficha de jogo (Humanidade, dinheiro, itens).
-- **Luz e escuridão:** a visão para nas paredes, mas a cena fica toda iluminada (sem alcance de visão nem luzes).
+- **Luz em cone e modos de visão:** a luz em cone vira círculo, e não há visão no escuro do cyberware (o mestre aumenta o alcance no cartão).
 - **Imagem do mapa:** o mapa inteiro vai para os jogadores, e a névoa e a sombra da visão só cobrem na tela, como no Foundry.
 
 ## Arquivos fora desta pasta (mudados para o HP na ficha)
@@ -175,7 +179,8 @@ O M4 do roadmap. Quando você aprovar o teste:
    - criar a mesa com `require('./Tabletop/mesa-api')({ dataDir, charactersDir: path.join(charactersDataDir, 'personagens'), wikiDir: root, who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter, send, writeJsonAtomic })`;
    - ligar a rota `ROUTES` antes da `characterApiRoutes`;
    - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
-   - não carregar o `mesa-config.js`: ele só existe no teste.
+   - não carregar o `mesa-config.js`: ele só existe no teste;
+   - entregar a página da mesa carregada na memória quando o servidor liga, e passar a `versao` (como o `testar.js`): página nova com servidor velho dá "Operação desconhecida".
 2. **Barra lateral:** o quadro **Mesa** ganha **Mesa da wiki**, com quantos estão nela (`mesa.connected(campanha)`).
 3. **`sw.js`:** já não guarda nada de `/api/mesa/`. O `/api/mesa/eventos` é uma conexão aberta e passa direto.
 4. **`api-personagens.js`:** exportar `idFor` e `realId`. A mesa usa a mesma conta do id público, que hoje está repetida em `mesa-api.js`.
@@ -191,9 +196,9 @@ O M4 do roadmap. Quando você aprovar o teste:
 |---|---|
 | `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e o HP dos personagens. |
 | `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha) e as regras puras do RED (DV, armadura, autofogo, Death Save). |
-| `mesa-visao.js` | A conta da visão (quem vê o quê, a porta, o passo, o polígono da sombra). Vai para o servidor e para o navegador. |
+| `mesa-visao.js` | A conta da visão e da luz (quem vê o quê, a porta, o passo, o que a luz alcança, o polígono da sombra), com o índice das paredes. Vai para o servidor e para o navegador. |
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 29 testes, com dados rolados de propósito. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-visao.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 34 testes, com dados rolados de propósito. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

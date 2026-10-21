@@ -79,6 +79,12 @@ label { font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; lett
 .paredes-escolhida[hidden] { display: none; }
 .paredes-escolhida select { min-width: 0; flex: 1; }
 .tiles-opcoes { width: 300px; }
+.luzes-opcoes { width: 300px; }
+.luz-titulo { margin: 0; font: 11px var(--lbl); text-transform: uppercase; letter-spacing: .06em; color: var(--y); }
+.luzes-opcoes input[type="number"] { width: 80px; }
+.luzes-opcoes input[type="color"], .aparencia input[type="color"] { width: 44px; height: 30px; padding: 2px; }
+.faixa { display: flex; align-items: center; gap: 8px; }
+.faixa input { flex: 1; }
 .arquivo { position: relative; overflow: hidden; text-align: center; cursor: pointer; }
 .arquivo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .tile-escolhido { display: grid; gap: 8px; border-top: 1px solid var(--l); padding-top: 8px; }
@@ -276,3 +282,8 @@ label { font: 11px var(--lbl); color: var(--mu); text-transform: uppercase; lett
   .dica { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .painel { transition: none; } .aviso { animation: none; } }
+
+/* A mesa foi atualizada (o servidor reiniciou com outra versão): a faixa fica até recarregar. */
+.atualizada { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 10px 14px; background: var(--y); color: #090b0c; font: 600 13px var(--ui); clip-path: var(--cut-s); }
+.atualizada[hidden] { display: none; }
+.atualizada .botao { background: #090b0c; color: var(--y); }

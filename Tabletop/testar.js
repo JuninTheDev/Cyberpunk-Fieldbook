@@ -9,18 +9,18 @@
 //   node Tabletop/testar.js --limpar   apaga os dados de teste e começa de novo
 //   $env:HOST='0.0.0.0'                deixa o celular entrar pela rede de casa
 //   $env:PORTA='8011'                  outra porta
+const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
 const { createRequire, wrap } = require('module');
 const os = require('os');
 const path = require('path');
-const { pipeline } = require('stream');
 const vm = require('vm');
 
 const here = __dirname;
 const root = path.resolve(here, '..');
 const createTableApi = require('./mesa-api');
-const SEMENTE = 4; // muda quando os dados de teste mudam de formato: os antigos são refeitos
+const SEMENTE = 5; // muda quando os dados de teste mudam de formato: os antigos são refeitos
 // As cenas do Foundry entram sozinhas nos dados de teste quando o backup completo está neste computador.
 const BACKUP_FOUNDRY = path.join(process.env.USERPROFILE || '', 'Backups', 'Night City Fieldbook', 'foundry12-completo-2026-10-12.tar');
 
@@ -33,6 +33,18 @@ const files = {
   '/mesa-visao.js': path.join(here, 'mesa-visao.js'),
   '/mesa.css': path.join(here, 'mesa.css')
 };
+
+// A página da mesa como estava quando o teste ligou. O Node carrega o código do servidor uma vez só: entregar a página
+// do disco, editada depois, junta página nova com servidor velho (a operação nova volta "Operação desconhecida"). A
+// versão junta a página e o servidor: quando o teste reinicia com código novo, a página aberta avisa para recarregar.
+function carregarPagina() {
+  const pagina = new Map();
+  for (const [rota, arquivo] of Object.entries(files)) pagina.set(rota, { conteudo: fs.readFileSync(arquivo), tipo: contentTypes[path.extname(arquivo)] });
+  const hash = crypto.createHash('sha1');
+  const codigo = [...new Set(Object.values(files)), ...['mesa-api.js', 'mesa-combate.js', 'mesa-regras.js'].map(nome => path.join(here, nome)), path.join(root, 'personagem-jogo.js')];
+  for (const arquivo of codigo) hash.update(fs.readFileSync(arquivo));
+  return { pagina, versao: hash.digest('hex').slice(0, 12) };
+}
 
 // Como no server.js: grava num temporário com nome único e troca, tentando de novo se o Windows segurar o arquivo.
 let temporaryCount = 0;
@@ -79,7 +91,7 @@ function carregarWiki(dados) {
   return { atender, characterApi };
 }
 
-async function iniciar({ porta = Number(process.env.PORTA || 8010), host = process.env.HOST || '127.0.0.1', dados = process.env.DADOS_MESA || defaultData(), limpar = false, semente = true, cenasDoFoundry = true, random, prazoDefesa, silencioso = false } = {}) {
+async function iniciar({ porta = Number(process.env.PORTA || 8010), host = process.env.HOST || '127.0.0.1', dados = process.env.DADOS_MESA || defaultData(), limpar = false, semente = true, cenasDoFoundry = true, random, prazoDefesa, silencioso = false, versao: outraVersao } = {}) {
   const infoFile = path.join(dados, 'teste.json');
   const readInfo = () => { try { return JSON.parse(fs.readFileSync(infoFile, 'utf8')); } catch { return null; } };
   const velho = readInfo();
@@ -88,10 +100,13 @@ async function iniciar({ porta = Number(process.env.PORTA || 8010), host = proce
   const log = (...args) => { if (!silencioso) console.log(...args); };
 
   const { atender, characterApi } = carregarWiki(dados);
+  // outraVersao: só para os testes simularem o servidor reiniciado com código novo.
+  const { pagina, versao: calculada } = carregarPagina();
+  const versao = outraVersao || calculada;
   const tableApi = createTableApi({
     dataDir: dados, charactersDir: path.join(dados, 'personagens'), wikiDir: root,
     who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter,
-    send, writeJsonAtomic, ...(random ? { random } : {}), ...(prazoDefesa ? { prazoDefesa } : {})
+    send, writeJsonAtomic, versao, ...(random ? { random } : {}), ...(prazoDefesa ? { prazoDefesa } : {})
   });
 
   const server = http.createServer((request, response) => {
@@ -106,14 +121,12 @@ async function iniciar({ porta = Number(process.env.PORTA || 8010), host = proce
       const config = { teste: true, contas: (readInfo() || {}).contas || [] };
       return send(response, 200, `window.mesaConfig = ${JSON.stringify(config)};\n`, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
     }
-    const file = files[pathname];
-    if (!file) return void atender(request, response);
-    fs.stat(file, (error, stats) => {
-      if (error || !stats.isFile()) return send(response, 404, 'Não encontrado.');
-      response.writeHead(200, { 'Content-Type': contentTypes[path.extname(file)], 'Content-Length': stats.size, 'Cache-Control': 'no-cache' });
-      if (request.method === 'HEAD') return response.end();
-      pipeline(fs.createReadStream(file), response, () => {});
-    });
+    const arquivo = pagina.get(pathname);
+    if (!arquivo) return void atender(request, response);
+    const etag = `"${versao}"`;
+    if (request.headers['if-none-match'] === etag) { response.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); return response.end(); }
+    response.writeHead(200, { 'Content-Type': arquivo.tipo, 'Content-Length': arquivo.conteudo.length, 'Cache-Control': 'no-cache', ETag: etag });
+    response.end(request.method === 'HEAD' ? undefined : arquivo.conteudo);
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(porta, host, resolve); });
   const url = `http://localhost:${server.address().port}`;
@@ -128,7 +141,7 @@ async function iniciar({ porta = Number(process.env.PORTA || 8010), host = proce
     server.closeAllConnections?.();
     await new Promise(resolve => server.close(() => resolve()));
   };
-  return { server, url, dados, fechar, contas: (readInfo() || {}).contas || [], tableApi, characterApi };
+  return { server, url, dados, fechar, contas: (readInfo() || {}).contas || [], tableApi, characterApi, versao };
 }
 
 // ---------------- Dados de teste ----------------
