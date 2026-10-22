@@ -6,7 +6,7 @@ import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
-  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao
+  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao, hpDepoisDoMaximo
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -71,6 +71,7 @@ export class AtorCPR extends Actor {
     if (['personagem', 'capanga'].includes(this.type) && ['system.humanidade.value', 'system.atributos.emp.valor'].some(campo => foundry.utils.hasProperty(mudancas, campo))) {
       opcoes.cprfEstadoMental = estadoMental(this.system.humanidade.value, this.system.atributos.emp.valor);
     }
+    if (['personagem', 'capanga'].includes(this.type)) this.#dentroDoMaximo(mudancas);
     const tipo = foundry.utils.getProperty(mudancas, 'system.tipo');
     if (this.type === 'conteiner' && tipo !== undefined && tipo !== this._source.system.tipo) {
       const pedidas = foundry.utils.getProperty(mudancas, 'system.permissoes') ?? {};
@@ -83,6 +84,50 @@ export class AtorCPR extends Actor {
       const linha = linhaDoExtrato({ acao: 'definir', antes: this._source.system[campo], saldo: Number(novo), usuario: usuario?.name ?? game.users.get(usuario)?.name ?? '' });
       foundry.utils.setProperty(mudancas, `system.extratos.${campo}`, [...this._source.system.extratos[campo], linha]);
     }
+  }
+
+  // O HP e a Humanidade dentro do máximo (o C31), no que se grava pelo ator (a ficha, o Painel, o Desfazer, a cura à mão):
+  // o valor pedido para no máximo de depois da mudança, e o BODY ou a WILL que mudam levam junto o HP cheio
+  // (regras.hpDepoisDoMaximo). O máximo de depois sai de uma cópia temporária do ator, sem token nem cena, que prepara os
+  // efeitos como o original (o Grafted Muscle que soma no BODY, o Linear Frame que o fixa). A Humanidade só fica no máximo:
+  // a cheia não sobe junto com a EMP (o setMaxHumanity do CORE só a leva quando a máxima desce, cpr-actor.js:1773-1788).
+  #dentroDoMaximo(mudancas) {
+    const mudou = chave => {
+      const novo = foundry.utils.getProperty(mudancas, `system.atributos.${chave}.valor`);
+      return novo !== undefined && novo !== this._source.system.atributos[chave].valor;
+    };
+    const hp = foundry.utils.getProperty(mudancas, 'system.hp.value');
+    const humanidade = foundry.utils.getProperty(mudancas, 'system.humanidade.value');
+    const mudaHp = mudou('body') || mudou('will'), mudaHumanidade = mudou('emp');
+    if (hp === undefined && humanidade === undefined && !mudaHp && !mudaHumanidade) return;
+    const depois = mudaHp || mudaHumanidade ? this.clone({ system: { atributos: foundry.utils.getProperty(mudancas, 'system.atributos') } }, { parent: null }).system : this.system;
+    const fonte = this._source.system;
+    if (hp !== undefined || mudaHp) {
+      const novo = hp !== undefined ? Math.min(hp, depois.hp.max) : hpDepoisDoMaximo(fonte.hp.value, this.system.hp.max, depois.hp.max);
+      if (novo !== (hp ?? fonte.hp.value)) foundry.utils.setProperty(mudancas, 'system.hp.value', novo);
+    }
+    if (humanidade !== undefined || mudaHumanidade) {
+      const novo = Math.min(humanidade ?? fonte.humanidade.value, depois.humanidade.max);
+      if (novo !== (humanidade ?? fonte.humanidade.value)) foundry.utils.setProperty(mudancas, 'system.humanidade.value', novo);
+    }
+  }
+
+  // O máximo do HP que muda por um item ou um efeito (o C31: o Grafted Muscle instalado ou tirado, o Linear Frame vestido,
+  // o efeito ligado ou desligado): o HP cheio vai junto, e o que passa do máximo novo para nele. O estado de antes fica nas
+  // opções da operação, e só o cliente de quem mudou grava, como no aviso da ciberpsicose. Criar um item não entra: a
+  // importação da mesa cria o ator antes dos itens, com o HP que ele tinha com eles.
+  _preUpdateDescendantDocuments(...args) { super._preUpdateDescendantDocuments(...args); this.#hpAntesDoItem(...args.slice(-2)); }
+  _onUpdateDescendantDocuments(...args) { super._onUpdateDescendantDocuments(...args); this.#hpDepoisDoItem(...args.slice(-2)); }
+  _preDeleteDescendantDocuments(...args) { super._preDeleteDescendantDocuments(...args); this.#hpAntesDoItem(...args.slice(-2)); }
+  _onDeleteDescendantDocuments(...args) { super._onDeleteDescendantDocuments(...args); this.#hpDepoisDoItem(...args.slice(-2)); }
+  #hpAntesDoItem(opcoes, usuarioId) {
+    if (usuarioId === game.user.id && ['personagem', 'capanga'].includes(this.type)) opcoes.cprfHp ??= { value: this._source.system.hp.value, max: this.system.hp.max };
+  }
+  #hpDepoisDoItem(opcoes, usuarioId) {
+    const antes = opcoes.cprfHp;
+    if (!antes || usuarioId !== game.user.id || this.system.hp.max === antes.max) return;
+    const novo = hpDepoisDoMaximo(antes.value, antes.max, this.system.hp.max);
+    if (novo !== this._source.system.hp.value) this.update({ 'system.hp.value': novo }).catch(erro => console.error(`${SISTEMA} | HP no máximo`, erro));
   }
 
   // O aviso da ciberpsicose (terapia.mjs), no cliente de quem mudou a Humanidade ou a EMP.
@@ -514,7 +559,8 @@ export class AtorCPR extends Actor {
   }
 
   // Desfaz um dano aplicado: o HP perdido, o SP da armadura e os pontos do escudo voltam. Pela diferença, e não pelo
-  // valor de antes: o que aconteceu com o ator depois (outro ataque, uma cura) continua valendo.
+  // valor de antes: o que aconteceu com o ator depois (outro ataque, uma cura) continua valendo. O HP não passa do máximo
+  // (o _reverseDamage do CORE, cpr-actor.js:1544-1556; aqui, o _preUpdate).
   async desfazerDano({ perdeu = 0, armaduraId, lugar, ablado = 0, armaduras = null, escudoId, escudoAblado = 0 }) {
     if (perdeu) await this.update({ 'system.hp.value': this.system.hp.value + perdeu });
     // O cartão antigo tem uma só fonte. O novo guarda cada ID e quanto de SP realmente perdeu, inclusive no zero.
@@ -552,8 +598,11 @@ export class AtorCPR extends Actor {
       perda = roll.total;
       await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), flavor: `Perda de Humanidade: ${item.name}` });
     }
+    // A perda sai da Humanidade de antes da peça, como no CORE: instalada, a peça já baixa a máxima em 2, e a atual lida
+    // depois já vem limitada à máxima nova (o C31; dados.mjs). Descontar dela tiraria os 2 a mais.
+    const maxAntes = this.system.humanidade.max;
     await item.update({ 'system.instalado': true, 'system.perdaHumanidade.sofrida': perda, 'system.instaladoEm': fundacao?.id ?? '' });
-    await this.update({ 'system.humanidade.value': this.system.humanidade.value - perda });
+    await this.update({ 'system.humanidade.value': Math.min(this._source.system.humanidade.value, maxAntes) - perda });
     // A peça única sem fundação do lado fica no membro natural (o C30): o recado diz onde.
     if (!fundacao && item.noMembroNatural) ui.notifications.info(`${item.name} ficou no membro natural (${nomeDoLado(item.ladoDoCyberware).toLowerCase()}).`);
     else if (!fundacao && !item.system.fundacional && pedeFundacao(encaixeDe(item))) ui.notifications.info(`${item.name} entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre.`);

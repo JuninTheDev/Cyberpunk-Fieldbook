@@ -127,6 +127,11 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     const instalados = this.parent.items.filter(item => item.type === 'cyberware' && item.system.instalado)
       .map(item => ({ tipo: item.system.tipo, perda: item.system.perdaHumanidade.media }));
     this.humanidade.max = regras.humanidadeMaxima(a.emp.valor, instalados);
+    // O atual nunca passa do máximo, venha de onde vier (o C31; o CORE, cpr-actor.js:370-380): o HP e a Humanidade, aqui na
+    // memória. Abaixo, fica (a Humanidade negativa é a ciberpsicose extrema; o C21). O que se grava também para no máximo
+    // (AtorCPR._preUpdate).
+    this.hp.value = Math.min(this.hp.value, this.hp.max);
+    this.humanidade.value = Math.min(this.humanidade.value, this.humanidade.max);
     this.sorte.max = a.luck.valor;
     this.empAtual = regras.empAtual(this.humanidade.value, a.emp.valor);
     this.ferimento = regras.estadoDeFerimento(this.hp.value, this.hp.max);

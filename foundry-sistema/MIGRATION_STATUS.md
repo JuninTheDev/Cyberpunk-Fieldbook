@@ -152,6 +152,23 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C31, o HP e a Humanidade dentro do máximo (2026-10-22, worker da sessão KouArt):** as referências são o CORE 0.92.4
+  (`cpr-actor.js:370-380`, o limite na memória; `:1544-1556`, o `_reverseDamage`; `:1773-1788`, o `setMaxHumanity`;
+  `cpr-character-sheet.js:162-169`, o `_setMaxHp`) e a wiki (`system-rules.js:576` e `:581`, a terapia até a máxima). As
+  diferenças:
+  - **o máximo é calculado sempre:** o CORE guarda o máximo e só o recalcula pela calculadora da ficha; aqui o máximo
+    sai dos atributos e das peças a cada preparo, e o HP cheio acompanha sozinho;
+  - **a gravação também é limitada:** o CORE só limita na memória e guarda o valor acima; aqui o `_preUpdate` do ator
+    para no máximo de depois da mudança (menos na criação: a importação da mesa cria o ator antes dos itens, e o máximo
+    sem eles é menor). "Cheio" é o gravado igual ao máximo de antes, como no CORE;
+  - **a Humanidade não sobe junto:** o `setMaxHumanity` do CORE só leva a cheia quando a máxima desce, o que dá o mesmo
+    que o limite;
+  - **ficou de fora:** criar um item com efeito que sobe o máximo (um cyberware já instalado arrastado para a ficha, a
+    importação) não faz o HP cheio acompanhar, para a importação não "curar" quem chega ferido; a Humanidade depois de uma
+    peça criada já instalada aparece na máxima, mas o banco guarda o valor antigo até a próxima gravação; quando um item
+    muda o máximo, o HP vai numa segunda gravação, sem esperar; digitar na ficha um HP acima do máximo com ele já cheio
+    não grava nada, e o campo mostra o número digitado até a ficha se redesenhar.
+
 - **C33, o modo de rolagem e "Mostrar aos jogadores" (2026-10-22, worker da sessão KouArt):** a referência é o
   `ChatDataSetup` do CORE 0.92.4 (`cpr-chat.js:21-50`: o `modeOverride` ou o `rollMode` do chat) e o
   `hide-blind-rolls.js:12-21`. No Foundry 14, o `applyRollMode` e o `CONFIG.Dice.rollModes` estão obsoletos
@@ -7485,6 +7502,44 @@ worktree própria a partir do `15baf260`, revisados e integrados aqui pelo patch
   imagem, M6; a imagem que não vai para a mesa, M7; o menu sem o `fixed`, M8). No G4, a M2, a M3 e a M7 caíram também
   (o passo do modo e o do "Mostrar aos jogadores").
 - **Próximo:** o C31 (HP e Humanidade dentro do máximo), o C32 (a ficha) e o C39 (gastar IP, com o Codex).
+
+### Ciclo 153 (2026-10-22): o C31, o HP e a Humanidade dentro do máximo (sessão KouArt, com um worker)
+
+Commit anterior: `28d99769` (o ciclo 152, o C33). O código e os testes saíram de um worker (`workers:artesao`), numa
+worktree própria a partir do `15baf260`, revisados e integrados aqui pelo patch, sem conflito com o C33.
+
+- **O que muda:**
+  - **`regras.hpDepoisDoMaximo`:** com o HP cheio (o atual igual ao máximo de antes), vai para o máximo novo; senão,
+    fica, limitado ao máximo;
+  - **na memória** (`dados.mjs`, o `prepareDerivedData`): o HP e a Humanidade atuais nunca acima do máximo, antes do
+    `empAtual` e do ferimento; vale para o que se lê (a ficha, a barra do token, o Painel, o ferimento);
+  - **no que se grava** (`documentos.mjs`, o `_preUpdate` do personagem e do capanga): o HP e a Humanidade param no
+    máximo de depois da mudança, e o BODY ou a WILL que mudam levam junto o HP cheio. O máximo de depois sai de uma cópia
+    temporária do ator (`this.clone(..., { parent: null })`), que aplica os efeitos como o original;
+  - **nos itens e efeitos** (os ganchos `_pre/_onUpdateDescendantDocuments` e `_pre/_onDeleteDescendantDocuments`): o
+    item que muda o máximo (o Grafted Muscle instalado ou tirado, o efeito ligado) leva o HP cheio, e o que passa do
+    máximo novo para nele, gravado só no cliente de quem mudou;
+  - **a instalação do cyberware:** a perda sai da Humanidade de antes da peça (`Math.min(_source, máxima de antes) −
+    perda`), como no CORE; com o limite na memória, descontar da atual tiraria os 2 da máxima duas vezes.
+- **Fica de fora:** ver as dúvidas (criar um item, a Humanidade da peça criada já instalada, a segunda gravação).
+- **Testes:**
+  - **G3:** `hp-maximo.test.mjs` (novo, 4 casos): cheio sobe e desce; ferido fica e só é limitado; o gravado acima do
+    máximo não conta como cheio; o mesmo máximo não muda nada;
+  - **G4:** um passo novo, depois do "mortalmente ferido: −6 MOVE": o criado com 99/99 mostra 40 e 50; o Grafted Muscle
+    instalado com o HP cheio leva a 45 (a Humanidade 36/48) e, tirado, a 40; o BODY 8 cheio leva junto, o ferido fica, o
+    42 com o BODY 4 para nos 35; 99 pelo `update` e pela ficha param nos 35; o Desfazer depois da cura à mão fica em 35;
+    a Humanidade pela EMP (desce, a leva; sobe, não; −5 fica, com o cartão da extrema); o capanga de token solto;
+  - **seis atores de teste antigos** nasciam com o HP acima do máximo (o C18 Camadas e Modelo, o Saco de Pancadas, o C15
+    Ocupante, o alvo das munições e o da área do míssil): o BODY e a WILL subiram para o máximo ser o HP que eles usam;
+    nenhum número esperado mudou.
+- **Portões:** G1, 182 arquivos sem erro; G2, nenhum erro; G3, 338/338; G4 completo, 223/223, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos: no G3, o gravado acima que conta como cheio
+  (M1) e o cheio que não acompanha (M2); no G4, sem o limite na memória (M3: também caem o ataque do Black ICE e as
+  chaves do Fluxo), o HP gravado sem o limite (M4), os ganchos dos itens sem o estado de antes (M5), a instalação que
+  desconta da Humanidade já limitada (M6: caem também o catálogo, o desinstalar e o capanga), o máximo de depois sem a
+  cópia (M7) e a Humanidade gravada sem o limite (M8).
+- **Próximo:** o C32 (a ficha) e o C39 (gastar IP, com o Codex).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

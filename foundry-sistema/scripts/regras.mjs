@@ -15,6 +15,12 @@
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
 
+// O HP atual depois de o máximo mudar (o C31): cheio, vai junto para o máximo novo, que suba ou desça (o _setMaxHp do
+// CORE, cpr-character-sheet.js:162-169); senão, fica, só limitado ao máximo (cpr-actor.js:370-374). Cheio é o atual igual
+// ao máximo de antes, como no CORE (hp.max === hp.value): o gravado acima dele (o ator criado antes dos itens, na
+// importação da mesa) não conta como cheio.
+export const hpDepoisDoMaximo = (atual, maxAntes, maxDepois) => (Number(atual) === Number(maxAntes) ? Number(maxDepois) : Math.min(Number(atual), Number(maxDepois)));
+
 // Wiki, Combate (system-rules.js): cada rodada dura 3 segundos, também ao voltar pelo rastreador.
 export const tempoEntreRodadas = (antes, depois) => (Math.max(depois, 1) - Math.max(antes, 1)) * 3;
 

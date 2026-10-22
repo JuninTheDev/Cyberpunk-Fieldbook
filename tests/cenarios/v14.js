@@ -476,7 +476,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const metal = roupa('core_armor:metalgear-body', 'C18 Metalgear ablada', 5), kevlar = roupa('core_armor:kevlar-body', 'C18 Kevlar', 7);
           const pele = roupa('core_armor:skin-weave', 'C18 Skin Weave', 1), cabeca = roupa('core_armor:light-armorjack-head', 'C18 Cabeça', 0); cabeca.system.sp.cabeca.value = 9;
           const guardada = roupa('core_armor:metalgear-body', 'C18 Guardada', 18, false), escudo = roupa('core_armor:bullet-proof-shield', 'C18 Escudo', 30); escudo.system.sp.corpo.max = 30;
-          ator = await Actor.implementation.create({ name: 'C18 Camadas', type: 'personagem', system: { hp: { value: 40 } }, items: [metal, kevlar, pele, cabeca, guardada, escudo] });
+          ator = await Actor.implementation.create({ name: 'C18 Camadas', type: 'personagem', system: { atributos: { body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 } }, items: [metal, kevlar, pele, cabeca, guardada, escudo] });
           const item = nome => ator.items.getName('C18 ' + nome), valores = () => ['Metalgear ablada', 'Kevlar', 'Skin Weave', 'Cabeça', 'Guardada', 'Escudo'].map(n => [n, item(n).system.sp.corpo.value, item(n).system.sp.cabeca.value]);
           const antes = { corpo: ator.system.armadura.corpo.sp, cabeca: ator.system.armadura.cabeca.sp, fonte: ator.system.armadura.corpo.item === item('Kevlar').id, penalidade: ator.system.penalidadeArmadura };
           const recebido = await ator.receberDano({ dano: 11, ablacao: 2 });
@@ -576,7 +576,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const pistola = atirador.items.find(i => i.type === 'arma'); await pistola.update({ 'system.carregada': atirador.items.find(i => i.type === 'municao').id });
           const externa = pegar('core_armor:light-armorjack-body'); externa.system.equipada = true;
           const interna = pegar('core_armor:skin-weave'); interna.system.equipada = true; interna.system.sp.corpo.value = 1;
-          const modelo = await Actor.implementation.create({ name: 'C18 Modelo', type: 'capanga', system: { hp: { value: 40 }, atributos: { ref: { valor: 6 } } }, items: [externa, interna] }); atores.push(modelo);
+          const modelo = await Actor.implementation.create({ name: 'C18 Modelo', type: 'capanga', system: { hp: { value: 40 }, atributos: { ref: { valor: 6 }, body: { valor: 6 }, will: { valor: 6 } } }, items: [externa, interna] }); atores.push(modelo);
           cena = await Scene.implementation.create({ name: 'C18 Desfazer', active: false, width: 1000, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
           await cena.activate(); for (let i = 0; i < 80 && !(canvas.ready && canvas.scene?.id === cena.id); i++) await new Promise(r => setTimeout(r, 100));
           const tokens = await cena.createEmbeddedDocuments('Token', [(await atirador.getTokenDocument({ x: 100, y: 100 })).toObject(), (await modelo.getTokenDocument({ x: 200, y: 100, actorLink: false })).toObject()]);
@@ -1328,6 +1328,87 @@ module.exports = async ({ edge, servidores, r }) => {
         return { mortal, vivo };
       })()`);
       return [info.mortal === 2 && info.vivo === 8, JSON.stringify(info)];
+    });
+
+    await r.passo('HP e Humanidade dentro do máximo (o C31; o CORE, cpr-actor.js:370-380, o _setMaxHp e o _reverseDamage): o criado acima mostra o máximo; com o HP cheio, o Grafted Muscle instalado e o BODY que sobe levam o atual junto; ferido, fica; o máximo que cai abaixo dele o limita; o update, a ficha e o Desfazer depois da cura à mão param no máximo; a Humanidade fica na máxima (a EMP que desce a leva, a que sobe não) e pode ficar negativa; o capanga de token solto, também', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const atores = [], mensagens = new Set(game.messages.map(m => m.id));
+        let cena;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          // BODY 6 e WILL 6: HP 40 (10 + 5 × 6); EMP 5: Humanidade 50. Criado com 99 nos dois: a ficha mostra o máximo (o
+          // gravado fica: a importação da mesa cria o ator antes dos itens).
+          const a = await Actor.implementation.create({ name: 'C31 Limites', type: 'personagem', system: { atributos: { body: { valor: 6 }, will: { valor: 6 }, emp: { valor: 5 } }, hp: { value: 99 }, humanidade: { value: 99 } } }); atores.push(a);
+          const hp = () => [a.system.hp.value, a.system.hp.max, a._source.system.hp.value];
+          const hum = () => [a.system.humanidade.value, a.system.humanidade.max, a._source.system.humanidade.value];
+          const r = { criado: [...hp(), ...hum()] };
+          // 1. O efeito: cheio (40/40), o Grafted Muscle (+2 BODY) instalado pela média leva o HP a 45 (10 + 5 × 7); tirado,
+          //    de volta a 40. A Humanidade sai da de antes da peça (99 gravada, 50 na ficha): 50 − 14 = 36, a máxima 48.
+          await a.update({ 'system.hp.value': 40 });
+          const [grafted] = await a.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_cyberware:grafted-muscle-and-bone-lace'])]);
+          await a.instalarCyberware(grafted, { rolar: false });
+          await esperar(() => a._source.system.hp.value === 45);
+          r.instalado = [...hp(), a.system.atributos.body.valor, ...hum()];
+          await a.desinstalarCyberware(grafted);
+          await esperar(() => a._source.system.hp.value === 40);
+          r.tirado = [...hp(), a.system.atributos.body.valor];
+          await grafted.delete();
+          // 2. Cheio (40/40), o BODY 8: o máximo 45, e o atual vai junto.
+          await a.update({ 'system.atributos.body.valor': 8 }); r.cheio = hp();
+          // 3. Ferido (30/45), o BODY 10: o máximo 50, e o atual fica.
+          await a.update({ 'system.hp.value': 30 });
+          await a.update({ 'system.atributos.body.valor': 10 }); r.ferido = hp();
+          // 4. Ferido acima do máximo novo: 42/50, o BODY 4 (o máximo 35) o deixa nos 35, gravado.
+          await a.update({ 'system.hp.value': 42 });
+          await a.update({ 'system.atributos.body.valor': 4 }); r.limitado = hp();
+          // 5. Acima do máximo pelo update (99) e pela ficha (99, de 20): para nos 35.
+          await a.update({ 'system.hp.value': 99 }); r.update = hp();
+          await a.update({ 'system.hp.value': 20 });
+          await a.sheet.render({ force: true });
+          const campo = () => a.sheet.element?.querySelector('input[name="system.hp.value"]');
+          await esperar(() => campo()?.value === '20');
+          campo().value = 99;
+          campo().dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => a._source.system.hp.value !== 20 && campo()?.value === '35');
+          r.ficha = [...hp(), campo()?.value];
+          await a.sheet.close();
+          // 6. O Desfazer depois da cura à mão: 10 de dano (sem armadura), a cura até os 35, e o Desfazer não passa deles.
+          const dano = await a.receberDano({ dano: 10 });
+          r.dano = [dano.hpAntes, dano.hpDepois];
+          await a.update({ 'system.hp.value': 35 });
+          await a.desfazerDano({ perdeu: dano.hpAntes - dano.hpDepois, lugar: dano.lugar });
+          r.desfeito = hp();
+          // 7. A Humanidade (36/50): 99 pelo update para na máxima; a EMP 4 leva a cheia aos 40; a EMP 5 de volta não a
+          //    sobe; −5 fica (a ciberpsicose extrema, com o cartão do C21).
+          await a.update({ 'system.humanidade.value': 99 }); r.humanidade = hum();
+          await a.update({ 'system.atributos.emp.valor': 4 }); r.empDesce = hum();
+          await a.update({ 'system.atributos.emp.valor': 5 }); r.empSobe = hum();
+          await a.update({ 'system.humanidade.value': -5 }); r.negativa = hum();
+          r.cartao = await esperar(() => game.messages.some(m => !mensagens.has(m.id) && m.getFlag('${S}', 'ciberpsicose')?.depois === 'extrema'));
+          // 8. O capanga de token solto (BODY 6 e WILL 6: 40), numa cena que não está vista: cheio, o BODY 8 leva o HP do
+          //    token a 45; o 99 para nos 45; o ator modelo não muda.
+          const c = await Actor.implementation.create({ name: 'C31 Capanga', type: 'capanga', system: { atributos: { body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 } } }); atores.push(c);
+          cena = await Scene.implementation.create({ name: 'C31 Limites', active: false, width: 1000, height: 1000 });
+          const [token] = await cena.createEmbeddedDocuments('Token', [(await c.getTokenDocument({ x: 300, y: 300 })).toObject()]);
+          const solto = () => [token.actor.system.hp.value, token.actor.system.hp.max, token.actor._source.system.hp.value];
+          await token.actor.update({ 'system.atributos.body.valor': 8 }); r.capangaCheio = solto();
+          await token.actor.update({ 'system.hp.value': 20 });
+          await token.actor.update({ 'system.hp.value': 99 }); r.capangaAcima = solto();
+          r.modelo = [c.system.hp.value, c.system.hp.max, c.system.atributos.body.valor, token.actorLink];
+          return r;
+        } finally {
+          await cena?.delete();
+          for (const ator of atores) { await ator.sheet?.close(); await ator.delete(); }
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      const igual = (valor, esperado) => JSON.stringify(valor) === JSON.stringify(esperado);
+      return [igual(info.criado, [40, 40, 99, 50, 50, 99]) && igual(info.instalado, [45, 45, 45, 8, 36, 48, 36]) && igual(info.tirado, [40, 40, 40, 6])
+        && igual(info.cheio, [45, 45, 45]) && igual(info.ferido, [30, 50, 30]) && igual(info.limitado, [35, 35, 35]) && igual(info.update, [35, 35, 35])
+        && igual(info.ficha, [35, 35, 35, '35']) && igual(info.dano, [35, 25]) && igual(info.desfeito, [35, 35, 35])
+        && igual(info.humanidade, [50, 50, 50]) && igual(info.empDesce, [40, 40, 40]) && igual(info.empSobe, [40, 50, 40]) && igual(info.negativa, [-5, 50, -5]) && info.cartao
+        && igual(info.capangaCheio, [45, 45, 45]) && igual(info.capangaAcima, [45, 45, 45]) && igual(info.modelo, [40, 40, 6, false]), JSON.stringify(info)];
     });
 
     await r.passo('teste de perícia: REF 8 + Pistola 4 + 1d10; o 10 soma mais um d10 e o 1 tira um d10', async () => {
@@ -3433,7 +3514,8 @@ module.exports = async ({ edge, servidores, r }) => {
         const criarUsuario = async dados => { const u = await User.implementation.create(dados); usuarios.push(u); return u; };
         const a = await criar({ name: 'Munições: atirador', type: 'personagem', system: { hp: { value: 80 }, atributos: { ref: { valor: 8 } }, pericias: { handgun: { nivel: 10 }, archery: { nivel: 10 }, 'heavy-weapons': { nivel: 10 } } } });
         const armadura = pegar('core_armor:light-armorjack-body'); armadura.system.equipada = true;
-        const alvo = await criar({ name: 'Munições: alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { will: { valor: 8 }, tech: { valor: 8 }, ref: { valor: 0 }, body: { valor: 8 } } }, items: [armadura] });
+        // BODY 20 e WILL 8: o HP máximo é 80 (o C31: o atual não passa dele). A WILL 8 é a da resistência.
+        const alvo = await criar({ name: 'Munições: alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { will: { valor: 8 }, tech: { valor: 8 }, ref: { valor: 0 }, body: { valor: 20 } } }, items: [armadura] });
         cena = await Scene.implementation.create({ name: 'Munições (C14)', active: false, width: 1600, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
         await cena.activate();
         await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
@@ -4195,7 +4277,7 @@ module.exports = async ({ edge, servidores, r }) => {
         await a.createEmbeddedDocuments('Item', [mira]);
         const armadura = pegar('core_armor:light-armorjack-body'); armadura.system.equipada = true;
         const outro = await criar({ name: 'Munições: alvo na área do míssil', type: 'personagem', system: {
-          hp: { value: 80 }, atributos: { ref: { valor: 0 }, will: { valor: 8 }, body: { valor: 8 } }
+          hp: { value: 80 }, atributos: { ref: { valor: 0 }, will: { valor: 8 }, body: { valor: 20 } }
         }, items: [armadura] });
         await cena.createEmbeddedDocuments('Token', [(await outro.getTokenDocument({ x: 700, y: 400 })).toObject()]);
         await esperar(() => canvas.tokens.placeables.some(t => t.actor.id === outro.id));
@@ -8112,7 +8194,7 @@ module.exports = async ({ edge, servidores, r }) => {
         // 3. O dano: o jogador ataca, com a pistola do Alvo, um saco de pancadas a 2 m dele (d10 9 → 20 contra DV 13); o
         //    mestre pede o dano, e a janela abre no jogador; +2 do mestre: 4 + 4 + 4 + 2 = 14.
         await edge.evaluate(`(async () => {
-          const saco = await Actor.implementation.create({ name: 'Saco de Pancadas', type: 'personagem', system: { hp: { value: 40 } } });
+          const saco = await Actor.implementation.create({ name: 'Saco de Pancadas', type: 'personagem', system: { atributos: { body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 } } });
           const alvo = __token('Alvo');
           await canvas.scene.createEmbeddedDocuments('Token', [(await saco.getTokenDocument({ x: alvo.x, y: alvo.y + 100 })).toObject()]);
           await __esperar(() => canvas.tokens.placeables.some(t => t.document.name === 'Saco de Pancadas'));
@@ -12071,7 +12153,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const dados = (modelo, nome, sistema = {}) => ({ ...foundry.utils.deepClone(cat[modelo]), _id: foundry.utils.randomID(), name: nome, system: { ...foundry.utils.deepClone(cat[modelo].system), ...sistema } });
           const a = await Actor.implementation.create({ name: 'C15 Atirador de teste', type: 'personagem', system: { atributos: { ref: { valor: 8 } }, pericias: { 'shoulder-arms': { nivel: 6 }, 'heavy-weapons': { nivel: 6 }, autofire: { nivel: 6 } } } });
           atores.push(a);
-          const ocupante = await Actor.implementation.create({ name: 'C15 Ocupante de teste', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, hp: { value: 40 }, pericias: { evasion: { nivel: 10 } } } });
+          const ocupante = await Actor.implementation.create({ name: 'C15 Ocupante de teste', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 }, body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 }, pericias: { evasion: { nivel: 10 } } } });
           atores.push(ocupante);
           const carro = dados('core_vehicles:compact-groundcar', 'C15 Alvo veicular', { familia: true, janelas: { frente: { nome: 'Para-brisa', hp: { value: 15, max: 15 } }, lateral: { nome: 'Lateral densa', hp: { value: 30, max: 30 } } } });
           const blindagem = dados('core_upgrades:armored-chassis', 'Blindagem', { instaladoEm: carro._id });
