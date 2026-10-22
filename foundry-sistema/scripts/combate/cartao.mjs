@@ -159,11 +159,21 @@ export async function rolarLesaoDoCartao(mensagem) {
   const feitos = new Set(mensagem.getFlag(SISTEMA, 'lesoesRoladas') ?? []);
   const novos = alvos.filter(token => !feitos.has(token.uuid));
   if (!novos.length) { ui.notifications.warn('Este dano já rolou a lesão desses alvos.'); return null; }
+  // Só o alvo cuja lesão saiu fica marcado: a recusada ("Role novamente") pode ser rolada de novo neste cartão.
   const lesoes = [];
-  for (const token of novos) lesoes.push(await lesaoCritica(token.actor, { naFicha: modo === 'ficha' }));
-  await mensagem.setFlag(SISTEMA, 'lesoesRoladas', [...feitos, ...novos.map(token => token.uuid)]);
+  const rolados = [];
+  for (const token of novos) {
+    const lesao = await lesaoCritica(token.actor, { naFicha: modo === 'ficha' });
+    lesoes.push(lesao);
+    if (lesao) rolados.push(token.uuid);
+  }
+  if (rolados.length) await mensagem.setFlag(SISTEMA, 'lesoesRoladas', [...feitos, ...rolados]);
   return lesoes;
 }
+
+// Um clique por vez em cada botão de cada cartão, neste cliente: a marca do cartão ("desfeito", "lesoesRoladas") só é
+// gravada no fim, e o clique duplo passava duas vezes (o HP devolvido duas vezes, duas lesões no mesmo alvo).
+const cliquesEmAndamento = new Set();
 
 // Os tipos de cartão que mudam o visual da mensagem inteira (styles/tema.css): a borda vermelha do dano e da morte.
 const TIPOS_DE_CARTAO = ['teste', 'ataque', 'dano', 'death-save', 'falhou', 'espera', 'morte'];
@@ -175,18 +185,25 @@ export function ligarBotoes(mensagem, html) {
   if (cartao) html.classList.add('cprf-mensagem', ...TIPOS_DE_CARTAO.filter(tipo => cartao.classList.contains(tipo)).map(tipo => `cprf-${tipo}`));
   for (const botao of html.querySelectorAll('[data-cprf-acao]')) {
     if (!game.user.isGM) { botao.remove(); continue; }
-    botao.addEventListener('click', evento => {
+    botao.addEventListener('click', async evento => {
       evento.preventDefault();
-      if (botao.dataset.cprfAcao === 'desfazer') desfazer(mensagem);
-      else if (botao.dataset.cprfAcao === 'responder') desistir(botao.dataset.pedido, { escolha: botao.dataset.escolha, forcada: true });
-      else if (botao.dataset.cprfAcao === 'aplicarNet') aplicarDanoDeNet(mensagem, botao.dataset.onde);
-      else if (botao.dataset.cprfAcao === 'aplicarDano') aplicarDanoDoCartao(mensagem);
-      else if (botao.dataset.cprfAcao === 'rolarLesao') rolarLesaoDoCartao(mensagem);
-      else if (botao.dataset.cprfAcao === 'escolherLesao') escolherLesao(mensagem, botao.dataset.lesao);
-      else if (botao.dataset.cprfAcao === 'aplicarHumanidade') aplicarPerdaDeHumanidade(mensagem);
-      else if (botao.dataset.cprfAcao === 'aplicarEmp') escolherEmp(mensagem, botao.dataset.ator);
-      else if (botao.dataset.cprfAcao === 'encerrarMunicao') encerrarEfeitos(mensagem, botao.dataset.ator);
-      else if (botao.dataset.cprfAcao === 'apagarFogo') fromUuid(botao.dataset.ator).then(apagarFogo);
+      const chave = `${mensagem.id}:${botao.dataset.cprfAcao}`;
+      if (cliquesEmAndamento.has(chave)) return;
+      cliquesEmAndamento.add(chave);
+      try {
+        if (botao.dataset.cprfAcao === 'desfazer') await desfazer(mensagem);
+        else if (botao.dataset.cprfAcao === 'responder') await desistir(botao.dataset.pedido, { escolha: botao.dataset.escolha, forcada: true });
+        else if (botao.dataset.cprfAcao === 'aplicarNet') await aplicarDanoDeNet(mensagem, botao.dataset.onde);
+        else if (botao.dataset.cprfAcao === 'aplicarDano') await aplicarDanoDoCartao(mensagem);
+        else if (botao.dataset.cprfAcao === 'rolarLesao') await rolarLesaoDoCartao(mensagem);
+        else if (botao.dataset.cprfAcao === 'escolherLesao') await escolherLesao(mensagem, botao.dataset.lesao);
+        else if (botao.dataset.cprfAcao === 'aplicarHumanidade') await aplicarPerdaDeHumanidade(mensagem);
+        else if (botao.dataset.cprfAcao === 'aplicarEmp') await escolherEmp(mensagem, botao.dataset.ator);
+        else if (botao.dataset.cprfAcao === 'encerrarMunicao') await encerrarEfeitos(mensagem, botao.dataset.ator);
+        else if (botao.dataset.cprfAcao === 'apagarFogo') await apagarFogo(await fromUuid(botao.dataset.ator));
+      } finally {
+        cliquesEmAndamento.delete(chave);
+      }
     });
   }
   if (mensagem.getFlag(SISTEMA, 'desfeito')) html.querySelector('.cartao.ataque')?.classList.add('desfeito');

@@ -7391,6 +7391,41 @@ com o "Levantar-se" do ciclo 148).
   abas do item sem a seleção (M7) e a ficha do personagem sem o ouvinte (M8).
 - **Próximo:** o C28 (a sistema-v14 no master: decisão do usuário).
 
+### Ciclo 151 (2026-10-22): o P1, o clique duplo nos botões do cartão e a lesão recusada (sessão KouArt)
+
+Commit anterior: `15baf260` (a Fase 7 no ROADMAP). As duas suspeitas que o worker do ciclo 149 deixou no P1, confirmadas
+lendo o código antes de mudar.
+
+- **O que estava errado:**
+  - o `desfazer` (`scripts/combate/cartao.mjs`) confere a marca `desfeito` no começo e só a grava no fim, e o
+    `desfazerDano` soma o HP perdido ao HP de agora. O segundo clique que chega depois de o HP voltar e antes da marca
+    (o clique duplo de verdade) devolvia o HP outra vez: no passo do G4, com a mutação, o Alvo foi a 60 de HP com o
+    máximo 45;
+  - o `rolarLesaoDoCartao` gravava em `lesoesRoladas` todos os alvos que tentou, também o que voltou `null` (a ficha
+    recusou a criação, ou o sorteio pediu "Role novamente"): aquele cartão não deixava tentar de novo, e o aviso dizia
+    para rolar de novo.
+- **O que muda:**
+  - **um clique por vez:** no `ligarBotoes`, cada botão de cada cartão (a mensagem e a ação) fica travado neste cliente
+    enquanto a ação corre, e solta no `finally`. Vale para todos os botões do mestre (o Desfazer, o aplicar dano, a lesão,
+    a escolha do Monowire, a Humanidade, o EMP, o fogo). O segundo clique no meio do primeiro não faz nada e não avisa; um
+    clique depois de terminar segue a regra de sempre (o "já foi desfeito");
+  - **a lesão recusada:** só o alvo cuja lesão saiu fica marcado no cartão.
+- **Fica de fora:** dois mestres clicando no mesmo cartão ao mesmo tempo (a trava é do cliente); as chamadas pela API
+  (`game.system.api.combate.desfazer`) não passam pela trava, como antes.
+- **Testes:**
+  - **G3:** nenhum novo (o que mudou é o clique no chat);
+  - **G4:** dois passos mudaram: o do Desfazer dá o segundo clique no meio do primeiro (quando ele vai tirar a Perna
+    quebrada, depois de o HP voltar) e confere o HP 45, o SP, o MOVE, a lesão e nenhum aviso; o do dano rolado à parte
+    recusa a primeira lesão (a ficha não aceita), confere o aviso, nenhum alvo marcado e nenhuma lesão, e o botão rola de
+    novo e acrescenta a Perna quebrada.
+- **Portões:** G1, 85 arquivos do sistema sem erro; G2, nenhum erro; G3, 328/328; G4 completo, 219/219, com a checagem
+  dos dois navegadores sem avisos ou erros de JS.
+- **Mutações:** as três caíram, uma por vez, e os arquivos voltaram exatos: sem a trava (M1; na primeira versão do passo,
+  os dois cliques no mesmo instante, ela sobreviveu: os dois liam o HP antigo e gravavam o mesmo 45; o passo passou a
+  clicar no meio do primeiro, e ela caiu com o HP 60), a trava que nunca solta (M2) e a lesão recusada que marca o alvo
+  (M3).
+- **Próximo:** os C31 a C33 da Fase 7, com os workers.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

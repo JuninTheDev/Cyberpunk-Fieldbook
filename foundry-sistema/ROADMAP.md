@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 151). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 152). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -468,8 +468,9 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [x] **A janela de rolagem no resto** (Ciclo 27): no computador do jogador, a esquiva e a Concentração que o mestre
   pede (dentro do prazo: a janela fecha quando ele desiste ou responde por ele), o dano que ele rola e o Death Save do
   começo do turno; na ficha, o botão do dano e o do Death Save. Com isso, o P1 fecha.
-- [~] **Notado na divisão do combate** (sessão KouArt, 2026-10-22; confirmado lendo o código: o Desfazer soma o HP de
-  volta, então o clique duplo devolve duas vezes) (ciclo 149, sem reprodução; conferir antes de mudar): o "Rolar a lesão" do cartão
+- [x] **Notado na divisão do combate:** feito no ciclo 151 (sessão KouArt, 2026-10-22; confirmado lendo o código: o
+  Desfazer soma o HP de volta, então o clique duplo devolvia duas vezes; agora, um clique por vez em cada botão do cartão,
+  e só o alvo cuja lesão saiu fica marcado) (ciclo 149, sem reprodução; conferir antes de mudar): o "Rolar a lesão" do cartão
   marca o alvo mesmo quando a lesão não foi criada (uma criação recusada impede tentar de novo naquele cartão); o
   Desfazer confere o `desfeito` no começo e grava no fim (dois cliques ao mesmo tempo podem passar os dois).
 

@@ -2484,16 +2484,31 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.hp === 30 && info.sp === 10 && info.move === 1 && info.lesoes.join() === 'Perna quebrada' && info.pente === 24 && info.cartao === 'acertou', JSON.stringify(info)];
     });
 
-    await r.passo('Desfazer: o botão do cartão (só do mestre) devolve o HP e o SP e tira a Perna quebrada', async () => {
+    await r.passo('Desfazer: o botão do cartão (só do mestre) devolve o HP e o SP e tira a Perna quebrada, uma vez só no clique duplo', async () => {
       const info = await edge.evaluate(`(async () => {
         const m = game.messages.contents.findLast(msg => msg.getFlag('${S}', 'desfazer')?.length);
         const botao = document.querySelector(\`[data-message-id="\${m.id}"] [data-cprf-acao="desfazer"]\`);
-        botao?.click();
-        await __esperar(() => m.getFlag('${S}', 'desfeito'));
+        // O clique duplo: antes, os dois passavam (a marca "desfeito" só sai no fim) e o HP voltava duas vezes. O segundo
+        // clique vem no meio do primeiro, depois de o HP voltar e antes da marca: quando ele vai tirar a Perna quebrada.
+        const hpAntes = __ator('Alvo').system.hp.value;
+        const ferido = await fromUuid(m.getFlag('${S}', 'desfazer')[0].ator);
+        const apagar = ferido.deleteEmbeddedDocuments.bind(ferido);
+        let segundo = false;
+        ferido.deleteEmbeddedDocuments = async (...args) => {
+          if (!segundo) { segundo = true; botao?.click(); await new Promise(resolve => setTimeout(resolve, 500)); }
+          return apagar(...args);
+        };
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try {
+          botao?.click();
+          await __esperar(() => m.getFlag('${S}', 'desfeito'));
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } finally { delete ferido.deleteEmbeddedDocuments; delete ui.notifications.warn; }
         const alvo = __ator('Alvo');
-        return { botao: Boolean(botao), desfeito: Boolean(m.getFlag('${S}', 'desfeito')), hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp, move: alvo.system.atributos.move.valor, lesoes: alvo.items.filter(i => i.type === 'lesao').length };
+        return { botao: Boolean(botao), segundo, desfeito: Boolean(m.getFlag('${S}', 'desfeito')), hpAntes, hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp, move: alvo.system.atributos.move.valor, lesoes: alvo.items.filter(i => i.type === 'lesao').length, avisos };
       })()`);
-      return [info.botao && info.desfeito && info.hp === 45 && info.sp === 11 && info.move === 5 && info.lesoes === 0, JSON.stringify(info)];
+      return [info.botao && info.segundo && info.desfeito && info.hpAntes === 30 && info.hp === 45 && info.sp === 11 && info.move === 5 && info.lesoes === 0 && info.avisos.length === 0, JSON.stringify(info)];
     });
 
     await r.passo('o dano rolado à parte (o botão "Dano" da ficha) pelos botões do cartão (as maquetes do usuário): "Aplicar dano" no alvo marcado (T), no corpo, com a armadura, como o ataque, e o "Desfazer"; no crítico, os +5 sem a lesão, e "Rolar a lesão" rola a tabela do corpo uma vez por alvo', async () => {
@@ -2534,8 +2549,9 @@ module.exports = async ({ edge, servidores, r }) => {
           await __esperar(() => resultado.getFlag('${S}', 'desfeito'));
           return { ...lido, desfeito: { hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp } };
         })()`);
-        // Crítico: 6, 6, 2, 3, 4 = 21 contra SP 11: passam 10, e os +5 do crítico (HP 45 → 30), sem a lesão. A lesão: 2d6 4 + 4 = 8 (Perna quebrada).
-        await fixar(edge, [[6, 6], [6, 6], [2, 6], [3, 6], [4, 6], [4, 6], [4, 6]]);
+        // Crítico: 6, 6, 2, 3, 4 = 21 contra SP 11: passam 10, e os +5 do crítico (HP 45 → 30), sem a lesão. A lesão: 2d6 4 + 4 = 8 (Perna quebrada),
+        // duas vezes: a primeira a ficha recusa, e a segunda fica.
+        await fixar(edge, [[6, 6], [6, 6], [2, 6], [3, 6], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6]]);
         critico = await edge.evaluate(`(async () => {
           const rifle = __ator('Atiradora').items.getName('Assault Rifle');
           const alvo = __ator('Alvo');
@@ -2549,6 +2565,16 @@ module.exports = async ({ edge, servidores, r }) => {
           await __esperar(() => game.messages.size > antes && game.messages.contents.at(-1).getFlag('${S}', 'ataque'));
           const resumo = game.messages.contents.at(-1).getFlag('${S}', 'ataque');
           const depoisDoDano = { hp: alvo.system.hp.value, lesoes: lesoes().join(), notas: resumo.notas.join(' ') };
+          // A criação recusada (a ficha não aceitou a lesão): o alvo não fica marcado no cartão, e o botão rola de novo.
+          const ferido = __token('Alvo').actor;
+          const avisosDaRecusa = [];
+          ferido.createEmbeddedDocuments = async () => [];
+          ui.notifications.warn = mensagem => { avisosDaRecusa.push(String(mensagem)); };
+          try {
+            document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="rolarLesao"]').click();
+            await __esperar(() => avisosDaRecusa.length === 1);
+          } finally { delete ferido.createEmbeddedDocuments; delete ui.notifications.warn; }
+          const recusa = { avisos: avisosDaRecusa, lesoes: lesoes().join(), rolados: (m.getFlag('${S}', 'lesoesRoladas') ?? []).length };
           antes = game.messages.size;
           document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="rolarLesao"]').click();
           await __esperar(() => lesoes().length === 1 && game.messages.size > antes);
@@ -2560,7 +2586,7 @@ module.exports = async ({ edge, servidores, r }) => {
             document.querySelector('[data-message-id="' + m.id + '"] [data-cprf-acao="rolarLesao"]').click();
             await __esperar(() => avisos.length === 1);
           } finally { delete ui.notifications.warn; }
-          return { total: r.total, critico: r.critico, botoes, depoisDoDano, lesoes: lesoes().join(), cartaoDaLesao, avisos, rolados: (m.getFlag('${S}', 'lesoesRoladas') ?? []).length };
+          return { total: r.total, critico: r.critico, botoes, depoisDoDano, recusa, lesoes: lesoes().join(), cartaoDaLesao, avisos, rolados: (m.getFlag('${S}', 'lesoesRoladas') ?? []).length };
         })()`);
       } finally {
         await limpar();
@@ -2568,7 +2594,9 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = simples.total === 15 && !simples.critico && simples.botoes === 'aplicarDano' && simples.hp === 41 && simples.sp === 10
         && simples.cabecalho === '15 de dano, no corpo' && simples.ataque === null && simples.linha === 'acertou,4,corpo' && simples.desfeito.hp === 45 && simples.desfeito.sp === 11
         && critico.total === 21 && critico.critico && critico.botoes === 'aplicarDano,rolarLesao' && critico.depoisDoDano.hp === 30 && critico.depoisDoDano.lesoes === ''
-        && critico.depoisDoDano.notas.includes('Rolar a lesão') && critico.lesoes === 'Perna quebrada' && critico.cartaoDaLesao === 'Perna quebrada'
+        && critico.depoisDoDano.notas.includes('Rolar a lesão')
+        && critico.recusa.avisos.join() === 'Não consegui acrescentar Perna quebrada à ficha de Alvo.' && critico.recusa.lesoes === '' && critico.recusa.rolados === 0
+        && critico.lesoes === 'Perna quebrada' && critico.cartaoDaLesao === 'Perna quebrada'
         && critico.avisos.join() === 'Este dano já rolou a lesão desses alvos.' && critico.rolados === 1;
       return [ok, JSON.stringify({ simples, critico })];
     });
