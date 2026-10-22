@@ -2312,6 +2312,214 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('ficha (o C32; o item-create e o filter-contents do CORE): o "+" de cada lista cria o item em branco do tipo dela, com o "New {item}" do CORE em português ("Arma nova", "Equipamento novo", "Lesão crítica nova"), e abre a ficha dele; a busca do cabeçalho filtra pelo nome (sem maiúsculas nem acentos) as perícias, todas à vista enquanto há texto, e as listas de itens de todas as abas, sem gravar nada no ator; continua depois de uma mudança no ator e, vazia, volta tudo', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const a = await Actor.implementation.create({ name: 'Teste da Busca', type: 'personagem', system: { pericias: { handgun: { nivel: 4 }, evasion: { nivel: 2 } } },
+          items: ['core_weapons:heavy-pistol', 'core_weapons:assault-rifle', 'core_gear:agent'].map(id => foundry.utils.deepClone(cat[id])) });
+        const atualizacoes = [];
+        const contar = ator => { if (ator === a) atualizacoes.push(1); };
+        Hooks.on('updateActor', contar);
+        try {
+          await a.sheet.render({ force: true });
+          const f = () => a.sheet.element;
+          await esperar(() => f()?.querySelector('input.busca-da-ficha'));
+          // 1. Um "+" por lista (a lesão, no painel geral e na aba Combate) e o clique em três deles.
+          const mais = [...f().querySelectorAll('[data-action="criarItem"]')].map(b => b.dataset.tipo).sort().join();
+          const criar = async (aba, tipo) => {
+            a.sheet.changeTab(aba, 'primary');
+            const antes = new Set(a.items.map(i => i.id));
+            f().querySelector('.tab.' + aba + ' [data-action="criarItem"][data-tipo="' + tipo + '"]').click();
+            const novo = () => a.items.find(i => !antes.has(i.id));
+            await esperar(() => novo()?.sheet.rendered && f()?.querySelector('.tab.' + aba + ' [data-item-id="' + novo().id + '"]'));
+            const item = novo();
+            const r = { nome: item?.name, tipo: item?.type, aberta: Boolean(item?.sheet.rendered), naLista: Boolean(item && f().querySelector('.tab.' + aba + ' [data-item-id="' + item.id + '"]')) };
+            await item?.sheet.close();
+            return r;
+          };
+          const criados = [await criar('equipamento', 'arma'), await criar('equipamento', 'equipamento'), await criar('combate', 'lesao')];
+          // 2. A busca, pelo campo (o valor e os eventos da digitação): o que fica à vista em cada aba.
+          a.sheet.changeTab('equipamento', 'primary');
+          atualizacoes.length = 0;
+          const campo = () => f()?.querySelector('input.busca-da-ficha');
+          const nomes = seletor => [...f().querySelectorAll(seletor)].filter(el => !el.hidden).map(el => (el.querySelector('[data-action="editarItem"]') ?? el.querySelector('.nome'))?.textContent.trim()).sort();
+          const olhar = () => ({
+            texto: campo()?.value, pericias: f().querySelectorAll('.tab.pericias li.pericia').length, vistas: nomes('.tab.pericias li.pericia'),
+            grupos: [...f().querySelectorAll('.tab.pericias li.grupo-pericias')].filter(el => !el.hidden).map(el => el.textContent.trim()),
+            equipamento: nomes('.tab.equipamento ol.itens li[data-item-id]'), combate: nomes('.tab.combate table.lista tr[data-item-id]')
+          });
+          const digitar = texto => {
+            campo().focus();
+            campo().value = texto;
+            campo().dispatchEvent(new Event('input', { bubbles: true }));
+            campo().dispatchEvent(new Event('change', { bubbles: true }));
+          };
+          digitar('pist');
+          await esperar(() => f()?.querySelectorAll('.tab.pericias li.pericia').length > 2 && campo()?.value === 'pist');
+          const pist = olhar();
+          digitar('EVASAO');
+          await esperar(() => nomes('.tab.pericias li.pericia').join() === 'Evasão');
+          const evasao = olhar();
+          await new Promise(r => setTimeout(r, 400));
+          const semGravar = atualizacoes.length;
+          // 3. Uma mudança no ator redesenha a ficha: a busca continua.
+          await a.update({ 'system.apelido': 'Ruído' });
+          await esperar(() => f()?.querySelector('[name="system.apelido"]')?.value === 'Ruído');
+          const depois = olhar();
+          // 4. Vazia: o painel geral volta às perícias com nível, e todos os itens aparecem.
+          digitar('');
+          await esperar(() => f()?.querySelectorAll('.tab.pericias li.pericia').length === 2);
+          const vazia = olhar();
+          return { mais, criados, pist, evasao, semGravar, depois, vazia, apelido: a.system.apelido };
+        } finally {
+          Hooks.off('updateActor', contar);
+          for (const item of a.items) await item.sheet?.close();
+          await a.sheet.close();
+          await a.delete();
+        }
+      })()`);
+      const igual = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+      const { pist, evasao, depois, vazia } = info;
+      const ok = info.mais === 'arma,armadura,cyberdeck,cyberware,droga,equipamento,lesao,lesao,municao,programa,roupa'
+        && igual(info.criados, [{ nome: 'Arma nova', tipo: 'arma', aberta: true, naLista: true }, { nome: 'Equipamento novo', tipo: 'equipamento', aberta: true, naLista: true }, { nome: 'Lesão crítica nova', tipo: 'lesao', aberta: true, naLista: true }])
+        && pist.pericias > 2 && !pist.vistas.length && !pist.grupos.length && pist.equipamento.join() === 'Heavy Pistol' && pist.combate.join() === 'Heavy Pistol'
+        && evasao.texto === 'EVASAO' && evasao.vistas.join() === 'Evasão' && evasao.grupos.join() === 'Luta' && !evasao.equipamento.length && !evasao.combate.length
+        && info.semGravar === 0 && info.apelido === 'Ruído' && igual(depois, evasao)
+        && vazia.texto === '' && vazia.pericias === 2 && vazia.vistas.join() === 'Armas de uma Mão,Evasão' && !vazia.grupos.length
+        && vazia.equipamento.join() === 'Agent,Arma nova,Assault Rifle,Equipamento novo,Heavy Pistol' && vazia.combate.join() === 'Arma nova,Assault Rifle,Heavy Pistol';
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('ficha (o C32; o load e o unload do CORE, cpr-loadable.js, e a pergunta do contêiner, cpr-container.js): na aba Combate, trocar a munição do rifle (a pergunta lista as duas; a AP enche o pente, e as 10 que sobraram voltam para a básica) e descarregar (o pente a 0, as 25 de volta na AP, sem munição carregada, e o botão some); sem a munição do pente na ficha, descarregar avisa e não mexe; o ✕ da arma com acessório pergunta: "Só tirar" descarrega o rifle (as 25 de volta na AP) e deixa o Smartgun Link solto, e "Apagar junto" leva o rifle (com as balas do pente), a baioneta e a arma dela, sem mexer nas munições; no deck, "Só tirar" solta o programa desativado; na fundação, "Só tirar" desinstala a opção (o máximo de Humanidade volta, e a Humanidade perdida não); sem nada instalado, a confirmação de sempre, e a arma carregada descarrega antes de sair', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = (id, mudar = {}) => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), mudar);
+        const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const dialogo = classe => document.querySelector('.application.dialog' + classe + ':not(.minimizing)');
+        const avisos = [];
+        ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+        const a = await Actor.implementation.create({ name: 'Teste do Pente', type: 'personagem', system: { humanidade: { value: 50 } }, items: [
+          pegar('core_weapons:assault-rifle', { name: 'Rifle Um' }), pegar('core_weapons:assault-rifle', { name: 'Rifle Dois' }), pegar('core_weapons:assault-rifle', { name: 'Rifle Três' }),
+          pegar('core_ammo:rifle-basic', { system: { quantidade: 30 } }), pegar('core_ammo:rifle-armor-piercing', { system: { quantidade: 40 } }),
+          pegar('core_upgrades:smartgun-link'), pegar('core_upgrades:bayonet'), pegar('core_gear:cyberdeck'), pegar('core_programs:armor'),
+          pegar('core_cyberware:cyberarm'), pegar('core_cyberware:grapple-hand')] });
+        try {
+          const item = nome => a.items.getName(nome);
+          const um = item('Rifle Um'), dois = item('Rifle Dois');
+          const linkId = item('Smartgun Link').id, baionetaId = item('Bayonet').id, deckId = item('Cyberdeck').id, armorId = item('Armor').id;
+          const daBaioneta = () => a.items.some(i => i.getFlag('${S}', 'armaDoUpgrade') === baionetaId);
+          // A montagem: o Smartgun Link no Rifle Um, a baioneta no Rifle Dois (a arma dela entra pelo gancho) e o Armor ativo no deck.
+          await a.updateEmbeddedDocuments('Item', [{ _id: linkId, 'system.instaladoEm': um.id }, { _id: baionetaId, 'system.instaladoEm': dois.id }, { _id: armorId, 'system.instaladoEm': deckId, 'system.ativo': true }]);
+          await esperar(daBaioneta);
+          // O Rifle Um carregado com a básica (sobram 5) e com 10 no pente (os tiros já dados).
+          await um.update({ 'system.carregada': item('Rifle (Basic)').id });
+          await um.recarregar();
+          await um.update({ 'system.pente.value': 10 });
+          await a.sheet.render({ force: true });
+          a.sheet.changeTab('combate', 'primary');
+          const f = () => a.sheet.element;
+          const linha = arma => f()?.querySelector('.tab.combate tr[data-item-id="' + arma.id + '"]');
+          const estoque = () => ({ pente: um.system.pente.value, carregada: um.municaoCarregada?.name ?? '', basica: item('Rifle (Basic)').system.quantidade, ap: item('Rifle (Armor-Piercing)').system.quantidade });
+          await esperar(() => linha(um)?.querySelector('[data-action="descarregar"]'));
+          const antes = estoque();
+          // 1. Trocar a munição pelo botão da linha.
+          const apId = item('Rifle (Armor-Piercing)').id;
+          linha(um).querySelector('[data-action="trocarMunicao"]').click();
+          await esperar(() => dialogo('.painel-tatico-municao')?.querySelector('button[data-action="' + apId + '"]'));
+          const opcoes = [...(dialogo('.painel-tatico-municao')?.querySelectorAll('.form-footer button') ?? [])].map(b => b.textContent.trim()).sort();
+          dialogo('.painel-tatico-municao')?.querySelector('button[data-action="' + apId + '"]').click();
+          await esperar(() => um.system.pente.value === 25 && um.municaoCarregada?.id === apId && !dialogo('.painel-tatico-municao'));
+          const trocou = estoque();
+          // 2. Descarregar pelo botão da linha.
+          await esperar(() => linha(um)?.querySelector('[data-action="descarregar"]'));
+          linha(um).querySelector('[data-action="descarregar"]').click();
+          await esperar(() => um.system.pente.value === 0 && linha(um) && !linha(um).querySelector('[data-action="descarregar"]'));
+          const descarregou = { ...estoque(), botao: Boolean(linha(um)?.querySelector('[data-action="descarregar"]')) };
+          // 3. Sem a munição do pente na ficha (apagada ou levada): avisa e não mexe.
+          await dois.update({ 'system.pente.value': 7, 'system.carregada': 'semEssaMunicao' });
+          const n = avisos.length;
+          const semMunicao = { resultado: await dois.descarregar(), pente: dois.system.pente.value, avisos: avisos.slice(n) };
+          // 4. O ✕ de cada um, a pergunta e a escolha.
+          const apagarPeloX = async (aba, id, botao) => {
+            a.sheet.changeTab(aba, 'primary');
+            const x = () => f()?.querySelector('.tab.' + aba + ' li[data-item-id="' + id + '"] [data-action="apagarItem"]');
+            await esperar(x);
+            x().click();
+            await esperar(() => dialogo('.apagar-com-instalados')?.querySelector('button[data-action="' + botao + '"]'));
+            const d = dialogo('.apagar-com-instalados');
+            const r = { texto: d?.querySelector('.dialog-content')?.textContent.replace(/\\s+/g, ' ').trim(), botoes: [...(d?.querySelectorAll('.form-footer button') ?? [])].map(b => b.dataset.action).join() };
+            d?.querySelector('button[data-action="' + botao + '"]').click();
+            await esperar(() => !a.items.has(id) && !dialogo('.apagar-com-instalados'));
+            return r;
+          };
+          // O Rifle Um carregado de novo com a AP (sobram 15): o "Só tirar" descarrega antes de apagar.
+          await um.recarregar({ municao: item('Rifle (Armor-Piercing)') });
+          const antesDeApagar = { pente: um.system.pente.value, ap: item('Rifle (Armor-Piercing)').system.quantidade };
+          const perguntaUm = await apagarPeloX('equipamento', um.id, 'soltar');
+          await esperar(() => a.items.get(linkId)?.system.instaladoEm === '');
+          const soTirar = { rifle: a.items.has(um.id), link: a.items.get(linkId)?.system.instaladoEm ?? null, ap: item('Rifle (Armor-Piercing)').system.quantidade };
+          // O Rifle Dois com 7 da básica no pente: no "Apagar junto", elas saem com ele.
+          await dois.update({ 'system.carregada': item('Rifle (Basic)').id });
+          const perguntaDois = await apagarPeloX('equipamento', dois.id, 'junto');
+          await esperar(() => !a.items.has(baionetaId) && !daBaioneta());
+          const junto = { rifle: a.items.has(dois.id), baioneta: a.items.has(baionetaId), armaDaBaioneta: daBaioneta(), link: a.items.has(linkId),
+            municoes: a.items.filter(i => i.type === 'municao').map(i => i.name + ' ' + i.system.quantidade).sort().join() };
+          const perguntaDeck = await apagarPeloX('net', deckId, 'soltar');
+          await esperar(() => a.items.get(armorId)?.system.instaladoEm === '');
+          const deck = { deck: a.items.has(deckId), instaladoEm: a.items.get(armorId)?.system.instaladoEm ?? null, ativo: a.items.get(armorId)?.system.ativo ?? null };
+          // 5. A fundação com uma opção, pelo ✕ da aba Cyberware: "Só tirar" desinstala a opção (o máximo de Humanidade volta;
+          // a Humanidade perdida, não).
+          const bracoId = item('Cyberarm').id, maoId = item('Grapple Hand').id;
+          const semCyber = a.system.humanidade.max;
+          await a.instalarCyberware(item('Cyberarm'), { rolar: false });
+          await a.instalarCyberware(item('Grapple Hand'), { rolar: false });
+          const montado = { mao: item('Grapple Hand').system.instalado && item('Grapple Hand').system.instaladoEm === bracoId, max: a.system.humanidade.max, hum: a.system.humanidade.value };
+          const perguntaBraco = await apagarPeloX('cyberware', bracoId, 'soltar');
+          await esperar(() => a.items.get(maoId)?.system.instalado === false);
+          const mao = a.items.get(maoId);
+          const fundacao = { braco: a.items.has(bracoId), instalado: mao?.system.instalado ?? null, instaladoEm: mao?.system.instaladoEm ?? null, sofrida: mao?.system.perdaHumanidade.sofrida ?? null,
+            max: a.system.humanidade.max, hum: a.system.humanidade.value, semCyber };
+          // 6. O Rifle Três carregado com as 15 da básica, sem nada instalado: a confirmação de sempre, e as balas voltam antes.
+          const tres = item('Rifle Três');
+          await tres.recarregar({ municao: item('Rifle (Basic)') });
+          const carregado = { pente: tres.system.pente.value, basica: item('Rifle (Basic)').system.quantidade };
+          a.sheet.changeTab('equipamento', 'primary');
+          const xDoTres = () => f()?.querySelector('.tab.equipamento li[data-item-id="' + tres.id + '"] [data-action="apagarItem"]');
+          await esperar(xDoTres);
+          xDoTres().click();
+          await esperar(() => dialogo('')?.querySelector('button[data-action="yes"]'));
+          const simples = { pergunta: Boolean(dialogo('.apagar-com-instalados')), sim: Boolean(dialogo('')?.querySelector('button[data-action="yes"]')), carregado };
+          dialogo('')?.querySelector('button[data-action="yes"]').click();
+          await esperar(() => !a.items.has(tres.id) && item('Rifle (Basic)').system.quantidade === 15);
+          Object.assign(simples, { apagou: !a.items.has(tres.id), basica: item('Rifle (Basic)').system.quantidade });
+          return { antes, opcoes, trocou, descarregou, semMunicao, antesDeApagar, perguntaUm, soTirar, perguntaDois, junto, perguntaDeck, deck, montado, perguntaBraco, fundacao, simples, avisos };
+        } finally {
+          delete ui.notifications.warn;
+          for (const app of [...foundry.applications.instances.values()]) if (['apagar-com-instalados', 'painel-tatico-municao'].some(classe => app.options.classes?.includes(classe))) await app.close();
+          for (const item of a.items) await item.sheet?.close();
+          await a.sheet.close();
+          await a.delete();
+        }
+      })()`);
+      const igual = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+      const ok = igual(info.antes, { pente: 10, carregada: 'Rifle (Basic)', basica: 5, ap: 40 })
+        && igual(info.opcoes, ['Rifle (Armor-Piercing) (40)', 'Rifle (Basic) (5) · no pente'])
+        && igual(info.trocou, { pente: 25, carregada: 'Rifle (Armor-Piercing)', basica: 15, ap: 15 })
+        && igual(info.descarregou, { pente: 0, carregada: '', basica: 15, ap: 40, botao: false })
+        && info.semMunicao.resultado === null && info.semMunicao.pente === 7
+        && info.semMunicao.avisos.join() === 'Rifle Dois: a munição do pente não está mais na ficha; acerte o pente na ficha da arma.' && info.avisos.length === 1
+        && igual(info.antesDeApagar, { pente: 25, ap: 15 })
+        && info.perguntaUm.texto.includes('Instalado nele: Smartgun Link.') && info.perguntaUm.botoes === 'soltar,junto,cancelar' && igual(info.soTirar, { rifle: false, link: '', ap: 40 })
+        && info.perguntaDois.texto.includes('Instalado nele: Bayonet.')
+        && igual(info.junto, { rifle: false, baioneta: false, armaDaBaioneta: false, link: true, municoes: 'Rifle (Armor-Piercing) 40,Rifle (Basic) 15' })
+        && info.perguntaDeck.texto.includes('Instalado nele: Armor.') && igual(info.deck, { deck: false, instaladoEm: '', ativo: false })
+        && igual(info.montado, { mao: true, max: 46, hum: 40 }) && info.perguntaBraco.texto.includes('Instalado nele: Grapple Hand.')
+        && igual(info.fundacao, { braco: false, instalado: false, instaladoEm: '', sofrida: 0, max: 50, hum: 40, semCyber: 50 })
+        && igual(info.simples, { pergunta: false, sim: true, carregado: { pente: 15, basica: 0 }, apagou: true, basica: 15 });
+      return [ok, JSON.stringify(info)];
+    });
+
     // ---------- Combate ----------
     // Ajudantes no navegador do mestre: o token e o ator pelo nome, o resumo de cada alvo do cartão e esperar.
     await edge.evaluate(`(() => {

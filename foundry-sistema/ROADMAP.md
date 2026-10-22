@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 154). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 155). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -327,7 +327,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   nunca passa do máximo (o CORE, `cpr-actor.js:370-380`), e com o HP cheio, o máximo que muda (BODY, WILL, um item ou
   efeito) leva o atual junto (`cpr-character-sheet.js:162-169`). Antes, o Desfazer e a cura à mão deixavam passar, e quem
   subia o BODY ficava ferido.
-- [~] **C32. A ficha do personagem, o que falta do CORE** (sessão KouArt, 2026-10-22): o "+" que cria um item em branco
+- [x] **C32. A ficha do personagem, o que falta do CORE:** feito no ciclo 154 (sessão KouArt, com um worker,
+  2026-10-22). O "+" que cria um item em branco
   em cada lista (`cpr-actor-sheet.js:1693-1702`); a busca de perícias e itens (`:1660-1683`); descarregar a arma
   (`cpr-loadable.js:57-62`) e trocar a munição na ficha (hoje só no Painel Tático); e, ao apagar um item com o que está
   instalado nele, perguntar se apaga junto ou só tira (`cpr-container.js:11-21`).

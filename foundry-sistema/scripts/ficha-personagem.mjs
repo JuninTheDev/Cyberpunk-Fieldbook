@@ -12,8 +12,9 @@ import { abrirExtrato } from './extrato.mjs';
 import { levantar, movimentoDe } from './estados.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
-import { divisaoDaPilha } from './regras-inventario.mjs';
+import { apagarComInstalados, descarregaAoApagar, divisaoDaPilha, nomeDoItemNovo, passaNaBusca } from './regras-inventario.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
+import { trocarMunicao } from './painel/acoes.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
@@ -120,6 +121,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       zerarDeathSave: FichaPersonagem.#zerarDeathSave,
       rolarDano: FichaPersonagem.#rolarDano,
       recarregar: FichaPersonagem.#recarregar,
+      trocarMunicao: FichaPersonagem.#trocarMunicao,
+      descarregar: FichaPersonagem.#descarregar,
       usarVeiculo: FichaPersonagem.#usarVeiculo,
       dirigirVeiculo: FichaPersonagem.#dirigirVeiculo,
       prepararArmaVeicular: FichaPersonagem.#prepararArmaVeicular,
@@ -144,6 +147,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       instalar: FichaPersonagem.#instalar,
       instalarOpcao: FichaPersonagem.#instalarOpcao,
       editarItem: FichaPersonagem.#editarItem,
+      criarItem: FichaPersonagem.#criarItem,
       apagarItem: FichaPersonagem.#apagarItem,
       rolarLesao: FichaPersonagem.#rolarLesao,
       corrigirLesao: FichaPersonagem.#corrigirLesao,
@@ -179,10 +183,50 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   // Todas as perícias ou só as que têm nível (o painel geral). Sem escolha, todas quando nenhuma tem nível.
   #todasAsPericias = null;
+  // A busca de perícias e itens do cabeçalho (o C32; o filter-contents do CORE, cpr-actor-sheet.js:1660-1683): o texto
+  // fica nesta janela, e não no ator, e vale de novo a cada desenho (o ApplicationV2 redesenha a cada mudança do ator).
+  #busca = '';
 
   async _onRender(contexto, opcoes) {
     await super._onRender(contexto, opcoes);
     prepararAcessibilidade(this.element);
+    const campo = this.element.querySelector('input.busca-da-ficha');
+    if (campo) {
+      campo.value = this.#busca;
+      // Com texto, o painel geral mostra todas as perícias (as do CORE ficam todas à vista): o começo e o fim da busca
+      // redesenham; o resto só esconde e mostra as linhas.
+      campo.addEventListener('input', () => {
+        const mudouAsPericias = Boolean(this.#busca.trim()) !== Boolean(campo.value.trim());
+        this.#busca = campo.value;
+        if (mudouAsPericias) this.render(); else this.#filtrar();
+      });
+      // O texto não é campo do ator: nem a mudança nem o Enter enviam o formulário.
+      campo.addEventListener('change', evento => evento.stopPropagation());
+      campo.addEventListener('keydown', evento => { if (evento.key === 'Enter') evento.preventDefault(); });
+      if (campo === document.activeElement) campo.setSelectionRange(campo.value.length, campo.value.length);
+    }
+    this.#filtrar();
+  }
+
+  // Esconde as linhas que não passam na busca (regras-inventario.passaNaBusca), pelo nome: as perícias e os itens das
+  // listas e da tabela de armas, em todas as abas; o grupo de perícias sem nenhuma à vista some junto. Os painéis de
+  // resumo (os favoritos, o painel geral, as lesões) ficam inteiros.
+  #filtrar() {
+    const raiz = this.element;
+    if (!raiz) return;
+    for (const linha of raiz.querySelectorAll('.lista-pericias li.pericia, ol.itens li[data-item-id], table.lista tr[data-item-id]')) {
+      const nome = (linha.querySelector('[data-action="editarItem"]') ?? linha.querySelector('.nome'))?.textContent ?? '';
+      linha.hidden = !passaNaBusca(nome, this.#busca);
+    }
+    for (const lista of raiz.querySelectorAll('.lista-pericias')) {
+      let grupo = null, algum = false;
+      for (const li of [...lista.children, null]) {
+        if (li && !li.classList.contains('grupo-pericias')) { if (li.classList.contains('pericia')) algum ||= !li.hidden; continue; }
+        if (grupo) grupo.hidden = !algum;
+        grupo = li;
+        algum = false;
+      }
+    }
   }
 
   async _prepareContext(options) {
@@ -225,7 +269,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const todas = [...PERICIAS.map(p => linhaPericia(p.id)), ...Object.entries(s.pericias).filter(([, propria]) => propria.familia || propria.atributo).map(([id]) => linhaPericia(id))];
     const comNivel = todas.filter(p => p.nivel > 0).sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
     comNivel.slice(0, EM_DESTAQUE).forEach(p => { p.alta = true; });
-    const mostrarTodas = this.#todasAsPericias ?? comNivel.length === 0;
+    const mostrarTodas = Boolean(this.#busca.trim()) || (this.#todasAsPericias ?? comNivel.length === 0);
     // Tirar uma perícia de família só na lista completa, onde a lista se edita.
     if (mostrarTodas) for (const p of todas) p.tirar = p.familia;
     const grupoDe = p => PERICIAS.find(base => base.id === p.id)?.grupo ?? FAMILIAS[s.pericias[p.id]?.familia]?.grupo ?? (p.propria ? 'Próprias' : 'Educação');
@@ -361,7 +405,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       vitais: { hp: porcento(s.hp.value, s.hp.max), humanidade: porcento(s.humanidade.value, s.humanidade.max), grave: Math.ceil(s.hp.max / 2) },
       deathSavePenalidade: s.deathSave.base + s.deathSave.penalidade,
       movimento: movimentoDe(ator),
-      todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length,
+      todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length, busca: this.#busca,
       armas, armasDeCombate, armasSemVeiculo, armasEquipadas: armasDeCombate.filter(arma => arma.pronta),
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
       locaisArmadura: ['cabeca', 'corpo'].map(local => ({ local, rotulo: local === 'cabeca' ? 'CABEÇA' : 'CORPO',
@@ -374,9 +418,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown, emCobertura: ator.statuses.has(STATUS_COBERTURA), agarrao: agarraoDe(ator), movimentos: movimentosDe(ator),
       municoes: itens('municao'),
       inventario: [
-        { titulo: 'EQUIPAMENTO', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
-        { titulo: 'ROUPAS', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
-        { titulo: 'DROGAS', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item)) }
+        { titulo: 'EQUIPAMENTO', tipo: 'equipamento', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
+        { titulo: 'ROUPAS', tipo: 'roupa', vazio: 'Sem roupas.', itens: itens('roupa').map(item => linhaDoInventario(item, TIPOS_ROUPA[item.system.tipo], ESTILOS_ROUPA[item.system.estilo])) },
+        { titulo: 'DROGAS', tipo: 'droga', vazio: 'Sem drogas.', itens: itens('droga').map(item => linhaDoInventario(item)) }
       ],
       decks,
       programas: itens('programa').map(p => ({
@@ -611,6 +655,10 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #zerarDeathSave() { return this.actor.zerarDeathSave(); }
   static #rolarDano(evento, alvo) { return this.#item(alvo)?.rolarDano({ perguntar: comJanela(evento) }); }
   static #recarregar(evento, alvo) { return this.#item(alvo)?.recarregar(); }
+  // Trocar a munição (o mesmo do Painel Tático: a sobra do pente volta para a que estava nele) e descarregar (o C32; o
+  // load e o unload do CORE, cpr-loadable.js:57-62 e :131-134).
+  static #trocarMunicao(evento, alvo) { const item = this.#item(alvo); return item ? trocarMunicao(this.actor, item.id) : null; }
+  static #descarregar(evento, alvo) { return this.#item(alvo)?.descarregar(); }
   // Um veículo em uso por vez; o motorista pode começar ou parar de dirigir sem trocar a escolha.
   static #usarVeiculo(evento, alvo) {
     const item = this.#item(alvo);
@@ -711,6 +759,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return opcao ? this.actor.instalarOpcao(opcao, fundacao, { rolar: !evento.shiftKey }) : null;
   }
   static #editarItem(evento, alvo) { return this.#item(alvo)?.sheet.render(true); }
+  // O "+" de cada lista (o C32; o item-create do CORE, cpr-actor-sheet.js:1693-1702): um item em branco do tipo da lista,
+  // com o nome do CORE em português ("Arma nova"; regras-inventario.nomeDoItemNovo), que abre para ser preenchido, como o
+  // "+" do contêiner.
+  static async #criarItem(evento, alvo) {
+    const tipo = alvo.dataset.tipo;
+    if (!this.isEditable || !(tipo in CONFIG.Item.dataModels)) return null;
+    const [criado] = await this.actor.createEmbeddedDocuments('Item', [{ name: nomeDoItemNovo(tipo, game.i18n.localize(`TYPES.Item.${tipo}`)), type: tipo }]);
+    return criado?.sheet.render(true) ?? null;
+  }
   // A correção rápida, o tratamento e o "Voltou" da lesão (tratamento.mjs, pela wiki).
   // CORE: escolher a tabela e rolar a lesão à mão cria o item e o cartão, sem alterar o HP.
   static async #rolarLesao() {
@@ -726,10 +783,46 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #corrigirLesao(evento, alvo) { const item = this.#item(alvo); return this.isEditable && item ? tratarLesao(item, 'correcao') : null; }
   static #tratarLesao(evento, alvo) { const item = this.#item(alvo); return this.isEditable && item ? tratarLesao(item, 'tratamento') : null; }
   static #voltouLesao(evento, alvo) { const item = this.#item(alvo); return this.isEditable && item ? voltouALesao(item) : null; }
+  // Apagar. Com algo instalado no item (o acessório na arma, a opção na fundação, o programa no deck, a arma e o upgrade
+  // no veículo), a pergunta do CORE (o C32; cpr-container.js:11-21 e cpr-actor-sheet.js:1057-1073): só tirar (o padrão
+  // do CORE) ou apagar junto (regras-inventario.apagarComInstalados). Só tirar desinstala o que estava nele, como o
+  // uninstallItems do CORE (cpr-actor.js:314-327): o cyberware pelo desinstalarCyberware (o efeito para, o máximo de
+  // Humanidade volta, e a perdida não; a arma dele sai pelo gancho), o programa desativado (o CORE, :1042-1055), o resto
+  // fora do item. A arma descarrega antes (regras-inventario.descarregaAoApagar). A arma do cyberware ou do acessório sai
+  // com ele, pelo gancho (armas-cyberware.mjs), com as balas de volta.
   static async #apagarItem(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return;
-    const ok = await DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${foundry.utils.escapeHTML(item.name)}</b> da ficha?</p>` });
-    if (ok) await item.delete();
+    const nome = foundry.utils.escapeHTML(item.name);
+    const montagem = junto => apagarComInstalados(item.id, this.actor.items.map(outro => ({ id: outro.id, instaladoEm: outro.system.instaladoEm ?? '', propria: ehArmaMontadaEmItem(outro) })), junto);
+    // Sem a munição carregada na ficha, a arma só sai (sem o aviso do descarregar).
+    const descarregar = junto => (descarregaAoApagar({ tipo: item.type, pente: item.system.pente?.value, municaoNaFicha: Boolean(item.municaoCarregada), junto }) ? item.descarregar() : null);
+    const dentro = montagem(false).soltar.map(id => this.actor.items.get(id)?.name).filter(Boolean);
+    if (!dentro.length) {
+      const ok = await DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${nome}</b> da ficha?</p>` });
+      if (!ok || !this.actor.items.has(item.id)) return;
+      await descarregar(false);
+      await item.delete();
+      return;
+    }
+    const escolha = await DialogV2.wait({
+      window: { title: 'Apagar item' }, classes: [SISTEMA, 'apagar-com-instalados'], rejectClose: false,
+      content: `<p>Apagar <b>${nome}</b> da ficha? Instalado nele: ${dentro.map(outro => foundry.utils.escapeHTML(outro)).join(', ')}.</p><p class="dica">Só tirar: o que está nele fica solto no inventário. Apagar junto: sai tudo.</p>`,
+      buttons: [{ action: 'soltar', label: 'Só tirar', default: true }, { action: 'junto', label: 'Apagar junto' }, { action: 'cancelar', label: 'Cancelar' }]
+    });
+    // A montagem se lê de novo depois da pergunta: o que entrou ou saiu do item enquanto ela estava aberta.
+    if (!['soltar', 'junto'].includes(escolha) || !this.actor.items.has(item.id)) return;
+    const junto = escolha === 'junto';
+    const { apagar, soltar } = montagem(junto);
+    await descarregar(junto);
+    // O item sai antes de o resto se desinstalar: o acessório que sai da arma faz o gancho acertar o pente dela
+    // (armas-cyberware.acertarPentes), e a arma apagada no meio disso daria erro.
+    await this.actor.deleteEmbeddedDocuments('Item', apagar);
+    // Recusado o apagar (um gancho pode devolver nada sem erro), o que está nele fica onde estava.
+    if (this.actor.items.has(item.id)) return;
+    for (const outro of soltar.map(id => this.actor.items.get(id)).filter(Boolean)) {
+      if (outro.type === 'cyberware' && outro.system.instalado) await this.actor.desinstalarCyberware(outro);
+      else await outro.update({ 'system.instaladoEm': '', ...(outro.type === 'programa' ? { 'system.ativo': false } : {}) });
+    }
   }
 }

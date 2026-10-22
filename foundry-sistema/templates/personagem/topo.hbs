@@ -8,6 +8,7 @@
       <span>// RANK</span>
       <input class="rank" type="number" name="system.role.rank" value="{{fonte.role.rank}}" min="0" max="10" aria-label="Rank">
       {{#if sistema.roleSecundaria.nome}}<span class="segunda-role-topo" data-tooltip="A segunda Role (a regra da mesa): na aba Role">// {{sistema.roleSecundaria.nome}} {{sistema.roleSecundaria.rank}}</span>{{/if}}
+      <label class="campo-busca" data-tooltip="Filtra pelo nome as perícias e as listas de itens de todas as abas; não grava nada na ficha"><i class="fa-solid fa-magnifying-glass" inert></i><input class="busca-da-ficha" type="search" id="cprf-busca-{{ator.id}}" value="{{busca}}" placeholder="Buscar perícias e itens" aria-label="Buscar perícias e itens"></label>
     </p>
     {{#if podeAtualizarWiki}}<button type="button" data-action="atualizarWiki"><i class="fa-solid fa-rotate" inert></i> Atualizar da wiki</button>{{/if}}
     <div class="nome-linha">

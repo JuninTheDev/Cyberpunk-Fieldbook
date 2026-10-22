@@ -16,7 +16,7 @@ import { rolarDano, testar } from './rolagens.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
 import { ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
-import { efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
+import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
 
@@ -955,5 +955,19 @@ export class ItemCPR extends Item {
     await municao.update({ 'system.quantidade': municao.system.quantidade - entra });
     await this.update({ 'system.carregada': municao.id, 'system.pente.value': sobra + entra });
     return { municao: municao.name, pente: sobra + entra };
+  }
+
+  // Descarregar (o C32; o unload do CORE, cpr-loadable.js:57-62, e a opção vazia da troca, :131-134): o pente vai a 0, as
+  // balas voltam para a munição que estava nele (regras-inventario.descarga), e a arma fica sem munição carregada, como a
+  // vendida para a loja (conteiner.venderParaALoja). A carga Tech e o carregador do acessório não mudam. Sem a munição na
+  // ficha (apagada ou levada para outra), as balas não têm para onde voltar: avisa e não mexe.
+  async descarregar() {
+    if (this.type !== 'arma' || !this.system.pente.value) return null;
+    const municao = this.municaoCarregada;
+    if (!municao) { ui.notifications.warn(`${this.name}: a munição do pente não está mais na ficha; acerte o pente na ficha da arma.`); return null; }
+    const { pente, estoque } = descarga(this.system.pente.value, municao.system.quantidade);
+    await municao.update({ 'system.quantidade': estoque });
+    await this.update({ 'system.pente.value': pente, 'system.carregada': '' });
+    return { municao: municao.name, estoque };
   }
 }

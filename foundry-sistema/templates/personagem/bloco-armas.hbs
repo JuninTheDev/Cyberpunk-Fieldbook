@@ -1,6 +1,6 @@
 {{!-- A tabela de armas, com os ataques: na aba Combate do personagem e na ficha do capanga. As de mão, as do cyberware
 instalado (o C11), que estão sempre prontas, e as dos acessórios, prontas com a arma onde estão equipada. A linha arrastada
-para a barra vira a macro do ataque (o C20). --}}
+para a barra vira a macro do ataque (o C20). O pente recarrega, troca de munição e descarrega (o C32). --}}
 <section class="painel corte">
   <div class="titulo">ARMAS<span>MARQUE O ALVO (T) E ATAQUE</span></div>
   {{#if armasDeCombate.length}}
@@ -22,7 +22,7 @@ para a barra vira a macro do ataque (o C20). --}}
           {{#each modos2077}}<button type="button" data-action="atacar" data-modo="{{modo}}" data-tooltip="{{dica}}">{{rotulo}}</button>{{/each}}
           {{#each alternar2077}}<button type="button" data-action="{{acao}}" data-tooltip="{{dica}}">{{rotulo}}</button>{{/each}}
           <button type="button" data-action="rolarDano" data-tooltip="Só rolar o dano">Dano</button>
-          {{#if sistema.pente.max}}<button type="button" data-action="recarregar" data-tooltip="Recarregar" aria-label="Recarregar {{nome}}">↻</button>{{/if}}
+          {{#if sistema.pente.max}}<button type="button" data-action="recarregar" data-tooltip="Recarregar" aria-label="Recarregar {{nome}}">↻</button><button type="button" data-action="trocarMunicao" data-tooltip="Trocar a munição: o que sobrou no pente volta para a munição que estava nele" aria-label="Trocar a munição de {{nome}}"><i class="fa-solid fa-boxes-stacked" inert></i></button>{{#if sistema.pente.value}}<button type="button" data-action="descarregar" data-tooltip="Descarregar: as balas do pente voltam para a munição" aria-label="Descarregar {{nome}}"><i class="fa-solid fa-eject" inert></i></button>{{/if}}{{/if}}
         </div></td>
       </tr>
       {{/each}}

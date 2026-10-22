@@ -36,3 +36,37 @@ export function luzDoItem({ name = '', catalogo = '', type }) {
 }
 export const efeitoDaLuz = (nome, alcance) => ({ name: nome, type: 'base', transfer: true, disabled: true,
   system: { changes: [{ key: 'token.light.bright', type: 'upgrade', value: String(alcance), phase: 'initial', priority: null }] } });
+
+// O nome do item em branco do "+" de cada lista da ficha (o C32): o "New {item}" do CORE (en.json:16, no
+// _createInventoryItem, cpr-actor-sheet.js:1693-1702) em português, com o gênero do tipo ("Arma nova", "Equipamento novo").
+const FEMININOS = ['arma', 'armadura', 'municao', 'lesao', 'roupa', 'droga', 'arquitetura'];
+export const nomeDoItemNovo = (tipo, rotulo) => `${rotulo} ${FEMININOS.includes(tipo) ? 'nova' : 'novo'}`;
+
+// A busca da ficha (o C32; o filter-contents do CORE, cpr-actor-sheet.js:1660-1683, com o cprSheetContentFilter,
+// register-helpers.js:977-987): sem texto, tudo passa; com texto, o nome que o contém, sem diferença de maiúsculas. Como a
+// busca do Painel Tático, sem os espaços das pontas; e sem os acentos ("evasao" acha "Evasão").
+const semAcento = texto => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+export function passaNaBusca(nome, busca) {
+  const filtro = semAcento(busca).trim();
+  return !filtro || semAcento(nome).includes(filtro);
+}
+
+// Descarregar a arma (o C32; o unload do CORE, cpr-loadable.js:57-62): o pente vai a 0, e as balas dele voltam para o
+// estoque da munição que estava nele.
+export const descarga = (pente, estoque) => ({ pente: 0, estoque: (Number(estoque) || 0) + Math.max(0, Number(pente) || 0) });
+// Antes de apagar a arma, ela descarrega (o unloadAmmo do CORE, ligado por padrão no deleteEmbeddedDocuments,
+// cpr-actor.js:288-327, e que só vale sem o deleteInstalled): na confirmação simples e no "só tirar", com bala no pente e a
+// munição carregada na ficha. No "apagar junto", as balas do pente saem com a arma (o estoque fica).
+export const descarregaAoApagar = ({ tipo, pente, municaoNaFicha, junto = false }) => tipo === 'arma' && Number(pente) > 0 && Boolean(municaoNaFicha) && !junto;
+
+// Apagar um item com o que está instalado nele (o C32; a pergunta do CORE, cpr-container.js:11-21, e o _deleteOwnedItem,
+// cpr-actor-sheet.js:1057-1073): junto, o item e tudo o que está nele, nos andares de baixo; senão, só o item, e o que
+// estava direto nele fica solto. itens: [{ id, instaladoEm, propria }]; propria é a arma do cyberware ou do acessório, que
+// sai com ele pelo gancho (armas-cyberware.mjs, com as balas de volta) e fica fora das duas listas.
+export function apagarComInstalados(id, itens, junto) {
+  const dentro = pai => itens.filter(item => item.instaladoEm === pai && item.id !== pai && !item.propria).map(item => item.id);
+  if (!junto) return { apagar: [id], soltar: dentro(id) };
+  const apagar = [id];
+  for (let i = 0; i < apagar.length; i++) apagar.push(...dentro(apagar[i]).filter(filho => !apagar.includes(filho)));
+  return { apagar, soltar: [] };
+}

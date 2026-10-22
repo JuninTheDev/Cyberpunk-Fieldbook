@@ -152,6 +152,26 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C32, a ficha do personagem (2026-10-22, worker da sessão KouArt):** as referências são o CORE 0.92.4: o "+"
+  (`cpr-actor-sheet.js:1693-1702`, `en.json:16`, "New {item}"), a busca (`:1660-1683` e `register-helpers.js:977-987`),
+  descarregar e trocar (`cpr-loadable.js:57-62`, `:107-113` e `:131-134`) e o apagar (`cpr-container.js:11-21`;
+  `cpr-actor.js:288-335`, o `deleteEmbeddedDocuments` com o `uninstallItems` e o `unloadAmmo`; `cpr-actor-sheet.js:1042-1073`).
+  As diferenças:
+  - **a busca ignora os acentos e os espaços das pontas** (o CORE, só as maiúsculas) e fica no cabeçalho, para todas as
+    abas: não se limpa ao trocar de aba, como no CORE (`cpr-character-sheet.js:69`). Enquanto há texto, o "VER TODAS /
+    SÓ COM NÍVEL" não muda o que aparece;
+  - **descarregar é um botão próprio** (o CORE põe "Descarregar" na lista da troca), e a troca segue o Painel: com uma
+    munição só, recarrega sem perguntar. Sem a munição do pente na ficha, descarregar avisa e não mexe (não recria a
+    munição: o sistema não tem os dados dela);
+  - **a munição não é instalada na arma:** no CORE, a arma carregada faz a pergunta do contêiner, e "apagar junto" apaga
+    o item de munição inteiro. Aqui a arma carregada sem mais nada instalado tem a confirmação simples (e as balas voltam
+    ao estoque), e "apagar junto" não apaga o estoque: só as balas do pente saem com a arma;
+  - **a ordem do "só tirar":** o item sai antes, e o que estava nele se desinstala depois (o CORE desinstala primeiro): o
+    acessório que sai da arma faz o gancho acertar o pente dela, e a arma apagada no meio disso daria erro;
+  - **sem as configurações** `deleteContainer` (o padrão do CORE, "só tirar", é o da pergunta) e `playersCreateInventory`
+    (o "+" vale para quem pode editar a ficha), nem a imagem padrão de cada tipo (estas duas estão no C34). No capanga, a
+    lista ITENS, de vários tipos, ficou sem "+" (pediria a escolha do tipo).
+
 - **C31, o HP e a Humanidade dentro do máximo (2026-10-22, worker da sessão KouArt):** as referências são o CORE 0.92.4
   (`cpr-actor.js:370-380`, o limite na memória; `:1544-1556`, o `_reverseDamage`; `:1773-1788`, o `setMaxHumanity`;
   `cpr-character-sheet.js:162-169`, o `_setMaxHp`) e a wiki (`system-rules.js:576` e `:581`, a terapia até a máxima). As
@@ -7540,6 +7560,52 @@ worktree própria a partir do `15baf260`, revisados e integrados aqui pelo patch
   desconta da Humanidade já limitada (M6: caem também o catálogo, o desinstalar e o capanga), o máximo de depois sem a
   cópia (M7) e a Humanidade gravada sem o limite (M8).
 - **Próximo:** o C32 (a ficha) e o C39 (gastar IP, com o Codex).
+
+### Ciclo 154 (2026-10-22): o C32, a ficha do personagem (sessão KouArt, com um worker)
+
+Commit anterior: `ea479907` (o ciclo 153, o C31). O código e os testes saíram de um worker (`workers:artesao`), numa
+worktree própria a partir do `15baf260`, em duas rodadas: na revisão, o "só tirar" passou a desinstalar o que estava
+dentro e a arma passou a descarregar antes de sair, como o `deleteEmbeddedDocuments` do CORE. Integrado aqui pelo patch,
+sem conflito com os ciclos 152 e 153.
+
+- **Antes de mudar, o que acontecia ao apagar pela ficha:** só o item saía. O acessório ficava com o `instaladoEm`
+  apontando para um id que não existe (a ficha o mostrava "não instalado"); as opções de uma fundação ficavam instaladas,
+  "SEM FUNDAÇÃO", tirando da Humanidade máxima; os programas de um deck ficavam "fora do deck", e um Black ICE ativo
+  deixava o token na cena; as armas de um veículo iam para "Veículo ausente"; as balas do pente se perdiam.
+- **O que muda:**
+  - **`regras-inventario.mjs`:** `nomeDoItemNovo` ("Arma nova", "Equipamento novo"), `passaNaBusca` (sem maiúsculas,
+    acentos e os espaços das pontas), `descarga` (o pente a 0, as balas no estoque), `descarregaAoApagar` (a arma com bala
+    no pente e a munição na ficha, menos no "apagar junto") e `apagarComInstalados` (o que se apaga e o que fica solto; a
+    arma do cyberware ou do acessório fica fora, e o gancho a tira com as balas de volta);
+  - **`ItemCPR.descarregar`** (`documentos.mjs`): o pente a 0, as balas na munição carregada e a arma sem munição, como a
+    vendida para a loja; sem a munição na ficha, avisa e não mexe;
+  - **a ficha** (`ficha-personagem.mjs` e os templates): o "+" em cada lista (`criarItem`), a busca no cabeçalho (o texto
+    na janela, reaplicado a cada desenho; o começo e o fim da busca redesenham, para o painel geral mostrar todas as
+    perícias), trocar a munição (o mesmo do Painel Tático) e descarregar na tabela de armas, e o apagar: sem nada
+    instalado, a confirmação de sempre; com algo, "Só tirar" (o padrão), "Apagar junto" ou "Cancelar", com a montagem
+    relida depois da pergunta. "Só tirar" desinstala o cyberware pelo `desinstalarCyberware` (sem devolver a Humanidade
+    atual, o ciclo 31), desativa o programa e solta o resto; a arma descarrega antes, na confirmação simples e no "Só tirar";
+  - **o capanga:** a busca, as armas, as lesões e o apagar iguais; o estilo do "+" e da busca no `tema.css`.
+- **Fica de fora:** ver as dúvidas.
+- **Testes:**
+  - **G3:** `inventario.test.mjs` (5 testes novos): os nomes de todos os tipos (lendo o `en.json` do CORE e o `pt-BR.json`),
+    a busca, a descarga (lendo o unload do CORE), o descarregar ao apagar (lendo o `unloadAmmo` e o `uninstallItems` do
+    `cpr-actor.js`) e o apagar (a arma com acessório e baioneta, o deck, a fundação, o veículo, um laço nos dados);
+  - **G4:** dois passos novos, depois do dos acessórios do C11: o "+" (11 na ficha; o clique em três cria o item com o
+    nome certo, a ficha aberta e a linha na lista) e a busca ("pist" deixa só a Heavy Pistol nas duas abas, com as perícias
+    todas à vista; "EVASAO" acha a Evasão, sem nenhum `updateActor`; continua depois de mudar o apelido; vazia, volta
+    tudo); a troca e a descarga da munição (a sobra e as balas no estoque; sem a munição na ficha, o aviso); o apagar ("Só
+    tirar" devolve as balas e solta o Smartgun Link; "Apagar junto" leva o rifle, a baioneta e a arma dela, sem o estoque;
+    o deck solta o programa desativado; a fundação desinstala a opção, com a Humanidade máxima de volta; a arma carregada
+    pela confirmação simples devolve as balas).
+- **Portões:** G1, 182 arquivos sem erro; G2, nenhum erro; G3, 343/343; G4 completo, 225/225, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as doze caíram, uma por vez, e os arquivos voltaram exatos: no G3, a busca sem tirar os acentos (M1), a
+  descarga sem as balas (M2), a arma do acessório na lista do que se solta (M3) e o "apagar junto" que descarrega (M10);
+  no G4, o "só tirar" que apaga junto (M4), o programa solto ativo (M5), a arma descarregada com a munição carregada (M6),
+  o item novo só com o nome do tipo (M7), a busca sem todas as perícias (M8), o cyberware que não se desinstala (M9) e as
+  duas descargas ao apagar (M11 e M12).
+- **Próximo:** o C39 (gastar IP, com o Codex).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

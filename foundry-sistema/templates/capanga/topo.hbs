@@ -8,6 +8,7 @@
       {{else}}
       <span class="modelo" data-tooltip="A ficha do ator: os capangas na cena seguem o que ela tem, menos o que cada um já mudou (HP, munição)">MODELO DOS TOKENS</span>
       {{/if}}
+      <label class="campo-busca" data-tooltip="Filtra pelo nome as perícias, as armas e os itens; não grava nada na ficha"><i class="fa-solid fa-magnifying-glass" inert></i><input class="busca-da-ficha" type="search" id="cprf-busca-{{ator.id}}" value="{{busca}}" placeholder="Buscar perícias e itens" aria-label="Buscar perícias e itens"></label>
     </p>
     <div class="nome-linha">
       <input class="nome" type="text" name="name" value="{{nomeNaFicha}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>

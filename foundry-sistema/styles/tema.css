@@ -69,6 +69,14 @@
 .cpr-fieldbook.ficha-personagem :is(.acao, .alternar-pericias, table.lista td.acoes button):hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
 .cpr-fieldbook.ficha-personagem .perigo .acao { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
 .cpr-fieldbook.ficha-personagem .perigo .acao:hover { background: var(--cp-vermelho); color: var(--cp-fundo); }
+/* O "+" de cada lista (o C32; o item-create do CORE): cria um item em branco do tipo dela. */
+.cpr-fieldbook.ficha-personagem .titulo span .criar {
+  flex: none; width: 22px; height: 22px; min-height: 0; padding: 0; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; color: var(--cp-amarelo); font: 700 15px/1 var(--cp-dados); cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem .titulo span .criar:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .perigo .titulo span .criar { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .perigo .titulo span .criar:hover { background: var(--cp-vermelho); color: var(--cp-fundo); }
 
 /* ---------- Cabeçalho ---------- */
 .cpr-fieldbook.ficha-personagem .topo { display: flex; gap: 20px; flex: none; }
@@ -88,6 +96,10 @@
 .cpr-fieldbook.ficha-personagem .linha-id input:is(:hover, :focus) { border-bottom-color: var(--cp-ciano); background: transparent; }
 .cpr-fieldbook.ficha-personagem .linha-id input.role { width: auto; field-sizing: content; min-width: 5ch; }
 .cpr-fieldbook.ficha-personagem .linha-id input.rank { width: 3ch; text-align: center; }
+/* A busca de perícias e itens (o C32): no fim da linha do alto, sem as maiúsculas do resto da linha. */
+.cpr-fieldbook.ficha-personagem .linha-id .campo-busca { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .linha-id .campo-busca input { width: 24ch; border-bottom-color: var(--cp-linha); color: var(--cp-texto); letter-spacing: 0.04em; text-transform: none; }
+.cpr-fieldbook.ficha-personagem .linha-id .campo-busca input:is(:hover, :focus) { border-bottom-color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .nome-linha { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 10px; }
 .cpr-fieldbook.ficha-personagem .nome-linha .nome {
   width: auto; field-sizing: content; min-width: 6ch; max-width: 100%; height: auto; padding: 0; background: transparent; border: none; border-bottom: 1px solid transparent;
