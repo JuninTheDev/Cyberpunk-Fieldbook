@@ -91,7 +91,8 @@ async function executarTratamento(lesao, tipo) {
     && original && opcoesDaLesao(lesao.system, tipo).some(opcao => opcao.chave === original.chave && opcao.dv === original.dv);
   if (!valida()) return null;
   const opcao = opcaoParaParteCibernetica(original, escolha.cibernetica);
-  const teste = opcao.role ? await medico.rolarRole(opcao.id) : await medico.rolarPericia(opcao.id);
+  // O cartão do tratamento diz o total: o teste fica público, fora do modo do seletor do chat (o C33).
+  const teste = opcao.role ? await medico.rolarRole(opcao.id, { modo: 'public' }) : await medico.rolarPericia(opcao.id, { modo: 'public' });
   if (!teste) {
     if (opcao.role) ui.notifications.warn(`${medico.name} não tem a Cirurgia (a do Medtech).`);
     return null;

@@ -28,6 +28,7 @@ import { CombateCPR, CombatenteCPR } from './iniciativa.mjs';
 import { abrirJanelaDaWiki, botaoNaAbaDeAtores } from './janela-wiki.mjs';
 import * as lesoes from './lesoes.mjs';
 import * as macros from './macros.mjs';
+import { registrarMesa } from './mesa.mjs';
 import * as migracao from './migracao.mjs';
 import * as municoes from './municoes.mjs';
 import { registrarNet } from './netrun/index.mjs';
@@ -90,6 +91,8 @@ Hooks.once('init', () => {
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
   registrarConteiner();
   estados.registrarEstados();
+  // "Mostrar aos jogadores" no clique direito da imagem das fichas (o C33; o modo do chat nos cartões fica nas rolagens).
+  registrarMesa();
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
   reguaDv.registrarReguaDv();

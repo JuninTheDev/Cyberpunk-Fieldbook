@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 152). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 153). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -330,10 +330,11 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   em cada lista (`cpr-actor-sheet.js:1693-1702`); a busca de perícias e itens (`:1660-1683`); descarregar a arma
   (`cpr-loadable.js:57-62`) e trocar a munição na ficha (hoje só no Painel Tático); e, ao apagar um item com o que está
   instalado nele, perguntar se apaga junto ou só tira (`cpr-container.js:11-21`).
-- [~] **C33. A mesa e o chat** (sessão KouArt, 2026-10-22): o modo de rolagem do Foundry (pública, só o mestre, às
-  cegas, só para si) nos cartões do sistema (`cpr-chat.js:21-50`, `hide-blind-rolls.js`); "Mostrar aos jogadores" no
-  clique direito da imagem das fichas (`cpr-imageContextMenu.js`); fechar a ficha do token solto que foi apagado
-  (`close-unlinked-sheet-on-delete.js`).
+- [x] **C33. A mesa e o chat:** feito no ciclo 152 (sessão KouArt, com um worker, 2026-10-22): o modo de rolagem do
+  Foundry (pública, só o mestre, às cegas, só para si) nos cartões das rolagens avulsas (`cpr-chat.js:21-50`,
+  `hide-blind-rolls.js`); "Mostrar aos jogadores" no clique direito da imagem das fichas (`cpr-imageContextMenu.js`);
+  a ficha do token solto que foi apagado (`close-unlinked-sheet-on-delete.js`), que o Foundry 14 já fecha. Ficaram de
+  fora as etiquetas do modo no cartão (`cpr-chat.js:418-445`) e a NET (ver as dúvidas).
 - [ ] **C34. Os detalhes do CORE**, um ciclo por grupo: a aba de efeitos do ator; o +1 à mão na penalidade do Death
   Save; escolher a armadura de cada local (o "track" do CORE); expandir e recolher as listas; a lesão repetida como
   configuração (desligado, avisar, rolar de novo: o `preventDuplicateCriticalInjuries`); as perícias do capanga por

@@ -152,6 +152,28 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C33, o modo de rolagem e "Mostrar aos jogadores" (2026-10-22, worker da sessão KouArt):** a referência é o
+  `ChatDataSetup` do CORE 0.92.4 (`cpr-chat.js:21-50`: o `modeOverride` ou o `rollMode` do chat) e o
+  `hide-blind-rolls.js:12-21`. No Foundry 14, o `applyRollMode` e o `CONFIG.Dice.rollModes` estão obsoletos
+  (`chat-message.mjs:656-672`, `config.mjs:3039`): o sistema usa o `messageMode` das opções da criação e a configuração
+  `core.messageMode`. As diferenças:
+  - **quem não recebe vê que houve uma rolagem:** no CORE, os cartões não levam `rolls`, e o "às cegas" some para todo
+    não-mestre, inclusive para quem rolou; aqui os cartões levam as rolagens, e o Foundry 14 mostra a mensagem
+    "rolou dados em particular" com o total "?" (como o ataque escondido do sistema já fazia);
+  - **sem as etiquetas do modo no cartão** ("Às cegas", "Para si", "Sussurro", `cpr-chat.js:418-445`);
+  - **a NET não segue o modo:** no CORE, as rolagens das fichas do Black ICE e do demônio seguem; aqui a NET tem as
+    configurações dela (o jogador que rola, o mestre que responde) e ficou como estava. Também ficaram públicos o ataque
+    e a defesa (as configurações "Quem vê o cartão do resultado" e "esconder o total"), a droga, a terapia, o
+    tratamento, o Death Save do começo do turno, as Artes Marciais, a resistência à munição e a lesão crítica;
+  - **"Mostrar aos jogadores" só para o mestre e o dono:** no CORE, o menu entra para quem abre a ficha
+    (`cpr-actor-sheet.js:397-399`), e na 0.92.4 os seletores só pegam o contêiner (`.bice-icon`, `.demon-icon` e
+    `.item-image-block` não existem nos templates). O título é o nome do documento, como no CORE (os popouts nativos do
+    Foundry 14 passam o `uuid`, e aí o nome some para quem não tem a permissão Limitada: útil para não revelar um NPC,
+    se a mesa quiser);
+  - **a ficha do token solto apagado:** o Foundry 14 já fecha (o `TokenDocument._onDelete`, `token.mjs:2196-2201`, chama
+    o `_onDelete` do ator sintético, que fecha as janelas dele e as dos itens dele): o sistema não tem código para isso,
+    só o passo do G4.
+
 - **C27, campanha por mundo e crossover (2026-10-20, worker da sessão KouArt):** a resolução segue
   `foundry-2077/scripts/wiki.mjs`, `tableCampaign` e `ofTable`: configuração, mundo cadastrado, campanha única;
   sem correspondência com várias campanhas, lista completa e pedidos bloqueados. `sendMovedAway` e
@@ -7425,6 +7447,44 @@ lendo o código antes de mudar.
   clicar no meio do primeiro, e ela caiu com o HP 60), a trava que nunca solta (M2) e a lesão recusada que marca o alvo
   (M3).
 - **Próximo:** os C31 a C33 da Fase 7, com os workers.
+
+### Ciclo 152 (2026-10-22): o C33, a mesa e o chat (sessão KouArt, com um worker)
+
+Commit anterior: `3f0be39e` (a reserva do C39). O código e os testes saíram de um worker (`workers:artesao`), numa
+worktree própria a partir do `15baf260`, revisados e integrados aqui pelo patch.
+
+- **O que muda:**
+  - **`scripts/mesa.mjs` (novo),** ligado no `init`: `modoDoCartao` (o modo pedido pelo fluxo vale; sem ele, o do
+    seletor do chat; sem nenhum, público) e `modoDaMesa` (lê o `core.messageMode`); o "Mostrar aos jogadores", um
+    `ContextMenu` fixo no `img.retrato` das fichas (pelos ganchos `render` de cada classe de ficha, que valem também
+    para as filhas), que abre o `ImagePopout` com o nome e chama o `shareImage`, só para o mestre e o dono;
+  - **as rolagens avulsas no modo do chat:** o atributo, o Facedown, a perícia, a Role e o Backup, o Death Save da
+    ficha (`documentos.mjs`), o dano rolado à parte e a Humanidade rolada à parte do item (`humanidade.mjs`) e os dois
+    ramos do `/red` (`rolagens.mjs`). O `testar` e o `rolarDano` compartilhados não mudam (sem modo, públicos);
+  - **os fluxos que continuam públicos** passam o `modo: 'public'` explícito (antes, públicos por omissão): as Artes
+    Marciais, a resistência à munição, o efeito secundário da droga, a terapia, o tratamento e o Death Save do turno (o
+    do mestre e o do jogador).
+- **Fica de fora:** ver as dúvidas (as etiquetas do modo, a NET, o ataque e a defesa).
+- **Testes:**
+  - **G3:** `mesa.test.mjs` (novo, 6 testes): o `modoDoCartao` em cada modo, com o trecho do CORE lido do arquivo; cada
+    rolagem avulsa com o `modoDaMesa`; a varredura de `scripts/`, em que toda chamada das rolagens avulsas fora das
+    fichas, do Painel e das macros passa um `modo:` (a contagem por arquivo), e o combate e a NET não usam o
+    `modoDaMesa`; a regra do mestre e do dono; o gancho do menu com globais de mentira; o `sistema.mjs` liga a mesa;
+  - **G4:** três passos novos, depois do passo das conveniências do C26: o mestre e o jogador escolhem o modo pelo botão
+    do chat e rolam a Percepção nos quatro modos (o `whisper`, o `blind`, o `isContentVisible` e o total "?" de quem
+    não recebe, nos dois navegadores), e o jogador, às cegas, rola o atributo, o Facedown, os dois `/red`, o dano à
+    parte, o Death Save e a Humanidade; "Mostrar aos jogadores" em cada ficha do mestre e no jogador (a imagem do Alvo
+    abre no navegador dele; a ficha que ele só observa não tem a opção); o token solto de um capanga apagado fecha a
+    ficha dele e a de um item dele nos dois navegadores.
+- **Antes de integrar:** a worktree desta sessão tinha o sparse checkout sem a pasta `cyberpunk-red-core/` (rastreada na
+  `sistema-v14`), e o G3 novo, que lê o CORE, falhou aqui; com a pasta de volta no checkout, passou.
+- **Portões:** G1, 181 arquivos sem erro (o sistema e os testes); G2, nenhum erro; G3, 334/334; G4 completo, 222/222,
+  com a checagem dos dois navegadores sem avisos ou erros de JS.
+- **Mutações:** as nove do worker caíram no G3, uma por vez (o modo do chat por cima do pedido, M1; o seletor ignorado,
+  M2; o Death Save e o `/red` sem o modo, M3 e M4; os fluxos sem o `public` explícito, M5 e M9; só o mestre mostra a
+  imagem, M6; a imagem que não vai para a mesa, M7; o menu sem o `fixed`, M8). No G4, a M2, a M3 e a M7 caíram também
+  (o passo do modo e o do "Mostrar aos jogadores").
+- **Próximo:** o C31 (HP e Humanidade dentro do máximo), o C32 (a ficha) e o C39 (gastar IP, com o Codex).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

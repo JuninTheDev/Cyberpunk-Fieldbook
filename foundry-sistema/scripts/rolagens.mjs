@@ -2,6 +2,7 @@
 import { caminho, SISTEMA } from './config.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { perguntarModificador } from './janela-rolagem.mjs';
+import { modoDaMesa } from './mesa.mjs';
 import { bonusDoCritico, danoCritico, expressaoDoDano, lerComandoRed, sorteParaGastar } from './regras.mjs';
 
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(caminho(`templates/chat/${arquivo}`), dados);
@@ -66,11 +67,12 @@ export async function testar(ator, { rotulo, partes = [], modo, falar = true, sa
 
 // O comando /red no chat (CORE parse-red-command.js e CPRChat.HandleCPRCommand), pelo tipo do dado: o d10 é um teste do RED
 // (o cartão de teste, com o crítico); o d6, um dano (o cartão de dano, com os dois 6 do crítico e a ablação); outro dado
-// rola a soma, sem crítico (o "generic" do CORE).
+// rola a soma, sem crítico (o "generic" do CORE). O cartão sai no modo do seletor do chat, como o RenderRollCard do CORE
+// (cpr-chat.js:235; o C33).
 export async function executarComandoRed(mensagem, ator = null) {
   const comando = lerComandoRed(mensagem);
   if (!comando) return null;
-  if (comando.tipo === 'teste') return testar(ator, { rotulo: 'Rolagem', partes: comando.partes, sabor: comando.descricao, sorte: 0, dado: comando.dados });
+  if (comando.tipo === 'teste') return testar(ator, { rotulo: 'Rolagem', partes: comando.partes, sabor: comando.descricao, sorte: 0, dado: comando.dados, modo: modoDaMesa() });
   const roll = await new Roll([comando.dados, ...comando.partes.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ')).evaluate();
   const critico = comando.tipo === 'dano' && danoCritico(roll.dice.flatMap(dado => dado.results.filter(r => r.active).map(r => r.result)));
   const titulo = [comando.tipo === 'dano' ? 'Dano' : 'Rolagem', comando.descricao].filter(Boolean).join(': ');
@@ -80,7 +82,7 @@ export async function executarComandoRed(mensagem, ator = null) {
   return ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: [roll],
     flags: { [SISTEMA]: { red: { tipo: comando.tipo, dados: comando.dados, total: roll.total, critico, ablacao: comando.ablacao, descricao: comando.descricao } } }
-  });
+  }, { messageMode: modoDaMesa() });
 }
 
 // O dano de uma arma (p. 187): a fórmula da arma (ou outra: 2d6 do autofogo, 3d6 do cartucho), vezes o multiplicador do

@@ -14193,6 +14193,231 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(d)];
     });
 
+    // O C33: o modo do seletor do chat (o messageMode do Foundry 14) nos cartões das rolagens avulsas, como o ChatDataSetup do
+    // CORE (cpr-chat.js:21-50). O Foundry aplica o modo ao criar a mensagem; quem não a recebe vê só que houve uma rolagem
+    // (o isContentVisible e o "?" no total). No "às cegas", nem o jogador que rolou vê o resultado, só o mestre.
+    await r.passo('modo de rolagem do chat (o C33, o ChatDataSetup do CORE): o teste de Percepção do mestre e o do jogador, escolhidos no seletor do chat em cada modo (pública, só o mestre, às cegas, só para si), vão para quem o modo manda, e quem não recebe não vê o total (às cegas, nem o jogador que rolou); às cegas, o atributo, o Facedown, o /red (teste e dano), o dano à parte, o Death Save e a perda de Humanidade do jogador também; o modo de cada navegador volta ao de antes', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const antes = { mestre: await edge.evaluate(`game.settings.get('core', 'messageMode')`), jogador: await jogador.evaluate(`game.settings.get('core', 'messageMode')`) };
+      const ids = { mestre: await edge.evaluate(`game.user.id`), jogador: await jogador.evaluate(`game.user.id`), mestres: await edge.evaluate(`game.users.filter(u => u.isGM).map(u => u.id).sort()`) };
+      // O seletor do chat (os botões #message-modes do Foundry 14), como quem joga.
+      const escolher = (navegador, modo) => navegador.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 40 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const botao = document.querySelector('#message-modes button[data-mode="${modo}"]');
+        botao?.click();
+        await esperar(() => game.settings.get('core', 'messageMode') === '${modo}');
+        return { botao: Boolean(botao), modo: game.settings.get('core', 'messageMode') };
+      })()`);
+      // Como um navegador vê a mensagem: o conteúdo dele (isContentVisible), o cartão do sistema e o total que aparece.
+      const ver = (navegador, id) => navegador.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 60 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        await esperar(() => game.messages.get('${id}') && document.querySelector('[data-message-id="${id}"] .message-content'));
+        const m = game.messages.get('${id}');
+        const el = document.querySelector('[data-message-id="${id}"]');
+        return { conteudo: Boolean(m?.isContentVisible), cartao: Boolean(el?.querySelector('.cartao')), total: el?.querySelector('.cartao b.total, .dice-total')?.textContent.trim() ?? null };
+      })()`);
+      // O que cada modo manda (ChatMessage.applyMode do Foundry 14): para quem vai e quem vê o conteúdo.
+      const esperado = (quem, modo) => ({
+        whisper: { public: [], gm: ids.mestres, blind: ids.mestres, self: [ids[quem]] }[modo], blind: modo === 'blind',
+        mestre: modo !== 'self' || quem === 'mestre', jogador: modo === 'public' || (quem === 'jogador' && ['gm', 'self'].includes(modo))
+      });
+      const confere = (r, quem, modo) => {
+        const e = esperado(quem, modo);
+        const viu = (visao, deve) => visao.conteudo === deve && visao.cartao === deve && visao.total === (deve ? String(r.total) : '?');
+        return r.whisper.join() === e.whisper.join() && r.blind === e.blind && viu(r.mestre, e.mestre) && viu(r.jogador, e.jogador);
+      };
+      const testes = [];
+      try {
+        // 1. O teste de Percepção do Alvo, pelo mestre e pelo jogador (dono dele), em cada modo; o d10 de 2 a 9, sem crítico.
+        let lado = 2;
+        for (const quem of ['mestre', 'jogador']) {
+          const navegador = quem === 'mestre' ? edge : jogador;
+          for (const modo of ['public', 'gm', 'blind', 'self']) {
+            const seletor = await escolher(navegador, modo);
+            await fixar(navegador, [[lado, 10]]);
+            lado = lado === 9 ? 2 : lado + 1;
+            const r = await navegador.evaluate(`(async () => {
+              const r = await game.actors.getName('Alvo').rolarPericia('perception');
+              return { id: r.mensagem.id, total: r.total, whisper: [...r.mensagem.whisper].sort(), blind: r.mensagem.blind };
+            })()`);
+            const lido = { quem, modo, seletor, ...r, mestre: await ver(edge, r.id), jogador: await ver(jogador, r.id) };
+            testes.push({ ...lido, ok: confere(lido, quem, modo) });
+          }
+        }
+        // 2. Às cegas, as outras rolagens avulsas do jogador: o atributo (INT), o Facedown, o /red de d10 e o de d6, o dano à
+        // parte de uma faca (1d6), o Death Save (o 10 natural falha: a penalidade não muda) e a perda de Humanidade de uma
+        // peça (1d6), as duas criadas aqui.
+        const seletor = await escolher(jogador, 'blind');
+        await fixar(jogador, [[5, 10], [6, 10], [4, 10], [3, 6], [2, 6], [5, 6], [10, 10], [3, 6]]);
+        const extras = await jogador.evaluate(`(async () => {
+          const esperar = async condicao => { for (let i = 0; i < 60 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const alvo = game.actors.getName('Alvo');
+          const penalidade = alvo.system.deathSave.penalidade;
+          await alvo.createEmbeddedDocuments('Item', [{ name: 'Faca do C33', type: 'arma', system: { dano: '1d6' } }, { name: 'Peça do C33', type: 'cyberware', system: { perdaHumanidade: { formula: '1d6', media: 4 } } }]);
+          const faca = alvo.items.getName('Faca do C33'), peca = alvo.items.getName('Peça do C33');
+          const nova = async acao => { const antes = game.messages.size; await acao(); await esperar(() => game.messages.size > antes); return game.messages.contents.at(-1); };
+          try {
+            const mensagens = {
+              atributo: (await alvo.rolarAtributo('int'))?.mensagem,
+              facedown: (await alvo.rolarFacedown())?.mensagem,
+              redTeste: await nova(() => ui.chat.processMessage('/red +2 # C33')),
+              redDano: await nova(() => ui.chat.processMessage('/red 2d6 a2 # C33')),
+              dano: (await faca?.rolarDano())?.mensagem,
+              deathSave: await nova(() => alvo.rolarDeathSave()),
+              humanidade: await peca?.rolarHumanidade()
+            };
+            return {
+              penalidade: [penalidade, alvo.system.deathSave.penalidade],
+              mensagens: Object.fromEntries(Object.entries(mensagens).map(([nome, m]) => [nome, { id: m?.id ?? null, whisper: [...(m?.whisper ?? [])].sort(), blind: m?.blind ?? null, conteudo: m?.isContentVisible ?? null }]))
+            };
+          } finally {
+            await alvo.deleteEmbeddedDocuments('Item', [faca?.id, peca?.id].filter(Boolean));
+          }
+        })()`);
+        const doMestre = {};
+        for (const [nome, m] of Object.entries(extras.mensagens)) doMestre[nome] = m.id ? (await ver(edge, m.id)).conteudo : null;
+        const ok = testes.length === 8 && testes.every(t => t.ok) && seletor.modo === 'blind'
+          && extras.penalidade[0] === extras.penalidade[1] && Object.keys(extras.mensagens).length === 7
+          && Object.entries(extras.mensagens).every(([nome, m]) => m.id && m.blind === true && m.whisper.join() === ids.mestres.join() && m.conteudo === false && doMestre[nome] === true);
+        return [ok, JSON.stringify({ testes, seletor, extras, doMestre })];
+      } finally {
+        await edge.evaluate(`(async () => { window.__fila = []; await game.settings.set('core', 'messageMode', ${JSON.stringify(antes.mestre)}); return true; })()`);
+        await jogador.evaluate(`(async () => { window.__fila = []; await game.settings.set('core', 'messageMode', ${JSON.stringify(antes.jogador)}); return true; })()`);
+      }
+    });
+
+    // O C33: "Mostrar aos jogadores" no clique direito da imagem das fichas (o cpr-imageContextMenu.js do CORE, :10-30). Só
+    // o mestre e o dono têm a opção; a imagem vai para todos pelo ImagePopout#shareImage do Foundry 14.
+    const MENU_DO_RETRATO = `(() => {
+      const esperar = async (condicao, vezes = 40) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+      // O clique direito no retrato da ficha: as opções do menu (sem menu, nenhuma). clicar: a opção a escolher.
+      window.__menuDoRetrato = async (ficha, clicar = null) => {
+        await ui.context?.close({ animate: false });
+        await ficha.render({ force: true });
+        await esperar(() => ficha.rendered && ficha.element?.querySelector('img.retrato'));
+        const img = ficha.element.querySelector('img.retrato');
+        const { left, top } = img.getBoundingClientRect();
+        img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: left + 4, clientY: top + 4 }));
+        await esperar(() => document.querySelector('#context-menu .context-item'), 10);
+        const itens = [...document.querySelectorAll('#context-menu .context-item')];
+        const opcoes = itens.map(li => li.textContent.trim());
+        const escolhida = clicar && itens.find(li => li.textContent.trim() === clicar);
+        if (escolhida) escolhida.click();
+        else await ui.context?.close({ animate: false });
+        await esperar(() => !document.querySelector('#context-menu'), 10);
+        await ficha.close();
+        return opcoes;
+      };
+      window.__popouts = () => [...foundry.applications.instances.values()].filter(app => app instanceof foundry.applications.apps.ImagePopout);
+      return true;
+    })()`;
+    await r.passo('"Mostrar aos jogadores" no clique direito do retrato (o C33, o cpr-imageContextMenu.js do CORE): o mestre tem a opção nas fichas do personagem, do capanga, do Black ICE, do demônio, do contêiner e do item, e a imagem do Alvo abre no navegador do jogador, com o nome; no jogador, a opção aparece na ficha dele e não na que ele só observa', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      try {
+        await edge.evaluate(MENU_DO_RETRATO);
+        await jogador.evaluate(MENU_DO_RETRATO);
+        const mestre = await edge.evaluate(`(async () => {
+          const u = game.users.getName('Jogador');
+          const atores = {};
+          for (const [tipo, nome] of [['capanga', 'C33 Capanga'], ['blackice', 'C33 Black ICE'], ['demonio', 'C33 Demônio'], ['conteiner', 'C33 Contêiner']]) atores[tipo] = await Actor.implementation.create({ name: nome, type: tipo });
+          atores.observado = await Actor.implementation.create({ name: 'C33 Observado', type: 'personagem', ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER } });
+          window.__c33Atores = Object.values(atores).map(a => a.id);
+          const alvo = game.actors.getName('Alvo');
+          const item = alvo.items.find(i => i.type === 'armadura');
+          const opcoes = {};
+          for (const tipo of ['capanga', 'blackice', 'demonio', 'conteiner']) opcoes[tipo] = await window.__menuDoRetrato(atores[tipo].sheet);
+          opcoes.item = await window.__menuDoRetrato(item.sheet);
+          opcoes.personagem = await window.__menuDoRetrato(alvo.sheet, 'Mostrar aos jogadores');
+          for (let i = 0; i < 60 && !window.__popouts().some(app => app.options.src === alvo.img && app.rendered); i++) await new Promise(r => setTimeout(r, 100));
+          const aqui = window.__popouts().find(app => app.options.src === alvo.img);
+          return { opcoes, img: alvo.img, aqui: aqui ? { titulo: aqui.title } : null, observado: atores.observado.id };
+        })()`);
+        const doJogador = await jogador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 60) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await esperar(() => window.__popouts().some(app => app.options.src === ${JSON.stringify(mestre.img)} && app.rendered));
+          const recebida = window.__popouts().find(app => app.options.src === ${JSON.stringify(mestre.img)});
+          await esperar(() => game.actors.get('${mestre.observado}')?.testUserPermission(game.user, 'OBSERVER'));
+          const observado = game.actors.get('${mestre.observado}');
+          return {
+            recebida: recebida ? { titulo: recebida.title, aberta: recebida.rendered } : null,
+            observado: { dono: observado?.isOwner, opcoes: observado ? await window.__menuDoRetrato(observado.sheet) : null },
+            dele: await window.__menuDoRetrato(game.actors.getName('Alvo').sheet)
+          };
+        })()`);
+        const so = lista => JSON.stringify(lista) === JSON.stringify(['Mostrar aos jogadores']);
+        const ok = ['capanga', 'blackice', 'demonio', 'conteiner', 'item', 'personagem'].every(tipo => so(mestre.opcoes[tipo]))
+          && mestre.aqui?.titulo === 'Alvo' && doJogador.recebida?.aberta === true && doJogador.recebida.titulo === 'Alvo'
+          && doJogador.observado.dono === false && Array.isArray(doJogador.observado.opcoes) && doJogador.observado.opcoes.length === 0 && so(doJogador.dele);
+        return [ok, JSON.stringify({ mestre, doJogador })];
+      } finally {
+        // Os atores criados pelo mestre (guardados no navegador dele, também se o passo caiu no meio).
+        const criados = await edge.evaluate(`window.__c33Atores ?? []`);
+        for (const navegador of [edge, jogador]) {
+          await navegador.evaluate(`(async () => {
+            await ui.context?.close({ animate: false });
+            for (const app of window.__popouts?.() ?? []) await app.close();
+            for (const app of [...foundry.applications.instances.values()]) if (${JSON.stringify(criados)}.includes(app.document?.id)) await app.close();
+            delete window.__menuDoRetrato;
+            delete window.__popouts;
+            return true;
+          })()`);
+        }
+        await edge.evaluate(`(async () => { const ids = ${JSON.stringify(criados)}.filter(id => game.actors.has(id)); if (ids.length) await Actor.implementation.deleteDocuments(ids); delete window.__c33Atores; return true; })()`);
+      }
+    });
+
+    // O C33: a ficha do token solto que foi apagado (o close-unlinked-sheet-on-delete.js do CORE, :12-23). O Foundry 14 já
+    // fecha: o TokenDocument._onDelete chama o _onDelete do ator sintético, que fecha as janelas dele e as dos itens dele.
+    await r.passo('token solto apagado (o C33, o close-unlinked-sheet-on-delete.js do CORE): a ficha do capanga do token solto e a ficha de um item dele, abertas no mestre e no jogador dono, fecham quando o token sai da cena', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      let montado = null;
+      try {
+        montado = await edge.evaluate(`(async () => {
+          const u = game.users.getName('Jogador');
+          const cena = game.scenes.active;
+          if (!cena) throw new Error('Sem cena ativa para o token solto.');
+          const ator = await Actor.implementation.create({ name: 'C33 Solto', type: 'capanga', ownership: { [u.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, items: [{ name: 'Faca do C33', type: 'arma', system: { dano: '1d6' } }] });
+          const [token] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 1000, y: 1000, actorLink: false })).toObject()]);
+          return { cena: cena.id, ator: ator.id, token: token.id };
+        })()`);
+        // Abre a ficha do ator do token e a do item dele (os documentos sintéticos), e guarda as duas janelas.
+        const abrir = navegador => navegador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 60) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await esperar(() => game.scenes.get('${montado.cena}')?.tokens.get('${montado.token}')?.actor?.isOwner);
+          const token = game.scenes.get('${montado.cena}').tokens.get('${montado.token}');
+          const item = token.actor.items.getName('Faca do C33');
+          await token.actor.sheet.render({ force: true });
+          await item.sheet.render({ force: true });
+          await esperar(() => token.actor.sheet.rendered && item.sheet.rendered);
+          window.__c33Fichas = [token.actor.sheet, item.sheet];
+          return { solto: !token.actorLink, sintetico: token.actor.isToken, abertas: window.__c33Fichas.map(f => f.rendered) };
+        })()`);
+        const antes = { mestre: await abrir(edge), jogador: await abrir(jogador) };
+        await edge.evaluate(`game.scenes.get('${montado.cena}').deleteEmbeddedDocuments('Token', ['${montado.token}']).then(() => true)`);
+        const fechou = navegador => navegador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 60) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await esperar(() => !game.scenes.get('${montado.cena}').tokens.has('${montado.token}') && window.__c33Fichas.every(f => !f.rendered && !foundry.applications.instances.has(f.id)));
+          return window.__c33Fichas.map(f => ({ aberta: f.rendered, naLista: foundry.applications.instances.has(f.id) }));
+        })()`);
+        const depois = { mestre: await fechou(edge), jogador: await fechou(jogador) };
+        const ok = [antes.mestre, antes.jogador].every(a => a.solto && a.sintetico && a.abertas.join() === 'true,true')
+          && [depois.mestre, depois.jogador].every(d => d.length === 2 && d.every(f => !f.aberta && !f.naLista));
+        return [ok, JSON.stringify({ antes, depois })];
+      } finally {
+        for (const navegador of [edge, jogador]) {
+          await navegador.evaluate(`(async () => { for (const f of window.__c33Fichas ?? []) if (f.rendered) await f.close(); delete window.__c33Fichas; return true; })()`);
+        }
+        if (montado) {
+          await edge.evaluate(`(async () => {
+            const cena = game.scenes.get('${montado.cena}');
+            if (cena?.tokens.has('${montado.token}')) await cena.deleteEmbeddedDocuments('Token', ['${montado.token}']);
+            await game.actors.get('${montado.ator}')?.delete();
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('wiki (C27): a campanha do mundo filtra a lista e os pedidos; o crossover manda uma vez, deixa o ator antigo parado e traz ficha, itens, efeitos e extratos ao novo dono, sem apagar a transferência antes do vínculo', async () => {
       const campanhas = [], personagens = [];
       let configuracao;

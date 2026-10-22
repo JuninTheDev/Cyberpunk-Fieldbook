@@ -10,6 +10,7 @@ import {
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
+import { modoDaMesa } from './mesa.mjs';
 import { avisarCiberpsicose, estadoMental } from './terapia.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
@@ -194,10 +195,13 @@ export class AtorCPR extends Actor {
   partesDoAtributo(chave, { situacionais = null } = {}) {
     return [{ rotulo: SIGLA[chave], valor: this.system.atributos[chave].valor }, ...this.#penalidade(), ...this.#situacionais(situacionais)];
   }
-  rolarAtributo(chave, { perguntar = false, ...opcoes } = {}) {
+  // As rolagens avulsas (o atributo, o Facedown, a perícia, a Role, o Backup e o Death Save) saem no modo do seletor do
+  // chat (mesa.modoDaMesa, o C33); os fluxos que as chamam (a droga, a terapia, o tratamento, as Artes Marciais, a
+  // resistência à munição, o Death Save do turno) pedem o modo deles.
+  rolarAtributo(chave, { perguntar = false, modo, ...opcoes } = {}) {
     return this.#testarComJanela({
       rotulo: SIGLA[chave], perguntar, partes: situacionais => this.partesDoAtributo(chave, { situacionais }), situacionais: () => this.situacionaisDoTeste()
-    }, opcoes);
+    }, { ...opcoes, modo: modoDaMesa(modo) });
   }
 
   // Facedown (regras.FACEDOWN): COOL + Reputação + 1d10, com as penalidades e os situacionais de todas as ações, como os
@@ -207,10 +211,10 @@ export class AtorCPR extends Actor {
     const [cool, ...resto] = this.partesDoAtributo('cool', { situacionais });
     return [cool, { rotulo: 'Reputação', valor: this.system.reputacao }, ...resto];
   }
-  rolarFacedown({ perguntar = false, ...opcoes } = {}) {
+  rolarFacedown({ perguntar = false, modo, ...opcoes } = {}) {
     return this.#testarComJanela({
       rotulo: FACEDOWN.rotulo, perguntar, partes: situacionais => this.partesDoFacedown({ situacionais }), situacionais: () => this.situacionaisDoTeste()
-    }, { sabor: FACEDOWN.dica, ...opcoes });
+    }, { sabor: FACEDOWN.dica, ...opcoes, modo: modoDaMesa(modo) });
   }
 
   // A Interface do Netrunner (regras.HABILIDADES_DE_INTERFACE; o CPRInterfaceRoll do CORE): o Rank de Interface + 1d10,
@@ -339,10 +343,10 @@ export class AtorCPR extends Actor {
     return { pericia: p, partes: [...partes, ...this.#penalidade(), ...this.#situacionais(situacionais, id)] };
   }
   // extras: partes a mais, fixas (o −2 do Aperto de ferro na fuga do agarrão; artes-marciais.mjs).
-  rolarPericia(id, { perguntar = false, extras = [], ...opcoes } = {}) {
+  rolarPericia(id, { perguntar = false, extras = [], modo, ...opcoes } = {}) {
     return this.#testarComJanela({
       rotulo: this.system.pericia(id).nome, perguntar, partes: situacionais => [...this.partesDaPericia(id, { situacionais }).partes, ...extras], situacionais: () => this.situacionaisDoTeste(id)
-    }, opcoes);
+    }, { ...opcoes, modo: modoDaMesa(modo) });
   }
 
   // As rolagens de habilidade de Role do RED (regras.ROLAGENS_DE_ROLE), como o _createRoleRoll do CORE: o Rank da
@@ -379,21 +383,21 @@ export class AtorCPR extends Actor {
   }
   // As Expertises do Tech rolam com a perícia que vem em pericia (o "varying" do CORE: uma do atributo da rolagem); sem
   // ela, ou com uma de outro atributo, não rolam.
-  rolarRole(id, { perguntar = false, pericia = null, ...opcoes } = {}) {
+  rolarRole(id, { perguntar = false, pericia = null, modo, ...opcoes } = {}) {
     const rolagem = this.rolagemDeRole(id);
     if (!rolagem) return null;
-    if (rolagem.backup) return this.rolarBackup(opcoes);
+    if (rolagem.backup) return this.rolarBackup({ ...opcoes, modo });
     if (rolagem.escolherPericia && (!pericia || this.system.pericia(pericia).atributo !== rolagem.atributo)) return null;
     const periciaId = rolagem.pericia ?? (rolagem.escolherPericia ? pericia : null);
     const rotulo = rolagem.escolherPericia ? `${rolagem.rotulo} (${this.system.pericia(pericia).nome})` : rolagem.rotulo;
     return this.#testarComJanela({
       rotulo, perguntar, partes: situacionais => this.partesDaRole(id, { situacionais, pericia }), situacionais: () => this.situacionaisDoTeste(periciaId)
-    }, { sabor: rolagem.dica, ...opcoes });
+    }, { sabor: rolagem.dica, ...opcoes, modo: modoDaMesa(modo) });
   }
 
   // O Backup do Lawman (regras.backup): 1d10 contra o Rank (o do Lawman, principal ou segunda) e, vindo, o d6 das
   // rodadas.
-  async rolarBackup({ falar = true } = {}) {
+  async rolarBackup({ falar = true, modo } = {}) {
     const rank = this.system.roles.find(role => role.id === 'lawman')?.rank ?? this.system.role.rank;
     const d10 = await new Roll('1d10').evaluate();
     const d6 = d10.total <= rank ? await new Roll('1d6').evaluate() : null;
@@ -402,14 +406,14 @@ export class AtorCPR extends Actor {
       const rolls = d6 ? [d10, d6] : [d10];
       const dados = dadosDoCartao(rolls, { critico: false, total: false });
       const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/backup.hbs'), { nome: this.name, ...resultado, dados });
-      await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls, flags: { [SISTEMA]: { backup: resultado } } });
+      await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls, flags: { [SISTEMA]: { backup: resultado } } }, { messageMode: modoDaMesa(modo) });
     }
     return resultado;
   }
 
   // Death Save (p. 186): 1d10 + penalidades contra BODY, sem crítico. Passou: a próxima fica 1 mais difícil. Com a janela
   // (perguntar), o modificador do mestre (sem a Sorte: ela é só dos testes); fechada, null.
-  async rolarDeathSave({ falar = true, perguntar = false, aoAbrir = null } = {}) {
+  async rolarDeathSave({ falar = true, perguntar = false, aoAbrir = null, modo } = {}) {
     const { base, penalidade, body } = this.system.deathSave;
     let modificador = 0;
     if (perguntar) {
@@ -426,7 +430,7 @@ export class AtorCPR extends Actor {
     if (falar) {
       const mestre = modificador ? `${modificador < 0 ? '−' : '+'} ${Math.abs(modificador)}` : '';
       const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/death-save.hbs'), { nome: this.name, total: roll.total, body, base, penalidade, mestre, passou, natural, dados: dadosDoCartao(roll, { critico: false }) });
-      await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { deathSave: { total: roll.total, passou } } } });
+      await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: this }), content, rolls: [roll], flags: { [SISTEMA]: { deathSave: { total: roll.total, passou } } } }, { messageMode: modoDaMesa(modo) });
     }
     return { roll, total: roll.total, natural, passou };
   }
@@ -682,9 +686,9 @@ export class ItemCPR extends Item {
     return this.type === 'programa' ? this.update({ 'system.rezPerdida': 0 }) : null;
   }
   // "Rolar Humanidade" no cyberware (as maquetes do usuário): a perda rolada sem instalar, num cartão com o "Aplicar" do
-  // mestre (humanidade.mjs).
-  rolarHumanidade() {
-    return rolarPerdaDeHumanidade(this);
+  // mestre (humanidade.mjs), no modo do seletor do chat (o C33).
+  rolarHumanidade({ modo } = {}) {
+    return rolarPerdaDeHumanidade(this, { modo: modoDaMesa(modo) });
   }
   // "Usar" o equipamento ligado à mão (as maquetes do usuário): liga os efeitos dele, ou desliga, se algum está ligado.
   // No equipamento de ativação à mão, o efeito vale pelo liga e desliga, e não pelo uso (dados.mjs). Os outros: null.
@@ -867,9 +871,10 @@ export class ItemCPR extends Item {
     return game.system.api.combate.atacar(this, opcoes);
   }
 
-  // O dano rolado à parte, pela ficha: o cartão tem os botões do mestre (aplicar nos alvos marcados, rolar a lesão).
+  // O dano rolado à parte, pela ficha: o cartão tem os botões do mestre (aplicar nos alvos marcados, rolar a lesão), no
+  // modo do seletor do chat (o C33). O dano do fluxo do ataque não passa por aqui (combate/socket.mjs).
   rolarDano(opcoes = {}) {
-    return rolarDano(this, { falar: true, paraAplicar: true, ...opcoes });
+    return rolarDano(this, { falar: true, paraAplicar: true, ...opcoes, modo: modoDaMesa(opcoes.modo) });
   }
 
   // A munição que entra nesta arma: o tipo dela e, na que só aceita a Smart melhorada (a Zhuo), só essa; com alguma no

@@ -95,7 +95,8 @@ async function encerrar(droga) {
   }
   // A terapia de dependência (o C21; terapia.mjs): por um ano, quem se tratou falha sozinho no teste contra aquela droga.
   const tratada = dependenciaTratada(ator.getFlag(SISTEMA, FLAG_DEPENDENCIAS), chaveDaDroga({ catalogo: droga.getFlag(SISTEMA, 'catalogo'), nome: droga.name }), game.time.worldTime);
-  const teste = tratada ? null : await ator.rolarPericia('resist-torture-drugs', { sabor: `Contra a DV${rua.dv} do efeito secundário de ${droga.name}` });
+  // O cartão seguinte diz o total: o teste fica público, fora do modo do seletor do chat (o C33).
+  const teste = tratada ? null : await ator.rolarPericia('resist-torture-drugs', { sabor: `Contra a DV${rua.dv} do efeito secundário de ${droga.name}`, modo: 'public' });
   if (!tratada && !teste) return null;
   const resultado = tratada ? 'viciou' : resultadoDoSecundario(teste.total, rua.dv);
   if (resultado === 'passou' && sob.humanidade) {

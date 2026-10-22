@@ -16,14 +16,15 @@ function conteudo(dados, roll) {
     + `<p class="sabor">${esc(dados.formula)} (média ${dados.media}), sem instalar a peça.</p>${fim}</div>`;
 }
 
-export async function rolarPerdaDeHumanidade(item) {
+// modo: o messageMode do Foundry 14 (ItemCPR.rolarHumanidade manda o do seletor do chat; o C33).
+export async function rolarPerdaDeHumanidade(item, { modo } = {}) {
   const { formula, media } = item.system.perdaHumanidade ?? {};
   if (item.type !== 'cyberware' || !item.actor || !formula || formula === '0') return null;
   const roll = await new Roll(formula).evaluate();
   const dados = { ator: item.actor.name, atorUuid: item.actor.uuid, peca: item.name, formula, media, total: roll.total, aplicado: null };
   return ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ actor: item.actor }), content: conteudo(dados, roll), rolls: [roll], flags: { [SISTEMA]: { perdaDeHumanidade: dados } }
-  });
+  }, { messageMode: modo });
 }
 
 // O "Aplicar" do cartão (só o mestre): a Humanidade atual do dono cai o total, uma vez (abaixo de 0, a ciberpsicose extrema

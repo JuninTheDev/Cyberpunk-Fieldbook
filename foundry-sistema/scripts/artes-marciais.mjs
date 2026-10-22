@@ -89,7 +89,8 @@ export async function usarMovimento(ator, id, { alvo = null, perguntar = false, 
     if (!arma) return avisar(`${ator.name}: ${m.nome} é um golpe de Artes Marciais. Ponha na ficha a arma "Martial Arts" (o compêndio de armas).`);
     return arma.atacar({ alvo: token, local, perguntar, movimento: id, pericia: m.pericia });
   }
-  const teste = await ator.rolarPericia(m.pericia, { perguntar, rotulo: `${m.nome} (${m.nomeDaForma})`, sabor: `DV ${m.teste.dv}`, dados: { movimento: id }, categoria: 'ataque' });
+  // O teste do movimento é do fluxo do combate: fica público, fora do modo do seletor do chat (o C33).
+  const teste = await ator.rolarPericia(m.pericia, { perguntar, rotulo: `${m.nome} (${m.nomeDaForma})`, sabor: `DV ${m.teste.dv}`, dados: { movimento: id }, categoria: 'ataque', modo: 'public' });
   if (!teste) return null;
   return pedirAoMestre({ id, ator: ator.uuid, alvo: token?.uuid ?? null, total: teste.total, ficar: escolha.ficar !== false });
 }

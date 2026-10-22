@@ -30,7 +30,9 @@ async function deathSave(combate) {
   if (ator.system.hp.value >= 1 || ator.statuses.has(CONFIG.specialStatusEffects.DEFEATED)) return;
   const jogador = jogadorDe(ator);
   if (!jogador && modo === 'jogadores') return;
-  const resultado = (jogador ? await pedir(jogador, 'deathSave', { ator: ator.uuid }) : null) ?? await ator.rolarDeathSave();
+  // O Death Save do turno é do fluxo: fica público, fora do modo do seletor do chat (o C33), como o do jogador
+  // (combate/socket.mjs).
+  const resultado = (jogador ? await pedir(jogador, 'deathSave', { ator: ator.uuid }) : null) ?? await ator.rolarDeathSave({ modo: 'public' });
   if (!resultado || resultado.passou) return;
   await ator.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: true, overlay: true });
   await combatente.update({ defeated: true });

@@ -78,7 +78,7 @@ const TRATADORES = {
     return { aceitou: resposta === true };
   },
   deathSave: async ({ ator }, id) => {
-    const resultado = await (await fromUuid(ator)).rolarDeathSave({ perguntar: config('rolagemManual') && !config('rolarDireto'), aoAbrir: registrarJanela(id) });
+    const resultado = await (await fromUuid(ator)).rolarDeathSave({ perguntar: config('rolagemManual') && !config('rolarDireto'), aoAbrir: registrarJanela(id), modo: 'public' });
     janelas.delete(id);
     return resultado && { total: resultado.total, passou: resultado.passou };
   }

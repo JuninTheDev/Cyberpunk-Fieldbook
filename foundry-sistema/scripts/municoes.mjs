@@ -17,10 +17,11 @@ const registro = (ctx, linha) => linha.municao ??= { ator: linha.token.actor.uui
 const marca = (ataque, tipo, minuto = true) => ({ ataque, tipo, ...(minuto ? { fim: game.time.worldTime + 60 } : {}) });
 const selecoesEmp = new Set();
 
-// A mesma janela de rolagem dos outros testes, incluindo a Sorte e os situacionais; sem resposta, o mestre rola.
+// A mesma janela de rolagem dos outros testes, incluindo a Sorte e os situacionais; sem resposta, o mestre rola. É do
+// fluxo do ataque: o cartão fica público, fora do modo do seletor do chat (o C33).
 export async function rolarResistencia({ ator: uuid, pericia, dv, nome }, { perguntar = false, aoAbrir = null } = {}) {
   const ator = await fromUuid(uuid);
-  const resultado = await ator?.rolarPericia(pericia, { perguntar, aoAbrir, sabor: `${nome}: supere a DV${dv}` });
+  const resultado = await ator?.rolarPericia(pericia, { perguntar, aoAbrir, sabor: `${nome}: supere a DV${dv}`, modo: 'public' });
   return resultado ? { total: resultado.total } : null;
 }
 

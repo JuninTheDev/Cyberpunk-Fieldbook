@@ -86,7 +86,8 @@ export async function fazerTerapia(paciente) {
   const terapia = TERAPIAS[escolha.tipo];
   const droga = escolha.tipo === 'dependencia' ? paciente.items.get(escolha.vicio) : null;
   if (!medico || !terapia || (escolha.tipo === 'dependencia' && !droga)) return null;
-  const teste = await medico.rolarRole('tecnologia-medica', { sabor: `Terapia de ${terapia.rotulo} em ${paciente.name}, contra a DV${terapia.dv}` });
+  // O cartão da terapia diz o total: o teste fica público, fora do modo do seletor do chat (o C33).
+  const teste = await medico.rolarRole('tecnologia-medica', { sabor: `Terapia de ${terapia.rotulo} em ${paciente.name}, contra a DV${terapia.dv}`, modo: 'public' });
   if (!teste) return null;
   const passou = passouNaTerapia(teste.total, terapia.dv);
   const contra = `Tecnologia Médica ${teste.total} contra DV${terapia.dv}`;
