@@ -337,19 +337,22 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   `hide-blind-rolls.js`); "Mostrar aos jogadores" no clique direito da imagem das fichas (`cpr-imageContextMenu.js`);
   a ficha do token solto que foi apagado (`close-unlinked-sheet-on-delete.js`), que o Foundry 14 já fecha. Ficaram de
   fora as etiquetas do modo no cartão (`cpr-chat.js:418-445`) e a NET (ver as dúvidas).
-- [ ] **C34. Os detalhes do CORE**, um ciclo por grupo: a aba de efeitos do ator; o +1 à mão na penalidade do Death
-  Save; escolher a armadura de cada local (o "track" do CORE); expandir e recolher as listas; a lesão repetida como
-  configuração (desligado, avisar, rolar de novo: o `preventDuplicateCriticalInjuries`); as perícias do capanga por
-  nível, base ou total; a confirmação ao apagar item e o jogador que cria itens (configurações do CORE); a SP na barra do
-  token; a árvore dos instalados no diretório de itens; a imagem padrão de cada tipo.
+- [ ] **C34. Os detalhes do CORE**, um ciclo por parte:
+  - [~] parte 1, a ficha (sessão KouArt, 2026-10-22): a aba de efeitos do ator; o +1 à mão na penalidade do Death Save;
+    expandir e recolher as listas;
+  - [ ] parte 2, as configurações: a lesão repetida (desligado, avisar, rolar de novo: o
+    `preventDuplicateCriticalInjuries`); as perícias do capanga por nível, base ou total; a confirmação ao apagar item e o
+    jogador que cria itens;
+  - [ ] parte 3, a mesa: a SP na barra do token; a árvore dos instalados no diretório de itens; a imagem padrão de cada
+    tipo; escolher a armadura de cada local (o "track" do CORE; conferir antes o que muda, já que o C18 usa a de maior SP).
 - [ ] **C35. Gerar a cena da arquitetura** com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de
   acesso é um Tile numa cena que já existe.
 
 **As regras da wiki com número que o sistema ainda não aplica** (fonte: `system-rules.js`):
-- [ ] **C36. Estabilizar e a cura natural** (p. 222–223, `:552`): TECH + Primeiros Socorros ou Paramédico contra DV10,
+- [~] **C36. Estabilizar e a cura natural** (sessão KouArt, 2026-10-22) (p. 222–223, `:552`): TECH + Primeiros Socorros ou Paramédico contra DV10,
   13 ou 15 pelo ferimento; o mortal estabilizado volta a 1 HP, inconsciente por 1 minuto; descansar um dia devolve HP
   igual ao BODY (o Skin Weave e o Subdermal Armor, +1 SP por dia; o Reinforced Antibodies, o dobro).
-- [ ] **C37. Arremessar** (p. 177, `:535`): DEX + Atletismo + 1d10, até 25 m, contra a DV da linha do lança-granadas;
+- [~] **C37. Arremessar** (sessão KouArt, com o Codex, 2026-10-22) (p. 177, `:535`): DEX + Atletismo + 1d10, até 25 m, contra a DV da linha do lança-granadas;
   a granada de mão pela área.
 - [ ] **C38. Os perigos do ambiente** (`:556-562`): a queda, o fogo pela intensidade (2, 4 ou 6), a eletrocução, o
   afogamento e a asfixia, a radiação e o veneno; o mestre aplica pelo cartão.
