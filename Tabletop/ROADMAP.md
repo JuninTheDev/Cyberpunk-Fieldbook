@@ -213,6 +213,81 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - módulos e sistema arquivados;
   - o README da wiki sem o Foundry.
 
+## Fase 4: a mesa melhor que o Foundry (o plano de 2026-10-22)
+
+**O pedido do usuário (2026-10-22):** melhorar a mesa sempre, com o Foundry VTT e os outros VTTs de inspiração. O plano
+saiu de duas análises separadas, a do Claude Code e a do Codex, comparando a mesa com o núcleo do Foundry 13 e 14 (os
+níveis de cena, as regiões, a lista de objetos), os módulos mais usados (Monk's TokenBar, Quick Insert, Global Progress
+Clocks, FXMaster) e outros VTTs (Owlbear Rodeo 2, Roll20, Alchemy, Fantasy Grounds, Shard).
+
+**Como esta fase anda:**
+- **Onde:** na branch `Tabletop`, numa worktree própria (sessão Claude, com o Codex de worker e revisor). O usuário junta
+  no `master`. A reserva `[~]` daqui só aparece no `master` depois dessa junção.
+- **A ordem combinada:** a frente A (a virada com segurança), a C (as ferramentas do mestre), a B (a mesa narrativa) e a
+  D (a atmosfera e o celular). Um item por ciclo, cada um com teste e mutações que caem.
+- **Fora daqui:** a NET (o M13 é de outra sessão).
+
+### A. A virada com segurança
+
+- [~] **M24 · O arquivo da mesa nunca se perde** (sessão Claude, com o Codex, 2026-10-22). Hoje, um `mesa.json` que não
+  abre vira uma mesa vazia (`catch { /* mesa nova */ }` no `tableOf`), e a próxima gravação apaga a campanha. A escolha
+  do usuário: a cópia anterior, senão recusa.
+  - uma cópia boa a cada minuto (`mesa.anterior.json`);
+  - o arquivo que não abre fica guardado à parte, a mesa abre a cópia (perde no máximo um minuto) e avisa o mestre;
+  - sem cópia boa, a mesa recusa abrir e não sobrescreve nada; o erro passageiro (o arquivo ocupado) só tenta de novo;
+  - a gravação que falha tenta de novo e avisa o mestre (hoje vai só para o log).
+- [ ] **M25 · O personagem como fonte única:** o dano, a recarga e a Sorte partem da ficha gravada, e todos os tokens do
+  personagem pegam o resultado na hora. Hoje o `dano.aplicar` conta sobre a cópia no token e grava com o `writeSheet`,
+  sem atualizar os outros tokens do mesmo personagem (o `writeCharacter`, ao lado, atualiza).
+- [ ] **M26 · A ação confirmada no celular:** "enviando", "feito" ou "incerto" em cada pedido, o texto digitado que não
+  some, e o pedido repetido depois de uma queda que não gasta a bala nem aplica o dano duas vezes (um id por pedido).
+- [ ] **M27 · A conexão lenta no SSE:** a fila de cada conexão com limite (a atividade atrasada cai; a conexão que não
+  esvazia recomeça pelo estado inteiro). Hoje o `response.write` ignora a resposta.
+- [ ] **M28 · Os critérios de saída da virada,** escritos no M4 e no M20 a M22 e conferidos:
+  - a ficha que vive sem o Foundry (o `personagem-jogo.js` ainda lê os STATs e o inventário do `doc.mesa`) e a loja que
+    entrega sem ele;
+  - o backup com a mídia e as fichas no mesmo ponto;
+  - a memória, o tempo de gravação e o tráfego medidos na VM de 1 GB, com o grupo inteiro e os mapas de verdade;
+  - o celular que dorme, troca de rede ou volta com a página velha.
+
+### C. As ferramentas do mestre
+
+- [ ] **M29 · Pedir um teste ao grupo** (o Monk's TokenBar): o mestre escolhe os personagens e a perícia, cada jogador
+  rola na tela dele, e o mestre vê quem já rolou.
+- [ ] **M30 · Estados no token com duração** (os Active Effects do Foundry, os efeitos do Fantasy Grounds): em chamas,
+  atordoado, cego, a droga; o ícone no token e o fim sozinho pelas rodadas do combate.
+- [ ] **M31 · Passagens entre cenas** (as regiões do Foundry, a versão leve dos níveis de cena do Foundry 14): a escada
+  ou o elevador que leva o token para outra cena. Night City é vertical.
+- [ ] **M32 · Encontros prontos** (o Fantasy Grounds): os NPCs, as posições e a nota de condução guardados juntos e
+  postos na cena de uma vez.
+- [ ] **M33 · Desfazer e refazer a edição da cena** (o Owlbear Rodeo): a parede, o tile, a nota e a luz.
+- [ ] **M34 · Pausa, seleção em lote e busca rápida** (a pausa do Foundry, a lista de objetos do Foundry 14, o Quick
+  Insert): a pausa segura os prazos da defesa.
+
+### B. A mesa narrativa
+
+- [ ] **M35 · O Agent:** as mensagens dos contatos (o fixer, os NPCs), com foto e áudio, no "celular" do personagem; cada
+  anexo pode virar pista.
+- [ ] **M36 · O acervo das pistas** (o diário do Shard): o que o mestre mostrou fica guardado para o jogador reabrir.
+  Hoje o `nota.mostrar` só manda para quem está conectado.
+- [ ] **M37 · A cena de diálogo** (as cenas do Alchemy): o fundo e os retratos de quem fala, sem tokens, e o "falar
+  como" o NPC, com o balão em cima do token.
+- [ ] **M38 · O quadro da missão e os relógios** (o Global Progress Clocks): o objetivo, as pistas e o pagamento; o
+  relógio "reforços chegando 3/6", que o mestre mostra ou esconde.
+- [ ] **M39 · O registro de cada sessão para a wiki:** o começo, o fim, as decisões e as revelações, exportados para a
+  página da campanha. Hoje o registro guarda só as últimas 200 entradas.
+
+### D. A atmosfera e o celular
+
+- [ ] **M40 · Luzes animadas e texto no mapa:** o neon que pisca, a sirene, o pulso (o "Falta" do M6b).
+- [ ] **M41 · Clima e partículas** (o FXMaster): a chuva ácida, o smog, a fumaça; desligados no modo leve.
+- [ ] **M42 · Sons no mapa e de efeito:** o som com raio, que a parede abafa; a porta, o tiro, a granada (o "Falta" do
+  M11).
+- [ ] **M43 · O modo leve no celular e a próxima cena pré-carregada:** o mapa em vídeo vira imagem, o canvas com limite
+  de resolução, a mídia das cenas antigas sai da memória (hoje fica em `S.imagens`); o mestre prepara a próxima cena.
+- [ ] **M44 · Os modos de visão do cyberware:** o infravermelho e a pouca luz (o "Falta" do M6b).
+- [ ] **M45 · O `mesa.js` dividido aos poucos:** a conexão e os pedidos primeiro, depois o estado, o desenho e os gestos.
+
 ## Para as outras sessões
 
 A `sistema-v14` (o sistema `cpr-fieldbook` para o Foundry 14, plano C1–C28) continua sendo a mesa até a virada (M20–M22). Combinar com o usuário quanto ainda vale investir nela.
