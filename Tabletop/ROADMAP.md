@@ -254,8 +254,8 @@ Clocks, FXMaster) e outros VTTs (Owlbear Rodeo 2, Roll20, Alchemy, Fantasy Groun
   - **Achado no ciclo (não é deste item):** o teste "áudio: pausar, continuar, ir…" (`mesa-audio.test.js`, a pausa em
     0,15 s ± 0,1) cai em parte das rodadas da suíte inteira, com os arquivos em paralelo: 3 de 5 antes do M24, 1 de 5
     depois. Sozinho, passa. Ele mede o relógio de verdade; não foi afrouxado.
-- [ ] **M25 · O personagem como fonte única:** o dano, a recarga e a Sorte partem da ficha gravada, e todos os tokens do
-  personagem pegam o resultado na hora. Hoje o `dano.aplicar` conta sobre a cópia no token e grava com o `writeSheet`,
+- [~] **M25 · O personagem como fonte única** (sessão Claude, com o Codex, 2026-10-22): o dano, a recarga e a Sorte
+  partem da ficha gravada, e todos os tokens do personagem pegam o resultado na hora. Hoje o `dano.aplicar` conta sobre a cópia no token e grava com o `writeSheet`,
   sem atualizar os outros tokens do mesmo personagem (o `writeCharacter`, ao lado, atualiza).
 - [ ] **M26 · A ação confirmada no celular:** "enviando", "feito" ou "incerto" em cada pedido, o texto digitado que não
   some, e o pedido repetido depois de uma queda que não gasta a bala nem aplica o dano duas vezes (um id por pedido).
