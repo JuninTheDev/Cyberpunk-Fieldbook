@@ -49,7 +49,7 @@ Esta pasta é a versão de teste. Ela sobe a wiki de verdade com a mesa junto, c
 7. **Começar de novo:** `testar-mesa.bat --limpar`.
 8. **Depois de mudar o código da mesa:** feche a janela do teste (Ctrl+C) e rode de novo. O servidor carrega o código e a página uma vez só, quando liga: até reiniciar, ele entrega a página daquele momento. A página aberta mostra **A mesa foi atualizada** quando o servidor volta com código novo.
 
-Teste automático (não abre navegador): `node --test Tabletop/` (79 testes).
+Teste automático (não abre navegador): `node --test "Tabletop/*.test.js"` (118 testes). O Node 24 não aceita mais a pasta (`node --test Tabletop/`).
 
 ## O que dá para fazer
 
@@ -287,6 +287,13 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
   - as fichas de NPC vêm do `mestre-npcs.js`, que só o servidor lê;
   - os personagens são os da campanha, com o retrato, o HP e a ficha do Foundry quando ela existe.
 - **Sem pacote novo:** Server-Sent Events em vez de socket.io, como o resto da wiki (Node puro).
+- **O arquivo da mesa nunca se perde** (o M24). A mesa de cada campanha fica em `mesa/<campanha>/mesa.json`:
+  - **A cópia:** a cada minuto, a gravação também vai para o `mesa.anterior.json`, ao lado.
+  - **O arquivo que não abre** (o JSON quebrado, ou o que abre mas não é uma mesa, sem a lista de cenas): fica guardado como `mesa.ilegivel-AAAAMMDD-HHMMSS.json`, a mesa abre a cópia e avisa só o mestre, no registro, com a hora da cópia. Perde no máximo um minuto enquanto a cópia grava; se só a cópia falha, ela tenta de novo a cada 5 segundos, com o erro no log do servidor, e fica para trás até conseguir.
+  - **O `mesa.json` que sumiu:** a mesa abre a cópia e avisa o mestre. Mesa nova só quando os dois arquivos nunca existiram.
+  - **Sem cópia boa:** a mesa recusa abrir (503), não sobrescreve nada, e a página mostra o motivo no canto da conexão. Consertado o arquivo, a página entra sozinha.
+  - **O arquivo ocupado** (o antivírus, o OneDrive): a mesa recusa só daquela vez, e a próxima tentativa lê de novo.
+  - **A gravação que falha:** tenta de novo a cada 5 segundos, e o mestre recebe "A mesa não conseguiu gravar" e depois "A mesa voltou a gravar". Antes, ia só para o log.
 
 ## A ficha de jogo e a ficha da wiki
 
@@ -354,7 +361,7 @@ O M4 do roadmap. Quando você aprovar o teste:
 4. **`api-personagens.js`:** exportar `idFor` e `realId`. A mesa usa a mesma conta do id público, que hoje está repetida em `mesa-api.js`.
 5. **Testes:** levar o `mesa.test.js` para `tests/isolados/` e ligar no `tests/validar.js`.
 6. **Servidor:**
-   - os dados ficam em `/srv/fieldbook/dados/mesa/` (215 MB só com as 13 cenas). Confira se o `backup.sh` leva essa pasta e se cabe no disco;
+   - os dados ficam em `/srv/fieldbook/dados/mesa/` (215 MB só com as 13 cenas). Confira se o `backup.sh` leva essa pasta e se cabe no disco. Ao lado de cada `mesa.json` fica a cópia de um minuto antes (`mesa.anterior.json`) e, se um dia o arquivo não abrir, o guardado (`mesa.ilegivel-…json`), que o mestre apaga quando não precisar mais;
    - o Caddy repassa Server-Sent Events sem configuração nova;
    - as cenas entram com o `importar-foundry.js --dados /srv/foundry14/data/Data --mundo protocolo --mesa https://wiki.SEUDOMINIO --senha …`, rodado no servidor (ele usa o classic-level do Foundry de lá).
 
@@ -376,5 +383,5 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists, a biblioteca do yt-jukebox e os atores (as fichas de NPC do mestre) de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-veiculos.test.js`, `mesa-luta.test.js`, `mesa-net.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 97 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-veiculos.test.js`, `mesa-luta.test.js`, `mesa-net.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `mesa-arquivo.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 118 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. O `mesa-arquivo.test.js` simula o arquivo ocupado, quebrado e a gravação que falha (as opções `lerArquivo`, `gravarJson`, `copiaACada` e `tentarGravarDe` da mesa). |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

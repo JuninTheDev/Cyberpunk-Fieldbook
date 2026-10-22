@@ -229,13 +229,31 @@ Clocks, FXMaster) e outros VTTs (Owlbear Rodeo 2, Roll20, Alchemy, Fantasy Groun
 
 ### A. A virada com segurança
 
-- [~] **M24 · O arquivo da mesa nunca se perde** (sessão Claude, com o Codex, 2026-10-22). Hoje, um `mesa.json` que não
-  abre vira uma mesa vazia (`catch { /* mesa nova */ }` no `tableOf`), e a próxima gravação apaga a campanha. A escolha
-  do usuário: a cópia anterior, senão recusa.
-  - uma cópia boa a cada minuto (`mesa.anterior.json`);
-  - o arquivo que não abre fica guardado à parte, a mesa abre a cópia (perde no máximo um minuto) e avisa o mestre;
-  - sem cópia boa, a mesa recusa abrir e não sobrescreve nada; o erro passageiro (o arquivo ocupado) só tenta de novo;
-  - a gravação que falha tenta de novo e avisa o mestre (hoje vai só para o log).
+- [x] **M24 · O arquivo da mesa nunca se perde** (sessão Claude, com o Codex, 2026-10-22; `mesa-api.js` `lerMesa`,
+  `tableOf`, `flushTable`, `openStream`; `mesa.js` `conectar`). Antes, um `mesa.json` que não abria virava uma mesa
+  vazia (`catch { /* mesa nova */ }` no `tableOf`), e a próxima gravação apagava a campanha. A escolha do usuário: a
+  cópia anterior, senão recusa.
+  - **A cópia:** a cada minuto, o mesmo snapshot também vai para o `mesa.anterior.json` (o intervalo vale entre
+    reinícios, pela data do arquivo).
+  - **O arquivo ruim** (o JSON quebrado, o `null`, o array, o objeto sem a lista de cenas, como `{}`): os bytes ficam
+    guardados em `mesa.ilegivel-…json`, a mesa abre a cópia e avisa só o mestre, com a hora da cópia em Brasília (o
+    servidor roda em UTC). O "no máximo um minuto" vale enquanto a cópia grava: a falha só dela vai para o log.
+  - **O `mesa.json` que sumiu:** a cópia, com o aviso. Mesa nova só quando os dois nunca existiram; a cópia quebrada que
+    sobrou recusa, porque havia uma mesa.
+  - **Sem cópia boa:** 503, nada é sobrescrito, e a página mostra o motivo no canto da conexão (o `EventSource` não
+    entrega o corpo da recusa: a página pede o estado quando a conexão fecha de vez). Consertado, entra sozinha.
+  - **O ocupado** (`EBUSY`, `EPERM`, `EACCES`, `EMFILE`, `ENFILE`, `EAGAIN`, no principal ou na cópia): 503 só naquela
+    vez, sem guardar a mesa na memória; o pedido seguinte lê de novo.
+  - **A gravação que falha:** tenta de novo a cada 5 segundos; o mestre recebe "não conseguiu gravar" uma vez por
+    sequência e "voltou a gravar" no fim. A falha só da cópia tenta de novo sem esse aviso.
+  - **O stream** confere a mesa antes de responder 200.
+  - **Testado:** 16 testes (`mesa-arquivo.test.js`, com as opções `lerArquivo`, `gravarJson`, `copiaACada` e
+    `tentarGravarDe`), 23 mutações que caem, e a conferência no Edge (o motivo no canto da conexão e a volta sozinha ao
+    "ao vivo"). O Codex escreveu a primeira versão; a revisão do Claude achou a cópia ocupada e a cópia quebrada sem o
+    principal, e a revisão do Codex achou o `{}`: os três abriam uma mesa vazia.
+  - **Achado no ciclo (não é deste item):** o teste "áudio: pausar, continuar, ir…" (`mesa-audio.test.js`, a pausa em
+    0,15 s ± 0,1) cai em parte das rodadas da suíte inteira, com os arquivos em paralelo: 3 de 5 antes do M24, 1 de 5
+    depois. Sozinho, passa. Ele mede o relógio de verdade; não foi afrouxado.
 - [ ] **M25 · O personagem como fonte única:** o dano, a recarga e a Sorte partem da ficha gravada, e todos os tokens do
   personagem pegam o resultado na hora. Hoje o `dano.aplicar` conta sobre a cópia no token e grava com o `writeSheet`,
   sem atualizar os outros tokens do mesmo personagem (o `writeCharacter`, ao lado, atualiza).

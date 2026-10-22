@@ -166,7 +166,13 @@
       ligacao.textContent = fonte.readyState === EventSource.CLOSED ? 'fora do ar' : 'reconectando…';
       S.conexao = null;
       // Fechada de vez (sessão acabou, campanha sumiu): confere quem é quem de novo.
-      if (fonte.readyState === EventSource.CLOSED) setTimeout(() => iniciar(), 3000);
+      if (fonte.readyState !== EventSource.CLOSED) return;
+      setTimeout(() => iniciar(), 3000);
+      // O EventSource não entrega o corpo da recusa (a mesa que não abriu); o estado traz o motivo para quem abriu a mesa.
+      fetch(comCampanha('/api/mesa/estado'), { cache: 'no-store' }).then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok && data.erro && S.fonte === fonte && fonte.readyState !== EventSource.OPEN) ligacao.textContent = data.erro;
+      }).catch(() => {});
     };
   }
 

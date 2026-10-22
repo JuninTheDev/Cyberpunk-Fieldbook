@@ -95,7 +95,7 @@ function carregarWiki(dados) {
   return { atender, characterApi };
 }
 
-async function iniciar({ porta = Number(process.env.PORTA || 8010), host = process.env.HOST || '127.0.0.1', dados = process.env.DADOS_MESA || defaultData(), limpar = false, semente = true, cenasDoFoundry = true, random, prazoDefesa, tituloDoYoutube, silencioso = false, versao: outraVersao } = {}) {
+async function iniciar({ porta = Number(process.env.PORTA || 8010), host = process.env.HOST || '127.0.0.1', dados = process.env.DADOS_MESA || defaultData(), limpar = false, semente = true, cenasDoFoundry = true, random, prazoDefesa, copiaACada, tentarGravarDe, lerArquivo, gravarJson, tituloDoYoutube, silencioso = false, versao: outraVersao } = {}) {
   const infoFile = path.join(dados, 'teste.json');
   const readInfo = () => { try { return JSON.parse(fs.readFileSync(infoFile, 'utf8')); } catch { return null; } };
   const velho = readInfo();
@@ -110,7 +110,9 @@ async function iniciar({ porta = Number(process.env.PORTA || 8010), host = proce
   const tableApi = createTableApi({
     dataDir: dados, charactersDir: path.join(dados, 'personagens'), wikiDir: root,
     who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter,
-    send, writeJsonAtomic, versao, ...(random ? { random } : {}), ...(prazoDefesa ? { prazoDefesa } : {}), ...(tituloDoYoutube ? { tituloDoYoutube } : {})
+    send, writeJsonAtomic, versao, ...(random ? { random } : {}), ...(prazoDefesa ? { prazoDefesa } : {}), ...(tituloDoYoutube ? { tituloDoYoutube } : {}),
+    ...(copiaACada !== undefined ? { copiaACada } : {}), ...(tentarGravarDe !== undefined ? { tentarGravarDe } : {}),
+    ...(lerArquivo ? { lerArquivo } : {}), ...(gravarJson ? { gravarJson } : {})
   });
 
   const server = http.createServer((request, response) => {

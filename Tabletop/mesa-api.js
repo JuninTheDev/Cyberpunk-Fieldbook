@@ -132,7 +132,7 @@ function looksLike(head, extension) {
 
 // versao: a da página e do servidor juntos (quem carrega a mesa calcula). A página aberta compara a cada conexão e, se
 // mudou (o servidor reiniciou com código novo), pede para recarregar.
-module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who, campaigns, updateCharacter = null, send, writeJsonAtomic, random = faces => crypto.randomInt(faces), prazoDefesa = 60_000, versao = '', tituloDoYoutube = null }) {
+module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who, campaigns, updateCharacter = null, send, writeJsonAtomic, random = faces => crypto.randomInt(faces), prazoDefesa = 60_000, copiaACada = 60_000, tentarGravarDe = 5_000, lerArquivo = file => fs.readFileSync(file, 'utf8'), gravarJson = writeJsonAtomic, versao = '', tituloDoYoutube = null }) {
   const json = (response, status, data) => send(response, status, JSON.stringify(data), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' });
   const tableDir = id => path.join(dataDir, 'mesa', id);
   const die = faces => random(faces) + 1;
@@ -317,14 +317,57 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
 
   // ---------------- Estado de cada mesa ----------------
   const tables = new Map();
+  let closed = false;
   const emptyState = () => ({ formato: 1, cenaAtiva: null, cenas: [], combate: null, registro: [] });
+  // Toda mesa gravada tem a lista de cenas (desde o M1); o que não tem não é uma mesa, e normalizar viraria uma mesa vazia.
+  // Os campos que vieram depois (npcs, retratos) continuam opcionais.
+  function lerMesa(file) {
+    try {
+      const state = JSON.parse(lerArquivo(file));
+      if (!state || !Array.isArray(state.cenas)) throw new Error('não é uma mesa');
+      return { tipo: 'abriu', state };
+    } catch (error) {
+      const tipo = error.code === 'ENOENT' ? 'sumiu' : ['EBUSY', 'EPERM', 'EACCES', 'EMFILE', 'ENFILE', 'EAGAIN'].includes(error.code) ? 'passageiro' : 'ruim';
+      return { tipo, motivo: error.code || (error instanceof SyntaxError ? 'JSON inválido' : error.message) };
+    }
+  }
   function tableOf(id) {
     let table = tables.get(id);
     if (table) return table;
     const file = path.join(tableDir(id), 'mesa.json');
-    let stored = null;
-    try { stored = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* mesa nova */ }
-    const state = { ...emptyState(), ...(stored && typeof stored === 'object' ? stored : {}) };
+    const copyFile = path.join(tableDir(id), 'mesa.anterior.json');
+    const main = lerMesa(file);
+    if (main.tipo === 'passageiro') throw fail(503, 'A mesa desta campanha está ocupada: o arquivo dela não abriu agora. Tente de novo em instantes.');
+    let stored = main.state;
+    let aviso = '';
+    let lastCopy = 0;
+    try { lastCopy = fs.statSync(copyFile).mtimeMs; } catch { /* ainda não há cópia */ }
+    if (main.tipo !== 'abriu') {
+      const copy = lerMesa(copyFile);
+      if (copy.tipo === 'passageiro') throw fail(503, 'A mesa desta campanha está ocupada: o arquivo dela não abriu agora. Tente de novo em instantes.');
+      if (copy.tipo === 'abriu') {
+        try { lastCopy = fs.statSync(copyFile).mtimeMs; } catch (error) {
+          console.error(`Mesa: não conferiu a data de ${copyFile} (${error.message}).`);
+          throw fail(503, 'A mesa desta campanha está ocupada: o arquivo dela não abriu agora. Tente de novo em instantes.');
+        }
+        const hora = new Date(lastCopy).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        if (main.tipo === 'sumiu') aviso = `O arquivo da mesa (mesa.json) sumiu. A mesa abriu a cópia de ${hora}.`;
+        else {
+          const nome = `mesa.ilegivel-${new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')}.json`;
+          try { fs.copyFileSync(file, path.join(tableDir(id), nome), fs.constants.COPYFILE_EXCL); } catch (error) {
+            console.error(`Mesa: não guardou ${file} (${error.message}).`);
+            throw fail(503, 'A mesa desta campanha não abriu: não foi possível guardar o arquivo que não abriu. Nada foi apagado. Tente de novo em instantes.');
+          }
+          aviso = `O arquivo da mesa (mesa.json) não abriu (${main.motivo}). A mesa abriu a cópia de ${hora}; o arquivo que não abriu ficou guardado como ${nome}.`;
+        }
+        stored = copy.state;
+      } else if (main.tipo === 'ruim' || copy.tipo === 'ruim') {
+        // Mesa nova só quando os dois arquivos nunca existiram: a cópia que sobrou mostra que havia uma mesa.
+        console.error(`Mesa: não leu ${file} (${main.motivo}); a cópia não abriu (${copy.motivo}).`);
+        throw fail(503, 'A mesa desta campanha não abriu: o arquivo dela (mesa.json) não pôde ser lido, e não há cópia boa. Nada foi apagado: restaure o backup ou conserte o arquivo.');
+      }
+    }
+    const state = { ...emptyState(), ...stored };
     if (!Array.isArray(state.cenas)) state.cenas = [];
     if (!Array.isArray(state.registro)) state.registro = [];
     if (!Array.isArray(state.npcs)) state.npcs = [];
@@ -333,19 +376,46 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     for (const scene of state.cenas) for (const item of [...(scene.paredes || []), ...(scene.luzes || [])]) if (!item.id) item.id = newId();
     combatFlow.cancelarPendentes(state);
     // pendentes: os ataques esperando a defesa (só na memória: o servidor que reinicia cancela).
-    table = { id, file, state, seq: 0, timer: null, writing: Promise.resolve(), pendentes: new Map() };
+    table = { id, file, copyFile, lastCopy, state, seq: 0, timer: null, retryTimer: null, writeFailed: false, writing: Promise.resolve(), pendentes: new Map() };
     tables.set(id, table);
+    if (aviso) { systemEntry(state, aviso, true); save(table); }
     return table;
   }
   // Grava um pouco depois da última mudança (arrastar um token não vira dez gravações), sempre uma de cada vez.
   function flushTable(table) {
     clearTimeout(table.timer);
     table.timer = null;
+    clearTimeout(table.retryTimer);
+    table.retryTimer = null;
     const snapshot = JSON.parse(JSON.stringify(table.state));
+    let writingFile = table.file;
     table.writing = table.writing.then(async () => {
       fs.mkdirSync(path.dirname(table.file), { recursive: true });
-      await writeJsonAtomic(table.file, snapshot);
-    }).catch(error => console.error(`Mesa: não gravou ${table.file} (${error.message}).`));
+      await gravarJson(table.file, snapshot);
+      if (table.writeFailed) {
+        table.writeFailed = false;
+        const entry = systemEntry(table.state, 'A mesa voltou a gravar.', true);
+        broadcast(table.id, { registro: entry });
+        if (!closed) save(table);
+      }
+      if (!table.lastCopy || Date.now() - table.lastCopy >= copiaACada) {
+        writingFile = table.copyFile;
+        await gravarJson(table.copyFile, snapshot);
+        table.lastCopy = Date.now();
+      }
+    }).catch(error => {
+      console.error(`Mesa: não gravou ${writingFile} (${error.message}).`);
+      if (writingFile === table.file && !table.writeFailed) {
+        table.writeFailed = true;
+        const entry = systemEntry(table.state, `A mesa não conseguiu gravar (${error.message}). As mudanças estão só na memória do servidor; ela tenta de novo a cada 5 segundos.`, true);
+        broadcast(table.id, { registro: entry });
+      }
+      if (!closed) {
+        clearTimeout(table.retryTimer);
+        table.retryTimer = setTimeout(() => flushTable(table), tentarGravarDe);
+        table.retryTimer.unref();
+      }
+    });
     return table.writing;
   }
   const save = table => { clearTimeout(table.timer); table.timer = setTimeout(() => flushTable(table), 400); };
@@ -604,6 +674,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     for (const connection of connections.values()) if (connection.campanha === campaignId) sendEvent(connection, 'presenca', list);
   }
   function openStream(request, response, identity, campaignId) {
+    tableOf(campaignId);
     response.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'private, no-store, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     response.write('retry: 2000\n\n');
     const viewer = viewerOf(identity);
@@ -1014,7 +1085,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     return full;
   }
   const authorOf = (viewer, color) => ({ nome: viewer.nome, papel: viewer.papel, conta: viewer.conta, cor: color });
-  const systemEntry = (state, texto) => addEntry(state, { tipo: 'sistema', autor: { nome: 'Mesa', papel: 'sistema', conta: null, cor: '#a9aeaa' }, texto });
+  const systemEntry = (state, texto, secreta = false) => addEntry(state, { tipo: 'sistema', autor: { nome: 'Mesa', papel: 'sistema', conta: null, cor: '#a9aeaa' }, texto, secreta });
 
   // REF de quem rola a iniciativa: a ficha de agora (personagem), a ficha do livro (NPC) ou o que o mestre pôs.
   function refOf(campaignId, token) {
@@ -2031,7 +2102,12 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
   handle.flush = () => Promise.all([...tables.values()].map(flushTable));
   // Quantos estão na mesa da wiki de cada campanha (para a barra lateral, quando a mesa entrar no server.js).
   handle.connected = campaignId => presenceOf(campaignId).length;
-  handle.close = () => { clearInterval(syncTimer); for (const connection of connections.values()) connection.response.end(); };
+  handle.close = () => {
+    closed = true;
+    clearInterval(syncTimer);
+    for (const table of tables.values()) { clearTimeout(table.timer); clearTimeout(table.retryTimer); }
+    for (const connection of connections.values()) connection.response.end();
+  };
   handle.syncCharacters = syncCharacters;
   return handle;
 };
